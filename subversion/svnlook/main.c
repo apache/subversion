@@ -38,7 +38,7 @@
 #include "svn_subst.h"
 #include "svn_opt.h"
 #include "svn_props.h"
-#include "svn_config.h"
+#include "svn_diff.h"
 
 
 /*** Some convenience macros and types. ***/
@@ -546,6 +546,27 @@ dump_contents (apr_file_t *fh,
 }
 
 
+/* Generate a diff label for PATH in ROOT, allocating in POOL. */
+static const char *
+generate_label (svn_fs_root_t *root,
+                const char *path,
+                apr_pool_t *pool)
+{
+  const char *label = "";
+  if (svn_fs_is_revision_root (root))
+    {
+      svn_revnum_t rev = svn_fs_revision_root_revision (root);
+      label = apr_psprintf (pool, "%s\t(r%" SVN_REVNUM_T_FMT ")", path, rev);
+    }
+  else 
+    {
+      /* Only our *new* path can be a transaction */
+      label = apr_pstrcat (pool, path, "\t(new)", NULL);
+    }
+  return label;
+}
+
+
 /* Recursively print all nodes in the tree that have been modified
    (do not include directories affected only by "bubble-up"). */
 static svn_error_t *
@@ -555,7 +576,6 @@ print_diff_tree (svn_fs_root_t *root,
                  const char *path /* UTF-8! */,
                  const char *base_path /* UTF-8! */,
                  svn_boolean_t no_diff_deleted,
-                 apr_hash_t *config,
                  apr_pool_t *pool)
 {
   const char *orig_path = NULL, *new_path = NULL, *path_native;
@@ -660,12 +680,6 @@ print_diff_tree (svn_fs_root_t *root,
 
   if (orig_path && new_path)
     {
-      apr_file_t *outhandle;
-      apr_status_t apr_err;
-      const char *label;
-      const char *abs_path;
-      int exitcode;
-      
       if (! is_copy)
         printf ("%s: %s\n", 
                 ((node->action == 'A') ? "Added" : 
@@ -675,38 +689,38 @@ print_diff_tree (svn_fs_root_t *root,
 
       if ((! no_diff_deleted) || (node->action != 'D'))
         {
+          svn_diff_t *diff;
+
           printf ("===========================================================\
 ===================\n");
           fflush (stdout);
 
-          /* Get an apr_file_t representing stdout, which is where
-             we'll have the diff program print to. */
-          apr_err = apr_file_open_stdout (&outhandle, pool);
-          if (apr_err)
-            return svn_error_create 
-              (apr_err, NULL,
-               "print_diff_tree: can't open handle to stdout");
+          /* ### TODO: Read the mime-type property of our two diffy
+             items, and if either indicates binariness, don't do the
+             diff. */
+          
+          SVN_ERR (svn_diff_file_diff (&diff, orig_path, new_path, pool));
+          if (svn_diff_contains_diffs (diff))
+            {
+              apr_file_t *outhandle;
+              apr_status_t apr_err;
+              const char *orig_label, *new_label;
 
-          label = apr_psprintf (pool, "%s\t(original)", base_path);
-          SVN_ERR (svn_path_get_absolute (&abs_path, orig_path, pool));
+              /* Get an apr_file_t representing stdout, which is where
+                 we'll have the diff program print to. */
+              apr_err = apr_file_open_stdout (&outhandle, pool);
+              if (apr_err)
+                return svn_error_create 
+                  (apr_err, NULL,
+                   "print_diff_tree: can't open handle to stdout");
 
-          {
-            const char *diff_cmd;
-            svn_config_t *cfg;
-
-            cfg = config ? apr_hash_get (config, SVN_CONFIG_CATEGORY_CONFIG,
-                                         APR_HASH_KEY_STRING) : NULL;
-
-            svn_config_get (cfg, &diff_cmd, SVN_CONFIG_SECTION_HELPERS, 
-                            SVN_CONFIG_OPTION_DIFF_CMD, NULL);
-
-            SVN_ERR (svn_io_run_diff (SVNLOOK_TMPDIR, NULL, 0, label, NULL,
-                                      abs_path, path, 
-                                      &exitcode, outhandle, NULL, diff_cmd,
-                                      pool));
-          }
-
-          /* TODO: Handle exit code == 2 (i.e. diff error) here. */
+              orig_label = generate_label (base_root, base_path, pool);
+              new_label = generate_label (root, path, pool);
+              SVN_ERR (svn_diff_file_output_unified (outhandle, diff, 
+                                                     orig_path, new_path,
+                                                     orig_label, new_label,
+                                                     pool));
+            }
         }
 
       printf ("\n");
@@ -737,7 +751,7 @@ print_diff_tree (svn_fs_root_t *root,
              (root, base_root, node,
               svn_path_join (path, node->name, subpool),
               svn_path_join (base_path, node->name, subpool),
-              no_diff_deleted, config,
+              no_diff_deleted, 
               subpool));
 
     /* Recurse across siblings. */
@@ -749,7 +763,7 @@ print_diff_tree (svn_fs_root_t *root,
                  (root, base_root, node,
                   svn_path_join (path, node->name, subpool),
                   svn_path_join (base_path, node->name, subpool),
-                  no_diff_deleted, config,
+                  no_diff_deleted, 
                   pool));
       }
     
@@ -1039,12 +1053,10 @@ do_diff (svnlook_ctxt_t *c, apr_pool_t *pool)
   if (tree)
     {
       svn_node_kind_t kind;
-      apr_hash_t *config;
 
-      SVN_ERR (svn_config_get_config (&config, pool));
       SVN_ERR (svn_fs_revision_root (&base_root, c->fs, base_rev_id, pool));
       SVN_ERR (print_diff_tree (root, base_root, tree, "", "",
-                                c->no_diff_deleted, config, pool));
+                                c->no_diff_deleted, pool));
       SVN_ERR (svn_io_check_path (SVNLOOK_TMPDIR, &kind, pool));
       if (kind == svn_node_dir)
         SVN_ERR (svn_io_remove_dir (SVNLOOK_TMPDIR, pool));
