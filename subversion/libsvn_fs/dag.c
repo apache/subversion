@@ -356,7 +356,7 @@ txn_body_dag_init_fs (void *fs_baton, trail_t *trail)
 
   /* Create empty root directory with node revision 0.0. */
   {
-    static char unparsed_node_rev[] = "((dir 3 0.0) 0 0 )";
+    static char unparsed_node_rev[] = "((dir 1 0) 0 0 )";
     skel_t *node_rev = svn_fs__parse_skel (unparsed_node_rev,
                                            sizeof (unparsed_node_rev) - 1,
                                            trail->pool);
@@ -730,7 +730,7 @@ make_entry (dag_node_t **child_p,
     svn_fs__prepend (svn_fs__str_atom ("mutable", trail->pool), flag_skel);
     /* Now we have a FLAG skel: (`mutable' PARENT-ID) */
     
-    /* Step 2: create the HEADER skel. */
+    /* Step 2: create the HEADER skel (initialized to an empty revision)*/
     header_skel = svn_fs__make_empty_list (trail->pool);
     svn_fs__prepend (flag_skel, header_skel);
     svn_fs__prepend (svn_fs__str_atom ("", trail->pool), header_skel);
@@ -1968,7 +1968,7 @@ make_node_immutable (dag_node_t *node, trail_t *trail)
   }
 
   /* The FLAGs start at the 2nd element of the header. */
-  for (flag = header->children->next, prev = NULL;
+  for (flag = HDR_FLAGS (header), prev = NULL;
        flag;
        prev = flag, flag = flag->next)
     {
