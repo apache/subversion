@@ -93,7 +93,7 @@ Step 3:  Install Specific Language Bindings
    1.  Run `make swig-pl-lib' from the top of the
        Subversion source tree.
 
-   2.  Go to subversion/bindings/swig/perl and run
+   2.  Go to subversion/bindings/swig/perl/native and run
        `env APR_CONFIG=/path/to/apr-config perl Makefile.PL'.
 
        Be sure to use the same perl binary here that you configured
