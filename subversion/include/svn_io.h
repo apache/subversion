@@ -350,7 +350,8 @@ svn_error_t *svn_stream_close (svn_stream_t *stream);
 svn_error_t *svn_stream_printf (svn_stream_t *stream,
                                 apr_pool_t *pool,
                                 const char *fmt,
-                                ...);
+                                ...)
+       __attribute__ ((format(printf, 3, 4)));
 
 /* Allocate *STRINGBUF in POOL, and read one line from STREAM into it.
    The '\n' is read from the stream, but is not added to the end of
