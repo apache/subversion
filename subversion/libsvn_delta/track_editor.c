@@ -55,6 +55,13 @@ struct edit_baton
   /* An already-intitialized array, ready to store (svn_string_t *)
      objects */
   apr_array_header_t *array;
+
+  /* These are defined only if the caller wants close_edit() to bump
+     revisions */
+  svn_revnum_t new_rev;
+  svn_error_t *(*bump_func) (void *baton, svn_string_t *path,
+                             svn_revnum_t new_rev);
+  void *bump_baton;
 };
 
 
@@ -257,6 +264,14 @@ change_file_prop (void *file_baton,
 
 
 static svn_error_t *
+window_handler (svn_txdelta_window_t *window, void *handler_pair)
+{
+  /* No-op, but required for proper editor composition. */
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
 apply_textdelta (void *file_baton, 
                  svn_txdelta_window_handler_t **handler,
                  void **handler_baton)
@@ -269,9 +284,30 @@ apply_textdelta (void *file_baton,
       fb->stored = TRUE;
     }
   
+  *handler = window_handler;
+  *handler_baton = NULL;
+
   return SVN_NO_ERROR;
 }
 
+
+static svn_error_t *
+close_edit (void *edit_baton)
+{
+  int i;
+  struct edit_baton *eb = edit_baton;
+
+  /* Bump all targets if the caller wants us to. */
+  if (SVN_IS_VALID_REVNUM(eb->new_rev) && eb->bump_func)
+    for (i = 0; i < eb->array->nelts; i++)
+      {
+        svn_string_t *target;
+        target = (((svn_string_t **)(eb->array)->elts)[i]);
+        SVN_ERR (eb->bump_func (eb->bump_baton, target, eb->new_rev));
+      }
+  
+  return SVN_NO_ERROR;
+}
 
 
 
@@ -281,7 +317,13 @@ svn_error_t *
 svn_delta_get_commit_track_editor (svn_delta_edit_fns_t **editor,
                                    void **edit_baton,
                                    apr_pool_t *pool,
-                                   apr_array_header_t *array)
+                                   apr_array_header_t *array,
+                                   svn_revnum_t new_rev,
+                                   svn_error_t *(*bump_func) 
+                                     (void *baton,
+                                      svn_string_t *path,
+                                      svn_revnum_t new_rev),
+                                   void *bump_baton)
 {
   struct edit_baton *eb = apr_pcalloc (pool, sizeof (*eb));
   svn_delta_edit_fns_t *track_editor = svn_delta_default_editor (pool);
@@ -303,12 +345,15 @@ svn_delta_get_commit_track_editor (svn_delta_edit_fns_t **editor,
   track_editor->change_dir_prop = change_dir_prop;
   track_editor->change_file_prop = change_file_prop;
   track_editor->apply_textdelta = apply_textdelta;
-
+  track_editor->close_edit = close_edit;
 
   /* Set up the edit baton. */
   eb->pool = pool;
   eb->initial_path = svn_string_create ("", pool);
   eb->array = array;
+  eb->new_rev = new_rev;
+  eb->bump_func = bump_func;
+  eb->bump_baton = bump_baton;
 
   *editor = track_editor;
   *edit_baton = eb;

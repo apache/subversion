@@ -42,7 +42,6 @@ struct edit_baton
   svn_fs_t *fs;
 
   /* Location in fs where where the edit will begin. */
-  svn_revnum_t base_rev;
   svn_string_t *base_path;
 
   /* Created during the edit: */
@@ -91,7 +90,7 @@ replace_root (void *edit_baton,
 
   /* Begin a subversion transaction, cache its name, and get its
      root object. */
-  SVN_ERR (svn_fs_begin_txn (&(eb->txn), eb->fs, eb->base_rev, eb->pool));
+  SVN_ERR (svn_fs_begin_txn (&(eb->txn), eb->fs, base_revision, eb->pool));
   SVN_ERR (svn_fs_txn_root (&(eb->root), eb->txn, eb->pool));
   
   /* Finish filling out the root dir baton.  The `base_path' field is
@@ -405,7 +404,6 @@ svn_error_t *
 svn_fs_get_editor (svn_delta_edit_fns_t **editor,
                    void **edit_baton,
                    svn_fs_t *fs,
-                   svn_revnum_t base_revision,
                    svn_string_t *base_path,
                    svn_string_t *log_msg,
                    svn_fs_commit_hook_t *hook,
@@ -437,7 +435,6 @@ svn_fs_get_editor (svn_delta_edit_fns_t **editor,
   eb->log_msg = svn_string_dup (log_msg, subpool);
   eb->hook = hook;
   eb->hook_baton = hook_baton;
-  eb->base_rev = base_revision;
   eb->base_path = svn_string_dup (base_path, subpool);
   eb->fs = fs;
 

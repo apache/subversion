@@ -611,12 +611,24 @@ svn_delta_get_xml_editor (svn_stream_t *output,
 
 /* Return an *EDITOR (and *EDIT_BATON) which notices paths that are
    committed.  Each commited path is pushed onto ARRAY, allocated from
-   POOL.  ARRAY must be initialized to store (svn_string_t *) objects.  */
+   POOL.  ARRAY must be initialized to store (svn_string_t *) objects.
+
+   The arguments {NEW_REV, BUMP_FUNC, BUMP_BATON} are an optional set
+   of args;  if specified, then close_edit() will use them to bump
+   revisions.   If this behavior isn't desired, just set these args to
+   {SVN_INVALID_REVNUM, NULL, NULL}.
+  */
 svn_error_t *
 svn_delta_get_commit_track_editor (svn_delta_edit_fns_t **editor,
                                    void **edit_baton,
                                    apr_pool_t *pool,
-                                   apr_array_header_t *array);
+                                   apr_array_header_t *array,
+                                   svn_revnum_t new_rev,
+                                   svn_error_t *(*bump_func) 
+                                     (void *baton,
+                                      svn_string_t *path,
+                                      svn_revnum_t new_rev),
+                                   void *bump_baton);
 
 
 

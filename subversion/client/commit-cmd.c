@@ -57,6 +57,8 @@ svn_cl__commit (svn_cl__opt_state_t *opt_state,
       err = svn_client_commit (NULL, NULL,
                                trace_editor, trace_edit_baton,
                                target,
+                               /* a fixed log message: change this! */
+                               svn_string_create ("fooooo msg", pool),
                                opt_state->xml_file,
                                opt_state->revision,
                                pool);

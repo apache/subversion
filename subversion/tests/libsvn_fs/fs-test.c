@@ -353,7 +353,7 @@ call_functions_with_unopened_fs (const char **msg)
     svn_string_t *base_path, *log_msg;
     svn_fs_commit_hook_t *hook;
 
-    err = svn_fs_get_editor (&editor, &edit_baton, fs, 0, base_path,
+    err = svn_fs_get_editor (&editor, &edit_baton, fs, base_path,
                              log_msg, hook, hook_baton, pool);
     SVN_ERR (check_no_fs_error (err));
   }

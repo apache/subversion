@@ -321,12 +321,9 @@ svn_wc_close_commit (svn_string_t *path,
    supplied EDIT_BATON).
 
    Any items (files or dirs) that were found to be modified, and were
-   therefore committed, are stored in TARGETS as full paths.  LOCKS is
-   a list of all directories that were locked in the process of
-   committing; the caller needs to unlock these dirs when appropriate.  */
+   therefore committed, are stored in TARGETS as full paths. */
 svn_error_t *
 svn_wc_crawl_local_mods (apr_hash_t **targets,
-                         apr_hash_t **locks,
                          svn_string_t *root_directory,
                          const svn_delta_edit_fns_t *edit_fns,
                          void *edit_baton,
