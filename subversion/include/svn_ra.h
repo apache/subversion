@@ -54,26 +54,18 @@ typedef svn_error_t *svn_ra_set_wc_prop_func_t (void *close_baton,
   
 typedef struct svn_ra_reporter_t
 {
-  /* Given a ROOT_PATH within a working copy, describe the REVISION
-     and REPOSITORY_PATH it corresponds to.   (ROOT_PATH will be where
-     the WC update begins.) */
-  svn_error_t *(*set_baseline) (void *report_baton,
-                                svn_revnum_t revision,
-                                svn_string_t *repository_path,
-                                svn_string_t *root_path);
-
   /* Describe an entire subtree DIR_PATH as being at a particular
      REVISION; this will *override* any previous set_directory() calls
-     made on DIR_PATH's parents.  DIR_PATH is relative to the ROOT_PATH
-     specified in set_baseline(). */
+     made on DIR_PATH's parents.  DIR_PATH is relative to the URL
+     specified in open(), and are `svn_path_url_style'. */
   svn_error_t *(*set_directory) (void *report_baton,
                                  svn_string_t *dir_path,
                                  svn_revnum_t revision);
   
   /* Describe a file FILE_PATH as being at a particular REVISION; this
      will *override* any previous set_file() calls made on FILE_PATH's
-     parents.  FILE_PATH is relative to the ROOT_PATH specified
-     in set_baseline(). */
+     parents.  FILE_PATH is relative to the URL specified in open(),
+     and are `svn_path_url_style'. */
   svn_error_t *(*set_file) (void *report_baton,
                             svn_string_t *file_path,
                             svn_revnum_t revision);
@@ -145,11 +137,10 @@ typedef struct svn_ra_plugin_t
                                      void *close_baton);
 
 
-  /* Ask the network layer to check out a copy of ROOT_PATH from the
-     repository's filesystem, using EDITOR and EDIT_BATON to create a
+  /* Ask the network layer to check out a copy of the repository URL
+     specified in open(), using EDITOR and EDIT_BATON to create a
      working copy. */
   svn_error_t *(*do_checkout) (void *session_baton,
-                               svn_string_t *root_path,
                                const svn_delta_edit_fns_t *editor,
                                void *edit_baton);
 
