@@ -56,7 +56,6 @@ create_stdio_stream (svn_stream_t **stream,
 
 static svn_opt_subcommand_t
   subcommand_create,
-  subcommand_createtxn,
   subcommand_dump,
   subcommand_help,
   subcommand_load,
@@ -139,11 +138,6 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
      "usage: svnadmin create REPOS_PATH\n\n"
      "Create a new, empty repository at REPOS_PATH.\n",
      {svnadmin__bdb_txn_nosync, svnadmin__config_dir} },
-    
-    {"createtxn", subcommand_createtxn, {0},
-     "usage: svnadmin createtxn REPOS_PATH -r REVISION\n\n"
-     "Create a new transaction based on REVISION.\n",
-     {'r'} },
     
     {"dump", subcommand_dump, {0},
      "usage: svnadmin dump REPOS_PATH [-r LOWER[:UPPER]] [--incremental]\n\n"
@@ -265,32 +259,6 @@ subcommand_create (apr_getopt_t *os, void *baton, apr_pool_t *pool)
                              NULL, NULL, 
                              config, fs_config, pool));
 
-  return SVN_NO_ERROR;
-}
-
-
-/* This implements `svn_opt_subcommand_t'. */
-static svn_error_t *
-subcommand_createtxn (apr_getopt_t *os, void *baton, apr_pool_t *pool)
-{
-  struct svnadmin_opt_state *opt_state = baton;
-  svn_repos_t *repos;
-  svn_fs_t *fs;
-  svn_fs_txn_t *txn;
-
-  if (opt_state->start_revision.kind != svn_opt_revision_number)
-    return svn_error_createf (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                              "missing revision");
-  else if (opt_state->end_revision.kind != svn_opt_revision_unspecified)
-    return svn_error_createf (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                              "only one revision allowed");
-    
-  SVN_ERR (svn_repos_open (&repos, opt_state->repository_path, pool));
-  fs = svn_repos_fs (repos);
-  SVN_ERR (svn_fs_begin_txn (&txn, fs, opt_state->start_revision.value.number,
-                             pool));
-  SVN_ERR (svn_fs_close_txn (txn));
-  
   return SVN_NO_ERROR;
 }
 
