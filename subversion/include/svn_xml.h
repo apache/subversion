@@ -147,8 +147,10 @@ svn_error_t *svn_xml_write_header (apr_file_t *file, apr_pool_t *pool);
 
 
 /* Print an XML tag named TAGNAME into FILE.  Varargs are used to
-   specify a NULL-terminated list of {const char *attribute, const
-   char *value}.  TAGTYPE must be one of 
+   specify a NULL-terminated list of alternating const char *attribute
+   and svn_string_t *value.  kff todo: implement that!
+
+   TAGTYPE must be one of 
 
               svn_xml__open_tag         ... <tagname>
               svn_xml__close_tag        ... </tagname>

@@ -243,6 +243,9 @@ svn_xml_write_tag_v (apr_file_t *file,
       value = va_arg (ap, char *);
       assert (value != NULL);
       
+      /* kff todo: once values are svn_string_t's, implement the xml
+         quoting. */
+
       svn_string_appendcstr (xmlstring, "\n   ", subpool);
       svn_string_appendcstr (xmlstring, attribute, subpool);
       svn_string_appendcstr (xmlstring, "=\"", subpool);
