@@ -1770,6 +1770,8 @@ svn_fs_revision_root (svn_fs_root_t **root_p,
   struct revision_root_args args;
   svn_fs_root_t *root;
 
+  SVN_ERR (svn_fs__check_fs (fs));
+
   args.root_p = &root;
   args.fs     = fs;
   args.rev    = rev;

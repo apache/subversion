@@ -268,6 +268,99 @@ create_file_transaction (const char **msg)
 }
 
 
+static svn_error_t *
+check_no_fs_error (svn_error_t *err)
+{
+  if (err && (err->apr_err != SVN_ERR_FS_NOT_OPEN))
+    return svn_error_create
+      (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+       "checking not opened filesystem got wrong error");
+  else if (! err)
+    return svn_error_create
+      (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+       "checking not opened filesytem failed to get error");
+  else
+    return SVN_NO_ERROR;
+}
+
+
+/* Call functions with not yet opened filesystem and see it returns
+   correct error.  */
+static svn_error_t *
+call_functions_with_unopened_fs (const char **msg)
+{
+  svn_error_t *err;
+  svn_fs_t *fs = svn_fs_new (pool);
+
+  *msg = "Call functions with unopened filesystem and check errors";
+
+  /* This is the exception --- it is perfectly okay to call
+     svn_fs_close_fs on an unopened filesystem.  */
+  SVN_ERR (svn_fs_close_fs (fs));
+
+  fs = svn_fs_new (pool);
+  err = svn_fs_set_berkeley_errcall (fs, berkeley_error_handler);
+  SVN_ERR (check_no_fs_error (err));
+
+  {
+    svn_fs_txn_t *ignored;
+    err = svn_fs_begin_txn (&ignored, fs, 0, pool);
+    SVN_ERR (check_no_fs_error (err));
+    err = svn_fs_open_txn (&ignored, fs, "0", pool);
+    SVN_ERR (check_no_fs_error (err));
+  }
+
+  {
+    char **ignored;
+    err = svn_fs_list_transactions (&ignored, fs, pool);
+    SVN_ERR (check_no_fs_error (err));
+  }
+
+  {
+    svn_fs_root_t *ignored;
+    err = svn_fs_revision_root (&ignored, fs, 0, pool);
+    SVN_ERR (check_no_fs_error (err));
+  }
+
+  {
+    svn_revnum_t ignored;
+    err = svn_fs_youngest_rev (&ignored, fs, pool);
+    SVN_ERR (check_no_fs_error (err));
+  }
+
+  {
+    svn_string_t *ignored, *unused;
+    err = svn_fs_revision_prop (&ignored, fs, 0, unused, pool);
+    SVN_ERR (check_no_fs_error (err));
+  }
+
+  {
+    apr_hash_t *ignored;
+    err = svn_fs_revision_proplist (&ignored, fs, 0, pool);
+    SVN_ERR (check_no_fs_error (err));
+  }
+
+  {
+    svn_string_t *unused1, *unused2;
+    err = svn_fs_change_rev_prop (fs, 0, unused1, unused2, pool);
+    SVN_ERR (check_no_fs_error (err));
+  }
+
+  {
+    void *edit_baton, *hook_baton;
+    svn_delta_edit_fns_t *editor;
+    svn_string_t *base_path, *log_msg;
+    svn_fs_commit_hook_t *hook;
+
+    err = svn_fs_get_editor (&editor, &edit_baton, fs, 0, base_path,
+                             log_msg, hook, hook_baton, pool);
+    SVN_ERR (check_no_fs_error (err));
+  }
+
+  return SVN_NO_ERROR;
+}
+
+
 /* Make sure we get txn lists correctly. */
 static svn_error_t *
 verify_txn_list (const char **msg)
@@ -1712,6 +1805,7 @@ svn_error_t * (*test_funcs[]) (const char **msg) = {
   reopen_trivial_transaction,
   create_file_transaction,
   verify_txn_list,
+  call_functions_with_unopened_fs,
   write_and_read_file,
   create_mini_tree_transaction,
   create_greek_tree_transaction,

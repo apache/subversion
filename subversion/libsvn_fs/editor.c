@@ -20,7 +20,7 @@
 #include "svn_delta.h"
 #include "svn_fs.h"
 #include "dag.h"
-
+#include "err.h"
 
 
 /*** Editor batons. ***/
@@ -411,6 +411,8 @@ svn_fs_get_editor (svn_delta_edit_fns_t **editor,
   apr_pool_t *subpool = svn_pool_create (pool);
   struct edit_baton *eb = apr_pcalloc (subpool, sizeof (*eb));
 
+  SVN_ERR (svn_fs__check_fs (fs));
+
   /* Set up the editor. */
   e->replace_root      = replace_root;
   e->delete_entry      = delete_entry;
@@ -432,6 +434,7 @@ svn_fs_get_editor (svn_delta_edit_fns_t **editor,
   eb->hook_baton = hook_baton;
   eb->base_rev = base_revision;
   eb->base_path = svn_string_dup (base_path, subpool);
+  eb->fs = fs;
 
   *edit_baton = eb;
   *editor = e;
