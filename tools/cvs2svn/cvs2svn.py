@@ -346,8 +346,9 @@ class RepositoryMirror:
     self.nodes_db_file = NODES_DB
     self.nodes_db = anydbm.open(self.nodes_db_file, 'n')
 
-    # A key that could never be a real directory entry.
+    # These keys could never be real directory entries.
     self.mutable_flag = "//mutable"
+    self.symbolic_names = "//sym_names"
     # This could represent a new mutable directory or file.
     self.empty_mutable_thang = { self.mutable_flag : 1 }
 
@@ -369,8 +370,9 @@ class RepositoryMirror:
     dir = marshal.loads(self.nodes_db[key])
     if dir.has_key(self.mutable_flag):
       del dir[self.mutable_flag]
-      for entry in dir.keys():
-        self._stabilize_directory(dir[entry])
+      for entry_key in dir.keys():
+        if not entry_key[0] == '/':
+          self._stabilize_directory(dir[entry_key])
       self.nodes_db[key] = marshal.dumps(dir)
 
   def stabilize_youngest(self):
@@ -483,24 +485,29 @@ class RepositoryMirror:
     # Now change the last node, the versioned file.  Just like at the
     # top of the above loop, parent is already mutable.
     op = OP_ADD
+    old_names = ()
     last_component = components[-1]
     if parent.has_key(last_component):
-      # Sanity check
+      # Sanity check.
       child = marshal.loads(self.nodes_db[parent[last_component]])
       if child.has_key(self.mutable_flag):
         sys.stderr.write("'%s' has already been changed in revision %d;\n" \
                          "can't change it again in the same revision."     \
                          % (path, self.youngest))
         sys.exit(1)
-      # Okay, passed the sanity check
+      # Okay, passed the sanity check.
       op = OP_CHANGE
+      old_names = child[self.symbolic_names]
 
     leaf_key = gen_key()
     parent[last_component] = leaf_key
     self.nodes_db[parent_key] = marshal.dumps(parent)
-    self.nodes_db[leaf_key] = marshal.dumps(self.empty_mutable_thang)
-
-    return (op, ()) # kff todo: empty tuple should be closed_names
+    new_names = tuple(tags + branches)
+    new_val = { self.symbolic_names : new_names,
+                self.mutable_flag   : 1 }
+    s = marshal.dumps(new_val)
+    self.nodes_db[leaf_key] = marshal.dumps(new_val)
+    return (op, old_names)
 
   def delete_path(self, path, tags, branches, prune=None):
     """Delete PATH from the tree.  PATH may not have a leading slash.
@@ -563,11 +570,14 @@ class RepositoryMirror:
       because the directory might have a mutable flag that we need
       this function at all.)"""
       num_items = len(dir)
-      if num_items > 2:
+      if num_items > 3:
         return None
-      if num_items == 2:
-        if dir.has_key(mutable_flag): return 1
-        else:                         return None
+      if num_items == 3 or num_items == 2:
+        real_entries = 0
+        for key in dir.keys():
+          if not key[0] == '/': real_entries = real_entries + 1
+        if real_entries > 1: return None
+        else:                return 1
       else:
         return 1
 
@@ -592,8 +602,12 @@ class RepositoryMirror:
 
     # If the target is not present in its parent, then we're done.
     last_component = components[-1]
+    old_names = ()
     if not parent.has_key(last_component):
       return (None, ())
+    else:
+      child = marshal.loads(self.nodes_db[parent[last_component]])
+      old_names = child[self.symbolic_names]
 
     # The target is present, so remove it and bubble up, making a new
     # mutable path and/or pruning as necessary.
@@ -646,9 +660,13 @@ class RepositoryMirror:
         # We never prune away the root directory, so back up one component.
         pruned_count = pruned_count - 1
       retpath = string.join(components[:0 - pruned_count], '/')
-      return (retpath, ()) # kff todo: empty tuple should be closed_names
+      return (retpath, old_names)
     else:
-      return (path, ())    # kff todo: empty tuple should be closed_names
+      return (path, old_names)
+
+    ### We've no place to put tags + branches.  Suspect we just
+    ### shouldn't be taking them as arguments, which the doc string
+    ### implies already.  Ponder.
 
   def close(self):
     # Just stabilize the last revision.  This may or may not affect
@@ -1192,11 +1210,11 @@ class Commit:
         # Uh, can this even happen on a deleted path?  Hmmm.  If not,
         # there's no risk, since tags and branches would just be empty
         # and therefore enrooting would be a no-op.  Still, it would
-        # be clearer to know for sure and simply not call it. 
+        # be clearer to know for sure and simply not call it.
         sym_tracker.enroot_names(svn_path, svn_rev, tags, branches)
-        ### FIXME: this will return path_delete == None if no path was
-        ### deleted.  But we'll already have started the revision by
-        ### then, so it's a bit late to use the knowledge!  Need to
+        ### FIXME: this will return path_deleted == None if no path
+        ### was deleted.  But we'll already have started the revision
+        ### by then, so it's a bit late to use the knowledge!  Need to
         ### reorganize things so that starting the revision is a
         ### callback with its own internal conditional, so anyone can
         ### just invoke when they know they're really about to do
