@@ -1,0 +1,12 @@
+--- apr/Makefile.in.orig	Fri Dec 14 18:22:46 2001
++++ apr/Makefile.in	Mon Mar 18 19:17:26 2002
+@@ -61,7 +61,8 @@
+ 	    $(top_srcdir)/build/mkdir.sh $(includedir); \
+ 	fi; \
+ 	cp $(top_srcdir)/include/*.h $(includedir); \
+-	cp $(top_blddir)/include/*.h $(includedir); \
++	# comment this out to avoid an autoconf bug.
++	#cp $(top_blddir)/include/*.h $(includedir); \
+ 	if [ ! -d $(libdir) ]; then \
+ 	    $(top_srcdir)/build/mkdir.sh $(libdir); \
+ 	fi; \
