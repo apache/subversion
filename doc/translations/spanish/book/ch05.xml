@@ -19,10 +19,10 @@
       por red. También hablaremos acerca del mantenimiento del
       repositorio, incluyendo el uso de las herramientas
       <command>svnlook</command> y <command>svnadmin</command>
-      ( que están disponibles junto con Subversion ). <!--TODO: address?
-      We'll address some common questions and mistakes ... -->
-      Incidiremos en algunas preguntas y errores, y haremos sugerencias
-      sobre la forma de <!--TODO: arrange how to arrange the data in ... -->
+      ( que están disponibles junto con Subversion ). 
+      Trataremos también algunas preguntas y errores comunes,
+      y haremos sugerencias sobre la forma de 
+      <!--TODO: arrange how to arrange the data in ... -->
       arreglar los datos en el repositorio.</para>
 
     <para>Si planea acceder al repositorio Subversion sólo desde el
@@ -47,40 +47,43 @@
   <!-- *** SECTION 1:  REPOSITORY BASICS                               *** -->
   <!-- ******************************************************************* -->
   <sect1 id="svn-ch-5-sect-1">
-    <title>Repository Basics</title>
+    <title>Cuestiones básicas acerca de el repositorio</title>
 
-    <para>Before jumping into the broader topic of repository
-      administration, let's further define what a repository is.  How
-      does it look?  How does it feel?  Does it take its tea hot or
-      iced, sweetened, and with lemon?  As an administrator, you'll be
-      expected to understand the composition of a repository both from
-      a logical perspective&mdash;dealing with how data is represented
-      inside the repository&mdash;and from a physical nuts-and-bolts
-      perspective&mdash;how a repository looks and acts with respect
-      to non-Subversion tools.  The following section covers some of
-      these basic concepts at a very high level.</para>
+    <para>Antes de entrar en el tema principal de la administración
+      del repositorio, vamos a definir con más detalla qué es un repositorio.
+      ¿Qué pinta tiene? ¿Cómo se siente? ¿Se toma el té caliente o helado,
+      dulce, y con limón? Como administrador, necesitará entender la
+      composición de un repositorio desde una perspectiva lógica&mdash;
+      <!--TODO: deal-->dealing con cómo se representa la información
+      dentro del repositorio&mdash;y desde una perspectiva <!--TODO:
+      nuts-and-bolts-->&mdash;qué apariencia tiene y cómo actúa un
+      repositorio con respecto a herramientas no pertenecientes a Subversion.
+      La siguiente sección se ocupa de algunos de estos conceptos básicos
+      a un nivel muy alto.</para>
 
     <!-- ***************************************************************** -->
     <sect2 id="svn-ch-5-sect-1.1">
-      <title>Understanding Transactions and Revisions</title>
+      <title>Entendiendo las Transacciones y Revisiones</title>
         
-      <para>Conceptually speaking, a Subversion repository is a
-        sequence of directory trees.  Each tree is a snapshot of how
-        the files and directories versioned in your repository looked
-        at some point in time.  These snapshots are created as a
-        result of client operations, and are called revisions.</para>
+      <para>Hablando conceptualmente, un repositorio Subversion es
+        una secuencia de árboles de directorios. Cada árbol es una
+	<!--TODO:snapshot=¿fotografía?-->fotografía de cómo eran 
+	los ficheros y directorios versionados en tu repositorio en
+	un momento determinado. Estas fotografías son generadas como
+	resultado de operaciones de programas cliente, y son llamadas
+	revisiones.</para>
 
-      <para>Every revision begins life as a transaction tree.  When
-        doing a commit, a client builds a Subversion transaction that
-        mirrors their local changes (plus any additional changes that
-        might have been made to the repository since the beginning of
-        the client's commit process), and then instructs the
-        repository to store that tree as the next snapshot in the
-        sequence.  If the commit succeeds, the transaction is
-        effectively promoted into a new revision tree, and is assigned
-        a new revision number.  If the commit fails for some reason,
-        the transaction is destroyed and the client is informed of the
-        failure.</para>
+      <para>Cada revisión nace como un árbol de transacciones. Cuando se
+        envían cambios al repositorio, el programa cliente construye
+        una transacción de Subversion que copia los cambios locales
+        ( junto a cualquier cambio adicional que haya podido tener lugar
+        desde el comienzo del proceso de envío de datos),
+        y luego pide al repositorio que guarde ese árbol como la próxima
+        <!--TODO: snapshot=fotografía -->fotograría en la secuencia.
+        Si el envío de datos no da error, la transacción se convierte
+        en una nueva revisión del árbol, y se le asigna un nuevo número de
+        revisión. Si el envío de datos fallara por alguna razón,
+	la transacción se destruye, y se le informa al cliente del error.</para>
             
       <para>Updates work in a similar way.  The client builds a
         temporary transaction tree that mirrors the state of the
