@@ -13,7 +13,7 @@ Candidate changes:
     Client-side memory leak when doing 'svn switch' over http://.
     Justification: Scalability bug, very small & simple fix.
     Votes:
-      +1: cmpilato, kfogel
+      +1: cmpilato, kfogel, epg
 
   * r11483, r12072, r12157, r12158 (Issue #2091)
     Unitialized variable on Win98.
@@ -46,7 +46,7 @@ Candidate changes:
     Justification:
       Did you miss the part where I said "working copy ... busticated state"?
     Votes:
-      +1: cmpilato
+      +1: cmpilato, epg
 
   * r11862, r11921, r12061 (part of issue #1997)
     Fix encoding bug in svnserve -h.
@@ -55,7 +55,7 @@ Candidate changes:
     Note:
       r12061 is just a docstring clarification.
     Votes:
-      +1: lundblad, maxb
+      +1: lundblad, maxb, epg
       +0: nori (not r12061)
 
   * r11936
@@ -63,7 +63,7 @@ Candidate changes:
     Justification:
       It's a regression from 1.0.x.
     Votes:
-      +1: philip
+      +1: philip, epg
       Nominated by: Chris AtLee <catlee@sidefx.com>
 
   * r12006
@@ -83,14 +83,14 @@ Candidate changes:
       (This is a regression from 1.0.x)
       Trivial change.
     Votes:
-      +1: maxb
+      +1: maxb, epg
 
   * r12063, r12084 (Issue #2119)
     Canonicalize paths received over the wire in ra_svn and svnserve.
     Justification:
       Protects against API violations, which lead to assertion failures.
     Votes:
-      +1: lundblad
+      +1: lundblad, epg
 
   * r12100, r12111, r12114
     Fix output of notifications when merging a deletion of a directory.
@@ -124,7 +124,7 @@ Candidate changes:
     Justification:
       Segfaults bad!
     Votes:
-      +1: maxb
+      +1: maxb, epg
 
 
 Approved changes (further review is welcome, but not required):
