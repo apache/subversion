@@ -82,7 +82,7 @@ svn_cl__help (apr_getopt_t *os,
     for (i = 0; i < targets->nelts; i++)
       {
         const char *this = (((const char **) (targets)->elts))[i];
-	svn_cl__subcommand_help (this, pool);
+        svn_cl__subcommand_help (this, pool);
       }
   else if (opt_state && opt_state->version)  /* just -v or --version */
     SVN_ERR (print_version_info (pool));        

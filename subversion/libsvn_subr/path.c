@@ -345,9 +345,8 @@ svn_path_remove_component (svn_stringbuf_t *path)
 char *
 svn_path_remove_component_nts (const char *path, apr_pool_t *pool)
 {
-  /* ### If svn_path_canonicalize_nts() didn't return const, we could
-     chop away at the return value directly here.  Not sure that
-     slight efficiency improvement is worth it, though. */
+  /* ### We could chop away at the return value directly here.  Not
+     sure that slight efficiency improvement is worth it, though. */
 
   const char *newpath = svn_path_canonicalize_nts (path, pool);
   int i;

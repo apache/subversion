@@ -517,7 +517,7 @@ open_root (void *edit_baton,
   *dir_baton = d = make_dir_baton (NULL, eb, NULL, FALSE, pool);
   if (eb->is_checkout)
     SVN_ERR (prep_directory (d->path, eb->ancestor_url, eb->target_revision,
-                             1, pool));
+                             TRUE, pool));
 
   return SVN_NO_ERROR;
 }
@@ -569,7 +569,7 @@ delete_entry (const char *path,
   SVN_ERR (svn_wc__close_adm_file (log_fp,
                                    pb->path,
                                    SVN_WC__ADM_LOG,
-                                   1, /* sync */
+                                   TRUE, /* sync */
                                    pool));
     
   SVN_ERR (svn_wc__run_log (pb->path, pool));
@@ -636,7 +636,7 @@ add_directory (const char *path,
   /* Create dir (if it doesn't yet exist), make sure it's formatted
      with an administrative subdir.   */
   SVN_ERR (prep_directory (db->path, copyfrom_path, copyfrom_revision,
-                           1, db->pool));
+                           TRUE, db->pool));
 
   *child_baton = db;
 
@@ -881,7 +881,7 @@ close_directory (void *dir_baton)
       SVN_ERR (svn_wc__close_adm_file (log_fp,
                                        db->path,
                                        SVN_WC__ADM_LOG,
-                                       1, /* sync */
+                                       TRUE, /* sync */
                                        db->pool));
 
       /* Run the log. */
@@ -1001,9 +1001,8 @@ add_file (const char *name,
           apr_pool_t *pool,
           void **file_baton)
 {
-  return add_or_open_file (name, parent_baton, 
-                           copyfrom_path, copyfrom_revision, 
-                           file_baton, 1, pool);
+  return add_or_open_file (name, parent_baton, copyfrom_path, 
+                           copyfrom_revision, file_baton, TRUE, pool);
 }
 
 
@@ -1015,7 +1014,7 @@ open_file (const char *name,
            void **file_baton)
 {
   return add_or_open_file (name, parent_baton, NULL, base_revision, 
-                           file_baton, 0, pool);
+                           file_baton, FALSE, pool);
 }
 
 
@@ -1224,8 +1223,8 @@ svn_wc_install_file (const char *file_path,
      -- that's where the rest of this code wants it to be anyway. */
   if (new_text_path)
     {
-      const char *final_location =
-        svn_wc__text_base_path (file_path, 1, pool);
+      const char *final_location = 
+        svn_wc__text_base_path (file_path, TRUE, pool);
       
       /* Only do the 'move' if NEW_TEXT_PATH isn't -already-
          pointing to parent_dir/.svn/tmp/text-base/basename.  */
@@ -1401,8 +1400,8 @@ svn_wc_install_file (const char *file_path,
 
   if (new_text_path)   /* is there a new text-base to install? */
     {
-      txtb     = svn_wc__text_base_path (base_name, 0, pool);
-      tmp_txtb = svn_wc__text_base_path (base_name, 1, pool);
+      txtb     = svn_wc__text_base_path (base_name, FALSE, pool);
+      tmp_txtb = svn_wc__text_base_path (base_name, TRUE, pool);
 
       if (! is_locally_modified)
         {
@@ -1490,7 +1489,7 @@ svn_wc_install_file (const char *file_path,
      a retranslation of the working file. */
   if ((! new_text_path) && magic_props_changed)
     {
-      const char *tmptext = svn_wc__text_base_path (base_name, 1, pool);
+      const char *tmptext = svn_wc__text_base_path (base_name, TRUE, pool);
 
       /* A log command which copies and DEtranslates the working file
          to a tmp-text-base. */
@@ -1636,7 +1635,7 @@ svn_wc_install_file (const char *file_path,
 
   /* The log is ready to run.  Close it and run it! */
   SVN_ERR (svn_wc__close_adm_file (log_fp, parent_dir, SVN_WC__ADM_LOG,
-                                   1, /* sync */ pool));
+                                   TRUE, /* sync */ pool));
   SVN_ERR (svn_wc__run_log (parent_dir, pool));
 
   /* Now that the file's text, props, and entries are fully installed,
@@ -1673,7 +1672,7 @@ close_file (void *file_baton)
 
   /* window-handler assembles new pristine text in .svn/tmp/text-base/  */
   if (fb->text_changed)
-    new_text_path = svn_wc__text_base_path (fb->path, 1, fb->pool);
+    new_text_path = svn_wc__text_base_path (fb->path, TRUE, fb->pool);
 
   if (fb->prop_changed)
     propchanges = fb->propchanges;
@@ -1766,10 +1765,10 @@ make_editor (const char *anchor,
   eb->pool            = subpool;
   eb->is_checkout     = is_checkout;
   eb->target_revision = target_revision;
-  eb->ancestor_url    = ancestor_url;  /* ### Why not copied? */
-  eb->switch_url      = switch_url;    /* ### Why not copied? */
-  eb->anchor          = anchor;        /* ### Why not copied? */
-  eb->target          = target;        /* ### Why not copied? */
+  eb->ancestor_url    = ancestor_url;
+  eb->switch_url      = switch_url;
+  eb->anchor          = anchor;
+  eb->target          = target;
   eb->recurse         = recurse;
   eb->externals_old   = apr_hash_make (eb->pool);
   eb->externals_new   = apr_hash_make (eb->pool);
