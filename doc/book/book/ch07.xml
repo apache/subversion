@@ -1545,7 +1545,7 @@ crawl_dir (apr_array_header_t *files,
         community having already decided on a particular itch they
         would like to scratch.  But by watching the developer
         discussion lists, you might see mentions of existing bugs or
-        feature requestss fly by that particularly interest
+        feature requests fly by that particularly interest
         you.  Also, a great place to look for outstanding, unclaimed
         tasks is the Issue Tracking database on the Subversion
         website.  There you will find the current list of known bugs
