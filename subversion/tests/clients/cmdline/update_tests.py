@@ -310,10 +310,9 @@ def update_missing(sbox):
   E_path = os.path.join(wc_dir, 'A', 'B', 'E')
   H_path = os.path.join(wc_dir, 'A', 'D', 'H')
 
-  ### FIXME run_and_verify_update doesn't appear to understand 'Restored'
-  ### feedback
-  #os.remove(mu_path)
-  #os.remove(rho_path)
+  # remove two files to verify that they get restored
+  os.remove(mu_path)
+  os.remove(rho_path)
 
   ### FIXME I think directories work because they generate 'A'
   ### feedback, is this the correct feedback?
@@ -322,8 +321,8 @@ def update_missing(sbox):
 
   # Create expected output tree for an update of the missing items by name
   expected_output = svntest.wc.State(wc_dir, {
-    #'A/mu'        : Item(status='A '),
-    #'A/D/G/rho'   : Item(status='A '),
+    'A/mu'        : Item(verb='Restored'),
+    'A/D/G/rho'   : Item(verb='Restored'),
     'A/B/E' : Item(status='A '),
     'A/B/E/alpha' : Item(status='A '),
     'A/B/E/beta' : Item(status='A '),

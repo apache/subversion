@@ -104,8 +104,10 @@ class SVNTypeMismatch(SVNTreeError):
 # depending on the parsing context:
 
 #   - in the 'svn co/up' use-case, each line of output starts with two
-#     characters from the set of (A, D, G, U, C, _).  This status code
-#     is stored in a attribute named 'status'.
+#     characters from the set of (A, D, G, U, C, _) or 'Restored'.  The
+#     status code is stored in a attribute named 'status'.  In the case
+#     of a restored file, the word 'Restored' is stored in an attribute
+#     named 'verb'.
 
 #   - in the 'svn ci/im' use-case, each line of output starts with one
 #      of the words (Adding, Deleting, Sending).  This verb is stored in
@@ -561,14 +563,24 @@ def build_tree_from_checkout(lines):
   "Return a tree derived by parsing the output LINES from 'co' or 'up'."
   
   root = SVNTreeNode(root_node_name)
-  rm = re.compile ('^([MAGCUD_ ][MAGCUD_ ])\s+(.+)')
+  rm1 = re.compile ('^([MAGCUD_ ][MAGCUD_ ])\s+(.+)')
+  # There may be other verbs we need to match, in addition to
+  # "Restored".  If so, add them as alternatives in the first match
+  # group below.
+  rm2 = re.compile ('^(Restored)\s+\'(.+)\'')
   
   for line in lines:
-    match = rm.search(line)
+    match = rm1.search(line)
     if match and match.groups():
       new_branch = create_from_path(match.group(2), None, {},
                                     {'status' : match.group(1)})
       root.add_child(new_branch)
+    else:
+      match = rm2.search(line)
+      if match and match.groups():
+        new_branch = create_from_path(match.group(2), None, {},
+                                      {'verb' : match.group(1)})
+        root.add_child(new_branch)
 
   return root
 
