@@ -362,7 +362,7 @@ def receive_copy_in_update(sbox):
 #----------------------------------------------------------------------
 
 # Regression test for issue #683.  In particular, this bug prevented
-# us from running 'svn cp -rN src_URL dst_URL' as a means of
+# us from running 'svn cp -r N src_URL dst_URL' as a means of
 # resurrecting a deleted directory.  Also, the final 'update' at the
 # end of this test was uncovering a ghudson 'deleted' edge-case bug.
 # (In particular, re-adding G to D, when D already had a 'deleted'
@@ -404,11 +404,11 @@ def resurrect_deleted_dir(sbox):
                                             wc_dir):
     return 1
 
-  # Use 'svn cp -r1 URL URL' to resurrect the deleted directory, where
+  # Use 'svn cp -r 1 URL URL' to resurrect the deleted directory, where
   # the two URLs are identical.  This used to trigger a failure.  
   url = svntest.main.test_area_url + '/' \
         + svntest.main.current_repo_dir + '/A/D/G'
-  outlines, errlines = svntest.main.run_svn(None, 'cp', '-r1', url, url,
+  outlines, errlines = svntest.main.run_svn(None, 'cp', '-r', '1', url, url,
                                             '-m', 'logmsg')
   if errlines:
     return 1

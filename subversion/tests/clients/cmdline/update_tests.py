@@ -702,7 +702,8 @@ def update_delete_modified_files(sbox):
     return 1
 
   # Backdate to restore deleted items
-  stdout_lines, stderr_lines = svntest.main.run_svn(None, 'up', '-r1', wc_dir)
+  stdout_lines, stderr_lines = svntest.main.run_svn(None, 'up', '-r', '1',
+                                                    wc_dir)
   if len(stderr_lines) != 0:
     print "backdating failed"
     return 1
@@ -800,7 +801,7 @@ def update_after_add_rm_deleted(sbox):
 
   # Although parent dir is already at rev 1, the "deleted" state will cause
   # alpha and F to be restored in the WC when updated to rev 1
-  outlines, errlines = svntest.main.run_svn(None, 'up', '-r1', wc_dir)
+  outlines, errlines = svntest.main.run_svn(None, 'up', '-r', '1', wc_dir)
   if errlines:
     return 1
   expected_status.add({
@@ -883,7 +884,7 @@ def update_replace_dir(sbox):
   #  return 1
 
   # Update to revision 1 replaces the directory
-  outlines, errlines = svntest.main.run_svn(None, 'up', '-r1', wc_dir)
+  outlines, errlines = svntest.main.run_svn(None, 'up', '-r', '1', wc_dir)
   if errlines:
     return 1
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
@@ -924,7 +925,7 @@ def update_single_file(sbox):
   was_cwd = os.getcwd()
   os.chdir(os.path.join(wc_dir, 'A'))
   ### Can't get run_and_verify_update to work having done the chdir.
-  outlines, errlines = svntest.main.run_svn(None, 'up', '-r1', 'mu')
+  outlines, errlines = svntest.main.run_svn(None, 'up', '-r', '1', 'mu')
   os.chdir(was_cwd)
   if errlines:
     print "update failed"

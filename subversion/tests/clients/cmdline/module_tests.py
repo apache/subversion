@@ -73,7 +73,7 @@ def externals_test_setup(sbox):
   The arrangement of the externals in the first repository is:
 
      /A/B/     ==>  exdir_G       <schema>:///<other_repos>/A/D/G
-                    exdir_H  -r1  <schema>:///<other_repos>/A/D/H
+                    exdir_H  -r 1 <schema>:///<other_repos>/A/D/H
 
      /A/D/     ==>  exdir_A          <schema>:///<other_repos>/A
                     exdir_A/G        <schema>:///<other_repos>/A/D/G
@@ -149,7 +149,7 @@ def externals_test_setup(sbox):
   # Set up the externals properties on A/B/ and A/D/.
   externals_desc = \
            "exdir_G       " + os.path.join(other_repo_url, "A/D/G") + "\n" + \
-           "exdir_H  -r1  " + os.path.join(other_repo_url, "A/D/H") + "\n"
+           "exdir_H  -r 1 " + os.path.join(other_repo_url, "A/D/H") + "\n"
 
   tmp_f = os.tempnam(wc_init_dir, 'tmp')
   svntest.main.file_append(tmp_f, externals_desc)
@@ -672,7 +672,7 @@ def modify_and_update_receive_new_external(sbox):
   B_path = os.path.join(wc_dir, "A/B")
   externals_desc = \
           "exdir_G       " + os.path.join(other_repo_url, "A/D/G") + "\n" + \
-          "exdir_H  -r1  " + os.path.join(other_repo_url, "A/D/H") + "\n" + \
+          "exdir_H  -r 1 " + os.path.join(other_repo_url, "A/D/H") + "\n" + \
           "exdir_Z       " + os.path.join(other_repo_url, "A/D/H") + "\n"
 
   tmp_f = os.tempnam()

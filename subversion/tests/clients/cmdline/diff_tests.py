@@ -102,7 +102,7 @@ def diff_check_repo_subset(wc_dir, repo_subset, check_fn, do_diff_r):
     return 1
 
   if do_diff_r:
-    diff_output, err_output = svntest.main.run_svn(None, 'diff', '-rHEAD',
+    diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', 'HEAD',
                                                    repo_subset)
     if check_fn(diff_output):
       os.chdir(was_cwd)
@@ -167,7 +167,7 @@ def diff_check_add_a_file_repo_subset(wc_dir):
     return 1
   
   repo_subset = os.path.join('A', 'B', 'E', 'theta')
-  ### TODO: diff -rHEAD doesn't work for added file
+  ### TODO: diff -r HEAD doesn't work for added file
   if diff_check_repo_subset(wc_dir, repo_subset, check_add_a_file, 0):
     return 1
 
@@ -208,13 +208,13 @@ def diff_check_add_a_file_in_a_subdir_repo_subset(wc_dir):
   "diff and check add a file in a subdir for a repository subset"
 
   repo_subset = os.path.join('A', 'B', 'T')
-  ### TODO: diff -rHEAD doesn't work for added subdir
+  ### TODO: diff -r HEAD doesn't work for added subdir
   if diff_check_repo_subset(wc_dir, repo_subset,
                             check_add_a_file_in_a_subdir, 0):
     return 1
   
   repo_subset = os.path.join('A', 'B', 'T', 'phi')
-  ### TODO: diff -rHEAD doesn't work for added file in subdir
+  ### TODO: diff -r HEAD doesn't work for added file in subdir
   if diff_check_repo_subset(wc_dir, repo_subset,
                             check_add_a_file_in_a_subdir, 0):
     return 1
@@ -275,7 +275,7 @@ def change_diff_commit_diff(wc_dir, revision, change_fn, check_fn):
   was_cwd = os.getcwd()
   os.chdir(wc_dir)
 
-  svntest.main.run_svn(None, 'up', '-rHEAD')
+  svntest.main.run_svn(None, 'up', '-r', 'HEAD')
 
   change_fn()
 
@@ -286,7 +286,7 @@ def change_diff_commit_diff(wc_dir, revision, change_fn, check_fn):
     return 1
 
   # diff with revision runs an editor
-  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-rHEAD')
+  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', 'HEAD')
   if check_fn(diff_output):
     os.chdir(was_cwd)
     return 1
@@ -478,19 +478,19 @@ def diff_non_recursive(sbox):
   # recursively, there is only one change even though D is the anchor
   
   # full diff has three changes
-  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r1',
+  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '1',
                                                  os.path.join(wc_dir, 'A', 'D'))
   if count_diff_output(diff_output) != 3:
     return 1
 
   # non-recursive has one change
-  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r1', '-N',
+  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '1', '-N',
                                                  os.path.join(wc_dir, 'A', 'D'))
   if count_diff_output(diff_output) != 1:
     return 1
 
   # diffing a directory doesn't pick up other diffs in the anchor
-  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r1',
+  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '1',
                                                  os.path.join(wc_dir,
                                                               'A', 'D', 'G'))
   if count_diff_output(diff_output) != 1:
@@ -580,37 +580,37 @@ def diff_pure_repository_update_a_file(sbox):
   update_added_file()
   svntest.main.run_svn(None, 'ci', '-m', 'log msg')
 
-  svntest.main.run_svn(None, 'up', '-r2')
+  svntest.main.run_svn(None, 'up', '-r', '2')
   os.chdir(was_cwd)
 
   url = svntest.main.current_repo_url
 
-  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r1:2', url)
+  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '1:2', url)
   if check_update_a_file(diff_output): return 1
 
   os.chdir(wc_dir)
-  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r1:2')
+  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '1:2')
   os.chdir(was_cwd)
   if check_update_a_file(diff_output): return 1
 
-  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r2:3', url)
+  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '2:3', url)
   if check_add_a_file_in_a_subdir(diff_output): return 1
 
   os.chdir(wc_dir)
-  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r2:3')
+  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '2:3')
   os.chdir(was_cwd)
   if check_add_a_file_in_a_subdir(diff_output): return 1
 
-  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r4:5', url)
+  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '4:5', url)
   if check_update_added_file(diff_output): return 1
 
   os.chdir(wc_dir)
-  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r4:5')
+  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '4:5')
   os.chdir(was_cwd)
   if check_update_added_file(diff_output): return 1
 
   os.chdir(wc_dir)
-  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-rhead')
+  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', 'head')
   os.chdir(was_cwd)
   if check_add_a_file_in_a_subdir_reverse(diff_output): return 1
 
@@ -633,13 +633,13 @@ def diff_only_property_change(sbox):
 
   result = 0
 
-  output, errput = svntest.main.run_svn(None, 'diff', '-r1:2')
+  output, errput = svntest.main.run_svn(None, 'diff', '-r', '1:2')
   if len (errput) > 0:
     print "error forward diffing a prop change"
     print errput
     return 1
 
-  output, errput = svntest.main.run_svn(None, 'diff', '-r2:1')
+  output, errput = svntest.main.run_svn(None, 'diff', '-r', '2:1')
   if len (errput) > 0:
     print "error reverse diffing a prop change"
     print errput

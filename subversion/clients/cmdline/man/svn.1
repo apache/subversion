@@ -182,16 +182,16 @@ descent into subdirectories.
 Compares the working copy version of the file with current repository
 version.
 
-\fBexample:\fP svn diff -rHEAD README
+\fBexample:\fP svn diff -r HEAD README
 
 Compares the working copy with most recent repository version.
 
-\fBexample:\fP svn diff -r123:456 README
+\fBexample:\fP svn diff -r 123:456 README
 
 Compares revisions 123 and 456 of the file in the repository.
 
 \fBexample:\fP
-  svn diff -r123:456 http://rep.com/repo/README
+  svn diff -r 123:456 http://rep.com/repo/README
 
 Compare revisions 123 and 456 of the file in the repository without
 the need for a working copy.
@@ -267,7 +267,7 @@ option must be passed to identify two versions of PATH1, for example:
 .in +0.2i
 .ft B
 .nf
-svn merge -r4:5 http://ex.com/repos/proj
+svn merge -r 4:5 http://ex.com/repos/proj
 .fi
 .ft P
 .in -0.2i
@@ -338,8 +338,8 @@ relative directory path, optional revision flags, and an URL.  For example :
 .in +0.2i
 .ft B
 .nf
-foo            http://ex.com/repos/zig
-foo/bar -r1234 http://ex.com/repos/zag
+foo             http://ex.com/repos/zig
+foo/bar -r 1234 http://ex.com/repos/zag
 .fi
 .ft P
 .in -0.2i

@@ -1256,7 +1256,7 @@ def commit_add_file_twice(sbox):
     return 1
 
   # Update to state before commit
-  svntest.main.run_svn(None, 'up', '-r1', wc_dir)
+  svntest.main.run_svn(None, 'up', '-r', '1', wc_dir)
 
   # Create the file again
   gloo_path = os.path.join(wc_dir, 'A', 'D', 'H', 'gloo') 
