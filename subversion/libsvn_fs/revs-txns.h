@@ -30,6 +30,26 @@
 extern "C" {
 #endif /* __cplusplus */
 
+
+
+/* The private structure underlying the public svn_fs_txn_t typedef.  */
+
+struct svn_fs_txn_t
+{
+  /* The filesystem to which this transaction belongs.  */
+  svn_fs_t *fs;
+
+  /* The revision on which this transaction is based, or
+     SVN_INVALID_REVISION if the transaction is not based on a
+     revision at all. */
+  svn_revnum_t base_rev;
+
+  /* The ID of this transaction --- a null-terminated string.
+     This is the key into the `transactions' table.  */
+  const char *id;
+};
+
+
 
 /*** Revisions ***/
 
