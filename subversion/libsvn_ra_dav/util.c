@@ -276,8 +276,7 @@ svn_ra_dav__parsed_request(ne_session *sess,
   int expected_code;
   const char *msg;
   svn_error_t *err = SVN_NO_ERROR;
-  svn_ra_ne_session_baton_t *sess_baton =
-    ne_get_session_private(sess, SVN_RA_NE_SESSION_ID);
+  svn_ra_session_t *ras = ne_get_session_private(sess, SVN_RA_NE_SESSION_ID);
 
   /* create/prep the request */
   req = ne_request_create(sess, method, url);
@@ -321,7 +320,7 @@ svn_ra_dav__parsed_request(ne_session *sess,
 
   /* Register the "main" accepter and body-reader with the request --
      the one to use when the HTTP status is 2XX */
-  if (sess_baton->compression)
+  if (ras->compression)
     {
       decompress_main = ne_decompress_reader(req, ne_accept_2xx,
                                              ne_xml_parse_v, success_parser);
@@ -335,7 +334,7 @@ svn_ra_dav__parsed_request(ne_session *sess,
 
   /* Register the "error" accepter and body-reader with the request --
      the one to use when HTTP status is *not* 2XX */
-  if (sess_baton->compression)
+  if (ras->compression)
     {
       decompress_err = ne_decompress_reader(req, ra_dav_error_accepter,
                                             ne_xml_parse_v, error_parser);

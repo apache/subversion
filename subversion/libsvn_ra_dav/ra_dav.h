@@ -55,19 +55,15 @@ typedef struct {
 
   svn_auth_iterstate_t *auth_iterstate; /* state of authentication retries */
 
+  svn_boolean_t compression;            /* should we use http compression? */
   const char *uuid;                     /* repository UUID */
 } svn_ra_session_t;
 
 
-/* A baton which is attached to Neon session's to hold session-related
-   private data. */
-typedef struct {
-  svn_boolean_t compression;            /* should we use http compression? */
-} svn_ra_ne_session_baton_t;
-
 /* Id used with ne_set_session_private() and ne_get_session_private()
-   to retrieve the associated svn_ra_ne_session_baton_t baton. */
+   to retrieve the userdata (which is currently the RA session baton!) */
 #define SVN_RA_NE_SESSION_ID   "SVN"
+
 
 #ifdef SVN_DEBUG
 #define DEBUG_CR "\n"
