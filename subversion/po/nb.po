@@ -55,7 +55,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2005-03-27 01:27+0100\n"
+"POT-Creation-Date: 2005-03-29 10:35+0200\n"
 "PO-Revision-Date: 2004-07-13 11:59+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Norwegian <dev@subversion.tigris.org>\n"
@@ -2530,11 +2530,13 @@ msgid "Read access denied for root of edit"
 msgstr "Lesetilgang er nektet for redigeringens opphav"
 
 #: include/svn_error_codes.h:774
-msgid "Item is not readable."
+#, fuzzy
+msgid "Item is not readable"
 msgstr "Element er ikke lesbart."
 
 #: include/svn_error_codes.h:779
-msgid "Item is partially readable."
+#, fuzzy
+msgid "Item is partially readable"
 msgstr "Element er delvis lesbart."
 
 #: include/svn_error_codes.h:786
@@ -2800,7 +2802,8 @@ msgid "'%s' is already a working copy for a different URL"
 msgstr "«%s» er allerede en arbeidskopi, for en annen URL"
 
 #: libsvn_client/checkout.c:154
-msgid "; run 'svn update' to complete it."
+#, fuzzy
+msgid "; run 'svn update' to complete it"
 msgstr "; kjør «svn update» for å fullføre den."
 
 #: libsvn_client/checkout.c:163
@@ -2904,7 +2907,7 @@ msgstr "Objekt «%s» for innsending har kopimerke, men ingen copyfrom-URL\n"
 #: libsvn_client/log.c:129 libsvn_client/prop_commands.c:213
 #: libsvn_client/prop_commands.c:446 libsvn_client/prop_commands.c:602
 #: libsvn_client/prop_commands.c:951 libsvn_client/ra.c:180
-#: libsvn_client/revisions.c:89 libsvn_client/status.c:246
+#: libsvn_client/revisions.c:89 libsvn_client/status.c:247
 #: libsvn_client/switch.c:104 libsvn_wc/adm_ops.c:2186
 #: libsvn_wc/adm_ops.c:2212 libsvn_wc/adm_ops.c:2249 libsvn_wc/copy.c:448
 #: libsvn_wc/entries.c:1455 libsvn_wc/entries.c:1907 libsvn_wc/props.c:281
@@ -3207,22 +3210,24 @@ msgstr "«%s» er ikke låst i denne arbeidskopien"
 msgid "'%s' is not locked"
 msgstr "«%s» er ikke låst"
 
-#: libsvn_client/locking_commands.c:344 libsvn_fs/fs-loader.c:805
-msgid "Lock comment has illegal characters."
+#: libsvn_client/locking_commands.c:344 libsvn_fs/fs-loader.c:806
+#: libsvn_ra/ra_loader.c:506
+msgid "Lock comment has illegal characters"
 msgstr "Låsekommentaren inneholder ulovlige tegn"
 
 #: libsvn_client/log.c:72
 msgid "Missing required revision specification"
 msgstr "Mangler påkrevet revisjonsspesifikasjon"
 
-#: libsvn_client/log.c:135 libsvn_client/status.c:251
+#: libsvn_client/log.c:135 libsvn_client/status.c:252
 #: libsvn_client/update.c:85
 #, c-format
 msgid "Entry '%s' has no URL"
 msgstr "Posten «%s» mangler nettadresse"
 
 #: libsvn_client/log.c:321
-msgid "No commits in repository."
+#, fuzzy
+msgid "No commits in repository"
 msgstr "Ingen innsendinger i depotet"
 
 #: libsvn_client/ls.c:128 libsvn_client/ls.c:135
@@ -4249,10 +4254,6 @@ msgstr ""
 msgid "Unrecognized URL scheme for '%s'"
 msgstr "Ukjent URL-skjema for «%s»"
 
-#: libsvn_ra/ra_loader.c:506
-msgid "Lock comment has illegal characters"
-msgstr "Låsekommentaren inneholder ulovlige tegn"
-
 #: libsvn_ra/ra_loader.c:574
 #, c-format
 msgid "  - handles '%s' schema\n"
@@ -4534,28 +4535,28 @@ msgstr ""
 msgid "Please upgrade the server to 0.19 or later"
 msgstr "Oppgrader tjeneren til versjon 0.19 eller senere"
 
-#: libsvn_ra_dav/session.c:1027 libsvn_ra_dav/session.c:1156
+#: libsvn_ra_dav/session.c:1016 libsvn_ra_dav/session.c:1146
 msgid "Failed to parse URI"
 msgstr "Klarte ikke å tolke URI"
 
-#: libsvn_ra_dav/session.c:1050
+#: libsvn_ra_dav/session.c:1039
 msgid "Lock request failed"
 msgstr "Låseforespørsel feilet"
 
-#: libsvn_ra_dav/session.c:1171
+#: libsvn_ra_dav/session.c:1161
 #, c-format
 msgid "'%s' is not locked in the repository"
 msgstr "«%s» er ikke låst i depotet"
 
-#: libsvn_ra_dav/session.c:1208
+#: libsvn_ra_dav/session.c:1198
 msgid "Unlock request failed"
 msgstr "«Lås opp»-forespørsel feilet"
 
-#: libsvn_ra_dav/session.c:1390
+#: libsvn_ra_dav/session.c:1382
 msgid "Failed to fetch lock information"
 msgstr "Klarte ikke å hente låseinformasjon"
 
-#: libsvn_ra_dav/session.c:1465
+#: libsvn_ra_dav/session.c:1457
 #, c-format
 msgid "Unsupported RA loader version (%d) for ra_dav"
 msgstr "Ustøttet versjon av RA-laster (%d) for ra_dav"
@@ -4872,27 +4873,27 @@ msgstr "Misdannet feilliste"
 msgid "Unknown status '%s' in command response"
 msgstr "Ukjent status «%s» i kommandorespons"
 
-#: libsvn_repos/commit.c:117
+#: libsvn_repos/commit.c:121
 #, c-format
 msgid "Out of date: '%s' in transaction '%s'"
 msgstr "Utdatert: «%s» i transaksjon «%s»"
 
-#: libsvn_repos/commit.c:224 libsvn_repos/commit.c:358
+#: libsvn_repos/commit.c:248 libsvn_repos/commit.c:382
 #, c-format
 msgid "Got source path but no source revision for '%s'"
 msgstr "Fikk kildesti, men ingen kilderevisjon for «%s»"
 
-#: libsvn_repos/commit.c:248 libsvn_repos/commit.c:382
+#: libsvn_repos/commit.c:272 libsvn_repos/commit.c:406
 #, c-format
 msgid "Source url '%s' is from different repository"
 msgstr "Kilde-URL «%s» er fra et forskjellig depot"
 
-#: libsvn_repos/commit.c:304
+#: libsvn_repos/commit.c:328
 #, c-format
 msgid "Path '%s' not present"
 msgstr "Stien «%s» ikke til stede"
 
-#: libsvn_repos/commit.c:488
+#: libsvn_repos/commit.c:512
 #, c-format
 msgid ""
 "Checksum mismatch for resulting fulltext\n"
@@ -4966,8 +4967,8 @@ msgstr ""
 "og kan tyde på en feil i klienten din"
 
 #: libsvn_repos/fs-wrap.c:296
-#, c-format
-msgid "Write denied:  not authorized to read all of revision %ld."
+#, fuzzy, c-format
+msgid "Write denied:  not authorized to read all of revision %ld"
 msgstr "Skriving nektet: Er ikke autorisert til å lese alt i revisjon %ld."
 
 #: libsvn_repos/fs-wrap.c:481
@@ -5261,7 +5262,8 @@ msgid "Invalid end revision %ld"
 msgstr "Ugyldig sluttrevisjon %ld"
 
 #: libsvn_repos/rev_hunt.c:314
-msgid "Unreadable path encountered; access denied."
+#, fuzzy
+msgid "Unreadable path encountered; access denied"
 msgstr "Uleselig sti funnet; tilgang nektes."
 
 #: libsvn_subr/config.c:632
@@ -5411,8 +5413,8 @@ msgid "Can't set file '%s' read-write"
 msgstr "Kan ikke gjøre «%s» skrivbar"
 
 #: libsvn_subr/io.c:1015
-#, c-format
-msgid "Can't get default file perms for file at '%s' (file stat error"
+#, fuzzy, c-format
+msgid "Can't get default file perms for file at '%s' (file stat error)"
 msgstr ""
 "Klarer ikke å få tak i standard filrettigheter for filen i «%s» («file stat»-"
 "feil"
@@ -6216,7 +6218,7 @@ msgstr "Fant «%s» uventet: Filstien er merket som savnet"
 msgid "Working copy '%s' locked"
 msgstr "Arbeidskopien «%s» er låst"
 
-#: libsvn_wc/lock.c:279 libsvn_wc/lock.c:820
+#: libsvn_wc/lock.c:279
 #, c-format
 msgid "Path '%s' ends in '%s', which is unsupported for this operation"
 msgstr ""
@@ -6227,17 +6229,17 @@ msgstr ""
 msgid "Working copy '%s' is missing or not locked"
 msgstr "Arbeidskopien «%s» mangler eller er ikke låst"
 
-#: libsvn_wc/lock.c:1085
+#: libsvn_wc/lock.c:1078
 #, c-format
 msgid "Write-lock stolen in '%s'"
 msgstr "Skrivelåsen er stjålet i «%s»"
 
-#: libsvn_wc/lock.c:1093
+#: libsvn_wc/lock.c:1086
 #, c-format
 msgid "No write-lock in '%s'"
 msgstr "Ingen skrivelås i «%s»"
 
-#: libsvn_wc/lock.c:1115
+#: libsvn_wc/lock.c:1108
 #, c-format
 msgid "Lock file '%s' is not a regular file"
 msgstr "Låsfilen «%s» er ikke en vanlig fil"
@@ -6599,7 +6601,7 @@ msgid "'%s' is an URL when it should be a path"
 msgstr "«%s» er en nettadresse men skulle vært en filsti"
 
 #: svnadmin/main.c:233 svndumpfilter/main.c:761 svnlook/main.c:96
-#: svnserve/main.c:111 svnversion/main.c:212
+#: svnserve/main.c:110 svnversion/main.c:212
 msgid "show version information"
 msgstr "vis versjonsinformasjon"
 
@@ -7501,60 +7503,60 @@ msgstr ""
 "Delkommandoen «%s» tar ikke valget «%s»\n"
 "Skriv «svnlook help %s» for bruk.\n"
 
-#: svnserve/main.c:102
+#: svnserve/main.c:101
 msgid "daemon mode"
 msgstr "tjenestemodus"
 
-#: svnserve/main.c:104
+#: svnserve/main.c:103
 msgid "listen port (for daemon mode)"
 msgstr "lytteport (for tjenestemodus)"
 
-#: svnserve/main.c:106
+#: svnserve/main.c:105
 msgid "listen hostname or IP address (for daemon mode)"
 msgstr "tjenernavn eller IP-adresse for lytting (for tjenestemodus)"
 
-#: svnserve/main.c:108
+#: svnserve/main.c:107
 msgid "run in foreground (useful for debugging)"
 msgstr "kjør i forgrunnen (nyttig for avlusing)"
 
-#: svnserve/main.c:109 svnversion/main.c:211
+#: svnserve/main.c:108 svnversion/main.c:211
 msgid "display this help"
 msgstr "vis denne hjelpen"
 
-#: svnserve/main.c:112
+#: svnserve/main.c:111
 msgid "inetd mode"
 msgstr "inetd-modus"
 
-#: svnserve/main.c:113
+#: svnserve/main.c:112
 msgid "root of directory to serve"
 msgstr "rot til katalogen som deles ut"
 
-#: svnserve/main.c:114
+#: svnserve/main.c:113
 msgid "deprecated; use repository config file"
 msgstr "avlegs; bruk konfigurasjonsfil for depot"
 
-#: svnserve/main.c:115
+#: svnserve/main.c:114
 msgid "tunnel mode"
 msgstr "tunnelmodus"
 
-#: svnserve/main.c:117
+#: svnserve/main.c:116
 msgid "tunnel username (default is current uid's name)"
 msgstr "tunnelbrukernavn (Standard: Navn for gjeldende UID)"
 
-#: svnserve/main.c:119
+#: svnserve/main.c:118
 msgid "use threads instead of fork"
 msgstr "bruk tråder istedenfor tvillingprosesser/fork"
 
-#: svnserve/main.c:121
+#: svnserve/main.c:120
 msgid "listen once (useful for debugging)"
 msgstr "lytt én gang (nyttig for avlusing)"
 
-#: svnserve/main.c:132
+#: svnserve/main.c:131
 #, c-format
 msgid "Type '%s --help' for usage.\n"
 msgstr "Skriv «%s --help» for bruk.\n"
 
-#: svnserve/main.c:141
+#: svnserve/main.c:140
 msgid ""
 "Usage: svnserve [options]\n"
 "\n"
@@ -7564,7 +7566,7 @@ msgstr ""
 "\n"
 "Lovlige valg:\n"
 
-#: svnserve/main.c:336
+#: svnserve/main.c:340
 msgid ""
 "Warning: -R is deprecated.\n"
 "Anonymous access is now read-only by default.\n"
@@ -7582,45 +7584,46 @@ msgstr ""
 "  auth-access = read|write|none (standard: write)\n"
 "Setter all tilgang til skrivebeskyttet i denne omgang\n"
 
-#: svnserve/main.c:358
+#: svnserve/main.c:362
 msgid "Option --tunnel-user is only valid in tunnel mode.\n"
 msgstr "Valget --tunnel-user er bare gyldig i tunnelmodus.\n"
 
-#: svnserve/main.c:365
-msgid "You must specify one of -d, -i, -t or -X.\n"
+#: svnserve/main.c:369
+#, fuzzy
+msgid "You must specify exactly one of -d, -i, -t or -X.\n"
 msgstr "En av disse må spesifiseres: -d, -i, -t eller -X.\n"
 
-#: svnserve/main.c:406
+#: svnserve/main.c:410
 #, c-format
 msgid "Can't create server socket: %s\n"
 msgstr "Kan ikke opprette tjenersokkel: %s\n"
 
-#: svnserve/main.c:423
+#: svnserve/main.c:427
 #, c-format
 msgid "Can't get address info: %s\n"
 msgstr "Kan ikke hente adresseinfo: %s\n"
 
-#: svnserve/main.c:437
+#: svnserve/main.c:441
 #, c-format
 msgid "Can't bind server socket: %s\n"
 msgstr "Kan ikke binde tjenersokkel: %s\n"
 
-#: svnserve/main.c:480
+#: svnserve/main.c:484
 #, c-format
 msgid "Can't accept client connection: %s\n"
 msgstr "Kan ikke akseptere klienttilkobling: %s\n"
 
-#: svnserve/main.c:535
+#: svnserve/main.c:539
 #, c-format
 msgid "Can't create threadattr: %s\n"
 msgstr "Kan ikke opprette trådegenskap: %s\n"
 
-#: svnserve/main.c:544
+#: svnserve/main.c:548
 #, c-format
 msgid "Can't set detached state: %s\n"
 msgstr "Kan ikke kjøre i bakgrunnen: %s\n"
 
-#: svnserve/main.c:558
+#: svnserve/main.c:562
 #, c-format
 msgid "Can't create thread: %s\n"
 msgstr "Kan ikke opprette tråd: %s\n"
@@ -7704,3 +7707,6 @@ msgstr "eksportert%s"
 #, c-format
 msgid "'%s' not versioned, and not exported\n"
 msgstr "«%s» er verken versjonert eller eksportert\n"
+
+#~ msgid "Lock comment has illegal characters."
+#~ msgstr "Låsekommentaren inneholder ulovlige tegn"
