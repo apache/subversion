@@ -346,7 +346,7 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
         "Run the Berkeley DB recovery procedure on a repository.  Do\n"
         "this if you've been getting errors indicating that recovery\n"
         "ought to be run.  Recovery requires exclusive access and will\n"
-        "exit if the repository is in use by another process.\n\n"),
+        "exit if the repository is in use by another process.\n"),
      {svnadmin__wait} },
 
     {"rmtxns", subcommand_rmtxns, {0},
