@@ -44,7 +44,7 @@ typedef enum svn_errno_t {
   SVN_ERR_MALFORMED_FILE,
   SVN_ERR_INCOMPLETE_DATA,
 
-  /* The xml delta we got was not valid. */
+  /* The xml delta we got was not well-formed. */
   SVN_ERR_MALFORMED_XML,
 
   /* A working copy "descent" crawl came up empty */
