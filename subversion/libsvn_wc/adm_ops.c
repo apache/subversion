@@ -234,7 +234,6 @@ svn_wc_process_committed (const char *path,
                           apr_array_header_t *wcprop_changes,
                           apr_pool_t *pool)
 {
-  apr_status_t apr_err;
   const char *base_name;
   svn_stringbuf_t *logtags;
   apr_file_t *log_fp = NULL;
@@ -382,14 +381,9 @@ svn_wc_process_committed (const char *path,
         }
     }
 
-  apr_err = apr_file_write_full (log_fp, logtags->data, logtags->len, NULL);
-  if (apr_err)
-    {
-      apr_file_close (log_fp);
-      return svn_error_createf (apr_err, NULL,
-                                "Error writing log file for '%s'", 
-                                path);
-    }
+  SVN_ERR_W (svn_io_file_write_full (log_fp, logtags->data, 
+                                     logtags->len, NULL, pool),
+             apr_psprintf (pool, "Error writing log file for '%s'", path));
       
   SVN_ERR (svn_wc__close_adm_file (log_fp, svn_wc_adm_access_path (adm_access),
                                    SVN_WC__ADM_LOG,

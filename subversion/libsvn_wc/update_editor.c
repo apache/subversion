@@ -833,7 +833,6 @@ do_entry_deletion (struct edit_baton *eb,
                    const char *path, 
                    apr_pool_t *pool)
 {
-  apr_status_t apr_err;
   apr_file_t *log_fp = NULL;
   const char *base_name = svn_path_basename (path, pool);
   const char *tgt_rev_str = NULL;
@@ -914,14 +913,10 @@ do_entry_deletion (struct edit_baton *eb,
       eb->target_deleted = TRUE;
     }
 
-  apr_err = apr_file_write_full (log_fp, log_item->data, log_item->len, NULL);
-  if (apr_err)
-    {
-      apr_file_close (log_fp);
-      return svn_error_createf (apr_err, NULL,
-                                "Error writing log file for '%s'",
-                                parent_path);
-    }
+  SVN_ERR_W (svn_io_file_write_full (log_fp, log_item->data, 
+                                     log_item->len, NULL, pool),
+             apr_psprintf (pool, 
+                           "Error writing log file for '%s'", parent_path));
 
   SVN_ERR (svn_wc__close_adm_file (log_fp,
                                    parent_path,
@@ -1198,7 +1193,6 @@ close_directory (void *dir_baton,
     {
       svn_wc_adm_access_t *adm_access;
       apr_file_t *log_fp = NULL;
-      apr_status_t apr_err;
 
       /* to hold log messages: */
       svn_stringbuf_t *entry_accum = svn_stringbuf_create ("", db->pool);
@@ -1299,15 +1293,10 @@ close_directory (void *dir_baton,
       accumulate_wcprops (entry_accum, SVN_WC_ENTRY_THIS_DIR, wc_props, pool);
 
       /* Write our accumulation of log entries into a log file */
-      apr_err = apr_file_write_full (log_fp, entry_accum->data,
-                                     entry_accum->len, NULL);
-      if (apr_err)
-        {
-          apr_file_close (log_fp);
-          return svn_error_createf (apr_err, NULL,
-                                    "Error writing log file for '%s'",
-                                    db->path);
-        }
+      SVN_ERR_W (svn_io_file_write_full (log_fp, entry_accum->data,
+                                         entry_accum->len, NULL, pool),
+                 apr_psprintf (pool, 
+                               "Error writing log file for '%s'", db->path));
 
       /* The log is ready to run, close it. */
       SVN_ERR (svn_wc__close_adm_file (log_fp,
@@ -1791,7 +1780,6 @@ install_file (svn_wc_notify_state_t *content_state,
               apr_pool_t *pool)
 {
   apr_file_t *log_fp = NULL;
-  apr_status_t apr_err;
   char *revision_str = NULL;
   const char *parent_dir, *base_name;
   svn_stringbuf_t *log_accum;
@@ -2254,15 +2242,9 @@ install_file (svn_wc_notify_state_t *content_state,
                            NULL);
 
   /* Write our accumulation of log entries into a log file */
-  apr_err = apr_file_write_full (log_fp, log_accum->data, 
-                                 log_accum->len, NULL);
-  if (apr_err)
-    {
-      apr_file_close (log_fp);
-      return svn_error_createf (apr_err, NULL,
-                                "Error writing log for '%s'.",
-                                file_path);
-    }
+  SVN_ERR_W (svn_io_file_write_full (log_fp, log_accum->data, 
+                                    log_accum->len, NULL, pool),
+             apr_psprintf (pool, "Error writing log for '%s'", file_path));
 
   /* The log is ready to run.  Close it and run it! */
   SVN_ERR (svn_wc__close_adm_file (log_fp, parent_dir, SVN_WC__ADM_LOG,

@@ -214,17 +214,15 @@ append_prop_conflict (apr_file_t *fp,
   /* TODO:  someday, perhaps prefix each conflict_description with a
      timestamp or something? */
   apr_size_t written;
-  apr_status_t status;
   const svn_string_t *conflict_description_native;
 
   SVN_ERR (svn_utf_string_from_utf8 (&conflict_description_native,
                                      conflict_description,
                                      pool));
 
-  status = apr_file_write_full (fp, conflict_description_native->data,
-                                conflict_description_native->len, &written);
-  if (status)
-    return svn_error_create (status, NULL, NULL);
+  SVN_ERR (svn_io_file_write_full (fp, conflict_description_native->data,
+                                   conflict_description_native->len, &written,
+                                   pool));
 
   return SVN_NO_ERROR;
 }
@@ -270,7 +268,6 @@ svn_wc_merge_prop_diffs (svn_wc_notify_state_t *state,
                          svn_boolean_t dry_run,
                          apr_pool_t *pool)
 {
-  apr_status_t apr_err;
   const svn_wc_entry_t *entry;
   const char *parent, *base_name;
   svn_stringbuf_t *log_accum;
@@ -313,14 +310,9 @@ svn_wc_merge_prop_diffs (svn_wc_notify_state_t *state,
 
   if (! dry_run)
     {
-      apr_err = apr_file_write_full (log_fp, log_accum->data, 
-                                     log_accum->len, NULL);
-      if (apr_err)
-        {
-          apr_file_close (log_fp);
-          return svn_error_createf (apr_err, NULL,
-                                    "Error writing log for '%s'", path);
-        }
+      SVN_ERR_W (svn_io_file_write_full (log_fp, log_accum->data, 
+                                         log_accum->len, NULL, pool),
+                 apr_psprintf (pool, "Error writing log for '%s'", path));
 
       SVN_ERR (svn_wc__close_adm_file (log_fp, parent, SVN_WC__ADM_LOG,
                                        1, /* sync */ pool));
