@@ -58,25 +58,33 @@ static int request_auth(void *userdata, const char *realm, int attempt,
   svn_ra_simple_password_authenticator_t *authenticator = NULL;
   svn_ra_session_t *ras = userdata;
 
+  /* No authenticator callback?  Give up. */
+  if (! ras->callbacks->get_authenticator)
+    return -1;
+
+  /* Only use two retries. */
   if (attempt > 1) 
-    {
-      /* Only use two retries. */
-      return -1;
-    }
+    return -1;
 
-  /* ### my only worry is that we're not catching any svn_errors from
-     get_authenticator, get_username, get_password... */
+  /* Get an authenticator object. */
+  if (ras->callbacks->get_authenticator (&a, &auth_baton, 
+                                         svn_ra_auth_simple_password, 
+                                         ras->callback_baton,
+                                         ras->pool))
+    return -1;
 
-  /* pull the username and password from the client */
-  ras->callbacks->get_authenticator (&a, &auth_baton, 
-                                     svn_ra_auth_simple_password, 
-                                     ras->callback_baton, ras->pool);      
+  /* Verify that we have a query callback. */
   authenticator = (svn_ra_simple_password_authenticator_t *) a;      
-  authenticator->get_user_and_pass (&uname, &pword,
-                                    auth_baton, 
-                                    /* possibly force a user-prompt: */
-                                    attempt ? TRUE : FALSE,
-                                    ras->pool);
+  if (! authenticator->get_user_and_pass)
+    return -1;
+
+  /* Use the authenticator to query for a username and password. */
+  if (authenticator->get_user_and_pass (&uname, &pword,
+                                        auth_baton, 
+                                        /* possibly force a user-prompt: */
+                                        attempt ? TRUE : FALSE,
+                                        ras->pool))
+    return -1;
 
   /* ### silently truncates username/password to 256 chars. */
   apr_cpystrn(username, uname, NE_ABUFSIZ);
