@@ -78,8 +78,6 @@ def get_txns(repo_dir):
 
 ######################################################################
 # Tests
-#
-#   Each test must return 0 on success or non-zero on failure.
 
 
 #----------------------------------------------------------------------
@@ -89,14 +87,13 @@ def test_create(sbox):
 
   # This call tests the creation of repository.
   # It also imports to the repository, and checks out from the repository.
-  if sbox.build():
-    return 1
+  sbox.build()
 
   # ### TODO: someday this test should create an empty repo, checkout,
   # ### and then look at the CR value using 'svn st -v'.  We're not
   # ### parsing that value in our status regexp yet anyway.
 
-  return 0  # success
+  # success
 
 
 #----------------------------------------------------------------------
@@ -104,8 +101,7 @@ def test_create(sbox):
 def create_txn(sbox):
   "test 'svnadmin createtxn' subcommand"
 
-  if sbox.build():
-    return 1
+  sbox.build()
 
   wc_dir = sbox.wc_dir
   repo_dir = sbox.repo_dir
@@ -116,9 +112,7 @@ def create_txn(sbox):
   # Look for it by running 'lstxn'.
   tree_list = get_txns(repo_dir)
   if tree_list != ['2']:
-    return 1
-
-  return 0
+    raise svntest.Failure
 
 
 #----------------------------------------------------------------------
@@ -126,8 +120,7 @@ def create_txn(sbox):
 def remove_txn(sbox):
   "test 'svnadmin rmtxns' subcommand"
 
-  if sbox.build():
-    return 1
+  sbox.build()
 
   wc_dir = sbox.wc_dir
   repo_dir = sbox.repo_dir
@@ -142,7 +135,7 @@ def remove_txn(sbox):
   # Look for them by running 'lstxn'.
   tree_list = get_txns(repo_dir)
   if tree_list != ['2', '3', '4', '5', '6']:
-    return 1
+    raise svntest.Failure
 
   # Remove the 2nd and 4th transactions.
   svntest.main.run_svnadmin("rmtxns", repo_dir, "3", "5")
@@ -150,15 +143,13 @@ def remove_txn(sbox):
   # Examine the list of transactions again.
   tree_list = get_txns(repo_dir)
   if tree_list != ['2', '4', '6']:
-    return 1
-
-  return 0
+    raise svntest.Failure
 
 #----------------------------------------------------------------------
 
 def dump_copied_dir(sbox):
   "test 'svnadmin dump' on a copied directory"
-  if sbox.build(): return 1
+  sbox.build()
   wc_dir = sbox.wc_dir
   repo_dir = sbox.repo_dir
 
@@ -168,17 +159,18 @@ def dump_copied_dir(sbox):
   svntest.main.run_svn(None, 'ci', wc_dir, '--quiet', '-m', 'log msg')
 
   output, errput = svntest.main.run_svnadmin("dump", repo_dir)
-  return svntest.actions.compare_and_display_lines(
+  if svntest.actions.compare_and_display_lines(
     "Output of 'svnadmin dump' is unexpected.",
     'STDERR', ["* Dumped revision 0.\n",
                "* Dumped revision 1.\n",
-               "* Dumped revision 2.\n"], errput)
+               "* Dumped revision 2.\n"], errput):
+    raise svntest.Failure
 
 #----------------------------------------------------------------------
 
 def dump_move_dir_modify_child(sbox):
   "test 'svnadmin dump' on modified child of copied directory"
-  if sbox.build(): return 1
+  sbox.build()
   wc_dir = sbox.wc_dir
   repo_dir = sbox.repo_dir
 
@@ -189,11 +181,12 @@ def dump_move_dir_modify_child(sbox):
   svntest.main.run_svn(None, 'ci', wc_dir, '--quiet', '-m', 'log msg')
 
   output, errput = svntest.main.run_svnadmin("dump", repo_dir)
-  return svntest.actions.compare_and_display_lines(
+  if svntest.actions.compare_and_display_lines(
     "Output of 'svnadmin dump' is unexpected.",
     'STDERR', ["* Dumped revision 0.\n",
                "* Dumped revision 1.\n",
-               "* Dumped revision 2.\n"], errput)
+               "* Dumped revision 2.\n"], errput):
+    raise svntest.Failure
 
 #----------------------------------------------------------------------
 
@@ -203,9 +196,10 @@ def dump_quiet(sbox):
     return 1
 
   output, errput = svntest.main.run_svnadmin("dump", sbox.repo_dir, '--quiet')
-  return svntest.actions.compare_and_display_lines(
+  if svntest.actions.compare_and_display_lines(
     "Output of 'svnadmin dump --quiet' is unexpected.",
-    'STDERR', [], errput)
+    'STDERR', [], errput):
+    raise svntest.Failure
 
 
 ########################################################################
