@@ -99,7 +99,7 @@ main (int argc, char **argv)
       return 1;
     }
 
-  err = svn_ra_checkout(ras, "", 1, walker, walk_baton, dir_baton, pool);
+  err = svn_ra_checkout(ras, "", 1, walker, walk_baton, dir_baton);
 
   svn_ra_close(ras);
 
