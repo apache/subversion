@@ -650,9 +650,8 @@ delta_files (struct context *c,
       svn_txdelta_stream_t *delta_stream = NULL;
       unsigned char source_digest[MD5_DIGESTSIZE];
       unsigned char target_digest[MD5_DIGESTSIZE];
-      static const unsigned char zeros_digest[MD5_DIGESTSIZE] = { 0 };
       const char *source_hex_digest = NULL;
-      const char *target_hex_digest = NULL;
+      const char *target_hex_digest;
 
       if (c->text_deltas)
         {
@@ -670,17 +669,14 @@ delta_files (struct context *c,
           SVN_ERR (svn_fs_file_md5_checksum
                    (source_digest, c->source_root, source_path, subpool));
 
-          if (memcmp (source_digest, zeros_digest, MD5_DIGESTSIZE) != 0)
-            source_hex_digest = svn_md5_digest_to_cstring (source_digest,
-                                                           subpool);
-
+          source_hex_digest = svn_md5_digest_to_cstring (source_digest,
+                                                         subpool);
         }
 
       SVN_ERR (svn_fs_file_md5_checksum
                (target_digest, c->target_root, target_path, subpool));
 
-      if (memcmp (target_digest, zeros_digest, MD5_DIGESTSIZE) != 0)
-        target_hex_digest = svn_md5_digest_to_cstring (target_digest, subpool);
+      target_hex_digest = svn_md5_digest_to_cstring (target_digest, subpool);
 
       SVN_ERR (send_text_delta (c, file_baton,
                                 source_hex_digest, target_hex_digest,

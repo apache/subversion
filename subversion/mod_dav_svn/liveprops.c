@@ -471,7 +471,6 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
               || resource->type == DAV_RESOURCE_TYPE_VERSION))
         {
           unsigned char digest[MD5_DIGESTSIZE];
-          static const unsigned char zeros_digest[MD5_DIGESTSIZE] = { 0 };
 
           serr = svn_fs_file_md5_checksum(digest,
                                           resource->info->root.root,
@@ -483,9 +482,9 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
               break;
             }
 
-          if (memcmp (digest, zeros_digest, MD5_DIGESTSIZE) != 0)
-            value = svn_md5_digest_to_cstring (digest, p);
-          else
+          value = svn_md5_digest_to_cstring (digest, p);
+
+          if (! value)
             return DAV_PROP_INSERT_NOTSUPP;
         }
       else
