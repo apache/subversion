@@ -271,7 +271,8 @@ svn_config__sys_config_path (const char **path_p,
     if (res != S_OK)
       return SVN_NO_ERROR;
 
-    *path_p = svn_path_join_many (pool, folder,
+    *path_p = svn_path_join_many (pool,
+                                  svn_path_canonicalize_nts (folder, pool),
                                   SVN_CONFIG__SUBDIRECTORY, fname, NULL);
   }
 
@@ -304,7 +305,8 @@ svn_config__user_config_path (const char **path_p,
     if (res != S_OK)
       return SVN_NO_ERROR;
 
-    *path_p = svn_path_join_many (pool, folder,
+    *path_p = svn_path_join_many (pool,
+                                  svn_path_canonicalize_nts (folder, pool),
                                   SVN_CONFIG__SUBDIRECTORY, fname, NULL);
   }
 
@@ -328,7 +330,8 @@ svn_config__user_config_path (const char **path_p,
     if (apr_err)
       return SVN_NO_ERROR;
     
-    *path_p = svn_path_join_many (pool, homedir,
+    *path_p = svn_path_join_many (pool,
+                                  svn_path_canonicalize_nts (homedir, pool),
                                   SVN_CONFIG__USR_DIRECTORY, fname, NULL);
     
   }
