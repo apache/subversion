@@ -233,6 +233,9 @@ svn_fs_youngest_rev (svn_revnum_t *youngest_p,
 {
   svn_revnum_t youngest;
   struct youngest_rev_args args;
+
+  SVN_ERR (svn_fs__check_fs (fs));
+
   args.youngest_p = &youngest;
   args.fs = fs;
 
@@ -298,6 +301,8 @@ svn_fs_revision_prop (svn_string_t **value_p,
   struct revision_prop_args args;
   svn_string_t *value;
 
+  SVN_ERR (svn_fs__check_fs (fs));
+
   args.value_p = &value;
   args.fs = fs;
   args.rev = rev;
@@ -355,6 +360,8 @@ svn_fs_revision_proplist (apr_hash_t **table_p,
 {
   struct revision_proplist_args args;
   apr_hash_t *table;
+
+  SVN_ERR (svn_fs__check_fs (fs));
 
   args.table_p = &table;
   args.fs = fs;
@@ -488,6 +495,8 @@ svn_fs_change_rev_prop (svn_fs_t *fs,
                         apr_pool_t *pool)
 {
   struct change_rev_prop_args args;
+
+  SVN_ERR (svn_fs__check_fs (fs));
 
   args.fs = fs;
   args.rev = rev;
