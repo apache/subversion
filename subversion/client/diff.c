@@ -69,8 +69,8 @@ svn_cl__print_file_diff (svn_string_t *path,
 
   args[0] = SVN_CLIENT_DIFF;  /* the autoconfiscated system diff program */
   args[1] = "-c";
-  args[2] = path->data;
-  args[3] = pristine_copy_path->data;
+  args[2] = pristine_copy_path->data;
+  args[3] = path->data;
   args[4] = NULL;
 
   /* todo: This printf is NOT "my final answer" -- placeholder for
