@@ -686,16 +686,120 @@
 
     <hr width="80&#37;">
     <h2>Server Requirements</h2>
+    <h3>DAV Methods</h3>
     <p>
-      Retain activity information. Activities have user-specified
-      names, mapping to the server-side records.
+      The server will need to implement the following WebDAV methods
+      for proper operation:
+    </p>
+    <ul>
+      <li><code>MKACTIVITY</code></li>
+      <li><code>CHECKOUT</code></li>
+      <li><code>PROPPATCH</code></li>
+      <li><code>PROPFIND</code></li>
+      <li><code>DELETE</code></li>
+      <li><code>COPY</code></li>
+      <li><code>MERGE</code></li>
+      <li><code>REPORT</code></li>
+      <li><code>LABEL</code></li>
+    </ul>
+    <p>
+      The following "core versioning" methods are not required by
+      Subversion at this time:
+      <code>VERSION-CONTROL</code>,
+      <code>CHECKIN</code>,
+      <code>UNCHECKOUT</code>,
+      and
+      <code>SET-TARGET</code>.
+      The following "advanced versioning" methods are not required by
+      Subversion at this time:
+      <code>MKWORKSPACE</code>,
+      and
+      <code>BASELINE-CONTROL</code>.
+    </p>
+
+    <h3>DAV Properties</h3>
+    <p>
+      All of the "core versioning" properties will be implemented:
+    </p>
+    <ul>
+      <li><code>DAV:creator-displayname</code></li>
+      <li><code>DAV:comment</code></li>
+      <li><code>DAV:target</code></li>
+      <li><code>DAV:auto-version</code> is set to <code>F</code></li>
+      <li>
+	<code>DAV:version-name</code> is simply the (global) version
+	number
+      </li>
+      <li><code>DAV:version</code></li>
+      <li>
+	<code>DAV:predecessor-set</code>
+	<br>
+	<i>
+	  Note: the Subversion design document is not clear on the
+	  mechanics of how multiple predecessors are merged to create
+	  a single, new version. When this clarifies, then
+	  <code>DAV:predecessor-set</code> may end up containing more
+	  than zero or one predecessor URLs
+	</i>
+      </li>
+      <li><code>DAV:checkin-date</code></li>
+      <li><code>DAV:label-name-set</code></li>
+      <li><code>DAV:checked-out</code></li>
+    </ul>
+    <p>
+      The following "advanced versioning" properties will be
+      implemented:
+    </p>
+    <ul>
+      <li><code>DAV:version-history</code></li>
+      <li>
+	<code>DAV:checkout-fork</code> (protected) is set to
+	<code>DAV:discouraged</code>
+      </li>
+      <li>
+	<code>DAV:checkin-fork</code> (protected) is set to
+	<code>DAV:discouraged</code>
+      </li>
+      <li><code>DAV:version-set</code></li>
+      <li><code>DAV:initial-version</code></li>
+      <li><code>DAV:unreserved</code> (protected) is set to <code>F</code></li>
+    </ul>
+
+    <h3>OPTIONS</h3>
+    <p>
+      The <code>OPTIONS</code> request will signal that it supports
+      the following DAV features:
+    </p>
+    <ul>
+      <li><code>1</code></li>
+      <li><code>2</code></li>
+      <li><code>core-versioning</code></li>
+      <li><code>property-report</code></li>
+      <li><code>activity</code></li>
+      <li><code>mkactivity</code></li>
+      <li><code>merge</code></li>
+      <li><code>collection-versioning</code></li>
+      <li><code>checkout-fork</code></li>
+      <li><code>checkin-fork</code></li>
+    </ul>
+    <p>
+      The <code>REPORT</code> method and
+      <code>DAV:available-report</code> report will signal support for 
+      the following reports:
+      <code>DAV:available-report</code>,
+      <code>DAV:repository-report</code>,
+      <code>DAV:property-report</code>,
+      and
+      <code>DAV:compare-report</code>.
+    </p>
+
+    <h3>Notes, reminders</h3>
+    <p>
+      Advanced CHECKOUT to associate an activity with the working
+      resource.
       <br>
-      Advanced CHECKOUT to
-      associate an activity with the working resource.
-      <br>
-      COPY into a
-      checked-out collection must create new working resources
-      (recursively).
+      COPY into a checked-out collection must create new working
+      resources (recursively).
       <br>
       Add SVN:test-proppatch (live) property.
       <br>
@@ -705,18 +809,19 @@
       Discuss timeouts and auto-purge of activities (and the related
       working resources).
       <br>
-      <code>DAV:repository-report</code>
+      Need a database to map working resource URLs to some semantic
+      info about those working resources, and the activities they are
+      a part of.
       <br>
-      <code>DAV:property-report</code>
-      <br>
-      <code>DAV:compare-report</code>
+      Need a database to map activity URLs to their relevant
+      information.
     </p>
 
     <hr>
     <address><a href="mailto:gstein@lyra.org">Greg Stein</a></address>
 <!-- Created: Thu Aug 10 19:14:20 PDT 2000 -->
 <!-- hhmts start -->
-Last modified: Tue Aug 15 01:58:57 PDT 2000
+Last modified: Tue Aug 15 02:34:15 PDT 2000
 <!-- hhmts end -->
   </body>
 </html>
