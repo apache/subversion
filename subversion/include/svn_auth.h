@@ -277,7 +277,7 @@ typedef svn_error_t *
 #define SVN_AUTH_SSL_EXPIRED     (1<<1)
 #define SVN_AUTH_SSL_CNMISMATCH  (1<<2)
 #define SVN_AUTH_SSL_UNKNOWNCA   (1<<3)
-#define SVN_AUTH_SSL_OTHER       (1<<31)
+#define SVN_AUTH_SSL_OTHER       (1<<30)
 
 typedef svn_error_t *(*svn_auth_ssl_server_trust_prompt_func_t) (
   svn_auth_cred_ssl_server_trust_t **cred,
