@@ -793,7 +793,10 @@ repos_to_wc_copy (const char *src_url,
           /* We just did a checkout; whatever revision we just got, that
              should be the copyfrom_revision when we commit later. */
           svn_wc_entry_t *d_entry;
-          SVN_ERR (svn_wc_entry (&d_entry, dst_path, adm_access, FALSE, pool));
+          svn_wc_adm_access_t *dst_access;
+          SVN_ERR (svn_wc_adm_open (&dst_access, adm_access, dst_path,
+                                    TRUE, TRUE, pool));
+          SVN_ERR (svn_wc_entry (&d_entry, dst_path, dst_access, FALSE, pool));
           src_revnum = d_entry->revision;
         }
 
