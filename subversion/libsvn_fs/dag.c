@@ -1232,7 +1232,7 @@ svn_fs__dag_get_contents (svn_stream_t **contents,
      reads.  This means the stream will do each read in a one-off,
      temporary trail.  */
   *contents = svn_fs__rep_contents_read_stream (file->fs, noderev->data_key,
-                                                0, NULL, pool);
+                                                NULL, pool);
 
   /* Note that we're not registering any `close' func, because there's
      nothing to cleanup outside of our trail.  When the trail is
