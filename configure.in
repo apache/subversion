@@ -20,10 +20,14 @@ dnl Todo: we're English-only now, but GNU Gettext eventually?
 dnl Set of available languages.
 dnl ALL_LINGUAS="de fr es ko nl no pl pt sl sv"
 
-dnl Please run ./configure in the apr subdirectory.
+dnl APR defines a number of useful autoconf macros. grab them.
+sinclude(apr/apr_common.m4)
+
+dnl Please run ./configure in the apr and neon subdirectories.
 dnl (Add any other sub-projects, like expat-lite, to this list.)
 dnl   TEMPORARILY COMMENTED OUT:  
-dnl   AC_CONFIG_SUBDIRS(apr)
+dnl RUN_SUBDIR_CONFIG_NOW(apr)
+dnl RUN_SUBDIR_CONFIG_NOW(neon, --with-expat=../expat-lite)
 
 dnl SET_MAKE -> `MAKE=make', unless MAKE is already defined.
 dnl (automake's docs said this macro is required if we set SUBDIRS
@@ -105,6 +109,7 @@ dnl Final step:  create all Makefiles ----------------------------
 
 AC_OUTPUT([Makefile                                           \
            doc/Makefile                                       \
+           expat-lite/Makefile                                \
            subversion/Makefile                                \
            subversion/tests-common/Makefile                   \
            subversion/libsvn_string/Makefile                  \
