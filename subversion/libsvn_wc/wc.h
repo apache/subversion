@@ -609,6 +609,16 @@ svn_wc__save_prop_file (svn_string_t *propfile_path,
                         apr_pool_t *pool);
 
 
+/* Given PATH/NAME (represting a node of type KIND) and an array of
+   PROPCHANGES, merge the changes into the working copy.  Necessary
+   log entries will be appended to ENTRY_ACCUM.  */
+svn_error_t *
+svn_wc__do_property_merge (svn_string_t *path,
+                           const svn_string_t *name,
+                           apr_array_header_t *propchanges,
+                           apr_pool_t *pool,
+                           enum svn_node_kind kind,
+                           svn_string_t **entry_accum);
 
 
 /* 

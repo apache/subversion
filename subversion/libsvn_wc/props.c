@@ -1,5 +1,5 @@
 /*
- * props.c :  routines dealing with properties
+ * props.c :  routines dealing with properties in the working copy
  *
  * ================================================================
  * Copyright (c) 2000 CollabNet.  All rights reserved.
@@ -71,6 +71,7 @@
 #include "wc.h"
 
 
+/*---------------------------------------------------------------------*/
 
 /*** Deducing local changes to properties ***/
 
@@ -170,6 +171,7 @@ svn_wc__get_local_propchanges (apr_array_header_t **local_propchanges,
 }
 
 
+/*---------------------------------------------------------------------*/
 
 /*** Detecting a property conflict ***/
 
@@ -226,6 +228,7 @@ svn_wc__conflicting_propchanges_p (svn_propdelta_t *change1,
 
 
 
+/*---------------------------------------------------------------------*/
 
 /*** Reading/writing property hashes from disk ***/
 
@@ -316,6 +319,220 @@ svn_wc__save_prop_file (svn_string_t *propfile_path,
 
 
 
+/*---------------------------------------------------------------------*/
+
+/*** Merging propchanges into the working copy ***/
+
+/* This routine is called by the working copy update editor, by both
+   close_file() and close_dir(): */
+
+
+/* Given PATH/NAME (represting a node of type KIND) and an array of
+   PROPCHANGES, merge the changes into the working copy.  Necessary
+   log entries will be appended to ENTRY_ACCUM.  */
+svn_error_t *
+svn_wc__do_property_merge (svn_string_t *path,
+                           const svn_string_t *name,
+                           apr_array_header_t *propchanges,
+                           apr_pool_t *pool,
+                           enum svn_node_kind kind,
+                           svn_string_t **entry_accum)
+{
+  int i;
+  svn_error_t *err;
+
+  /* Zillions of pathnames to compute!  yeargh!  */
+  svn_string_t *base_propfile_path, *local_propfile_path;
+  svn_string_t *base_prop_tmp_path, *local_prop_tmp_path;
+  svn_string_t *tmp_prop_base, *real_prop_base;
+  svn_string_t *tmp_props, *real_props;
+  
+  const char *PROPS, *PROP_BASE;  /* constants pointing to parts of SVN/ */
+  apr_array_header_t *local_propchanges; /* propchanges that the user
+                                            has made since last update */
+  apr_hash_t *localhash;   /* all `working' properties */
+  apr_hash_t *basehash;    /* all `pristine' properties */
+
+  /* Decide which areas of SVN/ are relevant */
+  if (kind == svn_node_file)
+    {
+      PROPS = SVN_WC__ADM_PROPS;
+      PROP_BASE = SVN_WC__ADM_PROP_BASE;
+    }
+  else if (kind == svn_node_dir)
+    {
+      PROPS = SVN_WC__ADM_DIR_PROPS;
+      PROP_BASE = SVN_WC__ADM_DIR_PROP_BASE;
+    }
+  
+  /* Load the base & working property files into hashes */
+  localhash = apr_make_hash (pool);
+  basehash = apr_make_hash (pool);
+  
+  base_propfile_path = svn_wc__adm_path (path,
+                                         0, /* not tmp */
+                                         pool,
+                                         PROP_BASE,
+                                         name->data,
+                                         NULL);
+  
+  local_propfile_path = svn_wc__adm_path (path,
+                                          0, /* not tmp */
+                                          pool,
+                                          PROPS,
+                                          name->data,
+                                          NULL);
+  
+  err = svn_wc__load_prop_file (base_propfile_path,
+                                basehash, pool);
+  if (err) return err;
+  
+  err = svn_wc__load_prop_file (local_propfile_path,
+                                localhash, pool);
+  if (err) return err;
+  
+  /* Deduce any local propchanges the user has made since the last
+     update.  */
+  err = svn_wc__get_local_propchanges (&local_propchanges,
+                                       localhash, basehash, pool);
+  if (err) return err;
+  
+  /* Looping over the array of propchanges we want to apply: */
+  for (i = 0; i < propchanges->nelts; i++)
+    {
+      int j;
+      int found_match = 0;          
+      svn_propdelta_t *update_change, *local_change;
+      
+      update_change = (((svn_propdelta_t **)(propchanges)->elts)[i]);
+      
+      /* Apply the update_change to the pristine hash, no
+         questions asked. */
+      apr_hash_set (basehash,
+                    update_change->name->data,
+                    update_change->name->len,
+                    update_change->value);
+      
+      /* Now, does the update_change conflict with some local change?  */
+      
+      /* First check if the property name even exists in our list
+         of local changes... */
+      for (j = 0; j < local_propchanges->nelts; j++)
+        {
+          local_change =
+            (((svn_propdelta_t **)(local_propchanges)->elts)[j]);
+          
+          if (svn_string_compare (local_change->name, update_change->name))
+            {
+              found_match = 1;
+              break;
+            }
+        }
+      
+      if (found_match)
+        /* Now see if the two changes actually conflict */
+        if (svn_wc__conflicting_propchanges_p (update_change,
+                                               local_change))
+          {
+            /* TODO:  write log:  mark entry as conflicted
+               TODO:  write log:  append english to some .prej
+               file */
+            continue;  /* skip to the next update_change */
+          }
+      
+      /* If we get here, there's no conflict and we safely apply
+         the update_change to our working property hash */
+      apr_hash_set (localhash,
+                    update_change->name->data,
+                    update_change->name->len,
+                    update_change->value);
+    }
+  
+  
+  /* Done merging property changes into both pristine and working
+     hashes.  Now we write them to temporary files.  Notice that
+     the paths computed are ABSOLUTE pathnames.  */
+  
+  /* Write the merged pristine prop hash to SVN/tmp/prop-base/ */
+  base_prop_tmp_path = svn_wc__adm_path (path,
+                                         TRUE, /* tmp area */
+                                         pool,
+                                         PROP_BASE,
+                                         name->data,
+                                         NULL);
+  
+  err = svn_wc__save_prop_file (base_prop_tmp_path, basehash, pool);
+  if (err) return err;
+  
+  /* Write the merged local prop hash to SVN/tmp/props/ */
+  local_prop_tmp_path = svn_wc__adm_path (path,
+                                          TRUE, /* tmp area */
+                                          pool,
+                                          PROPS,
+                                          name->data,
+                                          NULL);
+  
+  err = svn_wc__save_prop_file (local_prop_tmp_path, localhash, pool);
+  if (err) return err;
+  
+  /* Compute pathnames for the "mv" log entries.  Notice that
+     these paths are RELATIVE pathnames, so that each SVN subdir
+     remains separable when executing run_log().  */
+  tmp_prop_base = svn_wc__adm_path (svn_string_create ("", pool),
+                                    1, /* tmp */
+                                    pool,
+                                    PROP_BASE,
+                                    name->data,
+                                    NULL);
+  real_prop_base = svn_wc__adm_path (svn_string_create ("", pool),
+                                     0, /* no tmp */
+                                     pool,
+                                     PROP_BASE,
+                                     name->data,
+                                     NULL);
+  
+  tmp_props = svn_wc__adm_path (svn_string_create ("", pool),
+                                1, /* tmp */
+                                pool,
+                                PROPS,
+                                name->data,
+                                NULL);
+  real_props = svn_wc__adm_path (svn_string_create ("", pool),
+                                 0, /* no tmp */
+                                 pool,
+                                 PROPS,
+                                 name->data,
+                                 NULL);
+  
+  
+  /* Write log entry to move pristine tmp copy to real pristine area. */
+  svn_xml_make_open_tag (entry_accum,
+                         pool,
+                         svn_xml_self_closing,
+                         SVN_WC__LOG_MV,
+                         SVN_WC__LOG_ATTR_NAME,
+                         tmp_prop_base,
+                         SVN_WC__LOG_ATTR_DEST,
+                         real_prop_base,
+                         NULL);
+  
+  /* Write log entry to move working tmp copy to real working area. */
+  svn_xml_make_open_tag (entry_accum,
+                         pool,
+                         svn_xml_self_closing,
+                         SVN_WC__LOG_MV,
+                         SVN_WC__LOG_ATTR_NAME,
+                         tmp_props,
+                         SVN_WC__LOG_ATTR_DEST,
+                         real_props,
+                         NULL);
+  
+  /* At this point, we need to write log entries that bump revision
+     number and set new entry timestamps.  The caller of this function
+     should (hopefully) follow up with this. */
+
+  return SVN_NO_ERROR;
+}
 
 
 
