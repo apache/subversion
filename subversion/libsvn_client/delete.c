@@ -117,6 +117,7 @@ delete_urls (svn_client_commit_info_t **commit_info,
   const char *log_msg;
   svn_node_kind_t kind;
   apr_array_header_t *targets;
+  svn_error_t *err;
   const char *common;
   int i;
 
@@ -185,9 +186,15 @@ delete_urls (svn_client_commit_info_t **commit_info,
                                       commit_baton, pool));
 
   /* Call the path-based editor driver. */
-  SVN_ERR (svn_delta_path_driver (editor, edit_baton, SVN_INVALID_REVNUM, 
-                                  targets, path_driver_cb_func, 
-                                  (void *)editor, pool));
+  err = svn_delta_path_driver (editor, edit_baton, SVN_INVALID_REVNUM, 
+                               targets, path_driver_cb_func, 
+                               (void *)editor, pool);
+  if (err)
+    {
+      /* At least try to abort the edit (and fs txn) before throwing err. */
+      svn_error_clear (editor->abort_edit (edit_baton, pool));
+      return err;
+    }
 
   /* Close the edit. */
   SVN_ERR (editor->close_edit (edit_baton, pool));
