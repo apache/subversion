@@ -855,6 +855,8 @@ svn_repos_dump_fs (svn_repos_t *repos,
                    svn_revnum_t start_rev,
                    svn_revnum_t end_rev,
                    svn_boolean_t incremental,
+                   svn_cancel_func_t cancel_func,
+                   void *cancel_baton,
                    apr_pool_t *pool)
 {
   const svn_delta_editor_t *dump_editor;
@@ -910,6 +912,10 @@ svn_repos_dump_fs (svn_repos_t *repos,
     {
       svn_revnum_t from_rev, to_rev;
       svn_fs_root_t *to_root;
+
+      /* Check for cancellation. */
+      if (cancel_func)
+        SVN_ERR (cancel_func (cancel_baton));
 
       /* Special-case the initial revision dump: it needs to contain
          *all* nodes, because it's the foundation of all future

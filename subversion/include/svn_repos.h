@@ -870,6 +870,10 @@ enum svn_repos_load_uuid
  * If @a incremental is @c TRUE, the first revision dumped will be a diff
  * against the previous revision (usually it looks like a full dump of
  * the tree).
+ *
+ * If @a cancel_func is not @c NULL, it is called periodically with
+ * @a cancel_baton as argument to see if the client wishes to cancel
+ * the dump.
  */
 svn_error_t *svn_repos_dump_fs (svn_repos_t *repos,
                                 svn_stream_t *dumpstream,
@@ -877,6 +881,8 @@ svn_error_t *svn_repos_dump_fs (svn_repos_t *repos,
                                 svn_revnum_t start_rev,
                                 svn_revnum_t end_rev,
                                 svn_boolean_t incremental,
+                                svn_cancel_func_t cancel_func,
+                                void *cancel_baton,
                                 apr_pool_t *pool);
 
 
@@ -899,12 +905,18 @@ svn_error_t *svn_repos_dump_fs (svn_repos_t *repos,
  *
  * If the dumpstream contains no UUID, then @a uuid_action is
  * ignored and the repository UUID is not touched.
+ *
+ * If @a cancel_func is not @c NULL, it is called periodically with
+ * @a cancel_baton as argument to see if the client wishes to cancel
+ * the load.
  */
 svn_error_t *svn_repos_load_fs (svn_repos_t *repos,
                                 svn_stream_t *dumpstream,
                                 svn_stream_t *feedback_stream,
                                 enum svn_repos_load_uuid uuid_action,
                                 const char *parent_dir,
+                                svn_cancel_func_t cancel_func,
+                                void *cancel_baton,
                                 apr_pool_t *pool);
 
 
@@ -984,6 +996,10 @@ typedef struct svn_repos_parse_fns_t
 /** Read and parse dumpfile-formatted @a stream, calling callbacks in
  * @a parse_fns/@a parse_baton, and using @a pool for allocations.
  *
+ * If @a cancel_func is not @c NULL, it is called periodically with
+ * @a cancel_baton as argument to see if the client wishes to cancel
+ * the dump.
+ *
  * This parser has built-in knowledge of the dumpfile format, but only
  * in a general sense:
  *
@@ -1003,6 +1019,8 @@ svn_error_t *
 svn_repos_parse_dumpstream (svn_stream_t *stream,
                             const svn_repos_parser_fns_t *parse_fns,
                             void *parse_baton,
+                            svn_cancel_func_t cancel_func,
+                            void *cancel_baton,
                             apr_pool_t *pool);
 
 

@@ -387,6 +387,8 @@ svn_error_t *
 svn_repos_parse_dumpstream (svn_stream_t *stream,
                             const svn_repos_parser_fns_t *parse_fns,
                             void *parse_baton,
+                            svn_cancel_func_t cancel_func,
+                            void *cancel_baton,
                             apr_pool_t *pool)
 {
   svn_boolean_t eof;
@@ -431,6 +433,10 @@ svn_repos_parse_dumpstream (svn_stream_t *stream,
 
       /* Clear our per-line pool. */
       svn_pool_clear (linepool);
+
+      /* Check for cancellation. */
+      if (cancel_func)
+        SVN_ERR (cancel_func (cancel_baton));
 
       /* Keep reading blank lines until we discover a new record, or until
          the stream runs out. */
@@ -1031,6 +1037,8 @@ svn_repos_load_fs (svn_repos_t *repos,
                    svn_stream_t *feedback_stream,
                    enum svn_repos_load_uuid uuid_action,
                    const char *parent_dir,
+                   svn_cancel_func_t cancel_func,
+                   void *cancel_baton,
                    apr_pool_t *pool)
 {
   const svn_repos_parser_fns_t *parser;
@@ -1046,7 +1054,8 @@ svn_repos_load_fs (svn_repos_t *repos,
                                           parent_dir,
                                           pool));
 
-  SVN_ERR (svn_repos_parse_dumpstream (dumpstream, parser, parse_baton, pool));
+  SVN_ERR (svn_repos_parse_dumpstream (dumpstream, parser, parse_baton,
+                                       cancel_func, cancel_baton, pool));
 
   return SVN_NO_ERROR;
 }
