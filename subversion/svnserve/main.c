@@ -60,7 +60,9 @@ int main(int argc, const char *const *argv)
   char opt, errbuf[256];
   const char *arg, *root = "/";
   apr_status_t status;
+#if APR_HAS_PROC
   apr_proc_t proc;
+#endif
 
   apr_initialize();
   atexit(apr_terminate);
@@ -111,17 +113,17 @@ int main(int argc, const char *const *argv)
 
   apr_listen(sock, 7);
 
+#if APR_HAS_FORK
   if (!debug)
-    apr_proc_detach(1);
+    apr_proc_detach(APR_PROC_DETACH_DAEMONIZE);
 
-#ifdef APR_HAS_FORK
   apr_signal(SIGCHLD, sigchld_handler);
 #endif
 
   while (1)
     {
       status = apr_accept(&usock, sock, pool);
-#ifdef APR_HAS_FORK
+#if APR_HAS_FORK
       /* Collect any zombie child processes. */
       while (apr_proc_wait_all_procs(&proc, NULL, NULL, APR_NOWAIT,
                                      pool) == APR_CHILD_DONE)
@@ -146,7 +148,7 @@ int main(int argc, const char *const *argv)
           exit(0);
         }
 
-#ifdef APR_HAS_FORK
+#if APR_HAS_FORK
       /* This definitely won't work on Windows, which doesn't have the
        * concept of forking a process at all.  I'm not sure how to
        * structure a forking daemon process under Windows.  (Threads?

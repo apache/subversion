@@ -41,6 +41,9 @@ Package=<4>
     Begin Project Dependency
     Project_Dep_Name svnlook
     End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name svnserve
+    End Project Dependency
 }}}
 
 ###############################################################################
@@ -270,6 +273,21 @@ Package=<4>
 
 ###############################################################################
 
+Project: "libsvn_ra_svn"=.\subversion\libsvn_ra_svn\libsvn_ra_svn.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name __config__
+    End Project Dependency
+}}}
+
+###############################################################################
+
 Project: "libsvn_repos"=.\subversion\libsvn_repos\libsvn_repos.dsp - Package Owner=<4>
 
 Package=<5>
@@ -407,6 +425,9 @@ Package=<4>
     Begin Project Dependency
     Project_Dep_Name libsvn_ra_dav
     End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_ra_svn
+    End Project Dependency
 }}}
 
 ###############################################################################
@@ -474,6 +495,45 @@ Package=<4>
 
 ###############################################################################
 
+Project: "svnserve"=.\subversion\svnserve\svnserve.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name __config__
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name apr
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name aprutil
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name xml
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_delta
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_subr
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_fs
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_repos
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_ra_svn
+    End Project Dependency
+}}}
+
+###############################################################################
+
 Project: "tests_libsvn_delta_random"=.\subversion\tests\libsvn_delta\random_test.dsp - Package Owner=<4>
 
 Package=<5>
@@ -520,6 +580,30 @@ Package=<4>
 {{{
     Begin Project Dependency
     Project_Dep_Name __config__
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_delta
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "tests_libsvn_fs_changes"=.\subversion\tests\libsvn_fs\changes_test.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name __config__
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_fs
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_repos
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name libsvn_delta
@@ -592,30 +676,6 @@ Package=<4>
 ###############################################################################
 
 Project: "tests_libsvn_fs_strings_reps"=.\subversion\tests\libsvn_fs\strings_reps_test.dsp - Package Owner=<4>
-
-Package=<5>
-{{{
-}}}
-
-Package=<4>
-{{{
-    Begin Project Dependency
-    Project_Dep_Name __config__
-    End Project Dependency
-    Begin Project Dependency
-    Project_Dep_Name libsvn_fs
-    End Project Dependency
-    Begin Project Dependency
-    Project_Dep_Name libsvn_repos
-    End Project Dependency
-    Begin Project Dependency
-    Project_Dep_Name libsvn_delta
-    End Project Dependency
-}}}
-
-###############################################################################
-
-Project: "tests_libsvn_fs_changes"=.\subversion\tests\libsvn_fs\changes_test.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
