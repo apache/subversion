@@ -147,6 +147,9 @@
 (defvar svn-status-hide-unknown nil "*Hide unknown files in *svn-status* buffer.")
 (defvar svn-status-hide-unmodified nil "*Hide unmodified files in *svn-status* buffer.")
 (defvar svn-status-directory-history nil "*List of visited svn working directories.")
+(defvar svn-status-sort-status-buffer t "Sort the *svn-status* buffer.
+Setting this variable to nil speeds up M-x svn-status.
+However, it is possible, that the sorting is wrong in this case.")
 
 (defvar svn-status-unmark-files-after-list '(commit revert)
   "*List of operations after which all user marks will be removed.
@@ -216,6 +219,7 @@ Possible values are: commit, revert.")
 (defvar svn-temp-suffix (make-temp-name "."))
 (defvar svn-status-temp-file-to-remove nil)
 (defvar svn-status-temp-arg-file (concat svn-status-temp-dir "svn.arg" svn-temp-suffix))
+(defvar svn-status-options nil)
 
 ;;; faces
 (defface svn-status-marked-face
@@ -496,7 +500,7 @@ for  example: '(\"revert\" \"file1\"\)"
 
 
 (defun svn-parse-status-result ()
-    "Parse the *svn-process* buffer.
+  "Parse the *svn-process* buffer.
 The results are used to build the `svn-status-info' variable."
   (setq svn-status-head-revision nil)
   (save-excursion
@@ -512,7 +516,7 @@ The results are used to build the `svn-status-info' variable."
           (author)
           (path)
           (user-elide nil)
-          (ui-status '(nil nil)) ; contains (user-mark user-elide)
+          (ui-status '(nil nil))     ; contains (user-mark user-elide)
           (revision-width svn-status-default-revision-width)
           (author-width svn-status-default-author-width))
       (set-buffer "*svn-process*")
@@ -534,12 +538,12 @@ The results are used to build the `svn-status-info' variable."
           )
          (t
           (setq svn-marks (buffer-substring (point) (+ (point) 8))
-                svn-file-mark (elt svn-marks 0)              ; 1st column
-                svn-property-mark (elt svn-marks 1)          ; 2nd column
+                svn-file-mark (elt svn-marks 0) ; 1st column
+                svn-property-mark (elt svn-marks 1) ; 2nd column
                 ;;svn-locked-mark (elt svn-marks 2)            ; 3rd column
                 ;;svn-added-with-history-mark (elt svn-marks 3); 4th column
                 ;;svn-switched-mark (elt svn-marks 4)          ; 5th column
-                svn-update-mark (elt svn-marks 7))           ; 8th column
+                svn-update-mark (elt svn-marks 7)) ; 8th column
 
           (when (eq svn-property-mark ?\ ) (setq svn-property-mark nil))
           (when (eq svn-update-mark ?\ ) (setq svn-update-mark nil))
@@ -570,10 +574,10 @@ The results are used to build the `svn-status-info' variable."
                                             svn-update-mark)
                                       svn-status-info))
           (setq revision-width (max revision-width
-                                                                        (length (number-to-string local-rev))
-                                                                        (length (number-to-string last-change-rev))))
+                                    (length (number-to-string local-rev))
+                                    (length (number-to-string last-change-rev))))
           (setq author-width (max author-width (length author)))))
-                (forward-line 1))
+        (forward-line 1))
       ;; With subversion 0.29.0 and above, `svn -u st' returns files in
       ;; a random order (especially if we have a mixed revision wc)
       (setq svn-status-default-column
@@ -583,7 +587,8 @@ The results are used to build the `svn-status-info' variable."
                                            revision-width
                                            revision-width
                                            author-width))
-      (setq svn-status-info (sort svn-status-info 'svn-status-sort-predicate)))))
+      (when svn-status-sort-status-buffer
+        (setq svn-status-info (sort svn-status-info 'svn-status-sort-predicate))))))
 
 ;;(string-lessp "." "%") => nil
 ;(svn-status-sort-predicate '(t t t ".") '(t t t "%")) => t
@@ -620,6 +625,8 @@ A and B must be line-info's."
 (defvar svn-status-mode-map () "Keymap used in `svn-status-mode' buffers.")
 (defvar svn-status-mode-property-map ()
   "Subkeymap used in `svn-status-mode' for property commands.")
+(defvar svn-status-mode-options-map ()
+  "Subkeymap used in `svn-status-mode' for option commands.")
 
 (when (not svn-status-mode-map)
   (setq svn-status-mode-map (make-sparse-keymap))
@@ -714,7 +721,12 @@ A and B must be line-info's."
   ;; TODO: Why is `svn-status-select-line' in `svn-status-mode-property-map'?
   (define-key svn-status-mode-property-map (kbd "RET") 'svn-status-select-line)
   (define-key svn-status-mode-map (kbd "P") svn-status-mode-property-map))
-
+(when (not svn-status-mode-options-map)
+  (setq svn-status-mode-options-map (make-sparse-keymap))
+  (define-key svn-status-mode-options-map (kbd "s") 'svn-status-save-state)
+  (define-key svn-status-mode-options-map (kbd "l") 'svn-status-load-state)
+  (define-key svn-status-mode-options-map (kbd "x") 'svn-status-toggle-sort-status-buffer)
+  (define-key svn-status-mode-map (kbd "O") svn-status-mode-options-map))
 
 (easy-menu-define svn-status-mode-menu svn-status-mode-map
   "'svn-status-mode' menu"
@@ -753,6 +765,12 @@ A and B must be line-info's."
      "---"
      ["Set svn:keywords List" svn-status-property-set-keyword-list t]
      ["Set svn:eol-style" svn-status-property-set-eol-style t]
+     )
+    ("Options"
+     ["Save Options" svn-status-save-state t]
+     ["Load Options" svn-status-load-state t]
+     ["Toggle sorting of *svn-status* buffer" svn-status-toggle-sort-status-buffer
+      :style toggle :selected svn-status-sort-status-buffer]
      )
     "---"
     ["Edit Next SVN Cmd Line" svn-status-toggle-edit-cmd-flag t]
@@ -2267,6 +2285,57 @@ When called with a prefix argument, ask the user for the revision."
       (set-buffer "*svn-process*")
       (diff-mode)
       (font-lock-fontify-buffer))))
+
+;; --------------------------------------------------------------------------------
+;; svn status persistent options
+;; --------------------------------------------------------------------------------
+
+(defun svn-status-base-dir ()
+  (let ((base-dir default-directory)
+        (dot-svn-dir)
+        (dir-below default-directory))
+    (setq dot-svn-dir (concat base-dir ".svn"))
+    (while (when (file-exists-p dot-svn-dir)
+             (setq base-dir (file-name-directory dot-svn-dir))
+             (string-match "\\(.+/\\).+/" dir-below)
+             (setq dir-below (match-string 1 dir-below))
+             (setq dot-svn-dir (concat dir-below ".svn"))))
+    base-dir))
+
+(defun svn-status-save-state ()
+  (interactive)
+  (let ((buf (find-file (concat (svn-status-base-dir) "++psvn.state"))))
+    (delete-region (point-min) (point-max))
+    (setq svn-status-options
+          (list
+           (list "sort-status-buffer" svn-status-sort-status-buffer)))
+    (insert (pp-to-string svn-status-options))
+    (save-buffer)
+    (kill-buffer buf)))
+
+(defun svn-status-load-state ()
+  (interactive)
+  (let ((file (concat (svn-status-base-dir) "++psvn.state")))
+    (if (file-readable-p file)
+        (with-temp-buffer
+          (insert-file-contents file)
+          (setq svn-status-options (read (current-buffer)))
+          (setq svn-status-sort-status-buffer
+                (nth 1 (assoc "sort-status-buffer" svn-status-options))))
+      (error "%s is not readable." file))
+    (message "Loaded %s" file)))
+
+(defun svn-status-toggle-sort-status-buffer ()
+  "If you turn off sorting, you can speed up M-x svn-status.
+However, the buffer is not correct sorted then.
+This function will be removed again, when a faster parsing and
+display routine for svn-status is available."
+  (interactive)
+  (setq svn-status-sort-status-buffer (not svn-status-sort-status-buffer))
+  (message (concat "The *svn-status* buffer will be"
+                   (if svn-status-sort-status-buffer "" " not")
+                   " sorted.")))
+
 
 (provide 'psvn)
 
