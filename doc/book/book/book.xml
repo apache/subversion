@@ -18,7 +18,6 @@
 <!ENTITY appc     SYSTEM "appc.xml">
 <!ENTITY appd     SYSTEM "appd.xml">
 <!ENTITY appe     SYSTEM "appe.xml">
-<!ENTITY appf     SYSTEM "appf.xml">
 <!ENTITY gloss    SYSTEM "glossary.xml">
 <!ENTITY copy     SYSTEM "copyright.xml">
 <!ENTITY colo     SYSTEM "colo.xml">
