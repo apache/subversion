@@ -1138,7 +1138,7 @@ main (int argc, const char * const *argv)
   int i, num_opts = 0;
 
   /* Initialize the app. */
-  if (svn_cmdline_init2 ("svnadmin", stderr, FALSE) != EXIT_SUCCESS)
+  if (svn_cmdline_init ("svnadmin", stderr) != EXIT_SUCCESS)
     return EXIT_FAILURE;
 
   /* Create our top-level pool.  Use a seperate mutexless allocator,

@@ -804,7 +804,7 @@ main (int argc, const char * const *argv)
   svn_config_t *cfg;
   
   /* Initialize the app. */
-  if (svn_cmdline_init2 ("svn", stderr, FALSE) != EXIT_SUCCESS)
+  if (svn_cmdline_init ("svn", stderr) != EXIT_SUCCESS)
     return EXIT_FAILURE;
 
   /* Create our top-level pool.  Use a seperate mutexless allocator,
