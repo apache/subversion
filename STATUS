@@ -101,6 +101,13 @@ section for approved changes.)
                      vote counts).
       Votes:
 
+    * r8296
+      Change to correctly build Fedora Core 1 RPMs.
+      Justification: Without this the generated package name
+         contains "Unknown" instead of the platform abbreviation.
+      Notes:
+      Votes: david
+
 Core changes that already have three +1 votes and no vetos.  (If you
 veto something below, or remove a threshold vote, please move it to
 the section for unapproved changes.)
