@@ -225,7 +225,7 @@ svn_client_switch (const char *path,
       svn_stream_t *file_stream;
       svn_revnum_t fetched_rev = 1; /* this will be set by get_file() */
       apr_status_t apr_err;
-      const char *url_parent, *url_basename, *path_parent;
+      const char *path_parent;
 
       /* Create a unique file */
       SVN_ERR (svn_io_open_unique_file (&fp, &new_text_path,
@@ -237,9 +237,8 @@ svn_client_switch (const char *path,
       file_stream = svn_stream_from_aprfile (fp, pool);
 
       /* Open an RA session to 'target' file URL. */
-      svn_path_split (switch_url, &url_parent, &url_basename, pool);
       svn_path_split (path, &path_parent, NULL, pool);
-      SVN_ERR (svn_client__open_ra_session (&session, ra_lib, url_parent,
+      SVN_ERR (svn_client__open_ra_session (&session, ra_lib, switch_url,
                                             path_parent,
                                             NULL, NULL, TRUE, TRUE,
                                             ctx, pool));
@@ -248,7 +247,7 @@ svn_client_switch (const char *path,
 
       /* Push the file's text into file_stream, which means it ends up
          in our unique tmpfile.  We also get the full proplist. */
-      SVN_ERR (ra_lib->get_file (session, url_basename, revnum, file_stream,
+      SVN_ERR (ra_lib->get_file (session, "", revnum, file_stream,
                                  &fetched_rev, &prophash, pool));
       SVN_ERR (svn_stream_close (file_stream));
       apr_err = apr_file_close (fp); 
