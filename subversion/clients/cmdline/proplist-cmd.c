@@ -29,6 +29,7 @@
 #include "svn_string.h"
 #include "svn_delta.h"
 #include "svn_error.h"
+#include "svn_path.h"
 #include "cl.h"
 
 
@@ -100,6 +101,7 @@ svn_cl__proplist (apr_getopt_t *os,
           apr_array_header_t *props;
           int j;
           svn_error_t *err;
+          svn_boolean_t is_url = svn_path_is_url (target);
 
           svn_pool_clear (subpool);
           SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
@@ -126,8 +128,12 @@ svn_cl__proplist (apr_getopt_t *os,
               svn_client_proplist_item_t *item 
                 = ((svn_client_proplist_item_t **)props->elts)[j];
               const char *node_name_stdout;
-              SVN_ERR (svn_cmdline_path_local_style_from_utf8
-                       (&node_name_stdout, item->node_name->data, subpool));
+              if (! is_url)
+                SVN_ERR (svn_cmdline_path_local_style_from_utf8
+                         (&node_name_stdout, item->node_name->data, subpool));
+              else
+                SVN_ERR (svn_cmdline_cstring_from_utf8
+                         (&node_name_stdout, item->node_name->data, subpool));
               printf("Properties on '%s':\n", node_name_stdout);
               SVN_ERR (svn_cl__print_prop_hash
                        (item->prop_hash, (! opt_state->verbose), subpool));

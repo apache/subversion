@@ -31,6 +31,7 @@
 #include "svn_error.h"
 #include "svn_utf.h"
 #include "svn_subst.h"
+#include "svn_path.h"
 #include "cl.h"
 
 
@@ -141,6 +142,7 @@ svn_cl__propget (apr_getopt_t *os,
           apr_hash_t *props;
           apr_hash_index_t *hi;
           svn_boolean_t print_filenames = FALSE;
+          svn_boolean_t is_url = svn_path_is_url (target);
 
           svn_pool_clear (subpool);
           SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
@@ -176,8 +178,12 @@ svn_cl__propget (apr_getopt_t *os,
               if (print_filenames) 
                 {
                   const char *filename_stdout;
-                  SVN_ERR (svn_cmdline_path_local_style_from_utf8
-                           (&filename_stdout, filename, subpool));
+                  if (! is_url)
+                    SVN_ERR (svn_cmdline_path_local_style_from_utf8
+                             (&filename_stdout, filename, subpool));
+                  else
+                    SVN_ERR (svn_cmdline_cstring_from_utf8
+                             (&filename_stdout, filename, subpool));
                   SVN_ERR (stream_write (out, filename_stdout,
                                          strlen (filename_stdout)));
                   SVN_ERR (stream_write (out, " - ", 3));
