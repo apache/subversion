@@ -99,6 +99,10 @@ SOURCE=.\config.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\config_auth.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\config_file.c
 # End Source File
 # Begin Source File
