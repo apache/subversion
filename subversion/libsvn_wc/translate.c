@@ -826,33 +826,39 @@ svn_wc__eol_style_from_value (enum svn_wc__eol_style *style,
   if (value == NULL)
     {
       /* property dosen't exist. */
-      *style = svn_wc__eol_style_none;
       *eol = NULL;
+      if (style)
+        *style = svn_wc__eol_style_none;
     }
   else if (! strcmp ("native", value))
     {
-      *style = svn_wc__eol_style_native;
       *eol = APR_EOL_STR;       /* whee, a portability library! */
+      if (style)
+        *style = svn_wc__eol_style_native;
     }
   else if (! strcmp ("LF", value))
     {
-      *style = svn_wc__eol_style_fixed;
       *eol = "\n";
+      if (style)
+        *style = svn_wc__eol_style_fixed;
     }
   else if (! strcmp ("CR", value))
     {
-      *style = svn_wc__eol_style_fixed;
       *eol = "\r";
+      if (style)
+        *style = svn_wc__eol_style_fixed;
     }
   else if (! strcmp ("CRLF", value))
     {
-      *style = svn_wc__eol_style_fixed;
       *eol = "\r\n";
+      if (style)
+        *style = svn_wc__eol_style_fixed;
     }
   else
     {
-      *style = svn_wc__eol_style_unknown;
       *eol = NULL;
+      if (style)
+        *style = svn_wc__eol_style_unknown;
     }
 }
 
@@ -1090,9 +1096,9 @@ svn_wc__get_keywords (svn_wc_keywords_t **keywords,
 
 
 svn_error_t *
-svn_wc__maybe_toggle_working_executable_bit (svn_boolean_t *toggled,
-                                             const char *path,
-                                             apr_pool_t *pool)
+svn_wc__maybe_set_executable (svn_boolean_t *did_set,
+                              const char *path,
+                              apr_pool_t *pool)
 {
   const svn_string_t *propval;
   SVN_ERR (svn_wc_prop_get (&propval, SVN_PROP_EXECUTABLE, path, pool));
@@ -1100,10 +1106,11 @@ svn_wc__maybe_toggle_working_executable_bit (svn_boolean_t *toggled,
   if (propval != NULL)
     {
       SVN_ERR (svn_io_set_file_executable (path, TRUE, FALSE, pool));
-      *toggled = TRUE;
+      if (did_set)
+        *did_set = TRUE;
     }
-  else
-    *toggled = FALSE;
+  else if (did_set)
+    *did_set = FALSE;
 
   return SVN_NO_ERROR;
 }
