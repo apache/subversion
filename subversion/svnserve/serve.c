@@ -590,19 +590,95 @@ static svn_error_t *commit_done(svn_revnum_t new_rev, const char *date,
   return SVN_NO_ERROR;
 }
 
+/* Add the LOCK_TOKENS to the filesystem access context if any. LOCK_TOKENS is
+   an array of svn_ra_svn_item_t structs.  Return an error if they are
+   not strings. */
+static svn_error_t *add_lock_tokens(apr_array_header_t *lock_tokens,
+                                    server_baton_t *sb,
+                                    apr_pool_t *pool)
+{
+  int i;
+  svn_fs_access_t *fs_access;
+
+  SVN_ERR(svn_fs_get_access(&fs_access, sb->fs));
+
+  /* If there is no access context, nowhere to add the tokens. */
+  if (! fs_access)
+    return SVN_NO_ERROR;
+
+  for (i = 0; i < lock_tokens->nelts; ++i)
+    {
+      svn_ra_svn_item_t *item = &APR_ARRAY_IDX(lock_tokens, i,
+                                               svn_ra_svn_item_t);
+      if (item->kind != SVN_RA_SVN_STRING)
+        return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
+                                "Lock token not a string");
+      SVN_ERR(svn_fs_access_add_lock_token(fs_access, item->u.string->data));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Unlock the paths with lock tokens in LOCK_TOKENS, ignoring any errors.
+   LOCK_TOKENS contais svn_ra_svn_item_t elements, assumed to be strings. */
+static svn_error_t *unlock_paths(apr_array_header_t *lock_tokens,
+                                 server_baton_t *sb,
+                                 apr_pool_t *pool)
+{
+  int i;
+  apr_pool_t *iterpool;
+  
+  iterpool = svn_pool_create(pool);
+
+  for (i = 0; i < lock_tokens->nelts; ++i)
+    {
+      svn_ra_svn_item_t *item;
+
+      svn_pool_clear(iterpool);
+      item = &APR_ARRAY_IDX(lock_tokens, i, svn_ra_svn_item_t);
+      /* The lock may have been defunct after the commit, so ignore such
+         errors.
+         ### What is the best thing to do with other errors (see comment
+         ### libsvn_ra_local/ra_plugin.c. */
+      svn_error_clear(svn_repos_fs_unlock(sb->repos, item->u.string->data,
+                                          FALSE, pool));
+    }
+                                       
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *commit(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                            apr_array_header_t *params, void *baton)
 {
   server_baton_t *b = baton;
   const char *log_msg, *date, *author;
+  apr_array_header_t *lock_tokens;
+  svn_boolean_t keep_locks;
   const svn_delta_editor_t *editor;
   void *edit_baton;
   svn_boolean_t aborted;
   commit_callback_baton_t ccb;
   svn_revnum_t new_rev;
 
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c", &log_msg));
-  SVN_ERR(must_have_write_access(conn, pool, b, FALSE));
+  if (params->nelts == 1)
+    {
+      /* Clients before 1.2 don't send lock-tokens and keep-locks fields. */
+      SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c", &log_msg));
+      lock_tokens = NULL;
+      keep_locks = TRUE;
+    }
+  else
+    SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "clb", &log_msg,
+                                   &lock_tokens, &keep_locks));
+  /* Require a username if the client gave us any lock tokens. */
+  SVN_ERR(must_have_write_access(conn, pool, b,
+                                 lock_tokens && lock_tokens->nelts > 0));
+
+  /* Give the lock tokens to the FS if we got any. */
+  if (lock_tokens)
+    SVN_CMD_ERR(add_lock_tokens(lock_tokens, b, pool));
   ccb.new_rev = &new_rev;
   ccb.date = &date;
   ccb.author = &author;
@@ -625,6 +701,10 @@ static svn_error_t *commit(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
       if (b->tunnel)
         SVN_ERR(svn_fs_deltify_revision(b->fs, new_rev, pool));
+
+      /* Unlock the paths. */
+      if (! keep_locks && lock_tokens)
+        SVN_ERR(unlock_paths(lock_tokens, b, pool));
 
       SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "r(?c)(?c)",
                                      new_rev, date, author));

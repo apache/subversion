@@ -774,20 +774,39 @@ static svn_error_t *ra_svn_end_commit(void *baton)
 
 }
 
-static svn_error_t *ra_svn_commit(void *baton,
-                                  const svn_delta_editor_t **editor,
-                                  void **edit_baton,
-                                  const char *log_msg,
-                                  svn_commit_callback_t callback,
-                                  void *callback_baton,
-                                  apr_pool_t *pool)
+static svn_error_t *ra_svn_commit2(void *baton,
+                                   const svn_delta_editor_t **editor,
+                                   void **edit_baton,
+                                   const char *log_msg,
+                                   svn_commit_callback_t callback,
+                                   void *callback_baton,
+                                   apr_hash_t *lock_tokens,
+                                   svn_boolean_t keep_locks,
+                                   apr_pool_t *pool)
 {
   ra_svn_session_baton_t *sess = baton;
   svn_ra_svn_conn_t *conn = sess->conn;
   ra_svn_commit_callback_baton_t *ccb;
+  apr_hash_index_t *hi;
+  apr_pool_t *iterpool;
 
   /* Tell the server we're starting the commit. */
-  SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "commit", "c", log_msg));
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(c(!", "commit", log_msg));
+  if (lock_tokens)
+    {
+      iterpool = svn_pool_create(pool);
+      for (hi = apr_hash_first(pool, lock_tokens); hi; hi = apr_hash_next(hi))
+        {
+          void *val;
+          const char *token;
+          svn_pool_clear(iterpool);
+          apr_hash_this(hi, NULL, NULL, &val);
+          token = val;
+          SVN_ERR(svn_ra_svn_write_cstring(conn, iterpool, token));
+        }
+      svn_pool_destroy(iterpool);
+    }
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)b)", keep_locks));
   SVN_ERR(handle_auth_request(sess, pool));
   SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, ""));
 
@@ -804,6 +823,18 @@ static svn_error_t *ra_svn_commit(void *baton,
   svn_ra_svn_get_editor(editor, edit_baton, conn, pool,
                         ra_svn_end_commit, ccb);
   return SVN_NO_ERROR;
+}
+
+static svn_error_t *ra_svn_commit(void *baton,
+                                  const svn_delta_editor_t **editor,
+                                  void **edit_baton,
+                                  const char *log_msg,
+                                  svn_commit_callback_t callback,
+                                  void *callback_baton,
+                                  apr_pool_t *pool)
+{
+  return ra_svn_commit2(baton, editor, edit_baton, log_msg, callback,
+                        callback_baton, NULL, TRUE, pool);
 }
 
 static svn_error_t *ra_svn_get_file(void *baton, const char *path,
@@ -1452,7 +1483,8 @@ static const svn_ra_plugin_t ra_svn_plugin = {
   ra_svn_lock,
   ra_svn_unlock,
   ra_svn_get_lock,
-  ra_svn_get_locks
+  ra_svn_get_locks,
+  ra_svn_commit2
 };
 
 svn_error_t *svn_ra_svn_init(int abi_version, apr_pool_t *pool,
