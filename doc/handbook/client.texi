@@ -18,13 +18,13 @@ For a first conversational overview of the the client's CVS-like
 @end menu
 
 @c ------------------------------------------------------------------
-
 @node Checkout
 @section Checkout
 
-Most of the time, you will start using a Subversion repository by doing
-a @dfn{checkout} of your project. "Checking out" will provide you with a
-local copy of the HEAD of the Subversion repository that you checked out.
+Most of the time, you will start using a Subversion repository by
+doing a @dfn{checkout} of your project. "Checking out" will provide
+you with a local copy of the HEAD (latest revision) of the Subversion
+repository that you checked out.
 
 @example
 $ svn co http://svn.collab.net/repos/svn/trunk
@@ -50,62 +50,257 @@ A  handbook/license.texi
 A  handbook/repos_admin.texi
 A  handbook/client.texi
 Checked out revision 2499.
-$
 @end example
 
-Since Subversion uses copy-modify-merge instead of lock-modify-unlock,
-you're now ready to start making changes to the files that you've
-checked out, known collectively as your @dfn{Working copy}. You can even
-delete the entire working copy and forget about it entirely--there's no
-need to notify the Subversion server unless you're ready to @dfn{check
-in} changes, a new file, or even a directory.
+Since Subversion uses a ``copy-modify-merge'' model instead of
+``lock-modify-unlock'', you're now ready to start making changes to
+the files that you've checked out, known collectively as your
+@dfn{working copy}. You can even delete the entire working copy and
+forget about it entirely -- there's no need to notify the Subversion
+server unless you're ready to @dfn{check in} changes, a new file, or
+even a directory.
 
-See @command{svn help checkout} for command line options to checkout.
+Every directory in a working copy contains an @dfn{administrative
+area}, a subdirectory named @file{.svn}.  Normal @command{ls} commands
+won't show this subdirectory, but it's vital.  Whatever you do, don't
+delete or change anything in the administrative area!  Subversion
+depends on it to manage your working copy.
 
+You can run @command{svn help checkout} for command line options to
+checkout, although one option is very common and worth mentioning: the
+@samp{--destination} (@samp{-d}) switch.  This places your working
+copy into a new directory that you name.  For example:
 
+@example
+$ svn co http://svn.collab.net/repos/svn/trunk -d subv
+A  subv/subversion.dsw
+A  subv/svn_check.dsp
+A  subv/COMMITTERS
+A  subv/configure.in
+A  subv/IDEAS
+...
+Checked out revision 2499.
+@end example
+
+@c ------------------------------------------------------------------
 @node Basic Work Cycle
 @section Basic Work Cycle
 
-Subversion has numerous features, options, bells and whistles, but on a
-day-to-day basis, odds are that you will only use a few of them. In this
-chapter we'll run through the most basic things that you might find
-yourself doing with Subversion in the course of a day's work.
+Subversion has numerous features, options, bells and whistles, but on
+a day-to-day basis, odds are that you will only use a few of them. In
+this section we'll run through the most common things that you might
+find yourself doing with Subversion in the course of a day's work.
 
-@subheading Update
+The typical work cycle looks like this:
 
-When working on a project with a team, you'll want to update to get any
-changes from other developers on the project.
+@itemize @bullet
+@item
+Update your working copy
+@item
+Make changes
+@item
+Examine your changes
+@item
+Merge others' changes
+@item
+Commit your changes
+@end itemize
+
+@c ---------------
+@subsection Update your working copy  (svn up)
+
+When working on a project with a team, you'll want to @dfn{update}
+your working copy: that is, receive any changes from other developers
+on the project.  @command{svn update} brings your working copy in-sync
+with the latest revision in the repository.
 
 @example
 $ svn up
 U  ./foo.c
 U  ./bar.c
 Updated to revision 2.
-$
 @end example
 
-In this case someone else checked in modifications to both foo.c and
-bar.c since your last update, and Subversion has updated your working
-copy to include those changes.
+In this case, someone else checked in modifications to both
+@file{foo.c} and @file{bar.c} since the last time you updated, and
+Subversion has updated your working copy to include those changes.
 
-@subheading Status
+Let's examine the output of @samp{svn update} a bit more.  When the
+server sends changes to your working copy, a letter code is displayed
+next to each item:
 
-Now you're ready to get to work and make changes in your working
-copy. It's usually most convenient to commit at logical breaks in your
-work--a new feature added or a bug fixed. After making some changes in
-your working copy, see what files you've modified by running @command{svn status}
+@table @b
+@item U  foo
+File @file{foo} was (U)pdated (received changes from the server.)
+@item A  foo
+File or directory @file{foo} was (A)dded to your working copy.
+@item D  foo
+File or directory @file{foo} was (D)eleted from your working copy.
+@item R  foo
+File or directory @file{foo} was (R)eplaced in your working copy;
+that is, @file{foo} was deleted, and a new item with the same name
+was added.  While they may have the same name, the repository
+considers them to be distinct objects with distinct histories.
+@item G  foo
+File @file{foo} received new changes, but also had changes of your own
+to begin with.  The changes did not intersect, however, so Subversion
+has mer(G)ed the repository's changes into the file without a problem.
+@item C  foo
+File @file{foo} received (C)onflicting changes from the server.  The
+changes from the server directly overlap your own changes to the file.
+No need to panic, though.  This overlap needs to be resolved by a
+human (you); we discuss this situation further down.
+@end table
+
+
+
+@subsection Make changes  (svn add, rm, cp, mv)
+
+Now you can to get to work and make changes in your working copy. It's
+usually most convenient to create a 'task' for yourself, such as
+writing a new feature, fixing a bug, etc.
+
+What kinds of changes can you make to your working copy tree?
+
+@table @b
+@item File changes
+This is the simplest sort of change.  Unlike other revision control
+systems, you don't need to tell Subversion that you intend to change a
+file;  just do it.  Later on, Subversion will be able to automatically
+detect which files have been changed.
+@item Tree changes
+You can ask Subversion to 'mark' files and directories for scheduled
+removal or addition.  Of course, no additions or removals will happen
+in the repository until you decide to commit.
+@end table
+
+To make file changes, just use your normal editor, word processor, or
+whatever.   A file needn't be in text-format;  binary files work just
+fine.
+
+There are at least four Subversion subcommands for making tree
+changes.  Detailed help can be found with @command{svn help}, but here
+is an overview:
+
+@table @command
+@item svn add foo
+Schedule @file{foo} to be added to the repository.  When you next
+commit, @file{foo} will become a permanent child of its parent
+directory.  Note that if @file{foo} is a directory, only the directory
+itself will be scheduled for addition.  If you want to add its
+contents as well, pass the @samp{--recursive} switch.
+@item svn rm foo
+Schedule @file{foo} to be removed from the repository.  If @file{foo}
+is a file, it immediately vanishes from the working copy -- but it can
+be recovered with @command{svn revert} (see below.)  If @file{foo} is
+a directory, it is merely scheduled for deletion.  After you commit,
+@file{foo} will no longer exist in the working copy or repository.
+@item svn cp foo bar
+Create new item @file{bar} as a duplicate of @file{foo}.  @file{bar}
+is automatically scheduled for addition.  When @file{bar} is added to
+the repository on the next commit, it's copy-history is recorded (as
+having originally come from @file{foo}.)
+@item svn mv foo bar
+This command is exactly the same as running @command{svn cp foo bar;
+svn rm foo}.  That is, @file{bar} is scheduled for addition as a copy
+of @file{foo}, and @file{foo} is scheduled for removal.
+@end table
+
+
+@subsection Examine your changes  (svn status, diff, revert)
+
+So now you've finished your changes... or so you think.  But what
+exactly did you change?  How can you review them?
+
+Subversion has been optimized to help you with this task, and is able
+to do many things without talking to the repository or network at all.
+In particular, your working copy contains a secret cached ``pristine''
+copy of each file within the @file{.svn} area.  Because of this, it
+can quickly show you how your working files have changed, or even
+allow you to undo your changes.
+
+The @command{svn status} command is your friend; become intimate with
+it.  You'll probably use @command{svn status} more than any other
+command.
+
+If you run @command{svn status} at the top of your working copy, with
+no arguments, it will detect all file and tree changes you've made:
 
 @example
 $ svn status
 M      ./bar.c
-$
+M      ./README
+D      ./stuff/fish.c
+A      ./stuff/things/bloo.h
 @end example
 
-This means that bar.c is the only file that you've modified in your
-working copy. You can find out exactly what those changes are by running
-@command{svn diff} with no arguments, which prints out the changes (In unified diff format)
+Here, the status command is saying that you have (M)odified two files,
+scheduled another for (A)ddition, and scheduled another for (D)eletion.
 
-@subheading Diff
+If a single path is passed to the command, it will tell you about it:
+
+@example
+$ svn status stuff/fish.c
+D      ./stuff/fish.c
+@end example
+
+This command also has a @samp{--verbose} (@samp{-v}) mode, which will
+show you the status of @emph{every} item in your working copy:
+
+@example
+$ svn status -v
+M               44        23    joe       ./README
+_               44        30    frank     ./INSTALL
+M               44        20    frank     ./bar.c
+_               44        18    joe       ./stuff
+_               44        35    mary      ./stuff/trout.c
+D               44        19    frank     ./stuff/fish.c
+_               44        21    mary      ./stuff/things
+A                0         ?     ?        ./stuff/things/bloo.h
+_               44        36    joe       ./stuff/things/gloo.c
+@end example
+
+This is the ``long form'' output of @command{svn status}.  The first
+column is still the same.  The second column shows the
+working-revision of the item.  The third and fourth column show the
+revision in which the item last changed, and who changed it.
+
+Finally, there is a @samp{--show-updates} (@samp{-u}) switch, which
+contacts the repository and adds information about things that are
+out-of-date:
+
+@example
+$ svn status -u
+M      *        44        23    joe       ./README
+M               44        20    frank     ./bar.c
+_      *        44        35    mary      ./stuff/trout.c
+D               44        19    frank     ./stuff/fish.c
+A                0         ?     ?        ./stuff/things/bloo.h
+@end example
+
+Notice the two asterisks:  if you were to run @command{svn up} at this
+point, you would receive changes to @file{README} and @file{trout.c}.
+Hmmm, better be careful.  You'll need to absorb those server-changes
+on @file{README} before you commit, lest the repository reject your
+commit for being out-of-date.  (More on this subject below.)
+
+We should also mention two other status codes that you might see:
+
+@example
+$ svn status
+?    ./foo.o
+!    ./foo.c
+@end example
+
+The '?' indicates a file in the directory that is not under revision
+control.  You can silence the question marks by either passing the
+@samp{--quiet} (@samp{-q}) option to status, or by setting the
+@samp{svn:ignore} property on the parent directory (@xref{Properties}.)
+
+Another way to examine your changes is with the @command{svn diff}
+command.  You can find out @emph{exactly} how you've modified things
+by running @command{svn diff} with no arguments, which prints out file
+changes in unified diff format:
 
 @example
 $ svn diff
@@ -119,25 +314,127 @@ Index: ./bar.c
 +#include <unistd.h>
 +
 +#include <stdio.h>
- 
- 
+  
  int main(void) @{
 -  printf("Sixty-four slices of American Cheese...\n");
 +  printf("Sixty-five slices of American Cheese...\n");
    return 0;
  @}
-$ 
+
+Index: ./README
+===================================================================
+--- ./README
++++ ./README	Mon Jul 15 17:58:18 2002
+@@ -193,3 +193,4 @@ 
++Note to self:  pick up laundry.
+
+Index: ./stuff/fish.c
+===================================================================
+--- ./stuff/fish.c
++++ ./stuff/fish.c  Mon Jul 15 17:58:18 2002
+-Welcome to the file known as 'fish'.
+-Information on fish will be here soon.
+
+Index: ./stuff/things/bloo.h
+===================================================================
+--- ./stuff/things/bloo.h
++++ ./stuff/things/bloo.h  Mon Jul 15 17:58:18 2002
++Here is a new file to describe
++things about bloo.
 @end example
 
-So now that you know what your changes are, and that they compile,
-update once again to make sure that you're up to date, and check the
-changes into the repository.
+The @command{svn diff} command produces this output by comparing your
+working files against the cached ``pristine'' copies within the
+@file{.svn} area.  Files scheduled for addition are displayed as all
+added-text, and files scheduled for deletion are displayed as all
+deleted text.
 
-@subheading Commit
+Now suppose you see this output, and realize that your changes to
+@file{README} are a mistake; perhaps you accidentally typed that text
+into the wrong file in your editor.
+
+The @command{svn revert} command is exactly for this purpose.  It
+throws away all changes to your file:
 
 @example
-$ svn update
-At revision 2.  ## No changes from anyone else--great.
+$ svn revert README
+Reverted ./README
+@end example
+
+The file is reverted to its pre-modified state by overwriting it with
+the cached ``pristine'' copy.  But also note that @command{svn revert}
+can undo any scheduled operations -- in case you decide that you don't
+want to add a new file after all, or that you don't want to remove
+something.
+
+A final reminder:  all three of these commands (@command{svn status},
+@command{svn diff}, @command{svn revert}) can be used without any
+network access (except for the @samp{-u} switch to status).  This
+makes it easy to manage your changes-in-progress while travelling on
+an airplane, etc.
+
+@subsection Merge others' changes  (conflict resolution)
+
+We've already seen how @command{svn status -u} can predict conflicts.
+Suppose you run @command{svn update} and some interesting things
+occur:
+
+@example
+$ svn up
+U  ./INSTALL
+G  ./README
+C  ./bar.c
+@end example
+
+The U and G codes are nothing to sweat about;  those files cleanly
+absorbed changes from the repository.  The 'G' stands for mer(G)ed,
+which means that the file had local changes to begin with, but the
+repository changes didn't overlap in any way.
+
+But the 'C' stands for conflict.  This means that the server's changes
+overlapped with your own, and now you have to manually choose between
+them.
+
+Whenever a conflict occurs:
+
+@itemize @bullet
+@item
+a 'C' is printed during the update, and Subversion remembers that the
+file is ``conflicted''.
+@item
+three fulltext files starting with @file{tmp} are created; these files
+are the original three files that could not be merged together.
+@item
+conflict markers are placed into the file, to visibly demonstrate the
+overlapping areas.
+@end itemize
+
+At this point, Subversion will @emph{not} allow you to commit the file
+until the three temporary files are removed.
+
+If you get a conflict, you need to either (1) hand-merge the
+conflicted text (by examining and editing the conflict markers within
+the file), (2) copy one of the tmpfiles on top of your working file, or
+(3) run @command{svn revert} to toss all of your changes.
+
+Once you've resolved the conflict, you need to let Subversion know by
+removing the three tmpfiles.  (The @command{svn resolve} command, by
+the way, is a shortcut that does nothing but automatically remove the
+three tmpfiles for you.)  When the tmpfiles are gone, Subversion no
+longer considers the file to be in a state of conflict anymore.
+
+
+@subsection Commit your changes
+
+Finally!  Your edits are finished, you've merged all updates from the
+server, and you're ready to commit your changes.
+
+The @command{svn commit} command sends all (or some) of your changes
+to the repository.  When you commit a change, you need to supply a
+@dfn{log message}, describing your change.  Your log message will be
+permanently attached to the new revision you create.
+
+@example
 $ svn commit -m "Added include lines and corrected # of cheese slices."
 Sending        bar.c
 Transmitting file data .
@@ -145,12 +442,40 @@ Committed revision 3.
 $
 @end example
 
-That covers the most basic work cycle for using Subversion. See
-@command{svn help <commandname>} help on the update, status, diff, and
-commit commands.
+Another way to specify a log message is to place it in a file, and
+pass the filename with the @samp{-F} switch.  If you fail to
+specify either the @samp{-m} or @samp{-F} switch, then Subversion will
+automatically launch your favorite @samp{$EDITOR} for composing a log
+message.
 
+The repository doesn't know or care if your changes make any sense as
+a whole; it only checks to make sure that nobody else has changed any
+of the same files that you did when you weren't looking.  If somebody
+@emph{has} done that, the entire commit will fail with a message
+informing that one or more of your files is out-of-date.  At this
+point, you need to run @command{svn update} again, deal with any
+merges or conflicts that result, and attempt your commit again.
+
+That covers the most basic work cycle for using Subversion. Run
+@command{svn help <commandname>} for help on any of the commands
+covered in this section.
+
+
+@c ------------------------------------------------------------------
 @node History
 @section History
+
+As we mentioned eariler, the repository is like a time machine.  It
+remembers every revision ever committed, and allows you to explore
+this history.
+
+There are two commands that mine historical data from the repository.
+@command{svn log} shows you broad information: log messages attached
+to revisions, and which paths changed in each revision.  @command{svn
+diff}, on the other hand, can show you the specific details of how a
+file changed over time.
+
+@subsection svn log
 
 To find out information about the history of a file or directory, you
 use the @command{svn log} command. @command{svn log} will tell you who
@@ -170,169 +495,728 @@ Added main() methods.
 ------------------------------------------------------------------------
 rev 1:  fitz | Mon, 15 Jul 2002 17:40:08 -0500 | 2 lines
 
-
 Initial import
 ------------------------------------------------------------------------
 @end example
 
-Note that the log messages are printed in reverse chronological order,
-and there are numerous options for controlling what output you get. See
-@command{svn help log} for command line options to log.
+Note that the log messages are printed in reverse chronological order
+by default.  If you wish to see a different range of revisions, or
+just a single revision, pass the @samp{--revision} (@samp{-r}) switch:
 
+@example
+$ svn log -r 5:19
+[...]
+$ svn log -r 8
+[...]
+@end example
+
+You can also examine the log history on a single file or directory.
+The commands
+
+@example
+$ svn log foo.c
+[...]
+$ svn log http://foo.com/svn/trunk/code/foo.c
+[...]
+@end example
+
+will display log messages @emph{only} for those revisions in which the
+working file (or URL) changed.
+
+And while we're on the subject, @command{svn log} also takes a
+@samp{--verbose} (@samp{-v}) option too;  it includes a list of
+changed-paths in each revision:
+
+@example
+$ svn log -r 8 -v
+------------------------------------------------------------------------
+rev 8:  jrandom | 2002-07-14 08:15:29 -0500 | 1 line
+Changed paths:
+   U /trunk/code/foo.c
+   U /trunk/code/bar.h
+   A /trunk/code/doc/README
+
+Frozzled the sub-space winch.
+
+------------------------------------------------------------------------
+@end example
+
+@subsection svn diff
+
+We've already seen @command{svn diff} in an previous section; it
+displays file differences in unified diff format.  Earlier, it was
+used to show the local modifications made to our working copy.
+
+In fact, it turns out that there are @emph{three} distinct uses of
+@command{svn diff}:
+
+@subsubsection Examining local changes
+Invoking @command{svn diff} with no switches will compare your working
+files to the cached ``pristine'' copies in the @file{.svn} area:
+
+@example
+$ svn diff foo
+Index: ./foo
+===================================================================
+--- ./foo
++++ ./foo	Tue Jul 16 15:19:53 2002
+@@ -1 +1,2 @@
+ An early version of the file
++...extra edits
+@end example
+
+@subsubsection Comparing working copy to repository
+If a single @samp{--revision}(@samp{-r}) number is passed, then your
+working files are compared to a particular revision in the repository.
+
+@example
+$ svn diff -r 3 foo
+Index: ./foo
+===================================================================
+--- ./foo
++++ ./foo	Tue Jul 16 15:19:53 2002
+@@ -1,2 +1,2 @@
+ An early version of the file
+-Second version of the file
++...extra edits
+@end example
+
+@subsubsection Comparing repository to repository
+If two revision numbers are passed via @samp{-r}, then the two
+revisions are directly compared.
+
+@example
+$ svn diff -r 2:3 foo
+
+Index: ./foo
+===================================================================
+--- ./foo
++++ tmp.280.00001	Tue Jul 16 15:22:19 2002
+@@ -1 +1,2 @@
+ An early version of the file
++Second version of the file
+@end example
+
+
+If you read the help for @command{svn diff}, you'll discover that you
+can supply URLs instead of working copy paths as well.  This is
+especially useful if you wish to inspect changes when you have no
+working copy available:
+
+@example
+$ svn diff -r 23:24 http://foo.com/some/project
+[...]
+@end example
+
+
+@c ------------------------------------------------------------------
 @node Branches and Tags
 @section Branches and Tags
 
-Ben, this one's all yours. :)
+@subsection Branching with @command{svn cp} 
 
+At this point, you should understand how each commit creates an entire
+new filesystem tree in the repository.  (If not, read about
+@dfn{revisions}, @xref{Transactions and Revision Numbers}, or
+@xref{Revision numbers are different now}.)
+
+As you may have suspected, the filesystem doesn't grow 652 new inodes
+each time a new revision is created.  Instead, each new tree is
+@emph{mostly} made of pointers to already-existing nodes; new nodes
+are created only for changed items, and all the rest of the revision
+tree is ``shared storage'' with other revision trees.  This technique
+demonstrates how the filesystem is able to make "cheap copies" of
+things.  These cheap copies are nothing more than directory entries
+that point to existing nodes.  And this is the basis of tags and
+branches.
+
+Suppose we have a repository whose head tree is revision 82.  In this
+repository is a subdirectory @file{mooIRC} that contains a software
+project that is ready to be tagged.  How do we tag it?  Very simple:
+make a ``cheap'' copy of this directory.  In other words, create a new
+directory entry (somewhere else in the filesystem) that points to this
+@emph{specific} node that represents directory @file{mooIRC} in
+revision 82.  Of course, you can name the new directory entry whatever
+you want -- probably a tag-name like @file{mooIRC-beta}.
+
+The easiest way to make this copy is with @command{svn cp}, which,
+incidentally, can operate entirely on URLs, so that the copy happens
+only on the server-side:
+
+@example
+$ svn cp http://foo.com/repos/mooIRC \
+         http://foo.com/repos/mooIRC-beta
+Committed revision 83.
+@end example
+
+Now, as long as you never touch the contents of the directory
+@file{mooIRC-beta}, that entry will forever point to a node that looks
+the way @file{mooIRC} did at a specific moment in time (however it
+looked in revision 82).  And that's exactly what a @dfn{tag} is.
+
+But what if you start making commits within @file{mooIRC-beta}?  And
+what if you also continue to make commits in the original
+@file{mooIRC} directory?  Then you have two directories that started
+out looking identical -- their common ancestor was @file{mooIRC} in
+revision 82 -- but now have diverged their contents over time.  In
+other words, they represent different @dfn{branches} of the project.
+
+It's very important to note that the Subversion filesystem is
+@emph{not} aware of "tags" or "branches".  It's only aware of
+directories, and all directories are equal.  The tag and branch
+concepts are purely @emph{human} meanings attached to particular
+directories.
+
+For this reason, it's up to users (and the Subversion repository
+administrator) to choose sane policies that help elucidate these
+labels.  For example, here's a good way to lay out your repository:
+
+@example
+   /
+   /projectA
+   /projectA/trunk/
+   /projectA/branches/
+   /projectA/tags/
+   /projectB
+   /projectB/trunk/
+   /projectB/branches/
+   /projectB/tags/
+@end example
+
+Each time @file{/projectA/trunk} reaches a taggable state, make a copy
+of the directory somewhere in @file{/projectA/tags/}, and set the copy
+to read-only.  Use the same procedure to create a branch in
+@file{/projectA/branches/}.
+
+An alternate way to lay out a repository:
+
+@example
+   /
+   /trunk
+   /trunk/projectA
+   /trunk/projectB
+   /branches
+   /branches/projectA
+   /branches/projectB
+   /tags
+   /tags/projectA
+   /tags/projectB
+@end example
+
+Or, of course, you could just place each project into a dedicated
+repository.  It's up to you.  (@xref{FAQ}.) @c ###
+
+
+@subsection Switching to a branch with @command{svn switch}
+
+The @command{svn switch} command allows you to ``move'' some or all of
+your working copy to a branch or tag.  For example, suppose I have a
+working copy of @file{mooIRC}, and I'd like to work on some subsystem
+as it appears in a subdirectory of @file{mooIRC-beta}.  At the same
+time, I want the rest my working copy to remain on the original
+@file{mooIRC} branch.  To do this, I switch the appropriate subdir to
+the new branch location:
+
+@example
+$ svn switch mooIRC/subsystems/renderer \
+             http://foo.com/repos/mooIRC-beta/subsystems/renderer
+
+U  mooIRC/subsystems/renderer/foo.c
+U  mooIRC/subsystems/renderer/bar.h
+U  mooIRC/subsystems/renderer/baz.c
+@end example
+
+Now my working copy of the @file{renderer} subdirectory represents a
+different location on the server.
+
+Really, @command{svn switch} is just a fancier version of @command{svn
+update}.  Whereas @command{svn update} has the ability to move your
+working copy through time (either by updating to the latest revision,
+or by updating to a specific revision given with @samp{-r}),
+@command{svn switch} is able to move your working copy through time
+@emph{and} space.
+
+
+@subsection Moving changes with @command{svn merge}
+
+Suppose a team of programmers working on the @file{mooIRC-beta} branch
+have fixed a critical bug, and the team working on the original
+@file{mooIRC} branch would like to apply that change as well.
+
+The @command{svn merge} command is the answer.  You can think of
+@command{svn merge} as a special kind of @command{svn diff};  only
+instead of displaying unified diffs to the screen, it @emph{applies}
+the differences to your working copy as if they were local changes.  
+
+For example, suppose the bug fix happened in a commit to the
+@file{mooIRC-beta} branch in revision 102.
+
+@example
+$ svn diff -r 101:102 http://foo.com/repos/mooIRC-beta
+
+[...]   # diffs sent to screen
+
+$ svn merge -r 101:102 http://foo.com/repos/mooIRC-beta mooIRC
+U   mooIRC/glorb.c
+U   mooIRC/src/floo.h
+@end example
+
+While the output of @command{svn merge} looks similar to
+@command{update} or @command{switch}, it is in fact only applying
+temporary changes to the working files.  Once the differences are
+applied as local changes, you can examine them as usual with
+@command{svn diff}, @command{svn status}, or undo them with
+@command{svn revert} as usual.  If the changes are acceptable, you can
+commit them.
+
+@subsection Removing a branch or tag with @command{svn rm}
+
+The @command{svn rm} command can operate on URLs.  A file or directory
+can be ``remotely'' deleted from the repository, with no working copy
+present:
+
+@example
+$ svn rm http://foo.com/repos/tags/mooIRC-bad-tag -m "deleting bad tag"
+Committed revision 1023.
+@end example
+
+Of course, this is still a form of immediate commit, so some kind of
+log message is still required.
+
+Enough said!
+
+
+@c ------------------------------------------------------------------
 @node Properties
 @section Properties
 
-A Property is a piece of meta data about a file, and using Subversion,
-you can attach any bit of data to a file as a property. A property
-consists of two parts--a @dfn{key} which identifies the value, and the
-@dfn{value} itself. Some examples of properties are:
+Subversion allows you to attach arbitrary ``metadata'' to files and
+directories.  We refer to this data as @dfn{properties}, and they can
+be thought of as collections of name/value pairs (hash-tables) attached
+to each item in your working copy.
+  
+To set or get a property on a file or directory, use the @command{svn
+propset} and @command{svn propget} commands.  To list all properties
+attached to an item, use @command{svn proplist}.  To delete a
+property, use @command{svn propdel}.
 
 @example
-key:   svn:ignore
-value: Makefile
-       *.o
-       *~
-       .*~
-key:   svn:executable
-value: on
+$ svn propset color green foo.c
+property `color' set on 'foo.c'
+
+$ svn propget color foo.c
+green
+
+$ svn propset height "5 feet" foo.c
+property `height' set on 'foo.c'
+
+$ svn proplist foo.c
+Properties on 'foo.c':
+  height
+  color
+
+$ svn proplist foo.c --verbose
+Properties on 'foo.c':
+  height : 5 feet
+  color : green
+
+$ svn propdel color foo.c
+property `color' deleted from 'foo.c'
 @end example
 
-The first property listed above is usually set on a directory to tell
-Subversion which files (or regexps) to ignore when performing actions on
-that directory. The second property tells the Subversion client to set
-the executable bit on the corresponding file. You can also use
-properties to keep arbitrary data for your own purposes.
+Properties are @emph{versioned}, just like file contents.  This means
+that new properties can be merged into your working files, and can
+sometimes come into conflict too.  Property values need not be text,
+either.  For example, you could attach a binary property-value by
+using the @samp{-F} switch:
 
 @example
-Ben, what are some good examples, keeping in mind that:
-     "Names of user properties should be URI's, to avoid conflicts
-     between organizations." from svn-manual.txt
+$ svn propset x-face -F joeface.jpg foo.c
+property `x-face' set on 'foo.c'
 @end example
 
-@subheading Setting a Property's Value
+Subversion also provides a great convenience method for editing
+existing properties: @command{svn propedit}. When you invoke it,
+Subversion will open the value of the property in question in your
+favorite editor (or at least the editor that you've defined as $EDITOR
+in your shell), and you can edit the value just as you would edit any
+text file. This is exceptionally convenient for properties that are a
+newline-separated array of values. (See below.)
 
-To set a property on file (or directory), use @command{svn propset}.
-
-@example
-$ svn propset svn:ignore foo .
-property `svn:ignore' set on '.'
-$
-@end example
-
-Even though you've added a property to '.', you need to commit to send
-your changes to the repository. Check your changes using @command{svn status}
-
-@example
-$ svn status
-_M     .
-$
-@end example
-
-The 'M' in the 2nd column indicates that you've modified the properties
-for '.' @command{svn diff} will even show you what properties have changed:
+Property changes are still considered ``local modifications'', and
+aren't permanent until you commit.  Like textual changes, property
+changes can be seen by @command{svn diff}, @command{svn status}, and
+reverted altogether with @command{svn revert}:
 
 @example
 $ svn diff
-Property changes on: .
+Property changes on: foo.c
 ___________________________________________________________________
-Name: svn:ignore
-   + foo
+Name: color
+   + green
 
-$
+$ svn status
+_M   foo.c
 @end example
 
+Notice that a 2nd column has appeared in the status output; the
+leading undescore indicates that you've not made any textual changes,
+but the 'M' means you've modified the properties.  @command{svn
+status} tries to hide the 2nd 'property' column when an item has no
+properties at all; this was a design choice, to ease new users into
+the concept.  When properties are created, edited, or updated on an
+item, that 2nd column appears forever after.
 
-@subheading Getting a Property's Value
 
-Once you've set a property, you can get the value by using @command{svn propget}
+@subsection Special properties
+
+Subversion has no particular policy regarding properties; they can be
+used for any purpose.  The only restriction is that Subversion has
+reserved the @samp{svn:} name prefix for itself.  A number of special
+``magic'' properties begin with this prefix.  We'll cover these
+features here.
+
+@subsubsection @samp{svn:executable}
+
+This is a file-only property, and can be set to any value.  Its mere
+existence causes a file's permissions to be executable.
+
+@subsubsection @samp{svn:mime-type}
+
+At the present time, Subversion examines the "svn:mime-type" property
+to decide if a file is text or binary.  If the file has no
+"svn:mime-type" property, or if the property's value matches "text/*",
+then Subversion assumes it is a text file.  If the file has the
+"svn:mime-type" property set to anything other than "text/*", it
+assumes the file is binary.
+
+If Subversion believes that the file is binary, it will not attempt to
+perform contextual merges during updates.  Instead, Subversion creates
+two files side-by-side in your working copy; the one containing your
+local modifications is renamed with an ".orig" extension.
+
+Subversion also helps users by running a binary-detection algorithm in
+the 'svn import' and 'svn add' subcommands.  These subcommands try to
+make a good guess at a file's binary-ness, and then (possibly) set a
+"svn:mime-type" property of "application/octet-stream" on the file
+being added.  (If Subversion guesses wrong, you can always remove or
+hand-edit the property.)
+
+Finally, if the "svn:mime-type" property is set, then mod_dav_svn will
+use it to fill in the 'Content-type:' header when responding to an
+http GET request.  This makes files display more nicely when perusing
+a repository with a web browser.
+
+
+@subsubsection @samp{svn:ignore}
+
+If you attach this property to a directory, it causes certain file
+patterns within the directory to be ignored by @command{svn status}.
+For example, suppose I don't want to see object files or backup files
+in my status listing:
+
+@example
+$ svn status
+M  ./foo.c
+?  ./foo.o
+?  ./foo.c~
+@end example
+
+Using @command{svn propedit}, I would set the value of
+@samp{svn:ignore} to a newline-delimited list of patterns:
 
 @example
 $ svn propget svn:ignore .
-foo
-$
+*.o
+*~
 @end example
 
-That's about all there is to it.
 
-@subheading Listing Properties
+@subsubsection @samp{svn:keywords}
 
-To view the properties on a file or directory, use @command{svn
-proplist}. This will list the keys for all the properties, but not the
-values.
+Subversion has the ability to substitute useful strings into special
+``keywords'' within text files.  For example, if I placed this text
+into a file:
 
 @example
-$ svn proplist .
-Properties on '.':
-  svn:ignore
-$
+Here is the latest report from the front lines.
+$LastChangedDate$
+Cumulus clouds are appearing more frequently as summer approaches.
 @end example
 
-@subheading Editing a Property
-
-Subversion provides a great convenience method for editing existing
-properties called @command{svn propedit}. When you invoke it, Subversion
-will open the value of the property in question in your favorite editor
-(or at least the editor that you've defined as $EDITOR in your shell),
-and you can edit the value just as you would edit any text file. This is
-exceptionally convenient for properties that are a newline separated
-array of values, such as 'svn:ignore'.
-
-@command{svn propedit} only changes your working copy, so don't forget
-to commit your changes.
-
-@subheading Deleting Properties
-
-Finally, there is @command{svn propdel} for deleting properties.
+Subversion is able subsitute the @samp{$LastChangedDate$} string with
+the actual date in which this file last changed:
 
 @example
-$ svn propdel silly-mistake .
-property `silly-mistake' deleted from '.'.
-$
+Here is the latest report from the front lines.
+$LastChangedDate: 2002-07-15T03:53:48 $
+Cumulus clouds are appearing more frequently as summer approaches.
 @end example
 
-Like propset and propedit, @command{svn propdel} only changes your
-working copy, so don't forget to commit your changes.
+All in all, there are four special keywords that Subversion knows how
+to substitute:
+
+@table @b
+@item LastChangedDate
+The last time this file changed.  Can also be abbreviated as 'Date'.
+@item LastChangedRev
+The last revision in which this file changed.  Can be abbreviated as
+'Rev'.
+@item LastChangedBy
+The last user to change this file.  Can be abbreviated as 'Author'.
+@item HeadURL
+A full URL to the latest version of the file in the repository.  Can
+be abbreviated as 'URL'.
+@end table
+
+To activate a keyword, or set of keywords, you merely need to set the
+@samp{svn:keywords} property to a list of keywords:
+
+@example
+$ svn propset svn:keywords "Date Author" foo.c
+property `svn:keywords' set on 'foo.c'
+@end example
+
+And when you commit this property change, you'll discover that all
+occurrences of @samp{$Date$}, @samp{$LastChangedDate$},
+@samp{$Author$}, and @samp{$LastChangedBy$} will have substituted
+values within @file{foo.c}.
 
 
-That pretty much covers the property commands. Use @command{svn help
-<commandname>} help on the propset, propget, proplist, propedit, and
-propdel commanads.
+@subsubsection @samp{svn:eol-style}
 
+By default, Subversion doesn't pay any attention to line endings.  If
+a text file has either LF, CR, or CRLF endings, then those are the
+line endings that will exist on the file in both the repository and
+working copy.
+
+But if developers are working on different platforms, line endings can
+sometimes become troublesome.  For example, if a Win32 developer and
+Unix developer took turns modifying a file, its line endings might
+flip-flop back and forth from revision to revision in the repository.
+This makes examining or merging differences very difficult, as
+@emph{every} line appears to be changed in each version of the file.
+
+The solution here is to set the @samp{svn:eol-style} property to
+``native''.  This makes the file always appear with the ``native''
+line endings of each developer's operating system.  Note, however,
+that the file will always contain LF endings in the repository.  This
+prevents the line-ending ``churn'' from revision to revision.
+
+Alternately, you can force files to always retain a fixed, specific
+line ending: set a file's @samp{svn:eol-style} property to one of
+@samp{LF}, @samp{CR} or @samp{CRLF}.  A Win32 '.dsp' file, for
+example, which is used by Microsoft development tools, should always
+have CRLF endings.
+
+
+@subsubsection @samp{svn:externals}
+
+@xref{Modules}.
+
+
+@c ------------------------------------------------------------------
 @node Modules
 @section Modules
 
+Sometimes it's useful to construct a working copy that is made out of
+a number of different checkouts.  For example, you may want different
+sub-directories to come from different locations in a repository.
+
+On the one hand, you could begin by checking out a working copy, and
+then run @command{svn switch} on various subdirectories.  But this is
+a bit of work.  Wouldn't it be nice to define -- in a single place --
+exactly how you want the final working copy to be?
+
+This is known as a @dfn{module}.  You can define a module by attaching
+another special ``magic'' @samp{svn:} property to a directory: the
+@samp{svn:externals} property.
+
+The value of this property is a list of subdirectories and
+their corresponding URLs:
+
+@example
+$ svn propget svn:externals projectdir
+subdir1/foo       http://url.for.external.source/foo
+subdir1/bar       http://blah.blah.blah/repositories/theirproj
+subdir1/bar/baz   http://blorg.blorg.blorg/basement/code
+@end example
+
+Assuming that this property is attached to the directory
+@file{projectdir}, then when we check it out, we'll get everything
+else defined by the property.
+
+@example
+$ svn checkout http://foo.com/repos/projectdir
+A  projectdir/blah.c
+A  projectdir/gloo.c
+A  projectdir/trout.h
+Checked out revision 128.
+
+Fetching external item into projectdir/subdir1/foo
+A  projectdir/subdir1/foo/rho.txt
+A  projectdir/subdir1/foo/pi.txt
+A  projectdir/subdir1/foo/tau.doc
+Checked out revision 128.
+[...]
+@end example
+
+By tweaking the value of the @samp{svn:externals} property, the
+definition of the module can change over time, and subsequent calls to
+@command{svn update} will update working copies appropriately.
+
+@c ### Karl, anything else to add here?  I'm suspicious that this
+@c feature doesn't work as I expect just yet;  when I run 'svn up' at
+@c the top of the wc, nothing happens in the external directory at
+@c all, because (I guess) it's not linked to the parent. 
+
+
+@c ------------------------------------------------------------------
 @node Other Commands
 @section Other Commands
 
-@subheading Add
 
-@subheading Cleanup
+@subheading @command{svn cleanup}
 
-@subheading Copy
+When Subversion modifies your working copy (or any information within
+@file{.svn/}), it tries to do so as safely as possible.  Before
+changing anything, it writes its intentions to a logfile, then
+executes the commands in the logfile.  It's similar in design to a
+journaled filesystem;  if the user hits Control-C or if the machine
+crashes, the logfiles are left lying around.  By re-executing the
+logfiles, the work can complete, and your working copy can get itself
+back into a consistent state.
 
-@subheading Delete
+And this is exactly what @command{svn cleanup} does:  it searches your
+working copy and re-runs any leftover logs, removing locks in the
+process.  Use this command if Subversion ever tells you that some part
+of your working copy is ``locked''.  Also, @command{svn status} will
+display an 'L' next to locked items:
 
-@subheading Export
+@example
+$ svn st
+  L    ./somedir
+M      ./somedir/foo.c 
 
-@subheading Help
+$ svn cleanup
+$ svn st
+M      ./somedir/foo.c
+@end example
 
-@subheading Import
+@subheading @command{svn info}
 
-@subheading Info
+In general, we try to discourage users from directly reading the
+@file{.svn/entries} file used to track items.  Instead, curiosity can
+be quelled by using the @command{svn info} to display most of the
+tracked information:
 
-@subheading Merge
+@example
+$ svn info client.texi
+Path: client.texi
+Name: client.texi
+Url: http://svn.collab.net/repos/svn/trunk/doc/handbook/client.texi
+Revision: 2548
+Node Kind: file
+Schedule: normal
+Last Changed Author: fitz
+Last Changed Rev: 2545
+Last Changed Date: 2002-07-15 23:03:54 -0500 (Mon, 15 Jul 2002)
+Text Last Updated: 2002-07-16 08:48:04 -0500 (Tue, 16 Jul 2002)
+Properties Last Updated: 2002-07-16 08:48:03 -0500 (Tue, 16 Jul 2002)
+Checksum: 8sfaU+5dqyOgkhuSdyxGrQ==
+@end example
 
-@subheading Make Directory
 
-@subheading Move
+@subheading @command{svn import}
 
-@subheading Revert
+The import command is a quick way to move an unversioned tree of files
+into a repository.
 
-@subheading Resolve
+There are two ways to use this command:
 
-@subheading Switch
+@example
+$ svnadmin create /usr/local/svn/newrepos
+$ svn import file:///usr/local/svn/newrepos mytree
+Adding  mytree/foo.c
+Adding  mytree/bar.c
+Adding  mytree/subdir
+Adding  mytree/subdir/quux.h
+Transmitting file data....
+Committed revision 1.
+@end example
+
+The above example places the contents of directory @file{mytree}
+directly into the root of the repository:
+
+@example
+/foo.c
+/bar.c
+/subdir
+/subdir/quux.h
+@end example
+
+If you give @command{svn import} a third argument, it will use the
+argument as the name of a new subdirectory to create within the URL.
+
+@example
+$ svnadmin create /usr/local/svn/newrepos
+$ svn import file:///usr/local/svn/newrepos mytree fooproject
+Adding  mytree/foo.c
+Adding  mytree/bar.c
+Adding  mytree/subdir
+Adding  mytree/subdir/quux.h
+Transmitting file data....
+Committed revision 1.
+@end example
+
+The repository would now look like
+
+@example
+/fooproject/foo.c
+/fooproject/bar.c
+/fooproject/subdir
+/fooproject/subdir/quux.h
+@end example
+
+
+@subheading @command{svn export}
+
+The export command is a quick way to create an unversioned tree of
+files from a repository directory.
+
+@example
+$ svn export file:///usr/local/svn/newrepos/fooproject
+A  fooproject/foo.c
+A  fooproject/bar.c
+A  fooproject/subdir
+A  fooproject/subdir/quux.h
+Checked out revision 3.
+@end example
+
+The resulting directory will not contain any @file{.svn}
+administrative areas.
+
+
+@subheading @command{svn mkdir}
+
+This is another convenience command, and it has two uses.
+
+First, it can be used to simultaneously create a new working copy
+directory and schedule it for addition:
+
+@example
+$ svn mkdir new-dir
+A     new-dir
+@end example
+
+Or, it can be used to instantly delete a file or directory from a
+repository (no working copy needed):
+
+@example
+$ svn mkdir file:///usr/local/svn/newrepos/branches -m "made new dir"
+Committed revision 1123.
+@end example
+
+Again, this is a form of immediate commit, so some sort of log message
+is required.
+

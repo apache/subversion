@@ -1,13 +1,7 @@
 @node Getting Started
 @chapter Getting Started
 
-@quotation
-``The mere absence of that blisteringly arbitrary chaos that makes CVS
-CVS is like leaving the squalor of an inner-city tenement for a walk
-in a park, filled with trees, children on skates, and people having
-picnics.''
-      -- a former CVS user
-@end quotation
+How to get started with Subversion. 
 
 @menu
 * Introduction::                History and overview of features.
@@ -263,10 +257,11 @@ client library.
 @section Installation
 
 ### Somebody please write this.  It should describe how to fetch various
-binary packages of Subversion for different platforms.
+binary packages of Subversion for different platforms.  Maybe this
+will flesh out once RPMs, .debs, and BSD ports are widely available
+from standard locations?
 
-### Place a cross-ref here to the appendix that describes how to build
-from source code.
+To build from source code, @xref{Compiling and installing}.
 
 
 @c ------------------------------------------------------------------
@@ -278,8 +273,8 @@ If you're an existing CVS user, then the first section, @ref{The
 Subversion Development Model}, should already be familiar.  You may just
 want to skim it quickly, noting the special definition of "Revision" in
 the second subsection.  At some point, you should probably also read the
-appendix which describes fundamental differences between CVS and SVN.
-@c ### (@xref{?}
+appendix which describes fundamental differences between CVS and SVN
+(@xref{SVN for CVS users}.)
 
 
 @menu
@@ -523,9 +518,8 @@ automatically, Subversion leaves it to the user to resolve the conflict.
 @end itemize
 
 The subversion "status" command will show you the state of any item in
-your working copy.  
-@c ### @xref{status in chapter 2}
-
+your working copy.  @xref{Basic Work Cycle}, in particular the
+subsection ``Examine your changes''.
 
 @node Subversion Does Not Lock Files
 @subsubsection Subversion Does Not Lock Files
@@ -579,8 +573,8 @@ Patch is not appropriate for files with rigid formats, like images or
 executables.  Subversion attempts to notice when a file is in a binary
 format, or is of any mime-type other than text/*.  For these
 rigid-format files, Subversion simply presents you with the two
-original texts to choose from.  
-@c ### @xref conflict merging
+original texts to choose from.  @xref{Basic Work Cycle}, in particular
+the subsection ``Merge others' changes''.
 
 
 @c ------------------------------------
@@ -717,8 +711,7 @@ D   ./baz/bloo
 According to this output, three items are scheduled to be (D)eleted from
 the repository, one item is scheduled to be (A)dded to the repository,
 and two items have had their contents (M)odified in some way.  For more
-details, be sure to see the @command{svn status} section in Chapter 2. 
-@c ### @xref{?}
+details, be sure to read about @command{svn status} in Chapter 2. 
 
 Now we decide to commit our changes, creating Revision 2 in the
 repository:
