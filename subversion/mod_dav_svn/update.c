@@ -112,7 +112,7 @@ struct authz_read_baton
 };
 
 
-/* This implements 'svn_repos_authz_read_func_t'. */
+/* This implements 'svn_repos_authz_func_t'. */
 static svn_error_t *authz_read(svn_boolean_t *allowed,
                                svn_fs_root_t *root,
                                const char *path,

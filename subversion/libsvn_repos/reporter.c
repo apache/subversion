@@ -77,7 +77,7 @@ typedef struct report_baton_t
   void *update_edit_baton; 
 
   /* Authz callback for svn_repos_dir_delta.  These may be NULL. */
-  svn_repos_authz_read_func_t authz_read_func;
+  svn_repos_authz_func_t authz_read_func;
   void *authz_read_baton;
 
   /* This hash contains any `linked paths', and what they were linked
@@ -536,7 +536,7 @@ svn_repos_begin_report (void **report_baton,
                         svn_boolean_t ignore_ancestry,
                         const svn_delta_editor_t *editor,
                         void *edit_baton,
-                        svn_repos_authz_read_func_t authz_read_func,
+                        svn_repos_authz_func_t authz_read_func,
                         void *authz_read_baton,
                         apr_pool_t *pool)
 {
