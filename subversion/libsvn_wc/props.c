@@ -287,7 +287,7 @@ svn_wc__save_prop_file (svn_stringbuf_t *propfile_path,
   apr_file_t *prop_tmp;
 
   apr_err = apr_file_open (&prop_tmp, propfile_path->data,
-                      (APR_WRITE | APR_CREATE),
+                      (APR_WRITE | APR_CREATE | APR_TRUNCATE),
                       APR_OS_DEFAULT, pool);
   if (apr_err)
     return svn_error_createf (apr_err, 0, NULL, pool,
