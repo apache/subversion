@@ -2453,14 +2453,6 @@ typedef struct txdelta_baton_t
   svn_txdelta_window_handler_t interpreter;
   void *interpreter_baton;
 
-  /* This string holds the entire "growing" target in memory.  Yes,
-     this is bad!  Someday we'll tell berkeley db to operate directly
-     on substrings of table values. */
-  svn_stringbuf_t *target_string;
-
-  /* Information about the file into which we will eventually dump
-     target_string:  */
-
   /* The original file info */
   svn_fs_root_t *root;
   const char *path;
@@ -2468,6 +2460,7 @@ typedef struct txdelta_baton_t
   /* Derived from the file info */
   dag_node_t *node;
   svn_stream_t *source_stream;
+  svn_stream_t *target_stream;
 
   /* Pool used by db txns */
   apr_pool_t *pool;
@@ -2475,63 +2468,12 @@ typedef struct txdelta_baton_t
 } txdelta_baton_t;
 
 
-
-/* Helper function of generic type `svn_write_fn_t'.  Implements a
-   writable stream which appends to an svn_stringbuf_t. */
+/* A trail-ready wrapper around svn_fs__dag_finalize_edits. */
 static svn_error_t *
-write_to_string (void *baton, const char *data, apr_size_t *len)
+txn_body_finalize_edits (void *baton, trail_t *trail)
 {
   txdelta_baton_t *tb = (txdelta_baton_t *) baton;
-  
-  svn_stringbuf_appendbytes (tb->target_string, data, *len);
-
-  return SVN_NO_ERROR;
-}
-
-
-/* Helper function: insure that BATON->path is a mutable file, set
-   BATON->source_stream to a readable generic stream for the file's
-   contents.  The stream is allocated in TRAIL->pool.  
-   
-   If BATON->path is not a file, return SVN_ERR_FS_NOT_FILE; if it is
-   an immutable file, make it mutable.  */
-static svn_error_t *
-txn_body_get_mutable_source_stream (void *baton, trail_t *trail)
-{
-  txdelta_baton_t *tb = (txdelta_baton_t *) baton;
-  parent_path_t *parent_path;
-
-  /* Call open_path with no flags, as we want this to return an error
-     if the node for which we are searching doesn't exist. */
-  SVN_ERR (open_path (&parent_path, tb->root, tb->path, 0, trail));
-
-  /* Now, make sure this path is mutable. */
-  SVN_ERR (make_path_mutable (tb->root, parent_path, tb->path, trail));
-  tb->node = parent_path->node;
-
-  /* If we get here without error, then the path to the file must
-     exist.  Now convert the dag_node into a generic readable
-     stream. */
-  SVN_ERR (svn_fs__dag_get_contents (&(tb->source_stream),
-                                     tb->node,
-                                     tb->pool,
-                                     trail));
-  return SVN_NO_ERROR;
-}
-
-
-/* Helper function:  flush baton->target_string to disk as new file
-   contents. */
-static svn_error_t *
-txn_body_write_target_string (void *baton, trail_t *trail)
-{
-  txdelta_baton_t *tb = (txdelta_baton_t *) baton;
-
-  SVN_ERR (svn_fs__dag_set_contents (tb->node,
-                                     tb->target_string,
-                                     trail));
-
-  return SVN_NO_ERROR;
+  return svn_fs__dag_finalize_edits (tb->node, trail);
 }
 
 
@@ -2546,18 +2488,56 @@ window_consumer (svn_txdelta_window_t *window, void *baton)
      cb->target_string. */
   SVN_ERR (tb->interpreter (window, tb->interpreter_baton));
 
-  /* Is the window NULL?  If so, we're done;  time to dump our target
-     string to disk.  */
+  /* Is the window NULL?  If so, we're done, and we need to tell the
+     dag subsystem that we're finished with our edits. */
   if (! window)
     SVN_ERR (svn_fs__retry_txn (svn_fs_root_fs (tb->root),
-                                txn_body_write_target_string, tb,
-                                tb->pool));
-  
+                                txn_body_finalize_edits, tb, tb->pool));
+
   return SVN_NO_ERROR;
 }
 
 
+static svn_error_t *
+txn_body_apply_textdelta (void *baton, trail_t *trail)
+{
+  txdelta_baton_t *tb = (txdelta_baton_t *) baton;
+  parent_path_t *parent_path;
 
+  /* Call open_path with no flags, as we want this to return an error
+     if the node for which we are searching doesn't exist. */
+  SVN_ERR (open_path (&parent_path, tb->root, tb->path,
+                      open_path_last_optional, trail));
+
+  /* Now, make sure this path is mutable. */
+  SVN_ERR (make_path_mutable (tb->root, parent_path, tb->path, trail));
+  tb->node = parent_path->node;
+
+  /* Make a readable "source" stream out of the current contents of
+     ROOT/PATH; obviously, this must done in the context of a db_txn.
+     The stream is returned in tb->source_stream. */
+  SVN_ERR (svn_fs__dag_get_contents (&(tb->source_stream),
+                                     tb->node,
+                                     tb->pool,
+                                     trail));
+
+  /* Make a writable "target" stream */
+  SVN_ERR (svn_fs__dag_get_edit_stream (&(tb->target_stream),
+                                        tb->node,
+                                        tb->pool,
+                                        trail));
+
+  /* Finally, create a custom window handler that uses our two
+     streams. */
+  svn_txdelta_apply (tb->source_stream,
+                     tb->target_stream,
+                     tb->pool,
+                     &(tb->interpreter),
+                     &(tb->interpreter_baton));
+
+  return SVN_NO_ERROR;
+
+}
 
 svn_error_t *
 svn_fs_apply_textdelta (svn_txdelta_window_handler_t *contents_p,
@@ -2566,50 +2546,15 @@ svn_fs_apply_textdelta (svn_txdelta_window_handler_t *contents_p,
                         const char *path,
                         apr_pool_t *pool)
 {
-  svn_stream_t *target_stream;
   txdelta_baton_t *tb = apr_pcalloc (pool, sizeof(*tb));
+
   tb->root = root;
   tb->path = path;
   tb->pool = pool;
-  tb->target_string = svn_stringbuf_create ("", pool);
 
   /* See IZ Issue #438 */
-  /* ### kff & cmpilato todo: we speculate that insuring the file's
-     mutability is not logically connected with getting a read stream
-     on it, and that therefore there should be two different calls
-     below.  txn_body_get_mutable_source_stream() would go back to
-     being txn_body_get_source_stream(), and we'd separately insure
-     that the path is mutable.  However, this all may be related to
-     the losing way we're accumulating the target_string in memory at
-     the moment (see txdelta_baton_t's documentation), and more
-     thought is required. 
-
-     One thought: the "base" contents shouldn't be the mutable file,
-     but the original, immutable contents.  Then the new file would
-     start out with a clear() call, followed by apply() calls (see the
-     strings-table.h string clear/append interface, for example),
-     where the apply() calls apply deltas against the immutable
-     contents.  That is one possible way out of the
-     accumulate-the-whole-string then-write-it method we're using now.
-     Further investigation required.  */
-
-  /* Make a readable "source" stream out of the current contents of
-     ROOT/PATH; obviously, this must done in the context of a
-     db_txn.  The stream is returned in tb->source_stream. */
   SVN_ERR (svn_fs__retry_txn (svn_fs_root_fs (root),
-                              txn_body_get_mutable_source_stream, tb, pool));
-
-  /* Make a writable "target" stream which writes data to
-     tb->target_string. */
-  target_stream = svn_stream_create (tb, pool);
-  svn_stream_set_write (target_stream, write_to_string);
-
-  /* Finally, create a custom window handler that uses our two streams. */
-  svn_txdelta_apply (tb->source_stream,
-                     target_stream,
-                     pool,
-                     &(tb->interpreter),
-                     &(tb->interpreter_baton));
+                              txn_body_apply_textdelta, tb, pool));
   
   *contents_p = window_consumer;
   *contents_baton_p = tb;
@@ -2618,8 +2563,6 @@ svn_fs_apply_textdelta (svn_txdelta_window_handler_t *contents_p,
 
 /* --- End machinery for svn_fs_apply_textdelta() ---  */
 
-
-/* --- Machinery for asking if things changed --- */
 
 /* Note: we're sharing the `things_changed_args' struct with
    svn_fs_props_changed(). */
@@ -2688,9 +2631,6 @@ svn_fs_contents_changed (int *changed_p,
 
   return SVN_NO_ERROR;
 }
-
-
-/* --- End machinery for asking if things changed --- */
 
 
 

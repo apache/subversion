@@ -1295,6 +1295,17 @@ svn_fs__dag_delete_if_mutable (svn_fs_t *fs,
       SVN_ERR (svn_fs__delete_rep_if_mutable (fs, data_rep_key, trail));
   }
 
+  /* Delete any mutable edit representation. */
+  if (SVN_FS__NR_EDIT_KEY (node_rev))
+    {
+      const char *edit_rep_key;
+      edit_rep_key = apr_pstrndup (trail->pool,
+                                   (SVN_FS__NR_EDIT_KEY (node_rev))->data,
+                                   (SVN_FS__NR_EDIT_KEY (node_rev))->len);
+      if (edit_rep_key[0] != '\0')
+        SVN_ERR (svn_fs__delete_rep_if_mutable (fs, edit_rep_key, trail));
+    }
+
   /* Delete the node revision itself. */
   SVN_ERR (svn_fs__delete_node_revision (fs, id, trail));
   
@@ -1470,18 +1481,18 @@ svn_fs__dag_file_length (apr_size_t *length,
 
 
 
-svn_error_t *
-svn_fs__dag_set_contents (dag_node_t *file,
-                          svn_stringbuf_t *contents,
-                          trail_t *trail)
-{
-  /* ### todo: writing file contents needs to move to a streamy
-     interface. */
 
+svn_error_t *
+svn_fs__dag_get_edit_stream (svn_stream_t **contents,
+                             dag_node_t *file,
+                             apr_pool_t *pool,
+                             trail_t *trail)
+{
   svn_fs_t *fs = file->fs;   /* just for nicer indentation */
   skel_t *node_rev_skel;
   svn_boolean_t is_mutable;
-  const char *rep_key, *mutable_rep_key;
+  const char *mutable_rep_key;
+  svn_stream_t *ws;
 
   /* Make sure our node is a file. */
   if (! svn_fs__dag_is_file (file))
@@ -1498,39 +1509,86 @@ svn_fs__dag_set_contents (dag_node_t *file,
       (SVN_ERR_FS_NOT_MUTABLE, 0, NULL, trail->pool,
        "Attempted to set textual contents of an immutable node.");
 
-  /* Get the node's current contents... */
+  /* Get the node revision. */
   SVN_ERR (get_node_revision (&node_rev_skel, file, trail));
 
-  rep_key = apr_pstrndup (trail->pool,
-                          (SVN_FS__NR_DATA_KEY (node_rev_skel))->data,
-                          (SVN_FS__NR_DATA_KEY (node_rev_skel))->len);
-  
-  SVN_ERR (svn_fs__get_mutable_rep (&mutable_rep_key, rep_key, fs, trail));
-  
-  /* If we got a new rep, make the node revision refer to it. */
-  if (strcmp (rep_key, mutable_rep_key) != 0)
+  /* If this node already has an EDIT-DATA-KEY, destroy the data
+     associated with that key.  ### todo: should this return an error
+     instead?  */
+  if (SVN_FS__NR_EDIT_KEY (node_rev_skel))
     {
-      /* We made a new rep, so update the node revision. */
-      (SVN_FS__NR_DATA_KEY (node_rev_skel))->data = mutable_rep_key;
-      (SVN_FS__NR_DATA_KEY (node_rev_skel))->len  = strlen (mutable_rep_key);
-      SVN_ERR (svn_fs__put_node_revision (fs, file->id,
-                                          node_rev_skel, trail));
+      const char *rep_key;
+      rep_key = apr_pstrndup (trail->pool,
+                              (SVN_FS__NR_EDIT_KEY (node_rev_skel))->data,
+                              (SVN_FS__NR_EDIT_KEY (node_rev_skel))->len);
+      SVN_ERR (svn_fs__delete_rep_if_mutable (fs, rep_key, trail));
     }
 
-  /* This is so losing.  We need to move to a streamy, delta-aware
-     interface.  Thanks for listening. */
+  /* Now, let's ensure that we have a new EDIT-DATA-KEY available for
+     use. */
+  SVN_ERR (svn_fs__get_mutable_rep (&mutable_rep_key, NULL, fs, trail));
+  
+  /* We made a new rep, so update the node revision. */
+  svn_fs__append (svn_fs__str_atom (mutable_rep_key, trail->pool), 
+                  node_rev_skel);
+  SVN_ERR (svn_fs__put_node_revision (fs, file->id, node_rev_skel, trail));
 
-  /* Replace the old contents with the new contents. */
-  {
-    svn_stream_t *ws;
-    apr_size_t len;
+  /* Return a writable stream with which to set new contents. */
+  ws = svn_fs__rep_contents_write_stream (fs, mutable_rep_key, NULL, pool);
+  *contents = ws;
 
-    ws = svn_fs__rep_contents_write_stream (fs, mutable_rep_key,
-                                            trail, trail->pool);
-    SVN_ERR (svn_fs__rep_contents_clear (fs, mutable_rep_key, trail));
-    len = contents->len;
-    SVN_ERR (svn_stream_write (ws, contents->data, &len));
-  }
+  return SVN_NO_ERROR;
+}
+
+
+
+svn_error_t *
+svn_fs__dag_finalize_edits (dag_node_t *file,
+                            trail_t *trail)
+{
+  svn_fs_t *fs = file->fs;   /* just for nicer indentation */
+  skel_t *node_rev_skel;
+  svn_boolean_t is_mutable;
+  const char *old_data_key;
+
+  /* Make sure our node is a file. */
+  if (! svn_fs__dag_is_file (file))
+    return 
+      svn_error_createf 
+      (SVN_ERR_FS_NOT_FILE, 0, NULL, trail->pool,
+       "Attempted to set textual contents of a *non*-file node.");
+  
+  /* Make sure our node is mutable. */
+  SVN_ERR (svn_fs__dag_check_mutable (&is_mutable, file, trail));
+  if (! is_mutable)
+    return 
+      svn_error_createf 
+      (SVN_ERR_FS_NOT_MUTABLE, 0, NULL, trail->pool,
+       "Attempted to set textual contents of an immutable node.");
+
+  /* Get the node revision. */
+  SVN_ERR (get_node_revision (&node_rev_skel, file, trail));
+
+  /* If this node has no EDIT-DATA-KEY, this is a no-op.  ### todo:
+     should this return an error? */
+  if (! SVN_FS__NR_EDIT_KEY (node_rev_skel))
+    return SVN_NO_ERROR;
+
+  /* Now, we want to delete the old representation and replace it with
+     the new.  Of course, we don't actually delete anything until
+     everything is being properly referred to by the node-revision
+     skel. */
+  old_data_key = apr_pstrndup (trail->pool,
+                               (SVN_FS__NR_DATA_KEY (node_rev_skel))->data,
+                               (SVN_FS__NR_DATA_KEY (node_rev_skel))->len);
+  (SVN_FS__NR_PROP_KEY (node_rev_skel))->next = 
+                                       SVN_FS__NR_EDIT_KEY (node_rev_skel);
+  SVN_ERR (svn_fs__put_node_revision (fs, file->id, node_rev_skel, trail));
+  
+  /* Only *now* can we safely destroy the old representation (if it
+     even existed in the first place). */
+  if (old_data_key && *old_data_key)
+    SVN_ERR (svn_fs__delete_rep_if_mutable (fs, old_data_key, trail));
 
   return SVN_NO_ERROR;
 }
@@ -1744,6 +1802,17 @@ make_node_immutable (dag_node_t *node,
   /* If this node revision is immutable already, do nothing. */
   if (! node_rev_is_mutable (node_rev))
     return SVN_NO_ERROR;
+
+  /* Make sure there is no outstanding EDIT-DATA-KEY associated with
+     this node.  If there is, we have a problem. */
+  if (SVN_FS__NR_EDIT_KEY (node_rev))
+    {
+      svn_stringbuf_t *id_str = svn_fs_unparse_id (node->id, trail->pool);
+      return svn_error_createf 
+        (SVN_ERR_FS_CORRUPT, 0, NULL, trail->pool,
+         "make_node_immutable: node `%s' has unfinished edits",
+         id_str->data);
+    }
 
   /* Copy the node_rev skel into our subpool. */
   node_rev = svn_fs__copy_skel (node_rev, trail->pool);
