@@ -345,6 +345,35 @@ svn_txdelta__vdelta (svn_txdelta_window_t *window,
   vdelta (window, data, data, data + source_len, FALSE, table, pool);
   vdelta (window, data, data + source_len, data + source_len + target_len,
           TRUE, table, pool);
+
+#if 0
+  /* This bit of code calculates the hash load and the
+     number of collisions. Please note that a the number
+     of collisions per bucket is one less than the length
+     of the chain. :-)  --xbc */
+  {
+    int i;
+    int empty = 0;
+    int collisions = 0;
+    for (i = 0; i < table->num_buckets; ++i)
+    {
+      hash_slot_t *slot = table->buckets[i];
+      if (!slot)
+        ++empty;
+      else
+      {
+        slot = slot->next;
+        while (slot != NULL)
+        {
+          ++collisions;
+          slot = slot->next;
+        }
+      }
+    }
+    fprintf (stderr, "Hash stats: load %d, collisions %d\n",
+             100 - 100 * empty / table->num_buckets, collisions);
+  }
+#endif
 }
 
 
