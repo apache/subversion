@@ -80,3 +80,10 @@ Candidate changes:
     Justification: Simple one-line fix to a shallow bug.
     Votes:
       +1: bliss, rooneg
+
+  * r8794
+    Fix memory corruption bug in mod_dav_svn.
+    Justification:  Because it can cause a segfault!
+    Notes:  Simple patch which allocates errors in a longer-lived pool.
+    Votes:
+      +1: sussman
