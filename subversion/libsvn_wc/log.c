@@ -103,13 +103,14 @@ merge_text (svn_string_t *path,
 }
 
 
-/* Move a file NAME to DEST, assuming that PATH is the common parent
-   of both locations.  */
+/* Copy (or rename, if RENAME is non-zero) NAME to DEST, assuming that
+   PATH is the common parent of both locations. */
 static svn_error_t *
-rename_under_directory (svn_string_t *path,
-                        const char *name,
-                        const char *dest,
-                        apr_pool_t *pool)
+cp_or_mv_under_directory (svn_string_t *path,
+                          const char *name,
+                          const char *dest,
+                          svn_boolean_t rename,
+                          apr_pool_t *pool)
 {
   apr_status_t status;
   svn_string_t *full_from_path, *full_dest_path;
@@ -120,12 +121,18 @@ rename_under_directory (svn_string_t *path,
   svn_path_add_component_nts (full_from_path, name, svn_path_local_style);
   svn_path_add_component_nts (full_dest_path, dest, svn_path_local_style);
 
-  status = apr_rename_file (full_from_path->data, full_dest_path->data, pool);
-  if (status)
-    return svn_error_createf (status, 0, NULL, pool,
-                              "rename_under_directory: "
-                              "can't move %s to %s",
-                              name, dest);
+  if (rename)
+    {
+      status = apr_rename_file (full_from_path->data,
+                                full_dest_path->data, pool);
+      if (status)
+        return svn_error_createf (status, 0, NULL, pool,
+                                  "cp_or_mv_under_directory: "
+                                  "can't move %s to %s",
+                                  name, dest);
+    }
+  else
+    return svn_wc__copy_file (full_from_path, full_dest_path, pool);
 
   return SVN_NO_ERROR;
 }
@@ -274,10 +281,16 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
         /* Note that saved_mods is allowed to be null. */
         err = merge_text (loggy->path, name, saved_mods, loggy->pool);
     }
-  else if (strcmp (eltname, SVN_WC__LOG_MV) == 0)
+  else if (strcmp (eltname, SVN_WC__LOG_RUN_CMD) == 0)
+    {
+      /* kff todo */
+    }
+  else if ((strcmp (eltname, SVN_WC__LOG_MV) == 0)
+           || (strcmp (eltname, SVN_WC__LOG_CP) == 0))
     {
       /* Grab a "dest" attribute as well. */
       const char *dest = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_DEST, atts);
+      svn_boolean_t rename = (strcmp (eltname, SVN_WC__LOG_MV)) ? 0 : 1;
 
       if (! name)
         return signal_error
@@ -296,8 +309,8 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
                                      "missing dest attr in %s",
                                      loggy->path->data));
       else
-        err = rename_under_directory (loggy->path, name, dest,
-                                      loggy->pool);
+        err = cp_or_mv_under_directory (loggy->path, name, dest,
+                                        rename, loggy->pool);
     }
   else if (strcmp (eltname, SVN_WC__LOG_DELETE_ENTRY) == 0)
     {

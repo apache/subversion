@@ -304,8 +304,14 @@ svn_error_t *svn_wc__ensure_adm (svn_string_t *path,
 /* Delete the entry SVN_WC__LOG_ATTR_NAME. */
 #define SVN_WC__LOG_DELETE_ENTRY        "delete-entry"
 
+/* Run an external command.  kff todo */
+#define SVN_WC__LOG_RUN_CMD             "run"
+
 /* Move a file from one place to another */
 #define SVN_WC__LOG_MV                  "mv"
+
+/* Move a file from one place to another */
+#define SVN_WC__LOG_CP                  "cp"
 
 
 /* A commit completed successfully, so:  
