@@ -18,7 +18,14 @@ ClearCase-lsvtree-1.gif:
 ClearCase-lsvtree-2.gif:
 
     Same file, but showing only versions contributing to the version
-    in the current view (working copy in SVN terms).
+    in the current view (working copy in SVN terms). Notice the
+    tooltip on the selected version. It can also show the version's
+    change log, which just happens to be empty in this case.
+
+    (Interesting note: ClearCase can be configured to ask for a change
+    log at check-out time, not just check-in. This is extremely useful
+    because it acts as a reminder for the developer, and other people
+    can see what you're doing.)
 
 
 ClearCase-lsvtree-3.gif:
