@@ -109,6 +109,8 @@ Berkeley DB a repository is using?</a></li>
 <li><a href="#website-auto-update">I'm managing a website in my
 repository.  How can I make the live site automatically update after
 every commit?</a></li>
+<li><a href="#single-file-checkout">How do I check out a single
+file?</a></li>
 </ul>
 
 <h4>Troubleshooting:</h4>
@@ -1599,6 +1601,17 @@ binary.</p>
 &lt;/DirectoryMatch&gt;
 </pre>
 
+<![CDATA[=========================================================]]>
+
+<h3><a name="single-file-checkout" title="#single-file-checkout"
+    >How do I check out a single file?</a></h3>
+
+<p>Subversion does not support checkout of a single file, it only
+supports checkout of directory structures.</p>
+
+<p>However, you can use 'svn cat' to export a single file.  This will
+retrieve the file's contents, it just won't create a versioned working
+copy.</p>
 
 <![CDATA[=========================================================]]>
 
