@@ -265,10 +265,11 @@ svn_auth_save_credentials (svn_auth_iterstate_t *state,
                                                  provider->provider_baton, 
                                                  pool));
 
-  /* If provider failed to save, throw an error. */
+  /* If provider failed to save, throw an error.
   if (! save_succeeded)                  
-    return svn_error_create (SVN_ERR_AUTH_CREDS_NOT_SAVED, NULL,
-                             "Provider failed to save credentials.");
+  return svn_error_create (SVN_ERR_AUTH_CREDS_NOT_SAVED, NULL,
+  "Provider failed to save credentials.");
+  */
 
   return SVN_NO_ERROR;
 }

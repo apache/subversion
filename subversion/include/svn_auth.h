@@ -212,8 +212,7 @@ svn_error_t * svn_auth_next_credentials(void **credentials,
  * Ask @a state to store the most recently returned credentials,
  * presumably because they successfully authenticated.  Use @a pool
  * for temporary allocation.  If no credentials were ever returned, do
- * nothing.  If credentials were returned, but no provider is able to
- * store them, return error.
+ * nothing.
  */
 svn_error_t * svn_auth_save_credentials(svn_auth_iterstate_t *state,
                                         apr_pool_t *pool);
