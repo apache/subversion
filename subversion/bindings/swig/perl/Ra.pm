@@ -23,7 +23,7 @@ sub AUTOLOAD {
 
     return $ret[0] unless $#ret;
 
-    return ($AUTOLOAD eq 'get_commit_editor') ? [@ret] :
+    return ($AUTOLOAD eq 'get_commit_editor') ? @ret :
 	bless [@ret], 'SVN::Ra::Reporter';
 }
 
