@@ -125,11 +125,15 @@ svn_wc__check_wc (svn_string_t *path, apr_pool_t *pool)
 static svn_boolean_t
 timestamps_equal_p (apr_finfo_t *finfo1, apr_finfo_t *finfo2)
 {
-  if (finfo1->ctime == finfo2->ctime)
-    return TRUE;
+  /* bmcs todo:  rewrite this to use Karl's new timestamp interface */
 
-  else
-    return FALSE;
+  /*  if (finfo1->ctime == finfo2->ctime)
+      return TRUE;
+      
+      else
+      return FALSE; */
+
+  return TRUE;
 }
 
 
@@ -144,17 +148,42 @@ filesizes_equal_p (apr_finfo_t *finfo1, apr_finfo_t *finfo2)
 }
 
 
-/* Do a byte-for-byte comparison of two previously-opened files, FILE1
-   and FILE2.  FILE1 and FILE2 are _assumed_ to be identical in size.  */
+/* Do a byte-for-byte comparison of the local version and text-base
+   version of FILENAME.  These two files are assumed to be the *same*
+   size already (i.e. have already passed the filesizes_equal_p()
+   test). */
 static svn_error_t *
 contents_identical_p (svn_boolean_t *identical_p,
-                      apr_file_t *file1,
-                      apr_file_t *file2,
+                      svn_string_t *filename,
                       apr_pool_t *pool)
 {
+  svn_error_t *err;
   apr_status_t status;
   apr_size_t bytes_read1, bytes_read2;
   char buf1[BUFSIZ], buf2[BUFSIZ];
+  apr_file_t *local_file = NULL;
+  apr_file_t *textbase_file = NULL;
+
+  /* Get filehandles for both the original and text-base versions of
+     FILENAME */
+  status = apr_open (&local_file, filename->data,
+                     APR_READ, APR_OS_DEFAULT, pool);
+  if (status)
+    return svn_error_createf
+      (status, 0, NULL, pool,
+       "contents_identical_p: apr_open failed on `%s'", filename->data);
+
+  err = svn_wc__open_text_base (&textbase_file, filename, APR_READ, pool);
+  if (err)
+    {
+      char *msg =
+        apr_psprintf
+        (pool,
+         "contents_identical_p: failed to open text-base copy of `%s'",
+         filename->data);
+      return svn_error_quick_wrap (err, msg);
+    }
+
  
   /* Strategy: repeatedly read BUFSIZ bytes from each file and
      memcmp() the bytestrings.  */
@@ -163,12 +192,12 @@ contents_identical_p (svn_boolean_t *identical_p,
 
   while (status != APR_EOF)
     {
-      status = apr_full_read (file1, buf1, BUFSIZ, &bytes_read1);
+      status = apr_full_read (local_file, buf1, BUFSIZ, &bytes_read1);
       if (status)
         return svn_error_create
           (status, 0, NULL, pool, "apr_full_read() failed.");
 
-      status = apr_full_read (file2, buf2, BUFSIZ, &bytes_read2);
+      status = apr_full_read (textbase_file, buf2, BUFSIZ, &bytes_read2);
       if (status)
         return svn_error_create
           (status, 0, NULL, pool, "apr_full_read() failed.");
@@ -180,8 +209,19 @@ contents_identical_p (svn_boolean_t *identical_p,
         }
     }
 
+  /* Close filehandles. */
+  err = svn_wc__close_text_base (textbase_file, filename, 0, pool);
+  if (err)
+    return err;
+
+  status = apr_close (local_file);
+  if (status)
+    return svn_error_create (status, 0, NULL, pool,
+                             "contents_identical_p: apr_close failed.");
+
   return SVN_NO_ERROR;
 }
+
 
 
 /* The public interface: has FILENAME been edited since the last
@@ -197,79 +237,53 @@ svn_wc__file_modified_p (svn_boolean_t *modified_p,
   apr_status_t status;
   svn_boolean_t identical_p;
   svn_error_t *err;
-  apr_finfo_t current_stat;
+  svn_string_t *textbase_filename;
+  apr_finfo_t local_stat;
   apr_finfo_t textbase_stat;
-  apr_file_t *current_file = NULL;
-  apr_file_t *textbase_file = NULL;
-
-  /* Get filehandles for both the original and text-base versions of
-     FILENAME */
-  status = apr_open (&current_file, filename->data,
-                     APR_READ, APR_OS_DEFAULT, pool);
-  if (status)
-    return svn_error_create
-      (status, 0, NULL, pool, "svn_wc__file_modified_p: apr_open failed.");
-
-  err = svn_wc__open_text_base (&textbase_file, filename, APR_READ, pool);
-  if (err)
-    {
-      char *msg =
-        apr_psprintf
-        (pool,
-         "svn_wc__file_modified_p:  failed to open text-base copy of `%s'",
-         filename->data);
-      return svn_error_quick_wrap (err, msg);
-    }
                      
-  /* Get stat info on both files */
-  status = apr_getfileinfo (&current_stat, current_file);
-  if (status)
-    return svn_error_create
-      (status, 0, NULL, pool,
-       "svn_wc__file_modified_p: apr_get_fileinfo failed.");
+  /* Get the full path of the textbase version of filename */
+  textbase_filename = svn_wc__text_base_path (filename, 0, pool);
 
-  status = apr_getfileinfo (&textbase_stat, textbase_file);
+  /* Stat both files */
+  status = apr_stat (&local_stat, filename->data, pool);
   if (status)
-    return svn_error_create
+    return svn_error_createf
       (status, 0, NULL, pool,
-       "svn_wc__file_modified_p: apr_get_fileinfo failed.");
+       "svn_wc__file_modified_p: apr_stat failed on `%s'", filename->data);
 
+  status = apr_stat (&textbase_stat, textbase_filename->data, pool);
+  if (status)
+    return svn_error_createf
+      (status, 0, NULL, pool,
+       "svn_wc__file_modified_p: apr_stat failed on `%s'",
+       textbase_filename->data);
 
   /* Easy-answer attempt #1:  */
-  if (timestamps_equal_p (&current_stat, &textbase_stat)
-      && filesizes_equal_p (&current_stat, &textbase_stat))
-    *modified_p = TRUE;
+  if (timestamps_equal_p (&local_stat, &textbase_stat)
+      && filesizes_equal_p (&local_stat, &textbase_stat))
+    *modified_p = FALSE;
 
   /* Easy-answer attempt #2:  */
-  else if (! filesizes_equal_p (&current_stat, &textbase_stat))
-    *modified_p = FALSE;
+  else if (! filesizes_equal_p (&local_stat, &textbase_stat))
+    *modified_p = TRUE;
   
-  else {
-    /* Give up and get the answer the hard way -- brute force! */
-    err = contents_identical_p (&identical_p, 
-                                current_file,
-                                textbase_file,
-                                pool);
-    if (err)
-      return err;
-
-    if (identical_p)
-      *modified_p = FALSE;
-    else
-      *modified_p = TRUE;
-  }
-
-  /* Close filehandles. */
-  err = svn_wc__close_text_base (textbase_file, filename, 0, pool);
-  if (err)
-    return err;
-
-  status = apr_close (current_file);
-  if (status)
-    return svn_error_create (status, 0, NULL, pool,
-                             "svn_wc__file_modified_p: apr_close failed.");
-
-
+  else 
+    {
+      /* If we get here, then we know that the filesizes are the same,
+         but the timestamps are different.  That's still not enough
+         evidence to make a correct decision.  So we just give up and
+         get the answer the hard way -- a brute force, byte-for-byte
+         comparision. */
+      err = contents_identical_p (&identical_p, filename, pool);
+      if (err)
+        return err;
+      
+      if (identical_p)
+        *modified_p = FALSE;
+      else
+        *modified_p = TRUE;
+    }
+  
   return SVN_NO_ERROR;
 }
 

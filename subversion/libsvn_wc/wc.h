@@ -312,9 +312,10 @@ svn_error_t *svn_wc__entries_init (svn_string_t *path, apr_pool_t *pool);
 
 
 /* For a given ENTRYNAME in PATH, set its version to VERSION in the
-   `entries' file.  Also set other XML attributes via varargs: key,
-   value, key, value, etc. -- where names are char *'s and values are
-   svn_string_t *'s.   Terminate list with NULL.
+   `entries' file.  Set KIND to svn_file_kind or svn_dir_kind; also
+   set other XML attributes via varargs: key, value, key, value,
+   etc. -- where names are char *'s and values are svn_string_t *'s.
+   Terminate list with NULL.
 
    ENTRYNAME is a string to match the value of the "name" attribute of
    some entry.  (This attribute is special attribute on entries,
@@ -325,8 +326,7 @@ svn_error_t *svn_wc__entries_init (svn_string_t *path, apr_pool_t *pool);
    the entry for this dir will be set.
 
    The entries file must not be open for writing by anyone else when
-   you call this, or badness will result.  
-*/
+   you call this, or badness will result.  */
 svn_error_t *svn_wc__entry_set (svn_string_t *path,
                                 svn_string_t *entryname,
                                 svn_vernum_t version,
