@@ -828,29 +828,6 @@ svn_txdelta__compose_windows (const svn_txdelta_window_t *window_A,
 }
 
 
-svn_txdelta_window_t *
-svn_txdelta__copy_window (const svn_txdelta_window_t *window,
-                          apr_pool_t *pool)
-{
-  svn_txdelta__ops_baton_t build_baton = { 0 };
-  svn_txdelta_window_t *new_window;
-  const apr_size_t ops_alloc_size = (window->num_ops
-                                     * sizeof(*build_baton.ops));
-  build_baton.num_ops = build_baton.ops_size = window->num_ops;
-  build_baton.src_ops = window->src_ops;
-  build_baton.ops = apr_palloc(pool, ops_alloc_size);
-  memcpy(build_baton.ops, window->ops, ops_alloc_size);
-  build_baton.new_data = svn_stringbuf_ncreate(window->new_data->data,
-                                               window->new_data->len,
-                                               pool);
-  new_window = svn_txdelta__make_window(&build_baton, pool);
-  new_window->sview_offset = window->sview_offset;
-  new_window->sview_len = window->sview_len;
-  new_window->tview_len = window->tview_len;
-  return new_window;
-}
-
-
 
 /*
  * local variables:

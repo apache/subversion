@@ -73,7 +73,7 @@ struct apply_baton {
 
 
 svn_txdelta_window_t *
-svn_txdelta__make_window (svn_txdelta__ops_baton_t *build_baton,
+svn_txdelta__make_window (const svn_txdelta__ops_baton_t *build_baton,
                           apr_pool_t *pool)
 {
   svn_txdelta_window_t *window;
@@ -96,6 +96,31 @@ svn_txdelta__make_window (svn_txdelta__ops_baton_t *build_baton,
   window->new_data = new_data;
 
   return window;
+}
+
+
+
+svn_txdelta_window_t *
+svn_txdelta__copy_window (const svn_txdelta_window_t *window,
+                          apr_pool_t *pool)
+{
+  svn_txdelta__ops_baton_t build_baton = { 0 };
+  svn_txdelta_window_t *new_window;
+  const apr_size_t ops_size = (window->num_ops * sizeof (*build_baton.ops));
+
+  build_baton.num_ops = window->num_ops;
+  build_baton.src_ops = window->src_ops;
+  build_baton.ops_size = window->num_ops;
+  build_baton.ops = apr_palloc (pool, ops_size);
+  memcpy (build_baton.ops, window->ops, ops_size);
+  build_baton.new_data =
+    svn_stringbuf_create_from_string (window->new_data, pool);
+
+  new_window = svn_txdelta__make_window (&build_baton, pool);
+  new_window->sview_offset = window->sview_offset;
+  new_window->sview_len = window->sview_len;
+  new_window->tview_len = window->tview_len;
+  return new_window;
 }
 
 
