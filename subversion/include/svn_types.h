@@ -78,6 +78,7 @@ typedef struct svn_prop_t
 } svn_prop_t;
 
 
+/* kff todo: shouldn't we just use apr_hash_t for this? */
 /* a property list is an unordered list of properties */
 typedef struct svn_proplist_t
 {

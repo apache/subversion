@@ -86,3 +86,9 @@ You can also give a prefix to C-c C-s, which tells it to list the
 @node commands alongside their sectioning commands.  This is helpful
 for finding mismatches.
 
+============================================================================
+JimB also says:
+============================================================================
+
+For defining functions, you should definitely use @deffun or
+@deftypefun, not @itemize nor @table.
