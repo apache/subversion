@@ -309,7 +309,7 @@ II. New Client Behaviors
                          *            file1
                        O              file2
                   M    B             file3
-                   M   S             file42
+                   M   T             file42
 
                As with "svn status", the sixth column indicates lock
                state.  The letters have the following meanings:
@@ -320,8 +320,8 @@ II. New Client Behaviors
                     Other WC.)
                'B': Lock in WC, but no lock in repository. (Lock
                     Broken.)
-               'S': Locked in WC, but locked with another token in
-                    repository.  (Lock was STolen.)
+               'T': Locked in WC, but locked with another token in
+                    repository.  (Lock was sTolen.)
             
             3.  'svn info', describes the attributes of a lock-token,
                 if attached to a working object.  If invoked on a URL,
