@@ -37,7 +37,23 @@ extern "C" {
 #include "svn_error.h"
 
 
+/* ### TODO:  Multiple Targets
 
+    - We eventually want svn_client_commit to take multiple targets.
+    Commits need to be atomic, so this change bubbles all the way down
+    int svn_wc_crawl_local_mods().  crawl_local_mods must start
+    crawling from the _parent_ of all targets and drive the commit
+    editor correctly;  any error at all causes the driver to bail.
+
+    - Up for debate:  an update on multiple targets is *not* atomic.
+    Right now, svn_client_update only takes one path.  What's
+    debatable is whether this should ever change.  On the one hand,
+    it's kind of losing to have the client application loop over
+    targets and call svn_client_update() on each one;  each call to
+    update initializes a whole new repository session (network
+    overhead, etc.)  On the other hand, it's this is a very simple
+    implementation, and allows for the possibility that different
+    targets may come from different repositories.  */
 
 
 
@@ -75,12 +91,22 @@ svn_client_checkout (const svn_delta_edit_fns_t *before_editor,
                      apr_pool_t *pool);
 
 
-/* Perform an update, providing pre- and post-checkout hook editors
-   and batons (BEFORE_EDITOR, BEFORE_EDIT_BATON / AFTER_EDITOR,
-   AFTER_EDIT_BATON), the target PATH that will be the root directory
-   of your updated working copy, an XML_SRC file to use instead of an
-   fs repository, and the ANCESTOR_REVISION to which you would like to
-   update.  This operation will use the provided memory POOL. */
+/* Perform an update of PATH (part of a working copy), providing pre-
+   and post-checkout hook editors and batons (BEFORE_EDITOR,
+   BEFORE_EDIT_BATON / AFTER_EDITOR, AFTER_EDIT_BATON).
+
+   If XML_SRC is NULL, then the update will come from the repository
+   that PATH was originally checked-out from.  An invalid REVISION
+   will cause the PATH to be updated to the "latest" revision, while a
+   valid REVISION will update to a specific tree.
+
+   If XML_SRC is non-NULL, it is an xml file to update from.  An
+   invalid REVISION implies that the revision *must* be present in the
+   <delta-pkg> tag, while a valid REVISION will be simply be stored in
+   the wc. (Note: a <delta-pkg> revision will *always* override the
+   one passed in.)
+
+   This operation will use the provided memory POOL. */
 svn_error_t *
 svn_client_update (const svn_delta_edit_fns_t *before_editor,
                    void *before_edit_baton,
@@ -88,7 +114,7 @@ svn_client_update (const svn_delta_edit_fns_t *before_editor,
                    void *after_edit_baton,
                    svn_string_t *path,
                    svn_string_t *xml_src,
-                   svn_revnum_t ancestor_revision,
+                   svn_revnum_t revision,
                    apr_pool_t *pool);
 
 

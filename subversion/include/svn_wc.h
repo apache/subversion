@@ -40,7 +40,7 @@ extern "C" {
 #include "svn_string.h"
 #include "svn_delta.h"
 #include "svn_error.h"
-
+#include "svn_ra.h"    /* for svn_ra_reporter_t type */
 
 
 /*** Asking questions about a working copy. ***/
@@ -340,20 +340,19 @@ svn_wc_crawl_local_mods (apr_hash_t **targets,
 
    Do a depth-first crawl in a working copy, beginning at
    ROOT_DIRECTORY.  Communicate the `state' of the working copy's
-   revisions to EDIT_FNS.  
+   revisions to REPORTER/REPORT_BATON.  
 
    No locks are or logs are created, nor are any animals harmed in the
    process.  No cleanup is necessary.
 
-   However, after all revisions are reported, edit_fns->close_edit()
-   is called, which immediately causes the RA layer to update the
-   working copy.  Thus the return value may very well reflect the
-   result of the update!   
- */
+   After all revisions are reported, REPORTER->finish_report() is
+   called, which immediately causes the RA layer to update the working
+   copy.  Thus the return value may very well reflect the result of
+   the update!  */
 svn_error_t *
 svn_wc_crawl_revisions (svn_string_t *root_directory,
-                        const svn_delta_edit_fns_t *edit_fns,
-                        void *edit_baton,
+                        const svn_ra_reporter_t *reporter,
+                        void *report_baton,
                         apr_pool_t *pool);
 
 

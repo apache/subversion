@@ -103,7 +103,6 @@ svn_client_commit (const svn_delta_edit_fns_t *before_editor,
       const char *URL;
 
       /* Construct full URL from PATH. */
-      /* todo:  API here??  need to get from working copy. */
       SVN_ERR (svn_wc_entry (&entry, path, pool));
       URL = entry->ancestor->data;
 
