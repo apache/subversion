@@ -69,7 +69,7 @@ init_cmdline (const char *progname, FILE *error_stream)
   /* C programs default to the "C" locale. But because svn is supposed
      to be i18n-aware, it should inherit the default locale of its
      environment.  */
-  if (!setlocale(LC_ALL, ""))
+  if (!setlocale(LC_CTYPE, ""))
     {
       if (error_stream)
         fprintf(error_stream,
