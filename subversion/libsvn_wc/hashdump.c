@@ -191,8 +191,8 @@ hash_write (ap_hash_t *hash,
 
 
 /* Read a line from FILE into BUF, but not exceeding *LIMIT bytes.
- * Does not include newline.
- * Length read is returned in *LIMIT.
+ * Does not include newline, instead '\0' is put there.
+ * Length (as in strlen) is returned in *LIMIT.
  * BUF should be pre-allocated.
  * FILE should be already opened. 
  *
