@@ -71,3 +71,20 @@ Candidate changes:
       Leak introduced in 1.1.1.
     Votes:
       +1: lundblad
+
+  * r11047 (Issue #2032)
+    Always call mkdir-init, even if we're not in a VPATH setup.
+    Justification:
+      Allows users to install JavaHL without manually creating
+      directories to work around Issue #2032.
+    Votes:
+      Nominated by: David James <james82@gmail.com>
+
+  * r11050
+    Add install dependencies for libsvn_fs and libsvn_fs_base.
+    Justification:
+      Allows users to install JavaHL separately, without needing to
+      compile and install the base subversion package.  Without this
+      fix, JavaHL installation crashes in that case.
+    Votes:
+      Nominated by: David James <james82@gmail.com>
