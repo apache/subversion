@@ -526,33 +526,16 @@ static void fetch_file_reader(void *userdata, const char *buf, size_t len)
 
   if (!cgc->checked_type)
     {
-#if 0
-      printf("Content-Type: %s/%s; charset=%s\n",
-             cgc->ctype.type, cgc->ctype.subtype, cgc->ctype.charset);
-#endif
 
-#ifndef NEON_CTYPE_BUG
-      if (ne_version_minimum(0, 19))    /* if (api < 0.19) */
+      if (!strcmp(cgc->ctype.type, "application") && 
+          !strcmp(cgc->ctype.subtype, "vnd.svn-svndiff"))
         {
-          /* 0.18.x has a bug in the Content-Type parsing. work around it.
-             (subtype points to an empty string; one past is what we want
-             to look for) */
-#if 0
-          printf("subtype=%s\n", cgc->ctype.subtype+1);
-#endif
-          if (!strcmp(cgc->ctype.subtype+1, "nd.svn-svndiff"))
-            {
-              /* we are receiving an svndiff. set things up. */
-              frc->stream = svn_txdelta_parse_svndiff(frc->handler,
-                                                      frc->handler_baton,
-                                                      TRUE,
-                                                      frc->pool);
-            }
+          /* we are receiving an svndiff. set things up. */
+          frc->stream = svn_txdelta_parse_svndiff(frc->handler,
+                                                  frc->handler_baton,
+                                                  TRUE,
+                                                  frc->pool);
         }
-      else
-        /* ### need to patch this code when Neon is fixed */
-        abort();
-#endif
 
       cgc->checked_type = 1;
     }
