@@ -1,6 +1,5 @@
-/*
- * svn_sorts.h :  all sorts of sorts.
- *
+/**
+ * @copyright
  * ====================================================================
  * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
  *
@@ -14,6 +13,12 @@
  * individuals.  For exact contribution history, see the revision
  * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
+ * @endcopyright
+ *
+ * @file svn_sorts.h
+ * @brief all sorts of sorts.
+ *
+ * @{
  */
 
 
@@ -32,25 +37,32 @@ extern "C" {
 
 
 
-/* This structure is used to hold a key/value from a hash table */
+/** This structure is used to hold a key/value from a hash table */
 typedef struct {
-  const void *key;      /* pointer to the key */
-  apr_ssize_t klen;     /* size of the key */
+  /** pointer to the key */
+  const void *key;
 
-  void *value;          /* pointer to the value */
+  /** size of the key */
+  apr_ssize_t klen;
+
+  /** pointer to the value */
+  void *value;
 } svn_item_t;
 
 
-/* Compare two svn_item_t's, returning an integer greater than,
- * equal to, or less than 0, according as A is greater than, equal to,
- * or less than B.
+/** Compare two @c svn_item_t's.
+ *
+ * Compare two @c svn_item_t's, returning an integer greater than,
+ * equal to, or less than 0, according as @a a is greater than, equal to,
+ * or less than @a b.
  * 
  * This is useful for converting a hash into a sorted
- * apr_array_header_t.  For example, to convert hash HSH to a sorted
+ * @c apr_array_header_t.  For example, to convert hash @a hsh to a sorted
  * array, do this:
  * 
- *   apr_array_header_t *HDR;
- *   HDR = apr_hash_sorted_keys (HSH, svn_sort_compare_items_as_paths, pool);
+ *<pre>   apr_array_header_t *hdr;
+ *   hdr = apr_hash_sorted_keys (hsh, @c svn_sort_compare_items_as_paths,
+ *                               pool);</pre>
  *
  * The key strings must be null-terminated, even though klen does not
  * include the terminator.
@@ -58,34 +70,38 @@ typedef struct {
 int svn_sort_compare_items_as_paths (const svn_item_t *a, const svn_item_t *b);
 
 
-/* Compare two svn_revnum_t's, returning an integer greater than, equal
- * to, or less than 0, according as B is greater than, equal to, or less
- * than A. Note that this sorts newest revsion to oldest (IOW, descending
+/** Compare two @c svn_revnum_t's.
+ *
+ * Compare two @c svn_revnum_t's, returning an integer greater than, equal
+ * to, or less than 0, according as @a b is greater than, equal to, or less
+ * than @a a. Note that this sorts newest revsion to oldest (IOW, descending
  * order).
  *
  * This is useful for converting an array of revisions into a sorted
- * apr_array_header_t. You are responsible for detecting, preventing or
+ * @c apr_array_header_t. You are responsible for detecting, preventing or
  * removing duplicates.
  */
 int svn_sort_compare_revisions (const void *a, const void *b);
 
 
 #ifndef apr_hash_sorted_keys
-/* Sort HT according to its keys, return an apr_array_header_t
-   containing svn_item_t structures holding those keys and values
-   (i.e. for each svn_item_t ITEM in the returned array, ITEM->key
-   and is the ITEM->size are the hash key, and ITEM->data points to
-   the hash value).
-
-   Storage is shared with the original hash, not copied.
-
-   COMPARISON_FUNC should take two svn_item_t's and return an integer
-   greater than, equal to, or less than 0, according as the first item
-   is greater than, equal to, or less than the second.
-
-   NOTE:
-   This function and the svn_item_t should go over to APR. Got a Round Tuit?
-*/
+/** Sort a hashtable according to it's keys and return an array.
+ *
+ * Sort @a ht according to its keys, return an @c apr_array_header_t
+ * containing @c svn_item_t structures holding those keys and values
+ * (i.e. for each @c svn_item_t @a item in the returned array, @a item->key
+ * and is the @a item->size are the hash key, and @a item->data points to
+ * the hash value).
+ *
+ * Storage is shared with the original hash, not copied.
+ *
+ * @a comparison_func should take two @c svn_item_t's and return an integer
+ * greater than, equal to, or less than 0, according as the first item
+ * is greater than, equal to, or less than the second.
+ *
+ * NOTE:
+ * This function and the @a svn_item_t should go over to APR. Got a Round Tuit?
+ */
 apr_array_header_t *
 apr_hash_sorted_keys (apr_hash_t *ht,
                       int (*comparison_func) (const svn_item_t *,
@@ -96,5 +112,6 @@ apr_hash_sorted_keys (apr_hash_t *ht,
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
+/** @} */
 
 #endif /* SVN_SORTS_H */

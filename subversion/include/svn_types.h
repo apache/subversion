@@ -169,23 +169,23 @@ typedef struct svn_dirent
  * would take care of both internationalization issues and custom
  * keywords (e.g., $NetBSD$).  See
  * 
- *    http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=8921
+ *<pre>    http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=8921
  *    =====
  *    From: "Jonathan M. Manning" <jmanning@alisa-jon.net>
  *    To: dev@subversion.tigris.org
  *    Date: Fri, 14 Dec 2001 11:56:54 -0500
  *    Message-ID: <87970000.1008349014@bdldevel.bl.bdx.com>
- *    Subject: Re: keywords
+ *    Subject: Re: keywords</pre>
  *
  * and Eric Gillespie's support of same:
- * 
- *    http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=8757
+ *
+ *<pre>    http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=8757
  *    =====
  *    From: "Eric Gillespie, Jr." <epg@pretzelnet.org>
  *    To: dev@subversion.tigris.org
  *    Date: Wed, 12 Dec 2001 09:48:42 -0500
  *    Message-ID: <87k7vsebp1.fsf@vger.pretzelnet.org>
- *    Subject: Re: Customizable Keywords
+ *    Subject: Re: Customizable Keywords</pre>
  *
  * However, it is considerably more complex than the scheme below.
  * For now we're going with simplicity, hopefully the more general

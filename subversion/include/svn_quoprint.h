@@ -1,5 +1,5 @@
-/*  svn_quoprint.h:  quoted-printable encoding and decoding functions.
- *
+/**
+ * @copyright
  * ====================================================================
  * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
  *
@@ -13,6 +13,12 @@
  * individuals.  For exact contribution history, see the revision
  * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
+ * @endcopyright
+ *
+ * @file svn_quoprint.h
+ * @brief quoted-printable encoding and decoding functions.
+ *
+ * @{
  */
 
 
@@ -25,22 +31,44 @@
 extern "C" {
 #endif /* __cplusplus */
 
-/* Return a writable generic stream which will encode binary data in
-   quoted-printable format and write the encoded data to OUTPUT.  Be
-   sure to close the stream when done writing in order to squeeze out
-   the last bit of encoded data.  */
+/** Create a stream that encodes binary data in quoted-printable format and 
+ * writes the data to @a output.
+ *
+ * Return a writable generic stream which will encode binary data in
+ * quoted-printable format and write the encoded data to @a output.  Be
+ * sure to close the stream when done writing in order to squeeze out
+ * the last bit of encoded data.
+ */
 svn_stream_t *svn_quoprint_encode (svn_stream_t *output, apr_pool_t *pool);
 
-/* Return a writable generic stream which will decode
-   quoted-printable-encoded data and write the decoded data to OUTPUT.  */
+/** Return a writable generic stream which will decode
+ * quoted-printable-encoded data and write the decoded data to @a output.
+ *
+ * Return a writable generic stream which will decode binary data in
+ * quoted-printable format and write the decoded data to @a output.  Be
+ * sure to close the stream when done writing in order to squeeze out
+ * the last bit of encoded data.
+ */
 svn_stream_t *svn_quoprint_decode (svn_stream_t *output, apr_pool_t *pool);
 
 
-/* Simpler interfaces for encoding and decoding quoted-printable data
-   assuming we have all of it present at once.  The returned string
-   will be allocated from POOL.  */
-svn_stringbuf_t *svn_quoprint_encode_string (svn_stringbuf_t *str, apr_pool_t *pool);
-svn_stringbuf_t *svn_quoprint_decode_string (svn_stringbuf_t *str, apr_pool_t *pool);
+/** Simpler interface for encoding quoted-printable data assuming we have 
+ * all of it present at once.
+ *
+ * Simpler interface for encoding quoted-printable data assuming we have all 
+ * of it present at once.  The returned string will be allocated from @a pool.
+ */
+svn_stringbuf_t *svn_quoprint_encode_string (svn_stringbuf_t *str,
+                                             apr_pool_t *pool);
+
+/** Simpler interface for decoding quoted-printable data assuming we have 
+ * all of it present at once.
+ *
+ * Simpler interface for decoding quoted-printable data assuming we have all 
+ * of it present at once.  The returned string will be allocated from @a pool.
+ */
+svn_stringbuf_t *svn_quoprint_decode_string (svn_stringbuf_t *str,
+                                             apr_pool_t *pool);
 
 
 #ifdef __cplusplus
