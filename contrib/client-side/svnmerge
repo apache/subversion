@@ -41,8 +41,7 @@
 # Definitions (would like ':' in property names but can't because of bug 1971)
 NAME="svnmerge"
 SVN_MERGE_SVN="svn"
-SVN_MERGE_HEAD_PROP="${NAME}-head"
-SVN_MERGE_REVS_PROP="${NAME}-revs"
+DFLABEL="default"
 SRCREV=`echo '$Rev$' | sed 's/^\$Rev: \([0-9]\{1,\}\).\{0,\}$/\1/g'`
 SRCDATE=`echo '$Date$' | sed 's/^\$Date: .\{0,\}(\(.\{0,\}\)).\{0,\}$/\1/g'`
 
@@ -50,14 +49,14 @@ SRCDATE=`echo '$Date$' | sed 's/^\$Date: .\{0,\}(\(.\{0,\}\)).\{0,\}$/\1/g'`
 usage()
 {
     echo 'Usage:'
-    echo "   ${NAME} init [-s] [-v] [-n] [-r revs] [-f file] head"
+    echo "  ${NAME} init [-s] [-v] [-n] [-r revs] [-L label] [-f file] head"
     echo '       Initialize merge tracking from "head" on the current working'
     echo '       directory. "head" is either an URL or a working directory;'
     echo '       in the latter case, the corresponding URL is used. "revs"'
     echo '       specifies the already-merged in revisions; it defaults to'
     echo '       "1-HEAD", where HEAD is the latest revision of "head".'
     echo ''
-    echo "   ${NAME} avail [-s] [-v] [-l] [-d] [-r revs] [branch-dir]"
+    echo "  ${NAME} avail [-s] [-v] [-l] [-d] [-r revs] [-L label] [branch-dir]"
     echo '       Show unmerged revisions available for "branch-dir" as a'
     echo '       revision list. If revision list "revs" is given, the revisions'
     echo '       shown will be limited to those also specified in "revs".'
@@ -65,7 +64,7 @@ usage()
     echo '         -l  Show corresponding log history instead of revision list'
     echo '         -d  Show corresponding diffs instead of revision list'
     echo ''
-    echo "   ${NAME} merge [-s] [-v] [-n] [-r revs] [-f file] [branch-dir]"
+    echo "  ${NAME} merge [-s] [-v] [-n] [-r revs] [-f file] [-L label] [branch-dir]"
     echo '       Merge in revisions specified by "revs" into "branch-dir"'
     echo '       from the "head" location previously specified by init.'
     echo '       "revs" is the revision list specifying revisions to merge in.'
@@ -80,14 +79,15 @@ usage()
     echo '         -f  Write a suitable commit log message into "file"'
     echo '         -r  Specify a revision list, consisting of revision numbers'
     echo '             and ranges separated by commas, e.g., "534,537-539,540"'
+    echo '         -L  Specify a label for merging; allows tracking of merges'
+    echo '             from multiple head locations by using unique labels.'
+    echo '             Also required when "head" is itself a target for merge'
+    echo "             tracking, to avoid ${NAME} property name conflicts."
     echo ''
     echo '   "branch-dir" is always a working directory and defaults to ".".'
+    echo "   Default label is \"${DFLABEL}\" for \"init\", otherwise whichever"
+    echo '   label is already in use on "branch-dir" if there is only one.'
     echo "   This is svnmerge revision ${SRCREV} dated ${SRCDATE}."
-#    echo ''
-#    echo '   This tool maintains its state using the following properties of'
-#    echo '   "branch-dir":'
-#    echo "     ${SVN_MERGE_HEAD_PROP}"
-#    echo "     ${SVN_MERGE_REVS_PROP}"
     echo ''
     exit 1
 }
@@ -448,16 +448,16 @@ merge()
 [ $# -ge 1 ] || usage_error no action specified
 case "$1" in
     init)
-        FLAGS="svnr:f:"
+        FLAGS="svnr:f:L:"
         BRANCH_DIR="."
         ;;
     avail)
-        FLAGS="svldr:"
+        FLAGS="svldr:L:"
         BRANCH_DIR="."
         AVAIL_DISPLAY="revisions"
         ;;
     merge)
-        FLAGS="svnr:f:"
+        FLAGS="svnr:f:L:"
         BRANCH_DIR="."
         ;;
     help)
@@ -512,6 +512,11 @@ for i; do
             SVN_MERGE_SHOW_CMDS="true"
             shift
             ;;
+        -L)
+            SVN_MERGE_LABEL="$2"
+            shift
+            shift
+            ;;
         --)
             shift
             break
@@ -562,8 +567,21 @@ esac
 normalize_url "${BRANCH_DIR}"
 BRANCH_DIR="${RETURN_VALUE}"
 
+# See if we need to "upgrade" existing property names
+if "${SVN_MERGE_SVN}" proplist "${BRANCH_DIR}" | grep -qw svnmerge-head; then
+    echo "${NAME}: old property names detected; an upgrade is required."
+    echo ''
+    echo 'Please execute and commit these changes to upgrade:'
+    echo ''
+    echo "  svn propset ${NAME}-${DFLABEL}-head \`svn propget svnmerge-head\` ${BRANCH_DIR}"
+    echo "  svn propset ${NAME}-${DFLABEL}-revs \`svn propget svnmerge-revs\` ${BRANCH_DIR}"
+    echo "  svn propdel svnmerge-head ${BRANCH_DIR}"
+    echo "  svn propdel svnmerge-revs ${BRANCH_DIR}"
+    echo ''
+    exit 1
+fi
+
 # In the --init case, convert ${HEAD} into ${HEAD_URL}
-# Otherwise, retrieve ${HEAD_URL} from the corresponding property
 if [ "${ACTION}" = "init" ]; then
     if [ -d "${HEAD}" -a -d "${HEAD}/.svn" ]; then
         HEAD_URL=`"${SVN_MERGE_SVN}" info "${HEAD}" \
@@ -571,7 +589,42 @@ if [ "${ACTION}" = "init" ]; then
     else
         HEAD_URL="${HEAD}"
     fi
+fi
+
+# Determine which label to use
+if [ "${ACTION}" = "init" ]; then
+    [ "${SVN_MERGE_LABEL}" != "" ] || SVN_MERGE_LABEL="${DFLABEL}"
 else
+    # Get the list of labels currently in use
+    LABELS=`"${SVN_MERGE_SVN}" proplist "${BRANCH_DIR}" | tail +2 \
+      | grep '^[[:space:]]\{0,\}'"${NAME}"'-\([^-]\{1,\}\)-.\{1,\}$' \
+      | sed 's/^[[:space:]]\{0,\}'"${NAME}"'-\([^-]\{1,\}\)-.\{1,\}$/\1/g' \
+      | sort -u`
+    # If more than one is in use, user must specify which one to use
+    # Otherwise, use the only one there is
+    NUM_LABELS=`echo ${LABELS} | wc -w`
+    if [ ${NUM_LABELS} -eq 1 ]; then
+        if [ "${SVN_MERGE_LABEL}" = "" ]; then
+            SVN_MERGE_LABEL="${LABELS}"
+        fi
+    fi
+    if [ ${NUM_LABELS} -gt 1 ]; then
+        if [ "${SVN_MERGE_LABEL}" = "" ]; then
+            echo "${NAME}: multiple labels are in use; -L flag is required."
+            echo -n "${NAME}: these labels are currently in use:"
+            for LABEL in ${LABELS}; do echo -n " ${LABEL}"; done
+            echo ''
+            exit 1
+        fi
+    fi
+fi
+
+# Get property names associated with the chosen label
+SVN_MERGE_HEAD_PROP="${NAME}-${SVN_MERGE_LABEL}-head"
+SVN_MERGE_REVS_PROP="${NAME}-${SVN_MERGE_LABEL}-revs"
+
+# If already initialized, retrieve ${HEAD_URL} from the corresponding property
+if [ "${ACTION}" != "init" ]; then
     get_prop "${SVN_MERGE_HEAD_PROP}" "${BRANCH_DIR}"
     HEAD_URL="${RETURN_VALUE}"
 fi
