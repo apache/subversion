@@ -113,7 +113,8 @@ svn_client__checkout_internal (const char *URL,
                                  revnum,
                                  recurse,
                                  checkout_editor,
-                                 checkout_edit_baton);
+                                 checkout_edit_baton,
+                                 pool);
 
       if (err)
         {

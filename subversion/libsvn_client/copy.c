@@ -798,7 +798,7 @@ repos_to_wc_copy (const char *src_url,
          it will be as if the new tree isn't really there yet. */
       SVN_ERR (ra_lib->do_checkout (sess, src_revnum, 1, 
                                     editor,
-                                    edit_baton));
+                                    edit_baton, pool));
 
       if (! SVN_IS_VALID_REVNUM (src_revnum))
         {
