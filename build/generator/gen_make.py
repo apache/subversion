@@ -113,11 +113,6 @@ class Generator(gen_base.GeneratorBase):
         # there is nothing to build
         continue
 
-      sources = self.graph.get_sources(gen_base.DT_LINK, target_ob.name)
-
-      if isinstance(target_ob, gen_base.TargetI18N):
-        sources = sources + self.graph.get_sources(gen_base.DT_NONLIB, target_ob.name)
-
       target = target_ob.name
       if isinstance(target_ob, gen_base.TargetJava):
         path = target_ob.classes
@@ -135,34 +130,41 @@ class Generator(gen_base.GeneratorBase):
       deps = [ ]
       libs = [ ]
 
-      for source in sources:
-        if isinstance(source, gen_base.TargetJava):
-          deps.append(source.name)
-        elif isinstance(source, gen_base.TargetLinked):
-          if source.external_lib:
-            libs.append(source.external_lib)
+      for link_dep in self.graph.get_sources(gen_base.DT_LINK, target_ob.name):
+        if isinstance(link_dep, gen_base.TargetJava):
+          deps.append(link_dep.name)
+        elif isinstance(link_dep, gen_base.TargetLinked):
+          if link_dep.external_lib:
+            libs.append(link_dep.external_lib)
           else:
             # append the output of the target to our stated dependencies
-            deps.append(source.filename)
+            deps.append(link_dep.filename)
 
             # link against the library
-            libs.append(build_path_join(retreat, source.filename))
-        elif isinstance(source, gen_base.ObjectFile):
+            libs.append(build_path_join(retreat, link_dep.filename))
+        elif isinstance(link_dep, gen_base.ObjectFile):
           # link in the object file
-          objects.append(source.filename)
-          for dep in self.graph.get_sources(gen_base.DT_OBJECT, source, gen_base.SourceFile):
+          objects.append(link_dep.filename)
+          for dep in self.graph.get_sources(gen_base.DT_OBJECT, link_dep, gen_base.SourceFile):
             object_srcs.append(
               build_path_join('$(abs_srcdir)', dep.filename))
-        elif isinstance(source, gen_base.HeaderFile):
+        elif isinstance(link_dep, gen_base.HeaderFile):
           # link in the header file
           # N.B. that filename_win contains the '_'-escaped class name
-          headers.append(source.filename_win)
-          header_classes.append(source.classname)
-          for dep in self.graph.get_sources(gen_base.DT_OBJECT, source, gen_base.ObjectFile):
+          headers.append(link_dep.filename_win)
+          header_classes.append(link_dep.classname)
+          for dep in self.graph.get_sources(gen_base.DT_OBJECT, link_dep, gen_base.ObjectFile):
             header_class_filenames.append(dep.filename)
         else:
           ### we don't know what this is, so we don't know what to do with it
           raise UnknownDependency
+
+      for nonlib in self.graph.get_sources(gen_base.DT_NONLIB, target_ob.name):
+        if isinstance(nonlib, gen_base.TargetLinked):
+          if not nonlib.external_lib:
+            deps.append(nonlib.filename)
+            print "%s: %s" % (target_ob.name,
+                getattr(nonlib,'filename',repr(nonlib)))
 
       targ_varname = string.replace(target, '-', '_')
       objnames = string.join(build_path_strip(path, objects))
