@@ -152,17 +152,14 @@ svn_client_export (const char *from,
       svn_ra_plugin_t *ra_lib;
       void *edit_baton;
       const svn_delta_editor_t *export_editor;
+      const svn_ra_reporter_t *reporter;
+      void *report_baton;
 
       URL = svn_path_canonicalize (from, pool);
       
       SVN_ERR (svn_client__get_export_editor (&export_editor, &edit_baton,
                                               to, URL, ctx, pool));
       
-      if (revision->kind == svn_opt_revision_number)
-        revnum = revision->value.number;
-      else
-        revnum = SVN_INVALID_REVNUM;
-
       SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
       SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL, pool));
 
@@ -170,11 +167,26 @@ svn_client_export (const char *from,
                                             NULL, NULL, FALSE, TRUE,
                                             ctx, pool));
 
-      /* Tell RA to do a checkout of REVISION; if we pass an invalid
-         revnum, that means RA will fetch the latest revision.  */
-      SVN_ERR (ra_lib->do_checkout (session, revnum,
-                                    TRUE, /* recurse */
-                                    export_editor, edit_baton, pool));
+      /* Unfortunately, it's not kosher to pass an invalid revnum into
+         set_path(), so we actually need to convert it to HEAD. */
+      if (revision->kind == svn_opt_revision_unspecified)
+        revision->kind = svn_opt_revision_head;
+      SVN_ERR (svn_client__get_revision_number
+               (&revnum, ra_lib, session, revision, to, pool));
+
+      /* Manufacture a basic 'report' to the update reporter. */
+      SVN_ERR (ra_lib->do_update (session,
+                                  &reporter, &report_baton,
+                                  revnum,
+                                  NULL, /* no sub-target */
+                                  TRUE, /* recurse */
+                                  export_editor, edit_baton, pool));
+
+      SVN_ERR (reporter->set_path (report_baton, "", revnum,
+                                   TRUE, /* "help, my dir is empty!" */
+                                   pool));
+
+      SVN_ERR (reporter->finish_report (report_baton));               
     }
   else
     {

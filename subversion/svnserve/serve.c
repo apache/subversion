@@ -554,29 +554,6 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *checkout(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
-                             apr_array_header_t *params, void *baton)
-{
-  server_baton_t *b = baton;
-  svn_revnum_t rev;
-  svn_boolean_t recurse;
-  const svn_delta_editor_t *editor;
-  void *edit_baton;
-
-  /* Parse the arguments. */
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "(?r)b", &rev, &recurse));
-  if (!SVN_IS_VALID_REVNUM(rev))
-    SVN_CMD_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
-
-  /* Write an empty command-reponse, signalling that we will start editing. */
-  SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
-
-  /* Drive the network editor with a checkout. */
-  svn_ra_svn_get_editor(&editor, &edit_baton, conn, pool, NULL, NULL);
-  SVN_ERR(svn_repos_checkout(b->fs, rev, recurse, b->fs_path,
-                             editor, edit_baton, pool));
-  return SVN_NO_ERROR;
-}
 
 static svn_error_t *update(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                            apr_array_header_t *params, void *baton)
@@ -842,7 +819,6 @@ static const svn_ra_svn_cmd_entry_t main_commands[] = {
   { "commit",          commit },
   { "get-file",        get_file },
   { "get-dir",         get_dir },
-  { "checkout",        checkout },
   { "update",          update },
   { "switch",          switch_cmd },
   { "status",          status },

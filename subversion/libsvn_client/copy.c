@@ -708,6 +708,7 @@ repos_to_wc_copy (const char *src_url,
   const char *src_uuid = NULL, *dst_uuid = NULL;
   svn_boolean_t same_repositories;
   const char *auth_dir;
+  svn_opt_revision_t *revision = apr_pcalloc (pool, sizeof(*revision));
 
   /* Get the RA vtable that matches URL. */
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
@@ -724,9 +725,16 @@ repos_to_wc_copy (const char *src_url,
                                         ctx, pool));
       
   /* Pass null for the path, to ensure error if trying to get a
-     revision based on the working copy. */
+     revision based on the working copy.  And additionally, we can't
+     pass an 'unspecified' revnum to the update reporter;  assume HEAD
+     if not specified. */
+  revision->kind = src_revision->kind;
+  revision->value = src_revision->value;
+  if (revision->kind == svn_opt_revision_unspecified)
+    revision->kind = svn_opt_revision_head;
+
   SVN_ERR (svn_client__get_revision_number
-           (&src_revnum, ra_lib, sess, src_revision, NULL, pool));
+           (&src_revnum, ra_lib, sess, revision, NULL, pool));
 
   /* Verify that SRC_URL exists in the repository. */
   SVN_ERR (ra_lib->check_path (&src_kind, sess, "", src_revnum, pool));
@@ -827,6 +835,8 @@ repos_to_wc_copy (const char *src_url,
     {    
       const svn_delta_editor_t *editor;
       void *edit_baton;
+      const svn_ra_reporter_t *reporter;
+      void *report_baton;
 
       /* Get a checkout editor and wrap it. */
       SVN_ERR (svn_wc_get_checkout_editor (dst_path, src_url, src_revnum, 1,
@@ -837,9 +847,18 @@ repos_to_wc_copy (const char *src_url,
       
       /* Check out the new tree.  The parent dir will get no entry, so
          it will be as if the new tree isn't really there yet. */
-      SVN_ERR (ra_lib->do_checkout (sess, src_revnum, 1, 
-                                    editor,
-                                    edit_baton, pool));
+      SVN_ERR (ra_lib->do_update (sess,
+                                  &reporter, &report_baton,
+                                  src_revnum,
+                                  NULL, /* no sub-target */
+                                  TRUE, /* recurse */
+                                  editor, edit_baton, pool));
+
+      SVN_ERR (reporter->set_path (report_baton, "", src_revnum,
+                                   TRUE, /* "help, my dir is empty!" */
+                                   pool));
+
+      SVN_ERR (reporter->finish_report (report_baton));               
 
       if ((! SVN_IS_VALID_REVNUM (src_revnum))
           && same_repositories)

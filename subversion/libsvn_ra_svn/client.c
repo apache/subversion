@@ -695,22 +695,6 @@ static svn_error_t *ra_svn_get_dir(void *sess, const char *path,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *ra_svn_checkout(void *sess, svn_revnum_t rev,
-                                    svn_boolean_t recurse,
-                                    const svn_delta_editor_t *editor,
-                                    void *edit_baton, apr_pool_t *pool)
-{
-  svn_ra_svn_conn_t *conn = sess;
-
-  /* Tell the server to start a checkout. */
-  SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "checkout", "(?r)b", rev, recurse));
-  SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, ""));
-
-  /* Let the server drive the checkout editor. */
-  SVN_ERR(svn_ra_svn_drive_editor(conn, pool, editor, edit_baton, TRUE, NULL));
-  SVN_ERR(svn_ra_svn_flush(conn, pool));
-  return SVN_NO_ERROR;
-}
 
 static svn_error_t *ra_svn_update(void *sess,
                                   const svn_ra_reporter_t **reporter,
@@ -934,7 +918,6 @@ static const svn_ra_plugin_t ra_svn_plugin = {
   ra_svn_commit,
   ra_svn_get_file,
   ra_svn_get_dir,
-  ra_svn_checkout,
   ra_svn_update,
   ra_svn_switch,
   ra_svn_status,
