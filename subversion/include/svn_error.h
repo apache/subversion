@@ -252,6 +252,10 @@ typedef enum svn_errno_t {
   /* Generic arg parsing error */
   SVN_ERR_CL_ARG_PARSING_ERROR,
 
+  /* An operation was attempted on the administrative subdirectory
+     (i.e., user tried to import it, or update it, or...) */
+  SVN_ERR_CL_ADM_DIR_RESERVED,
+
   /* END Client errors */
   
 

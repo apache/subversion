@@ -37,13 +37,10 @@
 
 /*** File names in the adm area. ***/
 
-/* No one outside this file should ever need to know this.  In fact,
-   no one outside adm_subdir() should ever need to know this. */
-#define SVN_WC__ADM_DIR_DEFAULT   "SVN"
 static const char *
 adm_subdir (void)
 {
-  return SVN_WC__ADM_DIR_DEFAULT;
+  return SVN_WC_ADM_DIR_NAME;
 }
 
 
