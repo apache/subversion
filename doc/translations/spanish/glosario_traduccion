@@ -145,3 +145,8 @@ switch -> cambiar
     En el contexto de svn switch, traducirlo como cambiar. Quizás
     traducir como relocalizar una vez haya suficiente material
     traducido y una lectura final sugiera una u otra traducción.
+
+API -> no se traduce
+
+plugins -> módulos
+    El término fue extraído del glosario de ORCA.
