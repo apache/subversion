@@ -723,6 +723,17 @@ def overdead():
   repos, wc, logs = ensure_conversion('overdead')
 
 
+def no_trunk_prune():
+  "ensure that trunk doesn't get pruned"
+  repos, wc, logs = ensure_conversion('overdead')
+  for rev in logs.keys():
+    rev_logs = logs[rev]
+    for changed_path in rev_logs.changed_paths.keys():
+      if changed_path == '/trunk' \
+         and rev_logs.changed_paths[changed_path] == 'D':
+        raise svntest.Failure
+
+
 def double_delete():
   "file deleted twice, in the root of the repository"
   # This really tests several things: how we handle a file that's
@@ -791,6 +802,7 @@ test_list = [ None,
               phoenix_branch,
               ctrl_char_in_log,
               overdead,
+              no_trunk_prune,
               double_delete,
               split_branch,
               resync_misgroups,
