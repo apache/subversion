@@ -315,6 +315,7 @@ svn_error_t *svn_wc__entry_set (svn_string_t *path,
                                 apr_pool_t *pool,
                                 const char *entryname, /* Ben, svn_string_t? */
                                 svn_vernum_t version,
+                                /* int kind */
                                 ...);
 
 
@@ -329,7 +330,7 @@ svn_error_t *svn_wc__entry_get (svn_string_t *path,
                                 apr_pool_t *pool,
                                 const char *entryname, /* Ben, svn_string_t? */
                                 svn_vernum_t *version,
-                                /* int kind, */
+                                /* int *kind, */
                                 ...);  /* Ben, hash here? */
 
 
