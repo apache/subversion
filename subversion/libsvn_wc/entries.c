@@ -439,7 +439,10 @@ handle_start_tag (void *userData, const char *tagname, const char **atts)
   attributes = svn_xml_make_att_hash (atts, accum->pool);
   err = svn_wc__atts_to_entry (&entry, &modify_flags, attributes, accum->pool);
   if (err)
-    svn_xml_signal_bailout (err, accum->parser);
+    {
+      svn_xml_signal_bailout (err, accum->parser);
+      return;
+    }
         
   /* Find the name and set up the entry under that name.  This
      should *NOT* be NULL, since svn_wc__atts_to_entry() should
