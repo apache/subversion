@@ -23,8 +23,14 @@ II. Client Implementation
           last-changed-rev, last-author, etc., tokens come into the
           client with an svn:wc:entry: prefix, are filtered by libsvn_wc,
           and stored in .svn/entries.   We'll probably call the new
-          entryprop "svn:wc:entry:locktoken".  (In DAV parlance, what
+          entryprop "svn:wc:entry:lock-token".  (In DAV parlance, what
           we call 'entryprops' are called 'live props'.)
+
+          libsvn_wc also stores the other fields of a lock (owner, comment,
+          creation-date, expiration-date) in the entries file, so that
+          they are available for the info command.  Note that this
+          information is only stored if the current WC has a lock on
+          the file.
 
       2. New client subcommands
           
@@ -33,7 +39,7 @@ II. Client Implementation
              'svn lock' calls new RA->lock() function, which marshalls
              BASE rev of file to svn_fs_lock().  FS does a
              complimentary out-of-dateness check before creating the
-             lock.  Lock token is marshalled back to client, stored in
+             lock.  The lock is marshalled back to client, stored in
              .svn/entries file.
 
          b. Using a lock
@@ -42,25 +48,47 @@ II. Client Implementation
 
                When driving the RA layer's commit editor, the client
                pushes tokens by doing an editor->change_file_prop() of
-               svn:wc:entry:locktoken.  (Exactly the reverse of the
+               svn:wc:entry:lock-token.  (Exactly the reverse of the
                way the client -recieves- entryprops.)  The RA editor
                parses the entryprop, then marshalls the token however
                it wishes over the network:
 
-                  - for ra_svn, probably just a new argument in the tuple.
+                  - for ra_svn, a new command in the editor command set.
                   - for ra_dav, a new standard header in the PUT request.
 
+               When the commit is finished, if the user didn't specify
+               the --keep-locks option, the client will issue unlock
+               commans for the files it has locked.  (### Is it
+               cleaner to have a new ra->get_commit_editor2() with a
+               flag for this and tlet the server take care of it. It
+               will avoid a lot of network round-trips in ra_svn,
+               since the server already got the tokens.)
+
             2. Releasing a lock
- 
+
+               svn unlock uses the lock token stored in the WC and
+               issues an ra->unlock command to the server.
+
+
          c. Breaking a lock
 
+            svn unlock --force will first ask the server for a lock
+            token and use it in the ra->unlock command to break the
+            lock.
+
          d. Stealing a lock
+
+            svn lock --force uses ra->lock with the force argument set
+            to TRUE to steal a lock.
 
          e. Discovering/examining locks
 
             1. seeing lock tokens in a working copy
 
-            2. seeing locks in a repository.
+               The client uses the lock information stored in the
+               entries file to show lock information with svn info.
+
+            2. seeing locks in a repository
 
             3.  svn info [wcpath | URL]
 
@@ -71,6 +99,9 @@ II. Client Implementation
                 revnums to the server, but also existing locktokens.
                 We need to be careful with protocols when marshalling
                 this new information to older or newer servers.
+
+                In ra_svn a new command will be added to the report
+                command set for this purpose.
 
                 B.  If a locktoken is defunct (expired, broken,
                 whatever), then the server sends a 'deletion' of the
@@ -89,6 +120,7 @@ III. Server Implementation
  
             UUID
             owner
+            comment [optional]
             creation-date
             expiration-date [optional]
 

@@ -241,6 +241,8 @@ II. New Client Behaviors
              password:  XXXX
              Lock on 'foo.c' has been broken by user 'sally'.
 
+             The --force option also accepts a URL, so that the lock can being removed without a working copy.
+
          d. Stealing a lock
 
             "Stealing" a lock is a means of creating a lock when:
