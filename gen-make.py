@@ -25,8 +25,6 @@ gen_modules = {
   }
 
 def main(fname, gentype, verfname=None, oname=None, skip_depends=0):
-  if oname is None:
-    oname = os.path.splitext(os.path.basename(fname))[0] + '-outputs.mk'
   if verfname is None:
     verfname = os.path.join('subversion', 'include', 'svn_version.h')
 
@@ -36,10 +34,14 @@ def main(fname, gentype, verfname=None, oname=None, skip_depends=0):
     print 'ERROR: the "%s" generator is not yet implemented.' % gentype
     sys.exit(1)
 
-  generator = gen_module.Generator(fname, verfname, oname)
+  generator = gen_module.Generator(fname, verfname)
   if not skip_depends:
     generator.compute_hdr_deps()
-  generator.write()
+
+  if oname is None:
+    oname = generator.default_output(fname)
+
+  generator.write(oname)
 
 
 def _usage_exit():

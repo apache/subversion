@@ -18,13 +18,13 @@ class Generator(gen_base.GeneratorBase):
     ('lib', 'object'): '.lo',
     }
 
-  def __init__(self, fname, verfname, oname):
-    gen_base.GeneratorBase.__init__(self, fname, verfname)
+  def default_output(self, conf_path):
+    return os.path.splitext(os.path.basename(conf_path))[0] + '-outputs.mk'
 
+  def write(self, oname):
     self.ofile = open(oname, 'w')
     self.ofile.write('# DO NOT EDIT -- AUTOMATICALLY GENERATED\n\n')
 
-  def write(self):
     # write various symbols at the top of the file so they will be
     # defined before their use in dependency lines.
     self.write_symbols()
