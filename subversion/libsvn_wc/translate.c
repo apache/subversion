@@ -658,7 +658,7 @@ svn_wc_copy_and_translate (const char *src,
         default:
           /* If we're currently bagging up a keyword string, we'll
              add this character to the keyword buffer.  */
-          if ((len = keyword_off))
+          if (keyword_off)
             {
               keyword_buf[keyword_off++] = c;
               
@@ -667,7 +667,8 @@ svn_wc_copy_and_translate (const char *src,
                  and continue on. */
               if (keyword_off >= SVN_KEYWORD_MAX_LEN)
                 {
-                  if ((err = translate_write (d, dst, keyword_buf, len, pool)))
+                  if ((err = translate_write (d, dst, keyword_buf, 
+                                              keyword_off, pool)))
                     goto cleanup;
                   keyword_off = 0;
                 }

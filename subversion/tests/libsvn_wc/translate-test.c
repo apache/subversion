@@ -99,8 +99,13 @@ const char *lines[] =
     "Line 50: a series of dollar signs $$$$$$$$$$$$$$$$$$$$$$$$$$$$.",
     "Line 51: same, but with embedded keyword $$$$$$$$Date$$$$$$$$$$.",
     "Line 52: same, with expanded, empty keyword $$$$$$Date: $$$$$$.",
-    "", /* Lines 53-69 are blank to test consecutive newlines */
-    "",
+    "Line 53: $This is a lengthy line designed to test a bug that was "
+    "reported about keyword expansion.  The problem was that a line "
+    "had more than SVN_KEYWORD_MAX_LEN (255 at the time) characters "
+    "after an initial dollar sign, which triggered a buglet in our "
+    "svn_wc_copy_and_translate() function and resulted in, in some cases "
+    "a SEGFAULT, and in others a filthy corrupt commit. ",
+    "", /* Lines 54-69 are blank to test consecutive newlines */
     "",
     "",
     "",
