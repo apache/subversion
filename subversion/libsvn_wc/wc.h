@@ -297,7 +297,11 @@ svn_error_t *svn_wc__ensure_adm (svn_string_t *path,
 #define SVN_WC__LOG_REPLACE_PROP_BASE   "replace-prop-base"
 
 /* Bump SVN_WC__LOG_ATTR_NAME's version to SVN_WC__LOG_ATTR_VERSION */
-#define SVN_WC__LOG_SET_VERSION         "set-entry"
+#define SVN_WC__LOG_SET_VERSION         "set-version"
+
+/* Delete the entry SVN_WC__LOG_ATTR_NAME. */
+#define SVN_WC__LOG_DELETE_ENTRY        "delete-entry"
+
 
 /* A commit completed successfully, so:  
  *   if SVN/tmp/text-base/SVN_WC__LOG_ATTR_NAME exists, then
@@ -463,7 +467,7 @@ svn_error_t *svn_wc__entry_add (apr_hash_t *entries,
  * is already present in the attributes.
  * 
  * NOTE: the entries file will be read, tweaked, and written back out.
- * This is your one-stop shopping for changing the entries file.
+ * This is your one-stop shopping for changing an entry.
  */
 svn_error_t *svn_wc__entry_merge_sync (svn_string_t *path,
                                        svn_string_t *name,
@@ -479,7 +483,8 @@ svn_error_t *svn_wc__entry_merge_sync (svn_string_t *path,
 void svn_wc__entry_remove (apr_hash_t *entries, svn_string_t *name);
 
 
-/* Utility: return a duplicate of ENTRY object allocated in POOL. */
+/* Return a duplicate of ENTRY, allocated in POOL.  No part of the new
+   entry will be shared with ENTRY. */
 svn_wc__entry_t *svn_wc__entry_dup (svn_wc__entry_t *entry, apr_pool_t *pool);
 
 

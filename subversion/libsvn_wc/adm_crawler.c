@@ -433,10 +433,10 @@ do_postfix_text_deltas (apr_hash_t *affected_targets,
           err = do_apply_textdelta (filepath, editor, tb, pool);
           if (err)
             return err;
-        }
 
-      err = editor->close_file (tb->editor_baton);
-      if (err) return err;
+          err = editor->close_file (tb->editor_baton);
+          if (err) return err;
+        }
     }
 
   return SVN_NO_ERROR;
@@ -487,6 +487,8 @@ process_subdirectory (svn_string_t *path, void *dir_baton,
 
   /* Retrieve _all_ the entries in this subdir into subpool. */
   err = svn_wc__entries_read (&entries, path, subpool);
+  if (err)
+    return err;
 
   /* Grab the entry representing "." */
   this_dir = (svn_wc__entry_t *) 
@@ -536,7 +538,8 @@ process_subdirectory (svn_string_t *path, void *dir_baton,
       /* Start examining the current_entry: */
 
       /* Is the entry marked for both deletion AND addition? */
-      if ((current_entry->flags) & (SVN_WC__ENTRY_DELETE | SVN_WC__ENTRY_ADD))
+      if ((current_entry->flags & SVN_WC__ENTRY_DELETE)
+          && (current_entry->flags & SVN_WC__ENTRY_ADD))
         {
           /* Do what's necesary to get a baton for current directory */
           if (! dir_baton)
@@ -620,8 +623,21 @@ process_subdirectory (svn_string_t *path, void *dir_baton,
           /* Delete the entry */
           err = editor->delete (current_entry_name, dir_baton);
           if (err) return err;
-        }
 
+          /* Remember that it was affected. */
+          {
+            svn_string_t *longpath;
+            struct target_baton *tb = apr_pcalloc (top_pool, sizeof (*tb));
+            
+            tb->entry = svn_wc__entry_dup (current_entry, top_pool);
+            longpath = svn_string_dup (path, top_pool);
+            if (current_entry_name != NULL)
+              svn_path_add_component (longpath, current_entry_name,
+                                      svn_path_local_style);
+            apr_hash_set (affected_targets,
+                          longpath->data, longpath->len, tb);
+          }
+        }
 
       /* Is this entry marked for addition only? */
       else if ((current_entry->flags) & SVN_WC__ENTRY_ADD)

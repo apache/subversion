@@ -11,10 +11,10 @@ So:
 
    svn checkout -d TARGETDIR --xml-file FILE.XML \
                 --ancestor-path blah --version N
-   svn update --xml-file FILE.XML
    svn add FILE
    svn delete [--force] FILE
    svn commit --xml-file FILE.XML --version N
+   svn update --xml-file FILE.XML --version N
 
 You may be wondering why the --ancestor-path and --version are on the
 command line.  Don't worry, they won't be in a real-life client.  The
@@ -24,6 +24,22 @@ be passed manually, by a human (excuse me, I mean by a developer).
 
 If you check out into TARGETDIR, that directory must exist and be
 empty.
+
+Also, because update is taking input only from an XML file, it doesn't
+yet know enough to be able to update the version numbers of
+directories in which nothing changed, even though a real update might
+do so.  The issue is that sometimes the user may restrict the update
+to a few files, and sometimes do it across the whole tree.  In the
+latter kind of update, one can safely set version numbers everywhere
+afterwards; but in the former, only the version numbers of the updated
+entities may be set.  Since the client doesn't yet distinguish between
+selective and non-selective updates, it just sets the version numbers
+of entities that received updates, and their ancestors.  Obviously,
+things will be more sophisticated when we have selective updates.
+
+If you want to see the milestone 1 client in action, run "make check"
+in this directory.  That runs the tests/svn-test.sh script, which see
+for details of piping to and from xml files.
 
 
 

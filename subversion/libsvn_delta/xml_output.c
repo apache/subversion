@@ -242,8 +242,7 @@ get_to_elem (struct edit_baton *eb, enum elemtype elem, apr_pool_t *pool)
   if ((eb->elem == elem_dir && elem == elem_dir_prop_delta)
       || (eb->elem == elem_file && elem == elem_file_prop_delta))
     {
-      svn_xml_make_open_tag (&str, pool, svn_xml_protect_pcdata,
-                             "prop-delta", NULL);
+      svn_xml_make_open_tag (&str, pool, svn_xml_normal, "prop-delta", NULL);
       eb->elem = elem;
     }
 
