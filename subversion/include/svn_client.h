@@ -424,9 +424,11 @@ typedef struct svn_client_ctx_t
 /** @} */
 
 
-/** Checkout a working copy of @a URL at @a revision, using @a path as 
- * the root directory of the newly checked out working copy, and 
- * authenticating with the authentication baton cached in @a ctx.
+/** Checkout a working copy of @a URL at @a revision, using @a path as
+ * the root directory of the newly checked out working copy, and
+ * authenticating with the authentication baton cached in @a ctx.  If
+ * @a result_rev is not @c NULL, set @a *result_rev to the value of
+ * the revision actually checked out from the repository.
  *
  * @a revision must be of kind @c svn_opt_revision_number,
  * @c svn_opt_revision_head, or @c svn_opt_revision_date.  If
@@ -439,7 +441,8 @@ typedef struct svn_client_ctx_t
  * Use @a pool for any temporary allocation.
  */
 svn_error_t *
-svn_client_checkout (const char *URL,
+svn_client_checkout (svn_revnum_t *result_rev,
+                     const char *URL,
                      const char *path,
                      const svn_opt_revision_t *revision,
                      svn_boolean_t recurse,
@@ -448,7 +451,9 @@ svn_client_checkout (const char *URL,
 
 
 /** Update working tree @a path to @a revision, authenticating with
- * the authentication baton cached in @a ctx.
+ * the authentication baton cached in @a ctx.  If @a result_rev is not
+ * @c NULL, set @a *result_rev to the value of the revision to which
+ * the working copy was actually updated.
  *
  * @a revision must be of kind @c svn_opt_revision_number,
  * @c svn_opt_revision_head, or @c svn_opt_revision_date.  If @a 
@@ -464,15 +469,18 @@ svn_client_checkout (const char *URL,
  * Use @a pool for any temporary allocation.
  */
 svn_error_t *
-svn_client_update (const char *path,
+svn_client_update (svn_revnum_t *result_rev,
+                   const char *path,
                    const svn_opt_revision_t *revision,
                    svn_boolean_t recurse,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool);
 
 
-/** Switch working tree @a path to @a url at @a revision, authenticating 
- * with the authentication baton cached in @a ctx.
+/** Switch working tree @a path to @a url at @a revision,
+ * authenticating with the authentication baton cached in @a ctx.  If
+ * @a result_rev is not @c NULL, set @a *result_rev to the value of
+ * the revision to which the working copy was actually switched.
  *
  * Summary of purpose: this is normally used to switch a working
  * directory over to another line of development, such as a branch or
@@ -490,7 +498,8 @@ svn_client_update (const char *path,
  * Use @a pool for any temporary allocation.
  */
 svn_error_t *
-svn_client_switch (const char *path,
+svn_client_switch (svn_revnum_t *result_rev,
+                   const char *path,
                    const char *url,
                    const svn_opt_revision_t *revision,
                    svn_boolean_t recurse,
@@ -662,32 +671,28 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
  * @a status_func/status_baton with a set of @c svn_wc_status_t *
  * structures which describe the status of @a path and its children.
  *
- *    - If @a descend is non-zero, recurse fully, else do only immediate
- *      children.  This (inversely) corresponds to the "-N"
- *      (--non-recursive) flag in the commandline client app.
+ *    - If @a descend is non-zero, recurse fully, else do only
+ *      immediate children.
  *
- *    - If @a get_all is set, then all entries are retrieved; otherwise
- *      only "interesting" entries (local mods and/or out-of-date)
- *      will be fetched.  This directly corresponds to the "-v"
- *      (--verbose) flag in the commandline client app.
+ *    - If @a get_all is set, retrieve all entries; otherwise,
+ *      retrieve only "interesting" entries (local mods and/or
+ *      out-of-date).
  *
- *    - If @a update is set, then the repository will be contacted, so
- *      that the structures are augmented with information about
- *      out-of-dateness (with respect to @a revision), and @a *youngest
- *      is set to the youngest repository revision (@a *youngest is not
- *      touched unless @a update is set).  This directly corresponds to
- *      the "-u" (--show-updates) flag in the commandline client app.
+ *    - If @a update is set, contact the repository and augment the
+ *      status structures with information about out-of-dateness (with
+ *      respect to @a revision).  Also, if @a result_rev is not @c NULL,
+ *      set @a *result_rev to the actual revision against which the
+ *      working copy was compared (@a *result_rev is not touched unless
+ *      @a update is set).
  *
  * This function recurses into externals definitions ('svn:externals')
- * after handling the main target, if any exist.  The client
- * notification function (in @a ctx) will be called with the
- * @c svn_wc_notify_status_external action before handling each externals
- * definition; with @c svn_wc_notify_status_completed after each
- * externals definition's statuses have been described to the @a
- * status_func.
+ * after handling the main target, if any exist.  The function calls
+ * the client notification function (in @a ctx) with the @c
+ * svn_wc_notify_status_external action before handling each externals
+ * definition, and with @c svn_wc_notify_status_completed after each.
  */
 svn_error_t *
-svn_client_status (svn_revnum_t *youngest,  /* only touched if `update' set */
+svn_client_status (svn_revnum_t *result_rev,
                    const char *path,
                    svn_opt_revision_t *revision,
                    svn_wc_status_func_t status_func,
@@ -1204,9 +1209,12 @@ svn_client_revprop_list (apr_hash_t **props,
 /** @} */
 
 
-/** Export the contents of either a subversion repository or a subversion 
- * working copy into a 'clean' directory (meaning a directory with no 
- * administrative directories).
+/** Export the contents of either a subversion repository or a
+ * subversion working copy into a 'clean' directory (meaning a
+ * directory with no administrative directories).  If @a result_rev
+ * is not @c NULL and the path being exported is a repository URL, set
+ * @a *result_rev to the value of the revision actually exported (set
+ * it to @c SVN_INVALID_REVNUM for local exports).
  *
  * @a from is either the path the working copy on disk, or a URL to the
  * repository you wish to export.
@@ -1226,7 +1234,8 @@ svn_client_revprop_list (apr_hash_t **props,
  * All allocations are done in @a pool.
  */ 
 svn_error_t *
-svn_client_export (const char *from,
+svn_client_export (svn_revnum_t *result_rev,
+                   const char *from,
                    const char *to,
                    svn_opt_revision_t *revision,
                    svn_boolean_t force, 

@@ -143,13 +143,10 @@ svn_cl__switch (apr_getopt_t *os,
                           FALSE, pool);
 
   /* Do the 'switch' update. */
-  SVN_ERR (svn_client_switch
-           (target,
-            switch_url,
-            &(opt_state->start_revision),
-            opt_state->nonrecursive ? FALSE : TRUE,
-            ctx,
-            pool));
+  SVN_ERR (svn_client_switch (NULL, target, switch_url,
+                              &(opt_state->start_revision),
+                              opt_state->nonrecursive ? FALSE : TRUE,
+                              ctx, pool));
 
   return SVN_NO_ERROR;
 }

@@ -51,7 +51,8 @@
 
 
 svn_error_t *
-svn_client_switch (const char *path,
+svn_client_switch (svn_revnum_t *result_rev,
+                   const char *path,
                    const char *switch_url,
                    const svn_opt_revision_t *revision,
                    svn_boolean_t recurse,
@@ -222,5 +223,9 @@ svn_client_switch (const char *path,
                          svn_wc_notify_state_inapplicable,
                          revnum);
 
+  /* If the caller wants the result revision, give it to them. */
+  if (result_rev)
+    *result_rev = revnum;
+  
   return SVN_NO_ERROR;
 }

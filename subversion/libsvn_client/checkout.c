@@ -43,7 +43,8 @@
 
 
 svn_error_t *
-svn_client__checkout_internal (const char *URL,
+svn_client__checkout_internal (svn_revnum_t *result_rev,
+                               const char *URL,
                                const char *path,
                                const svn_opt_revision_t *revision,
                                svn_boolean_t recurse,
@@ -109,7 +110,7 @@ svn_client__checkout_internal (const char *URL,
           SVN_ERR (svn_wc_ensure_adm (path, uuid, URL, revnum, pool));
           
           /* Have update fix the incompleteness. */
-          err = svn_client_update (path, revision, recurse, ctx, pool);
+          err = svn_client_update (NULL, path, revision, recurse, ctx, pool);
         }
       else if (kind == svn_node_dir)
         {
@@ -122,7 +123,8 @@ svn_client__checkout_internal (const char *URL,
             {
               /* Make the unversioned directory into a versioned one. */
               SVN_ERR (svn_wc_ensure_adm (path, uuid, URL, revnum, pool));
-              err = svn_client_update (path, revision, recurse, ctx, pool);
+              err = svn_client_update (NULL, path, revision, 
+                                       recurse, ctx, pool);
               goto done;
             }
 
@@ -137,7 +139,8 @@ svn_client__checkout_internal (const char *URL,
              interrupted checkout. */
           if (entry->url && (strcmp (entry->url, URL) == 0))
             {
-              err = svn_client_update (path, revision, recurse, ctx, pool);
+              err = svn_client_update (NULL, path, revision, 
+                                       recurse, ctx, pool);
             }
           else
             {
@@ -186,13 +189,14 @@ svn_client__checkout_internal (const char *URL,
 }
 
 svn_error_t *
-svn_client_checkout (const char *URL,
+svn_client_checkout (svn_revnum_t *result_rev,
+                     const char *URL,
                      const char *path,
                      const svn_opt_revision_t *revision,
                      svn_boolean_t recurse,
                      svn_client_ctx_t *ctx,
                      apr_pool_t *pool)
 {
-  return svn_client__checkout_internal (URL, path, revision, recurse, NULL, ctx,
-                                        pool);
+  return svn_client__checkout_internal (result_rev, URL, path, 
+                                        revision, recurse, NULL, ctx, pool);
 }

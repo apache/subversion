@@ -75,7 +75,7 @@ tweak_status (void *baton,
 
 
 svn_error_t *
-svn_client_status (svn_revnum_t *youngest,
+svn_client_status (svn_revnum_t *result_rev,
                    const char *path,
                    svn_opt_revision_t *revision,
                    svn_wc_status_func_t status_func,
@@ -95,6 +95,7 @@ svn_client_status (svn_revnum_t *youngest,
   svn_ra_plugin_t *ra_lib;  
   const svn_wc_entry_t *entry;
   struct status_baton sb;
+  svn_revnum_t edit_revision = SVN_INVALID_REVNUM;
 
   sb.real_status_func = status_func;
   sb.real_status_baton = status_baton;
@@ -127,7 +128,7 @@ svn_client_status (svn_revnum_t *youngest,
 
   /* Get the status edit, and use our wrapping status function/baton
      as the callback pair. */
-  SVN_ERR (svn_wc_get_status_editor (&editor, &edit_baton, youngest,
+  SVN_ERR (svn_wc_get_status_editor (&editor, &edit_baton, &edit_revision,
                                      adm_access, target, ctx->config, descend,
                                      get_all, no_ignore, tweak_status, &sb,
                                      ctx->cancel_func, ctx->cancel_baton,
@@ -238,7 +239,11 @@ svn_client_status (svn_revnum_t *youngest,
                         NULL,
                         svn_wc_notify_state_unknown,
                         svn_wc_notify_state_unknown,
-                        *youngest);
+                        edit_revision);
+
+  /* If the caller wants the result revision, give it to them. */
+  if (result_rev)
+    *result_rev = edit_revision;
 
   /* Close the access baton here, as svn_client__do_external_status()
      calls back into this function and thus will be re-opening the

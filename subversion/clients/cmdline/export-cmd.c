@@ -69,12 +69,8 @@ svn_cl__export (apr_getopt_t *os,
                           FALSE, pool);
 
   /* Do the export. */
-  err = svn_client_export (from,
-                           to,
-                           &(opt_state->start_revision),
-                           opt_state->force,
-                           ctx,
-                           pool);
+  err = svn_client_export (NULL, from, to, &(opt_state->start_revision),
+                           opt_state->force, ctx, pool);
   if (err && err->apr_err == SVN_ERR_WC_OBSTRUCTED_UPDATE && !opt_state->force)
     SVN_ERR_W (err,
                "Destination directory exists.  Please remove\n"

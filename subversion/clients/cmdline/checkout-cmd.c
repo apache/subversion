@@ -142,12 +142,10 @@ svn_cl__checkout (apr_getopt_t *os,
       if (opt_state->start_revision.kind == svn_opt_revision_unspecified)
         opt_state->start_revision.kind = svn_opt_revision_head;
 
-      SVN_ERR (svn_client_checkout (repos_url,
-                                    target_dir,
+      SVN_ERR (svn_client_checkout (NULL, repos_url, target_dir,
                                     &(opt_state->start_revision),
                                     opt_state->nonrecursive ? FALSE : TRUE,
-                                    ctx,
-                                    subpool));
+                                    ctx, subpool));
       SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
       svn_pool_clear (subpool);
     }
