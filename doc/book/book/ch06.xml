@@ -1145,6 +1145,20 @@ $ svn status
           items&mdash; such as that source code file that you probably
           forgot to add to version control.</para>
 
+        <para>If you want to see the ignored files, you can pass the 
+          <command>--no-ignore</command> option to subversion:</para>
+
+<screen>
+$ svn status --no-ignore
+ M     calc/button.c
+I      calc/calculator
+?      calc/data.c
+I      calc/debug_log
+I      calc/debug_log.1
+I      calc/debug_log.2.gz
+I      calc/debug_log.3.gz
+</screen>
+
       </sect3>
 
       <!-- cmpilato was here -->
