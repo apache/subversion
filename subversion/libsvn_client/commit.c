@@ -416,9 +416,13 @@ send_to_repos (const svn_delta_edit_fns_t *before_editor,
   svn_ra_plugin_t *ra_lib;
   svn_ra_callbacks_t *ra_callbacks;
   svn_boolean_t is_import;
-  struct svn_wc_close_commit_baton ccb = {base_dir, pool};
-  apr_hash_t *committed_targets = apr_hash_make (pool);
+  struct svn_wc_close_commit_baton ccb;
+  apr_hash_t *committed_targets;
   
+  ccb.prefix_path	= base_dir;
+  ccb.pool		= pool;
+  committed_targets	= apr_hash_make (pool);
+
   if (url) 
     is_import = TRUE;
   else

@@ -69,9 +69,12 @@ svn_cl__propget (apr_getopt_t *os,
       svn_stringbuf_t *target = ((svn_stringbuf_t **) (targets->elts))[i];
       /* ### Main code should propably be changed to make arguments
          svn_string_t's instead of svn_stringbuf_t's */
-      svn_string_t pname = { propname->data, propname->len };
+      svn_string_t pname;
       apr_hash_t *props;
       apr_hash_index_t *hi;
+      pname.data = propname->data;
+      pname.len = propname->len;
+ 
 
       SVN_ERR (svn_client_propget (&props, propname, target,
                                    opt_state->recursive, pool));

@@ -141,8 +141,11 @@ svn_client_mkdir (svn_stringbuf_t *path,
                   svn_stringbuf_t *log_msg,
                   apr_pool_t *pool)
 {
-  svn_string_t path_str = { path->data, path->len };
+  svn_string_t path_str;
   apr_status_t apr_err;
+
+  path_str.data = path->data;
+  path_str.len = path->len;
 
   /* If this is a URL, we want to drive a commit editor to create this
      directory. */
@@ -182,6 +185,9 @@ svn_client_mkdir (svn_stringbuf_t *path,
                                       SVN_INVALID_REVNUM, &dir_baton));
       SVN_ERR (editor->close_directory (dir_baton));
       SVN_ERR (editor->close_edit (edit_baton));
+
+      /* Free the RA session. */
+      SVN_ERR (ra_lib->close (session));
 
       return SVN_NO_ERROR;
     }

@@ -273,6 +273,7 @@ repos_to_repos_copy (svn_stringbuf_t *src_url,
   /* Turn off the lights, close up the shop, and go home. */
   SVN_ERR (editor->close_directory (batons[0]));
   SVN_ERR (editor->close_edit (edit_baton));
+  SVN_ERR (ra_lib->close (sess));
 
   return SVN_NO_ERROR;
 }
@@ -459,6 +460,9 @@ repos_to_wc_copy (svn_stringbuf_t *src_url,
      about whether svn_wc_add() is appropriate for this. */
   SVN_ERR (svn_wc_add (dst_path, src_url, src_rev, pool));
 
+  /* Free the RA session. */
+  SVN_ERR (ra_lib->close (sess));
+
   return SVN_NO_ERROR;
 }
 
@@ -543,6 +547,7 @@ setup_copy (svn_stringbuf_t *src_path,
 }
 
 
+
 /* Public Interfaces */
 
 svn_error_t *

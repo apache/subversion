@@ -136,8 +136,12 @@ static void *create_private(void *userdata, const char *url)
   char *url_path;
   svn_ra_dav_resource_t *r = apr_pcalloc(pc->pool, sizeof(*r));
   apr_size_t len;
-  svn_string_t my_url = { url, strlen(url) };
-  svn_stringbuf_t *url_str = svn_path_uri_decode(&my_url, pc->pool);
+  svn_string_t my_url;
+  svn_stringbuf_t *url_str;
+  
+  my_url.data = url;
+  my_url.len = strlen(url);
+  url_str = svn_path_uri_decode(&my_url, pc->pool);
 
   r->pool = pc->pool;
 
@@ -305,9 +309,13 @@ svn_error_t * svn_ra_dav__get_props(apr_hash_t **results,
   ne_xml_parser *hip;
   int rv;
   prop_ctx_t pc = { 0 };
-  svn_string_t my_url = { url, strlen(url) };
-  svn_stringbuf_t *url_str = svn_path_uri_encode(&my_url, pool);
+  svn_string_t my_url;
+  svn_stringbuf_t *url_str;
   ne_request *req;
+
+  my_url.data = url;
+  my_url.len = strlen(url);
+  url_str = svn_path_uri_encode(&my_url, pool);
 
   pc.pool = pool;
   pc.props = apr_hash_make(pc.pool);
