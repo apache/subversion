@@ -341,7 +341,6 @@ rep_undeltify_range (svn_fs_t *fs,
           SVN_ERR (svn_fs__bdb_string_read
                    (fs, fulltext->contents.fulltext.string_key,
                     source_buf, cb.window->sview_offset, &source_len, trail));
-                              /* FIXME: svn_filesize_t */
           assert (source_len == cb.window->sview_len);
         }
       else
@@ -1351,7 +1350,7 @@ svn_fs__rep_deltify (svn_fs_t *fs,
   /* The current offset into the fulltext that our window is about to
      write.  This doubles, after all windows are written, as the
      total size of the svndiff data for the deltification process. */
-  apr_size_t tview_off = 0;
+  svn_filesize_t tview_off = 0;
 
   /* The total amount of diff data written while deltifying. */
   svn_filesize_t diffsize = 0;
@@ -1418,7 +1417,7 @@ svn_fs__rep_deltify (svn_fs_t *fs,
           ww = apr_pcalloc (pool, sizeof (*ww));
           ww->key = new_target_baton.key;
           ww->svndiff_len = new_target_baton.size;
-          ww->text_off = tview_off;/* FIXME: svn_filesize_t */
+          ww->text_off = tview_off;
           ww->text_len = window->tview_len;
           (*((window_write_t **)(apr_array_push (windows)))) = ww;
 
