@@ -14,19 +14,16 @@ sys.modules['svnfs_bsddb'] = bsddb
 from svnfs_bsddb.db import *
 
 class Ctx:
-  def __init__(self, dbhome, readonly=None, dbenv=None):
+  def __init__(self, dbhome, readonly=None):
     self.env = self.uuids_db = self.revs_db = self.txns_db = self.changes_db \
         = self.copies_db = self.nodes_db = self.reps_db = self.strings_db = \
         None
     try:
-      self.env = dbenv or DBEnv()
-      self.env.set_lk_detect(DB_LOCK_DEFAULT)
+      self.env = DBEnv()
+      self.env.set_lk_detect(DB_LOCK_RANDOM)
       self.env.set_get_returns_none(1)
-      try:
-        self.env.open(dbhome, DB_JOINENV)
-      except bsddb._db.DBNoSuchFileError:
-        self.env.open(dbhome, DB_CREATE | DB_INIT_MPOOL | DB_INIT_TXN \
-            | DB_INIT_LOCK | DB_INIT_LOG)
+      self.env.open(dbhome, DB_CREATE | DB_INIT_MPOOL | DB_INIT_TXN \
+          | DB_INIT_LOCK | DB_INIT_LOG)
       def open_db(dbname):
         db = DB(self.env)
         dbflags = 0
