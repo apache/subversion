@@ -18,6 +18,7 @@
 import sys
 import string
 import time
+import os
 
 from svn import fs, util, delta, _repos
 
@@ -74,7 +75,7 @@ class SVNLook:
         print
 
   def cmd_diff(self):
-    raise NotImplementedError
+    self._print_tree(DiffEditor, pass_root=1)
 
   def cmd_dirs_changed(self):
     self._print_tree(DirsChangedEditor)
@@ -262,6 +263,55 @@ class ChangedEditor(delta.Editor):
       if status != '_ ':
         print status + '  ' + path
 
+
+class DiffEditor(delta.Editor):
+  def __init__(self, root, base_root):
+    self.root = root
+    self.base_root = base_root
+
+  def _do_diff(self, base_path, path, pool):
+    if base_path is None:
+      print "Added: " + path
+      label = path
+    elif path is None:
+      print "Removed: " + path
+      label = base_path
+    else:
+      print "Modified: " + path
+      label = path
+    print "===============================================================" + \
+          "==============="
+    (pobj, file1, file2) = \
+           fs.diff_files(self.base_root, base_path, self.root, path, pool,
+                         "-L '" + label + "\t(original)' " + \
+                         "-L '" + label + "\t(new)' " + \
+                         "-u")
+    while 1:
+      line = pobj.readline()
+      if not line:
+        break
+      print line,
+    print ""
+    os.remove(file1)
+    os.remove(file2)
+    
+  def delete_entry(self, path, revision, parent_baton, pool):
+    ### need more logic to detect 'replace'
+    if not fs.is_dir(self.base_root, '/' + path, pool):
+      self._do_diff(path, None, pool)
+
+  def add_file(self, path, parent_baton,
+               copyfrom_path, copyfrom_revision, file_pool):
+    self._do_diff(None, path, pool)
+    return [ '_', ' ', None, file_pool ]
+
+  def open_file(self, path, parent_baton, base_revision, file_pool):
+    return [ '_', ' ', path, file_pool ]
+
+  def apply_textdelta(self, file_baton):
+    if file_baton[2] is not None:
+      self._do_diff(file_baton[2], file_baton[2], file_baton[3])
+    return None
 
 def _basename(path):
   "Return the basename for a '/'-separated path."
