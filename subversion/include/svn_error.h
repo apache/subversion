@@ -102,8 +102,9 @@ svn_error_t *svn_error_quick_wrap (svn_error_t *child, const char *new_msg);
 #define svn_error_quick_wrap \
   (svn_error__locate(__FILE__,__LINE__), (svn_error_quick_wrap))
 
-/* Add NEW to the end of CHAIN's chain of errors; i.e., NEW will be
-   the last child error in CHAIN.  */
+/* Add NEW_ERR to the end of CHAIN's chain of errors.  The NEW_ERR
+ * chain will be copied into CHAIN's pool and destroyed, so NEW_ERR
+ * itself becomes invalid after this function. */
 void svn_error_compose (svn_error_t *chain, svn_error_t *new_err);
 
 
