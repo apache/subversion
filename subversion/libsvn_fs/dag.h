@@ -1,4 +1,4 @@
-* dag.h : DAG-like interface filesystem, private to libsvn_fs
+/* dag.h : DAG-like interface filesystem, private to libsvn_fs
  *
  * ====================================================================
  * Copyright (c) 2000 CollabNet.  All rights reserved.
