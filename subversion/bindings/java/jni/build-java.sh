@@ -6,12 +6,12 @@
 # thing...
 
 # first step: compile all of the java sources
-javac org/tigris/subversion/*.java
-javac org/tigris/subversion/lib/*.java
-javac *.java
+javac -classpath . org/tigris/subversion/*.java
+javac -classpath . org/tigris/subversion/lib/*.java
+javac -classpath . *.java
 
 # second step: build the JNI header
-javah -o svn_jni.h org.tigris.subversion.lib.ClientImpl
+javah -classpath . -o svn_jni.h org.tigris.subversion.lib.ClientImpl
 
 # third step: give some extra information
 echo "to run the examples, first set the shell variable."
