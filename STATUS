@@ -59,7 +59,7 @@ Candidate changes:
       APR's compatibility rules means that Subversion will always compile
       against any 1.x version of APR.
     Votes:
-      +1: jerenkrantz
+      +1: jerenkrantz, maxb
 
   * r12397
     Properly invoke ra_callbacks->open_tmp_file in Perl with pool.
