@@ -49,7 +49,17 @@
 
 /* ==================================================================== */
 
+#ifndef SVN_TEST_H
+#define SVN_TEST_H
 
+#include <apr_pools.h>
+#include "svn_delta.h"
+#include "svn_types.h"
+#include "svn_error.h"
+#include "svn_string.h"
+
+
+
 /* Retrieve a dummy editor that simply prints info to stdout.   This
    is implemented in tests-common/libsvn_test_editor.la */
 
@@ -59,3 +69,4 @@ svn_error_t *svn_test_get_editor (svn_delta_edit_fns_t **editor,
                                   svn_vernum_t version,
                                   apr_pool_t *pool);
      
+#endif /* SVN_TEST_H */
