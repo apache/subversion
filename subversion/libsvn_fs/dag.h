@@ -33,6 +33,9 @@
      the filesystem, while the svn_fs.h interface does any cloning
      necessary to make the filesystem look like a tree.
 
+   - The dag_node_t interface exposes the existence of copy nodes,
+     whereas the svn_fs.h handles them transparently.
+
    - dag_node_t's must be explicitly cloned, whereas the svn_fs.h
      operations make clones implicitly.
 
@@ -78,9 +81,10 @@ int svn_fs__dag_is_mutable (dag_node_t *node);
 void svn_fs__dag_close (dag_node_t *node); 
 
 
-/* Return true iff NODE is a file/directory.  */
+/* Return true iff NODE is a file/directory/copy.  */
 int svn_fs__dag_is_file (dag_node_t *node);
 int svn_fs__dag_is_directory (dag_node_t *node);
+int svn_fs__dag_is_copy (dag_node_t *node);
 
 
 /* Set *PROPLIST_P to a PROPLIST skel representing the entire property
@@ -241,12 +245,11 @@ svn_error_t *svn_fs__dag_make_file (dag_node_t **child_p,
 
 /* Copies */
 
-/* Create a copy of the node SOURCE_PATH in SOURCE_REVISION, named
-   NAME in PARENT, as part of TRAIL.  Set *CHILD_P to a reference to
-   the new node, allocated in TRAIL->pool.  PARENT must be
-   mutable. NAME must be a single path component; it cannot be a
-   slash-separated directory path.  The source of the copy must be
-   immutable. */
+/* Create a copy node named NAME in PARENT which refers to SOURCE_PATH
+   in SOURCE_REVISION, as part of TRAIL.  Set *CHILD_P to a reference
+   to the new node, allocated in TRAIL->pool.  PARENT must be mutable.
+   NAME must be a single path component; it cannot be a slash-
+   separated directory path.  */
 svn_error_t *svn_fs__dag_make_copy (dag_node_t **child_p,
                                     dag_node_t *parent,
                                     const char *name,
@@ -254,6 +257,13 @@ svn_error_t *svn_fs__dag_make_copy (dag_node_t **child_p,
                                     const char *source_path,
                                     trail_t *trail);
 
+
+/* Set *REV_P and *PATH_P to the revision and path of NODE, which must
+   be a copy node, as part of TRAIL.  Allocate *PATH_P in TRAIL->pool.  */
+svn_error_t *svn_fs__dag_get_copy (svn_revnum_t *rev_p,
+                                   char **path_p,
+                                   dag_node_t *node,
+                                   trail_t *trail);
 
 
 #endif /* SVN_LIBSVN_FS_DAG_H */
