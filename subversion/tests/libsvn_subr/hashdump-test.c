@@ -29,6 +29,17 @@
 apr_pool_t *pool = NULL;
 
 
+/* Convert an apr_status_t into an svn_error_t.  */
+static svn_error_t *
+check (apr_status_t status)
+{
+  if (status != APR_SUCCESS)
+    return svn_error_create (status, 0, 0, pool, "");
+  else
+    return SVN_NO_ERROR;
+}
+
+
 /* Our own global variables */
 apr_hash_t *proplist, *new_proplist;
 
@@ -43,7 +54,7 @@ const char *review =
 
 
 
-static int
+static svn_error_t *
 test1 (const char **msg)
 {
   apr_status_t result;
@@ -83,13 +94,13 @@ test1 (const char **msg)
 
   apr_file_close (f);
 
-  return ((int) result);
+  return check (result);
 }
 
 
 
 
-static int
+static svn_error_t *
 test2 (const char **msg)
 {
   apr_status_t result;
@@ -105,16 +116,16 @@ test2 (const char **msg)
 
   apr_file_close (f);
 
-  return ((int) result);
+  return check (result);
 }
 
 
 
-static int
+static svn_error_t *
 test3 (const char **msg)
 {
   apr_hash_index_t *this;
-  int err;
+  svn_error_t *err;
   int found_discrepancy = 0;
   const char *ignored;
 
@@ -158,7 +169,11 @@ test3 (const char **msg)
     }
 
 
-  return found_discrepancy;
+  if (found_discrepancy)
+    return svn_error_createf (SVN_ERR_TEST_FAILED, 0, 0, pool,
+                              "found discrepancy reading back hash table");
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -171,7 +186,7 @@ test3 (const char **msg)
 */
 
 /* An array of all test functions */
-int (*test_funcs[])(const char **msg) =
+svn_error_t *(*test_funcs[])(const char **msg) =
 {
   NULL,
   test1,
