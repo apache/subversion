@@ -262,11 +262,11 @@ The locking system was designed to have these features:
 @enumerate
 @item
     There can any number of concurrent filesystem @dfn{readers}, and a
-    reader @emph{never} has to wait for any other process.
+    reader never has to wait for any other process.
 @item
-    There can any number of concurrent filesystem writers, provided that
-    their changes do not directly conflict.  When writers @emph{do} need
-    to wait, the waiting is kept to an absolute minimum.
+    There can any number of concurrent filesystem @dfn{writers},
+    provided that their changes do not directly conflict.  When writers
+    @emph{do} need to wait, the waiting is kept to an absolute minimum.
 @end enumerate
 
 @subsection Reading
@@ -287,6 +287,14 @@ Each Subversion filesystem has a process called a @dfn{lock manager}.
 The lock manager isn't always running;  when a server process wishes to
 execute a @code{write()} on the filesystem, it must first determine if a
 lock manager is running.  If not, it starts one.
+
+              
+          \                              /
+           \                            /
+            \                          /
+             \                        /
+              \                      /  
+                   INSERT PICTURE HERE
 
 After the lock manager is up, the server process first sends it a
 @code{submit()} call containing the delta it would like to write.  
