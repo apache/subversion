@@ -52,11 +52,11 @@
 				TargetMachine="1"
 				IgnoreDefaultLibraryNames="libc.lib"
 				GenerateDebugInformation="TRUE"
-				ProgramDatabaseFile="$(OutDir)\$(ProjectName).pdb"[is configs.name "Debug"]
+				ProgramDatabaseFile="$(OutDir)\$(TargetName).pdb"[is configs.name "Debug"]
 				OptimizeReferences="0"[else]
 				OptimizeReferences="2"
 				EnableCOMDATFolding="2"[end][is target_type "2"]
-				ImportLibrary="$(OutDir)\$(ProjectName).lib"[end]
+				ImportLibrary="$(OutDir)\$(TargetName).lib"[end]
 [is target_type "1"]				Subsystem="1"[end]/>
 [is target_type "4"]
 			<Tool
@@ -95,8 +95,9 @@
 				Name="[configs.name]|Win32">
 				<Tool
 					Name="VCCustomBuildTool"
-					CommandLine="swig -[sources.swig_language][for includes] -I&quot;[includes]&quot;[end] -o [sources.swig_output] $(InputPath)"
-					Outputs="[sources.swig_target]"/>
+					CommandLine="swig -[sources.swig_language][for includes] -I&quot;[includes]&quot;[end] -o &quot;[sources.swig_output]&quot; $(InputPath)"
+					AdditionalDependencies="[for sources.user_deps]&quot;[sources.user_deps]&quot;;[end]"
+					Outputs="&quot;[sources.swig_target]&quot;"/>
 			</FileConfiguration>
 [end][end]
 [if-any sources.reldir][for configs]
