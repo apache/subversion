@@ -862,6 +862,123 @@ check_env_flags (svn_boolean_t *match,
 #endif
 
 
+/* Set *PAGESIZE to the size of pages used to hold items in the
+   database environment located at PATH.
+*/
+static svn_error_t *
+get_db_pagesize (u_int32_t *pagesize,
+                 const char *path,
+                 apr_pool_t *pool)
+{
+  DB_ENV *env;
+  DB *nodes_table;
+  const char *path_native;
+
+  SVN_BDB_ERR (create_env (&env));
+  SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, pool));
+
+  SVN_BDB_ERR (env->open (env, path_native, (DB_CREATE
+                                             | DB_INIT_LOCK | DB_INIT_LOG
+                                             | DB_INIT_MPOOL | DB_INIT_TXN),
+                          0666));
+
+  /* ### We're only asking for the pagesize on the 'nodes' table.
+         Is this enough?  We never call DB->set_pagesize() on any of
+         our tables, so presumably BDB is using the same default
+         pagesize for all our databases, right? */
+  SVN_BDB_ERR (svn_fs_bdb__open_nodes_table (&nodes_table, env, FALSE));
+  SVN_BDB_ERR (nodes_table->get_pagesize (nodes_table, pagesize));
+  SVN_BDB_ERR (nodes_table->close (nodes_table, 0));
+  SVN_BDB_ERR (env->close (env, 0));
+
+  return SVN_NO_ERROR;
+}
+
+
+/* Copy FILENAME from SRC_DIR to DST_DIR in byte increments of size
+   CHUNKSIZE.  The read/write buffer of size CHUNKSIZE will be
+   allocated in POOL. */
+static svn_error_t *
+copy_db_file_safely (const char *src_dir,
+                     const char *dst_dir,
+                     const char *filename,
+                     u_int32_t chunksize,
+                     apr_pool_t *pool)
+{
+  apr_file_t *s = NULL, *d = NULL;  /* init to null important for APR */
+  const char *file_src_path = svn_path_join (src_dir, filename, pool);
+  const char *file_dst_path = svn_path_join (dst_dir, filename, pool);  
+  apr_status_t status;
+  char *buf;
+
+  /* Open source file. */
+  status = apr_file_open(&s, file_src_path, APR_READ, APR_OS_DEFAULT, pool);
+  if (status)
+    return svn_error_createf (status, NULL,
+                              "Can't open file '%s' for reading.",
+                              file_src_path);
+
+  /* Open destination file. */
+  status = apr_file_open(&d, file_dst_path, (APR_WRITE | APR_CREATE),
+                         APR_OS_DEFAULT, pool);
+  if (status)
+    return svn_error_createf (status, NULL,
+                              "Can't open file '%s' for writing.",
+                              file_dst_path);
+
+  /* Allocate our read/write buffer. */
+  buf = apr_palloc (pool, chunksize);
+
+  /* Copy bytes till the cows come home. */
+  while (1) 
+    {
+      apr_size_t bytes_this_time = chunksize;
+      apr_status_t read_err;
+      apr_status_t write_err;
+      
+      /* Read 'em. */
+      read_err = apr_file_read(s, buf, &bytes_this_time);
+      if (read_err && !APR_STATUS_IS_EOF(read_err))
+        {
+          apr_file_close(s);  /* toss any error */
+          apr_file_close(d);  /* toss any error */
+          return svn_error_createf (status, NULL,
+                                    "Error reading file '%s'.",
+                                    file_src_path);
+        }
+    
+      /* Write 'em. */
+      write_err = apr_file_write_full(d, buf, bytes_this_time, NULL);
+      if (write_err)
+        {
+          apr_file_close(s);  /* toss any error */
+          apr_file_close(d);  /* toss any error */
+          return svn_error_createf (status, NULL,
+                                    "Error writing file '%s'.",
+                                    file_dst_path);
+        }
+    
+      if (read_err && APR_STATUS_IS_EOF(read_err)) 
+        {
+          status = apr_file_close(s);
+          if (status)
+            return svn_error_createf (status, NULL, "Can't close file '%s'.",
+                                      file_src_path);
+          status = apr_file_close(d);
+          if (status)
+            return svn_error_createf (status, NULL, "Can't close file '%s'.",
+                                      file_dst_path);
+
+          break;  /* got EOF on read, all files closed, all done. */
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+
+
 static svn_error_t *
 base_hotcopy (const char *src_path,
               const char *dest_path,
@@ -869,6 +986,7 @@ base_hotcopy (const char *src_path,
               apr_pool_t *pool)
 {
   svn_error_t *err;
+  u_int32_t pagesize;
   svn_boolean_t log_autoremove = FALSE;
 
   /* Check BDB version, just in case */
@@ -887,16 +1005,28 @@ base_hotcopy (const char *src_path,
   /* Copy the DB_CONFIG file. */
   SVN_ERR (svn_io_dir_file_copy (src_path, dest_path, "DB_CONFIG", pool));
 
+  /* In order to copy the database files safely and atomically, we
+     must copy them in chunks which are multiples of the page-size
+     used by BDB.  See sleepycat docs for details, or svn issue #1818. */
+  SVN_ERR (get_db_pagesize (&pagesize, src_path, pool));
+
   /* Copy the databases.  */
-  SVN_ERR (svn_io_dir_file_copy (src_path, dest_path, "nodes", pool));
-  SVN_ERR (svn_io_dir_file_copy (src_path, dest_path, "revisions", pool));
-  SVN_ERR (svn_io_dir_file_copy (src_path, dest_path, "transactions", pool));
-  SVN_ERR (svn_io_dir_file_copy (src_path, dest_path, "copies", pool));
-  SVN_ERR (svn_io_dir_file_copy (src_path, dest_path, "changes", pool));
-  SVN_ERR (svn_io_dir_file_copy (src_path, dest_path, "representations",
-                                 pool));
-  SVN_ERR (svn_io_dir_file_copy (src_path, dest_path, "strings", pool));
-  SVN_ERR (svn_io_dir_file_copy (src_path, dest_path, "uuids", pool));
+  SVN_ERR (copy_db_file_safely (src_path, dest_path,
+                                "nodes", pagesize, pool));
+  SVN_ERR (copy_db_file_safely (src_path, dest_path,
+                                "transactions", pagesize, pool));
+  SVN_ERR (copy_db_file_safely (src_path, dest_path,
+                                "revisions", pagesize, pool));
+  SVN_ERR (copy_db_file_safely (src_path, dest_path,
+                                "copies", pagesize, pool));
+  SVN_ERR (copy_db_file_safely (src_path, dest_path,
+                                "changes", pagesize, pool));
+  SVN_ERR (copy_db_file_safely (src_path, dest_path,
+                                "representations", pagesize, pool));
+  SVN_ERR (copy_db_file_safely (src_path, dest_path,
+                                "strings", pagesize, pool));
+  SVN_ERR (copy_db_file_safely (src_path, dest_path,
+                                "uuids", pagesize, pool));
 
   {
     apr_array_header_t *logfiles;
