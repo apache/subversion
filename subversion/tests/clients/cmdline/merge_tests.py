@@ -417,9 +417,7 @@ def add_with_history(sbox):
   expected_status = wc.State(C_path, {
     ''       : Item(status='  ', wc_rev=1, repos_rev=2),
     'Q'      : Item(status='A ', wc_rev='-', copied='+', repos_rev=2),
-    # FIXME: This doesn't seem right. How can Q/bar be copied and not added?
-    #        Can't close issue #838 until this is resolved.
-    'Q/bar'  : Item(status='  ', wc_rev='-', copied='+', repos_rev=2),
+    'Q/bar'  : Item(status='A ', wc_rev='-', copied='+', repos_rev=2),
     'foo'    : Item(status='A ', wc_rev='-', copied='+', repos_rev=2),
     })
 
@@ -462,8 +460,7 @@ def add_with_history(sbox):
     'A/B/F/Q/bar' : Item(status='  ', wc_rev=2, repos_rev=2),
     'A/B/F/foo'   : Item(status='  ', wc_rev=2, repos_rev=2),
     'A/C/Q'       : Item(status='A ', wc_rev='-', copied='+', repos_rev=2),
-    # FIXME: See fixme above, related to issue #838.
-    'A/C/Q/bar'   : Item(status='  ', wc_rev='-', copied='+', repos_rev=2),
+    'A/C/Q/bar'   : Item(status='A ', wc_rev='-', copied='+', repos_rev=2),
     'A/C/foo'     : Item(status='A ', wc_rev='-', copied='+', repos_rev=2),
     })
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
@@ -473,6 +470,7 @@ def add_with_history(sbox):
   # the status because it is simply a child of a copied directory.
   expected_output = svntest.wc.State(wc_dir, {
     'A/C/Q'     : Item(verb='Adding'),
+    'A/C/Q/bar' : Item(verb='Adding'),
     'A/C/foo'   : Item(verb='Adding'),
     })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
@@ -485,6 +483,7 @@ def add_with_history(sbox):
     'A/C/Q/bar'   : Item(status='  ', wc_rev=3, repos_rev=3),
     'A/C/foo'     : Item(status='  ', wc_rev=3, repos_rev=3),
     })
+
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,

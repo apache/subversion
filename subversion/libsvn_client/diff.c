@@ -392,6 +392,8 @@ diff_file_added (svn_wc_adm_access_t *adm_access,
                  const char *path,
                  const char *tmpfile1,
                  const char *tmpfile2,
+                 svn_revnum_t rev1,
+                 svn_revnum_t rev2,
                  const char *mimetype1,
                  const char *mimetype2,
                  void *diff_baton)
@@ -406,7 +408,7 @@ diff_file_added (svn_wc_adm_access_t *adm_access,
   diff_cmd_baton->force_diff_output = TRUE;
 
   SVN_ERR (diff_file_changed (adm_access, NULL, path, tmpfile1, tmpfile2, 
-                              diff_cmd_baton->revnum1, diff_cmd_baton->revnum2,
+                              rev1, rev2,
                               mimetype1, mimetype2, diff_baton));
   
   diff_cmd_baton->force_diff_output = FALSE;
@@ -459,6 +461,7 @@ diff_file_deleted_no_diff (svn_wc_adm_access_t *adm_access,
 static svn_error_t *
 diff_dir_added (svn_wc_adm_access_t *adm_access,
                 const char *path,
+                svn_revnum_t rev,
                 void *diff_baton)
 {
   /* ### todo:  send feedback to app */
@@ -622,11 +625,74 @@ merge_file_changed (svn_wc_adm_access_t *adm_access,
   return SVN_NO_ERROR;
 }
 
+
+/* A context for fetch_file_helper(). */
+struct fetch_file_baton {
+  const char *path;             /* the file to push at the stream */
+  apr_pool_t *pool;             /* for scratchwork */
+};
+
+/* A helper func of type svn_wc_add_repos_file_helper_t, to aid
+   merge_file_added()'s call to svn_wc_add_repos_file().  */
+static svn_error_t *
+fetch_file_helper (svn_stream_t *target_stream,
+                   apr_hash_t **props,
+                   void *baton)
+{
+  struct fetch_file_baton *b = baton;
+  svn_stream_t *file_source_stream;
+  apr_file_t *fp;
+  apr_size_t rlen, wlen;
+  char buf[SVN_STREAM_CHUNK_SIZE];
+
+  /* We have no props yet, so return an empty hash.  This means
+     svn_wc_add_repos_file() will install an empty prop & prop-base
+     for us, which is fine.  Later on, the repos-diff editor will push
+     the full proplist at us via merge_props_changed().  */
+  *props = apr_hash_make (b->pool);
+
+  /* Push the contents of the tmpfile at the stream. */
+  SVN_ERR_W (svn_io_file_open (&fp, b->path, (APR_READ),
+                               APR_OS_DEFAULT, b->pool),           
+             "failed to open file for reading.");
+  file_source_stream =  svn_stream_from_aprfile (fp, b->pool);
+
+  while (1)
+    {
+      /* read a maximum number of bytes */
+      rlen = SVN_STREAM_CHUNK_SIZE; 
+      SVN_ERR (svn_stream_read (file_source_stream, buf, &rlen));
+      
+      /* write however many bytes you read */
+      wlen = rlen;
+      SVN_ERR (svn_stream_write (target_stream, buf, &wlen));
+      if (wlen != rlen)
+        {
+          /* Uh oh, didn't write as many bytes as we read, and no
+             error was returned.  According to the docstring, this
+             should never happen. */
+          return svn_error_create (SVN_ERR_STREAM_UNEXPECTED_EOF, NULL,
+                                   "Error writing to svn_stream.");
+        }          
+      if (rlen != SVN_STREAM_CHUNK_SIZE)
+        {
+          /* svn_stream_read didn't throw an error, yet it didn't read
+             all the bytes requested.  According to the docstring,
+             this means a plain old EOF happened, so we're done. */
+          break;
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *
 merge_file_added (svn_wc_adm_access_t *adm_access,
                   const char *mine,
                   const char *older,
                   const char *yours,
+                  svn_revnum_t rev1,
+                  svn_revnum_t rev2,
                   const char *mimetype1,
                   const char *mimetype2,
                   void *baton)
@@ -648,24 +714,26 @@ merge_file_added (svn_wc_adm_access_t *adm_access,
           copyfrom_url = svn_path_join (merge_b->url, child, merge_b->pool);
 
           {
-            svn_wc_notify_func_t notify_func = merge_b->ctx->notify_func;
-            svn_error_t *err;
+            /* Since 'mine' doesn't exist, and this is
+               'merge_file_added', I hope it's safe to assume that
+               'older' is empty, and 'yours' is the full file.  Merely
+               copying 'yours' to 'mine', isn't enough; we need to get
+               the whole text-base and props installed too, just as if
+               we had called 'svn cp wc wc'. */
+            struct fetch_file_baton ffb;
+            ffb.path = yours;
+            ffb.pool = merge_b->pool;
 
-            /* FIXME: This is lame, we should have some way of doing this 
-               that doesn't involve messing with the client context, but 
-               for now we have to or we get double notifications for each 
-               add. */
-            merge_b->ctx->notify_func = NULL; 
+            SVN_ERR (svn_wc_add_repos_file (mine, adm_access,
+                                            fetch_file_helper, &ffb,
+                                            merge_b->pool));
 
-            /* ### FIXME: This will get the file again! */
-            /* ### 838 When 838 stops using svn_client_copy the adm_access
-               parameter can be removed from the function. */
-            err = svn_client_copy (NULL, copyfrom_url, merge_b->revision, 
-                                   mine, adm_access, merge_b->ctx, subpool);
-
-            merge_b->ctx->notify_func = notify_func;
-
-            if (err) return err;
+            SVN_ERR (svn_wc_add (mine, adm_access,
+                                 copyfrom_url, rev2,
+                                 merge_b->ctx->cancel_func,
+                                 merge_b->ctx->cancel_baton,
+                                 NULL, NULL, /* don't pass notify func! */
+                                 merge_b->pool));
           }
         }
       break;
@@ -755,6 +823,7 @@ merge_file_deleted (svn_wc_adm_access_t *adm_access,
 static svn_error_t *
 merge_dir_added (svn_wc_adm_access_t *adm_access,
                  const char *path,
+                 svn_revnum_t rev,
                  void *baton)
 {
   struct merge_cmd_baton *merge_b = baton;
@@ -773,22 +842,13 @@ merge_dir_added (svn_wc_adm_access_t *adm_access,
     case svn_node_none:
       if (! merge_b->dry_run)
         {
-          svn_wc_notify_func_t notify_func = merge_b->ctx->notify_func;
-          svn_error_t *err;
-
-          /* FIXME: This is lame, we should have some way of doing this 
-             that doesn't involve messing with the client context, but 
-             for now we have to or we get double notifications for each 
-             add. */
-          merge_b->ctx->notify_func = NULL;
-
-          /* ### FIXME: This will get the directory tree again! */
-          err = svn_client_copy (NULL, copyfrom_url, merge_b->revision, path,
-                                  adm_access, merge_b->ctx, merge_b->pool);
-
-          merge_b->ctx->notify_func = notify_func;
-
-          if (err) return err;
+          SVN_ERR (svn_io_make_dir_recursively (path, subpool));
+          SVN_ERR (svn_wc_add (path, adm_access,
+                               copyfrom_url, rev,
+                               merge_b->ctx->cancel_func,
+                               merge_b->ctx->cancel_baton,
+                               NULL, NULL, /* don't pass notification func! */
+                               merge_b->pool));
         }
       break;
     case svn_node_dir:
@@ -797,22 +857,13 @@ merge_dir_added (svn_wc_adm_access_t *adm_access,
       if (!merge_b->dry_run
           && (! entry || (entry && entry->schedule == svn_wc_schedule_delete)))
         {
-          svn_wc_notify_func_t notify_func = merge_b->ctx->notify_func;
-          svn_error_t *err;
-
-          /* FIXME: This is lame, we should have some way of doing this 
-             that doesn't involve messing with the client context, but 
-             for now we have to or we get double notifications for each 
-             add. */
-          merge_b->ctx->notify_func = NULL;
-
-          /* ### FIXME: This will get the directory tree again! */
-          err = svn_client_copy (NULL, copyfrom_url, merge_b->revision, path,
-                                 adm_access, merge_b->ctx, merge_b->pool);
-
-          merge_b->ctx->notify_func = notify_func;
-
-          if (err) return err;
+          SVN_ERR (svn_wc_add (path, adm_access,
+                               copyfrom_url,
+                               merge_b->revision->value.number,
+                               merge_b->ctx->cancel_func,
+                               merge_b->ctx->cancel_baton,
+                               NULL, NULL, /* don't pass notification func! */
+                               merge_b->pool));
         }
       break;
     case svn_node_file:
