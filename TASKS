@@ -18,3 +18,14 @@ to take something on.
    libsvn_client would then select the appropriate RA layer
    (libsvn_ra_dav, libsvn_ra_xml, or libsvn_ra_local) depending upon
    the desired operation.
+
+4. Macintosh/Windows GUI clients.
+
+   Once libsvn_client API is finalized (which, for a sufficiently
+   loose definition of "final", should be by Milestone 2 on Dec 7th),
+   it will be usable by any client, not just the command-line client.
+
+   I'm not sure this argues definitively for native clients written in
+   C for Mac and Windows, though that's certainly one way to get it
+   done.  Perhaps one client could be written for both platforms,
+   using a Java class that links to the C libsvn_client API?
