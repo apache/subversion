@@ -2126,7 +2126,7 @@ Recommended values are ?m or ?M.")
                      (not (eq (svn-status-line-info->filemark (car st-info)) ??)))
             (svn-status-line-info->set-filemark (car st-info)
                                                 svn-status-file-modified-after-save-flag)
-            (save-excursion
+            (save-window-excursion
               (set-buffer "*svn-status*")
               (svn-status-goto-file-name i-fname)
               (let ((buffer-read-only nil))
@@ -2738,7 +2738,8 @@ If ARG then show diff between some other version of the selected files."
   '(("^r.+" . font-lock-keyword-face)
   "Keywords in svn-log-view-mode."))
 
-(define-derived-mode svn-log-view-mode log-view-mode "svn-log-view"
+
+(define-derived-mode svn-log-view-mode fundamental-mode "svn-log-view"
   "Major Mode to show the output from svn log.
 Commands:
 \\{svn-log-view-mode-map}
