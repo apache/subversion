@@ -114,6 +114,7 @@ svn_client_update (const svn_delta_editor_t *before_editor,
                                      recurse,
                                      &update_editor,
                                      &update_edit_baton,
+                                     NULL,
                                      pool));
 
 

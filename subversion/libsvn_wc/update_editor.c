@@ -52,6 +52,24 @@
 
 /*** batons ***/
 
+struct traversal_info
+{
+  /* The pool in which this structure and everything inside it is
+     allocated. */
+  apr_pool_t *pool;
+
+  /* The before and after values of the SVN_PROP_EXTERNALS property,
+   * for each directory on which that property changed.  These have
+   * the same layout as those returned by svn_wc_edited_externals(). 
+   *
+   * The hashes, their keys, and their values are allocated in the
+   * above pool.
+   */
+  apr_hash_t *externals_old;
+  apr_hash_t *externals_new;
+};
+
+
 struct edit_baton
 {
   /* For updates, the "destination" of the edit is the ANCHOR (the
@@ -74,22 +92,9 @@ struct edit_baton
   /* Non-null if this is a 'switch' operation. */
   const char *switch_url;
 
-  /* The before and after values of the SVN_PROP_EXTERNALS property,
-   * for each directory on which that property changed.  These have
-   * the same layout as those returned by svn_wc_edited_externals(). 
-   *
-   * The hashes, their keys, and their values are allocated in this
-   * baton's pool.
-   *
-   * Implementation notes (3 June 2002): These values are gathered
-   * here because it's most efficient if the libsvn_wc update editor
-   * gathers them while walking over dirs anyway.  It's libsvn_client
-   * that will actually use the information; it just didn't make sense
-   * to have libsvn_client make a separate pass over the tree after
-   * this editor had already done so.
-   */
-  apr_hash_t *externals_old;
-  apr_hash_t *externals_new;
+  /* Object for gathering info to be accessed after the edit is
+     complete. */
+  struct traversal_info *traversal_info;
 
   apr_pool_t *pool;
 };
@@ -788,36 +793,35 @@ close_directory (void *dir_baton)
 
         if (change)
           {
-            const char *new_value = change->value->data;
-            const char *old_value;
-            const svn_string_t *old_value_s;
+            const svn_string_t *new_val_s = change->value;
+            const svn_string_t *old_val_s;
 
             SVN_ERR (svn_wc_prop_get
-                     (&old_value_s, SVN_PROP_EXTERNALS,
+                     (&old_val_s, SVN_PROP_EXTERNALS,
                       db->path, db->pool));
 
-            old_value = old_value_s->data;
-
-            if ((new_value == NULL) && (old_value == NULL))
+            if ((new_val_s == NULL) && (old_val_s == NULL))
               ; /* No value before, no value after... so do nothing. */
-            else if (new_value && old_value
-                     && (strcmp (old_value, new_value) == 0))
+            else if (new_val_s && old_val_s
+                     && (svn_string_compare (old_val_s, new_val_s)))
               ; /* Value did not change... so do nothing. */
             else
               {
-                struct edit_baton *eb = db->edit_baton;
+                struct traversal_info *ti = db->edit_baton->traversal_info;
 
-                if (old_value)
-                  apr_hash_set (eb->externals_old,
-                                apr_pstrdup (eb->pool, db->path),
-                                APR_HASH_KEY_STRING,
-                                apr_pstrdup (eb->pool, old_value));
+                if (old_val_s)
+                    apr_hash_set (ti->externals_old,
+                                  apr_pstrdup (ti->pool, db->path),
+                                  APR_HASH_KEY_STRING,
+                                  apr_pstrmemdup (ti->pool, old_val_s->data,
+                                                  old_val_s->len));
 
-                if (new_value)
-                  apr_hash_set (eb->externals_new,
-                                apr_pstrdup (eb->pool, db->path),
+                if (new_val_s)
+                  apr_hash_set (ti->externals_new,
+                                apr_pstrdup (ti->pool, db->path),
                                 APR_HASH_KEY_STRING,
-                                apr_pstrdup (eb->pool, new_value));
+                                apr_pstrmemdup (ti->pool, new_val_s->data,
+                                                new_val_s->len));
               }
           }
       }
@@ -1751,6 +1755,7 @@ make_editor (const char *anchor,
              svn_boolean_t recurse,
              const svn_delta_editor_t **editor,
              void **edit_baton,
+             void **traversal_info,
              apr_pool_t *pool)
 {
   struct edit_baton *eb;
@@ -1770,8 +1775,18 @@ make_editor (const char *anchor,
   eb->anchor          = anchor;
   eb->target          = target;
   eb->recurse         = recurse;
-  eb->externals_old   = apr_hash_make (eb->pool);
-  eb->externals_new   = apr_hash_make (eb->pool);
+
+  if (traversal_info)
+    {
+      /* Use the highest pool for the traversal info. */
+      struct traversal_info *ti = apr_palloc (pool, sizeof (*ti));
+      
+      ti->pool           = pool;
+      ti->externals_old  = apr_hash_make (ti->pool);
+      ti->externals_new  = apr_hash_make (ti->pool);
+      
+      *traversal_info = eb->traversal_info = ti;
+    }
 
   /* Construct an editor. */
   tree_editor->set_target_revision = set_target_revision;
@@ -1802,11 +1817,12 @@ svn_wc_get_update_editor (const char *anchor,
                           svn_boolean_t recurse,
                           const svn_delta_editor_t **editor,
                           void **edit_baton,
+                          void **traversal_info,
                           apr_pool_t *pool)
 {
   return make_editor (anchor, target, target_revision, 
                       FALSE, NULL, NULL,
-                      recurse, editor, edit_baton, pool);
+                      recurse, editor, edit_baton, traversal_info, pool);
 }
 
 
@@ -1817,11 +1833,12 @@ svn_wc_get_checkout_editor (const char *dest,
                             svn_boolean_t recurse,
                             const svn_delta_editor_t **editor,
                             void **edit_baton,
+                            void **traversal_info,
                             apr_pool_t *pool)
 {
   return make_editor (dest, NULL, target_revision, 
                       TRUE, ancestor_url, NULL,
-                      recurse, editor, edit_baton, pool);
+                      recurse, editor, edit_baton, traversal_info, pool);
 }
 
 
@@ -1833,25 +1850,26 @@ svn_wc_get_switch_editor (const char *anchor,
                           svn_boolean_t recurse,
                           const svn_delta_editor_t **editor,
                           void **edit_baton,
+                          void **traversal_info,
                           apr_pool_t *pool)
 {
   assert (switch_url);
 
   return make_editor (anchor, target, target_revision,
                       FALSE, NULL, switch_url,
-                      recurse, editor, edit_baton, pool);
+                      recurse, editor, edit_baton, traversal_info, pool);
 }
 
 
 void
 svn_wc_edited_externals (apr_hash_t **externals_new,
                          apr_hash_t **externals_old,
-                         void *edit_baton)
+                         void *traversal_info)
 {
-  struct edit_baton *eb = edit_baton;
+  struct traversal_info *ti = traversal_info;
 
-  *externals_new = eb->externals_new;
-  *externals_old = eb->externals_old;
+  *externals_new = ti->externals_new;
+  *externals_old = ti->externals_old;
 }
 
 

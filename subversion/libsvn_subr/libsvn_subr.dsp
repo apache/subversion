@@ -107,7 +107,7 @@ SOURCE=.\getdate.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\hashdump.c
+SOURCE=.\hash.c
 # End Source File
 # Begin Source File
 

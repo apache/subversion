@@ -72,6 +72,7 @@ apply_delta (const svn_delta_editor_t *before_editor,
                                       recurse,
                                       &editor,
                                       &edit_baton,
+                                      NULL,
                                       pool);
     }
   else /* checkout */
@@ -82,6 +83,7 @@ apply_delta (const svn_delta_editor_t *before_editor,
                                         recurse,
                                         &editor,
                                         &edit_baton,
+                                        NULL,
                                         pool);
     }
   if (err)

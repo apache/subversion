@@ -74,6 +74,44 @@ apr_status_t svn_hash_write (apr_hash_t *hash,
 
 
 
+/*** Taking the "diff" of two hash tables. ***/
+
+/* Hash key status indicator for svn_hash_diff_func_t.  */
+enum svn_hash_diff_key_status
+  {
+    svn_hash_diff_key_both,  /* Key is present in both hashes. */
+    svn_hash_diff_key_a,     /* Key is present in first hash only. */
+    svn_hash_diff_key_b      /* Key is present in second hash only. */
+  };
+
+
+/* Function type for expressing a key's status between two hash tables. */
+typedef svn_error_t *(*svn_hash_diff_func_t)
+       (const void *key, apr_ssize_t klen,
+        enum svn_hash_diff_key_status status,
+        void *baton);
+
+
+/* For each key in the union of hash_a's and hash_b's keys, invoke
+ * DIFF_FUNC exactly once, passing the key, the key's length, an enum
+ * svn_hash_diff_key_status indicating which table(s) the key appears
+ * in, and DIFF_FUNC_BATON.
+ *
+ * Process all keys of HASH_A first, then all remaining keys of HASH_B. 
+ *
+ * If DIFF_FUNC returns error, return that error immediately, without
+ * applying DIFF_FUNC to anything else.
+ *
+ * Use POOL for temporary allocation.
+ */
+svn_error_t *svn_hash_diff (apr_hash_t *hash_a,
+                            apr_hash_t *hash_b,
+                            svn_hash_diff_func_t diff_func,
+                            void *diff_func_baton,
+                            apr_pool_t *pool);
+
+
+
 /*** Helper routines specific to Subversion proplists. ***/
 
 /* A helper for hash_write(): 

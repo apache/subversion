@@ -54,6 +54,7 @@ svn_client_checkout (const svn_delta_editor_t *before_editor,
 {
   const svn_delta_editor_t *checkout_editor;
   void *checkout_edit_baton;
+  void *traversal_info;
   svn_error_t *err;
   svn_revnum_t revnum;
 
@@ -80,6 +81,7 @@ svn_client_checkout (const svn_delta_editor_t *before_editor,
                                        recurse,
                                        &checkout_editor,
                                        &checkout_edit_baton,
+                                       &traversal_info,
                                        pool));
 
   /* Wrap it up with outside editors. */
@@ -167,14 +169,15 @@ svn_client_checkout (const svn_delta_editor_t *before_editor,
 
     }
    
-  /* Note that this is done _after_ the entire initial checkout is
-     complete so that fetching external items (and any errors
-     therefrom) won't delay the primary checkout.  */
-  SVN_ERR (svn_client__checkout_externals (path,
-                                           before_editor, before_edit_baton,
-                                           after_editor, after_edit_baton,
-                                           auth_baton,
-                                           pool));
+  /* We handle externals after the initial checkout is complete, so
+     that fetching external items (and any errors therefrom) doesn't
+     delay the primary checkout.  */
+  SVN_ERR (svn_client__handle_externals_changes
+           (traversal_info,
+            before_editor, before_edit_baton,
+            after_editor, after_edit_baton,
+            auth_baton,
+            pool));
 
   return SVN_NO_ERROR;
 }

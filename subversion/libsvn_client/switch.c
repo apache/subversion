@@ -144,7 +144,7 @@ svn_client_switch (const svn_delta_editor_t *before_editor,
       SVN_ERR (svn_wc_get_switch_editor (anchor, target,
                                          revnum, switch_url, recurse,
                                          &switch_editor, &switch_edit_baton,
-                                         pool));
+                                         NULL, pool));
 
       /* Wrap it up with outside editors. */
       svn_delta_wrap_editor (&wrap_editor, &wrap_edit_baton,
