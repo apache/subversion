@@ -1547,9 +1547,10 @@ svn_fs__dag_set_contents (dag_node_t *file,
                           svn_stringbuf_t *contents,
                           trail_t *trail)
 {
-  /* This whole routine will have to be reincarnated as a "streamy"
-     interface someday. */
-  skel_t *content_skel;
+  /* ### todo: writing file contents needs to move to a streamy
+     interface. */
+
+  skel_t *node_rev_skel;
   svn_boolean_t is_mutable;
 
   /* Make sure our node is a file. */
@@ -1568,16 +1569,39 @@ svn_fs__dag_set_contents (dag_node_t *file,
        "Attempted to set textual contents of an immutable node.");
 
   /* Get the node's current contents... */
-  SVN_ERR (get_node_revision (&content_skel, file, trail));
-  
-  /* ...aaaaaaaaand then swap 'em out with some new ones! */
-  content_skel->children->next = svn_fs__mem_atom (contents->data,
-                                                   contents->len,
-                                                   trail->pool);
+  SVN_ERR (get_node_revision (&node_rev_skel, file, trail));
 
-  /* Stash the file's new contents in the db. */
-  SVN_ERR (svn_fs__put_node_revision (file->fs, file->id,
-                                      content_skel, trail));
+  /* Get a mutable representation for the contents, write them. */
+  {
+    const char *old_key, *new_key;
+
+    old_key = apr_pstrndup (trail->pool,
+                            node_rev_skel->children->next->next->data,
+                            node_rev_skel->children->next->next->len);
+
+    SVN_ERR (svn_fs__get_mutable_rep (&new_key, old_key, file->fs, trail));
+
+    /* This is so losing.  We need to move to a streamy, delta-aware
+       interface.  Thanks for listening. */
+
+    SVN_ERR (svn_fs__string_clear (file->fs, new_key, trail));
+    SVN_ERR (svn_fs__string_append (file->fs, &new_key,
+                                    contents->len,
+                                    contents->data,
+                                    trail));
+
+    if (strcmp (old_key, new_key) != 0)
+      {
+        /* We made a new rep, so update the node revision. */
+        node_rev_skel->children->next->next = svn_fs__str_atom (new_key,
+                                                                trail->pool);
+        SVN_ERR (svn_fs__put_node_revision (file->fs, file->id,
+                                            node_rev_skel, trail));
+      }
+
+    /* Else the node revision already pointed to a mutable rep, and so
+       doesn't need to be updated. */
+  }
 
   return SVN_NO_ERROR;
 }

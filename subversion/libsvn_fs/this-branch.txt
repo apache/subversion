@@ -50,15 +50,12 @@ And these are all the exported functions implemented in dag.c:
       svn_fs__dag_delete
       svn_fs__dag_delete_tree
       svn_fs__dag_delete_if_mutable
+      svn_fs__dag_get_contents
 
    NOT-SO-DONE (read: "Not Done At All, Really")
       svn_fs__dag_set_proplist
-      svn_fs__dag_get_contents
       svn_fs__dag_set_contents
 
-
-   HELPERS NEEDING HELP
-      read_file_contents
       
 -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- 
 
