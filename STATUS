@@ -103,7 +103,7 @@ already know about.)
      Fixes to make 'svn blame' work with i18n and uri-escaped filenames.
      Justification: Correctness.  [feel free to extend this, anyone.]
      Votes:
-      +1: jerenkrantz, rooneg
+      +1: jerenkrantz, rooneg, jszakmeister
 
 
    * r8048
