@@ -8,7 +8,7 @@
       bindings (as described in <xref linkend="svn-ch-8-sect-2.3" />)
       make Subversion a likely candidate for use as an extension or
       backend to other pieces of software.  In this appendix, we'll
-      introduce you to some of the third-party tools which are using
+      introduce you to some of the third-party tools that work with
       Subversion.  We will not cover actual Subversion
       clients&mdash;see <xref linkend="svn-ap-e" /> for those.
     </para>
@@ -16,9 +16,75 @@
   </simplesect>
 
   <!-- ******************************************************************* -->
-  <!-- *** SECTION 1:  VIEWCVS                                         *** -->
+  <!-- *** SECTION 1:  REPOSITORY CONVERTERS                           *** -->
   <!-- ******************************************************************* -->
   <sect1 id="svn-ap-e-sect-1">
+    <title>Repository Converters</title>
+
+     <para>There are several different converters available to turn
+     your CVS repository into a Subversion repository.  We'll mention
+     a few here, but you should also check the list at
+     <systemitem class="url"
+     >http://subversion.tigris.org/project_faq.html#cvs2svn</systemitem>
+     to see if any new ones have been added.</para>
+
+     <variablelist>
+       <varlistentry>
+           <term>cvs2svn</term>
+           <listitem><para><command>cvs2svn.py</command> is a Python
+           script that converts a CVS repository to a Subversion
+           repository.  It is under active development.  It currently
+           ships with Subversion, though it may become an independent
+           project soon.  For now, you should always run the most
+           recent version you can, by checking out this subdirectory
+           of the Subversion repository: 
+           <systemitem class="url"
+           >http://svn.collab.net/repos/svn/trunk/tools/cvs2svn/</systemitem>.
+           For more information about <command>cvs2svn.py</command>,
+           read the <filename>README</filename> file in that subdirectory.
+           As of this writing (February 2004),
+           <command>cvs2svn.py</command> is not really "1.0 quality":
+           it has successfully converted many people's repositories
+           (including branches and tags), but for others it has either
+           failed to complete the conversion, or converted the data in
+           an unexpected or subtly wrong way.  However, by the time
+           you read this, the situation may have changed; check the
+           <filename>README</filename> for
+           updates.</para></listitem></varlistentry>
+        
+        <varlistentry>
+           <term>Subversion plugin for VCP</term>
+           <listitem><para>Chia-liang Kao has written a converter
+           based on <literal>VCP</literal>.  The converter doesn't
+           seem to have its own name, it's just "the Subversion plugin
+           to VCP", but it can be checked out from <systemitem class="url" 
+           >http://svn.clkao.org/revml/branches/svn-perl/</systemitem>,
+           with documentation at <systemitem class="url"
+>http://svn.clkao.org/revml/branches/svn-perl/lib/VCP/Dest/svn.pm</systemitem>.
+           It depends on the Subversion Perl bindings as well as
+           VCP.  (For more information about VCP, see <systemitem class="url"
+           >http://public.perforce.com/public/revml/index.html</systemitem>).
+           </para></listitem></varlistentry>
+
+        <varlistentry>
+           <term>RefineCVS</term>
+           <listitem><para>Lev Serebryakov has written a converter
+           called <command>RefineCVS</command>, available from
+           <systemitem class="url"
+           >http://lev.serebryakov.spb.ru/refinecvs/</systemitem>.
+           We don't have any direct experience with
+           it.</para></listitem></varlistentry>
+      </variablelist>
+     <para>
+     </para>
+
+
+  </sect1>
+
+  <!-- ******************************************************************* -->
+  <!-- *** SECTION 2:  VIEWCVS                                         *** -->
+  <!-- ******************************************************************* -->
+  <sect1 id="svn-ap-e-sect-2">
     <title>ViewCVS</title>
 
     <para>Perhaps the first&mdash;and definitely the most
@@ -52,9 +118,9 @@
   </sect1>
 
   <!-- ******************************************************************* -->
-  <!-- *** SECTION 2:  SUBWIKI                                         *** -->
+  <!-- *** SECTION 3:  SUBWIKI                                         *** -->
   <!-- ******************************************************************* -->
-  <sect1 id="svn-ap-e-sect-2">
+  <sect1 id="svn-ap-e-sect-3">
     <title>SubWiki</title>
 
     <para>SubWiki is a Subversion-backed Wiki program.  Wikis have

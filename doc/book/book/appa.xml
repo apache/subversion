@@ -484,6 +484,16 @@ X    Resource is external to this working copy (comes from another
 
   </sect1>
 
+  <!-- ================================================================= -->
+  <!-- ======================== SECTION 11 ============================= -->
+  <!-- ================================================================= -->
+  <sect1 id="svn-app-a-sect-11">
+
+    <title>Converting a Repository from CVS to Subversion</title>
+    <para>See <xref linkend="svn-ap-e-sect-1"/>.</para>
+
+  </sect1>
+
 </appendix>
 
 <!--
