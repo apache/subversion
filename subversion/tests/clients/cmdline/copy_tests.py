@@ -488,9 +488,10 @@ def expect_extra_files(node, extra_files):
     mo = re.match(pattern, node.name)
     if mo:
       extra_files.pop(extra_files.index(pattern))
-      return 0
-  print "Found unexpected disk object:", node.name
-  raise svntest.main.SVNTreeUnequal
+      break
+  else:
+    print "Found unexpected disk object:", node.name
+    raise svntest.main.SVNTreeUnequal
 
 def no_wc_copy_overwrites(sbox):
   "svn cp PATH PATH cannot overwrite destination"

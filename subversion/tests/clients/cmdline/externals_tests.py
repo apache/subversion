@@ -697,12 +697,10 @@ def disallow_parent_directory_reference(sbox):
     out_lines, err_lines = svntest.main.run_svn (1, 'up', path)
     if (err_lines):
       m = re.compile(expected_err)
-      found_it = 0
       for line in err_lines:
         if m.match(line):
-          found_it = 1
           break
-      if not found_it:
+      else:
         raise svntest.Failure
 
   test_update(other_B_path, "Target dir '../foo' references '..'")

@@ -287,7 +287,7 @@ def status_with_new_files_pending(sbox):
     # problem.
     for line in output:
       if line.find('newfile') != -1:
-        break;
+        break
     else:
       raise svntest.Failure
 

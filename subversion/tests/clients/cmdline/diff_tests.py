@@ -720,11 +720,10 @@ def dont_diff_binary_file(sbox):
 
   stdout, stderr = svntest.main.run_svn(None, 'diff', wc_dir)
 
-  failed_to_display = 0;
   for line in stdout:
     if (re_nodisplay.match(line)):
-      failed_to_display = 1;
-  if not failed_to_display:
+      break
+  else:
     raise svntest.Failure
 
   # Second diff use-case: 'svn diff -r1 wc' compares the wc against a
@@ -732,11 +731,10 @@ def dont_diff_binary_file(sbox):
 
   stdout, stderr = svntest.main.run_svn(None, 'diff', '-r', '1', wc_dir)
 
-  failed_to_display = 0;
   for line in stdout:
     if (re_nodisplay.match(line)):
-      failed_to_display = 1;
-  if not failed_to_display:
+      break
+  else:
     raise svntest.Failure
 
   # Now commit the local mod, creating rev 3.
@@ -759,11 +757,10 @@ def dont_diff_binary_file(sbox):
 
   stdout, stderr = svntest.main.run_svn(None, 'diff', '-r', '2:3', wc_dir)
 
-  failed_to_display = 0;
   for line in stdout:
     if (re_nodisplay.match(line)):
-      failed_to_display = 1;
-  if not failed_to_display:
+      break
+  else:
     raise svntest.Failure
 
 

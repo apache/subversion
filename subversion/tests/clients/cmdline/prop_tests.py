@@ -309,10 +309,10 @@ def detect_conflict_files(node, extra_files):
     mo = re.match(pattern, node.name)
     if mo:
       extra_files.pop(extra_files.index(pattern)) # delete pattern from list
-      return
-
-  print "Found unexpected disk object:", node.name
-  raise svntest.tree.SVNTreeUnequal
+      break
+  else:
+    print "Found unexpected disk object:", node.name
+    raise svntest.tree.SVNTreeUnequal
 
 def update_conflict_props(sbox):
   "update with conflicting props"
