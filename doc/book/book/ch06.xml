@@ -764,9 +764,10 @@ joessh = $JOESSH /opt/alternate/ssh -p 29934
         connect to a non-standard port.  Second, it shows how to
         define a custom environment variable that can override the
         name of the tunneling program.  If we were to set the
-        <literal>JOESSH</literal> environment variable to a different
-        program, it would be executed instead of
-        <filename>/opt/alternate/ssh</filename>.</para>
+        <literal>JOESSH</literal> environment variable, its value
+        would override the entire value of the tunnel variable;
+        $JOESSH would be executed instead of
+        <filename>/opt/alternate/ssh -p 29934</filename>.</para>
 
     </sect2>
 
@@ -782,7 +783,7 @@ joessh = $JOESSH /opt/alternate/ssh -p 29934
 
     <para>The Apache HTTP Server is a "heavy duty" network server that
       Subversion can leverage.  Via a custom module,
-      <command>httpd</command> make Subversion repositories available
+      <command>httpd</command> makes Subversion repositories available
       to clients via the WebDAV/deltaV protocol, which is an extension
       to HTTP 1.1 (see <systemitem
       class="url">http://www.webdav.org/</systemitem> for more
@@ -794,10 +795,13 @@ joessh = $JOESSH /opt/alternate/ssh -p 29934
       Apache 2.0 software, is supported by numerous pieces of core
       operating system and third-party products, and which doesn't
       require network administrators to open up yet another custom
-      port.
+      port. 
       <footnote>
         <para>They really hate doing that.</para>
       </footnote>
+      While an Apache-Subversion server has more features than
+      <command>svnserve</command>, it's also a bit more difficult
+      to set up.  With flexibility often comes more complexity.
     </para>
 
     <para>Much of the following discussion includes references to
@@ -823,9 +827,34 @@ joessh = $JOESSH /opt/alternate/ssh -p 29934
       the source of a problem that is not clearly noticeable
       otherwise.</para>
     
-    <para><emphasis>TODO: in this intro, explain why apache2, not
-      apache1.  also explain why it's not a big deal to require
-      apache2, run side-by-side, etc.</emphasis></para>
+    <sidebar>
+      <title>Why Apache 2?</title>
+
+      <para>If you're a system administrator, it's very likely that
+        you're already running the Apache web server and have some
+        prior experience with it.  At the time of writing, Apache 1.3
+        is by far the most popular version of Apache.  The world has
+        been somewhat slow to upgrade to the Apache 2.X series for
+        various reasons: some people fear change, especially changing
+        something as critical as a web server.  Other people depend on
+        plug-in modules that only work against the Apache 1.3 API, and
+        are waiting for a 2.X port.  Whatever the reason, many people
+        begin to worry when they first discover that Subversion's
+        Apache module is written specifically for the Apache 2 API.</para>
+
+      <para>The proper response to this problem is: don't worry about
+        it.  It's easy to run Apache 1.3 and Apache 2 side-by-side;
+        simply install them to separate places, and use Apache 2 as a
+        dedicated Subversion server that runs on a port other than 80.
+        Clients can access the repository by placing the port number
+        into the URL:</para>
+
+      <screen>
+$ svn checkout http://host.example.com:7382/repos/project
+&hellip;
+</screen>
+    </sidebar>
+
 
     <sect2 id="svn-ch-6-sect-4.1">
       <title>Prerequisites</title>
@@ -967,7 +996,7 @@ LoadModule dav_svn_module     modules/mod_dav_svn.so
           <filename>httpd.conf</filename> to accomplish this.</para>
         
         <screen>
-ServerName svn.red-bean.com
+ServerName svn.example.com
 </screen>
             
         <para>If you are using Apache's virtual hosting support via
@@ -987,7 +1016,7 @@ ServerName svn.red-bean.com
         appropriately, that allows Apache to work with those files.
         Apache, when used as a Subversion server, will also need the
         correct permissions to read and write to your Subversion
-        repository.</para>
+        repository.  (See <xref linkend="svn-ch-6-sidebar-1"/>.) </para>
     
       <para>You will need to determine a permission system setup that
         satisfies Subversion's requirements without messing up any
@@ -1009,16 +1038,23 @@ ServerName svn.red-bean.com
 
     <sect2 id="svn-ch-6-sect-4.3">
       <title>Authentication Options</title>
-      
-      <para><emphasis>explain that all apache authn options are open,
-          but that we only cover the two most common ones
-          here.  </emphasis></para>
-      
-      <para>At this point, unless you have some system-wide
-        configuration of authentication and authorization, the
-        Subversion repositories you make available via the
-        <filename>Location</filename> directives will be generally
-        accessible to everyone.  In other words,</para>
+
+      <para>At this point, if you configured
+      <filename>httpd.conf</filename> to contain something like</para>
+
+      <screen>
+&lt;Location /svn&gt;
+  DAV svn
+  SVNParentPath /usr/local/svn
+&lt;/Location&gt;
+</screen>
+
+      <para>...then your repository is "anonymously" accessible to the
+         world.  Until you configure some authentication and
+         authorization policies, the Subversion repositories you make
+         available via the <filename>Location</filename> directive
+         will be generally accessible to everyone.  In other
+         words,</para>
       
       <itemizedlist>
         <listitem>
@@ -1035,7 +1071,7 @@ ServerName svn.red-bean.com
           <para>anyone can commit to the repository.</para>
         </listitem>
       </itemizedlist>
-      
+
       <sect3 id="svn-ch-6-sect-4.3.1">
         <title>Basic HTTP Authentication</title>
         
@@ -1103,10 +1139,23 @@ $
           (<xref linkend="svn-ch-6-sect-4.4"/>) to configure
           authorization policies.</para>
 
-        <para><emphasis>a word of warning: basic auth passwords pass
-            in nearly-plaintext over the network, extremely insecure.
-            We recommend using some sort of encryption or
-            SSL</emphasis></para>
+        <para>One word of warning: HTTP Basic Auth passwords pass in
+          very nearly plain-text over the network, and thus are
+          extremely insecure.  If you're worried about password
+          snooping, it may be best to use some sort of SSL encryption,
+          so that clients authenticate via <literal>https://</literal>
+          instead of <literal>http://</literal>; at a bare minimum,
+          you can configure Apache to use a self-signed server
+          certificate.
+          <footnote>
+            <para>While self-signed server certificates are still
+              vulnerable to a <quote>man in the middle</quote> attack,
+              such an attack is still much more difficult for a casual
+              observer to pull off, compared to sniffing unprotected
+              passwords.</para>
+          </footnote>
+          Consult Apache's documentation (and OpenSSL documentation)
+          about how to do that.</para>
 
       </sect3>
 
@@ -1114,22 +1163,56 @@ $
       <sect3 id="svn-ch-6-sect-4.3.2">
         <title>SSL and Certificates</title>
         
-        <para><emphasis>ptrs to apache docs, brief overview of
-            process.  how to manange certs in client!</emphasis></para>
+        <para>If a Subversion client is compiled to use OpenSSL, then
+          it gains the ability to speak to an Apache server via
+          <literal>https://</literal> URLs.  The Neon library used by
+          the Subversion client is not only able to verify server
+          certificates, but can also supply client certificates when
+          challenged.  When the client and server have exchanged SSL
+          certificates and successfully authenticated one another, all
+          further communication is encrypted via a session key.
+          Businesses that need to expose their repositories for access
+          outside the company firewall should be conscious of the
+          possibility that unauthorized parties could be
+          <quote>sniffing</quote> their network traffic.  SSL makes
+          that kind of unwanted attention less likely to result in
+          sensitive data leaks.</para>
 
-        <para>...this means that SSL-enabled Subversion clients can
-          access SSL-enabled Apache servers and perform all
-          communication using an encrypted protocol, all by using
-          <literal>https:</literal> URLs with their Subversion clients
-          instead of <literal>http:</literal> ones.  Businesses that
-          need to expose their repositories for access outside the
-          company firewall should be conscious of the possibility that
-          unauthorized parties could be <quote>sniffing</quote> their
-          network traffic.  SSL makes that kind of unwanted attention
-          less likely to result in sensitive data leaks.  Apache can
-          be configured such that only SSL-enabled Subversion clients
-          can communicate with the repository.</para>
+        <para>It's beyond the scope of this book to describe how to
+          generate client and server certificates, and how to
+          configure Apache to use them.  Many other books, including
+          Apache's own documentation, describe this task.  But what
+          <emphasis>can</emphasis> be covered here is how to manage
+          server and client certificates from an ordinary Subversion
+          client.</para>
 
+        <para>When speaking to Apache via <literal>https://</literal>,
+          a Subversion client can receive two different types of
+          information:</para>
+
+        <itemizedlist>
+          <listitem><para>a server certificate</para></listitem>
+          <listitem><para>a demand for a client certificate</para></listitem>
+        </itemizedlist>
+
+        <para>If the client receives a server certificate, it needs to
+          verify that it trusts the certificate: is the server really
+          who it claims to be?  The OpenSSL library does this by
+          examining the signer of the server certificate, or
+          <firstterm>certifying authority</firstterm>
+          (CA)..... <emphasis> blah blah blah, how the prompt looks,
+          how caching works, how to set lists of trusted
+          CAs.</emphasis></para>
+
+        <para>If the client receives a challenge for a certificate,
+          Apache is asking the client to identify itself: is the
+          client really who it says it is?  If all goes correctly, the
+          Subversion client sends back a certificate that is signed by
+          a CA that Apache trusts.  <emphasis>.... blah blah blah,
+          explain pkcs12 requirement, show example of prompting
+          provider, and how to set up permanent pointer in servers
+          file.</emphasis></para>
+          
       </sect3>
 
     </sect2>
@@ -1140,8 +1223,9 @@ $
       <sect3 id="svn-ch-6-sect-4.4.1">
         <title>Blanket Access Control</title>
 
-        <para><emphasis>intro about what 'blanket'
-        means?</emphasis></para>
+        <para>The simplest form of access control is to authorize
+          certain users for either read-only access to a repository,
+          or read/write access to a repository.</para>
 
         <para>You can restrict access on all repository operations by
           adding the <literal>Require valid-user</literal> directive
@@ -1150,8 +1234,21 @@ $
           claimed to be either <literal>harry</literal> or
           <literal>sally</literal>, and which provided the correct
           password for their respective username, would be allowed to
-          do anything with the Subversion repository.</para>
+          do anything with the Subversion repository:</para>
     
+        <screen>
+&lt;Location /svn&gt;
+  DAV svn
+  SVNParentPath /usr/local/svn
+  AuthType Basic
+  AuthName "Subversion repository"
+  AuthUserFile /path/to/users/file
+  
+  # only authenticated users may access the repository
+  Require valid-user
+&lt;/Location&gt;
+</screen>
+
         <para>Sometimes you don't need to run such a tight ship.  For
           example, Subversion's own source code repository at
           <systemitem
@@ -1188,6 +1285,8 @@ $
   AuthType Basic
   AuthName "Subversion repository"
   AuthUserFile /path/to/users/file
+
+  # For any operations other than these, require an authenticated user.
   &lt;LimitExcept GET PROPFIND OPTIONS REPORT&gt;
     Require valid-user
   &lt;/LimitExcept&gt;
@@ -1315,6 +1414,15 @@ $
           access the repository through a proxy.  These things are all
           supported by Neon, so Subversion gets that support for
           free.</para>
+
+        <para>Finally, because <command>mod_dav_svn</command> is
+          speaking a semi-complete dialect of WebDAV/deltaV, it's
+          possible to access the repository via third-party DAV
+          clients.  Most modern operating systems (Win32, OS X, and
+          Linux) have the built-in ability to mount a DAV server as a
+          standard network "share".  This is a complicated topic;  for
+          details, read <xref linkend="svn-ap-d"/>.</para>
+
         
       </sect3>
 
