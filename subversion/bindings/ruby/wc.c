@@ -64,7 +64,7 @@ check_wc (VALUE self, VALUE aPath)
 }
 
 static VALUE
-has_binary_prop (VALUE self, VALUE aPath)
+wc_has_binary_prop (VALUE self, VALUE aPath)
 {
   svn_stringbuf_t *path;
   svn_boolean_t has_binary_prop;
@@ -779,7 +779,7 @@ void svn_ruby_init_wc (void)
   rb_undef_method (CLASS_OF (cSvnWc), "new");
   define_prop (cSvnWc, "ADM_DIR_NAME", SVN_WC_ADM_DIR_NAME);
   rb_define_singleton_method (cSvnWc, "wc?", check_wc, 1);
-  rb_define_singleton_method (cSvnWc, "hasBinaryProp?", has_binary_prop, 1);
+  rb_define_singleton_method (cSvnWc, "hasBinaryProp?", wc_has_binary_prop, 1);
   rb_define_singleton_method (cSvnWc, "textModified?", text_modified_p, 1);
   rb_define_singleton_method (cSvnWc, "propsModified?", props_modified_p, 1);
   rb_define_singleton_method (cSvnWc, "proplist", prop_list, 1);
@@ -808,6 +808,8 @@ void svn_ruby_init_wc (void)
                    INT2NUM (svn_wc_existence_added));
   rb_define_const (cSvnWcEntry, "EXISTENCE_DELETED",
                    INT2NUM (svn_wc_existence_deleted));
+  rb_define_const (cSvnWcEntry, "EXISTENCE_COPIED",
+                   INT2NUM (svn_wc_existence_copied));
   define_prop (cSvnWcEntry, "ATTR_NAME",  SVN_WC_ENTRY_ATTR_NAME);
   define_prop (cSvnWcEntry, "ATTR_REVISION",  SVN_WC_ENTRY_ATTR_REVISION);
   define_prop (cSvnWcEntry, "ATTR_KIND",  SVN_WC_ENTRY_ATTR_KIND);
@@ -825,6 +827,7 @@ void svn_ruby_init_wc (void)
   define_prop (cSvnWcEntry, "VALUE_REPLACE",  SVN_WC_ENTRY_VALUE_REPLACE);
   define_prop (cSvnWcEntry, "VALUE_ADDED",  SVN_WC_ENTRY_VALUE_ADDED);
   define_prop (cSvnWcEntry, "VALUE_DELETED",  SVN_WC_ENTRY_VALUE_DELETED);
+  define_prop (cSvnWcEntry, "VALUE_COPIED",  SVN_WC_ENTRY_VALUE_COPIED);
   define_prop (cSvnWcEntry, "THIS_DIR",  SVN_WC_ENTRY_THIS_DIR);
   rb_define_method (cSvnWcEntry, "revision", wc_entry_revision, 0);
   rb_define_method (cSvnWcEntry, "url", wc_entry_url, 0);
