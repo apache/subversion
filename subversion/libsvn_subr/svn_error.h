@@ -59,11 +59,16 @@
 #include <stdio.h>
 
 
-#define SVN_RETURN_IF_ERROR(err) if ((err)) return (err)
 
-#define SVN_SUCCESS 0
+/* REALLY USEFUL macros for throwing errors quickly and easily! */
+#define SVN_RETURN_IF_ERROR(err) \
+if (err) return (err)
 
-/* svn_error_t constructor */
+#define SVN_RETURN_WRAPPED_ERROR(err, msg) \
+if (err) return (svn_quick_wrap_error((err),(msg)))
+
+
+#define SVN_SUCCESS   0
 
 #define SVN_FATAL     1    /* Use instead of TRUE or 1, for readability. */
 #define SVN_NON_FATAL 0    /* Use instead of FALSE or 0, for readability. */
@@ -84,11 +89,16 @@ typedef struct svn_error_t
 {
   ap_status_t err;             /* native OS errno */
   svn_boolean_t fatal;         /* does the creator think this a fatal error? */
-  svn_string_t *message;       /* description from top-level caller */
-  char *description;           /* generic description from ap_strerror() */
+  char *message;               /* details from producer of error */
+  struct svn_error_t *child;   /* ptr to next error below this one */
+
   int canonical_errno;         /* "canonicalized" errno from APR */ 
+  char *description;           /* generic description from ap_strerror() */
+
+  ap_pool_t *pool;             /* place to generate message strings from */
 
 } svn_error_t;
+
 
 
 /* svn_error_t constructor */
@@ -96,23 +106,55 @@ typedef struct svn_error_t
 #define SVN_FATAL     1    /* Use instead of TRUE or 1, for readability. */
 #define SVN_NON_FATAL 0    /* Use instead of FALSE or 0, for readability. */
 
+
+/*
+  svn_create_error() : for creating nested exception structures.
+
+  Input:  an error code,
+          is-error-fatal-p?,
+          a descriptive message,
+          a "child" exception,
+          a pool for alloc'ing
+
+  Returns:  a new error structure (containing the old one).
+
+
+  Usage: 
+
+          1.  If this is a BOTTOM level error (i.e. the first one
+          thrown), you MUST set child to NULL and pass a real pool_t.
+          
+             my_err = svn_create_error (errno, SVN_NON_FATAL,
+                                        "Can't find repository",
+                                        NULL, my_pool);
+
+          2.  If this error WRAPS a previous error, include a non-NULL
+          child to wrap.  You can use the child's pool if you wish.
+
+             next_err = svn_create_error (errno, SVN_NON_FATAL,
+                                          "Filesystem access failed",
+                                          previous_err, previous_err->pool);
+
+ */
+
 svn_error_t *svn_create_error (ap_status_t err,
                                svn_boolean_t fatal,
                                svn_string_t *message,
+                               svn_error_t *child,
                                ap_pool_t *pool);
 
 
-/* all routines call this */
+
+/* A quick n' easy way to create a wrappered exception with your own
+   message, before throwing it up the stack.  (It uses all of the
+   child's fields.)  */
+
+svn_error_t * svn_quick_wrap_error (svn_error_t *child, char *new_msg)
+
+
+/* Very dumb "default" error handler that anyone can use if they wish. */
 
 void svn_handle_error (svn_error_t *error);
-
-
-/* example usage:
-
-   if (bad_thing)
-     svn_handle_error (svn_create_error (errno, FALSE, pool));
-
- */
 
 
 
