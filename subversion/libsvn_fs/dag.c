@@ -299,8 +299,7 @@ txn_body_dag_init_fs (void *fs_baton, trail_t *trail)
                               svn_fs__parse_skel (rev_skel,
                                                   sizeof (rev_skel) - 1,
                                                   trail->pool),
-                              trail->db_txn,
-                              trail->pool));
+                              trail));
 
     if (rev != 0)
       return svn_error_createf (SVN_ERR_FS_CORRUPT, 0, 0, fs->pool,
