@@ -116,7 +116,7 @@ Summary:  Python Bindings for Subversion
 Group:    Development/Other
 Requires: %{name}-base = %{version}-%{release}
 Requires: python >= 2.2.0
-Requires: swig >= 1.3.14
+Requires: swig >= 1.3.16
 %description python
 This package contains the files necessary to use the subversion library
 functions within python scripts. This will also install a number of utility
