@@ -765,27 +765,13 @@ static svn_error_t * commit_add_file(svn_stringbuf_t *name,
       svn_path_add_component_nts(src_url, bc_relative.data,
                                  svn_path_url_style);
 
-      /* Stoopid debugging info */
-      printf ("For local path %s :\n", file->rsrc->local_path->data);
-      printf ("Copyfrom_url/rev:  %s, %ld\n",
-              copyfrom_path->data, copyfrom_revision);
-      printf ("bc_url, bc_relative:  %s, %s\n", 
-              bc_url.data, bc_relative.data);
-      printf ("COPY args are: %s, %s\n",
-              src_url->data, file->rsrc->wr_url);              
-
       /* Have neon do the COPY. */
       status = ne_copy(parent->cc->ras->sess,
                        1,                   /* overwrite */
                        NE_DEPTH_ZERO,       /* for a file, does it care? */
                        src_url->data,       /* source URI */
                        file->rsrc->wr_url); /* dest URI */
-
-      printf ("ne_copy result code was: %d\n", status);
-      fflush(stdout);
-
     }
-
 
   /* return the file_baton */
   *file_baton = file;

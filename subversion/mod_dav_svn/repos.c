@@ -1048,10 +1048,43 @@ static int is_our_resource(const dav_resource *res1,
 
   /* coalesce the repository */
   if (res1->info->repos != res2->info->repos)
-    {
-        /* ### crap. what to do with this... */
-        (void) svn_fs_close_fs(res2->info->repos->fs);
-        res2->info->repos = res1->info->repos;
+    {      
+      /* close the old, redundant filesystem */
+      (void) svn_fs_close_fs(res2->info->repos->fs);
+      
+      /* have res2 point to res1's filesystem */
+      res2->info->repos = res1->info->repos;
+
+      /* res2's fs_root object is now invalid.  regenerate it using
+         the now-shared filesystem. */
+      if (res2->info->root.txn_name)
+        {
+          /* reopen the txn by name */
+          (void) svn_fs_open_txn(&(res2->info->root.txn),
+                                 res2->info->repos->fs,
+                                 res2->info->root.txn_name,
+                                 res2->info->repos->pool);
+
+          /* regenerate the txn "root" object */
+          (void) svn_fs_txn_root(&(res2->info->root.root),
+                                 res2->info->root.txn,
+                                 res2->info->repos->pool);
+        }
+      else if (res2->info->node_id)
+        {
+          /* regenerate the id "root" object */
+          (void) svn_fs_id_root(&(res2->info->root.root),
+                                res2->info->repos->fs,
+                                res2->info->repos->pool);
+        }
+      else if (res2->info->root.rev)
+        {
+          /* default:  regenerate a revision "root" object */
+          (void) svn_fs_revision_root(&(res2->info->root.root),
+                                      res2->info->repos->fs,
+                                      res2->info->root.rev,
+                                      res2->info->repos->pool);
+        }
     }
 
   return 1;
