@@ -1603,9 +1603,9 @@ svn_fs_commit_txn (const char **conflict_p,
       merge_args.node = youngish_root_node;
       merge_args.txn = txn;
       err = svn_fs__retry_txn (fs, txn_body_merge, &merge_args, pool);
-      if (err) 
+      if (err)
         {
-          if (err->apr_err == SVN_ERR_FS_CONFLICT)
+          if ((err->apr_err == SVN_ERR_FS_CONFLICT) && conflict_p)
             *conflict_p = merge_args.conflict;
           return err;
         }

@@ -392,10 +392,13 @@ svn_error_t *svn_fs_begin_txn (svn_fs_txn_t **txn_p,
 
 /* Commit the transaction TXN.  If the transaction conflicts with
    other changes committed to the repository, return an
-   SVN_ERR_FS_CONFLICT error, with *CONFLICT_P set to the path of the
-   conflict in TXN.  Otherwise, create a new filesystem revision
-   containing the changes made in TXN, storing that new revision
-   number in *NEW_REV, and return zero, with *CONFLICT_P set to null.
+   SVN_ERR_FS_CONFLICT error.  Otherwise, create a new filesystem
+   revision containing the changes made in TXN, storing that new
+   revision number in *NEW_REV, and return zero.
+
+   Iff CONFLICT_P is non-null, then a conflict error will cause
+   *CONFLICT_P to be set to the path of the conflict in TXN, and
+   success will cause *CONFLICT_P to be set to null.
 
    If the commit succeeds, it frees TXN, and any temporary resources
    it holds.  Any root objects (see below) referring to the root

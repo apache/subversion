@@ -3237,10 +3237,7 @@ delete (const char **msg)
   SVN_ERR (greek_tree_under_root (txn_root));
 
   /* Commit the greek tree. */
-  {
-    const char *conflict;
-    SVN_ERR (svn_fs_commit_txn (&conflict, &new_rev, txn));
-  }
+  SVN_ERR (svn_fs_commit_txn (NULL, &new_rev, txn));
   SVN_ERR (svn_fs_close_txn (txn));
 
   /* Create new transaction. */
