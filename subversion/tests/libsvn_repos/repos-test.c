@@ -335,6 +335,7 @@ dir_deltas (const char **msg,
                                         edit_baton,
                                         TRUE,
                                         TRUE,
+                                        FALSE,
                                         subpool));
 
           /* Hopefully at this point our transaction has been modified
