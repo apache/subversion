@@ -340,7 +340,11 @@ make_file_baton (struct dir_baton *parent_dir_baton, svn_stringbuf_t *name)
 
   f->pool       = subpool;
   f->dir_baton  = parent_dir_baton;
-  f->name       = name;
+
+  /* copy the name into *our* subpool; who knows what the caller may plan
+     to do with the darned thing. */
+  f->name       = svn_stringbuf_dup (name, subpool);
+
   f->path       = path;
   f->propchanges = apr_array_make (subpool, 1, sizeof(svn_prop_t *));
   f->wcpropchanges = apr_array_make (subpool, 1, sizeof(svn_prop_t *));
