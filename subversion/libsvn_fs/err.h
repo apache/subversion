@@ -21,7 +21,8 @@
 #ifndef SVN_LIBSVN_FS_ERR_H
 #define SVN_LIBSVN_FS_ERR_H
 
-#include "apr_pools.h"
+#include <apr_pools.h>
+
 #include "svn_error.h"
 #include "svn_fs.h"
 

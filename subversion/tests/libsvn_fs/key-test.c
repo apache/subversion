@@ -19,9 +19,11 @@
 #include <stdarg.h>
 #include <string.h>
 #include <stdio.h>
+
+#include <apr.h>
+
 #include "svn_error.h"
 #include "svn_test.h"
-#include "apr.h"
 #include "../../libsvn_fs/key-gen.h"
 
 

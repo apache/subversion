@@ -21,7 +21,7 @@
 #include <string.h>
 #include <assert.h>
 
-#include "apr_file_info.h"
+#include <apr_file_info.h>
 
 #include "svn_string.h"
 #include "svn_path.h"

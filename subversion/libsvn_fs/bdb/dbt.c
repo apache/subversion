@@ -17,8 +17,8 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include "apr_pools.h"
-#include "db.h"
+#include <apr_pools.h>
+#include <db.h>
 #include "dbt.h"
 
 

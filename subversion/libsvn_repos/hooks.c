@@ -19,8 +19,8 @@
 #include <string.h>
 #include <ctype.h>
 
-#include "apr_pools.h"
-#include "apr_file_io.h"
+#include <apr_pools.h>
+#include <apr_file_io.h>
 
 #include "svn_pools.h"
 #include "svn_error.h"

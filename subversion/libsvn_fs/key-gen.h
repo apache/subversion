@@ -18,7 +18,7 @@
 #ifndef SVN_LIBSVN_FS_KEY_GEN_H
 #define SVN_LIBSVN_FS_KEY_GEN_H
 
-#include "apr.h"
+#include <apr.h>
 
 #ifdef __cplusplus
 extern "C" {

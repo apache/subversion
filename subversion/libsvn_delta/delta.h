@@ -19,8 +19,9 @@
 /* ==================================================================== */
 
 
-#include "apr_pools.h"
-#include "apr_hash.h"
+#include <apr_pools.h>
+#include <apr_hash.h>
+
 #include "svn_xml.h"
 
 #ifndef SVN_LIBSVN_DELTA_H

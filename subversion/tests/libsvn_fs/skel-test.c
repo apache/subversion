@@ -19,7 +19,9 @@
 #include <stdarg.h>
 #include <string.h>
 #include <stdio.h>
-#include "apr.h"
+
+#include <apr.h>
+
 #include "svn_pools.h"
 #include "svn_string.h"
 #include "svn_test.h"

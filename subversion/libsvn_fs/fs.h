@@ -18,11 +18,11 @@
 #ifndef SVN_LIBSVN_FS_FS_H
 #define SVN_LIBSVN_FS_FS_H
 
-#include "db.h"                 /* Berkeley DB interface */
-#include "apr_pools.h"
-#include "apr_hash.h"
+#include <db.h>                 /* Berkeley DB interface */
+#include <apr_pools.h>
+#include <apr_hash.h>
+#include <apr_md5.h>
 #include "svn_fs.h"
-#include "apr_md5.h"
 
 #ifdef __cplusplus
 extern "C" {

@@ -22,8 +22,10 @@
 
 
 #include <stdio.h>
-#include "apr_pools.h"
-#include "apr_file_io.h"
+
+#include <apr_pools.h>
+#include <apr_file_io.h>
+
 #include "svn_types.h"
 #include "svn_test.h"
 #include "svn_error.h"

@@ -19,9 +19,9 @@
 #define SVN_LIBSVN_FS_DBT_H
 
 #include <apr_pools.h>
+#include <db.h>
 
 #include "svn_fs.h"
-#include "db.h"
 #include "../util/skel.h"
 
 #ifdef __cplusplus

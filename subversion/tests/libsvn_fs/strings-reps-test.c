@@ -19,9 +19,11 @@
 #include <stdarg.h>
 #include <string.h>
 #include <stdio.h>
+
+#include <apr.h>
+
 #include "svn_error.h"
 #include "svn_test.h"
-#include "apr.h"
 #include "../fs-helpers.h"
 #include "../../libsvn_fs/util/skel.h"
 #include "../../libsvn_fs/util/fs_skels.h"
