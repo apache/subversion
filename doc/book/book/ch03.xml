@@ -58,6 +58,201 @@
   <!-- ======================== SECTION 3 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-ch-3-sect-3">
+    <title>Revisions: Numbers, Keywords, and Dates, Oh My!</title>
+
+    <para>Before we go on, you should know a bit about how to identify
+      a particular revision in your repository.  As you learned in
+      <xref linkend="svn-ch-2-sect-3.2"/>, a revision is a
+      <quote>snapshot</quote> of the repository at a particular moment
+      in time.  As you continue to commit and grow your repository,
+      you need a mechanism for identifying these snapshots.
+      Subversion provides three ways for you to refer to them by
+      number, keyword, or date.</para>
+    
+    <sect2 id="svn-ch-3-sect-3.1">
+      <title>Revision Numbers</title>
+      
+      <para>When you create a new Subversion repository, it begins its
+        life at revision zero and each successive commit increases the
+        revision number by one.  After your commit completes, the
+        Subversion client informs you of the new revision
+        number:</para>
+      
+      <screen>
+$ svn commit --message "Corrected number of cheese slices."
+Sending        sandwich
+Transmitting file data .
+Committed revision 3.
+      </screen>
+
+      <para>If at any point in the future you want to refer to that
+        revision (We'll see how and why we might want to do that later
+        in this chapter), you can refer to it as
+        <quote>3</quote>.</para>
+
+    </sect2>
+    
+    <sect2 id="svn-ch-3-sect-3.2">
+      <title>Revision Keywords</title>
+      
+      <para>The Subversion client understands a number of
+        <firstterm>revision keywords</firstterm>.  These keywords
+        can be used instead of integer arguments to the
+        <option>--revision</option> switch, and are resolved into
+        specific revision numbers by Subversion:</para>
+      
+      <variablelist>
+        
+        <varlistentry>
+          <term>HEAD</term>
+          <listitem>
+            <para>The latest revision in the repository.</para>
+          </listitem>
+        </varlistentry>
+        
+        <varlistentry>
+          <term>BASE</term>
+          <listitem>
+            <para>The <quote>pristine</quote> revision of an item in a
+              working copy.</para>
+          </listitem>
+        </varlistentry>
+        
+        <varlistentry>
+          <term>COMMITTED</term>
+          <listitem>
+            <para>The last revision in which an item changed.</para>
+          </listitem>
+        </varlistentry>
+        
+        <varlistentry>
+          <term>PREV</term>
+          <listitem>
+            <para>The revision just <emphasis>before</emphasis> the last
+              revision in which an item changed.  (Technically,
+              COMMITTED - 1).</para>
+          </listitem>
+        </varlistentry>
+        
+      </variablelist>
+      
+      <para>Here are some examples of revision keywords in action
+        (don't worry if the commands don't make sense yet; we'll be
+        explaining these commands as we go through the
+        chapter):</para>
+      
+      <screen>
+$ svn diff --revision PREV:COMMITTED foo.c
+# shows the last change committed to foo.c
+
+$ svn log --revision HEAD
+# shows log message for the latest repository commit
+
+$ svn diff --revision HEAD
+# compares your working file (with local mods) to the latest version
+# in the repository.
+
+$ svn diff --revision BASE:HEAD foo.c
+# compares your <quote>pristine</quote> foo.c (no local mods) with the 
+# latest version in the repository
+
+$ svn log --revision BASE:HEAD
+# shows all commit logs since you last updated
+
+$ svn update --revision PREV foo.c
+# rewinds the last change on foo.c.
+# (foo.c's working revision is decreased.)
+      </screen>
+      
+      <para>These keywords allow you to perform many common (and
+        helpful) operations without having to look up specific
+        revision numbers or remember the exact revision of your
+        working copy.</para>
+      
+    </sect2>
+    
+    <sect2 id="svn-ch-3-sect-3.3">
+      <title>Revision Dates</title>
+      
+      <para>Anywhere that you specify a revision number or revision
+        keyword, you can also specify a date by specifying the date
+        inside curly braces <quote>{}</quote>.  You can even access
+        a range of changes in the repository using both dates and
+        revisions together!</para>
+      
+      <para>Subversion accepts an incredible number of date formats
+        &mdash;just remember to use quotes around any date that
+        contains spaces.  Here are just a few of the formats that
+        Subversion accepts:</para>
+
+      <screen>
+$ svn co --revision {2/17/02}
+$ svn co --revision {"17 Feb"}
+$ svn co --revision {"17 Feb 2002"}
+$ svn co --revision {"17 Feb 2002 15:30"}
+$ svn co --revision {"17 Feb 2002 15:30:12 GMT"}
+$ svn co --revision {"10 days ago"} 
+$ svn co --revision {"yesterday"} 
+$ svn co --revision {"10 days ago"} 
+&hellip;
+      </screen>
+      
+      <para>When you specify a date as a revision, Subversion finds
+        the most recent revision of the repository as of that
+        date:</para>
+        
+      <screen>
+$ svn log --revision {11/28/2002}
+------------------------------------------------------------------------
+rev 12:  ira | 2002-11-27 12:31:51 -0600 (Wed, 27 Nov 2002) | 6 lines
+&hellip;
+      </screen>
+        
+      <sidebar>
+        <title>Is Subversion a Day Early?</title>
+        
+        <para>If you specify a single date as a revision without
+          specifying a time of day (for example
+          <literal>11/27/02</literal>, you may think that Subversion
+          should give you the last revision that took place on the
+          27th of November.  Instead, you'll get back a revision from
+          the 26th, or even earlier.  Remember that Subversion will
+          find the <emphasis>most recent revision of the
+          repository</emphasis> as of the date you give.  If you give
+          a date without a timestamp, like
+          <literal>11/27/02</literal>, Subversion assumes a time of
+          00:00:00, so looking for the most recent revision won't
+          return anything on the day of the 27th.</para>
+
+        <para>If you want to include the 27th in your search, you can
+          either specify the 27th with the time (<literal>"27 Nov 2002
+          23:59"</literal>), or just specify the next day
+          (<literal>"28 Nov 2002"</literal>).</para>
+        
+      </sidebar>
+      
+      <para>You can also use a range of dates.  Subversion will find
+        all revisions between both dates, inclusive:</para>
+      
+      <screen>
+$ svn log --revision {2002-11-20}:{2002-11-29}
+&hellip;
+      </screen>
+        
+      <para>As we pointed out, you can also mix dates and revisions:</para>
+      
+      <screen>
+$svn log -r {11/20/02}:4040
+      </screen>
+        
+    </sect2>
+      
+  </sect1>
+
+  <!-- ================================================================= -->
+  <!-- ======================== SECTION 4 ============================== -->
+  <!-- ================================================================= -->
+  <sect1 id="svn-ch-3-sect-4">
     <title>Initial Checkout</title>
 
     <para>Most of the time, you will start using a Subversion
@@ -155,9 +350,9 @@ Checked out revision 2499.
   </sect1>
 
   <!-- ================================================================= -->
-  <!-- ======================== SECTION 4 ============================== -->
+  <!-- ======================== SECTION 5 ============================== -->
   <!-- ================================================================= -->
-  <sect1 id="svn-ch-3-sect-4">
+  <sect1 id="svn-ch-3-sect-5">
     <title>Basic Workcycle</title>
 
     <para>Subversion has numerous features, options, bells and whistles, but on
@@ -500,7 +695,7 @@ D      ./stuff/fish.c        # this file is scheduled for deletion
 A      ./stuff/loot/bloo.h   # this file is scheduled for addition
 C      ./stuff/loot/lump.c   # this file has conflicts from an update
     S  ./stuff/other_dir     # this dir has been switched to a branch
-        </screen><!-- ###TODO Should the above be a table? -Fitz -->
+        </screen>
       
         <para>In this output format <command>svn status</command>
           prints five columns of characters, followed by several
@@ -920,47 +1115,51 @@ C  ./bar.c
           <para>For every conflicted file, Subversion places three
             extra files in your working copy:</para>
 
-            <!-- ###TODO make this a varlist -->
-            <!-- ###TODO sidebar about svn not screwing up your file. -->
-            <itemizedlist>
-              
+          <variablelist>
+            
+            <varlistentry>
+              <term><filename>filename.*.mine</filename></term>
               <listitem>
-                <para><filename>filename.*.mine</filename> This is
-                  your file as it existed in your working copy before
-                  you updated your working copy&mdash;that is, without
-                  conflict markers.  This file has your latest changes
-                  in it and nothing else.</para>
+                <para> This is your file as it existed in your working
+                  copy before you updated your working copy&mdash;that
+                  is, without conflict markers.  This file has your
+                  latest changes in it and nothing else.</para>
               </listitem>
-                  
+            </varlistentry>
+            
+            <varlistentry>
+              <term><filename>filename.*.rOLDREV</filename></term>
               <listitem>
-                <para><filename>filename.*.rOLDREV</filename> This is
-                  the file that was the BASE revision before you
-                  updated your working copy.  That is, it the file
-                  that you checked out before you made your latest
-                  edits.</para>
+                <para>This is the file that was the BASE revision
+                  before you updated your working copy.  That is, it
+                  the file that you checked out before you made your
+                  latest edits.</para>
               </listitem>
+            </varlistentry>
 
+            <varlistentry>
+              <term><filename>filename.*.rNEWREV</filename></term>
               <listitem>
-                <para><filename>filename.*.rNEWREV</filename> This
-                  is the file that your Subversion client just
-                  received from the server when you updated your
+                <para>This is the file that your Subversion client
+                  just received from the server when you updated your
                   working copy.  This file corresponds to the HEAD
                   revision of the repository.</para>
               </listitem>
-              
-            </itemizedlist>
+            </varlistentry>
 
-            <para>Here <literal>*</literal> represents some random
-              digits that Subversion chooses,
-              <literal>OLDREV</literal> is the revision number of the
-              file in your <filename>.svn</filename> directory, and
-              <literal>NEWREV</literal> is the revision number of the
-              repository HEAD.
-              </para>
+          </variablelist>
+          
+          <para>Here <literal>*</literal> represents some random
+            digits that Subversion chooses,
+            <literal>OLDREV</literal> is the revision number of the
+            file in your <filename>.svn</filename> directory, and
+            <literal>NEWREV</literal> is the revision number of the
+            repository HEAD.
+          </para>
         </listitem>
-
+        
       </itemizedlist>
-
+      
       <para>For example, Sally makes changes to the file
         <filename>sandwich</filename> in the repository.  Harry has
         just changed the file in his working copy and checked it in.
@@ -1125,9 +1324,9 @@ $
   </sect1>
 
   <!-- ================================================================= -->
-  <!-- ======================== SECTION 5 ============================== -->
+  <!-- ======================== SECTION 6 ============================== -->
   <!-- ================================================================= -->
-  <sect1 id="svn-ch-3-sect-5">
+  <sect1 id="svn-ch-3-sect-6">
     <title>Examining History</title>
 
     <para>As we mentioned earlier, the repository is like a time
@@ -1447,94 +1646,6 @@ _    2785    brane        0 Jul 29 19:07 trunk/
 
   </sect1>
 
-  <!-- ================================================================= -->
-  <!-- ======================== SECTION 6 ============================== -->
-  <!-- ================================================================= -->
-  <sect1 id="svn-ch-3-sect-6">
-    <title>Revision Numbers, Keywords, and Dates</title>
-
-<!-- ###TODO EMERG divvy this up into 3 subsections and move it to the
-beginning with a summary paragraph -->
-
-
-    <para>As you've probably noticed by now, many Subversion commands
-      can take a <option>--revision</option> (<option>-r</option>)
-      switch.  Here we describe some special ways to specify
-      revisions.</para>
-
-    <para>The Subversion client understands a number of
-      <firstterm>revision keywords</firstterm>.  These keywords can be
-      used instead of integer arguments to the
-      <option>--revision</option> switch, and are resolved into
-      specific revision numbers by Subversion:</para>
-    
-    <variablelist>
-      
-      <varlistentry>
-        <term>HEAD</term>
-        <listitem>
-          <para>The latest revision in the repository.</para>
-        </listitem>
-      </varlistentry>
-
-      <varlistentry>
-        <term>BASE</term>
-        <listitem>
-          <para>The <quote>pristine</quote> revision of an item in a
-            working copy.</para>
-        </listitem>
-      </varlistentry>
-
-      <varlistentry>
-        <term>COMMITTED</term>
-        <listitem>
-          <para>The last revision in which an item changed.</para>
-        </listitem>
-      </varlistentry>
-
-      <varlistentry>
-        <term>PREV</term>
-        <listitem>
-          <para>The revision just <emphasis>before</emphasis> the last
-            revision in which an item changed.  (Technically,
-            COMMITTED - 1).</para>
-        </listitem>
-      </varlistentry>
-
-    </variablelist>
-
-    <para>Here are some examples of revision keywords in
-      action:</para>
-
-    <screen>
-$ svn diff --revision PREV:COMMITTED foo.c
-# shows the last change committed to foo.c
-
-$ svn log --revision HEAD
-# shows log message for the latest repository commit
-
-$ svn diff --revision HEAD
-# compares your working file (with local mods) to the latest version
-# in the repository.
-
-$ svn diff --revision BASE:HEAD foo.c
-# compares your <quote>pristine</quote> foo.c (no local mods) with the 
-# latest version in the repository
-
-$ svn log --revision BASE:HEAD
-# shows all commit logs since you last updated
-
-$ svn update --revision PREV foo.c
-# rewinds the last change on foo.c.
-# (foo.c's working revision is decreased.)
-    </screen>
-
-    <para>These keywords may not seem terribly important, but they do
-      allow you to perform many common (and helpful) operations
-      without having to look up specific revision numbers or remember
-      the exact revision of your working copy.</para>
-
-  </sect1>
 
   <!-- ================================================================= -->
   <!-- ======================== SECTION 7 ============================== -->
