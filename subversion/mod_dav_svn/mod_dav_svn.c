@@ -23,6 +23,7 @@
 #include <httpd.h>
 #include <http_config.h>
 #include <mod_dav.h>
+#include <ap_provider.h>
 
 #include <apr_strings.h>
 
