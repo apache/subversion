@@ -332,16 +332,7 @@ get_authenticator (void **authenticator,
   if (method == SVN_RA_AUTH_USERNAME)
     {
       svn_ra_username_authenticator_t *auth;
-      VALUE obj;
-      int error;
-      VALUE args[3];
 
-      args[0] = cb->callback;
-      args[1] = (VALUE) "getAuthenticator";
-      args[2] = LONG2NUM (method);
-      obj = rb_protect (svn_ruby_protect_call1, (VALUE) args, &error);
-      if (error)
-	return svn_ruby_error ("getAuthenticator", pool);
       auth = apr_palloc (pool, sizeof (*auth));
       auth->get_username = get_username;
       auth->store_username = NULL;
@@ -351,16 +342,6 @@ get_authenticator (void **authenticator,
   else if (method == SVN_RA_AUTH_SIMPLE_PASSWORD)
     {
       svn_ra_simple_password_authenticator_t *auth;
-      VALUE obj;
-      int error;
-      VALUE args[3];
-
-      args[0] = cb->callback;
-      args[1] = (VALUE) "getAuthenticator";
-      args[2] = LONG2NUM (method);
-      obj = rb_protect (svn_ruby_protect_call1, (VALUE) args, &error);
-      if (error)
-	return svn_ruby_error ("getAuthenticator", pool);
       auth = apr_palloc (pool, sizeof (*auth));
 
       auth->get_user_and_pass = get_user_and_pass;
@@ -375,10 +356,27 @@ get_authenticator (void **authenticator,
 }
 
 
+
+static VALUE
+ra_helper_get_username (VALUE self, VALUE force_prompt)
+{
+  rb_notimplement ();
+  return Qnil;                  /* Not reached. */
+}
+
+static VALUE
+ra_helper_get_user_and_pass (VALUE self, VALUE force_prompt)
+{
+  rb_notimplement ();
+  return Qnil;                  /* Not reached. */
+}
+
+
+
 /* Ra plugin methods. */
 
 static VALUE
-ra_open (VALUE self, VALUE aURL, VALUE aCallback)
+ra_open (VALUE self, VALUE aURL)
 {
   svn_stringbuf_t *URL;
   svn_ra_callbacks_t *callbacks;
@@ -397,7 +395,7 @@ ra_open (VALUE self, VALUE aURL, VALUE aCallback)
   callbacks = apr_palloc (ra->pool, sizeof (*callbacks));
   callbacks->open_tmp_file = open_tmp_file;
   callbacks->get_authenticator = get_authenticator;
-  cb.callback = aCallback;
+  cb.callback = self;
   cb.ra = self;
   err = ra->plugin->open (&(ra->session_baton), URL,
                           callbacks, (void *)&cb,
@@ -409,8 +407,6 @@ ra_open (VALUE self, VALUE aURL, VALUE aCallback)
       svn_ruby_raise (err);
     }
 
-  /* GC protect */
-  rb_iv_set (self, "@callback", aCallback);
   ra->closed = FALSE;
 
   return Qnil;
@@ -703,6 +699,7 @@ ra_check_path (VALUE self, VALUE aPath, VALUE aRevision)
 void
 svn_ruby_init_ra (void)
 {
+  VALUE mSvnHelper;
   VALUE cSvnRaLib = rb_define_class_under (svn_ruby_mSvn, "RaLib", rb_cObject);
   rb_undef_method (CLASS_OF (cSvnRaLib), "new");
   rb_define_singleton_method (cSvnRaLib, "create", ralib_create, 1);
@@ -713,11 +710,15 @@ svn_ruby_init_ra (void)
   rb_define_method (cSvnRaReporter, "deletePath", ra_reporter_delete_path, 1);
   rb_define_method (cSvnRaReporter, "finishReport", ra_reporter_finish_report, 0);
   rb_define_method (cSvnRaReporter, "abortReport", ra_reporter_abort_report, 0);
+  mSvnHelper = rb_define_module_under (svn_ruby_mSvn, "RaHelper");
+  rb_define_method (mSvnHelper, "getUsername", ra_helper_get_username, 1);
+  rb_define_method (mSvnHelper, "getUserAndPass", ra_helper_get_username, 1);
   cSvnRa = rb_define_class_under (svn_ruby_mSvn, "Ra", rb_cObject);
   rb_undef_method (CLASS_OF (cSvnRa), "new");
+  rb_include_module (cSvnRa, mSvnHelper);
   rb_define_method (cSvnRa, "name", ra_name, 0);
   rb_define_method (cSvnRa, "description", ra_description, 0);
-  rb_define_method (cSvnRa, "open", ra_open, 2);
+  rb_define_method (cSvnRa, "open", ra_open, 1);
   rb_define_method (cSvnRa, "close", ra_close, 0);
   rb_define_method (cSvnRa, "close?", ra_is_closed, 0);
   rb_define_method (cSvnRa, "getLatestRevnum", ra_get_latest_revnum, 0);
