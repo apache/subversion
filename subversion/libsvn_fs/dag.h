@@ -115,8 +115,8 @@ svn_error_t *svn_fs__dag_revision_root (dag_node_t **node_p,
                                         trail_t *trail);
 
 
-/* Set *NODE_P to the root of transaction TXN in FS, as part of TRAIL.
-   Allocate the node in TRAIL->pool.  */
+/* Set *NODE_P to the mutable root of transaction TXN in FS, as part
+   of TRAIL.  Allocate the node in TRAIL->pool.  */
 svn_error_t *svn_fs__dag_txn_root (dag_node_t **node_p,
                                    svn_fs_t *fs,
                                    const char *txn,
