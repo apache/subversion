@@ -349,10 +349,11 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
  * the @a new_revision, @a date, and @a author of the commit, along with 
  * the @a baton closure.
  */
-typedef svn_error_t *svn_repos_commit_callback_t (svn_revnum_t new_revision,
-                                                  const char *date,
-                                                  const char *author,
-                                                  void *baton);
+typedef svn_error_t *(*svn_repos_commit_callback_t) (
+    svn_revnum_t new_revision,
+    const char *date,
+    const char *author,
+    void *baton);
 
 /** Return an @a editor and @a edit_baton to commit changes to @a session->fs.
  *

@@ -602,7 +602,7 @@ svn_fs_t *svn_fs_root_fs (svn_fs_root_t *root);
 
 
 /** Return true iff @a root is a transaction root.  */
-int svn_fs_is_txn_root      (svn_fs_root_t *root);
+int svn_fs_is_txn_root (svn_fs_root_t *root);
 
 /** Return true iff @a root is a revision root.  */
 int svn_fs_is_revision_root (svn_fs_root_t *root);
