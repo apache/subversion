@@ -7,24 +7,23 @@ this first.
                      HACKER'S GUIDE TO SUBVERSION
                      ============================
 
-              Last updated:  $Date: 2001/08/31 01:02:57 $
-
 
 TABLE OF CONTENTS
 
   * Participating in the community
   * What to read
-  * Building from a working copy
-  * Building on Win32
   * Coding style
+  * Document everything
   * Using page breaks
   * Other conventions
-  * Writing log entries
-  * Generating changelogs
-  * The Configuration/Build System Under Unix
+  * APR status codes
   * Automated tests
   * Writing test cases before code
-  * APR status codes
+  * Writing log entries
+  * Patch submission guidelines
+  * The Configuration/Build System Under Unix
+  * Building from a working copy - Unix
+  * Building from a working copy - Win32
 
 
 
@@ -43,10 +42,11 @@ repository:
 
  * Go to http://subversion.tigris.org and
 
-    * Join the "dev", "cvs", and "announce" mailing lists.
+    * Join the "dev", "svn", and "announce" mailing lists.
       The dev list, dev@subversion.tigris.org, is where almost all
       discussion takes place.  All questions should go there, though
-      you might want to check the list archives first.
+      you might want to check the list archives first.  The "svn"
+      list receives automated commit emails.
 
     * Print out and digest the Spec.  (The postscript might look
       better than the PDF.)  The Spec will give you a theoretical
@@ -63,15 +63,6 @@ If you'd like to contribute code, then look at:
 To submit code, simply send your patches to dev@subversion.tigris.org.
 No, wait, first read the rest of this file, _then_ start sending
 patches to dev@subversion.tigris.org. :-)
-
-After someone has contributed a few non-trivial patches, some current
-committer (usually the one who has reviewed and applied the patches)
-proposes that person for commit access.  This proposal is sent only to
-the other full committers -- the ensuing discussion is private, so
-that everyone can feel comfortable speaking their minds.  Assuming
-there are no objections, the contributor is granted commit access.
-The decision is made by consensus; there are no formal rules governing
-the procedure.
 
 
 
@@ -97,7 +88,7 @@ perusal order:
 
    * client-side interfaces:  svn_ra.h, svn_wc.h, svn_client.h
 
-   * the repository filesystem: svn_fs.h
+   * the repository and versioned filesystem:  svn_repos.h svn_fs.h
 
 
 Subversion tries to stay portable by using only ANSI/ISO C and by
@@ -115,131 +106,6 @@ in APR (look in apr/include/):
 
    * hashes and arrays:  apr_hash.h, apr_tables.h
 
-
-
-
-Building from a working copy
-============================
-
-Unlike a packaged distribution, the Subversion working tree does not
-contain a `configure' script nor any other of the generated files
-normally used in configuration and building.  You have to regenerate
-them inside your working copy first, then configure, and then build.
-So, first run
-
-   $ chmod +x autogen.sh   ## needed until Subversion versions file mode bits
-   $ ./autogen.sh
-
-which does everything necessary to prepare for the configuration step.
-You are expected to have the `autoheader' and `autoconf' tools
-installed.  autogen.sh will check for the source code of external
-packages required to build Subversion (such as APR and Neon), and tell
-you how to get them if you don't have them.
-
-Next, do
-
-   $ ./configure   [...possibly with options...]
-   $ make
-   $ make check
-   $ make install
-
-Skip the last step if don't want to blow away your previous Subversion
-installation.  Also, you may wish to run "./configure" with some
-options; see the end of autogen.sh's output for some hints about this.
-
-See also the section "The Configuration/Build System Under Unix" for
-more details about the build process.
-
-
-
-Building on Unix
-================
-
-Note that if you have Berkeley DB installed and you try running
-configure with the
-
-      --with-berkeley-db=/path/to/BerkeleyDB.3.3
-
-option, you have to make sure that your linker knows where the
-Berkeley DB libs are:
-
-kfogel says: 
-
-   After you install Berkeley, say in /usr/local/BerkeleyDB.3.3, you
-   may need to modify /etc/ld.so.conf or /etc/rc.conf (those seem to
-   be Linux and FreeBSD, respectively; Your Mileage May Vary), and run
-   `ldconfig' or whatever your system wants.
-  
-   The problem is that configure tries to build, link, and run a small
-   program against Berkeley DB.  If the system loader doesn't yet know
-   how to do that, configure will claim it can't find Berkeley DB.
-
-
-
-Building on Win32
-=================
-
-There is some support for building Subversion on Win32 platforms. The
-project files included in the source tree are from Microsoft Visual
-C++ 6.x; earlier versions of the compiler are not supported at this
-time.
-
-To build the client components, you'll need a copy of neon 0.17.2. The
-sources are available at
-
-    http://www.webdav.org/neon/neon-0.17.2.tar.gz
-
-Unpack the distribution into the root directory of the Subversion
-source tree and rename the directory neon-0.17.0 to neon.  The MSVC
-project files in this archive are not up-to-date, so building the neon
-libraries is not straight-forward.  Pre-built neon libraries are
-available at
-
-   http://www.xbc.nu/svn/libneon-0.17.2-svn-win32.zip
-
-Unpack the archive into the <SVN>/neon directory. (<SVN> is the root
-of the source tree, the directory where you found the file you're
-reading.)  You'll get the pre-built libneon.lib and libneonD.lib, as
-well as the modified project files used to build them, the config.hw
-file and the complete (unmodified) neon/src directory.
-
-    IMPORTANT NOTE: These neon libraries should *only* be used when
-         building Subversion. They were build to depend on the verson
-         of expat-lite in the Subversion sources.
-
-If you want to rebuild the neon libraries using the project files in
-this package, you'll have to set the NEON_EXPAT_LITE_WIN32 environment
-variable to <SVN>/expat-lite before starting Visual Studio, so that
-neon can find the expat-lite includes.
-
-If you want to build the server components, you'll also need a copy of
-Berkeley DB, version 3.3.11 or newer. The sources are available at
-http://www.sleepycat.com. There is a binary distibution at 
-
-    http://www.xbc.nu/svn/db-3.3.11-win32.zip
-
-Unpack the distribution into the root directory of the Subversion
-source tree and rename the directory db-3.3.11-win32 to db3-win32.
-It's a good idea to add <SVN>\db3-win32\bin to your PATH, so that
-Subversion can find the Berkeley DB DLLs.
-
-If you build Berkeley DB from the source, you will have to copy the
-file <DB3>\build_win32\db.h to <SVN>\db3-win32\include, and all
-the import libraries to <SVN>\db3-win32\lib. Again, the DLLs
-should be somewhere in your path.
-
-The workspace `subversion.dsw' at the top of the source tree includes
-all the necessary projects. Right now, only static libraries are
-built. The "__build__" project (active by default) builds all the
-libraries and programs. The "__check__" project builds the test
-drivers.
-
-You will have to edit the file svn_private_config.hw to set the
-correct paths for diff and patch.
-
-
-NOTE: There have been rumours that Subversion on Win32 can be build
-using the latest cygwin. ymmv.
 
 
 
@@ -288,6 +154,30 @@ name and its opening paren is optional in Subversion.  If you're
 editing an area of code that already seems to have a consistent
 preference about this, then just stick with that; otherwise, pick
 whichever way you like.
+
+
+
+Document everything
+===================
+
+Every function, whether public or internal, must start out with a
+documentation comment that describes what the function does.  The
+documentation should mention every parameter received by the function,
+every possible return value, and (if not obvious) the conditions under
+which the function could return an error.  Put the parameter names in
+upper case in the doc string, even when they are not upper case in the
+actual declaration, so that they stand out to human readers.
+
+For public or semi-public API functions, the doc string should go
+above the function in the .h file where it is declared; otherwise, it
+goes above the function definition in the .c file.
+
+For structure types, document each individual member of the structure
+as well as the structure itself.
+
+Read over the Subversion code to get an overview of how this
+documentation looks in practice; in particular, use the .h files in
+subversion/include/ as examples.
 
 
 
@@ -355,6 +245,61 @@ In addition to the GNU standards, Subversion uses these conventions:
 
 
 
+APR Status Codes:
+=================
+
+Always check for APR status codes (except APR_SUCCESS) with the
+APR_STATUS_IS_...() macros, not by direct comparison. This is
+required for portability to non-Unix platforms.
+
+
+
+Automated Tests:
+================
+
+For a description of how to use and add tests to Subversion's
+automated test framework, please read subversion/tests/README.
+
+
+
+Writing test cases before code:
+===============================
+
+From: Karl Fogel <kfogel@collab.net>
+Subject: writing test cases
+To: dev@subversion.tigris.org
+Date: Mon, 5 Mar 2001 15:58:46 -0600
+
+Many of us implementing the filesystem interface have now gotten into
+the habit of writing the test cases (see fs-test.c) *before* writing
+the actual code.  It's really helping us out a lot -- for one thing,
+it forces one to define the task precisely in advance, and also it
+speedily reveals the bugs in one's first try (and second, and
+third...).
+
+I'd like to recommend this practice to everyone.  If you're
+implementing an interface, or adding an entirely new feature, or even
+just fixing a bug, a test for it is a good idea.  And if you're going
+to write the test anyway, you might as well write it first. :-)
+
+Yoshiki Hayashi's been sending test cases with all his patches lately,
+which is what inspired me to write this mail to encourage everyone to
+do the same.  Having those test cases makes patches easier to examine,
+because they show the patch's purpose very clearly.  It's like having
+a second log message, one whose accuracy is verified at run-time.
+
+That said, I don't think we want a rigid policy about this, at least
+not yet.  If you encounter a bug somewhere in the code, but you only
+have time to write a patch with no test case, that's okay -- having
+the patch is still useful; someone else can write the test case.
+
+As Subversion gets more complex, though, the automated test suite gets
+more crucial, so let's all get in the habit of using it early.
+
+-K
+
+
+
 Writing Log Entries
 ===================
 
@@ -379,44 +324,38 @@ searches through the logs later.  Don't hide names in wildcards,
 because the globbed portion may be what someone searches for later.
 For example, this is bad:
 
-   (twirling_baton_*): removed these obsolete structures.
+   * twirl.c (twirling_baton_*): removed these obsolete structures.
    (handle_parser_warning): pass data directly to callees, instead of
    storing in twirling_baton_*.
+
+   * twirl.h: Fix indentation.
 
 Later on, when someone is trying to figure out what happened to
 `twirling_baton_fast', they may not find it if they just search for
-"fast".  A better entry would be:
+"_fast".  A better entry would be:
 
-   (twirling_baton_fast, twirling_baton_slow): removed these obsolete
-   structures. 
+   * twirl.c (twirling_baton_fast, twirling_baton_slow): removed these
+   obsolete structures. 
    (handle_parser_warning): pass data directly to callees, instead of
    storing in twirling_baton_*.
+
+   * twirl.h: Fix indentation.
 
 The wildcard is okay in the description for `handle_parser_warning',
 but only because the two structures were mentioned by full name
 elsewhere in the log entry.
 
-There are some common-sense exceptions to the need to name everything
-that was changed:
-
-   * If you have made a change which requires trivial changes
-     throughout the rest of the program (e.g., renaming a variable),
-     you needn't name all the functions affected.
-
-   * If you have rewritten a file completely, the reader understands
-     that everything in it has changed, so your log entry may simply
-     give the file name, and say "Rewritten".
-
-In general, there is a tension between making entries easy to find by
-searching for identifiers, and wasting time or producing unreadable
-entries by being exhaustive.  Use your best judgement --- and be
-considerate of your fellow developers.
+Note how each file is its own group, with the symbols listed in
+parentheses, followed by a colon, followed by text describing the
+change.  Please adhere to this format -- not only does consistency
+greatly aid readability, it also allows software to colorize log
+entries automatically.
 
 For large changes or change groups, group the log entry into
 paragraphs separated by blank lines.  Each paragraph should be a set
-of changes that accomplishes a single goal.  Independent changes
-should be in separate paragraphs.  It helps to start out each group
-with a sentence or two summarizing the change.
+of changes that accomplishes a single goal, and each group should
+start with a sentence or two summarizing the change.  Truly
+independent changes should be made in separate commits, of course.
 
 One should never need the log entries to understand the current code.
 If you find yourself writing a significant explanation in the log, you
@@ -446,30 +385,99 @@ And then, in `consume_count' in `cplus-dem.c':
 This is why a new function, for example, needs only a log entry saying
 "New Function" --- all the details should be in the source.
 
+There are some common-sense exceptions to the need to name everything
+that was changed:
+
+   * If you have made a change which requires trivial changes
+     throughout the rest of the program (e.g., renaming a variable),
+     you needn't name all the functions affected.
+
+   * If you have rewritten a file completely, the reader understands
+     that everything in it has changed, so your log entry may simply
+     give the file name, and say "Rewritten".
+
+In general, there is a tension between making entries easy to find by
+searching for identifiers, and wasting time or producing unreadable
+entries by being exhaustive.  Use your best judgement --- and be
+considerate of your fellow developers.  (Also, run "svn log" to see
+how others have been writing their log entries.)
+
 These guidelines are paraphrased from Jim Blandy's excellent essay
 "Maintaining the ChangeLog".  It is in `doc/WritingChangeLogs.txt'.
 
 
-Generating ChangeLogs
-=====================
+
+Patch submission guidelines
+===========================
 
-Subversion does not keep ChangeLog files, because they're redundant
-with the CVS log entries.  But ChangeLog is an easier format to
-browse, so it's often handy to generate a ChangeLog from the cvs log
-data.  You can do so with the script `cvs2cl.pl', from:
+Patches should be mailed to `dev@subversion.tigris.org'.  A patch
+should contain one logical change; please don't mix N unrelated
+changes in one submission -- send N separate emails instead.
 
-   http://www.red-bean.com/cvs2cl/
+The patch should be in unified diff format, inserted directly into the
+body of your mail message (i.e., not MIME-attached, uuencoded, or
+otherwise opaqified).  Be sure to start off with a log message, as
+described in "Writing log entries" above.
 
-If you've never used it before, try invoking it like this:
+If the patch implements a new feature, make sure to describe the
+feature completely in your mail; if the patch fixes a bug, describe
+the bug in detail and give a reproduction recipe.  An exception to
+these guidelines is when the patch addresses a specific issue in the
+issues database -- in that case, just make sure to refer to the issue
+number in your log message, with a string like "issue #N".  For
+example, if a patch resolves issue 1729, then the log message might
+be:
 
-   cd subversion/subversion
-   cvs2cl.pl --fsf -r
+   Fix issue #1729:
 
-That will produce a ChangeLog in the current directory (the "-r" flag
-says include revision numbers, and "--fsf" means do auto-wrapping in a
-way friendly to log entries written in GNU ChangeLog style).
+   * get_editor.c (frobnicate_file): Check that file exists first.
 
-Run "cvs2cl.pl --help" for more information.
+It is normal for patches to undergo several rounds of feedback and
+change before being applied.  Don't be discouraged if your patch is
+not accepted immediately -- it doesn't mean you goofed, it just means
+that there are a *lot* of eyes looking at every code submission, and
+it's a rare patch that doesn't have at least a little room for
+improvement.  After reading people's responses to your patch, make the
+appropriate changes and resubmit, wait for the next round of feedback,
+and lather, rinse, repeat, until some committer applies it.
+
+If you don't get a response for a while, and don't see the patch
+applied, it may just mean that people are really busy.  Go ahead and
+repost, and don't hesitate to point out that you're still waiting for
+a response.  One way to think of it is that patch management is highly
+parallizable, and we need you to shoulder your share of the management
+as well as the coding.  Every patch needs someone to shepherd it
+through the process, and the person best qualified to do that is the
+original submitter.
+
+
+
+Commit access
+=============
+
+After someone has successfully contributed a few non-trivial patches,
+some committer, usually whoever has reviewed and applied the most
+patches from that contributor, proposes them for commit access.  This
+proposal is sent only to the other full committers -- the ensuing
+discussion is private, so that everyone can feel comfortable speaking
+their minds.  Assuming there are no objections, the contributor is
+granted commit access.  The decision is made by consensus; there are
+no formal rules governing the procedure, though generally if someone
+strongly objects the access is not offered, or is offered on a
+provisional basis.
+
+The criteria for commit access are that the person's patches adhere to
+the guidelines in this file, adhere to all the usual unquantifiable
+rules of coding (code should readable, robust, maintainable, etc), and
+that the person respects the "Hippocratic Principle": first, do no
+harm.  In other words, what is significant is not the size or quantity
+of patches submitted, but the degree of care shown in avoiding bugs
+and minimizing unnecessary impact on the rest of the code.  Many
+committers are people who have not made major code contributions, but
+rather lots of small, clean fixes, each of which was an unambiguous
+improvement to the code.
+
+See the COMMITTERS file for a complete list of committers.
 
 
 
@@ -658,148 +666,123 @@ configuration/build system:
 
 
 
-Automated Tests:
-================
+Building from a working copy - Unix
+===================================
 
-For a description of how to use and add tests to Subversion's
-automated test framework, please read subversion/tests/README.
+Unlike a packaged distribution, the Subversion working tree does not
+contain a `configure' script nor any other of the generated files
+normally used in configuration and building.  You have to regenerate
+them inside your working copy first, then configure, and then build.
+So, first run
+
+   $ chmod +x autogen.sh   ## needed until Subversion versions file mode bits
+   $ ./autogen.sh
+
+which does everything necessary to prepare for the configuration step.
+You are expected to have the `autoheader' and `autoconf' tools
+installed.  autogen.sh will check for the source code of external
+packages required to build Subversion (such as APR and Neon), and tell
+you how to get them if you don't have them.
+
+Next, do
+
+   $ ./configure   [...possibly with options...]
+   $ make
+   $ make check
+   $ make install
+
+Skip the last step if don't want to blow away your previous Subversion
+installation.  Also, you may wish to run "./configure" with some
+options; see the end of autogen.sh's output for some hints about this.
+
+Some things to watch out for:
+
+Note that if you have Berkeley DB installed and you try running
+configure with the
+
+      --with-berkeley-db=/path/to/BerkeleyDB.3.3
+
+option, you have to make sure that your linker knows where the
+Berkeley DB libs are:
+
+kfogel says: 
+
+   After you install Berkeley, say in /usr/local/BerkeleyDB.3.3, you
+   may need to modify /etc/ld.so.conf or /etc/rc.conf (those seem to
+   be Linux and FreeBSD, respectively; Your Mileage May Vary), and run
+   `ldconfig' or whatever your system wants.
+  
+   The problem is that configure tries to build, link, and run a small
+   program against Berkeley DB.  If the system loader doesn't yet know
+   how to do that, configure will claim it can't find Berkeley DB.
+
+
+See also the section "The Configuration/Build System Under Unix" for
+more details about the build process.
 
 
 
-Writing test cases before code:
-===============================
+Building from a working copy - Win32
+====================================
 
-From: Karl Fogel <kfogel@collab.net>
-Subject: writing test cases
-To: dev@subversion.tigris.org
-Date: Mon, 5 Mar 2001 15:58:46 -0600
+There is some support for building Subversion on Win32 platforms. The
+project files included in the source tree are from Microsoft Visual
+C++ 6.x; earlier versions of the compiler are not supported at this
+time.
 
-Many of us implementing the filesystem interface have now gotten into
-the habit of writing the test cases (see fs-test.c) *before* writing
-the actual code.  It's really helping us out a lot -- for one thing,
-it forces one to define the task precisely in advance, and also it
-speedily reveals the bugs in one's first try (and second, and
-third...).
+To build the client components, you'll need a copy of neon 0.17.2. The
+sources are available at
 
-I'd like to recommend this practice to everyone.  If you're
-implementing an interface, or adding an entirely new feature, or even
-just fixing a bug, a test for it is a good idea.  And if you're going
-to write the test anyway, you might as well write it first. :-)
+    http://www.webdav.org/neon/neon-0.17.2.tar.gz
 
-Yoshiki Hayashi's been sending test cases with all his patches lately,
-which is what inspired me to write this mail to encourage everyone to
-do the same.  Having those test cases makes patches easier to examine,
-because they show the patch's purpose very clearly.  It's like having
-a second log message, one whose accuracy is verified at run-time.
+Unpack the distribution into the root directory of the Subversion
+source tree and rename the directory neon-0.17.0 to neon.  The MSVC
+project files in this archive are not up-to-date, so building the neon
+libraries is not straight-forward.  Pre-built neon libraries are
+available at
 
-That said, I don't think we want a rigid policy about this, at least
-not yet.  If you encounter a bug somewhere in the code, but you only
-have time to write a patch with no test case, that's okay -- having
-the patch is still useful; someone else can write the test case.
+   http://www.xbc.nu/svn/libneon-0.17.2-svn-win32.zip
 
-As Subversion gets more complex, though, the automated test suite gets
-more crucial, so let's all get in the habit of using it early.
+Unpack the archive into the <SVN>/neon directory. (<SVN> is the root
+of the source tree, the directory where you found the file you're
+reading.)  You'll get the pre-built libneon.lib and libneonD.lib, as
+well as the modified project files used to build them, the config.hw
+file and the complete (unmodified) neon/src directory.
 
--K
+    IMPORTANT NOTE: These neon libraries should *only* be used when
+         building Subversion. They were build to depend on the verson
+         of expat-lite in the Subversion sources.
+
+If you want to rebuild the neon libraries using the project files in
+this package, you'll have to set the NEON_EXPAT_LITE_WIN32 environment
+variable to <SVN>/expat-lite before starting Visual Studio, so that
+neon can find the expat-lite includes.
+
+If you want to build the server components, you'll also need a copy of
+Berkeley DB, version 3.3.11 or newer. The sources are available at
+http://www.sleepycat.com. There is a binary distibution at 
+
+    http://www.xbc.nu/svn/db-3.3.11-win32.zip
+
+Unpack the distribution into the root directory of the Subversion
+source tree and rename the directory db-3.3.11-win32 to db3-win32.
+It's a good idea to add <SVN>\db3-win32\bin to your PATH, so that
+Subversion can find the Berkeley DB DLLs.
+
+If you build Berkeley DB from the source, you will have to copy the
+file <DB3>\build_win32\db.h to <SVN>\db3-win32\include, and all
+the import libraries to <SVN>\db3-win32\lib. Again, the DLLs
+should be somewhere in your path.
+
+The workspace `subversion.dsw' at the top of the source tree includes
+all the necessary projects. Right now, only static libraries are
+built. The "__build__" project (active by default) builds all the
+libraries and programs. The "__check__" project builds the test
+drivers.
+
+You will have to edit the file svn_private_config.hw to set the
+correct paths for diff and patch.
 
 
-
-APR Status Codes:
-=================
-
-Always check for APR status codes (except APR_SUCCESS) with the
-APR_STATUS_IS_...() macros, not by direct comparison. This is
-required for portability to non-Unix platforms.
-
-
-Compiling mod_dav_svn:
-======================
-
-To compile the mod_dav_svn module, the configure script needs to be
-pointed at an Apache 2.0 source tree or installation area. Without
-this, mod_dav_svn will be skipped in the normal build process.
-
-Note that you will need at *least* Apache 2.0a9 for this, and
-preferably the latest CVS version. To fetch the Apache 2.0 CVS tree,
-you can use:
-
-$ cvs -d :pserver:anoncvs@cvs.apache.org:/home/cvspublic login
- (password 'anoncvs')
-$ cvs -d :pserver:anoncvs@cvs.apache.org:/home/cvspublic co httpd-2.0
-
-When Apache 2.0 is installed, it creates a Perl script named "apxs"
-which is used by external (third-party) modules to discover
-compilation, link, and directory information about the installed
-Apache. apxs is also used to install third-party modules into the
-Apache install directories. The apxs script is the key for the
-configure process.
-
-By default, configure will automatically look in /usr/sbin and
-/usr/local/apache/bin for the apxs script. If it isn't found, then you 
-must use the --with-apxs=FILE switch to say where it is located (or
-plain --with-apxs to look in the current PATH). For example:
-
-$ ./configure --with-apxs=/usr/local/apache2/bin/apxs
-
-The configure script will verify that apxs actually refers to an
-Apache 2.0 installation, and then gather the necessary parameters. It
-will then enable the build and installation of mod_dav_svn.
-
-When building mod_dav_svn for an install Apache, you MUST build it as
-a dynamic library. This means that you cannot pass --disable-shared to 
-the configure script.
-
-An alternative is to work with an Apache 2.0 source directory. There
-is no default for this, so you must specify the directory explicity
-using the --with-apache switch. For example:
-
-$ ./configure --with-apache=/home/gstein/src/httpd-2.0
-
-The configure script will gather up the right information and enable
-the build/install of mod_dav_svn. In this form, the module will be
-built as a static library and then linked into the Apache
-executable. Therefore, you cannot pass --disable-static to the
-configure script.
-
-Once mod_dav_svn is actually built, it must be installed. For the apxs
-style (working against an installed Apache), the apxs script will be
-used to perform the actual installation of the module into the Apache
-install tree. apxs will also tweak your httpd.conf file to add a
-LoadModule directive. With this style, you can change, build and
-install mod_dav_svn without any changes to Apache itself (since it is
-already installed). As a result, this is the preferable form, and will
-be the "standard" install when Subversion ships.
-
-If you are building directly against a source tree (statically), then
-the install will copy mod_dav_svn into the tree along with a number of 
-files for Apache's config/build system. After each change and build of 
-mod_dav_svn, it must be installed and Apache needs to be relinked to
-pick up the changes. You will also need to put an AddModule line into
-your httpd.conf file (see below).
-
-Since mod_dav_svn links against libsvn_subr and libsvn_fs, these must
-be built and INSTALLED for mod_dav_svn to work. Nothing special is
-done for apxs-style builds, which generally means the two libraries
-will be placed into /usr/local/lib/. If you are building a static
-library for direct linking into Apache, then the libsvn_subr and
-libsvn_fs targets will also place copies of the static (.a) libraries
-into the Apache source tree.
-
-After mod_dav_svn has been installed (or linked into Apache), then
-your httpd.conf file must be updated to get Apache to use the
-module. This is actually quite simple to do. Here is an example:
-
-  <Location /svn/repos>
-    DAV svn
-    SVNPath /home/gstein/dav/svnrepos
-  </Location>
-
-This tells Apache about a location named /svn/repos, that it is
-DAV-enabled and should use the "svn" DAV back end, and that the
-repository for this location is in the /home/gstein/dav/svnrepos
-directory. The net effect is that you now have a Subversion server
-located at:
-
-    http://some.host.name/svn/repos
-
-Further config magic and usage is an exercise for the reader.
+NOTE: There have been rumours that Subversion on Win32 can be build
+using the latest cygwin. ymmv.
