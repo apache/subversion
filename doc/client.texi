@@ -33,7 +33,7 @@ copies.
 
 This chapter uses a few fundamental concepts that have not been
 introduced previously.  Here they are briefly defined, but see
-@xref{Protocol} for more complete descriptions.
+@pxref{Protocol} for more complete descriptions.
 
 @table @b
 @item vdelta, vdiff 
