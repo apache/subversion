@@ -77,7 +77,7 @@ dnl Configure neon --------------------------
           # Also find out which macros neon defines (but ignore extra include paths):
           # this will include -DNEON_SSL if neon was built with SSL support
           changequote(<<, >>)dnl
-          CFLAGS="$CFLAGS `$SHELL $abs_builddir/neon/neon-config --cflags | sed -e "s/-I[^ ]*//g"`"
+          CFLAGS="$CFLAGS `$SHELL $abs_builddir/neon/neon-config --cflags | sed -e 's/-I[^ ]*//g'`"
           changequote([, ])dnl
         fi
 
