@@ -401,13 +401,6 @@ make_entry (dag_node_t **child_p,
       (SVN_ERR_FS_NOT_MUTABLE, NULL,
        "Attempted to clone child of non-mutable node");
 
-  /* Check that parent does not already have an entry named NAME. */
-  SVN_ERR (dir_entry_id_from_node (&new_node_id, parent, name, pool));
-  if (new_node_id)
-    return svn_error_createf
-      (SVN_ERR_FS_ALREADY_EXISTS, NULL,
-       "Attempted to create entry that already exists");
-
   /* Create the new node's NODE-REVISION */
   memset (&new_noderev, 0, sizeof (new_noderev));
   new_noderev.kind = is_dir ? svn_node_dir : svn_node_file;
