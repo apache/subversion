@@ -6,7 +6,7 @@ If the bug is in the APR library, please report it to all of these
 lists:
 
    dev@subversion.tigris.org
-   new-httpd@apache.org
+   dev@apr.apache.org
 
    (If the above two aren't getting results for some reason, Greg
    Stein suggests Ryan Bloom <rbb@apache.org>, "who could be
