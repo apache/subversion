@@ -31,13 +31,6 @@
 #include "reps-strings.h"
 
 
-/* Change this to 1 to test deltification/undeltification.  When we're
-   ready for it to be permanently on, we should just remove the
-   #define altogether of course. */
-#define DELTIFYING 1
-
-
-
 
 /*** Local prototypes. ***/
 
@@ -1241,7 +1234,6 @@ svn_fs__rep_contents_clear (svn_fs_t *fs,
 
 /*** Deltified storage. ***/
 
-#if DELTIFYING
 /* Baton for svn_write_fn_t write_string(). */
 struct write_string_baton
 {
@@ -1346,8 +1338,6 @@ write_svndiff_strings (void *baton, const char *data, apr_size_t *len)
   return SVN_NO_ERROR;
 }
 
-#endif /* ! DELTIFYING */
-
 
 typedef struct window_write_t
 {
@@ -1365,14 +1355,13 @@ svn_fs__rep_deltify (svn_fs_t *fs,
                      const char *source,
                      trail_t *trail)
 {
-#if DELTIFYING
   svn_stream_t *source_stream; /* stream to read the source */
   svn_stream_t *target_stream; /* stream to read the target */
   svn_txdelta_stream_t *txdelta_stream; /* stream to read delta windows  */
 
   /* window-y things, and an array to track them */
   window_write_t *ww;
-  apr_array_header_t *windows = apr_array_make (trail->pool, 1, sizeof (ww));
+  apr_array_header_t *windows;
 
   /* stream to write new (deltified) target data and its baton */
   svn_stream_t *new_target_stream;
@@ -1408,6 +1397,20 @@ svn_fs__rep_deltify (svn_fs_t *fs,
        "svn_fs__rep_deltify: attempt to deltify \"%s\" against itself",
        target);
 
+  /* To favor time over space, we don't currently deltify files that
+     are larger than the svndiff window size.  This might seem
+     counterintuitive, but most files are smaller than a window
+     anyway, and until we write the delta combiner or something
+     approaching it, the cost of retrieval for large files becomes
+     simply prohibitive after about 10 or so revisions.  See issue
+     #531 for more details. */
+  {
+    apr_size_t size;
+    SVN_ERR (svn_fs__rep_contents_size (&size, fs, target, trail));
+    if (size > svn_txdelta_window_size)
+      return SVN_NO_ERROR;
+  }
+
   /* Set up a handler for the svndiff data, which will write each
      window to its own string in the `strings' table. */
   new_target_baton.fs = fs;
@@ -1428,6 +1431,7 @@ svn_fs__rep_deltify (svn_fs_t *fs,
                           &new_target_handler, &new_target_handler_baton);
 
   /* Now, loop, manufacturing and dispatching windows of svndiff data. */
+  windows = apr_array_make (trail->pool, 1, sizeof (ww));
   do
     {
       /* Reset some baton variables. */
@@ -1572,7 +1576,6 @@ svn_fs__rep_deltify (svn_fs_t *fs,
     SVN_ERR (svn_fs__write_rep (fs, target, rep, trail));
     SVN_ERR (delete_strings (orig_str_keys, fs, trail));
   }
-#endif /* ! DELTIFYING */
 
   return SVN_NO_ERROR;
 }
@@ -1583,7 +1586,6 @@ svn_fs__rep_undeltify (svn_fs_t *fs,
                        const char *rep,
                        trail_t *trail)
 {
-#if DELTIFYING
   /* ### todo:  Make this thing `delta'-aware! */
   svn_stream_t *source_stream; /* stream to read the source */
   svn_stream_t *target_stream; /* stream to write the fulltext */
@@ -1637,8 +1639,6 @@ svn_fs__rep_undeltify (svn_fs_t *fs,
 
   /* ...then we delete our original strings. */
   SVN_ERR (delete_strings (orig_keys, fs, trail));
-
-#endif /* ! DELTIFYING */
 
   return SVN_NO_ERROR;
 }

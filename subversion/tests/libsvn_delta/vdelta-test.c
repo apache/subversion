@@ -89,7 +89,7 @@ print_delta_window (int quiet, svn_txdelta_window_t *window, FILE *stream)
   return len;
 }
 
-extern apr_size_t svn_txdelta__window_size;
+extern apr_size_t svn_txdelta_window_size;
 
 int
 main (int argc, char **argv)
@@ -106,7 +106,7 @@ main (int argc, char **argv)
   if (argc > 1 && argv[1][0] == '-' && argv[1][1] == 's')
     {
       char *endptr;
-      svn_txdelta__window_size = strtol (&argv[1][2], &endptr, 10);
+      svn_txdelta_window_size = strtol (&argv[1][2], &endptr, 10);
       --argc; ++argv;
     }
 
