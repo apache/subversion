@@ -28,6 +28,7 @@ usage: switch [TARGET] REPOS_URL
 
 Valid options:
   -r [--revision] arg      : specify revision number ARG (or X:Y range)
+  -D [--date] arg          : specify a date ARG (instead of a revision)
   -n [--nonrecursive]      : operate on single directory only
   --force                  : force operation to run
 
