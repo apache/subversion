@@ -34,7 +34,9 @@ extern "C" {
               node_id ::= number ;
               copy_id ::= number ;
                txn_id ::= number ;
-     node_revision_id ::= node_id "." copy_id "." txn_id ;
+                  rev ::= number ;
+               offset ::= number ;
+     node_revision_id ::= node_id "." copy_id "." txn_id "." rev "." offset;
 
    A directory entry identifies the file or subdirectory it refers to
    using a node revision number --- not a node number.  This means that
@@ -60,6 +62,12 @@ struct svn_fs_id_t
 
   /* txn id, a key into the `transactions' table. */
   const char *txn_id;
+
+  /* committed revision where this node id is located */
+  svn_revnum_t rev;
+
+  /* offset into the rev file where this node id is located */
+  apr_off_t offset;
 };
 
 
@@ -81,6 +89,12 @@ const char *svn_fs__id_copy_id (const svn_fs_id_t *id);
 
 /* Access the "txn id" portion of ID. */
 const char *svn_fs__id_txn_id (const svn_fs_id_t *id);
+
+/* Access the "rev" portion of ID. */
+const svn_revnum_t svn_fs__id_rev(const svn_fs_id_t *id);
+
+/* Access the "offset" portion of the ID. */
+const apr_off_t svn_fs__id_offset(const svn_fs_id_t *id);
 
 /* Return non-zero iff the node or node revision ID's A and B are equal.  */
 int svn_fs__id_eq (const svn_fs_id_t *a, 

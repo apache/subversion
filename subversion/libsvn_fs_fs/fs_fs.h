@@ -83,6 +83,22 @@ svn_error_t *svn_fs__fs_revision_proplist (apr_hash_t **proplist,
                                            svn_revnum_t rev,
                                            apr_pool_t *pool);
 
+/* Set *LENGTH to the be fulltext length of the node revision
+   specified by NODEREV.  Use POOL for temporary allocations. */
+svn_error_t *svn_fs__fs_file_length (svn_filesize_t *length,
+                                     svn_fs__node_revision_t *noderev,
+                                     apr_pool_t *pool);
+
+/* Return TRUE if the property keys in A and B both point to the same
+   property representation, else return FALSE. */
+svn_boolean_t svn_fs__fs_noderev_same_prop_key (svn_fs__node_revision_t *a,
+                                                svn_fs__node_revision_t *b);
+
+/* Return TRUE if the data keys in A and B both point to the same
+   property representation, else return FALSE. */
+svn_boolean_t svn_fs__fs_noderev_same_data_key (svn_fs__node_revision_t *a,
+                                                svn_fs__node_revision_t *b);
+
 /* Following are defines that specify the textual elements of the
    native filesystem directories and revision files. */
 
@@ -98,9 +114,13 @@ svn_error_t *svn_fs__fs_revision_proplist (apr_hash_t **proplist,
 #define SVN_FS_FS__PROPS             "props"    
 #define SVN_FS_FS__REP               "rep"      
 #define SVN_FS_FS__CPATH             "cpath"
+#define SVN_FS_FS__COPYFROM          "copyfrom"
+#define SVN_FS_FS__COPYROOT          "copyroot"
 
 /* Kinds that a node-rev can be. */
 #define SVN_FS_FS__FILE              "file"     /* node-rev kind for file */
 #define SVN_FS_FS__DIR               "dir"      /* node-rev kind for directory */
+#define SVN_FS_FS__SOFT              "soft"
+#define SVN_FS_FS__HARD              "hard"
 
 #endif

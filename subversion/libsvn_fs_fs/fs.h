@@ -18,9 +18,6 @@
 #ifndef SVN_LIBSVN_FS_FS_H
 #define SVN_LIBSVN_FS_FS_H
 
-#define APU_WANT_DB
-#include <apu_want.h>
-
 #include <apr_pools.h>
 #include <apr_hash.h>
 #include <apr_md5.h>
@@ -42,6 +39,9 @@ struct svn_fs_t
 
   /* The path to the repository's top-level directory. */
   char *path;
+
+  /* The path to the repository's revision directory. */
+  char *fs_path;
 
   /* A callback function for printing warning messages, and a baton to
      pass through to it.  */
@@ -115,6 +115,14 @@ typedef struct
 
 } svn_fs__transaction_t;
 
+/*** Copy Kind ***/
+typedef enum
+{
+  svn_fs__copy_kind_real = 1, /* real copy */
+  svn_fs__copy_kind_soft      /* soft copy */
+
+} svn_fs__copy_kind_t;
+
 
 /*** Node-Revision ***/
 typedef struct
@@ -122,21 +130,38 @@ typedef struct
   /* node kind */
   svn_node_kind_t kind;
 
+  /* The node-id for this node-rev. */
+  const svn_fs_id_t *id;
+
   /* predecessor node revision id, or NULL if there is no predecessor
      for this node revision */
   const svn_fs_id_t *predecessor_id;
+
+  /* If this node-rev is a copy, where was it copied from? */
+  const svn_fs_id_t *copyfrom;
+
+  /* If this node-rev is a copy, how was it created? */
+  svn_fs__copy_kind_t copykind;
+  
+  /* Helper for history tracing, root of the parent tree from whence
+     this node-rev was copied. */
+  const svn_fs_id_t *copyroot;
 
   /* number of predecessors this node revision has (recursively), or
      -1 if not known (for backward compatibility). */
   int predecessor_count;
 
-  /* representation key for this node's properties.  may be NULL if
+  /* representation key for this node's properties.  may be -1 if
      there are no properties.  */
-  const char *prop_key;
+  apr_off_t prop_offset;
+  svn_revnum_t prop_revision;
 
   /* representation key for this node's text data (files) or entries
-     list (dirs).  may be NULL if there are no contents.  */
-  const char *data_key;
+     list (dirs).  may be -1 if there are no contents.  */
+  apr_off_t data_offset;
+  apr_size_t data_size; /* size of svndiff data */
+  svn_revnum_t data_revision;
+  apr_size_t data_expanded_size; /* fulltext size of data */
 
   /* representation key for this node's text-data-in-progess (files
      only).  NULL if no edits are currently in-progress.  This field
@@ -225,14 +250,6 @@ typedef struct
   } contents;
 } svn_fs__representation_t;
 
-
-/*** Copy Kind ***/
-typedef enum
-{
-  svn_fs__copy_kind_real = 1, /* real copy */
-  svn_fs__copy_kind_soft      /* soft copy */
-
-} svn_fs__copy_kind_t;
 
 
 /*** Copy ***/

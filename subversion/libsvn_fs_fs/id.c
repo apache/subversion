@@ -61,6 +61,17 @@ svn_fs__id_txn_id (const svn_fs_id_t *id)
   return id->txn_id;
 }
 
+const svn_revnum_t
+svn_fs__id_rev (const svn_fs_id_t *id)
+{
+  return id->rev;
+}
+
+const apr_off_t
+svn_fs__id_offset (const svn_fs_id_t *id)
+{
+  return id->offset;
+}
 
 
 /* Copying ID's.  */
@@ -72,6 +83,8 @@ svn_fs__id_copy (const svn_fs_id_t *id, apr_pool_t *pool)
   new_id->node_id = apr_pstrdup (pool, id->node_id);
   new_id->copy_id = apr_pstrdup (pool, id->copy_id);
   new_id->txn_id = apr_pstrdup (pool, id->txn_id);
+  new_id->rev = id->rev;
+  new_id->offset = id->offset;
   return new_id;
 }
 
@@ -91,6 +104,10 @@ svn_fs__id_eq (const svn_fs_id_t *a,
         return FALSE;
       if ((a->txn_id != b->txn_id) && (strcmp (a->txn_id, b->txn_id)))
         return FALSE;
+      if (a->rev != b->rev)
+        return FALSE;
+      if (a->offset != b->offset)
+        return FALSE;
     }
   return TRUE;
 }
@@ -106,7 +123,7 @@ svn_fs_parse_id (const char *data,
 {
   svn_fs_id_t *id;
   char *data_copy;
-  char *dot;
+  char *str, *last_str;
 
   /* Dup the ID data into POOL.  Our returned ID will have references
      into this memory. */
@@ -116,29 +133,33 @@ svn_fs_parse_id (const char *data,
   id = apr_palloc (pool, sizeof (*id));
 
   /* Now, we basically just need to "split" this data on `.'
-     characters.  There should be exactly three pieces (around two
-     `.'s) as a result.  To do this, we'll just replace the `.'s with
-     NULL terminators, and do fun pointer-y things.  */
+     characters.  We will use apr_strtok, which will essentially put
+     NULLs where each of the '.'s used to be.  Then our new id field
+     will reference string locations inside our duplicate string.*/
 
   /* Node Id */
-  id->node_id = data_copy;
-  dot = strchr (id->node_id, '.');
-  if ((! dot) || (dot <= id->node_id))
-    return NULL;
-  *dot = 0;
+  str = apr_strtok (data_copy, ".", &last_str);
+  if (str == NULL) return NULL;
+  id->node_id = str;
 
   /* Copy Id */
-  id->copy_id = dot + 1;
-  dot = strchr (id->copy_id, '.');
-  if ((! dot) || (dot <= id->copy_id))
-    return NULL;
-  *dot = 0;
+  str = apr_strtok (NULL, ".", &last_str);
+  if (str == NULL) return NULL;
+  id->copy_id = str;
   
   /* Txn Id */
-  id->txn_id = dot + 1;
-  dot = strchr (id->copy_id, '.');
-  if (dot)
-    return NULL;
+  str = apr_strtok (NULL, ".", &last_str);
+  if (str == NULL) return NULL;
+  id->txn_id = str;
+
+  /* Revision */
+  str = apr_strtok (NULL, ".", &last_str);
+  if (str == NULL) return NULL;
+  id->rev = atoi (str);
+
+  str = apr_strtok (NULL, ".", &last_str);
+  if (str == NULL) return NULL;
+  id->offset = apr_atoi64 (str);
 
   /* Return our ID */
   return id;
@@ -149,8 +170,10 @@ svn_string_t *
 svn_fs_unparse_id (const svn_fs_id_t *id,
                    apr_pool_t *pool)
 {
-  return svn_string_createf (pool, "%s.%s.%s", 
-                             id->node_id, id->copy_id, id->txn_id);
+  return svn_string_createf (pool, "%s.%s.%s.%" SVN_REVNUM_T_FMT
+                             ".%" APR_SIZE_T_FMT,
+                             id->node_id, id->copy_id, id->txn_id,
+                             id->rev, id->offset);
 }
 
 
