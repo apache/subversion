@@ -61,6 +61,8 @@ def main(fname, oname=None, skip_depends=0):
     else:
       install[itype] = [ target_ob ]
 
+    target_dirs[target_ob.path] = None
+
   if errors:
     sys.exit(1)
 
@@ -74,8 +76,6 @@ def main(fname, oname=None, skip_depends=0):
 
     tpath = target_ob.output
     tfile = os.path.basename(tpath)
-
-    target_dirs[path] = None
 
     if target_ob.install == 'test' and bldtype == 'exe' \
        and parser.get(target, 'testing') != 'skip':
