@@ -467,8 +467,6 @@ main (int argc, char *argv[])
   /* Fire up the XML parser */
   err = svn_delta_xml_auto_parse (my_read_func, source_baton, 
                                   &my_editor,
-                                  base_path,
-                                  base_version,
                                   my_edit_baton,
                                   globalpool);
 

@@ -12,7 +12,9 @@ libsvn_client_la_SOURCES = checkout.c update.c add.c commit.c
 
 ## Libraries this binary depends upon:
 libsvn_client_la_LIBADD = ../libsvn_subr/libsvn_subr.la     \
-                          ../libsvn_string/libsvn_string.la
+                          ../libsvn_string/libsvn_string.la \
+                          ../libsvn_wc/libsvn_wc.la         \
+                          ../libsvn_delta/libsvn_delta.la
 
 ## Build flags ---------
 

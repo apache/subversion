@@ -133,23 +133,22 @@ xml_validation_error (apr_pool_t *pool,
    already set.  Information is derived by walking backwards up from
    FRAME and examining parents, so it is important that frame has
    _already_ been linked into the digger's stack. */
-static void
-maybe_derive_ancestry (svn_xml__digger_t *digger,
-                       svn_xml__stackframe_t *frame,
+static svn_error_t *
+maybe_derive_ancestry (svn_xml__stackframe_t *frame,
                        apr_pool_t *pool)
 {
   if ((frame->tag != svn_delta__XML_dir) 
       && (frame->tag != svn_delta__XML_file))
     {
       /* This is not the kind of frame that needs ancestry information. */
-      return;
+      return SVN_NO_ERROR;
     }
   else if (frame->ancestor_path
            && (frame->ancestor_version >= 0))
     {
       /* It is the kind of frame that needs ancestry information, but
          all its ancestry information is already set. */
-      return;
+      return SVN_NO_ERROR;
     }
   else
     {
@@ -180,8 +179,6 @@ maybe_derive_ancestry (svn_xml__digger_t *digger,
                * repository.  Following ancestry solves these
                * problems.
                *
-               * kff todo: sleep on above reasoning.
-               *
                * Remember that if any of the directories in the
                * chain has changed its name, then we wouldn't be
                * here anyway, because the delta should have set
@@ -208,7 +205,16 @@ maybe_derive_ancestry (svn_xml__digger_t *digger,
           p = p->previous;
         }
 
+      if ((frame->ancestor_path == NULL)
+          || (frame->ancestor_version == SVN_INVALID_VERNUM))
+        return svn_error_create (SVN_ERR_XML_MISSING_ANCESTRY,
+                                 0,
+                                 NULL,
+                                 pool,
+                                 "unable to derive ancestry");
     }
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -377,7 +383,9 @@ do_stack_append (svn_xml__digger_t *digger,
   new_frame->previous = youngest_frame;
   
   /* Set up any unset ancestry information. */
-  maybe_derive_ancestry (digger, new_frame, pool);
+  err = maybe_derive_ancestry (new_frame, pool);
+  if (err)
+    return err;
 
   return SVN_NO_ERROR;
 }
@@ -1316,8 +1324,6 @@ xml_handle_data (void *userData, const char *data, int len)
 svn_error_t *
 svn_delta_make_xml_parser (svn_delta_xml_parser_t **parser,
                            const svn_delta_edit_fns_t *editor,
-                           svn_string_t *base_path, 
-                           svn_vernum_t base_version,
                            void *edit_baton,
                            apr_pool_t *pool)
 {
@@ -1350,11 +1356,11 @@ svn_delta_make_xml_parser (svn_delta_xml_parser_t **parser,
      in the digger's stack.  */
   rootframe = apr_pcalloc (main_subpool, sizeof (svn_xml__stackframe_t));
 
-  rootframe->tag            = svn_delta__XML_dir;
-  rootframe->name           = NULL; /* This frame's distinguishing feature! */
-  rootframe->ancestor_path  = svn_string_dup (base_path, main_subpool);
-  rootframe->ancestor_version = base_version;
-  rootframe->baton          = rootdir_baton;
+  rootframe->tag              = svn_delta__XML_dir;
+  rootframe->name             = NULL;
+  rootframe->ancestor_path    = NULL;
+  rootframe->ancestor_version = SVN_INVALID_VERNUM;
+  rootframe->baton            = rootdir_baton;
 
   /* Create a new digger structure and fill it out*/
   digger = apr_pcalloc (main_subpool, sizeof (svn_xml__digger_t));
@@ -1362,8 +1368,6 @@ svn_delta_make_xml_parser (svn_delta_xml_parser_t **parser,
   digger->pool             = main_subpool;
   digger->stack            = rootframe;
   digger->editor           = editor;
-  digger->base_path        = base_path;
-  digger->base_version     = base_version;
   digger->edit_baton       = edit_baton;
   digger->rootdir_baton    = rootdir_baton;
   digger->dir_baton        = rootdir_baton;
@@ -1449,8 +1453,6 @@ svn_error_t *
 svn_delta_xml_auto_parse (svn_read_fn_t *source_fn,
                           void *source_baton,
                           const svn_delta_edit_fns_t *editor,
-                          svn_string_t *base_path,
-                          svn_vernum_t base_version,
                           void *edit_baton,
                           apr_pool_t *pool)
 {
@@ -1463,8 +1465,6 @@ svn_delta_xml_auto_parse (svn_read_fn_t *source_fn,
   /* Create a custom Subversion XML parser */
   err =  svn_delta_make_xml_parser (&delta_parser,
                                     editor,
-                                    base_path,
-                                    base_version,
                                     edit_baton,
                                     pool);
   if (err)

@@ -87,6 +87,9 @@ typedef enum svn_errno_t {
   /* There's no such xml tag attribute */
   SVN_ERR_XML_ATTRIB_NOT_FOUND,
 
+  /* A delta-pkg is missing ancestry. */
+  SVN_ERR_XML_MISSING_ANCESTRY,
+
   /* Can't do this update or checkout, because something was in the way. */
   SVN_ERR_OBSTRUCTED_UPDATE,
 

@@ -232,6 +232,8 @@ main (int argc, char **argv)
   if (err)
     svn_handle_error (err, stdout, 1);
 
+  apr_destroy_pool (pool);
+
   return 0;
 }
 
