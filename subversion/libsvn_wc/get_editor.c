@@ -434,7 +434,7 @@ replace_root (void *edit_baton,
 
   *dir_baton = d = make_dir_baton (NULL, eb, NULL, eb->pool);
 
-  err = svn_wc__get_entry_ancestry (d->path,
+  err = svn_wc__entry_get_ancestry (d->path,
                                     NULL,
                                     &ancestor_path,
                                     &ancestor_version,

@@ -54,6 +54,7 @@
 #include "wc.h"
 #include "svn_xml.h"
 #include "svn_error.h"
+#include "svn_types.h"
 
 
 /*------------------------------------------------------------------*/
@@ -149,13 +150,68 @@ svn_wc__entries_init (svn_string_t *path, apr_pool_t *pool)
 /*--------------------------------------------------------------- */
 
 /*** ancestry ***/
-svn_error_t *svn_wc__get_entry_ancestry (svn_string_t *path,
-                                         svn_string_t *entry,
-                                         svn_string_t **ancestor_path,
-                                         svn_vernum_t *ancestor_ver,
-                                         apr_pool_t *pool)
+svn_error_t *
+svn_wc__entry_get_ancestry (svn_string_t *path,
+                            svn_string_t *entry,
+                            svn_string_t **ancestor_path,
+                            svn_vernum_t *ancestor_ver,
+                            apr_pool_t *pool)
 {
-  /* FIXME: to be completed (Ben) */
+  svn_string_t *ancestor;
+  svn_vernum_t version;
+  svn_error_t *err;
+  apr_hash_t *h;
+
+  err = svn_wc__entry_get (path, entry, &version, NULL, pool, &h);
+  if (err)
+    return err;
+
+  ancestor = apr_hash_get (h,
+                           SVN_WC__ENTRIES_ATTR_ANCESTOR,
+                           strlen (SVN_WC__ENTRIES_ATTR_ANCESTOR));
+
+  /* Default back to directory itself, in case anything's missing. */
+  if (entry && ((! ancestor) || (version == SVN_INVALID_VERNUM)))
+    {
+      svn_string_t *default_ancestor;
+      svn_vernum_t default_version;
+      
+      err = svn_wc__entry_get (path,
+                               NULL,
+                               &default_version,
+                               NULL,
+                               pool,
+                               &h);
+      if (err)
+        return err;
+      
+      if (! ancestor)
+        {
+          ancestor = default_ancestor;
+          svn_path_add_component (ancestor,
+                                  entry,
+                                  SVN_PATH_REPOS_STYLE,
+                                  pool);
+        }
+      
+      if (version == SVN_INVALID_VERNUM)
+        version = default_version;
+    }
+
+  /* If we still don't have the information, that's an error. */
+  if ((! ancestor) || (version == SVN_INVALID_VERNUM))
+    return svn_error_createf (SVN_ERR_WC_ENTRY_MISSING_ANCESTRY,
+                              0,
+                              NULL,
+                              pool,
+                              "missing ancestor path or version for %s/%s",
+                              path->data,
+                              entry ? entry->data : "");
+
+
+  *ancestor_path = ancestor;
+  *ancestor_ver  = version;
+
   return SVN_NO_ERROR;
 }
 
@@ -193,7 +249,7 @@ typedef struct svn_wc__entry_baton_t
 
   apr_hash_t *attributes;  /* The attribute list from XML, which will
                               be read from and written to. */
-                              
+
 } svn_wc__entry_baton_t;
 
 
