@@ -474,7 +474,9 @@ svn_wc_crawl_revisions (svn_stringbuf_t *path,
 /*
  * Return an editor for updating a working copy.
  * 
- * DEST is the local path to the working copy.
+ * ANCHOR is the local path to the working copy which will be used as
+ * the root of our editor.  TARGET is the entry in ANCHOR that will
+ * actually be updated, or NULL if all of ANCHOR should be update.
  *
  * TARGET_REVISION is the repository revision that results from this set
  * of changes.
@@ -483,7 +485,8 @@ svn_wc_crawl_revisions (svn_stringbuf_t *path,
  * and the latter two should be used as parameters to editor
  * functions.
  */
-svn_error_t *svn_wc_get_update_editor (svn_stringbuf_t *dest,
+svn_error_t *svn_wc_get_update_editor (svn_stringbuf_t *anchor,
+                                       svn_stringbuf_t *target,
                                        svn_revnum_t target_revision,
                                        const svn_delta_edit_fns_t **editor,
                                        void **edit_baton,

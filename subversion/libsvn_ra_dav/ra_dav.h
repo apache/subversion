@@ -93,6 +93,7 @@ svn_error_t * svn_ra_dav__do_update(
   const svn_ra_reporter_t **reporter,
   void **report_baton,
   svn_revnum_t revision_to_update_to,
+  svn_stringbuf_t *update_target,
   const svn_delta_edit_fns_t *wc_update,
   void *wc_update_baton);
 

@@ -293,6 +293,10 @@ typedef struct svn_ra_plugin_t
 
      When finished, the client calls REPORTER->finish_report(). The RA
      layer then drives UPDATE_EDITOR to update the working copy.
+     UPDATE_TARGET is an optional single path component will restrict
+     the scope of things affected by the update to an entry in the
+     directory represented by the SESSION_BATON's URL, or NULL if the
+     entire directory is meant to be updated.
 
      The working copy will be updated to REVISION_TO_UPDATE_TO, or the
      "latest" revision if this arg is invalid. */
@@ -300,6 +304,7 @@ typedef struct svn_ra_plugin_t
                              const svn_ra_reporter_t **reporter,
                              void **report_baton,
                              svn_revnum_t revision_to_update_to,
+                             svn_stringbuf_t *update_target,
                              const svn_delta_edit_fns_t *update_editor,
                              void *update_baton);
 

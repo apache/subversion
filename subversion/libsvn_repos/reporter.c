@@ -106,8 +106,9 @@ svn_repos_set_path (void *report_baton,
          empty string in the file case since the target is the file
          itself, not a directory containing the file). */
       from_path = svn_stringbuf_dup (rbaton->base_path, rbaton->pool);
-      svn_path_add_component (from_path, rbaton->target, 
-                              svn_path_repos_style);
+      if (rbaton->target)
+        svn_path_add_component (from_path, rbaton->target, 
+                                svn_path_repos_style);
       svn_path_add_component (from_path, path, svn_path_repos_style);
 
       /* Copy into our txn. */
@@ -139,8 +140,9 @@ svn_repos_delete_path (void *report_baton,
      empty string in the file case since the target is the file
      itself, not a directory containing the file). */
   delete_path = svn_stringbuf_dup (rbaton->base_path, rbaton->pool);
-  svn_path_add_component (delete_path, rbaton->target, 
-                          svn_path_repos_style);
+  if (rbaton->target)
+    svn_path_add_component (delete_path, rbaton->target, 
+                            svn_path_repos_style);
   svn_path_add_component (delete_path, path, svn_path_repos_style);
   
 
@@ -210,6 +212,7 @@ svn_repos_begin_report (void **report_baton,
                         const char *username,
                         svn_fs_t *fs,
                         svn_stringbuf_t *fs_base,
+                        svn_stringbuf_t *update_target,
                         const svn_delta_edit_fns_t *update_editor,
                         void *update_baton,
                         apr_pool_t *pool)
@@ -224,17 +227,8 @@ svn_repos_begin_report (void **report_baton,
   rbaton->path_rev_hash = apr_hash_make (pool);
   rbaton->fs = fs;
   rbaton->username = username;
-
-  /* Split the filesystem path given to us into an ANCHOR (which is
-     the root of the report) and a TARGET (which is the target of the
-     report). */
-  svn_path_split (fs_base, &rbaton->base_path, &rbaton->target,
-                  svn_path_repos_style, pool);
-
-  /* If the target is "this dir", clear it out. */
-  if (svn_path_is_thisdir (rbaton->target, svn_path_repos_style))
-    svn_stringbuf_setempty (rbaton->target);
-
+  rbaton->base_path = fs_base;
+  rbaton->target = update_target;
   rbaton->pool = pool;
   
   /* Hand reporter back to client. */
