@@ -931,7 +931,7 @@ this would have been called a ``vendor branch''.  Subversion doesn't have
 a formal ``vendor branch'', but it is sufficiently flexible that you can 
 still do much the same thing.
 
-The general procedure goes like like this.  You create a top level 
+The general procedure goes like this.  You create a top level 
 directory (we'll use @file{/vendor}) to hold the vendor branches.  Then you 
 import the third party code into a subdirectory of @file{/vendor}, and copy it 
 into @file{/trunk} where you make your local changes.  With each new
