@@ -27,14 +27,17 @@
 /* -----------------------------------------------------------------------
    don't wrap the following items
 */
-%ignore svn_client_proplist_item_t;
+#ifndef SWIGPERL
+    %ignore svn_client_proplist_item_t;
+#endif
 
 /* -----------------------------------------------------------------------
    these types (as 'type **') will always be an OUT param
 */
 %apply SWIGTYPE **OUTPARAM {
   svn_client_commit_info_t **,
-  svn_auth_provider_object_t **
+  svn_auth_provider_object_t **,
+  svn_client_ctx_t **
 };
 
 /* -----------------------------------------------------------------------
@@ -87,6 +90,22 @@
     $result = t_output_helper($result, list);
 }
 
+%typemap(perl5,in,numinputs=0) apr_array_header_t ** (apr_array_header_t *temp)
+{
+    $1 = &temp;
+}
+
+%typemap(perl5,argout) apr_array_header_t ** {
+    $result = svn_swig_pl_convert_array(*$1,SWIG_TypeQuery(
+                                              "svn_client_proplist_item_t *"));
+    argvi++;
+}
+
+%typemap(perl5,out) apr_hash_t *prop_hash {
+    $result = svn_swig_pl_prophash_to_hash($1);
+    argvi++;
+}
+
 /* -----------------------------------------------------------------------
    handle svn_wc_notify_func_t/baton pairs
 */
@@ -95,9 +114,6 @@
 
   $1 = svn_swig_py_notify_func;
   $2 = $input; /* our function is the baton. */
-}
-%typemap(perl5,argout) apr_hash_t **statushash {
-    /* ### FIXME-perl */
 }
 
 %typemap(java,in) (svn_wc_notify_func_t notify_func, void *notify_baton) {
@@ -114,16 +130,17 @@
     return $jnicall;
   }
 
-%typemap(perl5,in) (svn_wc_notify_func_t notify_func, void *notify_baton) {
-    /* ### FIXME-perl */
-}
-
 /* -----------------------------------------------------------------------
    handle svn_wc_notify_func_t/baton pairs
 */
 
 %typemap(python,in) (svn_wc_status_func_t status_func, void *status_baton) {
   $1 = svn_swig_py_status_func;
+  $2 = $input; /* our function is the baton. */
+}
+
+%typemap(perl5,in) (svn_wc_status_func_t status_func, void *status_baton) {
+  $1 = svn_swig_pl_status_func;
   $2 = $input; /* our function is the baton. */
 }
 
@@ -152,11 +169,6 @@
 %typemap(javaout) svn_client_get_commit_log_t {
     return $jnicall;
   }
-
-%typemap(perl5,in) (svn_client_get_commit_log_t log_msg_func, 
-                     void *log_msg_baton) {
-    /* ### FIXME-perl */
-}
 
 /* -----------------------------------------------------------------------
    handle svn_client_prompt_t/baton pairs
@@ -199,6 +211,15 @@
   }
 
 /* -----------------------------------------------------------------------
+   handle svn_client_blame_receiver_t/baton pairs
+*/
+
+%typemap(perl5,in) (svn_client_blame_receiver_t receiver, void *receiver_baton) {
+  $1 = svn_swig_pl_blame_func;
+  $2 = $input; /* our function is the baton. */
+}
+
+/* -----------------------------------------------------------------------
    handle the "statushash" OUTPUT param for svn_client_status()
 */
 %typemap(python,in,numinputs=0) apr_hash_t **statushash = apr_hash_t **OUTPUT;
@@ -206,10 +227,6 @@
     $result = t_output_helper(
         $result,
         svn_swig_py_convert_hash(*$1, SWIGTYPE_p_svn_wc_status_t));
-}
-
-%typemap(perl5,argout) apr_hash_t **statushash {
-    /* ### FIXME-perl */
 }
 
 /* -----------------------------------------------------------------------
@@ -275,20 +292,35 @@
     $2 = (void *) _global_callback;
 }
 
-/* For all the prompt functions create a reference for the baton
- * (which in this case is an SV pointing to the prompt callback)
- * and make that a second return from the prompt function.  The
- * auth_open_helper can then split these values up so they
- * can be stored and the callback can stay valid until the 
- * auth_baton is freed. */
-%typemap(perl5, argout) void *prompt_baton (SV * _global_callback) {
-  $result = sv_2mortal (newRV_inc (_global_callback));
-  argvi++;
+/* -----------------------------------------------------------------------
+ * For all the various functions that set a callback baton create a reference
+ * for the baton (which in this case is an SV pointing to the callback)
+ * and make that a return from the function.  The perl side should
+ * then store the return in the object the baton is attached to.
+ * If the function already returns a value then this value is follows that
+ * function.  In the case of the prompt functions auth_open_helper in Core.pm
+ * is used to split up these values.
+*/
+%typemap(perl5, argout) void *CALLBACK_BATON (SV * _global_callback) {
+  /* callback baton */
+  $result = sv_2mortal (newRV_inc (_global_callback)); argvi++; }
+
+%typemap(perl5, in) void *CALLBACK_BATON (SV * _global_callback) {
+  _global_callback = $input;
+  $1 = (void *) _global_callback;
 }
 
-/* ----------------------------------------------------------------------- */
+#ifdef SWIGPERL
+%apply void *CALLBACK_BATON {
+  void *prompt_baton,
+  void *notify_baton,
+  void *log_msg_baton,
+  void *cancel_baton
+}
+#endif
 
-/* Convert perl hashes back into apr_hash_t * for setting the config
+/* ----------------------------------------------------------------------- 
+ * Convert perl hashes back into apr_hash_t * for setting the config
  * member of the svn_client_ctx_t.   This is an ugly hack, it will
  * always allocate the new apr_hash_t out of the global current_pool
  * It would be better to make apr_hash_t's into magic variables in
@@ -304,6 +336,70 @@
   $result = svn_swig_pl_convert_hash($1, SWIG_TypeQuery("svn_config_t *"));
   argvi++;
 }
+
+/* -----------------------------------------------------------------------
+ * override default typemap for svn_client_commit_info_t for perl.  Some calls
+ * never allocate and fill the commit_info struct.  This lets us return
+ * undef for them.  Otherwise the object we pass back can cause crashes */
+%typemap(perl5, in, numinputs=0) svn_client_commit_info_t ** 
+                                 ( svn_client_commit_info_t * temp ) {
+    temp = NULL;
+    $1 = &temp;
+}
+
+%typemap(perl5, argout) svn_client_commit_info_t ** {
+    if ($1 == NULL) {
+        $result = &PL_sv_undef;
+        argvi++;
+    }  else {
+        $result = sv_newmortal();
+        SWIG_MakePtr($result, (void *)*$1,
+                     $*1_descriptor, 0);
+        argvi++;
+    }
+}
+
+/* -----------------------------------------------------------------------
+ * wcprop_changes member of svn_client_commit_info needs to be
+ * converted back and forth from an array */
+
+%typemap(perl5, out) apr_array_header_t *wcprop_changes {
+    $result = svn_swig_pl_convert_array($1,SWIG_TypeQuery("svn_prop_t *"));
+    argvi++;
+}
+
+/* -----------------------------------------------------------------------
+ * wrap svn_client_create_context */
+
+%typemap(perl5,in,numinputs=0) svn_client_ctx_t ** (svn_client_ctx_t *temp) {
+    $1 = &temp;
+}
+
+%typemap(perl5,argout) svn_client_ctx_t ** {
+  (*$1)->notify_func = svn_swig_pl_notify_func;
+  (*$1)->notify_baton = (void *) &PL_sv_undef;
+  (*$1)->log_msg_func = svn_swig_pl_get_commit_log_func;
+  (*$1)->log_msg_baton = (void *) &PL_sv_undef;
+  (*$1)->cancel_func = svn_swig_pl_cancel_func;
+  (*$1)->cancel_baton = (void *) &PL_sv_undef;
+  $result = sv_newmortal();
+  SWIG_MakePtr($result, (void *)*$1,
+               $*1_descriptor, 0);
+  argvi++;
+}  
+
+
+/* -----------------------------------------------------------------------
+ * Handle output types for svn_client_url_from_path, svn_client_uuid_from_url
+ * and svn_client_uuid_from_path */
+
+%apply const char **OUTPUT {
+    const char **url,
+    const char **uuid
+};
+
+
+
 
 /* ----------------------------------------------------------------------- */
 

@@ -1,13 +1,16 @@
 #!/usr/bin/perl -w
 
-use Test::More qw(no_plan);
+use Test::More tests => 10;
 use strict;
+no warnings 'once'; # shut up about variables that are only used once.
 
 require SVN::Core;
 require SVN::Repos;
 require SVN::Fs;
+use File::Path qw(rmtree);
+use File::Temp qw(tempdir);
 
-my $repospath = "/tmp/svn-$$";
+my $repospath = tempdir('svn-perl-test-XXXXXX', TMPDIR => 1);
 
 my $repos;
 
@@ -55,5 +58,5 @@ is ($fs->revision_prop(1, 'not:exists'), undef, 'nonexisting property');
 
 END {
 diag "cleanup";
-`rm -rf $repospath`;
+rmtree($repospath);
 }
