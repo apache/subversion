@@ -263,23 +263,23 @@
       <varlistentry>
         <term><option>-v</option></term>
         <listitem>
-          <para>Show <emphasis>all</emphasis> entries under
-            version control.</para>
+          <para>Muestra <emphasis>todas</emphasis> las entradas bajo
+            el control de versiones.</para>
         </listitem>
       </varlistentry>
 
       <varlistentry>
         <term><option>-N</option></term>
         <listitem>
-          <para>Run non-recursively (do not descend into
-            subdirectories).</para>
+          <para>Se ejecuta no-recursivamente (no desciende hacia los
+            subdirectorios).</para>
         </listitem>
       </varlistentry>
     </variablelist>
 
-    <para>The <command>status</command> command has two output
-      formats.  In the default <quote>short</quote> format, local
-      modifications look like this:</para>
+    <para>El comando <command>status</command> tiene dos formatos de
+      salida. En el formato <quote>corto</quote> por defecto, las
+      modificaciones locales se parecen a esto:</para>
 
     <screen>
 % svn status
@@ -287,9 +287,9 @@ M     ./foo.c
 M     ./bar/baz.c
 </screen>
 
-    <para>If you specify the <option>--show-updates</option>
-      (<option>-u</option>) switch, a longer output format is
-      used:</para>
+    <para>Si usted especifica la opción <option>--show-updates</option>
+      (<option>-u</option>), <!--TODO:a longer output format is
+      used-->un formato de salida más largo es usado:</para>
 
     <screen>
 % svn status -u
@@ -300,15 +300,15 @@ M             1050    ./bar/baz.c
 Status against revision:   1066
 </screen>
 
-    <para>In this case, two new columns appear.  The second column
-      contains an asterisk if the file or directory is out-of-date.
-      The third column shows the working-copy's revision number of the
-      item.  In the example above, the asterisk indicates that
-      <filename>faces.html</filename> would be patched if we updated,
-      and that <filename>bloo.png</filename> is a newly added file in
-      the repository.  (The <command>-</command> next to
-      <filename>bloo.png</filename> means that it doesn't yet exist in
-      the working copy.)</para>
+    <para>En este caso, aparecen dos columnas nuevas. La segunda columna
+      contiene un asterisco si el fichero o directorio está desactualizado.
+      La tercera columna muestra el número de revisión del objeto en la
+      copia de trabajo. En el ejemplo de arriba, el asterisco indica que
+      <filename>faces.html</filename> será parcheado si actualizamos, y
+      que <filename>bloo.png</filename> es un nuevo fichero añadido
+      en el repositorio. (El <command>-</command> al lado de
+      <filename>bloo.png</filename> significa que todavía no existe en
+      la copia de trabajo.)</para>
 
     <!-- ###TODO describe -u here as well as -uv. -u and -v use
          different <quote>long</quote> formats and need to be
@@ -318,8 +318,8 @@ Status against revision:   1066
          paragraph *is* about -u, not -v, my patch concentrated on
          that. -->
 
-    <para>Lastly, here's a quick summary of the most common status codes that
-      you may see:</para>
+    <para>Por último<!--TODO:lastly-->, aquí está un resumen rápido de
+      los códigos de estado más comunes que usted puede ver:</para>
 
     <screen>
 A    Resource is scheduled for Addition
@@ -337,14 +337,15 @@ X    Resource is external to this working copy (comes from another
     <!-- ###TODO:  This paragraph should be moved elsewhere.  We are
                    talking about status codes here, and not update.
                    Although CVS uses update as a form of status... -->
-    <para>Subversion has combined the CVS <command>P</command> and
-      <command>U</command> codes into just <command>U</command>.  When
-      a merge or conflict occurs, Subversion simply prints
-      <command>G</command> or <command>C</command>, rather than a
-      whole sentence about it.</para>
+    <para>Subversion ha combinado los codigos de CVS <command>P</command>
+      y <command>U</command> en<!--TODO:into just--> <command>U</command>.
+      Cuando ocurre una fusión o un conflicto, Subversion simplemente
+      imprime <command>G</command> o <command>C</command>, antes que
+      una oración entera sobre esto<!--TODO:rather than a whole sentence
+      about it-->.</para>
 
-    <para>For a more detailed discussion of <command>svn
-    status</command>, see <xref linkend="svn-ch-3-sect-4.3.1" />.</para>
+    <para>Para una discusión más detallada sobre <command>svn
+    status</command>, vea <xref linkend="svn-ch-3-sect-4.3.1" />.</para>
 
 
   </sect1>
