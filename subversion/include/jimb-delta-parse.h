@@ -75,8 +75,8 @@ typedef struct svn_delta_walk_t
 			    svn_string_t *base_path,
 			    svn_version_t base_version,
 			    svn_pdelta_t *pdelta,
-                            svn_delta_handler_t *handler,
-			    void *handler_baton);
+                            svn_delta_handler_t **handler,
+			    void **handler_baton);
 
   /* We are going to change the directory entry named NAME to a file.
      TEXT_DELTA specifies the file contents as a delta relative to the

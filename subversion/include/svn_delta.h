@@ -262,8 +262,8 @@ typedef size_t svn_version_t;   /* Would they ever need to be signed? */
 typedef enum svn_XML_t
 {
   svn_XML_treedelta = 1,
-  svn_XML_add,
-  svn_XML_del,
+  svn_XML_new,
+  svn_XML_delete,
   svn_XML_replace,
   svn_XML_file,
   svn_XML_dir,
@@ -276,6 +276,7 @@ typedef struct svn_delta_stackframe_t
 {
   svn_XML_t tag;     /* represents an open <tag> */
   void *baton;       /* holds caller data for a particular subdirectory */
+  svn_string_t *name /* if the tag had a "name" attribute attached */
   
   struct svn_delta_stackframe_t *next;
   struct svn_delta_stackframe_t *previous;
@@ -304,6 +305,12 @@ typedef struct svn_delta_stackframe_t
  *    closed from the delta).  So cdr'ing down the chain to the end is
  *    not so bad.  Given that deltas usually result in file IO of some
  *    kind, a little pointer chasing should be lost in the noise.
+ *
+ * The digger structure also holds critical information given to us by
+ * the uber-caller of "svn_delta_parse", such as batons and a walker_t
+ * structure which tells us what to do in the case of certain parse
+ * events.
+ *
  */
 
 typedef struct svn_delta_digger_t
@@ -320,18 +327,24 @@ typedef struct svn_delta_digger_t
 
   /* Userdata structures that we need to keep track of while we parse,
      given to us by either the SVN filesystem or the SVN client */
-  void *walk_baton;  /* (global) */
-  void *dir_baton;   /* (info about current directory we're parsing) */
+  void *walk_baton;  /* (global data from our caller) */
+  void *dir_baton;   /* (local info about root directory;  local subdir
+                         info will be stored in each stackframe structure ) */
 
   /* Has a validation error happened in the middle of an expat
-     callback?  All of our expat callbacks will check this field
-     before doing anything. */
+     callback?  signal_expat_bailout() fills in this field, and
+     svn_delta_parse() checks this value between calls to expat's
+     parser. */
   svn_error_t *validation_error;
 
   /* The expat parser itself, so that our expat callbacks have the
-     power to set themselves to NULL in the case of an error */
+     power to set themselves to NULL in the case of an error.  (Again,
+     this is done by signal_expat_bailout(). */
+  XML_Parser expat_parser;   /* (note: this is a pointer in disguise!) */
 
-  XML_Parser parser;   /* note: this is a pointer in disguise! */
+  /* A vcdiff parser, called whenever we receive binary data from expat. */
+  svn_vcdiff_parser_T *vcdiff_parser;
+
 
 } svn_delta_digger_t;
 
