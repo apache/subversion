@@ -195,14 +195,20 @@ get_category_config (svn_config_t **cfg,
   
   *cfg = NULL;
 
+  if (! config_dir)
+    {
 #ifdef SVN_WIN32
-  sys_reg_path = apr_pstrcat (pool, SVN_REGISTRY_SYS_CONFIG_PATH,
-                              category, NULL);
-  usr_reg_path = apr_pstrcat (pool, SVN_REGISTRY_USR_CONFIG_PATH,
-                              category, NULL);
+      sys_reg_path = apr_pstrcat (pool, SVN_REGISTRY_SYS_CONFIG_PATH,
+                                  category, NULL);
+      usr_reg_path = apr_pstrcat (pool, SVN_REGISTRY_USR_CONFIG_PATH,
+                                  category, NULL);
 #endif /* SVN_WIN32 */
 
-  SVN_ERR (svn_config__sys_config_path (&sys_cfg_path, category, pool));
+      SVN_ERR (svn_config__sys_config_path (&sys_cfg_path, category, pool));
+    }
+  else
+    sys_cfg_path = NULL;
+
   SVN_ERR (svn_config__user_config_path (config_dir, &usr_cfg_path, category,
                                          pool));
   SVN_ERR (read_all (cfg,
