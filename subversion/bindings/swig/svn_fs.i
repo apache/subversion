@@ -105,6 +105,7 @@ OUT_PARAM(svn_stream_t);
 
 MAKE_TYPE(svn_stream_t);
 MAKE_TYPE(svn_txdelta_stream_t);
+MAKE_PLAIN_TYPE(svn_txdelta_window_handler_t);
 
 /* ----------------------------------------------------------------------- */
 
@@ -117,4 +118,5 @@ MAKE_TYPE(svn_txdelta_stream_t);
 /* implement the hack for the types */
 MAKE_TYPE_IMPL(svn_stream_t)
 MAKE_TYPE_IMPL(svn_txdelta_stream_t)
+MAKE_PLAIN_TYPE_IMPL_NO_DECL(svn_txdelta_window_handler_t)
 %}
