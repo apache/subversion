@@ -146,11 +146,14 @@ copy_file_administratively (const char *src_path,
          "Cannot copy or move '%s' -- it's not under revision control",
          src_path);
     }
-  else if ((src_entry->schedule == svn_wc_schedule_add) || (! src_entry->url))
+  else if ((src_entry->schedule == svn_wc_schedule_add)
+           || (! src_entry->url)
+           || (src_entry->copied))
     {
       return svn_error_createf 
         (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL, pool,
-         "Cannot copy or move '%s' -- it's not in the repository yet.\n"
+         "Cannot copy or move '%s' -- it's not in the repository yet,\n"
+         "perhaps because it is a copy or is inside a copied tree.\n"
          "Try committing first.",
          src_path);
     }
