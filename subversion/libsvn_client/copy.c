@@ -341,6 +341,117 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
 }
 
 
+
+static svn_error_t *
+unlock_dirs (apr_hash_t *locked_dirs,
+             apr_pool_t *pool)
+{
+  apr_hash_index_t *hi;
+
+  /* Split if there's nothing to be done. */
+  if (! locked_dirs)
+    return SVN_NO_ERROR;
+
+  /* Clean up any locks. */
+  for (hi = apr_hash_first (pool, locked_dirs); hi; hi = apr_hash_next (hi))
+    {
+      const void *key;
+      apr_ssize_t keylen;
+      void *val;
+      svn_stringbuf_t *strkey;
+
+      apr_hash_this (hi, &key, &keylen, &val);
+      strkey = svn_stringbuf_ncreate ((const char *)key, keylen, pool);
+      SVN_ERR (svn_wc_unlock (strkey, pool));
+    }
+
+  return SVN_NO_ERROR;
+}  
+
+
+static svn_error_t *
+remove_tmpfiles (apr_hash_t *tempfiles,
+                 apr_pool_t *pool)
+{
+  apr_hash_index_t *hi;
+
+  /* Split if there's nothing to be done. */
+  if (! tempfiles)
+    return SVN_NO_ERROR;
+
+  /* Clean up any tempfiles. */
+  for (hi = apr_hash_first (pool, tempfiles); hi; hi = apr_hash_next (hi))
+    {
+      const void *key;
+      apr_ssize_t keylen;
+      void *val;
+      svn_node_kind_t kind;
+
+      apr_hash_this (hi, &key, &keylen, &val);
+      SVN_ERR (svn_io_check_path ((const char *)key, &kind, pool));
+      if (kind == svn_node_file)
+        SVN_ERR (svn_io_remove_file ((const char *)key, pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+
+static svn_error_t *
+reconcile_errors (svn_error_t *commit_err,
+                  svn_error_t *unlock_err,
+                  svn_error_t *cleanup_err,
+                  apr_pool_t *pool)
+{
+  svn_error_t *err;
+
+  /* Early release (for good behavior). */
+  if (! (commit_err || unlock_err || cleanup_err))
+    return SVN_NO_ERROR;
+
+  /* If there was a commit error, start off our error chain with
+     that. */
+  if (commit_err)
+    {
+      commit_err = svn_error_quick_wrap 
+        (commit_err, "Commit failed (details follow):");
+      err = commit_err;
+    }
+
+  /* Else, create a new "general" error that will head off the errors
+     that follow. */
+  else
+    err = svn_error_create (SVN_ERR_GENERAL, 0, NULL, pool,
+                            "Commit succeeded, but other errors follow:");
+
+  /* If there was an unlock error... */
+  if (unlock_err)
+    {
+      /* Wrap the error with some headers. */
+      unlock_err = svn_error_quick_wrap 
+        (unlock_err, "Error unlocking locked dirs (details follow):");
+
+      /* Append this error to the chain. */
+      svn_error_compose (err, unlock_err);
+    }
+
+  /* If there was a cleanup error... */
+  if (cleanup_err)
+    {
+      /* Wrap the error with some headers. */
+      cleanup_err = svn_error_quick_wrap 
+        (cleanup_err, "Error in post-commit clean-up (details follow):");
+
+      /* Append this error to the chain. */
+      svn_error_compose (err, cleanup_err);
+    }
+
+  return err;
+}
+
+
+
 static svn_error_t *
 wc_to_repos_copy (svn_client_commit_info_t **commit_info,
                   svn_stringbuf_t *src_path, 
@@ -354,21 +465,19 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
                   apr_pool_t *pool)
 {
   svn_stringbuf_t *anchor, *target, *parent, *basename;
-  void *ra_baton, *sess;
+  void *ra_baton, *session;
   svn_ra_plugin_t *ra_lib;
   const svn_delta_editor_t *editor;
   void *edit_baton;
-  const svn_delta_edit_fns_t *wrapped_old_editor;
-  void *wrapped_old_edit_baton;
   svn_node_kind_t src_kind, dst_kind;
   svn_revnum_t committed_rev = SVN_INVALID_REVNUM;
   const char *committed_date = NULL;
   const char *committed_author = NULL;
-
-  /* ### TEMPORARY ### */
-  return svn_error_create
-    (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL, pool,
-     "Copies of wc paths to repository URLs are temporarily disabled");
+  apr_hash_t *committables, *locked_dirs, *tempfiles = NULL;
+  apr_array_header_t *commit_items;
+  svn_error_t *cmt_err = NULL, *unlock_err = NULL, *cleanup_err = NULL;
+  svn_boolean_t commit_in_progress = FALSE;
+  svn_stringbuf_t *base_path, *base_url;
 
   /* Check the SRC_PATH. */
   SVN_ERR (svn_io_check_path (src_path->data, &src_kind, pool));
@@ -386,67 +495,121 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
   SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, anchor->data, pool));
 
   /* Open an RA session for the anchor URL. */
-  SVN_ERR (svn_client__open_ra_session (&sess, ra_lib, anchor, parent,
+  SVN_ERR (svn_client__open_ra_session (&session, ra_lib, anchor, parent,
                                         NULL, TRUE, TRUE, TRUE, 
                                         auth_baton, pool));
 
   /* Figure out the basename that will result from this operation. */
-  SVN_ERR (ra_lib->check_path (&dst_kind, sess, target->data,
+  SVN_ERR (ra_lib->check_path (&dst_kind, session, target->data,
                                SVN_INVALID_REVNUM));
+  
+  /* Close the RA session.  We'll re-open it after we've figured out
+     the right URL to open. */
+  SVN_ERR (ra_lib->close (session));
+  session = NULL;
+
+  /* BASE_URL defaults to DST_URL. */
+  base_url = svn_stringbuf_dup (dst_url, pool);
   if (dst_kind == svn_node_none)
-    /* use target */;
+    {
+      /* DST_URL doesn't exist under it's parent URL, so the URL we
+         will be creating is DST_URL. */
+    }
   else if (dst_kind == svn_node_dir)
     {
-      /* We need to re-open the RA session from DST_URL instead of its
-         parent directory. */
-      anchor = dst_url;
-      target = svn_stringbuf_dup (basename, pool);
-      SVN_ERR (ra_lib->close (sess));
-
-      SVN_ERR (svn_client__open_ra_session (&sess, ra_lib, anchor, src_path,
-                                            NULL, TRUE, TRUE, TRUE, 
-                                            auth_baton, pool));
+      /* DST_URL is an existing directory URL.  The URL we will be
+         creating, then, is DST_URL+BASENAME. */
+      svn_path_add_component (base_url, basename);
     }
   else
-    return svn_error_createf (SVN_ERR_FS_ALREADY_EXISTS, 0, NULL, pool,
-                              "file `%s' already exists.", dst_url->data);
+    {
+      /* DST_URL is an existing file, which can't be overwritten or
+         used as a container, so error out. */
+      return svn_error_createf (SVN_ERR_FS_ALREADY_EXISTS, 0, NULL, pool,
+                                "file `%s' already exists.", dst_url->data);
+    }
 
-  /* Fetch RA commit editor. */
-  SVN_ERR (ra_lib->get_commit_editor
-           (sess, &editor, &edit_baton,
-            &committed_rev,
-            &committed_date,
-            &committed_author,
-            message));
+  /* Get the absolute path of the WC path. */
+  SVN_ERR (svn_path_get_absolute (&base_path, src_path, pool));
 
-  /* Co-mingle the before- and after-editors with the commit
-     editor. */
+  /* Crawl the working copy for commit items. */
+  if ((cmt_err = svn_client__get_copy_committables (&committables, 
+                                                    &locked_dirs,
+                                                    base_url,
+                                                    base_path,
+                                                    pool)))
+    goto cleanup;
+
+  /* ### todo: There should be only one hash entry, which currently
+     has a hacked name until we have the entries files storing
+     canonical repository URLs.  Then, the hacked name can go away and
+     be replaced with a entry->repos (or whereever the entry's
+     canonical repos URL is stored). */
+  if (! ((commit_items = apr_hash_get (committables, 
+                                       SVN_CLIENT__SINGLE_REPOS_NAME, 
+                                       APR_HASH_KEY_STRING))))
+    goto cleanup;
+
+  /* Sort and condense our COMMIT_ITEMS. */
+  if ((cmt_err = svn_client__condense_commit_items (&base_url, 
+                                                    commit_items, 
+                                                    pool)))
+    goto cleanup;
+
+  /* Open an RA session to BASE_URL. */
+  if ((cmt_err = svn_client__open_ra_session (&session, ra_lib, base_url, NULL,
+                                              commit_items, TRUE, TRUE, TRUE,
+                                              auth_baton, pool)))
+    goto cleanup;
+
+  /* Fetch RA commit editor, giving it svn_wc_process_committed(). */
+  if ((cmt_err = ra_lib->get_commit_editor (session, &editor, &edit_baton, 
+                                            &committed_rev, &committed_date, 
+                                            &committed_author, message)))
+    goto cleanup;
+
+  /* Make a note that we have a commit-in-progress. */
+  commit_in_progress = TRUE;
+
+  /* Wrap the resulting editor with BEFORE and AFTER editors. */
   svn_delta_wrap_editor (&editor, &edit_baton,
                          before_editor, before_edit_baton,
-                         editor, edit_baton,
+                         editor, edit_baton, 
                          after_editor, after_edit_baton, pool);
 
-  /* ### todo:  This is a TEMPORARY wrapper around our editor so we
-     can use it with an old driver. */
-  svn_delta_compat_wrap (&wrapped_old_editor, &wrapped_old_edit_baton, 
-                         editor, edit_baton, pool);
+  /* Perform the commit. */
+  cmt_err = svn_client__do_commit (base_url, commit_items, editor, edit_baton, 
+                                   NULL, NULL, NULL,
+                                   &tempfiles, pool);
 
-  /* Crawl the working copy, committing as if SRC_PATH was scheduled
-     for a copy. */
-  SVN_ERR (svn_wc_crawl_as_copy (parent, basename, target,
-                                 wrapped_old_editor, wrapped_old_edit_baton,
-                                 pool));
+  commit_in_progress = FALSE;
 
-  /* Fill in the commit_info structure. */
-  *commit_info = svn_client__make_commit_info (committed_rev,
-                                               committed_author,
-                                               committed_date,
-                                               pool);
+  /* Sleep for one second to ensure timestamp integrity. */
+  apr_sleep (APR_USEC_PER_SEC * 1);
 
-  /* Close the RA session. */
-  SVN_ERR (ra_lib->close (sess));
+ cleanup:
+  /* Abort the commit if it is still in progress. */
+  if (commit_in_progress)
+    editor->abort_edit (edit_baton); /* ignore return value */
 
-  return SVN_NO_ERROR;
+  /* We were committing to RA, so close the session. */
+  if (session)
+    ra_lib->close (session);
+
+  /* Unlock any remaining locked dirs. */
+  if (locked_dirs)
+    unlock_err = unlock_dirs (locked_dirs, pool);
+
+  /* Remove any outstanding temporary text-base files. */
+  if (tempfiles)
+    cleanup_err = remove_tmpfiles (tempfiles, pool);
+
+  /* Fill in the commit_info structure */
+  *commit_info = svn_client__make_commit_info (committed_rev, 
+                                               committed_author, 
+                                               committed_date, pool);
+
+  return reconcile_errors (cmt_err, unlock_err, cleanup_err, pool);
 }
 
 
