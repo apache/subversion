@@ -1326,7 +1326,7 @@ svn_wc_remove_from_revision_control (const char *path,
   apr_status_t apr_err;
   svn_error_t *err;
   svn_boolean_t is_file;
-  svn_boolean_t left_a_file = FALSE;
+  svn_boolean_t left_something = FALSE;
   apr_pool_t *subpool = svn_pool_create (pool);
   apr_hash_t *entries = NULL;
   const char *full_path = apr_pstrdup (pool, path);
@@ -1391,21 +1391,28 @@ svn_wc_remove_from_revision_control (const char *path,
 
   else /* looking at THIS_DIR */
     {
-      const char *parent_dir, *base_name;
       apr_hash_index_t *hi;
       /* ### sanity check:  check 2 places for DELETED flag? */
 
-      /* Remove self from parent's entries file */
-      svn_path_split_nts (full_path, &parent_dir, &base_name, pool);
-      if (svn_path_is_empty_nts (parent_dir))
-        parent_dir = ".";
+      /* Remove self from parent's entries file, but only if parent is
+         a working copy.  If it's not, that's fine, we just move on. */
+      {
+        const char *parent_dir, *base_name;
+        svn_boolean_t parent_is_wc;
 
-      /* ### sanity check:  is parent_dir even a working copy?
-         if not, it should not be a fatal error.  we're just removing
-         the top of the wc. */
-      SVN_ERR (svn_wc_entries_read (&entries, parent_dir, FALSE, pool));
-      svn_wc__entry_remove (entries, base_name);
-      SVN_ERR (svn_wc__entries_write (entries, parent_dir, pool));      
+        svn_path_split_nts (full_path, &parent_dir, &base_name, pool);
+        if (svn_path_is_empty_nts (parent_dir))
+          parent_dir = ".";
+
+        SVN_ERR (svn_wc_check_wc (parent_dir, &parent_is_wc, pool));
+
+        if (parent_is_wc)
+          {
+            SVN_ERR (svn_wc_entries_read (&entries, parent_dir, FALSE, pool));
+            svn_wc__entry_remove (entries, base_name);
+            SVN_ERR (svn_wc__entries_write (entries, parent_dir, pool));
+          }
+      }
       
       /* Recurse on each file and dir entry. */
       SVN_ERR (svn_wc_entries_read (&entries, path, FALSE, subpool));
@@ -1434,7 +1441,7 @@ svn_wc_remove_from_revision_control (const char *path,
               if (err && (err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD))
                 {
                   svn_error_clear_all (err);
-                  left_a_file = TRUE;
+                  left_something = TRUE;
                 }
               else if (err)
                 return err;
@@ -1450,7 +1457,7 @@ svn_wc_remove_from_revision_control (const char *path,
               if (err && (err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD))
                 {
                   svn_error_clear_all (err);
-                  left_a_file = TRUE;
+                  left_something = TRUE;
                 }
               else if (err)
                 return err;
@@ -1467,23 +1474,23 @@ svn_wc_remove_from_revision_control (const char *path,
       /* If caller wants us to recursively nuke everything on disk, go
          ahead, provided that there are no dangling local-mod files
          below */
-      if (destroy_wf && (! left_a_file))
+      if (destroy_wf && (! left_something))
         {
           /* If the dir is *truly* empty (i.e. has no unversioned
              resources, all versioned files are gone, all .svn dirs are
              gone, and contains nothing but empty dirs), then a
              *non*-recursive dir_remove should work.  If it doesn't,
              no big deal.  Just assume there are unversioned items in
-             there and set "left_a_file" */
+             there and set "left_something" */
           apr_err = apr_dir_remove (path, subpool);
           if (apr_err)
-            left_a_file = TRUE;
+            left_something = TRUE;
         }
     }  /* end of directory case */
 
   svn_pool_destroy (subpool);
 
-  if (left_a_file)
+  if (left_something)
     return svn_error_create (SVN_ERR_WC_LEFT_LOCAL_MOD, 0, NULL, pool, "");
 
   else

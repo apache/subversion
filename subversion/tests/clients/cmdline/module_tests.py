@@ -31,8 +31,15 @@ import svntest
 
 #----------------------------------------------------------------------
 
+### todo: this is a bit hackish.  We need to formalize the ".other"
+### convention, for _both_ working copies and repositories, so that
+### the conf & symlinking code knows about them, thus enabling tests
+### that use secondary repositories and working copies to run over
+### DAV.
 def externals_test_cleanup(sbox):
-  """Clean up the 'other' repository for SBOX."""
+  """Clean up from any previous externals test with SBOX.  This
+  includes cleaning up the 'other' repository and working copy, and
+  the initialization working copy."""
   if os.path.exists(sbox.repo_dir):
     shutil.rmtree(sbox.repo_dir)
   if os.path.exists(sbox.wc_dir):
@@ -184,6 +191,32 @@ def externals_test_setup(sbox):
                                                None, None, None, None, None,
                                                wc_init_dir)
 
+
+def change_external(path, new_val):
+  """Change the value of the externals property on PATH to NEW_VAL,
+  and commit the change."""
+  tmp_f = os.tempnam(svntest.main.temp_dir, 'tmp')
+  svntest.main.file_append(tmp_f, new_val)
+  out_lines, err_lines = svntest.main.run_svn \
+                         (None, 'pset', '-F', tmp_f, 'svn:externals', path)
+  out_lines, err_lines = svntest.main.run_svn \
+                         (None, 'ci', '-m', 'log msg', '--quiet', path)
+  if (err_lines): return 1
+  os.remove(tmp_f)
+
+
+#----------------------------------------------------------------------
+
+
+### todo: It would be great if everything used the new wc.py system to
+### check output/status.  In fact, it would be great to do more output
+### and status checking period!  But must first see how well the
+### output checkers deal with multiple summary lines.  With external
+### modules, you can get the first "Updated to revision X" line, and
+### then there will be more "Updated to..." and "Checked out..." lines
+### following it, one line for each new or changed external.
+
+
 #----------------------------------------------------------------------
 
 def checkout_with_externals(sbox):
@@ -291,19 +324,9 @@ def update_receive_new_external(sbox):
            "\n"
 
   # Set and commit the property
-  D_path = os.path.join(wc_dir, "A/D")
-  tmp_f = os.tempnam(wc_dir, 'tmp')
-  svntest.main.file_append(tmp_f, new_externals_desc)
-  out_lines, err_lines = svntest.main.run_svn \
-                         (None, 'pset', '-F', tmp_f, 'svn:externals', D_path)
-  out_lines, err_lines = svntest.main.run_svn \
-                         (None, 'ci', '-m', 'log msg', '--quiet', wc_dir)
-  if (err_lines): return 1
-
-  os.remove(tmp_f)
+  change_external(os.path.join(wc_dir, "A/D"), new_externals_desc)
 
   # Update the other working copy, see if we get the new item.
-  ### todo: use the new wc.py system to check the output?
   out_lines, err_lines = svntest.main.run_svn (None, 'up', other_wc_dir)
   if err_lines: return 1
 
@@ -318,14 +341,151 @@ def update_receive_new_external(sbox):
 #----------------------------------------------------------------------
 
 def update_lose_external(sbox):
-  "(UNFINISHED) Update to lose an external module."
+  "Update to lose an external module."
+
+  if externals_test_setup(sbox):
+    return 1
+
+  wc_dir         = sbox.wc_dir
+  other_wc_dir   = wc_dir + ".other"
+  repo_dir       = sbox.repo_dir
+  repo_url       = os.path.join(svntest.main.test_area_url, repo_dir)
+  other_repo_url = repo_url + ".other"
+
+  # Checkout two working copies.
+  out_lines, err_lines = svntest.main.run_svn \
+                         (None, 'checkout', repo_url, '-d', wc_dir)
+  if err_lines: return 1
+
+  out_lines, err_lines = svntest.main.run_svn \
+                         (None, 'checkout', repo_url, '-d', other_wc_dir)
+  if err_lines: return 1
+
+  # Lose one new external item from A/D.  The lost item is
+  # "exdir_A", chosen because there are two other externals underneath
+  # it (G and H) which are not being removed.  We expect them to
+  # remain -- in other words:
+  #
+  #      BEFORE                              AFTER
+  #    ----------                          ----------     
+  #    A/exdir_A                           A/exdir_A
+  #    A/exdir_A/.svn/...                    <GONE>
+  #    A/exdir_A/mu                          <GONE>
+  #    A/exdir_A/B/...                       <GONE>
+  #    A/exdir_A/C/...                       <GONE>
+  #    A/exdir_A/D/...                       <GONE>
+  #    A/exdir_A/G/...                     A/exdir_A/G/...
+  #    A/exdir_A/H/...                     A/exdir_A/H/...
+
+  new_externals_desc = \
+           "exdir_A/G         " + os.path.join(other_repo_url, "A/D/G") + \
+           "\n"                                                         + \
+           "exdir_A/H   -r 1  " + os.path.join(other_repo_url, "A/D/H") + \
+           "\n"                                                         + \
+           "x/y/z/blah        " + os.path.join(other_repo_url, "A/B/E") + \
+           "\n"
+
+  # Set and commit the property
+  change_external(os.path.join(wc_dir, "A/D"), new_externals_desc)
+
+  # Update other working copy, see if lose & preserve things appropriately
+  out_lines, err_lines = svntest.main.run_svn (None, 'up', other_wc_dir)
+  if err_lines: return 1
+
+  exdir_A_path = os.path.join(other_wc_dir, "A", "D", "exdir_A")
+  if (not os.path.exists(exdir_A_path)):
+    print "Probing for", exdir_A_path, "failed."
+    return 1
+
+  mu_path = os.path.join(other_wc_dir, "A", "D", "exdir_A", "mu")
+  if (os.path.exists(mu_path)):
+    print mu_path, "unexpectedly still exists."
+    return 1
+
+  B_path = os.path.join(other_wc_dir, "A", "D", "exdir_A", "B")
+  if (os.path.exists(B_path)):
+    print B_path, "unexpectedly still exists."
+    return 1
+
+  C_path = os.path.join(other_wc_dir, "A", "D", "exdir_A", "C")
+  if (os.path.exists(C_path)):
+    print C_path, "unexpectedly still exists."
+    return 1
+
+  D_path = os.path.join(other_wc_dir, "A", "D", "exdir_A", "D")
+  if (os.path.exists(D_path)):
+    print D_path, "unexpectedly still exists."
+    return 1
+
+  G_path = os.path.join(other_wc_dir, "A", "D", "exdir_A", "G")
+  if (not os.path.exists(G_path)):
+    print "Probing for", G_path, "failed."
+    return 1
+
+  H_path = os.path.join(other_wc_dir, "A", "D", "exdir_A", "H")
+  if (not os.path.exists(H_path)):
+    print "Probing for", H_path, "failed."
+    return 1
+
   return 0
+
 
 
 #----------------------------------------------------------------------
 
 def update_modify_external(sbox):
-  "(UNFINISHED) Update to receive a change to an external module."
+  "Update to receive a change to an external module."
+
+  if externals_test_setup(sbox):
+    return 1
+
+  wc_dir         = sbox.wc_dir
+  other_wc_dir   = wc_dir + ".other"
+  repo_dir       = sbox.repo_dir
+  repo_url       = os.path.join(svntest.main.test_area_url, repo_dir)
+  other_repo_url = repo_url + ".other"
+
+  # Checkout two working copies.
+  out_lines, err_lines = svntest.main.run_svn \
+                         (None, 'checkout', repo_url, '-d', wc_dir)
+  if err_lines: return 1
+
+  out_lines, err_lines = svntest.main.run_svn \
+                         (None, 'checkout', repo_url, '-d', other_wc_dir)
+  if err_lines: return 1
+
+  # Change the "x/y/z/blah" external on A/D to point to a different
+  # URL.  Since no changes were made to the old checked-out external,
+  # we should get a clean replace.
+  new_externals_desc = \
+           "exdir_A           " + os.path.join(other_repo_url, "A")     + \
+           "\n"                                                         + \
+           "exdir_A/G         " + os.path.join(other_repo_url, "A/D/G") + \
+           "\n"                                                         + \
+           "exdir_A/H   -r 1  " + os.path.join(other_repo_url, "A/D/H") + \
+           "\n"                                                         + \
+           "x/y/z/blah        " + os.path.join(other_repo_url, "A/B/F") + \
+           "\n"
+
+  # Set and commit the property
+  change_external(os.path.join(wc_dir, "A/D"), new_externals_desc)
+
+  # Update other working copy, see if get the right change.
+  out_lines, err_lines = svntest.main.run_svn (None, 'up', other_wc_dir)
+  if err_lines: return 1
+
+  xyzb_path = os.path.join(other_wc_dir, "x", "y", "z", "blah")
+
+  alpha_path = os.path.join(xyzb_path, "alpha")
+  if (os.path.exists(alpha_path)):
+    print alpha_path, "unexpectedly still exists."
+    return 1
+
+  beta_path = os.path.join(xyzb_path, "beta")
+  if (os.path.exists(beta_path)):
+    print beta_path, "unexpectedly still exists."
+    return 1
+
   return 0
 
 
