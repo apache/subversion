@@ -264,14 +264,14 @@ swig-py-ext:
 	    -I$(SWIG_SRC_DIR)                                      \
 	    -I$(abs_srcdir)/subversion/include $(SVN_APR_INCLUDES) \
 	    -S$(SWIG_SRC_DIR)                                      \
-	    -L$(prefix)/lib -L$(SVN_APR_PREFIX)/lib                \
+	    -L$(DESTDIR)$(prefix)/lib -L$(SVN_APR_PREFIX)/lib      \
             build --build-base=$(SWIG_BUILD_DIR)/python/build)
 
 install-swig-py-ext:
 	(cd $(SWIG_BUILD_DIR)/python;                       \
 	 $(PYTHON) $(SWIG_SRC_DIR)/python/setup.py          \
 	    -S$(SWIG_SRC_DIR)                               \
-            install --prefix $(prefix))
+            install --prefix $(DESTDIR)$(prefix))
 
 ### Build a tarball.
 dist: 
