@@ -29,7 +29,7 @@ class Generator(gen_win.WinGeneratorBase):
       targval = "0x0103"
       target.output_name = target.name + '.exe'
     elif isinstance(target, gen_base.TargetLib):
-      if target == 'mod_dav_svn':
+      if target.is_apache_mod:
         targtype = "Win32 (x86) Dynamic-Link Library"
         targval = "0x0102"
         target.output_name = target.name + '.so'
@@ -80,7 +80,9 @@ class Generator(gen_win.WinGeneratorBase):
                                              gen_base.TargetExternal)),
       'is_utility' : ezt.boolean(isinstance(target,
                                             gen_base.TargetUtility)),
-      'is_apache_mod' : ezt.boolean(target.install == 'apache-mod'),
+      'is_apache_mod' : ezt.boolean(target.is_apache_mod),
+      'instrument_apr_pools' : self.instrument_apr_pools,
+      'instrument_purify_quantify' : self.instrument_purify_quantify,
       }
 
     self.write_with_template(fname, 'msvc_dsp.ezt', data)
@@ -136,7 +138,7 @@ class Generator(gen_win.WinGeneratorBase):
       if '-' in fname:
         fname = '"%s"' % fname
 
-      # For MSVC we need to hack around mod_dav_svn &
+      # For MSVC we need to hack around Apache modules &
       # libsvn_ra because dependencies implies linking
       # and there is no way around that
       if name == '__CONFIG__':
@@ -144,7 +146,7 @@ class Generator(gen_win.WinGeneratorBase):
       else:
         depends = [self.targets['__CONFIG__']]
 
-      if name == 'mod_dav_svn':
+      if target.is_apache_mod:
         pass
       elif name == 'depdelta':
         depends.append(self.targets['libsvn_delta'])

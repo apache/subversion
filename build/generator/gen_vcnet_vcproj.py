@@ -75,7 +75,7 @@ class Generator(gen_win.WinGeneratorBase):
 #                                             gen_base.TargetExternal)),
 #      'is_utility' : ezt.boolean(isinstance(target,
 #                                            gen_base.TargetUtility)),
-#      'is_apache_mod' : ezt.boolean(target.install == 'apache-mod'),
+#      'is_apache_mod' : ezt.boolean(target.is_apache_mod),
       }
 
     self.write_with_template(fname, 'vcnet_vcproj.ezt', data)

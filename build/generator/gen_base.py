@@ -356,6 +356,7 @@ class Target:
         raise GenError('Class "%s" has no default install location'
                        % self.__class__.__name__)
     self.install = install
+    self.is_apache_mod = (self.install == 'apache-mod')
 
     # default output name; subclasses can/should change this
     self.output = os.path.join(path, name)
