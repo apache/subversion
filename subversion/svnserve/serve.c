@@ -1242,7 +1242,7 @@ static svn_error_t *get_lock(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   const char *full_path;
   svn_lock_t *l;
 
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c", path));
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c", &path));
 
   full_path = svn_path_join(b->fs_path, svn_path_canonicalize(path, pool),
                             pool);
