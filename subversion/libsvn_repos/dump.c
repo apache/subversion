@@ -23,6 +23,7 @@
 #include "svn_string.h"
 #include "svn_hash.h"
 #include "svn_path.h"
+#include "svn_time.h"
 
 
 /*----------------------------------------------------------------------*/
@@ -597,6 +598,27 @@ write_revision_record (svn_stream_t *stream,
   svn_stringbuf_t *encoded_prophash;
 
   SVN_ERR (svn_fs_revision_proplist (&props, fs, rev, pool));
+
+  {
+    /* Run revision date properties through the time conversion to
+       canonize them. */
+    /* ### Remove this when it is no longer needed for sure. */
+    apr_time_t timetemp;
+    svn_string_t *datevalue = apr_hash_get (props,
+                                            SVN_PROP_REVISION_DATE,
+                                            APR_HASH_KEY_STRING);
+    if(datevalue)
+      {
+        SVN_ERR (svn_time_from_nts (&timetemp, datevalue->data, pool));
+        datevalue = svn_string_create (svn_time_to_nts (timetemp, pool),
+                                       pool);
+        apr_hash_set (props,
+                      SVN_PROP_REVISION_DATE,
+                      APR_HASH_KEY_STRING,
+                      datevalue);
+      }
+  }
+
   write_hash_to_stringbuf (props, svn_unpack_bytestring,
                            &encoded_prophash, pool);
 
