@@ -218,7 +218,7 @@ I.    BUILD REQUIREMENTS
           http://subversion.tigris.org/servlets/ProjectDownloadList
 
 
-      7.  Apache Web Server 2.0.44 or newer
+      7.  Apache Web Server 2.0.45 or newer
 
       The Apache HTTP server is required if you wish to offer your
       Subversion repository over the Internet. Building Subversion, the
