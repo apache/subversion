@@ -111,6 +111,10 @@ SOURCE=".\key-gen.c"
 # End Source File
 # Begin Source File
 
+SOURCE=".\node-rev.c"
+# End Source File
+# Begin Source File
+
 SOURCE=".\nodes-table.c"
 # End Source File
 # Begin Source File
@@ -188,6 +192,10 @@ SOURCE=.\id.h
 # Begin Source File
 
 SOURCE=".\key-gen.h"
+# End Source File
+# Begin Source File
+
+SOURCE=".\node-rev.h"
 # End Source File
 # Begin Source File
 

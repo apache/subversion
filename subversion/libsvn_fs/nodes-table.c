@@ -161,7 +161,7 @@ svn_fs__open_nodes_table (DB **nodes_p,
 
 
 
-/* Validating REPRESENTATION skels.  */
+/* Validating NODE-REVISION skels.  */
 
 
 static int
@@ -537,106 +537,6 @@ svn_fs__put_node_revision (svn_fs_t *fs,
                                     0)));
 
   return 0;
-}
-
-
-
-/* Creating completely new nodes.  */
-
-
-svn_error_t *
-svn_fs__create_node (svn_fs_id_t **id_p,
-                     svn_fs_t *fs,
-                     skel_t *skel,
-                     trail_t *trail)
-{
-  svn_fs_id_t *id;
-
-  /* Find an unused ID for the node.  */
-  SVN_ERR (svn_fs__new_node_id (&id, fs, trail));
-
-  /* Store its NODE-REVISION skel.  */
-  SVN_ERR (svn_fs__put_node_revision (fs, id, skel, trail));
-
-  *id_p = id;
-  return SVN_NO_ERROR;
-}
-
-
-
-/* Creating new revisions of existing nodes.  */
-
-
-svn_error_t *
-svn_fs__create_successor (svn_fs_id_t **new_id_p,
-                          svn_fs_t *fs,
-                          svn_fs_id_t *old_id,
-                          skel_t *new_skel,
-                          trail_t *trail)
-{
-  svn_fs_id_t *new_id;
-
-  /* Choose an ID for the new node, and store it in the database.  */
-  SVN_ERR (svn_fs__new_successor_id (&new_id, fs, old_id, trail));
-
-  /* Store the new skel under that ID.  */
-  SVN_ERR (svn_fs__put_node_revision (fs, new_id, new_skel, trail));
-
-  *new_id_p = new_id;
-  return SVN_NO_ERROR;
-}
-
-
-
-/* Stable nodes and deltification.  */
-
-
-/* Change ID's representation to be a delta against BASE, as part of
-   TRAIL.  */
-static svn_error_t *
-deltify (svn_fs_id_t *id, svn_fs_id_t *base, trail_t *trail)
-{
-  /* Don't actually deltify yet, since we don't have the
-     undeltification code yet so the fs-tests would fail. */
-
-#if 0
-  {
-    svn_stringbuf_t *idstr, *basestr;
-    
-    idstr   = svn_fs_unparse_id (id, trail->pool);
-    basestr = svn_fs_unparse_id (base, trail->pool);
-    
-    printf ("*** Deltifying %s against %s\n", idstr->data, basestr->data);
-  }
-#endif /* 0 */
-
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_fs__stable_node (svn_fs_t *fs,
-                     svn_fs_id_t *id,
-                     trail_t *trail)
-{
-  svn_fs_id_t *predecessor_id = svn_fs_predecessor_id (id, trail->pool);
-
-  if (predecessor_id != NULL)
-    SVN_ERR (deltify (predecessor_id, id, trail));
-
-  return SVN_NO_ERROR;
-}
-
-
-
-/* Deleting a node revision. */
-
-svn_error_t *
-svn_fs__delete_node_revision (svn_fs_t *fs,
-                              const svn_fs_id_t *id,
-                              trail_t *trail)
-{
-  return svn_fs__delete_nodes_entry (fs, id, trail);
 }
 
 

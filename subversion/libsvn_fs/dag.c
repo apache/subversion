@@ -22,6 +22,7 @@
 #include "err.h"
 #include "fs.h"
 #include "nodes-table.h"
+#include "node-rev.h"
 #include "txn-table.h"
 #include "rev-table.h"
 #include "reps-table.h"
@@ -30,26 +31,6 @@
 #include "skel.h"
 #include "trail.h"
 #include "validate.h"
-
-
-/* Accessor macros. */
-
-
-/* Access the header of a node revision skel. */
-#define NR_HEADER(node_rev) ((node_rev)->children)
-
-/* Access the property rep key of a node revision skel. */
-#define NR_PROP_KEY(node_rev) ((node_rev)->children->next)
-
-/* Access the data rep key of a node revision skel. */
-#define NR_DATA_KEY(node_rev) ((node_rev)->children->next->next)
-
-/* Access the kind skel of a node revision header. */
-#define HDR_KIND(header) ((header)->children)
-
-/* Access the revision skel of a node revision header. */
-#define HDR_REV(header) ((header)->children->next)
-
 
 
 /* Initializing a filesystem.  */
@@ -140,8 +121,8 @@ static int
 node_is_kind_p (skel_t *node_rev,
                 const char *kindstr)
 {
-  skel_t *header = NR_HEADER (node_rev);
-  return svn_fs__matches_atom (HDR_KIND (header), kindstr);
+  skel_t *header = SVN_FS__NR_HEADER (node_rev);
+  return svn_fs__matches_atom (SVN_FS__NR_HDR_KIND (header), kindstr);
 }
 
 
@@ -151,8 +132,8 @@ node_is_kind_p (skel_t *node_rev,
 static int
 node_rev_is_mutable (skel_t *node_content)
 {
-  skel_t *header = NR_HEADER (node_content);
-  skel_t *rev = HDR_REV (header);
+  skel_t *header = SVN_FS__NR_HEADER (node_content);
+  skel_t *rev = SVN_FS__NR_HDR_REV (header);
   
   return (rev->len == 0);
 }
@@ -164,7 +145,7 @@ node_rev_is_mutable (skel_t *node_content)
 static void
 node_rev_make_mutable (skel_t *node_rev)
 {
-  (HDR_REV (NR_HEADER (node_rev)))->len = 0;
+  (SVN_FS__NR_HDR_REV (SVN_FS__NR_HEADER (node_rev)))->len = 0;
   return;
 }
 
@@ -383,14 +364,14 @@ get_dir_entries (skel_t **entries,
                  skel_t *node_rev,
                  trail_t *trail)
 {
-  skel_t *header = NR_HEADER (node_rev);
+  skel_t *header = SVN_FS__NR_HEADER (node_rev);
 
   if (header)
     {
       /* Make sure we're looking at a directory node here */
-      if (svn_fs__matches_atom (HDR_KIND (header), "dir"))
+      if (svn_fs__matches_atom (SVN_FS__NR_HDR_KIND (header), "dir"))
         {
-          skel_t *rep_key = NR_DATA_KEY (node_rev);
+          skel_t *rep_key = SVN_FS__NR_DATA_KEY (node_rev);
           skel_t *rep;
           const char *key = apr_pstrndup (trail->pool,
                                           rep_key->data,
@@ -531,8 +512,8 @@ set_entry (dag_node_t *parent,
 
   SVN_ERR (get_node_revision (&parent_node_rev, parent, trail));
   rep_key = apr_pstrndup (trail->pool,
-                          (NR_DATA_KEY (parent_node_rev))->data,
-                          (NR_DATA_KEY (parent_node_rev))->len);
+                          (SVN_FS__NR_DATA_KEY (parent_node_rev))->data,
+                          (SVN_FS__NR_DATA_KEY (parent_node_rev))->len);
 
   /* Empty string is allowable, but null is not. */
   assert (rep_key != NULL);
@@ -566,8 +547,8 @@ set_entry (dag_node_t *parent,
   if (strcmp (rep_key, mutable_rep_key) != 0)
     {
       skel_t *new_node_rev = svn_fs__copy_skel (parent_node_rev, trail->pool);
-      (NR_DATA_KEY (new_node_rev))->data = mutable_rep_key;
-      (NR_DATA_KEY (new_node_rev))->len = strlen (mutable_rep_key);
+      (SVN_FS__NR_DATA_KEY (new_node_rev))->data = mutable_rep_key;
+      (SVN_FS__NR_DATA_KEY (new_node_rev))->len = strlen (mutable_rep_key);
       SVN_ERR (set_node_revision (parent, new_node_rev, trail));
     }
 
@@ -824,7 +805,7 @@ svn_fs__dag_get_proplist (skel_t **proplist_p,
   SVN_ERR (get_node_revision (&node_rev, node, trail));
 
   /* Get key skel for properties. */
-  rep_key_skel = NR_PROP_KEY (node_rev);
+  rep_key_skel = SVN_FS__NR_PROP_KEY (node_rev);
 
   /* Get the string associated with the property rep, parsing it as a
      skel. */
@@ -882,8 +863,8 @@ svn_fs__dag_set_proplist (dag_node_t *node,
 
   /* Get the property rep key. */
   orig_rep_key = apr_pstrndup (trail->pool,
-                               (NR_PROP_KEY (node_rev))->data,
-                               (NR_PROP_KEY (node_rev))->len);
+                               (SVN_FS__NR_PROP_KEY (node_rev))->data,
+                               (SVN_FS__NR_PROP_KEY (node_rev))->len);
 
   /* Get a mutable version of this rep. */
   SVN_ERR (svn_fs__get_mutable_rep (&mutable_rep_key, orig_rep_key,
@@ -904,8 +885,8 @@ svn_fs__dag_set_proplist (dag_node_t *node,
   /* If we made a new rep, record it in the node revision. */
   if (strcmp (mutable_rep_key, orig_rep_key) != 0)
     {
-      (NR_PROP_KEY (node_rev))->data = mutable_rep_key;
-      (NR_PROP_KEY (node_rev))->len = strlen (mutable_rep_key);
+      (SVN_FS__NR_PROP_KEY (node_rev))->data = mutable_rep_key;
+      (SVN_FS__NR_PROP_KEY (node_rev))->len = strlen (mutable_rep_key);
       SVN_ERR (svn_fs__put_node_revision (node->fs, node->id,
                                           node_rev, trail));
     }
@@ -1148,8 +1129,8 @@ delete_entry (dag_node_t *parent,
 
   /* Get the key for this node's data representation. */
   rep_key = apr_pstrndup (trail->pool,
-                          (NR_DATA_KEY (parent_node_rev))->data,
-                          (NR_DATA_KEY (parent_node_rev))->len);
+                          (SVN_FS__NR_DATA_KEY (parent_node_rev))->data,
+                          (SVN_FS__NR_DATA_KEY (parent_node_rev))->len);
 
   /* No REP_KEY means no representation, and no representation means
      no data, and no data means no enties...there's nothing here to
@@ -1166,8 +1147,8 @@ delete_entry (dag_node_t *parent,
   if (strcmp (rep_key, mutable_rep_key) != 0)
     {
       skel_t *new_node_rev = svn_fs__copy_skel (parent_node_rev, trail->pool);
-      (NR_DATA_KEY (new_node_rev))->data = mutable_rep_key;
-      (NR_DATA_KEY (new_node_rev))->len = strlen (mutable_rep_key);
+      (SVN_FS__NR_DATA_KEY (new_node_rev))->data = mutable_rep_key;
+      (SVN_FS__NR_DATA_KEY (new_node_rev))->len = strlen (mutable_rep_key);
       SVN_ERR (set_node_revision (parent, new_node_rev, trail));
     }
 
@@ -1286,8 +1267,8 @@ svn_fs__dag_delete_if_mutable (svn_fs_t *fs,
   {
     const char *prop_rep_key;
     prop_rep_key = apr_pstrndup (trail->pool,
-                                 (NR_PROP_KEY (node_rev))->data,
-                                 (NR_PROP_KEY (node_rev))->len);
+                                 (SVN_FS__NR_PROP_KEY (node_rev))->data,
+                                 (SVN_FS__NR_PROP_KEY (node_rev))->len);
     if (prop_rep_key[0] != '\0')
       SVN_ERR (svn_fs__delete_rep_if_mutable (fs, prop_rep_key, trail));
   }
@@ -1296,8 +1277,8 @@ svn_fs__dag_delete_if_mutable (svn_fs_t *fs,
   {
     const char *data_rep_key;
     data_rep_key = apr_pstrndup (trail->pool,
-                                 (NR_DATA_KEY (node_rev))->data,
-                                 (NR_DATA_KEY (node_rev))->len);
+                                 (SVN_FS__NR_DATA_KEY (node_rev))->data,
+                                 (SVN_FS__NR_DATA_KEY (node_rev))->len);
     if (data_rep_key[0] != '\0')
       SVN_ERR (svn_fs__delete_rep_if_mutable (fs, data_rep_key, trail));
   }
@@ -1397,113 +1378,13 @@ svn_fs__dag_link (dag_node_t *parent,
 }
 
 
-/* Local typedef for __dag_get_contents */
-typedef struct file_content_baton_t
-{
-  /* The FS from which we're reading. */
-  svn_fs_t *fs;
-
-  /* The representation skel for the file's contents.  If this is
-     null, the file has never had any contents, so all reads fetch 0
-     bytes.
-
-     Formerly, we cached the entire rep skel here, not just the key.
-     That way we didn't have to fetch the rep from the db every time
-     we want to read a little bit more of the file.  Unfortunately,
-     this has a problem: if the file's representation changes while
-     we're reading (say, it changes from fulltext to delta), we'll
-     never know it.  So for correctness, we now refetch the
-     representation skel every time we want to read another chunk.  */
-  const char *rep_key;
-  
-  /* How many bytes have been read already. */
-  apr_size_t offset;
-
-  /* Used for temporary allocations.  This is really for
-     txn_body_read_file_contents(), but to get it into
-     read_file_contents(), we have to package it here. */
-  apr_pool_t *pool;
-
-} file_content_baton_t;
-
-
-struct read_file_contents_args
-{
-  file_content_baton_t *fb;   /* The data source.             */
-  char *buf;                  /* Where to put what we read.   */
-  apr_size_t *len;            /* How much to read / was read. */
-};
-
-
-/* Read into BATON->fb->buf the *(BATON->len) bytes starting at
-   BATON->fb->offset from the data represented at BATON->fb->rep_key
-   in BATON->fb->fs, as part of TRAIL.
-
-   Afterwards, *(BATON->len) is the number of bytes actually read, and
-   BATON->fb->offset is incremented by that amount.
-   
-   If BATON->fb->rep_key is null, this is assumed to mean the file's
-   contents have no representation, i.e., the file has no contents.
-   In that case, if BATON->fb->offset > 0, return the error
-   SVN_ERR_FS_FILE_CONTENTS_CHANGED, else just set *(BATON->len) to
-   zero and return.  */
-static svn_error_t *
-txn_body_read_file_contents (void *baton, trail_t *trail)
-{
-  struct read_file_contents_args *args = baton;
-
-  if (args->fb->rep_key)
-    {
-      SVN_ERR (svn_fs__rep_read_range (args->fb->fs,
-                                       args->fb->rep_key,
-                                       args->buf,
-                                       args->fb->offset,
-                                       args->len,
-                                       trail));
-      args->fb->offset += *(args->len);
-    }
-  else if (args->fb->offset > 0)
-    {
-      return
-        svn_error_create
-        (SVN_ERR_FILE_CONTENTS_CHANGED, 0, NULL, trail->pool,
-         "A file changed between subrange reads.");
-    }
-  else
-    *(args->len) = 0;
-
-  return SVN_NO_ERROR;
-}
-
-
-/* Helper func of type svn_read_func_t, used to read the CONTENTS
-   stream in __dag_get_contents below. */
-static svn_error_t *
-read_file_contents (void *baton, char *buf, apr_size_t *len)
-{
-  file_content_baton_t *fb = baton;
-  struct read_file_contents_args args;
-
-  args.fb = fb;
-  args.buf = buf;
-  args.len = len;
-
-  SVN_ERR (svn_fs__retry_txn (fb->fs,
-                              txn_body_read_file_contents,
-                              &args,
-                              fb->pool));
-  
-  return SVN_NO_ERROR;
-}
-
-
 svn_error_t *
 svn_fs__dag_get_contents (svn_stream_t **contents,
                           dag_node_t *file,
                           trail_t *trail)
 { 
   skel_t *node_rev;
-  file_content_baton_t *baton;
+  svn_fs__rep_read_baton_t *baton;
 
   /* Make sure our node is a file. */
   if (! svn_fs__dag_is_file (file))
@@ -1517,16 +1398,17 @@ svn_fs__dag_get_contents (svn_stream_t **contents,
   baton->pool = trail->pool;
   baton->fs = file->fs;
   baton->offset = 0;
+  baton->trail = NULL;
 
   /* Go get a fresh node-revision for FILE. */
   SVN_ERR (get_node_revision (&node_rev, file, trail));
 
   /* Get the rep key. */
-  if ((NR_DATA_KEY (node_rev))->len != 0)
+  if ((SVN_FS__NR_DATA_KEY (node_rev))->len != 0)
     {
       baton->rep_key = apr_pstrndup (trail->pool,
-                                     (NR_DATA_KEY (node_rev))->data,
-                                     (NR_DATA_KEY (node_rev))->len);
+                                     (SVN_FS__NR_DATA_KEY (node_rev))->data,
+                                     (SVN_FS__NR_DATA_KEY (node_rev))->len);
     }
   else
     baton->rep_key = NULL;
@@ -1534,7 +1416,7 @@ svn_fs__dag_get_contents (svn_stream_t **contents,
   /* Create a stream object in trail->pool, and make it use our read
      func and baton. */
   *contents = svn_stream_create (baton, trail->pool);
-  svn_stream_set_read (*contents, read_file_contents);
+  svn_stream_set_read (*contents, svn_fs__rep_read_contents);
 
   /* Note that we're not registering any `close' func, because there's
      nothing to cleanup outside of our trail.  When the trail is
@@ -1569,8 +1451,8 @@ svn_fs__dag_file_length (apr_size_t *length,
   {
     skel_t *rep;
     const char *rep_key = apr_pstrndup (trail->pool,
-                                        (NR_DATA_KEY (node_rev))->data,
-                                        (NR_DATA_KEY (node_rev))->len);
+                                        (SVN_FS__NR_DATA_KEY (node_rev))->data,
+                                        (SVN_FS__NR_DATA_KEY (node_rev))->len);
 
     SVN_ERR (svn_fs__read_rep (&rep, file->fs, rep_key, trail));
     str_key = svn_fs__string_key_from_rep (rep, trail->pool);
@@ -1618,8 +1500,8 @@ svn_fs__dag_set_contents (dag_node_t *file,
     const char *old_key, *new_key;
 
     old_key = apr_pstrndup (trail->pool,
-                            (NR_DATA_KEY (node_rev_skel))->data,
-                            (NR_DATA_KEY (node_rev_skel))->len);
+                            (SVN_FS__NR_DATA_KEY (node_rev_skel))->data,
+                            (SVN_FS__NR_DATA_KEY (node_rev_skel))->len);
 
     SVN_ERR (svn_fs__get_mutable_rep (&new_key, old_key, file->fs, trail));
 
@@ -1635,8 +1517,8 @@ svn_fs__dag_set_contents (dag_node_t *file,
     if (strcmp (old_key, new_key) != 0)
       {
         /* We made a new rep, so update the node revision. */
-        (NR_DATA_KEY (node_rev_skel))->data = new_key;
-        (NR_DATA_KEY (node_rev_skel))->len  = strlen (new_key);
+        (SVN_FS__NR_DATA_KEY (node_rev_skel))->data = new_key;
+        (SVN_FS__NR_DATA_KEY (node_rev_skel))->len  = strlen (new_key);
         SVN_ERR (svn_fs__put_node_revision (file->fs, file->id,
                                             node_rev_skel, trail));
       }
@@ -1933,8 +1815,8 @@ make_node_immutable (dag_node_t *node,
     const char *prop_rep_key;
   
     prop_rep_key = apr_pstrndup (trail->pool,
-                                 (NR_PROP_KEY (node_rev))->data,
-                                 (NR_PROP_KEY (node_rev))->len);
+                                 (SVN_FS__NR_PROP_KEY (node_rev))->data,
+                                 (SVN_FS__NR_PROP_KEY (node_rev))->len);
     if (prop_rep_key && prop_rep_key[0] != '\0')
       SVN_ERR (svn_fs__make_rep_immutable (node->fs, prop_rep_key, trail));
   }
@@ -1944,8 +1826,8 @@ make_node_immutable (dag_node_t *node,
     const char *data_rep_key;
 
     data_rep_key = apr_pstrndup (trail->pool,
-                                 (NR_DATA_KEY (node_rev))->data,
-                                 (NR_DATA_KEY (node_rev))->len);
+                                 (SVN_FS__NR_DATA_KEY (node_rev))->data,
+                                 (SVN_FS__NR_DATA_KEY (node_rev))->len);
     if (data_rep_key && data_rep_key[0] != '\0')
       SVN_ERR (svn_fs__make_rep_immutable (node->fs, data_rep_key, trail));
   }
@@ -1956,8 +1838,8 @@ make_node_immutable (dag_node_t *node,
     char *revstr;
 
     revstr = apr_psprintf (trail->pool, "%lu", (unsigned long) rev);
-    (HDR_REV (NR_HEADER (node_rev)))->data = revstr;
-    (HDR_REV (NR_HEADER (node_rev)))->len = strlen (revstr);
+    (SVN_FS__NR_HDR_REV (SVN_FS__NR_HEADER (node_rev)))->data = revstr;
+    (SVN_FS__NR_HDR_REV (SVN_FS__NR_HEADER (node_rev)))->len = strlen (revstr);
     SVN_ERR (set_node_revision (node, node_rev, trail));
   }
 
