@@ -372,13 +372,13 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
         }
       else
         {
+          apr_time_t timestamp;
           svn_string_t *sname = svn_string_create (name, loggy->pool);
           svn_string_t *revstr = apr_hash_get (ah,
                                                SVN_WC_ENTRY_ATTR_REVISION,
                                                APR_HASH_KEY_STRING);
           svn_revnum_t new_revision = (revstr ? atoi (revstr->data)
                                       : SVN_INVALID_REVNUM);
-          apr_time_t timestamp = 0;
           int flags = 0;
           
           enum svn_node_kind kind = svn_node_unknown;
@@ -416,42 +416,61 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
           if (apr_hash_get (ah, SVN_WC_ENTRY_ATTR_CONFLICT,
                             APR_HASH_KEY_STRING))
             flags |= SVN_WC_ENTRY_CONFLICT;
-          
-          /* Get the timestamp only if the working file exists. */
-          {
-            /* kff todo: there is an issue here.  The timestamp should
-               be done after the wfile is updated. */
-            enum svn_node_kind wfile_kind;
-            err = svn_io_check_path (wfile, &wfile_kind, loggy->pool);
-            if (err)
-              {
-                signal_error (loggy, svn_error_createf
-                              (SVN_ERR_WC_BAD_ADM_LOG,
-                               0,
-                               NULL,
-                               loggy->pool,
-                               "error checking path %s",
-                               name));
-                return;
-              }
-            if (kind == svn_node_file)
-              err = svn_wc__file_affected_time (&timestamp,
-                                                wfile,
-                                                loggy->pool);
-          }
 
-          if (err)
-            {
-              signal_error (loggy, svn_error_createf
-                            (SVN_ERR_WC_BAD_ADM_LOG,
-                             0,
-                             NULL,
-                             loggy->pool,
-                             "error discovering file affected time on %s",
-                             name));
-              return;
-            }
+          /* Did the log command give us a timestamp?  There are three
+             possible scenarios here.  */
+          {
+          svn_string_t *timestr = apr_hash_get (ah,
+                                                SVN_WC_ENTRY_ATTR_TIMESTAMP,
+                                                APR_HASH_KEY_STRING);
+
+          /* Scenario 1:  no timestamp mentioned at all */
+          if (! timestr)
+            timestamp = 0;  /* this tells merge_sync to ignore the
+                               field */
           
+          /* Scenario 2:  use the working copy's timestamp */
+          else if (! strcmp (timestr->data, SVN_WC__LOG_ATTR_TIMESTAMP_WC))
+            {
+              enum svn_node_kind wfile_kind;
+              err = svn_io_check_path (wfile, &wfile_kind, loggy->pool);
+              if (err)
+                {
+                  signal_error (loggy, svn_error_createf
+                                (SVN_ERR_WC_BAD_ADM_LOG,
+                                 0,
+                                 NULL,
+                                 loggy->pool,
+                                 "error checking path %s",
+                                 name));
+                  return;
+                }
+              if (wfile_kind == svn_node_file)
+                err = svn_wc__file_affected_time (&timestamp,
+                                                  wfile,
+                                                  loggy->pool);
+              if (err)
+                {
+                  signal_error (loggy, svn_error_createf
+                                (SVN_ERR_WC_BAD_ADM_LOG,
+                                 0,
+                                 NULL,
+                                 loggy->pool,
+                                 "error discovering file affected time on %s",
+                                 name));
+                  return;
+                }
+            }
+
+          /* Scenario 3:  use the integer provided, as-is. */
+          else
+            /* Is atol appropriate here for converting an apr_time_t
+               to a string and then back again?  Or should we just use
+               our svn_wc__time_to_string and string_to_time? */
+            timestamp = (apr_time_t) atol (timestr->data);
+          }
+          
+          /* Now write the new entry out */
           err = svn_wc__entry_merge_sync (loggy->path,
                                           sname,
                                           new_revision,
