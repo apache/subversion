@@ -177,7 +177,6 @@ Changes to svn_delta_edit_fns_t:
    discussed on the list; see the "STATUS" lines for more.
 
    =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-
    Change #2:  Modify prototypes of replace_*() and add_*()
    STATUS: discussing on list
    The Way It Works Now:
@@ -410,3 +409,147 @@ Changes to svn_delta_edit_fns_t:
    Rationale:
       I think it's all been explained above.  Other folks, feel free to
       add to this explanation.
+
+Anyone:
+
+   These three mails between Greg Stein and Ben explain the issue:
+
+   ----------------------------------------------------------------------
+   From: Greg Stein <gstein@lyra.org>
+   Subject: Re: CVS update: subversion/subversion/libsvn_ra_local \
+            Makefile.am ra_local.h ra_plugin.c split_url.c
+   To: dev@subversion.tigris.org
+   Date: Fri, 9 Feb 2001 17:27:06 -0800
+   
+   On Sat, Feb 10, 2001 at 12:59:19AM -0000, sussman@tigris.org wrote:
+   >...
+   >   @@ -283,7 +296,10 @@
+   >                       apr_pool_t *pool,
+   >                       const svn_ra_plugin_t **plugin)
+   >    {
+   >   -  *plugin = ra_local_plugin;
+   >   +  svn_ra_plugin_t *p = apr_pcalloc (pool, sizeof (*p));
+   >   +  memcpy (p, &ra_local_plugin, sizeof (ra_local_plugin));
+   >   +
+   >   +  *plugin = p;
+   
+   Overkill. Use:
+   
+       *plugin = &ra_local_plugin;
+   
+   >      /* are we ever going to care about abi_version? */
+   
+   Yes.
+   
+   >... [ split_url ]
+   
+   This function would be a *lot* simpler, if you:
+   
+   1) make a dup of the URL
+   2) strip the leading file:// portion (leaving "/abs/path/foo/bar")
+   3) loop:
+      a) try to open FS with the path. succeed: break
+      b) chop the last component off
+   4) fs_path is what remains, repos_path is &URL[strlen(fs_path) + 7]
+      (the +7 is to account for "file://" at the start of the URL)
+   
+   The whole algorithm only requires one string dup to hold the shrinking path.
+   stripping the leading "file://" is simply advancing string->data (we should
+   have a utility function for this, because string->blocksize must shrink).
+   The chopping just drops in '\0' into the dup'd path. The return is done by
+   duplicating the input URL, or altering the input ->data and ->blocksize
+   field values.
+   
+   And warning: I'm not sure whether a file URL is in "local" or "URL" style
+   separators. Strictly speaking, our "URL style" is really "http scheme URL
+   style". If the file URL uses "/" no matter what, then we would (strictly)
+   need to convert the dup'd path (the fs_path) to local style before beginning
+   the loop/test.
+   
+   Cheers,
+   -g
+   ----------------------------------------------------------------------
+   From: Ben Collins-Sussman <sussman@newton.ch.collab.net>
+   Subject: Re: CVS update: subversion/subversion/libsvn_ra_local \
+            Makefile.am ra_local.h ra_plugin.c split_url.c
+   To: Greg Stein <gstein@lyra.org>
+   Cc: dev@subversion.tigris.org
+   Date: 09 Feb 2001 20:06:42 -0600
+   
+   Greg Stein <gstein@lyra.org> writes:
+   
+   > Overkill. Use:
+   > 
+   >     *plugin = &ra_local_plugin;
+   > 
+   
+   Heh, sure.  :)
+   > 
+   > >... [ split_url ]
+   > 
+   > This function would be a *lot* simpler, if you:
+   > 
+   > 1) make a dup of the URL
+   > 2) strip the leading file:// portion (leaving "/abs/path/foo/bar")
+   > 3) loop:
+   >    a) try to open FS with the path. succeed: break
+   >    b) chop the last component off
+   > 4) fs_path is what remains, repos_path is &URL[strlen(fs_path) + 7]
+   >    (the +7 is to account for "file://" at the start of the URL)
+   
+   Oh, this is the *easy* way, which I purposely avoided.
+   
+   I wanted to be "correct" by searching from the other direction,
+   thereby always finding the repository with the shortest path, not the
+   longest.
+   
+   Yes, I know, we agreed that we will never allow nested repositories.
+   I guess I was being paranoid and trying to emulate Apache's search
+   methods.  :)
+   
+   Do you think it's worth re-writing?
+
+   ----------------------------------------------------------------------
+   From: Greg Stein <gstein@lyra.org>
+   Subject: Re: CVS update: subversion/subversion/libsvn_ra_local \
+            Makefile.am ra_local.h ra_plugin.c split_url.c
+   To: dev@subversion.tigris.org
+   Date: Fri, 9 Feb 2001 19:19:57 -0800
+   
+   On Fri, Feb 09, 2001 at 08:06:42PM -0600, Ben Collins-Sussman wrote:
+   > Greg Stein <gstein@lyra.org> writes:
+   >...
+   > > >... [ split_url ]
+   > > 
+   > > This function would be a *lot* simpler, if you:
+   > > 
+   > > 1) make a dup of the URL
+   > > 2) strip the leading file:// portion (leaving "/abs/path/foo/bar")
+   > > 3) loop:
+   > >    a) try to open FS with the path. succeed: break
+   > >    b) chop the last component off
+   > > 4) fs_path is what remains, repos_path is &URL[strlen(fs_path) + 7]
+   > >    (the +7 is to account for "file://" at the start of the URL)
+   > 
+   > Oh, this is the *easy* way, which I purposely avoided.
+   > 
+   > I wanted to be "correct" by searching from the other direction,
+   > thereby always finding the repository with the shortest path, not the
+   > longest.
+   
+   Ah. Right. Sorry...
+   
+   But still a simple change. Search from the left for '/'; replace with '\0';
+   test for an FS; if not found, then put the '/' back and look for the next
+   '/' (repeat).
+   
+   >...
+   > Do you think it's worth re-writing?
+   
+   Yes, given how much simpler it could be, I think it would be a STACK item
+   that anybody could pick up. It works now, but for long-term maintenance, it
+   would be nice to have a simplifed version.
+   
+   Cheers,
+   -g
+   ----------------------------------------------------------------------
