@@ -2916,7 +2916,7 @@ msgstr "URL '%s' 並不存在於該修訂版中"
 #: libsvn_client/prop_commands.c:104
 #, c-format
 msgid "'%s' is a wcprop, thus not accessible to clients"
-msgstr ""
+msgstr "'%s' 是工作複本性質, 因此無法供用戶端存取"
 
 #: libsvn_client/prop_commands.c:182
 #, c-format
@@ -2990,44 +2990,53 @@ msgstr "於 '%s' 的檔案庫有 uuid '%s', 但是工作複本的是 '%s'"
 msgid "Unrecognized revision type requested for '%s'"
 msgstr "無法辨識要求的 '%s' 的修訂版類別"
 
+# as-is
 #: libsvn_delta/svndiff.c:350
 #, c-format
 msgid "Invalid diff stream: insn %d cannot be decoded"
-msgstr ""
+msgstr "Invalid diff stream: insn %d cannot be decoded"
 
+# as-is
 #: libsvn_delta/svndiff.c:354
 #, c-format
-msgid "Invalid diff stream: insn %d has non-positive length"
-msgstr ""
+msgid "Invalid diff stream: insn %d has non-positive lengthn"
+msgstr "Invalid diff stream: insn %d has non-positive length"
 
+# as-is
 #: libsvn_delta/svndiff.c:358
 #, c-format
 msgid "Invalid diff stream: insn %d overflows the target view"
-msgstr ""
+msgstr "Invalid diff stream: insn %d overflows the target view"
 
+# as-is
 #: libsvn_delta/svndiff.c:367
 #, c-format
 msgid "Invalid diff stream: [src] insn %d overflows the source view"
-msgstr ""
+msgstr "Invalid diff stream: [src] insn %d overflows the source view"
 
+# as-is
 #: libsvn_delta/svndiff.c:374
 #, c-format
 msgid ""
 "Invalid diff stream: [tgt] insn %d starts beyond the target view position"
 msgstr ""
+"Invalid diff stream: [tgt] insn %d starts beyond the target view position"
 
+# as-is
 #: libsvn_delta/svndiff.c:381
 #, c-format
 msgid "Invalid diff stream: [new] insn %d overflows the new data section"
-msgstr ""
+msgstr "Invalid diff stream: [new] insn %d overflows the new data section"
 
+# as-is
 #: libsvn_delta/svndiff.c:391
 msgid "Delta does not fill the target window"
-msgstr ""
+msgstr "Delta does not fill the target window"
 
+# as-is
 #: libsvn_delta/svndiff.c:394
 msgid "Delta does not contain enough new data"
-msgstr ""
+msgstr "Delta does not contain enough new data"
 
 #: libsvn_delta/svndiff.c:471
 msgid "Svndiff has invalid header"
@@ -3052,7 +3061,7 @@ msgstr "Unexpected end of svndiff input"
 #: libsvn_diff/diff_file.c:1169
 #, c-format
 msgid "Failed to delete mmap '%s'"
-msgstr ""
+msgstr "無法刪除 mmap '%s'"
 
 #: libsvn_fs/fs-loader.c:99 libsvn_ra/ra_loader.c:147
 #: libsvn_ra/ra_loader.c:160
@@ -3908,15 +3917,16 @@ msgstr "有缺陷的錯誤列表"
 msgid "Unknown status '%s' in command response"
 msgstr "命令回應中的未知狀態 '%s'"
 
+# as-is
 #: libsvn_repos/commit.c:117
 #, c-format
 msgid "Out of date: '%s' in transaction '%s'"
-msgstr ""
+msgstr "Out of date: '%s' in transaction '%s'"
 
 #: libsvn_repos/commit.c:224 libsvn_repos/commit.c:356
 #, c-format
 msgid "Got source path but no source revision for '%s'"
-msgstr ""
+msgstr "'%s' 中有來源路徑, 但是沒有來源修訂版"
 
 #: libsvn_repos/commit.c:248 libsvn_repos/commit.c:380
 #, c-format
@@ -3945,11 +3955,14 @@ msgstr "Unable to open root of edit"
 msgid "Invalid target path"
 msgstr "無效的目標類型"
 
+# as-is
 #: libsvn_repos/delta.c:256
 msgid ""
 "Invalid editor anchoring; at least one of the input paths is not a directory "
 "and there was no source entry"
 msgstr ""
+"Invalid editor anchoring; at least one of the input paths is not a directory "
+"and there was no source entry"
 
 # as-is
 #: libsvn_repos/dump.c:416
@@ -3989,11 +4002,13 @@ msgid ""
 "Storage of non-regular property '%s' is disallowed through the repository "
 "interface, and could indicate a bug in your client"
 msgstr ""
+"Storage of non-regular property '%s' is disallowed through the repository "
+"interface, and could indicate a bug in your client"
 
 #: libsvn_repos/fs-wrap.c:294
 #, c-format
 msgid "Write denied:  not authorized to read all of revision %ld."
-msgstr ""
+msgstr "拒絕寫入:  未授權讀取所有的修訂版 %ld."
 
 #: libsvn_repos/hooks.c:65
 #, c-format
@@ -4012,7 +4027,7 @@ msgstr "關閉標準錯誤管道的寫入端時發生錯誤"
 #: libsvn_repos/hooks.c:90
 #, c-format
 msgid "Failed to run '%s' hook"
-msgstr ""
+msgstr "無法執行 '%s' 掛勾"
 
 #: libsvn_repos/hooks.c:105
 #, c-format
@@ -4020,10 +4035,12 @@ msgid ""
 "'%s' hook failed with error output:\n"
 "%s"
 msgstr ""
+"'%s' 掛勾失敗, 錯誤輸出為:\n"
+"%s"
 
 #: libsvn_repos/hooks.c:116
 msgid "Error closing read end of stderr pipe"
-msgstr ""
+msgstr "關閉標準錯誤管道的讀取端時發生錯誤"
 
 #: libsvn_repos/hooks.c:120
 msgid "Error closing null file"
@@ -4032,13 +4049,15 @@ msgstr "關閉 null 檔案時發生錯誤"
 #: libsvn_repos/hooks.c:202
 #, c-format
 msgid "Failed to run '%s' hook; broken symlink"
-msgstr ""
+msgstr "無法執行 '%s' 掛勾: 壞掉的符號連結"
 
 #: libsvn_repos/hooks.c:343
 msgid ""
 "Repository has not been enabled to accept revision propchanges;\n"
 "ask the administrator to create a pre-revprop-change hook"
 msgstr ""
+"檔案庫並未設定成可接受修訂版性質更動;\n"
+"請要求管理員建立 pre-revprop-change 掛勾"
 
 #: libsvn_repos/load.c:155 libsvn_repos/load.c:167
 msgid "Found malformed header block in dumpfile stream"
@@ -4092,8 +4111,9 @@ msgstr "相對來源修訂版 %ld 不存在於目前檔案庫之中"
 
 #: libsvn_repos/load.c:983
 msgid "Malformed dumpstream: Revision 0 must not contain node records"
-msgstr ""
+msgstr "有缺陷的傾印串流: 修訂版 0 不可包含節點紀錄"
 
+# as-is
 #: libsvn_repos/load.c:1027
 #, c-format
 msgid "Unrecognized node-action on node '%s'"
@@ -4729,7 +4749,7 @@ msgstr "請使用 '%s help' 以了解用法.\n"
 #: libsvn_subr/path.c:1070
 #, c-format
 msgid "Couldn't determine absolute path of '%s'"
-msgstr ""
+msgstr "無法決定 '%s' 的絕對路徑"
 
 #: libsvn_subr/path.c:1109
 #, c-format
@@ -4738,7 +4758,7 @@ msgstr "'%s' 不是檔案或目錄名稱"
 
 #: libsvn_subr/path.c:1215
 msgid "Can't determine the native path encoding"
-msgstr ""
+msgstr "無法決定原生的路徑編碼"
 
 #: libsvn_subr/path.c:1269
 #, c-format
@@ -4752,11 +4772,11 @@ msgstr "檔案 '%s' 內的換列字元不一致"
 
 #: libsvn_subr/utf.c:147
 msgid "Can't lock charset translation mutex"
-msgstr ""
+msgstr "無法鎖定字元轉譯 mutex"
 
 #: libsvn_subr/utf.c:165 libsvn_subr/utf.c:215
 msgid "Can't unlock charset translation mutex"
-msgstr ""
+msgstr "無法解鎖字元轉譯 mutex"
 
 #: libsvn_subr/utf.c:228
 #, c-format
@@ -4782,12 +4802,18 @@ msgid ""
 "\n"
 "Non-ASCII character detected (see above), and unable to convert to/from UTF-8"
 msgstr ""
+"安全資料:\n"
+"\"%s\"\n"
+"... 跟著非 ASCII 位元 %d.\n"
+"\n"
+"偵測到非 ASCII 字元 (見上述資料), 無法轉換自/至 UTF-8"
 
 #: libsvn_subr/utf.c:413
 #, c-format
 msgid ""
 "Non-ASCII character (code %d) detected, and unable to convert to/from UTF-8"
 msgstr ""
+"偵測到非 ASCII 字元 (字碼 %d), 無法轉換自/至 UTF-8"
 
 #: libsvn_subr/utf.c:455
 #, c-format
@@ -4797,6 +4823,10 @@ msgid ""
 "followed by invalid UTF-8 sequence\n"
 "(hex:%s)"
 msgstr ""
+"有效 UTF-8 資料\n"
+"(十六進制:%s)\n"
+"跟隨無效的 UTF-8 序列\n"
+"(十六進制:%s)"
 
 #: libsvn_subr/validate.c:48
 #, c-format
@@ -5856,7 +5886,7 @@ msgstr "其父節點已捨棄的節點偷跑進來"
 
 #: svndumpfilter/main.c:637
 msgid "Delta property block detected - not supported by svndumpfilter"
-msgstr ""
+msgstr "偵測到差異性質區塊 - svndumpfilter 不支援"
 
 #: svndumpfilter/main.c:763
 msgid "Do not display filtering statistics."
