@@ -332,13 +332,17 @@ replace_root (void *edit_baton,
 {
   struct edit_baton *eb = (struct edit_baton *) edit_baton;
   apr_pool_t *pool = svn_pool_create (eb->pool, NULL);
-  svn_string_t *str = svn_xml_make_header (pool);
-  apr_size_t len = str->len;
+  svn_string_t *str;
+  apr_size_t len;
   svn_error_t *err;
+
+  str = svn_xml_make_header (pool);
+  svn_xml_append_tag (str, pool, svn_xml_open_tag, "delta-pkg", NULL);
 
   *dir_baton = make_dir_baton (eb, elem_delta_pkg);
   eb->elem = elem_dir;
 
+  len = str->len;
   err = eb->output (eb->output_baton, str->data, &len, eb->pool);
   apr_destroy_pool (pool);
   return err;
