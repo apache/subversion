@@ -23,7 +23,6 @@
 ;;; - mode-line-string, to show newly added files, modified props?
 ;;;   see vc-cvs-mode-line-string
 ;;; - merge across arbitrary revisions
-;;; - allow getting read-only copies for vc-version-other-window etc
 ;;;
 ;;; VC passes the vc-svn-register function a COMMENT argument, which
 ;;; is like the file description in CVS and RCS.  Could we store the
@@ -407,5 +406,8 @@ This function returns a status of either 0 (no differences found), or
       (if (or async (> (buffer-size (get-buffer "*vc-diff*")) 0))
           1 0))))
 
+(defun vc-svn-find-version (file rev buffer)
+  (apply 'vc-do-command buffer 0 vc-svn-program-name file 
+         "cat" (list "-r" rev)))
 
 (provide 'vc-svn)
