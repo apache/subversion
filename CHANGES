@@ -18,7 +18,7 @@ Version 0.24.0 (released 15 June 2003, revision XXXX, branches/release-0.24.0)
  * fix export over ra_svn (#1318)
  * fix ra_svn error transmission bug (#1146)
  * fix ra_svn corruption in tunnel mode (#1145)
- * make svnserve multi-threaded on non-fork platforms
+ * make svnserve multi-threaded on non-fork platforms (now works on Windows)
  * remove svnserve -F and -S options
  * various memory use improvements (#1323)
  * various performance improvements for all protocols
