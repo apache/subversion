@@ -639,7 +639,8 @@ svn_ra_local__get_file (void *session_baton,
                         svn_revnum_t revision,
                         svn_stream_t *stream,
                         svn_revnum_t *fetched_rev,
-                        apr_hash_t **props)
+                        apr_hash_t **props,
+                        apr_pool_t *pool)
 {
   svn_fs_root_t *root;
   svn_stream_t *contents;
@@ -660,26 +661,23 @@ svn_ra_local__get_file (void *session_baton,
 
   /* If we were given a relative path to append, append it. */
   if (path)
-    abs_path = svn_path_join (abs_path, path, sbaton->pool);
+    abs_path = svn_path_join (abs_path, path, pool);
 
   /* Open the revision's root. */
   if (! SVN_IS_VALID_REVNUM (revision))
     {
-      SVN_ERR (svn_fs_youngest_rev (&youngest_rev, sbaton->fs, sbaton->pool));
-      SVN_ERR (svn_fs_revision_root (&root, sbaton->fs,
-                                     youngest_rev, sbaton->pool));
+      SVN_ERR (svn_fs_youngest_rev (&youngest_rev, sbaton->fs, pool));
+      SVN_ERR (svn_fs_revision_root (&root, sbaton->fs, youngest_rev, pool));
       if (fetched_rev != NULL)
         *fetched_rev = youngest_rev;
     }
   else
-    SVN_ERR (svn_fs_revision_root (&root, sbaton->fs,
-                                   revision, sbaton->pool));
+    SVN_ERR (svn_fs_revision_root (&root, sbaton->fs, revision, pool));
 
   if (stream)
     {
       /* Get a stream representing the file's contents. */
-      SVN_ERR (svn_fs_file_contents (&contents, root,
-                                     abs_path, sbaton->pool));
+      SVN_ERR (svn_fs_file_contents (&contents, root, abs_path, pool));
       
       /* Now push data from the fs stream back at the caller's stream. */
       while (1)
@@ -723,11 +721,9 @@ svn_ra_local__get_file (void *session_baton,
     {
       svn_revnum_t committed_rev;
       const char *committed_date, *last_author;
-      svn_string_t *value;
-      char *revision_str = NULL;
 
       /* Create a hash with props attached to the fs node. */
-      SVN_ERR (svn_fs_node_proplist (props, root, abs_path, sbaton->pool));
+      SVN_ERR (svn_fs_node_proplist (props, root, abs_path, pool));
       
       /* Now add some non-tweakable metadata to the hash as well... */
     
@@ -736,32 +732,27 @@ svn_ra_local__get_file (void *session_baton,
                                              &committed_date,
                                              &last_author,
                                              root, abs_path,
-                                             sbaton->pool));
+                                             pool));
 
-
-      revision_str = apr_psprintf (sbaton->pool, "%" SVN_REVNUM_T_FMT,
-                                   committed_rev);
-      value = svn_string_create (revision_str, sbaton->pool);
-      apr_hash_set (*props, SVN_PROP_ENTRY_COMMITTED_REV, 
-                    APR_HASH_KEY_STRING, value);
-                    
-      if (committed_date)
-        value = svn_string_create (committed_date, sbaton->pool);
-      else
-        value = NULL;
-      apr_hash_set (*props, SVN_PROP_ENTRY_COMMITTED_DATE, 
-                    APR_HASH_KEY_STRING, value);
-      
-      if (last_author)
-        value = svn_string_create (last_author, sbaton->pool);
-      else
-        value = NULL;
-      apr_hash_set (*props, SVN_PROP_ENTRY_LAST_AUTHOR, 
-                    APR_HASH_KEY_STRING, value);
-            
-      value = svn_string_create (sbaton->uuid, sbaton->pool); 
-      apr_hash_set (*props, SVN_PROP_ENTRY_UUID,
-                    APR_HASH_KEY_STRING, value);
+      apr_hash_set (*props, 
+                    SVN_PROP_ENTRY_COMMITTED_REV, 
+                    APR_HASH_KEY_STRING, 
+                    svn_string_createf (pool, "%" SVN_REVNUM_T_FMT, 
+                                        committed_rev));
+      apr_hash_set (*props, 
+                    SVN_PROP_ENTRY_COMMITTED_DATE, 
+                    APR_HASH_KEY_STRING, 
+                    committed_date ? svn_string_create (committed_date, pool)
+                                   : NULL) ;
+      apr_hash_set (*props, 
+                    SVN_PROP_ENTRY_LAST_AUTHOR, 
+                    APR_HASH_KEY_STRING, 
+                    last_author ? svn_string_create (last_author, pool)
+                                : NULL);
+      apr_hash_set (*props, 
+                    SVN_PROP_ENTRY_UUID,
+                    APR_HASH_KEY_STRING, 
+                    svn_string_create (sbaton->uuid, pool));
 
       /* We have no 'wcprops' in ra_local, but might someday. */
     }

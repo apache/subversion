@@ -847,7 +847,7 @@ repos_to_wc_copy (const char *src_url,
          relative path of "", because we opened SRC_URL, which is
          already the full URL to the file. */         
       SVN_ERR (ra_lib->get_file (sess, "", src_revnum, fstream, 
-                                 &fetched_rev, &props));
+                                 &fetched_rev, &props, pool));
 
       /* Close the file. */
       status = apr_file_close (fp);

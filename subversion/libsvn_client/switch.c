@@ -240,7 +240,7 @@ svn_client_switch (const char *path,
          means it ends up in our unique tmpfile.  We also get the full
          proplist. */
       SVN_ERR (ra_lib->get_file (session, "", revnum, file_stream,
-                                 &fetched_rev, &prophash));
+                                 &fetched_rev, &prophash, pool));
       SVN_ERR (svn_stream_close (file_stream));
       apr_err = apr_file_close (fp); 
       if (apr_err)

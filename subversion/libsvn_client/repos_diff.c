@@ -287,7 +287,8 @@ get_file_from_ra (struct file_baton *b)
                                             b->path,
                                             b->edit_baton->revision,
                                             fstream, NULL,
-                                            &(b->pristine_props)));
+                                            &(b->pristine_props),
+                                            b->pool));
 
   status = apr_file_close (file);
   if (status)

@@ -364,7 +364,8 @@ typedef struct svn_ra_plugin_t
   /** Fetch the contents and properties of file @a path at @a revision.
    *
    * Fetch the contents and properties of file @a path at @a revision.
-   * Interpret @a path relative to the url in @a session_baton.
+   * Interpret @a path relative to the url in @a session_baton.  Use
+   * @a pool for all allocations.
    *
    * If @a revision is @c SVN_INVALID_REVNUM (meaning 'head') and
    * @a *fetched_rev is not @c NULL, then this function will set
@@ -385,7 +386,8 @@ typedef struct svn_ra_plugin_t
                             svn_revnum_t revision,
                             svn_stream_t *stream,
                             svn_revnum_t *fetched_rev,
-                            apr_hash_t **props);
+                            apr_hash_t **props,
+                            apr_pool_t *pool);
 
   /** If @a dirents is non @c NULL, set @a *dirents to contain all the entries
    * of directory @a path at @a revision.
