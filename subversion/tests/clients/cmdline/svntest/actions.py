@@ -63,60 +63,69 @@ def guarantee_greek_repository(path):
   """Guarantee that a local svn repository exists at PATH, containing
   nothing but the greek-tree at revision 1."""
 
-  if os.path.exists(path):
-    shutil.rmtree(path)
+  if path == main.pristine_dir:
+    print "ERROR:  attempt to overwrite the pristine repos!  Aborting."
+    sys.exit(1)
 
-  main.create_repos(path)
-  
-  # dump the greek tree to disk if it is not already there.
-  if not os.path.exists(main.greek_dump_dir):
+  # If there's no pristine repos, create one.
+  if not os.path.exists(main.pristine_dir):
+    main.create_repos(main.pristine_dir)
+    
+    # dump the greek tree to disk.
     main.greek_state.write_to_disk(main.greek_dump_dir)
 
-  # build a URL for doing an import.
-  url = main.test_area_url + '/' + path
-  if main.windows == 1:
-    url = string.replace(url, '\\', '/')
+    # build a URL for doing an import.
+    url = main.test_area_url + '/' + main.pristine_dir
+    if main.windows == 1:
+      url = string.replace(url, '\\', '/')
 
-  # import the greek tree, using l:foo/p:bar
-  ### todo: svn should not be prompting for auth info when using
-  ### repositories with no auth/auth requirements
-  output, errput = main.run_svn(None, 'import',
-                                '--username', main.wc_author,
-                                '--password', main.wc_passwd,
-                                '-m', 'Log message for revision 1.',
-                                main.greek_dump_dir, url)
+    # import the greek tree, using l:foo/p:bar
+    ### todo: svn should not be prompting for auth info when using
+    ### repositories with no auth/auth requirements
+    output, errput = main.run_svn(None, 'import',
+                                  '--username', main.wc_author,
+                                  '--password', main.wc_passwd,
+                                  '-m', 'Log message for revision 1.',
+                                  main.greek_dump_dir, url)
 
-  # check for any errors from the import
-  if len(errput):
-    display_lines("Errors during initial 'svn import':",
-                  'STDERR', None, errput)
-    sys.exit(1)
+    # check for any errors from the import
+    if len(errput):
+      display_lines("Errors during initial 'svn import':",
+                    'STDERR', None, errput)
+      sys.exit(1)
 
-  # verify the printed output of 'svn import'.
-  lastline = string.strip(output.pop())
-  cm = re.compile ("(Committed|Imported) revision 1.")
-  match = cm.search (lastline)
-  if not match:
-    print "ERROR:  import did not succeed, while creating greek repos."
-    print "The final line from 'svn import' was:"
-    print lastline
-    sys.exit(1)
-  output_tree = tree.build_tree_from_commit(output)
+    # verify the printed output of 'svn import'.
+    lastline = string.strip(output.pop())
+    cm = re.compile ("(Committed|Imported) revision [0-9]+.")
+    match = cm.search (lastline)
+    if not match:
+      print "ERROR:  import did not succeed, while creating greek repos."
+      print "The final line from 'svn import' was:"
+      print lastline
+      sys.exit(1)
+    output_tree = tree.build_tree_from_commit(output)
 
-  ### due to path normalization in the .old_tree() method, we cannot
-  ### prepend the necessary '.' directory. thus, let's construct an old
-  ### tree manually from the greek_state.
-  output_list = []
-  for greek_path in main.greek_state.desc.keys():
-    output_list.append([ os.path.join(main.greek_dump_dir, greek_path),
-                         None, {}, {'verb' : 'Adding'}])
-  expected_output_tree = tree.build_generic_tree(output_list)
+    ### due to path normalization in the .old_tree() method, we cannot
+    ### prepend the necessary '.' directory. thus, let's construct an old
+    ### tree manually from the greek_state.
+    output_list = []
+    for greek_path in main.greek_state.desc.keys():
+      output_list.append([ os.path.join(main.greek_dump_dir, greek_path),
+                           None, {}, {'verb' : 'Adding'}])
+    expected_output_tree = tree.build_generic_tree(output_list)
 
-  try:
-    tree.compare_trees(output_tree, expected_output_tree)
-  except tree.SVNTreeUnequal:
-    display_trees("ERROR:  output of import command is unexpected.",
-                  'OUTPUT TREE', expected_output_tree, output_tree)
+    try:
+      tree.compare_trees(output_tree, expected_output_tree)
+    except tree.SVNTreeUnequal:
+      display_trees("ERROR:  output of import command is unexpected.",
+                    'OUTPUT TREE', expected_output_tree, output_tree)
+      sys.exit(1)
+
+  # Now that the pristine repos exists, copy it to PATH.
+  if os.path.exists(path):
+    shutil.rmtree(path)
+  if main.copy_repos(main.pristine_dir, path, 1):
+    print "ERROR:  copying repository failed."
     sys.exit(1)
 
   # make the repos world-writeable, for mod_dav_svn's sake.

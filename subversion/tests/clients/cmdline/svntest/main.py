@@ -124,6 +124,7 @@ current_repo_url = None
 temp_dir = 'local_tmp'
 
 # (derivatives of the tmp dir.)
+pristine_dir = os.path.join(temp_dir, "repos")
 greek_dump_dir = os.path.join(temp_dir, "greekfiles")
 config_dir = os.path.abspath(os.path.join(temp_dir, "config"))
 default_config_dir = config_dir
