@@ -479,7 +479,8 @@ def generate_content(output, cfg, repos, changelist, group, params, paths,
   output.write('Author: %s\nDate: %s\nNew Revision: %s\n\n'
                % (repos.author, date, repos.rev))
 
-  excluded_paths = cfg.get('excluded_paths', group, params) or 'show-all'
+  show_nonmatching_paths = cfg.get('show_nonmatching_paths', group, params) \
+      or 'yes'
 
   # print summary sections
   # first, those changes within the selected path-space
@@ -489,7 +490,7 @@ def generate_content(output, cfg, repos, changelist, group, params, paths,
 
   # second, those outside, if any
   if len(paths) != len(changelist):
-    if excluded_paths == 'hide':
+    if show_nonmatching_paths == 'no':
       output.write('and changes in other areas\n')
     else:
       output.write('\nChanges in other areas also in this revision:\n')
@@ -503,14 +504,14 @@ def generate_content(output, cfg, repos, changelist, group, params, paths,
   # these are sorted by path already
   for path, change in changelist:
     if paths.has_key(path):
-      generate_diff(output, cfg, repos, date, path, change, group, params,
+      generate_diff(output, cfg, repos, date, change, group, params,
                     diffsels, pool)
 
-  if len(paths) != len(changelist) and excluded_paths == 'show-all':
+  if len(paths) != len(changelist) and show_nonmatching_paths == 'yes':
     output.write('\nDiffs of changes in other areas also in this revision:\n')
     for path, change in changelist:
       if not paths.has_key(path):
-        generate_diff(output, cfg, repos, date, path, change, group, params,
+        generate_diff(output, cfg, repos, date, change, group, params,
                       diffsels, pool)
 
 
