@@ -1355,7 +1355,7 @@ crawl_dir (svn_stringbuf_t *path,
                                  APR_HASH_KEY_STRING);
   if (! this_dir_entry)
     return svn_error_createf 
-      (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL, top_pool,
+      (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, top_pool,
        "Can't find `.' entry in %s", path->data);
 
   /* If the `.' entry is marked with ADD, then we *only* want to
@@ -2032,16 +2032,16 @@ crawl_as_copy (svn_stringbuf_t *parent,
   SVN_ERR (svn_wc_entry (&p_entry, parent, pool));
   if (! p_entry)
     return svn_error_create 
-      (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL, pool, parent->data);
+      (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool, parent->data);
   if (! p_entry->url)
     return svn_error_create 
-      (SVN_ERR_WC_ENTRY_MISSING_URL, 0, NULL, pool, parent->data);
+      (SVN_ERR_ENTRY_MISSING_URL, 0, NULL, pool, parent->data);
 
   /* Get the entry for the commit target. */
   SVN_ERR (svn_wc_entry (&entry, fullpath, pool));
   if (! entry)
     return svn_error_create 
-      (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL, pool, parent->data);
+      (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool, parent->data);
 
   /* Get the root baton. */
   SVN_ERR (editor->open_root (edit_baton, p_entry->revision, &root_baton));

@@ -114,6 +114,12 @@ svn_ruby_init_error (void)
   define_error (SVN_ERR_IO_INCONSISTENT_EOL, "IoInconsistentEOL");
   define_error (SVN_ERR_IO_UNKNOWN_EOL, "IoUnknownEOL");
   define_error (SVN_ERR_IO_CORRUPT_EOL, "IoCorruptEOL");
+  define_error (SVN_ERR_ENTRY_NOT_FOUND, "EntryNotFound");
+  define_error (SVN_ERR_ENTRY_EXISTS, "EntryExists");
+  define_error (SVN_ERR_ENTRY_MISSING_REVISION, "EntryMissingRevision");
+  define_error (SVN_ERR_ENTRY_MISSING_URL, "EntryMissingURL");
+  define_error (SVN_ERR_ENTRY_ATTRIBUTE_INVALID, "EntryAttributeInvalid");
+  define_error (SVN_ERR_ENTRY_BOGUS_MERGE, "EntryBogusMerge");
   define_error (SVN_ERR_WC_OBSTRUCTED_UPDATE, "WcObstructedUpdate");
   define_error (SVN_ERR_WC_UNWIND_MISMATCH, "WcUnwindMismatch");
   define_error (SVN_ERR_WC_UNWIND_EMPTY, "WcUnwindEmpty");
@@ -124,12 +130,6 @@ svn_ruby_init_error (void)
   define_error (SVN_ERR_WC_BAD_ADM_LOG, "WcBadAdmLog");
   define_error (SVN_ERR_WC_PATH_NOT_FOUND, "WcPathNotFound");
   define_error (SVN_ERR_WC_UNEXPECTED_KIND, "WcUnexpectedKind");
-  define_error (SVN_ERR_WC_ENTRY_NOT_FOUND, "WcEntryNotFound");
-  define_error (SVN_ERR_WC_ENTRY_EXISTS, "WcEntryExists");
-  define_error (SVN_ERR_WC_ENTRY_MISSING_REVISION, "WcEntryMissingRevision");
-  define_error (SVN_ERR_WC_ENTRY_MISSING_URL, "WcEntryMissingURL");
-  define_error (SVN_ERR_WC_ENTRY_ATTRIBUTE_INVALID, "WcEntryAttributeInvalid");
-  define_error (SVN_ERR_WC_ENTRY_BOGUS_MERGE, "WcEntryBogusMerge");
   define_error (SVN_ERR_WC_NOT_UP_TO_DATE, "WcNotUpToDate");
   define_error (SVN_ERR_WC_LEFT_LOCAL_MOD, "WcLeftLocalMod");
   define_error (SVN_ERR_IO_UNIQUE_NAMES_EXHAUSTED, "IoUniqueNamesExhausted");

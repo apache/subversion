@@ -538,7 +538,7 @@ svn_wc_delete (svn_stringbuf_t *path,
   SVN_ERR (svn_wc_entry (&entry, path, pool));
   if (! entry)
     return svn_error_createf
-      (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL, pool,
+      (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool,
        "'%s' does not appear to be under revision control", path->data);
     
   if (entry->kind == svn_node_dir)
@@ -641,7 +641,7 @@ svn_wc_add (svn_stringbuf_t *path,
           && (orig_entry->schedule != svn_wc_schedule_delete))
         {
           return svn_error_createf 
-            (SVN_ERR_WC_ENTRY_EXISTS, 0, NULL, pool,
+            (SVN_ERR_ENTRY_EXISTS, 0, NULL, pool,
              "'%s' is already under revision control",
              path->data);
         }
@@ -1012,7 +1012,7 @@ svn_wc_revert (svn_stringbuf_t *path,
   SVN_ERR (svn_wc_entry (&entry, path, pool));
   if (! entry)
     return svn_error_createf 
-      (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL, pool,
+      (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool,
        "Cannot revert '%s' -- not a versioned resource", path->data);
 
   /* Safeguard 2:  can we handle this node kind? */

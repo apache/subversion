@@ -132,7 +132,7 @@ copy_file_administratively (svn_stringbuf_t *src_path,
   /* Sanity check:  if dst file exists already, don't allow overwrite. */
   SVN_ERR (svn_io_check_path (dst_path, &dst_kind, pool));
   if (dst_kind != svn_node_none)
-    return svn_error_createf (SVN_ERR_WC_ENTRY_EXISTS, 0, NULL, pool,
+    return svn_error_createf (SVN_ERR_ENTRY_EXISTS, 0, NULL, pool,
                               "'%s' already exists and is in the way.",
                               dst_path->data);
 

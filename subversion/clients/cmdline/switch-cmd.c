@@ -81,7 +81,7 @@ svn_cl__switch (apr_getopt_t *os,
   SVN_ERR (svn_wc_entry (&entry, target, pool));
   if (! entry)
     return svn_error_createf 
-      (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL, pool, 
+      (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool, 
        "`%s' does not appear to be a working copy path", target->data);
   
   /* Build an authentication baton to give to libsvn_client. */

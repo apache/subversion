@@ -131,7 +131,7 @@ svn_client_add (svn_stringbuf_t *path,
     err = svn_wc_add (path, NULL, SVN_INVALID_REVNUM,
                       notify_func, notify_baton, pool);
 
-  if (err && (err->apr_err == SVN_ERR_WC_ENTRY_EXISTS))
+  if (err && (err->apr_err == SVN_ERR_ENTRY_EXISTS))
     return svn_error_quick_wrap 
       (err, "svn warning: Cannot add because entry already exists.");
 

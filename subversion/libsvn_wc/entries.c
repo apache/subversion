@@ -220,7 +220,7 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
           entry->schedule = svn_wc_schedule_normal;
         else
           return svn_error_createf 
-            (SVN_ERR_WC_ENTRY_ATTRIBUTE_INVALID, 0, NULL, pool,
+            (SVN_ERR_ENTRY_ATTRIBUTE_INVALID, 0, NULL, pool,
              "Entry '%s' has invalid '%s' value",
              (name ? name->data : SVN_WC_ENTRY_THIS_DIR),
              SVN_WC_ENTRY_ATTR_SCHEDULE);
@@ -246,7 +246,7 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
           entry->conflicted = FALSE;
         else
           return svn_error_createf 
-            (SVN_ERR_WC_ENTRY_ATTRIBUTE_INVALID, 0, NULL, pool,
+            (SVN_ERR_ENTRY_ATTRIBUTE_INVALID, 0, NULL, pool,
              "Entry '%s' has invalid '%s' value",
              (name ? name->data : SVN_WC_ENTRY_THIS_DIR),
              SVN_WC_ENTRY_ATTR_CONFLICTED);
@@ -272,7 +272,7 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
           entry->copied = FALSE;
         else
           return svn_error_createf 
-            (SVN_ERR_WC_ENTRY_ATTRIBUTE_INVALID, 0, NULL, pool,
+            (SVN_ERR_ENTRY_ATTRIBUTE_INVALID, 0, NULL, pool,
              "Entry '%s' has invalid '%s' value",
              (name ? name->data : SVN_WC_ENTRY_THIS_DIR),
              SVN_WC_ENTRY_ATTR_COPIED);
@@ -405,21 +405,21 @@ resolve_to_defaults (apr_hash_t *entries,
 
   /* First check the dir's own entry for consistency. */
   if (! default_entry)
-    return svn_error_create (SVN_ERR_WC_ENTRY_NOT_FOUND,
+    return svn_error_create (SVN_ERR_ENTRY_NOT_FOUND,
                              0,
                              NULL,
                              pool,
                              "missing default entry");
 
   if (default_entry->revision == SVN_INVALID_REVNUM)
-    return svn_error_create (SVN_ERR_WC_ENTRY_MISSING_REVISION,
+    return svn_error_create (SVN_ERR_ENTRY_MISSING_REVISION,
                              0,
                              NULL,
                              pool,
                              "default entry has no revision number");
 
   if (! default_entry->url)
-    return svn_error_create (SVN_ERR_WC_ENTRY_MISSING_URL,
+    return svn_error_create (SVN_ERR_ENTRY_MISSING_URL,
                              0,
                              NULL,
                              pool,
@@ -918,7 +918,7 @@ svn_wc__entries_write (apr_hash_t *entries,
 
   /* If there is no "this dir" entry, something is wrong. */
   if (! this_dir)
-    return svn_error_createf (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL, pool,
+    return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool,
                               "No default entry in directory `%s'", 
                               path->data);
 
@@ -1148,7 +1148,7 @@ fold_state_changes (apr_hash_t *entries,
         default:
           return 
             svn_error_createf 
-            (SVN_ERR_WC_ENTRY_BOGUS_MERGE, 0, NULL, pool,
+            (SVN_ERR_WC_SCHEDULE_CONFLICT, 0, NULL, pool,
              "fold_state_changes: Illegal schedule in state set operation");
         }
     }
@@ -1162,7 +1162,7 @@ fold_state_changes (apr_hash_t *entries,
       else
         return 
           svn_error_createf 
-          (SVN_ERR_WC_ENTRY_BOGUS_MERGE, 0, NULL, pool,
+          (SVN_ERR_WC_SCHEDULE_CONFLICT, 0, NULL, pool,
            "fold_state_changes: '%s' is not a versioned resource",
            name->data);
     }
@@ -1190,14 +1190,14 @@ fold_state_changes (apr_hash_t *entries,
       if (*schedule == svn_wc_schedule_add)
         return 
           svn_error_createf 
-          (SVN_ERR_WC_ENTRY_BOGUS_MERGE, 0, NULL, pool,
+          (SVN_ERR_WC_SCHEDULE_CONFLICT, 0, NULL, pool,
            "fold_state_changes: Can't add '%s' to deleted directory"
            "--try undeleting its parent directory first",
            name->data);
       if (*schedule == svn_wc_schedule_replace)
         return 
           svn_error_createf 
-          (SVN_ERR_WC_ENTRY_BOGUS_MERGE, 0, NULL, pool,
+          (SVN_ERR_WC_SCHEDULE_CONFLICT, 0, NULL, pool,
            "fold_state_changes: Can't replace '%s' in deleted directory"
            "--try undeleting its parent directory first",
            name->data);
@@ -1226,7 +1226,7 @@ fold_state_changes (apr_hash_t *entries,
              revision control. */
           return 
             svn_error_createf 
-            (SVN_ERR_WC_ENTRY_BOGUS_MERGE, 0, NULL, pool,
+            (SVN_ERR_WC_SCHEDULE_CONFLICT, 0, NULL, pool,
              "fold_state_changes: Entry '%s' already under revision control",
              name->data);
         }
@@ -1314,7 +1314,7 @@ fold_state_changes (apr_hash_t *entries,
     default:
       return 
         svn_error_createf 
-        (SVN_ERR_WC_ENTRY_BOGUS_MERGE, 0, NULL, pool,
+        (SVN_ERR_WC_SCHEDULE_CONFLICT, 0, NULL, pool,
          "fold_state_changes: Entry '%s' has illegal schedule",
          name->data);
     }
@@ -1450,7 +1450,7 @@ svn_wc__tweak_entry (apr_hash_t *entries,
 
   entry = apr_hash_get (entries, name->data, APR_HASH_KEY_STRING);
   if (! entry)
-    return svn_error_createf (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL, pool,
+    return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool,
                               "No such entry: '%s'", name->data);
 
   if (new_url != NULL)

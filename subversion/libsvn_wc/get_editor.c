@@ -924,7 +924,7 @@ add_or_open_file (svn_stringbuf_t *name,
 
   /* If replacing, make sure the .svn entry already exists. */
   if ((! adding) && (! entry))
-    return svn_error_createf (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL,
+    return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL,
                               parent_dir_baton->pool,
                               "trying to open non-versioned file "
                               "%s in directory %s",
@@ -2299,7 +2299,7 @@ svn_wc_is_wc_root (svn_boolean_t *wc_root,
   SVN_ERR (svn_wc_entry (&entry, path, pool));
   if (! entry)
     return svn_error_createf 
-      (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL, pool,
+      (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool,
        "svn_wc_is_wc_root: %s is not a versioned resource", path->data);
 
   /* If PATH is the current working directory, we have no choice but
@@ -2319,7 +2319,7 @@ svn_wc_is_wc_root (svn_boolean_t *wc_root,
      messed up.  Bail with an error. */
   if (! p_entry->url)
     return svn_error_createf 
-      (SVN_ERR_WC_ENTRY_MISSING_URL, 0, NULL, pool,
+      (SVN_ERR_ENTRY_MISSING_URL, 0, NULL, pool,
        "svn_wc_is_wc_root: %s has no ancestry information.", 
        parent->data);
 

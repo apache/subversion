@@ -85,7 +85,7 @@ wc_to_wc_copy (svn_stringbuf_t *src_path,
   else if (dst_kind == svn_node_dir)
     svn_path_split (src_path, &unused, &basename, pool);
   else
-    return svn_error_createf (SVN_ERR_WC_ENTRY_EXISTS, 0, NULL, pool,
+    return svn_error_createf (SVN_ERR_ENTRY_EXISTS, 0, NULL, pool,
                               "file `%s' already exists.", dst_path->data);
 
   /* Perform the copy and (optionally) delete. */
@@ -493,7 +493,7 @@ repos_to_wc_copy (svn_stringbuf_t *src_url,
       svn_path_add_component (dst_path, basename);
     }
   else if (dst_kind != svn_node_none)  /* must be a file */
-    return svn_error_createf (SVN_ERR_WC_ENTRY_EXISTS, 0, NULL, pool,
+    return svn_error_createf (SVN_ERR_ENTRY_EXISTS, 0, NULL, pool,
                               "file `%s' already exists.", dst_path->data);
 
   /* Now that dst_path has possibly been reset, check that there's

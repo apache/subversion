@@ -82,7 +82,7 @@ svn_client_log (svn_client_auth_baton_t *auth_baton,
        "svn_client_log: %s is not under revision control", basename->data);
   if (! entry->url)
     return svn_error_createf
-      (SVN_ERR_WC_ENTRY_MISSING_URL, 0, NULL, pool,
+      (SVN_ERR_ENTRY_MISSING_URL, 0, NULL, pool,
        "svn_client_log: entry '%s' has no URL", basename->data);
   URL = svn_stringbuf_dup (entry->url, pool);
 
