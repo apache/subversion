@@ -63,12 +63,12 @@
    then clear the buffer and return. */
 static svn_error_t *
 flush_xml_buffer (svn_string_t *xml_buffer,
-                  svn_xml_parser_t *xml_parser)
+                  svn_delta_xml_parser_t *xml_parser)
 {
-  svn_error_t *err = svn_xml_parsebytes (xml_buffer->data,
-                                         xml_buffer->len,
-                                         0,
-                                         xml_parser);
+  svn_error_t *err = svn_delta_xml_parsebytes (xml_buffer->data,
+                                               xml_buffer->len,
+                                               0,
+                                               xml_parser);
   if (err)
     return err;
 
@@ -186,7 +186,7 @@ get_delta_here_contents (svn_string_t **str,
 static svn_error_t *
 do_crawl (svn_string_t *current_dir,
           svn_string_t *xml_buffer,
-          svn_xml_parser_t *xml_parser,
+          svn_delta_xml_parser_t *xml_parser,
           apr_pool_t *pool)
 
 {
@@ -290,18 +290,18 @@ svn_wc_crawl_local_mods (svn_string_t *root_directory,
                          apr_pool_t *pool)
 {
   svn_error_t *err;
-  svn_xml_parser_t *xml_parser;
+  svn_delta_xml_parser_t *xml_parser;
   svn_string_t *xml_buffer;
 
   /* kff todo: I've fooled around with the arguments below to get rid
      of compilation warnings, but that doesn't mean that the call is
      correct.  Take it away, Ben... :-) */
-  err = svn_make_xml_parser (&xml_parser,
-                             edit_fns,
-                             NULL,
-                             0,
-                             NULL,
-                             pool);
+  err = svn_delta_make_xml_parser (&xml_parser,
+                                   edit_fns,
+                                   NULL,
+                                   0,
+                                   NULL,
+                                   pool);
   if (err)
     return (err);
 

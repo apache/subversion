@@ -53,11 +53,11 @@
 /*
   This file implements a few public interfaces :
 
-     svn_make_xml_parser()   -- create a custom svn/expat parser
-     svn_free_xml_parser()   -- free it
+     svn_delta_make_xml_parser()   -- create a custom svn/expat parser
+     svn_delta_free_xml_parser()   -- free it
  
-     svn_xml_parsebytes()    -- push some svn xml stream at the parser
-     svn_xml_auto_parse()    -- automated `pull interface' wrapper
+     svn_delta_xml_parsebytes()    -- push some svn xml stream at the parser
+     svn_delta_xml_auto_parse()    -- automated `pull interface' wrapper
 
   As the parser receives xml, calls are made into an svn_delta_edit_fns_t.
 
@@ -1375,16 +1375,16 @@ xml_handle_data (void *userData, const char *data, int len)
    BASE_VERSION as default "context variables" when computing ancestry
    within a tree-delta. */
 svn_error_t *
-svn_make_xml_parser (svn_xml_parser_t **parser,
-                     const svn_delta_edit_fns_t *editor,
-                     svn_string_t *base_path, 
-                     svn_vernum_t base_version,
-                     void *edit_baton,
-                     apr_pool_t *pool)
+svn_delta_make_xml_parser (svn_delta_xml_parser_t **parser,
+                           const svn_delta_edit_fns_t *editor,
+                           svn_string_t *base_path, 
+                           svn_vernum_t base_version,
+                           void *edit_baton,
+                           apr_pool_t *pool)
 {
   svn_error_t *err;
 
-  svn_xml_parser_t *xmlparser;
+  svn_delta_xml_parser_t *xmlparser;
   XML_Parser expat_parser;
 
   svn_xml__digger_t *digger;
@@ -1394,7 +1394,7 @@ svn_make_xml_parser (svn_xml_parser_t **parser,
   void *rootdir_baton = NULL;
 
   /* Create a subpool to contain *everything*.  That way,
-     svn_free_xml_parser() has an easy target to destroy.  :) */
+     svn_delta_free_xml_parser() has an easy target to destroy.  :) */
   main_subpool = apr_make_sub_pool (pool, NULL);
 
   /* Fetch the rootdir_baton by calling into the editor */
@@ -1404,8 +1404,8 @@ svn_make_xml_parser (svn_xml_parser_t **parser,
                                         edit_baton, &rootdir_baton);
       if (err)
         return
-          svn_quick_wrap_error (err,
-                                "svn_make_xml_parser: replace_root failed.");
+          svn_quick_wrap_error 
+          (err, "svn_delta_make_xml_parser: replace_root failed.");
     }
       
   /* Create a "root" stackframe that will always be the oldest object
@@ -1450,7 +1450,7 @@ svn_make_xml_parser (svn_xml_parser_t **parser,
   digger->expat_parser = expat_parser;
 
   /* Create a new subversion xml parser and put everything inside it. */
-  xmlparser = apr_pcalloc (main_subpool, sizeof (svn_xml_parser_t));
+  xmlparser = apr_pcalloc (main_subpool, sizeof (svn_delta_xml_parser_t));
   
   xmlparser->my_pool      = main_subpool;
   xmlparser->expat_parser = expat_parser;
@@ -1463,9 +1463,9 @@ svn_make_xml_parser (svn_xml_parser_t **parser,
 
 
 
-/* Destroy an svn_xml_parser_t when finished with it. */
+/* Destroy an svn_delta_xml_parser_t when finished with it. */
 void 
-svn_free_xml_parser (svn_xml_parser_t *parser)
+svn_delta_free_xml_parser (svn_delta_xml_parser_t *parser)
 {
   apr_destroy_pool (parser->my_pool);
 }
@@ -1477,8 +1477,8 @@ svn_free_xml_parser (svn_xml_parser_t *parser)
    parser "push", ISFINAL must be set to true (so that both expat and
    local cleanup can occur.)  */
 svn_error_t *
-svn_xml_parsebytes (const char *buffer, apr_size_t len, int isFinal, 
-                    svn_xml_parser_t *svn_xml_parser)
+svn_delta_xml_parsebytes (const char *buffer, apr_size_t len, int isFinal, 
+                    svn_delta_xml_parser_t *svn_xml_parser)
 {
   svn_error_t *err;
   XML_Parser expat_parser = svn_xml_parser->expat_parser;
@@ -1527,27 +1527,27 @@ svn_xml_parsebytes (const char *buffer, apr_size_t len, int isFinal,
   Once called, it retains control and "pulls" data from SOURCE_FN
   until either the stream runs out or it encounters an error. */
 svn_error_t *
-svn_xml_auto_parse (svn_read_fn_t *source_fn,
-                    void *source_baton,
-                    const svn_delta_edit_fns_t *editor,
-                    svn_string_t *base_path,
-                    svn_vernum_t base_version,
-                    void *edit_baton,
-                    apr_pool_t *pool)
+svn_delta_xml_auto_parse (svn_read_fn_t *source_fn,
+                          void *source_baton,
+                          const svn_delta_edit_fns_t *editor,
+                          svn_string_t *base_path,
+                          svn_vernum_t base_version,
+                          void *edit_baton,
+                          apr_pool_t *pool)
 {
   char buf[BUFSIZ];
   apr_size_t len;
   int done;
   svn_error_t *err;
-  svn_xml_parser_t *xmlparser;
+  svn_delta_xml_parser_t *xmlparser;
 
   /* Create a custom Subversion XML parser */
-  err =  svn_make_xml_parser (&xmlparser,
-                              editor,
-                              base_path,
-                              base_version,
-                              edit_baton,
-                              pool);
+  err =  svn_delta_make_xml_parser (&xmlparser,
+                                    editor,
+                                    base_path,
+                                    base_version,
+                                    edit_baton,
+                                    pool);
   if (err)
     return err;
 
@@ -1567,13 +1567,13 @@ svn_xml_auto_parse (svn_read_fn_t *source_fn,
     done = (len == 0);
 
     /* Push these bytes at the parser */
-    err = svn_xml_parsebytes (buf, len, done, xmlparser);
+    err = svn_delta_xml_parsebytes (buf, len, done, xmlparser);
     if (err)
       return err;
 
   } while (! done);
 
-  svn_free_xml_parser (xmlparser);
+  svn_delta_free_xml_parser (xmlparser);
   return SVN_NO_ERROR;
 }
 

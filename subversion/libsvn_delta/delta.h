@@ -275,12 +275,12 @@ typedef struct svn_propdelta_t
 
 
 /* A object representing a Subversion-specific XML parser; opaque to
-   outside callers, this object is passed to svn_xml_parsebytes(). 
+   outside callers, this object is passed to svn_delta_xml_parsebytes(). 
 
    This is typedef'ed in public "svn_delta.h".
 */
 
-struct svn_xml_parser_t
+struct svn_delta_xml_parser_t
 {
   apr_pool_t *my_pool;            /* the pool which contains the parser */
   XML_Parser expat_parser;        /* custom-built Expat parser */
