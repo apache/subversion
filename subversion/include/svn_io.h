@@ -453,6 +453,19 @@ typedef svn_error_t *(*svn_write_fn_t) (void *baton,
 /** Close handler function for a generic stream.  */
 typedef svn_error_t *(*svn_close_fn_t) (void *baton);
 
+/** 
+ * @since New in 1.2.
+ *
+ * Timeout handler function for a generic stream. */
+typedef void (*svn_timeout_fn_t) (void *baton, 
+                                  apr_interval_time_t interval);
+
+/**
+ * @since New in 1.2.
+ *
+ * Data pending handler function for a generic stream.  */
+typedef svn_boolean_t (*svn_data_pending_fn_t) (void *baton);
+
 
 /** Creating a generic stream.  */
 svn_stream_t *svn_stream_create (void *baton, apr_pool_t *pool);
@@ -469,6 +482,18 @@ void svn_stream_set_write (svn_stream_t *stream, svn_write_fn_t write_fn);
 /** Set @a stream's close function to @a close_fn */
 void svn_stream_set_close (svn_stream_t *stream, svn_close_fn_t close_fn);
 
+/** 
+ * @since New in 1.2.
+ *
+ * Set @a stream's timeout function to @a timeout_fn */
+void svn_stream_set_timeout (svn_stream_t *stream, svn_timeout_fn_t timeout_fn);
+
+/**
+ * @since New in 1.2.
+ *
+ * Set @a stream's data pending function to @a data_pending_fn */
+void svn_stream_set_data_pending (svn_stream_t *stream, 
+                                  svn_data_pending_fn_t data_pending_fn);
 
 /** Convenience function to create a generic stream which is empty.  */
 svn_stream_t *svn_stream_empty (apr_pool_t *pool);
@@ -515,6 +540,19 @@ svn_error_t *svn_stream_write (svn_stream_t *stream, const char *data,
 
 /** Close a generic stream. */
 svn_error_t *svn_stream_close (svn_stream_t *stream);
+
+/** 
+ * @since New in 1.2.
+ *
+ * Sets the timeout of a generic stream. */
+void svn_stream_timeout (svn_stream_t *stream,
+                         apr_interval_time_t interval);
+
+/**
+ * @since New in 1.2.
+ *
+ * Checks if data is pending in a generic stream. */
+svn_boolean_t svn_stream_data_pending (svn_stream_t *stream);
 
 
 /** Write to @a stream using a printf-style @a fmt specifier, passed through
