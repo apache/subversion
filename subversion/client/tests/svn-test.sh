@@ -16,6 +16,11 @@ ANCESTOR_PATH=anni       # See if Greg Stein notices. :-)
 check_status()
 {
     res=$?
+    clear
+    echo "T1:"
+    svn st t1
+    echo "T2:"
+    svn st t2
     if [ $res -ne 0 ]; then
       echo Oops, problem: ${@-"(no further details)"}
       exit $res
@@ -176,6 +181,7 @@ echo "Committing changes for merge, from ${TEST_DIR_1}."
 
 check_status 10
 
+exit 0
 
 ### Update.
 echo "Updating ${TEST_DIR_2}, merging changes from ${TEST_DIR_1}."
