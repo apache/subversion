@@ -191,7 +191,7 @@ svn_client_switch (const svn_delta_edit_fns_t *before_editor,
 
       /* Create a unique file */
       SVN_ERR (svn_io_open_unique_file (&fp, &new_text_path,
-                                        path, ".new-text-base",
+                                        path->data, ".new-text-base",
                                         FALSE, /* don't delete on close */
                                         pool));
 

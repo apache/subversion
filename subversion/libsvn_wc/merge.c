@@ -38,6 +38,7 @@ svn_wc_merge (const char *left,
   svn_stringbuf_t *tmp_target;
   apr_file_t *tmp_f;
   apr_status_t apr_err;
+  int exit_code;
 
   abort ();  /* this is not ready yet, callers should blow up */
 
@@ -51,48 +52,67 @@ svn_wc_merge (const char *left,
          "svn_wc_merge: `%s' not under revision control", merge_target);
   }
 
-  /* Operate on a tmp file, with keywords and line endings contracted.
-     If any contraction happens, we get a tmp file automatically;
-     otherwise, we have to make the tmp file by hand.  */
+  /* Open a tmp file, with keywords and line endings contracted.  If
+     any contraction happens, we get the tmp file automatically;
+     otherwise, we have to make it by hand.  */
   SVN_ERR (svn_wc_translated_file (&tmp_target, target, pool));
-  if (tmp_target == target)  /* no contraction happened */
+  if (tmp_target != target)  /* contraction occurred */
     {
-      svn_path_split (target, &parent_dir, &basename, pool);
-      SVN_ERR (svn_io_open_unique_file (&tmp_f,
-                                        &tmp_target,
-                                        target,
-                                        SVN_WC__TMP_EXT,
-                                        FALSE,
-                                        pool));
-      apr_err = apr_file_close (tmp_f);
+      apr_err = apr_file_open (&tmp_f, tmp_target->data,
+                               APR_WRITE, APR_OS_DEFAULT, pool);
       if (! APR_STATUS_IS_SUCCESS (apr_err))
         return svn_error_createf
           (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool,
-           "svn_wc_merge: unable to close tmp file `%s'", tmp_target);
+           "svn_wc_merge: unable to open tmp file `%s'", tmp_target);
+    }
+  else
+    {
+      SVN_ERR (svn_io_open_unique_file (&tmp_f,
+                                        &tmp_target,
+                                        merge_target,
+                                        SVN_WC__TMP_EXT,
+                                        FALSE,
+                                        pool));
     }
 
-  /* run diff3 using all 6 arguments. */
+  svn_path_split (target, &parent_dir, &basename, pool);
+  SVN_ERR (svn_io_run_diff3 (parent_dir->data,
+                             tmp_target->data, left, right,
+                             target_label, left_label, right_label,
+                             tmp_f,
+                             &exit_code,
+                             pool));
+  
+  apr_err = apr_file_close (tmp_f);
+  if (! APR_STATUS_IS_SUCCESS (apr_err))
+    return svn_error_createf
+      (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool,
+       "svn_wc_merge: unable to close tmp file `%s'", tmp_target);
 
-  /* if diff3 returned 1,
+  if (exit_code == 1)  /* got a conflict */
+    {
+      /* preserve old text base, old working file, new repos file
+         and modify entry: mark as conflicted, track above copies */
 
-         reserve 3 unique files.
-         copy-and-translate left -> xxx.left_label
-         copy-and-translate right -> xxx.right_label
-         copy merge_target -> xxx.target_label
+#if 0
+      svn_stringbuf_t *old_base;
 
-         modify-entry:  conflicted
-         modify-entry:  track 3 backup files.
- 
-     else if diff3 returned 0,
-      
-         do nothing;
+      /* we'll have to construct the extension, based on the
+         revision */
 
-     else
+      SVN_ERR (svn_io_open_unique_file (&tmp_f,
+                                        &tmp_target,
+                                        merge_target,
+                                        SVN_WC__TMP_EXT,
+                                        FALSE,
+                                        pool));
+#endif /* 0 */
 
-         return error;
+    }
 
-     cp-and-translate merged-result merge_target
-     rm merged-result (and merge_target.tmp)
+  /*
+    cp-and-translate merged-result merge_target
+    rm merged-result (and merge_target.tmp)
   */
 
   /* ### PROBLEM: Callers need to be careful about making sure the
@@ -107,7 +127,6 @@ svn_wc_merge (const char *left,
 
   return SVN_NO_ERROR;
 }
-
 
 
 

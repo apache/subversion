@@ -101,8 +101,7 @@ generate_file_diffs (apr_array_header_t **tmp_files_p,
       /* Open the output file (a tmpfile whose name we want to
          remember!) */
       SVN_ERR (svn_io_open_unique_file (&tmp_file, &tmpfile_name,
-                                        svn_stringbuf_create ("svndiff", pool),
-                                        ".data", FALSE, pool));
+                                        "svndiff", ".data", FALSE, pool));
       
       /* Create OUTSTREAM from TMPFILE. */
       out_stream = svn_stream_from_aprfile (tmp_file, pool);
@@ -184,8 +183,7 @@ apply_svndiff_data (const char **out_filename,
   source_file = fopen (source_filename, "rb");
   svndiff_file = fopen (svndiff_filename, "rb");
   SVN_ERR (svn_io_open_unique_file (&out_file, &unique_file,
-                                    svn_stringbuf_create ("svndiff", pool),
-                                    ".data", FALSE, pool));
+                                    "svndiff", ".data", FALSE, pool));
 
   /* Store our returned filename. */
   *out_filename = unique_file->data;

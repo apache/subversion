@@ -448,8 +448,8 @@ print_diff_tree (svn_fs_root_t *root,
           SVN_ERR (dump_contents (fh1, root, path, pool));
           apr_file_close (fh1);
 
-          SVN_ERR (svn_io_open_unique_file (&fh2, &orig_path, new_path, NULL,
-                                            FALSE, pool));
+          SVN_ERR (svn_io_open_unique_file (&fh2, &orig_path, new_path->data,
+                                            NULL, FALSE, pool));
           SVN_ERR (dump_contents (fh2, base_root, path, pool));
           apr_file_close (fh2);
         }
@@ -461,8 +461,8 @@ print_diff_tree (svn_fs_root_t *root,
           SVN_ERR (dump_contents (fh1, root, path, pool));
           apr_file_close (fh1);
 
-          SVN_ERR (svn_io_open_unique_file (&fh2, &orig_path, new_path, NULL,
-                                            FALSE, pool));
+          SVN_ERR (svn_io_open_unique_file (&fh2, &orig_path, new_path->data,
+                                            NULL, FALSE, pool));
           apr_file_close (fh2);
         }
       if (tmp_node->action == 'D')
@@ -472,8 +472,8 @@ print_diff_tree (svn_fs_root_t *root,
           SVN_ERR (open_writable_binary_file (&fh1, new_path, pool));
           apr_file_close (fh1);
 
-          SVN_ERR (svn_io_open_unique_file (&fh2, &orig_path, new_path, NULL,
-                                            FALSE, pool));
+          SVN_ERR (svn_io_open_unique_file (&fh2, &orig_path, new_path->data,
+                                            NULL, FALSE, pool));
           SVN_ERR (dump_contents (fh2, base_root, path, pool));
           apr_file_close (fh2);
         }

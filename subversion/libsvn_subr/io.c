@@ -84,7 +84,7 @@ svn_io_check_path (const svn_stringbuf_t *path,
 svn_error_t *
 svn_io_open_unique_file (apr_file_t **f,
                          svn_stringbuf_t **unique_name,
-                         const svn_stringbuf_t *path,
+                         const char *path,
                          const char *suffix,
                          svn_boolean_t delete_on_close,
                          apr_pool_t *pool)
@@ -107,7 +107,7 @@ svn_io_open_unique_file (apr_file_t **f,
      (unsigned int)unique_name,
      &random_portion_width);
 
-  *unique_name = svn_stringbuf_dup (path, pool);
+  *unique_name = svn_stringbuf_create (path, pool);
 
   /* Not sure of a portable PATH_MAX constant to use here, so just
      guessing at 255. */
@@ -171,7 +171,7 @@ svn_io_open_unique_file (apr_file_t **f,
                             NULL,
                             pool,
                             "svn_io_open_unique_file: unable to make name for "
-                            "%s", path->data);
+                            "%s", path);
 }
 
 

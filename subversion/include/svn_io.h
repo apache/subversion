@@ -102,7 +102,7 @@ svn_error_t *svn_io_check_path (const svn_stringbuf_t *path,
  */
 svn_error_t *svn_io_open_unique_file (apr_file_t **f,
                                       svn_stringbuf_t **unique_name,
-                                      const svn_stringbuf_t *path,
+                                      const char *path,
                                       const char *suffix,
                                       svn_boolean_t delete_on_close,
                                       apr_pool_t *pool);

@@ -732,7 +732,7 @@ svn_wc_translated_file (svn_stringbuf_t **xlated_p,
       
       SVN_ERR (svn_io_open_unique_file (&ignored,
                                         &tmp_vfile,
-                                        tmp_vfile,
+                                        tmp_vfile->data,
                                         SVN_WC__TMP_EXT,
                                         FALSE,
                                         pool));

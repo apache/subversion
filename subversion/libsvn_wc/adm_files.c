@@ -1380,7 +1380,7 @@ svn_wc_create_tmp_file (apr_file_t **fp,
 
   /* Open a unique file;  use APR_DELONCLOSE. */  
   SVN_ERR (svn_io_open_unique_file (fp, &ignored_filename,
-                                    truepath, ".tmp",
+                                    truepath->data, ".tmp",
                                     delete_on_close, pool));
 
   return SVN_NO_ERROR;

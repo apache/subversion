@@ -526,7 +526,7 @@ svn_wc__merge_prop_diffs (const char *path,
                 /* Reserve a .prej file based on it.  */
                 SVN_ERR (svn_io_open_unique_file (&reject_tmp_fp,
                                                   &reject_tmp_path,
-                                                  tmppath,
+                                                  tmppath->data,
                                                   SVN_WC__PROP_REJ_EXT,
                                                   FALSE,
                                                   pool));
@@ -696,7 +696,7 @@ svn_wc__merge_prop_diffs (const char *path,
 
           SVN_ERR (svn_io_open_unique_file (&reject_fp,
                                             &reserved_path,
-                                            full_reject_path,
+                                            full_reject_path->data,
                                             SVN_WC__PROP_REJ_EXT,
                                             FALSE,
                                             pool));
