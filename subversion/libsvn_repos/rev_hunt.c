@@ -180,16 +180,23 @@ svn_repos_revisions_changed (apr_array_header_t **revs,
                              apr_pool_t *pool)
 {
   svn_fs_history_t *history;
-  apr_pool_t *subpool1 = svn_pool_create (pool);
-  apr_pool_t *subpool2 = svn_pool_create (pool);
-  apr_pool_t *oldpool, *newpool;
+  apr_pool_t *oldpool = svn_pool_create (pool);
+  apr_pool_t *newpool = svn_pool_create (pool);
   const char *history_path;
   svn_revnum_t history_rev;
   svn_fs_root_t *root;
 
   /* Validate the revisions. */
-  if ((! SVN_IS_VALID_REVNUM (start)) || (! SVN_IS_VALID_REVNUM (end)))
-    return svn_error_create (SVN_ERR_FS_NO_SUCH_REVISION, 0, "");
+  if (! SVN_IS_VALID_REVNUM (start))
+    return svn_error_createf 
+      (SVN_ERR_FS_NO_SUCH_REVISION, 0, 
+       "svn_repos_revisions_changed: invalid start revision %" 
+       SVN_REVNUM_T_FMT, start);
+  if (! SVN_IS_VALID_REVNUM (end))
+    return svn_error_createf 
+      (SVN_ERR_FS_NO_SUCH_REVISION, 0, 
+       "svn_repos_revisions_changed: invalid end revision %" 
+       SVN_REVNUM_T_FMT, end);
 
   /* Ensure that the input is ordered. */
   if (start > end)
@@ -204,9 +211,7 @@ svn_repos_revisions_changed (apr_array_header_t **revs,
 
   /* Get a revision root for END, and an initial HISTORY baton.  */
   SVN_ERR (svn_fs_revision_root (&root, fs, end, pool));
-  SVN_ERR (svn_fs_node_history (&history, root, path, subpool1));
-  oldpool = subpool1;
-  newpool = subpool2;
+  SVN_ERR (svn_fs_node_history (&history, root, path, oldpool));
 
   /* Now, we loop over the history items, calling svn_fs_history_prev(). */
   do
@@ -243,8 +248,8 @@ svn_repos_revisions_changed (apr_array_header_t **revs,
     }
   while (history); /* shouldn't hit this */
 
-  svn_pool_destroy (subpool1);
-  svn_pool_destroy (subpool2);
+  svn_pool_destroy (oldpool);
+  svn_pool_destroy (newpool);
   return SVN_NO_ERROR;
 }
 

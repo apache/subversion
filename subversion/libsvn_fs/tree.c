@@ -3651,19 +3651,27 @@ svn_fs_paths_changed (apr_hash_t **changed_paths_p,
 /* Our coolio opaque history object. */
 struct svn_fs_history_t
 {
+  /* filesystem object */
   svn_fs_t *fs;
+
+  /* path and revision of historical location */
   const char *path;
   svn_revnum_t revision;
+
+  /* internal-use hints about where to resume the history search. */
   const char *path_hint;
   svn_revnum_t rev_hint;
+
+  /* FALSE until the first call to svn_fs_history_prev(). */
   int is_interesting;
 };
 
 
 /* Return a new history object (marked as "interesting") for PATH and
-   REVISION, allocated in POOL.  Note that paths are not duped into
-   POOL -- it is the responsibility of the caller to ensure that this
-   happens. */
+   REVISION, allocated in POOL, and with its members set to the values
+   of the parameters provided.  Note that PATH and PATH_HINT are not
+   duped into POOL -- it is the responsibility of the caller to ensure
+   that this happens. */
 static svn_fs_history_t *
 assemble_history (svn_fs_t *fs,
                   const char *path,
@@ -3741,7 +3749,7 @@ find_youngest_copy (svn_revnum_t *src_rev, /* return */
       /* If no copies were made in this transaction, it's
          uninteresting to us. */
       if (! (txn->copies && txn->copies->nelts))
-        goto loop_inc;
+        goto next_iter;
 
       /* Otherwise, copies were made in this transaction, and we need
          to search them, in reverse order of creation, looking for
@@ -3805,7 +3813,7 @@ find_youngest_copy (svn_revnum_t *src_rev, /* return */
             }
         } /* for() */
       
-    loop_inc:
+    next_iter:
       cur_rev--;
       
     } /* while() */
@@ -3871,6 +3879,8 @@ txn_body_history_prev (void *baton, trail_t *trail)
      the chase, start from those locations. */
   if (history->path_hint && SVN_IS_VALID_REVNUM (history->rev_hint))
     {
+      if (! args->cross_copies)
+        return SVN_NO_ERROR;
       path = history->path_hint;
       revision = history->rev_hint;
     }
@@ -3924,10 +3934,6 @@ txn_body_history_prev (void *baton, trail_t *trail)
         }
     }
 
-  /* Easy out to avoid a copy hunt when our caller wouldn't want one. */
-  if (paths_differ && (! args->cross_copies))
-    return SVN_NO_ERROR;
-    
   /* See if any copies took place between our path/revision and
      the location of the node's last commit.  */
   SVN_ERR (find_youngest_copy (&src_rev, &src_path, &dst_rev, path,
