@@ -1574,25 +1574,27 @@ Committed revision 351.
     </sect2>
     
     <sect2 id="svn-ch-4-sect-6.2">
-      <title>Creating a Complex Tag</title>
+      <title>Creando una etiqueta compleja</title>
       
-      <para>Sometimes you may want your <quote>snapshot</quote> to be
-        more complicated than a single directory at a single
-        revision.</para>
+      <para>A veces quiere que su <quote>instantánea</quote> sea
+        más complicada que un solo directorio de una revisión
+        concreta.</para>
       
-      <para>For example, pretend your project is much larger than our
-        <filename>calc</filename> example: suppose it contains a
-        number of subdirectories and many more files.  In the course
-        of your work, you may decide that you need to create a working
-        copy that is designed to have specific features and bugfixes.
-        You can accomplish this by selectively backdating files or
-        directories to particular revisions (using <command>svn update
-        -r</command> liberally), or by switching files and directories
-        to particular branches (making use of <command>svn
-        switch</command>).  When you're done, your working copy is a
-        hodgepodge of repository locations from different revisions.
-        But after testing, you know it's the precise combination of
-        data you need.</para>
+      <para>Por ejemplo, pretendamos que su proyecto es mucho más
+        grande que nuestro ejemplo <filename>calc</filename>:
+        suponga que contiene un número de subdirectorios y muchos más
+        ficheros. Realizando su trabajo, puede decidir que necesita
+        crear una copia de trabajo local diseñada para contener
+        características o correcciones de fallos específicas. Puede
+        conseguir esto modificando ficheros o directorios de forma
+        selectiva para que reflejen una revisión particular (usando
+        <command>svn update -r</command> liberalmente), o cambiando
+        ficheros y directorios a ramas particulares (haciendo uso
+        de <command>svn switch</command>). Cuando ha finalizado,
+        su copia local es un batiburrillo de localizaciones del
+        repositorio de diferentes versiones.  Pero tras hacer unas
+        pruebas, sabe que es la combinación precisa de datos que
+        necesita.</para>
 
       <para>Time to make a snapshot.  Copying one URL to another won't
         work here. In this case, you want to make a snapshot of your
