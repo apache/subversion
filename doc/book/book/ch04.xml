@@ -344,13 +344,13 @@
       additions or removals manually, and then commit.</para>
 
     <screen>
-      $ svn co http://svnhost/repos/vendor/foobar/current ~/current
+      $ svn checkout http://svnhost/repos/vendor/foobar/current ~/current
       $ cd ~/foobar-1.1
       $ tar -cf - . | (cd ~/current ; tar -xf -)
       $ cd ~/current
       $ mv foobar.c main.c
-      $ svn mv main.c foobar.c
-      $ svn rm dead.c
+      $ svn move main.c foobar.c
+      $ svn delete dead.c
       $ svn add doc
       $ svn add doc/*
       $ svn commit -m `importing foobar 1.1 on vendor branch'
@@ -362,18 +362,15 @@
     <para>What happened? foobar 1.0 had a file called
       <filename>main.c</filename>.  This file was renamed to
       <filename>foobar.c</filename> in 1.1.  So your working-copy had
-      the old <filename>main.c</filename> which <command>svn</command>
-      knew about, and the new <filename>foobar.c</filename> which
-      <command>svn</command> did not know about.  You rename
-      <filename>foobar.c</filename> to <filename>main.c</filename> and
-      <command>svn mv</command> it back to the new name.  This way,
-      <command>svn</command> will know that
-      <filename>foobar.c</filename> is a descendant of
-      <filename>main.c</filename>.  <filename>dead.c</filename> has
-      vanished in 1.1, and they have finally written some
-      documentation, so you add that.</para><!-- ###TODO I'm thinking
-      that svn should just be referred to here as
-      Subversion. Thoughts? -Fitz -->
+      the old <filename>main.c</filename> which Subversion knew about, 
+      and the new <filename>foobar.c</filename> which Subversion did 
+      not know about.  You rename <filename>foobar.c</filename> to 
+      <filename>main.c</filename> and <command>svn mv</command> it 
+      back to the new name.  This way, Subversion will know that 
+      <filename>foobar.c</filename> is a descendant of 
+      <filename>main.c</filename>.  <filename>dead.c</filename> has 
+      been removed in 1.1, and they have finally written some 
+      documentation, so you add that.</para>
 
     <para>Next you copy <filename>/vendor/foobar/current</filename> to
       <filename>/vendor/foobar/foobar-1.1</filename> so you can always
@@ -391,7 +388,7 @@
       looks like this.</para>
 
     <screen>
-      $ svn co http://svnhost/repos/trunk/foobar ~/foobar
+      $ svn checkout http://svnhost/repos/trunk/foobar ~/foobar
       $ cd ~/foobar
       $ svn merge http://svnhost/repos/vendor/foobar/foobar-1.0 \
                   http://svnhost/repos/vendor/foobar/foobar-1.1
