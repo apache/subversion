@@ -95,6 +95,8 @@ throughout the perl bindings), with the edit_baton omitted.
 package SVN::TxDelta;
 use SVN::Base qw(Delta svn_txdelta_);
 
+*new = *SVN::_Delta::svn_txdelta;
+
 package _p_svn_txdelta_op_t;
 use SVN::Base qw(Delta svn_txdelta_op_t_);
 
