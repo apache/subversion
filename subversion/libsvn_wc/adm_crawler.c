@@ -1455,9 +1455,10 @@ svn_wc__crawl_local_mods (svn_stringbuf_t *parent_dir,
    This is a depth-first recursive walk of DIR_PATH under WC_PATH.
    Look at each entry and check if its revision is different than
    DIR_REV.  If so, report this fact to REPORTER.  If an entry is
-   missing from disk, report its absence to REPORTER.  If an
-   unversioned object is discovered, report it to the client using
-   FBTABLE. */
+   missing from disk, report its absence to REPORTER.  
+
+   If PRINT_UNRECOGNIZED is set, then unversioned objects will be
+   reported via FBTABLE. */
 static svn_error_t *
 report_revisions (svn_stringbuf_t *wc_path,
                   svn_stringbuf_t *dir_path,
@@ -1465,6 +1466,7 @@ report_revisions (svn_stringbuf_t *wc_path,
                   const svn_ra_reporter_t *reporter,
                   void *report_baton,
                   svn_pool_feedback_t *fbtable,
+                  svn_boolean_t print_unrecognized,
                   apr_pool_t *pool)
 {
   apr_hash_t *entries, *dirents;
@@ -1487,62 +1489,64 @@ report_revisions (svn_stringbuf_t *wc_path,
 
   /* Phase 1:  Print out every unrecognized (unversioned) object. */
 
-  for (hi = apr_hash_first (subpool, dirents); hi; hi = apr_hash_next (hi))
-    {
-      const void *key;
-      apr_size_t klen;
-      void *val;
-      const char *keystring;
-      svn_stringbuf_t *current_entry_name;
-      svn_stringbuf_t *printable_path;
+  if (print_unrecognized)
 
-      apr_hash_this (hi, &key, &klen, &val);
-      keystring = (const char *) key;
-
-      /* If the dirent isn't in `SVN/entries'... */
-      if (! apr_hash_get (entries, key, klen))        
-        /* and we're not looking at SVN... */
-        if (strcmp (keystring, SVN_WC_ADM_DIR_NAME))
-          {
-            svn_boolean_t print_item = TRUE;
-            apr_status_t status;
-            int i;
-
-            current_entry_name = svn_stringbuf_create (keystring, subpool);
-                        
-            for (i = 0; i < patterns->nelts; i++)
-              {
-                const char *pat = (((const char **) (patterns)->elts))[i];
-                
-                /* Try to match current_entry_name to pat. */
-                status = apr_fnmatch (pat, current_entry_name->data,
-                                      FNM_PERIOD);
-                
-                if (status == APR_SUCCESS)
-                  {
-                    /* APR_SUCCESS means we found a match: */
-                    print_item = FALSE;
-                    break;
-                  }
-              }
-            
-            if (print_item)
-              {
-                printable_path = svn_stringbuf_dup (full_path, subpool);
-                svn_path_add_component (printable_path, current_entry_name,
-                                        svn_path_local_style);
-                status = 
-                  fbtable->report_unversioned_item (printable_path->data);
-                if (status)
-                  return 
-                    svn_error_createf (status, 0, NULL, subpool,
-                                       "error reporting unversioned '%s'",
-                                       printable_path->data);
-              }
-          }
-    }  /* end of dirents loop */
-
-
+    for (hi = apr_hash_first (subpool, dirents); hi; hi = apr_hash_next (hi))
+      {
+        const void *key;
+        apr_size_t klen;
+        void *val;
+        const char *keystring;
+        svn_stringbuf_t *current_entry_name;
+        svn_stringbuf_t *printable_path;
+        
+        apr_hash_this (hi, &key, &klen, &val);
+        keystring = (const char *) key;
+        
+        /* If the dirent isn't in `SVN/entries'... */
+        if (! apr_hash_get (entries, key, klen))        
+          /* and we're not looking at SVN... */
+          if (strcmp (keystring, SVN_WC_ADM_DIR_NAME))
+            {
+              svn_boolean_t print_item = TRUE;
+              apr_status_t status;
+              int i;
+              
+              current_entry_name = svn_stringbuf_create (keystring, subpool);
+              
+              for (i = 0; i < patterns->nelts; i++)
+                {
+                  const char *pat = (((const char **) (patterns)->elts))[i];
+                  
+                  /* Try to match current_entry_name to pat. */
+                  status = apr_fnmatch (pat, current_entry_name->data,
+                                        FNM_PERIOD);
+                  
+                  if (status == APR_SUCCESS)
+                    {
+                      /* APR_SUCCESS means we found a match: */
+                      print_item = FALSE;
+                      break;
+                    }
+                }
+              
+              if (print_item)
+                {
+                  printable_path = svn_stringbuf_dup (full_path, subpool);
+                  svn_path_add_component (printable_path, current_entry_name,
+                                          svn_path_local_style);
+                  status = 
+                    fbtable->report_unversioned_item (printable_path->data);
+                  if (status)
+                    return 
+                      svn_error_createf (status, 0, NULL, subpool,
+                                         "error reporting unversioned '%s'",
+                                         printable_path->data);
+                }
+            }
+      }  /* end of dirents loop */
+  
+  
   /* Phase 2:  Do the real reporting and recursing. */
 
   /* Looping over current directory's SVN entries: */
@@ -1637,6 +1641,7 @@ report_revisions (svn_stringbuf_t *wc_path,
                                            full_entry_path,
                                            subdir_entry->revision,
                                            reporter, report_baton, fbtable,
+                                           print_unrecognized,
                                            subpool));
               }
             } /* end directory case */
@@ -1758,6 +1763,7 @@ svn_error_t *
 svn_wc_crawl_revisions (svn_stringbuf_t *path,
                         const svn_ra_reporter_t *reporter,
                         void *report_baton,
+                        svn_boolean_t print_unrecognized,
                         apr_pool_t *pool)
 {
   svn_error_t *err;
@@ -1817,7 +1823,8 @@ svn_wc_crawl_revisions (svn_stringbuf_t *path,
       err = report_revisions (path,
                               svn_stringbuf_create ("", pool),
                               base_rev,
-                              reporter, report_baton, fbtable, pool);
+                              reporter, report_baton, fbtable, 
+                              print_unrecognized, pool);
       if (err)
         {
           /* Clean up the fs transaction. */

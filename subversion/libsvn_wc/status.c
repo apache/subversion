@@ -52,6 +52,8 @@ assemble_status (svn_wc_status_t *status,
   status->repos_rev = SVN_INVALID_REVNUM;  /* caller fills in */
   status->text_status = svn_wc_status_none;       /* default to no status. */
   status->prop_status = svn_wc_status_none;       /* default to no status. */
+  status->repos_text_status = svn_wc_status_none;       /* default */
+  status->repos_prop_status = svn_wc_status_none;       /* default */
   status->locked = FALSE;
 
   if (status->entry)

@@ -263,7 +263,7 @@ enum svn_wc_status_kind
 typedef struct svn_wc_status_t
 {
   svn_wc_entry_t *entry;     /* Can be NULL if not under vc. */
-  svn_revnum_t repos_rev;    /* Likewise, can be SVN_INVALID_REVNUM */
+  svn_revnum_t repos_rev;    /* Head repos rev; can be SVN_INVALID_REVNUM */
   
   /* Mutually exclusive states. One of these will always be set for
      the "textual" component and one will be set for the "property"
@@ -271,6 +271,12 @@ typedef struct svn_wc_status_t
   enum svn_wc_status_kind text_status;
   enum svn_wc_status_kind prop_status;
   svn_boolean_t locked;
+
+  /* Fields that describe the status of the entry in the repository;
+     in other words, these fields indicate whether text or props would
+     be patched or deleted if we were to run 'svn up'. */
+  enum svn_wc_status_kind repos_text_status;
+  enum svn_wc_status_kind repos_prop_status;
 
 } svn_wc_status_t;
 
@@ -308,6 +314,23 @@ svn_error_t *svn_wc_statuses (apr_hash_t *statushash,
                               svn_stringbuf_t *path,
                               svn_boolean_t descend,
                               apr_pool_t *pool);
+
+
+/* Fetch an EDITOR/EDIT_BATON, which, when driven, will add 'update'
+   information to an existing STATUSHASH of status structures.
+   Allocation will be done in POOL.  ANCHOR/TARGET desribes how to
+   anchor the editor.
+
+   The editor will edit the "repository" fields in existing structures
+   (repos_text_status, repos_prop_status, repos_rev).  If a structure
+   doesn't exist, it will be created and added to the hash. */
+svn_error_t *svn_wc_get_status_editor (svn_delta_edit_fns_t **editor,
+                                       void **edit_baton,
+                                       svn_stringbuf_t *anchor,
+                                       svn_stringbuf_t *target,
+                                       apr_hash_t *statushash,
+                                       apr_pool_t *pool);
+
 
 
 /* Where you see an argument like
@@ -459,11 +482,15 @@ svn_error_t *svn_wc_crawl_local_mods (svn_stringbuf_t *parent_dir,
    After all revisions are reported, REPORTER->finish_report() is
    called, which immediately causes the RA layer to update the working
    copy.  Thus the return value may very well reflect the result of
-   the update!  */
+   the update!
+
+   If PRINT_UNRECOGNIZED is set, then unversioned objects will be
+   reported to the application layer via a pool feedback table.  */
 svn_error_t *
 svn_wc_crawl_revisions (svn_stringbuf_t *path,
                         const svn_ra_reporter_t *reporter,
                         void *report_baton,
+                        svn_boolean_t print_unrecognized,
                         apr_pool_t *pool);
 
 
