@@ -586,7 +586,7 @@ add_or_replace_file (svn_string_t *name,
     return err;
   else if ((! adding) && (err->apr_err == SVN_ERR_WC_ENTRY_NOT_FOUND))
     return svn_error_quick_wrap (err, "trying to replace non-versioned file");
-  else if (adding && (! err))
+  else if (adding && err)
     return svn_error_quick_wrap (err, "trying to add versioned file");
 
   /* Make sure we've got a working copy to put the file in. */
