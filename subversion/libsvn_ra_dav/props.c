@@ -348,7 +348,25 @@ svn_error_t * svn_ra_dav__get_props_resource(svn_ra_dav_resource_t **rsrc,
 
   SVN_ERR( svn_ra_dav__get_props(&props, ras, url, NE_DEPTH_ZERO,
                                  label, which_props, pool) );
-  *rsrc = apr_hash_get(props, url, APR_HASH_KEY_STRING);
+
+  if (label != NULL)
+    {
+      /* pick out the first response: the URL requested will not match
+       * the response href. */
+      apr_hash_index_t *hi = apr_hash_first(pool, props);
+
+      if (hi)
+        {
+          void *ent;
+          apr_hash_this(hi, NULL, NULL, &ent);
+          *rsrc = ent;
+        }
+    }
+  else
+    {
+      *rsrc = apr_hash_get(props, url, APR_HASH_KEY_STRING);
+    }
+
   if (*rsrc == NULL)
     {
       /* ### hmmm, should have been in there... */
