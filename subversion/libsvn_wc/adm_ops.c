@@ -1746,8 +1746,7 @@ svn_wc_remove_from_revision_control (svn_wc_adm_access_t *adm_access,
     {
       apr_pool_t *subpool = svn_pool_create (pool);
       apr_hash_index_t *hi;
-      svn_wc_entry_t *incomplete_entry
-        = apr_pcalloc (pool, sizeof (*incomplete_entry));
+      svn_wc_entry_t incomplete_entry;
 
       /* ### sanity check:  check 2 places for DELETED flag? */
             
@@ -1755,10 +1754,10 @@ svn_wc_remove_from_revision_control (svn_wc_adm_access_t *adm_access,
          file, mark this directory as "incomplete".  This allows this
          function to be interruptible and the wc recoverabel by 'svn
          up' later on. */
-      incomplete_entry->incomplete = TRUE;
+      incomplete_entry.incomplete = TRUE;
       SVN_ERR (svn_wc__entry_modify (adm_access,
                                      SVN_WC_ENTRY_THIS_DIR,
-                                     incomplete_entry,
+                                     &incomplete_entry,
                                      SVN_WC__ENTRY_MODIFY_INCOMPLETE,
                                      TRUE, /* sync to disk immediately */
                                      pool));
