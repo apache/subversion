@@ -721,7 +721,7 @@ do_item_commit (const char *url,
                 apr_hash_t *tempfiles,
                 svn_wc_notify_func_t notify_func,
                 void *notify_baton,
-                int notify_path_offset,
+                const char *notify_path_prefix,
                 apr_pool_t *pool)
 {
   svn_node_kind_t kind = item->kind;
@@ -741,8 +741,17 @@ do_item_commit (const char *url,
      describe what we're about to do to this item.  */
   if (notify_func)
     {
-      /* Convert an absolute path into a relative one (for feedback.) */
-      const char *path = item->path + notify_path_offset;
+      /* Convert an absolute path into a relative one (if possible.) */
+      const char *path;
+      if (notify_path_prefix)
+        {
+          if (strcmp (notify_path_prefix, item->path))
+            path = svn_path_is_child (notify_path_prefix, item->path, pool);
+          else
+            path = ".";
+        }
+      if (!path)
+        path = item->path; /* Otherwise just use full path */
 
       if ((item->state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
           && (item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD))
@@ -894,7 +903,7 @@ svn_client__do_commit (const char *base_url,
                        void *edit_baton,
                        svn_wc_notify_func_t notify_func,
                        void *notify_baton,
-                       int notify_path_offset,
+                       const char *notify_path_prefix,
                        apr_hash_t **tempfiles,
                        apr_pool_t *pool)
 {
@@ -1003,7 +1012,7 @@ svn_client__do_commit (const char *base_url,
       /*** Step D - Commit the item.  ***/
       SVN_ERR (do_item_commit (item_url, item, editor,
                                db_stack, &stack_ptr, file_mods, *tempfiles,
-                               notify_func, notify_baton, notify_path_offset,
+                               notify_func, notify_baton, notify_path_prefix,
                                pool));
 
       /* Save our state for the next iteration. */
