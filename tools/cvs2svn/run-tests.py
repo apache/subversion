@@ -480,7 +480,7 @@ def prune_with_care():
       print "Revision %d failed to remove '%s'." % (rev, path)
       raise svntest.Failure
 
-  rev = 30
+  rev = 31
   for path in ('/trunk/full-prune-reappear',
                '/trunk/full-prune-reappear',
                '/trunk/full-prune-reappear/appears-later'):
@@ -566,7 +566,7 @@ def interleaved_commits():
   repos, wc, logs = ensure_conversion('main')
 
   # The initial import.
-  rev = 23
+  rev = 24
   for path in ('/trunk/interleaved',
                '/trunk/interleaved/1',
                '/trunk/interleaved/2',
@@ -617,7 +617,7 @@ def interleaved_commits():
   # One of the commits was letters only, the other was numbers only.
   # But they happened "simultaneously", so we don't assume anything
   # about which commit appeared first, we just try both ways.
-  rev = 25
+  rev = rev + 2
   if not ((check_letters(rev, logs) and check_numbers(rev + 1, logs))
           or (check_numbers(rev, logs) and check_letters(rev + 1, logs))):
     raise svntest.Failure
@@ -684,7 +684,7 @@ def simple_branch_commits():
   # See test-data/main-cvsrepos/proj/README.
   repos, wc, logs = ensure_conversion('main')
 
-  rev = 21
+  rev = 22
   if not logs.has_key(rev):
     raise svntest.Failure
 
@@ -703,7 +703,7 @@ def mixed_commit():
   # See test-data/main-cvsrepos/proj/README.
   repos, wc, logs = ensure_conversion('main')
 
-  rev = 22
+  rev = 23
   for path in ('/trunk/proj/sub2/default', 
                '/branches/B_MIXED/proj/sub2/branch_B_MIXED_only'):
     if not (logs[rev].changed_paths.get(path) == 'M'):
