@@ -1084,6 +1084,12 @@ static const svn_ra_plugin_t ra_svn_plugin = {
 svn_error_t *svn_ra_svn_init(int abi_version, apr_pool_t *pool,
                              apr_hash_t *hash)
 {
+  if (abi_version != 1)
+    return svn_error_createf(SVN_ERR_RA_UNSUPPORTED_ABI_VERSION, NULL,
+                             "Unsupported RA plugin ABI version (%d) "
+                             "for ra_svn.", abi_version);
+
   apr_hash_set(hash, "svn", APR_HASH_KEY_STRING, &ra_svn_plugin);
+
   return SVN_NO_ERROR;
 }
