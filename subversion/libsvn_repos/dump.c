@@ -628,19 +628,9 @@ svn_repos_dump_fs (svn_repos_t *repos,
           /* Special-special-case a dump of revision 0. */
           if (i == 0)
             {
-              svn_fs_root_t *root_0;
-              char buffer[1024];
-
-              /* Just write out the one revision record and the one
-                 root-node record (for formality), and continue
-                 looping. */
+              /* Just write out the one revision 0 record and move on.
+                 The parser might want to use its properties. */
               SVN_ERR (write_revision_record (stream, fs, 0, subpool));
-
-              SVN_ERR (svn_fs_revision_root (&root_0, fs, 0, subpool));
-              SVN_ERR (dump_node (root_0, "/",
-                                  svn_node_dir, svn_node_action_add,
-                                  stream, buffer, 1024, subpool));
-
               goto loop_end;
             }
 

@@ -537,14 +537,23 @@ new_revision_record (void **revision_baton,
   svn_revnum_t head_rev;
   
   rb = make_revision_baton (headers, pb, pool);
-  
-  SVN_ERR (svn_fs_youngest_rev (&head_rev, pb->fs, pool));
-  SVN_ERR (svn_fs_begin_txn (&(rb->txn), pb->fs, head_rev, pool));
-  SVN_ERR (svn_fs_txn_root (&(rb->txn_root), rb->txn, pool));
-         
-  printf ("<<< Started new txn, based on original revision %"
-          SVN_REVNUM_T_FMT "\n", rb->rev);
 
+  if (rb->rev > 0)
+    {
+      /* Create a new fs txn. */
+      SVN_ERR (svn_fs_youngest_rev (&head_rev, pb->fs, pool));
+      SVN_ERR (svn_fs_begin_txn (&(rb->txn), pb->fs, head_rev, pool));
+      SVN_ERR (svn_fs_txn_root (&(rb->txn_root), rb->txn, pool));
+      
+      printf ("<<< Started new txn, based on original revision %"
+              SVN_REVNUM_T_FMT "\n", rb->rev);
+    }
+
+  /* If we're parsing revision 0, only the revision are (possibly)
+     interesting to us: when loading the stream into an empty
+     filesystem, then we want new filesystem's revision 0 to have the
+     same props.  Otherwise, we just ignore revision 0 in the stream. */
+  
   *revision_baton = rb;
   return SVN_NO_ERROR;
 }
@@ -613,13 +622,28 @@ set_revision_property (void *baton,
 {
   struct revision_baton *rb = baton;
 
-  SVN_ERR (svn_fs_change_txn_prop (rb->txn, name, value, rb->pool));
+  if (rb->rev > 0)
+    {
+      SVN_ERR (svn_fs_change_txn_prop (rb->txn, name, value, rb->pool));
+      
+      /* Remember any datestamp that passes through!  (See comment in
+         close_revision() below.) */
+      if (! strcmp (name, SVN_PROP_REVISION_DATE))
+        rb->datestamp = svn_string_dup (value, rb->pool);
+    }
+  else if (rb->rev == 0)
+    {     
+      /* Special case: set revision 0 properties when loading into an
+         'empty' filesystem. */
+      struct parse_baton *pb = rb->pb;
+      svn_revnum_t youngest_rev;
 
-  /* Remember any datestamp that passes through!  (See comment in
-     close_revision() below.) */
-  if (! strcmp (name, SVN_PROP_REVISION_DATE))
-    rb->datestamp = svn_string_dup (value, rb->pool);
-  
+      SVN_ERR (svn_fs_youngest_rev (&youngest_rev, pb->fs, rb->pool));
+
+      if (youngest_rev == 0)
+        SVN_ERR (svn_fs_change_rev_prop (pb->fs, 0, name, value, rb->pool));
+    }
+
   return SVN_NO_ERROR;
 }
 
@@ -668,6 +692,9 @@ close_revision (void *baton)
   const char *conflict_msg;
   svn_revnum_t new_rev;
   svn_error_t *err;
+
+  if (rb->rev <= 0)
+    return SVN_NO_ERROR;
 
   err = svn_fs_commit_txn (&conflict_msg, &new_rev, rb->txn);
 
