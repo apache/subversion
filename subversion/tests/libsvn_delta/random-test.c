@@ -17,12 +17,14 @@
  */
 
 
-#include <stdio.h>
-#include <string.h>
 #include <assert.h>
 
+#define APR_WANT_STDIO
+#define APR_WANT_STRFUNC
+#include <apr_want.h>
 #include <apr_general.h>
 #include <apr_getopt.h>
+#include <apr_file_io.h>
 
 #include "svn_delta.h"
 #include "svn_pools.h"
@@ -95,88 +97,73 @@ static void init_params (apr_uint32_t *seed,
 }
 
 
-/* Open and close temporary files. This hack is necessary because, on
-   Windows, tmpfile() may fail if the root directory of the current
-   drive isn't writable by the user. And guess what? There's no way to
-   tell tmpfile to use $TMP or $TEMP or $TMPDIR. */
-typedef struct tempfile_magic_t tempfile_magic_t;
-struct tempfile_magic_t
+/* Open a temporary file. */
+static apr_file_t *
+open_tempfile (const char *name_template, apr_pool_t *pool)
 {
-  FILE* fp;
-  char* name;
-  tempfile_magic_t *next;
-};
+  apr_status_t apr_err;
+  apr_file_t *fp = NULL;
+  char *templ;
 
-static tempfile_magic_t *first = NULL;
+  if (!name_template)
+    templ = apr_pstrdup (pool, "tempfile_XXXXXX");
+  else
+    templ = apr_pstrdup (pool, name_template);
 
-static FILE *
-open_temp (void)
-{
-  tempfile_magic_t *magic = calloc (1, sizeof *magic);
-  assert (magic != NULL);
-  magic->name = tempnam (NULL, NULL);
-  magic->fp = fopen (magic->name, "w+b");
-
-  magic->next = first;
-  first = magic;
-  return magic->fp;
+  apr_err = apr_file_mktemp (&fp, templ, 0, pool);
+  assert (apr_err == 0);
+  assert (fp != NULL);
+  return fp;
 }
 
-static tempfile_magic_t *
-unlink_magic_struct (FILE *fp)
+/* Rewind the file pointer */
+static void rewind_file (apr_file_t *fp)
 {
-  tempfile_magic_t **rover = &first;
-  while (*rover)
+  apr_off_t offset = 0;
+  apr_status_t apr_err = apr_file_seek (fp, APR_SET, &offset);
+  assert (apr_err == 0);
+  assert (offset == 0);
+}
+
+
+static void
+dump_file_contents (apr_file_t *fp)
+{
+  static char file_buffer[10240];
+  apr_size_t length = sizeof file_buffer;
+  fputs ("--------\n", stdout);
+  do
     {
-      if ((*rover)->fp == fp)
-        {
-          tempfile_magic_t *rv = *rover;
-          *rover = rv->next;
-          return rv;
-        }
-
-      rover = &(*rover)->next;
+      apr_file_read_full (fp, file_buffer, sizeof file_buffer, &length);
+      fwrite (file_buffer, 1, length, stdout);
     }
-
-  return NULL;
+  while (length == sizeof file_buffer);
+  putc ('\n', stdout);
+  rewind_file (fp);
 }
-
-static int
-close_temp (FILE *fp)
-{
-  tempfile_magic_t *magic = unlink_magic_struct (fp);
-  int rc1, rc2;
-
-  /* This is a precaution against people passing in an ordinary FILE*
-     that's not part of the magic struct. */
-  assert (magic != NULL);
-
-  rc1 = fclose (magic->fp);
-  rc2 = remove (magic->name);
-  free (magic->name);
-  free (magic);
-  return (rc1 ? rc1 : rc2);
-}
-
 
 /* Generate a temporary file containing sort-of random data.  Diffs
    between files of random data tend to be pretty boring, so we try to
    make sure there are a bunch of common substrings between two runs
    of this function with the same seedbase.  */
-static FILE *
+static apr_file_t *
 generate_random_file (apr_uint32_t maxlen,
                       apr_uint32_t subseed_base,
                       apr_uint32_t *seed,
                       const char *random_bytes,
                       apr_uint32_t bytes_range,
-                      int dump_files)
+                      int dump_files,
+                      apr_pool_t *pool)
 {
+  static char file_buffer[10240];
+  char *buf = file_buffer;
+  char *const end = buf + sizeof file_buffer;
+
   apr_uint32_t len, seqlen;
-  FILE *fp;
+  apr_file_t *fp;
   unsigned long r;
 
-  fp = open_temp ();
-  assert (fp != NULL);
+  fp = open_tempfile ("random_XXXXXX", pool);
   len = svn_test_rand (seed) % maxlen; /* We might go over this by a bit.  */
   while (len > 0)
     {
@@ -184,6 +171,7 @@ generate_random_file (apr_uint32_t maxlen,
          where the seed is in the range [seedbase..seedbase+MAXSEQ-1].
          (Use our own pseudo-random number generator here to avoid
          clobbering the seed of the libc random number generator.)  */
+
       seqlen = svn_test_rand (seed) % MAXSEQ;
       if (seqlen > len) seqlen = len;
       len -= seqlen;
@@ -193,74 +181,95 @@ generate_random_file (apr_uint32_t maxlen,
           const int ch = (random_bytes
                           ? random_bytes[r % bytes_range]
                           : r % bytes_range);
-          putc (ch, fp);
+          if (buf == end)
+            {
+              apr_size_t ignore_length;
+              apr_file_write_full (fp, file_buffer, sizeof file_buffer,
+                                   &ignore_length);
+              buf = file_buffer;
+            }
+
+          *buf++ = ch;
           r = r * 1103515245 + 12345;
         }
     }
-  rewind (fp);
+
+  if (buf > file_buffer)
+    {
+      apr_size_t ignore_length;
+      apr_file_write_full (fp, file_buffer, buf - file_buffer, &ignore_length);
+      buf = file_buffer;
+    }
+  rewind_file (fp);
 
   if (dump_files)
-    {
-      int ch;
-      fputs ("--------\n", stdout);
-      while (EOF != (ch = getc (fp)))
-        putc (ch, stdout);
-      putc ('\n', stdout);
-      rewind (fp);
-    }
+    dump_file_contents (fp);
 
   return fp;
 }
 
 /* Compare two open files. The file positions may change. */
 static svn_error_t *
-compare_files (FILE *f1, FILE *f2, int dump_files)
+compare_files (apr_file_t *f1, apr_file_t *f2, int dump_files)
 {
-  int c1, c2;
-  apr_off_t pos = 0;
+  static char file_buffer_1[10240];
+  static char file_buffer_2[10240];
 
-  rewind (f1);
-  rewind (f2);
+  char *c1, *c2;
+  apr_off_t pos = 0;
+  apr_size_t len1, len2;
+
+  rewind_file (f1);
+  rewind_file (f2);
 
   if (dump_files)
-    {
-      int ch;
-      fputs ("--------\n", stdout);
-      while (EOF != (ch = getc (f2)))
-        putc (ch, stdout);
-      putc ('\n', stdout);
-      rewind (f2);
-    }
+    dump_file_contents (f2);
 
-  for (;;)
+  do
     {
-      c1 = getc (f1);
-      c2 = getc (f2);
-      ++pos;
-      if (c1 == EOF && c2 == EOF)
-        break;
-      if (c1 != c2)
+      apr_file_read_full(f1, file_buffer_1, sizeof file_buffer_1, &len1);
+      apr_file_read_full(f2, file_buffer_2, sizeof file_buffer_2, &len2);
+
+      for (c1 = file_buffer_1, c2 = file_buffer_2;
+           c1 < file_buffer_1 + len1 && c2 < file_buffer_2 + len2;
+           ++c1, ++c2, ++pos)
+        {
+          if (*c1 != *c2)
+            return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
+                                      "mismatch at position %"APR_OFF_T_FMT,
+                                      pos);
+        }
+
+      if (len1 != len2)
         return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
-                                  "mismatch at position %"APR_OFF_T_FMT,
-                                  pos);
+                                  "unequal file sizes at position"
+                                  " %"APR_OFF_T_FMT, pos);
     }
+  while (len1 == sizeof file_buffer_1);
   return SVN_NO_ERROR;
 }
 
 
-static FILE *
-copy_tempfile (FILE *fp)
+static apr_file_t *
+copy_tempfile (apr_file_t *fp, apr_pool_t *pool)
 {
-  FILE *newfp;
-  int c;
+  static char file_buffer[10240];
+  apr_file_t *newfp;
+  apr_size_t length1, length2;
 
-  newfp = open_temp ();
-  assert (newfp != NULL);
-  rewind(fp);
-  while ((c = getc (fp)) != EOF)
-    putc (c, newfp);
-  rewind(fp);
-  rewind (newfp);
+  newfp = open_tempfile ("copy_XXXXXX", pool);
+
+  rewind_file (fp);
+  do
+    {
+      apr_file_read_full (fp, file_buffer, sizeof file_buffer, &length1);
+      apr_file_write_full (newfp, file_buffer, length1, &length2);
+      assert (length1 == length2);
+    }
+  while (length1 == sizeof file_buffer);
+
+  rewind_file (fp);
+  rewind_file (newfp);
   return newfp;
 }
 
@@ -287,20 +296,20 @@ random_test (const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
   else
-    printf("SEED: %s\n", msg_buff);
+    printf("SEED:  %s\n", msg_buff);
 
   for (i = 0; i < iterations; i++)
     {
       /* Generate source and target for the delta and its application.  */
       apr_uint32_t subseed_base = svn_test_rand (&seed);
-      FILE *source = generate_random_file (maxlen, subseed_base, &seed,
-                                           random_bytes, bytes_range,
-                                           dump_files);
-      FILE *target = generate_random_file (maxlen, subseed_base, &seed,
-                                           random_bytes, bytes_range,
-                                           dump_files);
-      FILE *source_copy = copy_tempfile (source);
-      FILE *target_regen = open_temp ();
+      apr_file_t *source = generate_random_file (maxlen, subseed_base, &seed,
+                                                 random_bytes, bytes_range,
+                                                 dump_files, pool);
+      apr_file_t *target = generate_random_file (maxlen, subseed_base, &seed,
+                                                 random_bytes, bytes_range,
+                                                 dump_files, pool);
+      apr_file_t *source_copy = copy_tempfile (source, pool);
+      apr_file_t *target_regen = open_tempfile (NULL, pool);
 
       svn_txdelta_stream_t *txdelta_stream;
       svn_txdelta_window_handler_t handler;
@@ -314,8 +323,8 @@ random_test (const char **msg,
       apr_pool_t *delta_pool = svn_pool_create (pool);
 
       /* Make stage 4: apply the text delta.  */
-      svn_txdelta_apply (svn_stream_from_stdio (source_copy, delta_pool),
-                         svn_stream_from_stdio (target_regen, delta_pool),
+      svn_txdelta_apply (svn_stream_from_aprfile (source_copy, delta_pool),
+                         svn_stream_from_aprfile (target_regen, delta_pool),
                          delta_pool, &handler, &handler_baton);
 
       /* Make stage 3: reparse the text delta.  */
@@ -327,8 +336,8 @@ random_test (const char **msg,
 
       /* Make stage 1: create the text delta.  */
       svn_txdelta (&txdelta_stream,
-                   svn_stream_from_stdio (source, delta_pool),
-                   svn_stream_from_stdio (target, delta_pool),
+                   svn_stream_from_aprfile (source, delta_pool),
+                   svn_stream_from_aprfile (target, delta_pool),
                    delta_pool);
 
       SVN_ERR (svn_txdelta_send_txstream (txdelta_stream,
@@ -340,10 +349,10 @@ random_test (const char **msg,
 
       SVN_ERR (compare_files (target, target_regen, dump_files));
 
-      close_temp (source);
-      close_temp (target);
-      close_temp (source_copy);
-      close_temp (target_regen);
+      apr_file_close (source);
+      apr_file_close (target);
+      apr_file_close (source_copy);
+      apr_file_close (target_regen);
     }
 
   return SVN_NO_ERROR;
@@ -374,24 +383,24 @@ do_random_combine_test (const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
   else
-    printf("SEED: %s\n", msg_buff);
+    printf("SEED:  %s\n", msg_buff);
 
   for (i = 0; i < iterations; i++)
     {
       /* Generate source and target for the delta and its application.  */
       apr_uint32_t subseed_base = svn_test_rand ((*last_seed = seed, &seed));
-      FILE *source = generate_random_file (maxlen, subseed_base, &seed,
-                                           random_bytes, bytes_range,
-                                           dump_files);
-      FILE *middle = generate_random_file (maxlen, subseed_base, &seed,
-                                           random_bytes, bytes_range,
-                                           dump_files);
-      FILE *target = generate_random_file (maxlen, subseed_base, &seed,
-                                           random_bytes, bytes_range,
-                                           dump_files);
-      FILE *source_copy = copy_tempfile (source);
-      FILE *middle_copy = copy_tempfile (middle);
-      FILE *target_regen = open_temp ();
+      apr_file_t *source = generate_random_file (maxlen, subseed_base, &seed,
+                                                 random_bytes, bytes_range,
+                                                 dump_files, pool);
+      apr_file_t *middle = generate_random_file (maxlen, subseed_base, &seed,
+                                                 random_bytes, bytes_range,
+                                                 dump_files, pool);
+      apr_file_t *target = generate_random_file (maxlen, subseed_base, &seed,
+                                                 random_bytes, bytes_range,
+                                                 dump_files, pool);
+      apr_file_t *source_copy = copy_tempfile (source, pool);
+      apr_file_t *middle_copy = copy_tempfile (middle, pool);
+      apr_file_t *target_regen = open_tempfile (NULL, pool);
 
       svn_txdelta_stream_t *txdelta_stream_A;
       svn_txdelta_stream_t *txdelta_stream_B;
@@ -406,8 +415,8 @@ do_random_combine_test (const char **msg,
       apr_pool_t *delta_pool = svn_pool_create (pool);
 
       /* Make stage 4: apply the text delta.  */
-      svn_txdelta_apply (svn_stream_from_stdio (source_copy, delta_pool),
-                         svn_stream_from_stdio (target_regen, delta_pool),
+      svn_txdelta_apply (svn_stream_from_aprfile (source_copy, delta_pool),
+                         svn_stream_from_aprfile (target_regen, delta_pool),
                          delta_pool, &handler, &handler_baton);
 
       /* Make stage 3: reparse the text delta.  */
@@ -420,13 +429,13 @@ do_random_combine_test (const char **msg,
       /* Make stage 1: create the text deltas.  */
 
       svn_txdelta (&txdelta_stream_A,
-                   svn_stream_from_stdio (source, delta_pool),
-                   svn_stream_from_stdio (middle, delta_pool),
+                   svn_stream_from_aprfile (source, delta_pool),
+                   svn_stream_from_aprfile (middle, delta_pool),
                    delta_pool);
 
       svn_txdelta (&txdelta_stream_B,
-                   svn_stream_from_stdio (middle_copy, delta_pool),
-                   svn_stream_from_stdio (target, delta_pool),
+                   svn_stream_from_aprfile (middle_copy, delta_pool),
+                   svn_stream_from_aprfile (target, delta_pool),
                    delta_pool);
 
       {
@@ -477,12 +486,12 @@ do_random_combine_test (const char **msg,
 
       SVN_ERR (compare_files (target, target_regen, dump_files));
 
-      close_temp (source);
-      close_temp (middle);
-      close_temp (target);
-      close_temp (source_copy);
-      close_temp (middle_copy);
-      close_temp (target_regen);
+      apr_file_close (source);
+      apr_file_close (middle);
+      apr_file_close (target);
+      apr_file_close (source_copy);
+      apr_file_close (middle_copy);
+      apr_file_close (target_regen);
     }
 
   return SVN_NO_ERROR;
@@ -496,7 +505,7 @@ random_combine_test (const char **msg,
   apr_uint32_t seed;
   svn_error_t *err = do_random_combine_test (msg, msg_only, pool, &seed);
   if (!msg_only)
-    printf("SEED: Last seen = %lu\n", (unsigned long) seed);
+    printf("SEED:  Last seen = %lu\n", (unsigned long) seed);
   return err;
 }
 
