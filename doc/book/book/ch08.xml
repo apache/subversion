@@ -1173,7 +1173,7 @@ Index: COMMITTERS
 ===================================================================
 --- COMMITTERS	(revision 3000)
 +++ COMMITTERS	(revision 3500)
-...
+&hellip;
             </screen>
 
             <para>Compare revision 3000 to revision 3500 using range
@@ -1288,7 +1288,7 @@ pantheon: /tmp&gt;
 $ svn export file:///tmp/repos my-export
 A  my-export/test
 A  my-export/quiz
-...
+&hellip;
 Exported revision 15.
             </screen>
 
@@ -1397,7 +1397,7 @@ Exported revision 15.
             <screen>
 $ svn import -m "New import" myproj http://svn.red-bean.com/repos/test
 Adding         myproj/sample.txt
-...
+&hellip;
 Transmitting file data .........
 Committed revision 16.
             </screen>
@@ -1410,7 +1410,7 @@ Committed revision 16.
             <screen>
 $ svn import -m "New import" myproj http://svn.red-bean.com/repos/test/trunk/vendors/myproj
 Adding         myproj/sample.txt
-...
+&hellip;
 Transmitting file data .........
 Committed revision 19.
             </screen>
@@ -1683,7 +1683,7 @@ rev 20:  harry | 2003-01-17 22:56:19 -0600 (Fri, 17 Jan 2003) | 1 line
 Tweak.
 ------------------------------------------------------------------------
 rev 17:  sally | 2003-01-16 23:21:19 -0600 (Thu, 16 Jan 2003) | 2 lines
-...
+&hellip;
             </screen>
 
             <para>Examine all log messages for a particular file in
@@ -1697,7 +1697,7 @@ rev 32:  sally | 2003-01-13 16:43:13 -0600 (Mon, 13 Jan 2003) | 1 line
 Added defines.
 ------------------------------------------------------------------------
 rev 28:  sally | 2003-01-07 21:48:33 -0600 (Tue, 07 Jan 2003) | 3 lines
-...
+&hellip;
             </screen>
 
             <para>If you don't have a working copy handy, you can log
@@ -1711,7 +1711,7 @@ rev 32:  sally | 2003-01-13 16:43:13 -0600 (Mon, 13 Jan 2003) | 1 line
 Added defines.
 ------------------------------------------------------------------------
 rev 28:  sally | 2003-01-07 21:48:33 -0600 (Tue, 07 Jan 2003) | 3 lines
-...
+&hellip;
             </screen>
 
             <para>If you want several distinct paths underneath the
@@ -1730,7 +1730,7 @@ rev 31:  harry | 2003-01-10 12:25:08 -0600 (Fri, 10 Jan 2003) | 1 line
 Added new file bar.c
 ------------------------------------------------------------------------
 rev 28:  sally | 2003-01-07 21:48:33 -0600 (Tue, 07 Jan 2003) | 3 lines
-...
+&hellip;
             </screen>
 
             <para>That is the same as explicitly placing both URLs on
@@ -1739,7 +1739,7 @@ rev 28:  sally | 2003-01-07 21:48:33 -0600 (Tue, 07 Jan 2003) | 3 lines
             <screen>
 $ svn log http://svn.red-bean.com/repos/test/foo.c \
           http://svn.red-bean.com/repos/test/foo.c
-...
+&hellip;
             </screen>
 
             <para>When you're concatenating the results of multiple
@@ -1918,7 +1918,7 @@ U  myproj/flo.txt
             <screen>
 $ svn merge -r 23:30 file:///tmp/repos/trunk/vendors
 U  myproj/thhgttg.txt
-...
+&hellip;
             </screen>
             
           <para>To merge changes to a single file:</para>
@@ -3458,7 +3458,7 @@ Revision-number: 0
 * Dumped revision 0.
 Prop-content-length: 56
 Content-length: 56
-...
+&hellip;
           </screen>
 
           <para>Incrementally dump a single transaction from your
@@ -3471,7 +3471,7 @@ SVN-fs-dump-format-version: 1
 Revision-number: 21
 Prop-content-length: 101
 Content-length: 101
-...
+&hellip;
           </screen>
 
         </refsect1>
@@ -3527,7 +3527,7 @@ $ svnadmin load /usr/local/svn/restored &lt; repos-backup
 &lt;&lt;&lt; Started new txn, based on original revision 1
      * adding path : test ... done.
      * adding path : test/a ... done.
-...
+&hellip;
           </screen>
 
         </refsect1>
@@ -3593,7 +3593,7 @@ $ svnadmin lscr /usr/local/svn/repos/ test-moved-file --copies
 33
 15
 14
-...
+&hellip;
           </screen>
 
         </refsect1>
