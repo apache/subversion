@@ -1,3 +1,37 @@
+Version 0.14.1 [Alpha Interim 1] (released ? August 2002, revision ?)
+
+ User-visible changes:
+ * show copy-ancestry in 'svn log -v'
+ * 'svn co' can take multiple URLs now
+ * new 'svn ls' command
+ * new 'svn st --no-ignore' option
+ * more conservative 'svn help' usage error-message
+ * more graceful degredation from charset conversion failure
+ * standardize policy of -q switch behavior
+ * less intimidating error output
+ * new SVNParentPath directive for mod_dav_svn <Location>s
+ * Handbook: additions, tweaks, cleanups, and new French Translation.  :-)
+
+ Developer-visible changes:
+ * integrated the delta-combiner! (issue #531)
+ * integration of libsvn_wc-baton-locking branch (issue #749)
+ * new "skip-deltas" added to delta-combiner
+ * properly URI-encode/decode path components throughout our code
+ * RA->do_diff() made independent from RA->do_switch().
+ * stricter setting/parsing of svn:mime-type property in client and server.
+ * new 'install-static' make target
+ * extend SWIG bindings to libsvn_wc and libsvn_client
+ * BerkeleyDB usage tweaking:  in preparation for auto-recovery features.
+ * work on #850 (.dsp generator)
+ * started fs branch work on #842 (copyID inheritance), #830 (copies of
+   copies), #790 (copy table uses txnID), #815 (custom sorting)
+ * numerous bugfixes: #709 (better error handling), #813/814
+   (apr_filepath_merge), #685 (showing dir propdiffs), OS X dumper
+    bugfix, #561 (property conflict detection), mod_dav_svn path bugs,
+    svn_wc_status() bugs, path canonicalization bugs, #816 (svn log  -r), 
+    #843 (URL keyword), #846 (kind-change replacement), #809 ($EDITOR dir),
+
+
 Version 0.14.0 [Alpha] (released 23 July 2002, revision 2667)
 
  User-visible changes:
