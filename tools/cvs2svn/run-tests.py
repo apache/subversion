@@ -292,53 +292,54 @@ def two_quick():
     raise svntest.Failure
 
 
-def prune_with_care():
+def full_prune():
   "prune, but not too eagerly"
   # Robert Pluim encountered this lovely one while converting the
   # directory src/gnu/usr.bin/cvs/contrib/pcl-cvs/ in FreeBSD's CVS
   # repository (see issue #1302).  Step 4 is the doozy:
   #
-  #   revision 1:  adds trunk/, adds trunk/cookie
-  #   revision 2:  adds trunk/NEWS
-  #   revision 3:  deletes trunk/cookie
-  #   revision 4:  deletes trunk/  [re-deleting trunk/cookie pruned trunk!]
+  #   revision 1:  adds blah/trunk/, adds blah/trunk/cookie
+  #   revision 2:  adds blah/trunk/NEWS
+  #   revision 3:  deletes blah/trunk/cookie
+  #   revision 4:  deletes blah/  [re-deleting blah/trunk/cookie pruned blah!]
   #   revision 5:  does nothing
   #   
   # After fixing cvs2svn, the sequence (correctly) looks like this:
   #
-  #   revision 1:  adds trunk/, adds trunk/cookie
-  #   revision 2:  adds trunk/NEWS
-  #   revision 3:  deletes trunk/cookie
-  #   revision 4:  does nothing    [because trunk/cookie already deleted]
-  #   revision 5:  deletes trunk/NEWS
+  #   revision 1:  adds blah/trunk/, adds blah/trunk/cookie
+  #   revision 2:  adds blah/trunk/NEWS
+  #   revision 3:  deletes blah/trunk/cookie
+  #   revision 4:  does nothing    [because blah/trunk/cookie already deleted]
+  #   revision 5:  deletes blah/
   # 
-  # The difference is in 4 and 5.  It's not correct to prune trunk/,
-  # because NEWS is still in there, so revision 4 does nothing.  But
-  # when we delete NEWS in 5, that should bubble up and prune trunk/
-  # instead.
+  # The difference is in 4 and 5.  In revision 4, it's not correct to
+  # prune blah/, because trunk/NEWS is still in there, so revision 4
+  # does nothing now.  But when we delete NEWS in 5, that should
+  # bubble up and prune blah/ instead.
   #
   # ### Note that empty revisions like 4 are probably going to become
   # ### at least optional, if not banished entirely from cvs2svn's
   # ### output.  Hmmm, or they may stick around, with an extra
   # ### revision property explaining what happened.  Need to think
-  # ### about that.
+  # ### about that.  In some sense, it's a bug in Subversion itself,
+  # ### that such revisions don't show up in 'svn log' output.
   #
-  # In the test below, the file 'trunk/prune-with-care/first' is
-  # cookie, and 'trunk/prune-with-care/second' is NEWS.
+  # In the test below, 'trunk/full-prune/first' represents
+  # cookie, and 'trunk/full-prune/second' represents NEWS.
 
   repos, wc, logs = ensure_conversion('main')
 
-  # Confirm that revision 3 removes '/prune-with-care/trunk/first',
-  # and that revision 5 removes '/prune-with-care/trunk'.
+  # Confirm that revision 3 removes '/full-prune/trunk/first',
+  # and that revision 5 removes '/full-prune'.
 
-  if not (logs[3].changed_paths.has_key('/prune-with-care/trunk/first')
-          and logs[3].changed_paths['/prune-with-care/trunk/first'] == 'D'):
-    print "Revision 3 failed to remove '/prune-with-care/trunk/first'."
+  if not (logs[3].changed_paths.has_key('/full-prune/trunk/first')
+          and logs[3].changed_paths['/full-prune/trunk/first'] == 'D'):
+    print "Revision 3 failed to remove '/full-prune/trunk/first'."
     raise svntest.Failure
 
-  if not (logs[5].changed_paths.has_key('/prune-with-care/trunk')
-          and logs[5].changed_paths['/prune-with-care/trunk'] == 'D'):
-    print "Revision 5 failed to remove '/prune-with-care/trunk'."
+  if not (logs[5].changed_paths.has_key('/full-prune')
+          and logs[5].changed_paths['/full-prune'] == 'D'):
+    print "Revision 5 failed to remove '/full-prune'."
     raise svntest.Failure
 
 
@@ -613,7 +614,7 @@ test_list = [ None,
               attr_exec,
               space_fname,
               two_quick,
-              prune_with_care,
+              full_prune,
               double_delete,
               simple_commits,
               interleaved_commits,
