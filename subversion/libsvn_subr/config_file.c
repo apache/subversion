@@ -903,7 +903,7 @@ svn_config_ensure (const char *config_dir, apr_pool_t *pool)
         "### corresponding name."
         APR_EOL_STR
         APR_EOL_STR
-        "# [groups]"
+        "[groups]"
         APR_EOL_STR
         "# group1 = *.collab.net"
         APR_EOL_STR
@@ -974,7 +974,7 @@ svn_config_ensure (const char *config_dir, apr_pool_t *pool)
         APR_EOL_STR
         "### due to SSL."
         APR_EOL_STR
-        "# [global]"
+        "[global]"
         APR_EOL_STR
         "# http-proxy-exceptions = *.exception.com, www.internal-site.org"
         APR_EOL_STR
@@ -1036,7 +1036,7 @@ svn_config_ensure (const char *config_dir, apr_pool_t *pool)
         APR_EOL_STR
         "### Section for authentication and authorization customizations."
         APR_EOL_STR
-        "# [auth]"
+        "[auth]"
         APR_EOL_STR
         "### Set store-passwords to 'no' to avoid storing passwords in the"
         APR_EOL_STR
@@ -1089,7 +1089,7 @@ svn_config_ensure (const char *config_dir, apr_pool_t *pool)
         APR_EOL_STR
         "###   program accepts the '--diff-program' option."
         APR_EOL_STR
-        "# [helpers]"
+        "[helpers]"
         APR_EOL_STR
         "# editor-cmd = editor (vi, emacs, notepad, etc.)"
         APR_EOL_STR
@@ -1102,7 +1102,7 @@ svn_config_ensure (const char *config_dir, apr_pool_t *pool)
         APR_EOL_STR
         "### Section for configuring tunnel agents."
         APR_EOL_STR
-        "# [tunnels]"
+        "[tunnels]"
         APR_EOL_STR
         "### Configure svn protocol tunnel schemes here.  By default, only"
         APR_EOL_STR
@@ -1153,7 +1153,7 @@ svn_config_ensure (const char *config_dir, apr_pool_t *pool)
         APR_EOL_STR
         "### Section for configuring miscelleneous Subversion options."
         APR_EOL_STR
-        "# [miscellany]"
+        "[miscellany]"
         APR_EOL_STR
         "### Set global-ignores to a set of whitespace-delimited globs"
         APR_EOL_STR
@@ -1194,7 +1194,7 @@ svn_config_ensure (const char *config_dir, apr_pool_t *pool)
         APR_EOL_STR
         "### is typically done by setting the 'enable-auto-props' option."
         APR_EOL_STR
-        "# [auto-props]"
+        "[auto-props]"
         APR_EOL_STR
         "# *.c = svn:eol-style=native"
         APR_EOL_STR
