@@ -1,13 +1,14 @@
 log: Show the log messages for a set of revision(s) and/or file(s).
 usage: svn log [URL] [PATH1 [PATH2] ...] 
-    Either get the log messages for local PATHs or PATHs at the
-    URL.  If URL is given by itself, then log messages are output for
-    that specific path.  The -v option will include a list of affected
-    files for each log message.  By default, the resultant collection
-    of log messages for a given path will include logs for all the
-    revisions in which that path's node was modified, spanning copy
-    history where such exists.  This can be disabled by using the
-    --strict option.  Examples are:
+    Print the log messages for local PATHs, or for PATHs under
+    URL, if URL is given.  If URL is given by itself, then print log
+    messages for everything under it.  With -v, also print all affected
+    paths with each log message.
+
+    Each log message is printed just once, even if more than one of the
+    affected paths for that revision were explicitly requested.  Logs
+    cross copy history by default; use --strict to disable this.
+    For example:
 
        svn log
        svn log foo.c
