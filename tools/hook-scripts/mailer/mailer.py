@@ -899,7 +899,10 @@ will be provided via standard input.
 
   cmd = sys.argv[1]
   repos_dir = sys.argv[2]
-  revision = int(sys.argv[3])
+  try:
+    revision = int(sys.argv[3])
+  except ValueError:
+    usage()
   config_fname = None
 
   # Used for propchange only
