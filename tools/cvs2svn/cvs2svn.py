@@ -729,11 +729,6 @@ class RepositoryMirror:
     components = string.split(path, '/')
     path_so_far = None
 
-    # Start out assuming that we will delete it.  The for-loop may
-    # change this to None, if it turns out we can't even reach the
-    # path (i.e., it is already deleted).
-    retval = path
-
     parent_key = self.revs_db[str(self.youngest)]
     parent = marshal.loads(self.nodes_db[parent_key])
 
@@ -771,8 +766,6 @@ class RepositoryMirror:
         return 1
 
     for component in components[:-1]:
-      # parent is always mutable at the top of the loop
-
       if path_so_far:
         path_so_far = path_so_far + '/' + component
       else:
