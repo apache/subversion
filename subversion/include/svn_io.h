@@ -50,6 +50,9 @@
 /* ==================================================================== */
 
 
+#ifndef SVN_IO_H
+#define SVN_IO_H
+
 #include "svn_error.h"
 
 
@@ -76,3 +79,4 @@ typedef svn_error_t *svn_read_fn_t (void *baton,
                                     apr_off_t *len,
                                     apr_pool_t *pool);
 
+#endif /* SVN_IO_H */
