@@ -38,7 +38,7 @@ svn_cl__update (svn_cl__opt_state_t *opt_state,
   int i;
 
   /* Add "." if user passed 0 arguments */
-  push_implicit_dot_target(targets, pool);
+  svn_cl__push_implicit_dot_target(targets, pool);
 
   for (i = 0; i < targets->nelts; i++)
     {
