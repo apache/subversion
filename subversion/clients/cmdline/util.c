@@ -371,7 +371,8 @@ svn_cl__get_log_message (const char **log_msg,
                          void *baton,
                          apr_pool_t *pool)
 {
-  const char *default_msg = "\n" EDITOR_EOF_PREFIX "\n\n";
+  const char *default_msg =
+    APR_EOL_STR EDITOR_EOF_PREFIX APR_EOL_STR APR_EOL_STR;
   struct log_msg_baton *lmb = baton;
   svn_stringbuf_t *message = NULL;
   
@@ -440,7 +441,7 @@ svn_cl__get_log_message (const char **log_msg,
           svn_stringbuf_appendbytes (tmp_message, &prop_mod, 1); 
           svn_stringbuf_appendcstr (tmp_message, "   ");
           svn_stringbuf_appendcstr (tmp_message, path);
-          svn_stringbuf_appendcstr (tmp_message, "\n");
+          svn_stringbuf_appendcstr (tmp_message, APR_EOL_STR);
         }
 
       /* Use the external edit to get a log message. */
