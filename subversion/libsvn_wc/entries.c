@@ -476,6 +476,47 @@ read_entries (apr_hash_t *entries, svn_string_t *path, apr_pool_t *pool)
 
 
 svn_error_t *
+svn_wc_entry (svn_wc_entry_t **entry,
+              svn_string_t *path,
+              apr_pool_t *pool)
+{
+  svn_error_t *err;
+  enum svn_node_kind kind;
+  svn_wc_entry_t *e = NULL;
+  apr_hash_t *entries = apr_make_hash (pool);
+
+  err = svn_io_check_path (path, &kind, pool);
+  if (err)
+    return err;
+
+  /* kff todo: fooo working here:
+     Make an innocent way to discover that a dir/path is or is not
+     under version control, so that this function can be robust.  I
+     think svn_wc__entries_read() will return an error right now if,
+     for example, PATH represents a new dir that svn still thinks is a
+     regular file under version control. */
+
+  if (kind == svn_node_dir)
+    {
+      err = svn_wc__entries_read (&entries, path, pool);
+      e = apr_hash_get (entries, SVN_WC_ENTRY_THIS_DIR, APR_HASH_KEY_STRING);
+    }
+
+  if (entry)
+    *entry = e;
+  else   /* try it as a non-directory. */
+    {
+      svn_string_t *dir, *basename;
+      svn_path_split (path, &dir, &basename, svn_path_local_style, pool);
+      
+      /* to be continued */
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
 svn_wc__entries_read (apr_hash_t **entries,
                       svn_string_t *path,
                       apr_pool_t *pool)
