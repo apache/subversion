@@ -584,7 +584,7 @@ msgstr ""
 "顯示兩個路徑之間的差異.\n"
 "用法: 1. diff [-r N[:M]] [TARGET[@REV]...]\n"
 "      2. diff [-r N[:M]] --old=OLD-TGT[@OLDREV] [--new=NEW-TGT[@NEWREV]] \\\n"
-"               [PATH...]\n"
+"              [PATH...]\n"
 "      3. diff OLD-URL[@OLDREV] NEW-URL[@NEWREV]\n"
 "\n"
 "  1. 顯示在 REV 修訂版中存在的 TARGET, 它 (們) 在兩個不同的修訂版之間的\n"
@@ -901,6 +901,7 @@ msgstr ""
 "\n"
 "  1. 顯示納入版本控制的工作複本性質.\n"
 "  2. 顯示無版本控制的遠端檔案庫修訂版性質.\n"
+"\n"
 "  本子命令的預設行為會在性質內容加上額外的換列字元, 如此可得到較\n"
 "  美觀的輸出. 另外, 當同時處理多個路徑時, 每一個性質內容會加上它\n"
 "  所對應到的路徑. 使用 --strict 選項以關閉這項美化行為 (舉例來說,\n"
@@ -923,7 +924,6 @@ msgstr ""
 "  2. 列出無版本控制的遠端檔案庫修訂版性質更動.\n"
 
 #: clients/cmdline/main.c:500
-#, fuzzy
 msgid ""
 "Set PROPNAME to PROPVAL on files, dirs, or revisions.\n"
 "usage: 1. propset PROPNAME [PROPVAL | -F VALFILE] PATH...\n"
@@ -973,7 +973,8 @@ msgstr ""
 "      URL, HeadURL             - 本物件於檔案庫 HEAD 版的 URL.\n"
 "      Author, LastChangedBy    - 最後一次修改檔案的使用者.\n"
 "      Date, LastChangedDate    - 本物件最近一次更動的日期.\n"
-"      Rev, LastChangedRevision - 本物件最後一次更動的修訂版.\n"
+"      Rev, Revision,           - 本物件最後一次更動的修訂版.\n"
+"      LastChangedRevision\n"
 "      Id                       - 前四個關鍵字的壓縮摘要.\n"
 "    svn:executable - 如果存在的話, 讓檔案變成可執行檔. 這個性質無法\n"
 "      對目錄設定. 非遞迴式的動作會失敗, 而遞迴式的動作只會設定該目錄\n"
@@ -1084,8 +1085,8 @@ msgstr ""
 "顯示工作複本目錄與檔案的狀態.\n"
 "用法: status [PATH...]\n"
 "\n"
-"  未指定引數時, 它只會顯示本地修改的項目 (沒有網路的存取動作).  使用 -u 時, "
-"再加上工作修訂版與伺服器過時的資訊.\n"
+"  未指定引數時, 它只會顯示本地修改的項目 (沒有網路的存取動作).\n"
+"  使用 -u 時, 再加上工作修訂版與伺服器過時的資訊.\n"
 "  使用 -v 時, 顯示每一個項目的完整修訂版資訊.\n"
 "\n"
 "  輸出的前五個欄位各為一個字元寬:\n"
@@ -1109,9 +1110,11 @@ msgstr ""
 "    第三欄: 只在工作複本目錄被鎖定時才會出現\n"
 "      ' ' 未鎖定\n"
 "      'L' 鎖定\n"
-"    第四欄: 預定要連同歷史紀錄被新增      ' ' 預定的送交並不包含歷史紀錄\n"
+"    第四欄: 預定要連同歷史紀錄被新增\n"
+"      ' ' 預定的送交並不包含歷史紀錄\n"
 "      '+' 預定的送交包含歷史紀錄\n"
-"    第五欄: 該項目相對其父目錄是否已被切換      ' ' 正常\n"
+"    第五欄: 該項目相對其父目錄是否已被切換\n"
+"      ' ' 正常\n"
 "      'S' 被切換\n"
 "\n"
 "  是否過時的資訊, 出現的位置是第八欄 (與 -u 併用時):\n"
@@ -1205,9 +1208,8 @@ msgstr ""
 "  第一欄的字元表示實際檔案的更新, 而檔案性質顯示在第二欄.\n"
 
 #: clients/cmdline/main.c:675
-#, fuzzy
 msgid "Print client version info\n"
-msgstr "輸出用戶端版本資料"
+msgstr "輸出用戶端版本資料\n"
 
 #: clients/cmdline/main.c:729 svnadmin/main.c:75
 msgid "Caught signal"
@@ -2533,9 +2535,9 @@ msgid "Unknown entry kind for '%s'"
 msgstr "未知的項目類型 '%s'"
 
 #: libsvn_client/commit_util.c:236
-#, fuzzy, c-format
+#, c-format
 msgid "Entry '%s' has unexpectedly changed special status"
-msgstr "項目 '%s' 已被特殊檔案所取代"
+msgstr "項目 '%s' 不預期地變換特殊狀態"
 
 #: libsvn_client/commit_util.c:286
 #, c-format
@@ -3231,7 +3233,7 @@ msgstr "'%s' 的 RA 外掛版本不符合: 遇到 %d.%d.%d%s, 預期 %d.%d.%d%s"
 msgid "Unrecognized URL scheme '%s'"
 msgstr "無法辨識的 URL 綱要 '%s'"
 
-# leave as-is
+# as-is
 #: libsvn_ra/ra_loader.c:291
 #, c-format
 msgid "  - handles '%s' schema\n"
@@ -3560,25 +3562,24 @@ msgid "Unable to open repository '%s'"
 msgstr "無法開啟檔案庫 '%s'"
 
 #: libsvn_ra_svn/client.c:137
-#, fuzzy, c-format
+#, c-format
 msgid "Unknown hostname '%s'"
-msgstr "未知的 FS 類別 '%s'"
+msgstr "未知的主機名稱 '%s'"
 
 #: libsvn_ra_svn/client.c:148
-#, fuzzy
 msgid "Can't create socket"
-msgstr "無法讀取標準輸入"
+msgstr "無法建立 socket"
 
 #: libsvn_ra_svn/client.c:152
-#, fuzzy, c-format
+#, c-format
 msgid "Can't connect to host '%s'"
-msgstr "無法 chmod '%s'"
+msgstr "無法連線至主機 '%s'"
 
 # as-is
 #: libsvn_ra_svn/client.c:173
 #, fuzzy
 msgid "Proplist element not a list"
-msgstr "Prop diffs element not a list"
+msgstr "Proplist element not a list"
 
 # as-is
 #: libsvn_ra_svn/client.c:197
@@ -3586,91 +3587,86 @@ msgid "Prop diffs element not a list"
 msgstr "Prop diffs element not a list"
 
 #: libsvn_ra_svn/client.c:218
-#, fuzzy, c-format
+#, c-format
 msgid "Unrecognized node kind '%s' from server"
-msgstr "無法確認的節點種類: '%s'"
+msgstr "無法辨識來自伺服器的節點種類 '%s'"
 
 #: libsvn_ra_svn/client.c:263 libsvn_ra_svn/client.c:317
-#, fuzzy, c-format
+#, c-format
 msgid "Authentication error from server: %s"
-msgstr "認證領域: %s\n"
+msgstr "來自伺服器的認證錯誤: %s"
 
 #: libsvn_ra_svn/client.c:266 libsvn_ra_svn/cram.c:196
 #: libsvn_ra_svn/cram.c:214
 msgid "Unexpected server response to authentication"
-msgstr ""
+msgstr "不預期對認證的伺服器回應"
 
 #: libsvn_ra_svn/client.c:324
-#, fuzzy
 msgid "Cannot negotiate authentication mechanism"
-msgstr "不記憶認證符"
+msgstr "無法協商出認識機制"
 
 #: libsvn_ra_svn/client.c:451
-#, fuzzy, c-format
+#, c-format
 msgid "Undefined tunnel scheme '%s'"
-msgstr "無法辨識的 URL 綱要 '%s'"
+msgstr "無法辨識的 tunnel 綱要 '%s'"
 
 #: libsvn_ra_svn/client.c:468
 #, c-format
 msgid "Tunnel scheme %s requires environment variable %s to be defined"
-msgstr ""
+msgstr "Tunnel 綱要 %s 需要設定環境變數 %s"
 
 # as-is
 #: libsvn_ra_svn/client.c:479
-#, fuzzy, c-format
+#, c-format
 msgid "Can't tokenize command '%s'"
-msgstr "Can't seek in '%s'"
+msgstr "Can't tokenize command '%s'"
 
 #: libsvn_ra_svn/client.c:508
 #, c-format
 msgid "Error in child process: %s"
-msgstr ""
+msgstr "子程序錯誤: %s"
 
 #: libsvn_ra_svn/client.c:531
-#, fuzzy
 msgid "Can't create tunnel"
-msgstr "無法讀取標準輸入"
+msgstr "無法建立 tunnel"
 
 #: libsvn_ra_svn/client.c:575
-#, fuzzy, c-format
+#, c-format
 msgid "Illegal svn repository URL '%s'"
-msgstr "無法開啟檔案庫 '%s'"
+msgstr "不合法的 svn 檔案庫 URL '%s'"
 
 #: libsvn_ra_svn/client.c:594
 #, c-format
 msgid "Server requires minimum version %d"
-msgstr ""
+msgstr "伺服器最低要求的版號為 %d"
 
 #: libsvn_ra_svn/client.c:641
 #, fuzzy
 msgid "impossibly long repository root from server"
-msgstr "未提供檔案庫路徑引數"
+msgstr "伺服器回傳的檔案庫根路徑長得太誇張"
 
 #: libsvn_ra_svn/client.c:705
 msgid "Server did not send repository root"
-msgstr ""
+msgstr "伺服器沒有傳回檔案庫根路徑"
 
 #: libsvn_ra_svn/client.c:826
 msgid "Non-string as part of file contents"
-msgstr ""
+msgstr "檔案內容的一部份不是字串"
 
 # as-is
 #: libsvn_ra_svn/client.c:895
-#, fuzzy
 msgid "Dirlist element not a list"
-msgstr "Prop diffs element not a list"
+msgstr "Dirlist element not a list"
 
 # as-is
 #: libsvn_ra_svn/client.c:1046
-#, fuzzy
 msgid "Log entry not a list"
-msgstr "Revision entry not a list"
+msgstr "Log entry not a list"
 
 # as-is
 #: libsvn_ra_svn/client.c:1059
-#, fuzzy
 msgid "Changed-path entry not a list"
-msgstr "Revision entry not a list"
+msgstr "Changed-path entry not a list"
 
 # as-is
 #: libsvn_ra_svn/client.c:1131
@@ -3679,9 +3675,8 @@ msgstr "get-locations not implemented"
 
 # as-is
 #: libsvn_ra_svn/client.c:1144
-#, fuzzy
 msgid "Location entry not a list"
-msgstr "Revision entry not a list"
+msgstr "Location entry not a list"
 
 # as-is
 #: libsvn_ra_svn/client.c:1196
@@ -3703,83 +3698,83 @@ msgstr "get-file-revs 命令沒有傳回任何修訂版"
 
 # as-is
 #: libsvn_ra_svn/client.c:1271
-#, fuzzy
 msgid "Module for accessing a repository using the svn network protocol."
-msgstr "Module for accessing a repository via WebDAV (DeltaV) protocol."
+msgstr "Module for accessing a repository using the svn network protocol."
 
 # as-is
 #: libsvn_ra_svn/client.c:1307
-#, fuzzy, c-format
+#, c-format
 msgid "Unsupported RA plugin ABI version (%d) for ra_svn."
-msgstr "Unsupported RA plugin ABI version (%d) for ra_dav"
+msgstr "Unsupported RA plugin ABI version (%d) for ra_svn."
 
+# as-is
 #: libsvn_ra_svn/editor.c:384 libsvn_ra_svn/editorp.c:419
 msgid "Invalid file or dir token during edit"
-msgstr ""
+msgstr "Invalid file or dir token during edit"
 
 #: libsvn_ra_svn/editor.c:608
 msgid "Non-string as part of text delta"
-msgstr ""
+msgstr "檔案差異的一部份不是字串"
 
+# as-is
 #: libsvn_ra_svn/editorp.c:129
 msgid "Successful edit status returned too soon"
-msgstr ""
+msgstr "Successful edit status returned too soon"
 
+# as-is
 #: libsvn_ra_svn/editorp.c:601
 msgid "Apply-textdelta already active"
-msgstr ""
+msgstr "Apply-textdelta already active"
 
+# as-is
 #: libsvn_ra_svn/editorp.c:623 libsvn_ra_svn/editorp.c:641
 msgid "Apply-textdelta not active"
-msgstr ""
+msgstr "Apply-textdelta not active"
 
 #: libsvn_ra_svn/editorp.c:789 libsvn_ra_svn/marshal.c:809
-#, fuzzy, c-format
+#, c-format
 msgid "Unknown command '%s'"
-msgstr "未知的命令: '%s'\n"
+msgstr "未知的命令: '%s'"
 
+# as-is
 #: libsvn_ra_svn/marshal.c:78
 msgid "Capability entry is not a word"
-msgstr ""
+msgstr "Capability entry is not a word"
 
 #: libsvn_ra_svn/marshal.c:160
-#, fuzzy
 msgid "Can't write to connection"
-msgstr "無法寫入至 '%s'"
+msgstr "無法寫入連線"
 
 #: libsvn_ra_svn/marshal.c:250
-#, fuzzy
 msgid "Can't read from connection"
-msgstr "無法讀取標準輸入"
+msgstr "無法讀取連線"
 
 #: libsvn_ra_svn/marshal.c:253
-#, fuzzy
 msgid "Connection closed unexpectedly"
 msgstr "網路連線無預期地關閉"
 
 #: libsvn_ra_svn/marshal.c:497
 msgid "String length larger than maximum"
-msgstr ""
+msgstr "字串長度超出上限"
 
 #: libsvn_ra_svn/marshal.c:545
 msgid "Number is larger than maximum"
-msgstr ""
+msgstr "數字大小超過上限"
 
 #: libsvn_ra_svn/marshal.c:758
 msgid "Empty error list"
-msgstr ""
+msgstr "空的錯誤列表"
 
 #: libsvn_ra_svn/marshal.c:765
-#, fuzzy
 msgid "Malformed error list"
-msgstr "有缺陷的網路資料"
+msgstr "有缺陷的錯誤列表"
 
 #: libsvn_ra_svn/marshal.c:780
 #, c-format
 msgid "Unknown status '%s' in command response"
-msgstr ""
+msgstr "命令回應中的未知狀態 '%s'"
 
-# leave as-is
+# as-is
 #: libsvn_repos/dump.c:416
 #, c-format
 msgid ""
@@ -3801,13 +3796,13 @@ msgstr "起始修訂版 %ld 比結束修訂版號 %ld 為大"
 msgid "End revision %ld is invalid (youngest revision is %ld)"
 msgstr "結束修訂版 %ld 無效 (最年輕的修訂版為 %ld)"
 
-# leave as-is
+# as-is
 #: libsvn_repos/dump.c:1044
 #, c-format
 msgid "* %s revision %ld.\n"
 msgstr "* %s revision %ld.\n"
 
-# leave as-is
+# as-is
 #: libsvn_repos/load.c:800
 #, c-format
 msgid "<<< Started new transaction, based on original revision %ld\n"
@@ -3818,7 +3813,7 @@ msgstr "<<< Started new transaction, based on original revision %ld\n"
 msgid "Relative source revision %ld is not available in current repository"
 msgstr "相對來源修訂版 %ld 不存在於目前檔案庫之中"
 
-# leave as-is
+# as-is
 #: libsvn_repos/load.c:1117
 #, c-format
 msgid ""
@@ -3830,7 +3825,7 @@ msgstr ""
 "------- Committed revision %ld >>>\n"
 "\n"
 
-# leave as-is
+# as-is
 #: libsvn_repos/load.c:1123
 #, c-format
 msgid ""
@@ -3913,7 +3908,7 @@ msgstr ""
 "   編譯於 %s, %s\n"
 "\n"
 
-# leave as-is
+# as-is
 #: libsvn_subr/opt.c:709
 msgid ""
 "Copyright (C) 2000-2004 CollabNet.\n"
@@ -4689,6 +4684,7 @@ msgstr "關閉紀錄檔自動移除 [Berkeley DB]"
 msgid "remove redundant log files from source repository"
 msgstr "自來源檔案庫移除多餘的紀錄檔"
 
+# XXX: This doesn't look right.  Wait for a while.
 #: svnadmin/main.c:269
 msgid ""
 "wait instead of exit if the the repository is in\n"
@@ -4813,7 +4809,6 @@ msgstr ""
 "顯示所有未處理異動的名稱.\n"
 
 #: svnadmin/main.c:345
-#, fuzzy
 msgid ""
 "usage: svnadmin recover REPOS_PATH\n"
 "\n"
@@ -4828,8 +4823,9 @@ msgstr ""
 "對檔案庫進行 Berkeley DB 修復程序. 如果你遇到要求進行修復的\n"
 "錯誤訊息, 請執行本命令.\n"
 "\n"
-"警告: 只有在你絕對確定你是唯一存取檔案庫的人時,才執行本命令.\n"
-"本命令必須有獨佔的存取權.\n"
+"警告: 只有在你絕對確定你是唯一存取檔案庫的人時, 才執行本命令.\n"
+"本命令必須有獨佔的存取權, 如果檔案庫被其它行程所佔用, 它會馬\n"
+"上結束\n"
 "\n"
 
 #: svnadmin/main.c:353
@@ -4902,21 +4898,24 @@ msgstr ""
 "可用的子命令:\n"
 
 #: svnadmin/main.c:653
-#, fuzzy
 msgid ""
 "Repository lock acquired.\n"
 "Please wait; recovering the repository may take some time...\n"
-msgstr "請稍待; 修復檔案庫也許得花費一些時間...\n"
+msgstr ""
+"已取得檔案庫鎖定.\n"
+"請稍待; 修復檔案庫也許得花費一些時間...\n"
 
 #: svnadmin/main.c:688
 msgid ""
 "Failed to get exclusive repository access; perhaps another process\n"
 "such as httpd, svnserve or svn has it open?"
 msgstr ""
+"無法取得獨佔存取權; 也許其它像是 httpd, svnserve 或 svn 的行程讓它\n"
+"保持開啟的狀態?"
 
 #: svnadmin/main.c:693
 msgid "Waiting on repository lock; perhaps another process has it open?\n"
-msgstr ""
+msgstr "等待檔案庫鎖定中; 也許其它的行讓它保持開啟的狀態?\n"
 
 #: svnadmin/main.c:700
 msgid ""
@@ -4962,17 +4961,18 @@ msgstr ""
 "請使用 'svnadmin help %s' 以了解用法.\n"
 
 #: svndumpfilter/main.c:363
-#, fuzzy, c-format
+#, c-format
 msgid "Invalid copy source path '%s'"
-msgstr "無效的檔案系統路徑語法"
+msgstr "無效的複製來源路徑 '%s'"
 
 #: svndumpfilter/main.c:414
 msgid "Node with dropped parent sneaked in"
-msgstr ""
+msgstr "其父節點已捨棄的節點偷跑進來"
 
+# as-is
 #: svndumpfilter/main.c:586
 msgid "This is an empty revision for padding."
-msgstr ""
+msgstr "This is an empty revision for padding."
 
 #: svndumpfilter/main.c:641
 #, c-format
@@ -4986,40 +4986,43 @@ msgstr "略過修訂版 %ld.\n"
 
 #: svndumpfilter/main.c:707
 msgid "Do not display filtering statistics."
-msgstr ""
+msgstr "不顯示過濾的統計資料."
 
 #: svndumpfilter/main.c:709
 msgid "Remove revisions emptied by filtering."
-msgstr ""
+msgstr "移除因過濾而產生的空修訂版."
 
 #: svndumpfilter/main.c:711
 msgid "Renumber revisions left after filtering."
-msgstr ""
+msgstr "過濾後重編餘下的修訂版."
 
 #: svndumpfilter/main.c:713
 msgid "Don't filter revision properties."
-msgstr ""
+msgstr "不過濾修訂版性質."
 
 #: svndumpfilter/main.c:724
 msgid ""
 "Filter out nodes with given prefixes from dumpstream.\n"
 "usage: svndumpfilter exclude PATH_PREFIX...\n"
 msgstr ""
+"自傾印串流移除符合指定字首的節點.\n"
+"用法: svndumpfilter exclude PATH_PREFIX...\n"
 
 #: svndumpfilter/main.c:730
 msgid ""
 "Filter out nodes without given prefixes from dumpstream.\n"
 "usage: svndumpfilter include PATH_PREFIX...\n"
 msgstr ""
+"自傾印串流移除未包含指定字首的節點.\n"
+"usage: svndumpfilter include PATH_PREFIX...\n"
 
 #: svndumpfilter/main.c:736
-#, fuzzy
 msgid ""
 "Describe the usage of this program or its subcommands.\n"
 "usage: svndumpfilter help [SUBCOMMAND...]\n"
 msgstr ""
 "描述本程式或其子命令的用法.\n"
-"用法: help [SUBCOMMAND...]\n"
+"用法: svndumpfilter help [SUBCOMMAND...]\n"
 
 #: svndumpfilter/main.c:799
 #, fuzzy
@@ -5029,26 +5032,26 @@ msgid ""
 "\n"
 "Available subcommands:\n"
 msgstr ""
-"一般用法: svnadmin SUBCOMMAND REPOS_PATH  [ARGS & OPTIONS ...]\n"
-"請使用 \"svnadmin help <subcommand>\" 以取得特定子命令的求助資訊.\n"
+"一般用法: svndumpfilter SUBCOMMAND [ARGS & OPTIONS ...]\n"
+"請使用 \"svndumpfilter help <subcommand>\" 以取得特定子命令的求助資訊.\n"
 "\n"
 "可用的子命令:\n"
 
 #: svndumpfilter/main.c:854
 msgid "Excluding (and dropping empty revisions for) prefixes:\n"
-msgstr ""
+msgstr "排除 (以及丟棄空修訂版) 的字首:\n"
 
 #: svndumpfilter/main.c:856
 msgid "Excluding prefixes:\n"
-msgstr ""
+msgstr "排除字首:\n"
 
 #: svndumpfilter/main.c:858
 msgid "Including (and dropping empty revisions for) prefixes:\n"
-msgstr ""
+msgstr "涵蓋 (以及丟棄空修訂版) 的字首:\n"
 
 #: svndumpfilter/main.c:860
 msgid "Including prefixes:\n"
-msgstr ""
+msgstr "涵蓋的字首:\n"
 
 #: svndumpfilter/main.c:887
 #, c-format
@@ -5079,7 +5082,7 @@ msgid "Dropped %d node(s):\n"
 msgstr "丟棄 %d 節點:\n"
 
 #: svndumpfilter/main.c:1125
-#, fuzzy, c-format
+#, c-format
 msgid "unknown command: '%s'\n"
 msgstr "未知的命令: '%s'\n"
 
