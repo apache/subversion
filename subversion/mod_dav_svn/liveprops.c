@@ -168,8 +168,7 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
       break;
 
     case DAV_PROPID_checked_in:
-      /* only defined for VCRs */
-      /* ### VCRs within the BC should not have this property! */
+      /* only defined for VCRs (in the public space and in a BC space) */
       /* ### note that a VCC (a special VCR) is defined as _PRIVATE for now */
       if (resource->type == DAV_RESOURCE_TYPE_PRIVATE
           && resource->info->restype == DAV_SVN_RESTYPE_VCC)
