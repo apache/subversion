@@ -843,7 +843,7 @@ Updated to revision 3.
             <quote>working copy locked</quote> error, run this
             command to remove stale locks and get your working copy
             into a usable state again.  See <xref
-            linkend="svn-ap-c"/>.</para>
+            linkend="svn-ap-b"/>.</para>
         </refsect1>
 
         <refsect1>

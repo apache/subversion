@@ -1761,7 +1761,7 @@ jane = r
           clients.  Most modern operating systems (Win32, OS X, and
           Linux) have the built-in ability to mount a DAV server as a
           standard network "share".  This is a complicated topic;  for
-          details, read <xref linkend="svn-ap-d"/>.</para>
+          details, read <xref linkend="svn-ap-c"/>.</para>
 
         
       </sect3>

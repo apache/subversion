@@ -1296,7 +1296,7 @@ if __name__ == '__main__':
     </para>
 
     <para>For a more thorough discussion of WebDAV, how it works, and
-      how Subversion uses it, see <xref linkend="svn-ap-d"/>.  Among
+      how Subversion uses it, see <xref linkend="svn-ap-c"/>.  Among
       other things, that appendix discusses the degree to which
       Subversion adheres to the generic WebDAV specification, and how
       that affects interoperability with generic WebDAV

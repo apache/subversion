@@ -1,10 +1,10 @@
-  <appendix id="svn-ap-e">
+  <appendix id="svn-ap-d">
     <title>Other Subversion Clients</title>
     
   <!-- ================================================================= -->
   <!-- ======================== SECTION 1 ============================== -->
   <!-- ================================================================= -->
-  <sect1 id="svn-ap-e-sect-1">
+  <sect1 id="svn-ap-d-sect-1">
     <title>Out of One, Many</title>
 
       <para>The Subversion command line client,
@@ -22,7 +22,7 @@
         number of GUI clients available for Subversion, each in
         various phases of development.</para>
 
-      <table id="svn-ap-e-table-1">
+      <table id="svn-ap-d-table-1">
         <title>GUI Clients for Subversion</title>
 
         <tgroup cols="5">
