@@ -1079,13 +1079,13 @@ check_repos_path (const char *path,
 
 /* Verify that the repository's 'format' file is a suitable version. */
 static svn_error_t *
-check_repos_version (const char *path,
+check_repos_version (svn_repos_t *repos,
                      apr_pool_t *pool)
 {
   int version;
   const char *format_path;
 
-  format_path = svn_path_join (path, SVN_REPOS__FORMAT, pool);
+  format_path = svn_path_join (repos->path, SVN_REPOS__FORMAT, pool);
   SVN_ERR (svn_io_read_version_file (&version, format_path, pool));
 
   if (version != SVN_REPOS__VERSION)
@@ -1093,6 +1093,8 @@ check_repos_version (const char *path,
       (SVN_ERR_REPOS_UNSUPPORTED_VERSION, NULL,
        _("Expected version '%d' of repository; found version '%d'"), 
        SVN_REPOS__VERSION, version);
+
+  repos->format = version;
 
   return SVN_NO_ERROR;
 }
@@ -1116,14 +1118,14 @@ get_repos (svn_repos_t **repos_p,
 {
   svn_repos_t *repos;
 
-  /* Verify the validity of our repository format. */
-  SVN_ERR (check_repos_version (path, pool));
-
   /* Allocate a repository object. */
   repos = apr_pcalloc (pool, sizeof (*repos));
 
   /* Initialize the repository paths. */
   init_repos_dirs (repos, path, pool);
+
+  /* Verify the validity of our repository format. */
+  SVN_ERR (check_repos_version (repos, pool));
 
   /* Locking. */
   {
