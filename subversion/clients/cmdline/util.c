@@ -406,7 +406,7 @@ svn_cl__get_log_message (const char **log_msg,
       int i;
       svn_stringbuf_t *tmp_message = svn_stringbuf_create (default_msg, pool);
       svn_error_t *err = NULL;
-      const char *msg2;  /* ### shim for svn_cl__edit_externally */
+      const char *msg2 = NULL;  /* ### shim for svn_cl__edit_externally */
 
       for (i = 0; i < commit_items->nelts; i++)
         {
