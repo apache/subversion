@@ -373,7 +373,8 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
        "    Author of the last commit\n"
        "    Size (in bytes)\n"
        "    Date and time of the last commit\n"),
-    {'r', 'v', 'R', SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
+    {'r', 'v', 'R', svn_cl__incremental_opt, svn_cl__xml_opt,
+     SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
   
   { "log", svn_cl__log, {0},
     N_("Show the log messages for a set of revision(s) and/or file(s).\n"

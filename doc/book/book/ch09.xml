@@ -1951,6 +1951,12 @@ Last Changed Date: 2003-01-16 23:21:19 -0600 (Thu, 16 Jan 2003)
             bytes)</para></listitem> <listitem><para>Date and time of
             the last commit</para></listitem>
           </itemizedlist>
+
+          <para>With <option>--xml</option>, output is in XML format (with
+            a header and an enclosing document element unless
+            <option>--incremental</option> is also specified).  All of the
+            information is present; the <option>--verbose</option> option
+            is not accepted.</para>
         </refsect1>
 
         <refsect1>
@@ -1975,6 +1981,8 @@ Last Changed Date: 2003-01-16 23:21:19 -0600 (Thu, 16 Jan 2003)
 --revision (-r) REV
 --verbose (-v)
 --recursive (-R)
+--incremental
+--xml
 --username USER
 --password PASS
 --no-auth-cache
