@@ -325,14 +325,12 @@ class SWIGLibrary(DependencyNode):
   ### stupid Target vs DependencyNode
   add_deps = ''
 
-  def __init__(self, fname, lang, desc):
+  def __init__(self, fname, name, lang, desc):
     DependencyNode.__init__(self, fname)
+    self.name = name
     self.lang = lang
     self.lang_abbrev = lang_abbrev[lang]
-
     self.path = os.path.dirname(fname)
-
-    self.name = lang + os.path.splitext(os.path.basename(fname))[0]
     self.desc = desc + ' for ' + lang_full_name[lang]
 
     ### maybe tweak to avoid these duplicate attrs
@@ -341,6 +339,9 @@ class SWIGLibrary(DependencyNode):
 
     ### hmm. this is Makefile-specific
     self.link_cmd = '$(LINK_%s_WRAPPER)' % string.upper(self.lang_abbrev)
+
+class SWIGRuntimeLibrary(SWIGLibrary):
+  pass
 
 class ExternalLibrary(DependencyNode):
   pass
@@ -516,9 +517,11 @@ class TargetSWIG(Target):
 
     ### we should really extract the %module line
     if iname[:4] == 'svn_':
-      libname = iname[3:-2] + self._libext
+      libname = iname[3:-2]
     else:
-      libname = '_' + iname[:-2] + self._libext
+      libname = '_' + iname[:-2]
+
+    libfile = libname + self._libext
 
     ifile = SWIGSource(ipath)
 
@@ -534,7 +537,8 @@ class TargetSWIG(Target):
       graph.add(DT_OBJECT, ofile, cfile)
 
       # the library depends upon the object
-      library = SWIGLibrary(os.path.join(dir, lang, libname), lang, self.desc)
+      library = SWIGLibrary(os.path.join(dir, lang, libfile),
+                            lang + libname, lang, self.desc)
       graph.add(DT_LINK, library.name, ofile)
 
       # add some more libraries
@@ -553,6 +557,37 @@ class TargetSWIG(Target):
 
       # the specified install area depends upon the library
       graph.add(DT_INSTALL, self.install + '-' + abbrev, library)
+
+class TargetSWIGRuntime(TargetSWIG):
+  default_install = 'swig_runtime'
+
+  def add_dependencies(self, src_patterns, graph):
+    self._libraries = {}
+    for lang in self.cfg.swig_lang:
+      if lang == 'java':
+        # java doesn't seem to have a separate runtime  
+        continue
+
+      abbrev = lang_abbrev[lang]
+
+      name = 'swig' + abbrev
+      cname = name + '.c'
+      oname = name + self._objext
+      libname = name + self._libext
+
+      cfile = SWIGObject(os.path.join(self.path, lang, cname), lang)
+      ofile = SWIGObject(os.path.join(self.path, lang, oname), lang)
+      graph.add(DT_OBJECT, ofile, cfile)
+
+      library = SWIGRuntimeLibrary(os.path.join(self.path, lang, libname),
+                                   lang + '_runtime', lang, self.desc)
+      graph.add(DT_LINK, library.name, ofile)
+
+      self._libraries[lang] = library
+      graph.add(DT_INSTALL, self.install + '-' + abbrev, library)
+
+  def get_library(self, lang):
+    return self._libraries.get(lang, None)
 
 ### I don't think this should be TargetLinked, but 'apr' uses the 'libs'
 ### option, which means we need to make this TargetLinked so that the
@@ -584,6 +619,7 @@ _build_types = {
   'project' : TargetProject,
   'external' : TargetExternal,
   'utility' : TargetUtility,
+  'swig_runtime' : TargetSWIGRuntime,
   'swig_utility' : TargetSWIGUtility,
   }
 

@@ -70,8 +70,9 @@ USERDEP__=[else] [end]"[sources.user_deps]"[end][if-any sources.swig_language]
 InputPath=[sources.path]
 
 [sources.swig_target] : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	swig -[sources.swig_language][for includes] -I"[includes]"[end] -o [sources.swig_output] $(InputPath)
-	
+[if-any sources.swig_output]	swig -c -[sources.swig_language][for includes] -I"[includes]"[end] -o [sources.swig_output] $(InputPath)
+[else]	python $(InputPath) [sources.swig_language] [sources.swig_target]
+[end]
 # End Custom Build
 
 [end]

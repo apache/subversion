@@ -95,8 +95,9 @@
 				Name="[configs.name]|Win32">
 				<Tool
 					Name="VCCustomBuildTool"
-					CommandLine="swig -[sources.swig_language][for includes] -I&quot;[includes]&quot;[end] -o &quot;[sources.swig_output]&quot; $(InputPath)"
-					AdditionalDependencies="[for sources.user_deps]&quot;[sources.user_deps]&quot;;[end]"
+					[if-any sources.swig_output]CommandLine="swig -c -[sources.swig_language][for includes] -I&quot;[includes]&quot;[end] -o &quot;[sources.swig_output]&quot; $(InputPath)"
+					[else]CommandLine="python $(InputPath) [sources.swig_language] [sources.swig_target]"
+					[end]AdditionalDependencies="[for sources.user_deps]&quot;[sources.user_deps]&quot;;[end]"
 					Outputs="&quot;[sources.swig_target]&quot;"/>
 			</FileConfiguration>
 [end][end]

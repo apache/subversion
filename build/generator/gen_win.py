@@ -284,6 +284,13 @@ class WinGeneratorBase(gen_base.GeneratorBase):
             if isinstance(cobj, gen_base.SWIGObject):
               csrc = rootpath + '\\' + string.replace(cobj.fname, '/', '\\')
 
+              if isinstance(target, gen_base.SWIGRuntimeLibrary):
+                bsrc = rootpath + "\\build\\win32\\gen_swig_runtime.py"
+                sources.append(ProjectItem(path=bsrc, reldir=None, user_deps=[],
+                                           swig_language=target.lang,
+                                           swig_target=csrc, swig_output=None))
+                continue
+
               # output path passed to swig has to use forward slashes,
               # otherwise the generated python files (for shadow
               # classes) will be saved to the wrong directory
@@ -368,6 +375,9 @@ class WinGeneratorBase(gen_base.GeneratorBase):
         if hasattr(lib, 'proj_name'):
           depends.append(lib)
           depends.extend(self.get_win_depends(lib, 0))          
+      if not isinstance(target, gen_base.SWIGRuntimeLibrary):
+        runtime = self.targets['swig_runtime'].get_library(target.lang)
+        if runtime: depends.append(runtime)
     else:
       assert 0
       
