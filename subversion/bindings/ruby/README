@@ -1,4 +1,4 @@
-This directly used to contain a set of Ruby bindings which were
+This directory used to contain a set of Ruby bindings which were
 hand-built. They became completely stale and confused people by
 their presence, so the bindings were removed in revision 6485.
 
