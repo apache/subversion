@@ -155,6 +155,7 @@ Approved changes (further review is welcome, but not required):
     Fix output of notifications when merging a deletion of a directory.
     Justification:
       It just looks ugly and sloppy.
+    Branch: 1.1.x-r12100
     Votes:
       +1: breser
 
