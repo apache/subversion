@@ -106,3 +106,12 @@ Candidate changes:
       Crashes are unnice.
     Votes:
       +1: lundblad
+
+  * r10480
+    Fix handling of non-canonical copyfrom data in FSFS.
+    Justification: Without this fix, FSFS repositories will be ever so
+     slightly incorrect, and it's better to nip these imprecisions in
+     the bud than have to worry about them for years.  And it's a
+     small fix.
+    Votes:
+      +1: ghudson
