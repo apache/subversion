@@ -895,7 +895,7 @@ svn_fs_node_proplist (apr_hash_t **table_p,
 struct change_node_prop_args {
   svn_fs_root_t *root;
   const char *path;
-  const svn_string_t *name;
+  const char *name;
   const svn_string_t *value;
 };
 
@@ -921,7 +921,7 @@ txn_body_change_node_prop (void *baton,
 svn_error_t *
 svn_fs_change_node_prop (svn_fs_root_t *root,
                          const char *path,
-                         const svn_string_t *name,
+                         const char *name,
                          const svn_string_t *value,
                          apr_pool_t *pool)
 {

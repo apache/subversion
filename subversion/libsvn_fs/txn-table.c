@@ -512,7 +512,7 @@ svn_fs_txn_proplist (apr_hash_t **table_p,
 struct change_txn_prop_args {
   svn_fs_t *fs;
   const char *id;
-  const svn_string_t *name;
+  const char *name;
   const svn_string_t *value;
 };
 
@@ -541,7 +541,7 @@ txn_body_change_txn_prop (void *baton, trail_t *trail)
 
 svn_error_t *
 svn_fs_change_txn_prop (svn_fs_txn_t *txn,
-                        const svn_string_t *name,
+                        const char *name,
                         const svn_string_t *value,
                         apr_pool_t *pool)
 {

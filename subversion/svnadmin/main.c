@@ -393,8 +393,6 @@ main (int argc, const char * const *argv)
       svn_revnum_t the_rev;
       svn_stringbuf_t *file_contents;
       svn_string_t log_contents;
-      svn_string_t log_prop = {SVN_PROP_REVISION_LOG,
-                               strlen(SVN_PROP_REVISION_LOG)};
 
       if (argc != 5)
         {
@@ -415,9 +413,8 @@ main (int argc, const char * const *argv)
       if (err) goto error;
 
       /* set the revision property */
-      err = svn_fs_change_rev_prop (fs, the_rev,
-                                    &log_prop, &log_contents,
-                                    pool);
+      err = svn_fs_change_rev_prop (fs, the_rev, SVN_PROP_REVISION_LOG,
+                                    &log_contents, pool);
       if (err) goto error;
     }
   else if ((is_deltify) || (is_undeltify))

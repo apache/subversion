@@ -490,12 +490,11 @@ change_file_prop (void *file_baton,
 {
   struct file_baton *fb = file_baton;
   struct edit_baton *eb = fb->parent->edit_baton;
-  svn_string_t propname = { name->data, name->len };
   svn_string_t propvalue = { value->data, value->len };
 
   /* This routine is a mindless wrapper. */
   SVN_ERR (svn_fs_change_node_prop (eb->txn_root, fb->path->data,
-                                    &propname, &propvalue, fb->subpool));
+                                    name->data, &propvalue, fb->subpool));
 
   return SVN_NO_ERROR;
 }
@@ -508,12 +507,11 @@ change_dir_prop (void *dir_baton,
 {
   struct dir_baton *db = dir_baton;
   struct edit_baton *eb = db->edit_baton;
-  svn_string_t propname = { name->data, name->len };
   svn_string_t propvalue = { value->data, value->len };
 
   /* This routine is a mindless wrapper. */
   SVN_ERR (svn_fs_change_node_prop (eb->txn_root, db->path->data,
-                                    &propname, &propvalue, db->subpool));
+                                    name->data, &propvalue, db->subpool));
 
   return SVN_NO_ERROR;
 }

@@ -96,7 +96,7 @@ svn_fs__make_prop_hash (apr_hash_t **prop_hash,
 
 svn_error_t *
 svn_fs__set_prop (skel_t *proplist,
-                  const svn_string_t *name,
+                  const char *name,
                   const svn_string_t *value,
                   apr_pool_t *pool)
 {
@@ -115,7 +115,7 @@ svn_fs__set_prop (skel_t *proplist,
       skel_t *this_name = prop;
       skel_t *this_value = prop->next;
 
-      if (svn_fs__atom_matches_string (this_name, name))
+      if (svn_fs__matches_atom (this_name, name))
         {
           /* We've found the property we wish to change.  Let's see
              what kind of change we're supposed to be making here. */
@@ -177,8 +177,8 @@ svn_fs__set_prop (skel_t *proplist,
                                          value->len,
                                          pool),
                        proplist);
-      svn_fs__prepend (svn_fs__mem_atom (name->data,
-                                         name->len,
+      svn_fs__prepend (svn_fs__mem_atom (name,
+                                         strlen (name),
                                          pool),
                        proplist);
     }

@@ -136,15 +136,12 @@ svn_fs_begin_txn (svn_fs_txn_t **txn_p,
      a txn is promoted to a revision, this property will be
      automatically overwritten with a revision datestamp. */
   {
-    svn_string_t propname, date;
-
-    propname.data = SVN_PROP_REVISION_DATE;
-    propname.len  = strlen (SVN_PROP_REVISION_DATE);
+    svn_string_t date;
 
     date.data = svn_time_to_nts (apr_time_now(), pool);
     date.len = strlen (date.data);
 
-    SVN_ERR (svn_fs_change_txn_prop (txn, &propname, &date, pool));
+    SVN_ERR (svn_fs_change_txn_prop (txn, SVN_PROP_REVISION_DATE, &date, pool));
   }
 
   return SVN_NO_ERROR;
