@@ -62,8 +62,6 @@ svn_client_switch (const svn_delta_edit_fns_t *before_editor,
                    void *notify_baton,
                    apr_pool_t *pool)
 {
-  const svn_delta_edit_fns_t *switch_editor;
-  void *switch_edit_baton;
   const svn_ra_reporter_t *reporter;
   void *report_baton;
   svn_wc_entry_t *entry, *session_entry;
@@ -128,6 +126,11 @@ svn_client_switch (const svn_delta_edit_fns_t *before_editor,
     
   if (entry->kind == svn_node_dir)
     {
+      const svn_delta_editor_t *switch_editor;
+      void *switch_edit_baton;
+      const svn_delta_edit_fns_t *wrap_editor;
+      void *wrap_edit_baton;
+
       /* Open an RA session to 'source' URL */
       SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, path,
                                             TRUE, TRUE, auth_baton, pool));
@@ -142,10 +145,15 @@ svn_client_switch (const svn_delta_edit_fns_t *before_editor,
                                          &switch_editor, &switch_edit_baton,
                                          pool));
       
+      /* ### todo:  This is a TEMPORARY wrapper around our editor so we
+         can use it with an old driver. */
+      svn_delta_compat_wrap (&wrap_editor, &wrap_edit_baton, 
+                             switch_editor, switch_edit_baton, pool);
+
       /* Wrap it up with outside editors. */
-      svn_delta_wrap_editor (&switch_editor, &switch_edit_baton,
+      svn_delta_wrap_editor (&wrap_editor, &wrap_edit_baton,
                              before_editor, before_edit_baton,
-                             switch_editor, switch_edit_baton,
+                             wrap_editor, wrap_edit_baton,
                              after_editor, after_edit_baton, pool);
 
       /* Tell RA to do a update of URL+TARGET to REVISION; if we pass an
@@ -156,7 +164,7 @@ svn_client_switch (const svn_delta_edit_fns_t *before_editor,
                                   target,
                                   recurse,
                                   switch_url,
-                                  switch_editor, switch_edit_baton));
+                                  wrap_editor, wrap_edit_baton));
       
       /* Drive the reporter structure, describing the revisions within
          PATH.  When we call reporter->finish_report, the

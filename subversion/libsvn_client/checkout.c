@@ -50,8 +50,10 @@ svn_client_checkout (const svn_delta_edit_fns_t *before_editor,
                      svn_stringbuf_t *xml_src,
                      apr_pool_t *pool)
 {
-  const svn_delta_edit_fns_t *checkout_editor;
+  const svn_delta_editor_t *checkout_editor;
   void *checkout_edit_baton;
+  const svn_delta_edit_fns_t *wrap_editor;
+  void *wrap_edit_baton;
   svn_error_t *err;
   svn_revnum_t revnum;
 
@@ -80,10 +82,15 @@ svn_client_checkout (const svn_delta_edit_fns_t *before_editor,
                                        &checkout_edit_baton,
                                        pool));
 
+  /* ### todo:  This is a TEMPORARY wrapper around our editor so we
+     can use it with an old driver. */
+  svn_delta_compat_wrap (&wrap_editor, &wrap_edit_baton, 
+                         checkout_editor, checkout_edit_baton, pool);
+
   /* Wrap it up with outside editors. */
-  svn_delta_wrap_editor (&checkout_editor, &checkout_edit_baton,
+  svn_delta_wrap_editor (&wrap_editor, &wrap_edit_baton,
                          before_editor, before_edit_baton,
-                         checkout_editor, checkout_edit_baton,
+                         wrap_editor, wrap_edit_baton,
                          after_editor, after_edit_baton, pool);
 
   /* if using an RA layer */
@@ -110,8 +117,8 @@ svn_client_checkout (const svn_delta_edit_fns_t *before_editor,
       err = ra_lib->do_checkout (session,
                                  revnum,
                                  recurse,
-                                 checkout_editor,
-                                 checkout_edit_baton);
+                                 wrap_editor,
+                                 wrap_edit_baton);
       /* Sleep for one second to ensure timestamp integrity. */
       apr_sleep (APR_USEC_PER_SEC * 1);
       
@@ -140,8 +147,8 @@ svn_client_checkout (const svn_delta_edit_fns_t *before_editor,
          tag.  Otherwise, a valid revnum will be stored in the wc,
          assuming there's no <delta-pkg> tag to override it. */
       err = svn_delta_xml_auto_parse (svn_stream_from_aprfile (in, pool),
-                                      checkout_editor,
-                                      checkout_edit_baton,
+                                      wrap_editor,
+                                      wrap_edit_baton,
                                       URL->data,
                                       revnum,
                                       pool);

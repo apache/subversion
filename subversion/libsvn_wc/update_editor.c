@@ -137,71 +137,54 @@ struct handler_baton
   struct file_baton *fb;
 };
 
-/* Create a new dir_baton for subdir NAME in PARENT_PATH with
- * EDIT_BATON, using a new subpool of POOL.
- *
- * The new baton's ref_count is 1.
- *
- * NAME and PARENT_BATON can be null, meaning this is the root baton.
- */
+
+/* Return a new dir_baton to represent NAME (a subdirectory of
+   PARENT_BATON).  If PATH is NULL, this is the root directory of the
+   edit. */
 static struct dir_baton *
-make_dir_baton (svn_stringbuf_t *name,
+make_dir_baton (const char *path,
                 struct edit_baton *edit_baton,
                 struct dir_baton *parent_baton,
                 svn_boolean_t added,
                 apr_pool_t *pool)
 {
   struct edit_baton *eb = edit_baton;
-  apr_pool_t *subpool = svn_pool_create (pool);
-  struct dir_baton *d = apr_pcalloc (subpool, sizeof (*d));
-  svn_stringbuf_t *path, *URL;
+  struct dir_baton *pb = parent_baton;
+  struct dir_baton *d = apr_pcalloc (pool, sizeof (*d));
+  svn_stringbuf_t *URL;
   svn_error_t *err;
   svn_wc_entry_t *entry;
   svn_boolean_t disjoint_url = FALSE;
+  
+  /* Don't do this.  Just do NOT do this to me. */
+  if (pb && (! path))
+    abort();
 
-  if (parent_baton)
-    {
-      /* I, the baton-in-creation, have a parent, so base my path on
-         that of my parent. */
-      path = svn_stringbuf_dup (parent_baton->path, subpool);
-    }
-  else
-    {
-      /* I am Adam.  All my base are belong to me. */
-      path = svn_stringbuf_dup (eb->anchor, subpool);
-    }
-
-  if (name)
-    {
-      d->name = svn_stringbuf_dup (name, subpool);
-      svn_path_add_component (path, name);
-    }
+  /* Construct the PATH and baseNAME of this directory. */
+  d->path = svn_stringbuf_dup (eb->anchor, pool);
+  if (pb)
+    svn_path_add_component_nts (d->path, path);
+  d->name = pb ? svn_path_last_component (d->path, pool) : NULL;
 
   /* Figure out the URL for this directory. */
   if (edit_baton->is_checkout)
     {
       /* for checkouts, telescope the URL normally.  no such thing as
          disjoint urls.   */
-      if (parent_baton)
+      if (pb)
         {
-
-          URL = svn_stringbuf_dup (parent_baton->URL, subpool);
-          svn_path_add_component (URL, name);
+          URL = svn_stringbuf_dup (pb->URL, pool);
+          svn_path_add_component (URL, d->name);
         }
       else
-        URL = svn_stringbuf_dup (eb->ancestor_url, subpool);
+        URL = svn_stringbuf_dup (eb->ancestor_url, pool);
     }
   else 
     {
-      svn_stringbuf_t *parent_URL;
-
       /* For updates, look in the 'entries' file */
-      err = svn_wc_entry (&entry, path, subpool);
-      if (err || (entry == NULL))
-        {
-          /* ### hm, this function doesn't return svn_error_t... */
-          URL = svn_stringbuf_create ("", subpool);
-        }
+      err = svn_wc_entry (&entry, d->path, pool);
+      if (err || (! entry) || (! entry->url))
+        URL = svn_stringbuf_create ("", pool);
       else
         URL = entry->url;
 
@@ -209,28 +192,27 @@ make_dir_baton (svn_stringbuf_t *name,
          define disjointedness not just in terms of having an
          unexpected URL, but also as a condition that is automatically
          *inherited* from a parent baton.  */
-      if (parent_baton) 
+      if (pb) 
         {
-          parent_URL = svn_stringbuf_dup (parent_baton->URL, subpool);
-          svn_path_add_component (parent_URL, name);
-          if (parent_baton->disjoint_url
-              || (! svn_stringbuf_compare (parent_URL, URL)))
+          svn_stringbuf_t *parent_URL;
+          parent_URL = svn_stringbuf_dup (pb->URL, pool);
+          svn_path_add_component (parent_URL, d->name);
+          if (pb->disjoint_url || (! svn_stringbuf_compare (parent_URL, URL)))
             disjoint_url = TRUE;
         }
     }
 
-  d->path         = path;
   d->edit_baton   = edit_baton;
-  d->parent_baton = parent_baton;
+  d->parent_baton = pb;
   d->ref_count    = 1;
-  d->pool         = subpool;
-  d->propchanges  = apr_array_make (subpool, 1, sizeof(svn_prop_t));
+  d->pool         = pool;
+  d->propchanges  = apr_array_make (pool, 1, sizeof (svn_prop_t));
   d->added        = added;
   d->URL          = URL;
   d->disjoint_url = disjoint_url;
 
-  if (parent_baton)
-    parent_baton->ref_count++;
+  if (pb)
+    pb->ref_count++;
 
   return d;
 }
@@ -241,9 +223,8 @@ static svn_error_t *decrement_ref_count (struct dir_baton *d);
 
 
 static svn_error_t *
-free_dir_baton (struct dir_baton *dir_baton)
+bump_dir_revision (struct dir_baton *dir_baton)
 {
-  svn_error_t *err;
   struct dir_baton *parent = dir_baton->parent_baton;
 
   /* Bump this dir to the new revision if this directory is beneath
@@ -287,17 +268,10 @@ free_dir_baton (struct dir_baton *dir_baton)
                                      NULL));
     }
 
-  /* After we destroy DIR_BATON->pool, DIR_BATON itself is lost. */
-  svn_pool_destroy (dir_baton->pool);
-
   /* We've declared this directory done, so decrement its parent's ref
      count too. */ 
   if (parent)
-    {
-      err = decrement_ref_count (parent);
-      if (err)
-        return err;
-    }
+    SVN_ERR (decrement_ref_count (parent));
 
   return SVN_NO_ERROR;
 }
@@ -316,7 +290,7 @@ decrement_ref_count (struct dir_baton *d)
   d->ref_count--;
 
   if (d->ref_count == 0)
-    return free_dir_baton (d);
+    return bump_dir_revision (d);
 
   return SVN_NO_ERROR;
 }
@@ -326,6 +300,9 @@ struct file_baton
 {
   /* Baton for this file's parent directory. */
   struct dir_baton *dir_baton;
+
+  /* The global edit baton. */
+  struct edit_baton *edit_baton;
 
   /* Pool specific to this file_baton. */
   apr_pool_t *pool;
@@ -364,41 +341,44 @@ struct file_baton
 
 
 /* Make a file baton, using a new subpool of PARENT_DIR_BATON's pool.
-   NAME is just one component, not a path. */
+   PATH is relative to the root of the edit. */
 static struct file_baton *
 make_file_baton (struct dir_baton *parent_dir_baton,
-                 svn_stringbuf_t *name,
-                 apr_pool_t *subpool)
+                 const char *path,
+                 apr_pool_t *pool)
 {
-  struct file_baton *f = apr_pcalloc (subpool, sizeof (*f));
-  svn_stringbuf_t *path = svn_stringbuf_dup (parent_dir_baton->path, subpool);
+  struct file_baton *f = apr_pcalloc (pool, sizeof (*f));
+  struct dir_baton *pb = parent_dir_baton;
   svn_stringbuf_t *URL;
   svn_error_t *err;
   svn_wc_entry_t *entry;
   svn_boolean_t disjoint_url = FALSE;
 
+  /* I rather need this information, yes. */
+  if (! path)
+    abort();
+
   /* Make the file's on-disk name. */
-  svn_path_add_component (path, name);
+  f->path = svn_stringbuf_dup (pb->edit_baton->anchor, pool);
+  svn_path_add_component_nts (f->path, path);
+  f->name = svn_path_last_component (f->path, pool);
 
   /* Figure out the URL for this file. */
-  if (parent_dir_baton->edit_baton->is_checkout)
+  if (pb->edit_baton->is_checkout)
     {
       /* for checkouts, telescope the URL normally.  no such thing as
          disjoint urls.   */
-      URL = svn_stringbuf_dup (parent_dir_baton->URL, subpool);
-      svn_path_add_component (URL, name);
+      URL = svn_stringbuf_dup (pb->URL, pool);
+      svn_path_add_component (URL, f->name);
     }
   else 
     {
       svn_stringbuf_t *parent_URL;
 
       /* For updates, look in the 'entries' file */
-      err = svn_wc_entry (&entry, path, subpool);
-      if (err || (entry == NULL))
-        {
-          /* ### hm, this function doesn't return svn_error_t... */
-          URL = svn_stringbuf_create ("", subpool);
-        }
+      err = svn_wc_entry (&entry, f->path, pool);
+      if (err || (! entry) || (! entry->url))
+        URL = svn_stringbuf_create ("", pool);
       else
         URL = entry->url;
 
@@ -406,36 +386,22 @@ make_file_baton (struct dir_baton *parent_dir_baton,
          define disjointedness not just in terms of having an
          unexpected URL, but also as a condition that is automatically
          *inherited* from a parent baton.  */
-      parent_URL = svn_stringbuf_dup (parent_dir_baton->URL, subpool);
-      svn_path_add_component (parent_URL, name);
-      if (parent_dir_baton->disjoint_url
-          || (! svn_stringbuf_compare (parent_URL, URL)))
-        disjoint_url = TRUE;      
+      parent_URL = svn_stringbuf_dup (pb->URL, pool);
+      svn_path_add_component (parent_URL, f->name);
+      if (pb->disjoint_url || (! svn_stringbuf_compare (parent_URL, URL)))
+        disjoint_url = TRUE;
     }
 
-  f->pool       = subpool;
-  f->dir_baton  = parent_dir_baton;
-
-  /* copy the name into *our* subpool; who knows what the caller may plan
-     to do with the darned thing. */
-  f->name       = svn_stringbuf_dup (name, subpool);
-  f->path       = path;
-  f->propchanges = apr_array_make (subpool, 1, sizeof(svn_prop_t));
-  f->URL        = URL;
+  f->pool         = pool;
+  f->dir_baton    = pb;
+  f->edit_baton   = pb->edit_baton;
+  f->propchanges  = apr_array_make (pool, 1, sizeof (svn_prop_t));
+  f->URL          = URL;
   f->disjoint_url = disjoint_url;
 
-  parent_dir_baton->ref_count++;
+  pb->ref_count++;
 
   return f;
-}
-
-
-static svn_error_t *
-free_file_baton (struct file_baton *fb)
-{
-  struct dir_baton *parent = fb->dir_baton;
-  svn_pool_destroy (fb->pool);
-  return decrement_ref_count (parent);
 }
 
 
@@ -456,7 +422,7 @@ window_handler (svn_txdelta_window_t *window, void *baton)
 
   /* Either we're done (window is NULL) or we had an error.  In either
      case, clean up the handler.  */
-  if ((! fb->dir_baton->edit_baton->is_checkout) && hb->source)
+  if ((! fb->edit_baton->is_checkout) && hb->source)
     {
       err2 = svn_wc__close_text_base (hb->source, fb->path, 0, fb->pool);
       if (err2 != SVN_NO_ERROR && err == SVN_NO_ERROR)
@@ -502,29 +468,16 @@ prep_directory (svn_stringbuf_t *path,
                 svn_boolean_t force,
                 apr_pool_t *pool)
 {
-  svn_error_t *err;
-
   /* kff todo: how about a sanity check that it's not a dir of the
      same name from a different repository or something? 
      Well, that will be later on down the line... */
 
   if (force)   /* Make sure the directory exists. */
-    {
-      err = svn_wc__ensure_directory (path, pool);
-      if (err)
-        return err;
-    }
+    SVN_ERR (svn_wc__ensure_directory (path, pool));
 
   /* Make sure it's the right working copy, either by creating it so,
      or by checking that it is so already. */
-  err = svn_wc__ensure_wc (path,
-                           ancestor_url,
-                           ancestor_revision,
-                           pool);
-  if (err)
-    return err;
-
-  return SVN_NO_ERROR;
+  return svn_wc__ensure_wc (path, ancestor_url, ancestor_revision, pool);
 }
 
 
@@ -545,166 +498,138 @@ set_target_revision (void *edit_baton, svn_revnum_t target_revision)
 static svn_error_t *
 open_root (void *edit_baton,
            svn_revnum_t base_revision, /* This is ignored in co */
+           apr_pool_t *pool,
            void **dir_baton)
 {
   struct edit_baton *eb = edit_baton;
   struct dir_baton *d;
-  svn_error_t *err;
-  svn_stringbuf_t *ancestor_url;
-  svn_revnum_t ancestor_revision;
 
-  *dir_baton = d = make_dir_baton (NULL, eb, NULL, FALSE, eb->pool);
-
+  *dir_baton = d = make_dir_baton (NULL, eb, NULL, FALSE, pool);
   if (eb->is_checkout)
-    {
-      ancestor_url = eb->ancestor_url;
-      ancestor_revision = eb->target_revision;
-      
-      err = prep_directory (d->path,
-                            ancestor_url,
-                            ancestor_revision,
-                            1, /* force */
-                            d->pool);
-      if (err)
-        return err;
-    }
+    SVN_ERR (prep_directory (d->path, eb->ancestor_url, eb->target_revision,
+                             1, pool));
 
   return SVN_NO_ERROR;
 }
 
 
 static svn_error_t *
-delete_entry (svn_stringbuf_t *name, svn_revnum_t revision, void *parent_baton)
+delete_entry (const char *path, 
+              svn_revnum_t revision, 
+              void *parent_baton,
+              apr_pool_t *pool)
 {
-  struct dir_baton *parent_dir_baton = parent_baton;
+  struct dir_baton *pb = parent_baton;
   apr_status_t apr_err;
   apr_file_t *log_fp = NULL;
-  svn_stringbuf_t *log_item
-    = svn_stringbuf_create ("", parent_dir_baton->pool);
+  svn_stringbuf_t *log_item = svn_stringbuf_create ("", pool);
 
-  SVN_ERR (svn_wc__lock (parent_dir_baton->path, 0, parent_dir_baton->pool));
+  SVN_ERR (svn_wc__lock (pb->path, 0, pool));
   SVN_ERR (svn_wc__open_adm_file (&log_fp,
-                                  parent_dir_baton->path,
+                                  pb->path,
                                   SVN_WC__ADM_LOG,
                                   (APR_WRITE | APR_CREATE), /* not excl */
-                                  parent_dir_baton->pool));
+                                  pool));
   svn_xml_make_open_tag (&log_item,
-                         parent_dir_baton->pool,
+                         pool,
                          svn_xml_self_closing,
                          SVN_WC__LOG_DELETE_ENTRY,
                          SVN_WC__LOG_ATTR_NAME,
-                         name,
+                         svn_stringbuf_create (path, pool),
                          NULL);
 
   apr_err = apr_file_write_full (log_fp, log_item->data, log_item->len, NULL);
   if (apr_err)
     {
       apr_file_close (log_fp);
-      return svn_error_createf (apr_err, 0, NULL, parent_dir_baton->pool,
+      return svn_error_createf (apr_err, 0, NULL, pool,
                                 "delete error writing %s's log file",
-                                parent_dir_baton->path->data);
+                                pb->path->data);
     }
 
   SVN_ERR (svn_wc__close_adm_file (log_fp,
-                                   parent_dir_baton->path,
+                                   pb->path,
                                    SVN_WC__ADM_LOG,
                                    1, /* sync */
-                                   parent_dir_baton->pool));
+                                   pool));
     
-  SVN_ERR (svn_wc__run_log (parent_dir_baton->path, parent_dir_baton->pool));
-  SVN_ERR (svn_wc__unlock (parent_dir_baton->path, parent_dir_baton->pool));
+  SVN_ERR (svn_wc__run_log (pb->path, pool));
+  SVN_ERR (svn_wc__unlock (pb->path, pool));
   return SVN_NO_ERROR;
 }
 
 
 static svn_error_t *
-add_directory (svn_stringbuf_t *name,
+add_directory (const char *path,
                void *parent_baton,
-               svn_stringbuf_t *copyfrom_path,
+               const char *copyfrom_path,
                svn_revnum_t copyfrom_revision,
+               apr_pool_t *pool,
                void **child_baton)
 {
-  svn_error_t *err;
-  enum svn_node_kind kind;
-  struct dir_baton *parent_dir_baton = parent_baton;
-
-  /* Make a new dir baton for the new directory. */
-  struct dir_baton *this_dir_baton
-    = make_dir_baton (name,
-                      parent_dir_baton->edit_baton,
-                      parent_dir_baton,
-                      TRUE,
-                      parent_dir_baton->pool);
+  struct dir_baton *pb = parent_baton;
+  struct dir_baton *db = make_dir_baton (path, pb->edit_baton, pb, TRUE, pool);
+  svn_node_kind_t kind;
+  svn_stringbuf_t *cfpath;
 
   /* Semantic check.  Either both "copyfrom" args are valid, or they're
      NULL and SVN_INVALID_REVNUM.  A mixture is illegal semantics. */
-  if ((copyfrom_path && (! SVN_IS_VALID_REVNUM(copyfrom_revision)))
-      || ((! copyfrom_path) && (SVN_IS_VALID_REVNUM(copyfrom_revision))))
+  if ((copyfrom_path && (! SVN_IS_VALID_REVNUM (copyfrom_revision)))
+      || ((! copyfrom_path) && (SVN_IS_VALID_REVNUM (copyfrom_revision))))
     abort();
+
+  /* Convert copyfrom_path into a stringbuf. */
+  cfpath = copyfrom_path ? svn_stringbuf_create (copyfrom_path, pool) : NULL;
       
   /* Check that an object by this name doesn't already exist. */
-  SVN_ERR (svn_io_check_path (this_dir_baton->path, &kind,
-                              this_dir_baton->pool));
+  SVN_ERR (svn_io_check_path (db->path, &kind, db->pool));
   if (kind != svn_node_none)
-    return 
-      svn_error_createf 
-      (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL, this_dir_baton->pool,
-       "wc editor: add_dir `%s': object already exists and is in the way.",
-       this_dir_baton->path->data);
+    return svn_error_createf (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL, pool,
+                              "failed to add dir`%s': object already exists",
+                              db->path->data);
 
   /* Either we got real copyfrom args... */
-  if (copyfrom_path || SVN_IS_VALID_REVNUM(copyfrom_revision))
+  if (cfpath || SVN_IS_VALID_REVNUM (copyfrom_revision))
     {
       /* ### todo: for now, this editor doesn't know how to deal with
          copyfrom args.  Someday it will interpet them as an update
          optimization, and actually copy one part of the wc to another.
          Then it will recursively "normalize" all the ancestry in the
          copied tree.  Someday! */      
-      return 
-        svn_error_createf 
-        (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL,
-         parent_dir_baton->edit_baton->pool,
-         "wc editor: add_dir `%s': sorry, I don't support copyfrom args yet.",
-         name->data);
+      return svn_error_createf (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL, pool,
+                                "copyfrom args not yet supported",
+                                pb->path->data);
     }
-  /* ...or we got invalid copyfrom args. */
-  else
+  else  /* ...or we got invalid copyfrom args. */
     {
       /* If the copyfrom args are both invalid, inherit the URL from the
          parent, and make the revision equal to the global target
          revision. */
       svn_stringbuf_t *new_URL;
       svn_wc_entry_t *parent_entry;
-      SVN_ERR (svn_wc_entry (&parent_entry,
-                             parent_dir_baton->path,
-                             parent_dir_baton->pool));
-      new_URL = svn_stringbuf_dup (parent_entry->url, this_dir_baton->pool);
-      svn_path_add_component (new_URL, name);
 
-      copyfrom_path = new_URL;
-      copyfrom_revision = parent_dir_baton->edit_baton->target_revision;      
+      SVN_ERR (svn_wc_entry (&parent_entry, pb->path, db->pool));
+      new_URL = svn_stringbuf_dup (parent_entry->url, db->pool);
+      svn_path_add_component (new_URL, db->name);
+      cfpath = new_URL;
+      copyfrom_revision = pb->edit_baton->target_revision;      
     }
 
   /* Create dir (if it doesn't yet exist), make sure it's formatted
      with an administrative subdir.   */
-  err = prep_directory (this_dir_baton->path,
-                        copyfrom_path,
-                        copyfrom_revision,
-                        1, /* force */
-                        this_dir_baton->pool);
-  if (err)
-    return (err);
+  SVN_ERR (prep_directory (db->path, cfpath, copyfrom_revision, 1, db->pool));
 
-  *child_baton = this_dir_baton;
+  *child_baton = db;
 
   return SVN_NO_ERROR;
 }
 
 
 static svn_error_t *
-open_directory (svn_stringbuf_t *name,
+open_directory (const char *path,
                 void *parent_baton,
                 svn_revnum_t base_revision,
+                apr_pool_t *pool,
                 void **child_baton)
 {
   struct dir_baton *parent_dir_baton = parent_baton;
@@ -714,11 +639,11 @@ open_directory (svn_stringbuf_t *name,
      ancestor_revision need to get used. */
 
   struct dir_baton *this_dir_baton
-    = make_dir_baton (name,
+    = make_dir_baton (path,
                       parent_dir_baton->edit_baton,
                       parent_dir_baton,
                       FALSE,
-                      parent_dir_baton->pool);
+                      pool);
 
   *child_baton = this_dir_baton;
 
@@ -728,61 +653,33 @@ open_directory (svn_stringbuf_t *name,
 
 static svn_error_t *
 change_dir_prop (void *dir_baton,
-                 svn_stringbuf_t *name,
-                 svn_stringbuf_t *value)
+                 const char *name,
+                 const svn_string_t *value,
+                 apr_pool_t *pool)
 {
-  svn_stringbuf_t *local_name, *local_value;
   svn_prop_t *propchange;
   struct dir_baton *db = dir_baton;
 
-  /* Duplicate storage of name/value pair;  they should live in the
-     dir baton's pool, not some pool within the editor's driver. :)
-  */
-  local_name = svn_stringbuf_dup (name, db->pool);
-  if (value)
-    /* remember that value could be NULL, signifying a property
-       `delete' */
-    local_value = svn_stringbuf_dup (value, db->pool);
-  else
-    local_value = NULL;
-
   /* If this is a 'wc' prop, store it in the administrative area and
      get on with life.  It's not a regular versioned property. */
-  if (svn_wc_is_wc_prop (name->data))
-    {
-      if (local_value == NULL)
-        SVN_ERR (svn_wc__wcprop_set (name->data, NULL,
-                                     db->path->data, db->pool));
-      else
-        {
-          svn_string_t value_struct;
-
-          value_struct.data = local_value->data;
-          value_struct.len = local_value->len;
-          SVN_ERR (svn_wc__wcprop_set (name->data, &value_struct,
-                                       db->path->data, db->pool));
-        }
-      return SVN_NO_ERROR;
-    }
+  if (svn_wc_is_wc_prop (name))
+    return svn_wc__wcprop_set (name, value, db->path->data, pool);
   
   /* If this is an 'entry' prop, store it in the entries file and get
      on with life.  It's not a regular user property. */
-  else if (svn_wc_is_entry_prop (name->data))
+  else if (svn_wc_is_entry_prop (name))
     {
       /* make a temporary hash */
-      apr_pool_t *subpool = svn_pool_create (db->pool);
+      apr_pool_t *subpool = svn_pool_create (pool);
       apr_hash_t *att_hash = apr_hash_make (subpool);
+      svn_stringbuf_t *local_name = svn_stringbuf_create (name, subpool);
 
       /* remove the 'svn:wc:entry:' prefix from the property name. */
       svn_wc__strip_entry_prefix (local_name);
 
       /* push the property into the att hash. */
-      if (local_value)
-        apr_hash_set (att_hash, local_name->data,
-                      local_name->len, local_value);
-      else
-        apr_hash_set (att_hash, local_name->data,
-                      local_name->len, svn_stringbuf_create ("", db->pool));
+      apr_hash_set (att_hash, local_name->data, local_name->len, 
+                    svn_stringbuf_create (value ? value->data : "", subpool));
 
       /* write out the new attribute (via the hash) to the directory's
          THIS_DIR entry. */
@@ -804,11 +701,8 @@ change_dir_prop (void *dir_baton,
 
   /* Push a new propchange to the directory baton's array of propchanges */
   propchange = apr_array_push (db->propchanges);
-  propchange->name = local_name->data;
-  if (local_value)
-    propchange->value = svn_string_create_from_buf (local_value, db->pool);
-  else
-    propchange->value = NULL;
+  propchange->name = apr_pstrdup (db->pool, name);
+  propchange->value = value ? svn_string_dup (value, db->pool) : NULL;
 
   /* Let close_dir() know that propchanges are waiting to be
      applied. */
@@ -941,28 +835,28 @@ close_directory (void *dir_baton)
 
 /* Common code for add_file() and open_file(). */
 static svn_error_t *
-add_or_open_file (svn_stringbuf_t *name,
+add_or_open_file (const char *path,
                   void *parent_baton,
-                  svn_stringbuf_t *ancestor_url,
-                  svn_revnum_t ancestor_revision,
+                  const char *copyfrom_path,
+                  svn_revnum_t copyfrom_url,
                   void **file_baton,
-                  svn_boolean_t adding)  /* 0 if replacing */
+                  svn_boolean_t adding, /* 0 if replacing */
+                  apr_pool_t *pool)
 {
-  struct dir_baton *parent_dir_baton = parent_baton;
+  struct dir_baton *pb = parent_baton;
   struct file_baton *fb;
   apr_hash_t *dirents;
-  apr_hash_t *entries = NULL;
   svn_wc_entry_t *entry;
   svn_boolean_t is_wc;
-  apr_pool_t *subpool = svn_pool_create (parent_dir_baton->pool);
+  apr_pool_t *subpool = svn_pool_create (pool);
 
   /* ### kff todo: if file is marked as removed by user, then flag a
      conflict in the entry and proceed.  Similarly if it has changed
      kind.  see issuezilla task #398. */
 
-  fb = make_file_baton (parent_dir_baton, name, subpool);
+  fb = make_file_baton (pb, path, pool);
 
-  SVN_ERR (svn_io_get_dirents (&dirents, parent_dir_baton->path, subpool));
+  SVN_ERR (svn_io_get_dirents (&dirents, pb->path, subpool));
 
   /* ### It would be nice to get the dirents and entries *once* and stash
      ### them in the directory baton.  But an important question is,
@@ -971,13 +865,7 @@ add_or_open_file (svn_stringbuf_t *name,
      ### Are editor drives guaranteed not to mention the same name
      ### twice in the same dir baton?  Don't know.  */
 
-  /* ### We could just call svn_wc_entry(&entry, fb->path, subpool)
-     here and save some code.  But since we've got the parent path and
-     basename here already, why have svn_wc_entry() go through the
-     effort of re-splitting fb->path?  So we read the entries manually
-     and look up name in the result. */
-  SVN_ERR (svn_wc_entries_read (&entries, parent_dir_baton->path, subpool));
-  entry = apr_hash_get (entries, name->data, name->len);
+  SVN_ERR (svn_wc_entry (&entry, fb->path, subpool));
   
   /* Sanity checks. */
 
@@ -985,42 +873,28 @@ add_or_open_file (svn_stringbuf_t *name,
      same name.  This error happen if either a) the user changed the
      filetype of the working file and ran 'update', or b) the
      update-driver is very confused. */
-  if (adding && apr_hash_get (dirents, name->data, name->len))
+  if (adding && apr_hash_get (dirents, fb->name, APR_HASH_KEY_STRING))
     return svn_error_createf
       (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL, subpool,
        "Can't add '%s':\n object of same name already exists in '%s'",
-       name->data, parent_dir_baton->path->data);
-
-  /* ben sez: If we're trying to add a file that's already in
-     `entries' (but not on disk), that's okay.  It's probably because
-     the user deleted the working version and ran 'svn up' as a means
-     of getting the file back.  
-
-     Or... perhaps the entry was removed and committed, leaving its
-     existence == `deleted'.  The user may be updating to a revision
-     where the entry exists again.
-
-     Either way, it certainly doesn't hurt to re-add the file.  We
-     can't possibly get the entry showing up twice in `entries', since
-     it's a hash; and we know that we won't lose any local mods.  Let
-     the existing entry be overwritten. */
+       fb->name, pb->path->data);
 
   /* If replacing, make sure the .svn entry already exists. */
   if ((! adding) && (! entry))
     return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, subpool,
                               "trying to open non-versioned file "
                               "%s in directory %s",
-                              name->data, parent_dir_baton->path->data);
-
+                              fb->name, pb->path->data);
+  
         
   /* Make sure we've got a working copy to put the file in. */
   /* kff todo: need stricter logic here */
-  SVN_ERR (svn_wc_check_wc (parent_dir_baton->path, &is_wc, subpool));
+  SVN_ERR (svn_wc_check_wc (pb->path, &is_wc, subpool));
   if (! is_wc)
     return svn_error_createf
       (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL, subpool,
        "add_or_open_file: %s is not a working copy directory",
-       parent_dir_baton->path->data);
+       pb->path->data);
 
   /* ### todo:  right now the incoming copyfrom* args are being
      completely ignored!  Someday the editor-driver may expect us to
@@ -1028,31 +902,36 @@ add_or_open_file (svn_stringbuf_t *name,
      -copy- the specified existing wc file to this location.  From
      there, the driver can apply_textdelta on it, etc. */
 
+  svn_pool_destroy (subpool);
+
   *file_baton = fb;
   return SVN_NO_ERROR;
 }
 
 
 static svn_error_t *
-add_file (svn_stringbuf_t *name,
+add_file (const char *name,
           void *parent_baton,
-          svn_stringbuf_t *copyfrom_path,
+          const char *copyfrom_path,
           svn_revnum_t copyfrom_revision,
+          apr_pool_t *pool,
           void **file_baton)
 {
-  return add_or_open_file
-    (name, parent_baton, copyfrom_path, copyfrom_revision, file_baton, 1);
+  return add_or_open_file (name, parent_baton, 
+                           copyfrom_path, copyfrom_revision, 
+                           file_baton, 1, pool);
 }
 
 
 static svn_error_t *
-open_file (svn_stringbuf_t *name,
-              void *parent_baton,
-              svn_revnum_t base_revision,
-              void **file_baton)
+open_file (const char *name,
+           void *parent_baton,
+           svn_revnum_t base_revision,
+           apr_pool_t *pool,
+           void **file_baton)
 {
-  return add_or_open_file
-    (name, parent_baton, NULL, base_revision, file_baton, 0);
+  return add_or_open_file (name, parent_baton, NULL, base_revision, 
+                           file_baton, 0, pool);
 }
 
 
@@ -1068,7 +947,7 @@ apply_textdelta (void *file_baton,
 
   /* Open the text base for reading, unless this is a checkout. */
   hb->source = NULL;
-  if (! fb->dir_baton->edit_baton->is_checkout)
+  if (! fb->edit_baton->is_checkout)
     {
       /* 
          kff todo: what we really need to do here is:
@@ -1128,29 +1007,17 @@ apply_textdelta (void *file_baton,
 
 static svn_error_t *
 change_file_prop (void *file_baton,
-                  svn_stringbuf_t *name,
-                  svn_stringbuf_t *value)
+                  const char *name,
+                  const svn_string_t *value,
+                  apr_pool_t *pool)
 {
   struct file_baton *fb = file_baton;
-  const char *local_name;
-  const svn_string_t *local_value;
   svn_prop_t *propchange;
-
-  /* Duplicate storage of name/value pair;  they should live in the
-     file baton's pool, not some pool within the editor's driver. :)
-  */
-  local_name = apr_pstrdup (fb->pool, name->data);
-  if (value)
-    /* remember that value could be NULL, signifying a property
-       `delete' */
-    local_value = svn_string_create_from_buf (value, fb->pool);
-  else
-    local_value = NULL;
 
   /* Push a new propchange to the file baton's array of propchanges */
   propchange = apr_array_push (fb->propchanges);
-  propchange->name = local_name;
-  propchange->value = local_value;
+  propchange->name = apr_pstrdup (fb->pool, name);
+  propchange->value = value ? svn_string_dup (value, fb->pool) : NULL;
 
   /* Let close_file() know that propchanges are waiting to be
      applied. */
@@ -2246,7 +2113,7 @@ close_file (void *file_baton)
     propchanges = fb->propchanges;
 
   SVN_ERR (svn_wc_install_file (fb->path->data,
-                                fb->dir_baton->edit_baton->target_revision,
+                                fb->edit_baton->target_revision,
                                 new_text_path ? new_text_path->data : NULL,
                                 propchanges,
                                 FALSE, /* -not- a full proplist */
@@ -2254,7 +2121,7 @@ close_file (void *file_baton)
                                 fb->pool));
 
   /* Tell the parent directory it has one less thing to worry about. */
-  SVN_ERR (free_file_baton (fb));
+  SVN_ERR (decrement_ref_count (fb->dir_baton));
 
   return SVN_NO_ERROR;  
 }
@@ -2298,9 +2165,6 @@ close_edit (void *edit_baton)
                                           eb->pool));
     }
 
-  /* The edit is over, free its pool. */
-  svn_pool_destroy (eb->pool);
-    
   return SVN_NO_ERROR;
 }
 
@@ -2318,13 +2182,13 @@ make_editor (svn_stringbuf_t *anchor,
              svn_boolean_t is_switch,
              svn_stringbuf_t *switch_url,
              svn_boolean_t recurse,
-             const svn_delta_edit_fns_t **editor,
+             const svn_delta_editor_t **editor,
              void **edit_baton,
              apr_pool_t *pool)
 {
   struct edit_baton *eb;
   apr_pool_t *subpool = svn_pool_create (pool);
-  svn_delta_edit_fns_t *tree_editor = svn_delta_old_default_editor (pool);
+  svn_delta_editor_t *tree_editor = svn_delta_default_editor (pool);
 
   if (is_checkout)
     assert (ancestor_url != NULL);
@@ -2368,7 +2232,7 @@ svn_wc_get_update_editor (svn_stringbuf_t *anchor,
                           svn_stringbuf_t *target,
                           svn_revnum_t target_revision,
                           svn_boolean_t recurse,
-                          const svn_delta_edit_fns_t **editor,
+                          const svn_delta_editor_t **editor,
                           void **edit_baton,
                           apr_pool_t *pool)
 {
@@ -2384,7 +2248,7 @@ svn_wc_get_checkout_editor (svn_stringbuf_t *dest,
                             svn_stringbuf_t *ancestor_url,
                             svn_revnum_t target_revision,
                             svn_boolean_t recurse,
-                            const svn_delta_edit_fns_t **editor,
+                            const svn_delta_editor_t **editor,
                             void **edit_baton,
                             apr_pool_t *pool)
 {
@@ -2401,7 +2265,7 @@ svn_wc_get_switch_editor (svn_stringbuf_t *anchor,
                           svn_revnum_t target_revision,
                           svn_stringbuf_t *switch_url,
                           svn_boolean_t recurse,
-                          const svn_delta_edit_fns_t **editor,
+                          const svn_delta_editor_t **editor,
                           void **edit_baton,
                           apr_pool_t *pool)
 {

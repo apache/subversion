@@ -43,26 +43,29 @@ apply_delta (svn_stream_t *delta,
              svn_revnum_t revision,
              apr_pool_t *pool)
 {
-  const svn_delta_edit_fns_t *editor;
+  const svn_delta_editor_t *editor;
   void *edit_baton;
-  svn_error_t *err;
+  const svn_delta_edit_fns_t *wrap_editor;
+  void *wrap_edit_baton;
 
   /* Get the editor and friends... */
-  err = svn_wc_get_checkout_editor (dest,
-                                    /* Assume we're checking out root. */
-                                    svn_stringbuf_create ("", pool),
-                                    revision,
-                                    TRUE, /* Recurse */
-                                    &editor,
-                                    &edit_baton,
-                                    pool);
-  if (err)
-    return err;
+  SVN_ERR (svn_wc_get_checkout_editor (dest, /* Assume checkout of root */
+                                       svn_stringbuf_create ("", pool),
+                                       revision,
+                                       TRUE, /* Recurse */
+                                       &editor,
+                                       &edit_baton,
+                                       pool));
+
+  /* ### todo:  This is a TEMPORARY wrapper around our editor so we
+     can use it with an old driver. */
+  svn_delta_compat_wrap (&wrap_editor, &wrap_edit_baton, 
+                         editor, edit_baton, pool);
 
   /* ... and edit! */
   return svn_delta_xml_auto_parse (delta,
-                                   editor,
-                                   edit_baton,
+                                   wrap_editor,
+                                   wrap_edit_baton,
                                    "",
                                    revision,
                                    pool);

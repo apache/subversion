@@ -709,7 +709,7 @@ svn_error_t *svn_wc_get_update_editor (svn_stringbuf_t *anchor,
                                        svn_stringbuf_t *target,
                                        svn_revnum_t target_revision,
                                        svn_boolean_t recurse,
-                                       const svn_delta_edit_fns_t **editor,
+                                       const svn_delta_editor_t **editor,
                                        void **edit_baton,
                                        apr_pool_t *pool);
 
@@ -733,7 +733,7 @@ svn_error_t *svn_wc_get_checkout_editor (svn_stringbuf_t *dest,
                                          svn_stringbuf_t *ancestor_url,
                                          svn_revnum_t target_revision,
                                          svn_boolean_t recurse,
-                                         const svn_delta_edit_fns_t **editor,
+                                         const svn_delta_editor_t **editor,
                                          void **edit_baton,
                                          apr_pool_t *pool);
 
@@ -757,7 +757,7 @@ svn_error_t *svn_wc_get_switch_editor (svn_stringbuf_t *anchor,
                                        svn_revnum_t target_revision,
                                        svn_stringbuf_t *switch_url,
                                        svn_boolean_t recurse,
-                                       const svn_delta_edit_fns_t **editor,
+                                       const svn_delta_editor_t **editor,
                                        void **edit_baton,
                                        apr_pool_t *pool);
 
