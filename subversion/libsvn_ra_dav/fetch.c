@@ -1067,11 +1067,8 @@ static svn_error_t * reporter_finish_report(void *report_baton)
 {
   report_baton_t *rb = report_baton;
   apr_status_t status;
-  http_req *req;
-  hip_xml_parser *parser;
   FILE *fp;
-  int rv;
-  int code;
+  svn_error_t *err;
 
   status = apr_file_write_full(rb->tmpfile,
                                report_tail, sizeof(report_tail) - 1, NULL);
@@ -1093,60 +1090,20 @@ static svn_error_t * reporter_finish_report(void *report_baton)
   rb->vuh.name = svn_string_create(SVN_RA_DAV__LP_VSN_URL, rb->ras->pool);
   rb->vuh.value = MAKE_BUFFER(rb->ras->pool);
 
-  /* create/prep the request */
-  req = http_request_create(rb->ras->sess, "REPORT", rb->ras->root.path);
-  if (req == NULL)
-    {
-      (void) apr_file_remove(rb->fname->data, rb->ras->pool);
-      return svn_error_createf(SVN_ERR_RA_CREATING_REQUEST, 0, NULL,
-                               rb->ras->pool,
-                               "Could not create a REPORT request (%s)",
-                               rb->ras->root.path);
-    }
-
-  /* ### use a symbolic name somewhere for this MIME type? */
-  http_add_request_header(req, "Content-Type", "text/xml");
-
   fp = fopen(rb->fname->data, "rb");
-  http_set_request_body_stream(req, fp);
 
-  /* create a parser to read the REPORT response body */
-  parser = hip_xml_create();
-  hip_xml_push_handler(parser, report_elements,
-                       validate_element, start_element, end_element, rb);
-  http_add_response_body_reader(req, http_accept_2xx, hip_xml_parse_v, parser);
-
-  /* run the request and get the resulting status code. */
-  rv = http_request_dispatch(req);
+  err = svn_ra_dav__parsed_request(rb->ras, "REPORT", rb->ras->root.path,
+                                   NULL, fp,
+                                   report_elements, validate_element,
+                                   start_element, end_element, rb,
+                                   rb->ras->pool);
 
   /* we're done with the file */
   (void) fclose(fp);
   (void) apr_file_remove(rb->fname->data, rb->ras->pool);
 
-  /* fetch the status, then clean up the request */
-  code = http_get_status(req)->code;
-  http_request_destroy(req);
-
-  if (rv != HTTP_OK)
-    {
-      /* ### need to be more sophisticated with reporting the failure */
-      return svn_error_createf(SVN_ERR_RA_REQUEST_FAILED, 0, NULL,
-                               rb->ras->pool,
-                               "The REPORT request failed (neon: %d) (%s)",
-                               rv, rb->ras->root.path);
-    }
-
-  /* if it didn't returned 200 (Ok), then puke */
-  /* ### is that right? what else might we see? be more robust. */
-  if (code != 200)
-    {
-      /* ### need to be more sophisticated with reporting the failure */
-      return svn_error_createf(SVN_ERR_RA_REQUEST_FAILED, 0, NULL,
-                               rb->ras->pool,
-                               "The REPORT request did not complete "
-                               "properly (status: %d) (%s)",
-                               code, rb->ras->root.path);
-    }
+  if (err != NULL)
+    return err;
 
   /* we got the whole HTTP response thing done. now wrap up the update
      process with a close_edit call. */

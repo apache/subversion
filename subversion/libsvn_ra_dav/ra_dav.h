@@ -140,6 +140,18 @@ svn_error_t * svn_ra_dav__get_activity_url(svn_string_t **activity_url,
                                            const char *url,
                                            apr_pool_t *pool);
 
+svn_error_t *svn_ra_dav__parsed_request(svn_ra_session_t *ras,
+                                        const char *method,
+                                        const char *url,
+                                        const char *body,
+                                        FILE *fp,
+                                        const struct hip_xml_elm *elements, 
+                                        hip_xml_validate_cb validate_cb,
+                                        hip_xml_startelm_cb startelm_cb, 
+                                        hip_xml_endelm_cb endelm_cb,
+                                        void *baton,
+                                        apr_pool_t *pool);
+
 /* ### add SVN_RA_DAV_ to these to prefix conflicts with (sys) headers? */
 enum {
   /* DAV elements */
