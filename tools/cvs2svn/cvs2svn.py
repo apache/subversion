@@ -488,6 +488,8 @@ class RepositoryMirror:
     dir = marshal.loads(self.nodes_db[key])
     if dir.has_key(self.mutable_flag):
       del dir[self.mutable_flag]
+      if dir.has_key(self.approved_entries):
+        del dir[self.approved_entries]
       for entry_key in dir.keys():
         if not entry_key[0] == '/':
           self._stabilize_directory(dir[entry_key])
