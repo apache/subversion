@@ -671,6 +671,7 @@ svn_config_ensure (apr_pool_t *pool)
         "# http-proxy-username = blah\n"
         "# http-proxy-password = doubleblah\n"
         "# http-timeout = 60\n"
+        "# http-debug = 130\n"
         "\n"
         "### Information for the second group:\n"
         "# [othergroup]\n"
@@ -695,7 +696,8 @@ svn_config_ensure (apr_pool_t *pool)
         "# http-proxy-port = 7000\n"
         "# http-proxy-username = defaultusername\n"
         "# http-proxy-password = defaultpassword\n"
-        "# No http-timeout, so just use the builtin default.\n";
+        "# No http-timeout, so just use the builtin default.\n"
+        "# No http-debug, so neon debugging is disabled.\n";
 
       apr_err = apr_file_open (&f, path,
                                (APR_WRITE | APR_CREATE | APR_EXCL),

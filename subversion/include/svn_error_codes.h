@@ -523,9 +523,9 @@ SVN_ERROR_START
               SVN_ERR_RA_DAV_CATEGORY_START + 5,
               "RA layer file already exists")
 
-  SVN_ERRDEF (SVN_ERR_RA_DAV_INVALID_TIMEOUT,
+  SVN_ERRDEF (SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE,
               SVN_ERR_RA_DAV_CATEGORY_START + 6,
-              "invalid timeout")
+              "Invalid configuration value")
 
   /* ra_local errors */
   
