@@ -47,14 +47,65 @@
  * individuals on behalf of Collab.Net.
  */
 
-#include <svn_string.h>
+#include <svn_string.h>  /* defines svn_string_t */
 
 
 
+/* set a bytestring to null */
+
+void
+svn_string_setnull (svn_string_t *str)
+{
+  str->data = NULL;
+  str->len = 0;
+}
 
 
+/* ask if a bytestring is null */
+
+char
+svn_string_isnull (svn_string_t *str)
+{
+  if ((str->data == NULL) || (str->len <=0))
+    return 1;
+  else
+    return 0;
+}
 
 
+/* realloc a bytstring's space */
+
+svn_string_realloc ()
+{
+}
+
+
+/* copy a C string into a bytestring */
+
+svn_string_copyCstring ()
+{
+}
+
+
+/* append a C string into a bytestring */
+
+svn_string_appendCstring ()
+{
+}
+
+
+/* duplicate a bytestring */
+
+svn_string_duplicate ()
+{
+}
+
+
+/* append one bytestring onto another */
+
+svn_string_append ()
+{
+}
 
 
 /* --------------------------------------------------------------
