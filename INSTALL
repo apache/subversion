@@ -58,7 +58,7 @@ I.    BUILD REQUIREMENTS
       commands described in section II.B before installing the following.
 
 
-      1.  Apache Portable Runtime 0.9.4 (http://apr.apache.org/)
+      1.  Apache Portable Runtime 0.9.5 (http://apr.apache.org/)
 
       Whenever you want to build any part of Subversion, you need the
       Apache Portable Runtime (APR) and the APR Utility (APRUTIL)
@@ -107,7 +107,9 @@ I.    BUILD REQUIREMENTS
       code stored in these subdirectories which you could copy or link
       to.
 
-      If you need the latest CVS versions, however, you can use the
+      You probably don't need the latest CVS versions, since Subversion
+      is only guaranteed to compile against the latest released httpd-2.0
+      or APR and APRUTIL.  However, just in case, you can use the
       following two commands. If you run them from the directory where
       you've checked out Subversion, then the APR source code will be
       in "./apr" and "./apr-util", where Subversion wants it:
@@ -115,8 +117,10 @@ I.    BUILD REQUIREMENTS
           $ cvs -d :pserver:anoncvs@cvs.apache.org:/home/cvspublic login
           (password: 'anoncvs')
 
-          $ cvs -d :pserver:anoncvs@cvs.apache.org:/home/cvspublic co apr
-          $ cvs -d :pserver:anoncvs@cvs.apache.org:/home/cvspublic co apr-util
+          $ cvs -d :pserver:anoncvs@cvs.apache.org:/home/cvspublic \
+	    co -r APR_0_9_BRANCH apr
+          $ cvs -d :pserver:anoncvs@cvs.apache.org:/home/cvspublic \
+	    co -r APU_0_9_BRANCH apr-util
 
       The "./apr" and "./apr-util" directories will not be considered
       if the search for apr-config and apu-config scripts is successful.
@@ -124,7 +128,8 @@ I.    BUILD REQUIREMENTS
       NOTE: On Windows you will also need apr-iconv.  Check it out next to
       the apr and apr-util directories:
 
-          $ cvs -d :pserver:anoncvs@cvs.apache.org:/home/cvspublic co apr-iconv
+          $ cvs -d :pserver:anoncvs@cvs.apache.org:/home/cvspublic \
+	    co -r API_0_9_BRANCH apr-iconv
 
       Be sure to use a native Windows CVS client (as opposed to
       Cygwin's version) so that the .dsp files get carriage-returns at
