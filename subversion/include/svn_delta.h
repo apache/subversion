@@ -182,14 +182,13 @@ void svn_txdelta (svn_txdelta_stream_t **stream,
 void svn_txdelta_free (svn_txdelta_stream_t *stream);
 
 
-/* Prepare to apply a text delta.  SOURCE_FN and SOURCE_BATON specify
-   how to read source data, TARGET_FN and TARGET_BATON specify how to
-   write target data, and allocation takes place in a sub-pool of
+/* Prepare to apply a text delta.  SOURCE is a readable generic stream
+   containing the source data, TARGET_FN and TARGET_BATON specify how
+   to write target data, and allocation takes place in a sub-pool of
    POOL.  On return, *HANDLER is set to a window handler function and
    *HANDLER_BATON is set to the value to pass as the BATON argument to
    *HANDLER.  */
-void svn_txdelta_apply (svn_read_fn_t *source_fn,
-                        void *source_baton,
+void svn_txdelta_apply (svn_stream_t *source,
                         svn_write_fn_t *target_fn,
                         void *target_baton,
                         apr_pool_t *pool,

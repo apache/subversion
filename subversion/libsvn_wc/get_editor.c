@@ -278,24 +278,6 @@ free_file_baton (struct file_baton *fb)
 /*** Helpers for the editor callbacks. ***/
 
 static svn_error_t *
-read_from_file (void *baton, char *buffer, apr_size_t *len, apr_pool_t *pool)
-{
-  apr_file_t *fp = baton;
-  apr_status_t status;
-
-  if (fp == NULL)
-    {
-      *len = 0;
-      return SVN_NO_ERROR;
-    }
-  status = apr_full_read (fp, buffer, *len, len);
-  if (status && !APR_STATUS_IS_EOF(status))
-    return svn_error_create (status, 0, NULL, pool, "Can't read base file");
-  return SVN_NO_ERROR;
-}
-
-
-static svn_error_t *
 write_to_file (void *baton, const char *data, apr_size_t *len,
                apr_pool_t *pool)
 {
@@ -871,8 +853,9 @@ apply_textdelta (void *file_baton,
     }
   
   /* Prepare to apply the delta.  */
-  svn_txdelta_apply (read_from_file, hb->source, write_to_file, hb->dest,
-                     subpool, &hb->apply_handler, &hb->apply_baton);
+  svn_txdelta_apply (svn_stream_from_aprfile (hb->source, subpool),
+                     write_to_file, hb->dest, subpool, &hb->apply_handler,
+                     &hb->apply_baton);
   
   hb->pool = subpool;
   hb->fb = fb;

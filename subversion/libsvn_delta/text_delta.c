@@ -44,8 +44,7 @@ struct svn_txdelta_stream_t {
 
 struct apply_baton {
   /* These are copied from parameters passed to svn_txdelta_apply.  */
-  svn_read_fn_t *source_fn;
-  void *source_baton;
+  svn_stream_t *source;
   svn_write_fn_t *target_fn;
   void *target_baton;
 
@@ -388,8 +387,7 @@ apply_window (svn_txdelta_window_t *window, void *baton)
   if (ab->sbuf_len < window->sview_len)
     {
       len = window->sview_len - ab->sbuf_len;
-      err = ab->source_fn (ab->source_baton, ab->sbuf + ab->sbuf_len, &len,
-                           ab->pool);
+      err = svn_stream_read (ab->source, ab->sbuf + ab->sbuf_len, &len);
       if (err == SVN_NO_ERROR && len != window->sview_len - ab->sbuf_len)
         err = svn_error_create (SVN_ERR_INCOMPLETE_DATA, 0, NULL, ab->pool,
                                 "Delta source ended unexpectedly");
@@ -410,8 +408,7 @@ apply_window (svn_txdelta_window_t *window, void *baton)
 
 
 void
-svn_txdelta_apply (svn_read_fn_t *source_fn,
-                   void *source_baton,
+svn_txdelta_apply (svn_stream_t *source,
                    svn_write_fn_t *target_fn,
                    void *target_baton,
                    apr_pool_t *pool,
@@ -423,8 +420,7 @@ svn_txdelta_apply (svn_read_fn_t *source_fn,
   assert (pool != NULL);
 
   ab = apr_palloc (subpool, sizeof (*ab));
-  ab->source_fn = source_fn;
-  ab->source_baton = source_baton;
+  ab->source = source;
   ab->target_fn = target_fn;
   ab->target_baton = target_baton;
   ab->pool = subpool;
