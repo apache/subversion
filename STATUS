@@ -39,7 +39,7 @@ Candidate changes:
       It's confusing when you have 1.3.24 and it tells you that
       you need 1.3.19 or newer...
     Votes:
-      +1: breser, jerenkrantz
+      +1: breser, jerenkrantz, clkao
 
   * r12144, r12485
     Adds type caching to the perl bindings.  Otherwise mostly
@@ -49,7 +49,7 @@ Candidate changes:
       Makes the perl bindings build with r12397 which we merged
       already.
     Votes:
-      +1: breser
+      +1: breser, clkao
 
    * r12576
      Fix JavaHL run-time link error by properly depending on libsvn_repos.
