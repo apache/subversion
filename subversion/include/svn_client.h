@@ -191,12 +191,28 @@ svn_client_update (const svn_delta_edit_fns_t *before_editor,
                    apr_pool_t *pool);
 
 
+/* Schedule a working copy PATH for addition to the repository.
+   PATH's parent must be under revision control already, but PATH is
+   not.  If RECURSIVE is set, then assuming PATH is a directory, all
+   of its contents will be scheduled for addition as well.
+
+   Important:  this is a *scheduling* operation.  No changes will
+   happen to the repository until a commit occurs.  This scheduling
+   can be removed with svn_client_revert. */
 svn_error_t *
 svn_client_add (svn_stringbuf_t *path,
                 svn_boolean_t recursive,
                 apr_pool_t *pool);
 
 
+/* Schedule a working copy PATH for removal from the repository.
+   PATH's parent must be under revision control.  If FORCE is set,
+   then PATH itself will be recursively removed as well; otherwise
+   PATH simply stops being tracked by the working copy.
+
+   Important:  this is a *scheduling* operation.  No changes will
+   happen to the repository until a commit occurs.  This scheduling
+   can be removed with svn_client_revert. */
 svn_error_t *
 svn_client_delete (svn_stringbuf_t *path,
                    svn_boolean_t force,
@@ -351,6 +367,21 @@ svn_error_t *
 svn_client_revert (svn_stringbuf_t *path,
                    svn_boolean_t recursive,
                    apr_pool_t *pool);
+
+
+/* Copy SRC_PATH to DST_PATH, and schedule DST_PATH for addition to
+   the repository, remembering the copy history.
+
+   SRC_PATH must be a path in a working copy, and DST_PATH must be a
+   location within the working copy.  
+
+   Important:  this is a variant of svn_client_add.  No changes will
+   happen to the repository until a commit occurs.  This scheduling
+   can be removed with svn_client_revert.  */
+svn_error_t *
+svn_client_copy (svn_stringbuf_t *src_path,
+                 svn_stringbuf_t *dst_path,
+                 apr_pool_t *pool);
 
 
 #endif  /* SVN_CLIENT_H */

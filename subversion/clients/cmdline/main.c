@@ -74,6 +74,11 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
     "usage: commit [TARGETS]\n" },
   { "ci",         TRUE, NULL, NULL },
 
+  { "copy",       FALSE, svn_cl__copy,
+    "Duplicate something in your working copy.\n"
+    "usage: copy SRC_PATH DST_PATH.\n" },
+  { "cp",         TRUE, NULL, NULL },
+
   { "delete",     FALSE, svn_cl__delete,
     "Remove files and directories from version control.\n"
     "usage: delete [TARGETS]\n" },

@@ -367,13 +367,6 @@ svn_wc_rename (svn_stringbuf_t *src, svn_stringbuf_t *dst, apr_pool_t *pool)
 }
 
 
-svn_error_t *
-svn_wc_copy (svn_stringbuf_t *src, svn_stringbuf_t *dst, apr_pool_t *pool)
-{
-  /* kff todo */
-  return SVN_NO_ERROR;
-}
-
 
 enum mark_tree_state {
   mark_tree_state_delete = 1,

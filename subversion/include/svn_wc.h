@@ -346,14 +346,17 @@ svn_error_t *svn_wc_get_status_editor (svn_delta_edit_fns_t **editor,
  * on any random set of files and directories.
  */
 
+
+svn_error_t *svn_wc_copy (svn_stringbuf_t *src,
+                          svn_stringbuf_t *dst_parent,
+                          svn_stringbuf_t *dst_basename,
+                          apr_pool_t *pool);
+
+
 /* kff todo: these do nothing and return SVN_NO_ERROR right now. */
 svn_error_t *svn_wc_rename (svn_stringbuf_t *src,
                             svn_stringbuf_t *dst,
                             apr_pool_t *pool);
-
-svn_error_t *svn_wc_copy (svn_stringbuf_t *src,
-                          svn_stringbuf_t *dst,
-                          apr_pool_t *pool);
 
 svn_error_t *svn_wc_delete (svn_stringbuf_t *path,
                             apr_pool_t *pool);
