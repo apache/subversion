@@ -63,3 +63,9 @@ Candidate changes:
     Justification: Don't offer templates we don't want to use ourselves.
     Votes:
       +1: dionisos, kfogel
+
+  * r9716
+    Fix issue #1854 (user data loss on case-insensitive file systems).
+    Justification: Never ever overwrite local modifications.
+    Votes:
+      +1: bliss
