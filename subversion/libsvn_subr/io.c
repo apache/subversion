@@ -492,10 +492,7 @@ svn_io_file_affected_time (apr_time_t *apr_time,
 
   SVN_ERR (svn_io_stat (&finfo, path, APR_FINFO_MIN, pool));
 
-  if (finfo.mtime > finfo.ctime)
-    *apr_time = finfo.mtime;
-  else
-    *apr_time = finfo.ctime;
+  *apr_time = finfo.mtime;
 
   return SVN_NO_ERROR;
 }

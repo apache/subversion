@@ -215,19 +215,11 @@ apr_status_t
 svn_io_read_length_line (apr_file_t *file, char *buf, apr_size_t *limit);
 
 
-/* Set *APR_TIME to the later of PATH's (a regular file) mtime or ctime.
- * PATH is utf8-encoded.
+/* Set *APR_TIME to the time of last modification of the contents of the
+ * file PATH.  PATH is utf8-encoded.
  *
- * Unix traditionally distinguishes between "mod time", which is when
- * someone last modified the contents of the file, and "change time",
- * when someone changed something else about the file (such as
- * permissions).
- *
- * Since Subversion versions both kinds of information, our timestamp
- * comparisons have to notice either kind of change.  That's why this
- * function gives the time of whichever kind came later.  APR will
- * hopefully make sure that both ctime and mtime always have useful
- * values, even on OS's that do things differently. (?)
+ * Note: this is the APR mtime which corresponds to the traditional mtime
+ * on Unix, and the last write time on Windows.
  */
 svn_error_t *svn_io_file_affected_time (apr_time_t *apr_time,
                                         const char *path,
