@@ -74,7 +74,12 @@
    Smaller values will limit your overall memory consumption, but can
    drastically hurt throughput by necessitating more write operations
    to the database (which also generates more log-files).  */
-#define SVN_FS_WRITE_BUFFER_SIZE   512000
+#define SVN_FS_WRITE_BUFFER_SIZE          512000
+
+/* The maximum number of cache items to maintain in the
+   node-revision-id cache. */
+#define SVN_FS_NODE_ID_CACHE_MAX_KEYS     32
+
 
 
 /* The root structure.  */
@@ -112,6 +117,11 @@ struct svn_fs_root_t
      afresh every time, since the root may have been cloned, or
      the transaction may have disappeared altogether.  */
   dag_node_t *root_dir;
+
+  /* Cache structures, for mapping const char * PATH to const
+     dag_node_t * NODE. */
+  apr_hash_t *node_id_cache;
+  const char *node_id_cache_keys[SVN_FS_NODE_ID_CACHE_MAX_KEYS];
 };
 
 
@@ -131,6 +141,7 @@ make_root (svn_fs_t *fs,
 
   root->fs = fs;
   root->pool = pool;
+  root->node_id_cache = apr_hash_make (pool);
 
   return root;
 }
@@ -388,7 +399,7 @@ root_node (dag_node_t **node_p,
     {
       /* It's a revision root, so we already have its root directory
          opened.  */
-      *node_p = svn_fs__dag_dup (root->root_dir, trail);
+      *node_p = svn_fs__dag_dup (root->root_dir, trail->pool);
       return SVN_NO_ERROR;
     }
   else if (root->kind == transaction_root)
@@ -835,12 +846,49 @@ get_dag (dag_node_t **dag_node_p,
          trail_t *trail)
 {
   parent_path_t *parent_path;
+  dag_node_t *node = NULL;
+  apr_pool_t *rootpool = root->pool;
+  int do_cache = (root->kind == revision_root);
 
-  /* Call open_path with no flags, as we want this to return an error
-     if the node for which we are searching doesn't exist. */
-  SVN_ERR (open_path (&parent_path, root, path, 0, trail));
-  *dag_node_p = parent_path->node;
+  /* Canonicalize the input PATH. */
+  path = svn_fs__canonicalize_abspath (path, trail->pool);
 
+  /* If ROOT is a revision root, we'll look for the DAG in our cache. */
+  if (do_cache)
+    node = apr_hash_get (root->node_id_cache, path, APR_HASH_KEY_STRING);
+  
+  if (! node)
+    {
+      /* Call open_path with no flags, as we want this to return an error
+         if the node for which we are searching doesn't exist. */
+      SVN_ERR (open_path (&parent_path, root, path, 0, trail));
+      node = parent_path->node;
+      if (do_cache)
+        {
+          const char *cache_path;
+          apr_size_t cache_len = apr_hash_count (root->node_id_cache);
+
+          /* We're adding a new cache item.  First, see if we have
+             room for it (otherwise, make some room). */
+          if (cache_len == SVN_FS_NODE_ID_CACHE_MAX_KEYS)
+            {
+              /* No room.  Expire the oldest thing. */
+              cache_path = root->node_id_cache_keys[0];
+              apr_hash_set (root->node_id_cache, cache_path,
+                            APR_HASH_KEY_STRING, NULL);
+              cache_len--;
+              memmove (root->node_id_cache_keys, 
+                       root->node_id_cache_keys + 1,
+                       sizeof (*(root->node_id_cache_keys)));
+            }
+          cache_path = apr_pstrdup (rootpool, path);
+          apr_hash_set (root->node_id_cache, cache_path,
+                        APR_HASH_KEY_STRING, svn_fs__dag_dup (node, rootpool));
+          root->node_id_cache_keys[cache_len] = cache_path;
+        }
+    }
+
+  *dag_node_p = node;
   return SVN_NO_ERROR;
 }
 
