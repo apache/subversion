@@ -3,6 +3,8 @@
 
 lib_LTLIBRARIES = libsvn_ra_dav.la
 
-libsvn_ra_dav_la_SOURCES = session.c fetch.c
+libsvn_ra_dav_la_SOURCES = session.c fetch.c commit.c
 
 INCLUDES = -I../include -I../../apr/include -I../../neon/src
+
+SUBDIRS = . tests
