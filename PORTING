@@ -144,16 +144,19 @@ Mac OS X 10.1.2:
           + needs autoconf 2.52 (get from GNU)
           + needs libtool 1.4.2 (get from Darwin CVS repository)
 
-NetBSD (### version?):
-     Client:     Build OK, Check ? (awaiting more info)
-     Filesystem: ?
-     Last Check: 15 Feb 2002, revision 1302
+NetBSD (1.5, 1.6_BETA, -CURRENT):
+     Client:     Build OK, Check OK.
+     Filesystem: Build OK, Check OK
+     Last Check: 29 July 2002, revision 2786
      Tester:     Perry E. Metzger <perry@wasabisystems.com>
+                 Eric Gillespie <epg@pretzelnet.org>
      Notes:
      -- Perry says: NetBSD seems to fine. You need to install gnu
         patch to make it work, of course.  (A number of us are now
         talking seriously about fixing up the NetBSD patch to support
         the gnu patch features needed by subversion.)
+     -- Eric says: Both client and server work flawlessly.  I build and
+        use svn almost daily and never have a problem.
 
 
 rs6000-ibm-aix4.3.2.0:
