@@ -43,6 +43,8 @@ svn_cl__copy (apr_getopt_t *os,
   svn_stringbuf_t *src_path, *dst_path;
   svn_client_auth_baton_t *auth_baton = NULL;
   svn_stringbuf_t *message = NULL;
+  const svn_delta_edit_fns_t *trace_editor;
+  void *trace_edit_baton;
 
   targets = svn_cl__args_to_target_array (os, pool);
 
@@ -64,9 +66,17 @@ svn_cl__copy (apr_getopt_t *os,
   src_path = ((svn_stringbuf_t **) (targets->elts))[0];
   dst_path = ((svn_stringbuf_t **) (targets->elts))[1];
   
+  SVN_ERR (svn_cl__get_trace_update_editor (&trace_editor,
+                                            &trace_edit_baton,
+                                            dst_path,
+                                            pool));
+
   SVN_ERR (svn_client_copy 
            (src_path, opt_state->start_revision, dst_path, auth_baton, 
-            message ? message : svn_stringbuf_create ("", pool), pool));
+            message ? message : svn_stringbuf_create ("", pool),
+            NULL, NULL,                     /* no before_editor */
+            trace_editor, trace_edit_baton, /* one after_editor */
+            pool));
 
   return SVN_NO_ERROR;
 }
