@@ -70,49 +70,101 @@ public class NativeWrapper
     public static native Entry entryCreate();
 
     /**
-     * setter for "url" in Entry class
+     * wrapper for function "entry__create_from_svn_wc_entry_t" (entry.h)
+     * this function takes the entry parameter, converts it to
+     * a svn_wc_entry_t and uses this to call the function...
+     */
+    public static native Entry entryCreateFromSvnWcEntryT(Entry entry);
+
+    /**
+     * wrapper for function "entry__set_url" (entry.h)
      */
     public static native void entrySetUrl(Entry entry, String url);
 
     /**
-     * setter for "revision" in Entry class
+     * wrapper for function "entry__get_url" (entry.h)
+     */
+    public static native String entryGetUrl(Entry entry);
+
+    /**
+     * wrapper for "entry__set_revision" (entry.h)
      */
     public static native void entrySetRevision(Entry entry, Revision revision);
+
+    /**
+     * wrapper for "entry__get_revision" (entry.h)
+     */
+    public static native Revision entryGetRevision(Entry entry);
     
     /**
-     * setter for "nodekind" in Entry class
+     * wrapper for "entry__set_kind" (entry.h)
      */
      public static native void entrySetKind(Entry entry, Nodekind kind);
 
     /**
-     * setter for "schedule" in Entry class
+     * wrapper for "entry__get_kind" (entry.h)
+     */
+     public static native Nodekind entryGetKind(Entry entry);
+
+    /**
+     * wrapper for "entry__set_schedule" (entry.h)
      */
     public static native void entrySetSchedule(Entry entry, Schedule schedule);
+
+    /**
+     * wrapper for "entry__get_schedule" (entry.h)
+     */
+    public static native Schedule entryGetSchedule(Entry entry);
     
     /**
-     * setter for "conflicted" in Entry class
+     * wrapper for "entry__set_conflicted" (entry.h)
      */
     public static native void entrySetConflicted(Entry entry, boolean conflicted);
-       
+
     /**
-     * setter for "copied" in Entry class
+     * wrapper for "entry__get_conflicted" (entry.h)
+     */
+    public static native boolean entryGetConflicted(Entry entry);
+     
+    /**
+     * wrapper for "entry__set_copied" (entry.h)
      */
     public static native void entrySetCopied(Entry entry, boolean copied);
 
     /**
-     * setter for "texttime" in Entry class
+     * wrapper for "entry__get_copied (entry.h)
+     */
+    public static native boolean entryGetCopied(Entry entry);
+
+    /**
+     * wrapper for "entry__set_texttime" (entry.h)
      */
     public static native void entrySetTexttime(Entry entry, Date texttime);
     
     /**
-     * setter for "proptime" in Entry class
+     * wrapper for "entry__get_texttime" (entry.h)
+     */
+    public static native Date entryGetTexttime(Entry entry);
+
+    /**
+     * wrapper for "entry__set_proptime" (entry.h)
      */
     public static native void entrySetProptime(Entry entry, Date proptime);
 
     /**
-     * setter for "attributes" in Entry class
+     * wrapper for "entry__get_proptime" (entry.h)
+     */
+    public static native Date entryGetProptime(Entry entry);
+
+    /**
+     * wrapper for "entry__set_attributes" (entry.h)
      */
     public static native void entrySetAttributes(Entry entry, Hashtable attributes);
+
+    /**
+     * wrapper for "entry__get_attributes" (entry.h)
+     */
+    public static native Hashtable entryGetAttributes(Entry entry);
     
     /**
      * wrapper for function "hashtable__create" (hashtable.h)
