@@ -510,7 +510,7 @@ delta_proplists (struct context *c,
       if (s_props 
           && ((s_value = apr_hash_get (s_props, key, klen)) != 0))
         {
-          if (svn_string_compare (s_value, val))
+          if (! svn_string_compare (s_value, val))
             SVN_ERR (change_fn (c, object, key, val, subpool));
 
           /* Remove the property from source list so we can track
