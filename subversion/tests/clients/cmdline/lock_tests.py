@@ -245,7 +245,7 @@ def enforce_lock(sbox):
 test_list = [ None,
               lock_file,
               unlock_file,
-              XFail(break_lock),
+              break_lock,
               XFail(steal_lock),
               XFail(examine_lock),
               XFail(handle_defunct_lock),

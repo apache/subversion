@@ -1323,10 +1323,13 @@ static svn_error_t *unlock(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                            apr_array_header_t *params, void *baton)
 {
   server_baton_t *b = baton;
-  const char *path, *token;
+  const char *path, *token, *full_path;
   svn_boolean_t force;
 
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "ccb", &path, &token, &force));
+
+  full_path = svn_path_join(b->fs_path, svn_path_canonicalize(path, pool),
+                            pool);
 
   /* Username required unless force was specified. */
   SVN_ERR(must_have_write_access(conn, pool, b, ! force));

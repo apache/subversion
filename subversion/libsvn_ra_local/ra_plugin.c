@@ -1085,12 +1085,16 @@ svn_ra_local__unlock (void *session_baton,
                       apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *sess = session_baton;
+  const char *abs_path;
 
   /* A username is absolutely required to unlock a path. */
   SVN_ERR (get_username (sess, pool));
 
+  /* Get the absolute path. */
+  abs_path = svn_path_join (sess->fs_path, path, pool);
+
   /* This warrper will call pre- and post-unlock hooks. */
-  SVN_ERR (svn_repos_fs_unlock (sess->repos, path, token, force, pool));
+  SVN_ERR (svn_repos_fs_unlock (sess->repos, abs_path, token, force, pool));
 
   return SVN_NO_ERROR;
 }
