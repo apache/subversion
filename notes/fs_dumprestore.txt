@@ -79,43 +79,47 @@ always ignored, for backwards compatibility.
 
 Revision-number: N
 [Revision-content-md5: blob]
+Prop-content-length: P
 Content-length: L
 
-   ...L bytes of property data.  Properties are stored in the same
+   ...P bytes of property data.  Properties are stored in the same
    human-readable hashdump format used by working copy property files,
    except that they end with "PROPS-END\n" for better readability.
 
 Node-path: /absolute/path/to/node/in/filesystem
 Node-kind: file | dir  (1)
 Node-action: change | add | delete | replace
-Node-notice: text | props | all | none  (2)
 [Node-copyfrom-rev: X]
 [Node-copyfrom-path: /path ]
-[Node-copy-source-md5: blob] (3)
+[Node-copy-source-md5: blob] (2)
 [Node-content-md5: blob]
-Content-length: Y
+[Text-content-length: T]
+[Prop-content-length: P]
+Content-length: Y (3)
 
-   ... Y bytes of content data, divided into 'props' and 'text'
-   sections.  The properties come first; their total length (including
-   formatting) is included in Node-content-length.  The "PROPS-END\n"
-   line always terminates the property section; if there are no props,
-   "PROPS-END\n" still signifies the beginning of the node's text
-   content.
+   ... Y bytes of content data, divided into P bytes of "property"
+   data and T bytes of "text" data.  The properties come first; their
+   total length (including formatting) is Prop-content-length, and is
+   included in Node-content-length.  The "PROPS-END\n" line always
+   terminates the property section if there are props.  The remainder
+   of the Y bytes (expected to be equivalent to Text-content-length]
+   represent the contents of the node.
 
 
 Notes:
 
 (1) if the node represents a deletion, this field is optional.
 
-(2) if the node represents a deletion, this field is optional, and
-    "none" is the default value.
-
-(3) this is a checksum of the source of the copy.  a loader process
+(2) this is a checksum of the source of the copy.  a loader process
     can use this checksum to determine that the copyfrom path/rev
     already present in a filesystem is really the *correct* one to use.
 
-
-
+(3) the Content-length header is technically unnecessary, since the
+    information it holds (and more) can be found in the
+    Prop-content-length and Text-content-length fields.  Though
+    Subversion itself does not make use of the header when reading a
+    dumpfile, we include it for compatibility with generic RFC822
+    parsers.
 
 -----------------------------------------------------------------
 EXAMPLE
@@ -125,7 +129,8 @@ Here's an example of revision 1422, whereby I added a new directory
 
 
 Revision-number: 1422
-Content-length: 74
+Prop-content-length: 80
+Content-length: 80
 
 K 6
 author
@@ -137,12 +142,11 @@ V 17
 Added two files, changed a third.
 PROPS-END
 
-Node-path: /bar/baz
-Node-rev: 1422
+Node-path: bar/baz
 Node-kind: dir
-Node-action: added
-Content-checksum:  oj3eu729
-Content-length: 29
+Node-action: add
+Prop-content-length: 35
+Content-length: 35
 
 K 10
 svn:ignore
@@ -150,32 +154,31 @@ V 4
 TAGS
 PROPS-END
 
-Node-path: /bar/baz/bop
-Node-rev: 1422
-Node-kind: file
-Node-action: added
-Content-checksum:  bzz35te7
-Content-length: 124
 
-K 12
-svn:keywords
-V 15
-LastChangedDate
+Node-path: bar/baz/bop
+Node-kind: file
+Node-action: add
+Prop-content-length: 76
+Text-content-length: 54
+Content-length: 130
+
 K 14
 svn:executable
 V 2
 on
+K 12
+svn:keywords
+V 15
+LastChangedDate
 PROPS-END
 Here is the text of the newly added 'bop' file.
 Whee.
 
-Node-path: /bar/foo.c
-Node-rev: 1422
+Node-path: bar/foo.c
 Node-kind: file
-Node-action: added
-Content-checksum:  Ae73te7et
-Content-length: 105
+Node-action: change
+Text-content-length: 102
+Content-length: 102
 
-PROPS-END
 Here is the fulltext of my change to an existing /bar/foo.c.
 Notice that this file has no properties.
