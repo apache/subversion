@@ -582,7 +582,8 @@ static svn_error_t * thunk_change_dir_prop(void *dir_baton,
   /* ### python doesn't have 'const' on the method name and format */
   if ((result = PyObject_CallMethod(ib->editor, (char *)"change_dir_prop",
                                     (char *)"Oss#O&", ib->baton, name,
-                                    value->data, value->len,
+                                    value ? value->data : NULL, 
+                                    value ? value->len : 0,
                                     make_ob_pool, pool)) == NULL)
     {
       err = convert_python_error();
@@ -772,7 +773,8 @@ static svn_error_t * thunk_change_file_prop(void *file_baton,
   /* ### python doesn't have 'const' on the method name and format */
   if ((result = PyObject_CallMethod(ib->editor, (char *)"change_file_prop",
                                     (char *)"Oss#O&", ib->baton, name,
-                                    value->data, value->len,
+                                    value ? value->data : NULL, 
+                                    value ? value->len : 0,
                                     make_ob_pool, pool)) == NULL)
     {
       err = convert_python_error();
