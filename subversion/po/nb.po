@@ -55,7 +55,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2005-03-07 19:23+0100\n"
+"POT-Creation-Date: 2005-03-08 21:52+0100\n"
 "PO-Revision-Date: 2004-07-13 11:59+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Norwegian <dev@subversion.tigris.org>\n"
@@ -1370,7 +1370,7 @@ msgstr ""
 msgid "Print client version info\n"
 msgstr "Vis versjonsinformasjon for klienten\n"
 
-#: clients/cmdline/main.c:754 svnadmin/main.c:76
+#: clients/cmdline/main.c:754 svnadmin/main.c:76 svnlook/main.c:264
 msgid "Caught signal"
 msgstr "Fanget signal"
 
@@ -3356,103 +3356,103 @@ msgstr "hent depot-uuid"
 msgid "set repository uuid"
 msgstr "sett depot-uuid"
 
-#: libsvn_fs_base/dag.c:389
+#: libsvn_fs_base/dag.c:313
 #, c-format
 msgid "Corrupt DB: initial transaction id not '0' in filesystem '%s'"
 msgstr ""
 "Ødelagt database: Innledende transaksjons-ID er ikke «0» i filsystem «%s»"
 
-#: libsvn_fs_base/dag.c:397
+#: libsvn_fs_base/dag.c:321
 #, c-format
 msgid "Corrupt DB: initial copy id not '0' in filesystem '%s'"
 msgstr "Ødelagt database: Innledende kopi-ID er ikke «0» i filsystem «%s»"
 
-#: libsvn_fs_base/dag.c:406
+#: libsvn_fs_base/dag.c:330
 #, c-format
 msgid "Corrupt DB: initial revision number is not '0' in filesystem '%s'"
 msgstr ""
 "Ødelagt database: Innledende revisjonsnummer er ikke «0» i filsystem «%s»"
 
-#: libsvn_fs_base/dag.c:454 libsvn_fs_base/dag.c:631 libsvn_fs_fs/dag.c:385
+#: libsvn_fs_base/dag.c:378 libsvn_fs_base/dag.c:555 libsvn_fs_fs/dag.c:385
 msgid "Attempted to create entry in non-directory parent"
 msgstr "Forsøkte å opprette post i forelder som ikke er en katalog"
 
-#: libsvn_fs_base/dag.c:625 libsvn_fs_fs/dag.c:379
+#: libsvn_fs_base/dag.c:549 libsvn_fs_fs/dag.c:379
 #, c-format
 msgid "Attempted to create a node with an illegal name '%s'"
 msgstr "Forsøkte å opprette en node med ulovlig navn «%s»"
 
-#: libsvn_fs_base/dag.c:637 libsvn_fs_base/dag.c:870 libsvn_fs_fs/dag.c:391
+#: libsvn_fs_base/dag.c:561 libsvn_fs_base/dag.c:795 libsvn_fs_fs/dag.c:391
 msgid "Attempted to clone child of non-mutable node"
 msgstr "Forsøkte å klone barn av ikke-foranderlig node"
 
-#: libsvn_fs_base/dag.c:644
+#: libsvn_fs_base/dag.c:568
 msgid "Attempted to create entry that already exists"
 msgstr "Forsøkte å opprette post som allerede finnes"
 
-#: libsvn_fs_base/dag.c:696 libsvn_fs_fs/dag.c:453
+#: libsvn_fs_base/dag.c:619 libsvn_fs_fs/dag.c:453
 msgid "Attempted to set entry in non-directory node"
 msgstr "Forsøkte å sette post i node som ikke er en katalog"
 
-#: libsvn_fs_base/dag.c:702 libsvn_fs_fs/dag.c:459
+#: libsvn_fs_base/dag.c:625 libsvn_fs_fs/dag.c:459
 msgid "Attempted to set entry in immutable node"
 msgstr "Forsøkte å sette post i uforanderlig node"
 
-#: libsvn_fs_base/dag.c:765
+#: libsvn_fs_base/dag.c:689
 #, c-format
 msgid "Can't set proplist on *immutable* node-revision %s"
 msgstr "Kan ikke sette egenskapsliste i *uforanderlig* noderevisjon %s"
 
-#: libsvn_fs_base/dag.c:876
+#: libsvn_fs_base/dag.c:801
 #, c-format
 msgid "Attempted to make a child clone with an illegal name '%s'"
 msgstr "Forsøkte å klone et barn med det ulovlige navnet «%s»"
 
-#: libsvn_fs_base/dag.c:1000
+#: libsvn_fs_base/dag.c:926
 #, c-format
 msgid "Attempted to delete entry '%s' from *non*-directory node"
 msgstr "Forsøkte å slette posten «%s» fra node som *ikke* er en katalog"
 
-#: libsvn_fs_base/dag.c:1006
+#: libsvn_fs_base/dag.c:932
 #, c-format
 msgid "Attempted to delete entry '%s' from immutable directory node"
 msgstr "Forsøkte å slette posten «%s» fra uforanderlig katalognode"
 
-#: libsvn_fs_base/dag.c:1013
+#: libsvn_fs_base/dag.c:939
 #, c-format
 msgid "Attempted to delete a node with an illegal name '%s'"
 msgstr "Forsøkte å slette en node med det ulovlige navnet «%s»"
 
-#: libsvn_fs_base/dag.c:1027 libsvn_fs_base/dag.c:1062
+#: libsvn_fs_base/dag.c:954 libsvn_fs_base/dag.c:987
 #, c-format
 msgid "Delete failed: directory has no entry '%s'"
 msgstr "Sletting feilet: Katalogen har ingen post «%s»"
 
-#: libsvn_fs_base/dag.c:1111
+#: libsvn_fs_base/dag.c:1036
 msgid "Attempted removal of immutable node"
 msgstr "Forsøkte å fjerne uforanderlig node"
 
-#: libsvn_fs_base/dag.c:1231
+#: libsvn_fs_base/dag.c:1156
 msgid "Attempted to get textual contents of a *non*-file node"
 msgstr "Forsøkte å hente tekstinnhold fra en *ikke*-filnode"
 
-#: libsvn_fs_base/dag.c:1265
+#: libsvn_fs_base/dag.c:1191
 msgid "Attempted to get length of a *non*-file node"
 msgstr "Forsøkte å finne lengden på en *ikke*-filnode"
 
-#: libsvn_fs_base/dag.c:1290
+#: libsvn_fs_base/dag.c:1217
 msgid "Attempted to get checksum of a *non*-file node"
 msgstr "Forsøkte å lese kontrollsum fra en *ikke*-filnode"
 
-#: libsvn_fs_base/dag.c:1320 libsvn_fs_base/dag.c:1373
+#: libsvn_fs_base/dag.c:1248 libsvn_fs_base/dag.c:1302
 msgid "Attempted to set textual contents of a *non*-file node"
 msgstr "Forsøkte å sette tekstinnhold på en *ikke*-filnode"
 
-#: libsvn_fs_base/dag.c:1326 libsvn_fs_base/dag.c:1379
+#: libsvn_fs_base/dag.c:1254 libsvn_fs_base/dag.c:1308
 msgid "Attempted to set textual contents of an immutable node"
 msgstr "Forsøkte å sette tekstinnhold på en uforanderlig node"
 
-#: libsvn_fs_base/dag.c:1401
+#: libsvn_fs_base/dag.c:1331
 #, c-format
 msgid ""
 "Checksum mismatch, rep '%s':\n"
@@ -3463,12 +3463,12 @@ msgstr ""
 "   forventet:  %s\n"
 "     faktisk:  %s\n"
 
-#: libsvn_fs_base/dag.c:1460
+#: libsvn_fs_base/dag.c:1386
 #, c-format
 msgid "Attempted to open non-existent child node '%s'"
 msgstr "Forsøkte å åpne ikke-eksisterende barnenode «%s»"
 
-#: libsvn_fs_base/dag.c:1466
+#: libsvn_fs_base/dag.c:1392
 #, c-format
 msgid "Attempted to open node with an illegal name '%s'"
 msgstr "Forsøkte å åpne node med det ulovlige navnet «%s»"
@@ -3722,8 +3722,8 @@ msgstr "Forespurte egenskaper forandret seg i to forskjellige filsystemer"
 msgid "Corrupt DB: faulty predecessor count"
 msgstr "Ødelagt database: Galt forfedreantall"
 
-#: libsvn_fs_base/tree.c:1792 libsvn_fs_base/tree.c:2180
-#: libsvn_fs_base/tree.c:2275 libsvn_fs_base/tree.c:2369
+#: libsvn_fs_base/tree.c:1792 libsvn_fs_base/tree.c:2181
+#: libsvn_fs_base/tree.c:2276 libsvn_fs_base/tree.c:2372
 #: libsvn_fs_fs/tree.c:1171
 #, c-format
 msgid "Unexpected immutable node at '%s'"
@@ -3741,32 +3741,32 @@ msgstr ""
 msgid "Conflict at '%s'"
 msgstr "Konflikt i «%s»"
 
-#: libsvn_fs_base/tree.c:1910 libsvn_fs_base/tree.c:2722
+#: libsvn_fs_base/tree.c:1911 libsvn_fs_base/tree.c:2730
 #: libsvn_fs_fs/tree.c:1243 libsvn_fs_fs/tree.c:1732
 msgid "Bad merge; ancestor, source, and target not all in same fs"
 msgstr ""
 "Feilaktig fletting; opprinnelse, kilde og mål er ikke alle i det samme "
 "filsystemet"
 
-#: libsvn_fs_base/tree.c:1926 libsvn_fs_fs/tree.c:1259
+#: libsvn_fs_base/tree.c:1927 libsvn_fs_fs/tree.c:1259
 #, c-format
 msgid "Bad merge; target '%s' has id '%s', same as ancestor"
 msgstr "Feilaktig fletting; målet «%s» har ID «%s», samme som opprinnelse"
 
-#: libsvn_fs_base/tree.c:2546
+#: libsvn_fs_base/tree.c:2549
 #, c-format
 msgid "Transaction '%s' out of date with respect to revision '%s'"
 msgstr "Transaksjonen «%s» er utdatert i forhold til revisjon «%s»"
 
-#: libsvn_fs_base/tree.c:2896 libsvn_fs_fs/tree.c:1864
+#: libsvn_fs_base/tree.c:2904 libsvn_fs_fs/tree.c:1864
 msgid "The root directory cannot be deleted"
 msgstr "Rotkatalogen kan ikke slettes"
 
-#: libsvn_fs_base/tree.c:3038 libsvn_fs_fs/tree.c:1905
+#: libsvn_fs_base/tree.c:3046 libsvn_fs_fs/tree.c:1905
 msgid "Copy from mutable tree not currently supported"
 msgstr "Kopi fra foranderlig tre er foreløpig ikke støttet"
 
-#: libsvn_fs_base/tree.c:3519 libsvn_fs_fs/tree.c:2307
+#: libsvn_fs_base/tree.c:3527 libsvn_fs_fs/tree.c:2307
 #, c-format
 msgid ""
 "Base checksum mismatch on '%s':\n"
@@ -3777,11 +3777,11 @@ msgstr ""
 "   forventet:  %s\n"
 "     faktisk:  %s\n"
 
-#: libsvn_fs_base/tree.c:3767 libsvn_fs_fs/tree.c:2537
+#: libsvn_fs_base/tree.c:3775 libsvn_fs_fs/tree.c:2537
 msgid "Asking contents changed in two different filesystems"
 msgstr "Forespurt innhold forandret i to forskjellige filsystemer"
 
-#: libsvn_fs_base/tree.c:3776 libsvn_fs_base/tree.c:3781
+#: libsvn_fs_base/tree.c:3784 libsvn_fs_base/tree.c:3789
 #: libsvn_fs_fs/tree.c:2546 libsvn_fs_fs/tree.c:2551
 #: libsvn_repos/rev_hunt.c:540
 #, c-format
@@ -3991,6 +3991,26 @@ msgstr "Adresseskjemaet «%s» er ukjent"
 msgid "Could not create a request (%s '%s')"
 msgstr "Kunne ikke lage forespørsel (%s «%s»)"
 
+#: libsvn_ra_dav/commit.c:263
+msgid ""
+"Could not fetch the Version Resource URL (needed during an import or when it "
+"is missing from the local, cached props)"
+msgstr ""
+
+#: libsvn_ra_dav/commit.c:433
+#, fuzzy, c-format
+msgid "Could not create a CHECKOUT request (%s)"
+msgstr "Kunne ikke lage en PUT-forespørsel (%s)"
+
+#: libsvn_ra_dav/commit.c:505
+#, fuzzy, c-format
+msgid "Your file or directory '%s' is probably out-of-date"
+msgstr "Loggkommando for katalogen «%s» er feilplassert"
+
+#: libsvn_ra_dav/commit.c:513
+msgid "The CHECKOUT response did not contain a 'Location:' header"
+msgstr ""
+
 #: libsvn_ra_dav/commit.c:1016
 msgid "Could not write svndiff to temp file"
 msgstr "Kunne ikke skrive svndiff til midlertidig fil"
@@ -4047,7 +4067,8 @@ msgid "Invalid server response to dated-rev request"
 msgstr "Ugyldig tjenersvar på forespørsel for dated-rev"
 
 #: libsvn_ra_dav/fetch.c:1241
-msgid "get-locations REPORT not implemented"
+#, fuzzy
+msgid "'get-locations' REPORT not implemented"
 msgstr "get-locations REPORT er ikke implementert"
 
 #: libsvn_ra_dav/fetch.c:1309
@@ -4075,7 +4096,8 @@ msgstr ""
 "redigeringsprogrammet."
 
 #: libsvn_ra_dav/file_revs.c:359
-msgid "get-file-revs REPORT not implemented"
+#, fuzzy
+msgid "'get-file-revs' REPORT not implemented"
 msgstr "get-file-revs REPORT er ikke implementert"
 
 #: libsvn_ra_dav/file_revs.c:366
@@ -4420,11 +4442,13 @@ msgid "Changed-path entry not a list"
 msgstr "Post med stiforandring er ikke en liste"
 
 #: libsvn_ra_svn/client.c:1164
-msgid "stat not implemented"
+#, fuzzy
+msgid "'stat' not implemented"
 msgstr "stat ikke implementert"
 
 #: libsvn_ra_svn/client.c:1227
-msgid "get-locations not implemented"
+#, fuzzy
+msgid "'get-locations' request not implemented"
 msgstr "get-locations ikke implementert"
 
 #: libsvn_ra_svn/client.c:1240
@@ -4432,7 +4456,8 @@ msgid "Location entry not a list"
 msgstr "Post for beliggenhet er ikke en liste"
 
 #: libsvn_ra_svn/client.c:1294
-msgid "get-file-revs not implemented"
+#, fuzzy
+msgid "'get-file-revs' request not implemented"
 msgstr "get-file-revs ikke implementert"
 
 #: libsvn_ra_svn/client.c:1308
@@ -6883,6 +6908,11 @@ msgstr ""
 "bruk: svnlook youngest DEPOTSTI\n"
 "\n"
 "Vis det yngste revisjonsnummeret.\n"
+
+#: svnlook/main.c:566
+#, fuzzy, c-format
+msgid "Error creating dir '%s' (path exists)"
+msgstr "Feil under lesing av filen «%s»"
 
 #: svnlook/main.c:833
 #, c-format
