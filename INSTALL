@@ -219,7 +219,7 @@ I.    BUILD REQUIREMENTS
           http://subversion.tigris.org/servlets/ProjectDocumentList
 
 
-      6.  Apache Web Server 2.0.48 or newer
+      6.  Apache Web Server 2.0.49 or newer
           (http://httpd.apache.org/download.cgi)
 
       The Apache HTTP server is required if you wish to offer your
@@ -391,7 +391,7 @@ II.   INSTALLATION
       subversion RPM depending on what packages you already have installed:
 
           subversion*.i386.rpm
-          apache*.i386.rpm (Version 2.0.48 or greater)
+          apache*.i386.rpm (Version 2.0.49 or greater)
           db*.i386.rpm     (Version 4.0.14 or greater; version 4.2.52 is
                             preferred however)
           expat            (Comes with RedHat)
@@ -650,7 +650,7 @@ II.   INSTALLATION
 
       You will need Perl 5.8 to run this script.
 
-      To build the Apache module, you will also need the Apache 2.0.48
+      To build the Apache module, you will also need the Apache 2.0.49
       or later Win32 source. You can download it from here:
 
           http://httpd.apache.org/download.cgi
@@ -691,12 +691,12 @@ II.   INSTALLATION
       C:\SVN\src> ren neon-0.24.4 neon
       C:\SVN\src> unzip ..\db-4.2.52-win32.zip
       C:\SVN\src> cd ..
-      C:\SVN> unzip httpd_2.0.48-win32-src.zip
-      C:\SVN> copy w32locatedb.pl httpd-2.0.48\srclib\apr-util\build
-      C:\SVN> perl httpd-2.0.48\srclib\apr-util\build\w32locatedb.pl dll src\db4-win32\include src\db4-win32\lib
-      C:\SVN> msdev httpd-2.0.48\apache.dsw /MAKE "BuildBin - Win32 Debug"
+      C:\SVN> unzip httpd_2.0.49-win32-src.zip
+      C:\SVN> copy w32locatedb.pl httpd-2.0.49\srclib\apr-util\build
+      C:\SVN> perl httpd-2.0.49\srclib\apr-util\build\w32locatedb.pl dll src\db4-win32\include src\db4-win32\lib
+      C:\SVN> msdev httpd-2.0.49\apache.dsw /MAKE "BuildBin - Win32 Debug"
       C:\SVN> cd src
-      C:\SVN\src> python gen-make.py -t dsp --with-httpd=..\httpd-2.0.48
+      C:\SVN\src> python gen-make.py -t dsp --with-httpd=..\httpd-2.0.49
       C:\SVN\src> msdev subversion_msvc.dsw /MAKE "__ALL__ - Win32 Debug"
 
       [NOTE: Substitute "Release" for "Debug" in the "msdev" command lines
