@@ -237,23 +237,30 @@ Making a distro
 
   1. Make sure that all the programs needed by INNO are installed as described
      earlier in this file.
+
   2. If you haven't done it already: Copy the file "paths_inno_src.iss" from
      the packages\win32-innosetup\templates folder to packages\win32-innosetup
      in your WC and edit it according to the documentation inside it.
-  3. Make sure that all the files to include in the setup are where they are
-     supposed to be according to the paths_inno_src.iss file.
-  4. Now, you have two diffrent ways of making the documentation and the setup:
 
+  3. Copy the file svn_version.iss from packages\win32-innosetup\templates to
+     packages\win32-innosetup and edit it according to the documentation
+	 inside it.
+
+  4. Make sure that all the files to include in the setup are where they are
+     supposed to be according to the paths_inno_src.iss file.
+
+  5. Now, you have two diffrent ways of making the documentation and the setup:
      A. Change directory (cd) to the packages\win32-innosetup\tools folder on
         your working Subversion repository and run the following command and
         follow the instructions:
             mk_distro
-         
-     B. You may want to make a automatic setup (nightly build, anything else),
-        just run the packages\win32-innosetup\tools\mk_distro file as:
+
+     B. You may want to make an automatic setup (nightly build, anything else),
+        just run the packages\win32-innosetup\tools\mk_distro file:
             path\to\packages\win32-innosetup\tools\mk_distro -a
 
   A shiny new svn-X.XX.X-rXXXX-setup.exe should now be in your path_setup_out
   folder if you have done everything right.
 
 Good luck!
+
