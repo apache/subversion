@@ -36,8 +36,6 @@
 
 static void
 write_hash_to_stringbuf (apr_hash_t *hash, 
-                         apr_size_t (*unpack_func) (char **unpacked_data, 
-                                                    void *val),
                          svn_stringbuf_t **strbuf,
                          apr_pool_t *pool)
 {
@@ -51,10 +49,8 @@ write_hash_to_stringbuf (apr_hash_t *hash,
       const void *key;
       void *val;
       apr_ssize_t keylen;
-      size_t vallen;
       int bytes_used;
-      char *valstring;
-      svn_stringbuf_t *valbuf; /* ### temporary. */
+      svn_string_t *value;
 
       /* Get this key and val. */
       apr_hash_this (this, &key, &keylen, &val);
@@ -71,15 +67,15 @@ write_hash_to_stringbuf (apr_hash_t *hash,
       svn_stringbuf_appendbytes (*strbuf, "\n", 1);
 
       /* Output value length, then value. */
-      valbuf = svn_stringbuf_create_from_string (val, pool);
-      vallen = (size_t) (*unpack_func) (&valstring, valbuf);
+      value = val;
+
       svn_stringbuf_appendbytes (*strbuf, "V ", 2);
 
-      sprintf (buf, "%ld%n", (long int) vallen, &bytes_used);
-      svn_stringbuf_appendbytes (*strbuf,  buf, bytes_used);
+      sprintf (buf, "%ld%n", (long int) value->len, &bytes_used);
+      svn_stringbuf_appendbytes (*strbuf, buf, bytes_used);
       svn_stringbuf_appendbytes (*strbuf, "\n", 1);
 
-      svn_stringbuf_appendbytes (*strbuf, valstring, vallen);
+      svn_stringbuf_appendbytes (*strbuf, value->data, value->len);
       svn_stringbuf_appendbytes (*strbuf, "\n", 1);
     }
 
@@ -392,8 +388,7 @@ dump_node (struct edit_baton *eb,
   if (must_dump_props)
     {
       SVN_ERR (svn_fs_node_proplist (&prophash, eb->fs_root, path, pool));
-      write_hash_to_stringbuf (prophash, svn_unpack_bytestring, 
-                               &propstring, pool);
+      write_hash_to_stringbuf (prophash, &propstring, pool);
       proplen = propstring->len;
       content_length += proplen;
       SVN_ERR (svn_stream_printf (eb->stream, pool,
@@ -778,8 +773,7 @@ write_revision_record (svn_stream_t *stream,
       }
   }
 
-  write_hash_to_stringbuf (props, svn_unpack_bytestring,
-                           &encoded_prophash, pool);
+  write_hash_to_stringbuf (props, &encoded_prophash, pool);
 
   /* ### someday write a revision-content-checksum */
 

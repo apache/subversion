@@ -73,34 +73,8 @@
 
 /*** Code. ***/
 
-apr_size_t 
-svn_unpack_bytestring (char **returndata, void *value)
-{
-  svn_stringbuf_t *valstring = value;
-
-  *returndata = valstring->data;
-
-  return valstring->len;
-}
-
-
-void *
-svn_pack_bytestring (size_t len, const char *val, apr_pool_t *pool)
-{
-  svn_stringbuf_t *valstring = apr_palloc (pool, sizeof (*valstring)); 
-
-  valstring->len       = len;
-  valstring->blocksize = len;
-  valstring->data      = (void *) val;
-  valstring->pool      = pool;
-
-  return valstring;
-}
-
-
 apr_status_t
 svn_hash_write (apr_hash_t *hash, 
-                apr_size_t (*unpack_func) (char **unpacked_data, void *val),
                 apr_file_t *destfile,
                 apr_pool_t *pool)
 {
@@ -113,9 +87,8 @@ svn_hash_write (apr_hash_t *hash,
       const void *key;
       void *val;
       apr_ssize_t keylen;
-      size_t vallen;
       int bytes_used;
-      char *valstring;
+      const svn_string_t *value;
 
       /* Get this key and val. */
       apr_hash_this (this, &key, &keylen, &val);
@@ -139,19 +112,19 @@ svn_hash_write (apr_hash_t *hash,
       if (err) return err;
 
       /* Output value length, then value. */
+      value = val;
 
-      vallen = (size_t) (*unpack_func) (&valstring, val); /* secret decoder! */
       err = apr_file_write_full (destfile, "V ", 2, NULL);
       if (err) return err;
 
-      sprintf (buf, "%ld%n", (long int) vallen, &bytes_used);
+      sprintf (buf, "%ld%n", (long int) value->len, &bytes_used);
       err = apr_file_write_full (destfile, buf, bytes_used, NULL);
       if (err) return err;
 
       err = apr_file_write_full (destfile, "\n", 1, NULL);
       if (err) return err;
 
-      err = apr_file_write_full (destfile, valstring, vallen, NULL);
+      err = apr_file_write_full (destfile, value->data, value->len, NULL);
       if (err) return err;
 
       err = apr_file_write_full (destfile, "\n", 1, NULL);
@@ -206,9 +179,6 @@ svn_io_read_length_line (apr_file_t *file, char *buf, apr_size_t *limit)
 
 apr_status_t
 svn_hash_read (apr_hash_t *hash, 
-               void * (*pack_func) (size_t len,
-                                    const char *val,
-                                    apr_pool_t *pool),
                apr_file_t *srcfile,
                apr_pool_t *pool)
 {
@@ -216,7 +186,6 @@ svn_hash_read (apr_hash_t *hash,
   char buf[SVN_KEYLINE_MAXLEN];
   apr_size_t num_read;
   char c;
-  void *package;
   int first_time = 1;
   
 
@@ -274,6 +243,8 @@ svn_hash_read (apr_hash_t *hash,
 
           if ((buf[0] == 'V') && (buf[1] == ' '))
             {
+              svn_string_t *value = apr_palloc (pool, sizeof (*value));
+
               /* Get the length of the value */
               int vallen = atoi (buf + 2);
 
@@ -288,11 +259,11 @@ svn_hash_read (apr_hash_t *hash,
               if (err) return err;
               if (c != '\n') return SVN_ERR_MALFORMED_FILE;
 
-              /* Send the val data for packaging... */
-              package = (void *) (*pack_func) (vallen, valbuf, pool);
+              value->data = valbuf;
+              value->len = vallen;
 
               /* The Grand Moment:  add a new hash entry! */
-              apr_hash_set (hash, keybuf, keylen, package);
+              apr_hash_set (hash, keybuf, keylen, value);
             }
           else
             {

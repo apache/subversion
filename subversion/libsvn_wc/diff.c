@@ -75,28 +75,28 @@ reverse_propchanges (apr_hash_t *baseprops,
 {
   int i;
 
+  /* ### todo: research lifetimes for property values below */
+
   for (i = 0; i < propchanges->nelts; i++)
     {
       svn_prop_t *propchange
         = &APR_ARRAY_IDX (propchanges, i, svn_prop_t);
       
-      const svn_stringbuf_t *original_value =
+      const svn_string_t *original_value =
         apr_hash_get (baseprops, propchange->name, APR_HASH_KEY_STRING);
      
       if ((original_value == NULL) && (propchange->value != NULL)) 
         {
           /* found an addition.  make it look like a deletion. */
           apr_hash_set (baseprops, propchange->name, APR_HASH_KEY_STRING,
-                        svn_stringbuf_create_from_string (propchange->value,
-                                                          pool));
+                        svn_string_dup (propchange->value, pool));
           propchange->value = NULL;
         }
 
       else if ((original_value != NULL) && (propchange->value == NULL)) 
         {
           /* found a deletion.  make it look like an addition. */
-          propchange->value = svn_string_create_from_buf (original_value,
-                                                           pool);
+          propchange->value = svn_string_dup (original_value, pool);
           apr_hash_set (baseprops, propchange->name, APR_HASH_KEY_STRING,
                         NULL);
         }
@@ -104,11 +104,9 @@ reverse_propchanges (apr_hash_t *baseprops,
       else if ((original_value != NULL) && (propchange->value != NULL)) 
         {
           /* found a change.  just swap the values.  */
-          const svn_string_t *tmpstr = propchange->value;
-          propchange->value = svn_string_create_from_buf (original_value,
-                                                           pool);
-          apr_hash_set (baseprops, propchange->name, APR_HASH_KEY_STRING,
-                        svn_stringbuf_create_from_string (tmpstr, pool));
+          const svn_string_t *str = svn_string_dup (propchange->value, pool);
+          propchange->value = svn_string_dup (original_value, pool);
+          apr_hash_set (baseprops, propchange->name, APR_HASH_KEY_STRING, str);
         }
     }
 }

@@ -1334,14 +1334,10 @@ svn_wc_install_file (svn_wc_notify_state_t *content_state,
           /* Convert the given array into hash of 'new' pristine props. */
           for (i = 0; i < regular_props->nelts; i++)
             {
-              svn_stringbuf_t *value_buf;
               const svn_prop_t *prop = NULL;
-              
-              prop = &APR_ARRAY_IDX(regular_props, i, svn_prop_t);
-              value_buf = svn_stringbuf_create_from_string (prop->value, pool);
-              
+              prop = &APR_ARRAY_IDX (regular_props, i, svn_prop_t);
               apr_hash_set (new_pristine_props,
-                            prop->name, APR_HASH_KEY_STRING, value_buf);
+                            prop->name, APR_HASH_KEY_STRING, prop->value);
             }
           
           /* Deduce changes. */

@@ -64,11 +64,11 @@ display_prop_diffs (const apr_array_header_t *propchanges,
       const svn_prop_t *propchange
         = &APR_ARRAY_IDX(propchanges, i, svn_prop_t);
 
-      const svn_stringbuf_t *original_value;
+      const svn_string_t *original_value;
 
       if (original_props)
-        original_value =
-          apr_hash_get (original_props, propchange->name, APR_HASH_KEY_STRING);
+        original_value = apr_hash_get (original_props, 
+                                       propchange->name, APR_HASH_KEY_STRING);
       else
         original_value = NULL;
       

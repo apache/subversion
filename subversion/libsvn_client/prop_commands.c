@@ -302,11 +302,11 @@ add_to_proplist (apr_array_header_t *prop_list,
   if (hash && apr_hash_count (hash))
     {
       svn_client_proplist_item_t *item
-          = apr_palloc(pool, sizeof(svn_client_proplist_item_t));
+          = apr_palloc (pool, sizeof (svn_client_proplist_item_t));
       item->node_name = svn_stringbuf_create (node_name, pool);
       item->prop_hash = hash;
 
-      *((svn_client_proplist_item_t **)apr_array_push(prop_list)) = item;
+      *((svn_client_proplist_item_t **) apr_array_push (prop_list)) = item;
     }
 
   return SVN_NO_ERROR;
@@ -407,6 +407,7 @@ svn_client_revprop_list (apr_hash_t **props,
   void *ra_baton, *session;
   svn_ra_plugin_t *ra_lib;
   apr_hash_t *proplist;
+  apr_hash_index_t *hi;
 
   /* Open an RA session for the URL. Note that we don't have a local
      directory, nor a place to put temp files or store the auth data. */
@@ -424,33 +425,15 @@ svn_client_revprop_list (apr_hash_t **props,
   /* The actual RA call. */
   SVN_ERR (ra_lib->rev_proplist (session, *set_rev, &proplist));
 
-  /* ### TEMPORARY HACK.  The commandline client expects stringbufs in
-     the hash, so we convert every value from string_t to stringbuf_t.
-     See issue #909.  When that issue is fixed, remove this block. */
-  {
-    apr_hash_index_t *hi;
-    
-    for (hi = apr_hash_first (pool, proplist); hi; hi = apr_hash_next (hi))
-      {
-        const void *key;
-        void *val;
-        apr_ssize_t klen;
-        const char *pname;
-        svn_string_t *pval;
-        svn_stringbuf_t *new_pval;
-
-        apr_hash_this (hi, &key, &klen, &val);
-        pname = key;
-        pval = val;
-        
-        new_pval = apr_pcalloc (pool, sizeof(*new_pval));
-        new_pval->data = (char *) pval->data;
-        new_pval->len = pval->len;
-        /* new_pval's pool and blocksize are still 0.  :-) */
-
-        apr_hash_set (proplist, pname, klen, new_pval);
-      } 
-  }
+  for (hi = apr_hash_first (pool, proplist); hi; hi = apr_hash_next (hi))
+    {
+      const void *key;
+      void *val;
+      apr_ssize_t klen;
+      
+      apr_hash_this (hi, &key, &klen, &val);
+      apr_hash_set (proplist, key, klen, val);
+    } 
 
   /* All done. */
   SVN_ERR (ra_lib->close(session));
