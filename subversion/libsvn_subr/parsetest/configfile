@@ -1,0 +1,17 @@
+
+# This is a sample Subversion config file
+
+[foosection]
+giraffe:17
+elephant:green
+
+[barsection]
+3.14159:pi
+eee:2.71
+ghoti:phish
+
+# Really important section!
+
+[bazsection]
+airplane:bahamas
+
