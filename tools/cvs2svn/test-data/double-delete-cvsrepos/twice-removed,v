@@ -40,11 +40,6 @@ text
 need it for the regression test, so we removed it.  It was
 src/gnu/usr.bin/cvs/contrib/pcl-cvs/Attic/cookie.el,v in the FreeBSD
 CVS repository.
-
-I'm not even sure what it means that this revision adds text to this
-file for the first, but in a revision where the file is put in state
-'dead' for the second time.  How would someone ever get this content?
-I don't know.
 @
 
 
