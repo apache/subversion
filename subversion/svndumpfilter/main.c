@@ -922,7 +922,7 @@ do_filter (apr_getopt_t *os,
                                           this_key));
           else
             SVN_ERR (svn_cmdline_fprintf (stderr, subpool,
-                                          _("   %ld => %ld\n"),
+                                          "   %ld => %ld\n",
                                           this_key, this_val));
         }
       SVN_ERR (svn_cmdline_fputs ("\n", stderr, subpool));
