@@ -795,6 +795,8 @@ svn_fs_fs__lock (svn_lock_t **lock_p,
   if (!fs->access_ctx || !fs->access_ctx->username)
     return svn_fs_fs__err_no_user (fs);
 
+  SVN_ERR (svn_fs_fs__get_write_lock (fs, subpool));
+
   /* Is the caller attempting to lock an out-of-date working file? */
   if (SVN_IS_VALID_REVNUM(current_rev))
     {
@@ -815,8 +817,6 @@ svn_fs_fs__lock (svn_lock_t **lock_p,
                                   "Lock failed: newer version of '%s' exists.",
                                   path);
     }
-
-  SVN_ERR (svn_fs_fs__get_write_lock (fs, subpool));
 
   /* Is the path already locked?   
 
@@ -849,7 +849,7 @@ svn_fs_fs__lock (svn_lock_t **lock_p,
   SVN_ERR (write_lock_to_file (fs, new_lock, pool));
   *lock_p = new_lock;
 
-  /* Destroy our subpool and release the lock. */
+  /* Destroy our subpool and release the fs write lock. */
   svn_pool_destroy (subpool);
 
   return SVN_NO_ERROR;
@@ -867,6 +867,7 @@ svn_fs_fs__attach_lock (svn_lock_t *lock,
   svn_lock_t *existing_lock;
   svn_fs_root_t *root;
   svn_revnum_t youngest;
+  apr_pool_t *subpool = svn_pool_create (pool);
 
   SVN_ERR (svn_fs_fs__check_fs (fs));
 
@@ -911,7 +912,9 @@ svn_fs_fs__attach_lock (svn_lock_t *lock,
                                   lock->path);
     }
 
-  /* Try and get a lock from lock->path */ 
+  SVN_ERR (svn_fs_fs__get_write_lock (fs, subpool));
+
+    /* Try and get a lock from lock->path */ 
   SVN_ERR (get_lock_from_path_helper (fs, &existing_lock, lock->path, pool));
 
   if (existing_lock)
@@ -923,17 +926,17 @@ svn_fs_fs__attach_lock (svn_lock_t *lock,
         }
       else
         {
-          apr_pool_t *subpool = svn_pool_create (pool);
           /* Force was passed, so lock is being stolen. Destroy the
              existing lock. */
-          SVN_ERR (svn_fs_fs__get_write_lock (fs, subpool));
+
           SVN_ERR (delete_lock (fs, existing_lock, pool));
-          /* Destroy our subpool and release the lock. */
-          svn_pool_destroy (subpool);
         }          
     }
 
   SVN_ERR (write_lock_to_file (fs, lock, pool));
+
+  /* Destroy our subpool and release the fs write lock. */
+  svn_pool_destroy (subpool);
 
   return SVN_NO_ERROR;
 }
@@ -999,7 +1002,7 @@ svn_fs_fs__unlock (svn_fs_t *fs,
   /* Remove lock and lock token files. */
   SVN_ERR (delete_lock (fs, existing_lock, pool));
 
-  /* Destroy our subpool and release the lock. */
+  /* Destroy our subpool and release the fs write lock. */
   svn_pool_destroy (subpool);
 
   return SVN_NO_ERROR;
