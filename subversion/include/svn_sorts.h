@@ -67,6 +67,14 @@ int svn_sort_compare_items_as_paths (const svn_sort__item_t *a,
                                      const svn_sort__item_t *b);
 
 
+/** Compare two @c svn_sort__item_t's, returning an integer greater than,
+ * equal to, or less than 0, according as @a a is greater than, equal to,
+ * or less than @a b according to a lexical key comparison.  The keys are
+ * not required to be zero-terminated.
+ */
+int svn_sort_compare_items_lexically (const svn_sort__item_t *a,
+                                      const svn_sort__item_t *b);
+
 /** Compare two @c svn_revnum_t's, returning an integer greater than, equal
  * to, or less than 0, according as @a b is greater than, equal to, or less
  * than @a a. Note that this sorts newest revision to oldest (IOW, descending
