@@ -39,6 +39,7 @@
 #include "svn_path.h"
 #include "svn_md5.h"
 #include "svn_fs.h"
+#include "svn_sorts.h"
 #include "fs.h"
 #include "err.h"
 #include "trail.h"
@@ -2519,6 +2520,91 @@ txn_body_merge (void *baton, trail_t *trail)
 }
 
 
+static svn_error_t *
+verify_locks (const char *txn_name,
+              trail_t *trail,
+              apr_pool_t *pool)
+{
+  apr_pool_t *subpool = svn_pool_create (pool);
+  apr_hash_t *changes;
+  apr_hash_index_t *hi;
+  apr_array_header_t *changed_paths;
+  svn_stringbuf_t *last_recursed = NULL;
+  int i;
+
+  /* Locks may have been added (or stolen) between the calling of
+     previous svn_fs.h functions and svn_fs_commit_txn(), so we need
+     to re-examine every changed-path in the txn and re-verify all
+     discovered locks. */
+  /* Fetch the changes for this transaction. */
+  SVN_ERR (svn_fs_bdb__changes_fetch (&changes, trail->fs, txn_name, 
+                                      trail, pool));
+
+  /* Make an array of the changed paths, and sort them depth-first-ily.  */
+  changed_paths = apr_array_make (pool, apr_hash_count (changes) + 1, 
+                                  sizeof (const char *));
+  for (hi = apr_hash_first (pool, changes); hi; hi = apr_hash_next (hi))
+    {
+      const void *key;
+      apr_hash_this (hi, &key, NULL, NULL);
+      APR_ARRAY_PUSH (changed_paths, const char *) = key;
+    }
+  qsort (changed_paths->elts, changed_paths->nelts,
+         changed_paths->elt_size, svn_sort_compare_paths);
+  
+  /* Now, traverse the array of changed paths, verify locks.  Note
+     that if we need to do a recursive verification a path, we'll skip
+     over children of that path when we get to them. */
+  for (i = 0; i < changed_paths->nelts; i++)
+    {
+      const char *path;
+      svn_fs_path_change_t *change;
+      svn_boolean_t recurse = TRUE;
+
+      svn_pool_clear (subpool);
+      path = APR_ARRAY_IDX (changed_paths, i, const char *);
+
+      fprintf (stderr, "Path: %s\n", path);
+
+      /* If this path has already been verified as part of a recursive
+         check of one of its parents, no need to do it again.  */
+      if (last_recursed 
+          && svn_path_is_child (last_recursed->data, path, subpool))
+        continue;
+
+      /* Fetch the change associated with our path.  */
+      change = apr_hash_get (changes, path, APR_HASH_KEY_STRING);
+
+      /* What does it mean to succeed at lock verification for a given
+         path?  For an existing file or directory getting modified
+         (text, props), it means we hold the lock on the file or
+         directory.  For paths being added or removed, we need to hold
+         the locks for that path and any children of that path.
+
+         ### WHEW!  We have no reliable way to determine the node kind
+         of deleted items, but fortunately we are going to do a
+         recursive check on deleted paths regardless of their kind.  */
+      if (change->change_kind == svn_fs_path_change_modify)
+        recurse = FALSE;
+      fprintf (stderr, "   ... checking %s\n", recurse ? "recursively" : "non-recursively");
+      SVN_ERR (svn_fs_base__allow_locked_operation (path, recurse,
+                                                    trail, subpool));
+
+      /* If we just did a recursive check, remember the path we
+         checked (so children can be skipped).  */
+      if (recurse)
+        {
+          if (! last_recursed)
+            last_recursed = svn_stringbuf_create (path, pool);
+          else
+            svn_stringbuf_set (last_recursed, path);
+        }
+    }
+  svn_pool_destroy (subpool);
+  return SVN_NO_ERROR;
+}
+
+
 struct commit_args
 {
   svn_fs_txn_t *txn;
@@ -2540,9 +2626,6 @@ static svn_error_t *
 txn_body_commit (void *baton, trail_t *trail)
 {
   struct commit_args *args = baton;
-  apr_hash_t *changed_paths;
-  apr_hash_index_t *hi;
-  apr_pool_t *subpool;
 
   svn_fs_txn_t *txn = args->txn;
   svn_fs_t *fs = txn->fs;
@@ -2581,60 +2664,7 @@ txn_body_commit (void *baton, trail_t *trail)
      previous svn_fs.h functions and svn_fs_commit_txn(), so we need
      to re-examine every changed-path in the txn and re-verify all
      discovered locks. */
-  SVN_ERR (svn_fs_bdb__changes_fetch (&changed_paths, trail->fs, txn_name,
-                                      trail, trail->pool));
-  subpool = svn_pool_create (trail->pool);
-  for (hi = apr_hash_first (trail->pool, changed_paths);
-       hi; hi = apr_hash_next (hi))
-    {
-      const void *key;
-      void *val;
-      svn_fs_path_change_t *change;
-
-      svn_pool_clear (subpool);
-
-      apr_hash_this (hi, &key, NULL, &val);
-      change = val;
-
-      /* ### Ugh.  Gotta figure out the node_kind of each changed-path.
-         We REALLY REALLY need to put node-kind into the change skel!
-         Unfortunately, no schema changes allowed till svn 2.0.
-         Worse, we currently have no reliable way to determine the
-         kind of a deleted path!!  
-
-         So, here's the plan.  If a path is deleted, we'll look for
-         locks both as a file, and as a directory (recursively).
-         Otherwise, we'll do a more sane (single) check. */
-      if (change->change_kind != svn_fs_path_change_delete)
-        {
-          svn_node_kind_t kind;
-          svn_boolean_t recurse = TRUE;
-          dag_node_t *node;
-
-          SVN_ERR (svn_fs_base__dag_get_node
-                   (&node, trail->fs, change->node_rev_id, trail, subpool));
-          kind = svn_fs_base__dag_node_kind (node);
-
-          /* If a directory wasn't added or deleted, then it must be
-             listed because of a propchange only; do a non-recursive
-             lock-check.  And we always do non-recursive checks for
-             files.  Note that if we weren't able to determine the
-             node kind, we have to use a recursive check. */
-          if ((kind == svn_node_file)
-              || ((kind == svn_node_dir) 
-                  && (change->change_kind == svn_fs_path_change_modify)))
-            recurse = FALSE;
-
-          SVN_ERR (svn_fs_base__allow_locked_operation (key, recurse,
-                                                        trail, subpool));
-        }
-      else
-        {
-          SVN_ERR (svn_fs_base__allow_locked_operation (key, TRUE, 
-                                                        trail, subpool));
-        }
-    }
-  svn_pool_destroy (subpool);
+  SVN_ERR (verify_locks (txn_name, trail, trail->pool));
 
   /* Else, commit the txn. */
   SVN_ERR (svn_fs_base__dag_commit_txn (&(args->new_rev), fs, txn_name,
