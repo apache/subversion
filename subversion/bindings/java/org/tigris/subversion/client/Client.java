@@ -38,6 +38,6 @@ public interface Client
 
     LogMessageReceiver getCommitLogReceiver();
 
-    void checkout(String url, File path, Object revision, boolean recurs)
+    void checkout(String url, File path, Object revision, boolean recurse)
         throws SubversionException;
 }
