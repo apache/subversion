@@ -37,6 +37,16 @@ Candidate changes:
     Votes:
       +1: ghudson
 
+
+  * r10560
+    Sync with APR 1.0 find_apr.m4 and find_apu.m4 files.
+    Justification:
+     Allows building against APR 1.0; straightforward change.
+    Notes:
+     Not worth a resoak on its own.
+    Votes:
+      +1: ghudson
+
 Status of 1.1.1:
 ================
 
