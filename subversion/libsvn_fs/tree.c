@@ -4189,6 +4189,33 @@ svn_error_t *svn_fs_node_history (svn_fs_history_t **history_p,
 }
 
 
+/* Examine the PARENT_PATH structure chain to determine how copy IDs
+   would be doled out in the event that PARENT_PATH was made mutable.
+   Return an existing copy ID that would be assigned to PARENT_PATH in
+   that case, or NULL if a new copy ID would have to be created.
+
+   NOTE:  All items in the PARENT_PATH chain are assumed to be immutable! 
+*/
+static const char *
+examine_copy_inheritance (parent_path_t *parent_path)
+{
+  copy_id_inherit_t inherit = parent_path->copy_inherit;
+
+  /* If we have no parent (we are looking at the root node), or if
+     this node is supposed to inherit from itself, return that fact. */
+  if ((! parent_path->parent) || (inherit == copy_id_inherit_self))
+    return svn_fs__id_copy_id (svn_fs__dag_get_id (parent_path->node));
+
+  /* If our inheritance depends on our parent, recurse into an
+     examination of our parent, and return what we find there. */
+  if (inherit == copy_id_inherit_parent)
+    return examine_copy_inheritance (parent_path->parent);
+ 
+  /* If we get here, then our inheritence is "new".  Return NULL. */
+  return NULL;
+}
+
+
 struct history_prev_args
 {
   svn_fs_history_t **prev_history_p;
@@ -4204,16 +4231,16 @@ txn_body_history_prev (void *baton, trail_t *trail)
   struct history_prev_args *args = baton;
   svn_fs_history_t **prev_history = args->prev_history_p;
   svn_fs_history_t *history = args->history;
-  const char *end_cp_id = NULL;
   const char *commit_path, *src_path, *path = history->path;
   svn_revnum_t commit_rev, src_rev, dst_rev, revision = history->revision;
   apr_pool_t *retpool = args->pool;
   svn_fs_t *fs = history->fs;
+  parent_path_t *parent_path;
   dag_node_t *node;
   svn_fs_root_t *root;
   const svn_fs_id_t *node_id;
   struct revision_root_args rr_args;
-  int paths_differ;
+  int skip_copy_hunt = 0;
   int reported = history->is_interesting;
 
   /* Initialize our return value. */
@@ -4237,20 +4264,22 @@ txn_body_history_prev (void *baton, trail_t *trail)
   SVN_ERR (txn_body_revision_root (&rr_args, trail));
 
   /* Open PATH/REVISION, and get its node and a bunch of other goodies.  */
-  SVN_ERR (get_dag (&node, root, path, trail));
+  SVN_ERR (open_path (&parent_path, root, path, 0, trail));
+  node = parent_path->node;
   node_id = svn_fs__dag_get_id (node);
   commit_path = svn_fs__dag_get_created_path (node);
   SVN_ERR (svn_fs__dag_get_revision (&commit_rev, node, trail));
 
-  /* If our history path/revision matches its node's commit
-     path/revision ... */
-  paths_differ = strcmp (path, commit_path);
-  if ((! paths_differ) && (revision == commit_rev))
+  /* The Subversion filesystem is written in such a way that a given
+     line of history may have at most one interesting history point
+     per filesystem revision.  So, if our history revision matches its
+     node's commit revision, we know that ... */
+  if (revision == commit_rev)
     {
       if (! reported)
         {
-          /* ... and we've not already reported this history point,
-             then go for it. */
+          /* ... we either have not yet reported on this revision (and
+             need now to do so) ... */
           *prev_history = assemble_history (fs, 
                                             apr_pstrdup (retpool, commit_path),
                                             commit_rev, 1, NULL, 
@@ -4259,30 +4288,60 @@ txn_body_history_prev (void *baton, trail_t *trail)
         }
       else
         {
-          /* Otherwise, we set our target path and revision to those
-             of our predecessor (unless there is no predecessor, in
-             which case we're all done!). */
+          /* ... or we *have* reported on this revision, and must now
+             progress toward this node's predecessor (unless there is
+             no predecessor, in which case we're all done!). */
           const svn_fs_id_t *pred_id;
 
           SVN_ERR (svn_fs__dag_get_predecessor_id (&pred_id, node, trail));
           if (! pred_id)
             return SVN_NO_ERROR;
 
+          /* We can avoid the copy hunt algorithm if our search would
+             be bounded by two distinct node-rev-ids, and those
+             node-rev-ids have the same copy-ID. */
+          if (svn_fs__key_compare (svn_fs__id_copy_id (node_id),
+                                   svn_fs__id_copy_id (pred_id)) == 0)
+            skip_copy_hunt = 1;
+
           /* Replace NODE and friends with the information from its
              predecessor. */
           SVN_ERR (svn_fs__dag_get_node (&node, fs, pred_id, trail));
           node_id = svn_fs__dag_get_id (node);
-          end_cp_id = svn_fs__id_copy_id (node_id);
           commit_path = svn_fs__dag_get_created_path (node);
           SVN_ERR (svn_fs__dag_get_revision (&commit_rev, node, trail));
         }
     }
+  else if (strcmp (path, commit_path) == 0)
+    {
+      /* We are looking at a node via the same path as that at which
+         it was created, but at a different revision.  It is still
+         possible that some copies have occured betweent these two
+         locations (say, someone renamed a parent directory, and then
+         renamed it back, all without touching our node).  But let's
+         seek to rule out a copy hunt in any way we can.  For example,
+         we can avoid the hunt if we know that our node's copy ID
+         would not change if it were to be made mutable.  */
+      const char *new_copy_id = examine_copy_inheritance (parent_path);
+      if (new_copy_id
+          && (svn_fs__key_compare (svn_fs__id_copy_id (node_id), 
+                                   new_copy_id) == 0))
+        skip_copy_hunt = 1;
+    }
 
-  /* See if any copies took place between our path/revision and
-     the location of the node's last commit. */
-  SVN_ERR (find_youngest_copy (&src_rev, &src_path, &dst_rev, path,
-                               fs, commit_rev, svn_fs__id_copy_id (node_id),
-                               revision, trail));
+  src_path = NULL;
+  src_rev = SVN_INVALID_REVNUM;
+  if (! skip_copy_hunt)
+    {
+      /* We couldn't skip the copy hunt, so we gotta do the work.  See
+         if any copies took place between our path/revision and the
+         location of the node's last commit. */
+      SVN_ERR (find_youngest_copy (&src_rev, &src_path, &dst_rev, path,
+                                   fs, commit_rev, 
+                                   svn_fs__id_copy_id (node_id),
+                                   revision, trail));
+    }
+
   if (src_path && SVN_IS_VALID_REVNUM (src_rev))
     {
       *prev_history = assemble_history (fs, apr_pstrdup (retpool, path), 
