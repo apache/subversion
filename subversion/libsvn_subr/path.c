@@ -398,22 +398,15 @@ svn_path_basename (const char *path, apr_pool_t *pool)
   if (len == 0)
     return apr_pmemdup (pool, "/", 2);
 
-  /* back up to find the previous slash character.
-
-     note that p can actually end up at (path-1), but we make sure to not
-     deref that (the location may not be mapped; it is even possible that
-     some systems cannot compute path-1, but I don't know any).
-
-     the point is that we have to distinguish between stopping the loop
-     at *p == '/' or stopping because we hit the start of the string. it
-     is easiest to say we stop "one character before the start of the
-     resulting basename."  */
+  /* back up to find the previous slash character.  make sure not to
+     back up into (path-1) because the bounds checking gcc compiler
+     will core dump on that pointer.  */
   p = path + len - 1;
-  while (p >= path && *p != '/')
+  while (p > path && *(p-1) != '/')
     --p;
 
   /* copy the substring and null-terminate it */
-  return apr_pstrmemdup (pool, p + 1, len - 1 - (p - path));
+  return apr_pstrmemdup (pool, p, len - (p - path));
 }
 
 
