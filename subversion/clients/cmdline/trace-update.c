@@ -179,7 +179,6 @@ close_directory (void *dir_baton)
 static svn_error_t *
 close_file (void *file_baton)
 {
-  svn_error_t *err;
   struct file_baton *fb = file_baton;
   char statchar_buf[3] = "_ ";
 
