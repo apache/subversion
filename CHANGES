@@ -8,6 +8,7 @@ See the 1.1 release notes for a more verbose overview of the changes since
  User-visible-changes:
  * new non-database repository back-end (libsvn_fs_fs)
  * symlinks can now be placed under version control (unix systems only)
+ * cmdline client now supports psuedo-IRIs and autoescapes chars (issue #1910)
  * fixed: working copies now shareable by multiple users (issue #1509)
  * fixed: diff and other subcommands correctly follow renames (issue #1093)
      - new 'peg' syntax for diff/merge:  'svn diff -r X:Y TARGET@REV'
@@ -34,6 +35,7 @@ See the 1.1 release notes for a more verbose overview of the changes since
  * allow update of non-existent target entry (partial issue #1902 fix)
  * 'svnadmin create' now sets sgid bit on repos/db/  (unix systems only)
  * increase default neon (ra_dav) timeout from 120 to 3600 seconds (r9568)
+ * print verbose BDB error messages (r10557, r10566)
  * fixed: don't bail when 'svn up' refuses to delete local mods (issue #1806)
  * fixed: process svn:externals in defined order (issue #1788)
  * fixed: pass new propval to stdin of pre-revprop-change hook (issue #952)
