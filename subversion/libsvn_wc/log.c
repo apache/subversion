@@ -794,6 +794,9 @@ log_do_updated (struct log_runner *loggy,
 }
 
 
+/* Note:  assuming that svn_wc__log_commit() is what created all of
+   the <committed...> commands, the `name' attribute will either be a
+   file or SVN_WC_ENTRY_THIS_DIR. */
 static svn_error_t *
 log_do_committed (struct log_runner *loggy,
                   const char *name,
@@ -810,11 +813,13 @@ log_do_committed (struct log_runner *loggy,
     {
       svn_string_t *working_file;
       svn_string_t *tmp_base;
-      apr_time_t timestamp = 0; /* By default, don't override old stamp. */
+      apr_time_t text_time = 0; /* By default, don't override old stamp. */
+      apr_time_t prop_time = 0; /* By default, don't override old stamp. */
       enum svn_node_kind kind;
       svn_string_t *sname = svn_string_create (name, loggy->pool);
       apr_hash_t *entries = NULL;
       svn_wc_entry_t *entry;
+      svn_string_t *prop_path, *tmp_prop_path, *prop_base_path;
 
       err = svn_wc__entries_read (&entries, loggy->path, loggy->pool);
       if (err)
@@ -829,60 +834,151 @@ log_do_committed (struct log_runner *loggy,
         }
       else   /* entry not being deleted, so mark commited-to-date */
         {
-          working_file = svn_string_dup (loggy->path, loggy->pool);
-          svn_path_add_component (working_file,
-                                  sname,
-                                  svn_path_local_style);
-          tmp_base = svn_wc__text_base_path (working_file, 1, loggy->pool);
+          /* `name' will either be a file's basename, or
+             SVN_WC_ENTRY_THIS_DIR. */
+          svn_boolean_t is_this_dir;
+
+          if (! strcmp (name, SVN_WC_ENTRY_THIS_DIR))
+            is_this_dir = TRUE;
+          else
+            is_this_dir = FALSE;
+
+          if (! is_this_dir)
+            {
+              /* `name' is a file's basename.  check for textual
+                 changes. */
+              working_file = svn_string_dup (loggy->path, loggy->pool);
+              svn_path_add_component (working_file,
+                                      sname,
+                                      svn_path_local_style);
+              tmp_base = svn_wc__text_base_path (working_file, 1, loggy->pool);
               
-          err = svn_io_check_path (tmp_base, &kind, loggy->pool);
+              err = svn_io_check_path (tmp_base, &kind, loggy->pool);
+              if (err)
+                return svn_error_createf
+                  (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, loggy->pool,
+                   "error checking existence of %s", name);
+              
+              if (kind == svn_node_file)
+                {
+                  svn_boolean_t same;
+                  err = svn_wc__files_contents_same_p (&same,
+                                                       working_file,
+                                                       tmp_base,
+                                                       loggy->pool);
+                  if (err)
+                    return svn_error_createf 
+                      (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, loggy->pool,
+                       "error comparing %s and %s",
+                       working_file->data, tmp_base->data);
+                  
+                  /* What's going on here: the working copy has been
+                     copied to tmp/text-base/ during the commit.  That's
+                     what `tmp_base' points to.  If we get here, we know
+                     the commit was successful, and we need make tmp_base
+                     into the real text-base.  *However*, which timestamp
+                     do we put on the entry?  It's possible that during
+                     the commit the working file may have changed.  If
+                     that's the case, use tmp_base's timestamp.  If
+                     there's been no local mod, it's okay to use the
+                     working file's timestamp. */
+                  err = svn_io_file_affected_time 
+                    (&text_time, same ? working_file : tmp_base, loggy->pool);
+                  if (err)
+                    return svn_error_createf 
+                      (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, loggy->pool,
+                       "error getting file_affected_time on %s",
+                       same ? working_file->data : tmp_base->data);
+                  
+                  err = replace_text_base (loggy->path, name, loggy->pool);
+                  if (err)
+                    return svn_error_createf 
+                      (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, loggy->pool,
+                       "error replacing text base for %s", name);
+                }
+            }
+              
+          /* Now check for property commits. */
+
+          /* Get property file pathnames, depending on whether we're
+             examining a file or THIS_DIR */
+          err = svn_wc__prop_path (&prop_path,
+                                   is_this_dir ? loggy->path : working_file,
+                                   0 /* not tmp */, loggy->pool);
+          if (err) return err;
+          
+          err = svn_wc__prop_path (&tmp_prop_path, 
+                                   is_this_dir ? loggy->path : working_file,
+                                   1 /* tmp */, loggy->pool);
+          if (err) return err;
+          
+          err = svn_wc__prop_base_path (&prop_base_path,
+                                        is_this_dir ? 
+                                          loggy->path : working_file,
+                                        0 /* not tmp */, loggy->pool);
+          if (err) return err;
+
+          /* Check for existence of tmp_prop_path */
+          err = svn_io_check_path (tmp_prop_path, &kind, loggy->pool);
           if (err)
             return svn_error_createf
               (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, loggy->pool,
                "error checking existence of %s", name);
-              
+          
           if (kind == svn_node_file)
             {
+              /* Magic inference: if there's a working property file
+                 sitting in the tmp area, then we must have committed
+                 properties on this file or dir.  Time to sync. */
+              
+              /* We need to decide which prop-timestamp to use, just
+                 like we did with text-time. */             
               svn_boolean_t same;
+              apr_status_t status;
               err = svn_wc__files_contents_same_p (&same,
-                                                   working_file,
-                                                   tmp_base,
+                                                   prop_path,
+                                                   tmp_prop_path,
                                                    loggy->pool);
               if (err)
                 return svn_error_createf 
                   (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, loggy->pool,
                    "error comparing %s and %s",
-                   working_file->data, tmp_base->data);
-                  
+                   prop_path->data, tmp_prop_path->data);
+
               err = svn_io_file_affected_time 
-                (&timestamp, same ? working_file : tmp_base, loggy->pool);
+                (&prop_time, same ? prop_path : tmp_prop_path, loggy->pool);
               if (err)
                 return svn_error_createf 
                   (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, loggy->pool,
                    "error getting file_affected_time on %s",
-                   same ? working_file->data : tmp_base->data);
-                  
-              err = replace_text_base (loggy->path, name, loggy->pool);
-              if (err)
-                return svn_error_createf 
-                  (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, loggy->pool,
-                   "error replacing text base for %s", name);
+                   same ? prop_path->data : tmp_prop_path->data);
+
+              /* Make the tmp prop file the new pristine one. */
+              status = apr_rename_file (tmp_prop_path->data,
+                                        prop_base_path->data,
+                                        loggy->pool);
+              if (status)
+                return svn_error_createf (status, 0, NULL, loggy->pool,
+                                          "error renaming %s to %s",
+                                          tmp_prop_path->data,
+                                          prop_base_path->data);
             }
-              
-          /* Else the SVN/tmp/text-base/ file didn't exist.  Whatever; we
-             can ignore and move on. */
+          
+
+          /* Files have been moved, and timestamps are found.  Time
+             for The Big Merge Sync. */
           err = svn_wc__entry_merge_sync (loggy->path,
                                           sname,
                                           atoi (revstr),
                                           svn_node_file,
                                           SVN_WC_ENTRY_CLEAR_ALL,
-                                          timestamp,
-                                          0, /* todo: FIX THIS.  Is this
-                                                code aware of
-                                                properties at all
-                                                yet? */
+                                          text_time,
+                                          prop_time,
                                           loggy->pool,
                                           NULL,
+                                          /* remove the rejfile atts! */
+                                          SVN_WC_ENTRY_ATTR_REJFILE,
+                                          SVN_WC_ENTRY_ATTR_PREJFILE,
                                           NULL);
           if (err)
             return svn_error_createf
@@ -1001,7 +1097,7 @@ svn_wc__run_log (svn_string_t *path, apr_pool_t *pool)
   /* Parse the log file's contents. */
   err = svn_wc__open_adm_file (&f, path, SVN_WC__ADM_LOG, APR_READ, pool);
   if (err)
-    return err;
+    return svn_error_quick_wrap (err, "svn_wc__run_log: couldn't open log.");
   
   do {
     buf_len = sizeof (buf);
@@ -1068,13 +1164,14 @@ svn_wc__cleanup (svn_string_t *path,
       apr_size_t keylen;
       void *val;
       svn_wc_entry_t *entry;
+      svn_boolean_t is_this_dir = FALSE;
 
       apr_hash_this (hi, &key, &keylen, &val);
       entry = val;
 
       if ((keylen == strlen (SVN_WC_ENTRY_THIS_DIR))
           && (strcmp ((char *) key, SVN_WC_ENTRY_THIS_DIR) == 0))
-        continue;
+        is_this_dir = TRUE;
 
       /* If TARGETS tells us to care about this dir, we may need to
          clean up locks later.  So find out in advance. */
@@ -1095,8 +1192,9 @@ svn_wc__cleanup (svn_string_t *path,
       else
         care_about_this_dir = 1;
 
-      if (entry->kind == svn_node_dir)
+      if ((entry->kind == svn_node_dir) && (! is_this_dir))
         {
+          /* Recurse */
           svn_string_t *subdir = svn_string_dup (path, pool);
           svn_path_add_component (subdir,
                                   svn_string_create ((char *) key, pool),
@@ -1127,11 +1225,22 @@ svn_wc__cleanup (svn_string_t *path,
                                       path->data);
         }
       
-      /* Eat what's put in front of us. */
-      err = svn_wc__run_log (path, pool);
-      if (err)
-        return err;
-      
+      /* Is there a log?  If so, run it and then remove it. */
+      {
+        enum svn_node_kind kind;
+        svn_string_t *log_path = svn_wc__adm_path (path, 0, pool,
+                                                   SVN_WC__ADM_LOG, NULL);
+        
+        err = svn_io_check_path (log_path, &kind, pool);
+        if (err) return err;
+
+        if (kind == svn_node_file)
+          {
+            err = svn_wc__run_log (path, pool);
+            if (err) return err;
+          }
+      }
+
       /* Remove any lock here.  But we couldn't even be here if there were
          a lock file and bail_on_lock were set, so do the obvious check
          first. */
@@ -1169,83 +1278,93 @@ svn_wc__log_commit (svn_string_t *path,
       void *val;
       svn_wc_entry_t *entry;
 
+      svn_string_t *full_path;
+      svn_string_t *logtag = svn_string_create ("", pool);
+      char *revstr = apr_psprintf (pool, "%ld", revision);
+      apr_file_t *log_fp = NULL;
+
       apr_hash_this (hi, &key, &keylen, &val);
       entry = val;
 
-      if ((keylen == strlen (SVN_WC_ENTRY_THIS_DIR))
-          && (strcmp ((char *) key, SVN_WC_ENTRY_THIS_DIR) == 0))
-        continue;
+      /* Construct the full path of the entry we're examining. */
+      full_path = svn_string_dup (path, pool);
+      svn_path_add_component
+        (full_path,
+         svn_string_ncreate ((char *) key, keylen, pool),
+         svn_path_local_style);
 
-      if (entry->kind == svn_node_dir)
+      /* If we're looking at directory which is not `.', recurse. */
+      if ((entry->kind == svn_node_dir)
+          && (strcmp ((char *) key, SVN_WC_ENTRY_THIS_DIR)))
         {
-          svn_string_t *subdir = svn_string_dup (path, pool);
-          svn_path_add_component (subdir,
-                                  svn_string_create ((char *) key, pool),
-                                  svn_path_local_style);
-
-          err = svn_wc__log_commit (subdir, targets, revision, pool);
-          if (err)
-            return err;
+          err = svn_wc__log_commit (full_path, targets, revision, pool);
+          if (err) return err;
         }
-      else
+
+      if (targets)
         {
-          svn_string_t *logtag = svn_string_create ("", pool);
-          char *revstr = apr_psprintf (pool, "%ld", revision);
-          apr_file_t *log_fp = NULL;
-          
-          /* entry->kind == svn_node_file, but was the file actually
-             involved in the commit? */
-          
-          if (targets)
-            {
-              svn_string_t *target = svn_string_dup (path, pool);
-              svn_path_add_component
-                (target,
-                 svn_string_ncreate ((char *) key, keylen, pool),
-                 svn_path_local_style);
-              
-              if (! apr_hash_get (targets, target->data, target->len))
-                continue;
-            }
-          
-          /* Yes, the file was involved in the commit. */
+          /* If `full_path' isn't an affected target, move along. */
+          if (! apr_hash_get (targets, full_path->data, full_path->len))
+            continue;
+          else
+            /* `full_path' is an affected target, but we want to
+               ignore certain cases of it.  For example, in the case
+               of an affected directory "foo/bar/baz/", we want to
+               ignore
+                
+                     full_path = "foo/bar" + "baz"
 
-          err = svn_wc__open_adm_file (&log_fp, path, SVN_WC__ADM_LOG,
-                                       (APR_WRITE | APR_APPEND | APR_CREATE),
-                                       pool);
-          if (err)
-            return err;
-          
-          svn_xml_make_open_tag (&logtag,
-                                 pool,
-                                 svn_xml_self_closing,
-                                 SVN_WC__LOG_COMMITTED,
-                                 SVN_WC__LOG_ATTR_NAME,
-                                 svn_string_create ((char *) key, pool),
-                                 SVN_WC__LOG_ATTR_REVISION,
-                                 svn_string_create (revstr, pool),
-                                 NULL);
-          
-          apr_err = apr_full_write (log_fp, logtag->data, logtag->len, NULL);
-          if (apr_err)
-            {
-              apr_close (log_fp);
-              return svn_error_createf (apr_err, 0, NULL, pool,
-                                        "svn_wc__log_commit: "
-                                        "error writing %s's log file", 
-                                        path->data);
-            }
-          
-          err = svn_wc__close_adm_file (log_fp,
-                                        path,
-                                        SVN_WC__ADM_LOG,
-                                        1, /* sync */
-                                        pool);
-          if (err)
-            return err;
+               but we want to recognize
+ 
+                     full_path = "foo/bar/baz" + ""
+            */
+            if ((entry->kind == svn_node_dir)
+                && (! svn_string_compare (path, full_path)))
+              continue;
         }
+
+      /* The current entry was committed.  Append a log command that
+         will update the entry appropriately. */
+
+      err = svn_wc__open_adm_file (&log_fp, path, SVN_WC__ADM_LOG,
+                                   (APR_WRITE | APR_APPEND | APR_CREATE),
+                                   pool);
+      if (err)
+        return
+          svn_error_quick_wrap
+          (err, "svn_wc__log_commit: can't append to log file.");
+      
+      svn_xml_make_open_tag (&logtag,
+                             pool,
+                             svn_xml_self_closing,
+                             SVN_WC__LOG_COMMITTED,
+                             SVN_WC__LOG_ATTR_NAME,
+                             svn_string_create ((char *) key, pool),
+                             SVN_WC__LOG_ATTR_REVISION,
+                             svn_string_create (revstr, pool),
+                             NULL);
+      
+      apr_err = apr_full_write (log_fp, logtag->data, logtag->len, NULL);
+      if (apr_err)
+        {
+          apr_close (log_fp);
+          return svn_error_createf (apr_err, 0, NULL, pool,
+                                    "svn_wc__log_commit: "
+                                    "error writing %s's log file", 
+                                    full_path->data);
+        }
+      
+      err = svn_wc__close_adm_file (log_fp,
+                                    path,
+                                    SVN_WC__ADM_LOG,
+                                    1, /* sync */
+                                    pool);
+      if (err)
+        return
+          svn_error_quick_wrap
+          (err, "svn_wc__log_commit: can't close log file.");
     }
-
+    
   return SVN_NO_ERROR;
 }
 

@@ -351,7 +351,8 @@ do_apply_textdelta (svn_string_t *filename,
 
   /* Copy the local file to the administrative temp area. */
   local_tmp_path = svn_wc__text_base_path (filename, TRUE, pool);
-  svn_io_copy_file (filename, local_tmp_path, pool);
+  err = svn_io_copy_file (filename, local_tmp_path, pool);
+  if (err) return err;
 
   /* Open a filehandle for tmp local file, and one for text-base if
      applicable. */
@@ -465,7 +466,7 @@ do_prop_deltas (svn_string_t *path,
 {
   svn_error_t *err;
   int i;
-  svn_string_t *prop_path, *prop_base_path;
+  svn_string_t *prop_path, *prop_base_path, *tmp_prop_path;
   apr_array_header_t *local_propchanges;
   apr_hash_t *localprops = apr_make_hash (pool);
   apr_hash_t *baseprops = apr_make_hash (pool);
@@ -478,8 +479,14 @@ do_prop_deltas (svn_string_t *path,
   err = svn_wc__prop_base_path (&prop_base_path, path, 0, pool);
   if (err) return err;
 
+  /* Copy the local prop file to the administrative temp area */
+  err = svn_wc__prop_path (&tmp_prop_path, path, 1, pool);
+  if (err) return err;
+  err = svn_io_copy_file (prop_path, tmp_prop_path, pool);
+  if (err) return err;
+
   /* Load all properties into hashes */
-  err = svn_wc__load_prop_file (prop_path,
+  err = svn_wc__load_prop_file (tmp_prop_path,
                                 localprops, pool);
   if (err) return err;
   
