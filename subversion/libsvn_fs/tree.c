@@ -4033,8 +4033,7 @@ txn_body_history_prev (void *baton, trail_t *trail)
   rr_args.root_p = &root;
   rr_args.fs = fs;
   rr_args.rev = revision;
-  SVN_ERR (svn_fs__retry_txn (fs, txn_body_revision_root, &rr_args, 
-                              trail->pool));
+  SVN_ERR (txn_body_revision_root (&rr_args, trail));
 
   /* Open PATH/REVISION, and get its node and a bunch of other goodies.  */
   SVN_ERR (get_dag (&node, root, path, trail));
