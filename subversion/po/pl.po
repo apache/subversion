@@ -35,7 +35,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2004-09-14 08:26+0200\n"
-"PO-Revision-Date: 2004-09-21 23:39+0200\n"
+"PO-Revision-Date: 2004-09-22 22:36+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Polish <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -937,7 +937,7 @@ msgid ""
 "    URL -> URL:  complete server-side rename.\n"
 msgstr ""
 "Przenieś obiekt w nowe miejsce i/lub zmień jego nazwę.\n"
-"Wykorzytanie:\n"
+"Wykorzystanie:\n"
 "    move ŹRÓDŁO CEL\n"
 "\n"
 "  Uwaga: to polecenie jest równoważnie wykonaniu 'copy' a następnie\n"
@@ -962,7 +962,7 @@ msgid ""
 "  1. Removes versioned props in working copy.\n"
 "  2. Removes unversioned remote prop on repos revision.\n"
 msgstr ""
-"Usunięcie atrybutu z plikow, katalogów lub wersji.\n"
+"Usunięcie atrybutu z plików, katalogów lub wersji.\n"
 "Wykorzystanie:\n"
 "    1. propdel ATRYBUT [ŚCIEŻKA...]\n"
 "    2. propdel ATRYBUT --revprop -r WERSJA [URL]\n"
@@ -1135,7 +1135,7 @@ msgstr ""
 "Wykorzystanie: resolved ŚCIEŻKA...\n"
 "\n"
 "  Uwaga: to polecenie nie rozwikłuje konfliktów ani nie usuwa\n"
-"  znaczników wkazujących miejsca wystąpienia konfliktów. Służy ono\n"
+"  znaczników wskazujących miejsca wystąpienia konfliktów. Służy ono\n"
 "  jedynie do usunięcia plików z informacjami o konflikcie i przywraca\n"
 "  możliwość zatwierdzenia zmian. Powinno być używane po ręcznym\n"
 "  rozwikłaniu konfliktu.\n"
@@ -2127,7 +2127,7 @@ msgstr "System plików nie zawiera węzła o podanym identyfikatorze wersji"
 
 #: include/svn_error_codes.h:428
 msgid "String does not represent a node or node-rev-id"
-msgstr "Napis nie zawiera identyfikatora węzła lub wersji węzłą"
+msgstr "Napis nie zawiera identyfikatora węzła lub wersji węzła"
 
 #: include/svn_error_codes.h:432
 msgid "Name does not refer to a filesystem directory"
@@ -2204,8 +2204,7 @@ msgstr "Nieznany typ systemu plików"
 
 #: include/svn_error_codes.h:507
 msgid "The repository is locked, perhaps for db recovery"
-msgstr ""
-"Repozytorium jest zablokowane, być może ze wględu na odtwarzanie bazy danych"
+msgstr "Repozytorium jest zablokowane, być może ze względu na odtwarzanie bazy danych"
 
 #: include/svn_error_codes.h:511
 msgid "A repository hook failed"
@@ -2483,7 +2482,7 @@ msgstr "Nielegalny obiekt dla podanej operacji"
 
 #: include/svn_error_codes.h:817
 msgid "MD5 checksum is missing"
-msgstr "Niezgodnosć sumy kontrolnej MD5"
+msgstr "Niezgodność sumy kontrolnej MD5"
 
 #: include/svn_error_codes.h:821
 msgid "Directory needs to be empty but is not"
@@ -2570,7 +2569,7 @@ msgstr "Nie można zamknąć katalogu '%s'"
 #: libsvn_client/blame.c:389 libsvn_client/blame.c:766
 #, c-format
 msgid "Cannot calculate blame information for binary file '%s'"
-msgstr "Nie można okreslić odpowiedzialności za plik binarny '%s'"
+msgstr "Nie można określić odpowiedzialności za plik binarny '%s'"
 
 #: libsvn_client/blame.c:549
 msgid "Start revision must precede end revision"
@@ -3169,7 +3168,7 @@ msgstr "Obiekt systemu plików nie jest otwarty"
 #: libsvn_fs_fs/err.c:61
 #, c-format
 msgid "Corrupt node revision for node '%s' in filesystem '%s'"
-msgstr "Uskodzona wersja obiektu '%s' w systemie plików '%s'"
+msgstr "Uszkodzona wersja obiektu '%s' w systemie plików '%s'"
 
 #: libsvn_fs_fs/err.c:84
 #, c-format
@@ -4816,7 +4815,7 @@ msgstr ""
 "\n"
 "Wypisuje listę wszystkich logów Berkeley DB.\n"
 "\n"
-"UWAGA: zmodyfikowanie lub skasowanie logów bądących jeszcze w użyciu\n"
+"UWAGA: zmodyfikowanie lub skasowanie logów będących jeszcze w użyciu\n"
 "spowoduje uszkodzenie repozytorium.\n"
 
 #: svnadmin/main.c:325
@@ -5111,7 +5110,7 @@ msgid ""
 "\n"
 "Print the paths that were changed.\n"
 msgstr ""
-"wykorzytanie: svnlook changed KATALOG_REP\n"
+"wykorzystanie: svnlook changed KATALOG_REP\n"
 "\n"
 "Wypisuje ścieżki do obiektów, które zostały zmienione.\n"
 
@@ -5373,7 +5372,7 @@ msgid ""
 "Type 'svnlook help %s' for usage.\n"
 msgstr ""
 "polecenie '%s' nie obsługuje opcji '%s'\n"
-"Użyj 'svnlook help %s' by uzyskać więcj informacji\n"
+"Użyj 'svnlook help %s' by uzyskać więcej informacji\n"
 
 #: svnversion/main.c:126
 msgid ""
