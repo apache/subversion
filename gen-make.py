@@ -91,6 +91,10 @@ def _usage_exit():
   print "           tell neon to look for ZLib headers and"
   print "           libs in DIR"
   print
+  print "  --with-junit=PATH"
+  print "           look for the junit jar here"
+  print "           junit is for testing the java bindings"
+  print
   print "  --enable-pool-debug"
   print "           turn on APR pool debugging"
   print
@@ -128,6 +132,7 @@ if __name__ == '__main__':
                                 'with-httpd=',
                                 'with-openssl=',
                                 'with-zlib=',
+                                'with-junit=',
                                 'enable-pool-debug',
                                 'enable-purify',
                                 'enable-quantify',
