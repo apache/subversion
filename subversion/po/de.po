@@ -1574,7 +1574,7 @@ msgstr "Eigenschaft '%s' wurde von '%s' gelöscht.\n"
 #: clients/cmdline/propedit-cmd.c:127
 #: clients/cmdline/propedit-cmd.c:256
 msgid "Bad encoding option: prop value not stored as UTF8"
-msgstr "+++DUPLICATE+++ Fehlerhafte Codierung: Eigenschaftswert ist nicht als UTF8 gespeichert"
+msgstr "Fehlerhafte Codierung: Eigenschaftswert ist nicht als UTF8 gespeichert"
 
 #: clients/cmdline/propedit-cmd.c:136
 #, c-format
@@ -1604,10 +1604,6 @@ msgstr "Das Bearbeiten einer Eigenschaft für ein nicht lokales Ziel '%s' wird n
 #, c-format
 msgid "'%s' does not appear to be a working copy path"
 msgstr "'%s' scheint kein Pfad einer Arbeitskopie zu sein"
-
-#: clients/cmdline/propedit-cmd.c:256
-msgid "Bad encoding option: prop value not stored as UTF8"
-msgstr "---DUPLICATE--- Fehlerhafte Codierung: Eigenschaftswert ist nicht als UTF8 gespeichert"
 
 #: clients/cmdline/propedit-cmd.c:262
 #, c-format
