@@ -26,14 +26,16 @@ Requires: neon >= %{neon_version}
 Requires: python >= 2
 #Requires: /sbin/install-info
 Obsoletes: subversion-cvs2svn
-BuildPreReq: httpd >= %{apache_version}
-BuildPreReq: httpd-devel >= %{apache_version}
-BuildPreReq: httpd-apr-devel >= %{apache_version}
 BuildPreReq: autoconf >= 2.53
 BuildPreReq: db4-devel >= 4.0.14
+BuildPreReq: docbook-style-xsl >= 1.58.1
 BuildPreReq: expat-devel
 BuildPreReq: gdbm-devel
+BuildPreReq: httpd >= %{apache_version}
+BuildPreReq: httpd-apr-devel >= %{apache_version}
+BuildPreReq: httpd-devel >= %{apache_version}
 BuildPreReq: libtool >= 1.4.2
+BuildPreReq: libxslt >= 1.0.27
 BuildPreReq: neon-devel >= %{neon_version}
 BuildPreReq: openssl-devel
 BuildPreReq: python
@@ -96,6 +98,9 @@ Tools for Subversion.
 * Sat May 24 2003 David Summers <david@summersoft.fay.ar.us> 0.23.0-6036
 - Track changes to Python SWIG build.
 - Now requires neon-0.23.9 to pick up bug and security fixes.
+- Now builds the book and puts it in /usr/share/doc/subversion-VERSION/book
+  directory.  RedHat 7.x and RedHat 8.x users who build this RPM will need to
+  install or upgrade to the RedHat 9.0 docbook-style-xsl and libxslt packages.
 
 * Thu May 15 2003 David Summers <david@summersoft.fay.ar.us> 0.22.2-5943
 - The subversion package now requires python 2 because cvs2svn has been
@@ -359,6 +364,11 @@ cp svnadmin.static $RPM_BUILD_ROOT/usr/bin/svnadmin-%{version}-%{release}.static
 mkdir -p $RPM_BUILD_ROOT/usr/lib/subversion
 cp -r tools $RPM_BUILD_ROOT/usr/lib/subversion
 
+# Set up book generation and installation
+(cd doc/book; make XSL_DIR=/usr/share/sgml/docbook/xsl-stylesheets all-html)
+cp -r doc/book/book/html-chunk book
+cp -r doc/book/book/images     book/images
+
 %post
 # Only add to INFO directory if this is the only instance installed.
 if [ "$1"x = "1"x ]; then
@@ -406,6 +416,7 @@ rm -rf $RPM_BUILD_ROOT
 %defattr(-,root,root)
 %doc BUGS CHANGES COMMITTERS COPYING HACKING IDEAS INSTALL PORTING README
 %doc subversion/LICENSE
+%doc book
 /usr/bin/cvs2svn
 /usr/bin/svn
 /usr/bin/svnadmin
