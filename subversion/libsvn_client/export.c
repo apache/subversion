@@ -151,7 +151,6 @@ copy_versioned_files (const char *from,
                   svn_string_t *eol_style;
                   svn_string_t *keywords;
                   svn_string_t *executable;
-                  svn_string_t *date;
                   const char *eol = NULL;
                   svn_boolean_t local_mod = FALSE;
                   apr_time_t time;
