@@ -17,6 +17,7 @@
 #include "db.h"
 #include "svn_fs.h"
 #include "skel.h"
+#include "trail.h"
 
 
 /* Creating and opening the `nodes' table.  */
@@ -31,42 +32,38 @@ int svn_fs__open_nodes_table (DB **nodes_p,
 
 
 /* Set *SKEL_P to point to the REPRESENTATION skel for the node ID in
-   FS, as part of the Berkeley DB transaction DB_TXN.  Allocate the
-   skel and the data it points into in POOL.
+   FS, as part of TRAIL.  Allocate the skel and the data it points
+   into in TRAIL->pool.
 
    This verifies that *SKEL_P is a well-formed REPRESENTATION skel.  */
 svn_error_t *svn_fs__get_rep (skel_t **skel_p,
                               svn_fs_t *fs,
                               const svn_fs_id_t *id,
-                              DB_TXN *db_txn,
-                              apr_pool_t *pool);
+                              trail_t *trail);
 
 
 /* Store SKEL as the REPRESENTATION skel of node ID in FS, as part of
-   the Berkeley DB transaction DB_TXN.  Do any necessary temporary
-   allocation in POOL.
+   TRAIL.  Do any necessary temporary allocation in TRAIL->pool.
 
    This verifies that SKEL is a well-formed REPRESENTATION skel.  */
 svn_error_t *svn_fs__put_rep (svn_fs_t *fs,
                               const svn_fs_id_t *id,
                               skel_t *skel,
-                              DB_TXN *db_txn,
-                              apr_pool_t *pool);
+                              trail_t *trail);
 
 
 /* Check FS's `nodes' table to find an unused node number, and set
    *ID_P to the ID of the first revision of an entirely new node in
-   FS, as part of DB_TXN.  Allocate the new ID, and do all temporary
-   allocation, in POOL.  */
+   FS, as part of TRAIL.  Allocate the new ID, and do all temporary
+   allocation, in TRAIL->pool.  */
 svn_error_t *svn_fs__new_node_id (svn_fs_id_t **id_p,
                                   svn_fs_t *fs,
-                                  DB_TXN *db_txn,
-                                  apr_pool_t *pool);
+                                  trail_t *trail);
 
 
 /* Set *SUCCESSOR_P to the ID of an immediate successor to node
-   revision ID in FS that does not exist yet, as part of the Berkeley
-   DB transaction DB_TXN.  Do any needed temporary allocation in POOL.
+   revision ID in FS that does not exist yet, as part of TRAIL.
+   Allocate *SUCCESSOR_P in TRAIL->pool.
 
    If ID is the youngest revision of its node, then the successor is
    simply ID with its rightmost revision number increased; otherwise,
@@ -74,8 +71,7 @@ svn_error_t *svn_fs__new_node_id (svn_fs_id_t **id_p,
 svn_error_t *svn_fs__new_successor_id (svn_fs_id_t **successor_p,
                                        svn_fs_t *fs,
                                        const svn_fs_id_t *id,
-                                       DB_TXN *db_txn, 
-                                       apr_pool_t *pool);
+                                       trail_t *trail);
 
 
 #endif /* SVN_LIBSVN_FS_NODES_TABLE_H */
