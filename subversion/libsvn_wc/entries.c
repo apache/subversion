@@ -1606,8 +1606,6 @@ walker_helper (const char *dirpath,
 
   SVN_ERR (walk_callbacks->found_entry (dirpath, dot_entry, walk_baton));
 
-  apr_hash_set (entries, SVN_WC_ENTRY_THIS_DIR, APR_HASH_KEY_STRING, NULL);
-  
   /* Loop over each of the other entries. */
   for (hi = apr_hash_first (subpool, entries); hi; hi = apr_hash_next (hi))
     {
@@ -1619,7 +1617,10 @@ walker_helper (const char *dirpath,
 
       apr_hash_this (hi, &key, &klen, &val);
       current_entry = val;
-      
+
+      if (strcmp (current_entry->name, SVN_WC_ENTRY_THIS_DIR) == 0)
+        continue;
+
       entrypath = svn_path_join (dirpath, key, subpool);
       SVN_ERR (walk_callbacks->found_entry (entrypath, current_entry,
                                             walk_baton));
