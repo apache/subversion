@@ -16,21 +16,8 @@
  * ====================================================================
  */
 
-#include <apr_general.h>
-#include <apr_pools.h>
 
-#define APR_WANT_STDIO
-#define APR_WANT_STRFUNC
-#include <apr_want.h>
-
-#include "svn_types.h"
-#include "svn_pools.h"
-#include "svn_error.h"
-#include "svn_io.h"
-#include "svn_fs.h"
-#include "svn_repos.h"
-
-#include "db.h"
+#include "svnadmin.h"
 
 
 /*** Tree printing. ***/
@@ -146,6 +133,9 @@ usage (const char *progname, int exit_code)
      "   youngest  REPOS_PATH\n"
      "      Print the latest revision number.\n"
      "\n"
+     "   shell  REPOS_PATH\n"
+     "      Enter interactive shell for exploring the repository.\n"
+     "\n"
      "Printing a tree shows its structure, node ids, and file sizes.\n"
      "\n",
      progname);
@@ -173,7 +163,8 @@ main (int argc, const char * const *argv)
     is_rmtxns = 0,
     is_setlog = 0,
     is_undeltify = 0,
-    is_youngest = 0;
+    is_youngest = 0,
+    is_shell = 0;
   
   const char *path = NULL;
 
@@ -196,6 +187,7 @@ main (int argc, const char * const *argv)
          || (is_rmtxns = strcmp(argv[1], "rmtxns") == 0)
          || (is_createtxn = strcmp(argv[1], "createtxn") == 0)
          || (is_setlog = strcmp(argv[1], "setlog") == 0)
+         || (is_shell = strcmp(argv[1], "shell") == 0)
          || (is_undeltify = strcmp(argv[1], "undeltify") == 0)
          || (is_deltify = strcmp(argv[1], "deltify") == 0)
          || (is_recover = strcmp(argv[1], "recover") == 0)))
@@ -519,6 +511,14 @@ main (int argc, const char * const *argv)
              "%s: error closing `%s'", argv[0], lockfile_path);
           goto error;
         }
+    }
+  else if (is_shell)
+    {
+      err = svn_repos_open (&fs, path, pool);
+      if (err) goto error;
+
+      err = svnadmin_run_shell (fs, pool);
+      if (err) goto error;
     }
 
   err = svn_fs_close_fs(fs);
