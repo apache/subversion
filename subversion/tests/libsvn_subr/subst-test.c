@@ -434,7 +434,7 @@ substitute_and_verify (const char *test_name,
 
 
 
-/*** Tests ***/
+/*** EOL Tests ***/
 
 static svn_error_t *
 crlf_to_crlf (const char **msg,
@@ -573,6 +573,142 @@ mixed_to_lf (const char **msg,
 
 
 static svn_error_t *
+crlf_to_cr (const char **msg,
+            svn_boolean_t msg_only,
+            apr_pool_t *pool)
+{
+  *msg = "convert CRLF to CR";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  SVN_ERR (substitute_and_verify
+           ("crlf_to_cr", "\r\n", "\r", 0, NULL, NULL, NULL, NULL, pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+lf_to_cr (const char **msg,
+          svn_boolean_t msg_only,
+          apr_pool_t *pool)
+{
+  *msg = "convert LF to CR";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  SVN_ERR (substitute_and_verify
+           ("lf_to_cr", "\n", "\r", 0, NULL, NULL, NULL, NULL, pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+cr_to_cr (const char **msg,
+          svn_boolean_t msg_only,
+          apr_pool_t *pool)
+{
+  *msg = "convert CR to CR";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  SVN_ERR (substitute_and_verify
+           ("cr_to_cr", "\r", "\r", 0, NULL, NULL, NULL, NULL, pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+mixed_to_cr (const char **msg,
+             svn_boolean_t msg_only,
+             apr_pool_t *pool)
+{
+  *msg = "convert mixed line endings to CR";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  SVN_ERR (substitute_and_verify
+           ("mixed_to_cr", NULL, "\r", 1, NULL, NULL, NULL, NULL, pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+lf_to_lfcr (const char **msg,
+            svn_boolean_t msg_only,
+            apr_pool_t *pool)
+{
+  *msg = "convert LF to LFCR";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  SVN_ERR (substitute_and_verify
+           ("lf_to_lfcr", "\n", "\n\r", 0, NULL, NULL, NULL, NULL, pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+crlf_to_lfcr (const char **msg,
+              svn_boolean_t msg_only,
+              apr_pool_t *pool)
+{
+  *msg = "convert CRLF to LFCR";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  SVN_ERR (substitute_and_verify
+           ("crlf_to_lfcr", "\r\n", "\n\r", 0, NULL, NULL, NULL, NULL, pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+cr_to_lfcr (const char **msg,
+            svn_boolean_t msg_only,
+            apr_pool_t *pool)
+{
+  *msg = "convert CR to LFCR";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  SVN_ERR (substitute_and_verify
+           ("cr_to_lfcr", "\r", "\n\r", 0, NULL, NULL, NULL, NULL, pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+mixed_to_lfcr (const char **msg,
+               svn_boolean_t msg_only,
+               apr_pool_t *pool)
+{
+  *msg = "convert mixed line endings to LFCR";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  SVN_ERR (substitute_and_verify
+           ("cr_to_lfcr", NULL, "\n\r", 1, NULL, NULL, NULL, NULL, pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
 mixed_no_repair (const char **msg,
                  svn_boolean_t msg_only,
                  apr_pool_t *pool)
@@ -609,8 +745,19 @@ svn_error_t * (*test_funcs[]) (const char **msg,
   crlf_to_lf,
   cr_to_lf,
   mixed_to_lf,
-  /* ### Is there any compelling reason to test CR or LFCR? */
+  /* Conversions resulting in cr, no keywords involved. */
+  crlf_to_cr,
+  lf_to_cr,
+  cr_to_cr,
+  mixed_to_cr,
+  /* Conversions resulting in lfcr, no keywords involved. */
+  lf_to_lfcr,
+  crlf_to_lfcr,
+  cr_to_lfcr,
+  mixed_to_lfcr,
+  /* Random eol stuff. */
   mixed_no_repair,
+  /* Keywords. */
   0
 };
 
