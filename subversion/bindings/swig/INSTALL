@@ -83,9 +83,9 @@ Step 2:  Build and Install Subversion.
 
   Also make sure that the configure script sees the paths to the perl and/or
   python executable you used to configure SWIG as above.  If it does not then
-  you can specify the correct path by adding PYTHON2=/path/to/python or
+  you can specify the correct path by adding PYTHON=/path/to/python or
   PERL=/path/to/perl onto the command line for configure.  For example:
-       ./configure PYTHON2=/usr/bin/python2.2 PERL=/usr/bin/perl5.8.0
+       ./configure PYTHON=/usr/bin/python2.2 PERL=/usr/bin/perl5.8.0
 
   If Subversion's ./configure finds a SWIG that it's happy with, then
   it will build special glue libraries to link svn to the swig bindings:

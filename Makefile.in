@@ -348,7 +348,6 @@ check-swig-java: swig-java-tests
 #  will perform only basic tests (likewise for other tests).
 check: $(TEST_DEPS) @BDB_TEST_DEPS@
 	@if test "$(PYTHON)" != "none"; then                                 \
-	  $(PYTHON) $(top_srcdir)/build/pycheck.py;                          \
 	  flags="--verbose";                                                 \
 	  if test "$(CLEANUP)" != ""; then                                   \
 	    flags="--cleanup $$flags";                                       \
@@ -363,8 +362,9 @@ check: $(TEST_DEPS) @BDB_TEST_DEPS@
 		    '$(abs_srcdir)' '$(abs_builddir)' '$(PYTHON)' '$(SHELL)' \
 		    $(TESTS);                                                \
 	else                                                                 \
-	  echo "make check: Python not found";                               \
-	  echo "Please install Python 2.0 or greater";                       \
+	  echo "make check: Python 2.0 or greater is required,";             \
+	  echo "            but was not detected during configure";          \
+	  exit 1;                                                            \
 	fi;
 
 # First, set up Apache as documented in
