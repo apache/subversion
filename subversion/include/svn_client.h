@@ -746,8 +746,8 @@ svn_client_log (const apr_array_header_t *targets,
                 apr_pool_t *pool);
 
 /** Invoke @a receiver with @a receiver_baton on each line-blame item
- * associated with revision @a end of @a target, using @a start as the
- * default source of all blame. 
+ * associated with revision @a end of @a path_or_url, using @a start
+ * as the default source of all blame. 
  *
  * If @a strict_node_history is set, copy history (if any exists) will
  * not be traversed while harvesting revision logs for each target.
@@ -758,7 +758,7 @@ svn_client_log (const apr_array_header_t *targets,
  * Use @a pool for any temporary allocation.
  */
 svn_error_t *
-svn_client_blame (const char *target,
+svn_client_blame (const char *path_or_url,
                   const svn_opt_revision_t *start,
                   const svn_opt_revision_t *end,
                   svn_boolean_t strict_node_history,
