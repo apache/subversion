@@ -44,7 +44,7 @@ typedef struct {
   apr_pool_t *pool;
 
   const char *url;              /* original, unparsed url for this session */
-  struct uri root;              /* parsed version of above */
+  ne_uri root;                  /* parsed version of above */
 
   ne_session *sess;           /* HTTP session to server */
   ne_session *sess2;
