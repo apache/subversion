@@ -898,16 +898,19 @@ $ svn status
           vería <literal>D foo.c</literal> seguido por <literal>A
           foo.c</literal>.</para>
 
-        <para>Most merges involve comparing trees that are ancestrally
-          related to one another, and therefore <command>svn
-          merge</command> defaults to this behavior.  Occasionally,
-          however, you may want the merge command to compare two
-          unrelated trees.  For example, you may have imported two
-          source-code trees representing different vendor releases of
-          a software project (see <xref linkend="svn-ch-7-sect-4"/>).
-          If you asked <command>svn merge</command> to compare the two
-          trees, you'd see the entire first tree being deleted,
-          followed by an add of the entire second tree!</para>
+        <para>En la mayoría de las fusiones se comparan árboles que
+          están relacionados por ascendencia, y por esta razón
+          <command>svn merge</command> sigue este comportamiento
+          por defecto. No obstante, ocasionalmente puede querer
+          que el comando de fusionado compare dos árboles no
+          relacionados. Por ejemplo, puede haber importado
+          dos árboles de código fuente representando diferenes
+          versiones <!-- TODO vendor release, no veo traducción
+          sencilla --> de un proyecto de software (lea <xref
+          linkend="svn-ch-7-sect-4"/>).  ¡Si usase <command>svn
+          merge</command> para comparar los dos árboles, vería que
+          el primero es borrado completamente, seguido de una adición
+          completa del segundo!</para>
 
         <para>In these situations, you'll want <command>svn
           merge</command> to do a path-based comparison only, ignoring
