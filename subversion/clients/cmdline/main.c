@@ -138,6 +138,10 @@ const apr_getopt_option_t svn_cl__options[] =
                       N_("enable automatic properties")},
     {"no-auto-props", svn_cl__no_autoprops_opt, 0,
                       N_("disable automatic properties")},
+    {"native-eol", svn_cl__native_eol_opt, 1,
+         "Use a different EOL marker than the standard\n"
+         "                             system marker for files with a native svn:eol-style\n"
+         "                             property.  ARG may be one of 'LF', 'CR', 'CRLF'\n"},
     {0,               0, 0, 0}
   };
 
@@ -297,7 +301,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
        "control will\n"
        "     not be copied.\n"),
     {'r', 'q', svn_cl__force_opt, SVN_CL__AUTH_OPTIONS,
-     svn_cl__config_dir_opt} },
+     svn_cl__config_dir_opt, svn_cl__native_eol_opt} },
 
   { "help", svn_cl__help, {"?", "h"},
     N_("Describe the usage of this program or its subcommands.\n"
@@ -982,6 +986,23 @@ main (int argc, const char * const *argv)
           }
         opt_state.no_autoprops = TRUE;
         break;
+      case svn_cl__native_eol_opt:
+        if ( !strcmp ("LF", opt_arg) || !strcmp ("CR", opt_arg) ||
+             !strcmp ("CRLF", opt_arg))
+          opt_state.native_eol = apr_pstrdup (pool, opt_arg);
+        else
+          {
+            err = svn_utf_cstring_to_utf8 (&utf8_opt_arg, opt_arg, pool);
+            if (! err)
+              err = svn_error_createf
+                (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                 "Syntax error in native-eol argument '%s'",
+                 utf8_opt_arg);
+            svn_handle_error (err, stderr, FALSE);
+            svn_error_clear (err);
+            svn_pool_destroy (pool);
+            return EXIT_FAILURE;
+          }
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away
            opts that commands like svn diff might need. Hmmm indeed. */

@@ -60,12 +60,41 @@ add_externals (apr_hash_t *externals,
                                 externals_prop_val->len));
 }
 
+/* Helper function that gets the eol style and optionally overrides the
+   EOL marker for files marked as native with the EOL marker matching
+   the string specified in requested_value which is of the same format
+   as the svn:eol-style property values. */
+static svn_error_t *
+get_eol_style (svn_subst_eol_style_t *style,
+               const char **eol,
+               const char *value,
+               const char *requested_value)
+{
+  svn_subst_eol_style_from_value (style, eol, value);
+  if (requested_value && *style == svn_subst_eol_style_native)
+    {
+      svn_subst_eol_style_t requested_style;
+      const char *requested_eol;
+      
+      svn_subst_eol_style_from_value (&requested_style, &requested_eol,
+                                      requested_value);
+
+      if (requested_style == svn_subst_eol_style_fixed)
+        *eol = requested_eol;
+      else
+        return svn_error_createf (SVN_ERR_IO_UNKNOWN_EOL, NULL,
+                                  _("'%s' is not a valid EOL value"),
+                                  requested_value);
+    }
+  return SVN_NO_ERROR;
+}
 
 static svn_error_t *
 copy_versioned_files (const char *from,
                       const char *to,
                       svn_opt_revision_t *revision,
                       svn_boolean_t force,
+                      const char *native_eol,
                       svn_client_ctx_t *ctx,
                       apr_pool_t *pool)
 {
@@ -146,7 +175,8 @@ copy_versioned_files (const char *from,
               const char *new_to = svn_path_join (to, key, iterpool);
               
               SVN_ERR (copy_versioned_files (new_from, new_to, revision,
-                                             force, ctx, iterpool));
+                                             force, native_eol, ctx,
+                                             iterpool));
             }
         }
       else if (*type == svn_node_file)
@@ -204,7 +234,7 @@ copy_versioned_files (const char *from,
                                     APR_HASH_KEY_STRING);
           
           if (eol_style)
-            svn_subst_eol_style_from_value (&style, &eol, eol_style->data);
+            SVN_ERR (get_eol_style (&style, &eol, eol_style->data, native_eol));
           
           if (local_mod)
             {
@@ -315,6 +345,7 @@ struct edit_baton
   svn_boolean_t force;
   svn_revnum_t *target_revision;
   apr_hash_t *externals;
+  const char *native_eol;
 
   svn_wc_notify_func_t notify_func;
   void *notify_baton;
@@ -579,6 +610,7 @@ close_file (void *file_baton,
             apr_pool_t *pool)
 {
   struct file_baton *fb = file_baton;
+  struct edit_baton *eb = fb->edit_baton;
 
   /* Was a txdelta even sent? */
   if (! fb->tmppath)
@@ -611,7 +643,8 @@ close_file (void *file_baton,
       svn_subst_keywords_t final_kw = {0};
 
       if (fb->eol_style_val)
-        svn_subst_eol_style_from_value (&style, &eol, fb->eol_style_val->data);
+        SVN_ERR (get_eol_style (&style, &eol, fb->eol_style_val->data, 
+                                eb->native_eol));
 
       if (fb->keywords_val)
         SVN_ERR (svn_subst_build_keywords (&final_kw, fb->keywords_val->data, 
@@ -653,13 +686,14 @@ close_file (void *file_baton,
 /*** Public Interfaces ***/
 
 svn_error_t *
-svn_client_export (svn_revnum_t *result_rev,
-                   const char *from,
-                   const char *to,
-                   svn_opt_revision_t *revision,
-                   svn_boolean_t force, 
-                   svn_client_ctx_t *ctx,
-                   apr_pool_t *pool)
+svn_client_export2 (svn_revnum_t *result_rev,
+                    const char *from,
+                    const char *to,
+                    svn_opt_revision_t *revision,
+                    svn_boolean_t force, 
+                    const char *native_eol,
+                    svn_client_ctx_t *ctx,
+                    apr_pool_t *pool)
 {
   svn_revnum_t edit_revision = SVN_INVALID_REVNUM;
   svn_boolean_t use_ra = FALSE;
@@ -711,6 +745,7 @@ svn_client_export (svn_revnum_t *result_rev,
       eb->notify_func = ctx->notify_func;
       eb->notify_baton = ctx->notify_baton;
       eb->externals = apr_hash_make (pool);
+      eb->native_eol = native_eol; 
 
       editor->set_target_revision = set_target_revision;
       editor->open_root = open_root;
@@ -778,7 +813,8 @@ svn_client_export (svn_revnum_t *result_rev,
   else
     {
       /* just copy the contents of the working copy into the target path. */
-      SVN_ERR (copy_versioned_files (from, to, revision, force, ctx, pool));
+      SVN_ERR (copy_versioned_files (from, to, revision, force, native_eol,
+                                     ctx, pool));
     }
 
   if (ctx->notify_func)
@@ -798,3 +834,15 @@ svn_client_export (svn_revnum_t *result_rev,
 }
 
 
+svn_error_t *
+svn_client_export (svn_revnum_t *result_rev,
+                   const char *from,
+                   const char *to,
+                   svn_opt_revision_t *revision,
+                   svn_boolean_t force, 
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool)
+{
+  return svn_client_export2 (result_rev, from, to, revision, force, NULL, ctx,
+                             pool);
+}

@@ -265,6 +265,42 @@ def export_working_copy_at_base_revision(sbox):
                                         None, None, None, None,
                                         '-rBASE')
 
+def export_native_eol_option(sbox):
+  "export with --native-eol"
+  sbox.build()
+
+  wc_dir = sbox.wc_dir
+
+  # Append a '\n' to A/mu and set svn:eol-style to 'native'
+  # to see if it's applied correctly in the export operation
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  svntest.main.file_append(mu_path, '\n')
+  svntest.main.run_svn(None, 'ps', 'svn:eol-style', 
+                       'native', mu_path)
+  svntest.main.run_svn(None, 'ci',
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       '-m', 'Added eol-style prop to mu', mu_path)
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('A/mu',
+                      contents=expected_disk.desc['A/mu'].contents + 
+                      '\r')
+
+  export_target = sbox.add_wc_path('export')
+
+  expected_output = svntest.main.greek_state.copy()
+  expected_output.wc_dir = export_target
+  expected_output.desc[''] = Item()
+  expected_output.tweak(contents=None, status='A ')
+
+  svntest.actions.run_and_verify_export(sbox.repo_url,
+                                        export_target,
+                                        expected_output,
+                                        expected_disk,
+                                        None, None, None, None,
+                                        '--native-eol','CR')
+
 ########################################################################
 # Run the tests
 
@@ -280,7 +316,8 @@ test_list = [ None,
               export_eol_translation,
               export_working_copy_with_keyword_translation,
               export_working_copy_with_property_mods,
-              export_working_copy_at_base_revision
+              export_working_copy_at_base_revision,
+              export_native_eol_option
              ]
 
 if __name__ == '__main__':
