@@ -1,31 +1,22 @@
-This Software should compile and run under win32 and linux. The next
-step will be the integration into Subversion's build system.
+This Software should compile and run under win32 and linux. The 
+integration into the subversion build system has been done by
+Justin Erenkrantz for non win32 systems. The intergration for win32
+system will be provided later.
 
 It will produce libsvnjavahl.so or libsvnjavahl.dll (the native
 library for Unix or win32, respectively) and svnjavahl.jar (platform
 independent archive of Java bytecode).
 
+For build non win32 platforms, add "--enable-javahl" to the configure 
+parameters. "--with-jdk" can be provided to specify the path to a jdk.
+"--with-junit" can be provided to specify the path to a junit.jar. 
+JUnit version 3.8.1 has been tested. 
 
-On Linux it needs automake 1.6. Earlier version do not work.
+The following make target are provided:
 
-Unix build tools:
-
-$ ./autogen.sh
-$ ./configure --with-jdk=<path to jdk> 
-
-For the various other parameters to configure please see the
-documentation of configure.  Requires jdk 1.2 or newer. It must be
-either in the path or passed with the --with-jdk switch.  This
-version of svn-up has been built with svn-revision 6062. Other
-revisions may work, but are not supported.
-
-$ make
-
-compilation on make install
-
-Installation dir and other configuration parameters are documented
-in the configure command default installation would be in
-/usr/local/bin and /usr/local/lib.
+javahl                build javahl
+install-javahl        install javahl
+check-javahl          run javahl tests. JUnit and installation is needed.
 
 MacOS X:
 After building libsvnjavahl.dynlib it has to be renamed to libsvnjavahl.jnilib.
