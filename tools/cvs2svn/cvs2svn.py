@@ -883,24 +883,61 @@ class SymbolicNameTracker:
   def __init__(self):
     self.db_file = SYMBOLIC_NAMES_DB
     self.db = anydbm.open(self.db_file, 'n')
+    self.root_key = gen_key()
+    self.db[self.root_key] = marshal.dumps({})
+
+  def probe_path(self, components):
+    # Print information about a path in the sym name tree (for debugging).
+    print "PROBING SYMBOLIC NAME:\n", components
+
+    parent_dir_key = self.root_key
+    parent_dir = marshal.loads(self.db[parent_dir_key])
+    last_component = "/"
+    i = 1
+    for component in components:
+      for n in range(i):
+        print "  ",
+      print "'%s' key: %s, val:" % (last_component, parent_dir_key), parent_dir
+
+      if not parent_dir.has_key(component):
+        sys.stderr.write("SYM PROBE FAILED: '%s' does not contain '%s'\n" \
+                         % (last_component, component))
+        sys.exit(1)
+
+      this_entry_key = parent_dir[component]
+      this_entry_val = marshal.loads(self.db[this_entry_key])
+      parent_dir_key = this_entry_key
+      parent_dir = this_entry_val
+      last_component = component
+      i = i + 1
+  
+    for n in range(i):
+      print "  ",
+    print "parent_dir_key: %s, val:" % parent_dir_key, parent_dir
+
 
   def track_names(self, svn_path, svn_rev, tags, branches):
-    """Track that the the symbolic names in TAGS and BRANCHES can
-    earliest be copied from SVN_REV of SVN_PATH.  SVN_PATH does not
-    start with '/'."""
+    """Track that for SVN_PATH, the copies in TAGS and BRANCHES can
+    earliest be copied from SVN_REV.  SVN_PATH does not start with '/'."""
     if not (tags or branches): return  # early out
     for name in tags + branches:
-      key = name + '/' + svn_path
-      if self.db.has_key(key):
-        found_root_rev = self.open_db[key]
-        sys.stderr.write(
-          "track_names: '%s' already claims '%s' is rooted at revision %d."
-          % (svn_path, name, svn_rev))
-        sys.exit(1)
-      else:
-        # TODO: working here, among other places
-        # print "KFF: key: %2d ==> %s" % (svn_rev, key)
-        pass
+      components = [name] + string.split(svn_path, '/')
+
+      parent_dir_key = self.root_key
+      parent_dir = marshal.loads(self.db[parent_dir_key])
+
+      for component in components:
+        if not parent_dir.has_key(component):
+          new_child_key = gen_key()
+          parent_dir[component] = new_child_key
+          self.db[new_child_key] = marshal.dumps({})
+          self.db[parent_dir_key] = marshal.dumps(parent_dir)
+        # One way or another, parent_dir now has an entry for component.
+        this_entry_key = parent_dir[component]
+        this_entry_val = marshal.loads(self.db[this_entry_key])
+        # Swaparoo.
+        parent_dir_key = this_entry_key
+        parent_dir = this_entry_val
 
 
 class Commit:
