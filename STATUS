@@ -181,3 +181,10 @@ already know about.)
      Load RA modules as foo-MAJOR.so.0 instead of foo-MAJOR.so.
      Justification: Low risk; we should be nice to binary packagers.
      Votes:
+
+
+   * Issue #8014 (r8014)
+     Rename SVN_CONFIG_OPTION_STORE_PASSWORD to
+     SVN_CONFIG_OPTION_STORE_AUTH_CREDS.
+     Justification: API stability; low risk
+     Votes:
