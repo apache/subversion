@@ -28,6 +28,7 @@
 #include <apr_pools.h>
 #include <apr_hash.h>
 #include <apr_tables.h>
+#include <apr_time.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -105,6 +106,21 @@ enum svn_recurse_kind
   svn_nonrecursive = 1,
   svn_recursive
 };
+
+
+/* A general subversion directory entry. */
+typedef struct svn_dirent
+{
+  enum svn_node_kind kind;  /* node kind */
+  apr_off_t size;           /* length of file text, or 0 for directories */
+  svn_boolean_t has_props;  /* does the node have props? */
+
+  svn_revnum_t created_rev; /* last rev in which this node changed */
+  apr_time_t time;          /* time of created_rev (mod-time) */
+  const char *last_author;  /* author of created_rev */
+
+} svn_dirent_t;
+
 
 
 
