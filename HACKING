@@ -27,6 +27,7 @@ TABLE OF CONTENTS
    * Debugging the server
    * Writing log messages
    * Patch submission guidelines
+   * Filing bugs / issues
    * Commit access
    * The Configuration/Build System Under Unix
    * How to create a distribution tarball
@@ -755,6 +756,54 @@ through the process, and the person best qualified to do that is the
 original submitter.
 
 
+
+Filing bugs / issues
+====================
+
+This pretty much says it all:
+
+   From: Karl Fogel <kfogel@collab.net>
+   Subject: Please ask on the list before filing a new issue.
+   To: dev@subversion.tigris.org
+   Date: Tue, 30 Jul 2002 10:51:24 (CDT)
+   
+   Folks, we're getting tons of new issues, which is a Good Thing in
+   general, but some of them don't really belong in the issue tracker.
+   They're things that would be better solved by a quick conversation
+   here on the dev list.  Compilation problems, behavior questions,
+   feature ideas that have been discussed before, that sort of thing.
+   
+   *Please* be more conservative about filing issues.  The issues
+   database is physically much more cumbersome than email.  It wastes
+   people's time to have conversations in the issues database that should
+   be had in email.  (This is not a libel against the issue tracker, it's
+   just a result of the fact that the issues database is for permanent
+   storage and flow annotation, not for real-time conversation.)
+   
+   If you encounter a situation where Subversion is clearly behaving
+   wrongly, or behaving opposite to what the documentation says, then
+   it's okay to file the issue right away (after searching to make sure
+   it isn't already filed, of course!).  But if you're
+   
+      a) Requesting a new feature, or
+      b) Having build problems, or
+      c) Not sure what the behavior should be, or
+      d) Disagreeing with current intended behavior, or
+      e) Not TOTALLY sure that others would agree this is a bug, or
+      f) For any reason at all not sure this should be filed,
+   
+   ...then please post to the dev list first.  You'll get a faster
+   response, and others won't be forced to use the issues database to
+   have the initial real-time conversations.
+   
+   Nothing is lost this way.  If we eventually conclude that it should be
+   in the issue tracker, then we can still file it later, after the
+   description and reproduction recipe have been honed on the dev list.
+   
+   Thank you,
+   -Karl
+
+   
 
 Commit access
 =============
