@@ -120,7 +120,7 @@ typedef struct svn_ra_reporter_t
   /** Describe a working copy @a path as being at a particular @a revision.  
    *
    * If @a START_EMPTY is set and @a path is a directory, the
-   * implementor should assume the directory has no entries.
+   * implementor should assume the directory has no entries or props.
    *
    * This will *override* any previous @c set_path() calls made on parent
    * paths.  @a path is relative to the URL specified in @c open().
@@ -148,7 +148,7 @@ typedef struct svn_ra_reporter_t
    * repository @a url at @a revision.
    *
    * If @a START_EMPTY is set and @a path is a directory,
-   * the implementor should assume the directory has no entries.
+   * the implementor should assume the directory has no entries or props.
    *
    * All temporary allocations are done in @a pool.
    */
