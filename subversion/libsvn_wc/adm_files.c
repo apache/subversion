@@ -167,7 +167,7 @@ svn_wc__adm_path (svn_string_t *path,
   va_list ap;
 
   va_start (ap, pool);
-  v_extend_with_adm_name (path, tmp, pool, ap);
+  v_extend_with_adm_name (newpath, tmp, pool, ap);
   va_end (ap);
 
   return newpath;
