@@ -299,13 +299,13 @@ static svn_error_t * begin_checkout(svn_ra_session_t *ras,
   const char *bc;
   const char *vsn_name;
 
-  /* ### this function doesn't use REVISION yet. */
-
   /* ### if REVISION means "get latest", then we can use an expand-property
      ### REPORT rather than two PROPFINDs to reach the baseline-collection */
 
-  /* ### send an OPTIONS to get: server capabilities, activity coll set */
-  /* ### validate DAV: header */
+  /* Fetch the activity-collection-set from the server. */
+  /* ### also need to fetch/validate the DAV capabilities */
+  SVN_ERR( svn_ra_dav__get_activity_url(activity_url, ras, ras->root.path,
+                                        pool) );
 
   /* fetch the DAV:version-controlled-configuration, and the
      SVN:baseline-relative-path properties from the session root URL */
@@ -391,9 +391,6 @@ static svn_error_t * begin_checkout(svn_ra_session_t *ras,
                               "DAV:version-name was not present on the "
                               "baseline resource.");
     }
-
-  /* ### use value from above instead of this temporary */
-  *activity_url = svn_string_create("test-activity", pool);
 
   *target_rev = atoi(vsn_name);
 

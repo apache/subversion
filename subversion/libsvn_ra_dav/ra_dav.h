@@ -132,6 +132,12 @@ svn_error_t * svn_ra_dav__get_props_resource(svn_ra_dav_resource_t **rsrc,
                                              const dav_propname *which_props,
                                              apr_pool_t *pool);
 
+/* send an OPTIONS request to fetch the activity-collection-set */
+svn_error_t * svn_ra_dav__get_activity_url(svn_string_t **activity_url,
+                                           svn_ra_session_t *ras,
+                                           const char *url,
+                                           apr_pool_t *pool);
+
 #endif  /* RA_DAV_H */
 
 
