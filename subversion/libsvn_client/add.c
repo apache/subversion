@@ -117,22 +117,16 @@ svn_client_add (svn_stringbuf_t *path,
   svn_error_t *err = NULL;
 
   SVN_ERR (svn_io_check_path (path, &kind, pool));
-  
-  if (recursive)
-    SVN_ERR (add_dir_recursive (path->data, pool));
+  if ((kind == svn_node_dir) && (recursive))
+    err = add_dir_recursive (path->data, pool);
   else
     err = svn_wc_add (path, NULL, SVN_INVALID_REVNUM, pool);
 
-  if (err)
-    {
-      if (err->apr_err == SVN_ERR_WC_ENTRY_EXISTS)
-        return svn_error_quick_wrap 
-          (err,
-           "svn warning: Cannot add because entry already exists.");
-      else
-          return err;
-    }
-  return SVN_NO_ERROR;
+  if (err && (err->apr_err == SVN_ERR_WC_ENTRY_EXISTS))
+    return svn_error_quick_wrap 
+      (err, "svn warning: Cannot add because entry already exists.");
+
+  return err;
 }
 
 svn_error_t *
