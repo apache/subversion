@@ -1,4 +1,4 @@
-.TH svnadmin 1 "27 Jun 2002" "svn 0.13.0" "Subversion Command Line Tool"
+.TH svnadmin 1 "22 Sept 2002" "svn r3206" "Subversion Command Line Tool"
 .SH NAME
 svnadmin \- Subversion repository administration tool
 .SH SYNOPSIS
@@ -50,7 +50,7 @@ $ svn import file:///var/svn . new_proj
 Create a new transaction based on
 .IR base_rev .
 .TP
-.BI dump " repos-path"  " \fR[\fI lower-rev \fR[\fI upper-rev \fR]]"
+.BI dump " repos-path"  " \fR[\fI lower-rev \fR[\fI upper-rev \fR]] \fR[\fI--incremental\fR]\fI"
 Dump the contents of filesystem to stdout in a 'dumpfile'
 portable format, sending feedback to stderr.  Dump revisions
 .IR lower-rev
@@ -67,10 +67,12 @@ Read a 'dumpfile'-formatted stream from stdin, committing
 new revisions into the repository's filesystem.
 Send progress feedback to stdout.
 .TP
-.BI lscr " repos-path path"
+.BI lscr " repos-path path \fR[\fI --copies \fR]\fI"
 Print, one-per-line and youngest-to-eldest, the revisions in which 
 .IR path 
-was modified.  (For directories, this is, for now, almost guaranteed to be
+was modified.  Use the --copies flag to allow this operation 
+to cross copy history while searching for revisions.
+(For directories, this is, for now, almost guaranteed to be
 uninteresting.  Also, path must exist in the HEAD of the repository.
 .TP
 .BI lsrevs " repos-path"  " \fR[\fI lower-rev \fR[\fI upper-rev \fR]]"
@@ -79,7 +81,7 @@ If no revision is given, all revision trees are printed.  If just
 is given, that revision tree is printed.
 If two revisions are given, that range is printed, inclusive.
 .TP
-.BI lstxns " \fR[ \fB--long\fP ]\fI repos-path"
+.BI lstxns " repos_path \fR[ \fB--long\fP ]\fI"
 Print all txn names and, if 
 .BI --long
 is specified, their metadata and trees.
