@@ -298,9 +298,9 @@ txn_body_txn_root (void *baton,
   SVN_ERR (svn_fs_base__txn_proplist_in_trail (&txnprops, svn_txn_id, trail));
   if (txnprops)
     {
-      if (apr_hash_get (txnprops, SVN_FS_PROP_TXN_CHECK_OUT_OF_DATENESS,
+      if (apr_hash_get (txnprops, SVN_FS_PROP_TXN_CHECK_OOD,
                         APR_HASH_KEY_STRING))
-        flags |= SVN_FS_TXN_CHECK_OUT_OF_DATENESS;
+        flags |= SVN_FS_TXN_CHECK_OOD;
 
       if (apr_hash_get (txnprops, SVN_FS_PROP_TXN_CHECK_LOCKS,
                         APR_HASH_KEY_STRING))

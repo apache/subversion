@@ -187,9 +187,9 @@ svn_fs_fs__begin_txn (svn_fs_txn_t **txn_p,
   
   /* Set temporary txn props that represent the requested 'flags'
      behaviors. */
-  if (flags & SVN_FS_TXN_CHECK_OUT_OF_DATENESS)
+  if (flags & SVN_FS_TXN_CHECK_OOD)
     SVN_ERR (svn_fs_fs__change_txn_prop 
-             (*txn_p, SVN_FS_PROP_TXN_CHECK_OUT_OF_DATENESS,
+             (*txn_p, SVN_FS_PROP_TXN_CHECK_OOD,
               svn_string_create ("true", pool), pool));
   
   if (flags & SVN_FS_TXN_CHECK_LOCKS)

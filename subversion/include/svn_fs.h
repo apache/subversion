@@ -490,7 +490,7 @@ typedef struct svn_fs_txn_t svn_fs_txn_t;
  * throw error if a caller tries to edit an out-of-date item in the
  * transaction.   ### NOTE:   NOT YET IMPLEMENTED. 
  */
-#define SVN_FS_TXN_CHECK_OUT_OF_DATENESS         0x00001
+#define SVN_FS_TXN_CHECK_OOD                     0x00001
 
 /* Do on-the-fly lock checks.  That is, an fs routine may throw error
  * if a caller tries to edit a locked item without having rights to the lock.

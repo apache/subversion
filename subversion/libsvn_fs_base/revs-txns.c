@@ -627,12 +627,12 @@ txn_body_begin_txn (void *baton,
   SVN_ERR (svn_fs_base__rev_get_root (&root_id, trail->fs, args->rev, trail));
   SVN_ERR (svn_fs_bdb__create_txn (&txn_id, trail->fs, root_id, trail));
 
-  if (args->flags & SVN_FS_TXN_CHECK_OUT_OF_DATENESS)
+  if (args->flags & SVN_FS_TXN_CHECK_OOD)
     {
       struct change_txn_prop_args cpargs;
       cpargs.fs = trail->fs;
       cpargs.id = txn_id;
-      cpargs.name = SVN_FS_PROP_TXN_CHECK_OUT_OF_DATENESS;
+      cpargs.name = SVN_FS_PROP_TXN_CHECK_OOD;
       cpargs.value = svn_string_create ("true", trail->pool);
 
       SVN_ERR (txn_body_change_txn_prop (&cpargs, trail));

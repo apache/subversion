@@ -1547,11 +1547,10 @@ svn_fs_base__dag_commit_txn (svn_revnum_t *new_rev,
   SVN_ERR (svn_fs_base__txn_proplist_in_trail (&txnprops, txn_id, trail));
   if (txnprops)
     {
-      if (apr_hash_get (txnprops, SVN_FS_PROP_TXN_CHECK_OUT_OF_DATENESS,
+      if (apr_hash_get (txnprops, SVN_FS_PROP_TXN_CHECK_OOD,
                         APR_HASH_KEY_STRING))
         SVN_ERR (svn_fs_base__set_txn_prop 
-                 (fs, txn_id,
-                  SVN_FS_PROP_TXN_CHECK_OUT_OF_DATENESS, NULL, trail));
+                 (fs, txn_id, SVN_FS_PROP_TXN_CHECK_OOD, NULL, trail));
 
       if (apr_hash_get (txnprops, SVN_FS_PROP_TXN_CHECK_LOCKS,
                         APR_HASH_KEY_STRING))
