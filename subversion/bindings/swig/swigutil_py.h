@@ -108,6 +108,12 @@ void svn_swig_py_notify_func(void *baton,
                              svn_wc_notify_state_t prop_state,
                              svn_revnum_t revision);
 
+/* a status function that executes a Python function that is passed in
+   via the baton argument */
+void svn_swig_py_status_func(void *baton,
+                             const char *path,
+                             svn_wc_status_t *status);
+
 /* a cancel function that executes a Python function passed in via the
    cancel_baton argument. */
 svn_error_t *svn_swig_py_cancel_func(void *cancel_baton);
