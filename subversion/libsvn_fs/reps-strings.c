@@ -355,13 +355,18 @@ window_handler (svn_txdelta_window_t *window, void *baton)
                  "window_handler: unknown delta op action code (%d)",
                  op->action_code);
             }
-        }
 
-      /* Figure out how much data to copy into the output buffer. */
-      copy_amt = len_read;
-      copy_amt -= (wb->req_offset - wb->cur_offset);
-      if (copy_amt >= (wb->len_req - wb->len_read))
-        copy_amt = wb->len_req - wb->len_read;
+          /* Figure out how much data we would copy into the output
+             buffer if we were going to do so right now.  If we've
+             read enough to "fill the request", stop handling ops
+             here. */
+          copy_amt = len_read - (wb->req_offset - wb->cur_offset);
+          if (copy_amt >= (wb->len_req - wb->len_read))
+            {
+              copy_amt = wb->len_req - wb->len_read;
+              break;
+            }
+        }
 
       /* Copy our requested range into the output buffer. */
       memcpy (wb->buf + wb->len_read,
