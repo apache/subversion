@@ -155,7 +155,7 @@ extern svn_error_t *svn_next_delta_window (svn_delta_window_t **window,
 /* Free the delta window WINDOW.  */
 extern void svn_free_delta_window (svn_delta_window_t *window);
 
-/* A function resembling the POSIX `read' system call --- DATA is some
+/* A function resembling the POSIX `read' system call --- BATON is some
    opaque structure indicating what we're reading, BUFFER is a buffer
    to hold the data, and *LEN indicates how many bytes to read.  Upon
    return, the function should set *LEN to the number of bytes
@@ -165,7 +165,7 @@ extern void svn_free_delta_window (svn_delta_window_t *window);
    sockets, and so on; the data may be huge --- too large to read into
    memory at one time.  Using `read'-like functions allows us to
    process the data as we go.  */
-typedef svn_error_t *svn_delta_read_fn_t (void *data,
+typedef svn_error_t *svn_delta_read_fn_t (void *baton,
                                           char *buffer,
                                           apr_off_t *len);
 
@@ -178,26 +178,45 @@ typedef svn_error_t *svn_delta_read_fn_t (void *data,
    to gather as much data as it needs.  */
 extern svn_error_t *svn_text_delta (svn_delta_stream_t **stream,
                                     svn_delta_read_fn_t *source_fn,
-                                    void *source_data,
+                                    void *source_baton,
                                     svn_delta_read_fn_t *target_fn,
-                                    void *target_data);
+                                    void *target_baton);
 
 /* Free the delta stream STREAM.  */
 extern void svn_free_delta_stream (svn_delta_stream_t *stream);
 
-/* Given a delta stream STREAM, set *READ_FN and *DATA to a `read'-like
+/* Given a delta stream STREAM, set *READ_FN and *READ_BATON to a `read'-like
    function that will return a VCDIFF-format byte stream.
    (Do we need a `free' function for disposing of DATA somehow?)  */
 extern svn_error_t *svn_delta_to_vcdiff (svn_delta_read_fn_t **read_fn,
-                                         void **data,
+                                         void **read_baton,
                                          svn_delta_stream_t *stream);
 
-/* Given READ_FN and DATA, a `read'-like function and data pointer that
-   yield a VCDIFF-format byte stream, set *STREAM to a pointer to a
-   delta stream carrying the data from the VCDIFF stream.  */
-extern svn_error_t *svn_vcdiff_to_delta (svn_delta_stream_t **stream,
-                                         svn_delta_read_fn_t *read_fn,
-                                         void *data);
+/* A function to consume a series of delta windows.  This function
+   will typically apply each delta window to produce some file, or
+   save it somewhere.  */
+typedef svn_error_t *(svn_delta_handler_t) (svn_delta_window_t *window,
+                                            void *baton);
+
+/* Ongoing state for a vcdiff parser.  */
+typedef struct svn_vcdiff_parser_t svn_vcdiff_parser_t;
+
+/* Return a vcdiff parser object, PARSER.  If we're receiving a
+   vcdiff-format byte stream, one block of bytes at a time, we can
+   pass each block in succession to svn_parse_vcdiff, with PARSER as
+   the other argument.  PARSER keeps track of where we are in the
+   stream; each time we've received enough data for a complete
+   svn_delta_window_t, we pass it to HANDLER, along with
+   HANDLER_BATON.  */
+extern svn_vcdiff_parser_t *svn_make_vcdiff_parser (svn_delta_handler_t
+                                                    * handler,
+                                                    void *handler_baton);
+
+/* Parse another block of bytes in the vcdiff-format stream managed by
+   PARSER.  When we've accumulated enough data for a complete window,
+   call PARSER's consumer function.  */
+extern svn_error_t *svn_vcdiff_parse (svn_vcdiff_parser_t *parser,
+                                      char *buffer, apr_off_t *len);
 
 
 /* Property deltas.  */
