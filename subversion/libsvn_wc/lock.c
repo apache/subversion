@@ -106,7 +106,8 @@ maybe_upgrade_format (svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
          "please check out your working copy again",
          adm_access->path);
     }
-  else if (adm_access->wc_format == 2)
+  else if (adm_access->wc_format == 2
+           || adm_access->wc_format == 3)
     {
       const char *path = svn_wc__adm_path (adm_access->path, FALSE, pool,
                                            SVN_WC__ADM_FORMAT, NULL);

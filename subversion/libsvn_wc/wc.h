@@ -53,9 +53,12 @@ extern "C" {
  * The change from 2 to 3 was the introduction of the entry attribute
  * SVN_WC__ENTRY_ATTR_ABSENT.
  *
+ * The change from 3 to 4 was the renaming of the magic "svn:this_dir"
+ * entry name to "".
+ *
  * Please document any further format changes here.
  */
-#define SVN_WC__VERSION       3
+#define SVN_WC__VERSION       4
 
 /* A version <= to this (but > 0, of course) uses the old-style
    property file names, without the .svn-work extension. */
