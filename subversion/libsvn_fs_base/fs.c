@@ -837,18 +837,20 @@ base_hotcopy (const char *src_path,
               svn_boolean_t clean_logs,
               apr_pool_t *pool)
 {
-  svn_boolean_t log_autoremove;
+  svn_boolean_t log_autoremove = FALSE;
 
   /* Check BDB version, just in case */
   SVN_ERR (check_bdb_version (pool));
-
-  /* Note whether the DB_LOG_AUTOREMOVE feature is on.  If it is, we
-     have a potential race condition: another process might delete a
-     logfile while we're in the middle of copying all the logfiles.
-     (This is not a huge deal; at worst, the hotcopy fails with a
-     file-not-found error.) */
+  
+  /* If using DB 4.2 or later, note whether the DB_LOG_AUTOREMOVE
+     feature is on.  If it is, we have a potential race condition:
+     another process might delete a logfile while we're in the middle
+     of copying all the logfiles.  (This is not a huge deal; at worst,
+     the hotcopy fails with a file-not-found error.) */
+#ifdef DB_LOG_AUTOREMOVE
   SVN_ERR (check_env_flags (&log_autoremove, DB_LOG_AUTOREMOVE,
                             src_path, pool));
+#endif
 
   /* Copy the DB_CONFIG file. */
   SVN_ERR (svn_io_dir_file_copy (src_path, dest_path, "DB_CONFIG", pool));
