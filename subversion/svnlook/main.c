@@ -54,6 +54,7 @@
 
 static svn_opt_subcommand_t
   subcommand_author,
+  subcommand_cat,
   subcommand_changed,
   subcommand_date,
   subcommand_diff,
@@ -61,6 +62,8 @@ static svn_opt_subcommand_t
   subcommand_help,
   subcommand_info,
   subcommand_log,
+  subcommand_pget,
+  subcommand_plist,
   subcommand_tree,
   subcommand_uuid,
   subcommand_youngest;
@@ -92,6 +95,9 @@ static const apr_getopt_option_t options_table[] =
     {"transaction",  't', 1,
      "specify transaction name ARG"},
 
+    {"verbose",  'v', 0,
+     "be verbose"},
+
     {"show-ids",      svnlook__show_ids, 0,
      "show node revision ids for each path"},
 
@@ -110,6 +116,11 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
     {"author", subcommand_author, {0},
      "usage: svnlook author REPOS_PATH\n\n"
      "Print the author.\n",
+     {'r', 't'} },
+    
+    {"cat", subcommand_cat, {0},
+     "usage: svnlook cat REPOS_PATH FILE_PATH\n\n"
+     "Print the contents of a file.  Leading '/' on FILE_PATH is optional.\n",
      {'r', 't'} },
     
     {"changed", subcommand_changed, {0},
@@ -148,6 +159,17 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
      "Print the log message.\n",
      {'r', 't'} },
 
+    {"propget", subcommand_pget, {"pget", "pg"},
+     "usage: svnlook propget REPOS_PATH PROPNAME PATH_IN_REPOS\n\n"
+     "Print the raw value of a property on a path in the repository.\n",
+     {'r', 't'} },
+
+    {"proplist", subcommand_plist, {"plist", "pl"},
+     "usage: svnlook proplist REPOS_PATH PATH_IN_REPOS\n\n"
+     "List the properties of a path in the repository.\n"
+     "With -v, show the property values too.\n",
+     {'r', 't', 'v'} },
+
     {"tree", subcommand_tree, {0},
      "usage: svnlook tree REPOS_PATH\n\n"
      "Print the tree, optionally showing node revision ids.\n",
@@ -170,12 +192,15 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
 /* Baton for passing option/argument state to a subcommand function. */
 struct svnlook_opt_state
 {
-  const char *repos_path;
+  const char *repos_path;  /* 'arg0' is always the path to the repository. */
+  const char *arg1;        /* Usually an fs path, a propname, or NULL. */
+  const char *arg2;        /* Usually an fs path or NULL. */
   svn_revnum_t rev;
   const char *txn;
   svn_boolean_t show_ids;
   svn_boolean_t help;
   svn_boolean_t no_diff_deleted;
+  svn_boolean_t verbose;   /* Verbose output. */
 };
 
 
@@ -901,6 +926,68 @@ do_dirs_changed (svnlook_ctxt_t *c, apr_pool_t *pool)
 }
 
 
+/* Set *KIND to PATH's kind, if PATH exists.
+ *
+ * If PATH does not exist, then error; the text of the error depends
+ * on whether PATH looks like a URL or not.
+ */
+static svn_error_t *
+verify_path (svn_node_kind_t *kind,
+             svn_fs_root_t *root,
+             const char *path,
+             apr_pool_t *pool)
+{
+  /* ### ??? Whoa, svn_fs_check_path() should return error directly,
+     and return kind by reference. */
+  *kind = svn_fs_check_path (root, path, pool);
+
+  if (*kind == svn_node_none)
+    {
+      if (svn_path_is_url (path))  /* check for a common mistake. */
+        return svn_error_createf
+          (SVN_ERR_FS_NOT_FOUND, NULL,
+           "'%s' is a URL, probably should be a path.", path);
+      else
+        return svn_error_createf 
+          (SVN_ERR_FS_NOT_FOUND, NULL, "Path '%s' does not exist.", path);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+/* Print the contents of the file at PATH in the repository.
+   Error with SVN_ERR_FS_NOT_FOUND if PATH does not exist, or with
+   SVN_ERR_FS_NOT_FILE if PATH exists but is not a file. */
+static svn_error_t *
+do_cat (svnlook_ctxt_t *c, const char *path, apr_pool_t *pool)
+{
+  svn_fs_root_t *root;
+  svn_node_kind_t kind;
+  svn_stream_t *fstream, *stdout_stream;
+  char buf[BUFSIZ];
+  apr_size_t len = BUFSIZ;
+
+  SVN_ERR (get_root (&root, c, pool));
+  SVN_ERR (verify_path (&kind, root, path, pool));
+
+  if (kind != svn_node_file)
+    return svn_error_createf 
+      (SVN_ERR_FS_NOT_FILE, NULL, "Path '%s' is not a file.", path);
+
+  /* Else. */
+
+  SVN_ERR (svn_fs_file_contents (&fstream, root, path, pool));
+  SVN_ERR (svn_stream_for_stdout (&stdout_stream, pool));
+  do {
+    SVN_ERR (svn_stream_read (fstream, buf, &len));
+    SVN_ERR (svn_stream_write (stdout_stream, buf, &len));
+  } while (len == BUFSIZ);
+
+  return SVN_NO_ERROR;
+}
+
+
 /* Print a list of all paths modified in a format compatible with `svn
    update'. */
 static svn_error_t *
@@ -970,6 +1057,94 @@ do_diff (svnlook_ctxt_t *c, apr_pool_t *pool)
 }
 
 
+/* Print the value of property PROPNAME on PATH in the repository.
+   Error with SVN_ERR_FS_NOT_FOUND if PATH does not exist, or with
+   SVN_ERR_PROPERTY_NOT_FOUND if no such property on PATH. */
+static svn_error_t *
+do_pget (svnlook_ctxt_t *c,
+         const char *propname,
+         const char *path,
+         apr_pool_t *pool)
+{
+  svn_fs_root_t *root;
+  svn_string_t *prop;
+  svn_node_kind_t kind;
+  svn_stream_t *stdout_stream;
+  apr_size_t len = prop->len;
+  
+  SVN_ERR (get_root (&root, c, pool));
+  SVN_ERR (verify_path (&kind, root, path, pool));
+  SVN_ERR (svn_fs_node_prop (&prop, root, path, propname, pool));
+
+  if (prop == NULL)
+    return svn_error_createf
+      (SVN_ERR_PROPERTY_NOT_FOUND, NULL,
+       "Property '%s' not found on path '%s'.", propname, path);
+
+  /* Else. */
+
+  SVN_ERR (svn_stream_for_stdout (&stdout_stream, pool));
+  
+  /* Unlike the command line client, we don't translate the property
+     value or print a trailing newline here.  We just output the raw
+     bytes of whatever's in the repository, as svnlook is more likely
+     to be used for automated inspections. */
+  SVN_ERR (svn_stream_write (stdout_stream, prop->data, &len));
+
+  return SVN_NO_ERROR;
+}
+
+
+/* Print the property names of all properties on PATH in the repository.
+   If VERBOSE, print their values too.
+   Error with SVN_ERR_FS_NOT_FOUND if PATH does not exist, or with
+   SVN_ERR_PROPERTY_NOT_FOUND if no such property on PATH. */
+static svn_error_t *
+do_plist (svnlook_ctxt_t *c,
+          const char *path,
+          svn_boolean_t verbose,
+          apr_pool_t *pool)
+{
+  svn_stream_t *stdout_stream;
+  svn_fs_root_t *root;
+  apr_hash_t *props;
+  apr_hash_index_t *hi;
+  svn_node_kind_t kind;
+
+  SVN_ERR (get_root (&root, c, pool));
+  SVN_ERR (verify_path (&kind, root, path, pool));
+  SVN_ERR (svn_fs_node_proplist (&props, root, path, pool));
+  SVN_ERR (svn_stream_for_stdout (&stdout_stream, pool));
+
+  for (hi = apr_hash_first (pool, props); hi; hi = apr_hash_next (hi))
+    {
+      const void *key;
+      void *val;
+      const char *pname, *pname_native;
+      svn_string_t *propval;
+
+      apr_hash_this (hi, &key, NULL, &val);
+      pname = key;
+      propval = val;
+
+      /* Since we're already adding a trailing newline (and possible a
+         colon and some spaces) anyway, just mimic the output of the
+         command line client proplist.   Compare to 'svnlook propget',
+         which sends the raw bytes to stdout, untranslated. */
+      SVN_ERR (svn_utf_cstring_from_utf8 (&pname_native, pname, pool));
+      if (svn_prop_needs_translation (pname))
+        SVN_ERR (svn_subst_detranslate_string (&propval, propval, pool));
+
+      if (verbose)
+        printf ("  %s : %s\n", pname, propval->data);
+      else
+        printf ("  %s\n", pname);
+    }
+  
+  return SVN_NO_ERROR;
+}
+
+
 /* Print the diff between revision 0 and our root. */
 static svn_error_t *
 do_tree (svnlook_ctxt_t *c, svn_boolean_t show_ids, apr_pool_t *pool)
@@ -1018,6 +1193,23 @@ subcommand_author (apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   SVN_ERR (get_ctxt_baton (&c, opt_state, pool));
   SVN_ERR (do_author (c, pool));
+  return SVN_NO_ERROR;
+}
+
+/* This implements `svn_opt_subcommand_t'. */
+static svn_error_t *
+subcommand_cat (apr_getopt_t *os, void *baton, apr_pool_t *pool)
+{
+  struct svnlook_opt_state *opt_state = baton;
+  svnlook_ctxt_t *c;
+
+  if (opt_state->arg1 == NULL)
+    return svn_error_createf
+      (SVN_ERR_CL_INSUFFICIENT_ARGS, NULL,
+       "Missing repository path argument.");
+
+  SVN_ERR (get_ctxt_baton (&c, opt_state, pool));
+  SVN_ERR (do_cat (c, opt_state->arg1, pool));
   return SVN_NO_ERROR;
 }
 
@@ -1112,6 +1304,48 @@ subcommand_log (apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   SVN_ERR (get_ctxt_baton (&c, opt_state, pool));
   SVN_ERR (do_log (c, FALSE, pool));
+  return SVN_NO_ERROR;
+}
+
+/* This implements `svn_opt_subcommand_t'. */
+static svn_error_t *
+subcommand_pget (apr_getopt_t *os, void *baton, apr_pool_t *pool)
+{
+  struct svnlook_opt_state *opt_state = baton;
+  svnlook_ctxt_t *c;
+
+  if (opt_state->arg1 == NULL)
+    {
+      return svn_error_createf
+        (SVN_ERR_CL_INSUFFICIENT_ARGS, NULL,
+         "Missing propname and repository path arguments.");
+    }
+  else if (opt_state->arg2 == NULL)
+    {
+      return svn_error_createf
+        (SVN_ERR_CL_INSUFFICIENT_ARGS, NULL,
+         "Missing propname or repository path argument.");
+    }
+
+  SVN_ERR (get_ctxt_baton (&c, opt_state, pool));
+  SVN_ERR (do_pget (c, opt_state->arg1, opt_state->arg2, pool));
+  return SVN_NO_ERROR;
+}
+
+/* This implements `svn_opt_subcommand_t'. */
+static svn_error_t *
+subcommand_plist (apr_getopt_t *os, void *baton, apr_pool_t *pool)
+{
+  struct svnlook_opt_state *opt_state = baton;
+  svnlook_ctxt_t *c;
+
+  if (opt_state->arg1 == NULL)
+    return svn_error_createf
+      (SVN_ERR_CL_INSUFFICIENT_ARGS, NULL,
+       "Missing repository path argument.");
+
+  SVN_ERR (get_ctxt_baton (&c, opt_state, pool));
+  SVN_ERR (do_plist (c, opt_state->arg1, opt_state->verbose, pool));
   return SVN_NO_ERROR;
 }
 
@@ -1225,6 +1459,10 @@ main (int argc, const char * const *argv)
           opt_state.txn = opt_arg;
           break;
 
+        case 'v':
+          opt_state.verbose = TRUE;
+          break;
+
         case 'h':
         case '?':
           opt_state.help = TRUE;
@@ -1285,13 +1523,18 @@ main (int argc, const char * const *argv)
         }
     }
 
-  /* If there's a second argument, it's probably the repository.
-     Every subcommand except `help' requires one, so we parse it out
-     here and store it in opt_state. */
+  /* If there's a second argument, it's the repository.  There may be
+     more arguments following the repository; usually the next one is
+     a path within the repository, or it's a propname and the one
+     after that is the path.  Since we don't know, we just call them
+     arg1 and arg2, meaning the first and second arguments following
+     the repository. */ 
   if (subcommand->cmd_func != subcommand_help)
     {
       const char *repos_path = NULL;
+      const char *arg1 = NULL, *arg2 = NULL;
 
+      /* Get the repository. */
       if (os->ind < os->argc)
         {
           SVN_INT_ERR (svn_utf_cstring_to_utf8 (&repos_path,
@@ -1316,8 +1559,25 @@ main (int argc, const char * const *argv)
           return EXIT_FAILURE;
         }
 
-      /* Copy repos path into the OPT_STATE structure. */
       opt_state.repos_path = repos_path;      
+
+      /* Get next arg (arg1), if any. */
+      if (os->ind < os->argc)
+        {
+          SVN_INT_ERR (svn_utf_cstring_to_utf8
+                       (&arg1, os->argv[os->ind++], NULL, pool));
+          arg1 = svn_path_internal_style (arg1, pool);
+        }
+      opt_state.arg1 = arg1;      
+
+      /* Get next arg (arg2), if any. */
+      if (os->ind < os->argc)
+        {
+          SVN_INT_ERR (svn_utf_cstring_to_utf8
+                       (&arg2, os->argv[os->ind++], NULL, pool));
+          arg2 = svn_path_internal_style (arg2, pool);
+        }
+      opt_state.arg2 = arg2;      
     }
 
   /* Check that the subcommand wasn't passed any inappropriate options. */

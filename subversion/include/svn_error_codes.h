@@ -754,6 +754,10 @@ SVN_ERROR_START
               SVN_ERR_MISC_CATEGORY_START + 16,
               "The specified diff option is not supported")
 
+  SVN_ERRDEF (SVN_ERR_PROPERTY_NOT_FOUND,
+              SVN_ERR_MISC_CATEGORY_START + 17,
+              "Property not found")
+
   /* command-line client errors */
 
   SVN_ERRDEF (SVN_ERR_CL_ARG_PARSING_ERROR,
