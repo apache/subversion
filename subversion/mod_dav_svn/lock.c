@@ -22,6 +22,7 @@
 #include <http_log.h>
 #include <mod_dav.h>
 #include <apr_uuid.h>
+#include <apr_time.h>
 
 #include "svn_fs.h"
 #include "svn_repos.h"
@@ -38,6 +39,78 @@ struct dav_locktoken
   /* This is identical to the 'token' field of an svn_lock_t. */
   const char *uuid_str;
 };
+
+
+/* Helper func:  convert an svn_lock_t to a dav_lock, allocated in
+   pool.  EXISTS_P indicates whether slock->path actually exists or not.
+ */
+static void
+svn_lock_to_dav_lock(dav_lock **dlock,
+                     svn_lock_t *slock,
+                     svn_boolean_t exists_p,
+                     apr_pool_t *pool)
+{
+  dav_lock *lock = apr_pcalloc(pool, sizeof(*lock));
+  dav_locktoken *token = apr_pcalloc(pool, sizeof(*token));
+
+  lock->rectype = DAV_LOCKREC_DIRECT;
+  lock->scope = DAV_LOCKSCOPE_EXCLUSIVE;
+  lock->type = DAV_LOCKTYPE_WRITE;
+  lock->depth = 0;
+  lock->is_locknull = exists_p;
+
+  token->uuid_str = apr_pstrdup(pool, slock->token);
+  lock->locktoken = token;
+
+  /* ### I really don't understand the difference here: */
+  lock->owner = apr_pstrdup(pool, slock->owner);
+  lock->auth_user = lock->owner;
+
+  /* ### This is absurd.  apr_time.h has an apr_time_t->time_t func,
+     but not the reverse?? */
+  if (slock->expiration_date)
+    lock->timeout = (time_t)slock->expiration_date / APR_USEC_PER_SEC;
+  else
+    lock->timeout = DAV_TIMEOUT_INFINITE;
+
+  /* ### uhoh.  There's no concept of a lock creation-time in DAV.
+         How do we get that value over to the client?  Maybe we should
+         just get rid of that field in svn_lock_t?  */
+
+  *dlock = lock;
+}
+
+
+
+/* Helper func:  convert a dav_lock to an svn_lock_t, allocated in pool. */
+static void
+dav_lock_to_svn_lock(svn_lock_t **slock,
+                     dav_lock *dlock,
+                     const char *path,
+                     apr_pool_t *pool)
+{
+  svn_lock_t *lock = apr_pcalloc(pool, sizeof(*lock));
+
+  lock->path = apr_pstrdup(pool, path);
+
+  lock->token = apr_pstrdup(pool, dlock->locktoken->uuid_str);
+
+  /* DAV has no concept of lock creationdate, so assume 'now' */
+  lock->creation_date = apr_time_now();
+
+  /* ### Should we use 'auth_user' field instead?  What's the difference? */
+  if (dlock->owner)
+    lock->owner = apr_pstrdup(pool, dlock->owner);
+  
+  if (dlock->timeout)
+    lock->expiration_date = (apr_time_t)dlock->timeout * APR_USEC_PER_SEC;
+  else
+    lock->expiration_date = 0; /* never expires */
+
+  *slock = lock;
+}
+
+
 
 
 
@@ -169,8 +242,11 @@ static dav_error *
 dav_svn_remove_locknull_state(dav_lockdb *lockdb,
                               const dav_resource *resource)
 {
-  /* ### need to read up in RFC 2518:  what are lock-null resources,
-     how do they work?  I forgot.  */
+  /* ### perhaps our resource->info context should keep track if a
+     resource is in 'locknull' state', and not merely non-existent?
+     According to RFC 2518, 'locknull' resources are supposed to be
+     listed as children of their parent collections (e.g. a PROPFIND
+     on the parent).  */
 
   return 0;  /* temporary: just to suppress compile warnings */
 }
@@ -188,14 +264,12 @@ dav_svn_create_lock(dav_lockdb *lockdb,
                     const dav_resource *resource,
                     dav_lock **lock)
 {
-  /* ### call svn_repos_fs_lock(), and build a dav_lock struct to return. */
+  /* ### just allocate a dav_lock structure (and uuid) here, nothing
+     more.  mod_dav will fill in the 'owner' and 'timeout' fields for
+     us later on, then ultimately call dav_svn_append_locks() with the
+     fully fleshed-out structure. */
 
-  /* ### my only concern is:  does mod_dav return "enough" fields in
-     its LOCK response for the client to recreate an svn_lock_t
-     structure?  I'm worried that there's no lock-creationdate field
-     in the returned dav_lock struct.  Need to check the RFC.  */
-
-  return 0;  /* temporary: just to suppress compile warnings */
+  return 0;  
 }
 
 
@@ -220,14 +294,33 @@ dav_svn_get_locks(dav_lockdb *lockdb,
                   int calltype,
                   dav_lock **locks)
 {
-  /* ### verify that resource isn't a collection, then call
-         svn_fs_get_lock() and returned a linked list of exactly one
-         dav_lock (since we only support 1 exclusive lock per
-         resource).  return NULL if not locked.  we can pretty much
-         ignore the 'calltype' arg, since we don't have lockable
-         collections, and thus don't have indirect locks.  */
+  svn_error_t *serr;
+  svn_lock_t *slock;
+  dav_lock *lock;
 
-  return 0;  /* temporary: just to suppress compile warnings */
+  /* We only support exclusive locks, not shared ones.  So this
+     function always returns a "list" of exactly one lock, or just a
+     NULL list.  The 'calltype' arg is also meaningless, since we
+     don't support locks on collections.  */
+  
+  /* ### TODO: call authz_read callback here.  If the resource is
+     unreadable, we don't want to say anything about locks attached to
+     it.*/
+  
+  serr = svn_fs_get_lock_from_path(&slock,
+                                   resource->info->repos->fs,
+                                   resource->info->repos_path,
+                                   resource->pool);
+  if (serr)
+    return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                               "Failed to check path for a lock.",
+                               resource->pool);
+
+  if (slock != NULL)
+    svn_lock_to_dav_lock(&lock, slock, resource->exists, resource->pool);
+
+  *locks = lock;
+  return 0;  
 }
 
 
@@ -251,10 +344,32 @@ dav_svn_find_lock(dav_lockdb *lockdb,
                   int partial_ok,
                   dav_lock **lock)
 {
-  /* ### since we don't support shared locks, this function can share
-     the same factorized code as dav_svn_get_locks, right? */
+  svn_error_t *serr;
+  svn_lock_t *slock;
+  dav_lock *dlock;
   
-  return 0;  /* temporary: just to suppress compile warnings */
+  /* ### TODO: call authz_read callback here.  If the resource is
+     unreadable, we don't want to say anything about locks attached to
+     it.*/
+  
+  serr = svn_fs_get_lock_from_token(&slock,
+                                    resource->info->repos->fs,
+                                    locktoken->uuid_str,
+                                    resource->pool);
+  if (serr &&
+      ((serr->apr_err == SVN_ERR_FS_BAD_LOCK_TOKEN)
+       || (serr->apr_err == SVN_ERR_FS_LOCK_EXPIRED)))
+    dlock = NULL;
+  else if (serr)
+    return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                               "Failed to lookup lock via token.",
+                               resource->pool);
+
+  if (slock != NULL)
+    svn_lock_to_dav_lock(&dlock, slock, resource->exists, resource->pool);
+
+  *lock = dlock;
+  return 0;  
 }
 
 
@@ -273,11 +388,24 @@ dav_svn_has_locks(dav_lockdb *lockdb,
                   const dav_resource *resource,
                   int *locks_present)
 {
-  /* ### again, this function can share the same factorized code as
-     the previous two.  even if a resource doesn't exist,
-     svn_fs_get_lock() will return a lock for a reserved name. */
+  svn_error_t *serr;
+  svn_lock_t *slock;
 
-  return 0;  /* temporary: just to suppress compile warnings */
+  /* ### TODO: call authz_read callback here.  If the resource is
+     unreadable, we don't want to say anything about locks attached to
+     it.*/
+  
+  serr = svn_fs_get_lock_from_path(&slock,
+                                   resource->info->repos->fs,
+                                   resource->info->repos_path,
+                                   resource->pool);
+  if (serr)
+    return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                               "Failed to check path for a lock.",
+                               resource->pool);
+
+  *locks_present = slock ? 1 : 0;
+  return 0;
 }
 
 
@@ -299,10 +427,18 @@ dav_svn_append_locks(dav_lockdb *lockdb,
                      int make_indirect,
                      const dav_lock *lock)
 {
-  /* ### need to return error if the resource is already locked.  we
-     don't support multiple shared locks on a resource. */
+  /* ### if lock->next, return ERROR, we don't allow multiple locks. */
 
-  return 0;  /* temporary: just to suppress compile warnings */
+  /* ### convert the dav_lock into an svn_lock_t */
+
+  /* ### call svn_repos_fs_attach_lock() to do the actual locking. */
+
+  /*  serr = svn_repos_fs_attach_lock(slock,
+                                      resource->info->repos->repos,
+                                      resource->info->repos_path,
+                                      resource->pool);  */
+
+  return 0;
 }
 
 
@@ -317,8 +453,11 @@ dav_svn_remove_lock(dav_lockdb *lockdb,
                     const dav_resource *resource,
                     const dav_locktoken *locktoken)
 {
+
   /* ### call svn_repos_fs_unlock() on resource, using incoming
          locktoken. */
+
+
 
   return 0;  /* temporary: just to suppress compile warnings */
 }
