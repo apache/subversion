@@ -677,6 +677,13 @@ $ svnlook tree path/to/repos --show-ids
           </varlistentry>
 
           <varlistentry>
+            <term><literal>cat</literal></term>
+            <listitem>
+              <para>Print the contents of a file in the tree.</para>
+            </listitem>
+          </varlistentry>
+
+          <varlistentry>
             <term><literal>date</literal></term>
             <listitem>
               <para>Print the tree's datestamp.</para>
@@ -719,6 +726,14 @@ $ svnlook tree path/to/repos --show-ids
             <term><literal>log</literal></term>
             <listitem>
               <para>Print the tree's log message.</para>
+            </listitem>
+          </varlistentry>
+
+          <varlistentry>
+            <term><literal>proplist</literal></term>
+            <listitem>
+              <para>Print the names and values of properties set on paths
+                in the tree.</para>
             </listitem>
           </varlistentry>
 
