@@ -307,15 +307,6 @@ static int auth_checker(request_rec *r)
 
     apr_uri_parse(r->pool, dest_uri, &parsed_dest_uri);
 
-    if (strcmp(parsed_dest_uri.hostname, r->parsed_uri.hostname)
-        || strcmp(parsed_dest_uri.scheme, r->parsed_uri.scheme)) {
-        /* Don't allow this, operation between different hosts/schemes.
-         * XXX: Maybe we should DECLINE instead and rely on mod_dav to
-         * XXX: throw an error.
-         */
-        return HTTP_BAD_REQUEST;
-    }
-
     dest_uri = parsed_dest_uri.path;
     if (strncmp(dest_uri, conf->base_path, strlen(conf->base_path))) {
         /* If it is not the same location, then we don't allow it.
