@@ -65,12 +65,7 @@
   
 */
 
-
-#include <stdio.h>
-#include <string.h>
-#include "svn_types.h"
-#include "svn_string.h"
-#include "xmlparse.h"
+#include "delta_parse.h"
 
 
 
@@ -226,9 +221,11 @@ svn_xml_startElement(void *userData, const char *name, const char **atts)
 {
   int i;
   char *attr_name, *attr_value;
+
+  /* Retrieve our digger structure */
   svn_delta_digger_t *my_digger = (svn_delta_digger_t *) userData;
 
-  if (strcmp (name, "tree-delta"))
+  if (strcmp (name, "tree-delta") == 0)
     {
       /* Found a new tree-delta element */
 
@@ -249,7 +246,9 @@ svn_xml_startElement(void *userData, const char *name, const char **atts)
         {
           /* This is a nested tree-delta, below a <dir>.  Hook it in. */
           svn_error_t *err = 
-            svn_append_to_delta (d, new_delta, svn_XML_treedelta);
+            svn_append_to_delta (my_digger->delta, 
+                                 new_delta,
+                                 svn_XML_treedelta);
 
           /* TODO: we're inside an event-driven callback.  What do we
              do if we get an error?  Just Punt?  Call a warning
@@ -258,44 +257,100 @@ svn_xml_startElement(void *userData, const char *name, const char **atts)
         }
     }
 
-  else if (strcmp (name, "text-delta"))
+  else if (strcmp (name, "text-delta") == 0)
     {
       /* Found a new text-delta element */
-      /* Please mark flag in edit_content structure (should be the
+      /* No need to create a text-delta structure... */
+      /* ...just mark flag in edit_content structure (should be the
          last structure on our growing delta) */
       
-      svn_error_t *err = svn_append_to_delta (d, NULL, svn_XML_textdelta);
+      svn_error_t *err = svn_append_to_delta (my_digger->delta,
+                                              NULL,
+                                              svn_XML_textdelta);
 
       /* TODO: check error */
     }
 
-  else if (strcmp (name, "prop-delta"))
+  else if (strcmp (name, "prop-delta") == 0)
     {
       /* Found a new prop-delta element */
-      /* Please mark flag in edit_content structure (should be the
+      /* No need to create a prop-delta structure... */
+      /* ...just mark flag in edit_content structure (should be the
          last structure on our growing delta) */
 
-      svn_error_t *err = svn_append_to_delta (d, NULL, svn_XML_propdelta);
+      svn_error_t *err = svn_append_to_delta (my_digger->delta,
+                                              NULL,
+                                              svn_XML_propdelta);
 
       /* TODO: check error */
     }
 
-  else if (strcmp (name, "new"))
+  else if (strcmp (name, "new") == 0)
     {
       /* Found a new svn_edit_t */
-      /* Build a new edit struct, fill with **attrs */
+      /* Build a new edit struct */
+      svn_edit_t *new_edit = svn_delta_edit_create (my_digger->pool);
+      new_edit->kind = action_new;
+
+      /* Our three edit tags currently only have one attribute: "name" */
+      if (strcmp (*atts, "name") == 0) {
+        new_edit->name = svn_string_create (++*atts, my_digger->pool);
+      }
+      else {
+        /* TODO: return error if we have some other attribute */
+      }
+
+      /* Now drop this edit at the end of our delta */
+      svn_error_t *err = svn_append_to_delta (my_digger->delta,
+                                              new_edit,
+                                              svn_XML_edit);
+      /* TODO: check error */
     }
 
   else if (strcmp (name, "replace"))
     {
       /* Found a new svn_edit_t */
-      /* Build a new edit struct, fill with **attrs */
+      /* Build a new edit struct */
+      svn_edit_t *new_edit = svn_delta_edit_create (my_digger->pool);
+      new_edit->kind = action_replace;
+
+      /* Our three edit tags currently only have one attribute: "name" */
+      if (strcmp (*atts, "name") == 0) {
+        new_edit->name = svn_string_create (++*atts, my_digger->pool);
+      }
+      else {
+        /* TODO: return error if we have some other attribute */
+      }
+
+      /* Now drop this edit at the end of our delta */
+      svn_error_t *err = svn_append_to_delta (my_digger->delta,
+                                              new_edit,
+                                              svn_XML_edit);
+      /* TODO: check error */
+
     }
 
   else if (strcmp (name, "delete"))
     {
       /* Found a new svn_edit_t */
-      /* Build a new edit struct, fill with **attrs */
+      /* Build a new edit struct */
+      svn_edit_t *new_edit = svn_delta_edit_create (my_digger->pool);
+      new_edit->kind = action_delete;
+
+      /* Our three edit tags currently only have one attribute: "name" */
+      if (strcmp (*atts, "name") == 0) {
+        new_edit->name = svn_string_create (++*atts, my_digger->pool);
+      }
+      else {
+        /* TODO: return error if we have some other attribute */
+      }
+
+      /* Now drop this edit at the end of our delta */
+      svn_error_t *err = svn_append_to_delta (my_digger->delta,
+                                              new_edit,
+                                              svn_XML_edit);
+      /* TODO: check error */
+
     }
 
   else if (strcmp (name, "file"))
