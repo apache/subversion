@@ -374,7 +374,7 @@ merge_file_changed (svn_wc_adm_access_t *adm_access,
       else if (has_local_mods)
         *state = svn_wc_notify_state_merged;
       else if (merge_outcome == svn_wc_merge_merged)
-        *state = svn_wc_notify_state_modified;
+        *state = svn_wc_notify_state_changed;
       else /* merge_outcome == svn_wc_merge_unchanged */
         *state = svn_wc_notify_state_unchanged;
     }

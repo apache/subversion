@@ -132,7 +132,7 @@ notify (void *baton,
                   statchar_buf[0] = 'C';
                 else if (content_state == svn_wc_notify_state_merged)
                   statchar_buf[0] = 'G';
-                else if (content_state == svn_wc_notify_state_modified)
+                else if (content_state == svn_wc_notify_state_changed)
                   statchar_buf[0] = 'U';
               }
             
@@ -140,7 +140,7 @@ notify (void *baton,
               statchar_buf[1] = 'C';
             else if (prop_state == svn_wc_notify_state_merged)
               statchar_buf[1] = 'G';
-            else if (prop_state == svn_wc_notify_state_modified)
+            else if (prop_state == svn_wc_notify_state_changed)
               statchar_buf[1] = 'U';
 
             printf ("%s %s\n", statchar_buf, path_native);
