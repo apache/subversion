@@ -209,6 +209,9 @@ typedef struct svn_propdelta_t
     svn_propdelta_dirent
   } kind;                    /* what kind of object does this
                                 prop-delta affect? */
+
+  svn_string_t *entity_name; /* The name of the file, dir, or dirent
+                                which is being patched. */
   
   svn_string_t *name;        /* name of property to change */
   svn_string_t *value;       /* new value of property; if NULL, then

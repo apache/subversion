@@ -82,7 +82,8 @@ test_add_directory (svn_string_t *name,
   printf ("ADD_DIR event:  name '%s', ancestor '%s' version %d\n",
           name->data, ancestor_path->data, ancestor_version);
 
-  /* A real callback would fill in **child_baton here */
+  /* Set child_baton to the name of the new directory. */
+  *child_baton = (svn_string_t *) svn_string_dup (name, globalpool);  
   
   return SVN_NO_ERROR;
 }
@@ -98,7 +99,8 @@ test_replace_directory (svn_string_t *name,
   printf ("REPLACE_DIR event:  name '%s', ancestor '%s' version %d\n",
           name->data, ancestor_path->data, ancestor_version);
   
-  /* A real callback would fill in **child_baton here */
+  /* Set child_baton to the name of the new directory. */
+  *child_baton = (svn_string_t *) svn_string_dup (name, globalpool);  
 
   return SVN_NO_ERROR;
 }
@@ -107,7 +109,10 @@ test_replace_directory (svn_string_t *name,
 svn_error_t *
 test_finish_directory (void *dir_baton)
 {
-  printf ("FINISH_DIR event.\n");
+  if (dir_baton)
+    printf ("FINISH_DIR '%s'\n", (char *)((svn_string_t *) dir_baton)->data);
+  else 
+    printf ("FINISH_DIR:  null baton!!\n");
 
   return SVN_NO_ERROR;    
 }
@@ -116,7 +121,11 @@ test_finish_directory (void *dir_baton)
 svn_error_t *
 test_finish_file (void *file_baton)
 {
-  printf ("FINISH_FILE event.\n");
+  if (file_baton)
+    printf ("  FINISH_FILE '%s'\n", 
+            (char *)((svn_string_t *) file_baton)->data);
+  else
+    printf ("FINISH_DIR:  null baton!!\n");
 
   return SVN_NO_ERROR;    
 }
@@ -128,7 +137,7 @@ test_apply_textdelta (void *walk_baton, void *parent_baton, void *file_baton,
                       svn_txdelta_window_handler_t **handler,
                       void **handler_baton)
 {
-  printf ("TEXT-DELTA event:  within file `%s'.\n", 
+  printf ("    TEXT-DELTA event within file '%s'.\n", 
           (char *) ((svn_string_t *) file_baton)->data);
 
   /* Set the value of HANDLER and HANDLER_BATON here */
@@ -149,7 +158,7 @@ test_add_file (svn_string_t *name,
                long int ancestor_version,
                void **file_baton)
 {
-  printf ("ADD_FILE event:  name '%s', ancestor '%s' version %d\n",
+  printf ("  ADD_FILE event:  name '%s', ancestor '%s' version %d\n",
           name->data, ancestor_path->data, ancestor_version);
   
   /* Put the filename in file_baton */
@@ -167,7 +176,7 @@ test_replace_file (svn_string_t *name,
                    long int ancestor_version,
                    void **file_baton)
 {
-  printf ("REPLACE_FILE event:  name '%s', ancestor '%s' version %d\n",
+  printf ("  REPLACE_FILE event:  name '%s', ancestor '%s' version %d\n",
           name->data, ancestor_path->data, ancestor_version);
 
   /* Put the filename in file_baton */
@@ -175,6 +184,65 @@ test_replace_file (svn_string_t *name,
   
   return SVN_NO_ERROR;
 }
+
+
+svn_error_t *
+test_change_file_prop (void *walk_baton, void *parent_baton, void *file_baton,
+                       svn_string_t *name, svn_string_t *value)
+{
+  printf ("    GOT PROPCHANGE event on file '%s': ",
+          (char *) ((svn_string_t *) file_baton)->data);
+
+  if (value == NULL)
+    printf (" delete property '%s'\n", (char *) name->data);
+
+  else
+    printf (" set property '%s' to '%s'\n",
+            (char *) name->data, (char *) value->data);
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+test_change_dir_prop (void *walk_baton, void *parent_baton,
+                      svn_string_t *name, svn_string_t *value)
+{
+  printf ("    GOT PROPCHANGE event on dir '%s': ",
+          (char *) ((svn_string_t *) parent_baton)->data);
+
+  if (value == NULL)
+    printf (" delete property '%s'\n", (char *) name->data);
+
+  else
+    printf (" set property '%s' to '%s'\n",
+            (char *) name->data, (char *) value->data);
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+test_change_dirent_prop (void *walk_baton, void *parent_baton,
+                         svn_string_t *entry,
+                         svn_string_t *name, svn_string_t *value)
+{
+  printf ("    GOT PROPCHANGE event on dirent '%s': ", (char *) entry->data);
+
+  if (value == NULL)
+    printf (" delete property '%s'\n", (char *) name->data);
+
+  else
+    printf (" set property '%s' to '%s'\n",
+            (char *) name->data, (char *) value->data);
+
+  return SVN_NO_ERROR;
+}
+
+
+
+
+
 
 
 
@@ -258,9 +326,9 @@ int main(int argc, char *argv[])
 
   my_walker.apply_textdelta    = test_apply_textdelta;
 
-  my_walker.change_file_prop   = NULL;
-  my_walker.change_dir_prop    = NULL;
-  my_walker.change_dirent_prop = NULL;
+  my_walker.change_file_prop   = test_change_file_prop;
+  my_walker.change_dir_prop    = test_change_dir_prop;
+  my_walker.change_dirent_prop = test_change_dirent_prop;
 
 
   /* Fire up the XML parser */
