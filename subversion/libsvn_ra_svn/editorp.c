@@ -787,7 +787,7 @@ svn_error_t *svn_ra_svn__drive_editorp(svn_ra_svn_conn_t *conn,
           if (!state.done)
             {
               /* Abort the edit and use non-blocking I/O to write the error. */
-              editor->abort_edit(edit_baton, subpool);
+              svn_error_clear (editor->abort_edit(edit_baton, subpool));
               svn_ra_svn__set_block_handler(conn, blocked_write, &state);
             }
           write_err = svn_ra_svn_write_cmd_failure(conn, subpool, err->child);
