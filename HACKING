@@ -964,9 +964,9 @@ elsewhere in the log entry.
 Note how each file gets its own entry prefixed with an "*", and the
 changes within a file are grouped by symbol, with the symbols listed
 in parentheses followed by a colon, followed by text describing the
-change.  Please adhere to this format -- not only does consistency aid
-readability, it also allows software to colorize log entries
-automatically.
+change.  Please adhere to this format, even when only one file is
+changed -- not only does consistency aid readability, it also allows
+software to colorize log entries automatically.
 
 If your change is related to a specific issue in the issue tracker,
 then include a string like "issue #N" in the log message.  For
@@ -1058,13 +1058,19 @@ instead.
 
 The email message should start off with a log message, as described in
 "Writing log messages" above.  The patch itself should be in unified
-diff format (e.g., with "svn diff"), preferably inserted directly into
-the body of your message (rather than MIME-attached, uuencoded, or
-otherwise opaqified).  If your mailer wraps long lines, then you will
-need to attach your patch.  Please ensure the MIME type of the attachment
-is text/plain (some mailers allow you to set the MIME type; for some
-others, you might have to use a .txt extension on your patch file). Do
-not compress or otherwise encode the attached patch.
+diff format (e.g., with "svn diff").  Send the patch as an attachment,
+with a mime-type of text/x-diff, text/x-patch, or text/plain.  (Most
+people's mailreaders can display those inline, and having the patch as
+an attachment allows them to extract the patch from the message
+conveniently.)  
+
+If you can't attach the patch with one of these mime-types, or if the
+patch is very short, then just include it directly in the body of your
+message.  But if your mailer forces wrapping of long lines, then you
+must attach the patch, otherwise it is likely to get munged.  Never
+send patches in archived or compressed form (e.g., tar, gzip, zip,
+bzip2), because that prevents people from reviewing the patch directly
+in their mailreaders.
 
 If the patch implements a new feature, make sure to describe the
 feature completely in your mail; if the patch fixes a bug, describe
