@@ -36,7 +36,7 @@ repository) is:
   revprops      Subdirectory containing rev-props
    <revnum>      File containing rev-props for <revnum>
   transactions  Subdirectory containing transactions
-   <txnid>       Directory containing transaction <txnid>
+   <txnid>.txn   Directory containing transaction <txnid>
   current       File specifying current revision
   write-lock    Lockfile for commits
 
@@ -176,14 +176,16 @@ The predecessor of a node-rev crosses both soft and true copies;
 together with the count field, it allows efficient determination of
 the base for skip-deltas.  The first node-rev of a node contains no
 "pred" field.  A node-revision with no properties may omit the "props"
-field.  In a node-revision resulting from a true copy operation, the
-"copyfrom" field gives the copyfrom data.  The "copyroot" field
-identifies the root node-revision of the copy; it may be omitted if
-the node-rev is its own copy root (as is the case for node-revs with
-copy history, and for the root node of revision 0).  Copy roots are
-identified by revision and created-path, not by node-rev ID, because a
-copy root may be a node-rev which exists later on within the same
-revision file, meaning its offset is not yet known.
+field.  A node-revision with no contents (a zero-length file or an
+empty directory) may omit the "text" field.  In a node-revision
+resulting from a true copy operation, the "copyfrom" field gives the
+copyfrom data.  The "copyroot" field identifies the root node-revision
+of the copy; it may be omitted if the node-rev is its own copy root
+(as is the case for node-revs with copy history, and for the root node
+of revision 0).  Copy roots are identified by revision and
+created-path, not by node-rev ID, because a copy root may be a
+node-rev which exists later on within the same revision file, meaning
+its offset is not yet known.
 
 The changed-path data is represented as a series of changed-path
 items, each consisting of two lines.  The first line has the format
