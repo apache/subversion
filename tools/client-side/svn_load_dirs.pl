@@ -159,8 +159,8 @@ my $orig_cwd = cwd;
 
 # The first step is to determine the root of the svn repository.  Do
 # this with the svn log command.  Take the svn_url hostname and port
-# as the initial url and and append to it successive portions of the
-# final path until svn log succeeds.
+# as the initial url and append to it successive portions of the final
+# path until svn log succeeds.
 my $repos_root_uri;
 my $repos_root_uri_path;
 my $repos_base_path_segment;

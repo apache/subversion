@@ -286,7 +286,7 @@ svn_xml_parse (svn_xml_parser_t *svn_parser,
       return err;
     }
 
-  /* Did an an error occur somewhere *inside* the expat callbacks? */
+  /* Did an error occur somewhere *inside* the expat callbacks? */
   if (svn_parser->error)
     {
       err = svn_parser->error;

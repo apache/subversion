@@ -1524,8 +1524,8 @@ svn_wc__tweak_entry (apr_hash_t *entries,
      svn_wc__do_update_cleanup, then it's okay to totally remove any
      'deleted' entry.  The rationale is: if the server didn't
      overwrite the 'deleted' entry with something new during the
-     update, then it *must* have meant for the the entry to be
-     permanently gone in the parent dir's revision. */
+     update, then it *must* have meant for the entry to be permanently
+     gone in the parent dir's revision. */
   if (entry->deleted)
     apr_hash_set (entries, name, APR_HASH_KEY_STRING, NULL);
 

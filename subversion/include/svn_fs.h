@@ -707,7 +707,7 @@ svn_error_t *svn_fs_props_changed (int *changed_p,
    allocating *PATH_P in POOL.
 
    Else if there is no copy ancestry for the node, set *REV_P to
-   SVN_INVALID_REVNUM and and *PATH_P to null.
+   SVN_INVALID_REVNUM and *PATH_P to null.
 
    If an error is returned, the values of *REV_P and *PATH_P are
    undefined, but otherwise, if one of them is set as described above,

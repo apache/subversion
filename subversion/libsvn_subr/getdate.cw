@@ -1163,7 +1163,7 @@ case 41:
 	;
     break;}
 }
-   /* the action file gets copied in in place of this dollarsign */
+   /* the action file gets copied in place of this dollar sign */
 #line 543 "/usr/lib/bison.simple"
 
   yyvsp -= yylen;

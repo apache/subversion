@@ -223,7 +223,7 @@ svn_wc_merge (const char *left,
           SVN_ERR (svn_io_copy_file (merge_target,
                                      target_copy, TRUE, pool));
 
-          /* Derive the basenames of the the 3 backup files. */
+          /* Derive the basenames of the 3 backup files. */
           svn_path_split_nts (left_copy, &parentt, &left_base, pool);
           svn_path_split_nts (right_copy, &parentt, &right_base, pool);
           svn_path_split_nts (target_copy, &parentt, &target_base, pool);
@@ -305,7 +305,7 @@ svn_wc_merge (const char *left,
       SVN_ERR (svn_io_copy_file (right,
                                  right_copy, TRUE, pool));
       
-      /* Derive the basenames of the the backup files. */
+      /* Derive the basenames of the backup files. */
       svn_path_split_nts (left_copy, &parentt, &left_base, pool);
       svn_path_split_nts (right_copy, &parentt, &right_base, pool);
       entry->conflict_old = left_base;

@@ -4,8 +4,8 @@
 How to make a lovely gumbo with your Subversion client, in 11 easy steps.
 
 This chapter goes into more of the gritty details of client commands.
-For a first overview of the the client's CVS-like
-``copy-modify-merge'' model of development, @xref{Basics}.
+For a first overview of the client's CVS-like ``copy-modify-merge''
+model of development, @xref{Basics}.
 
 Before reading on, here is the most important piece of information
 you'll ever need when using Subversion: @samp{svn help}.  The
@@ -65,7 +65,7 @@ Checked out revision 2499.
 @end example
 
 Since Subversion uses a ``copy-modify-merge'' model instead of
-``lock-modify-unlock'', you're now ready to start making changes to
+``lock-modify-unlock,'' you're now ready to start making changes to
 the files that you've checked out, known collectively as your
 @dfn{working copy}. You can even delete the entire working copy and
 forget about it entirely -- there's no need to notify the Subversion
@@ -1649,9 +1649,9 @@ system.)
 @subsection Proxies
 
 At the time of writing, the configuration area only contains one item:
-a @file{proxies} file.  By setting values in this this file, your
-Subversion client can operate through an http proxy.  (Read the file
-itself for details; it should be self-documenting.)
+a @file{proxies} file.  By setting values in this file, your Subversion
+client can operate through an http proxy.  (Read the file itself for
+details; it should be self-documenting.)
 
 @subsection Config
 

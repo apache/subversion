@@ -900,7 +900,7 @@ svn_repos_dump_fs (svn_repos_t *repos,
                                     subpool));
 
     loop_end:
-      /* Reuse all memory consumed by the dump of of this one revision. */
+      /* Reuse all memory consumed by the dump of this one revision. */
       svn_pool_clear (subpool);
       if (feedback_stream)
         svn_stream_printf (feedback_stream, pool,

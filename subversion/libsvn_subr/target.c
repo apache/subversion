@@ -54,7 +54,7 @@ svn_path_condense_targets (const char **pbasedir,
       /* Copy the targets array, but with absolute paths instead of
          relative.  Also, find the pbasedir argument by finding what is
          common in all of the absolute paths. NOTE: This is not as
-         efficient as it could be The calculation of the the basedir
+         efficient as it could be.  The calculation of the basedir
          could be done in the loop below, which would save some calls to
          svn_path_get_longest_ancestor.  I decided to do it this way
          because I thought it would simpler, since this way, we don't

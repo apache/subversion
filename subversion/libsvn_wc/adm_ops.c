@@ -845,7 +845,7 @@ svn_wc_add (const char *path,
         {
           /* When we are called with the copyfrom arguments set and with
              the admin directory already in existance, then the dir will
-             contain the copyfrom settings.  So we need to pass the the
+             contain the copyfrom settings.  So we need to pass the
              copyfrom arguments to the ensure call. */
           SVN_ERR (svn_wc__ensure_adm (path, copyfrom_url, 
                                        copyfrom_rev, pool));
@@ -1613,7 +1613,7 @@ resolve_conflict_on_entry (const char *path,
 
   /* Although removing the files is sufficient to indicate that the
      conflict is resolved, if we update the entry as well future checks
-     for conflict state will will be more efficient. */
+     for conflict state will be more efficient. */
   if (entry->kind == svn_node_dir)
     SVN_ERR (svn_wc__entry_modify (path, NULL, entry, modify_flags, pool));
   else

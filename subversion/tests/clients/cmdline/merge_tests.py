@@ -70,8 +70,8 @@ def textual_merges_galore(sbox):
   ##
   ## In the other working copy (which is at rev 2), update rho back
   ## to revision 1, while giving other files local mods.  This sets
-  ## things up so so that "svn merge -r 1:3" will test all of the
-  ## above cases except case 4:
+  ## things up so that "svn merge -r 1:3" will test all of the above
+  ## cases except case 4:
   ## 
   ##    case 1: A/mu .......... do nothing, the only change was in rev 2
   ##    case 2: A/B/lambda .... do nothing, so we accept the merge easily

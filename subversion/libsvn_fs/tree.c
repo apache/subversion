@@ -1180,8 +1180,8 @@ deltify_if_mutable_under_txn_id (svn_fs_t *fs,
         }
     }
 
-  /* If we have have a predecessor, deltify it against the current
-     node revision. */
+  /* If we have a predecessor, deltify it against the current node
+     revision. */
   if ((pred_id = noderev->predecessor_id))
     {
       dag_node_t *pred_node;

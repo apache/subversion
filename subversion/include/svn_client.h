@@ -844,7 +844,7 @@ svn_client_proplist (apr_array_header_t **props,
    working copy into a 'clean' directory (meaning a directory with no 
    administrative directories).
 
-   FROM is either the path the the working copy on disk, or a url to the 
+   FROM is either the path the working copy on disk, or a url to the
    repository you wish to export.
 
    TO is the path to the directory where you wish to create the exported

@@ -482,7 +482,7 @@ directory_elements_diff (struct dir_baton *dir_baton,
   svn_boolean_t in_anchor_not_target;
   apr_pool_t *subpool;
 
-  /* This directory should have been been unchanged or replaced, not added,
+  /* This directory should have been unchanged or replaced, not added,
      since an added directory can only contain added files and these will
      already have been compared. (Note: the ADDED flag is used to simulate
      added directories, these are *not* scheduled to be added in the

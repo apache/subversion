@@ -49,7 +49,7 @@ struct edit_baton
   /* Commit message for this commit. */
   const char *log_msg;
 
-  /* Hook to run when when the commit is done. */
+  /* Hook to run when the commit is done. */
   svn_ra_local__commit_hook_t *hook;
   void *hook_baton;
 
@@ -60,7 +60,7 @@ struct edit_baton
      convenience). */
   svn_fs_t *fs;
 
-  /* Location in fs where where the edit will begin. */
+  /* Location in fs where the edit will begin. */
   const char *base_path;
 
   /** Created during the edit: **/
@@ -403,7 +403,7 @@ open_file (const char *path,
   /* Get this node's creation revision (doubles as an existence check). */
   SVN_ERR (svn_fs_node_created_rev (&cr_rev, eb->txn_root, full_path, pool));
   
-  /* If the node our caller has has an older revision number than the
+  /* If the node our caller has is an older revision number than the
      one in our transaction, return an out-of-dateness error. */
   if (base_revision < cr_rev)
     return out_of_date (full_path, eb->txn_name, pool);

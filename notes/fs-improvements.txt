@@ -150,7 +150,7 @@ Not so fast, Spidey.  We don't have parent pointers -- this is a
 predecessor walk by node keys; we can't just walk up the parent path
 like that.  Fortunately, copyIDs are generated from a new `copies'
 table, which maps unique copyIDs onto (REV COPY_DST_PATH
-COPY_DST_NODEKEY).  We look up the the rev/path for the old copyID,
+COPY_DST_NODEKEY).  We look up the rev/path for the old copyID,
 convert it to a node key, and compare it to the node key we're
 currently on.  Voilà!  Actually, we're not sure we'll store all of
 those in the copies table, it may boil down to just the DST_NODEKEY or

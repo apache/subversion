@@ -358,7 +358,7 @@ create problematic use-cases.
 
 @subsubsection Problem
 
-@c This is the first part of of the ``Greg Hudson'' problem, so named
+@c This is the first part of the ``Greg Hudson'' problem, so named
 @c because he was the first one to bring it up and define it well.  :-)
 
 Suppose our working copy has directory @samp{DIR:1} containing file

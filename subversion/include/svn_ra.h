@@ -491,8 +491,8 @@ typedef struct svn_ra_plugin_t
 
      When finished, the client calls REPORTER->finish_report(). The RA
      layer then does a complete drive of STATUS_EDITOR, ending with
-     close_edit(), to report, essentially, what would would be
-     modified in the working copy were the client to call do_update().
+     close_edit(), to report, essentially, what would be modified in
+     the working copy were the client to call do_update().
      STATUS_TARGET is an optional single path component will restrict
      the scope of the status report to an entry in the directory
      represented by the SESSION_BATON's URL, or NULL if the entire

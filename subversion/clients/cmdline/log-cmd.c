@@ -131,8 +131,8 @@ log_message_receiver (void *baton,
       return SVN_NO_ERROR;
     }
 
-  /* If log data has UTF-8 characters that cannot be converted to to
-     the local encoding, we shouldn't stop cold, so we just emit a
+  /* If log data has UTF-8 characters that cannot be converted to the
+     local encoding, we shouldn't stop cold, so we just emit a
      placeholder and move on.  (Subversion's logs actually have such
      data, in revision 2600 for example.)
 
