@@ -76,7 +76,7 @@ delete_item (svn_string_t *name, void *parent_baton)
   svn_string_t *printable_name = svn_string_dup (d->path, d->edit_baton->pool);
   svn_path_add_component (printable_name, name, svn_path_local_style);
 
-  printf ("D <- %s\n", printable_name->data);
+  printf ("Deleting:  %s\n", printable_name->data);
   return SVN_NO_ERROR;
 }
 
@@ -98,7 +98,7 @@ add_directory (svn_string_t *name,
   svn_path_add_component (child_d->path, name, svn_path_local_style);
   child_d->added = TRUE;
 
-  printf ("A <- %s\n", child_d->path->data);
+  printf ("Adding:    %s\n", child_d->path->data);
   *child_baton = child_d;
 
   return SVN_NO_ERROR;
@@ -136,7 +136,7 @@ close_directory (void *dir_baton)
   struct dir_baton *db = dir_baton;
 
   if (db->prop_changed)
-    printf ("M <- %s\n", db->path->data); 
+    printf ("Changing:  %s\n", db->path->data); 
 
   return SVN_NO_ERROR;
 }
@@ -149,9 +149,9 @@ close_file (void *file_baton)
 
 
   if (fb->added)
-    printf ("A <- %s\n", fb->path->data); 
+    printf ("Adding:    %s\n", fb->path->data); 
   else
-    printf ("M <- %s\n", fb->path->data);
+    printf ("Changing:  %s\n", fb->path->data);
 
   return SVN_NO_ERROR;
 }
@@ -162,6 +162,7 @@ close_edit (void *edit_baton)
 {
   /* If we get here, then the *real* close_edit() must have
      succeeded. */
+  /* TODO:  print final revision number here someday. */
   printf ("Commit succeeded.\n");
   return SVN_NO_ERROR;
 }
