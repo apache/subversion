@@ -1668,3 +1668,37 @@ svn_wc_walk_entries (const char *path,
     return svn_error_createf (SVN_ERR_NODE_UNKNOWN_KIND, NULL,
                               "%s: unrecognized node kind.", path);
 }
+
+
+svn_error_t *
+svn_wc_mark_missing_deleted (const char *path,
+                             svn_wc_adm_access_t *parent,
+                             apr_pool_t *pool)
+{
+  svn_node_kind_t pkind;
+
+  SVN_ERR (svn_io_check_path (path, &pkind, pool));
+
+  if (pkind == svn_node_none)
+    {
+      const char *parent_path, *bname;
+      svn_wc_adm_access_t *adm_access;
+      svn_wc_entry_t *newent
+        = apr_pcalloc (pool, sizeof(*newent));
+      
+      newent->deleted = TRUE;
+
+      svn_path_split (path, &parent_path, &bname, pool);
+
+      SVN_ERR (svn_wc_adm_retrieve (&adm_access, parent, parent_path, pool));
+      SVN_ERR (svn_wc__entry_modify (adm_access, bname, newent,
+                                     SVN_WC__ENTRY_MODIFY_DELETED,
+                                     TRUE, /* sync right away */ pool));
+
+      return SVN_NO_ERROR;
+    }
+  else
+    return svn_error_createf (SVN_ERR_WC_PATH_FOUND, NULL,
+                              "svn_wc_mark_missing_deleted: path %s isn't "
+                              "missing.", path);
+}

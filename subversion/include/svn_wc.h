@@ -595,6 +595,13 @@ svn_error_t *svn_wc_walk_entries (const char *path,
                                   apr_pool_t *pool);
 
 
+/* Mark missing PATH as 'deleted' in its PARENT's list of entries.
+   Return SVN_ERR_WC_PATH_FOUND if PATH isn't actually missing. */
+svn_error_t *svn_wc_mark_missing_deleted (const char *path,
+                                          svn_wc_adm_access_t *parent,
+                                          apr_pool_t *pool);
+                       
+
 
 /*** Status. ***/
 
