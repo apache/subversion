@@ -172,7 +172,6 @@ svn_ruby_init_error (void)
   define_error (SVN_ERR_RA_DAV_CREATING_REQUEST, "RaDavCreatingRequest");
   define_error (SVN_ERR_RA_DAV_REQUEST_FAILED, "RaDavRequestFailed");
   define_error (SVN_ERR_RA_DAV_PROPS_NOT_FOUND, "RaDavPropsNotFound");
-  define_error (SVN_ERR_RA_NOT_VERSIONED_RESOURCE, "RaNotVersionedResource");
   define_error (SVN_ERR_SVNDIFF_INVALID_HEADER, "SvndiffInvalidHeader");
   define_error (SVN_ERR_SVNDIFF_CORRUPT_WINDOW, "SvndiffCorruptWindow");
   define_error (SVN_ERR_SVNDIFF_BACKWARD_VIEW, "SvndiffBackwardView");
