@@ -42,8 +42,7 @@ my_vcdiff_windoweater (svn_delta_window_t *window, void *baton)
                                   (window->ops[i].length),
                                   globalpool);
 
-            printf ("--- new data -- : %s\n",
-                    svn_string_dup2cstring (str, globalpool));
+            printf ("--- new data -- : %s\n", str->data);
           }
         case svn_delta_source:
           {
@@ -70,9 +69,7 @@ my_vcdiff_windoweater (svn_delta_window_t *window, void *baton)
 svn_error_t *
 test_delete (svn_string_t *filename, void *walk_baton, void *parent_baton)
 {
-  printf ("DELETE event:  delete filename '%s'\n", 
-          svn_string_dup2cstring (filename, globalpool));
-
+  printf ("DELETE event:  delete filename '%s'\n", filename->data);
   return SVN_NO_ERROR;         
 }
 
@@ -85,8 +82,7 @@ test_add_directory (svn_string_t *name,
                     void **child_baton)
 {
   printf ("ADD_DIR event:  name '%s', ancestor '%s' version %d\n",
-          svn_string_dup2cstring (name, globalpool),
-          svn_string_dup2cstring (base_path, globalpool), base_version);
+          name->data, base_path->data, base_version);
   
   return SVN_NO_ERROR;
 }
@@ -101,8 +97,7 @@ test_replace_directory (svn_string_t *name,
                         void **child_baton)
 {
   printf ("REPLACE_DIR event:  name '%s', ancestor '%s' version %d\n",
-          svn_string_dup2cstring (name, globalpool),
-          svn_string_dup2cstring (base_path, globalpool), base_version);
+          name->data, base_path->data, base_version);
   
   return SVN_NO_ERROR;
 }
@@ -136,8 +131,7 @@ test_add_file (svn_string_t *name,
                void **handler_baton)
 {
   printf ("ADD_FILE event:  name '%s', ancestor '%s' version %d\n",
-          svn_string_dup2cstring (name, globalpool),
-          svn_string_dup2cstring (base_path, globalpool), base_version);
+          name->data, base_path->data, base_version);
   
   /* Set the value of HANDLER and HANDLER_BATON here */
   *handler        = my_vcdiff_windoweater;
@@ -158,8 +152,7 @@ test_replace_file (svn_string_t *name,
                    void **handler_baton)
 {
   printf ("REPLACE_FILE event:  name '%s', ancestor '%s' version %d\n",
-          svn_string_dup2cstring (name, globalpool),
-          svn_string_dup2cstring (base_path, globalpool), base_version);
+          name->data, base_path->data, base_version);
   
   /* Set the value of HANDLER and HANDLER_BATON here */
   *handler        = my_vcdiff_windoweater;

@@ -202,8 +202,7 @@ svn_parse (apr_hash_t **uberhash, const char *filename, apr_pool_t *pool)
         ("svn_parse(): can't open for reading, file ", pool);
       svn_string_appendstr (msg, filename, pool);
 
-      finalmsg = svn_string_dup2cstring (msg, pool);
-      return (svn_create_error (result, NULL, finalmsg, NULL, pool));
+      return (svn_create_error (result, NULL, msg->data, NULL, pool));
     }
 
   /* Create a scratch memory pool for buffering our file as we read it */
@@ -265,7 +264,7 @@ svn_parse (apr_hash_t **uberhash, const char *filename, apr_pool_t *pool)
                 policy->warning 
                   (policy->data, 
                    "svn_parse():  skipping malformed line: `%s'",
-                   svn_string_dup2cstring, (currentline, pool));
+                   currentline->data, pool);
                 break;
               }
                                         
@@ -305,7 +304,7 @@ svn_parse (apr_hash_t **uberhash, const char *filename, apr_pool_t *pool)
                 policy->warning 
                   (policy->data, 
                    "svn_parse():  skipping malformed line: `%s'",
-                   svn_string_dup2cstring, (currentline, pool));
+                   currentline->data);
                 break;
               }
 
@@ -346,8 +345,7 @@ svn_parse (apr_hash_t **uberhash, const char *filename, apr_pool_t *pool)
     {
       policy->warning 
         (policy->data, 
-         "svn_parse():  can't close file: `%s'",
-         svn_string_dup2cstring, (filename, pool));
+         "svn_parse():  can't close file: `%s'", filename->data);
     }
   
   apr_destroy_pool (scratchpool);
