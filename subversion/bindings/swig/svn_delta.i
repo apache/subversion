@@ -64,4 +64,8 @@ void svn_swig_py_make_editor(const svn_delta_editor_t **editor,
 #ifdef SWIGPYTHON
 #include "swigutil_py.h"
 #endif
+
+#ifdef SWIGJAVA
+#include "swigutil_java.h"
+#endif
 %}

@@ -62,6 +62,12 @@ typedef apr_int32_t time_t;
 %typemap(python,argout,fragment="t_output_helper") apr_time_t * {
     $result = t_output_helper($result, PyLong_FromLongLong(*$1));
 }
+%typemap(java,argout) apr_time_t * {
+    jclass cls = JCALL1(FindClass, jenv, "java/lang/Long");
+    jmethodID ctor = JCALL3(GetMethodID, jenv, cls, "<init>", "(J)V");
+    jobject l = JCALL3(NewObject, jenv, cls, ctor, (jlong) *$1);
+    $result = t_output_helper($result, JCALL1(NewGlobalRef, jenv, l));
+}
 
 /* -----------------------------------------------------------------------
    create some INOUT typemaps for apr_size_t
@@ -71,6 +77,12 @@ typedef apr_int32_t time_t;
 
 %typemap(python,in) apr_size_t *INOUT (apr_size_t temp) {
     temp = (apr_size_t) PyInt_AsLong($input);
+    $1 = &temp;
+}
+%typemap(java,in) apr_size_t *INOUT (apr_size_t temp) {
+    jclass cls = JCALL1(FindClass, jenv, "java/lang/Long");
+    jmethodID mid = JCALL3(GetStaticMethodID, jenv, cls, "longValue", "()J");
+    temp = (apr_size_t) JCALL2(CallStaticLongMethod, jenv, mid, $input);
     $1 = &temp;
 }
 
@@ -93,6 +105,12 @@ typedef apr_int32_t time_t;
     Py_DECREF($result);
     $result = svn_swig_py_prophash_to_dict(*$1);
 }
+%typemap(java,argout) apr_hash_t **PROPHASH {
+    /* toss prior result, get new result from the hash */
+    JCALL1(DeleteGlobalRef, jenv, $result);
+    $result = JCALL1(NewGlobalRef, jenv,
+                     svn_swig_java_prophash_to_dict(jenv, *$1));
+}
 
 /* -----------------------------------------------------------------------
   handle apr_file_t *
@@ -110,6 +128,13 @@ typedef apr_int32_t time_t;
     $1 = &temp;
 }
 %typemap(python,argout,fragment="t_output_helper") apr_file_t ** {
+    $result = t_output_helper(
+        $result,
+        SWIG_NewPointerObj(*$1, $*1_descriptor, 0));
+}
+%typemap(java,argout) apr_file_t ** {
+    /* HELP: Is there a JNI equivalent of SWIG_NewPointerObj, or is
+       this actually a cross-language typemap? */
     $result = t_output_helper(
         $result,
         SWIG_NewPointerObj(*$1, $*1_descriptor, 0));
