@@ -518,6 +518,34 @@ def rev_update_switched_things(sbox):
 
 #----------------------------------------------------------------------
 
+def log_switched_file(sbox):
+  "show logs for a switched file"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  
+  # Setup some switched things (don't bother verifying)
+  if do_routine_switching(wc_dir, 0):
+    raise svntest.Failure  # really, do_routine_switching should raise this
+
+  # edit and commit switched file 'iota'
+  iota_path = os.path.join(wc_dir, 'iota')
+  svntest.main.run_svn (None, 'ps', 'x', 'x', iota_path)
+  svntest.main.run_svn (None, 'ci', '-m', 
+                        'set prop on switched iota', 
+                        iota_path)
+
+  # log switched file 'iota'
+  output, error = svntest.main.run_svn (None, 'log', iota_path)
+  for line in output:
+    if line.find("set prop on switched iota") != -1:
+      break
+  else:
+    raise svntest.Failure
+
+
+#----------------------------------------------------------------------
+
 ### ...and a slew of others...
 
 ########################################################################
@@ -532,6 +560,7 @@ test_list = [ None,
               full_rev_update,
               update_switched_things,
               rev_update_switched_things,
+              log_switched_file,
               ]
 
 if __name__ == '__main__':

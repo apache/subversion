@@ -192,6 +192,10 @@ int svn_path_compare_paths (const char *path1, const char *path2);
  *
  * Return the longest common path shared by both @a path1 and @a path2.  If
  * there's no common ancestor, return @c NULL.
+ *
+ * @a path1 and @a path2 may be URLs.  It is not enough for two URLs to 
+ * share the prefix 'protocol://'; they must actually share some of the 
+ * subsequent path in order to be deemed to have a common ancestor.
  */
 char *svn_path_get_longest_ancestor (const char *path1,
                                      const char *path2,
@@ -199,6 +203,9 @@ char *svn_path_get_longest_ancestor (const char *path1,
 
 /** Convert @a relative path to an absolute path and return the results in
  * @a *pabsolute, allocated in @a pool.
+ *
+ * @a relative may be a URL, in which case no attempt is made to convert it, 
+ * and a copy of the URL is returned. 
  */
 svn_error_t *
 svn_path_get_absolute (const char **pabsolute,
@@ -223,14 +230,15 @@ svn_path_split_if_file(const char *path,
  *
  * Find the common prefix of the paths in @a targets, and remove redundancies.
  *
- * The elements in @a targets must be existing files or directories (as
- * const char *).
+ * Each of the elements in @a targets must be a URL, or an existing file or 
+ * directory (as const char *).
  *
  * If there are multiple targets, or exactly one target and it's not a
  * directory, then 
  *
  *   - @a *pbasename is set to the absolute path of the common parent
- *     directory of all of those targets, and
+ *     directory of those targets (if the targets are files/directories), 
+ *     or the common URL prefix of the targets (if they are URLs).
  *
  *   - If @a pcondensed_targets is non-null, @a *pcondensed_targets is set
  *     to an array of targets relative to @a *pbasename, with

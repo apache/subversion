@@ -78,6 +78,8 @@ svn_path_condense_targets (const char **pbasedir,
           *pbasedir = svn_path_get_longest_ancestor (*pbasedir, 
                                                      absolute, 
                                                      pool);
+          if (! *pbasedir)
+            *pbasedir = "";
         }
       
       /* If we need to find the targets, find the common part of each pair
@@ -155,7 +157,11 @@ svn_path_condense_targets (const char **pbasedir,
                   continue;
                 
                 rel_item = ((const char **)abs_targets->elts)[i];
-                rel_item += basedir_len + 1;
+
+                /* If a common prefix was found, condensed_targets
+                   are given relative to that prefix. */
+                if (basedir_len > 0)
+                  rel_item += basedir_len + 1;
                 
                 (*((const char **)apr_array_push (*pcondensed_targets)))
                   = apr_pstrdup (pool, rel_item);
@@ -163,13 +169,16 @@ svn_path_condense_targets (const char **pbasedir,
           }
         }
       
-      /* Finally check if pbasedir is a dir or a file. */
-      SVN_ERR (svn_path_split_if_file (*pbasedir, pbasedir, &file, pool));
-      if ((pcondensed_targets != NULL) && (! svn_path_is_empty (file)))
+      /* Finally check if pbasedir is a dir or a file (or a URL). */
+      if (! svn_path_is_url (*pbasedir))
         {
-          /* If there was just one target, and it was a file, then
-             return it as the sole condensed target. */
-          (*((const char **)apr_array_push (*pcondensed_targets))) = file;
+          SVN_ERR (svn_path_split_if_file (*pbasedir, pbasedir, &file, pool));
+          if ((pcondensed_targets != NULL) && (! svn_path_is_empty (file)))
+            {
+              /* If there was just one target, and it was a file, then
+                 return it as the sole condensed target. */
+              (*((const char **)apr_array_push (*pcondensed_targets))) = file;
+            }
         }
     }
   

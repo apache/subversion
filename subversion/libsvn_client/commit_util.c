@@ -689,6 +689,9 @@ svn_client__condense_commit_items (const char **base_url,
       else
         *base_url = svn_path_get_longest_ancestor (*base_url, url, pool); 
 
+      if (! *base_url)
+        *base_url = "";
+
       /* If our BASE_URL is itself a to-be-committed item, and it is
          anything other than an already-versioned directory with
          property mods, we'll call its parent directory URL the
