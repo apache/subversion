@@ -917,6 +917,14 @@ main (int argc, const char * const *argv)
   ctx.log_msg_baton = svn_cl__make_log_msg_baton (&opt_state, NULL, 
                                                   ctx.config, pool);
 
+  if (!opt_state.encoding || !*opt_state.encoding)
+    {
+      svn_config_get (cfg, &opt_state.encoding,
+                      SVN_CONFIG_SECTION_MISCELLANY,
+                      SVN_CONFIG_OPTION_LOG_ENCODING,
+                      NULL);
+    }
+
   /* Authentication set-up. */
   {
     const char *store_password_val = NULL;
