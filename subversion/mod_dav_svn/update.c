@@ -1004,7 +1004,8 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
                                      recurse,
                                      ignore_ancestry,
                                      editor, &uc,
-                                     authz_read, &arb,
+                                     NULL /* authz_read */,
+                                     NULL /* &arb */,
                                      resource->pool)))
     {
       return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
@@ -1146,8 +1147,8 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
                                      uc.rev_root, dst_path,
                                      /* re-use the editor */
                                      editor, &uc,
-                                     authz_read,
-                                     &arb,
+                                     NULL /* authz_read */,
+                                     NULL /* &arb */,
                                      FALSE, /* no text deltas */
                                      recurse,
                                      TRUE, /* send entryprops */
