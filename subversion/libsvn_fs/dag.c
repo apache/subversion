@@ -401,18 +401,18 @@ add_new_entry_skel (skel_t *parent,
 }
 
 
-/* Adds to PARENT an ENTRY skel which refers to CHILD named NAME.
-   Allocations are done in TRAIL.  
+/* Adds to PARENT a new directory entry NAME pointing to ID.
+   Allocations are done in TRAIL.
 
    Assumptions:
    - PARENT is a directory.
    - PARENT does not already have an entry named NAME.
-   - CHILD is not an ancestor of parent
+   - ID does not refer to an ancestor of parent
    - NAME is a single path component
 */
 static svn_error_t *
 add_new_entry (dag_node_t *parent,
-               dag_node_t *child,
+               const svn_fs_id_t *id,
                const char *name,
                trail_t *trail)
 {
@@ -421,7 +421,7 @@ add_new_entry (dag_node_t *parent,
 
   SVN_ERR (get_node_revision (&parent_node_rev, parent, trail));
   new_node_rev = svn_fs__copy_skel (parent_node_rev, trail->pool);
-  add_new_entry_skel (new_node_rev, name, svn_fs__dag_get_id (child), trail);
+  add_new_entry_skel (new_node_rev, name, id, trail);
   
   /* Store the new incarnation of the directory. */
   SVN_ERR (set_node_revision (parent, new_node_rev, trail));
@@ -437,9 +437,9 @@ add_new_entry (dag_node_t *parent,
    the memory allocated for PNODE_REV. */
 static svn_error_t *
 find_dir_entry_skel (skel_t **entry, 
-                skel_t *pnode_rev,
-                const char *name, 
-                trail_t *trail)
+                     skel_t *pnode_rev,
+                     const char *name, 
+                     trail_t *trail)
 {
   skel_t *header;
   
@@ -618,7 +618,8 @@ make_entry (dag_node_t **child_p,
   /* We can safely call add_new_entry because we already know that
      PARENT is mutable, and we just created CHILD, so we know it has
      no ancestors (therefore, PARENT cannot be an ancestor of CHILD) */
-  SVN_ERR (add_new_entry (parent, *child_p, name, trail ));
+  SVN_ERR (add_new_entry (parent, svn_fs__dag_get_id (*child_p),
+                          name, trail));
 
   return SVN_NO_ERROR;
 }
@@ -628,7 +629,9 @@ make_entry (dag_node_t **child_p,
    Given a PARENT directory, and the NAME of an entry in that
    directory, update the PARENT's ENTRY list item for the NAMEd entry
    to refer to a different node ID than the one currently associated
-   with it.  Allocations occur in TRAIL->pool. */
+   with it.
+   ENTRY must exist in PARENT.
+   Allocations occur in TRAIL->pool. */
 static svn_error_t *
 replace_dir_entry (dag_node_t *parent, 
                    const char *name, 
@@ -648,7 +651,11 @@ replace_dir_entry (dag_node_t *parent,
   {
     svn_string_t *id_str;
     
-    assert (entry_skel != NULL);
+    /* Make sure the entry exists. */
+    if (entry_skel == NULL)
+      return svn_error_createf
+        (SVN_ERR_FS_NO_SUCH_ENTRY, 0, NULL, trail->pool,
+         "no such entry `%s'", name);
 
     /* Get a string representation of the new ID */
     id_str = svn_fs_unparse_id (new_node_id, trail->pool);
@@ -666,9 +673,9 @@ replace_dir_entry (dag_node_t *parent,
 
 
 svn_error_t *
-svn_fs__dag_dir_entries (skel_t **entries_p,
-                         dag_node_t *node,
-                         trail_t *trail)
+svn_fs__dag_dir_entries_skel (skel_t **entries_p,
+                              dag_node_t *node,
+                              trail_t *trail)
 {
   skel_t *node_rev, *entries, *entry;
   
@@ -694,6 +701,37 @@ svn_fs__dag_dir_entries (skel_t **entries_p,
     }
   
   *entries_p = entries;
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_fs__dag_dir_entries_hash (apr_hash_t **table_p,
+                              dag_node_t *node,
+                              trail_t *trail)
+{
+  skel_t *entries, *entry;
+  apr_hash_t *table;
+
+  SVN_ERR (svn_fs__dag_dir_entries_skel (&entries, node, trail));
+
+  /* Build a hash table from the directory entry list.  */
+  table = apr_hash_make (trail->pool);
+  for (entry = entries->children; entry; entry = entry->next)
+    {
+      skel_t *name_skel = entry->children;
+      skel_t *id_skel   = entry->children->next;
+      svn_fs_dirent_t *dirent = apr_pcalloc (trail->pool, sizeof (*dirent));
+
+      dirent->name = apr_pstrndup (trail->pool, name_skel->data,
+                                   name_skel->len);
+      dirent->id = svn_fs_parse_id (id_skel->data, id_skel->len, trail->pool);
+
+      apr_hash_set (table, dirent->name, name_skel->len, dirent);
+    }
+
+  *table_p = table;
+
   return SVN_NO_ERROR;
 }
 
@@ -1089,7 +1127,7 @@ svn_error_t *svn_fs__dag_delete (dag_node_t *parent,
   /* Get a fresh NODE-REVISION for this node. */
   SVN_ERR (get_node_revision (&node_rev, parent, trail));
 
-  /* We don't use svn_fs__dag_dir_entries here -- to keep things
+  /* We don't use svn_fs__dag_dir_entries_skel here -- to keep things
    * simple, we're going to dup the entire directory node-revision
    * skel anyway, since we're changing it.  Given that, we might as
    * well just find copy's entries list by hand and modify it
@@ -1263,7 +1301,7 @@ svn_error_t *svn_fs__dag_link (dag_node_t *parent,
      PARENT is mutable, and we know that CHILD is immutable (since
      every parent of a mutable node is mutable itself, we know that
      CHILD can't be equal to, or a parent of, PARENT).  */
-  SVN_ERR (add_new_entry (parent, child, name, trail ));
+  SVN_ERR (add_new_entry (parent, svn_fs__dag_get_id (child), name, trail));
 
   return SVN_NO_ERROR;
 }
@@ -1644,7 +1682,7 @@ svn_error_t *svn_fs__dag_make_copy (dag_node_t **child_p,
   /* We can safely call add_new_entry because we already know that
      PARENT is mutable, and we just created CHILD, so we know it has
      no ancestors (therefore, PARENT cannot be an ancestor of CHILD) */
-  SVN_ERR (add_new_entry (parent, *child_p, name, trail ));
+  SVN_ERR (add_new_entry (parent, svn_fs__dag_get_id (*child_p), name, trail));
 
   return SVN_NO_ERROR;
 
@@ -1664,6 +1702,290 @@ svn_error_t *svn_fs__dag_get_copy (svn_revnum_t *rev_p,
   abort();
   /* NOTREACHED */
   return NULL;
+}
+
+
+
+/*** Merging ***/
+
+svn_error_t *
+svn_fs__dag_merge (const char **conflict_p,
+                   const char *target_path,
+                   dag_node_t *source,
+                   dag_node_t *target,
+                   dag_node_t *ancestor,
+                   trail_t *trail)
+{
+  const svn_fs_id_t *source_id, *target_id, *ancestor_id;
+  svn_fs_t *fs;
+  svn_boolean_t is_mutable;
+
+  /* Make sure everyone comes from the same filesystem. */
+  if ((ancestor->fs != source->fs)
+      || (ancestor->fs != target->fs))
+    {
+      return svn_error_createf
+        (SVN_ERR_FS_CORRUPT, 0, NULL, trail->pool,
+         "Bad merge -- ancestor, source, and target not all in same fs: "
+         "filesystems `%s', `%s', and `%s' respectively.",
+         ancestor->fs->env_path ? ancestor->fs->env_path : "(none)",
+         source->fs->env_path ? source->fs->env_path : "(none)",
+         target->fs->env_path ? target->fs->env_path : "(none)");
+    }
+
+  /* We have the same fs, now check it. */
+  fs = ancestor->fs;
+  SVN_ERR (svn_fs__check_fs (fs));
+
+  /* Make sure we're merging into a mutable target. */
+  SVN_ERR (svn_fs__dag_check_mutable (&is_mutable, target, trail));
+  if (! is_mutable)
+    {
+      return svn_error_create
+        (SVN_ERR_FS_CONFLICT, 0, NULL, trail->pool,
+         "attempting to merge into a non-mutable target");
+    }
+
+  source_id   = svn_fs__dag_get_id (source);
+  target_id   = svn_fs__dag_get_id (target);
+  ancestor_id = svn_fs__dag_get_id (ancestor);
+
+  /* It's improper to call this function with ancestor == target. */
+  if (svn_fs_id_eq (ancestor_id, target_id))
+    {
+      svn_string_t *id_str = svn_fs_unparse_id (ancestor_id, trail->pool);
+      return svn_error_createf
+        (SVN_ERR_FS_CONFLICT, 0, NULL, trail->pool,
+         "Bad merge call -- ancestor and target are the same id (`%s')",
+         id_str->data);
+    }
+
+  *conflict_p = NULL;
+
+  /* Base cases:
+   * Either no change made in source, or same change as made in target.
+   * Both mean nothing to merge here.
+   */
+  if (svn_fs_id_eq (ancestor_id, source_id)
+      || (svn_fs_id_eq (source_id, target_id)))
+    return SVN_NO_ERROR;
+
+  /* Else proceed, knowing all three are distinct node revisions.
+   *
+   * How to merge from this point: 
+   *
+   * if (all 3 are directories)
+   *   {
+   *     for (each entry E in ancestor)
+   *       {
+   *         if (E exists in target and source)
+   *           {
+   *             if (source entry points to different id than E)
+   *               {
+   *                 if (target entry points to same id as ancestor E)
+   *                   change target to point to same id as source entry;
+   *                 else if (target entry id different from source entry id)
+   *                   {
+   *                     if (all 3 entries point to directories)
+   *                       // We know they are different directories, so...
+   *                       recursively merge;
+   *                     else
+   *                       conflict;
+   *                   }
+   *                 // Else target entry same as source entry; do nothing.
+   *               }
+   *           }
+   *         else if (E exists in source but not target)
+   *           add same entry to target, pointing to source entry's id
+   *
+   *         // Otherwise: E exists in neither target nor source, OR
+   *         // E exists in target but not source.  Both are no-ops
+   *         // for our purposes, so do nothing.
+   *       }
+   *
+   *     for (each remaining entry E in source)
+   *       {
+   *         if (E does not exist in target)
+   *           add it to target, based on source;
+   *         else if (E exists in target but different id than E in source)
+   *           conflict;
+   *       }
+   *         
+   *     // All entries in ancestor and source are accounted for.
+   *     // Remaining entries in target should be left as-is.
+   *   }
+   * else   // not all directories, and distinct node revisions
+   *   conflict;
+   *
+   */
+
+  /* If target has not changed since ancestor, it's an error. */
+  if (svn_fs_id_eq (ancestor_id, target_id))
+    {
+      svn_string_t *id_str = svn_fs_unparse_id (target_id, trail->pool);
+      return svn_error_createf
+        (SVN_ERR_FS_CORRUPT, 0, NULL, trail->pool,
+         "Bad merge call -- target `%s' has id `%s', same as ancestor.",
+         target_path, id_str->data);
+    }
+  else if (svn_fs__dag_is_directory (source)
+           && svn_fs__dag_is_directory (target)
+           && svn_fs__dag_is_directory (ancestor))
+    {
+      apr_hash_t *s_entries, *t_entries, *a_entries;
+      apr_hash_index_t *hi;
+      
+      SVN_ERR (svn_fs__dag_dir_entries_hash (&s_entries, source, trail));
+      SVN_ERR (svn_fs__dag_dir_entries_hash (&t_entries, target, trail));
+      SVN_ERR (svn_fs__dag_dir_entries_hash (&a_entries, ancestor, trail));
+
+      /* for each entry E in a_entries... */
+      for (hi = apr_hash_first (a_entries); hi; hi = apr_hash_next (hi))
+        {
+          svn_fs_dirent_t *s_entry, *t_entry, *a_entry;
+
+          const void *key;
+          void *val;
+          apr_size_t klen;
+          
+          /* KEY will be the entry name in ancestor, VAL the dirent */
+          apr_hash_this (hi, &key, &klen, &val);
+          a_entry = val;
+          
+          /* E exists in target and source (as well as ancestor) */
+          if ((s_entry = apr_hash_get (s_entries, key, klen))
+              && (t_entry = apr_hash_get (t_entries, key, klen)))
+            {
+              /* If source entry has changed since ancestor entry... */
+              if (! svn_fs_id_eq (a_entry->id, s_entry->id))
+                {
+                  /* ... and if target entry has not changed, then... */
+                  if (svn_fs_id_eq (a_entry->id, t_entry->id))
+                    {
+                      /* ... target takes source. */
+                      SVN_ERR (replace_dir_entry (target, t_entry->name,
+                                                  s_entry->id, trail));
+                    }
+                  /* or if target entry is different from both, then... */
+                  else if (! svn_fs_id_eq (s_entry->id, t_entry->id))
+                    {
+                      dag_node_t *s_ent_node, *t_ent_node, *a_ent_node;
+                      
+                      SVN_ERR (svn_fs__dag_get_node (&s_ent_node, fs,
+                                                     s_entry->id, trail));
+                      SVN_ERR (svn_fs__dag_get_node (&t_ent_node, fs,
+                                                     t_entry->id, trail));
+                      SVN_ERR (svn_fs__dag_get_node (&a_ent_node, fs,
+                                                     a_entry->id, trail));
+                      
+                      /* ... and all three entries are dirs, then... */
+                      if (svn_fs__dag_is_directory (s_ent_node)
+                          && svn_fs__dag_is_directory (t_ent_node)
+                          && svn_fs__dag_is_directory (a_ent_node))
+                        {
+                          /* ... just recurse. */
+
+                          /* ### kff todo: would be nice to use an
+                             abstracted, char * based path function
+                             here, if we had one. */
+                          const char *new_tpath
+                            = apr_psprintf (trail->pool, "%s/%s",
+                                            target_path, t_entry->name);
+
+                          SVN_ERR (svn_fs__dag_merge
+                                   (conflict_p, new_tpath,
+                                    s_ent_node, t_ent_node, a_ent_node,
+                                    trail));
+                        }
+                      else  /* otherwise, they're not all dirs, so... */
+                        {
+                          /*... flag a conflict. */
+                          *conflict_p = target_path;
+                          return svn_error_createf
+                            (SVN_ERR_FS_CONFLICT, 0, NULL, trail->pool,
+                             "conflict at \"%s\"", target_path);
+                        }
+                    }
+                  /* Else target entry has changed since ancestor
+                     entry, but it changed to the same thing as source
+                     entry, so we need do nothing. */
+                }
+            }
+          /* E exists in source but not target */
+          else if ((s_entry = apr_hash_get (s_entries, key, klen))
+                   && (! apr_hash_get (t_entries, key, klen)))
+            {
+              /* target takes source */
+              SVN_ERR (add_new_entry (target, s_entry->id, s_entry->name,
+                                      trail));
+            }
+          
+          /* The remaining two cases are;
+           *    - E exists in neither source nor target
+           *    - E exists in target but not source
+           *
+           * The first means a double delete, the second means E
+           * was added in target only.  In both cases, target
+           * stays as is.
+           */
+          
+          /* We've taken care of any possible implications E could
+             have.  Remove it from source_entries, so it's easy
+             later to loop over all the source entries that didn't
+             exist in ancestor_entries. */
+          apr_hash_set (s_entries, key, klen, NULL);
+        }
+      
+      /* For each entry E in source but not in ancestor */
+      for (hi = apr_hash_first (s_entries); hi; hi = apr_hash_next (hi))
+        {
+          svn_fs_dirent_t *s_entry, *t_entry;
+          const void *key;
+          void *val;
+          apr_size_t klen;
+          
+          apr_hash_this (hi, &key, &klen, &val);
+          s_entry = val;
+          t_entry = apr_hash_get (t_entries, key, klen);
+
+          /* E does not exist in target */
+          if (! t_entry)
+            {
+              /* target takes source */
+              SVN_ERR (add_new_entry (target, s_entry->id, s_entry->name,
+                                      trail));
+            }
+          /* E exists in target but is different from E in source */
+          else if (! svn_fs_id_eq (s_entry->id, t_entry->id))
+            {
+              *conflict_p = target_path;
+              return svn_error_createf
+                (SVN_ERR_FS_CONFLICT, 0, NULL, trail->pool,
+                 "conflict at \"%s\"", target_path);
+
+              /* The remaining case would be: E exists in target and
+               * is same as in source.  This implies a twin add, so
+               * target just stays as is.
+               */
+            }
+        }
+      
+      /* All entries in ancestor and source have been accounted for.
+       *
+       * Any entry E in target that does not exist in ancestor or
+       * source is a non-conflicting add, so we don't need to do
+       * anything about it. 
+       */
+    }
+  else  /* they are distinct node revisions, and not all directories */
+    {
+      *conflict_p = target_path;
+      return svn_error_createf
+        (SVN_ERR_FS_CONFLICT, 0, NULL, trail->pool,
+         "conflict at \"%s\"", target_path);
+    }
+
+  return SVN_NO_ERROR;
 }
 
 

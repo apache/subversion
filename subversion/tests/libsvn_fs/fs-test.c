@@ -18,6 +18,7 @@
 #include "svn_fs.h"
 
 #include "../../libsvn_fs/fs.h"
+#include "../../libsvn_fs/dag.h"
 #include "../../libsvn_fs/rev-table.h"
 #include "../../libsvn_fs/nodes-table.h"
 #include "../../libsvn_fs/trail.h"
@@ -1614,7 +1615,11 @@ attempt_merge (svn_boolean_t conflict_expected,
 }
 
 
-/* Test svn_fs_merge(). */
+/* Test svn_fs__dag_merge().
+   NOTE: this test should really test svn_fs_merge().  However, the
+   internal functionality we need for commits right now, today, here,
+   as we speak, is svn_fs__dag_merge().  So we're testing that for
+   now.  */ 
 static svn_error_t *
 merge_trees (const char **msg)
 {

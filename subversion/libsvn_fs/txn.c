@@ -185,7 +185,7 @@ delete_from_id (svn_fs_t *fs, svn_fs_id_t *id, trail_t *trail)
   if (svn_fs__dag_is_directory (node))
     {
       skel_t *entries, *entry;
-      SVN_ERR (svn_fs__dag_dir_entries (&entries, node, trail));
+      SVN_ERR (svn_fs__dag_dir_entries_skel (&entries, node, trail));
           
       for (entry = entries->children; entry; entry = entry->next)
         {
