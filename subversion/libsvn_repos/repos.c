@@ -1128,48 +1128,6 @@ svn_repos_recover (const char *path,
   svn_repos_t *repos;
   apr_pool_t *subpool = svn_pool_create (pool);
 
-  /* Destroy ALL existing svn locks on the repository.  If we're
-     recovering, we need to ensure we have exclusive access.  The
-     theory is that the caller *knows* that all existing locks are
-     'dead' ones, left by dead processes.  (The caller might be a
-     human running 'svnadmin recover', or maybe some future repository
-     lock daemon.) */
-  {
-    const char *lockfile_path;
-    apr_file_t *lockfile_handle;
-    apr_status_t apr_err;
-    svn_repos_t *locked_repos;
-
-    /* We're not calling get_repos to fetch a repository structure,
-       because this routine actually tries to open the db environment,
-       which would hang.   So we replicate a bit of get_repos's code
-       here: */
-    SVN_ERR (check_repos_version (path, subpool));
-
-    locked_repos = apr_pcalloc (subpool, sizeof (*locked_repos));
-    init_repos_dirs (locked_repos, path, subpool);
-    
-    /* Get a filehandle for the wedged repository's db lockfile. */
-    lockfile_path = svn_repos_db_lockfile (locked_repos, subpool);
-    SVN_ERR_W (svn_io_file_open (&lockfile_handle, lockfile_path,
-                                 APR_READ, APR_OS_DEFAULT, pool),
-               "svn_repos_recover: error opening db lockfile");
-    
-    apr_err = apr_file_unlock (lockfile_handle);
-    if (apr_err && ! APR_STATUS_IS_EACCES(apr_err))
-      return svn_error_createf
-        (apr_err, NULL,
-         "svn_repos_recover: failed to delete all locks on repository '%s'.",
-         path);
-
-    apr_err = apr_file_close (lockfile_handle);
-    if (apr_err)
-      return svn_error_createf
-        (apr_err, NULL,
-         "svn_repos_recover: failed to close lockfile on repository '%s'.",
-         path);
-  }
-  
   /* Fetch a repository object initialized with an EXCLUSIVE lock on
      the database.   This will at least prevent others from trying to
      read or write to it while we run recovery. */
