@@ -88,25 +88,14 @@ svn_create_error (ap_status_t err,
                   svn_error_t *child;
                   ap_pool_t *pool)
 {
-  svn_error_t *new_error;     /* The error we're going to return */
-  char *strerror_msg;         /* A place to store result of strerror() */
-
   /* Create the new error structure */
-  new_error = (svn_error_t *) ap_palloc (pool,
-                                         sizeof(svn_error_t));
-
-  /* Create space for strerror()'s result */
-  strerror_msg = ap_palloc (pool, 100);
+  svn_error_t *new_error = (svn_error_t *) ap_palloc (pool,
+                                                      sizeof(svn_error_t));
 
   new_error->err = err;
   new_error->fatal = fatal;
   new_error->message = message;
   new_error->child = child;
-
-  new_error->apr_errno = ap_canonical_error (errno);
-  ap_strerror (err, strerror_msg, 100);
-  new_error->apr_description = strerror_msg;
-
   new_error->pool = pool;  
 
   return new_error;
@@ -137,22 +126,27 @@ svn_quick_wrap_error (svn_error_t *child, char *new_msg)
 */
 
 void
-svn_handle_error (svn_error_t *err)
+svn_handle_error (svn_error_t *err, FILE *stream)
 {
+  char buf[100];
 
   /* Pretty-print the error */
   /* Note: we can also log errors here someday. */
-  printf ("\nsvn_error: errno %d,, apr_errno %d: %s\n", 
-          err->err, err->apr_errno, err->apr_description);
-  printf ("      %s\n", err->message);
-  fflush (stdout);
+  /* Create space for strerror()'s result */
+  
+  fprintf (stream, "\nsvn_error: errno %d, apr_errno %d: %s\n", 
+           err->err, 
+           ap_canonical_error (err->err),
+           ap_strerror (err->err, buf, 100));
+  fprintf (stream, "      %s\n", err->message);
+  fflush (stream);
 
   if (err->child == NULL)  /* bottom of exception stack */
     {
       /* Bail if fatal */
       if (err->fatal)
         {
-          printf ("Fatal error, exiting.\n");
+          fprintf (stream, "Fatal error, exiting.\n");
           exit (err->err);
         }
       
@@ -165,7 +159,7 @@ svn_handle_error (svn_error_t *err)
   /* Bail if fatal */
   if (err->fatal)
     {
-      printf ("Fatal error, exiting.\n");
+      fprintf (stream, "Fatal error, exiting.\n");
       exit (err->err);
     }
 }
