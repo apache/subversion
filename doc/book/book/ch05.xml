@@ -155,7 +155,7 @@
       <para>As of Subversion 1.1, there are two options for storing
         data in a Subversion repository.  One type of repository
         stores everything in a Berkeley DB database; the other kind
-        stores data in ordinary flat files, using a proprietary binary
+        stores data in ordinary flat files, using a custom
         format.  Because Subversion developers often refer to a
         repository as "The [Versioned] Filesystem", they have adopted
         the habit of referring to the latter type of repository as
