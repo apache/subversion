@@ -5,20 +5,35 @@ import sys
 import operator
 
 
+_re_trail = re.compile('\((?P<txn_body>[a-z_]*), (?P<filename>[a-z_\-./]*), (?P<lineno>[0-9]*), (?P<txn>0|1)\): (?P<ops>.*)')
 _re_table_op = re.compile('\(([a-z]*), ([a-z]*)\)')
+
+_seperator = '------------------------------------------------------------\n'
 
 def parse_trails_log(infile):
   trails = []
   for line in infile.readlines():
-    trail = _re_table_op.findall(line)
+    m = _re_trail.match(line)
+
+    txn = int(m.group('txn'))
+    if not txn:
+      ### We're not interested in trails that don't use txns at this point.
+      continue
+
+    txn_body = (m.group('txn_body'), m.group('filename'),
+                int(m.group('lineno')))
+    trail = _re_table_op.findall(m.group('ops'))
     trail.reverse()
-    trails.append(trail)
+    
+    trails.append((txn_body, trail))
 
   return trails
 
 
 def output_summary(trails, outfile):
-  ops = map(len, trails)
+  ops = []
+  for (txn_body, trail) in trails:
+    ops.append(len(trail))
   ops.sort()
 
   total_trails = len(ops)
@@ -26,7 +41,10 @@ def output_summary(trails, outfile):
   max_ops = ops[-1]
   median_ops = ops[total_trails / 2]
   average_ops = float(total_ops) / total_trails
-  
+
+  outfile.write(_seperator)
+  outfile.write('Summary\n')
+  outfile.write(_seperator)
   outfile.write('Total number of trails: %10i\n' % total_trails)
   outfile.write('Total number of ops:    %10i\n' % total_ops)
   outfile.write('max ops/trail:          %10i\n' % max_ops)
@@ -36,28 +54,59 @@ def output_summary(trails, outfile):
 
 
 # custom compare function
-def freqtable_cmp((a, b), (c, d)):
+def _freqtable_cmp((a, b), (c, d)):
   c = cmp(d, b)
   if not c:
     c = cmp(a, c)
   return c
 
-def output_trail_length_frequencies(trails, outfile):
-  ops = map(len, trails)
+def list_frequencies(list):
+  """
+  Given a list, return a list composed of (item, frequency)
+  in sorted order
+  """
+  
+  counter = {}
+  for item in list:
+    counter[item] = counter.get(item, 0) + 1
 
-  frequencies = {}
-  for rank in ops:
-    frequencies[rank] = frequencies.get(rank, 0) + 1
+  frequencies = counter.items()
+  frequencies.sort(_freqtable_cmp)
+
+  return frequencies
+
+
+def output_trail_length_frequencies(trails, outfile):
+  ops = []
+  for (txn_body, trail) in trails:
+    ops.append(len(trail))
 
   total_trails = len(ops)
+  frequencies = list_frequencies(ops)
  
-  ranks = frequencies.items()
-  ranks.sort(freqtable_cmp)
-
+  outfile.write(_seperator)
+  outfile.write('Trail length frequencies\n')
+  outfile.write(_seperator)
   outfile.write('ops/trail   frequency   percentage\n')
-  for (r, f) in ranks:
+  for (r, f) in frequencies:
     p = float(f) * 100 / total_trails
     outfile.write('%4i         %6i       %5.2f\n' % (r, f, p))
+  outfile.write('\n')
+
+
+def output_trail(outfile, trail, column = 0):
+  ### Output the trail itself, in it's own column
+  line = str(trail[0])
+  for op in trail[1:]:
+    op_str = str(op)
+    if len(line) + len(op_str) > 75 - column:
+      outfile.write('%s,\n' % line)
+      outfile.write(''.join(' ' * column))
+      line = op_str
+    else:
+      line = line + ', ' + op_str
+  outfile.write('%s\n' % line)
+    
   outfile.write('\n')
 
 
@@ -65,35 +114,39 @@ def output_trail_frequencies(trails, outfile):
 
   total_trails = len(trails)
 
-  # Since lists can't be keys, turn all trails into tuples
-  ttrails = map(tuple, trails)
-  
-  freqs = {}
-  for trail in ttrails:
-    freqs[trail] = freqs.get(trail, 0) + 1
+  ttrails = []
+  for (txn_body, trail) in trails:
+    ttrails.append((txn_body, tuple(trail)))
 
-  ops = freqs.items()
-  ops.sort(freqtable_cmp)
+  frequencies = list_frequencies(ttrails)
 
+  outfile.write(_seperator)
+  outfile.write('Trail frequencies\n')
+  outfile.write(_seperator)
   outfile.write('frequency   percentage   ops/trail   trail\n')
-  for (tt, f) in ops:
+  for (((txn_body, file, line), trail), f) in frequencies:
     p = float(f) * 100 / total_trails
-    t = list(tt)
-    outfile.write('%6i        %5.2f       %4i       ' % (f, p, len(t)))
-    
-    ### Output the trail itself, in it's own column
-    line = str(t[0])
-    for op in t[1:]:
-      op_str = str(op)
-      if len(line) + len(op_str) > 50:
-        outfile.write('%s,\n' % line)
-        outfile.write('                                     ')
-        line = op_str
-      else:
-        line = line + ', ' + op_str
-    outfile.write('%s\n' % line)
-    
-  outfile.write('\n')
+    outfile.write('-- %s - %s:%u --\n' % (txn_body, file, line))
+    outfile.write('%6i        %5.2f       %4i       ' % (f, p, len(trail)))
+    output_trail(outfile, trail, 37)
+
+
+def output_txn_body_frequencies(trails, outfile):
+  bodies = []
+  for (txn_body, trail) in trails:
+    bodies.append(txn_body)
+
+  total_trails = len(trails)
+  frequencies = list_frequencies(bodies)
+  
+  outfile.write(_seperator)
+  outfile.write('txn_body frequencies\n')
+  outfile.write(_seperator)
+  outfile.write('frequency   percentage   txn_body\n')
+  for ((txn_body, file, line), f) in frequencies:
+    p = float(f) * 100 / total_trails
+    outfile.write('%6i        %5.2f       %s - %s:%u\n'
+                  % (f, p, txn_body, file, line))
 
 
 if __name__ == '__main__':
@@ -112,3 +165,4 @@ if __name__ == '__main__':
   output_summary(trails, sys.stdout)
   output_trail_length_frequencies(trails, sys.stdout)
   output_trail_frequencies(trails, sys.stdout)
+  output_txn_body_frequencies(trails, sys.stdout)

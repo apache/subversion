@@ -186,6 +186,21 @@ svn_error_t *svn_fs__retry (svn_fs_t *fs,
                             int use_txn,
                             apr_pool_t *pool);
 
+svn_error_t *svn_fs__retry_debug (svn_fs_t *fs,
+                                  svn_error_t *(*txn_body) (void *baton,
+                                                            trail_t *trail),
+                                  void *baton,
+                                  int use_txn,
+                                  apr_pool_t *pool,
+                                  const char *txn_body_fn_name,
+                                  const char *filename,
+                                  int line);
+
+#if defined(SVN_FS__TRAIL_DEBUG)
+#define svn_fs__retry(fs, txn_body, baton, use_txn, pool) \
+  svn_fs__retry_debug(fs, txn_body, baton, use_txn, pool, \
+                      #txn_body, __FILE__, __LINE__)
+#endif
 
 /* Record a change which should be undone if TRAIL is aborted, either
    because of a deadlock or an error.
