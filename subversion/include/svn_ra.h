@@ -422,10 +422,11 @@ typedef struct svn_ra_plugin_t
                             svn_revnum_t *fetched_rev,
                             apr_hash_t **props);
 
-  /* Set *DIRENTS to contain all the entries of directory PATH at
-     REVISION; PATH is interpreted relative to the url in
-     SESSION_BATON.  The keys are entry names (const char *), and the
-     values are dirents (svn_dirent_t *).
+  /* If DIRENTS is non-null, set *DIRENTS to contain all the entries
+     of directory PATH at REVISION.  The keys of DIRENTS will be entry
+     names (const char *), and the values dirents (svn_dirent_t *).
+
+     PATH is interpreted relative to the url in SESSION_BATON.  
 
      If REVISION is SVN_INVALID_REVNUM (meaning 'head') and
      *FETCHED_REV is not NULL, then this function will set

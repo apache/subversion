@@ -1014,106 +1014,113 @@ svn_error_t *svn_ra_dav__get_dir(void *session_baton,
         *fetched_rev = got_rev;
     }
 
-  /* Just like Nautilus, Cadaver, or any other browser, we do a
-     PROPFIND on the directory of depth 1. */
-  SVN_ERR( svn_ra_dav__get_props(&resources, ras->sess,
-                                 final_url, NE_DEPTH_ONE,
-                                 NULL, NULL /* all props */, ras->pool) );
-
-  /* Clean up any trailing slashes on final_url, creating stripped_final_url */
-  stripped_final_url = apr_pstrdup(ras->pool, final_url);
-  len = strlen(final_url);
-  if (len > 1 && final_url[len - 1] == '/')
-      stripped_final_url[len - 1] = '\0';
-  
-  /* Now we have a hash that maps a bunch of url children to resource
-     objects.  Each resource object contains the properties of the
-     child.   Parse these resources into svn_dirent_t structs. */
-  *dirents = apr_hash_make (ras->pool);
-  for (hi = apr_hash_first (ras->pool, resources); hi; hi = apr_hash_next (hi))
+  if (dirents)
     {
-      const void *key;
-      void *val;
-      const char *childname;
-      svn_ra_dav_resource_t *resource;
-      const char *propval;
-      apr_hash_index_t *h;
-      svn_dirent_t *entry;
-
-      apr_hash_this (hi, &key, NULL, &val);
-      childname =  key;
-      resource = val;
+      /* Just like Nautilus, Cadaver, or any other browser, we do a
+         PROPFIND on the directory of depth 1. */
+      SVN_ERR( svn_ra_dav__get_props(&resources, ras->sess,
+                                     final_url, NE_DEPTH_ONE,
+                                     NULL, NULL /* all props */, ras->pool) );
       
-      /* Skip the effective '.' entry that comes back from NE_DEPTH_ONE */
-      if (strcmp(resource->url, stripped_final_url) == 0)
-        continue;
-
-      entry = apr_pcalloc (ras->pool, sizeof(*entry));
-
-      /* node kind */
-      entry->kind = resource->is_collection ? svn_node_dir : svn_node_file;
-
-      /* size */
-      propval = apr_hash_get(resource->propset,
-                             SVN_RA_DAV__PROP_GETCONTENTLENGTH,
-                             APR_HASH_KEY_STRING);
-      if (propval == NULL)
-        entry->size = 0;
-      else
-        entry->size = (apr_off_t) atol(propval); /* ### FIXME? */
-
-      /* does this resource contain any 'svn' or 'custom' properties,
-         i.e.  ones actually created and set by the user? */
-      for (h = apr_hash_first (ras->pool, resource->propset);
-           h; h = apr_hash_next (h))
+      /* Clean up any trailing slashes on final_url, creating
+         stripped_final_url */
+      stripped_final_url = apr_pstrdup(ras->pool, final_url);
+      len = strlen(final_url);
+      if (len > 1 && final_url[len - 1] == '/')
+        stripped_final_url[len - 1] = '\0';
+      
+      /* Now we have a hash that maps a bunch of url children to resource
+         objects.  Each resource object contains the properties of the
+         child.   Parse these resources into svn_dirent_t structs. */
+      *dirents = apr_hash_make (ras->pool);
+      for (hi = apr_hash_first (ras->pool, resources);
+           hi;
+           hi = apr_hash_next (hi))
         {
-          const void *kkey;
-          void *vval;
-          apr_hash_this (h, &kkey, NULL, &vval);
+          const void *key;
+          void *val;
+          const char *childname;
+          svn_ra_dav_resource_t *resource;
+          const char *propval;
+          apr_hash_index_t *h;
+          svn_dirent_t *entry;
           
-          if (strncmp((const char *)kkey, SVN_DAV_PROP_NS_CUSTOM,
-                      sizeof(SVN_DAV_PROP_NS_CUSTOM)) == 0)
-            entry->has_props = TRUE;
-
-          else if (strncmp((const char *)kkey, SVN_DAV_PROP_NS_SVN,
-                           sizeof(SVN_DAV_PROP_NS_SVN)) == 0)
-            entry->has_props = TRUE;
-
+          apr_hash_this (hi, &key, NULL, &val);
+          childname =  key;
+          resource = val;
+          
+          /* Skip the effective '.' entry that comes back from NE_DEPTH_ONE */
+          if (strcmp(resource->url, stripped_final_url) == 0)
+            continue;
+          
+          entry = apr_pcalloc (ras->pool, sizeof(*entry));
+          
+          /* node kind */
+          entry->kind = resource->is_collection ? svn_node_dir : svn_node_file;
+          
+          /* size */
+          propval = apr_hash_get(resource->propset,
+                                 SVN_RA_DAV__PROP_GETCONTENTLENGTH,
+                                 APR_HASH_KEY_STRING);
+          if (propval == NULL)
+            entry->size = 0;
+          else
+            entry->size = (apr_off_t) atol(propval); /* ### FIXME? */
+          
+          /* does this resource contain any 'svn' or 'custom' properties,
+             i.e.  ones actually created and set by the user? */
+          for (h = apr_hash_first (ras->pool, resource->propset);
+               h; h = apr_hash_next (h))
+            {
+              const void *kkey;
+              void *vval;
+              apr_hash_this (h, &kkey, NULL, &vval);
+              
+              if (strncmp((const char *)kkey, SVN_DAV_PROP_NS_CUSTOM,
+                          sizeof(SVN_DAV_PROP_NS_CUSTOM)) == 0)
+                entry->has_props = TRUE;
+              
+              else if (strncmp((const char *)kkey, SVN_DAV_PROP_NS_SVN,
+                               sizeof(SVN_DAV_PROP_NS_SVN)) == 0)
+                entry->has_props = TRUE;
+              
 #ifdef SVN_DAV_FEATURE_USE_OLD_NAMESPACES
-          else if (strncmp((const char *)kkey, SVN_PROP_CUSTOM_PREFIX,
-                           sizeof(SVN_PROP_CUSTOM_PREFIX)) == 0)
-            entry->has_props = TRUE;
-
-          else if (strncmp((const char *)kkey, SVN_PROP_PREFIX,
-                           sizeof(SVN_PROP_PREFIX)) == 0)
-            if (strcmp((const char *)kkey + sizeof(SVN_PROP_PREFIX),
-                       "baseline-relative-path") != 0)
-              entry->has_props = TRUE;          
+              else if (strncmp((const char *)kkey, SVN_PROP_CUSTOM_PREFIX,
+                               sizeof(SVN_PROP_CUSTOM_PREFIX)) == 0)
+                entry->has_props = TRUE;
+              
+              else if (strncmp((const char *)kkey, SVN_PROP_PREFIX,
+                               sizeof(SVN_PROP_PREFIX)) == 0)
+                if (strcmp((const char *)kkey + sizeof(SVN_PROP_PREFIX),
+                           "baseline-relative-path") != 0)
+                  entry->has_props = TRUE;          
 #endif /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
+            }
+          
+          /* created_rev & friends */
+          propval = apr_hash_get(resource->propset,
+                                 SVN_RA_DAV__PROP_VERSION_NAME,
+                                 APR_HASH_KEY_STRING);
+          if (propval != NULL)
+            entry->created_rev = SVN_STR_TO_REV(propval);
+          
+          propval = apr_hash_get(resource->propset,
+                                 SVN_RA_DAV__PROP_CREATIONDATE,
+                                 APR_HASH_KEY_STRING);
+          if (propval != NULL)
+            SVN_ERR( svn_time_from_cstring(&(entry->time),
+                                           propval, ras->pool) );
+          
+          propval = apr_hash_get(resource->propset,
+                                 SVN_RA_DAV__PROP_CREATOR_DISPLAYNAME,
+                                 APR_HASH_KEY_STRING);
+          if (propval != NULL)
+            entry->last_author = propval;
+          
+          apr_hash_set(*dirents, svn_path_basename(childname, ras->pool),
+                       APR_HASH_KEY_STRING, entry);
         }
-
-      /* created_rev & friends */
-      propval = apr_hash_get(resource->propset,
-                             SVN_RA_DAV__PROP_VERSION_NAME,
-                             APR_HASH_KEY_STRING);
-      if (propval != NULL)
-        entry->created_rev = SVN_STR_TO_REV(propval);
-
-      propval = apr_hash_get(resource->propset,
-                             SVN_RA_DAV__PROP_CREATIONDATE,
-                             APR_HASH_KEY_STRING);
-      if (propval != NULL)
-        SVN_ERR( svn_time_from_cstring(&(entry->time), propval, ras->pool) );
-
-      propval = apr_hash_get(resource->propset,
-                             SVN_RA_DAV__PROP_CREATOR_DISPLAYNAME,
-                             APR_HASH_KEY_STRING);
-      if (propval != NULL)
-        entry->last_author = propval;
-
-      apr_hash_set(*dirents, svn_path_basename(childname, ras->pool),
-                   APR_HASH_KEY_STRING, entry);
-  }
+    }
 
   if (props)                    
     {
