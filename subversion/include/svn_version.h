@@ -83,7 +83,7 @@ extern "C" {
  *
  * Always change this at the same time as SVN_VER_NUMTAG.
  */
-#define SVN_VER_TAG        "beta"
+#define SVN_VER_TAG        " (beta1)"
 
 
 /** Number tag: a string describing the version.
@@ -98,7 +98,7 @@ extern "C" {
  *
  * Always change this at the same time as SVN_VER_TAG.
  */
-#define SVN_VER_NUMTAG     "-beta"
+#define SVN_VER_NUMTAG     "-beta1"
 
 
 /** Revision number: The repository revision number of this release.
