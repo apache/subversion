@@ -356,8 +356,8 @@ commit_delete_entry (svn_string_t *name, void *parent_baton)
 static svn_error_t *
 commit_add_dir (svn_string_t *name,
                 void *parent_baton,
-                svn_string_t *ancestor_path,
-                svn_revnum_t ancestor_revision,
+                svn_string_t *copyfrom_path,
+                svn_revnum_t copyfrom_revision,
                 void **child_baton)
 {
   dir_baton_t *parent = parent_baton;
@@ -400,7 +400,7 @@ commit_add_dir (svn_string_t *name,
 static svn_error_t *
 commit_rep_dir (svn_string_t *name,
                 void *parent_baton,
-                svn_revnum_t ancestor_revision,
+                svn_revnum_t base_revision,
                 void **child_baton)
 {
   dir_baton_t *parent = parent_baton;
@@ -460,8 +460,8 @@ commit_close_dir (void *dir_baton)
 static svn_error_t *
 commit_add_file (svn_string_t *name,
                  void *parent_baton,
-                 svn_string_t *ancestor_path,
-                 svn_revnum_t ancestor_revision,
+                 svn_string_t *copyfrom_path,
+                 svn_revnum_t copyfrom_revision,
                  void **file_baton)
 {
   dir_baton_t *parent = parent_baton;
@@ -500,7 +500,7 @@ commit_add_file (svn_string_t *name,
 static svn_error_t *
 commit_rep_file (svn_string_t *name,
                  void *parent_baton,
-                 svn_revnum_t ancestor_revision,
+                 svn_revnum_t base_revision,
                  void **file_baton)
 {
   dir_baton_t *parent = parent_baton;

@@ -284,9 +284,12 @@ typedef struct svn_delta_edit_fns_t
      At the start of traversal, the consumer provides EDIT_BATON, a
      baton global to the entire delta edit.  In the case of
      `svn_xml_parse', this would be the EDIT_BATON argument; other
-     producers will work differently.  The producer should pass this
-     value as the EDIT_BATON argument to the `replace_root' function,
-     to get a baton representing root of the tree being edited.
+     producers will work differently.  If there is a target revision
+     that needs to be set for this operation, the producer should
+     called the 'set_target_revision' function at this point.  Next,
+     the producer should pass this EDIT_BATON to the `replace_root'
+     function, to get a baton representing root of the tree being
+     edited.
 
      Most of the callbacks work in the obvious way:
 
@@ -302,10 +305,10 @@ typedef struct svn_delta_edit_fns_t
 
      Since every call requires a parent directory baton, including
      add_directory and replace_directory, where do we ever get our
-     initial directory baton, to get things started?  The
-     `replace_root' function returns a baton for the top directory of
-     the change.  In general, the producer needs to invoke the
-     editor's `replace_root' function before it can get anything done.
+     initial directory baton, to get things started?  The `replace_root'
+     function returns a baton for the top directory of the change.  In
+     general, the producer needs to invoke the editor's `replace_root'
+     function before it can get anything of interest done.
 
      While `replace_root' provides a directory baton for the root of
      the tree being changed, the `add_directory' and
@@ -397,7 +400,9 @@ typedef struct svn_delta_edit_fns_t
      (This is the top of the subtree being changed, not necessarily
      the root of the filesystem.)  Like any other directory baton, the
      producer should call `close_directory' on ROOT_BATON when they're
-     done.  */
+     done.  And like other replace_* calls, the BASE_REVISION here is
+     the current revision of the directory (before getting bumped up
+     to the new target revision set with set_target_revision). */
   svn_error_t *(*replace_root) (void *edit_baton,
                                 svn_revnum_t base_revision,
                                 void **root_baton);
@@ -422,22 +427,21 @@ typedef struct svn_delta_edit_fns_t
   
   /* We are going to add a new subdirectory named NAME.  We will use
      the value this callback stores in *CHILD_BATON as the
-     PARENT_BATON for further changes in the new subdirectory.  The
-     subdirectory is described as a series of changes to the base; if
-     ANCESTOR_PATH is zero, the changes are relative to an empty
-     directory. */
+     PARENT_BATON for further changes in the new subdirectory.  If
+     COPYFROM_PATH is non-NULL, this add has history (which is the
+     copy case), and its most recent path-y alias was COPYFROM_PATH,
+     which was at version COPYFROM_REVISION. */
   svn_error_t *(*add_directory) (svn_string_t *name,
                                  void *parent_baton,
-                                 svn_string_t *base_path,
-                                 svn_revnum_t base_revision,
+                                 svn_string_t *copyfrom_path,
+                                 svn_revnum_t copyfrom_revision,
                                  void **child_baton);
 
   /* We are going to change the directory entry named NAME to a
      subdirectory.  The callback must store a value in *CHILD_BATON
      that will be used as the PARENT_BATON for subsequent changes in
-     this subdirectory.  The subdirectory is described as a series of
-     changes to the base; if ANCESTOR_PATH is zero, the changes are
-     relative to an empty directory.  */
+     this subdirectory.  BASE_REVISION is the current revision of the
+     subdirectory. */
   svn_error_t *(*replace_directory) (svn_string_t *name,
                                      void *parent_baton,
                                      svn_revnum_t base_revision,
@@ -464,17 +468,21 @@ typedef struct svn_delta_edit_fns_t
   /* We are going to add a new file named NAME.  The callback can
      store a baton for this new file in **FILE_BATON; whatever value
      it stores there will be passed through to apply_textdelta and/or
-     apply_propdelta.  */
+     apply_propdelta.  If COPYFROM_PATH is non-NULL, this add has
+     history (which is the copy case), and its most recent path-y
+     alias was COPYFROM_PATH, which was at version
+     COPYFROM_REVISION. */
   svn_error_t *(*add_file) (svn_string_t *name,
                             void *parent_baton,
-                            svn_string_t *base_path,
-                            svn_revnum_t base_revision,
+                            svn_string_t *copy_path,
+                            svn_revnum_t copy_revision,
                             void **file_baton);
 
   /* We are going to change the directory entry named NAME to a file.
      The callback can store a baton for this new file in **FILE_BATON;
      whatever value it stores there will be passed through to
-     apply_textdelta and/or apply_propdelta.  */
+     apply_textdelta and/or apply_propdelta.  This file has a current
+     revision of BASE_REVISION.  */
   svn_error_t *(*replace_file) (svn_string_t *name,
                                 void *parent_baton,
                                 svn_revnum_t base_revision,
