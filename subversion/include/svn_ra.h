@@ -402,7 +402,7 @@ typedef struct svn_ra_plugin_t
    * If @a dirents is non @c NULL, set @a *dirents to contain all the entries
    * of directory @a path at @a revision.  The keys of @a dirents will be 
    * entry names (<tt>const char *</tt>), and the values dirents 
-   * (<tt>@c svn_dirent_t *</tt>).
+   * (<tt>@c svn_dirent_t *</tt>).  Use @a pool for all allocations.
    *
    * @a path is interpreted relative to the url in @a session_baton.  
    *
@@ -423,7 +423,8 @@ typedef struct svn_ra_plugin_t
                            svn_revnum_t revision,
                            apr_hash_t **dirents,
                            svn_revnum_t *fetched_rev,
-                           apr_hash_t **props);
+                           apr_hash_t **props,
+                           apr_pool_t *pool);
 
 
   /** Check out revision @a revision of the url specified in

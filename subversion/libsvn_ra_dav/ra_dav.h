@@ -117,7 +117,8 @@ svn_error_t *svn_ra_dav__get_dir(
   svn_revnum_t revision,
   apr_hash_t **dirents,
   svn_revnum_t *fetched_rev,
-  apr_hash_t **props);
+  apr_hash_t **props,
+  apr_pool_t *pool);
 
 svn_error_t * svn_ra_dav__abort_commit(
  void *session_baton,

@@ -39,7 +39,8 @@ get_dir_contents (apr_hash_t *dirents,
 
   /* Get the directory's entries, but not its props. */
   if (ra_lib->get_dir)
-    SVN_ERR (ra_lib->get_dir (session, dir, rev, &tmpdirents, NULL, NULL));
+    SVN_ERR (ra_lib->get_dir (session, dir, rev, &tmpdirents, 
+                              NULL, NULL, pool));
   else
     return svn_error_create (SVN_ERR_RA_NOT_IMPLEMENTED, NULL,
                              "No get_dir() available for url schema.");
@@ -131,7 +132,8 @@ svn_client_ls (apr_hash_t **dirents,
 
       /* Get all parent's entries, no props. */
       if (ra_lib->get_dir)
-        SVN_ERR (ra_lib->get_dir (session, "", rev, &parent_ents, NULL, NULL));
+        SVN_ERR (ra_lib->get_dir (session, "", rev, &parent_ents, 
+                                  NULL, NULL, pool));
       else
         return svn_error_create (SVN_ERR_RA_NOT_IMPLEMENTED, NULL,
                                  "No get_dir() available for url schema.");

@@ -309,7 +309,8 @@ get_dirprops_from_ra (struct dir_baton *b)
                                            b->path,
                                            b->edit_baton->revision,
                                            &dirents, NULL,
-                                           &(b->pristine_props)));
+                                           &(b->pristine_props),
+                                           b->pool));
 
   return SVN_NO_ERROR;
 }
