@@ -189,7 +189,7 @@ svn__svr_wrap_logic (svn_fsrequest_t *request)
   /* Check authorization hooks within plugins */
   error = svn_svr_plugin_authorize (request);
   if (error)
-    return svn_quick_wrap_error (error, "svn_svr_plugin_authorize() failed.");
+    return svn_error_quick_wrap (error, "svn_svr_plugin_authorize() failed.");
 }
 
 

@@ -202,7 +202,7 @@ svn_parse (apr_hash_t **uberhash, const char *filename, apr_pool_t *pool)
         ("svn_parse(): can't open for reading, file ", pool);
       svn_string_appendstr (msg, filename, pool);
 
-      return svn_create_error (result, NULL, NULL, pool, msg->data);
+      return svn_error_create (result, NULL, NULL, pool, msg->data);
     }
 
   /* Create a scratch memory pool for buffering our file as we read it */

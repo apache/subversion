@@ -360,7 +360,7 @@ my_read_func (void *baton, char *buffer, apr_size_t *len, apr_pool_t *pool)
 
   if (stat && (stat != APR_EOF)) 
     return
-      svn_create_error (stat, 0, NULL, pool,
+      svn_error_create (stat, 0, NULL, pool,
                         "my_read_func: error reading xmlfile");
   
   return SVN_NO_ERROR;  

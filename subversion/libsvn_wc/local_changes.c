@@ -107,7 +107,7 @@ svn_wc__generic_patcher (void *user_data,
       /* kff todo: write svn_io_copy_file ? */
       char *msg = apr_psprintf (pool, "copying %s to %s",
                                 src->data, target->data);
-      return svn_create_error (apr_err, 0, NULL, pool, msg);
+      return svn_error_create (apr_err, 0, NULL, pool, msg);
     }
 
   return SVN_NO_ERROR;

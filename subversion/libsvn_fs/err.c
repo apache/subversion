@@ -59,7 +59,7 @@
 svn_error_t *
 svn_fs__dberr (apr_pool_t *pool, int db_err)
 {
-  return svn_create_error (SVN_ERR_BERKELEY_DB,
+  return svn_error_create (SVN_ERR_BERKELEY_DB,
 			   db_err,
 			   0,
 			   pool,
@@ -77,7 +77,7 @@ svn_fs__dberrf (apr_pool_t *pool, int db_err, char *fmt, ...)
   msg = apr_pvsprintf (pool, fmt, ap);
   va_end (ap);
 
-  return svn_create_errorf (SVN_ERR_BERKELEY_DB, db_err, 0, pool, 
+  return svn_error_createf (SVN_ERR_BERKELEY_DB, db_err, 0, pool, 
 			    "%s%s", msg, db_strerror (db_err));
 }
 
