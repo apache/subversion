@@ -298,3 +298,20 @@ svn_stream_from_stringbuf (svn_stringbuf_t *str,
   svn_stream_set_write (stream, write_handler_string);
   return stream;
 }
+
+
+svn_error_t *
+svn_stream_for_stdout (svn_stream_t **out, apr_pool_t *pool)
+{
+  apr_file_t *stdout_file;
+  apr_status_t apr_err;
+
+  apr_err = apr_file_open_stdout (&stdout_file, pool);
+  if (apr_err)
+    return svn_error_create
+      (apr_err, NULL, "Unable to open stdout for writing.");
+
+  *out = svn_stream_from_aprfile (stdout_file, pool);
+
+  return SVN_NO_ERROR;
+}

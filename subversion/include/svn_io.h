@@ -381,6 +381,14 @@ svn_stream_t *svn_stream_empty (apr_pool_t *pool);
  */
 svn_stream_t *svn_stream_from_aprfile (apr_file_t *file, apr_pool_t *pool);
 
+/** Return a generic stream connected to stdout.
+ *
+ * Set @a *out to a generic stream connected to stdout, allocated in 
+ * @a pool.  The stream and its underlying APR handle will be closed
+ * when @a pool is cleared or destroyed.
+ */
+svn_error_t *svn_stream_for_stdout (svn_stream_t **out, apr_pool_t *pool);
+
 /** Return a generic stream connected to stringbuf @a str.
  *
  * Return a generic stream connected to stringbuf @a str.  Allocate the
