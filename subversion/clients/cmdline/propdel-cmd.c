@@ -120,8 +120,11 @@ svn_cl__propdel (apr_getopt_t *os,
 
           svn_pool_clear (subpool);
           SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
-          SVN_ERR (svn_client_propset (pname_utf8, NULL, target,
-                                       opt_state->recursive, subpool));
+          /* Pass 0 for 'force' because it doesn't matter here, and
+             opt_state->force doesn't apply to this command anyway. */
+          SVN_ERR (svn_client_propset2 (pname_utf8, NULL, target,
+                                        opt_state->recursive,
+                                        0, subpool));
           if (! opt_state->quiet) 
             {
               SVN_ERR (svn_cmdline_printf

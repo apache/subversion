@@ -219,9 +219,10 @@ add_file (const char *path,
   if (is_special)
     {
       /* This must be a special file. */
-      SVN_ERR (svn_wc_prop_set (SVN_PROP_SPECIAL,
-                                svn_string_create (SVN_PROP_SPECIAL_VALUE, pool),
-                                path, adm_access, pool));
+      SVN_ERR (svn_wc_prop_set2
+               (SVN_PROP_SPECIAL,
+                svn_string_create (SVN_PROP_SPECIAL_VALUE, pool),
+                path, adm_access, 0, pool));
       mimetype = NULL;
     }
   else
@@ -239,7 +240,11 @@ add_file (const char *path,
               void *pval;
           
               apr_hash_this (hi, &pname, NULL, &pval);
-              SVN_ERR (svn_wc_prop_set (pname, pval, path, adm_access, pool));
+              /* It's probably best to pass 0 for force, so that if
+                 the autoprops say to set some weird combination,
+                 we just error and let the user sort it out. */
+              SVN_ERR (svn_wc_prop_set2 (pname, pval, path,
+                                         adm_access, 0, pool));
             }
         }
     }

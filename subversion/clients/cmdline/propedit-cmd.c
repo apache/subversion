@@ -187,7 +187,7 @@ svn_cl__propedit (apr_getopt_t *os,
           SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
           if (svn_path_is_url (target))
             {
-              /* ### If/when svn_client_propset() supports setting
+              /* ### If/when svn_client_propset2() supports setting
                  properties remotely, this guard can go away.  Also,
                  when we do that, we'll have to pass a real auth baton
                  instead of NULL to svn_client_propget() below. */
@@ -243,8 +243,9 @@ svn_cl__propedit (apr_getopt_t *os,
                   (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                    _("Bad encoding option: prop value not stored as UTF8"));
               
-              SVN_ERR (svn_client_propset (pname_utf8, propval, target, 
-                                           FALSE, subpool));
+              SVN_ERR (svn_client_propset2 (pname_utf8, propval, target, 
+                                            FALSE, opt_state->force,
+                                            subpool));
               SVN_ERR
                 (svn_cmdline_printf
                  (subpool, _("Set new value for property '%s' on '%s'\n"),

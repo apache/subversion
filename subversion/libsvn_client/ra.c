@@ -174,7 +174,16 @@ set_wc_prop (void *baton,
 
   SVN_ERR (svn_wc_adm_probe_retrieve (&adm_access, cb->base_access,
                                       full_path, pool));
-  return svn_wc_prop_set (name, value, full_path, adm_access, pool);
+
+  /* We pass 1 for the 'force' parameter here.  Since the property is
+     coming from the repository, we definitely want to accept it.
+     Ideally, we'd raise a conflict if, say, the received property is
+     svn:eol-style yet the file has a locally added svn:mime-type
+     claiming that it's binary.  Probably the repository is still
+     right, but the conflict would remind the user to make sure.
+     Unfortunately, we don't have a clean mechanism for doing that
+     here, so we just set the property and hope for the best. */
+  return svn_wc_prop_set2 (name, value, full_path, adm_access, 1, pool);
 }
 
 
@@ -204,7 +213,9 @@ invalidate_wcprop_for_entry (const char *path,
                                  ? path
                                  : svn_path_dirname (path, pool)),
                                 pool));
-  return svn_wc_prop_set (wb->prop_name, NULL, path, entry_access, pool);
+  /* It doesn't matter if we pass 0 or 1 for force here, since
+     property deletion is always permitted. */
+  return svn_wc_prop_set2 (wb->prop_name, NULL, path, entry_access, 0, pool);
 }
 
 

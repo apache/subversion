@@ -982,11 +982,12 @@ validate_eol_prop_against_file (const char *path,
 
 
 svn_error_t *
-svn_wc_prop_set (const char *name,
-                 const svn_string_t *value,
-                 const char *path,
-                 svn_wc_adm_access_t *adm_access,
-                 apr_pool_t *pool)
+svn_wc_prop_set2 (const char *name,
+                  const svn_string_t *value,
+                  const char *path,
+                  svn_wc_adm_access_t *adm_access,
+                  svn_boolean_t force,
+                  apr_pool_t *pool)
 {
   svn_error_t *err;
   apr_hash_t *prophash;
@@ -1007,19 +1008,21 @@ svn_wc_prop_set (const char *name,
 
   /* Else, handle a regular property: */
 
-  /* Setting an inappropriate property is not allowed, deleting such a
-     property is allowed since older clients allowed (and other clients
-     possibly still allow) setting it. */
+  /* Setting an inappropriate property is not allowed (unless
+     overridden by 'force', in some circumstances).  Deleting an
+     inappropriate property is allowed, however, since older clients
+     allowed (and other clients possibly still allow) setting it in
+     the first place. */
   if (value)
     {
       SVN_ERR (validate_prop_against_node_kind (name, path, kind, pool));
-      if (strcmp (name, SVN_PROP_EOL_STYLE) == 0)
+      if (!force && (strcmp (name, SVN_PROP_EOL_STYLE) == 0))
         {
           new_value = svn_stringbuf_create_from_string (value, pool);
           svn_stringbuf_strip_whitespace (new_value);
           SVN_ERR (validate_eol_prop_against_file (path, adm_access, pool));
         }
-      else if (strcmp (name, SVN_PROP_MIME_TYPE) == 0)
+      else if (!force && (strcmp (name, SVN_PROP_MIME_TYPE) == 0))
         {
           new_value = svn_stringbuf_create_from_string (value, pool);
           svn_stringbuf_strip_whitespace (new_value);
@@ -1035,7 +1038,10 @@ svn_wc_prop_set (const char *name,
               svn_stringbuf_appendbytes (new_value, "\n", 1);
             }
 
-          /* Make sure this is a valid externals property. */
+          /* Make sure this is a valid externals property.  Do not
+             allow 'force' to override, as there is no circumstance in
+             which this is proper (because there is no circumstance in
+             which Subversion can handle it). */
           if (strcmp (name, SVN_PROP_EXTERNALS) == 0)
             {
               /* We don't allow "." nor ".." as target directories in
@@ -1144,6 +1150,18 @@ svn_wc_prop_set (const char *name,
 
   return SVN_NO_ERROR;
 }
+
+
+svn_error_t *
+svn_wc_prop_set (const char *name,
+                 const svn_string_t *value,
+                 const char *path,
+                 svn_wc_adm_access_t *adm_access,
+                 apr_pool_t *pool)
+{
+  return svn_wc_prop_set2 (name, value, path, adm_access, 0, pool);
+}
+
 
 
 svn_boolean_t

@@ -1136,7 +1136,10 @@ svn_client_move (svn_client_commit_info_t **commit_info,
  */
 
 
-/** Set @a propname to @a propval on @a target.  If @a recurse is true, 
+/** 
+ * @since New in 1.2.
+ *
+ * Set @a propname to @a propval on @a target.  If @a recurse is true, 
  * then @a propname will be set on recursively on @a target and all 
  * children.  If @a recurse is false, and @a target is a directory, @a 
  * propname will be set on _only_ @a target.
@@ -1147,7 +1150,27 @@ svn_client_move (svn_client_commit_info_t **commit_info,
  * @c SVN_PROP_PREFIX), then the caller is responsible for ensuring that
  * the value is UTF8-encoded and uses LF line-endings.
  *
+ * If @a force is true, do no validity checking.  But if @a force is
+ * false, and @a propname is not a valid property for @a target,
+ * return an error, either @c SVN_ERR_ILLEGAL_TARGET (if the property
+ * is not appropriate for @a target), or @c SVN_ERR_BAD_MIME_TYPE (if
+ * @a propname is "svn:mime-type", but @a propval is not a valid
+ * mime-type).
+ *
  * Use @a pool for all memory allocation.
+ */
+svn_error_t *
+svn_client_propset2 (const char *propname,
+                     const svn_string_t *propval,
+                     const char *target,
+                     svn_boolean_t recurse,
+                     svn_boolean_t force,
+                     apr_pool_t *pool);
+
+/**
+ * @deprecated Provided for backward compatibility with the 1.1 API.
+ * 
+ * Like svn_client_propset2(), but with @a force always false.
  */
 svn_error_t *
 svn_client_propset (const char *propname,
@@ -1168,7 +1191,7 @@ svn_client_propset (const char *propname,
  * @c SVN_PROP_PREFIX), then the caller is responsible for ensuring that
  * the value UTF8-encoded and uses LF line-endings.
  *
- * Note that unlike its cousin @c svn_client_propset, this routine
+ * Note that unlike its cousin @c svn_client_propset2, this routine
  * doesn't affect the working copy at all;  it's a pure network
  * operation that changes an *unversioned* property attached to a
  * revision.  This can be used to tweak log messages, dates, authors,
