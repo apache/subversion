@@ -31,7 +31,7 @@
       <para>RFC 2518 defines a set of concepts and accompanying
         extension methods to HTTP 1.1 that make the web into a more
         universal read/write medium.  The basic idea is that a
-        WebDAV-compliant webserver can act like a generic fileserver;
+        WebDAV-compliant web server can act like a generic fileserver;
         clients can mount WebDAV <quote>shares</quote> that behave
         much like NFS or SMB shares.</para>
       
