@@ -324,19 +324,15 @@ apr_append_file (const char *src, const char *dst, apr_pool_t *pool)
 
 
 svn_error_t *
-svn_io_copy_file (svn_stringbuf_t *src, svn_stringbuf_t *dst, apr_pool_t *pool)
+svn_io_copy_file (const char *src, const char *dst, apr_pool_t *pool)
 {
   apr_status_t apr_err;
 
-  apr_err = apr_copy_file (src->data, dst->data, pool);
+  apr_err = apr_copy_file (src, dst, pool);
   if (apr_err)
-    {
-      const char *msg
-        = apr_psprintf (pool, "svn_io_copy_file: copying %s to %s",
-                        src->data, dst->data);
-      return svn_error_create (apr_err, 0, NULL, pool, msg);
-    }
-  
+    return svn_error_createf
+      (apr_err, 0, NULL, pool, "svn_io_copy_file: copying %s to %s", src, dst);
+
   return SVN_NO_ERROR;
 }
 
@@ -664,9 +660,7 @@ svn_io_copy_and_translate (const char *src,
                            apr_pool_t *pool)
 {
 #ifndef SVN_TRANSLATE
-  return svn_io_copy_file (svn_stringbuf_create (src, pool),
-                           svn_stringbuf_create (dst, pool),
-                           pool);
+  return svn_io_copy_file (src, dst, pool);
 #else /* ! SVN_TRANSLATE */
   apr_file_t *s = NULL, *d = NULL;  /* init to null important for APR */
   apr_status_t apr_err;
@@ -684,12 +678,9 @@ svn_io_copy_and_translate (const char *src,
 
 #if 0 /* ### todo:  here's a little shortcut */
   if (! (eol_str || keywords))
-    return svn_io_copy_file (svn_stringbuf_create (src, pool),
-                             svn_stringbuf_create (dst, pool),
-                             pool);
+    return svn_io_copy_file (src, dst, pool);
 
 #endif /* 0 */
-
   /* Open source file. */
   apr_err = apr_file_open (&s, src, APR_READ, APR_OS_DEFAULT, pool);
   if (apr_err)
@@ -1020,7 +1011,8 @@ svn_error_t *svn_io_copy_dir_recursively (svn_stringbuf_t *src,
           /* Telescope and de-telescope the dst_target in here */
           svn_path_add_component_nts (dst_target, entryname,
                                       svn_path_local_style);
-          SVN_ERR (svn_io_copy_file (src_target, dst_target, subpool));
+          SVN_ERR (svn_io_copy_file (src_target->data, dst_target->data,
+                                     subpool));
           svn_path_remove_component (dst_target, svn_path_local_style);
         }          
 

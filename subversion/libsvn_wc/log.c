@@ -143,7 +143,7 @@ replace_text_base (svn_stringbuf_t *path,
       apr_status_t apr_err;
       apr_file_t *ignored;
       svn_boolean_t same;
-      svn_stringbuf_t *tmp_workingfile, *pdir, *bname;
+      svn_stringbuf_t *tmp_wfile, *pdir, *bname;
       enum svn_wc__eol_style eol_style;
       const char *eol_str;
 
@@ -167,11 +167,11 @@ replace_text_base (svn_stringbuf_t *path,
        * reread the file if they don't really need to.
        */
       svn_path_split (filepath, &pdir, &bname, svn_path_local_style, pool);
-      tmp_workingfile = svn_wc__adm_path (pdir, TRUE, pool, bname->data, NULL);
+      tmp_wfile = svn_wc__adm_path (pdir, TRUE, pool, bname->data, NULL);
       
       SVN_ERR (svn_io_open_unique_file (&ignored,
-                                        &tmp_workingfile,
-                                        tmp_workingfile,
+                                        &tmp_wfile,
+                                        tmp_wfile,
                                         SVN_WC__TMP_EXT,
                                         FALSE,
                                         pool));
@@ -180,10 +180,10 @@ replace_text_base (svn_stringbuf_t *path,
       if (! (APR_STATUS_IS_SUCCESS (apr_err)))
         return svn_error_createf
           (apr_err, 0, NULL, pool,
-           "replace_text_base: error closing %s", tmp_workingfile->data);
+           "replace_text_base: error closing %s", tmp_wfile->data);
 
       SVN_ERR (svn_io_copy_and_translate (tmp_text_base->data,
-                                          tmp_workingfile->data,
+                                          tmp_wfile->data,
                                           eol_str,
                                           FALSE, /* don't repair eol */
                                           keywords,
@@ -191,12 +191,12 @@ replace_text_base (svn_stringbuf_t *path,
                                           pool));
 
       SVN_ERR (svn_wc__files_contents_same_p
-               (&same, tmp_workingfile, filepath, pool));
+               (&same, tmp_wfile, filepath, pool));
 
       if (! same)
-        SVN_ERR (svn_io_copy_file (tmp_workingfile, filepath, pool));
+        SVN_ERR (svn_io_copy_file (tmp_wfile->data, filepath->data, pool));
 
-      SVN_ERR (svn_io_remove_file (tmp_workingfile->data, pool));
+      SVN_ERR (svn_io_remove_file (tmp_wfile->data, pool));
 
       /* Move committed tmp/text-base to real text-base. */
       SVN_ERR (svn_wc__sync_text_base (filepath, pool));

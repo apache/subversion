@@ -147,7 +147,7 @@ copy_file_administratively (svn_stringbuf_t *src_path,
        src_path->data);
 
   /* Now, make an actual copy of the working file. */
-  SVN_ERR (svn_io_copy_file (src_path, dst_path, pool));
+  SVN_ERR (svn_io_copy_file (src_path->data, dst_path->data, pool));
 
   /* Copy the pristine text-base over.  Why?  Because it's the *only*
      way we can detect any upcoming local mods on the copy.
@@ -178,17 +178,17 @@ copy_file_administratively (svn_stringbuf_t *src_path,
     SVN_ERR (svn_wc__prop_base_path (&dst_bprop, dst_path, 0, pool));
 
     /* Copy the text-base over unconditionally. */
-    SVN_ERR (svn_io_copy_file (src_txtb, dst_txtb, pool));
+    SVN_ERR (svn_io_copy_file (src_txtb->data, dst_txtb->data, pool));
 
     /* Copy the props over if they exist. */
     SVN_ERR (svn_io_check_path (src_wprop, &kind, pool));
     if (kind == svn_node_file)
-      SVN_ERR (svn_io_copy_file (src_wprop, dst_wprop, pool));
+      SVN_ERR (svn_io_copy_file (src_wprop->data, dst_wprop->data, pool));
       
     /* Copy the base-props over if they exist */
     SVN_ERR (svn_io_check_path (src_bprop, &kind, pool));
     if (kind == svn_node_file)
-      SVN_ERR (svn_io_copy_file (src_bprop, dst_bprop, pool));
+      SVN_ERR (svn_io_copy_file (src_bprop->data, dst_bprop->data, pool));
   }
 
   /* Schedule the new file for addition in its parent, WITH HISTORY. */

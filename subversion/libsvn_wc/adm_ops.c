@@ -840,7 +840,7 @@ revert_admin_things (svn_stringbuf_t *parent_dir,
     {
       SVN_ERR (svn_wc__prop_path (&thing, full_path, 0, pool)); 
       SVN_ERR (svn_wc__prop_base_path (&pristine_thing, full_path, 0, pool));
-      err = svn_io_copy_file (pristine_thing, thing, pool);
+      err = svn_io_copy_file (pristine_thing->data, thing->data, pool);
       if (err)
         return svn_error_createf 
           (err->apr_err, 0, NULL, pool,
