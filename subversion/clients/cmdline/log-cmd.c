@@ -122,17 +122,17 @@ log_message_receiver (void *baton,
   /* Number of lines in the msg. */
   int lines;
 
-  /* Date string for humans. */
-  const char *dbuf;
-
   if (rev == 0)
     {
-      printf ("No commits in repository.\n");
+      printf ("No commit for revision 0.\n");
       return SVN_NO_ERROR;
     }
 
   /* ### See http://subversion.tigris.org/issues/show_bug.cgi?id=807
      for more on the fallback fuzzy conversions below. */
+
+  if (author == NULL)
+    author = "(no author)";
 
   err = svn_utf_cstring_from_utf8 (&author_native, author, pool);
   if (err && (APR_STATUS_IS_EINVAL (err->apr_err)))
@@ -140,26 +140,31 @@ log_message_receiver (void *baton,
   else if (err)
     return err;
 
+  if (date && date[0])
+    {
+      /* Convert date to a format for humans. */
+      apr_time_t time_temp;
+      
+      SVN_ERR (svn_time_from_nts (&time_temp, date, pool));
+      date = svn_time_to_human_nts(time_temp, pool);
+    }
+  else
+    date = "(no date)";
+  
   err = svn_utf_cstring_from_utf8 (&date_native, date, pool);
   if (err && (APR_STATUS_IS_EINVAL (err->apr_err)))   /* unlikely! */
     date_native = svn_utf_cstring_from_utf8_fuzzy (date, pool);
   else if (err)
     return err;
 
+  if (msg == NULL)
+    msg = "";
+
   err = svn_utf_cstring_from_utf8 (&msg_native, msg, pool);
   if (err && (APR_STATUS_IS_EINVAL (err->apr_err)))
     msg_native = svn_utf_cstring_from_utf8_fuzzy (msg, pool);
   else if (err)
     return err;
-
-
-  {
-    /* Convert date to a format for humans. */
-    apr_time_t time_temp;
-
-    SVN_ERR (svn_time_from_nts (&time_temp, date, pool));
-    dbuf = svn_time_to_human_nts(time_temp, pool);
-  }
 
 #define SEP_STRING \
   "------------------------------------------------------------------------\n"
@@ -172,7 +177,7 @@ log_message_receiver (void *baton,
 
   lines = num_lines (msg_native);
   printf ("rev %" SVN_REVNUM_T_FMT ":  %s | %s | %d line%s\n",
-          rev, author_native, dbuf, lines, (lines > 1) ? "s" : "");
+          rev, author_native, date_native, lines, (lines > 1) ? "s" : "");
 
   if (changed_paths)
     {
@@ -284,11 +289,17 @@ log_message_receiver_xml (void *baton,
   svn_xml_make_open_tag (&sb, pool, svn_xml_normal, "logentry",
                          "revision", revstr, NULL);
 
+  if (author == NULL)
+    author = "(no author)";
+
   /* <author>xxx</author> */
   svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata, "author",
                          NULL);
   svn_xml_escape_nts (&sb, author, pool);
   svn_xml_make_close_tag (&sb, pool, "author");
+
+  if (date == NULL)
+    date = "(no date)";
 
   /* Print the full, uncut, date.  This is machine output. */
   /* <date>xxx</date> */
@@ -346,6 +357,9 @@ log_message_receiver_xml (void *baton,
       /* </paths> */
       svn_xml_make_close_tag (&sb, pool, "paths");
     }
+
+  if (msg == NULL)
+    msg = "";
 
   /* <msg>xxx</msg> */
   svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata, "msg", NULL);
