@@ -51,7 +51,7 @@ svn_cl__propset (svn_cl__opt_state_t *opt_state,
         if (err)
           return err;
 
-        /* kff todo: prints may be temporary.  Ben? */
+        /* fitz todo: make these print out only when VERBOSE */
         if (value)
           printf ("property `%s' set on %s.\n",
                   name->data, target->data);
