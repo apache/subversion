@@ -3,14 +3,14 @@
 # USAGE: enable-dupkey.sh REPOS_PATH
 #
 # This script will upgrade an existing repository to enable "duplicates"
-# in the 'strings' table. The addition of that flag was added in r####
+# in the 'strings' table. The addition of that flag was added in r1384
 # of Subversion. All old/existing databases need to be updated.
 #
 # Your PATH should refer the BerkeleyDB 4.0 tools (make sure the 4.0
 # versions are found before any others). Typically, you can set this
 # up without needing to permanent modify your PATH; use the following:
 #
-#    $ PATH=/usr/local/BerkeleyDB.4.0:$PATH ./enable-dupkey.sh REPOS_PATH
+#    $ PATH=/usr/local/BerkeleyDB.4.0/bin:$PATH ./enable-dupkeys.sh REPOS_PATH
 #
 # Note that REPOS_PATH refers to a Subversion repository, not the 'db'
 # directory inside the repository.
