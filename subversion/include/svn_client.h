@@ -724,13 +724,12 @@ svn_client_status (svn_revnum_t *result_rev,
  * start to @a end in turn, inclusive (but never invoke @a receiver on a 
  * given log message more than once).
  *
- * @a targets contains all the working copy paths (as <tt>const char 
- * *</tt>'s) for which log messages are desired.  The repository info is
+ * @a targets contains either a URL followed by zero or more relative
+ * paths, or a list working copy paths (as <tt> const char *</tt>'s
+ * for which log messages are desired.  The repository info is
  * determined by taking the common prefix of the target entries' URLs.
- * @a receiver is invoked only on messages 
- * whose revisions involved a change to some path in @a targets.
- *
- * ### todo: the above paragraph is not fully implemented yet.
+ * @a receiver is invoked only on messages whose revisions involved a
+ * change to some path in @a targets.
  *
  * If @a limit is non-zero only invoke @a receiver on the first @a limit
  * logs.
