@@ -39,6 +39,7 @@
 #include "svn_version.h"
 #include "svn_path.h"
 #include "svn_time.h"
+#include "svn_xml.h"
 #include "svn_private_config.h"
 
 #include "ra_dav.h"
@@ -1003,7 +1004,7 @@ shim_svn_ra_dav__lock(svn_ra_session_t *session,
   svn_lock_t *slock;
 
   /* To begin, we convert the incoming path into an absolute fs-path. */
-  url = svn_path_url_add_component (ras->url, path, pool);  
+  url = svn_path_url_add_component(ras->url, path, pool);  
   SVN_ERR(svn_ra_dav__get_baseline_info(NULL, NULL, &fs_path, NULL, ras->sess,
                                         url, SVN_INVALID_REVNUM, pool));
 
@@ -1017,7 +1018,8 @@ shim_svn_ra_dav__lock(svn_ra_session_t *session,
 
   /* Make a neon lock structure. */
   nlock = ne_lock_create();
-  nlock->owner = ne_strdup(comment);
+  nlock->owner = ne_strdup(apr_xml_quote_string(pool, comment, 1));
+
   if ((rv = ne_uri_parse(url, &(nlock->uri))))
     {
       ne_lock_destroy(nlock);

@@ -25,6 +25,7 @@
 #include "svn_client.h"
 #include "client.h"
 #include "svn_path.h"
+#include "svn_xml.h"
 #include "svn_pools.h"
 
 #include "svn_private_config.h"
@@ -250,10 +251,14 @@ open_lock_targets (const svn_wc_entry_t **parent_entry_p,
 
 
 svn_error_t *
-svn_client_lock (apr_array_header_t **locks_p, apr_array_header_t *targets,
-                 const char *comment, svn_boolean_t force,
-                 svn_lock_callback_t lock_func, void *lock_baton,
-                 svn_client_ctx_t *ctx, apr_pool_t *pool)
+svn_client_lock (apr_array_header_t **locks_p,
+                 apr_array_header_t *targets,
+                 const char *comment,
+                 svn_boolean_t force,
+                 svn_lock_callback_t lock_func,
+                 void *lock_baton,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *pool)
 {
   svn_wc_adm_access_t *adm_access;
   const svn_wc_entry_t *entry;
@@ -261,6 +266,15 @@ svn_client_lock (apr_array_header_t **locks_p, apr_array_header_t *targets,
   apr_array_header_t *locks;
   apr_hash_t *path_revs;
   struct lock_baton cb;
+
+  /* Enforce that the comment be xml-escapable. */
+  if (comment)
+    {
+      if (! svn_xml_is_xml_safe(comment, strlen(comment)))
+        return svn_error_create
+          (SVN_ERR_XML_UNESCAPABLE_DATA, NULL,
+           _("Lock comment has illegal characters."));      
+    }
 
   SVN_ERR (open_lock_targets (&entry, &adm_access, &path_revs, 
                               targets, TRUE, force, ctx, pool));
@@ -292,9 +306,12 @@ svn_client_lock (apr_array_header_t **locks_p, apr_array_header_t *targets,
 }
 
 svn_error_t *
-svn_client_unlock (apr_array_header_t *targets, svn_boolean_t force,
-                   svn_lock_callback_t unlock_func, void *lock_baton,
-                   svn_client_ctx_t *ctx, apr_pool_t *pool)
+svn_client_unlock (apr_array_header_t *targets,
+                   svn_boolean_t force,
+                   svn_lock_callback_t unlock_func,
+                   void *lock_baton,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool)
 {
   svn_wc_adm_access_t *adm_access;
   const svn_wc_entry_t *entry;

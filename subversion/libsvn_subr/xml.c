@@ -62,48 +62,27 @@ struct svn_xml_parser_t
 
 /*** XML character validation ***/
 
-/* The values in this table represent validity of char input for
-   Subversion's XML encoders.  Basically, we'll claim that we can
-   handle anything between 0x20 and 0x7F, plus 0x09, 0x0A, and
-   0x0D (the XML-safe whitespace chars).  */
-static const int xml_char_validity[256] = {
-  0, 0, 0, 0, 0, 0, 0, 0,   0, 1, 1, 0, 0, 1, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0,   0, 0, 0, 0, 0, 0, 0, 0,
-  1, 1, 1, 1, 1, 1, 1, 1,   1, 1, 1, 1, 1, 1, 1, 1,
-  1, 1, 1, 1, 1, 1, 1, 1,   1, 1, 1, 1, 1, 1, 1, 1,
-
-  /* 64 */
-  1, 1, 1, 1, 1, 1, 1, 1,   1, 1, 1, 1, 1, 1, 1, 1,
-  1, 1, 1, 1, 1, 1, 1, 1,   1, 1, 1, 1, 1, 1, 1, 1,
-  1, 1, 1, 1, 1, 1, 1, 1,   1, 1, 1, 1, 1, 1, 1, 1,
-  1, 1, 1, 1, 1, 1, 1, 1,   1, 1, 1, 1, 1, 1, 1, 1,
-
-  /* 128 */
-  0, 0, 0, 0, 0, 0, 0, 0,   0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0,   0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0,   0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0,   0, 0, 0, 0, 0, 0, 0, 0,
-
-  /* 192 */
-  0, 0, 0, 0, 0, 0, 0, 0,   0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0,   0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0,   0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0,   0, 0, 0, 0, 0, 0, 0, 0,
-};
-
-
 svn_boolean_t
 svn_xml_is_xml_safe (const char *data, apr_size_t len)
 {
   const char *end = data + len;
   const char *p;
 
-  /* ### We could accept valid UTF-8 as being XML-safe, but what's wrong
-     ### with being conservative? */
   for (p = data; p < end; p++)
     {
-      if (! xml_char_validity[(unsigned char)*p])
+      unsigned char c = *p;
+
+      if (! svn_ctype_isutf8(c))
         return FALSE;
+
+      if (svn_ctype_iscntrl(c))
+        {
+          if ((c != SVN_CTYPE_ASCII_TAB)
+              && (c != SVN_CTYPE_ASCII_LINEFEED)
+              && (c != SVN_CTYPE_ASCII_CARRIAGERETURN)
+              && (c != SVN_CTYPE_ASCII_DELETE))
+            return FALSE;
+        }
     }
   return TRUE;
 }

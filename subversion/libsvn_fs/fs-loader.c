@@ -26,6 +26,7 @@
 #include "svn_version.h"
 #include "svn_fs.h"
 #include "svn_path.h"
+#include "svn_xml.h"
 #include "svn_private_config.h"
 
 #include "fs-loader.h"
@@ -795,6 +796,15 @@ svn_fs_lock (svn_lock_t **lock, svn_fs_t *fs, const char *path,
              const char *comment, svn_boolean_t force, long int timeout,
              svn_revnum_t current_rev, apr_pool_t *pool)
 {
+  /* Enforce that the comment be xml-escapable. */
+  if (comment)
+    {
+      if (! svn_xml_is_xml_safe(comment, strlen(comment)))
+        return svn_error_create
+          (SVN_ERR_XML_UNESCAPABLE_DATA, NULL,
+           _("Lock comment has illegal characters."));      
+    }
+
   return fs->vtable->lock (lock, fs, path, comment, force, timeout,
                            current_rev, pool);  
 }

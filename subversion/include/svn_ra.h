@@ -910,7 +910,8 @@ svn_error_t *svn_ra_get_file_revs (svn_ra_session_t *session,
  * this function will have to "pull" a username from the client, if
  * it hasn't done so already.
  *
- * @a comment is optional: it may describe the lock, or it may be NULL.
+ * @a comment is optional: it's either an xml-escapable UTF8 string
+ * which describes the lock, or it is NULL.
  *
  * If any path is already locked by a different user, then return
  * error.  If @a force is true, then "steal" the existing lock(s)

@@ -77,14 +77,16 @@ svn_lock_to_dav_lock(dav_lock **dlock,
     {
       if (! slock->xml_comment)
         {
-          /* We need to wrap the naked comment with <DAV:owner>, lest
-             we send back an invalid http response.  mod_dav won't do
-             it for us, because it assumes that it personally created
-             every lock in the repository, and thus the wrapping is
-             already present. */
+          /* This comment was originally given to us by an svn client,
+             so, we need to wrap the naked comment with <DAV:owner>,
+             and xml-escape it for safe transport, lest we send back
+             an invalid http response.  (mod_dav won't do it for us,
+             because it assumes that it personally created every lock
+             in the repository.) */
           lock->owner = apr_pstrcat(pool,
                                     "<D:owner xmlns:D=\"DAV:\">",
-                                    slock->comment,
+                                    apr_xml_quote_string(pool,
+                                                         slock->comment, 1),
                                     "</D:owner>", NULL);
         }
       else
@@ -139,6 +141,38 @@ extract_cdata(const char *ownerstring, apr_pool_t *pool)
 }
 
 
+/* Helper func for dav_lock_to_svn_lock:  take an incoming 
+   "<D:owner>&lt;foo&gt;</D:owner>" tag and convert it to
+   "<foo>". */
+static dav_error *
+unescape_xml(const char **output,
+             const char *input,
+             apr_pool_t *pool)
+{
+  apr_xml_parser *xml_parser = apr_xml_parser_create(pool);
+  apr_xml_doc *xml_doc;
+  apr_status_t apr_err;
+  const char *xml_input = apr_pstrcat 
+    (pool, "<?xml version=\"1.0\" encoding=\"utf-8\"?>", input, NULL);
+
+  apr_err = apr_xml_parser_feed(xml_parser, xml_input, strlen(xml_input));
+  if (!apr_err)
+    apr_err = apr_xml_parser_done(xml_parser, &xml_doc);
+
+  if (apr_err)
+    {
+      char errbuf[1024];
+      (void *)apr_xml_parser_geterror(xml_parser, errbuf, sizeof(errbuf));
+      return dav_new_error(pool, HTTP_INTERNAL_SERVER_ERROR,
+                           DAV_ERR_LOCK_SAVE_LOCK, errbuf);
+    }
+
+  apr_xml_to_text(pool, xml_doc->root, APR_XML_X2T_INNER,
+                  xml_doc->namespaces, NULL, output, NULL);
+  return SVN_NO_ERROR;
+}
+
+
 
 /* Helper func:  convert a dav_lock to an svn_lock_t, allocated in pool. */
 static dav_error *
@@ -178,11 +212,20 @@ dav_lock_to_svn_lock(svn_lock_t **slock,
     {
       if (info->svn_client)
         {
-          lock->comment = extract_cdata(dlock->owner, pool);
+          /* mod_dav has forcibly xml-escaped the comment before
+             handing it to us; we need to xml-unescape it (and remove
+             the <D:owner> wrapper) when storing in the repository, so
+             it looks reasonable to the rest of svn. */
+          dav_error *derr;
           lock->xml_comment = 0;  /* comment is NOT xml-wrapped. */
+          derr = unescape_xml(&(lock->comment), dlock->owner, pool);
+          if (derr)
+            return derr;
         }
       else
-        {          
+        { 
+          /* The comment comes from a non-svn client;  don't touch
+             this data at all. */
           lock->comment = apr_pstrdup(pool, dlock->owner);
           lock->xml_comment = 1; /* comment IS xml-wrapped. */
         }

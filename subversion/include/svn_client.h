@@ -1764,9 +1764,9 @@ svn_client_cat (svn_stream_t *out,
  *
  * Lock @a targets in the repository.  Return an error any * @a
  * targets are already locked, unless @a force is true, in which case
- * the locks are stolen.  @a comment, if non-null, is stored with each
- * lock in the repository.  Each acquired lock will be stored in the
- * working copy.
+ * the locks are stolen.  @a comment, if non-null, is an xml-escapable
+ * UTF8 description stored with each lock in the repository.  Each
+ * acquired lock will be stored in the working copy.
  *
  * Call @a svn_lock_callback_t/lock_baton once for each file target is
  * locked.
@@ -1774,10 +1774,14 @@ svn_client_cat (svn_stream_t *out,
  * Return the acquired lock in @a *lock, allocated in @a pool.
  */
 svn_error_t *
-svn_client_lock (apr_array_header_t **locks_p, apr_array_header_t *targets,
-                 const char *comment, svn_boolean_t force,
-                 svn_lock_callback_t lock_func, void *lock_baton,
-                 svn_client_ctx_t *ctx, apr_pool_t *pool);
+svn_client_lock (apr_array_header_t **locks_p,
+                 apr_array_header_t *targets,
+                 const char *comment,
+                 svn_boolean_t force,
+                 svn_lock_callback_t lock_func,
+                 void *lock_baton,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *pool);
 
 /** @since New in 1.2.
  *
@@ -1796,9 +1800,12 @@ svn_client_lock (apr_array_header_t **locks_p, apr_array_header_t *targets,
  * Use @a pool for temporary allocations.
  */
 svn_error_t *
-svn_client_unlock (apr_array_header_t *targets, svn_boolean_t force,
-                   svn_lock_callback_t unlock_func, void *lock_baton,
-                   svn_client_ctx_t *ctx, apr_pool_t *pool);
+svn_client_unlock (apr_array_header_t *targets,
+                   svn_boolean_t force,
+                   svn_lock_callback_t unlock_func,
+                   void *lock_baton,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool);
 
 /** @} */
 

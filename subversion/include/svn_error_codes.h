@@ -189,6 +189,10 @@ SVN_ERROR_START
               SVN_ERR_XML_CATEGORY_START + 3,
               "XML data was not well-formed")
 
+  SVN_ERRDEF (SVN_ERR_XML_UNESCAPABLE_DATA,
+              SVN_ERR_XML_CATEGORY_START + 4,
+              "Data cannot be safely XML-escaped")
+
   /* io errors */
 
   SVN_ERRDEF (SVN_ERR_IO_INCONSISTENT_EOL,
