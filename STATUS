@@ -52,12 +52,6 @@ Candidate changes:
     Justification: Perl correctness issue.
     Votes:
 
-  * r8710, r8713, r8714
-    svn_filesize_t fixes for swig bindings.
-    Justification: Wrong data size == bug, causing segfault.
-    Votes:
-      +1: breser, clkao
-
   * r8712
     apr_time_t warning fixes.
     Justification: Easy warning fix.
