@@ -613,19 +613,19 @@ void svn_swig_py_notify_func(void *baton,
                              svn_revnum_t revision)
 {
   PyObject *function = baton;
-  PyObject *arglist;
   PyObject *result;
 
   if (function != NULL && function != Py_None)
     {
-      arglist = Py_BuildValue("(siisiii)",
-                              path, action, kind, mime_type,
-                              content_state, prop_state, revision);
-
-      result = PyEval_CallObject(function, arglist);
-
-      Py_XDECREF(arglist);
-      Py_XDECREF(result);
+      if ((result = PyObject_CallFunction(function, 
+                                          (char *)"(siisiii)", 
+                                          path, action, kind,
+                                          mime_type,
+                                          content_state, prop_state, 
+                                          revision)) == NULL)
+        {
+          Py_XDECREF(result);
+        }
     }
 }
 
@@ -644,6 +644,9 @@ svn_error_t * svn_swig_py_thunk_log_receiver(void *baton,
   PyObject *result;
   swig_type_info *tinfo = SWIG_TypeQuery("SWIGTYPE_p_svn_log_changed_path_t");
   PyObject *chpaths;
+ 
+  if ((receiver == NULL) || (receiver == Py_None))
+    return SVN_NO_ERROR;
 
   if (changed_paths)
     {
