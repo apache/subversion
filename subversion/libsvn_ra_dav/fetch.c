@@ -1543,7 +1543,7 @@ svn_error_t *svn_ra_dav__change_rev_prop (void *session_baton,
   if (rv != NE_OK)
     {
       const char *msg = apr_psprintf(ras->pool,
-                                     "applying property change to to %s",
+                                     "applying property change to %s",
                                      baseline->url);
       return svn_ra_dav__convert_error(ras->sess, msg, rv);
     }
