@@ -74,13 +74,13 @@
    `svn_delta_window_t' structure, describes how to produce the next
    section of the target string.
 
-   We begin delta generation by calling `svn_delta_files' or
-   `svn_delta_strings' on the files or strings we want to compare.
-   That returns us an `svn_delta_stream_t' object.  We then call
-   `svn_next_delta_window' on the stream object repeatedly; each call
-   generates a new `svn_delta_window_t' object which describes the
-   next portion of the target string.  When `svn_next_delta_window'
-   returns zero, we are done building the target string.  */
+   We begin delta generation by calling `svn_text_delta' on the
+   strings we want to compare.  That returns us an
+   `svn_delta_stream_t' object.  We then call `svn_next_delta_window'
+   on the stream object repeatedly; each call generates a new
+   `svn_delta_window_t' object which describes the next portion of the
+   target string.  When `svn_next_delta_window' returns zero, we are
+   done building the target string.  */
 
 /* An `svn_delta_window' object describes how to reconstruct a section
    of the target string.  It contains a series of instructions which
