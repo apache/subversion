@@ -95,7 +95,7 @@ class GeneratorBase:
 
     # collect all the test scripts
     self.scripts = _collect_paths(parser.get('test-scripts', 'paths'))
-    self.fs_scripts = _collect_paths(parser.get('bdb-test-scripts', 'paths'))
+    self.bdb_scripts = _collect_paths(parser.get('bdb-test-scripts', 'paths'))
 
     self.swig_dirs = string.split(parser.get('swig-dirs', 'paths'))
 
@@ -233,13 +233,13 @@ dep_types = [
   ]
 
 list_types = [
-  'LT_PROJECT',       # Visual C++ projects (TargetSpecial instances)
-  'LT_TEST_DEPS',     # Test programs to build
-  'LT_TEST_PROGS',    # Test programs to run (subset of LT_TEST_DEPS)
-  'LT_FS_TEST_DEPS',  # File system test programs to build
-  'LT_FS_TEST_PROGS', # File system test programs to run
-  'LT_TARGET_DIRS',   # directories where files are built
-  'LT_MANPAGES',      # manpages
+  'LT_PROJECT',        # Visual C++ projects (TargetSpecial instances)
+  'LT_TEST_DEPS',      # Test programs to build
+  'LT_TEST_PROGS',     # Test programs to run (subset of LT_TEST_DEPS)
+  'LT_BDB_TEST_DEPS',  # File system test programs to build
+  'LT_BDB_TEST_PROGS', # File system test programs to run
+  'LT_TARGET_DIRS',    # directories where files are built
+  'LT_MANPAGES',       # manpages
   ]
 
 # create some variables for these
@@ -445,9 +445,9 @@ class TargetExe(TargetLinked):
       if self.testing != 'skip':
         graph.add(DT_LIST, LT_TEST_PROGS, self.filename)
     elif self.install == 'bdb-test':
-      graph.add(DT_LIST, LT_FS_TEST_DEPS, self.filename)
+      graph.add(DT_LIST, LT_BDB_TEST_DEPS, self.filename)
       if self.testing != 'skip':
-        graph.add(DT_LIST, LT_FS_TEST_PROGS, self.filename)
+        graph.add(DT_LIST, LT_BDB_TEST_PROGS, self.filename)
 
     graph.bulk_add(DT_LIST, LT_MANPAGES, string.split(self.manpages))
 

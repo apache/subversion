@@ -59,7 +59,7 @@ static const struct fs_type_defn {
   },
 
   {
-    SVN_FS_TYPE_FSFS, "fsfs",
+    SVN_FS_TYPE_FSFS, "fs",
 #ifdef SVN_LIBSVN_FS_LINKS_FS_FS
     &svn_fs_fs__vtable
 #endif

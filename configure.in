@@ -306,7 +306,7 @@ AH_BOTTOM(
 INSTALL_STATIC_RULES="install-bin install-docs"
 INSTALL_RULES="install-base-lib install-lib install-include install-static"
 INSTALL_RULES="$INSTALL_RULES $INSTALL_APACHE_RULE"
-BUILD_RULES="base-lib lib bin test $BUILD_APACHE_RULE test"
+BUILD_RULES="base-lib lib bin test $BUILD_APACHE_RULE"
 
 if test "$svn_lib_berkeley_db" = "yes"; then
   BUILD_RULES="$BUILD_RULES bdb-lib bdb-test"
@@ -540,6 +540,8 @@ if test "$enable_shared" = "no" -o "$enable_dso" != "yes"; then
   ### /usr/local/BerkeleyDB.4.0.  If libsvn_ra_dav.la comes before 
   ### libsvn_fs.la then libtool ends up linking libsvn_fs to the db3
   ### in /usr/local/lib
+  AC_DEFINE(SVN_LIBSVN_CLIENT_LINKS_RA_LOCAL, 1,
+      [Defined if libsvn_client should link against libsvn_ra_local])
   svn_ra_lib_deps="\$(RA_LOCAL_DEPS)"
   svn_ra_lib_link="\$(RA_LOCAL_LINK)"
 
@@ -670,15 +672,16 @@ dnl  end, where people will actually see them.
 case "$svn_lib_berkeley_db" in
   "no" )
     db_version="$SVN_FS_WANT_DB_MAJOR.$SVN_FS_WANT_DB_MINOR.$SVN_FS_WANT_DB_PATCH"
-    AC_MSG_WARN([we have configured for a client-only build
+    AC_MSG_WARN([we have configured without BDB filesystem support
 
 
-The Subversion filesystem library, part of the server, requires
-Berkeley DB version $db_version or newer, which you don't seem to have
-installed and linked to APR-UTIL.  We have created makefiles which
-will build the Subversion client code only, and skip the server.  You
-can find latest version of Berkeley DB at http://www.sleepycat.com/.
-You can find the latest version of Berkeley DB here:
+The Subversion default filesystem back-end library requires Berkeley
+DB version $db_version or newer, which you don't seem to have
+installed and linked to APR-UTIL.  We have created Makefiles which
+will build without the default filesystem library; you will have to
+use "svnadmin create --fs-type=fsfs PATH" to create a repository using
+the alternative FSFS back-end.  You can find the latest version of
+Berkeley DB here:
   http://www.sleepycat.com/download/index.shtml
 ])
 ;;
