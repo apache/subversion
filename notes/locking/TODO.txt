@@ -12,20 +12,20 @@ MUST HAVE
 
 * research future ra_dav shim removal plan:  will it work? (sussman)
 
-* chat with jorton about neon 0.25 escaping bugs.  This affects:
-
-   * need to xml-escape lock-comments over http.  (sussman;  almost done)
+* chat with jorton about neon 0.25/svn1.2 coordination.
 
 * fs lock-enforcement issues (cmpilato)
 
 * fix svn_fs_access_t handling in svnserve (lundblad?)
    
-* bump fs format file (cmpilato)
+* automatic bumping of fs format file (kfogel)
 
 * autoversioning:
 
     - fix issue 2161 (sussman)
     - research interoperability with popular dav clients (fitz)
+
+* test 4 new hook scripts.  do they actually work?
 
 
 NICE TO HAVE
@@ -49,6 +49,8 @@ NICE TO HAVE
 * get httpd 2.0.54 released, so that svn 1.2 can compile on win32
 
 * get neon 0.25 released, so the control-c bug can go away
+
+* make --keep-locks into a runtime 'config' option
 
 
 -----------------------------------------------
