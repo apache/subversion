@@ -1687,7 +1687,7 @@ apr_dir_is_empty (const char *dir, apr_pool_t *pool)
     }
 
   /* Make sure we broke out of the loop for the right reason. */
-  if (! APR_STATUS_IS_ENOENT (apr_err))
+  if (apr_err && ! APR_STATUS_IS_ENOENT (apr_err))
     return apr_err;
 
   apr_err = apr_dir_close (dir_handle);
