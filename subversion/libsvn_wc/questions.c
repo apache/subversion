@@ -69,7 +69,10 @@ svn_wc_check_wc (const svn_stringbuf_t *path,
          was an error at all, then for our purposes this is not a
          working copy. */
       if (err)
-        *is_wc = FALSE;
+        {
+          svn_error_clear_all (err);
+          *is_wc = FALSE;
+        }
       else
         {
           *is_wc = TRUE;

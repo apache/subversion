@@ -80,33 +80,28 @@ make_error_internal (apr_status_t apr_err,
                      apr_pool_t *pool)
 {
   svn_error_t *new_error;
-  apr_pool_t *newpool;
+  apr_pool_t *this_pool = NULL;
 
   /* Make a new subpool of the active error pool, or else use child's pool. */
   if (pool)
     {
-      apr_pool_t *error_pool;
-      apr_pool_userdata_get ((void **) &error_pool, SVN_ERROR_POOL, pool);
-      if (error_pool)
-        newpool = svn_pool_create (error_pool);
-      else
-        newpool = pool;
+      apr_pool_userdata_get ((void **) &this_pool, SVN_ERROR_POOL, pool);
+      if (! this_pool)
+        this_pool = pool;
     }
   else if (child)
-    newpool = child->pool;
-  else            /* can't happen */
-    return NULL;  /* kff todo: is this a good reaction? */
+    this_pool = child->pool;
 
-  assert (newpool != NULL);
+  assert (this_pool != NULL);
 
   /* Create the new error structure */
-  new_error = (svn_error_t *) apr_pcalloc (newpool, sizeof (*new_error));
+  new_error = (svn_error_t *) apr_pcalloc (this_pool, sizeof (*new_error));
 
   /* Fill 'er up. */
   new_error->apr_err = apr_err;
   new_error->src_err = src_err;
   new_error->child   = child;
-  new_error->pool    = newpool;  
+  new_error->pool    = this_pool;  
 #ifdef SVN_DEBUG
   new_error->file    = error_file;
   new_error->line    = error_line;
@@ -311,9 +306,9 @@ svn_error_compose (svn_error_t *chain, svn_error_t *new_err)
 
 
 void
-svn_error_free (svn_error_t *err)
+svn_error_clear_all (svn_error_t *err)
 {
-  svn_pool_destroy (err->pool);
+  svn_pool_clear (err->pool);
 }
 
 

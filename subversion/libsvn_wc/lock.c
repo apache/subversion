@@ -35,7 +35,7 @@ svn_wc__lock (svn_stringbuf_t *path, int wait_for, apr_pool_t *pool)
                                   svn_node_file, APR_OS_DEFAULT, 0, pool);
     if (err && APR_STATUS_IS_EEXIST(err->apr_err))
       {
-        svn_error_free (err);
+        svn_error_clear_all (err);
         apr_sleep (1 * APR_USEC_PER_SEC);  /* micro-seconds */
         wait_for--;
       }

@@ -222,6 +222,8 @@ process_committed (svn_stringbuf_t *path,
     {
       /* (Ah, PATH must be a file.  So create a logfile in its
          parent instead.) */      
+
+      svn_error_clear_all (err);
       svn_path_split (path, &log_parent, &basename, pool);
       if (svn_path_is_empty (log_parent))
         svn_stringbuf_set (log_parent, ".");
@@ -1341,7 +1343,10 @@ svn_wc_remove_from_revision_control (svn_stringbuf_t *path,
                                                          current_entry_name,
                                                          destroy_wf, subpool);
               if (err && (err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD))
-                left_a_file = TRUE;
+                {
+                  svn_error_clear_all (err);
+                  left_a_file = TRUE;
+                }
               else if (err)
                 return err;
             }
@@ -1354,7 +1359,10 @@ svn_wc_remove_from_revision_control (svn_stringbuf_t *path,
               err = svn_wc_remove_from_revision_control (entrypath, this_dir,
                                                          destroy_wf, subpool);
               if (err && (err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD))
-                left_a_file = TRUE;
+                {
+                  svn_error_clear_all (err);
+                  left_a_file = TRUE;
+                }
               else if (err)
                 return err;
             }

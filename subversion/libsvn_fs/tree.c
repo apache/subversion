@@ -522,12 +522,14 @@ open_path (parent_path_t **parent_path_p,
                   /* If this was the last path component, and the caller
                      said it was optional, then don't return an error;
                      just put a zero node pointer in the path.  */
+
+                  svn_error_clear_all (svn_err);
+
                   if ((flags & open_path_last_optional)
                       && (! next || *next == '\0'))
                     {
                       parent_path = make_parent_path (0, entry,
                                                       parent_path, pool);
-                      svn_error_free (svn_err);
                       break;
                     }
                   else
@@ -1864,6 +1866,8 @@ svn_fs_commit_txn (const char **conflict_p,
           SVN_ERR (svn_fs_youngest_rev (&youngest_rev, fs, pool));
           if (youngest_rev == youngish_rev)
             return err;
+          else
+            svn_error_clear_all (err);
         }
       else if (err)
         return err;
