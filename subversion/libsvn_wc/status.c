@@ -51,13 +51,16 @@ assemble_status (svn_wc_status_t **status,
                  svn_boolean_t get_all,
                  apr_pool_t *pool)
 {
-  svn_error_t *err;
-  svn_boolean_t text_modified_p = FALSE;
-  svn_boolean_t prop_modified_p = FALSE;
-  svn_boolean_t prop_exists = FALSE;
   svn_wc_status_t *stat;
   svn_stringbuf_t *prop_path;
   enum svn_node_kind prop_kind, path_kind;
+  svn_boolean_t text_modified_p = FALSE;
+  svn_boolean_t prop_modified_p = FALSE;
+  svn_boolean_t prop_exists = FALSE;
+
+  /* Defaults for two main variables. */
+  enum svn_wc_status_kind final_text_status = svn_wc_status_none;
+  enum svn_wc_status_kind final_prop_status = svn_wc_status_none;
 
   if (! entry)
     {
@@ -66,123 +69,36 @@ assemble_status (svn_wc_status_t **status,
       return SVN_NO_ERROR;
     }
 
-  /* Pre-emptive strike:  see if there are any local mods.  If not, we
-     might just return NULL instead of a status structure. */
+  /* Implement predecence rules: */
 
-      
-  /* Before examining the entry's state, determine if a property
-     component exists. */
-  err = svn_wc__prop_path (&prop_path, path, 0, pool);
-  if (err) return err;      
-  err = svn_io_check_path (prop_path, &prop_kind, pool);
-  if (err) return err;
-  
+  /* 1. Set the two main variables to "discovered" values first (M, C). 
+        Together, these two stati are of lowest precedence, and C has
+        precedence over M. */
+
+  /* Determine if a property component exists. ### CHANGEME */
+  SVN_ERR (svn_wc__prop_path (&prop_path, path, 0, pool));
+  SVN_ERR (svn_io_check_path (prop_path, &prop_kind, pool));
   if (prop_kind == svn_node_file)
     prop_exists = TRUE;
   
-  /* Look for local mods, independent of other tests. */
-  
-  /* If the entry has a property file, see if it has local
-     changes. */
+  /* If the entry has a property file, see if it has local changes. */
   if (prop_exists)
-    {
-      err = svn_wc_props_modified_p (&prop_modified_p, path, pool);
-      if (err) return err;
-    }
+    SVN_ERR (svn_wc_props_modified_p (&prop_modified_p, path, pool));
   
   /* If the entry is a file, check for textual modifications */
   if (entry->kind == svn_node_file)
-    {
-      err = svn_wc_text_modified_p (&text_modified_p, path, pool);
-      if (err) return err;
-    }
+    SVN_ERR (svn_wc_text_modified_p (&text_modified_p, path, pool));
   
-  /* Check for absence first.  Note that svn_wc_text_modified_p()
-     claims there are no modifications if file is simply absent;
-     instead, we use svn_io_check_path() to discover absence. */
-  err = svn_io_check_path (path, &path_kind, pool);
-  if (err) return err;
-
-  /* If filtering and there are no local mods, return a NULL pointer. */
-  if ((path_kind != svn_node_none)
-      && (! get_all)
-      && (! text_modified_p)
-      && (! prop_modified_p))
-    {
-      *status = NULL;
-      return SVN_NO_ERROR;
-    }
+  if (text_modified_p)
+    final_text_status = svn_wc_status_modified;
   
-  /* If we get here, then we know that either
-       - GET_ALL is set,  or
-       - GET_ALL is zero, but we found that ENTRY has local mods.
-  */
-
-  /* Make a status structure */
-  stat = apr_pcalloc (pool, sizeof(**status));
-
-  /* Copy info from entry struct to status struct */
-  stat->entry = entry;
-  stat->repos_rev = SVN_INVALID_REVNUM;  /* caller fills in */
-  stat->text_status = svn_wc_status_none;       /* default to no status. */
-  stat->prop_status = svn_wc_status_none;       /* default to no status. */
-  stat->repos_text_status = svn_wc_status_none;       /* default */
-  stat->repos_prop_status = svn_wc_status_none;       /* default */
-  stat->locked = FALSE;
-
-  /* TODO (philosophical).  Does it make sense to talk about a
-     directory having "textual" modifications?  I mean, if you
-     `svn add' a file to a directory, does the parent dir now
-     have local modifications?  Are these modifications
-     "textual" in the sense that the "text" of a directory is
-     a list of entries, which has now been changed?  And would
-     we then show that `M' in the first column?  Ponder,
-     ponder.  */
-  
-  /* Mark `M' or `?' in status structure based on tests above. */
-
-  if (path_kind == svn_node_none)
-    stat->text_status = svn_wc_status_absent;
-  else if (text_modified_p)
-    stat->text_status = svn_wc_status_modified;
-
   if (prop_modified_p)
-    stat->prop_status = svn_wc_status_modified;      
-  
-  if (entry->schedule == svn_wc_schedule_add)
-    {
-      /* If an entry has been marked for future addition to the
-         repository, we *know* it has a textual component: */
-      stat->text_status = svn_wc_status_added;
-      
-      /* However, it may or may not have a property component.  If
-         it does, report that portion as "added" too. */
-      if (prop_exists)
-        stat->prop_status = svn_wc_status_added;
-    }
-  
-  else if (entry->schedule == svn_wc_schedule_replace)
-    {
-      stat->text_status = svn_wc_status_replaced;
-      
-      if (prop_exists)
-        stat->prop_status = svn_wc_status_replaced;
-    }
-  
-  else if ((entry->schedule == svn_wc_schedule_delete)
-           || (entry->existence == svn_wc_existence_deleted))
-    {
-      stat->text_status = svn_wc_status_deleted;
-      
-      if (prop_exists)
-        stat->prop_status = svn_wc_status_deleted;
-    }
+    final_prop_status = svn_wc_status_modified;      
   
   if (entry->conflicted)
     {
-      /* We must decide if either component is "conflicted", based
-         on whether reject files are mentioned and/or continue to
-         exist.  Luckily, we have a function to do this.  :) */
+      /* We must decide if either component is still "conflicted",
+         based on whether reject files continue to exist. */
       svn_boolean_t text_conflict_p, prop_conflict_p;
       svn_stringbuf_t *parent_dir;
       
@@ -194,23 +110,82 @@ assemble_status (svn_wc_status_t **status,
       else if (entry->kind == svn_node_dir)
         parent_dir = path;
       
-      err = svn_wc_conflicted_p (&text_conflict_p,
-                                 &prop_conflict_p,
-                                 parent_dir,
-                                 entry,
-                                 pool);
-      if (err) return err;
+      SVN_ERR (svn_wc_conflicted_p (&text_conflict_p, &prop_conflict_p,
+                                    parent_dir, entry, pool));
       
       if (text_conflict_p)
-        stat->text_status = svn_wc_status_conflicted;
+        final_text_status = svn_wc_status_conflicted;
       if (prop_conflict_p)
-        stat->prop_status = svn_wc_status_conflicted;
+        final_prop_status = svn_wc_status_conflicted;
     }
+
+   
+  /* 2. Possibly overwrite the the text_status variable with
+        "scheduled" states from the entry (A, D, R).  As a group,
+        these states are of medium precedence.  They also override any
+        C or M that may be in the prop_status field at this point.*/
+
+  if (entry->schedule == svn_wc_schedule_add)
+    {
+      final_text_status = svn_wc_status_added;
+      final_prop_status = svn_wc_status_none;
+    }
+      
+  else if (entry->schedule == svn_wc_schedule_replace)
+    {
+      final_text_status = svn_wc_status_replaced;
+      final_prop_status = svn_wc_status_none;
+    }
+    
+  else if ((entry->schedule == svn_wc_schedule_delete)
+           || (entry->existence == svn_wc_existence_deleted))
+    {
+      final_text_status = svn_wc_status_deleted;
+      final_prop_status = svn_wc_status_none;
+    }
+
+
+  /* 3. Highest precedence: check to see if file or dir is just
+        missing.  This overrides every possible state *except*
+        deletion.  (If something is deleted or scheduled for it, we
+        don't care if the working file exists.)  */
   
-  /* Check for locked directories. */
+  SVN_ERR(svn_io_check_path (path, &path_kind, pool));
+  if ((path_kind == svn_node_none)
+      && (final_text_status != svn_wc_status_deleted))
+    final_text_status = svn_wc_status_absent;
+
+
+  /* 4. Easy out:  unless we're fetching -every- entry, don't bother
+     to allocate a struct for an uninteresting entry. */
+
+  if (! get_all)
+    if ((final_text_status == svn_wc_status_none)
+        && ((final_prop_status == svn_wc_status_none)))
+      {
+        *status = NULL;
+        return SVN_NO_ERROR;
+      }
+
+
+  /* 5. Build and return a status structure. */
+
+  stat = apr_pcalloc (pool, sizeof(**status));
+  stat->entry = entry;
+  stat->repos_rev = SVN_INVALID_REVNUM;           /* caller fills in */
+  stat->text_status = final_text_status;       
+  stat->prop_status = final_prop_status;    
+  stat->repos_text_status = svn_wc_status_none;   /* default */
+  stat->repos_prop_status = svn_wc_status_none;   /* default */
+  stat->locked = FALSE;
+
+  
+  /* 6. Check for locked directory. */
+
   if (entry->kind == svn_node_dir)
     SVN_ERR (svn_wc__locked (&(stat->locked), path, pool));
   
+
   *status = stat;
 
   return SVN_NO_ERROR;
