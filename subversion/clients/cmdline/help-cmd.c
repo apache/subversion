@@ -31,21 +31,6 @@
 
 #include "svn_private_config.h"
 
-const char svn_cl__help_header[] =
-   N_("usage: svn <subcommand> [options] [args]\n"
-      "Subversion command-line client, version " SVN_VER_NUMBER ".\n"
-      "Type 'svn help <subcommand>' for help on a specific subcommand.\n"
-      "\n"
-      "Most subcommands take file and/or directory arguments, recursing\n"
-      "on the directories.  If no arguments are supplied to such a\n"
-      "command, it recurses on the current directory (inclusive) by default.\n"
-      "\n"
-      "Available subcommands:\n");
-
-const char svn_cl__help_footer[] =
-   N_("Subversion is a tool for version control.\n"
-      "For additional information, see http://subversion.tigris.org/\n");
-
 
 /*** Code. ***/
 
@@ -59,6 +44,26 @@ print_help (apr_getopt_t *os,
             apr_pool_t *pool)
 {
   void *ra_baton;
+
+  /* xgettext: the %s is for SVN_VER_NUMBER. */
+  char help_header_template[] =
+  N_("usage: svn <subcommand> [options] [args]\n"
+     "Subversion command-line client, version %s.\n"
+     "Type 'svn help <subcommand>' for help on a specific subcommand.\n"
+     "\n"
+     "Most subcommands take file and/or directory arguments, recursing\n"
+     "on the directories.  If no arguments are supplied to such a\n"
+     "command, it recurses on the current directory (inclusive) by default.\n"
+     "\n"
+     "Available subcommands:\n");
+
+  char help_footer[] =
+  N_("Subversion is a tool for version control.\n"
+     "For additional information, see http://subversion.tigris.org/\n");
+
+  char *help_header =
+    apr_psprintf (pool, gettext (help_header_template), SVN_VER_NUMBER);
+
   const char *ra_desc_start
     = _("The following repository access (RA) modules are available:\n\n");
   svn_stringbuf_t *ra_desc_body, *ra_desc_all;
@@ -73,10 +78,10 @@ print_help (apr_getopt_t *os,
                              print_version,
                              quiet,
                              ra_desc_all->data,
-                             gettext (svn_cl__help_header),
+                             help_header,   /* already gettext()'d */
                              svn_cl__cmd_table,
                              svn_cl__options,
-                             gettext (svn_cl__help_footer),
+                             gettext (help_footer),
                              pool);
 }
 

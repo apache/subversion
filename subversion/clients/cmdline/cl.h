@@ -184,10 +184,6 @@ extern const svn_opt_subcommand_desc_t svn_cl__cmd_table[];
 /* See definition in main.c for documentation. */
 extern const apr_getopt_option_t svn_cl__options[];
 
-/* Header and footer text for svn_opt_print_generic_help. */
-extern const char svn_cl__help_header[];
-extern const char svn_cl__help_footer[];
-
 
 /* Evaluate EXPR.  If it yields an SVN_ERR_UNVERSIONED_RESOURCE error,
  * handle the error as a warning and clear the error; if it yields any
