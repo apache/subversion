@@ -159,26 +159,19 @@ make_dir_baton (const char *path,
   return new_db;
 }
 
-enum node_action
-{
-  node_action_change,
-  node_action_add,
-  node_action_delete,
-  node_action_replace
-};
 
 /* This helper is the main "meat" of the editor -- it does all the
    work of writing a node record.
    
    Write out a node record for PATH of type KIND under FS_ROOT.
-   ACTION describes what is happening to the node (see enum node_action).
+   ACTION describes what is happening to the node (see enum svn_node_action).
    Write record to writable STREAM, using BUFFER to write in chunks.
   */
 static svn_error_t *
 dump_node (svn_fs_root_t *fs_root,
            const char *path,    /* an absolute path. */
            enum svn_node_kind kind,
-           enum node_action action,
+           enum svn_node_action action,
            svn_stream_t *stream,
            void *buffer,
            apr_size_t bufsize,
@@ -200,19 +193,19 @@ dump_node (svn_fs_root_t *fs_root,
     SVN_ERR (svn_stream_printf (stream, pool,
                                 SVN_REPOS_DUMPFILE_NODE_KIND ": dir\n"));
   
-  if (action == node_action_change)
+  if (action == svn_node_action_change)
     {
       SVN_ERR (svn_stream_printf (stream, pool,
                                   SVN_REPOS_DUMPFILE_NODE_ACTION
                                   ": change\n"));  
     }
-  else if (action == node_action_replace)
+  else if (action == svn_node_action_replace)
     {
       SVN_ERR (svn_stream_printf (stream, pool,
                                   SVN_REPOS_DUMPFILE_NODE_ACTION
                                   ": replace\n"));  
     }
-  else if (action == node_action_delete)
+  else if (action == svn_node_action_delete)
     {
       SVN_ERR (svn_stream_printf (stream, pool,
                                   SVN_REPOS_DUMPFILE_NODE_ACTION
@@ -221,7 +214,7 @@ dump_node (svn_fs_root_t *fs_root,
       /* Get out!  We're done! */
       return SVN_NO_ERROR;
     }
-  else if (action == node_action_add)
+  else if (action == svn_node_action_add)
     {
       const char *copyfrom_path;
       svn_revnum_t copyfrom_rev;
@@ -368,7 +361,7 @@ add_directory (const char *path,
 
   SVN_ERR (dump_node (eb->fs_root, path, 
                       svn_node_dir,
-                      val ? node_action_replace : node_action_add,
+                      val ? svn_node_action_replace : svn_node_action_add,
                       eb->stream, eb->buffer, eb->bufsize, pool));
 
   if (val)
@@ -420,7 +413,7 @@ close_directory (void *dir_baton)
          be written out.  No big deal at all, really.  The loader
          shouldn't care.  */
       SVN_ERR (dump_node (eb->fs_root, path,
-                          svn_node_unknown, node_action_delete,
+                          svn_node_unknown, svn_node_action_delete,
                           eb->stream, eb->buffer, eb->bufsize, subpool));     
     }
 
@@ -446,7 +439,7 @@ add_file (const char *path,
 
   SVN_ERR (dump_node (eb->fs_root, path, 
                       svn_node_file,
-                      val ? node_action_replace : node_action_add,
+                      val ? svn_node_action_replace : svn_node_action_add,
                       eb->stream, eb->buffer, eb->bufsize, pool));
 
   if (val)
@@ -469,7 +462,7 @@ open_file (const char *path,
   struct edit_baton *eb = pb->edit_baton;
 
   SVN_ERR (dump_node (eb->fs_root, path, 
-                      svn_node_file, node_action_change, 
+                      svn_node_file, svn_node_action_change, 
                       eb->stream, eb->buffer, eb->bufsize, pool));
 
   *file_baton = NULL;  /* muhahahaha again */
@@ -492,7 +485,7 @@ change_dir_prop (void *parent_baton,
   if (! db->written_out)
     {
       SVN_ERR (dump_node (eb->fs_root, db->path, 
-                          svn_node_dir, node_action_change, 
+                          svn_node_dir, svn_node_action_change, 
                           eb->stream, eb->buffer, eb->bufsize, pool));
       db->written_out = TRUE;
     }
@@ -643,7 +636,7 @@ svn_repos_dump_fs (svn_repos_t *repos,
 
               SVN_ERR (svn_fs_revision_root (&root_0, fs, 0, subpool));
               SVN_ERR (dump_node (root_0, "/",
-                                  svn_node_dir, node_action_add,
+                                  svn_node_dir, svn_node_action_add,
                                   stream, buffer, 1024, subpool));
 
               goto loop_end;
