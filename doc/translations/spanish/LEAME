@@ -31,7 +31,7 @@ Pasos para poder compilar el libro:
 
    El "Docbook Open Repository" en Sourceforge tiene una
    larga colección de hojas de estilo XSL que funcionan con
-   Docbook. Descarge e instale el paquete 'docbook-xsl-1.65.1'
+   Docbook. Descargue e instale el paquete 'docbook-xsl-1.65.1'
    de la siguiente página:
   
       http://sourceforge.net/project/showfiles.php?group_id=21935
@@ -101,7 +101,7 @@ contacto sea realizado a través de la lista de correo (ver sección
 "Lista de correo para discutir la traducción") para evitar largas
 esperas. Se puede colaborar traduciendo el libro o revisando las
 traducciones realizadas. En ambos casos, cualquier colaboración
-por mímina que sea será anotada en un listado de contribuciones.
+por mínima que sea será anotada en un listado de contribuciones.
 
 Antes de colaborar alguna traducción, hay que entender que
 esta traducción se realiza bajo la misma licencia que el libro
@@ -141,7 +141,7 @@ el proyecto.
 
 El trabajo de revisión normalmente no se hará de forma global hasta
 que al menos un capítulo esté completo. No obstante, si leyendo algo
-se encuentra algúna falta ortográfica o gramatical, se agradecerán
+se encuentra alguna falta ortográfica o gramatical, se agradecerán
 las sugerencias o parches realizados contra el servidor público
 (resultado del comando svn diff). Un capítulo se considerará
 revisado cuando al menos una persona que no haya colaborado en
@@ -159,14 +159,14 @@ una vez por una o dos personas como mínimo.
 Al finalizar la traducción completa se volverá a realizar una
 revisión global. Tras ésta, se considerará actualizar la traducción
 a la versión actual del libro original, pues la traducción se realiza
-sobre una versión específica que con seguiridad quedará obsoleta.
+sobre una versión específica que con seguridad quedará obsoleta.
 
 
 Obteniendo acceso de escritura al repositorio
 =============================================
 
 En la sección anterior se ha mencionado que el repositorio está en
-modo lectura (de hecho se puede ver via navegador web a través de
+modo lectura (de hecho se puede ver vía navegador web a través de
 http://svn.collab.net/repos/svn/trunk/doc/translations/spanish/).
 Esto es aceptable para hacer trabajos de revisión, cuando lo único
 importante es tener acceso a la última versión y poder compilar el
@@ -197,7 +197,7 @@ servidor http://www.tigris.org/.  Esta cuenta es similar a la que
 se puede obtener en servicios como http://www.sourceofrge.net/ o
 http://developer.berlios.de. El nombre o alias que usemos en esta
 cuenta será el que figurará en los informes de cambios que genera
-el repositorio cuando se envian cambios.
+el repositorio cuando se envían cambios.
 
 Una vez creada esta cuenta, mandar un mensaje a la lista de la
 traducción indicando el nombre de usuario de tigris.org. Entonces
@@ -231,7 +231,7 @@ Herramientas para ayudar en la traducción
 =========================================
 
 Glosario de informática Inglés-Español:
-http://es.tldp.org/ORCA/glosario.html más info en
+http://es.tldp.org/ORCA/glosario.html más información en
 http://quark.fe.up.pt/orca/index.es.html?.
 
 Cómo traducción:
@@ -261,7 +261,7 @@ de los términos.
 
 Por último, sentido común. Si hay alguna duda sobre un trozo
 traducido, a veces viene bien cerrar los ojos y recitar las frases
-una y otra vez en voz alta. A veces oir las palabras escritas
+una y otra vez en voz alta. A veces oír las palabras escritas
 es el mejor método para saber si están bien traducidas, pues
 deben reflejar lo que una persona humana le diría a otra en una
 conversación natural. Si algo le suena "raro", márquelo como un
@@ -284,7 +284,7 @@ tienen y envían parches a la lista de correo:
   ha colaborado ningún cambio en 14 días. Se recomienda traducir
   un párrafo al día. En el caso de colaborar mediante parches
   enviados a la lista de correo, puede acumular los cambios y
-  enviar éstos semanalmente para evitar sobrecargarse con el uso
+  enviar éstos semanalmente para evitar sobre cargarse con el uso
   del correo electrónico (si bien el coordinador aceptará cualquier
   colaboración por pequeña que sea).
 
@@ -298,7 +298,7 @@ tienen y envían parches a la lista de correo:
 - Por ahora ningún ejemplo de línea de comando o imagen será
   traducido. Dejar las cosas tal cual (ej: lo que viene dentro de
   las etiquetas screen), excepto los nombres de usuario que serán
-  traducidos segun lo que se haya especificado en el glosario.
+  traducidos según lo que se haya especificado en el glosario.
 
 - A veces es necesario añadir una nota de traductor ya sea para
   indicar un uso inusual de una palabra o comando, explicar alguna
@@ -316,7 +316,7 @@ tienen y envían parches a la lista de correo:
 Reglas mínimas para traductores con acceso de escritura
 =======================================================
 
-Las siguientes reglas están orientadas a quellos que tienen acceso
+Las siguientes reglas están orientadas a aquellos que tienen acceso
 de escritura al servidor y trabajan de forma activa sobre algún
 fichero en particular:
 
@@ -364,7 +364,7 @@ fichero en particular:
     Book Spanish. Translated two paragraphs.
 
   Si se nos olvida, siempre se puede modificar el log de un cambio
-  antiguo con el subcomando propset o propedit. Ejemplo:
+  antiguo con el sub comando propset o propedit. Ejemplo:
 
     svn propedit svn:log -r113 --revprop
 
@@ -415,15 +415,15 @@ desde el directorio raíz del proyecto tecleamos en la línea de
 comando "make aspell_check".  Este comando ejecutará aspell sobre
 todos los ficheros de la variable BOOK_ASPELL_FILES. Los que ya
 están verificados no tendrán fallos, así que como mucho veremos un
-parpadeo de pantalla que indica que aspell comencó la verificación
+parpadeo de pantalla que indica que aspell comenzó la verificación
 y salió sin encontrar ningún fallo.
 
 Pero como acabamos de añadir un fichero nuevo, el proceso se
-dentendrá en cuanto llegue el turno del fichero que hemos añadido. La
+detendrá en cuanto llegue el turno del fichero que hemos añadido. La
 interfaz de aspell es simple: muestra el texto en la pantalla
 superior junto con la palabra que no está en su diccionario, y una
 leyenda de opciones en la parte inferior de la pantalla. Pulsando
-uno de los números sutituiremos la palabra resaltada por esa opción.
+uno de los números sustituiremos la palabra resaltada por esa opción.
 
 Así, lo único que tenemos que hacer es ir corrigiendo lo que esté
 mal.  Para aquellas palabras que están bien, o que se han dejado
@@ -471,7 +471,7 @@ esta lista de correo incluye la cabecera:
   
 Así que cualquier cliente de correo decente debería responder a la
 lista y evitar mandar mensajes duplicados al autor y a la lista
-(práctica habitual en las listas de subversion). También incluye
+(práctica habitual en las listas de Subversion). También incluye
 la cabecera:
 
   List-Post: <mailto:l10n-es@subversion.tigris.org>
