@@ -702,7 +702,7 @@ svn_client_status (apr_hash_t **statushash,
  *
  * ### todo: the above paragraph is not fully implemented yet.
  *
- * If @a discover_changed_pahts is set, then the `@a changed_paths' argument
+ * If @a discover_changed_paths is set, then the `@a changed_paths' argument
  * to @a receiver will be passed on each invocation.
  *
  * If @a strict_node_history is set, copy history (if any exists) will
