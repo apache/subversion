@@ -528,11 +528,7 @@ apply_textdelta (void *file_baton,
   struct file_baton *b = file_baton;
   apr_status_t status;
 
-  /* The second revision starts empty */
-  SVN_ERR (create_empty_file (&b->path_end_revision, b->pool));
-  SVN_ERR (temp_file_cleanup_register (b->path_end_revision, b->pool));
-
-  /* Open first revision to be used as the base for new second revision */
+  /* Open the file to be used as the base for second revision */
   status = apr_file_open (&b->file_start_revision, b->path_start_revision->data,
                           APR_READ, APR_OS_DEFAULT, b->pool);
   if (status)
@@ -540,7 +536,10 @@ apply_textdelta (void *file_baton,
                               "failed to open file '%s'",
                               b->path_start_revision->data);
 
-  /* Open the second revision to apply text delta */
+  /* Open the file that will become the second revision after applying the
+     text delta, it starts empty */
+  SVN_ERR (create_empty_file (&b->path_end_revision, b->pool));
+  SVN_ERR (temp_file_cleanup_register (b->path_end_revision, b->pool));
   status = apr_file_open (&b->file_end_revision, b->path_end_revision->data,
                           APR_WRITE, APR_OS_DEFAULT, b->pool);
   if (status)
@@ -587,16 +586,7 @@ close_edit (void *edit_baton)
   return SVN_NO_ERROR;
 }
 
-/* Create a diff editor and baton.
- *
- * ANCHOR/TARGET represent the base of the hierarchy to be compared.
- *
- * DIFF_CMD/DIFF_CMD_BATON represent the callback and calback argument that
- * implement the file comparison function
- *
- * RECURSE is set if the diff is to be recursive.
- *
- * EDITOR/EDIT_BATON return the newly created editor and baton/
+/* Create a repository diff editor and baton.
  */
 svn_error_t *
 svn_client__get_diff_editor (svn_stringbuf_t *target,

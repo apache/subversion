@@ -176,6 +176,17 @@ def diff_check_add_a_file_repo_subset(wc_dir):
   if diff_check_repo_subset(wc_dir, repo_subset, check_add_a_file, 0):
     return 1
 
+def update_added_file():
+  svntest.main.file_append(os.path.join('A', 'B', 'E', 'theta'), "net ttext")
+  "update added file"
+  return 0
+
+def check_update_added_file(diff_output):
+  "check diff for update of added file"
+  return check_diff_output(diff_output,
+                           os.path.join('A', 'B', 'E', 'theta'),
+                           'M')
+
 #----------------------------------------------------------------------
 
 def add_a_file_in_a_subdir():
@@ -557,15 +568,59 @@ def diff_pure_repository_update_a_file(sbox):
   wc_dir = sbox.wc_dir
   was_cwd = os.getcwd()
   os.chdir(wc_dir)
+
+  # rev 2
   update_a_file()
   svntest.main.run_svn(None, 'ci')
+
+  # rev 3
+  add_a_file_in_a_subdir()
+  svntest.main.run_svn(None, 'ci')
+
+  # rev 4
+  add_a_file()
+  svntest.main.run_svn(None, 'ci')
+
+  # rev 5
+  update_added_file()
+  svntest.main.run_svn(None, 'ci')
+
+  svntest.main.run_svn(None, 'up', '-r2')
   os.chdir(was_cwd)
 
   url = svntest.main.test_area_url + '/' + svntest.main.current_repo_dir
 
   diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r1:2', url)
+  if check_update_a_file(diff_output): return 1
 
-  return check_update_a_file(diff_output)
+  os.chdir(wc_dir)
+  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r1:2')
+  os.chdir(was_cwd)
+  if check_update_a_file(diff_output): return 1
+
+  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r2:3', url)
+  if check_add_a_file_in_a_subdir(diff_output): return 1
+
+  os.chdir(wc_dir)
+  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r2:3')
+  os.chdir(was_cwd)
+  if check_add_a_file_in_a_subdir(diff_output): return 1
+
+  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r4:5', url)
+  if check_update_added_file(diff_output): return 1
+
+  os.chdir(wc_dir)
+  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r4:5')
+  os.chdir(was_cwd)
+  if check_update_added_file(diff_output): return 1
+
+  os.chdir(wc_dir)
+  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-rh')
+  os.chdir(was_cwd)
+  if check_add_a_file_in_a_subdir_reverse(diff_output): return 1
+
+  return 0
+
 
 ########################################################################
 # Run the tests

@@ -93,7 +93,8 @@ svn_client_checkout (const svn_delta_edit_fns_t *before_editor,
          for storing temp files. We do, however, want to store auth data
          after the checkout builds the WC. */
       SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, path,
-                                            TRUE, FALSE, auth_baton, pool));
+                                            TRUE, FALSE, FALSE, auth_baton,
+                                            pool));
 
       /* Decide which revision to get: */
 

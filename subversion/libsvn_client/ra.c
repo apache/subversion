@@ -75,6 +75,7 @@ get_wc_prop(void *baton,
 {
   svn_client__callback_baton_t *cb = baton;
   struct svn_wc_close_commit_baton ccb;
+  svn_error_t *err;
 
   /* if we don't have a base directory, then there are no properties */
   if (cb->base_dir == NULL)
@@ -88,7 +89,16 @@ get_wc_prop(void *baton,
   ccb.prefix_path = cb->base_dir;
   ccb.pool = cb->pool;
 
-  return svn_wc_get_wc_prop(&ccb, relpath, name, value);
+  err = svn_wc_get_wc_prop(&ccb, relpath, name, value);
+  if (err && err->apr_err == SVN_ERR_WC_OBSTRUCTED_UPDATE && cb->arbitrary_wc)
+    {
+      /* If we have an arbitrary working copy revision, then the requested
+         entry may not exist. This is acceptable, we simply have no
+         properties. */
+      *value = NULL;
+      return SVN_NO_ERROR;
+    }
+  return err;
 }
 
 
@@ -98,6 +108,7 @@ svn_error_t * svn_client__open_ra_session (void **session_baton,
                                            svn_stringbuf_t *base_dir,
                                            svn_boolean_t do_store,
                                            svn_boolean_t use_admin,
+                                           svn_boolean_t arbitrary_wc,
                                            void *auth_baton,
                                            apr_pool_t *pool)
 {
@@ -111,6 +122,7 @@ svn_error_t * svn_client__open_ra_session (void **session_baton,
   cb->auth_baton = auth_baton;
   cb->base_dir = base_dir;
   cb->do_store = do_store;
+  cb->arbitrary_wc = arbitrary_wc;
   cb->pool = pool;
 
   SVN_ERR (ra_lib->open (session_baton, repos_URL, cbtable, cb, pool));
