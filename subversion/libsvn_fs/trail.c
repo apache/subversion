@@ -50,6 +50,7 @@ begin_trail (trail_t **trail_p,
   trail_t *trail = apr_pcalloc (pool, sizeof (*trail));
 
   trail->pool = svn_pool_create (pool);
+  trail->scratchpool = svn_pool_create (trail->pool);
   trail->undo = 0;
   SVN_ERR (DB_WRAP (fs, "beginning Berkeley DB transaction",
                     fs->env->txn_begin (fs->env, 0, &trail->db_txn, 0)));
@@ -105,7 +106,9 @@ commit_trail (trail_t *trail,
                     fs->env->txn_checkpoint (fs->env, 1024, 5, 0)));
 
   /* We don't destroy the pool; we assume it contains stuff which will
-     be useful beyond the transaction.  */
+     be useful beyond the transaction.  But we *do* destroy the
+     trail's scratchpool, freeing any temporary memory used. */
+  svn_pool_destroy (trail->scratchpool);
 
   return SVN_NO_ERROR;
 }
