@@ -819,10 +819,14 @@ C      ./stuff/loot/lump.c   # this file has conflicts from an update
           </varlistentry>
 
           <varlistentry>
-            <term><computeroutput>M      file</computeroutput></term>
+            <term><computeroutput>C     file</computeroutput></term>
             <listitem>
-              <para>The contents of file <filename>file</filename> have
-                been modified.</para>
+              <para><filename>file_or_dir</filename> is in a state of
+                conflict.  That is, changes received from the server
+                during an update overlap with local changes that you
+                have in your working copy.  You must resolve this
+                conflict before committing your changes to the
+                repository.</para>
             </listitem>
           </varlistentry>
 
@@ -832,6 +836,14 @@ C      ./stuff/loot/lump.c   # this file has conflicts from an update
               <para>The file or directory
                 <filename>file_or_dir</filename> has been scheduled for
                 deletion from the repository.</para>
+            </listitem>
+          </varlistentry>
+
+          <varlistentry>
+            <term><computeroutput>M      file</computeroutput></term>
+            <listitem>
+              <para>The contents of file <filename>file</filename> have
+                been modified.</para>
             </listitem>
           </varlistentry>
 
@@ -888,18 +900,6 @@ C      ./stuff/loot/lump.c   # this file has conflicts from an update
                 and created a directory in its place, without using the
                 <command>svn delete</command> or <command>svn add</command>
                 commands.</para>
-            </listitem>
-          </varlistentry>
-
-          <varlistentry>
-            <term><computeroutput>C     file</computeroutput></term>
-            <listitem>
-              <para><filename>file_or_dir</filename> is in a state of
-                conflict.  That is, changes received from the server
-                during an update overlap with local changes that you
-                have in your working copy.  You must resolve this
-                conflict before committing your changes to the
-                repository.</para>
             </listitem>
           </varlistentry>
 
