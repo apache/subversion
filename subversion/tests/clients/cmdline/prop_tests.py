@@ -857,7 +857,7 @@ def binary_props(sbox):
 
     # Blow away our existing main working copy in favor of a new
     # ra-local-based one.
-    shutil.rmtree(wc_dir)
+    svntest.main.safe_rmtree(wc_dir)
 
     # Checkout over ra-local.
     output, errput = \
