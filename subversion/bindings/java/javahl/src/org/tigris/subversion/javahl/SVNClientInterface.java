@@ -64,8 +64,9 @@ public interface SVNClientInterface
      * @param onServer  Request status information from server.
      * @param getAll    get status for uninteristing files (unchanged).
      * @param noIgnore  get status for normaly ignored files and directories.
-     * @param ignoreExternals if externals are ignored during checkout
+     * @param ignoreExternals if externals are ignored during status
      * @return Array of Status entries.
+     * @since 1.2
      */
     Status[]status(String path, boolean descend, boolean onServer,
                    boolean getAll, boolean noIgnore, boolean ignoreExternals)
@@ -86,6 +87,7 @@ public interface SVNClientInterface
      * @param pegRevision the revision to interpret url
      * @param recurse   recurse into subdirectories
      * @return  Array of DirEntry objects.
+     * @since 1.2
      */
     DirEntry[]list(String url, Revision revision, Revision pegRevision,
                    boolean recurse)
@@ -158,6 +160,7 @@ public interface SVNClientInterface
      * @param limit         limit the number of log messages (if 0 or less no
      *                      limit)
      * @return array of LogMessages
+     * @since 1.2
      */
     LogMessage[] logMessages(String path, Revision revisionStart,
                              Revision revisionEnd, boolean stopOnCopy,
@@ -172,6 +175,7 @@ public interface SVNClientInterface
      * @param recurse whether you want it to checkout files recursively.
      * @param ignoreExternals if externals are ignored during checkout
      * @exception ClientException
+     * @since 1.2
      */
     long checkout(String moduleName, String destPath, Revision revision,
                   Revision pegRevision, boolean recurse,
@@ -192,8 +196,17 @@ public interface SVNClientInterface
      * to the calling program.
      * @param notify listener that the SVN library should call on many
      *               file operations.
+     * @deprecated use notification2 instead
      */
     void notification(Notify notify);
+    /**
+     * Sets the notification callback used to send processing information back
+     * to the calling program.
+     * @param notify listener that the SVN library should call on many
+     *               file operations.
+     * @since 1.2
+     */
+    void notification2(Notify2 notify);
     /**
      * Sets the commit message handler. This allows more complex commit message
      * with the list of the elements to be commited as input.
@@ -231,6 +244,7 @@ public interface SVNClientInterface
      * @param force     if adding a directory and recurse true and path is a
      *                  directory, all not already managed files are added.
      * @exception ClientException
+     * @since 1.2
      */
     void add(String path, boolean recurse, boolean force)throws ClientException;
     /**
@@ -253,6 +267,7 @@ public interface SVNClientInterface
      * @param recurse recursively update.
      * @param ignoreExternals if externals are ignored during update
      * @exception ClientException
+     * @since 1.2
      */
     long[] update(String[] path, Revision revision, boolean recurse,
                   boolean ignoreExternals) throws ClientException;
@@ -307,6 +322,7 @@ public interface SVNClientInterface
      * @param message   commit message if destPath is an url
      * @param force     even with local modifications.
      * @exception ClientException
+     * @since 1.2
      */
     void move(String srcPath, String destPath, String message,
               boolean force) throws ClientException;
@@ -357,6 +373,7 @@ public interface SVNClientInterface
      * @param recurse   recurse to subdirectories
      * @param nativeEOL which EOL characters to use during export
      * @exception ClientException
+     * @since 1.2
      */
     long doExport(String srcPath, String destPath, Revision revision,
                   Revision pegRevision, boolean force, boolean ignoreExternals,
@@ -408,6 +425,7 @@ public interface SVNClientInterface
      * @param ignoreAncestry ignore if files are not related
      * @param dryRun        do not change anything
      * @exception ClientException
+     * @since 1.2
      */
     void merge(String path1, Revision revision1, String path2,
                Revision revision2, String localPath, boolean force,
@@ -425,6 +443,7 @@ public interface SVNClientInterface
      * @param ignoreAncestry ignore if files are not related
      * @param dryRun        do not change anything
      * @exception ClientException
+     * @since 1.2
      */
     void merge(String path, Revision pegRevision, Revision revision1,
                Revision revision2, String localPath, boolean force,
@@ -455,6 +474,7 @@ public interface SVNClientInterface
      * @param noDiffDeleted no output on deleted files
      * @param force         diff even on binary files
      * @exception ClientException
+     * @since 1.2
      */
     void diff(String target1, Revision revision1, String target2,
               Revision revision2, String outFileName, boolean recurse, 
@@ -472,6 +492,7 @@ public interface SVNClientInterface
      * @param noDiffDeleted no output on deleted files
      * @param force         diff even on binary files
      * @exception ClientException
+     * @since 1.2
      */
     void diff(String target, Revision pegRevision, Revision startRevision,
               Revision endRevision, String outFileName, boolean recurse,
@@ -489,6 +510,7 @@ public interface SVNClientInterface
      * @param path      the path of the item
      * @param revision  the revision of the item
      * @return array of property objects
+     * @since 1.2
      */
     PropertyData[] properties(String path, Revision revision)
             throws ClientException;
@@ -498,6 +520,7 @@ public interface SVNClientInterface
      * @param revision  the revision of the item
      * @param pegRevision the revision to interpret path
      * @return array of property objects
+     * @since 1.2
      */
     PropertyData[] properties(String path, Revision revision, 
                               Revision pegRevision)
@@ -520,6 +543,7 @@ public interface SVNClientInterface
      * @param recurse   set property also on the subdirectories
      * @param force     do not check if the value is valid
      * @throws ClientException
+     * @since 1.2
      */
     void propertySet(String path, String name, String value, boolean recurse,
                      boolean force)
@@ -542,6 +566,7 @@ public interface SVNClientInterface
      * @param recurse   set property also on the subdirectories
      * @param force     do not check if the value is valid
      * @throws ClientException
+     * @since 1.2
      */
     void propertySet(String path, String name, byte[] value, boolean recurse,
                      boolean force)
@@ -573,6 +598,7 @@ public interface SVNClientInterface
      * @param recurse   set property also on the subdirectories
      * @param force     do not check if the value is valid
      * @throws ClientException
+     * @since 1.2
      */
     void propertyCreate(String path, String name, String value, boolean recurse,
                         boolean force)
@@ -595,6 +621,7 @@ public interface SVNClientInterface
      * @param recurse   set property also on the subdirectories
      * @param force     do not check if the value is valid
      * @throws ClientException
+     * @since 1.2
      */
     void propertyCreate(String path, String name, byte[] value, boolean recurse,
                         boolean force)
@@ -615,6 +642,7 @@ public interface SVNClientInterface
      * @param rev       revision to retrieve
      * @return the Properties
      * @throws ClientException
+     * @since 1.2
      */
     PropertyData[] revProperties(String path, Revision rev)
             throws ClientException;
@@ -626,6 +654,7 @@ public interface SVNClientInterface
      * @param value     value of the property
      * @param force     use force to set
      * @throws ClientException
+     * @since 1.2
      */
     void setRevProperty(String path, String name, Revision rev, String value,
                         boolean force)
@@ -645,6 +674,7 @@ public interface SVNClientInterface
      * @param revision  revision of the item
      * @return the Property
      * @throws ClientException
+     * @since 1.2
      */
     PropertyData propertyGet(String path, String name, Revision revision)
             throws ClientException;
@@ -653,8 +683,10 @@ public interface SVNClientInterface
      * @param path      path of the item
      * @param name      name of property
      * @param revision  revision of the item
+     * @param pegRevision the revision to interpret path
      * @return the Property
      * @throws ClientException
+     * @since 1.2
      */
     PropertyData propertyGet(String path, String name, Revision revision,
                              Revision pegRevision)
@@ -674,6 +706,7 @@ public interface SVNClientInterface
      * @param pegRevision the revision to interpret path
      * @return  the content as byte array
      * @throws ClientException
+     * @since 1.2
      */
     byte[] fileContent(String path, Revision revision, Revision pegRevision)
             throws ClientException;
@@ -721,6 +754,7 @@ public interface SVNClientInterface
      * @param callback      callback to receive the file content and the other
      *                      information
      * @throws ClientException
+     * @since 1.2
      */
     void blame(String path, Revision pegRevision, Revision revisionStart,
                Revision revisionEnd,
@@ -755,21 +789,21 @@ public interface SVNClientInterface
      * Lock a working copy item
      * @param path  path of the item
      * @param comment
-     * @param lockCallback
      * @param force break an existing lock
      * @throws ClientException
+     * @since 1.2
      */
-    Lock[] lock(String[] path, String comment, LockCallback lockCallback, boolean force)
+    void lock(String[] path, String comment, boolean force)
             throws ClientException;
 
     /**
      * Unlock a working copy item
      * @param path  path of the item
-     * @param lockCallback
      * @param force break an existing lock
      * @throws ClientException
+     * @since 1.2
      */
-    void unlock(String[] path, LockCallback lockCallback, boolean force)
+    void unlock(String[] path, boolean force)
             throws ClientException;
 
     /**
@@ -779,6 +813,7 @@ public interface SVNClientInterface
      * @param pegRevision   the revision to interpret pathOrUrl
      * @param recurse       flag if to recurse, if the item is a directory
      * @return              the information objects
+     * @since 1.2
      */
     Info2[] info2(String pathOrUrl, Revision revision, Revision pegRevision,
                  boolean recurse) throws ClientException;
@@ -789,6 +824,7 @@ public interface SVNClientInterface
      * @param lastChanged   last changed rather than current revisions
      * @return      the compact "version number"
      * @throws ClientException
+     * @since 1.2
      */
     String getVersionInfo(String path, String trailUrl, boolean lastChanged)
             throws ClientException;

@@ -110,21 +110,31 @@ public class Status
      */
     private long revisionCopiedFrom;
     /**
+     * @since 1.2
      * token specified for the lock (null if not locked)
      */
     private String lockToken;
     /**
+     * @since 1.2
      * owner of the lock (null if not locked)
      */
     private String lockOwner;
     /**
+     * @since 1.2
      * comment specified for the lock (null if not locked)
      */
     private String lockComment;
     /**
+     * @since 1.2
      * date of the creation of the lock (null if not locked)
      */
     private long lockCreationDate;
+    /**
+     * @since 1.2
+     * the lock in the repository
+     */
+    private Lock reposLock;
+
     /**
      * this constructor should only called from JNI code
      * @param path                  the file system path of item
@@ -153,6 +163,12 @@ public class Status
      *                              source
      * @param switched              flag if the node has been switched in the 
      *                              path
+     * @param lockToken             the token for the current lock if any
+     * @param lockOwner             the owner of the current lock is any
+     * @param lockComment           the comment of the current lock if any
+     * @param lockCreationDate      the date, the lock was created if any
+     * @param reposLock             the lock as stored in the repository if
+     *                              any
      */
     public Status(String path, String url, int nodeKind, long revision,
                   long lastChangedRevision, long lastChangedDate,
@@ -162,7 +178,7 @@ public class Status
                   String conflictNew, String conflictWorking,
                   String urlCopiedFrom, long revisionCopiedFrom,
                   boolean switched, String lockToken, String lockOwner, 
-                  String lockComment, long lockCreationDate)
+                  String lockComment, long lockCreationDate, Lock reposLock)
     {
         this.path = path;
         this.url = url;
@@ -187,6 +203,7 @@ public class Status
         this.lockOwner = lockOwner;
         this.lockComment = lockComment;
         this.lockCreationDate = lockCreationDate;
+        this.reposLock = reposLock;
     }
 
     /**
@@ -490,6 +507,7 @@ public class Status
     /**
      * Returns the lock token
      * @return the lock token
+     * @since 1.2
      */
     public String getLockToken()
     {
@@ -499,6 +517,7 @@ public class Status
     /**
      * Returns the lock  owner
      * @return the lock owner
+     * @since 1.2
      */
     public String getLockOwner()
     {
@@ -508,6 +527,7 @@ public class Status
     /**
      * Returns the lock comment
      * @return the lock comment
+     * @since 1.2
      */
     public String getLockComment()
     {
@@ -517,6 +537,7 @@ public class Status
     /**
      * Returns the lock creation date
      * @return the lock creation date
+     * @since 1.2
      */
     public Date getLockCreationDate()
     {
@@ -526,6 +547,15 @@ public class Status
             return new Date(lastChangedDate / 1000);
     }
 
+    /**
+     * Returns the lock as in the repository
+     * @return the lock as in the repository
+     * @since 1.2
+     */
+    public Lock getReposLock()
+    {
+        return reposLock;
+    }
     /**
      * class for kind status of the item or its properties
      * the constants are defined in the interface StatusKind for building

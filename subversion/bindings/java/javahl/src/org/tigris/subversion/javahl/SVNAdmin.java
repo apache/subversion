@@ -27,6 +27,21 @@ public class SVNAdmin
     static
     {
         /*
+         * see if the user has specified the fully qualified path to the native
+         * library
+         */
+        try
+        {
+            String specifiedLibraryName =
+                    System.getProperty("subversion.native.library");
+            if(specifiedLibraryName != null)
+                System.load(specifiedLibraryName);
+        }
+        catch(UnsatisfiedLinkError ex)
+        {
+            // ignore that error to try again
+        }
+        /*
          * first try to load the library by the new names.
          * if that fails, try to load the library by the old name.
          */
@@ -219,9 +234,19 @@ public class SVNAdmin
             throws ClientException;
 
     /**
-     * List all locks in the repository
+     * list all locks in the repository
      * @param path              the path to the repository
      * @throws ClientException  throw in case of problem
+     * @since 1.2
      */ 
     public native Lock[] lslocks(String path) throws ClientException;
+    /**
+     * remove multiple locks from the repository
+     * @param path              the path to the repository
+     * @param locks             the name of the locked items
+     * @throws ClientException  throw in case of problem
+     * @since 1.2
+     */
+    public native void rmlocks(String path, String [] locks)
+            throws ClientException;
 }

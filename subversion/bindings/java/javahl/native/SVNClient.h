@@ -30,12 +30,12 @@
 
 class Revision;
 class Notify;
+class Notify2;
 class Targets;
 class JNIByteArray;
 class Prompter;
 class BlameCallback;
 class CommitMessage;
-class LockCallback;
 #include <svn_client.h>
 #include "SVNBase.h"
 
@@ -44,9 +44,8 @@ class SVNClient :public SVNBase
 public:
     jobjectArray info2(const char *path, Revision &revision, 
         Revision &pegRevision, bool recurse);
-	void unlock(Targets &targets, LockCallback &callback, bool force);
-	jobjectArray lock(Targets &targets, const char *comment, 
-                 LockCallback &callback, bool force);
+	void unlock(Targets &targets, bool force);
+	void lock(Targets &targets, const char *comment, bool force);
 	jobjectArray revProperties(jobject jthis, const char *path, 
                                 Revision &revision);
     void cancelOperation();
@@ -102,6 +101,7 @@ public:
     void revert(const char *path, bool recurse);
     void remove(Targets &targets, const char *message,bool force);
     void notification(Notify *notify);
+    void notification2(Notify2 *notify2);
     jlong checkout(const char *moduleName, const char *destPath,
                        Revision &revision, Revision &pegRevsion, bool recurse,
                        bool ignoreExternals);
@@ -152,6 +152,7 @@ private:
     jobject createJavaInfo(const svn_wc_entry_t *entry);
     svn_client_ctx_t * getContext(const char *message);
     Notify *m_notify;
+    Notify2 *m_notify2;
     Prompter *m_prompter;
     Path m_lastPath;
     bool m_cancelOperation;
@@ -167,9 +168,6 @@ private:
     std::string m_configDir;
     static jobject createJavaStatus(const char *path,
                                         svn_wc_status_t *status);
-    static jint mapStatusKind(int svnKind);
-    static jint mapScheduleKind(int schedule);
-    static jint mapNodeKind(int nodeKind);
     static svn_error_t *messageReceiver(void *baton,
                                             apr_hash_t * changed_paths,
                                             svn_revnum_t rev,
@@ -179,11 +177,6 @@ private:
                                             apr_pool_t * pool);
     static void statusReceiver(void *baton,
                                    const char *path, svn_wc_status_t *status);
-    static svn_error_t *lockCallback(void *baton,
-                                     const char *path,
-                                     svn_boolean_t do_lock,
-                                     const svn_lock_t *lock,
-                                     svn_error_t *ra_err);
     static svn_error_t *infoReceiver(void *baton, 
                                      const char *path,
                                      const svn_info_t *info,

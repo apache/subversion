@@ -38,6 +38,7 @@ private:
     std::vector<Path> m_targets;
     jobjectArray m_targetArray;
     svn_error_t *m_error_occured;
+    bool m_doesNotContainsPath;
 public:
     Targets(jobjectArray jtargets);
     Targets(const char *path);
@@ -45,6 +46,7 @@ public:
     ~Targets();
     const apr_array_header_t *array (const Pool & pool);
     svn_error_t *error_occured();
+    void setDoesNotContainsPath();
 };
 // !defined(AFX_TARGETS_H__61202731_41A4_43FF_97C4_7E26DC255BF1__INCLUDED_)
 #endif

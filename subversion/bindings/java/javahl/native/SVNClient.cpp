@@ -22,6 +22,7 @@
 #include "SVNClient.h"
 #include "JNIUtil.h"
 #include "Notify.h"
+#include "Notify2.h"
 #include "Prompter.h"
 #include "Pool.h"
 #include "Targets.h"
@@ -29,6 +30,7 @@
 #include "BlameCallback.h"
 #include "JNIByteArray.h"
 #include "CommitMessage.h"
+#include "EnumMapper.h"
 #include <svn_client.h>
 #include <svn_sorts.h>
 #include <svn_time.h>
@@ -36,12 +38,10 @@
 #include <svn_io.h>
 #include <svn_path.h>
 #include "svn_private_config.h"
-#include "../include/org_tigris_subversion_javahl_StatusKind.h"
 #include "../include/org_tigris_subversion_javahl_Revision.h"
 #include "../include/org_tigris_subversion_javahl_NodeKind.h"
-#include "../include/org_tigris_subversion_javahl_ScheduleKind.h"
+#include "../include/org_tigris_subversion_javahl_StatusKind.h"
 #include "JNIStringHolder.h"
-#include "LockCallback.h"
 #include <vector>
 #include <iostream>
 #include <sstream>
@@ -57,6 +57,7 @@ struct log_msg_baton
 SVNClient::SVNClient()
 {
     m_notify = NULL;
+    m_notify2 = NULL;
     m_prompter = NULL;
     m_commitMessage = NULL;
 }
@@ -64,6 +65,7 @@ SVNClient::SVNClient()
 SVNClient::~SVNClient()
 {
     delete m_notify;
+    delete m_notify2;
     delete m_prompter;
 }
 
@@ -565,6 +567,12 @@ void SVNClient::notification(Notify *notify)
 {
     delete m_notify;
     m_notify = notify;
+}
+
+void SVNClient::notification2(Notify2 *notify2)
+{
+    delete m_notify2;
+    m_notify2 = notify2;
 }
 
 void SVNClient::remove(Targets &targets, const char *message, bool force)
@@ -1729,6 +1737,8 @@ svn_client_ctx_t * SVNClient::getContext(const char *message)
         JNIUtil::handleSVNError(err);
         return NULL;
     }
+    ctx->notify_func2= Notify2::notify;
+    ctx->notify_baton2 = m_notify2;
 
     return ctx;
 }
@@ -1791,7 +1801,7 @@ jobject SVNClient::createJavaStatus(const char *path, svn_wc_status_t *status)
             "(Ljava/lang/String;Ljava/lang/String;IJJJLjava/lang/String;IIIIZZ"
              "Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;"
              "Ljava/lang/String;JZLjava/lang/String;Ljava/lang/String;"
-             "Ljava/lang/String;J)V");
+             "Ljava/lang/String;JLorg/tigris/subversion/javahl/Lock;)V");
         if(JNIUtil::isJavaExceptionThrown())
         {
             return NULL;
@@ -1827,17 +1837,22 @@ jobject SVNClient::createJavaStatus(const char *path, svn_wc_status_t *status)
     jstring jLockComment = NULL;
     jstring jLockOwner = NULL;
     jlong jLockCreationDate = 0;
+    jobject jLock = NULL;
     if(status != NULL)
     {
 
-        jTextType = mapStatusKind(status->text_status);
-        jPropType = mapStatusKind(status->prop_status);
-        jRepositoryTextType = mapStatusKind(status->repos_text_status);
-        jRepositoryPropType = mapStatusKind(status->repos_prop_status);
+        jTextType = EnumMapper::mapStatusKind(status->text_status);
+        jPropType = EnumMapper::mapStatusKind(status->prop_status);
+        jRepositoryTextType = EnumMapper::mapStatusKind(status->repos_text_status);
+        jRepositoryPropType = EnumMapper::mapStatusKind(status->repos_prop_status);
         jIsCopied = (status->copied == 1) ? JNI_TRUE: JNI_FALSE;
         jIsLocked = (status->locked == 1) ? JNI_TRUE: JNI_FALSE;
         jIsSwitched = (status->switched == 1) ? JNI_TRUE: JNI_FALSE;
-
+        jLock = createJavaLock(status->repos_lock);
+        if(JNIUtil::isJavaExceptionThrown())
+        {
+            return NULL;
+        }
         svn_wc_entry_t * entry = status->entry;
         if (entry != NULL)
         {
@@ -1846,7 +1861,7 @@ jobject SVNClient::createJavaStatus(const char *path, svn_wc_status_t *status)
             {
                 return NULL;
             }
-            jNodeKind = mapNodeKind(entry->kind);
+            jNodeKind = EnumMapper::mapNodeKind(entry->kind);
             jRevision = entry->revision;
             jLastChangedRevision = entry->cmt_rev;
             jLastChangedDate = entry->cmt_date;
@@ -1892,7 +1907,7 @@ jobject SVNClient::createJavaStatus(const char *path, svn_wc_status_t *status)
             {
                 return NULL;
             }
-            jLockCreationDate = entry->lock_crt_date;
+            jLockCreationDate = entry->lock_creation_date;
         }
     }
 
@@ -1901,7 +1916,7 @@ jobject SVNClient::createJavaStatus(const char *path, svn_wc_status_t *status)
         jTextType, jPropType, jRepositoryTextType, jRepositoryPropType, 
         jIsLocked, jIsCopied, jConflictOld, jConflictNew, jConflictWorking,
         jURLCopiedFrom, jRevisionCopiedFrom, jIsSwitched, jLockToken, 
-        jLockOwner, jLockComment, jLockCreationDate);
+        jLockOwner, jLockComment, jLockCreationDate, jLock);
     if(JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
@@ -1916,92 +1931,59 @@ jobject SVNClient::createJavaStatus(const char *path, svn_wc_status_t *status)
     {
         return NULL;
     }
-    if (jUrl != NULL)
+    env->DeleteLocalRef(jUrl);
+    if(JNIUtil::isJavaExceptionThrown())
     {
-        env->DeleteLocalRef(jUrl);
-        if(JNIUtil::isJavaExceptionThrown())
-        {
-            return NULL;
-        }
+        return NULL;
     }
-    if(jLastCommitAuthor != NULL)
+    env->DeleteLocalRef(jLastCommitAuthor);
+    if(JNIUtil::isJavaExceptionThrown())
     {
-        env->DeleteLocalRef(jLastCommitAuthor);
-        if(JNIUtil::isJavaExceptionThrown())
-        {
-            return NULL;
-        }
+        return NULL;
     }
-    if(jConflictNew != NULL)
+    env->DeleteLocalRef(jConflictNew);
+    if(JNIUtil::isJavaExceptionThrown())
     {
-        env->DeleteLocalRef(jConflictNew);
-        if(JNIUtil::isJavaExceptionThrown())
-        {
-            return NULL;
-        }
+        return NULL;
     }
-    if(jConflictOld != NULL)
+    env->DeleteLocalRef(jConflictOld);
+    if(JNIUtil::isJavaExceptionThrown())
     {
-        env->DeleteLocalRef(jConflictOld);
-        if(JNIUtil::isJavaExceptionThrown())
-        {
-            return NULL;
-        }
+        return NULL;
     }
-    if(jConflictWorking != NULL)
+    env->DeleteLocalRef(jConflictWorking);
+    if(JNIUtil::isJavaExceptionThrown())
     {
-        env->DeleteLocalRef(jConflictWorking);
-        if(JNIUtil::isJavaExceptionThrown())
-        {
-            return NULL;
-        }
+        return NULL;
     }
-    if(jURLCopiedFrom != NULL)
+    env->DeleteLocalRef(jURLCopiedFrom);
+    if(JNIUtil::isJavaExceptionThrown())
     {
-        env->DeleteLocalRef(jURLCopiedFrom);
-        if(JNIUtil::isJavaExceptionThrown())
-        {
-            return NULL;
-        }
+        return NULL;
+    }
+    env->DeleteLocalRef(jLockComment);
+    if(JNIUtil::isJavaExceptionThrown())
+    {
+        return NULL;
+    }
+    env->DeleteLocalRef(jLockOwner);
+    if(JNIUtil::isJavaExceptionThrown())
+    {
+        return NULL;
+    }
+    env->DeleteLocalRef(jLockToken);
+    if(JNIUtil::isJavaExceptionThrown())
+    {
+        return NULL;
+    }
+    env->DeleteLocalRef(jLock);
+    if(JNIUtil::isJavaExceptionThrown())
+    {
+        return NULL;
     }
     return ret;
 }
 
-jint SVNClient::mapStatusKind(int svnKind)
-{
-    switch(svnKind)
-    {
-    case svn_wc_status_none:
-    default:
-        return org_tigris_subversion_javahl_StatusKind_none;
-    case svn_wc_status_unversioned:
-        return org_tigris_subversion_javahl_StatusKind_unversioned;
-    case svn_wc_status_normal:
-        return org_tigris_subversion_javahl_StatusKind_normal;
-    case svn_wc_status_added:
-        return org_tigris_subversion_javahl_StatusKind_added;
-    case svn_wc_status_missing:
-        return org_tigris_subversion_javahl_StatusKind_missing;
-    case svn_wc_status_deleted:
-        return org_tigris_subversion_javahl_StatusKind_deleted;
-    case svn_wc_status_replaced:
-        return org_tigris_subversion_javahl_StatusKind_replaced;
-    case svn_wc_status_modified:
-        return org_tigris_subversion_javahl_StatusKind_modified;
-    case svn_wc_status_merged:
-        return org_tigris_subversion_javahl_StatusKind_merged;
-    case svn_wc_status_conflicted:
-        return org_tigris_subversion_javahl_StatusKind_conflicted;
-    case svn_wc_status_ignored:
-        return org_tigris_subversion_javahl_StatusKind_ignored;
-    case svn_wc_status_obstructed:
-        return org_tigris_subversion_javahl_StatusKind_obstructed;
-    case svn_wc_status_external:
-        return org_tigris_subversion_javahl_StatusKind_external;
-    case svn_wc_status_incomplete:
-        return org_tigris_subversion_javahl_StatusKind_incomplete;
-    }
-}
 svn_error_t *SVNClient::messageReceiver (void *baton, apr_hash_t *changed_paths,
                  svn_revnum_t rev, const char *author, const char *date,
                  const char *msg, apr_pool_t * pool)
@@ -2424,7 +2406,7 @@ jobject SVNClient::createJavaDirEntry(const char *path, svn_dirent_t *dirent)
     {
         return NULL;
     }
-    jint jNodeKind = mapNodeKind(dirent->kind);
+    jint jNodeKind = EnumMapper::mapNodeKind(dirent->kind);
     jlong jSize = dirent->size;
     jboolean jHasProps = (dirent->has_props? JNI_TRUE : JNI_FALSE);
     jlong jLastChangedRevision = dirent->created_rev;
@@ -2832,8 +2814,8 @@ jobject SVNClient::createJavaInfo(const svn_wc_entry_t *entry)
     {
         return NULL;
     }
-    jint jSchedule = mapScheduleKind(entry->schedule);
-    jint jNodeKind = mapNodeKind(entry->kind);
+    jint jSchedule = EnumMapper::mapScheduleKind(entry->schedule);
+    jint jNodeKind = EnumMapper::mapNodeKind(entry->kind);
     jstring jAuthor = JNIUtil::makeJString(entry->cmt_author);
     if(JNIUtil::isJavaExceptionThrown())
     {
@@ -2939,46 +2921,6 @@ jobject SVNClient::createJavaInfo(const svn_wc_entry_t *entry)
     return ret;
 }
 
-jint SVNClient::mapNodeKind(int nodeKind)
-{
-    switch(nodeKind)
-    {
-    case svn_node_none:
-        return org_tigris_subversion_javahl_NodeKind_none;
-    case svn_node_file:
-        return org_tigris_subversion_javahl_NodeKind_file;
-    case svn_node_dir:
-        return org_tigris_subversion_javahl_NodeKind_dir;
-    case svn_node_unknown:
-        return org_tigris_subversion_javahl_NodeKind_unknown;
-    default:
-        return org_tigris_subversion_javahl_NodeKind_unknown;
-    }
-}
-jint SVNClient::mapScheduleKind(int schedule)
-{
-    switch(schedule)
-    {
-    /** Nothing special here */
-    case svn_wc_schedule_normal:
-        return org_tigris_subversion_javahl_ScheduleKind_normal;
-
-    /** Slated for addition */
-    case svn_wc_schedule_add:
-        return org_tigris_subversion_javahl_ScheduleKind_add;
-
-    /** Slated for deletion */
-    case svn_wc_schedule_delete:
-        return org_tigris_subversion_javahl_ScheduleKind_delete;
-
-    /** Slated for replacement (delete + add) */
-    case svn_wc_schedule_replace:
-        return org_tigris_subversion_javahl_ScheduleKind_replace;
-
-    default:
-        return org_tigris_subversion_javahl_ScheduleKind_normal;
-    }
-}
 jobject SVNClient::createJavaLock(const svn_lock_t *lock)
 {
     if(lock == NULL)
@@ -3065,8 +3007,8 @@ jobject SVNClient::createJavaLock(const svn_lock_t *lock)
     return ret;
 }
 
-jobjectArray SVNClient::lock(Targets &targets, const char *comment, 
-                        LockCallback &callback, bool force)
+void SVNClient::lock(Targets &targets, const char *comment, 
+                        bool force)
 {
     Pool requestPool;
     const apr_array_header_t *targetsApr = targets.array(requestPool);
@@ -3074,61 +3016,20 @@ jobjectArray SVNClient::lock(Targets &targets, const char *comment,
     if(Err != NULL)
     {
         JNIUtil::handleSVNError(Err);
-        return NULL;
+        return;
     }
     apr_pool_t * apr_pool = requestPool.pool ();
     svn_client_ctx_t *ctx = getContext(NULL);
-    apr_array_header_t *locks;
-    svn_error_t *err = svn_client_lock(&locks, (apr_array_header_t *)targetsApr,
-        comment, force, lockCallback, &callback, ctx, apr_pool);
+    svn_error_t *err = svn_client_lock(targetsApr,
+        comment, force, ctx, apr_pool);
 
-    if (Err == NULL)
-    {
-        JNIEnv *env = JNIUtil::getEnv();
-        int size = locks->nelts;
-        jclass clazz = env->FindClass(JAVA_PACKAGE"/Lock");
-        if(JNIUtil::isJavaExceptionThrown())
-        {
-            return NULL;
-        }
-        jobjectArray ret = env->NewObjectArray(size, clazz, NULL);
-        if(JNIUtil::isJavaExceptionThrown())
-        {
-            return NULL;
-        }
-        env->DeleteLocalRef(clazz);
-        if(JNIUtil::isJavaExceptionThrown())
-        {
-            return NULL;
-        }
-
-        for(int i = 0; i < size; i++)
-        {
-            svn_lock_t **item = 
-                &APR_ARRAY_IDX (locks, i, svn_lock_t*);
-
-            jobject jLock = createJavaLock(*item);
-            env->SetObjectArrayElement(ret, i, jLock);
-            if(JNIUtil::isJavaExceptionThrown())
-            {
-                return NULL;
-            }
-            env->DeleteLocalRef(jLock);
-            if(JNIUtil::isJavaExceptionThrown())
-            {
-                return NULL;
-            }
-        }
-        return ret;
-    }
-    else
+    if (Err != NULL)
     {
         JNIUtil::handleSVNError(err);
-        return NULL;
     }
 }
 
-void SVNClient::unlock(Targets &targets, LockCallback &callback, bool force)
+void SVNClient::unlock(Targets &targets, bool force)
 {
     Pool requestPool;
 
@@ -3141,38 +3042,13 @@ void SVNClient::unlock(Targets &targets, LockCallback &callback, bool force)
     }
     svn_client_ctx_t *ctx = getContext(NULL);
     Err = svn_client_unlock((apr_array_header_t*)targetsApr, force, 
-        lockCallback, &callback, ctx, requestPool.pool());
+        ctx, requestPool.pool());
     if(Err != NULL)
     {
         JNIUtil::handleSVNError(Err);
         return;
     }
 }
-svn_error_t *SVNClient::lockCallback(void *baton,
-                                     const char *path,
-                                     svn_boolean_t do_lock,
-                                     const svn_lock_t *lock,
-                                     svn_error_t *ra_err)
-{
-    if(ra_err == NULL)
-    {
-        LockCallback *callback = (LockCallback *)baton;
-        jobject jLock = createJavaLock(lock);
-        if(JNIUtil::isJavaExceptionThrown())
-        {
-            return NULL;
-        }
-        callback->callback(path, do_lock ? true:false, jLock);
-        JNIUtil::getEnv()->DeleteLocalRef(jLock);
-        if(JNIUtil::isJavaExceptionThrown())
-        {
-            return NULL;
-        }
-
-    }
-    return ra_err;
-}
-
 void SVNClient::setRevProperty(jobject jthis, const char *path, 
                                const char *name, Revision &rev, 
                                const char *value, bool force)
@@ -3688,7 +3564,7 @@ jobject SVNClient::createJavaInfo2(const char *path, const svn_info_t *info)
         return NULL;
     }
     jlong jrev = info->rev;
-    jint jnodeKind = mapNodeKind(info->kind);
+    jint jnodeKind = EnumMapper::mapNodeKind(info->kind);
     jstring jreposRootUrl = JNIUtil::makeJString(info->repos_root_URL);
     if(JNIUtil::isJavaExceptionThrown())
     {
@@ -3713,7 +3589,7 @@ jobject SVNClient::createJavaInfo2(const char *path, const svn_info_t *info)
         return NULL;
     }
     jboolean jhasWcInfo = info->has_wc_info ? JNI_TRUE:JNI_FALSE;
-    jint jschedule = mapScheduleKind(info->schedule);
+    jint jschedule = EnumMapper::mapScheduleKind(info->schedule);
     jstring jcopyFromUrl = JNIUtil::makeJString(info->copyfrom_url);
     jlong jcopyFromRev = info->copyfrom_rev;
     jlong jtextTime = info->text_time;
