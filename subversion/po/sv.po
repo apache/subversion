@@ -45,8 +45,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2005-04-01 23:16+0200\n"
-"PO-Revision-Date: 2005-03-31 23:05+0200\n"
+"POT-Creation-Date: 2005-04-02 23:55+0200\n"
+"PO-Revision-Date: 2005-04-03 00:11+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Swedish <sv@li.org>\n"
 "MIME-Version: 1.0\n"
@@ -288,21 +288,21 @@ msgid "Lock Expires"
 msgstr "Låset går ut"
 
 #: clients/cmdline/info-cmd.c:206
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Lock Comment (%i lines):\n"
 "%s\n"
 msgstr ""
-"Låskommentar (%i %s):\n"
+"Låskommentar (%i rader):\n"
 "%s\n"
 
 #: clients/cmdline/info-cmd.c:207
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Lock Comment (%i line):\n"
 "%s\n"
 msgstr ""
-"Låskommentar (%i %s):\n"
+"Låskommentar (%i rad):\n"
 "%s\n"
 
 #: clients/cmdline/info-cmd.c:280
@@ -642,10 +642,9 @@ msgid ""
 msgstr ""
 "Städa i arbetskopian och dess underkataloger rekursivt. Lås tas bort,\n"
 "avbrutna operationer återupptas o.s.v.\n"
-"användning: cleanup [PATH...]\n"
+"användning: cleanup [SÖKVÄG...]\n"
 
 #: clients/cmdline/main.c:226
-#, fuzzy
 msgid ""
 "Send changes from your working copy to the repository.\n"
 "usage: commit [PATH...]\n"
@@ -655,11 +654,13 @@ msgid ""
 "  If any targets are (or contain) locked items, those will be\n"
 "  unlocked after a successful commit.\n"
 msgstr ""
-"Skicka ändringar från arbetskopian till databasen.\n"
-"användning: commit [PATH...]\n"
+"Skicka ändringar från arbetskopian till arkivet.\n"
+"användning: commit [SÖKVÄG...]\n"
 "\n"
 "  Ett loggmeddelande måste anges, men det kan vara tomt. Om det inte anges\n"
 "  med en --message- eller --file-flagga, startas en editor.\n"
+"  Om något mål är låst (eller innehåller låsta objekt), kommer dessa att\n"
+"  låsas upp efter en lyckad incheckning.\n"
 
 #: clients/cmdline/main.c:237
 msgid ""
@@ -672,14 +673,14 @@ msgid ""
 "    URL -> WC:   check out URL into WC, schedule for addition\n"
 "    URL -> URL:  complete server-side copy;  used to branch & tag\n"
 msgstr ""
-"Duplicera något i en arbetskopia eller databas och kom ihåg historik.\n"
+"Duplicera något i en arbetskopia eller arkiv och kom ihåg historik.\n"
 "användning: copy SRC DST\n"
 "\n"
-"  SRC och DST kan vardera vara antingen en sökväg i en arbetskopia (WC)\n"
+"  SRC och DST kan vardera vara antingen en sökväg i en arbetskopia (AK)\n"
 "  eller en URL:\n"
-"    WC  -> WC:   kopiera och schemalägg för tillägg (med historik)\n"
-"    WC  -> URL:  checka genast in en kopia av WC till URL\n"
-"    URL -> WC:   checka ut URL till WC och schemalägg för tillägg\n"
+"    AK  -> AK:   kopiera och schemalägg för tillägg (med historik)\n"
+"    AK  -> URL:  arkivera genast en kopia av AK till URL\n"
+"    URL -> AK:   checka ut URL till AK och schemalägg för tillägg\n"
 "    URL -> URL:  kopiering på servern; används för att förgrena och skapa\n"
 "                 märken\n"
 
@@ -699,17 +700,17 @@ msgid ""
 "    via an immediate commit.\n"
 msgstr ""
 "Radera filer och kataloger från versionshantering.\n"
-"användning: 1. delete PATH...\n"
+"användning: 1. delete AÖKVÄG...\n"
 "            2. delete URL...\n"
 "\n"
 "  1. Varje objekt som angivits med en sökväg schemaläggs för radering vid\n"
-"     nästa incheckning. Filer och kataloger för vilka incheckning ej har\n"
-"     gjorts tas genast bort från arbetskopian. Sökvägar som är, eller\n"
-"     innehåller, objekt som ej är versionshanterade eller som är ändrade\n"
-"     raderas inte utan att --force-flaggan används.\n"
+"     nästa arkivering. Filer och kataloger som aldrig arkiverats tas\n"
+"     genast bort från arbetskopian. Sökvägar som är, eller innehåller,\n"
+"     objekt som ej är versionshanterade eller som är ändrade raderas\n"
+"     inte utan att --force-flaggan används.\n"
 "\n"
-"  2. Varje objekt som anges med en URL raderas från databasen genom\n"
-"     en omedelbar incheckning.\n"
+"  2. Varje objekt som anges med en URL raderas från arkivet genom en\n"
+"     omedelbar arkivering.\n"
 
 #: clients/cmdline/main.c:266
 msgid ""
@@ -740,13 +741,12 @@ msgid ""
 "  Use just 'svn diff' to display local modifications in a working copy.\n"
 msgstr ""
 "Visa skillnaderna mellan två sökvägar.\n"
-"användning: 1. diff [-r N[:M]] [TARGET[@REV]...]\n"
-"            2. diff [-r N[:M]] --old=OLD-TGT[@OLDREV] [--new=NEW-TGT"
-"[@NEWREV]]\n"
-"               [PATH...]\n"
-"            3. diff OLD-URL[@OLDREV] NEW-URL[@NEWREV]\n"
+"användning: 1. diff [-r N[:M]] [MÅL[@REV]...]\n"
+"            2. diff [-r N[:M]] --old=GAMMALT-MÅL[@GAMMALREV]\n"
+"               [--new=NYTT-MÅL[@NYREV]] [SÖKVÄG...]\n"
+"            3. diff GAMMAL-URL[@GAMMALREV] NY-URL[@NYREV]\n"
 "\n"
-"  1. Visa ändringarna mellan två revisioner i målen TARGET som de ser ut i\n"
+"  1. Visa ändringarna mellan två revisioner i målen MÅL som de ser ut i\n"
 "     revision REV. Målen kan vara arbetskopior eller URL:er.\n"
 "\n"
 "     Standardvärdet för N är BASE om något av målen är en sökväg till en\n"
@@ -754,22 +754,21 @@ msgstr ""
 "     målen är en sökväg till en arbetskopia, används den aktuella arbets-\n"
 "     versionen. Annars är standardvärdet HEAD.\n"
 "\n"
-"  2. Visa skillnaden mellan OLD-TGT som den såg ut i OLDREV och NEW-TGT\n"
-"     som den såg ut i NEWREV. Om en eller flera sökvägar PATH anges, ska\n"
-"     dessa vara relativa OLD-TGT och NEW-TGT och de begränsar i så fall\n"
-"     utskriften till skillnaderna i dessa sökvägar. OLD-TGT och NEW-TGT kan\n"
-"     vara sökvägar till en arbetskopia eller URL[@REV]. Standardvärdet för\n"
-"     NEW-TGT är OLD-TGT. -r N sätter standardvärdet för OLDREV till N. -r N:"
-"M\n"
-"     sätter standardvädet för OLDREV till N och för NEWREV till M.\n"
+"  2. Visa skillnaden mellan GAMMALT_MÅL som den såg ut i GAMMALREV och\n"
+"     NYTT-MÅL som den såg ut i NYREV. Om en eller flera sökvägar PATH\n"
+"     anges, ska dessa vara relativa GAMMALT_MÅL och NYTT-MÅL och de\n"
+"     begränsar i så fall utskriften till skillnaderna i dessa sökvägar.\n"
+"     GAMMALT_MÅL och NYTT_MÅL kan vara sökvägar till en arbetskopia\n"
+"     eller URL[@REV]. Standardvärdet för NYTT_MÅL är GAMMALT_MÅL. -r N\n"
+"     sätter standardvärdet för GAMMALREV till N. -r N:M sätter\n"
+"     standardvädet för GAMMALREV till N och för NYREV till M.\n"
 "\n"
-"  3. Kortare sätt att skriva \"svn diff --old=OLD-URL[@OLDREV]\n"
-"    --new=NEW-URL[@NEWREV]\".\n"
+"  3. Kortare sätt att skriva \"svn diff --old=GAMMAL-URL[@GAMMALREV]\n"
+"    --new=NY-URL[@NYREV]\".\n"
 "\n"
 "  Använd endast \"svn diff\" för att se lokala ändringar i en arbetskopia.\n"
 
 #: clients/cmdline/main.c:306
-#, fuzzy
 msgid ""
 "Create an unversioned copy of a tree.\n"
 "usage: 1. export [-r REV] URL[@PEGREV] [PATH]\n"
@@ -791,18 +790,21 @@ msgid ""
 "  looked up.\n"
 msgstr ""
 "Skapa en icke versionshanterad kopia av ett träd.\n"
-"användning: 1. export [-r REV] URL [PATH]\n"
-"            2. export [-r REV] PATH1 [PATH2]\n"
+"användning: 1. export [-r REV] URL[@FIXREV] [SÖKVÄG]\n"
+"            2. export [-r REV] SÖKVÄG1[@FIXRREV] [SÖKVÄG2]\n"
 "\n"
-"  1. Exporterar ett rent katalogträd från databasen som anges av URL,\n"
-"     vid revisionen REV, eller HEAD om REV inte anges, till PATH. Om PATH\n"
+"  1. Exporterar ett rent katalogträd från arkivet som anges av URL, vid\n"
+"     revisionen REV, eller HEAD om REV inte anges, till SÖKGÄV. Om SÖKVÄG\n"
 "     utelämnas används den sista delen av URL som lokalt katalognamn.\n"
 "\n"
-"  2. Exporterar ett rent katalogträd från arbetskopian PATH1, vid revision\n"
-"     REV, eller WORKING om REV inte anges, till PATH2. Om PATH2 utelämnas\n"
+"  2. Exporterar ett rent katalogträd från arbetskopian SÖKVÄG1, vid "
+"revision\n"
+"     REV, eller WORKING om REV inte anges, till SÖKVÄG2. Om PATH2 utelämnas\n"
 "     används den sista delen av PATH1 som lokalt katalognamn. Om REV inte\n"
 "     är angiven kommer lokala ändringar att bevaras, men filer som inte är\n"
 "     versionshanterade kopieras inte.\n"
+"\n"
+"  Om FIXREV är angiven, anger den i vilken revision målet först letas upp.\n"
 
 #: clients/cmdline/main.c:335
 msgid ""
@@ -810,7 +812,7 @@ msgid ""
 "usage: help [SUBCOMMAND...]\n"
 msgstr ""
 "Visa hur detta program eller dess underkommandon används.\n"
-"användning: help [SUBCOMMAND...]\n"
+"användning: help [UNDERKOMMANDO...]\n"
 
 #: clients/cmdline/main.c:344
 msgid ""
@@ -821,15 +823,15 @@ msgid ""
 "  If PATH is omitted '.' is assumed.  Parent directories are created\n"
 "  as necessary in the repository.\n"
 msgstr ""
-"Checka in en icke versionshanterad fil eller katalog till databasen.\n"
-"användning: import [PATH] URL\n"
+"Arkivera en icke versionshanterad fil eller katalog.\n"
+"användning: import [SÖKVÄG] URL\n"
 "\n"
-"  Checka in en kopia av PATH till URL rekursivt.\n"
-"  Om PATH utelämnas används \".\". Föräldrakataloger skapas där det behövs\n"
-"  i databasen.\n"
+"  Arkivera en kopia av SÖKVÄG till URL rekursivt.\n"
+"  Om SÖKVÄG utelämnas används \".\". Föräldrakataloger skapas där det "
+"behövs\n"
+"  i arkivet.\n"
 
 #: clients/cmdline/main.c:354
-#, fuzzy
 msgid ""
 "Display information about a local or remote item.\n"
 "usage: info [PATH...]\n"
@@ -837,13 +839,13 @@ msgid ""
 "  Print information about each PATH (default: '.')\n"
 "  PATH may be either a working-copy path or URL.\n"
 msgstr ""
-"Visa information om en fil eller katalog.\n"
-"användning: info [PATH...]\n"
+"Visa information om en fil eller katlog - lokalt eller från ett arkiv.\n"
+"användning: info [SÖKVÄG...]\n"
 "\n"
-"  Skriv ut information om varje angiven sökväg PATH (\".\" om ingen anges).\n"
+"  Skriv ut information om varje angiven SÖKVÄG (\".\" om ingen anges).\n"
+"  SÖKVÄG kan antingen vara till en arbertskopia eller en URL.\n"
 
 #: clients/cmdline/main.c:362
-#, fuzzy
 msgid ""
 "List directory entries in the repository.\n"
 "usage: list [TARGET[@REV]...]\n"
@@ -863,23 +865,22 @@ msgid ""
 "    Size (in bytes)\n"
 "    Date and time of the last commit\n"
 msgstr ""
-"Lista kataloginnehåll i databasen.\n"
-"användning: list [TARGET...]\n"
+"Lista kataloginnehåll i arkivet.\n"
+"användning: list [MÅL[@REV]...]\n"
 "\n"
-"  Lista varje fil TARGET och innehållet i varje katalog TARGET som de ser "
-"ut\n"
-"  i databasen. Om TARGET är en sökväg i en arbetskopia, används motsvarande\n"
-"  URL till databasen.\n"
+"  Lista varje fil MÅL och innehållet i varje katalog MÅL som de ser ut i\n"
+"  arkivet. Om MÅL är en sökväg i en arbetskopia, används motsvarande URL\n"
+"  URL till arkivet. OM REV anges, avgör den var MÅL först letas upp.\n"
 "\n"
-"  Standardvärdet för TARGET är \".\", vilket innebär databas-URL:en till\n"
+"  Standardvärdet för MÅL är \".\", vilket innebär arkiv-URL:en till\n"
 "  arbetskopian i aktuell katalog.\n"
 "\n"
 "  Om --verbose används, visas status med följande fält:\n"
 "\n"
-"    Revisionsnummer för senaste incheckning\n"
-"    Författare till senaste incheckning\n"
+"    Revisionsnummer för senaste arkiveringen\n"
+"    Författare till senaste arkiveringen\n"
 "    Storlek (i byte)\n"
-"    Datum och tid för senaste incheckning\n"
+"    Datum och tid för senaste arkiveringen\n"
 
 #: clients/cmdline/main.c:386
 msgid ""
@@ -889,6 +890,13 @@ msgid ""
 "\n"
 "  Use --force to steal the lock from another user or working copy.\n"
 msgstr ""
+"Lås sökvägar till arbetskopior, eller URL:er, i arkivet så att ingen annan\n"
+"användare kan arkivera ändringar till dem.\n"
+"användning: lock SÖKVÄG...\n"
+"\n"
+"  Använd -force-flaggan för att stjäla ett lås från en annana användare "
+"eller\n"
+"  arbetskopia.\n"
 
 #: clients/cmdline/main.c:394
 msgid ""
@@ -918,14 +926,13 @@ msgid ""
 "    svn log http://www.example.com/repo/project foo.c bar.c\n"
 msgstr ""
 "Visa loggmeddelanden för revisioner och/eller filer.\n"
-"användning: 1. log [PATH]\n"
-"            2. log URL [PATH...]\n"
+"användning: 1. log [SÖKVÄG]\n"
+"            2. log URL [SÖKVÄG...]\n"
 "\n"
 "  1. Visa loggmeddelanden för en lokal sökväg (\".\" är standardvärdet).\n"
 "     Standardvärdet för revisionsområdet är BASE:1.\n"
 "\n"
-"  2. Visa loggmeddelanden för varje sökväg PATH (standardvärdet är \".\") "
-"under\n"
+"  2. Visa loggmeddelanden för varje SÖKVÄG (standardvärdet är \".\") under\n"
 "     URL. Standardvärdet för revisionsområdet är HEAD:1.\n"
 "\n"
 "  Om -v används skrivs även alla berörda sökvägar ut med varje "
@@ -971,9 +978,9 @@ msgid ""
 "  in which case, the differences will be applied to that file.\n"
 msgstr ""
 "Inför skillnaderna mellan två källor i en arbetskopia.\n"
-"användning: 1. merge sourceURL1[@N] sourceURL2[@M] [WCPATH]\n"
-"            2. merge sourceWCPATH1@N sourceWCPATH2@M [WCPATH]\n"
-"            3. merge -r N:M SOURCE[REV] [WCPATH]\n"
+"användning: 1. merge källURL1[@N] källURL2[@M] [AKSÖKVÄG]\n"
+"            2. merge källAKSÖKVÄG1@N källAKSÖKVÄG2@M [AKSÖKVÄG]\n"
+"            3. merge -r N:M KÄLLA[REV] [AKSÖKVÄG]\n"
 "\n"
 "  1. I den första formen anges käll-URL:erna med revisionsnummer N och M.\n"
 "     Dessa är de två källor som kommer att jämföras. Revisionsnumren\n"
@@ -983,14 +990,15 @@ msgstr ""
 "     arbetskopiorna vilka källor som ska jämföras. I detta fall måste\n"
 "     revisionsnummer anges.\n"
 "\n"
-"  3. I den tredje formen kan SOURCE vara en URL eller en sökväg till en\n"
+"  3. I den tredje formen kan KÄLLA vara en URL eller en sökväg till en\n"
 "     arbetskopia. I det senare fallet används motsvarande URL. Denna URL,\n"
 "     vid revision REV, som den såg ut i revisionerna N respektive M "
 "bestämmer\n"
 "     vad som ska jämföras. Om REV inte anges, används HEAD.\n"
 "\n"
-"  WCPATH är sökvägen till den arbetskopia där ändringarna kommer att\n"
-"  införas. Om WCPATH utelämnas används \".\" som standardvärde, såvida inte\n"
+"  AKSÖKVÄG är sökvägen till den arbetskopia där ändringarna kommer att\n"
+"  införas. Om AKSÖKVÄG utelämnas används \".\" som standardvärde, såvida "
+"inte\n"
 "  källorna har ett gemensamt basnamn som matchar en fil i \".\";\n"
 "  i så fall införs skillnaderna i den filen.\n"
 
@@ -1011,16 +1019,16 @@ msgid ""
 "  In both cases, all the intermediate directories must already exist.\n"
 msgstr ""
 "Skapa en ny versionshanterad katalog.\n"
-"användning: 1. mkdir PATH...\n"
+"användning: 1. mkdir SÖKVÄG...\n"
 "            2. mkdir URL...\n"
 "\n"
 "  Skapa versionshanterade kataloger.\n"
 "\n"
 "  1. Varje katalog, som anges av en sökväg i en arbetskopia, skapas lokalt\n"
-"     och schemaläggs att läggas till vid nästa incheckning.\n"
+"     och schemaläggs att läggas till vid nästa arkivering.\n"
 "\n"
-"  2. Varje katalog, som anges av en URL, skapas i databasen och checkas\n"
-"     genast in.\n"
+"  2. Varje katalog, som anges av en URL, skapas i arkivet och arkiveras\n"
+"     genast.\n"
 "\n"
 "  I båda fallen måste katalogerna ovanför de angivna redan finnas.\n"
 
@@ -1036,15 +1044,15 @@ msgid ""
 "    URL -> URL:  complete server-side rename.\n"
 msgstr ""
 "Flytta och/eller byt namn på ett objekt i en arbetskopia\n"
-"eller databas.\n"
-"användning: move SRC DST\n"
+"eller arkiv.\n"
+"användning: move KÄLLA DEST\n"
 "\n"
 "  Anmärkning: Detta underkommando är samma sak som \"copy\" följt av \"delete"
 "\".\n"
 "\n"
-"  SRC och DST kan vara antingen sökvägar i en arbetskopia (WC)\n"
+"  KÄLLA och DEST kan vara antingen sökvägar i en arbetskopia (AK)\n"
 "  eller URL:er:\n"
-"    WC  -> WC:   flytta och schemalägg för tillägg (med historik)\n"
+"    AK  -> AK:   flytta och schemalägg för tillägg (med historik)\n"
 "    URL -> URL:  namnbyte på servern\n"
 
 #: clients/cmdline/main.c:488
@@ -1056,13 +1064,13 @@ msgid ""
 "  1. Removes versioned props in working copy.\n"
 "  2. Removes unversioned remote prop on repos revision.\n"
 msgstr ""
-"Radera PROPNAME från filer, kataloger eller revisioner.\n"
-"användning: 1. propdel PROPNAME [PATH...]\n"
-"            2. propdel PROPNAME --revprop -r REV [URL]\n"
+"Radera PROPNAMN från filer, kataloger eller revisioner.\n"
+"användning: 1. propdel PROPNAMN [SÖKVÄG...]\n"
+"            2. propdel PROPNAMN --revprop -r REV [URL]\n"
 "\n"
 "  1. Ta bort versionshanterade egenskaper i arbetskopian.\n"
-"  2. Ta bort icke versionshanterad revisionsegenskap på en revision i\n"
-"     databasen.\n"
+"  2. Ta bort en icke versionshanterad revisionsegenskap på en revision i\n"
+"     arkivet.\n"
 
 #: clients/cmdline/main.c:498
 msgid ""
@@ -1073,14 +1081,14 @@ msgid ""
 "  1. Edits versioned props in working copy.\n"
 "  2. Edits unversioned remote prop on repos revision.\n"
 msgstr ""
-"Editera egenskapen PROPNAME med en extern editor på\n"
+"Editera egenskapen PROPNAMN med en extern editor på\n"
 "angivna mål.\n"
-"användning: 1. propedit PROPNAME PATH...\n"
-"            2. propedit PROPNAME --revprop -r REV [URL]\n"
+"användning: 1. propedit PROPNAMN SÖKVÄG...\n"
+"            2. propedit PROPNAMN --revprop -r REV [URL]\n"
 "\n"
 "  1. Editera versionshanterade egenskaper i arbetskopian.\n"
-"  2. Editera icke versionshanterad revisionsegenskap på en revision i\n"
-"     databasen.\n"
+"  2. Editera en icke versionshanterad revisionsegenskap på en revision i\n"
+"     arkivet.\n"
 
 #: clients/cmdline/main.c:509
 #, fuzzy
@@ -1714,12 +1722,12 @@ msgstr "Skickar filinnehåll "
 #: clients/cmdline/notify.c:351
 #, c-format
 msgid "'%s' locked by user '%s'.\n"
-msgstr ""
+msgstr "'%s' låstes av användaren '%s'.\n"
 
 #: clients/cmdline/notify.c:357
 #, c-format
 msgid "'%s' unlocked.\n"
-msgstr ""
+msgstr "'%s' låstes upp.\n"
 
 #: clients/cmdline/prompt.c:94
 msgid "Can't open stdin"
@@ -2145,7 +2153,7 @@ msgstr "Försök att låsa en katalog som redan var låst"
 
 #: include/svn_error_codes.h:304
 msgid "Working copy not locked; this is probably a bug, please report"
-msgstr ""
+msgstr "Arbetskopian är inte låst; detta är troligen en bugg, vänligen rapportera den"
 
 #: include/svn_error_codes.h:309
 msgid "Invalid lock"
@@ -2356,45 +2364,41 @@ msgid "Unknown FS type"
 msgstr "Okänd filsystemstyp"
 
 #: include/svn_error_codes.h:522
-#, fuzzy
 msgid "No user associated with filesystem"
-msgstr "Ingen transaktion med namnet \"%s\" i filsystemet \"%s\""
+msgstr "Ingen användare kopplad till filsystemet"
 
 #: include/svn_error_codes.h:527
 msgid "Path is locked"
-msgstr ""
+msgstr "Sökvägen är låst"
 
 #: include/svn_error_codes.h:532 include/svn_error_codes.h:659
-#, fuzzy
 msgid "Path is not locked"
-msgstr "Sökvägen \"%s\" är inte en fil"
+msgstr "Sökvägen är inte låst"
 
 #: include/svn_error_codes.h:537
 msgid "Lock token is incorrect"
-msgstr ""
+msgstr "Låsidentifieraren är fel"
 
 #: include/svn_error_codes.h:542
-#, fuzzy
 msgid "No lock token provided"
-msgstr "Argument saknas"
+msgstr "Ingen låsidentifierare tillhandahållen"
 
 #: include/svn_error_codes.h:547
 msgid "Username does not match lock owner"
-msgstr ""
+msgstr "Användarnamnet matchar inte låsägaren"
 
 #: include/svn_error_codes.h:552
 #, fuzzy
 msgid "Filesystem has no such lock"
-msgstr "Kopia saknas i filsystem"
+msgstr "Filsystemet har inget sådant lås"
 
 #: include/svn_error_codes.h:557
 msgid "Lock has expired"
-msgstr ""
+msgstr "Låset har gått ut"
 
 #: include/svn_error_codes.h:562
-#, fuzzy
 msgid "Item is out of date"
-msgstr "Inaktuellt objekt"
+msgstr "Objektet är inaktuellt"
 
 #: include/svn_error_codes.h:574
 #, fuzzy
@@ -2558,14 +2562,13 @@ msgid "Read access denied for root of edit"
 msgstr "Läsning nekas till roten för editeringen"
 
 #: include/svn_error_codes.h:774
-#, fuzzy
 msgid "Item is not readable"
-msgstr "Objektet är inte läsbart."
+msgstr "Objektet är inte läsbart"
 
 #: include/svn_error_codes.h:779
 #, fuzzy
 msgid "Item is partially readable"
-msgstr "Objektet är delvis läsbar."
+msgstr "Objektet är delvis läsbart"
 
 #: include/svn_error_codes.h:786
 msgid "Svndiff data has invalid header"
@@ -2661,7 +2664,7 @@ msgstr "Två orelaterade versionshanterade resurser"
 
 #: include/svn_error_codes.h:886
 msgid "Path has no lock token"
-msgstr ""
+msgstr "Sökvägen saknar låsidentifierare"
 
 #: include/svn_error_codes.h:892
 msgid "A problem occurred; see later errors for details"
@@ -3252,7 +3255,7 @@ msgstr "Sökvägen \"%s\" är inte en fil"
 #: libsvn_client/locking_commands.c:344 libsvn_fs/fs-loader.c:815
 #: libsvn_ra/ra_loader.c:506
 msgid "Lock comment has illegal characters"
-msgstr ""
+msgstr "Låskommentaren innehåller ogiltiga tecken"
 
 #: libsvn_client/log.c:72
 msgid "Missing required revision specification"
@@ -3387,11 +3390,11 @@ msgstr ""
 
 #: libsvn_delta/svndiff.c:391
 msgid "Delta does not fill the target window"
-msgstr ""
+msgstr "Deltat fyller inte målfönstret"
 
 #: libsvn_delta/svndiff.c:394
 msgid "Delta does not contain enough new data"
-msgstr ""
+msgstr "Deltat innehåller inte tillräckligt med ny data"
 
 #: libsvn_delta/svndiff.c:471
 msgid "Svndiff has invalid header"
@@ -3413,7 +3416,7 @@ msgstr "Oväntat slut på svndiff"
 #: libsvn_diff/diff_file.c:1169
 #, c-format
 msgid "Failed to delete mmap '%s'"
-msgstr ""
+msgstr "Kunde inte ta bort minnesmappning '%s'"
 
 #: libsvn_fs/fs-loader.c:102 libsvn_ra/ra_loader.c:157
 #: libsvn_ra/ra_loader.c:170
@@ -3910,7 +3913,7 @@ msgstr ""
 
 #: libsvn_fs_base/fs.c:1335
 msgid "Module for working with a Berkeley DB repository."
-msgstr ""
+msgstr "Modul för att arbeta med ett Berkeley DB-arkiv."
 
 #: libsvn_fs_base/fs.c:1369
 #, c-format
@@ -3920,7 +3923,7 @@ msgstr "Versionen för FS-laddaren (%d) stöds ej för bdb"
 #: libsvn_fs_base/lock.c:449 libsvn_fs_fs/lock.c:618
 #, c-format
 msgid "Cannot verify lock on path '%s'; no username available"
-msgstr ""
+msgstr "Kan inte kontrollera låset för sökvägen '%s'; användarnamn saknas"
 
 #: libsvn_fs_base/lock.c:455 libsvn_fs_fs/lock.c:624
 #, c-format
@@ -7836,52 +7839,52 @@ msgstr "exporterad%s"
 msgid "'%s' not versioned, and not exported\n"
 msgstr "\"%s\" är inte versionshanterad eller exporterad\n"
 
-#, fuzzy
-#~ msgid "'get-file-revs' request not implemented"
-#~ msgstr "get-file-revs ej implementerad"
+#~ msgid "repository argument required\n"
+#~ msgstr "argument för databas saknas\n"
+
+#~ msgid "unknown command: '%s'\n"
+#~ msgstr "Okänt kommando: \"%s\"\n"
 
 #, fuzzy
-#~ msgid "'get-locations' request not implemented"
-#~ msgstr "get-locations ej implementerad"
-
-#~ msgid "   %ld => %ld\n"
-#~ msgstr "   %ld => %ld\n"
-
-#~ msgid "Cannot cleanup '%s': not a directory"
-#~ msgstr "Kan inte städa i \"%s\": ingen katalog"
-
-#~ msgid "pass ARG as bundled options to GNU diff"
-#~ msgstr "skicka ARG som flaggor till GNU diff"
-
-#~ msgid "'svn info' only works on working copy paths, not URLs"
-#~ msgstr ""
-#~ "\"svn info\" fungerar endast för sökvägar i en arbetskopia, ej URL:er"
-
-#~ msgid "No commit for revision 0.\n"
-#~ msgstr "Ingen incheckning av revision 0.\n"
-
-#~ msgid "Working copy not locked"
-#~ msgstr "Arbetskopian ej låst"
-
-#~ msgid "No get_dir() available for URL schema"
-#~ msgstr "get_dir() ej tillgänglig för URL-schemat"
-
-#~ msgid "Unsupported RA plugin ABI version (%d) for ra_dav"
-#~ msgstr ""
-#~ "ABI-versionen för insticksmodulen för databasåtkomst (%d) för ra_dav "
-#~ "stöds ej"
+#~ msgid "Can't recode string"
+#~ msgstr "Kan inte läsa från standard in"
 
 #~ msgid "Unsupported RA plugin ABI version (%d) for ra_svn."
 #~ msgstr ""
 #~ "ABI-versionen för insticksmodulen för databasåtkomst (%d) för ra_svn "
 #~ "stöds ej"
 
+#~ msgid "Unsupported RA plugin ABI version (%d) for ra_dav"
+#~ msgstr ""
+#~ "ABI-versionen för insticksmodulen för databasåtkomst (%d) för ra_dav "
+#~ "stöds ej"
+
+#~ msgid "No get_dir() available for URL schema"
+#~ msgstr "get_dir() ej tillgänglig för URL-schemat"
+
+#~ msgid "Working copy not locked"
+#~ msgstr "Arbetskopian ej låst"
+
+#~ msgid "No commit for revision 0.\n"
+#~ msgstr "Ingen incheckning av revision 0.\n"
+
+#~ msgid "'svn info' only works on working copy paths, not URLs"
+#~ msgstr ""
+#~ "\"svn info\" fungerar endast för sökvägar i en arbetskopia, ej URL:er"
+
+#~ msgid "pass ARG as bundled options to GNU diff"
+#~ msgstr "skicka ARG som flaggor till GNU diff"
+
+#~ msgid "Cannot cleanup '%s': not a directory"
+#~ msgstr "Kan inte städa i \"%s\": ingen katalog"
+
+#~ msgid "   %ld => %ld\n"
+#~ msgstr "   %ld => %ld\n"
+
 #, fuzzy
-#~ msgid "Can't recode string"
-#~ msgstr "Kan inte läsa från standard in"
+#~ msgid "'get-locations' request not implemented"
+#~ msgstr "get-locations ej implementerad"
 
-#~ msgid "unknown command: '%s'\n"
-#~ msgstr "Okänt kommando: \"%s\"\n"
-
-#~ msgid "repository argument required\n"
-#~ msgstr "argument för databas saknas\n"
+#, fuzzy
+#~ msgid "'get-file-revs' request not implemented"
+#~ msgstr "get-file-revs ej implementerad"
