@@ -1781,13 +1781,27 @@ svn_fs__dag_merge (const char **conflict_p,
    *               }
    *           }
    *         else if (E exists in source but not target)
-   *           add same entry to target, pointing to source entry's id
-   *
-   *         // Otherwise: E exists in neither target nor source, OR
-   *         // E exists in target but not source.  Both are no-ops
-   *         // for our purposes, so do nothing.
+   *           add same entry to target, pointing to source entry's id;
+   *         else if (E exists in target but not source)
+   *           {
+   *             if (E points the same node rev in target and ancestor)
+   *                delete E from target;
+   *             else // E points to different node revs in target & ancestor
+   *               {
+   *                 conflict;
+   *               }
+   *           }
+   *         else
+   *           {
+   *             // E exists in neither target nor source, so it's a
+   *             // double delete -- do nothing, since E is already
+   *             // absent from target.  ### kff todo: but it would be
+   *             // nice to handle the rename case better.  How?
+   *           }
    *       }
    *
+   *     // This next loop is over those entries in source that were
+   *     // not already covered in the loop over ancestor above.
    *     for (each remaining entry E in source)
    *       {
    *         if (E does not exist in target)
@@ -1906,15 +1920,46 @@ svn_fs__dag_merge (const char **conflict_p,
               SVN_ERR (add_new_entry (target, s_entry->id, s_entry->name,
                                       trail));
             }
-          
-          /* The remaining two cases are;
-           *    - E exists in neither source nor target
-           *    - E exists in target but not source
-           *
-           * The first means a double delete, the second means E
-           * was added in target only.  In both cases, target
-           * stays as is.
-           */
+          /* E exists in target but not source */
+          else if ((t_entry = apr_hash_get (t_entries, key, klen))
+                   && (! apr_hash_get (s_entries, key, klen)))
+            {
+              if (svn_fs_id_eq (t_entry->id, a_entry->id))
+                {
+                  /* If E is same in target as ancestor, then it has
+                     not changed, and the deletion in source should be
+                     honored. */
+                  SVN_ERR (svn_fs__dag_delete (target, t_entry->name, trail));
+
+                  /* Seems cleanest to remove it from the target
+                     entries hash now, even though no code would break
+                     if we didn't.  It's more robust if t_entries
+                     reflects the state of the target at all times. */
+                  apr_hash_set (t_entries, key, klen, NULL);
+                }
+              else
+                {
+                  /* Otherwise, E is different in target than in
+                     ancestor, so it's a conflict with the deletion of
+                     E in source. */
+
+                  /* ### kff todo: abstract path creation func here? */
+                  const char *new_tpath
+                    = apr_psprintf (trail->pool, "%s/%s",
+                                    target_path, t_entry->name);
+
+                  *conflict_p = new_tpath;
+                  return svn_error_createf
+                    (SVN_ERR_FS_CONFLICT, 0, NULL, trail->pool,
+                     "conflict at \"%s\"", new_tpath);
+                }
+            }
+          /* E exists in neither target nor source */
+          else
+            {
+              /* It's a double delete, so do nothing.
+                 ### kff todo: what about the rename case? */
+            }
           
           /* We've taken care of any possible implications E could
              have.  Remove it from source_entries, so it's easy
