@@ -99,7 +99,6 @@ copy_one_versioned_file (const char *from,
                          apr_pool_t *pool)
 {
   const svn_wc_entry_t *entry;
-  svn_error_t *err;
   svn_subst_keywords_t kw = { 0 };
   svn_subst_eol_style_t style;
   apr_hash_t *props;
