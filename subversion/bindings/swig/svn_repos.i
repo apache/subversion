@@ -62,6 +62,16 @@ typedef void * svn_repos_file_rev_handler_t;
 };
 
 /* -----------------------------------------------------------------------
+   handle the 'location_revisions' parameter appropriately
+*/
+%typemap(python,in) apr_array_header_t *location_revisions {
+    $1 = (apr_array_header_t *) svn_swig_py_revnums_to_array($input,
+                                                             _global_pool);
+    if ($1 == NULL)
+        return NULL;
+}
+
+/* -----------------------------------------------------------------------
    XXX: for some reasons svn_delta_editor doesn't get typemapped even
    if svn_delta.i is imported. so we redeclare here.
 */
@@ -127,6 +137,13 @@ typedef void * svn_repos_file_rev_handler_t;
     $1 = svn_swig_pl_strings_to_hash ($input, _global_pool);
 }
 
+/* -----------------------------------------------------------------------
+   handle the output from svn_repos_trace_node_locations()
+*/
+%typemap(python,in,numinputs=0) apr_hash_t **locations = apr_hash_t **OUTPUT;
+%typemap(python,argout,fragment="t_output_helper") apr_hash_t **locations {
+    $result = t_output_helper($result, svn_swig_py_locationhash_to_dict(*$1));
+}
 
 /* ----------------------------------------------------------------------- */
 
