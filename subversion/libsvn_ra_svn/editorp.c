@@ -34,6 +34,7 @@
 #include "svn_ra_svn.h"
 #include "svn_pools.h"
 #include "svn_md5.h"
+#include "svn_private_config.h"
 
 #include "ra_svn.h"
 
@@ -125,7 +126,7 @@ static svn_error_t *check_for_error(ra_svn_edit_baton_t *eb, apr_pool_t *pool)
       SVN_ERR(svn_ra_svn_read_cmd_response(eb->conn, pool, ""));
       /* We shouldn't get here if the consumer is doing its job. */
       return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
-                              "Successful edit status returned too soon");
+                              _("Successful edit status returned too soon"));
     }
   return SVN_NO_ERROR;
 }
@@ -415,7 +416,7 @@ static svn_error_t *lookup_token(ra_svn_driver_state_t *ds, const char *token,
   *entry = apr_hash_get(ds->tokens, token, APR_HASH_KEY_STRING);
   if (!*entry || (*entry)->is_file != is_file)
     return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
-                            "Invalid file or dir token during edit");
+                            _("Invalid file or dir token during edit"));
   return SVN_NO_ERROR;
 }
 
@@ -597,7 +598,7 @@ static svn_error_t *ra_svn_handle_apply_textdelta(svn_ra_svn_conn_t *conn,
   SVN_ERR(lookup_token(ds, token, TRUE, &entry));
   if (entry->dstream)
     return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
-                            "Apply-textdelta already active");
+                            _("Apply-textdelta already active"));
   entry->pool = svn_pool_create(ds->file_pool);
   SVN_CMD_ERR(ds->editor->apply_textdelta(entry->baton, base_checksum,
                                           entry->pool, &wh, &wh_baton));
@@ -619,7 +620,7 @@ static svn_error_t *ra_svn_handle_textdelta_chunk(svn_ra_svn_conn_t *conn,
   SVN_ERR(lookup_token(ds, token, TRUE, &entry));
   if (!entry->dstream)
     return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
-                            "Apply-textdelta not active");
+                            _("Apply-textdelta not active"));
   SVN_CMD_ERR(svn_stream_write(entry->dstream, str->data, &str->len));
   return SVN_NO_ERROR;
 }
@@ -637,7 +638,7 @@ static svn_error_t *ra_svn_handle_textdelta_end(svn_ra_svn_conn_t *conn,
   SVN_ERR(lookup_token(ds, token, TRUE, &entry));
   if (!entry->dstream)
     return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
-                            "Apply-textdelta not active");
+                            _("Apply-textdelta not active"));
   SVN_CMD_ERR(svn_stream_close(entry->dstream));
   entry->dstream = NULL;
   apr_pool_destroy(entry->pool);
@@ -785,7 +786,7 @@ svn_error_t *svn_ra_svn__drive_editorp(svn_ra_svn_conn_t *conn,
       else
         {
           err = svn_error_createf(SVN_ERR_RA_SVN_UNKNOWN_CMD, NULL,
-                                  "Unknown command '%s'", cmd);
+                                  _("Unknown command '%s'"), cmd);
           err = svn_error_create(SVN_ERR_RA_SVN_CMD_ERR, err, NULL);
         }
 
