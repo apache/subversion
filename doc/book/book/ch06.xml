@@ -798,10 +798,9 @@ joessh = $JOESSH /opt/alternate/ssh -p 29934
       writing&mdash;specifically, versioned
       writing&mdash;capabilities.  The result is a standardized,
       robust system that is conveniently packaged as part of the
-      Apache 2.0 software, is supported by numerous pieces of core
-      operating system and third-party products, and which doesn't
-      require network administrators to open up yet another custom
-      port. 
+      Apache 2.0 software, is supported by numerous operating systems
+      and third-party products, and which doesn't require network
+      administrators to open up yet another custom port.
       <footnote>
         <para>They really hate doing that.</para>
       </footnote>
@@ -988,6 +987,19 @@ LoadModule dav_svn_module     modules/mod_dav_svn.so
         restart Apache in order to create and network new
         repositories.</para>      
 
+      <para>Be sure that when you define your new
+        <literal>Location</literal>, it doesn't overlap with other
+        exported Locations.  For example, if your main
+        <literal>DocumentRoot</literal> to <filename>/www</filename>,
+        do not export a Subversion repository in <literal>&lt;Location
+        /www/repos&gt;</literal>.  If a request comes in for the URI
+        <filename>/www/repos/foo.c</filename>, Apache won't know
+        whether to look for a file <filename>repos/foo.c</filename> in
+        the <literal>DocumentRoot</literal>, or whether to delegate
+        <command>mod_dav_svn</command> to return
+        <filename>foo.c</filename> from the Subversion
+        repository.</para>
+
       <sidebar>
         <title>Server Names and the COPY Request</title>
         
@@ -1134,16 +1146,33 @@ $
 &lt;/Location&gt;
 </screen>
 
-        <para>Now, at this stage, if you were to restart Apache, any
-          Subversion operations that required authentication would
-          harvest a username and password from the Subversion client,
-          which would either provide previously cached values for
-          these things, or prompt the user for the information.
-          What's missing here, however, are directives that tell
-          Apache <emphasis>which</emphasis> sorts of client requests
-          require authorization.  Wherever authorization is required,
-          Apache will demand authentication.  See the next section
-          (<xref linkend="svn-ch-6-sect-4.4"/>) to configure
+        <para>This <literal>&lt;Location&gt;</literal> block is not
+          yet complete, and will not do anything useful.  It's merely
+          telling Apache that whenever authorization is required,
+          Apache should harvest a username and password from the
+          Subversion client. What's missing here, however, are
+          directives that tell Apache <emphasis>which</emphasis> sorts
+          of client requests require authorization.  Wherever
+          authorization is required, Apache will demand
+          authentication as well.  The simplest thing to do is protect
+          all requests.  Adding <literal>Require valid-user</literal>
+          tells Apache that all requests require an authenticated
+          user:</para>
+
+        <screen>
+&lt;Location /svn&gt;
+  DAV svn
+  SVNParentPath /usr/local/svn
+  AuthType Basic
+  AuthName "Subversion repository"
+  AuthUserFile /etc/svn-auth-file
+  Require valid-user
+&lt;/Location&gt;
+</screen>
+
+        <para>Be sure to read the next section (<xref
+          linkend="svn-ch-6-sect-4.4"/>) for more detail on the
+          <literal>Require</literal> directive and other ways to set
           authorization policies.</para>
 
         <para>One word of warning: HTTP Basic Auth passwords pass in
@@ -1732,7 +1761,7 @@ jane = r
           clients.  Most modern operating systems (Win32, OS X, and
           Linux) have the built-in ability to mount a DAV server as a
           standard network "share".  This is a complicated topic;  for
-          details, read <xref linkend="svn-ap-d"/>.</para>
+          details, read <xref linkend="svn-ap-c"/>.</para>
 
         
       </sect3>
@@ -1808,7 +1837,7 @@ $ cat /usr/local/bin/svn
 #!/bin/sh
 
 umask 002
-/usr/local/subversion/bin/svn
+/usr/local/subversion/bin/svn "$@"
 
 </screen>
 

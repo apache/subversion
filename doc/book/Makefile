@@ -29,7 +29,6 @@ MDOCS_XML_SOURCE = $(MDOCS_DIR)/misc-docs.xml
 MDOCS_ALL_SOURCE = $(MDOCS_DIR)/*.xml
 MDOCS_INSTALL_DIR = $(INSTALL_DIR)/misc-docs
 
-XSL_DIR = ${BOOK_TOP}/tools/xsl
 XSL_FO = ${BOOK_TOP}/tools/fo-stylesheet.xsl
 XSL_HTML = $(BOOK_TOP)/tools/html-stylesheet.xsl
 XSL_HTML_CHUNK = $(BOOK_TOP)/tools/chunk-stylesheet.xsl

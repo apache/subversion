@@ -1,91 +1,141 @@
-  <appendix id="svn-ap-e">
-    <title>Other Subversion Clients</title>
-    
-  <!-- ================================================================= -->
-  <!-- ======================== SECTION 1 ============================== -->
-  <!-- ================================================================= -->
+<appendix id="svn-ap-e">
+  <title>Third Party Tools</title>
+
+  <simplesect>
+
+    <para>Subversion's modular design (covered in <xref
+      linkend="svn-ch-8-sect-1" />) and the availability of language
+      bindings (as described in <xref linkend="svn-ch-8-sect-2.3" />)
+      make Subversion a likely candidate for use as an extension or
+      backend to other pieces of software.  In this appendix, we'll
+      introduce you to some of the third-party tools that work with
+      Subversion.  We will not cover actual Subversion
+      clients&mdash;see <xref linkend="svn-ap-e" /> for those.
+    </para>
+
+  </simplesect>
+
+  <!-- ******************************************************************* -->
+  <!-- *** SECTION 1:  REPOSITORY CONVERTERS                           *** -->
+  <!-- ******************************************************************* -->
   <sect1 id="svn-ap-e-sect-1">
-    <title>Out of One, Many</title>
+    <title>Repository Converters</title>
 
-      <para>The Subversion command line client,
-        <command>svn</command>, is the official<footnote><para>Because
-        we says so, that's why.</para></footnote> implementation of a
-        Subversion client.  Fortunately for those interested in
-        developing additional Subversion clients, Subversion is
-        implemented as a series of libraries.  These libraries are
-        accessible via C API, as well as other languages (see <xref
-        linkend="svn-ch-8-sect-2.3"/>).</para>
+     <para>There are several different converters available to turn
+     your CVS repository into a Subversion repository.  We'll mention
+     a few here, but you should also check the list at
+     <systemitem class="url"
+     >http://subversion.tigris.org/project_faq.html#cvs2svn</systemitem>
+     to see if any new ones have been added.</para>
 
-      <para>This component design means that it's easy (well, at least
-        <emphasis>easier</emphasis>) to write clients and utilities
-        using these libraries.  As a result, even pre-1.0, there are a
-        number of GUI clients available for Subversion, each in
-        various phases of development.</para>
+     <variablelist>
+       <varlistentry>
+           <term>cvs2svn</term>
+           <listitem><para><command>cvs2svn.py</command> is a Python
+           script that converts a CVS repository to a Subversion
+           repository.  It is under active development.  It currently
+           ships with Subversion, though it may become an independent
+           project soon.  For now, you should always run the most
+           recent version you can, by checking out this subdirectory
+           of the Subversion repository: 
+           <systemitem class="url"
+           >http://svn.collab.net/repos/svn/trunk/tools/cvs2svn/</systemitem>.
+           For more information about <command>cvs2svn.py</command>,
+           read the <filename>README</filename> file in that subdirectory.
+           As of this writing (February 2004),
+           <command>cvs2svn.py</command> is not really "1.0 quality":
+           it has successfully converted many people's repositories
+           (including branches and tags), but for others it has either
+           failed to complete the conversion, or converted the data in
+           an unexpected or subtly wrong way.  However, by the time
+           you read this, the situation may have changed; check the
+           <filename>README</filename> for
+           updates.</para></listitem></varlistentry>
+        
+        <varlistentry>
+           <term>Subversion plugin for VCP</term>
+           <listitem><para>Chia-liang Kao has written a converter
+           based on <literal>VCP</literal>.  The converter doesn't
+           seem to have its own name, it's just "the Subversion plugin
+           to VCP", but it can be checked out from <systemitem class="url" 
+           >http://svn.clkao.org/revml/branches/svn-perl/</systemitem>,
+           with documentation at <systemitem class="url"
+>http://svn.clkao.org/revml/branches/svn-perl/lib/VCP/Dest/svn.pm</systemitem>.
+           It depends on the Subversion Perl bindings as well as
+           VCP.  (For more information about VCP, see <systemitem class="url"
+           >http://public.perforce.com/public/revml/index.html</systemitem>).
+           </para></listitem></varlistentry>
 
-      <table id="svn-ap-e-table-1">
-        <title>GUI Clients for Subversion</title>
+        <varlistentry>
+           <term>RefineCVS</term>
+           <listitem><para>Lev Serebryakov has written a converter
+           called <command>RefineCVS</command>, available from
+           <systemitem class="url"
+           >http://lev.serebryakov.spb.ru/refinecvs/</systemitem>.
+           We don't have any direct experience with
+           it.</para></listitem></varlistentry>
+      </variablelist>
+     <para>
+     </para>
 
-        <tgroup cols="5">
-          <thead>
-            <row>
-              <entry>name</entry>
-              <entry>Language</entry>
-              <entry>Portable</entry>
-              <entry>License</entry>
-              <entry>URL</entry>
-            </row>
-          </thead>
-          <tbody>
-            <row>
-              <entry>RapidSVN</entry>
-              <entry>C++</entry>
-              <entry>Yes, native widgets</entry>
-              <entry>Apache-style</entry>
-              <entry><systemitem
-              class="url">http://rapidsvn.tigris.org/</systemitem></entry>
-            </row>
 
-            <row>
-              <entry>gsvn</entry>
-              <entry>Python</entry>
-              <entry>Unix only, non-native widgets</entry>
-              <entry>GPL</entry>
-              <entry><systemitem
-              class="url">http://gsvn.tigris.org/</systemitem></entry>
-            </row>
+  </sect1>
 
-            <row>
-              <entry>TortoiseSVN</entry>
-              <entry>C++</entry>
-              <entry>Win32 only</entry>
-              <entry>GPL</entry>
-              <entry><systemitem
-              class="url">http://tortoisesvn.tigris.org/</systemitem></entry>
-            </row>
+  <!-- ******************************************************************* -->
+  <!-- *** SECTION 2:  VIEWCVS                                         *** -->
+  <!-- ******************************************************************* -->
+  <sect1 id="svn-ap-e-sect-2">
+    <title>ViewCVS</title>
 
-            <row>
-              <entry>svnup</entry>
-              <entry>Java, JNI bindings</entry>
-              <entry>Yes</entry>
-              <entry>Apache-style</entry>
-              <entry><systemitem
-              class="url">http://svnup.tigris.org/</systemitem></entry>
-            </row>
-      
-            <row>
-              <entry>jsvn</entry>
-              <entry>Java, wrapping the svn command-line client</entry>
-              <entry>Yes</entry>
-              <entry>Academic Free License</entry>
-              <entry><systemitem
-              class="url">http://jsvn.alternatecomputing.com</systemitem></entry>
-            </row>
-          </tbody>
-        </tgroup>
-      </table>
+    <para>Perhaps the first&mdash;and definitely the most
+      popular&mdash;utility to take advantage of Subversion's public
+      API is ViewCVS.  ViewCVS is essentially a CGI script which
+      enables browsing of the files and directories of a version
+      control system.  Originally designed as a Python-based
+      replacement for the popular cvsweb utility,
+      <footnote>
+        <para>CVSWeb was written in Perl.</para>
+      </footnote>
+      ViewCVS provides a full-featured Web-based interface to CVS
+      repositories, allowing folks to see the version control history
+      of the files in those repositories and to perform such nifty
+      tasks as generating differences between arbitrary versions of
+      those files.</para>
 
-    </sect1>
+    <para>In the early part of 2002, the repository accessing portion
+      of ViewCVS was modularized into a semi-generic interface, and a
+      pair of modules were grown to provide that functionality for CVS
+      repositories.  Later that year, Subversion's Python language
+      bindings sufficiently matured, and a Subversion repository
+      module was written for the ViewCVS interface.  Now, ViewCVS is
+      able to browse Subversion repositories, providing essentially
+      the same history and differencing mechanisms for those
+      repositories as are available for CVS ones.</para>
 
+    <para>For more information on ViewCVS, see the project's website at
+      <systemitem class="url">http://viewcvs.sf.net/</systemitem>.</para>
+
+  </sect1>
+
+  <!-- ******************************************************************* -->
+  <!-- *** SECTION 3:  SUBWIKI                                         *** -->
+  <!-- ******************************************************************* -->
+  <sect1 id="svn-ap-e-sect-3">
+    <title>SubWiki</title>
+
+    <para>SubWiki is a Subversion-backed Wiki program.  Wikis have
+      sprung up on the World Wide Web as unique publishing and
+      community tools&mdash;essentially, web-based interfaces for
+      editing web pages.  SubWiki takes the Wiki concept one step
+      further by using a version control system for its backend
+      storage mechanism.  The result is a CGI program which allows web
+      pages to be essentially edited in-place, yet never loses old
+      versions of those web pages.</para>
+
+    <para>To learn more about SubWiki, visit that project's website at
+      <systemitem class="url">http://subwiki.tigris.org/</systemitem>.</para>
+
+  </sect1>
 </appendix>
 
 <!--

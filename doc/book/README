@@ -53,8 +53,7 @@ II. COMPILING THE DOCS
       $ mv docbook-xsl-X.YY.Z xsl
 
    The default build process expects to the stylesheets to be in
-   tools/xsl/.  If you already have them installed elsewhere on your
-   system, you can change the variable XSL_DIR in doc/book/Makefile.
+   tools/xsl/.
 
 
 2. Use XSLT to transform the book.
