@@ -368,7 +368,7 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
      {svnadmin__wait} },
 
     {"rmlocks", subcommand_rmlocks, {0},
-     N_("usage: svnadmin rmtlocks REPOS_PATH LOCKED_PATH...\n\n"
+     N_("usage: svnadmin rmlocks REPOS_PATH LOCKED_PATH...\n\n"
         "Unconditionally remove lock from each LOCKED_PATH.\n"),
      {0} },
 
