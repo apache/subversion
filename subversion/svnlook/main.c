@@ -261,7 +261,7 @@ static svn_error_t *
 check_cancel (void *baton)
 {
   if (cancelled)
-    return svn_error_create (SVN_ERR_CANCELLED, NULL, "Caught signal");
+    return svn_error_create (SVN_ERR_CANCELLED, NULL, _("Caught signal"));
   else
     return SVN_NO_ERROR;
 }
@@ -563,7 +563,7 @@ open_writable_binary_file (apr_file_t **fh,
       else if (kind != svn_node_dir)
         {
           return svn_error_createf (err->apr_err, err,
-                                    "Error creating dir '%s' (path exists)", 
+                                    _("Error creating dir '%s' (path exists)"),
                                     full_path);
         }
     }
