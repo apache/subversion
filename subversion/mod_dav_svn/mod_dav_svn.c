@@ -96,8 +96,7 @@ static const command_rec dav_svn_cmds[] =
 static void register_hooks(void)
 {
     /* repository provider */
-    ap_hook_get_resource(dav_svn_hook_get_resource, NULL, NULL,
-                         AP_HOOK_MIDDLE);
+    dav_svn_register_repos(NULL /* ### pconf */);
 
     /* live property handling */
     ap_hook_gather_propsets(dav_svn_gather_propsets, NULL, NULL,

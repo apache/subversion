@@ -59,8 +59,7 @@
 #include <apr_tables.h>
 #include <mod_dav.h>
 
-int dav_svn_hook_get_resource(request_rec *r, const char *root_dir,
-                              const char *workspace);
+void dav_svn_register_repos(apr_pool_t *p);
 
 const dav_hooks_propdb *dav_svn_get_propdb_hooks(request_rec *r);
 
