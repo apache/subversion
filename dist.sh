@@ -20,8 +20,7 @@
 DIST_SANDBOX=.dist_sandbox
 
 ### The "REV" part of ${DISTNAME}-rREV.tar.gz
-###  Somebody please make this filter better!!!
-VERSION=`svn st -v README | cut -c 16-18`
+VERSION=`svn st -v README | awk '{print $2}'`
 
 ### The tarball's basename, also the name of the subdirectory into which
 ### it should unpack.
