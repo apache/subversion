@@ -31,14 +31,10 @@ BOOK_DIR = ${BOOK_TOP}/book
 MDOCS_DIR = ${BOOK_TOP}/misc-docs
 DOC_DIRS = $(DESIGN_DIR) $(BOOK_DIR) $(MDOCS_DIR) 
 
-### not sure these two are needed
 SWIG_SRC_DIR = $(abs_srcdir)/subversion/bindings/swig
-SWIG_BUILD_DIR = $(abs_builddir)/subversion/bindings/swig
 
 ### these should go away; gen-make should place this into BUILD_DIRS
-SWIG_DIRS = subversion/bindings/swig            \
-            subversion/bindings/swig/python     \
-            subversion/bindings/swig/python/svn \
+SWIG_DIRS = subversion/bindings/swig/python     \
             subversion/bindings/swig/java       \
             subversion/bindings/swig/java/org   \
             subversion/bindings/swig/java/org/tigris \
@@ -103,7 +99,6 @@ SWIG_LDFLAGS = @SWIG_LDFLAGS@
 SWIG_PY_INCLUDES = @SWIG_PY_INCLUDES@
 SWIG_PY_COMPILE = @SWIG_PY_COMPILE@
 SWIG_PY_LINK = @SWIG_PY_LINK@
-SWIG_PY_SETUP_LDFLAGS = @SWIG_PY_SETUP_LDFLAGS@
 SWIG_JAVA_INCLUDES = @SWIG_JAVA_INCLUDES@
 SWIG_JAVA_COMPILE = $(CC) -DNDEBUG -g -O3 -Wall -Wstrict-prototypes -fPIC
 SWIG_JAVA_LINK = $(CC) -shared
@@ -134,8 +129,9 @@ LINK = $(LIBTOOL) $(LTFLAGS) --mode=link $(CC) $(LT_LDFLAGS) $(CFLAGS) $(LDFLAGS
 LINK_APACHE_MOD = $(LIBTOOL) $(LTFLAGS) --mode=link $(CC) $(LT_LDFLAGS) $(CFLAGS) $(LDFLAGS) -rpath $(APACHE_LIBEXECDIR) -avoid-version -module
 
 # these commands run SWIG to generate wrapper source files (*.c)
+### should we protect against swig not being available?
 RUN_SWIG_PY = $(SWIG) -c -python -noproxy $(SWIG_INCLUDES) $(SWIG_PY_INCLUDES) -o $@ $<
-RUN_SWIG_JAVA = cd ${abs_srcdir}/subversion/bindings/swig/java/org/tigris/subversion/swig && $(SWIG) -c -java -noproxy -package 'org.tigris.subversion.swig' $(SWIG_INCLUDES) -o ${abs_builddir}/$@ ${abs_builddir}/$<
+RUN_SWIG_JAVA = cd ${SWIG_SRC_DIR}/java/org/tigris/subversion/swig && $(SWIG) -c -java -noproxy -package 'org.tigris.subversion.swig' $(SWIG_INCLUDES) -o ${abs_builddir}/$@ ${abs_builddir}/$<
 
 # Compilation of SWIG-generated C source code
 COMPILE_PY_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=compile $(SWIG_PY_COMPILE) $(SWIG_INCLUDES) $(SWIG_PY_INCLUDES) -prefer-pic -c -o $@ $<
@@ -163,6 +159,10 @@ INSTALL_SWIG_PY_LIB = $(INSTALL_LIB)
 INSTALL_SWIG_JAVA = $(INSTALL_LIB)
 INSTALL_SWIG_JAVA_LIB = $(INSTALL_LIB)
 
+# additional installation rules for the SWIG wrappers
+INSTALL_EXTRA_SWIG_PY=$(top_srcdir)/build/copy-swig-py.sh "$(PYTHON)" "$(INSTALL_DATA)" "${SWIG_SRC_DIR}/python/svn" "$(DESTDIR)$(swig_pydir)"
+INSTALL_EXTRA_SWIG_JAVA=:
+
 APXS = @APXS@ 
 
 PYTHON = @PYTHON@
@@ -173,21 +173,6 @@ JAVAC = @JAVAC@
 ECHO_C = @ECHO_C@
 ECHO_N = @ECHO_N@
 
-PYTHON_DISTUTIL = $(SWIG_SRC_DIR)/python/setup.py                        \
-                  -I$(SWIG_SRC_DIR)                                      \
-                  -I$(abs_srcdir)/subversion/include $(SVN_APR_INCLUDES) \
-                  -S$(SWIG_SRC_DIR)                                      \
-                  -s"$(SWIG)"                                            \
-                  -L$(SVN_APR_PREFIX)/lib                                \
-                  -L$(abs_builddir)/subversion/libsvn_client/.libs       \
-                  -L$(abs_builddir)/subversion/libsvn_delta/.libs        \
-                  -L$(abs_builddir)/subversion/libsvn_fs/.libs           \
-                  -L$(abs_builddir)/subversion/libsvn_ra/.libs           \
-                  -L$(abs_builddir)/subversion/libsvn_repos/.libs        \
-                  -L$(abs_builddir)/subversion/libsvn_wc/.libs           \
-                  -L$(abs_builddir)/subversion/libsvn_subr/.libs         \
-                  -L$(abs_builddir)/subversion/bindings/swig/.libs       \
-                  $(SWIG_PY_SETUP_LDFLAGS)
 
 all: external-all local-all
 clean: external-clean local-clean
@@ -368,24 +353,6 @@ doc-clean:
                    *.tp *.vr                                \
                    *.dvi *.txt *.html *.ps *.pdf *.fo);     \
         done
-
-swig-assert-available:
-	@if test -z "$(SWIG)" || test "$(SWIG)" = 'none'; then     \
-	    echo 'SWIG variable not defined; this rule is unavailable' >&2; \
-	    echo 'Re-run configure --with-swig' >&2;               \
-	    exit 1;                                                \
-	fi
-
-swig-py-ext: swig-assert-available
-	cd $(SWIG_BUILD_DIR)/python; \
-        $(PYTHON) $(PYTHON_DISTUTIL) build $(DISTUTIL_PARAM)
-
-install-swig-py-ext: swig-assert-available
-	cd $(SWIG_BUILD_DIR)/python; \
-        $(PYTHON) $(PYTHON_DISTUTIL) install $(DISTUTIL_PARAM) --prefix=$(DESTDIR)$(prefix)
-
-swig-py-ext-clean:
-	rm -rf $(SWIG_BUILD_DIR)/python/build
 
 java-api:
 	@$(MAKE) -C $(abs_srcdir)/subversion/bindings/java "JAVAC=$(JAVAC)"

@@ -6,7 +6,7 @@ BUILDING SWIG BINDINGS FOR SVN
 Step 1:  Build & install the proper version of SWIG (which is
          currently swig 1.3.16).
 
-    * Go to http://www.swig.org, download the sourceball, unpack.
+    * Go to http://www.swig.org/, download the sourceball, unpack.
 
     * In the SWIG-X.X.X directory, run ./configure.
 
@@ -50,27 +50,26 @@ SPECIFIC LANGUAGE BINDINGS
 
 *  Python
 
-   1.  On Unix systems, run 'make swig-py-ext' from the top of the
+   1.  On Unix systems, run 'make swig-py from the top of the
        Subversion source tree.  This will invoke SWIG on the *.i
        files, resulting in a collection of .c source files.  It will
-       then compile those .c files into Python libraries.
+       then compile and link those .c files into Python libraries.
 
        On Windows, ???
 
-   2.  On Unix systems, run 'make install-swig-py-ext' (as root,
-       typically) from the top of the Subversion source tree.  This
-       will copy your new Python libraries into the appropriate system
-       location.
+   2.  On Unix systems, run 'make install-swig-py (as root, typically)
+       from the top of the Subversion source tree.  This will copy
+       your new Python libraries into the appropriate system location.
 
        Note: If you don't have access to install to python's site-packages
        directory, you can have the python modules install to your home
        directory.  You can do this by running
-       'make install-swig-py-ext DISTUTIL_PARAM=--home=~'.
+       'make install-swig-py swig_pydir=~'.
 
        Note: If you want to install to an alterante prefix (usually only
        if you are building packages), you can supply the prefix here.  An
        example of doing this for building rpms looks like
-       'make install-swig-py-ext DISTUTIL_PARAM=--prefix=$RPM_BUILD_ROOT/usr'.
+       'make install-swig-py DESTDIR=$RPM_BUILD_ROOT/usr'.
 
        On Windows, ???
 
@@ -86,19 +85,8 @@ SPECIFIC LANGUAGE BINDINGS
 
    The Java bindings are still under development, and have not yet
    reached a functional state.  You can attempt to build them by
-   running 'make swig-java-ext' from the top level of the Subversion
+   running 'make swig-java from the top level of the Subversion
    source tree.
 
 
 *  Perl?
-
-
-TROUBLESHOOTING FAQ
-
-* "When I 'make swig-py-ext', I see this error:
-       ld: can't locate file for: -lsvn_swig_py-1"
-
-    This means that step 2 (above) failed.  Subversion's ./configure
-    script probably didn't find a suitable SWIG installation, and thus
-    never built/installed libsvn_swig_py.so.
-
