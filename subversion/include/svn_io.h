@@ -77,12 +77,15 @@ svn_error_t *svn_io_check_path (svn_string_t *path,
  * *TMP_NAME is allocated in POOL.
  *
  * Since there's no guarantee how long the tmp name will remain unique
- * after it is chosen, a part of the name is generated randomly; this
- * makes on-disk collisions less likely, though it can't eliminate
- * them entirely.
+ * after it is chosen, a part of the name is generated semi-randomly;
+ * this makes on-disk collisions less likely, though it doesn't
+ * eliminate them entirely.
  * 
- * Avoiding C tmpnam() because not thread-safe.
- * Avoiding C tempname() because it tries standard tmp areas first.
+ * Justification for Claim of Historical Inevitability: this function
+ * was written because
+ *
+ *    tmpnam() is not thread-safe.
+ *    tempname() tries standard system tmp areas first.
  */
 svn_error_t *svn_io_tmp_name (svn_string_t **tmp_name,
                               svn_string_t *path,
