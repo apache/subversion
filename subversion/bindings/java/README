@@ -31,11 +31,12 @@ III.   INTERFACES
 
        The interface code exists to present an API which is familiar
        Subversion Java programmers regardless of the binding
-       implementation method.  The SWIG/Java bindings currently
-       conform to this interface.  The API is likely to be adjusted to
-       more closely align with the JavaHL implementation in hopes of
-       its eventual adoption.  If that doesn't work out, it's likely
-       that the interface concept will be dropped entirely.
+       implementation method.  You can find it under the org/
+       sub-directory.  The SWIG/Java bindings currently conform to
+       this interface.  The API is likely to be adjusted to more
+       closely align with the JavaHL implementation in hopes of its
+       eventual adoption.  If that doesn't work out, it's likely that
+       the interface concept will be dropped entirely.
 
 
 IV.    SWIG
