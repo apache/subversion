@@ -147,6 +147,20 @@ Filesystem:
   steps 2-7; we'll first establish the concrete list of functions,
   then implement them.
 
+  (O.K., I'll take a guess, at the DAG layer:
+
+      -4. svn_fs__dag_clone_root
+      -3. svn_fs__dag_make_file
+      -2. svn_fs__dag_txn_node
+      -1. svn_fs__dag_close
+       0. svn_fs__dag_delete  (that's for svn_fs_abort_txn)
+
+   Hmm ... Oh, yes:
+
+      -5. Decide what exactly a dag_node_t is.
+
+   and of course whatever's missing below.  -xbc)
+
   Once that's working, we can do the Big One: svn_fs_commit_txn(). :-)
 
   -Karl
