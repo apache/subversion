@@ -115,11 +115,7 @@ SVN_LIB_APR($APR_VER_REGEX)
 SVN_LIB_APRUTIL($APU_VER_REGEX)
 
 if test -d "$abs_srcdir/db" ; then
-    # Note: We have to configure and build a db subdirectory even if
-    # some other berkeley db is configured via --with-berkeley-db
-    ### why do we "have to" ?? -gjs
-    SVN_SUBDIR_CONFIG(db/dist)
-    SVN_SUBDIRS="$SVN_SUBDIRS db/dist"
+    AC_MSG_ERROR([Berkeley DB in the source tree is not supported anymore])
 fi
 
 dnl What version of Expat are we using? -----------------
@@ -287,8 +283,6 @@ AC_SUBST(INSTALL_STATIC_RULES)
 AC_SUBST(INSTALL_RULES)
 AC_SUBST(FS_TEST_DEPS)
 AC_SUBST(FS_TEST_PROGRAMS)
-AC_SUBST(SVN_DB_INCLUDES)
-AC_SUBST(SVN_DB_LIBS)
 
 AC_DEFINE_UNQUOTED(SVN_FS_WANT_DB_MAJOR, $SVN_FS_WANT_DB_MAJOR,
                    [The desired major version for the Berkeley DB])
@@ -549,15 +543,11 @@ case "$svn_lib_berkeley_db" in
 
 The Subversion filesystem library, part of the server, requires
 Berkeley DB version $db_version or newer, which you don't seem to have
-installed.  We have created makefiles which will build the Subversion
-client code only, and skip the server.  You can find latest version of
-Berkeley DB at http://www.sleepycat.com/.  You can find the latest
-version of Berkeley DB here: http://www.sleepycat.com/download/index.shtml
-
-As an option, you may build Berkeley DB directly within the Subversion
-source tree. Download and extract the Berkeley distribution, then
-rename db-$db_version/ to db/ in the top level of the Subversion
-source tree.
+installed and linked to APR-UTIL.  We have created makefiles which
+will build the Subversion client code only, and skip the server.  You
+can find latest version of Berkeley DB at http://www.sleepycat.com/.
+You can find the latest version of Berkeley DB here:
+  http://www.sleepycat.com/download/index.shtml
 ])
 ;;
 esac

@@ -204,13 +204,8 @@ I.    BUILD REQUIREMENTS
 
           http://www.sleepycat.com/download/patchlogs.shtml
 
-      If you already have another version of Berkeley DB installed and
-      don't want to downgrade, you can unpack the Berkeley DB 4.0.14
-      distribution into a subdir named `db' in the top-level of the
-      Subversion source tree.  Then Subversion will ignore the system
-      DB and use the one it found in its own source tree.
-
-      Alternatively, you can add this flag
+      If you have Berkeley DB installed in a place not searched by default
+      for includes and libraries; add this flag
 
           --with-berkeley-db=/usr/local/BerkeleyDB.4.0
 
@@ -507,7 +502,7 @@ II.   INSTALLATION
 
           $ svn co http://svn.collab.net/repos/svn/trunk svn
           $ cd svn
-          $ # get neon/db/apr as required
+          $ # get neon/apr as required
           $ chmod +x autogen.sh
           $ ./autogen.sh
           $ mkdir ../obj
