@@ -181,7 +181,7 @@ mkdir-init:
         done
 
 # recursive targets to handle external projects (e.g. APR, Neon)
-external-all external-clean external-distclean external-install:
+external-all external-install:
 	@target=`echo $@ | sed s/external-//`;          \
         list='$(EXTERNAL_PROJECT_DIRS)';                \
         for i in $$list; do                             \
@@ -190,10 +190,22 @@ external-all external-clean external-distclean external-install:
             echo "------ completed $$target in $$i";    \
         done;
 
+### apr-util relies on generated files in apr, so reverse the
+### list so that it is cleaned before apr.
+external-clean external-distclean:
+	@target=`echo $@ | sed s/external-//`;          \
+        list='$(EXTERNAL_PROJECT_DIRS)';                \
+        for i in $$list; do                             \
+            revlist="$$i $$revlist";                    \
+        done;                                           \
+        for i in $$revlist; do                          \
+            echo "------ making $$target in $$i";       \
+            (cd $$i && $(MAKE) $$target) || exit 1;     \
+            echo "------ completed $$target in $$i";    \
+        done;
+
 ### temporary hack. Neon does not have an "extraclean" and neither does db
 ### If we don't have extraclean -- do the next best thing.
-### second hack. apr-util relies on generated files in apr, so reverse the
-### list so that it is extracleaned before apr.
 external-extraclean:
 	@list='$(EXTERNAL_PROJECT_DIRS)';                                \
         for i in $$list; do                                              \
