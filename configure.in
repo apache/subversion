@@ -215,7 +215,7 @@ if test "$enable_shared" = "no"; then
   if test "$svn_lib_berkeley_db" = "yes"; then
     AC_DEFINE(SVN_LIBSVN_CLIENT_LINKS_RA_LOCAL, 1,
         [Defined if libsvn_client should link against libsvn_ra_local])
-    LIBSVN_CLIENT_DEPS="$LIBSVN_CLIENT_DEPS $SVN_LIBSVN_RA_LOCAL_LIBS $SVN_LIBSVN_FS_LIBS $SVN_LIBSVN_REPOS_LIBS"
+    LIBSVN_CLIENT_DEPS="$LIBSVN_CLIENT_DEPS $SVN_LIBSVN_RA_LOCAL_LIBS $SVN_LIBSVN_REPOS_LIBS $SVN_LIBSVN_FS_LIBS"
   fi
 
 fi
