@@ -5,6 +5,7 @@ lib_LTLIBRARIES = libsvn_fs.la
 libsvn_fs_la_SOURCES =				\
 			clones-table.c		\
 			convert-size.c		\
+			dag.c			\
 			dbt.c			\
 			err.c			\
 			fs.c			\
