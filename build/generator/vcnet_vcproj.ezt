@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding = "Windows-1252"?>
+<VisualStudioProject
+	ProjectType="Visual C++"
+	Version="7.00"
+	Name="[target.name]">
+	<Platforms>
+[for platforms]		<Platform
+			Name="[platforms]"/>
+[end]	</Platforms>
+	<Configurations>
+[for platforms][for configs]		<Configuration
+			Name="[configs.name]|[platforms]"
+			OutputDirectory="$(SolutionDir)\[configs.name]"
+			IntermediateDirectory="[configs.name]"
+			ConfigurationType="[target_type]"[is configs.name "Release"]
+			WholeProgramOptimization="TRUE"[end]>
+			<Tool
+				Name="VCCLCompilerTool"
+[is configs.name "Debug"]				Optimization="0"
+				GlobalOptimizations="FALSE"
+[else]				Optimization="2"
+				GlobalOptimizations="TRUE"
+				InlineFunctionExpansion="2"
+				EnableIntrinsicFunctions="TRUE"
+				FavorSizeOrSpeed="1"
+				OmitFramePointers="TRUE"
+[end]				AdditionalIncludeDirectories="[for includes][includes][if-index includes last][else];[end][end]"
+				PreprocessorDefinitions="[for configs.defines][configs.defines][if-index configs.defines last][else];[end][end]"
+[is configs.name "Debug"]				MinimalRebuild="TRUE"
+				RuntimeLibrary="3"
+				BufferSecurityCheck="TRUE"
+				EnableFunctionLevelLinking="TRUE"
+[else]				StringPooling="TRUE"
+				RuntimeLibrary="2"
+				BufferSecurityCheck="FALSE"
+[end]				WarningLevel="3"
+				Detect64BitPortabilityProblems="TRUE"
+[is configs.name "Debug"]				DebugInformationFormat="4"
+[end]				CompileAsManaged="0"
+				CompileAs="0"[if-any is_exe][is configs.name "Release"]
+				OptimizeForWindowsApplication="TRUE"[end][end]/>
+			<Tool
+				Name="VCCustomBuildTool"/>
+			<Tool
+				Name="VCLinkerTool"
+				AdditionalDependencies="[for configs.libs][configs.libs][if-index configs.libs last][else] [end][end]"
+[is target_type "4"][else]				OutputFile="$(OutDir)\$(ProjectName).[if-any is_exe]exe[else]dll[end]"
+[end][is configs.name "Debug"]				LinkIncremental="2"
+[else]				LinkIncremental="1"
+[end]				AdditionalLibraryDirectories="[rootpath]\db4-win32\lib"
+[is configs.name "Debug"]				GenerateDebugInformation="TRUE"
+[else]				GenerateDebugInformation="FALSE"
+[end]				ProgramDatabaseFile="$(OutDir)\$(ProjectName).pdb"[is configs.name "Debug"]
+				OptimizeReferences="0"[else]
+				OptimizeReferences="2"
+				EnableCOMDATFolding="2"[end][is target_type "2"]
+				ImportLibrary="$(OutDir)\$(ProjectName).lib"[end]/>
+[is target_type "4"]			<Tool
+				Name="VCLibrarianTool"
+				OutputFile="$(OutDir)\$(ProjectName).lib"/>
+[end]			<Tool
+				Name="VCMIDLTool"/>
+			<Tool
+				Name="VCPostBuildEventTool"/>
+			<Tool
+				Name="VCPreBuildEventTool"/>
+			<Tool
+				Name="VCPreLinkEventTool"/>
+			<Tool
+				Name="VCResourceCompilerTool"/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"/>
+			<Tool
+				Name="VCWebDeploymentTool"/>
+		</Configuration>
+[end][end]	</Configurations>
+	<Files>
+[for sources]		<File
+			RelativePath="[sources]">
+		</File>
+[end]	</Files>
+	<Globals>
+	</Globals>
+</VisualStudioProject>
