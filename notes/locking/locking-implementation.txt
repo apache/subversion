@@ -21,12 +21,14 @@ II. Client Implementation
 
           Stored as 'entryprops'.  That is, just like
           last-changed-rev, last-author, etc., tokens come into the
-          client with an svn:wc:entry: prefix, are filtered by libsvn_wc,
-          and stored in .svn/entries.   We'll probably call the new
-          entryprop "svn:wc:entry:lock-token".  (In DAV parlance, what
+          client with an svn:entry: prefix, are filtered by libsvn_wc,
+          and stored in .svn/entries.   We'll call the new entryprops
+          "svn:entry:lock-token", "svn:entry:lock-owner",
+          "svn:entry:lock-comment and "svn:entry:lock-creation-date".
+          (In DAV parlance, what
           we call 'entryprops' are called 'live props'.)
 
-          libsvn_wc also stores the other fields of a lock (owner,
+          libsvn_wc stores the other fields of a lock (owner,
           comment, creation-date) in the entries file, so that they
           are available for the info command.  Note that this
           information is only stored if the current WC has a lock on
@@ -47,11 +49,22 @@ II. Client Implementation
             1. Using a lock to Commit
 
                A new RA layer get_commit_editor2() function will be created.
-               It takes a has of path -> lock token from the working
+               It takes a hash of path -> lock token from the working
                copy.  This will be used by the server to check that
                the WC locks match the current locks on the paths.  A
                flag keep_locks will also be added, specifying whether
                the committables should be unlocked after a successful commit.
+
+               libsvn_client will collect lock tokens during the
+               harvesting of commit items.  If --no-unlock was not
+               specified, unmodified objects will be treated as commit
+               items if the WC has a lock on them.  A new status flag
+               in svn_client_commit_info_t indicates that the object
+               has a lock token.
+
+               A new svn_wc_process_committed2 WC function will be
+               created with a flag indicating whether the lock toke
+               should be removed as part of the post-commit entry update.
 
             2. Releasing a lock
 
@@ -75,13 +88,18 @@ II. Client Implementation
             1. seeing lock tokens in a working copy
 
                The client uses the lock information stored in the
-               entries file to show lock information with svn info.
+               entries file to show lock information with svn info and
+               svn status.
 
             2. seeing locks in a repository
 
-            3.  svn info [wcpath | URL]
+               The server will marshall the lock information as
+               entryprops when calling the status editor.
 
-            4. 'svn update' behavior
+               svn info URL will use RA->get_lock to get the lock for the
+               path specified.
+
+            3. 'svn update' behavior
 
                 A.  At the start of an update, a new version of the
                 'reporter' vtable is used to describe not only mixed
@@ -138,7 +156,8 @@ III. Server Implementation
 
       1.  Define an API for associating a user with an open
           filesystem.  Locks cannot be created/destroyed without a
-          username.
+          username, except that the filesystem allows breaking a lock
+          without a username.
 
       2.  New fs functions for locks:
 
@@ -156,7 +175,7 @@ III. Server Implementation
               svn_repos_fs_lock()
               svn_repos_fs_unlock()
 
-            As usualy, encourage "good citizens" to use these
+            As usually, encourage "good citizens" to use these
             wrappers, since they'll invoke the new hook scripts.  The
             only thing which calls the fs functions directly (and
             circumvents hooks) would be a tool like svnadmin (see
@@ -172,8 +191,7 @@ III. Server Implementation
           svn_fs_make_dir()
 
             Check to see if the incoming path is locked.  If so, use
-            the fs lock-token callback to "pull" a lock-token from
-            the caller.
+            the access descriptor to see if the caller has the lock token.
 
               1. check that the lock-token correctly matches the
                  lock. (i.e. that the caller isn't using some defunct
@@ -188,7 +206,7 @@ III. Server Implementation
 
             Same logic as above, except that because these operations
             can operate on entire trees,  *multiple* lock-tokens might
-            need to be pulled via callback.
+            need to be checked in the access descriptor.
 
           svn_fs_commit_txn()
 
@@ -196,9 +214,7 @@ III. Server Implementation
             already briefly locks the revisions-table in order to do a
             final out-of-date check on everything.  In that same vein,
             it needs to briefly lock the locks-table, and verify every
-            single lock.  This means pulling multiple lock-tokens
-            again, even if they've already been pulled "on the fly" by
-            other fs functions.
+            single lock.
 
 
       5.  auto-expiration of locks
