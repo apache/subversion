@@ -767,6 +767,116 @@ svn_wc__do_property_merge (svn_string_t *path,
   return SVN_NO_ERROR;
 }
 
+/*------------------------------------------------------------------*/
+
+/*** Private 'wc prop' functions ***/
+
+/* A clone of svn_wc_prop_list, for the most part, except that it
+   returns 'wc' props instead of normal props.  */
+static svn_error_t *
+wcprop_list (apr_hash_t **props,
+             svn_string_t *path,
+             apr_pool_t *pool)
+{
+  svn_error_t *err;
+  enum svn_node_kind kind, pkind;
+  svn_string_t *prop_path;
+  
+  *props = apr_hash_make (pool);
+
+  /* Check validity of PATH */
+  err = svn_io_check_path (path, &kind, pool);
+  if (err) return err;
+  
+  if (kind == svn_node_none)
+    return svn_error_createf (SVN_ERR_BAD_FILENAME, 0, NULL, pool,
+                              "svn_wc__wcprop_list: non-existent path '%s'.",
+                              path->data);
+  
+  if (kind == svn_node_unknown)
+    return svn_error_createf (SVN_ERR_UNKNOWN_NODE_KIND, 0, NULL, pool,
+                              "svn_wc__wcprop_list: unknown node kind: '%s'.",
+                              path->data);
+
+  /* Construct a path to the relevant property file */
+  err = svn_wc__wcprop_path (&prop_path, path, 0, pool);
+  if (err) return err;
+
+  /* Does the property file exist? */
+  err = svn_io_check_path (prop_path, &pkind, pool);
+  if (err) return err;
+  
+  if (pkind == svn_node_none)
+    /* No property file exists.  Just go home, with an empty hash. */
+    return SVN_NO_ERROR;
+  
+  /* else... */
+
+  err = svn_wc__load_prop_file (prop_path, *props, pool);
+  if (err) return err;
+
+  return SVN_NO_ERROR;
+}
+
+
+
+/* This is what RA_DAV will use to fetch 'wc' properties.  It will be
+   passed to ra_session_baton->do_commit(). */
+svn_error_t *
+svn_wc__wcprop_get (svn_string_t **value,
+                    svn_string_t *name,
+                    svn_string_t *path,
+                    apr_pool_t *pool)
+{
+  svn_error_t *err;
+  apr_hash_t *prophash;
+
+  err = wcprop_list (&prophash, path, pool);
+  if (err)
+    return
+      svn_error_quick_wrap
+      (err, "svn_wc__wcprop_get: failed to load props from disk.");
+
+  *value = apr_hash_get (prophash, name->data, name->len);
+
+  return SVN_NO_ERROR;
+}
+
+
+/* This is what RA_DAV will use to store 'wc' properties.  It will be
+   passed to ra_session_baton->do_commit(). */
+svn_error_t *
+svn_wc__wcprop_set (svn_string_t *name,
+                    svn_string_t *value,
+                    svn_string_t *path,
+                    apr_pool_t *pool)
+{
+  svn_error_t *err;
+  apr_hash_t *prophash;
+  svn_string_t *prop_path;
+
+  err = wcprop_list (&prophash, path, pool);
+  if (err)
+    return
+      svn_error_quick_wrap
+      (err, "svn_wc__wcprop_get: failed to load props from disk.");
+
+  /* Now we have all the properties in our hash.  Simply merge the new
+     property into it. */
+  apr_hash_set (prophash, name->data, name->len, value);
+  
+  /* Construct a path to the relevant property file */
+  err = svn_wc__wcprop_path (&prop_path, path, 0, pool);
+  if (err) return err;
+  
+  /* Write the properties back out to disk. */
+  err = svn_wc__save_prop_file (prop_path, prophash, pool);
+  if (err) return err;
+
+  return SVN_NO_ERROR;
+}
+
+
 
 /*------------------------------------------------------------------*/
 
@@ -790,12 +900,12 @@ svn_wc_prop_list (apr_hash_t **props,
   
   if (kind == svn_node_none)
     return svn_error_createf (SVN_ERR_BAD_FILENAME, 0, NULL, pool,
-                              "svn_wc_prop_find: non-existent path '%s'.",
+                              "svn_wc_prop_list: non-existent path '%s'.",
                               path->data);
   
   if (kind == svn_node_unknown)
     return svn_error_createf (SVN_ERR_UNKNOWN_NODE_KIND, 0, NULL, pool,
-                              "svn_wc_prop_find: unknown node kind: '%s'.",
+                              "svn_wc_prop_list: unknown node kind: '%s'.",
                               path->data);
 
   /* Construct a path to the relevant property file */
@@ -860,7 +970,7 @@ svn_wc_prop_set (svn_string_t *name,
   if (err)
     return
       svn_error_quick_wrap
-      (err, "svn_wc_prop_get: failed to load props from disk.");
+      (err, "svn_wc_prop_set: failed to load props from disk.");
 
   /* Now we have all the properties in our hash.  Simply merge the new
      property into it. */
