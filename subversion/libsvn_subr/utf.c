@@ -540,8 +540,8 @@ invalid_utf8 (const char *data, apr_size_t len, apr_pool_t *pool)
                                              (unsigned char)last[i]), NULL);
 
   return svn_error_createf (APR_EINVAL, NULL,
-                            _("Valid UTF-8 data (hex:%s)"
-                              "followed by invalid UTF-8 sequence (hex:%s)"),
+                            _("Valid UTF-8 data\n(hex:%s)\n"
+                              "followed by invalid UTF-8 sequence\n(hex:%s)"),
                             valid_txt, invalid_txt);
 }
 
