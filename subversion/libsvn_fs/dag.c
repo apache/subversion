@@ -185,6 +185,37 @@ int svn_fs__dag_is_mutable (dag_node_t *node)
 }
 
 
+skel_t *
+svn_fs__dag_find_dir_entry (dag_node_t *node, const char *name )
+{
+  /* The node "header" is the first element of a node-revision skel,
+     itself a list. */
+  skel_t *header = node->contents->children;
+
+  if (header)
+    {
+      /* Make sure we're looking at a directory node here */
+      if (svn_fs__matches_atom (header->children, "dir"))
+        {
+          /* The entries are the 2nd, 3rd, etc. elements of the
+             node-revision skel. */
+          skel_t *entry = node->contents->children->next;
+ 
+          /* Loop through all the entries in this node-revision... */
+          while (entry)
+            {
+              /* ...returning true if we find one whose name matches
+                 the entry name passed into this function. */
+              if (svn_fs__matches_atom (entry->children, name))
+                return entry;
+
+              entry = entry->next;
+            }
+        }
+    }
+  return (skel_t *)NULL;
+}
+        
 
 svn_error_t *svn_fs__dag_get_proplist (skel_t **proplist_p,
                                        dag_node_t *node,
@@ -374,45 +405,44 @@ svn_error_t *svn_fs__dag_make_file (dag_node_t **child_p,
                                   noderev_skel, trail));
   }
 
-  {
-    skel_t *pnoderev_skel;
-    skel_t *entry_skel;
-    svn_string_t *node_id_str;
+  /* Verify that this parent node does not already have an entry named
+     NAME. */
+  if (! svn_fs__dag_find_dir_entry (parent, name))
+    {
+      skel_t *pnoderev_skel;
+      skel_t *entry_skel;
+      svn_string_t *node_id_str;
 
-    /* Get a string representation of the node id we created above. */
-    node_id_str = svn_fs_unparse_id (new_node_id, trail->pool);
+      /* Get a string representation of the node id we created above. */
+      node_id_str = svn_fs_unparse_id (new_node_id, trail->pool);
 
-    /* Now, we need to tell the parent that it has another new mouth
-       to feed.  So, we get the NODE-REVISION skel of the parent... */
-    SVN_ERR (svn_fs__get_node_revision (&pnoderev_skel,
-                                        parent->fs,
-                                        parent->id,
-                                        trail));
+      /* Now, we need to tell the parent that it has another new mouth
+         to feed.  So, we get the NODE-REVISION skel of the parent... */
+      SVN_ERR (svn_fs__get_node_revision (&pnoderev_skel,
+                                          parent->fs,
+                                          parent->id,
+                                          trail));
 
-    /* ...and we construct a new ENTRY skel to be added to the
-       parent's NODE-REVISION skel... */
-    entry_skel = svn_fs__make_empty_list (trail->pool);
-    svn_fs__prepend (svn_fs__str_atom (node_id_str->data, trail->pool),
-                     entry_skel);
-    svn_fs__prepend (svn_fs__str_atom ((char *) name, trail->pool),
-                     entry_skel);
-
-    /* ...and now we have an ENTRY skel for this new child: (NAME ID).
-       So.  We now get to slap this entry into the parent's list of
-       entries. 
-
-       cmpilato todo: figure out if we're supposed to make sure no
-       entry of the same name exists here already, and whether that
-       check should happen here or not. 
-    */
-    svn_fs__append (entry_skel, pnoderev_skel);
-
-    /* Finally, update the parent's stored skel. */
-    SVN_ERR (svn_fs__put_node_revision (parent->fs,
-                                        parent->id,
-                                        pnoderev_skel,
-                                        trail));
-  }
+      /* ...and we construct a new ENTRY skel to be added to the
+         parent's NODE-REVISION skel... */
+      entry_skel = svn_fs__make_empty_list (trail->pool);
+      svn_fs__prepend (svn_fs__str_atom (node_id_str->data, trail->pool),
+                       entry_skel);
+      svn_fs__prepend (svn_fs__str_atom ((char *) name, trail->pool),
+                       entry_skel);
+      
+      /* ...and now we have an ENTRY skel for this new child: (NAME ID).
+         So.  We now get to slap this entry into the parent's list of
+         entries. 
+      */
+      svn_fs__append (entry_skel, pnoderev_skel);
+      
+      /* Finally, update the parent's stored skel. */
+      SVN_ERR (svn_fs__put_node_revision (parent->fs,
+                                          parent->id,
+                                          pnoderev_skel,
+                                          trail));
+    }
   return SVN_NO_ERROR;
 }
 
