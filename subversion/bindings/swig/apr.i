@@ -69,12 +69,12 @@ typedef apr_int64_t apr_time_t;
    create some INOUT typemaps for apr_size_t
 */
 
+%apply unsigned long *INOUT { apr_size_t *INOUT };
+
 %typemap(python,in) apr_size_t *INOUT (apr_size_t temp) {
     temp = (apr_size_t) PyInt_AsLong($input);
     $1 = &temp;
 }
-
-%typemap(argout) apr_size_t *INOUT = unsigned long *INOUT;
 
 /* -----------------------------------------------------------------------
    create an OUTPUT argument typemap for an apr_hash_t **
