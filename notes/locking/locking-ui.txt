@@ -210,12 +210,17 @@ II. New Client Behaviors
                default.  The Subversion client provides an option to
                retain the lock after commit:
 
-               $ svn commit foo.c --keep-lock
+               $ svn commit foo.c --no-unlock
+
+               If --no-unlock is not specified, even unmodified files
+               will be considered part of the commit and shown to the
+               user in the list of files to commit.  Such files will
+               also be unlocked after the commit.
 
             2. Releasing a lock
  
                $ svn unlock foo.c
-               Lock on 'foo.c' has been released by user 'harry'.
+               Lock on 'foo.c' has been released.
 
                After successful release, the working copy's lock token
                is gone.
@@ -239,9 +244,11 @@ II. New Client Behaviors
              $ svn unlock foo.c --force
              username:  sally
              password:  XXXX
-             Lock on 'foo.c' has been broken by user 'sally'.
+             Lock on 'foo.c' has been broken.
 
-             The --force option also accepts a URL, so that the lock can being removed without a working copy.
+             The --force option also accepts a URL, so that the lock
+             can be
+             released without a working copy.
 
          d. Stealing a lock
 
@@ -268,7 +275,7 @@ II. New Client Behaviors
               password:  XXXX
               'foo.c' has been locked by user 'sally'.
 
-              Remember than 'svn lock' requires a lock comment, so -m,
+              Remember that 'svn lock' requires a lock comment, so -m,
               -F, or launching of $EDITOR is required.  And remember
               that the 'svn lock' command still requires that the
               target be up-to-date to succeed.
