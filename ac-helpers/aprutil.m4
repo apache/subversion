@@ -29,10 +29,20 @@ AC_DEFUN(SVN_LIB_APRUTIL,
   dnl Get libraries and thread flags from APRUTIL ---------------------
 
   LDFLAGS="$LDFLAGS `$apu_config --ldflags`"
+  if test $? -ne 0; then
+    AC_MSG_ERROR([apu-config --ldflags failed])
+  fi
 
   SVN_EXTRA_INCLUDES="$SVN_EXTRA_INCLUDES `$apu_config --includes`"
+  if test $? -ne 0; then
+    AC_MSG_ERROR([apu-config --includes failed])
+  fi
 
   SVN_APRUTIL_LIBS="`$apu_config --link-libtool --libs`"
+  if test $? -ne 0; then
+    AC_MSG_ERROR([apu-config --link-libtool --libs failed])
+  fi
+
   AC_SUBST(SVN_APRUTIL_LIBS)
 ])
 
