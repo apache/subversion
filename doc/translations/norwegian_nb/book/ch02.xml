@@ -1,240 +1,264 @@
 <chapter id="svn-ch-2">
-  <title>Basic Concepts</title>
+  <title>Grunnleggende konsepter</title>
 
   <simplesect>
-    <para>This chapter is a short, casual introduction to Subversion.
-      If you're new to version control, this chapter is definitely for
-      you.  We begin with a discussion of general version control
-      concepts, work our way into the specific ideas behind
-      Subversion, and show some simple examples of Subversion in
-      use.</para>
+    <para>Dette kapittelet er en kort, lettvint introduksjon til 
+      Subversion.
+      Hvis du er ny innen versjonskontroll, er dette kapittelet 
+      definitivt for deg.
+      Vi begynner med en diskusjon om generelle konsepter innen 
+      versjonskontroll, jobber oss gjennom de spesifikke id&#233;ene bak 
+      Subversion, og viser noen enkle eksempler p&#229; bruk av 
+      Subversion.</para>
     
-    <para>Even though the examples in this chapter show people sharing
-      collections of program source code, keep in mind that Subversion
-      can manage any sort of file collection&mdash;it's not limited to
-      helping computer programmers.</para>
+    <para>Selv om eksemplene i dette kapittelet viser personer som deler 
+      samlinger av kildekode til programmer, husk at Subversion kan 
+      behandle alle typer filsamlinger &#8212; det er ikke begrenset til &#229; 
+      hjelpe dataprogrammerere.</para>
   </simplesect>
   
   
   <sect1 id="svn-ch-2-sect-1" > 
-    <title>The Repository</title>  
+    <title>Depotet</title>
     
-    <para>Subversion is a centralized system for sharing information.
-      At its core is a repository, which is a central store of data.
-      The repository stores information in the form of a
-      <firstterm>filesystem tree</firstterm>&mdash;a typical hierarchy
-      of files and directories.  Any number of
-      <firstterm>clients</firstterm> connect to the repository, and
-      then read or write to these files.  By writing data, a client
-      makes the information available to others; by reading data, the
-      client receives information from others.  <xref
-      linkend="svn-ch-2-dia-1"/> illustrates this.</para>
+    <para>Subversion er et sentralisert system for &#229; dele informasjon.
+      Dens kjerne er et depot, som er et sentralt lager av data.
+      Depotet lagrer informasjon i form av et 
+      <firstterm>filsystemtre</firstterm> &#8212; et typisk hierarki av filer 
+      og kataloger.
+      Ethvert antall <firstterm>klienter</firstterm> kobler seg til 
+      depotet, og leser eller skriver deretter til disse filene.
+      Ved &#229; skrive data, gj&#248;r klientenen informasjonen tilgjengelig for 
+      andre; ved &#229; lese data henter klienten informasjon fra andre. 
+      <xref linkend="svn-ch-2-dia-1"/> illustrerer dette.</para>
 
     <figure id="svn-ch-2-dia-1">
-      <title>A typical client/server system</title>
+      <title>Et typisk klient/tjener-system</title>
       <graphic fileref="images/ch02dia1.png"/>
     </figure>
     
-    <para>So why is this interesting?  So far, this sounds like the
-      definition of a typical file server.  And indeed, the repository
-      <emphasis>is</emphasis> a kind of file server, but it's not your
-      usual breed.  What makes the Subversion repository special is
-      that <emphasis>it remembers every change</emphasis> ever written
-      to it: every change to every file, and even changes to the
-      directory tree itself, such as the addition, deletion, and
-      rearrangement of files and directories.</para>
+    <para>S&#229; hvorfor er dette interessant?
+      S&#229; langt h&#248;res dette ut som definisjonen av en typisk filtjener.
+      Og det stemmer, depotet <emphasis>er</emphasis> en slags 
+      filtjener, men den er ikke det du vanligvis kommer ut for.
+      Det som gj&#248;r Subversiondepotet spesielt er at <emphasis>det husker 
+      hver eneste forandring</emphasis> noensinne skrevet til det: Hver 
+      forandring til hver eneste fil, og til og med forandringer i selve 
+      katalogtreet, som opprettelser, slettinger og ommb&#248;bleringer p&#229; 
+      filer og kataloger.</para>
 
-    <para>When a client reads data from the repository, it normally
-      sees only the latest version of the filesystem tree.  But the
-      client also has the ability to view
-      <emphasis>previous</emphasis> states of the filesystem.  For
-      example, a client can ask historical questions like, <quote>What
-      did this directory contain last Wednesday?</quote> or <quote>Who
-      was the last person to change this file, and what changes did
-      they make?</quote> These are the sorts of questions that are at
-      the heart of any <firstterm>version control system</firstterm>:
-      systems that are designed to record and track changes to data
-      over time.
-    </para>
-  </sect1>
+    <para>N&#229;r en klient leser data fra depotet, ser den vanligvis bare 
+      den siste versjonen av filsystemtreet.
+      Men klienten har ogs&#229; muligheten til &#229; se 
+      <emphasis>tidligere</emphasis> tilstander av filsystemet.
+      For eksempel, en klient kan sp&#248;rre historiske sp&#248;rsm&#229;l som:
+      <quote>Hva inneholdt denne katalogen forrige onsdag?</quote> eller 
+      <quote>Hvem var den siste personen som forandret denne filen, og 
+      hvilke forandringer gjorde de?</quote>
+      Dette er typen sp&#248;rsm&#229;l som er hjertet av ethvert 
+      <firstterm>versjonskontrollsystem</firstterm>:
+      Systemer som er designet for &#229; lagre og f&#248;lge forandringer i data 
+      over tid.</para></sect1>
 
   <sect1 id="svn-ch-2-sect-2">
-    <title>Versioning Models</title>
+    <title>Versjoneringsmodeller</title>
 
-    <para>The core mission of a version control system is to enable
-      collaborative editing and sharing of data.  But different
-      systems use different strategies to achieve this.</para>
+    <para>Hovedm&#229;let for et versjonskontrollsystem er &#229; muliggj&#248;re 
+      samarbeidsredigering og deling av data.
+      Men forskjellige systemer bruker forskjellige strategier for &#229; 
+      oppn&#229; dette.</para>
     
     <sect2 id="svn-ch-2-sect-2.1">
-      <title>The Problem of File-Sharing</title>
+      <title>Problemet med fildeling</title>
       
-      <para>All version control systems have to solve the same
-        fundamental problem: how will the system allow users to share
-        information, but prevent them from accidentally stepping on
-        each other's feet?  It's all too easy for users to
-        accidentally overwrite each other's changes in the
-        repository.</para>
+      <para>Alle versjonskontrollsystemer m&#229; l&#248;se det samme fundamentale 
+        problemet:
+        Hvordan vil systemet tillate brukere &#229; dele informasjon, men 
+        forhindre dem fra &#229; tr&#229;kke hverandre p&#229; t&#230;rne?
+        Det er alt for lett for brukere &#229; overskrive hverandres 
+        forandringer i depotet ved en ulykke.</para>
 
-      <para>Consider the scenario shown in <xref
-        linkend="svn-ch-2-dia-2"/>.  Suppose we have two co-workers,
-        Harry and Sally.  They each decide to edit the same repository
-        file at the same time.  If Harry saves his changes to the
-        repository first, then it's possible that (a few moments
-        later) Sally could accidentally overwrite them with her own
-        new version of the file.  While Harry's version of the file
-        won't be lost forever (because the system remembers every
-        change), any changes Harry made <emphasis>won't</emphasis> be
-        present in Sally's newer version of the file, because she
-        never saw Harry's changes to begin with.  Harry's work is
-        still effectively lost&mdash;or at least missing from the
-        latest version of the file&mdash;and probably by accident.
-        This is definitely a situation we want to avoid!</para>
+      <para>Tenk over scenariet vist i <xref linkend="svn-ch-2-dia-2"/>.
+        Sett at vi har to arbeidskolleger, Harry og Sally.
+        De bestemmer seg begge for &#229; redigere den samme filen i depotet 
+        samtidig.
+        Hvis Harry lagrer hans forandringer til depotet f&#248;rst, er det 
+        (noen &#248;yeblikk senere) mulig at Sally feilaktig overskriver dem 
+        med hennes egen nye versjon av filen.
+        Selv om Harrys versjon av filen ikke vil v&#230;re tapt for alltid 
+        (fordi systemet husker hver eneste forandring), vil alle 
+        forandringene Harry gjorde <emphasis>ikke</emphasis> v&#230;re med i 
+        Sallys nyere versjon av filen, fordi hun s&#229; aldri Harrys 
+        forandringer til &#229; begynne med.
+        Harrys arbeid er fortsatt borte &#8212; eller i det minste borte fra 
+        den siste versjonen av filen &#8212; og sannsynligvis ved en ulykke.
+        Dette er definitivt en situasjon vi vil unng&#229;!</para>
 
       <figure id="svn-ch-2-dia-2">
-        <title>The problem to avoid</title>
+        <title>Problemet som m&#229; unng&#229;s</title>
         <graphic fileref="images/ch02dia2.png"/>
       </figure>
 
       </sect2>
     
     <sect2 id="svn-ch-2-sect-2.2">
-      <title>The Lock-Modify-Unlock Solution</title>
+      <title><quote>L&#229;s-rediger-l&#229;s opp</quote>-l&#248;sningen</title>
       
-      <para>Many version control systems use a
-        <firstterm>lock-modify-unlock</firstterm> model to address
-        this problem.  In such a system, the repository allows only
-        one person to change a file at a time.  First Harry must
-        <quote>lock</quote> the file before he can begin making
-        changes to it.  Locking a file is a lot like borrowing a book
-        from the library; if Harry has locked a file, then Sally
-        cannot make any changes to it.  If she tries to lock the file,
-        the repository will deny the request.  All she can do is read
-        the file, and wait for Harry to finish his changes and release
-        his lock.  After Harry unlocks the file, his turn is over, and
-        now Sally can take her turn by locking and editing.  <xref
-        linkend="svn-ch-2-dia-3"/> demonstrates this simple
-        solution.</para>
+      <para>Mange versjonskontrollsystemer bruker en modell av typen
+        <firstterm>l&#229;s-rediger-l&#229;s opp</firstterm> n&#229;r de tar for seg 
+        dette problemet.
+        I et s&#229;nt system tillater depotet bare en person &#229; forandre en 
+        fil om gangen.
+        F&#248;rst m&#229; Harry <quote>l&#229;se</quote> filen f&#248;r han kan begynne med 
+        &#229; gj&#248;re forandringer i den.
+        L&#229;sing av en fil er mye likt det &#229; l&#229;ne en bok p&#229; biblioteket;
+        hvis Harry har l&#229;st en fil kan ikke Sally gj&#248;re forandringer i 
+        den.
+        Hvis hun pr&#248;ver &#229; l&#229;se filen, vil ikke depotet tillate dette.
+        Alt hun kan gj&#248;re er &#229; lese filen, og vente p&#229; at Harry gj&#248;r seg 
+        ferdig med sine forandringer og slippe l&#229;sen han har satt opp.
+        Etter at Harry l&#229;ser opp filen, er hans tur over, og n&#229; kan 
+        Sally ta sin runde med l&#229;sing og redigering.
+        <xref linkend="svn-ch-2-dia-3"/> demonstrerer denne enkle 
+        l&#248;sningen.</para>
       
       <figure id="svn-ch-2-dia-3">
-        <title>The lock-modify-unlock solution</title>
+        <title><quote>L&#229;s-rediger-l&#229;s opp</quote>-l&#248;sningen</title>
         <graphic fileref="images/ch02dia3.png"/>
       </figure>
       
-      <para>The problem with the lock-modify-unlock model is that it's
-        a bit restrictive, and often becomes a roadblock for
-        users:</para>
+      <para>Problemet med <quote>l&#229;s-rediger-l&#229;s opp</quote>-metoden er 
+        at den er ganske restriktiv, og blir ofte en hindring for 
+        brukerne:</para>
 
       <itemizedlist>
         <listitem><para>
-            <emphasis>Locking may cause administrative problems.</emphasis>
-
-            Sometimes Harry will lock a file and then forget about it.
-            Meanwhile, because Sally is still waiting to edit the file,
-            her hands are tied.  And then Harry goes on vacation.  Now
-            Sally has to get an administrator to release Harry's lock.
-            The situation ends up causing a lot of unnecessary delay
-            and wasted time.</para></listitem>
+            <emphasis>L&#229;sing kan medf&#248;re administrative 
+            problemer.</emphasis>
+            
+            Noen ganger hender det at Harry l&#229;ser en fil og glemmer den.
+            I mellomtiden, fordi Sally fortsatt venter p&#229; &#229; f&#229; redigere 
+            filen, har hun hendene bundet.
+            Og s&#229; drar Harry p&#229; ferie.
+            N&#229; m&#229; Sally f&#229; en administrator til &#229; fjerne Harrys l&#229;s.
+            Situasjonen ender opp med &#229; for&#229;rsake mange forsinkelser og 
+            bortkastet tid.</para></listitem>
         
         <listitem><para>
-            <emphasis>Locking may cause unnecessary serialization.</emphasis>
+            <emphasis>L&#229;sing kan for&#229;rsake un&#248;dvendig 
+            serialisering.</emphasis>
 
-            What if Harry is editing the beginning of a text file,
-            and Sally simply wants to edit the end of the same file?
-            These changes don't overlap at all.  They could easily
-            edit the file simultaneously, and no great harm would
-            come, assuming the changes were properly merged together.
-            There's no need for them to take turns in this
-            situation.</para></listitem>
+            Hva hvis Harry redigerer begynnelsen av en tekstfil, og 
+            Sally vil rett og slett bare redigere slutten av den samme 
+            filen?
+            Disse forandringene overlapper ikke i det hele tatt.
+            De kan enkelt redigere filen samtidig, og ingen stor skade 
+            vil skje, s&#229;fremt forandringene ble flettet fint sammen.
+            Det er ingen vits i at de m&#229; vente p&#229; tur i denne 
+            situasjonen.</para></listitem>
     
         <listitem><para>
-            <emphasis>Locking may create a false sense of security.</emphasis>
+            <emphasis>L&#229;sing kan skape en falsk f&#248;lelse av 
+            trygghet.</emphasis>
 
-            Pretend that Harry locks and edits file A, while
-            Sally simultaneously locks and edits file B.  But suppose
-            that A and B depend on one another, and the changes made
-            to each are semantically incompatible.  Suddenly A and B
-            don't work together anymore. The locking system was
-            powerless to prevent the problem&mdash;yet it somehow
-            provided a false sense of security.  It's easy for Harry and
-            Sally to imagine that by locking files, each is beginning a
-            safe, insulated task, and thus inhibits them from
-            discussing their incompatible changes early
-            on.</para></listitem>
+            Tenk deg at Harry l&#229;ser og redigerer fil A, mens Sally 
+            samtidig redigerer fil B.
+            Tenk deg ogs&#229; at A og B er avhengig av hverandre, og 
+            forandringene er hver for seg inkompatible med hverandre.
+            Plutselig virker ikke A og B sammen mer.
+            L&#229;sesystemet var ikke i stand til &#229; forhindre problemet &#8212; 
+            men skapte likevel en falsk f&#248;lelse av trygghet.
+            Det er lett for Harry og Sally &#229; tenke seg at ved &#229; l&#229;se 
+            filer, starter hver av dem en trygg, isolert oppgave, og 
+            dermed forhindrer dem fra &#229; diskutere deres inkompatible 
+            forandringer p&#229; et tidligere tidspunkt.</para></listitem>
       </itemizedlist>
 
       </sect2>
 
     <sect2 id="svn-ch-2-sect-2.3">
-      <title>The Copy-Modify-Merge Solution</title>
+      <title><quote>Kopier-rediger-flett</quote>-l&#248;sningen</title>
       
-      <para>Subversion, CVS, and other version control systems use a
-        <firstterm>copy-modify-merge</firstterm> model as an
-        alternative to locking.  In this model, each user's client
-        contacts the project repository and creates a personal
-        <firstterm>working copy</firstterm>&mdash;a local reflection
-        of the repository's files and directories.  Users then work in
-        parallel, modifying their private copies.  Finally, the
-        private copies are merged together into a new, final version.
-        The version control system often assists with the merging, but
-        ultimately a human being is responsible for making it happen
-        correctly.</para>
+      <para>Subversion, CVS og andre versjonskontrollsystemer bruker en 
+        modell av typen <firstterm>kopier-rediger-flett</firstterm> som 
+        et alternativ til l&#229;sing.
+        I denne modellen kontakter klienten til hver bruker og lager en 
+        personlig <firstterm>arbeidskopi</firstterm> &#8212; et lokalt speil 
+        av depotets filer og kataloger.
+        Brukere arbeider s&#229; parallellt ved &#229; modifisere deres private 
+        kopier.
+        Til slutt blir de private kopiene flettet inn i en ny, endelig 
+        versjon.
+        Versjonskontrollsystemet hjelper ofte til med flettingen, men 
+        til slutt er det et menneske som er ansvarlig for &#229; la det skje 
+        skikkelig.</para>
       
-      <para>Here's an example.  Say that Harry and Sally each create
-        working copies of the same project, copied from the
-        repository.  They work concurrently, and make changes to the
-        same file A within their copies.  Sally saves her changes to
-        the repository first.  When Harry attempts to save his changes
-        later, the repository informs him that his file A is
-        <firstterm>out-of-date</firstterm>.  In other words, that file
-        A in the repository has somehow changed since he last copied
-        it.  So Harry asks his client to <firstterm>merge</firstterm>
-        any new changes from the repository into his working copy of
-        file A.  Chances are that Sally's changes don't overlap with
-        his own; so once he has both sets of changes integrated, he
-        saves his working copy back to the repository.  <xref
-        linkend="svn-ch-2-dia-4"/> and <xref linkend="svn-ch-2-dia-5"/>
-        show this process.</para>
+      <para>Her er et eksempel.
+        Si at Harry og Sally hver for seg lager arbeidskopier av det 
+        samme prosjektet, kopiert fra depotet.
+        De arbeider samtidig, og gj&#248;r forandringer til den samme filen A 
+        innenfor sine kopier.
+        Sally lagrer hennes forandringer til depotet f&#248;rst.
+        N&#229;r Harry pr&#248;ver &#229; lagre sine forandringer senere, informerer 
+        depotet ham om at hans fil A er <firstterm>utdatert</firstterm>.
+        Med andre ord, filen A i depotet har p&#229; en eller annen m&#229;te 
+        forandret seg siden han kopierte den sist.
+        S&#229; Harry ber klienten hans om &#229; <firstterm>flette</firstterm> 
+        alle nye forandringer fra depotet inn i hans arbeidskopi av fil 
+        A.
+        Sjansene for at Sallys forandringer ikke overlapper med hans 
+        egne er store; s&#229; n&#229;r begges forandringer er lagt inn i filen, 
+        lagrer han hans egen arbeidskopi til depotet. <xref 
+        linkend="svn-ch-2-dia-4"/> og <xref linkend="svn-ch-2-dia-5"/> 
+        viser denne prosessen.</para>
 
       <figure id="svn-ch-2-dia-4">
-        <title>The copy-modify-merge solution</title>
+        <title><quote>Kopier-rediger-flett</quote>-l&#248;sningen</title>
         <graphic fileref="images/ch02dia4.png"/>
       </figure>
       
       <figure id="svn-ch-2-dia-5">
-        <title>The copy-modify-merge solution (continued)</title>
+        <title><quote>Kopier-rediger-flett</quote>-l&#248;sningen 
+          (forts.)</title>
         <graphic fileref="images/ch02dia5.png"/>
       </figure>
 
-      <para>But what if Sally's changes <emphasis>do</emphasis> overlap
-        with Harry's changes?  What then?  This situation is called a
-        <firstterm>conflict</firstterm>, and it's usually not much of
-        a problem.  When Harry asks his client to merge the latest
-        repository changes into his working copy, his copy of file A
-        is somehow flagged as being in a state of conflict: he'll be
-        able to see both sets of conflicting changes, and manually
-        choose between them.  Note that software can't automatically
-        resolve conflicts; only humans are capable of understanding
-        and making the necessary intelligent choices.  Once Harry has
-        manually resolved the overlapping changes&mdash;perhaps after
-        a discussion with Sally&mdash;he can safely save the
-        merged file back to the repository.</para>
+      <para>Men hva hvis Sallys forandringer 
+        <emphasis>likevel</emphasis> overlapper med Harrys forandringer?
+        Hva da?
+        Denne situasjonen kalles en <firstterm>konflikt</firstterm>, og 
+        er vanligvis ikke mye til problem.
+        N&#229;r Harry ber klienten hans om &#229; flette sammen de nyeste 
+        forandringene i depotet inn i hans arbeidskopi, blir det vist at 
+        hans kopi av fil A er i konflikt:
+        Han vil v&#230;re i stand til &#229; se begge settene av konfliktskapende 
+        forandringer, og velge mellom dem manuelt.
+        Legg merke til at programvare ikke kan l&#248;se konflikter 
+        automatisk; bare mennesker er i stand til &#229; forst&#229; og gj&#248;re de 
+        n&#248;dvendige intelligente valgene,
+        N&#229;r Harry har l&#248;st de overlappende forandringene manuelt &#8212; 
+        kanskje etter en diskusjon med Sally &#8212; kan han trygt lagre den 
+        flettede filen tilbake til depotet.</para>
 
-      <para>The copy-modify-merge model may sound a bit chaotic, but
-        in practice, it runs extremely smoothly.  Users can work in
-        parallel, never waiting for one another.  When they work on
-        the same files, it turns out that most of their concurrent
-        changes don't overlap at all; conflicts are infrequent.  And
-        the amount of time it takes to resolve conflicts is far less
-        than the time lost by a locking system.</para>
+      <para><quote>kopier-rediger-flett</quote>-modellen kan h&#248;res litt 
+        kaotisk ut, men i praksis g&#229;r det ekstremt glatt.
+        Brukere kan jobbe parallellt, og aldri vente p&#229; hverandre.
+        N&#229;r de arbeider p&#229; de samme filene, viser det sef at mesteparten 
+        av de samtidige forandringene ikke overlapper i det hele tatt; 
+        konflikter er sjeldne.
+        Og tiden det tar &#229; l&#248;se konflikter er langt mindre enn tiden 
+        tapt med et l&#229;sesystem.</para>
 
-      <para>In the end, it all comes down to one critical factor: user
-        communication.  When users communicate poorly, both syntactic
-        and semantic conflicts increase.  No system can force users to
-        communicate perfectly, and no system can detect semantic
-        conflicts.  So there's no point in being lulled into a false
-        promise that a locking system will somehow prevent conflicts;
-        in practice, locking seems to inhibit productivity more than
-        anything else.</para>
+      <para>Til sist koker det ned til en kritisk faktor:
+        Brukerkommunikasjon.
+        N&#229;r brukerne kommuniserer d&#229;rlig, &#248;ker antallet av b&#229;de <!-- &#164; 
+        -->syntaktiske og <!-- &#164; -->semantiske konflikter.
+        Ingen systemer kan tvinge brukerne til &#229; kommunisere perfekt, og 
+        ingen systemer kan oppdage <!-- &#164; -->semantiske konflikter.
+        S&#229; det er ikke mye poeng i &#229; bli lurt av et falskt l&#248;fte om at 
+        et l&#229;sesystem p&#229; en eller annen m&#229;te vil forhindre konflikter;
+        i praksis ser l&#229;sing ut til &#229; vanskeliggj&#248;re mer enn noenting 
+        annet.</para>
       
     </sect2>
     
@@ -242,71 +266,74 @@
   
   <!-- How svn implements the philosophy -->
   <sect1 id="svn-ch-2-sect-3">
-    <title>Subversion in Action</title>
+    <title>Subversion i aksjon</title>
     
-    <para>It's time to move from the abstract to the concrete.  In
-      this section, we'll show real examples of Subversion being
-      used.</para>
+    <para>Det er p&#229; tide &#229; g&#229; fra det abstrakte til det konkrete.
+      I denne seksjonen vil vi vise reelle eksempler p&#229; bruk av 
+      Subversion.</para>
 
     <sect2 id="svn-ch-2-sect-3.1">
-      <title>Working Copies</title>
+      <title>Arbeidskopier</title>
       
-      <para>You've already read about working copies; now we'll
-        demonstrate how the Subversion client creates and uses
-        them.</para>
+      <para>Du har allerede lest om arbeidskopier; n&#229; skal vi 
+        demonstrere hvordan Subversion-klienten lager og bruker 
+        dem.</para>
       
-      <para>A Subversion working copy is an ordinary directory tree on
-        your local system, containing a collection of files.  You can
-        edit these files however you wish, and if they're source code
-        files, you can compile your program from them in the usual
-        way.  Your working copy is your own private work area:
-        Subversion will never incorporate other people's changes, nor
-        make your own changes available to others, until you
-        explicitly tell it to do so.</para>
+      <para>En arbeidskopi i Subversion er et vanlig katalogtre p&#229; ditt 
+        lokale system, og inneholder en samling av filer.
+        Du kan redigere disse filene s&#229;nn som du vil, og hvis det er 
+        kildekode, kan du kompilere programmet fra dem p&#229; den vanlige 
+        m&#229;ten.
+        Arbeidskopien din er ditt eget private arbeidsomr&#229;de:
+        Subversion vil aldri legge inn andre folks forandringer, heller 
+        ikke gj&#248;re dine egne forandringer tilgjengelig for andre f&#248;r du 
+        eksplisitt ber den om &#229; gj&#248;re det.</para>
 
-      <para>After you've made some changes to the files in your
-        working copy and verified that they work properly, Subversion
-        provides you with commands to <quote>publish</quote> your
-        changes to the other people working with you on your project
-        (by writing to the repository).  If other people publish their
-        own changes, Subversion provides you with commands to merge
-        those changes into your working directory (by reading from the
-        repository).</para>
+      <para>Etter at du har gjort noen forandringer i filene i 
+        arbeidskopien og sjekket at de virker skikkelig, gir Subversion 
+        deg kommandoer til &#229; <quote>publisere</quote> dine forandringer 
+        til de andre personene som arbeider med deg p&#229; prosjektet ditt 
+        (ved &#229; skrive til depotet).
+        Hvis andre personer publiserer deres egne forandringer, gir 
+        Subversion deg kommandoer for &#229; flette desse forandringene inn i 
+        din arbeidskopi (ved &#229; lese fra depotet).</para>
 
-      <para>A working copy also contains some extra files, created and
-        maintained by Subversion, to help it carry out these commands.
-        In particular, each directory in your working copy contains a
-        subdirectory named <filename>.svn</filename>, also known as
-        the working copy <firstterm>administrative
-        directory</firstterm>.  The files in each administrative
-        directory help Subversion recognize which files contain
-        unpublished changes, and which files are out-of-date with
-        respect to others' work.</para>
+      <para>En arbeidskopi inneholder ogs&#229; noen ekstra filer, opprettet 
+        og vedlikeholdt av Subversion, for &#229; hjelpe seg med &#229; utf&#248;re 
+        disse kommandoene.
+        Hver katalog i arbeidskopien inneholder en underkatalog kalt 
+        <filename>.svn</filename>, ogs&#229; kjent som arbeidskopiens 
+        <firstterm>administrative katalog</firstterm>.
+        Filene i hver administrative katalog hjelper Subversion til &#229; se 
+        hvilke som som inneholder upubliserte forandringer, og hvilke 
+        filer som er utdatert i forhold til andres arbeid.</para>
       
-      <para>A typical Subversion repository often holds the files (or
-        source code) for several projects; usually, each project is a
-        subdirectory in the repository's filesystem tree.  In this
-        arrangement, a user's working copy will usually correspond to
-        a particular subtree of the repository.</para>
+      <para>Et typisk Subversiondepot inneholder ofte filene (eller 
+        kildekoden) for flere prosjekter;
+        vanligvis har hvert prosjekt sin egen underkatalog i depotets 
+        filsystemtre.
+        Med dette arrangementet vil en brukers arbeidskopi samsvare med 
+        et spesielt subtre av depotet.</para>
       
-      <para>For example, suppose you have a repository that contains
-        two software projects, <literal>paint</literal> and
-        <literal>calc</literal>.  Each project lives in its own
-        top-level subdirectory, as shown in <xref
+      <para>For eksempel, tenk deg at du har et depot som best&#229;r av to 
+        programprosjekter, <literal>paint</literal> og 
+        <literal>calc</literal>.
+        Hvert prosjekt bor i hver sin toppkatalog, som vist i <xref 
         linkend="svn-ch-2-dia-6"/>.</para>
 
       <figure id="svn-ch-2-dia-6">
-        <title>The repository's filesystem</title>
+        <title>Depotets filsystem</title>
         <graphic fileref="images/ch02dia6.png"/>
       </figure>
       
-      <para>To get a working copy, you must <firstterm>check
-        out</firstterm> some subtree of the repository.  (The term
-        <quote>check out</quote> may sound like it has something to do
-        with locking or reserving resources, but it doesn't; it simply
-        creates a private copy of the project for you.) For example,
-        if you check out <filename>/calc</filename>, you will get a
-        working copy like this: </para>
+      <para>For &#229; f&#229; en arbeidskopi, m&#229; du f&#248;rst <firstterm>hente 
+        ut</firstterm> et del av et katalogtre fra depotet.
+        (Uttrykket <quote>hente ut</quote> kan h&#248;res ut som det har noe 
+        &#229; gj&#248;re med l&#229;sing eller reservering av ressurser, men det har 
+        ikke det;
+        det lager bare en privat kopi av prosjektet for deg.)
+        For eksempel, hvis du henter ut <filename>/calc</filename>, vil 
+        du f&#229; en arbeidskopi som dette:</para>
 
 <screen>
 $ svn checkout http://svn.example.com/repos/calc
@@ -319,112 +346,116 @@ $ ls -A calc
 Makefile  integer.c  button.c  .svn/
 </screen>
 
-      <para>The list of letter A's indicates that Subversion is adding
-        a number of items to your working copy.  You now have a
-        personal copy of the repository's <filename>/calc</filename>
-        directory, with one additional
-        entry&mdash;<filename>.svn</filename>&mdash;which holds the
-        extra information needed by Subversion, as mentioned
-        earlier.</para>
+      <para>Listen av bokstaven A indikerer at Subversion legger til et 
+        antall elementer til arbeidskopien din.
+        Du har n&#229; en personlig kopi av depotets 
+        <filename>/calc</filename>-katalog, med en ekstra komponent &#8212; 
+        <filename>.svn</filename> &#8212; som inneholder den ekstra 
+        informasjonen som Subversion trenger, som tidligere 
+        nevnt.</para>
 
       <sidebar id="svn-ch-2-sidebar-1">
-        <title>Repository URLs</title>
+        <title>Depot-URLer</title>
 
-        <para>Subversion repositories can be accessed through many
-          different methods&mdash;on local disk, or through various
-          network protocols.  A repository location, however, is
-          always a URL.  Table 2-1 describes how different URL
-          schemas map to the available access methods.</para>
+        <para>Subversiondepot kan bli aksessert gjennom ved hjelp av 
+          mange forskjellige metoder &#8212; p&#229; en lokal disk, eller gjennom 
+          diverse nettverksprotokoller.
+          Beliggenheten til et depot er imidlertid alltid en URL.
+          Tabell 2-1 viser hvordan forskjellige URL-skjemaer st&#229;r i 
+          forhold til de forskjellige aksessmetodene.</para>
 
         <table id="svn-ch-2-table-1">
-          <title>Repository Access URLs</title>
+          <title>URLer for tilgang til et depot</title>
           <tgroup cols="2">
             <thead>
               <row>
-                <entry>Schema</entry>
-                <entry>Access Method</entry>
+                <entry>Skjema</entry>
+                <entry>Tilgangsmetode</entry>
               </row>
             </thead>
             <tbody>
               <row>
                 <entry><literal>file:///</literal></entry>
-                <entry>direct repository access (on local disk)</entry>
+                <entry>direkte depottilgang (p&#229; lokal disk)</entry>
               </row>
               <row>
                 <entry><literal>http://</literal></entry>
-                <entry>access via WebDAV protocol to Subversion-aware
-                  Apache server</entry>
+                <entry>tilgang via WebDAV-protokollen til en 
+                  Apache-server som kjenner til Subversion</entry>
               </row>
               <row>
                 <entry><literal>https://</literal></entry>
-                <entry>same as <literal>http://</literal>, but with
-                  SSL encryption.</entry>
+                <entry>samme som <literal>http://</literal>, men med 
+                  SSL-kryptering.</entry>
               </row>
               <row>
                 <entry><literal>svn://</literal></entry>
-                <entry>access via custom protocol to an
-                  <literal>svnserve</literal> server</entry>
+                <entry>tilgang gjennom en tilpasset protokoll til en 
+                <literal>svnserve</literal>-tjener</entry>
               </row>
               <row>
                 <entry><literal>svn+ssh://</literal></entry>
-                <entry>same as <literal>svn://</literal>, but through
-                  an SSH tunnel.</entry>
+                <entry>samme som <literal>svn://</literal>, men gjennom 
+                  en SSH-tunnel.</entry>
               </row>
             </tbody>
           </tgroup>
         </table>
  
-        <para>For the most part, Subversion's URLs use the standard
-          syntax, allowing for server names and port numbers to be
-          specified as part of the URL.  Remember that the
-          <literal>file:</literal> access method is valid only for
-          locations on the same server as the client&mdash;in fact, in
-          accordance with convention, the server name portion of the
-          URL is required to be either absent or
-          <literal>localhost</literal>:</para>
+        <para>For det meste bruker Subversions URLer den vanlige 
+          syntaksen, og tillater tjenernavn og portnummere &#229; bli 
+          spesifisert som en del av adressen.
+          Husk at tilgangsmetoden <literal>file:</literal> bare er 
+          gyldig for plasseringer p&#229; den samme tjeneren som klienten &#8212; 
+          faktisk, i overenskommelse med konvensjonen m&#229; delen som 
+          best&#229;r av tjenernavnet enten v&#230;re <literal>localhost</literal> 
+          eller ikke v&#230;re der i det hele tatt:</para>
  
         <screen>
-$ svn checkout file:///path/to/repos
-&hellip;
-$ svn checkout file://localhost/path/to/repos
-&hellip;
+$ svn checkout file:///sti/til/depot
+&#8230;
+$ svn checkout file://localhost/sti/til/depot
+&#8230;
 </screen>
 
-        <para>Also, users of the <literal>file:</literal> scheme on
-          Windows platforms will need to use an unofficially
-          <quote>standard</quote> syntax for accessing repositories
-          that are on the same machine, but on a different drive than
-          the client's current working drive.  Either of the two
-          following URL path syntaxes will work where
-          <literal>X</literal> is the drive on which the repository
-          resides:</para>
+        <para>I tillegg trenger brukere av 
+          <literal>file:</literal>-skjemaet p&#229; Windows-plattformer &#229; 
+          bruke en uoffisiell <quote>standard</quote> syntaks for &#229; f&#229; 
+          tilgang til depot som er p&#229; den samme maskinen, men p&#229; en 
+          annen disk enn klientens arbeidsdisk for &#248;yeblikket.
+          En av de to f&#248;lgende syntaksene for URL-stier vil virke n&#229;r 
+          <literal>X</literal> er disken som depotet ligger p&#229;:</para>
 
         <screen>
-C:\> svn checkout file:///X:/path/to/repos
-&hellip;
-C:\> svn checkout "file:///X|/path/to/repos"
-&hellip;
+C:\&gt; svn checkout file:///X:/path/to/repos
+&#8230;
+C:\&gt; svn checkout "file:///X|/path/to/repos"
+&#8230;
 </screen>
  
-        <para>In the second syntax, you need to quote the URL so that
-          the vertical bar character is not interpreted as a pipe.</para>
+        <para>I den andre syntaksen m&#229; du kapsle inn URLen s&#229; den 
+          verticale stolpen (<quote>|</quote>) ikke blir tolket som et 
+          r&#248;r.</para>
 
-        <para>Note that a URL uses ordinary slashes even though the native
-          (non-URL) form of a path on Windows uses backslashes.</para>
+        <para>Legg merke til at en URL bruker ordin&#230;re skr&#229;streker selv 
+          om den i den lokale (ikke-URL) formen av en sti p&#229; Windows 
+          brukes omvendte skr&#229;streker.</para>
 
       </sidebar>
 
-      <para>Suppose you make changes to <filename>button.c</filename>.
-        Since the <filename>.svn</filename> directory remembers the
-        file's modification date and original contents, Subversion can
-        tell that you've changed the file.  However, Subversion does
-        not make your changes public until you explicitly tell it to.
-        The act of publishing your changes is more commonly known as
-        <firstterm>committing</firstterm> (or <firstterm>checking
-        in</firstterm>) changes to the repository.</para>
+      <para>Tenk at du gj&#248;r forandringer til 
+        <filename>button.c</filename>.
+        Siden <filename>.svn</filename>-katalogen husker filens 
+        modifiseringsdato og originale innhold, kan Subversion se at du 
+        har forandret filen.
+        Men Subversion gj&#248;r ikke dine forandringer offentlige f&#248;r du 
+        eksplisitt forteller den &#229; gj&#248;re det.
+        Prosessen &#229; publisere dine forandringer er vanligvis omtalt som 
+        &#229; <firstterm>legge inn</firstterm> (eller <firstterm>sjekke 
+        inn</firstterm>) forandringer til depotet.</para>
 
-      <para>To publish your changes to others, you can use
-        Subversion's <command>commit</command> command:</para>
+      <para>For &#229; publisere dine forandringer til andre, kan du bruke 
+        Subversions <command>commit</command>-kommando:</para>
 
 <screen>
 $ svn commit button.c
@@ -433,24 +464,26 @@ Transmitting file data .
 Committed revision 57.
 </screen>
 
-      <para>Now your changes to <filename>button.c</filename> have
-        been committed to the repository; if another user checks out a
-        working copy of <filename>/calc</filename>, they will see
-        your changes in the latest version of the file.</para>
+      <para>N&#229; er dine forandringer til <filename>button.c</filename> 
+        lagt inn i depotet;
+        hvis en annen bruker henter ut en arbeidskopi av 
+        <filename>/calc</filename>, vil de se dine forandringer i den 
+        seneste versjonen av filen.</para>
 
-      <para>Suppose you have a collaborator, Sally, who checked out a
-        working copy of <filename>/calc</filename> at the same time
-        you did.  When you commit your change to
-        <filename>button.c</filename>, Sally's working copy is left
-        unchanged; Subversion only modifies working copies at the
-        user's request.</para>
+      <para>Tenk deg at du har en samarbeidspartner, Sally, som hentet 
+        ut en arbeidskopi av <filename>/calc</filename> samtidig med 
+        deg.
+        N&#229;r du legger inn din forandring til 
+        <filename>button.c</filename>, er Sallys arbeidskopi uforandret;
+        Subversion modifiserer bare arbeidskopier etter brukerens 
+        &#248;nske.</para>
 
-      <para>To bring her project up to date, Sally can ask
-        Subversion to <firstterm>update</firstterm> her working copy,
-        by using the Subversion <command>update</command> command.
-        This will incorporate your changes into her working copy, as
-        well as any others that have been committed since she checked
-        it out.</para>
+      <para>For &#229; f&#229; hennes prosjekt oppdatert, kan Sally be Subversion 
+        om &#229; <firstterm>oppdatere</firstterm> hennes arbeidskopi, ved &#229; 
+        bruke Subversionkommandoen <command>update</command>.
+        Dette vil legge inn dine forandringer inn i hennes arbeidskopi, 
+        s&#229; vel som andres som har v&#230;rt lagt inn i depotet siden hun 
+        hentet det ut.</para>
 
 <screen>
 $ pwd
@@ -463,77 +496,83 @@ $ svn update
 U button.c
 </screen>
 
-      <para>The output from the <command>svn update</command> command
-        indicates that Subversion updated the contents of
-        <filename>button.c</filename>.  Note that Sally didn't need to
-        specify which files to update; Subversion uses the information
-        in the <filename>.svn</filename> directory, and further
-        information in the repository, to decide which files need to
-        be brought up to date.</para>
+      <para>Utdataene fra kommandoen <command>svn update</command> 
+        indikerer at Subversion oppdaterte innholdet av 
+        <filename>button.c</filename>.
+        Legg merke til at Sally trengte ikke &#229; spesifisere hvilke filer 
+        som skulle oppdateres, Subversion bruker informasjonen i 
+        <filename>.svn</filename>-katalogen sammen med annen informasjon 
+        i depotet for &#229; bestemme hvilke filer som trenger en 
+        oppdatering.</para>
       
     </sect2>
     
     
     <sect2 id="svn-ch-2-sect-3.2">
-      <title>Revisions</title>
+      <title>Revisjoner</title>
 
-      <para>An <command>svn commit</command> operation can publish
-        changes to any number of files and directories as a single
-        atomic transaction.  In your working copy, you can change
-        files' contents, create, delete, rename and copy files and
-        directories, and then commit the complete set of changes as a
-        unit.</para>
+      <para>En <command>svn commit</command>-operasjon kan publisere 
+        forandringer til ethvert antall filer og kataloger som en 
+        enkeltst&#229;ende atomisk transaksjon.
+        I arbeidskopien din kan du forandre filenes innhold, opprette, 
+        slette, skifte navn og kopiere filer og kataloger, og s&#229; legge 
+        inn det komplette settet med forandringer som en enhet.</para>
 
-      <para>In the repository, each commit is treated as an atomic
-        transaction: either all the commit's changes take place, or
-        none of them take place.  Subversion tries to retain this
-        atomicity in the face of program crashes, system crashes,
-        network problems, and other users' actions.</para>
+      <para>I depotet blir hver innlegging behandlet som en atomisk 
+        transaksjon:
+        Enten blir alle forandringene lagt inn, eller s&#229; blir ingen lagt 
+        inn.
+        Subversion pr&#248;ver &#229; beholde denne atomiteten stilt opp mot 
+        programkr&#230;sj, systemkr&#230;sj, nettverksproblemer og andre brukeres 
+        aktiviteter.</para>
 
-      <para>Each time the repository accepts a commit, this creates a
-        new state of the filesystem tree, called a
-        <firstterm>revision</firstterm>.  Each revision is assigned a
-        unique natural number, one greater than the number of the
-        previous revision.  The initial revision of a freshly created
-        repository is numbered zero, and consists of nothing but an
-        empty root directory.</para>
+      <para>Hver gang depotet aksepterer en innlegging, lager dette en 
+        ny tilstand i filsystemtreet, kalt en 
+        <firstterm>revisjon</firstterm>.
+        Hver revisjon blir tildelt et unikt naturlig tall, ett st&#248;rre en 
+        nummeret p&#229; den forrige revisjonen.
+        Den f&#248;rste revisjonen i et nyopprettet depot er nummerert null, 
+        og inneholder ingenting annet enn en tom rotkatalog.</para>
       
-      <para><xref linkend="svn-ch-2-dia-7"/> illustrates a nice way to
-        visualize the repository.  Imagine an array of revision
-        numbers, starting at 0, stretching from left to right.  Each
-        revision number has a filesystem tree hanging below it, and
-        each tree is a <quote>snapshot</quote> of the way the
-        repository looked after each commit. </para>
+      <para><xref linkend="svn-ch-2-dia-7"/> illustrerer en fin m&#229;te &#229; 
+        visualisere depotet p&#229;.
+        Tenk deg en rekke av revisjonsnumre som starter p&#229; 0 og strekker 
+        seg fra venstre til h&#248;yre.
+        Hvert revisjonsnummer har et filsystemtre hengende under seg, og 
+        hvert tre er et <quote>&#248;yeblikksbilde</quote> av hvordan depotet 
+        s&#229; ut etter hver innlegging.</para>
       
       <figure id="svn-ch-2-dia-7">
-        <title>The repository</title>
+        <title>Depotet</title>
         <graphic fileref="images/ch02dia7.png"/>
       </figure>
 
       <sidebar>
-        <title>Global Revision Numbers</title>
+        <title>Globale revisjonsnumre</title>
          
-        <para>Unlike those of many other version control systems,
-          Subversion's revision numbers apply to <emphasis>entire
-          trees</emphasis>, not individual files.  Each revision
-          number selects an entire tree, a particular state of the
-          repository after some committed change.  Another way to
-          think about it is that revision N represents the state of
-          the repository filesystem after the Nth commit.  When a
-          Subversion user talks about <quote>revision 5 of
-          <filename>foo.c</filename></quote>, they really mean
-          <quote><filename>foo.c</filename> as it appears in revision 5.</quote>
-          Notice that in general, revisions N and M of a file do
-          <emphasis>not</emphasis> necessarily differ!  Because CVS
-          uses per-file revisions numbers, CVS users might want to see
-          <xref linkend="svn-ap-a"/> for more details.</para>
+        <para>Ulikt mange av de andre versjonskontrollsystemene, gjelder 
+          Subversions revisjonsnumre for <emphasis>hele tr&#230;r</emphasis>, 
+          ikke individuelle filer.
+          Hvert revisjonsnummer velger et helt tre, en spesiell tilstand 
+          til depotet etter noen la inn en forandring.
+          En annen m&#229;te &#229; tenke seg det er at revisjon N representerer 
+          tilstanden til depotfilsystemet etter den Nte innleggingen.
+          N&#229;r en Subversionbruker snakker om <quote>revisjon 5 av 
+          <filename>foo.c</filename></quote>, mener de egentlig 
+          <quote><filename>foo.c</filename> som den fremst&#229;r i revisjon 
+          5.</quote>
+          Legg merke til at vanligvis vil revisjonene N og M av en fil 
+          <emphasis>ikke</emphasis> v&#230;re forskjellig!
+          Fordi CVS bruker egne revisjonsnumre for hver fil, vil kanskje 
+          CVS-brukere ta en kikk p&#229; <xref linkend="svn-ap-a"/> for flere 
+          detaljer.</para>
       </sidebar>
 
-      <para>It's important to note that working copies do not always
-        correspond to any single revision in the repository; they may
-        contain files from several different revisions.  For example,
-        suppose you check out a working copy from a repository whose
-        most recent revision is 4:</para>
+      <para>Det er viktig &#229; notere seg at arbeidskopier ikke bestandig 
+        samsvarer med en enkelt revisjon i depotet;
+        de kan inneholde filer fra flere forskjellige revisjoner.
+        For eksempel, tenk at du henter ut en arbeidskopi fra et depot 
+        det den siste revisjonen er 4:</para>
 
 <screen>
 calc/Makefile:4
@@ -541,12 +580,13 @@ calc/Makefile:4
      button.c:4
 </screen>
 
-      <para>At the moment, this working directory corresponds exactly
-        to revision 4 in the repository.  However, suppose you make a
-        change to <filename>button.c</filename>, and commit that
-        change.  Assuming no other commits have taken place, your
-        commit will create revision 5 of the repository, and your
-        working copy will now look like this:</para>
+      <para>For &#248;yeblikket samsvarer arbeidskopien n&#248;yaktig med revisjon 
+        4 i depotet.
+        Men tenk deg s&#229; at du gj&#248;r en forandring til 
+        <filename>button.c</filename>, og legger inn denne forandringen.
+        Forutsatt at ingen andre innlegginger har skjedd, vil din 
+        innlegging opprette reisjon 5 i depotet, og arbeidskopien din 
+        vil se ut som dette:</para>
 
 <screen>
 calc/Makefile:4
@@ -554,10 +594,11 @@ calc/Makefile:4
      button.c:5
 </screen>
 
-      <para>Suppose that, at this point, Sally commits a change to
-        <filename>integer.c</filename>, creating revision 6.  If you
-        use <command>svn update</command> to bring your working copy
-        up to date, then it will look like this:</para>
+      <para>S&#229; sier vi at p&#229; dette tidspunktet legger Sally inn en 
+        forandring til <filename>integer.c</filename>, som lager 
+        revisjon 6.
+        Hvis du bruker <command>svn update</command> for &#229; oppdatere 
+        arbeidskopien, vil den se ut som dette:</para>
 
 <screen>
 calc/Makefile:6
@@ -565,178 +606,193 @@ calc/Makefile:6
      button.c:6
 </screen>
 
-      <para>Sally's changes to <filename>integer.c</filename> will
-        appear in your working copy, and your change will still be
-        present in <filename>button.c</filename>.  In this example,
-        the text of <filename>Makefile</filename> is identical in
-        revisions 4, 5, and 6, but Subversion will mark your working
-        copy of <filename>Makefile</filename> with revision 6 to
-        indicate that it is still current.  So, after you do a clean
-        update at the top of your working copy, it will generally
-        correspond to exactly one revision in the repository.</para>
+      <para>Sallys forandringer til <filename>integer.c</filename> vil 
+        komme til syne i arbeidskopien din, og din forandring vil 
+        fortsatt v&#230;re til stede i <filename>button.c</filename>.
+        I dette eksempelet er teksten i <filename>Makefile</filename> 
+        identisk i revisjon 4, 5 og 6, men Subversion vil merke kopien 
+        av <filename>Makefile</filename> med revisjon 6 for &#229; indikere 
+        at den gjelder fortsatt.
+        S&#229;, etter at du gj&#248;r en ren oppdatering fra toppen av 
+        arbeidskopien din, vil den vanligvis samsvare til en eksakt 
+        revisjon i depotet.</para>
 
     </sect2>
     
     
     <sect2 id="svn-ch-2-sect-3.3">
-      <title>How Working Copies Track the Repository</title>
+      <title>Hvordan arbeidskopier holder f&#248;lge med depotet</title>
       
-      <para>For each file in a working directory, Subversion records
-        two essential pieces of information in the
-        <filename>.svn/</filename> administrative area:</para>
+      <para>For hver fil i en arbeidskatalog, lagrer Subversion to 
+        essensielle deler informasjon i det administrative 
+        <filename>.svn</filename>-omr&#229;det:</para>
       
       
       <itemizedlist>
-        <listitem><para>what revision your working file is based on
-            (this is called the file's <firstterm>working
-             revision</firstterm>), and</para></listitem>
+        <listitem><para>Hvilken revisjon arbeidsfilen din er basert p&#229; 
+            (dette kalles filens 
+            <firstterm>arbeidsrevisjon</firstterm>), 
+            og</para></listitem>
         
-        <listitem><para>a timestamp recording when the local copy was
-            last updated by the repository.</para></listitem>
+        <listitem><para>et tidsmerke fra n&#229;r den lokale kopien sist ble 
+            oppdatert av depotet.</para></listitem>
       </itemizedlist>
 
-      <para>Given this information, by talking to the repository,
-        Subversion can tell which of the following four states a
-        working file is in:</para>
+      <para>Ved hjelp av denne informasjonen kan Subversion n&#229;r den 
+        kommuniserer med depotet se hvilke fire tilstander en arbeidsfil 
+        er i:</para>
 
       <variablelist>
         <varlistentry>
-          <term>Unchanged, and current</term> 
+          <term>Uforandret, og oppdatert</term>
 
-          <listitem><para>The file is unchanged in the working
-          directory, and no changes to that file have been committed
-          to the repository since its working revision.  A
-          <command>svn commit</command> of the file will do nothing,
-          and an <command>svn update</command> of the file will do
-          nothing. </para></listitem>
+          <listitem><para>Filen er uforandret i arbeidskopien, og ingen 
+          forandringer til denne filen er blitt lagt inn i depotet siden 
+          siden arbeidskopien ble lagt inn.
+          En <command>svn commit</command> p&#229; filen vil ikke gj&#248;re noe, 
+          og en <command>svn update</command> p&#229; filen vil heller ikke 
+          gj&#248;re noe.</para></listitem>
         </varlistentry>
         
         <varlistentry>
-          <term>Locally changed, and current</term>
-
-          <listitem><para>The file has been changed in the working
-          directory, and no changes to that file have been committed
-          to the repository since its base revision.  There are local
-          changes that have not been committed to the repository, thus
-          an <command>svn commit</command> of the file will succeed in
-          publishing your changes, and an <command>svn update</command>
-          of the file will do nothing.</para></listitem>
+          <term>Forandret lokalt og samtidig gjeldende</term>
+          
+          <listitem><para>Filen er blit forandret i arbeidskopien, og 
+          ingen foorandringer til denne filen er blitt lagt inn i 
+          depotet siden stamrevisjonen.
+          Det er lokale forandringer som ikke er blitt lagt inn i 
+          depotet, s&#229; en <command>svn commit</command> av filen vil 
+          lykkes i &#229; publisere forandringene dine, og en <command>svn 
+          update</command> p&#229; filen vil ikke gj&#248;re noen 
+          ting.</para></listitem>
         </varlistentry>
         
         <varlistentry>
-          <term>Unchanged, and out-of-date</term> 
-
-          <listitem><para>The file has not been changed in the working
-          directory, but it has been changed in the repository.  The
-          file should eventually be updated, to make it current with
-          the public revision.  An <command>svn commit</command> of the
-          file will do nothing, and an <command>svn update</command> of
-          the file will fold the latest changes into your working
-          copy.</para></listitem>
+          <term>Uforandret og utdatert</term>
+          
+          <listitem><para>Filen er ikke blitt forandret i arbeidskopien, 
+          men har forandret seg i depotet.
+          Filen m&#229; etterhvert bli oppdatert, for &#229; gj&#248;re den gjeldende 
+          med den offentlige revisjonen.
+          En <command>svn commit</command> p&#229; filen vil ikke gj&#248;re noe, 
+          og en <command>svn update</command> p&#229; filen vil legge de 
+          seneste forandringene inn i arbeidskopien 
+          din.</para></listitem>
         </varlistentry>
         
         <varlistentry>
-          <term>Locally changed, and out-of-date</term>
-
-          <listitem><para>The file has been changed both in the
-          working directory, and in the repository.  An <command>svn
-          commit</command> of the file will fail with an
-          <quote>out-of-date</quote> error.  The file should be
-          updated first; an <command>svn update</command> command will
-          attempt to merge the public changes with the local changes.
-          If Subversion can't complete the merge in a plausible way
-          automatically, it leaves it to the user to resolve the
-          conflict.</para></listitem>
+          <term>Forandret lokalt og samtidig utdatert</term>
+          
+          <listitem><para>Filen er blitt forandret b&#229;de i arbeidskopien 
+          og depotet.
+          En <command>svn commit</command> av filen vil feile med en 
+          <quote>out-of-date</quote>-feilmelding.
+          Filen m&#229; oppdateres f&#248;rst; en <command>svn 
+          update</command>-kommando vil pr&#248;ve &#229; flette inn de offentlige 
+          forandringene med de lokale forandringene.
+          Hvis Subversion ikke kan fullf&#248;re flettingen automatisk p&#229; en 
+          skikkelig m&#229;te, blir det opp til brukeren &#229; l&#248;se 
+          konflikten.</para></listitem>
         </varlistentry>
       </variablelist>
       
       
-      <para>This may sound like a lot to keep track of, but the
-        <command>svn status</command> command will show you the state
-        of any item in your working copy.  For more information on
-        that command, see <xref linkend="svn-ch-3-sect-4.3.1" />.</para>
+      <para>Dette kan h&#248;res ut som mye &#229; holde greie p&#229;, men 
+        <command>svn status</command>-kommandoen vil vise det tilstanden 
+        til ethvert element i arbeidskopien din.
+        For mer informasjon om denne kommandoen, se <xref 
+        linkend="svn-ch-3-sect-4.3.1" />.</para>
      
     </sect2>
     
     <sect2 id="svn-ch-2-sect-3.4">
-      <title>The Limitations of Mixed Revisions</title>
+      <title>Begrensningene i blandede revisjoner</title>
 
-      <para>As a general principle, Subversion tries to be as flexible
-        as possible.  One special kind of flexibility is the ability
-        to have a working copy containing mixed revision
-        numbers.</para>
+      <para>Som et generelt prinsipp pr&#248;ver Subversion &#229; v&#230;re s&#229; 
+        fleksibel som mulig.
+        En spesiell type av fleksibilitet er muligheten til &#229; ha en 
+        arbeidskopi som inneholder blandede revisjonsnumre.</para>
 
-      <para>At first, it may not be entirely clear why this sort of
-        flexibility is considered a feature, and not a liability.
-        After completing a commit to the repository, the freshly
-        committed files and directories are at a more recent working
-        revision than the rest of the working copy.  It looks like a
-        bit of a mess.  As demonstrated earlier, the working copy can
-        always be brought to a single working revision by running
-        <command>svn update</command>.  Why would someone
-        <emphasis>deliberately</emphasis> want a mixture of working
-        revisions?</para>
+      <para>Til &#229; begynne med er det ikke sikkert det er helt klart 
+        hvorfor denne typen fleksibilitet er &#229; betrakte som en fordel, 
+        og ikke en svakhet.
+        Etter &#229; ha fullf&#248;rt en innlegging i depotet, er de nylig 
+        innlagte filene og katalogene i en nyere arbeidsrevisjon enn 
+        resten av kopien.
+        Det ser ut som litt av et rot.
+        Som tidligere demonstrert, kan arbeidskopien alltid bli satt til 
+        en enkelt arbeidsrevisjon ved &#229; kj&#248;re <command>svn 
+        update</command>.
+        Hvorfor vil noen <emphasis>med vilje</emphasis> &#248;nske seg en 
+        blanding av arbeidsrevisjoner?</para>
 
-      <para>Assuming your project is sufficiently complex, you'll
-        discover that it's sometimes nice to forcibly
-        <quote>backdate</quote> portions of your working copy to an
-        earlier revision; you'll learn how to do that in Chapter 3.
-        Perhaps you'd like to test an earlier version of a sub-module,
-        contained in a subdirectory, or perhaps you'd like to examine
-        a number of previous versions of a file in the context of the
-        latest tree.</para>
+      <para>Forutsatt at prosjektet ditt er komplekst nok, vil du 
+        oppdage at det noen ganger er fint &#229; kunne 
+        <quote>tilbakedatere</quote> deler av arbeidskopien til en 
+        tidligere revisjon; du vil l&#230;re hvordan du gj&#248;r det i kapittel 
+        3.
+        Kanskje vil du pr&#248;ve en tidligere versjon av en delmodul, lagret 
+        i en underkatalog, eller kanskje du vil utforske et antall 
+        tidligere versjoner av en fil sett i forhold til det seneste 
+        treet.</para>
         
-      <para>However you make use of mixed-revisions in your working
-        copy, there are limitations to this flexibility.</para>
+      <para>Hvordan du enn gj&#248;r bruk av blandede revisjoner i 
+        arbeidskopien, er det begrensninger i denne 
+        fleksibiliteten.</para>
 
-      <para>First, you cannot commit the deletion of a file or
-        directory which isn't fully up-to-date.  If a newer version of
-        the item exists in the repository, your attempt to delete will
-        be rejected, to prevent you from accidentally
-        destroying changes you've not yet seen.</para>
+      <para>For det f&#248;rste kan du ikke legge inn sletting av en fil 
+        eller katalog som ikke er fullstendig oppdatert.
+        Hvis en nyere versjon av elementet eksisterer i depotet, vil 
+        fors&#248;ket ditt p&#229; &#229; slette bli nektet, for &#229; forhindre deg &#229; 
+        &#248;delegge ved en ulykke forandringer som du enda ikke har 
+        sett.</para>
 
-      <para>Second, you cannot commit a metadata change to a directory
-        unless it's fully up-to-date.  You'll learn about attaching
-        <quote>properties</quote> to items in Chapter 6.  A
-        directory's working revision defines a specific set of entries
-        and properties, and thus committing a property change to an
-        out-of-date directory may destroy properties you've not yet
-        seen.</para>
+      <para>For det andre kan du ikke legge inn en metadata-forandring 
+        til en katalog hvis den ikke er fullstendig oppdatert.
+        Du vil f&#229; l&#230;re om &#229; legge til <quote>egenskaper</quote> til 
+        elementer i kapittel 6.
+        En katalogs arbeidsrevisjon definerer et spesifikt sett med 
+        poster og egenskaper, og en innlegging av forandringer i en 
+        egenskap for en utdatert katalog kan &#248;delegge egenskaper som du 
+        enda ikke har sett.</para>
 
     </sect2>
 
   </sect1>
 
   <sect1 id="svn-ch-2-sect-4">
-    <title>Summary</title>
+    <title>Oppsummering</title>
     
-    <para>We've covered a number of fundamental Subversion concepts in
-    this chapter:</para>
+    <para>Vi har dekket flere fundamentale konsepter for Subversion i 
+      dette kapitlet:</para>
 
     <itemizedlist>
       <listitem>
-        <para>We've introduced the notions of the central repository,
-          the client working copy, and the array of repository
-          revision trees.</para>
+        <para>Vi har introdusert begrepene om et sentralt depot, 
+          arbeidskopien til klienten, og rekken av revisjonstr&#230;r i 
+          depotet.</para>
       </listitem>
 
       <listitem>
-        <para>We've seen some simple examples of how two collaborators
-        can use Subversion to publish and receive changes from one
-        another, using the 'copy-modify-merge' model.</para>
+        <para>Vi har sett noen enkle eksempler p&#229; hvordan to 
+          arbeidskollegaer kan bruke Subversion til &#229; publisere og motta 
+          forandringer til og fra hverandre, ved &#229; bruke 
+          <quote>kopier-rediger-flett</quote>-modellen.</para>
       </listitem>
 
       <listitem>
-        <para>We've talked a bit about the way Subversion tracks and
-          manages information in a working copy.</para>
+        <para>Vi har snakket litt om m&#229;ten Subversion f&#248;lger og 
+          behandler informasjon i en arbeidskopi.</para>
       </listitem>
+
 
     </itemizedlist>
     
-    <para>At this point, you should have a good idea of how Subversion
-    works in the most general sense.  Armed with this knowledge, you
-    should now be ready to jump into the next chapter, which is a
-    detailed tour of Subversion's commands and features. </para>
+    <para>S&#229; langt skal du ha en god oversikt om hvordan Subversion 
+      arbeider generelt sett.
+      Bev&#230;pnet med kunnskap er du n&#229; klar til &#229; hoppe inn i neste 
+      kapittel, som er en detaljert gjennomgang av Subversions 
+      kommandoer og funksjoner.</para>
       
   </sect1>
 
@@ -746,4 +802,5 @@ calc/Makefile:6
 local variables: 
 sgml-parent-document: ("book.xml" "chapter")
 end:
+vim: set textwidth=72 nowrap formatoptions+=w2 expandtab shiftwidth=2 tabstop=2 softtabstop=2 fileencoding=utf8 :
 -->
