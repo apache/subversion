@@ -41,7 +41,7 @@ svn_client_revert (const char *path,
                    void *notify_baton,
                    apr_pool_t *pool)
 {
-  svn_error_t *err = svn_wc_revert (path, recursive,
+  svn_error_t *err = svn_wc_revert (path, NULL, recursive,
                                     notify_func, notify_baton,
                                     pool);
 

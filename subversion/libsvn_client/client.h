@@ -213,6 +213,11 @@ svn_client__update_internal (const svn_delta_editor_t *before_editor,
  * TARGET is a working-copy path, the base of the hierarchy to be
  * compared.  It corresponds to the URL opened in RA_SESSION below.
  *
+ * ADM_ACCESS is an access baton with a write lock for the anchor of
+ * TARGET.  It should lock the entire TARGET tree if RECURSE is TRUE.
+ * ADM_ACCESS may be NULL, in which case the DIFF_CMD callbacks will be
+ * passed a NULL access baton.
+ *
  * DIFF_CMD/DIFF_CMD_BATON represent the callback and calback argument that
  * implement the file comparison function
  *
@@ -230,6 +235,7 @@ svn_client__update_internal (const svn_delta_editor_t *before_editor,
  */
 svn_error_t *
 svn_client__get_diff_editor (const char *target,
+                             svn_wc_adm_access_t *adm_access,
                              const svn_wc_diff_callbacks_t *diff_cmd,
                              void *diff_cmd_baton,
                              svn_boolean_t recurse,

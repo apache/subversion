@@ -378,7 +378,7 @@ file_diff (struct dir_baton *dir_baton,
       empty_file = svn_wc__empty_file_path (path, pool);
 
       SVN_ERR (dir_baton->edit_baton->callbacks->file_deleted
-               (path, 
+               (NULL, path, 
                 pristine_copy, 
                 empty_file,
                 dir_baton->edit_baton->callback_baton));
@@ -391,7 +391,7 @@ file_diff (struct dir_baton *dir_baton,
       empty_file = svn_wc__empty_file_path (path, pool);
 
       SVN_ERR (dir_baton->edit_baton->callbacks->file_added
-               (path,
+               (NULL, path,
                 empty_file,
                 path,
                 dir_baton->edit_baton->callback_baton));
@@ -406,7 +406,7 @@ file_diff (struct dir_baton *dir_baton,
                                           pool));
 
           SVN_ERR (dir_baton->edit_baton->callbacks->props_changed
-                   (NULL,
+                   (NULL, NULL,
                     path,
                     propchanges, baseprops,
                     dir_baton->edit_baton->callback_baton));
@@ -430,7 +430,7 @@ file_diff (struct dir_baton *dir_baton,
           SVN_ERR (svn_wc_translated_file (&translated, path, pool));
           
           err = dir_baton->edit_baton->callbacks->file_changed
-            (NULL,
+            (NULL, NULL,
              path,
              pristine_copy, 
              translated,
@@ -455,7 +455,7 @@ file_diff (struct dir_baton *dir_baton,
                                           pool));
 
           SVN_ERR (dir_baton->edit_baton->callbacks->props_changed
-                   (NULL,
+                   (NULL, NULL,
                     path,
                     propchanges, baseprops,
                     dir_baton->edit_baton->callback_baton));
@@ -515,7 +515,7 @@ directory_elements_diff (struct dir_baton *dir_baton,
                                           dir_baton->pool));
               
           SVN_ERR (dir_baton->edit_baton->callbacks->props_changed
-                   (NULL,
+                   (NULL, NULL,
                     dir_baton->path,
                     propchanges, baseprops,
                     dir_baton->edit_baton->callback_baton));
@@ -649,7 +649,7 @@ delete_entry (svn_stringbuf_t *name_s,
          revision, so diff should show this as and add. Thus compare the
          empty file against the current working copy. */
       SVN_ERR (pb->edit_baton->callbacks->file_added
-               (path,
+               (NULL, path,
                 svn_wc__empty_file_path (path, pool),
                 path,
                 pb->edit_baton->callback_baton));
@@ -737,7 +737,7 @@ close_directory (void *dir_baton)
     {
       reverse_propchanges (b->baseprops, b->propchanges, b->pool);
       SVN_ERR (b->edit_baton->callbacks->props_changed
-               (NULL,
+               (NULL, NULL,
                 b->path,
                 b->propchanges,
                 b->baseprops,
@@ -919,7 +919,7 @@ close_file (void *file_baton)
          diff should show this as and delete. Thus compare the current
          working copy against the empty file. */
       SVN_ERR (b->edit_baton->callbacks->file_deleted
-               (b->path,
+               (NULL, b->path,
                 temp_file_path,
                 svn_wc__empty_file_path (b->wc_path, b->pool),
                 b->edit_baton->callback_baton));
@@ -934,7 +934,7 @@ close_file (void *file_baton)
       SVN_ERR (svn_wc_translated_file (&translated, b->path, b->pool));
 
       err1 = b->edit_baton->callbacks->file_changed
-        (NULL,
+        (NULL, NULL,
          b->path,
          temp_file_path,
          translated,
@@ -952,7 +952,7 @@ close_file (void *file_baton)
         {
           reverse_propchanges (b->baseprops, b->propchanges, b->pool);
           SVN_ERR (b->edit_baton->callbacks->props_changed
-                   (NULL,
+                   (NULL, NULL,
                     b->path,
                     b->propchanges,
                     b->baseprops,

@@ -65,12 +65,8 @@ svn_cl__update (apr_getopt_t *os,
   for (i = 0; i < condensed_targets->nelts; i++)
     {
       const char *target = ((const char **) (condensed_targets->elts))[i];
-      const char *parent_dir, *entry;
 
-      SVN_ERR (svn_wc_get_actual_target (target,
-                                         &parent_dir,
-                                         &entry,
-                                         pool));
+      target = svn_path_canonicalize_nts (target, pool);
 
       SVN_ERR (svn_client_update
                (auth_baton,

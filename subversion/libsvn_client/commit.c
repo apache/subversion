@@ -739,22 +739,15 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
   svn_error_t *cmt_err = NULL, *unlock_err = NULL;
   svn_error_t *bump_err = NULL, *cleanup_err = NULL;
   svn_boolean_t use_xml = (xml_dst && xml_dst[0]) ? TRUE : FALSE;
-  svn_boolean_t commit_in_progress = FALSE;
-  svn_wc_entry_t *base_entry;
+  svn_boolean_t is_root, commit_in_progress = FALSE;
   const char *display_dir = ".";
   int i;
 
   /* Condense the target list. */
   SVN_ERR (svn_path_condense_targets (&base_dir, &rel_targets, targets, pool));
 
-  /* Eeek!  To get an access baton we need a directory name.  If the user
-     explicitly commits a deleted file that has been physically removed
-     from the working copy (as is normal for deleted files), then BASE_DIR
-     will be the file name not a directory name.  To identify this case we
-     need to get the entry for BASE_DIR before we get the access baton.  I
-     wonder where this logic should live? */
-  SVN_ERR (svn_wc_entry (&base_entry, base_dir, TRUE, pool));
-  if (base_entry->kind == svn_node_dir)
+  SVN_ERR (svn_wc_is_wc_root (&is_root, base_dir, pool));
+  if (is_root)
     SVN_ERR (svn_wc_adm_open (&base_dir_access, NULL, base_dir, TRUE, TRUE,
                               pool));
   else

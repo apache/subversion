@@ -56,10 +56,16 @@
 
 /* Copy SRC_PATH into DST_PATH as DST_BASENAME, deleting SRC_PATH
    afterwards if IS_MOVE is TRUE.  Use POOL for all necessary
-   allocations. */
+   allocations.
+
+   ### 838 OPTIONAL_ADM_ACCESS is an access baton with a write lock for the
+   ### parent of DST_PATH. This parameter should be removed when issue 838
+   ### stops using svn_client_copy.
+*/
 static svn_error_t *
 wc_to_wc_copy (const char *src_path,
                const char *dst_path,
+               svn_wc_adm_access_t *optional_adm_access,
                svn_boolean_t is_move,
                svn_boolean_t force,
                svn_wc_notify_func_t notify_func,
@@ -68,6 +74,7 @@ wc_to_wc_copy (const char *src_path,
 {
   svn_node_kind_t src_kind, dst_kind;
   const char *parent = dst_path, *base_name;
+  svn_wc_adm_access_t *adm_access;
 
   /* Verify that SRC_PATH exists. */
   SVN_ERR (svn_io_check_path (src_path, &src_kind, pool));
@@ -97,8 +104,25 @@ wc_to_wc_copy (const char *src_path,
     }
 
   /* Perform the copy and (optionally) delete. */
-  SVN_ERR (svn_wc_copy (src_path, parent, base_name,
+
+  if (! optional_adm_access)
+    {
+      if (dst_kind == svn_node_none)
+        SVN_ERR (svn_wc_adm_open (&adm_access, NULL, parent, TRUE, FALSE,
+                                  pool));
+      else
+        SVN_ERR (svn_wc_adm_open (&adm_access, NULL, dst_path, TRUE, FALSE,
+                                  pool));
+    }
+  else
+    adm_access = optional_adm_access;
+                              
+  SVN_ERR (svn_wc_copy (src_path, adm_access, base_name,
                         notify_func, notify_baton, pool));
+
+  if (! optional_adm_access)
+    SVN_ERR (svn_wc_adm_close (adm_access));
+
   if (is_move)
     {
       SVN_ERR (svn_wc_delete (src_path,
@@ -604,10 +628,16 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
 }
 
 
+/*
+   ### 838 OPTIONAL_ADM_ACCESS is an access baton with a write lock for the
+   ### parent of DST_PATH. This parameter should be removed when issue 838
+   ### stops using svn_client_copy.
+*/
 static svn_error_t *
 repos_to_wc_copy (const char *src_url,
                   const svn_client_revision_t *src_revision,
                   const char *dst_path, 
+                  svn_wc_adm_access_t *optional_adm_access,
                   svn_client_auth_baton_t *auth_baton,
                   svn_wc_notify_func_t notify_func,
                   void *notify_baton,
@@ -617,6 +647,7 @@ repos_to_wc_copy (const char *src_url,
   svn_ra_plugin_t *ra_lib;
   svn_node_kind_t src_kind, dst_kind;
   svn_revnum_t src_revnum;
+  svn_wc_adm_access_t *adm_access;
 
   /* Get the RA vtable that matches URL. */
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
@@ -801,19 +832,43 @@ repos_to_wc_copy (const char *src_url,
      rewritten, wcprops removed, and everything marked as 'copied'.
      See comment in svn_wc_add()'s doc about whether svn_wc_add is the
      appropriate place for this. */
-  SVN_ERR (svn_wc_add (dst_path, src_url, src_revnum,
+  if (! optional_adm_access)
+    {
+      const char *parent_path;
+      if (dst_kind == svn_node_dir)
+        parent_path = dst_path;
+      else
+        {
+          parent_path = svn_path_remove_component_nts (dst_path, pool);
+          if (svn_path_is_empty_nts (parent_path))
+            parent_path = ".";
+        }
+      SVN_ERR (svn_wc_adm_open (&adm_access, NULL, parent_path, TRUE, FALSE,
+                                pool));
+    }
+  else
+    adm_access = optional_adm_access;
+                              
+  SVN_ERR (svn_wc_add (dst_path, adm_access, src_url, src_revnum,
                        notify_func, notify_baton, pool));
 
+  if (! optional_adm_access)
+    SVN_ERR (svn_wc_adm_close (adm_access));
 
   return SVN_NO_ERROR;
 }
 
-
+/*
+   ### 838 OPTIONAL_ADM_ACCESS is an access baton with a write lock for the
+   ### parent of DST_PATH. This parameter should be removed when issue 838
+   ### stops using svn_client_copy.
+*/
 static svn_error_t *
 setup_copy (svn_client_commit_info_t **commit_info,
             const char *src_path,
             const svn_client_revision_t *src_revision,
             const char *dst_path,
+            svn_wc_adm_access_t *optional_adm_access,
             svn_client_auth_baton_t *auth_baton,
             svn_client_get_commit_log_t log_msg_func,
             void *log_msg_baton,
@@ -908,7 +963,8 @@ setup_copy (svn_client_commit_info_t **commit_info,
 
   /* Now, call the right handler for the operation. */
   if ((! src_is_url) && (! dst_is_url))
-    SVN_ERR (wc_to_wc_copy (src_path, dst_path, is_move, force,
+    SVN_ERR (wc_to_wc_copy (src_path, dst_path, optional_adm_access,
+                            is_move, force,
                             notify_func, notify_baton,
                             pool));
 
@@ -920,7 +976,7 @@ setup_copy (svn_client_commit_info_t **commit_info,
 
   else if ((src_is_url) && (! dst_is_url))
     SVN_ERR (repos_to_wc_copy (src_path, src_revision, 
-                               dst_path, auth_baton,
+                               dst_path, optional_adm_access, auth_baton,
                                notify_func, notify_baton,
                                pool));
 
@@ -936,11 +992,17 @@ setup_copy (svn_client_commit_info_t **commit_info,
 
 /* Public Interfaces */
 
+/*
+   ### 838 OPTIONAL_ADM_ACCESS is an access baton with a write lock for the
+   ### parent of DST_PATH. This parameter should be removed when issue 838
+   ### stops using svn_client_copy.
+*/
 svn_error_t *
 svn_client_copy (svn_client_commit_info_t **commit_info,
                  const char *src_path,
                  const svn_client_revision_t *src_revision,
                  const char *dst_path,
+                 svn_wc_adm_access_t *optional_adm_access,
                  svn_client_auth_baton_t *auth_baton,
                  svn_client_get_commit_log_t log_msg_func,
                  void *log_msg_baton,
@@ -949,7 +1011,8 @@ svn_client_copy (svn_client_commit_info_t **commit_info,
                  apr_pool_t *pool)
 {
   return setup_copy (commit_info, 
-                     src_path, src_revision, dst_path, auth_baton, 
+                     src_path, src_revision, dst_path, optional_adm_access,
+                     auth_baton, 
                      log_msg_func, log_msg_baton,
                      FALSE /* is_move */,
                      TRUE /* force, set to avoid deletion check */,
@@ -972,7 +1035,7 @@ svn_client_move (svn_client_commit_info_t **commit_info,
                  apr_pool_t *pool)
 {
   return setup_copy (commit_info,
-                     src_path, src_revision, dst_path, auth_baton,
+                     src_path, src_revision, dst_path, NULL, auth_baton,
                      log_msg_func, log_msg_baton,
                      TRUE /* is_move */,
                      force,

@@ -1416,7 +1416,7 @@ fold_scheduling (apr_hash_t *entries,
 
 
 svn_error_t *
-svn_wc__entry_modify (const char *path,
+svn_wc__entry_modify (svn_wc_adm_access_t *adm_access,
                       const char *name,
                       svn_wc_entry_t *entry,
                       apr_uint32_t modify_flags,
@@ -1430,7 +1430,8 @@ svn_wc__entry_modify (const char *path,
   assert (entry);
 
   /* Load PATH's whole entries file. */
-  SVN_ERR (svn_wc_entries_read (&entries, path, TRUE, pool));
+  SVN_ERR (svn_wc_entries_read (&entries, svn_wc_adm_access_path (adm_access),
+                                TRUE, pool));
 
   /* Ensure that NAME is valid. */
   if (name == NULL)
@@ -1465,7 +1466,8 @@ svn_wc__entry_modify (const char *path,
     fold_entry (entries, name, modify_flags, entry, pool);
 
   /* Sync changes to disk. */
-  return svn_wc__entries_write (entries, path, pool);
+  return svn_wc__entries_write (entries, svn_wc_adm_access_path (adm_access),
+                                pool);
 }
 
 

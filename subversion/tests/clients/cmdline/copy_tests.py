@@ -516,12 +516,15 @@ def no_wc_copy_overwrites(sbox):
   outlines, errlines = svntest.main.run_svn(1, 'cp', pi_path, rho_path)
   if not errlines:
     return 1
+  svntest.main.run_svn(None, 'cleanup', wc_dir)
   outlines, errlines = svntest.main.run_svn(1, 'cp', pi_path, tau_path)
   if not errlines:
     return 1
+  svntest.main.run_svn(None, 'cleanup', wc_dir)
   outlines, errlines = svntest.main.run_svn(1, 'cp', pi_path, alpha_path)
   if not errlines:
     return 1
+  svntest.main.run_svn(None, 'cleanup', wc_dir)
 
   # Status after failed copies should not have changed
   extra_files = [ 'tau' ]
