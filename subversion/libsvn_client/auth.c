@@ -248,7 +248,7 @@ store_auth_info (const char *filename,
     }
 
   /* ### Fragile!  For a checkout we have no access baton before the checkout
-     starts, so base_access is NULL.  However checkout closes it's batons
+     starts, so base_access is NULL.  However checkout closes its batons
      before storing auth info so we can open a new baton here. */
 
   if (! cb->base_access)
