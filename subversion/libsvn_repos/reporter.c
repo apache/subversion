@@ -159,7 +159,7 @@ svn_repos_set_path (void *report_baton,
       if (! svn_path_is_empty (pathbuf))
         return 
           svn_error_create
-          (SVN_ERR_RA_BAD_REVISION_REPORT, 0, NULL, rbaton->pool,
+          (SVN_ERR_REPOS_BAD_REVISION_REPORT, 0, NULL, rbaton->pool,
            "svn_repos_set_path: initial revision report was bogus.");
 
       /* Start a transaction based on REVISION. */

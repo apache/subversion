@@ -334,7 +334,7 @@ import (const char *path,
     {
       if (! new_entry)
         return svn_error_create
-          (SVN_ERR_UNKNOWN_NODE_KIND, 0, NULL, pool,
+          (SVN_ERR_NODE_UNKNOWN_KIND, 0, NULL, pool,
            "new entry name required when importing a file");
 
       SVN_ERR (import_file (files,
@@ -398,7 +398,7 @@ import (const char *path,
   else if (kind == svn_node_none)
     {
       return svn_error_createf
-        (SVN_ERR_UNKNOWN_NODE_KIND, 0, NULL, pool,
+        (SVN_ERR_NODE_UNKNOWN_KIND, 0, NULL, pool,
          "'%s' does not exist.", path);  
     }
 
@@ -664,10 +664,10 @@ reconcile_errors (svn_error_t *commit_err,
       err = commit_err;
     }
 
-  /* Else, create a new "general" error that will head off the errors
+  /* Else, create a new "general" error that will lead off the errors
      that follow. */
   else
-    err = svn_error_create (SVN_ERR_GENERAL, 0, NULL, pool,
+    err = svn_error_create (SVN_ERR_BASE, 0, NULL, pool,
                             "Commit succeeded, but other errors follow:");
 
   /* If there was an unlock error... */

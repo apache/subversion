@@ -275,13 +275,13 @@ svn_error_t *svn_io_copy_dir_recursively (const char *src,
      DST_BASENAME doesn't already exist in DST_PARENT. */
   SVN_ERR (svn_io_check_path (src, &kind, subpool));
   if (kind != svn_node_dir)
-    return svn_error_createf (SVN_ERR_UNEXPECTED_NODE_KIND, 0, NULL, subpool,
+    return svn_error_createf (SVN_ERR_NODE_UNEXPECTED_KIND, 0, NULL, subpool,
                               "svn_io_copy_dir: '%s' is not a directory.",
                               src);
 
   SVN_ERR (svn_io_check_path (dst_parent, &kind, subpool));
   if (kind != svn_node_dir)
-    return svn_error_createf (SVN_ERR_UNEXPECTED_NODE_KIND, 0, NULL, subpool,
+    return svn_error_createf (SVN_ERR_NODE_UNEXPECTED_KIND, 0, NULL, subpool,
                               "svn_io_copy_dir: '%s' is not a directory.",
                               dst_parent);
 

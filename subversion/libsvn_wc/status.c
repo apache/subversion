@@ -262,7 +262,7 @@ assemble_status (svn_wc_status_t **status,
 
               if (strict)
                 return svn_error_createf (
-                         SVN_ERR_UNEXPECTED_NODE_KIND, 0, NULL, pool,
+                         SVN_ERR_NODE_UNEXPECTED_KIND, 0, NULL, pool,
                          "assemble_status: "
                          "'%s' is obstructing a versioned resource",
                          path);

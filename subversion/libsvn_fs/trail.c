@@ -135,7 +135,7 @@ svn_fs__retry_txn (svn_fs_t *fs,
         }
 
       /* Is this a real error, or do we just need to retry?  */
-      if (svn_err->apr_err != SVN_ERR_BERKELEY_DB
+      if (svn_err->apr_err != SVN_ERR_FS_BERKELEY_DB
           || svn_err->src_err != DB_LOCK_DEADLOCK)
         {
           /* Ignore any error returns.  The first error is more valuable.  */

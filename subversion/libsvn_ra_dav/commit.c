@@ -156,7 +156,7 @@ static svn_error_t * simple_request(svn_ra_session_t *ras, const char *method,
   req = ne_request_create(ras->sess, method, url);
   if (req == NULL)
     {
-      return svn_error_createf(SVN_ERR_RA_CREATING_REQUEST, 0, NULL,
+      return svn_error_createf(SVN_ERR_RA_DAV_CREATING_REQUEST, 0, NULL,
                                ras->pool,
                                "Could not create a request (%s %s)",
                                method, url);
@@ -477,7 +477,7 @@ static svn_error_t * do_checkout(commit_ctx_t *cc,
   req = ne_request_create(cc->ras->sess, "CHECKOUT", vsn_url);
   if (req == NULL)
     {
-      return svn_error_createf(SVN_ERR_RA_CREATING_REQUEST, 0, NULL,
+      return svn_error_createf(SVN_ERR_RA_DAV_CREATING_REQUEST, 0, NULL,
                                cc->ras->pool,
                                "Could not create a CHECKOUT request (%s)",
                                vsn_url);
@@ -549,7 +549,7 @@ static svn_error_t * checkout_resource(commit_ctx_t *cc,
   /* we got the header, right? */
   if (locn == NULL)
     {
-      return svn_error_create(SVN_ERR_RA_REQUEST_FAILED, 0, NULL,
+      return svn_error_create(SVN_ERR_RA_DAV_REQUEST_FAILED, 0, NULL,
                               cc->ras->pool,
                               "The CHECKOUT response did not contain a "
                               "Location: header.");
@@ -964,11 +964,11 @@ static svn_error_t * commit_add_file(const char *path,
       if (!err)
         {
           /* If the PROPFIND succeeds the file already exists */
-          return svn_error_createf(SVN_ERR_RA_ALREADY_EXISTS, 0, NULL,
+          return svn_error_createf(SVN_ERR_RA_DAV_ALREADY_EXISTS, 0, NULL,
                                    file_pool,
                                    "file '%s' already exists", file->rsrc->url);
         }
-      else if (err->apr_err == SVN_ERR_RA_REQUEST_FAILED)
+      else if (err->apr_err == SVN_ERR_RA_DAV_REQUEST_FAILED)
         {
           /* ### TODO: This is what we get if the file doesn't exist
              but an explicit not-found error might be better */
@@ -1101,7 +1101,7 @@ static svn_error_t * commit_stream_close(void *baton)
   req = ne_request_create(cc->ras->sess, "PUT", url);
   if (req == NULL)
     {
-      return svn_error_createf(SVN_ERR_RA_CREATING_REQUEST, 0, NULL,
+      return svn_error_createf(SVN_ERR_RA_DAV_CREATING_REQUEST, 0, NULL,
                                pb->pool,
                                "Could not create a PUT request (%s)",
                                url);

@@ -895,37 +895,6 @@ svn_client_ls (apr_hash_t **dirents,
                apr_pool_t *pool);
 
 
-
-/* Cancellation. */
-
-/* ### Plan is to get rid of this, and make svn_wc_notify_func_t
-   ### return boolean, where true indicates that the user requested
-   ### cancellation.  The caller of the notification func can then
-   ### take whatever action is appropriate (most editor functions will
-   ### probably return SVN_ERR_CANCELED, for example). */
-
-/* A function type for determining whether or not to cancel an operation.
- * Returns TRUE if should cancel, FALSE if should not.
- */
-typedef svn_boolean_t (*svn_client_cancellation_func_t) (void *baton);
-
-
-/* Set *EDITOR and *EDIT_BATON to an editor that returns
- * SVN_ERR_CANCELED if SHOULD_I_CANCEL(CANCEL_BATON) ever returns
- * true.  Should be composed before any editor that does any real
- * work.
- */
-svn_error_t *svn_client_get_cancellation_editor
-      (const svn_delta_edit_fns_t **editor,
-       void **edit_baton,
-       svn_client_cancellation_func_t should_i_cancel,
-       void *cancel_baton,
-       apr_pool_t *pool);
-
-
-
-
-
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

@@ -862,7 +862,7 @@ wcprop_list (apr_hash_t **props,
                               path);
   
   if (kind == svn_node_unknown)
-    return svn_error_createf (SVN_ERR_UNKNOWN_NODE_KIND, 0, NULL, pool,
+    return svn_error_createf (SVN_ERR_NODE_UNKNOWN_KIND, 0, NULL, pool,
                               "wcprop_list: unknown node kind: '%s'.",
                               path);
 #endif

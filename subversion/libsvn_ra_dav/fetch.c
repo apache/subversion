@@ -575,7 +575,7 @@ static svn_error_t *custom_get_request(ne_session *sess,
   req = ne_request_create(sess, "GET", url);
   if (req == NULL)
     {
-      return svn_error_createf(SVN_ERR_RA_CREATING_REQUEST, 0, NULL, pool,
+      return svn_error_createf(SVN_ERR_RA_DAV_CREATING_REQUEST, 0, NULL, pool,
                                "Could not create a GET request for %s",
                                url);
     }
@@ -876,7 +876,7 @@ static void get_file_reader(void *userdata, const char *buf, size_t len)
     {
       /* Uh oh, didn't write as many bytes as neon gave us. */
       return 
-        svn_error_create(SVN_ERR_UNEXPECTED_EOF, 0, NULL,
+        svn_error_create(SVN_ERR_STREAM_UNEXPECTED_EOF, 0, NULL,
                          sbaton->pool, "Error writing to svn_stream.");
     }
 #endif

@@ -57,7 +57,7 @@ svn_client__can_delete (const char *path,
 
       if (statstruct->text_status == svn_wc_status_obstructed)
         {
-          return svn_error_createf (SVN_ERR_UNEXPECTED_NODE_KIND,
+          return svn_error_createf (SVN_ERR_NODE_UNEXPECTED_KIND,
                                     0, NULL, pool,
                                     "'%s' is in the way of the resource "
                                     "actually under revision control.",

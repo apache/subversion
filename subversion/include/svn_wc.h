@@ -654,7 +654,7 @@ svn_error_t *svn_wc_status (svn_wc_status_t **status,
  * If STRICT is set, then: if what should be a versioned directory
  * appears to be unversioned, return SVN_ERR_WC_NOT_DIRECTORY; else if
  * the item on disk is simply a different kind from what's expected by
- * the entry, then return SVN_ERR_UNEXPECTED_NODE_KIND; else if the
+ * the entry, then return SVN_ERR_NODE_UNEXPECTED_KIND; else if the
  * item is missing from disk, return APR_ENOENT.
  *
  * Assuming PATH is a directory, then:
