@@ -333,8 +333,7 @@ class Generator(gen_base.GeneratorBase):
         upper_var = string.upper(area_var)
         self.ofile.write('install-%s: %s\n'
                          '\t$(MKDIR) $(DESTDIR)$(%sdir)\n'
-                         % (area, string.join(files + inst_area_deps),
-                            area_var))
+                         % (area, string.join(files), area_var))
         for file in files:
           # cd to dirname before install to work around libtool 1.4.2 bug.
           dirname, fname = build_path_splitfile(file)
