@@ -165,7 +165,7 @@
       </varlistentry>
 
       <varlistentry>
-        <term><command>svn undo</command></term>
+        <term><command>svn revert</command></term>
         <listitem>
           <para>Removes your local changes. (see <xref
               linkend="svn-ch-3-sect-4.3.3"/>)</para>
@@ -179,7 +179,7 @@
 
     <para>The last subcommand in the list is new; it will not only
       remove local mods, but it will un-schedule operations such as
-      adds and deletes.  It's the preferred way to undo changes to a file;
+      adds and deletes.  It's the preferred way to revert a file;
       running <command>rm file; svn update</command> will still work, but
       it blurs the purpose of updating.  And, while we're on this
       subject&hellip;

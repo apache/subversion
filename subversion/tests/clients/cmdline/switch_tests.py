@@ -183,10 +183,10 @@ def commit_routine_switching(wc_dir, verify):
                                         None, None, None, None,
                                         wc_dir)
 
-  # Okay, that all taken care of, let's undo the A/D/G/pi path and
+  # Okay, that all taken care of, let's revert the A/D/G/pi path and
   # move along.  Afterward, we should be okay to commit.  (Sorry,
   # holsta, that banana has to go...)
-  svntest.main.run_svn(None, 'undo', Gpi_path)
+  svntest.main.run_svn(None, 'revert', Gpi_path)
 
   # Create expected output tree.
   expected_output = svntest.wc.State(wc_dir, {

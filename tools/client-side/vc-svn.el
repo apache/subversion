@@ -305,13 +305,13 @@ write the contents to; we raise an error."
   (vc-file-setprop file 'vc-workfile-version nil))
 
 
-(defun vc-svn-undo (file &optional contents-done)
-  "Undo FILE back to the current workfile version.
+(defun vc-svn-revert (file &optional contents-done)
+  "Revert FILE back to the current workfile version.
 If optional arg CONTENTS-DONE is non-nil, then the contents of FILE
-have already been undone from a version backup, and this function
+have already been reverted from a version backup, and this function
 only needs to update the status of FILE within the backend.  This
 function ignores the CONTENTS-DONE argument."
-  (vc-do-command nil 0 vc-svn-program-name file "undo"))
+  (vc-do-command nil 0 vc-svn-program-name file "revert"))
 
 
 (defun vc-svn-merge-news (file)

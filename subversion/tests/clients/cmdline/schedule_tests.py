@@ -272,22 +272,22 @@ def delete_dirs(sbox):
 #  Stage II - Reversion of changes made in Stage I
 #
 
-def undo_add_files(sbox):
-  "undo: add some files"
+def revert_add_files(sbox):
+  "revert: add some files"
 
   wc_dir = sbox.wc_dir
 
   if add_files(sbox):
     return 1
 
-  # Undo our changes recursively from wc_dir.
+  # Revert our changes recursively from wc_dir.
   delta_path = os.path.join(wc_dir, 'delta')
   zeta_path = os.path.join(wc_dir, 'A', 'B', 'zeta')
   epsilon_path = os.path.join(wc_dir, 'A', 'D', 'G', 'epsilon')
-  expected_output = ["Undid " + delta_path + "\n",
-                     "Undid " + zeta_path + "\n",
-                     "Undid " + epsilon_path + "\n"]
-  output, errput = svntest.main.run_svn (None, 'undo', '--recursive', wc_dir)
+  expected_output = ["Reverted " + delta_path + "\n",
+                     "Reverted " + zeta_path + "\n",
+                     "Reverted " + epsilon_path + "\n"]
+  output, errput = svntest.main.run_svn (None, 'revert', '--recursive', wc_dir)
 
   # Make sure we got the right output.
   if len(errput) > 0:
@@ -305,22 +305,22 @@ def undo_add_files(sbox):
 
 #----------------------------------------------------------------------
 
-def undo_add_directories(sbox):
-  "undo: add some directories"
+def revert_add_directories(sbox):
+  "revert: add some directories"
 
   wc_dir = sbox.wc_dir
 
   if add_directories(sbox):
     return 1
 
-  # Undo our changes recursively from wc_dir.
+  # Revert our changes recursively from wc_dir.
   X_path = os.path.join(wc_dir, 'X')
   Y_path = os.path.join(wc_dir, 'A', 'C', 'Y')
   Z_path = os.path.join(wc_dir, 'A', 'D', 'H', 'Z')
-  expected_output = ["Undid " + X_path + "\n",
-                     "Undid " + Y_path + "\n",
-                     "Undid " + Z_path + "\n"]
-  output, errput = svntest.main.run_svn (None, 'undo', '--recursive', wc_dir)
+  expected_output = ["Reverted " + X_path + "\n",
+                     "Reverted " + Y_path + "\n",
+                     "Reverted " + Z_path + "\n"]
+  output, errput = svntest.main.run_svn (None, 'revert', '--recursive', wc_dir)
 
   # Make sure we got the right output.
   if len(errput) > 0:
@@ -338,22 +338,22 @@ def undo_add_directories(sbox):
 
 #----------------------------------------------------------------------
 
-def undo_nested_adds(sbox):
-  "undo: add some nested files and directories"
+def revert_nested_adds(sbox):
+  "revert: add some nested files and directories"
 
   wc_dir = sbox.wc_dir
 
   if nested_adds(sbox):
     return 1
 
-  # Undo our changes recursively from wc_dir.
+  # Revert our changes recursively from wc_dir.
   X_path = os.path.join(wc_dir, 'X')
   Y_path = os.path.join(wc_dir, 'A', 'C', 'Y')
   Z_path = os.path.join(wc_dir, 'A', 'D', 'H', 'Z')
-  expected_output = ["Undid " + X_path + "\n",
-                     "Undid " + Y_path + "\n",
-                     "Undid " + Z_path + "\n"]
-  output, errput = svntest.main.run_svn (None, 'undo', '--recursive', wc_dir)
+  expected_output = ["Reverted " + X_path + "\n",
+                     "Reverted " + Y_path + "\n",
+                     "Reverted " + Z_path + "\n"]
+  output, errput = svntest.main.run_svn (None, 'revert', '--recursive', wc_dir)
 
   # Make sure we got the right output.
   if len(errput) > 0:
@@ -371,8 +371,8 @@ def undo_nested_adds(sbox):
 
 #----------------------------------------------------------------------
 
-def undo_add_executable(sbox):
-  "undo: add some executable files"
+def revert_add_executable(sbox):
+  "revert: add some executable files"
 
   if add_executable(sbox):
     return 1
@@ -384,13 +384,13 @@ def undo_add_executable(sbox):
   group_path = os.path.join(wc_dir, 'group_exe')
   other_path = os.path.join(wc_dir, 'other_exe')
 
-  expected_output = ["Undid " + all_path + "\n",
-                     "Undid " + none_path + "\n",
-                     "Undid " + user_path + "\n",
-                     "Undid " + group_path + "\n",
-                     "Undid " + other_path + "\n"]
+  expected_output = ["Reverted " + all_path + "\n",
+                     "Reverted " + none_path + "\n",
+                     "Reverted " + user_path + "\n",
+                     "Reverted " + group_path + "\n",
+                     "Reverted " + other_path + "\n"]
 
-  output, errput = svntest.main.run_svn (None, 'undo', 
+  output, errput = svntest.main.run_svn (None, 'revert', 
                                          '--recursive', wc_dir)
 
   # Make sure we got the right output.
@@ -409,24 +409,24 @@ def undo_add_executable(sbox):
 
 #----------------------------------------------------------------------
 
-def undo_delete_files(sbox):
-  "undo: delete some files"
+def revert_delete_files(sbox):
+  "revert: delete some files"
 
   wc_dir = sbox.wc_dir
 
   if delete_files(sbox):
     return 1
 
-  # Undo our changes recursively from wc_dir.
+  # Revert our changes recursively from wc_dir.
   iota_path = os.path.join(wc_dir, 'iota')
   mu_path = os.path.join(wc_dir, 'A', 'mu')
   rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
   omega_path = os.path.join(wc_dir, 'A', 'D', 'H', 'omega')
-  expected_output = ["Undid " + iota_path + "\n",
-                     "Undid " + mu_path + "\n",
-                     "Undid " + omega_path + "\n",
-                     "Undid " + rho_path + "\n"]
-  output, errput = svntest.main.run_svn (None, 'undo', '--recursive', wc_dir)
+  expected_output = ["Reverted " + iota_path + "\n",
+                     "Reverted " + mu_path + "\n",
+                     "Reverted " + omega_path + "\n",
+                     "Reverted " + rho_path + "\n"]
+  output, errput = svntest.main.run_svn (None, 'revert', '--recursive', wc_dir)
 
   # Make sure we got the right output.
   if len(errput) > 0:
@@ -444,15 +444,15 @@ def undo_delete_files(sbox):
 
 #----------------------------------------------------------------------
 
-def undo_delete_dirs(sbox):
-  "undo: delete some directories"
+def revert_delete_dirs(sbox):
+  "revert: delete some directories"
 
   wc_dir = sbox.wc_dir
 
   if delete_dirs(sbox):
     return 1
 
-  # Undo our changes recursively from wc_dir.
+  # Revert our changes recursively from wc_dir.
   E_path = os.path.join(wc_dir, 'A', 'B', 'E')
   F_path = os.path.join(wc_dir, 'A', 'B', 'F')
   H_path = os.path.join(wc_dir, 'A', 'D', 'H')
@@ -461,15 +461,15 @@ def undo_delete_dirs(sbox):
   chi_path   = os.path.join(H_path, 'chi')
   omega_path = os.path.join(H_path, 'omega')
   psi_path   = os.path.join(H_path, 'psi')
-  expected_output = ["Undid " + E_path + "\n",
-                     "Undid " + F_path + "\n",
-                     "Undid " + H_path + "\n",
-                     "Undid " + alpha_path + "\n",
-                     "Undid " + beta_path + "\n",
-                     "Undid " + chi_path + "\n",
-                     "Undid " + omega_path + "\n",
-                     "Undid " + psi_path + "\n"]
-  output, errput = svntest.main.run_svn (None, 'undo', '--recursive', wc_dir)
+  expected_output = ["Reverted " + E_path + "\n",
+                     "Reverted " + F_path + "\n",
+                     "Reverted " + H_path + "\n",
+                     "Reverted " + alpha_path + "\n",
+                     "Reverted " + beta_path + "\n",
+                     "Reverted " + chi_path + "\n",
+                     "Reverted " + omega_path + "\n",
+                     "Reverted " + psi_path + "\n"]
+  output, errput = svntest.main.run_svn (None, 'revert', '--recursive', wc_dir)
 
   # Make sure we got the right output.
   if len(errput) > 0:
@@ -560,7 +560,7 @@ def commit_delete_dirs(sbox):
 # Suppose here is a either scheduled-add file or directory which is
 # also missing.  If I want to make the working copy forget all
 # knowledge of the item ("unschedule" the addition), then either 'svn
-# undo' or 'svn rm' will make that happen, with no errors.  The
+# revert' or 'svn rm' will make that happen, with no errors.  The
 # entry is simply removed from the entries file.
 
 def unschedule_missing_added(sbox):
@@ -600,9 +600,9 @@ def unschedule_missing_added(sbox):
   svntest.main.safe_rmtree(dir1_path)
   svntest.main.safe_rmtree(dir2_path)
 
-  # Unschedule the additions, using 'svn rm' and 'svn undo'.
+  # Unschedule the additions, using 'svn rm' and 'svn revert'.
   svntest.main.run_svn(None, 'rm', file1_path, dir1_path)
-  svntest.main.run_svn(None, 'undo', file2_path, dir2_path)
+  svntest.main.run_svn(None, 'revert', file2_path, dir2_path)
 
   # 'svn st' should now show absolutely zero local mods.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
@@ -666,12 +666,12 @@ test_list = [ None,
               Skip(add_executable, (os.name != 'posix')),
               delete_files,
               delete_dirs,
-              undo_add_files,
-              undo_add_directories,
-              undo_nested_adds,
-              Skip(undo_add_executable, (os.name != 'posix')),
-              undo_delete_files,
-              undo_delete_dirs,
+              revert_add_files,
+              revert_add_directories,
+              revert_nested_adds,
+              Skip(revert_add_executable, (os.name != 'posix')),
+              revert_delete_files,
+              revert_delete_dirs,
               XFail(commit_add_files),
               XFail(commit_add_directories),
               XFail(commit_nested_adds),

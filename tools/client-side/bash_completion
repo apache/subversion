@@ -17,7 +17,7 @@ _svn()
 	cmds='add cat checkout co cleanup commit ci copy cp delete del \
 	      remove rm diff di export import info h help list ls log merge \
 	      mkdir move mv rename ren propdel pdel propedit pedit pe propget \
-	      pget pg proplist plist pl propset pset ps undo resolve status \
+	      pget pg proplist plist pl propset pset ps revert resolve status \
 	      stat st switch sw update up --version'
 
 	if [[ $COMP_CWORD -eq 1 ]] ; then
@@ -130,7 +130,7 @@ _svn()
 		cmdOpts="-F --file $qOpts --targets -R --recursive --revprop \
 		         --encoding $pOpts"
 		;;
-	undo)
+	revert)
 		cmdOpts="--targets -R --recursive $qOpts"
 		;;
 	resolve)

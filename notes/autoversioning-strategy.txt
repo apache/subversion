@@ -154,7 +154,7 @@ non-mergable.
 as the default log message
 <brane> "svn note" and "svn rmnote", always contacts the server
 
-"svn undo" now becomes "svn undo" + "svn rmnote" all rolled into
+"svn revert" now becomes "svn revert" + "svn rmnote" all rolled into
 one.
 "svn rmnote" undos (as appropriate) any annotation on a WC entry. If
 created via "svn note" functionality, then the server is contacted. If

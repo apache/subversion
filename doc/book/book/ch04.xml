@@ -530,7 +530,7 @@ M  integer.c
         entered a conflicted state.  You might need to resolve the
         conflict using standard procedures (see Chapter 3), or if you
         decide that the merge was a bad idea altogether, simply give up
-        and <command>svn undo</command> the local change.</para>
+        and <command>svn revert</command> the local change.</para>
 
       <para>But assuming the you've reviewed the merged change, you can
         <command>svn commit</command> the change as usual.  At that

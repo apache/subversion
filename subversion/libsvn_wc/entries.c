@@ -662,7 +662,7 @@ read_entries (svn_wc_adm_access_t *adm_access,
  * Note: There is one bit of information about directories that is only
  * available in the parent directory, that is the "deleted" state.  If PATH
  * is a versioned directory then the "deleted" state information will not
- * be returned in ENTRY.  This means some bits of the code (e.g. undo)
+ * be returned in ENTRY.  This means some bits of the code (e.g. revert)
  * need to obtain it by directly extracting the directory entry from the
  * parent directory's entries.  I wonder if this function should handle
  * that?

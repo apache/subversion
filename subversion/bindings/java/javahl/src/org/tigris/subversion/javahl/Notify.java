@@ -50,8 +50,8 @@ public interface Notify
         public static final int copy = 1;
         public static final int delete =2;
         public static final int restore = 3;
-        public static final int undo = 4;
-        public static final int failed_undo = 5;
+        public static final int revert = 4;
+        public static final int failed_revert = 5;
         public static final int resolve = 6;
         public static final int status = 7;
         public static final int skip = 8;
@@ -86,8 +86,8 @@ public interface Notify
 			"copy",
 			"delete",
 			"restore",
-			"undo",
-			"failed undo",
+			"revert",
+			"failed revert",
 			"resolve",
 			"status",
 			"skip",

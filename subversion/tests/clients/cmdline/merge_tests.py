@@ -87,10 +87,9 @@ def textual_merges_galore(sbox):
   ##
   ## ...and expect the right output.
   ##
-  ## Now undo changes to rho, then update it to revision 2, then
-  ## *prepend* a bunch of lines, which will be separated by enough
-  ## distance from the changes about to be received that the merge
-  ## will be clean.
+  ## Now revert rho, then update it to revision 2, then *prepend* a
+  ## bunch of lines, which will be separated by enough distance from
+  ## the changes about to be received that the merge will be clean.
   ##
   ##    $ cd wc.other/A/D/G
   ##    $ svn merge -r 2:3 url-to-repo/A/D/G
@@ -274,10 +273,10 @@ def textual_merges_galore(sbox):
   # whole expected_foo routine for these intermediate operations;
   # they're not what we're here to test, after all, so it's enough to
   # know that they worked.  Is this a bad practice? ###
-  out, err = svntest.main.run_svn(None, 'undo', other_rho_path)
+  out, err = svntest.main.run_svn(None, 'revert', other_rho_path)
   if (err):
     for line in err:
-      print "Error undoing: ", line,
+      print "Error reverting: ", line,
     raise svntest.Failure
 
   out, err = svntest.main.run_svn(None, 'up', '-r', '2', other_rho_path)
@@ -715,8 +714,8 @@ def simple_property_merges(sbox):
     raise svntest.Failure
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-  # Undo merge
-  outlines, errlines = svntest.main.run_svn(None, 'undo', '--recursive',
+  # Revert merge
+  outlines, errlines = svntest.main.run_svn(None, 'revert', '--recursive',
                                             wc_dir)
   if errlines:
     raise svntest.Failure
@@ -749,7 +748,7 @@ def simple_property_merges(sbox):
   
   # issue 1109 : single file property merge.  This test performs a merge
   # that should be a no-op (adding properties that are already present).
-  outlines, errlines = svntest.main.run_svn(None, 'undo', '--recursive',
+  outlines, errlines = svntest.main.run_svn(None, 'revert', '--recursive',
                                             wc_dir)
   
   A_url = svntest.main.current_repo_url + '/A'
@@ -954,7 +953,7 @@ def merge_one_file(sbox):
     raise svntest.Failure
 
   # Restore rho to pristine revision 1, for another merge.
-  out, err = svntest.main.run_svn(0, 'undo', rho_path)
+  out, err = svntest.main.run_svn(0, 'revert', rho_path)
   if err:
     raise svntest.Failure
 
