@@ -219,6 +219,39 @@ def basic_update(sbox):
                                         expected_status)
 
 #----------------------------------------------------------------------
+def basic_mkdir_url(sbox):
+  "basic mkdir URL"
+
+  sbox.build()
+  Y_url = svntest.main.current_repo_url + '/Y'
+  Y_Z_url = svntest.main.current_repo_url + '/Y/Z'
+
+  # Issue 1369 XFail
+  svntest.actions.run_and_verify_svn("mkdir URL URL/subdir",
+                                     ["\n", "Committed revision 2.\n"], [],
+                                     'mkdir', Y_url, Y_Z_url)
+
+  expected_output = wc.State(sbox.wc_dir, {
+    'Y'   : Item(status='A '),
+    'Y/Z' : Item(status='A '),
+    })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    'Y'   : Item(),
+    'Y/Z' : Item()
+    })
+  expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 2)
+  expected_status.add({
+    'Y'   : Item(status='  ', wc_rev=2, repos_rev=2),
+    'Y/Z' : Item(status='  ', wc_rev=2, repos_rev=2)
+    })
+
+  svntest.actions.run_and_verify_update(sbox.wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status)
+
+#----------------------------------------------------------------------
 def basic_corruption(sbox):
   "basic corruption detection"
 
@@ -1548,6 +1581,7 @@ test_list = [ None,
               basic_status,
               basic_commit,
               basic_update,
+              XFail(basic_mkdir_url),
               basic_corruption,
               basic_merging_update,
               basic_conflict,
