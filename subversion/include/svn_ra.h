@@ -56,6 +56,7 @@
 #define SVN_RA_H
 
 #include <apr_pools.h>
+
 #include "svn_error.h"
 #include "svn_delta.h"
 
@@ -68,24 +69,24 @@ svn_error_t * svn_ra_open (svn_ra_session_t **p_ras,
 
 void svn_ra_close (svn_ra_session_t *ras);
 
-svn_error_t * svn_ra_update (svn_ra_session_t *ras,
-                             const char *start_at,
-                             int recurse,
-                             svn_delta_walk_t *walker,
-                             void *walk_baton,
-                             void *dir_baton,
-                             apr_pool_t *pool);
-
 svn_error_t * svn_ra_checkout (svn_ra_session_t *ras,
                                const char *start_at,
                                int recurse,
-                               svn_delta_walk_t *walker,
+                               const svn_delta_walk_t *walker,
                                void *walk_baton,
                                void *dir_baton,
                                apr_pool_t *pool);
 
-#endif  /* SVN_RA_H */
+svn_error_t * svn_ra_get_commit_walker(const svn_delta_walk_t **walker,
+                                       void **walk_baton,
+                                       ... /* more params */);
 
+svn_error_t * svn_ra_get_update_walker(const svn_delta_walk_t **walker,
+                                       void **walk_baton,
+                                       ... /* more params */);
+
+
+#endif  /* SVN_RA_H */
 
 
 /* 

@@ -52,18 +52,23 @@
 
 
 
+#include <string.h>     /* for strrchr() */
+
 #include <apr_pools.h>
 #include <apr_tables.h>
 #include <apr_strings.h>
 
+#include <http_basic.h>
+#include <http_utils.h>
 #include <dav_basic.h>
 #include <dav_207.h>
-#include <hip_xml.h>
-#include <http_utils.h>
 #include <dav_props.h>
+#include <hip_xml.h>
 
+#include "svn_error.h"
 #include "svn_delta.h"
 #include "svn_ra.h"
+#include "svn_path.h"
 
 #include "ra_session.h"
 
@@ -95,21 +100,45 @@ typedef struct {
 
 typedef struct {
   const char *href;
+  void *parent_baton;   /* baton of parent dir */
+} dir_rec_t;
+
+typedef struct {
+  const char *href;
   int is_collection;
   const char *target_href;
 } resource_t;
 
 typedef struct {
-  const char *cur_collection;
-  const char *cur_wc_dir;
-
-  dav_propfind_handler *dph;
+  const char *cur_collection;   /* current URL on server */
+  void *cur_baton;              /* current dir in WC */
 
   apr_array_header_t *subdirs;  /* URL paths of subdirs to scan */
   apr_array_header_t *files;
 
+  const svn_delta_walk_t *walker;
+  void *walk_baton;
+
   apr_pool_t *pool;
+
+  /* used during fetch_dirents() */
+  dav_propfind_handler *dph;
+
+  /* used during fetch_file() */
+  svn_txdelta_window_handler_t *handler;
+  void *handler_baton;
+
 } fetch_ctx_t;
+
+
+static svn_string_t *
+my_basename(const char *url, apr_pool_t *pool)
+{
+  svn_string_t *s = svn_string_create(url, pool);
+
+  /* ### creates yet another string. let's optimize this stuff... */
+  return svn_path_last_component(s, 0, pool);
+}
 
 static void *
 start_resource (void *userdata, const char *href)
@@ -154,7 +183,9 @@ end_resource (void *userdata, void *resource, const char *status_line,
         }
       else
         {
-          *(const char **)apr_push_array(fc->subdirs) = href.path;
+          dir_rec_t *dr = apr_push_array(fc->subdirs);
+          dr->href = href.path;
+          dr->parent_baton = fc->cur_baton;
 
           printf("  ... pushing subdir: %s\n", href.path);
         }
@@ -257,6 +288,7 @@ fetch_dirents (svn_ra_session_t *ras,
   rv = dav_propfind_named(fc->dph, fetch_props, fc);
   if (rv != HTTP_OK)
     {
+      /* ### raise an error */
     }
 
   /* ### how to toss dph? */
@@ -264,68 +296,331 @@ fetch_dirents (svn_ra_session_t *ras,
   return NULL;
 }
 
-static svn_error_t *
-fetch_data (svn_ra_session_t *ras,
-            const char *start_at,
-            int recurse,
-            svn_delta_walk_t *walker,
-            void *walk_baton,
-            void *dir_baton,
-            apr_pool_t *pool)
+static void
+fetch_file_reader(void *userdata, const char *buf, size_t len)
 {
+  fetch_ctx_t *fc = userdata;
+  svn_txdelta_window_t window = { 0 };
+  svn_txdelta_op_t op;
+  svn_string_t data = { (char *)buf, len, len };
   svn_error_t *err;
-  fetch_ctx_t fc = { 0 };
 
-  fc.pool = pool;
-  fc.subdirs = apr_make_array(pool, 5, sizeof(const char *));
-  fc.files = apr_make_array(pool, 10, sizeof(file_rec_t));
-
-  /* ### join ras->rep_root, start_at */
-  *(const char **)apr_push_array(fc.subdirs) = ras->root.path;
-
-  while (fc.subdirs->nelts > 0)
+  if (len == 0)
     {
-      const char *url;
-
-      /* pop a subdir off the stack */
-      url = ((const char **)fc.subdirs->elts)[--fc.subdirs->nelts];
-
-      err = fetch_dirents(ras, url, &fc);
-      if (err)
-        return svn_quick_wrap_error(err, "could not fetch directory entries");
-
-      /* process each of the files that were found */
-      /* ### */ fc.files->nelts = 0;
+      /* file is complete. */
+      /* ### anything to do? */
+      return;
     }
 
-  return NULL;
+  op.action_code = svn_txdelta_new;
+  op.offset = 0;
+  op.length = len;
+
+  window.num_ops = 1;
+  window.ops = &op;
+  window.new = &data;
+  window.pool = fc->pool;
+
+  err = (*fc->handler)(&window, fc->handler_baton);
+  if (err)
+    {
+      /* ### how to abort the read loop? */
+    }
 }
 
-svn_error_t *
-svn_ra_update (svn_ra_session_t *ras,
-               const char *start_at,
-               int recurse,
-               svn_delta_walk_t *walker,
-               void *walk_baton,
-               void *dir_baton,
-               apr_pool_t *pool)
+static svn_error_t *
+fetch_file (svn_ra_session_t *ras,
+            const char *url,
+            fetch_ctx_t *fc)
 {
-  return fetch_data(ras, start_at, recurse, walker, walk_baton,
-                    dir_baton, pool);
+  svn_error_t *err;
+  svn_string_t *name;
+  svn_string_t *ancestor_path;
+  svn_vernum_t ancestor_version;
+  void *file_baton;
+  int rv;
+
+  /* ### */
+  ancestor_path = svn_string_create("### ancestor_path ###", fc->pool);
+  ancestor_version = 1;
+
+  printf("fetching and saving %s\n", url);
+
+  name = my_basename(url, fc->pool);
+  err = (*fc->walker->add_file) (name, fc->walk_baton, fc->cur_baton,
+                                 ancestor_path, ancestor_version,
+                                 &file_baton);
+  if (err)
+    return svn_quick_wrap_error(err, "could not add a file");
+
+  err = (*fc->walker->apply_textdelta) (fc->walk_baton, fc->cur_baton,
+                                        file_baton,
+                                        &fc->handler, &fc->handler_baton);
+  if (err)
+    return svn_quick_wrap_error(err, "could not save file");
+
+  rv = http_read_file(ras->sess, url, fetch_file_reader, fc);
+  if (rv != HTTP_OK)
+    {
+      /* ### other GET responses? */
+    }
+
+  /* ### how to close the handler? */
+
+  /* ### fetch properties */
+  /* ### store URL into a local, predefined property */
+
+  /* done with the file */
+  return (*fc->walker->finish_file)(file_baton);
 }
 
 svn_error_t *
 svn_ra_checkout (svn_ra_session_t *ras,
                  const char *start_at,
                  int recurse,
-                 svn_delta_walk_t *walker,
+                 const svn_delta_walk_t *walker,
                  void *walk_baton,
                  void *dir_baton,
                  apr_pool_t *pool)
 {
-  return fetch_data(ras, start_at, recurse, walker, walk_baton,
-                    dir_baton, pool);
+  svn_error_t *err;
+  fetch_ctx_t fc = { 0 };
+  dir_rec_t *dr;
+  svn_string_t *ancestor_path;
+  svn_vernum_t ancestor_version;
+
+  fc.walker = walker;
+  fc.walk_baton = walk_baton;
+  fc.pool = pool;
+  fc.subdirs = apr_make_array(pool, 5, sizeof(dir_rec_t));
+  fc.files = apr_make_array(pool, 10, sizeof(file_rec_t));
+
+  /* ### join ras->rep_root, start_at */
+  dr = apr_push_array(fc.subdirs);
+  dr->href = ras->root.path;
+  dr->parent_baton = dir_baton;
+
+  /* ### */
+  ancestor_path = svn_string_create("### ancestor_path ###", pool);
+  ancestor_version = 1;
+
+  do
+    {
+      int idx;
+      const char *url;
+      void *parent_baton;
+      void *this_baton;
+      int i;
+      svn_string_t *name;
+
+      /* pop a subdir off the stack */
+      while (1)
+        {
+          dr = &((dir_rec_t *)fc.subdirs->elts)[fc.subdirs->nelts - 1];
+          url = dr->href;
+          parent_baton = dr->parent_baton;
+          --fc.subdirs->nelts;
+
+          if (url != NULL)
+            break;
+
+          err = (*walker->finish_directory) (parent_baton);
+          if (err)
+            return svn_quick_wrap_error(err, "could not finish directory");
+
+          if (fc.subdirs->nelts == 0)
+            goto traversal_complete;
+        }
+
+      /* add a placeholder. this will be used to signal a finish_directory
+         for this directory's baton. */
+      dr = apr_push_array(fc.subdirs);
+      dr->href = NULL;
+      dr->parent_baton = NULL;
+      idx = fc.subdirs->nelts - 1;
+
+      err = fetch_dirents(ras, url, &fc);
+      if (err)
+        return svn_quick_wrap_error(err, "could not fetch directory entries");
+
+      /* we fetched information about the directory successfully. time to
+         create the local directory. */
+      name = my_basename(url, pool);
+      err = (*walker->add_directory) (name, walk_baton, parent_baton,
+                                      ancestor_path, ancestor_version,
+                                      &this_baton);
+      if (err)
+        return svn_quick_wrap_error(err, "could not add directory");
+
+      /* for each new directory added (including our marker), set its
+         parent_baton */
+      for (i = fc.subdirs->nelts; i-- > idx; )
+        {
+          dr = &((dir_rec_t *)fc.subdirs->elts)[i];
+          dr->parent_baton = this_baton;
+        }
+
+      /* process each of the files that were found */
+      fc.cur_baton = this_baton;
+      for (i = fc.files->nelts; i--; )
+        {
+          file_rec_t *fr = &((file_rec_t *)fc.files->elts)[i];
+
+          err = fetch_file(ras, fr->href, &fc);
+          if (err)
+            return svn_quick_wrap_error(err, "could not checkout a file");
+        }
+      /* reset the list of files */
+      fc.files->nelts = 0;
+
+    } while (recurse && fc.subdirs->nelts > 0);
+
+ traversal_complete:
+  ;
+
+  return NULL;
 }
+
+/* -------------------------------------------------------------------------
+**
+** UPDATE HANDLING
+**
+** ### docco...
+*/
+
+static svn_error_t *
+update_delete (svn_string_t *name,
+               void *walk_baton,
+               void *parent_baton)
+{
+  return NULL;
+}
+
+static svn_error_t *
+update_add_dir (svn_string_t *name,
+                void *walk_baton,
+                void *parent_baton,
+                svn_string_t *ancestor_path,
+                svn_vernum_t ancestor_version,
+                void **child_baton)
+{
+  return NULL;
+}
+
+static svn_error_t *
+update_rep_dir (svn_string_t *name,
+                void *walk_baton,
+                void *parent_baton,
+                svn_string_t *ancestor_path,
+                svn_vernum_t ancestor_version,
+                void **child_baton)
+{
+  return NULL;
+}
+
+static svn_error_t *
+update_change_dir_prop (void *walk_baton,
+                        void *dir_baton,
+                        svn_string_t *name,
+                        svn_string_t *value)
+{
+  return NULL;
+}
+
+static svn_error_t *
+update_change_dirent_prop (void *walk_baton,
+                           void *dir_baton,
+                           svn_string_t *entry,
+                           svn_string_t *name,
+                           svn_string_t *value)
+{
+  return NULL;
+}
+
+static svn_error_t *
+update_finish_dir (void *dir_baton)
+{
+  return NULL;
+}
+
+static svn_error_t *
+update_add_file (svn_string_t *name,
+                 void *walk_baton,
+                 void *parent_baton,
+                 svn_string_t *ancestor_path,
+                 svn_vernum_t ancestor_version,
+                 void **file_baton)
+{
+  return NULL;
+}
+
+static svn_error_t *
+update_rep_file (svn_string_t *name,
+                 void *walk_baton,
+                 void *parent_baton,
+                 svn_string_t *ancestor_path,
+                 svn_vernum_t ancestor_version,
+                 void **file_baton)
+{
+  return NULL;
+}
+
+static svn_error_t *
+update_apply_txdelta (void *walk_baton,
+                      void *parent_baton,
+                      void *file_baton, 
+                      svn_txdelta_window_handler_t **handler,
+                      void **handler_baton)
+{
+  return NULL;
+}
+
+static svn_error_t *
+update_change_file_prop (void *walk_baton,
+                         void *parent_baton,
+                         void *file_baton,
+                         svn_string_t *name,
+                         svn_string_t *value)
+{
+  return NULL;
+}
+
+static svn_error_t *
+update_finish_file (void *file_baton)
+{
+  return NULL;
+}
+
+/*
+** This structure is used during the update process. An external caller
+** uses these callbacks to describe all the changes in the working copy.
+** These are communicated to the server, which then decides how to update
+** the client to a specific version/latest/label/etc.
+*/
+static const svn_delta_walk_t update_walker = {
+  update_delete,
+  update_add_dir,
+  update_rep_dir,
+  update_change_dir_prop,
+  update_change_dirent_prop,
+  update_finish_dir,
+  update_add_file,
+  update_rep_file,
+  update_apply_txdelta,
+  update_change_file_prop,
+  update_finish_file
+};
+
+svn_error_t *
+svn_ra_get_update_walker(const svn_delta_walk_t **walker,
+                         void **walk_baton,
+                         ... /* more params */)
+{
+  *walker = &update_walker;
+  *walk_baton = NULL;
+  return NULL;
+}
+
 
 
 /* 

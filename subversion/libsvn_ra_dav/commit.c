@@ -1,5 +1,5 @@
 /*
- * ra-dav-test.c :  basic test program for the RA/DAV library
+ * commit.c :  routines for committing changes to the server
  *
  * ================================================================
  * Copyright (c) 2000 CollabNet.  All rights reserved.
@@ -52,127 +52,146 @@
 
 
 
-#include <apr_general.h>
-#include <apr_pools.h>
-
+#include "svn_error.h"
 #include "svn_delta.h"
 #include "svn_ra.h"
 
 
 static svn_error_t *
-change_txdelta_handler (svn_txdelta_window_t *window, void *file_baton)
+commit_delete (svn_string_t *name,
+               void *walk_baton,
+               void *parent_baton)
 {
-  printf("  ... writing %lu bytes\n", (unsigned long)window->ops->length);
   return NULL;
 }
 
 static svn_error_t *
-change_add_dir (svn_string_t *name,
+commit_add_dir (svn_string_t *name,
                 void *walk_baton,
                 void *parent_baton,
                 svn_string_t *ancestor_path,
                 svn_vernum_t ancestor_version,
                 void **child_baton)
 {
-  printf("change_add_dir: %s\n", name->data);
-  *child_baton = name->data;
   return NULL;
 }
 
 static svn_error_t *
-change_finish_dir (void *dir_baton)
+commit_rep_dir (svn_string_t *name,
+                void *walk_baton,
+                void *parent_baton,
+                svn_string_t *ancestor_path,
+                svn_vernum_t ancestor_version,
+                void **child_baton)
 {
-  printf("change_finish_dir: %s\n", dir_baton);
   return NULL;
 }
 
 static svn_error_t *
-change_add_file (svn_string_t *name,
+commit_change_dir_prop (void *walk_baton,
+                        void *dir_baton,
+                        svn_string_t *name,
+                        svn_string_t *value)
+{
+  return NULL;
+}
+
+static svn_error_t *
+commit_change_dirent_prop (void *walk_baton,
+                           void *dir_baton,
+                           svn_string_t *entry,
+                           svn_string_t *name,
+                           svn_string_t *value)
+{
+  return NULL;
+}
+
+static svn_error_t *
+commit_finish_dir (void *dir_baton)
+{
+  return NULL;
+}
+
+static svn_error_t *
+commit_add_file (svn_string_t *name,
                  void *walk_baton,
                  void *parent_baton,
                  svn_string_t *ancestor_path,
                  svn_vernum_t ancestor_version,
                  void **file_baton)
 {
-  printf("change_add_file: %s/%s\n", parent_baton, name->data);
-  *file_baton = name->data;
   return NULL;
 }
 
 static svn_error_t *
-change_apply_txdelta (void *walk_baton,
+commit_rep_file (svn_string_t *name,
+                 void *walk_baton,
+                 void *parent_baton,
+                 svn_string_t *ancestor_path,
+                 svn_vernum_t ancestor_version,
+                 void **file_baton)
+{
+  return NULL;
+}
+
+static svn_error_t *
+commit_apply_txdelta (void *walk_baton,
                       void *parent_baton,
                       void *file_baton, 
                       svn_txdelta_window_handler_t **handler,
                       void **handler_baton)
 {
-  printf("change_apply_txdelta: %s/%s\n", parent_baton, file_baton);
-  *handler = change_txdelta_handler;
-  *handler_baton = file_baton;
- return NULL;
-}
-
-static svn_error_t *
-change_finish_file (void *file_baton)
-{
-  printf("change_finish_file: %s\n", file_baton);
   return NULL;
 }
 
-/* ### hack. we really want to call svn_wc_get_change_walker() */
-static const svn_delta_walk_t change_walker = {
-  NULL,
-  change_add_dir,
-  NULL,
-  NULL,
-  NULL,
-  change_finish_dir,
-  change_add_file,
-  NULL,
-  change_apply_txdelta,
-  NULL,
-  change_finish_file
-};
-
-int
-main (int argc, char **argv)
+static svn_error_t *
+commit_change_file_prop (void *walk_baton,
+                         void *parent_baton,
+                         void *file_baton,
+                         svn_string_t *name,
+                         svn_string_t *value)
 {
-  apr_pool_t *pool;
-  svn_error_t *err;
-  svn_ra_session_t *ras;
-  const char *url;
-
-  apr_initialize ();
-  apr_create_pool (&pool, NULL);
-
-  if (argc != 2)
-    {
-      fprintf (stderr, "usage: %s REPOSITORY_URL\n", argv[0]);
-      return 1;
-    }
-  else
-    url = argv[1];
-
-  err = svn_ra_open(&ras, url, pool);
-  if (err)
-    svn_handle_error (err, stdout);
-
-  err = svn_ra_checkout(ras, "", 1, &change_walker, NULL, NULL, pool);
-
-  svn_ra_close(ras);
-
-  apr_destroy_pool(pool);
-  apr_terminate();
-
-  return 0;
+  return NULL;
 }
 
+static svn_error_t *
+commit_finish_file (void *file_baton)
+{
+  return NULL;
+}
 
+/*
+** This structure is used during the commit process. An external caller
+** uses these callbacks to describe all the changes in the working copy
+** that must be committed to the server.
+*/
+static const svn_delta_walk_t commit_walker = {
+  commit_delete,
+  commit_add_dir,
+  commit_rep_dir,
+  commit_change_dir_prop,
+  commit_change_dirent_prop,
+  commit_finish_dir,
+  commit_add_file,
+  commit_rep_file,
+  commit_apply_txdelta,
+  commit_change_file_prop,
+  commit_finish_file
+};
 
+svn_error_t *
+svn_ra_get_commit_walker(const svn_delta_walk_t **walker,
+                         void **walk_baton,
+                         ... /* more params */)
+{
+  *walker = &commit_walker;
+  *walk_baton = NULL;
+  return NULL;
+}
 
 
-/* -----------------------------------------------------------------
+/* 
  * local variables:
- * eval: (load-file "../../svn-dev.el")
+ * eval: (load-file "../svn-dev.el")
  * end:
  */
