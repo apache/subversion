@@ -424,7 +424,7 @@ typedef enum open_path_flags_t {
      directories must exist, as usual.)  If the last component doesn't
      exist, simply leave the `node' member of the bottom parent_path
      component zero.  */
-  open_path_last_optional = 1,
+  open_path_last_optional = 1
 
 } open_path_flags_t;
 
