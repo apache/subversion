@@ -762,7 +762,7 @@ svn_error_t *svn_wc_get_switch_editor (svn_stringbuf_t *anchor,
 
    If NEW_URL is non-NULL, then this URL will be attached to the file
    in the 'entries' file.  Otherwise, the file will simply "inherit"
-   it's URL from the parent dir.
+   its URL from the parent dir.
 
    POOL is used for all bookkeeping work during the installation.
  */
@@ -1195,21 +1195,28 @@ svn_error_t *svn_wc_locked (svn_boolean_t *locked,
 /*** Text/Prop Deltas Using an Editor ***/
 
 
-/* Given a PATH (with FILE_BATON) representing a file with local
-   textual modifications, transmit those modifications using EDITOR,
-   closing the FILE BATON after the textual mod has been transmitted.
-   Use POOL for all allocations.
+/* Send the local modifications for versioned file PATH (with
+   matching FILE_BATON) through EDITOR, then close FILE_BATON
+   afterwards.  Use POOL for any temporary allocation.
+  
+   This process creates a copy of PATH with keywords and eol
+   untranslated.  If TEMPFILE is non-null, set *TEMPFILE to the path
+   to this copy.  Do not clean up the copy; caller can do that.  (The
+   purpose of handing back the tmp copy is that it is usually about to
+   become the new text base anyway, but the installation of the new
+   text base is outside the scope of this function.)
 
-   If FULLTEXT, the text of the file will be sent through the editor
-   interface as full-text, else a diff between the file and its
-   current text-base will be transmitted.
+   If FULLTEXT, send the untranslated copy of PATH through EDITOR as
+   full-text; else send it as svndiff against the current text base.
 
-   If a temporary file remains after this function is finished, the
-   path to that file is returned in *TEMPFILE (so the caller can clean
-   this up if it wishes to do so).
+   If sending a diff, and the recorded checksum for PATH's text-base
+   does not match the current actual checksum, then remove the tmp
+   copy (and set *TEMPFILE to null if appropriate), and return the
+   error SVN_ERR_WC_CORRUPT_TEXT_BASE.
 
-   This in intended to be suitable for use with both infix and postfix
-   text-delta styled editor drivers.  */
+   Note: this is intended for use with both infix and postfix
+   text-delta styled editor drivers.
+*/
 svn_error_t *svn_wc_transmit_text_deltas (svn_stringbuf_t *path,
                                           svn_boolean_t fulltext,
                                           const svn_delta_editor_t *editor,

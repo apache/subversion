@@ -466,18 +466,61 @@ svn_wc_transmit_text_deltas (svn_stringbuf_t *path,
   if (tmpf != path)
     SVN_ERR (svn_io_remove_file (tmpf->data, pool));
       
-  /* Open a filehandle for tmp text-base. */
-  if ((status = apr_file_open (&localfile, tmp_base->data, 
-                               APR_READ, APR_OS_DEFAULT, pool)))
-    return svn_error_createf (status, 0, NULL, pool,
-                              "do_apply_textdelta: error opening '%s'",
-                              tmp_base->data);
-
   /* If we're not sending fulltext, we'll be sending diffs against the
      text-base. */
   if (! fulltext)
-    SVN_ERR (svn_wc__open_text_base (&basefile, path, APR_READ, pool));
-  
+    {
+      /* Before we set up an svndiff stream against the old text base,
+         make sure the old text base still matches its checksum.
+         Otherwise we could send corrupt data and never know it. */ 
+
+      svn_stringbuf_t *checksum;
+      svn_stringbuf_t *tb = svn_wc__text_base_path (path, FALSE, pool);
+      svn_wc_entry_t *ent;
+      
+      SVN_ERR (svn_wc_entry (&ent, path, pool));
+      SVN_ERR (svn_io_file_checksum (&checksum, tb->data, pool));
+      
+      if (ent->checksum && (! svn_stringbuf_compare (checksum, ent->checksum)))
+        {
+          /* There is an entry checksum, but it does not match the
+             actual text base checksum.  Extreme badness.  Of course,
+             theoretically we could just switch to fulltext
+             transmission here, and everything would work fine; after
+             all, we're going to replace the text base with a new one
+             in a moment anyway, and we'd fix the checksum then.
+             But it's better to error out.  People should know that
+             their text bases are getting corrupted, so they can
+             investigate.  Other commands could be affected, too, such
+             as `svn diff'.  */
+          
+          /* Deliberately ignore error here; the error about the
+             checksum mismatch is more important to return. */
+          svn_io_remove_file (tmp_base->data, pool);
+          
+          if (tempfile)
+            *tempfile = NULL;
+          
+          return svn_error_createf
+            (SVN_ERR_WC_CORRUPT_TEXT_BASE, 0, NULL, pool,
+             "svn_wc_transmit_text_deltas: checksum mismatch for '%s':\n"
+             "   recorded checksum: %s\n"
+             "   actual checksum:   %s\n",
+             tb->data, ent->checksum->data, checksum->data);
+        }
+      else
+        SVN_ERR (svn_wc__open_text_base (&basefile, path, APR_READ, pool));
+    }
+
+  /* Open a filehandle for tmp text-base. */
+  if ((status = apr_file_open (&localfile, tmp_base->data, 
+                               APR_READ, APR_OS_DEFAULT, pool)))
+    {
+      return svn_error_createf (status, 0, NULL, pool,
+                                "do_apply_textdelta: error opening '%s'",
+                                tmp_base->data);
+    }
+
   /* Create a text-delta stream object that pulls data out of the two
      files. */
   svn_txdelta (&txdelta_stream,
