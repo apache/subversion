@@ -550,8 +550,9 @@ Updated to revision 2.
           <listitem>
             <para>File <filename>foo</filename> received new changes
               from the repository, but your local copy of the file had
-              your modifications.  The changes did not intersect,
-              however, so Subversion has
+              your modifications.  Either the changes did not intersect,
+              or the changes were exactly the same as your local
+              modifications, so Subversion has successfully
               mer<computeroutput>G</computeroutput>ed the repository's
               changes into the file without a problem.</para>
           </listitem>
