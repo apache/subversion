@@ -255,9 +255,10 @@ svn_error_t *svn_mime_type_validate (const char *mime_type,
                                      apr_pool_t *pool);
 
 
-/* Return false iff MIME_TYPE starts with "text/", true otherwise. */
-svn_boolean_t
-svn_mime_type_is_binary (const char *mime_type);
+/* Return false iff MIME_TYPE is a textual type.  All mime types that
+   start with "text/" are textual, plus some special cases (for
+   example, "image/x-xbitmap"). */
+svn_boolean_t svn_mime_type_is_binary (const char *mime_type);
 
 
 

@@ -65,9 +65,6 @@ svn_mime_type_validate (const char *mime_type, apr_pool_t *pool)
 svn_boolean_t
 svn_mime_type_is_binary (const char *mime_type)
 {
-  return (! (   (mime_type[0] == 't')
-             && (mime_type[1] == 'e')
-             && (mime_type[2] == 'x')
-             && (mime_type[3] == 't')
-             && (mime_type[4] == '/')));
+  return ((strncmp (mime_type, "text/", 5) != 0)
+          && (strcmp (mime_type, "image/x-xbitmap") != 0));
 }
