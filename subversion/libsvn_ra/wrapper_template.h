@@ -160,8 +160,8 @@ static svn_error_t *compat_delete_path (void *report_baton,
 
   return crb->reporter->delete_path (crb->baton, path, pool);
 }
-    
-svn_error_t *compat_link_path (void *report_baton,
+
+static svn_error_t *compat_link_path (void *report_baton,
                                const char *path,
                                const char *url,
                                svn_revnum_t revision,
