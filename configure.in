@@ -30,7 +30,6 @@ sinclude(ac-helpers/berkeley-db.m4)
 sinclude(ac-helpers/svn-apache.m4)
 sinclude(ac-helpers/svn-macros.m4)
 sinclude(ac-helpers/neon.m4)
-sinclude(ac-helpers/find_apr.m4)
 sinclude(ac-helpers/apr.m4)
 sinclude(ac-helpers/aprutil.m4)
 
