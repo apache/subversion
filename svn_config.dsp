@@ -62,6 +62,7 @@ MTL=midl.exe
 # Begin Source File
 
 SOURCE=.\svn_private_config.h
+# PROP Exclude_From_Build 1
 # End Source File
 # Begin Source File
 
