@@ -547,33 +547,6 @@ cl_log (int argc, VALUE *argv, VALUE self)
 }
 
 static VALUE
-cl_file_diff (VALUE class, VALUE aPath)
-{
-  svn_stringbuf_t *path;
-  svn_stringbuf_t *pristine_copy_path;
-  apr_pool_t *pool;
-
-  VALUE obj;
-  svn_error_t *err;
-
-  Check_Type (aPath, T_STRING);
-
-  pool = svn_pool_create (NULL);
-  path = svn_stringbuf_create (StringValuePtr (aPath), pool);
-  err = svn_client_file_diff (path, &pristine_copy_path, pool);
-
-  if (err)
-    {
-      apr_pool_destroy (pool);
-      svn_ruby_raise (err);
-    }
-
-  obj = rb_str_new (pristine_copy_path->data, pristine_copy_path->len);
-  apr_pool_destroy (pool);
-  return obj;
-}
-
-static VALUE
 cl_cleanup (VALUE class, VALUE aPath)
 {
   svn_stringbuf_t *path;
@@ -777,7 +750,6 @@ void svn_ruby_init_client (void)
   rb_define_method (cSvnClient, "commit", cl_commit, -1);
   rb_define_method (cSvnClient, "status", cl_status, 4);
   rb_define_method (cSvnClient, "log", cl_log, -1);
-  rb_define_singleton_method (cSvnClient, "fileDiff", cl_file_diff, 1);
   rb_define_singleton_method (cSvnClient, "cleanup", cl_cleanup, 1);
   rb_define_singleton_method (cSvnClient, "revert", cl_revert, 2);
   rb_define_method (cSvnClient, "copy", cl_copy, -1);
