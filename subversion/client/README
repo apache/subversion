@@ -11,13 +11,13 @@ not preserved in updates.
 So:
 
    svn checkout -d TARGETDIR --xml-file FILE.XML \
-                --ancestor-path blah --version N
+                --ancestor-path blah --revision N
    svn add FILE
    svn delete [--force] FILE
-   svn commit --xml-file FILE.XML --version N
-   svn update --xml-file FILE.XML --version N
+   svn commit --xml-file FILE.XML --revision N
+   svn update --xml-file FILE.XML --revision N
 
-You may be wondering why the --ancestor-path and --version are on the
+You may be wondering why the --ancestor-path and --revision are on the
 command line.  Don't worry, they won't be in a real-life client.  The
 issue right now is that the client and server aren't actually talking
 to one another, so information that they would have exchanged has to
@@ -27,14 +27,14 @@ If you check out into TARGETDIR, that directory must exist and be
 empty.
 
 Also, because update is taking input only from an XML file, it doesn't
-yet know enough to be able to update the version numbers of
+yet know enough to be able to update the revision numbers of
 directories in which nothing changed, even though a real update might
 do so.  The issue is that sometimes the user may restrict the update
 to a few files, and sometimes do it across the whole tree.  In the
-latter kind of update, one can safely set version numbers everywhere
-afterwards; but in the former, only the version numbers of the updated
+latter kind of update, one can safely set revision numbers everywhere
+afterwards; but in the former, only the revision numbers of the updated
 entities may be set.  Since the client doesn't yet distinguish between
-selective and non-selective updates, it just sets the version numbers
+selective and non-selective updates, it just sets the revision numbers
 of entities that received updates, and their ancestors.  Obviously,
 things will be more sophisticated when we have selective updates.
 
@@ -66,14 +66,15 @@ Parsing Command-Line Arguments
 The CVS custom of switching on a subcommand seems to work out pretty
 well, so we'll do the same thing.  But many people have mentioned that
 having separate global versus command-local option namespaces is
-confusing.  So Subversion has one option namespace, and all options
-come after the subcommand.
+confusing.  So each subversion subcommand will have one option name
+space and all options come after the subcommand.
 
    svn  [<subcommand>]  [<option> ...]  [<argument> ...]
 
 Notes: the subcommand is marked as optional because there are a few
 cases where Subversion can do something meaningful without the
-command, for example, "svn --help".
+command.  Specifically, `svn --help' is supported, along with the
+short option equivalents of `svn -h', `svn -?' and `svn -H'.
 
 Also, it would be nice for options and arguments to be mixable, but
 it's not necessary (CVS doesn't permit this, for example).  We
@@ -122,11 +123,9 @@ Options
 
   -D --date DATESPEC             Like "cvs cmd -D DATESPEC"
 
-  -v --file-version VER          Like "cvs -r" Subversion does not have
-                                 revisions, we have versions. Multiple
-                                 version #s are separated by a `,'
+  -r --revision VER              Like "cvs -r"  Separate Multiple #-s by `,'
 
-     --version                   svn version is printed.
+  -v --version                   subversion version is printed.
 
   -l --local-dir                 Local; run only in current working directory.
       
@@ -253,7 +252,7 @@ NOTE: For now, the option descriptions are mostly not included in the
 
   This command moves files/directories within your working copy. When
   you commit after doing this, the files/directories are moved within
-  the repository (thus retaining all ancestry and version
+  the repository (thus retaining all ancestry and revision
   history). 
  
   e.g. svn rename foo.c bar.c 
@@ -319,7 +318,7 @@ NOTE: For now, the option descriptions are mostly not included in the
   Usage: svn tag PATH
 
   Create a configuration in the repository at PATH, mirroring the tree
-  in the working copy and based on the versions found there.
+  in the working copy and based on the revisions found there.
 
   [[TODO: this needs to be documented _very_ thoroughly.  These are not
   much like CVS tags.]]  [[Then you need to reference another doc, since
@@ -381,7 +380,7 @@ NOTE: For now, the option descriptions are mostly not included in the
   Show log messages (and affected entities) for commits in which any
   of the entities in question changed.  If none were specified, then
   recursive inclusion is the default.  The set of messages can be
-  further restricted by a date or version range specification.
+  further restricted by a date or revision range specification.
 
 
   propset
