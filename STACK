@@ -129,23 +129,22 @@ Filesystem:
   which they're doing stuff in the fs.)
 
   We've got svn_fs_begin_txn(), svn_fs_close_txn(), svn_fs_open_txn(),
-  svn_fs_txn_name(). Next, let's do:
+  svn_fs_txn_name(), svn_fs_list_transactions(). Next, let's do:
 
     1.  svn_fs_abort_txn()
-    2.  svn_fs_list_transactions()
 
   These don't do anything useful by themselves, of course, but they're
   prerequisites for:
 
-    3. Begin, open a txn
-    4. Make a change to some node in that txn
-    5. Get txn's name
-    6. close the txn
-    7. re-open the same txn, by name
-    8. check that our change is still there!
+    2. Begin, open a txn
+    3. Make a change to some node in that txn
+    4. Get txn's name
+    5. close the txn
+    6. re-open the same txn, by name
+    7. check that our change is still there!
 
   I'm not sure yet what specific functions are required to implement
-  steps 3-8; we'll first establish the concrete list of functions,
+  steps 2-7; we'll first establish the concrete list of functions,
   then implement them.
 
   Once that's working, we can do the Big One: svn_fs_commit_txn(). :-)
