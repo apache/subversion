@@ -735,7 +735,7 @@ Version 0.9 (released 15 Feb 2002, revision 1302)
 
 [Versions 0.8 and older are only brief summaries]
 
-Version 0.8  (released 15 Jan 2002. revision 909)
+Version 0.8  (released 15 Jan 2002, revision 909)
 
   * newline conversion and keyword substitution (#524)
   * rewrite ra_local commit system to commit against HEAD (#463)
@@ -746,8 +746,8 @@ Version 0.8  (released 15 Jan 2002. revision 909)
 Version 0.7  (released 03 Dec 2001, revision 587)
 
   * 'svn cp/mv' completed:  
-       - can copy from wc/repos to wc/repos.
-       - This how we create branches/tags.
+       - can copy from wc/repos to wc/repos
+       - This how we create branches/tags
   * 'svn mkdir' [WC_PATH|REPOS_URL]
   * 'svn delete' [REPOS_URL]
 
@@ -769,15 +769,15 @@ Milestone M3  (released 30 Aug 2001, revision 1)
   * self-hosting begins, all history left behind in CVS repository.
 
 
-Milestone M2  (released 15 May 2001)
+Milestone M2  (released 15 May 2001, from CVS, "milestone-2" tag)
 
   * filesystem library (libsvn_fs)
   * network layer (libsvn_ra_dav and mod_dav_svn)
 
 
-Milestone M1  (released 20 Oct 2000)
+Milestone M1  (released 20 Oct 2000, from CVS, "milestone-1" tag)
 
-  * working-copy library (libsvn_wc), using XML files.
+  * working-copy library (libsvn_wc), using XML files
 
 
 Birth  (05 June 2000)
