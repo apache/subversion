@@ -143,6 +143,22 @@ To only update a particular language, you may use
 
 where ll is the name of the po file without the extension (i.e. PO=sv).
 
+It is recommended that the .po update is done by using two commits; one
+after the "make locale-gnu-po-update", and one after the translation is
+done. This has two advantages:
+
+- gettext(1) produces lots of line number changes which makes the
+  resulting diff hard to review by the other translators. By committing
+  twice, all the line number changes are stored in the first commit, and
+  the second commit contains all the actual translations with no extra
+  garbage.
+- If there are several translators for a specific language (which is
+  highly preferred by the project) you don't risk working for hours just
+  to find that some other translator already has done the job when
+  you're finished. You will immediately notice that someone else is
+  working on the .po file when you try to perform the first commit,
+  because svn will tell you that the file is outdated.
+
 
 Maintenance on branches
 =======================
