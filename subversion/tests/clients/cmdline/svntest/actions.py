@@ -444,6 +444,11 @@ def run_and_verify_commit(wc_dir_name, output_tree, status_output_tree,
     
   # Verify actual output against expected output.
   if tree.compare_trees (expected_tree, output_tree):
+    print "Output of commit is unexpected."
+    print "EXPECTED OUTPUT TREE:"
+    tree.dump_tree(expected_tree)
+    print "ACTUAL OUTPUT TREE:"
+    tree.dump_tree(output_tree)
     return 1
     
   # Verify via 'status' command too, if possible.
@@ -479,9 +484,17 @@ def run_and_verify_status(wc_dir_name, output_tree,
     if tree.compare_trees (mytree, output_tree,
                            singleton_handler_a, a_baton,
                            singleton_handler_b, b_baton):
+      print "EXPECTED OUTPUT TREE:"
+      tree.dump_tree(output_tree)
+      print "ACTUAL OUTPUT TREE:"
+      tree.dump_tree(mytree)
       return 1
   else:
     if tree.compare_trees (mytree, output_tree):
+      print "EXPECTED OUTPUT TREE:"
+      tree.dump_tree(output_tree)
+      print "ACTUAL OUTPUT TREE:"
+      tree.dump_tree(mytree)
       return 1
     
   return 0
