@@ -405,14 +405,14 @@ make_new_directory (const char *repos_path,
   /* Commit the transaction, creating a new revision of the filesystem
      which includes our added directory path.  */
   err = svn_repos_fs_commit_txn (&amp;conflict_str, repos, 
-                                 &amp;youngest_rev, txn);
+                                 &amp;youngest_rev, txn, pool);
   if (! err)
     {
       /* No error?  Excellent!  Print a brief report of our success.  */
       printf ("Directory '%s' was successfully added as new revision "
               "'%" SVN_REVNUM_T_FMT "'.\n", new_directory, youngest_rev);
     }
-  else if (err->apr_err == SVN_ERR_FS_CONFLICT))
+  else if (err->apr_err == SVN_ERR_FS_CONFLICT)
     {
       /* Uh-oh.  Our commit failed as the result of a conflict
          (someone else seems to have made changes to the same area 
