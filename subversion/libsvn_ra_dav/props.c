@@ -103,6 +103,8 @@ static void *create_private(void *userdata, const char *url)
   svn_ra_dav_resource_t *r = apr_pcalloc(pc->pool, sizeof(*r));
   apr_size_t len;
 
+  r->pool = pc->pool;
+
   /* parse the PATH element out of the URL
 
      Note: mod_dav does not (currently) use an absolute URL, but simply a
@@ -127,20 +129,29 @@ static void *create_private(void *userdata, const char *url)
   return r;
 }
 
+static int add_to_hash(void *userdata, const ne_propname *pname,
+                       const char *value, const ne_status *status)
+{
+  svn_ra_dav_resource_t *r = userdata;
+  const char *name;
+  
+  name = apr_pstrcat(r->pool, pname->nspace, pname->name, NULL);
+  value = apr_pstrdup(r->pool, value);
+
+  apr_hash_set(r->propset, name, APR_HASH_KEY_STRING, value);
+
+  return 0;
+}
+
 static void process_results(void *userdata, const char *uri,
                             const ne_prop_result_set *rset)
 {
-#if 0
   prop_ctx_t *pc = userdata;
   svn_ra_dav_resource_t *r = ne_propset_private(rset);
-#endif
 
   /* ### should use ne_propset_status(rset) to determine whether the
    * ### PROPFIND failed for the properties we're interested in. */
-
-  /* ### use ne_propset_iterate(rset) to copy unhandled properties into
-     ### the resource's hash table of props.
-     ### maybe we need a special namespace for user props? */
+  (void) ne_propset_iterate(rset, add_to_hash, r);
 }
 
 static int validate_element(ne_xml_elmid parent, ne_xml_elmid child)
@@ -274,7 +285,15 @@ svn_error_t * svn_ra_dav__get_props(apr_hash_t **results,
       ne_add_request_header(req, "Label", label);
     }
   
-  rv = ne_propfind_named(pc.dph, which_props, process_results, &pc);
+  if (which_props) 
+    {
+      rv = ne_propfind_named(pc.dph, which_props, process_results, &pc);
+    } 
+  else
+    { 
+      rv = ne_propfind_allprop(pc.dph, process_results, &pc);
+    }
+
   ne_propfind_destroy(pc.dph);
 
   if (rv != NE_OK)
