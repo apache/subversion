@@ -84,18 +84,6 @@ section for approved changes.)
       Votes:
        +1: david
 
-    * r8287
-      Check the ABI versions in the RA plugins.
-      Justification: What's the point of the RA plugin ABI version if
-      the 1.0 plugins don't check it?
-      Votes:
-       +1: bliss, ghudson
-
-    * Issue #1710
-      The auth provider next/save functions need the realmstring.
-      Justification: API change required to fix design flaw.
-      Votes:
-       +1: bliss, ghudson
 
 Core changes that already have three +1 votes and no vetos.  (If you
 veto something below, or remove a threshold vote, please move it to
@@ -106,6 +94,21 @@ the section for unapproved changes.)
       Justification: Absolute cosmic brokenness, itty bitty fix
       Votes:
        +1: ghudson, cmpilato, brane
+
+    * r8287
+      Check the ABI versions in the RA plugins.
+      Justification: What's the point of the RA plugin ABI version if
+      the 1.0 plugins don't check it?
+      Votes:
+       +1: bliss, ghudson, sussman
+
+    * Issue #1710
+      The auth provider next/save functions need the realmstring.
+      Justification: API change required to fix design flaw.
+      Notes:  this change needs to be committed to both trunk and 1.0.
+      Votes:
+       +1: bliss, ghudson, sussman
+
 
 -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*-
 
