@@ -77,10 +77,10 @@ check_existence (svn_string_t *path,
                  apr_pool_t *pool)
 {
   apr_status_t apr_err;
-  apr_file_t *tmp_f;
+  apr_file_t *tmp_f = NULL;  /* init to NULL hugely important to APR */
 
   apr_err = apr_open (&tmp_f, path->data,
-                     (APR_CREATE | APR_APPEND | APR_EXCL),
+                     (APR_READ | APR_CREATE | APR_EXCL),
                      APR_OS_DEFAULT, pool);
 
   if (apr_err == APR_EEXIST)
@@ -98,6 +98,7 @@ check_existence (svn_string_t *path,
   else              /* path definitely does not exist */
     {
       apr_close (tmp_f);
+      apr_remove_file (path->data, pool);
       return 0;
     }
 }
@@ -176,6 +177,38 @@ finish_directory (void *child_baton)
 static svn_error_t *
 finish_file (void *child_baton)
 {
+  printf ("\n");
+  return 0;
+}
+
+
+static svn_error_t *
+window_handler (svn_delta_window_t *window, void *baton)
+{
+  int i;
+
+  for (i = 0; i < window->num_ops; i++)
+    {
+      svn_delta_op_t this_op = (window->ops)[i];
+      switch (this_op.action_code)
+        {
+        case svn_delta_source:
+          printf ("action_code: svn_delta_source\n");
+          break;
+
+        case svn_delta_target:
+          printf ("action_code: svn_delta_target\n");
+          break;
+
+        case svn_delta_new:
+          {
+            const char *data = ((svn_string_t *) (window->new))->data;
+            printf ("%.*s", (int) this_op.length, (data + this_op.offset));
+            break;
+          }
+        }
+    }
+
   return 0;
 }
 
@@ -186,9 +219,12 @@ add_file (svn_string_t *name,
           svn_string_t *base_path,
           svn_vernum_t base_version,
           svn_pdelta_t *pdelta,
-          svn_delta_handler_t **handler,
+          svn_text_delta_window_handler_t **handler,
           void **handler_baton)
 {
+  printf ("file \"%s\" (%s, %ld)\n",
+          name->data, base_path->data, base_version);
+  *handler = window_handler;
   return 0;
 }
 
@@ -199,9 +235,12 @@ replace_file (svn_string_t *name,
               svn_string_t *base_path,
               svn_vernum_t base_version,
               svn_pdelta_t *pdelta,
-              svn_delta_handler_t **handler,
+              svn_text_delta_window_handler_t **handler,
               void **handler_baton)
 {
+  printf ("file \"%s\" (%s, %ld)\n",
+          name->data, base_path->data, base_version);
+  *handler = window_handler;
   return 0;
 }
 
