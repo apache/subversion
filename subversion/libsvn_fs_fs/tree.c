@@ -1154,27 +1154,6 @@ get_root (dag_node_t **node, svn_fs_root_t *root, apr_pool_t *pool)
 }
 
 
-/* Set *IS_ANCESTOR to non-zero iff ID1 is an ancestor of ID2 in FS,
-   allocating from POOL. */
-static svn_error_t *
-id_check_ancestor (svn_boolean_t *is_ancestor,
-                   svn_fs_t *fs, 
-                   const svn_fs_id_t *id1, 
-                   const svn_fs_id_t *id2,
-                   apr_pool_t *pool)
-{
-  dag_node_t *node1, *node2;
-
-  /* Get the nodes. */
-  SVN_ERR (svn_fs_fs__dag_get_node (&node1, fs, id1, pool));
-  SVN_ERR (svn_fs_fs__dag_get_node (&node2, fs, id2, pool));
-  
-  /* Do the test.  If the test fails, we'll just go with "not an
-     ancestor" for now.  ### better come back and check this out.  */
-  return svn_fs_fs__dag_is_ancestor (is_ancestor, node1, node2, pool);
-}
-
-
 static svn_error_t *
 update_ancestry (svn_fs_t *fs,
                  const svn_fs_id_t *source_id,
@@ -1201,55 +1180,6 @@ update_ancestry (svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
-
-/* Possibly */
-static svn_error_t *
-undelete_change (svn_fs_t *fs,
-                 const char *path,
-                 const char *txn_id,
-                 apr_pool_t *pool)
-{
-  apr_hash_t *changes;
-  svn_fs_path_change_t *this_change;
-
-  /* Canonicalize PATH. */
-  path = svn_fs_fs__canonicalize_abspath (path, pool);
-
-  /* First, get the changes associated with TXN_ID. */
-  SVN_ERR (svn_fs_fs__txn_changes_fetch (&changes, fs, txn_id, NULL, pool));
-
-  /* Now, do any of those changes apply to path and indicate deletion? */
-  this_change = apr_hash_get (changes, path, APR_HASH_KEY_STRING);
-  if (this_change
-      && ((this_change->change_kind == svn_fs_path_change_delete)
-          || (this_change->change_kind == svn_fs_path_change_replace)))
-    {
-      /* If so, reset the changes and re-add everything except the
-         deletion. */
-      SVN_ERR (add_change (fs, txn_id, path, NULL,
-                           svn_fs_path_change_reset, 0, 0, SVN_INVALID_REVNUM,
-                           NULL, pool));
-      if (this_change->change_kind == svn_fs_path_change_replace)
-        {
-          SVN_ERR (add_change (fs, txn_id, path, NULL,
-                               svn_fs_path_change_reset, 0, 0,
-                               SVN_INVALID_REVNUM, NULL, pool));
-        }
-    }
-  else
-    {
-      /* Else, this function was called in error, OR something is not
-         as we expected it to be in the changes table. */
-      return svn_error_createf
-        (SVN_ERR_FS_CORRUPT, NULL,
-         _("No deletion changes for path '%s' "
-           "in transaction '%s' of filesystem '%s'"),
-         path, txn_id, fs->path);
-    }
-  
-  return SVN_NO_ERROR;
-}
-                       
 
 /* Set the contents of CONFLICT_PATH to PATH, and return an
    SVN_ERR_FS_CONFLICT error that indicates that there was a conflict
@@ -1563,7 +1493,6 @@ merge (svn_stringbuf_t *conflict_p,
       const void *key;
       void *val;
       apr_ssize_t klen;
-      svn_boolean_t s_ancestorof_t = FALSE;
 
       svn_pool_clear (iterpool);
 
