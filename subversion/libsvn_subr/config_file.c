@@ -467,12 +467,14 @@ ensure_auth_dirs (const char *path,
   svn_node_kind_t kind;
   apr_status_t apr_err;
   const char *auth_dir, *auth_subdir;
+  svn_error_t *err;
 
   /* Ensure ~/.subversion/auth/ */
   auth_dir = svn_path_join_many (pool, path, SVN_CONFIG__AUTH_SUBDIR, NULL);
-  svn_io_check_path (auth_dir, &kind, pool);
-  if (kind == svn_node_none)
+  err = svn_io_check_path (auth_dir, &kind, pool);
+  if (err || kind == svn_node_none)
     {
+      svn_error_clear (err);
       /* 'chmod 700' permissions: */
       apr_err = apr_dir_make (auth_dir,
                               (APR_UREAD | APR_UWRITE | APR_UEXECUTE),
@@ -486,22 +488,30 @@ ensure_auth_dirs (const char *path,
 
   auth_subdir = svn_path_join_many (pool, auth_dir,
                                     SVN_AUTH_CRED_SIMPLE, NULL);
-  svn_io_check_path (auth_subdir, &kind, pool);
-  if (kind == svn_node_none)
-    apr_err = apr_dir_make (auth_subdir, APR_OS_DEFAULT, pool);
-
+  err = svn_io_check_path (auth_subdir, &kind, pool);
+  if (err || kind == svn_node_none)
+    {
+      svn_error_clear (err);
+      apr_err = apr_dir_make (auth_subdir, APR_OS_DEFAULT, pool);
+    }
+      
   auth_subdir = svn_path_join_many (pool, auth_dir,
                                     SVN_AUTH_CRED_USERNAME, NULL);
-  svn_io_check_path (auth_subdir, &kind, pool);
-  if (kind == svn_node_none)
-    apr_err = apr_dir_make (auth_subdir, APR_OS_DEFAULT, pool);
+  err = svn_io_check_path (auth_subdir, &kind, pool);
+  if (err || kind == svn_node_none)
+    {
+      svn_error_clear (err);
+      apr_err = apr_dir_make (auth_subdir, APR_OS_DEFAULT, pool);
+    }
 
   auth_subdir = svn_path_join_many (pool, auth_dir,
                                     SVN_AUTH_CRED_SSL_SERVER_TRUST, NULL);
-  svn_io_check_path (auth_subdir, &kind, pool);
-  if (kind == svn_node_none)
-    apr_err = apr_dir_make (auth_subdir, APR_OS_DEFAULT, pool);
-
+  err = svn_io_check_path (auth_subdir, &kind, pool);
+  if (err || kind == svn_node_none)
+    {
+      svn_error_clear (err);
+      apr_err = apr_dir_make (auth_subdir, APR_OS_DEFAULT, pool);
+    }
 }
 
 
