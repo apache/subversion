@@ -18,8 +18,6 @@
 #ifndef SVN_LIBSVN_FS_VALIDATE_H
 #define SVN_LIBSVN_FS_VALIDATE_H
 
-#include "util/skel.h"
-
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */

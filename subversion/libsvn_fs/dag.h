@@ -19,8 +19,7 @@
 #define SVN_LIBSVN_FS_DAG_H
 
 #include "svn_fs.h"
-#include "db.h"
-#include "util/skel.h"
+
 #include "trail.h"
 
 #ifdef __cplusplus
@@ -149,7 +148,7 @@ int svn_fs__dag_is_directory (dag_node_t *node);
 
    If properties do not exist on NODE, *PROPLIST_P will be set to NULL.
 
-   The returned skel is allocated in TRAIL->pool.  */
+   The returned property list is allocated in TRAIL->pool.  */
 svn_error_t *svn_fs__dag_get_proplist (apr_hash_t **proplist_p,
                                        dag_node_t *node,
                                        trail_t *trail);
