@@ -682,12 +682,11 @@ version_mismatch_error (const char *libname, const svn_version_t *versioninfo,
   return svn_error_createf (SVN_ERR_VERSION_MISMATCH, child,
                             _("The '%s' library is not compatible"
                               " with this program; found version %d.%d.%d%s,"
-                              " expected version %d.%d.%d%s"),
+                              " expected version %s"),
                             libname,
                             versioninfo->major, versioninfo->minor,
                             versioninfo->micro, versioninfo->tag,
-                            SVN_VER_MAJOR, SVN_VER_MINOR, SVN_VER_MICRO,
-                            SVN_VER_NUMTAG);
+                            SVN_VER_NUMBER);
 }
 
 static svn_error_t *
