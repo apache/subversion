@@ -1377,7 +1377,10 @@ svn_fs__rep_deltify (svn_fs_t *fs,
   apr_array_header_t *orig_str_keys;
   
   /* MD5 digest */
-  const unsigned char *digest; 
+  const unsigned char *digest;
+
+  /* pool for holding the windows */
+  apr_pool_t *wpool;
 
   /* Paranoia: never allow a rep to be deltified against itself,
      because then there would be no fulltext reachable in the delta
@@ -1421,6 +1424,9 @@ svn_fs__rep_deltify (svn_fs_t *fs,
   svn_txdelta_to_svndiff (new_target_stream, trail->pool,
                           &new_target_handler, &new_target_handler_baton);
 
+  /* subpool for the windows */
+  wpool = svn_pool_create (trail->pool);
+
   /* Now, loop, manufacturing and dispatching windows of svndiff data. */
   windows = apr_array_make (trail->pool, 1, sizeof (ww));
   do
@@ -1430,7 +1436,7 @@ svn_fs__rep_deltify (svn_fs_t *fs,
       new_target_baton.key = NULL;
 
       /* Fetch the next window of txdelta data. */
-      SVN_ERR (svn_txdelta_next_window (&window, txdelta_stream));
+      SVN_ERR (svn_txdelta_next_window (&window, txdelta_stream, wpool));
 
       /* Send off this package to be written as svndiff data. */
       SVN_ERR (new_target_handler (window, new_target_handler_baton));
@@ -1449,10 +1455,12 @@ svn_fs__rep_deltify (svn_fs_t *fs,
           diffsize += ww->svndiff_len;
            
           /* Free the window. */
-          svn_txdelta_free_window (window);
+          svn_pool_clear (wpool);
         }
 
     } while (window);
+
+  svn_pool_destroy (wpool);
 
   /* Having processed all the windows, we can query the MD5 digest
      from the stream.  */

@@ -140,10 +140,6 @@ typedef struct svn_txdelta_window_t {
   /* New data, for use by any `svn_delta_new' instructions.  */
   svn_stringbuf_t *new_data;
 
-  /* The sub-pool that this window is living in, needed for
-     svn_txdelta_free_window() */
-  apr_pool_t *pool;
-
 } svn_txdelta_window_t;
 
 
@@ -165,13 +161,13 @@ typedef struct svn_txdelta_stream_t svn_txdelta_stream_t;
 
 /* Set *WINDOW to a pointer to the next window from the delta stream
    STREAM.  When we have completely reconstructed the target string,
-   set *WINDOW to zero.  */
+   set *WINDOW to zero.
+
+   The window will be allocated in POOL.  */
 svn_error_t *svn_txdelta_next_window (svn_txdelta_window_t **window,
-                                      svn_txdelta_stream_t *stream);
+                                      svn_txdelta_stream_t *stream,
+                                      apr_pool_t *pool);
 
-
-/* Free the delta window WINDOW.  */
-void svn_txdelta_free_window (svn_txdelta_window_t *window);
 
 /* Return the MD5 digest for the complete fulltext deltified by
    STREAM, or NULL if STREAM has not yet returned its final NULL

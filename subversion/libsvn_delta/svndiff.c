@@ -363,7 +363,6 @@ write_handler (void *baton,
   const unsigned char *p, *end;
   apr_off_t val, sview_offset;
   apr_size_t sview_len, tview_len, inslen, newlen, remaining, npos;
-  svn_txdelta_window_t *window;
   svn_error_t *err;
   svn_txdelta_op_t *op;
   int ninst;
@@ -400,6 +399,9 @@ write_handler (void *baton,
 
   while (1)
     {
+      apr_pool_t *newpool;
+      svn_txdelta_window_t window = { 0 };
+
       /* Read the header, if we have enough bytes for that.  */
       p = (const unsigned char *) db->buffer->data;
       end = (const unsigned char *) db->buffer->data + db->buffer->len;
@@ -462,15 +464,14 @@ write_handler (void *baton,
 				 "svndiff contains invalid instructions");
 
       /* Build the window structure.  */
-      window = apr_palloc (db->subpool, sizeof (*window));
-      window->sview_offset = sview_offset;
-      window->sview_len = sview_len;
-      window->tview_len = tview_len;
-      window->num_ops = ninst;
-      window->ops_size = ninst;
-      window->ops = apr_palloc (db->subpool, ninst * sizeof (*window->ops));
+      window.sview_offset = sview_offset;
+      window.sview_len = sview_len;
+      window.tview_len = tview_len;
+      window.num_ops = ninst;
+      window.ops_size = ninst;
+      window.ops = apr_palloc (db->subpool, ninst * sizeof (*window.ops));
       npos = 0;
-      for (op = window->ops; op < window->ops + ninst; op++)
+      for (op = window.ops; op < window.ops + ninst; op++)
 	{
 	  p = decode_instruction (op, p, end);
 	  if (op->action_code == svn_txdelta_new)
@@ -479,27 +480,31 @@ write_handler (void *baton,
 	      npos += op->length;
 	    }
 	}
-      window->new_data
-	= svn_stringbuf_ncreate ((const char *) p, newlen, db->subpool);
-      window->pool = db->subpool;
+      window.new_data
+        = svn_stringbuf_ncreate ((const char *) p, newlen, db->subpool);
 
       /* Send it off.  */
-      err = db->consumer_func (window, db->consumer_baton);
+      err = db->consumer_func (&window, db->consumer_baton);
 
       /* Make a new subpool and buffer, saving aside the remaining
          data in the old buffer.  */
-      db->subpool = svn_pool_create (db->pool);
+      newpool = svn_pool_create (db->pool);
       p += newlen;
       remaining = db->buffer->data + db->buffer->len - (const char *) p;
       db->buffer = 
-	svn_stringbuf_ncreate ((const char *) p, remaining, db->subpool);
+	svn_stringbuf_ncreate ((const char *) p, remaining, newpool);
 
       /* Remember the offset and length of the source view for next time.  */
       db->last_sview_offset = sview_offset;
       db->last_sview_len = sview_len;
 
-      /* Free the window; this will also free up our old buffer.  */
-      svn_txdelta_free_window (window);
+      /* We've copied stuff out of the old pool. Toss that pool and use
+         our new pool.
+         ### might be nice to avoid the copy and just use svn_pool_clear
+         ### to get rid of whatever the "other stuff" is. future project...
+      */
+      svn_pool_destroy(db->subpool);
+      db->subpool = newpool;
     }
 
   return err;
