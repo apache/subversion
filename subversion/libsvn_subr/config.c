@@ -461,7 +461,7 @@ svn_config_enumerate (svn_config_t *cfg, const char *section,
 
       ++count;
       make_string_from_option (&temp_value, cfg, opt);
-      if (!callback (opt->name, &temp_value, baton))
+      if (!callback (opt->name, temp_value.data, baton))
         break;
     }
 

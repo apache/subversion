@@ -217,7 +217,7 @@ void svn_config_set (svn_config_t *cfg,
    duration of the call. */
 
 typedef svn_boolean_t (*svn_config_enumerator_t)
-       (const char *name, const svn_string_t *value, void *baton);
+       (const char *name, const char *value, void *baton);
 
 int svn_config_enumerate (svn_config_t *cfg, const char *section,
                           svn_config_enumerator_t callback, void *baton);
