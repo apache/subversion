@@ -451,9 +451,7 @@ translate_newline (const char *eol_str,
       if ((! repair) &&
           ((*src_format_len != newline_len) ||
            (strncmp (src_format, newline_buf, newline_len)))) 
-        return svn_error_create
-          (SVN_ERR_IO_INCONSISTENT_EOL, NULL,
-           "Inconsistent line-endings in source stream");
+        return svn_error_create (SVN_ERR_IO_INCONSISTENT_EOL, NULL, NULL);
     }
   else
     {

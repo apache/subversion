@@ -932,7 +932,6 @@ svn_stringbuf_from_file (svn_stringbuf_t **result,
   if (filename[0] == '-' && filename[1] == '\0')
     return svn_error_create
         (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-         "svn_stringbuf_from_file: "
          "Reading from stdin is currently broken, so disabled");
 
   SVN_ERR (svn_io_file_open (&f, filename, APR_READ, APR_OS_DEFAULT, pool));
