@@ -637,13 +637,13 @@ Committed revision 360.
         important <quote>best practice</quote> to follow.</para>
 
       <sidebar>
-        <title>Why Not Use Patches Instead?</title>
+        <title>¿Por qué no usar parches?</title>
         
-        <para>A question may be on your mind, especially if you're a
-          Unix user: why bother to use <command>svn merge</command> at
-          all?  Why not simply use the operating system's
-          <command>patch</command> command to accomplish the same job?
-          For example:</para>
+        <para>Una pregunta que tendrá en mente, especialmente si
+          es un usuario de Unix: ¿para qué usar el comando
+          <command>svn merge</command>?  ¿Por qué no simplemente usar
+          el comando <command>patch</command> del sistema operativo
+          para realizar la misma tarea?  Por ejemplo:</para>
 
 <screen>
 $ svn diff -r 343:344 http://svn.example.com/repos/calc/trunk &gt; patchfile
