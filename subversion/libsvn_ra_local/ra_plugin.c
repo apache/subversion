@@ -295,7 +295,35 @@ do_update (void *session_baton,
                                  revnum_to_update_to,
                                  sbaton->username,
                                  sbaton->fs, sbaton->fs_path,
-                                 update_target, update_editor, update_baton,
+                                 update_target, TRUE,
+                                 update_editor, update_baton,
+                                 sbaton->pool);
+}
+
+
+static svn_error_t *
+do_status (void *session_baton,
+           const svn_ra_reporter_t **reporter,
+           void **report_baton,
+           svn_stringbuf_t *status_target,
+           const svn_delta_edit_fns_t *status_editor,
+           void *status_baton)
+{
+  svn_revnum_t revnum_to_update_to;
+  svn_ra_local__session_baton_t *sbaton = session_baton;
+  
+  SVN_ERR (get_latest_revnum (sbaton, &revnum_to_update_to));
+
+  /* Pass back our reporter */
+  *reporter = &ra_local_reporter;
+
+  /* Build a reporter baton. */
+  return svn_repos_begin_report (report_baton,
+                                 revnum_to_update_to,
+                                 sbaton->username,
+                                 sbaton->fs, sbaton->fs_path,
+                                 status_target, FALSE,
+                                 status_editor, status_baton,
                                  sbaton->pool);
 }
 
@@ -315,7 +343,8 @@ static const svn_ra_plugin_t ra_local_plugin =
   get_dated_revision,
   get_commit_editor,
   do_checkout,
-  do_update
+  do_update,
+  do_status
 };
 
 

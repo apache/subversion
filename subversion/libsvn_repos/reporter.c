@@ -40,13 +40,12 @@ typedef struct svn_repos_report_baton_t
   /* The actual target of the report */
   svn_stringbuf_t *target;
 
-  /* finish_report() calls svn_fs_dir_delta(), and uses this arg to
-     decide which revision to compare the transaction against. */
-  svn_revnum_t revnum_to_update_to;
-
-  /* The working copy editor driven by svn_fs_dir_delta(). */
-  const svn_delta_edit_fns_t *update_editor;
-  void *update_edit_baton;
+  /* These items are used by finish_report() when it calls
+     svn_repos_dir_delta() */
+  svn_boolean_t text_deltas; /* whether or not to generate text-deltas */
+  svn_revnum_t revnum_to_update_to; /* which revision to compare against */
+  const svn_delta_edit_fns_t *update_editor; /* the editor to use... */
+  void *update_edit_baton; /* ...and its baton */
 
   /* This hash describes the mixed revisions in the transaction; it
      maps pathnames (char *) to revision numbers (svn_revnum_t). */
@@ -183,7 +182,7 @@ svn_repos_finish_report (void *report_baton)
                                 rev_path,
                                 rbaton->update_editor,
                                 rbaton->update_edit_baton,
-                                TRUE,
+                                rbaton->text_deltas,
                                 rbaton->pool));
                            
   /* Still here?  Great!  Throw out the transaction. */
@@ -213,9 +212,10 @@ svn_repos_begin_report (void **report_baton,
                         const char *username,
                         svn_fs_t *fs,
                         svn_stringbuf_t *fs_base,
-                        svn_stringbuf_t *update_target,
-                        const svn_delta_edit_fns_t *update_editor,
-                        void *update_baton,
+                        svn_stringbuf_t *target,
+                        svn_boolean_t text_deltas,
+                        const svn_delta_edit_fns_t *editor,
+                        void *edit_baton,
                         apr_pool_t *pool)
 {
   svn_repos_report_baton_t *rbaton;
@@ -223,13 +223,14 @@ svn_repos_begin_report (void **report_baton,
   /* Build a reporter baton. */
   rbaton = apr_pcalloc (pool, sizeof(*rbaton));
   rbaton->revnum_to_update_to = revnum;
-  rbaton->update_editor = update_editor;
-  rbaton->update_edit_baton = update_baton;
+  rbaton->update_editor = editor;
+  rbaton->update_edit_baton = edit_baton;
   rbaton->path_rev_hash = apr_hash_make (pool);
   rbaton->fs = fs;
   rbaton->username = username;
   rbaton->base_path = fs_base;
-  rbaton->target = update_target;
+  rbaton->target = target;
+  rbaton->text_deltas = text_deltas;
   rbaton->pool = pool;
   
   /* Hand reporter back to client. */
