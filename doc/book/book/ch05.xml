@@ -818,10 +818,30 @@ Available subcommands:
           </varlistentry>
 
           <varlistentry>
+            <term><literal>deltify</literal></term>
+            <listitem>
+              <para>Run over a specified revision range, performing
+                predecessor deltification on the paths changed in
+                those revisions.  If no revisions are specified, this
+                command will simply deltify the HEAD revision.</para>
+            </listitem>
+          </varlistentry>
+
+          <varlistentry>
             <term><literal>dump</literal></term>
             <listitem>
               <para>Dumps the contents of the repository, bounded by a
                 given set of revisions, using a portable dump format.</para>
+            </listitem>
+          </varlistentry>
+
+          <varlistentry>
+            <term><literal>hotcopy</literal></term>
+            <listitem>
+              <para>Makes a hot copy of a repository.  You can run
+                this command at any time and make a safe copy of the
+                repository, regardless if other processes are using
+                the repository.</para>
             </listitem>
           </varlistentry>
 
