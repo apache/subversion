@@ -1,3 +1,5 @@
+								-*-text-*-
+
 These are tasks that break down along clean interface boundaries --
 everything here will get done eventually, but volunteers will make it
 happen faster! :-)  Please email dev@subversion.tigris.org if you want
@@ -30,3 +32,20 @@ to take something on.
    C for Mac and Windows, though that's certainly one way to get it
    done.  Perhaps one client could be written for both platforms,
    using a Java class that links to the C libsvn_client API?
+
+
+5. Language bindings to the Subversion libraries.
+
+   Volunteers / interested parties:
+
+      Python: Lefty, GJS
+      Perl: Jens Klocker
+      Guile: JimB
+      Tcl: Mo DeJong
+      Ruby: Julian Fitzell
+      Java: ??
+
+   Note: names can/should be added to the above. If you're interested,
+   then let us know, so we can add your name. The above list is
+   certainly not intended to be the only people to work on these, but
+   mainly as a way to verify that we have full coverage.
