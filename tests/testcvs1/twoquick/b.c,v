@@ -1,0 +1,43 @@
+head	1.2;
+access;
+symbols
+	after:1.2;
+locks; strict;
+comment	@ * @;
+
+
+1.2
+date	2002.09.29.14.45.16;	author gotoh;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2002.09.29.14.44.59;	author gotoh;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.2
+log
+@*** empty log message ***
+@
+text
+@hello
+modified after checked in
+
+
+@
+
+
+1.1
+log
+@*** empty log message ***
+@
+text
+@d2 2
+@
+

@@ -1,0 +1,83 @@
+head	1.5;
+access;
+symbols
+	after:1.4
+	before:1.3;
+locks; strict;
+comment	@ * @;
+expand	@o@;
+
+
+1.5
+date	2002.09.29.14.47.12;	author gotoh;	state dead;
+branches;
+next	1.4;
+
+1.4
+date	2002.09.29.14.45.34;	author gotoh;	state Exp;
+branches;
+next	1.3;
+
+1.3
+date	2001.09.30.15.25.29;	author gotoh;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2001.09.30.13.27.25;	author gotoh;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.5
+log
+@*** empty log message ***
+@
+text
+@main()
+{
+  printf("hello\n");
+  puts("");
+  puts("hello again");
+  /* modified after b.c is added */
+}
+@
+
+
+1.4
+log
+@*** empty log message ***
+@
+text
+@@
+
+
+1.3
+log
+@*** empty log message ***
+@
+text
+@d1 7
+a7 6
+main()
+{
+  printf("hello\n");
+  puts("");
+  puts("hello again");
+}
+@
+
+
+1.1
+log
+@*** empty log message ***
+@
+text
+@d4 2
+@
+
+

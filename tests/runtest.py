@@ -9,6 +9,7 @@ else:
     tests = [ 
               'test1', 
               'space-fname',
+              'twoquick',
             ]
     for test in tests:
 	print "Running test", test

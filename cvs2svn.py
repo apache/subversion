@@ -337,10 +337,14 @@ class BuildRevision(rcsparse.Sink):
 
 class Commit:
   def __init__(self):
+    self.files = { }
     self.changes = [ ]
     self.deletes = [ ]
     self.t_min = 1<<30
     self.t_max = 0
+
+  def has_file(self, fname):
+    return self.files.has_key(fname)
 
   def add(self, t, op, file, rev, branch_name, tags, branches):
     # record the time range of this commit
@@ -354,6 +358,7 @@ class Commit:
     else:
       # OP_DELETE
       self.deletes.append((file, rev, branch_name, tags, branches))
+    self.files[file] = 1
 
   def get_metadata(self, pool):
     # by definition, the author and log message must be the same for all
@@ -694,7 +699,14 @@ def pass4(ctx):
     # scan for commits to process
     process = [ ]
     for scan_id, scan_c in commits.items():
-      if scan_c.t_max + COMMIT_THRESHOLD < timestamp:
+
+      # ISSUE: the has_file() check below is not optimal.
+      # it does fix the dataloss bug where revisions would get lost
+      # if checked in too quickly, but it can alco break apart the 
+      # commits. The correct fix would require tracking the dependencies
+      # between change sets and commiting them in proper order.
+      if scan_c.t_max + COMMIT_THRESHOLD < timestamp or \
+         scan_c.has_file(fname):
         process.append((scan_c.t_max, scan_c))
         del commits[scan_id]
 
