@@ -24,8 +24,6 @@
 #include "strings-table.h"
 #include "reps-strings.h"
 
-/* Define this to enable deltification.  */
-#undef ACTUALLY_DO_DELTIFICATION
 
 
 /* Helper function.  Is representation a `fulltext' type?  */
@@ -67,6 +65,117 @@ string_key (const char **string_key_p, skel_t *rep, apr_pool_t *pool)
 }
 
 
+
+/*** Reading the contents from a representation. ***/
+
+/* This fulltext reconstruction method is neither the best nor the
+ * worst possible; it has at least the advantage of simplicity.
+ *
+ * rep_read_range() runs through the raw svndiff data, passing it into
+ * a stream which invokes window_handler() every time a new window is
+ * available.  The window_handler() ignores windows until it sees one
+ * that reconstructs data within the range requested, at which point
+ * it obtains the range of source fulltext required to reconstruct the
+ * data, via a recursive call to rep_read_range().  When
+ * window_handler() has finished reconstructing the requested range,
+ * or receives the null window, it sets the `done' bit in its baton,
+ * so that rep_read_range() won't bother looping over the trailing
+ * svndiff data.
+ * 
+ * In terms of number of passes over ignored leading svndiff data,
+ * this method's worst case is probably Subversion's most common case,
+ * that is, looping to read a whole file from beginning to end.  But
+ * note that the case is only bad when each loop reads a chunk that is
+ * small relative to the full size of the file.  If you use big
+ * chunks, the penalty is not so bad; and if you read the whole file
+ * in one call, then there's no penalty at all (except, of course,
+ * that you held a whole file in memory, which your mother taught you
+ * never to do).  Users of the FS interface should use their
+ * judgement; probably it would be good to read a whole file at a time
+ * on checkouts, for example, except when a file is really
+ * prohibitively large.
+ *
+ * We should feel free to improve this method whenever we have a
+ * better one, of course.
+ */
+
+
+/* Baton for window_handler() below. */
+struct window_handler_baton_t
+{
+  /* Where to store the data as we undeltify it. */
+  char *buf;
+
+  /* Requested offset into the fulltext. */
+  apr_size_t offset;
+
+  /* Current offset into the fulltext. */
+  apr_size_t cur_offset;
+
+  /* Representation whose fulltext this delta was made against. */
+  const char *base_rep;
+
+  /* Amount of fulltext requested to reconstruct. */
+  apr_size_t len_requested;
+
+  /* Amount of fulltext reconstructed so far. */
+  apr_size_t len_read;
+
+  /* False until we have received the null (final) window. */
+  svn_boolean_t done;
+
+  /* Pool in which to do any temporary or error allocations. */
+  apr_pool_t *pool;
+};
+
+
+/* Function of type `svn_txdelta_window_handler_t'.
+   BATON is a `struct window_handler_baton_t'.
+
+   Reconstruct part of BATON->buf if WINDOW is relevant to it,
+   otherwise ignore WINDOW.
+
+   fooo: finish documenting this.
+ */
+static svn_error_t *
+window_handler (svn_txdelta_window_t *window, void *baton)
+{
+  struct window_handler_baton_t *wb = baton;
+
+  /* If received the null (final) window, we're done. */
+  if (window == NULL)
+    {
+      wb->done = TRUE;
+      return SVN_NO_ERROR;
+    }
+
+  /* If this window is irrelevant because it reconstructs text that is
+     entirely before the range we're interested in, then ignore it. */
+  if (0) /* fooo */
+    {
+      return SVN_NO_ERROR;
+    }
+
+  /* If this window is irrelevant because it reconstructs text that is
+     entirely after the range we're interested in, and yet we didn't
+     think we were done, then something is mighty fishy indeed. */
+  if (0) /* fooo */
+    {
+      return svn_error_createf
+        (SVN_ERR_FS_CORRUPT, 0, NULL, wb->pool,
+         "window_handler: delta data skipped range, base rep is \"%s\"", 
+         wb->base_rep);
+    }
+
+  /* Else, handle the window. */
+
+  /* kff working here */
+  /* (window->tview_len + wb->cur_offset) >= offset) */
+
+  return SVN_NO_ERROR;
+}
+
+
 /* Copy into BUF *LEN bytes starting at OFFSET from the string
    represented via REP_KEY in FS, as part of TRAIL.
    The number of bytes actually copied is stored in *LEN.  */
@@ -79,23 +188,57 @@ rep_read_range (svn_fs_t *fs,
                 trail_t *trail)
 {
   skel_t *rep;
+  const char *str_key;
         
   SVN_ERR (svn_fs__read_rep (&rep, fs, rep_key, trail));
+  SVN_ERR (string_key (&str_key, rep, trail->pool));
 
   if (rep_is_fulltext (rep))
     {
-      const char *str_key;
-
-      SVN_ERR (string_key (&str_key, rep, trail->pool));
       SVN_ERR (svn_fs__string_read (fs, str_key, buf, offset, len, trail));
     }
   else
     {
-#ifdef ACTUALLY_DO_DELTIFICATION
-      this code does not exist yet;
-#else  /* ! ACTUALLY_DO_DELTIFICATION */
-      abort ();
-#endif /* ACTUALLY_DO_DELTIFICATION */
+      svn_stream_t *wstream;
+      struct window_handler_baton_t wb;
+      char chunk[4096];      /* chunk of svndiff data */
+      apr_size_t off;        /* offset into svndiff data */
+      apr_size_t amt;        /* how much svndiff data to/was read */
+      const char *base_rep;  /* representation this delta is based against */
+      
+      /* Extract the base rep key from this rep. */
+      base_rep = apr_pstrndup (trail->pool,
+                               rep->children->next->data,
+                               rep->children->next->len);
+
+      /* Initialize the window handler baton. */
+      wb.buf           = buf;
+      wb.offset        = offset;
+      wb.cur_offset    = 0;
+      wb.base_rep      = base_rep;
+      wb.len_requested = *len;
+      wb.len_read      = 0;
+      wb.done          = FALSE;
+      wb.pool          = trail->pool;
+
+      /* Set up a window handling stream for the svndiff data. */
+      wstream = svn_txdelta_parse_svndiff (window_handler, &wb, trail->pool);
+
+      /* Run through the svndiff data, at least as far as necessary. */
+      off = 0;
+      do {
+        amt = sizeof (chunk);
+        SVN_ERR (svn_fs__string_read (fs, str_key, chunk, off, &amt, trail));
+        off += amt;
+        SVN_ERR (svn_stream_write (wstream, chunk, &amt));
+      } while ((! wb.done) && (amt == sizeof (chunk)));
+
+      SVN_ERR (svn_stream_close (wstream));
+      *len = wb.len_read;
+
+      /* ### todo: hmmm, I just realized something: the way this
+         interface works, there's no natural place to actually use the
+         checksum stored in the delta representation.  Urk.  -kff  */
     }
 
   return SVN_NO_ERROR;
@@ -767,12 +910,6 @@ write_string (void *baton, const char *data, apr_size_t *len)
 {
   struct write_string_baton *wb = baton;
 
-#if 0  /* Want to see some svndiff data? */
-  printf ("*** Window data: ");
-  fwrite (data, sizeof (*data), *len, stdout);
-  printf ("\n");
-#endif /* 0 */
-
   SVN_ERR (svn_fs__string_append (wb->fs,
                                   &(wb->key),
                                   *len,
@@ -919,11 +1056,11 @@ svn_fs__rep_deltify (svn_fs_t *fs,
     svn_fs__prepend (svn_fs__str_atom (source, trail->pool), rep);
     svn_fs__prepend (header, rep);
 
-#ifdef ACTUALLY_DO_DELTIFICATION
+#if 0 /* Uncomment this when rep_read_range() and friends are ready. */
     /* Write out the new representation. */
     SVN_ERR (svn_fs__write_rep (target, fs, rep, trail));
     SVN_ERR (svn_fs__string_delete (fs, orig_str_key, trail));
-#endif
+#endif /* 0 */
   }
 
   return SVN_NO_ERROR;
