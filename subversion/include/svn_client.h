@@ -582,10 +582,24 @@ svn_client_status (apr_hash_t **statushash,
    If DISCOVER_CHANGED_PATHS is set, then the `changed_paths' argument
    to RECEIVER will be passed on each invocation.
   
-   If START->kind or END->kind is svn_revision_unspecified_kind,
+   If START->kind or END->kind is svn_client_revision_unspecified,
    return the error SVN_ERR_CLIENT_BAD_REVISION.
 
    Use POOL for any temporary allocation.
+
+   Special case for repositories at revision 0:
+
+   If START->kind is svn_client_revision_head, and END->kind is
+   svn_client_revision_number && END->number is 1, then handle an
+   empty (no revisions) repository specially: instead of erroring
+   because requested revision 1 when the highest revision is 0, just
+   invoke RECEIVER on revision 0, passing NULL for changed paths and
+   empty strings for the author and date.  This is because that
+   particular combination of START and END usually indicates the
+   common case of log invocation -- the user wants to see all log
+   messages from youngest to oldest, where the oldest commit is
+   revision 1.  That works fine, except when there are no commits in
+   the repository, hence this special case.
  */
 svn_error_t *
 svn_client_log (svn_client_auth_baton_t *auth_baton,

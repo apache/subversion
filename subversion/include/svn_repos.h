@@ -344,6 +344,9 @@ svn_repos_get_committed_info (svn_revnum_t *committed_rev,
  * If any invocation of RECEIVER returns error, return that error
  * immediately and without wrapping it.
  *
+ * If START or END is a non-existent revision, return the error
+ * SVN_ERR_FS_NO_SUCH_REVISION, without ever invoking RECEIVER.
+ *
  * See also the documentation for `svn_log_message_receiver_t'.
  *
  * Use POOL for temporary allocations.  */

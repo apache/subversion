@@ -62,7 +62,7 @@ svn_client_log (svn_client_auth_baton_t *auth_baton,
   svn_string_t path_str;
   apr_array_header_t *condensed_targets;
   svn_revnum_t start_revnum, end_revnum;
-  svn_revnum_t youngest_rev;
+  svn_error_t *err;
 
   if ((start->kind == svn_client_revision_unspecified)
       || (end->kind == svn_client_revision_unspecified))
@@ -157,33 +157,51 @@ svn_client_log (svn_client_auth_baton_t *auth_baton,
            (&end_revnum, ra_lib, session, end, 
             basename ? basename->data : NULL, pool));
 
-  /* If there have been no commits, there are no logs.
+  err = ra_lib->get_log (session,
+                         condensed_targets,
+                         start_revnum,
+                         end_revnum,
+                         discover_changed_paths,
+                         receiver,
+                         receiver_baton);
+  
+  /* Special case: If there have been no commits, we'll get in error
+   * if request log for a revision higher than 0.  But the default
+   * behavior of "svn log" is to give revisions HEAD through 1, on
+   * the assumption that HEAD >= 1.
+   *
+   * So if we got that error for that reason, and it looks like the
+   * user was just depending on the defaults (rather than explicitly
+   * requestion the log for revision 1), then we don't error.  Instead
+   * we just invoke the receiver manually on a hand-constructed log
+   * message for revision 0.
    *
    * See also http://subversion.tigris.org/issues/show_bug.cgi?id=692.
    */
-  SVN_ERR (ra_lib->get_latest_revnum (session, &youngest_rev));
-  if (youngest_rev == 0)
+  if (err && (err->apr_err == SVN_ERR_FS_NO_SUCH_REVISION)
+      && (start->kind == svn_client_revision_head)
+      && ((end->kind == svn_client_revision_number)
+          && (end->value.number == 1)))
     {
-      /* Log receivers are free to handle revision 0 specially... But
-         just in case some don't, we make up a message here. */
-      SVN_ERR (receiver (receiver_baton,
-                         NULL, 0, "", "", "No commits in repository.", pool));
-    }
-  else
-    {
-      SVN_ERR (ra_lib->get_log (session,
-                                condensed_targets,
-                                start_revnum,
-                                end_revnum,
-                                discover_changed_paths,
-                                receiver,
-                                receiver_baton));
+      svn_revnum_t youngest_rev;
+      
+      SVN_ERR (ra_lib->get_latest_revnum (session, &youngest_rev));
+      if (youngest_rev == 0)
+        {
+          err = SVN_NO_ERROR;
+
+          /* Log receivers are free to handle revision 0 specially... But
+             just in case some don't, we make up a message here. */
+          SVN_ERR (receiver (receiver_baton,
+                             NULL, 0, "", "", "No commits in repository.",
+                             pool));
+        }
     }
 
   /* We're done with the RA session. */
   SVN_ERR (ra_lib->close (session));
 
-  return SVN_NO_ERROR;
+  return err;
 }
 
 

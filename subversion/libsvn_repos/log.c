@@ -106,21 +106,23 @@ svn_repos_get_logs (svn_repos_t *repos,
   svn_fs_t *fs = repos->fs;
   apr_array_header_t *revs = NULL;
 
-  /* If no START revision was given, use HEAD. */
-  if (! SVN_IS_VALID_REVNUM (start))
-    {
-      SVN_ERR (svn_fs_youngest_rev (&head, fs, pool));
-      start = head;
-    }
+  SVN_ERR (svn_fs_youngest_rev (&head, fs, pool));
 
-  /* If no END revision was given, use HEAD (note that we might have
-     already calculate HEAD in the step above). */
+  if (! SVN_IS_VALID_REVNUM (start))
+    start = head;
+
   if (! SVN_IS_VALID_REVNUM (end))
-    {
-      if (! SVN_IS_VALID_REVNUM (head))
-        SVN_ERR (svn_fs_youngest_rev (&head, fs, pool));
-      end = head;
-    }
+    end = head;
+
+  /* Check that revisions are sane before ever invoking receiver. */
+  if (start > head)
+    return svn_error_createf
+      (SVN_ERR_FS_NO_SUCH_REVISION, 0, 0, pool,
+       "svn_repos_get_logs: No such revision `%" SVN_REVNUM_T_FMT "'", start);
+  if (end > head)
+    return svn_error_createf
+      (SVN_ERR_FS_NO_SUCH_REVISION, 0, 0, pool,
+       "svn_repos_get_logs: No such revision `%" SVN_REVNUM_T_FMT "'", end);
 
   /* If paths were specified, then we only really care about revisions
      in which those paths were changed.  So we ask the filesystem for
