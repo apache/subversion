@@ -179,9 +179,11 @@ static svn_error_t * simple_request(svn_ra_session_t *ras, const char *method,
   return NULL;
 }
 
-static svn_error_t * get_version_url(commit_ctx_t *cc, resource_t *rsrc)
+static svn_error_t * get_version_url(commit_ctx_t *cc, resource_t *rsrc,
+                                     svn_revnum_t revision)
 {
   svn_ra_dav_resource_t *propres;
+  const char *url;
 
   if (cc->get_func != NULL)
     {
@@ -197,8 +199,31 @@ static svn_error_t * get_version_url(commit_ctx_t *cc, resource_t *rsrc)
 
       /* whoops. it wasn't there. go grab it from the server. */
     }
-  
-  SVN_ERR( svn_ra_dav__get_props_resource(&propres, cc->ras->sess, rsrc->url,
+
+  if (revision == SVN_INVALID_REVNUM)
+    url = rsrc->url;
+  else
+    {
+      svn_string_t bc_url, bc_relative;
+      svn_stringbuf_t *bc;
+
+      SVN_ERR( svn_ra_dav__get_baseline_info(NULL,
+                                             &bc_url, &bc_relative, NULL,
+                                             cc->ras->sess,
+                                             rsrc->url,
+                                             revision,
+                                             cc->ras->pool));
+      bc = svn_stringbuf_create(bc_url.data, cc->ras->pool);
+      svn_path_add_component_nts(bc, bc_relative.data,
+                                 svn_path_url_style);
+
+      SVN_ERR( svn_ra_dav__get_props_resource(&propres, cc->ras->sess,
+                                              bc->data, NULL, fetch_props,
+                                              cc->ras->pool) );
+      url = bc->data;
+    }
+
+  SVN_ERR( svn_ra_dav__get_props_resource(&propres, cc->ras->sess, url,
                                           NULL, fetch_props, cc->ras->pool) );
   rsrc->vsn_url = apr_hash_get(propres->propset,
                                SVN_RA_DAV__PROP_CHECKED_IN,
@@ -287,10 +312,18 @@ static svn_error_t * add_child(resource_t **child,
                                commit_ctx_t *cc,
                                const resource_t *parent,
                                const char *name,
-                               int created)
+                               int created,
+                               svn_revnum_t revision)
 {
   apr_pool_t *pool = cc->ras->pool;
   resource_t *rsrc;
+
+  /* ### todo:  This from Yoshiki Hayashi <yoshiki@xemacs.org>:
+
+     Probably created flag in add_child can be removed because
+        revision is valid => created is false 
+        revision is invalid => created is true
+  */
 
   rsrc = apr_pcalloc(pool, sizeof(*rsrc));
   rsrc->url = apr_pstrcat(pool, parent->url, "/", name, NULL);
@@ -313,9 +346,7 @@ static svn_error_t * add_child(resource_t **child,
      This means it has a VR URL already, and the WR URL won't exist
      until it's "checked out". */
   else
-    {
-      SVN_ERR( get_version_url(cc, rsrc) );
-    }
+    SVN_ERR( get_version_url(cc, rsrc, revision) );
 
   apr_hash_set(cc->resources, rsrc->url, APR_HASH_KEY_STRING, rsrc);
 
@@ -548,7 +579,7 @@ static svn_error_t * commit_open_root(void *edit_baton,
   /* ### should we use the WC symbol? (SVN_WC_ENTRY_THIS_DIR) */
   rsrc->local_path = svn_stringbuf_create("", cc->ras->pool);
 
-  SVN_ERR( get_version_url(cc, rsrc) );
+  SVN_ERR( get_version_url(cc, rsrc, SVN_INVALID_REVNUM) );
 
   apr_hash_set(cc->resources, rsrc->url, APR_HASH_KEY_STRING, rsrc);
 
@@ -619,7 +650,8 @@ static svn_error_t * commit_add_dir(svn_stringbuf_t *name,
   /* create a child object that contains all the resource urls */
   child = apr_pcalloc(pool, sizeof(*child));
   child->cc = parent->cc;
-  SVN_ERR( add_child(&child->rsrc, parent->cc, parent->rsrc, name->data, 1) );
+  SVN_ERR( add_child(&child->rsrc, parent->cc, parent->rsrc,
+                     name->data, 1, SVN_INVALID_REVNUM) );
 
   if (! copyfrom_path)
     {
@@ -692,7 +724,8 @@ static svn_error_t * commit_open_dir(svn_stringbuf_t *name,
   resource_baton_t *child = apr_pcalloc(pool, sizeof(*child));
 
   child->cc = parent->cc;
-  SVN_ERR( add_child(&child->rsrc, parent->cc, parent->rsrc, name->data, 0) );
+  SVN_ERR( add_child(&child->rsrc, parent->cc, parent->rsrc,
+                     name->data, 0, base_revision) );
 
   /*
   ** Note: open_dir simply means that a change has occurred somewhere
@@ -761,7 +794,8 @@ static svn_error_t * commit_add_file(svn_stringbuf_t *name,
   /* Construct a file_baton that contains all the resource urls. */
   file = apr_pcalloc(pool, sizeof(*file));
   file->cc = parent->cc;
-  SVN_ERR( add_child(&file->rsrc, parent->cc, parent->rsrc, name->data, 1) );
+  SVN_ERR( add_child(&file->rsrc, parent->cc, parent->rsrc,
+                     name->data, 1, SVN_INVALID_REVNUM) );
 
   if (! copyfrom_path)
     {
@@ -831,7 +865,8 @@ static svn_error_t * commit_open_file(svn_stringbuf_t *name,
 
   file = apr_pcalloc(pool, sizeof(*file));
   file->cc = parent->cc;
-  SVN_ERR( add_child(&file->rsrc, parent->cc, parent->rsrc, name->data, 0) );
+  SVN_ERR( add_child(&file->rsrc, parent->cc, parent->rsrc,
+                     name->data, 0, base_revision) );
 
   /* do the CHECKOUT now. we'll PUT the new file contents later on. */
   SVN_ERR( checkout_resource(parent->cc, file->rsrc) );
