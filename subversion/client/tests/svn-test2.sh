@@ -16,7 +16,9 @@ check_status()
       exit $res
     fi
     # REMOVE ME;  for easy debugging step-throughs:
-    # read foo
+    if test "`whoami 2> /dev/null`" = "sussman"; then
+      read foo
+    fi
 }
 
 # Remove the testing tree
