@@ -58,22 +58,14 @@
 #include "dav_svn.h"
 
 
-int dav_svn_hook_get_resource(request_rec *r, const char *root_dir,
-                             const char *workspace)
+void dav_svn_register_repos(apr_pool_t *p)
 {
+    /* register the repository provider */
 #if 0
-    dav_resource *resource = dav_svn_get_resource(r, root_dir, workspace);
-
-    if (resource == NULL)
-        return DECLINED;
-
-    (void) apr_set_userdata(resource, DAV_KEY_RESOURCE, apr_null_cleanup,
-                           r->pool);
-    return OK;
-#else
-    return DECLINED;
+    dav_register_repository(p, "svn", &dav_hooks_repository_svn);
 #endif
 }
+
 
 
 /* 
