@@ -11,6 +11,7 @@
  * ====================================================================
  */
 
+#include <string.h>
 #include "db.h"
 #include "svn_fs.h"
 #include "fs.h"
@@ -39,7 +40,16 @@ svn_fs__string_key_from_rep (skel_t *rep, apr_pool_t *pool)
                          rep->children->next->data,
                          rep->children->next->len);
   else
-    abort ();   /* ### we only know about fulltext right now */
+    {
+      skel_t *diff = rep->children->next->next;
+
+      if (strncmp ("svndiff", diff->children->data, diff->children->len) != 0)
+        abort ();  /* unknown delta format rep */
+
+      return apr_pstrndup (pool,
+                           diff->children->next->data,
+                           diff->children->next->len);
+    }
 
   return NULL;
 }
@@ -548,6 +558,61 @@ svn_fs__rep_write_stream (svn_fs_t *fs,
   svn_stream_set_write (ws, rep_write_contents);
 
   return ws;
+}
+
+
+svn_error_t *
+svn_fs__rep_clear (svn_fs_t *fs,
+                   const char *rep_key,
+                   trail_t *trail)
+{
+  skel_t *rep;
+  const char *str_key;
+
+  SVN_ERR (svn_fs__read_rep (&rep, fs, rep_key, trail));
+
+  /* Make sure it's mutable. */
+  if (! svn_fs__rep_is_mutable (rep))
+    return svn_error_createf
+      (SVN_ERR_FS_REP_NOT_MUTABLE, 0, NULL, trail->pool,
+       "svn_fs__rep_clear: rep \"%s\" is not mutable", rep_key);
+
+  str_key = svn_fs__string_key_from_rep (rep, trail->pool);
+
+  /* If rep is already clear, just return success. */
+  if ((str_key == NULL) || (str_key[0] == '\0'))
+    return SVN_NO_ERROR;
+
+  /* Else, clear it. */
+
+  if (rep_is_fulltext (rep))
+    {
+      SVN_ERR (svn_fs__string_clear (fs, str_key, trail));
+    }
+  else  /* delta */
+    {
+      /* I can't actually imagine that this case would ever be
+         reached.  When would you clear a deltified representation,
+         since the fact that it's deltified implies that the node
+         referring to it has been stabilized?  But that logic is
+         outside the scope of this function.  We shouldn't refuse to
+         clear a deltified rep just because we don't understand why
+         someone wants to. */
+
+      /* ### todo: we could convert the rep to fulltext, but instead
+         we keep it in delta form, to avoid losing the base rep
+         information.  We just change the svndiff data to a
+         bone-simple delta that converts any base text to an empty
+         target string.  */
+
+      /* The universal null delta is the four bytes 'S' 'V' 'N' '\0'. */
+      const char *null_delta = "SVN";
+
+      SVN_ERR (svn_fs__string_clear (fs, str_key, trail));
+      SVN_ERR (svn_fs__string_append (fs, &str_key, 4, null_delta, trail));
+    }
+
+  return SVN_NO_ERROR;
 }
 
 
