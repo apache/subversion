@@ -22,7 +22,7 @@ Candidate changes:
     Justification:
       Trivial, obviously correct fix.
     Votes:
-      +1: maxb
+      +1: maxb, ghudson
 
   * r10604
     Cleanup some qsort-related stuff.
@@ -36,12 +36,12 @@ Candidate changes:
     Justification:
       Tiny patch; creates a useful error message where none existed (#1988)
     Votes:
-      +1: sussman
+      +1: sussman, ghudson
 
   * r10608
     Fix issue 1674: "svnadmin load" crashes on contentful rev 0.
     Justification:
       Trivial fix. Never crash.
     Votes:
-      +1: maxb
+      +1: maxb, ghudson
 
