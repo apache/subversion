@@ -1139,7 +1139,7 @@ svn_wc_revert (const char *path,
   enum svn_node_kind kind;
   const char *p_dir = NULL, *bname = NULL;
   svn_wc_entry_t *entry;
-  svn_boolean_t wc_root, reverted = FALSE;
+  svn_boolean_t wc_root = FALSE, reverted = FALSE;
   apr_uint32_t modify_flags = 0;
 
   /* Safeguard 1:  is this a versioned resource? */
@@ -1165,9 +1165,11 @@ svn_wc_revert (const char *path,
       (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL, pool,
        "Cannot revert '%s' -- unsupported node kind in working copy", path);
 
-  /* Determine if PATH is a WC root.  If PATH is a file, it should
-     definitely NOT be a WC root. */
-  SVN_ERR (svn_wc_is_wc_root (&wc_root, path, pool));
+  /* For directories, determine if PATH is a WC root so that we can
+     tell if it is safe to split PATH into a parent directory and
+     basename.  For files, we always do this split.  */
+  if (kind == svn_node_dir)
+    SVN_ERR (svn_wc_is_wc_root (&wc_root, path, pool));
   if (! wc_root)
     {
       /* Split the base_name from the parent path. */
@@ -1304,7 +1306,7 @@ svn_wc_revert (const char *path,
                     svn_wc_notify_state_unknown,
                     svn_wc_notify_state_unknown,
                     SVN_INVALID_REVNUM);
-
+ 
   /* Finally, recurse if requested. */
   if (recursive && (entry->kind == svn_node_dir))
     {
