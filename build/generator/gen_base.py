@@ -136,11 +136,8 @@ class GeneratorBase:
       if isinstance(target, TargetLinked):
         for lib in self._find_libs(parser.get(name, 'libs')):
           self.graph.add(DT_LINK, name, lib)
-        try:
-          for nonlib in self._find_libs(parser.get(name, 'nonlibs')):
-               self.graph.add(DT_LINK, name, nonlib)
-        except:
-          pass
+        for nonlib in self._find_libs(parser.get(name, 'nonlibs')):
+          self.graph.add(DT_LINK, name, nonlib)
          
 
     # collect various files
@@ -598,6 +595,7 @@ class GenError(Exception):
 _cfg_defaults = {
   'sources' : '',
   'libs' : '',
+  'nonlibs' : '',
   'manpages' : '',
   'custom' : '',
   'install' : '',
