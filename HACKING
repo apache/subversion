@@ -25,6 +25,7 @@ TABLE OF CONTENTS
    * Debugging the server
    * Writing log entries
    * Patch submission guidelines
+   * Commit access
    * The Configuration/Build System Under Unix
    * How to create a distribution tarball
 
