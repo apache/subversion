@@ -37,6 +37,7 @@
 
 #include "fs.h"
 #include "err.h"
+#include "tree.h"
 #include "dag.h"
 #include "revs-txns.h"
 #include "key-gen.h"
@@ -56,6 +57,16 @@ I didn't keep track of pool lifetimes at all in this code.  There
 are likely some errors because of that.
    
 */
+
+/* The vtable associated with an open transaction object. */
+static txn_vtable_t txn_vtable = {
+  svn_fs_fs__commit_txn,
+  svn_fs_fs__abort_txn,
+  svn_fs_fs__txn_prop,
+  svn_fs_fs__txn_proplist,
+  svn_fs_fs__change_txn_prop,
+  svn_fs_fs__txn_root
+};
 
 /* Read a text representation of an apr_hash from STREAM into the hash
    object HASH.  Allocations are from POOL.  This is copied directly
@@ -2220,6 +2231,9 @@ svn_fs_fs__create_txn (svn_fs_txn_t **txn_p,
 
   /* Get the txn_id. */
   svn_path_split (txn_tmpfile, NULL, &txn->id, pool);
+
+  txn->vtable = &txn_vtable;
+  txn->fsap_data = NULL;
   *txn_p = txn;
   
   /* Create a new root node for this transaction. */
@@ -3865,6 +3879,8 @@ svn_fs_fs__open_txn (svn_fs_txn_t **txn_p,
 
   txn->base_rev = local_txn->revision;
 
+  txn->vtable = &txn_vtable;
+  txn->fsap_data = NULL;
   *txn_p = txn;
 
   return SVN_NO_ERROR;

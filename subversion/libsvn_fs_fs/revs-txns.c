@@ -162,16 +162,6 @@ svn_fs_fs__txn_prop (svn_string_t **value_p,
   return SVN_NO_ERROR;
 }
 
-/* The vtable associated with an open transaction object. */
-static txn_vtable_t txn_vtable = {
-  svn_fs_fs__commit_txn,
-  svn_fs_fs__abort_txn,
-  svn_fs_fs__txn_prop,
-  svn_fs_fs__txn_proplist,
-  svn_fs_fs__change_txn_prop,
-  svn_fs_fs__txn_root
-};
-
 /* Note:  it is acceptable for this function to call back into
    public FS API interfaces because it does not itself use trails.  */
 svn_error_t *
@@ -186,9 +176,6 @@ svn_fs_fs__begin_txn (svn_fs_txn_t **txn_p,
 
   SVN_ERR (svn_fs_fs__create_txn (txn_p, fs, rev, pool));
 
-  (*txn_p)->vtable = &txn_vtable;
-  (*txn_p)->fsap_data = NULL;
-  
   /* Put a datestamp on the newly created txn, so we always know
      exactly how old it is.  (This will help sysadmins identify
      long-abandoned txns that may need to be manually removed.)  When
