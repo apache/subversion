@@ -53,7 +53,8 @@
 #include "svn_types.h"
 #include "apr_pools.h"
 
-
+/*
+ */
 typedef struct svn_delta_digger_t
 {
   apr_pool_t *pool;
@@ -78,3 +79,8 @@ typedef struct svn_delta_digger_t
 
 
 
+/* 
+ * local variables:
+ * eval: (load-file "../svn-dev.el")
+ * end:
+ */
