@@ -93,6 +93,12 @@ commit_trail (trail_t *trail,
   SVN_ERR (DB_WRAP (fs, "committing Berkeley DB transaction",
                     txn_commit (trail->db_txn, 0)));
 
+  /* Do a checkpoint here, if enough has gone on.
+     The checkpoint parameters below are pretty arbitrary.  Perhaps
+     there should be an svn_fs_berkeley_mumble function to set them.  */
+  SVN_ERR (DB_WRAP (fs, "checkpointing after Berkeley DB transaction",
+                    txn_checkpoint (fs->env, 1024, 5, 0)));
+
   /* We don't destroy the pool; we assume it contains stuff which will
      be useful beyond the transaction.  */
 
