@@ -210,8 +210,9 @@ svn_auth_next_credentials (void **credentials,
       provider = APR_ARRAY_IDX(table->providers,
                                state->provider_idx,
                                provider_t *);
-      SVN_ERR (provider->vtable->next_credentials 
-               (&creds, state->provider_iter_baton, pool));
+      if (provider->vtable->next_credentials)
+        SVN_ERR (provider->vtable->next_credentials 
+                 (&creds, state->provider_iter_baton, pool));
 
       if (creds != NULL)
         break;
@@ -245,8 +246,10 @@ svn_auth_save_credentials (const char *cred_kind,
   for (i = 0; i < table->providers->nelts; i++)
     {
       provider = APR_ARRAY_IDX(table->providers, i, provider_t *);
-      SVN_ERR (provider->vtable->save_credentials 
-               (&save_succeeded, credentials, provider->provider_baton, pool));
+      if (provider->vtable->save_credentials)
+        SVN_ERR (provider->vtable->save_credentials 
+                 (&save_succeeded, credentials,
+                  provider->provider_baton, pool));
 
       if (save_succeeded)
         break;
