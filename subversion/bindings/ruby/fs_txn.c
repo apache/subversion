@@ -121,9 +121,8 @@ abort_txn (VALUE self)
 static VALUE
 txn_prop (VALUE self, VALUE aPropname)
 {
-  svn_stringbuf_t *value;
+  svn_string_t *value;
   svn_ruby_fs_txn_t *txn;
-  const svn_string_t *propname;
   apr_pool_t *pool;
   svn_error_t *err;
   VALUE obj;
@@ -134,9 +133,8 @@ txn_prop (VALUE self, VALUE aPropname)
 
   Check_Type (aPropname, T_STRING);
   pool = svn_pool_create (txn->pool);
-  propname = svn_string_create (StringValuePtr (aPropname), pool);
 
-  err = svn_fs_txn_prop (&value, txn->txn, propname, pool);
+  err = svn_fs_txn_prop (&value, txn->txn, StringValuePtr (aPropname), pool);
   if (err)
     {
       apr_pool_destroy (pool);
@@ -182,7 +180,7 @@ static VALUE
 change_txn_prop (VALUE self, VALUE aName, VALUE aValue)
 {
   svn_ruby_fs_txn_t *txn;
-  const svn_string_t *name, *value;
+  const svn_string_t *value;
   apr_pool_t *pool;
   svn_error_t *err;
 
@@ -195,13 +193,12 @@ change_txn_prop (VALUE self, VALUE aName, VALUE aValue)
     Check_Type (aValue, T_STRING);
 
   pool = svn_pool_create (txn->pool);
-  name = svn_string_create (StringValuePtr (aName), pool);
   if (aValue == Qnil)
     value = NULL;
   else
     value = svn_string_create (StringValuePtr (aValue), pool);
 
-  err = svn_fs_change_txn_prop (txn->txn, name, value, pool);
+  err = svn_fs_change_txn_prop (txn->txn, StringValuePtr (aName), value, pool);
   apr_pool_destroy (pool);
   if (err)
     svn_ruby_raise (err);
