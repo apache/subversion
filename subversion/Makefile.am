@@ -7,6 +7,7 @@ SUBDIRS = libsvn_subr                \
           libsvn_delta               \
           libsvn_wc                  \
           libsvn_ra_dav              \
+          libsvn_ra_local            \
           libsvn_client              \
           client                     \
           @LIBSVN_FS@                \

@@ -23,12 +23,11 @@
 
 /* (This is a routine of type svn_fs_commit_hook_t) */
 static svn_error_t *
-cleanup_commit (svn_revnum_t *new_revision,
-                void *baton)
+cleanup_commit (svn_revnum_t new_revision, void *baton)
 {
-  /* Recover our hook baton */
-  svn_ra_local__commit_hook_baton_t *hook_baton =
-    (svn_ra_local__commit_hook_baton_t *) baton;
+  /* Recover our hook baton: */
+  /*  svn_ra_local__commit_hook_baton_t *hook_baton =
+      (svn_ra_local__commit_hook_baton_t *) baton; */
 
   /* Call hook_baton->close_func() on each committed target! */
   /* TODO */
@@ -89,7 +88,6 @@ open (void **session_baton,
 {
   svn_error_t *err;
   svn_ra_local__session_baton_t *baton;
-  svn_string_t *repos_path, *fs_path;
 
   /* When we close the session_baton later, we don't necessarily want
      to kill the main caller's pool; so let's subpool and work from
@@ -128,15 +126,18 @@ static svn_error_t *
 close (void *session_baton)
 {
   svn_error_t *err;
+  
+  svn_ra_local__session_baton_t *baton = 
+    (svn_ra_local__session_baton_t *) session_baton;
 
   /* Close the repository filesystem */
-  err = svn_fs_close_fs (session_baton->fs);
+  err = svn_fs_close_fs (baton->fs);
   if (err) return err;
 
   /* When we free the session's pool, the entire session and
      everything inside it is freed, which is good.  However, the
      original pool passed to open() is NOT freed, which is also good. */
-  apr_pool_destroy (session_baton->pool);
+  apr_pool_destroy (baton->pool);
 
   return SVN_NO_ERROR;
 }
@@ -150,7 +151,10 @@ get_latest_revnum (void *session_baton,
 {
   svn_error_t *err;
 
-  err = svn_fs_youngest_rev (session_baton->fs, latest_revnum);
+  svn_ra_local__session_baton_t *baton = 
+    (svn_ra_local__session_baton_t *) session_baton;
+
+  err = svn_fs_youngest_rev (baton->fs, latest_revnum);
   if (err) return err;
 
   return SVN_NO_ERROR;
@@ -170,14 +174,18 @@ get_commit_editor (void *session_baton,
                    void *close_baton)
 {
   svn_error_t *err;
-  svn_delta_edit_fns_t *commit_editor, *tracking_editor, *composed_editor;
+  svn_delta_edit_fns_t *commit_editor, *tracking_editor;
+  const svn_delta_edit_fns_t *composed_editor;
   void *commit_editor_baton, *tracking_editor_baton, *composed_editor_baton;
+
+  svn_ra_local__session_baton_t *sess_baton = 
+    (svn_ra_local__session_baton_t *) session_baton;
 
   /* Construct a Magick commit-hook baton */
   svn_ra_local__commit_hook_baton_t *hook_baton
-    = apr_pcalloc (session_baton->pool, sizeof(*hook_baton));
+    = apr_pcalloc (sess_baton->pool, sizeof(*hook_baton));
 
-  hook_baton->pool = session_baton->pool;
+  hook_baton->pool = sess_baton->pool;
   hook_baton->close_func = close_func;
   hook_baton->set_func = set_func;
   hook_baton->close_baton = close_baton;
@@ -187,35 +195,40 @@ get_commit_editor (void *session_baton,
   /* Get the filesystem commit-editor */     
   err = svn_fs_get_editor (&commit_editor,
                            &commit_editor_baton,
-                           session_baton->fs,
+                           sess_baton->fs,
                            base_revision,
                            log_msg,
-                           cleanup_commit, /* our post-commit hook */
+                           /* our post-commit hook: */
+                           cleanup_commit, 
                            hook_baton,
-                           session_baton->pool);
+                           sess_baton->pool);
   if (err) return err;
 
   /* Get the commit `tracking' editor, telling it to store committed
-     targets in our hook_baton */
+     targets inside our hook_baton */
   err = svn_ra_local__get_commit_track_editor (&tracking_editor,
                                                &tracking_editor_baton,
-                                               session_baton->pool,
+                                               sess_baton->pool,
                                                hook_baton);
   if (err) return err;
 
-  /* Compose the two editors */
+  /* TEMPORARY:  shut up compile warnings until we're able to pass
+     non-bogus values to the composition function...
+
   err = svn_delta_compose_editors (&composed_editor,
                                    &composed_editor_baton,
                                    commit_editor,
                                    commit_editor_baton,
                                    tracking_editor,
                                    tracking_editor_baton,
-                                   session_baton->pool);
+                                   sess_baton->pool);
   if (err) return err;
+
+  */
 
   /* Give the magic composed-editor thingie back to the client */
   *editor = composed_editor;
-  *edit_baton = composed_edit_baton;
+  *edit_baton = composed_editor_baton;
 
   return SVN_NO_ERROR;
 }
@@ -283,7 +296,10 @@ svn_ra_local_init (int abi_version,
                    apr_pool_t *pool,
                    const svn_ra_plugin_t **plugin)
 {
-  *plugin = ra_local_plugin;
+  svn_ra_plugin_t *p = apr_pcalloc (pool, sizeof (*p));
+  memcpy (p, &ra_local_plugin, sizeof (ra_local_plugin));
+
+  *plugin = p;
 
   /* are we ever going to care about abi_version? */
 
