@@ -5,9 +5,11 @@
     
     <para>A Subversion repository can be accessed simultaneously by
       clients running on the same machine on which the repository
-      resides.  But the typical Subversion setup involves a single
-      server machine being accessed from clients on computers all over
-      the office&mdash;or, perhaps, all over the world.</para>
+      resides using the <literal>file:///</literal> method.  But the
+      typical Subversion setup involves a single server machine being
+      accessed from clients on computers all over the office&mdash;or,
+      perhaps, all over the world.</para>
+
     
     <para>This section describes how to get your Subversion repository
       exposed outside its host machine for use by remote clients.  We
@@ -918,7 +920,7 @@ LoadModule dav_svn_module     modules/mod_dav_svn.so
 </screen>
 
       <para>Note that if <command>mod_dav</command> was compiled as a
-        shared object (instead of statically linked, directly to the
+        shared object (instead of statically linked directly to the
         <command>httpd</command> binary), you'll need a similar
         <literal>LoadModule</literal> statement for it, too.</para>
     
@@ -1087,11 +1089,12 @@ ServerName svn.example.com
     
         <screen>
 $ ### First time: use -c to create the file
-$ htpasswd -c /etc/svn-auth-file harry
+$ ### Use -m to use MD5 encryption of the password, which is more secure
+$ htpasswd -cm /etc/svn-auth-file harry
 New password: ***** 
 Re-type new password: *****
 Adding password for user harry
-$ htpasswd /etc/svn-auth-file sally
+$ htpasswd /etc/svn-auth-file -m sally
 New password: *******
 Re-type new password: *******
 Adding password for user sally
@@ -1123,7 +1126,7 @@ $
   SVNParentPath /usr/local/svn
   AuthType Basic
   AuthName "Subversion repository"
-  AuthUserFile /path/to/users/file
+  AuthUserFile /etc/svn-auth-file
 &lt;/Location&gt;
 </screen>
 
@@ -1692,7 +1695,7 @@ jane = r
           increased functionality or security in Subversion as well.
           Subversion communicates with Apache using Neon, which is a
           generic HTTP/WebDAV library with support for such mechanisms
-          as SSL (the secure socket layer, discussed earlier) and
+          as SSL (the Secure Socket Layer, discussed earlier) and
           Deflate compression (the same algorithm used by the
           <command>gzip</command> and <command>PKZIP</command>
           programs to <quote>shrink</quote> files into smaller chunks

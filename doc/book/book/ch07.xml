@@ -197,12 +197,12 @@
         attempt to create a default configuration area there.  You can
         create the keys you need using the <command>REGEDIT</command>
         program.  Alternatively, you can create a
-        <filename>.REG</filename> file, and then double-click on that
+        <filename>.reg</filename> file, and then double-click on that
         file from the Explorer shell, which will cause the data to be
         merged into your registry.</para>
 
       <example id="svn-ch-7-sect-1.2-ex-1">
-        <title>Sample Registration Entries (.REG) File.</title>
+        <title>Sample Registration Entries (.reg) File.</title>
 
         <programlisting>
 REGEDIT4
@@ -246,7 +246,7 @@ REGEDIT4
       </example>
 
       <para>The previous example shows the contents of a
-        <filename>.REG</filename> file which contains some of most
+        <filename>.reg</filename> file which contains some of most
         commonly used configuration options and their default values.
         Note the presence of both system-wide (for network
         proxy-related options) and per-user settings (editor programs
