@@ -36,6 +36,39 @@
 
 /*** Code. ***/
 
+/* Helper for log_message_receiver(). 
+ *
+ * Return the number of lines in MSG, allowing any kind of newline
+ * termination (CR, CRLF, or LFCR), even inconsistent.  The minimum
+ * number of lines in MSG is 1 -- even the empty string is considered
+ * to have one line, due to the way we print log messages.
+ */
+static int
+num_lines (const char *msg)
+{
+  int count = 1;
+  const char *p;
+
+  for (p = msg; *p; p++)
+    {
+      if (*p == '\n')
+        {
+          count++;
+          if (*(p + 1) == '\r')
+            p++;
+        }
+      else if (*p == '\r')
+        {
+          count++;
+          if (*(p + 1) == '\n')
+            p++;
+        }
+    }
+
+  return count;
+}
+
+
 /* This implements `svn_log_message_receiver_t'. */
 static svn_error_t *
 log_message_receiver (void *baton,
@@ -48,6 +81,9 @@ log_message_receiver (void *baton,
 {
   /* ### todo: we ignore changed_paths for now; the repository isn't
      calculating it anyway, currently. */
+
+  /* Number of lines in the msg. */
+  int lines;
 
   /* As much date as we ever want to see. */
   char dbuf[38];
@@ -78,8 +114,9 @@ log_message_receiver (void *baton,
   "------------------------------------------------------------------------\n"
 
   printf (SEP_STRING);
-  printf ("rev %lu: %s   %s  (size: %d bytes)\n\n",
-          rev, author, dbuf, strlen (msg));
+  lines = num_lines (msg);
+  printf ("rev %lu:  %s | %s | %d line%s\n\n",
+          rev, author, dbuf, lines, (lines > 1) ? "s" : "");
   printf ("%s\n", msg);
 
   if (last_call)

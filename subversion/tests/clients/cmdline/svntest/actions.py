@@ -53,6 +53,7 @@ def guarantee_greek_repository(path):
     output, errput = main.run_svn(None, 'import',
                                   '--username', 'foo',
                                   '--password', 'bar',
+                                  '-m', 'Log message for revision 1.',
                                   url, main.greek_dump_dir)
 
     # check for any errors from the import
