@@ -640,7 +640,7 @@ main (int argc, const char * const *argv)
   int opt_id;
   apr_getopt_t *os;  
   svn_cl__opt_state_t opt_state = { { 0 } };
-  svn_client_ctx_t ctx = { 0 };
+  svn_client_ctx_t *ctx;
   int received_opts[SVN_OPT_MAX_OPTIONS];
   int i, num_opts = 0;
   const svn_opt_subcommand_desc_t *subcommand = NULL;
@@ -1090,9 +1090,17 @@ main (int argc, const char * const *argv)
 
   /* Create a client context object. */
   command_baton.opt_state = &opt_state;
-  command_baton.ctx = &ctx;
+  if ((err = svn_client_create_context (&ctx, pool)))
+    {
+      svn_handle_error (err, stderr, FALSE);
+      svn_error_clear (err);
+      svn_pool_destroy (pool);
+      return EXIT_FAILURE;
+    }
+  command_baton.ctx = ctx;
 
-  if ((err = svn_config_get_config (&(ctx.config), opt_state.config_dir, pool)))
+  if ((err = svn_config_get_config (&(ctx->config),
+                                    opt_state.config_dir, pool)))
     {
       svn_handle_error (err, stderr, FALSE);
       svn_error_clear (err);
@@ -1100,7 +1108,7 @@ main (int argc, const char * const *argv)
       return EXIT_FAILURE;
     }
 
-  cfg = apr_hash_get (ctx.config, SVN_CONFIG_CATEGORY_CONFIG,
+  cfg = apr_hash_get (ctx->config, SVN_CONFIG_CATEGORY_CONFIG,
                       APR_HASH_KEY_STRING);
   
   /* Update the options in the config */
@@ -1130,8 +1138,8 @@ main (int argc, const char * const *argv)
     }
 
   /* Set the log message callback function.  Note that individual
-     subcommands will populate the ctx.log_msg_baton */
-  ctx.log_msg_func = svn_cl__get_log_message;
+     subcommands will populate the ctx->log_msg_baton */
+  ctx->log_msg_func = svn_cl__get_log_message;
 
   /* Authentication set-up. */
   {
@@ -1191,11 +1199,11 @@ main (int argc, const char * const *argv)
 
     /* Build an authentication baton to give to libsvn_client. */
     svn_auth_open (&ab, providers, pool);
-    ctx.auth_baton = ab;
+    ctx->auth_baton = ab;
 
     /* Set up our cancellation support. */
     apr_signal (SIGINT, sig_int);
-    ctx.cancel_func = svn_cl__check_cancel;
+    ctx->cancel_func = svn_cl__check_cancel;
 
     /* Place any default --username or --password credentials into the
        auth_baton's run-time parameter hash. */
