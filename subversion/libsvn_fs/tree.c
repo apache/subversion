@@ -943,26 +943,118 @@ svn_fs_make_file (svn_fs_root_t *root,
 }
 
 
-/* Helper for svn_fs_apply_textdelta, a local baton type to give to
-   window_consumer. */
-typedef struct consumer_baton_t
+/* --- Machinery for svn_fs_apply_textdelta() ---  */
+
+
+/* Local baton type for all the helper functions below. */
+typedef struct txdelta_baton_t
 {
-  /* Data about a file being changed. */
+  /* This is the custom-built window consumer given to us by the delta
+     library;  it uniquely knows how to read data from our designated
+     "source" stream, interpret the window, and write data to our
+     designated "target" stream (in this case, our repos file.) */
+  svn_txdelta_window_handler_t *interpreter;
+  void *interpreter_baton;
 
-} consumer_baton_t;
+  /* This string holds the entire "growing" target in memory.  Yes,
+     this is bad!  Someday we'll tell berkeley db to operate directly
+     on substrings of table values -- then each txdelta window can be
+     applied -directly- to disk as a db transaction. */
+  svn_string_t *target_string;
+
+  /* Information about the file into which we will eventually dump
+     target_string:  */
+
+  /* The original file info */
+  svn_fs_root_t *root;
+  const char *path;
+  
+  /* Derived from the file info */
+  parent_path_t *parent_path;
+  svn_stream_t *source_stream;
+
+  /* Pool used by db txns */
+  apr_pool_t *pool;
+
+} txdelta_baton_t;
 
 
-/* Helper for svn_fs_apply_textdelta, a func of type
-   svn_txdelta_window_handler_t. */
+
+/* Helper function of generic type `svn_write_fn_t'.  Implements a
+   writable stream which appends to an svn_string_t. */
 static svn_error_t *
-window_consumer (svn_txdelta_window_t *window, void *baton)
+write_to_string (void *baton, const char *data, apr_size_t *len)
 {
-  consumer_baton_t *cb = (consumer_baton_t *) baton;
-
-  /* Apply the window to the file represented in cb. */
+  txdelta_baton_t *tb = (txdelta_baton_t *) baton;
+  
+  svn_string_appendbytes (tb->target_string, data, *len);
 
   return SVN_NO_ERROR;
 }
+
+
+/* Helper function: takes a txdelta_baton_t and converts its file
+   information into a readable generic stream. */
+static svn_error_t *
+txn_body_get_source_stream (void *baton, trail_t *trail)
+{
+  txdelta_baton_t *tb = (txdelta_baton_t *) baton;
+
+  /* Construct a path of dag_node_t's from path up to root. */
+  SVN_ERR (open_path (&(tb->parent_path),
+                      tb->root,
+                      tb->path,
+                      0,          /* return err if path doesn't exist */
+                      trail));
+  
+  /* If we get here without error, then the path to the file must
+     exist.  The file's dag_node_t is the very first one in
+     tb->parent_path;  we now convert it into a generic readable
+     stream. */
+  SVN_ERR (svn_fs__dag_get_contents (&(tb->source_stream),
+                                     tb->parent_path->node,
+                                     trail));
+  return SVN_NO_ERROR;
+}
+
+
+/* Helper function:  flush baton->target_string to disk as new file
+   contents. */
+static svn_error_t *
+txn_body_write_target_string (void *baton, trail_t *trail)
+{
+  txdelta_baton_t *tb = (txdelta_baton_t *) baton;
+
+  SVN_ERR (svn_fs__dag_set_contents (tb->parent_path->node,
+                                     tb->target_string,
+                                     trail));
+
+  return SVN_NO_ERROR;
+}
+
+
+/* The main window handler returned by svn_fs_apply_textdelta. */
+static svn_error_t *
+window_consumer (svn_txdelta_window_t *window, void *baton)
+{
+  txdelta_baton_t *tb = (txdelta_baton_t *) baton;
+
+  /* Send the window right through to the custom window interpreter.
+     In theory, the interpreter will then write more data to
+     cb->target_string. */
+  SVN_ERR (tb->interpreter (window, tb->interpreter_baton));
+
+  /* Is the window NULL?  If so, we're done;  time to dump our target
+     string to disk.  */
+  if (! window)
+    SVN_ERR (svn_fs__retry_txn (svn_fs_root_fs (tb->root),
+                                txn_body_write_target_string, tb,
+                                tb->pool));
+  
+  return SVN_NO_ERROR;
+}
+
+
 
 
 svn_error_t *
@@ -972,14 +1064,36 @@ svn_fs_apply_textdelta (svn_txdelta_window_handler_t **contents_p,
                         const char *path,
                         apr_pool_t *pool)
 {
-  consumer_baton_t *baton = apr_pcalloc (pool, sizeof(*baton));
+  svn_stream_t *target_stream;
+  txdelta_baton_t *tb = apr_pcalloc (pool, sizeof(*tb));
+  tb->root = root;
+  tb->path = path;
+  tb->pool = pool;
+ 
+  /* Make a readable "source" stream out of the current contents of
+     ROOT/PATH; obviously, this must done in the context of a
+     db_txn.  The stream is returned in tb->source_stream. */
+  SVN_ERR (svn_fs__retry_txn (svn_fs_root_fs (root),
+                              txn_body_get_source_stream, tb, pool));
 
-  /* Fill in baton with relevant data about root/path */
+  /* Make a writable "target" stream which writes data to
+     tb->target_string. */
+  target_stream = svn_stream_create (tb, pool);
+  svn_stream_set_write (target_stream, write_to_string);
 
+  /* Finally, create a custom window handler that uses our two streams. */
+  svn_txdelta_apply (tb->source_stream,
+                     target_stream,
+                     pool,
+                     &(tb->interpreter),
+                     &(tb->interpreter_baton));
+  
   *contents_p = window_consumer;
-  *contents_baton_p = baton;
+  *contents_baton_p = tb;
   return SVN_NO_ERROR;
 }
+
+/* --- End machinery for svn_fs_apply_textdelta() ---  */
 
 
 
