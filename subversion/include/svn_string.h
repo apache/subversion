@@ -14,16 +14,18 @@
  */
 
 
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
-
 #ifndef SVN_STRING_H
 #define SVN_STRING_H
 
+#include <apr.h>
 #include <apr_pools.h>       /* APR memory pools for everyone. */
 #include <apr_strings.h>
+
 #include "svn_types.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
 
 
@@ -53,20 +55,14 @@ svn_string_t * svn_string_ncreate (const char *bytes, const apr_size_t size,
 svn_string_t *svn_string_createf (apr_pool_t *pool,
                                   const char *fmt,
                                   ...)
-#ifdef __GNUC__
-    __attribute__ ((format (printf, 2, 3)))
-#endif /* __GNUC__ */
-;
+       __attribute__ ((format (printf, 2, 3)));
 
 /* Create a new bytestring by formatting CSTRING (null-terminated)
    from a va_list (see svn_string_createf). */
 svn_string_t *svn_string_createv (apr_pool_t *pool,
                                   const char *fmt,
                                   va_list ap)
-#ifdef __GNUC__
-    __attribute__ ((format (printf, 2, 0)))
-#endif /* __GNUC__ */
-;
+       __attribute__ ((format (printf, 2, 0)));
 
 /* Make sure that the string STR has at least MINIMUM_SIZE bytes of
    space available in the memory block.  (MINIMUM_SIZE should include
@@ -121,12 +117,12 @@ apr_size_t svn_string_find_char_backward (const svn_string_t *str, char ch);
 /* Chop STR back to CHAR, inclusive.  Returns number of chars
    chopped, so if no such CHAR in STR, chops nothing and returns 0. */
 apr_size_t svn_string_chop_back_to_char (svn_string_t *str, char ch);
-#endif  /* SVN_STRING_H */
 
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
 
+#endif  /* SVN_STRING_H */
 
 /* ----------------------------------------------------------------
  * local variables:
