@@ -64,7 +64,8 @@ class Generator(gen_win.WinGeneratorBase):
 
     sources = [ ]
     for src in self.get_win_sources(target_ob):
-      rsrc = string.replace(string.replace(src, target_ob.path + os.sep, ''),
+      rsrc = string.replace(string.replace(str(src),
+                                           target_ob.path + os.sep, ''),
                             os.sep, '\\')
       sources.append(rsrc)
 
