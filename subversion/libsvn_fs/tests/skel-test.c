@@ -46,6 +46,7 @@
  * individuals on behalf of Collab.Net.
  */
 
+#include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 #include "apr.h"
