@@ -107,7 +107,7 @@ typedef struct svn_directory_t
 /* a node is either a file or directory, a distinguished union  */
 typedef struct svn_node_t
 {
-  enum node_kind {file, directory} kind;  /* am I a file or directory? */
+  enum node_kind {svn_file_kind, svn_directory_kind} kind;
   union node_union 
   {
     svn_file_t *file;
@@ -139,24 +139,24 @@ typedef struct svn_ver_t
 
 typedef enum 
 {
-  latest,
-  get_ver_prop,
-  get_ver_proplist,
-  get_ver_propnames,
-  read,
-  get_node_prop,
-  get_dirent_prop,
-  get_node_proplist,
-  get_dirent_proplist,
-  get_node_propnames,
-  get_dirent_propnames,
-  submit,
-  write,
-  abandon,
-  get_delta,
-  get_diff,
-  status,
-  update
+  svn_action_latest,
+  svn_action_get_ver_prop,
+  svn_action_get_ver_proplist,
+  svn_action_get_ver_propnames,
+  svn_action_read,
+  svn_action_get_node_prop,
+  svn_action_get_dirent_prop,
+  svn_action_get_node_proplist,
+  svn_action_get_dirent_proplist,
+  svn_action_get_node_propnames,
+  svn_action_get_dirent_propnames,
+  svn_action_submit,
+  svn_action_write,
+  svn_action_abandon,
+  svn_action_get_delta,
+  svn_action_get_diff,
+  svn_action_status,
+  svn_action_update
 } svn_svr_action_t;
 
 
@@ -234,7 +234,7 @@ typedef unsigned long svn_token_t;
  * use.  The callee may continue to append svn_change_t objects to the
  * list even while the caller is using the ones already there.  The
  * callee signals that it is done by adding a change of the special
- * type `done' (see the enumeration `svn_change_action_t' below).
+ * type `done' (see the enumeration `svn_delta_action_t' below).
  *
  * Since the caller can tell by inspection whether or not it's done
  * yet, the callee could tack on new change objects in an unscheduled
@@ -247,12 +247,14 @@ typedef size_t svn_version_t;   /* Would they ever need to be signed? */
 typedef int pdelta_t;           /* todo: for now */
 typedef int vdelta_t;           /* todo: for now */
 
+/* It would have been more consistent to name this `svn_change_action_t', 
+   but the ambiguity is too great -- is "change" a noun or a verb? */
 typedef enum { 
-  action_delete = 1,      /* Delete the file or directory. */
-  action_new,             /* Create a new file or directory. */
-  action_replace,         /* Commit to an existing file or directory. */
-  changes_done            /* End of change chain -- no more action. */
-} svn_change_action_t;
+  svn_delta_action_delete = 1,  /* Delete the file or directory. */
+  svn_delta_action_new,         /* Create a new file or directory. */
+  svn_delta_action_replace,     /* Commit to an existing file or directory. */
+  changes_done                  /* End of change chain -- no more action. */
+} svn_delta_action_t;
 
 typedef enum { 
   file_type = 1,
@@ -294,7 +296,7 @@ typedef struct svn_change_content_t
 /* A tree delta is a list of changes.  This is a change. */
 typedef struct svn_change_t
 {
-  svn_change_action_t action;     /* One of the enumerated values. */
+  svn_delta_action_t action;      /* One of the enumerated values. */
   svn_string_t *new_name;         /* Only for `new' and `replace'. */
   svn_change_content_t *content;
   struct svn_change_t *next;      /* Next one in the list, or NULL. */
