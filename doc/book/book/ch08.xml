@@ -1549,7 +1549,7 @@ Committed revision 19.
           <itemizedlist>
             <listitem><para>Path</para></listitem>
             <listitem><para>Name</para></listitem>
-            <listitem><para>Url</para></listitem>
+            <listitem><para>URL</para></listitem>
             <listitem><para>Revision</para></listitem>
             <listitem><para>Node Kind</para></listitem>
             <listitem><para>Last Changed Author</para></listitem>
@@ -1596,7 +1596,7 @@ Committed revision 19.
 $ svn info foo.c
 Path: foo.c
 Name: foo.c
-Url: http://svn.red-bean.com/repos/test/foo.c
+URL: http://svn.red-bean.com/repos/test/foo.c
 Revision: 4417
 Node Kind: file
 Schedule: normal
@@ -1613,7 +1613,7 @@ Checksum: /3L38YwzhT93BWvgpdF6Zw==
           <screen>
 $ svn info vendors
 Path: trunk
-Url: http://svn.red-bean.com/repos/test/vendors
+URL: http://svn.red-bean.com/repos/test/vendors
 Revision: 19
 Node Kind: directory
 Schedule: normal

@@ -162,7 +162,7 @@ $ svn cleanup working-copy
 
         <sect3 id="svn-ap-c-sect-1.2.3">
           <title>I'm Getting Errors Finding or Opening a Repository,
-            but I Know My Repository Url is Correct.</title>
+            but I Know My Repository URL is Correct.</title>
 
           <para>See <xref linkend="svn-ap-c-sect-1.2.1"/>.</para>
 
@@ -298,7 +298,7 @@ The specified activity does not exist.
         <sect3 id="svn-ap-c-sect-1.3.1">
           <title>I Just Built the Distribution Binary, and When I Try
             to Check Out Subversion, I Get an Error About an
-            <quote>Unrecognized Url Scheme</quote></title>
+            <quote>Unrecognized URL Scheme</quote></title>
 
 
           <para>Subversion uses a plugin system to allow access to

@@ -507,7 +507,7 @@ svn_client_propget (apr_hash_t **props,
             {
               return svn_error_createf
                 (SVN_ERR_ILLEGAL_TARGET, NULL,
-                 "\"%s\" is a url, but revision kind requires a working copy",
+                 "\"%s\" is a URL, but revision kind requires a working copy",
                  target);
             }
           else  /* target is a working copy path */
@@ -889,7 +889,7 @@ svn_client_proplist (apr_array_header_t **props,
             {
               return svn_error_createf
                 (SVN_ERR_ILLEGAL_TARGET, NULL,
-                 "\"%s\" is a url, but revision kind requires a working copy",
+                 "\"%s\" is a URL, but revision kind requires a working copy",
                  target);
             }
           else  /* it's a working copy path */

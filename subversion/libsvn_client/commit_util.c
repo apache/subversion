@@ -340,7 +340,7 @@ harvest_committables (apr_hash_t *committables,
           else
             return svn_error_createf 
               (SVN_ERR_BAD_URL, NULL,
-               "Commit item '%s' has copy flag but no copyfrom url\n"
+               "Commit item '%s' has copy flag but no copyfrom URL\n"
                "See issue #830", path);
         }
     }
@@ -800,7 +800,7 @@ svn_client__condense_commit_items (const char **base_url,
 
 #ifdef SVN_CLIENT_COMMIT_DEBUG
   /* ### TEMPORARY CODE ### */
-  fprintf (stderr, "COMMITTABLES: (base url=%s)\n", *base_url);
+  fprintf (stderr, "COMMITTABLES: (base URL=%s)\n", *base_url);
   fprintf (stderr, "   FLAGS     REV  REL-URL (COPY-URL)\n");
   for (i = 0; i < ci->nelts; i++)
     {
@@ -895,7 +895,7 @@ do_item_commit (void **dir_baton,
       if (! copyfrom_url)
         return svn_error_createf 
           (SVN_ERR_BAD_URL, NULL,
-           "Commit item '%s' has copy flag but no copyfrom url", path);
+           "Commit item '%s' has copy flag but no copyfrom URL", path);
       if (! SVN_IS_VALID_REVNUM (item->revision))
         return svn_error_createf 
           (SVN_ERR_CLIENT_BAD_REVISION, NULL,
@@ -1317,7 +1317,7 @@ open_root (void *edit_baton,
 {
   struct edit_baton *eb = edit_baton;
   struct item_baton *new_baton = make_baton (eb, NULL, eb->path, dir_pool);
-  fprintf (stderr, "TEST EDIT STARTED (base url=%s)\n", eb->path);
+  fprintf (stderr, "TEST EDIT STARTED (base URL=%s)\n", eb->path);
   *root_baton = new_baton;
   return (*eb->real_editor->open_root) (eb->real_eb,
                                         base_revision,

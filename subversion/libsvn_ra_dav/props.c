@@ -577,7 +577,7 @@ svn_error_t * svn_ra_dav__get_props_resource(svn_ra_dav_resource_t **rsrc,
     {
       /* ### hmmm, should have been in there... */
       return svn_error_createf(APR_EGENERAL, NULL,
-                               "failed to find label \"%s\" for url \"%s\"",
+                               "failed to find label \"%s\" for URL \"%s\"",
                                label ? label : "NULL", url_path);
     }
 

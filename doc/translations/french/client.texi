@@ -1577,7 +1577,7 @@ informations tracées :
 $ svn info client.texi
 Path: client.texi
 Name: client.texi
-Url: http://svn.collab.net/repos/svn/trunk/doc/handbook/client.texi
+URL: http://svn.collab.net/repos/svn/trunk/doc/handbook/client.texi
 Revision: 2548
 Node Kind: file
 Schedule: normal
