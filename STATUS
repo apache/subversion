@@ -98,10 +98,4 @@ Candidate changes:
 
 Approved changes (further review is welcome, but not required):
 
-  * r12172
-    Create FSFS write-lock file when repository is created.
-    Justification:
-      Fixed an edge-case umask dependency for FSFS repositories.
-    Votes:
-      +1: ghudson, epg, cmpilato
-
+  (none)
