@@ -1,5 +1,6 @@
 %define apache_version 2.0.48-0.1
 %define neon_version 0.24.4
+%define swig_version 1.3.19
 %define apache_dir /usr/local/apache2
 # If you don't have 360+ MB of free disk space or don't want to run checks then
 # set make_*_check to 0.
@@ -7,6 +8,8 @@
 %define make_ra_svn_check 1
 %define make_ra_dav_check 1
 %define make_cvs2svn_check 1
+# If you want the perl bindings, you'll have to install perl-5.8.0 or higher.
+%define perl_bindings 0
 Summary: A Concurrent Versioning system similar to but better than CVS.
 Name: subversion
 Version: @VERSION@
@@ -34,10 +37,13 @@ BuildPreReq: libtool >= 1.4.2-12
 BuildPreReq: libxslt >= 1.0.27
 BuildPreReq: neon-devel >= %{neon_version}
 BuildPreReq: openssl-devel
+%if %{perl_bindings}
+BuildPreReq: perl >= 5.8.0
+%endif
 BuildPreReq: python2
 BuildPreReq: python2-devel
-BuildPreReq: swig >= 1.3.19
-BuildPreReq: swig-runtime >= 1.3.19
+BuildPreReq: swig >= %{swig_version}
+BuildPreReq: swig-runtime >= %{swig_version}
 BuildPreReq: zlib-devel
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}
 Prefix: /usr
@@ -77,10 +83,20 @@ BuildPreReq: apache-devel >= %{apache_version}
 The subversion-server package adds the Subversion server Apache module to
 the Apache directories and configuration.
 
+%if %{perl_bindings}
+%package perl
+Group: Utilities/System
+Summary: Allows Perl scripts to directly use Subversion repositories.
+Requires: swig-runtime >= %{swig_version}
+Requires: perl
+%description perl
+Provides Perl (SWIG) support for Subversion.
+%endif
+
 %package python
 Group: Utilities/System
 Summary: Allows Python scripts to directly use Subversion repositories.
-Requires: swig-runtime >= 1.3.19
+Requires: swig-runtime >= %{swig_version}
 Requires: python2
 Obsoletes: subversion-cvs2svn
 %description python
@@ -93,8 +109,13 @@ Summary: Tools for Subversion
 Tools for Subversion.
 
 %changelog
+* Sun Jan 18 2004 David Summers <david@summersoft.fay.ar.us> 0.36.0-8372
+- Added subversion-perl package to support Perl (SWIG) bindings.
+  *** Note: Made it conditional as RedHat 7.x doesn't have the
+            required perl-5.8.0.
+
 * Sat Jan 17 2004 David Summers <david@summersoft.fay.ar.us> 0.36.0-8362
-- Now requires swig-1.3.19.
+- Now requires swig-1.3.19 so we can build the upcoming perl bindings.
 
 * Sat Dec 27 2003 David Summers <david@summersoft.fay.ar.us> 0.35.1-8104
 - Patch by Ben Reser <ben@reser.org> to get documentation to build again.
@@ -339,6 +360,15 @@ make
 
 make swig-py
 
+%if %{perl_bindings}
+# Build PERL bindings
+make swig-pl-lib
+(cd subversion/bindings/swig/perl
+env APR_CONFIG=/usr/bin/apr-config perl Makefile.PL INSTALLDIRS=vendor PREFIX=$RPM_BUILD_ROOT/%{_prefix}
+make all test
+)
+%endif
+
 %if %{make_ra_local_check}
 echo "*** Running regression tests on RA_LOCAL (FILE SYSTEM) layer ***"
 make check
@@ -396,6 +426,14 @@ cp -r tools/cvs2svn/rcsparse $RPM_BUILD_ROOT/usr/lib/python2.2/site-packages/rcs
 mv $RPM_BUILD_ROOT/usr/lib/svn-python/* $RPM_BUILD_ROOT/usr/lib/python2.2/site-packages
 rmdir $RPM_BUILD_ROOT/usr/lib/svn-python
 cp $RPM_BUILD_DIR/subversion-%{version}/tools/cvs2svn/cvs2svn.1 $RPM_BUILD_ROOT/usr/share/man/man1
+
+%if %{perl_bindings}
+# Install PERL SWIG bindings.
+make install-swig-pl-lib DESTDIR=$RPM_BUILD_ROOT
+(cd subversion/bindings/swig/perl
+make PREFIX=$RPM_BUILD_ROOT/%{_prefix} install
+)
+%endif
 
 # Copy svnadmin.static to destination
 cp svnadmin.static $RPM_BUILD_ROOT/usr/bin/svnadmin-%{version}-%{release}.static
@@ -506,6 +544,15 @@ rm -rf $RPM_BUILD_ROOT
 %{apache_dir}/modules/mod_dav_svn.so
 %{apache_dir}/modules/mod_authz_svn.la
 %{apache_dir}/modules/mod_authz_svn.so
+
+%if %{perl_bindings}
+%files perl
+%defattr(-,root,root)
+/usr/lib/perl5/vendor_perl/5.8.0/i386-linux-thread-multi/SVN
+/usr/lib/perl5/vendor_perl/5.8.0/i386-linux-thread-multi/auto/SVN
+/usr/lib/libsvn_swig_perl*so*
+/usr/share/man/man3/SVN*
+%endif
 
 %files python
 %defattr(-,root,root)
