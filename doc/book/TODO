@@ -47,10 +47,6 @@ To be fixed by fitz:
 
 To be fixed by sussman:
 
-  - svn merge --dry-run   (different than 'svn diff')
-
-  - ch06: document the log-encoding and use-commit-times variables in
-    the [miscellany] section
 
   - appA should mention no $Log$ keyword.  Or maybe it should mention
     what keywords *do* exist as well.
@@ -59,6 +55,7 @@ To be fixed by sussman:
     within an existing DocumentRoot, else the 301 error.
 
   - rewrite whole chapter 4 example to use project-root layout???
+
 
 --------------------------------------------------------------
 
