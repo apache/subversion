@@ -111,7 +111,7 @@ Candidate changes:
     Notes:  Pretty embarrassing.  We got it right for README.txt already,
             how did we forget the other files in ~/.subversion/?  :-)
     Votes:
-      +1: sussman, dlr
+      +1: sussman, dlr, striker
 
   * r9212
     Added VC7 support and defines for including debug symbol files.
@@ -121,3 +121,8 @@ Candidate changes:
     Votes:
       +1: josander
 
+  * r9085, r9101, r9109, r9130
+    Issue 1509: unable to share working copy.
+    Notes: Backport attached to the issue with conflicts removed.
+    Votes:
+      +1: striker
