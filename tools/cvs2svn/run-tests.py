@@ -23,6 +23,7 @@ import stat
 import string
 import re
 import os
+import time
 import os.path
 
 # Find the Subversion test framework.
@@ -83,19 +84,106 @@ def run_svn(*varargs):
   return run_program(svn, *varargs)
 
 
+def repos_to_url(path_to_svn_repos):
+  """This does what you think it does."""
+  return 'file://%s' % os.path.abspath(path_to_svn_repos)
+
+
 class Log:
-  def __init__(revision, author, date):
-    self.revision = None
-    self.author = None
-    self.date = None
-    self.msg = None
+  def __init__(self, revision, author, date):
+    self.revision = revision
+    self.author = author
     
-    # Keys are paths such as '/trunk/foo/bar', values are letter codes
-    # such as 'M', 'A', and 'D'.
+    # Internally, we represent the date as seconds since epoch (UTC).
+    # Since standard subversion log output shows dates in localtime
+    #
+    #   "1993-06-18 00:46:07 -0500 (Fri, 18 Jun 1993)"
+    #
+    # and time.mktime() converts from localtime, it all works out very
+    # happily.
+    self.date = time.mktime(time.strptime(date[0:19], "%Y-%m-%d %H:%M:%S"))
+
+    # The changed paths will be accumulated later, as log data is read.
+    # Keys here are paths such as '/trunk/foo/bar', values are letter
+    # codes such as 'M', 'A', and 'D'.
     self.changed_paths = { }
 
-    # TODO: working here.  Many tests will need to parse 'svn log'
-    # output, and this will abstract that task.
+    # The msg will be accumulated later, as log data is read.
+    self.msg = ''
+
+
+def parse_log(svn_repos):
+  """Return a dictionary of Logs, keyed on revision number, for SVN_REPOS."""
+
+  def absorb_changed_paths(out, log):
+    'Read changed paths from OUT into Log item LOG, until no more.'
+    while 1:
+      line = out.readline()
+      if len(line) == 1: return
+      line = line[:-1]
+      log.changed_paths[line[5:]] = line[3:4]
+
+  def absorb_message_body(out, num_lines, log):
+    'Read NUM_LINES of log message body from OUT into Log item LOG.'
+    i = 0
+    while i < num_lines:
+      line = out.readline()
+      log.msg += line
+      i += 1
+
+  log_start_re = re.compile('^rev (?P<rev>[0-9]+):  '
+                            '(?P<author>[^\|]+) \| '
+                            '(?P<date>[^\|]+) '
+                            '\| (?P<lines>[0-9]+) (line|lines)$')
+
+  log_separator = '-' * 72
+
+  logs = { }
+
+  # We use popen3 directly, instead of run_svn(), because it's
+  # actually easier to process the results by calling readline()
+  # repeatedly than it would be to have all the lines in a list.
+  ign, out, err = os.popen3('%s log -v %s'
+                            % (svn, repos_to_url(svn_repos)), 'b')
+  err_lines = err.readlines()
+  if err_lines:
+    print '\n%s said:\n' % svn
+    for line in err_lines: print '   ' + line,
+    print
+    sys.exit(1)
+
+  while 1:
+    this_log = None
+    line = out.readline()
+    if not line: break
+    line = line[:-1]
+
+    if line.find(log_separator) == 0:
+      line = out.readline()
+      line = line[:-1]
+      m = log_start_re.match(line)
+      if m:
+        this_log = Log(int(m.group('rev')), m.group('author'), m.group('date'))
+        line = out.readline()
+        if not line.find('Changed paths:') == 0:
+          print 'unexpected log output (missing changed paths)'
+          print "Line: '%s'" % line
+          sys.exit(1)
+        absorb_changed_paths(out, this_log)
+        absorb_message_body(out, int(m.group('lines')), this_log)
+        logs[this_log.revision] = this_log
+      elif len(line) == 0:
+        break   # We've reached the end of the log output.
+      else:
+        print 'unexpected log output (missing revision line)'
+        print "Line: '%s'" % line
+        sys.exit(1)
+    else:
+      print 'unexpected log output (missing log separator)'
+      print "Line: '%s'" % line
+      sys.exit(1)
+        
+  return logs
 
 
 def erase(path):
@@ -107,8 +195,10 @@ def erase(path):
     os.remove(path)
 
 
-# List of already converted names (see the NAME argument to ensure_conversion).
-# Keys are names; values are whatever, since they are ignored.
+# List of already converted names; see the NAME argument to ensure_conversion.
+#
+# Keys are names, values are tuples: (svn_repos, svn_wc, log_dictionary).
+# The log_dictionary comes from parse_log(svn_repos).
 already_converted = { }
 
 def ensure_conversion(name):
@@ -124,10 +214,11 @@ def ensure_conversion(name):
   Return the Subversion repository path and wc path. """
 
   cvsrepos = os.path.abspath(os.path.join(test_data_dir, '%s-cvsrepos' % name))
-  svnrepos = '%s-svnrepos' % name   # relative to ./tmp/, not ./
-  wc       = '%s-wc' % name         # relative to ./tmp/, not ./
 
   if not already_converted.has_key(name):
+
+    svnrepos = '%s-svnrepos' % name   # relative to ./tmp/, not to ./
+    wc       = '%s-wc' % name         # relative to ./tmp/, not to ./
 
     if not os.path.isdir(tmp_dir):
       os.mkdir(tmp_dir)
@@ -135,21 +226,23 @@ def ensure_conversion(name):
     saved_wd = os.getcwd()
     try:
       os.chdir(tmp_dir)
-      svn_url  = 'file://%s' % os.path.abspath(svnrepos)
       
       # Clean up from any previous invocations of this script.
       erase(svnrepos)
       erase(wc)
       
       run_cvs2svn('--create', '-s', svnrepos, cvsrepos)
-      run_svn('co', svn_url, wc)
+      run_svn('co', repos_to_url(svnrepos), wc)
+      log_dict = parse_log(svnrepos)
     finally:
       os.chdir(saved_wd)
 
     # This name is done for the rest of this session.
-    already_converted[name] = 1
+    already_converted[name] = (os.path.join('tmp', svnrepos),
+                               os.path.join('tmp', wc),
+                               log_dict)
 
-  return os.path.join('tmp', svnrepos), os.path.join('tmp', wc)
+  return already_converted[name]
 
 
 #----------------------------------------------------------------------
@@ -167,7 +260,7 @@ def show_usage():
 
 def attr_exec():
   "detection of the executable flag"
-  repos, wc = ensure_conversion('main')
+  repos, wc, logs = ensure_conversion('main')
   st = os.stat(os.path.join(wc, 'trunk', 'single-files', 'attr-exec'))
   if not st[0] & stat.S_IXUSR:
     raise svntest.Failure
@@ -175,7 +268,7 @@ def attr_exec():
 
 def space_fname():
   "conversion of filename with a space"
-  repos, wc = ensure_conversion('main')
+  repos, wc, logs = ensure_conversion('main')
   if not os.path.exists(os.path.join(wc, 'trunk',
                                      'single-files', 'space fname')):
     raise svntest.Failure
@@ -183,7 +276,7 @@ def space_fname():
 
 def two_quick():
   "two commits in quick succession"
-  repos, wc = ensure_conversion('main')
+  repos, wc, logs = ensure_conversion('main')
   out = run_svn('log', os.path.join(wc, 'trunk', 'single-files', 'twoquick'))
   num_revisions = 0
   for line in out:
@@ -197,12 +290,12 @@ def prune_with_care():
   "prune, but not too eagerly"
   # Robert Pluim encountered this lovely one while converting the
   # directory src/gnu/usr.bin/cvs/contrib/pcl-cvs/ in FreeBSD's CVS
-  # repository, see issue #1302:
+  # repository (see issue #1302).  Step 4 is the doozy:
   #
   #   revision 1:  adds trunk/, adds trunk/cookie
   #   revision 2:  adds trunk/NEWS
   #   revision 3:  deletes trunk/cookie
-  #   revision 4:  deletes trunk/  [oops, re-deleting trunk/cookie pruned!]
+  #   revision 4:  deletes trunk/  [re-deleting trunk/cookie pruned trunk!]
   #   revision 5:  does nothing
   #   
   # After fixing cvs2svn, the sequence (correctly) looks like this:
@@ -220,15 +313,27 @@ def prune_with_care():
   #
   # ### Note that empty revisions like 4 are probably going to become
   # ### at least optional, if not banished entirely from cvs2svn's
-  # ### output.  At the moment, however, they get created.
+  # ### output.  Hmmm, or they may stick around, with an extra
+  # ### revision property explaining what happened.  Need to think
+  # ### about that.
   #
   # In the test below, the file 'trunk/prune-with-care/first' is
   # cookie, and 'trunk/prune-with-care/second' is NEWS.
-  repos, wc = ensure_conversion('main')
 
-  # TODO: working here: finish the Log class, then use it to confirm
-  # that revision 3 removes /trunk/prune-with-care/first, and revision
-  # 5 removes /trunk/prune-with-care/.
+  repos, wc, logs = ensure_conversion('main')
+
+  # Confirm that revision 3 removes '/trunk/prune-with-care/first',
+  # and that revision 5 removes '/trunk/prune-with-care'.
+
+  if not (logs[3].changed_paths.has_key('/trunk/prune-with-care/first')
+          and logs[3].changed_paths['/trunk/prune-with-care/first'] == 'D'):
+    print "Revision 3 failed to remove ''/trunk/prune-with-care/first'."
+    raise svntest.Failure
+
+  if not (logs[5].changed_paths.has_key('/trunk/prune-with-care')
+          and logs[5].changed_paths['/trunk/prune-with-care'] == 'D'):
+    print "Revision 5 failed to remove '/trunk/prune-with-care'."
+    raise svntest.Failure
 
 
 #----------------------------------------------------------------------
