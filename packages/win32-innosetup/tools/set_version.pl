@@ -315,13 +315,16 @@ sub SvnVersion
     my ($SvnVersion, $SvnRelease) ='';
  
     $Svn = "\"$Svn\"";
-    $SvnRetVal  = `$Svn --version`;
-    
     $SvnRetVal = `$Svn --version`;
-    $SvnRetVal =~ s/svn, version\s//;
-    ($SvnVersion, $SvnRelease) = split (/\s/, $SvnRetVal);
-    $SvnRelease =~ s/^\(r(.*)\)$/$1/;
-    
+    $SvnRetVal =~ s/svn, version//;
+    $SvnRetVal =~ s/(^.*)\).*/$1/;
+
+    ($SvnVersion, $SvnRelease) = split (/\(/, $1);
+
+    $SvnVersion =~ s/^\s+//;
+	  $SvnVersion =~ s/\s+$//;
+    $SvnRelease =~ s/r//;
+    $SvnRelease =~ s/dev build/_dev-build/;
+
     return ($SvnVersion, $SvnRelease);
 }
-
