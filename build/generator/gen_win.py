@@ -52,8 +52,8 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     self.httpd_path = None
     self.zlib_path = None
     self.openssl_path = None
-    self.skip_targets = { 'mod_dav_svn': None,
-                          'mod_authz_svn': None }
+    self.skip_sections = { 'mod_dav_svn': None,
+                           'mod_authz_svn': None }
 
     # Instrumentation options
     self.instrument_apr_pools = None
@@ -62,8 +62,8 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     for opt, val in options:
       if opt == '--with-httpd':
         self.httpd_path = os.path.abspath(val)
-        del self.skip_targets['mod_dav_svn']
-        del self.skip_targets['mod_authz_svn']
+        del self.skip_sections['mod_dav_svn']
+        del self.skip_sections['mod_authz_svn']
       elif opt == '--with-zlib':
         self.zlib_path = os.path.abspath(val)
       elif opt == '--with-openssl':
@@ -221,31 +221,31 @@ class WinGeneratorBase(gen_base.GeneratorBase):
 
     return map(lambda x:string.replace(x, os.sep, '\\'), list)
 
-  def _find_libs(self, libs_option):
-    "Override the parents _find_libs function so that environment substitution happens first"
+  def find_sections(self, section_list):
+    "Override the parents find_sections function so that environment substitution happens first"
 
-    libs = [ ]
-    for x in string.split(libs_option):
-      for libname in self.subst_win_env(x):
-        if self.targets.has_key(libname):
-          libs.append(self.targets[libname])
+    sections = [ ]
+    for x in string.split(section_list):
+      for section_name in self.subst_win_env(x):
+        if self.sections.has_key(section_name):
+          sections.append(self.sections[section_name])
         else:
-          libs.append(libname)
-    return libs
+          sections.append(section_name)
+    return sections
 
   def get_install_targets(self):
     "Generate the list of targets"
     # Generate a fake depaprutil project
     options = {'path': 'build/win32'}
     utility = gen_base.TargetUtility
-    self.targets['depsubr'] = utility.Section(options, utility)
-    self.targets['depdelta'] = utility.Section(options, utility)
+    self.sections['depsubr'] = utility.Section(options, utility)
+    self.sections['depdelta'] = utility.Section(options, utility)
 
-    self.targets['depsubr'].create_targets(self.graph, 'depsubr', self.cfg, 
-                                           self._extension_map)
-
-    self.targets['depdelta'].create_targets(self.graph, 'depdelta', self.cfg,
+    self.sections['depsubr'].create_targets(self.graph, 'depsubr', self.cfg, 
                                             self._extension_map)
+
+    self.sections['depdelta'].create_targets(self.graph, 'depdelta', self.cfg,
+                                             self._extension_map)
 
     install_targets = self.graph.get_all_sources(gen_base.DT_PROJECT)   \
                       + self.graph.get_all_sources(gen_base.DT_INSTALL)
@@ -283,7 +283,7 @@ class WinGeneratorBase(gen_base.GeneratorBase):
         if isinstance(obj, gen_base.SWIGObject):
           for cobj in self.graph.get_sources(gen_base.DT_OBJECT, obj):
             if isinstance(cobj, gen_base.SWIGObject):
-              csrc = rootpath + '\\' + string.replace(cobj.fname, '/', '\\')
+              csrc = rootpath + '\\' + string.replace(cobj.filename, '/', '\\')
 
               if isinstance(target, gen_base.TargetSWIGRuntime):
                 bsrc = rootpath + "\\build\\win32\\gen_swig_runtime.py"
@@ -295,7 +295,7 @@ class WinGeneratorBase(gen_base.GeneratorBase):
               # output path passed to swig has to use forward slashes,
               # otherwise the generated python files (for shadow
               # classes) will be saved to the wrong directory
-              cout = string.replace(os.path.join(rootpath, cobj.fname),
+              cout = string.replace(os.path.join(rootpath, cobj.filename),
                                     os.sep, '/')
                                     
               # included header files that the generated c file depends on
@@ -341,23 +341,23 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     if name == '__CONFIG__':
       depends = []
     else:
-      depends = self.targets['__CONFIG__'].get_dep_targets(target)
+      depends = self.sections['__CONFIG__'].get_dep_targets(target)
 
     if isinstance(target, gen_base.TargetApacheMod):
       if target.name == 'mod_authz_svn':
-        depends.extend(self.targets['mod_dav_svn'].get_dep_targets(target))
+        depends.extend(self.sections['mod_dav_svn'].get_dep_targets(target))
       pass
     elif name == 'depdelta':
-      depends.extend(self.targets['libsvn_delta'].get_dep_targets(target))
+      depends.extend(self.sections['libsvn_delta'].get_dep_targets(target))
     elif name == 'libsvn_wc':
-      depends.extend(self.targets['depdelta'].get_dep_targets(target))
+      depends.extend(self.sections['depdelta'].get_dep_targets(target))
     elif name == 'depsubr':
-      depends.extend(self.targets['libsvn_subr'].get_dep_targets(target))
+      depends.extend(self.sections['libsvn_subr'].get_dep_targets(target))
     elif name == 'libsvn_ra_svn':
-      depends.extend(self.targets['depsubr'].get_dep_targets(target))
+      depends.extend(self.sections['depsubr'].get_dep_targets(target))
     elif name == 'libsvn_ra_dav':
-      depends.extend(self.targets['depsubr'].get_dep_targets(target))
-      depends.extend(self.targets['neon'].get_dep_targets(target))
+      depends.extend(self.sections['depsubr'].get_dep_targets(target))
+      depends.extend(self.sections['neon'].get_dep_targets(target))
     elif isinstance(target, gen_base.TargetExe):
       depends.extend(self.get_win_depends(target, 1,
                                           ccls=gen_base.TargetLib))
@@ -367,7 +367,7 @@ class WinGeneratorBase(gen_base.GeneratorBase):
           depends.append(lib)
           depends.extend(self.get_win_depends(lib, 0))        
       if not isinstance(target, gen_base.TargetSWIGRuntime):
-        depends.extend(self.targets['swig_runtime'].get_dep_targets(target))
+        depends.extend(self.sections['swig_runtime'].get_dep_targets(target))
     elif isinstance(target, gen_base.Target):
       depends.extend(self.get_win_depends(target, 3))
     else:
@@ -528,10 +528,10 @@ class WinGeneratorBase(gen_base.GeneratorBase):
         if not isinstance(lib, gen_base.ExternalLibrary):
           continue
 
-        if cfg == 'Debug' and lib.fname == self.dblibname:
-          nondeplibs.append(lib.fname+'d.lib')
+        if cfg == 'Debug' and lib.filename == self.dblibname:
+          nondeplibs.append(lib.filename+'d.lib')
         else:
-          nondeplibs.append(lib.fname+'.lib')
+          nondeplibs.append(lib.filename+'.lib')
 
     return nondeplibs
 

@@ -50,16 +50,16 @@ class Generator(gen_base.GeneratorBase):
       for source in sources:
         if isinstance(source, gen_base.TargetLib):
           # append the output of the target to our stated dependencies
-          deps.append(source.output)
+          deps.append(source.filename)
 
           # link against the library
-          libs.append(os.path.join(retreat, source.output))
+          libs.append(os.path.join(retreat, source.filename))
         elif isinstance(source, gen_base.ObjectFile):
           # link in the object file
-          objects.append(source.fname)
+          objects.append(source.filename)
         elif isinstance(source, gen_base.ExternalLibrary):
           # link against the library
-          libs.append(source.fname)
+          libs.append(source.filename)
         else:
           ### we don't know what this is, so we don't know what to do with it
           raise UnknownDependency
@@ -76,9 +76,9 @@ class Generator(gen_base.GeneratorBase):
 
            targ_varname, objnames,
 
-           target_ob.output, targ_varname,
+           target_ob.filename, targ_varname,
 
-           path, target_ob.link_cmd, os.path.basename(target_ob.output),
+           path, target_ob.link_cmd, os.path.basename(target_ob.filename),
            targ_varname, string.join(libs))
         )
 
@@ -86,7 +86,7 @@ class Generator(gen_base.GeneratorBase):
     for itype, i_targets in self.graph.get_deps(gen_base.DT_INSTALL):
       outputs = [ ]
       for t in i_targets:
-        outputs.append(t.output)
+        outputs.append(t.filename)
       self.ofile.write('%s: %s\n\n' % (itype, string.join(outputs)))
 
     cfiles = [ ]
@@ -97,8 +97,8 @@ class Generator(gen_base.GeneratorBase):
          and not isinstance(target, gen_base.TargetProject) \
          and not isinstance(target, gen_base.TargetExternal) \
          and not isinstance(target, gen_base.TargetUtility) \
-         and target.output[-3:] != '.la':
-        cfiles.append(target.output)
+         and target.filename[-3:] != '.la':
+        cfiles.append(target.filename)
     cfiles.sort()
     self.ofile.write('CLEAN_FILES = %s\n\n' % string.join(cfiles))
 
@@ -124,7 +124,7 @@ class Generator(gen_base.GeneratorBase):
         for apmod in inst_targets:
           for source in self.graph.get_sources(gen_base.DT_LINK, apmod.name,
                                                gen_base.Target):
-            bt = source.output
+            bt = source.filename
             if bt[-3:] == '.la':
               la_tweaked[bt + '-a'] = None
         la_tweaked = la_tweaked.keys()
@@ -186,7 +186,7 @@ class Generator(gen_base.GeneratorBase):
     self.ofile.write('\n# handy shortcut targets\n')
     for target in self.graph.get_all_sources(gen_base.DT_INSTALL):
       if not isinstance(target, gen_base.TargetScript):
-        self.ofile.write('%s: %s\n' % (target.name, target.output))
+        self.ofile.write('%s: %s\n' % (target.name, target.filename))
     self.ofile.write('\n')
 
     self.ofile.write('BUILD_DIRS = %s\n\n' % string.join(self.build_dirs))
@@ -211,7 +211,7 @@ class Generator(gen_base.GeneratorBase):
     for objname, sources in self.graph.get_deps(gen_base.DT_OBJECT):
       deps = string.join(map(str, sources))
       self.ofile.write('%s: %s\n' % (objname, deps))
-      cmd = getattr(objname, 'build_cmd', '')
+      cmd = objname.compile_cmd
       if cmd:
         if not getattr(objname, 'source_generated', 0):
           self.ofile.write('\t%s %s\n' % (cmd, os.path.join('$(top_srcdir)',
@@ -231,12 +231,12 @@ class Generator(gen_base.GeneratorBase):
 
         # construct a list of the other .la libs to link against
         retreat = gen_base._retreat_dots(target.path)
-        deps = [ target.output ]
-        link = [ os.path.join(retreat, target.output) ]
+        deps = [ target.filename ]
+        link = [ os.path.join(retreat, target.filename) ]
         for source in self.graph.get_sources(gen_base.DT_LINK, target.name,
                                              gen_base.TargetLib):
-          deps.append(source.output)
-          link.append(os.path.join(retreat, source.output))
+          deps.append(source.filename)
+          link.append(os.path.join(retreat, source.filename))
 
         self.ofile.write('%s_DEPS = %s\n'
                          '%s_LINK = %s\n\n' % (name, string.join(deps, ' '),

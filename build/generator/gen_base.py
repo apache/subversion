@@ -39,7 +39,7 @@ class GeneratorBase:
     except:
       raise GenError('Unable to extract version.')
 
-    self.targets = { }
+    self.sections = { }
     self.includes = [ ]
     self.test_progs = [ ]
     self.test_deps = [ ]
@@ -49,17 +49,17 @@ class GeneratorBase:
     self.manpages = [ ]
     self.graph = DependencyGraph()
 
-    if not hasattr(self, 'skip_targets'):
-      self.skip_targets = { }
+    if not hasattr(self, 'skip_sections'):
+      self.skip_sections = { }
 
     # PASS 1: collect the targets and some basic info
-    for target in _filter_targets(parser.sections()):
-      if self.skip_targets.has_key(target):
+    for section_name in _filter_sections(parser.sections()):
+      if self.skip_sections.has_key(section_name):
         continue
 
       options = {}
-      for option in parser.options(target):
-        options[option] = parser.get(target, option)
+      for option in parser.options(section_name):
+        options[option] = parser.get(section_name, option)
 
       type = options.get('type')
 
@@ -67,49 +67,48 @@ class GeneratorBase:
       if not target_class:
         raise GenError('ERROR: unknown build type: ' + type)
 
-      target_ob = target_class.Section(options, target_class)
+      section = target_class.Section(options, target_class)
       
-      self.targets[target] = target_ob
+      self.sections[section_name] = section
       
-      # the target should add all relevant dependencies onto the
-      # specified sources
-      target_ob.create_targets(self.graph, target, self.cfg,
-                               self._extension_map)
+      section.create_targets(self.graph, section_name, self.cfg,
+                             self._extension_map)
 
       self.manpages.extend(string.split(options.get('manpages', '')))
 
-      if issubclass(target_class, TargetLinked) and not issubclass(target_class, TargetSWIG):
+      if issubclass(target_class, TargetLinked) and \
+        not issubclass(target_class, TargetSWIG):
         # collect test programs
         if issubclass(target_class, TargetExe):
-          if target_ob.target.install == 'test':
-            self.test_deps.append(target_ob.target.output)
+          if section.target.install == 'test':
+            self.test_deps.append(section.target.filename)
             if options.get('testing') != 'skip':
-              self.test_progs.append(target_ob.target.output)
-          elif target_ob.target.install == 'fs-test':
-            self.fs_test_deps.append(target_ob.target.output)
+              self.test_progs.append(section.target.filename)
+          elif section.target.install == 'fs-test':
+            self.fs_test_deps.append(section.target.filename)
             if options.get('testing') != 'skip':
-              self.fs_test_progs.append(target_ob.output)
+              self.fs_test_progs.append(section.filename)
 
         # collect all the paths where stuff might get built
         ### we should collect this from the dependency nodes rather than
         ### the sources. "what dir are you going to put yourself into?"
-        self.target_dirs[target_ob.target.path] = None
+        self.target_dirs[section.target.path] = None
         for pattern in string.split(options.get('sources', '')):
           idx = string.rfind(pattern, '/')
           if idx != -1:
             ### hmm. probably shouldn't be os.path.join() right here
             ### (at this point in the control flow; defer to output)
-            self.target_dirs[os.path.join(target_ob.target.path,
+            self.target_dirs[os.path.join(section.target.path,
                                           pattern[:idx])] = None
 
     # compute intra-library dependencies
-    for section in self.targets.values():
+    for section in self.sections.values():
       dep_types = ((DT_LINK, section.options.get('libs')),
                    (DT_NONLIB, section.options.get('nonlibs')))
 
       for dt_type, deps_list in dep_types:
         if deps_list:
-          for dep_section in self._find_libs(deps_list):            
+          for dep_section in self.find_sections(deps_list):            
             if isinstance(dep_section, Target.Section):              
               for target in section.get_targets():
                 self.graph.bulk_add(dt_type, target.name,
@@ -135,14 +134,15 @@ class GeneratorBase:
       build_dirs[d] = None
     self.build_dirs = build_dirs.keys()
 
-  def _find_libs(self, libs_option):
-    libs = [ ]
-    for libname in string.split(libs_option):
-      if self.targets.has_key(libname):
-        libs.append(self.targets[libname])
+  def find_sections(self, section_list):
+    """Return a list of section objects from a string of section names."""
+    sections = [ ]
+    for section_name in string.split(section_list):
+      if self.sections.has_key(section_name):
+        sections.append(self.sections[section_name])
       else:
-        libs.append(libname)
-    return libs
+        sections.append(section_name)
+    return sections
 
   def compute_hdr_deps(self):
     #
@@ -175,12 +175,12 @@ class GeneratorBase:
       if isinstance(objname, SWIGObject):
         for ifile in self.graph.get_sources(DT_SWIG_C, sources[0]):
           if isinstance(ifile, SWIGSource):
-            for short in _find_includes(ifile.fname, include_deps):
+            for short in _find_includes(ifile.filename, include_deps):
               self.graph.add(DT_SWIG_C, sources[0], include_deps[short][0])
         continue
 
       hdrs = [ ]
-      for short in _find_includes(sources[0].fname, include_deps):
+      for short in _find_includes(sources[0].filename, include_deps):
         self.graph.add(DT_OBJECT, objname, include_deps[short][0])
 
 
@@ -253,39 +253,39 @@ for _dt in dep_types:
   globals()[_dt] = _dt
 
 class DependencyNode:
-  def __init__(self, fname):
-    self.fname = fname
+  def __init__(self, filename):
+    self.filename = filename
 
   def __str__(self):
-    return self.fname
+    return self.filename
 
   def __cmp__(self, ob):
-    return cmp(self.fname, ob.fname)
+    return cmp(self.filename, ob.filename)
 
   def __hash__(self):
-    return hash(self.fname)
+    return hash(self.filename)
 
 class ObjectFile(DependencyNode):
-  def __init__(self, fname, build_cmd = None):
-    DependencyNode.__init__(self, fname)
-    self.build_cmd = build_cmd
+  def __init__(self, filename, compile_cmd = None):
+    DependencyNode.__init__(self, filename)
+    self.compile_cmd = compile_cmd
 
 class SWIGObject(ObjectFile):
-  def __init__(self, fname, lang):
-    ObjectFile.__init__(self, fname)
+  def __init__(self, filename, lang):
+    ObjectFile.__init__(self, filename)
     self.lang = lang
     self.lang_abbrev = lang_abbrev[lang]
     ### hmm. this is Makefile-specific
-    self.build_cmd = '$(COMPILE_%s_WRAPPER)' % string.upper(self.lang_abbrev)
+    self.compile_cmd = '$(COMPILE_%s_WRAPPER)' % string.upper(self.lang_abbrev)
     self.source_generated = 1
 
 class SourceFile(DependencyNode):
-  def __init__(self, fname, reldir):
-    DependencyNode.__init__(self, fname)
+  def __init__(self, filename, reldir):
+    DependencyNode.__init__(self, filename)
     self.reldir = reldir
 class SWIGSource(SourceFile):
-  def __init__(self, fname):
-    SourceFile.__init__(self, fname, os.path.dirname(fname))
+  def __init__(self, filename):
+    SourceFile.__init__(self, filename, os.path.dirname(filename))
   pass
 
 class ExternalLibrary(DependencyNode):
@@ -325,18 +325,29 @@ class Target(DependencyNode):
     raise NotImplementedError
 
   class Section:
+    """Represents an individual section of build.conf
+    
+    The Section class is sort of a factory class which is responsible for
+    creating and keeping track of Target instances associated with a section
+    of the configuration file. By default it only allows one Target per 
+    section, but subclasses may create multiple Targets.
+    """
+
     def __init__(self, options, target_class):
       self.options = options
       self.target_class = target_class
 
     def create_targets(self, graph, name, cfg, extmap):
+      """Create target instances"""
       self.target = self.target_class(name, self.options, cfg, extmap)
       self.target.add_dependencies(graph, cfg, extmap)
 
     def get_targets(self):
+      """Return list of target instances associated with this section"""
       return [self.target]
 
     def get_dep_targets(self, target):
+      """Return list of targets from this section that "target" depends on"""
       return [self.target]
 
 class TargetLinked(Target):
@@ -348,20 +359,17 @@ class TargetLinked(Target):
     self.compile_cmd = options.get('compile-cmd')
     self.sources = options.get('sources', '*.c')
 
-    # default output name; subclasses can/should change this
-    self.output = os.path.join(self.path, name)    
-    self.fname = self.output
-
-  ### hmm. this is Makefile-specific
-  link_cmd = '$(LINK)'
+    ### hmm. this is Makefile-specific
+    self.link_cmd = '$(LINK)'
 
   def add_dependencies(self, graph, cfg, extmap):
-    src_patterns = self.sources
-
     # the specified install area depends upon this target
     graph.add(DT_INSTALL, self.install, self)
 
-    for src, reldir in self._get_sources(src_patterns):
+    sources = _collect_paths(self.sources or '*.c', self.path)
+    sources.sort()
+
+    for src, reldir in sources:
       if src[-2:] != '.c':
         raise GenError('ERROR: unknown file extension on ' + src)
 
@@ -375,18 +383,12 @@ class TargetLinked(Target):
       # target (a linked item) depends upon object
       graph.add(DT_LINK, self.name, ofile)
 
-  def _get_sources(self, src_patterns):
-    sources = _collect_paths(src_patterns or '*.c', self.path)
-    sources.sort()
-    return sources
-
 class TargetExe(TargetLinked):
   def __init__(self, name, options, cfg, extmap):
     TargetLinked.__init__(self, name, options, cfg, extmap)
 
     self.objext = extmap['exe', 'object']
-    self.output = os.path.join(self.path, name + extmap['exe', 'target'])
-    self.fname = self.output
+    self.filename = os.path.join(self.path, name + extmap['exe', 'target'])
 
 class TargetScript(Target):
   def add_dependencies(self, graph, cfg, extmap):
@@ -404,8 +406,7 @@ class TargetLib(TargetLinked):
 
     # the target file is the name, version, and appropriate extension
     tfile = '%s-%s%s' % (name, cfg.version, extmap['lib', 'target'])
-    self.output = os.path.join(self.path, tfile)
-    self.fname = self.output
+    self.filename = os.path.join(self.path, tfile)
 
 class TargetApacheMod(TargetLib):
 
@@ -413,8 +414,7 @@ class TargetApacheMod(TargetLib):
     TargetLib.__init__(self, name, options, cfg, extmap)
 
     tfile = name + extmap['lib', 'target']
-    self.output = os.path.join(self.path, tfile)
-    self.fname = self.output
+    self.filename = os.path.join(self.path, tfile)
 
     # we have a custom linking rule
     ### hmm. this is Makefile-specific
@@ -430,77 +430,59 @@ class TargetDoc(Target):
 class TargetSWIG(TargetLib):
   def __init__(self, name, options, cfg, extmap, lang):
     TargetLib.__init__(self, name, options, cfg, extmap)
-    self._objext = extmap['lib', 'object']
-    self._libext = extmap['lib', 'target']
-
     self.lang = lang
-    self.lang_abbrev = lang_abbrev[lang]
     self.desc = self.desc + ' for ' + lang_full_name[lang]
     self.shared_dir = 1
 
     ### hmm. this is Makefile-specific
-    self.link_cmd = '$(LINK_%s_WRAPPER)' % string.upper(self.lang_abbrev)
+    self.link_cmd = '$(LINK_%s_WRAPPER)' % string.upper(lang_abbrev[lang])
 
   def add_dependencies(self, graph, cfg, extmap):
-    src_patterns = self.sources
-    lang = self.lang
-    library = self
+    sources = _collect_paths(self.sources, self.path)
+    assert len(sources) == 1  ### simple assertions for now
 
-    assert src_patterns, "source(s) must be specified explicitly"
+    # get path to .i file
+    ipath = sources[0][0]
+    iname = os.path.split(ipath)[1]
 
-    sources = _collect_paths(src_patterns, self.path)
-
-    ### simple assertions for now
-    assert len(sources) == 1
-
-    ipath, reldir = sources[0]
-    assert ipath[-2:] == '.i'
-
-    dir, iname = os.path.split(ipath)
+    assert iname[-2:] == '.i'
     cname = iname[:-2] + '.c'
-    oname = iname[:-2] + self._objext
+    oname = iname[:-2] + extmap['lib', 'object']
 
     ### we should really extract the %module line
-    if iname[:4] == 'svn_':
-      libname = iname[3:-2]
-    else:
-      libname = '_' + iname[:-2]
+    libname = iname[:4] != 'svn_' and ('_' + iname[:-2]) or iname[3:-2]
+    libfile = libname + extmap['lib', 'target']
 
-    libfile = libname + self._libext
-
-    self.name = lang + libname
-    self.output = os.path.join(dir, lang, libfile)
-    self.fname = self.output
-    self.path = os.path.join(dir, lang)
+    self.name = self.lang + libname
+    self.path = os.path.join(self.path, self.lang)
+    self.filename = os.path.join(self.path, libfile)
 
     ifile = SWIGSource(ipath)
+    cfile = SWIGObject(os.path.join(self.path, cname), self.lang)
+    ofile = SWIGObject(os.path.join(self.path, oname), self.lang)
 
-    if 1:
-      abbrev = lang_abbrev[lang]
+    # the .c file depends upon the .i file
+    graph.add(DT_SWIG_C, cfile, ifile)
 
-      # the .c file depends upon the .i file
-      cfile = SWIGObject(os.path.join(dir, lang, cname), lang)
-      graph.add(DT_SWIG_C, cfile, ifile)
+    # the object depends upon the .c file
+    graph.add(DT_OBJECT, ofile, cfile)
 
-      # the object depends upon the .c file
-      ofile = SWIGObject(os.path.join(dir, lang, oname), lang)
-      graph.add(DT_OBJECT, ofile, cfile)
+    # the library depends upon the object
+    graph.add(DT_LINK, self.name, ofile)
 
-      # the library depends upon the object
-      graph.add(DT_LINK, library.name, ofile)
+    # add some language-specific libraries for languages other than
+    # Java (SWIG doesn't seem to provide a libswigjava.so)
+    abbrev = lang_abbrev[self.lang]
+    if abbrev != 'java':
+      ### fix this. get these from the .conf file
+      graph.add(DT_LINK, self.name, ExternalLibrary('-lswig' + abbrev))
+    ### fix this, too. find the right Target swigutil lib. we know there
+    ### will be only one.
+    util = graph.get_sources(DT_INSTALL, 'swig-%s-lib' % abbrev)[0]
+    graph.add(DT_LINK, self.name, util)
 
-      # add some language-specific libraries for languages other than
-      # Java (SWIG doesn't seem to provide a libswigjava.so)
-      if abbrev != 'java':
-        ### fix this. get these from the .conf file
-        graph.add(DT_LINK, library.name, ExternalLibrary('-lswig' + abbrev))
-      ### fix this, too. find the right Target swigutil lib. we know there
-      ### will be only one.
-      util = graph.get_sources(DT_INSTALL, 'swig-%s-lib' % abbrev)[0]
-      graph.add(DT_LINK, library.name, util)
-
-      # the specified install area depends upon the library
-      graph.add(DT_INSTALL, 'swig-' + abbrev, library)
+    # the specified install area depends upon the library
+    graph.add(DT_INSTALL, 'swig-' + abbrev, self)
 
   class Section(TargetLib.Section):
     def create_targets(self, graph, name, cfg, extmap):
@@ -519,27 +501,21 @@ class TargetSWIG(TargetLib):
 
 class TargetSWIGRuntime(TargetSWIG):
   def add_dependencies(self, graph, cfg, extmap):
-      lang = self.lang
-      library = self
+    abbrev = lang_abbrev[self.lang]
+    name = 'swig' + abbrev
+    cname = name + '.c'
+    oname = name + extmap['lib', 'object']
+    libname = name + extmap['lib', 'target']
 
-      abbrev = lang_abbrev[lang]
+    self.name = self.lang + '_runtime' 
+    self.path = os.path.join(self.path, self.lang)
+    self.filename = os.path.join(self.path, libname)
 
-      name = 'swig' + abbrev
-      cname = name + '.c'
-      oname = name + self._objext
-      libname = name + self._libext
-
-      self.name = lang + '_runtime' 
-
-      cfile = SWIGObject(os.path.join(self.path, lang, cname), lang)
-      ofile = SWIGObject(os.path.join(self.path, lang, oname), lang)
-      graph.add(DT_OBJECT, ofile, cfile)
-      graph.add(DT_LINK, library.name, ofile)
-      graph.add(DT_INSTALL, 'swig_runtime-' + abbrev, library)
-
-      self.output = os.path.join(self.path, lang, libname)
-      self.fname = self.output
-      self.path = os.path.join(self.path, lang)
+    cfile = SWIGObject(os.path.join(self.path, cname), self.lang)
+    ofile = SWIGObject(os.path.join(self.path, oname), self.lang)
+    graph.add(DT_OBJECT, ofile, cfile)
+    graph.add(DT_LINK, self.name, ofile)
+    graph.add(DT_INSTALL, 'swig_runtime-' + abbrev, self)
 
   class Section(TargetSWIG.Section):
     def create_targets(self, graph, name, cfg, extmap):
@@ -553,27 +529,34 @@ class TargetSWIGRuntime(TargetSWIG):
         self.targets[lang] = target
 
 class TargetSpecial(Target):
+  """Abstract Target class for Visual C++ Project Files"""
   def __init__(self, name, options, cfg, extmap):
     Target.__init__(self, name, options, cfg, extmap)
     self.release = options.get('release')
     self.debug = options.get('debug')
-    self.fname = os.path.join(self.path, name)
+    self.filename = os.path.join(self.path, name)
 
   def add_dependencies(self, graph, cfg, extmap):
     graph.add(DT_PROJECT, 'notused', self)
 
 class TargetProject(TargetSpecial):
+  """Represents pre-existing project files not created by generator"""
   def __init__(self, name, options, cfg, extmap):
     TargetSpecial.__init__(self, name, options, cfg, extmap)
     self.project_name = options.get('project_name')
 
 class TargetExternal(TargetSpecial):
+  """Represents "External" MSVC projects which wrap an external build command
+  and bypass the MSVC's build system
+  """
+
   def __init__(self, name, options, cfg, extmap):
     TargetSpecial.__init__(self, name, options, cfg, extmap)
     self.cmd = options.get('cmd')
 
 class TargetUtility(TargetSpecial):
-  pass
+  """Represents projects which don't produce any output"""
+
 
 class TargetSWIGUtility(TargetUtility):
   def __init__(self, name, options, cfg, extmap):
@@ -611,7 +594,8 @@ _predef_sections = [
   'fs-test-scripts',
   ]
 
-def _filter_targets(t):
+def _filter_sections(t):
+  """Sort list of section names and remove predefined sections"""
   t = t[:]
   for s in _predef_sections:
     if s in t:
@@ -620,6 +604,18 @@ def _filter_targets(t):
   return t
 
 def _collect_paths(pats, path=None):
+  """Find files matching a space separated list of globs
+  
+  pats (string) is the list of glob patterns
+
+  path (string), if specified, is a path that will be prepended to each
+    glob pattern before it is evaluated
+    
+  If path is none the return value is a list of filenames, otherwise
+  the return value is a list of 2-tuples. The first element in each tuple
+  is a matching filename and the second element is the portion of the
+  glob pattern which matched the file before its last forward slash (/)
+  """
   result = [ ]
   for base_pat in string.split(pats):
     if path:
@@ -665,10 +661,28 @@ def _retreat_dots(path):
   return (os.pardir + os.sep) * len(parts)
 
 def _find_includes(fname, include_deps):
+  """Return list of files in include_deps included by fname"""
   hdrs = _scan_for_includes(fname, include_deps.keys())
   return _include_closure(hdrs, include_deps).keys()
 
 def _create_include_deps(includes, prev_deps={}):
+  """Find files included by a list of files
+  
+  includes (sequence of strings) is a list of files which should
+    be scanned for includes
+    
+  prev_deps (dictionary) is an optional parameter which may contain
+    the return value of a previous call to _create_include_deps. All
+    data inside will be included in the return value of the current
+    call.
+    
+  Return value is a dictionary with one entry for each file that
+    was scanned (in addition the entries from prev_deps). The key
+    for an entry is the short file name of the file that was scanned
+    and the value is a 2-tuple containing the long file name and a
+    dictionary of files included by that file.
+  """
+  
   shorts = map(os.path.basename, includes)
 
   # limit intra-header dependencies to just these headers, and what we
@@ -696,6 +710,19 @@ def _create_include_deps(includes, prev_deps={}):
       return deps
 
 def _include_closure(hdrs, deps):
+  """Update a set of dependencies with dependencies of dependencies
+  
+  hdrs (dictionary) is a set of dependencies. It is a dictionary with
+    filenames as keys and None as values
+    
+  deps (dictionary) is a big catalog of dependencies in the format
+    returned by _create_include_deps.
+    
+  Return value is a copy of the hdrs dictionary updated with new
+    entries for files that the existing entries include, according
+    to the information in deps.
+  """
+
   new = hdrs.copy()
   for h in hdrs.keys():
     new.update(deps[h][1])
@@ -703,7 +730,17 @@ def _include_closure(hdrs, deps):
 
 _re_include = re.compile(r'^#\s*include\s*[<"]([^<"]+)[>"]')
 def _scan_for_includes(fname, limit):
-  "Return a dictionary of headers found (fnames as keys, None as values)."
+  """Find headers directly included by a C source file.
+  
+  fname (string) is the name of the file to scan
+  
+  limit (sequence or dictionary) is a collection of file names
+    which may be included. Included files which aren't found
+    in this collection will be ignored.
+  
+  Return value is a dictionary with included file names as keys and
+  None as values.
+  """
   # note: we don't worry about duplicates in the return list
   hdrs = { }
   for line in fileinput.input(fname):
@@ -741,7 +778,7 @@ def _sorted_files(graph, area):
       else:
         # no dependencies found in the targets list. this is a good "base"
         # to add to the files list now.
-        files.append(t.output)
+        files.append(t.filename)
 
         # don't consider this target any more
         targets.remove(t)
@@ -760,13 +797,5 @@ def _sorted_files(graph, area):
 
 class CircularDependencies(Exception):
   pass
-
-
-def unique(seq):
-  "Eliminate duplicates from a sequence"
-  d = {}
-  for i in seq:
-    d[i] = None
-  return d.keys()
 
 ### End of file.
