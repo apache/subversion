@@ -2,7 +2,9 @@
 
 echo "buildcheck: checking installation..."
 
+#--------------------------------------------------------------------------
 # autoconf 2.50 or newer
+#
 ac_version=`autoconf --version 2>/dev/null|head -1|sed -e 's/^[^0-9]*//' -e 's/[a-z]* *$//'`
 if test -z "$ac_version"; then
   echo "buildcheck: autoconf not found."
@@ -19,7 +21,9 @@ fi
 
 echo "buildcheck: autoconf version $ac_version (ok)"
 
+#--------------------------------------------------------------------------
 # libtool 1.4 or newer
+#
 libtool=`which glibtool 2>/dev/null`
 if test ! -x "$libtool"; then
   libtool=`which libtool`
@@ -46,7 +50,9 @@ fi
 
 echo "buildcheck: libtool version $lt_pversion (ok)"
 
+#--------------------------------------------------------------------------
 # check for the correct version of Neon
+#
 NEON_WANTED=0.18.5
 if test -d ./neon; then
   NEON_VERSION="`./ac-helpers/get-neon-ver.sh neon`"
@@ -59,4 +65,26 @@ if test -d ./neon; then
   echo "buildcheck: neon version $NEON_VERSION (ok)"
 fi
 
+#--------------------------------------------------------------------------
+# check that our local copies of files match up with those in APR(UTIL)
+#
+if test -d ./apr; then
+  if ! cmp -s ./ac-helpers/find_apr.m4 ./apr/build/find_apr.m4; then
+    echo "buildcheck: local copy of find_apr.m4 does not match APR's copy."
+    echo "            An updated copy of find_apr.m4 may need to be checked in."
+  fi
+  if ! cmp -s ./build/PrintPath ./apr/build/PrintPath; then
+    echo "buildcheck: local copy of PrintPath does not match APR's copy."
+    echo "            An updated copy of PrintPath may need to be checked in."
+  fi
+fi
+
+if test -d ./apr-util; then
+  if ! cmp -s ./ac-helpers/find_apu.m4 ./apr-util/build/find_apu.m4; then
+    echo "buildcheck: local copy of find_apu.m4 does not match APRUTIL's copy."
+    echo "            An updated copy of find_apu.m4 may need to be checked in."
+  fi
+fi
+
+#--------------------------------------------------------------------------
 exit 0
