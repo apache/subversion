@@ -48,15 +48,6 @@ typedef struct svn_txdelta__ops_baton_t {
 } svn_txdelta__ops_baton_t;
 
 
-/* Context for composing windows. */
-typedef struct svn_txdelta__compose_ctx_t
-{
-  svn_filesize_t sview_offset;  /* Source view offset in the combined window */
-  apr_size_t sview_len;         /* Source view length in the combined window */
-  svn_boolean_t use_second;     /* TRUE if window_B is the composite. */
-} svn_txdelta__compose_ctx_t;
-
-
 /* Insert a delta op into the delta window being built via BUILD_BATON. If
    OPCODE is svn_delta_new, bytes from NEW_DATA are copied into the window
    data and OFFSET is ignored.  Otherwise NEW_DATA is ignored. All
@@ -88,13 +79,10 @@ void svn_txdelta__vdelta (svn_txdelta__ops_baton_t *build_baton,
                           apr_pool_t *pool);
 
 
-/* Compose two delta windows, yielding a third, allocated from POOL.
-   Return NULL If WINDOW_B doesn't depend on WINDOW_A (i.e., it's
-   already a valid composed window. */
+/* Compose two delta windows, yielding a third, allocated from POOL. */
 svn_txdelta_window_t *
 svn_txdelta__compose_windows (const svn_txdelta_window_t *window_A,
                               const svn_txdelta_window_t *window_B,
-                              svn_txdelta__compose_ctx_t *context,
                               apr_pool_t *pool);
 
 
