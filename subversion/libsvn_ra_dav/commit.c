@@ -217,9 +217,6 @@ static svn_error_t * get_version_url(commit_ctx_t *cc, resource_t *rsrc,
       svn_path_add_component_nts(bc, bc_relative.data,
                                  svn_path_url_style);
 
-      SVN_ERR( svn_ra_dav__get_props_resource(&propres, cc->ras->sess,
-                                              bc->data, NULL, fetch_props,
-                                              cc->ras->pool) );
       url = bc->data;
     }
 
