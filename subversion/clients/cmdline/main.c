@@ -353,7 +353,10 @@ format_option (char **string,
   char *opts;
 
   if (opt == NULL)
-    *string = apr_psprintf (pool, "?");
+    {
+      *string = apr_psprintf (pool, "?");
+      return;
+    }
 
   if (opt->optch <= 255)  
     opts = apr_psprintf (pool, "-%c [--%s]", opt->optch, opt->name);
