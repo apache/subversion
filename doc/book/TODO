@@ -134,3 +134,6 @@ List of 1.2 features/changes (that still need to be documented)
     - Expanded keyword:           "$keyword:: value $"
     - Expanded kw with filling:   "$keyword:: value   $"
     - Truncated keyword:          "$keyword:: longval#$"
+  * New revprop hook features (ch05)
+    - Added fifth ACTION argument (A, M, or D)
+    - New/old revprop value available on stdin
