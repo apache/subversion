@@ -47,6 +47,9 @@
 %apply int *OUTPUT { svn_boolean_t * };
 %apply int *OUTPUT { int * };
 
+/* handle the property hash returned by svn_wc_prop_list */
+%apply apr_hash_t **PROPHASH { apr_hash_t **props };
+
 /* -----------------------------------------------------------------------
    handle svn_wc_notify_func_t/baton pairs
 */
