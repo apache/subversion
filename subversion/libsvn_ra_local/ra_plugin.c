@@ -239,9 +239,11 @@ do_update (void *session_baton,
            void *update_baton)
 {
   svn_revnum_t revnum_to_update_to;
+  svn_ra_local__report_baton_t *rbaton;
   svn_ra_local__session_baton_t *sbaton = 
     (svn_ra_local__session_baton_t *) session_baton;
-  svn_ra_local__report_baton_t *rbaton;
+  svn_revnum_t *rev_ptr = apr_pcalloc (sbaton->pool, sizeof(*rev_ptr));
+
   
   if (! SVN_IS_VALID_REVNUM(update_revision))
     SVN_ERR (get_latest_revnum (sbaton, &revnum_to_update_to));
@@ -253,6 +255,7 @@ do_update (void *session_baton,
   rbaton->revnum_to_update_to = revnum_to_update_to;
   rbaton->update_editor = update_editor;
   rbaton->update_edit_baton = update_baton;
+  rbaton->path_rev_hash = apr_hash_make (sbaton->pool);
   rbaton->fs = sbaton->fs;
   rbaton->base_path = sbaton->fs_path;
   rbaton->pool = sbaton->pool;
@@ -262,6 +265,11 @@ do_update (void *session_baton,
                              base_revision, sbaton->pool));
   SVN_ERR (svn_fs_txn_root (&(rbaton->txn_root), rbaton->txn, sbaton->pool));
   
+  /* In our hash, map the root of the txn ("") to the
+     base_revision. */
+  *rev_ptr = base_revision;
+  apr_hash_set (rbaton->path_rev_hash, "", APR_HASH_KEY_STRING, rev_ptr);
+
   /* Hand reporter back to client. */
   *reporter = &ra_local_reporter;
   *report_baton = rbaton;
