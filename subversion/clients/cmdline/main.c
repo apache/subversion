@@ -95,7 +95,7 @@ const apr_getopt_option_t svn_cl__options[] =
                       N_("specify a username ARG")},
     {"password",      svn_cl__auth_password_opt, 1, 
                       N_("specify a password ARG")},
-    {"extensions",    'x', 1, N_("pass ARG as bundled options to diff (default: '-u')")},
+    {"extensions",    'x', 1, N_("pass ARG to --diff-cmd as options (default: '-u')")},
     {"targets",       svn_cl__targets_opt, 1,
                       N_("pass contents of file ARG as additional args")},
     {"xml",           svn_cl__xml_opt, 0, N_("output in XML")},
@@ -286,8 +286,8 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
        "\n"
        "  Use just 'svn diff' to display local modifications in "
        "a working copy.\n"),
-    {'r', svn_cl__old_cmd_opt, svn_cl__new_cmd_opt, 'x', 'N',
-     svn_cl__diff_cmd_opt, svn_cl__no_diff_deleted,
+    {'r', svn_cl__old_cmd_opt, svn_cl__new_cmd_opt, 'N',
+     svn_cl__diff_cmd_opt, 'x', svn_cl__no_diff_deleted,
      svn_cl__notice_ancestry_opt, svn_cl__force_opt, SVN_CL__AUTH_OPTIONS,
      svn_cl__config_dir_opt} },
 
