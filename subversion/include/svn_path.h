@@ -386,13 +386,15 @@ const char *svn_path_url_add_component (const char *url,
                                         const char *component,
                                         apr_pool_t *pool);
 
-/** Convert @a iri (Internationalized URI) to an URI.
+/** @since New in 1.2.
+ * Convert @a iri (Internationalized URI) to an URI.
  * The return value may be the same as @a iri if it was already
  * a URI.  Else, allocate the return value in @a pool. */
 const char *svn_path_uri_from_iri (const char *iri,
                                    apr_pool_t *pool);
 
-/** URI-encode certain characters in @a uri that are not valid in an URI, but
+/** @since New in 1.2.
+ * URI-encode certain characters in @a uri that are not valid in an URI, but
  * doesn't have any special meaning in @a uri at their positions.  If no
  * characters need escaping, just return @a uri.
  *
