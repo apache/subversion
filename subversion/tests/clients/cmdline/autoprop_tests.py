@@ -2,9 +2,9 @@
 #
 #  autoprop_tests.py:  testing automatic properties
 #
-#  Subversion is a tool for revision control. 
+#  Subversion is a tool for revision control.
 #  See http://subversion.tigris.org for more information.
-#    
+#
 # ====================================================================
 # Copyright (c) 2000-2003 CollabNet.  All rights reserved.
 #
@@ -84,7 +84,10 @@ def create_config(config_dir, enable_flag):
   # create the file 'config'
   fd = open(cfgfile_cfg, 'w')
   fd.write('[miscellany]\n')
-  fd.write('enable-auto-props = ' + enable_flag + '\n')
+  if enable_flag:
+    fd.write('enable-auto-props = yes\n')
+  else:
+    fd.write('enable-auto-props = no\n')
   fd.write('\n')
   fd.write('[auto-props]\n')
   fd.write('*.c = cfile=yes\n')
@@ -113,15 +116,19 @@ def create_test_file(dir, name):
 
 #----------------------------------------------------------------------
 
-def autoprops_test(sbox, cmd, cfgtype, paramtype, subdir):
+def autoprops_test(sbox, cmd, cfgenable, clienable, subdir):
   """configurable autoprops test.
-     if CMD == 1 do test svn import else test svn add
-     if CFGTYPE == 1 add is enabled in the config, if it is 2 import is
-       enabled else both are disabled
-     if PARAMTYPE == 1 --auto-props is added to the commandline, if it is
-       2 --no-auto-props is added else none is added
+
+     CMD is the subcommand to test: 'import' or 'add'
+     if CFGENABLE is true, enable autoprops in the config file, else disable
+     if CLIENABLE == 1: --auto-props is added to the command line
+                     0: nothing is added
+                    -1: --no-auto-props is added to command line
      if string SUBDIR is not empty files are created in that subdir and the
        directory is added/imported"""
+
+  # Bootstrap
+  sbox.build()
 
   # some directories
   wc_dir = sbox.wc_dir
@@ -131,35 +138,27 @@ def autoprops_test(sbox, cmd, cfgtype, paramtype, subdir):
   svntest.main.set_config_dir(config_dir)
 
   # initialize parameters
-  parameters = []
-
-  # add svn command
-  if cmd == 1:
-    parameters = parameters + ['import', '--username', main.wc_author,
-                            '--password', main.wc_passwd, '-m', 'bla']
-    need_svn_up = 1
+  if cmd == 'import':
+    parameters = ['import', '--username', svntest.main.wc_author,
+                            '--password', svntest.main.wc_passwd, '-m', 'bla']
     files_dir = tmp_dir
   else:
-    parameters = parameters + ['add']
-    need_svn_up = 0
+    parameters = ['add']
     files_dir = wc_dir
+  
   parameters = parameters + ['--config-dir', config_dir]
 
-  # set config flags
-  if cfgtype == 1:
-    create_config(config_dir, 'yes')
-    enable_flag = 1
-  else:
-    create_config(config_dir, 'no')
-    enable_flag = 0
+  create_config(config_dir, cfgenable)
 
   # add comandline flags
-  if paramtype == 1:
+  if clienable == 1:
     parameters = parameters + ['--auto-props']
     enable_flag = 1
-  elif paramtype == 2:
+  elif clienable == -1:
     parameters = parameters + ['--no-auto-props']
     enable_flag = 0
+  else:
+    enable_flag = cfgenable
 
   # setup subdirectory if needed
   if len(subdir) > 0:
@@ -170,40 +169,35 @@ def autoprops_test(sbox, cmd, cfgtype, paramtype, subdir):
     files_wc_dir = wc_dir
 
   # create test files
-  filenames = []
-  filenames = filenames + ['foo.h']
-  create_test_file(files_dir, filenames[len(filenames)-1])
-  filenames = filenames + ['foo.c']
-  create_test_file(files_dir, filenames[len(filenames)-1])
-  filenames = filenames + ['foo.jpg']
-  create_test_file(files_dir, filenames[len(filenames)-1])
-  filenames = filenames + ['fubar.tar']
-  create_test_file(files_dir, filenames[len(filenames)-1])
-  filenames = filenames + ['foobar.lha']
-  create_test_file(files_dir, filenames[len(filenames)-1])
-  filenames = filenames + ['spacetest']
-  create_test_file(files_dir, filenames[len(filenames)-1])
+  filenames = ['foo.h',
+               'foo.c',
+               'foo.jpg',
+               'fubar.tar',
+               'foobar.lha',
+               'spacetest']
+  for filename in filenames:
+    create_test_file(files_dir, filename)
 
   if len(subdir) == 0:
     # add/import the files
     for filename in filenames:
-      filename = os.path.join(files_dir, filename)
-      if cmd == 1:
-        tmp_params = parameters + [filename, os.path.join(repos_url, filename)]
+      path = os.path.join(files_dir, filename)
+      if cmd == 'import':
+        tmp_params = parameters + [path, os.path.join(repos_url, filename)]
       else:
-        tmp_params = parameters + [filename]
+        tmp_params = parameters + [path]
       svntest.main.run_svn(None, *tmp_params)
   else:
     # add/import subdirectory
-    if cmd == 1:
+    if cmd == 'import':
       parameters = parameters + [files_dir, repos_url]
     else:
       parameters = parameters + [files_wc_dir]
     svntest.main.run_svn(None, *parameters)
 
-  # do an svn up if needed
-  if need_svn_up:
-    svntest.main.run_svn(None, 'update')
+  # do an svn co if needed
+  if cmd == 'import':
+    svntest.main.run_svn(None, 'checkout', repos_url, files_wc_dir)
 
   # check the properties
   if enable_flag:
@@ -234,16 +228,8 @@ def autoprops_test(sbox, cmd, cfgtype, paramtype, subdir):
     check_prop('g h i', filename, ['j k l'])
     check_prop('m n o', filename, [])
   else:
-    filename = os.path.join(files_wc_dir, 'foo.h' )
-    check_proplist(filename,[])
-    filename = os.path.join(files_wc_dir, 'foo.c' )
-    check_proplist(filename,[])
-    filename = os.path.join(files_wc_dir, 'foo.jpg' )
-    check_proplist(filename,[])
-    filename = os.path.join(files_wc_dir, 'fubar.tar' )
-    check_proplist(filename,[])
-    filename = os.path.join(files_wc_dir, 'foobar.lha' )
-    check_proplist(filename,[])
+    for filename in filenames:
+      check_proplist(os.path.join(files_wc_dir, filename), [])
 
 
 #----------------------------------------------------------------------
@@ -251,10 +237,6 @@ def autoprops_test(sbox, cmd, cfgtype, paramtype, subdir):
 def autoprops_add_no_none(sbox):
   "add: config=no,  commandline=none"
 
-  # Bootstrap
-  sbox.build()
-
-  # cmd=add, config=no, commandline=none
   autoprops_test(sbox, 'add', 0, 0, '')
 
 #----------------------------------------------------------------------
@@ -262,10 +244,6 @@ def autoprops_add_no_none(sbox):
 def autoprops_add_yes_none(sbox):
   "add: config=yes, commandline=none"
 
-  # Bootstrap
-  sbox.build()
-
-  # cmd=add, config=yes, commandline=none
   autoprops_test(sbox, 'add', 1, 0, '')
 
 #----------------------------------------------------------------------
@@ -273,10 +251,6 @@ def autoprops_add_yes_none(sbox):
 def autoprops_add_no_yes(sbox):
   "add: config=no,  commandline=yes"
 
-  # Bootstrap
-  sbox.build()
-
-  # cmd=add, config=no, commandline=yes
   autoprops_test(sbox, 'add', 0, 1, '')
 
 #----------------------------------------------------------------------
@@ -284,10 +258,6 @@ def autoprops_add_no_yes(sbox):
 def autoprops_add_yes_yes(sbox):
   "add: config=yes, commandline=yes"
 
-  # Bootstrap
-  sbox.build()
-
-  # cmd=add, config=yes, commandline=yes
   autoprops_test(sbox, 'add', 1, 1, '')
 
 #----------------------------------------------------------------------
@@ -295,32 +265,20 @@ def autoprops_add_yes_yes(sbox):
 def autoprops_add_no_no(sbox):
   "add: config=no,  commandline=no"
 
-  # Bootstrap
-  sbox.build()
-
-  # cmd=add, config=no, commandline=no
-  autoprops_test(sbox, 'add', 0, 2, '')
+  autoprops_test(sbox, 'add', 0, -1, '')
 
 #----------------------------------------------------------------------
 
 def autoprops_add_yes_no(sbox):
   "add: config=yes, commandline=no"
 
-  # Bootstrap
-  sbox.build()
-
-  # cmd=add, config=yes, commandline=no
-  autoprops_test(sbox, 'add', 1, 2, '')
+  autoprops_test(sbox, 'add', 1, -1, '')
 
 #----------------------------------------------------------------------
 
 def autoprops_imp_no_none(sbox):
   "import: config=no,  commandline=none"
 
-  # Bootstrap
-  sbox.build()
-
-  # cmd=import, config=no, commandline=none
   autoprops_test(sbox, 'import', 0, 0, '')
 
 #----------------------------------------------------------------------
@@ -328,10 +286,6 @@ def autoprops_imp_no_none(sbox):
 def autoprops_imp_yes_none(sbox):
   "import: config=yes, commandline=none"
 
-  # Bootstrap
-  sbox.build()
-
-  # cmd=import, config=yes, commandline=none
   autoprops_test(sbox, 'import', 1, 0, '')
 
 #----------------------------------------------------------------------
@@ -339,10 +293,6 @@ def autoprops_imp_yes_none(sbox):
 def autoprops_imp_no_yes(sbox):
   "import: config=no,  commandline=yes"
 
-  # Bootstrap
-  sbox.build()
-
-  # cmd=import, config=no, commandline=yes
   autoprops_test(sbox, 'import', 0, 1, '')
 
 #----------------------------------------------------------------------
@@ -350,10 +300,6 @@ def autoprops_imp_no_yes(sbox):
 def autoprops_imp_yes_yes(sbox):
   "import: config=yes, commandline=yes"
 
-  # Bootstrap
-  sbox.build()
-
-  # cmd=import, config=yes, commandline=yes
   autoprops_test(sbox, 'import', 1, 1, '')
 
 #----------------------------------------------------------------------
@@ -361,32 +307,20 @@ def autoprops_imp_yes_yes(sbox):
 def autoprops_imp_no_no(sbox):
   "import: config=no,  commandline=no"
 
-  # Bootstrap
-  sbox.build()
-
-  # cmd=import, config=no, commandline=no
-  autoprops_test(sbox, 'import', 0, 2, '')
+  autoprops_test(sbox, 'import', 0, -1, '')
 
 #----------------------------------------------------------------------
 
 def autoprops_imp_yes_no(sbox):
   "import: config=yes, commandline=no"
 
-  # Bootstrap
-  sbox.build()
-
-  # cmd=import, config=yes, commandline=no
-  autoprops_test(sbox, 'import', 1, 2, '')
+  autoprops_test(sbox, 'import', 1, -1, '')
 
 #----------------------------------------------------------------------
 
 def autoprops_add_dir(sbox):
   "add directory"
 
-  # Bootstrap
-  sbox.build()
-
-  # cmd=import, config=yes, commandline=no
   autoprops_test(sbox, 'add', 1, 0, 'autodir')
 
 #----------------------------------------------------------------------
@@ -394,10 +328,6 @@ def autoprops_add_dir(sbox):
 def autoprops_imp_dir(sbox):
   "import directory"
 
-  # Bootstrap
-  sbox.build()
-
-  # cmd=import, config=yes, commandline=no
   autoprops_test(sbox, 'import', 1, 0, 'autodir')
 
 
