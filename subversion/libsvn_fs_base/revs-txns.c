@@ -566,6 +566,8 @@ make_txn (svn_fs_t *fs,
   txn->fs = fs;
   txn->id = id;
   txn->base_rev = base_rev;
+  txn->fsap_data = NULL;
+  /* XXX Set vtable */
 
   return txn;
 }

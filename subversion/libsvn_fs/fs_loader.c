@@ -318,7 +318,7 @@ svn_fs_purge_txn (svn_fs_t *fs, const char *txn_id, apr_pool_t *pool)
 svn_error_t *
 svn_fs_txn_name (const char **name_p, svn_fs_txn_t *txn, apr_pool_t *pool)
 {
-  *name_p = apr_pstrdup (pool, txn->name);
+  *name_p = apr_pstrdup (pool, txn->id);
   return SVN_NO_ERROR;
 }
 

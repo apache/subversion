@@ -230,11 +230,6 @@ struct svn_fs_t
 
 struct svn_fs_txn_t
 {
-  /* A pool managing this transaction.  Freeing the pool releases any
-     DB resources used by the transaction, but does not delete the
-     transaction. */
-  apr_pool_t *pool;
-
   /* The filesystem to which this transaction belongs */
   svn_fs_t *fs;
 
@@ -244,7 +239,7 @@ struct svn_fs_txn_t
   svn_revnum_t base_rev;
 
   /* The ID of this transaction */
-  const char *name;
+  const char *id;
 
   /* FSAP-specific vtable and private data */
   txn_vtable_t *vtable;
