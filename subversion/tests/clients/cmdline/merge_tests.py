@@ -844,6 +844,70 @@ def merge_catches_nonexistent_target(sbox):
 
 
 #----------------------------------------------------------------------
+# This is a regression for issue #1176.
+
+def merge_similar_unrelated_trees(sbox):
+  "merging similar trees ancestrally unrelated"
+  
+  ## See http://subversion.tigris.org/issues/show_bug.cgi?id=1249. ##
+
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
+
+  # Simple test.  Make three directories with the same content.
+  # Modify some stuff in the second one.  Now merge
+  # (firstdir:seconddir->thirddir).
+
+  base1_path = os.path.join(wc_dir, 'base1')
+  base2_path = os.path.join(wc_dir, 'base2')
+  apply_path = os.path.join(wc_dir, 'apply')
+
+  base1_url = os.path.join(svntest.main.current_repo_url + '/base1')
+  base2_url = os.path.join(svntest.main.current_repo_url + '/base2')
+
+  # Make a tree of stuff ...
+  os.mkdir(base1_path)
+  svntest.main.file_append(os.path.join(base1_path, 'iota'),
+                           "This is the file iota\n")
+  os.mkdir(os.path.join(base1_path, 'A'))
+  svntest.main.file_append(os.path.join(base1_path, 'A', 'mu'),
+                           "This is the file mu\n")
+  os.mkdir(os.path.join(base1_path, 'A', 'B'))
+  svntest.main.file_append(os.path.join(base1_path, 'A', 'B', 'alpha'),
+                           "This is the file alpha\n")
+  svntest.main.file_append(os.path.join(base1_path, 'A', 'B', 'beta'),
+                           "This is the file beta\n")
+
+  # ... Copy it twice ...
+  shutil.copytree(base1_path, base2_path)
+  shutil.copytree(base1_path, apply_path)
+
+  # ... Gonna see if merge is naughty or nice!
+  svntest.main.file_append(os.path.join(base2_path, 'A', 'mu'),
+                           "A new line in mu.\n")
+  os.rename(os.path.join(base2_path, 'A', 'B', 'beta'),
+            os.path.join(base2_path, 'A', 'B', 'zeta'))
+
+  out, err = svntest.main.run_svn(None, 'add',
+                                  base1_path, base2_path, apply_path)
+  if err:
+    return 1
+
+  out, err = svntest.main.run_svn(None, 'ci', '-m', 'rev 2', wc_dir)
+  if err:
+    return 1
+
+  out, err = svntest.main.run_svn(None, 'merge',
+                                  base1_url, base2_url, apply_path)
+  if err:
+    return 1
+
+  return 0
+
+
+#----------------------------------------------------------------------
 def merge_one_file(sbox):
   "merge one file, receive a specific error"
 
@@ -1084,6 +1148,7 @@ test_list = [ None,
               simple_property_merges,
               merge_with_implicit_target,
               merge_catches_nonexistent_target,
+              XFail(merge_similar_unrelated_trees),
               # merge_one_file,          # See issue #1150.
               # property_merges_galore,  # Would be nice to have this.
               # tree_merges_galore,      # Would be nice to have this.
