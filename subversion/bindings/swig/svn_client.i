@@ -21,6 +21,7 @@
 
 %import apr.i
 %import svn_types.i
+%import svn_opt.i
 %import svn_string.i
 %import svn_delta.i
 
@@ -28,12 +29,6 @@
    don't wrap the following items
 */
 %ignore svn_client_proplist_item_s;
-
-/* ### these take an 'apr_array_header_t *' which requires a pool, which
-   ### we don't have immediately handy. just eliminate these funcs for now. */
-%ignore svn_client_commit;
-%ignore svn_client_log;
-%ignore svn_client_diff;
 
 /* -----------------------------------------------------------------------
    all "targets" and "diff_options" arrays are constant inputs of

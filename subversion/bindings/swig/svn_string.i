@@ -133,7 +133,8 @@ typedef struct svn_string_t svn_string_t;
  */
 
 %typemap(python,in) const apr_array_header_t *STRINGLIST {
-    $1 = svn_swig_py_strings_to_array($input, _global_pool);
+    $1 = (apr_array_header_t *) svn_swig_py_strings_to_array($input,
+                                                             _global_pool);
     if ($1 == NULL)
         return NULL;
 }

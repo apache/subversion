@@ -90,6 +90,12 @@ void svn_swig_py_make_editor(const svn_delta_editor_t **editor,
                              PyObject *py_editor,
                              apr_pool_t *pool);
 
+apr_file_t *svn_swig_py_make_file (PyObject *py_file,
+                                   apr_pool_t *pool);
+
+svn_opt_revision_t *svn_swig_py_make_opt_revision (PyObject *py_rev,
+                                                   apr_pool_t *pool);
+
 /* a notify function that executes a Python function that is passed in
    via the baton argument */
 void svn_swig_py_notify_func(void *baton,

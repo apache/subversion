@@ -19,10 +19,15 @@
 
 #include <Python.h>
 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+
 #include <apr_pools.h>
 #include <apr_hash.h>
 
 #include "svn_string.h"
+#include "svn_opt.h"
 #include "svn_delta.h"
 
 #include "swigutil_py.h"
@@ -602,6 +607,64 @@ void svn_swig_py_make_editor(const svn_delta_editor_t **editor,
   *edit_baton = make_baton(pool, py_editor, NULL);
 }
 
+/* This is very hacky and gross.  And did I mention broken? */
+apr_file_t *svn_swig_py_make_file (PyObject *py_file,
+                                   apr_pool_t *pool)
+{
+  apr_file_t *apr_file;
+  apr_status_t status;
+  FILE *file;
+  int fd = -1;
+
+  if (py_file == NULL || py_file == Py_None)
+    return NULL;
+
+  if (PyString_Check (py_file))
+    {
+      fd = open (PyString_AS_STRING (py_file),
+                 O_CREAT | O_RDWR,
+                 S_IRUSR | S_IWUSR);
+    }
+  else if (PyFile_Check (py_file))
+    {
+      file = PyFile_AsFile (py_file);
+      fd = fileno (file);
+    }
+  else if (PyInt_Check (py_file))
+    {
+      fd = PyInt_AsLong (py_file);
+    }
+
+  if (fd >= 0) 
+    {  
+      apr_status_t status;
+      status = apr_os_file_put (&apr_file, &fd, O_CREAT | O_WRONLY, pool);
+    }
+
+  /* FIXME: We shouldn't just silently fail. */
+
+  return apr_file;
+}
+
+svn_opt_revision_t *svn_swig_py_make_opt_revision (PyObject *py_rev,
+                                                   apr_pool_t *pool)
+{
+  svn_opt_revision_t *rev;
+  int arg1, arg2;
+
+  rev = apr_palloc(pool, sizeof (svn_opt_revision_t));
+  rev->kind = svn_opt_revision_unspecified;
+
+  /* FIXME: This is very hacky.  Silently failing sucks */
+  if (PyArg_Parse(py_rev, "(ii)", &arg1, &arg2))
+    {
+      rev->kind = (enum svn_opt_revision_kind) arg1;
+      if (rev->kind == svn_opt_revision_number)
+        rev->value.number = arg2;
+    }
+
+  return rev;
+}
 
 void svn_swig_py_notify_func(void *baton,
                              const char *path,

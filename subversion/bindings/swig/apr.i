@@ -95,6 +95,14 @@ typedef apr_int32_t time_t;
 }
 
 /* -----------------------------------------------------------------------
+  handle apr_file_t *
+*/
+
+%typemap(python, in) apr_file_t * {
+  $1 = svn_swig_py_make_file($input, _global_pool);
+}
+
+/* -----------------------------------------------------------------------
    apr_file_t ** is always an OUT param
 */
 
