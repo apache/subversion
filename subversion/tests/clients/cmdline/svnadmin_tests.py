@@ -159,6 +159,30 @@ def dump_quiet(sbox):
     "Output of 'svnadmin dump --quiet' is unexpected.",
     'STDERR', [], errput)
 
+#----------------------------------------------------------------------
+
+def hotcopy_dot(sbox):
+  "'svnadmin hotcopy PATH .'"
+  sbox.build()
+
+  backup_dir, backup_url = sbox.add_repo_path('backup')
+  os.mkdir(backup_dir)
+  cwd = os.getcwd()
+  try:
+    os.chdir(backup_dir)
+    output, errput = svntest.main.run_svnadmin("hotcopy",
+                                               os.path.join(cwd, sbox.repo_dir),
+                                               '.')
+    if errput:
+      raise svntest.Failure
+  finally:
+    os.chdir(cwd)
+
+  origout, origerr = svntest.main.run_svnadmin("dump", sbox.repo_dir, '--quiet')
+  backout, backerr = svntest.main.run_svnadmin("dump", backup_dir, '--quiet')
+  if origerr or backerr or origout != backout:
+    raise svntest.Failure
+
 
 ########################################################################
 # Run the tests
@@ -169,6 +193,7 @@ test_list = [ None,
               dump_copied_dir,
               dump_move_dir_modify_child,
               dump_quiet,
+              hotcopy_dot,
              ]
 
 if __name__ == '__main__':

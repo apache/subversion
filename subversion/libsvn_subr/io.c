@@ -1774,6 +1774,10 @@ dir_make (const char *path, apr_fileperms_t perm,
 
   SVN_ERR (svn_path_cstring_from_utf8 (&path_apr, path, pool));
 
+  /* APR doesn't like "" directories */
+  if (path_apr[0] == '\0')
+    path_apr = ".";
+
   status = apr_dir_make (path_apr, perm, pool);
 
   if (status)
