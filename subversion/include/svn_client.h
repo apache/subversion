@@ -133,17 +133,28 @@ svn_client_delete (svn_string_t *path,
  * (BEFORE_EDITOR, BEFORE_EDIT_BATON / AFTER_EDITOR,
  * AFTER_EDIT_BATON).  Store LOG_MSG as the log for the commit.
  * 
- * URL is the repository directory where the new tree should be added.
- * The last path component of is the name of the new directory this
- * import should create; if it already exists in the youngest
- * revision, return error.
- * 
- * If XML_DST is NULL, then the commit will write to a repository, and
- * the REVISION argument is ignored.
+ * PATH is the path to local tree being imported.  PATH can be a file
+ * or directory.
+ *
+ * URL is the repository directory where the imported data is placed.
+ *
+ * NEW_ENTRY is the new entry created in the repository directory
+ * identified by URL.
+ *
+ * If PATH is a file, that file is imported as NEW_ENTRY.  If PATH is
+ * a directory, the contents of that directory are imported, under a
+ * new directory the NEW_ENTRY in the repository.  Note and the
+ * directory itself is not imported; that is, the basename of PATH is
+ * not part of the import.
+ *
+ * If PATH is a directory and NEW_ENTRY is null, then the contents of
+ * PATH are imported directly into the repository directory identified
+ * by URL.  NEW_ENTRY may not be the empty string.
+ *
+ * If NEW_ENTRY already exists in the youngest revision, return error.
  * 
  * If XML_DST is non-NULL, it is a file in which to store the xml
- * result of the commit.  In this case, only the last component of URL
- * is used.
+ * result of the commit, and REVISION is used as the revision.
  * 
  * Use POOL for all allocation.
  * 
@@ -158,7 +169,9 @@ svn_error_t *svn_client_import (const svn_delta_edit_fns_t *before_editor,
                                 void *before_edit_baton,
                                 const svn_delta_edit_fns_t *after_editor,
                                 void *after_edit_baton,                   
+                                svn_string_t *path,
                                 svn_string_t *url,
+                                svn_string_t *new_entry,
                                 svn_string_t *log_msg,
                                 svn_string_t *xml_dst,
                                 svn_revnum_t revision,
