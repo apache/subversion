@@ -25,6 +25,15 @@ struct edit_baton
 {
   apr_pool_t *pool;
 
+  /* Subversion file system */
+  svn_fs_t *fs;
+
+  /* Transaction associated with this edit */
+  svn_fs_txn_t *txn;
+
+  /* Existing revision number upon which this edit is based */
+  svn_revnum_t base_rev;
+
   /* Commit message for this commit. */
   svn_string_t *log_msg;
 
@@ -39,6 +48,12 @@ struct dir_baton
   struct edit_baton *edit_baton;
   struct dir_baton *parent;
   svn_string_t *name;  /* just this entry, not full path */
+
+  /* Current directory */
+  svn_fs_node_t *node;
+
+  /* Revision number of this directory */
+  svn_revnum_t base_rev;
 };
 
 
@@ -46,6 +61,9 @@ struct file_baton
 {
   struct dir_baton *parent;
   svn_string_t *name;  /* just this entry, not full path */
+
+  /* Revision number of this file */
+  svn_revnum_t base_rev;
 };
 
 
@@ -54,12 +72,20 @@ begin_edit (void *edit_baton, void **root_baton)
 {
   struct edit_baton *eb = edit_baton;
   struct dir_baton *db = apr_pcalloc (eb->pool, sizeof (*db));
+  svn_error_t *err;
 
   db->edit_baton = edit_baton;
   db->parent = NULL;
   db->name = svn_string_create ("", eb->pool);
+  db->base_rev = eb->base_rev; /* This is about to be obsoleted */
 
+  /* Begin a transaction. */
+  err = svn_fs_begin_txn (&(eb->txn), eb->fs, eb->base_rev, eb->pool);
+  if (err) return err;
   
+  /* Get the root directory of the transaction */
+  err = svn_fs_open_txn_root (&(db->node), eb->txn, eb->pool);
+  if (err) return err;
 
   *root_baton = db;
   return SVN_NO_ERROR;
@@ -204,9 +230,11 @@ close_edit (void *edit_baton)
   struct edit_baton *eb = edit_baton;
   svn_revnum_t new_revision = SVN_INVALID_REVNUM;
 
-  err = (*eb->hook) (new_revision, eb->hook_baton);
+  err = svn_fs_commit_txn (&new_revision, eb->txn);
+  if (err) return err;
 
-  return SVN_NO_ERROR;
+  err = (*eb->hook) (new_revision, eb->hook_baton);
+  return err;
 }
 
 
@@ -246,6 +274,7 @@ svn_fs_get_editor (svn_delta_edit_fns_t **editor,
   eb->log_msg = svn_string_dup (log_msg, subpool);
   eb->hook = hook;
   eb->hook_baton = hook_baton;
+  eb->base_rev = base_revision;
 
   *edit_baton = eb;
   *editor = e;

@@ -92,6 +92,8 @@ txn_body_begin_txn (void *baton,
 }
 
 
+
+
 svn_error_t *
 svn_fs_begin_txn (svn_fs_txn_t **txn_p,
 		  svn_fs_t *fs,
@@ -130,6 +132,16 @@ svn_fs_close_txn (svn_fs_txn_t *txn)
      this handle on it will go away, which is the goal. */
   apr_destroy_pool (txn->pool);
 
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_fs_commit_txn (svn_revnum_t *new_rev, 
+                   svn_fs_txn_t *txn)
+{
+  *new_rev = SVN_INVALID_REVNUM;
+  abort();
   return SVN_NO_ERROR;
 }
 

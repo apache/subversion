@@ -706,7 +706,8 @@ svn_error_t *svn_fs_begin_txn (svn_fs_txn_t **txn_p,
 /* Commit the transaction TXN.  If the transaction conflicts with
    other changes committed to the repository, return an
    SVN_ERR_FS_CONFLICT error.  Otherwise, create a new filesystem
-   revision containing the changes made in TXN, and return zero.
+   revision containing the changes made in TXN, storing that new
+   revision number in *NEW_REV, and return zero.
 
    If the commit succeeds, it frees TXN, and any temporary resources
    it holds.  Any node objects referring to formerly mutable nodes
@@ -717,7 +718,7 @@ svn_error_t *svn_fs_begin_txn (svn_fs_txn_t **txn_p,
    If the commit fails, TXN is still valid; you can make more
    operations to resolve the conflict, or call `svn_fs_abort_txn' to
    abort the transaction.  */
-svn_error_t *svn_fs_commit_txn (svn_fs_txn_t *txn);
+svn_error_t *svn_fs_commit_txn (svn_revnum_t *new_rev, svn_fs_txn_t *txn);
 
 
 /* Abort the transaction TXN.  Any changes made in TXN are discarded,
@@ -885,16 +886,17 @@ typedef svn_error_t *svn_fs_commit_hook_t (svn_revnum_t new_revision,
 
 
 /* Return an EDITOR and EDIT_BATON to commit changes to BASE_REVISION
- * of FS, with LOG_MSG as the commit message.  The directory baton
- * returned by (*EDITOR)->begin_edit is for the root of the tree; all
- * edits must start at the top and descend.
+ * of FS (which is assumed to be a previously opened file system) with
+ * LOG_MSG as the commit message.  The directory baton returned by
+ * (*EDITOR)->begin_edit is for the root of the tree; all edits must
+ * start at the top and descend.
  *
  * Calling (*EDITOR)->close_edit completes the commit.  Before
  * close_edit returns, but after the commit has succeeded, it will
  * invoke HOOK with the new revision number and HOOK_BATON as
  * arguments.  If HOOK returns an error, that error will be returned
  * from close_edit, otherwise close_edit will return successfully
- * (unless it encountered an error before invoking HOOK).
+ * (unless it encountered an error before invoking HOOK).  
  */
 svn_error_t *svn_fs_get_editor (svn_delta_edit_fns_t **editor,
                                 void **edit_baton,
