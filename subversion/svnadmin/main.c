@@ -19,6 +19,25 @@
 
 #include "svnadmin.h"
 
+typedef enum svnadmin_cmd_t
+{
+  svnadmin_cmd_unknown = 0,
+
+  svnadmin_cmd_create,
+  svnadmin_cmd_createtxn,
+  svnadmin_cmd_deltify,
+  svnadmin_cmd_lsrevs,
+  svnadmin_cmd_lstxns,
+  svnadmin_cmd_recover,
+  svnadmin_cmd_rmtxns,
+  svnadmin_cmd_setlog,
+  svnadmin_cmd_shell,
+  svnadmin_cmd_undeltify,
+  svnadmin_cmd_youngest
+
+} svnadmin_cmd_t;
+
+
 
 /*** Tree printing. ***/
 
@@ -151,26 +170,52 @@ usage (const char *progname, int exit_code)
 
 /*** Main. ***/
 
+static svnadmin_cmd_t 
+parse_command (const char *command)
+{
+  if (! strcmp (command, "create"))
+    return svnadmin_cmd_create;
+  else if (! strcmp (command, "youngest"))
+    return svnadmin_cmd_youngest;
+  else if (! strcmp (command, "lstxns"))
+    return svnadmin_cmd_lstxns;
+  else if (! strcmp (command, "lsrevs"))
+    return svnadmin_cmd_lsrevs;
+  else if (! strcmp (command, "rmtxns"))
+    return svnadmin_cmd_rmtxns;
+  else if (! strcmp (command, "createtxn"))
+    return svnadmin_cmd_createtxn;
+  else if (! strcmp (command, "setlog"))
+    return svnadmin_cmd_setlog;
+  else if (! strcmp (command, "shell"))
+    return svnadmin_cmd_shell;
+  else if (! strcmp (command, "undeltify"))
+    return svnadmin_cmd_undeltify;
+  else if (! strcmp (command, "deltify"))
+    return svnadmin_cmd_deltify;
+  else if (! strcmp (command, "recover"))
+    return svnadmin_cmd_recover;
+
+  return svnadmin_cmd_unknown;
+}
+
+
+
+#define INT_ERR(expr)                                       \
+  do {                                                      \
+    svn_error_t *svnadmin_err__temp = (expr);               \
+    if (svnadmin_err__temp) {                               \
+      svn_handle_error (svnadmin_err__temp, stderr, FALSE); \
+      return EXIT_FAILURE; }                                \
+  } while (0)
+
 int
 main (int argc, const char * const *argv)
 {
   apr_pool_t *pool;
   svn_repos_t *repos;
   svn_fs_t *fs;
-  svn_error_t *err;
-  int               /* commands */
-    is_create = 0,
-    is_createtxn = 0,
-    is_deltify = 0,
-    is_lsrevs = 0,
-    is_lstxn = 0,
-    is_recover = 0,
-    is_rmtxns = 0,
-    is_setlog = 0,
-    is_undeltify = 0,
-    is_youngest = 0,
-    is_shell = 0;
-  
+  svnadmin_cmd_t command = svnadmin_cmd_unknown;
   const char *path = NULL;
 
   /* ### this whole thing needs to be cleaned up once client/main.c
@@ -184,385 +229,358 @@ main (int argc, const char * const *argv)
     }
 
   path = argv[2];
-
-  if (! ((is_create = strcmp(argv[1], "create") == 0)
-         || (is_youngest = strcmp(argv[1], "youngest") == 0)
-         || (is_lstxn = strcmp(argv[1], "lstxns") == 0)
-         || (is_lsrevs = strcmp(argv[1], "lsrevs") == 0)
-         || (is_rmtxns = strcmp(argv[1], "rmtxns") == 0)
-         || (is_createtxn = strcmp(argv[1], "createtxn") == 0)
-         || (is_setlog = strcmp(argv[1], "setlog") == 0)
-         || (is_shell = strcmp(argv[1], "shell") == 0)
-         || (is_undeltify = strcmp(argv[1], "undeltify") == 0)
-         || (is_deltify = strcmp(argv[1], "deltify") == 0)
-         || (is_recover = strcmp(argv[1], "recover") == 0)))
-    {
-      usage (argv[0], 1);
-      return EXIT_FAILURE;
-    }
-
   apr_initialize ();
   pool = svn_pool_create (NULL);
 
-  if (is_create)
+  command = parse_command (argv[1]);
+  switch (command)
     {
-      err = svn_repos_create (&repos, path, pool);
-      if (err) goto error;
-    }
-  else if (is_youngest)
-    {
-      svn_revnum_t youngest_rev;
+    case svnadmin_cmd_unknown:
+    default:
+      {
+        usage (argv[0], 1);
+        return EXIT_FAILURE;
+      }
+      break;
 
-      err = svn_repos_open (&repos, path, pool);
-      if (err) goto error;
+    case svnadmin_cmd_create:
+      {
+        INT_ERR (svn_repos_create (&repos, path, pool));
+      }
+      break;
 
-      fs = svn_repos_fs (repos);
-      svn_fs_youngest_rev (&youngest_rev, fs, pool);
-      printf ("%ld\n", (long int) youngest_rev);
-    }
-  else if (is_lstxn)
-    {
-      char **txns;
-      char *txn_name;
+    case svnadmin_cmd_youngest:
+      {
+        svn_revnum_t youngest_rev;
 
-      err = svn_repos_open (&repos, path, pool);
-      if (err) goto error;
+        INT_ERR (svn_repos_open (&repos, path, pool));
+        fs = svn_repos_fs (repos);
+        svn_fs_youngest_rev (&youngest_rev, fs, pool);
+        printf ("%ld\n", (long int) youngest_rev);
+      }
+      break;
 
-      fs = svn_repos_fs (repos);
-      err = svn_fs_list_transactions(&txns, fs, pool);
-      if (err) goto error;
-
-      /* Loop, printing revisions. */
-      while ((txn_name = *txns++))
-        {
-          svn_fs_txn_t *txn;
-          svn_fs_root_t *this_root;
-          svn_string_t *datestamp;
-          svn_string_t *author;
-          svn_string_t *log;
-          apr_pool_t *this_pool = svn_pool_create (pool);
-
-          err = svn_fs_open_txn (&txn, fs, txn_name, this_pool);
-          if (err) goto error;
-
-          err = svn_fs_txn_root (&this_root, txn, this_pool);
-          if (err) goto error;
-
-          err = svn_fs_txn_prop (&datestamp, txn, SVN_PROP_REVISION_DATE,
-                                 this_pool);
-          if (err) goto error;
-          err = svn_fs_txn_prop (&author, txn, SVN_PROP_REVISION_AUTHOR,
-                                 this_pool);
-          if (err) goto error;
-          if ((! datestamp) || (! datestamp->data))
-            datestamp = svn_string_create ("", this_pool);
-          if ((! author) || (! author->data))
-            author = svn_string_create ("", this_pool);
-          err = svn_fs_txn_prop (&log, txn, SVN_PROP_REVISION_LOG, this_pool);
-          if (err) goto error;
-          if (! log)
-            log = svn_string_create ("", this_pool);
+    case svnadmin_cmd_lstxns:
+      {
+        char **txns;
+        char *txn_name;
+        
+        INT_ERR (svn_repos_open (&repos, path, pool));
+        fs = svn_repos_fs (repos);
+        INT_ERR (svn_fs_list_transactions(&txns, fs, pool));
+        
+        /* Loop, printing revisions. */
+        while ((txn_name = *txns++))
+          {
+            svn_fs_txn_t *txn;
+            svn_fs_root_t *this_root;
+            svn_string_t *datestamp;
+            svn_string_t *author;
+            svn_string_t *log;
+            apr_pool_t *this_pool = svn_pool_create (pool);
+            
+            INT_ERR (svn_fs_open_txn (&txn, fs, txn_name, this_pool));
+            INT_ERR (svn_fs_txn_root (&this_root, txn, this_pool));
+            INT_ERR (svn_fs_txn_prop (&datestamp, txn,
+                                      SVN_PROP_REVISION_DATE, 
+                                      this_pool));
+            INT_ERR (svn_fs_txn_prop (&author, txn,
+                                      SVN_PROP_REVISION_AUTHOR, 
+                                      this_pool));
+            if ((! datestamp) || (! datestamp->data))
+              datestamp = svn_string_create ("", this_pool);
+            if ((! author) || (! author->data))
+              author = svn_string_create ("", this_pool);
+            INT_ERR (svn_fs_txn_prop (&log, txn,
+                                      SVN_PROP_REVISION_LOG, 
+                                      this_pool));
+            if (! log)
+              log = svn_string_create ("", this_pool);
           
-          printf ("Txn %s:\n", txn_name);
-          printf ("Created: %s\n", datestamp->data);
-          printf ("Author: %s\n", author->data);
-          printf ("Log (%lu bytes):\n%s\n",
-                  (unsigned long int) log->len, log->data);
-          printf ("==========================================\n");
-          print_tree (this_root, "", 1, this_pool);
-          printf ("\n");
+            printf ("Txn %s:\n", txn_name);
+            printf ("Created: %s\n", datestamp->data);
+            printf ("Author: %s\n", author->data);
+            printf ("Log (%lu bytes):\n%s\n",
+                    (unsigned long int) log->len, log->data);
+            printf ("==========================================\n");
+            print_tree (this_root, "", 1, this_pool);
+            printf ("\n");
 
-          svn_pool_destroy (this_pool);
-        }
-    }
-  else if (is_lsrevs)
-    {
-      svn_revnum_t
-        lower = SVN_INVALID_REVNUM,
-        upper = SVN_INVALID_REVNUM,
-        this;
+            svn_pool_destroy (this_pool);
+          }
+      }
+      break;
 
-      err = svn_repos_open (&repos, path, pool);
-      if (err) goto error;
+    case svnadmin_cmd_lsrevs:
+      {
+        svn_revnum_t
+          lower = SVN_INVALID_REVNUM,
+          upper = SVN_INVALID_REVNUM,
+          this;
 
-      fs = svn_repos_fs (repos);
+        INT_ERR (svn_repos_open (&repos, path, pool));
+        fs = svn_repos_fs (repos);
 
-      /* Do the args tell us what revisions to inspect? */
-      if (argv[3])
-        {
-          lower = SVN_STR_TO_REV (argv[3]);
-          if (argv[4])
-            upper = SVN_STR_TO_REV (argv[4]);
-        }
+        /* Do the args tell us what revisions to inspect? */
+        if (argv[3])
+          {
+            lower = SVN_STR_TO_REV (argv[3]);
+            if (argv[4])
+              upper = SVN_STR_TO_REV (argv[4]);
+          }
+        
+        /* Fill in for implied args. */
+        if (lower == SVN_INVALID_REVNUM)
+          {
+            lower = 0;
+            svn_fs_youngest_rev (&upper, fs, pool);
+          }
+        else if (upper == SVN_INVALID_REVNUM)
+          upper = lower;
+        
+        /* Loop, printing revisions. */
+        for (this = lower; this <= upper; this++)
+          {
+            svn_fs_root_t *this_root;
+            svn_string_t *datestamp;
+            svn_string_t *author;
+            svn_string_t *log;
+            apr_pool_t *this_pool = svn_pool_create (pool);
+            
+            INT_ERR (svn_fs_revision_root (&this_root, fs, this, this_pool));
+            INT_ERR (svn_fs_revision_prop (&datestamp, fs, this, 
+                                           SVN_PROP_REVISION_DATE, this_pool));
+            INT_ERR (svn_fs_revision_prop (&author, fs, this, 
+                                           SVN_PROP_REVISION_AUTHOR, 
+                                           this_pool));
+            if (! author)
+              author = svn_string_create ("", this_pool);
+            
+            INT_ERR (svn_fs_revision_prop (&log, fs, this,
+                                           SVN_PROP_REVISION_LOG, this_pool));
+            if (! log)
+              log = svn_string_create ("", this_pool);
+            
+            printf ("Revision %ld\n", (long int) this);
+            printf ("Created: %s\n", datestamp->data);
+            printf ("Author: %s\n", author->data);
+            printf ("Log (%lu bytes):\n%s\n",
+                    (unsigned long int) log->len, log->data);
+            printf ("==========================================\n");
+            print_tree (this_root, "", 1, this_pool);
+            printf ("\n");
+            
+            svn_pool_destroy (this_pool);
+          }
+      }
+      break;
 
-      /* Fill in for implied args. */
-      if (lower == SVN_INVALID_REVNUM)
-        {
-          lower = 0;
-          svn_fs_youngest_rev (&upper, fs, pool);
-        }
-      else if (upper == SVN_INVALID_REVNUM)
-        upper = lower;
+    case svnadmin_cmd_rmtxns:
+      {
+        svn_fs_txn_t *txn;
+        int i;
+        
+        if (! argv[3])
+          {
+            usage (argv[0], 1);
+            return EXIT_FAILURE;
+          }
+        
+        INT_ERR (svn_repos_open (&repos, path, pool));
+        fs = svn_repos_fs (repos);
+        
+        /* All the rest of the arguments are transaction names. */
+        for (i = 3; i < argc; i++)
+          {
+            INT_ERR (svn_fs_open_txn (&txn, fs, argv[i], pool));
+            INT_ERR (svn_fs_abort_txn (txn));
+          }
+      }
+      break;
 
-      /* Loop, printing revisions. */
-      for (this = lower; this <= upper; this++)
-        {
-          svn_fs_root_t *this_root;
-          svn_string_t *datestamp;
-          svn_string_t *author;
-          svn_string_t *log;
-          apr_pool_t *this_pool = svn_pool_create (pool);
-           
-          err = svn_fs_revision_root (&this_root, fs, this, this_pool);
-          if (err) goto error;
+    case svnadmin_cmd_createtxn:
+      {
+        svn_fs_txn_t *txn;
+        
+        if (! argv[3])
+          {
+            usage (argv[0], 1);
+            return EXIT_FAILURE;
+          }
+        
+        INT_ERR (svn_repos_open (&repos, path, pool));
+        fs = svn_repos_fs (repos);
+        INT_ERR (svn_fs_begin_txn (&txn, fs, SVN_STR_TO_REV (argv[3]), pool));
+        INT_ERR (svn_fs_close_txn (txn));
+      }
+      break;
 
-          err = svn_fs_revision_prop (&datestamp, fs, this,
-                                      SVN_PROP_REVISION_DATE, this_pool);
-          if (err) goto error;
+    case svnadmin_cmd_setlog:
+      {
+        svn_revnum_t the_rev;
+        svn_stringbuf_t *file_contents;
+        svn_string_t log_contents;
 
-          err = svn_fs_revision_prop (&author, fs, this,
-                                      SVN_PROP_REVISION_AUTHOR, this_pool);
-          if (err) goto error;
-          if (! author)
-            author = svn_string_create ("", this_pool);
-
-          err = svn_fs_revision_prop (&log, fs, this,
-                                      SVN_PROP_REVISION_LOG, this_pool);
-          if (err) goto error;
-          if (! log)
-            log = svn_string_create ("", this_pool);
-
-
-          printf ("Revision %ld\n", (long int) this);
-          printf ("Created: %s\n", datestamp->data);
-          printf ("Author: %s\n", author->data);
-          printf ("Log (%lu bytes):\n%s\n",
-                  (unsigned long int) log->len, log->data);
-          printf ("==========================================\n");
-          print_tree (this_root, "", 1, this_pool);
-          printf ("\n");
-
-          svn_pool_destroy (this_pool);
-        }
-    }
-  else if (is_rmtxns)
-    {
-      svn_fs_txn_t *txn;
-      int i;
-
-      if (! argv[3])
-        {
-          usage (argv[0], 1);
-          return EXIT_FAILURE;
-        }
-
-      err = svn_repos_open (&repos, path, pool);
-      if (err) goto error;
-
-      fs = svn_repos_fs (repos);
-
-      /* All the rest of the arguments are transaction names. */
-      for (i = 3; i < argc; i++)
-        {
-          err = svn_fs_open_txn (&txn, fs, argv[i], pool);
-          if (err) goto error;
-
-          err = svn_fs_abort_txn (txn);
-          if (err) goto error;
-        }
-    }
-  else if (is_createtxn)
-    {
-      svn_fs_txn_t *txn;
-
-      if (! argv[3])
-        {
-          usage (argv[0], 1);
-          return EXIT_FAILURE;
-        }
-
-      err = svn_repos_open (&repos, path, pool);
-      if (err) goto error;
-
-      fs = svn_repos_fs (repos);
-
-      err = svn_fs_begin_txn (&txn, fs, SVN_STR_TO_REV (argv[3]), pool);
-      if (err) goto error;
-
-      err = svn_fs_close_txn (txn);
-      if (err) goto error;
-    }
-  else if (is_setlog)
-    {
-      svn_revnum_t the_rev;
-      svn_stringbuf_t *file_contents;
-      svn_string_t log_contents;
-
-      if (argc != 5)
-        {
-          printf ("Error: `setlog' requires exactly 3 arguments.\n");
-          exit(1);
-        }
+        if (argc != 5)
+          {
+            printf ("Error: `setlog' requires exactly 3 arguments.\n");
+            exit(1);
+          }
       
-      /* get revision and file from argv[] */
-      the_rev = SVN_STR_TO_REV (argv[3]);
-      err = svn_string_from_file (&file_contents, argv[4], pool); 
-      if (err) goto error;
+        /* get revision and file from argv[] */
+        the_rev = SVN_STR_TO_REV (argv[3]);
+        INT_ERR (svn_string_from_file (&file_contents, argv[4], pool)); 
+        log_contents.data = file_contents->data;
+        log_contents.len = file_contents->len;
 
-      log_contents.data = file_contents->data;
-      log_contents.len = file_contents->len;
+        /* open the filesystem  */
+        INT_ERR (svn_repos_open (&repos, path, pool));
+        fs = svn_repos_fs (repos);
 
-      /* open the filesystem  */
-      err = svn_repos_open (&repos, path, pool);
-      if (err) goto error;
+        /* set the revision property */
+        INT_ERR (svn_fs_change_rev_prop (fs, the_rev, SVN_PROP_REVISION_LOG,
+                                         &log_contents, pool));
+      }
+      break;
 
-      fs = svn_repos_fs (repos);
+    case svnadmin_cmd_deltify:
+    case svnadmin_cmd_undeltify:
+      {
+        svn_revnum_t the_rev;
+        int is_dir = 0;
+        svn_fs_root_t *rev_root;
+        const char *node;
+        int is_deltify = (command == svnadmin_cmd_deltify);
 
-      /* set the revision property */
-      err = svn_fs_change_rev_prop (fs, the_rev, SVN_PROP_REVISION_LOG,
-                                    &log_contents, pool);
-      if (err) goto error;
-    }
-  else if ((is_deltify) || (is_undeltify))
-    {
-      svn_revnum_t the_rev;
-      int is_dir = 0;
-      svn_fs_root_t *rev_root;
-      const char *node;
+        if (argc != 5)
+          {
+            printf ("Error: `%s' requires exactly 3 arguments.\n",
+                    is_deltify ? "deltify" : "undeltify");
+            exit(1);
+          }
 
-      if (argc != 5)
-        {
-          printf ("Error: `%s' requires exactly 3 arguments.\n",
-                  is_deltify ? "deltify" : "undeltify");
-          exit(1);
-        }
+        /* get revision and path from argv[] */
+        the_rev = SVN_STR_TO_REV (argv[3]);
+        node = argv[4];
 
-      /* get revision and path from argv[] */
-      the_rev = SVN_STR_TO_REV (argv[3]);
-      node = argv[4];
+        /* open the filesystem */
+        INT_ERR (svn_repos_open (&repos, path, pool));      
+        fs = svn_repos_fs (repos);
 
-      /* open the filesystem */
-      err = svn_repos_open (&repos, path, pool);
-      if (err) goto error;
-      
-      fs = svn_repos_fs (repos);
+        /* open the revision root */
+        INT_ERR (svn_fs_revision_root (&rev_root, fs, the_rev, pool));
 
-      /* open the revision root */
-      err = svn_fs_revision_root (&rev_root, fs, the_rev, pool);
-      if (err) goto error;
+        /* see if PATH represents a directory (this doubles as an
+           existence check!) */
+        INT_ERR (svn_fs_is_dir (&is_dir, rev_root, node, pool));
 
-      /* see if PATH represents a directory (this doubles as an
-         existence check!) */
-      err = svn_fs_is_dir (&is_dir, rev_root, node, pool);
-      if (err) goto error;
+        /* do the (un-)deltification */
+        printf ("%seltifying `%s' in revision %ld...", 
+                is_deltify ? "D" : "Und", node, (long int)the_rev);
+        if (is_deltify)
+          {
+            INT_ERR (svn_fs_deltify (rev_root, node, is_dir ? 1 : 0, pool));
+          }
+        else
+          {
+            INT_ERR (svn_fs_undeltify (rev_root, node, is_dir ? 1 : 0, pool));
+          }
+        printf ("done.\n");
+      }
+      break;
 
-      /* do the (un-)deltification */
-      printf ("%seltifying `%s' in revision %ld...", 
-              is_deltify ? "D" : "Und", node, (long int)the_rev);
-      if (is_deltify)
-        {
-          err = svn_fs_deltify (rev_root, node, is_dir ? 1 : 0, pool);
-          if (err) goto error;
-        }
-      else
-        {
-          err = svn_fs_undeltify (rev_root, node, is_dir ? 1 : 0, pool);
-          if (err) goto error;
-        }
-      printf ("done.\n");
-    }
 #if 0
-  /* ### TODO: Get this working with new libsvn_repos API.  We need
+      /* ### TODO: Get this working with new libsvn_repos API.  We need
      the repos API to access the lockfile paths and such, but we
      apparently don't want the locking that comes along with the repos
      API. */
-  else if (is_recover)
-    {
-      apr_status_t apr_err;
-      const char *lockfile_path, *env_path;
-      apr_file_t *lockfile_handle = NULL;
+    case svnadmin_cmd_recover:
+      {
+        apr_status_t apr_err;
+        const char *lockfile_path, *env_path;
+        apr_file_t *lockfile_handle = NULL;
+        svn_error_t *err;
 
-      /* Don't use svn_repos_open() here, because we don't want the
-         usual locking behavior. */
-      fs = svn_fs_new (pool);
-      err = svn_fs_open_berkeley (fs, path);
-      if (err && (err->src_err != DB_RUNRECOVERY))
-        goto error;
-
-      /* Exclusively lock the repository.  This blocks on other locks,
-         including shared locks. */
-      lockfile_path = svn_fs_db_lockfile (fs, pool);
-      apr_err = apr_file_open (&lockfile_handle, lockfile_path,
-                               (APR_WRITE | APR_APPEND), APR_OS_DEFAULT, pool);
-      if (! APR_STATUS_IS_SUCCESS (apr_err))
-        {
-          err = svn_error_createf
-            (apr_err, 0, NULL, pool,
-             "%s: error opening db lockfile `%s'", argv[0], lockfile_path);
+        /* Don't use svn_repos_open() here, because we don't want the
+           usual locking behavior. */
+        fs = svn_fs_new (pool);
+        err = svn_fs_open_berkeley (fs, path);
+        if (err && (err->src_err != DB_RUNRECOVERY))
           goto error;
-        }
 
-      apr_err = apr_file_lock (lockfile_handle, APR_FLOCK_EXCLUSIVE);
-      if (! APR_STATUS_IS_SUCCESS (apr_err))
-        {
-          err = svn_error_createf
-            (apr_err, 0, NULL, pool,
-             "%s: exclusive lock on `%s' failed", argv[0], lockfile_path);
-          goto error;
-        }
+        /* Exclusively lock the repository.  This blocks on other locks,
+           including shared locks. */
+        lockfile_path = svn_fs_db_lockfile (fs, pool);
+        apr_err = apr_file_open (&lockfile_handle, lockfile_path,
+                                 (APR_WRITE | APR_APPEND), APR_OS_DEFAULT, pool);
+        if (! APR_STATUS_IS_SUCCESS (apr_err))
+          {
+            err = svn_error_createf
+              (apr_err, 0, NULL, pool,
+               "%s: error opening db lockfile `%s'", argv[0], lockfile_path);
+            goto error;
+          }
 
-      /* Run recovery on the Berkeley environment, using FS to get the
-         path to said environment. */ 
-      env_path = svn_fs_db_env (fs, pool);
-      /* ### todo: this usually seems to get an error -- namely, that
-         the DB needs recovery!  Why would that be, when we just
-         recovered it?  Is it an error to recover a DB that doesn't
-         need recovery, perhaps?  See issue #430. */
-      err = svn_fs_berkeley_recover (env_path, pool);
-      if (err) goto error;
+        apr_err = apr_file_lock (lockfile_handle, APR_FLOCK_EXCLUSIVE);
+        if (! APR_STATUS_IS_SUCCESS (apr_err))
+          {
+            err = svn_error_createf
+              (apr_err, 0, NULL, pool,
+               "%s: exclusive lock on `%s' failed", argv[0], lockfile_path);
+            goto error;
+          }
 
-      /* Release the exclusive lock. */
-      apr_err = apr_file_unlock (lockfile_handle);
-      if (! APR_STATUS_IS_SUCCESS (apr_err))
-        {
-          err = svn_error_createf
-            (apr_err, 0, NULL, pool,
-             "%s: error unlocking `%s'", argv[0], lockfile_path);
-          goto error;
-        }
+        /* Run recovery on the Berkeley environment, using FS to get the
+           path to said environment. */ 
+        env_path = svn_fs_db_env (fs, pool);
+        /* ### todo: this usually seems to get an error -- namely, that
+           the DB needs recovery!  Why would that be, when we just
+           recovered it?  Is it an error to recover a DB that doesn't
+           need recovery, perhaps?  See issue #430. */
+        INT_ERR (svn_fs_berkeley_recover (env_path, pool));
 
-      apr_err = apr_file_close (lockfile_handle);
-      if (! APR_STATUS_IS_SUCCESS (apr_err))
-        {
-          err = svn_error_createf
-            (apr_err, 0, NULL, pool,
-             "%s: error closing `%s'", argv[0], lockfile_path);
-          goto error;
-        }
-    }
+        /* Release the exclusive lock. */
+        apr_err = apr_file_unlock (lockfile_handle);
+        if (! APR_STATUS_IS_SUCCESS (apr_err))
+          {
+            err = svn_error_createf
+              (apr_err, 0, NULL, pool,
+               "%s: error unlocking `%s'", argv[0], lockfile_path);
+            goto error;
+          }
+
+        apr_err = apr_file_close (lockfile_handle);
+        if (! APR_STATUS_IS_SUCCESS (apr_err))
+          {
+            err = svn_error_createf
+              (apr_err, 0, NULL, pool,
+               "%s: error closing `%s'", argv[0], lockfile_path);
+            goto error;
+          }
+
+      error:
+        svn_handle_error(err, stderr, FALSE);
+        return EXIT_FAILURE;
+
+      }
+      break;
+
 #endif /* 0 */
-  else if (is_shell)
-    {
-      err = svn_repos_open (&repos, path, pool);
-      if (err) goto error;
+    case svnadmin_cmd_shell:
+      {
+        INT_ERR (svn_repos_open (&repos, path, pool));
+        fs = svn_repos_fs (repos);
+        INT_ERR (svnadmin_run_shell (fs, pool));
+      }
 
-      fs = svn_repos_fs (repos);
+    } /* switch ... */
 
-      err = svnadmin_run_shell (fs, pool);
-      if (err) goto error;
-    }
-
-  err = svn_repos_close (repos);
-  if (err) goto error;
+  INT_ERR (svn_repos_close (repos));
 
   svn_pool_destroy (pool);
   apr_terminate();
 
   return EXIT_SUCCESS;
-
- error:
-  svn_handle_error(err, stderr, FALSE);
-  return EXIT_FAILURE;
 }
 
 
