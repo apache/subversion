@@ -55,7 +55,8 @@ typedef struct {
   update_ctx_t *uc;
   const char *path;
   svn_boolean_t added;
-  svn_boolean_t seen_prop_change;
+  apr_array_header_t *changed_props;
+  apr_array_header_t *removed_props;
 } item_baton_t;
 
 #define DIR_OR_FILE(is_dir) ((is_dir) ? "directory" : "file")
@@ -179,9 +180,25 @@ static void replace_helper(svn_boolean_t is_dir,
 
 static void close_helper(svn_boolean_t is_dir, item_baton_t *baton)
 {
-  if (baton->seen_prop_change 
-      && (! baton->added))
-    send_xml(baton->uc, "<S:fetch-props/>" DEBUG_CR);
+  int i;
+  svn_stringbuf_t *name;
+  
+  /* ### ack!  binary names won't float here! */
+  if (baton->removed_props && (! baton->added))
+    {
+      for (i = 0; i < baton->removed_props->nelts; i++)
+        {
+          name = ((svn_stringbuf_t **)(baton->removed_props->elts))[i];
+          send_xml(baton->uc, "<S:remove-prop name=\"%s\"/>" DEBUG_CR,
+                   name->data);
+        }
+    }
+  if (baton->changed_props && (! baton->added))
+    {
+      /* ### for now, we will simply tell the client to fetch all the
+         props */
+      send_xml(baton->uc, "<S:fetch-props/>" DEBUG_CR);
+    }
 
   if (baton->added)
     send_xml(baton->uc, "</S:add-%s>" DEBUG_CR, DIR_OR_FILE(is_dir));
@@ -264,8 +281,22 @@ static svn_error_t * upd_change_xxx_prop(void *baton,
 {
   item_baton_t *b = baton;
 
-  b->seen_prop_change = TRUE;
+  if (value)
+    {
+      if (! b->changed_props)
+        b->changed_props = apr_array_make (b->pool, 1, sizeof (name));
 
+      (*((svn_stringbuf_t **)(apr_array_push (b->changed_props)))) = 
+        svn_stringbuf_dup (name, b->pool);
+    }
+  else
+    {
+      if (! b->removed_props)
+        b->removed_props = apr_array_make (b->pool, 1, sizeof (name));
+
+      (*((svn_stringbuf_t **)(apr_array_push (b->removed_props)))) = 
+        svn_stringbuf_dup (name, b->pool);
+    }
   return NULL;
 }
 

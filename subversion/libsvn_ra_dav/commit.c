@@ -186,7 +186,7 @@ static svn_error_t * get_version_url(commit_ctx_t *cc, resource_t *rsrc)
       /* whoops. it wasn't there. go grab it from the server. */
     }
   
-  SVN_ERR( svn_ra_dav__get_props_resource(&propres, cc->ras, rsrc->url,
+  SVN_ERR( svn_ra_dav__get_props_resource(&propres, cc->ras->sess, rsrc->url,
                                           NULL, fetch_props, cc->ras->pool) );
   rsrc->vsn_url = apr_hash_get(propres->propset,
                                SVN_RA_DAV__PROP_CHECKED_IN,
@@ -943,12 +943,12 @@ static svn_error_t * apply_log_message(commit_ctx_t *cc,
      ### REPORT when that is available on the server. */
 
   /* fetch the DAV:version-controlled-configuration from the session's URL */
-  SVN_ERR( svn_ra_dav__get_one_prop(&vcc, cc->ras, cc->ras->root.path, NULL,
-                                    &svn_ra_dav__vcc_prop, pool) );
+  SVN_ERR( svn_ra_dav__get_one_prop(&vcc, cc->ras->sess, cc->ras->root.path, 
+                                    NULL, &svn_ra_dav__vcc_prop, pool) );
 
   /* Get the Baseline from the DAV:checked-in value */
-  SVN_ERR( svn_ra_dav__get_one_prop(&baseline_url, cc->ras, vcc->data, NULL,
-                                    &svn_ra_dav__checked_in_prop, pool) );
+  SVN_ERR( svn_ra_dav__get_one_prop(&baseline_url, cc->ras->sess, vcc->data, 
+                                    NULL, &svn_ra_dav__checked_in_prop, pool));
 
   baseline_rsrc.vsn_url = baseline_url->data;
   SVN_ERR( checkout_resource(cc, &baseline_rsrc) );

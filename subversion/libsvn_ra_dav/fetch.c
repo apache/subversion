@@ -146,6 +146,7 @@ static const struct ne_xml_elm report_elements[] =
   { SVN_XML_NAMESPACE, "add-file", ELEM_add_file, 0 },
   { SVN_XML_NAMESPACE, "delete-entry", ELEM_delete_entry, 0 },
   { SVN_XML_NAMESPACE, "fetch-props", ELEM_fetch_props, 0 },
+  { SVN_XML_NAMESPACE, "remove-prop", ELEM_remove_prop, 0 },
   { SVN_XML_NAMESPACE, "fetch-file", ELEM_fetch_file, 0 },
 
   { "DAV:", "checked-in", ELEM_checked_in, 0 },
@@ -275,7 +276,7 @@ static svn_error_t * fetch_dirents(svn_ra_session_t *ras,
 
   /* Fetch all properties so we can snarf ones out of the svn:custom
    * namspace. */
-  SVN_ERR( svn_ra_dav__get_props(&dirents, ras, url, NE_DEPTH_ONE, NULL,
+  SVN_ERR( svn_ra_dav__get_props(&dirents, ras->sess, url, NE_DEPTH_ONE, NULL,
                                  NULL /* allprop */, pool) );
 
   uri_parse(url, &parsed_url, NULL);
@@ -460,7 +461,7 @@ static svn_error_t * begin_checkout(svn_ra_session_t *ras,
   /* fetch the DAV:version-controlled-configuration, and the
      svn:baseline-relative-path properties from the session root URL */
 
-  SVN_ERR( svn_ra_dav__get_props_resource(&rsrc, ras, ras->root.path,
+  SVN_ERR( svn_ra_dav__get_props_resource(&rsrc, ras->sess, ras->root.path,
                                           NULL, starting_props, pool) );
   if (!rsrc->is_collection)
     {
@@ -494,10 +495,10 @@ static svn_error_t * begin_checkout(svn_ra_session_t *ras,
       /* Get the Baseline from the DAV:checked-in value, then fetch its
          DAV:baseline-collection property. */
       /* ### should wrap this with info about rsrc==VCC */
-      SVN_ERR( svn_ra_dav__get_one_prop(&baseline, ras, vcc, NULL,
+      SVN_ERR( svn_ra_dav__get_one_prop(&baseline, ras->sess, vcc, NULL,
                                         &svn_ra_dav__checked_in_prop, pool) );
 
-      SVN_ERR( svn_ra_dav__get_props_resource(&rsrc, ras, baseline->data, NULL,
+      SVN_ERR( svn_ra_dav__get_props_resource(&rsrc, ras->sess, baseline->data, NULL,
                                               baseline_props, pool) );
     }
   else
@@ -509,7 +510,7 @@ static svn_error_t * begin_checkout(svn_ra_session_t *ras,
       /* ### send Label hdr, get DAV:baseline-collection [from the baseline] */
 
       apr_snprintf(label, sizeof(label), "%ld", revision);
-      SVN_ERR( svn_ra_dav__get_props_resource(&rsrc, ras, vcc, label,
+      SVN_ERR( svn_ra_dav__get_props_resource(&rsrc, ras->sess, vcc, label,
                                               baseline_props, pool) );
     }
 
@@ -633,6 +634,7 @@ svn_error_t * svn_ra_dav__do_checkout(void *session_baton,
       if (strlen(url) > strlen(bc_root))
         {
           svn_stringbuf_t *name;
+          svn_ra_dav_resource_t *rsrc;
 
           /* We're not in the root, add a directory */
           name = my_basename(url, ras->pool);
@@ -642,6 +644,14 @@ svn_error_t * svn_ra_dav__do_checkout(void *session_baton,
                                           &this_baton);
           if (err)
             return svn_error_quick_wrap(err, "could not add directory");
+
+          SVN_ERR (svn_ra_dav__get_props_resource(&rsrc,
+                                                  ras->sess,
+                                                  url,
+                                                  NULL,
+                                                  NULL,
+                                                  ras->pool));
+          add_props(rsrc, editor->change_dir_prop, this_baton, ras->pool);
         }
       else 
         {
@@ -673,7 +683,8 @@ svn_error_t * svn_ra_dav__do_checkout(void *session_baton,
       /* process each of the files that were found */
       for (i = files->nelts; i--; )
         {
-          svn_ra_dav_resource_t *rsrc = ((svn_ra_dav_resource_t **)files->elts)[i];
+          svn_ra_dav_resource_t *rsrc = 
+            ((svn_ra_dav_resource_t **)files->elts)[i];
 
           err = fetch_file(ras, rsrc, this_baton, &vuh, editor, ras->pool);
           if (err)
@@ -714,15 +725,15 @@ svn_error_t *svn_ra_dav__get_latest_revnum(void *session_baton,
      ### to talk to? */
 
   /* fetch the DAV:version-controlled-configuration from the session's URL */
-  SVN_ERR( svn_ra_dav__get_one_prop(&vcc, ras, ras->root.path, NULL,
+  SVN_ERR( svn_ra_dav__get_one_prop(&vcc, ras->sess, ras->root.path, NULL,
                                     &svn_ra_dav__vcc_prop, pool) );
 
   /* Get the Baseline from the DAV:checked-in value */
-  SVN_ERR( svn_ra_dav__get_one_prop(&baseline, ras, vcc->data, NULL,
+  SVN_ERR( svn_ra_dav__get_one_prop(&baseline, ras->sess, vcc->data, NULL,
                                     &svn_ra_dav__checked_in_prop, pool) );
 
   /* The revision is in DAV:version-name on the latest Baseline */
-  SVN_ERR( svn_ra_dav__get_one_prop(&vsn_name, ras, baseline->data, NULL,
+  SVN_ERR( svn_ra_dav__get_one_prop(&vsn_name, ras->sess, baseline->data, NULL,
                                     &version_name_prop, pool) );
 
   *latest_revnum = atol(vsn_name->data);
@@ -791,6 +802,7 @@ static int validate_element(void *userdata, ne_xml_elmid parent, ne_xml_elmid ch
           || child == ELEM_replace_file
           || child == ELEM_add_file
           || child == ELEM_fetch_props
+          || child == ELEM_remove_prop
           || child == ELEM_delete_entry
           || child == ELEM_checked_in)
         return NE_XML_VALID;
@@ -808,7 +820,8 @@ static int validate_element(void *userdata, ne_xml_elmid parent, ne_xml_elmid ch
     case ELEM_replace_file:
       if (child == ELEM_checked_in
           || child == ELEM_fetch_file
-          || child == ELEM_fetch_props)
+          || child == ELEM_fetch_props
+          || child == ELEM_remove_prop)
         return NE_XML_VALID;
       else
         return NE_XML_INVALID;
@@ -848,6 +861,7 @@ static void push_dir(report_baton_t *rb, void *baton)
   di->vsn_url = NULL;
 }
 
+
 static int start_element(void *userdata, const struct ne_xml_elm *elm,
                          const char **atts)
 {
@@ -873,7 +887,6 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
       att = get_attr(atts, "rev");
       /* ### verify we got it. punt on error. */
       base = atol(att);
-
       if (rb->dirs->nelts == 0)
         {
           err = (*rb->editor->replace_root)(rb->edit_baton, base,
@@ -917,8 +930,6 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
 
       /* push the new baton onto the directory baton stack */
       push_dir(rb, new_dir_baton);
-
-      /* ### fetch dir props */
       break;
 
     case ELEM_replace_file:
@@ -954,15 +965,66 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
                                       cpath, crev, &rb->file_baton) );
       break;
 
-    case ELEM_fetch_props:
-      /* Need to examine rb->is_status, I think. */
+    case ELEM_remove_prop:
+      name = get_attr(atts, "name");
+
+      /* Removing a prop.  */
       if (rb->file_baton == NULL)
         {
-          /* ### not yet implemented: fetch dir props. using TOP_DIR.vsn_url */
+          svn_stringbuf_t *namestr = svn_stringbuf_create(name, rb->ras->pool);
+          rb->editor->change_dir_prop(TOP_DIR(rb).baton, namestr, NULL);
         }
       else
         {
-          /* ### not yet implemented: fetch file props. using href. */
+          svn_stringbuf_t *namestr = svn_stringbuf_create(name, rb->ras->pool);
+          rb->editor->change_file_prop(rb->file_baton, namestr, NULL);
+        }
+      break;
+      
+    case ELEM_fetch_props:
+      if (rb->is_status)
+        {
+          /* If this is just a status check, the specifics of the
+             property change are uninteresting.  Simply call our
+             editor function with bogus data so it registers a
+             property mod. */
+          svn_stringbuf_t *namestr = 
+            svn_stringbuf_create(SVN_PROP_PREFIX "BOGOSITY", rb->ras->pool);
+          if (rb->file_baton == NULL)
+            rb->editor->change_dir_prop(TOP_DIR(rb).baton, namestr, NULL);
+          else
+            rb->editor->change_file_prop(rb->file_baton, namestr, NULL);
+        }
+      else
+        {
+          svn_ra_dav_resource_t *rsrc;
+          prop_setter_t setter;
+          void *baton;
+          if (rb->file_baton == NULL)
+            { 
+              /* fetch dir props. using TOP_DIR.vsn_url */
+              setter = rb->editor->change_dir_prop;
+              baton = TOP_DIR(rb).baton;
+              CHKERR (svn_ra_dav__get_props_resource(&rsrc,
+                                                     rb->ras->sess2,
+                                                     TOP_DIR(rb).vsn_url,
+                                                     NULL,
+                                                     NULL,
+                                                     rb->ras->pool));
+            }
+          else
+            {
+              /* fetch file props. using href. */
+              setter = rb->editor->change_file_prop;
+              baton = rb->file_baton;
+              CHKERR (svn_ra_dav__get_props_resource(&rsrc,
+                                                     rb->ras->sess2,
+                                                     rb->href->data,
+                                                     NULL,
+                                                     NULL,
+                                                     rb->ras->pool));
+            }
+          add_props(rsrc, setter, baton, rb->ras->pool);
         }
       break;
 
@@ -994,7 +1056,9 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
   return 1;
 }
 
-static int end_element(void *userdata, const struct ne_xml_elm *elm,
+
+static int end_element(void *userdata, 
+                       const struct ne_xml_elm *elm,
                        const char *cdata)
 {
   report_baton_t *rb = userdata;
@@ -1002,8 +1066,29 @@ static int end_element(void *userdata, const struct ne_xml_elm *elm,
 
   switch (elm->id)
     {
-    case ELEM_replace_directory:
     case ELEM_add_directory:
+      /* fetch all dir props */
+      /* ### we won't do this during a status check for now, since the
+         act of adding an file is enough to make status display this
+         file */
+      if (! rb->is_status)
+        {
+          svn_ra_dav_resource_t *rsrc;
+          CHKERR (svn_ra_dav__get_props_resource(&rsrc,
+                                                 rb->ras->sess2,
+                                                 TOP_DIR(rb).vsn_url,
+                                                 NULL,
+                                                 NULL,
+                                                 rb->ras->pool));
+          add_props(rsrc, 
+                    rb->editor->change_dir_prop, 
+                    TOP_DIR(rb).baton, 
+                    rb->ras->pool);
+        }
+
+      /*** FALLTHRU ***/
+
+    case ELEM_replace_directory:
       /* close the topmost directory, and pop it from the stack */
       CHKERR( (*rb->editor->close_directory)(TOP_DIR(rb).baton) );
       --rb->dirs->nelts;
@@ -1018,9 +1103,26 @@ static int end_element(void *userdata, const struct ne_xml_elm *elm,
                                 rb->is_status ? FALSE : TRUE,
                                 rb->file_baton, rb->editor, rb->ras->pool) );
 
-      /* ### not yet implemented: fetch file props */
+      /* fetch all file props */
+      /* ### we won't do this during a status check for now, since the
+         act of adding an file is enough to make status display this
+         file */
+      if (! rb->is_status)
+        {
+          svn_ra_dav_resource_t *rsrc;
+          CHKERR(svn_ra_dav__get_props_resource(&rsrc,
+                                                rb->ras->sess2,
+                                                rb->href->data,
+                                                NULL,
+                                                NULL,
+                                                rb->ras->pool));
+          add_props(rsrc, 
+                    rb->editor->change_file_prop, 
+                    rb->file_baton,
+                    rb->ras->pool);
+        }
 
-      /* FALLTHRU */
+      /*** FALLTHRU ***/
 
     case ELEM_replace_file:
       /* close the file and mark that we are no longer operating on a file */
