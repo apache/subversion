@@ -134,8 +134,11 @@ node_is_kind_p (dag_node_t *node, const char *kindstr)
   /* The first element of the header should be an atom defining the
      node kind. */
   skel_t *kind = header->children;
+
+  apr_size_t kindstr_len = strlen(kindstr);
   
-  if (! memcmp (kind->data, kindstr, kind->len))
+  if ((kind->len == kindstr_len)
+      && (! memcmp (kind->data, kindstr, kindstr_len)))
     return TRUE;
   else
     return FALSE;
@@ -169,10 +172,9 @@ int svn_fs__dag_is_mutable (dag_node_t *node)
   
   while (flag)
     {
-      /* If current flag is a list... */
-      if (flag->children)
-        if (! memcmp (flag->children->data, "mutable", flag->children->len))
-          return TRUE;
+      /* Looking for the `mutable' flag, which is itself a list. */
+      if (svn_fs__matches_atom (flag->children, "mutable"))
+        return TRUE;
 
       /* Move to next header flag. */
       flag = flag->next;
