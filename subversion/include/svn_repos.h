@@ -243,6 +243,9 @@ svn_error_t *svn_repos_fs_commit_txn (const char **conflict_p,
  * Before a txn is created, the repository's start-commit hooks are
  * run; if any of them fail, no txn is created, *TXN_P is
  * unaffected, and SVN_ERR_REPOS_HOOK_FAILURE is returned.
+ *
+ * LOG_MSG may be NULL to indicate the message is not (yet) available.
+ * The caller will need to attach it to the transaction at a later time.
  */
 svn_error_t *svn_repos_fs_begin_txn_for_commit (svn_fs_txn_t **txn_p,
                                                 svn_fs_t *fs,
