@@ -497,8 +497,9 @@ jlong SVNClient::checkout(const char *moduleName, const char *destPath,
         return -1;
     }
 
-    svn_error_t *Err = svn_client_checkout (&retval, moduleName,
+    svn_error_t *Err = svn_client_checkout2 (&retval, moduleName,
                                  m_lastPath.c_str (),
+                                 revision.revision (),
                                  revision.revision (),
                                  recurse, ctx,
                                  apr_pool);
