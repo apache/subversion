@@ -973,17 +973,18 @@ xml_handle_start (void *userData, const char *name, const char **atts)
   value = svn_xml_get_attr_value (SVN_DELTA__XML_ATTR_NAME, atts);
   if (value)
     new_frame->name = svn_string_create (value, my_digger->pool);
-  
+
   /* Set ancestor path in frame, if there's any such attribute in ATTS */
   value = svn_xml_get_attr_value (SVN_DELTA__XML_ATTR_BASE_PATH, atts);
   if (value)
     new_frame->ancestor_path = svn_string_create (value, my_digger->pool);
   
-  /* Set ancestor revision in frame, if there's any such attribute in ATTS */
+  /* Set ancestor revision in frame, if there's any such attribute in
+     ATTS */
   value = svn_xml_get_attr_value (SVN_DELTA__XML_ATTR_BASE_REV, atts);
   if (value)
     new_frame->ancestor_revision = atoi (value);
-
+  
   /* Set "id" in frame, if there's any such attribute in ATTS */
   value = svn_xml_get_attr_value (SVN_DELTA__XML_ATTR_ID, atts);
   if (value)
@@ -998,23 +999,51 @@ xml_handle_start (void *userData, const char *name, const char **atts)
      holds the "base" ancestry info */
   if (new_frame->tag == svn_delta__XML_deltapkg)
     {
-      new_frame->ancestor_path = my_digger->base_path;
-      new_frame->ancestor_revision = my_digger->base_revision;
+      svn_revnum_t target_rev = SVN_INVALID_REVNUM;
 
-      /* Set target revision, if there's any such attribute in ATTS */
-      value = svn_xml_get_attr_value (SVN_DELTA__XML_ATTR_TARGET_REV, 
-                                      atts);
-      if (value)
+      /* If no target revision was provided to us via the digger, then
+         it is assumed the caller is wanting to operate on the head of
+         the tree, which from the perspective of an xml-based
+         repository has a current revision of the target_rev we
+         hopefully will attain from the attributes of the delta-pkg
+         tag.  However, if we *were* provided a target revision, we
+         will (for now) allow that value to override the value read in
+         from the delta-pkg tag. [todo] Consider the banishment of
+         this exercise once a real filesystem is in place. */
+
+      if (! SVN_IS_VALID_REVNUM(my_digger->base_revision))
         {
-          my_digger->target_revision = atoi (value);
+          /* Set target revision, if there's any such attribute in ATTS */
+          value = svn_xml_get_attr_value (SVN_DELTA__XML_ATTR_TARGET_REV, 
+                                          atts);
+          if (value)
+            target_rev = atoi (value);
+        }
+      else
+        target_rev = my_digger->base_revision;
 
-          /* Set the global target revision by calling into the editor */
+      /* Set the global target revision by calling into the editor */
+      if (SVN_IS_VALID_REVNUM(target_rev))
+        {
+          my_digger->base_revision = target_rev;
           if (my_digger->editor->set_target_revision)
             {
               err = my_digger->editor->set_target_revision
-                (my_digger->edit_baton, my_digger->target_revision);
+                (my_digger->edit_baton, target_rev);
             }
         }
+      else
+        {
+          err = svn_error_create (
+                  SVN_ERR_XML_MISSING_ANCESTRY, 0,
+                  NULL, my_digger->pool,
+                  "xml_handle_start: no valid target revision provided!");
+          svn_xml_signal_bailout (err, my_digger->svn_parser);
+          return;
+        }
+
+      new_frame->ancestor_path = my_digger->base_path;
+      new_frame->ancestor_revision = my_digger->base_revision;
     }
 
   /* If this frame represents a new tree-delta, we need to fill in its
