@@ -1108,7 +1108,7 @@ svn_client_propget (apr_hash_t **props,
                     svn_client_ctx_t *ctx,
                     apr_pool_t *pool);
 
-/** Set @a *propname to the value of @a propval on revision @a revision 
+/** Set @a *propval to the value of @a propname on revision @a revision 
  * in the repository represented by @a URL.  Use the authentication baton 
  * in @a ctx for authentication, and @a pool for all memory allocation.  
  * Return the actual rev queried in @a *set_rev.
