@@ -96,6 +96,9 @@ Summary: Tools for Subversion
 Tools for Subversion.
 
 %changelog
+* Tue Jun 10 2003 David Summers <david@summersoft.fay.ar.us> 0.23.0-6188
+- Track changes for addition of mod_authz_svn httpd module.
+
 * Sat Jun 07 2003 David Summers <david@summersoft.fay.ar.us> 0.23.0-6163
 - svn-design.info is no longer built.
 
@@ -449,6 +452,8 @@ rm -rf $RPM_BUILD_ROOT
 %config %{apache_dir}/conf/subversion.conf
 %{apache_dir}/modules/mod_dav_svn.la
 %{apache_dir}/modules/mod_dav_svn.so
+%{apache_dir}/lib/httpd/modules/mod_authz_svn.la
+%{apache_dir}/lib/httpd/modules/mod_authz_svn.so
 
 %files python
 %defattr(-,root,root)
