@@ -470,6 +470,7 @@ svn_io_copy_and_translate (const char *src,
           /* If we are currently in the middle of tracking a possible
              keyword expansion, then this is its terminator.  Else,
              this is the beginning of a new possible keyword. */
+          ;
         default:
         }
 
