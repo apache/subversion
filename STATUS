@@ -99,3 +99,12 @@ Candidate changes:
             verified that /trunk fixes the problems.
     Votes:
       +1: sussman
+
+  * r9293
+    Fix assertion failure on errors without error message when using an 
+    svnserve connection.
+    Justification: Leaves working copy locked.
+    Notes:  This bug manifests itself on obstructed updates.
+    Votes:
+      +1: dionisos
+
