@@ -13,11 +13,14 @@ import fileinput
 import string
 import getopt
 import statcache
+import stat
 
 from svn import fs, util, delta, repos
 
 
 trunk_rev = re.compile('^[0-9]+\\.[0-9]+$')
+branch_tag = re.compile('^[0-9.]+\\.0\\.[0-9]+$')
+vendor_tag = re.compile('^[0-9]+\\.[0-9]+\\.[0-9]+$')
 
 DATAFILE = 'cvs2svn-data'
 REVS_SUFFIX = '.revs'
@@ -53,9 +56,54 @@ class CollectData(rcsparse.Sink):
     # revision -> [timestamp, author, operation, old-timestamp]
     self.rev_data = { }
     self.prev = { }
+    self.branch_names = {}
+    self.taglist = {}
+    self.branchlist = {}
+
+  def set_branch_name(self, revision, name):
+    self.branch_names[revision] = name
+
+  def get_branch_name(self, revision):
+    brev = revision[:revision.rindex(".")];
+    if not self.branch_names.has_key(brev):
+      return None
+    return self.branch_names[brev]
+
+  def add_branch_point(self, revision, branch_name):
+    if not self.branchlist.has_key(revision):
+      self.branchlist[revision] = []
+    self.branchlist[revision].append(branch_name)
+
+  def add_cvs_branch(self, revision, branch_name):
+    last_dot = revision.rfind(".");
+    branch_rev = revision[:last_dot];
+    last2_dot = branch_rev.rfind(".");
+    branch_rev = branch_rev[:last2_dot] + revision[last_dot:];
+    self.set_branch_name(branch_rev, branch_name)
+    self.add_branch_point(branch_rev[:last2_dot], branch_name)
+
+  def get_tags(self, revision):
+    if self.taglist.has_key(revision):
+      return self.taglist[revision]
+    else:
+      return []
+
+  def get_branches(self, revision):
+    if self.branchlist.has_key(revision):
+      return self.branchlist[revision]
+    else:
+      return []
 
   def define_tag(self, name, revision):
     self.tags.write('%s %s %s\n' % (name, revision, self.fname))
+    if branch_tag.match(revision):
+      self.add_cvs_branch(revision, name)
+    elif vendor_tag.match(revision):
+      self.set_branch_name(revision, name)
+    else:
+      if not self.taglist.has_key(revision):
+        self.taglist[revision] = [];
+      self.taglist[revision].append(name)
 
   def define_revision(self, revision, timestamp, author, state,
                       branches, next):
@@ -131,14 +179,19 @@ class CollectData(rcsparse.Sink):
       # for this time and log message.
       self.resync.write('%08lx %s %08lx\n' % (old_ts, digest, timestamp))
 
-    self.revs.write('%08lx %s %s %s %s\n' % (timestamp, digest,
-                                             op, revision, self.fname))
+    branch_name = self.get_branch_name(revision)
+
+    write_revs_line(self.revs, timestamp, digest, op, revision, self.fname,
+                    branch_name, self.get_tags(revision), self.get_branches(revision))
 
 def branch_path(ctx, branch_name = None):
   if branch_name:
      return ctx.branches_base + '/' + branch_name + '/'
   else:
      return ctx.trunk_base + '/'
+
+def get_tag_path(ctx, tag_name):
+  return ctx.tags_base + '/' + tag_name + '/'
 
 def relative_name(cvsroot, fname):
   l = len(cvsroot)
@@ -147,6 +200,19 @@ def relative_name(cvsroot, fname):
       return fname[l+1:]
     return fname[l:]
   return l
+
+def make_path(fs, root, repos_path, f_pool):
+  ### hmm. need to clarify OS path separators vs FS path separators
+  dirname = os.path.dirname(repos_path)
+  if dirname != '/':
+    # get the components of the path (skipping the leading '/')
+    parts = string.split(dirname[1:], os.sep)
+    for i in range(1, len(parts) + 1):
+      # reassemble the pieces, adding a leading slash
+      parent_dir = '/' + string.join(parts[:i], '/')
+      if fs.check_path(root, parent_dir, f_pool) == util.svn_node_none:
+        print '    making dir:', parent_dir
+        fs.make_dir(root, parent_dir, f_pool)
 
 def visit_file(arg, dirname, files):
   cd, p, stats = arg
@@ -266,12 +332,16 @@ class BuildRevision(rcsparse.Sink):
 
 class Commit:
   def __init__(self):
+    self.files = { }
     self.changes = [ ]
     self.deletes = [ ]
     self.t_min = 1<<30
     self.t_max = 0
 
-  def add(self, t, op, file, rev):
+  def has_file(self, fname):
+    return self.files.has_key(fname)
+
+  def add(self, t, op, file, rev, branch_name, tags, branches):
     # record the time range of this commit
     if t < self.t_min:
       self.t_min = t
@@ -279,20 +349,21 @@ class Commit:
       self.t_max = t
 
     if op == OP_CHANGE:
-      self.changes.append((file, rev))
+      self.changes.append((file, rev, branch_name, tags, branches))
     else:
       # OP_DELETE
-      self.deletes.append((file, rev))
+      self.deletes.append((file, rev, branch_name, tags, branches))
+    self.files[file] = 1
 
   def get_metadata(self, pool):
     # by definition, the author and log message must be the same for all
     # items that went into this commit. therefore, just grab any item from
     # our record of changes/deletes.
     if self.changes:
-      file, rev = self.changes[0]
+      file, rev, br, tags, branches = self.changes[0]
     else:
       # there better be one...
-      file, rev = self.deletes[0]
+      file, rev, br, tags, branches = self.deletes[0]
 
     # now, fetch the author/log from the ,v file
     rip = RevInfoParser()
@@ -312,15 +383,15 @@ class Commit:
                                                self.t_max - self.t_min)
 
     if ctx.dry_run:
-      for f, r in self.changes:
+      for f, r, br, tags, branches in self.changes:
         # compute a repository path. ensure we have a leading "/" and drop
         # the ,v from the file name
-        repos_path = branch_path(ctx) + relative_name(ctx.cvsroot, f[:-2])
+        repos_path = branch_path(ctx, br) + relative_name(ctx.cvsroot, f[:-2])
         print '    changing %s : %s' % (r, repos_path)
-      for f, r in self.deletes:
+      for f, r, br, tags, branches in self.deletes:
         # compute a repository path. ensure we have a leading "/" and drop
         # the ,v from the file name
-        repos_path = branch_path(ctx) + relative_name(ctx.cvsroot, f[:-2])
+        repos_path = branch_path(ctx, br) + relative_name(ctx.cvsroot, f[:-2])
         print '    deleting %s : %s' % (r, repos_path)
       print '    (skipped; dry run enabled)'
       return
@@ -334,28 +405,21 @@ class Commit:
 
     lastcommit = (None, None)
 
+    do_copies = [ ]
+
     # create a pool for each file; it will be cleared on each iteration
     f_pool = util.svn_pool_create(c_pool)
 
-    for f, r in self.changes:
+    for f, r, br, tags, branches in self.changes:
       # compute a repository path. ensure we have a leading "/" and drop
       # the ,v from the file name
-      repos_path = branch_path(ctx) + relative_name(ctx.cvsroot, f[:-2])
+      rel_name = relative_name(ctx.cvsroot, f[:-2])
+      repos_path = branch_path(ctx, br) + rel_name
       #print 'DEBUG:', repos_path
 
       print '    changing %s : %s' % (r, repos_path)
 
-      ### hmm. need to clarify OS path separators vs FS path separators
-      dirname = os.path.dirname(repos_path)
-      if dirname != '/':
-        # get the components of the path (skipping the leading '/')
-        parts = string.split(dirname[1:], os.sep)
-        for i in range(1, len(parts) + 1):
-          # reassemble the pieces, adding a leading slash
-          parent_dir = '/' + string.join(parts[:i], '/')
-          if fs.check_path(root, parent_dir, f_pool) == util.svn_node_none:
-            print '    making dir:', parent_dir
-            fs.make_dir(root, parent_dir, f_pool)
+      make_path(fs, root, repos_path, f_pool)
 
       if fs.check_path(root, repos_path, f_pool) == util.svn_node_none:
         created_file = 1
@@ -367,11 +431,11 @@ class Commit:
 
       # figure out the real file path for "co"
       try:
-        statcache.stat(f)
+        f_st = statcache.stat(f)
       except os.error:
         dirname, fname = os.path.split(f)
         f = os.path.join(dirname, 'Attic', fname)
-        statcache.stat(f)
+        f_st = statcache.stat(f)
 
       pipe = os.popen('co -q -p%s \'%s\'' % (r, f), 'r', 102400)
 
@@ -381,6 +445,8 @@ class Commit:
       ### in HUGE files...
       if created_file:
         delta.svn_txdelta_send_string(pipe.read(), handler, baton, f_pool)
+        if f_st[0] & stat.S_IXUSR:
+          fs.change_node_prop(root, repos_path, "svn:executable", "", f_pool);
       else:
         # open an SVN stream onto the pipe
         stream2 = util.svn_stream_from_aprfile(pipe, f_pool)
@@ -412,10 +478,18 @@ class Commit:
       # remember what we just did, for the next iteration
       lastcommit = (repos_path, r)
 
-    for f, r in self.deletes:
+      for to_tag in tags:
+        to_tag_path = get_tag_path(ctx, to_tag) + rel_name
+        do_copies.append((repos_path, to_tag_path, 1))
+      for to_branch in branches:
+        to_branch_path = branch_path(ctx, to_branch) + rel_name
+        do_copies.append((repos_path, to_branch_path, 2))
+
+    for f, r, br, tags, branches in self.deletes:
       # compute a repository path. ensure we have a leading "/" and drop
       # the ,v from the file name
-      repos_path = branch_path(ctx) + relative_name(ctx.cvsroot, f[:-2])
+      rel_name = relative_name(ctx.cvsroot, f[:-2])
+      repos_path = branch_path(ctx, br) + rel_name
 
       print '    deleting %s : %s' % (r, repos_path)
 
@@ -426,13 +500,23 @@ class Commit:
         ### need to discriminate between OS paths and FS paths
         fs.delete(root, repos_path, f_pool)
 
+      for to_branch in branches:
+        to_branch_path = branch_path(ctx, to_branch) + rel_name
+        print "file", f, "created on branch", to_branch, "rev", r, "path", to_branch_path
+
       # wipe the pool, in case the delete loads it up
       util.svn_pool_clear(f_pool)
 
     # get the metadata for this commit
     author, log, date = self.get_metadata(c_pool)
-    fs.change_txn_prop(txn, 'svn:author', author, c_pool)
-    fs.change_txn_prop(txn, 'svn:log', log, c_pool)
+
+    # convert locale encoded strings to unicode objects
+    l = unicode(log, ctx.encoding)
+    a = unicode(author, ctx.encoding)
+
+    # put UTF-8 encoded unicode-"strings" into svn filesystem
+    fs.change_txn_prop(txn, 'svn:author', a.encode('utf8'), c_pool)
+    fs.change_txn_prop(txn, 'svn:log', l.encode('utf8'), c_pool)
 
     conflicts, new_rev = fs.commit_txn(txn)
 
@@ -443,6 +527,33 @@ class Commit:
     if conflicts != '\n':
       print '    CONFLICTS:', `conflicts`
     print '    new revision:', new_rev
+
+    if len(do_copies) > 0:
+      # make a new transaction for the tags
+      rev = fs.youngest_rev(t_fs, c_pool)
+      txn = fs.begin_txn(t_fs, rev, c_pool)
+      root = fs.txn_root(txn, c_pool)
+
+      for c_from, c_to, c_type in do_copies:
+        print "copying", c_from, "to", c_to
+
+        t_root = fs.revision_root(t_fs, rev, f_pool);
+        make_path(fs, root, c_to, f_pool)
+        fs.copy(t_root, c_from, root, c_to, f_pool)
+
+        # clear the pool after each copy
+        util.svn_pool_clear(f_pool)
+
+      log_msg = "%d copies to tags/branches\n" % (len(do_copies))
+      fs.change_txn_prop(txn, 'svn:author', "cvs2svn", c_pool)
+      fs.change_txn_prop(txn, 'svn:log', log_msg, c_pool)
+
+      conflicts, new_rev = fs.commit_txn(txn)
+      if conflicts != '\n':
+        print '    CONFLICTS:', `conflicts`
+      print '    new revision:', new_rev
+
+      # FIXME: we don't set a date here
 
     # done with the commit and file pools
     util.svn_pool_destroy(c_pool)
@@ -481,15 +592,37 @@ def read_resync(fname):
   return resync
 
 def parse_revs_line(line):
-  timestamp = int(line[:8], 16)
-  id = line[9:DIGEST_END_IDX]
-  op = line[DIGEST_END_IDX + 1]
-  idx = string.find(line, ' ', DIGEST_END_IDX + 3)
-  rev = line[DIGEST_END_IDX+3:idx]
-  fname = line[idx+1:-1]
+  data = line.split(' ', 6)
+  timestamp = int(data[0], 16)
+  id = data[1]
+  op = data[2]
+  rev = data[3]
+  branch_name = data[4]
+  if branch_name == "*":
+    branch_name = None
+  ntags = int(data[5])
+  tags = data[6].split(' ', ntags + 1)
+  nbranches = int(tags[ntags])
+  branches = tags[ntags + 1].split(' ', nbranches)
+  fname = branches[nbranches][:-1]  # strip \n
+  tags = tags[:ntags]
+  branches = branches[:nbranches]
 
-  return timestamp, id, op, rev, fname
+  return timestamp, id, op, rev, fname, branch_name, tags, branches
 
+def write_revs_line(output, timestamp, digest, op, revision, fname,
+                    branch_name, tags, branches):
+  output.write('%08lx %s %s %s ' % (timestamp, digest, op, revision))
+  if not branch_name:
+    branch_name = "*"
+  output.write('%s ' % branch_name);
+  output.write('%d ' % (len(tags)));
+  for tag in tags:
+    output.write('%s ' % (tag));
+  output.write('%d ' % (len(branches)));
+  for branch in branches:
+    output.write('%s ' % (branch));
+  output.write('%s\n' % fname);
 
 def pass1(ctx):
   cd = CollectData(ctx.cvsroot, DATAFILE)
@@ -513,7 +646,8 @@ def pass2(ctx):
 
   # process the revisions file, looking for items to clean up
   for line in fileinput.FileInput(ctx.log_fname_base + REVS_SUFFIX):
-    timestamp, digest, op, rev, fname = parse_revs_line(line)
+    timestamp, digest, op, rev, fname, branch_name, tags, branches = \
+      parse_revs_line(line)
     if not resync.has_key(digest):
       output.write(line)
       continue
@@ -523,8 +657,8 @@ def pass2(ctx):
     for record in resync[digest]:
       if record[0] <= timestamp <= record[1]:
         # bingo! remap the time on this (record[2] is the new time).
-        output.write('%08lx %s %s %s %s\n'
-                     % (record[2], digest, op, rev, fname))
+        write_revs_line(output, record[2], digest, op, rev, fname,
+                        branch_name, tags, branches)
 
         print 'RESYNC: %s (%s) : old time="%s" new time="%s"' \
               % (relative_name(ctx.cvsroot, fname),
@@ -562,18 +696,20 @@ def pass4(ctx):
   count = 0
 
   for line in fileinput.FileInput(ctx.log_fname_base + SORTED_REVS_SUFFIX):
-    timestamp, id, op, rev, fname = parse_revs_line(line)
-
-    ### only handle changes on the trunk for now
-    if not trunk_rev.match(rev):
-      ### technically, the timestamp on this could/should cause a flush.
-      ### don't worry about it; the next item will handle it
-      continue
+    timestamp, id, op, rev, fname, branch_name, tags, branches = \
+      parse_revs_line(line)
 
     # scan for commits to process
     process = [ ]
     for scan_id, scan_c in commits.items():
-      if scan_c.t_max + COMMIT_THRESHOLD < timestamp:
+
+      # ISSUE: the has_file() check below is not optimal.
+      # it does fix the dataloss bug where revisions would get lost
+      # if checked in too quickly, but it can alco break apart the 
+      # commits. The correct fix would require tracking the dependencies
+      # between change sets and commiting them in proper order.
+      if scan_c.t_max + COMMIT_THRESHOLD < timestamp or \
+         scan_c.has_file(fname):
         process.append((scan_c.t_max, scan_c))
         del commits[scan_id]
 
@@ -588,7 +724,7 @@ def pass4(ctx):
       c = commits[id]
     else:
       c = commits[id] = Commit()
-    c.add(timestamp, op, fname, rev)
+    c.add(timestamp, op, fname, rev, branch_name, tags, branches)
 
   # if there are any pending commits left, then flush them
   if commits:
@@ -642,6 +778,7 @@ def usage(ctx):
   print '  --trunk=PATH     path for trunk (default: %s)' % ctx.trunk_base
   print '  --branches=PATH  path for branches (default: %s)' % ctx.branches_base
   print '  --tags=PATH      path for tags (default: %s)' % ctx.tags_base
+  print '  --encoding=ENC   encoding of log messages in CVS repos (default: %s)' % ctx.encoding
   sys.exit(1)
 
 def main():
@@ -656,10 +793,11 @@ def main():
   ctx.trunk_base = "/trunk"
   ctx.tags_base = "/tags"
   ctx.branches_base = "/branches"
+  ctx.encoding = "ascii"
 
   try:
     opts, args = getopt.getopt(sys.argv[1:], 'p:s:vn',
-                               [ "create", "trunk=", "branches=", "tags=" ])
+                               [ "create", "trunk=", "branches=", "tags=", "encoding=" ])
   except getopt.GetoptError:
     usage(ctx)
   if len(args) != 1:
@@ -689,6 +827,8 @@ def main():
       ctx.branches_base = value
     elif opt == '--tags':
       ctx.tags_base = value
+    elif opt == '--encoding':
+      ctx.encoding = value
 
   util.run_app(convert, ctx, start_pass=start_pass)
 
