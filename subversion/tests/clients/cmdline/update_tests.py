@@ -87,7 +87,7 @@ def update_binary_file(sbox):
 
   # Created expected output tree for 'svn ci'
   expected_output = svntest.wc.State(wc_dir, {
-    'A/theta' : Item(verb='Adding'),
+    'A/theta' : Item(verb='Adding  (bin)'),
     })
 
   # Create expected status tree
@@ -224,8 +224,8 @@ def update_binary_file_2(sbox):
 
   # Created expected output tree for 'svn ci'
   expected_output = svntest.wc.State(wc_dir, {
-    'A/theta' : Item(verb='Adding'),
-    'A/zeta' : Item(verb='Adding'),
+    'A/theta' : Item(verb='Adding  (bin)'),
+    'A/zeta' : Item(verb='Adding  (bin)'),
     })
 
   # Create expected status tree

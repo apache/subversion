@@ -761,28 +761,41 @@ do_item_commit (const char *url,
 
       if ((item->state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
           && (item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD))
-        (*notify_func) (notify_baton, path, svn_wc_notify_commit_replaced,
-                        item->kind,
-                        NULL,
-                        svn_wc_notify_state_unknown,
-                        svn_wc_notify_state_unknown,
-                        SVN_INVALID_REVNUM);
-
+        {
+          /* We don't print the "(bin)" notice for binary files when
+             replacing, only when adding.  So we don't bother to get
+             the mime-type here. */
+          (*notify_func) (notify_baton, path, svn_wc_notify_commit_replaced,
+                          item->kind,
+                          NULL,
+                          svn_wc_notify_state_unknown,
+                          svn_wc_notify_state_unknown,
+                          SVN_INVALID_REVNUM);
+        }
       else if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
-        (*notify_func) (notify_baton, path, svn_wc_notify_commit_deleted,
-                        item->kind,
-                        NULL,
-                        svn_wc_notify_state_unknown,
-                        svn_wc_notify_state_unknown,
-                        SVN_INVALID_REVNUM);
-
+        {
+          (*notify_func) (notify_baton, path, svn_wc_notify_commit_deleted,
+                          item->kind,
+                          NULL,
+                          svn_wc_notify_state_unknown,
+                          svn_wc_notify_state_unknown,
+                          SVN_INVALID_REVNUM);
+        }
       else if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)
-        (*notify_func) (notify_baton, path, svn_wc_notify_commit_added,
-                        item->kind,
-                        NULL,  /* ### Where can we get mime type? */
-                        svn_wc_notify_state_unknown,
-                        svn_wc_notify_state_unknown,
-                        SVN_INVALID_REVNUM);
+        {
+          const svn_string_t *propval = NULL;
+
+          if (item->kind == svn_node_file)
+            SVN_ERR (svn_wc_prop_get
+                     (&propval, SVN_PROP_MIME_TYPE, item->path, pool));
+
+          (*notify_func) (notify_baton, path, svn_wc_notify_commit_added,
+                          item->kind,
+                          propval ? propval->data : NULL,
+                          svn_wc_notify_state_unknown,
+                          svn_wc_notify_state_unknown,
+                          SVN_INVALID_REVNUM);
+        }
 
       else if ((item->state_flags & SVN_CLIENT_COMMIT_ITEM_TEXT_MODS)
                || (item->state_flags & SVN_CLIENT_COMMIT_ITEM_PROP_MODS))
