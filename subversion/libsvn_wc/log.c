@@ -622,11 +622,25 @@ log_do_delete_entry (struct log_runner *loggy, const char *name)
      ### If they were available, it would be nice to use them. */
   if (entry->kind == svn_node_dir)
     {
-      err = svn_wc_remove_from_revision_control (adm_access,
-                                                 SVN_WC_ENTRY_THIS_DIR,
-                                                 TRUE,
-                                                 NULL, NULL,
-                                                 loggy->pool);
+      if (svn_wc__adm_missing (adm_access, full_path))
+        {
+          /* The directory is already missing, so don't try to recurse --
+             just delete the entry in the parent directory. */
+          apr_hash_t *entries;
+          SVN_ERR (svn_wc_entries_read (&entries, loggy->adm_access, FALSE,
+                                        loggy->pool));
+          svn_wc__entry_remove (entries, name);
+          SVN_ERR (svn_wc__entries_write (entries, loggy->adm_access, 
+                                          loggy->pool));
+        }
+      else 
+        {
+          err = svn_wc_remove_from_revision_control (adm_access,
+                                                     SVN_WC_ENTRY_THIS_DIR,
+                                                     TRUE,
+                                                     NULL, NULL,
+                                                     loggy->pool);
+        }
     }
   else if (entry->kind == svn_node_file)
     {

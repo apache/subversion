@@ -1019,6 +1019,72 @@ def update_receive_illegal_name(sbox):
   else:
     raise svntest.Failure
 
+#----------------------------------------------------------------------
+
+def update_deleted_missing_dir(sbox):
+  "update missing dir to revision in which it is absent"
+
+  sbox.build()
+
+  wc_dir = sbox.wc_dir
+  E_path = os.path.join(wc_dir, 'A', 'B', 'E')
+  H_path = os.path.join(wc_dir, 'A', 'D', 'H')
+
+  # Create a new revision with directories deleted
+  svntest.main.run_svn(None, 'rm', E_path)  
+  svntest.main.run_svn(None, 'rm', H_path)  
+  svntest.main.run_svn(None, 'ci', '-m', 'log msg', E_path, H_path)  
+
+  # Update back to the old revision
+  svntest.main.run_svn(None, 'up', '-r', '1', wc_dir)  
+
+  # Delete the directories from disk
+  svntest.main.safe_rmtree(E_path)
+  svntest.main.safe_rmtree(H_path)
+
+  # Create expected output tree for an update of the missing items by name
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/E' : Item(status='D '),
+    'A/D/H' : Item(status='D '),
+    })
+
+  # Create expected disk tree for the update.
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('A/B/E', 'A/B/E/alpha', 'A/B/E/beta')
+  expected_disk.remove('A/D/H', 'A/D/H/chi', 'A/D/H/omega', 'A/D/H/psi')
+
+  # Create expected status tree for the update.
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.remove('A/B/E', 'A/B/E/alpha', 'A/B/E/beta')
+  expected_status.remove('A/D/H', 'A/D/H/chi', 'A/D/H/omega', 'A/D/H/psi')
+  expected_status.tweak(wc_rev=1, repos_rev=2)
+  
+  # Do the update, specifying the deleted paths explicitly. 
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None, None, None, 
+                                        0, "-r", "2", E_path, H_path)
+
+  # Update back to the old revision again
+  svntest.main.run_svn(None, 'up', '-r', '1', wc_dir)  
+
+  # Delete the directories from disk
+  svntest.main.safe_rmtree(E_path)
+  svntest.main.safe_rmtree(H_path)
+
+  # This time we're updating the whole working copy
+  expected_status.tweak(wc_rev=2, repos_rev=2)
+
+  # Do the update, on the whole working copy this time
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None, None, None, 
+                                        0, "-r", "2", wc_dir)
+
 ########################################################################
 # Run the tests
 
@@ -1037,7 +1103,8 @@ test_list = [ None,
               update_replace_dir,
               update_single_file,
               prop_update_on_scheduled_delete,
-              update_receive_illegal_name
+              update_receive_illegal_name,
+              update_deleted_missing_dir
              ]
 
 if __name__ == '__main__':

@@ -59,6 +59,9 @@ static svn_error_t *
 recursively_tweak_entries (svn_wc_adm_access_t *dirpath,
                            const char *base_url,
                            const svn_revnum_t new_rev,
+                           svn_wc_notify_func_t notify_func,
+                           void *notify_baton,
+                           svn_boolean_t remove_missing_dirs,
                            apr_pool_t *pool)
 {
   apr_hash_t *entries;
@@ -101,16 +104,39 @@ recursively_tweak_entries (svn_wc_adm_access_t *dirpath,
                                       child_url, new_rev,
                                       svn_wc_adm_access_pool (dirpath)));
       
-      /* If a dir, recurse. */
+      /* If a directory... */
       else if (current_entry->kind == svn_node_dir)        
         {
-          svn_wc_adm_access_t *child_access;
           const char *child_path
             = svn_path_join (svn_wc_adm_access_path (dirpath), name, subpool);
-          SVN_ERR (svn_wc_adm_retrieve (&child_access, dirpath, child_path,
-                                        subpool));
-          SVN_ERR (recursively_tweak_entries 
-                   (child_access, child_url, new_rev, subpool));
+
+          /* If the directory is 'missing', remove it.  This is safe as 
+             long as this function is only called as a helper to 
+             svn_wc__do_update_cleanup, since the update will already have 
+             restored any missing items that it didn't want to delete. */
+          if (remove_missing_dirs 
+              && svn_wc__adm_missing (dirpath, child_path))
+            {
+              svn_wc__entry_remove (entries, name);
+              if (notify_func)
+                (* notify_func) (notify_baton, child_path, 
+                                 svn_wc_notify_delete,
+                                 current_entry->kind, NULL, 
+                                 svn_wc_notify_state_unknown,
+                                 svn_wc_notify_state_unknown,
+                                 SVN_INVALID_REVNUM);
+            }
+
+          /* Not missing or deleted, so recurse. */
+          else
+            {
+              svn_wc_adm_access_t *child_access;
+              SVN_ERR (svn_wc_adm_retrieve (&child_access, dirpath, child_path,
+                                            subpool));
+              SVN_ERR (recursively_tweak_entries 
+                       (child_access, child_url, new_rev, notify_func, 
+                        notify_baton, remove_missing_dirs, subpool));
+            }
         }
     }
 
@@ -131,6 +157,9 @@ svn_wc__do_update_cleanup (const char *path,
                            const svn_boolean_t recursive,
                            const char *base_url,
                            const svn_revnum_t new_revision,
+                           svn_wc_notify_func_t notify_func,
+                           void *notify_baton,
+                           svn_boolean_t remove_missing_dirs,
                            apr_pool_t *pool)
 {
   apr_hash_t *entries;
@@ -168,7 +197,9 @@ svn_wc__do_update_cleanup (const char *path,
         }
       else
         SVN_ERR (recursively_tweak_entries (dir_access, base_url,
-                                            new_revision, pool));
+                                            new_revision, notify_func, 
+                                            notify_baton, remove_missing_dirs,
+                                            pool));
     }
 
   else
@@ -1055,7 +1086,8 @@ svn_wc_add (const char *path,
 
           /* Change the entry urls recursively (but not the working rev). */
           SVN_ERR (svn_wc__do_update_cleanup (path, adm_access, TRUE, new_url, 
-                                              SVN_INVALID_REVNUM, pool));
+                                              SVN_INVALID_REVNUM, NULL, 
+                                              NULL, FALSE, pool));
 
           /* Recursively add the 'copied' existence flag as well!  */
           SVN_ERR (mark_tree (adm_access, SVN_WC__ENTRY_MODIFY_COPIED,
@@ -1753,23 +1785,35 @@ svn_wc_remove_from_revision_control (svn_wc_adm_access_t *adm_access,
                 = svn_path_join (svn_wc_adm_access_path(adm_access),
                                  current_entry_name,
                                  subpool);
-              SVN_ERR (svn_wc_adm_retrieve (&entry_access, adm_access,
-                                            entrypath, pool));
 
-              err = svn_wc_remove_from_revision_control (entry_access,
+              if (svn_wc__adm_missing (adm_access, entrypath))
+                {
+                  /* The directory is already missing, so don't try to 
+                     recurse, just delete the entry in the parent 
+                     directory. */
+                  svn_wc__entry_remove (entries, current_entry_name);
+                }
+              else 
+                {
+                  SVN_ERR (svn_wc_adm_retrieve (&entry_access, adm_access,
+                                                entrypath, pool));
+
+                  err = 
+                    svn_wc_remove_from_revision_control (entry_access,
                                                          SVN_WC_ENTRY_THIS_DIR,
                                                          destroy_wf,
                                                          cancel_func,
                                                          cancel_baton,
                                                          subpool);
 
-              if (err && (err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD))
-                {
-                  svn_error_clear (err);
-                  left_something = TRUE;
+                  if (err && (err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD))
+                    {
+                      svn_error_clear (err);
+                      left_something = TRUE;
+                    }
+                  else if (err)
+                    return err;
                 }
-              else if (err)
-                return err;
             }
         }
 
