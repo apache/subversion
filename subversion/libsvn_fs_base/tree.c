@@ -2926,6 +2926,7 @@ txn_body_delete (void *baton,
   const char *path = args->path;
   parent_path_t *parent_path;
   const char *txn_id = root->txn;
+  const svn_fs_id_t *change_id;
 
   if (! root->is_txn_root)
     return not_txn (root);
@@ -2956,9 +2957,26 @@ txn_body_delete (void *baton,
                                txn_id, trail));
 
   /* Make a record of this modification in the changes table. */
-  SVN_ERR (add_change (root->fs, txn_id, path,
-                       svn_fs_base__dag_get_id (parent_path->node),
-                       svn_fs_path_change_delete, 0, 0, trail));
+
+  /* The goal: avoid writing a 'changes' entry of a mutable node-id.
+     If it's mutable, we try to use its predecessor-id instead, which
+     is guaranteed to be immutable.  In the unusual case that there is
+     no predecessor id (e.g. we created and deleted the object all in
+     the same transaction), then we don't want to record any
+     'changes' information at all -- so we send a 'reset' command. */
+
+  if (svn_fs_base__dag_check_mutable (parent_path->node, txn_id))
+    SVN_ERR (svn_fs_base__dag_get_predecessor_id (&change_id,
+                                                  parent_path->node,
+                                                  trail));
+  else
+    change_id = svn_fs_base__dag_get_id (parent_path->node);
+
+  SVN_ERR (add_change (root->fs, txn_id, path, change_id,
+                       change_id ? svn_fs_path_change_delete : 
+                                   svn_fs_path_change_reset,
+                       0, 0, trail));
+  
 
   return SVN_NO_ERROR;
 }
