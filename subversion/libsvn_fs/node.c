@@ -131,7 +131,7 @@ get_representation_skel (skel_t **skel, svn_fs_t *fs, svn_fs_id_t *id,
   db_err = fs->nodes->get (fs->nodes, 0, /* no transaction */ &key, &value, 0);
   if (db_err == DB_NOTFOUND)
     return corrupt_dangling_id (fs, id);
-  SVN_ERR (DB_ERR (fs, "reading node representation", db_err));
+  SVN_ERR (DB_WRAP (fs, "reading node representation", db_err));
   svn_fs__track_dbt (&value, pool);
 
   rep_skel = svn_fs__parse_skel (value.data, value.size, pool);
@@ -168,7 +168,7 @@ put_representation_skel (svn_fs_t *fs, DB_TXN *txn,
   unparsed_rep = svn_fs__unparse_skel (representation_skel, pool);
   svn_fs__set_dbt (&value, unparsed_rep->data, unparsed_rep->len);
 
-  SVN_ERR (DB_ERR (fs, "storing node representation",
+  SVN_ERR (DB_WRAP (fs, "storing node representation",
 		   fs->nodes->put (fs->nodes, txn, &key, &value, 0)));
 
   return 0;
@@ -497,14 +497,17 @@ make_nodes (svn_fs_t *fs, int create)
 {
   DB *nodes;
 
-  SVN_ERR (DB_ERR (fs, "allocating `nodes' table object",
-		   db_create (&nodes, fs->env, 0)));
-  SVN_ERR (DB_ERR (fs, "setting `nodes' comparison function",
-		   nodes->set_bt_compare (nodes, compare_nodes_keys)));
-  SVN_ERR (DB_ERR (fs, "creating `nodes' table",
-		   nodes->open (nodes, "nodes", 0, DB_BTREE,
-				create ? (DB_CREATE | DB_EXCL) : 0,
-				0666)));
+  SVN_ERR (DB_WRAP (fs, "allocating `nodes' table object",
+		    db_create (&nodes, fs->env, 0)));
+  SVN_ERR (DB_WRAP (fs, "setting `nodes' comparison function",
+		    nodes->set_bt_compare (nodes, compare_nodes_keys)));
+  SVN_ERR (DB_WRAP (fs,
+		    (create
+		     ? "creating `nodes' table"
+		     : "opening `nodes' table"),
+		    nodes->open (nodes, "nodes", 0, DB_BTREE,
+				 create ? (DB_CREATE | DB_EXCL) : 0,
+				 0666)));
 
   if (create)
     {

@@ -84,7 +84,7 @@ svn_fs__dberrf (apr_pool_t *pool, int db_err, char *fmt, ...)
 
 
 svn_error_t *
-svn_fs__check_db (svn_fs_t *fs, const char *operation, int db_err)
+svn_fs__wrap_db (svn_fs_t *fs, const char *operation, int db_err)
 {
   if (! db_err)
     return 0;
