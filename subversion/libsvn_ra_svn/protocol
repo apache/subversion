@@ -149,6 +149,7 @@ Here are some miscellaneous prototypes used by the command sets:
 
   proplist:  ( ( name:string value:string ) ... )
   node-kind: none|file|dir|unknown
+  bool:      true|false
 
 3.1. Command Sets
 
@@ -189,51 +190,51 @@ The main command set corresponds to the svn_ra interfaces.
     commit-info: ( new-rev:number date:string author:string )
 
   get-file
-    params:   ( path:string [ rev:number ] [ want-props ] [ want-contents ] )
+    params:   ( path:string [ rev:number ] want-props:bool want-contents:bool )
     response: ( rev:number props:proplist )
     If want-contents is specified, then after sending response, server
      sends file contents as a series of strings, terminated by the empty
      string.
 
   get-dir
-    params:   ( path:string [ rev:number ] [ want-props ] [ want-contents ] )
+    params:   ( path:string [ rev:number ] want-props:bool want-contents:bool )
     response: ( rev:number props:proplist ( entry:dirent ... ) )]
-    dirent:   ( name:string kind:node-kind size:number [ has-props ]
+    dirent:   ( name:string kind:node-kind size:number has-props:bool
                 created-rev:number [ created-date:string ]
                 [ last-author:string ] )
 
   checkout
-    params:   ( [ rev:number ] [ recurse ] )
+    params:   ( [ rev:number ] recurse:bool )
     response: ( )
     After sending response, server switches to editor command set.
 
   update
-    params:   ( [ rev:number ] target:string [ recurse ] )
+    params:   ( [ rev:number ] target:string recurse:bool )
     response: ( )
     Upon receiving response, client switches to report command set.
     Upon completion of report, server switches to editor command set.
 
   switch
-    params:   ( [ rev:number ] target:string [ recurse ] url:string )
+    params:   ( [ rev:number ] target:string recurse:bool url:string )
     response: ( )
     Upon receiving response, client switches to report command set.
     Upon completion of report, server switches to editor command set.
 
   status
-    params:   ( target:string [ recurse ] )
+    params:   ( target:string recurse:bool )
     response: ( )
     Upon receiving response, client switches to report command set.
     Upon completion of report, server switches to editor command set.
 
   diff
-    params:   ( [ rev:number ] target:string [ recurse ] url:string )
+    params:   ( [ rev:number ] target:string recurse:bool url:string )
     response: ( )
     Upon receiving response, client switches to report command set.
     Upon completion of report, server switches to editor command set.
 
   log
     params:   ( ( target-path:string ... ) [ start-rev:number ]
-                [ end-rev:number ] [ changed-paths ] [ strict-node ] )
+                [ end-rev:number ] changed-paths:bool strict-node:bool )
     response: ( )
     After sending response, server sends log entries
     log-entry: ( ( change:changed-path-entry ... ) rev:number

@@ -108,6 +108,7 @@ svn_error_t *svn_ra_svn_flush(svn_ra_svn_conn_t *conn, apr_pool_t *pool);
  *   s     const svn_string_t *  String
  *   c     const char *          String
  *   w     const char *          Word
+ *   b     svn_boolean_t         Word ("true" or "false")
  *   (                           Begin tuple
  *   )                           End tuple
  *   [                           Begin optional tuple
@@ -116,10 +117,8 @@ svn_error_t *svn_ra_svn_flush(svn_ra_svn_conn_t *conn, apr_pool_t *pool);
  * Inside an optional tuple, 'r' values may be SVN_INVALID_REVNUM and
  * 's', 'c', and 'w' values may be NULL; in these cases no data will
  * be written.  Either all or none of the optional tuple values should
- * be valid.
+ * be valid.  Optional tuples may not be nested.
  */
-svn_error_t *svn_ra_svn_vwrite_tuple(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
-                                     const char *fmt, va_list ap);
 svn_error_t *svn_ra_svn_write_tuple(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                     const char *fmt, ...);
 
@@ -137,11 +136,16 @@ svn_error_t *svn_ra_svn_read_item(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
  *   s     svn_string_t **        String
  *   c     const char **          String
  *   w     const char **          Word
+ *   b     svn_boolean_t *        Word ("true" or "false")
  *   l     apr_array_header_t **  List
+ *   [                            Begin optional tuple
+ *   ]                            End optional tuple
+ *
+ * If an optional tuple contains no data, 'r' values will be set to
+ * SVN_INVALID_REVNUM and 's', 'c', 'w', and 'l' values will be set to
+ * NULL.  'n' and 'b' may not appear inside an optional tuple
+ * specification.  Optional tuples may not be nested.
  */
-svn_error_t *svn_ra_svn_vparse_tuple(apr_array_header_t *list,
-                                     apr_pool_t *pool,
-                                     const char *fmt, va_list ap);
 svn_error_t *svn_ra_svn_parse_tuple(apr_array_header_t *list,
                                     apr_pool_t *pool,
                                     const char *fmt, ...);

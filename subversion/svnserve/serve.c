@@ -344,9 +344,8 @@ static svn_error_t *get_file(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                              apr_array_header_t *params, void *baton)
 {
   server_baton_t *b = baton;
-  const char *path, *full_path, *wpword, *wcword;
+  const char *path, *full_path;
   svn_revnum_t rev;
-  apr_array_header_t *opt_rev, *opt_want_props, *opt_want_contents;
   svn_fs_root_t *root;
   svn_stream_t *contents;
   apr_hash_t *props = NULL;
@@ -356,18 +355,10 @@ static svn_error_t *get_file(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   svn_boolean_t want_props, want_contents;
 
   /* Parse arguments. */
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "clll", &path, &opt_rev,
-                                 &opt_want_props, &opt_want_contents));
-  if (opt_rev->nelts > 0)
-    SVN_ERR(svn_ra_svn_parse_tuple(opt_rev, pool, "r", &rev));
-  else
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c[r]bb", &path, &rev,
+                                 &want_props, &want_contents));
+  if (!SVN_IS_VALID_REVNUM(rev))
     CMD_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
-  if (opt_want_props->nelts > 0)
-    SVN_ERR(svn_ra_svn_parse_tuple(opt_want_props, pool, "w", &wpword));
-  want_props = (wpword && strcmp(wpword, "want-props") == 0);
-  if (opt_want_contents->nelts > 0)
-    SVN_ERR(svn_ra_svn_parse_tuple(opt_want_contents, pool, "w", &wcword));
-  want_contents = (wcword && strcmp(wcword, "want-contents") == 0);
   full_path = svn_path_join(b->fs_path, path, pool);
 
   /* Fetch the properties and a stream for the contents. */
@@ -414,8 +405,6 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 {
   server_baton_t *b = baton;
   const char *path, *full_path, *file_path, *name, *cauthor, *cdate;
-  const char *wpword, *wcword;
-  apr_array_header_t *opt_rev, *opt_want_props, *opt_want_contents;
   svn_revnum_t rev;
   apr_hash_t *entries, *props = NULL, *file_props;
   apr_hash_index_t *hi;
@@ -428,18 +417,10 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   apr_pool_t *subpool;
   svn_boolean_t want_props, want_contents;
 
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "clll", &path, &opt_rev,
-                                 &opt_want_props, &opt_want_contents));
-  if (opt_rev->nelts > 0)
-    SVN_ERR(svn_ra_svn_parse_tuple(opt_rev, pool, "r", &rev));
-  else
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c[r]bb", &path, &rev,
+                                 &want_props, &want_contents));
+  if (!SVN_IS_VALID_REVNUM(rev))
     CMD_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
-  if (opt_want_props->nelts > 0)
-    SVN_ERR(svn_ra_svn_parse_tuple(opt_want_props, pool, "w", &wpword));
-  want_props = (wpword && strcmp(wpword, "want-props") == 0);
-  if (opt_want_contents->nelts > 0)
-    SVN_ERR(svn_ra_svn_parse_tuple(opt_want_contents, pool, "w", &wcword));
-  want_contents = (wcword && strcmp(wcword, "want-contents") == 0);
   full_path = svn_path_join(b->fs_path, path, pool);
 
   /* Fetch the root of the appropriate revision. */
@@ -514,12 +495,11 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
           entry = val;
           cdate = (entry->time == (time_t) -1) ? NULL
             : svn_time_to_cstring(entry->time, pool);
-          SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "cwn[w]r[c][c]", name,
+          SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "cwnbr[c][c]", name,
                                          kind_word(entry->kind),
                                          (apr_uint64_t) entry->size,
-                                         entry->has_props ? "has-props" : NULL,
-                                         entry->created_rev, cdate,
-                                         entry->last_author));
+                                         entry->has_props, entry->created_rev,
+                                         cdate, entry->last_author));
         }
     }
   SVN_ERR(svn_ra_svn_end_list(conn, pool));
@@ -533,21 +513,14 @@ static svn_error_t *checkout(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 {
   server_baton_t *b = baton;
   svn_revnum_t rev;
-  const char *recurse_word = NULL;
   svn_boolean_t recurse;
   const svn_delta_editor_t *editor;
   void *edit_baton;
-  apr_array_header_t *opt_rev, *opt_recurse;
 
   /* Parse the arguments. */
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "ll", &opt_rev, &opt_recurse));
-  if (opt_rev->nelts > 0)
-    SVN_ERR(svn_ra_svn_parse_tuple(opt_rev, pool, "r", &rev));
-  else
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "[r]b", &rev, &recurse));
+  if (!SVN_IS_VALID_REVNUM(rev))
     CMD_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
-  if (opt_recurse->nelts > 0)
-    SVN_ERR(svn_ra_svn_parse_tuple(opt_recurse, pool, "w", &recurse_word));
-  recurse = (recurse_word && strcmp(recurse_word, "recurse") == 0);
 
   /* Write an empty command-reponse, signalling that we will start editing. */
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
@@ -564,24 +537,18 @@ static svn_error_t *update(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 {
   server_baton_t *b = baton;
   svn_revnum_t rev;
-  const char *target, *recurse_word = NULL;
+  const char *target;
   svn_boolean_t recurse;
   const svn_delta_editor_t *editor;
   void *edit_baton, *report_baton;
-  apr_array_header_t *opt_rev, *opt_recurse;
 
   /* Parse the arguments. */
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "lcl", &opt_rev, &target,
-                                 &opt_recurse));
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "[r]cl", &rev, &target,
+                                 &recurse));
   if (svn_path_is_empty(target))
     target = NULL;  /* ### Compatibility hack, shouldn't be needed */
-  if (opt_rev->nelts > 0)
-    SVN_ERR(svn_ra_svn_parse_tuple(opt_rev, pool, "r", &rev));
-  else
+  if (!SVN_IS_VALID_REVNUM(rev))
     CMD_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
-  if (opt_recurse->nelts > 0)
-    SVN_ERR(svn_ra_svn_parse_tuple(opt_recurse, pool, "w", &recurse_word));
-  recurse = (recurse_word && strcmp(recurse_word, "recurse") == 0);
 
   /* Make an svn_repos report baton.  Tell it to drive the network editor
    * when the report is complete. */
@@ -603,27 +570,21 @@ static svn_error_t *switch_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 {
   server_baton_t *b = baton;
   svn_revnum_t rev;
-  const char *target, *recurse_word = NULL;
+  const char *target;
   const char *switch_url, *switch_path;
   svn_boolean_t recurse;
   const svn_delta_editor_t *editor;
   void *edit_baton, *report_baton;
-  apr_array_header_t *opt_rev, *opt_recurse;
   int len;
   svn_error_t *err;
 
   /* Parse the arguments. */
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "lclc", &opt_rev, &target,
-                                 &opt_recurse, &switch_url));
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "[r]cbc", &rev, &target,
+                                 &recurse, &switch_url));
   if (svn_path_is_empty(target))
     target = NULL;  /* ### Compatibility hack, shouldn't be needed */
-  if (opt_rev->nelts > 0)
-    SVN_ERR(svn_ra_svn_parse_tuple(opt_rev, pool, "r", &rev));
-  else
+  if (!SVN_IS_VALID_REVNUM(rev))
     CMD_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
-  if (opt_recurse->nelts > 0)
-    SVN_ERR(svn_ra_svn_parse_tuple(opt_recurse, pool, "w", &recurse_word));
-  recurse = (recurse_word && strcmp(recurse_word, "recurse") == 0);
 
   /* Verify that switch_url is in the same repository and get its fs path. */
   switch_url = svn_path_uri_decode(switch_url, pool);
@@ -659,19 +620,15 @@ static svn_error_t *status(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 {
   server_baton_t *b = baton;
   svn_revnum_t rev;
-  const char *target, *recurse_word = NULL;
+  const char *target;
   svn_boolean_t recurse;
   const svn_delta_editor_t *editor;
   void *edit_baton, *report_baton;
-  apr_array_header_t *opt;
 
   /* Parse the arguments. */
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "cl", &target, &opt));
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "cb", &target, &recurse));
   if (svn_path_is_empty(target))
     target = NULL;  /* ### Compatibility hack, shouldn't be needed */
-  if (opt->nelts > 0)
-    SVN_ERR(svn_ra_svn_parse_tuple(opt, pool, "w", &recurse_word));
-  recurse = (recurse_word && strcmp(recurse_word, "recurse") == 0);
 
   /* Make an svn_repos report baton.  Tell it to drive the network editor
    * when the report is complete. */
@@ -694,26 +651,21 @@ static svn_error_t *diff(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 {
   server_baton_t *b = baton;
   svn_revnum_t rev;
-  const char *target, *recurse_word = NULL, *versus_url, *versus_path;
+  const char *target, *versus_url, *versus_path;
   svn_boolean_t recurse;
   const svn_delta_editor_t *editor;
   void *edit_baton, *report_baton;
-  apr_array_header_t *opt_rev, *opt_recurse;
+
   int len;
   svn_error_t *err;
 
   /* Parse the arguments. */
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "lclc", &opt_rev, &target,
-                                 &opt_recurse, &versus_url));
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "[r]cbc", &rev, &target,
+                                 &recurse, &versus_url));
   if (svn_path_is_empty(target))
     target = NULL;  /* ### Compatibility hack, shouldn't be needed */
-  if (opt_rev->nelts > 0)
-    SVN_ERR(svn_ra_svn_parse_tuple(opt_rev, pool, "r", &rev));
-  else
+  if (!SVN_IS_VALID_REVNUM(rev))
     CMD_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
-  if (opt_recurse->nelts > 0)
-    SVN_ERR(svn_ra_svn_parse_tuple(opt_recurse, pool, "w", &recurse_word));
-  recurse = (recurse_word && strcmp(recurse_word, "recurse") == 0);
 
   /* Verify that versus_url is in the same repository and get its fs path. */
   versus_url = svn_path_uri_decode(versus_url, pool);
@@ -808,19 +760,17 @@ static svn_error_t *log(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                         apr_array_header_t *params, void *baton)
 {
   server_baton_t *b = baton;
-  svn_revnum_t start_rev = SVN_INVALID_REVNUM, end_rev = SVN_INVALID_REVNUM;
-  const char *cpword = NULL, *snword = NULL, *full_path;
+  svn_revnum_t start_rev, end_rev;
+  const char *full_path;
   svn_boolean_t changed_paths, strict_node;
-  apr_array_header_t *paths, *full_paths, *opt_start_rev, *opt_end_rev;
-  apr_array_header_t *opt_changed_paths, *opt_strict_node;
+  apr_array_header_t *paths, *full_paths;
   svn_ra_svn_item_t *elt;
   int i;
   log_baton_t lb;
 
   /* Parse the arguments. */
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "lllll", &paths, &opt_start_rev,
-                                 &opt_end_rev, &opt_changed_paths,
-                                 &opt_strict_node));
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "l[r][r]bb", &paths, &start_rev,
+                                 &end_rev, &changed_paths, &strict_node));
   full_paths = apr_array_make(pool, paths->nelts, sizeof(const char *));
   for (i = 0; i < paths->nelts; i++)
     {
@@ -831,16 +781,6 @@ static svn_error_t *log(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
       full_path = svn_path_join(b->fs_path, elt->u.string->data, pool);
       *((const char **) apr_array_push(full_paths)) = full_path;
     }
-  if (opt_start_rev->nelts > 0)
-    SVN_ERR(svn_ra_svn_parse_tuple(opt_start_rev, pool, "r", &start_rev));
-  if (opt_end_rev->nelts > 0)
-    SVN_ERR(svn_ra_svn_parse_tuple(opt_end_rev, pool, "r", &end_rev));
-  if (opt_changed_paths->nelts > 0)
-    SVN_ERR(svn_ra_svn_parse_tuple(opt_changed_paths, pool, "w", &cpword));
-  changed_paths = (cpword && strcmp(cpword, "changed-paths") == 0);
-  if (opt_strict_node->nelts > 0)
-    SVN_ERR(svn_ra_svn_parse_tuple(opt_strict_node, pool, "w", &snword));
-  strict_node = (snword && strcmp(snword, "strict-node") == 0);
 
   /* Write an empty command-reponse, telling the client logs are coming. */
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
@@ -859,16 +799,13 @@ static svn_error_t *check_path(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                apr_array_header_t *params, void *baton)
 {
   server_baton_t *b = baton;
-  apr_array_header_t *opt;
-  svn_revnum_t rev = SVN_INVALID_REVNUM;
+  svn_revnum_t rev;
   const char *path, *full_path;
   svn_fs_root_t *root;
   svn_node_kind_t kind;
 
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "cl", &path, &opt));
-  if (opt->nelts > 0)
-    SVN_ERR(svn_ra_svn_parse_tuple(opt, pool, "r", &rev));
-  else
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c[r]", &path, &rev));
+  if (!SVN_IS_VALID_REVNUM(rev))
     SVN_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
   full_path = svn_path_join(b->fs_path, path, pool);
   CMD_ERR(svn_fs_revision_root(&root, b->fs, rev, pool));
@@ -943,7 +880,8 @@ svn_error_t *serve(int sock, const char *root, apr_pool_t *pool)
   svn_error_t *err;
   apr_uint64_t ver;
   const char *mech, *client_url, *repos_url, *fs_path;
-  apr_array_header_t *opt, *caplist;
+  const svn_string_t *mecharg;
+  apr_array_header_t *caplist;
   svn_repos_t *repos;
   server_baton_t b;
 
@@ -957,7 +895,7 @@ svn_error_t *serve(int sock, const char *root, apr_pool_t *pool)
   /* Read client response.  This should specify version 1, the
    * anonymous mechanism, an empty argument, and possibly some
    * capabilities.  But don't bother checking. */
-  SVN_ERR(svn_ra_svn_read_tuple(conn, pool, "nwll", &ver, &mech, &opt,
+  SVN_ERR(svn_ra_svn_read_tuple(conn, pool, "nw[s]l", &ver, &mech, &mecharg,
                                 &caplist));
 
   /* Write back a success notification. */
