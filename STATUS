@@ -14,7 +14,7 @@ Showstoppers:
     were omitted.  LSWIGPY and LSWIGPL need to be merged so that <1.3.24 can
     work correctly.
     Votes:
-      +1: maxb
+      +1: maxb, jszakmeister
 
 Candidate changes that seem to have become stalled
 due to persistent lack of votes:
@@ -35,53 +35,14 @@ due to persistent lack of votes:
                    good, pre-0.14 compatibility not so important)
       +0: kfogel
 
-  * r11050
-    Add install dependencies for libsvn_fs and libsvn_fs_base.
-    Justification:
-      Allows users to install JavaHL separately, without needing to
-      compile and install the base subversion package.  Without this
-      fix, JavaHL installation crashes in that case.
-    Votes:
-      +1: ghudson, jerenkrantz
-      Nominated by: David James <james82@gmail.com>
-
 Candidate changes:
-
-  * r12636
-    Dataloss bug in svndumpfilter - delete-all-properties-from-node operations
-    are lost.
-    Justification:
-      Dataloss!
-    Branch:
-      1.1.x-svndumpfilter r12656:12657
-      Does not itself conflict, but present on branch so that does not
-      cause conflicts in the merge of later revisions.
-    Votes:
-      +1: maxb, dionisos
-
-  * r13222, r13223, r13232
-    Rewrite libsvn_fs_fs's auto-merge algorithm
-    Justification:
-      unacceptable performance (>50 minutes for a small commit) in
-      a repository with 300,000 revisions
-    Branch:
-      1.1.x-r13222@13517
-    Votes:
-      +1: epg, ghudson
-
-  * r13553
-    Fix issue #2173 (Symbolic links from Linux are not ignored in Windows)
-    Justification:
-      High embarassment factor, a highly touted 1.1 feature that no worky.
-    Votes:
-      +1: cmpilato, jpieper
 
   * r13683
     Fix FSFS segfault when handling non-existent data representations
     Justification:
       Client will segfault on otherwise valid revision files.
     Votes:
-      +1: jpieper
+      +1: jpieper, jszakmeister
 
 Approved changes (further review is welcome, but not required):
 
@@ -124,4 +85,43 @@ Approved changes (further review is welcome, but not required):
       Tiny change, avoids our dependencies being stricter than they need to be.
     Votes:
       +1: maxb, cmpilato
+  
+  * r13553
+    Fix issue #2173 (Symbolic links from Linux are not ignored in Windows)
+    Justification:
+      High embarassment factor, a highly touted 1.1 feature that no worky.
+    Votes:
+      +1: cmpilato, jpieper, jszakmeister
+
+  * r13222, r13223, r13232
+    Rewrite libsvn_fs_fs's auto-merge algorithm
+    Justification:
+      unacceptable performance (>50 minutes for a small commit) in
+      a repository with 300,000 revisions
+    Branch:
+      1.1.x-r13222@13517
+    Votes:
+      +1: epg, ghudson, jszakmeister
+
+  * r12636
+    Dataloss bug in svndumpfilter - delete-all-properties-from-node operations
+    are lost.
+    Justification:
+      Dataloss!
+    Branch:
+      1.1.x-svndumpfilter r12656:12657
+      Does not itself conflict, but present on branch so that does not
+      cause conflicts in the merge of later revisions.
+    Votes:
+      +1: maxb, dionisos, jszakmeister
+
+  * r11050
+    Add install dependencies for libsvn_fs and libsvn_fs_base.
+    Justification:
+      Allows users to install JavaHL separately, without needing to
+      compile and install the base subversion package.  Without this
+      fix, JavaHL installation crashes in that case.
+    Votes:
+      +1: ghudson, jerenkrantz, jszakmeister
+      Nominated by: David James <james82@gmail.com>
 
