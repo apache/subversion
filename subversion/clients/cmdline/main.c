@@ -1222,8 +1222,7 @@ main (int argc, const char * const *argv)
 
     /* Same with the --non-interactive option. */
     if (opt_state.non_interactive)
-      svn_auth_set_parameter(ab, SVN_AUTH_PARAM_NON_INTERACTIVE,
-                             (void *) "");
+      svn_auth_set_parameter(ab, SVN_AUTH_PARAM_NON_INTERACTIVE, "");
 
     if (opt_state.config_dir)
       svn_auth_set_parameter(ab, SVN_AUTH_PARAM_CONFIG_DIR,
@@ -1238,8 +1237,7 @@ main (int argc, const char * const *argv)
                                     TRUE)))
       svn_handle_error (err, stderr, TRUE);
     if (opt_state.no_auth_cache || !store_password_val)
-      svn_auth_set_parameter(ab, SVN_AUTH_PARAM_NO_AUTH_CACHE,
-                             (void *) "");
+      svn_auth_set_parameter(ab, SVN_AUTH_PARAM_NO_AUTH_CACHE, "");
   }
 
   /* Set up our cancellation support. */

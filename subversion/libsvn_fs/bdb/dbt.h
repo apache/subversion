@@ -100,7 +100,7 @@ DBT *svn_fs__skel_to_dbt (DBT *dbt, skel_t *skel, apr_pool_t *pool);
 
 /* Set DBT to the text of the null-terminated string STR.  DBT will
    refer to STR's storage.  Return DBT.  */
-DBT *svn_fs__str_to_dbt (DBT *dbt, char *str);
+DBT *svn_fs__str_to_dbt (DBT *dbt, const char *str);
 
 
 #ifdef __cplusplus

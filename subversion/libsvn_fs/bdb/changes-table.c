@@ -77,7 +77,7 @@ svn_fs__bdb_changes_add (svn_fs_t *fs,
   SVN_ERR (svn_fs__unparse_change_skel (&skel, change, trail->pool));
 
   /* Store a new record into the database. */
-  svn_fs__str_to_dbt (&query, (char *) key);
+  svn_fs__str_to_dbt (&query, key);
   svn_fs__skel_to_dbt (&value, skel, trail->pool);
   svn_fs__trail_debug (trail, "changes", "put");
   SVN_ERR (BDB_WRAP (fs, "creating change", 
@@ -98,7 +98,7 @@ svn_fs__bdb_changes_delete (svn_fs_t *fs,
   
   svn_fs__trail_debug (trail, "changes", "del");
   db_err = fs->changes->del (fs->changes, trail->db_txn,
-                             svn_fs__str_to_dbt (&query, (char *) key), 0);
+                             svn_fs__str_to_dbt (&query, key), 0);
 
   /* If there're no changes for KEY, that is acceptable.  Any other
      error should be propogated to the caller, though.  */
@@ -248,7 +248,7 @@ svn_fs__bdb_changes_fetch (apr_hash_t **changes_p,
                                          &cursor, 0)));
 
   /* Advance the cursor to the key that we're looking for. */
-  svn_fs__str_to_dbt (&query, (char *) key);
+  svn_fs__str_to_dbt (&query, key);
   svn_fs__result_dbt (&result);
   db_err = cursor->c_get (cursor, &query, &result, DB_SET);
   if (! db_err)
@@ -369,7 +369,7 @@ svn_fs__bdb_changes_fetch_raw (apr_array_header_t **changes_p,
                                          &cursor, 0)));
 
   /* Advance the cursor to the key that we're looking for. */
-  svn_fs__str_to_dbt (&query, (char *) key);
+  svn_fs__str_to_dbt (&query, key);
   svn_fs__result_dbt (&result);
   db_err = cursor->c_get (cursor, &query, &result, DB_SET);
   if (! db_err)

@@ -127,7 +127,7 @@ svn_fs__id_to_dbt (DBT *dbt,
                    apr_pool_t *pool)
 {
   svn_string_t *unparsed_id = svn_fs_unparse_id (id, pool);
-  svn_fs__set_dbt (dbt, (char *) unparsed_id->data, unparsed_id->len);
+  svn_fs__set_dbt (dbt, unparsed_id->data, unparsed_id->len);
   return dbt;
 }
 
@@ -147,7 +147,7 @@ svn_fs__skel_to_dbt (DBT *dbt,
 /* Set DBT to the text of the null-terminated string STR.  DBT will
    refer to STR's storage.  Return DBT.  */
 DBT *
-svn_fs__str_to_dbt (DBT *dbt, char *str)
+svn_fs__str_to_dbt (DBT *dbt, const char *str)
 {
   svn_fs__set_dbt (dbt, str, strlen (str));
   return dbt;

@@ -56,8 +56,8 @@ svn_fs__bdb_open_strings_table (DB **strings_p,
       /* Create the `next-key' table entry.  */
       BDB_ERR (strings->put
               (strings, 0,
-               svn_fs__str_to_dbt (&key, (char *) svn_fs__next_key_key),
-               svn_fs__str_to_dbt (&value, (char *) "0"),
+               svn_fs__str_to_dbt (&key, svn_fs__next_key_key),
+               svn_fs__str_to_dbt (&value, "0"),
                SVN_BDB_AUTO_COMMIT));
     }
   
@@ -192,7 +192,7 @@ svn_fs__bdb_string_read (svn_fs_t *fs,
   DBC *cursor;
   apr_size_t length, bytes_read = 0;
 
-  svn_fs__str_to_dbt (&query, (char *) key);
+  svn_fs__str_to_dbt (&query, key);
 
   SVN_ERR (locate_key (&length, &cursor, &query, fs, trail));
 
@@ -285,8 +285,7 @@ get_key_and_bump (svn_fs_t *fs, const char **key, trail_t *trail)
   /* Advance the cursor to 'next-key' and read it. */
 
   db_err = cursor->c_get (cursor,
-                          svn_fs__str_to_dbt (&query,
-                                              (char *) svn_fs__next_key_key),
+                          svn_fs__str_to_dbt (&query, svn_fs__next_key_key),
                           svn_fs__result_dbt (&result),
                           DB_SET);
   if (db_err)
@@ -304,7 +303,7 @@ get_key_and_bump (svn_fs_t *fs, const char **key, trail_t *trail)
 
   /* Shove the new key back into the database, at the cursor position. */
   db_err = cursor->c_put (cursor, &query,
-                          svn_fs__str_to_dbt (&result, (char *) next_key),
+                          svn_fs__str_to_dbt (&result, next_key),
                           DB_CURRENT);
   if (db_err)
     {
@@ -338,8 +337,8 @@ svn_fs__bdb_string_append (svn_fs_t *fs,
   SVN_ERR (BDB_WRAP (fs, "appending string",
                     fs->strings->put
                     (fs->strings, trail->db_txn,
-                     svn_fs__str_to_dbt (&query, (char *) (*key)),
-                     svn_fs__set_dbt (&result, (void *) buf, len),
+                     svn_fs__str_to_dbt (&query, *key),
+                     svn_fs__set_dbt (&result, buf, len),
                      0)));
 
   return SVN_NO_ERROR;
@@ -354,7 +353,7 @@ svn_fs__bdb_string_clear (svn_fs_t *fs,
   int db_err;
   DBT query, result;
 
-  svn_fs__str_to_dbt (&query, (char *)key);
+  svn_fs__str_to_dbt (&query, key);
 
   /* Torch the prior contents */
   svn_fs__trail_debug (trail, "strings", "del");
@@ -394,7 +393,7 @@ svn_fs__bdb_string_size (svn_filesize_t *size,
   apr_size_t length;
   svn_filesize_t total;
 
-  svn_fs__str_to_dbt (&query, (char *) key);
+  svn_fs__str_to_dbt (&query, key);
 
   SVN_ERR (locate_key (&length, &cursor, &query, fs, trail));
 
@@ -429,7 +428,7 @@ svn_fs__bdb_string_delete (svn_fs_t *fs,
 
   svn_fs__trail_debug (trail, "strings", "del");
   db_err = fs->strings->del (fs->strings, trail->db_txn,
-                             svn_fs__str_to_dbt (&query, (char *) key), 0);
+                             svn_fs__str_to_dbt (&query, key), 0);
 
   /* If there's no such node, return an appropriately specific error.  */
   if (db_err == DB_NOTFOUND)
@@ -467,8 +466,8 @@ svn_fs__bdb_string_copy (svn_fs_t *fs,
                     fs->strings->cursor (fs->strings, trail->db_txn,
                                          &cursor, 0)));
 
-  svn_fs__str_to_dbt (&query, (char *) old_key);
-  svn_fs__str_to_dbt (&copykey, (char *) *new_key);
+  svn_fs__str_to_dbt (&query, old_key);
+  svn_fs__str_to_dbt (&copykey, *new_key);
 
   svn_fs__clear_dbt (&result);
 

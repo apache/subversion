@@ -459,10 +459,10 @@ get_dir_entries (apr_hash_t **entries_p,
       
       /* KEY will be the entry name in ancestor, VAL the id.  */
       apr_hash_this (hi, &key, &klen, &val);
-      dirent->name = (char *) key;
+      dirent->name = key;
       dirent->id = val;
       dirent->kind = svn_node_unknown;
-      apr_hash_set (*entries_p, key, klen, (void *) dirent);
+      apr_hash_set (*entries_p, key, klen, dirent);
     }
 
   /* Return our findings. */
@@ -555,7 +555,7 @@ set_entry (dag_node_t *parent,
     entries = apr_hash_make (trail->pool);
 
   /* Now, add our new entry to the entries list. */
-  apr_hash_set (entries, name, APR_HASH_KEY_STRING, (void *) id);
+  apr_hash_set (entries, name, APR_HASH_KEY_STRING, id);
 
   /* Finally, replace the old entries list with the new one. */
   SVN_ERR (svn_fs__unparse_entries_skel (&entries_skel, entries, trail->pool));
