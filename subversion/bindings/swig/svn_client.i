@@ -63,10 +63,10 @@
    handle the return value for svn_client_proplist()
 */
 
-%typemap(python,in,numinputs=0) apr_array_header_t ** (apr_array_header_t *temp) {
+%typemap(python,in,numinputs=0) apr_array_header_t **props (apr_array_header_t *temp) {
     $1 = &temp;
 }
-%typemap(python,argout,fragment="t_output_helper") apr_array_header_t ** {
+%typemap(python,argout,fragment="t_output_helper") apr_array_header_t **props {
     svn_client_proplist_item_t **ppitem;
     int i;
     int nelts = (*$1)->nelts;
@@ -95,12 +95,12 @@
     $result = t_output_helper($result, list);
 }
 
-%typemap(perl5,in,numinputs=0) apr_array_header_t ** (apr_array_header_t *temp)
+%typemap(perl5,in,numinputs=0) apr_array_header_t **props (apr_array_header_t *temp)
 {
     $1 = &temp;
 }
 
-%typemap(perl5,argout) apr_array_header_t ** {
+%typemap(perl5,argout) apr_array_header_t **props {
     $result = svn_swig_pl_convert_array(*$1,SWIG_TypeQuery(
                                               "svn_client_proplist_item_t *"));
     argvi++;
