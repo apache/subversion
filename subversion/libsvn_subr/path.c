@@ -1185,6 +1185,13 @@ svn_path_canonicalize (const char *path, apr_pool_t *pool)
   
   *dst = '\0';
 
+#ifdef WIN32
+  /* Skip leading double slashes when there are less then 1
+   * canon segments. UNC paths *MUST* have two segments. */
+  if (canon_segments < 2 && canon[0] == '/' && canon[1] == '/')
+    return canon + 1;
+#endif /* WIN32 */
+
   return canon;
 }
 
