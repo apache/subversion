@@ -1056,12 +1056,16 @@ svn_ra_local__lock (void *session_baton,
                     apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *sess = session_baton;
+  const char *abs_path;
 
   /* A username is absolutely required to lock a path. */
   SVN_ERR (get_username (sess, pool));
 
+  /* Get the absolute path. */
+  abs_path = svn_path_join (sess->fs_path, path, pool);
+
   /* This wrapper will call pre- and post-lock hooks. */
-  SVN_ERR (svn_repos_fs_lock (lock, sess->repos, path, comment, force,
+  SVN_ERR (svn_repos_fs_lock (lock, sess->repos, abs_path, comment, force,
                               0 /* no timeout */, current_rev, pool));
 
   return SVN_NO_ERROR;
@@ -1095,8 +1099,12 @@ svn_ra_local__get_lock (void *session_baton,
                         apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *sess = session_baton;
+  const char *abs_path;
 
-  SVN_ERR (svn_fs_get_lock_from_path (lock, sess->fs, path, pool));
+  /* Get the absolute path. */
+  abs_path = svn_path_join (sess->fs_path, path, pool);
+
+  SVN_ERR (svn_fs_get_lock_from_path (lock, sess->fs, abs_path, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1110,10 +1118,14 @@ svn_ra_local__get_locks (void *session_baton,
                          apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *sess = session_baton;
+  const char *abs_path;
+
+  /* Get the absolute path. */
+  abs_path = svn_path_join (sess->fs_path, path, pool);
 
   /* Kinda silly to call the repos wrapper, since we have no authz
      func to give it.  But heck, why not. */
-  SVN_ERR (svn_repos_fs_get_locks (locks, sess->repos, path,
+  SVN_ERR (svn_repos_fs_get_locks (locks, sess->repos, abs_path,
                                    NULL, NULL, pool));
 
   return SVN_NO_ERROR;
