@@ -34,7 +34,7 @@ _svn()
 	optsParam="-r|--revision|--username|--password|--targets|
 	           |-x|--extensions|-m|--message|-F|--file|--encoding|
 	           |--diff-cmd|--diff3-cmd|--editor-cmd|--old|--new|
-	           |--config-dir|--native-eol"
+	           |--config-dir|--native-eol|--limit"
 
 	# if not typing an option, or if the previous option required a
 	# parameter, then fallback on ordinary filename expansion
