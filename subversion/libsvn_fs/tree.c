@@ -3482,6 +3482,7 @@ struct revisions_changed_baton
 {
   apr_hash_t *revs;
   int cross_copy_history;
+  const char *successor_path;
   const svn_fs_id_t *successor_id;
 };
 
@@ -3494,25 +3495,38 @@ revisions_changed_callback (void *baton,
 {
   struct revisions_changed_baton *b = baton;
 
-  /* If there is no NODE, then this is the last call, so we need to
-     flush our B->SUCCESSOR_ID cache. */
+  /* If there is no NODE, then this is (or should be) the last call,
+     but we'll set the DONE flag just in case. */
   if (! node)
     {
-      b->successor_id = NULL;
+      *done = 1;
     }
   else
     {
-      svn_revnum_t *rev 
-        = apr_palloc (apr_hash_pool_get (b->revs), sizeof (*rev));
+      const char *succ_cp_id = svn_fs__id_copy_id (b->successor_id);
+      const char *node_cp_id = svn_fs__id_copy_id (svn_fs__dag_get_id (node));
+      const char *node_cr_path = svn_fs__dag_get_created_path (node);
+      svn_revnum_t *rev = apr_palloc (apr_hash_pool_get (b->revs), 
+                                      sizeof (*rev));
 
       /* Check B->CROSS_COPY_HISTORY.  If we are not supposed to cross
-         copy history, then compare NODE's ID against B->SUCCESSOR_ID
-         to see if we have done so, and if so, set the DONE flag and
-         exit. */
-      if ((! b->cross_copy_history) && (b->successor_id))
+         copy history, we'll do some checks to ensure that we aren't
+         about to cross that history. */
+      if (! b->cross_copy_history)
         {
-          if (strcmp (svn_fs__id_copy_id (svn_fs__dag_get_id (node)), 
-                      svn_fs__id_copy_id (b->successor_id)))
+          /* Compare NODE's ID against B->SUCCESSOR_ID to see if we
+             just crossed a copy boundary.  If so, set the DONE flag
+             and exit. */
+          if (strcmp (node_cp_id, succ_cp_id) != 0)
+            {
+              *done = 1;
+              return SVN_NO_ERROR;
+            }
+
+          /* Compare NODE's CMT-PATH against B->SUCCESSOR_PATH to see
+             if we just crossed a copy boundary.  If so, set the DONE
+             flag and exit. */
+          if (strcmp (node_cr_path, b->successor_path) != 0)
             {
               *done = 1;
               return SVN_NO_ERROR;
@@ -3541,6 +3555,8 @@ struct revisions_changed_args
 {
   apr_hash_t *revs;
   svn_fs_t *fs;
+  svn_fs_root_t *root;
+  const char *path;
   const svn_fs_id_t *id;
   int cross_copy_history;
 };
@@ -3562,12 +3578,21 @@ txn_body_revisions_changed (void *baton, trail_t *trail)
   /* Also, note in our baton whether we wish to cross copy history. */
   b.cross_copy_history = args->cross_copy_history;
 
-  /* Flush the SUCCESSOR_ID member of the callback baton as we are
-     about to start working on a new node. */
-  b.successor_id = NULL;
-
   /* Get the NODE for ARGS->id.  */
   SVN_ERR (svn_fs__dag_get_node (&node, args->fs, args->id, trail));
+
+  /* Reset the SUCCESSOR_PATH and SUCCESSOR_ID members of the callback
+     baton to point to our new node. */
+  b.successor_path = svn_fs__dag_get_created_path (node);
+  b.successor_id = args->id;
+
+  /* If we are coming at this thing from a different path than it was
+     last committed at, there has been at least one copy of a parent
+     directory made since that last commit.  If we aren't crossing
+     copy boundaries, we should stop our search here. */
+  if ((! b.cross_copy_history) 
+      && (strcmp (args->path, b.successor_path) != 0))
+    return SVN_NO_ERROR;
 
   /* Add NODE's created rev to the array in the baton. */
   SVN_ERR (svn_fs__dag_get_revision (rev, node, trail));
@@ -3601,14 +3626,15 @@ svn_fs_revisions_changed (apr_array_header_t **revs,
   args.revs = all_revs;
   args.fs = fs;
   args.cross_copy_history = cross_copy_history;
+  args.root = root;
 
   /* Get the node revision id for each PATH under ROOT, and find out
      in which revisions that node revision id was changed.  */
   for (i = 0; i < paths->nelts; i++)
     {
-      SVN_ERR (svn_fs_node_id (&(args.id), root, 
-                               APR_ARRAY_IDX (paths, i, const char *), 
-                               subpool));
+      args.path = APR_ARRAY_IDX (paths, i, const char *);
+      args.path = svn_fs__canonicalize_abspath (args.path, subpool);
+      SVN_ERR (svn_fs_node_id (&(args.id), args.root, args.path, subpool));
       SVN_ERR (svn_fs__retry_txn (fs, txn_body_revisions_changed,
                                   &args, subpool));
       svn_pool_clear (subpool);
