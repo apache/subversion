@@ -1139,6 +1139,14 @@ svn_path_canonicalize (const char *path, apr_pool_t *pool)
   if (*src == '/')
     {
       *(dst++) = *(src++);
+
+#ifdef WIN32
+      /* On Windows permit two leading separator characters which means an
+       * UNC path. */
+      if (*src == '/')
+        *(dst++) = *(src++);
+#endif /* WIN32 */
+      
     }
 
   while (*src)
