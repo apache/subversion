@@ -442,6 +442,7 @@ fetch_file (svn_ra_session_t *ras,
 
   name = my_basename(rsrc->url, fc->pool);
   err = (*fc->editor->add_file) (name, fc->cur_baton,
+                                 /* ### NULL, SVN_INVALID_REVNUM, */
                                  ancestor_path, ancestor_revision,
                                  &file_baton);
   if (err)
@@ -495,8 +496,7 @@ fetch_file (svn_ra_session_t *ras,
 
 svn_error_t * svn_ra_dav__checkout (void *session_baton,
                                     const svn_delta_edit_fns_t *editor,
-                                    void *edit_baton,
-                                    svn_string_t *URL)
+                                    void *edit_baton)
 {
   svn_ra_session_t *ras = session_baton;
   int recurse = 1;      /* ### until it gets passed to us */
@@ -526,7 +526,7 @@ svn_error_t * svn_ra_dav__checkout (void *session_baton,
   rsrc = apr_pcalloc(ras->pool, sizeof(*rsrc));
   rsrc->parent_baton = root_baton;
 
-  /* ### join ras->rep_root, URL */
+  /* ### verify this the right place to start... */
   rsrc->url = ras->root.path;
 
   prsrc = apr_push_array(fc.subdirs);
@@ -574,6 +574,7 @@ svn_error_t * svn_ra_dav__checkout (void *session_baton,
           
           printf("adding directory: %s\n", name->data);
           err = (*editor->add_directory) (name, parent_baton,
+                                          /* ### NULL, SVN_INVALID_REVNUM, */
                                           ancestor_path, ancestor_revision,
                                           &this_baton);
           if (err)
