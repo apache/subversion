@@ -55,7 +55,7 @@ int main(int argc, char **argv)
       const char *path_utf8;
       err = svn_utf_cstring_to_utf8(&path_utf8, argv[i], pool);
       if (err != SVN_NO_ERROR)
-        svn_handle_error(err, stderr, 1);
+        svn_handle_error2(err, stderr, TRUE, "target-test: ");
       *((const char **)apr_array_push(targets)) = 
         svn_path_internal_style(path_utf8, pool);
     }
@@ -65,14 +65,14 @@ int main(int argc, char **argv)
   err = svn_path_condense_targets(&common_path, &condensed_targets, targets,
                                   TRUE, pool);
   if (err != SVN_NO_ERROR)
-    svn_handle_error(err, stderr, 1);
+    svn_handle_error2(err, stderr, TRUE, "target-test: ");
 
   /* Display the results */
   {
     const char *common_path_stdout;
     err = svn_utf_cstring_from_utf8(&common_path_stdout, common_path, pool);
     if (err != SVN_NO_ERROR)
-      svn_handle_error(err, stderr, 1);
+      svn_handle_error2(err, stderr, TRUE, "target-test: ");
     printf("%s: ", common_path_stdout);
   }
   for (i = 0; i < condensed_targets->nelts; i++)
@@ -83,7 +83,7 @@ int main(int argc, char **argv)
           const char *target_stdout;
           err = svn_utf_cstring_from_utf8(&target_stdout, target, pool);
           if (err != SVN_NO_ERROR)
-            svn_handle_error(err, stderr, 1);
+            svn_handle_error2(err, stderr, TRUE, "target-test: ");
           printf("%s, ", target_stdout);
         }
       else
@@ -94,7 +94,7 @@ int main(int argc, char **argv)
   /* Now ensure it works without the pbasename */
   err = svn_path_condense_targets(&common_path2, NULL, targets, TRUE, pool);
   if (err != SVN_NO_ERROR)
-    svn_handle_error(err, stderr, 1);
+    svn_handle_error2(err, stderr, TRUE, "target-test: ");
 
   if (strcmp (common_path, common_path2) != 0)
     {

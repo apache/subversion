@@ -152,17 +152,33 @@ svn_error_t *svn_error_dup (svn_error_t *err);
 void svn_error_clear (svn_error_t *error);
 
 
-/** Very basic default error handler: print out error stack, and quit
- * iff the @a fatal flag is set.
+/** @since New in 1.2
+ *
+ * Very basic default error handler: print out error stack @a error to the
+ * stdio stream @a stream, with each error prefixed by @a prefix, and quit
+ * iff the @a fatal flag is set.  Allocations are performed in the error's
+ * pool.
+ */
+void svn_handle_error2 (svn_error_t *error,
+                        FILE *stream,
+                        svn_boolean_t fatal,
+                        const char *prefix);
+
+/** Like @c svn_handle_error2 but with @c prefix set to "svn: "
  */
 void svn_handle_error (svn_error_t *error,
                        FILE *stream,
                        svn_boolean_t fatal);
 
-/** Basic, default warning handler.
+/** @since New in 1.2
  *
- * Just prints @a error to the stdio stream given in @a stream. Allocations
- * are performed in the error's pool.
+ * Very basic default warning handler: print out the error @a error to the
+ * stdio stream @a stream, prefixed by @a prefix.  Allocations are
+ * performed in the error's pool.
+ */
+void svn_handle_warning2 (FILE *stream, svn_error_t *error, const char *prefix);
+
+/** Like @c svn_handle_warning2 but with @c prefix set to "svn: "
  */
 void svn_handle_warning (FILE *stream, svn_error_t *error);
 

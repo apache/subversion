@@ -152,8 +152,8 @@ main (int argc, const char **argv)
     {
       /* For functions deeper in the stack, we usually use the
          SVN_ERR() exception-throwing macro (see svn_error.h).  At the
-         top level, we catch & print the error with svn_handle_error(). */
-      svn_handle_error (err, stderr, 0);
+         top level, we catch & print the error with svn_handle_error2(). */
+      svn_handle_error2 (err, stderr, FALSE, "minimal_client: ");
       return EXIT_FAILURE;
     }
 
@@ -162,14 +162,14 @@ main (int argc, const char **argv)
     /* Initialize and allocate the client_ctx object. */
     if ((err = svn_client_create_context (&ctx, pool)))
       {
-        svn_handle_error (err, stderr, 0);
+        svn_handle_error2 (err, stderr, FALSE, "minimal_client: ");
         return EXIT_FAILURE;
       }
     
     /* Load the run-time config file into a hash */
     if ((err = svn_config_get_config (&(ctx->config), NULL, pool)))
       {
-        svn_handle_error (err, stderr, 0);
+        svn_handle_error2 (err, stderr, FALSE, "minimal_client: ");
         return EXIT_FAILURE;
       }
 
@@ -228,7 +228,7 @@ main (int argc, const char **argv)
                        ctx, pool);
   if (err)
     {
-      svn_handle_error (err, stderr, 0);
+      svn_handle_error2 (err, stderr, FALSE, "minimal_client: ");
       return EXIT_FAILURE;
     }
 

@@ -62,7 +62,7 @@ int main(int argc, char *argv[])
   svn_err = svn_stream_for_stdout(&ostream, pool);
   if (svn_err)
     {
-      svn_handle_error(svn_err, stdout, FALSE);
+      svn_handle_error2(svn_err, stdout, FALSE, "diff3-test: ");
       rc = 2;
     }
   else if (argc == 4)
@@ -77,7 +77,7 @@ int main(int argc, char *argv[])
         }
       else
         {
-          svn_handle_error(svn_err, stdout, FALSE);
+          svn_handle_error2(svn_err, stdout, FALSE, "diff3-test: ");
           rc = 2;
         }
     }

@@ -60,7 +60,7 @@ do_one_diff (apr_file_t *source_file, apr_file_t *target_file,
     svn_error_t *err;
     err = svn_txdelta_next_window (&delta_window, delta_stream, wpool);
     if (err)
-      svn_handle_error (err, stderr, TRUE);
+      svn_handle_error2 (err, stderr, TRUE, "vdelta-test: ");
     if (delta_window != NULL)
       {
         *len += print_delta_window (delta_window, tag, quiet, stream);
@@ -189,10 +189,10 @@ main (int argc, char **argv)
 
           err = svn_txdelta_next_window (&window_A, stream_A, wpool);
           if (err)
-            svn_handle_error (err, stderr, TRUE);
+            svn_handle_error2 (err, stderr, TRUE, "vdelta-test: ");
           err = svn_txdelta_next_window (&window_B, stream_B, wpool);
           if (err)
-            svn_handle_error (err, stderr, TRUE);
+            svn_handle_error2 (err, stderr, TRUE, "vdelta-test: ");
 
           /* Note: It's not possible that window_B is null, we already
              counted the number of windows in the second delta. */

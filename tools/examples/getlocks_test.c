@@ -244,6 +244,6 @@ main (int argc, const char **argv)
   return EXIT_SUCCESS;
 
  hit_error:
-  svn_handle_error (err, stderr, 0);
+  svn_handle_error2 (err, stderr, FALSE, "getlocks_test: ");
   return EXIT_FAILURE;
 }

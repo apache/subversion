@@ -140,7 +140,7 @@ warning_func (void *baton,
 {
   if (! err)
     return;
-  svn_handle_error (err, stderr, FALSE);
+  svn_handle_error2 (err, stderr, FALSE, "svnadmin: ");
 }
 
 
@@ -878,7 +878,7 @@ subcommand_rmtxns (apr_getopt_t *os, void *baton, apr_pool_t *pool)
          with this particular txn. */
       if (err)
         {
-          svn_handle_error (err, stderr, FALSE /* non-fatal */);
+          svn_handle_error2 (err, stderr, FALSE /* non-fatal */, "svnadmin: ");
           svn_error_clear (err);
         }
       else if (! opt_state->quiet)
@@ -1116,7 +1116,7 @@ subcommand_rmlocks (apr_getopt_t *os, void *baton, apr_pool_t *pool)
       if (err)
         {
           /* Print the error, but move on to the next lock. */
-          svn_handle_error (err, stderr, FALSE /* non-fatal */);
+          svn_handle_error2 (err, stderr, FALSE /* non-fatal */, "svnadmin: ");
           svn_error_clear (err);
         }
             
@@ -1165,7 +1165,7 @@ main (int argc, const char * const *argv)
   err = check_lib_versions ();
   if (err)
     {
-      svn_handle_error (err, stderr, FALSE);
+      svn_handle_error2 (err, stderr, FALSE, "svnadmin: ");
       svn_error_clear (err);
       svn_pool_destroy (pool);
       return EXIT_FAILURE;
@@ -1216,7 +1216,7 @@ main (int argc, const char * const *argv)
                 (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                  _("Multiple revision arguments encountered; "
                    "try '-r M:N' instead of '-r M -r N'"));
-              svn_handle_error (err, stderr, FALSE);
+              svn_handle_error2 (err, stderr, FALSE, "svnadmin: ");
               svn_error_clear (err);
               svn_pool_destroy (pool);
               return EXIT_FAILURE;
@@ -1233,7 +1233,7 @@ main (int argc, const char * const *argv)
                   (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                    _("Syntax error in revision argument '%s'"),
                    utf8_opt_arg);
-              svn_handle_error (err, stderr, FALSE);
+              svn_handle_error2 (err, stderr, FALSE, "svnadmin: ");
               svn_error_clear (err);
               svn_pool_destroy (pool);
               return EXIT_FAILURE;
@@ -1267,7 +1267,7 @@ main (int argc, const char * const *argv)
         err = svn_utf_cstring_to_utf8 (&opt_state.fs_type, opt_arg, pool);
         if (err)
           {
-            svn_handle_error (err, stderr, FALSE);
+            svn_handle_error2 (err, stderr, FALSE, "svnadmin: ");
             svn_error_clear (err);
             svn_pool_destroy (pool);
             return EXIT_FAILURE;
@@ -1278,7 +1278,7 @@ main (int argc, const char * const *argv)
                                        pool);
         if (err)
           {
-            svn_handle_error (err, stderr, FALSE);
+            svn_handle_error2 (err, stderr, FALSE, "svnadmin: ");
             svn_error_clear (err);
             svn_pool_destroy (pool);
             return EXIT_FAILURE;
@@ -1350,7 +1350,7 @@ main (int argc, const char * const *argv)
               err = svn_utf_cstring_to_utf8 (&first_arg_utf8, first_arg, pool);
               if (err)
                 {
-                  svn_handle_error (err, stderr, FALSE);
+                  svn_handle_error2 (err, stderr, FALSE, "svnadmin: ");
                   svn_error_clear (err);
                   svn_pool_destroy (pool);
                   return EXIT_FAILURE;
@@ -1376,7 +1376,7 @@ main (int argc, const char * const *argv)
                                     pool);
       if(err)
         {
-          svn_handle_error (err, stderr, 0);
+          svn_handle_error2 (err, stderr, FALSE, "svnadmin: ");
           svn_opt_subcommand_help (subcommand->name, cmd_table,
                                    options_table, pool);
           svn_error_clear (err);
@@ -1396,7 +1396,7 @@ main (int argc, const char * const *argv)
                                     pool);
       if(err)
         {
-          svn_handle_error (err, stderr, 0);
+          svn_handle_error2 (err, stderr, FALSE, "svnadmin: ");
           svn_opt_subcommand_help (subcommand->name, cmd_table,
                                    options_table, pool);
           svn_error_clear (err);
@@ -1447,12 +1447,12 @@ main (int argc, const char * const *argv)
     {
       if (err->apr_err == SVN_ERR_CL_ARG_PARSING_ERROR)
         {
-          svn_handle_error (err, stderr, 0);
+          svn_handle_error2 (err, stderr, FALSE, "svnadmin: ");
           svn_opt_subcommand_help (subcommand->name, cmd_table,
                                    options_table, pool);
         }
       else
-        svn_handle_error (err, stderr, 0);
+        svn_handle_error2 (err, stderr, FALSE, "svnadmin: ");
       svn_error_clear (err);
       svn_pool_destroy (pool);
       return EXIT_FAILURE;
@@ -1464,7 +1464,7 @@ main (int argc, const char * const *argv)
          see any print errors. */
       err = svn_cmdline_fflush (stdout);
       if (err) {
-        svn_handle_error(err, stderr, FALSE);
+        svn_handle_error2 (err, stderr, FALSE, "svnadmin: ");
         svn_error_clear (err);
         return EXIT_FAILURE;
       }

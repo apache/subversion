@@ -232,7 +232,7 @@ main(int argc, const char *argv[])
   err = check_lib_versions ();
   if (err)
     {
-      svn_handle_error (err, stderr, FALSE);
+      svn_handle_error2 (err, stderr, FALSE, "svnversion: ");
       svn_error_clear (err);
       svn_pool_destroy (pool);
       return EXIT_FAILURE;
