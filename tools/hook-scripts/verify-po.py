@@ -48,22 +48,6 @@ class ChangeReceiver(delta.Editor):
     core.svn_pool_destroy(subpool)
 
 
-  # Ignore all other editor functions
-  def open_root(self, base_revision, dir_pool):
-    return 0
-  def delete_entry(self, path, revision, parent_baton, pool):
-    pass
-  def add_directory(self, path, parent_baton,
-                    copyfrom_path, copyfrom_revision, dir_pool):
-    return 0
-  def open_directory(self, path, parent_baton, base_revision, dir_pool):
-    return 0
-  def change_dir_prop(self, dir_baton, name, value, pool):
-    pass
-  def change_file_prop(self, file_baton, name, value, pool):
-    pass
-
-
 def check_po(pool, repos_path, txn):
   def authz_cb(root, path, pool):
     return 1
