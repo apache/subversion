@@ -24,6 +24,7 @@
 #include "fs.h"
 #include "err.h"
 #include "bdb/bdb-err.h"
+#include "bdb/bdb_compat.h"
 #include "trail.h"
 #include "../libsvn_fs/fs-loader.h"
 
