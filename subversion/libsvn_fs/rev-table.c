@@ -209,9 +209,12 @@ txn_body_youngest_rev (void *baton,
                         db_err));
     }
 
-  /* You can't commit a transaction with open cursors; you'll get
-     DB_RUNRECOVERY.  Why?  Perhaps someone who understands Berkeley
-     DB or database theory in general better than I can explain.  */
+  /* You can't commit a transaction with open cursors, because:
+     1) key/value pairs don't get deleted until the cursors referring
+     to them are closed, so closing a cursor can fail for various
+     reasons, and txn_commit shouldn't fail that way, and 
+     2) using a cursor after committing its transaction can cause
+     undetectable database corruption.  */
   SVN_ERR (DB_WRAP (fs, "getting youngest revision (closing cursor)",
                     cursor->c_close (cursor)));
 
