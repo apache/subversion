@@ -3724,14 +3724,14 @@ Committed revision 1.
 
       <!-- @ENGLISH {{{
       <screen>
-$ svn ls file:///usr/local/svn/newrepos/some/project
+$ svn list file:///usr/local/svn/newrepos/some/project
 bar.c
 foo.c
 subdir/
 </screen>
       @ENGLISH }}} -->
       <screen>
-$ svn ls file:///usr/local/svn/nyttdepot/etellerannet/prosjekt
+$ svn list file:///usr/local/svn/nyttdepot/etellerannet/prosjekt
 bar.c
 foo.c
 subdir/
