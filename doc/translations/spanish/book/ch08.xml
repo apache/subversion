@@ -10,21 +10,21 @@
       una compañía de desarrollo de software con sede en California.
       La comunidad que se ha formado alrededor del desarrollo
       de Subversion siempre da la bienvenida a nuevos miembros
-      que pueden conar su tiempo y atención al proyecto. A los
+      que pueden donar su tiempo y atención al proyecto. A los
       voluntarios se les anima a ayudar de cualquier modo, ya sea
       encontrando y diagnosticando fallos, refinando el código fuente
       existente, o implementando por nuevas características.</para>
     
     <para>Este capítulo es para aquellos que desean asistir en
       la evolución continua de Subversion ensuciándose las manos
-      con el código fuente.  Cubriremos algunos detalles íntimos
-      del software, ese tipo de conocimiento técnico específico
-      necesario por aquellos que desarrollan Subversion&mdash;o
-      herramientas completamente nuevas basadas en las librerías
-      de Subversion.  Si no prevee participar con el software a
-      tal nivel, siéntase libre de ignorar este capítulo con la
-      certeza de que su experiencia como usuario de Subversion no
-      se verá afectada.</para>
+      con el código fuente.  Cubriremos algunos detalles íntimos del
+      software, ese tipo de conocimiento técnico específico necesario
+      por aquellos que desarrollan Subversion&mdash;o herramientas
+      completamente nuevas basadas en las librerías de Subversion.
+      Si no tiene previsto participar con el software a tal nivel,
+      sientase libre de ignorar este capítulo con la certeza de
+      que su experiencia como usuario de Subversion no se verá
+      afectada.</para>
 
   </simplesect>
 
@@ -153,7 +153,7 @@
     <sect2 id="svn-ch-8-sect-1.1">
       <title>Capa de repositorio</title>
 
-      <para>Cuando nos referimos a la capa de respositorio de
+      <para>Cuando nos referimos a la capa de repositorio de
         Subversion, en general estamos hablando de dos
         librerías&mdash;la librería de repositorio, y la librería
         del sistema de ficheros. Estas librerías proporcionan
@@ -245,7 +245,7 @@
           o nada</quote>&mdash;o bien todas las acciones del
           conjunto son completadas con éxito, o todas son tratadas
           como si <emphasis>ninguna</emphasis> de ellas hubiese
-          ocurrido&mdash;y de un modo que no intefieran con otros
+          ocurrido&mdash;y de un modo que no interfieran con otros
           procesos que actúan sobre los datos.</para>
 
         <para>Las transacciones de base de datos generalmente
@@ -971,8 +971,9 @@ The following repository access (RA) modules are available:
         (i18n<footnote><para>N.T.: Forma breve de referirse
         a la palabra internacionalización, en inglés
         <quote>internationalization</quote>, que comienza con una
-        <quote>i</quote>, seguida de 18 carácteres y terminada en
-        <quote>n</quote>.</para> </footnote>). Después de todo,
+        <quote>i</quote>, <!-- TODO estilo en los tiempos verbales,
+        mezclar no es bueno-->seguida de 18 carácteres y terminada
+        en <quote>n</quote>.</para> </footnote>). Después de todo,
         aunque <quote>remotas</quote> pueda significar <quote>de
         un lado a otro de la oficina</quote>, podría significar
         perfectamente <quote>de un lado a otro del globo.</quote>.
