@@ -299,7 +299,11 @@ svn_wc_adm_open (svn_wc_adm_access_t **adm_access,
       apr_hash_index_t *hi;
       apr_pool_t *subpool = svn_pool_create (pool);
 
-      SVN_ERR (svn_wc_entries_read (&entries, lock, FALSE, subpool));
+      /* We ask for the deleted entries if there is a write lock on the
+         basis that we will eventually need these when we come to write.
+         Getting them now avoids a second file parse.  However if we don't
+         ever write it does use more memory. */
+      SVN_ERR (svn_wc_entries_read (&entries, lock, write_lock, subpool));
 
       /* Use a temporary hash until all children have been opened. */
       if (associated)
@@ -317,7 +321,8 @@ svn_wc_adm_open (svn_wc_adm_access_t **adm_access,
 
           apr_hash_this (hi, NULL, NULL, &val);
           entry = val;
-          if (entry->kind != svn_node_dir
+          if ((entry->deleted && entry->schedule != svn_wc_schedule_add)
+              || entry->kind != svn_node_dir
               || ! strcmp (entry->name, SVN_WC_ENTRY_THIS_DIR))
             continue;
           entry_path = svn_path_join (lock->path, entry->name, subpool);
@@ -621,10 +626,10 @@ prune_deleted (svn_wc_adm_access_t *adm_access,
            hi = apr_hash_next (hi))
         {
           void *val;
-          svn_wc_entry_t *entry;
+          const svn_wc_entry_t *entry;
           apr_hash_this (hi, NULL, NULL, &val);
           entry = val;
-          if (entry->deleted)
+          if (entry->deleted && entry->schedule != svn_wc_schedule_add)
             break;
         }
 
@@ -643,11 +648,11 @@ prune_deleted (svn_wc_adm_access_t *adm_access,
         {
           void *val;
           const void *key;
-          svn_wc_entry_t *entry;
+          const svn_wc_entry_t *entry;
 
           apr_hash_this (hi, &key, NULL, &val);
           entry = val;
-          if (! entry->deleted)
+          if (! entry->deleted || entry->schedule == svn_wc_schedule_add)
             apr_hash_set (adm_access->entries, key, APR_HASH_KEY_STRING, entry);
         }
     }

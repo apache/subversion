@@ -129,7 +129,7 @@ report_revisions (svn_wc_adm_access_t *adm_access,
   apr_hash_t *entries, *dirents;
   apr_hash_index_t *hi;
   apr_pool_t *subpool = svn_pool_create (pool);
-  svn_wc_entry_t *dot_entry;
+  const svn_wc_entry_t *dot_entry;
   const char *this_url, *this_path, *this_full_path;
   svn_wc_adm_access_t *dir_access;
 
@@ -147,7 +147,7 @@ report_revisions (svn_wc_adm_access_t *adm_access,
   
   /* First, look at "this dir" to see what its URL is. */
   dot_entry = apr_hash_get (entries, SVN_WC_ENTRY_THIS_DIR, 
-                                 APR_HASH_KEY_STRING);
+                            APR_HASH_KEY_STRING);
   this_url = apr_pstrdup (pool, dot_entry->url);
   this_path = apr_pstrdup (subpool, dir_path);
   this_full_path = apr_pstrdup (subpool, full_path);
