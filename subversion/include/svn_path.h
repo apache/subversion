@@ -38,6 +38,7 @@
 #include <apr_tables.h>
 #include "svn_string.h"
 #include "svn_error.h"
+#include "svn_utf.h"
 
 
 #ifdef __cplusplus
@@ -375,6 +376,25 @@ const char *svn_path_uri_decode (const char *path, apr_pool_t *pool);
 const char *svn_path_url_add_component (const char *url,
                                         const char *component,
                                         apr_pool_t *pool);
+
+/** @} */
+
+/** Charset conversion stuff
+ *
+ * @defgroup svn_path_charset_stuff Charset conversion stuff
+ * @{
+ */
+
+/** Convert @a path_utf8 from UTF-8 to the internal encoding used by APR. */
+svn_error_t *svn_path_cstring_from_utf8 (const char **path_apr,
+                                         const char *path_utf8,
+                                         apr_pool_t *pool);
+
+/** Convert @a path_apr from the internal encoding used by APR to UTF-8. */
+svn_error_t *svn_path_cstring_to_utf8 (const char **path_utf8,
+                                       const char *path_apr,
+                                       apr_pool_t *pool);
+
 
 /** @} */
 
