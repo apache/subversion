@@ -363,8 +363,6 @@ prop_path_internal (const char **prop_path,
   else  /* It's either a file, or a non-wc dir (i.e., maybe an ex-file) */
     {
       svn_path_split_nts (path, prop_path, &entry_name, pool);
-      if (svn_path_is_empty_nts (*prop_path))
-        *prop_path = ".";
 
       err = svn_wc_check_wc (*prop_path, &wc_format_version, pool);
       if (err)

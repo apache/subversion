@@ -138,7 +138,7 @@ static const char *get_from_path_map(apr_hash_t *hash,
                              path + my_path->len + 1, NULL);
         }
     }
-  while (! svn_path_is_empty(my_path));
+  while (! svn_path_is_empty(my_path) && strcmp (my_path->data, "/") != 0);
   
   /* well, we simply never found anything worth mentioning the map.
      PATH is its own default finding, then. */

@@ -649,8 +649,6 @@ svn_wc_delete (const char *path,
          the addition of a delete flag. */
       const char *dir, *base_name;
       svn_path_split_nts (path, &dir, &base_name, pool);
-      if (svn_path_is_empty_nts (dir))
-        dir = ".";
       
       entry->schedule = svn_wc_schedule_delete;
       SVN_ERR (svn_wc__entry_modify (adm_access, base_name, entry,
@@ -763,8 +761,6 @@ svn_wc_add (const char *path,
 
   /* Split off the base_name from the parent directory. */
   svn_path_split_nts (path, &parent_dir, &base_name, pool);
-  if (svn_path_is_empty_nts (parent_dir))
-     parent_dir = ".";  /* no need to palloc, it's const */
   SVN_ERR (svn_wc_entry (&parent_entry, parent_dir, FALSE, pool));
   if (! parent_entry)
     return svn_error_createf 
@@ -1196,8 +1192,6 @@ svn_wc_revert (const char *path,
     {
       /* Split the base_name from the parent path. */
       svn_path_split_nts (path, &p_dir, &bname, pool);
-      if (svn_path_is_empty_nts (p_dir))
-        p_dir = ".";
     }
 
   if (! optional_parent_access)
@@ -1521,8 +1515,6 @@ svn_wc_remove_from_revision_control (svn_wc_adm_access_t *adm_access,
         if (! is_root)
           {
             svn_path_split_nts (full_path, &parent_dir, &base_name, pool);
-            if (svn_path_is_empty_nts (parent_dir))
-              parent_dir = ".";
             
             SVN_ERR (svn_wc_entries_read (&entries, parent_dir, FALSE, pool));
             svn_wc__entry_remove (entries, base_name);

@@ -71,7 +71,7 @@ svn_cl__push_implicit_dot_target (apr_array_header_t *targets,
                                   apr_pool_t *pool)
 {
   if (targets->nelts == 0)
-    array_push_str (targets, ".", pool);
+    array_push_str (targets, "", pool); /* Ha! "", not ".", is the canonical */
   assert (targets->nelts);
 }
 
@@ -242,26 +242,13 @@ svn_cl__args_to_target_array (apr_array_header_t **targets_p,
         }
       else  /* not a url, so treat as a path */
         {
-          const char *base_name = svn_path_basename (raw_target, pool);
+          const char *base_name;
           char *truenamed_target;
           apr_status_t apr_err;
-          
-          /* If this target is a Subversion administrative directory,
-             skip it.  TODO: Perhaps this check should not call the
-             target a SVN admin dir unless svn_wc_check_wc passes on
-             the target, too? */
-          if (! strcmp (base_name, SVN_WC_ADM_DIR_NAME))
-            continue;
           
           /* canonicalize case, and change all separators to '/'. */
           apr_err = apr_filepath_merge (&truenamed_target, "", raw_target,
                                         APR_FILEPATH_TRUENAME, pool);
-
-          /* ### HACK: apr_filepath_merge("", ".") returns "", which
-             is borken.  Sander is looking into fixing this apr bug.
-             Remove this hack when it's fixed:  */
-          if (! strcmp (truenamed_target, ""))
-            truenamed_target = (char *) ".";
 
           /* It's okay for the file to not exist, that just means we have
              to accept the case given to the client. */
@@ -278,6 +265,16 @@ svn_cl__args_to_target_array (apr_array_header_t **targets_p,
           SVN_ERR (svn_utf_cstring_to_utf8 (&target,
                                             (const char *) truenamed_target,
                                             NULL, pool));
+
+          target = svn_path_canonicalize_nts (target, pool);
+
+          /* If this target is a Subversion administrative directory,
+             skip it.  TODO: Perhaps this check should not call the
+             target a SVN admin dir unless svn_wc_check_wc passes on
+             the target, too? */
+          base_name = svn_path_basename (target, pool);
+          if (! strcmp (base_name, SVN_WC_ADM_DIR_NAME))
+            continue;
         }
 
       (*((const char **) apr_array_push (output_targets))) = target;
@@ -399,6 +396,9 @@ svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
         (apr_err, 0, NULL, pool, "failed to get current working directory");
     }
   SVN_ERR (svn_utf_cstring_from_utf8 (&base_dir_native, base_dir, pool));
+  /* APR doesn't like "" directories */
+  if (base_dir_native[0] == '\0')
+    base_dir_native = ".";
   apr_err = apr_filepath_set (base_dir_native, pool);
   if (apr_err)
     {

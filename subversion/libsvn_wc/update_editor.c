@@ -1754,8 +1754,6 @@ close_file (void *file_baton)
     propchanges = fb->propchanges;
 
   parent_path = svn_path_remove_component_nts (fb->path, fb->pool);
-  if (svn_path_is_empty_nts (parent_path))
-    parent_path = ".";
     
   SVN_ERR (svn_wc_adm_retrieve (&adm_access, fb->edit_baton->adm_access,
                                 parent_path, fb->pool));
@@ -2130,8 +2128,6 @@ check_wc_root (svn_boolean_t *wc_root,
 
   /* If we cannot get an entry for PATH's parent, PATH is a WC root. */
   svn_path_split_nts (path, &parent, &base_name, pool);
-  if (svn_path_is_empty_nts (parent))
-    parent = ".";
   err = svn_wc_entry (&p_entry, parent, FALSE, pool);
   if (err || (! p_entry))
     {
@@ -2188,7 +2184,7 @@ svn_wc_get_actual_target (const char *path,
     {
       svn_path_split_nts (path, anchor, target, pool);
       if ((*anchor)[0] == '\0')
-        *anchor = ".";
+        *anchor = "";
     }
   else
     {

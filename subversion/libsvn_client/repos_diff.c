@@ -346,8 +346,6 @@ get_parent_access (svn_wc_adm_access_t **parent_access,
   else
     {
       const char *parent_path = svn_path_remove_component_nts (path, pool);
-      if (svn_path_is_empty_nts (parent_path))
-        parent_path = ".";
       SVN_ERR (svn_wc_adm_retrieve (parent_access, adm_access, parent_path,
                                     pool));
     }

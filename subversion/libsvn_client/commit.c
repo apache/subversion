@@ -570,8 +570,6 @@ svn_client_import (svn_client_commit_info_t **commit_info,
       SVN_ERR (svn_io_check_path (path, &kind, pool));
       if (kind == svn_node_file)
         svn_path_split_nts (path, &base_dir, NULL, pool);
-      if (svn_path_is_empty_nts (base_dir))
-        base_dir = ".";
       SVN_ERR (get_ra_editor (&ra_baton, &session, &ra_lib, 
                               &editor, &edit_baton, auth_baton, url, base_dir,
                               log_msg, NULL, &committed_rev, &committed_date,
@@ -740,7 +738,7 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
   svn_error_t *bump_err = NULL, *cleanup_err = NULL;
   svn_boolean_t use_xml = (xml_dst && xml_dst[0]) ? TRUE : FALSE;
   svn_boolean_t is_root, commit_in_progress = FALSE;
-  const char *display_dir = ".";
+  const char *display_dir = "";
   int i;
 
   /* Condense the target list. */

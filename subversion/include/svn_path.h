@@ -37,6 +37,10 @@ extern "C" {
  * No result path ever ends with a separator, no matter whether the
  * path is a file or directory, because we always canonicalize() it.
  *
+ * All paths passed to the svn_path_xxx functions, with the exceptions of
+ * the svn_path_canonicalize, svn_path_canonicalize_nts and
+ * svn_path_internal_style functions, must be in canonical form.
+ *
  * todo: this library really needs a test suite!
  ***/
 
@@ -49,15 +53,13 @@ void svn_path_local_style (svn_stringbuf_t *path);
 
 /* Join a base path (BASE) with a component (COMPONENT), allocated in POOL.
 
-   If either BASE or COMPONENT is the empty string, then the other argument
-   will be copied and returned.  If one of BASE or COMPONENT is "." the other
-   is returned; if both are "." a single "." is returned.
+   If either BASE or COMPONENT is the empty path, then the other argument
+   will be copied and returned.  If both are the empty path the empty
+   path is returned.
 
    If the COMPONENT is an absolute path, then it is copied and returned.
    Exactly one slash character ('/') is used to joined the components,
-   accounting for any trailing slash in BASE. If BASE has multiple trailing
-   slashes, then the result will also have multiple slashes (svn_path_join
-   just won't add more).
+   accounting for any trailing slash in BASE.
 
    Note that the contents of BASE are not examined, so it is possible to
    use this function for constructing URLs, or for relative URLs or
@@ -154,10 +156,9 @@ void svn_path_split_nts (const char *path,
                          apr_pool_t *pool);
 
 
-/* Return non-zero iff PATH is empty or represents the current
-   directory -- that is, if it is NULL or if prepending it as a
-   component to an existing path would result in no meaningful
-   change. */
+/* Return non-zero iff PATH is empty ("") or represents the current
+   directory -- that is, if prepending it as a component to an existing
+   path would result in no meaningful change.  */
 int svn_path_is_empty (const svn_stringbuf_t *path);
 
 
@@ -165,15 +166,15 @@ int svn_path_is_empty (const svn_stringbuf_t *path);
 int svn_path_is_empty_nts (const char *path);
 
 
-/* Remove trailing separators that don't affect the meaning of PATH.
-   (At some future point, this may make other semantically inoperative
-   transformations.) */
+/* Remove trailing separators that don't affect the meaning of PATH. Will
+   convert a "." path to "".  (At some future point, this may make other
+   semantically inoperative transformations.) */
 void svn_path_canonicalize (svn_stringbuf_t *path);
 
 
-/* Return a new path like PATH, but with any trailing separators that
-   don't affect PATH's meaning removed.  Allocate the new path in
-   POOL if anything changed, else just return PATH.
+/* Return a new path like PATH, but with any trailing separators that don't
+   affect PATH's meaning removed. Will convert a "." path to "".  Allocate
+   the new path in POOL if anything changed, else just return PATH.
 
    (At some future point, this may make other semantically inoperative
    transformations.) */
@@ -203,7 +204,7 @@ svn_path_get_absolute (const char **pabsolute,
 
 /* Return the path part of PATH in *PDIRECTORY, and the file part in *PFILE.
    If PATH is a directory, set *PDIRECTORY to PATH, and *PFILE to the
-   empty string (i.e., "" instead of NULL). */
+   empty string. */
 svn_error_t *
 svn_path_split_if_file(const char *path,
                        const char **pdirectory, 
@@ -304,7 +305,7 @@ apr_array_header_t *svn_path_decompose (const char *path,
 /* Test that NAME is a single path component, that is:
      - not NULL or empty.
      - not a `/'-separated directory path
-     - not `.' or `..'  
+     - not empty or `..'  
 */
 svn_boolean_t svn_path_is_single_path_component (const char *name);
 
@@ -342,7 +343,8 @@ const char *svn_path_uri_decode (const char *path, apr_pool_t *pool);
    before adding it to the URL.  Return the new URL, allocated in
    POOL.  Notes: if COMPONENT is NULL, just return a copy or URL
    allocated in POOL; if COMPONENT is already URI-encoded, calling
-   code should just use svn_path_join (url, component, pool). */
+   code should just use svn_path_join (url, component, pool).  URL
+   does not need to be a canonical path, it may have trailing '/'. */
 const char *svn_path_url_add_component (const char *url,
                                         const char *component,
                                         apr_pool_t *pool);

@@ -92,7 +92,7 @@ svn_cl__merge (apr_getopt_t *os,
       if (targets->nelts == 2)
         targetpath = ((const char **) (targets->elts))[1];
       else
-        targetpath = ".";
+        targetpath = "";
     }
   else /* using @rev syntax, revs already extracted. */
     {
@@ -111,7 +111,7 @@ svn_cl__merge (apr_getopt_t *os,
       if (targets->nelts == 3)
         targetpath = ((const char **) (targets->elts))[2];
       else
-        targetpath = ".";
+        targetpath = "";
     }
 
   if (opt_state->start_revision.kind == svn_client_revision_unspecified)

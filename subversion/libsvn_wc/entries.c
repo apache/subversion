@@ -644,9 +644,6 @@ svn_wc_entry (svn_wc_entry_t **entry,
       const char *dir, *base_name;
       svn_path_split_nts (path, &dir, &base_name, pool);
 
-      if (svn_path_is_empty_nts (dir))
-        dir = ".";
-
       SVN_ERR (svn_wc_check_wc (dir, &is_wc, pool));
       if (! is_wc)
         return svn_error_createf
@@ -1736,7 +1733,6 @@ svn_wc__compose_paths (apr_hash_t *paths, apr_pool_t *pool)
       path = val;
 
       apr_hash_set (paths, key, keylen, NULL);
-      svn_path_canonicalize (path);
       apr_hash_set (paths, path->data, path->len, path);
     }
 

@@ -1050,6 +1050,10 @@ svn_io_remove_dir (const char *path, apr_pool_t *pool)
   apr_int32_t flags = APR_FINFO_TYPE | APR_FINFO_NAME;
   const char *path_native;
 
+  /* APR doesn't like "" directories */
+  if (path[0] == '\0')
+    path = ".";
+
   /* Convert path to native here and call apr_dir_open directly,
      instead of just using svn_io_dir_open, because we're going to
      need path_native later anyway when we remove the dir itself. */
@@ -1578,6 +1582,10 @@ svn_io_stat (apr_finfo_t *finfo, const char *fname,
   apr_status_t status;
   const char *fname_native;
 
+  /* APR doesn't like "" directories */
+  if (fname[0] == '\0')
+    fname = ".";
+
   SVN_ERR (svn_utf_cstring_from_utf8 (&fname_native, fname, pool));
 
   status = apr_stat (finfo, fname_native, wanted, pool);
@@ -1635,6 +1643,10 @@ svn_io_dir_open (apr_dir_t **new_dir, const char *dirname, apr_pool_t *pool)
 {
   apr_status_t status;
   const char *dirname_native;
+
+  /* APR doesn't like "" directories */
+  if (dirname[0] == '\0')
+    dirname = ".";
 
   SVN_ERR (svn_utf_cstring_from_utf8 (&dirname_native, dirname, pool));
 
@@ -1786,6 +1798,10 @@ apr_dir_is_empty (const char *dir, apr_pool_t *pool)
   apr_finfo_t finfo;
   apr_status_t retval = APR_SUCCESS;
   
+  /* APR doesn't like "" directories */
+  if (dir[0] == '\0')
+    dir = ".";
+
   apr_err = apr_dir_open (&dir_handle, dir, pool);
   if (apr_err != APR_SUCCESS)
     return apr_err;

@@ -94,7 +94,7 @@ svn_cl__import (apr_getopt_t *os,
 
   /* Get a local path. */
   if (targets->nelts < 2)
-    path = ".";
+    path = "";
   else
     path = ((const char **) (targets->elts))[1];
 

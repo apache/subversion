@@ -196,8 +196,6 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
       const char *parent_path;
   
       parent_path = svn_path_remove_component_nts (path, pool);
-      if (svn_path_is_empty_nts (parent_path))
-        parent_path = ".";
       SVN_ERR (svn_wc_adm_open (&adm_access, NULL, parent_path, TRUE, TRUE,
                                 pool));
     }
