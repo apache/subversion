@@ -304,9 +304,9 @@ AH_BOTTOM(
 # Only add *_APACHE_RULE if we also have db, since mod_dav_svn depends on it.
 INSTALL_STATIC_RULES="install-bin install-docs"
 INSTALL_RULES="install-base-lib install-lib install-include install-static"
-BUILD_RULES="base-lib lib bin test"
+BUILD_RULES="base-lib lib bin"
 if test "$svn_lib_berkeley_db" = "yes"; then
-  BUILD_RULES="base-lib fs-lib lib bin fs-bin $BUILD_APACHE_RULE test fs-test"
+  BUILD_RULES="base-lib fs-lib lib bin fs-bin $BUILD_APACHE_RULE"
   INSTALL_STATIC_RULES="install-bin install-fs-bin install-docs"
   INSTALL_RULES="install-base-lib install-fs-lib install-lib install-include install-static $INSTALL_APACHE_RULE"
   FS_TEST_DEPS="\$(FS_TEST_DEPS)"
