@@ -140,7 +140,7 @@ cleanup_fs_db (svn_fs_t *fs, DB **db_ptr, const char *name)
 static svn_error_t *
 cleanup_fs (svn_fs_t *fs)
 {
-  bl_fsap_data_t *bfd = fs->fsap_data;
+  base_fs_data_t *bfd = fs->fsap_data;
   DB_ENV *env = bfd ? bfd->env : NULL;
 
   if (! env)
@@ -167,7 +167,7 @@ cleanup_fs (svn_fs_t *fs)
 #if 0   /* Set to 1 for instrumenting. */
 static void print_fs_stats(svn_fs_t *fs)
 {
-  bl_fsap_data_t *bfd = fs->fsap_data;
+  base_fs_data_t *bfd = fs->fsap_data;
   DB_TXN_STAT *t;
   DB_LOCK_STAT *l;
   int db_err;
@@ -276,10 +276,10 @@ cleanup_fs_apr (void *data)
 
 
 static svn_error_t *
-bl_bdb_set_errcall (svn_fs_t *fs,
-                    void (*db_errcall_fcn) (const char *errpfx, char *msg))
+base_bdb_set_errcall (svn_fs_t *fs,
+                      void (*db_errcall_fcn) (const char *errpfx, char *msg))
 {
-  bl_fsap_data_t *bfd = fs->fsap_data;
+  base_fs_data_t *bfd = fs->fsap_data;
 
   SVN_ERR (svn_fs__check_fs (fs));
   bfd->env->set_errcall(bfd->env, db_errcall_fcn);
@@ -296,7 +296,7 @@ bl_bdb_set_errcall (svn_fs_t *fs,
 static svn_error_t *
 allocate_env (svn_fs_t *fs)
 {
-  bl_fsap_data_t *bfd = fs->fsap_data;
+  base_fs_data_t *bfd = fs->fsap_data;
 
   /* Allocate a Berkeley DB environment object.  */
   SVN_ERR (BDB_WRAP (fs, "allocating environment object",
@@ -459,12 +459,12 @@ bdb_write_config  (svn_fs_t *fs)
 
 
 static svn_error_t *
-bl_create (svn_fs_t *fs, const char *path, apr_pool_t *pool)
+base_create (svn_fs_t *fs, const char *path, apr_pool_t *pool)
 {
   svn_error_t *svn_err;
   const char *path_apr;
   const char *path_native;
-  bl_fsap_data_t *bfd;
+  base_fs_data_t *bfd;
 
   apr_pool_cleanup_register (fs->pool, fs, cleanup_fs_apr,
                              apr_pool_cleanup_null);
@@ -546,11 +546,11 @@ error:
 
 
 static svn_error_t *
-bl_open (svn_fs_t *fs, const char *path, apr_pool_t *pool)
+base_open (svn_fs_t *fs, const char *path, apr_pool_t *pool)
 {
   svn_error_t *svn_err;
   const char *path_native;
-  bl_fsap_data_t *bfd;
+  base_fs_data_t *bfd;
 
   apr_pool_cleanup_register (fs->pool, fs, cleanup_fs_apr,
                              apr_pool_cleanup_null);
@@ -686,10 +686,10 @@ svn_fs__clean_logs(const char *live_path,
 }
 
 static svn_error_t *
-bl_hotcopy (const char *src_path, 
-            const char *dest_path, 
-            svn_boolean_t clean_logs, 
-            apr_pool_t *pool)
+base_hotcopy (const char *src_path, 
+              const char *dest_path, 
+              svn_boolean_t clean_logs, 
+              apr_pool_t *pool)
 {
   /* Check DBD version, just in case */
   SVN_ERR (check_bdb_version (pool));
@@ -741,8 +741,8 @@ bl_hotcopy (const char *src_path,
 
 
 static svn_error_t *
-bl_bdb_recover (const char *path,
-                apr_pool_t *pool)
+base_bdb_recover (const char *path,
+                  apr_pool_t *pool)
 {
   DB_ENV *env;
   const char *path_native;
@@ -777,10 +777,10 @@ bl_bdb_recover (const char *path,
 
 
 static svn_error_t *
-bl_bdb_logfiles (apr_array_header_t **logfiles,
-                 const char *path,
-                 svn_boolean_t only_unused,
-                 apr_pool_t *pool)
+base_bdb_logfiles (apr_array_header_t **logfiles,
+                   const char *path,
+                   svn_boolean_t only_unused,
+                   apr_pool_t *pool)
 {
   DB_ENV *env;
   const char *path_native;
@@ -828,8 +828,8 @@ bl_bdb_logfiles (apr_array_header_t **logfiles,
 
 
 static svn_error_t *
-bl_delete_fs (const char *path,
-              apr_pool_t *pool)
+base_delete_fs (const char *path,
+                apr_pool_t *pool)
 {
   DB_ENV *env;
   const char *path_native;
@@ -848,14 +848,14 @@ bl_delete_fs (const char *path,
 
 
 
-/* Baseline library vtable, used by the FS loader library. */
+/* Base FS library vtable, used by the FS loader library. */
 
-fs_library_vtable_t svn_fs_bl__vtable = {
-  bl_create,
-  bl_open,
-  bl_delete_fs,
-  bl_hotcopy,
-  bl_bdb_set_errcall,
-  bl_bdb_recover,
-  bl_bdb_logfiles
+fs_library_vtable_t svn_fs_base__vtable = {
+  base_create,
+  base_open,
+  base_delete_fs,
+  base_hotcopy,
+  base_bdb_set_errcall,
+  base_bdb_recover,
+  base_bdb_logfiles
 };

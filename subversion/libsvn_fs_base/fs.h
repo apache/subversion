@@ -55,7 +55,7 @@ typedef struct
 
   /* The filesystem UUID (or NULL if not-yet-known; see svn_fs_get_uuid). */
   const char *uuid;
-} bl_fsap_data_t;
+} base_fs_data_t;
 
 
 /*** Filesystem Revision ***/

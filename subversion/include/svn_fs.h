@@ -47,6 +47,7 @@ typedef struct svn_fs_t svn_fs_t;
 /** Filesystem configuration options. */
 #define SVN_FS_CONFIG_BDB_TXN_NOSYNC            "bdb-txn-nosync"
 #define SVN_FS_CONFIG_BDB_LOG_AUTOREMOVE        "bdb-log-autoremove"
+#define SVN_FS_CONFIG_FSAP_NAME                 "fsap-name"
 
 
 /** Create a new filesystem object in @a pool.
@@ -99,19 +100,19 @@ void svn_fs_set_warning_func (svn_fs_t *fs,
  * not currently exist, but its parent must exist.  Use @a pool only
  * for temporary allocations.
  *
- * If @a FSAP_NAME is not @a NULL, it determines the filesystem
- * abstract provider used for the new filesystem.  Currently defined
- * values are:
+ * If the @a fs_config parameter passed to @c svn_fs_new contains a
+ * value for @c SVN_FS_CONFIG_FSAP_NAME, that value determines the
+ * filesystem abstract provider used for the new filesystem.
+ * Currently defined values are:
  *
- *   "baseline"  Berkeley-DB implementation
- *   "fsfs"      Native-filesystem implementation
+ *   "base"  Berkeley-DB implementation (perhaps other DBs later)
+ *   "fsfs"  Native-filesystem implementation
  *
- * If @a FSAP_NAME is @a NULL, the baseline abstract provider is
- * assumed.  Once the filesystem is created, its type will be recorded
- * so that other functions will know how to operate on it.
+ * Otherwise, the base abstract provider is assumed.  Once the
+ * filesystem is created, its type will be recorded so that other
+ * functions will know how to operate on it.
  */
-svn_error_t *svn_fs_create (svn_fs_t *fs, const char *path,
-                            const char *fsap_name, apr_pool_t *pool);
+svn_error_t *svn_fs_create (svn_fs_t *fs, const char *path, apr_pool_t *pool);
 
 /** Make @a fs refer to the filesystem at @a path.  Use @a pool only
  * for temporary allocations.

@@ -25,7 +25,7 @@
 
 #include "fs_loader.h"
 
-#define DEFAULT_FSAP_NAME "baseline"
+#define DEFAULT_FSAP_NAME "base"
 #define FSAP_NAME_FILENAME "fsap-name"
 
 /* The implementation of this library is deliberately not separated
@@ -37,7 +37,7 @@
 
 /* --- Utility functions for the loader --- */
 
-extern fs_library_vtable_t svn_fs_bl__vtable;
+extern fs_library_vtable_t svn_fs_base__vtable;
 extern fs_library_vtable_t svn_fs_fs__vtable;
 
 /* Fetch a library vtable by name. */
@@ -49,8 +49,8 @@ get_library_vtable (fs_library_vtable_t **vtable, const char *fsap_name,
   /* XXX Placeholder implementation.  The real implementation should
      support DSO-loading of back-end libraries and should return an
      error rather than aborting if fsap_name is unrecognized. */
-  if (strcmp(fsap_name, "baseline") == 0)
-    *vtable = &svn_fs_bl__vtable;
+  if (strcmp(fsap_name, "base") == 0)
+    *vtable = &svn_fs_base__vtable;
   else if (strcmp(fsap_name, "fsfs") == 0)
     *vtable = &svn_fs_fs__vtable;
   else
@@ -149,11 +149,14 @@ svn_fs_set_warning_func (svn_fs_t *fs, svn_fs_warning_callback_t warning,
 }
 
 svn_error_t *
-svn_fs_create (svn_fs_t *fs, const char *path, const char *fsap_name,
-               apr_pool_t *pool)
+svn_fs_create (svn_fs_t *fs, const char *path, apr_pool_t *pool)
 {
   fs_library_vtable_t *vtable;
+  const char *fsap_name;
 
+  if (fs->config)
+    fsap_name = apr_hash_get (fs->config, SVN_FS_CONFIG_FSAP_NAME,
+                              APR_HASH_KEY_STRING);
   if (fsap_name == NULL)
     fsap_name = DEFAULT_FSAP_NAME;
   SVN_ERR (get_library_vtable (&vtable, fsap_name, pool));
