@@ -1294,7 +1294,7 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_NULL,
     SVN_TEST_XFAIL (dump_core),
     SVN_TEST_PASS (test_two_way_unified),
-    SVN_TEST_XFAIL (test_two_way_unified_suspect),
+    SVN_TEST_PASS (test_two_way_unified_suspect),
     SVN_TEST_PASS (test_three_way_merge_no_overlap),
     SVN_TEST_PASS (test_three_way_merge_with_overlap),
     SVN_TEST_PASS (random_trivial_merge),
