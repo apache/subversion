@@ -43,11 +43,17 @@ static svn_error_t *vparse_tuple(apr_array_header_t *list, apr_pool_t *pool,
 
 /* --- CONNECTION INITIALIZATION --- */
 
-svn_ra_svn_conn_t *svn_ra_svn_create_conn(apr_socket_t *sock, apr_pool_t *pool)
+svn_ra_svn_conn_t *svn_ra_svn_create_conn(apr_socket_t *sock,
+                                          apr_file_t *in_file,
+                                          apr_file_t *out_file,
+                                          apr_pool_t *pool)
 {
   svn_ra_svn_conn_t *conn = apr_palloc(pool, sizeof(*conn));
 
+  assert((sock && !in_file && !out_file) || (!sock && in_file && out_file));
   conn->sock = sock;
+  conn->in_file = in_file;
+  conn->out_file = out_file;
   conn->read_ptr = conn->read_buf;
   conn->read_end = conn->read_buf;
   conn->write_pos = 0;
@@ -71,20 +77,33 @@ static const char *writebuf_push(svn_ra_svn_conn_t *conn, const char *data,
   return data + copylen;
 }
 
+/* Write data to socket or output file as appropriate. */
+static svn_error_t *writebuf_output(svn_ra_svn_conn_t *conn,
+                                    const char *data, apr_size_t len)
+{
+  const char *end = data + len;
+  apr_status_t status;
+  apr_size_t count;
+
+  while (data < end)
+    {
+      count = end - data;
+      if (conn->sock)
+        status = apr_send(conn->sock, data, &count);
+      else
+        status = apr_file_write(conn->out_file, data, &count);
+      if (status)
+        return svn_error_create(status, 0, NULL, "Write failure");
+      data += count;
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* Write data from the write buffer out to the socket. */
 static svn_error_t *writebuf_flush(svn_ra_svn_conn_t *conn)
 {
-  apr_size_t count = 0, len;
-  apr_status_t status;
-
-  while (count < conn->write_pos)
-    {
-      len = conn->write_pos - count;
-      status = apr_send(conn->sock, conn->write_buf + count, &len);
-      if (status)
-        return svn_error_create(status, 0, NULL, "Write failure");
-      count += len;
-    }
+  SVN_ERR(writebuf_output(conn, conn->write_buf, conn->write_pos));
   conn->write_pos = 0;
   return SVN_NO_ERROR;
 }
@@ -93,8 +112,6 @@ static svn_error_t *writebuf_write(svn_ra_svn_conn_t *conn,
                                    const char *data, apr_size_t len)
 {
   const char *end = data + len;
-  apr_status_t status;
-  apr_size_t count;
 
   if (conn->write_pos > 0 && conn->write_pos + len > sizeof(conn->write_buf))
     {
@@ -103,17 +120,10 @@ static svn_error_t *writebuf_write(svn_ra_svn_conn_t *conn,
       SVN_ERR(writebuf_flush(conn));
     }
 
-  while (end - data > sizeof(conn->write_buf))
-    {
-      /* Save on copying by writing directly to the socket. */
-      count = end - data;
-      status = apr_send(conn->sock, data, &count);
-      if (status)
-        return svn_error_create(status, 0, NULL, "Read failure");
-      data += count;
-    }
-
-  writebuf_push(conn, data, end);
+  if (end - data > sizeof(conn->write_buf))
+    SVN_ERR(writebuf_output(conn, data, end - data));
+  else
+    writebuf_push(conn, data, end);
   return SVN_NO_ERROR;
 }
 
@@ -144,21 +154,33 @@ static char *readbuf_drain(svn_ra_svn_conn_t *conn, char *data, char *end)
   return data + copylen;
 }
 
-/* Read data from the socket into the read buffer, which must be empty. */
-static svn_error_t *readbuf_fill(svn_ra_svn_conn_t *conn)
+/* Read data from socket or input file as appropriate. */
+static svn_error_t *readbuf_input(svn_ra_svn_conn_t *conn, char *data,
+                                  apr_size_t *len)
 {
   apr_status_t status;
-  apr_size_t len;
 
-  assert(conn->read_ptr == conn->read_end);
-  writebuf_flush(conn);
-  len = sizeof(conn->read_buf);
-  status = apr_recv(conn->sock, conn->read_buf, &len);
+  if (conn->sock)
+    status = apr_recv(conn->sock, data, len);
+  else
+    status = apr_file_read(conn->in_file, data, len);
   if (status && !APR_STATUS_IS_EOF(status))
     return svn_error_create(status, 0, NULL, "Read failure");
   if (len == 0)
     return svn_error_create(SVN_ERR_RA_SVN_CONNECTION_CLOSED, 0, NULL,
                             "Connection closed unexpectedly");
+  return SVN_NO_ERROR;
+}
+
+/* Read data from the socket into the read buffer, which must be empty. */
+static svn_error_t *readbuf_fill(svn_ra_svn_conn_t *conn)
+{
+  apr_size_t len;
+
+  assert(conn->read_ptr == conn->read_end);
+  writebuf_flush(conn);
+  len = sizeof(conn->read_buf);
+  SVN_ERR(readbuf_input(conn, conn->read_buf, &len));
   conn->read_ptr = conn->read_buf;
   conn->read_end = conn->read_buf + len;
   return SVN_NO_ERROR;
@@ -187,23 +209,17 @@ static svn_error_t *readbuf_read(svn_ra_svn_conn_t *conn,
                                  char *data, apr_size_t len)
 {
   char *end = data + len;
-  apr_status_t status;
   apr_size_t count;
 
   /* Copy in an appropriate amount of data from the buffer. */
   data = readbuf_drain(conn, data, end);
 
+  /* Read large chunks directly into buffer. */
   while (end - data > sizeof(conn->read_buf))
     {
-      /* Save on copying by reading the remainder directly from socket. */
       writebuf_flush(conn);
       count = end - data;
-      status = apr_recv(conn->sock, data, &count);
-      if (status && !APR_STATUS_IS_EOF(status))
-        return svn_error_create(status, 0, NULL, "Read failure");
-      if (count == 0)
-        return svn_error_create(SVN_ERR_RA_SVN_CONNECTION_CLOSED, 0, NULL,
-                                "Unexpected connection close");
+      SVN_ERR(readbuf_input(conn, data, &count));
       data += count;
     }
 

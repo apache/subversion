@@ -24,6 +24,7 @@
 #include <apr_lib.h>
 #include <apr_strings.h>
 #include <apr_network_io.h>
+#include <apr_user.h>
 
 #include <svn_types.h>
 #include <svn_string.h>
@@ -875,29 +876,70 @@ static svn_error_t *find_repos(const char *url, const char *root,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *serve(apr_socket_t *sock, const char *root, apr_pool_t *pool)
+svn_error_t *serve(svn_ra_svn_conn_t *conn, const char *root,
+                   svn_boolean_t tunnel, apr_pool_t *pool)
 {
-  svn_ra_svn_conn_t *conn;
   svn_error_t *err;
   apr_uint64_t ver;
-  const char *mech, *client_url, *repos_url, *fs_path;
-  const svn_string_t *mecharg;
+  const char *mech, *mecharg, *user = NULL, *client_url, *repos_url, *fs_path;
   apr_array_header_t *caplist;
   svn_repos_t *repos;
   server_baton_t b;
 
-  conn = svn_ra_svn_create_conn(sock, pool);
-
   /* Send greeting, saying we only support protocol version 1, the
    * anonymous authentication mechanism, and no extensions. */
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "nn(w)()", (apr_uint64_t) 1,
-                                 (apr_uint64_t) 1, "ANONYMOUS"));
+  SVN_ERR(svn_ra_svn_start_list(conn, pool));
+  /* Our minimum and maximum supported protocol version is 1. */
+  SVN_ERR(svn_ra_svn_write_number(conn, pool, 1));
+  SVN_ERR(svn_ra_svn_write_number(conn, pool, 1));
+  SVN_ERR(svn_ra_svn_start_list(conn, pool));
+  /* We support anonymous and maybe external authentication. */
+  SVN_ERR(svn_ra_svn_write_word(conn, pool, "ANONYMOUS"));
+#if APR_HAS_USER
+  if (tunnel)
+    SVN_ERR(svn_ra_svn_write_word(conn, pool, "EXTERNAL"));
+#endif
+  SVN_ERR(svn_ra_svn_end_list(conn, pool));
+  /* We have no special capabilities. */
+  SVN_ERR(svn_ra_svn_start_list(conn, pool));
+  SVN_ERR(svn_ra_svn_end_list(conn, pool));
+  SVN_ERR(svn_ra_svn_end_list(conn, pool));
 
   /* Read client response.  This should specify version 1, the
-   * anonymous mechanism, an empty argument, and possibly some
-   * capabilities.  But don't bother checking. */
-  SVN_ERR(svn_ra_svn_read_tuple(conn, pool, "nw[s]l", &ver, &mech, &mecharg,
+   * mechanism, a mechanism argument, and possibly some
+   * capabilities. */
+  SVN_ERR(svn_ra_svn_read_tuple(conn, pool, "nw[c]l", &ver, &mech, &mecharg,
                                 &caplist));
+
+#if APR_HAS_USER
+  if (tunnel && strcmp(mech, "EXTERNAL") == 0)
+    {
+      apr_uid_t uid;
+      apr_gid_t gid;
+
+      if (!mecharg)  /* Must be present */
+        return SVN_NO_ERROR;
+      if (apr_uid_current(&uid, &gid, pool) != APR_SUCCESS
+          || apr_uid_name_get((char **) &user, uid, pool) != APR_SUCCESS)
+        {
+          SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(c)", "failure",
+                                         "Can't determine username"));
+          return SVN_NO_ERROR;
+        }
+      if (*mecharg && strcmp(mecharg, user) != 0)
+        {
+          SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(c)", "failure",
+                                         "Requested username does not match"));
+          return SVN_NO_ERROR;
+        }
+    }
+#endif
+
+  if (strcmp(mech, "ANONYMOUS") == 0)
+    user = "anonymous";
+
+  if (!user)  /* Client gave us an unlisted mech. */
+    return SVN_NO_ERROR;
 
   /* Write back a success notification. */
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w()", "success"));
@@ -919,7 +961,7 @@ svn_error_t *serve(apr_socket_t *sock, const char *root, apr_pool_t *pool)
   b.url = client_url;
   b.repos_url = repos_url;
   b.fs_path = fs_path;
-  b.user = "anonymous";
+  b.user = user;
   b.fs = svn_repos_fs(repos);
   return svn_ra_svn_handle_commands(conn, pool, main_commands, &b, FALSE);
 }

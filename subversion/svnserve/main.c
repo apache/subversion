@@ -40,7 +40,7 @@ static void usage(const char *progname)
 {
   if (!progname)
     progname = "svn-server";
-  fprintf(stderr, "Usage: %s [-X] [-r root]\n", progname);
+  fprintf(stderr, "Usage: %s [-X|-d|-t] [-r root]\n", progname);
   exit(1);
 }
 
@@ -51,8 +51,9 @@ static void sigchld_handler(int signo)
 
 int main(int argc, const char *const *argv)
 {
-  int debug = 0;
+  svn_boolean_t listen_once = FALSE, daemon = FALSE, tunnel = FALSE;
   apr_socket_t *sock, *usock;
+  apr_file_t *in_file, *out_file;
   apr_sockaddr_t *sa;
   apr_pool_t *pool;
   svn_error_t *err;
@@ -60,6 +61,7 @@ int main(int argc, const char *const *argv)
   char opt, errbuf[256];
   const char *arg, *root = "/";
   apr_status_t status;
+  svn_ra_svn_conn_t *conn;
 #if APR_HAS_FORK
   apr_proc_t proc;
 #endif
@@ -71,15 +73,23 @@ int main(int argc, const char *const *argv)
 
   while (1)
     {
-      status = apr_getopt(os, "Xr:", &opt, &arg);
+      status = apr_getopt(os, "dtXr:", &opt, &arg);
       if (APR_STATUS_IS_EOF(status))
         break;
       if (status != APR_SUCCESS)
         usage(argv[0]);
       switch (opt)
         {
+        case 'd':
+          daemon = TRUE;
+          break;
+
+        case 't':
+          tunnel = TRUE;
+          break;
+
         case 'X':
-          debug = 1;
+          listen_once = TRUE;
           break;
 
         case 'r':
@@ -89,6 +99,15 @@ int main(int argc, const char *const *argv)
     }
   if (os->ind != argc)
     usage(argv[0]);
+
+  if (!daemon && !listen_once)
+    {
+      apr_file_open_stdin(&in_file, pool);
+      apr_file_open_stdout(&out_file, pool);
+      conn = svn_ra_svn_create_conn(NULL, in_file, out_file, pool);
+      svn_error_clear(serve(conn, root, tunnel, pool));
+      exit(0);
+    }
 
   status = apr_socket_create(&sock, APR_INET, SOCK_STREAM, pool);
   if (status)
@@ -114,7 +133,7 @@ int main(int argc, const char *const *argv)
   apr_listen(sock, 7);
 
 #if APR_HAS_FORK
-  if (!debug)
+  if (!listen_once)
     apr_proc_detach(APR_PROC_DETACH_DAEMONIZE);
 
   apr_signal(SIGCHLD, sigchld_handler);
@@ -138,13 +157,18 @@ int main(int argc, const char *const *argv)
           exit(1);
         }
 
-      if (debug)
-        {
-          err = serve(usock, root, pool);
+      conn = svn_ra_svn_create_conn(sock, NULL, NULL, pool);
 
-          if (debug && err && err->apr_err != SVN_ERR_RA_SVN_CONNECTION_CLOSED)
+      if (listen_once)
+        {
+          err = serve(conn, root, FALSE, pool);
+
+          if (listen_once && err
+              && err->apr_err != SVN_ERR_RA_SVN_CONNECTION_CLOSED)
             svn_handle_error(err, stdout, FALSE);
 
+          apr_socket_close(usock);
+          apr_socket_close(sock);
           exit(0);
         }
 
@@ -157,7 +181,8 @@ int main(int argc, const char *const *argv)
       status = apr_proc_fork(&proc, pool);
       if (status == APR_INCHILD)
         {
-          svn_error_clear(serve(usock, root, pool));
+          svn_error_clear(serve(conn, root, FALSE, pool));
+          apr_socket_close(usock);
           exit(0);
         }
       else if (status == APR_INPARENT)
@@ -171,7 +196,7 @@ int main(int argc, const char *const *argv)
         }
 #else
       /* Serve one connection at a time. */
-      svn_error_clear(serve(usock, root, pool));
+      svn_error_clear(serve(conn, root, FALSE, pool));
 #endif
     }
 

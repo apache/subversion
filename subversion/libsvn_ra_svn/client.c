@@ -31,6 +31,7 @@
 #include "svn_time.h"
 #include "svn_path.h"
 #include "svn_pools.h"
+#include "svn_config.h"
 #include "svn_ra.h"
 #include "svn_ra_svn.h"
 
@@ -240,6 +241,24 @@ static void ra_svn_get_reporter(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
 /* --- RA LAYER IMPLEMENTATION --- */
 
+static const char *find_tunnel_agent(const char *hostname, apr_pool_t *pool)
+{
+  svn_config_t *cfg;
+  const char *server_group, *agent = NULL;
+  svn_error_t *err;
+
+  err = svn_config_read_servers(&cfg, pool);
+  if (err)
+    {
+      svn_error_clear(err);
+      return NULL;
+    }
+  server_group = svn_config_find_group(cfg, hostname, "groups", pool);
+  if (server_group)
+    svn_config_get(cfg, &agent, server_group, "svn-tunnel-agent", NULL);
+  return agent;
+}
+
 static svn_boolean_t find_mech(apr_array_header_t *mechlist, const char *mech)
 {
   int i;
@@ -261,19 +280,39 @@ static svn_error_t *ra_svn_open(void **sess, const char *url,
 {
   svn_ra_svn_conn_t *conn;
   apr_socket_t *sock;
-  const char *hostname, *user, *status;
+  const char *hostname, *user, *status, *tunnel_agent, *args[5];
   unsigned short port;
   apr_uint64_t minver, maxver;
   apr_array_header_t *mechlist, *caplist, *status_param;
+      apr_procattr_t *attr;
+      apr_proc_t *proc;
 
-  /* URL begins with "svn:".  Skip past that and get the host part. */
   if (parse_url(url, &user, &port, &hostname, pool) != 0)
     return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, 0, NULL,
                              "Illegal svn repository URL %s", url);
 
-  SVN_ERR(make_connection(hostname, port, &sock, pool));
-
-  conn = svn_ra_svn_create_conn(sock, pool);
+  tunnel_agent = find_tunnel_agent(hostname, pool);
+  if (tunnel_agent)
+    {
+      /* ### It should be nice if tunnel_agent could contain flags. */
+      args[0] = tunnel_agent;
+      args[1] = hostname;
+      args[2] = "svnserve";
+      args[3] = "-t";
+      args[4] = NULL;
+      apr_procattr_create(&attr, pool);
+      apr_procattr_io_set(attr, 1, 1, 0);
+      apr_procattr_cmdtype_set(attr, APR_PROGRAM_PATH);
+      proc = apr_palloc(pool, sizeof(*proc));
+      apr_proc_create(proc, tunnel_agent, args, NULL, attr, pool);
+      conn = svn_ra_svn_create_conn(NULL, proc->out, proc->in, pool);
+      conn->proc = proc;
+    }
+  else
+    {
+      SVN_ERR(make_connection(hostname, port, &sock, pool));
+      conn = svn_ra_svn_create_conn(sock, NULL, NULL, pool);
+    }
 
   /* Read server's greeting. */
   SVN_ERR(svn_ra_svn_read_tuple(conn, pool, "nnll", &minver, &maxver,
@@ -283,24 +322,32 @@ static svn_error_t *ra_svn_open(void **sess, const char *url,
     return svn_error_createf(SVN_ERR_RA_SVN_BAD_VERSION, 0, NULL,
                              "Server requires minimum version %d",
                              (int) minver);
-  if (!find_mech(mechlist, "ANONYMOUS"))
+  if (tunnel_agent && find_mech(mechlist, "EXTERNAL"))
+    {
+      /* Ask the server to use the ssh connection environment (on
+       * Unix, that means uid) to determine the authentication name. */
+      SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "nw(c)()", (apr_uint64_t) 1,
+                                     "EXTERNAL", ""));
+    }
+  else if (find_mech(mechlist, "ANONYMOUS"))
+    {
+      SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "nw(c)()", (apr_uint64_t) 1,
+                                     "ANONYMOUS", ""));
+    }
+  else
     return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, 0, NULL,
-                            "Client can only do anonymous authorization, "
-                            "which server does not allow");
+                            "Cannot negotiate authentication mechanism");
 
   /* Write client response to greeting, picking version 1 and the
    * anonymous authentication mechanism with an empty argument. */
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "nw(c)()", (apr_uint64_t) 1,
-                                 "ANONYMOUS", ""));
 
-  /* Read the server's challenge.  Since we're only doing anonymous
-   * authentication, the only expected answer is a success
+  /* Read the server's challenge.  Since we're only doing anonymous or
+   * external authentication, the only expected answer is a success
    * notification with no parameter. */
   SVN_ERR(svn_ra_svn_read_tuple(conn, pool, "wl", &status, &status_param));
   if (strcmp(status, "success") != 0)
     return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, 0, NULL,
-                            "Unexpected server response to anonymous "
-                            "authorization.");
+                            "Unexpected server response to authentication");
 
   /* This is where the security layer would go into effect if we
    * supported security layers, which is a ways off. */
@@ -317,7 +364,17 @@ static svn_error_t *ra_svn_close(void *sess)
 {
   svn_ra_svn_conn_t *conn = sess;
 
-  apr_socket_close(conn->sock);
+  if (conn->sock)
+    apr_socket_close(conn->sock);
+  else
+    {
+      apr_file_close(conn->in_file);
+      apr_file_close(conn->out_file);
+      /* ### Perhaps a cleanup handler should make sure this gets done? */
+      while (apr_proc_wait(conn->proc, NULL, NULL,
+                           APR_WAIT) == APR_CHILD_NOTDONE)
+        ;
+    }
   return SVN_NO_ERROR;
 }
 

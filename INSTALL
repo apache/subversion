@@ -909,27 +909,35 @@ III.  BUILDING A SUBVERSION SERVER
       the server.  This is a simple network layer that speaks a custom
       protocol over plain TCP (documented in libsvn_ra_svn/protocol):
 
-         $ svnserve     # becomes a background daemon
+         $ svnserve -d     # becomes a background daemon
          $ svn checkout svn://localhost/usr/local/svn/repository
 
       This network layer passes 'make check', but is still relatively
-      new and untested.  Greg Hudson, the author, issues these caveats:
+      new and untested.  Also, assume for now that the daemon will
+      permit anonymous checkouts and checkins of any repository
+      accessible by the uid you run it under, even if you pass it a
+      "-r" option to set the logical root of repositories.
 
-        -- It only handles anonymous authentication.  That's pretty
-           limiting.  I hope to find time to implement ssh tunneling
-           soon.
+      You can also run ra_svn over ssh or any similar tool.  To do
+      this, create a server group for the repository server in
+      ~/.subversion/servers, and set the variable "svn-tunnel-agent"
+      to "ssh".  An example:
 
-        -- It is insecure; if you run svnserve, you will allow commits
-           (as "anonymous") to any repository your uid can find, even
-           if you pass a "-r" option specifying a logical root.  This
-           is because the server doesn't try to prevent "../" in URLs.
-           I hope to fix that soon.
+        [groups]
+        mygroup = server.host.name
+
+        [mygroup]
+        svn-tunnel-agent = ssh
+
+      (Right now you can't put any arguments to ssh in that variable.
+      That may change.)  Make sure svnserve is in your path on the
+      server.
+
+      Expect the server invocation options to change incompatibly
+      before they are finalized.
 
       If subversion/svnserve/ and subversion/libsvn_ra_svn/ aren't
       compiled by the default build process, you can activate them by
       uncommenting the [libsvn_ra_svn] and [svnserve] sections of
       build.conf, and unblock the "if" statement of the ra_svn clause
       within configure.in.
-
-      
-      
