@@ -59,7 +59,7 @@
 
 #define SVN_XML_NAMESPACE "http://subversion.tigris.org/xmlns/"
 
-/* Used as type argument to svn_xml_write_tag() */
+/* Used as type argument to svn_xml_make_tag() and friends. */
 enum svn_xml_tag_type {
   svn_xml_open_tag = 1,     /* <tag ...>  */
   svn_xml_close_tag,        /* </tag>     */

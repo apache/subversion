@@ -233,6 +233,7 @@ svn_wc__run_log (svn_string_t *path, apr_pool_t *pool)
   apr_ssize_t buf_len;
   apr_file_t *f = NULL;
 
+  /* kff todo: use the tag-making functions here, now. */
   const char *log_start
     = "<wc-log xmlns=\"http://subversion.tigris.org/xmlns\">\n";
   const char *log_end

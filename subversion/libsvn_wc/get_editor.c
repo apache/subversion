@@ -689,8 +689,10 @@ close_file (void *file_baton)
   struct file_baton *fb = (struct file_baton *) file_baton;
   apr_file_t *log_fp = NULL;
   svn_error_t *err;
+  apr_status_t apr_err;
   void *local_changes;
   char *version_str = NULL;
+  svn_string_t *entry_accum;
 
   err = svn_wc__lock (fb->dir_baton->path, 0, fb->pool);
   if (err)
@@ -798,56 +800,50 @@ close_file (void *file_baton)
   /* kff todo: save *local_changes somewhere, maybe to a tmp file
      in SVN/. */
   
+  entry_accum = svn_string_create ("", fb->pool);
+
   if (fb->text_changed)
     {
       /* Merge text. */
-      err = svn_xml_write_tag (log_fp,
-                               fb->pool,
-                               svn_xml_self_close_tag,
-                               SVN_WC__LOG_MERGE_TEXT,
-                               SVN_WC__LOG_ATTR_NAME,
-                               fb->name,
-                               SVN_WC__LOG_ATTR_SAVED_MODS,
-                               svn_string_create ("kff todo", fb->pool),
-                               NULL);
-      if (err)
-        return err;
+      svn_xml_append_tag (entry_accum,
+                          fb->pool,
+                          svn_xml_self_close_tag,
+                          SVN_WC__LOG_MERGE_TEXT,
+                          SVN_WC__LOG_ATTR_NAME,
+                          fb->name,
+                          SVN_WC__LOG_ATTR_SAVED_MODS,
+                          svn_string_create ("kff todo", fb->pool),
+                          NULL);
       
       /* Replace text base. */
-      err = svn_xml_write_tag (log_fp,
-                               fb->pool,
-                               svn_xml_self_close_tag,
-                               SVN_WC__LOG_REPLACE_TEXT_BASE,
-                               SVN_WC__LOG_ATTR_NAME,
-                               fb->name,
-                               NULL);
-      if (err)
-        return err;
+      svn_xml_append_tag (entry_accum,
+                          fb->pool,
+                          svn_xml_self_close_tag,
+                          SVN_WC__LOG_REPLACE_TEXT_BASE,
+                          SVN_WC__LOG_ATTR_NAME,
+                          fb->name,
+                          NULL);
     }
   
   if (fb->prop_changed)
     {
       /* Merge props. */
-      err = svn_xml_write_tag (log_fp,
-                               fb->pool,
-                               svn_xml_self_close_tag,
-                               SVN_WC__LOG_MERGE_PROPS,
-                               SVN_WC__LOG_ATTR_NAME,
-                               fb->name,
-                               NULL);
-      if (err)
-        return err;
+      svn_xml_append_tag (entry_accum,
+                          fb->pool,
+                          svn_xml_self_close_tag,
+                          SVN_WC__LOG_MERGE_PROPS,
+                          SVN_WC__LOG_ATTR_NAME,
+                          fb->name,
+                          NULL);
       
       /* Replace prop base. */
-      err = svn_xml_write_tag (log_fp,
-                               fb->pool,
-                               svn_xml_self_close_tag,
-                               SVN_WC__LOG_REPLACE_PROP_BASE,
-                               SVN_WC__LOG_ATTR_NAME,
-                               fb->name,
-                               NULL);
-      if (err)
-        return err;
+      svn_xml_append_tag (entry_accum,
+                          fb->pool,
+                          svn_xml_self_close_tag,
+                          SVN_WC__LOG_REPLACE_PROP_BASE,
+                          SVN_WC__LOG_ATTR_NAME,
+                          fb->name,
+                          NULL);
     }
 
   /* Set version. */
@@ -855,17 +851,24 @@ close_file (void *file_baton)
                               "%d",
                               fb->dir_baton->edit_baton->target_version);
 
-  err = svn_xml_write_tag (log_fp,
-                           fb->pool,
-                           svn_xml_self_close_tag,
-                           SVN_WC__LOG_SET_ENTRY,
-                           SVN_WC__LOG_ATTR_NAME,
-                           fb->name,
-                           SVN_WC__LOG_ATTR_VERSION,
-                           svn_string_create (version_str, fb->pool),
-                           NULL);
-  if (err)
-    return err;
+  svn_xml_append_tag (entry_accum,
+                      fb->pool,
+                      svn_xml_self_close_tag,
+                      SVN_WC__LOG_SET_ENTRY,
+                      SVN_WC__LOG_ATTR_NAME,
+                      fb->name,
+                      SVN_WC__LOG_ATTR_VERSION,
+                      svn_string_create (version_str, fb->pool),
+                      NULL);
+
+  apr_err = apr_full_write (log_fp, entry_accum->data, entry_accum->len, NULL);
+  if (apr_err)
+    {
+      apr_close (log_fp);
+      return svn_error_createf (apr_err, 0, NULL, fb->pool,
+                                "close_file: error writing %s's log file",
+                                fb->path->data);
+    }
 
   /* The log is ready to run, close it. */
   err = svn_wc__close_adm_file (log_fp,
