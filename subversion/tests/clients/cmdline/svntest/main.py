@@ -70,6 +70,10 @@ class SVNCommitFailure(Failure):
   "Exception raised if a commit failed"
   pass
 
+class SVNRepositoryCopyFailure(Failure):
+  "Exception raised if unable to copy a repository"
+  pass
+
 
 # Windows specifics
 if sys.platform == 'win32':
@@ -338,11 +342,11 @@ def copy_repos(src_path, dst_path, head_revision):
     match = dump_re.match(dump_line)
     if not match or match.group(1) != str(expect_revision):
       print 'ERROR:  dump failed:', dump_line,
-      return 1
+      raise SVNRepositoryCopyFailure
     expect_revision += 1
   if expect_revision != head_revision + 1:
     print 'ERROR:  dump failed; did not see revision', head_revision
-    return 1
+    raise SVNRepositoryCopyFailure
 
   load_re = re.compile(r'^------- Committed new rev (\d+)' +
                        r' \(loaded from original rev (\d+)\) >>>$')
@@ -353,11 +357,12 @@ def copy_repos(src_path, dst_path, head_revision):
       if (match.group(1) != str(expect_revision)
           or match.group(2) != str(expect_revision)):
         print 'ERROR:  load failed:', load_line,
-        return 1
+        raise SVNRepositoryCopyFailure
       expect_revision += 1
   if expect_revision != head_revision + 1:
     print 'ERROR:  load failed; did not see revision', head_revision
-    return 1
+    raise SVNRepositoryCopyFailure
+
 
 def set_repos_paths(repo_dir):
   "Set current_repo_dir and current_repo_url from a relative path to the repo."
