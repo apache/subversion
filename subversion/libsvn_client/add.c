@@ -222,6 +222,34 @@ mkdir_urls (svn_client_commit_info_t **commit_info,
       svn_path_split (common, &common, &bname, pool);
       APR_ARRAY_PUSH (targets, const char *) = bname;
     }
+  else
+    {
+      svn_boolean_t resplit = FALSE;
+
+      /* We can't "mkdir" the root of an editor drive, so if one of
+         our targets is the empty string, we need to back everything
+         up by a path component. */
+      for (i = 0; i < targets->nelts; i++)
+        {
+          const char *path = APR_ARRAY_IDX (targets, i, const char *);
+          if (! *path)
+            {
+              resplit = TRUE;
+              break;
+            }
+        }
+      if (resplit)
+        {
+          const char *bname;
+          svn_path_split (common, &common, &bname, pool);
+          for (i = 0; i < targets->nelts; i++)
+            {
+              const char *path = APR_ARRAY_IDX (targets, i, const char *);
+              path = svn_path_join (bname, path, pool);
+              APR_ARRAY_IDX (targets, i, const char *) = path;
+            }
+        }
+    }
 
   /* Create new commit items and add them to the array. */
   if (ctx->log_msg_func)

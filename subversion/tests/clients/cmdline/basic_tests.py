@@ -226,10 +226,9 @@ def basic_mkdir_url(sbox):
   Y_url = svntest.main.current_repo_url + '/Y'
   Y_Z_url = svntest.main.current_repo_url + '/Y/Z'
 
-  # Issue 1369 XFail
   svntest.actions.run_and_verify_svn("mkdir URL URL/subdir",
                                      ["\n", "Committed revision 2.\n"], [],
-                                     'mkdir', Y_url, Y_Z_url)
+                                     'mkdir', '-m', 'log_msg', Y_url, Y_Z_url)
 
   expected_output = wc.State(sbox.wc_dir, {
     'Y'   : Item(status='A '),
@@ -1581,7 +1580,7 @@ test_list = [ None,
               basic_status,
               basic_commit,
               basic_update,
-              XFail(basic_mkdir_url),
+              basic_mkdir_url,
               basic_corruption,
               basic_merging_update,
               basic_conflict,
