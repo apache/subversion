@@ -482,9 +482,10 @@ X    Ressursen er ekstern i denne arbeidskopien (kommer fra et annet
 
     <para>I motsetning til CVS er en arbeidskopi i Subversion klar over 
       at den har hentet ut en modul.
-      Dette betyr at hvis noen forandrer definisjonen av en modul, vil 
-      et kall til <command>svn update</command> oppdatere arbeidskopien 
-      p&#229; en skikkelig m&#229;te.</para>
+      Dette betyr at hvis noen forandrer definisjonen av en modul (det 
+      vil si legger til eller fjerner komponenter), vil et kall til 
+      <command>svn update</command> oppdatere arbeidskopien p&#229; en 
+      skikkelig m&#229;te.</para>
 
     <para>Subversion definerer moduler som en liste av kataloger 
       innenfor en katalogegenskap:
@@ -502,8 +503,9 @@ X    Ressursen er ekstern i denne arbeidskopien (kommer fra et annet
     <para>Med CVSs pserver er du n&#248;dt til &#229; <quote>logge inn</quote> p&#229; 
       tjeneren f&#248;r du kan utf&#248;re lese- eller skriveoperasjoner &#8212; du m&#229; 
       til og med logge inn for anonyme operasjoner.
-      Med et Subversiondepot som bruker Apache HTTPD p&#229; tjeneren, oppgir 
-      du ingen autentiseringsopplysninger, tjeneren vil sp&#248;rre deg etter 
+      Med et Subversiondepot som bruker Apache <command>httpd</command> 
+      eller <command>svnserve</command> p&#229; tjeneren, oppgir du ingen 
+      autentiseringsopplysninger, tjeneren vil sp&#248;rre deg etter 
       opplysningene (enten disse er brukernavn og passord, et 
       klientsertifikat, eller til og med begge).
       S&#229; hvis depotet er lesbart for hele verden, trenger du ikke &#229; 
@@ -516,7 +518,11 @@ X    Ressursen er ekstern i denne arbeidskopien (kommer fra et annet
       Til dette bruker du valget 
       <option>--no-auth-cache</option>.</para>
 
-
+    <para>Unntaket fra denne oppf&#248;rselen derimot, er tilfellet med &#229; 
+      aksessere en <command>svnserve</command>-tjener gjennom en 
+      ssh-tunnel ved &#229; bruke URL-skjemaet <literal>svn+ssh://</literal>.
+      I det tilfellet forlanger <command>ssh</command> autentisering 
+      bare for &#229; starte tunnelen.</para>
 
   </sect1>
 

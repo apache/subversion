@@ -28,7 +28,9 @@
 
   <!-- Using revnumber would be more appropriate, but our stylesheets -->
   <!-- don't seem to render it. -->
-  <subtitle>&svn.version;</subtitle>
+  <subtitle><para>For Subversion 1.1</para>
+            <para>(Boken kompilert fra &svn.version;)</para>
+  </subtitle>
 
   <bookinfo>
 
