@@ -23,6 +23,7 @@ import re      # to parse version string
 import stat    # for ST_MODE
 import string  # for atof()
 import copy    # for deepcopy()
+import traceback # for print_exc()
 
 ######################################################################
 #
@@ -347,11 +348,14 @@ def run_one_test(n, test_list):
     args = ()
 
   # Run the test.
+  error = 1
   try:
     error = apply(func, args)
   except SVNTreeUnequal:
     print "caught an SVNTreeUnequal exception, returning error instead"
-    error = 1
+  except:
+    print "caught unexpected exception"
+    traceback.print_exc(file=sys.stdout)
   if error:
     print "FAIL:",
   else:

@@ -1,4 +1,4 @@
-import os, sys, string, shutil
+import os, sys, string, shutil, traceback
 
 ### Fix these paths!
 python = 'C:/PROGRA~1/Python/python.exe'
@@ -53,7 +53,7 @@ def delete_execs(filter, dirname, names):
         print "kill:", tgt
         os.unlink(tgt)
     except:
-      sys.excepthook(sys.exc_info())
+      traceback.print_exc(file=sys.stdout)
       pass
 
 def copy_execs(filter, dirname, names):
@@ -67,7 +67,7 @@ def copy_execs(filter, dirname, names):
       print "  to:", tgt
       shutil.copy(src, tgt)
     except:
-      sys.excepthook(sys.exc_info())
+      traceback.print_exc(file=sys.stdout)
       pass
 
 
