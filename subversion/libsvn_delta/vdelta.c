@@ -188,7 +188,7 @@ find_match_len (const char *match, const char *from, const char *end)
 /* This is the main vdelta generator. */
 
 static void
-vdelta (struct build_ops_baton_t *build_baton,
+vdelta (svn_txdelta__ops_baton_t *build_baton,
         const char *data,
         const char *start,
         const char *end,
@@ -304,7 +304,7 @@ vdelta (struct build_ops_baton_t *build_baton,
 
 
 void
-svn_txdelta__vdelta (struct build_ops_baton_t *build_baton,
+svn_txdelta__vdelta (svn_txdelta__ops_baton_t *build_baton,
                      const char *data,
                      apr_size_t source_len,
                      apr_size_t target_len,
