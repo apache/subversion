@@ -676,6 +676,9 @@ do_begin_propdelta (svn_delta__digger_t *digger)
     (svn_propdelta_t *) apr_palloc (digger->pool, 
                                     sizeof(svn_propdelta_t));
 
+  digger->current_propdelta->name  = svn_string_create ("", digger->pool);
+  digger->current_propdelta->value = svn_string_create ("", digger->pool);
+
   /* Now figure out our context.  Is this a propdelta on a file, dir,
      or dirent? */
   youngest_frame = digger->stack;
@@ -777,7 +780,7 @@ do_delete_prop (svn_delta__digger_t *digger,
   /* Finish filling out current propdelta. */
   digger->current_propdelta->name =
     svn_string_dup (dir_name, digger->pool);
-  digger->current_propdelta->value = NULL;  /* This means delete!! */
+
 
   return SVN_NO_ERROR;
 }
@@ -790,10 +793,16 @@ do_delete_prop (svn_delta__digger_t *digger,
 static svn_error_t *
 do_prop_delta_callback (svn_delta__digger_t *digger)
 {
+  svn_string_t *value_string;
   svn_error_t *err = SVN_NO_ERROR;
 
   if (! digger->current_propdelta)
     return SVN_NO_ERROR;
+
+  if (svn_string_isempty(digger->current_propdelta->value))
+    value_string = NULL;
+  else
+    value_string = digger->current_propdelta->value;
 
   switch (digger->current_propdelta->kind)
     {
@@ -803,7 +812,7 @@ do_prop_delta_callback (svn_delta__digger_t *digger)
           err = (*(digger->walker->change_file_prop)) 
             (digger->walk_baton, digger->dir_baton, digger->file_baton,
              digger->current_propdelta->name,
-             digger->current_propdelta->value);
+             value_string);
         break;
       }
     case svn_propdelta_dir:
@@ -812,7 +821,7 @@ do_prop_delta_callback (svn_delta__digger_t *digger)
           err = (*(digger->walker->change_dir_prop)) 
             (digger->walk_baton, digger->dir_baton,
              digger->current_propdelta->name,
-             digger->current_propdelta->value);
+             value_string);
         break;
       }
     case svn_propdelta_dirent:
@@ -822,7 +831,7 @@ do_prop_delta_callback (svn_delta__digger_t *digger)
             (digger->walk_baton, digger->dir_baton,
              digger->current_propdelta->entity_name,
              digger->current_propdelta->name,
-             digger->current_propdelta->value);
+             value_string);
         break;
       }
     default:
@@ -840,8 +849,8 @@ do_prop_delta_callback (svn_delta__digger_t *digger)
   /* Now that the change has been sent, clear its NAME and VALUE
      fields -- but not the KIND field, because more changes may be
      coming inside this <prop-delta> ! */
-  digger->current_propdelta->name = NULL;
-  digger->current_propdelta->value = NULL;
+  svn_string_setempty(digger->current_propdelta->name);
+  svn_string_setempty(digger->current_propdelta->value);
 
   return SVN_NO_ERROR;
 }
@@ -1070,13 +1079,14 @@ xml_handle_end (void *userData, const char *name)
     }
 
   /* EVENT: when we get a prop-delta </delete>, send it off. */
-  if ( (strcmp (name, "delete") == 0)
-       && (digger->stack->tag == svn_delta__XML_propdelta) )
-    {
-      err = do_prop_delta_callback (digger);
-      if (err)
-        signal_expat_bailout (err, digger);
-    }
+  if (digger->stack->previous)
+    if ( (strcmp (name, "delete") == 0)
+         && (digger->stack->previous->tag == svn_delta__XML_propdelta) )
+      {
+        err = do_prop_delta_callback (digger);
+        if (err)
+          signal_expat_bailout (err, digger);
+      }
 
 
   /* After checking for above events, do the stackframe removal. */
