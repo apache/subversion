@@ -458,7 +458,7 @@ svn_error_t *svn_wc__entry_add (apr_hash_t *entries,
  * If VERSION is SVN_INVALID_VERNUM, then the entry's version number
  * will not be changed, else it will be set to VERSION.
  * 
- * If KIND is svn_invalid_kind, then the entry's kind will not be
+ * If KIND is svn_node_none, then the entry's kind will not be
  * changed, else it will be set to KIND.
  * 
  * If flags has the SVN_WC__ENTRY_CLEAR bit set, then the entry's

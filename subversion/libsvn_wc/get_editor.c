@@ -182,7 +182,7 @@ free_dir_baton (struct dir_baton *dir_baton)
   err = svn_wc__entry_merge_sync (dir_baton->path,
                                   NULL,
                                   dir_baton->edit_baton->target_version,
-                                  svn_dir_kind,
+                                  svn_node_dir,
                                   0,
                                   0,
                                   dir_baton->pool,
@@ -540,7 +540,7 @@ add_directory (svn_string_t *name,
   err = svn_wc__entry_merge_sync (parent_dir_baton->path,
                                   this_dir_baton->name,
                                   SVN_INVALID_VERNUM,
-                                  svn_dir_kind,
+                                  svn_node_dir,
                                   0,
                                   0,
                                   parent_dir_baton->pool,
@@ -781,7 +781,7 @@ load_prop_file (svn_string_t *propfile_path,
   err = svn_io_check_path (propfile_path, &kind, pool);
   if (err) return err;
   
-  if (kind == svn_file_kind)
+  if (kind == svn_node_file)
     {
       /* Ah, this file already has on-disk properties.  Load 'em. */
       apr_status_t status;

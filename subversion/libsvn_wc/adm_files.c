@@ -210,7 +210,7 @@ svn_wc__make_adm_thing (svn_string_t *path,
 
   components_added = extend_with_adm_name (path, tmp, pool, thing, NULL);
 
-  if (type == svn_file_kind)
+  if (type == svn_node_file)
     {
       apr_err = apr_open (&f, path->data,
                           (APR_WRITE | APR_CREATE | APR_EXCL),
@@ -227,7 +227,7 @@ svn_wc__make_adm_thing (svn_string_t *path,
             err = svn_error_create (apr_err, 0, NULL, pool, path->data);
         }
     }
-  else if (type == svn_dir_kind)
+  else if (type == svn_node_dir)
     {
       apr_err = apr_make_dir (path->data, APR_OS_DEFAULT, pool);
       if (apr_err)
@@ -372,7 +372,7 @@ maybe_copy_file (svn_string_t *src, svn_string_t *dst, apr_pool_t *pool)
   err = svn_io_check_path (src, &kind, pool);
   if (err)
     return err;
-  else if (kind == svn_invalid_kind)
+  else if (kind == svn_node_none)
     {
       /* SRC doesn't exist, create DST empty. */
       apr_file_t *f = NULL;
@@ -861,27 +861,27 @@ init_adm (svn_string_t *path,
 
   /* SVN_WC__ADM_TMP */
   err = svn_wc__make_adm_thing (path, SVN_WC__ADM_TMP,
-                                svn_dir_kind, 0, pool);
+                                svn_node_dir, 0, pool);
   if (err)
     return err;
   
   /* SVN_WC__ADM_TEXT_BASE */
   err = svn_wc__make_adm_thing (path, SVN_WC__ADM_TEXT_BASE,
-                                svn_dir_kind, 0, pool);
+                                svn_node_dir, 0, pool);
   if (err)
     return err;
 
 
   /* SVN_WC__ADM_PROP_BASE */
   err = svn_wc__make_adm_thing (path, SVN_WC__ADM_PROP_BASE,
-                                svn_dir_kind, 0, pool);
+                                svn_node_dir, 0, pool);
   if (err)
     return err;
 
 
   /* SVN_WC__ADM_PROPS */
   err = svn_wc__make_adm_thing (path, SVN_WC__ADM_PROPS,
-                                svn_dir_kind, 0, pool);
+                                svn_node_dir, 0, pool);
   if (err)
     return err;
 
@@ -890,21 +890,21 @@ init_adm (svn_string_t *path,
 
   /* SVN_WC__ADM_TMP/SVN_WC__ADM_TEXT_BASE */
   err = svn_wc__make_adm_thing (path, SVN_WC__ADM_TEXT_BASE,
-                                svn_dir_kind, 1, pool);
+                                svn_node_dir, 1, pool);
   if (err)
     return err;
 
 
   /* SVN_WC__ADM_TMP/SVN_WC__ADM_PROP_BASE */
   err = svn_wc__make_adm_thing (path, SVN_WC__ADM_PROP_BASE,
-                                svn_dir_kind, 1, pool);
+                                svn_node_dir, 1, pool);
   if (err)
     return err;
 
 
   /* SVN_WC__ADM_TMP/SVN_WC__ADM_PROPS */
   err = svn_wc__make_adm_thing (path, SVN_WC__ADM_PROPS,
-                                svn_dir_kind, 1, pool);
+                                svn_node_dir, 1, pool);
   if (err)
     return err;
 
@@ -932,14 +932,14 @@ init_adm (svn_string_t *path,
 
   /* SVN_WC__ADM_DIR_PROPS */
   err = svn_wc__make_adm_thing (path, SVN_WC__ADM_DIR_PROPS,
-                                svn_file_kind, 0, pool);
+                                svn_node_file, 0, pool);
   if (err)
     return err;
 
 
   /* SVN_WC__ADM_DIR_PROP_BASE */
   err = svn_wc__make_adm_thing (path, SVN_WC__ADM_DIR_PROP_BASE,
-                                svn_file_kind, 0, pool);
+                                svn_node_file, 0, pool);
   if (err)
     return err;
 

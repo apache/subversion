@@ -282,9 +282,9 @@ svn_wc__merge_local_changes (svn_wc_patch_fn_t *patch_fn,
   if (err)
     return err;
 
-  /* kff todo: switch on kind */
+  /* kff todo: switch on node kind here */
 
-  if (kind == svn_invalid_kind)
+  if (kind == svn_node_none)
     return SVN_NO_ERROR;   /* tolerate mop-up calls gracefully */
   else
     return (*patch_fn) (diff, tmp_text_base, path, pool);

@@ -94,7 +94,7 @@ typedef enum svn_errno_t {
   SVN_ERR_UNKNOWN_NODE_KIND,
 
   /* Can't do this update or checkout, because something was in the way. */
-  SVN_ERR_OBSTRUCTED_UPDATE,
+  SVN_ERR_WC_OBSTRUCTED_UPDATE,
 
   /* A mismatch popping the wc unwind stack. */
   SVN_ERR_WC_UNWIND_MISMATCH,
@@ -126,6 +126,9 @@ typedef enum svn_errno_t {
 
   /* Working copy is not up-to-date w.r.t. the repository. */
   SVN_ERR_WC_NOT_UP_TO_DATE,
+
+  /* No names available for tmp files. */
+  SVN_ERR_WC_UNIQUE_TMP_NAME_UNAVAILABLE,
 
   /* A general filesystem error.  */
   SVN_ERR_FS_GENERAL,

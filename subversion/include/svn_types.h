@@ -68,9 +68,10 @@
 
 enum svn_node_kind
 {
-  svn_invalid_kind = 0,  /* keep this 0, some code cares */
-  svn_file_kind,
-  svn_dir_kind
+  svn_node_none,        /* absent */
+  svn_node_file,        /* regular file */
+  svn_node_dir,         /* directory */
+  svn_node_unknown      /* something's here, but we don't know what */
 };
 
 

@@ -63,7 +63,7 @@ svn_wc__lock (svn_string_t *path, int wait, apr_pool_t *pool)
 
   do {
     err = svn_wc__make_adm_thing (path, SVN_WC__ADM_LOCK,
-                                  svn_file_kind, 0, pool);
+                                  svn_node_file, 0, pool);
     if (err && (err->apr_err == APR_EEXIST))
       {
         svn_error_free (err);
@@ -98,9 +98,9 @@ svn_wc__locked (svn_boolean_t *locked, svn_string_t *path, apr_pool_t *pool)
   err = svn_io_check_path (lockfile, &kind, pool);
   if (err)
     return err;
-  else if (kind == svn_file_kind)
+  else if (kind == svn_node_file)
     *locked = 1;
-  else if (kind == svn_invalid_kind)
+  else if (kind == svn_node_none)
     *locked = 0;
   else
     return svn_error_createf (SVN_ERR_WC_LOCKED,
