@@ -328,19 +328,11 @@ V.  BUILDING A SUBVERSION SERVER
   3.  At the top of the httpd-2.0 tree:
 
        ./buildconf
-       ./configure --enable-dav --enable-so --prefix=/usr/local/apache2 \
-	           --with-mpm=prefork
+       ./configure --enable-dav --enable-so --prefix=/usr/local/apache2
 
        The first arg says to build mod_dav.
        The second arg says to enable (and build everything) as shared libs.
        The third arg is where you will ultimately install apache.
-       The fourth arg says to use the "prefork" style of operation.
-         NOTE: The fourth arg is needed for FreeBSD systems (broken
-         threads), but should be left out for other platforms (which
-         will cause Apache to default to a threaded model of
-         operation).  Also note that "libmm.so" is needed for the
-         prefork option;  if you're running FreeBSD, you may have to
-         build it out of /usr/ports.
 
        Note: if you build Subversion with --enable-maintainer-mode,
        then do the same for Apache. mod_dav_svn uses Apache's
