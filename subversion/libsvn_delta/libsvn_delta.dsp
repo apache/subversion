@@ -107,10 +107,6 @@ SOURCE=.\text_delta.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\track_editor.c
-# End Source File
-# Begin Source File
-
 SOURCE=.\vdelta.c
 # End Source File
 # Begin Source File
