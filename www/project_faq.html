@@ -135,6 +135,10 @@ a <tt>file:</tt> URL?</a></li>
     non-recursively (with -N), and now I want to make certain
     subdirectories "appear".  But <tt>svn up subdir</tt> doesn't
     work.</a></li>
+<li><a href="#mod_dav_svn-win32">I am trying to use mod_dav_svn
+    with Apache on Win32 and I'm getting an error saying that the 
+    module cannot be found, yet the mod_dav_svn.so file is right 
+    there in <tt>\Apache\modules.</tt></li>
 
 
 
@@ -1864,6 +1868,26 @@ other than to change your process: try checking out separate
 subdirectories of the repository and manually nesting your working
 copies.</p>
 
+<![CDATA[-----------------------------------------------------------]]>
+
+<h3><a name="mod_dav_svn-win32">I am trying to use mod_dav_svn
+    with Apache on Win32 and I'm getting an error saying that the 
+    module cannot be found, yet the mod_dav_svn.so file is right 
+    there in <tt>\Apache\modules.</tt></a></h3>
+
+<p>The error message in this case is a little misleading. Most likely 
+Apache is unable to load one or more DLLs that <tt>mod_dav_svn.so</tt>
+relies on.  If Apache is running as a service it will not have the
+same <tt>PATH</tt> as a regular user.  Make sure that
+<tt>libdb4*.dll</tt>, <tt>libeay32.dll</tt> and <tt>ssleay32.dll</tt>
+are present in either <tt>\Apache\bin</tt> or
+<tt>\Apache\modules</tt>.  You can copy them from your Subversion
+installation directory if they are not there.</p>
+
+<p>If this still does not resolve the problem, you should use a tool 
+like <a href="http://www.dependencywalker.com">Dependency Walker</a> 
+on <tt>mod_dav_svn.so</tt> to see if there are any other unresolved
+dependencies.</p>
 
 <![CDATA[=========================================================]]>
 
