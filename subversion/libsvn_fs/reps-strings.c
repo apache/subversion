@@ -183,30 +183,12 @@ compose_handler (svn_txdelta_window_t *window, void *baton)
       /* Combine the incoming window with whatever's in the baton. */
       apr_pool_t *composite_pool = svn_pool_create (cb->trail->pool);
       svn_txdelta_window_t *composite;
-      svn_txdelta__compose_ctx_t context = { 0 };
 
-      composite = svn_txdelta__compose_windows
-        (window, cb->window, &context, composite_pool);
-
-      if (composite)
-        {
-          svn_pool_destroy (cb->window_pool);
-          cb->window = composite;
-          cb->window_pool = composite_pool;
-        }
-      else if (context.use_second)
-        {
-          svn_pool_destroy (composite_pool);
-          cb->window->sview_offset = context.sview_offset;
-          cb->window->sview_len = context.sview_len;
-
-          /* This can only happen if the window doesn't touch
-             source data; so ... */
-          cb->done = TRUE;
-        }
-      else
-        /* Can't happen, because cb->window can't be NULL. */
-        abort ();
+      composite = svn_txdelta__compose_windows (window, cb->window,
+                                                composite_pool);
+      svn_pool_destroy (cb->window_pool);
+      cb->window = composite;
+      cb->window_pool = composite_pool;
     }
   else if (window)
     {

@@ -725,102 +725,77 @@ copy_source_ops (apr_size_t offset, apr_size_t limit,
 svn_txdelta_window_t *
 svn_txdelta__compose_windows (const svn_txdelta_window_t *window_A,
                               const svn_txdelta_window_t *window_B,
-                              svn_txdelta__compose_ctx_t *context,
                               apr_pool_t *pool)
 {
   svn_txdelta__ops_baton_t build_baton = { 0 };
   svn_txdelta_window_t *composite;
+  apr_pool_t *subpool = svn_pool_create(pool);
+  offset_index_t *offset_index = create_offset_index(window_A, subpool);
+  range_index_t *range_index = create_range_index(subpool);
+  apr_size_t target_offset = 0;
+  int i;
 
-  context->use_second = FALSE;
-  if (!window_B)
-    return NULL;
-
-  if (window_A)
+  /* Read the description of the delta composition algorithm in
+     notes/fs-improvements.txt before going any further.
+     You have been warned. */
+  build_baton.new_data = svn_stringbuf_create("", pool);
+  for (i = 0; i < window_B->num_ops; ++i)
     {
-      context->sview_offset = window_A->sview_offset;
-      context->sview_len = window_A->sview_len;
-    }
-  else
-    {
-      context->sview_offset = window_B->sview_offset;
-      context->sview_len = 0;
-    }
-
-  if (!window_A || window_B->src_ops == 0)
-    {
-      context->use_second = TRUE;
-      return NULL;
-    }
-  else
-    {
-      apr_pool_t *subpool = svn_pool_create(pool);
-      offset_index_t *offset_index = create_offset_index(window_A, subpool);
-      range_index_t *range_index = create_range_index(subpool);
-      apr_size_t target_offset = 0;
-      int i;
-
-      /* Read the description of the delta composition algorithm in
-         notes/fs-improvements.txt before going any further.
-         You have been warned. */
-      build_baton.new_data = svn_stringbuf_create("", pool);
-      for (i = 0; i < window_B->num_ops; ++i)
+      const svn_txdelta_op_t *const op = &window_B->ops[i];
+      if (op->action_code != svn_txdelta_source)
         {
-          const svn_txdelta_op_t *const op = &window_B->ops[i];
-          if (op->action_code != svn_txdelta_source)
+          /* Delta ops that don't depend on the source can be copied
+             to the composite unchanged. */
+          const char *const new_data =
+            (op->action_code == svn_txdelta_new
+             ? window_B->new_data->data + op->offset
+             : NULL);
+          svn_txdelta__insert_op(&build_baton, op->action_code,
+                                 op->offset, op->length,
+                                 new_data, pool);
+        }
+      else
+        {
+          /* NOTE: Remember that `offset' and `limit' refer to
+             positions in window_B's _source_ stream, which is the
+             same as window_A's _target_ stream! */
+          const apr_size_t offset = op->offset;
+          const apr_size_t limit = op->offset + op->length;
+          range_list_node_t *range_list, *range;
+          apr_size_t tgt_off = target_offset;
+
+          splay_range_index(offset, range_index);
+          range_list = build_range_list(offset, limit, range_index);
+
+          for (range = range_list; range; range = range->next)
             {
-              /* Delta ops that don't depend on the source can be copied
-                 to the composite unchanged. */
-              const char *const new_data =
-                (op->action_code == svn_txdelta_new
-                 ? window_B->new_data->data + op->offset
-                 : NULL);
-              svn_txdelta__insert_op(&build_baton, op->action_code,
-                                     op->offset, op->length,
-                                     new_data, pool);
+              if (range->kind == range_from_target)
+                svn_txdelta__insert_op(&build_baton, svn_txdelta_target,
+                                       range->target_offset,
+                                       range->limit - range->offset,
+                                       NULL, pool);
+              else
+                copy_source_ops(range->offset, range->limit, tgt_off,
+                                &build_baton, window_A, offset_index,
+                                pool);
+
+              tgt_off += range->limit - range->offset;
             }
-          else
-            {
-              /* NOTE: Remember that `offset' and `limit' refer to
-                 positions in window_B's _source_ stream, which is the
-                 same as window_A's _target_ stream! */
-              const apr_size_t offset = op->offset;
-              const apr_size_t limit = op->offset + op->length;
-              range_list_node_t *range_list, *range;
-              apr_size_t tgt_off = target_offset;
+          assert (tgt_off == target_offset + op->length);
 
-              splay_range_index(offset, range_index);
-              range_list = build_range_list(offset, limit, range_index);
-
-              for (range = range_list; range; range = range->next)
-                {
-                  if (range->kind == range_from_target)
-                    svn_txdelta__insert_op(&build_baton, svn_txdelta_target,
-                                           range->target_offset,
-                                           range->limit - range->offset,
-                                           NULL, pool);
-                  else
-                    copy_source_ops(range->offset, range->limit, tgt_off,
-                                    &build_baton, window_A, offset_index,
-                                    pool);
-
-                  tgt_off += range->limit - range->offset;
-                }
-              assert (tgt_off == target_offset + op->length);
-
-              free_range_list(range_list, range_index);
-              insert_range(offset, limit, target_offset, range_index);
-            }
-
-          /* Remember the new offset in the would-be target stream. */
-          target_offset += op->length;
+          free_range_list(range_list, range_index);
+          insert_range(offset, limit, target_offset, range_index);
         }
 
-      svn_pool_destroy(subpool);
+      /* Remember the new offset in the would-be target stream. */
+      target_offset += op->length;
     }
 
+  svn_pool_destroy(subpool);
+
   composite = svn_txdelta__make_window(&build_baton, pool);
-  composite->sview_offset = context->sview_offset;
-  composite->sview_len = context->sview_len;
+  composite->sview_offset = window_A->sview_offset;
+  composite->sview_len = window_A->sview_len;
   composite->tview_len = window_B->tview_len;
   return composite;
 }

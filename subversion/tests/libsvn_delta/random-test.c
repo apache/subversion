@@ -449,8 +449,6 @@ do_random_combine_test (const char **msg,
 
         do
           {
-            svn_txdelta__compose_ctx_t context = { 0 };
-
             SVN_ERR (svn_txdelta_next_window (&window_A, txdelta_stream_A,
                                               wpool));
             if (print_windows)
@@ -459,14 +457,17 @@ do_random_combine_test (const char **msg,
                                               wpool));
             if (print_windows)
               delta_window_print (window_B, "B ", stdout);
-            composite = svn_txdelta__compose_windows (window_A, window_B,
-                                                      &context, wpool);
-            if (!composite && context.use_second)
+            if (!window_B)
+              break;
+            assert (window_A != NULL || window_B->src_ops == 0);
+            if (window_B->src_ops == 0)
               {
                 composite = window_B;
-                composite->sview_offset = context.sview_offset;
-                composite->sview_len = context.sview_len;
+                composite->sview_len = 0;
               }
+            else
+              composite = svn_txdelta__compose_windows (window_A, window_B,
+                                                        wpool);
             if (print_windows)
               delta_window_print (composite, "AB", stdout);
 
