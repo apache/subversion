@@ -769,7 +769,7 @@ svn_config_ensure (apr_pool_t *pool)
         "[miscellany]\n"
         "### Set global-ignores to a set of whitespace-delimited globs\n"
         "###   which Subversion will ignore in its `status' output.\n"
-        "global-ignores = *.o *.lo *.la #*# .*.rej *.rej .*~ *~ .#*"
+        "# global-ignores = *.o *.lo *.la #*# .*.rej *.rej .*~ *~ .#*"
         "\n"
         "### Set compression to 'no' to avoid compressing requests\n"
         "###   to a DAV-enabled Subversion server.  It defaults to 'yes'.\n"   
