@@ -1894,6 +1894,21 @@ svn_fs__dag_commit_txn (svn_revnum_t *new_rev,
 
 
 
+/*** Comparison. ***/
+
+svn_error_t *
+svn_fs__things_different (int *props_changed,
+                          int *contents_changed,
+                          dag_node_t *node1,
+                          dag_node_t *node2,
+                          trail_t *trail)
+{
+  /* ### todo: finish this. */
+  abort ();
+}
+
+
+
 /* 
  * local variables:
  * eval: (load-file "../svn-dev.el")

@@ -960,6 +960,64 @@ svn_fs_change_node_prop (svn_fs_root_t *root,
 }
 
 
+struct things_changed_args
+{
+  int *changed_p;
+  svn_fs_root_t *root1;
+  svn_fs_root_t *root2;
+  const char *path;
+  apr_pool_t *pool;
+};
+
+
+static svn_error_t *
+txn_body_props_changed (void *baton, trail_t *trail)
+{
+  struct things_changed_args *args = baton;
+  parent_path_t *parent_path_1, *parent_path_2;
+
+  SVN_ERR (open_path (&parent_path_1, args->root1, args->path, 0, trail));
+  SVN_ERR (open_path (&parent_path_2, args->root2, args->path, 0, trail));
+
+  SVN_ERR (svn_fs__things_different (args->changed_p,
+                                     NULL,
+                                     parent_path_1->node,
+                                     parent_path_2->node,
+                                     trail));
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_fs_props_changed (int *changed_p,
+                      svn_fs_root_t *root1,
+                      svn_fs_root_t *root2,
+                      const char *path,
+                      apr_pool_t *pool)
+{
+  struct things_changed_args args;
+  
+  /* Check that roots are in the same fs. */
+  if ((svn_fs_root_fs (root1)) != (svn_fs_root_fs (root2)))
+    return svn_error_createf
+      (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+       "Asking props changed at `%s' in two different filesystems.",
+       path);
+  
+  args.root1      = root1;
+  args.root2      = root2;
+  args.path       = path;
+  args.changed_p  = changed_p;
+  args.pool       = pool;
+
+  SVN_ERR (svn_fs__retry_txn (root1->fs, txn_body_props_changed,
+                              &args, pool));
+
+  return SVN_NO_ERROR;
+}
+
+
 
 /* Merges and commits. */
  
@@ -2530,6 +2588,77 @@ svn_fs_apply_textdelta (svn_txdelta_window_handler_t *contents_p,
 }
 
 /* --- End machinery for svn_fs_apply_textdelta() ---  */
+
+
+/* --- Machinery for asking if things changed --- */
+
+/* Note: we're sharing the `things_changed_args' struct with
+   svn_fs_props_changed(). */
+
+static svn_error_t *
+txn_body_contents_changed (void *baton, trail_t *trail)
+{
+  struct things_changed_args *args = baton;
+  parent_path_t *parent_path_1, *parent_path_2;
+
+  SVN_ERR (open_path (&parent_path_1, args->root1, args->path, 0, trail));
+  SVN_ERR (open_path (&parent_path_2, args->root2, args->path, 0, trail));
+
+  SVN_ERR (svn_fs__things_different (NULL,
+                                     args->changed_p,
+                                     parent_path_1->node,
+                                     parent_path_2->node,
+                                     trail));
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_fs_contents_changed (int *changed_p,
+                         svn_fs_root_t *root1,
+                         svn_fs_root_t *root2,
+                         const char *path,
+                         apr_pool_t *pool)
+{
+  struct things_changed_args args;
+
+  /* Check that roots are in the same fs. */
+  if ((svn_fs_root_fs (root1)) != (svn_fs_root_fs (root2)))
+    return svn_error_createf
+      (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+       "Asking props changed at `%s' in two different filesystems.",
+       path);
+  
+  /* Check that both paths are files. */
+  {
+    int is_file;
+
+    SVN_ERR (svn_fs_is_file (&is_file, root1, path, pool));
+    if (! is_file)
+      return svn_error_createf
+        (SVN_ERR_FS_GENERAL, 0, NULL, pool, "`%s' is not a file.", path);
+      
+    SVN_ERR (svn_fs_is_file (&is_file, root2, path, pool));
+    if (! is_file)
+      return svn_error_createf
+        (SVN_ERR_FS_GENERAL, 0, NULL, pool, "`%s' is not a file.", path);
+  }
+
+  args.root1      = root1;
+  args.root2      = root2;
+  args.path       = path;
+  args.changed_p  = changed_p;
+  args.pool       = pool;
+
+  SVN_ERR (svn_fs__retry_txn (root1->fs, txn_body_contents_changed,
+                              &args, pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+/* --- End machinery for asking if things changed --- */
 
 
 
