@@ -318,6 +318,52 @@ dir_empty (const char *path, apr_pool_t *pool)
 }
 
 
+
+/* Configuration files. */
+
+const char *
+svn_fs_conf_dir (svn_fs_t *fs)
+{
+  return fs->conf_path;
+}
+
+
+const char *
+svn_fs_pre_commit_conf (svn_fs_t *fs, apr_pool_t *pool)
+{
+  return apr_psprintf (fs->pool, "%s/%s",
+                       fs->conf_path,
+                       SVN_FS__REPOS_CONF_PRE_COMMIT_HOOKS);
+}
+
+
+const char *
+svn_fs_post_commit_conf (svn_fs_t *fs, apr_pool_t *pool)
+{
+  return apr_psprintf (fs->pool, "%s/%s",
+                       fs->conf_path,
+                       SVN_FS__REPOS_CONF_POST_COMMIT_HOOKS);
+}
+
+
+const char *
+svn_fs_read_sentinel_conf (svn_fs_t *fs, apr_pool_t *pool)
+{
+  return apr_psprintf (fs->pool, "%s/%s",
+                       fs->conf_path,
+                       SVN_FS__REPOS_CONF_READ_SENTINELS);
+}
+
+
+const char *
+svn_fs_write_sentinel_conf (svn_fs_t *fs, apr_pool_t *pool)
+{
+  return apr_psprintf (fs->pool, "%s/%s",
+                       fs->conf_path,
+                       SVN_FS__REPOS_CONF_WRITE_SENTINELS);
+}
+
+
 static svn_error_t *
 create_conf (svn_fs_t *fs, const char *path)
 {
@@ -338,10 +384,7 @@ create_conf (svn_fs_t *fs, const char *path)
 
   /* Pre-commit hooks. */
   {
-    this_path = apr_psprintf (fs->pool, "%s/%s",
-                              fs->conf_path,
-                              SVN_FS__REPOS_CONF_PRE_COMMIT_HOOKS);
-    
+    this_path = svn_fs_pre_commit_conf (fs, fs->pool);
     apr_err = apr_file_open (&f, this_path,
                              (APR_WRITE | APR_CREATE | APR_EXCL),
                              APR_OS_DEFAULT,
@@ -380,10 +423,7 @@ create_conf (svn_fs_t *fs, const char *path)
 
   /* Post-commit hooks. */
   {
-    this_path = apr_psprintf (fs->pool, "%s/%s",
-                              fs->conf_path,
-                              SVN_FS__REPOS_CONF_POST_COMMIT_HOOKS);
-    
+    this_path = svn_fs_post_commit_conf (fs, fs->pool);
     apr_err = apr_file_open (&f, this_path,
                              (APR_WRITE | APR_CREATE | APR_EXCL),
                              APR_OS_DEFAULT,
@@ -419,10 +459,7 @@ create_conf (svn_fs_t *fs, const char *path)
 
   /* Read sentinels. */
   {
-    this_path = apr_psprintf (fs->pool, "%s/%s",
-                              fs->conf_path,
-                              SVN_FS__REPOS_CONF_READ_SENTINELS);
-    
+    this_path = svn_fs_read_sentinel_conf (fs, fs->pool);
     apr_err = apr_file_open (&f, this_path,
                              (APR_WRITE | APR_CREATE | APR_EXCL),
                              APR_OS_DEFAULT,
@@ -447,10 +484,7 @@ create_conf (svn_fs_t *fs, const char *path)
 
   /* Write sentinels. */
   {
-    this_path = apr_psprintf (fs->pool, "%s/%s",
-                              fs->conf_path,
-                              SVN_FS__REPOS_CONF_WRITE_SENTINELS);
-    
+    this_path = svn_fs_write_sentinel_conf (fs, fs->pool);
     apr_err = apr_file_open (&f, this_path,
                              (APR_WRITE | APR_CREATE | APR_EXCL),
                              APR_OS_DEFAULT,

@@ -523,6 +523,29 @@ svn_error_t *svn_fs_change_txn_prop (svn_fs_txn_t *txn,
 
 
 
+/* Repository configuration paths. */
+
+/* Return the path to FS's configuration directory. */
+const char *svn_fs_conf_dir (svn_fs_t *fs);
+
+/* Return the path to FS's pre-commit hook configuration file,
+   allocated in POOL. */
+const char *svn_fs_pre_commit_conf (svn_fs_t *fs, apr_pool_t *pool);
+
+/* Return the path to FS's post-commit hook configuration file,
+   allocated in POOL. */
+const char *svn_fs_post_commit_conf (svn_fs_t *fs, apr_pool_t *pool);
+
+/* Return the path to FS's read sentinel configuration file, allocated
+   in POOL. */
+const char *svn_fs_read_sentinel_conf (svn_fs_t *fs, apr_pool_t *pool);
+
+/* Return the path to FS's write sentinel configuration file,
+   allocated in POOL. */
+const char *svn_fs_write_sentinel_conf (svn_fs_t *fs, apr_pool_t *pool);
+
+
+
 /* Roots.  */
 
 /* An svn_fs_root_t object represents the root directory of some
