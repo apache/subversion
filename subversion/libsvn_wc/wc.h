@@ -235,66 +235,6 @@ svn_string_t *svn_wc__versions_init_contents (svn_vernum_t version,
                                               apr_pool_t *pool);
 
 
-/*** The working copy unwind stack. ***/
-
-/* Unwindable actions. */
-#define SVN_WC__UNWIND_UPDATE "update"  /* no args, use for checkouts too */
-#define SVN_WC__UNWIND_MV     "mv"      /* takes SRC and DST args */
-#define SVN_WC__UNWIND_MERGE  "merge"   /* takes SRC and DST args */
-
-
-/* Push an action on the top of the `unwind' stack. 
- * PATH means we're talking about the `PATH/SVN/unwind' file.
- * ACTION is the tag name to push.
- * ATTS are attributes to the action; kff todo: may want a slightly
- * more structured interface when discover similarities among pushes. 
- */
-svn_error_t *svn_wc__push_unwind (svn_string_t *path,
-                                  const char *action,
-                                  const char **atts,
-                                  apr_pool_t *pool);
-
-/* Pop (and execute) the action on the top of the `unwind' stack.
- *
- * If ACTION is non-null, then the top item on the stack must match
- * that action -- if it doesn't, the error SVN_ERR_WC_UNWIND_MISMATCH
- * is returned and the top item is not popped.
- *
- * If DEFAULT_TO_DONE is non-zero, than it will not be an error for
- * the top item on the stack to appear to have already been done.
- * This always means it *has* already been done, but that things
- * spooked before the unwind stack could be adjusted.  Such items are
- * treated as a no-op and popped anyway.  Remaining pops should not
- * interpret such an situation as innocent, of course.
- *
- * (For actions which have no operands, the DEFAULT_TO_DONE argument
- * is ignored.)
- *
- * If *EMPTY_STACK is non-null, it gets set to non-zero if the stack
- * is empty _after_ the pop.  (Popping an unwind stack that's already
- * empty is an error, SVN_ERR_WC_UNWIND_EMPTY).
- */
-svn_error_t *svn_wc__pop_unwind (svn_string_t *path,
-                                 const char *action,
-                                 int default_to_done,
-                                 int *empty_stack,
-                                 apr_pool_t *pool);
-
-
-/* Unwind the entire stack.
-   kff todo: it may be that pop_unwind() should be static & hidden,
-   and only ever called from unwind_all(). */
-svn_error_t *svn_wc__unwind_all (svn_string_t *path,
-                                 apr_pool_t *pool);
-
-
-/* Sets *ISEMPTY to non-zero iff the unwind stack for PATH is empty.
-   Does not affect the stack in any way. */
-svn_error_t *svn_wc__unwind_empty_p (svn_string_t *path,
-                                     int *isempty,
-                                     apr_pool_t *pool);
-
-
 /*** General utilities that may get moved upstairs at some point. */
 svn_error_t *svn_wc__ensure_directory (svn_string_t *path, apr_pool_t *pool);
 

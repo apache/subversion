@@ -99,55 +99,6 @@ svn_wc__ensure_wc (svn_string_t *path,
 }
 
 
-
-
-/*** The log file. ***/
-
-svn_error_t *
-svn_wc__push_unwind (svn_string_t *path,
-                     const char *action,
-                     const char **atts,
-                     apr_pool_t *pool)
-{
-  /* kff todo */
-
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_wc__pop_unwind (svn_string_t *path,
-                    const char *action,
-                    int default_to_done,
-                    int *empty_stack,
-                    apr_pool_t *pool)
-{
-  /* kff todo */
-
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_wc__unwind_all (svn_string_t *path, apr_pool_t *pool)
-{
-  /* kff todo */
-
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_wc__unwind_empty_p (svn_string_t *path, int *isempty, apr_pool_t *pool)
-{
-  /* kff todo */
-
-  *isempty = 1;
-
-  return SVN_NO_ERROR;
-}
-
-
 
 /* kff todo: not all of these really belong in wc_adm.  Some may get
    broken out into other files later.  They're just here to satisfy
