@@ -36,6 +36,7 @@ TABLE OF CONTENTS
    * How to release a distribution tarball
    * Release numbering
    * Compatibility
+   * Stabilizing a release branch
 
 
 Participating in the community
@@ -1417,3 +1418,67 @@ updating the ra_svn code:
  
      This mechanism is a last resort, to be used when capability
      keywords would be too hard to manage.
+
+
+Stabilizing a release branch
+============================
+
+[For clarity, this section is written specifically for the 1.0
+release.  The same principles apply to future releases; it may be
+appropriate to generalize this section after 1.0 is out.]
+
+First, we create a "1.0-stabilization" branch based on the last
+interim release:
+
+   $ svn cp http://svn.collab.net/repos/svn/tags/0.35.0 \
+            http://svn.collab.net/repos/svn/branches/1.0-stabilization
+
+Trunk development can continue normally, since changes on trunk do not
+affect the 1.0 release unless explicitly merged in.  However, we try
+to avoid major new initiatives on trunk while we're stabilizing 1.0.
+As developers must still review trunk commits, the more we can reduce
+that distraction, the more attention we can devote to the release
+line.
+
+Certain trunk changes are desirable: those that are meant to be merged
+into the 1.0-stabilization branch.  The preferred way to get a change
+into the release is to make the change on trunk, then port it over.
+This is partly to ensure that the change will be in future Subversions
+as well as in the upcoming release; but also, it gives the developers
+something concrete to vote on for inclusion in the release line.
+
+A change needs three +1 votes from full committers, and no vetoes, to
+go into the 1.0-stablization branch.  We use the STATUS file in the
+top level of the release branch for recording votes.  Each item is a
+short identifying string (a revision number, an issue number, etc), a
+brief description of the change, an at-most-one-line justification of
+why it should be in 1.0, ending with the votes themselves.  For
+example:
+
+   * r98765 (issue #56789)
+     Use an opaque type for svn_ra_get_ansible(), instead of void *.
+     Justification: API stability
+     See mailing list thread http://...
+
+     Votes for merging into 1.0:
+       +1 ghudson
+       +1 bliss
+
+Obviously trivial and risk-free changes, such as spelling fixes and
+most documentation changes, do not need STATUS file entries.  They can
+be merged from trunk without discussion; just use your judgement.
+
+We don't use the issue tracker for voting, for various reasons.  A
+file is more browseable than the issue tracker, it allows the votes to
+be grouped together for easy counting, it automatically limits the
+vote to committers, and it versions the votes in case people change
+their minds.  Also, it separates the question of whether something
+should be fixed from whether that fix should go into 1.0.  An issue is
+about recording the existence of a bug, feature request, whatever, and
+getting the change into the main development line.  The STATUS file is
+about whether that change should go into the release line as well --
+which is why the STATUS file for a release lives on its branch, not on
+the trunk.
+
+The STATUS file is not the place for discussion; use the dev mailing
+list for that, and have the file point to the thread.
