@@ -255,37 +255,29 @@ svn_config__user_config_path (const char **path_p,
                               const char *fname,
                               apr_pool_t *pool)
 {
+  /* This code requires APR_HAS_USER to be defined.  Does anyone not
+     define it?  Apparently even Win32 does, though functions about
+     users may or may not return useful results there. */
+  
   apr_status_t apr_err;
-  
-  /* ### Are there any platforms where APR_HAS_USER is not defined?
-     This code won't compile without it.  */
-  
   apr_uid_t uid;
   apr_gid_t gid;
   char *username;
   char *homedir;
   
-  /* ### Will these calls fail under Windows sometimes?  If so, maybe
-     we shouldn't error, since the caller may not care (it can often
-     just fall back to registry). */
+  *path_p = NULL;
   
   apr_err = apr_current_userid (&uid, &gid, pool);
   if (apr_err)
-    return svn_error_create
-      (apr_err, 0, NULL, pool,
-       "svn_config_read_all: unable to get current userid.");
+    return SVN_NO_ERROR;
   
   apr_err = apr_get_username (&username, uid, pool);
   if (apr_err)
-    return svn_error_create
-      (apr_err, 0, NULL, pool,
-       "svn_config_read_all: unable to get username.");
+    return SVN_NO_ERROR;
   
   apr_err = apr_get_home_directory (&homedir, username, pool);
   if (apr_err)
-    return svn_error_createf
-      (apr_err, 0, NULL, pool,
-       "svn_config_read_all: unable to get home dir for user %s.", username);
+    return SVN_NO_ERROR;
   
   /* ### No compelling reason to use svn's path lib here? */
   if (fname)
@@ -430,6 +422,10 @@ svn_config_ensure (apr_pool_t *pool)
 
   /* Ensure that the config directory exists.  */
   SVN_ERR (svn_config__user_config_path (&path, NULL, pool));
+
+  if (! path)
+    return SVN_NO_ERROR;
+
   SVN_ERR (svn_io_check_path (path, &kind, pool));
   if (kind == svn_node_none)
     {
@@ -449,6 +445,10 @@ svn_config_ensure (apr_pool_t *pool)
   /* Ensure that the `README' file exists. */
   SVN_ERR (svn_config__user_config_path
            (&path, SVN_CONFIG__USR_README_FILE, pool));
+
+  if (! path)  /* highly unlikely, since a previous call succeeded */
+    return SVN_NO_ERROR;
+
   err = svn_io_check_path (path, &kind, pool);
   if (err)
     return SVN_NO_ERROR;
@@ -586,6 +586,10 @@ svn_config_ensure (apr_pool_t *pool)
   /* Ensure that the `proxies' file exists. */
   SVN_ERR (svn_config__user_config_path
            (&path, SVN_CONFIG__USR_PROXY_FILE, pool));
+
+  if (! path)  /* highly unlikely, since a previous call succeeded */
+    return SVN_NO_ERROR;
+
   err = svn_io_check_path (path, &kind, pool);
   if (err)
     return SVN_NO_ERROR;
