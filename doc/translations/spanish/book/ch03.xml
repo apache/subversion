@@ -566,75 +566,82 @@ Updated to revision 2.
         y Subversion ha actualizado su copia de trabajo local para incluir
         estos cambios.</para>
       
-      <para>Let's examine the output of <command>svn update</command>
-        a bit more.  When the server sends changes to your working
-        copy, a letter code is displayed next to each item to let you
-        know what actions Subversion performed to bring your working
-        copy up-to-date:</para>
+      <para>Vamos a examinar la salida de <command>svn update</command>
+        un poco más. Cuando el servidor envía cambios a su copia de trabajo
+        local, una letra codigo <!--TODO:a letter code--> se visualiza al
+        lado del objeto para hacerle saber qué acciones realizó Subversion
+        para traer su copia de trabajo local a la actualización:<!--TODO:
+        to bring...up-to-date--></para>
 
       <variablelist>
 
         <varlistentry>
           <term><computeroutput>U      foo</computeroutput></term>
           <listitem>
-            <para>File <filename>foo</filename> was
-              <computeroutput>U</computeroutput>pdated (received changes
-              from the server).</para>
+            <para>El fichero <filename>foo</filename> fue
+              <computeroutput>U</computeroutput>pdated<!--TODO:quizá poner
+              NT diciendo que Updated es actualizado?--> (recibidos
+              cambios del servidor).</para>
           </listitem>
         </varlistentry>
 
         <varlistentry>
           <term><computeroutput>A      foo</computeroutput></term>
           <listitem>
-            <para>File or directory <filename>foo</filename> was
-              <computeroutput>A</computeroutput>dded to your working
-              copy.</para>
+            <para>El fichero o directorio <filename>foo</filename> fue
+              <computeroutput>A</computeroutput>dded <!--TODO:lo mismo de
+              antes, solo que aqui quedaria bien poner "Añadido"-->
+              a su copia de trabajo local.</para>
           </listitem>
         </varlistentry>
 
         <varlistentry>
           <term><computeroutput>D      foo</computeroutput></term>
           <listitem>
-            <para>File or directory <filename>foo</filename> was
-              <computeroutput>D</computeroutput>eleted from your working
-              copy.</para>
+            <para>El fichero o directorio <filename>foo</filename> fue
+              <computeroutput>D</computeroutput>eleted <!--TODO:otra vez-->
+              de su copia de trabajo local.</para>
           </listitem>
         </varlistentry>
         
         <varlistentry>
           <term><computeroutput>R      foo</computeroutput></term>
           <listitem>
-            <para>File or directory <filename>foo</filename> was
-              <computeroutput>R</computeroutput>eplaced in your working
-              copy; that is, <filename>foo</filename> was deleted, and a
-              new item with the same name was added.  While they may have
-              the same name, the repository considers them to be distinct
-              objects with distinct histories.</para>
+            <para>El fichero o directorio <filename>foo</filename> fue
+              <computeroutput>R</computeroutput>eplaced <!--TODO:otra mas-->
+              en su copia de trabajo local; esto es, <filename>foo</filename>
+              fue borrado, y un nuevo objeto con el mismo nombre fue añadido.
+              Mientras pueden tener el mismo nombre, el repositorio los
+              considera objetos distintos con historiales distintos.
+            </para>
           </listitem>
         </varlistentry>
 
         <varlistentry>
           <term><computeroutput>G      foo</computeroutput></term>
           <listitem>
-            <para>File <filename>foo</filename> received new changes
-              from the repository, but your local copy of the file had
-              your modifications.  Either the changes did not intersect,
-              or the changes were exactly the same as your local
-              modifications, so Subversion has successfully
-              mer<computeroutput>G</computeroutput>ed the repository's
-              changes into the file without a problem.</para>
+            <para>El fichero <filename>foo</filename> recibió nuevos
+              cambios del repositorio, pero su copia local del
+              fichero tenía sus modificaciones. O los cambios no se
+              intersectaron <!--TODO:intersect-->, o los cambios eran
+              exactamente iguales que sus modificaciones locales, asi que
+              Subversion ha mer<computeroutput>G</computeroutput>ed
+              <!--TODO: cambiar lo de merged--> satisfactoriamente los
+              cambios del repositorio al fichero sin ningún problema.
+            </para>
           </listitem>
         </varlistentry>
 
         <varlistentry>
           <term><computeroutput>C      foo</computeroutput></term>
           <listitem>
-            <para>File <filename>foo</filename> received
-              <computeroutput>C</computeroutput>onflicting changes from
-              the server.  The changes from the server directly overlap
-              your own changes to the file.  No need to panic, though.
-              This overlap needs to be resolved by a human (you); we
-              discuss this situation later in this chapter.</para>
+            <para>El fichero <filename>foo</filename> recibió cambios
+              <computeroutput>C</computeroutput>onflicting del servidor.
+              Los cambios del servidor directamente <!--overlap-->
+              se superpusieron sobre sus propios cambios en el fichero.
+              Aunque no hay necesidad de aterrarse. Esta superposición
+              necesita ser resuelta por un humano (usted); tratamos esta
+              situación más tarde en este capítulo.</para>
           </listitem>
         </varlistentry>
 
@@ -643,9 +650,10 @@ Updated to revision 2.
     </sect2>
 
     <sect2 id="svn-ch-3-sect-4.2">
-      <title>Make Changes to Your Working Copy</title>
+      <title>Hacer Cambios en Su Copia de Trabajo Local</title>
       
-      <para>Now you can get to work and make changes in your
+      <para>
+      Now you can get to work and make changes in your
         working copy. It's usually most convenient to decide on a
         particular change (or set of changes) to make, such as writing
         a new feature, fixing a bug, etc.  The Subversion commands
