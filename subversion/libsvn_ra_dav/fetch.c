@@ -43,6 +43,7 @@
 #include "svn_path.h"
 #include "svn_xml.h"
 #include "svn_dav.h"
+#include "svn_time.h"
 
 #include "ra_dav.h"
 
@@ -971,6 +972,204 @@ svn_error_t *svn_ra_dav__get_file(void *session_baton,
 
   return SVN_NO_ERROR;
 }
+
+
+svn_error_t *svn_ra_dav__get_dir(void *session_baton,
+                                 const char *path,
+                                 svn_revnum_t revision,
+                                 apr_hash_t **dirents,
+                                 svn_revnum_t *fetched_rev,
+                                 apr_hash_t **props)
+{
+  svn_ra_dav_resource_t *rsrc;
+  apr_hash_index_t *hi;
+  int len;
+  apr_hash_t *resources;
+  const char *final_url;
+  char *stripped_final_url;
+  svn_ra_session_t *ras = (svn_ra_session_t *) session_baton;
+  const char *url = svn_path_url_add_component (ras->url, path, ras->pool);
+
+  /* If the revision is invalid (head), then we're done.  Just fetch
+     the public URL, because that will always get HEAD. */
+  if ((! SVN_IS_VALID_REVNUM(revision)) && (fetched_rev == NULL))
+    final_url = url;
+
+  /* If the revision is something specific, we need to create a bc_url. */
+  else
+    {
+      svn_revnum_t got_rev;
+      svn_string_t bc_url, bc_relative;
+
+      SVN_ERR (svn_ra_dav__get_baseline_info(NULL,
+                                             &bc_url, &bc_relative,
+                                             &got_rev,
+                                             ras->sess,
+                                             url, revision,
+                                             ras->pool));
+      final_url = svn_path_url_add_component(bc_url.data,
+                                             bc_relative.data,
+                                             ras->pool);
+      if (fetched_rev != NULL)
+        *fetched_rev = got_rev;
+    }
+
+  /* Just like Nautilus, Cadaver, or any other browser, we do a
+     PROPFIND on the directory of depth 1. */
+  SVN_ERR( svn_ra_dav__get_props(&resources, ras->sess,
+                                 final_url, NE_DEPTH_ONE,
+                                 NULL, NULL /* all props */, ras->pool) );
+
+  /* Clean up any trailing slashes on final_url, creating stripped_final_url */
+  stripped_final_url = apr_pstrdup(ras->pool, final_url);
+  len = strlen(final_url);
+  if (len > 1 && final_url[len - 1] == '/')
+      stripped_final_url[len - 1] = '\0';
+  
+  /* Now we have a hash that maps a bunch of url children to resource
+     objects.  Each resource object contains the properties of the
+     child.   Parse these resources into svn_dirent_t structs. */
+  *dirents = apr_hash_make (ras->pool);
+  for (hi = apr_hash_first (ras->pool, resources); hi; hi = apr_hash_next (hi))
+    {
+      const void *key;
+      void *val;
+      const char *childname;
+      svn_ra_dav_resource_t *resource;
+      const char *propval;
+      apr_hash_index_t *h;
+      svn_dirent_t *entry;
+
+      apr_hash_this (hi, &key, NULL, &val);
+      childname =  key;
+      resource = val;
+      
+      /* Skip the effective '.' entry that comes back from NE_DEPTH_ONE */
+      if (strcmp(resource->url, stripped_final_url) == 0)
+        continue;
+
+      entry = apr_pcalloc (ras->pool, sizeof(*entry));
+
+      /* node kind */
+      entry->kind = resource->is_collection ? svn_node_dir : svn_node_file;
+
+      /* size */
+      propval = apr_hash_get(resource->propset,
+                             SVN_RA_DAV__PROP_GETCONTENTLENGTH,
+                             APR_HASH_KEY_STRING);
+      if (propval == NULL)
+        entry->size = 0;
+      else
+        entry->size = (apr_off_t) atol(propval); /* ### FIXME? */
+
+      /* does this resource contain any 'svn:custom:' properties, i.e.
+         ones actually created and set by the user? */
+      for (h = apr_hash_first (ras->pool, resource->propset);
+           h; h = apr_hash_next (h))
+        {
+          const void *kkey;
+          void *vval;
+          apr_hash_this (hi, &kkey, NULL, &vval);
+
+          if (strncmp((const char *)kkey, SVN_PROP_CUSTOM_PREFIX,
+                      sizeof(SVN_PROP_CUSTOM_PREFIX)) == 0)
+            entry->has_props = TRUE;
+        }
+
+      /* created_rev & friends */
+      propval = apr_hash_get(resource->propset,
+                             SVN_RA_DAV__PROP_VERSION_NAME,
+                             APR_HASH_KEY_STRING);
+      if (propval != NULL)
+        entry->created_rev = SVN_STR_TO_REV(propval);
+
+      propval = apr_hash_get(resource->propset,
+                             SVN_RA_DAV__PROP_CREATIONDATE,
+                             APR_HASH_KEY_STRING);
+      if (propval != NULL)
+        SVN_ERR( svn_time_from_nts(&(entry->time), propval, ras->pool) );
+
+      propval = apr_hash_get(resource->propset,
+                             SVN_RA_DAV__PROP_CREATOR_DISPLAYNAME,
+                             APR_HASH_KEY_STRING);
+      if (propval != NULL)
+        entry->last_author = propval;
+
+      apr_hash_set(*dirents, svn_path_basename(childname, ras->pool),
+                   APR_HASH_KEY_STRING, entry);
+  }
+
+  if (props)                    
+    {
+      SVN_ERR( svn_ra_dav__get_props_resource(&rsrc, ras->sess, final_url, 
+                                              NULL, NULL /* all props */, 
+                                              ras->pool) ); 
+
+      *props = apr_hash_make(ras->pool);
+
+      for (hi = apr_hash_first(ras->pool, rsrc->propset); 
+           hi; 
+           hi = apr_hash_next(hi)) 
+        {
+          const void *key;
+          void *val;
+
+          apr_hash_this(hi, &key, NULL, &val);
+
+          /* If the property starts with "svn:custom:", then it's a
+             normal user-controlled property coming from the fs.  Just
+             strip off this prefix and add to the hash. */
+#define NSLEN (sizeof(SVN_PROP_CUSTOM_PREFIX) - 1)
+          if (strncmp(key, SVN_PROP_CUSTOM_PREFIX, NSLEN) == 0)
+            apr_hash_set(*props, &((const char *)key)[NSLEN], 
+                         APR_HASH_KEY_STRING, 
+                         svn_string_create(val, ras->pool));    
+#undef NSLEN
+          
+          else if (strcmp(key, SVN_RA_DAV__PROP_CHECKED_IN) == 0)
+            {
+              /* ### I *think* we have to remove any old
+                 version-url-rev if we're going to set a new
+                 version-url.  Not sure it's absolutely necessary
+                 here, though (and note that this doesn't take effect
+                 until the props hash is interpreted, meaning there
+                 may still be a small window during which the old rev
+                 is still around while the new url is on disk.
+                 Sigh.)  
+
+                 And of course, we can't just store NULL in the hash,
+                 because apr hash tables don't work that way.  So we
+                 have to store SVN_INVALID_REVNUM as the actual
+                 revision.  */
+
+              {
+                const char *invalid_rev = apr_psprintf (ras->pool,
+                                                        "%" SVN_REVNUM_T_FMT,
+                                                        SVN_INVALID_REVNUM);
+                
+                apr_hash_set(*props, SVN_RA_DAV__LP_VSN_URL_REV,
+                             APR_HASH_KEY_STRING,
+                             svn_string_create(invalid_rev, ras->pool));
+              }
+
+              apr_hash_set(*props, SVN_RA_DAV__LP_VSN_URL,
+                           APR_HASH_KEY_STRING, 
+                           svn_string_create(val, ras->pool));
+            }
+          else
+            /* If it's one of the 'entry' props, this func will
+               recognize the DAV name & add it to the hash mapped to a
+               new name recognized by libsvn_wc. */
+            SVN_ERR( set_special_wc_prop ((const char *) key,
+                                          (const char *) val,
+                                          add_prop_to_hash, *props, 
+                                          ras->pool) );
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
 
 
 svn_error_t * svn_ra_dav__do_checkout(void *session_baton,
