@@ -20,6 +20,7 @@ import sys     # for argv[]
 import os      # for popen2()
 import shutil  # for rmtree()
 import re      # to parse version string
+import stat    # for ST_MODE
 import string  # for atof()
 import copy    # for deepcopy()
 
@@ -245,7 +246,7 @@ def chmod_tree(path, mode, mask):
     mode, mask = arg
     for name in names:
       fullname = os.path.join(dirname, name)
-      new_mode = (os.stat(fullname).st_mode & ~mask) | mode
+      new_mode = (os.stat(fullname)[stat.ST_MODE] & ~mask) | mode
       os.chmod(fullname, new_mode)
   os.path.walk(path, visit, (mode, mask))
 
