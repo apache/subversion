@@ -1492,7 +1492,7 @@ crawl_dir (apr_array_header_t *files,
     
     <para>Pools might not be ideal for every application, but they are
       extremely useful in Subversion.  As a Subversion developer,
-      you'll need to grow comfortable with pools and how to weild them
+      you'll need to grow comfortable with pools and how to wield them
       correctly.  Memory usage bugs and bloating can be difficult to
       diagnose and fix regardless of the API, but the pool construct
       provided by APR has proven a tremendously convenient,
@@ -1561,7 +1561,7 @@ crawl_dir (apr_array_header_t *files,
         Subversion's source code is versioned using Subversion itself,
         you actually need to "bootstrap" by getting a working
         Subversion client via some other method.  The most common
-        methods inclue downloading the latest binary distribution (if
+        methods include downloading the latest binary distribution (if
         such is available for your platform), or downloading the
         latest source tarball and building your own Subversion client.
         If you build from source, make sure read the INSTALL file in
