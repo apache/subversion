@@ -52,6 +52,7 @@
 #include <apr_pools.h>
 #include <apr_file_io.h>
 #include <apr_time.h>
+#include <apr_strings.h>
 #include "svn_types.h"
 #include "svn_string.h"
 #include "svn_error.h"
@@ -217,7 +218,7 @@ svn_wc__file_modified_p (svn_boolean_t *modified_p,
         apr_psprintf
         (pool,
          "svn_wc__file_modified_p:  failed to open text-base copy of `%s'",
-         filename->data);  /* kff: whoa, why the warning here? */
+         filename->data);
       return svn_quick_wrap_error (err, msg);
     }
                      
