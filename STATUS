@@ -129,3 +129,10 @@ already know about.)
      Rename 'svn_repos_authz_read_func_t' to 'svn_repos_authz_func_t'.
      Justification: API stability; and, old name was overly restrictive.
      Votes:
+
+
+   * Issue #1671
+     Add a pool parameter to finish_abort and abort_report.
+     Justification: API stability; low risk
+     Votes:
+
