@@ -3,9 +3,18 @@
 
 Put blue-sky requests here...
 
-* Content knowledge allows better conflict resolution strategies
+@menu
+* Smart conflict resolution
+* Multisite and local repository
+* Digital signatures
+* Import/export format
+@end menu
 
-TODO: this is a plugin now
+@c -----------------------------------------------------------------------
+@node Smart conflict resolution
+@section Smart conflict resolution
+
+(TODO: this is a plugin now)
 
 Certain kinds of conflicts can be resolved without human intervention.
 For example, files like /etc/passwd just need to keep lines unique by
@@ -23,14 +32,83 @@ header lines.  And so on.
 These features may not be in the first release of Subversion, but let's
 keep them in mind.
 
-* Digital signatures.
+@c -----------------------------------------------------------------------
+@node Multisite and local repository
+@subsubsection Multisite and local repository
 
-     A few people have mentioned cryptographic signing of changes.
-     It's a cool idea, and we should leave the door open for it.  BUT,
-     it isn't a priority for the first release(s), because change
-     history can never be lost -- therefore, any change can be backed
-     out.  So the risk is not of someone damaging the project, but of
-     someone damaging the project and no one else *noticing*.  That
-     would have to be a pretty lax project. :-)
+Two commonly requested enhancements for CVS are "multisite" and "local
+repositories".  Although the two terms are sometimes used
+interchangably, they refer to two different things (explained below).
+Subversion can eventually support both, but they are not priorities
+for the first release.  Nothing in the design prevents them from being
+added on later.
 
-* import/export format?  (Jason mentioned this.)
+(Ben sez:  The "Multisite" section below needs to be rewritten to
+describe the master/slave replicating server-caching model.  The "Local"
+repository section needs to be rewritten to explain how cheap clones
+(branches) give us this behavior for free;  of course, for the first
+release of subversion, these quick branches will only be
+intra-repository, not inter-.)
+
+@enumerate
+
+@item Multisite
+
+This is like the ClearCase multisite feature.  Essentially, it is a
+redundant distributed repository.  The repository exists on two or
+more cooperatively mirroring servers (each one presumably being close,
+network-wise, to its intended users).  Commits on any server are
+visible on all of them.  I'm not sure how conflict resolution is
+handled when people at different mirrors change the same file at at
+the same time -- perhaps one of the commits is backed out and returned
+to that user?  Hmmm.
+
+Anyway, CVS has gotten away with simply assuming decent Net access for
+all users; this doesn't satisfy everyone, but for the first release of
+Subversion we should probably do the same.
+
+@item Local repository
+
+This is one that people request a lot: the ability to commit changes
+first to a local "working repository" (not visible to the rest of the
+world), and then commit what's in the working repository to the real
+repository (with the several commits maybe being folded into one
+commit).
+
+Why do people want this?  I think mostly it's the psychological
+comfort of making a snapshot whenever one reaches a good stopping
+point, but not necessarily wanting all those "comfort points" to
+become publically-visible commits.  This is understandable, but of
+course the local repository will have to refuse to commit changes if
+any of the files turn out not to be up-to-date.  (There may also be a
+very cheap way to implement 90% of this feature by making skeleton
+duplicates of the working copy's directory tree and copying the
+changed files into that skeleton...)
+
+(Are there any other reasons people want this feature?  I remember
+seeing posts on info-cvs explaining what appeared to be other reasons,
+but frankly I could never understand them very well...)
+
+For now, similar effects are achievable without involving the version
+control system, so this feature is not a priority for the first
+release of Subversion.  Unless someone can explain a clear way to
+implement it, and another reason why it's important to support it.
+@end enumerate
+
+@c -----------------------------------------------------------------------
+@node Digital signatures
+@section Digital signatures
+
+A few people have mentioned cryptographic signing of changes.  It's a
+cool idea, and we should leave the door open for it.  BUT, it isn't a
+priority for the first release(s), because change history can never be
+lost -- therefore, any change can be backed out.  So the risk is not of
+someone damaging the project, but of someone damaging the project and no
+one else *noticing*.  That would have to be a pretty lax project. :-)
+
+@c -----------------------------------------------------------------------
+@node Import/export format
+@section Import/export format
+
+Jason mentioned this as a nice thing to have someday.  Makes
+repositories easy to transport.
