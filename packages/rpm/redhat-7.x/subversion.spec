@@ -24,6 +24,7 @@ Requires: db4 >= 4.0.14
 Requires: expat
 Requires: neon >= %{neon_version}
 #Requires: /sbin/install-info
+Obsoletes: subversion-cvs2svn
 BuildPreReq: apache >= %{apache_version}
 BuildPreReq: apache-devel >= %{apache_version}
 BuildPreReq: apache-libapr-devel >= %{apache_version}
@@ -78,14 +79,13 @@ BuildPreReq: apache-devel >= %{apache_version}
 The subversion-server package adds the Subversion server Apache module to
 the Apache directories and configuration.
 
-%package cvs2svn
+%package python
 Group: Utilities/System
-Summary: Converts CVS repositories to Subversion repositories.
+Summary: Allows Python scripts to directly use Subversion repositories.
 Requires: swig-runtime >= 1.3.16
-%description cvs2svn
-Converts CVS repositories to Subversion repositories.
-
-See /usr/share/doc/subversion*/tools/cvs2svn directory for more information.
+Obsoletes: subversion-cvs2svn
+%description python
+Provides Pythong (SWIG) support for Subversion.
 
 %package tools
 Group: Utilities/System
@@ -94,6 +94,13 @@ Summary: Tools for Subversion
 Tools for Subversion.
 
 %changelog
+* Sat May 10 2003 David Summers <david@summersoft.fay.ar.us> 0.22.1-5879
+- svn-config has been taken back out of the distribution.
+- cvs2svn no longer requires SWIG, so rename the subversion-cvs2svn package to
+  subversion-python and move the cvs2svn and RCS parser into the subversion
+  package.
+- Added cvs2svn man page.
+
 * Sun Apr 13 2003 David Summers <david@summersoft.fay.ar.us> 0.20.1-5610
 - Added svndumpfilter.
 
@@ -304,7 +311,7 @@ killall httpd
 echo "*** Finished regression tests on RA_DAV (HTTP method) layer ***"
 %endif
 
-# Build cvs2svn python bindings
+# Build python bindings
 make swig-py
 
 %install
@@ -330,6 +337,7 @@ mkdir -p $RPM_BUILD_ROOT/usr/lib/python2.2/site-packages
 cp -r tools/cvs2svn/rcsparse $RPM_BUILD_ROOT/usr/lib/python2.2/site-packages/rcsparse
 mv $RPM_BUILD_ROOT/usr/lib/svn-python/svn $RPM_BUILD_ROOT/usr/lib/python2.2/site-packages
 rmdir $RPM_BUILD_ROOT/usr/lib/svn-python
+cp $RPM_BUILD_DIR/subversion-%{version}/tools/cvs2svn/cvs2svn.1 $RPM_BUILD_ROOT/usr/share/man/man1
 
 # Copy svnadmin.static to destination
 cp svnadmin.static $RPM_BUILD_ROOT/usr/bin/svnadmin-%{version}-%{release}.static
@@ -407,6 +415,7 @@ rm -rf $RPM_BUILD_ROOT
 %defattr(-,root,root)
 %doc BUGS CHANGES COMMITTERS COPYING HACKING IDEAS INSTALL PORTING README
 %doc subversion/LICENSE
+/usr/bin/cvs2svn
 /usr/bin/svn
 /usr/bin/svnadmin
 /usr/bin/svnadmin-%{version}-%{release}.static
@@ -422,6 +431,7 @@ rm -rf $RPM_BUILD_ROOT
 /usr/lib/libsvn_repos*so*
 /usr/lib/libsvn_subr*so*
 /usr/lib/libsvn_wc*so*
+/usr/lib/python2.2/site-packages/rcsparse
 /usr/share/man/man1/*
 /usr/share/info/*
 
@@ -430,7 +440,6 @@ rm -rf $RPM_BUILD_ROOT
 /usr/lib/libsvn*.a
 /usr/lib/libsvn*.la
 /usr/include/subversion-1
-/usr/bin/svn-config
 
 %files server
 %defattr(-,root,root)
@@ -438,11 +447,9 @@ rm -rf $RPM_BUILD_ROOT
 %{apache_dir}/modules/mod_dav_svn.la
 %{apache_dir}/modules/mod_dav_svn.so
 
-%files cvs2svn
+%files python
 %defattr(-,root,root)
-/usr/bin/cvs2svn
 /usr/lib/python2.2/site-packages/svn
-/usr/lib/python2.2/site-packages/rcsparse
 /usr/lib/libsvn_swig_py*so*
 
 %files tools
