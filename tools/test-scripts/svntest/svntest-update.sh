@@ -57,22 +57,22 @@ UPDATE_REBUILD_FLAG () {
 
 # Update apr, apr-util, httpd
 START "update $APR_NAME" "Updating $APR_NAME..."
-cd $APR_REPO && $CVS -f -q -z6 update -d -P > "$TEST_ROOT/LOG_up_apr" 2>&1
+cd $APR_REPO && $SVN update > "$TEST_ROOT/LOG_up_apr" 2>&1
 test $? = 0 || {
     FAIL_LOG "$TEST_ROOT/LOG_up_apr"
     FAIL
 }
 PASS
-UPDATE_REBUILD_FLAG CVS "$TEST_ROOT/LOG_up_apr" "$APR_REPO.rb"
+UPDATE_REBUILD_FLAG SVN "$TEST_ROOT/LOG_up_apr" "$APR_REPO.rb"
 
 START "update $APU_NAME" "Updating $APU_NAME..."
-cd $APU_REPO && $CVS -f -q -z6 update -d -P > "$TEST_ROOT/LOG_up_apu" 2>&1
+cd $APU_REPO && $SVN update > "$TEST_ROOT/LOG_up_apu" 2>&1
 test $? = 0 || {
     FAIL_LOG "$TEST_ROOT/LOG_up_apu"
     FAIL
 }
 PASS
-UPDATE_REBUILD_FLAG CVS "$TEST_ROOT/LOG_up_apu" "$APU_REPO.rb"
+UPDATE_REBUILD_FLAG SVN "$TEST_ROOT/LOG_up_apu" "$APU_REPO.rb"
 
 START "update $HTTPD_NAME" "Updating $HTTPD_NAME..."
 cd $HTTPD_REPO && $CVS -f -q -z6 update -d -P > "$TEST_ROOT/LOG_up_httpd" 2>&1
