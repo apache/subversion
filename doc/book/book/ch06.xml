@@ -475,14 +475,20 @@ collabnet = svn.collab.net
   <sect1 id="svn-ch-6-sect-2">
     <title>Properties</title>
 
-    <!-- ###TODO This is the way this chapter was laid out in the
-    outline. This pull from the handbook doesn't really follow that,
-    so we need to decide what to do here.
-    
-         1. General use (pset, pget, plist, pdel, pedit)
-         2. EOL translation
-         3. Keyword substitution
-         4. Other special keywords (executable, mime-type, ignore) -->
+    <para>
+    <!-- ### cmpilato todo: come back to this, and use this layout:
+
+         - Introduction to properties (what, and more important, why?) 
+         - Revision properties (xref chapter 5)
+         - Node properties
+         - Manipulating properties (pset, pget, plist, pdel, pedit)
+         - Special properties
+             - svn:eol-style
+             - svn:keywords
+             - svn:mimetype
+             - svn:ignore
+             - svn:executable
+    -->
 
     <para>Subversion allows you to attach arbitrary
       <quote>metadata</quote> to files and directories.  We refer to
