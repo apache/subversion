@@ -95,11 +95,7 @@ sub read_from_process
   my ($status, @output) = &safe_read_from_pipe(@_);
   if ($status)
     {
-      print STDERR "$0: @_ failed with this output:\n", join("\n", @output),
-                   "\n",
-                   "Press return to quit and clean up svn working directory: ";
-      <STDIN>;
-      exit 1;
+      die "$0: @_ failed with this output:\n", join("\n", @output), "\n";
     }
   else
     {
