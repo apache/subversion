@@ -74,9 +74,9 @@ static svn_error_t * log_receiver(void *baton,
            "<S:date>%s</S:date>" DEBUG_CR
            "<D:comment>%s</D:comment>" DEBUG_CR,
            rev,
-           apr_xml_quote_string(pool, author, 0),
-           apr_xml_quote_string(pool, date, 0),
-           apr_xml_quote_string(pool, msg, 0));
+           apr_xml_quote_string(pool, (author ? author : ""), 0),
+           apr_xml_quote_string(pool, (date ? date : ""), 0),
+           apr_xml_quote_string(pool, (msg ? msg : ""), 0));
 
   if (changed_paths)
     {
@@ -254,22 +254,37 @@ dav_error * dav_svn__log_report(const dav_resource *resource,
                             &lrb,
                             resource->pool);
 
+  if (serr)
+    {
+      /* ### We've definitely generated some content into the output
+         ### filter, which means that we cannot return an error here.
+         ### In the future, mod_dav may specify a way to signal an
+         ### error even after the response stream has begun. 
+         ### 
+         ### So for now, we "return" the error by invoking the
+         ### log_receiver on the error message itself. 
+         ### 
+         ### http://subversion.tigris.org/issues/show_bug.cgi?id=816
+         ### describes a situation where this helps. */
+
+      /* Don't bother to check for error; we can't do anything with it
+         if we get one. */
+      log_receiver(&lrb,
+                   NULL,
+                   SVN_INVALID_REVNUM,
+                   "", "",
+                   serr->message,
+                   resource->pool);
+
+      serr = NULL;
+    }
+  
   /* End the log report. */
   send_xml(&lrb, "</S:log-report>" DEBUG_CR);
 
   /* flush the contents of the brigade */
   ap_fflush(output, lrb.bb);
 
-  if (serr)
-    {
-      /* NOTE: we've definitely generated some content into the output
-         filter, which means that we cannot return an error here.
-         Oh well... */
-      /* ### in the future, mod_dav may specify a way to signal an error
-         ### even after the response stream has begun */
-      return NULL;
-    }
-  
   return NULL;
 }
 
