@@ -720,6 +720,9 @@ svn_error_t *svn_wc_delete (const char *path,
    When the PATH has been added, then NOTIFY_FUNC will be called
    (if it is not NULL) with the NOTIFY_BATON and the path.
 
+   Return SVN_ERR_WC_NODE_KIND_CHANGE if PATH is both an unversioned
+   directory and a file that is scheduled for deletion or in state deleted.
+
    ### This function currently does double duty -- it is also
    ### responsible for "switching" a working copy directory over to a
    ### new copyfrom ancestry and scheduling it for addition.  Here is

@@ -763,11 +763,12 @@ svn_wc_add (const char *path,
           /* ### todo: At some point, we obviously don't want to block
              replacements where the node kind changes.  When this
              happens, svn_wc_revert() needs to learn how to revert
-             this situation.  */
+             this situation.  At present we are using a specific node-change
+             error so that clients can detect it. */
           return svn_error_createf 
-            (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL, pool,
+            (SVN_ERR_WC_NODE_KIND_CHANGE, 0, NULL, pool,
              "Could not replace '%s' with a node of a differing type"
-             " -- try committing your deletion first and then re-adding '%s'",
+             " -- commit the deletion, update the parent, and then add '%s'",
              path, path);
         }
       if (orig_entry->schedule == svn_wc_schedule_delete)

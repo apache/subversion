@@ -621,25 +621,20 @@ svn_wc_entry (svn_wc_entry_t **entry,
   if (kind == svn_node_dir)
     {
       SVN_ERR (svn_wc_check_wc (path, &is_wc, pool));
-      if (! is_wc)
-        return svn_error_createf
-          (SVN_ERR_WC_NOT_DIRECTORY, 0, NULL, pool,
-           "svn_wc_entry: %s is not a working copy directory", path);
+      if (is_wc)
+        {
+          SVN_ERR (svn_wc_entries_read (&entries, path, show_deleted, pool));
 
-
-      SVN_ERR (svn_wc_entries_read (&entries, path, show_deleted, pool));
-
-      *entry
-        = apr_hash_get (entries, SVN_WC_ENTRY_THIS_DIR, APR_HASH_KEY_STRING);
+          *entry = apr_hash_get (entries, SVN_WC_ENTRY_THIS_DIR,
+                                 APR_HASH_KEY_STRING);
+        }
     }
 
-  if (! *entry)
+  if (kind != svn_node_dir || ! is_wc)
     {
-      /* Maybe we're here because PATH is a directory, and we've
-         already tried and failed to retrieve its revision information
-         (we could have failed because PATH is under rev control as a
-         file, not a directory, i.e., the user rm'd the file and
-         created a dir there).
+      /* Maybe we're here because PATH is an unversioned directory, in
+         which case PATH may also be a file that is deleted or scheduled
+         for deletion.
          
          Or maybe we're here because PATH is a regular file.
          
@@ -656,7 +651,8 @@ svn_wc_entry (svn_wc_entry_t **entry,
       if (! is_wc)
         return svn_error_createf
           (SVN_ERR_WC_NOT_DIRECTORY, 0, NULL, pool,
-           "svn_wc_entry: %s is not a working copy directory", dir);
+           "svn_wc_entry: %s is not a working copy directory",
+           kind == svn_node_dir ? path : dir);
 
       /* ### it would be nice to avoid reading all of these. or maybe read
          ### them into a subpool and copy the one that we need up to the
