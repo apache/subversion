@@ -2,7 +2,7 @@ This is a python script which converts a CVS repository to an SVN Repository.
 
 It works by:
 
-  * using the rcsparse.py module to directly read the CVS repository
+  * using the rcsparse/ module to directly read the CVS repository
     and deduce commits,
 
   * creating a bunch of temporary scratchwork on disk,
@@ -10,13 +10,13 @@ It works by:
   * replaying all of the commits into a new SVN repository.
 
 Most of the script was written by Greg Stein (gstein@lyra.org) and
-Daniel Berlin (dberlin@dberlin.org).
+Daniel Berlin (dberlin@dberlin.org), with tweaks from Marko Macek
+(Marko.Macek@gmx.net).
 
 
-** As of September 2002, this script works reasonably well, with two
-   big caveats:
+** The script works reasonably well, with two big caveats:
 
-     - it doesn't yet detect branches or tags
+     - it doesn't do branches or tags very well yet
 
      - there may be tiny bugs in the way it deduces CVS commits.
 
@@ -28,12 +28,25 @@ Daniel Berlin (dberlin@dberlin.org).
 
 ** To use this script:
 
+     - Install RCS.  cvs2svn uses the "co" command.
+
      - Get at least python 2.0.
 
-     - Install the rcsparse.py module.  It's a part of the ViewCVS project.
+     - Make sure you have GNU 'sort' installed, or some other sort
+       program that handles large files other than by reading them
+       entirely into memory.
 
      - Install the python swig bindings, so that python can directly
        invoke libsvn_fs routines.  See the INSTALL file in
        subversion/bindings/swig/.
 
+     - If you're not running cvs2svn.py from this directory, then make
+       sure to install the rcsparse/ tree somewhere where Python can
+       find it.  Note that it's a CVS working copy, so we can update
+       it easily :-).  Except for `compat.py', that comes from
+       viewcvs/lib/compat.py.
 
+       Rcsparse is currently part of ViewCVS, see
+       http://viewcvs.sourceforge.net/.  Someday rcsparse will be an
+       independent Python project, and then we can depend on it in a
+       more normal way.
