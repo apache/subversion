@@ -116,7 +116,11 @@ const char *lines[] =
     "",
     "",
     "",
-    "Line 70: end of subst test data."
+    "$Author$Rev$.", /* Line 70-73 test places where '$' abuts a newline. */
+    ".$veR$Author$",
+    "$",
+    "$$",
+    "Line 74: end of subst test data."
   };
 
 
@@ -344,7 +348,8 @@ substitute_and_verify (const char *test_name,
       else  /* unexpand */
         {
           /* Lines 3 and 5 remain unchanged. */
-          expect[26 - 1] = "Line 26: Emptily expanded keyword $Rev$.";
+          expect[26 - 1] = 
+            "Line 26: Emptily expanded keyword $Rev$.";
           expect[29 - 1] =
             "Line 29: Valid $LastChangedRevision$, started expanded.";
           expect[30 - 1] =
@@ -423,10 +428,12 @@ substitute_and_verify (const char *test_name,
             apr_pstrcat (pool, "Line 38: ",
                          "Valid $Author: ", author, " $, started expanded.",
                          NULL);
+          expect[71 - 1] =
+            apr_pstrcat (pool, ".$veR$Author: ", author, " $", NULL);
         }
       else  /* unexpand */
         {
-          /* Lines 8 and 9 remain unchanged. */
+          /* Lines 8, 9, and 71 remain unchanged. */
           expect[37 - 1] =
             "Line 37: Valid $LastChangedBy$, started expanded.";
           expect[38 - 1] =
@@ -465,7 +472,8 @@ substitute_and_verify (const char *test_name,
         }
     }
 
-  /* Handle line 48 specially, as it contains two valid keywords. */
+  /* Handle lines 48, 49, and 70 specially, as they contains two valid
+     keywords. */
   if (rev && author)
     {
       if (expand)
@@ -481,8 +489,10 @@ substitute_and_verify (const char *test_name,
                          "One keyword, one not, back to back: "
                          "$Author: ", author, " $Rev$.",
                          NULL);
+          expect[70 - 1] =
+            apr_pstrcat (pool, "$Author: ", author, " $Rev$.", NULL);
         }
-      /* Else Lines 48 and 49 remain unchanged. */
+      /* Else Lines 48, 49, and 70 remain unchanged. */
     }
   else if (rev && (! author))
     {
@@ -498,9 +508,10 @@ substitute_and_verify (const char *test_name,
                          "One keyword, one not, back to back: "
                          "$Author$Rev: ", rev, " $.",
                          NULL);
-
+          expect[70 - 1] = 
+            apr_pstrcat (pool, "$Author$Rev: ", rev, " $.", NULL);
         }
-      /* Else Lines 48 and 49 remain unchanged. */
+      /* Else Lines 48, 49, and 70 remain unchanged. */
     }
   else if ((! rev) && author)
     {
@@ -516,10 +527,13 @@ substitute_and_verify (const char *test_name,
                          "One keyword, one not, back to back: "
                          "$Author: ", author, " $Rev$.",
                          NULL);
+          expect[70 - 1] =
+            apr_pstrcat (pool, "$Author: ", author, " $Rev$.", NULL);
         }
-      /* Else Lines 48 and 49 remain unchanged. */
+      /* Else Lines 48, 49, and 70 remain unchanged. */
     }
-  /* Else neither rev nor author, so Lines 48 and 49 remain unchanged. */
+  /* Else neither rev nor author, so Lines 48, 49, and 70 remain
+     unchanged. */
 
   /* Handle line 24 specially, as it contains two valid keywords. */
   if (date && author)
