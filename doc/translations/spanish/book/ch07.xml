@@ -48,26 +48,30 @@
   <!-- *** SECTION 1:  RUNTIME CONFIGURATION AREA                      *** -->
   <!-- ******************************************************************* -->
   <sect1 id="svn-ch-7-sect-1">
-    <title>Runtime Configuration Area</title>
+    <title>Área de configuración de parámetros de ejecución</title>
     
-    <para>Subversion provides many optional behaviors that can be
-      controlled by the user.  Many of these options are of the kind
-      that a user would wish to apply to all Subversion operations.
-      So, rather than forcing users to remember command-line arguments
-      for specifying these options, and to use them for each and every
-      operation they perform, Subversion uses configuration files,
-      segregated into a Subversion configuration area.</para>
+    <para>Subversion proporciona muchos comportamientos opcionales
+      que pueden ser controlados por el usuario. Muchas de estas
+      opciones son del tipo que el usuario querría aplicar a todas
+      las operaciones de Subversion.  Así que en lugar de obligar a
+      los usuarios a recordar parámetros de línea de comando para
+      especificar estas opciones, y usarlos para todas y cada una
+      de las operaciones que realicen, Subversion usa ficheros
+      de configuración, segregados en un área de configuraciónde
+      Subversion.</para>
 
-    <para>The Subversion <firstterm>configuration area</firstterm> is
-      a two-tiered hierarchy of option names and their values.
-      Usually, this boils down to a special directory that contains
-      <firstterm>configuration files</firstterm> (the first tier),
-      which are just text files in standard INI format (with
-      <quote>sections</quote> providing the second tier).  These files
-      can be easily edited using your favorite text editor (such as
-      Emacs or vi), and contain directives read by the client to
-      determine which of several optional behaviors the user
-      prefers.</para>
+    <para>El <firstterm>área de configuración</firstterm> de
+      Subversion es una jerarquía de dos capas de nombres de opciones
+      y sus respectivos valores. Normalmente, esto se reduce a
+      un directorio especial que contiene <firstterm>ficheros
+      de configuración</firstterm> (la primera capa), que son
+      simplemente ficheros de texto en un formato INI estándar
+      (con <quote>secciones</quote>, las cuales forman la segunda
+      capa).  Estos ficheros pueden ser modificados fácilmente
+      usando su editor de texto favorito (como Emacs o vi), y
+      contienen directivas leídas por el cliente para determinar
+      qué comportamiento opcional, de varios a elegir, prefiere
+      el usuario.</para>
 
     <!-- ***************************************************************** -->
     <sect2 id="svn-ch-7-sect-1.1">
