@@ -47,7 +47,6 @@ AC_ARG_ENABLE(subdir-config,
 
 if test "$enable_subdir_config" = "yes"; then
   APR_SUBDIR_CONFIG(apr)
-  APR_SUBDIR_CONFIG(neon, --with-expat="$abs_srcdir/expat-lite/libexpat.la")
 fi
 
 
@@ -60,18 +59,6 @@ if test -f "$abs_builddir/apr/APRVARS"; then
   LIBS="$LIBS $EXTRA_LIBS"
 else
   AC_MSG_ERROR([Must configure APR before Subversion.])
-fi
-
-dnl Get extra libraries for neon --------------------
-
-if test -f "$abs_builddir/neon/neon-config"; then
-  AC_MSG_CHECKING([for any extra libraries neon needs])
-  # this is not perfect since it will pick up extra -L flags too,
-  # but that shouldn't do any real damage.
-  NEON_LIBS=`$SHELL $abs_builddir/neon/neon-config --libs | sed -e "s/-lneon//g"`
-  AC_MSG_RESULT([$NEON_LIBS])
-else
-  AC_MSG_ERROR([Must configure neon before Subversion.])
 fi
 
 dnl Set include dir and module library lists for Makefiles -----------------
@@ -109,6 +96,25 @@ AC_PROG_LN_S
 dnl Check for libtool -- we'll definitely need it for all our shared libs!
 echo "configuring libtool now"
 AC_PROG_LIBTOOL
+
+dnl Configure neon --------------------------
+
+if test "$enable_subdir_config" = "yes"; then
+  # neon (as of 0.15) defaults to not building shared libs, so 
+  # tell it to do whatever we're doing.
+  if test "$enable_shared" = "yes"; then
+     args="--enable-shared"
+  else
+     args="--disable-shared"
+  fi
+  APR_SUBDIR_CONFIG(neon, $args --with-expat="$abs_srcdir/expat-lite/libexpat.la")
+
+  AC_MSG_CHECKING([for any extra libraries neon needs])
+  # this is not perfect since it will pick up extra -L flags too,
+  # but that shouldn't do any real damage.
+  NEON_LIBS=`$SHELL $abs_builddir/neon/neon-config --libs | sed -e "s/-lneon//g"`
+  AC_MSG_RESULT([$NEON_LIBS])
+fi
 
 dnl find Apache
 SVN_FIND_APACHE
