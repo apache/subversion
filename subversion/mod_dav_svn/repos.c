@@ -1467,7 +1467,7 @@ static const char *get_parent_path(const char *path,
                                    apr_pool_t *pool)
 {
   apr_size_t len;
-  const char *parentpath, *basename;
+  const char *parentpath, *base_name;
   char *tmp = apr_pstrdup(pool, path);
 
   len = strlen(tmp);
@@ -1477,7 +1477,7 @@ static const char *get_parent_path(const char *path,
       /* Remove any trailing slash; else svn_path_split() asserts. */
       if (tmp[len-1] == '/')
         tmp[len-1] = '\0';      
-      svn_path_split(tmp, &parentpath, &basename, pool);
+      svn_path_split(tmp, &parentpath, &base_name, pool);
 
       /* ### preserve the slash on the parent?? */
       return parentpath;
