@@ -28,10 +28,12 @@ Candidate changes:
     Old votes (for just r8490,r8794):
       +1: cmpilato, kfogel, jszakmeister
 
-  * r8839,r8932
+  * r8839,r8932,r8950
     Finish Issue #1756 -- import doesn't handle svn:eol-style or svn:keywords
     Justification:  Allows malformed data into the repository.
     Votes:
+      +0: julianfoad
+    Old votes (for r8839,r8932):
       +1: kfogel, sussman
       -1: julianfoad ("repairs" line endings: mail thread "Issue #1756 ...")
     Old votes (for r8839 alone):
