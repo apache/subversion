@@ -107,6 +107,7 @@ VI.  Advanced Topics
 
    D. Vendor branches (strategies and svn_load_dirs.pl)
 
+   E. Fine-grained access control (demonstrating how to use our hook scripts)
 
 
 VII.  Developer Information
