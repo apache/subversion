@@ -318,7 +318,7 @@ END
         <emphasis>only</emphasis> be presented to the server if the
         server requests them.
 
-          <footnote><para>Again, a common mistake is to misconfigure a
+         <footnote><para>Again, a common mistake is to misconfigure a
            server so that it never issues an authentication challenge.
            When users pass <option>--username</option> and
            <option>--password</option> options to the client,
@@ -326,15 +326,16 @@ END
            revisions still appear to have been committed
            anonymously!</para></footnote>
         
-        Typically, these options are used when:
-      </para>
+        Typically, these options are used when:</para>
 
       <itemizedlist>
-        <listitem><para>the user wants to authenticate as a
-            different user than her system login name, or</para>
+        <listitem>
+          <para>the user wants to authenticate as a different user
+            than her system login name, or</para>
         </listitem>
-        <listitem><para>a script wants to authenticate without
-            using cached credentials.</para>
+        <listitem>
+          <para>a script wants to authenticate without using cached
+            credentials.</para>
         </listitem>
       </itemizedlist>
           
@@ -844,8 +845,7 @@ joessh = $JOESSH /opt/alternate/ssh -p 29934
       </footnote>
       While an Apache-Subversion server has more features than
       <command>svnserve</command>, it's also a bit more difficult
-      to set up.  With flexibility often comes more complexity.
-    </para>
+      to set up.  With flexibility often comes more complexity.</para>
 
     <para>Much of the following discussion includes references to
       Apache configuration directives.  While some examples are given

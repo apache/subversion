@@ -250,16 +250,16 @@ svn_error: &hellip; The specified activity does not exist.
         <para>The error you are seeing means that the dynamic
           linker/loader can't find the plugins to load.  This normally
           happens when you build Subversion with shared libraries,
-          then attempt to run it without first running 'make install'.
-          Another possible cause is that you ran make install, but the
-          libraries were installed in a location that the dynamic
-          linker/loader doesn't recognize.  Under Linux, you can allow
-          the linker/loader to find the libraries by adding the
-          library directory to <filename>/etc/ld.so.conf</filename>
-          and running ldconfig.  If you don't wish to do this, or you
-          don't have root access, you can also specify the library
-          directory in the LD_LIBRARY_PATH environment
-          variable.</para>
+          then attempt to run it without first running <command>make
+          install</command>.  Another possible cause is that you ran
+          make install, but the libraries were installed in a location
+          that the dynamic linker/loader doesn't recognize.  Under
+          Linux, you can allow the linker/loader to find the libraries
+          by adding the library directory to
+          <filename>/etc/ld.so.conf</filename> and running ldconfig.
+          If you don't wish to do this, or you don't have root access,
+          you can also specify the library directory in the
+          LD_LIBRARY_PATH environment variable.</para>
         </sect3>
 
 
@@ -278,8 +278,8 @@ svn_error: &hellip; The specified activity does not exist.
         
         <para>Making the <command>svn revert</command> command require
           an explicit target&mdash;even if that target is just
-          '.'&mdash;is one way of accomplishing that.  This
-          requirement (as well as requiring you to supply the
+          <quote>.</quote>&mdash;is one way of accomplishing that.
+          This requirement (as well as requiring you to supply the
           <option>--recursive</option> flag if you want that behavior)
           is intended to make you really think about what you're
           doing, because once your files are reverted, your local
@@ -288,9 +288,9 @@ svn_error: &hellip; The specified activity does not exist.
 
 
       <sect3 id="svn-ap-b-sect-1.2.10">
-        <title>When I start Apache, mod_dav_svn complains about a "bad
-          database version", that it found db-3.X, rather than
-          db-4.X.</title>
+        <title>When I start Apache, mod_dav_svn complains about a
+          <quote>bad database version</quote>, that it found db-3.X,
+          rather than db-4.X.</title>
 
         <para>Your apr-util linked against DB-3, and svn linked
           against DB-4.  Unfortunately, the DB symbols aren't
@@ -349,8 +349,8 @@ Function not implemented
 
 
       <sect3 id="svn-ap-b-sect-1.2.12">
-        <title>Why does log say "(no author)" for files committed
-          or imported via Apache (ra_dav)?</title>
+        <title>Why does log say <quote>(no author)</quote> for files
+          committed or imported via Apache (ra_dav)?</title>
 
         <para>If you allow anonymous write access to the repository
           via Apache, the Apache server never challenges the client
@@ -412,8 +412,8 @@ rev 24:&nbsp; (no author) | 2003-07-29 19:28:35 +0200 (Tue, 29 Jul 2003)
 
         <para>It means your httpd.conf is misconfigured.  Usually this
           error happens when you've defined the Subversion virtual
-          "location" to exist within two different scopes at the same
-          time.</para>
+          <quote>location</quote> to exist within two different scopes
+          at the same time.</para>
 
         <para>For example, if you've exported a repository as
           <literal>&lt;Location /www/foo&gt;</literal>, but you've
@@ -437,8 +437,9 @@ rev 24:&nbsp; (no author) | 2003-07-29 19:28:35 +0200 (Tue, 29 Jul 2003)
 
       
       <sect3 id="svn-ap-b-sect-1.2.16">
-        <title>I'm trying to look at an old version of my file, but svn
-          says something about "path not found".</title>
+        <title>I'm trying to look at an old version of my file, but
+          svn says something about <quote>path not
+          found</quote>.</title>
 
         <para>A nice feature of Subversion is that the repository
           understands copies and renames, and preserves the historical
@@ -446,9 +447,9 @@ rev 24:&nbsp; (no author) | 2003-07-29 19:28:35 +0200 (Tue, 29 Jul 2003)
           <filename>/trunk</filename> to
           <filename>/branches/mybranch</filename>, then the repository
           understands that every file in the branch has a
-          "predecessor" in the trunk.  Running <command>svn log
-          --verbose</command> will show you the historical copy, so
-          you can see the rename:</para>
+          <quote>predecessor</quote> in the trunk.  Running
+          <command>svn log --verbose</command> will show you the
+          historical copy, so you can see the rename:</para>
 
 <screen>
 r7932 | joe | 2003-12-03 17:54:02 -0600 (Wed, 03 Dec 2003) | 1 line
