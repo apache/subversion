@@ -547,16 +547,20 @@ svn_cstring_split (const char *input,
 
   while (1)
     {
-      if ((*e == sep_char) || (*e == '\0'))
+      if (chop_whitespace && (isspace (*b)))
         {
-          const char *b2 = b, *e2 = e;
+          b++;
+
+          if (e < b)
+            e = b;
+        }
+      else if ((*e == sep_char) || (*e == '\0'))
+        {
+          const char *e2 = e;
           
           if (chop_whitespace)
             {
-              while (isspace (*b2))
-                b2++;
-
-              if (e2 != b2)
+              if (e2 > b)
                 {
                   while (isspace (*(--e2)))
                     ;
@@ -565,7 +569,7 @@ svn_cstring_split (const char *input,
             }
 
           *((char **) (apr_array_push (substrings)))
-            = apr_pstrmemdup (pool, b2, e2 - b2);
+            = apr_pstrmemdup (pool, b, e2 - b);
 
           b = ++e;
         }
@@ -574,6 +578,7 @@ svn_cstring_split (const char *input,
 
       if (one_last_time)
         break;
+
       if (*e == '\0')
         one_last_time = TRUE;
     }
