@@ -18,7 +18,7 @@ echo "Checking out ${TEST_DIR_1}."
 ${SVN_PROG} checkout                                      \
       -d ${TEST_DIR_1}                                    \
       --xml-file ../../tests-common/xml/co1-inline.xml    \
-      --version 1                                         \
+      --revision 1                                         \
       --ancestor-path ${ANCESTOR_PATH}
 
 ### Copy the pristine checked-out tree, so we can test updates later.
@@ -52,7 +52,7 @@ ${SVN_PROG} delete --force ${TEST_DIR_1}/A/D/H/omega
 ### Commit.
 echo "Committing changes in ${TEST_DIR_1}."
 (cd ${TEST_DIR_1};                                               \
- ../${SVN_PROG} commit --xml-file ../${COMMIT_RESULTFILE_1} --version 2;   \
+ ../${SVN_PROG} commit --xml-file ../${COMMIT_RESULTFILE_1} --revision 2;   \
  cd ..)
 
 ### Show the results of the commit to the user.
@@ -62,7 +62,7 @@ echo "Committing changes in ${TEST_DIR_1}."
 echo "Updating ${TEST_DIR_2} from changes in ${TEST_DIR_1}."
 (cd ${TEST_DIR_2};                                           \
  ../${SVN_PROG} update --xml-file ../${COMMIT_RESULTFILE_1}  \
-                --version 2;                                 \
+                --revision 2;                                 \
  cd ..)
 
 ### Diff the two trees.  The only differences should be in timestamps
