@@ -645,7 +645,7 @@ static svn_error_t *
 do_begin_textdelta (svn_delta__digger_t *digger)
 {
   svn_error_t *err;
-  svn_txdelta_window_handler_t *window_consumer;
+  svn_txdelta_window_handler_t *window_consumer = NULL;
   void *consumer_baton = NULL;
 
   if (digger->walker->apply_textdelta == NULL)
