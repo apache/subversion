@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#  copy_tests.py:  testing the many uses of 'svn cp'
+#  copy_tests.py:  testing the many uses of 'svn cp' and 'svn mv'
 #
 #  Subversion is a tool for revision control. 
 #  See http://subversion.tigris.org for more information.
@@ -200,6 +200,76 @@ def basic_copy_and_move_files(sbox):
                                                 None, None,
                                                 wc_dir)
 
+def mv_unversioned_file(sbox):
+  "Test fix for 'svn mv unversioned_file some_dst'"
+
+  ##################### Here is the bug Lars saw ######################
+  #
+  # From: Lars Kellogg-Stedman <lars@larsshack.org>
+  # Subject:  svn mv segfault
+  # To: dev@subversion.tigris.org
+  # Date: Tue, 29 Jan 2002 15:40:00 -0500
+  # 
+  # Here's a new one.  And this one's reliable :).
+  # 
+  # I tried performing the following operation:
+  # 
+  #    $ svn mv src/config.h.in .
+  # 
+  # But src/config.h.in wasn't in the repository.  This should have
+  # generated an error, right around line 141 in libsvn_wc/copy.c.  But
+  # instead it's segfaulting.
+  # 
+  # This is in copy_file_administratively(), in the following section:
+  # 
+  #    SVN_ERR (svn_wc_entry (&src_entry, src_path, pool));
+  #    if ((src_entry->schedule == svn_wc_schedule_add)
+  #        || (! src_entry->url))
+  #      return svn_error_createf
+  #        (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL, pool,
+  #        "Not allowed to copy or move '%s' -- it's not in the
+  # repository yet.\n"
+  #         "Try committing first.",
+  #         src_path->data);
+  # 
+  # The first thing svn_wc_entry() does is set src_entry to NULL, so upon
+  # our return from svn_wc_entry(), when we try to look at
+  # src_entry->schedule, we're attempting to dereference a NULL pointer.
+  # Ouch!
+  # 
+  # It looks like the real failure may be in svn_wc_entry(), here:
+  # 
+  #        /* ### it would be nice to avoid reading all of these. or maybe read
+  #           ### them into a subpool and copy the one that we need up to the
+  #           ### specified pool. */
+  #        SVN_ERR (svn_wc_entries_read (&entries, dir, pool));
+  # 
+  #        *entry = apr_hash_get (entries, basename->data, basename->len);
+  # 
+  # Since the file isn't under revision control, that hash lookup is
+  # probably going to fail, so src_entry never gets set to anything but
+  # NULL.
+  # 
+  # Cheers,
+  # 
+  # -- Lars
+
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
+
+  unver_path = os.path.join(wc_dir, 'A', 'unversioned')
+  dst_path = os.path.join(wc_dir, 'A', 'hypothetical-dest')
+  svntest.main.file_append(unver_path, "an unversioned file")
+  output, errput = svntest.main.run_svn(1, 'mv', unver_path, dst_path)
+
+  rm = re.compile ("not under revision control")
+  for line in errput:
+    match = rm.search(line)
+    if match:
+      return 0
+  return 1
 
 
 
@@ -210,6 +280,7 @@ def basic_copy_and_move_files(sbox):
 # list all tests here, starting with None:
 test_list = [ None,
               basic_copy_and_move_files,
+              mv_unversioned_file,
              ]
 
 if __name__ == '__main__':
