@@ -378,7 +378,7 @@ svn_client_log (svn_client_auth_baton_t *auth_baton,
                 svn_revnum_t start,
                 svn_revnum_t end,
                 svn_boolean_t discover_changed_paths,
-                svn_ra_log_message_receiver_t receiver,
+                svn_log_message_receiver_t receiver,
                 void *receiver_baton,
                 apr_pool_t *pool);
 

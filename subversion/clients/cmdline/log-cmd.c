@@ -73,16 +73,18 @@ log_message_receiver (void *baton,
       }
   }
 
-  printf ("--------------------------------------------------------\n");
-  printf ("rev %lu: %s   %s, %d bytes\n", rev, author, dbuf, strlen (msg));
-  printf ("\n");
+#define SEP_STRING \
+  "------------------------------------------------------------------------\n"
+
+  printf (SEP_STRING);
+  printf ("rev %lu: %s   %s  (size: %d bytes)\n\n",
+          rev, author, dbuf, strlen (msg));
   printf ("%s\n", msg);
 
   if (last_call)
-    printf ("--------------------------------------------------------\n");
+    printf (SEP_STRING);
 
-  /* ### todo We don't use baton at all, since we can do everything
-     with printf's. */
+  /* We don't use the baton at all, since using printf() for output. */
 
   return SVN_NO_ERROR;
 }
