@@ -323,46 +323,6 @@ new_node_record (void **node_baton,
   nb->do_skip = (ary_prefix_match (pb->prefixes, node_path)
                  ? pb->do_exclude : (! pb->do_exclude));
 
-  /* See if this node was copied from dropped source.  If it was,
-     we have to drop this node, too.  
-
-     However, there is one special case we'll handle.  If the node is
-     a file, and this was a copy-and-modify operation, then the
-     dumpfile should contain the new contents of the file.  In this
-     scenario, we'll just do an add without history using the new
-     contents.  */
-   if ((copyfrom_path != NULL) && (! nb->do_skip))
-    {
-      const char *kind, *tcl;
-      kind = apr_hash_get (headers, SVN_REPOS_DUMPFILE_NODE_KIND,
-                           APR_HASH_KEY_STRING);
-      tcl = apr_hash_get (headers, SVN_REPOS_DUMPFILE_TEXT_CONTENT_LENGTH,
-                          APR_HASH_KEY_STRING);
-
-      /* If there is a Text-content-length header, and the kind is
-         "file", we just fallback to an add without history. */
-      if (tcl && (strcmp (kind, "file") == 0))
-        {
-          apr_hash_set (headers, SVN_REPOS_DUMPFILE_NODE_COPYFROM_PATH,
-                        APR_HASH_KEY_STRING, NULL);
-          apr_hash_set (headers, SVN_REPOS_DUMPFILE_NODE_COPYFROM_REV,
-                        APR_HASH_KEY_STRING, NULL);
-          copyfrom_path = NULL;
-        }
-      /* Else, this is either a directory or a file whose contents we
-         don't have readily available.  */
-      else
-        {
-          /* If the copy source is excluded, we can't do the right
-             thing with this copy. */
-          if (ary_prefix_match (pb->prefixes, copyfrom_path) 
-              ? pb->do_exclude : (! pb->do_exclude))
-            return svn_error_createf 
-              (SVN_ERR_INCOMPLETE_DATA, 0,
-               _("Invalid copy source path '%s'"), copyfrom_path);
-        }
-    }
-
   /* If we're skipping the node, take note of path, discarding the
      rest.  */
   if (nb->do_skip)
@@ -375,6 +335,45 @@ new_node_record (void **node_baton,
     }
   else
     {
+      /* Test if this node was copied from dropped source. */
+      if (copyfrom_path &&
+          (ary_prefix_match (pb->prefixes, copyfrom_path) 
+           ? pb->do_exclude : (! pb->do_exclude)))
+        {
+          /* This node was copied from dropped source.
+             We have a problem, since we did not want to drop this node too.
+
+             However, there is one special case we'll handle.  If the node is
+             a file, and this was a copy-and-modify operation, then the
+             dumpfile should contain the new contents of the file.  In this
+             scenario, we'll just do an add without history using the new
+             contents.  */
+          const char *kind, *tcl;
+          kind = apr_hash_get (headers, SVN_REPOS_DUMPFILE_NODE_KIND,
+                               APR_HASH_KEY_STRING);
+          tcl = apr_hash_get (headers, SVN_REPOS_DUMPFILE_TEXT_CONTENT_LENGTH,
+                              APR_HASH_KEY_STRING);
+
+          /* If there is a Text-content-length header, and the kind is
+             "file", we just fallback to an add without history. */
+          if (tcl && (strcmp (kind, "file") == 0))
+            {
+              apr_hash_set (headers, SVN_REPOS_DUMPFILE_NODE_COPYFROM_PATH,
+                            APR_HASH_KEY_STRING, NULL);
+              apr_hash_set (headers, SVN_REPOS_DUMPFILE_NODE_COPYFROM_REV,
+                            APR_HASH_KEY_STRING, NULL);
+              copyfrom_path = NULL;
+            }
+          /* Else, this is either a directory or a file whose contents we
+             don't have readily available.  */
+          else
+            {
+              return svn_error_createf 
+                (SVN_ERR_INCOMPLETE_DATA, 0,
+                 _("Invalid copy source path '%s'"), copyfrom_path);
+            }
+        }
+
       nb->has_props = FALSE;
       nb->has_text  = FALSE;
       nb->remove_props = FALSE;
