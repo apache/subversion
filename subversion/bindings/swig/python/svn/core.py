@@ -111,7 +111,7 @@ def secs_from_timestr(svn_datetime, pool):
   return aprtime / 1000000
 
 
-
+import sys
 # ============================================================================
 # Reusable code segment. This code is duplicated in the several locations.
 # THIS IS THE MASTER COPY.
@@ -165,3 +165,5 @@ else:
 
     return string.join(map(escape_shell_arg, argv), " ")
 # ============================================================================
+del sys # don't export
+
