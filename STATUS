@@ -86,3 +86,9 @@ Candidate changes:
     Votes:
       +1: maxb
 
+  * r10422
+    Python bindings build fix. Make the compile flags more like distutils uses,
+    avoiding large amounts of compiler warnings.
+    Votes:
+      +1: maxb
+
