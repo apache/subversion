@@ -106,7 +106,7 @@ read_header_block (svn_stream_t *stream,
 /* Read CONTENT_LENGTH bytes from STREAM.  Look for encoded properties
    at the start of the content block, and make multiple calls to
    PARSE_FNS->set_*_property on RECORD_BATON (depending on the value
-   of IS_NODE.)  PACK_FUNC is used to decode the property values.
+   of IS_NODE.)
 
    If IS_NODE is true and content exists beyond the properties, push
    the remaining content at a write-stream obtained from
@@ -120,9 +120,6 @@ parse_content_block (svn_stream_t *stream,
                      apr_size_t content_length,
                      const svn_repos_parser_fns_t *parse_fns,
                      void *record_baton,
-                     void *(*pack_func) (size_t len,
-                                         const char *val,
-                                         apr_pool_t *pool),
                      svn_boolean_t is_node,
                      char *buffer,
                      apr_size_t buflen,
@@ -135,8 +132,6 @@ parse_content_block (svn_stream_t *stream,
      variant of the hash-reading routine in libsvn_subr. */
   while (1)
     {
-      void *package;
-      svn_string_t *propstring;
       char *buf;  /* a pointer into the stringbuf's data */
 
       /* Read a key length line.  (Actually, it might be PROPS_END). */
@@ -154,7 +149,7 @@ parse_content_block (svn_stream_t *stream,
           char c;
           
           /* Get the length of the key */
-          size_t keylen = (size_t) atoi (buf + 2);
+          apr_size_t keylen = (apr_size_t) atoi (buf + 2);
 
           /* Now read that much into a buffer, + 1 byte for null terminator */
           keybuf = apr_pcalloc (subpool, keylen + 1);
@@ -163,7 +158,7 @@ parse_content_block (svn_stream_t *stream,
           content_length -= numread;
           if (numread != keylen)
             goto stream_ran_dry;
-          ((char *) keybuf)[keylen] = '\0';
+          keybuf[keylen] = '\0';
 
           /* Suck up extra newline after key data */
           numread = 1;
@@ -181,6 +176,8 @@ parse_content_block (svn_stream_t *stream,
 
           if ((buf[0] == 'V') && (buf[1] == ' '))
             {
+              svn_string_t propstring;
+
               /* Get the length of the value */
               int vallen = atoi (buf + 2);
 
@@ -202,19 +199,19 @@ parse_content_block (svn_stream_t *stream,
               if (c != '\n') 
                 goto stream_malformed;
 
-              /* Send the val data for packaging... */
-              package = (void *) (*pack_func) (vallen, valbuf, subpool);
-              propstring = (svn_string_t *) package;
+              /* Create final value string */
+              propstring.data = valbuf;
+              propstring.len = vallen;
 
               /* Now send the property pair to the vtable! */
               if (is_node)
                 SVN_ERR (parse_fns->set_node_property (record_baton,
                                                        keybuf,
-                                                       propstring));
+                                                       &propstring));
               else
                 SVN_ERR (parse_fns->set_revision_property (record_baton,
                                                            keybuf,
-                                                           propstring));
+                                                           &propstring));
             }
           else
             goto stream_malformed; /* didn't find expected 'V' line */
@@ -393,7 +390,6 @@ svn_repos_parse_dumpstream (svn_stream_t *stream,
                                             parse_fns,
                                             found_node ? 
                                               node_baton : current_rev_baton,
-                                            svn_pack_bytestring,
                                             found_node,
                                             buffer, buflen,
                                             found_node ?
@@ -433,8 +429,8 @@ svn_repos_parse_dumpstream (svn_stream_t *stream,
 
 struct parse_baton
 {
+  svn_repos_t *repos;
   svn_fs_t *fs;
-  
 };
 
 struct revision_baton
@@ -442,6 +438,9 @@ struct revision_baton
   svn_revnum_t rev;
 
   svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root;
+
+  const svn_string_t *datestamp;
 
   struct parse_baton *pb;
   apr_pool_t *pool;
@@ -489,14 +488,17 @@ make_node_baton (apr_hash_t *headers,
                            APR_HASH_KEY_STRING)))
     {
       if (! strcmp (val, "change"))
-        nb->kind = svn_node_action_change;
+        nb->action = svn_node_action_change;
       else if (! strcmp (val, "add"))
-        nb->kind = svn_node_action_add;
+        nb->action = svn_node_action_add;
       else if (! strcmp (val, "delete"))
-        nb->kind = svn_node_action_delete;
+        nb->action = svn_node_action_delete;
       else if (! strcmp (val, "replace"))
-        nb->kind = svn_node_action_replace;
+        nb->action = svn_node_action_replace;
     }
+
+  /* What's cool about this dump format is that the parser just
+     ignores any unrecognized headers.  :-)  */
 
   return nb;
 }
@@ -517,7 +519,6 @@ make_revision_baton (apr_hash_t *headers,
                            APR_HASH_KEY_STRING)))
     rb->rev = (svn_revnum_t) atoi (val);
 
-
   return rb;
 }
 
@@ -529,11 +530,17 @@ new_revision_record (void **revision_baton,
                      apr_pool_t *pool)
 {
   struct parse_baton *pb = parse_baton;
-  struct revision_baton *rb =  make_revision_baton (headers, pb, pool);
-
-  printf ("<<< Got new record for revision %" SVN_REVNUM_T_FMT "\n", rb->rev);
-
-  /* ### Create a new rb->txn someday, using pb->fs. */
+  struct revision_baton *rb;
+  svn_revnum_t head_rev;
+  
+  rb = make_revision_baton (headers, pb, pool);
+  
+  SVN_ERR (svn_fs_youngest_rev (&head_rev, pb->fs, pool));
+  SVN_ERR (svn_fs_begin_txn (&(rb->txn), pb->fs, head_rev, pool));
+  SVN_ERR (svn_fs_txn_root (&(rb->txn_root), rb->txn, pool));
+         
+  printf ("<<< Started new txn, based on original revision %"
+          SVN_REVNUM_T_FMT "\n", rb->rev);
 
   *revision_baton = rb;
   return SVN_NO_ERROR;
@@ -547,9 +554,49 @@ new_node_record (void **node_baton,
                  apr_pool_t *pool)
 {
   struct revision_baton *rb = revision_baton;
-  struct node_baton *nb =  make_node_baton (headers, rb, pool);
+  struct node_baton *nb = make_node_baton (headers, rb, pool);
 
-  printf ("   [[[ Got new record for node path : %s\n", nb->path);
+  switch (nb->action)
+    {
+    case svn_node_action_change:
+      {
+        printf ("     * editing path : %s ...", nb->path);
+        break;
+      }
+    case svn_node_action_delete:
+      {
+        printf ("     * deleting path : %s ...", nb->path);
+        SVN_ERR (svn_fs_delete_tree (rb->txn_root, nb->path, pool));
+        break;
+      }
+    case svn_node_action_add:
+      {
+        printf ("     * adding path : %s ...", nb->path);
+
+        if (nb->kind == svn_node_file)
+          SVN_ERR (svn_fs_make_file (rb->txn_root, nb->path, pool));
+        else if (nb->kind == svn_node_dir)
+          SVN_ERR (svn_fs_make_dir (rb->txn_root, nb->path, pool));
+        break;
+      }
+    case svn_node_action_replace:
+      {
+        printf ("     * replacing path : %s ...", nb->path);
+
+        SVN_ERR (svn_fs_delete_tree (rb->txn_root, nb->path, pool));
+
+        if (nb->kind == svn_node_file)
+          SVN_ERR (svn_fs_make_file (rb->txn_root, nb->path, pool));
+        else if (nb->kind == svn_node_dir)
+          SVN_ERR (svn_fs_make_dir (rb->txn_root, nb->path, pool));
+        break;
+      }
+    default:
+      return svn_error_createf (SVN_ERR_UNRECOGNIZED_STREAM_DATA,
+                                0, NULL, pool, 
+                                "Unrecognized node-action on node %s.",
+                                nb->path);
+    }
 
   *node_baton = nb;
   return SVN_NO_ERROR;
@@ -561,8 +608,15 @@ set_revision_property (void *baton,
                        const char *name,
                        const svn_string_t *value)
 {
-  printf (" Set revision property '%s' to '%s'\n", name, value->data);
+  struct revision_baton *rb = baton;
 
+  SVN_ERR (svn_fs_change_txn_prop (rb->txn, name, value, rb->pool));
+
+  /* Remember any datestamp that passes through!  (See comment in
+     close_revision() below.) */
+  if (! strcmp (name, SVN_PROP_REVISION_DATE))
+    rb->datestamp = svn_string_dup (value, rb->pool);
+  
   return SVN_NO_ERROR;
 }
 
@@ -571,8 +625,12 @@ set_node_property (void *baton,
                    const char *name,
                    const svn_string_t *value)
 {
-  printf ("        Set node property '%s' to '%s'\n", name, value->data);
+  struct node_baton *nb = baton;
+  struct revision_baton *rb = nb->rb;
 
+  SVN_ERR (svn_fs_change_node_prop (rb->txn_root, nb->path,
+                                    name, value, nb->pool));
+  
   return SVN_NO_ERROR;
 }
 
@@ -581,7 +639,6 @@ static svn_error_t *
 set_fulltext (svn_stream_t **stream,
               void *node_baton)
 {
-  printf ("        Sorry, not interested in node's fulltext.\n");
   *stream = NULL;
   return SVN_NO_ERROR;
 }
@@ -591,7 +648,7 @@ static svn_error_t *
 close_node (void *baton)
 {
   struct node_baton *nb = baton;
-  printf ("       End of node path : %s ]]]\n\n", nb->path);
+  printf (" done.\n", nb->path);
   return SVN_NO_ERROR;
 }
 
@@ -600,9 +657,30 @@ static svn_error_t *
 close_revision (void *baton)
 {
   struct revision_baton *rb = baton;
-  printf ("End of revision %" SVN_REVNUM_T_FMT " >>>\n\n", rb->rev);
+  struct parse_baton *pb = rb->pb;
+  const char *conflict_msg;
+  svn_revnum_t new_rev;
+  svn_error_t *err;
 
-  /* ### someday commit a txn here. */
+  err = svn_fs_commit_txn (&conflict_msg, &new_rev, rb->txn);
+
+  if (err)
+    {
+      svn_fs_abort_txn (rb->txn);
+      return svn_error_quick_wrap (err, conflict_msg);
+    }
+
+  /* Grrr, svn_fs_commit_txn rewrites the datestamp property to the
+     current clock-time.  We don't want that, we want to preserve
+     history exactly.  Good thing revision props aren't versioned! */
+  if (rb->datestamp)
+    SVN_ERR (svn_fs_change_rev_prop (pb->fs, new_rev,
+                                     SVN_PROP_REVISION_DATE, rb->datestamp,
+                                     rb->pool));
+
+  printf ("\n------- Committed new rev %" SVN_REVNUM_T_FMT
+          " (loaded from original rev %" SVN_REVNUM_T_FMT ") >>>\n\n",
+          new_rev, rb->rev);
 
   return SVN_NO_ERROR;
 }
@@ -626,6 +704,7 @@ get_parser (const svn_repos_parser_fns_t **parser_callbacks,
   parser->close_node = close_node;
   parser->close_revision = close_revision;
 
+  pb->repos = repos;
   pb->fs = svn_repos_fs (repos);
 
   *parser_callbacks = parser;
