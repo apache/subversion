@@ -1285,6 +1285,57 @@ merge (const char **conflict_p,
                                           s_ent_node,
                                           a_ent_node,
                                           trail));
+                          /* ### kff todo:
+                             As Jim mentioned on the phone, there's a
+                             history-tracking problem here.  After we
+                             do the merge into target, target has
+                             absorbed the history between ancestor and
+                             source, but there is no record of this
+                             absorbtion having happened.  For example,
+                             when generating a log message for target,
+                             you'd want to include all the changes
+                             between ancestor and source.
+
+                             In the general case, this is the same
+                             genetic merge problem that we'll have to
+                             deal with when we do full ancestry
+                             tracking.  (Hello, changesets.)
+
+                             But the most common particular case is
+                             that target is an immediate descendant of
+                             ancestor, and source is also a descendant
+                             of ancestor.  That is:
+
+                                svn_fs_id_distance (ancestor, target) == 1
+                                svn_fs_id_distance (ancestor, source) >= 1
+                             
+                             In such cases, we can record the
+                             successful merge for free, by making
+                             t_entry->name point to a node id that is
+                             a successor of s_entry->id.  This is safe
+                             because
+
+                                - all the history from time-zero to
+                                  ancestor is preserved
+
+                                - all the history from ancestor to
+                                  source is now preserved
+
+                                - the single historical step from
+                                  ancestor to target is preserved as a
+                                  single step from source to target,
+                                  which is an accurate reflection of
+                                  the post-merge situation anyway.
+
+                             Note that this trick should be used after
+                             *any* call to merge(), not just the
+                             recursive call above.  That means the
+                             transaction root should be re-ID'd after
+                             the merge.  (And come to think of it,
+                             we're already resetting the transaction's
+                             base root to source, so setting the txn's
+                             mutable root to a successor of source has
+                             a certain inevitability, n'est ce pas?) */
                         }
                       else  /* otherwise, they're not all dirs, so... */
                         {
@@ -1508,6 +1559,10 @@ txn_body_merge (void *baton, trail_t *trail)
                       ancestor_node,
                       trail));
       
+      /* ### kff todo:
+         See the comment immediately after the recursive call in
+         merge().  The same thing applies here. */
+
       SVN_ERR (svn_fs__set_txn_base (fs, txn_name, source_id, trail));
     }
   
