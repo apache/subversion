@@ -19,14 +19,11 @@
 #define SVN_LIBSVN_FS_FILE_H
 
 
-/* Set *CONTENTS_FN_P and *CONTENTS_BATON_P to a `read'-like function
-   which will return the contents of the node ID in FS.  Allocate the
-   baton in POOL.
+/* Set *CONTENTS to a readable generic stream which will return the
+   contents of the node ID in FS.  Allocate the stream in POOL.
 
-   *CONTENTS_FN_P and *CONTENTS_BATON_P become invalid when FS is
-   closed.  */
-svn_error_t *svn_fs__file_contents (svn_read_fn_t **contents_fn_p,
-				    void **contents_baton_p,
+   *CONTENTS becomes invalid when FS is closed.  */
+svn_error_t *svn_fs__file_contents (svn_read_fn_t **contents,
 				    svn_fs_t *fs,
 				    svn_fs_id_t *id,
 				    apr_pool_t *pool);

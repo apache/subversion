@@ -471,9 +471,6 @@ static svn_error_t *delta_file_props (struct context *c,
 static svn_error_t *send_text_delta (struct context *c,
 				     void *file_baton,
 				     svn_txdelta_stream_t *delta_stream);
-static svn_error_t *null_read_fn (void *baton,
-				  char *buffer, apr_size_t *len,
-				  apr_pool_t *pool);
 
 
 /* Make the appropriate edits on FILE_BATON to change its contents and
@@ -543,19 +540,6 @@ delta_file_props (struct context *c,
 
   return delta_proplists (c, ancestor_props, target_props,
 			  c->editor->change_file_prop, file_baton);
-}
-
-
-/* A read function representing the empty string/file.  */
-static svn_error_t *
-null_read_fn (void *baton,
-	      char *buffer,
-	      apr_size_t *len,
-	      apr_pool_t *pool)
-{
-  *len = 0;
-
-  return 0;
 }
 
 
@@ -700,27 +684,18 @@ svn_fs_file_delta (svn_txdelta_stream_t **stream,
 		   svn_fs_file_t *target_file,
 		   apr_pool_t *pool)
 {
-  svn_read_fn_t *source_read_fn, *target_read_fn;
-  void *source_read_baton, *target_read_baton;
+  svn_stream_t *source, *target;
   svn_txdelta_stream_t *delta_stream;
 
   /* Get read functions for the file contents.  */
   if (source_file)
-    SVN_ERR (svn_fs_file_contents (&source_read_fn, &source_read_baton,
-				   source_file, pool));
+    SVN_ERR (svn_fs_file_contents (&source, source_file, pool));
   else
-    {
-      source_read_fn = null_read_fn;
-      source_read_baton = 0;
-    }
-  SVN_ERR (svn_fs_file_contents (&target_read_fn, &target_read_baton,
-				 target_file, pool));
+    source = svn_stream_empty (pool);
+  SVN_ERR (svn_fs_file_contents (&target, target_file, pool));
 
   /* Create a delta stream that turns the ancestor into the target.  */
-  svn_txdelta (&delta_stream,
-               source_read_fn, source_read_baton,
-               target_read_fn, target_read_baton,
-               pool);
+  svn_txdelta (&delta_stream, source, target, pool);
 
   *stream = delta_stream;
   return 0;

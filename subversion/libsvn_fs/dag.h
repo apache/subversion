@@ -192,11 +192,10 @@ svn_error_t *svn_fs__dag_make_dir (dag_node_t **child_p,
 /* Files.  */
 
 
-/* Set *CONTENTS_FN_P and *CONTENTS_BATON_P to a `read'-like function
-   and baton which return the contents of FILE, as part of TRAIL.
-   Allocate the BATON in TRAIL->pool.  */
-svn_error_t *svn_fs__dag_get_contents (svn_read_fn_t **contents_fn_p,
-				       void **contents_baton_p,
+/* Set *CONTENTS to a readable generic stream which yields the
+   contents of FILE, as part of TRAIL.  Allocate the stream in
+   TRAIL->pool.  */
+svn_error_t *svn_fs__dag_get_contents (svn_stream_t **contents,
 				       dag_node_t *file,
 				       trail_t *trail);
 
