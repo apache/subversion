@@ -218,7 +218,7 @@ I.    BUILD REQUIREMENTS
           http://subversion.tigris.org/servlets/ProjectDownloadList
 
 
-      7.  Apache Web Server 2.0.45 or newer
+      7.  Apache Web Server 2.0.46 or newer
 
       The Apache HTTP server is required if you wish to offer your
       Subversion repository over the Internet. Building Subversion, the
@@ -617,7 +617,7 @@ II.   INSTALLATION
       and all the import libraries to <SVN>\db4-win32\lib. Again, the
       DLLs should be somewhere in your path.
 
-      To build the Apache module, you will also need the Apache 2.0.45
+      To build the Apache module, you will also need the Apache 2.0.46
       or later Win32 source. You can download it from here:
 
           http://httpd.apache.org/download.cgi
@@ -628,7 +628,7 @@ II.   INSTALLATION
       Walkthrough:
 
           Unzip the Apache source. Copy the Apache apr, apr-util, and
-          apr-iconv directories from the Apache httpd-2.0.45\srclib
+          apr-iconv directories from the Apache httpd-2.0.46\srclib
           directory to the top-level Subversion directory.
 
           Open the Apache.dsw file and build the Apache source. If you
@@ -655,13 +655,13 @@ II.   INSTALLATION
       C:\Subversion\src> ren neon-0.23.9 neon
       C:\Subversion\src> unzip ..\db-4.0.14-win32.zip
       C:\Subversion\src> cd ..
-      C:\Subversion> unzip httpd_2.0.45-win32-src.zip
-      C:\Subversion> xcopy /S httpd-2.0.45\srclib\apr src\apr
-      C:\Subversion> xcopy /S httpd-2.0.45\srclib\apr-util src\apr-util
-      C:\Subversion> xcopy /S httpd-2.0.45\srclib\apr-iconv src\apr-iconv
-      C:\Subversion> msdev httpd-2.0.45\apache.dsw /MAKE ALL
+      C:\Subversion> unzip httpd_2.0.46-win32-src.zip
+      C:\Subversion> xcopy /S httpd-2.0.46\srclib\apr src\apr
+      C:\Subversion> xcopy /S httpd-2.0.46\srclib\apr-util src\apr-util
+      C:\Subversion> xcopy /S httpd-2.0.46\srclib\apr-iconv src\apr-iconv
+      C:\Subversion> msdev httpd-2.0.46\apache.dsw /MAKE ALL
       C:\Subversion> cd src
-      C:\Subversion\src> python gen-make.py -t dsp --with-httpd=..\httpd-2.0.45
+      C:\Subversion\src> python gen-make.py -t dsp --with-httpd=..\httpd-2.0.46
       C:\Subversion\src> msdev subversion_msvc.dsw /MAKE __ALL__
 
 
