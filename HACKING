@@ -1590,9 +1590,9 @@ Stabilizing and maintaining releases
 Minor and major number releases go through a stabilization period
 before release, and remain in maintenance (bugfix) mode after release.
 To start the release process, we create an "A.B.x" branch based on the
-previous release, for example:
+latest trunk, for example:
 
-   $ svn cp http://svn.collab.net/repos/svn/tags/A.(B-1).C \
+   $ svn cp http://svn.collab.net/repos/svn/trunk \
             http://svn.collab.net/repos/svn/branches/A.B.x
 
 The stabilization period for a new A.B.0 release normally lasts four
