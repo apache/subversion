@@ -67,8 +67,9 @@
       retaining the basic ideas of CVS, but without the bugs and
       misfeatures.</para>
 
-    <para>In February 2000, they contacted Karl Fogel, the author of a
-      1999 book on CVS, and asked if he'd like to work on this new
+    <para>In February 2000, they contacted Karl Fogel, the author of
+      <citetitle>Open Source Development with CVS</citetitle>
+      (Coriolis, 1999), and asked if he'd like to work on this new
       project.  Coincidentally, at the time Karl was already
       discussing a design for a new version control system with his
       friend Jim Blandy.  In 1995 the two had started Cyclic Software,
