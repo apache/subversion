@@ -109,20 +109,25 @@ Each node in our generic trees have these fields:
 
 >>> To make a script run over ra_DAV instead of ra_local: 
 
-   * use global switch to python test scripts:  'dav'
+   * because repositories are still created on-the-fly (which httpd
+     must read), the client and server must still running on the
+     -same- machine.
 
-               ./basic_tests.py dav
-               ./basic_tests.py 3 dav
+   * use global switch to python test scripts:  '--url'
+
+               ./basic_tests.py --url http://localhost
+               ./basic_tests.py 3 --url http://newton.collab.net
 
      ASSUMPTIONS MADE BY THIS MODE:
 
        - an svn-aware httpd is running locally on port 80.
 
-       - httpd.conf maps /svn/repositories to the 'repositories'
-         subdirectory, right below these python tests.
+       - httpd.conf has a DAV Location '/repositories/current-repo'
+         that maps to the 'repositories/current-repo' symlink right
+         below these tests.
 
-       - httpd.conf maps /svn/tmp/repo to the 'local_tmp/repo'
-         directory that is temporarily created during a test run.
+       - httpd.conf has a DAV Location '/local_tmp/repos' that maps to
+         the master 'local_tmp/repos' right below these tests.
 
 
 ------------------------------------------------------------------
