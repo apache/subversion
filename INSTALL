@@ -592,19 +592,6 @@ II.   INSTALLATION
         gettext-tools-0.12.1.bin.woe32.zip, and
         libiconv-1.9.1.bin.woe32.zip from
         http://mirrors.kernel.org/gnu/gettext
-      * The latest version of apr-util (see Section I.1) must be told
-        where to find the Berkeley DB include files and libraries. You
-        can do this with the w32locatedb.pl script (located in the
-        "build" directory in the apr-util sources), which modifies
-        apr-util's header and DSP files. The instructions at the top of
-        the script file explain how to use the script.
-
-        If your copy of apr-util does not contain build\w32locatedb.pl,
-        you can download a recent version from here:
-
-            http://subversion.tigris.org/files/documents/15/8705/w32locatedb.pl
-
-        You will need Perl 5.8 to run this script.
       * A Subversion client binary from http://subversion.tigris.org/ to
         do the initial checkout of the Subversion source. See the section
         "Bootstrapping from a Zip or Installer File under Windows" above
@@ -683,9 +670,6 @@ II.   INSTALLATION
         SVN\zlib\static32\zlibstat.lib into SVN\zlib
       * Extract openssl into SVN\openssl-0.9.7d
       * Extract nasm into SVN\nasm and put it in your path
-      * Put the w32locatedb.pl script in
-        httpd-2.0.49\srclib\apr-util\build\w32locatedb.pl if it isn't already
-        there.
       * Make a directory SVN\gettext and unpack
         gettext-runtime-0.12.1.bin.woe32.zip,
         gettext-tools-0.12.1.bin.woe32.zip, and
@@ -731,8 +715,6 @@ II.   INSTALLATION
 
     Apache 2
 
-    C:>perl httpd-2.0.49\srclib\apr-util\build\w32locatedb.pl dll
-       src-%DIR%\db4-win32\include src-%DIR%\db4-win32\lib
     C:>msdev httpd-2.0.49\apache.dsw /MAKE "BuildBin - Win32 Release"
 
     Subversion

@@ -119,6 +119,9 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     # Find the installed SWIG version to adjust swig options
     self._find_swig()
 
+    # Run apr-util's w32locatedb.pl script
+    self._configure_apr_util()
+
     #Make some files for the installer so that we don't need to
     #require sed or some other command to do it
     ### GJS: don't do this right now
@@ -829,6 +832,18 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     finally:
       fp.close()
     return ''
+
+  def _configure_apr_util(self):
+    script_path = os.path.join(self.apr_util_path, "build", "w32locatedb.pl")
+    inc_path = os.path.join(self.bdb_path, "include")
+    lib_path = os.path.join(self.bdb_path, "lib")
+    cmdline = "perl %s dll %s %s" % (escape_shell_arg(script_path),
+                                     escape_shell_arg(inc_path),
+                                     escape_shell_arg(lib_path))
+    sys.stderr.write('Configuring apr-util library...\n%s\n' % cmdline)
+    if os.system(cmdline):
+      sys.stderr.write('WARNING: apr-util library was not configured'
+                       ' successfully\n')
 
 class ProjectItem:
   "A generic item class for holding sources info, config info, etc for a project"
