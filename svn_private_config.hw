@@ -28,9 +28,9 @@
 #define SVN_WIN32 1
 
 /* The version of Berkely DB we want */
-#define SVN_FS_WANT_DB_MAJOR	3
-#define SVN_FS_WANT_DB_MINOR	3
-#define SVN_FS_WANT_DB_PATCH	11
+#define SVN_FS_WANT_DB_MAJOR	4
+#define SVN_FS_WANT_DB_MINOR	0
+#define SVN_FS_WANT_DB_PATCH	14
 
 
 /* Paths to configuration files */
