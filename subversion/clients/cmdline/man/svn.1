@@ -1,7 +1,7 @@
 .\" You can view this file with:
 .\" nroff -man [filename]
 .\"
-.TH svn 1 "9 Oct 2001" "svn M4" "Subversion Command Line Tool"
+.TH svn 1 "7 Jan 2002" "svn M4" "Subversion Command Line Tool"
 .SH NAME
 svn \- Subversion command line tool
 .SH SYNOPSIS
@@ -201,21 +201,21 @@ Rename SOURCE to DEST, or move SOURCE(s) to DIRECTORY. Both source and dest
 can be specified either as a local file name, or as a URL in a possibly remote
 repository.
 .TP
-\fBpropdel\fP \fIname\fP [\fItargets\fP]
+\fBpropdel\fP \fIpropname\fP [\fItargets\fP]
 (Alias: pdel)
-Remove property \fIname\fP on files and directories.
+Remove property \fIpropname\fP on files and directories.
 .TP
-\fBpropget\fP
+\fBpropget\fP \fIpropname\fP [\fItargets\fP]
 (Alias: pget, pg)
-Not yet written. Find out, fill in, submit.
+Get the value of \fIpropname\fP on files and directories.
 .TP
-\fBproplist\fP
+\fBproplist\fP [\fItargets\fP]
 (Alias: plist, pl)
-Not yet written. Find out, fill in, submit.
+List all properties for given files and directories.
 .TP
-\fBpropset\fP \fIname\fP [\fIvalue\fP | \fI--valfile file\fP ] [\fItargets\fP]
+\fBpropset\fP \fIpropname\fP [\fIvalue\fP | \fI--valfile file\fP ] [\fItargets\fP]
 (Alias: pset, ps)
-Set property \fIname\fP to \fIvalue\fP on files and directories.
+Set property \fIpropname\fP to \fIvalue\fP on files and directories.
 .TP
 \fBrdiff\fP \fIURL1 URL2\fP
 Exactly the same as diff, but takes 2 URLs and requires no working copy.
@@ -223,7 +223,7 @@ Exactly the same as diff, but takes 2 URLs and requires no working copy.
 \fBexample:\fP svn rdiff http://svn.tigris.org/one http://svn.tigris.org/two
 .TP
 \fBrevert\fP [\fIfile\fP\|.\|.\|.]
-Not yet written. Find out, fill in, submit.
+Restore a pristine working copy version of file, undoing all local changes.
 .TP
 \fBstatus\fP [\fItargets\fP]
 (Alias: stat, st)
