@@ -274,7 +274,7 @@ cleanup_fs_apr (void *data)
      the default will simply abort().  */
   (*fs->warning) (fs->warning_baton, err);
 
-  svn_error_clear(err);
+  svn_error_clear (err);
 
   return SVN_ERR_FS_CLEANUP;
 }
@@ -589,7 +589,7 @@ svn_fs_open_berkeley (svn_fs_t *fs, const char *path)
   if (svn_err) goto error;
   svn_err = BDB_WRAP (fs, "opening 'uuids' table",
                      svn_fs__bdb_open_uuids_table (&fs->uuids,
-                                                     fs->env, FALSE));
+                                                   fs->env, FALSE));
   if (svn_err) goto error;
 
   return SVN_NO_ERROR;
