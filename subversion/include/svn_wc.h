@@ -213,7 +213,8 @@ svn_error_t *svn_wc_entry (svn_wc_entry_t **entry,
 
 
 /* Parse the `entries' file for PATH and return a hash ENTRIES, whose
-   keys are (const char *) entry names and values are (svn_wc_entry_t *). 
+   keys are (const char *) entry names and values are (svn_wc_entry_t
+   *).  Allocate ENTRIES, and its keys and values, in POOL.
    
    Entries that are in a 'deleted' state (and not scheduled for
    re-addition) are not returned in the hash, unless SHOW_DELETED is set.
@@ -599,15 +600,15 @@ svn_error_t *svn_wc_close_commit (void *baton,
                                   apr_pool_t *pool);
 
 
-/* This is a function of type svn_ra_get_wc_prop_t.  Return *VALUE for
-   property NAME on PATH.  */
+/* This is a function of type svn_ra_get_wc_prop_func_t.  Return
+   *VALUE for property NAME on PATH.  */
 svn_error_t *svn_wc_get_wc_prop (const char *path,
                                  const char *name,
                                  const svn_string_t **value,
                                  apr_pool_t *pool);
 
-/* This is a function of type svn_ra_set_wc_prop_t. Set property NAME
-   to VALUE on PATH.  */
+/* This is a function of type svn_ra_set_wc_prop_func_t. Set property
+   NAME to VALUE on PATH.  */
 svn_error_t *svn_wc_set_wc_prop (const char *path,
                                  const char *name,
                                  const svn_string_t *value,

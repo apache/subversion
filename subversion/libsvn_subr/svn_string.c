@@ -535,55 +535,42 @@ svn_string_compare_stringbuf (const svn_string_t *str1,
 
 /*** C string stuff. ***/
 
-apr_array_header_t *
-svn_cstring_split (const char *input,
-                   char sep_char,
+void
+svn_cstring_split (apr_array_header_t **array,
+                   const char *input,
+                   const char *sep_chars,
                    svn_boolean_t chop_whitespace,
                    apr_pool_t *pool)
 {
-  const char *b = input, *e = input;
-  svn_boolean_t one_last_time = (! *e);
-  apr_array_header_t *substrings = apr_array_make (pool, 1, sizeof (input));
+  char *last;
+  char *pats = apr_pstrdup (pool, input);
+  char *p = apr_strtok (pats, sep_chars, &last);
+  
+  if (! *array)
+    *array = apr_array_make (pool, 1, sizeof (input));
 
-  while (1)
+  while (p)
     {
-      if (chop_whitespace && (apr_isspace (*b)))
+      if (chop_whitespace)
         {
-          b++;
-
-          if (e < b)
-            e = b;
-        }
-      else if ((*e == sep_char) || (*e == '\0'))
-        {
-          const char *e2 = e;
+          while (apr_isspace (*p))
+            p++;
           
-          if (chop_whitespace)
-            {
-              if (e2 > b)
-                {
-                  while (apr_isspace (*(--e2)))
-                    ;
-                  e2++;
-                }
-            }
-
-          *((char **) (apr_array_push (substrings)))
-            = apr_pstrmemdup (pool, b, e2 - b);
-
-          b = ++e;
+          {
+            char *e = p + (strlen (p) - 1);
+            while ((e >= p) && (apr_isspace (*e)))
+              e--;
+            *(++e) = '\0';
+          }
         }
-      else
-        e++;
 
-      if (one_last_time)
-        break;
+      if (p[0] != '\0')
+        (*((const char **) apr_array_push (*array))) = p;
 
-      if (*e == '\0')
-        one_last_time = TRUE;
+      p = apr_strtok (NULL, sep_chars, &last);
     }
 
-  return substrings;
+  return;
 }
 
 

@@ -234,21 +234,27 @@ svn_boolean_t svn_string_compare_stringbuf (const svn_string_t *str1,
 
 /*** C strings. ***/
 
-/* Divide INPUT into substrings along SEP_CHAR boundaries, return an
- * array of copies of the substrings, all allocated in POOL.
+/* Divide INPUT into substrings along SEP_CHAR boundaries, return
+ * copies of the substrings in ARRAY, allocating the copies in POOL.
  *
- * No element of the array contains SEP_CHAR, though some elements
- * may be empty.  If there are N occurrences of SEP_CHAR in INPUT,
- * then return N+1 elements; thus, the minimum number of elements
- * returned is 1.
+ * If *ARRAY is null, allocate a new array in POOL; else append the
+ * substrings onto existing *ARRAY (in which case note that the copies
+ * are still allocated in POOL, though *ARRAY itself grows in its own
+ * pool).
+ *
+ * None of the elements added to the array contain any of the
+ * characters in SEP_CHARS, and none of the new elements are empty
+ * (thus, it is possible that there will be no elements added to the
+ * array, but an array of at least zero length is always returned).
  *
  * If CHOP_WHITESPACE is true, then remove leading and trailing
  * whitespace from the returned strings.
  */
-apr_array_header_t *svn_cstring_split (const char *input,
-                                       char sep_char,
-                                       svn_boolean_t chop_whitespace,
-                                       apr_pool_t *pool);
+void svn_cstring_split (apr_array_header_t **array,
+                        const char *input,
+                        const char *sep_chars,
+                        svn_boolean_t chop_whitespace,
+                        apr_pool_t *pool);
 
 
 
