@@ -536,19 +536,16 @@ svn_string_compare_stringbuf (const svn_string_t *str1,
 /*** C string stuff. ***/
 
 void
-svn_cstring_split (apr_array_header_t **array,
-                   const char *input,
-                   const char *sep_chars,
-                   svn_boolean_t chop_whitespace,
-                   apr_pool_t *pool)
+svn_cstring_split_append (apr_array_header_t *array,
+                          const char *input,
+                          const char *sep_chars,
+                          svn_boolean_t chop_whitespace,
+                          apr_pool_t *pool)
 {
   char *last;
   char *pats = apr_pstrdup (pool, input);
   char *p = apr_strtok (pats, sep_chars, &last);
   
-  if (! *array)
-    *array = apr_array_make (pool, 1, sizeof (input));
-
   while (p)
     {
       if (chop_whitespace)
@@ -565,12 +562,24 @@ svn_cstring_split (apr_array_header_t **array,
         }
 
       if (p[0] != '\0')
-        (*((const char **) apr_array_push (*array))) = p;
+        (*((const char **) apr_array_push (array))) = p;
 
       p = apr_strtok (NULL, sep_chars, &last);
     }
 
   return;
+}
+
+
+apr_array_header_t *
+svn_cstring_split (const char *input,
+                   const char *sep_chars,
+                   svn_boolean_t chop_whitespace,
+                   apr_pool_t *pool)
+{
+  apr_array_header_t *a = apr_array_make (pool, 1, sizeof (input));
+  svn_cstring_split_append (a, input, sep_chars, chop_whitespace, pool);
+  return a;
 }
 
 

@@ -51,10 +51,9 @@ handle_externals_description (const char *externals,
                               const char *path,
                               apr_pool_t *pool)
 {
-  apr_array_header_t *description_lines = NULL;
+  apr_array_header_t *description_lines
+    = svn_cstring_split (externals, "\n\r", TRUE, pool);
   int i;
-
-  svn_cstring_split (&description_lines, externals, "\n\r", TRUE, pool);
   
   for (i = 0; i < description_lines->nelts; i++)
     {

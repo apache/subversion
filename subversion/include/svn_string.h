@@ -234,27 +234,32 @@ svn_boolean_t svn_string_compare_stringbuf (const svn_string_t *str1,
 
 /*** C strings. ***/
 
-/* Divide INPUT into substrings along SEP_CHAR boundaries, return
- * copies of the substrings in ARRAY, allocating the copies in POOL.
- *
- * If *ARRAY is null, allocate a new array in POOL; else append the
- * substrings onto existing *ARRAY (in which case note that the copies
- * are still allocated in POOL, though *ARRAY itself grows in its own
- * pool).
+/* Divide INPUT into substrings along SEP_CHAR boundaries, return an
+ * array of copies of those substrings, allocating both the array and
+ * the copies in POOL.
  *
  * None of the elements added to the array contain any of the
  * characters in SEP_CHARS, and none of the new elements are empty
- * (thus, it is possible that there will be no elements added to the
- * array, but an array of at least zero length is always returned).
+ * (thus, it is possible that the returned array will have length
+ * zero).
  *
  * If CHOP_WHITESPACE is true, then remove leading and trailing
  * whitespace from the returned strings.
  */
-void svn_cstring_split (apr_array_header_t **array,
-                        const char *input,
-                        const char *sep_chars,
-                        svn_boolean_t chop_whitespace,
-                        apr_pool_t *pool);
+apr_array_header_t *svn_cstring_split (const char *input,
+                                       const char *sep_chars,
+                                       svn_boolean_t chop_whitespace,
+                                       apr_pool_t *pool);
+
+/* Like svn_cstring_split(), but append to existing ARRAY instead of
+ * creating a new one.  Allocate the copied substrings in POOL
+ * (i.e., caller decides whether or not to pass ARRAY->pool as POOL).
+ */
+void svn_cstring_split_append (apr_array_header_t *array,
+                               const char *input,
+                               const char *sep_chars,
+                               svn_boolean_t chop_whitespace,
+                               apr_pool_t *pool);
 
 
 
