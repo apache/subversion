@@ -64,6 +64,9 @@ typedef struct {
      scheme, host, or port).
 
      Example: the URI is "http://host/repos/file", this will be "/repos".
+
+     This always starts with "/", and if there are any components
+     beyond that, then it does not end with "/".
   */
   const char *root_path;
 
