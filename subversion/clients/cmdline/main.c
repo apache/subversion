@@ -130,7 +130,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "Put files and directories under revision control, scheduling\n"
     "them for addition to repository.  They will be added in next commit.\n"
     "usage: add PATH [PATH [PATH ... ]]\n",
-    {svn_cl__targets_opt, 'R', 'q'} },
+    {svn_cl__targets_opt, 'N', 'q'} },
 
   { "cat", svn_cl__cat, {0},
     "Output the content of specified files or URLs.\n"

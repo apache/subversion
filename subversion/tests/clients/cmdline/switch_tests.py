@@ -176,7 +176,7 @@ def commit_routine_switching(wc_dir, verify):
   svntest.main.file_append(Gpi_path, "banana")
   os.mkdir(Z_path)
   svntest.main.file_append(zeta_path, "This is the file 'zeta'.")
-  svntest.main.run_svn(None, 'add', '--recursive', Z_path)
+  svntest.main.run_svn(None, 'add', Z_path)
 
   # Try to commit.  We expect this to fail because, if all the
   # switching went as expected, A/B/pi and A/D/G/pi point to the

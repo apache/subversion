@@ -147,8 +147,8 @@ def nested_adds(sbox):
   svntest.main.file_append(upsilon_path, "This is the file 'upsilon'.")
   svntest.main.file_append(zeta_path, "This is the file 'zeta'.")
 
-  # Finally, let's try some recursive adds of our new files and directories
-  svntest.main.run_svn(None, 'add', '--recursive', X_path, Y_path, Z_path)
+  # Finally, let's try adding our new files and directories
+  svntest.main.run_svn(None, 'add', X_path, Y_path, Z_path)
     
   # Make sure the adds show up as such in status
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)

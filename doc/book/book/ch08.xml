@@ -411,8 +411,8 @@ $ svn checkout -r 1729:{2/17/02}
       schedules them for addition to the repository.  They will be
       uploaded and added to the repository on your next commit.  If
       you add something and change your mind before committing, you
-      can unschedule the file's addition using <command>svn
-        revert</command>.</para>
+      can unschedule the addition using <command>svn revert</command>.
+    </para>
 
     <variablelist>
       
@@ -447,8 +447,8 @@ $ svn checkout -r 1729:{2/17/02}
             </listitem>
 
             <listitem>
-              <para><option>--recursive</option> (The default
-                behavior is to not recurse).</para>
+              <para><option>--nonrecursive</option> (The default
+                behavior is to add recursively).</para>
             </listitem>
 
             <listitem>

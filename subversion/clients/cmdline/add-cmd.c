@@ -47,7 +47,6 @@ svn_cl__add (apr_getopt_t *os,
   svn_error_t *err;
   apr_array_header_t *targets;
   int i;
-  svn_boolean_t recursive = opt_state->recursive;
   apr_pool_t *subpool;
   svn_wc_notify_func_t notify_func = NULL;
   void *notify_baton = NULL;
@@ -70,8 +69,8 @@ svn_cl__add (apr_getopt_t *os,
     {
       const char *target = ((const char **) (targets->elts))[i];
 
-      err = svn_client_add (target, recursive, notify_func, 
-                            notify_baton, subpool);
+      err = svn_client_add (target, (! opt_state->nonrecursive),
+                            notify_func, notify_baton, subpool);
       if (err)
         {
           if (err->apr_err == SVN_ERR_ENTRY_EXISTS)
