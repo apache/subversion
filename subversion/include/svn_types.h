@@ -404,6 +404,29 @@ svn_boolean_t svn_mime_type_is_binary (const char *mime_type);
  */
 typedef svn_error_t *(*svn_cancel_func_t) (void *cancel_baton);
 
+
+
+/* @since New in 1.2 */
+
+/** A lock token object, for client & server to share.
+ *
+ * A lock token represents the exclusive right to add, delete, or
+ * modify a path.  A lock token is immutable.
+ *
+ * ### Note: in the current implementation, only files are lockable.
+ */
+typedef struct svn_lock_token_t
+{
+  const char *path;             /* the path this token applies to */
+  const char *uuid;             /* unique lock token identifier */
+  const char *owner;            /* the username which 'owns' the lock */
+  apr_time_t creation_date;     /* when lock was made */
+  apr_time_t expiration_date;   /* (optional) when lock will expire;
+                                   A value of 0 will never expire. */
+} svn_lock_token_t;
+
+
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

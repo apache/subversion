@@ -876,6 +876,46 @@ svn_error_t *svn_repos_fs_begin_txn_for_update (svn_fs_txn_t **txn_p,
 
 
 /** 
+ * @since New in 1.2. 
+ *
+ * Like @c svn_fs_lock(), but invoke the @a repos's pre- and post-lock
+ * hooks before and after the locking action.  Use @a pool for any
+ * necessary allocations.
+ *
+ * If the pre-lock hook or svn_fs_lock() fails, throw the original
+ * error to caller.  If an error occurs when running the post-lock
+ * hook, return the original error wrapped with
+ * SVN_ERR_REPOS_POST_LOCK_HOOK_FAILED.  If the caller sees this
+ * error, it knows that the lock succeeded anyway.
+ */
+svn_error_t *svn_repos_fs_lock (svn_fs_lock_token_t **token,
+                                svn_repos_t *repos,
+                                const char *path,
+                                svn_boolean_t force,
+                                long int timeout,
+                                apr_pool_t *pool);
+
+
+/** 
+ * @since New in 1.2. 
+ *
+ * Like @c svn_fs_unlock(), but invoke the @a repos's pre- and
+ * post-unlock hooks before and after the unlocking action.  Use @a
+ * pool for any necessary allocations.
+ *
+ * If the pre-unlock hook or svn_fs_unlock() fails, throw the original
+ * error to caller.  If an error occurs when running the post-unlock
+ * hook, return the original error wrapped with
+ * SVN_ERR_REPOS_POST_UNLOCK_HOOK_FAILED.  If the caller sees this
+ * error, it knows that the unlock succeeded anyway.
+ */
+svn_error_t *svn_repos_fs_unlock (svn_repos_t *repos,
+                                  svn_fs_lock_token_t *token,
+                                  svn_boolean_t force,
+                                  apr_pool_t *pool);
+
+
+/** 
  * @since New in 1.1. 
  *
  * Like @c svn_fs_change_rev_prop(), but invoke the @a repos's pre- and

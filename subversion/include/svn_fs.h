@@ -272,6 +272,52 @@ svn_error_t *svn_fs_hotcopy_berkeley (const char *src_path,
 /** @} */
 
 
+/** Filesystem Users.   (@since New in 1.2.)
+ * 
+ */
+
+/** An opaque object representing a user. */
+typedef struct svn_fs_user_t svn_fs_user_t;
+
+/**
+ * ### Note: this paves the way for future ACL stuff; someday a user
+ * object can contain information about group membership, and so on.
+ * Because it's an opaque type, we can easily add new fields and
+ * create new accessor and setter functions.
+ */
+
+/** Set @a *user to a new @c svn_fs_user_t object representing @a
+ *  username, allocated in @a pool.
+ */
+svn_error_t *svn_fs_create_user (svn_fs_user_t **user,
+                                 const char *username,
+                                 apr_pool_t *pool);
+
+
+/** Set @a *username to the name represented by @a user. */
+svn_error_t *svn_fs_get_username (const char **username,
+                                  svn_fs_user_t *user);
+
+
+/** Associate @a user with an open @a fs.  Presumably this represents
+ * a user that has already been authenticated by the caller.
+ *
+ * This function can be run multiple times on the same open
+ * filesystem, in order to change the filesystem user for different
+ * filesystem operations.  Pass a NULL value for @a user to
+ * disassociate the current user from the filesystem.
+ */
+svn_error_t *svn_fs_set_user (svn_fs_t *fs,
+                              svn_fs_user_t *user);
+
+
+/** Set @a *user to the current @a fs user. */
+svn_error_t *svn_fs_get_user (svn_fs_user_t **user,
+                              svn_fs_t *fs);
+
+
+
+
 /** Filesystem Nodes.
  *
  * In a Subversion filesystem, a `node' corresponds roughly to an
@@ -1361,6 +1407,81 @@ svn_error_t *svn_fs_set_uuid (svn_fs_t *fs,
 /* Non-historical properties.  */
 
 /* [[Yes, do tell.]] */
+
+
+
+/* Filesystem locks.  (@since New in 1.2.) */
+
+/** Lock @a path in @a fs, and set @a *token to a lock-token
+ * representing the new lock, allocated in @a pool.
+ *
+ * @a fs must have a user associated with it, else return @c
+ * SVN_ERR_FS_NO_USER.  Set the 'owner' field in @a *token to the
+ * username of the current @a fs user.
+ *
+ * If path is already locked by a different user, then return @c
+ * SVN_ERR_FS_PATH_LOCKED.  If @a force is true, then delete the lock
+ * on path (if any), and unconditionally create a new lock.
+ *
+ * If @a timeout is zero, then create a non-expiring lock.  Else, the
+ * lock will expire in @a timeout seconds after creation.
+ *
+ * If @a path is non-existent, that's fine.  The name is reserved, and
+ * a lock-token is returned.
+ *
+ * ### Note:  at this time, only files can be locked.
+ */
+svn_error_t *svn_fs_lock (svn_fs_lock_token_t **token,
+                          svn_fs_t *fs,
+                          const char *path,
+                          svn_boolean_t force,
+                          long int timeout,
+                          apr_pool_t *pool);
+
+
+/**  Remove lock on the path represented by @a token in @a fs.
+ *
+ * If the path is not locked, return @c SVN_ERR_FS_PATH_NOT_LOCKED.
+ *
+ * If the path is locked, but @a token doesn't match the lock, return
+ * @c SVN_ERR_FS_BAD_LOCK_TOKEN.
+ *
+ * If @a token matches the lock, but the @a fs user's username doesn't
+ * match @a token's owner, return @c SVN_ERR_FS_LOCK_OWNER_MISMATCH.
+ * Do not return this error if @a force is true; allow the unlock to
+ * succeed.
+ *
+ * Use @a pool for temporary allocations.
+ */
+svn_error_t *svn_fs_unlock (svn_fs_t *fs,
+                            svn_fs_lock_token_t *token,
+                            svn_boolean_t force,
+                            apr_pool_t *pool);
+
+
+/** If @a path is locked in @a fs, set @a *token to a lock-token
+ * describing the lock, allocated in @a pool.
+ *  
+ * If @a path is not locked, set @a *token to NULL.
+ */
+svn_error_t *svn_fs_get_lock (svn_fs_lock_token_t **token,
+                              svn_fs_t *fs,
+                              const char *path,
+                              apr_pool_t *pool);
+
+
+/** Set @a *locks to a hashtable which represents all locks on or
+ * below @a path in @a fs.
+ *
+ * The hashtable maps (const char *) absolute fs paths to (const
+ * svn_lock_token_t *) structures.  The hashtable -- and all keys and
+ * values -- are allocated in @a pool.
+ */
+svn_error_t *svn_fs_get_locks (apr_hash_t **locks,
+                               svn_fs_t *fs,
+                               const char *path,
+                               apr_pool_t *pool);
+
 
 #ifdef __cplusplus
 }
