@@ -16,7 +16,7 @@ Blanket commit access:
          brane   Branko Cibej <brane@xbc.nu>
            joe   Joe Orton <joe@light.plus.com>
        ghudson   Greg Hudson <ghudson@mit.edu>
-          fitz   Brian Fitzpatrick <fitz@red-bean.com>
+          fitz   Brian W. Fitzpatrick <fitz@red-bean.com>
         daniel   Daniel Stenberg <daniel@haxx.se>
       cmpilato   C. Michael Pilato <cmpilato@collab.net>
          kevin   Kevin Pilch-Bisson <kevin@pilchie.homeip.net>
@@ -39,6 +39,8 @@ Blanket commit access:
   jszakmeister   John Szakmeister <john@szakmeister.net>
       dionisos   Erik Huelsmann <e.huelsmann@gmx.net>
         breser   Ben Reser <ben@reser.org>
+           djh   D.J. Heap <dj@shadyvale.net>
+          maxb   Max Bowsher <maxb@ukf.net>
 
 Commit access for specific areas:
 
@@ -65,13 +67,11 @@ Commit access for specific areas:
      gthompson   Glenn A. Thompson <gthompson@cdr.net>       (fs/db branch)
            kon   Kalle Olavi Niemitalo <kon@iki.fi>          (Emacs Lisp)
        patrick   Patrick Mayweg <mayweg@qint.de>             (Java bindings)
-           djh   D.J. Heap <dj@shadyvale.net>                (Win32 build)
           rey4   Russell Yanofsky <rey4@columbia.edu>        (bindings)
          clkao   Chia-liang Kao <clkao@clkao.org>            (perl bindings)
     jrepenning   Jack Repenning <jrepenning@collab.net>      (tools/dev)
       sergeyli   Sergey A. Lipnevich <sergey@optimaltec.com> (neon-0.24 port)
       lonestar   Martin MAURER <martin.maurer@email.de>      (svnshow)
-          maxb   Max Bowsher <maxb@ukf.net>                  (cvs2svn)
        shlomif   Shlomi Fish <shlomif@vipe.technion.ac.il>   (svn-push)
 
 Committers who have asked to be listed as dormant:
