@@ -116,8 +116,7 @@ import_file (const svn_delta_editor_t *editor,
                                        pool));
   if (properties)
     {
-      for (hi = apr_hash_first (pool, properties);
-           hi != NULL; hi = apr_hash_next (hi))
+      for (hi = apr_hash_first (pool, properties); hi; hi = apr_hash_next (hi))
         {
           const void *propname;
           void *propvalue;
@@ -185,15 +184,15 @@ import_dir (const svn_delta_editor_t *editor,
 
   SVN_ERR (svn_io_get_dirents (&dirents, path, pool));
 
-  for (hi = apr_hash_first (pool, dirents);
-       hi;
-       svn_pool_clear (subpool), hi = apr_hash_next (hi))
+  for (hi = apr_hash_first (pool, dirents); hi; hi = apr_hash_next (hi))
     {
       const char *this_path, *this_edit_path, *abs_path;
       const svn_node_kind_t *filetype;
       const char *filename;
       const void *key;
       void *val;
+      
+      svn_pool_clear (subpool);
 
       apr_hash_this (hi, &key, NULL, &val);
 
