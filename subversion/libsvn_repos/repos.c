@@ -65,6 +65,13 @@ svn_repos_svnserve_conf (svn_repos_t *repos, apr_pool_t *pool)
 
 
 const char *
+svn_repos_passwd (svn_repos_t *repos, apr_pool_t *pool)
+{
+  return svn_path_join (repos->conf_path, SVN_REPOS__CONF_PASSWD, pool);
+}
+
+
+const char *
 svn_repos_lock_dir (svn_repos_t *repos, apr_pool_t *pool)
 {
   return apr_pstrdup (pool, repos->lock_path);
@@ -813,19 +820,7 @@ create_conf (svn_repos_t *repos, apr_pool_t *pool)
       APR_EOL_STR
       "### the file's location is relative to the conf directory."
       APR_EOL_STR
-      "### The format of the password database is similar to this file."
-      APR_EOL_STR
-      "### It contains one section labelled [users]. The name and"
-      APR_EOL_STR
-      "### password for each user follow, one account per line. The"
-      APR_EOL_STR
-      "### format is"
-      APR_EOL_STR
-      "###    USERNAME = PASSWORD"
-      APR_EOL_STR
-      "### Please note that both the user name and password are case"
-      APR_EOL_STR
-      "### sensitive. There is no default for the password file."
+      "### Uncomment the line below to use the default password file."
       APR_EOL_STR
       "# password-db = passwd"
       APR_EOL_STR
@@ -844,6 +839,30 @@ create_conf (svn_repos_t *repos, apr_pool_t *pool)
                                    svnserve_conf_contents, pool),
                "Creating svnserve.conf file");
   }
+
+  {
+    static const char * const passwd_contents =
+      "### This file is an example password file for svnserve."
+      APR_EOL_STR
+      "### Its format is similar to that of svnserve.conf. As shown in the"
+      APR_EOL_STR
+      "### example below it contains one section labelled [users]."
+      APR_EOL_STR
+      "### The name and password for each user follow, one account per line."
+      APR_EOL_STR
+      APR_EOL_STR
+      "# [users]"
+      APR_EOL_STR
+      "# harry = harryssecret"
+      APR_EOL_STR
+      "# sally = sallyssecret"
+      APR_EOL_STR;
+
+    SVN_ERR_W (svn_io_file_create (svn_repos_passwd (repos, pool),
+                                   passwd_contents, pool),
+               "Creating passwd file");
+  }
+
 
   return SVN_NO_ERROR;
 }
