@@ -2,7 +2,7 @@
 
 <p>
 
-<!-- Table of Contents -->
+<![CDATA[ Table of Contents ]]>
 <ol>
 <li><a href="#why">Why does this project exist?</a></li>
 <li><a href="#collab">Is Subversion proprietary?  I heard that it
@@ -42,13 +42,13 @@
     about Subversion.  Where can I get more information?</a></li>
 </ol>
 
-<!-- ========================================================= -->
+<![CDATA[=========================================================]]>
 
 <p>
 <hr>
 <p>
 
-<!-- ----------------------------------------------------------- -->
+<![CDATA[-----------------------------------------------------------]]>
 
 <h2><a name="why">Why does this project exist?</a></h2>
 
@@ -56,7 +56,7 @@
 revision control system that is very similar to CVS, but fixes many
 things that are broken.  See our front page.</p>
 
-<!-- ----------------------------------------------------------- -->
+<![CDATA[-----------------------------------------------------------]]>
 
 <h2><a name="collab">Is Subversion proprietary?  I heard that it
 belongs to CollabNet.</a></h2>
@@ -72,7 +72,7 @@ Software Guidelines</a>.  In other words, you are free to download,
 modify, and redistribute Subversion as you please; no permission from
 CollabNet or anyone else is required.</p>
 
-<!-- ----------------------------------------------------------- -->
+<![CDATA[-----------------------------------------------------------]]>
 
 <h2><a name="stable">Is Subversion stable enough for me to use for my
 own projects?</a></h2>
@@ -97,7 +97,7 @@ shipping conversion utilities.</p>
 <p>So, as long as you're willing to take those risks, then go right ahead
 and use Subversion.</p>
 
-<!-- ----------------------------------------------------------- -->
+<![CDATA[-----------------------------------------------------------]]>
 
 <h2><a name="portability">What operating systems does Subversion run
     on?</a></h2>
@@ -119,7 +119,7 @@ it's known not to work due to shared-memory segment problems).  In
 practice, it's difficult to get the Subversion repository running on
 non-Unix platforms; if you succeed, we'd like to hear about it.</p>
 
-<!-- ----------------------------------------------------------- -->
+<![CDATA[-----------------------------------------------------------]]>
 
 <h2><a name="filesystem">What's all this about a new filesystem?  Is
 it like ext2?</a></h2>
@@ -134,7 +134,7 @@ is like writing against other filesystem APIs.  The main difference is
 that this particular filesystem doesn't lose data when written to; old
 versions of files and directories are saved.</p>
 
-<!-- ----------------------------------------------------------- -->
+<![CDATA[-----------------------------------------------------------]]>
 
 <h2><a name="apache-extension">I heard that Subversion is an Apache
 extension?</a></h2>
@@ -147,7 +147,7 @@ repository.  For more information about how Subversion uses WebDAV as
 its network protocol, see our <a
 href="http://subversion.tigris.org/servlets/ProjectDocumentList">docs.</a></p>
 
-<!-- ----------------------------------------------------------- -->
+<![CDATA[-----------------------------------------------------------]]>
 
 <h2><a name="need-apache">Does this mean I have to set up Apache to
 use Subversion?</a></h2>
@@ -159,7 +159,7 @@ use Subversion?</a></h2>
 server, please see <a
 href="http://subversion.tigris.org/server_setup.html">Server Setup</a>.</p>
 
-<!-- ----------------------------------------------------------- -->
+<![CDATA[-----------------------------------------------------------]]>
 
 <h2><a name="feature-x">Why don't you do X, just like SCM system Y?</a></h2>
 
@@ -167,7 +167,7 @@ href="http://subversion.tigris.org/server_setup.html">Server Setup</a>.</p>
 attempting to imitate all the best features of every SCM system out
 there.  We're trying to replace CVS.  See the first question.</p>
 
-<!-- ----------------------------------------------------------- -->
+<![CDATA[-----------------------------------------------------------]]>
 
 <h2><a name="release">When's the next release?</a></h2>
 
@@ -175,7 +175,7 @@ there.  We're trying to replace CVS.  See the first question.</p>
 href="http://subversion.tigris.org/project_status.html">
 http://subversion.tigris.org/project_status.html</a>.</p>
 
-<!-- ----------------------------------------------------------- -->
+<![CDATA[-----------------------------------------------------------]]>
 
 <h2>I just built the distribution binary, and when I try to check out
 Subversion, I get an error about an "Unrecognized URL scheme."  What's up
@@ -200,7 +200,7 @@ ldconfig.  If you don't wish to do this, or you don't have root access, you
 can also specify the library directory in the LD_LIBRARY_PATH environment
 variable.</p>
 
-<!-- ----------------------------------------------------------- -->
+<![CDATA[-----------------------------------------------------------]]>
 
 <h2><a name="repository">How do I create a repository?  How do I
 import data into it?</a></h2>
@@ -211,7 +211,7 @@ http://svn.collab.net/repos/svn/trunk/README</a>;  specifically, look
 at section IV, the "Quickstart Guide".</p>
 
 
-<!-- ----------------------------------------------------------- -->
+<![CDATA[-----------------------------------------------------------]]>
 
 <h2><a name="db-recover">I'm getting errors finding or opening a repository,
     but I know my repository URL is correct.  What's wrong?</a></h2> 
@@ -258,7 +258,7 @@ typically your Apache process.</p>
 at all.  We're working on it, and volunteers are welcome :-).
 </p>
 
-<!-- ----------------------------------------------------------- -->
+<![CDATA[-----------------------------------------------------------]]>
 
 <h2>I'm getting strange errors in my httpd error log, and Subversion
 operations aren't working.</h2>
@@ -277,7 +277,7 @@ maintenance.  However, until we get all the bugs worked out, the above
 will sometimes be necessary.
 </p>
 
-<!-- ----------------------------------------------------------- -->
+<![CDATA[-----------------------------------------------------------]]>
 
 <h2>When I run `<tt>configure</tt>', I get errors about
 <tt>subs-1.sed&nbsp;line&nbsp;38:&nbsp;Unterminated&nbsp;`s'&nbsp;command</tt>.
@@ -291,7 +291,7 @@ sure the <tt>apr/</tt> and <tt>apr-util/</tt> that you're
 building with are completely up-to-date, and try again.
 </p>
 
-<!-- ----------------------------------------------------------- -->
+<![CDATA[-----------------------------------------------------------]]>
  
 <h2>I'm having trouble building Subversion under Windows with MSVC++ 6.0.
 <a name="windows-msvc-build"> What should I do?</a></h2>
@@ -301,7 +301,7 @@ Probably you just need to get the latest platform SDK.  The one that
 ships with VC++ 6.0 is not recent enough.
 </p>
 
-<!-- ----------------------------------------------------------- -->
+<![CDATA[-----------------------------------------------------------]]>
 
 <h2>I'm running Subversion under windows and I can create a repository
 fine, but <a name="windows-repository">I get errors trying to import
@@ -320,7 +320,7 @@ d:
 svn import file:///some/path/to/repos/on/d/drive e:\file\to\be\imported
 </pre>
 
-<!-- ----------------------------------------------------------- -->
+<![CDATA[-----------------------------------------------------------]]>
 
 <h2><a name="proxy">What if I'm behind a proxy?</a></h2>
 
@@ -362,7 +362,7 @@ as on port 80.  Try:</p>
 
 <p>and maybe the proxy will let you through.</p>
 
-<!-- ----------------------------------------------------------- -->
+<![CDATA[-----------------------------------------------------------]]>
 
 <h2><a name="globalrev">Why does the entire repository share the 
     same revision number? I want each of my projects to have their
@@ -385,14 +385,14 @@ change of a given code base.  There are other more complicated ways to
 get a much better picture of a code-base's rate of change.
 </p>
 
-<!-- ----------------------------------------------------------- -->
+<![CDATA[-----------------------------------------------------------]]>
 
 <h2><a name="bikeshed">What's a 'bikeshed'?</a></h2>
 
 <p>See Poul-Henning Kamp's post to freebsd-hackers: <a href="http://www.freebsd.org/doc/en_US.ISO8859-1/books/faq/misc.html#BIKESHED-PAINTING">http://www.freebsd.org/doc/en_US.ISO8859-1/books/faq/misc.html#BIKESHED-PAINTING</a>.
 </p>
 
-<!-- ----------------------------------------------------------- -->
+<![CDATA[-----------------------------------------------------------]]>
 
 <h2>I have other problems or questions about Subversion.  Where can I get
 more<a name="more-information"> information?</a></h2>
