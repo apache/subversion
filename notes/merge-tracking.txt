@@ -119,8 +119,8 @@ apply a patch that changes "1\n2\n3" to "one\nTwo\nthree", and the
 target file has no matching lines at all.
 
 A smarter system (like Clearcase) would remember that the previous
-merge had happened, and specifically remember that the lines "one" and
+merge had happened, and specifically notice that the lines "one" and
 "three" are the results of that previous merge.  Therefore, it would
 ask the human only to deal with the "Two" versus "two-point-five"
-conflict; the earliest changes ("1\n2\n3" to "one\ntwo\nthree") would
+conflict; the earlier changes ("1\n2\n3" to "one\ntwo\nthree") would
 already be accounted for.
