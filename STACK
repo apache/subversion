@@ -10,25 +10,28 @@ short-term tasks to it, if that's helpful.
 ------------------------------------------------------------------------
 
 Ben & Karl todo:
-   - (working) make sure textual merging & conflict resolution all works
-     correctly, just as it does with properties.
-
-   - (working) once it works, add textual tests to svn-test2.sh
 
    - clean up the interface in libsvn_client.  make it more canonical.
+
+   - trace editor:  trace commits.
+
+Ben todo:
+
+   - update-after-editor: isn't printing `G' for prop merges.  isn't
+     printing `C' for either textual or property conflicts.  fix this.
+     (is this still true??)
+
+   - start implementing the generic ra library -- just a system for
+     loading the "real" ra-plugin libraries.
 
    - make a new mini-crawler (lots of shared code with adm_crawler.c)
      which reports "version differences" to an editor.  this will be
      used to communicate the working copy's state to the repository
      *before* receiving an update.
 
-   - trace editor:  trace commits.
-
-Ben todo:
-   - update-after-editor: isn't printing `G' for prop merges.  isn't
-     printing `C' for either textual or property conflicts.  fix this.
 
 Karl todo:
+
    - Propagate changes down into libsvn_client.  Currently, the client
      usually takes a `targets' list and iterates over it, invoking
      some libsvn_client routine each time.  There are cases where the
@@ -46,6 +49,7 @@ Karl todo:
      about with Ben, change everyone around to use it (chore, whoa).
 
 Ben and Karl (longer term):
+
    - xml dtd, for both xml deltas and wc formats
 
    - for milestone 3: TREE DELTAS.  Quake before them.  This problem
@@ -55,6 +59,7 @@ Ben and Karl (longer term):
      Just a tip of the iceberg.
 
 Greg:
+
    - mod_dav_svn:
       - finish repository hooks (waiting on FS a bit)
 	defer mkcol/copy/move/delete.
