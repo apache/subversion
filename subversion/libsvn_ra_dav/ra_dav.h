@@ -199,8 +199,14 @@ svn_error_t *svn_ra_dav__do_check_path(
 #define SVN_RA_DAV__PROP_CREATOR_DISPLAYNAME "DAV:creator-displayname"
 #define SVN_RA_DAV__PROP_GETCONTENTLENGTH "DAV:getcontentlength"
 
-#define SVN_RA_DAV__PROP_BASELINE_RELPATH \
+/* ### REMOVE ME SOMEDAY:  Here for backward compatibility */
+#define SVN_RA_DAV__PROP_BASELINE_RELPATH_OLD \
     SVN_PROP_PREFIX "baseline-relative-path"
+
+#define SVN_RA_DAV__PROP_BASELINE_RELPATH \
+    SVN_DAV_PROP_NS_DAV "baseline-relative-path"
+
+
 
 typedef struct {
   /* what is the URL for this resource */
@@ -357,7 +363,8 @@ enum {
   /* SVN elements */
   ELEM_add_directory,
   ELEM_add_file,
-  ELEM_baseline_relpath,
+  ELEM_baseline_relpath, 
+  ELEM_baseline_relpath_old,    /* ### REMOVE ME someday. */
   ELEM_deleted_path,  /* used in log reports */
   ELEM_replaced_path,  /* used in log reports */
   ELEM_added_path,    /* used in log reports */
