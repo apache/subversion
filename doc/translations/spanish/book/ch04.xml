@@ -193,9 +193,8 @@ A  bigwc/branches/
 Checked out revision 340.
 </screen>
 
-      <para>Making a copy is now simply a matter of passing two
-        working-copy paths to the <command>svn copy</command>
-        command:</para>
+      <para>Realizar ahora una copia es cuestión de pasar dos
+        rutas locales al comando <command>svn copy</command>:</para>
 
 <screen>
 $ cd bigwc
@@ -204,20 +203,21 @@ $ svn status
 A  +   branches/my-calc-branch
 </screen>
 
-      <para>In this case, the <command>svn copy</command> command
-        recursively copies the <filename>trunk</filename> working
-        directory to a new working directory,
-        <filename>branches/my-calc-branch</filename>.  As you can see
-        from the <command>svn status</command> command, the new
-        directory is now scheduled for addition to the repository.
-        But also notice the <quote>+</quote> sign next to the letter
-        A.  This indicates that the scheduled addition is a
-        <emphasis>copy</emphasis> of something, not something new.
-        When you commit your changes, Subversion will create
-        <filename>/calc/branches/my-calc-branch</filename> in the
-        repository by copying <filename>/calc/trunk</filename>, rather
-        than resending all of the working copy data over the
-        network:</para>
+      <para>En este caso, el comando <command>svn copy</command>
+        copia recursivamente el directorio
+        <filename>trunk</filename> en un nuevo directorio,
+        <filename>branches/my-calc-branch</filename>.  Tal y como
+        puede ver por el comando <command>svn status</command>,
+        el nuevo directorio está ahora a la espera de ser añadido
+        al repositorio. Pero fíjese en el signo <quote>+</quote>
+        tras la letra A.  Esto indica que la adición pendiente
+        es una <emphasis>copia</emphasis> de algo, no algo nuevo.
+        Cuando envíe sus cambios al repositorio, Subversion creará
+        <filename>/calc/branches/my-calc-branch</filename>
+        en el repositorio como una copia de
+        <filename>/calc/trunk</filename>, en lugar de reenviar
+        todos los datos de su copia local de nuevo a través de
+        la red:</para>
 
 <screen>
 $ svn commit -m "Creating a private branch of /calc/trunk."
