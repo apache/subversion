@@ -144,16 +144,15 @@ diff_cmd (svn_stringbuf_t *path1,
 */
 
 svn_error_t *
-svn_client_diff (svn_stringbuf_t *path,
-                 const apr_array_header_t *diff_options,
+svn_client_diff (const apr_array_header_t *diff_options,
                  svn_client_auth_baton_t *auth_baton,
-                 svn_revnum_t start_revision,
-                 apr_time_t start_date,
-                 svn_revnum_t end_revision,
-                 apr_time_t end_date,
+                 const svn_client_revision_t *start,
+                 const svn_client_revision_t *end,
+                 svn_stringbuf_t *path,
                  svn_boolean_t recurse,
                  apr_pool_t *pool)
 {
+  svn_revnum_t start_revnum, end_revnum;
   svn_string_t path_str;
   svn_boolean_t path_is_url;
   svn_boolean_t use_admin;
@@ -168,13 +167,14 @@ svn_client_diff (svn_stringbuf_t *path,
   void *diff_edit_baton;
   struct diff_cmd_baton diff_cmd_baton;
 
-  /* If both a revision and a date/time are specified, this is an error.
-     They mostly likely contradict one another. */
-  if ((SVN_IS_VALID_REVNUM(start_revision) && start_date)
-      || (SVN_IS_VALID_REVNUM(end_revision) && end_date))
-    return
-      svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, 0, NULL, pool,
-                       "Cannot specify _both_ revision and time.");
+  /* Sanity check. */
+  if ((start->kind == svn_client_revision_unspecified)
+      || (end->kind == svn_client_revision_unspecified))
+    {
+      return svn_error_create
+        (SVN_ERR_CLIENT_BAD_REVISION, 0, NULL, pool,
+         "svn_client_diff: caller failed to specify any revisions");
+    }
 
   diff_cmd_baton.options = diff_options;
   diff_cmd_baton.pool = pool;
@@ -201,44 +201,60 @@ svn_client_diff (svn_stringbuf_t *path,
       URL = svn_stringbuf_create (entry->url->data, pool);
     }
 
-  /* ### TODO: awful revision handling */
-  if (!path_is_url
-      && !SVN_IS_VALID_REVNUM(start_revision) && end_revision == 1
-      && !start_date && !end_date)
+  if ((! path_is_url)
+      && ((start->kind == svn_client_revision_committed)
+          || (start->kind == svn_client_revision_base))
+      && (end->kind == svn_client_revision_working))
     {
-      /* Not an url and no revisions, this is the 'quick' diff that does
-         not contact the repository and simply uses the text base */
+      /* This is the 'quick' diff that does not contact the repository
+         and simply uses the text base. */
       return svn_wc_diff (anchor,
                           target,
                           diff_cmd, &diff_cmd_baton,
                           recurse,
                           pool);
+      /* ### todo: see comments issue #422 about how libsvn_client's
+         diff implementation prints to stdout.  Apparently same is
+         true for libsvn_wc!  Both will need adjusting; strongly
+         suspect that the callback abstraction will be exactly what is
+         needed to make merge share code -- that is, the same library
+         functions will be called, but with different callbacks that
+         Do The Right Thing.  Random Thought: these callbacks probably
+         won't be svn_delta_edit_fns_t, because there's no depth-first
+         requirement and no need to tweak .svn/ metadata.  Can be a
+         lot simpler than an editor, therefore */
     }
 
-  /* Establish the RA session */
+  /* Else we must contact the repository. */
+
+  /* Establish RA session */
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
   SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL->data, pool));
 
   /* ### TODO: We have to pass null for the base_dir here, since the
-     working copy does not match the requested revision. It might be
+     working copy does not match the requested revision.  It might be
      possible to have a special ra session for diff, where get_wc_prop
      cooperates with the editor and returns values when the file is in the
      wc, and null otherwise. */
   SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, NULL,
                                         FALSE, FALSE, auth_baton, pool));
 
-  if (start_date)
-    SVN_ERR (ra_lib->get_dated_revision (session, &start_revision, start_date));
-  if (end_date)
-    SVN_ERR (ra_lib->get_dated_revision (session, &end_revision, end_date));
+  /* ### todo: later, when we take two (or N) targets and a more
+     sophisticated indication of their interaction with start and end,
+     these calls will need to be rearranged. */
+  SVN_ERR (svn_client__get_revision_number
+           (&start_revnum, ra_lib, session, start, path->data, pool));
+  SVN_ERR (svn_client__get_revision_number
+           (&end_revnum, ra_lib, session, end, path->data, pool));
 
-  /* ### TODO: Warn the user? */
-  if (path_is_url && start_revision == end_revision)
-    return SVN_NO_ERROR;
+  /* ### todo: For the moment, we'll maintain the two distinct diff
+     editors, svn_wc vs svn_client, in order to get this change done
+     in a finite amount of time.  Next the two editors will be unified
+     into one "lazy" editor that uses local data whenever possible. */
 
-  if (start_revision == end_revision)
+  if (end->kind == svn_client_revision_working)
     {
-      /* The working copy is involved if only one revision is given */
+      /* The working copy is involved in this case. */
       SVN_ERR (svn_wc_get_diff_editor (anchor, target,
                                        diff_cmd, &diff_cmd_baton,
                                        recurse,
@@ -247,7 +263,7 @@ svn_client_diff (svn_stringbuf_t *path,
 
       SVN_ERR (ra_lib->do_update (session,
                                   &reporter, &report_baton,
-                                  end_revision,
+                                  start_revnum,
                                   target,
                                   recurse,
                                   diff_editor, diff_edit_baton));
@@ -257,9 +273,9 @@ svn_client_diff (svn_stringbuf_t *path,
                                        NULL, NULL, /* notification is N/A */
                                        pool));
     }
-  else
+  else   /* ### todo: there may be uncovered cases remaining */
     {
-      /* Pure repository comparison if two revisions are given */
+      /* Pure repository comparison. */
 
       /* Open a second session used to request individual file
          contents. Although a session can be used for multiple requests, it
@@ -282,18 +298,18 @@ svn_client_diff (svn_stringbuf_t *path,
                                             &diff_cmd_baton,
                                             recurse,
                                             ra_lib, session2,
-                                            start_revision,
+                                            start_revnum,
                                             &diff_editor, &diff_edit_baton,
                                             pool));
 
       SVN_ERR (ra_lib->do_update (session,
                                   &reporter, &report_baton,
-                                  end_revision,
+                                  end_revnum,
                                   target,
                                   recurse,
                                   diff_editor, diff_edit_baton));
 
-      SVN_ERR (reporter->set_path (report_baton, "", start_revision));
+      SVN_ERR (reporter->set_path (report_baton, "", start_revnum));
 
       SVN_ERR (reporter->finish_report (report_baton));
 

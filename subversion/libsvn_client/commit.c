@@ -391,7 +391,7 @@ send_to_repos (svn_client_commit_info_t **commit_info,
                void *before_edit_baton,
                const svn_delta_edit_fns_t *after_editor,
                void *after_edit_baton,                   
-               svn_stringbuf_t *base_dir,
+               svn_stringbuf_t *base_path,
                apr_array_header_t *condensed_targets,
                svn_stringbuf_t *url,        /* null unless importing */
                svn_stringbuf_t *new_entry,  /* null except when importing */
@@ -426,7 +426,7 @@ send_to_repos (svn_client_commit_info_t **commit_info,
      the assignments to committed_date and committed_author near the
      end of this function, as they'll need to allocate new storage. */
   ccb.pool		= pool;
-  ccb.prefix_path	= base_dir;
+  ccb.prefix_path	= base_path;
   committed_targets	= apr_hash_make (pool);
 
   if (url) 
@@ -494,13 +494,13 @@ send_to_repos (svn_client_commit_info_t **commit_info,
       if (! is_import)
         {
           /* Construct full URL from PATH. */
-          SVN_ERR (svn_wc_entry (&entry, base_dir, pool));
+          SVN_ERR (svn_wc_entry (&entry, base_path, pool));
           url = entry->url;
 
           if (entry->copied)
             return svn_error_createf
               (SVN_ERR_CL_COMMIT_IN_ADDED_DIR, 0, NULL, pool, 
-               "%s was already scheduled for addition.", base_dir->data);
+               "%s was already scheduled for addition.", base_path->data);
         }
       
       /* Make sure our log message at least exists, even if empty. */
@@ -514,7 +514,7 @@ send_to_repos (svn_client_commit_info_t **commit_info,
       /* Open an RA session to URL. */
       /* (Notice that in the case of import, we do NOT want the RA
          layer to attempt to store auth info in the wc.) */
-      SVN_ERR (svn_client__open_ra_session (&session, ra_lib, url, base_dir,
+      SVN_ERR (svn_client__open_ra_session (&session, ra_lib, url, base_path,
                                             !is_import, !is_import,
                                             auth_baton, pool));
 
@@ -544,7 +544,7 @@ send_to_repos (svn_client_commit_info_t **commit_info,
                                 &test_edit_baton,
                                 svn_stream_from_stdio (stdout, pool),
                                 0,
-                                base_dir,
+                                base_path,
                                 pool));
   
   svn_delta_compose_editors (&editor, &edit_baton,
@@ -563,7 +563,7 @@ send_to_repos (svn_client_commit_info_t **commit_info,
   if (is_import)
     {
       /* Crawl a directory tree, importing. */
-      err = import (base_dir, new_entry, editor, edit_baton, pool);
+      err = import (base_path, new_entry, editor, edit_baton, pool);
       if (err)
         {
           /* ignoring the return value of this.  we're *already* about
@@ -580,14 +580,14 @@ send_to_repos (svn_client_commit_info_t **commit_info,
 
       if (xml_dst && xml_dst->data)
         /* committing to XML */
-        err = svn_wc_crawl_local_mods (base_dir,
+        err = svn_wc_crawl_local_mods (base_path,
                                        condensed_targets,
                                        editor, edit_baton,
                                        NULL, NULL,
                                        pool);
       else 
         /* committing to RA layer */
-        err = svn_wc_crawl_local_mods (base_dir,
+        err = svn_wc_crawl_local_mods (base_path,
                                        condensed_targets,
                                        editor, edit_baton,
                                        &(ra_lib->get_latest_revnum), session,

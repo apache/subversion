@@ -56,18 +56,22 @@ svn_cl__diff (apr_getopt_t *os,
 
   auth_baton = svn_cl__make_auth_baton (opt_state, pool);
 
+  if (opt_state->start_revision.kind == svn_client_revision_unspecified)
+    opt_state->start_revision.kind = svn_client_revision_base;
+
+  if (opt_state->end_revision.kind == svn_client_revision_unspecified)
+    opt_state->end_revision.kind = svn_client_revision_working;
+
   for (i = 0; i < condensed_targets->nelts; ++i)
     {
       svn_stringbuf_t *target
         = ((svn_stringbuf_t **) (condensed_targets->elts))[i];
 
-      SVN_ERR (svn_client_diff (target,
-                                options,
+      SVN_ERR (svn_client_diff (options,
                                 auth_baton,
-                                opt_state->start_revision,
-                                opt_state->start_date,
-                                opt_state->end_revision,
-                                opt_state->end_date,
+                                &(opt_state->start_revision),
+                                &(opt_state->end_revision),
+                                target,
                                 opt_state->nonrecursive ? FALSE : TRUE,
                                 pool));
     }

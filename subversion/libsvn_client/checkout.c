@@ -45,19 +45,26 @@ svn_client_checkout (const svn_delta_edit_fns_t *before_editor,
                      svn_client_auth_baton_t *auth_baton,
                      svn_stringbuf_t *URL,
                      svn_stringbuf_t *path,
-                     svn_revnum_t revision,
+                     const svn_client_revision_t *revision,
                      svn_boolean_t recurse,
-                     apr_time_t tm,
                      svn_stringbuf_t *xml_src,
                      apr_pool_t *pool)
 {
   const svn_delta_edit_fns_t *checkout_editor;
   void *checkout_edit_baton;
   svn_error_t *err;
+  svn_revnum_t revnum;
 
   /* Sanity check.  Without these, the checkout is meaningless. */
   assert (path != NULL);
   assert (URL != NULL);
+
+  /* Get revnum set to something meaningful, so we can fetch the
+     checkout editor. */
+  if (revision->kind == svn_client_revision_number)
+    revnum = revision->value.number; /* do the trivial conversion manually */
+  else
+    revnum = SVN_INVALID_REVNUM; /* no matter, do real conversion later */
 
   /* Canonicalize the URL. */
   svn_path_canonicalize (URL);
@@ -67,7 +74,7 @@ svn_client_checkout (const svn_delta_edit_fns_t *before_editor,
      later on. */
   SVN_ERR (svn_wc_get_checkout_editor (path,
                                        URL,
-                                       revision,
+                                       revnum,
                                        recurse,
                                        &checkout_editor,
                                        &checkout_edit_baton,
@@ -90,28 +97,18 @@ svn_client_checkout (const svn_delta_edit_fns_t *before_editor,
       SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL->data, pool));
 
       /* Open an RA session to URL. Note that we do not have an admin area
-         for storing temp files. We do, however, want to store auth data
+         for storing temp files.  We do, however, want to store auth data
          after the checkout builds the WC. */
       SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, path,
                                             TRUE, FALSE, auth_baton, pool));
 
-      /* Decide which revision to get: */
-
-      /* If both REVISION and TM are specified, this is an error.
-         They mostly likely contradict one another. */
-      if ((revision != SVN_INVALID_REVNUM) && tm)
-        return
-          svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, 0, NULL, pool,
-                           "Cannot specify _both_ revision and time.");
-
-      /* If only TM is given, convert the time into a revision number. */
-      else if (tm)
-        SVN_ERR (ra_lib->get_dated_revision (session, &revision, tm));
+      SVN_ERR (svn_client__get_revision_number
+               (&revnum, ra_lib, session, revision, path->data, pool));
 
       /* Tell RA to do a checkout of REVISION; if we pass an invalid
          revnum, that means RA will fetch the latest revision.  */
       err = ra_lib->do_checkout (session,
-                                 revision,
+                                 revnum,
                                  recurse,
                                  checkout_editor,
                                  checkout_edit_baton);
@@ -146,7 +143,7 @@ svn_client_checkout (const svn_delta_edit_fns_t *before_editor,
                                       checkout_editor,
                                       checkout_edit_baton,
                                       URL->data,
-                                      revision,
+                                      revnum,
                                       pool);
 
       /* Sleep for one second to ensure timestamp integrity. */

@@ -56,8 +56,7 @@ svn_client_switch (const svn_delta_edit_fns_t *before_editor,
                    svn_client_auth_baton_t *auth_baton,
                    svn_stringbuf_t *path,
                    svn_stringbuf_t *switch_url,
-                   svn_revnum_t revision,
-                   apr_time_t tm,
+                   const svn_client_revision_t *revision,
                    svn_boolean_t recurse,
                    svn_wc_notify_func_t notify_func,
                    void *notify_baton,
@@ -72,19 +71,13 @@ svn_client_switch (const svn_delta_edit_fns_t *before_editor,
   svn_error_t *err;
   void *ra_baton, *session;
   svn_ra_plugin_t *ra_lib;
+  svn_revnum_t revnum;
 
   /* Sanity check.  Without these, the switch is meaningless. */
   assert (path != NULL);
   assert (path->len > 0);
   assert (switch_url != NULL);
   assert (switch_url->len > 0);
-
-  /* If both REVISION and TM are specified, this is an error.
-     They mostly likely contradict one another. */
-  if ((revision != SVN_INVALID_REVNUM) && tm)
-    return
-      svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, 0, NULL, pool,
-                       "Cannot specify _both_ revision and time.");
 
   SVN_ERR (svn_wc_entry (&entry, path, pool));
   if (! entry)
@@ -95,7 +88,7 @@ svn_client_switch (const svn_delta_edit_fns_t *before_editor,
   if (entry->kind == svn_node_file)
     {
       SVN_ERR (svn_wc_get_actual_target (path, &anchor, &target, pool));
-
+      
       /* 'entry' now refers to parent dir */
       SVN_ERR (svn_wc_entry (&entry, anchor, pool));
       if (! entry)
@@ -113,23 +106,29 @@ svn_client_switch (const svn_delta_edit_fns_t *before_editor,
          exactly what we want. */
       anchor = path;
       target = NULL;
-
+      
       /* 'entry' still refers to PATH */
     }
-  
-  /* Get the URL that we will open an RA session to. */
+
   if (! entry->url)
     return svn_error_createf
       (SVN_ERR_WC_ENTRY_MISSING_URL, 0, NULL, pool,
        "svn_client_switch: entry '%s' has no URL", path->data);
   URL = svn_stringbuf_dup (entry->url, pool);
 
+  /* Get revnum set to something meaningful, so we can fetch the
+     switch editor. */
+  if (revision->kind == svn_client_revision_number)
+    revnum = revision->value.number; /* do the trivial conversion manually */
+  else
+    revnum = SVN_INVALID_REVNUM; /* no matter, do real conversion later */
+
   /* Fetch the switch (update) editor.  If REVISION is invalid, that's
      okay; the RA driver will call editor->set_target_revision() later
      on. */
   SVN_ERR (svn_wc_get_switch_editor (anchor,
                                      target,
-                                     revision,
+                                     revnum,
                                      switch_url,
                                      recurse,
                                      &switch_editor,
@@ -150,9 +149,8 @@ svn_client_switch (const svn_delta_edit_fns_t *before_editor,
   SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, path,
                                         TRUE, TRUE, auth_baton, pool));
   
-  /* If TM is given, convert the time into a revision number. */
-  if (tm)
-    SVN_ERR (ra_lib->get_dated_revision (session, &revision, tm));
+  SVN_ERR (svn_client__get_revision_number
+           (&revnum, ra_lib, session, revision, path->data, pool));
 
   /* ### Note: the whole RA interface below will probably change soon. */ 
 
@@ -160,7 +158,7 @@ svn_client_switch (const svn_delta_edit_fns_t *before_editor,
      invalid revnum, that means RA will use the latest revision. */
   SVN_ERR (ra_lib->do_switch (session,
                               &reporter, &report_baton,
-                              revision,
+                              revnum,
                               target,
                               recurse,
                               switch_url,

@@ -454,6 +454,7 @@ svn_cl__commit (apr_getopt_t *os,
   svn_client_commit_info_t *commit_info = NULL;
   svn_stringbuf_t *messagep=NULL;
   svn_error_t *error;
+  svn_revnum_t revnum;
 
   /* Take our message from ARGV or a FILE */
   if (opt_state->filedata) 
@@ -558,6 +559,12 @@ svn_cl__commit (apr_getopt_t *os,
             trace_dir,
             pool));
 
+  /* Get revnum set to something meaningful, to cover the xml case. */
+  if (opt_state->start_revision.kind == svn_client_revision_number)
+    revnum = opt_state->start_revision.value.number;
+  else
+    revnum = SVN_INVALID_REVNUM; /* no matter, this is fine */
+
   /* Commit. */
   error = svn_client_commit (&commit_info,
                              NULL, NULL,
@@ -567,7 +574,7 @@ svn_cl__commit (apr_getopt_t *os,
                              targets,
                              message,
                              opt_state->xml_file,
-                             opt_state->start_revision,
+                             revnum,
                              pool);
 
   if (error)

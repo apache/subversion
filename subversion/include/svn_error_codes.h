@@ -366,6 +366,20 @@ SVN_ERROR_START
   SVN_ERRDEF (SVN_ERR_TEST_FAILED,
               "Test failed")
 
+  /* BEGIN libsvn_client errors */
+
+  SVN_ERRDEF (SVN_ERR_CLIENT_VERSIONED_PATH_REQUIRED,
+              "A path under revision control is needed for this operation")
+
+  SVN_ERRDEF (SVN_ERR_CLIENT_RA_ACCESS_REQUIRED,
+              "Repository access is needed for this operation")
+
+  SVN_ERRDEF (SVN_ERR_CLIENT_BAD_REVISION,
+              "Bogus revision information given")
+
+  /* END libsvn_client errors */
+
+
   /* BEGIN Client errors */
 
   SVN_ERRDEF (SVN_ERR_CL_ARG_PARSING_ERROR,

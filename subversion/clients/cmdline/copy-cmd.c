@@ -119,7 +119,7 @@ svn_cl__copy (apr_getopt_t *os,
 
   SVN_ERR (svn_client_copy 
            (&commit_info,
-            src_path, opt_state->start_revision, dst_path, auth_baton, 
+            src_path, &(opt_state->start_revision), dst_path, auth_baton, 
             message ? message : svn_stringbuf_create ("", pool),
             NULL, NULL,                     /* no before_editor */
             trace_editor, trace_edit_baton, /* one after_editor */

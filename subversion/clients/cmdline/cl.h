@@ -57,15 +57,10 @@ typedef enum {
    commands. */
 typedef struct svn_cl__opt_state_t
 {
-  /* You probably want start_revision to default SVN_INVALID_REVNUM
-     (which means `head' to the RA layer), and end_revision to default
-     to 0 or 1, which are the two possibilities for oldest revision. */
-  svn_revnum_t start_revision; /* X in "svn blah -r X" or "svn blah -r X:Y" */
-  svn_revnum_t end_revision;   /* Y in "svn blah -r X:Y" */
-
-  /* These should default to 0. */
-  apr_time_t start_date;  /* X in "svn blah -D X" or "svn blah -D X:Y" */
-  apr_time_t end_date;    /* Y in "svn blah -D X:Y" */
+  /* These get set as a result of revisions or dates being specified.
+     When only one revision is given, it's start_revision, and
+     end_revision remains `svn_client_revision_unspecified'. */
+  svn_client_revision_t start_revision, end_revision;
 
   svn_stringbuf_t *message;  /* log message */
 

@@ -497,142 +497,183 @@ svn_cl__subcommand_help (const char* subcommand,
 
 /*** Parsing "X:Y"-style arguments. ***/
 
-/* Return non-zero if REV is not all digits, nor "head", "h", nor some
-   case variation of same.  Otherwise, return 0. */
+/* If WORD matches one of the special revision descriptors,
+ * case-insensitively, set *REVISION accordingly:
+ *
+ *   - For "head", set REVISION->kind to svn_client_revision_head.
+ *
+ *   - For "first", set REVISION->kind to svn_client_revision_number
+ *     and REVISION->value.number to 0.  ### iffy, but might be useful
+ *     when mixed with dates ###
+ *
+ *   - For "prev", set REVISION->kind to svn_client_revision_previous.
+ *
+ *   - For "base", set REVISION->kind to svn_client_revision_base.
+ *
+ *   - For "committed" or "changed", set REVISION->kind to
+ *     svn_client_revision_committed.
+ *
+ * If match, return 1, else return 0 and don't touch REVISION.
+ *
+ * ### should we enforce a requirement that users write out these
+ * words in full?  Actually, we probably will need to start enforcing
+ * it as date parsing gets more sophisticated and the chances of a
+ * first-letter overlap between a valid date and a valid word go up.
+ */
 static int
-validate_revision (const char *rev)
+revision_from_word (svn_client_revision_t *revision, const char *word)
 {
-  const char *p;
-  
-  for (p = rev; *p; p++)
+  if (apr_strnatcasecmp (word, "head") == 0)
     {
-      if ((*p < '0') || (*p > '9'))
-        {
-          if (p != rev) /* We've already seen some digits... */
-            return 1;   /* ...and mixing digits w/ non-digits is invalid. */
-          else
-            {
-              /* Okay, it's "head", "h", or some variation thereof. */
-
-              int len = strlen (rev);
-
-              if ((len != 1) && (len != 4))
-                return 1;  /* wrong length, must be wrong string */
-              else if ((len == 1) && ((rev[0] == 'h') || (rev[0] == 'H')))
-                return 0;
-              else if (((rev[0] == 'h') || (rev[0] == 'H'))
-                       && ((rev[1] == 'e') || (rev[1] == 'E'))
-                       && ((rev[2] == 'a') || (rev[2] == 'A'))
-                       && ((rev[3] == 'd') || (rev[3] == 'D')))
-                return 0;
-              else
-                return 1;
-            }
-        }
+      revision->kind = svn_client_revision_head;
     }
-  
-  return 0;
+  else if (apr_strnatcasecmp (word, "first") == 0)
+    {
+      revision->kind = svn_client_revision_number;
+      revision->value.number = 0;
+    }
+  else if (apr_strnatcasecmp (word, "prev") == 0)
+    {
+      revision->kind = svn_client_revision_previous;
+    }
+  else if (apr_strnatcasecmp (word, "base") == 0)
+    {
+      revision->kind = svn_client_revision_base;
+    }
+  else if ((apr_strnatcasecmp (word, "committed") == 0)
+           || (apr_strnatcasecmp (word, "changed") == 0))
+    {
+      revision->kind = svn_client_revision_committed;
+    }
+  else
+    return 0;
+
+  return 1;
+}
+
+
+/* Return non-zero if REV is all digits, else return 0. */
+static int
+valid_revision_number (const char *rev)
+{
+  while (*rev) {
+    if ((*rev < '0') || (*rev++ > '9'))
+      return 0;
+  }
+
+  return 1;
 }
 
 
 /* Set OPT_STATE->start_revision and/or OPT_STATE->end_revision
- * according to ARG, where ARG is "N", "N:", ":N", or "N:M", like so:
+ * according to ARG, where ARG is "N" or "N:M", like so:
  * 
- *    - If ARG is "N", set both OPT_STATE->start_revision and
- *      OPT_STATE->end_revision to N.
+ *    - If ARG is "N", set OPT_STATE->start_revision's kind to
+ *      svn_client_revision_number and its value to the number N; and
+ *      leave OPT_STATE->end_revision untouched.
  *
- *    - If ARG is "N:head", set OPT_STATE->start_revision to N and
- *      OPT_STATE->end_revision to SVN_INVALID_REVNUM.
+ *    - If ARG is "N:M", set OPT_STATE->start_revision's and
+ *      OPT_STATE->end_revision's kinds to svn_client_revision_number
+ *      and values to N and M respectively.
  * 
- *    - If ARG is "head:N", set OPT_STATE->start_revision to
- *      SVN_INVALID_REVNUM and OPT_STATE->end_revision to N.
- * 
- *    - If ARG is "N:M", set OPT_STATE->start_revision to N and
- *      OPT_STATE->end_revision to M.
- * 
- * The special case "head" is case-insensitive and may also be written
- * "h" or "H"; it is implied when a revision number is simply omitted. 
- * It means the youngest revision, which is expressed by setting the
- * appropriate field to SVN_INVALID_REVNUM.
+ * N and/or M may be one of the special revision descriptors
+ * recognized by revision_from_word().
  *
  * If ARG is invalid, return non-zero; else return zero.
+ * It is invalid to omit a revision (as in, ":", "N:" or ":M").
+ *
+ * Note:
+ *
+ * It is typical, though not required, for OPT_STATE->start_revision
+ * and OPT_STATE->end_revision to be svn_client_revision_unspecified
+ * kind on entry.
  */
 static int
 parse_revision (svn_cl__opt_state_t *os, const char *arg, apr_pool_t *pool)
 {
-  char *sep = strchr (arg, ':');
   char *left_rev, *right_rev;
+  char *sep;
 
-  if (sep)
+  /* Operate on a copy of the argument. */
+  left_rev = apr_pstrdup (pool, arg);
+  
+  if ((sep = strchr (arg, ':')))
     {
       /* There can only be one colon. */
       if (strchr (sep + 1, ':'))
         return 1;
 
-      /* First, turn one string into two. */
-      left_rev = apr_pstrdup (pool, arg);
       *(left_rev + (sep - arg)) = '\0';
       right_rev = (left_rev + (sep - arg)) + 1;
+
+      /* If there was a separator, both revisions must be present. */
+      if ((! *left_rev) || (! *right_rev))
+        return 1;
     }
-  else  /* If no separator, set left_rev, right_rev to same string. */
-    left_rev = right_rev = apr_pstrdup (pool, arg);
+  else  /* no separator */
+    right_rev = NULL;
 
-  /* Validate each revision individually. */
-  if ((validate_revision (left_rev) != 0)
-      || (validate_revision (right_rev) != 0))
-    return 1;
-    
-  /* Okay, no syntax problems, parse 'em. */
-  
-  if ((left_rev[0] == 'h') || (left_rev[0] == 'H') || (left_rev[0] == '\0'))
-    os->start_revision = SVN_INVALID_REVNUM;
-  else
-    os->start_revision = SVN_STR_TO_REV (left_rev);
+  /* Now left_rev holds N and right_rev holds M or null. */
 
-  if ((right_rev[0] == 'h') || (right_rev[0] == 'H') || (right_rev[0] == '\0'))
-    os->end_revision = SVN_INVALID_REVNUM;
-  else
-    os->end_revision = SVN_STR_TO_REV (right_rev);
+  if (! revision_from_word (&(os->start_revision), left_rev))
+    {
+      if (! valid_revision_number (left_rev))
+        return 1;
+
+      os->start_revision.kind = svn_client_revision_number;
+      os->start_revision.value.number = SVN_STR_TO_REV (left_rev);
+    }
+
+  if (right_rev)
+    {
+      if (! revision_from_word (&(os->end_revision), right_rev))
+        {
+          if (! valid_revision_number (right_rev))
+            return 1;
+
+          os->end_revision.kind = svn_client_revision_number;
+          os->end_revision.value.number = SVN_STR_TO_REV (right_rev);
+        }
+    }
 
   return SVN_NO_ERROR;
 }
 
 
-/* Set OPT_STATE->start_date and/or OPT_STATE->end_date according to
- * ARG, where ARG is "X", ":X", or "X:Y", like so:
+/* Set OPT_STATE->start_revision and/or OPT_STATE->end_revision
+ * according to ARG, where ARG is "X" or "X:Y", like so:
  * 
- *    - If ARG is "X" set both OPT_STATE->start_date and
-        OPT_STATE->end_date to X.
- * 
- *    - If ARG is "X:", set OPT_STATE->start_date to X and don't
- *      touch OPT_STATE->end_date.
- * 
- *    - If ARG is ":X", don't touch OPT_STATE->end_date, and set
- *      OPT_STATE->end_date to X.
- * 
- *    - If ARG is "X:Y", set OPT_STATE->start_date to X and
- *      OPT_STATE->end_date to Y.
- * 
- * If ARG is invalid, return non-zero; else return zero.
+ *    - If ARG is "X", set OPT_STATE->start_revision's kind to
+ *      svn_client_revision_date and value to the apr_time_t for X,
+ *      and leave OPT_STATE->end_revision untouched.
  *
- * ### todo: think more carefully about date range syntax, change this
- * accordingly.
+ *    - If ARG is "X:Y", set OPT_STATE->start_revision's and
+ *      OPT_STATE->end_revision's kinds to svn_client_revision_date
+ *      and values to (apr_time_t) X and Y respectively.
+ * 
+ * X and/or Y may be one of the special revision descriptors
+ * recognized by revision_from_word().
+ *
+ * If ARG is invalid, return non-zero; else return zero.
+ * It is invalid to omit a revision (as in, ":", "X:" or ":Y").
+ *
+ * Note:
+ *
+ * It is typical, though not required, for OPT_STATE->start_revision
+ * and OPT_STATE->end_revision to be svn_client_revision_unspecified
+ * kind on entry.
  */
 static int
 parse_date (svn_cl__opt_state_t *os, const char *arg, apr_pool_t *pool)
 {
-  char *sep = strchr (arg, ':');
+  char *left_date, *right_date;
+  char *sep;
 
-  if (sep)
+  /* Operate on a copy of the argument. */
+  left_date = apr_pstrdup (pool, arg);
+
+  if ((sep = strchr (arg, ':')))
     {
-      /* svn_parse_date() originates in getdate.y; while I'd love to
-         change it to const char *, that turns out to be a little more
-         complex than just changing the qualifier.  So for now, we're
-         making the copies plain char stars, to get rid of the
-         compilation warning, and have filed issue #408 so we don't
-         forget about this.  -kff  */
-      char *left_date, *right_date;
-
       /* ### todo: some standard date formats contain colons.
          Eventually, we should probably allow those, and use some
          other syntax for expressing ranges.  But for now, I'm just
@@ -641,26 +682,36 @@ parse_date (svn_cl__opt_state_t *os, const char *arg, apr_pool_t *pool)
       if (strchr (sep + 1, ':'))
         return 1;
 
-      /* Okay, no syntax problems, parse the date. */
-
       /* First, turn one string into two. */
-      left_date = apr_pstrdup (pool, arg);
       *(left_date + (sep - arg)) = '\0';
       right_date = (left_date + (sep - arg)) + 1;
 
-      /* Treat each string individually. */
-      if (*left_date)
-        apr_ansi_time_to_apr_time (&(os->start_date),
-                                   svn_parse_date (left_date, NULL));
-      if (*right_date)
-        apr_ansi_time_to_apr_time (&(os->end_date),
-                                   svn_parse_date (right_date, NULL));
+      /* If there was a separator, both dates must be present. */
+      if ((! *left_date) || (! *right_date))
+        return 1;
     }
-  else
+  else  /* no separator */
+    right_date = NULL;
+    
+  /* Now left_date holds X and right_date holds Y or null. */
+
+  if (! revision_from_word (&(os->start_revision), left_date))
     {
-      apr_ansi_time_to_apr_time (&(os->start_date),
-                                 svn_parse_date ((char *) arg, NULL));
-      os->end_date = os->start_date;
+      os->start_revision.kind = svn_client_revision_date;
+      apr_ansi_time_to_apr_time (&(os->start_revision.value.date),
+                                 svn_parse_date (left_date, NULL));
+      /* ### todo: check if apr_time_t is valid? */
+    }
+
+  if (*right_date)
+    {
+      if (! revision_from_word (&(os->end_revision), right_date))
+        {
+          os->end_revision.kind = svn_client_revision_date;
+          apr_ansi_time_to_apr_time (&(os->end_revision.value.date),
+                                     svn_parse_date (right_date, NULL));
+          /* ### todo: check if apr_time_t is valid? */
+        }
     }
 
   return SVN_NO_ERROR;
@@ -704,9 +755,10 @@ main (int argc, const char * const *argv)
   apr_initialize ();
   pool = svn_pool_create (NULL);
   memset (&opt_state, 0, sizeof (opt_state));
-  opt_state.start_revision = SVN_INVALID_REVNUM; /* default to youngest */
-  opt_state.end_revision = 1;                    /* default to oldest */
 
+  opt_state.start_revision.kind = svn_client_revision_unspecified;
+  opt_state.end_revision.kind = svn_client_revision_unspecified;
+  
   /* No args?  Show usage. */
   if (argc <= 1)
     {
