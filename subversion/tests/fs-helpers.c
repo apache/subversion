@@ -148,7 +148,6 @@ svn_test__stream_to_string (svn_stringbuf_t **string,
 
   do 
     {
-      /* "please read 40 bytes into buf" */
       len = sizeof (buf);
       SVN_ERR (svn_stream_read (stream, buf, &len));
       
