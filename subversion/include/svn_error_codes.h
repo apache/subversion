@@ -307,9 +307,7 @@ SVN_ERROR_START
               SVN_ERR_WC_CATEGORY_START + 13,
               "Unmergeable scheduling requested on an entry")
 
-  SVN_ERRDEF (SVN_ERR_WC_CONFLICT,
-              SVN_ERR_WC_CATEGORY_START + 14,
-              "A conflict occurred in the working copy")
+  /* UNUSED error slot:                 + 14 */
 
   SVN_ERRDEF (SVN_ERR_WC_FOUND_CONFLICT,
               SVN_ERR_WC_CATEGORY_START + 15,

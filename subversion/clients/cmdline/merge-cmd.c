@@ -159,6 +159,7 @@ svn_cl__merge (apr_getopt_t *os,
                           targetpath,
                           opt_state->nonrecursive ? FALSE : TRUE,
                           opt_state->force,
+                          opt_state->dry_run,
                           pool); 
   if (err)
      return svn_cl__may_need_force (err);

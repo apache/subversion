@@ -602,6 +602,9 @@ svn_error_t *svn_client_diff (const apr_array_header_t *diff_options,
    If NOTIFY_FUNC is non-null, then call NOTIFY_FUNC with NOTIFY_BATON
    once for each merged target, passing the target's local path.
 
+   If DRY_RUN is TRUE the merge is carried out, and full notofication
+   feedback is provided, but the working copy is not modified.
+
    AUTH_BATON is used to communicate with the repository.  */
 svn_error_t *
 svn_client_merge (svn_wc_notify_func_t notify_func,
@@ -614,6 +617,7 @@ svn_client_merge (svn_wc_notify_func_t notify_func,
                   const char *target_wcpath,
                   svn_boolean_t recurse,
                   svn_boolean_t force,
+                  svn_boolean_t dry_run,
                   apr_pool_t *pool);
 
 

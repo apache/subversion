@@ -297,6 +297,9 @@ def run_and_verify_merge(dir, rev1, rev2, url,
   ### a target deeper than ".".
 
   # Update and make a tree of the output.
+  dry_out, dry_err = main.run_svn (error_re_string,
+                                   'merge', '--dry-run',
+                                   '-r', rev1 + ':' + rev2, url, dir)
   out, err = main.run_svn (error_re_string,
                            'merge', '-r', rev1 + ':' + rev2, url, dir)
 
@@ -308,6 +311,18 @@ def run_and_verify_merge(dir, rev1, rev2, url,
         return 0
     return 1
   elif err:
+    return 1
+
+  if dry_out != out:
+    print "============================================================="
+    print "The merge dry-run output didn't match that of the real merge"
+    print "============================================================="
+    print "The merge dry-run output:"
+    map(sys.stdout.write, dry_out)
+    print "============================================================="
+    print "The merge output:"
+    map(sys.stdout.write, out)
+    print "============================================================="
     return 1
 
   mytree = tree.build_tree_from_checkout(out)

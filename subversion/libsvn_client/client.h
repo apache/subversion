@@ -229,6 +229,8 @@ svn_client__update_internal (const svn_delta_editor_t *before_editor,
  *
  * RECURSE is set if the diff is to be recursive.
  *
+ * DRY_RUN is set if this is a dry-run merge. It is not relevant for diff.
+ *
  * RA_LIB/RA_SESSION define the additional ra session for requesting file
  * contents.
  *
@@ -245,6 +247,7 @@ svn_client__get_diff_editor (const char *target,
                              const svn_wc_diff_callbacks_t *diff_cmd,
                              void *diff_cmd_baton,
                              svn_boolean_t recurse,
+                             svn_boolean_t dry_run,
                              svn_ra_plugin_t *ra_lib,
                              void *ra_session, 
                              svn_revnum_t revision,

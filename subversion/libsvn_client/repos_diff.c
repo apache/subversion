@@ -50,9 +50,11 @@ struct edit_baton {
   const svn_wc_diff_callbacks_t *diff_callbacks;
   void *diff_cmd_baton;
 
-  /* Flags whether to diff recursively or not. If set the diff is
-     recursive. */
+  /* RECURSE is TRUE if this is a recursive diff or merge, false otherwise */
   svn_boolean_t recurse;
+
+  /* DRY_RUN is TRUE if this is a dry-run diff, false otherwise. */
+  svn_boolean_t dry_run;
 
   /* RA_LIB is the vtable for making requests to the RA layer, RA_SESSION
      is the open session for these requests */
@@ -333,36 +335,57 @@ create_empty_file (const char **empty_file,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *
-get_parent_access (svn_wc_adm_access_t **parent_access,
-                   svn_wc_adm_access_t *adm_access,
-                   const char *path,
-                   apr_pool_t *pool)
-{
-  if (! adm_access)
-    *parent_access = NULL;
-  else
-    {
-      const char *parent_path = svn_path_remove_component_nts (path, pool);
-      SVN_ERR (svn_wc_adm_retrieve (parent_access, adm_access, parent_path,
-                                    pool));
-    }
-  return SVN_NO_ERROR;
-}
-
+/* Return in *PATH_ACCESS the access baton for the directory PATH by
+   searching the access baton set of ADM_ACCESS.  If ADM_ACCESS is NULL
+   then *PATH_ACCESS will be NULL.  If LENIENT is TRUE then failure to find
+   an access baton will not return an error but will set *PATH_ACCESS to
+   NULL instead. */
 static svn_error_t *
 get_path_access (svn_wc_adm_access_t **path_access,
                  svn_wc_adm_access_t *adm_access,
                  const char *path,
+                 svn_boolean_t lenient,
                  apr_pool_t *pool)
 {
   if (! adm_access)
     *path_access = NULL;
   else
-    SVN_ERR (svn_wc_adm_retrieve (path_access, adm_access, path, pool));
+    {
+      svn_error_t *err = svn_wc_adm_retrieve (path_access, adm_access, path,
+                                              pool);
+      if (err)
+        {
+          if (! lenient)
+            return err;
+          svn_error_clear_all (err);
+          *path_access = NULL;
+        }
+    }
+
   return SVN_NO_ERROR;
 }
                   
+/* Like get_path_access except the returned access baton, in
+   *PARENT_ACCESS, is for the parent of PATH rather than for PATH
+   itself. */
+static svn_error_t *
+get_parent_access (svn_wc_adm_access_t **parent_access,
+                   svn_wc_adm_access_t *adm_access,
+                   const char *path,
+                   svn_boolean_t lenient,
+                   apr_pool_t *pool)
+{
+  if (! adm_access)
+    *parent_access = NULL;  /* Avoid messing around with paths */
+  else
+    {
+      const char *parent_path = svn_path_remove_component_nts (path, pool);
+      SVN_ERR (get_path_access (parent_access, adm_access, parent_path,
+                                lenient, pool));
+    }
+  return SVN_NO_ERROR;
+}
+
 /* Get the empty file associated with the edit baton. This is cached so
  * that it can be reused, all empty files are the same.
  */
@@ -437,7 +460,9 @@ delete_entry (const char *path,
                                                path,
                                                pb->edit_baton->revision));
 
-  SVN_ERR (get_path_access (&adm_access, eb->adm_access, pb->wcpath, pool));
+  /* Missing access batons are a problem during delete */
+  SVN_ERR (get_path_access (&adm_access, eb->adm_access, pb->wcpath,
+                            FALSE, pool));
   switch (kind)
     {
     case svn_node_file:
@@ -501,7 +526,7 @@ add_directory (const char *path,
   *child_baton = b;
 
   SVN_ERR (get_path_access (&adm_access, pb->edit_baton->adm_access, pb->wcpath,
-                            pool));
+                            pb->edit_baton->dry_run, pool));
   SVN_ERR (pb->edit_baton->diff_callbacks->dir_added 
            (adm_access, b->wcpath,
             pb->edit_baton->diff_cmd_baton));
@@ -656,7 +681,7 @@ close_file (void *file_baton,
     prop_state = svn_wc_notify_state_unknown;
 
   SVN_ERR (get_parent_access (&adm_access, eb->adm_access, 
-                              b->wcpath, b->pool));
+                              b->wcpath, eb->dry_run, b->pool));
   if (b->path_end_revision)
     {
       if (b->added)
@@ -676,7 +701,11 @@ close_file (void *file_baton,
                   b->edit_baton->diff_cmd_baton));
     }
 
-  if (b->propchanges->nelts > 0)
+  /* Don't do the props_changed stuff if this is a dry_run and we don't
+     have an access baton, since in that case the file will already have
+     been recognised as added, in which case they cannot conflict. A
+     similar argument applies to directories in close_directory. */
+  if (b->propchanges->nelts > 0 && (! eb->dry_run || adm_access))
     {
       SVN_ERR (eb->diff_callbacks->props_changed
                (adm_access, &prop_state,
@@ -718,12 +747,15 @@ close_directory (void *dir_baton,
     {
       svn_wc_adm_access_t *adm_access;
       SVN_ERR (get_path_access (&adm_access, eb->adm_access, b->wcpath,
-                                b->pool));
-      SVN_ERR (eb->diff_callbacks->props_changed
-               (adm_access, &prop_state,
-                b->wcpath,
-                b->propchanges, b->pristine_props,
-                b->edit_baton->diff_cmd_baton));
+                                eb->dry_run, b->pool));
+      /* As for close_file, whether we do this depends on whether it's a
+         dry-run */
+      if (! eb->dry_run || adm_access)
+        SVN_ERR (eb->diff_callbacks->props_changed
+                 (adm_access, &prop_state,
+                  b->wcpath,
+                  b->propchanges, b->pristine_props,
+                  b->edit_baton->diff_cmd_baton));
     }
 
   if (eb->notify_func)
@@ -794,6 +826,7 @@ svn_client__get_diff_editor (const char *target,
                              const svn_wc_diff_callbacks_t *diff_callbacks,
                              void *diff_cmd_baton,
                              svn_boolean_t recurse,
+                             svn_boolean_t dry_run,
                              svn_ra_plugin_t *ra_lib,
                              void *ra_session,
                              svn_revnum_t revision,
@@ -812,6 +845,7 @@ svn_client__get_diff_editor (const char *target,
   eb->diff_callbacks = diff_callbacks;
   eb->diff_cmd_baton = diff_cmd_baton;
   eb->recurse = recurse;
+  eb->dry_run = dry_run;
   eb->ra_lib = ra_lib;
   eb->ra_session = ra_session;
   eb->revision = revision;

@@ -870,8 +870,8 @@ close_directory (void *dir_baton,
          conflicts. */
       SVN_ERR_W (svn_wc__merge_prop_diffs (&prop_state, &prop_conflicts,
                                            adm_access, NULL,
-                                           db->propchanges, db->pool,
-                                           &entry_accum),
+                                           db->propchanges, TRUE, FALSE,
+                                           db->pool, &entry_accum),
                  "close_dir: couldn't do prop merge.");
 
       /* Set revision. */
@@ -1384,7 +1384,7 @@ svn_wc_install_file (svn_wc_notify_state_t *content_state,
 
         SVN_ERR (svn_wc__merge_prop_diffs (prop_state, &ignored_conflicts,
                                            adm_access, base_name,
-                                           propchanges, pool,
+                                           propchanges, TRUE, FALSE, pool,
                                            &log_accum));
       }
     }

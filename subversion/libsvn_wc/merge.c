@@ -22,6 +22,7 @@
 #include "wc.h"
 #include "entries.h"
 #include "translate.h"
+#include "questions.h"
 
 
 
@@ -34,6 +35,8 @@ svn_wc_merge (const char *left,
               const char *left_label,
               const char *right_label,
               const char *target_label,
+              svn_boolean_t dry_run,
+              enum svn_wc_merge_outcome_t *merge_outcome,
               apr_pool_t *pool)
 {
   const char *tmp_target, *result_target, *tmp_left, *tmp_right;
@@ -133,7 +136,7 @@ svn_wc_merge (const char *left,
           (apr_err, 0, NULL, pool,
            "svn_wc_merge: unable to close tmp file `%s'", result_target);
 
-      if (exit_code == 1)  /* got a conflict */
+      if (exit_code == 1 && ! dry_run)  /* got a conflict */
         {
           /* Preserve the three pre-merge files, and modify the
              entry (mark as conflicted, track the preserved files). */ 
@@ -243,16 +246,32 @@ svn_wc_merge (const char *left,
                     | SVN_WC__ENTRY_MODIFY_CONFLICT_WRK,
                     pool));
 
-        } /* end of conflict handling */
+          *merge_outcome = svn_wc_merge_conflict;
 
-      /* Unconditionally replace MERGE_TARGET with the new merged file,
-         expanding. */
-      SVN_ERR (svn_wc__get_keywords (&keywords, merge_target, adm_access,
-                                     NULL, pool));
-      SVN_ERR (svn_wc__get_eol_style (NULL, &eol, merge_target, pool));
-      SVN_ERR (svn_wc_copy_and_translate (result_target,
-                                          merge_target,
-                                          eol, FALSE, keywords, TRUE, pool));
+        }
+      else if (exit_code == 1 && dry_run)
+        {
+          *merge_outcome = svn_wc_merge_conflict;
+        } /* end of conflict handling */
+      else
+        {
+          svn_boolean_t same;
+          SVN_ERR (svn_wc__files_contents_same_p (&same, result_target,
+                                                  merge_target, pool));
+
+          *merge_outcome = same ? svn_wc_merge_unchanged : svn_wc_merge_merged;
+        }
+
+      if (*merge_outcome != svn_wc_merge_unchanged && ! dry_run)
+        {
+          /* replace MERGE_TARGET with the new merged file, expanding. */
+          SVN_ERR (svn_wc__get_keywords (&keywords, merge_target, adm_access,
+                                         NULL, pool));
+          SVN_ERR (svn_wc__get_eol_style (NULL, &eol, merge_target, pool));
+          SVN_ERR (svn_wc_copy_and_translate (result_target, merge_target,
+                                              eol, FALSE, keywords, TRUE,
+                                              pool));
+        }
 
       /* Don't forget to clean up tmp_target, result_target, tmp_left,
          tmp_right.  There are a lot of scratch files lying around. */
@@ -267,7 +286,7 @@ svn_wc_merge (const char *left,
 
     } /* end of merging for text files */
 
-  else  /* merging procedure for binary files */
+  else if (! dry_run) /* merging procedure for binary files */
     {
       /* ### when making the binary-file backups, should we be honoring
          keywords and eol stuff?   */
@@ -326,23 +345,18 @@ svn_wc_merge (const char *left,
                 | SVN_WC__ENTRY_MODIFY_CONFLICT_WRK,
                 pool));
 
-      exit_code = 1;  /* a conflict happened */
+      *merge_outcome = svn_wc_merge_conflict; /* a conflict happened */
 
     } /* end of binary conflict handling */
+  else
+    *merge_outcome = svn_wc_merge_conflict; /* dry_run for binary files. */
 
   /* Merging is complete.  Regardless of text or binariness, we might
      need to tweak the executable bit on the new working file.  */
-  SVN_ERR (svn_wc__maybe_set_executable (NULL, merge_target, pool));
+  if (! dry_run)
+    SVN_ERR (svn_wc__maybe_set_executable (NULL, merge_target, pool));
 
-  /* The docstring promises we'll return a CONFLICT error if
-     appropriate;  presumably callers will specifically look for this. */
-  if (exit_code == 1)
-    return svn_error_createf
-      (SVN_ERR_WC_CONFLICT, 0, NULL, pool,
-       "svn_wc_merge: `%s' had conflicts during merge", merge_target);
-
-  else
-    return SVN_NO_ERROR;
+  return SVN_NO_ERROR;
 }
 
 

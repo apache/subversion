@@ -360,6 +360,8 @@ svn_wc_merge_prop_diffs (svn_wc_notify_state_t *state,
                          const char *path,
                          svn_wc_adm_access_t *adm_access,
                          const apr_array_header_t *propchanges,
+                         svn_boolean_t base_merge,
+                         svn_boolean_t dry_run,
                          apr_pool_t *pool)
 {
   apr_status_t apr_err;
@@ -386,14 +388,18 @@ svn_wc_merge_prop_diffs (svn_wc_notify_state_t *state,
       break;
     case svn_node_file:
       svn_path_split_nts (path, &parent, &base_name, pool);
+      break;
     default:
       return SVN_NO_ERROR; /* ### svn_node_none or svn_node_unknown */
     }
 
-  SVN_ERR (svn_wc__open_adm_file (&log_fp, parent, SVN_WC__ADM_LOG,
-                                  (APR_WRITE | APR_CREATE), /* not excl */
-                                  pool));
-  log_accum = svn_stringbuf_create ("", pool);
+  if (! dry_run)
+    {
+      SVN_ERR (svn_wc__open_adm_file (&log_fp, parent, SVN_WC__ADM_LOG,
+                                      (APR_WRITE | APR_CREATE), /* not excl */
+                                      pool));
+      log_accum = svn_stringbuf_create ("", pool);
+    }
   
   /* Note that while this routine does the "real" work, it's only
      prepping tempfiles and writing log commands.  */
@@ -402,22 +408,27 @@ svn_wc_merge_prop_diffs (svn_wc_notify_state_t *state,
                                      adm_access,
                                      base_name,
                                      propchanges,
+                                     base_merge,
+                                     dry_run,
                                      pool,
                                      &log_accum));
 
-  apr_err = apr_file_write_full (log_fp, log_accum->data, 
-                                 log_accum->len, NULL);
-  if (apr_err)
+  if (! dry_run)
     {
-      apr_file_close (log_fp);
-      return svn_error_createf (apr_err, 0, NULL, pool,
-                                "svn_wc_merge_prop_diffs:"
-                                "error writing log for %s", path);
-    }
+      apr_err = apr_file_write_full (log_fp, log_accum->data, 
+                                     log_accum->len, NULL);
+      if (apr_err)
+        {
+          apr_file_close (log_fp);
+          return svn_error_createf (apr_err, 0, NULL, pool,
+                                    "svn_wc_merge_prop_diffs:"
+                                    "error writing log for %s", path);
+        }
 
-  SVN_ERR (svn_wc__close_adm_file (log_fp, parent, SVN_WC__ADM_LOG,
-                                   1, /* sync */ pool));
-  SVN_ERR (svn_wc__run_log (adm_access, pool));
+      SVN_ERR (svn_wc__close_adm_file (log_fp, parent, SVN_WC__ADM_LOG,
+                                       1, /* sync */ pool));
+      SVN_ERR (svn_wc__run_log (adm_access, pool));
+    }
 
   return SVN_NO_ERROR;
 }
@@ -429,6 +440,8 @@ svn_wc__merge_prop_diffs (svn_wc_notify_state_t *state,
                           svn_wc_adm_access_t *adm_access,
                           const char *name,
                           const apr_array_header_t *propchanges,
+                          svn_boolean_t base_merge,
+                          svn_boolean_t dry_run,
                           apr_pool_t *pool,
                           svn_stringbuf_t **entry_accum)
 {
@@ -579,6 +592,9 @@ svn_wc__merge_prop_diffs (svn_wc_notify_state_t *state,
               if (state && is_normal)
                 *state = svn_wc_notify_state_conflicted;
 
+              if (dry_run)
+                continue;
+
               if (! reject_tmp_fp)
                 {
                   /* This is the very first prop conflict found on this
@@ -650,18 +666,15 @@ svn_wc__merge_prop_diffs (svn_wc_notify_state_t *state,
     }
   
   
+  if (dry_run)
+    return SVN_NO_ERROR;
+
   /* Done merging property changes into both pristine and working
   hashes.  Now we write them to temporary files.  Notice that the
   paths computed are ABSOLUTE pathnames, which is what our disk
   routines require.*/
 
-  SVN_ERR (svn_wc__prop_base_path (&base_prop_tmp_path, full_path, 1, pool));
-
   SVN_ERR (svn_wc__prop_path (&local_prop_tmp_path, full_path, 1, pool));
-  
-  /* Write the merged pristine prop hash to either
-     path/.svn/tmp/prop-base/name or path/.svn/tmp/dir-prop-base */
-  SVN_ERR (svn_wc__save_prop_file (base_prop_tmp_path, basehash, pool));
   
   /* Write the merged local prop hash to path/.svn/tmp/props/name or
      path/.svn/tmp/dir-props */
@@ -670,14 +683,6 @@ svn_wc__merge_prop_diffs (svn_wc_notify_state_t *state,
   /* Compute pathnames for the "mv" log entries.  Notice that these
      paths are RELATIVE pathnames (each beginning with ".svn/"), so
      that each .svn subdir remains separable when executing run_log().  */
-  str = strstr (base_prop_tmp_path, SVN_WC_ADM_DIR_NAME);
-  len = (apr_size_t)(base_prop_tmp_path - str) + strlen (base_prop_tmp_path);
-  tmp_prop_base = apr_pstrndup (pool, str, len);
-
-  str = strstr (base_propfile_path, SVN_WC_ADM_DIR_NAME);
-  len = base_propfile_path + strlen (base_propfile_path) - str;
-  real_prop_base = apr_pstrndup (pool, str, len);
-
   str = strstr (local_prop_tmp_path, SVN_WC_ADM_DIR_NAME);
   len = local_prop_tmp_path + strlen (local_prop_tmp_path) - str;
   tmp_props = apr_pstrndup (pool, str, len);
@@ -686,26 +691,6 @@ svn_wc__merge_prop_diffs (svn_wc_notify_state_t *state,
   len = local_propfile_path + strlen (local_propfile_path) - str;
   real_props = apr_pstrndup (pool, str, len);
   
-  /* Write log entry to move pristine tmp copy to real pristine area. */
-  svn_xml_make_open_tag (entry_accum,
-                         pool,
-                         svn_xml_self_closing,
-                         SVN_WC__LOG_MV,
-                         SVN_WC__LOG_ATTR_NAME,
-                         tmp_prop_base,
-                         SVN_WC__LOG_ATTR_DEST,
-                         real_prop_base,
-                         NULL);
-
-  /* Make prop-base readonly */
-  svn_xml_make_open_tag (entry_accum,
-                         pool,
-                         svn_xml_self_closing,
-                         SVN_WC__LOG_READONLY,
-                         SVN_WC__LOG_ATTR_NAME,
-                         real_prop_base,
-                         NULL);
-
   /* Write log entry to move working tmp copy to real working area. */
   svn_xml_make_open_tag (entry_accum,
                          pool,
@@ -725,6 +710,38 @@ svn_wc__merge_prop_diffs (svn_wc_notify_state_t *state,
                          SVN_WC__LOG_ATTR_NAME,
                          real_props,
                          NULL);
+
+  /* Repeat the above steps for the base properties if required */
+  if (base_merge)
+    {
+      SVN_ERR (svn_wc__prop_base_path (&base_prop_tmp_path, full_path, 1,
+                                       pool));
+      SVN_ERR (svn_wc__save_prop_file (base_prop_tmp_path, basehash, pool));
+      str = strstr (base_prop_tmp_path, SVN_WC_ADM_DIR_NAME);
+      len = (apr_size_t)(base_prop_tmp_path - str)
+        + strlen (base_prop_tmp_path);
+      tmp_prop_base = apr_pstrndup (pool, str, len);
+      str = strstr (base_propfile_path, SVN_WC_ADM_DIR_NAME);
+      len = base_propfile_path + strlen (base_propfile_path) - str;
+      real_prop_base = apr_pstrndup (pool, str, len);
+      svn_xml_make_open_tag (entry_accum,
+                             pool,
+                             svn_xml_self_closing,
+                             SVN_WC__LOG_MV,
+                             SVN_WC__LOG_ATTR_NAME,
+                             tmp_prop_base,
+                             SVN_WC__LOG_ATTR_DEST,
+                             real_prop_base,
+                             NULL);
+      svn_xml_make_open_tag (entry_accum,
+                             pool,
+                             svn_xml_self_closing,
+                             SVN_WC__LOG_READONLY,
+                             SVN_WC__LOG_ATTR_NAME,
+                             real_prop_base,
+                             NULL);
+    }
+
 
   if (reject_tmp_fp)
     {
