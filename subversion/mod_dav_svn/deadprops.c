@@ -77,7 +77,8 @@ static dav_error *dav_svn_db_store(dav_db *db, dav_datum key, dav_datum value)
 
   /* ### hope node is open, and it is mutable */
 
-  serr = svn_fs_change_prop(db->resource->info->node, &propname, &propval);
+  serr = svn_fs_change_node_prop(db->resource->info->node,
+                                 &propname, &propval, db->resource->pool);
   if (serr != NULL)
     return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                "could not change a property");
@@ -95,7 +96,8 @@ static dav_error *dav_svn_db_remove(dav_db *db, dav_datum key)
 
   /* ### hope node is open, and it is mutable */
 
-  serr = svn_fs_change_prop(db->resource->info->node, &propname, NULL);
+  serr = svn_fs_change_node_prop(db->resource->info->node, &propname, NULL,
+                                 db->resource->pool);
   if (serr != NULL)
     return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                "could not remove a property");
