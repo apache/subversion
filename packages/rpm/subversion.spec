@@ -1,6 +1,5 @@
-%define apache_version 2.0.31
+%define apache_version 2.0.31-0.3
 %define neon_version 0.18.2
-%define apr_version 0.2002.01.19-2
 Summary: A Concurrent Versioning system similar to but better than CVS.
 Name: subversion
 Version: @VERSION@
@@ -13,14 +12,12 @@ Patch0: expat.patch
 Patch1: install.patch
 Vendor: Summersoft
 Packager: David Summers <david@summersoft.fay.ar.us>
-Requires: apr >= %{apr_version}
 Requires: db >= 4.0.14
 Requires: expat
 Requires: neon = %{neon_version}
 Requires: /sbin/install-info
 BuildPreReq: apache >= %{apache_version}
 BuildPreReq: apache-devel >= %{apache_version}
-BuildPreReq: apr-devel >= %{apr_version}
 BuildPreReq: autoconf >= 2.52
 BuildPreReq: db-devel >= 4.0.14
 BuildPreReq: expat-devel
@@ -39,6 +36,10 @@ if you don't have root access on your machine but would like to use this
 package.
 
 %changelog
+* Sat Feb 02 2002 David Summers <david@summersoft.fay.ar.us> 0.8.0-1147
+- Now builds without the separate APR package as it is built into and
+  "exported" from apache-2.0.31-0.3.
+
 * Fri Feb 01 2002 David Summers <david@summersoft.fay.ar.us> 0.8.0-1132
 - Took out patches to install procedure now not required because of fixes
   in rev 1130.
@@ -90,7 +91,7 @@ rm -rf expat-lite/xmlparse.c
 rm -rf expat-lite/xmlrole*
 rm -rf expat-lite/xmltok*
 
-./configure --prefix=/usr --with-apr=/usr
+LDFLAGS="-lcrypt -ldl -pthread" ./configure --prefix=/usr --with-apr=/usr --with-apr-util=/usr
 
 # Fix up mod_dav_svn installation.
 %patch1 -p1
