@@ -18,11 +18,6 @@ A rough guide to the source tree:
       User and Developer documentation.
    www/
       Subversion web pages (live content at http://subversion.tigris.org/).
-   apr/
-      Apache Portable Runtime library.
-      *Note*: This is not in the same repository as Subversion.  Read
-      autogen.sh for instructions on how to get it if you don't
-      already have it.
    subversion/  
       Source code to subversion itself (as opposed to external libraries).
    subversion/include/
@@ -47,3 +42,19 @@ A rough guide to the source tree:
       The command line client
    subversion/tests-common/
       Common code for automated tests.
+   expat-lite/
+      Expat library from James Clark. There is a private copy in the
+      Subversion repository because we have some local changes to
+      it. See expat-lite/CHANGES.svn and expat-lite/CHANGES for
+      information on those changes.
+
+   apr/
+      Apache Portable Runtime library.
+      *Note*: This is not in the same repository as Subversion.  Read
+      autogen.sh for instructions on how to get it if you don't
+      already have it.
+   neon/
+      Neon library from Joe Orton.
+      *Note*: This is not in the same repository as Subversion.  Read
+      autogen.sh for instructions on how to get it if you don't
+      already have it.
