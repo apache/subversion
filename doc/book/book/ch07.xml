@@ -1115,7 +1115,7 @@ if __name__ == '__main__':
           describes the current state of the working copy directory,
           and basically serves the purposes of CVS's
           <filename>Entries</filename>, <filename>Root</filename>, and
-          <filename>Repository</filename> files combined.
+          <filename>Repository</filename> files combined.</para>
 
       </sidebar>
 
