@@ -49,6 +49,7 @@
 
 
 
+#include <apr_strings.h>
 #include "wc.h"
 #include "svn_xml.h"
 
@@ -73,6 +74,71 @@
    In practice, this parser tries to filter out non-exceptions as it
    goes, so the `versions' file is always left without redundancies.
 */
+
+
+/*--------------------------------------------------------------- */
+
+/*** Initialization of the versions file. ***/
+
+svn_error_t *
+svn_wc__versions_init (svn_string_t *path, apr_pool_t *pool)
+{
+  svn_error_t *err;
+  apr_file_t *f = NULL;
+
+  err = svn_wc__open_adm_file (&f, path, SVN_WC__ADM_VERSIONS,
+                               (APR_WRITE | APR_CREATE), pool);
+  if (err)
+    return err;
+
+  /* Satisfy bureacracy. */
+  err = svn_xml_write_header (f, pool);
+  if (err)
+    {
+      apr_close (f);
+      return err;
+    }
+
+  /* Open the file's top-level form. */
+  err = svn_xml_write_tag (f, pool, svn_xml__open_tag,
+                           SVN_WC__VERSIONS_START,
+                           "xmlns", SVN_XML_NAMESPACE,
+                           NULL);
+  if (err)
+    {
+      apr_close (f);
+      return err;
+    }
+
+  /* Write the entry for this dir itself.  The dir's own entry has no
+     name attribute, only a version. */
+  err = svn_xml_write_tag (f, pool, svn_xml__self_close_tag,
+                           SVN_WC__VERSIONS_ENTRY,
+                           "version", apr_psprintf (pool, "%ld", 0),
+                           NULL);
+  if (err)
+    {
+      apr_close (f);
+      return err;
+    }
+
+  /* Close the top-level form. */
+  err = svn_xml_write_tag (f, pool, svn_xml__open_tag,
+                           SVN_WC__VERSIONS_END,
+                           NULL);
+  if (err)
+    {
+      apr_close (f);
+      return err;
+    }
+
+  err = svn_wc__close_adm_file (f, path, SVN_WC__ADM_VERSIONS, 1, pool);
+  if (err)
+    return err;
+
+  return SVN_NO_ERROR;
+}
+
 
 /*--------------------------------------------------------------- */
 
