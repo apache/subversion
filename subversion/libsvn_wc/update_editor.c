@@ -851,7 +851,7 @@ static svn_error_t *
 add_or_open_file (const char *path,
                   void *parent_baton,
                   const char *copyfrom_path,
-                  svn_revnum_t copyfrom_url,
+                  svn_revnum_t copyfrom_rev,
                   void **file_baton,
                   svn_boolean_t adding, /* 0 if replacing */
                   apr_pool_t *pool)

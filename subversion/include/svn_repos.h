@@ -217,13 +217,6 @@ svn_error_t *svn_repos_abort_report (void *report_baton);
    will be called with the TGT_ROOT's revision number, else it will
    not be called at all.
 
-   SRC_REVS is a hash whose keys are character string paths, and whose
-   values are pointers to svn_revnum_t's, which describes the base
-   revisions of the items in the SRC_PARENT tree.  This hash need only
-   contain the base revision for the top of that tree, and then those
-   paths that have a base revision that differs from that of their
-   parent directory.
-
    If TEXT_DELTAS is FALSE, send a single NULL txdelta window to the
    window handler returned by EDITOR->apply_textdelta().
 
@@ -252,7 +245,6 @@ svn_error_t *
 svn_repos_dir_delta (svn_fs_root_t *src_root,
                      const char *src_parent_dir,
                      const char *src_entry,
-                     apr_hash_t *src_revs,
                      svn_fs_root_t *tgt_root,
                      const char *tgt_path,
                      const svn_delta_edit_fns_t *editor,

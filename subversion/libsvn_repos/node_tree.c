@@ -207,9 +207,9 @@ open_root (void *edit_baton,
 
 static svn_error_t *
 open_directory (svn_stringbuf_t *name,
-                   void *parent_baton,
-                   svn_revnum_t base_revision,
-                   void **child_baton)
+                void *parent_baton,
+                svn_revnum_t base_revision,
+                void **child_baton)
 {
   struct dir_baton *pd = (struct dir_baton *) parent_baton;
   struct edit_baton *eb = (struct edit_baton *) pd->edit_baton;
@@ -262,9 +262,9 @@ add_directory (svn_stringbuf_t *name,
 
 static svn_error_t *
 open_file (svn_stringbuf_t *name,
-              void *parent_baton,
-              svn_revnum_t base_revision,
-              void **file_baton)
+           void *parent_baton,
+           svn_revnum_t base_revision,
+           void **file_baton)
 {
   struct dir_baton *pd = (struct dir_baton *) parent_baton;
   struct edit_baton *eb = (struct edit_baton *) pd->edit_baton;

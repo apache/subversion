@@ -67,10 +67,6 @@ typedef struct svn_repos_report_baton_t
   const svn_delta_edit_fns_t *update_editor;
   void *update_edit_baton; 
 
-  /* This hash describes the mixed revisions in the transaction; it
-     maps pathnames (char *) to revision numbers (svn_revnum_t). */
-  apr_hash_t *path_revs;
-
   /* This hash contains any `linked paths', and what they were linked
      from. */
   apr_hash_t *linked_paths;
@@ -88,14 +84,14 @@ static void add_to_path_map(apr_hash_t *hash,
                             const char *linkpath)
 {
   /* normalize 'root paths' to have a slash */
-  const char *norm_path = strcmp(path, "") ? path : "/";
+  const char *norm_path = strcmp (path, "") ? path : "/";
 
   /* if there is an actual linkpath given, it is the repos path, else
      our path maps to itself. */
   const char *repos_path = linkpath ? linkpath : norm_path;
 
   /* now, geez, put the path in the map already! */
-  apr_hash_set(hash, path, APR_HASH_KEY_STRING, (void *)repos_path);
+  apr_hash_set (hash, path, APR_HASH_KEY_STRING, (void *) repos_path);
 }
 
 
@@ -110,36 +106,36 @@ static const char *get_from_path_map(apr_hash_t *hash,
   
   /* no hash means no map.  that's easy enough. */
   if (! hash)
-    return apr_pstrdup(pool, path);
+    return apr_pstrdup (pool, path);
   
-  if ((repos_path = apr_hash_get(hash, path, APR_HASH_KEY_STRING)))
+  if ((repos_path = apr_hash_get (hash, path, APR_HASH_KEY_STRING)))
     {
       /* what luck!  this path is a hash key!  if there is a linkpath,
          use that, else return the path itself. */
-      return apr_pstrdup(pool, repos_path);
+      return apr_pstrdup (pool, repos_path);
     }
 
   /* bummer.  PATH wasn't a key in path map, so we get to start
      hacking off components and looking for a parent from which to
      derive a repos_path.  use a stringbuf for convenience. */
-  my_path = svn_stringbuf_create(path, pool);
+  my_path = svn_stringbuf_create (path, pool);
   do 
     {
-      svn_path_remove_component(my_path);
-      if ((repos_path = apr_hash_get(hash, my_path->data, my_path->len)))
+      svn_path_remove_component (my_path);
+      if ((repos_path = apr_hash_get (hash, my_path->data, my_path->len)))
         {
           /* we found a mapping ... but of one of PATH's parents.
              soooo, we get to re-append the chunks of PATH that we
              broke off to the REPOS_PATH we found. */
-          return apr_pstrcat(pool, repos_path, "/", 
-                             path + my_path->len + 1, NULL);
+          return apr_pstrcat (pool, repos_path, "/", 
+                              path + my_path->len + 1, NULL);
         }
     }
-  while (! svn_path_is_empty(my_path));
+  while (! svn_path_is_empty (my_path));
   
   /* well, we simply never found anything worth mentioning the map.
      PATH is its own default finding, then. */
-  return apr_pstrdup(pool, path);
+  return apr_pstrdup (pool, path);
 }
 
 
@@ -174,11 +170,6 @@ svn_repos_set_path (void *report_baton,
                                                   rbaton->pool));
       SVN_ERR (svn_fs_txn_root (&(rbaton->txn_root), rbaton->txn,
                                 rbaton->pool));
-      
-      /* In our hash, map the root of the txn ("") to the initial base
-         revision. */
-      *rev_ptr = revision;
-      apr_hash_set (rbaton->path_revs, "", APR_HASH_KEY_STRING, rev_ptr);
     }
 
   else  /* this is not the first call to set_path. */ 
@@ -211,12 +202,6 @@ svn_repos_set_path (void *report_baton,
       /* Copy into our txn. */
       SVN_ERR (svn_fs_link (from_root, link_path,
                             rbaton->txn_root, from_path, rbaton->pool));
-      
-      /* Remember this path in our hashtable. */
-      *rev_ptr = revision;
-      apr_hash_set (rbaton->path_revs, from_path, APR_HASH_KEY_STRING,
-                    rev_ptr);    
-
     }
 
   return SVN_NO_ERROR;
@@ -278,10 +263,6 @@ svn_repos_link_path (void *report_baton,
                             rbaton->txn2_root, from_path, rbaton->pool));
     }
 
-  /* Remember this path in our hashtable of revision.  It doesn't
-     matter that the path comes from a different repository location. */
-  *rev_ptr = revision;
-  apr_hash_set (rbaton->path_revs, from_path, APR_HASH_KEY_STRING, rev_ptr);    
   /* Remove this path/link_path in our hashtable of linked paths. */
   if (! rbaton->linked_paths)
     rbaton->linked_paths = apr_hash_make (rbaton->pool);
@@ -352,7 +333,6 @@ svn_repos_finish_report (void *report_baton)
   SVN_ERR (svn_repos_dir_delta (rbaton->txn_root, 
                                 rbaton->base_path, 
                                 rbaton->target,
-                                rbaton->path_revs,
                                 target_root, 
                                 tgt_path,
                                 rbaton->update_editor,
@@ -410,7 +390,6 @@ svn_repos_begin_report (void **report_baton,
   rbaton->revnum_to_update_to = revnum;
   rbaton->update_editor = editor;
   rbaton->update_edit_baton = edit_baton;
-  rbaton->path_revs = apr_hash_make (pool);
   rbaton->repos = repos;
   rbaton->text_deltas = text_deltas;
   rbaton->recurse = recurse;

@@ -43,7 +43,6 @@
 struct context {
   const svn_delta_edit_fns_t *editor;
   svn_fs_root_t *source_root;
-  apr_hash_t *source_rev_diffs;
   svn_fs_root_t *target_root;
   svn_boolean_t text_deltas;
   svn_boolean_t recurse;
@@ -69,9 +68,9 @@ typedef svn_error_t *proplist_change_fn_t (struct context *c,
 
 
 /* Retrieving the base revision from the path/revision hash.  */
-static svn_revnum_t get_revision_from_hash (apr_hash_t *hash, 
-                                            const char *path,
-                                            apr_pool_t *pool);
+static svn_revnum_t get_path_revision (svn_fs_root_t *root,
+                                       const char *path,
+                                       apr_pool_t *pool);
 
 
 /* proplist_change_fn_t property changing functions.  */
@@ -155,7 +154,6 @@ svn_error_t *
 svn_repos_dir_delta (svn_fs_root_t *src_root,
                      const char *src_parent_dir,
                      const char *src_entry,
-                     apr_hash_t *src_revs,
                      svn_fs_root_t *tgt_root,
                      const char *tgt_path,
                      const svn_delta_edit_fns_t *editor,
@@ -227,7 +225,6 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
      reference to all the helper functions. */
   c.editor = editor;
   c.source_root = src_root;
-  c.source_rev_diffs = src_revs;
   c.target_root = tgt_root;
   c.text_deltas = text_deltas;
   c.recurse = recurse;
@@ -255,7 +252,7 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
   /* Call open_root to get our root_baton... */
   SVN_ERR (editor->open_root 
            (edit_baton, 
-            get_revision_from_hash (src_revs, src_parent_dir, pool),
+            get_path_revision (src_root, src_parent_dir, pool),
             &root_baton));
 
   /* Construct the full path of the source and target update items. */
@@ -354,49 +351,31 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
 /* Retrieving the base revision from the path/revision hash.  */
 
 
-/* Look through a HASH (with paths as keys, and pointers to revision
-   numbers as values) for the revision associated with the given PATH.
-   Perform all necessary memory allocations in POOL.  */
-static svn_revnum_t
-get_revision_from_hash (apr_hash_t *hash, const char *path,
-                        apr_pool_t *pool)
+static svn_revnum_t 
+get_path_revision (svn_fs_root_t *root,
+                   const char *path,
+                   apr_pool_t *pool)
 {
-  void *val;
-  svn_stringbuf_t *path_copy;
-  svn_revnum_t revision = SVN_INVALID_REVNUM;
+  svn_revnum_t revision;
 
-  if (! hash)
-    return SVN_INVALID_REVNUM;
+  /* Easy out -- if ROOT is a revision root, we can use the revision
+     that it's a root of. */
+  if (svn_fs_is_revision_root (root))
+    return svn_fs_revision_root_revision (root);
 
-  /* See if this path has a revision assigned in the hash. */
-  val = apr_hash_get (hash, path, APR_HASH_KEY_STRING);
-  if (val)
-    {
-      revision = *((svn_revnum_t *) val);
-      if (SVN_IS_VALID_REVNUM(revision))
-        return revision;      
-    }
+  /* Else, this must be a transaction root, so ask the filesystem in
+     what revision this path was created. */
+  if (svn_fs_node_created_rev (&revision, root, path, pool))
+    revision = SVN_INVALID_REVNUM;
 
-  /* Make a copy of our path that we can hack on. */
-  path_copy = svn_stringbuf_create (path, pool);
-
-  /* If we haven't found a valid revision yet, and our copy of the
-     path isn't empty, hack the last component off the path and see if
-     *that* has a revision entry in our hash. */
-  while ((! SVN_IS_VALID_REVNUM(revision)) 
-         && (! svn_path_is_empty (path_copy)))
-    {
-      svn_path_remove_component (path_copy);
-
-      val = apr_hash_get (hash, path_copy->data, APR_HASH_KEY_STRING);
-      if (val)
-        revision = *((svn_revnum_t *) val);
-    }
-  
+  /* If we don't get back a valid revision, this path is mutable in
+     the transaction.  We should probably examing the node on which it
+     is based, doable by querying for the node-id of the path, and
+     thing examining that node-id's predecessor.  ### this predecessor
+     determination isn't exposed via the FS public API right now, so
+     for now, we'll just return the SVN_INVALID_REVNUM. */
   return revision;
 }
-
-
 
 
 /* proplist_change_fn_t property changing functions.  */
@@ -485,14 +464,14 @@ delta_proplists (struct context *c,
                               cr_str, subpool));
 
           /* Transmit the committed-date. */
-          svn_fs_revision_prop (&committed_date, fs,
-                                committed_rev, SVN_PROP_REVISION_DATE, pool);
+          svn_fs_revision_prop (&committed_date, fs, committed_rev, 
+                                SVN_PROP_REVISION_DATE, subpool);
           SVN_ERR (change_fn (c, object, SVN_PROP_ENTRY_COMMITTED_DATE, 
                               committed_date, subpool));
 
           /* Transmit the last-author. */
-          svn_fs_revision_prop (&last_author, fs,
-                                committed_rev, SVN_PROP_REVISION_AUTHOR, pool);
+          svn_fs_revision_prop (&last_author, fs, committed_rev, 
+                                SVN_PROP_REVISION_AUTHOR, subpool);
           SVN_ERR (change_fn (c, object, SVN_PROP_ENTRY_LAST_AUTHOR,
                               last_author, subpool));
         }
@@ -503,30 +482,21 @@ delta_proplists (struct context *c,
       int changed;
 
       /* Is this deltification worth our time? */
-      SVN_ERR (svn_fs_props_changed (&changed,
-                                     c->target_root,
-                                     target_path,
-                                     c->source_root,
-                                     source_path,
-                                     subpool));
+      SVN_ERR (svn_fs_props_changed (&changed, c->target_root, target_path,
+                                     c->source_root, source_path, subpool));
       if (! changed)
-        {
-          svn_pool_destroy (subpool);
-          return SVN_NO_ERROR;
-        }
+        goto cleanup;
     }
 
   /* Get the source file's properties */
   if (source_path)
-    SVN_ERR (svn_fs_node_proplist 
-             (&s_props, c->source_root, source_path,
-              subpool));
+    SVN_ERR (svn_fs_node_proplist (&s_props, c->source_root, 
+                                   source_path, subpool));
 
   /* Get the target file's properties */
   if (target_path)
-    SVN_ERR (svn_fs_node_proplist 
-             (&t_props, c->target_root, target_path,
-              subpool));
+    SVN_ERR (svn_fs_node_proplist (&t_props, c->target_root, 
+                                   target_path, subpool));
 
   for (hi = apr_hash_first (subpool, t_props); hi; hi = apr_hash_next (hi))
     {
@@ -541,8 +511,7 @@ delta_proplists (struct context *c,
       /* See if this property existed in the source.  If so, and if
          the values in source and target differ, open the value in
          target with the one in source. */
-      if (s_props 
-          && ((s_value = apr_hash_get (s_props, key, klen)) != 0))
+      if (s_props && ((s_value = apr_hash_get (s_props, key, klen)) != 0))
         {
           if (! svn_string_compare (s_value, val))
             SVN_ERR (change_fn (c, object, key, val, subpool));
@@ -574,6 +543,7 @@ delta_proplists (struct context *c,
         }
     }
 
+ cleanup:
   /* Destroy local subpool. */
   svn_pool_destroy (subpool);
 
@@ -710,7 +680,7 @@ add_file_or_dir (struct context *c, void *dir_baton,
                  apr_pool_t *pool)
 {
   int is_dir;
-  svn_stringbuf_t *target_full_path;
+  svn_stringbuf_t *t_fullpath;
   svn_revnum_t copied_from_revision = SVN_INVALID_REVNUM;
   const char *copied_from_path = NULL;
   struct context *context = c;
@@ -723,12 +693,11 @@ add_file_or_dir (struct context *c, void *dir_baton,
     abort();
 
   /* Get the target's full path */
-  target_full_path = svn_stringbuf_create (target_parent, pool);
-  svn_path_add_component_nts (target_full_path, target_entry);
+  t_fullpath = svn_stringbuf_create (target_parent, pool);
+  svn_path_add_component_nts (t_fullpath, target_entry);
 
   /* Is the target a file or a directory?  */
-  SVN_ERR (svn_fs_is_dir (&is_dir, c->target_root, 
-                          target_full_path->data, pool));
+  SVN_ERR (svn_fs_is_dir (&is_dir, c->target_root, t_fullpath->data, pool));
 
   namebuf = svn_stringbuf_create (target_entry, pool);
 
@@ -737,7 +706,7 @@ add_file_or_dir (struct context *c, void *dir_baton,
       SVN_ERR (svn_fs_copied_from (&copied_from_revision,
                                    &copied_from_path,
                                    c->target_root,
-                                   target_full_path->data,
+                                   t_fullpath->data,
                                    pool));
     }
 
@@ -761,7 +730,7 @@ add_file_or_dir (struct context *c, void *dir_baton,
                (namebuf, dir_baton,
                 copied_path_buf, copied_from_revision, &subdir_baton));
       SVN_ERR (delta_dirs (context, subdir_baton,
-                           copied_from_path, target_full_path->data, pool));
+                           copied_from_path, t_fullpath->data, pool));
       SVN_ERR (context->editor->close_directory (subdir_baton));
     }
   else
@@ -772,7 +741,7 @@ add_file_or_dir (struct context *c, void *dir_baton,
                (namebuf, dir_baton,
                 copied_path_buf, copied_from_revision, &file_baton));
       SVN_ERR (delta_files (context, file_baton,
-                            copied_from_path, target_full_path->data, pool));
+                            copied_from_path, t_fullpath->data, pool));
       SVN_ERR (context->editor->close_file (file_baton));
     }
 
@@ -793,8 +762,8 @@ replace_file_or_dir (struct context *c,
                      apr_pool_t *pool)
 {
   int is_dir;
-  svn_stringbuf_t *source_full_path = 0;
-  svn_stringbuf_t *target_full_path = 0;
+  svn_stringbuf_t *s_fullpath = 0;
+  svn_stringbuf_t *t_fullpath = 0;
   svn_revnum_t base_revision = SVN_INVALID_REVNUM;
 
   /* ### change the delta interface */
@@ -807,21 +776,19 @@ replace_file_or_dir (struct context *c,
     abort();
 
   /* Get the target's full path */
-  target_full_path = svn_stringbuf_create (target_parent, pool);
-  svn_path_add_component_nts (target_full_path, target_entry);
+  t_fullpath = svn_stringbuf_create (target_parent, pool);
+  svn_path_add_component_nts (t_fullpath, target_entry);
 
   /* Is the target a file or a directory?  */
   SVN_ERR (svn_fs_is_dir (&is_dir, c->target_root, 
-                          target_full_path->data, pool));
+                          t_fullpath->data, pool));
 
   /* Get the source's full path */
-  source_full_path = svn_stringbuf_create (source_parent, pool);
-  svn_path_add_component_nts (source_full_path, source_entry);
+  s_fullpath = svn_stringbuf_create (source_parent, pool);
+  svn_path_add_component_nts (s_fullpath, source_entry);
 
   /* Get the base revision for the entry from the hash. */
-  base_revision = get_revision_from_hash (c->source_rev_diffs,
-                                          source_full_path->data,
-                                          pool);
+  base_revision = get_path_revision (c->source_root, s_fullpath->data, pool);
 
   namebuf = svn_stringbuf_create (target_entry, pool);
   if (is_dir)
@@ -831,7 +798,7 @@ replace_file_or_dir (struct context *c,
       SVN_ERR (c->editor->open_directory 
                (namebuf, dir_baton, base_revision, &subdir_baton));
       SVN_ERR (delta_dirs (c, subdir_baton,
-                           source_full_path->data, target_full_path->data,
+                           s_fullpath->data, t_fullpath->data,
                            pool));
       SVN_ERR (c->editor->close_directory (subdir_baton));
     }
@@ -842,7 +809,7 @@ replace_file_or_dir (struct context *c,
       SVN_ERR (c->editor->open_file 
                (namebuf, dir_baton, base_revision, &file_baton));
       SVN_ERR (delta_files (c, file_baton,
-                            source_full_path->data, target_full_path->data,
+                            s_fullpath->data, t_fullpath->data,
                             pool));
       SVN_ERR (c->editor->close_file (file_baton));
     }
@@ -906,14 +873,14 @@ delta_dirs (struct context *c,
       const void *key;
       void *val;
       apr_ssize_t klen;
-      svn_stringbuf_t *target_fullpath =
+      svn_stringbuf_t *t_fullpath =
         svn_stringbuf_create (target_path, subpool);
           
       /* KEY is the entry name in target, VAL the dirent */
       apr_hash_this (hi, &key, &klen, &val);
       t_entry = val;
 
-      svn_path_add_component_nts (target_fullpath, t_entry->name);
+      svn_path_add_component_nts (t_fullpath, t_entry->name);
 
       /* Can we find something with the same name in the source
          entries hash? */
@@ -922,9 +889,8 @@ delta_dirs (struct context *c,
         {
           int distance;
           int is_dir;
-          SVN_ERR (svn_fs_is_dir (&is_dir,
-                                  c->target_root, target_fullpath->data,
-                                  subpool));
+          SVN_ERR (svn_fs_is_dir (&is_dir, c->target_root, 
+                                  t_fullpath->data, subpool));
 
           if (c->recurse || !is_dir)
             {
@@ -948,19 +914,14 @@ delta_dirs (struct context *c,
               else if (distance == -1)
                 {
                   SVN_ERR (delete (c, dir_baton, t_entry->name, subpool));
-                  SVN_ERR (add_file_or_dir 
-                           (c, dir_baton,
-                            target_path, t_entry->name, subpool));
+                  SVN_ERR (add_file_or_dir (c, dir_baton, target_path, 
+                                            t_entry->name, subpool));
                 }
               else
                 {
-                  SVN_ERR (replace_file_or_dir
-                           (c, dir_baton, 
-                            source_path,
-                            s_entry->name,
-                            target_path,
-                            t_entry->name,
-                            subpool));
+                  SVN_ERR (replace_file_or_dir (c, dir_baton, source_path,
+                                                s_entry->name, target_path,
+                                                t_entry->name, subpool));
                 }
             }
 
@@ -971,12 +932,12 @@ delta_dirs (struct context *c,
         {
           int is_dir;
           SVN_ERR (svn_fs_is_dir (&is_dir, c->target_root,
-                                  target_fullpath->data, subpool));
+                                  t_fullpath->data, subpool));
 
-          if (c->recurse || !is_dir)
+          if (c->recurse || (! is_dir))
             {
-              SVN_ERR (add_file_or_dir
-                       (c, dir_baton, target_path, t_entry->name, subpool));
+              SVN_ERR (add_file_or_dir (c, dir_baton, target_path, 
+                                        t_entry->name, subpool));
             } 
         }
 
@@ -994,25 +955,26 @@ delta_dirs (struct context *c,
           const void *key;
           void *val;
           apr_ssize_t klen;
-          svn_stringbuf_t *source_fullpath = svn_stringbuf_create (source_path,
-                                                                   subpool);
+          svn_stringbuf_t *s_fullpath = 
+            svn_stringbuf_create (source_path, subpool);
           int is_dir;
           
           /* KEY is the entry name in source, VAL the dirent */
           apr_hash_this (hi, &key, &klen, &val);
           s_entry = val;
-          svn_path_add_component_nts (source_fullpath, s_entry->name);
+          svn_path_add_component_nts (s_fullpath, s_entry->name);
 
           /* Do we actually want to delete the dir if we're non-recursive? */
-          SVN_ERR (svn_fs_is_dir (&is_dir,
-                                  c->source_root,
-                                  source_fullpath->data,
-                                  subpool));
+          SVN_ERR (svn_fs_is_dir (&is_dir, c->source_root, 
+                                  s_fullpath->data, subpool));
 
-          if (c->recurse || !is_dir)
+          if (c->recurse || (! is_dir))
             {
               SVN_ERR (delete (c, dir_baton, s_entry->name, subpool));
             }
+
+          /* Clear out our subpool for the next iteration... */
+          svn_pool_clear (subpool);
         }
     }
 

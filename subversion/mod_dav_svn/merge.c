@@ -319,8 +319,6 @@ dav_error * dav_svn__merge_response(ap_filter_t *output,
   const char *vcc;
   char revbuf[20];      /* long enough for SVN_REVNUM_T_FMT */
   svn_string_t *creationdate, *creator_displayname;
-  apr_hash_t *revs;
-  svn_revnum_t *rev_ptr;
   svn_delta_edit_fns_t *editor;
   merge_response_ctx mrc = { 0 };
 
@@ -405,12 +403,6 @@ dav_error * dav_svn__merge_response(ap_filter_t *output,
      ### we probably should say something about the dirs, so that we can
      ### pass back the new version URL */
 
-  /* ### hrm. needing this hash table feels wonky. */
-  revs = apr_hash_make(pool);
-  rev_ptr = apr_palloc(pool, sizeof(*rev_ptr));
-  *rev_ptr = new_rev - 1;
-  apr_hash_set(revs, "", APR_HASH_KEY_STRING, rev_ptr);
-
   /* set up the editor for the delta process */
   editor = svn_delta_old_default_editor(pool);
   editor->open_root = mr_open_root;
@@ -432,7 +424,6 @@ dav_error * dav_svn__merge_response(ap_filter_t *output,
 
   serr = svn_repos_dir_delta(previous_root, "/",
                              NULL,      /* ### should fix */
-                             revs,
                              committed_root, "/",
                              editor, &mrc, 
                              FALSE, /* don't bother with text-deltas */

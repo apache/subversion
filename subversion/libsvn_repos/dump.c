@@ -589,10 +589,7 @@ svn_repos_dump_fs (svn_repos_t *repos,
   const svn_delta_edit_fns_t *editor;
   void *dump_edit_baton, *edit_baton;
   svn_revnum_t i;  
-  apr_hash_t *src_revs;
-
   svn_fs_t *fs = svn_repos_fs (repos);
-
   apr_pool_t *subpool = svn_pool_create (pool);
 
   /* Use default vals if necessary. */
@@ -659,12 +656,7 @@ svn_repos_dump_fs (svn_repos_t *repos,
       /* Drive the editor. */
       SVN_ERR (svn_fs_revision_root (&from_root, fs, from_rev, subpool));
       SVN_ERR (svn_fs_revision_root (&to_root, fs, to_rev, subpool));
-
-      src_revs = apr_hash_make (subpool);
-      apr_hash_set (src_revs, "", APR_HASH_KEY_STRING, &from_rev);
-
       SVN_ERR (svn_repos_dir_delta (from_root, "/", NULL, 
-                                    src_revs,
                                     to_root, "/",
                                     editor, edit_baton,
                                     FALSE, /* don't send text-deltas */

@@ -469,7 +469,7 @@ def update_to_rev_zero(sbox):
 #----------------------------------------------------------------------
 
 def receive_overlapping_same_change(sbox):
-  "Make sure overlapping idental changes do not conflict."
+  "make sure overlapping identical changes do not conflict"
 
   ### (See http://subversion.tigris.org/issues/show_bug.cgi?id=682.)
   ###
