@@ -129,6 +129,7 @@ Candidate changes:
     Upgrade Inno Setup to 4.1.6
     Justification: potentially smaller distributions, better user experience
     Votes:
+       +1: josander
        +0: dionisos
   
   * r8856
