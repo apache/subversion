@@ -250,116 +250,6 @@ svn_wc__make_adm_thing (svn_string_t *path,
 
 
 
-/*** copying files ***/
-
-#ifndef apr_copy_file
-/**
- * copy one file to another
- * @param from_path The full path to the source file (using / on all systems)
- * @param to_path The full path to the dest file (using / on all systems)
- * @param pool The pool to use.
- * @tip If a file exists at the new location, then it will be overwritten.  
- * @tip The source file will be copied until EOF is reached, not until
- *      its size at the time of opening is reached.
- * @tip The dest file's permissions will be the same as the source file's.
- */
-
-apr_status_t
-apr_copy_file (const char *src, const char *dst, apr_pool_t *pool);
-
-apr_status_t
-apr_copy_file (const char *src, const char *dst, apr_pool_t *pool)
-{
-  apr_file_t *s = NULL, *d = NULL;  /* init to null important for APR */
-  apr_status_t apr_err;
-  apr_status_t read_err, write_err;
-  apr_finfo_t finfo;
-  apr_fileperms_t perms;
-  char buf[BUFSIZ];
-
-  /* Open source file. */
-  apr_err = apr_open (&s, src, APR_READ, APR_OS_DEFAULT, pool);
-  if (apr_err)
-    return apr_err;
-  
-  /* Get its size. */
-  apr_err = apr_getfileinfo (&finfo, s);
-  if (apr_err)
-    {
-      apr_close (s);  /* toss any error */
-      return apr_err;
-    }
-  else
-    perms = finfo.protection;
-
-  /* Open dest file. */
-  apr_err = apr_open (&d, dst, (APR_WRITE | APR_CREATE), perms, pool);
-  if (apr_err)
-    {
-      apr_close (s);  /* toss */
-      return apr_err;
-    }
-  
-  /* Copy bytes till the cows come home. */
-  while (read_err != APR_EOF)
-    {
-      apr_ssize_t bytes_this_time = sizeof (buf);
-
-      /* Read 'em. */
-      read_err = apr_read (s, buf, &bytes_this_time);
-      if (read_err && (read_err != APR_EOF))
-        {
-          apr_close (s);  /* toss */
-          apr_close (d);  /* toss */
-          return read_err;
-        }
-
-      /* Write 'em. */
-      write_err = apr_full_write (d, buf, bytes_this_time, NULL);
-      if (write_err)
-        {
-          apr_close (s);  /* toss */
-          apr_close (d);
-          return write_err;
-        }
-
-      if (read_err && (read_err == APR_EOF))
-        {
-          apr_err = apr_close (s);
-          if (apr_err)
-            {
-              apr_close (d);
-              return apr_err;
-            }
-          
-          apr_err = apr_close (d);
-          if (apr_err)
-            return apr_err;
-        }
-    }
-
-  return 0;
-}
-#endif /* apr_copy_file */
-
-
-svn_error_t *
-svn_wc__copy_file (svn_string_t *src, svn_string_t *dst, apr_pool_t *pool)
-{
-  apr_status_t apr_err;
-
-  apr_err = apr_copy_file (src->data, dst->data, pool);
-  if (apr_err)
-    {
-      const char *msg
-        = apr_psprintf (pool, "copying %s to %s", src->data, dst->data);
-      return svn_error_create (apr_err, 0, NULL, pool, msg);
-    }
-  
-  return SVN_NO_ERROR;
-}
-
-
 /* Copy SRC to DST if SRC exists, else create DST empty. */
 static svn_error_t *
 maybe_copy_file (svn_string_t *src, svn_string_t *dst, apr_pool_t *pool)
@@ -394,7 +284,7 @@ maybe_copy_file (svn_string_t *src, svn_string_t *dst, apr_pool_t *pool)
     }
   else /* SRC exists, so copy it to DST. */
     {    
-      err = svn_wc__copy_file (src, dst, pool);
+      err = svn_io_copy_file (src, dst, pool);
       if (err)
         return err;
     }

@@ -178,4 +178,12 @@ svn_error_t *svn_io_file_writer (void *filehandle,
                                  apr_pool_t *pool);
 
 
+/* Copy SRC to DST.  DST will be overwritten if it exists. */
+svn_error_t *svn_io_copy_file (svn_string_t *src,
+                               svn_string_t *dst,
+                               apr_pool_t *pool);
+
+
+
+
 #endif /* SVN_IO_H */
