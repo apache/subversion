@@ -80,6 +80,15 @@ typedef int svn_boolean_t;
 
 
 
+/* Defines for *reserved* svn property names.  */
+
+#define SVN_PROP_REVISION_LOG "svn:log"
+
+
+
+
+
+
 #endif  /* SVN_TYPES_H */
 
 #ifdef __cplusplus
