@@ -310,7 +310,7 @@ call_functions_with_unopened_fs (const char **msg,
   svn_error_t *err;
   svn_fs_t *fs = svn_fs_new (pool);
 
-  *msg = "Call functions with unopened filesystem and check errors";
+  *msg = "call functions with unopened filesystem and check errors";
 
   if (msg_only)
     return SVN_NO_ERROR;
@@ -4696,13 +4696,14 @@ random_data_to_buffer (char *buf,
   apr_size_t offset;
 
   int ds_off = 0;
-  char dataset[30] = "abcdefghijklmnopqrstuvwxyz .!?";
+  char dataset[10] = "0123456789";
+  int dataset_size = strlen (dataset);
 
   if (full)
     {
       for (i = 0; i < buf_len; i++)
         {
-          ds_off = my_rand (sizeof (dataset));
+          ds_off = my_rand (dataset_size);
           buf[i] = dataset[ds_off];
         }
 
@@ -4713,7 +4714,7 @@ random_data_to_buffer (char *buf,
   for (i = 0; i < num_bytes; i++)
     {
       offset = my_rand (buf_len - 1);
-      ds_off = my_rand (sizeof (dataset));
+      ds_off = my_rand (dataset_size);
       buf[offset] = dataset[ds_off];
     }
 
@@ -4981,10 +4982,10 @@ undeltify_deltify (const char **msg,
 { 
   svn_fs_t *fs;
   svn_fs_txn_t *txn;
-  svn_fs_root_t *txn_root;
-  svn_revnum_t youngest_rev = 0;
+  svn_fs_root_t *txn_root, *rev_root;
+  svn_revnum_t youngest_rev = 0, i_rev;
   int i;
-  apr_pool_t *subpool;
+  apr_pool_t *subpool, *iterpool;
   const char *greek_files[12][1 + 10] = { 
     /* name          per-rev contents ... */
     { "iota",        0 },
@@ -5019,19 +5020,19 @@ undeltify_deltify (const char **msg,
 
       /* The first time through, create the Greek tree. */
       if (youngest_rev == 0)
-        SVN_ERR (svn_test__create_greek_tree (txn_root, subpool));
+          SVN_ERR (svn_test__create_greek_tree (txn_root, subpool));
       
-      /* Modify each file.  */
+      /* Modify each file (changing all bytes only the first time).  */
       for (i = 0; i < 12; i++)
         {
+          const char *path = greek_files[i][0];
           char buf[1025];
-          random_data_to_buffer (buf, 1024, TRUE);
+
+          random_data_to_buffer (buf, 1024, youngest_rev ? FALSE : TRUE);
           buf[1024] = 0;
           greek_files[i][youngest_rev + 1] = apr_pstrdup (pool, buf);
           SVN_ERR (svn_test__set_file_contents 
-                   (txn_root, 
-                    greek_files[i][0], 
-                    greek_files[i][youngest_rev + 1], 
+                   (txn_root, path, greek_files[i][youngest_rev + 1], 
                     subpool));
         }
 
@@ -5046,49 +5047,39 @@ undeltify_deltify (const char **msg,
   /* Now, undeltify each file, in each revision (starting with the
      youngest, and going backward to revision 0), verifying that its
      contents are as expected. */
-  while (youngest_rev)
+  for (i_rev = youngest_rev; i_rev; i_rev--)
     {
-      svn_fs_root_t *rev_root;
-      apr_pool_t *iterpool;
-
       /* Get a revision root. */
-      SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, subpool));
-
+      SVN_ERR (svn_fs_revision_root (&rev_root, fs, i_rev, subpool));
+      
+      /* Create a per-iteration subpool. */
       iterpool = svn_pool_create (subpool);
+
+      /* Loop over files, undeltifying (then verifying) their
+         contents, then re-deltifying (and verifying) them again. */
       for (i = 0; i < 12; i++)
         {
+          const char *path = greek_files[i][0];
           svn_stringbuf_t *contents;
 
-          /* Undeltify this file. */
-          SVN_ERR (svn_fs_undeltify (rev_root, greek_files[i][0], 
-                                     0, iterpool));
-
-          /* Now get its file contents... */
-          SVN_ERR (svn_test__get_file_contents (rev_root,
-                                                greek_files[i][0],
-                                                &contents,
+          /* Undeltify this file, get its contents, and make sure they
+             'check out'.  */
+          SVN_ERR (svn_fs_undeltify (rev_root, path, 0, iterpool));
+          SVN_ERR (svn_test__get_file_contents (rev_root, path, &contents,
                                                 iterpool));
-
-          /* ...and make sure they 'check out'.  */
-          if (strcmp (greek_files[i][youngest_rev], contents->data))
+          if (strcmp (greek_files[i][i_rev], contents->data))
             return svn_error_createf
               (SVN_ERR_FS_CORRUPT, 0, NULL, pool,
-               "undeltify: %s:%ld undeltified contents seem oddly incorrect",
-               greek_files[i][0], youngest_rev);
+               "%s:%ld undeltified contents are incorrect", path, i_rev);
 
-          /* Now, we're going to try to re-deltify the file. */
-          SVN_ERR (svn_fs_deltify (rev_root, greek_files[i][0], 0, iterpool));
-
-          /* And again, see if its contents are all good. */
-          SVN_ERR (svn_test__get_file_contents (rev_root,
-                                                greek_files[i][0],
-                                                &contents,
+          /* Now, re-deltify, and again get its contents and verify them.  */
+          SVN_ERR (svn_fs_deltify (rev_root, path, 0, iterpool));
+          SVN_ERR (svn_test__get_file_contents (rev_root, path, &contents,
                                                 iterpool));
-          if (strcmp (greek_files[i][youngest_rev], contents->data))
+          if (strcmp (greek_files[i][i_rev], contents->data))
             return svn_error_createf
               (SVN_ERR_FS_CORRUPT, 0, NULL, pool,
-               "undeltify: %s:%ld re-deltified contents seem strangely wrong",
-               greek_files[i][0], youngest_rev);
+               "%s:%ld re-deltified contents are incorrect", path, i_rev);
 
           /* Clear out the per-file pool. */
           svn_pool_clear (iterpool);
@@ -5099,7 +5090,75 @@ undeltify_deltify (const char **msg,
 
       /* Clear out the per-revision pool. */
       svn_pool_clear (subpool);
-      youngest_rev--;
+    }
+
+
+  /*** Now, let's test the recursive deltification/undeltification. ***/
+
+  /* Undeltify... */
+  for (i_rev = youngest_rev; i_rev; i_rev--)
+    {
+      /* Un-deltify (recursively) the root directory in this revision. */
+      SVN_ERR (svn_fs_revision_root (&rev_root, fs, i_rev, subpool));
+      SVN_ERR (svn_fs_undeltify (rev_root, "", 1, subpool));
+
+      /* Create per-iteration subpool. */
+      iterpool = svn_pool_create (subpool);
+
+      /* Verify file contents are all good. */
+      for (i = 0; i < 12; i++)
+        {
+          svn_stringbuf_t *contents;
+          const char *path = greek_files[i][0];
+
+          /* Verify file contents.  */
+          SVN_ERR (svn_test__get_file_contents (rev_root, path, &contents,
+                                                iterpool));
+          if (strcmp (greek_files[i][i_rev], contents->data))
+            return svn_error_createf
+              (SVN_ERR_FS_CORRUPT, 0, NULL, pool,
+               "%s:%ld undeltified contents are incorrect", path, i_rev);
+
+          /* Clear out the per-file pool. */
+          svn_pool_clear (iterpool);
+        }
+
+      /* Putting chlorine in one algae-filled (sub)pool, which
+         completely drains the other (iterpool)... */
+      svn_pool_clear (subpool);
+    }
+
+  /* And re-deltify... */
+  for (i_rev = 1; i_rev <= youngest_rev; i_rev++)
+    {
+      /* Un-deltify (recursively) the root directory in this revision. */
+      SVN_ERR (svn_fs_revision_root (&rev_root, fs, i_rev, subpool));
+      SVN_ERR (svn_fs_deltify (rev_root, "", 1, subpool));
+
+      /* Create per-iteration subpool. */
+      iterpool = svn_pool_create (subpool);
+
+      /* Verify file contents are all good. */
+      for (i = 0; i < 12; i++)
+        {
+          svn_stringbuf_t *contents;
+          const char *path = greek_files[i][0];
+
+          /* Verify file contents.  */
+          SVN_ERR (svn_test__get_file_contents (rev_root, path, &contents,
+                                                iterpool));
+          if (strcmp (greek_files[i][i_rev], contents->data))
+            return svn_error_createf
+              (SVN_ERR_FS_CORRUPT, 0, NULL, pool,
+               "%s:%ld re-deltified contents are incorrect", path, i_rev);
+
+          /* Clear out the per-file pool. */
+          svn_pool_clear (iterpool);
+        }
+
+      /* Putting chlorine in one algae-filled (sub)pool, which
+         completely drains the other (iterpool)... */
+      svn_pool_clear (subpool);
     }
 
   /* Destroy the per-revision pool. */

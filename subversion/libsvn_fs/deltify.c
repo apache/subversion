@@ -20,6 +20,7 @@
 
 #include "svn_fs.h"
 #include "svn_pools.h"
+#include "svn_path.h"
 #include "fs.h"
 #include "nodes-table.h"
 #include "node-rev.h"
@@ -164,103 +165,180 @@ undeltify (svn_fs_id_t *id,
 }
 
 
-struct deltify_args {
-  svn_fs_t *fs;
-  svn_fs_root_t *root;
-  const char *path;
-};
 
-
-/* Find a suitable fulltext against which to deltify ARGS->path under
-   ARGS->root in ARGS->fs.  Some thoughts on that.
-
-   In general, we want to deltify against the youngest fulltext
-   available, which generally will be youngest revision of a given
-   node.
-
-   We can't just blindly deltify against ARGS->path in the head
-   revision, because ARGS->path might have been removed or renamed
-   somewhere along the way.
-
-   Just because ARGS->path exist under some revision does not mean it
-   is an optimal deltification target.  ARGS->path might exist because
-   some different node with completely unrelated text was replaced
-   ARGS->path.  In other words, we should at least pay attention to
-   node ancestry.
-
-   To further complicate matters, while it is trivial to determine a
-   node's predecessor, finding its youngest successor using node IDs
-   alone is quite a different story.  Each of its successors could
-   contain branched node IDs, branching (multiple times, perhaps) at
-   any point in revision history.  In other words, while we can easily
-   say that the predecessor of node 3.5 is node 3.4, its youngest
-   successor could be as close as 3.6, or really any number of things,
-   depending on the number of times it has been modified throughout
-   revision history.  We might see that successor as 3.100, 3.99.1.1,
-   3.98.1.2, 3.98.2.1, 3.98.1.1.1.1, and so on (for a very
-   unpredictably long time).  
-
-   Perhaps the best solution is one that combines path searches under
-   revisions with careful (crafty) node ID examination.  */
+/* Deltify TARGET_ID in FS against its immediately successor (also in
+   FS).  Pass IS_DIR through to deltify(), and do all of this stuff as
+   part of TRAIL.  */
 static svn_error_t *
-txn_body_deltify (void *baton, trail_t *trail)
+deltify_by_id (svn_fs_t *fs,
+               svn_fs_id_t *target_id,
+               int is_dir,
+               trail_t *trail)
 {
-  struct deltify_args *args = baton;
-  svn_fs_id_t *source_id = NULL, *target_id;
-  svn_revnum_t i, current, youngest;
-  svn_fs_root_t *y_root;
-  apr_pool_t *subpool = svn_pool_create (trail->pool);
-  svn_error_t *err;
+  svn_fs_id_t *source_id = NULL, *tmp_id;
+  apr_size_t len = svn_fs_id_length (target_id);
+  dag_node_t *node;
 
-  /* Our current algorithm: search backward through revision history,
-     from HEAD to ARGS->root's revision + 1, for the last instance of
-     ARGS->path still related to ARGS->path under ARGS->root. */
-
-  /* Get our two bounding revisions. */
-  SVN_ERR (svn_fs_youngest_rev (&youngest, args->fs, trail->pool));
-  current = svn_fs_revision_root_revision (args->root);
-
-  /* Get the ID of the target, which is the node we're changing. */
-  SVN_ERR (svn_fs_node_id (&target_id, args->root, args->path, trail->pool));
-
-  for (i = youngest; i > current; i--)
+  /* Increment TMP_ID as a regular successor of TARGET_ID, and see if
+     it exists in FS. */
+  tmp_id = svn_fs_copy_id (target_id, trail->pool);
+  tmp_id[len - 1]++;
+  if (SVN_NO_ERROR == svn_fs__dag_get_node (&node, fs, tmp_id, trail))
     {
-      svn_pool_clear (subpool);
-
-      /* Get the root of the revision we're examining. */
-      SVN_ERR (svn_fs_revision_root (&y_root, args->fs, youngest, subpool));
-
-      /* Get the node id of ARGS->path under that revision.  If this
-         fails for some reason, we don't really care.  */
-      err = svn_fs_node_id (&source_id, y_root, args->path, subpool);
-      if (! err)
-        {
-          /* We have a source ID.  If it is related to our target ID,
-             we'll call it quits on our search.  Else, another
-             iteration is in order. */
-          if (svn_fs_id_distance (source_id, target_id) != -1)
-            {
-              /* Copy SOURCE_ID out into TRAIL->pool so it doesn't
-                 disappear when we destroy SUBPOOL.  */
-              source_id = svn_fs_copy_id (source_id, trail->pool);
-              break;
-            }
-        }
-
-      /* Make sure SOURCE_ID is NULL -- we didn't find a valid one. */
-      source_id = NULL;
+      source_id = tmp_id;
     }
+  else
+    {
+      /* If that doesn't exist, we'll branch TARGET_ID, and see if
+         that exists. */
+      apr_size_t i;
+      tmp_id = apr_pcalloc (trail->pool, sizeof (*tmp_id) * (len + 3));
+      for (i = 0; i < len; i++)
+        {
+          tmp_id[i] = target_id[i];
+        }
+      tmp_id[len] = 1;
+      tmp_id[len + 1] = 1;
+      tmp_id[len + 2] = -1;
 
-  /* Destroy the subpool. */
-  svn_pool_destroy (subpool);
+      if (SVN_NO_ERROR == svn_fs__dag_get_node (&node, fs, tmp_id, trail))
+        {
+          source_id = tmp_id;
+        }
+    }
 
   /* If we found a valid source ID, perform the deltification step. */
   if (source_id)
-    SVN_ERR (deltify (target_id, source_id, args->fs, 0, trail));
+    SVN_ERR (deltify (target_id, source_id, fs, is_dir, trail));
 
   return SVN_NO_ERROR;
 }
 
+
+/* Deltify or undeltify a directory PATH under ROOT in FS (whose
+   node-id is ID).  If DO_DELTIFY is non-zero, drive deltify_by_id(),
+   else drive undeltify().  Use RECURSE to determine if this function
+   should recursively deltify or undeltify directories.  */
+static svn_error_t *
+deltify_undeltify (svn_fs_t *fs,
+                   svn_fs_root_t *root,
+                   const char *path,
+                   svn_fs_id_t *id,
+                   int do_deltify,
+                   int recurse,
+                   trail_t *trail)
+{
+  apr_pool_t *subpool = svn_pool_create (trail->pool);
+  svn_stringbuf_t *full_path = svn_stringbuf_create (path, subpool);
+  dag_node_t *node;
+  int is_dir = 0;
+
+  /* Get the node from its ID, and figure out if it is a directory. */
+  SVN_ERR (svn_fs__dag_get_node (&node, fs, id, trail));
+  is_dir = svn_fs__dag_is_directory (node);
+
+  /* If this is a directory and we have been asked to recurse, then
+     call this function for each of this ID's entries. */
+  if (is_dir && recurse)
+    {
+      apr_hash_t *entries;
+      apr_hash_index_t *hi;
+
+      SVN_ERR (svn_fs__dag_dir_entries_hash (&entries, node, trail));
+      for (hi = apr_hash_first (subpool, entries); hi; hi = apr_hash_next (hi))
+        {
+          const void *key;
+          void *val;
+          apr_size_t klen;
+          svn_fs_dirent_t *entry;
+          
+          /* KEY will be the entry name in source, VAL the dirent */
+          apr_hash_this (hi, &key, &klen, &val);
+          entry = val;
+          
+          /* Construct the full path of this entry, and recurse. */
+          svn_stringbuf_set (full_path, path);
+          svn_path_add_component_nts (full_path, entry->name);
+          SVN_ERR (deltify_undeltify (fs, root, full_path->data, entry->id,
+                                      do_deltify, recurse, trail));
+        }
+    }
+
+  /* Do the real work of ... */
+  if (do_deltify)
+    {
+      /* ... deltification. */
+      SVN_ERR (deltify_by_id (fs, id, is_dir, trail));
+    }
+  else
+    {
+      /* ... un-deltification. */
+      SVN_ERR (undeltify (id, fs, trail));
+    }
+
+  /* Destroy per-iteration subpool. */
+  svn_pool_destroy (subpool);
+
+  return SVN_NO_ERROR;
+}
+
+
+struct deltify_args {
+  svn_fs_t *fs;
+  svn_fs_root_t *root;
+  int recursive;
+  const char *path;
+};
+
+
+static svn_error_t *
+txn_body_deltify (void *baton, trail_t *trail)
+{
+  struct deltify_args *args = baton;
+  svn_fs_id_t *id;
+  int is_dir = 0;
+  dag_node_t *node;
+
+  /* Get the ID of the target, which is the node we're changing. */
+  SVN_ERR (svn_fs_node_id (&id, args->root, args->path, trail->pool));
+
+  /* Use the ID to determine if the target here is a directory. */
+  SVN_ERR (svn_fs__dag_get_node (&node, args->fs, id, trail));
+  is_dir = svn_fs__dag_is_directory (node);
+
+  /* Perform the deltification step. */
+  SVN_ERR (deltify_undeltify (args->fs, args->root, args->path, id,
+                              1, args->recursive, trail));
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+txn_body_undeltify (void *baton, trail_t *trail)
+{
+  struct deltify_args *args = baton;
+  svn_fs_id_t *id;
+  int is_dir = 0;
+  dag_node_t *node;
+
+  /* Get the ID of the target, which is the node we're changing. */
+  SVN_ERR (svn_fs_node_id (&id, args->root, args->path, trail->pool));
+
+  /* Use the ID to determine if the target here is a directory. */
+  SVN_ERR (svn_fs__dag_get_node (&node, args->fs, id, trail));
+  is_dir = svn_fs__dag_is_directory (node);
+
+  /* Perform the un-deltification step. */
+  SVN_ERR (deltify_undeltify (args->fs, args->root, args->path, id,
+                              0, args->recursive, trail));
+
+  return SVN_NO_ERROR;
+}
+
+
+
+/*** Public (or semi-public) interfaces. ***/
 
 svn_error_t *
 svn_fs_deltify (svn_fs_root_t *root,
@@ -274,13 +352,9 @@ svn_fs_deltify (svn_fs_root_t *root,
     return svn_error_create (SVN_ERR_FS_NOT_REVISION_ROOT, 0, NULL, pool,
                              "svn_fs_deltify: root is not a revision root");
 
-  /* ### todo:  Support recursiveness. */
-  if (recursive)
-    return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL, pool,
-                             "Recursive deltification is not implemented");
-
   args.fs = svn_fs_root_fs (root);
   args.root = root;
+  args.recursive = recursive;
   args.path = path;
 
   SVN_ERR (svn_fs__retry_txn (args.fs, txn_body_deltify, &args, pool));
@@ -288,19 +362,6 @@ svn_fs_deltify (svn_fs_root_t *root,
 }
 
 
-static svn_error_t *
-txn_body_undeltify (void *baton, trail_t *trail)
-{
-  struct deltify_args *args = baton;
-  svn_fs_id_t *id;
-
-  /* Get the ID of the target, which is the node we're changing. */
-  SVN_ERR (svn_fs_node_id (&id, args->root, args->path, trail->pool));
-
-  /* Perform the un-deltification step. */
-  SVN_ERR (undeltify (id, args->fs, trail));
-  return SVN_NO_ERROR;
-}
 
 
 svn_error_t *
@@ -315,13 +376,9 @@ svn_fs_undeltify (svn_fs_root_t *root,
     return svn_error_create (SVN_ERR_FS_NOT_REVISION_ROOT, 0, NULL, pool,
                              "svn_fs_deltify: root is not a revision root");
 
-  /* ### todo:  Support recursiveness. */
-  if (recursive)
-    return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL, pool,
-                             "Recursive undeltification is not implemented");
-
   args.fs = svn_fs_root_fs (root);
   args.root = root;
+  args.recursive = recursive;
   args.path = path;
 
   SVN_ERR (svn_fs__retry_txn (args.fs, txn_body_undeltify, &args, pool));
