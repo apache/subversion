@@ -8,9 +8,8 @@
 PORTNAME=	apr-snapshot
 PORTVERSION=	20020219232325
 CATEGORIES=	devel
-
-DISTFILES=	apr_20020219232325.tar.gz apr-util_20020219232336.tar.gz
 MASTER_SITES=	http://www.apache.org/dist/apr/not-released/
+DISTFILES=	apr_20020219232325.tar.gz apr-util_20020219232336.tar.gz
 
 MAINTAINER=	rooneg@electricjellyfish.net
 
