@@ -362,10 +362,35 @@ new_node_record (void **node_baton,
                                 SVN_REPOS_DUMPFILE_NODE_COPYFROM_PATH,
                                 APR_HASH_KEY_STRING);
 
-  /* See if this node was copied from dropped source (drop it too, then.) */
-  if ((copyfrom_path != NULL) && (!nb->do_skip))
+  /* See if this node was copied from dropped source.  If it was,
+     we have to drop this node, too.  
+
+     However, there is one special case we'll handle.  If the node is
+     a file, and this was a copy-and-modify operation, then the
+     dumpfile should contain the new contents of the file.  In this
+     scenario, we'll just do an add without history using the new
+     contents.  */
+   if ((copyfrom_path != NULL) && (! nb->do_skip))
     {
-      nb->do_skip = ary_exact_match (pb->dropped_nodes, copyfrom_path);
+      const char *kind, *tcl;
+      kind = apr_hash_get (headers, SVN_REPOS_DUMPFILE_NODE_KIND,
+                           APR_HASH_KEY_STRING);
+      tcl = apr_hash_get (headers, SVN_REPOS_DUMPFILE_TEXT_CONTENT_LENGTH,
+                          APR_HASH_KEY_STRING);
+      /* If there is a Text-content-length header, and the kind is
+         "file", we just fallback to an add without history. */
+      if (tcl && (strcmp (kind, "file") == 0))
+        {
+          apr_hash_set (headers, SVN_REPOS_DUMPFILE_NODE_COPYFROM_PATH,
+                        APR_HASH_KEY_STRING, NULL);
+          apr_hash_set (headers, SVN_REPOS_DUMPFILE_NODE_COPYFROM_REV,
+                        APR_HASH_KEY_STRING, NULL);
+          copyfrom_path = NULL;
+        }
+      else
+        {
+          nb->do_skip = ary_exact_match (pb->dropped_nodes, copyfrom_path);
+        }
     }
 
   /* if we're skipping the node, take note of path, discarding the rest
