@@ -107,3 +107,9 @@ Candidate changes:
     Notes:  This bug manifests itself on obstructed updates.
     Votes:
       +1: dionisos, ghudson, kfogel
+
+  * r9315
+    Change the formating codes used in svn_swig_pl_callback_thunk.
+    Justification: The old ones weren't portable and caused problems on Win32.
+    Votes:
+      +1: breser
