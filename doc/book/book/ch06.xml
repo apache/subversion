@@ -414,8 +414,9 @@ collabnet = svn.collab.net
               <para>This specifies the program Subversion will use to
                 query the user for a log message during a commit
                 operation, such as when using <command>svn
-                commit</command> without either the <option>--message
-                (-m)</option> or <option>--file (-F)</option> options.
+                commit</command> without either the
+                <option>--message</option> (<option>-m</option>) or
+                <option>--file</option> (<option>-F</option>) options.
                 This program is also used with the <command>svn
                 propedit</command> command&mdash;a temporary file is
                 populated with the current value of the property the
@@ -633,7 +634,8 @@ $
         have a multi-line textual, or even binary, property value, you
         probably do not want to supply that value on the command-line.
         So the <command>propset</command> subcommand takes a
-        <option>--file (-F)</option> option for specifying the name of
+        <option>--file</option> (<option>-F</option>) option for
+        specifying the name of
         a file which contains the new property value.</para>
 
       <screen>
@@ -704,7 +706,7 @@ $ svn propget copyright calc/button.c
       <para>There's even a variation of the
         <command>proplist</command> command which will list both the
         name and value of all of the properties.  Simply supply the
-        <option>--verbose (-v)</option> option.</para>
+        <option>--verbose</option> (<option>-v</option>) option.</para>
 
       <screen>
 $ svn proplist --verbose calc/button.c
