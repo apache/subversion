@@ -1,0 +1,6 @@
+This is the library described in the section "The working copy
+management library" of svn-design.texi.
+
+It performs local operations in the working copy, tweaking
+administrative files and versioned data.  It has no concept of network
+nor server -- that's libsvn_cl's job.

@@ -1,14 +1,14 @@
-If you would like to contribute code to the Subversion project, please
-read this first.
+If you are contributing code to the Subversion project, please read
+this first.
 
 We're using ANSI C, and following the GNU coding standards.  Emacs
-users can just load svn-dev.el (most source files here will load it
-automatically, if `enable-local-eval' is set appropriately) to get the
-right indentation behavior.
+users can just load svn-dev.el to get the right indentation behavior
+(most source files here will load it automatically, if
+`enable-local-eval' is set appropriately).
 
-Here is an example demonstrating some of the GNU formatting
-guidelines, but see http://www.gnu.org/prep/standards.html for the
-full story.
+Read http://www.gnu.org/prep/standards.html for a full description of
+the GNU coding standards; but here is a short example demonstrating
+the most important formatting guidelines:
 
    char *                                     /* func type on own line */
    argblarg (char *arg1, int arg2)            /* func name on own line */

@@ -296,5 +296,6 @@ typedef struct svn_svr_plugin_t
 /* --------------------------------------------------------------
  * local variables:
  * eval: (load-file "../svn-dev.el")
- * end: */
+ * end: 
+ */
 
