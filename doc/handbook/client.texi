@@ -495,7 +495,7 @@ overlapping areas.
 
 @item
 Three fulltext files are created; these files are the original three
-files that could not be merged together.  Given the a file named
+files that could not be merged together.  Given a file named
 @file{ORIG_NAME}, the three new fulltext files have filenames of the
 form @file{ORIG_NAME.*.mine}, @file{ORIG_NAME.*.rOLD_REV} and
 @file{ORIG_NAME.*.rNEW_REV}.  Here @file{*} represents some random
