@@ -93,13 +93,13 @@ svn_error_t *svn_wc_delete (apr_array_header_t *paths);
 
 /*** Commits. ***/
 
-/* A function to tell a working copy that a commit has succeeded, and
- * the resulting new VERSION.  (If you're implementing a call/baton
- * pair, note that the baton usually contains, among other things, the
- * location of the working copy.)
- */
-typedef svn_error_t *svn_wc_close_commit_fn_t (void *user_data,
-                                               svn_vernum_t new_version);
+/* Update working copy PATH with NEW_VERSION after the commit
+   identified by TOK has succeeded. */
+svn_error_t *
+svn_wc_close_commit (svn_string_t *path,
+                     svn_string_t *tok,
+                     svn_vernum_t new_version,
+                     apr_pool_t *pool);
 
 
 /* Do a depth-first crawl of the local changes in a working copy,
@@ -123,8 +123,7 @@ svn_error_t *
 svn_wc_crawl_local_mods (svn_string_t *root_directory,
                          svn_delta_edit_fns_t *edit_fns,
                          void *edit_baton,
-                         svn_wc_close_commit_fn_t **close_commit_fn,
-                         void **close_commit_baton,
+                         svn_string_t *tok,
                          apr_pool_t *pool);
 
 
