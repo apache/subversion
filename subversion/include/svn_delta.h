@@ -33,6 +33,7 @@
 #include "svn_string.h"
 #include "svn_error.h"
 #include "svn_io.h"
+#include "svn_version.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -40,6 +41,13 @@ extern "C" {
 
 
 
+/**
+ * Get libsvn_delta version information.
+ * @since New in 1.1.
+ */
+const svn_version_t *svn_delta_version (void);
+
+
 /**  Text deltas.
  *
  * A text delta represents the difference between two strings of

@@ -814,3 +814,10 @@ svn_fs_compare_ids (const svn_fs_id_t *a, const svn_fs_id_t *b)
 {
   return a->vtable->compare (a, b);
 }
+
+/* Return the library version number. */
+const svn_version_t *
+svn_fs_version (void)
+{
+  SVN_VERSION_BODY;
+}

@@ -280,3 +280,11 @@ svn_ra_print_ra_libraries (svn_stringbuf_t **descriptions,
 
   return SVN_NO_ERROR;
 }
+
+
+/* Return the library version number. */
+const svn_version_t *
+svn_ra_version (void)
+{
+  SVN_VERSION_BODY;
+}

@@ -37,6 +37,13 @@ extern "C" {
 #endif /* __cplusplus */
 
 
+/**
+ * Get libsvn_fs version information.
+ * @since New in 1.1.
+ */
+const svn_version_t *svn_fs_version (void);
+
+
 /* Opening and creating filesystems.  */
 
 

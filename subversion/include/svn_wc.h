@@ -50,6 +50,13 @@ extern "C" {
 #endif /* __cplusplus */
 
 
+/**
+ * Get libsvn_wc version information.
+ * @since New in 1.1.
+ */
+const svn_version_t *svn_wc_version (void);
+
+
 /* Locking/Opening/Closing */
 
 /** Baton for access to a working copy administrative area.
