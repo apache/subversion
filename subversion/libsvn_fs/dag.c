@@ -752,6 +752,25 @@ svn_error_t *svn_fs__dag_delete (dag_node_t *parent,
   skel_t *node_rev, *new_dirent_list, *old_entry, *entry;
   int deleted = FALSE;
 
+  /* kff todo: fooo working here:
+   * 
+   * 1. Rewrite to use svn_fs__dag_dir_entries().
+   * 
+   * 2. Consider semantics of Yoshiki's patch to this function (see
+   *    mail entitled "[PATCH] svn_fs_abort_txn and bug fixes"), in
+   *    which: If the entry points to a mutable node, then the node is
+   *    removed from the nodes table, as well as its dir entry here
+   *    being removed.  I'm not sure this is valid, though.  The node
+   *    may be mutable, but some other entries somewhere (presumably
+   *    in this txn) might still point to it.  I'm not sure what such
+   *    a scenario would be, but anyway, it seems weird to me that the
+   *    needs of svn_fs_abort_txn would bleed over into the behavior
+   *    of svn_fs__dag_delete.  Will sleep on this.
+   *
+   * 3. But before sleeping, will eat dinner with Fitz. :-)
+   *
+   */
+
   /* Make sure we're looking at a directory node. */
   if (! svn_fs__dag_is_directory (parent))
     return 
