@@ -45,7 +45,8 @@
     svn_fs_txn_t **,
     void **,
     svn_fs_history_t **,
-    svn_fs_id_t **
+    svn_fs_id_t **,
+    svn_fs_t **
 };
 
 /* and this is always an OUT param */
