@@ -1219,15 +1219,19 @@ Committed revision 350.
         es, <quote>¿Cómo puedo recuperar mi fichero o directorio
         antiguo?</quote></para>
 
-      <para>The first step is to define exactly <emphasis
-        role="bold">which</emphasis> item you're trying to resurrect.
-        Here's a useful metaphor: you can think of every object in the
-        repository as existing in a sort of two-dimensional coordinate
-        system.  The first coordinate is a particular revision tree,
-        and the second coordinate is a path within that tree.  So
-        every version of your file or directory can be defined by a
-        specific coordinate pair.</para>
-
+      <para>El primer paso es definir exáctamente<emphasis
+        role="bold">qué</emphasis> elemento está intentando
+        resucitar.  Aquí tiene una metáfora útil: puede pensar
+        que todo objeto en el repositorio existe en una especie de
+        sistema de coordenadas bidimensional. Las abscisas marcan
+        una revisión particular del árbol, y las ordenadas una ruta
+        de fichero dentro de ese árbol.  Así que cualquier versión de
+        su fichero o directorio puede definirse por un par específico
+        de coordenadas.<!-- TODO en la versión original no se usan
+        los términos abscisa y coordenada explícitamente. Estos
+        existen, aunque creo que no son nada populares. ¿Quizás
+        deberíamos hacer lo mismo? --></para>
+        
       <para>Subversion has no <filename>Attic</filename> directory
         like CVS does,
         <footnote><para>Because CVS doesn't version trees, it creates
