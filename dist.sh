@@ -195,12 +195,14 @@ else
   REPOS_PATH="`echo $REPOS_PATH | sed 's/^\/*//'`"
 fi
 
+# See comment when we 'roll' the tarballs as to why pax is required.
 type pax > /dev/null 2>&1
 if [ $? -ne 0 ] && [ -z "$ZIP" ]; then
   echo "ERROR: pax could not be found"
   exit 1
 fi
 
+# Default to 'wget', but allow 'curl' to be used if available.
 HTTP_FETCH=wget
 HTTP_FETCH_OUTPUT="-O"
 type wget > /dev/null 2>&1
@@ -249,7 +251,7 @@ install_dependency()
     else
       echo "Copying local $DEP_NAME into sandbox"
       cp -r "$DEP_PATH" "$DISTPATH/$DEP_NAME" 
-      (cd "$DISTPATH/$DEP_NAME" && [ -f Makefile ] && make extraclean)
+      (cd "$DISTPATH/$DEP_NAME" && [ -f Makefile ] && make distclean)
       echo "Removing all CVS/ and .cvsignore files from $DEP_NAME..."
       find "$DISTPATH/$DEP_NAME" -name CVS -type d -print | xargs rm -fr
       find "$DISTPATH/$DEP_NAME" -name .cvsignore -print | xargs rm -f
