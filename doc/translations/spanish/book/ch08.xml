@@ -781,31 +781,34 @@ The following repository access (RA) modules are available:
 
     <!-- ***************************************************************** -->
     <sect2 id="svn-ch-8-sect-1.3">
-      <title>Client Layer</title>
+      <title>Capa cliente</title>
       
-      <para>On the client side, the Subversion working copy is where
-        all the action takes place.  The bulk of functionality
-        implemented by the client-side libraries exists for the sole
-        purpose of managing working copies&mdash;directories full of
-        files and other subdirectories which serve as a sort of local,
-        editable <quote>reflection</quote> of one or more repository
-        locations&mdash;and propagating changes to and from the
-        Repository Access layer.</para>
+      <para>En el lado del cliente, la copia local de trabajo de
+        Subversion es donde ocurre toda la acción. El grueso de la
+        funcionalidad implementada por las librerías en el lado
+        del cliente existe con el único propósito de gestionar
+        copias locales de trabajo&mdash;directorios llenos de
+        ficheros y otros subdirectorios que sirven a modo de
+        <quote>reflejo</quote> local y editable de una o más
+        localizaciones de repositorio&mdash;y propagar cambios
+        hacia y desde la capa de acceso al repositorio.</para>
 
-      <para>Subversion's working copy library, libsvn_wc, is directly
-        responsible for managing the data in the working copies.  To
-        accomplish this, the library stores administrative information
-        about each working copy directory within a special
-        subdirectory.  This subdirectory, named
-        <filename>.svn</filename>, is present in each working copy
-        directory and contains various other files and directories
-        which record state and provide a private workspace for
-        administrative action.  For those familiar with CVS, this
-        <filename>.svn</filename> subdirectory is similar in purpose
-        to the <filename>CVS</filename> administrative directories
-        found in CVS working copies.  For more information about the
-        <filename>.svn</filename> administrative area, see <xref
-        linkend="svn-ch-8-sect-3"/>in this chapter.</para>
+      <para>La librería de Subversion de copias locales de trabajo,
+        libsvn_wc, es directamente responsable de gestionar los
+        datos en las copias locales.  Para realizar esta tarea,
+        la librería almacena información administrativa sobre cada
+        directorio dentro de un subdirectorio especial. Este
+        subdirectorio, llamado <filename>.svn</filename>,
+        está presente en cada directorio de la copia local y
+        contiene varios ficheros y directorios que almacenan el
+        estado y proporcionan un espacio de trabajo privado para
+        acciones administrativas.  Para aquellos familiarizados
+        con CVS, este subdirectorio <filename>.svn</filename> es
+        similar en propósito a los directorios administrativos
+        <filename>CVS</filename> encontrados en las copias de
+        trabajo locales de CVS.  Para más información sobre el
+        área administrativa <filename>.svn</filename>, vea <xref
+        linkend="svn-ch-8-sect-3"/>en este capítulo.</para>
 
       <para>The Subversion client library, libsvn_client, has the
         broadest responsibility; its job is to mingle the
