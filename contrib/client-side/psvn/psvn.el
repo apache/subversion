@@ -39,7 +39,7 @@
 ;; l     - svn-status-show-svn-log          run 'svn log'
 ;; i     - svn-status-info                  run 'svn info'
 ;; r     - svn-status-revert                run 'svn revert'
-;; M-v   - svn-status-resolved              run 'svn resolved'
+;; X v   - svn-status-resolved              run 'svn resolved'
 ;; U     - svn-status-update-cmd            run 'svn update'
 ;; c     - svn-status-commit-file           run 'svn commit'
 ;; a     - svn-status-add-file              run 'svn add --non-recursive'
@@ -774,6 +774,8 @@ A and B must be line-info's."
   "Subkeymap used in `svn-status-mode' for option commands.")
 (defvar svn-status-mode-trac-map ()
   "Subkeymap used in `svn-status-mode' for trac issue tracker commands.")
+(defvar svn-status-mode-extension-map ()
+  "Subkeymap used in `svn-status-mode' for some seldom used commands.")
 
 (when (not svn-status-mode-map)
   (setq svn-status-mode-map (make-sparse-keymap))
@@ -833,7 +835,6 @@ A and B must be line-info's."
   (define-key svn-status-mode-map (kbd "i") 'svn-status-info)
   (define-key svn-status-mode-map (kbd "b") 'svn-status-blame)
   (define-key svn-status-mode-map (kbd "=") 'svn-status-show-svn-diff)
-  (define-key svn-status-mode-map (kbd "M-v") 'svn-status-resolved)
   ;; [(control ?=)] is unreachable on TTY, but you can use "*u" instead.
   ;; (Is the "u" mnemonic for something?)
   (define-key svn-status-mode-map (kbd "C-=") 'svn-status-show-svn-diff-for-marked-files)
@@ -875,6 +876,10 @@ A and B must be line-info's."
   ;; TODO: Why is `svn-status-select-line' in `svn-status-mode-property-map'?
   (define-key svn-status-mode-property-map (kbd "RET") 'svn-status-select-line)
   (define-key svn-status-mode-map (kbd "P") svn-status-mode-property-map))
+(when (not svn-status-mode-extension-map)
+  (setq svn-status-mode-extension-map (make-sparse-keymap))
+  (define-key svn-status-mode-extension-map (kbd "v") 'svn-status-resolved)
+  (define-key svn-status-mode-map (kbd "X") svn-status-mode-extension-map))
 (when (not svn-status-mode-options-map)
   (setq svn-status-mode-options-map (make-sparse-keymap))
   (define-key svn-status-mode-options-map (kbd "s") 'svn-status-save-state)
