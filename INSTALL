@@ -30,6 +30,17 @@ then you must reverse the order of the "make check" and "make install"
 steps, because the shared libraries must be installed before "make
 check" will work.
 
+Additionally, with shared library builds, the destination library directory
+must be listed in either /etc/ld.so.conf or $LD_LIBRARY_PATH (for linux
+systems), so that subversion will be able to dynamically load repository
+access plugins.  If you try to do a checkout and see an error like:
+
+svn_error: #21068 : <Bad URL passed to RA layer>
+  Unrecognized URL scheme: http://svn.collab.net/repos/svn/trunk
+
+It probably means that the dynamic loader/linker can't find the subversion
+libraries.
+
 Note that if you commonly build with the -jN option to make, the make step
 above may fail, because we don't ensure that third party libraries in our
 source tree will finish building before subversion itself.  If you want
