@@ -204,9 +204,7 @@ notify (void *baton,
       break;
 
     case svn_wc_notify_commit_added:
-      if (mime_type
-          && ((strlen (mime_type)) > 5)
-          && ((strncmp (mime_type, "text/", 5)) != 0))
+      if (mime_type && svn_mime_type_is_binary (mime_type))
         printf ("Adding  (bin)  %s\n", path_native);
       else
         printf ("Adding         %s\n", path_native);
