@@ -574,56 +574,56 @@ def simple_tags():
   "simple tags"
   # See test-data/main-cvsrepos/proj/README.
   repos, wc, logs = ensure_conversion('main')
-
-  ### The actual revision number here (and in other tests) will have
-  ### to change when tags and branches are recognized.
-  if not logs.has_key(14):
+ 
+  rev = 37
+  if not logs.has_key(rev):
+    raise svntest.Failure
+  if not logs[rev].changed_paths == {
+    '/tags/T_ALL_INITIAL_FILES (from /branches/vendorbranch:17)': 'A',
+    '/tags/T_ALL_INITIAL_FILES/single-files': 'D',
+    '/tags/T_ALL_INITIAL_FILES/partial-prune': 'D'
+    }:
     raise svntest.Failure
 
-  for path in ('/tags/T_ALL_INITIAL_FILES/proj',
-               '/tags/T_ALL_INITIAL_FILES/proj/default',
-               '/tags/T_ALL_INITIAL_FILES/proj/sub1',
-               '/tags/T_ALL_INITIAL_FILES/proj/sub1/default',
-               '/tags/T_ALL_INITIAL_FILES/proj/sub1/subsubA',
-               '/tags/T_ALL_INITIAL_FILES/proj/sub1/subsubA/default',
-               '/tags/T_ALL_INITIAL_FILES/proj/sub1/subsubB',
-               '/tags/T_ALL_INITIAL_FILES/proj/sub1/subsubB/default',
-               '/tags/T_ALL_INITIAL_FILES/proj/sub2',
-               '/tags/T_ALL_INITIAL_FILES/proj/sub2/default',
-               '/tags/T_ALL_INITIAL_FILES/proj/sub2/subsubA',
-               '/tags/T_ALL_INITIAL_FILES/proj/sub2/subsubA/default',
-               '/tags/T_ALL_INITIAL_FILES/proj/sub3',
-               '/tags/T_ALL_INITIAL_FILES/proj/sub3/default'):
-    if not (logs[14].changed_paths.get(path) == 'A'):
-      raise svntest.Failure
-
-  for path in ('/tags/T_ALL_INITIAL_FILES_BUT_ONE/proj',
-               '/tags/T_ALL_INITIAL_FILES_BUT_ONE/proj/default',
-               '/tags/T_ALL_INITIAL_FILES_BUT_ONE/proj/sub1',
-               '/tags/T_ALL_INITIAL_FILES_BUT_ONE/proj/sub1/default',
-               '/tags/T_ALL_INITIAL_FILES_BUT_ONE/proj/sub1/subsubA',
-               '/tags/T_ALL_INITIAL_FILES_BUT_ONE/proj/sub1/subsubA/default',
-               '/tags/T_ALL_INITIAL_FILES_BUT_ONE/proj/sub1/subsubB',
-               '/tags/T_ALL_INITIAL_FILES_BUT_ONE/proj/sub2',
-               '/tags/T_ALL_INITIAL_FILES_BUT_ONE/proj/sub2/default',
-               '/tags/T_ALL_INITIAL_FILES_BUT_ONE/proj/sub2/subsubA',
-               '/tags/T_ALL_INITIAL_FILES_BUT_ONE/proj/sub2/subsubA/default',
-               '/tags/T_ALL_INITIAL_FILES_BUT_ONE/proj/sub3',
-               '/tags/T_ALL_INITIAL_FILES_BUT_ONE/proj/sub3/default'):
-    if not (logs[14].changed_paths.get(path) == 'A'):
-      raise svntest.Failure
-
-  # Make sure that other tag does *not* have the missing file:
-  but_one = '/tags/T_ALL_INITIAL_FILES_BUT_ONE/proj/sub1/subsubB/default'
-  if logs[14].has_key(but_one):
+  rev = 39
+  if not logs.has_key(rev):
+    raise svntest.Failure
+  if not logs[rev].changed_paths == {
+    '/tags/T_ALL_INITIAL_FILES_BUT_ONE/single-files': 'D',
+    '/tags/T_ALL_INITIAL_FILES_BUT_ONE (from /branches/vendorbranch:17)': 'A',
+    '/tags/T_ALL_INITIAL_FILES_BUT_ONE/partial-prune': 'D',
+    '/tags/T_ALL_INITIAL_FILES_BUT_ONE/proj/sub1/subsubB': 'D',
+    }:
     raise svntest.Failure
 
-  ### TODO: we also need to check copy history.
-
-  ### What will the log message be, hmm?
-  if logs[14].msg.find('') != 0:
+  rev = 17
+  if not logs.has_key(rev):
+    raise svntest.Failure
+  if not logs[rev].changed_paths == {
+    '/branches/vendorbranch/proj (from /trunk/proj:16)': 'A',
+    }:
     raise svntest.Failure
 
+  rev = 16
+  if not logs.has_key(rev):
+    raise svntest.Failure
+  if not logs[rev].changed_paths == {
+    '/trunk/proj': 'A',
+    '/trunk/proj/default': 'A',
+    '/trunk/proj/sub1': 'A',
+    '/trunk/proj/sub1/default': 'A',
+    '/trunk/proj/sub1/subsubA': 'A',
+    '/trunk/proj/sub1/subsubA/default': 'A',
+    '/trunk/proj/sub1/subsubB': 'A',
+    '/trunk/proj/sub1/subsubB/default': 'A',
+    '/trunk/proj/sub2': 'A',
+    '/trunk/proj/sub2/default': 'A',
+    '/trunk/proj/sub2/subsubA': 'A',
+    '/trunk/proj/sub2/subsubA/default': 'A',
+    '/trunk/proj/sub3': 'A',
+    '/trunk/proj/sub3/default': 'A',
+    }:
+    raise svntest.Failure
 
 
 def simple_branch_commits():
@@ -762,7 +762,7 @@ test_list = [ None,
               prune_with_care,
               simple_commits,
               interleaved_commits,
-              XFail(simple_tags),
+              simple_tags,
               simple_branch_commits,
               mixed_commit,
               tolerate_corruption,
