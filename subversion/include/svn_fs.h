@@ -1529,7 +1529,7 @@ svn_error_t *svn_fs_lock (svn_lock_t **lock,
  *
  * The caller is responsible for creating and initializing all fields
  * in @a lock before invoking this routine, including the generation
- * of a lock-token (see @c svn_fs_generate_token).  @a lock->owner
+ * of a lock-token (see @c svn_fs_generate_lock_token).  @a lock->owner
  * must be filled in with an authenticated username.  If not, then the
  * username associated with @a fs will be used to fill it in.  If
  * neither username is available, return SVN_ERR_FS_NO_USER.
@@ -1566,9 +1566,9 @@ svn_error_t *svn_fs_attach_lock (svn_fs_t *fs,
  * This can be used in to populate lock->token before calling @c
  * svn_fs_attach_lock().
  */
-svn_error_t *svn_fs_generate_token (const char **token,
-                                    svn_fs_t *fs,
-                                    apr_pool_t *pool);
+svn_error_t *svn_fs_generate_lock_token (const char **token,
+                                         svn_fs_t *fs,
+                                         apr_pool_t *pool);
 
 
 /** Remove the lock on @a path represented by @a token in @a fs.

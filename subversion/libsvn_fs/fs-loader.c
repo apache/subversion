@@ -817,9 +817,9 @@ svn_fs_attach_lock (svn_fs_t *fs, svn_lock_t *lock, svn_boolean_t force,
 }
 
 svn_error_t *
-svn_fs_generate_token (const char **token, svn_fs_t *fs, apr_pool_t *pool)
+svn_fs_generate_lock_token (const char **token, svn_fs_t *fs, apr_pool_t *pool)
 {
-  return fs->vtable->generate_token (token, fs, pool);  
+  return fs->vtable->generate_lock_token (token, fs, pool);  
 }
 
 svn_error_t *

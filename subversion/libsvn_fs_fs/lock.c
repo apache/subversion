@@ -488,7 +488,7 @@ generate_new_lock (svn_lock_t **lock_p,
 {
   svn_lock_t *lock = apr_pcalloc (pool, sizeof (*lock));
 
-  SVN_ERR (svn_fs_fs__generate_token (&(lock->token), fs, pool));
+  SVN_ERR (svn_fs_fs__generate_lock_token (&(lock->token), fs, pool));
   
   lock->path = apr_pstrdup (pool, path);
   lock->owner = apr_pstrdup (pool, owner);
@@ -873,9 +873,9 @@ svn_fs_fs__attach_lock (svn_fs_t *fs,
 
 
 svn_error_t *
-svn_fs_fs__generate_token (const char **token,
-                           svn_fs_t *fs,
-                           apr_pool_t *pool)
+svn_fs_fs__generate_lock_token (const char **token,
+                                svn_fs_t *fs,
+                                apr_pool_t *pool)
 {
   /* Notice that 'fs' is currently unused.  But perhaps someday,
      we'll want to use the fs UUID + some incremented number?  */
