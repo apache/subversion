@@ -73,6 +73,36 @@ extern const dav_hooks_propdb dav_svn_hooks_propdb;
 extern const dav_hooks_liveprop dav_svn_hooks_liveprop;
 extern const dav_hooks_vsn dav_svn_hooks_vsn;
 
+/* SPECIAL URI
+
+   SVN needs to create many types of "pseudo resources" -- resources
+   that don't correspond to the users' files/directories in the
+   repository. Specifically, these are:
+
+   - working resources
+   - activities
+   - version resources
+   - version history resources
+
+   Each of these will be placed under a portion of the URL namespace
+   that defines the SVN repository. For example, let's say the user
+   has configured an SVN repository at http://host/svn/repos. The
+   special resources could be configured to live at .../$svn/ under
+   that repository. Thus, an activity might be located at
+   http://host/svn/repos/$svn/act/1234.
+
+   The special URI is configurable on a per-server basis and defaults
+   to "$svn".
+
+   NOTE: the special URI is RELATIVE to the "root" of the
+   repository. The root is generally available only to
+   dav_svn_get_resource(). This is okay, however, because we can cache
+   the root_dir when the resource structure is built.
+*/
+
+/* Return the special URI to be used for this resource. */
+const char *dav_svn_get_special_uri(request_rec *r);
+
 
 #endif /* DAV_SVN_H */
 

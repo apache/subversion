@@ -58,13 +58,19 @@
 #include <http_config.h>
 #include <mod_dav.h>
 
+#include <apr_strings.h>
+
 #include "config.h"
 #include "dav_svn.h"
 
 
+/* This is the default "special uri" used for SVN's special resources
+   (e.g. working resources, activities) */
+#define SVN_DEFAULT_SPECIAL_URI "$svn"
+
 /* per-server configuration */
 typedef struct {
-    int not_yet_used;
+    const char *special_uri;
 
 } dav_svn_server_conf;
 
@@ -86,17 +92,65 @@ static void *dav_svn_create_server_config(apr_pool_t *p, server_rec *s)
 static void *dav_svn_merge_server_config(apr_pool_t *p,
                                          void *base, void *overrides)
 {
-/*    dav_svn_server_conf *parent = base;
-      dav_svn_server_conf *child = overrides; */
+    dav_svn_server_conf *parent = base;
+    dav_svn_server_conf *child = overrides;
     dav_svn_server_conf *newconf;
 
     newconf = apr_pcalloc(p, sizeof(*newconf));
 
+    newconf->special_uri =
+        child->special_uri ? child->special_uri : parent->special_uri;
+
     return newconf;
 }
 
+static const char *dav_svn_special_uri_cmd(cmd_parms *cmd, void *config,
+                                           const char *arg1)
+{
+    dav_svn_server_conf *conf;
+    char *uri;
+    apr_size_t len;
+
+    uri = apr_pstrdup(cmd->pool, arg1);
+
+    /* apply a bit of processing to the thing:
+       - eliminate .. and . components
+       - eliminate double slashes
+       - eliminate leading and trailing slashes
+     */
+    ap_getparents(uri);
+    ap_no2slash(uri);
+    if (*uri == '/')
+      ++uri;
+    len = strlen(uri);
+    if (len > 0 && uri[len - 1] == '/')
+      uri[--len] = '\0';
+    if (len == 0)
+      return "The special URI path must have at least one component.";
+
+    conf = ap_get_module_config(cmd->server->module_config,
+                                &dav_svn_module);
+    conf->special_uri = uri;
+
+    return NULL;
+}
+
+const char *dav_svn_get_special_uri(request_rec *r)
+{
+    dav_svn_server_conf *conf;
+
+    conf = ap_get_module_config(r->server->module_config,
+                                &dav_svn_module);
+    return conf->special_uri ? conf->special_uri : SVN_DEFAULT_SPECIAL_URI;
+}
+
+
 static const command_rec dav_svn_cmds[] =
 {
+    /* per server */
+    AP_INIT_TAKE1("SVNSpecialURI", dav_svn_special_uri_cmd, NULL, RSRC_CONF,
+                  "specify the URI component for special Subversion "
+                  "resources"),
     { NULL }
 };
 
