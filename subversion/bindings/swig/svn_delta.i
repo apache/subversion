@@ -33,7 +33,6 @@
     svn_delta_xml_parser_t **,
     svn_txdelta_window_t **,
     const svn_delta_editor_t **,
-    const svn_delta_edit_fns_t **,
     struct svn_pipe_edit_baton **,
     svn_txdelta_window_handler_t *
 };

@@ -305,7 +305,7 @@ svn_stream_t *svn_txdelta_parse_svndiff (svn_txdelta_window_handler_t handler,
 
    So instead of representing the tree delta explicitly, we define a
    standard way for a consumer to process each piece of a tree delta
-   as soon as the producer creates it.  The `svn_delta_edit_fns_t'
+   as soon as the producer creates it.  The `svn_delta_editor_t'
    structure is a set of callback functions to be defined by a delta
    consumer, and invoked by a delta producer.  Each invocation of a
    callback function describes a piece of the delta --- a file's
@@ -666,64 +666,6 @@ typedef struct
 } svn_delta_editor_t;  
 
 
-
-/* ### This structure is deprecated. It is the old format of the
-   ### svn_delta_editor_t interface. */
-typedef struct svn_delta_edit_fns_t
-{
-  svn_error_t *(*set_target_revision) (void *edit_baton,
-                                       svn_revnum_t target_revision);
-  svn_error_t *(*open_root) (void *edit_baton,
-                             svn_revnum_t base_revision,
-                             void **root_baton);
-  svn_error_t *(*delete_entry) (svn_stringbuf_t *name,
-                                svn_revnum_t revision,
-                                void *parent_baton);
-  svn_error_t *(*add_directory) (svn_stringbuf_t *name,
-                                 void *parent_baton,
-                                 svn_stringbuf_t *copyfrom_path,
-                                 svn_revnum_t copyfrom_revision,
-                                 void **child_baton);
-  svn_error_t *(*open_directory) (svn_stringbuf_t *name,
-                                  void *parent_baton,
-                                  svn_revnum_t base_revision,
-                                  void **child_baton);
-  svn_error_t *(*change_dir_prop) (void *dir_baton,
-                                   svn_stringbuf_t *name,
-                                   svn_stringbuf_t *value);
-  svn_error_t *(*close_directory) (void *dir_baton);
-  svn_error_t *(*add_file) (svn_stringbuf_t *name,
-                            void *parent_baton,
-                            svn_stringbuf_t *copy_path,
-                            svn_revnum_t copy_revision,
-                            void **file_baton);
-  svn_error_t *(*open_file) (svn_stringbuf_t *name,
-                             void *parent_baton,
-                             svn_revnum_t base_revision,
-                             void **file_baton);
-  svn_error_t *(*apply_textdelta) (void *file_baton, 
-                                   svn_txdelta_window_handler_t *handler,
-                                   void **handler_baton);
-  svn_error_t *(*change_file_prop) (void *file_baton,
-                                    svn_stringbuf_t *name,
-                                    svn_stringbuf_t *value);
-  svn_error_t *(*close_file) (void *file_baton);
-  svn_error_t *(*close_edit) (void *edit_baton);
-  svn_error_t *(*abort_edit) (void *edit_baton);
-
-} svn_delta_edit_fns_t;
-
-/* ### temporary function for wrapping an svn_delta_editor_t interface
-   ### into the old-form svn_delta_edit_fns_t interface. this wrapping
-   ### function enables an old-style editor driver to drive a new-style
-   ### editor. */
-void svn_delta_compat_wrap (const svn_delta_edit_fns_t **wrapper_editor,
-                            void **wrapper_baton,
-                            const svn_delta_editor_t *editor,
-                            void *edit_baton,
-                            apr_pool_t *pool);
-
-
 /* Return a default delta editor template, allocated in POOL.
  *
  * The editor functions in the template do only the most basic
@@ -738,10 +680,6 @@ void svn_delta_compat_wrap (const svn_delta_edit_fns_t **wrapper_editor,
  * safely do nothing of consequence.
  */
 svn_delta_editor_t *svn_delta_default_editor (apr_pool_t *pool);
-
-/* ### create a default editor for the old-style editor */
-svn_delta_edit_fns_t *svn_delta_old_default_editor (apr_pool_t *pool);
-
 
 
 /* Compose EDITOR_1 and its baton with EDITOR_2 and its baton.
@@ -769,7 +707,7 @@ svn_delta_compose_editors (const svn_delta_editor_t **new_editor,
 /* Compose BEFORE_EDITOR, BEFORE_EDIT_BATON with MIDDLE_EDITOR,
  * MIDDLE_EDIT_BATON, then compose the result with AFTER_EDITOR,
  * AFTER_EDIT_BATON, all according to the conventions of
- * svn_delta_compose_old_editors().  Return the resulting editor in
+ * svn_delta_compose_editors().  Return the resulting editor in
  * *NEW_EDITOR, *NEW_EDIT_BATON.
  *
  * If either BEFORE_EDITOR or AFTER_EDITOR is null, that editor will
