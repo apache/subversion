@@ -33,26 +33,23 @@ while (my $s = shift) {
 	print join(",\n", map "    $_", split(/\s*,\s*/, $args));
 	print "\n);\n\n";
 
-	$out .= "${n}_INVOKER($func, $args)\n";
+	$out .= "$rv *
+${prefix}invoke_${func} (const $s *\L$n\E, ${args})
+";
+
 	$args = join(
 	    ', ',
 	    map { s/^.*?(\w+)$/$1/; $_ }
 	    split(/\s*,\s*/, $args)
 	);
-	$out .= "${n}_INVOKER_FUNC($func, $args);\n\n";
+	$out .= "{ return \L${n}\E->${func} (${args}); }
+
+";
+
 	$lines = '';
     }
 
     print "%{\n";
-    print "
-#define ${n}_INVOKER(method, ...) \\
-	$rv *${prefix}invoke_ ## method \\
-	(const $s *\L$n\E, __VA_ARGS__)
-
-#define ${n}_INVOKER_FUNC(method, ...) \\
-	{ return \L${n}\E->method (__VA_ARGS__); }
-
-";
     print $out;
     print "%}\n\n";
 }
