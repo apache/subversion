@@ -134,7 +134,7 @@ while (<SOURCE>)
     elsif ($_ =~ /[a-zA-Z0-9]/) {
       print DEST "$_\n";
     }
-    elsif ($_ =~ /^\s*[-_]+\s*$/) {
+    elsif ((! $seen_first_heading) && ($_ =~ /^\s*[-_]+\s*$/)) {
       print DEST "<p><hr><p>\n";
     }
     else {
