@@ -1000,32 +1000,50 @@ static dav_error * dav_svn__get_locks_report(const dav_resource *resource,
           encoded_owner = svn_base64_encode_string(&owner_string, subpool);
           owner_to_send = encoded_owner->data;
           owner_base64 = TRUE;
+          
+          apr_err = ap_fprintf(output, bb,
+                               "<S:owner %s>%s</S:owner>" DEBUG_CR,
+                               owner_base64 ? "encoding=\"base64\"" : "",
+                               owner_to_send);
+          if (apr_err)
+            return dav_svn_convert_err(svn_error_create(apr_err, 0, NULL),
+                                       HTTP_INTERNAL_SERVER_ERROR,
+                                       "Error writing REPORT response.",
+                                       resource->pool);          
         }
 
-      if (svn_xml_is_xml_safe(lock->comment, strlen(lock->comment)))
+      if (lock->comment)
         {
-          comment_to_send = apr_xml_quote_string(subpool, lock->comment, 1);
-        }
-      else
-        {
-          svn_string_t comment_string;
-          const svn_string_t *encoded_comment;
+          if (svn_xml_is_xml_safe(lock->comment, strlen(lock->comment)))
+            {
+              comment_to_send = apr_xml_quote_string(subpool,
+                                                     lock->comment, 1);
+            }
+          else
+            {
+              svn_string_t comment_string;
+              const svn_string_t *encoded_comment;
+              
+              comment_string.data = lock->comment;
+              comment_string.len = strlen(lock->comment);         
+              encoded_comment = svn_base64_encode_string(&comment_string,
+                                                         subpool);
+              comment_to_send = encoded_comment->data;
+              comment_base64 = TRUE;
+            }
 
-          comment_string.data = lock->comment;
-          comment_string.len = strlen(lock->comment);         
-          encoded_comment = svn_base64_encode_string(&comment_string, subpool);
-          comment_to_send = encoded_comment->data;
-          comment_base64 = TRUE;
+          apr_err = ap_fprintf(output, bb,
+                               "<S:comment %s>%s</S:comment>" DEBUG_CR,
+                               comment_base64 ? "encoding=\"base64\"" : "",
+                               comment_to_send);
+          if (apr_err)
+            return dav_svn_convert_err(svn_error_create(apr_err, 0, NULL),
+                                       HTTP_INTERNAL_SERVER_ERROR,
+                                       "Error writing REPORT response.",
+                                       resource->pool);
         }
-
-      apr_err = ap_fprintf(output, bb,
-                           "<S:owner %s>%s</S:owner>" DEBUG_CR
-                           "<S:comment %s>%s</S:comment>" DEBUG_CR
-                           "<S:/lock>" DEBUG_CR,
-                           owner_base64 ? "encoding=\"base64\"" : "",
-                           owner_to_send,
-                           comment_base64 ? "encoding=\"base64\"" : "",
-                           comment_to_send);
+          
+      apr_err = ap_fprintf(output, bb, "<S:/lock>" DEBUG_CR);
       if (apr_err)
         return dav_svn_convert_err(svn_error_create(apr_err, 0, NULL),
                                    HTTP_INTERNAL_SERVER_ERROR,
