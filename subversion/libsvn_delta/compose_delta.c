@@ -597,7 +597,7 @@ build_range_list (apr_off_t offset, apr_off_t limit, range_index_t *ndx)
         }
     }
 
-  assert(!"A renge's offset isn't smaller then its limit? Impossible!");
+  assert(!"A range's offset isn't smaller than its limit? Impossible!");
   return range_list;
 }
 
