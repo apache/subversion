@@ -9,12 +9,12 @@
 import os, sys
 
 sys.path.insert(0, 'build')
-import gen_base
+import gen_make
 
 def main(fname, oname=None, skip_depends=0):
   if oname is None:
     oname = os.path.splitext(os.path.basename(fname))[0] + '-outputs.mk'
-  generator = gen_base.MakefileGenerator(fname, oname)
+  generator = gen_make.MakefileGenerator(fname, oname)
   generator.write()
   if not skip_depends:
     generator.write_depends()
@@ -39,3 +39,9 @@ if __name__ == '__main__':
     skip = 0
     fname = sys.argv[1]
   main(fname, skip_depends=skip)
+
+
+### End of file.
+# local variables:
+# eval: (load-file "tools/dev/svn-dev.el")
+# end:

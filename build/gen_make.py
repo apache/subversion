@@ -3,15 +3,14 @@
 #
 
 import os, sys
-import string, glob, re
-import fileinput
+import string, glob
 import gen_base
 
 
 __all__ = ['MakefileGenerator']
 
 
-class MakefileGenerator(_GeneratorBase):
+class MakefileGenerator(gen_base.GeneratorBase):
 
   _extension_map = {
     ('exe', 'target'): '',
@@ -23,7 +22,7 @@ class MakefileGenerator(_GeneratorBase):
     }
 
   def __init__(self, fname, oname):
-    _GeneratorBase.__init__(self, fname)
+    gen_base.GeneratorBase.__init__(self, fname)
 
     self.ofile = open(oname, 'w')
     self.ofile.write('# DO NOT EDIT -- AUTOMATICALLY GENERATED\n\n')
@@ -71,7 +70,7 @@ class MakefileGenerator(_GeneratorBase):
           print 'ERROR: unknown file extension on', src
           errors = 1
 
-      retreat = _retreat_dots(path)
+      retreat = gen_base._retreat_dots(path)
       libs = [ ]
       deps = [ ]
       for lib in string.split(self.parser.get(target, 'libs')):
@@ -95,7 +94,7 @@ class MakefileGenerator(_GeneratorBase):
       targ_varname = string.replace(target, '-', '_')
       ldflags = self.parser.get(target, 'link-flags')
       add_deps = self.parser.get(target, 'add-deps')
-      objnames = string.join(_strip_path(path, objects))
+      objnames = string.join(gen_base._strip_path(path, objects))
       custom = self.parser.get(target, 'custom')
       if custom == 'apache-mod':
         linkcmd = '$(LINK_APACHE_MOD)'
@@ -146,7 +145,7 @@ class MakefileGenerator(_GeneratorBase):
 
     for area, inst_targets in self.install.items():
       # get the output files for these targets, sorted in dependency order
-      files = _sorted_files(inst_targets)
+      files = gen_base._sorted_files(inst_targets)
 
       if area == 'apache-mod':
         self.ofile.write('install-mods-shared: %s\n' % (string.join(files),))
@@ -168,8 +167,8 @@ class MakefileGenerator(_GeneratorBase):
               la_tweaked[bt + '-a'] = None
         la_tweaked = la_tweaked.keys()
 
-        s_files, s_errors = _collect_paths(self.parser.get('static-apache',
-                                                           'paths'))
+        s_files, s_errors = gen_base._collect_paths(
+          self.parser.get('static-apache', 'paths'))
         errors = errors or s_errors
 
         # Construct a .libs directory within the Apache area and populate it
@@ -217,8 +216,8 @@ class MakefileGenerator(_GeneratorBase):
       #  t.write_dsp()
       #  pass
 
-    self.includes, i_errors = _collect_paths(self.parser.get('includes',
-                                                             'paths'))
+    self.includes, i_errors = gen_base._collect_paths(
+      self.parser.get('includes', 'paths'))
     errors = errors or i_errors
 
     includedir = os.path.join('$(includedir)', 'subversion-%s' % self.version)
@@ -236,12 +235,12 @@ class MakefileGenerator(_GeneratorBase):
         self.ofile.write('%s: %s\n' % (name, target.output))
     self.ofile.write('\n')
 
-    scripts, s_errors = _collect_paths(self.parser.get('test-scripts',
-                                                       'paths'))
+    scripts, s_errors = gen_base._collect_paths(
+      self.parser.get('test-scripts', 'paths'))
     errors = errors or s_errors
 
-    fs_scripts, fs_errors = _collect_paths(self.parser.get('fs-test-scripts',
-                                                           'paths'))
+    fs_scripts, fs_errors = gen_base._collect_paths(
+      self.parser.get('fs-test-scripts', 'paths'))
     errors = errors or fs_errors
 
     # get all the test scripts' directories
@@ -289,16 +288,16 @@ class MakefileGenerator(_GeneratorBase):
     # a second variable around for mapping the short to long names is more
     # than I cared to do right now)
     #
-    include_deps = _create_include_deps(self.includes)
+    include_deps = gen_base._create_include_deps(self.includes)
     for d in self.target_dirs.keys():
       hdrs = glob.glob(os.path.join(d, '*.h'))
       if hdrs:
-        more_deps = _create_include_deps(hdrs, include_deps)
+        more_deps = gen_base._create_include_deps(hdrs, include_deps)
         include_deps.update(more_deps)
 
     for src, objname in self.file_deps:
       hdrs = [ ]
-      for short in _find_includes(src, include_deps):
+      for short in gen_base._find_includes(src, include_deps):
         hdrs.append(include_deps[short][0])
       self.ofile.write('%s: %s %s\n' % (objname, src, string.join(hdrs)))
 
@@ -311,7 +310,7 @@ class MakefileGenerator(_GeneratorBase):
       name = string.upper(mod.name[7:])  # strip 'libsvn_' and upper-case it
 
       # construct a list of the other .la libs to link against
-      retreat = _retreat_dots(mod.path)
+      retreat = gen_base._retreat_dots(mod.path)
       deps = [ mod.output ]
       link = [ os.path.join(retreat, mod.output) ]
       for dep in mod.deps:
