@@ -1,5 +1,5 @@
 usage: svn <subcommand> [options] [args]
-Type "svn help <subcommand>" for help on a specific subcommand.
+Type 'svn help <subcommand>' for help on a specific subcommand.
 
 Most subcommands take file and/or directory arguments, recursing
 on the directories.  If no arguments are supplied to such a

@@ -33,7 +33,7 @@
 
 const char svn_cl__help_header[] =
     N_("usage: svn <subcommand> [options] [args]\n"
-       "Type \"svn help <subcommand>\" for help on a specific subcommand.\n"
+       "Type 'svn help <subcommand>' for help on a specific subcommand.\n"
        "\n"
        "Most subcommands take file and/or directory arguments, recursing\n"
        "on the directories.  If no arguments are supplied to such a\n"
