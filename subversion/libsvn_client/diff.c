@@ -1742,7 +1742,8 @@ diff_repos_wc (const apr_array_header_t *options,
   SVN_ERR (ra_lib->do_update (session,
                               &reporter, &report_baton,
                               rev,
-                              svn_path_uri_decode (target1, pool),
+                              (target1 ?
+                               svn_path_uri_decode (target1, pool) : NULL),
                               recurse, 
                               diff_editor, diff_edit_baton, pool));
 

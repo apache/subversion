@@ -51,7 +51,11 @@ svn_cl__diff (apr_getopt_t *os,
   apr_pool_t *subpool;
   int i;
 
-  options = svn_cstring_split (opt_state->extensions, " \t\n\r", TRUE, pool);
+  /* Fall back to "" to get options initialized either way. */
+  {
+    const char *optstr = opt_state->extensions ? opt_state->extensions : "";
+    options = svn_cstring_split (optstr, " \t\n\r", TRUE, pool);
+  }
 
   /* Get an apr_file_t representing stdout and stderr, which is where
      we'll have the external 'diff' program print to. */
