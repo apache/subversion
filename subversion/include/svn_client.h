@@ -704,10 +704,7 @@ svn_error_t *svn_client_import (svn_client_commit_info_t **commit_info,
                                 apr_pool_t *pool);
 
 
-/** 
- * @since New in 1.2.
- *
- * Commit file or directory @a path into repository, authenticating with
+/** Commit file or directory @a path into repository, authenticating with
  * the authentication baton cached in @a ctx, and using 
  * @a ctx->log_msg_func/@a ctx->log_msg_baton to obtain the log message. 
  * Set @a *commit_info to the results of the commit, allocated in @a pool.
