@@ -267,51 +267,9 @@ test9 (const char **msg,
 }
 
 
+
 static svn_error_t *
 test10 (const char **msg, 
-        svn_boolean_t msg_only,
-        apr_pool_t *pool)
-{
-  svn_stringbuf_t *s;
-  
-  apr_size_t num_chopped_1 = 0;
-  apr_size_t num_chopped_2 = 0;
-  apr_size_t num_chopped_3 = 0;
-  
-  int chopped_okay_1 = 0;
-  int chopped_okay_2 = 0;
-  int chopped_okay_3 = 0;
-  
-  *msg = "chop_back_to_char";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
-  s = svn_stringbuf_create ("chop from slash/you'll never see this", pool);
-
-  num_chopped_1 = svn_stringbuf_chop_back_to_char (s, '/');
-  chopped_okay_1 = (! strcmp (s->data, "chop from slash"));
-  
-  num_chopped_2 = svn_stringbuf_chop_back_to_char (s, 'X');
-  chopped_okay_2 = (! strcmp (s->data, "chop from slash"));
-  
-  num_chopped_3 = svn_stringbuf_chop_back_to_char (s, 'c');
-  chopped_okay_3 = (strlen (s->data) == 0);
-
-  if (chopped_okay_1 
-      && chopped_okay_2
-      && chopped_okay_3
-      && (num_chopped_1 == strlen ("/you'll never see this"))
-      && (num_chopped_2 == 0)
-      && (num_chopped_3 == strlen ("chop from slash")))
-    return SVN_NO_ERROR;
-  else
-    return fail (pool, "test failed");
-}
-
-
-static svn_error_t *
-test11 (const char **msg, 
         svn_boolean_t msg_only,
         apr_pool_t *pool)
 {
@@ -350,7 +308,7 @@ test11 (const char **msg,
 
 
 static svn_error_t *
-test12 (const char **msg, 
+test11 (const char **msg, 
         svn_boolean_t msg_only,
         apr_pool_t *pool)
 {
@@ -412,7 +370,7 @@ check_string_contents(svn_stringbuf_t *string,
                       
 
 static svn_error_t *
-test13 (const char **msg, 
+test12 (const char **msg, 
         svn_boolean_t msg_only,
         apr_pool_t *pool)
 {
@@ -510,7 +468,6 @@ svn_error_t *(*test_funcs[])(const char **msg,
   test10,
   test11,
   test12,
-  test13,
   NULL
 };
 

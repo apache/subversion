@@ -85,7 +85,9 @@ test_path_split (const char **msg,
     { "/foo/bar",        "/foo",     "bar" },
     { "/foo/bar/",       "/foo",     "bar" },
     { "/foo/bar/ ",      "/foo/bar", " " },
-    { "/foo",            "",         "foo" },
+    { "/foo",            "/",         "foo" },
+    { "foo",             "",         "foo" },
+    { "",                "",         "" },
     { "/flu\\b/\\blarg", "/flu\\b",  "\\blarg" },
   };
   
@@ -94,7 +96,7 @@ test_path_split (const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-  for (i = 0; i < 5; i++)
+  for (i = 0; i < 7; i++)
     {
       svn_stringbuf_t *path = svn_stringbuf_create (paths[i][0], pool);
       svn_stringbuf_t *dir, *base_name;
