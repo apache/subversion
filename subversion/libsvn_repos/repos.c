@@ -761,6 +761,7 @@ svn_repos_create (svn_repos_t **repos_p,
                   const char *on_disk_template,
                   const char *in_repos_template,
                   apr_hash_t *config,
+                  apr_hash_t *fs_config,
                   apr_pool_t *pool)
 {
   svn_repos_t *repos;
@@ -831,7 +832,7 @@ svn_repos_create (svn_repos_t **repos_p,
   /* The on-disk structure should be built now. */
   
   /* Initialize the filesystem object. */
-  repos->fs = svn_fs_new (pool);
+  repos->fs = svn_fs_new (fs_config, pool);
 
   /* Create a Berkeley DB environment for the filesystem. */
   SVN_ERR (svn_fs_create_berkeley (repos->fs, repos->db_path));
@@ -904,7 +905,7 @@ get_repos (svn_repos_t **repos_p,
   init_repos_dirs (repos, pool);
 
   /* Initialize the filesystem object. */
-  repos->fs = svn_fs_new (pool);
+  repos->fs = svn_fs_new (NULL, pool);
 
   /* Open up the Berkeley filesystem. */
   if (open_fs)

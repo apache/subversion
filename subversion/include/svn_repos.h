@@ -46,7 +46,6 @@ typedef struct svn_repos_t svn_repos_t;
 
 /** Set @a *repos_p to a repository object for the repository at @a path.
  *
- * Set @a *repos_p to a repository object for the repository at @a path.  
  * Allocate @a *repos_p in @a pool.
  *
  * Acquires a shared lock on the repository, and attaches a cleanup
@@ -81,12 +80,15 @@ svn_error_t *svn_repos_open (svn_repos_t **repos_p,
  *
  * @a config is a client configuration hash of @c svn_config_t * items
  * keyed on config category names, and may be NULL.
+ *
+ * @a fs_config is passed to the filesystem, and may be NULL.
  */
 svn_error_t *svn_repos_create (svn_repos_t **repos_p, 
                                const char *path,
                                const char *on_disk_template,
                                const char *in_repos_template,
                                apr_hash_t *config,
+                               apr_hash_t *fs_config,
                                apr_pool_t *pool);
 
 /** Destroy the Subversion repository found at @a path, using @a pool for any

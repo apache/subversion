@@ -59,6 +59,9 @@ struct svn_fs_t
      pass through to it.  */
   svn_fs_warning_callback_t warning;
   void *warning_baton;
+
+  /* The filesystem configuration. */
+  apr_hash_t *config;
 };
 
 

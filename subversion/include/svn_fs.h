@@ -44,17 +44,23 @@ extern "C" {
 typedef struct svn_fs_t svn_fs_t;
 
 
-/** Create a new filesystem object.
+/** Create a new filesystem object in @a pool.
  *
- * Create a new filesystem object in @a pool.  It doesn't refer to any
- * actual repository yet; you need to invoke @c svn_fs_open_* or
- * @c svn_fs_create_* on it for that to happen.  
+ * It doesn't refer to any actual repository yet; you need to invoke
+ * @c svn_fs_open_* or @c svn_fs_create_* on it for that to happen. If
+ * @a fs_config is not @c NULL, the options it contains modify the
+ * behaviour of the filesystem. The interpretation of @a fs_config is
+ * specific to the filesystem back-end.
  *
- * NOTE: you probably don't want to use this directly, especially not
+ * @note The lifetime of @a fs_config must not be shorter than @a
+ * pool's. It's a good idea to allocate @ fs_config from @a pool or
+ * one of its ancestors.
+ *
+ * @note You probably don't want to use this directly, especially not
  * if it's followed immediately by a call to @c svn_fs_open_berkeley().
  * Take a look at @c svn_repos_open() instead.
  */
-svn_fs_t *svn_fs_new (apr_pool_t *pool);
+svn_fs_t *svn_fs_new (apr_hash_t *fs_config, apr_pool_t *pool);
 
 
 /** The type of a warning callback function.
