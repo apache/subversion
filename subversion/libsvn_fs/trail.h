@@ -198,6 +198,17 @@ svn_error_t *svn_fs__retry_debug (svn_fs_t *fs,
   svn_fs__retry_debug(fs, txn_body, baton, pool, #txn_body, __FILE__, __LINE__)
 #endif
 
+
+/* Try an action repeatedly until it doesn't deadlock.  This is
+   exactly like svn_fs__retry_txn() (whose documentation you really
+   should read) except that no Berkeley DB transaction is created. */
+svn_error_t *svn_fs__retry (svn_fs_t *fs,
+                            svn_error_t *(*txn_body) (void *baton, 
+                                                      trail_t *trail),
+                            void *baton,
+                            apr_pool_t *pool);
+
+
 /* Record a change which should be undone if TRAIL is aborted, either
    because of a deadlock or an error.
 
