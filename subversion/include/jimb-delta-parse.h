@@ -66,15 +66,17 @@ typedef struct svn_delta_walk_t
      since CHILD_BATON won't be used any more.  */
   svn_error_t *(*finish_directory) (void *child_baton);
 
-  /* We are going to add a new file named NAME.  TEXT specifies the
-     file contents as a text delta versus the base text; if BASE_PATH
-     is zero, the changes are relative to the empty file.  */
+  /* We are going to add a new file named NAME.  HANDLER and
+     HANDLER_BATON specify a function to consume a series of vcdiff
+     windows.  If BASE_PATH is zero, the changes are relative to the
+     empty file.  */
   svn_error_t *(*add_file) (svn_string_t *name,
 			    void *walk_baton, void *parent_baton,
 			    svn_string_t *base_path,
 			    svn_version_t base_version,
 			    svn_pdelta_t *pdelta,
-			    svn_delta_stream_t *text);
+                            svn_delta_handler_t *handler,
+			    void *handler_baton);
 
   /* We are going to change the directory entry named NAME to a file.
      TEXT_DELTA specifies the file contents as a delta relative to the
@@ -84,7 +86,9 @@ typedef struct svn_delta_walk_t
 				svn_string_t *base_path,
 				svn_version_t base_version,
 				svn_pdelta_t *pdelta,
-				svn_delta_stream_t *text);
+                                svn_delta_handler_t *handler,
+                                void *handler_baton);
+
 
 } svn_delta_walk_t;
 

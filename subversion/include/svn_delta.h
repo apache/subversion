@@ -259,40 +259,27 @@ typedef struct svn_pdelta_t {
 
 typedef size_t svn_version_t;   /* Would they ever need to be signed? */
 
+typedef enum svn_XML_t
+{
+  svn_XML_treedelta = 1,
+  svn_XML_add,
+  svn_XML_del,
+  svn_XML_replace,
+  svn_XML_file,
+  svn_XML_dir,
+  svn_XML_textdelta,
+  svn_XML_propdelta
+} svn_XML_t;
+
 
 typedef struct svn_delta_stackframe_t
 {
-  enum {                     /* The type of XML object we're representing */
-    svn_XML_tree = 1,
-    svn_XML_edit,
-    svn_XML_content
-  } kind;
-
-  enum {                     /* If this is an svn_XML_edit kind, */
-    svn_edit_add = 1,        /* this is the type of edit in progress */
-    svn_edit_del,
-    svn_edit_replace
-  } edit_kind;
-
-  enum {                     /* If this is an svn_XML_content kind, */
-    svn_content_file = 1,    /* this is the type of content being processed */
-    svn_content_dir
-  } content_kind;
-
-  svn_string_t *name;        /* Used by svn_XML_edit and svn_XML_content */
+  svn_XML_t tag;     /* represents an open <tag> */
+  void *baton;       /* holds caller data for a particular subdirectory */
   
-  /* Used by svn_XML_content only */
-
-  svn_string_t *ancestor_path;
-  svn_version_t ancestor_ver;
-  svn_boolean_t inside_textdelta;
-  svn_boolean_t inside_propdelta;
-
-  /* Our stackframe is a doubly-linked list */
-
   struct svn_delta_stackframe_t *next;
   struct svn_delta_stackframe_t *previous;
-
+  
 } svn_delta_stackframe_t;
 
 
@@ -349,10 +336,6 @@ typedef struct svn_delta_digger_t
 } svn_delta_digger_t;
 
 
-
-
-/* Creates a parser with the common callbacks and userData registered. */
-XML_Parser svn_delta_make_xml_parser (svn_delta_digger_t *diggy);
 
 
 #endif  /* SVN_DELTA_H */
