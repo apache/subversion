@@ -21,6 +21,7 @@
 #include <apr_pools.h>
 #include <apr_general.h>
 
+#include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_diff.h"
 #include "svn_types.h"
@@ -88,20 +89,12 @@ struct svn_diff__lcs_t
  */
 
 static
-apr_status_t
+void
 svn_diff__tree_create(svn_diff__tree_t **tree, apr_pool_t *pool)
 {
-  svn_diff__tree_t *newtree;
-
-  *tree = NULL;
-
-  newtree = apr_palloc(pool, sizeof(svn_diff__tree_t));
-  newtree->pool = pool;
-  newtree->root = NULL;
-
-  *tree = newtree;
-
-  return APR_SUCCESS;
+  *tree = apr_palloc(pool, sizeof(**tree));
+  (*tree)->pool = pool;
+  (*tree)->root = NULL;
 }
 
 static
@@ -356,7 +349,7 @@ svn_diff__hat_get(svn_diff__hat_t *hat, apr_size_t idx)
  */
 
 static
-apr_status_t
+svn_error_t *
 svn_diff__get_tokens(svn_diff__position_t **position_list,
                      svn_diff__tree_t *tree,
                      void *diff_baton,
@@ -368,37 +361,46 @@ svn_diff__get_tokens(svn_diff__position_t **position_list,
   svn_diff__position_t **position_ref;
   void *token;
   apr_off_t offset;
-  apr_status_t rv;
 
   *position_list = NULL;
   
-  rv = vtable->datasource_open(diff_baton, datasource);
-  if (rv != APR_SUCCESS)
-    return rv;
+  SVN_ERR(vtable->datasource_open(diff_baton, datasource));
   
   position_ref = &position;
   offset = 0;
   while (1)
     {
-      token = vtable->datasource_get_next_token(diff_baton, datasource);
+      SVN_ERR(vtable->datasource_get_next_token(&token, diff_baton, datasource));
       if (token == NULL)
         break;
 
       offset++;
-      *position_ref = svn_diff__tree_insert_token(tree, diff_baton, vtable, token, offset, position_idx);
+      *position_ref = svn_diff__tree_insert_token(tree,
+                                                  diff_baton, vtable,
+                                                  token, offset,
+                                                  position_idx);
 
       position_ref = &(*position_ref)->next;
     }
 
   *position_ref = NULL;
   
-  vtable->datasource_close(diff_baton, datasource);
+  SVN_ERR(vtable->datasource_close(diff_baton, datasource));
 
   *position_list = position;
   
-  return APR_SUCCESS;
+  return NULL;
 }
 
+/*
+ * Calculate the Longest Common Subsequence between two datasources.
+ * This function is what makes the diff code tick.
+ *
+ * The LCS algorithm implemented here is described by J.W. Hunt and
+ * T.G. Szymanski in "A fast algorithm for computing longest common
+ * subsequences".
+ *
+ */
 static
 svn_diff__lcs_t *
 svn_diff__lcs(svn_diff__tree_t *tree,
@@ -549,7 +551,7 @@ svn_diff__lcs(svn_diff__tree_t *tree,
   return link;
 }
 
-apr_status_t
+svn_error_t *
 svn_diff(svn_diff_t **diff,
          void *diff_baton,
          svn_diff_fns_t *vtable,
@@ -558,35 +560,24 @@ svn_diff(svn_diff_t **diff,
   svn_diff__tree_t *tree;
   svn_diff__position_t *position_list[2];
   apr_pool_t *subpool;
-  apr_status_t rv;
   svn_diff__lcs_t *lcs;
 
   *diff = NULL;
 
-  rv = apr_pool_create(&subpool, pool);
-  if (rv != APR_SUCCESS)
-    return rv;
+  subpool = svn_pool_create(pool);
 
-  rv = svn_diff__tree_create(&tree,
-                             subpool);
-  if (rv != APR_SUCCESS)
-    return rv;
+  svn_diff__tree_create(&tree, subpool);
 
   /* Insert the data into the tree */
-  rv = svn_diff__get_tokens(&position_list[0],
-                            tree,
-                            diff_baton, vtable,
-                            svn_diff_datasource_original, 0);
-  if (rv != APR_SUCCESS)
-    return rv;
+  SVN_ERR(svn_diff__get_tokens(&position_list[0],
+                               tree,
+                               diff_baton, vtable,
+                               svn_diff_datasource_original, 0));
   
-  rv = svn_diff__get_tokens(&position_list[1],
-                            tree,
-                            diff_baton, vtable,
-                            svn_diff_datasource_modified, 1);
-  if (rv != APR_SUCCESS)
-    return rv;
-
+  SVN_ERR(svn_diff__get_tokens(&position_list[1],
+                               tree,
+                               diff_baton, vtable,
+                               svn_diff_datasource_modified, 1));
 
   /* The cool part is that we don't need the tokens anymore.
    * Allow the app to clean them up if it wants to.
@@ -702,12 +693,12 @@ svn_diff(svn_diff_t **diff,
   }
   
   /* Get rid of all the data we don't have a use for anymore */
-  apr_pool_destroy(subpool);
+  svn_pool_destroy(subpool);
 
-  return APR_SUCCESS;
+  return NULL;
 }
 
-apr_status_t
+svn_error_t *
 svn_diff3(svn_diff_t **diff,
           void *diff_baton,
           svn_diff_fns_t *vtable,
@@ -718,38 +709,27 @@ svn_diff3(svn_diff_t **diff,
   svn_diff__position_t *position_list[3];
   svn_diff__lcs_t *lcs_bw;
   svn_diff__lcs_t *lcs_br;
-  apr_status_t rv;
 
   *diff = NULL;
 
-  rv = apr_pool_create(&subpool, pool);
-  if (rv != APR_SUCCESS)
-    return rv;
+  subpool = svn_pool_create(pool);
 
-  rv = svn_diff__tree_create(&tree, subpool);
-  if (rv != APR_SUCCESS)
-    return rv;
+  svn_diff__tree_create(&tree, subpool);
 
-  rv = svn_diff__get_tokens(&position_list[0], 
-                            tree, 
-                            diff_baton, vtable,
-                            svn_diff_datasource_original, 0);
-  if (rv != APR_SUCCESS)
-    return rv;
+  SVN_ERR(svn_diff__get_tokens(&position_list[0], 
+                               tree, 
+                               diff_baton, vtable,
+                               svn_diff_datasource_original, 0));
 
-  rv = svn_diff__get_tokens(&position_list[1],
-                            tree,
-                            diff_baton, vtable,
-                            svn_diff_datasource_modified, 1);
-  if (rv != APR_SUCCESS)
-    return rv;
+  SVN_ERR(svn_diff__get_tokens(&position_list[1],
+                               tree,
+                               diff_baton, vtable,
+                               svn_diff_datasource_modified, 1));
   
-  rv = svn_diff__get_tokens(&position_list[2],
-                            tree,
-                            diff_baton, vtable,
-                            svn_diff_datasource_latest, 2);
-  if (rv != APR_SUCCESS)
-    return rv;
+  SVN_ERR(svn_diff__get_tokens(&position_list[2],
+                               tree,
+                               diff_baton, vtable,
+                               svn_diff_datasource_latest, 2));
   
   /* Get rid of the tokens, we don't need them to calc the diff */
   if (vtable->token_discard_all != NULL)
@@ -1043,9 +1023,9 @@ svn_diff3(svn_diff_t **diff,
     *diff_ref = NULL;
   }
 
-  apr_pool_destroy(subpool);
+  svn_pool_destroy(subpool);
 
-  return APR_SUCCESS;
+  return NULL;
 }
 
 
@@ -1081,81 +1061,55 @@ svn_diff_contains_diffs(svn_diff_t *diff)
   return FALSE;
 }
 
-void
+svn_error_t *
 svn_diff_output(svn_diff_t *diff,
                 void *output_baton,
                 svn_diff_output_fns_t *vtable)
 {
+  svn_error_t *(*output_fn)(void *,
+                            apr_off_t, apr_off_t,
+                            apr_off_t, apr_off_t,
+                            apr_off_t, apr_off_t);
+    
   while (diff != NULL)
     {
       switch (diff->type)
         {
-          case svn_diff__type_common:
-            if (vtable->output_common != NULL)
-              {
-                vtable->output_common(output_baton,
-                                      diff->original_start,
-                                      diff->original_length,
-                                      diff->modified_start,
-                                      diff->modified_length,
-                                      diff->latest_start,
-                                      diff->latest_length);
-              }
-            break;
+        case svn_diff__type_common:
+          output_fn = vtable->output_common;
+          break;
 
         case svn_diff__type_diff_common:
-            if (vtable->output_diff_common != NULL)
-              {
-                vtable->output_diff_common(output_baton,
-                                           diff->original_start,
-                                           diff->original_length,
-                                           diff->modified_start,
-                                           diff->modified_length,
-                                           diff->latest_start,
-                                           diff->latest_length);
-              }
-            break;
+          output_fn = vtable->output_diff_common;
+          break;
 
         case svn_diff__type_diff_modified:
-            if (vtable->output_diff_modified != NULL)
-              {
-                vtable->output_diff_modified(output_baton,
-                                                diff->original_start,
-                                                diff->original_length,
-                                                diff->modified_start,
-                                                diff->modified_length,
-                                                diff->latest_start,
-                                                diff->latest_length);
-              }
-            break;
+          output_fn = vtable->output_diff_modified;
+          break;
 
         case svn_diff__type_diff_latest:
-            if (vtable->output_diff_latest != NULL)
-              {
-                vtable->output_diff_latest(output_baton,
-                                               diff->original_start,
-                                               diff->original_length,
-                                               diff->modified_start,
-                                               diff->modified_length,
-                                               diff->latest_start,
-                                               diff->latest_length);
-              }
-            break;
+          output_fn = vtable->output_diff_latest;
+          break;
 
         case svn_diff__type_conflict:
-            if (vtable->output_conflict != NULL)
-              {
-                vtable->output_conflict(output_baton,
-                                        diff->original_start,
-                                        diff->original_length,
-                                        diff->modified_start,
-                                        diff->modified_length,
-                                        diff->latest_start,
-                                        diff->latest_length);
-              }
-            break;
+          output_fn = vtable->output_common;
+          break;
+
+        default:
+          output_fn = NULL; 
+          break;
+        }
+      
+      if (output_fn != NULL)
+        {
+          SVN_ERR(output_fn(output_baton,
+                            diff->original_start, diff->original_length,
+                            diff->modified_start, diff->modified_length,
+                            diff->latest_start, diff->latest_length));
         }
 
       diff = diff->next;
     }
+
+  return NULL;
 }
