@@ -937,6 +937,26 @@ def update_single_file(sbox):
     return 1
 
 
+def update_receive_illegal_name(sbox):
+  "bail when receive a file or dir named .svn"
+  if sbox.build():
+    return 1
+
+  # This tests the revision 4334 fix for issue #1068.
+  wc_dir = sbox.wc_dir
+  illegal_url = os.path.join(svntest.main.current_repo_url,
+                             'A', 'D', 'G', '.svn')
+  outlines, errlines = svntest.main.run_svn(None, 'mkdir', '-m', 'log msg',
+                                            illegal_url)
+  out, err = svntest.main.run_svn(None, 'up', wc_dir)
+
+  if err:
+    return 0
+  else:
+    return 1
+  
+
+
 ########################################################################
 # Run the tests
 
@@ -954,6 +974,7 @@ test_list = [ None,
               update_missing,
               update_replace_dir,
               update_single_file,
+              update_receive_illegal_name,
              ]
 
 if __name__ == '__main__':
