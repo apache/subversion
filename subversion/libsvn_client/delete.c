@@ -274,15 +274,15 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
         {
           svn_wc_adm_access_t *adm_access;
           const char *path = APR_ARRAY_IDX (paths, i, const char *);
-          const char *parent_path = svn_path_dirname (path, pool);
+          const char *parent_path;
 
           svn_pool_clear (subpool);
-
+          parent_path = svn_path_dirname (path, subpool);
           /* Let the working copy library handle the PATH. */
           SVN_ERR (svn_wc_adm_open (&adm_access, NULL, parent_path, 
-                                    TRUE, FALSE, pool));
+                                    TRUE, FALSE, subpool));
           SVN_ERR (svn_client__wc_delete (path, adm_access, force, 
-                                          FALSE, ctx, pool));
+                                          FALSE, ctx, subpool));
           SVN_ERR (svn_wc_adm_close (adm_access));
 
           /* See if the user wants us to stop. */
