@@ -81,6 +81,7 @@ dnl Configure neon --------------------------
             # this will include -DNEON_SSL if neon was built with SSL support
             changequote(<<, >>)dnl
             CFLAGS="$CFLAGS `$SHELL $abs_builddir/neon/neon-config --cflags | sed -e 's/-I[^ ]*//g'`"
+            SVN_NEON_INCLUDES="$SVN_NEON_INCLUDES `$SHELL $abs_builddir/neon/neon-config --cflags | sed -e 's/-D[^ ]*//g'`"
             changequote([, ])dnl
           fi
 
