@@ -282,7 +282,8 @@ dump_node (struct edit_baton *eb,
                                       ": replace\n")); 
 
           /* definitely need to dump all content for a replace. */
-          must_dump_text = TRUE;
+          if (kind == svn_node_file)
+            must_dump_text = TRUE;
           must_dump_props = TRUE;
         }
       else
@@ -324,8 +325,9 @@ dump_node (struct edit_baton *eb,
 
       if (! is_copy)
         {
-          /* For a simple 'add', we need to dump both props and text. */
-          must_dump_text = TRUE;
+          /* Dump all contents for a simple 'add'. */
+          if (kind == svn_node_file)
+            must_dump_text = TRUE;
           must_dump_props = TRUE;
         }
       else
@@ -370,21 +372,34 @@ dump_node (struct edit_baton *eb,
           /* ### someday write a node-copyfrom-source-checksum. */
         }
     }
-  
-  /* If we're not supposed to dump text or props, so be it, we can
-     just go home.  However, if either one needs to be dumped, then
-     our dumpstream format demands that at a *minimum*, we see a lone
-     "PROPS-END" as a divider between text and props content within
-     the content-block. */
-  if ((! must_dump_text) && (! must_dump_props))
+
+  if ((must_dump_text) && (must_dump_props))
     {
+      SVN_ERR (svn_stream_printf (eb->stream, pool,
+                                  SVN_REPOS_DUMPFILE_NODE_NOTICE ": all\n"));
+    }
+  else if ((must_dump_text) && (! must_dump_props))
+    {
+      SVN_ERR (svn_stream_printf (eb->stream, pool,
+                                  SVN_REPOS_DUMPFILE_NODE_NOTICE ": text\n"));
+    }
+  else if ((! must_dump_text) && (must_dump_props))
+    {
+      SVN_ERR (svn_stream_printf (eb->stream, pool,
+                                  SVN_REPOS_DUMPFILE_NODE_NOTICE ": props\n"));
+    }
+  else
+    {
+      /* If we're not supposed to dump text or props, so be it, we can
+         just go home.  However, if either one needs to be dumped,
+         then our dumpstream format demands that at a *minimum*, we
+         see a lone "PROPS-END" as a divider between text and props
+         content within the content-block. */
       len = 2;
-      SVN_ERR (svn_stream_write (eb->stream, "\n\n", &len)); /* ### needed? */
-      
-      return SVN_NO_ERROR;
+      return svn_stream_write (eb->stream, "\n\n", &len); /* ### needed? */
     }
 
-  /* Start prepping content to dump... */
+  /*** Start prepping content to dump... ***/
 
   /* If the node either has no props, or we're not supposed to dump
      props, then the prophash will be empty, and the propstring will
