@@ -177,18 +177,23 @@ class MakefileGenerator(_GeneratorBase):
       ldflags = self.parser.get(target, 'link-flags')
       add_deps = self.parser.get(target, 'add-deps')
       objnames = string.join(_strip_path(path, objects))
+      custom = self.parser.get(target, 'custom')
+      if custom == 'apache-mod':
+        linkcmd = '$(LINK_APACHE_MOD)'
+      else:
+        linkcmd = '$(LINK)'
+
       self.ofile.write(
         '%s_DEPS = %s %s\n'
         '%s_OBJECTS = %s\n'
         '%s: $(%s_DEPS)\n'
-        '\tcd %s && $(LINK) -o %s %s $(%s_OBJECTS) %s $(LIBS)\n\n'
+        '\tcd %s && %s -o %s %s $(%s_OBJECTS) %s $(LIBS)\n\n'
         % (targ_varname, string.join(objects + deps), add_deps,
            targ_varname, objnames,
            tpath, targ_varname,
-           path, tfile, ldflags, targ_varname, string.join(libs))
+           path, linkcmd, tfile, ldflags, targ_varname, string.join(libs))
         )
 
-      custom = self.parser.get(target, 'custom')
       if custom == 'apache-mod':
         # special build, needing Apache includes
         self.ofile.write('# build these special -- use APACHE_INCLUDES\n')
