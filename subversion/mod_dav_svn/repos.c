@@ -1079,7 +1079,6 @@ dav_error * dav_svn_split_uri (request_rec *r,
 }
 
 
-
 static dav_error * dav_svn_get_resource(request_rec *r,
                                         const char *root_path,
                                         const char *label,
@@ -1383,6 +1382,69 @@ static int dav_svn_is_parent_resource(const dav_resource *res1,
                     len1) == 0
           && res2->info->uri_path->data[len1] == '/');
 }
+
+
+dav_error * dav_svn_is_new_resource (request_rec *r,
+                                     const char *uri,
+                                     const char *root_path,
+                                     int *is_new)
+{
+  dav_error *derr;
+  svn_error_t *serr;
+  dav_resource *resource;
+  svn_revnum_t base_rev;
+  svn_fs_root_t *base_rev_root;
+  svn_node_kind_t kind;
+
+  /* parse the uri and prep the associated resource. */
+  derr = dav_svn_get_resource(r, root_path,
+                              /* ### I can't believe that every single
+                                 parser ignores the LABEL and USE_CHECKED_IN
+                                 args below!! */
+                              "ignored_label", 1,
+                              &resource);
+  if (derr)
+    return derr;
+
+  /* verify that we've got a working resource */
+  if (resource->type != DAV_RESOURCE_TYPE_WORKING)
+    {
+      /* callers can look for this specific parse error, as a way of
+         knowing that it's not a working resource. */
+      return dav_new_error(r->pool, HTTP_INTERNAL_SERVER_ERROR,
+                           DAV_ERR_IF_PARSE,
+                           "is_new_resource called on non-working resource.");
+    }
+
+  /* easy out: if the working resource doesn't exist in the txn, then
+     yes indeed, the uri should be considered "new". */
+  if (! resource->exists)
+    {
+      *is_new = 1;
+    }
+  else
+    {
+      /* we have a tangible item in the txn; see if it exists in the
+         original revision as well. */
+      base_rev = svn_fs_txn_base_revision (resource->info->root.txn);
+      serr = svn_fs_revision_root (&base_rev_root, resource->info->repos->fs,
+                                   base_rev, r->pool);
+      if (serr)
+        return 
+          dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                              apr_psprintf(r->pool,
+                                           "Could not open root of revision %"
+                                           SVN_REVNUM_T_FMT, base_rev));
+      
+      kind = svn_fs_check_path (base_rev_root,
+                                resource->info->repos_path, r->pool);
+      
+      *is_new = (kind == svn_node_none) ? 1 : 0;
+    }
+
+  return NULL;
+}
+
 
 static dav_error * dav_svn_open_stream(const dav_resource *resource,
                                        dav_stream_mode mode,
