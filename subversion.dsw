@@ -84,6 +84,9 @@ Package=<4>
     Project_Dep_Name tests_libsvn_subr_string
     End Project Dependency
     Begin Project Dependency
+    Project_Dep_Name tests_libsvn_subr_target_test
+    End Project Dependency
+    Begin Project Dependency
     Project_Dep_Name tests_libsvn_wc_checkout
     End Project Dependency
     Begin Project Dependency
