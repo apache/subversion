@@ -937,7 +937,8 @@ pre_send_hook(ne_request *req,
 
   /* Possibly attach some custom headers to the request. */
 
-  if (strcmp(lrb->method, "LOCK") == 0)
+  if ((strcmp(lrb->method, "LOCK") == 0)
+      || (strcmp(lrb->method, "PROPFIND") == 0))
     {
       /* Unconditionally create an X-SVN-Options: header that
          indicates this is an svn client (not a generic DAV client)
@@ -958,11 +959,7 @@ pre_send_hook(ne_request *req,
                                    lrb->current_rev);
           ne_buffer_zappend(header, buf);
         }
-    }
 
-  if ((strcmp(lrb->method, "LOCK") == 0)
-      || (strcmp(lrb->method, "PROPFIND") == 0))
-    {           
       /* Register a callback for custom 'creationdate' response header. */
       ne_add_response_header_handler(req, SVN_DAV_CREATIONDATE_HEADER,
                                      handle_creationdate_header, lrb);
@@ -1319,6 +1316,11 @@ svn_ra_dav__get_lock(svn_ra_session_t *session,
   if (lrb->error_parser)
     ne_xml_destroy(lrb->error_parser);
 
+  /* Check to see if the server sent a custom 'creationdate' header in
+     the PROPFIND response.  If so, use it. */
+  if (lrb->creation_date)
+    rb->lock->creation_date = lrb->creation_date;
+  
   *lock = rb->lock;
   return SVN_NO_ERROR;
 }

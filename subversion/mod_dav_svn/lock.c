@@ -510,8 +510,15 @@ dav_svn_get_locks(dav_lockdb *lockdb,
                                resource->pool);
 
   if (slock != NULL)
-    svn_lock_to_dav_lock(&lock, slock, info->lock_break,
-                         resource->exists, resource->pool);
+    {
+      svn_lock_to_dav_lock(&lock, slock, info->lock_break,
+                           resource->exists, resource->pool);
+
+      /* Let svn clients know the creationdate of the slock. */
+      apr_table_setn(info->r->headers_out, SVN_DAV_CREATIONDATE_HEADER,
+                     svn_time_to_cstring (slock->creation_date,
+                                          resource->pool));
+    }
 
   *locks = lock;
   return 0;  
@@ -538,6 +545,7 @@ dav_svn_find_lock(dav_lockdb *lockdb,
                   int partial_ok,
                   dav_lock **lock)
 {
+  dav_lockdb_private *info = lockdb->info;
   svn_error_t *serr;
   dav_error *derr;
   svn_lock_t *slock;
@@ -575,6 +583,11 @@ dav_svn_find_lock(dav_lockdb *lockdb,
 
       svn_lock_to_dav_lock(&dlock, slock, FALSE,
                            resource->exists, resource->pool);
+      
+      /* Let svn clients know the creationdate of the slock. */
+      apr_table_setn(info->r->headers_out, SVN_DAV_CREATIONDATE_HEADER,
+                     svn_time_to_cstring (slock->creation_date,
+                                          resource->pool));
     }
 
   *lock = dlock;
