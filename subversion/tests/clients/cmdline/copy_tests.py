@@ -830,6 +830,77 @@ def copy_preserve_executable_bit(sbox):
 
   return 0
 
+#----------------------------------------------------------------------
+# Issue 1029, copy failed with a "working copy not locked" error
+def wc_to_repos(sbox):
+  "working-copy to repository copy"
+
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
+
+  beta_path = os.path.join(wc_dir, "A", "B", "E", "beta")
+  beta2_url = svntest.main.current_repo_url + "/A/B/E/beta2"
+  H_path = os.path.join(wc_dir, "A", "D", "H")
+  H2_url = svntest.main.current_repo_url + "/A/D/H2"
+
+  # modify some items to be copied
+  svntest.main.file_append(os.path.join(wc_dir, 'A', 'D', 'H', 'omega'),
+                           "new otext")
+  output, errput = svntest.main.run_svn(None, 'propset', 'foo', 'bar',
+                                        beta_path)
+  if errput:
+    return 1
+
+  # copy a file
+  output, errput = svntest.main.run_svn(None, '-m', 'fumble file', 'copy',
+                                        beta_path, beta2_url)
+  if errput:
+    return 1
+  # and a directory
+  output, errput = svntest.main.run_svn(None, '-m', 'fumble dir', 'copy',
+                                        H_path, H2_url)
+  if errput:
+    return 1
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/E/beta2'  : Item(status='A '),
+    'A/D/H2'       : Item(status='A '),
+    'A/D/H2/chi'   : Item(status='A '),
+    'A/D/H2/omega' : Item(status='A '),
+    'A/D/H2/psi'   : Item(status='A '),
+    })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('A/D/H/omega',
+                      contents="This is the file 'omega'.new otext")
+  expected_disk.add({
+    'A/B/E/beta2'  : Item("This is the file 'beta'."),
+    'A/D/H2/chi'   : Item("This is the file 'chi'."),
+    'A/D/H2/omega' : Item("This is the file 'omega'.new otext"),
+    'A/D/H2/psi'   : Item("This is the file 'psi'."),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  expected_status.add({
+    'A/B/E/beta'   : Item(status=' M', wc_rev=3, repos_rev=3),
+    'A/D/H/omega'  : Item(status='M ', wc_rev=3, repos_rev=3),
+    'A/B/E/beta2'  : Item(status='  ', wc_rev=3, repos_rev=3),
+    'A/D/H2'       : Item(status='  ', wc_rev=3, repos_rev=3),
+    'A/D/H2/chi'   : Item(status='  ', wc_rev=3, repos_rev=3),
+    'A/D/H2/omega' : Item(status='  ', wc_rev=3, repos_rev=3),
+    'A/D/H2/psi'   : Item(status='  ', wc_rev=3, repos_rev=3),
+    })
+  if svntest.actions.run_and_verify_update(wc_dir,
+                                           expected_output,
+                                           expected_disk,
+                                           expected_status):
+    return 1
+
+  # check local property was copied
+  output, errput = svntest.main.run_svn(None, 'propget', 'foo',
+                                        beta_path + "2")
+  if errput or output != ['bar\n']:
+    return 1
 
 ########################################################################
 # Run the tests
@@ -848,6 +919,7 @@ test_list = [ None,
               copy_delete_commit,
               mv_and_revert_directory,
               Skip(copy_preserve_executable_bit, (os.name != 'posix')),
+              wc_to_repos,
              ]
 
 if __name__ == '__main__':
