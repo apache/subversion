@@ -27,7 +27,7 @@ if [ ! -f $LOG_FILE ]
 then
     $SENDMAIL -t <<EOF
 From: $FROM
-Subject: "ERROR: svn $REVPREFIX$REV ($TEST)
+Subject: ERROR: svn $REVPREFIX$REV ($TEST)
 To: $ERROR_TO
 
 Missing log file: $LOG_FILE
@@ -40,7 +40,7 @@ if [ "$BUILD_STAT" != "PASS" -a "$BUILD_STAT" != "FAIL" ]
 then
     $SENDMAIL -t <<EOF
 From: $FROM
-Subject: "ERROR: svn $REVPREFIX$REV ($TEST)
+Subject: ERROR: svn $REVPREFIX$REV ($TEST)
 To: $ERROR_TO
 
 Invalid build status: $BUILD_STAT
@@ -50,24 +50,21 @@ fi
 
 # Send the status mail
 MAILFILE="/tmp/svntest.$$"
-if [ "$BUILD_STAT" = "PASS" ]
-then
-    $CAT <<EOF > "$MAILFILE"
+NEXT_PART="NextPart-$$"
+TESTS_LOG_FILE="$TEST_ROOT/tests.$BUILD_TYPE.$RA_TYPE.$FS_TYPE.log.gz"
+$CAT <<EOF > "$MAILFILE"
 From: $FROM
 Subject: svn $REVPREFIX$REV: $BUILD_STAT ($TEST)
 Reply-To: $REPLY_TO
 To: $TO
-
 EOF
+if [ "$BUILD_STAT" = "PASS" -o ! -f "$TESTS_LOG_FILE" ]
+then
+    echo "" >> "$MAILFILE"
     $CAT "$LOG_FILE" >> "$MAILFILE"
 else
-    NEXT_PART="NextPart-$$"
-    TESTS_LOG_FILE="$TEST_ROOT/tests.$BUILD_TYPE.$RA_TYPE.$FS_TYPE.log.gz"
     $CAT <<EOF > "$MAILFILE"
-From: $FROM
-Subject: svn $REVPREFIX$REV: $BUILD_STAT ($TEST)
-Reply-To: $REPLY_TO
-To: $TO
+MIME-Version: 1.0
 Content-Type: multipart/mixed; boundary="$NEXT_PART"
 
 This is a multi-part message in MIME format.
@@ -77,21 +74,18 @@ Content-Transfer-Encoding: 8bit
 
 EOF
     $CAT "$LOG_FILE" >> "$MAILFILE"
-    if [ -f "$TESTS_LOG_FILE" ]
-    then
-        $CAT <<EOF >> "$MAILFILE"
+    $CAT <<EOF >> "$MAILFILE"
 ------------$NEXT_PART
 Content-Type: application/x-gzip; name="tests.log.gz"
 Content-Transfer-Encoding: base64
 Content-Disposition: inline; filename="tests.log.gz"
 
 EOF
-        $BASE64_E < "$TESTS_LOG_FILE" >> "$MAILFILE"
-        $RM_F "$TESTS_LOG_FILE"
-        $CAT <<EOF >> "$MAILFILE"
+    $BASE64_E < "$TESTS_LOG_FILE" >> "$MAILFILE"
+    $RM_F "$TESTS_LOG_FILE"
+    $CAT <<EOF >> "$MAILFILE"
 ------------$NEXT_PART--
 EOF
-    fi
 fi
 $SENDMAIL -t < "$MAILFILE"
 $RM_F "$MAILFILE"
