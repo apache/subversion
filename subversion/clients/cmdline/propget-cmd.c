@@ -33,16 +33,6 @@
 
 /*** Code. ***/
 
-static int
-print_prop (const svn_string_t *propname,
-            const char *filename,
-            const svn_string_t *propval)
-{
-  /* ### This won't handle binary property values properly. */
-  printf("%s - %s : %s\n", filename, propname->data, propval->data);
-  return 1;
-}
-
 svn_error_t *
 svn_cl__propget (apr_getopt_t *os,
                  svn_cl__opt_state_t *opt_state,
@@ -72,6 +62,7 @@ svn_cl__propget (apr_getopt_t *os,
       svn_string_t pname;
       apr_hash_t *props;
       apr_hash_index_t *hi;
+      svn_boolean_t print_filenames = FALSE;
 
       pname.data = propname->data;
       pname.len = propname->len;
@@ -79,12 +70,19 @@ svn_cl__propget (apr_getopt_t *os,
       SVN_ERR (svn_client_propget (&props, propname->data, target->data,
                                    opt_state->recursive, pool));
 
+      print_filenames = (targets->nelts > 1 || apr_hash_count(props) > 1);
+
       for (hi = apr_hash_first(pool, props); hi; hi = apr_hash_next(hi))
         {
           const char * filename; 
           const svn_string_t *propval;
           apr_hash_this(hi, (const void **)&filename, NULL, (void **)&propval);
-          print_prop(&pname, filename, propval);
+
+          /* ### this won't handle binary property values */
+          if (print_filenames)
+            printf ("%s - %s\n", filename, propval->data);
+          else
+            printf ("%s\n", propval->data);
         }
     }
 
