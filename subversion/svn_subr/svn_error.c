@@ -49,6 +49,8 @@
 
 
 #include <svn_error.h>
+#include <stdio.h>
+
 
 
 svn_error_t *
@@ -66,6 +68,19 @@ svn_create_error (ap_status_t errno, svn_boolean_t fatal, ap_pool_t *pool)
 }
 
 
+
+void
+svn_handle_error (svn_error_t err)
+{
+  printf ("svn_error: errno %d\n");
+  svn_string_print (err->description);
+
+  if (err->fatal)
+    {
+      printf ("Fatal error, exiting.\n");
+      exit (err->errno);
+    }
+}
 
 
 
