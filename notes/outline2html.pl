@@ -61,7 +61,7 @@ while (<SOURCE>)
 
   $_ = &escape_html ($_);
 
-  $_ = &intuit_italicization ($_);
+  $_ = &interpret_asterisks_in_context ($_);
 
   if ($num_stars == 1)
   {
@@ -154,15 +154,29 @@ sub escape_html ()
   return $str;
 }
 
-sub intuit_italicization ()
+sub interpret_asterisks_in_context ()
 {
   my $str = shift;
 
-  # Convert "*foo*" and similar things to "<i>foo</i>"
-  $str =~ s/^\*([^*\s\/]+)/<i>$1/g;
-  $str =~ s/(\s)\*([^*\s\/]+)/$1<i>$2/g;
-  $str =~ s/([^*\s\/]+)\*$/$1<\/i>/g;
-  $str =~ s/([^*\s\/]+)\*([\s\W\/])/$1<\/i>$2/g;
+  # Convert "*foo*" and similar things to "<i>foo</i>", and handle C
+  # comments in inset code examples.
+
+  if ($str =~ /^\s/)    # Inset text might be a monospaced code example
+  {
+    # Take care of C comments...
+    $str =~ s/\/\*/<font color=blue>\/\*<i>/g;
+    $str =~ s/\*\//<\/i>\*\/<\/font>/g;
+  }
+  else                  # Non-inset text could never be code example
+  {
+    # Take care of running text, ignoring C-style comments anyway,
+    # since, who knows, they might appear in running text in a short
+    # quote...
+    $str =~ s/^\*([^*\s\/]+)/<i>$1/g;
+    $str =~ s/(\s)\*([^*\s\/]+)/$1<i>$2/g;
+    $str =~ s/([^*\s\/]+)\*$/$1<\/i>/g;
+    $str =~ s/([^*\s\/]+)\*([\s\W\/])/$1<\/i>$2/g;
+  }
 
   return $str;
 }
