@@ -202,14 +202,13 @@ text-delta-parsing universe.  The pdelta parser can send commands to
 the caller's svn_walk_t callbacks in two different, *non*-mutually
 exclusive ways.
 
-  1.  If the svn_walk_t structure has non-NULL callbacks set in
-  "apply_*_propchange": buffer the propname and propvalue completely
-  into RAM, and send it to these callbacks.
+  1.  If the svn_walk_t callbacks "apply_*_propchange" are non-NULL:
+  buffer the propname and propvalue completely into RAM, and send it
+  to these callbacks.
 
-  2.  If the svn_walk_t callbacks "begin_*delta" return non-NULL
-  handlers: buffer the propname and propvalue gradually, and send off
-  `chunks' to these handlers.  This is similar to the text-delta
-  strategy.
+  2.  If the svn_walk_t callbacks "begin_*delta" are non-NULL: buffer
+  the propname and propvalue gradually, and send off `chunks' to these
+  handlers.  This is similar to the text-delta strategy.
       
 Again, note that these methods are non-mututally-exclusive.  The
 caller of svn_delta_parse() may actually want us to do both strategies.
