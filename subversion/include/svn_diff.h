@@ -34,144 +34,231 @@ extern "C" {
 #endif /* __cplusplus */
 
 
+/* This is an internalized library for performing contextual diffs
+   between sources of data.
+
+   NOTE: this is different than Subversion's binary-diffing engine.
+   That API lives in svn_delta.h -- see the "text deltas" section.  A
+   "text delta" is way of representing precise binary diffs between
+   strings of data.  The Subversion client and server send text deltas
+   to one another during updates and commits.
+
+   This API, however, is (or will be) used for peforming *contextual*
+   merges between files in the working copy.  During an update or
+   merge, 3-way file merging is needed.  And 'svn diff' needs to show
+   the differences between 2 files.
+
+   The nice thing about this API is that it's very general.  It
+   operates on any source of data (a "datasource") and calculates
+   contextual differences on "tokens" within the data.  In our
+   particular usage, the datasources are files and the tokens are
+   lines.  But the possibilites are endless.
+ */
+
 
 /*** Diffs.  ***/
 
+/* An opaque type that represents a difference between either two or
+   three datasources.   This object is returned by svn_diff() and
+   svn_diff3() below, and consumed by a number of other routines. */
 typedef struct svn_diff_t svn_diff_t;
 
+
+/* There are three types of datasources.  In GNU diff3 terminology,
+   these types correspond to the phrases "older", "mine", and "yours". */
 typedef enum svn_diff_datasource_e
 {
-  svn_diff_datasource_baseline,
-  svn_diff_datasource_workingcopy,
-  svn_diff_datasource_repository
+  /* The oldest form of the data. */
+  svn_diff_datasource_original,
+
+  /* The same data, but potentially changed by the user. */
+  svn_diff_datasource_modified,
+
+  /* The latest version of the data, possibly different than the
+     user's modified version.  */
+  svn_diff_datasource_latest
 
 } svn_diff_datasource_e;
 
 
+/* A vtable for reading data from the three datasources. */
 typedef struct svn_diff_fns_t
 {
-  apr_status_t (*datasource_open)(void *diff_baton,
-                                  svn_diff_datasource_e datasoure);
+  /* Open the datasource of type DATASOURCE. */
+  apr_status_t (*datasource_open) (void *diff_baton,
+                                   svn_diff_datasource_e datasource);
 
-  /* ### Unused at the moment.
-   */
-  apr_status_t (*datasource_seek)(void *diff_baton,
-                                  svn_diff_datasource_e datasoure,
-                                  apr_off_t token_offset);
+  /* Close the datasource of type DATASOURCE. */
+  void (*datasource_close) (void *diff_baton,
+                            svn_diff_datasource_e datasource);
 
-  void *(*datasource_get_token)(void *diff_baton,
-                                svn_diff_datasource_e datasoure);
+  /* Get the next "token" from the datasource of type DATASOURCE. */
+  void *(*datasource_get_next_token) (void *diff_baton,
+                                      svn_diff_datasource_e datasource);
 
-  void (*datasource_close)(void *diff_baton,
-                           svn_diff_datasource_e datasoure);
+  /* A function for ordering the tokens with the same interface as
+     'strcmp': If LTOKEN and RTOKEN are "equal", return 0.  If LTOKEN
+     is "less than" RTOKEN, return a number < 0.  If LTOKEN is
+     "greater than" RTOKEN, return a number > 0.  [The diff algorithm
+     uses this routine to assemble the tokens into a binary tree.] */
+  int (*token_compare) (void *diff_baton,
+                        void *ltoken,
+                        void *rtoken);
 
-  int (*token_compare)(void *diff_baton,
-                       void *ltoken,
-                       void *rtoken);
+  /* Free TOKEN from memory, the diff algorithm is done with it. */
+  void (*token_discard) (void *diff_baton,
+                         void *token);
 
-  void (*token_discard)(void *diff_baton,
-                        void *token);
+  /* Free *all* tokens from memory, they're no longer needed. */
+  void (*token_discard_all) (void *diff_baton);
 
-  void (*token_discard_all)(void *diff_baton);
 } svn_diff_fns_t;
 
-/* Produce a diff between baseline and workingcopy.
- *
- */
-apr_status_t svn_diff(svn_diff_t **diff,
-                      void *diff_baton,
-                      svn_diff_fns_t *diff_fns,
-                      apr_pool_t *pool);
 
-/* Merge baseline, workingcopy and repository.
- *
+/** The Main Events **/
+
+/* Given a vtable of DIFF_FNS/DIFF_BATON for reading datasources,
+ * return a diff object in *DIFF that represents a difference between
+ * an "original" and "modified" datasource.  Do all allocation in POOL.
  */
-apr_status_t svn_diff3(svn_diff_t **diff,
+apr_status_t svn_diff (svn_diff_t **diff,
                        void *diff_baton,
                        svn_diff_fns_t *diff_fns,
                        apr_pool_t *pool);
 
-
-/*
- * Utility functions
+/* Given a vtable of DIFF_FNS/DIFF_BATON for reading datasources,
+ * return a diff object in *DIFF that represents a difference between
+ * three datasources: "original", "modified", and "latest". Do all
+ * allocation in POOL.
  */
-
-/* Determine if a diff contains conflicts.  If it
- * does, return TRUE.
- */
-svn_boolean_t
-svn_diff_contains_conflicts(svn_diff_t *diff);
-
-
-/* Determine if a diff contains actual differences
- * between the datasources.  If so, return TRUE.
- */
-svn_boolean_t
-svn_diff_contains_diffs(svn_diff_t *diff);
-
+apr_status_t svn_diff3 (svn_diff_t **diff,
+                        void *diff_baton,
+                        svn_diff_fns_t *diff_fns,
+                        apr_pool_t *pool);
 
 
-/*
- *
+/**  Utility functions  **/
+
+/* Determine if a diff object contains conflicts.  If it does, return
+ * TRUE, else return FALSE.
  */
+svn_boolean_t
+svn_diff_contains_conflicts (svn_diff_t *diff);
+
+
+/* Determine if a diff object contains actual differences between the
+ * datasources.  If so, return TRUE, else return FALSE.
+ */
+svn_boolean_t
+svn_diff_contains_diffs (svn_diff_t *diff);
+
+
+
+
+/** Displaying Diffs **/
+
+/* A vtable for displaying (or consuming) differences between datasources.
+   Differences, similarities, and conflicts are described by lining up
+   "ranges" of data.
+   
+   Note: these callbacks describe data ranges in units of "tokens".
+   A "token" is whatever you've defined it to be in your datasource
+   svn_diff_fns_t vtable.
+*/
 typedef struct svn_diff_output_fns_t
 {
-  void (*output_common)(void *output_baton,
-                        apr_off_t baseline_start,
-                        apr_off_t baseline_end,
-                        apr_off_t workingcopy_start,
-                        apr_off_t workingcopy_end,
-                        apr_off_t repository_start,
-                        apr_off_t repository_end);
-  void (*output_conflict)(void *output_baton,
-                          apr_off_t baseline_start,
-                          apr_off_t baseline_end,
-                          apr_off_t workingcopy_start,
-                          apr_off_t workingcopy_end,
-                          apr_off_t repository_start,
-                          apr_off_t repository_end);
-  void (*output_diff_workingcopy)(void *output_baton,
-                                  apr_off_t baseline_start,
-                                  apr_off_t baseline_end,
-                                  apr_off_t workingcopy_start,
-                                  apr_off_t workingcopy_end,
-                                  apr_off_t repository_start,
-                                  apr_off_t repository_end);
-  void (*output_diff_repository)(void *output_baton,
-                                 apr_off_t baseline_start,
-                                 apr_off_t baseline_end,
-                                 apr_off_t workingcopy_start,
-                                 apr_off_t workingcopy_end,
-                                 apr_off_t repository_start,
-                                 apr_off_t repository_end);
-  void (*output_diff_common)(void *output_baton,
-                             apr_off_t baseline_start,
-                             apr_off_t baseline_end,
-                             apr_off_t workingcopy_start,
-                             apr_off_t workingcopy_end,
-                             apr_off_t repository_start,
-                             apr_off_t repository_end);
+  /* Two-way and three-way diffs both call the first two output functions: */
+
+  /* If doing a two-way diff, then an *identical* data range was found
+     between the "original" and "modified" datasources.  Specifically,
+     the match is from ORIGINAL_START to ORIGINAL_END in the original
+     data, and from MODIFIED_START to MODIFIED_END in the modified
+     data.
+
+     If doing a three-way diff, then all three datasources have
+     matching data ranges.  The range LATEST_START to LATEST_END in
+     the "latest" datasource is identical to the range ORIGINAL_START
+     to ORIGINAL_END in the original data, and is also identical to
+     the range MODIFIED_START to MODIFIED_END in the modified
+     data.  */
+  void (*output_common) (void *output_baton,
+                         apr_off_t original_start,
+                         apr_off_t original_end,
+                         apr_off_t modified_start,
+                         apr_off_t modified_end,
+                         apr_off_t latest_start,
+                         apr_off_t latest_end);
+
+  /* If doing a two-way diff, then an *conflicting* data range was found
+     between the "original" and "modified" datasources.  Specifically,
+     the conflict is from ORIGINAL_START to ORIGINAL_END in the original
+     data, and from MODIFIED_START to MODIFIED_END in the modified
+     data.
+
+     If doing a three-way diff, then all three datasources have
+     conflicting data ranges.  The range LATEST_START to LATEST_END in
+     the "latest" datasource conflicts with the range ORIGINAL_START
+     to ORIGINAL_END in the original data, and also conflicts with the
+     range MODIFIED_START to MODIFIED_END in the modified data.  */
+  void (*output_conflict) (void *output_baton,
+                           apr_off_t original_start,
+                           apr_off_t original_end,
+                           apr_off_t modified_start,
+                           apr_off_t modified_end,
+                           apr_off_t latest_start,
+                           apr_off_t latest_end);
+
+  /* ------ The following callbacks are used by three-way diffs only --- */
+
+  /* An identical data range was discovered between the "original" and
+     "latest" datasources, but this conflicts with a range in the
+     "modified" datasource. */
+  void (*output_diff_modified) (void *output_baton,
+                                apr_off_t original_start,
+                                apr_off_t original_end,
+                                apr_off_t modified_start,
+                                apr_off_t modified_end,
+                                apr_off_t latest_start,
+                                apr_off_t latest_end);
+  
+  /* An identical data range was discovered between the "original" and
+     "modified" datasources, but this conflicts with a range in the
+     "latest" datasource. */
+  void (*output_diff_latest) (void *output_baton,
+                              apr_off_t original_start,
+                              apr_off_t original_end,
+                              apr_off_t modified_start,
+                              apr_off_t modified_end,
+                              apr_off_t latest_start,
+                              apr_off_t latest_end);
+
+  /* All three datasources have ranges that conflict. */
+  void (*output_diff_common) (void *output_baton,
+                              apr_off_t original_start,
+                              apr_off_t original_end,
+                              apr_off_t modified_start,
+                              apr_off_t modified_end,
+                              apr_off_t latest_start,
+                              apr_off_t latest_end);
 } svn_diff_output_fns_t;
 
-/*
- *
- */
+
+/* Given a vtable of OUTPUT_FNS/OUTPUT_BATON for consuming
+   differences, output the differences in DIFF. */
 void
-svn_diff_output(svn_diff_t *diff,
-                void *output_baton,
-                svn_diff_output_fns_t *output_fns);
+svn_diff_output (svn_diff_t *diff,
+                 void *output_baton,
+                 svn_diff_output_fns_t *output_fns);
+
 
 
 /*** Diffs on files ***/
 
-/* Function to diff two files.
- *
- * DIFF is where the diff will be stored.
- * ORIGINAL is the path to the original file.
- * MODIFIED is the path to the file to which the
- *   original file will be compared.
- * POOL is the pool you want the diff to
- *   be allocated out of.
+/* A convenience function to produce a diff between two files.
+
+   Return a diff object in *DIFF (allocated from POOL) that represents
+   the difference between an ORIGINAL file and MODIFIED file.  
+   (The file arguments must be full paths to the files.)
  */
 apr_status_t
 svn_diff_file(svn_diff_t **diff,
@@ -179,22 +266,18 @@ svn_diff_file(svn_diff_t **diff,
               const char *modified,
               apr_pool_t *pool);
 
-/* Function to diff three files.
- *
- * DIFF is where the diff will be stored.
- * ORIGINAL is the path to the original file; the
- *  common ancestor of MODIFIED1 and MODIFIED2.
- * MODIFIED1 and MODIFIED2 are the paths to the
- *   files to be compared with the common ancestor
- *   (and eachother).
- * POOL is the pool you want the diff to
- *   be allocated out of.
+
+/* A convenience function to produce a diff between three files.
+
+   Return a diff object in *DIFF (allocated from POOL) that represents
+   the difference between an ORIGINAL file, MODIFIED file, and LATEST file.
+   (The file arguments must be full paths to the files.)
  */
 apr_status_t
 svn_diff3_file(svn_diff_t **diff,
                const char *original,
-               const char *modified1,
-               const char *modified2,
+               const char *modified,
+               const char *latest,
                apr_pool_t *pool);
 
 
