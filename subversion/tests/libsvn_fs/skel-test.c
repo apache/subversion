@@ -143,6 +143,7 @@ skel_is_space (char byte)
   return skel_char_map[(unsigned char) byte] == type_space;
 }
 
+#if 0
 /* Return true iff BYTE is a digit byte.  */
 static int
 skel_is_digit (char byte)
@@ -151,6 +152,7 @@ skel_is_digit (char byte)
 
   return skel_char_map[(unsigned char) byte] == type_digit;
 }
+#endif
 
 /* Return true iff BYTE is a name byte.  */
 static int
