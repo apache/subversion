@@ -174,6 +174,26 @@ static svn_error_t * simple_request(svn_ra_session_t *ras, const char *method,
   return SVN_NO_ERROR;
 }
 
+
+static svn_error_t * delete_activity(void *edit_baton,
+                                     apr_pool_t *pool)
+{
+  commit_ctx_t *cc = edit_baton;
+  int code;
+  svn_error_t *err;
+
+  err = simple_request(cc->ras, "DELETE", cc->activity_url, &code,
+                       NULL, 204 /* No Content */, 404 /* Not Found */);
+  /* ### toss this special test at some point before 1.0 */
+  if (err && code == 500)
+    {
+      svn_error_clear(err);
+      err = SVN_NO_ERROR;
+    }
+  return err;
+}
+
+
 static svn_error_t * get_version_url(commit_ctx_t *cc,
                                      resource_t *rsrc,
                                      svn_boolean_t force,
@@ -1118,11 +1138,19 @@ static svn_error_t * commit_close_edit(void *edit_baton,
                                       cc->valid_targets,
                                       cc->disable_merge_response,
                                       cc->ras->pool) );
-
+  SVN_ERR( delete_activity(edit_baton, pool) );
   SVN_ERR( svn_ra_dav__maybe_store_auth_info(cc->ras) );
 
   return SVN_NO_ERROR;
 }
+
+
+static svn_error_t * commit_abort_edit(void *edit_baton,
+                                       apr_pool_t *pool)
+{
+  return delete_activity(edit_baton, pool);
+}
+
 
 static svn_error_t * apply_log_message(commit_ctx_t *cc,
                                        const char *log_msg)
@@ -1240,6 +1268,7 @@ svn_error_t * svn_ra_dav__get_commit_editor(
   commit_editor->change_file_prop = commit_change_file_prop;
   commit_editor->close_file = commit_close_file;
   commit_editor->close_edit = commit_close_edit;
+  commit_editor->abort_edit = commit_abort_edit;
 
   *editor = commit_editor;
   *edit_baton = cc;

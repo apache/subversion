@@ -297,9 +297,12 @@ const char *dav_svn_get_xslt_uri(request_rec *r);
 dav_error * dav_svn_convert_err(const svn_error_t *serr, int status,
                                 const char *message);
 
-/* activity functions for looking up and storing ACTIVITY->TXN mappings */
+/* activity functions for looking up, storing, and deleting
+   ACTIVITY->TXN mappings */
 const char *dav_svn_get_txn(const dav_svn_repos *repos,
                             const char *activity_id);
+dav_error *dav_svn_delete_activity(const dav_svn_repos *repos,
+                                   const char *activity_id);
 dav_error *dav_svn_store_activity(const dav_svn_repos *repos,
                                   const char *activity_id,
                                   const char *txn_name);
