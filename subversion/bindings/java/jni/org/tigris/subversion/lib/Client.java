@@ -13,9 +13,6 @@ package org.tigris.subversion.lib;
  * newer version instead, at your option.
  * ====================================================================
  *
- * @author Alexander.Mueller@littleblue.de
- * @version 0.0
- *
  * FIXME: all of the comment is hand-copied-and-pasted comment cut out
  * of the c language header "svn_delta.h". So a lot of the naming
  * convetions in the comment do still relate to the c function names.

@@ -10,10 +10,7 @@ package org.tigris.subversion.lib;
  * If newer versions of this license are posted there, you may use a
  * newer version instead, at your option.
  * ====================================================================
- *
- * @author Alexander.Mueller@littleblue.de
- * @version 0.0
- */
+ **/
 
 public interface Entry {
     public final static int SCHEDULE_NORMAL=0;

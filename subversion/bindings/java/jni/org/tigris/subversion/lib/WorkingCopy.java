@@ -13,8 +13,6 @@ package org.tigris.subversion.lib;
  * newer version instead, at your option.
  * ====================================================================
  *
- * @author Alexander.Mueller@littleblue.de
- * @version 0.0
  * Remark: this class corresponds to the subversion c api type
  * 'svn_txdelta_op_t'
  */
