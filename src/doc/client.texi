@@ -19,13 +19,10 @@ copies.
 
 @menu
 * Terminology
-* The working copy management library
+* Working copies and the working copy library
 * The repository access library
 * The client operation library
-* The layout of working copies
 @end menu
-
-@c todo: make sure skelta gets define somewhere
 
 @c -----------------------------------------------------------------------
 @node Terminology
@@ -36,6 +33,8 @@ introduced previously.  Here they are briefly defined, but see
 @pxref{Protocol} for more complete descriptions.
 
 @table @b
+TODO: Jim is going to work on these definitions:
+
 @item vdelta, vdiff 
 A generic format for expressing the differences between two files.
 Unlike traditional @code{diff} format, vdeltas can express differences
@@ -63,14 +62,116 @@ A "skeleton delta".  That is, a delta with empty slots where the pdeltas
 and vdeltas would be.  A skelta is used to @emph{list} the changes that
 happened to a directory tree, omitting the changes to file contents
 
-FOOO working here
-
-
-@item node" 
-File or directory.
-
+@item node
+A file or directory.
 
 @end table
+
+@c -----------------------------------------------------------------------
+@node Working copies and the working copy library
+@subsection Working copies and the working copy library
+
+Working copies are client-side directory trees containing both versioned
+data and Subversion administrative files.  The functions in the working
+copy management library are the only functions in Subversion which
+operate on these trees.
+
+@menu
+* The layout of working copies
+* The working copy management library
+@end menu
+
+@c -----------------------------------------------------------------------
+@node The layout of working copies
+@subsection The layout of working copies
+
+This section gives an overview of how working copies are arranged
+physically.  It is not a full specification of working copy layout,
+however; many details will be resolved only as the code takes shape.
+
+As with CVS, Subversion working copies are simply directory trees with
+special administrative subdirectories, in this case named "SVN" instead
+of "CVS":
+
+@example
+
+                             myproj
+                             / | \
+               _____________/  |  \______________
+              /                |                 \
+            SVN               src                doc
+        ___/ | \___           /|\             ___/ \___
+       |     |     |         / | \           |         |
+      base  ...   ...       /  |  \     myproj.texi   SVN
+                           /   |   \              ___/ | \___
+                      ____/    |    \____        |     |     |
+                     |         |         |      base  ...   ...
+                    SVN      foo.c     bar.c     |
+                ___/ | \___                      |
+               |     |     |                     |
+             base   ...   ...               myproj.texi
+          ___/ \___
+         |         |
+       foo.c     bar.c
+
+@end example
+
+Each @file{dir/SVN/} directory records the files in @file{dir}, their
+version numbers and property lists, pristine versions of all the files
+for client-side delta generation, the repository from which @file{dir}
+came, and any local changes (such as uncommitted adds, deletes, and
+renames) that affect @file{dir}.
+
+Although often it would often be possible to deduce certain information
+(such as the origin repository) by examining parent directories, this is
+avoided in favor of making each directory be as much a self-contained
+unit as possible.
+
+For example, immediately after a checkout the administrative information
+for the entire working tree @emph{could} be stored in one top-level
+file.  But subdirectories instead keep track of their own version
+information.  This would be necessary anyway once the user starts
+committing new versions for particular files, and it also makes it
+easier for the user to prune a big, complete tree into a small subtree
+and still have a valid working copy.
+
+The SVN subdir contains:
+
+@itemize @bullet
+
+@item
+A @dfn{base} directory, containing the pristine repository versions of
+the files here.
+
+@item
+A @file{versions} file, the first entry of which records the version
+number of this directory (and, by implication, the version number of any
+files not otherwise mentioned).  The remaining entries are for files at
+other versions.
+
+It may help to think of this file as the functional equivalent of the
+CVS/Entries file.
+
+@item
+A @file{properties} file, recording properties for this directory and
+all directory entries and files it contains.  Although this information
+could be stored in the @file{versions} file, it is sufficiently
+separable to warrant its own file; very often one wants to look up a
+version without looking up a property, and vice-versa.
+
+@item
+A @file{changes} file, recording uncommitted changes to and from this
+directory (adds, removes, renames).
+
+@item
+A @file{lock} file, whose presence implies that some client is currently
+operating on the adminstrative area.
+
+@item
+
+@end itemize
+
+The formats of these files are not specified yet.
 
 @c -----------------------------------------------------------------------
 @node The working copy management library
@@ -288,94 +389,3 @@ fooo working here:
    update
 
 
-@c -----------------------------------------------------------------------
-@node The layout of working copies
-@subsection The layout of working copies
-
-This section gives an overview of how working copies are arranged
-physically.  It is not a full specification of working copy layout,
-however; many details will be resolved only as the code takes shape.
-
-As with CVS, Subversion working copies are simply directory trees with
-special administrative subdirectories, in this case named "SVN" instead
-of "CVS":
-
-@example
-
-                             myproj
-                             / | \
-               _____________/  |  \______________
-              /                |                 \
-            SVN               src                doc
-        ___/ | \___           /|\             ___/ \___
-       |     |     |         / | \           |         |
-      base  ...   ...       /  |  \     myproj.texi   SVN
-     / |                   /   |   \              ___/ | \___
-    /  |              ____/    |    \____        |     |     |
-  src doc            |         |         |      base  ...   ...
-                    SVN      foo.c     bar.c     |
-                ___/ | \___                      |
-               |     |     |                     |
-             base   ...   ...               myproj.texi
-          ___/ \___
-         |         |
-       foo.c     bar.c
-
-@end example
-
-Each @file{dir/SVN/} directory records the files in @file{dir}, their
-version numbers and property lists, pristine versions of all the files
-for client-side delta generation, the repository from which @file{dir}
-came, and any local changes (such as uncommitted adds, deletes, and
-renames) that affect @file{dir}.
-
-Although often it would often be possible to deduce certain information
-(such as the origin repository) by examining parent directories, this is
-avoided in favor of making each directory be as much a self-contained
-unit as possible.
-
-For example, immediately after a checkout the administrative information
-for the entire working tree @emph{could} be stored in one top-level
-file.  But subdirectories instead keep track of their own version
-information.  This would be necessary anyway once the user starts
-committing new versions for particular files, and it also makes it
-easier for the user to prune a big, complete tree into a small subtree
-and still have a valid working copy.
-
-Specifically, the SVN subdir holds:
-
-@itemize @bullet
-
-@item
-A @dfn{base} directory, containing the pristine repository versions of
-the files here.
-
-@item
-A @file{versions} file, the first entry of which records the version
-number of this directory (and, by implication, the version number of any
-files not otherwise mentioned).  The remaining entries are for files at
-other versions.
-
-It may help to think of this file as the functional equivalent of the
-CVS/Entries file.
-
-@item
-A @file{properties} file, recording properties for this directory and
-all directory entries and files it contains.  Although this information
-could be stored in the @file{versions} file, it is sufficiently
-separable to warrant its own file; very often one wants to look up a
-version without looking up a property, and vice-versa.
-
-@item
-A @file{changes} file, recording uncommitted changes to and from this
-directory (adds, removes, renames).
-
-@item
-A @file{lock} file, whose presence implies that some client is currently
-operating on the adminstrative area.
-
-@item
-
-@end itemize
-
-The formats of these files are not specified yet.
