@@ -74,13 +74,21 @@ static svn_error_t * svn_ra_open (void **session_baton,
         {
           uri.port = 443;
         }
-      if (ne_set_secure(sess, 1) || 
-          ne_set_accept_secure_upgrade(sess, 1))
+      if (ne_set_secure(sess, 1))
         {
           return svn_error_create(SVN_ERR_RA_SOCK_INIT, 0, NULL, pool,
                                   "SSL is not supported");
         }
     }
+#if 0
+  else
+    {
+      /* accept server-requested TLS upgrades... useless feature
+       * currently since there is no server support yet. */
+      (void) ne_set_accept_secure_upgrade(sess, 1);
+    }
+#endif
+
   if (uri.port == -1)
     {
       uri.port = 80;
