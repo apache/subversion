@@ -1150,15 +1150,15 @@ Transmitting file data .
 Committed revision 350.
 </screen>
 
-      <para>One way to think about a repository revision is as a
-        specific group of changes (some version control systems call
-        these <firstterm>changesets</firstterm>).  By using the
-        <option>-r</option> switch, you can ask <command>svn
-        merge</command> to apply a changeset, or whole range of
-        changesets, to your working copy.  In our case of undoing a
-        change, we're asking <command>svn merge</command> to apply
-        changeset #303 to our working copy
-        <emphasis>backwards</emphasis>.</para>
+      <para>Una forma de pensar sobre las revisiones del repositorio
+        es como un grupo de cambios (algunos sistemas de control de
+        versiones los llaman <firstterm>changesets</firstterm>). Al
+        usar el parámetro <option>-r</option>, puede pedirle a
+        <command>svn merge</command> que aplique el changeset,
+        o el rango completo de changesets sobre su copia local de
+        trabajo. En nuestro caso para deshacer un cambio usamos
+        <command>svn merge</command> para aplicar el changeset #303
+        a nuestra copia local <emphasis>al revés</emphasis>.</para>
     
       <para>Keep in mind that rolling back a change like this is just
         like any other <command>svn merge</command> operation, so you
