@@ -28,25 +28,6 @@ Candidate changes:
     Old votes (for just r8490,r8794):
       +1: cmpilato, kfogel, jszakmeister
 
-  * r8839,r8876,r8932,r8950,r8952
-    Finish Issue #1756 -- import doesn't handle svn:eol-style or svn:keywords
-    Justification:  Allows malformed data into the repository.
-    Notes:  sussman has actually tested these 5 merges, and they pass tests.
-    Votes:
-      +1: sussman, philip, cmpilato
-    Old votes: (for r8839,r8932,r8950,r8952)
-      +1: philip, sussman, cmpilato
-      +0: julianfoad
-    Old votes (for r8839,r8932,r8950):
-      +0: julianfoad
-      -1: philip (SEGV converting inconsistent eols, fixed in r8952)
-    Old votes (for r8839,r8932):
-      +1: kfogel, sussman
-      -1: julianfoad ("repairs" line endings: mail thread "Issue #1756 ...")
-    Old votes (for r8839 alone):
-      +1: cmpilato, jszakmeister
-      -1: kfogel (doc string bug, fixed in r8932)
-
   * r8846
     Add an example wrapper to help svn+ssh users using setgid svnserve.
     Votes:
