@@ -217,7 +217,6 @@ subcommand_create (apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   SVN_ERR (svn_repos_create (&repos, opt_state->repository_path,
                              opt_state->on_disk, opt_state->in_repos, pool));
-  SVN_ERR (svn_repos_close (repos));
 
   return SVN_NO_ERROR;
 }
@@ -244,7 +243,6 @@ subcommand_createtxn (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   SVN_ERR (svn_fs_begin_txn (&txn, fs, opt_state->start_revision.value.number,
                              pool));
   SVN_ERR (svn_fs_close_txn (txn));
-  SVN_ERR (svn_repos_close (repos));
   
   return SVN_NO_ERROR;
 }
@@ -300,8 +298,6 @@ subcommand_dump (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   SVN_ERR (svn_repos_dump_fs (repos, stdout_stream, stderr_stream,
                               lower, upper, opt_state->incremental, pool));
 
-  SVN_ERR (svn_repos_close (repos));
-
   return SVN_NO_ERROR;
 }
 
@@ -344,8 +340,6 @@ subcommand_load (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   
   SVN_ERR (svn_repos_load_fs (repos, stdin_stream, stdout_stream, pool));
 
-  SVN_ERR (svn_repos_close (repos));
-
   return SVN_NO_ERROR;
 }
 
@@ -384,8 +378,6 @@ subcommand_lscr (apr_getopt_t *os, void *baton, apr_pool_t *pool)
       svn_revnum_t this_rev = ((svn_revnum_t *)revs->elts)[i];
       printf ("%" SVN_REVNUM_T_FMT "\n", this_rev);
     }
-  
-  SVN_ERR (svn_repos_close (repos));
 
   return SVN_NO_ERROR;
 }
@@ -410,8 +402,6 @@ subcommand_lstxns (apr_getopt_t *os, void *baton, apr_pool_t *pool)
     {
       printf ("%s\n", APR_ARRAY_IDX (txns, i, const char *));
     }
-
-  SVN_ERR (svn_repos_close (repos));
   
   return SVN_NO_ERROR;
 }
@@ -440,7 +430,6 @@ subcommand_recover (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   SVN_ERR (svn_fs_youngest_rev (&youngest_rev, svn_repos_fs (repos), pool));
   printf ("The latest repos revision is %"
           SVN_REVNUM_T_FMT ".\n", youngest_rev);
-  SVN_ERR (svn_repos_close (repos));
 
   return SVN_NO_ERROR;
 }
@@ -474,8 +463,6 @@ subcommand_rmtxns (apr_getopt_t *os, void *baton, apr_pool_t *pool)
       SVN_ERR (svn_fs_abort_txn (txn));
       svn_pool_clear (subpool);
     }
-
-  SVN_ERR (svn_repos_close (repos));
 
   return SVN_NO_ERROR;
 }
@@ -525,8 +512,6 @@ subcommand_setlog (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   SVN_ERR (svn_fs_change_rev_prop (fs, opt_state->start_revision.value.number,
                                    SVN_PROP_REVISION_LOG,
                                    log_contents, pool));
-
-  SVN_ERR (svn_repos_close (repos));
 
   return SVN_NO_ERROR;
 }

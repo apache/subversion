@@ -64,7 +64,6 @@ create_berkeley_filesystem (const char **msg,
 
   /* Create and close a repository. */
   SVN_ERR (svn_test__create_fs (&fs, "test-repo-create-berkeley", pool));
-  SVN_ERR (svn_fs_close_fs (fs));
   
   return SVN_NO_ERROR;
 }
@@ -167,7 +166,6 @@ open_berkeley_filesystem (const char **msg,
 
   /* Create and close a repository (using fs). */
   SVN_ERR (svn_test__create_fs (&fs, "test-repo-open-berkeley", pool));
-  SVN_ERR (svn_fs_close_fs (fs));
 
   /* Create a different fs object, and use it to re-open the
      repository again.  */
@@ -176,8 +174,6 @@ open_berkeley_filesystem (const char **msg,
 
   /* Provide a handler for Berkeley DB error messages.  */
   SVN_ERR (svn_fs_set_berkeley_errcall (fs2, berkeley_error_handler));
-
-  SVN_ERR (svn_fs_close_fs (fs2));
 
   return SVN_NO_ERROR;
 }
@@ -212,7 +208,6 @@ trivial_transaction (const char **msg,
 
   /* Close the transaction and fs. */
   SVN_ERR (svn_fs_close_txn (txn));
-  SVN_ERR (svn_fs_close_fs (fs));
 
   return SVN_NO_ERROR;
 }
@@ -248,7 +243,6 @@ reopen_trivial_transaction (const char **msg,
 
   /* Close the transaction and fs. */
   SVN_ERR (svn_fs_close_txn (txn));
-  SVN_ERR (svn_fs_close_fs (fs));
 
   return SVN_NO_ERROR;
 }
@@ -283,7 +277,6 @@ create_file_transaction (const char **msg,
 
   /* Close the transaction and fs. */
   SVN_ERR (svn_fs_close_txn (txn));
-  SVN_ERR (svn_fs_close_fs (fs));
 
   return SVN_NO_ERROR;
 }
@@ -319,10 +312,6 @@ call_functions_with_unopened_fs (const char **msg,
 
   if (msg_only)
     return SVN_NO_ERROR;
-
-  /* This is the exception --- it is perfectly okay to call
-     svn_fs_close_fs on an unopened filesystem.  */
-  SVN_ERR (svn_fs_close_fs (fs));
 
   fs = svn_fs_new (pool);
   err = svn_fs_set_berkeley_errcall (fs, berkeley_error_handler);
@@ -427,9 +416,6 @@ verify_txn_list (const char **msg,
                            "Got a bogus txn list.");
  all_good:
   
-  /* Close the fs. */
-  SVN_ERR (svn_fs_close_fs (fs));
-
   return SVN_NO_ERROR;
 }
 
@@ -476,7 +462,6 @@ write_and_read_file (const char **msg,
 
   /* Clean up the repos. */
   SVN_ERR (svn_fs_close_txn (txn));
-  SVN_ERR (svn_fs_close_fs (fs));
 
   return SVN_NO_ERROR;
 }
@@ -517,7 +502,6 @@ create_mini_tree_transaction (const char **msg,
 
   /* Close the transaction and fs. */
   SVN_ERR (svn_fs_close_txn (txn));
-  SVN_ERR (svn_fs_close_fs (fs));
 
   return SVN_NO_ERROR;
 }
@@ -548,7 +532,6 @@ create_greek_tree_transaction (const char **msg,
 
   /* Close the transaction and fs. */
   SVN_ERR (svn_fs_close_txn (txn));
-  SVN_ERR (svn_fs_close_fs (fs));
 
   return SVN_NO_ERROR;
 }
@@ -653,7 +636,6 @@ list_directory (const char **msg,
 
   /* Close the transaction and fs. */
   SVN_ERR (svn_fs_close_txn (txn));
-  SVN_ERR (svn_fs_close_fs (fs));
 
   return SVN_NO_ERROR;
 }
@@ -752,9 +734,6 @@ revision_props (const char **msg,
              "revision property had an unexpected value");
       }
   }
-  
-  /* Close the fs. */
-  SVN_ERR (svn_fs_close_fs (fs));
 
   return SVN_NO_ERROR;
 }
@@ -909,9 +888,6 @@ transaction_props (const char **msg,
       }
   }
 
-  /* Close the fs. */
-  SVN_ERR (svn_fs_close_fs (fs));
-
   return SVN_NO_ERROR;
 }
 
@@ -1025,7 +1001,6 @@ node_props (const char **msg,
   
   /* Close the transaction and fs. */
   SVN_ERR (svn_fs_close_txn (txn));
-  SVN_ERR (svn_fs_close_fs (fs));
 
   return SVN_NO_ERROR;
 }
@@ -1393,7 +1368,6 @@ abort_txn (const char **msg,
 
   /* Close the transaction and fs. */
   SVN_ERR (svn_fs_close_txn (txn1));
-  SVN_ERR (svn_fs_close_fs (fs));
 
   return SVN_NO_ERROR;
 }
@@ -1445,7 +1419,6 @@ fetch_youngest_rev (const char **msg,
 
   /* Close the transaction and fs. */
   SVN_ERR (svn_fs_close_txn (txn));
-  SVN_ERR (svn_fs_close_fs (fs));
 
   return SVN_NO_ERROR;
 }
@@ -1506,9 +1479,6 @@ basic_commit (const char **msg,
 
   /* Check the tree. */
   SVN_ERR (svn_test__check_greek_tree (revision_root, pool));
-
-  /* Close the fs. */
-  SVN_ERR (svn_fs_close_fs (fs));
 
   return SVN_NO_ERROR;
 }
@@ -1631,9 +1601,6 @@ test_tree_node_validation (const char **msg,
     SVN_ERR (svn_test__validate_tree (revision_root, expected_entries,
                                       19, pool));
   }
-
-  /* Close the filesystem. */
-  SVN_ERR (svn_fs_close_fs (fs));
 
   return SVN_NO_ERROR;
 }
@@ -2422,9 +2389,6 @@ merging_commit (const char **msg,
   SVN_ERR (test_commit_txn (&after_rev, txn, "/iota", pool));
   SVN_ERR (svn_fs_abort_txn (txn));
 
-  /* Close the filesystem. */
-  SVN_ERR (svn_fs_close_fs (fs));
-
   return SVN_NO_ERROR;
 }
 
@@ -2722,8 +2686,7 @@ copy_test (const char **msg,
     SVN_ERR (svn_test__validate_tree (rev_root, expected_entries, 
                                       34, pool));
   }
-  /* Close the filesystem. */
-  SVN_ERR (svn_fs_close_fs (fs));
+
   return SVN_NO_ERROR;
 }
 
@@ -2885,8 +2848,6 @@ link_test (const char **msg,
          "A/D/G/pi", "A/D/G/pi2");
   }
 
-  /* Close the filesystem. */
-  SVN_ERR (svn_fs_close_fs (fs));
   return SVN_NO_ERROR;
 #endif /* 0 */
 }
@@ -3129,7 +3090,6 @@ delete_mutables (const char **msg,
 
   /* Close the transaction and fs. */
   SVN_ERR (svn_fs_close_txn (txn));
-  SVN_ERR (svn_fs_close_fs (fs));
 
   return SVN_NO_ERROR;
 }
@@ -3619,7 +3579,6 @@ delete (const char **msg,
 
   /* Close the transaction and fs. */
   SVN_ERR (svn_fs_close_txn (txn));
-  SVN_ERR (svn_fs_close_fs (fs));
 
   return SVN_NO_ERROR;
 }
@@ -4813,8 +4772,6 @@ undeltify_deltify (const char **msg,
   /* Destroy the per-revision pool. */
   svn_pool_destroy (subpool);
 
-  /* Close the filesystem. */
-  svn_fs_close_fs (fs);
   return SVN_NO_ERROR;
 }
 
@@ -4990,8 +4947,6 @@ test_node_created_rev (const char **msg,
   /* Destroy the per-commit subpool. */
   svn_pool_destroy (subpool);
 
-  /* Close the filesystem. */
-  svn_fs_close_fs (fs);
   return SVN_NO_ERROR;
 }
 
@@ -5208,9 +5163,6 @@ check_related (const char **msg,
 
   /* Destroy the subpool. */
   svn_pool_destroy (subpool);
-
-  /* Close the filesystem. */
-  svn_fs_close_fs (fs);
 
   return SVN_NO_ERROR;
 }
@@ -5441,9 +5393,6 @@ revisions_changed (const char **msg,
   /* Destroy the subpool. */
   svn_pool_destroy (spool);
 
-  /* Close the filesystem. */
-  svn_fs_close_fs (fs);
-
   return SVN_NO_ERROR;
 }
 
@@ -5602,7 +5551,7 @@ branch_test (const char **msg,
 #endif /* 0 */
 
   svn_pool_destroy (spool);
-  svn_fs_close_fs (fs);
+
   return SVN_NO_ERROR;
 }
 
@@ -5647,8 +5596,6 @@ verify_checksum (const char **msg,
        svn_md5_digest_to_cstring (actual_digest, pool));
 
   SVN_ERR (svn_fs_close_txn (txn));
-  SVN_ERR (svn_fs_close_fs (fs));
-  svn_fs_close_fs (fs);
 
   return SVN_NO_ERROR;
 }

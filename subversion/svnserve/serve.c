@@ -989,7 +989,6 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, const char *root,
   b.fs_path = fs_path;
   b.user = user;
   b.fs = svn_repos_fs(repos);
-  err = svn_ra_svn_handle_commands(conn, pool, main_commands, &b, FALSE);
-  svn_error_clear(svn_repos_close(repos));
-  return err;
+
+  return svn_ra_svn_handle_commands(conn, pool, main_commands, &b, FALSE);
 }

@@ -345,7 +345,7 @@ dir_deltas (const char **msg,
     }
 
   svn_pool_destroy (subpool);
-  svn_repos_close (repos);
+
   return SVN_NO_ERROR;
 }
 

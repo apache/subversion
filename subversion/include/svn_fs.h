@@ -57,14 +57,6 @@ typedef struct svn_fs_t svn_fs_t;
 svn_fs_t *svn_fs_new (apr_pool_t *pool);
 
 
-/** Free the filesystem object @a fs.
- *
- * Free the filesystem object @a fs.  This frees memory, closes files,
- * frees database library structures, etc.
- */
-svn_error_t *svn_fs_close_fs (svn_fs_t *fs);
-
-
 /** The type of a warning callback function.
  *
  * The type of a warning callback function.  @a baton is the value specified

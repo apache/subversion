@@ -1297,8 +1297,8 @@ static int is_our_resource(const dav_resource *res1,
   /* coalesce the repository */
   if (res1->info->repos != res2->info->repos)
     {      
-      /* close the old, redundant filesystem */
-      (void) svn_repos_close(res2->info->repos->repos);
+      /* ### might be nice to have a pool which we can clear to toss
+         ### out the old, redundant repos/fs.  */
 
       /* have res2 point to res1's filesystem */
       res2->info->repos = res1->info->repos;

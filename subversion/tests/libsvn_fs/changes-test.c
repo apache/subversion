@@ -171,9 +171,6 @@ changes_add (const char **msg,
   /* Add the standard slew of changes. */
   SVN_ERR (add_standard_changes (fs, pool));
 
-  /* Close the filesystem. */
-  SVN_ERR (svn_fs_close_fs (fs));
-
   return SVN_NO_ERROR;
 }
 
@@ -282,9 +279,6 @@ changes_fetch_raw (const char **msg,
         }
     }
 
-  /* Close the filesystem. */
-  SVN_ERR (svn_fs_close_fs (fs));
-
   return SVN_NO_ERROR;
 }
 
@@ -325,9 +319,6 @@ changes_delete (const char **msg,
           (SVN_ERR_TEST_FAILED, NULL,
            "expected empty changes array for txn `%s'", args.key);
     }
-
-  /* Close the filesystem. */
-  SVN_ERR (svn_fs_close_fs (fs));
 
   return SVN_NO_ERROR;
 }
@@ -543,9 +534,6 @@ changes_fetch (const char **msg,
            "unexpected number of changes for key `%s'", txn_id);
       SVN_ERR (compare_changes (ideals, args.changes, txn_id, pool));
     }
-
-  /* Close the filesystem. */
-  SVN_ERR (svn_fs_close_fs (fs));
 
   return SVN_NO_ERROR;
 }
