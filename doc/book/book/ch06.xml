@@ -870,7 +870,7 @@ $
  
         <para>To resolve property conflicts, simply ensure that the
           conflicting properties contain the values that they should,
-          and then use the <command>svn resolve</command> command to
+          and then use the <command>svn resolved</command> command to
           alert Subversion that you have manually resolved the
           problem.</para>
 

@@ -105,7 +105,7 @@
 ;; * proplist (plist, pl)      implemented
 ;; * propset (pset, ps)        used
 ;; * revert                    implemented
-;; * resolve
+;; * resolved
 ;; * status (stat, st)         implemented
 ;; * switch (sw)
 ;; * update (up)               implemented

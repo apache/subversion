@@ -2717,7 +2717,7 @@ foo.c.r31
 
           <para>Once you've resolved the conflict and
             <filename>foo.c</filename> is ready to be committed, run
-            <command>svn resolve</command> to let your working copy
+            <command>svn resolved</command> to let your working copy
             know you've taken care of everything.</para>
 
           <warning>

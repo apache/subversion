@@ -31,7 +31,7 @@
 ;;; web folder displays, or would it just languish in obscurity, the
 ;;; way CVS and RCS descriptions do?
 ;;;
-;;; After manual merging, need some way to run `svn resolve'.  Perhaps
+;;; After manual merging, need some way to run `svn resolved'.  Perhaps
 ;;; we should just prompt for approval when somebody tries to commit a
 ;;; conflicted file?
 ;;;
@@ -321,7 +321,7 @@ This calls `svn update'.  In the case of conflicts, Subversion puts
 conflict markers into the file and leaves additional temporary files
 containing the `ancestor', `mine', and `other' files.
 
-You may need to run `svn resolve' by hand once these conflicts have
+You may need to run `svn resolved' by hand once these conflicts have
 been resolved.  
 
 Returns a vc status, which is used to determine whether conflicts need
