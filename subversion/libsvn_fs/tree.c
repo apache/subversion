@@ -35,6 +35,7 @@
 #include "err.h"
 #include "trail.h"
 #include "txn-table.h"
+#include "txn.h"
 #include "dag.h"
 #include "tree.h"
 
@@ -149,6 +150,23 @@ root_node (dag_node_t **node_p,
 }
 
 
+/* Set *NODE_P to a mutable root directory for ROOT, cloning if
+   necessary, as part of TRAIL.  ROOT must be a transaction root.  Use
+   ERROR_PATH in error messages.  */
+static svn_error_t *
+mutable_root_node (dag_node_t **node_p,
+                   svn_fs_root_t *root,
+                   const char *error_path,
+                   trail_t *trail)
+{
+  /* If it's a revision root, we can't change its contents.  */
+  if (root->rev != -1)
+    return svn_fs__err_not_mutable (root->fs, root->rev, error_path);
+
+  return svn_fs__dag_clone_root (node_p, root->fs, root->txn, trail);
+}
+
+
 
 /* Simple root operations.  */
 
@@ -225,8 +243,8 @@ typedef struct parent_path_t
 } parent_path_t;
 
 
-/* Allocate a new path_t node from POOL, referring to NODE, ENTRY, and
-   PARENT.  */
+/* Allocate a new parent_path_t node from POOL, referring to NODE,
+   ENTRY, and PARENT.  */
 static parent_path_t *
 make_parent_path (dag_node_t *node,
                   char *entry,
@@ -309,7 +327,8 @@ next_entry_name (const char **next_p,
 
 /* Open the node identified by PATH in ROOT, as part of TRAIL.  Set
    *PARENT_PATH_P to a path from the node up to ROOT, allocated in
-   TRAIL->pool.  */
+   TRAIL->pool.  The resulting *PARENT_PATH_P value is guaranteed to
+   contain at least one element, for the root directory.  */
 static svn_error_t *
 open_path (parent_path_t **parent_path_p,
            svn_fs_root_t *root,
@@ -378,6 +397,48 @@ open_path (parent_path_t **parent_path_p,
 }
 
 
+/* Make the node referred to by PARENT_PATH mutable, if it isn't
+   already, as part of TRAIL.  ROOT must be the root from which
+   PARENT_PATH descends.  Clone any parent directories as needed.
+   Adjust the dag nodes in PARENT_PATH to refer to the clones.  Use
+   ERROR_PATH in error messages.  */
+static svn_error_t *
+make_path_mutable (svn_fs_root_t *root,
+                   parent_path_t *parent_path,
+                   const char *error_path,
+                   trail_t *trail)
+{
+  dag_node_t *clone;
+
+  /* Is the node mutable already?  */
+  if (svn_fs__dag_is_mutable (parent_path->node))
+    return SVN_NO_ERROR;
+
+  /* Are we trying to clone the root, or somebody's child node?  */
+  if (parent_path->parent)
+    {
+      /* We're trying to clone somebody's child. 
+         Make sure our parent is mutable.  */
+      SVN_ERR (make_path_mutable (root, parent_path->parent, error_path,
+                                  trail));
+      
+      /* Now make this node mutable.  */
+      SVN_ERR (svn_fs__dag_clone_child (&clone,
+                                        parent_path->parent->node,
+                                        parent_path->entry,
+                                        trail));
+    }
+  else
+    /* We're trying to clone the root directory.  */
+    SVN_ERR (mutable_root_node (&clone, root, error_path, trail));
+
+  /* Update the PARENT_PATH link to refer to the clone.  */
+  svn_fs__dag_close (parent_path->node);
+  parent_path->node = clone;
+  return SVN_NO_ERROR;
+}
+
+
 
 /* Generic node operations.  */
 
@@ -396,11 +457,12 @@ txn_body_node_prop (void *baton,
                     trail_t *trail)
 {
   struct node_prop_args *args = baton;
-  dag_node_t *node;
+  parent_path_t *parent_path;
   skel_t *proplist, *prop;
 
-  SVN_ERR (open_path (&node, root, path, trail));
-  SVN_ERR (svn_fs__dag_get_proplist (&proplist, node, trail));
+  SVN_ERR (open_path (&parent_path, args->root, args->path, trail));
+  SVN_ERR (svn_fs__dag_get_proplist (&proplist, parent_path->node, trail));
+  free_parent_path (parent_path);
   
   /* Search the proplist for a property with the right name.  */
   for (prop = proplist->children; prop; prop = prop->next->next)
@@ -436,8 +498,7 @@ svn_fs_node_prop (svn_string_t **value_p,
   args.root     = root;
   args.path     = path;
   args.propname = propname;
-
-  SVN_ERR (svn_fs__retry_txn (node->fs, txn_body_node_prop, &args, pool));
+  SVN_ERR (svn_fs__retry_txn (root->fs, txn_body_node_prop, &args, pool));
 
   *value_p = value;
   return SVN_NO_ERROR;
@@ -455,7 +516,8 @@ svn_fs_node_proplist (apr_hash_t **table_p,
 
 
 struct change_node_prop_args {
-  svn_fs_node_t *node;
+  svn_fs_root_t *root;
+  const char *path;
   svn_string_t *name;
   svn_string_t *value;
 };
@@ -466,10 +528,12 @@ txn_body_change_node_prop (void *baton,
                            trail_t *trail)
 {
   struct change_node_prop_args *args = baton;
+  parent_path_t *parent_path;
   skel_t *proplist, *prop;
 
-  SVN_ERR (make_clone (args->node, trail));
-  SVN_ERR (svn_fs__dag_get_proplist (&proplist, args->node->dag_node, trail));
+  SVN_ERR (open_path (&parent_path, args->root, args->path, trail));
+  SVN_ERR (make_path_mutable (args->root, parent_path, args->path, trail));
+  SVN_ERR (svn_fs__dag_get_proplist (&proplist, parent_path->node, trail));
   
   /* Delete the skel, either replacing or adding the given property.  */
   for (prop = proplist->children; prop; prop = prop->next->next)
@@ -503,7 +567,7 @@ txn_body_change_node_prop (void *baton,
                        proplist);
     }
 
-  SVN_ERR (svn_fs__dag_set_proplist (args->node->dag_node, proplist, trail));
+  SVN_ERR (svn_fs__dag_set_proplist (parent_path->node, proplist, trail));
 
   return SVN_NO_ERROR;
 }
@@ -518,11 +582,11 @@ svn_fs_change_node_prop (svn_fs_root_t *root,
 {
   struct change_node_prop_args args;
 
-  args.node  = node;
+  args.root  = root;
+  args.path  = path;
   args.name  = name;
   args.value = value;
-
-  SVN_ERR (svn_fs__retry_txn (node->fs, txn_body_change_node_prop, &args,
+  SVN_ERR (svn_fs__retry_txn (root->fs, txn_body_change_node_prop, &args,
                               pool));
 
   return SVN_NO_ERROR;
@@ -578,23 +642,25 @@ txn_body_delete (void *baton,
                  trail_t *trail)
 {
   struct delete_args *args = baton;
-  const char *entry_name;
-  dag_node_t *parent;
-  dag_node_t *child;
+  svn_fs_root_t *root = args->root;
+  const char *path = args->path;
+  parent_path_t *parent_path;
 
-  SVN_ERR (svn_fs__dag_open_path (&child, &parent, &entry_name,
-                                  args->root, args->path, trail));
-  svn_fs__dag_close (child);
+  SVN_ERR (open_path (&parent_path, root, path, trail));
 
-  /* We can't remove the root of the filesystem. */
-  if (parent == NULL)
-    return svn_err_create (SVN_ERR_FS_NOT_MUTABLE, 0, NULL, trail->pool,
-                           "attemptng to delete the root directory");
+  /* We can't remove the root of the filesystem.  */
+  if (! parent_path->parent)
+    return svn_error_create (SVN_ERR_FS_NOT_MUTABLE, 0, NULL, trail->pool,
+                             "the root directory cannot be deleted");
 
-  /* We have a bug here: we'll happily delete non-empty directories,
+  /* Make the parent directory mutable.  */
+  SVN_ERR (make_path_mutable (root, parent_path->parent, path, trail));
+
+  /* We have a (semi-)bug here: we'll happily delete non-empty directories,
      if they're shared with the base revision.  */
-  SVN_ERR (make_clone (parent, trail));
-  SVN_ERR (svn_fs__dag_delete (parent, entry_name, trail));
+  SVN_ERR (svn_fs__dag_delete (parent_path->parent->node,
+                               parent_path->entry,
+                               trail));
 
   return SVN_NO_ERROR;
 }
@@ -607,11 +673,9 @@ svn_fs_delete (svn_fs_root_t *root,
 {
   struct delete_args args;
 
-  SVN_ERR (check_node_mutable (parent));
-
-  args.parent = parent;
-  args.path   = path;
-  return svn_fs__retry_txn (parent->fs, txn_body_delete, &args, pool);
+  args.root = root;
+  args.path = path;
+  return svn_fs__retry_txn (root->fs, txn_body_delete, &args, pool);
 }
 
 
@@ -631,7 +695,6 @@ svn_fs_rename (svn_fs_root_t *root,
                apr_pool_t *pool)
 {
   abort ();
-  /* [[Don't forget to record renames in the `clones' table.]]  */
 }
 
 
@@ -662,15 +725,19 @@ txn_body_txn_root (void *baton,
                    trail_t *trail)
 {
   struct txn_root_args *args = baton;
+  svn_fs_root_t **root_p = args->root_p;
+  svn_fs_txn_t *txn = args->txn;
+  svn_fs_t *fs = svn_fs_txn_fs (txn);
+  const char *svn_txn_id = svn_fs__txn_id (txn);
   svn_fs_id_t *root_id, *base_root_id;
   svn_fs_root_t *root;
 
   /* Verify that the transaction actually exists.  */
-  SVN_ERR (svn_fs__get_txn (&root_id, &base_root_id, txn->fs, txn, trail));
+  SVN_ERR (svn_fs__get_txn (&root_id, &base_root_id, fs, svn_txn_id, trail));
 
-  root = make_txn_root (fs, txn, trail->pool);
+  root = make_txn_root (fs, svn_txn_id, trail->pool);
 
-  *args->root_p = root;
+  *root_p = root;
   return SVN_NO_ERROR;
 }
 
@@ -685,7 +752,8 @@ svn_fs_txn_root (svn_fs_root_t **root_p,
 
   args.root_p = &root;
   args.txn    = txn;
-  SVN_ERR (svn_fs__retry_txn (txn->fs, txn_body_txn_root, &args, pool));
+  SVN_ERR (svn_fs__retry_txn (svn_fs_txn_fs (txn), txn_body_txn_root,
+                              &args, pool));
 
   *root_p = root;
   return SVN_NO_ERROR;
@@ -694,7 +762,7 @@ svn_fs_txn_root (svn_fs_root_t **root_p,
 
 struct revision_root_args
 {
-  svn_fs_root_t *root_p;
+  svn_fs_root_t **root_p;
   svn_fs_t *fs;
   svn_revnum_t rev;
 };

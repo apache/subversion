@@ -26,6 +26,7 @@ libsvn_fs_la_SOURCES =				\
 			skel.h			\
 			trail.c			\
 			trail.h			\
+			tree.c			\
 			tree.h			\
 			txn.c			\
 			txn.h			\
@@ -36,7 +37,6 @@ libsvn_fs_la_SOURCES =				\
 
 # Set aside for the moment:
 #			txn.c			\
-#			tree.c			\
 #                      editor.c                \
 #		       delta.c			\
 #		       file.c			\
