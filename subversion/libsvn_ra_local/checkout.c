@@ -93,8 +93,8 @@ set_any_props (svn_fs_root_t *root,
       svn_stringbuf_t *name, *value;
 
       apr_hash_this (hi, &key, &klen, &val);
-      value = (svn_stringbuf_t *) val;
       name = svn_stringbuf_ncreate (key, klen, pool);
+      value = svn_stringbuf_create_from_string ((svn_string_t *) val, pool);
       
       if (is_dir)
         SVN_ERR (editor->change_dir_prop (object_baton, name, value));

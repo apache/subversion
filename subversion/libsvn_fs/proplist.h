@@ -36,18 +36,9 @@ svn_error_t *svn_fs__get_prop (svn_stringbuf_t **value_p,
                                const svn_string_t *name,
                                apr_pool_t *pool);
 
-/* Set *PROP_HASH to a hash table mapping char * names to
+/* Set *PROP_HASH to a hash table mapping const char * names to
    svn_stringbuf_t * values, based on PROPLIST.  The hash table and
-   its name/value pairs are all allocated in POOL.  
-
-   ### todo (issue #406): first of all, the hash should be mapping
-   names to svn_string_t's, not svn_stringbuf_t.  Second, the fact
-   that the keys are char *'s is inconsistent with other interfaces by
-   which we set property names, which all take an svn_string_t or
-   svn_stringbuf_t right now (usually the former).  Probably using
-   const char * is best -- I mean, who really wants binary property
-   names? -- but we need to be consistent about it.  This change would
-   affect a lot of functions, not just here.  */
+   its name/value pairs are all allocated in POOL.  */
 svn_error_t *svn_fs__make_prop_hash (apr_hash_t **prop_hash,
                                      skel_t *proplist,
                                      apr_pool_t *pool);

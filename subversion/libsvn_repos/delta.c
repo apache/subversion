@@ -453,7 +453,8 @@ delta_proplists (struct context *c,
 
   for (hi = apr_hash_first (subpool, t_props); hi; hi = apr_hash_next (hi))
     {
-      svn_stringbuf_t *s_value, *t_value, *t_name;
+      svn_string_t *s_value;
+      svn_stringbuf_t *t_value, *t_name;
       const void *key;
       void *val;
       apr_size_t klen;
@@ -461,7 +462,8 @@ delta_proplists (struct context *c,
       /* KEY is property name in target, VAL the value */
       apr_hash_this (hi, &key, &klen, &val);
       t_name = svn_stringbuf_ncreate (key, klen, subpool);
-      t_value = val;
+      t_value = svn_stringbuf_create_from_string ((svn_string_t *) val,
+                                                  subpool);
 
       /* See if this property existed in the source.  If so, and if
          the values in source and target differ, replace the value in
@@ -469,7 +471,7 @@ delta_proplists (struct context *c,
       if (s_props 
           && ((s_value = apr_hash_get (s_props, key, klen)) != 0))
         {
-          if (svn_stringbuf_compare (s_value, t_value))
+          if (svn_string_compare_stringbuf (s_value, t_value))
             SVN_ERR (change_fn (c, object, t_name, t_value, subpool));
 
           /* Remove the property from source list so we can track
@@ -490,7 +492,7 @@ delta_proplists (struct context *c,
     {
       for (hi = apr_hash_first (subpool, s_props); hi; hi = apr_hash_next (hi))
         {
-          svn_stringbuf_t *s_value, *s_name;
+          svn_stringbuf_t *s_name;
           const void *key;
           void *val;
           apr_size_t klen;
@@ -498,7 +500,6 @@ delta_proplists (struct context *c,
           /* KEY is property name in target, VAL the value */
           apr_hash_this (hi, &key, &klen, &val);
           s_name = svn_stringbuf_ncreate (key, klen, subpool);
-          s_value = val;
 
           SVN_ERR (change_fn (c, object, s_name, NULL, subpool));
         }

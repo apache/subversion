@@ -528,7 +528,7 @@ svn_error_t *svn_fs_txn_prop (svn_stringbuf_t **value_p,
 
 /* Set *TABLE_P to the entire property list of transaction TXN in
    filesystem FS, as an APR hash table allocated in POOL.  The
-   resulting table maps property names to pointers to svn_stringbuf_t
+   resulting table maps property names to pointers to svn_string_t
    objects containing the property value.  */
 svn_error_t *svn_fs_txn_proplist (apr_hash_t **table_p,
                                   svn_fs_txn_t *txn,
@@ -728,7 +728,7 @@ svn_error_t *svn_fs_node_prop (svn_stringbuf_t **value_p,
 
 /* Set *TABLE_P to the entire property list of PATH in ROOT, as an APR
    hash table allocated in POOL.  The resulting table maps property
-   names to pointers to svn_stringbuf_t objects containing the property
+   names to pointers to svn_string_t objects containing the property
    value.  */
 svn_error_t *svn_fs_node_proplist (apr_hash_t **table_p,
                                    svn_fs_root_t *root,
@@ -1127,10 +1127,8 @@ svn_error_t *svn_fs_revision_prop (svn_stringbuf_t **value_p,
 
 /* Set *TABLE_P to the entire property list of revision REV in
    filesystem FS, as an APR hash table allocated in POOL.  The table
-   maps char * property names to svn_stringbuf_t * values; the names
-   and values are allocated in POOL.
-
-   ### todo (issue #406): map to svn_string_t, not svn_stringbuf_t. */
+   maps char * property names to svn_string_t * values; the names
+   and values are allocated in POOL.  */
 svn_error_t *svn_fs_revision_proplist (apr_hash_t **table_p,
                                        svn_fs_t *fs,
                                        svn_revnum_t rev,

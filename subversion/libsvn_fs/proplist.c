@@ -84,7 +84,7 @@ svn_fs__make_prop_hash (apr_hash_t **prop_hash,
       apr_hash_set (table,
                     apr_pstrndup(pool, this_name->data, this_name->len),
                     this_name->len,
-                    svn_stringbuf_ncreate (this_value->data, 
+                    svn_string_ncreate (this_value->data, 
                                         this_value->len, 
                                         pool));
     }
