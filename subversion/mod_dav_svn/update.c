@@ -433,6 +433,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
   svn_revnum_t revnum = SVN_INVALID_REVNUM;
   int ns;
   svn_error_t *serr;
+  svn_stringbuf_t *switch_path;
   const dav_svn_repos *repos = resource->info->repos;
   const char *target = NULL;
   svn_boolean_t recurse = TRUE;
@@ -513,9 +514,18 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
                                  "The revision root could not be created.");
     }
 
+  /* We want dir_delta to run on -identical- fs paths.  */
+  switch_path =
+    svn_stringbuf_create (resource->info->repos_path, resource->pool);  
+  if (target)
+    svn_path_add_component_nts (switch_path, target);
+
   serr = svn_repos_begin_report(&rbaton, revnum, repos->username, 
-                                repos->repos, resource->info->repos_path,
-                                target, FALSE, recurse,
+                                repos->repos, 
+                                resource->info->repos_path, target,
+                                switch_path->data,
+                                FALSE, /* don't send text-deltas */
+                                recurse,
                                 editor, &uc, resource->pool);
 
   if (serr != NULL)

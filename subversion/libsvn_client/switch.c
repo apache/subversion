@@ -63,16 +63,13 @@ svn_client_switch (const svn_delta_edit_fns_t *before_editor,
 {
   const svn_delta_edit_fns_t *switch_editor;
   void *switch_edit_baton;
-  /*  const svn_ra_reporter_t *reporter;
-      void *report_baton; */
+  const svn_ra_reporter_t *reporter;
+  void *report_baton;
   svn_wc_entry_t *entry;
   svn_stringbuf_t *anchor, *target, *URL;
   svn_error_t *err;
   void *ra_baton, *session;
   svn_ra_plugin_t *ra_lib;
-
-  /* ### Bail for now */
-  return SVN_NO_ERROR;
 
   /* Sanity check.  Without these, the switch is meaningless. */
   assert (path != NULL);
@@ -132,25 +129,23 @@ svn_client_switch (const svn_delta_edit_fns_t *before_editor,
   if (tm)
     SVN_ERR (ra_lib->get_dated_revision (session, &revision, tm));
 
-  /* ################################################################## 
-       Rewrite all of the interaction with the RA layer below, since
-       the whole RA interface is probably about to change. 
-     ################################################################## */
+  /* ### Note: the whole RA interface below will probably change soon. */ 
 
   /* Tell RA to do a update of URL+TARGET to REVISION; if we pass an
-     invalid revnum, that means RA will use the latest revision. 
-  SVN_ERR (ra_lib->do_update (session,
+     invalid revnum, that means RA will use the latest revision. */
+  SVN_ERR (ra_lib->do_switch (session,
                               &reporter, &report_baton,
                               revision,
                               target,
                               recurse,
-                              update_editor, update_edit_baton)); */
+                              switch_url,
+                              switch_editor, switch_edit_baton));
 
   /* Drive the reporter structure, describing the revisions within
      PATH.  When we call reporter->finish_report, the
-     update_editor will be driven by svn_repos_dir_delta. 
+     update_editor will be driven by svn_repos_dir_delta. */ 
   err = svn_wc_crawl_revisions (path, reporter, report_baton,
-  TRUE, recurse, pool); */
+                                TRUE, recurse, pool);
   
   /* Sleep for one second to ensure timestamp integrity. */
   apr_sleep (APR_USEC_PER_SEC * 1);

@@ -373,10 +373,18 @@ do_update (void *session_baton,
   svn_delta_edit_fns_t *pipe_editor;
   struct svn_pipe_edit_baton *pipe_edit_baton;
   svn_revnum_t revnum_to_update_to;
+  svn_stringbuf_t *switch_path;
   svn_ra_local__session_baton_t *sbaton = session_baton;
 
   /* ### fix the update_target param at some point */
   const char *target;
+  target = update_target ? update_target->data : NULL;
+
+  /* We want dir_delta to run on -identical- fs paths. */
+  switch_path = 
+    svn_stringbuf_create_from_string (sbaton->fs_path, sbaton->pool);
+  if (target)
+    svn_path_add_component_nts (switch_path, target);
   
   if (! SVN_IS_VALID_REVNUM(update_revision))
     SVN_ERR (get_latest_revnum (sbaton, &revnum_to_update_to));
@@ -396,18 +404,87 @@ do_update (void *session_baton,
   /* Pass back our reporter */
   *reporter = &ra_local_reporter;
 
+  /* Build a reporter baton. */
+  return svn_repos_begin_report (report_baton,
+                                 revnum_to_update_to,
+                                 sbaton->username,
+                                 sbaton->repos, 
+                                 sbaton->fs_path->data,
+                                 target, 
+                                 switch_path->data,
+                                 TRUE, /* send text-deltas */
+                                 recurse,
+                                 pipe_editor, pipe_edit_baton,
+                                 sbaton->pool);
+}
+
+
+static svn_error_t *
+do_switch (void *session_baton,
+           const svn_ra_reporter_t **reporter,
+           void **report_baton,
+           svn_revnum_t update_revision,
+           svn_stringbuf_t *update_target,
+           svn_boolean_t recurse,
+           svn_stringbuf_t *switch_url,
+           const svn_delta_edit_fns_t *update_editor,
+           void *update_baton)
+{
+  svn_delta_edit_fns_t *pipe_editor;
+  struct svn_pipe_edit_baton *pipe_edit_baton;
+  svn_revnum_t revnum_to_update_to;
+  const svn_string_t *switch_repos_path, *switch_fs_path;
+  svn_ra_local__session_baton_t *sbaton = session_baton;
+
+  /* ### fix the update_target param at some point */
+  const char *target;
   target = update_target ? update_target->data : NULL;
+  
+  /* Pull the relevant fs-path portion out of switch_url. */
+  SVN_ERR (svn_ra_local__split_URL (&switch_repos_path, &switch_fs_path,
+                                    switch_url, sbaton->pool));
+
+  /* Sanity check:  the switch_url better be in the same repository as
+     the original session url! */
+  if (! svn_string_compare (sbaton->repos_path, switch_repos_path))
+    return svn_error_createf (SVN_ERR_RA_ILLEGAL_URL, 0, NULL, sbaton->pool,
+                              "URL '%s'\n"
+                              "is not in the same repository as\n"
+                              "URL '%s'", switch_repos_path->data,
+                              sbaton->repos_path->data);
+
+  if (! SVN_IS_VALID_REVNUM(update_revision))
+    SVN_ERR (get_latest_revnum (sbaton, &revnum_to_update_to));
+  else
+    revnum_to_update_to = update_revision;
+
+  /* Wrap UPDATE_EDITOR with a custom "pipe" editor that pushes extra
+     'entry' properties into the stream, whenever {open_root,
+     open_file, open_dir, add_file, add_dir} are called.  */
+  SVN_ERR (svn_ra_local__get_update_pipe_editor (&pipe_editor,
+                                                 &pipe_edit_baton,
+                                                 update_editor,
+                                                 update_baton,
+                                                 sbaton,
+                                                 sbaton->pool));
+
+  /* Pass back our reporter */
+  *reporter = &ra_local_reporter;
 
   /* Build a reporter baton. */
   return svn_repos_begin_report (report_baton,
                                  revnum_to_update_to,
                                  sbaton->username,
-                                 sbaton->repos, sbaton->fs_path->data,
-                                 target, TRUE,
+                                 sbaton->repos, 
+                                 sbaton->fs_path->data,
+                                 target,
+                                 switch_fs_path->data,
+                                 TRUE, /* we want text-deltas */
                                  recurse,
                                  pipe_editor, pipe_edit_baton,
                                  sbaton->pool);
 }
+
 
 
 static svn_error_t *
@@ -420,24 +497,33 @@ do_status (void *session_baton,
            void *status_baton)
 {
   svn_revnum_t revnum_to_update_to;
+  svn_stringbuf_t *switch_path;
   svn_ra_local__session_baton_t *sbaton = session_baton;
 
   /* ### fix the status_target param at some point */
   const char *target;
-  
+  target = status_target ? status_target->data : NULL;
+
+  /* We want dir_delta to run on -identical- fs paths. */
+  switch_path =
+    svn_stringbuf_create_from_string (sbaton->fs_path, sbaton->pool);
+  if (target)
+    svn_path_add_component_nts (switch_path, target);
+
   SVN_ERR (get_latest_revnum (sbaton, &revnum_to_update_to));
 
   /* Pass back our reporter */
   *reporter = &ra_local_reporter;
 
-  target = status_target ? status_target->data : NULL;
-
   /* Build a reporter baton. */
   return svn_repos_begin_report (report_baton,
                                  revnum_to_update_to,
                                  sbaton->username,
-                                 sbaton->repos, sbaton->fs_path->data,
-                                 target, FALSE,
+                                 sbaton->repos, 
+                                 sbaton->fs_path->data,
+                                 target,
+                                 switch_path->data,
+                                 FALSE, /* don't send text-deltas */
                                  recurse,
                                  status_editor, status_baton,
                                  sbaton->pool);
@@ -624,6 +710,7 @@ static const svn_ra_plugin_t ra_local_plugin =
   get_file,
   do_checkout,
   do_update,
+  do_switch,
   do_status,
   NULL,
   get_log,

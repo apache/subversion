@@ -402,6 +402,37 @@ typedef struct svn_ra_plugin_t
                              const svn_delta_edit_fns_t *update_editor,
                              void *update_baton);
 
+  /* Ask the network layer to 'switch' a working copy to a new
+     SWITCH_URL;  it's another form of do_update().
+
+     The client initially provides an UPDATE_EDITOR/BATON to the RA
+     layer; this editor contains knowledge of where the change will
+     begin in the working copy (when open_root() is called).
+
+     In return, the client receives a REPORTER/REPORT_BATON. The
+     client then describes its working-copy revision numbers by making
+     calls into the REPORTER structure; the RA layer assumes that all
+     paths are relative to the URL used to create SESSION_BATON.
+
+     When finished, the client calls REPORTER->finish_report(). The RA
+     layer then drives UPDATE_EDITOR to update the working copy.
+     UPDATE_TARGET is an optional single path component will restrict
+     the scope of things affected by the update to an entry in the
+     directory represented by the SESSION_BATON's URL, or NULL if the
+     entire directory is meant to be updated.
+
+     The working copy will be updated to REVISION_TO_UPDATE_TO, or the
+     "latest" revision if this arg is invalid. */
+  svn_error_t *(*do_switch) (void *session_baton,
+                             const svn_ra_reporter_t **reporter,
+                             void **report_baton,
+                             svn_revnum_t revision_to_update_to,
+                             svn_stringbuf_t *update_target,
+                             svn_boolean_t recurse,
+                             svn_stringbuf_t *switch_url,
+                             const svn_delta_edit_fns_t *update_editor,
+                             void *update_baton);
+
   /* Ask the network layer to describe the status of a working copy
      with respect to the HEAD revision of the repository.
 
