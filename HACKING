@@ -62,7 +62,7 @@ Go to http://subversion.tigris.org/ and
 
    *  Print out and digest the Subversion design specification.
       This document can be found in the "Documents & files" area of the
-      website in the Documentation/Design folder.  A PDF and an HTML
+      website in the Documentation->Design folder.  A PDF and an HTML
       version are available on the web.  The design spec will give you
       a theoretical overview of Subversion's design.
 
@@ -112,7 +112,7 @@ Theory and documentation
       Greg Stein has written an introduction to Subversion's network
       protocol, which is an extended dialect of HTTP.  The document is
       'www/webdav-usage.html', and is also posted on the website in
-      the "File sharing" section.
+      the "Documents & files" section in "Documentation->Design".
 
 
    3. USER MANUAL
