@@ -89,6 +89,7 @@ enum dav_svn_private_restype {
   DAV_SVN_RESTYPE_ACT_COLLECTION,       /* .../$svn/act/ */
   DAV_SVN_RESTYPE_VCC_COLLECTION,       /* .../$svn/vcc/ */
   DAV_SVN_RESTYPE_BC_COLLECTION,        /* .../$svn/bc/  */
+  DAV_SVN_RESTYPE_BLN_COLLECTION,       /* .../$svn/bln/ */
   DAV_SVN_RESTYPE_VCC                   /* .../$svn/vcc/NAME */
 };
 
