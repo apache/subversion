@@ -16,6 +16,7 @@ TABLE OF CONTENTS
    * What to read
    * Directory layout
    * Coding style
+   * Secure coding guidelines
    * Document everything
    * Using page breaks
    * Other conventions
@@ -140,7 +141,16 @@ in APR (look in apr/include/):
    *  hashes and arrays:  apr_hash.h, apr_tables.h
 
 
+Subversion also tries to deliver reliable and secure software. This can
+only be achieved by educating the developers on secure programming in
+the C programming language. Please see 'notes/assurance.txt' for the
+full rationale behind this.  Specifically, you should make it a point to
+carefully read David Wheeler's Secure Programming (as mentioned in
+'notes/assurance.txt'). If at any point you have questions about the
+security implications of a change, you are urged to ask for review on
+the developer mailinglist.
 
+
 Directory layout
 ================
 
@@ -240,6 +250,53 @@ whichever way you like.
 
 
 
+Secure coding guidelines
+========================
+
+Just like almost any other programming language, C has undesireable
+features which enables an attacker to make your program fail in
+predictable ways, often to the attacker's benefit. The goal of these
+guidelines is to make you aware of the pitfalls of C as they apply to
+the Subversion project.  You are encouraged to keep these pitfalls in
+mind when reviewing code of your peers, as even the most skilled and
+paranoid programmers make occasional mistakes.
+
+Input validation is the act of defining legal input and rejecting
+everything else. The code must perform input validation on all untrusted
+input. 
+
+
+Security boundaries
+
+A security boundary in the Subversion server code must be identified as
+such as this enables auditors to quickly determine the quality of the
+boundary.  Security boundaries exist where the running code has access
+to information the user does not or where the code runs with priviliges
+above those of the user making the request. Typical examples of such is
+code that does access control or an application with the SUID bit set.
+
+Functions which make calls to a security boundary must include
+validation checks of the arguments passed. Functions which themselves
+are security boundaries should audit the input received and alarm when
+invoked with improper values. 
+
+
+String operations
+
+Use sane string functions. When operating on strings, you must always
+use the functions provided by APR. You should never use C library calls
+such as strcat or strcpy as they do not provide bounds checking, and may 
+also blow up in a number of other circumstances.
+
+
+Password storage
+
+Help users keep their passwords secret: When the client reads or writes
+password locally, it should ensure that the file is mode 0600. If the
+file is readable by other users, the client should exit with a message
+that tells the user to change the filemode due to the risk of exposure.
+
+
 Document everything
 ===================
 
@@ -250,6 +307,12 @@ every possible return value, and (if not obvious) the conditions under
 which the function could return an error.  Put the parameter names in
 upper case in the doc string, even when they are not upper case in the
 actual declaration, so that they stand out to human readers.
+
+Security boundaries should be identified in a comment prefixed by the
+word SECURITY in uppercase, followed by a description of the boundary,
+including ranges of legal values for each parameter. Specifications of
+legal input could be 'digits only, a maximum of 10', 'a-zA-Z0-9, maximum
+30 characters', and so on. 
 
 For public or semi-public API functions, the doc string should go
 above the function in the .h file where it is declared; otherwise, it
