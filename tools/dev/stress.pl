@@ -122,7 +122,7 @@ sub check_out
 # Print status and update. The update is to do any required merges.
 sub status_update
   {
-    my ( $wc_dir, $wait_for_key, $disable_status ) = @_;
+    my ( $wc_dir, $wait_for_key, $disable_status, $resolve_conflicts ) = @_;
     my $svn_cmd = "svn st -u $wc_dir";
     if ( not $disable_status ) {
       print "Status:\n";
@@ -132,7 +132,41 @@ sub status_update
     read STDIN, $wait_for_key, 1 if $wait_for_key;
     print "Updating:\n";
     $svn_cmd = "svn up $wc_dir";
-    system( $svn_cmd ) and die "$svn_cmd: failed: $?\n";
+
+    # Check for conflicts during the update.  If any exist, we resolve them.
+    my $pid = open3(\*UPDATE_WRITE, \*UPDATE_READ, \*UPDATE_ERR_READ,
+                    $svn_cmd);
+    my @conflicts = ();
+    while ( <UPDATE_READ> )
+      {
+        print;
+        s/\r*$//;               # [Windows compat] Remove trailing \r's
+        if ( /^C  (.*)$/ )
+          {
+            push(@conflicts, ($1))
+          }
+      }
+
+    # Print any errors.
+    print while ( <UPDATE_ERR_READ> );
+
+    # Close up the streams.
+    close UPDATE_ERR_READ or die "close UPDATE_ERR_READ: $!\n";
+    close UPDATE_WRITE or die "close UPDATE_WRITE: $!\n";
+    close UPDATE_READ or die "close UPDATE_READ: $!\n";
+
+    # Get commit subprocess exit status
+    die "waitpid: $!\n" if $pid != waitpid $pid, 0;
+    die "unexpected update fail: exit status: $?\n" if $? != 0;
+
+    if ($resolve_conflicts)
+      {
+        foreach my $conflict (@conflicts)
+          {
+            $svn_cmd = "svn resolved $conflict";
+            system( $svn_cmd ) and die "$svn_cmd: failed: $?\n";
+          }
+      }
   }
 
 # Print status, update and commit. The update is to do any required
@@ -140,8 +174,8 @@ sub status_update
 # conflict.
 sub status_update_commit
   {
-    my ( $wc_dir, $wait_for_key, $disable_status ) = @_;
-    status_update $wc_dir, $wait_for_key, $disable_status;
+    my ( $wc_dir, $wait_for_key, $disable_status, $resolve_conflicts ) = @_;
+    status_update $wc_dir, $wait_for_key, $disable_status, $resolve_conflicts;
     print "Committing:\n";
     # Use current time as log message
     my $now_time = localtime;
@@ -269,8 +303,8 @@ sub ParseCommandLine
   {
     my %cmd_opts;
     my $usage = "
-usage: stress.pl [-c] [-h] [-i num] [-n num] [-s secs] [-x num] [-D num] 
-                 [-F num] [-N num] [-P num] [-R path] [-S path] [-U url] [-W]
+usage: stress.pl [-cdfhprW] [-i num] [-n num] [-s secs] [-x num] [-D num] 
+                 [-F num] [-N num] [-P num] [-R path] [-S path] [-U url]
 
 where
   -c cause repository creation
@@ -280,6 +314,7 @@ where
   -i the ID (valid IDs are 0 to 9, default is 0 if -c given, 1 otherwise)
   -n the number of sets of changes to commit
   -p add svn:eol-style and svn:keywords properties to the files
+  -r perform update-time conflict resolution
   -s the sleep delay (-1 wait for key, 0 none)
   -x the number of files to modify in each commit
   -D the number of sub-directories per directory in the tree
@@ -308,10 +343,11 @@ where
     $cmd_opts{'i'} = 0;            # ID
     $cmd_opts{'n'} = 200;          # sets of changes
     $cmd_opts{'p'} = 0;            # add file properties
+    $cmd_opts{'r'} = 0;            # conflict resolution
     $cmd_opts{'s'} = -1;           # sleep interval
     $cmd_opts{'x'} = 4;            # files to modify
 
-    getopts( 'cdfhi:n:ps:x:D:F:N:P:R:U:W', \%cmd_opts ) or die $usage;
+    getopts( 'cdfhi:n:prs:x:D:F:N:P:R:U:W', \%cmd_opts ) or die $usage;
 
     # print help info (and exit nicely) if requested
     if ( $cmd_opts{'h'} )
@@ -390,12 +426,14 @@ for $mod_number ( 1..$cmd_opts{'n'} )
     if ( $cmd_opts{'x'} > 0 ) {
       # Loop committing until successful or the stop file is created
       1 while not -e $stop_file
-        and status_update_commit $wc_dir, $wait_for_key, $cmd_opts{'d'};
+        and status_update_commit $wc_dir, $wait_for_key, \
+                                 $cmd_opts{'d'}, $cmd_opts{'r'};
     } else {
-      status_update $wc_dir, $wait_for_key, $cmd_opts{'d'};
+      status_update $wc_dir, $wait_for_key, $cmd_opts{'d'}, $cmd_opts{'r'};
     }
 
     # Break out of loop, or sleep, if required
     print( "stop file '$stop_file' detected\n" ), last if -e $stop_file;
     sleep $cmd_opts{'s'} if $cmd_opts{'s'} > 0;
   }
+
