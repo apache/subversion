@@ -483,7 +483,6 @@ get_path_ancestor_length (const char *path1,
                           const char *path2,
                           apr_pool_t *pool)
 {
-  char *common_path;
   apr_size_t path1_len, path2_len;
   apr_size_t i = 0;
   apr_size_t last_dirsep = 0;
