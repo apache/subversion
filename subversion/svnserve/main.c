@@ -36,6 +36,7 @@
 #include "svn_ra_svn.h"
 #include "svn_utf.h"
 #include "svn_path.h"
+#include "svn_opt.h"
 
 #include "server.h"
 
@@ -51,37 +52,69 @@ enum connection_handling_mode {
 #if APR_HAS_THREADS
 
 #define CONNECTION_DEFAULT connection_mode_fork
-#define CONNECTION_USAGE "|-T"
-#define CONNECTION_OPT "T"
+#define CONNECTION_HAVE_THREAD_OPTION
 
 #else /* ! APR_HAS_THREADS */
 
 #define CONNECTION_DEFAULT connection_mode_fork
-#define CONNECTION_USAGE
-#define CONNECTION_OPT
 
 #endif /* ! APR_HAS_THREADS */
 #elif APR_HAS_THREADS /* and ! APR_HAS_FORK */
 
 #define CONNECTION_DEFAULT connection_mode_thread
-#define CONNECTION_USAGE
-#define CONNECTION_OPT
 
 #else /* ! APR_HAS_THREADS and ! APR_HAS_FORK */
 
 #define CONNECTION_DEFAULT connection_mode_single
-#define CONNECTION_USAGE
-#define CONNECTION_OPT
 
 #endif
+
+/* Option codes and descriptions for svnserve.
+ *
+ * This must not have more than SVN_OPT_MAX_OPTIONS entries; if you
+ * need more, increase that limit first. 
+ *
+ * The entire list must be terminated with an entry of nulls.
+ */
+static const apr_getopt_option_t svnserve__options[] =
+  {
+    {"help",             'h', 0, "show help on a subcommand"},
+    {"daemon",           'd', 0, "daemon mode"},
+    {"tunnel",           't', 0, "tunnel mode"},
+    {"listen-once",      'X', 0, "listen once (useful for debugging)"},
+    {"root",             'r', 1, "root of directory to serve"},
+    {"read-only",        'R', 0, "serve in read-only mode"},
+#ifdef CONNECTION_HAVE_THREAD_OPTION
+    {"threads",          'T', 0, "use threads instead of fork"},
+#endif
+    {"believe-username", 'u', 0, "believe unauthenticated username"},
+    {0,                  0,   0, 0}
+  };
+
 
 static void usage(const char *progname)
 {
   if (!progname)
-    progname = "svn-server";
-  fprintf(stderr,
-          "Usage: %s [-X|-d|-t|-R|-u" CONNECTION_USAGE "] [-r root]\n",
-          progname);
+    progname = "svnserve";
+
+  fprintf (stderr, "Type '%s --help' for usage.\n", progname);
+  exit(1);
+}
+
+static void help(apr_pool_t *pool)
+{
+  apr_size_t i;
+
+  puts ("Usage: svnserve [options]\n"
+        "\n"
+        "Valid options:");
+  for (i = 0; svnserve__options[i].name && svnserve__options[i].optch; i++)
+    {
+      const char *optstr;
+      svn_opt_format_option (&optstr, svnserve__options + i, TRUE, pool);
+      fprintf (stdout, "  %s\n", optstr);
+    }
+  fprintf (stdout, "\n");
   exit(1);
 }
 
@@ -141,7 +174,8 @@ int main(int argc, const char *const *argv)
   apr_pool_t *connection_pool;
   svn_error_t *err;
   apr_getopt_t *os;
-  char opt, errbuf[256];
+  char errbuf[256];
+  int opt;
   const char *arg, *root = "/";
   apr_status_t status;
   svn_ra_svn_conn_t *conn;
@@ -164,13 +198,17 @@ int main(int argc, const char *const *argv)
 
   while (1)
     {
-      status = apr_getopt(os, "dtXr:Ru" CONNECTION_OPT, &opt, &arg);
+      status = apr_getopt_long (os, svnserve__options, &opt, &arg);
       if (APR_STATUS_IS_EOF(status))
         break;
       if (status != APR_SUCCESS)
         usage(argv[0]);
       switch (opt)
         {
+        case 'h':
+          help(pool);
+          break;
+
         case 'd':
           daemon_mode = TRUE;
           break;
