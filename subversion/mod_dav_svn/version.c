@@ -56,8 +56,51 @@ static dav_error *dav_svn_checkout(dav_resource *resource,
                                    apr_array_header_t *activities,
                                    dav_resource **working_resource)
 {
-  return dav_new_error(resource->pool, HTTP_NOT_IMPLEMENTED, 0,
-                       "CHECKOUT is not yet implemented.");
+  const char *activity_id;
+  const char *txn_name;
+  const char *repos_path;
+
+  if (resource->type != DAV_RESOURCE_TYPE_VERSION)
+    {
+      return dav_new_error(resource->pool, HTTP_METHOD_NOT_ALLOWED, 0,
+                           "CHECKOUT can only be performed on a version "
+                           "resource [at this time].");
+    }
+  if (create_activity)
+    {
+      return dav_new_error(resource->pool, HTTP_NOT_IMPLEMENTED, 0,
+                           "CHECKOUT can not create an activity at this "
+                           "time. Use MKACTIVITY first.");
+    }
+  if (is_unreserved)
+    {
+      return dav_new_error(resource->pool, HTTP_NOT_IMPLEMENTED, 0,
+                           "Unreserved checkouts are not yet available. "
+                           "A version history may not be checked out more "
+                           "than once, into a specific activity.");
+    }
+  if (activities == NULL)
+    {
+      return dav_new_error(resource->pool, HTTP_CONFLICT, 0,
+                           "An activity must be provided for the checkout.");
+    }
+  /* assert: nelts > 0.  the below check effectively means > 1. */
+  if (activities->nelts != 1)
+    {
+      return dav_new_error(resource->pool, HTTP_CONFLICT, 0,
+                           "Only one activity may be specified within the "
+                           "CHECKOUT.");
+    }
+
+  activity_id = ((const char * const *)activities->elts)[0];
+  txn_name = NULL;      /* ### should we look this up? or lazy? */
+  repos_path = resource->info->object_name;
+
+  *working_resource = dav_svn_create_working_resource(resource,
+                                                      activity_id,
+                                                      txn_name,
+                                                      repos_path);
+  return NULL;
 }
 
 static dav_error *dav_svn_uncheckout(dav_resource *resource)

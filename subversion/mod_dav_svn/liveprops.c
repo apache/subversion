@@ -76,7 +76,7 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
 {
   const char *value;
   const char *s;
-  apr_pool_t *p = resource->info->pool;
+  apr_pool_t *p = resource->pool;
   const dav_liveprop_spec *info;
   int global_ns;
 

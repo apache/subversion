@@ -17,6 +17,7 @@
 #include <httpd.h>
 #include <http_protocol.h>
 #include <http_log.h>
+#include <http_core.h>  /* for ap_construct_url */
 #include <mod_dav.h>
 
 #include <apr_strings.h>
@@ -59,11 +60,21 @@ typedef struct {
 static int dav_svn_parse_version_uri(dav_resource_combined *comb,
                                      const char *path)
 {
+  const char *slash;
+
+  /* format: NODE_ID/REPOS_PATH */
+
   comb->res.type = DAV_RESOURCE_TYPE_VERSION;
   comb->res.versioned = TRUE;
 
-  /* ### parse path */
-  comb->priv.object_name = path;
+  if ((slash = ap_strchr_c(path, '/')) == NULL)
+    return TRUE;
+
+  comb->priv.node_id = svn_fs_parse_id(path, slash - path, comb->res.pool);
+  if (comb->priv.node_id == NULL)
+    return TRUE;
+
+  comb->priv.object_name = slash + 1;
 
   return FALSE;
 }
@@ -71,6 +82,8 @@ static int dav_svn_parse_version_uri(dav_resource_combined *comb,
 static int dav_svn_parse_history_uri(dav_resource_combined *comb,
                                      const char *path)
 {
+  /* format: ??? */
+
   comb->res.type = DAV_RESOURCE_TYPE_HISTORY;
 
   /* ### parse path */
@@ -82,12 +95,21 @@ static int dav_svn_parse_history_uri(dav_resource_combined *comb,
 static int dav_svn_parse_working_uri(dav_resource_combined *comb,
                                      const char *path)
 {
+  const char *slash;
+
+  /* format: ACTIVITY_ID/REPOS_PATH */
+
+  /* ### working baselines? */
+
   comb->res.type = DAV_RESOURCE_TYPE_WORKING;
   comb->res.working = TRUE;
   comb->res.versioned = TRUE;
 
-  /* ### parse path */
-  comb->priv.object_name = path;
+  if ((slash = ap_strchr_c(path, '/')) == NULL || slash == path)
+    return TRUE;
+
+  comb->priv.activity_id = apr_pstrndup(comb->res.pool, path, slash - path);
+  comb->priv.object_name = slash + 1;
 
   return FALSE;
 }
@@ -95,10 +117,11 @@ static int dav_svn_parse_working_uri(dav_resource_combined *comb,
 static int dav_svn_parse_activity_uri(dav_resource_combined *comb,
                                       const char *path)
 {
+  /* format: ACTIVITY_ID */
+
   comb->res.type = DAV_RESOURCE_TYPE_ACTIVITY;
 
-  /* ### parse path */
-  comb->priv.object_name = path;
+  comb->priv.activity_id = path;
 
   return FALSE;
 }
@@ -263,7 +286,8 @@ static dav_error * dav_svn_prep_regular(dav_resource_combined *comb)
      ### well, you can't change a REGULAR resource, so this is probably
      ### going to be fine. a WORKING resource will have more work
   */
-  if (strcmp(comb->priv.path->data, "/") == 0)
+  /* ### for a REGULAR resource, uri_path == repository path */
+  if (strcmp(comb->priv.uri_path->data, "/") == 0)
     {
       comb->priv.node = repos->root_dir;
       comb->res.collection = 1;
@@ -272,7 +296,7 @@ static dav_error * dav_svn_prep_regular(dav_resource_combined *comb)
     {
       /* open the requested resource. note that we skip the leading "/" */
       serr = svn_fs_open_node(&comb->priv.node, repos->root_dir,
-                              comb->priv.path->data + 1, pool);
+                              comb->priv.uri_path->data + 1, pool);
       if (serr != NULL)
         {
           const char *msg;
@@ -293,6 +317,9 @@ static dav_error * dav_svn_prep_regular(dav_resource_combined *comb)
 
 static dav_error * dav_svn_prep_version(dav_resource_combined *comb)
 {
+  /* ### look up the object, set .exists and .collection flags */
+  comb->res.exists = TRUE;
+
   return NULL;
 }
 
@@ -303,13 +330,27 @@ static dav_error * dav_svn_prep_history(dav_resource_combined *comb)
 
 static dav_error * dav_svn_prep_working(dav_resource_combined *comb)
 {
+  const char *txn_name = dav_svn_get_txn(comb->priv.repos,
+                                         comb->priv.activity_id);
+
+  /* ### working baselines? */
+
+  if (txn_name == NULL)
+    {
+      /* ### return an error */
+    }
+  comb->priv.txn_name = txn_name;
+
+  /* ### look up the object, set .exists and .collection flags */
+  comb->res.exists = TRUE;
+
   return NULL;
 }
 
 static dav_error * dav_svn_prep_activity(dav_resource_combined *comb)
 {
   const char *txn_name = dav_svn_get_txn(comb->priv.repos,
-                                         comb->priv.object_name);
+                                         comb->priv.activity_id);
 
   comb->priv.txn_name = txn_name;
   comb->res.exists = txn_name != NULL;
@@ -356,7 +397,7 @@ static dav_error * dav_svn_prep_resource(dav_resource_combined *comb)
 }
 
 static dav_error * dav_svn_get_resource(request_rec *r,
-                                        const char *root_uri,
+                                        const char *root_path,
                                         const char *label,
                                         int use_checked_in,
                                         dav_resource **resource)
@@ -367,7 +408,6 @@ static dav_error * dav_svn_get_resource(request_rec *r,
   apr_size_t len1;
   char *uri;
   const char *relative;
-  const char *special_uri;
   svn_error_t *serr;
   dav_error *err;
 
@@ -386,9 +426,6 @@ static dav_error * dav_svn_get_resource(request_rec *r,
   comb->res.hooks = &dav_svn_hooks_repos;
   comb->res.pool = r->pool;
 
-  /* ### this should go away */
-  comb->priv.pool = r->pool;
-
   /* make a copy so that we can do some work on it */
   uri = apr_pstrdup(r->pool, r->uri);
 
@@ -404,10 +441,10 @@ static dav_error * dav_svn_get_resource(request_rec *r,
 
   /* The URL space defined by the SVN provider is always a virtual
      space. Construct the path relative to the configured Location
-     (root_uri). So... the relative location is simply the URL used,
-     skipping the root_uri.
+     (root_path). So... the relative location is simply the URL used,
+     skipping the root_path.
 
-     Note: mod_dav has canonialized root_uri. It will not have a trailing
+     Note: mod_dav has canonialized root_path. It will not have a trailing
            slash (unless it is "/").
 
      Note: given a URI of /something and a root of /some, then it is
@@ -416,10 +453,10 @@ static dav_error * dav_svn_get_resource(request_rec *r,
            URIs. We do not control /something, so we don't get here. Or,
            if we *do* control /something, then it is for THAT root.
   */
-  relative = ap_stripprefix(uri, root_uri);
+  relative = ap_stripprefix(uri, root_path);
 
   /* We want a leading slash on the path specified by <relative>. This
-     will almost always be the case since root_uri does not have a trailing
+     will almost always be the case since root_path does not have a trailing
      slash. However, if the root is "/", then the slash will be removed
      from <relative>. Backing up a character will put the leading slash
      back. */
@@ -428,7 +465,7 @@ static dav_error * dav_svn_get_resource(request_rec *r,
 
   /* "relative" is part of the "uri" string, so it has the proper
      lifetime to store here. */
-  comb->priv.path = svn_string_create(relative, r->pool);
+  comb->priv.uri_path = svn_string_create(relative, r->pool);
 
   /* create the repository structure and stash it away */
   repos = apr_pcalloc(r->pool, sizeof(*repos));
@@ -436,13 +473,17 @@ static dav_error * dav_svn_get_resource(request_rec *r,
 
   comb->priv.repos = repos;
 
-  /* We are assuming the root_uri will live at least as long as this
+  /* We are assuming the root_path will live at least as long as this
      resource. Considering that it typically comes from the per-dir
      config in mod_dav, this is valid for now. */
-  repos->root_uri = root_uri;
+  repos->root_path = root_path;
 
   /* where is the SVN FS for this resource? */
   repos->fs_path = fs_path;
+
+  /* Remember various bits for later URL construction */
+  repos->base_url = ap_construct_url(r->pool, "", r);
+  repos->special_uri = dav_svn_get_special_uri(r);
 
   /* open the SVN FS */
   repos->fs = svn_fs_new(r->pool);
@@ -458,10 +499,8 @@ static dav_error * dav_svn_get_resource(request_rec *r,
 
   /* Figure out the type of the resource */
 
-  special_uri = dav_svn_get_special_uri(r);
-
   /* skip over the leading "/" in the relative URI */
-  if (dav_svn_parse_uri(comb, relative + 1, special_uri))
+  if (dav_svn_parse_uri(comb, relative + 1, repos->special_uri))
     goto malformed_URI;
 
 #ifdef SVN_DEBUG
@@ -500,7 +539,7 @@ static dav_error * dav_svn_get_resource(request_rec *r,
 static dav_error * dav_svn_get_parent_resource(const dav_resource *resource,
                                                dav_resource **parent_resource)
 {
-  svn_string_t *path = resource->info->path;
+  svn_string_t *path = resource->info->uri_path;
 
   /* the root of the repository has no parent */
   if (path->len == 1 && *path->data == '/')
@@ -542,37 +581,38 @@ static int dav_svn_is_same_resource(const dav_resource *res1,
   if (!is_our_resource(res1, res2))
     return 0;
 
-  return svn_string_compare(res1->info->path, res2->info->path);
+  return svn_string_compare(res1->info->uri_path, res2->info->uri_path);
 }
 
 static int dav_svn_is_parent_resource(const dav_resource *res1,
                                       const dav_resource *res2)
 {
-  apr_size_t len1 = strlen(res1->info->path->data);
+  apr_size_t len1 = strlen(res1->info->uri_path->data);
   apr_size_t len2;
 
   if (!is_our_resource(res1, res2))
     return 0;
 
   /* res2 is one of our resources, we can use its ->info ptr */
-  len2 = strlen(res2->info->path->data);
+  len2 = strlen(res2->info->uri_path->data);
 
   return (len2 > len1
-          && memcmp(res1->info->path->data, res2->info->path->data, len1) == 0
-          && res2->info->path->data[len1] == '/');
+          && memcmp(res1->info->uri_path->data, res2->info->uri_path->data,
+                    len1) == 0
+          && res2->info->uri_path->data[len1] == '/');
 }
 
 static dav_error * dav_svn_open_stream(const dav_resource *resource,
                                        dav_stream_mode mode,
                                        dav_stream **stream)
 {
-  dav_resource_private *info = resource->info;
 #if 0
+  dav_resource_private *info = resource->info;
   svn_error_t *serr;
 #endif
 
   /* start building the stream structure */
-  *stream = apr_pcalloc(info->pool, sizeof(**stream));
+  *stream = apr_pcalloc(resource->pool, sizeof(**stream));
   (*stream)->res = resource;
 
 #if 0
@@ -582,7 +622,8 @@ static dav_error * dav_svn_open_stream(const dav_resource *resource,
 
   /* ### assuming mode == read for now */
 
-  serr = svn_fs_file_contents(&(*stream)->input, (*stream)->file, info->pool);
+  serr = svn_fs_file_contents(&(*stream)->input, (*stream)->file,
+                              resource->pool);
   if (serr != NULL)
     {
       return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
@@ -643,9 +684,9 @@ const char * dav_svn_getetag(const dav_resource *resource)
 
   /* ### what kind of etag to return for collections, activities, etc? */
 
-  id = svn_fs_get_node_id(resource->info->node, resource->info->pool);
-  idstr = svn_fs_unparse_id(id, resource->info->pool);
-  return apr_psprintf(resource->info->pool, "\"%s\"", idstr);
+  id = svn_fs_get_node_id(resource->info->node, resource->pool);
+  idstr = svn_fs_unparse_id(id, resource->pool);
+  return apr_psprintf(resource->pool, "\"%s\"", idstr);
 }
 
 static dav_error * dav_svn_set_headers(request_rec *r,
@@ -752,7 +793,7 @@ static dav_error * dav_svn_do_walk(dav_svn_walker_context *ctx, int depth)
   /* assert: collection resource. isdir == TRUE */
 
   /* append "/" to the path, in preparation for appending child names */
-  svn_string_appendcstr(ctx->info.path, "/");
+  svn_string_appendcstr(ctx->info.uri_path, "/");
 
   /* NOTE: the URI should already have a trailing "/" */
 
@@ -765,7 +806,7 @@ static dav_error * dav_svn_do_walk(dav_svn_walker_context *ctx, int depth)
 
   /* remember these values so we can chop back to them after each time
      we append a child name to the path/uri */
-  path_len = ctx->info.path->len;
+  path_len = ctx->info.uri_path->len;
   uri_len = ctx->uri->len;
 
   /* fetch this collection's children */
@@ -794,7 +835,7 @@ static dav_error * dav_svn_do_walk(dav_svn_walker_context *ctx, int depth)
         }
 
       /* append this child to our buffers */
-      svn_string_appendbytes(ctx->info.path, key, klen);
+      svn_string_appendbytes(ctx->info.uri_path, key, klen);
       svn_string_appendbytes(ctx->uri, key, klen);
 
       /* reset the URI pointer since the above may have changed it */
@@ -834,7 +875,7 @@ static dav_error * dav_svn_do_walk(dav_svn_walker_context *ctx, int depth)
         }
 
       /* chop the child off the path and uri. NOTE: no null-term. */
-      ctx->info.path->len = path_len;
+      ctx->info.uri_path->len = path_len;
       ctx->uri->len = uri_len;
 
       /* done with this child's node */
@@ -870,7 +911,7 @@ static dav_error * dav_svn_walk(const dav_walk_params *params, int depth,
 
   /* Don't monkey with the path from params->root. Create a new one.
      This path will then be extended/shortened as necessary. */
-  ctx.info.path = svn_string_dup(ctx.info.path, params->pool);
+  ctx.info.uri_path = svn_string_dup(ctx.info.uri_path, params->pool);
 
   /* prep the URI buffer */
   ctx.uri = svn_string_create(params->root->uri, params->pool);
@@ -890,6 +931,43 @@ static dav_error * dav_svn_walk(const dav_walk_params *params, int depth,
   err = dav_svn_do_walk(&ctx, depth);
   *response = ctx.wres.response;
   return err;
+}
+
+
+/*** Utility functions for resource management ***/
+
+dav_resource *dav_svn_create_working_resource(const dav_resource *base,
+                                              const char *activity_id,
+                                              const char *txn_name,
+                                              const char *repos_path)
+{
+  dav_resource_combined *comb;
+  svn_string_t *path = svn_string_createf(base->pool, "/%s/wrk/%s/%s",
+                                          base->info->repos->special_uri,
+                                          activity_id, repos_path);
+  
+
+  comb = apr_pcalloc(base->pool, sizeof(*comb));
+
+  comb->res.type = DAV_RESOURCE_TYPE_WORKING;
+  comb->res.exists = 1;         /* ### not necessarily true */
+  comb->res.collection = 0;     /* ### not necessarily true */
+  comb->res.versioned = 1;
+  comb->res.baselined = 0;      /* ### not necessarily true */
+  comb->res.working = 1;
+  comb->res.uri = apr_pstrcat(base->pool, base->info->repos->root_path,
+                              path->data, NULL);
+  comb->res.info = &comb->priv;
+  comb->res.hooks = &dav_svn_hooks_repos;
+  comb->res.pool = base->pool;
+
+  comb->priv.uri_path = path;
+  comb->priv.repos = base->info->repos;
+  comb->priv.object_name = repos_path;
+  comb->priv.activity_id = activity_id;
+  comb->priv.txn_name = txn_name;
+
+  return &comb->res;
 }
 
 
