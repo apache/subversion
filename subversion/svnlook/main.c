@@ -305,10 +305,17 @@ contents_to_tmp_file (svn_stringbuf_t **name,
   apr_status_t apr_err;
   svn_stringbuf_t *prefix;
   svn_stringbuf_t *d, *b;
-      
-  svn_path_split (path, &d, &b, svn_path_repos_style, pool);
-  prefix = svn_stringbuf_create 
-    (apr_psprintf (pool, "tmp.%s", b ? b->data : "null"), pool);
+
+  if (path)
+    {
+      svn_path_split (path, &d, &b, svn_path_repos_style, pool);
+      prefix = svn_stringbuf_create 
+        (apr_psprintf (pool, "tmp.%s", b ? b->data : "null"), pool);
+    }
+  else
+    {
+      prefix = svn_stringbuf_create ("tmp.null", pool);
+    }
 
   /* Open a unique file.  We'll be dumping the contents of the
      current file there. */
@@ -391,7 +398,11 @@ print_diff_tree (svn_fs_root_t *root,
                                                    " -u %s %s",
                                                    fname2->data,
                                                    fname1->data));
-      printf ("Index: %s\n", path->data);
+      printf ("%s: %s\n", 
+              ((tmp_node->action == 'A') ? "Added" : 
+               ((tmp_node->action == 'D') ? "Deleted" :
+                ((tmp_node->action == 'R') ? "Modified" : "Index"))),
+              path->data);
       printf ("===============================================================\
 ===============\n");
       fflush (stdout);
