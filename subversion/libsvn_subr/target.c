@@ -33,14 +33,13 @@
 /*** Code. ***/
 
 svn_error_t *
-svn_path_condense_targets (const char **pbasedir,
+svn_path_condense_targets (const char **pcommon,
                            apr_array_header_t **pcondensed_targets,
                            const apr_array_header_t *targets,
                            svn_boolean_t remove_redundancies,
                            apr_pool_t *pool)
 {
   int i, j, num_condensed = targets->nelts;
-  const char *file;
   svn_boolean_t *removed;
   apr_array_header_t *abs_targets;
   int basedir_len;
@@ -48,7 +47,7 @@ svn_path_condense_targets (const char **pbasedir,
   /* Early exit when there's no data to work on. */
   if (targets->nelts <= 0)
     {
-      *pbasedir = NULL;
+      *pcommon = NULL;
       if (pcondensed_targets)
         *pcondensed_targets = NULL;
       return SVN_NO_ERROR;
@@ -56,7 +55,7 @@ svn_path_condense_targets (const char **pbasedir,
 
 
   /* Copy the targets array, but with absolute paths instead of
-     relative.  Also, find the pbasedir argument by finding what is
+     relative.  Also, find the pcommon argument by finding what is
      common in all of the absolute paths. NOTE: This is not as
      efficient as it could be.  The calculation of the basedir
      could be done in the loop below, which would save some calls to
@@ -67,11 +66,11 @@ svn_path_condense_targets (const char **pbasedir,
   removed = apr_pcalloc (pool, (targets->nelts * sizeof (svn_boolean_t)));
   abs_targets = apr_array_make (pool, targets->nelts, sizeof (const char *));
   
-  SVN_ERR (svn_path_get_absolute (pbasedir,
+  SVN_ERR (svn_path_get_absolute (pcommon,
                                   ((const char **) targets->elts)[0],
                                   pool));
   
-  (*((const char **)apr_array_push (abs_targets))) = *pbasedir;
+  (*((const char **)apr_array_push (abs_targets))) = *pcommon;
   
   for (i = 1; i < targets->nelts; ++i)
     {
@@ -79,9 +78,7 @@ svn_path_condense_targets (const char **pbasedir,
       const char *absolute;
       SVN_ERR (svn_path_get_absolute (&absolute, rel, pool));
       (*((const char **)apr_array_push (abs_targets))) = absolute;
-      *pbasedir = svn_path_get_longest_ancestor (*pbasedir, 
-                                                 absolute, 
-                                                 pool);
+      *pcommon = svn_path_get_longest_ancestor (*pcommon, absolute, pool);
     }
   
   if (pcondensed_targets != NULL)
@@ -91,7 +88,7 @@ svn_path_condense_targets (const char **pbasedir,
           /* Find the common part of each pair of targets.  If
              common part is equal to one of the paths, the other
              is a child of it, and can be removed.  If a target is
-             equal to *pbasedir, it can also be removed. */
+             equal to *pcommon, it can also be removed. */
 
           /* First pass: when one non-removed target is a child of
              another non-removed target, remove the child. */
@@ -131,14 +128,14 @@ svn_path_condense_targets (const char **pbasedir,
                 }
             }
           
-          /* Second pass: when a target is the same as *pbasedir,
+          /* Second pass: when a target is the same as *pcommon,
              remove the target. */
           for (i = 0; i < abs_targets->nelts; ++i)
             {
               const char *abs_targets_i 
                 = ((const char **) abs_targets->elts)[i];
 
-              if ((strcmp (abs_targets_i, *pbasedir) == 0) && (! removed[i]))
+              if ((strcmp (abs_targets_i, *pcommon) == 0) && (! removed[i]))
                 {
                   removed[i] = TRUE;
                   num_condensed--;
@@ -147,7 +144,7 @@ svn_path_condense_targets (const char **pbasedir,
         }
       
       /* Now create the return array, and copy the non-removed items */
-      basedir_len = strlen (*pbasedir);
+      basedir_len = strlen (*pcommon);
       *pcondensed_targets = apr_array_make (pool, num_condensed,
                                             sizeof (const char *));
       
@@ -164,7 +161,7 @@ svn_path_condense_targets (const char **pbasedir,
           if (basedir_len > 0)
             {
               /* Only advance our pointer past a path separator if
-                 REL_ITEM isn't the same as *PBASEDIR.  */
+                 REL_ITEM isn't the same as *PCOMMON.  */
               rel_item += basedir_len;
               if (rel_item[0])
                 rel_item++;
@@ -172,18 +169,6 @@ svn_path_condense_targets (const char **pbasedir,
           
           (*((const char **)apr_array_push (*pcondensed_targets)))
             = apr_pstrdup (pool, rel_item);
-        }
-    }
-  
-  /* Finally check if pbasedir is a dir or a file (or a URL). */
-  if (! svn_path_is_url (*pbasedir))
-    {
-      SVN_ERR (svn_path_split_if_file (*pbasedir, pbasedir, &file, pool));
-      if ((pcondensed_targets != NULL) && (! svn_path_is_empty (file)))
-        {
-          /* If there was just one target, and it was a file, then
-             return it as the sole condensed target. */
-          (*((const char **)apr_array_push (*pcondensed_targets))) = file;
         }
     }
   
