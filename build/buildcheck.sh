@@ -32,6 +32,13 @@ if test "$1" = "2" -a "$2" -lt "50" || test "$1" -lt "2"; then
   echo "            for details.)"
   exit 1
 fi
+if test "$ac_version" = "2.58"; then
+  echo "buildcheck: autoconf version 2.58 found."
+  echo "            This version of autoconf is broken.  Please install at"
+  echo "            least autoconf 2.59 or downgrade to version 2.57 which"
+  echo "            is known to work."
+  exit 1
+fi
 
 echo "buildcheck: autoconf version $ac_version (ok)"
 
