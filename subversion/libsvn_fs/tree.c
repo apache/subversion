@@ -112,6 +112,9 @@ struct svn_fs_root_t
      afresh every time, since the root may have been cloned, or
      the transaction may have disappeared altogether.  */
   dag_node_t *root_dir;
+
+  /* Cache, mapping const char * PATH to const svn_fs_id_t NODE-REV-ID. */
+  apr_hash_t *node_id_cache;
 };
 
 
@@ -630,7 +633,12 @@ typedef enum open_path_flags_t {
    but if the final path component doesn't exist, simply return a path
    whose bottom `node' member is zero.  This option is useful for
    callers that create new nodes --- we find the parent directory for
-   them, and tell them whether the entry exists already. */
+   them, and tell them whether the entry exists already.
+
+   NOTE: Public interfaces which only *read* from the filesystem
+   should not call this function directly, but should instead use 
+   get_dag().
+*/
 static svn_error_t *
 open_path (parent_path_t **parent_path_p,
            svn_fs_root_t *root,
@@ -1180,11 +1188,11 @@ static svn_error_t *
 txn_body_node_proplist (void *baton, trail_t *trail)
 {
   struct node_proplist_args *args = baton;
-  parent_path_t *parent_path;
+  dag_node_t *node;
   apr_hash_t *proplist;
 
-  SVN_ERR (open_path (&parent_path, args->root, args->path, 0, trail));
-  SVN_ERR (svn_fs__dag_get_proplist (&proplist, parent_path->node, trail));
+  SVN_ERR (get_dag (&node, args->root, args->path, trail));
+  SVN_ERR (svn_fs__dag_get_proplist (&proplist, node, trail));
   *args->table_p = proplist ? proplist : apr_hash_make (trail->pool);
   return SVN_NO_ERROR;
 }
@@ -1293,17 +1301,12 @@ static svn_error_t *
 txn_body_props_changed (void *baton, trail_t *trail)
 {
   struct things_changed_args *args = baton;
-  parent_path_t *parent_path_1, *parent_path_2;
+  dag_node_t *node1, *node2;
 
-  SVN_ERR (open_path (&parent_path_1, args->root1, args->path1, 0, trail));
-  SVN_ERR (open_path (&parent_path_2, args->root2, args->path2, 0, trail));
-
-  SVN_ERR (svn_fs__things_different (args->changed_p,
-                                     NULL,
-                                     parent_path_1->node,
-                                     parent_path_2->node,
-                                     trail));
-
+  SVN_ERR (get_dag (&node1, args->root1, args->path1, trail));
+  SVN_ERR (get_dag (&node2, args->root2, args->path2, trail));
+  SVN_ERR (svn_fs__things_different (args->changed_p, NULL, 
+                                     node1, node2, trail));
   return SVN_NO_ERROR;
 }
 
@@ -2566,13 +2569,13 @@ txn_body_dir_entries (void *baton,
                       trail_t *trail)
 {
   struct dir_entries_args *args = baton;
-  parent_path_t *parent_path;
+  dag_node_t *node;
   apr_hash_t *entries;
 
-  SVN_ERR (open_path (&parent_path, args->root, args->path, 0, trail));
+  SVN_ERR (get_dag (&node, args->root, args->path, trail));
 
   /* Get the entries for PARENT_PATH. */
-  SVN_ERR (svn_fs__dag_dir_entries (&entries, parent_path->node, trail));
+  SVN_ERR (svn_fs__dag_dir_entries (&entries, node, trail));
 
   /* Potentially initialize the return value to an empty hash. */
   *args->table_p = entries ? entries : apr_hash_make (trail->pool);
@@ -2801,17 +2804,15 @@ txn_body_copy (void *baton,
   const char *from_path = args->from_path;
   svn_fs_root_t *to_root = args->to_root;
   const char *to_path = args->to_path;
-  parent_path_t *from_parent_path;
+  dag_node_t *from_node;
   parent_path_t *to_parent_path;
 
   if (! svn_fs_is_revision_root (from_root))
     return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                              "copy from mutable tree not currently supported");
 
-  /* Build up the parent path from FROM_PATH, making sure that it
-     exists in FROM_ROOT */
-  SVN_ERR (open_path (&from_parent_path, from_root, from_path, 
-                      0, trail));
+  /* Get the NODE for FROM_PATH in FROM_ROOT.*/
+  SVN_ERR (get_dag (&from_node, from_root, from_path, trail));
 
   /* Build up the parent path from TO_PATH in TO_ROOT.  If the last
      component does not exist, it's not that big a deal.  We'll just
@@ -2838,7 +2839,7 @@ txn_body_copy (void *baton,
 
       SVN_ERR (svn_fs__dag_copy (to_parent_path->parent->node,
                                  to_parent_path->entry,
-                                 from_parent_path->node,
+                                 from_node,
                                  args->preserve_history,
                                  svn_fs_revision_root_revision (from_root),
                                  from_path, txn_id, trail));
@@ -2929,14 +2930,11 @@ static svn_error_t *
 txn_body_copied_from (void *baton, trail_t *trail)
 {
   struct copied_from_args *args = baton;
-  parent_path_t *path_down;
+  dag_node_t *node;
 
-  SVN_ERR (open_path (&path_down, args->root, args->path, 0, trail));
-  SVN_ERR (svn_fs__dag_copied_from (&(args->result_rev),
-                                    &(args->result_path),
-                                    path_down->node,
-                                    trail));
-
+  SVN_ERR (get_dag (&node, args->root, args->path, trail));
+  SVN_ERR (svn_fs__dag_copied_from (&(args->result_rev), &(args->result_path),
+                                    node, trail));
   return SVN_NO_ERROR;
 }
 
@@ -3542,17 +3540,12 @@ static svn_error_t *
 txn_body_contents_changed (void *baton, trail_t *trail)
 {
   struct things_changed_args *args = baton;
-  parent_path_t *parent_path_1, *parent_path_2;
+  dag_node_t *node1, *node2;
 
-  SVN_ERR (open_path (&parent_path_1, args->root1, args->path1, 0, trail));
-  SVN_ERR (open_path (&parent_path_2, args->root2, args->path2, 0, trail));
-
-  SVN_ERR (svn_fs__things_different (NULL,
-                                     args->changed_p,
-                                     parent_path_1->node,
-                                     parent_path_2->node,
-                                     trail));
-
+  SVN_ERR (get_dag (&node1, args->root1, args->path1, trail));
+  SVN_ERR (get_dag (&node2, args->root2, args->path2, trail));
+  SVN_ERR (svn_fs__things_different (NULL, args->changed_p,
+                                     node1, node2, trail));
   return SVN_NO_ERROR;
 }
 
