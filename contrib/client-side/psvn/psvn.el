@@ -1808,28 +1808,34 @@ If called with a prefix ARG, unmark all such files."
   (setq svn-status-hide-unmodified (not svn-status-hide-unmodified))
   (svn-status-update-buffer))
 
-(defun svn-status-goto-file-name (name)
-  ;; (message "svn-status-goto-file-name: %s %d" name (point))
+(defun svn-status-get-file-name-buffer-position (name)
+  "Find the buffer position for a file.
+If the file is not found, return nil."
   (let ((start-pos (point))
         (found))
-    ;; performance optimization: search from point to end of buffer
-    (while (and (not found) (< (point) (point-max)))
-      (goto-char (next-overlay-change (point)))
-      (when (string= name (svn-status-line-info->filename
+	;; performance optimization: search from point to end of buffer
+	(while (and (not found) (< (point) (point-max)))
+	  (goto-char (next-overlay-change (point)))
+	  (when (string= name (svn-status-line-info->filename
                            (svn-status-get-line-information)))
         (setq start-pos (+ (point) svn-status-default-column))
         (setq found t)))
-    ;; search from buffer start to point
-    (goto-char (point-min))
-    (while (and (not found) (< (point) start-pos))
-      (goto-char (next-overlay-change (point)))
-      (when (string= name (svn-status-line-info->filename
+	;; search from buffer start to point
+	(goto-char (point-min))
+	(while (and (not found) (< (point) start-pos))
+	  (goto-char (next-overlay-change (point)))
+	  (when (string= name (svn-status-line-info->filename
                            (svn-status-get-line-information)))
         (setq start-pos (+ (point) svn-status-default-column))
         (setq found t)))
-    (unless found
-      (message "Warning: svn-status-goto-file-name: %s not found" name))
-    (goto-char start-pos)))
+	(and found start-pos)))
+
+(defun svn-status-goto-file-name (name)
+  "Move the cursor the the line that displays NAME."
+  (let ((pos (svn-status-get-file-name-buffer-position name)))
+    (if pos
+        (goto-char pos)
+      (message "Warning: svn-status-goto-file-name: %s not found" name))))
 
 (defun svn-status-find-info-for-file-name (name)
   (let* ((st-info svn-status-info)
@@ -2218,11 +2224,17 @@ Recommended values are ?m or ?M.")
                                                 svn-status-file-modified-after-save-flag)
             (save-window-excursion
               (set-buffer "*svn-status*")
-              (svn-status-goto-file-name i-fname)
-              (let ((buffer-read-only nil))
-                (delete-region (point-at-bol) (point-at-eol))
-                (svn-insert-line-in-status-buffer (car st-info))
-                (delete-char 1))))
+              (let ((buffer-read-only nil)
+                    (pos (svn-status-get-file-name-buffer-position i-fname)))
+                (if pos
+                    (progn
+                      (goto-char pos)
+                      (delete-region (point-at-bol) (point-at-eol))
+                      (svn-insert-line-in-status-buffer (car st-info))
+                      (delete-char 1))
+                  (message "psvn: file %s not found, updating *svn-status* buffer content..."
+                           i-fname)
+                  (svn-status-update-buffer)))))
           (setq st-info (cdr st-info))))))
   nil)
 
