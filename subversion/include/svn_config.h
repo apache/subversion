@@ -151,8 +151,8 @@ svn_error_t *svn_config_merge (svn_config_t *cfg,
  * If @a cfg is @c NULL, just sets @a *valuep to @a default_value. If
  * the value does not exist, expand and return @a default_value.
  *
- * The returned value will be valid at least until the next call to @t
- * svn_config_get, or for the lifetime of @a default_value. It is
+ * The returned value will be valid at least until the next call to
+ * @c svn_config_get, or for the lifetime of @a default_value. It is
  * safest to consume the returned value immediately.
  *
  * This function may change @a cfg by expanding option values.
@@ -170,7 +170,7 @@ void svn_config_set (svn_config_t *cfg,
                      const char *section, const char *option,
                      const char *value);
 
-/** Like @t svn_config_get, but for boolean values.
+/** Like @c svn_config_get, but for boolean values.
  *
  * Parses the option as a boolean value. The recognized representations
  * are 'true'/'false', 'yes'/'no', 'on'/'off', '1'/'0'; case does not
@@ -180,7 +180,7 @@ svn_error_t *svn_config_get_bool (svn_config_t *cfg, svn_boolean_t *valuep,
                                   const char *section, const char *option,
                                   svn_boolean_t default_value);
 
-/** Like @t svn_config_set, but for boolean values.
+/** Like @c svn_config_set, but for boolean values.
  *
  * Sets the option to 'true'/'false', depending on @a value.
  */
