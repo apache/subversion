@@ -25,7 +25,6 @@
 #include "../util/skel.h"
 #include "../util/fs_skels.h"
 #include "../trail.h"
-#include "../validate.h"
 #include "../id.h"
 #include "copies-table.h"
 
