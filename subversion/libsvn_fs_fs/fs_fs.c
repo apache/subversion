@@ -48,6 +48,100 @@
    
 */
 
+/* Read a text representation of an apr_hash from STREAM into the hash
+   object HASH.  Allocations are from POOL.  This is copied directly
+   from svn_hash_read, with file reads replaced by stream reads. */
+static svn_error_t *
+hash_read (apr_hash_t *hash,
+           svn_stream_t *stream,
+           apr_pool_t *pool)
+{
+  svn_error_t *err;
+  svn_stringbuf_t *stringbuf;
+  svn_boolean_t eof;
+  char buf[SVN_KEYLINE_MAXLEN];
+  apr_size_t num_read;
+  char c;
+  int first_time = 1;
+
+
+  while (1)
+    {
+      /* Read a key length line.  Might be END, though. */
+      apr_size_t len = sizeof (buf);
+
+      SVN_ERR (svn_stream_readline (stream, &stringbuf, "\n", &eof, pool));
+      if (eof)
+        {
+          /* We got an EOF on our very first attempt to read, which
+             means it's a zero-byte file.  No problem, just go home. */
+          svn_error_clear (err);
+          return SVN_NO_ERROR;
+        }
+      first_time = 0;
+
+      if ((strcmp (stringbuf->data, "END") == 0)
+          || (strcmp (stringbuf->data, "PROPS-END") == 0))
+        {
+          /* We've reached the end of the dumped hash table, so leave. */
+          return SVN_NO_ERROR;
+        }
+      else if ((stringbuf->data[0] == 'K') && (stringbuf->data[1] == ' '))
+        {
+          /* Get the length of the key */
+          size_t keylen = (size_t) atoi (stringbuf->data + 2);
+
+          /* Now read that much into a buffer, + 1 byte for null terminator */
+          void *keybuf = apr_palloc (pool, keylen + 1);
+          SVN_ERR (svn_stream_read (stream, keybuf, &keylen));
+          ((char *) keybuf)[keylen] = '\0';
+
+          /* Suck up extra newline after key data */
+          len = 1;
+          SVN_ERR (svn_stream_read (stream, &c, &len));
+          
+          if (c != '\n')
+            return svn_error_create (SVN_ERR_MALFORMED_FILE, NULL, NULL);
+
+          /* Read a val length line */
+          SVN_ERR (svn_stream_readline (stream, &stringbuf, "\n", &eof, pool));
+
+          if ((stringbuf->data[0] == 'V') && (stringbuf->data[1] == ' '))
+            {
+              svn_string_t *value = apr_palloc (pool, sizeof (*value));
+
+              /* Get the length of the value */
+              int vallen = atoi (stringbuf->data + 2);
+
+              /* Again, 1 extra byte for the null termination. */
+              void *valbuf = apr_palloc (pool, vallen + 1);
+              SVN_ERR (svn_stream_read (stream, valbuf, &vallen));
+              ((char *) valbuf)[vallen] = '\0';
+
+              /* Suck up extra newline after val data */
+              len = 1;
+              SVN_ERR (svn_stream_read (stream, &c, &len));
+              
+              if (c != '\n')
+                return svn_error_create (SVN_ERR_MALFORMED_FILE, NULL, NULL);
+
+              value->data = valbuf;
+              value->len = vallen;
+
+              /* The Grand Moment:  add a new hash entry! */
+              apr_hash_set (hash, keybuf, keylen, value);
+            }
+          else
+            {
+              return svn_error_create (SVN_ERR_MALFORMED_FILE, NULL, NULL);
+            }
+        }
+      else
+        {
+          return svn_error_create (SVN_ERR_MALFORMED_FILE, NULL, NULL);
+        }
+    } /* while (1) */
+}
 
 svn_error_t *
 svn_fs__fs_open (svn_fs_t *fs, const char *path, apr_pool_t *pool)
@@ -393,7 +487,6 @@ svn_fs__fs_put_node_revision (svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
-
 svn_error_t *
 svn_fs__fs_get_proplist (apr_hash_t **proplist_p,
                          svn_fs_t *fs,
@@ -428,38 +521,47 @@ svn_fs__fs_get_proplist (apr_hash_t **proplist_p,
 
 /* This structure is used to hold the information associated with a
    REP line. */
-typedef struct
+struct rep_args_t
 {
-  svn_boolean_t delta_base;
+  svn_boolean_t is_delta;
+  svn_boolean_t is_delta_vs_empty;
   
   svn_revnum_t delta_revision;
   apr_off_t delta_offset;
   apr_size_t delta_length;
-  
-} rep_args_t;
+};
 
 /* Read the next line from file FILE and parse it as a text
    representation entry.  Return the parsed entry in REP_ARGS_P.
    Perform all allocations in POOL. */
 svn_error_t *
-read_rep_line (rep_args_t **rep_args_p,
+read_rep_line (struct rep_args_t **rep_args_p,
                apr_file_t *file,
                apr_pool_t *pool)
 {
   char buffer[80];
-  char *space, *target_length;
-  apr_size_t limit;
+  char *str, *last_str;
   svn_boolean_t delta_base = FALSE;
-  rep_args_t *rep_args;
+  apr_size_t limit;
+  struct rep_args_t *rep_args;
   
   limit = sizeof (buffer);
   SVN_ERR (svn_io_read_length_line (file, buffer, &limit, pool));
 
   rep_args = apr_pcalloc (pool, sizeof (*rep_args));
-  rep_args->delta_base = FALSE;
+  rep_args->is_delta = FALSE;
 
-  if (strcmp (buffer, "REP") == 0)
+  if (strcmp (buffer, "PLAIN") == 0)
     {
+      *rep_args_p = rep_args;
+      return SVN_NO_ERROR;
+    }
+
+  if (strcmp (buffer, "DELTA") == 0)
+    {
+      /* This is a delta against the empty stream. */
+      rep_args->is_delta = TRUE;
+      rep_args->is_delta_vs_empty = TRUE;
       *rep_args_p = rep_args;
       return SVN_NO_ERROR;
     }
@@ -470,95 +572,6 @@ read_rep_line (rep_args_t **rep_args_p,
   
   return SVN_NO_ERROR;
 }
-
-
-svn_error_t *
-svn_fs__fs_rep_contents_dir (apr_hash_t **entries_p,
-                             svn_fs_t *fs,
-                             svn_fs__node_revision_t *noderev,
-                             apr_pool_t *pool)
-{
-  apr_file_t *rev_file;
-  apr_hash_t *entries;
-  apr_hash_index_t *hi;
-  rep_args_t *rep_args;
-
-  entries = apr_hash_make (pool);
-  /* If this node has no data representation. */
-  if (noderev->data_offset == -1)
-    {
-      *entries_p = entries;
-      return SVN_NO_ERROR;
-    }
-
-  SVN_ERR (open_and_seek_revision (&rev_file,
-                                   fs,
-                                   noderev->data_revision,
-                                   noderev->data_offset,
-                                   pool));
-
-  /* Read in the REP line, for directories it should never
-     reference a delta-base. */
-  SVN_ERR (read_rep_line (&rep_args, rev_file, pool));
-
-  if (rep_args->delta_base == TRUE)
-    {
-      return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
-                               "Directory has corrupt text entry");
-    }
-
-  SVN_ERR (svn_hash_read (entries, rev_file, pool));
-
-  /* Now convert this entries file into a hash of dirents. */
-  *entries_p = apr_hash_make (pool);
-
-  for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
-    {
-      const void *key;
-      apr_ssize_t klen;
-      void *val;
-      char *str_val;
-      char *str, *last_str;
-      svn_fs_dirent_t *dirent = apr_pcalloc (pool, sizeof (*dirent));
-      apr_hash_this (hi, &key, &klen, &val);
-
-      dirent->name = key;
-      str_val = apr_pstrdup (pool, *((char **)val));
-
-      str = apr_strtok (str_val, " ", &last_str);
-      if (str == NULL)
-          return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
-                                   "Directory entry corrupt");
-      
-      if (strcmp (str, SVN_FS_FS__FILE) == 0)
-        {
-          dirent->kind = svn_node_file;
-        }
-      else if (strcmp (str, SVN_FS_FS__DIR) == 0)
-        {
-          dirent->kind == svn_node_dir;
-        }
-      else
-        {
-          return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
-                                   "Directory entry corrupt");
-        }
-
-      str = apr_strtok (NULL, " ", &last_str);
-      if (str == NULL)
-        return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
-                                 "Directory entry corrupt");
-      
-      dirent->id = svn_fs_parse_id (str, strlen (str), pool);
-
-      apr_hash_set (*entries_p, key, klen, dirent);
-    }
-  
-  
-  return SVN_NO_ERROR;
-}
-
-
 
 /* Given a revision file REV_FILE, find the Node-ID of the header
    located at OFFSET and store it in *ID_P.  Allocate temporary
@@ -643,8 +656,6 @@ get_root_offset (apr_off_t *root_offset,
   return SVN_NO_ERROR;
 }
 
-  
-
 svn_error_t *
 svn_fs__fs_rev_get_root (svn_fs_id_t **root_id_p,
                          svn_fs_t *fs,
@@ -703,13 +714,303 @@ svn_fs__fs_revision_proplist (apr_hash_t **proplist_p,
   return SVN_NO_ERROR;
 }
 
+struct rep_read_baton
+{
+  /* The FS from which we're reading. */
+  svn_fs_t *fs;
+
+  /* Location of the representation we want to read. */
+  apr_file_t *rep_file;
+
+  /* How many bytes have been read from the rep file already. */
+  svn_filesize_t rep_offset;
+
+  /* How many bytes are there in this deltafied representation. */
+  apr_size_t rep_size;
+
+  /* Is this text-representation in delta format? */
+  svn_boolean_t is_delta;
+  
+  /* Streams to use with the delta handler. */
+  svn_stream_t *wstream, *target_stream;
+  
+  /* MD5 checksum.  Initialized when the baton is created, updated as
+     we read data, and finalized when the stream is closed. */
+  struct apr_md5_ctx_t md5_context;
+
+  /* The length of the rep's contents (as fulltext, that is,
+     independent of how the rep actually stores the data.)  This is
+     retrieved when the baton is created, and used to determine when
+     we have read the last byte, at which point we compare checksums.
+
+     Getting this at baton creation time makes interleaved reads and
+     writes on the same rep in the same trail impossible.  But we're
+     not doing that, and probably no one ever should.  And anyway if
+     they do, they should see problems immediately. */
+  svn_filesize_t size;
+
+  /* Set to FALSE when the baton is created, TRUE when the md5_context
+     is digestified. */
+  svn_boolean_t checksum_finalized;
+
+  /* Used for temporary allocations, iff `trail' (above) is null.  */
+  apr_pool_t *pool;
+
+  svn_stringbuf_t *nonconsumed_data;
+};
+
+/* Handler to be called when txdelta has a new window of data read.
+   BATON is of type rep_read_baton, DATA points to the data being
+   written and *LEN contains the length of data being written.
+
+   This function just buffers that data so that it can be read from
+   the content stream at the proper time.*/
+static svn_error_t *
+read_contents_write_handler (void *baton,
+                             const char *data,
+                             apr_size_t *len)
+{
+  struct rep_read_baton *b = baton;
+  
+  svn_stringbuf_appendbytes (b->nonconsumed_data, data, *len);
+
+  return SVN_NO_ERROR;
+}
+
+/* Create a rep_read_baton structure for node revision NODEREV in
+   filesystem FS and store it in *RB_P.  Perform all allocations in
+   POOL.
+
+   This opens the revision file and positions the file stream at the
+   beginning of the text representation.  In addition, if the
+   representation is in delta format, it sets up the delta handling
+   chain.
+*/
+static svn_error_t *
+rep_read_get_baton (struct rep_read_baton **rb_p,
+                    svn_fs_t *fs,
+                    svn_fs__node_revision_t *noderev,
+                    apr_pool_t *pool)
+{
+  struct rep_read_baton *b;
+  struct rep_args_t *rep_args;
+  svn_stream_t *empty_stream, *wstream, *target_stream;
+  svn_txdelta_window_handler_t handler;
+  void *handler_baton;
+
+  b = apr_pcalloc (pool, sizeof (*b));
+  apr_md5_init (&(b->md5_context));
+
+  b->fs = fs;
+  b->pool = pool;
+  b->rep_offset = 0;
+  b->rep_size = noderev->data_size;
+  b->size = noderev->data_expanded_size;
+  b->nonconsumed_data = svn_stringbuf_create ("", pool);
+  b->is_delta = FALSE;
+
+  /* Open the revision file. */
+  SVN_ERR (open_and_seek_revision (&b->rep_file, fs, noderev->data_revision,
+                                   noderev->data_offset, pool));
+
+  /* Read in the REP line. */
+  SVN_ERR (read_rep_line (&rep_args, b->rep_file, pool));
+
+  if (rep_args->is_delta)
+    {
+      /* Set up the delta handler. */
+      if (rep_args->is_delta_vs_empty == FALSE)
+        abort ();
+      
+      /* Create a stream that txdelta apply can write to, where we will
+         accumulate undeltified data. */
+      b->target_stream = svn_stream_create (b, pool);
+      svn_stream_set_write (b->target_stream, read_contents_write_handler);
+      
+      /* For now the empty stream is always our base revision. */
+      empty_stream = svn_stream_empty (pool);
+      
+      /* Create a handler that can process chunks of txdelta. */
+      svn_txdelta_apply (empty_stream, b->target_stream, NULL, NULL,
+                         pool, &handler, &handler_baton);
+
+      /* Create a writable stream that will call our handler when svndiff
+         data is written to it. */
+      b->wstream = svn_txdelta_parse_svndiff (handler, handler_baton, FALSE, pool);
+
+      b->is_delta = TRUE;
+    }
+
+  /* Save our output baton. */
+  *rb_p = b;
+
+  return SVN_NO_ERROR;
+}
+
+/* Handles closing the content stream.  BATON is of type
+   rep_read_baton. */
+static svn_error_t *
+rep_read_contents_close (void *baton)
+{
+  struct rep_read_baton *rb = baton;
+  
+  /* Clean up our baton. */
+  SVN_ERR (svn_io_file_close (rb->rep_file, rb->pool));
+  if (rb->wstream)
+    SVN_ERR (svn_stream_close (rb->wstream));
+
+  if (rb->target_stream)
+    SVN_ERR (svn_stream_close (rb->target_stream));
+
+  return SVN_NO_ERROR;
+}
+  
+
+/* BATON is of type `rep_read_baton':
+
+   Read into BATON->rb->buf the *(BATON->len) bytes starting at
+   BATON->rb->offset.  Afterwards, *LEN is the number of bytes
+   actually read, and BATON->rb->offset is incremented by that amount.
+*/
+
+static svn_error_t *
+rep_read_contents (void *baton,
+                   char *buf,
+                   apr_size_t *len)
+{
+  struct rep_read_baton *rb = baton;
+  apr_size_t size = 0;
+  char file_buf[4096];
+
+  if (rb->is_delta)
+    {
+
+      while (rb->nonconsumed_data->len < *len) {
+        /* Until we have enough data to return, keep trying to send out
+           more svndiff data. */
+        
+        size = sizeof (file_buf);
+        if (size > (rb->rep_size - rb->rep_offset))
+          size = rb->rep_size - rb->rep_offset;
+        
+        /* Check to see if we've read the entire representation. */
+        if (size == 0) break;
+        
+        SVN_ERR (svn_io_file_read (rb->rep_file, file_buf, &size, rb->pool));
+
+        rb->rep_offset += size;
+        
+        SVN_ERR (svn_stream_write (rb->wstream, file_buf, &size));
+      }
+      
+      /* Send out all the data we have, up to *len. */
+      size = *len;
+      if (size > rb->nonconsumed_data->len)
+        size = rb->nonconsumed_data->len;
+      
+      memcpy (buf, rb->nonconsumed_data->data, size);
+      
+      /* Remove the things we just wrote from the stringbuf. */
+      memmove (rb->nonconsumed_data->data, rb->nonconsumed_data + size,
+               rb->nonconsumed_data->len - size);
+      
+      svn_stringbuf_chop (rb->nonconsumed_data, size);
+      
+      *len = size;
+    }
+  else
+    {
+      /* This is a plaintext file. */
+
+      if ((*len + rb->rep_offset) > rb->size)
+        *len = rb->size - rb->rep_offset;
+      
+      SVN_ERR (svn_io_file_read_full (rb->rep_file, buf, *len, len, rb->pool));
+
+      rb->rep_offset += *len;
+    }
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_fs__fs_get_contents (svn_stream_t **contents_p,
                          svn_fs_t *fs,
                          svn_fs__node_revision_t *noderev,
                          apr_pool_t *pool)
 {
-  abort ();
+  struct rep_read_baton *rb;
+
+  SVN_ERR (rep_read_get_baton (&rb, fs, noderev, pool));
+  *contents_p = svn_stream_create (rb, pool);
+  svn_stream_set_read (*contents_p, rep_read_contents);
+  svn_stream_set_close (*contents_p, rep_read_contents_close);
+  
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs__fs_rep_contents_dir (apr_hash_t **entries_p,
+                             svn_fs_t *fs,
+                             svn_fs__node_revision_t *noderev,
+                             apr_pool_t *pool)
+{
+  svn_stream_t *rep;
+  apr_hash_t *entries;
+  apr_hash_index_t *hi;
+  struct rep_args_t *rep_args;
+
+  entries = apr_hash_make (pool);
+
+  /* Read in the directory hash. */
+  SVN_ERR (svn_fs__fs_get_contents (&rep, fs, noderev, pool));
+  SVN_ERR (hash_read (entries, rep, pool));
+  SVN_ERR (svn_stream_close (rep));
+
+  /* Now convert this entries file into a hash of dirents. */
+  *entries_p = apr_hash_make (pool);
+
+  for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
+    {
+      const void *key;
+      apr_ssize_t klen;
+      void *val;
+      char *str_val;
+      char *str, *last_str;
+      svn_fs_dirent_t *dirent = apr_pcalloc (pool, sizeof (*dirent));
+      apr_hash_this (hi, &key, &klen, &val);
+
+      dirent->name = key;
+      str_val = apr_pstrdup (pool, *((char **)val));
+
+      str = apr_strtok (str_val, " ", &last_str);
+      if (str == NULL)
+          return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
+                                   "Directory entry corrupt");
+      
+      if (strcmp (str, SVN_FS_FS__FILE) == 0)
+        {
+          dirent->kind = svn_node_file;
+        }
+      else if (strcmp (str, SVN_FS_FS__DIR) == 0)
+        {
+          dirent->kind == svn_node_dir;
+        }
+      else
+        {
+          return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
+                                   "Directory entry corrupt");
+        }
+
+      str = apr_strtok (NULL, " ", &last_str);
+      if (str == NULL)
+        return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
+                                 "Directory entry corrupt");
+      
+      dirent->id = svn_fs_parse_id (str, strlen (str), pool);
+
+      apr_hash_set (*entries_p, key, klen, dirent);
+    }
   
   return SVN_NO_ERROR;
 }
