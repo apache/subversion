@@ -1433,7 +1433,7 @@ svn_io_remove_dir (const char *path, apr_pool_t *pool)
   apr_status_t status;
   apr_dir_t *this_dir;
   apr_finfo_t this_entry;
-  apr_pool_t *subpool = svn_pool_create (pool);
+  apr_pool_t *subpool;
   apr_int32_t flags = APR_FINFO_TYPE | APR_FINFO_NAME;
   const char *path_apr;
 
@@ -1445,16 +1445,18 @@ svn_io_remove_dir (const char *path, apr_pool_t *pool)
      instead of just using svn_io_dir_open, because we're going to
      need path_apr later anyway when we remove the dir itself. */
 
-  SVN_ERR (svn_path_cstring_from_utf8 (&path_apr, path, subpool));
+  SVN_ERR (svn_path_cstring_from_utf8 (&path_apr, path, pool));
 
-  status = apr_dir_open (&this_dir, path_apr, subpool);
+  status = apr_dir_open (&this_dir, path_apr, pool);
   if (status)
     return svn_error_wrap_apr (status, _("Can't open directory '%s'"), path);
 
+  subpool = svn_pool_create (pool);
   for (status = apr_dir_read (&this_entry, flags, this_dir);
        status == APR_SUCCESS;
        status = apr_dir_read (&this_entry, flags, this_dir))
     {
+      svn_pool_clear (subpool);
       if ((this_entry.filetype == APR_DIR)
           && ((this_entry.name[0] == '.')
               && ((this_entry.name[1] == '\0')
@@ -1470,7 +1472,7 @@ svn_io_remove_dir (const char *path, apr_pool_t *pool)
           SVN_ERR (svn_path_cstring_to_utf8 (&entry_utf8, this_entry.name,
                                              subpool));
           
-          fullpath = svn_path_join (path, entry_utf8, pool);
+          fullpath = svn_path_join (path, entry_utf8, subpool);
 
           if (this_entry.filetype == APR_DIR)
             {
@@ -1492,6 +1494,8 @@ svn_io_remove_dir (const char *path, apr_pool_t *pool)
         }
     }
 
+  apr_pool_destroy (subpool);
+
   if (!APR_STATUS_IS_ENOENT (status))
     return svn_error_wrap_apr (status, _("Can't read directory '%s'"), path);
 
@@ -1499,12 +1503,10 @@ svn_io_remove_dir (const char *path, apr_pool_t *pool)
   if (status)
     return svn_error_wrap_apr (status, _("Error closing directory '%s'"), path);
 
-  status = apr_dir_remove (path_apr, subpool);
-  WIN32_RETRY_LOOP (status, apr_dir_remove (path_apr, subpool));
+  status = apr_dir_remove (path_apr, pool);
+  WIN32_RETRY_LOOP (status, apr_dir_remove (path_apr, pool));
   if (status)
     return svn_error_wrap_apr (status, _("Can't remove '%s'"), path);
-
-  apr_pool_destroy (subpool);
 
   return APR_SUCCESS;
 }
