@@ -192,8 +192,9 @@ send_to_repos (const svn_delta_edit_fns_t *before_editor,
                (session,
                 &editor, &edit_baton,
                 log_msg,
-                svn_wc_set_revision, /* revision bumping routine */
+                NULL,                /* todo: func that gets WC props */
                 NULL,                /* todo: func that sets WC props */
+                svn_wc_set_revision, /* revision bumping routine */
                 &ccb));              /* baton for both funcs */
     }
 
