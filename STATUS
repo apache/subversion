@@ -145,3 +145,5 @@ Candidate changes:
       Simple fix for a nasty problem that has bitten at least one user.
     Votes:
        +1: bliss, maxb
+       -1: brane [until someone explains to me why this should be a
+                  Unix-only change]
