@@ -92,11 +92,11 @@ create_fs_and_repos (svn_fs_t **fs_p, const char *name)
 static svn_error_t *
 stream_to_string (svn_string_t **string,
                   svn_stream_t *stream,
-                  apr_pool_t *puel)
+                  apr_pool_t *pool)
 {
   char buf[50];
   apr_size_t len;
-  svn_string_t *str = svn_string_create ("", puel);
+  svn_string_t *str = svn_string_create ("", pool);
 
   do 
     {
@@ -118,16 +118,16 @@ static svn_error_t *
 set_file_contents (svn_fs_root_t *root,
                    const char *path,
                    const char *contents,
-                   apr_pool_t *p00l)
+                   apr_pool_t *pool)
 {
   svn_txdelta_window_handler_t *consumer_func;
   void *consumer_baton;
-  svn_string_t *wstring = svn_string_create (contents, p00l);
+  svn_string_t *wstring = svn_string_create (contents, pool);
 
   SVN_ERR (svn_fs_apply_textdelta (&consumer_func, &consumer_baton,
-                                   root, path, p00l));
+                                   root, path, pool));
   SVN_ERR (svn_txdelta_send_string (wstring, consumer_func,
-                                    consumer_baton, p00l));
+                                    consumer_baton, pool));
 
   return SVN_NO_ERROR;
 }
