@@ -954,7 +954,7 @@ main (int argc, const char * const *argv)
         err = svn_string_from_file (&(opt_state.filedata), opt_arg, pool);
         if (err)
           {
-            svn_handle_error (err, stdout, FALSE);
+            svn_handle_error (err, stderr, FALSE);
             svn_pool_destroy (pool);
             return EXIT_FAILURE;
           }
@@ -973,7 +973,7 @@ main (int argc, const char * const *argv)
 	  err = svn_string_from_file (&buffer, opt_arg, pool);
 	  if (err)
 	    {
-	      svn_handle_error (err, stdout, FALSE);
+	      svn_handle_error (err, stderr, FALSE);
 	      svn_pool_destroy (pool);
 	      return EXIT_FAILURE;
 	    }
