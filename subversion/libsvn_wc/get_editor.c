@@ -131,6 +131,7 @@ struct handler_baton
 static void
 debug_dir_baton (struct dir_baton *d, const char *msg)
 {
+#if 0
   struct dir_baton *tmp;
 
   printf ("*** %s:\n", msg);
@@ -138,6 +139,7 @@ debug_dir_baton (struct dir_baton *d, const char *msg)
     printf ("   %s (%d), pool %p, baton itself %p\n",
             tmp->path->data, tmp->ref_count, tmp->pool, tmp);
   printf ("\n");
+#endif /* 0/1 */
 }
 
 

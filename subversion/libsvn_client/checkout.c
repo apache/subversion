@@ -128,7 +128,7 @@ svn_client_checkout (svn_string_t *path,
   svn_error_t *err;
   apr_status_t apr_err;
   char *repos = ":ssh:jrandom@subversion.tigris.org/repos";
-  apr_file_t *in;
+  apr_file_t *in = NULL;
 
   assert (path != NULL);
   assert (xml_src != NULL);
