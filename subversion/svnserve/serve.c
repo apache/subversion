@@ -352,6 +352,7 @@ static svn_error_t *commit(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   svn_boolean_t aborted;
   commit_callback_baton_t ccb;
   svn_revnum_t new_rev;
+  svn_error_t *err;
 
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c", &log_msg));
   SVN_CMD_ERR(must_not_be_read_only(b));
@@ -362,10 +363,12 @@ static svn_error_t *commit(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                           b->repos_url, b->fs_path, b->user,
                                           log_msg, commit_done, &ccb, pool));
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
-  SVN_ERR(svn_ra_svn_drive_editor(conn, pool, editor, edit_baton, FALSE,
-                                  &aborted));
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "r(?c)(?c)",
-                                 new_rev, date, author));
+  err = svn_ra_svn_drive_editor(conn, pool, editor, edit_baton, TRUE, &aborted);
+  if (err)
+    svn_error_clear (err); /* ### Should some errrors be returned? */
+  else
+    SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "r(?c)(?c)",
+                                   new_rev, date, author));
   return SVN_NO_ERROR;
 }
 
