@@ -1,4 +1,4 @@
-Version 0.18.1 (released 26 Feb 2003, revision 5116)
+Version 0.18.1 (released 26 Feb 2003, revision 5118)
 
  User-visible changes:
  * editor environment variables no longer incorrectly required
@@ -9,7 +9,7 @@ Version 0.18.1 (released 26 Feb 2003, revision 5116)
  * hot_backup.py now correctly removes old backups
 
  Developer-visible changes:
- * none
+ * various rpm package fixes
 
 
 Version 0.18.0 (released 19 Feb 2003, revision 4959)

@@ -15,8 +15,8 @@ Group: Utilities/System
 URL: http://subversion.tigris.org
 Source0: subversion-%{version}-%{release}.tar.gz
 Source1: subversion.conf
-Source2: rcsparse.py
 Patch0: install.patch
+Patch1: hang.patch
 Vendor: Summersoft
 Packager: David Summers <david@summersoft.fay.ar.us>
 Requires: httpd-apr >= %{apache_version}
@@ -201,6 +201,9 @@ sh autogen.sh
 # Fix up mod_dav_svn installation.
 %patch0 -p1
 
+# Fix subversion test hang during RA_SVN testing.
+%patch1 -p0
+
 # Brand release number into the displayed version number.
 RELEASE_NAME="r%{release}"
 export RELEASE_NAME
@@ -266,7 +269,7 @@ make clean
 make
 
 # Build cvs2svn python bindings
-make swig-py-ext
+make swig-py
 
 %if %{make_ra_local_check}
 echo "*** Running regression tests on RA_LOCAL (FILE SYSTEM) layer ***"
@@ -307,10 +310,13 @@ mkdir -p $RPM_BUILD_ROOT/etc/httpd/conf.d
 cp %{SOURCE1} $RPM_BUILD_ROOT/etc/httpd/conf.d
 
 # Install cvs2svn and supporting files
-make install-swig-py-ext DESTDIR=$RPM_BUILD_ROOT DISTUTIL_PARAM=--prefix=$RPM_BUILD_ROOT
+make install-swig-py DESTDIR=$RPM_BUILD_ROOT DISTUTIL_PARAM=--prefix=$RPM_BUILD_ROOT
 sed -e 's;#!/usr/bin/env python;#!/usr/bin/env python2;' < $RPM_BUILD_DIR/%{name}-%{version}/tools/cvs2svn/cvs2svn.py > $RPM_BUILD_ROOT/usr/bin/cvs2svn
 chmod a+x $RPM_BUILD_ROOT/usr/bin/cvs2svn
-cp %{SOURCE2} $RPM_BUILD_ROOT/usr/lib/python2.2/site-packages
+mkdir -p $RPM_BUILD_ROOT/usr/lib/python2.2/site-packages
+cp tools/cvs2svn/rcsparse.py $RPM_BUILD_ROOT/usr/lib/python2.2/site-packages
+mv $RPM_BUILD_ROOT/usr/lib/svn-python/svn $RPM_BUILD_ROOT/usr/lib/python2.2/site-packages
+rmdir $RPM_BUILD_ROOT/usr/lib/svn-python
 
 # Copy svnadmin.static to destination
 cp svnadmin.static $RPM_BUILD_ROOT/usr/bin/svnadmin-%{version}-%{release}.static
