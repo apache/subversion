@@ -1045,6 +1045,15 @@ static svn_error_t * reporter_delete_path(void *report_baton,
 }
 
 
+static svn_error_t * reporter_abort_report(void *report_baton)
+{
+  /* ## gstein:  this routine probably doesn't need to do anything but
+     delete rb->tmpfile, right?  */
+
+  return SVN_NO_ERROR;
+}
+
+
 static svn_error_t * reporter_finish_report(void *report_baton)
 {
   report_baton_t *rb = report_baton;
@@ -1097,7 +1106,8 @@ static svn_error_t * reporter_finish_report(void *report_baton)
 static const svn_ra_reporter_t ra_dav_reporter = {
   reporter_set_path,
   reporter_delete_path,
-  reporter_finish_report
+  reporter_finish_report,
+  reporter_abort_report
 };
 
 svn_error_t * svn_ra_dav__do_update(void *session_baton,

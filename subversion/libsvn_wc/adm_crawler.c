@@ -1549,6 +1549,7 @@ svn_wc_crawl_revisions (svn_stringbuf_t *path,
                         void *report_baton,
                         apr_pool_t *pool)
 {
+  svn_error_t *err;
   svn_wc_entry_t *entry;
   svn_revnum_t base_rev = SVN_INVALID_REVNUM;
 
@@ -1569,10 +1570,20 @@ svn_wc_crawl_revisions (svn_stringbuf_t *path,
     {
       /* Recursively crawl ROOT_DIRECTORY and report differing
          revisions. */
-      SVN_ERR (report_revisions (path,
-                                 svn_string_create ("", pool),
-                                 base_rev,
-                                 reporter, report_baton, pool));
+      err = report_revisions (path,
+                              svn_string_create ("", pool),
+                              base_rev,
+                              reporter, report_baton, pool);
+      if (err)
+        {
+          /* Clean up the fs transaction. */
+          svn_error_t *fserr;
+          fserr = reporter->abort_report (report_baton);
+          if (fserr)
+            return svn_error_quick_wrap (fserr, "Error aborting report.");
+          else
+            return err;
+        }
     }
   else if ((entry->kind == svn_node_file) 
            && (entry->revision != base_rev))
@@ -1582,13 +1593,33 @@ svn_wc_crawl_revisions (svn_stringbuf_t *path,
          of the report (not some file in a subdirectory of a target
          directory), and that target is a file, we need to pass an
          empty string to set_path. */
-      reporter->set_path (report_baton, 
-                          svn_string_create ("", pool),
-                          base_rev);
+      err = reporter->set_path (report_baton, 
+                                svn_string_create ("", pool),
+                                base_rev);
+      if (err)
+        {
+          /* Clean up the fs transaction. */
+          svn_error_t *fserr;
+          fserr = reporter->abort_report (report_baton);
+          if (fserr)
+            return svn_error_quick_wrap (fserr, "Error aborting report.");
+          else
+            return err;
+        }
     }
 
   /* Finish the report, which causes the update editor to be driven. */
-  SVN_ERR (reporter->finish_report (report_baton));
+  err = reporter->finish_report (report_baton);
+  if (err)
+    {
+      /* Clean up the fs transaction. */
+      svn_error_t *fserr;
+      fserr = reporter->abort_report (report_baton);
+      if (fserr)
+        return svn_error_quick_wrap (fserr, "Error aborting report.");
+      else
+        return err;
+    }
 
   return SVN_NO_ERROR;
 }

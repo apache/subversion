@@ -60,7 +60,8 @@ static const svn_ra_reporter_t ra_local_reporter =
 {
   svn_repos_set_path,
   svn_repos_delete_path,
-  svn_repos_finish_report
+  svn_repos_finish_report,
+  svn_repos_abort_report
 };
 
 
