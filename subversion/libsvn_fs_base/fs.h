@@ -33,6 +33,29 @@ extern "C" {
 
 /*** The filesystem structure.  ***/
 
+#define BDB_ERRCALL_BATON_ERRPFX_STRING "svn (bdb): "
+typedef struct
+{
+  /* Berkeley DB returns extended error info by callback before returning
+     an error code from the failing function.  The callback baton type is a 
+     string, not an arbitrary struct, so we prefix our struct with a valid 
+     string, to avoid problems should BDB ever try to interpret our baton as
+     a string.  Initializers of this structure must strcpy the value of
+     BDB_ERRCALL_BATON_ERRPFX_STRING into this array.  */
+  char errpfx_string[sizeof(BDB_ERRCALL_BATON_ERRPFX_STRING)];
+
+  /* We hold the extended info here until the Berkeley DB function returns.
+     It returns an error code, triggering the collection and wrapping of the
+     additional errors stored here.  */
+  svn_error_t *pending_errors;
+
+  /* We permitted clients of our library to install a Berkeley BDB errcall.  
+     Since we now use the errcall ourselves, we must store and invoke a user
+     errcall, to maintain our API guarantees. */
+  void (*user_callback) (const char *errpfx, char *msg);
+} bdb_errcall_baton_t;
+
+
 typedef struct
 {
   /* A Berkeley DB environment for all the filesystem's databases.
@@ -55,6 +78,8 @@ typedef struct
 
   /* The filesystem UUID (or NULL if not-yet-known; see svn_fs_get_uuid). */
   const char *uuid;
+
+  bdb_errcall_baton_t *errcall_baton;
 } base_fs_data_t;
 
 
