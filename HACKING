@@ -1,6 +1,92 @@
 If you are contributing code to the Subversion project, please read
 this first.
 
+                     ============================
+                     HACKER'S GUIDE TO SUBVERSION
+                     ============================
+              Last updated:  $Date: 2000-12-18 16:26:20 $
+
+
+TABLE OF CONTENTS
+
+  * Participating in the community
+  * What to read
+  * Building from a working copy
+  * Building on Win32
+  * Coding style
+  * Using page breaks
+  * Writing log entries
+  * Generating changelogs
+  * Other conventions
+  * Automated tests
+  * APR status codes
+
+
+
+Participating in the community
+==============================
+
+Although Subversion is originally sponsored and hosted by Collabnet
+(http://www.collab.net), it's a true open-source project under a
+BSD-style license.  A number of developers work for Collabnet, some
+work for other large companies (such as RedHat), and many others are
+simply excellent volunteers who are interested in building a better
+version control system.
+
+The community exists mainly through mailing lists and a CVS
+repository:
+
+ * Go to http://subversion.tigris.org and
+
+    * join the "dev", "cvs", and "announce" mailing lists.
+
+    * print out and digest the Spec.  (The postscript might look
+      better than the PDF.)  The Spec will give you a theoretical
+      overview of Subversion's design.
+
+
+
+What to read
+============
+x
+Before you can contribute code, you'll need to familiarize yourself
+with the existing codebase and interfaces.
+
+Check out a copy of Subversion (anonymously, if you don't yet have an
+account with commit-access) -- so you can look at the codebase.
+
+Within subversion/include/ are a bunch of header files with huge doc
+comments.  If you read through these, you'll have a pretty good
+understanding of the implementation details.  Here's a suggested
+perusal order:
+
+   * the basic building blocks:  svn_string.h, svn_error.h, svn_types.h
+
+   * useful utilities:  svn_io.h, svn_path.h, svn_hash.h, svn_xml.h
+
+   * the critical interface:  svn_delta.h
+
+   * client-side interfaces:  svn_ra.h, svn_wc.h, svn_client.h
+
+   * the repository filesystem: svn_fs.h
+
+
+Subversion tries to stay portable by using only ANSI/ISO C and by
+using the Apache Portable Runtime (APR) library.  APR is the
+portability layer used by the Apache httpd server, and more
+information can be found at http://apr.apache.org.
+
+Because Subversion depends so heavily on APR, it may be hard to
+understand Subversion without first glancing over certain header files
+in APR (look in apr/include/):
+
+   * memory pools:  apr_pools.h
+   
+   * filesystem access:  apr_file_io.h
+
+   * hashes and arrays:  apr_hash.h, apr_tables.h
+
+
 
 
 Building from a working copy
@@ -208,7 +294,7 @@ These guidelines are paraphrased from Jim Blandy's excellent essay
 
 
 Generating ChangeLogs
----------------------
+=====================
 
 Subversion does not keep ChangeLog files, because they're redundant
 with the CVS log entries.  But ChangeLog is an easier format to
