@@ -222,7 +222,8 @@ svn_auth_first_credentials (void **credentials,
 
       /* Put the creds in the cache */
       apr_hash_set(auth_baton->creds_cache,
-                   cache_key, APR_HASH_KEY_STRING,
+                   apr_pstrdup (auth_baton->pool, cache_key),
+                   APR_HASH_KEY_STRING,
                    creds);
     }
 
