@@ -1510,7 +1510,9 @@ svn_wc_cleanup (const char *path,
       else
         {
           /* "." and things that are not directories, check for mods to
-             trigger the timestamp repair mechanism */
+             trigger the timestamp repair mechanism.  Since this rewrites
+             the entries file for each timestamp fixed it has the potential
+             to be slow, perhaps we need something more sopisticated? */
           svn_boolean_t modified;
           SVN_ERR (svn_wc_props_modified_p (&modified, entry_path,
                                             adm_access, subpool));
