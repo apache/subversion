@@ -62,9 +62,15 @@ extern "C" {
  */
 typedef struct svn_wc_adm_access_t svn_wc_adm_access_t;
 
+/** Relocation validation callback typedef.
+ *
+ * Called for each relocated file/directory.  @a uuid contains the
+ * expected repository UUID, @url contains the tentative URL.
+ */
+
 typedef svn_error_t *svn_wc_relocation_validator(void *baton,
-                                                 const char *old,
-                                                 const char *new);
+                                                 const char *uuid,
+                                                 const char *url);
 
 /** Return, in @a *adm_access, a pointer to a new access baton for the working
  * copy administrative area associated with the directory @a path.  If
