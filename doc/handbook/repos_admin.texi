@@ -316,7 +316,7 @@ and data live in a set of tables within @file{repos/db/}.
 
 Berkeley DB comes with a number of tools for managing these files, and
 they have their own excellent documentation.  (See
-@url{http://www.sleepycat.com}, or just read man pages.)  We won't
+@uref{http://www.sleepycat.com}, or just read man pages.)  We won't
 cover all of these tools here; rather, we'll mention just a few of the
 more common procedures that repository administrators might need.
 
@@ -376,7 +376,7 @@ log.0000000029
 Subversion's own repository uses a post-commit-hook script, which,
 after performing a ``hot-backup'' of the repository, removes these
 excess logfiles.  (In the Subversion source tree, see
-@url{tools/backup/hot-backup.py})
+@uref{tools/backup/hot-backup.py})
 
 This script also illustrates the safe way to perform a backup of the
 repository while it's still up and running: recursively copy the
@@ -394,7 +394,7 @@ DB environment runs out of locks.  The maximum number of locks can be
 adjusted by changing the values in the @file{repos/db/DB_CONFIG}
 file.  Don't change the default values unless you know what you're
 doing;  be sure to read
-@url{http://www.sleepycat.com/docs/ref/lock/max.html} first.
+@uref{http://www.sleepycat.com/docs/ref/lock/max.html} first.
 
 
 @subsection Tweaking with svnadmin 
@@ -464,7 +464,7 @@ over a network.
 
 Subversion's primary network server is Apache httpd speaking
 WebDAV/deltaV protocol, which is a set of extension methods to http.
-(For more information on DAV, see @url{http://www.webdav.org}.)
+(For more information on DAV, see @uref{http://www.webdav.org}.)
 
 To network your repository, you'll need to
 
@@ -498,7 +498,7 @@ Somewhere near the bottom of your configuration file, define a new
 @end example
 
 This now makes your repository @file{myrepos} available at the URL
-@url{http://hostname/repos}, with no access restrictions at all:
+@uref{http://hostname/repos}, with no access restrictions at all:
 
 @itemize @bullet
 @item
@@ -581,7 +581,7 @@ AuthGroupFile /my/svn/group/file
 These are only a few simple examples.  For a complete tutorial on
 Apache access control, please consider taking a look at the
 ``Security'' tutorials found at
-@url{http://httpd.apache.org/docs-2.0/misc/tutorials.html}.
+@uref{http://httpd.apache.org/docs-2.0/misc/tutorials.html}.
 
 Another note: in order for 'svn cp' to work (which is actually
 implemented as a DAV COPY request), mod_dav needs to be able to be
@@ -599,7 +599,7 @@ additional names that your server is known by.
 
 (If you are unfamiliar with an Apache directive, or not exactly sure
 about what it does, don't hesitate to look it up in the documentation:
-@url{http://httpd.apache.org/docs-2.0/mod/directives.html}.)
+@uref{http://httpd.apache.org/docs-2.0/mod/directives.html}.)
 
 You can test your exported repository by firing up httpd:
 
@@ -756,7 +756,7 @@ of a read-only medium (as it mainly exists today.)  The theory is that
 directories and files can be shared over the web, using standardized
 extensions to HTTP.  RFC 2518 describes the WebDAV extensions to HTTP,
 and is available (along with a lot of other useful information) at
-@url{http://www.webdav.org}.
+@uref{http://www.webdav.org}.
 
 Already, a number of operating system file-browsers are able to mount
 networked directories using WebDAV.  On Win32, the Windows Explorer
@@ -767,7 +767,7 @@ GNOME.
 However, RFC 2518 doesn't fully implement the ``versioning'' aspect of
 WebDAV.  A separate committee has created RFC 3253, known as the
 @dfn{DeltaV} extensions to WebDAV, available at
-@url{http://www.webdav.org/deltav}.   These extensions add
+@uref{http://www.webdav.org/deltav}.   These extensions add
 version-control concepts to HTTP, and this is what Subversion uses.
 
 It's important to understand that while Subversion uses DeltaV for
@@ -790,4 +790,4 @@ client cannot checkout a working copy from a generic WebDAV server; it
 expects a specific subset of DeltaV features.
 
 For a detailed description of Subversion's WebDAV implementation, see
-@url{http://svn.collab.net/repos/svn-repos/trunk/www/webdav-usage.html}.
+@uref{http://svn.collab.net/repos/svn-repos/trunk/www/webdav-usage.html}.
