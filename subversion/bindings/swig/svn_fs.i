@@ -120,6 +120,14 @@
 }
 
 /* -----------------------------------------------------------------------
+   handle get_locks_func/get_locks_baton pairs.
+*/
+%typemap(python, in) (svn_fs_get_locks_callback_t get_locks_func, void *get_locks_baton) {
+  $1 = svn_swig_py_fs_get_locks_func;
+  $2 = $input; /* our function is the baton. */
+}
+
+/* -----------------------------------------------------------------------
    Fix the return value for svn_fs_commit_txn(). If the conflict result is
    NULL, then t_output_helper() is passed Py_None, but that goofs up
    because that is *also* the marker for "I haven't started assembling a

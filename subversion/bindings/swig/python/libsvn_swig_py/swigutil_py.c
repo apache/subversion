@@ -196,6 +196,10 @@ static PyObject *make_ob_status(void *ptr)
 {
   return make_pointer("svn_wc_status_t *", ptr);
 } 
+static PyObject *make_ob_lock(void *ptr)
+{
+  return make_pointer("svn_lock_t *", ptr);
+} 
 static PyObject *make_ob_fs_root(void *ptr)
 {
   return make_pointer("svn_fs_root_t *", ptr);
@@ -1295,6 +1299,35 @@ svn_error_t *svn_swig_py_cancel_func(void *cancel_baton)
   return err;
 }
 
+svn_error_t *svn_swig_py_fs_get_locks_func (void *baton, 
+                                            svn_lock_t *lock,
+                                            apr_pool_t *pool)
+{
+  PyObject *function = baton;
+  PyObject *result;
+  svn_error_t *err = SVN_NO_ERROR;
+
+  if (function == NULL || function == Py_None)
+    return SVN_NO_ERROR;
+
+  svn_swig_py_acquire_py_lock();
+  if ((result = PyObject_CallFunction(function, (char *)"O&O&",
+                                      make_ob_lock, lock,
+                                      make_ob_pool, pool)) == NULL)
+    {
+      err = callback_exception_error();
+    }
+  else
+    {
+      /* The callback shouldn't be returning anything. */
+      if (result != Py_None)
+        err = callback_bad_return_error("Not None");
+      Py_DECREF(result);
+    }
+
+  svn_swig_py_release_py_lock();
+  return err;
+}
 
 svn_error_t *svn_swig_py_get_commit_log_func(const char **log_msg,
                                              const char **tmp_file,
