@@ -2,7 +2,7 @@
 
      Inversion: A Version Control System You Actually Want To Use
      ------------------------------------------------------------
-              ($Revision: 1.22 $ of this document.)
+              ($Revision: 1.23 $ of this document.)
 
 * Introduction
 
@@ -637,8 +637,8 @@ diffs have been made yet.
 
 Step 3:  Make a lock.
 
-Now, there are two ways we can do locks: the naive way, and the right
-way.  The naive way is:
+Now, there are at least two ways we can do locks: the naive way, and
+the right way.  The naive way is:
 
   You make a lock on version 2.  If anyone else tries to commit
   version 2 from now until your lock is removed, they'll get bounced
@@ -686,7 +686,6 @@ foo:2 node (which in turn points to foo:1).
               |contents|          |contents|
               |________|          |________|
 
-
 The repository is still in a mostly sane state.  If the machine
 crashes now, there's this slightly weird situation in which a node for
 foo:2 is present in the tree, but myproj:2 doesn't exist yet.
@@ -727,8 +726,12 @@ diff against the next youngest node that cross-links to this one.)
               |contents|          |contents|
               |________|          |________|
 
+Even now, the repository is quite sane.  If someone wants to retrieve
+foo:1 (which is the only foo publicly available), the server will
+reconstruct it by patching foo:2, which, although not globally
+visible, is available to the server.
 
-Step 6:  Instantiate version 2 in the version array.  
+Step 6:  Instantiate version 2 in the version array.
 
             ____________________________
            |___1_______2________3_______---->
@@ -743,15 +746,14 @@ Step 6:  Instantiate version 2 in the version array.
            |__/___\__|
              /     \
             |       \
- 
+
 (Or, if you discover that someone else's commit finished faster than
 yours and version 2 already exists, then instantiate the next
 available version.  But what root node do you point to, if the interim
-commit created a new root node?  This is a the naive-vs-right locking
+commit created a new root node?  This is the naive-vs-right locking
 question, must figure this out...)
 
 Step 7:  Remove your lock, the commit is complete.
-
 
 ** How renames work
 
