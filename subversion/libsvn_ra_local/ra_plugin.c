@@ -96,13 +96,88 @@ cleanup_commit (svn_revnum_t new_rev,
 
 
 /* The reporter vtable needed by do_update() */
+typedef struct reporter_baton_t
+{
+  svn_ra_local__session_baton_t *session;
+  void *report_baton;
+
+} reporter_baton_t;
+
+
+static void *
+make_reporter_baton (svn_ra_local__session_baton_t *session,
+                     void *report_baton,
+                     apr_pool_t *pool)
+{
+  reporter_baton_t *rbaton = apr_palloc (pool, sizeof (*rbaton));
+  rbaton->session = session;
+  rbaton->report_baton = report_baton;
+  return rbaton;
+}
+
+
+static svn_error_t *
+reporter_set_path (void *reporter_baton,
+                   const char *path,
+                   svn_revnum_t revision)
+{
+  reporter_baton_t *rbaton = reporter_baton;
+  return svn_repos_set_path (rbaton->report_baton, path, revision);
+};
+
+
+static svn_error_t *
+reporter_delete_path (void *reporter_baton,
+                      const char *path)
+{
+  reporter_baton_t *rbaton = reporter_baton;
+  return svn_repos_delete_path (rbaton->report_baton, path);
+}
+
+
+static svn_error_t *
+reporter_link_path (void *reporter_baton,
+                    const char *path,
+                    const char *url,
+                    svn_revnum_t revision)
+{
+  reporter_baton_t *rbaton = reporter_baton;
+  const svn_string_t *repos_path = NULL, *fs_path = NULL;
+
+  /* Derive a FS path from URL. */
+  SVN_ERR (svn_ra_local__split_URL 
+           (&repos_path, &fs_path,
+            svn_stringbuf_create (url, rbaton->session->pool),
+            rbaton->session->pool));
+  
+  return svn_repos_link_path (rbaton->report_baton, path, 
+                              fs_path->data, revision);
+}
+
+
+static svn_error_t *
+reporter_finish_report (void *reporter_baton)
+{
+  reporter_baton_t *rbaton = reporter_baton;
+  return svn_repos_finish_report (rbaton->report_baton);
+}
+
+
+static svn_error_t *
+reporter_abort_report (void *reporter_baton)
+{
+  reporter_baton_t *rbaton = reporter_baton;
+  return svn_repos_abort_report (rbaton->report_baton);
+}
+
 
 static const svn_ra_reporter_t ra_local_reporter = 
 {
-  svn_repos_set_path,
-  svn_repos_delete_path,
-  svn_repos_finish_report,
-  svn_repos_abort_report
+  reporter_set_path,
+  reporter_delete_path,
+  reporter_link_path,
+  reporter_finish_report,
+  reporter_abort_report
 };
 
 
@@ -281,7 +356,6 @@ svn_ra_local__do_checkout (void *session_baton,
 }
 
 
-
 static svn_error_t *
 svn_ra_local__do_update (void *session_baton,
                          const svn_ra_reporter_t **reporter,
@@ -295,6 +369,7 @@ svn_ra_local__do_update (void *session_baton,
   svn_revnum_t revnum_to_update_to;
   svn_stringbuf_t *switch_path;
   svn_ra_local__session_baton_t *sbaton = session_baton;
+  void *rbaton;
 
   /* ### fix the update_target param at some point */
   const char *target;
@@ -315,17 +390,22 @@ svn_ra_local__do_update (void *session_baton,
   *reporter = &ra_local_reporter;
 
   /* Build a reporter baton. */
-  return svn_repos_begin_report (report_baton,
-                                 revnum_to_update_to,
-                                 sbaton->username,
-                                 sbaton->repos, 
-                                 sbaton->fs_path->data,
-                                 target, 
-                                 switch_path->data,
-                                 TRUE, /* send text-deltas */
-                                 recurse,
-                                 update_editor, update_baton,
-                                 sbaton->pool);
+  SVN_ERR (svn_repos_begin_report (&rbaton,
+                                   revnum_to_update_to,
+                                   sbaton->username,
+                                   sbaton->repos, 
+                                   sbaton->fs_path->data,
+                                   target, 
+                                   switch_path->data,
+                                   TRUE, /* send text-deltas */
+                                   recurse,
+                                   update_editor, update_baton,
+                                   sbaton->pool));
+  
+  /* Wrap the report baton given us by the repos layer with our own
+     reporter baton. */
+  *report_baton = make_reporter_baton (sbaton, rbaton, sbaton->pool);
+  return SVN_NO_ERROR;
 }
 
 
@@ -343,6 +423,7 @@ svn_ra_local__do_switch (void *session_baton,
   svn_revnum_t revnum_to_update_to;
   const svn_string_t *switch_repos_path, *switch_fs_path;
   svn_ra_local__session_baton_t *sbaton = session_baton;
+  void *rbaton;
 
   /* ### fix the update_target param at some point */
   const char *target;
@@ -371,17 +452,22 @@ svn_ra_local__do_switch (void *session_baton,
   *reporter = &ra_local_reporter;
 
   /* Build a reporter baton. */
-  return svn_repos_begin_report (report_baton,
-                                 revnum_to_update_to,
-                                 sbaton->username,
-                                 sbaton->repos, 
-                                 sbaton->fs_path->data,
-                                 target,
-                                 switch_fs_path->data,
-                                 TRUE, /* we want text-deltas */
-                                 recurse,
-                                 update_editor, update_baton,
-                                 sbaton->pool);
+  SVN_ERR (svn_repos_begin_report (&rbaton,
+                                   revnum_to_update_to,
+                                   sbaton->username,
+                                   sbaton->repos, 
+                                   sbaton->fs_path->data,
+                                   target,
+                                   switch_fs_path->data,
+                                   TRUE, /* we want text-deltas */
+                                   recurse,
+                                   update_editor, update_baton,
+                                   sbaton->pool));
+
+  /* Wrap the report baton given us by the repos layer with our own
+     reporter baton. */
+  *report_baton = make_reporter_baton (sbaton, rbaton, sbaton->pool);
+  return SVN_NO_ERROR;
 }
 
 
@@ -398,6 +484,7 @@ svn_ra_local__do_status (void *session_baton,
   svn_revnum_t revnum_to_update_to;
   svn_stringbuf_t *switch_path;
   svn_ra_local__session_baton_t *sbaton = session_baton;
+  void *rbaton;
 
   /* ### fix the status_target param at some point */
   const char *target;
@@ -415,17 +502,22 @@ svn_ra_local__do_status (void *session_baton,
   *reporter = &ra_local_reporter;
 
   /* Build a reporter baton. */
-  return svn_repos_begin_report (report_baton,
-                                 revnum_to_update_to,
-                                 sbaton->username,
-                                 sbaton->repos, 
-                                 sbaton->fs_path->data,
-                                 target,
-                                 switch_path->data,
-                                 FALSE, /* don't send text-deltas */
-                                 recurse,
-                                 status_editor, status_baton,
-                                 sbaton->pool);
+  SVN_ERR (svn_repos_begin_report (&rbaton,
+                                   revnum_to_update_to,
+                                   sbaton->username,
+                                   sbaton->repos, 
+                                   sbaton->fs_path->data,
+                                   target,
+                                   switch_path->data,
+                                   FALSE, /* don't send text-deltas */
+                                   recurse,
+                                   status_editor, status_baton,
+                                   sbaton->pool));
+
+  /* Wrap the report baton given us by the repos layer with our own
+     reporter baton. */
+  *report_baton = make_reporter_baton (sbaton, rbaton, sbaton->pool);
+  return SVN_NO_ERROR;
 }
 
 

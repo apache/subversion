@@ -25,11 +25,17 @@
    driven by the client as it describes its working copy revisions. */
 typedef struct svn_repos_report_baton_t
 {
+  svn_repos_t *repos;
+
   /* The transaction being built in the repository, a mirror of the
      working copy. */
-  svn_repos_t *repos;
   svn_fs_txn_t *txn;
   svn_fs_root_t *txn_root;
+
+  /* An optional second transaction used when preserving linked paths
+     in the delta report. */
+  svn_fs_txn_t *txn2;
+  svn_fs_root_t *txn2_root;
 
   /* Which user is doing the update (building the temporary txn) */
   const char *username;
@@ -140,6 +146,63 @@ svn_repos_set_path (void *report_baton,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_repos_link_path (void *report_baton,
+                     const char *path,
+                     const char *link_path,
+                     svn_revnum_t revision)
+{
+  svn_fs_root_t *from_root;
+  svn_stringbuf_t *from_path;
+  svn_repos_report_baton_t *rbaton = report_baton;
+  svn_revnum_t *rev_ptr = apr_palloc (rbaton->pool, sizeof(*rev_ptr));
+
+  /* If this is the very first call, no second txn exists yet. */
+  if (! rbaton->txn2)
+    {
+      /* Start a transaction based on the same revision as the first
+         transaction. */
+      SVN_ERR (svn_repos_fs_begin_txn_for_update (&(rbaton->txn2),
+                                                  rbaton->repos,
+                                                  rbaton->revnum_to_update_to,
+                                                  rbaton->username,
+                                                  rbaton->pool));
+      SVN_ERR (svn_fs_txn_root (&(rbaton->txn2_root), rbaton->txn2,
+                                rbaton->pool));
+      
+    }
+
+  /* The path we are dealing with is the anchor (where the
+     reporter is rooted) + target (the top-level thing being
+     reported) + path (stuff relative to the target...this is the
+     empty string in the file case since the target is the file
+     itself, not a directory containing the file). */
+  from_path = svn_stringbuf_create (rbaton->base_path, rbaton->pool);
+  if (rbaton->target)
+    svn_path_add_component (from_path, rbaton->target);
+  svn_path_add_component_nts (from_path, path);
+  
+  /* Copy into our txn. */
+  SVN_ERR (svn_fs_revision_root (&from_root, rbaton->repos->fs,
+                                 revision, rbaton->pool));
+  SVN_ERR (svn_fs_link (from_root, link_path,
+                        rbaton->txn_root, from_path->data, rbaton->pool));
+
+  /* Copy into our second "goal" txn (re-use FROM_ROOT). */
+  SVN_ERR (svn_fs_revision_root (&from_root, rbaton->repos->fs,
+                                 rbaton->revnum_to_update_to, rbaton->pool));
+  SVN_ERR (svn_fs_link (from_root, link_path,
+                        rbaton->txn2_root, from_path->data, rbaton->pool));
+  
+  /* Remember this path in our hashtable.  ### todo: Come back to
+     this, as the original hash table idea mapped only paths to
+     revisions, not paths to linkedpaths+revisions!  */
+  *rev_ptr = revision;
+  apr_hash_set (rbaton->path_rev_hash, from_path->data,
+                from_path->len, rev_ptr);    
+
+  return SVN_NO_ERROR;
+}
 
 
 svn_error_t *
@@ -159,7 +222,6 @@ svn_repos_delete_path (void *report_baton,
     svn_path_add_component (delete_path, rbaton->target);
   svn_path_add_component_nts (delete_path, path);
 
-
   /* Remove the file or directory (recursively) from the txn. */
   SVN_ERR (svn_fs_delete_tree (rbaton->txn_root, delete_path->data, 
                                rbaton->pool));
@@ -173,7 +235,7 @@ svn_repos_delete_path (void *report_baton,
 svn_error_t *
 svn_repos_finish_report (void *report_baton)
 {
-  svn_fs_root_t *rev_root;
+  svn_fs_root_t *target_root;
   svn_repos_report_baton_t *rbaton = (svn_repos_report_baton_t *) report_baton;
 
   /* If nothing was described, then we have an error */
@@ -183,10 +245,14 @@ svn_repos_finish_report (void *report_baton)
                             "svn_repos_finish_report: no transaction was "
                             "present, meaning no data was provided.");
 
-  /* Get the root of the revision we want to update to. */
-  SVN_ERR (svn_fs_revision_root (&rev_root, rbaton->repos->fs,
-                                 rbaton->revnum_to_update_to,
-                                 rbaton->pool));
+  /* Use the second transacation as a target if we made one, else get
+     the root of the revision we want to update to. */
+  if (rbaton->txn2)
+    target_root = rbaton->txn2_root;
+  else
+    SVN_ERR (svn_fs_revision_root (&target_root, rbaton->repos->fs,
+                                   rbaton->revnum_to_update_to,
+                                   rbaton->pool));
 
   /* Drive the update-editor. */
   SVN_ERR (svn_repos_dir_delta (rbaton->txn_root, 
@@ -194,7 +260,7 @@ svn_repos_finish_report (void *report_baton)
                                 rbaton->target ? 
                                 rbaton->target->data : NULL,
                                 rbaton->path_rev_hash,
-                                rev_root, 
+                                target_root, 
                                 rbaton->tgt_path,
                                 rbaton->update_editor,
                                 rbaton->update_edit_baton,
@@ -217,11 +283,12 @@ svn_repos_abort_report (void *report_baton)
 {
   svn_repos_report_baton_t *rbaton = (svn_repos_report_baton_t *) report_baton;
 
-  /* if we have a transaction, then abort it */
+  /* if we have transactions, then abort them. */
   if (rbaton->txn != NULL)
-    {
-      SVN_ERR (svn_fs_abort_txn (rbaton->txn));
-    }
+    SVN_ERR (svn_fs_abort_txn (rbaton->txn));
+
+  if (rbaton->txn2 != NULL)
+    SVN_ERR (svn_fs_abort_txn (rbaton->txn2));
 
   return SVN_NO_ERROR;
 }

@@ -49,7 +49,6 @@ struct context {
   svn_boolean_t recurse;
   svn_boolean_t entry_props;
   svn_boolean_t use_copyfrom_args;
-  int target_is_rev;
 };
 
 
@@ -240,7 +239,6 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
   c.source_root = src_root;
   c.source_rev_diffs = src_revs;
   c.target_root = tgt_root;
-  c.target_is_rev = svn_fs_is_revision_root (tgt_root);
   c.text_deltas = text_deltas;
   c.recurse = recurse;
   c.entry_props = entry_props;
@@ -251,10 +249,23 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
   c.use_copyfrom_args = FALSE;
 #endif
 
-  /* Set the global target revision if the target is a revision. */
-  if (c.target_is_rev)
-    SVN_ERR (editor->set_target_revision 
-             (edit_baton, svn_fs_revision_root_revision (tgt_root)));
+  /* Set the global target revision if one can be determined. */
+  if (svn_fs_is_revision_root (tgt_root))
+    {
+      SVN_ERR (editor->set_target_revision 
+               (edit_baton, svn_fs_revision_root_revision (tgt_root)));
+    }
+  else if (svn_fs_is_txn_root (tgt_root))
+    {
+      svn_fs_t *fs = svn_fs_root_fs (tgt_root);
+      const char *txn_name = svn_fs_txn_root_name (tgt_root, pool);
+      svn_fs_txn_t *txn;
+
+      SVN_ERR (svn_fs_open_txn (&txn, fs, txn_name, pool));
+      SVN_ERR (editor->set_target_revision 
+               (edit_baton, svn_fs_txn_base_revision (txn)));
+      SVN_ERR (svn_fs_close_txn (txn));
+    }
 
   /* Call open_root to get our root_baton... */
   SVN_ERR (editor->open_root 
@@ -630,7 +641,8 @@ send_text_delta (struct context *c,
 /* Make the appropriate edits on FILE_BATON to change its contents and
    properties from those in SOURCE_PATH to those in TARGET_PATH. */
 static svn_error_t *
-delta_files (struct context *c, void *file_baton,
+delta_files (struct context *c, 
+             void *file_baton,
              const char *source_path,
              const char *target_path,
              apr_pool_t *pool)

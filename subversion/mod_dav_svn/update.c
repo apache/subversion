@@ -236,7 +236,7 @@ static void close_helper(svn_boolean_t is_dir, item_baton_t *baton)
     /* ### special knowledge: svn_repos_dir_delta will never send
      *removals* of the commit-info "entry props". */
     if (baton->committed_rev)
-      send_xml(baton->uc, "<D:version-name>%ld</D:version-name>",
+      send_xml(baton->uc, "<D:version-name>%s</D:version-name>",
                baton->committed_rev);
       
     if (baton->committed_date)
@@ -609,16 +609,41 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
       {
         if (strcmp(child->name, "entry") == 0)
           {
-            svn_revnum_t rev;
             const char *path;
+            svn_revnum_t rev = SVN_INVALID_REVNUM;
+            const char *linkpath = NULL;
+            apr_xml_attr *this_attr = child->attr;
 
-            /* ### assume first/only attribute is the rev */
-            rev = SVN_STR_TO_REV(child->attr->value);
+            while (this_attr)
+              {
+                if (! strcmp (this_attr->name, "rev"))
+                  rev = SVN_STR_TO_REV(this_attr->value);
+                else if (! strcmp (this_attr->name, "linkpath"))
+                  linkpath = this_attr->value;
+
+                this_attr = this_attr->next;
+              }
+            
+            /* we require the `rev' attribute for this to make sense */
+            if (! SVN_IS_VALID_REVNUM (rev))
+              {
+                /* ### This removes the fs txn.  todo: check error. */
+                svn_repos_abort_report(rbaton);
+                serr = svn_error_create (SVN_ERR_XML_ATTRIB_NOT_FOUND, 0, 
+                                         NULL, resource->pool, "rev");
+                return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                           "A failure occurred while "
+                                           "recording one of the items of "
+                                           "working copy state.");
+              }
 
             /* get cdata, stipping whitespace */
             path = dav_xml_get_cdata(child, resource->pool, 1);
-
-            serr = svn_repos_set_path(rbaton, path, rev);
+            
+            if (! linkpath)
+              serr = svn_repos_set_path(rbaton, path, rev);
+            else
+              serr = svn_repos_link_path(rbaton, path, linkpath, rev);
             if (serr != NULL)
               {
                 /* ### This removes the fs txn.  todo: check error. */
