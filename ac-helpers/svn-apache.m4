@@ -86,7 +86,7 @@ if test -n "$APXS"; then
     APXS_CC="`$APXS -q CC`"
     APACHE_INCLUDES="$APACHE_INCLUDES -I$APXS_INCLUDE"
 
-    INSTALL_APACHE_RULE=install-mods-static
+    INSTALL_APACHE_RULE=install-mods-shared
 
     AC_SUBST(APXS)
     AC_SUBST(BINNAME)
