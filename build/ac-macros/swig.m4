@@ -166,9 +166,12 @@ AC_DEFUN(SVN_FIND_SWIG,
       for dir in $list; do
         SWIG_JAVA_INCLUDES="$SWIG_JAVA_INCLUDES -I$dir"
       done
-      dnl For now, we'll cheat and just use the compile and link from python.
+      dnl For now, use the compile and link from python as a base.
       SWIG_JAVA_COMPILE="$SWIG_PY_COMPILE"
-      SWIG_JAVA_LINK="$SWIG_PY_LINK"
+      dnl To relink our generated native binding libraries against
+      dnl libsvn_swig_java, we must include the latter's library path.
+      dnl ### Eventually reference somewhere under $(DESTDIR)?
+      SWIG_JAVA_LINK="$SWIG_PY_LINK -L\$(SWIG_BUILD_DIR)/.libs"
     fi
 
     if test "$PERL" != "none" -a "$SWIG_SUITABLE" = "yes" -a "$svn_swig_bindings_enable_perl" = "yes"; then

@@ -23,14 +23,6 @@ Candidate changes:
                    not sure an optimization like this belongs in a
                    patch release.)
 
-  * r9003
-    Include the path to the directory containing libsvn_swig_java in
-    SWIG_JAVA_LINK to allow the SWIG Java bindings to actually build.
-    Justification: It is not possible to build the SWIG Java bindings
-    without this fix.
-    Votes:
-      +1: dlr, breser
-
   * r9315
     Change the formating codes used in svn_swig_pl_callback_thunk.
     Justification: The old ones weren't portable and caused problems on Win32.
