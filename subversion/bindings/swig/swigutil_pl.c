@@ -911,6 +911,19 @@ svn_error_t *svn_swig_pl_make_stream (svn_stream_t **stream, SV *obj)
 {
     swig_type_info *tinfo = SWIG_TypeQuery("svn_stream_t *");
     IO *io;
+    int simple_type = 1;
+
+    if (obj && sv_isobject(obj)) {
+        if (sv_derived_from (obj, "SVN::Stream"))
+	    perl_callback_thunk (CALL_METHOD, "svn_stream", &obj, "O", obj);
+	else if (!sv_derived_from(obj, "_p_svn_stream_t"))
+            simple_type = 0;
+
+        if (simple_type) {
+            SWIG_ConvertPtr(obj, (void **)stream, tinfo, 0);
+            return SVN_NO_ERROR;
+        }
+    }
 
     if (obj && SvROK(obj) && SvTYPE(SvRV(obj)) == SVt_PVGV &&
 	(io = GvIO(SvRV(obj)))) {
@@ -924,20 +937,10 @@ svn_error_t *svn_swig_pl_make_stream (svn_stream_t **stream, SV *obj)
 	svn_stream_set_read (*stream, io_handle_read);
 	svn_stream_set_write (*stream, io_handle_write);
 	svn_stream_set_close (*stream, io_handle_close);
-	return SVN_NO_ERROR;
     }
-
-    if (obj && sv_isobject(obj)) {
-	if (sv_derived_from (obj, "SVN::Stream"))
-	    perl_callback_thunk (CALL_METHOD, "svn_stream", &obj, "O", obj);
-	else if (!sv_derived_from(obj, "_p_svn_stream_t"))
-	    croak ("unknown type for svn_stream_t");
-
-	SWIG_ConvertPtr(obj, (void **)stream, tinfo, 0);
-    }
-    else {
+    else
 	croak ("unknown type for svn_stream_t");
-    }
+
     return SVN_NO_ERROR;
 }
 

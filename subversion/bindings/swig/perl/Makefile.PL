@@ -11,7 +11,8 @@ $apr_config = 'apr-config' unless -e $apr_config;
 
 my $apr_shlib_path_var = `$apr_config --shlib-path-var`;
 my $apr_cflags = `$apr_config --includes`;
-my $apr_ldflags = `$apr_config --cflags --link-ld --libs`;
+my $apr_ldflags = `$apr_config --cflags --link-ld --libs`
+   if $^O eq 'darwin';
 
 chomp $apr_shlib_path_var;
 chomp $apr_cflags;

@@ -141,6 +141,7 @@ sub getline
     my $self = shift;
     *$self->{pool} ||= SVN::Core::pool_create (undef);
     my ($buf, $eof) = *$self->{svn_stream}->readline ($/, *$self->{pool});
+    return undef if $eof && !$buf;
     return $eof ? $buf : $buf.$/;
 }
 
@@ -163,6 +164,9 @@ sub READLINE
 	    $buf .= $chunk;
 	}
 	return $buf;
+    }
+    elsif (ref $/) {
+        return *$self->{svn_stream}->read (${$/}) || undef;
     }
     return wantarray ? $self->getlines : $self->getline;
 }
