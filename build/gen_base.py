@@ -55,8 +55,7 @@ class GeneratorBase:
     self.graph = DependencyGraph()
 
     # PASS 1: collect the targets and some basic info
-    self.target_names = _filter_targets(self.parser.sections())
-    for target in self.target_names:
+    for target in _filter_targets(self.parser.sections()):
       install = self.parser.get(target, 'install')
       type = self.parser.get(target, 'type')
 
@@ -443,7 +442,7 @@ class TargetSWIG(Target):
     for lang in self.cfg.swig_lang:
       # the .c file depends upon the .i file
       cfile = os.path.join(dir, lang, cname)
-      graph.add(DT_SWIG_C, cfile, ifile)
+      graph.add(DT_SWIG_C, SWIGObject(cfile, lang), ifile)
 
       # the object depends upon the .c file
       ofile = os.path.join(dir, lang, oname)

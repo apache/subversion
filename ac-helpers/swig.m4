@@ -107,11 +107,12 @@ AC_DEFUN(SVN_FIND_SWIG,
       AC_CACHE_CHECK([for Python includes], [ac_cv_python_includes],[
         ac_cv_python_includes="`$PYTHON ${abs_srcdir}/ac-helpers/get-py-info.py --includes`"
       ])
-      SWIG_PY_INCLUDES="-I$ac_cv_python_includes"
+      SWIG_PY_INCLUDES="$ac_cv_python_includes"
     fi
 
     if test "$JDK" != "none" -a "$SWIG_SUITABLE" = "yes"; then
-      for dir in `find "$JDK/include" -type d -print`; do
+      list="`find "$JDK/include" -type d -print`"
+      for dir in $list; do
         SWIG_JAVA_INCLUDES="$SWIG_JAVA_INCLUDES -I$dir"
       done
     fi
