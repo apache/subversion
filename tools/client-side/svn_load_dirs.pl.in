@@ -386,12 +386,11 @@ my $native_eol = &determine_native_eol;
   foreach my $load_tag (sort values %load_tags)
     {
       # Skip this tag if there is only one segment in its name.
-      next unless $load_tag =~ m#/#;
+      my $index = rindex($load_tag, '/');
+      next if $index == -1;
 
-      # Copy $load_tag otherwise the s/// will modify @load_tags.
-      my $l =  $load_tag;
-      $l    =~ s#/[^/]*$##;
-      push(@load_tags_without_last_segment, $l);
+      # Trim off the last segment and record the result.
+      push(@load_tags_without_last_segment, substr($load_tag, 0, $index));
     }
   
   foreach my $dir ($repos_load_rel_path, @load_tags_without_last_segment)
