@@ -189,6 +189,23 @@ class DependencyGraph:
   def get_deps(self, type):
     deps = self.deps[type].items()
     deps.sort()  # ensures consistency between runs
+
+    ### this function is handy for looking at differences between running
+    ### gen-make using different versions of Python. the dictionary
+    ### algorithm changes periodically, so items are inserted into the
+    ### dependency list in different orders. we do not want to keep this
+    ### enabled, however, as it makes assumptions that the first dependency
+    ### is a source file. in fact, other parts of the code assume that, too,
+    ### so a dumb sort is not possible: we have to sort [1:]. but for
+    ### testing purposes, to look at the output, this can be handy. just
+    ### uncomment the map() call as needed.
+    def test_sorter((objname, sources)):
+      first = sources[0]
+      del sources[0]
+      sources.sort()
+      sources.insert(0, first)
+    #map(test_sorter, deps)
+
     return deps
 
 # dependency types
@@ -432,7 +449,7 @@ class TargetSWIG(TargetLib):
     if self.lang == 'java':
       # SWIG-based classes implement pure Java interfaces.
       if self.add_deps:
-        self.add_deps += ' java-api'
+        self.add_deps = self.add_deps + ' java-api'
       else:
         self.add_deps = 'java-api'
 
