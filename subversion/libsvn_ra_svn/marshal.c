@@ -38,9 +38,6 @@
 
 #define svn_iswhitespace(c) ((c) == ' ' || (c) == '\n')
 
-static svn_error_t *vparse_tuple(apr_array_header_t *list, apr_pool_t *pool,
-                                 const char *fmt, va_list *ap);
-
 /* --- CONNECTION INITIALIZATION --- */
 
 svn_ra_svn_conn_t *svn_ra_svn_create_conn(apr_socket_t *sock,
@@ -285,7 +282,7 @@ svn_error_t *svn_ra_svn_flush(svn_ra_svn_conn_t *conn, apr_pool_t *pool)
 static svn_error_t *vwrite_tuple(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                  const char *fmt, va_list ap)
 {
-  int opt = 0;
+  svn_boolean_t opt = FALSE;
   svn_revnum_t rev;
   const char *cstr;
   const svn_string_t *str;
@@ -293,55 +290,50 @@ static svn_error_t *vwrite_tuple(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   SVN_ERR(svn_ra_svn_start_list(conn, pool));
   for (; *fmt; fmt++)
     {
-      if (*fmt == 'n')
+      if (*fmt == 'n' && !opt)
         SVN_ERR(svn_ra_svn_write_number(conn, pool, va_arg(ap, apr_uint64_t)));
       else if (*fmt == 'r')
         {
           rev = va_arg(ap, svn_revnum_t);
-          assert(opt > 0 || SVN_IS_VALID_REVNUM(rev));
+          assert(opt || SVN_IS_VALID_REVNUM(rev));
           if (SVN_IS_VALID_REVNUM(rev))
             SVN_ERR(svn_ra_svn_write_number(conn, pool, rev));
         }
       else if (*fmt == 's')
         {
           str = va_arg(ap, const svn_string_t *);
-          assert(opt > 0 || str);
+          assert(opt || str);
           if (str)
             SVN_ERR(svn_ra_svn_write_string(conn, pool, str));
         }
       else if (*fmt == 'c')
         {
           cstr = va_arg(ap, const char *);
-          assert(opt > 0 || cstr);
+          assert(opt || cstr);
           if (cstr)
             SVN_ERR(svn_ra_svn_write_cstring(conn, pool, cstr));
         }
       else if (*fmt == 'w')
         {
           cstr = va_arg(ap, const char *);
-          assert(opt > 0 || cstr);
+          assert(opt || cstr);
           if (cstr)
             SVN_ERR(svn_ra_svn_write_word(conn, pool, cstr));
         }
-      else if (*fmt == 'b')
+      else if (*fmt == 'b' && !opt)
         {
           cstr = va_arg(ap, svn_boolean_t) ? "true" : "false";
           SVN_ERR(svn_ra_svn_write_word(conn, pool, cstr));
         }
-      else if (*fmt == '[')
-        {
-          SVN_ERR(svn_ra_svn_start_list(conn, pool));
-          opt++;
-        }
-      else if (*fmt == ']')
-        {
-          SVN_ERR(svn_ra_svn_end_list(conn, pool));
-          opt--;
-        }
-      else if (*fmt == '(')
+      else if (*fmt == '?')
+        opt = TRUE;
+      else if (*fmt == '(' && !opt)
         SVN_ERR(svn_ra_svn_start_list(conn, pool));
       else if (*fmt == ')')
-        SVN_ERR(svn_ra_svn_end_list(conn, pool));
+        {
+          SVN_ERR(svn_ra_svn_end_list(conn, pool));
+          opt = FALSE;
+        }
       else
         abort();
     }
@@ -455,34 +447,62 @@ svn_error_t *svn_ra_svn_read_item(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   return read_item(conn, pool, *item, c);
 }
 
-/* We'll eventually need functions to read lists in a streaming
- * manner; that will probably want to tie into svn_streams, so I'll
- * write those later. */
-
 /* --- READING AND PARSING TUPLES --- */
 
-/* Parse an optional tuple.  Advance *FMT to the end of the optional
- * tuple specification. */
-static svn_error_t *vparse_optional_tuple(apr_array_header_t *list,
-                                          apr_pool_t *pool,
-                                          const char **fmt, va_list *ap)
+/* Parse a tuple.  Advance *FMT to the end of the tuple specification
+ * and advance AP by the corresponding arguments. */
+static svn_error_t *vparse_tuple(apr_array_header_t *list, apr_pool_t *pool,
+                                 const char **fmt, va_list *ap)
 {
-  const char *end, *subfmt;
+  int count, list_level;
+  svn_ra_svn_item_t *elt;
 
-  /* Find the beginning and end of the optional tuple spec. */
-  (*fmt)++;
-  end = strchr(*fmt, ']');
-  assert(end);
-  subfmt = apr_pstrmemdup(pool, *fmt, end - *fmt);
-  *fmt = end;
-  if (list->nelts > 0)
-    SVN_ERR(vparse_tuple(list, pool, subfmt, ap));
-  else
+  for (count = 0; **fmt && count < list->nelts; (*fmt)++, count++)
     {
-      for (; *subfmt; subfmt++)
+      /* '?' just means the tuple may stop; skip past it. */
+      if (**fmt == '?')
+        (*fmt)++;
+      elt = &((svn_ra_svn_item_t *) list->elts)[count];
+      if (**fmt == 'n' && elt->kind == SVN_RA_SVN_NUMBER)
+        *va_arg(*ap, apr_uint64_t *) = elt->u.number;
+      else if (**fmt == 'r' && elt->kind == SVN_RA_SVN_NUMBER)
+        *va_arg(*ap, svn_revnum_t *) = elt->u.number;
+      else if (**fmt == 's' && elt->kind == SVN_RA_SVN_STRING)
+        *va_arg(*ap, svn_string_t **) = elt->u.string;
+      else if (**fmt == 'c' && elt->kind == SVN_RA_SVN_STRING)
+        *va_arg(*ap, const char **) = elt->u.string->data;
+      else if (**fmt == 'w' && elt->kind == SVN_RA_SVN_WORD)
+        *va_arg(*ap, const char **) = elt->u.word;
+      else if (**fmt == 'b' && elt->kind == SVN_RA_SVN_WORD)
         {
-          switch (*subfmt)
+          if (strcmp(elt->u.word, "true") == 0)
+            *va_arg(*ap, svn_boolean_t *) = TRUE;
+          else if (strcmp(elt->u.word, "false") == 0)
+            *va_arg(*ap, svn_boolean_t *) = FALSE;
+          else
+            break;
+        }
+      else if (**fmt == 'l' && elt->kind == SVN_RA_SVN_LIST)
+        *va_arg(*ap, apr_array_header_t **) = elt->u.list;
+      else if (**fmt == '(' && elt->kind == SVN_RA_SVN_LIST)
+        {
+          (*fmt)++;
+          SVN_ERR(vparse_tuple(elt->u.list, pool, fmt, ap));
+        }
+      else if (**fmt == ')')
+        return SVN_NO_ERROR;
+      else
+        break;
+    }
+  if (**fmt == '?')
+    {
+      list_level = 0;
+      for (; **fmt; (*fmt)++)
+        {
+          switch (**fmt)
             {
+            case '?':
+              break;
             case 'r':
               *va_arg(*ap, svn_revnum_t *) = SVN_INVALID_REVNUM;
               break;
@@ -496,55 +516,22 @@ static svn_error_t *vparse_optional_tuple(apr_array_header_t *list,
             case 'l':
               *va_arg(*ap, apr_array_header_t **) = NULL;
               break;
-            case '[':
-            case ']':
+            case '(':
+              list_level++;
               break;
-            default: abort();
+            case ')':
+              if (--list_level < 0)
+                return SVN_NO_ERROR;
+              break;
+            default:
+              abort();
             }
         }
     }
+  if (**fmt && **fmt != ')')
+    return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
+                            "Malformed network data");
   return SVN_NO_ERROR;
-}
-
-static svn_error_t *vparse_tuple(apr_array_header_t *list, apr_pool_t *pool,
-                                 const char *fmt, va_list *ap)
-{
-  int count;
-  svn_ra_svn_item_t *elt;
-
-  for (count = 0; *fmt && count < list->nelts; fmt++, count++)
-    {
-      elt = &((svn_ra_svn_item_t *) list->elts)[count];
-      if (*fmt == 'n' && elt->kind == SVN_RA_SVN_NUMBER)
-        *va_arg(*ap, apr_uint64_t *) = elt->u.number;
-      else if (*fmt == 'r' && elt->kind == SVN_RA_SVN_NUMBER)
-        *va_arg(*ap, svn_revnum_t *) = elt->u.number;
-      else if (*fmt == 's' && elt->kind == SVN_RA_SVN_STRING)
-        *va_arg(*ap, svn_string_t **) = elt->u.string;
-      else if (*fmt == 'c' && elt->kind == SVN_RA_SVN_STRING)
-        *va_arg(*ap, const char **) = elt->u.string->data;
-      else if (*fmt == 'w' && elt->kind == SVN_RA_SVN_WORD)
-        *va_arg(*ap, const char **) = elt->u.word;
-      else if (*fmt == 'b' && elt->kind == SVN_RA_SVN_WORD)
-        {
-          if (strcmp(elt->u.word, "true") == 0)
-            *va_arg(*ap, svn_boolean_t *) = TRUE;
-          else if (strcmp(elt->u.word, "false") == 0)
-            *va_arg(*ap, svn_boolean_t *) = FALSE;
-          else
-            break;
-        }
-      else if (*fmt == 'l' && elt->kind == SVN_RA_SVN_LIST)
-        *va_arg(*ap, apr_array_header_t **) = elt->u.list;
-      else if (*fmt == '[' && elt->kind == SVN_RA_SVN_LIST)
-        SVN_ERR(vparse_optional_tuple(elt->u.list, pool, &fmt, ap));
-      else
-        break;
-    }
-  if (!*fmt)
-    return SVN_NO_ERROR;
-  return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
-                          "Malformed network data");
 }
 
 svn_error_t *svn_ra_svn_parse_tuple(apr_array_header_t *list,
@@ -555,7 +542,7 @@ svn_error_t *svn_ra_svn_parse_tuple(apr_array_header_t *list,
   va_list ap;
 
   va_start(ap, fmt);
-  err = vparse_tuple(list, pool, fmt, &ap);
+  err = vparse_tuple(list, pool, &fmt, &ap);
   va_end(ap);
   return err;
 }
@@ -572,7 +559,7 @@ svn_error_t *svn_ra_svn_read_tuple(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
     return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                             "Malformed network data");
   va_start(ap, fmt);
-  err = vparse_tuple(item->u.list, pool, fmt, &ap);
+  err = vparse_tuple(item->u.list, pool, &fmt, &ap);
   va_end(ap);
   return err;
 }
@@ -595,7 +582,7 @@ svn_error_t *svn_ra_svn_read_cmd_response(svn_ra_svn_conn_t *conn,
   if (strcmp(status, "success") == 0)
     {
       va_start(ap, fmt);
-      err = vparse_tuple(params, pool, fmt, &ap);
+      err = vparse_tuple(params, pool, &fmt, &ap);
       va_end(ap);
       return err;
     }

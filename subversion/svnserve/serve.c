@@ -307,7 +307,7 @@ static svn_error_t *rev_prop(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "rc", &rev, &name));
   SVN_CMD_ERR(svn_fs_revision_prop(&value, b->fs, rev, name, pool));
-  SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, "[s]", value));
+  SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, "(?s)", value));
   return SVN_NO_ERROR;
 }
 
@@ -363,7 +363,7 @@ static svn_error_t *get_file(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   unsigned char digest[MD5_DIGESTSIZE];
 
   /* Parse arguments. */
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c[r]bb", &path, &rev,
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c(?r)bb", &path, &rev,
                                  &want_props, &want_contents));
   if (!SVN_IS_VALID_REVNUM(rev))
     SVN_CMD_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
@@ -428,7 +428,7 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   apr_pool_t *subpool;
   svn_boolean_t want_props, want_contents;
 
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c[r]bb", &path, &rev,
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c(?r)bb", &path, &rev,
                                  &want_props, &want_contents));
   if (!SVN_IS_VALID_REVNUM(rev))
     SVN_CMD_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
@@ -507,7 +507,7 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
           entry = val;
           cdate = (entry->time == (time_t) -1) ? NULL
             : svn_time_to_cstring(entry->time, pool);
-          SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "cwnbr[c][c]", name,
+          SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "cwnbr(?c)(?c)", name,
                                          kind_word(entry->kind),
                                          (apr_uint64_t) entry->size,
                                          entry->has_props, entry->created_rev,
@@ -530,7 +530,7 @@ static svn_error_t *checkout(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   void *edit_baton;
 
   /* Parse the arguments. */
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "[r]b", &rev, &recurse));
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "(?r)b", &rev, &recurse));
   if (!SVN_IS_VALID_REVNUM(rev))
     SVN_CMD_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
 
@@ -555,7 +555,7 @@ static svn_error_t *update(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   void *edit_baton, *report_baton;
 
   /* Parse the arguments. */
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "[r]cb", &rev, &target,
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "(?r)cb", &rev, &target,
                                  &recurse));
   if (svn_path_is_empty(target))
     target = NULL;  /* ### Compatibility hack, shouldn't be needed */
@@ -591,7 +591,7 @@ static svn_error_t *switch_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   svn_error_t *err;
 
   /* Parse the arguments. */
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "[r]cbc", &rev, &target,
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "(?r)cbc", &rev, &target,
                                  &recurse, &switch_url));
   if (svn_path_is_empty(target))
     target = NULL;  /* ### Compatibility hack, shouldn't be needed */
@@ -672,7 +672,7 @@ static svn_error_t *diff(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   svn_error_t *err;
 
   /* Parse the arguments. */
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "[r]cbc", &rev, &target,
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "(?r)cbc", &rev, &target,
                                  &recurse, &versus_url));
   if (svn_path_is_empty(target))
     target = NULL;  /* ### Compatibility hack, shouldn't be needed */
@@ -736,7 +736,7 @@ static svn_error_t *log_receiver(void *baton, apr_hash_t *changed_paths,
           change = val;
           action[0] = change->action;
           action[1] = '\0';
-          SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "cw[cr]", path, action,
+          SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "cw(?cr)", path, action,
                                          change->copyfrom_path,
                                          change->copyfrom_rev));
         }
@@ -781,8 +781,9 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   log_baton_t lb;
 
   /* Parse the arguments. */
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "l[r][r]bb", &paths, &start_rev,
-                                 &end_rev, &changed_paths, &strict_node));
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "l(?r)(?r)bb", &paths,
+                                 &start_rev, &end_rev, &changed_paths,
+                                 &strict_node));
   full_paths = apr_array_make(pool, paths->nelts, sizeof(const char *));
   for (i = 0; i < paths->nelts; i++)
     {
@@ -816,7 +817,7 @@ static svn_error_t *check_path(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   svn_fs_root_t *root;
   svn_node_kind_t kind;
 
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c[r]", &path, &rev));
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c(?r)", &path, &rev));
   if (!SVN_IS_VALID_REVNUM(rev))
     SVN_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
   full_path = svn_path_join(b->fs_path, path, pool);
@@ -935,7 +936,7 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, const char *root,
   /* Read client response.  This should specify version 1, the
    * mechanism, a mechanism argument, and possibly some
    * capabilities. */
-  SVN_ERR(svn_ra_svn_read_tuple(conn, pool, "nw[c]l", &ver, &mech, &mecharg,
+  SVN_ERR(svn_ra_svn_read_tuple(conn, pool, "nw(?c)l", &ver, &mech, &mecharg,
                                 &caplist));
 
 #if APR_HAS_USER

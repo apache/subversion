@@ -105,7 +105,7 @@ static svn_error_t *ra_svn_open_root(void *edit_baton, svn_revnum_t rev,
   ra_svn_edit_baton_t *eb = edit_baton;
   const char *token;
 
-  SVN_ERR(svn_ra_svn_write_cmd(eb->conn, pool, "open-root", "[r]", rev));
+  SVN_ERR(svn_ra_svn_write_cmd(eb->conn, pool, "open-root", "(?r)", rev));
   SVN_ERR(svn_ra_svn_read_cmd_response(eb->conn, pool, "c", &token));
   *root_baton = ra_svn_make_baton(eb->conn, pool, token);
   return SVN_NO_ERROR;
@@ -116,7 +116,7 @@ static svn_error_t *ra_svn_delete_entry(const char *path, svn_revnum_t rev,
 {
   ra_svn_baton_t *b = parent_baton;
 
-  SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "delete-entry", "c[r]c",
+  SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "delete-entry", "c(?r)c",
                                path, rev, b->token));
   SVN_ERR(svn_ra_svn_read_cmd_response(b->conn, pool, ""));
   return SVN_NO_ERROR;
@@ -132,7 +132,7 @@ static svn_error_t *ra_svn_add_dir(const char *path, void *parent_baton,
 
   assert((copy_path && SVN_IS_VALID_REVNUM(copy_rev))
          || (!copy_path && !SVN_IS_VALID_REVNUM(copy_rev)));
-  SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "add-dir", "cc[cr]", path,
+  SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "add-dir", "cc(?cr)", path,
 			       b->token, copy_path, copy_rev));
   SVN_ERR(svn_ra_svn_read_cmd_response(b->conn, pool, "c", &token));
   *child_baton = ra_svn_make_baton(b->conn, pool, token);
@@ -146,7 +146,7 @@ static svn_error_t *ra_svn_open_dir(const char *path, void *parent_baton,
   ra_svn_baton_t *b = parent_baton;
   const char *token;
 
-  SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "open-dir", "cc[r]",
+  SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "open-dir", "cc(?r)",
                                path, b->token, rev));
   SVN_ERR(svn_ra_svn_read_cmd_response(b->conn, pool, "c", &token));
   *child_baton = ra_svn_make_baton(b->conn, pool, token);
@@ -159,7 +159,7 @@ static svn_error_t *ra_svn_change_dir_prop(void *dir_baton, const char *name,
 {
   ra_svn_baton_t *b = dir_baton;
 
-  SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "change-dir-prop", "cc[s]",
+  SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "change-dir-prop", "cc(?s)",
                                b->token, name, value));
   SVN_ERR(svn_ra_svn_read_cmd_response(b->conn, pool, ""));
   return SVN_NO_ERROR;
@@ -186,7 +186,7 @@ static svn_error_t *ra_svn_add_file(const char *path,
 
   assert((copy_path && SVN_IS_VALID_REVNUM(copy_rev))
          || (!copy_path && !SVN_IS_VALID_REVNUM(copy_rev)));
-  SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "add-file", "cc[cr]", path,
+  SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "add-file", "cc(?cr)", path,
 			       b->token, copy_path, copy_rev));
   SVN_ERR(svn_ra_svn_read_cmd_response(b->conn, pool, "c", &token));
   *file_baton = ra_svn_make_baton(b->conn, pool, token);
@@ -202,7 +202,7 @@ static svn_error_t *ra_svn_open_file(const char *path,
   ra_svn_baton_t *b = parent_baton;
   const char *token;
 
-  SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "open-file", "cc[r]",
+  SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "open-file", "cc(?r)",
                                path, b->token, rev));
   SVN_ERR(svn_ra_svn_read_cmd_response(b->conn, pool, "c", &token));
   *file_baton = ra_svn_make_baton(b->conn, pool, token);
@@ -242,7 +242,7 @@ static svn_error_t *ra_svn_apply_textdelta(void *file_baton,
   svn_boolean_t wanted;
 
   /* Tell the other side we're starting a text delta. */
-  SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "apply-textdelta", "c[c][c]",
+  SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "apply-textdelta", "c(?c)(?c)",
                                b->token,
                                (base_checksum ? base_checksum : ""),
                                (result_checksum ? result_checksum : "")));
@@ -274,7 +274,7 @@ static svn_error_t *ra_svn_change_file_prop(void *file_baton,
 {
   ra_svn_baton_t *b = file_baton;
 
-  SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "change-file-prop", "cc[s]",
+  SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "change-file-prop", "cc(?s)",
                                b->token, name, value));
   SVN_ERR(svn_ra_svn_read_cmd_response(b->conn, pool, ""));
   return SVN_NO_ERROR;
@@ -396,7 +396,7 @@ static svn_error_t *ra_svn_handle_open_root(svn_ra_svn_conn_t *conn,
   const char *token;
   void *root_baton;
 
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "[r]", &rev));
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "(?r)", &rev));
   subpool = svn_pool_create(conn->pool);
   SVN_CMD_ERR(ds->editor->open_root(ds->edit_baton, rev, subpool,
                                     &root_baton));
@@ -415,7 +415,7 @@ static svn_error_t *ra_svn_handle_delete_entry(svn_ra_svn_conn_t *conn,
   svn_revnum_t rev;
   ra_svn_token_entry_t *entry;
 
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c[r]c", &path, &rev, &token));
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c(?r)c", &path, &rev, &token));
   SVN_CMD_ERR(lookup_token(ds, token, &entry, pool));
   SVN_CMD_ERR(ds->editor->delete_entry(path, rev, entry->baton, entry->pool));
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
@@ -434,7 +434,7 @@ static svn_error_t *ra_svn_handle_add_dir(svn_ra_svn_conn_t *conn,
   apr_pool_t *subpool;
   void *child_baton;
 
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "cc[cr]", &path, &token,
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "cc(?cr)", &path, &token,
                                  &copy_path, &copy_rev));
   SVN_CMD_ERR(lookup_token(ds, token, &entry, pool));
   subpool = svn_pool_create(entry->pool);
@@ -457,7 +457,7 @@ static svn_error_t *ra_svn_handle_open_dir(svn_ra_svn_conn_t *conn,
   apr_pool_t *subpool;
   void *child_baton;
 
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "cc[r]", &path, &token, &rev));
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "cc(?r)", &path, &token, &rev));
   SVN_CMD_ERR(lookup_token(ds, token, &entry, pool));
   subpool = svn_pool_create(entry->pool);
   SVN_CMD_ERR(ds->editor->open_directory(path, entry->baton, rev, subpool,
@@ -477,7 +477,7 @@ static svn_error_t *ra_svn_handle_change_dir_prop(svn_ra_svn_conn_t *conn,
   svn_string_t *value;
   ra_svn_token_entry_t *entry;
 
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "cc[s]", &token, &name,
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "cc(?s)", &token, &name,
                                  &value));
   SVN_CMD_ERR(lookup_token(ds, token, &entry, pool));
   SVN_CMD_ERR(ds->editor->change_dir_prop(entry->baton, name, value,
@@ -516,7 +516,7 @@ static svn_error_t *ra_svn_handle_add_file(svn_ra_svn_conn_t *conn,
   apr_pool_t *subpool;
   void *file_baton;
 
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "cc[cr]", &path, &token,
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "cc(?cr)", &path, &token,
                                  &copy_path, &copy_rev));
   SVN_CMD_ERR(lookup_token(ds, token, &entry, pool));
 
@@ -541,7 +541,7 @@ static svn_error_t *ra_svn_handle_open_file(svn_ra_svn_conn_t *conn,
   apr_pool_t *subpool;
   void *file_baton;
 
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "cc[r]", &path, &token, &rev));
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "cc(?r)", &path, &token, &rev));
   SVN_CMD_ERR(lookup_token(ds, token, &entry, pool));
 
   /* File may outlive parent directory, so use ds->pool here. */
@@ -569,7 +569,7 @@ static svn_error_t *ra_svn_handle_apply_textdelta(svn_ra_svn_conn_t *conn,
   char *base_checksum, *result_checksum;
 
   /* Parse arguments, make the editor call, and respond. */
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c[c][c]", &token,
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c(?c)(?c)", &token,
                                  &base_checksum, &result_checksum));
 
   if (base_checksum[0] == '\0')
@@ -623,7 +623,7 @@ static svn_error_t *ra_svn_handle_change_file_prop(svn_ra_svn_conn_t *conn,
   svn_string_t *value;
   ra_svn_token_entry_t *entry;
 
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "cc[s]", &token, &name,
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "cc(?s)", &token, &name,
                                  &value));
   SVN_CMD_ERR(lookup_token(ds, token, &entry, pool));
   SVN_CMD_ERR(ds->editor->change_file_prop(entry->baton, name, value,
