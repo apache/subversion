@@ -653,6 +653,8 @@ typedef struct svn_ra_plugin_t
    * @c SVN_ERR_FS_NO_SUCH_REVISION, without ever invoking @a receiver.
    *
    * See also the documentation for @c svn_log_message_receiver_t.
+   *
+   * Use @a pool for memory allocation.
    */
   svn_error_t *(*get_log) (void *session_baton,
                            const apr_array_header_t *paths,
@@ -661,7 +663,8 @@ typedef struct svn_ra_plugin_t
                            svn_boolean_t discover_changed_paths,
                            svn_boolean_t strict_node_history,
                            svn_log_message_receiver_t receiver,
-                           void *receiver_baton);
+                           void *receiver_baton,
+                           apr_pool_t *pool);
 
   /* Yoshiki Hayashi <yoshiki@xemacs.org> points out that a more
      generic way to support 'discover_changed__paths' in logs would be

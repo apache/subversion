@@ -742,10 +742,10 @@ static svn_error_t *ra_svn_log(void *sess, const apr_array_header_t *paths,
                                svn_boolean_t discover_changed_paths,
                                svn_boolean_t strict_node_history,
                                svn_log_message_receiver_t receiver,
-                               void *receiver_baton)
+                               void *receiver_baton, apr_pool_t *pool)
 {
   svn_ra_svn_conn_t *conn = sess;
-  apr_pool_t *pool = conn->pool, *subpool;
+  apr_pool_t *subpool;
   int i;
   const char *path, *author, *date, *message, *cpath, *action, *copy_path;
   svn_ra_svn_item_t *item, *elt;
