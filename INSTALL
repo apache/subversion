@@ -560,7 +560,8 @@ II.   INSTALLATION
   E.1 Prerequisites
 
       * Visual Studio 6 and service pack. It can be built with Visual Studio
-        7 but these instructions assumes VS6.
+        7 (aka Visual Studio.NET aka Visual Studio.NET 2002) but these
+        instructions assumes VS6.
       * A recent Windows SDK, the one provided with Visual Studio 6 is
         too old. You only need the 'Core SDK'. You can get it from MSDN
         if you have it or from
@@ -569,6 +570,10 @@ II.   INSTALLATION
       * Python 2.2 or higher, downloaded from http://www.python.org/ which is
         used to generate the project files.
       * Perl 5.8 or higher from http://www.activestate.com/
+      * Awk, from http://cm.bell-labs.com/cm/cs/who/bwk/awk95.exe
+        This is needed to compile Apache or APR.  Note that this is the
+        actual awk program, not an installer - just rename it to awk.exe
+        and it is ready to use.
       * Neon 0.24.7 or higher, downloaded from
         http://www.webdav.org/neon/neon-0.24.7.tar.gz which is required
         for building the client components.  Neon is included in the zip file
@@ -583,6 +588,11 @@ II.   INSTALLATION
       * Apache 2 msi install file, also from
         http://httpd.apache.org/download.cgi (required for running the
         tests).  Only needed for testing the server dso modules.
+      * Apache apr, apr-util, and apr-iconv libraries, version 0.9.5.
+        Included in both the Subversion ZIP file and the Apache 2 source
+        tarball.  If you are building from a Subversion checkout and have
+        not downloaded Apache 2, then get these 3 libraries from
+        http://www.apache.org/dist/apr/
       * ZLib 1.1.4 or higher (version 1.1.x) binaries
         http://www.winimage.com/zLibDll/zlib114dll.zip.
       * Openssl 0.9.7d or higher obtained from
@@ -662,7 +672,9 @@ II.   INSTALLATION
         not be running."
 
       * Install Python and add it to your path
-      * Install Perl
+      * Install Perl (it should add itself to the path)
+      * Copy AWK (awk95.exe) to awk.exe (e.g. SVN\awk\awk.exe) and add
+        the directory containing it (e.g. SVN\awk) to the path.
       * Install Apache 2 using the msi file if you are going to test the
         server dso modules.
       * If you checked out Subversion from the repository then extract neon
@@ -685,6 +697,15 @@ II.   INSTALLATION
 
       * Extract Apache source into SVN\http-2.0.50 if you wish to build the
         server dso modules.
+      * If you are building from a checkout of Subversion, and you are NOT
+        building Apache, then you will need the APR libraries.  Depending
+        on how you got your version of APR, either:
+          - Extract the APR, APRUTIL and APR-ICONV source distributions into
+            SVN\apr, SVN\apr-util, and SVN\apr-iconv respectively.
+        Or:
+          - Extract the apr, apr-util and apr-iconv directories from the
+            srclib folder in the Apache httpd source into SVN\apr,
+            SVN\apr-util, and SVN\apr-iconv respectively.
       * Extract the pre-built zlib into SVN\zlib and copy
         SVN\zlib\static32\zlibstat.lib into SVN\zlib
       * Extract openssl into SVN\openssl-0.9.7d
@@ -713,13 +734,15 @@ II.   INSTALLATION
     C:>set DIR=trunk
     C:>set DRIVE=C
     C:>set PYTHONDIR=C:\Python22
+    C:>set AWKDIR=C:\SVN\Awk
+    C:>set NASMDIR=C:\SVN\nasm
     C:>set SDKINC=C:\Program Files\Microsoft SDK\include
     C:>set SDKLIB=C:\Program Files\Microsoft SDK\lib
     C:>set GETTEXTINC=C:\SVN\gettext\include
     C:>set GETTEXTLIB=C:\SVN\gettext\lib
     C:>set GETTEXTBIN=C:\SVN\gettext\bin
-    C:>PATH=%PATH%;%DRIVE%:\SVN\src-%DIR%\db4-win32;%DRIVE%:\SVN\nasm;
-            %PYTHONDIR%;%GETTEXTBIN%
+    C:>PATH=%PATH%;%DRIVE%:\SVN\src-%DIR%\db4-win32;%NASMDIR%;
+            %PYTHONDIR%;%AWKDIR%;%GETTEXTBIN%
     C:>set INCLUDE=%SDKINC%;%INCLUDE%;%GETTEXTINC%
     C:>set LIB=%SDKLIB%;%LIB%;%GETTEXTLIB%
 
@@ -772,9 +795,9 @@ II.   INSTALLATION
         directories must be in the Tools/Options/Directories settings (if you
         followed the 'Register the SDK with Visual Studio 6' instructions
         above this has been done for you).
-      * If you are using Visual Studio .NET add -t vcproj to the gen-make.py
-        command, you will also have to distribute the C runtime dll with the
-        binaries.
+      * If you are using Visual Studio .NET change -t dsw into -t vcproj on
+        the gen-make.py command.  In this case you will also have to
+        distribute the C runtime dll with the binaries.
       * If the server dso modules are being built and tested Apache must not
         be running or the copy of the dso modules will fail.
 
@@ -791,6 +814,12 @@ II.   INSTALLATION
     Then build subversion:
 
     C:>msdev subversion_msvc.dsw /USEENV /MAKE "__ALL_TESTS__ - Win32 Release"
+    C:>cd ..
+
+    Or, with Visual C++.NET:
+
+    C:>devenv subversion_vcnet.sln /USEENV /build "Debug"
+        /project "__ALL_TESTS__"
     C:>cd ..
 
     The binaries have now been built.
