@@ -337,7 +337,7 @@ immediately follows the last revision of node N.
 Similarly, we can find the last branch off a given node revision N.V by
 searching the `nodes' table for the last entry before N.(V+1).1.1.
 According to the sort order, this node immediately follows the last
-descendant of of N.V.  This last descendent could be a branch off a
+descendant of N.V.  This last descendent could be a branch off a
 branch off a branch ..., but by truncating the node revision ID
 appropriately, we can find the last branch off of N.V.
 

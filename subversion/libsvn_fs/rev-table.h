@@ -20,7 +20,7 @@
 #include "trail.h"
 
 
-/* Creating and opening the `nodes' table.  */
+/* Creating and opening the `revisions' table.  */
 
 /* Open a `revisions' table in ENV.  If CREATE is non-zero, create one
    if it doesn't exist.  Set *REVS_P to the new table.  Return a
