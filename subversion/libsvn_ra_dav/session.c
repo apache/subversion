@@ -102,15 +102,13 @@ server_ssl_callback(void *userdata,
                     const ne_ssl_certificate *cert)
 {
   svn_ra_session_t *ras = userdata;
-  svn_auth_cred_server_ssl_t *credentials;
   void *creds;
+  svn_auth_cred_server_ssl_t *server_creds;
   svn_auth_iterstate_t *state;
   apr_pool_t *pool;
   svn_error_t *error;
-  int failures_allowed;
-  
-  svn_auth_set_parameter(ras->callbacks->auth_baton,
-                         SVN_AUTH_PARAM_SSL_SERVER_CERTIFICATE, cert);
+  int failures_allowed = 0;
+
   svn_auth_set_parameter(ras->callbacks->auth_baton,
                          SVN_AUTH_PARAM_SSL_SERVER_FAILURES_IN,
                          (void*)failures);
@@ -120,10 +118,16 @@ server_ssl_callback(void *userdata,
                                      SVN_AUTH_CRED_SERVER_SSL,
                                      ras->callbacks->auth_baton,
                                      pool);
-  credentials = creds;
-  failures_allowed = (credentials) ? credentials->failures_allow : 0;
+  if (error || !creds)
+    {
+      svn_error_clear(error);
+    }
+  else
+    {
+      server_creds = creds;
+      failures_allowed = (server_creds) ? server_creds->failures_allow : 0;
+    }
   apr_pool_destroy(pool);
-
   return (failures & ~failures_allowed);
 }
 
@@ -131,8 +135,8 @@ static int
 client_ssl_keypw_callback(void *userdata, char *pwbuf, size_t len)
 {
   svn_ra_session_t *ras = userdata;
-  svn_auth_cred_client_ssl_pass_t *credentials;
   void *creds;
+  svn_auth_cred_client_ssl_pass_t *pw_creds = NULL;
   svn_auth_iterstate_t *state;
   apr_pool_t *pool;
   svn_error_t *error;
@@ -142,13 +146,20 @@ client_ssl_keypw_callback(void *userdata, char *pwbuf, size_t len)
                                      SVN_AUTH_CRED_CLIENT_PASS_SSL,
                                      ras->callbacks->auth_baton,
                                      pool);
-  credentials = creds;
-  if (credentials)
+  if (error || !creds)
     {
-      strncpy(pwbuf, credentials->password, len);
+      svn_error_clear(error);
+    }
+  else
+    {
+      pw_creds = creds;
+      if (pw_creds)
+        {
+          strncpy(pwbuf, pw_creds->password, len);
+        }
     }
   apr_pool_destroy(pool);
-  return (credentials == NULL);
+  return (pw_creds == NULL);
 }
 
 static void
@@ -156,8 +167,8 @@ client_ssl_callback(void *userdata, ne_session *sess,
                     const ne_ssl_dname *server)
 {
   svn_ra_session_t *ras = userdata;
-  svn_auth_cred_client_ssl_t *credentials;
   void *creds;
+  svn_auth_cred_client_ssl_t *client_creds;
   svn_auth_iterstate_t *state;
   apr_pool_t *pool;
   svn_error_t *error;
@@ -166,16 +177,24 @@ client_ssl_callback(void *userdata, ne_session *sess,
                                      SVN_AUTH_CRED_CLIENT_SSL,
                                      ras->callbacks->auth_baton,
                                      pool);
-  credentials = creds;
-  if(credentials)
+  if (error || !creds)
     {
-      if(credentials->cert_type == svn_auth_ssl_pem_cert_type)
+      svn_error_clear(error);
+    }
+  else
+    {
+      client_creds = creds;
+      if (client_creds)
         {
-          ne_ssl_load_pem(sess, credentials->cert_file, credentials->key_file);
-        }
-      else
-        {
-          ne_ssl_load_pkcs12(sess, credentials->cert_file);
+          if (client_creds->cert_type == svn_auth_ssl_pem_cert_type)
+            {
+              ne_ssl_load_pem(sess, client_creds->cert_file,
+                              client_creds->key_file);
+            }
+          else
+            {
+              ne_ssl_load_pkcs12(sess, client_creds->cert_file);
+            }
         }
     }
   apr_pool_destroy(pool);

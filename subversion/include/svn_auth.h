@@ -282,13 +282,6 @@ const void * svn_auth_get_parameter(svn_auth_baton_t *auth_baton,
     Property value is irrelevant; only property's existence matters. */
 #define SVN_AUTH_PARAM_NO_AUTH_CACHE  SVN_AUTH_PARAM_PREFIX "no-auth-cache"
 
-/** Available for ssl client cert providers, provides a @c ne_ssl_dname*  */
-#define SVN_AUTH_PARAM_SSL_SERVER_DNAME SVN_AUTH_PARAM_PREFIX "ssl:dname"
-/** Available for ssl server cert providers, provides a full 
-    @c ne_ssl_certificate* */
-#define SVN_AUTH_PARAM_SSL_SERVER_CERTIFICATE SVN_AUTH_PARAM_PREFIX \
-  "ssl:server-cert"
-
 /** The following property is for ssl server cert providers. This
     provides the detected failures by the certificate validator */
 #define SVN_AUTH_PARAM_SSL_SERVER_FAILURES_IN SVN_AUTH_PARAM_PREFIX \

@@ -425,31 +425,55 @@ server_ssl_file_first_credentials (void **credentials,
                                    apr_pool_t *pool)
 {
   const char *temp_setting;
+  int failures_in = (int) apr_hash_get (parameters,
+                                        SVN_AUTH_PARAM_SSL_SERVER_FAILURES_IN,
+                                        APR_HASH_KEY_STRING);
   svn_config_t *cfg = apr_hash_get (parameters,
                                     SVN_AUTH_PARAM_CONFIG,
                                     APR_HASH_KEY_STRING);
   const char *server_group = apr_hash_get (parameters,
                                            SVN_AUTH_PARAM_SERVER_GROUP,
                                            APR_HASH_KEY_STRING);
+  svn_auth_cred_server_ssl_t *cred;
+  int failures_allow = 0;
 
-  svn_auth_cred_server_ssl_t *cred =
-    apr_palloc (pool, sizeof(svn_auth_cred_server_ssl_t));
-
-  cred->failures_allow = 0;
   temp_setting = svn_config_get_server_setting (cfg, server_group, 
-                                                "ssl-ignore-unknown-ca", NULL);
-  cred->failures_allow = temp_setting ? SVN_AUTH_SSL_UNKNOWNCA : 0;
+                                                "ssl-ignore-unknown-ca",
+                                                "false");
+  if (strcasecmp (temp_setting, "true") == 0)
+    {
+      failures_allow |= SVN_AUTH_SSL_UNKNOWNCA;
+    }
+
   temp_setting = svn_config_get_server_setting (cfg, server_group, 
                                                 "ssl-ignore-host-mismatch",
-                                                NULL);
-  cred->failures_allow |= temp_setting ? SVN_AUTH_SSL_CNMISMATCH : 0;
+                                                "false");
+  if (strcasecmp (temp_setting, "true") == 0)
+    {
+      failures_allow |= SVN_AUTH_SSL_CNMISMATCH;
+    }
+
   temp_setting = svn_config_get_server_setting (cfg, server_group, 
                                                 "ssl-ignore-invalid-date",
-                                                NULL);
-  cred->failures_allow |=
-    temp_setting ? (SVN_AUTH_SSL_NOTYETVALID | SVN_AUTH_SSL_EXPIRED) : 0;
+                                                "false");
+  if (strcasecmp (temp_setting, "true") == 0)
+    {
+      failures_allow |= SVN_AUTH_SSL_NOTYETVALID | SVN_AUTH_SSL_EXPIRED;
+    }
 
-  *credentials = cred;
+  /* don't return creds unless we consider the certificate completely
+   * acceptable */
+  if ( (failures_in & ~failures_allow) == 0)
+    {
+      cred = apr_palloc (pool, sizeof(svn_auth_cred_server_ssl_t));
+      *credentials = cred;
+      cred->failures_allow = failures_allow;
+    }
+  else
+    {
+      *credentials = NULL;
+    }
+  *iter_baton = NULL;
   return SVN_NO_ERROR;
 }
 
@@ -507,6 +531,7 @@ client_ssl_cert_file_first_credentials (void **credentials,
       *credentials = NULL;
     }
 
+  *iter_baton = NULL;
   return SVN_NO_ERROR;
 }
 
@@ -537,7 +562,7 @@ client_ssl_pw_file_first_credentials (void **credentials,
       *credentials = cred;
     }
   else *credentials = NULL;
-
+  *iter_baton = NULL;
   return SVN_NO_ERROR;
 }
 
@@ -621,7 +646,7 @@ client_ssl_pw_prompt_first_cred (void **credentials,
     {
       *credentials = NULL;
     }
-
+  *iter_baton = NULL;
   return SVN_NO_ERROR;
 }
 
@@ -695,7 +720,7 @@ client_ssl_prompt_first_cred (void **credentials,
   cred->key_file = key_file;
   cred->cert_type = cert_type;
   *credentials = cred;
-
+  *iter_baton = NULL;
   return SVN_NO_ERROR;
 }
 
@@ -751,17 +776,17 @@ server_ssl_prompt_first_cred (void **credentials,
   SVN_ERR(pb->prompt_func (&choice, buf->data, FALSE,
                            pb->prompt_baton, pool));
   
-  cred = apr_palloc (pool, sizeof(*cred));
   if (choice && (choice[0] == 'y' || choice[0] == 'Y'))
     {
+      cred = apr_palloc (pool, sizeof(*cred));
       cred->failures_allow = failures_in;
+      *credentials = cred;
     }
   else
     {
-      cred->failures_allow = 0;
+      *credentials = NULL;
     }
-  *credentials = cred;
-
+  *iter_baton = NULL;
   return SVN_NO_ERROR;
 }
 
@@ -795,7 +820,7 @@ void
 svn_client_get_ssl_server_prompt_provider (const svn_auth_provider_t **provider,
                                            void **provider_baton,
                                            svn_client_prompt_t prompt_func,
-                                           void **prompt_baton,
+                                           void *prompt_baton,
                                            apr_pool_t *pool)
 {
   cred_ssl_provider_baton *pb = apr_palloc (pool, sizeof(*pb));
@@ -809,7 +834,7 @@ void
 svn_client_get_ssl_client_prompt_provider (const svn_auth_provider_t **provider,
                                            void **provider_baton,
                                            svn_client_prompt_t prompt_func,
-                                           void **prompt_baton,
+                                           void *prompt_baton,
                                            apr_pool_t *pool)
 {
   cred_ssl_provider_baton *pb = apr_palloc (pool, sizeof(*pb));
@@ -823,7 +848,7 @@ void
 svn_client_get_ssl_pw_prompt_provider (const svn_auth_provider_t **provider,
                                        void **provider_baton,
                                        svn_client_prompt_t prompt_func,
-                                       void **prompt_baton,
+                                       void *prompt_baton,
                                        apr_pool_t *pool)
 {
   cred_ssl_provider_baton *pb = apr_palloc (pool, sizeof(*pb));

@@ -200,7 +200,7 @@ void
 svn_client_get_ssl_server_prompt_provider(const svn_auth_provider_t **provider,
                                           void **provider_baton,
                                           svn_client_prompt_t prompt_func,
-                                          void **prompt_baton,
+                                          void *prompt_baton,
                                           apr_pool_t *pool);
 
 /** Set @a *provider and @ *provider_baton to an authentication
@@ -215,7 +215,7 @@ void
 svn_client_get_ssl_client_prompt_provider(const svn_auth_provider_t **provider,
                                           void **provider_baton,
                                           svn_client_prompt_t prompt_func,
-                                          void **prompt_baton,
+                                          void *prompt_baton,
                                           apr_pool_t *pool);
 
 /** Set @a *provider and @ *provider_baton to an authentication
@@ -230,7 +230,7 @@ void
 svn_client_get_ssl_pw_prompt_provider(const svn_auth_provider_t **provider,
                                       void **provider_baton,
                                       svn_client_prompt_t prompt_func,
-                                      void **prompt_baton,
+                                      void *prompt_baton,
                                       apr_pool_t *pool);
 
 
