@@ -5,12 +5,6 @@ TODO for locking
 MUST HAVE
 ---------
 
-* make 'svn up' use new system to tell user that a defunct token
-  has been deleted.  (lundblad)
-
-* make svn_client_(un)lock() use the new notify callback also.
-  (lundblad)
-
 * scan the whole patch for TODO items introduced on the branch (all, please)
   
 
