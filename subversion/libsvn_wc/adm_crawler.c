@@ -54,48 +54,40 @@ static void add_default_ignores (apr_array_header_t *patterns)
 
 }
 
-/* Helper routine: try to read the contents of DIRPATH/.svnignore.  If
-   no such file exists, then set *PATTERNS to NULL.  Otherwise, set
-   *PATTERNS to a list of patterns to match;  *PATTERNS will contain
-   an array of (const char *) objects. */
+
+/* Helper routine: add to a *PATTERNS list patterns from the value of
+   the SVN_PROP_IGNORE property set on DIRPATH.  If there is no such
+   property, or the property contains no patterns, do nothing.
+   Otherwise, add to *PATTERNS a list of (const char *) patterns to
+   match. */
 static svn_error_t *
-load_ignore_file (const char *dirpath,
-                  apr_array_header_t *patterns,
-                  apr_pool_t *pool)
+add_ignore_patterns (const char *dirpath,
+                     apr_array_header_t *patterns,
+                     apr_pool_t *pool)
 {
-  apr_file_t *fp;
-  apr_status_t status;
-  char buf[100];
-  apr_size_t sz = 100;
+  svn_stringbuf_t *value = NULL;
+  svn_stringbuf_t *name = svn_stringbuf_create (SVN_PROP_IGNORE, pool);
 
-  /* Try to load the .svnignore file. */
-  svn_stringbuf_t *path = svn_stringbuf_create (dirpath, pool);
-  svn_path_add_component_nts (path, SVN_WC_SVNIGNORE, svn_path_local_style);
-  if (apr_file_open (&fp, path->data, APR_READ | APR_BUFFERED, 
-                     APR_OS_DEFAULT, pool))
+  /* Try to load the SVN_PROP_IGNORE property. */
+  SVN_ERR (svn_wc_prop_get (&value, name, 
+                            svn_stringbuf_create (dirpath, pool), pool));
+  if (value != NULL)
     {
-      return SVN_NO_ERROR;
-    }
-
-  /* Now that it's open, read one line at a time into the array. */
-  while (1)
-    {
-      status = svn_io_read_length_line (fp, buf, &sz);
-      if (status == APR_EOF)
-        break;
-      else if (status)
-        return svn_error_createf(status, 0, NULL, pool,
-                                 "error reading %s", path->data);
-
-      (*((const char **) apr_array_push (patterns))) = 
-        apr_pstrndup (pool, buf, sz);
-
-      sz = 100;
-    }
-
+      char sep[3] = "\n\r";
+      char *last;
+      char *p = apr_strtok (value->data, sep, &last);
+      while (p)
+        {
+          if (p[0] != '\0')
+            {
+              (*((const char **) apr_array_push (patterns))) = 
+                apr_pstrdup (pool, p);
+            }
+          p = apr_strtok (NULL, sep, &last);
+        } 
+    }    
   return SVN_NO_ERROR;
 }                  
-
 
 
 /* The values stored in `affected_targets' hashes are of this type.
@@ -1571,8 +1563,8 @@ report_revisions (svn_stringbuf_t *wc_path,
 
   /* Try to load any '.svnignore' file that may be present. */
   patterns = apr_array_make (pool, 1, sizeof(const char *));
-  SVN_ERR (load_ignore_file (full_path->data, patterns, subpool));
   add_default_ignores (patterns);
+  SVN_ERR (add_ignore_patterns (full_path->data, patterns, pool));
 
   /* Phase 1:  Print out every unrecognized (unversioned) object. */
 

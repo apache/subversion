@@ -99,6 +99,9 @@ typedef int svn_boolean_t;
 /* The mime-type of a given file. */
 #define SVN_PROP_MIME_TYPE  SVN_PROP_PREFIX "mime-type"
 
+/* The ignore patters for given directory. */
+#define SVN_PROP_IGNORE  SVN_PROP_PREFIX "ignore"
+
 /* The character set of a given file. */
 #define SVN_PROP_CHARSET  SVN_PROP_PREFIX "charset"
 

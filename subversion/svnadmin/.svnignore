@@ -1,8 +1,0 @@
-svnadmin
-Debug
-Release
-.libs
-*.o
-*~
-.*~
-
