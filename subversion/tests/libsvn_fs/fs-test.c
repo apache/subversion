@@ -66,7 +66,7 @@ create_berkeley_filesystem (const char **msg)
 /* Open a filesystem.  */
 
 
-/* Get and chedk the initial root id; must be 0.0. */
+/* Get and check the initial root id; must be 0.0. */
 static svn_error_t *
 check_filesystem_root_id (void *fs_baton, trail_t *trail)
 {
