@@ -253,6 +253,9 @@ typedef struct svn_delta_walk_t
      since CHILD_BATON won't be used any more.  */
   svn_error_t *(*finish_directory) (void *child_baton);
 
+  /* We are done processing a file */
+  svn_error_t *(*finish_file) (void *child_baton);
+
   /* We are going to add a new file named NAME.  HANDLER and
      HANDLER_BATON specify a function to consume a series of vcdiff
      windows.  If BASE_PATH is zero, the changes are relative to the
@@ -273,8 +276,8 @@ typedef struct svn_delta_walk_t
 				svn_string_t *base_path,
 				svn_version_t base_version,
 				svn_pdelta_t *pdelta,
-                                svn_delta_handler_t *handler,
-                                void *handler_baton);
+                                svn_delta_handler_t **handler,
+                                void **handler_baton);
 
 
 } svn_delta_walk_t;
