@@ -209,14 +209,13 @@ svn_error_t * svn_auth_next_credentials(void **credentials,
 
 /** Save a set of credentials.
  *
- * Ask @a auth_baton to store @a credentials (of type @a cred_kind)
- * for future use.  Presumably these credentials authenticated
- * successfully.  Use @a pool for temporary allocation.  If no
- * provider is able to store the credentials, return error.
+ * Ask @a state to store the most recently returned credentials,
+ * presumably because they successfully authenticated.  Use @a pool
+ * for temporary allocation.  If no credentials were ever returned, do
+ * nothing.  If credentials were returned, but no provider is able to
+ * store them, return error.
  */
-svn_error_t * svn_auth_save_credentials(const char *cred_kind,
-                                        void *credentials,
-                                        svn_auth_baton_t *auth_baton,
+svn_error_t * svn_auth_save_credentials(svn_auth_iterstate_t *state,
                                         apr_pool_t *pool);
 
 /** @} */

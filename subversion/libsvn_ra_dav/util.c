@@ -356,19 +356,13 @@ svn_error_t *svn_ra_dav__parsed_request(svn_ra_session_t *ras,
 svn_error_t *
 svn_ra_dav__maybe_store_auth_info(svn_ra_session_t *ras)
 {
-  void *a, *auth_baton;
-  svn_ra_simple_password_authenticator_t *authenticator;
-  
-  SVN_ERR (ras->callbacks->get_authenticator (&a, &auth_baton, 
-                                              svn_ra_auth_simple_password, 
-                                              ras->callback_baton,
-                                              ras->pool));
-  authenticator = (svn_ra_simple_password_authenticator_t *) a;      
-  
-  /* If we have a auth-info storage callback, use it. */
-  if (authenticator->store_user_and_pass)
-    /* Storage will only happen if AUTH_BATON is already caching auth info. */
-    SVN_ERR (authenticator->store_user_and_pass (auth_baton));
+  /* No auth_baton?  Never mind. */
+  if (! ras->callbacks->auth_baton)
+    return SVN_NO_ERROR;
+
+  /* If we ever got credentials, ask the iter_baton to save them.  */
+  SVN_ERR (svn_auth_save_credentials(ras->auth_iterstate,
+                                     ras->pool));
   
   return SVN_NO_ERROR;
 }

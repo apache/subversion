@@ -216,8 +216,8 @@ apr_array_prepend (apr_array_header_t *arr)
   apr_array_push (arr);
   
   /* Now, shift all the things in the array down one spot. */
-  memmove (arr->elts, 
-           arr->elts + arr->elt_size,  
+  memmove (arr->elts + arr->elt_size,  
+           arr->elts,
            ((arr->nelts - 1) * arr->elt_size));
   
   /* Finally, return the pointer to the first array member so our
