@@ -809,8 +809,9 @@ do_begin_propdelta (svn_xml__digger_t *digger)
   /* First, allocate a new propdelta object in our digger (if there's
      already one there, we lose the pointer to it, which is fine.) */
   digger->current_propdelta
-    = (svn_propdelta_t *) apr_pcalloc (digger->pool,
-                                       sizeof (*(digger->current_propdelta)));
+    = (svn_delta__propdelta_t *)
+    apr_pcalloc (digger->pool,
+                 sizeof (*(digger->current_propdelta)));
 
   digger->current_propdelta->name  = svn_string_create ("", digger->pool);
   digger->current_propdelta->value = svn_string_create ("", digger->pool);

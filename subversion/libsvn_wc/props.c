@@ -98,7 +98,7 @@ svn_wc__get_local_propchanges (apr_array_header_t **local_propchanges,
 {
   apr_hash_index_t *hi;
   apr_array_header_t *ary
-    =  apr_make_array (pool, 1, sizeof(svn_propdelta_t *));
+    =  apr_make_array (pool, 1, sizeof(svn_prop_t *));
 
   /* Loop over baseprops and examine each key.  This will allow us to
      detect any `deletion' events or `set-modification' events.  */
@@ -119,20 +119,20 @@ svn_wc__get_local_propchanges (apr_array_header_t **local_propchanges,
       if (propval2 == NULL)
         {
           /* Add a delete event to the array */
-          svn_propdelta_t *p = apr_pcalloc (pool, sizeof(*p));
+          svn_prop_t *p = apr_pcalloc (pool, sizeof(*p));
           p->name = svn_string_ncreate ((char *) key, klen, pool);
           p->value = NULL;
           
-          *((svn_propdelta_t **)apr_push_array (ary)) = p;
+          *((svn_prop_t **)apr_push_array (ary)) = p;
         }
       else if (! svn_string_compare (propval1, propval2))
         {
           /* Add a set (modification) event to the array */
-          svn_propdelta_t *p = apr_pcalloc (pool, sizeof(*p));
+          svn_prop_t *p = apr_pcalloc (pool, sizeof(*p));
           p->name = svn_string_ncreate ((char *) key, klen, pool);
           p->value = propval2;
           
-          *((svn_propdelta_t **)apr_push_array (ary)) = p;
+          *((svn_prop_t **)apr_push_array (ary)) = p;
         }
     }
 
@@ -155,11 +155,11 @@ svn_wc__get_local_propchanges (apr_array_header_t **local_propchanges,
       if (propval1 == NULL)
         {
           /* Add a set (creation) event to the array */
-          svn_propdelta_t *p = apr_pcalloc (pool, sizeof(*p));
+          svn_prop_t *p = apr_pcalloc (pool, sizeof(*p));
           p->name = svn_string_ncreate ((char *) key, klen, pool);
           p->value = propval2;
           
-          *((svn_propdelta_t **)apr_push_array (ary)) = p;
+          *((svn_prop_t **)apr_push_array (ary)) = p;
         }
     }
 
@@ -194,8 +194,8 @@ svn_wc__get_local_propchanges (apr_array_header_t **local_propchanges,
 */
 svn_boolean_t
 svn_wc__conflicting_propchanges_p (svn_string_t **description,
-                                   svn_propdelta_t *local,
-                                   svn_propdelta_t *update,
+                                   svn_prop_t *local,
+                                   svn_prop_t *update,
                                    apr_pool_t *pool)
 {
   /* We're assuming that whoever called this routine has already
@@ -492,9 +492,9 @@ svn_wc__do_property_merge (svn_string_t *path,
       int j;
       int found_match = 0;          
       svn_string_t *conflict_description;
-      svn_propdelta_t *update_change, *local_change;
+      svn_prop_t *update_change, *local_change;
       
-      update_change = (((svn_propdelta_t **)(propchanges)->elts)[i]);
+      update_change = (((svn_prop_t **)(propchanges)->elts)[i]);
       
       /* Apply the update_change to the pristine hash, no
          questions asked. */
@@ -510,7 +510,7 @@ svn_wc__do_property_merge (svn_string_t *path,
       for (j = 0; j < local_propchanges->nelts; j++)
         {
           local_change =
-            (((svn_propdelta_t **)(local_propchanges)->elts)[j]);
+            (((svn_prop_t **)(local_propchanges)->elts)[j]);
           
           if (svn_string_compare (local_change->name, update_change->name))
             {
@@ -760,6 +760,14 @@ svn_wc__do_property_merge (svn_string_t *path,
 
   return SVN_NO_ERROR;
 }
+
+
+/*------------------------------------------------------------------*/
+
+/*** Public Functions ***/
+
+/*svn_error_t
+  svn_wc_prop_find (apr_array_header_t*/
 
 
 

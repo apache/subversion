@@ -160,6 +160,28 @@ typedef struct svn_xml__stackframe_t
 
 
 
+/***  An in-memory property delta ***/
+
+typedef struct svn_delta__propdelta_t
+{
+  enum {
+    svn_propdelta_file,
+    svn_propdelta_dir,
+  } kind;                    /* what kind of object does this
+                                prop-delta affect? */
+
+  svn_string_t *entity_name; /* The name of the file, dir, or dirent
+                                which is being patched. */
+  
+  svn_string_t *name;        /* name of property to change */
+  svn_string_t *value;       /* new value of property; if NULL, then
+                                this property should be deleted. */
+
+} svn_delta__propdelta_t;
+
+
+
+
 /* An svn_xml__digger_t is passed as *userData to Expat (and from
  * there to registered callback functions).
  *
@@ -224,7 +246,7 @@ typedef struct svn_xml__digger_t
   
   /* An in-memory prop-delta, possibly in the process of being
      buffered up */
-  struct svn_propdelta_t *current_propdelta;
+  struct svn_delta__propdelta_t *current_propdelta;
 
 } svn_xml__digger_t;
 
