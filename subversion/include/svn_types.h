@@ -177,7 +177,18 @@ svn_error_t *svn_categorize_props (const apr_array_header_t *proplist,
 /* Set to either TRUE or FALSE if we want a file to be executable or not. */
 #define SVN_PROP_EXECUTABLE  SVN_PROP_PREFIX "executable"
 
-/* Describes external items to check out into this directory. */
+/* Describes external items to check out into this directory. 
+ *
+ * The format is a series of lines, such as:
+ *
+ *   localdir1   http://url.for.external.source/etc/
+ *   localdir2   http://another.url/blah/blah/blah
+ *   localdir3   http://and.so.on/and/so/forth
+ *
+ * The directory names on the left side are single path components
+ * (they are interpreted relative to the directory on which this
+ * property is set).
+ */
 #define SVN_PROP_EXTERNALS  SVN_PROP_PREFIX "externals"
 
 /* The character set of a given file. */
