@@ -13,14 +13,6 @@ Put in best-practices doc:
 --------------------------------------------------------------
 To be fixed by someone:
 
- - people are screaming for a 1-page 'quickstart' to exist somewhere.
-   not everyone has patience to read the entire book, get a top-down
-   understanding of everything, and then start experimenting.  Ben
-   tried to satisfy the bottom-up learners by writing the 1-page
-   Quickstart in our README file.  But Karl and Ben and others think
-   it should be put in the book *somewhere*:  in Appendix A?  Maybe at
-   the very end of chapter 1?  Thoughts?
-
  - we seem to inconstisently assume repositories live either in
    /usr/local/svn/ or /usr/local/repositories/ throughout the book.
    We ought to consistify.
