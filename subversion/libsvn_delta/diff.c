@@ -647,7 +647,6 @@ svn_diff3(svn_diff_t **diff,
 
             if (is_modified && is_latest)
               {
-#if USE_SMART_CONFLICT_DETECTION
                 svn_diff__position_t *start_position[2];
 
                 type = svn_diff__type_diff_common;
@@ -854,41 +853,6 @@ svn_diff3(svn_diff_t **diff,
 
                     svn_pool_destroy(subpool2);
                   }
-#else /* !USE_SMART_CONFLICT_DETECTION */
-                type = svn_diff__type_diff_common;
-
-                if (modified_length != latest_length)
-                  {
-                    type = svn_diff__type_conflict;
-                  }
-                else if (modified_length > 0)
-                  {
-                    /* First find the starting positions for the
-                     * comparison
-                     */
-                    while (position_list[1]->offset < modified_start)
-                         position_list[1] = position_list[1]->next;
-
-                    while (position_list[2]->offset < latest_start)
-                         position_list[2] = position_list[2]->next;
-
-                      while (modified_length)
-                        {
-                          if (position_list[1]->node != position_list[2]->node)
-                            {
-                              type = svn_diff__type_conflict;
-                              break;
-                            }
-
-                          position_list[1] = position_list[1]->next;
-                          position_list[2] = position_list[2]->next;
-
-                          modified_length--;
-                        }
-
-                    modified_length = latest_length;
-                  }
-#endif /* !USE_SMART_CONFLICT_DETECTION */
               }
             else if (is_modified)
               {
