@@ -38,7 +38,6 @@ RUN_FOP = ${BOOK_TOP}/tools/bin/run-fop.sh
 
 # Book xsltproc options for HTML output
 BOOK_HTML_XSLTPROC_OPTS = --stringparam html.stylesheet styles.css
-BOOK_CHUNK_HTML_XSLTPROC_OPTS = stringparam html.stylesheet styles.css
 
 # Book xsltproc options for PDF and PostScript output
 # BOOK_PDF_XSLTPROC_OPTS = --stringparam page.height 9in --stringparam page.width 6.4in
