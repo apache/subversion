@@ -1116,7 +1116,6 @@ svn_path_canonicalize (const char *path, apr_pool_t *pool)
   const char *src;
   apr_size_t seglen;
   apr_size_t canon_segments = 0;
-  svn_boolean_t absolute_path = FALSE;
   svn_boolean_t uri;
 
   dst = canon = apr_pcalloc (pool, strlen (path) + 1);
@@ -1126,12 +1125,8 @@ svn_path_canonicalize (const char *path, apr_pool_t *pool)
   if (src)
     {
       uri = TRUE;
-      memcpy (canon, path, src - path);
+      memcpy (dst, path, src - path);
       dst += (src - path);
-
-      /* Skip over the hostname. */
-      while (*src && *src != '/')
-        *(dst++) = *(src++);
     }
   else
     {
@@ -1144,7 +1139,6 @@ svn_path_canonicalize (const char *path, apr_pool_t *pool)
   if (*src == '/')
     {
       *(dst++) = *(src++);
-      absolute_path = TRUE;
     }
 
   while (*src)
