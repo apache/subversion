@@ -291,7 +291,7 @@ static const command_rec dav_svn_cmds[] =
   { NULL }
 };
 
-static const dav_provider dav_svn_provider =
+static dav_provider dav_svn_provider =
 {
     &dav_svn_hooks_repos,
     &dav_svn_hooks_propdb,
@@ -303,7 +303,15 @@ static const dav_provider dav_svn_provider =
 
 static void register_hooks(apr_pool_t *pconf)
 {
+    dav_hooks_locks *optional_locks;
+
     ap_hook_post_config(dav_svn_init, NULL, NULL, APR_HOOK_MIDDLE);
+
+    optional_locks = ap_lookup_provider("dav-lock", "generic", "0");
+
+    if (optional_locks) {
+        dav_svn_provider.locks = optional_locks;
+    }
 
     /* our provider */
     dav_register_provider(pconf, "svn", &dav_svn_provider);
