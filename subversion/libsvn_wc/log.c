@@ -443,7 +443,7 @@ log_do_file_timestamp (struct log_runner *loggy,
                               svn_wc_adm_access_path (loggy->adm_access));
 
   /* Do not set the timestamp on special files. */
-  SVN_ERR (svn_io_check_special_path (name, &kind, loggy->pool));
+  SVN_ERR (svn_io_check_special_path (full_path, &kind, loggy->pool));
   
   if (kind != svn_node_special)
     {

@@ -9,9 +9,3 @@ Status of 1.1.0:
 
 Candidate changes:
 
-  * r10324
-    Fix a simple bug when avoiding setting time stamps on special
-    files.  This can cause svn to abort when checking out/updating a
-    symlink pointing to a non-existant path.
-    Votes:
-      +1: jpieper, ghudson, epg
