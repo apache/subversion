@@ -47,7 +47,7 @@ cl_prompt (char **info,
   obj = rb_protect (svn_ruby_protect_call2, (VALUE) args, &error);
 
   if (error)
-    svn_ruby_error ("authenticator", pool);
+    return svn_ruby_error ("authenticator", pool);
 
   if (BUILTIN_TYPE (obj) != T_STRING)
     return svn_error_create (APR_EGENERAL, 0, 0, pool,
