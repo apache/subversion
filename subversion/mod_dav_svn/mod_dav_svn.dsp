@@ -426,6 +426,23 @@ SOURCE=..\libsvn_subr\utf.c
 !ENDIF 
 
 # End Source File
+# Begin Source File
+
+SOURCE=..\libsvn_subr\validate.c
+
+!IF  "$(CFG)" == "mod_dav_svn - Win32 Release"
+
+# PROP Intermediate_Dir "Release\obj\libsvn_subr"
+# ADD CPP /I "..\libsvn_subr" /I "..\..\..\httpd-2.0\srclib\apr\include" /I "..\..\..\httpd-2.0\srclib\apr-util\include" /I "..\..\..\httpd-2.0\srclib\apr-util\xml\expat\lib" /I "..\include" /I "..\.."
+
+!ELSEIF  "$(CFG)" == "mod_dav_svn - Win32 Debug"
+
+# PROP Intermediate_Dir "Debug\obj\libsvn_subr"
+# ADD CPP /I "..\libsvn_subr" /I "..\..\..\httpd-2.0\srclib\apr\include" /I "..\..\..\httpd-2.0\srclib\apr-util\include" /I "..\..\..\httpd-2.0\srclib\apr-util\xml\expat\lib" /I "..\include" /I "..\.."
+
+!ENDIF 
+
+# End Source File
 # End Group
 # Begin Group "Source Files - libsvn_delta"
 
