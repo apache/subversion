@@ -1840,6 +1840,36 @@ def from_wc_top_with_bad_editor(sbox):
     os.chdir(was_cwd)
   
 
+def mods_in_schedule_delete(sbox):
+  "commit with mods in schedule delete"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Schedule a delete, then put in local mods
+  C_path = os.path.join(wc_dir, 'A', 'C')
+  svntest.actions.run_and_verify_svn(None, SVNAnyOutput, [], 'rm', C_path)
+  foo_path = os.path.join(C_path, 'foo')
+  foo_contents = 'zig\nzag\n'
+  svntest.main.file_append(foo_path, foo_contents)
+
+  # Commit should succeed
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak(repos_rev=2)
+  expected_status.remove('A/C')
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/C' : Item(verb='Deleting'),
+    })
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output, expected_status,
+                                        None, None, None, None, None, wc_dir)
+
+  # Unversioned file still exists
+  fp = open(foo_path)
+  if fp.read() != foo_contents:
+    raise svntest.Failure
+  fp.close()
+
 
 ########################################################################
 # Run the tests
@@ -1877,6 +1907,7 @@ test_list = [ None,
               commit_out_of_date_deletions,
               commit_with_bad_log_message,
               from_wc_top_with_bad_editor,
+              mods_in_schedule_delete,
              ]
 
 if __name__ == '__main__':
