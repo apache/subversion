@@ -27,13 +27,16 @@ class Generator(gen_win.WinGeneratorBase):
     if isinstance(target, gen_base.TargetExe):
       targtype = "Win32 (x86) Console Application"
       targval = "0x0103"
+      target.output_name = target.name + '.exe'
     elif isinstance(target, gen_base.TargetLib):
       if target == 'mod_dav_svn':
         targtype = "Win32 (x86) Dynamic-Link Library"
         targval = "0x0102"
+        target.output_name = target.name + '.so'
       else:
         targtype = "Win32 (x86) Static Library"
         targval = "0x0104"
+        target.output_name = '%s-%d.lib' % (target.name, self.cfg.version)
     elif isinstance(target, gen_base.TargetUtility):
       targtype = "Win32 (x86) Generic Project"
       targval = "0x010a"
