@@ -4,16 +4,64 @@
 @c Ben is hacking on this.
 
 The @dfn{Subversion server} isn't a simple, monolithic daemon process
-like sshd or ftpd;  rather, it's a set of well-defined interface
-layers that is meant to be as flexible as possible.
+like sshd or ftpd; rather, it's a set of well-defined interface layers
+that is meant to be flexible and open to future innovations.
+
+However, please remember that after all is said and done, it's
+@emph{Apache} that is the actual Subversion server process; all of the
+lower layers are simply shared libraries running in Apache's address
+space!
+
+In a nutshell:
+
+@enumerate
+@item
+    Apache receives a Subversion-specific HTTP method request.
+@item
+    An appropriate Apache module handles the request, and makes calls
+    into the "main" Subversion library.
+@item
+    The "main" library interacts with a particular implementation of the
+    versioned filesystem, and returns a response.
+@item
+    The Apache module converts this response back into an HTTP response
+    to be sent to the client.
+@end enumerate
+
+
+To build our concepts cleanly, we'll explore the server-side of
+Subversion from the bottom up.  (For full diagram, @xref{Architecture}.)
+
+@example
+
+ +------+-------------+--+---------+-------+ <===== Server interface
+ |                                         |                        
+ |            Main SVN Library             |                        
+ |                                         |                        
+ +-----------------------------------------+ <===== Filesystem interface
+ |                                         |                            
+ |          Subversion Filesystem          |                            
+ |                                         |                            
+ +-+--------------+--------+---------+-----+                            
+   | Berkeley DBM |        |   SQL   |                                  
+   +--------------+        +---------+      
+
+@end example
 
 @menu
-* Modules::                     The server's modular design.
-* Main Subversion Library::     The highest-level server interface.
-* Locking::                     How read and write locks work.
-* Filesystem::                  The low-level Subversion Filesystem.
-* Back-ends::                   Putting the information on disk.
+* Back-ends::                 Putting the information on disk.
+* Filesystem::                The low-level Subversion Filesystem.
+* Locking::                   How read/write locks work in the Filesystem.
+* Main Library::              The highest-level server interface.
+* Apache::                    The actual server process.
 @end menu
+
+@c ----------------------------------------------------------------
+
+@node Back-ends
+@section Back-ends
+
+
 
 @c ----------------------------------------------------------------
 
@@ -58,4 +106,20 @@ failure)
  previous approval)
 
 @end table
+
+@c ----------------------------------------------------------------
+
+@node Locking
+@section Locking
+
+
+@c ----------------------------------------------------------------
+
+@node Main Library
+@section Main Library
+
+
+
+
+
 

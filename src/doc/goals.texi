@@ -10,7 +10,7 @@ CVS's, except when there's a compelling reason to do otherwise.
 
 So what does Subversion have that CVS doesn't?
 
-@itemize *
+@itemize @bullet
 @item
 It versions directories, file-metadata, renames, and
 removals/resurrections.  In other words, Subversion records the

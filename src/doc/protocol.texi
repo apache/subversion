@@ -1,6 +1,14 @@
 @node Protocol
 @chapter Protocol
 
+@c  Jim, I guess you realize that most of this is a little too
+@c  specifically wrong now.  (Maybe the ideas can still be generalized in
+@c  terms of HTTP extensions.)  I've made a xref link to this chapter
+@c  from the Architectural overview, out of the subsection that mentions
+@c  the workings of the "network layer".  I guess this is the place
+@c  where we really need to define our new HTTP methods, and make them
+@c  match up to the API in "main" Subversion library.  -Ben
+
 @menu
 * Transport::                   
 * Common Protocol Conventions::  
