@@ -144,7 +144,8 @@ def externals_test_setup(sbox):
   # the one to which the first repository's `svn:externals' properties
   # will refer.  After this, both repositories have five revisions
   # of random stuff, with no svn:externals props set yet.
-  shutil.copytree(repo_dir, other_repo_dir)
+  if svntest.main.copy_repos(repo_dir, other_repo_dir, 5):
+    return 1
 
   # Set up the externals properties on A/B/ and A/D/.
   externals_desc = \

@@ -19,7 +19,7 @@
 import sys     # for argv[]
 import os      # for popen2()
 import shutil  # for rmtree()
-import re      # to parse version string
+import re
 import stat    # for ST_MODE
 import string  # for atof()
 import copy    # for deepcopy()
@@ -270,6 +270,59 @@ def create_repos(path):
 
   # make the repos world-writeable, for mod_dav_svn's sake.
   chmod_tree(path, 0666, 0666)
+
+# For copying a repository
+def copy_repos(src_path, dst_path, head_revision):
+  "Copy the repository SRC_PATH, with head revision HEAD_REVISION, to DST_PATH"
+
+  # A BDB hot-backup procedure would be more efficient, but that would
+  # require access to the BDB tools, and this doesn't.  Print a fake
+  # pipe command so that the displayed CMDs can be run by hand
+  create_repos(dst_path)
+  print 'CMD:', os.path.basename(svnadmin_binary) + ' dump "' + src_path + '" | ' + os.path.basename(svnadmin_binary) + ' load "' + dst_path + '"'
+  dump_in, dump_out, dump_err = os.popen3(svnadmin_binary + ' dump ' + src_path)
+  load_in, load_out, load_err = os.popen3(svnadmin_binary + ' load ' + dst_path)
+
+  while 1:
+    data = dump_out.read(1024*1024)  # Arbitrary buffer size
+    if data == "":
+      break
+    load_in.write(data)
+  load_in.close() # Tell load we are done
+
+  dump_lines = dump_err.readlines()
+  load_lines = load_out.readlines()
+  dump_in.close()
+  dump_out.close()
+  dump_err.close()
+  load_out.close()
+  load_err.close()
+ 
+  dump_re = re.compile('\* Dumped revision (\d+)\.\n')
+  expect_revision = 0
+  for dump_line in dump_lines:
+    match = dump_re.match(dump_line)
+    if not match or match.group(1) != str(expect_revision):
+      print 'Dump failed!  Line: ' + dump_line
+      return 1
+    expect_revision += 1
+  if expect_revision != head_revision + 1:
+    print 'Dump failed!  Did not see revision ' + str(head_revision)
+    return 1
+
+  load_re = re.compile('------- Committed new rev (\d+) \(loaded from original rev (\d+)\) >>>\n') 
+  expect_revision = 1
+  for load_line in load_lines:
+    match = load_re.match(load_line)
+    if match:
+      if (match.group(1) != str(expect_revision)
+          or match.group(2) != str(expect_revision)):
+        print 'Load failed!  Line: ' + load_line
+        return 1
+      expect_revision += 1
+  if expect_revision != head_revision + 1:
+    print 'Load failed!  Did not see revision ' + str(head_revision)
+    return 1
 
 def set_repos_paths(repo_dir):
   "Set current_repo_dir and current_repo_url from a relative path to the repo."
