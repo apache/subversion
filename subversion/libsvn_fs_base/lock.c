@@ -282,3 +282,54 @@ svn_fs_base__get_locks (apr_hash_t **locks,
 
 
 
+svn_error_t *
+svn_fs_base__allow_locked_operation (svn_boolean_t *allow,
+                                     const char *path,
+                                     svn_node_kind_t kind,
+                                     svn_boolean_t recurse,
+                                     trail_t *trail)
+{
+  *allow = FALSE;
+
+  /* In order for partial-key match to work properly, a directory
+     must end with '/'.  */
+  if (kind == svn_node_dir)
+    path = apr_pstrcat (trail->pool, path, "/", NULL);
+
+  if (kind == svn_node_dir && recurse)
+    {
+      apr_hash_t *locks;
+      
+      /* Discover all locks at or below the path. */
+      SVN_ERR (svn_fs_base__get_locks_helper (&locks, path, trail));
+
+      /* Easy out. */
+      if (apr_hash_count (locks) == 0)
+        {
+          *allow = TRUE;
+          return SVN_NO_ERROR;
+        }
+
+      /* Some number of locks exist below path; are we allowed to
+         change them? */
+      return svn_fs__verify_locks (allow, trail->fs, locks, trail->pool);      
+    }
+
+  /* We're either checking a file, or checking a path non-recursively: */
+    {
+      svn_lock_t *lock;
+
+      /* Discover any lock attached to the path. */
+      SVN_ERR (svn_fs_base__get_lock_from_path_helper (&lock, path, trail));
+
+      /* Easy out. */
+      if (! lock)
+        {
+          *allow = TRUE;
+          return SVN_NO_ERROR;
+        }
+
+      /* The path is locked;  are we allowed to change it? */
+      return svn_fs__verify_lock (allow, trail->fs, lock, trail->pool);
+    }
+}

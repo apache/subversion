@@ -76,6 +76,26 @@ svn_error_t *svn_fs_base__get_locks_helper (apr_hash_t **locks_p,
                                             const char *path,
                                             trail_t *trail);
 
+
+/* Examine PATH (of kind KIND) for locks.  
+   If no locks are present, then set *ALLOW to true.
+
+   If PATH is locked (or contains locks "below" it, when RECURSE is
+   set), then set *ALLOW to true iff:
+
+      1. for every lock discovered, an appropriate lock token has been
+         passed into TRAIL->fs, and
+
+      2. for every lock discovered, the current username in the access
+         context of TRAIL->fs matches the "owner" of the lock.
+
+   Otherwise, set *ALLOW to false. */
+svn_error_t *svn_fs_base__allow_locked_operation (svn_boolean_t *allow,
+                                                  const char *path,
+                                                  svn_node_kind_t kind,
+                                                  svn_boolean_t recurse,
+                                                  trail_t *trail);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
