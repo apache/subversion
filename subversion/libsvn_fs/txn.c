@@ -112,6 +112,8 @@ txn_body_begin_txn (void *baton,
 
 
 
+/* Note:  it is acceptable for this function to call back into
+   public FS API interfaces because it does not itself use trails.  */
 svn_error_t *
 svn_fs_begin_txn (svn_fs_txn_t **txn_p,
                   svn_fs_t *fs,
@@ -141,7 +143,8 @@ svn_fs_begin_txn (svn_fs_txn_t **txn_p,
     date.data = svn_time_to_nts (apr_time_now(), pool);
     date.len = strlen (date.data);
 
-    SVN_ERR (svn_fs_change_txn_prop (txn, SVN_PROP_REVISION_DATE, &date, pool));
+    SVN_ERR (svn_fs_change_txn_prop (txn, SVN_PROP_REVISION_DATE, 
+                                     &date, pool));
   }
 
   return SVN_NO_ERROR;

@@ -321,7 +321,10 @@ svn_fs_predecessor_id (const svn_fs_id_t *id, apr_pool_t *pool)
       corresponding children of A.
  
     - Brand new nodes (like, resulting from adds and copies) have the
-      first component of their node id > older nodes. */
+      first component of their node id > older nodes. 
+
+    Also note:  it is acceptable for this function to call back into
+    public FS API interfaces because it does not itself use trails.  */
 svn_error_t *
 svn_fs_check_related (int *related, 
                       svn_fs_t *fs,

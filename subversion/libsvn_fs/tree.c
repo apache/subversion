@@ -784,6 +784,8 @@ get_node_kind (enum svn_node_kind *kind,
 }
 
 
+/* Note:  it is acceptable for this function to call back into
+   public FS API interfaces because it does not itself use trails.  */
 svn_error_t *
 svn_fs_is_different (int *is_different,
                      svn_fs_root_t *root1,
@@ -1734,6 +1736,8 @@ txn_body_commit (void *baton, trail_t *trail)
 }
 
 
+/* Note:  it is acceptable for this function to call back into
+   public FS API interfaces because it does not itself use trails.  */
 svn_error_t *
 svn_fs_commit_txn (const char **conflict_p,
                    svn_revnum_t *new_rev, 
@@ -1838,7 +1842,6 @@ svn_fs_commit_txn (const char **conflict_p,
              loop again to merge the new changes in, then try to
              commit again.  Or if that's not what happened, then just
              return the error. */
-
           svn_revnum_t youngest_rev;
           SVN_ERR (svn_fs_youngest_rev (&youngest_rev, fs, pool));
           if (youngest_rev == youngish_rev)
@@ -1857,6 +1860,8 @@ svn_fs_commit_txn (const char **conflict_p,
 }
 
 
+/* Note:  it is acceptable for this function to call back into
+   public FS API interfaces because it does not itself use trails.  */
 svn_error_t *
 svn_fs_merge (const char **conflict_p,
               svn_fs_root_t *source_root,
@@ -2648,6 +2653,8 @@ txn_body_contents_changed (void *baton, trail_t *trail)
 }
 
 
+/* Note:  it is acceptable for this function to call back into
+   public FS API interfaces because it does not itself use trails.  */
 svn_error_t *
 svn_fs_contents_changed (int *changed_p,
                          svn_fs_root_t *root1,
@@ -2699,6 +2706,8 @@ svn_fs_contents_changed (int *changed_p,
 
 /* Public interface to computing file text deltas.  */
 
+/* Note:  it is acceptable for this function to call back into
+   public FS API interfaces because it does not itself use trails.  */
 svn_error_t *
 svn_fs_get_file_delta_stream (svn_txdelta_stream_t **stream_p,
                               svn_fs_root_t *source_root,
