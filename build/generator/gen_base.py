@@ -67,57 +67,56 @@ class GeneratorBase:
       if not target_class:
         raise GenError('ERROR: unknown build type: ' + type)
 
-      target_ob = target_class(target,
-                               options,
-                               self.cfg,
-                               self._extension_map)
-
+      target_ob = target_class.Section(options, target_class)
+      
       self.targets[target] = target_ob
-
-      ### another hack for now. tell a SWIG target what libraries should
-      ### be linked into each wrapper. this also depends on the fact that
-      ### the swig libraries occur *after* the other targets in build.conf
-      ### cuz of the test for "is this in self.targets?"
-      if type == 'swig':
-        target_ob.swig_libs = self._find_libs(parser.get(target, 'libs'))
-
+      
       # the target should add all relevant dependencies onto the
       # specified sources
-      target_ob.add_dependencies(options.get('sources', ''), self.graph)
+      target_ob.create_targets(self.graph, target, self.cfg,
+                               self._extension_map)
 
       self.manpages.extend(string.split(options.get('manpages', '')))
 
-      if isinstance(target_ob, TargetLinked):
+      if issubclass(target_class, TargetLinked) and not issubclass(target_class, TargetSWIG):
         # collect test programs
-        if isinstance(target_ob, TargetExe):
-          if target_ob.install == 'test':
-            self.test_deps.append(target_ob.output)
+        if issubclass(target_class, TargetExe):
+          if target_ob.target.install == 'test':
+            self.test_deps.append(target_ob.target.output)
             if options.get('testing') != 'skip':
-              self.test_progs.append(target_ob.output)
-          elif target_ob.install == 'fs-test':
-            self.fs_test_deps.append(target_ob.output)
+              self.test_progs.append(target_ob.target.output)
+          elif target_ob.target.install == 'fs-test':
+            self.fs_test_deps.append(target_ob.target.output)
             if options.get('testing') != 'skip':
               self.fs_test_progs.append(target_ob.output)
 
         # collect all the paths where stuff might get built
         ### we should collect this from the dependency nodes rather than
         ### the sources. "what dir are you going to put yourself into?"
-        self.target_dirs[target_ob.path] = None
+        self.target_dirs[target_ob.target.path] = None
         for pattern in string.split(options.get('sources', '')):
           idx = string.rfind(pattern, '/')
           if idx != -1:
             ### hmm. probably shouldn't be os.path.join() right here
             ### (at this point in the control flow; defer to output)
-            self.target_dirs[os.path.join(target_ob.path,
+            self.target_dirs[os.path.join(target_ob.target.path,
                                           pattern[:idx])] = None
 
     # compute intra-library dependencies
-    for name, target in self.targets.items():
-      for lib in self._find_libs(target.libs):
-        self.graph.add(DT_LINK, name, lib)
-      for nonlib in self._find_libs(target.nonlibs):
-        self.graph.add(DT_NONLIB, name, nonlib)
-         
+    for section in self.targets.values():
+      dep_types = ((DT_LINK, section.options.get('libs')),
+                   (DT_NONLIB, section.options.get('nonlibs')))
+
+      for dt_type, deps_list in dep_types:
+        if deps_list:
+          for dep_section in self._find_libs(deps_list):            
+            if isinstance(dep_section, Target.Section):              
+              for target in section.get_targets():
+                self.graph.bulk_add(dt_type, target.name,
+                                    dep_section.get_dep_targets(target))
+            else:
+              for target in section.get_targets():
+                self.graph.add(dt_type, target.name, ExternalLibrary(dep_section))
 
     # collect various files
     self.includes = _collect_paths(parser.get('options', 'includes'))
@@ -142,7 +141,7 @@ class GeneratorBase:
       if self.targets.has_key(libname):
         libs.append(self.targets[libname])
       else:
-        libs.append(ExternalLibrary(libname))
+        libs.append(libname)
     return libs
 
   def compute_hdr_deps(self):
@@ -203,6 +202,12 @@ class DependencyGraph:
       self.deps[type][target].append(source)
     else:
       self.deps[type][target] = [ source ]
+      
+  def bulk_add(self, type, target, sources):
+    if self.deps[type].has_key(target):
+      self.deps[type][target].extend(sources)
+    else:
+      self.deps[type][target] = sources[:]  
 
   def get_sources(self, type, target, cls=None):
     sources = self.deps[type].get(target, [ ])
@@ -252,20 +257,13 @@ class DependencyNode:
     self.fname = fname
 
   def __str__(self):
-    return _node_str(self)
+    return self.fname
 
   def __cmp__(self, ob):
-    return _node_cmp(self, ob)
+    return cmp(self.fname, ob.fname)
 
   def __hash__(self):
     return hash(self.fname)
-
-def _node_str(a):
-  return getattr(a, 'output', None) or getattr(a, 'fname', None) \
-    or os.path.join(a.path, a.name)
-
-def _node_cmp(a, b):
-  return cmp(_node_str(a), _node_str(b))
 
 class ObjectFile(DependencyNode):
   def __init__(self, fname, build_cmd = None):
@@ -290,28 +288,6 @@ class SWIGSource(SourceFile):
     SourceFile.__init__(self, fname, os.path.dirname(fname))
   pass
 
-class SWIGLibrary(DependencyNode):
-  ### stupid Target vs DependencyNode
-  add_deps = ''
-
-  def __init__(self, fname, name, lang, desc):
-    DependencyNode.__init__(self, fname)
-    self.name = name
-    self.lang = lang
-    self.lang_abbrev = lang_abbrev[lang]
-    self.path = os.path.dirname(fname)
-    self.desc = desc + ' for ' + lang_full_name[lang]
-
-    ### maybe tweak to avoid these duplicate attrs
-    self.output = fname
-    self.shared_dir = 1
-
-    ### hmm. this is Makefile-specific
-    self.link_cmd = '$(LINK_%s_WRAPPER)' % string.upper(self.lang_abbrev)
-
-class SWIGRuntimeLibrary(SWIGLibrary):
-  pass
-
 class ExternalLibrary(DependencyNode):
   pass
 
@@ -333,33 +309,35 @@ lang_full_name = {
   ### what others?
   }
 
-### we should turn these targets into DependencyNode subclasses...
-class Target:
+class Target(DependencyNode):
   def __init__(self, name, options, cfg, extmap):
     self.name = name
-    self.cfg = cfg
     self.desc = options.get('description')
     self.path = options.get('path')
-    self.libs = options.get('libs', '')
-    self.nonlibs = options.get('nonlibs', '')
     self.add_deps = options.get('add-deps', '')
 
     # true if several targets share the same directory, as is the case
     # with SWIG bindings.
     self.shared_dir = None
 
-  def add_dependencies(self, src_patterns, graph):
+  def add_dependencies(self, graph, cfg, extmap):
     # subclasses should override to provide behavior, as appropriate
-    pass
+    raise NotImplementedError
 
-  def __str__(self):
-    return _node_str(self)
+  class Section:
+    def __init__(self, options, target_class):
+      self.options = options
+      self.target_class = target_class
 
-  def __cmp__(self, ob):
-    return _node_cmp(self, ob)
+    def create_targets(self, graph, name, cfg, extmap):
+      self.target = self.target_class(name, self.options, cfg, extmap)
+      self.target.add_dependencies(graph, cfg, extmap)
 
-  def __hash__(self):
-    return hash(self.name)
+    def get_targets(self):
+      return [self.target]
+
+    def get_dep_targets(self, target):
+      return [self.target]
 
 class TargetLinked(Target):
   "The target is linked (by libtool) against other libraries."
@@ -368,14 +346,18 @@ class TargetLinked(Target):
     Target.__init__(self, name, options, cfg, extmap)
     self.install = options.get('install')
     self.compile_cmd = options.get('compile-cmd')
+    self.sources = options.get('sources', '*.c')
 
     # default output name; subclasses can/should change this
     self.output = os.path.join(self.path, name)    
+    self.fname = self.output
 
   ### hmm. this is Makefile-specific
   link_cmd = '$(LINK)'
 
-  def add_dependencies(self, src_patterns, graph):
+  def add_dependencies(self, graph, cfg, extmap):
+    src_patterns = self.sources
+
     # the specified install area depends upon this target
     graph.add(DT_INSTALL, self.install, self)
 
@@ -404,9 +386,10 @@ class TargetExe(TargetLinked):
 
     self.objext = extmap['exe', 'object']
     self.output = os.path.join(self.path, name + extmap['exe', 'target'])
+    self.fname = self.output
 
 class TargetScript(Target):
-  def add_dependencies(self, src_patterns, graph):
+  def add_dependencies(self, graph, cfg, extmap):
     # we don't need to "compile" the sources, so there are no dependencies
     # to add here, except to get the script installed in the proper area.
     # note that the script might itself be generated, but that isn't a
@@ -422,6 +405,7 @@ class TargetLib(TargetLinked):
     # the target file is the name, version, and appropriate extension
     tfile = '%s-%s%s' % (name, cfg.version, extmap['lib', 'target'])
     self.output = os.path.join(self.path, tfile)
+    self.fname = self.output
 
 class TargetApacheMod(TargetLib):
 
@@ -430,6 +414,7 @@ class TargetApacheMod(TargetLib):
 
     tfile = name + extmap['lib', 'target']
     self.output = os.path.join(self.path, tfile)
+    self.fname = self.output
 
     # we have a custom linking rule
     ### hmm. this is Makefile-specific
@@ -442,13 +427,25 @@ class TargetRaModule(TargetLib):
 class TargetDoc(Target):
   pass
 
-class TargetSWIG(Target):
-  def __init__(self, name, options, cfg, extmap):
-    Target.__init__(self, name, options, cfg, extmap)
+class TargetSWIG(TargetLib):
+  def __init__(self, name, options, cfg, extmap, lang):
+    TargetLib.__init__(self, name, options, cfg, extmap)
     self._objext = extmap['lib', 'object']
     self._libext = extmap['lib', 'target']
 
-  def add_dependencies(self, src_patterns, graph):
+    self.lang = lang
+    self.lang_abbrev = lang_abbrev[lang]
+    self.desc = self.desc + ' for ' + lang_full_name[lang]
+    self.shared_dir = 1
+
+    ### hmm. this is Makefile-specific
+    self.link_cmd = '$(LINK_%s_WRAPPER)' % string.upper(self.lang_abbrev)
+
+  def add_dependencies(self, graph, cfg, extmap):
+    src_patterns = self.sources
+    lang = self.lang
+    library = self
+
     assert src_patterns, "source(s) must be specified explicitly"
 
     sources = _collect_paths(src_patterns, self.path)
@@ -471,9 +468,14 @@ class TargetSWIG(Target):
 
     libfile = libname + self._libext
 
+    self.name = lang + libname
+    self.output = os.path.join(dir, lang, libfile)
+    self.fname = self.output
+    self.path = os.path.join(dir, lang)
+
     ifile = SWIGSource(ipath)
 
-    for lang in self.cfg.swig_lang:
+    if 1:
       abbrev = lang_abbrev[lang]
 
       # the .c file depends upon the .i file
@@ -485,8 +487,6 @@ class TargetSWIG(Target):
       graph.add(DT_OBJECT, ofile, cfile)
 
       # the library depends upon the object
-      library = SWIGLibrary(os.path.join(dir, lang, libfile),
-                            lang + libname, lang, self.desc)
       graph.add(DT_LINK, library.name, ofile)
 
       # add some language-specific libraries for languages other than
@@ -499,20 +499,28 @@ class TargetSWIG(Target):
       util = graph.get_sources(DT_INSTALL, 'swig-%s-lib' % abbrev)[0]
       graph.add(DT_LINK, library.name, util)
 
-      # add some more libraries
-      for lib in self.swig_libs:
-        graph.add(DT_LINK, library.name, lib)
-
       # the specified install area depends upon the library
       graph.add(DT_INSTALL, 'swig-' + abbrev, library)
 
+  class Section(TargetLib.Section):
+    def create_targets(self, graph, name, cfg, extmap):
+      self.targets = { }
+      for lang in cfg.swig_lang:
+        target = self.target_class(name, self.options, cfg, extmap, lang)
+        target.add_dependencies(graph, cfg, extmap)
+        self.targets[lang] = target
+
+    def get_targets(self):
+      return self.targets.values()
+
+    def get_dep_targets(self, target):
+      target = self.targets.get(target.lang, None)
+      return target and [target] or [ ]
+
 class TargetSWIGRuntime(TargetSWIG):
-  def add_dependencies(self, src_patterns, graph):
-    self._libraries = {}
-    for lang in self.cfg.swig_lang:
-      if lang == 'java':
-        # java doesn't seem to have a separate runtime  
-        continue
+  def add_dependencies(self, graph, cfg, extmap):
+      lang = self.lang
+      library = self
 
       abbrev = lang_abbrev[lang]
 
@@ -521,27 +529,37 @@ class TargetSWIGRuntime(TargetSWIG):
       oname = name + self._objext
       libname = name + self._libext
 
+      self.name = lang + '_runtime' 
+
       cfile = SWIGObject(os.path.join(self.path, lang, cname), lang)
       ofile = SWIGObject(os.path.join(self.path, lang, oname), lang)
       graph.add(DT_OBJECT, ofile, cfile)
-
-      library = SWIGRuntimeLibrary(os.path.join(self.path, lang, libname),
-                                   lang + '_runtime', lang, self.desc)
       graph.add(DT_LINK, library.name, ofile)
+      graph.add(DT_INSTALL, 'swig_runtime-' + abbrev, library)
 
-      self._libraries[lang] = library
-      graph.add(DT_INSTALL, self.name + '-' + abbrev, library)
+      self.output = os.path.join(self.path, lang, libname)
+      self.fname = self.output
+      self.path = os.path.join(self.path, lang)
 
-  def get_library(self, lang):
-    return self._libraries.get(lang, None)
+  class Section(TargetSWIG.Section):
+    def create_targets(self, graph, name, cfg, extmap):
+      self.targets = { }
+      for lang in cfg.swig_lang:
+        if lang == 'java':
+          # java doesn't seem to have a separate runtime  
+          continue      
+        target = self.target_class(name, self.options, cfg, extmap, lang)
+        target.add_dependencies(graph, cfg, extmap)
+        self.targets[lang] = target
 
 class TargetSpecial(Target):
   def __init__(self, name, options, cfg, extmap):
     Target.__init__(self, name, options, cfg, extmap)
     self.release = options.get('release')
     self.debug = options.get('debug')
+    self.fname = os.path.join(self.path, name)
 
-  def add_dependencies(self, src_patterns, graph):
+  def add_dependencies(self, graph, cfg, extmap):
     graph.add(DT_PROJECT, 'notused', self)
 
 class TargetProject(TargetSpecial):
@@ -559,8 +577,8 @@ class TargetUtility(TargetSpecial):
 
 class TargetSWIGUtility(TargetUtility):
   def __init__(self, name, options, cfg, extmap):
-    TargetSpecial.__init__(self, name, options, cfg, extmap)  
-    self.language = options.get('language')
+    TargetUtility.__init__(self, name, options, cfg, extmap)
+    self.lang = options.get('language')
 
 _build_types = {
   'exe' : TargetExe,
