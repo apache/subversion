@@ -6,20 +6,25 @@
 Last updated:  27 February 2001
 </center>
 
-<h3>The Big Picture</h3>
+<!-- ------------------------------------------------------------- -->
 
-(taken from our <a href="project_docs.html">design document</a>)
+<h3><i>Tentative</i> Roadmap</h3>
 
-<p>
-<img src="subversion-diagram.png">
-<p>
-
-<br><br>
+<ul>
+<li> <b>Milestone 1</b> (20 Oct 2000):  basic working copy manipulation;
+      client can checkout/update/commit using XML files. </li>
+<li> <b>Milestone 2</b> (1 Apr 2001):  rudimentary working filesystem;
+      client can checkout/update/commit using WebDAV layer. </li>
+<li> <b>Alpha</b> (15 May 2001):  feature complete. </li>
+<li> <b>Beta</b> (15 June 2001):  release candidate, heavy testing. </li>
+<li> <b>1.0 Release</b> (30 June 2001):  we hope.  :-) </li>
+</ul>
 
 <!----------------------------------------------------------------->
 
-
 <h3>Progress</h3>
+
+<ul>  <!-- unordered list for indentation only -->
 
 (note: these meters measure nothing but fuzzy gut feelings. :-) )
 
@@ -28,7 +33,7 @@ Last updated:  27 February 2001
 <table  cellspacing="0" cellpadding="2">
 
 <tr valign="top">
-<td align="left">Versioned Filesystem</td>
+<td align="left">Versioning Filesystem</td>
 <td align="left">
 <img src="blupixel.gif" border="0" width="205" height="15" 
 alt="200 units"><img src="redpixel.gif" border="0" width="195"
@@ -69,32 +74,26 @@ height="15" alt="200 units">
 
 </table>
 
+</ul>  <!-- END unordered list for indentation only -->
 
 <!----------------------------------------------------------------->
 
-<h3><i>Tentative</i> Roadmap</h3>
+<h3>Last Week's Activities</h3>
 
 <ul>
-
-<li> <b>Milestone 1</b> (20 Oct 2000):  basic working copy manipulation;
-      client can checkout/update/commit using XML files.
-</li>
-
-<li> <b>Milestone 2</b> (1 Apr 2001):  rudimentary working filesystem;
-      client can checkout/update/commit using WebDAV layer.
-</li>
-
-<li> <b>Alpha Release</b> (15 May 2001):  feature complete.
-</li>
-
-<li> <b>Beta Release</b> (15 June 2001):  release candidate, heavy testing.
-</li>
-
-<li> <b>1.0 Release</b> (30 June 2001):  we hope.  :-)
-</li>
-
+<li>Implemented upper level of repository public interface
+    (<tt>svn_fs.h</tt>, <tt>tree.c</tt>).</li>
+<li>Implementing DAG filesystem
+    (<tt>dag.h</tt>, <tt>dag.c</tt>).</li>
+<li>Implementing filesystem low-level table friendlies
+    (<tt>*-table.h</tt>, <tt>*-table.c</tt>).</li>
+<li>Started local-access commit editor
+    (<tt>editor.c</tt>).</li>
+<li>Add to repository test suite
+    (<tt>fs-test.c</tt>).</li>
+<li>Make adding a file to a repository work!
+    (<tt>all of the above, heh</tt>).</li>
 </ul>
-
 
 <!----------------------------------------------------------------->
 
@@ -103,14 +102,26 @@ height="15" alt="200 units">
 <ul>
 <li><b>Filesystem</b>:  kfogel, cmpilato, sussman, jimb </li>
 <li><b>DAV layer</b>:  gstein </li>
-<li><b>Client libs</b>:  -- </li>
+<li><b>Client libs</b>:  kfogel, but in holding pattern -- </li>
 <li><b>Migration tools</b>:  -- </li>
 <li><b>Docs</b>: -- </li>
 </ul>
 
+<!----------------------------------------------------------------->
 
-<h3>Last Week's Activities</h3>
+<h3>The Big Picture</h3>
 
-Insert two-paragraph summary here.  (Perhaps written by a volunteer?)
+<ul>  <!-- unordered list for indentation only -->
+
+(taken from the <a href="project_docs.html">design document</a>)
+
+<p>
+<img src="subversion-diagram.png">
+<p>
+
+<br>
+<br>
+
+</ul>  <!-- END unordered list for indentation only -->
 
 </html>
