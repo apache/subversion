@@ -303,7 +303,7 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
     "\n"
     "    Note: svn recognizes the following special properties but will \n"
     "    store any arbitrary properties set:\n"
-    "      svn:ingore     - A newline separated list of file patterns to ignore.\n"
+    "      svn:ignore     - A newline separated list of file patterns to ignore.\n"
     "      svn:keywords   - Keywords to be expanded.  Valid keywords are:\n"
     "        URL, HeadURL             - The URL for the head version of "
     "the object.\n"
@@ -315,7 +315,9 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
     "        attempt to set this property on a directory will be ignored.)\n"
     "      svn:eol-style  - One of 'native', 'LF', 'CR', 'CRLF'. \n"
     "      svn:mimetype   - The mimetype of the file.  Used to determine\n"
-    "        whether to merge the file, and how to serve it from Apache.",
+    "        whether to merge the file, and how to serve it from Apache.\n"
+    "        A mimetype beginning with 'text/' (or an absent mimetype) is\n"
+    "        treated as text.  Anything else is treated as binary.\n",
     {'F', 'q', svn_cl__targets_opt, svn_cl__recursive_opt} },
   
   { "revert", svn_cl__revert, {0},
