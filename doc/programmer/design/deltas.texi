@@ -294,8 +294,8 @@ the text @code{revision='@var{rev}'}, indicating a new value for
 
 If a filename or path appearing as a @var{name} or @var{path} in the
 description above contains the characters @samp{&}, @samp{<}, or
-@samp{'}, they should be replaced with the sequences @samp{&#38},
-@samp{&#60}, or @samp{&#39}, respectively.
+@samp{'}, they should be replaced with the sequences @samp{&#38;},
+@samp{&#60;}, or @samp{&#39;}, respectively.
 
 Suppose we have the following source tree:
 @example
