@@ -109,10 +109,10 @@ run_hook_cmd (const char *name,
 
 /* Run the start-commit hook for REPOS.  Use POOL for any temporary
    allocations.  If the hook fails, return SVN_ERR_REPOS_HOOK_FAILURE.  */
-static svn_error_t *
-run_start_commit_hook (svn_repos_t *repos,
-                       const char *user,
-                       apr_pool_t *pool)
+svn_error_t *
+svn_repos__hooks_start_commit (svn_repos_t *repos,
+                               const char *user,
+                               apr_pool_t *pool)
 {
   svn_node_kind_t kind;
   const char *hook = svn_repos_start_commit_hook (repos, pool);
@@ -136,10 +136,10 @@ run_start_commit_hook (svn_repos_t *repos,
 
 /* Run the pre-commit hook for REPOS.  Use POOL for any temporary
    allocations.  If the hook fails, return SVN_ERR_REPOS_HOOK_FAILURE.  */
-static svn_error_t  *
-run_pre_commit_hook (svn_repos_t *repos,
-                     const char *txn_name,
-                     apr_pool_t *pool)
+svn_error_t  *
+svn_repos__hooks_pre_commit (svn_repos_t *repos,
+                             const char *txn_name,
+                             apr_pool_t *pool)
 {
   svn_node_kind_t kind;
   const char *hook = svn_repos_pre_commit_hook (repos, pool);
@@ -163,10 +163,10 @@ run_pre_commit_hook (svn_repos_t *repos,
 
 /* Run the post-commit hook for REPOS.  Use POOL for any temporary
    allocations.  If the hook fails, run SVN_ERR_REPOS_HOOK_FAILURE.  */
-static svn_error_t  *
-run_post_commit_hook (svn_repos_t *repos,
-                      svn_revnum_t rev,
-                      apr_pool_t *pool)
+svn_error_t  *
+svn_repos__hooks_post_commit (svn_repos_t *repos,
+                              svn_revnum_t rev,
+                              apr_pool_t *pool)
 {
   svn_node_kind_t kind;
   const char *hook = svn_repos_post_commit_hook (repos, pool);
@@ -191,16 +191,16 @@ run_post_commit_hook (svn_repos_t *repos,
 /* Run the pre-revprop-change hook for REPOS.  Use POOL for any
    temporary allocations.  If the hook fails, return
    SVN_ERR_REPOS_HOOK_FAILURE.  */
-static svn_error_t  *
-run_pre_revprop_change_hook (svn_repos_t *repos,
-                             svn_revnum_t rev,
-                             const char *author,
-                             const char *name,
-                             const svn_string_t *value,
-                             apr_pool_t *pool)
+svn_error_t  *
+svn_repos__hooks_pre_revprop_change (svn_repos_t *repos,
+                                     svn_revnum_t rev,
+                                     const char *author,
+                                     const char *name,
+                                     const svn_string_t *value,
+                                     apr_pool_t *pool)
 {
   svn_node_kind_t kind;
-  const char *hook = svn_repos_pre_revprop_change_hook(repos, pool);
+  const char *hook = svn_repos_pre_revprop_change_hook (repos, pool);
 
   if ((! svn_io_check_path (hook, &kind, pool)) 
       && (kind == svn_node_file))
@@ -238,15 +238,15 @@ run_pre_revprop_change_hook (svn_repos_t *repos,
 /* Run the pre-revprop-change hook for REPOS.  Use POOL for any
    temporary allocations.  If the hook fails, return
    SVN_ERR_REPOS_HOOK_FAILURE.  */
-static svn_error_t  *
-run_post_revprop_change_hook (svn_repos_t *repos,
-                              svn_revnum_t rev,
-                              const char *author,
-                              const char *name,
-                              apr_pool_t *pool)
+svn_error_t  *
+svn_repos__hooks_post_revprop_change (svn_repos_t *repos,
+                                      svn_revnum_t rev,
+                                      const char *author,
+                                      const char *name,
+                                      apr_pool_t *pool)
 {
   svn_node_kind_t kind;
-  const char *hook = svn_repos_post_revprop_change_hook(repos, pool);
+  const char *hook = svn_repos_post_revprop_change_hook (repos, pool);
   
   if ((! svn_io_check_path (hook, &kind, pool)) 
       && (kind == svn_node_file))
@@ -291,14 +291,14 @@ svn_repos_fs_commit_txn (const char **conflict_p,
     const char *txn_name;
 
     SVN_ERR (svn_fs_txn_name (&txn_name, txn, pool));
-    SVN_ERR (run_pre_commit_hook (repos, txn_name, pool));
+    SVN_ERR (svn_repos__hooks_pre_commit (repos, txn_name, pool));
   }
 
   /* Commit. */
   SVN_ERR (svn_fs_commit_txn (conflict_p, new_rev, txn));
 
   /* Run post-commit hooks. */
-  SVN_ERR (run_post_commit_hook (repos, *new_rev, pool));
+  SVN_ERR (svn_repos__hooks_post_commit (repos, *new_rev, pool));
 
   return SVN_NO_ERROR;
 }
@@ -315,14 +315,15 @@ svn_repos_fs_change_rev_prop (svn_repos_t *repos,
   svn_fs_t *fs = repos->fs;
 
   /* Run pre-revprop-change hook */
-  SVN_ERR (run_pre_revprop_change_hook (repos, rev, author, name, 
-                                        value, pool));
+  SVN_ERR (svn_repos__hooks_pre_revprop_change (repos, rev, author, name, 
+                                                value, pool));
 
   /* Change the revision prop. */
   SVN_ERR (svn_fs_change_rev_prop (fs, rev, name, value, pool));
 
   /* Run post-revprop-change hook */
-  SVN_ERR (run_post_revprop_change_hook (repos, rev, author, name, pool));
+  SVN_ERR (svn_repos__hooks_post_revprop_change (repos, rev, author, 
+                                                 name, pool));
 
   return SVN_NO_ERROR;
 }
@@ -338,7 +339,7 @@ svn_repos_fs_begin_txn_for_commit (svn_fs_txn_t **txn_p,
                                    apr_pool_t *pool)
 {
   /* Run start-commit hooks. */
-  SVN_ERR (run_start_commit_hook (repos, author, pool));
+  SVN_ERR (svn_repos__hooks_start_commit (repos, author, pool));
 
   /* Begin the transaction. */
   SVN_ERR (svn_fs_begin_txn (txn_p, repos->fs, rev, pool));
