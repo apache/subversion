@@ -550,7 +550,7 @@ def pass4(ctx):
   # create the target repository
   if not ctx.dry_run:
     if ctx.create_repos:
-      t_repos = repos.svn_repos_create(ctx.target, None, None, ctx.pool)
+      t_repos = repos.svn_repos_create(ctx.target, None, None, None, ctx.pool)
     else:
       t_repos = repos.svn_repos_open(ctx.target, ctx.pool)
     t_fs = repos.svn_repos_fs(t_repos)
