@@ -441,6 +441,9 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
    function can use to query for a commit log message when one is
    needed.
 
+   Use NONRECURSIVE to indicate that imported directories should not
+   recurse into any subdirectories they may have.
+
    Note: REVISION is svn_revnum_t, rather than svn_client_revision_t,
    because only the svn_client_revision_number kind would be useful
    anyway.
@@ -465,6 +468,7 @@ svn_error_t *svn_client_import (svn_client_commit_info_t **commit_info,
                                 void *log_msg_baton,
                                 svn_stringbuf_t *xml_dst,
                                 svn_revnum_t revision,
+                                svn_boolean_t nonrecursive,
                                 apr_pool_t *pool);
 
 
@@ -500,6 +504,9 @@ svn_error_t *svn_client_import (svn_client_commit_info_t **commit_info,
    because only the svn_client_revision_number kind would be useful
    anyway.
 
+   Use NONRECURSIVE to indicate that subdirectories of directory
+   TARGETS should be ignored.
+
    Use POOL for any temporary allocation.
 
    If no error is returned and (*COMMIT_INFO)->revision is set to
@@ -520,6 +527,7 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
                    void *log_msg_baton,
                    svn_stringbuf_t *xml_dst,
                    svn_revnum_t revision,
+                   svn_boolean_t nonrecursive,
                    apr_pool_t *pool);
 
 

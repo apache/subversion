@@ -312,16 +312,14 @@ svn_client__get_diff_editor (svn_stringbuf_t *target,
    directory names which were locked in the process of this crawl.
    These will need to be unlocked again post-commit.
 
-   ### this will one day replace svn_wc_crawl_local_mods,
-   crawl_local_mods, crawl_dir, and report_single_entry.  
-
-   ### needed: a committables generator to replace
-   svn_wc_crawl_as_copy and crawl_as_copy.  */
+   If NONRECURSIVE is specified, subdirectories of directory targets
+   found in TARGETS will not be crawled for modifications.  */
 svn_error_t *
 svn_client__harvest_committables (apr_hash_t **committables,
                                   apr_hash_t **locked_dirs,
                                   svn_stringbuf_t *parent_dir,
                                   apr_array_header_t *targets,
+                                  svn_boolean_t nonrecursive,
                                   apr_pool_t *pool);
 
 

@@ -94,6 +94,7 @@ svn_cl__commit (apr_getopt_t *os,
             svn_cl__make_log_msg_baton (opt_state, base_dir, pool),
             opt_state->xml_file,
             revnum,
+            opt_state->nonrecursive,
             pool));
   if (commit_info)
     svn_cl__print_commit_info (commit_info);

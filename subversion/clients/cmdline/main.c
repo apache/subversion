@@ -140,7 +140,7 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
     "usage: svn commit [TARGETS]\n\n"
     "   Be sure to use one of -m or -F to send a log message;\n"
     "   the -r switch is only for use with --xml-file.\n",
-    {'m', 'F', 'q', svn_cl__targets_opt,
+    {'m', 'F', 'q', 'n', svn_cl__targets_opt,
      svn_cl__force_opt, svn_cl__auth_username_opt, svn_cl__auth_password_opt,
      svn_cl__xml_file_opt, 'r'} },
   
@@ -201,7 +201,7 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
     "    If no 3rd arg, copy top-level contents of PATH into REPOS_URL\n"
     "    directly.  Otherwise, create NEW_ENTRY underneath REPOS_URL and\n"
     "    begin copy there.  (-r is only needed if importing to --xml-file)\n",
-    {'F', 'm', 'q', svn_cl__auth_username_opt, svn_cl__auth_password_opt,
+    {'F', 'm', 'q', 'n', svn_cl__auth_username_opt, svn_cl__auth_password_opt,
      svn_cl__xml_file_opt, 'r'} },
   
   { "log", svn_cl__log, {0},

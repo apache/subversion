@@ -138,6 +138,7 @@ import_dir (apr_hash_t *files,
             void *dir_baton,
             const svn_stringbuf_t *path,
             const svn_stringbuf_t *edit_path,
+            svn_boolean_t nonrecursive,
             apr_pool_t *pool)
 {
   apr_pool_t *subpool = svn_pool_create (pool);  /* iteration pool */
@@ -186,7 +187,9 @@ import_dir (apr_hash_t *files,
       svn_path_add_component (this_path, name);
       svn_path_add_component (this_edit_path, name);
 
-      if (finfo.filetype == APR_DIR)
+      /* We only import subdirectories when we're doing a regular
+         recursive import. */
+      if ((finfo.filetype == APR_DIR) && (! nonrecursive))
         {
           void *this_dir_baton;
 
@@ -198,7 +201,8 @@ import_dir (apr_hash_t *files,
 
           /* Recurse. */
           SVN_ERR (import_dir (files, editor, this_dir_baton, 
-                               this_path, this_edit_path, subpool));
+                               this_path, this_edit_path, 
+                               FALSE, subpool));
 
           /* Finally, close the sub-directory. */
           SVN_ERR (editor->close_directory (this_dir_baton));
@@ -209,11 +213,9 @@ import_dir (apr_hash_t *files,
           SVN_ERR (import_file (files, editor, dir_baton, 
                                 this_path, this_edit_path->data, subpool));
         }
-      else
-        {
-          /* It's not a file or dir, so we can't import it (yet).
-             No need to error, just ignore the thing. */
-        }
+      /* ### We're silently ignoring things that aren't files or
+         directories.  If we stop doing that, here is the place to
+         change your world.  */
       
       /* Hack THIS_PATH and THIS_EDIT_PATH back to their original sizes. */
       svn_stringbuf_chop (this_path, 
@@ -264,6 +266,7 @@ import (const svn_stringbuf_t *path,
         const svn_stringbuf_t *new_entry,
         const svn_delta_editor_t *editor,
         void *edit_baton,
+        svn_boolean_t nonrecursive,
         apr_pool_t *pool)
 {
   void *root_baton;
@@ -310,7 +313,7 @@ import (const svn_stringbuf_t *path,
       SVN_ERR (import_dir 
                (files, editor, new_dir_baton ? new_dir_baton : root_baton, 
                 path, new_entry ? new_entry : svn_stringbuf_create ("", pool), 
-                pool));
+                nonrecursive, pool));
 
       /* Close one baton or two. */
       if (new_dir_baton)
@@ -422,6 +425,7 @@ svn_client_import (svn_client_commit_info_t **commit_info,
                    void *log_msg_baton,
                    svn_stringbuf_t *xml_dst,
                    svn_revnum_t revision,
+                   svn_boolean_t nonrecursive,
                    apr_pool_t *pool)
 {
   apr_status_t apr_err;
@@ -490,7 +494,7 @@ svn_client_import (svn_client_commit_info_t **commit_info,
 
   /* If an error occured during the commit, abort the edit and return
      the error.  We don't even care if the abort itself fails.  */
-  if ((err = import (path, new_entry, editor, edit_baton, pool)))
+  if ((err = import (path, new_entry, editor, edit_baton, nonrecursive, pool)))
     {
       editor->abort_edit (edit_baton);
       return err;
@@ -657,6 +661,7 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
                    void *log_msg_baton,
                    svn_stringbuf_t *xml_dst,
                    svn_revnum_t revision,
+                   svn_boolean_t nonrecursive,
                    apr_pool_t *pool)
 {
   const svn_delta_editor_t *editor;
@@ -714,6 +719,7 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
                                                    &locked_dirs,
                                                    base_dir,
                                                    rel_targets, 
+                                                   nonrecursive,
                                                    pool)))
     goto cleanup;
 

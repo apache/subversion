@@ -122,7 +122,9 @@ add_committable (apr_hash_t *committables,
    entry ENTRY and ancestry URL), and add those candidates to
    COMMITTABLES.  If in ADDS_ONLY modes, only new additions are
    recognized.  COPYFROM_URL is the default copyfrom-url for children
-   of copied directories.
+   of copied directories.  NONRECURSIVE indicates that this function
+   will not recurse into subdirectories of PATH when PATH is itself a
+   directory.
 
    If in COPY_MODE, the entry is treated as if it is destined to be
    added with history as URL.  */
@@ -135,6 +137,7 @@ harvest_committables (apr_hash_t *committables,
                       svn_wc_entry_t *entry,
                       svn_boolean_t adds_only,
                       svn_boolean_t copy_mode,
+                      svn_boolean_t nonrecursive,
                       apr_pool_t *pool)
 {
   apr_pool_t *subpool = svn_pool_create (pool);
@@ -336,6 +339,19 @@ harvest_committables (apr_hash_t *committables,
 
           /* Name is an entry name; value is an entry structure. */
           this_entry = (svn_wc_entry_t *) val;
+
+          /* Skip subdirectory entries when we're not recursing.
+
+             ### it occurs to me that if someone specified two
+             targets, `some/dir' and `some/dir/subdir' for the commit,
+             *and* specified that they wanted a non-recursive commit,
+             that these would be "compressed" to a single target of
+             `some/dir', which would (because of the non-recursive
+             feature) result in `some/dir/subdir' not getting
+             committed.  we probably ought to do something about that.  */
+          if ((this_entry->kind == svn_node_dir) && nonrecursive)
+            continue;
+
           svn_path_add_component_nts (full_path, name);
           if (this_cf_url)
             svn_path_add_component_nts (this_cf_url, name);
@@ -357,6 +373,7 @@ harvest_committables (apr_hash_t *committables,
                     (svn_wc_entry_t *)val, 
                     adds_only,
                     copy_mode,
+                    FALSE,
                     subpool));
 
           /* Truncate paths back to their pre-loop state. */
@@ -380,6 +397,7 @@ svn_client__harvest_committables (apr_hash_t **committables,
                                   apr_hash_t **locked_dirs,
                                   svn_stringbuf_t *parent_dir,
                                   apr_array_header_t *targets,
+                                  svn_boolean_t nonrecursive,
                                   apr_pool_t *pool)
 {
   int i = 0;
@@ -472,7 +490,8 @@ svn_client__harvest_committables (apr_hash_t **committables,
 
       /* Handle our TARGET. */
       SVN_ERR (harvest_committables (*committables, *locked_dirs, target, 
-                                     url, NULL, entry, FALSE, FALSE, pool));
+                                     url, NULL, entry, FALSE, FALSE, 
+                                     nonrecursive, pool));
 
       /* Reset our base path for the next iteration, and increment our
          counter. */
@@ -509,7 +528,7 @@ svn_client__get_copy_committables (apr_hash_t **committables,
   /* Handle our TARGET. */
   SVN_ERR (harvest_committables (*committables, *locked_dirs, target, 
                                  new_url, entry->url, entry, 
-                                 FALSE, TRUE, pool));
+                                 FALSE, TRUE, FALSE, pool));
 
   return SVN_NO_ERROR;
 }
