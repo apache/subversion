@@ -122,8 +122,7 @@ def guarantee_greek_repository(path):
       sys.exit(1)
 
   # Now that the pristine repos exists, copy it to PATH.
-  if os.path.exists(path):
-    shutil.rmtree(path)
+  svntest.main.safe_rmtree(path)
   if main.copy_repos(main.pristine_dir, path, 1):
     print "ERROR:  copying repository failed."
     sys.exit(1)
@@ -733,8 +732,7 @@ def duplicate_dir(wc_name, wc_copy_name):
   """Copy the working copy WC_NAME to WC_COPY_NAME.  Overwrite any
   existing tree at that location."""
 
-  if os.path.exists(wc_copy_name):
-    main.safe_rmtree(wc_copy_name)
+  main.safe_rmtree(wc_copy_name)
   shutil.copytree(wc_name, wc_copy_name)
   
 
