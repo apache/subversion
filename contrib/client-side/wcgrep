@@ -56,4 +56,4 @@ done
 
 find $pathargs -regex ${WCGREP_IGNORE:-'.*~$\|.*/\.svn\(/\|$\)'} -prune -o \
     -type f -print0 | xargs -r0 ${WCGREP_GREP:-grep} ${WCGREP_GREPARGS:--HnI} \
-    $grepargs $pattern 
+    $grepargs "$pattern"
