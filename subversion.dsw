@@ -41,9 +41,6 @@ Package=<4>
     Begin Project Dependency
     Project_Dep_Name svnlook
     End Project Dependency
-    Begin Project Dependency
-    Project_Dep_Name svn_com
-    End Project Dependency
 }}}
 
 ###############################################################################
@@ -418,42 +415,6 @@ Package=<4>
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name libsvn_ra_dav
-    End Project Dependency
-}}}
-
-###############################################################################
-
-Project: "svn_com"=.\subversion\clients\win32\svn_com\svn_com.dsp - Package Owner=<4>
-
-Package=<5>
-{{{
-}}}
-
-Package=<4>
-{{{
-    Begin Project Dependency
-    Project_Dep_Name apr
-    End Project Dependency
-    Begin Project Dependency
-    Project_Dep_Name aprutil
-    End Project Dependency
-    Begin Project Dependency
-    Project_Dep_Name apriconv
-    End Project Dependency
-    Begin Project Dependency
-    Project_Dep_Name xml
-    End Project Dependency
-    Begin Project Dependency
-    Project_Dep_Name libsvn_client
-    End Project Dependency
-    Begin Project Dependency
-    Project_Dep_Name libsvn_wc
-    End Project Dependency
-    Begin Project Dependency
-    Project_Dep_Name libsvn_delta
-    End Project Dependency
-    Begin Project Dependency
-    Project_Dep_Name libsvn_subr
     End Project Dependency
 }}}
 
