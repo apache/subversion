@@ -84,7 +84,7 @@ if test -n "$APXS"; then
     INSTALL_IT="\$(APXS) -i -a -n dav_svn $BINNAME"
 
     APXS_CC="`$APXS -q CC`"
-    APACHE_INCLUDES="$APACHE_INCLUDES -I$APXS_INCLUDE -I$APXS_INCLUDE/apr -I$APXS_INCLUDE/xml"
+    APACHE_INCLUDES="$APACHE_INCLUDES -I$APXS_INCLUDE"
 
     INSTALL_APACHE_RULE=install-mods-static
 
