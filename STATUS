@@ -46,13 +46,6 @@ Candidate changes:
        -1: brane [until someone explains to me why this should be a
                   Unix-only change]
 
-  * r10772, r10858
-    Allow 'svn commit' to delete schedule-delete symlinks. (issue 2045)
-    Justification:
-      Trivial fix to a new svn 1.1 feature.
-    Votes:
-      +1: sussman, jpieper, breser
-
   * r10676
     Fix segfault when committing renamed-file with changed svn:eol-style prop.
     Justification:
