@@ -280,8 +280,10 @@ do_apply_textdelta (svn_string_t *filename,
   status = apr_open (&localfile, filename->data,
                      APR_READ, APR_OS_DEFAULT, pool);
   if (status)
-    return svn_error_create (status, 0, NULL, pool,
-                             "do_apply_textdelta: error opening local file");
+    return
+      svn_error_createf (status, 0, NULL, pool,
+                         "do_apply_textdelta: error opening '%s'",
+                         filename->data);
 
   err = svn_wc__open_text_base (&textbasefile, filename, APR_READ, pool);
   if (err) return err;
@@ -289,8 +291,8 @@ do_apply_textdelta (svn_string_t *filename,
   /* Create a text-delta stream object that pulls data out of the two
      files. */
   svn_txdelta (&txdelta_stream, 
-               posix_file_reader, localfile,
                posix_file_reader, textbasefile,
+               posix_file_reader, localfile,
                pool);
   
   /* Grab a window from the stream, "push" it at the consumer routine,
