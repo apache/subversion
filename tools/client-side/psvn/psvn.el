@@ -38,7 +38,7 @@
 ;; =     - svn-status-show-svn-diff         run 'svn diff'
 ;; l     - svn-status-show-svn-log          run 'svn log'
 ;; i     - svn-status-info                  run 'svn info'
-;; r     - svn-status-revert-file           run 'svn revert'
+;; r     - svn-status-undo-file             run 'svn undo'
 ;; U     - svn-status-update-cmd            run 'svn update'
 ;; c     - svn-status-commit-file           run 'svn commit'
 ;; a     - svn-status-add-file              run 'svn add'
@@ -110,7 +110,7 @@
 ;; * propget (pget, pg)        used
 ;; * proplist (plist, pl)      implemented
 ;; * propset (pset, ps)        used
-;; * revert                    implemented
+;; * undo                      implemented
 ;; * resolve
 ;; * status (stat, st)         implemented
 ;; * switch (sw)
@@ -303,9 +303,9 @@
                 ((eq svn-process-cmd 'mkdir)
                  (svn-status-update)
                  (message "svn mkdir finished"))
-                ((eq svn-process-cmd 'revert)
+                ((eq svn-process-cmd 'undo)
                  (svn-status-update)
-                 (message "svn revert finished"))
+                 (message "svn undo finished"))
                 ((eq svn-process-cmd 'cleanup)
                  ;;(svn-status-show-process-buffer-internal t)
                  (message "svn cleanup finished"))
@@ -420,7 +420,9 @@
   (define-key svn-status-mode-map [?c] 'svn-status-commit-file)
   (define-key svn-status-mode-map [(meta ?c)] 'svn-status-cleanup)
   (define-key svn-status-mode-map [?U] 'svn-status-update-cmd)
-  (define-key svn-status-mode-map [?r] 'svn-status-revert-file)
+  ;; 'r' for "revert", since both 'U' and 'u' are taken.  But what
+  ;; will we do when we want to bind "svn resolve"?  Hmmm...
+  (define-key svn-status-mode-map [?r] 'svn-status-undo-file)
   (define-key svn-status-mode-map [?l] 'svn-status-show-svn-log)
   (define-key svn-status-mode-map [?i] 'svn-status-info)
   (define-key svn-status-mode-map [?=] 'svn-status-show-svn-diff))
@@ -451,7 +453,7 @@
                     ["svn diff" svn-status-show-svn-diff t]
                     ["svn add" svn-status-add-file t]
                     ["svn mkdir..." svn-status-make-directory t]
-                    ["svn revert" svn-status-revert-file t]
+                    ["svn undo" svn-status-undo-file t]
                     ["svn cleanup" svn-status-cleanup t]
                     ["Show Process Buffer" svn-status-show-process-buffer t]
                     ("Property"
@@ -492,7 +494,7 @@
   =     - svn-status-show-svn-diff         run 'svn diff'
   l     - svn-status-show-svn-log          run 'svn log'
   i     - svn-status-info                  run 'svn info'
-  r     - svn-status-revert-file           run 'svn revert'
+  r     - svn-status-undo-file             run 'svn undo'
   U     - svn-status-update-cmd            run 'svn update'
   c     - svn-status-commit-file           run 'svn commit'
   a     - svn-status-add-file              run 'svn add'
@@ -895,20 +897,20 @@ Then move to that line."
     (setq dir (file-relative-name dir)))
   (svn-run-svn t t 'mkdir "mkdir" "--" dir))
 
-(defun svn-status-revert-file ()
+(defun svn-status-undo-file ()
   (interactive)
   (let* ((marked-files (svn-status-marked-files))
          (num-of-files (length marked-files)))
     (if (= 0 num-of-files)
-        (message "No file selected for reverting!")
+        (message "No file selected for undoing!")
       (when (yes-or-no-p (if (= 1 num-of-files)
-                             (format "Revert %s? " (svn-status-line-info->filename
+                             (format "Undo changes to %s? " (svn-status-line-info->filename
                                                     (car marked-files)))
-                           (format "Revert %d files? " num-of-files)))
-        (message "reverting: %S" (svn-status-marked-files))
+                           (format "Undo %d files? " num-of-files)))
+        (message "undoing: %S" (svn-status-marked-files))
         (svn-status-create-arg-file svn-status-temp-arg-file ""
                                     (svn-status-marked-files) "")
-        (svn-run-svn t t 'revert "revert" "--targets" svn-status-temp-arg-file)))))
+        (svn-run-svn t t 'undo "undo" "--targets" svn-status-temp-arg-file)))))
 
 (defun svn-status-update-cmd ()
   (interactive)

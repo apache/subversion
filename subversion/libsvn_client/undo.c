@@ -1,5 +1,5 @@
 /*
- * revert.c:  wrapper around wc revert functionality.
+ * undo.c:  wrapper around wc undo functionality.
  *
  * ====================================================================
  * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
@@ -36,10 +36,10 @@
 /*** Code. ***/
 
 svn_error_t *
-svn_client_revert (const char *path,
-                   svn_boolean_t recursive,
-                   svn_client_ctx_t *ctx,
-                   apr_pool_t *pool)
+svn_client_undo (const char *path,
+                 svn_boolean_t recursive,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *pool)
 {
   svn_wc_adm_access_t *adm_access;
   svn_boolean_t wc_root;
@@ -79,10 +79,10 @@ svn_client_revert (const char *path,
         }
     }
 
-  err = svn_wc_revert (path, adm_access, recursive,
-                       ctx->cancel_func, ctx->cancel_baton,
-                       ctx->notify_func, ctx->notify_baton,
-                       pool);
+  err = svn_wc_undo (path, adm_access, recursive,
+                     ctx->cancel_func, ctx->cancel_baton,
+                     ctx->notify_func, ctx->notify_baton,
+                     pool);
 
   out:
 

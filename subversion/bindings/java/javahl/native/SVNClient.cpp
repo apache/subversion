@@ -438,7 +438,7 @@ void SVNClient::remove(const char *path, const char *message, bool force)
 
 }
 
-void SVNClient::revert(const char *path, bool recurse)
+void SVNClient::undo(const char *path, bool recurse)
 {
     Pool subPool;
     apr_pool_t * apr_pool = subPool.pool ();
@@ -448,7 +448,7 @@ void SVNClient::revert(const char *path, bool recurse)
 	{
 		return;
 	}
-	svn_error_t *Err = svn_client_revert (m_lastPath.c_str (), recurse, ctx, apr_pool);
+	svn_error_t *Err = svn_client_undo (m_lastPath.c_str (), recurse, ctx, apr_pool);
 
     if(Err != NULL)
  		JNIUtil::handleSVNError(Err, NULL);

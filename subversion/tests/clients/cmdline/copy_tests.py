@@ -780,8 +780,8 @@ def copy_delete_commit(sbox):
 
 
 #----------------------------------------------------------------------
-def mv_and_revert_directory(sbox):
-  "move and revert a directory"
+def mv_and_undo_directory(sbox):
+  "move and undo a directory"
 
   if sbox.build():
     return 1
@@ -805,11 +805,11 @@ def mv_and_revert_directory(sbox):
   if svntest.actions.run_and_verify_status(wc_dir, expected_status):
     return 1
 
-  # Issue 932: revert failed to lock the parent directory
-  outlines, errlines = svntest.main.run_svn(None, 'revert', '--recursive',
+  # Issue 932: undo failed to lock the parent directory
+  outlines, errlines = svntest.main.run_svn(None, 'undo', '--recursive',
                                             wc_dir + '/A/B/F/E')
   if errlines:
-    print "failed to revert A/B/F/E"
+    print "failed to undo A/B/F/E"
     return 1
   expected_status.remove('A/B/F/E', 'A/B/F/E/alpha', 'A/B/F/E/beta')
   if svntest.actions.run_and_verify_status(wc_dir, expected_status):
@@ -976,8 +976,8 @@ def repos_to_wc(sbox):
     })
   svntest.actions.run_and_verify_status (wc_dir, expected_output)
   
-  # Revert everything and verify.
-  output, errput = svntest.main.run_svn(None, 'revert', '-R', wc_dir)  
+  # Undo everything and verify.
+  output, errput = svntest.main.run_svn(None, 'undo', '-R', wc_dir)  
   if errput:
     raise svntest.Failure
 
@@ -1050,7 +1050,7 @@ test_list = [ None,
               copy_modify_commit,
               copy_files_with_properties,
               copy_delete_commit,
-              mv_and_revert_directory,
+              mv_and_undo_directory,
               Skip(copy_preserve_executable_bit, (os.name != 'posix')),
               wc_to_repos,
               repos_to_wc,

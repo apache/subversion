@@ -930,7 +930,7 @@ svn_wc_add (const char *path,
         {
           /* ### todo: At some point, we obviously don't want to block
              replacements where the node kind changes.  When this
-             happens, svn_wc_revert() needs to learn how to revert
+             happens, svn_wc_undo() needs to learn how to handle
              this situation.  At present we are using a specific node-change
              error so that clients can detect it. */
           return svn_error_createf 
@@ -1115,9 +1115,9 @@ svn_wc_add (const char *path,
 }
 
 
-/* Thoughts on Reversion. 
+/* Thoughts on Undoing. 
 
-    What does is mean to revert a given PATH in a tree?  We'll
+    What does is mean to undo a given PATH in a tree?  We'll
     consider things by their modifications.
 
     Adds
@@ -1125,7 +1125,7 @@ svn_wc_add (const char *path,
     - For files, svn_wc_remove_from_revision_control(), baby.
 
     - Added directories may contain nothing but added children, and
-      reverting the addition of a directory necessary means reverting
+      undoing the addition of a directory necessary means undoing
       the addition of all the directory's children.  Again,
       svn_wc_remove_from_revision_control() should do the trick.
 
@@ -1164,32 +1164,32 @@ svn_wc_add (const char *path,
 */
 
 
-/* Return a new wrapping of error ERR regarding the revert subcommand,
+/* Return a new wrapping of error ERR regarding the undo subcommand,
    while doing VERB on PATH.  Use POOL for allocations.
 */
 static svn_error_t *
-revert_error (svn_error_t *err,
+error_in_undo (svn_error_t *err,
               const char *path,
               const char *verb,
               apr_pool_t *pool)
 {
   return svn_error_quick_wrap 
-    (err, apr_psprintf (pool, "revert: error %s for `%s'", verb, path));
+    (err, apr_psprintf (pool, "undo: error %s for `%s'", verb, path));
 }
 
 
-/* Revert ENTRY for NAME in directory represented by ADM_ACCESS, altering
-   *MODIFY_FLAGS to indicate what parts of the entry were reverted
-   (for example, if property changes were reverted, then set the
+/* Undo ENTRY for NAME in directory represented by ADM_ACCESS, altering
+   *MODIFY_FLAGS to indicate what parts of the entry were undone
+   (for example, if property changes were undone, then set the
    SVN_WC__ENTRY_MODIFY_PROP_TIME bit in MODIFY_FLAGS).
 
    Use POOL for any temporary allocations.*/
 static svn_error_t *
-revert_admin_things (svn_wc_adm_access_t *adm_access,
-                     const char *name,
-                     svn_wc_entry_t *entry,
-                     apr_uint32_t *modify_flags,
-                     apr_pool_t *pool)
+undo_admin_things (svn_wc_adm_access_t *adm_access,
+                   const char *name,
+                   svn_wc_entry_t *entry,
+                   apr_uint32_t *modify_flags,
+                   apr_pool_t *pool)
 {
   const char *fullpath, *thing, *base_thing;
   svn_node_kind_t kind;
@@ -1197,7 +1197,7 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
   svn_error_t *err;
   apr_time_t tstamp;
 
-  /* Build the full path of the thing we're reverting. */
+  /* Build the full path of the thing we're undoing. */
   fullpath = svn_wc_adm_access_path (adm_access);
   if (name && (strcmp (name, SVN_WC_ENTRY_THIS_DIR) != 0))
     fullpath = svn_path_join (fullpath, name, pool);
@@ -1225,10 +1225,10 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
         {
           if ((working_props_kind == svn_node_file)
               && (err = svn_io_set_file_read_write (thing, FALSE, pool)))
-            return revert_error (err, fullpath, "restoring props", pool);
+            return error_in_undo (err, fullpath, "restoring props", pool);
 
           if ((err = svn_io_copy_file (base_thing, thing, FALSE, pool)))
-            return revert_error (err, fullpath, "restoring props", pool);
+            return error_in_undo (err, fullpath, "restoring props", pool);
 
           SVN_ERR (svn_io_file_affected_time (&tstamp, thing, pool));
           entry->prop_time = tstamp;
@@ -1236,10 +1236,10 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
       else if (working_props_kind == svn_node_file)
         {
           if ((err = svn_io_set_file_read_write (thing, FALSE, pool)))
-            return revert_error (err, fullpath, "removing props", pool);
+            return error_in_undo (err, fullpath, "removing props", pool);
 
           if ((err = svn_io_remove_file (thing, pool)))
-            return revert_error (err, fullpath, "removing props", pool);
+            return error_in_undo (err, fullpath, "removing props", pool);
         }
 
       /* Modify our entry structure. */
@@ -1247,7 +1247,7 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
     }
   else if (entry->schedule == svn_wc_schedule_replace)
     {
-      /* Edge case: we're reverting a replacement, and
+      /* Edge case: we're undoing a replacement, and
          svn_wc_props_modified_p thinks there's no property mods.
          However, because of the scheduled replacement,
          svn_wc_props_modified_p is deliberately ignoring the
@@ -1261,7 +1261,7 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
       SVN_ERR (svn_io_check_path (base_thing, &kind, pool));
 
       if ((err = svn_io_copy_file (base_thing, thing, FALSE, pool)))
-        return revert_error (err, fullpath, "restoring props", pool);
+        return error_in_undo (err, fullpath, "restoring props", pool);
       
       SVN_ERR (svn_io_file_affected_time (&tstamp, thing, pool));
       entry->prop_time = tstamp;
@@ -1299,7 +1299,7 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
                                                    keywords,
                                                    TRUE, /* expand keywords */
                                                    pool)))
-            return revert_error (err, fullpath, "restoring text", pool);
+            return error_in_undo (err, fullpath, "restoring text", pool);
 
           /* If necessary, tweak the new working file's executable bit. */
           SVN_ERR (svn_wc__maybe_set_executable (NULL, fullpath, adm_access,
@@ -1358,20 +1358,20 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
 
 
 svn_error_t *
-svn_wc_revert (const char *path,
-               svn_wc_adm_access_t *parent_access,
-               svn_boolean_t recursive,
-               svn_cancel_func_t cancel_func,
-               void *cancel_baton,
-               svn_wc_notify_func_t notify_func,
-               void *notify_baton,
-               apr_pool_t *pool)
+svn_wc_undo (const char *path,
+             svn_wc_adm_access_t *parent_access,
+             svn_boolean_t recursive,
+             svn_cancel_func_t cancel_func,
+             void *cancel_baton,
+             svn_wc_notify_func_t notify_func,
+             void *notify_baton,
+             apr_pool_t *pool)
 {
   svn_node_kind_t kind;
   const char *p_dir = NULL, *bname = NULL;
   const svn_wc_entry_t *entry;
   svn_wc_entry_t *tmp_entry;
-  svn_boolean_t wc_root = FALSE, reverted = FALSE;
+  svn_boolean_t wc_root = FALSE, undone = FALSE;
   apr_uint32_t modify_flags = 0;
   svn_wc_adm_access_t *dir_access;
 
@@ -1386,7 +1386,7 @@ svn_wc_revert (const char *path,
   if (! entry)
     return svn_error_createf 
       (SVN_ERR_ENTRY_NOT_FOUND, NULL,
-       "Cannot revert '%s' -- not a versioned resource", path);
+       "Cannot undo changes to '%s' -- not a versioned resource", path);
 
   /* Safeguard 1.5: is this a missing versioned directory? */
   if (entry->kind == svn_node_dir)
@@ -1396,13 +1396,13 @@ svn_wc_revert (const char *path,
       if ((disk_kind != svn_node_dir)
           && (entry->schedule != svn_wc_schedule_add))
         {
-          /* When the directory itself is missing, we can't revert
+          /* When the directory itself is missing, we can't undo
              without hitting the network.  Someday a '--force' option
              will make this happen.  For now, send notification of the
              failure. */
           if (notify_func != NULL)
             (*notify_func) (notify_baton, path,
-                            svn_wc_notify_failed_revert,
+                            svn_wc_notify_failed_undo,
                             svn_node_unknown,
                             NULL,
                             svn_wc_notify_state_unknown,
@@ -1417,7 +1417,7 @@ svn_wc_revert (const char *path,
   if ((entry->kind != svn_node_file) && (entry->kind != svn_node_dir))
     return svn_error_createf 
       (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-       "Cannot revert '%s' -- unsupported entry node kind", path);
+       "Cannot undo changes to '%s' -- unsupported entry node kind", path);
 
   /* Safeguard 3:  can we deal with the node kind of PATH current in
      the working copy? */
@@ -1427,7 +1427,8 @@ svn_wc_revert (const char *path,
       && (kind != svn_node_dir))
     return svn_error_createf 
       (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-       "Cannot revert '%s' -- unsupported node kind in working copy", path);
+       "Cannot undo chnges to '%s' -- unsupported node kind in working copy",
+       path);
 
   /* For directories, determine if PATH is a WC root so that we can
      tell if it is safe to split PATH into a parent directory and
@@ -1487,9 +1488,9 @@ svn_wc_revert (const char *path,
            "Unknown or unexpected kind for path '%s'", path);
 
       /* Recursivity is taken care of by svn_wc_remove_from_revision_control, 
-         and we've definitely reverted PATH at this point. */
+         and we've definitely undone PATH at this point. */
       recursive = FALSE;
-      reverted = TRUE;
+      undone = TRUE;
 
       /* If the removed item was *also* in a 'deleted' state, make
          sure we leave just a plain old 'deleted' entry behind in the
@@ -1517,26 +1518,26 @@ svn_wc_revert (const char *path,
   /* Regular prop and text edit. */
   else if (entry->schedule == svn_wc_schedule_normal)
     {
-      /* Revert the prop and text mods (if any). */
+      /* Undo the prop and text mods (if any). */
       if (entry->kind == svn_node_file)
-        SVN_ERR (revert_admin_things (parent_access, bname, tmp_entry,
-                                      &modify_flags, pool));
+        SVN_ERR (undo_admin_things (parent_access, bname, tmp_entry,
+                                    &modify_flags, pool));
       if (entry->kind == svn_node_dir)
-        SVN_ERR (revert_admin_things (dir_access, NULL, tmp_entry,
-                                      &modify_flags, pool));
+        SVN_ERR (undo_admin_things (dir_access, NULL, tmp_entry,
+                                    &modify_flags, pool));
     }
 
   /* Deletions and replacements. */
   else if ((entry->schedule == svn_wc_schedule_delete) 
            || (entry->schedule == svn_wc_schedule_replace))
     {
-      /* Revert the prop and text mods (if any). */
+      /* Undo the prop and text mods (if any). */
       if (entry->kind == svn_node_file)
-        SVN_ERR (revert_admin_things (parent_access, bname, tmp_entry,
-                                      &modify_flags, pool));
+        SVN_ERR (undo_admin_things (parent_access, bname, tmp_entry,
+                                    &modify_flags, pool));
       if (entry->kind == svn_node_dir)
-        SVN_ERR (revert_admin_things (dir_access, NULL, tmp_entry,
-                                      &modify_flags, pool));
+        SVN_ERR (undo_admin_things (dir_access, NULL, tmp_entry,
+                                    &modify_flags, pool));
 
       modify_flags |= SVN_WC__ENTRY_MODIFY_SCHEDULE;
     }
@@ -1572,13 +1573,13 @@ svn_wc_revert (const char *path,
                                          TRUE, pool));
         }
 
-      /* Note that this was reverted. */
-      reverted = TRUE;
+      /* Note that this was undone. */
+      undone = TRUE;
     }
 
-  /* If PATH was reverted, tell our client that. */
-  if ((notify_func != NULL) && reverted)
-    (*notify_func) (notify_baton, path, svn_wc_notify_revert,
+  /* If PATH was undone, tell our client that. */
+  if ((notify_func != NULL) && undone)
+    (*notify_func) (notify_baton, path, svn_wc_notify_undo,
                     svn_node_unknown,
                     NULL,  /* ### any way to get the mime type? */
                     svn_wc_notify_state_unknown,
@@ -1610,10 +1611,10 @@ svn_wc_revert (const char *path,
           /* Add the entry name to FULL_ENTRY_PATH. */
           full_entry_path = svn_path_join (path, keystring, subpool);
 
-          /* Revert the entry. */
-          SVN_ERR (svn_wc_revert (full_entry_path, dir_access, TRUE,
-                                  cancel_func, cancel_baton,
-                                  notify_func, notify_baton, subpool));
+          /* Undo the entry. */
+          SVN_ERR (svn_wc_undo (full_entry_path, dir_access, TRUE,
+                                cancel_func, cancel_baton,
+                                notify_func, notify_baton, subpool));
 
           svn_pool_clear (subpool);
         }

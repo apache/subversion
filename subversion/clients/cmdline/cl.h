@@ -150,7 +150,7 @@ svn_opt_subcommand_t
   svn_cl__propget,
   svn_cl__proplist,
   svn_cl__propset,
-  svn_cl__revert,
+  svn_cl__undo,
   svn_cl__resolve,
   svn_cl__status,
   svn_cl__switch,

@@ -2,7 +2,7 @@ Version 0.24.0 (released XX XXX XXXX, revision XXXX, branches/release-0.24)
 
  User-visible changes:
  * new 'svn diff [--old OLD] [--new NEW]' syntax
-
+ * 'svn undo' replaces 'svn revert', to avoid confusion with 'svn resolve'
 
 Version 0.23.0 (released 16 May 2003, revision 5962, branches/release-0.23.0)
 

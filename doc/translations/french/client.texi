@@ -214,7 +214,7 @@ ajouté le drapeau @option{--recursive}.
 @item @samp{svn rm @file{foo}}
 Programme la suppression de @file{foo} dans le dépôt. @file{foo} est un
 fichier, Subversion le fait disparaitre de la copie de travail -- mais il
-peut être restauré avec @samp{svn revert} (voir plus loin).  Si
+peut être restauré avec @samp{svn undo} (voir plus loin).  Si
 @file{foo} est un répertoire, il est simplement programmé pour la
 suppression. Après votre remontée, @file{foo} n'existera plus dans la
 copie de travai ni dans le dépôt.
@@ -240,7 +240,7 @@ URLs.  Regarder ce que vous retourne @samp{svn help} sur ces commandes
 pour plus de détails.)
 
 
-@subsection Examinez vos modifications (@samp{svn status}, @samp{svn diff}, @samp{svn revert})
+@subsection Examinez vos modifications (@samp{svn status}, @samp{svn diff}, @samp{svn undo})
 
 Donc maintenant que vous avez fini vos modification@dots{} vous vous dites:
 Quelle sont les modifications que j'ai fait ? Comment les consulter?
@@ -308,7 +308,7 @@ de révision mais il est manquant dans la copie de travail. Ceci peut
 arriver si le fichier ou le répertoire est supprimé en utilisant une
 commande non-Subversion. Pour restaurer le fichier ou répertoire manquant,
 vous pouvez utiliser @samp{svn update} (récupération depuis le dépôt) ou
-@samp{svn revert fichier_ou_répertoire} (récupération avec la copie de
+@samp{svn undo fichier_ou_répertoire} (récupération avec la copie de
 référence caché dans @file{.svn}).
 @end table
 
@@ -461,23 +461,23 @@ Maintenant supposons que vous voyez cette affichage et réalisez que vos
 modifications à @file{README} sont érronées; peut-être avez-vous éditer
 le mauvais fichier.
 
-La commande @samp{svn revert} répond à ce type de problème. Elle
+La commande @samp{svn undo} répond à ce type de problème. Elle
 supprime tous les modifications.
 
 
 @example
-$ svn revert README
-Reverted ./README
+$ svn undo README
+Undid ./README
 @end example
 
 Le fichier est ramener a son état avant modification en l'écrasant avec la
-copie de référence de @file{.svn}. Remarquer aussi que @samp{svn revert}
+copie de référence de @file{.svn}. Remarquer aussi que @samp{svn undo}
 peut annuler toutes opérations programmées -- Dans le cas où vous décidez
 que vous ne voulez pas ajouter un nouveau fichier, ou que vous ne voulez
 pas supprimer un fichier.
 
 Dernier point, ces trois commandes (@samp{svn status}, @samp{svn diff},
-@samp{svn revert}) peuvent être utilisées sans accès réseau (sauf
+@samp{svn undo}) peuvent être utilisées sans accès réseau (sauf
 @samp{svn status -u}).  Ceci facilite la gestion de vos modifications en
 cour lorsque vous voyagez en avion@dots{}
 
@@ -523,7 +523,7 @@ supprimés.
 Si vous obtenez un conflit, vous devez soit (1) faire la fusion
 manuellement des textes en conflits (en examinant et en éditant les
 marqueurs de conflit dans le fichier), (2) copier un des fichiers tmp*
-en haut de votre fichier de travail, ou (3) exécuter @samp{svn revert}
+en haut de votre fichier de travail, ou (3) exécuter @samp{svn undo}
 pour perdre tous vos modifications.
 
 Une fois que vous avez résolu les conflits, vous devez en informer 
@@ -908,7 +908,7 @@ update} ou @samp{svn switch}, La commande n'applique que des modifications
 temporaires à vos fichiers de travail. Une fois que les différences sont
 appliquées comme des modifications locales, vous pouvez les examiner comme
 d'habitude avec @samp{svn diff}, @samp{svn status}, ou les annuler comme
-d'habitude avec @samp{svn revert}. Si les changement sont acceptable, vous
+d'habitude avec @samp{svn undo}. Si les changement sont acceptable, vous
 pouvez les remonter.
 
 @subsection Revenir en arrière avec @samp{svn merge}
@@ -1230,7 +1230,7 @@ Les modifications de propriétés restent considérées comme des
 ``modifications locales'' et ne sont pas permanentes tant que vous ne les
 avez pas remontées. Comme les modifications de texte, les modifications de
 propriétés peuvent être vuess avec @samp{svn diff}, @samp{svn
-status} et également annulées avec @samp{svn revert}:
+status} et également annulées avec @samp{svn undo}:
 
 @example
 $ svn diff

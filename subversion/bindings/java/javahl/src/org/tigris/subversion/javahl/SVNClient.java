@@ -129,10 +129,10 @@ public class SVNClient
       */
     public native void remove(String path, String message, boolean force)throws ClientException;
     /**
-      * Reverts a file to a pristine state.
+      * Undoes a file to a pristine state.
       * @exception ClientException
       */
-    public native void revert(String path, boolean recurse)throws ClientException;
+    public native void undo(String path, boolean recurse)throws ClientException;
     /**
      * Adds a file to the repository.
      * @exception ClientException

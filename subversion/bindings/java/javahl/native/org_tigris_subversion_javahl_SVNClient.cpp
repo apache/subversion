@@ -356,13 +356,13 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_remove
 
 /*
  * Class:     org_tigris_subversion_javahl_SVNClient
- * Method:    revert
+ * Method:    undo
  * Signature: (Ljava/lang/String;Z)V
  */
-JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_revert
+JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_undo
   (JNIEnv* env, jobject jthis, jstring jpath, jboolean jrecurse)
 {
-	JNIEntry(SVNClient, revert);
+	JNIEntry(SVNClient, undo);
 	SVNClient *cl = SVNClient::getCppObject(jthis);
 	if(cl == NULL)
 	{
@@ -374,7 +374,7 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_revert
 	{
 		return;
 	}
-	cl->revert(path, jrecurse ? true : false);
+	cl->undo(path, jrecurse ? true : false);
 }
 
 /*

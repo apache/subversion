@@ -446,8 +446,8 @@ def commit_replacement_props(sbox):
 
 #----------------------------------------------------------------------
 
-def revert_replacement_props(sbox):
-  "props work when reverting a replacement"
+def undo_replacement_props(sbox):
+  "props work when undo a replacement"
 
   # Bootstrap
   sbox.build()
@@ -484,8 +484,8 @@ def revert_replacement_props(sbox):
   # Now add a property to lambda.  Iota still doesn't have any.
   svntest.main.run_svn(None, 'propset', 'capacitor', 'flux', lambda_path)  
 
-  # Now revert both files.
-  svntest.main.run_svn(None, 'revert', iota_path, lambda_path)
+  # Now undo both files.
+  svntest.main.run_svn(None, 'undo', iota_path, lambda_path)
 
   # Do an update; even though the update is really a no-op,
   # run_and_verify_update has the nice feature of scanning disk as
@@ -946,7 +946,7 @@ test_list = [ None,
               remove_props,
               update_conflict_props,
               commit_replacement_props,
-              revert_replacement_props,
+              undo_replacement_props,
               inappropriate_props,
               copy_should_use_copied_executable_and_mime_type_values,
               # If we learn how to write a pre-revprop-change hook for
