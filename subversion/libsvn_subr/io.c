@@ -1754,8 +1754,8 @@ svn_io_run_diff (const char *dir,
       args[i++] = label2;
     }
 
-  args[i++] = from;
-  args[i++] = to;
+  args[i++] = svn_path_local_style (from, subpool);
+  args[i++] = svn_path_local_style (to, subpool);
   args[i++] = NULL;
 
   assert (i == nargs);
@@ -1858,9 +1858,9 @@ svn_io_run_diff3 (const char *dir,
       }
   }
 #endif
-  args[i++] = mine;
-  args[i++] = older;
-  args[i++] = yours;
+  args[i++] = svn_path_local_style (mine, pool);
+  args[i++] = svn_path_local_style (older, pool);
+  args[i++] = svn_path_local_style (yours, pool);
   args[i++] = NULL;
   assert (i == nargs);
 
