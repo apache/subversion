@@ -77,8 +77,6 @@ class Generator(gen_base.GeneratorBase):
       objnames = string.join(gen_base._strip_path(path, objects))
 
       if isinstance(target_ob, gen_base.TargetJava):
-        ### TODO: --enable-maintainer-mode should add the -g argument
-        ### to include all debugging info in compiled bytecodes.
         self.ofile.write(
           '%s_DEPS = %s %s\n'
           '%s: $(%s_DEPS)\n'
