@@ -112,6 +112,14 @@ Bindings changes that affect the build system:
       +1: patrick (if above is applied)
       +1 (concept): kfogel
 
+    * r8368, r8417, r8418, r8438, r8439, r8440, r8441, r8442
+     Support SWIG 1.3.20 and newer and require at least 1.3.19.
+     Justification: An increasingly common version of SWIG that we need
+                    to support.  And have proper requirements.
+     Notes: This time it should be complete.
+     Votes:
+      +1: breser
+     
 Bindings changes that don't affect the build system:
 
 [none pending]
