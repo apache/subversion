@@ -133,8 +133,9 @@ def run_and_verify_checkout(URL, wc_dir_name, output_tree, disk_tree):
   return 0
 
 
-def run_and_verify_commit(wc_dir_name, output_tree, status_output_tree=None):
-  """Commit any pending changes in WC_DIR_NAME.
+def run_and_verify_commit(wc_dir_name, output_tree, status_output_tree, *args):
+  """Commit and verify results within working copy WC_DIR_NAME,
+  sending ARGS to the commit subcommand.
   
   The subcommand output will be verified against OUTPUT_TREE.  If
   optional STATUS_OUTPUT_TREE is given, then 'svn status' output will
@@ -142,7 +143,7 @@ def run_and_verify_commit(wc_dir_name, output_tree, status_output_tree=None):
   were bumped.)  Return 0 if successful."""
 
   # Commit.
-  output = svn_test_main.run_svn ('ci', wc_dir_name)
+  output = svn_test_main.run_svn ('ci', *args)
 
   # Remove the final output line, and verify that 'Commit succeeded'.
   lastline = string.strip(output.pop())
@@ -154,6 +155,8 @@ def run_and_verify_commit(wc_dir_name, output_tree, status_output_tree=None):
 
   # Convert the output into a tree.
   mytree = svn_tree.build_tree_from_commit (output)
+
+  svn_tree.dump_tree(mytree)
 
   # Verify actual output against expected output.
   if svn_tree.compare_trees (mytree, output_tree):
@@ -277,12 +280,12 @@ def basic_status():
   
 #----------------------------------------------------------------------
 
-def basic_commit():
-  "basic commit"
+def commit_from_wc_top():
+  "commit '.' in working copy"
 
-  wc_dir = os.path.join (general_wc_dir, 'basic-commit')
+  wc_dir = os.path.join (general_wc_dir, 'commit_from_wc_top')
   
-  if make_repo_and_wc('basic-commit'):
+  if make_repo_and_wc('commit_from_wc_top'):
     return 1
 
   # Make a couple of local mods to files
@@ -306,10 +309,49 @@ def basic_commit():
 
   return run_and_verify_commit (wc_dir,
                                 expected_output_tree,
-                                expected_status_tree)
+                                expected_status_tree,
+                                wc_dir)
   
 #----------------------------------------------------------------------
 
+def commit_one_file():
+  "commit one file only"
+
+  wc_dir = os.path.join (general_wc_dir, 'commit_one_file')
+  
+  if make_repo_and_wc('commit_one_file'):
+    return 1
+
+  # Make a couple of local mods to files
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
+  svn_test_main.file_append (mu_path, 'appended mu text')
+  svn_test_main.file_append (rho_path, 'new appended text for rho')
+
+  # Created expected output tree for 'svn ci';  we're only committing rho.
+  output_list = [ [rho_path, None, {'verb' : 'Changing' }] ]
+  expected_output_tree = svn_tree.build_generic_tree(output_list)
+
+  svn_tree.dump_tree(expected_output_tree)
+
+
+  # Create expected status tree; all local revisions should be at 1,
+  # but rho should be at revision 2.
+  status_list = get_virginal_status_list(wc_dir, '2')
+  for item in status_list:
+    if (item[0] != rho_path):
+      item[2]['wc_rev'] = '1'
+    # And mu should still be locally modified
+    if (item[0] == mu_path):
+      item[2]['status'] = 'M '
+  expected_status_tree = svn_tree.build_generic_tree(status_list)
+
+  return run_and_verify_commit (wc_dir,
+                                expected_output_tree,
+                                expected_status_tree,
+                                rho_path)
+  
+#----------------------------------------------------------------------
 
 
   
@@ -318,7 +360,8 @@ def basic_commit():
 test_list = [ None,
               basic_checkout,
               basic_status,
-              basic_commit
+              commit_from_wc_top,
+              commit_one_file
              ]
 
 if __name__ == '__main__':  
