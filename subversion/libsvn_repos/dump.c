@@ -402,7 +402,7 @@ dump_node (struct edit_baton *eb,
   if (must_dump_text && (kind == svn_node_file))
     {
       unsigned char md5_digest[MD5_DIGESTSIZE];
-      const char *hex_digest = NULL;
+      const char *hex_digest;
 
       SVN_ERR (svn_fs_file_length (&textlen, eb->fs_root, path, pool));
       content_length += textlen;
