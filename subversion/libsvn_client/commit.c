@@ -742,7 +742,6 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
   svn_boolean_t commit_in_progress = FALSE;
   svn_wc_entry_t *base_entry;
   const char *display_dir = ".";
-  int notify_path_offset;
   int i;
 
   /* Condense the target list. */
@@ -886,12 +885,11 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
                                         display_dir, pool)))
     goto cleanup;
   display_dir = svn_path_get_longest_ancestor (display_dir, base_dir, pool);
-  notify_path_offset = display_dir ? (strlen (display_dir) + 1): 0;
 
   /* Perform the commit. */
   cmt_err = svn_client__do_commit (base_url, commit_items, editor, edit_baton, 
                                    notify_func, notify_baton,
-                                   notify_path_offset,
+                                   display_dir,
                                    &tempfiles, pool);
 
   /* Make a note that our commit is finished. */

@@ -378,8 +378,8 @@ svn_client__condense_commit_items (const char **base_url,
    NOTIFY_FUNC/BATON will be called as the commit progresses, as a way
    of describing actions to the application layer (if non NULL).
 
-   NOTIFY_PATH_OFFSET is used to send shorter, relative paths to the
-   notify_func (it's the number of characters subtracted from the front
+   NOTIFY_PATH_PREFIX is used to send shorter, relative paths to the
+   notify_func (it's a prefix that will be subtracted from the front
    of the paths.)
 
    If the caller wants to keep track of any outstanding temporary
@@ -392,7 +392,7 @@ svn_client__do_commit (const char *base_url,
                        void *edit_baton,
                        svn_wc_notify_func_t notify_func,
                        void *notify_baton,
-                       int notify_path_offset,
+                       const char *notify_path_prefix,
                        apr_hash_t **tempfiles,
                        apr_pool_t *pool);
 
