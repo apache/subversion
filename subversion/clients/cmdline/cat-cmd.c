@@ -75,9 +75,7 @@ svn_cl__cat (apr_getopt_t *os,
    */
   status = apr_file_open_stdout (&std_out, pool);
   if (!APR_STATUS_IS_SUCCESS (status))
-    {
-      return svn_error_create (status, NULL, "");
-    }
+    return svn_error_create (status, NULL, "Error opening stdout.");
 
   for (i = 0; i < targets->nelts; i++)
     {
