@@ -349,11 +349,14 @@ svn_error_t *svn_wc__entry_remove (svn_string_t *path,
 
 struct svn_wc__entries_index
 {
-  /* To be continued */
+  apr_pool_t *pool;
+  svn_string_t *path;  /* Which `entries' file we're looping over */
+  int nth_item;        /* The Nth entry we're looking for on this
+                          pass. */
 };
 
 
-/* Start a loop over PATH's entries file. */
+/* Start a loop over PATH's entries file, returning an entries_index. */
 svn_error_t *svn_wc__entries_start (struct svn_wc__entries_index **idx,
                                     svn_string_t *path,
                                     apr_pool_t *pool);

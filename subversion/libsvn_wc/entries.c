@@ -236,6 +236,11 @@ typedef struct svn_wc__entry_baton_t
   apr_pool_t *pool;
   svn_xml_parser_t *parser;
 
+  int count;               /* If looping over entries, keep count of
+                              how many we've seen */
+  int nth_item;            /* If looping over entries, this is the Nth
+                              entry we're searching for */
+
   svn_boolean_t found_it;  /* Gets set to true iff we see a matching entry. */
 
   svn_boolean_t removing;  /* Set iff the task is to remove an entry. */
@@ -372,28 +377,79 @@ handle_start_tag (void *userData, const char *tagname, const char **atts)
 
   if ((strcmp (tagname, SVN_WC__ENTRIES_ENTRY)) == 0)
     {
+      /* Get the name of this entry */
       const char *entry
         = svn_xml_get_attr_value (SVN_WC__ENTRIES_ATTR_NAME, atts);
-      
-      /* Nulls count as a match, because null represents the dir itself. */
-      if (((entry == NULL) && (baton->entryname == NULL))
-          || ((entry != NULL)
-              && (baton->entryname != NULL)
-              && ((strcmp (entry, baton->entryname->data)) == 0)))
-        {
-          baton->found_it = 1;
 
-          if (baton->outfile) /* we're writing out a change */
+      /* Are we looping, looking for a particular Nth entry? */
+      if (baton->nth_item > 0)
+        {
+          /* Increment the counter */
+          (baton->count)++;
+
+          /* Is this the Nth entry? */
+          if (baton->count == baton->nth_item)
             {
-              /* Rewrite the tag only if we're not removing it. */
-              if (! baton->removing)
+              /* Put the entry name into the baton */
+              baton->entryname = svn_string_create (entry, baton->pool);
+
+              /* Get other info too */
+              get_entry_attributes (atts,
+                                    &(baton->version),
+                                    &(baton->kind),
+                                    baton->attributes,
+                                    baton->pool);
+            }
+        }
+
+      else   /* We're not doing a "loop", but looking for a real
+                name-match to get or set: */
+        {
+          /* Nulls count as a match, because null represents the dir itself. */
+          if (((entry == NULL) && (baton->entryname == NULL))
+              || ((entry != NULL)
+                  && (baton->entryname != NULL)
+                  && ((strcmp (entry, baton->entryname->data)) == 0)))
+            {
+              baton->found_it = 1;
+              
+              if (baton->outfile) /* we're writing out a change */
                 {
-                  err = write_entry (baton->outfile,
-                                     baton->entryname,
-                                     baton->version,
-                                     baton->kind,
-                                     baton->attributes,
-                                     baton->pool);
+                  /* Rewrite the tag only if we're not removing it. */
+                  if (! baton->removing)
+                    {
+                      err = write_entry (baton->outfile,
+                                         baton->entryname,
+                                         baton->version,
+                                         baton->kind,
+                                         baton->attributes,
+                                         baton->pool);
+                      if (err)
+                        {
+                          svn_xml_signal_bailout (err, baton->parser);
+                          return;
+                    }
+                    }
+                }
+              else  /* just reading attribute values, not writing a new tag */
+                get_entry_attributes (atts,
+                                      &(baton->version),
+                                      &(baton->kind),
+                                      baton->attributes,
+                                      baton->pool);
+            }
+                  
+          else  /* An entry tag, but not the one we're looking for. */
+            {
+              if (baton->outfile)  /* just write it back out unchanged. */
+                {
+                  err = svn_xml_write_tag_hash 
+                    (baton->outfile,
+                     baton->pool,
+                     svn_xml_self_close_tag,
+                     SVN_WC__ENTRIES_ENTRY,
+                 svn_xml_make_att_hash (atts, baton->pool));
+                  
                   if (err)
                     {
                       svn_xml_signal_bailout (err, baton->parser);
@@ -401,32 +457,9 @@ handle_start_tag (void *userData, const char *tagname, const char **atts)
                     }
                 }
             }
-          else  /* just reading attribute values, not writing a new tag */
-            get_entry_attributes (atts,
-                                  &(baton->version),
-                                  &(baton->kind),
-                                  baton->attributes,
-                                  baton->pool);
         }
-      else  /* An entry tag, but not the one we're looking for. */
-        {
-          if (baton->outfile)  /* just write it back out unchanged. */
-            {
-              err = svn_xml_write_tag_hash 
-                (baton->outfile,
-                 baton->pool,
-                 svn_xml_self_close_tag,
-                 SVN_WC__ENTRIES_ENTRY,
-                 svn_xml_make_att_hash (atts, baton->pool));
-                                            
-              if (err)
-                {
-                  svn_xml_signal_bailout (err, baton->parser);
-                  return;
-                }
-            }
-        } 
     }
+
   else  /* This is some tag other than `entry', preserve it unchanged.  */
     {
       if (baton->outfile)
@@ -540,17 +573,20 @@ do_parse (svn_wc__entry_baton_t *baton)
 
 /*** Getting and setting entries. ***/
 
-/* Common code for entry_set and entry_get. */
+/* Common code for entry_set, entry_get, and the entry looper. */
 static svn_error_t *
 do_entry (svn_string_t *path,
           apr_pool_t *pool,
           svn_string_t *entryname,
+          svn_string_t **entryname_receiver,
           svn_vernum_t version,
           svn_vernum_t *version_receiver,
           enum svn_node_kind kind,
           enum svn_node_kind *kind_receiver,
           svn_boolean_t removing,
           svn_boolean_t setting,
+          svn_boolean_t looping,
+          int nth_item,
           apr_hash_t *attributes)
 {
   svn_error_t *err;
@@ -561,6 +597,7 @@ do_entry (svn_string_t *path,
     = apr_pcalloc (pool, sizeof (svn_wc__entry_baton_t));
 
   assert (! (setting && removing));
+  assert (! (setting && looping));
   assert (! ((entryname == NULL) && removing));
 
   /* Open current entries file for reading */
@@ -589,6 +626,13 @@ do_entry (svn_string_t *path,
   baton->version    = version;
   baton->kind       = kind;
   baton->attributes = attributes;
+  baton->count      = 0;
+
+  if (looping)
+    baton->nth_item = nth_item;
+  else
+    baton->nth_item = -1;  /* tells handle_start_tag() that we're not
+                              looping */
 
   /* Set the att. */
   err = do_parse (baton);
@@ -612,6 +656,8 @@ do_entry (svn_string_t *path,
     }
   else
     {
+      if (entryname_receiver)
+        *entryname_receiver = svn_string_dup (baton->entryname, pool);
       if (version_receiver)
         *version_receiver = baton->version;
       if (kind_receiver)
@@ -639,11 +685,13 @@ svn_wc__entry_set (svn_string_t *path,
   att_hash = svn_xml_ap_to_hash (ap, pool);
   va_end (ap);
   
-  err = do_entry (path, pool, entryname,
+  err = do_entry (path, pool, entryname, NULL,
                   version, NULL,
                   kind, NULL,
                   0, /* not removing */
                   1, /* setting */
+                  0, /* not looping */
+                  -1,
                   att_hash);
 
   return err;
@@ -662,11 +710,13 @@ svn_wc__entry_get (svn_string_t *path,
   svn_error_t *err;
   apr_hash_t *ht = apr_make_hash (pool);
 
-  err = do_entry (path, pool, entryname,
+  err = do_entry (path, pool, entryname, NULL,
                   SVN_INVALID_VERNUM, version,
                   0, kind,
                   0, /* not removing */
                   0, /* not setting */
+                  0, /* not looping */
+                  -1,
                   ht);
   if (err)
     return err;
@@ -686,19 +736,80 @@ svn_error_t *svn_wc__entry_remove (svn_string_t *path,
 
   err = do_entry (path,
                   pool,
-                  entryname,
+                  entryname, NULL,
                   SVN_INVALID_VERNUM,  /* irrelevant */
                   NULL,                /* irrelevant */
                   0,                   /* irrelevant */
                   NULL,                /* irrelevant */
                   1,                   /* removing */
                   0,                   /* not setting */
+                  0,                   /* not looping */
+                  -1,                  /* irrelevant */
                   NULL);               /* irrelevant */
   if (err)
     return err;
 
   return SVN_NO_ERROR;
 }
+
+
+
+/* Start a loop over PATH's entries file, returning an entries_index. */
+svn_error_t *
+svn_wc__entries_start (struct svn_wc__entries_index **idx,
+                       svn_string_t *path,
+                       apr_pool_t *pool)
+{
+  struct svn_wc__entries_index *new_index
+    = apr_pcalloc (pool, sizeof(struct svn_wc__entries_index));
+
+  new_index->pool     = pool;
+  new_index->path     = svn_string_dup (path, pool);
+  new_index->nth_item = 0;
+
+  return SVN_NO_ERROR;
+}
+
+
+/* Loop over the entries file, returning the name of each entry, as
+   well as all the other information normally returned by
+   svn_wc__entry_get().  When there are no more entries, *ENTRYNAME
+   will be set to null. */
+svn_error_t *
+svn_wc__entries_next (struct svn_wc__entries_index *idx,
+                      svn_string_t **entryname,
+                      svn_vernum_t *version,
+                      enum svn_node_kind *kind,
+                      apr_hash_t **hash)
+{
+  svn_error_t *err;
+  apr_hash_t *ht = apr_make_hash (idx->pool);
+
+  /* Increment the index; this is the new nth entry to look for */
+  (idx->nth_item)++;
+
+  err = do_entry (idx->path, idx->pool,
+                  NULL, /* No entryname to search for */
+                  entryname,  /* return an entryname here */
+                  SVN_INVALID_VERNUM, version,
+                  0, kind,
+                  0, /* not removing */
+                  0, /* not setting */
+                  1, /* definitely looping! */
+                  idx->nth_item,  /* looking for nth entry */
+                  ht);
+  if (err)
+    return err;
+
+  *hash = ht;
+
+  return SVN_NO_ERROR;
+}
+
+
+
+
+
 
 
 
