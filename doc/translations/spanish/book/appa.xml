@@ -152,25 +152,26 @@
   <!-- ======================== SECTION 3 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-ap-a-sect-3">
-    <title>More Disconnected Operations</title>
+    <title>Más operaciones estando desconectado</title>
+    <!--More Disconnected Operations-->
 
-    <para>In recent years, disk space has become outrageously cheap
-      and abundant, but network bandwidth has not.  Therefore, the
-      Subversion working copy has been optimized around the scarcer
-      resource.</para>
+    <para>En años recientes, ha llegado a ser <!--TODO:outrageously cheap-->
+      muy barata y abundante, pero el ancho de banda de red no. Por lo
+      tanto, la copia de trabajo se Subversion ha sido optimizada alrededor
+      del recurso más escaso.</para>
 
-    <para>The <filename>.svn</filename> administrative directory
-      serves the same purpose as the <filename>CVS</filename>
-      directory, except that it also stores read-only,
-      <quote>pristine</quote> copies of your files.  This allows you
-      to do many things off-line:</para>
+    <para>El directorio administrativo <filename>.svn</filename> tiene el
+      mismo proposito que el directorio <filename>CVS</filename>, excepto
+      que este también almacena copias <quote>pristinas</quote> de
+      solo-lectura de sus ficheros. Esto le permite hacer muchas cosas
+      desconectado:</para>
     
     <variablelist>
       
       <varlistentry>
         <term><command>svn status</command></term>
         <listitem>
-          <para>Shows you any local changes you've made (see <xref
+          <para>Le muestra cualquier cambio local que haya hecho (vea <xref
               linkend="svn-ch-3-sect-4.3.1"/>)</para>
         </listitem>
       </varlistentry>
@@ -178,7 +179,7 @@
       <varlistentry>
         <term><command>svn diff</command></term>
         <listitem>
-          <para>Shows you the details of your changes (see <xref
+          <para>Le muestra los detalles de sus cambios (vea <xref
               linkend="svn-ch-3-sect-4.3.2"/>)</para>
         </listitem>
       </varlistentry>
@@ -186,22 +187,26 @@
       <varlistentry>
         <term><command>svn revert</command></term>
         <listitem>
-          <para>Removes your local changes (see <xref
+          <para>Borra sus cambios locales (vea <xref
               linkend="svn-ch-3-sect-4.3.3"/>)</para>
         </listitem>
       </varlistentry>
 
     </variablelist>
 
-    <para>Also, the cached pristine files allow the Subversion client
-      to send differences when committing, which CVS cannot do.</para>
+    <para>También, los ficheros prístinos almacenados permiten al cliente
+      de Subversion enviar las diferencias al repositorio<!--TODO:client
+      to send differences when committing-->, lo que CVS no puede
+      hacer.</para>
 
-    <para>The last subcommand in the list is new; it will not only
-      remove local mods, but it will un-schedule operations such as
-      adds and deletes.  It's the preferred way to revert a file;
-      running <command>rm file; svn update</command> will still work, but
-      it blurs the purpose of updating.  And, while we're on this
-      subject&hellip;
+    <para>El último subcomando en la lista es nuevo; este no solo borrará
+      las modificaciones locales, sino que desprogramará
+      <!--TODO: un-schedule-->las operaciones tales como adiciones y
+      eliminaciones. Es la manera preferida para revertir un fichero;
+      ejecutando <command>rm file; svn update</command> seguirá funcionando,
+      pero empaña el propósito de actualización<!--TODO:it blurs the
+      purpose of updating-->. Y, mientras nosotros estamos en este
+      asunto&hellip;
 
     </para>
 
@@ -211,28 +216,32 @@
   <!-- ======================== SECTION 4 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-ap-a-sect-4">
-    <title>Distinction Between Status and Update</title>
+    <title>Distinciones entre estado (status) y actualización (update)</title>
 
-    <para>In Subversion, we've tried to erase a lot of the confusion
-      between the <command>cvs status</command> and
-      <command>cvs update</command> commands.</para>
+    <para>En Subversion, hemos intentado eliminar muchas de las confusiones
+      entre los comandos <command>cvs status</command> y
+      <command>cvs update</command>.</para>
 
-    <para>The <command>cvs status</command> command has two purposes:
-      first, to show the user any local modifications in the working
-      copy, and second, to show the user which files are out-of-date.
-      Unfortunately, because of CVS's hard-to-read status output, many
-      CVS users don't take advantage of this command at all.  Instead,
-      they've developed a habit of running <command>cvs update</command>
-      or <command>cvs update -n</command> to quickly see their mods.  If
-      users forget to use the <option>-n</option> option, this has the
+    <para>El comando <command>cvs status</command> tiene dos propositos:
+      primero, mostrarle al usuario cualquier modificación local en la
+      copia de trabajo, y segundo, mostrarle al usuario qué ficheros
+      están desactualizados. Desafortunadamente, debido a la dificil de
+      leer salida de estado<!--TODO:status output-->, muchos usuarios de
+      CVS no se aprobechan del todo de este comando. En cambio, han
+      desarrollado el habito de ejecutar <command>cvs update</command>
+      o <command>cvs update -n</command> para ver rapidamente sus
+      modificaciones. Si los usuarios olvidan usar la opción
+      <option>-n</option>, esto tiene el efecto secundario de combinar
+      cambios del repositorio que no están preparados<!--TODO:this has the
       side effect of merging repository changes they may not be ready
-      to deal with.</para>
+      to deal with-->.</para>
 
-    <para>With Subversion, we've tried to remove this muddle by making
-      the output of <command>svn status</command> easy to read for
-      both humans and parsers.  Also, <command>svn update</command>
-      only prints information about files that are updated,
-      <emphasis>not</emphasis> local modifications.</para>
+    <para>Con Subversion, hemos intentado eliminar este desorden haciendo
+      la salida de <command>svn status</command> facil de leer para los
+      humanos y los programas de análisis sintacticos<!--TODO:parsers-->.
+      También, <command>svn update</command> solo imprime información
+      sobre los ficheros que están actualizados, <emphasis>no</emphasis>
+      sobre modificaciones locales.</para>
 
     <para><command>svn status</command> prints all files that have
       local modifications.  By default, the repository is not
