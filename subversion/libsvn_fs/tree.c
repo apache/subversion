@@ -353,9 +353,99 @@ typedef struct parent_path_t
 
   /* The parent of NODE, or zero if NODE is the root directory.  */
   struct parent_path_t *parent;
-  
+
+  /* The copy ID inheritence style and (optional) source path. */
+  copy_id_inherit_t copy_inherit;
+  const char *copy_src_path;
+
 } parent_path_t;
 
+
+static const char *
+parent_path_path (parent_path_t *parent_path,
+                  apr_pool_t *pool)
+{
+  const char *path_so_far = "/";
+  if (parent_path->parent)
+    path_so_far = parent_path_path (parent_path->parent, pool);
+  return parent_path->entry 
+         ? svn_path_join (path_so_far, parent_path->entry, pool) 
+         : path_so_far;
+}
+
+
+/* Choose a copy ID inheritance method *INHERIT_P to be used in the
+   event that immutable node CHILD in FS needs to be made mutable.  If
+   the inheritance method is copy_id_inherit_new, also return a
+   *COPY_SRC_PATH on which to base the new copy ID (else return NULL
+   for that path).  CHILD must have a parent (it cannot be the root
+   node), and must be immutable (if it is mutable, it has already
+   inherited its copy ID).  */
+static svn_error_t *
+get_copy_inheritance (copy_id_inherit_t *inherit_p,
+                      const char **copy_src_path,
+                      svn_fs_t *fs,
+                      parent_path_t *child,
+                      trail_t *trail)
+{
+  const svn_fs_id_t *child_id, *parent_id;
+  const char *child_copy_id, *parent_copy_id;
+  const char *id_path = NULL;
+  svn_fs__copy_t *copy;
+
+  /* Make some assertions about the function input. */
+  assert (child && child->parent);
+
+  /* Initialize some convenience variables. */
+  child_id = svn_fs__dag_get_id (child->node);
+  parent_id = svn_fs__dag_get_id (child->parent->node);
+  child_copy_id = svn_fs__id_copy_id (child_id);
+  parent_copy_id = svn_fs__id_copy_id (parent_id);
+
+  /* From this point on, we'll assume that the child will just take
+     its copy ID from its parent. */
+  *inherit_p = copy_id_inherit_parent;
+  *copy_src_path = NULL;
+
+  /* Special case: if the child's copy ID is '0', use the parent's
+     copy ID. */
+  if (strcmp (child_copy_id, "0") == 0)
+    return SVN_NO_ERROR;
+
+  /* Compare the copy IDs of the child and its parent.  If they are
+     the same, then the child is already on the same branch as the
+     parent, and should use the same mutability copy ID that the
+     parent will use. */
+  if (svn_fs__key_compare (child_copy_id, parent_copy_id) == 0)
+    return SVN_NO_ERROR;
+
+  /* If the child is on the same branch that the parent is on, the
+     child should just use the same copy ID that the parent would use.
+     Else, the child needs to generate a new copy ID to use should it
+     need to be made mutable.  We will claim that child is on the same
+     branch as its parent if the child itself is not a branch point,
+     or if it is a branch point that we are accessing via its original
+     copy destination path. */
+  SVN_ERR (svn_fs__bdb_get_copy (&copy, fs, child_copy_id, trail));
+  if (svn_fs_compare_ids (copy->dst_noderev_id, child_id) == -1)
+    return SVN_NO_ERROR;
+
+  /* Determine if we are looking at the child via its original path or
+     as a subtree item of a copied tree. */
+  id_path = svn_fs__dag_get_created_path (child->node);
+  if (strcmp (id_path, parent_path_path (child, trail->pool)) == 0)
+    {
+      *inherit_p = copy_id_inherit_self;
+      return SVN_NO_ERROR;
+    }
+
+  /* We are pretty sure that the child node is an unedited nested
+     branched node.  When it needs to be made mutable, it should claim
+     a new copy ID. */
+  *inherit_p = copy_id_inherit_new;
+  *copy_src_path = id_path;
+  return SVN_NO_ERROR;
+}
 
 
 /* Allocate a new parent_path_t node from POOL, referring to NODE,
@@ -490,6 +580,9 @@ open_path (parent_path_t **parent_path_p,
         }
       else
         {
+          copy_id_inherit_t inherit;
+          const char *copy_path = NULL;
+
           /* If we found a directory entry, follow it.  */
           svn_error_t *err = svn_fs__dag_open (&child, here, entry, trail);
 
@@ -522,6 +615,10 @@ open_path (parent_path_t **parent_path_p,
 
           /* Now, make a parent_path item for CHILD. */
           parent_path = make_parent_path (child, entry, parent_path, pool);
+          SVN_ERR (get_copy_inheritance (&inherit, &copy_path, 
+                                         fs, parent_path, trail));
+          parent_path->copy_inherit = inherit;
+          parent_path->copy_src_path = apr_pstrdup (pool, copy_path);
         }
       
       /* Are we finished traversing the path?  */
@@ -537,93 +634,6 @@ open_path (parent_path_t **parent_path_p,
     }
 
   *parent_path_p = parent_path;
-  return SVN_NO_ERROR;
-}
-
-
-static const char *
-parent_path_path (parent_path_t *parent_path,
-                  apr_pool_t *pool)
-{
-  const char *path_so_far = "/";
-  if (parent_path->parent)
-    path_so_far = parent_path_path (parent_path->parent, pool);
-  return parent_path->entry 
-         ? svn_path_join (path_so_far, parent_path->entry, pool) 
-         : path_so_far;
-}
-
-
-/* Choose a copy ID inheritance method *INHERIT_P to be used in the
-   event that immutable node CHILD in FS needs to be made mutable.  If
-   the inheritance method is copy_id_inherit_new, also return a
-   *COPY_SRC_PATH on which to base the new copy ID (else return NULL
-   for that path).  CHILD must have a parent (it cannot be the root
-   node), and must be immutable (if it is mutable, it has already
-   inherited its copy ID).  */
-static svn_error_t *
-choose_copy_id (copy_id_inherit_t *inherit_p,
-                const char **copy_src_path,
-                svn_fs_t *fs,
-                parent_path_t *child,
-                trail_t *trail)
-{
-  const svn_fs_id_t *child_id, *parent_id;
-  const char *child_copy_id, *parent_copy_id;
-  const char *id_path = NULL;
-  svn_fs__copy_t *copy;
-
-  /* Make some assertions about the function input. */
-  assert (child && child->parent);
-
-  /* Initialize some convenience variables. */
-  child_id = svn_fs__dag_get_id (child->node);
-  parent_id = svn_fs__dag_get_id (child->parent->node);
-  child_copy_id = svn_fs__id_copy_id (child_id);
-  parent_copy_id = svn_fs__id_copy_id (parent_id);
-
-  /* From this point on, we'll assume that the child will just take
-     its copy ID from its parent. */
-  *inherit_p = copy_id_inherit_parent;
-  *copy_src_path = NULL;
-
-  /* Special case: if the child's copy ID is '0', use the parent's
-     copy ID. */
-  if (strcmp (child_copy_id, "0") == 0)
-    return SVN_NO_ERROR;
-
-  /* Compare the copy IDs of the child and its parent.  If they are
-     the same, then the child is already on the same branch as the
-     parent, and should use the same mutability copy ID that the
-     parent will use. */
-  if (svn_fs__key_compare (child_copy_id, parent_copy_id) == 0)
-    return SVN_NO_ERROR;
-
-  /* If the child is on the same branch that the parent is on, the
-     child should just use the same copy ID that the parent would use.
-     Else, the child needs to generate a new copy ID to use should it
-     need to be made mutable.  We will claim that child is on the same
-     branch as its parent if the child itself is not a branch point,
-     or if it is a branch point that we are accessing via its original
-     copy destination path. */
-  SVN_ERR (svn_fs__bdb_get_copy (&copy, fs, child_copy_id, trail));
-  if (svn_fs_compare_ids (copy->dst_noderev_id, child_id) == -1)
-    return SVN_NO_ERROR;
-
-  /* Determine if we are looking at the child via its original path or
-     as a subtree item of a copied tree. */
-  id_path = svn_fs__dag_get_created_path (child->node);
-  if (strcmp (id_path, parent_path_path (child, trail->pool)) == 0)
-    {
-      *inherit_p = copy_id_inherit_self;
-      return SVN_NO_ERROR;
-    }
-
-  /* We are pretty sure that the child node is an unedited nested
-     branched node.  When it needs to be made mutable, it should claim
-     a new copy ID. */
-  *inherit_p = copy_id_inherit_new;
-  *copy_src_path = id_path;
   return SVN_NO_ERROR;
 }
 
@@ -653,12 +663,8 @@ make_path_mutable (svn_fs_root_t *root,
       const svn_fs_id_t *parent_id;
       const svn_fs_id_t *node_id = svn_fs__dag_get_id (parent_path->node);
       const char *copy_id = NULL;
-      const char *copy_src_path;
-      copy_id_inherit_t inherit;
-
-      /* Figure out what type of inheritance to use for our copy ID. */
-      SVN_ERR (choose_copy_id (&inherit, &copy_src_path, fs,
-                               parent_path, trail));
+      const char *copy_src_path = parent_path->copy_src_path;
+      copy_id_inherit_t inherit = parent_path->copy_inherit;
 
       /* We're trying to clone somebody's child.  Make sure our parent
          is mutable.  */
