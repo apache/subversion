@@ -94,7 +94,7 @@ def basic_checkout(sbox):
 
   # Repeat checkout of original URL into working copy with modifications
   url = svntest.main.current_repo_url
-  stdout_lines, stderr_lines = svntest.main.run_svn (1, 'checkout', url,
+  stdout_lines, stderr_lines = svntest.main.run_svn (None, 'checkout', url,
                                                      '-d', wc_dir)
   if len (stderr_lines) != 0:
     print "repeat checkout failed"
