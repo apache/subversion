@@ -193,7 +193,8 @@ dav_error * dav_svn__log_report(const dav_resource *resource,
       /* else unknown element; skip it */
     }
 
-  lrb.bb = apr_brigade_create(resource->pool);  /* not the subpool! */
+  lrb.bb = apr_brigade_create(resource->pool,  /* not the subpool! */
+                              output->c->bucket_alloc);
   lrb.output = output;
   lrb.pool = svn_pool_create(resource->pool);
 
