@@ -43,7 +43,7 @@ extern "C" {
 
 /* Patch number.
    Modify for every released patch. */
-#define SVN_VER_MICRO      0
+#define SVN_VER_MICRO      1
 
 
 /* Version tag: a string describing the version.
