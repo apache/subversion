@@ -182,6 +182,7 @@ JAVAC = @JAVAC@
 ECHO_C = @ECHO_C@
 ECHO_N = @ECHO_N@
 
+TESTS = $(TEST_PROGRAMS) @FS_TEST_PROGRAMS@
 
 all: external-all local-all
 clean: external-clean local-clean
@@ -228,6 +229,9 @@ revision-install:
 
 install-static: @INSTALL_STATIC_RULES@
 
+# "make check CLEANUP=true" will clean up directories for successful tests.
+# "make check TESTS=subversion/tests/clients/cmdline/basic_tests.py"
+#  will perform only basic tests (likewise for other tests).
 check: $(TEST_DEPS) @FS_TEST_DEPS@
 	@$(PYTHON) $(top_srcdir)/build/pycheck.py;                         \
 	flags="--verbose";                                                 \
@@ -239,7 +243,7 @@ check: $(TEST_DEPS) @FS_TEST_DEPS@
 	fi;                                                                \
 	$(PYTHON) $(top_srcdir)/build/run_tests.py $$flags                 \
 		  '$(abs_srcdir)' '$(abs_builddir)' '$(PYTHON)' '$(SHELL)' \
-		  $(TEST_PROGRAMS) @FS_TEST_PROGRAMS@
+		  $(TESTS)
 
 # First, set up Apache as documented in
 # subversion/tests/clients/cmdline/README.
