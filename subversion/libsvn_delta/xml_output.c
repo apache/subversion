@@ -54,7 +54,7 @@ enum elemtype {
   elem_file_prop_delta
 };
 
-struct edit_baton
+struct edit_context
 {
   svn_stream_t *output;
   enum elemtype elem;           /* Current element we are inside at
@@ -70,54 +70,149 @@ struct edit_baton
 
 struct dir_baton
 {
-  struct edit_baton *edit_baton;
+  struct edit_context *edit_context;
   enum elemtype addreplace;     /* elem_add or elem_replace, or
                                    elem_delta_pkg for the root
                                    directory.  */
+
+  /* Baton for this dir's parent directory, null if this is root. */
+  struct dir_baton *parent_dir_baton;
+
+  /* The number of other changes associated with this directory.
+     Starts at 1, is incremented for each file and subdir opened here,
+     and decremented for each one closed.  When ref_count reaches 0,
+     final cleanups may be performed and the directory freed.  See
+     free_dir_baton() for details. */
+  int ref_count;
+
   apr_pool_t *pool;
 };
 
 
 struct file_baton
 {
-  struct edit_baton *edit_baton;
+  struct edit_context *edit_context;
   enum elemtype addreplace;
   int txdelta_id;               /* ID of deferred text delta;
                                    0 means we're still working on the file,
                                    -1 means we already saw a text delta.  */
   int closed;			/* 1 if we closed the element already.  */
+
+  struct dir_baton *parent_dir_baton; /* This file's parent directory. */
+
   apr_pool_t *pool;
 };
 
 
 static struct dir_baton *
-make_dir_baton (struct edit_baton *eb, enum elemtype addreplace)
+make_dir_baton (struct edit_context *ec,
+                struct dir_baton *parent_dir_baton,
+                enum elemtype addreplace)
 {
-  apr_pool_t *subpool = svn_pool_create (eb->pool);
+  apr_pool_t *subpool = svn_pool_create (ec->pool);
   struct dir_baton *db = apr_palloc (subpool, sizeof (*db));
 
-  db->edit_baton = eb;
+  db->edit_context = ec;
   db->addreplace = addreplace;
   db->pool = subpool;
+  db->ref_count = 1;
+  db->parent_dir_baton = parent_dir_baton;
+
+  if (parent_dir_baton)
+    parent_dir_baton->ref_count++;
+
   return db;
 }
 
 
 static struct file_baton *
-make_file_baton (struct edit_baton *eb, enum elemtype addreplace)
+make_file_baton (struct edit_context *ec,
+                 struct dir_baton *parent_dir_baton,
+                 enum elemtype addreplace)
 {
-  apr_pool_t *subpool = svn_pool_create (eb->pool);
+  apr_pool_t *subpool = svn_pool_create (ec->pool);
   struct file_baton *fb = apr_palloc (subpool, sizeof (*fb));
 
-  fb->edit_baton = eb;
+  fb->edit_context = ec;
   fb->addreplace = addreplace;
   fb->txdelta_id = 0;
   fb->closed = 0;
   fb->pool = subpool;
+  fb->parent_dir_baton = parent_dir_baton;
+
+  if (parent_dir_baton)
+    parent_dir_baton->ref_count++;
+
   return fb;
 }
 
 
+/* Prototypes. */
+static svn_error_t *decrement_ref_count (struct dir_baton *d);
+static svn_string_t *get_to_elem (struct edit_context *ec,
+                                  enum elemtype elem,
+                                  apr_pool_t *pool);
+
+
+static svn_error_t *
+free_dir_baton (struct dir_baton *db)
+{
+  struct dir_baton *pb = db->parent_dir_baton;
+  svn_error_t *err;
+
+  if (pb)
+    {
+      apr_destroy_pool (db->pool);
+
+      err = decrement_ref_count (pb);
+      if (err)
+        return err;
+    }
+  else
+    {
+      /* We're freeing the root directory.  Most of the work was
+         done long ago by close_directory(), but there's some
+         end-of-edit bookkeeping to take care of now. */
+
+      svn_string_t *str = NULL;
+      apr_size_t len;
+
+      svn_xml_make_close_tag (&str, db->edit_context->pool, "delta-pkg");
+      len = str->len;
+      err = svn_stream_write (db->edit_context->output, str->data, &len);
+      if (err == SVN_NO_ERROR)
+        err = svn_stream_close (db->edit_context->output);
+      
+      apr_destroy_pool (db->edit_context->pool); /* destroys db->pool too */
+    }
+
+  if (err)
+    return err;
+
+  return SVN_NO_ERROR;
+}
+
+
+/* Decrement DIR_BATON's ref count, and if the count hits 0, call
+ * free_dir_baton().
+ *
+ * Note: There is no corresponding function for incrementing the
+ * ref_count.  As far as we know, nothing special depends on that, so
+ * it's always done inline.
+ */
+static svn_error_t *
+decrement_ref_count (struct dir_baton *db)
+{
+  db->ref_count--;
+
+  if (db->ref_count == 0)
+    return free_dir_baton (db);
+
+  return SVN_NO_ERROR;
+}
+
+
+
 /* The meshing between the edit_fns interface and the XML delta format
    is such that we can't usually output the end of an element until we
    go on to the next thing, and for a given call we may or may not
@@ -146,26 +241,26 @@ make_file_baton (struct edit_baton *eb, enum elemtype addreplace)
    ELEM specifies the element type we want to get to, with prop_delta
    split out into elem_dir_prop_delta and elem_file_prop_delta
    depending on where the prop_delta is in the little tree.  The
-   element type we are currently in is recorded inside EB.  */
+   element type we are currently in is recorded inside EC.  */
 
 static svn_string_t *
-get_to_elem (struct edit_baton *eb, enum elemtype elem, apr_pool_t *pool)
+get_to_elem (struct edit_context *ec, enum elemtype elem, apr_pool_t *pool)
 {
   svn_string_t *str = svn_string_create ("", pool);
   struct file_baton *fb;
 
   /* Unwind.  Start from the leaves and go back as far as necessary.  */
-  if (eb->elem == elem_file_prop_delta && elem != elem_file_prop_delta)
+  if (ec->elem == elem_file_prop_delta && elem != elem_file_prop_delta)
     {
       svn_xml_make_close_tag (&str, pool, "prop-delta");
-      eb->elem = elem_file;
+      ec->elem = elem_file;
     }
-  if (eb->elem == elem_file && elem != elem_file
+  if (ec->elem == elem_file && elem != elem_file
       && elem != elem_file_prop_delta)
     {
       const char *outertag;
 
-      fb = eb->curfile;
+      fb = ec->curfile;
       if (fb->txdelta_id == 0)
         {
           char buf[128];
@@ -173,7 +268,7 @@ get_to_elem (struct edit_baton *eb, enum elemtype elem, apr_pool_t *pool)
 
           /* Leak a little memory from pool to create idstr; all of our
              callers are using temporary pools anyway.  */
-          fb->txdelta_id = eb->txdelta_id_counter++;
+          fb->txdelta_id = ec->txdelta_id_counter++;
           sprintf (buf, "%d", fb->txdelta_id);
           idstr = svn_string_create (buf, pool);
           svn_xml_make_open_tag (&str, pool, svn_xml_self_closing,
@@ -183,59 +278,59 @@ get_to_elem (struct edit_baton *eb, enum elemtype elem, apr_pool_t *pool)
       outertag = (fb->addreplace == elem_add) ? "add" : "replace";
       svn_xml_make_close_tag (&str, pool, outertag);
       fb->closed = 1;
-      eb->curfile = NULL;
-      eb->elem = elem_tree_delta;
+      ec->curfile = NULL;
+      ec->elem = elem_tree_delta;
     }
-  if (eb->elem == elem_tree_delta
+  if (ec->elem == elem_tree_delta
       && (elem == elem_dir || elem == elem_dir_prop_delta))
     {
       svn_xml_make_close_tag (&str, pool, "tree-delta");
-      eb->elem = elem_dir;
+      ec->elem = elem_dir;
     }
-  if (eb->elem == elem_dir_prop_delta && elem != elem_dir_prop_delta)
+  if (ec->elem == elem_dir_prop_delta && elem != elem_dir_prop_delta)
     {
       svn_xml_make_close_tag (&str, pool, "prop-delta");
-      eb->elem = elem_dir;
+      ec->elem = elem_dir;
     }
 
   /* Now wind.  */
-  if (eb->elem == elem_dir && elem == elem_tree_delta)
+  if (ec->elem == elem_dir && elem == elem_tree_delta)
     {
       svn_xml_make_open_tag (&str, pool, svn_xml_normal, "tree-delta", NULL);
-      eb->elem = elem_tree_delta;
+      ec->elem = elem_tree_delta;
     }
-  if ((eb->elem == elem_dir && elem == elem_dir_prop_delta)
-      || (eb->elem == elem_file && elem == elem_file_prop_delta))
+  if ((ec->elem == elem_dir && elem == elem_dir_prop_delta)
+      || (ec->elem == elem_file && elem == elem_file_prop_delta))
     {
       svn_xml_make_open_tag (&str, pool, svn_xml_normal, "prop-delta", NULL);
-      eb->elem = elem;
+      ec->elem = elem;
     }
 
   /* If we didn't make it to the type of element the caller asked for,
      either the caller wants us to do something we don't do or we have
      a bug. */
-  assert (eb->elem == elem);
+  assert (ec->elem == elem);
 
   return str;
 }
 
 
 /* Output XML for adding or replacing a file or directory.  Also set
-   EB->elem to the value of DIRFILE for consistency.  */
+   EC->elem to the value of DIRFILE for consistency.  */
 static svn_error_t *
-output_addreplace (struct edit_baton *eb, enum elemtype addreplace,
+output_addreplace (struct edit_context *ec, enum elemtype addreplace,
                    enum elemtype dirfile, svn_string_t *name,
                    svn_string_t *ancestor_path, svn_revnum_t ancestor_revision)
 {
   svn_string_t *str;
-  apr_pool_t *pool = svn_pool_create (eb->pool);
+  apr_pool_t *pool = svn_pool_create (ec->pool);
   svn_error_t *err;
   apr_size_t len;
   apr_hash_t *att;
   const char *outertag = (addreplace == elem_add) ? "add" : "replace";
   const char *innertag = (dirfile == elem_dir) ? "dir" : "file";
 
-  str = get_to_elem (eb, elem_tree_delta, pool);
+  str = get_to_elem (ec, elem_tree_delta, pool);
   svn_xml_make_open_tag (&str, pool, svn_xml_normal, outertag,
                          "name", name, NULL);
 
@@ -249,10 +344,10 @@ output_addreplace (struct edit_baton *eb, enum elemtype addreplace,
     }
   svn_xml_make_open_tag_hash (&str, pool, svn_xml_normal, innertag, att);
 
-  eb->elem = dirfile;
+  ec->elem = dirfile;
 
   len = str->len;
-  err = svn_stream_write (eb->output, str->data, &len);
+  err = svn_stream_write (ec->output, str->data, &len);
   apr_destroy_pool (pool);
   return err;
 }
@@ -260,17 +355,17 @@ output_addreplace (struct edit_baton *eb, enum elemtype addreplace,
 
 /* Output a set or delete element.  ELEM is the type of prop-delta
    (elem_dir_prop_delta or elem_file_prop_delta) the element lives
-   in.  This function sets EB->elem to ELEM for consistency.  */
+   in.  This function sets EC->elem to ELEM for consistency.  */
 static svn_error_t *
-output_propset (struct edit_baton *eb, enum elemtype elem,
+output_propset (struct edit_context *ec, enum elemtype elem,
                 svn_string_t *name, svn_string_t *value)
 {
   svn_string_t *str;
-  apr_pool_t *pool = svn_pool_create (eb->pool);
+  apr_pool_t *pool = svn_pool_create (ec->pool);
   svn_error_t *err;
   apr_size_t len;
 
-  str = get_to_elem (eb, elem, pool);
+  str = get_to_elem (ec, elem, pool);
   if (value != NULL)
     {
       svn_xml_make_open_tag (&str, pool, svn_xml_protect_pcdata, "set",
@@ -283,30 +378,7 @@ output_propset (struct edit_baton *eb, enum elemtype elem,
                            "name", name, NULL);
 
   len = str->len;
-  err = svn_stream_write (eb->output, str->data, &len);
-  apr_destroy_pool (pool);
-  return err;
-}
-
-
-static svn_error_t *
-replace_root (void *edit_baton,
-              void **dir_baton)
-{
-  struct edit_baton *eb = (struct edit_baton *) edit_baton;
-  apr_pool_t *pool = svn_pool_create (eb->pool);
-  svn_string_t *str = NULL;
-  apr_size_t len;
-  svn_error_t *err;
-
-  svn_xml_make_header (&str, pool);
-  svn_xml_make_open_tag (&str, pool, svn_xml_normal, "delta-pkg", NULL);
-
-  *dir_baton = make_dir_baton (eb, elem_delta_pkg);
-  eb->elem = elem_dir;
-
-  len = str->len;
-  err = svn_stream_write (eb->output, str->data, &len);
+  err = svn_stream_write (ec->output, str->data, &len);
   apr_destroy_pool (pool);
   return err;
 }
@@ -316,18 +388,18 @@ static svn_error_t *
 delete_item (svn_string_t *name, void *parent_baton)
 {
   struct dir_baton *db = (struct dir_baton *) parent_baton;
-  struct edit_baton *eb = db->edit_baton;
+  struct edit_context *ec = db->edit_context;
   svn_string_t *str;
-  apr_pool_t *pool = svn_pool_create (eb->pool);
+  apr_pool_t *pool = svn_pool_create (ec->pool);
   svn_error_t *err;
   apr_size_t len;
 
-  str = get_to_elem (eb, elem_tree_delta, pool);
+  str = get_to_elem (ec, elem_tree_delta, pool);
   svn_xml_make_open_tag (&str, pool, svn_xml_self_closing, "delete",
                          "name", name, NULL);
 
   len = str->len;
-  err = svn_stream_write (eb->output, str->data, &len);
+  err = svn_stream_write (ec->output, str->data, &len);
   apr_destroy_pool (pool);
   return err;
 }
@@ -341,10 +413,10 @@ add_directory (svn_string_t *name,
                void **child_baton)
 {
   struct dir_baton *db = (struct dir_baton *) parent_baton;
-  struct edit_baton *eb = db->edit_baton;
+  struct edit_context *ec = db->edit_context;
 
-  *child_baton = make_dir_baton (eb, elem_add);
-  return output_addreplace (eb, elem_add, elem_dir, name,
+  *child_baton = make_dir_baton (ec, db, elem_add);
+  return output_addreplace (ec, elem_add, elem_dir, name,
                             ancestor_path, ancestor_revision);
 }
 
@@ -357,10 +429,10 @@ replace_directory (svn_string_t *name,
                    void **child_baton)
 {
   struct dir_baton *db = (struct dir_baton *) parent_baton;
-  struct edit_baton *eb = db->edit_baton;
+  struct edit_context *ec = db->edit_context;
 
-  *child_baton = make_dir_baton (eb, elem_replace);
-  return output_addreplace (eb, elem_replace, elem_dir, name,
+  *child_baton = make_dir_baton (ec, db, elem_replace);
+  return output_addreplace (ec, elem_replace, elem_dir, name,
                             ancestor_path, ancestor_revision);
 }
 
@@ -371,9 +443,9 @@ change_dir_prop (void *dir_baton,
                  svn_string_t *value)
 {
   struct dir_baton *db = (struct dir_baton *) dir_baton;
-  struct edit_baton *eb = db->edit_baton;
+  struct edit_context *ec = db->edit_context;
 
-  return output_propset (eb, elem_dir_prop_delta, name, value);
+  return output_propset (ec, elem_dir_prop_delta, name, value);
 }
 
 
@@ -381,27 +453,46 @@ static svn_error_t *
 close_directory (void *dir_baton)
 {
   struct dir_baton *db = (struct dir_baton *) dir_baton;
-  struct edit_baton *eb = db->edit_baton;
-  svn_string_t *str;
+  struct edit_context *ec = db->edit_context;
+  svn_string_t *str = NULL;
   svn_error_t *err;
   apr_size_t len;
 
-  str = get_to_elem (eb, elem_dir, db->pool);
   if (db->addreplace != elem_delta_pkg)
     {
-      /* Not the root directory.  */
+      /* Not the root directory. */
       const char *outertag = (db->addreplace == elem_add) ? "add" : "replace";
+      str = get_to_elem (ec, elem_dir, db->pool);
       svn_xml_make_close_tag (&str, db->pool, "dir");
       svn_xml_make_close_tag (&str, db->pool, outertag);
-      eb->elem = elem_tree_delta;
+      ec->elem = elem_tree_delta;
+      
+      len = str->len;
+      err = svn_stream_write (ec->output, str->data, &len);
+      if (err)
+        return err;
     }
-  else
-    eb->elem = elem_delta_pkg;
+  else  /* root directory */
+    {
+      /* Unconditionally output the "</tree-delta>" for the root
+       * directory, since the only things that could possibly follow
+       * this call should also follow that close tag.
+       *
+       * kff todo: my solution here is an offensive kluge.  I hope
+       * that Greg Hudson, with his better understanding of the XML
+       * output editor, will show me The Way. */
+      svn_xml_make_close_tag (&str, db->pool, "tree-delta");
+      len = str->len;
+      err = svn_stream_write (ec->output, str->data, &len);
+      if (err)
+        return err;
+    }
+  
+  err = decrement_ref_count (db);
+  if (err)
+    return err;
 
-  len = str->len;
-  err = svn_stream_write (eb->output, str->data, &len);
-  apr_destroy_pool (db->pool);
-  return err;
+  return SVN_NO_ERROR;
 }
 
 
@@ -413,12 +504,12 @@ add_file (svn_string_t *name,
           void **file_baton)
 {
   struct dir_baton *db = (struct dir_baton *) parent_baton;
-  struct edit_baton *eb = db->edit_baton;
+  struct edit_context *ec = db->edit_context;
 
-  SVN_ERR(output_addreplace (eb, elem_add, elem_file, name,
+  SVN_ERR(output_addreplace (ec, elem_add, elem_file, name,
                              ancestor_path, ancestor_revision));
-  *file_baton = make_file_baton (eb, elem_add);
-  eb->curfile = *file_baton;
+  *file_baton = make_file_baton (ec, db, elem_add);
+  ec->curfile = *file_baton;
   return SVN_NO_ERROR;
 }
 
@@ -431,12 +522,12 @@ replace_file (svn_string_t *name,
               void **file_baton)
 {
   struct dir_baton *db = (struct dir_baton *) parent_baton;
-  struct edit_baton *eb = db->edit_baton;
+  struct edit_context *ec = db->edit_context;
 
-  SVN_ERR(output_addreplace (eb, elem_replace, elem_file, name,
+  SVN_ERR(output_addreplace (ec, elem_replace, elem_file, name,
                              ancestor_path, ancestor_revision));
-  *file_baton = make_file_baton (eb, elem_replace);
-  eb->curfile = *file_baton;
+  *file_baton = make_file_baton (ec, db, elem_replace);
+  ec->curfile = *file_baton;
   return SVN_NO_ERROR;
 }
 
@@ -445,10 +536,10 @@ static svn_error_t *
 output_svndiff_data (void *baton, const char *data, apr_size_t *len)
 {
   struct file_baton *fb = (struct file_baton *) baton;
-  struct edit_baton *eb = fb->edit_baton;
+  struct edit_context *ec = fb->edit_context;
 
   /* Just pass through the write request to the editor's output stream.  */
-  return svn_stream_write (eb->output, data, len);
+  return svn_stream_write (ec->output, data, len);
 }
 
 
@@ -456,15 +547,15 @@ static svn_error_t *
 finish_svndiff_data (void *baton)
 {
   struct file_baton *fb = (struct file_baton *) baton;
-  struct edit_baton *eb = fb->edit_baton;
-  apr_pool_t *subpool = svn_pool_create (eb->pool);
+  struct edit_context *ec = fb->edit_context;
+  apr_pool_t *subpool = svn_pool_create (ec->pool);
   svn_string_t *str = NULL;
   svn_error_t *err;
   apr_size_t slen;
 
   svn_xml_make_close_tag (&str, subpool, "text-delta");
   slen = str->len;
-  err = svn_stream_write (eb->output, str->data, &slen);
+  err = svn_stream_write (ec->output, str->data, &slen);
   apr_destroy_pool (subpool);
   return err;
 }
@@ -476,9 +567,9 @@ apply_textdelta (void *file_baton,
                  void **handler_baton)
 {
   struct file_baton *fb = (struct file_baton *) file_baton;
-  struct edit_baton *eb = fb->edit_baton;
+  struct edit_context *ec = fb->edit_context;
   svn_string_t *str = NULL;
-  apr_pool_t *pool = svn_pool_create (eb->pool);
+  apr_pool_t *pool = svn_pool_create (ec->pool);
   svn_error_t *err;
   apr_size_t len;
   svn_stream_t *output, *encoder;
@@ -489,7 +580,7 @@ apply_textdelta (void *file_baton,
     {
       /* We are inside a file element (possibly in a prop-delta) and
          are outputting a text-delta inline.  */
-      str = get_to_elem (eb, elem_file, pool);
+      str = get_to_elem (ec, elem_file, pool);
     }
   else
     {
@@ -509,7 +600,7 @@ apply_textdelta (void *file_baton,
   fb->txdelta_id = -1;
 
   len = str->len;
-  err = svn_stream_write (eb->output, str->data, &len);
+  err = svn_stream_write (ec->output, str->data, &len);
   apr_destroy_pool (pool);
 
   /* Set up a handler which will write base64-encoded svndiff data to
@@ -518,11 +609,11 @@ apply_textdelta (void *file_baton,
   svn_stream_set_write (output, output_svndiff_data);
   svn_stream_set_close (output, finish_svndiff_data);
 #ifdef QUOPRINT_SVNDIFFS
-  encoder = svn_quoprint_encode (output, eb->pool);
+  encoder = svn_quoprint_encode (output, ec->pool);
 #else
-  encoder = svn_base64_encode (output, eb->pool);
+  encoder = svn_base64_encode (output, ec->pool);
 #endif
-  svn_txdelta_to_svndiff (encoder, eb->pool, handler, handler_baton);
+  svn_txdelta_to_svndiff (encoder, ec->pool, handler, handler_baton);
 
   return err;
 }
@@ -534,9 +625,9 @@ change_file_prop (void *file_baton,
                   svn_string_t *value)
 {
   struct file_baton *fb = (struct file_baton *) file_baton;
-  struct edit_baton *eb = fb->edit_baton;
+  struct edit_context *ec = fb->edit_context;
 
-  return output_propset (eb, elem_file_prop_delta, name, value);
+  return output_propset (ec, elem_file_prop_delta, name, value);
 }
 
 
@@ -544,7 +635,8 @@ static svn_error_t *
 close_file (void *file_baton)
 {
   struct file_baton *fb = (struct file_baton *) file_baton;
-  struct edit_baton *eb = fb->edit_baton;
+  struct dir_baton *pb = fb->parent_dir_baton;
+  struct edit_context *ec = fb->edit_context;
   svn_string_t *str;
   svn_error_t *err = SVN_NO_ERROR;
   apr_size_t len;
@@ -553,41 +645,33 @@ close_file (void *file_baton)
   if (!fb->closed)
     {
       const char *outertag = (fb->addreplace == elem_add) ? "add" : "replace";
-      str = get_to_elem (eb, elem_file, fb->pool);
+      str = get_to_elem (ec, elem_file, fb->pool);
       svn_xml_make_close_tag (&str, fb->pool, "file");
       svn_xml_make_close_tag (&str, fb->pool, outertag);
 
       len = str->len;
-      err = svn_stream_write (eb->output, str->data, &len);
-      eb->curfile = NULL;
-      eb->elem = elem_tree_delta;
+      err = svn_stream_write (ec->output, str->data, &len);
+      ec->curfile = NULL;
+      ec->elem = elem_tree_delta;
     }
+
+  if (err)
+    return err;
+
+  /* Free the file baton. */
   apr_destroy_pool (fb->pool);
-  return err;
-}
 
+  /* Tell parent its gone. */
+  err = decrement_ref_count (pb);
+  if (err)
+    return err;
 
-static svn_error_t *
-close_edit (void *edit_baton)
-{
-  struct edit_baton *eb = (struct edit_baton *) edit_baton;
-  svn_error_t *err;
-  svn_string_t *str = NULL;
-  apr_size_t len;
-
-  svn_xml_make_close_tag (&str, eb->pool, "delta-pkg");
-  len = str->len;
-  err = svn_stream_write (eb->output, str->data, &len);
-  if (err == SVN_NO_ERROR)
-    err = svn_stream_close (eb->output);
-  apr_destroy_pool (eb->pool);
-  return err;
+  return SVN_NO_ERROR;
 }
 
 
 static const svn_delta_edit_fns_t tree_editor =
 {
-  replace_root,
   delete_item,
   add_directory,
   replace_directory,
@@ -598,28 +682,51 @@ static const svn_delta_edit_fns_t tree_editor =
   apply_textdelta,
   change_file_prop,
   close_file,
-  close_edit
 };
 
 
 svn_error_t *
 svn_delta_get_xml_editor (svn_stream_t *output,
 			  const svn_delta_edit_fns_t **editor,
-			  void **edit_baton,
+			  void **root_dir_baton,
 			  apr_pool_t *pool)
 {
-  struct edit_baton *eb;
+  struct dir_baton *rb;
+  struct edit_context *ec;
   apr_pool_t *subpool = svn_pool_create (pool);
 
   *editor = &tree_editor;
-  eb = apr_palloc (subpool, sizeof (*eb));
-  eb->pool = subpool;
-  eb->output = output;
-  eb->curfile = NULL;
-  eb->txdelta_id_counter = 1;
 
-  *edit_baton = eb;
+  /* Set up an edit_context. */
+  ec = apr_palloc (subpool, sizeof (*ec));
+  ec->pool = subpool;
+  ec->output = output;
+  ec->curfile = NULL;
+  ec->txdelta_id_counter = 1;
 
+  /* Set up a root_dir_baton, initialized with that edit_context, and
+     output the start of the xml. */
+  {
+    svn_error_t *err;
+    svn_string_t *str = NULL;
+    apr_size_t len;
+    apr_pool_t *this_pool = svn_pool_create (subpool);
+
+    svn_xml_make_header (&str, this_pool);
+    svn_xml_make_open_tag (&str, this_pool, svn_xml_normal, "delta-pkg", NULL);
+
+    rb = make_dir_baton (ec, NULL, elem_delta_pkg);
+    ec->elem = elem_dir;
+
+    len = str->len;
+    err = svn_stream_write (ec->output, str->data, &len);
+    apr_destroy_pool (this_pool);
+  
+    if (err)
+      return err;
+  }
+
+  *root_dir_baton = rb;
   return SVN_NO_ERROR;
 }
 

@@ -33,9 +33,9 @@
 
 svn_error_t *
 svn_client_checkout (const svn_delta_edit_fns_t *before_editor,
-                     void *before_edit_baton,
+                     void *before_root_dir_baton,
                      const svn_delta_edit_fns_t *after_editor,
-                     void *after_edit_baton,
+                     void *after_root_dir_baton,
                      svn_string_t *path,
                      svn_string_t *xml_src,
                      svn_string_t *ancestor_path,
@@ -43,9 +43,9 @@ svn_client_checkout (const svn_delta_edit_fns_t *before_editor,
                      apr_pool_t *pool)
 {
   return svn_client__checkout_internal (before_editor,
-                                        before_edit_baton,
+                                        before_root_dir_baton,
                                         after_editor,
-                                        after_edit_baton,
+                                        after_root_dir_baton,
                                         path,
                                         xml_src,
                                         ancestor_path,

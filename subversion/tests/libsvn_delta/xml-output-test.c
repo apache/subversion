@@ -32,7 +32,7 @@ int main(int argc, char **argv)
   const svn_delta_edit_fns_t *editor;
   svn_txdelta_window_handler_t *handler;
   svn_txdelta_window_t window;
-  void *edit_baton, *root_baton, *dir_baton, *file_baton, *handler_baton;
+  void *root_dir_baton, *dir_baton, *file_baton, *handler_baton;
   svn_string_t *foo_string;
   svn_string_t *bar_string;
   svn_string_t *baz_string;
@@ -61,9 +61,8 @@ int main(int argc, char **argv)
   window.new_data = svn_string_create ("test delta", pool);
 
   svn_delta_get_xml_editor (svn_stream_from_stdio (stdout, pool),
-			    &editor, &edit_baton, pool);
-  editor->replace_root (edit_baton, &root_baton);
-  editor->replace_directory (foo_string, root_baton, aaa_string, 2,
+			    &editor, &root_dir_baton, pool);
+  editor->replace_directory (foo_string, root_dir_baton, aaa_string, 2,
 			     &dir_baton);
   editor->replace_file (bar_string, dir_baton, NULL, 0, &file_baton);
   editor->apply_textdelta (file_baton, &handler, &handler_baton);
@@ -75,10 +74,9 @@ int main(int argc, char **argv)
   editor->change_file_prop (file_baton, aaa_string, NULL);
   editor->change_dir_prop (dir_baton, ccc_string, bbb_string);
   editor->close_directory (dir_baton);
-  editor->close_directory (root_baton);
+  editor->close_directory (root_dir_baton);
   editor->apply_textdelta (file_baton, &handler, &handler_baton);
   handler (NULL, handler_baton);
   editor->close_file (file_baton);
-  editor->close_edit (edit_baton);
   return 0;
 }

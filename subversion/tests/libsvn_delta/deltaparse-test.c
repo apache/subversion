@@ -35,7 +35,7 @@ main (int argc, char *argv[])
   svn_error_t *err;
   apr_file_t *file = NULL;
   apr_status_t status;
-  void *edit_baton;
+  void *root_dir_baton;
 
   svn_revnum_t base_revision;
   svn_string_t *base_path;
@@ -69,13 +69,13 @@ main (int argc, char *argv[])
   base_path = svn_string_create ("/root", globalpool);
   
   /* Grab the "test" editor and baton */
-  err = svn_test_get_editor (&editor, &edit_baton,
+  err = svn_test_get_editor (&editor, &root_dir_baton,
                              base_path, base_revision, globalpool);
   
   /* Fire up the XML parser */
   err = svn_delta_xml_auto_parse (svn_stream_from_aprfile (file, globalpool),
                                   editor,
-                                  edit_baton,
+                                  root_dir_baton,
                                   base_path,
                                   base_revision,
                                   globalpool);

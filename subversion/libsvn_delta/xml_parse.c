@@ -296,6 +296,10 @@ do_stack_append (svn_xml__digger_t *digger,
       if (new_frame->tag != svn_delta__XML_deltapkg)
         return xml_validation_error (pool, tagname, FALSE);
 
+      /* The first frame's baton is the root directory baton, which we
+         have in the digger already. */
+      new_frame->baton = digger->root_dir_baton;
+
       /* Do the append and get out */
       digger->stack = new_frame;
 
@@ -1012,31 +1016,8 @@ xml_handle_start (void *userData, const char *name, const char **atts)
      <delta-pkg> frame, too.  */
   if (new_frame->tag == svn_delta__XML_treedelta)
     {
-      /* Always create frame's hashtable to hold dirent names. */
+      /* Frame's hashtable holds dirent names to check for uniqueness. */
       new_frame->namespace = apr_make_hash (my_digger->pool);
-      
-      /* If this is the FIRST tree-delta we've ever seen... */
-      if (my_digger->stack->tag == svn_delta__XML_deltapkg)
-        {
-          /* Fetch the rootdir_baton by calling into the editor */
-          if (my_digger->editor->replace_root) 
-            {
-              void *rootdir_baton;
-
-              err = my_digger->editor->replace_root
-                (my_digger->edit_baton, &rootdir_baton);
-              if (err)
-                svn_xml_signal_bailout (err, my_digger->svn_parser);
-
-              /* Place this rootdir_baton into the parent of the whole
-              stack, our <delta-pkg> tag.  Then, when we push the
-              <tree-delta> frame to the stack, it will automatically
-              "inherit" the baton as well.  We end up with our top two
-              stackframes both containing the root_baton, but that's
-              harmless.  */
-              my_digger->stack->baton = rootdir_baton;
-            }          
-        }
     }
 
   /* ---------- Append the new stackframe to the stack ------- */
@@ -1137,7 +1118,7 @@ xml_handle_start (void *userData, const char *name, const char **atts)
       return;
     }
 
-  /* EVENT:  Are we setting a proeprty?  */
+  /* EVENT:  Are we setting a property?  */
   if (new_frame->tag == svn_delta__XML_set) 
     {
       err = do_begin_setprop (my_digger, new_frame);
@@ -1357,14 +1338,14 @@ xml_handle_data (void *userData, const char *data, int len)
 
 
 /* Given a precreated svn_delta_edit_fns_t EDITOR, return a custom xml
-   PARSER that will call into it (and feed EDIT_BATON to its
+   PARSER that will call into it (and feed ROOT_DIR_BATON to its
    callbacks.)  Additionally, this XML parser will use BASE_PATH and
    BASE_REVISION as default "context variables" when computing ancestry
    within a tree-delta. */
 svn_error_t *
 svn_delta_make_xml_parser (svn_delta_xml_parser_t **parser,
                            const svn_delta_edit_fns_t *editor,
-                           void *edit_baton,
+                           void *root_dir_baton,
                            svn_string_t *base_path, 
                            svn_revnum_t base_revision,
                            apr_pool_t *pool)
@@ -1386,8 +1367,7 @@ svn_delta_make_xml_parser (svn_delta_xml_parser_t **parser,
   digger->editor           = editor;
   digger->base_path        = base_path;
   digger->base_revision    = base_revision;
-  digger->edit_baton       = edit_baton;
-  digger->rootdir_baton    = NULL;
+  digger->root_dir_baton   = root_dir_baton;
   digger->dir_baton        = NULL;
   digger->validation_error = SVN_NO_ERROR;
   digger->svndiff_parser   = NULL;
@@ -1439,16 +1419,6 @@ svn_delta_xml_parsebytes (const char *buffer, apr_size_t len, int isFinal,
 
   if (err)
     return err;
-
-  /* Call `close_edit' callback if this is the final push */
-  if (isFinal && delta_parser->digger->editor->close_edit)
-    {
-      err = delta_parser->digger->editor->close_edit
-        (delta_parser->digger->edit_baton);
-
-      if (err)
-        return err;        
-    }
   
   return SVN_NO_ERROR;
 }
@@ -1458,7 +1428,7 @@ svn_delta_xml_parsebytes (const char *buffer, apr_size_t len, int isFinal,
 svn_error_t *
 svn_delta_xml_auto_parse (svn_stream_t *source,
                           const svn_delta_edit_fns_t *editor,
-                          void *edit_baton,
+                          void *root_dir_baton,
                           svn_string_t *base_path,
                           svn_revnum_t base_revision,
                           apr_pool_t *pool)
@@ -1472,7 +1442,7 @@ svn_delta_xml_auto_parse (svn_stream_t *source,
   /* Create a custom Subversion XML parser */
   err =  svn_delta_make_xml_parser (&delta_parser,
                                     editor,
-                                    edit_baton,
+                                    root_dir_baton,
                                     base_path,
                                     base_revision,
                                     pool);

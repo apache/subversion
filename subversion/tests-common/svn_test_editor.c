@@ -28,7 +28,7 @@
 
 static const int indent_amount = 2;
 
-struct edit_baton
+struct edit_context
 {
   svn_string_t *root_path;
   svn_revnum_t revision;
@@ -40,7 +40,7 @@ struct dir_baton
 {
   int indent_level;
   svn_string_t *path;
-  struct edit_baton *edit_baton;
+  struct edit_context *edit_context;
 };
 
 
@@ -71,7 +71,7 @@ my_vcdiff_windoweater (svn_txdelta_window_t *window, void *baton)
 {
   int i;
   struct file_baton *fb = (struct file_baton *) baton;
-  apr_pool_t *pool = fb->dir_baton->edit_baton->pool;
+  apr_pool_t *pool = fb->dir_baton->edit_context->pool;
   
 
   if (! window)
@@ -147,28 +147,6 @@ test_delete_item (svn_string_t *filename, void *parent_baton)
 
 
 static svn_error_t *
-test_replace_root (void *edit_baton,
-                   void **root_baton)
-{
-  struct edit_baton *eb = (struct edit_baton *) edit_baton;
-  struct dir_baton *d = apr_pcalloc (eb->pool, sizeof (*d));
-
-  d->path = (svn_string_t *) svn_string_dup (eb->root_path, eb->pool);
-  d->edit_baton = eb;
-  d->indent_level = 0;
-  *root_baton = d;
-
-  print_spaces (d->indent_level);  /* probably a no-op */
-  printf ("REPLACE_ROOT:  name '%s', revision '%ld'\n",
-          eb->root_path->data,
-          eb->revision);
-
-
-  return SVN_NO_ERROR;
-}
-
-
-static svn_error_t *
 add_or_replace_dir (svn_string_t *name,
                     void *parent_baton,
                     svn_string_t *ancestor_path,
@@ -182,12 +160,12 @@ add_or_replace_dir (svn_string_t *name,
   struct dir_baton *d;
 
   /* Set child_baton to a new dir baton. */
-  d = apr_pcalloc (pd->edit_baton->pool, sizeof (*d));
-  d->path = svn_string_dup (pd->path, pd->edit_baton->pool);
+  d = apr_pcalloc (pd->edit_context->pool, sizeof (*d));
+  d->path = svn_string_dup (pd->path, pd->edit_context->pool);
   svn_path_add_component (d->path,
-                          svn_string_create (Aname, pd->edit_baton->pool),
+                          svn_string_create (Aname, pd->edit_context->pool),
                           svn_path_local_style);
-  d->edit_baton = pd->edit_baton;
+  d->edit_context = pd->edit_context;
   d->indent_level = (pd->indent_level + indent_amount);
   print_spaces (d->indent_level);
   *child_baton = d;
@@ -263,15 +241,6 @@ test_close_file (void *file_baton)
 }
 
 static svn_error_t *
-test_close_edit (void *edit_baton)
-{
-  printf ("EDIT COMPLETE.\n");
-
-  return SVN_NO_ERROR;
-}
-
-
-static svn_error_t *
 test_apply_textdelta (void *file_baton,
                       svn_txdelta_window_handler_t **handler,
                       void **handler_baton)
@@ -306,9 +275,9 @@ add_or_replace_file (svn_string_t *name,
   const char *ancestor = ancestor_path ? ancestor_path->data : "(unknown)";
 
   /* Put the filename in file_baton */
-  fb = apr_pcalloc (d->edit_baton->pool, sizeof (*fb));
+  fb = apr_pcalloc (d->edit_context->pool, sizeof (*fb));
   fb->dir_baton = d;
-  fb->path = (svn_string_t *) svn_string_dup (name, d->edit_baton->pool);
+  fb->path = (svn_string_t *) svn_string_dup (name, d->edit_context->pool);
   fb->indent_level = (d->indent_level + indent_amount);
   print_spaces (fb->indent_level);
   *file_baton = fb;
@@ -399,18 +368,18 @@ test_change_dir_prop (void *parent_baton,
 
 svn_error_t *
 svn_test_get_editor (const svn_delta_edit_fns_t **editor,
-                     void **edit_baton,
+                     void **root_dir_baton,
                      svn_string_t *path,
                      svn_revnum_t revision,
                      apr_pool_t *pool)
 {
   svn_delta_edit_fns_t *my_editor;
-  struct edit_baton *my_edit_baton;
+  struct dir_baton *rb;
+  struct edit_context *ec;
 
+  /* Set up the editor. */
   my_editor = apr_pcalloc (pool, sizeof (*my_editor));
-
   my_editor->delete_item        = test_delete_item;
-  my_editor->replace_root       = test_replace_root;
   my_editor->add_directory      = test_add_directory;
   my_editor->replace_directory  = test_replace_directory;
   my_editor->close_directory    = test_close_directory;
@@ -420,17 +389,21 @@ svn_test_get_editor (const svn_delta_edit_fns_t **editor,
   my_editor->apply_textdelta    = test_apply_textdelta;
   my_editor->change_file_prop   = test_change_file_prop;
   my_editor->change_dir_prop    = test_change_dir_prop;
-  my_editor->close_edit         = test_close_edit;
 
-  my_edit_baton = apr_pcalloc (pool, sizeof (*my_edit_baton));
+  /* Set up the edit context. */
+  ec = apr_pcalloc (pool, sizeof (*ec));
+  ec->root_path = svn_string_dup (path, pool);
+  ec->revision = revision;
+  ec->pool = pool;
 
-  my_edit_baton->root_path = svn_string_dup (path, pool);
-  my_edit_baton->revision = revision;
-  my_edit_baton->pool = pool;
-
+  /* Set up the root directory baton. */
+  rb = apr_pcalloc (pool, sizeof (*rb));
+  rb->indent_level = 0;
+  rb->edit_context = ec;
+  rb->path = (svn_string_t *) svn_string_dup (ec->root_path, ec->pool);
 
   *editor = my_editor;
-  *edit_baton = my_edit_baton;
+  *root_dir_baton = rb;
 
   return SVN_NO_ERROR;
 }

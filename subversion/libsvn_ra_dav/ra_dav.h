@@ -47,11 +47,11 @@ svn_error_t *svn_ra_dav_init(int abi_version,
 svn_error_t * svn_ra_dav__get_commit_editor(
   void *session_baton,
   const svn_delta_edit_fns_t **editor,
-  void **edit_baton,
+  void **root_dir_baton,
   svn_revnum_t *new_revision);
 svn_error_t * svn_ra_dav__checkout (void *session_baton,
                                     const svn_delta_edit_fns_t *editor,
-                                    void *edit_baton);
+                                    void *root_dir_baton);
 
 /*
 ** SVN_RA_DAV__LP_*: local properties for RA/DAV

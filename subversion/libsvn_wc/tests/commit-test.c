@@ -41,7 +41,7 @@ main (int argc, char *argv[])
   apr_hash_t *targets = NULL;
 
   const svn_delta_edit_fns_t *my_editor;
-  void *my_edit_baton;
+  void *my_root_dir_baton;
 
   svn_string_t *rootdir;
 
@@ -77,7 +77,7 @@ main (int argc, char *argv[])
       
       err = svn_delta_get_xml_editor (svn_stream_from_aprfile (stdout_handle,
 							       globalpool),
-                                      &my_editor, &my_edit_baton,
+                                      &my_editor, &my_root_dir_baton,
                                       globalpool);
       if (err)
         {
@@ -89,7 +89,7 @@ main (int argc, char *argv[])
 
   else  /* human-readable output */
     {
-      err = svn_test_get_editor (&my_editor, &my_edit_baton,
+      err = svn_test_get_editor (&my_editor, &my_root_dir_baton,
                                  rootdir, 59, globalpool);
       if (err)
         {
@@ -100,7 +100,8 @@ main (int argc, char *argv[])
     }
 
   /* Call the commit-crawler with the editor. */
-  err = svn_wc_crawl_local_mods (&targets, rootdir, my_editor, my_edit_baton,
+  err = svn_wc_crawl_local_mods (&targets, rootdir,
+                                 my_editor, my_root_dir_baton,
                                  globalpool);
   if (err)
     {
