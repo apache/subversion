@@ -28,9 +28,11 @@ MUST HAVE
 
 * chat with jorton about neon 0.25/svn1.2 coordination.
 
-* Fix svn_xml_is_xml_safe.  Currently, it allows invaid UTF8!  (lundblad?)
+* fix svn_xml_is_xml_safe.  currently, it allows invalid UTF8!  (lundblad?)
 
-* Scan the whole patch for TODO items introduced on the branch. (all, please)
+* remove auto-force behaviour for svn unlock URL.
+
+* scan the whole patch for TODO items introduced on the branch. (all, please)
 
 
 NICE TO HAVE
@@ -48,6 +50,7 @@ NICE TO HAVE
 
 * make --keep-locks into a runtime 'config' option
 
+* Fixups for r13392.  Posting by lundblad.
 
 -----------------------------------------------
 
