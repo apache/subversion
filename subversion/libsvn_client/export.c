@@ -44,6 +44,7 @@
 static svn_error_t *
 copy_versioned_files (const char *from,
                       const char *to,
+                      svn_boolean_t force,
                       svn_client_ctx_t *ctx,
                       apr_pool_t *pool)
 {
@@ -53,14 +54,19 @@ copy_versioned_files (const char *from,
   const svn_wc_entry_t *entry;
   svn_error_t *err;
 
-  SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, from, FALSE, FALSE, pool));
+  SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, from, FALSE, 
+                                  FALSE, pool));
   err = svn_wc_entry (&entry, from, adm_access, FALSE, subpool);
   SVN_ERR (svn_wc_adm_close (adm_access));
+  if (err)
+    {
+      if (err->apr_err != SVN_ERR_WC_NOT_DIRECTORY)
+        return err;
+      else
+        svn_error_clear (err);
+    }
 
-  if (err && err->apr_err != SVN_ERR_WC_NOT_DIRECTORY)
-    return err;
-
-  /* we don't want to copy some random non-versioned directory. */
+  /* We don't want to copy some random non-versioned directory. */
   if (entry)
     {
       apr_hash_index_t *hi;
@@ -68,7 +74,21 @@ copy_versioned_files (const char *from,
 
       SVN_ERR (svn_io_stat (&finfo, from, APR_FINFO_PROT, subpool));
 
-      SVN_ERR (svn_io_dir_make (to, finfo.protection, subpool));
+      /* Try to make the new directory.  If this fails because the
+         directory already exists, check our FORCE flag to see if we
+         care. */
+      err = svn_io_dir_make (to, finfo.protection, subpool);
+      if (err)
+        {
+          if (! APR_STATUS_IS_EEXIST (err->apr_err))
+            return err;
+          if (! force)
+            SVN_ERR_W (err,
+                       "Destination directory exists.  Please remove the "
+                       "directory, or use --force to override this error.");
+          else
+            svn_error_clear (err);
+        }
 
       SVN_ERR (svn_io_get_dirents (&dirents, from, pool));
 
@@ -101,7 +121,7 @@ copy_versioned_files (const char *from,
                   const char *new_from = svn_path_join (from, key, subpool);
                   const char *new_to = svn_path_join (to, key, subpool);
 
-                  SVN_ERR (copy_versioned_files (new_from, new_to,
+                  SVN_ERR (copy_versioned_files (new_from, new_to, force,
                                                  ctx, subpool));
                 }
             }
@@ -253,7 +273,7 @@ svn_client_export (const char *from,
   else
     {
       /* just copy the contents of the working copy into the target path. */
-      SVN_ERR (copy_versioned_files (from, to, ctx, pool));
+      SVN_ERR (copy_versioned_files (from, to, force, ctx, pool));
     }
 
   return SVN_NO_ERROR;
