@@ -99,16 +99,5 @@ Be careful with this option.  Log messages are stored as revision properties.
 The history of revision properties is not saved.  This command will 
 .B permanently
 overwrite the previous log message.
-.TP
-.BI undeltify " repos-path \-rrev path"
-Undeltify (ensure full text storage for) 
-.IR path 
-in
-.IR rev .
-If path represents a directory, perform a recursive undeltification of the tree
-starting at path.  Normally files are stored as a sequences of diffs
-representing past changes to the file.  Undeltification is an optimization that
-speeds some repository operations.  One might, for example, undelitfy all
-releases to speed checkout of those releases.
 .SH "SEE ALSO"
 .BR svn (1)

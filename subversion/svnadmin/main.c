@@ -70,9 +70,7 @@ static svn_opt_subcommand_t
   subcommand_lstxns,
   subcommand_recover,
   subcommand_rmtxns,
-  subcommand_setlog,
-  subcommand_undeltify;
-
+  subcommand_setlog;
 
 enum 
   { 
@@ -123,16 +121,6 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
      "usage: svnadmin createtxn REPOS_PATH -rREVISION\n\n"
      "Create a new transaction based on REVISION.\n",
      {'r'} },
-    
-#if 0 /* not currently available, see deltify_or_undeltify() */
-    {"deltify", subcommand_deltify, {0},
-     "usage: svnadmin deltify REPOS_PATH -r:REVISION PATH \n\n"
-     "Offer the repository a chance to deltify the storage\n"
-     "associated with PATH in REVISION.  If PATH represents\n"
-     "a directory, perform a recursive deltification of the\n"
-     "tree starting at PATH.\n",
-     {'r'} },
-#endif /* 0 */
     
     {"dump", subcommand_dump, {0},
      "usage: svnadmin dump REPOS_PATH [-rLOWER[:UPPER]] [--incremental]\n\n"
@@ -190,13 +178,6 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
      "Set the log-message on revision REVISION to the contents of FILE.\n"
      "(Note that revision properties are not historied, so this command\n"
      "will permanently overwrite the previous log message.)\n",
-     {'r'} },
-
-    {"undeltify", subcommand_undeltify, {0},
-     "usage: svnadmin undeltify REPOS_PATH -rREVISION PATH\n\n"
-     "Undeltify (ensure fulltext storage for) PATH in REVISION.\n"
-     "If PATH represents a directory, perform a recursive\n"
-     "undeltification of the tree starting at PATH.\n",
      {'r'} },
 
     { NULL, NULL, {0}, NULL, {0} }
@@ -534,82 +515,6 @@ subcommand_setlog (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   SVN_ERR (svn_repos_close (repos));
 
   return SVN_NO_ERROR;
-}
-
-
-/* Helper for subcommand_undeltify and, someday perhaps, subcommand_deltify. */
-static svn_error_t *
-deltify_or_undeltify (svn_boolean_t is_deltify,
-                      apr_getopt_t *os,
-                      void *baton,
-                      apr_pool_t *pool)
-{
-  struct svnadmin_opt_state *opt_state = baton;
-  svn_repos_t *repos;
-  svn_fs_t *fs;
-  int is_dir = 0;
-  svn_fs_root_t *rev_root;
-  const char *path, *path_utf8;
-  apr_array_header_t *args;
-
-  if (opt_state->start_revision.kind != svn_opt_revision_number)
-    return svn_error_createf (SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL,
-                              "missing revision");
-  else if (opt_state->end_revision.kind != svn_opt_revision_unspecified)
-    return svn_error_createf (SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL,
-                              "only one revision allowed");
-    
-  SVN_ERR (svn_opt_parse_all_args (&args, os, pool));
-
-  if (args->nelts != 1)
-    return svn_error_createf (SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL,
-                              "exactly one path argument required");
-  
-  path = APR_ARRAY_IDX (args, 0, const char *);
-
-  /* get revision and path from argv[] */
-  SVN_ERR (svn_utf_cstring_to_utf8 (&path_utf8, path, NULL, pool));
-
-  /* open the filesystem */
-  SVN_ERR (svn_repos_open (&repos, opt_state->repository_path, pool));      
-  fs = svn_repos_fs (repos);
-
-  /* open the revision root */
-  SVN_ERR (svn_fs_revision_root (&rev_root, fs,
-                                 opt_state->start_revision.value.number,
-                                 pool));
-
-  /* See if PATH represents a directory (this doubles as an
-     existence check). */
-  SVN_ERR (svn_fs_is_dir (&is_dir, rev_root, path_utf8, pool));
-
-  /* do the (un-)deltification */
-  printf ("%seltifying `%s' in revision %" SVN_REVNUM_T_FMT "...", 
-          (is_deltify ? "D" : "Und"),
-          path,
-          opt_state->start_revision.value.number);
-
-  if (is_deltify)
-    {
-      SVN_ERR (svn_fs_deltify (rev_root, path_utf8, is_dir ? 1 : 0, pool));
-    }
-  else
-    {
-      SVN_ERR (svn_fs_undeltify (rev_root, path_utf8, is_dir ? 1 : 0, pool));
-    }
-  printf ("done.\n");
-
-  SVN_ERR (svn_repos_close (repos));
-
-  return SVN_NO_ERROR;
-}
-
-
-/* This implements `svn_opt_subcommand_t'. */
-static svn_error_t *
-subcommand_undeltify (apr_getopt_t *os, void *baton, apr_pool_t *pool)
-{
-  return deltify_or_undeltify (FALSE, os, baton, pool);
 }
 
 
