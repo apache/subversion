@@ -419,41 +419,70 @@ Updated to revision 2.
 
     <sect2 id="svn-ch-3-sect-4.3">
       <title>Examine Your Changes</title>
-
+      
       <!-- ###TODO Note that this sect2 currently mentions nothing about
       info. -Fitz -->
-
-      <para>So now you've finished your changes&hellip; or so you
-        think.  But what exactly did you change?  How can you review
-        them? You can use <command>svn status</command>, <command>svn
-          info</command>, <command>svn diff</command>, and <command>svn
-          revert</command> to find out all this and more.</para>
       
-      <para>Subversion has been optimized to help you with this task,
-        and is able to do many things without talking to the
-        repository or network at all.  In particular, your working
-        copy contains a secret cached <quote>pristine</quote> copy of
-        each file within the <filename>.svn</filename> area.  Because
-        of this, it can quickly show you how your working files have
-        changed, or even allow you to undo your changes.</para>
+      <sect3 id="svn-ch-3-sect-4.3.1">
+        <title><command>svn status</command></title>
 
-      <para>The <command>svn status</command> command is your friend;
-        become intimate with it.  You'll probably use <command>svn
-          status</command> more than any other command.</para>
+        <para>Once you've finished making changes, you need to commit
+          them to the repository, but before you do so, it's usually a
+          good idea to take a look at exactly what you've changed.  By
+          examining your changes before you commit, you can not only
+          make a more accurate log message, but you may discover that
+          you've inadvertently changed a file, and this gives you a
+          chance to revert those changes before committing.  You can
+          see exactly what changes you've made by using <command>svn
+          status</command>, <command>svn info</command>, <command>svn
+          diff</command>, and <command>svn revert</command> to find
+          out what files have changed where and possibly remove these
+          changes.</para>
       
-      <para> If you run <command>svn status</command> at the top of
-        your working copy with no arguments, it will detect all file
-        and tree changes you've made.  This example is designed to
-        show all the different status codes that <command>svn
+        <para>Subversion has been optimized to help you with this
+          task, and is able to do many things without communicating
+          with the repository.  In particular, your working copy
+          contains a secret cached <quote>pristine</quote> copy of
+          each version controlled file within the
+          <filename>.svn</filename> area.  Because of this, Subversion
+          can quickly show you how your working files have changed, or
+          even allow you to undo your changes offline.</para>
+
+        <para>You'll probably use the <command>svn status</command>
+          command more than any other Subversion command.</para>
+        
+        <sidebar>
+          <title>CVS Users note</title>
+          
+          <para>You're probably used to using <command>cvs
+              update</command> to see what changes you've made to your
+            working copy.  <command>svn status</command> will give
+            you all the information you need regarding what has
+            changed in your working copy&mdash;without accessing the
+            repository.</para>
+        
+          <para>In Subversion, <command>update</command> does just
+            that&mdash;it updates your working copy with any changes
+            committed to the repository since the last time you've
+            updated your working copy.  You'll have to break the habit
+            of using the <command>update</command> command to see what
+            local modifications you've made.</para>
+
+        </sidebar>
+        
+        <para> If you run <command>svn status</command> at the top of
+          your working copy with no arguments, it will detect all file
+          and tree changes you've made.  This example is designed to
+          show all the different status codes that <command>svn
           status</command> can return.  Note that the text in
-        <literal>[]</literal> is not printed by <command>svn
+          <literal>[]</literal> is not printed by <command>svn
           status</command>.</para>
       
-      <screen>
+        <screen>
 $ svn status
-_ L    ./abc.c               [svn has a lock in its .svn directory for abc.c]
+  L    ./abc.c               [svn has a lock in its .svn directory for abc.c]
 M      ./bar.c               [the content in bar.c has local modifications]
-_M     ./baz.c               [baz.c has property but no content modifications]
+ M     ./baz.c               [baz.c has property but no content modifications]
 ?      ./foo.o               [svn doesn't manage foo.o]
 !      ./foo.c               [svn knows foo.c but a non-svn program deleted it]
 ~      ./qux                 [versioned as dir, but is file, or vice versa]
@@ -461,220 +490,229 @@ A  +   ./moved_dir           [added with history of where it came from]
 M  +   ./moved_dir/README    [added with history and has local modifications]
 D      ./stuff/fish.c        [this file is scheduled for deletion]
 A      ./stuff/things/bloo.h [this file is scheduled for addition]
-      </screen><!-- ###TODO The above should probably be a talble. -Fitz -->
+        </screen><!-- ###TODO Should the above be a table? -Fitz -->
       
-      <para>In this output format <command>svn status</command> prints
-        four columns of characters followed by several whitespace
-        characters followed by a file or directory name.  The first
-        column tells the status of a file or directory and/or its
-        contents.  The codes printed here are:</para>
+        <para>In this output format <command>svn status</command>
+          prints four columns of characters followed by several
+          whitespace characters followed by a file or directory name.
+          The first column tells the status of a file or directory
+          and/or its contents.  The codes printed here are:</para>
 
 
-      <variablelist>
-        <varlistentry>
-          <term><computeroutput>_      file_or_dir</computeroutput></term>
-          <listitem>
-            <para>The file or directory has not been added or deleted,
-              nor have <filename>file_or_dir</filename>'s contents
-              been modified if it is a file.</para>
-          </listitem>
-        </varlistentry>
+        <variablelist>
+          <varlistentry>
+            <term><computeroutput>       file_or_dir</computeroutput></term>
+            <listitem>
+              <para>The file or directory has not been added or deleted,
+                nor have <filename>file_or_dir</filename>'s contents
+                been modified if it is a file.  This line is printed
+                only if you use <command>svn status -v</command></para>
+            </listitem>
+          </varlistentry>
 
-        <varlistentry>
-          <term><computeroutput>A      file_or_dir</computeroutput></term>
-          <listitem>
-            <para>The file or directory
-              <filename>file_or_dir</filename> has been scheduled for
-              addition into the repository.
-            </para>
-          </listitem>
-        </varlistentry>
+          <varlistentry>
+            <term><computeroutput>A      file_or_dir</computeroutput></term>
+            <listitem>
+              <para>The file or directory
+                <filename>file_or_dir</filename> has been scheduled for
+                addition into the repository.
+              </para>
+            </listitem>
+          </varlistentry>
 
-        <varlistentry>
-          <term><computeroutput>M      file</computeroutput></term>
-          <listitem>
-            <para>The contents of file <filename>file</filename> have been modified.</para>
-          </listitem>
-        </varlistentry>
+          <varlistentry>
+            <term><computeroutput>M      file</computeroutput></term>
+            <listitem>
+              <para>The contents of file <filename>file</filename> have
+                been modified.</para>
+            </listitem>
+          </varlistentry>
 
-        <varlistentry>
-          <term><computeroutput>D      file_or_dir</computeroutput></term>
-          <listitem>
-            <para>The file or directory
-              <filename>file_or_dir</filename> has been scheduled for
-              deletion from the repository.</para>
-          </listitem>
-        </varlistentry>
+          <varlistentry>
+            <term><computeroutput>D      file_or_dir</computeroutput></term>
+            <listitem>
+              <para>The file or directory
+                <filename>file_or_dir</filename> has been scheduled for
+                deletion from the repository.</para>
+            </listitem>
+          </varlistentry>
 
-        <varlistentry>
-          <term><computeroutput>?      file_or_dir</computeroutput></term>
-          <listitem>
-            <para>The file or directory
-              <filename>file_or_dir</filename> indicates that this file
-              or directory is not under version control.  You can
-              silence the question marks by either passing the
-              <option>--quiet</option> (<option>-q</option>)
-              switch to <command>svn status</command>, or by setting the
-              <literal>svn:ignore</literal> property on the parent
-              directory, see <xref linkend="svn-ch-6"/>.</para><!--
-            ###TODO make this xref more specific. -Fitz -->
-          </listitem>
-        </varlistentry>
+          <varlistentry>
+            <term><computeroutput>?      file_or_dir</computeroutput></term>
+            <listitem>
+              <para>The file or directory
+                <filename>file_or_dir</filename> is not under version
+                control.  You can silence the question marks by either
+                passing the <option>--quiet</option>
+                (<option>-q</option>) switch to <command>svn
+                  status</command>, or by setting the
+                <literal>svn:ignore</literal> property on the parent
+                directory.</para>
 
-        <varlistentry>
-          <term><computeroutput>!      file_or_dir</computeroutput></term>
-          <listitem>
-            <para>The file or directory
-              <filename>file_or_dir</filename> is under version
-              control but the working copy is missing.  This happens
-              if the file or directory is removed using a
-              non-Subversion command.  A quick <command>svn
-              up</command> or <command>svn revert
-              file_or_dir</command> will restore the missing file from
-              its cached pristine copy.</para>
-          </listitem>
-        </varlistentry>
+              <para>By default, <command>svn status</command> ignores
+                files matching the regular expressions
+                <literal>*.o</literal>, <literal>*.lo</literal>,
+                <literal>*.la</literal>, <literal>#*#</literal>,
+                <literal>*.rej</literal>, <literal>*~</literal>, and
+                <literal>.#*</literal>.  If you want additional files
+                ignored, set the <literal>svn:ignore</literal> property
+                on the parent directory.  If you want to see the status
+                of all the files in the repository regardless of
+                <command>svn status</command> and
+                <command>svn:ignore</command>'s regular expressions,
+                then use the <option>--no-ignore</option> command line
+                option.  See <xref linkend="svn-ch-6-sect-2.1.3"/> for
+                more information.</para>
 
-        <varlistentry>
-          <term><computeroutput>~     file_or_dir</computeroutput></term>
-          <listitem>
-            <para>The file or directory
-           <filename>file_or_dir</filename> is under version control
-           as one kind of object, but what's actually on disk is some
-           other kind.  For example, Subversion might be expecting a
-           file, but the user has removed the file and created a
-           directory in its place, without using the <command>svn rm</command>
-           nor <command>svn add</command> commands.</para>
-          </listitem>
-        </varlistentry>
+            </listitem>
+          </varlistentry>
 
-      </variablelist>
+          <varlistentry>
+            <term><computeroutput>!      file_or_dir</computeroutput></term>
+            <listitem>
+              <para>The file or directory
+                <filename>file_or_dir</filename> is under version
+                control but is missing from the working copy.  This
+                happens if the file or directory is removed using a
+                non-Subversion command.  A quick <command>svn
+                  up</command> or <command>svn revert
+                  file_or_dir</command> will restore the missing file from
+                its cached pristine copy (directories must be refetched
+                from the repository since the pristine copies are kept
+                <emphasis>inside</emphasis> of it.</para>
+            </listitem>
+          </varlistentry>
 
-      <para>The second column tells the status of a file's or
-        directory's properties, see <xref linkend="svn-ch-6"/><!--
-        ###TODO make this xref more specific. -Fitz -->.  If a
-        <computeroutput>M</computeroutput> appears in the second
-        column, then the properties have been modified, otherwise a
-        whitespace will be printed.  If only the properties of a file
-        or directory are modified, then you will get
-        <computeroutput>_M</computeroutput> printed in the first and
-        second columns.  The first <computeroutput>_</computeroutput> is just printed to make
-        it clear to the eye that the properties are modified and not
-        the contents.</para>
-           
-      <para>The third column will only show whitespace or a
-        <computeroutput>L</computeroutput> which means that
-        <command>svn</command> has locked the item in
-        the<filename>.svn</filename> working area.  You will see
-        <computeroutput>L</computeroutput> if you run <command>svn
-        status</command> in a directory you are currently running
-        <command>svn commit</command> when you are editing the log
-        message.  If there are no running <command>svn</command>'s, then
-        presumably <command>svn</command> was forcibly quit or died and the
-        lock needs to be cleaned up by running <command>svn
-        cleanup</command>.  Locks typically appear if a Subversion
-        command is interrupted before completion.</para>
-           
-      <para>The forth column will only show whitespace or a
-        <computeroutput>+</computeroutput> which means that the file
-        or directory is scheduled to be added or modified with
-        additional attached history.  This typically happens when you
-        <command>svn mv</command> or <command>svn cp</command> a file
-        or directory.  If you see <computeroutput>A  
-        +</computeroutput>, this means the item is scheduled for
-        addition-with-history.  It could be a file, or the root of a
-        copied directory.  <computeroutput>_   +</computeroutput>
-        means the item is part of a subtree scheduled for
-        addition-with-history, i.e. some parent got copied, and its
-        just coming along for the ride.  <computeroutput>M  
-        +</computeroutput> means the item is part of a subtree
-        scheduled for addition-with-history, <emphasis>and</emphasis>
-        it has local mods.  When you commit, first some parent will be
-        added-with-history (copied), which means this file will
-        automatically exist in the copy.  Then the local mods will be
-        further uploaded into the copy.</para>
-           
-      <para>By default, <command>svn status</command> ignores files
-        matching the regular expressions <literal>*.o</literal>,
-        <literal>*.lo</literal>, <literal>*.la</literal>,
-        <literal>#*#</literal>, <literal>*.rej</literal>,
-        <literal>*~</literal>, and <literal>.#*</literal>.  If you want
-        additional files ignored, set the
-        <literal>svn:ignore</literal> property on the parent
-        directory.  If you want to see the status of all the files in
-        the repository irrespective of <command>svn status</command>
-        and <command>svn:ignore</command>'s regular expressions, then
-        use the <option>--no-ignore</option> command line
-        option.</para>
-           
-      <para>If a single path is passed to the command, it will tell
-      you about it:</para>
-           
-      <screen>
+          <varlistentry>
+            <term><computeroutput>~     file_or_dir</computeroutput></term>
+            <listitem>
+              <para>The file or directory
+                <filename>file_or_dir</filename> is in the repository as
+                one kind of object, but what's actually in your working
+                copy is some other kind.  For example, Subversion might
+                have a file in the repository, but you removed the file
+                and created a directory in its place, without using the
+                <command>svn rm</command> nor <command>svn add</command>
+                commands.</para>
+            </listitem>
+          </varlistentry>
+
+        </variablelist>
+
+        <para>The second column tells the status of a file or
+          directory's properties.  If an
+          <computeroutput>M</computeroutput> appears in the second
+          column, then the properties have been modified, otherwise a
+          whitespace will be printed.</para>
+        
+        <para>The third column will only show whitespace or an
+          <computeroutput>L</computeroutput> which means that Subversion
+          has locked the item in the<filename>.svn</filename> working
+          area.  You will see an <computeroutput>L</computeroutput> if
+          you run <command>svn status</command> in a directory where an
+          <command>svn commit</command> is in progress&mdash;perhaps
+          when you are editing the log message.  If Subversion is not
+          running, then presumably Subversion was forcibly quit or died
+          and the lock needs to be cleaned up by running <command>svn
+            cleanup</command>.  Locks typically appear if a Subversion
+          command is interrupted before completion.</para>
+        
+        <para>The fourth column will only show whitespace or a
+          <computeroutput>+</computeroutput> which means that the file
+          or directory is scheduled to be added or modified with
+          additional attached history.  This typically happens when you
+          <command>svn mv</command> or <command>svn cp</command> a file
+          or directory.  If you see
+          <computeroutput>A&nbsp;&nbsp;+</computeroutput>, this means
+          the item is scheduled for addition-with-history.  It could be
+          a file, or the root of a copied directory.
+          <quote><computeroutput>&nbsp;&nbsp;&nbsp;+</computeroutput></quote>
+          means the item is part of a subtree scheduled for
+          addition-with-history, i.e. some parent got copied, and it's
+          just coming along for the ride.
+          <computeroutput>M&nbsp;&nbsp;+</computeroutput> means the item
+          is part of a subtree scheduled for addition-with-history,
+          <emphasis>and</emphasis> it has local modifications.  When you
+          commit, first the parent will be added-with-history (copied),
+          which means this file will automatically exist in the copy.
+          Then the local modifications will be uploaded into the
+          copy.</para>
+        
+        <para>If you pass a specific path is passed to <command>svn
+            status</command>, it give you information about that item
+          alone:</para>
+        
+        <screen>
 $ svn status stuff/fish.c
 D      stuff/fish.c
-      </screen>
+        </screen>
+        
+        <para><command>svn status</command> also has a
+          <option>--verbose</option> (<option>-v</option>) switch,
+          which will show you the status of <emphasis>every</emphasis>
+          item in your working copy, even if it has not been changed
+          in your working copy:</para>
            
-      <para>This command also has a <option>--verbose</option>
-           (<option>-v</option>) mode, which will show you the
-           status of <emphasis>every</emphasis> item in your working
-           copy:</para>
-           
-      <screen>
+        <screen>
 $ svn status -v
-M               44        23    joe       ./README
-_               44        30    frank     ./INSTALL
-M               44        20    frank     ./bar.c
-_               44        18    joe       ./stuff
-_               44        35    mary      ./stuff/trout.c
-D               44        19    frank     ./stuff/fish.c
-_               44        21    mary      ./stuff/things
+M               44        23    sally     ./README
+                44        30    sally     ./INSTALL
+M               44        20    harry     ./bar.c
+                44        18    ira       ./stuff
+                44        35    harry     ./stuff/trout.c
+D               44        19    ira       ./stuff/fish.c
+                44        21    sally     ./stuff/things
 A                0         ?     ?        ./stuff/things/bloo.h
-_               44        36    joe       ./stuff/things/gloo.c
-      </screen>
+                44        36    harry     ./stuff/things/gloo.c
+        </screen>
            
-      <para>This is the <quote>long form</quote> output of
-        <command>svn status</command>.  The first column is still the
-        same.  The second column shows the working-revision of the
-        item.  The third and fourth column show the revision in which
-        the item last changed, and who changed it.</para>
+        <para>This is the <quote>long form</quote> output of
+          <command>svn status</command>.  The first column remains
+          same, but the second column shows the working-revision of
+          the item.  The third and fourth column show the revision in
+          which the item last changed, and who changed it.</para>
 
-      <para>All of the above invocations to <command>svn
-        status</command> do not contact the repository, they work only
-        locally by comparing the metadata in the
-        <filename>.svn</filename> directory with the working
-        area.</para>
+        <para>None of the above invocations to <command>svn
+            status</command> contact the repository, they work only
+          locally by comparing the metadata in the
+          <filename>.svn</filename> directory with the working
+          copy.</para>
            
-      <para>Finally, there is a <option>--show-updates</option>
-        (<option>-u</option>) switch, which contacts the
-        repository and adds information about things that are
-        <firstterm>out-of-date</firstterm>:</para>
+        <para>Finally, there is the <option>--show-updates</option>
+          (<option>-u</option>) switch, which contacts the repository
+          and adds information about things that are
+          <firstterm>out-of-date</firstterm>:</para>
       
-      <screen>
+        <screen>
 $ svn status -u -v
-M      *        44        23    joe       ./README
-M               44        20    frank     ./bar.c
-_      *        44        35    mary      ./stuff/trout.c
-D               44        19    frank     ./stuff/fish.c
+M      *        44        23    sally     ./README
+M               44        20    harry     ./bar.c
+       *        44        35    harry     ./stuff/trout.c
+D               44        19    ira       ./stuff/fish.c
 A                0         ?     ?        ./stuff/things/bloo.h
-      </screen>
+        </screen>
            
-      <para>Notice the two asterisks: if you were to run <command>svn
-           up</command> at this point, you would receive changes
-           to<filename>README</filename>
-           and<filename>trout.c</filename>.  Hmmm, better be careful.
-           You'll need to absorb those server-changes
-           on<filename>README</filename> before you commit, lest the
-           repository reject your commit for being out-of-date.  (More
-           on this subject later).</para>
+        <para>Notice the two asterisks: if you were to run
+            <command>svn up</command> at this point, you would receive
+          changes to<filename>README</filename>
+          and<filename>trout.c</filename>.  This tells you some very
+          useful information&mdash;you'll need to update and get the
+          server-changes on<filename>README</filename> before you
+          commit, or the repository reject your commit for being
+          out-of-date.  (More on this subject later).</para>
+
+      </sect3>
+
+      <sect3 id="svn-ch-3-sect-4.3.2">
+        <title><command>svn diff</command></title>
            
-      <para>Another way to examine your changes is with the
-        <command>svn diff</command> command.  You can find out
-        <emphasis>exactly</emphasis> how you've modified things by running
-        <command>svn diff</command> with no arguments, which prints
-        out file changes in unified diff format:</para>
-      
-      <screen>
+        <para>Another way to examine your changes is with the
+          <command>svn diff</command> command.  You can find out
+          <emphasis>exactly</emphasis> how you've modified things by
+          running <command>svn diff</command> with no arguments, which
+          prints out file changes in unified diff format:</para>
+        
+        <screen>
 $ svn diff
 Index: ./bar.c
 ===================================================================
@@ -713,42 +751,102 @@ Index: ./stuff/things/bloo.h
 +++ ./stuff/things/bloo.h  Mon Jul 15 17:58:18 2002
 +Here is a new file to describe
 +things about bloo.
-      </screen>
-           
-      <para>The <command>svn diff</command> command produces this
-        output by comparing your working files against the cached
-        <quote>pristine</quote> copies within the
-        <filename>.svn</filename> area.  Files scheduled for addition
-        are displayed as all added-text, and files scheduled for
-        deletion are displayed as all deleted text.</para>
+        </screen>
+        
+        <para>The <command>svn diff</command> command produces this
+          output by comparing your working files against the cached
+          <quote>pristine</quote> copies within the
+          <filename>.svn</filename> area.  Files scheduled for
+          addition are displayed as all added-text, and files
+          scheduled for deletion are displayed as all deleted
+          text.</para>
+
+        <para>Output is displayed in <firstterm>unified diff
+            format</firstterm>.  That is, removed lines are prefaced
+            with a <literal>-</literal> and added lines are prefaced
+            with a <literal>+</literal>.  <command>svn diff</command>
+            also prints filename and offset information useful to the
+            <command>patch</command> program, so you can generate
+            <quote>patches</quote> by redirecting the diff output to a
+            file:</para>
+
+        <screen>
+$ svn diff > patchfile
+        </screen>
+
+        <para>You could, for example, email the patchfile to another
+          developer for review or testing prior to commit.</para>
+
+        <!-- ###TODO more diff examples: against non-base, etc) -Fitz -->
+
+      </sect3>
+
+      <sect3 id="svn-ch-3-sect-4.3.3">
+        <title><command>svn revert</command></title>
+
+        <para>Now suppose you see the above diff output, and realize
+          that your changes to <filename>README</filename> are a
+          mistake; perhaps you accidentally typed that text into the
+          wrong file in your editor.</para>
       
-      <para>Now suppose you see this output, and realize that your
-        changes to <filename>README</filename> are a mistake; perhaps
-        you accidentally typed that text into the wrong file in your
-        editor.</para>
-      
-      <para>The <command>svn revert} command is exactly for this purpose.  It
-          throws away all changes to your file:</command></para>
+        <para>This is a prime example for using <command>svn
+          revert</command>.</para>
            
-      <screen>
+        <screen>
 $ svn revert README
 Reverted ./README
-      </screen>
+        </screen>
         
-      <para>The file is reverted to its pre-modified state by
-        overwriting it with the cached <quote>pristine</quote> copy.
-        But also note that <command>svn revert</command> can undo any
-        scheduled operations&mdash;in case you decide that you don't
-        want to add a new file after all, or that you don't want to
-        remove something.</para>
-           
+        <para>The file is reverted to its pre-modified state by
+          overwriting it with the cached <quote>pristine</quote> copy
+          from the <filename>.svn</filename> area.  But also note that
+          <command>svn revert</command> can undo any scheduled
+          operations&mdash;in case you decide that you don't want to
+          add a new file after all:</para>
+
+        <screen>
+$ svn st foo
+?      foo
+
+$ svn add foo
+A         foo
+
+$ svn revert foo
+Reverted foo
+
+$ svn st foo
+?      foo
+        </screen>
+
+        <para>Or perhaps you mistakenly removed a file from version
+          control:</para>
+
+        <screen>
+$ svn st README 
+       README
+
+$ svn rm README 
+D         README
+
+$ svn revert README
+Reverted README
+
+$ svn st README
+       README
+        </screen>
+
+      </sect3>
+
       <sidebar>
+          <title>Look Ma! No Network!</title>
+
         <para>All three of these commands (<command>svn
           status</command>, <command>svn diff</command>, <command>svn
           revert</command>) can be used without any network access
-          (except for the <option>-u</option> switch to status).  This
-          makes it easy to manage your changes-in-progress while
-          traveling on an airplane, etc.</para>
+          (except for the <option>--show-updates</option>
+          (<option>-u</option>) switch to status).  This makes it easy
+          to manage your changes-in-progress while traveling on an
+          airplane, etc.</para>
 
         <para>Subversion manages this by keeping private caches of
           pristine versions of each versioned file inside of the
