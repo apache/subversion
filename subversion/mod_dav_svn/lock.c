@@ -121,8 +121,8 @@ dav_svn_get_supportedlock(const dav_resource *resource)
   /* This is imitating what mod_dav_fs is doing.  Note that unlike
      mod_dav_fs, however, we don't support "shared" locks.  */
 
-  /* ### it seems awfully weird to me that a provider knows that
-     mod_dav is going to use D=DAV for xml namespaces... */
+  /* ### it seems awfully weird that a provider knows that
+     mod_dav is going to use 'D=DAV' for xml namespaces, no? */
   static const char supported[] = DEBUG_CR
     "<D:lockentry>" DEBUG_CR
     "<D:lockscope><D:exclusive/></D:lockscope>" DEBUG_CR
@@ -188,10 +188,7 @@ static int
 dav_svn_compare_locktoken(const dav_locktoken *lt1,
                           const dav_locktoken *lt2)
 {
-  /* ### what on earth does it mean for a locktoken to be "greater"
-     than another?   ...maybe this is just for nice sorted output?? */
-
-  return 0;  /* temporary: just to suppress compile warnings */
+  return strcmp(lt1->uuid_str, lt2->uuid_str);
 }
 
 
@@ -219,8 +216,13 @@ dav_svn_open_lockdb(request_rec *r,
                     int force,
                     dav_lockdb **lockdb)
 {
-  /* ### create a lockdb context... ?? */
+  dav_lockdb *db = apr_pcalloc(r->pool, sizeof(*db));
 
+  db->hooks = &dav_svn_hooks_locks;
+  db->ro = ro;
+  db->info = NULL; /* we could add private context someday. */
+
+  *lockdb = db;
   return 0;
 }
 
@@ -230,8 +232,7 @@ dav_svn_open_lockdb(request_rec *r,
 static void
 dav_svn_close_lockdb(dav_lockdb *lockdb)
 {
-  /* ### free the lockdb context... ?? */
-
+  /* nothing to do here. */
   return;
 }
 
@@ -314,7 +315,7 @@ dav_svn_get_locks(dav_lockdb *lockdb,
 {
   svn_error_t *serr;
   svn_lock_t *slock;
-  dav_lock *lock;
+  dav_lock *lock = NULL;
 
   /* We only support exclusive locks, not shared ones.  So this
      function always returns a "list" of exactly one lock, or just a
@@ -457,7 +458,7 @@ dav_svn_append_locks(dav_lockdb *lockdb,
   dav_lock_to_svn_lock(&slock, lock, resource->info->repos_path,
                        resource->pool);
 
-  /* Now use the svn_lock_t to actually peform the lock. */
+  /* Now use the svn_lock_t to actually perform the lock. */
   serr = svn_repos_fs_attach_lock(slock,
                                   resource->info->repos->repos,
                                   resource->pool);
@@ -518,9 +519,45 @@ dav_svn_refresh_locks(dav_lockdb *lockdb,
                       time_t new_time,
                       dav_lock **locks)
 {
-  /* ### call svn_repos_fs_attach_lock() using incoming locktoken. */
+  /* We're not looping over a list of locks, since we only support one
+     lock per resource. */
+  dav_locktoken *token = ltl->locktoken;
+  svn_error_t *serr;
+  svn_lock_t *slock;
+  dav_lock *dlock;
 
-  return 0;  /* temporary: just to suppress compile warnings */
+  /* ### TODO: call authz_read callback here.  If the resource is
+     unreadable, we don't want to say anything about locks attached to
+     it.*/
+
+  /* Convert the token into an svn_lock_t. */
+  serr = svn_fs_get_lock_from_token(&slock,
+                                    resource->info->repos->fs,
+                                    token->uuid_str,
+                                    resource->pool);
+  if (serr)
+    return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                               "Token doesn't point to a lock.",
+                               resource->pool);
+
+
+  /* Tweak the expiration_date to the new expiration time. */
+  slock->expiration_date = (apr_time_t)new_time * APR_USEC_PER_SEC;
+
+  /* Now use the tweaked svn_lock_t to 'refresh' the existing lock. */
+  serr = svn_repos_fs_attach_lock(slock,
+                                  resource->info->repos->repos,
+                                  resource->pool);
+  if (serr)
+    return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                               "Failed to refresh existing lock.",
+                               resource->pool);
+
+  /* Convert the refreshed lock into a dav_lock and return it. */
+  svn_lock_to_dav_lock(&dlock, slock, resource->exists, resource->pool);
+  *locks = dlock;
+
+  return 0;
 }
 
 
@@ -541,20 +578,18 @@ dav_svn_refresh_locks(dav_lockdb *lockdb,
 **       caller should then traverse up the repository hierarchy looking
 **       for the resource defining a lock with this locktoken.
 */
-static dav_error *
-dav_svn_lookup_resource(dav_lockdb *lockdb,
-                        const dav_locktoken *locktoken,
-                        const dav_resource *start_resource,
-                        const dav_resource **resource)
-{
-  /* ### call svn_fs_get_lock_from_token(), then
-     dav_svn_get_resource() on lock->path.   It looks like we can
-     pretty much ignore 'start_resource', since we don't have indirect
-     locks.  */
 
-  return 0;  /* temporary: just to suppress compile warnings */
-}
+  /* ### no reason to implement this func, see docstring. */
 
+/* static dav_error *
+   dav_svn_lookup_resource(dav_lockdb *lockdb,
+                           const dav_locktoken *locktoken,
+                           const dav_resource *start_resource,
+                           const dav_resource **resource)
+  {
+    return 0;
+  }
+*/
 
 
 
@@ -576,6 +611,6 @@ const dav_hooks_locks dav_svn_hooks_locks = {
   dav_svn_append_locks,
   dav_svn_remove_lock,
   dav_svn_refresh_locks,
-  dav_svn_lookup_resource,
+  NULL,
   NULL                          /* hook structure context */
 };

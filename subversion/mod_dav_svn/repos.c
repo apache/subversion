@@ -1376,9 +1376,31 @@ static dav_error * dav_svn_get_resource(request_rec *r,
                        "software.");
 }
 
+
+static const char *get_parent_path(const char *path,
+                                   apr_pool_t *pool)
+{
+  apr_size_t len;
+  const char *parentpath, *basename;
+  char *tmp = apr_pstrdup(pool, path);
+
+  /* Remove any trailing slash; they make svn_path_split() assert and die.*/
+  len = strlen(tmp);
+  if (tmp[len-1] == '/')
+    tmp[len-1] = '\0';
+
+  svn_path_split(tmp, &parentpath, &basename, pool);
+  
+  /* ### preserve the slash on the parent?? */
+  return parentpath;
+}
+
+
 static dav_error * dav_svn_get_parent_resource(const dav_resource *resource,
                                                dav_resource **parent_resource)
 {
+  dav_resource *parent;
+  dav_resource_private *parentinfo;
   svn_stringbuf_t *path = resource->info->uri_path;
 
   /* the root of the repository has no parent */
@@ -1390,8 +1412,35 @@ static dav_error * dav_svn_get_parent_resource(const dav_resource *resource,
 
   switch (resource->type)
     {
-    case DAV_RESOURCE_TYPE_WORKING:
     case DAV_RESOURCE_TYPE_REGULAR:
+
+      parent = apr_pcalloc(resource->pool, sizeof(*parent));
+      parentinfo  = apr_pcalloc(resource->pool, sizeof(*parentinfo));
+
+      parent->type = DAV_RESOURCE_TYPE_REGULAR;
+      parent->exists = 1;
+      parent->collection = 1;
+      parent->versioned = 1;
+      parent->hooks = resource->hooks;
+      parent->pool = resource->pool;
+      parent->uri = get_parent_path(resource->uri, resource->pool);
+      parent->info = parentinfo;
+
+      parentinfo->pool = resource->info->pool;
+      parentinfo->uri_path = 
+        svn_stringbuf_create(get_parent_path(resource->info->uri_path->data,
+                                             resource->pool), resource->pool);
+      parentinfo->repos = resource->info->repos;
+      parentinfo->root = resource->info->root;
+      parentinfo->r = resource->info->r;
+      parentinfo->svn_client_options = resource->info->svn_client_options;
+      parentinfo->repos_path = get_parent_path(resource->info->repos_path,
+                                               resource->pool);
+
+      *parent_resource = parent;
+      break;
+
+    case DAV_RESOURCE_TYPE_WORKING:
       /* The "/" occurring within the URL of working resources is part of
          its identifier; it does not establish parent resource relationships.
          All working resources have the same parent, which is:
