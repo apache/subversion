@@ -50,6 +50,13 @@
                     </tree-delta>
                   </dir>
                 </replace>
+                <replace name="H">
+                  <dir>
+                    <tree-delta>
+                      <delete name="psi"/>
+                    </tree-delta>
+                  </dir>
+                </replace>
               </tree-delta>
             </dir>
           </replace>
