@@ -134,7 +134,7 @@ extern "C" {
                                            + (17 * SVN_ERR_CATEGORY_SIZE))
 #define SVN_ERR_RA_SVN_CATEGORY_START   (APR_OS_START_USERERR \
                                            + (18 * SVN_ERR_CATEGORY_SIZE))
-#define SVN_ERR_AUTH_CATEGORY_START     (APR_OS_START_USERERR \
+#define SVN_ERR_AUTHN_CATEGORY_START    (APR_OS_START_USERERR \
                                            + (19 * SVN_ERR_CATEGORY_SIZE))
 
 #endif /* DOXYGEN_SHOULD_SKIP_THIS */
@@ -611,20 +611,20 @@ SVN_ERROR_START
 
        /* this error can be used when an auth provider doesn't have
           the creds, but no other "real" error occurred. */
-  SVN_ERRDEF (SVN_ERR_AUTH_CREDS_UNAVAILABLE,
-              SVN_ERR_AUTH_CATEGORY_START + 0,
+  SVN_ERRDEF (SVN_ERR_AUTHN_CREDS_UNAVAILABLE,
+              SVN_ERR_AUTHN_CATEGORY_START + 0,
               "Credential data unavailable")
 
-  SVN_ERRDEF (SVN_ERR_AUTH_NO_PROVIDER,
-              SVN_ERR_AUTH_CATEGORY_START + 1,
+  SVN_ERRDEF (SVN_ERR_AUTHN_NO_PROVIDER,
+              SVN_ERR_AUTHN_CATEGORY_START + 1,
               "No authentication provider available")
 
-  SVN_ERRDEF (SVN_ERR_AUTH_PROVIDERS_EXHAUSTED,
-              SVN_ERR_AUTH_CATEGORY_START + 2,
+  SVN_ERRDEF (SVN_ERR_AUTHN_PROVIDERS_EXHAUSTED,
+              SVN_ERR_AUTHN_CATEGORY_START + 2,
               "All authentication providers exhausted")
 
-  SVN_ERRDEF (SVN_ERR_AUTH_CREDS_NOT_SAVED,
-              SVN_ERR_AUTH_CATEGORY_START + 3,
+  SVN_ERRDEF (SVN_ERR_AUTHN_CREDS_NOT_SAVED,
+              SVN_ERR_AUTHN_CATEGORY_START + 3,
               "All authentication providers exhausted")
 
   /* svndiff errors */
