@@ -1,5 +1,5 @@
 # Norwegian Bokmål translations for the subversion package
-# Copyright (C) 2004 Collab Net.
+# Copyright (C) 2004-2005 Collab Net.
 # This file is distributed under the same license as the subversion package.
 #
 # Dictionary:
