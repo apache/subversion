@@ -104,9 +104,8 @@ svn_string_t * svn_string_dup (const svn_string_t *original_string,
                                apr_pool_t *pool);
 
 
-/* compare if two bytestrings' data fields are identical,
-   byte-for-byte */
-
+/* Return TRUE iff the contents of STR1 and STR2 are identical,
+   byte-for-byte.  */
 svn_boolean_t svn_string_compare (const svn_string_t *str1, 
                                   const svn_string_t *str2);
 
