@@ -1728,7 +1728,13 @@ typedef enum svn_wc_merge_outcome_t
    /** The working copy has been (or would be) changed, but there was (or
     * would be) a conflict
     */
-   svn_wc_merge_conflict
+   svn_wc_merge_conflict,
+
+   /** No merge was performed, probably because the target file was
+    * either absent or not under version control.
+    */
+   svn_wc_merge_no_merge
+
 } svn_wc_merge_outcome_t;
 
 /** Given paths to three fulltexts, merge the differences between @a left
@@ -1748,8 +1754,11 @@ typedef enum svn_wc_merge_outcome_t
  * @a merge_target is temporarily converted to this form to receive the
  * changes, then translated back again.
  *
- * @a merge_target must be under version control; if it is not, return
- * @c SVN_ERR_NO_SUCH_ENTRY.
+ * If @a merge_target is absent, or present but not under version
+ * control, then set @a *merge_outcome to svn_wc_merge_no_merge and
+ * return success without merging anything.  (The reasoning is that if
+ * the file is not versioned, then it is probably unrelated to the
+ * changes being considered, so they should not be merged into it.)
  *
  * @a dry_run determines whether the working copy is modified.  When it
  * is @c FALSE the merge will cause @a merge_target to be modified, when it
