@@ -1248,16 +1248,8 @@ close_file (void *file_baton)
       svn_boolean_t prop_modified;
 
       /* Are the working file's props locally modified? */
-      svn_string_t *full_prop_path = 
-        svn_wc__adm_path (fb->dir_baton->path,
-                          0, /* not tmp */
-                          fb->pool,
-                          SVN_WC__ADM_PROPS,
-                          fb->name,
-                          NULL);
-      
       err = svn_wc_props_modified_p (&prop_modified,
-                                     full_prop_path,
+                                     fb->path,
                                      fb->pool);
       if (err) return err;
 

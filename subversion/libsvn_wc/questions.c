@@ -429,14 +429,100 @@ svn_wc_text_modified_p (svn_boolean_t *modified_p,
 }
 
 
+
+
 svn_error_t *
 svn_wc_props_modified_p (svn_boolean_t *modified_p,
                          svn_string_t *path,
                          apr_pool_t *pool)
 {
-  /* kff todo: Ben, here's a skeleton. */
+  svn_boolean_t identical_p;
+  enum svn_node_kind kind;
+  svn_error_t *err;
+  svn_string_t *prop_path;
+  svn_string_t *prop_base_path;
+  svn_string_t *working_path, *basename;
+  svn_boolean_t different_filesizes, equal_timestamps;
 
-  *modified_p = FALSE;
+  /* First, construct the prop_path from the original path */
+  svn_path_split (path, &working_path, &basename,
+                  svn_path_local_style, pool);
+  
+  prop_path = svn_wc__adm_path (working_path,
+                                0, /* not tmp */
+                                pool,
+                                SVN_WC__ADM_PROPS,
+                                basename,
+                                NULL);
+
+  /* Sanity check:  if the prop_path doesn't exist, return FALSE. */
+  err = svn_io_check_path (prop_path, &kind, pool);
+  if (err) return err;
+  if (kind != svn_node_file)
+    {
+      *modified_p = FALSE;
+      return SVN_NO_ERROR;
+    }              
+
+  /* Get the full path of the prop-base `pristine' file */
+  prop_base_path = svn_wc__adm_path (working_path,
+                                     0, /* not tmp */
+                                     pool,
+                                     SVN_WC__ADM_PROP_BASE,
+                                     basename,
+                                     NULL);
+
+  
+  /* There are at least three tests we can try in succession. */
+  
+  /* Easy-answer attempt #1:  */
+  
+  /* Check if the the local and prop-base file have *definitely*
+     different filesizes. */
+  err = filesizes_definitely_different_p (&different_filesizes,
+                                          prop_path, prop_base_path,
+                                          pool);
+  if (err) return err;
+  
+  if (different_filesizes) 
+    {
+      *modified_p = TRUE;
+      return SVN_NO_ERROR;
+    }
+  
+  /* Easy-answer attempt #2:  */
+      
+  /* See if the local file's timestamp is the same as the one recorded
+     in the administrative directory.  */
+  err = timestamps_equal_p (&equal_timestamps, prop_path,
+                            svn_wc__prop_time, pool);
+  if (err) return err;
+  
+  if (equal_timestamps)
+    {
+      *modified_p = FALSE;
+      return SVN_NO_ERROR;
+    }
+  
+  /* Last ditch attempt:  */
+  
+  /* If we get here, then we know that the filesizes are the same,
+     but the timestamps are different.  That's still not enough
+     evidence to make a correct decision.  So we just give up and
+     get the answer the hard way -- a brute force, byte-for-byte
+     comparison. */
+  err = contents_identical_p (&identical_p,
+                              prop_path,
+                              prop_base_path,
+                              pool);
+  if (err)
+    return err;
+  
+  if (identical_p)
+    *modified_p = FALSE;
+  else
+    *modified_p = TRUE;
+  
   return SVN_NO_ERROR;
 }
 
