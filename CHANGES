@@ -1,4 +1,4 @@
-Version 0.14.5 [Alpha Interim 5] (released 29 Oct 2002, revision r3566)
+Version 0.14.5 [Alpha Interim 5] (released 30 Oct 2002, revision r3578)
 
  User-visible changes:
  * allow --incremental option for 'svn log' xml output
