@@ -374,8 +374,7 @@ def log_with_empty_repos(sbox):
   "'svn log' on an empty repository"
 
   # Create virgin repos
-  if os.path.exists(sbox.repo_dir):
-    shutil.rmtree(sbox.repo_dir)
+  svntest.main.safe_rmtree(sbox.repo_dir, 1)
   svntest.main.create_repos(sbox.repo_dir)
   svntest.main.set_repos_paths(sbox.repo_dir)
 

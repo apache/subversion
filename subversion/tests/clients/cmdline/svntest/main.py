@@ -279,12 +279,26 @@ def chmod_tree(path, mode, mask):
   os.path.walk(path, visit, (mode, mask))
 
 # For clearing away working copies
-def safe_rmtree(dirname):
+def safe_rmtree(dirname, retry=0):
   "Remove the tree at DIRNAME, making it writable first"
-
-  if os.path.exists(dirname):
+  def rmtree(dirname):
     chmod_tree(dirname, 0666, 0666)
     shutil.rmtree(dirname)
+
+  if not os.path.exists(dirname):
+    return
+
+  if retry:
+    for delay in (0.5, 1, 2, 4):
+      try:
+        rmtree(dirname)
+        break
+      except:
+        time.sleep(delay)
+    else:
+      rmtree(dirname)
+  else:
+    rmtree(dirname)
 
 # For making local mods to files
 def file_append(path, new_text):
@@ -565,8 +579,7 @@ def run_tests(test_list):
 
   # remove all scratchwork: the 'pristine' repository, greek tree, etc.
   # This ensures that an 'import' will happen the next time we run.
-  if os.path.exists(temp_dir):
-    shutil.rmtree(temp_dir)
+  safe_rmtree(temp_dir)
 
   _cleanup_deferred_test_paths()
 
@@ -580,8 +593,7 @@ def run_tests(test_list):
 # Cleanup: if a previous run crashed or interrupted the python
 # interpreter, then `temp_dir' was never removed.  This can cause wonkiness.
 
-if os.path.exists(temp_dir):
-  shutil.rmtree(temp_dir)
+safe_rmtree(temp_dir)
 
 # the modules import each other, so we do this import very late, to ensure
 # that the definitions in "main" have been completed.

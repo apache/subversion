@@ -1254,7 +1254,7 @@ def basic_import_executable(sbox):
     raise svntest.Failure
 
   # remove (uncontrolled) local files
-  shutil.rmtree(xt_path)
+  svntest.main.safe_rmtree(xt_path)
 
   # Create expected disk tree for the update (disregarding props)
   expected_disk = svntest.main.greek_state.copy()
@@ -1526,7 +1526,7 @@ def basic_import_ignores(sbox):
     raise svntest.actions.SVNUnexpectedOutput
 
   # remove (uncontrolled) local dir
-  shutil.rmtree(dir_path)
+  svntest.main.safe_rmtree(dir_path)
 
   # Create expected disk tree for the update (disregarding props)
   expected_disk = svntest.main.greek_state.copy()
