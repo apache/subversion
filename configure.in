@@ -161,10 +161,15 @@ if test "$enable_debugging" = "yes"; then
 fi
 
 
-dnl Find a diff
+dnl Find a default diff program
 AC_PATH_PROG(SVN_CLIENT_DIFF, diff, diff)
 AC_DEFINE_UNQUOTED(SVN_CLIENT_DIFF, "$SVN_CLIENT_DIFF", 
 	[Define to be the full path to your diff program])
+
+dnl Find a default patch program
+AC_PATH_PROG(SVN_CLIENT_PATCH, patch, patch)
+AC_DEFINE_UNQUOTED(SVN_CLIENT_PATCH, "$SVN_CLIENT_PATCH", 
+	[Define to be the full path to your patch program])
 
 
 dnl Pass some config data ----------------------------

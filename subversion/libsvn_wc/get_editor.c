@@ -968,7 +968,6 @@ close_file (void *file_baton)
       Because we must preserve local changes, the actual order of
       operations to update F is this:
 
-         0. fooo
          1. receive svndiff data D
          2. svnpatch SVN/text-base/F < D > SVN/tmp/text-base/F
          3. gdiff -c SVN/text-base/F SVN/tmp/text-base/F > SVN/tmp/F.blah.tmp
@@ -976,53 +975,6 @@ close_file (void *file_baton)
          5. gpatch F < SVN/tmp/F.tmpfile
               ==> possibly producing F.blah.rej
 
-       A finer granularity view of the above process is:
-
-       kff todo fooo: doc'ing here
-
-         0. Write file_baton->properties to SVN/tmp/prop
-
-         1. Discover and save local mods (right now, this means do a
-            GNU diff -c on ./SVN/text-base/F vs ./F, and save
-            the result somewhere).
-
-         2. Write out the following SVN/log entries, omitting any that
-            aren't applicable of course:
-
-              <merge-text name="F" saved-mods="..."/>
-                 <!-- Will attempt to merge local changes into the new
-                      text.  When done, ./F will reflect the new
-                      state, either by having the changes folded in,
-                      having them folded in with conflict markers, or
-                      not having them folded in (in which case the
-                      user is told that no merge was possible).  Yes,
-                      this means that the working file is updated
-                      *before* its text-base, but that's okay, because
-                      the updating of the text-base will already be
-                      logged by the time any of this runs, so it's "as
-                      good as done".  -->
-              <replace-text-base name="F"/>
-                  <!-- Now that the merge step is done, it's safe to
-                       replace the old pristine copy with the new,
-                       updated one, copying `./SVN/tmp/text-base/F'
-                       to `./SVN/text-base/F' -->
-              <merge-props name="F">
-                  <!-- This really just detects and warns about
-                       conflicts between local prop changes and
-                       received prop changes.  I'm not sure merging is
-                       really applicable here. -->
-              <replace-prop-base name="F"/>
-                  <!-- You know what to do. -->
-              <set-entry name="F" revision="N"/>
-                  <!-- Once everything else is done, we can set F's
-                       entry to revision N, changing the ./SVN/entries
-                       file. -->
-         
-         3. Now run over the log file, doing each operation.  Note
-            that if an operation appears to have already been done,
-            that means it _was_ done, so just count it and move on.
-            When all entries have been done, the operation is
-            complete, so remove SVN/log.
   */
 
   /** Write out the appropriate log entries. 

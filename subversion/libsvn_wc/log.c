@@ -77,6 +77,113 @@ enum svn_wc__xfer_action {
   svn_wc__xfer_mv,
 };
 
+/* Invoke PROGRAM with ARGS, using PATH as working directory.
+ * Connect PROGRAM's stdin, stdout, and stderr to INFILE, OUTFILE, and
+ * ERRFILE, except where they are null.
+ *
+ * ARGS is a list of (const char *)'s, terminated by NULL.
+ * ARGS[0] is the name of the program, though it need not be the same
+ * as CMD.
+ */
+static svn_error_t *
+run_cmd_in_directory (svn_string_t *path,
+                      const char *cmd,
+                      char *const *args,
+                      apr_file_t *infile,
+                      apr_file_t *outfile,
+                      apr_file_t *errfile,
+                      apr_pool_t *pool)
+{
+  apr_status_t apr_err;
+  apr_proc_t cmd_proc;
+  apr_procattr_t *cmdproc_attr;
+
+  /* Create the process attributes. */
+  apr_err = apr_createprocattr_init (&cmdproc_attr, pool); 
+  if (! APR_STATUS_IS_SUCCESS (apr_err))
+    return svn_error_createf
+      (apr_err, 0, NULL, pool,
+       "run_cmd_under_directory: error creating %s process attributes",
+       cmd);
+
+  /* Make sure we invoke cmd directly, not through a shell. */
+  apr_err = apr_setprocattr_cmdtype (cmdproc_attr, APR_PROGRAM);
+  if (! APR_STATUS_IS_SUCCESS (apr_err))
+    return svn_error_createf 
+      (apr_err, 0, NULL, pool,
+       "run_cmd_under_directory: error setting %s process cmdtype",
+       cmd);
+
+  /* Set the process's working directory. */
+  if (path)
+    {
+      apr_err = apr_setprocattr_dir (cmdproc_attr, path->data);
+      if (! APR_STATUS_IS_SUCCESS (apr_err))
+        return svn_error_createf 
+          (apr_err, 0, NULL, pool,
+           "run_cmd_under_directory: error setting %s process directory",
+           cmd);
+    }
+
+  /* Set io style. */
+  apr_err = apr_setprocattr_io (cmdproc_attr, APR_FULL_BLOCK, 
+                                APR_CHILD_BLOCK, APR_CHILD_BLOCK);
+  if (! APR_STATUS_IS_SUCCESS (apr_err))
+    return svn_error_createf
+      (apr_err, 0, NULL, pool,
+       "run_cmd_under_directory: error setting %s process io attributes",
+       cmd);
+
+  /* Use requested inputs and outputs. */
+  if (infile)
+    {
+      apr_err = apr_setprocattr_childin (cmdproc_attr, infile, NULL);
+      if (! APR_STATUS_IS_SUCCESS (apr_err))
+        return svn_error_createf 
+          (apr_err, 0, NULL, pool,
+           "run_cmd_under_directory: error setting %s process child input",
+           cmd);
+    }
+  if (outfile)
+    {
+      apr_err = apr_setprocattr_childout (cmdproc_attr, outfile, NULL);
+      if (! APR_STATUS_IS_SUCCESS (apr_err))
+        return svn_error_createf 
+          (apr_err, 0, NULL, pool,
+           "run_cmd_under_directory: error setting %s process child outfile",
+           cmd);
+    }
+  if (errfile)
+    {
+      apr_err = apr_setprocattr_childerr (cmdproc_attr, errfile, NULL);
+      if (! APR_STATUS_IS_SUCCESS (apr_err))
+        return svn_error_createf 
+          (apr_err, 0, NULL, pool,
+           "run_cmd_under_directory: error setting %s process child errfile",
+           cmd);
+    }
+
+  /* Start the cmd command. */ 
+  apr_err = apr_create_process (&cmd_proc, cmd, args, NULL,
+                                cmdproc_attr, pool);
+  if (! APR_STATUS_IS_SUCCESS (apr_err))
+    return svn_error_createf 
+      (apr_err, 0, NULL, pool,
+       "run_cmd_under_directory: error starting %s process",
+       cmd);
+
+  /* Wait for the cmd command to finish. */
+  apr_err = apr_wait_proc (&cmd_proc, APR_WAIT);
+  if (APR_STATUS_IS_CHILD_NOTDONE (apr_err))
+    return svn_error_createf
+      (apr_err, 0, NULL, pool,
+       "run_cmd_under_directory: error waiting for %s process",
+       cmd);
+
+  return SVN_NO_ERROR;
+}
+
+
 /* Copy (or rename, if RENAME is non-zero) NAME to DEST, assuming that
    PATH is the common parent of both locations. */
 static svn_error_t *

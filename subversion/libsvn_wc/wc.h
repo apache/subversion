@@ -282,25 +282,35 @@ svn_error_t *svn_wc__ensure_adm (svn_string_t *path,
 
 /** Log actions. **/
 
-/* Set attributes on SVN_WC__LOG_ATTR_NAME's entry. */
+/* Set some attributes on SVN_WC__LOG_ATTR_NAME's entry.  Unmentioned
+   attributes are unaffected. */
 #define SVN_WC__LOG_MODIFY_ENTRY        "modify-entry"
 
 /* Delete the entry SVN_WC__LOG_ATTR_NAME. */
 #define SVN_WC__LOG_DELETE_ENTRY        "delete-entry"
 
-/* Run an external command.  kff todo */
+/* Run an external command:
+ *    - command to run is SVN_WC__LOG_ATTR_NAME
+ *    - arguments are SVN_WC__LOG_ATTR_ARG_[1,2,3,...]
+ *    - input from SVN_WC__LOG_ATTR_INFILE, defaults to stdin
+ *    - output into SVN_WC__LOG_ATTR_OUTFILE, defaults to stdout
+ *    - stderr into SVN_WC__LOG_ATTR_ERRFILE, defaults to stderr
+ *
+ * The program will be run in the working copy directory, that is, the
+ * same directory from which paths in the log file are rooted.
+ */
 #define SVN_WC__LOG_RUN_CMD             "run"
 
-/* Move a file from one place to another */
+/* Move file SVN_WC__LOG_ATTR_NAME to SVN_WC__LOG_ATTR_DEST. */
 #define SVN_WC__LOG_MV                  "mv"
 
-/* Copy a file from one place to another */
+/* Copy file SVN_WC__LOG_ATTR_NAME to SVN_WC__LOG_ATTR_DEST. */
 #define SVN_WC__LOG_CP                  "cp"
 
-/* Delete a file */
+/* Remove file SVN_WC__LOG_ATTR_NAME. */
 #define SVN_WC__LOG_RM                  "rm"
 
-/* Append one file onto another */
+/* Append file from SVN_WC__LOG_ATTR_NAME to SVN_WC__LOG_ATTR_DEST. */
 #define SVN_WC__LOG_APPEND              "append"
 
 
@@ -318,6 +328,24 @@ svn_error_t *svn_wc__ensure_adm (svn_string_t *path,
 #define SVN_WC__LOG_ATTR_DEST           "dest"
 #define SVN_WC__LOG_ATTR_REVISION       "revision"
 #define SVN_WC__LOG_ATTR_SAVED_MODS     "saved-mods"
+/* The rest are for SVN_WC__LOG_RUN_CMD.  I'd love not to need a
+   separate attribute for every argument to the CMD, but in xml each
+   attribute has to have a unique name within that element, right? */
+#define SVN_WC__LOG_ATTR_INFILE         "infile"
+#define SVN_WC__LOG_ATTR_OUTFILE        "outfile"
+#define SVN_WC__LOG_ATTR_ERRFILE        "errfile"
+#define SVN_WC__LOG_ATTR_ARG_1          "arg1"
+#define SVN_WC__LOG_ATTR_ARG_2          "arg2"
+#define SVN_WC__LOG_ATTR_ARG_3          "arg3"
+#define SVN_WC__LOG_ATTR_ARG_4          "arg4"
+#define SVN_WC__LOG_ATTR_ARG_5          "arg5"
+#define SVN_WC__LOG_ATTR_ARG_6          "arg6"
+#define SVN_WC__LOG_ATTR_ARG_7          "arg7"
+#define SVN_WC__LOG_ATTR_ARG_8          "arg8"
+#define SVN_WC__LOG_ATTR_ARG_9          "arg9"  /* SEE NOTE BELOW! */
+/* If you ever add SVN_WC__LOG_ATTR_ARG_10, be sure to find whatever
+   `sort' function applies to them and make sure it still works.
+   Getting 1-9 right is easy, but 10's a doozy.  -kff */
 
 
 /* Starting at PATH, write out log entries indicating that a commit
