@@ -443,6 +443,9 @@ svn_error_t *svn_wc__adm_destroy (svn_stringbuf_t *path,
 /* Append file from SVN_WC__LOG_ATTR_NAME to SVN_WC__LOG_ATTR_DEST. */
 #define SVN_WC__LOG_APPEND              "append"
 
+/* Make file SVN_WC__LOG_ATTR_NAME readonly */
+#define SVN_WC__LOG_READONLY            "readonly"
+
 /* Handle closure after a commit completes successfully:  
  *
  *   If SVN/tmp/text-base/SVN_WC__LOG_ATTR_NAME exists, then

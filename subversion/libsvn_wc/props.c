@@ -622,6 +622,15 @@ svn_wc__do_property_merge (const char *path,
                          real_prop_base,
                          NULL);
 
+  /* Make prop-base readonly */
+  svn_xml_make_open_tag (entry_accum,
+                         pool,
+                         svn_xml_self_closing,
+                         SVN_WC__LOG_READONLY,
+                         SVN_WC__LOG_ATTR_NAME,
+                         real_prop_base,
+                         NULL);
+
   /* Write log entry to move working tmp copy to real working area. */
   svn_xml_make_open_tag (entry_accum,
                          pool,
@@ -630,6 +639,15 @@ svn_wc__do_property_merge (const char *path,
                          SVN_WC__LOG_ATTR_NAME,
                          tmp_props,
                          SVN_WC__LOG_ATTR_DEST,
+                         real_props,
+                         NULL);
+
+  /* Make props readonly */
+  svn_xml_make_open_tag (entry_accum,
+                         pool,
+                         svn_xml_self_closing,
+                         SVN_WC__LOG_READONLY,
+                         SVN_WC__LOG_ATTR_NAME,
                          real_props,
                          NULL);
 

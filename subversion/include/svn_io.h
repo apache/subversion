@@ -108,18 +108,22 @@ svn_error_t *svn_io_open_unique_file (apr_file_t **f,
                                       apr_pool_t *pool);
 
 
-/* Copy SRC to DST.  DST will be overwritten if it exists, else it
-   will be created. */
+/* Copy SRC to DST.  DST will be overwritten if it exists, else it will be
+   created. If COPY_PERMS is set the file permissions of DST will be set to
+   match those of SRC, this will happen before the contents are copied. */
 svn_error_t *svn_io_copy_file (const char *src,
                                const char *dst,
+                               svn_boolean_t copy_perms,
                                apr_pool_t *pool);
 
-/* Recursively copy directory SRC into DST_PARENT, as a new entry
-   named DST_BASENAME.   If DST_BASENAME already exists in DST_PARENT,
-   return error. */
+/* Recursively copy directory SRC into DST_PARENT, as a new entry named
+   DST_BASENAME.  If DST_BASENAME already exists in DST_PARENT, return
+   error. COPY_PERMS will be passed through to svn_io_copy_file when any
+   files are copied. */
 svn_error_t *svn_io_copy_dir_recursively (svn_stringbuf_t *src,
                                           svn_stringbuf_t *dst_parent,
                                           svn_stringbuf_t *dst_basename,
+                                          svn_boolean_t copy_perms,
                                           apr_pool_t *pool);
 
 
@@ -134,6 +138,11 @@ apr_status_t apr_check_dir_empty (const char *path, apr_pool_t *pool);
 svn_error_t *svn_io_append_file (svn_stringbuf_t *src,
                                  svn_stringbuf_t *dst,
                                  apr_pool_t *pool);
+
+/* Make a file as read-only as the operating system allows.
+ * PATH is the path to the file.
+ */
+svn_error_t *svn_io_set_file_read_only (const char *path, apr_pool_t *pool);
 
 
 /* Read a line from FILE into BUF, but not exceeding *LIMIT bytes.
