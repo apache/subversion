@@ -46,7 +46,7 @@ RSC=rc.exe
 # ADD RSC /l [if-any is_exe]0x409[else]0x424[end]
 BSC32=bscmake.exe
 LINK32=link.exe
-[if-any is_exe is_apache_mod]# ADD LINK32 /nologo [if-any is_exe]/subsystem:console[end] [is configs.name "Debug"]/debug[end] [if-any is_apache_mod]/dll[end] /machine:IX86[for libs] [libs][end][for configs.libdirs] /libpath:"[configs.libdirs]"[end] /out:"[rootpath]\[configs.name]\[target.path]\[target.output_name]"
+[if-any is_exe is_apache_mod]# ADD LINK32 /nologo [if-any is_exe]/subsystem:console[end] /debug [if-any is_apache_mod]/dll[end] /machine:IX86[for configs.libs] [configs.libs][end][for configs.libdirs] /libpath:"[configs.libdirs]"[end] /out:"[rootpath]\[configs.name]\[target.path]\[target.output_name]"
 [end][end][end][end][end]
 !ENDIF 
 

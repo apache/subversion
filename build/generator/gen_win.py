@@ -49,13 +49,13 @@ class WinGeneratorBase(gen_base.GeneratorBase):
       os.unlink(src)
 
   def parse_options(self, options):
+    self.httpd_path = None
+    self.skip_targets = { 'mod_dav_svn': None }
+
     for opt, val in options:
       if opt == '--with-httpd':
-        self.httpd_path = val
-        break
-    else:
-      self.httpd_path = None
-      self.skip_targets = { 'mod_dav_svn': None }
+        self.httpd_path = os.path.abspath(val)
+        del self.skip_targets['mod_dav_svn']
 
   def __init__(self, fname, verfname, options, subdir):
     """
@@ -293,11 +293,11 @@ class WinGeneratorBase(gen_base.GeneratorBase):
 
     return self.make_windirs(fakelibdirs)
 
-  def get_win_libs(self, target):
+  def get_win_libs(self, target, cfg):
     "Return the list of external libraries needed for target"
     
     if target.name == 'mod_dav_svn':
-      return [ self.dblibname+'.lib',
+      return [ self.dblibname+(cfg == 'Debug' and 'd.lib' or '.lib'),
                'xml.lib',
                'libapr.lib',
                'libaprutil.lib',
@@ -319,7 +319,10 @@ class WinGeneratorBase(gen_base.GeneratorBase):
         if not isinstance(lib, gen_base.ExternalLibrary):
           continue
 
-        nondeplibs.append(lib.fname+'.lib')
+        if cfg == 'Debug' and lib.fname == self.dblibname:
+          nondeplibs.append(lib.fname+'d.lib')
+        else:
+          nondeplibs.append(lib.fname+'.lib')
 
     return nondeplibs
 

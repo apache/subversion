@@ -51,8 +51,8 @@ class Generator(gen_win.WinGeneratorBase):
       configs.append(_item(name=cfg,
                            lower=string.lower(cfg),
                            defines=self.get_win_defines(target, cfg),
-                           libdirs=self.get_win_lib_dirs(target, rootpath,
-                                                         cfg),
+                           libdirs=self.get_win_lib_dirs(target,rootpath, cfg),
+                           libs=self.get_win_libs(target, cfg),
                            ))
 
     sources = [ ]
@@ -72,7 +72,6 @@ class Generator(gen_win.WinGeneratorBase):
       'platforms' : self.platforms,
       'configs' : configs,
       'includes' : self.get_win_includes(target, rootpath),
-      'libs' : self.get_win_libs(target),
       'sources' : sources,
       'default_platform' : self.platforms[0],
       'default_config' : configs[0].name,
