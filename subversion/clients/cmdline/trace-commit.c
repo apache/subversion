@@ -426,8 +426,11 @@ close_edit (void *edit_baton)
   struct edit_baton *eb = edit_baton;
   svn_pool_destroy (eb->pool);
 
-  printf ("\n");
-  fflush (stdout);
+  if (eb->started_sending_txdeltas)
+    {
+      printf ("\n");
+      fflush (stdout);
+    }
 
   return SVN_NO_ERROR;
 }
