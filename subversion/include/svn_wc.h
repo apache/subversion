@@ -549,7 +549,7 @@ struct svn_wc_close_commit_baton
 
    BATON is of type `svn_wc_close_commit_baton'.  Use BATON->prefix_path
    to convert TARGET, a path relative to the root of the commit, to an
-   absolute path.  Use BATON->pool for all temporary allocation during
+   absolute path.  Use POOL for all temporary allocation during
    the post-commit process.
 
    If RECURSE is set and TARGET is a directory, then bump every

@@ -517,7 +517,7 @@ abort_edit (void *edit_baton)
 /*** Public interface. ***/
 
 svn_error_t *
-svn_ra_local__get_editor (svn_delta_editor_t **editor,
+svn_ra_local__get_editor (const svn_delta_editor_t **editor,
                           void **edit_baton,
                           svn_ra_local__session_baton_t *session,
                           svn_stringbuf_t *log_msg,

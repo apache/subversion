@@ -1,0 +1,21 @@
+Conversion of old editors to the new editor interface
+=====================================================
+
+DONE    clients/cmdline/trace-commit.c
+DONE    clients/cmdline/trace-update.c
+        libsvn_client/cancellation_editor.c
+        libsvn_client/repos_diff.c
+        libsvn_delta/compose_editors.c
+        libsvn_delta/pipe_editors.c
+DONE    libsvn_delta/track_editor.c
+        libsvn_delta/xml_output.c
+DONE    libsvn_ra_dav/commit.c
+DONE    libsvn_ra_local/commit_editor.c
+        libsvn_repos/node_tree.c
+        libsvn_wc/diff.c
+DONE    libsvn_wc/status_editor.c
+DONE    libsvn_wc/update_editor.c
+        mod_dav_svn/merge.c
+        mod_dav_svn/update.c
+        tests/libsvn_repos/dir-delta-editor.c
+        tests/libsvn_test_editor.c

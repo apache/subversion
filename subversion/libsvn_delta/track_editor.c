@@ -58,31 +58,18 @@
 struct edit_baton
 {
   apr_pool_t *pool;
-  svn_stringbuf_t *initial_path;
-
-  /* Stores paths as we declare them committed. */
-  apr_hash_t *committed_targets;
-
-  /* These are defined only if the caller wants close_edit() to bump
-     revisions */
+  svn_stringbuf_t *path;
+  apr_hash_t *committed_targets; /* Paths we declare as committed. */
+  svn_delta_bump_func_t bump_func; /* May be NULL */
   svn_revnum_t new_rev;
-  svn_delta_bump_func_t bump_func;
-
   void *bump_baton;
 };
 
 
-struct dir_baton
+struct item_baton
 {
   struct edit_baton *edit_baton;
-  struct dir_baton *parent_dir_baton;
-  svn_stringbuf_t *path;
-};
-
-
-struct file_baton
-{
-  struct dir_baton *parent_dir_baton;
+  struct item_baton *parent_dir_baton;
   svn_stringbuf_t *path;
 };
 
@@ -90,157 +77,123 @@ struct file_baton
 
 /*** the anonymous editor functions ***/
 
+static struct item_baton *
+make_item_baton (const char *path,
+                 void *edit_baton,
+                 void *parent_dir_baton,
+                 apr_pool_t *pool)
+{
+  struct edit_baton *eb = edit_baton;
+  struct item_baton *pd = parent_dir_baton;
+  struct item_baton *new_ib = apr_pcalloc (pool, sizeof (*new_ib));
+  svn_stringbuf_t *full_path = svn_stringbuf_dup (eb->path, pool);
+
+  if (path)
+    svn_path_add_component_nts (full_path, path);
+
+  new_ib->edit_baton = eb;
+  new_ib->parent_dir_baton = pd;
+  new_ib->path = full_path;
+
+  return new_ib;
+}
+
 static svn_error_t *
 open_root (void *edit_baton,
            svn_revnum_t base_revision,
+           apr_pool_t *pool,
            void **root_baton)
 {
   struct edit_baton *eb = edit_baton;
-  struct dir_baton *rb = apr_pcalloc (eb->pool, sizeof (*rb));
-
-  rb->edit_baton = eb;
-  rb->parent_dir_baton = NULL;
-  rb->path = eb->initial_path;
-
-  *root_baton = rb;
-
+  *root_baton = make_item_baton (NULL, eb, NULL, pool);
   return SVN_NO_ERROR;
 }
 
 
 static svn_error_t *
-add_directory (svn_stringbuf_t *name,
+add_directory (const char *path,
                void *parent_baton,
-               svn_stringbuf_t *copyfrom_path,
+               const char *copyfrom_path,
                svn_revnum_t copyfrom_revision,
+               apr_pool_t *pool,
                void **child_baton)
 {
-  struct dir_baton *parent_d = parent_baton;
-  struct dir_baton *child_d
-    = apr_pcalloc (parent_d->edit_baton->pool, sizeof (*child_d));
+  struct item_baton *pb = parent_baton;
+  struct edit_baton *eb = pb->edit_baton;
+  struct item_baton *new_ib = make_item_baton (path, eb, pb, pool);
 
-  child_d->edit_baton = parent_d->edit_baton;
-  child_d->parent_dir_baton = parent_d;
-  child_d->path = svn_stringbuf_dup (parent_d->path,
-                                     child_d->edit_baton->pool);
-  svn_path_add_component (child_d->path, name);
-
-  /* If this was an add-with-history (copy), then indicate in the
-     hash-value that this dir needs to be RECURSIVELY bumped after the
-     commit completes. */
-  if (copyfrom_path && SVN_IS_VALID_REVNUM(copyfrom_revision))
-    apr_hash_set (parent_d->edit_baton->committed_targets,
-                  child_d->path->data, APR_HASH_KEY_STRING,
+  /* Copy the full path into the edit baton's pool, then: if this was
+     an add-with-history (copy), indicate in the hash-value that
+     this dir needs to be RECURSIVELY bumped after the commit
+     completes. */
+  svn_stringbuf_t *full_path = svn_stringbuf_dup (new_ib->path, eb->pool);
+  if (copyfrom_path && SVN_IS_VALID_REVNUM (copyfrom_revision))
+    apr_hash_set (eb->committed_targets,
+                  full_path->data, full_path->len,
                   (void *) svn_recursive);
   else
-    apr_hash_set (parent_d->edit_baton->committed_targets,
-                  child_d->path->data, APR_HASH_KEY_STRING,
+    apr_hash_set (eb->committed_targets,
+                  full_path->data, full_path->len,
                   (void *) svn_nonrecursive);
 
-
-  *child_baton = child_d;
-
+  *child_baton = new_ib;
   return SVN_NO_ERROR;
 }
 
 
 static svn_error_t *
-open_directory (svn_stringbuf_t *name,
-                void *parent_baton,
-                svn_revnum_t base_revision,
-                void **child_baton)
-{
-  struct dir_baton *parent_d = parent_baton;
-  struct dir_baton *child_d
-    = apr_pcalloc (parent_d->edit_baton->pool, sizeof (*child_d));
-
-  child_d->edit_baton = parent_d->edit_baton;
-  child_d->parent_dir_baton = parent_d;
-  child_d->path = svn_stringbuf_dup (parent_d->path,
-                                     child_d->edit_baton->pool);
-  svn_path_add_component (child_d->path, name);
-
-  *child_baton = child_d;
-
-  return SVN_NO_ERROR;
-}
-
-
-
-
-static svn_error_t *
-add_file (svn_stringbuf_t *name,
-          void *parent_baton,
-          svn_stringbuf_t *copy_path,
-          svn_revnum_t copy_revision,
-          void **file_baton)
-{
-  struct dir_baton *parent_d = parent_baton;
-  struct file_baton *child_fb
-    = apr_pcalloc (parent_d->edit_baton->pool, sizeof (*child_fb));
-
-  child_fb->parent_dir_baton = parent_d;
-  child_fb->path = svn_stringbuf_dup (parent_d->path,
-                                      parent_d->edit_baton->pool);
-  svn_path_add_component (child_fb->path, name);
-
-  apr_hash_set (parent_d->edit_baton->committed_targets,
-                child_fb->path->data, APR_HASH_KEY_STRING,
-                (void *) svn_nonrecursive);
-
-  *file_baton = child_fb;
-
-  return SVN_NO_ERROR;
-}
-
-
-static svn_error_t *
-open_file (svn_stringbuf_t *name,
+open_item (const char *path,
            void *parent_baton,
            svn_revnum_t base_revision,
-           void **file_baton)
+           apr_pool_t *pool,
+           void **child_baton)
 {
-  struct dir_baton *parent_d = parent_baton;
-  struct file_baton *child_fb
-    = apr_pcalloc (parent_d->edit_baton->pool, sizeof (*child_fb));
-
-  child_fb->parent_dir_baton = parent_d;
-  child_fb->path = svn_stringbuf_dup (parent_d->path,
-                                      parent_d->edit_baton->pool);
-  svn_path_add_component (child_fb->path, name);
-
-  *file_baton = child_fb;
-
+  struct item_baton *pb = parent_baton;
+  struct edit_baton *eb = pb->edit_baton;
+  *child_baton = make_item_baton (path, eb, pb, pool);
   return SVN_NO_ERROR;
 }
 
 
 static svn_error_t *
-delete_entry (svn_stringbuf_t *name,
+add_file (const char *path,
+          void *parent_baton,
+          const char *copy_path,
+          svn_revnum_t copy_revision,
+          apr_pool_t *pool,
+          void **file_baton)
+{
+  struct item_baton *pb = parent_baton;
+  struct edit_baton *eb = pb->edit_baton;
+  struct item_baton *new_ib = make_item_baton (path, eb, pb, pool);
+
+  /* Copy the full path into the edit baton's pool, and stuff a
+     reference to it in the edit baton's hash. */
+  svn_stringbuf_t *full_path = svn_stringbuf_dup (new_ib->path, eb->pool);
+  apr_hash_set (eb->committed_targets,
+                full_path->data, full_path->len,
+                (void *) svn_nonrecursive);
+
+  *file_baton = new_ib;
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+delete_entry (const char *path,
               svn_revnum_t revision,
-              void *parent_baton)
+              void *parent_baton,
+              apr_pool_t *pool)
 {
-  struct dir_baton *parent_d = parent_baton;
-  svn_stringbuf_t *path = svn_stringbuf_dup (parent_d->path,
-                                       parent_d->edit_baton->pool);
-  svn_path_add_component (path, name);
-  
-  apr_hash_set (parent_d->edit_baton->committed_targets,
-                path->data, APR_HASH_KEY_STRING, (void *) svn_nonrecursive);
+  struct item_baton *pb = parent_baton;
+  struct edit_baton *eb = pb->edit_baton;
 
-  return SVN_NO_ERROR;
-}
-
-
-static svn_error_t *
-change_dir_prop (void *dir_baton,
-                 svn_stringbuf_t *name,
-                 svn_stringbuf_t *value)
-{
-  struct dir_baton *db = dir_baton;
-
-  apr_hash_set (db->edit_baton->committed_targets,
-                db->path->data, APR_HASH_KEY_STRING,
+  /* Construct the full path in the edit baton's pool, and stuff a
+     reference to it in the edit baton's hash. */
+  svn_stringbuf_t *full_path = svn_stringbuf_dup (eb->path, eb->pool);
+  svn_path_add_component_nts (full_path, path);
+  apr_hash_set (eb->committed_targets,
+                full_path->data, full_path->len, 
                 (void *) svn_nonrecursive);
 
   return SVN_NO_ERROR;
@@ -248,24 +201,21 @@ change_dir_prop (void *dir_baton,
 
 
 static svn_error_t *
-change_file_prop (void *file_baton,
-                  svn_stringbuf_t *name,
-                  svn_stringbuf_t *value)
+change_item_prop (void *item_baton,
+                  const char *name,
+                  const svn_string_t *value,
+                  apr_pool_t *pool)
 {
-  struct file_baton *fb = file_baton;
+  struct item_baton *ib = item_baton;
+  struct edit_baton *eb = ib->edit_baton;
 
-  apr_hash_set (fb->parent_dir_baton->edit_baton->committed_targets,
-                fb->path->data, APR_HASH_KEY_STRING,
+  /* Copy the full path into the edit baton's pool, and stuff a
+     reference to it in the edit baton's hash. */
+  svn_stringbuf_t *full_path = svn_stringbuf_dup (ib->path, eb->pool);
+  apr_hash_set (eb->committed_targets,
+                full_path->data, full_path->len,
                 (void *) svn_nonrecursive);
-  
-  return SVN_NO_ERROR;
-}
 
-
-static svn_error_t *
-window_handler (svn_txdelta_window_t *window, void *handler_pair)
-{
-  /* No-op, but required for proper editor composition. */
   return SVN_NO_ERROR;
 }
 
@@ -275,13 +225,17 @@ apply_textdelta (void *file_baton,
                  svn_txdelta_window_handler_t *handler,
                  void **handler_baton)
 {
-  struct file_baton *fb = file_baton;
-  
-  apr_hash_set (fb->parent_dir_baton->edit_baton->committed_targets,
-                fb->path->data, APR_HASH_KEY_STRING,
+  struct item_baton *ib = file_baton;
+  struct edit_baton *eb = ib->edit_baton;
+
+  /* Copy the full path into the edit baton's pool, and stuff a
+     reference to it in the edit baton's hash. */
+  svn_stringbuf_t *full_path = svn_stringbuf_dup (ib->path, eb->pool);
+  apr_hash_set (eb->committed_targets,
+                full_path->data, full_path->len,
                 (void *) svn_nonrecursive);
   
-  *handler = window_handler;
+  *handler = NULL;
   *handler_baton = NULL;
 
   return SVN_NO_ERROR;
@@ -296,25 +250,19 @@ close_edit (void *edit_baton)
   apr_pool_t *subpool = svn_pool_create (eb->pool);
 
   /* Bump all targets if the caller wants us to. */
-  if ((! SVN_IS_VALID_REVNUM(eb->new_rev)) || (! eb->bump_func))
+  if ((! SVN_IS_VALID_REVNUM (eb->new_rev)) || (! eb->bump_func))
     return SVN_NO_ERROR;
 
   for (hi = apr_hash_first (eb->pool, eb->committed_targets);
        hi;
        hi = apr_hash_next (hi))
     {
-      char *path;
       void *val;
       svn_stringbuf_t path_str;
       enum svn_recurse_kind r;
 
-      apr_hash_this (hi, (void *) &path, NULL, &val);
-
-      /* Sigh. */
-      path_str.data = path;
-      path_str.len = strlen (path);
+      apr_hash_this (hi, (void *) (&(path_str.data)), &(path_str.len), &val);
       r = (enum svn_recurse_kind) val;
-
       SVN_ERR (eb->bump_func (eb->bump_baton, &path_str,
                               (r == svn_recursive) ? TRUE : FALSE,
                               eb->new_rev, NULL, NULL,
@@ -323,7 +271,7 @@ close_edit (void *edit_baton)
       svn_pool_clear (subpool);
     }
 
-  svn_pool_destroy (subpool);
+  svn_pool_destroy (eb->pool); /* this also takes care of `subpool' */
   return SVN_NO_ERROR;
 }
 
@@ -332,7 +280,7 @@ close_edit (void *edit_baton)
 /*** exported routine ***/
 
 svn_error_t *
-svn_delta_get_commit_track_editor (const svn_delta_edit_fns_t **editor,
+svn_delta_get_commit_track_editor (const svn_delta_editor_t **editor,
                                    void **edit_baton,
                                    apr_pool_t *pool,
                                    apr_hash_t *committed_targets,
@@ -340,8 +288,9 @@ svn_delta_get_commit_track_editor (const svn_delta_edit_fns_t **editor,
                                    svn_delta_bump_func_t bump_func,
                                    void *bump_baton)
 {
-  struct edit_baton *eb = apr_pcalloc (pool, sizeof (*eb));
-  svn_delta_edit_fns_t *track_editor = svn_delta_old_default_editor (pool);
+  apr_pool_t *subpool = svn_pool_create (pool);
+  struct edit_baton *eb = apr_pcalloc (subpool, sizeof (*eb));
+  svn_delta_editor_t *track_editor = svn_delta_default_editor (pool);
 
   /* Set up the editor.  These functions are no-ops, so the default
      editor's implementations are used:
@@ -353,18 +302,18 @@ svn_delta_get_commit_track_editor (const svn_delta_edit_fns_t **editor,
   */
   track_editor->open_root = open_root;
   track_editor->add_directory = add_directory;
-  track_editor->open_directory = open_directory;
+  track_editor->open_directory = open_item;
   track_editor->add_file = add_file;
-  track_editor->open_file = open_file;
+  track_editor->open_file = open_item;
   track_editor->delete_entry = delete_entry;
-  track_editor->change_dir_prop = change_dir_prop;
-  track_editor->change_file_prop = change_file_prop;
+  track_editor->change_dir_prop = change_item_prop;
+  track_editor->change_file_prop = change_item_prop;
   track_editor->apply_textdelta = apply_textdelta;
   track_editor->close_edit = close_edit;
 
   /* Set up the edit baton. */
-  eb->pool = pool;
-  eb->initial_path = svn_stringbuf_create ("", pool);
+  eb->pool = subpool;
+  eb->path = svn_stringbuf_create ("", eb->pool);
   eb->committed_targets = committed_targets;
   eb->new_rev = new_rev;
   eb->bump_func = bump_func;
@@ -383,8 +332,3 @@ svn_delta_get_commit_track_editor (const svn_delta_edit_fns_t **editor,
  * eval: (load-file "../../tools/dev/svn-dev.el")
  * end:
  */
-
-
-
-
-
