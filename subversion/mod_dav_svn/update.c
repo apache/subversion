@@ -589,7 +589,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
                                          "Could not parse dst-path URL.");
             }
 
-          dst_path = apr_pstrdup(resource->pool, this_info.repos_path);
+          dst_path = svn_path_uri_decode(this_info.repos_path, resource->pool);
         }
 
       if (child->ns == ns && strcmp(child->name, "update-target") == 0)

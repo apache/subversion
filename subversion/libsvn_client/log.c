@@ -80,6 +80,8 @@ svn_client_log (svn_client_auth_baton_t *auth_baton,
   /* Use the passed URL, if there is one.  */
   if (svn_path_is_url (path))
     {
+      URL = path;
+      
       /* Initialize this array, since we'll be building it below */
       condensed_targets = apr_array_make (pool, 1, sizeof (const char *));
 

@@ -250,7 +250,7 @@ svn_client_switch (svn_client_auth_baton_t *auth_baton,
         svn_wc_notify_state_t prop_state;
         
         SVN_ERR (svn_wc_install_file (&content_state, &prop_state,
-                                      path, revnum,
+                                      path, fetched_rev,
                                       new_text_path,
                                       proparray, TRUE, /* is full proplist */
                                       switch_url, /* new url */
