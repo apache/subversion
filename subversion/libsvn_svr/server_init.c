@@ -88,7 +88,7 @@ svn_svr_init (ap_hash_t *configdata, ap_pool_t *pool)
   /* A policy structure has its own private memory pool, too, for
      miscellaneous useful things.  */
 
-  result = ap_create_pool (& (my_policies->pool));
+  result = ap_create_pool (& (my_policies->pool), NULL);
 
   if (result != APR_SUCCESS)
     {
@@ -96,7 +96,7 @@ svn_svr_init (ap_hash_t *configdata, ap_pool_t *pool)
          Then just use the one that was passed in instead.  */
       svn_string_t *msg = 
         svn_string_create 
-        ("svr_init(): warning: can't alloc pool for policy structure");
+        ("svr_init(): warning: can't alloc pool for policy structure", pool);
       svn_handle_error (svn_create_error (result, FALSE, msg, pool));
 
       my_policies->pool = pool;
@@ -108,7 +108,6 @@ svn_svr_init (ap_hash_t *configdata, ap_pool_t *pool)
     ap_hash_index_t *hash_index;
     void *key, *val;
     size_t keylen;
-    char *cstr;
 
     for (hash_index = ap_hash_first (configdata); /* get first hash entry */
          hash_index;                              /* NULL if out of entries */
