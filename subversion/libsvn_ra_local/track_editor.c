@@ -15,6 +15,14 @@
 #include "ra_local.h"
 
 
+
+
+
+/* ------------------------------------------------------------------- */
+
+/** exported routine **/
+
+
 svn_error_t *
 svn_ra_local__get_commit_track_editor (svn_delta_edit_fns_t **editor,
                                        void **edit_baton,
@@ -22,6 +30,12 @@ svn_ra_local__get_commit_track_editor (svn_delta_edit_fns_t **editor,
                                        svn_ra_local__commit_hook_baton_t
                                                       *hook_baton)
 {
+  svn_error_t *err;
+
+  svn_delta_edit_fns_t *track_editor = svn_delta_default_editor (pool);
+  
+
+
   return SVN_NO_ERROR;
 }
 
