@@ -472,7 +472,7 @@ svn_error_t *svn_fs__dag_get_proplist (skel_t **proplist_p,
   header = node_rev->children;
 
   /* The property list is the 2nd item in the header skel. */
-  *proplist_p = header->next;
+  *proplist_p = header->children->next;
 
   return SVN_NO_ERROR;
 }
@@ -527,19 +527,24 @@ svn_error_t *svn_fs__dag_set_proplist (dag_node_t *node,
   /* Go get a fresh NODE-REVISION for this node. */
   SVN_ERR (get_node_revision (&node_rev, node, trail));
 
-  /* The node "header" is the first element of a node-revision skel,
-     itself a list. */
-  header = node_rev->children;
+  {
+    skel_t *node_rev_copy;
 
-  /* Insert the new proplist into the content_skel.  */
-  /* jimb: Watch out!  Once we've got content caching working, this
-     will be changing the cached skel.  If the operation below fails
-     or deadlocks, the cache will be wrong.  */
-  header->children->next = proplist;
+    /* Copy this NODE-REVISION skel so we can work on it without fear
+       of tampering with the cache. */
+    node_rev_copy = svn_fs__copy_skel (node_rev, trail->pool);
+
+    /* The node "header" is the first element of a node-revision skel,
+       itself a list. */
+    header = node_rev_copy->children;
+
+    /* Insert the new proplist into the content_skel.  */
+    proplist->next = header->children->next->next;
+    header->children->next = proplist;
   
-  /* Commit the new content_skel, within the given trail. */
-  SVN_ERR (set_node_revision (node, node_rev, trail));
-
+    /* Commit the new content_skel, within the given trail. */
+    SVN_ERR (set_node_revision (node, node_rev_copy, trail));
+  }
   return SVN_NO_ERROR;
 }
 
