@@ -76,11 +76,8 @@ svn_cl__import (apr_getopt_t *os,
    * ### kff todo: review above behaviors.
    */
 
-  SVN_ERR (svn_opt_args_to_target_array (&targets, os, 
-                                         opt_state->targets,
-                                         &(opt_state->start_revision),
-                                         &(opt_state->end_revision),
-                                         FALSE, pool));
+  SVN_ERR (svn_opt_args_to_target_array2 (&targets, os, 
+                                          opt_state->targets, pool));
 
   if (targets->nelts < 1)
     return svn_error_create
