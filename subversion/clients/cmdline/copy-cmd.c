@@ -105,6 +105,8 @@ svn_cl__copy (apr_getopt_t *os,
       SVN_ERR (svn_cl__get_trace_update_editor (&trace_editor,
                                                 &trace_edit_baton,
                                                 dst_path,
+                                                TRUE, /* is checkout */
+                                                FALSE,
                                                 pool));
     }
   else

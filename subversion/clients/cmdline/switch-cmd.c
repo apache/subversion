@@ -94,7 +94,10 @@ svn_cl__switch (apr_getopt_t *os,
 
   SVN_ERR (svn_cl__get_trace_update_editor (&trace_editor,
                                             &trace_edit_baton,
-                                            parent_dir, pool));
+                                            parent_dir,
+                                            FALSE, /* is checkout */
+                                            FALSE,
+                                            pool));
 
   /* Do the 'switch' update. */
   SVN_ERR (svn_client_switch

@@ -118,6 +118,8 @@ svn_cl__checkout (apr_getopt_t *os,
       SVN_ERR (svn_cl__get_trace_update_editor (&trace_editor,
                                                 &trace_edit_baton,
                                                 local_dir,
+                                                TRUE, /* is checkout */
+                                                FALSE,
                                                 pool));
   
       SVN_ERR (svn_client_checkout (NULL, NULL,

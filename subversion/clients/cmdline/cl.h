@@ -272,11 +272,16 @@ void svn_cl__print_prop_hash (apr_hash_t *prop_hash, apr_pool_t *pool);
    to property values (svn_stringbuf_t *). */
 void svn_cl__print_prop_names (apr_hash_t *prop_hash, apr_pool_t *pool);
 
-/* Returns an editor that prints out events in an update or checkout. */
+/* Returns an editor that prints out events in an update or checkout.
+   The IS_CHECKOUT boolean tells the editor what kind of final
+   revision line to print;  the SUPPRESS_FINAL_LINE flag indicates
+   whether to print the final revision line at all. */
 svn_error_t *
 svn_cl__get_trace_update_editor (const svn_delta_editor_t **editor,
                                  void **edit_baton,
                                  svn_stringbuf_t *initial_path,
+                                 svn_boolean_t is_checkout,
+                                 svn_boolean_t suppress_final_line,
                                  apr_pool_t *pool);
 
 /* Returns an editor that prints out events in a commit. */

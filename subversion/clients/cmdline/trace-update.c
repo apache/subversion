@@ -34,6 +34,9 @@ struct edit_baton
 {
   svn_stringbuf_t *path;
   apr_pool_t *pool;
+  svn_revnum_t target_revision;
+  svn_boolean_t is_checkout;
+  svn_boolean_t suppress_final_line;
 };
 
 
@@ -116,6 +119,16 @@ open_root (void *edit_baton,
            void **root_baton)
 {
   *root_baton = make_dir_baton (NULL, edit_baton, NULL, pool);
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+set_target_revision (void *edit_baton,
+                     svn_revnum_t target_revision)
+{
+  struct edit_baton *eb = edit_baton;
+  eb->target_revision = target_revision;
   return SVN_NO_ERROR;
 }
 
@@ -335,6 +348,15 @@ static svn_error_t *
 close_edit (void *edit_baton)
 {
   struct edit_baton *eb = edit_baton;
+
+  if (! eb->suppress_final_line)
+    {
+      if (eb->is_checkout)
+        printf ("Checked out revision %ld.\n", eb->target_revision);
+      else
+        printf ("Updated to revision %ld.\n", eb->target_revision);
+    }
+
   svn_pool_destroy (eb->pool);
   return SVN_NO_ERROR;
 }
@@ -345,6 +367,8 @@ svn_error_t *
 svn_cl__get_trace_update_editor (const svn_delta_editor_t **editor,
                                  void **edit_baton,
                                  svn_stringbuf_t *initial_path,
+                                 svn_boolean_t is_checkout,
+                                 svn_boolean_t suppress_final_line,
                                  apr_pool_t *pool)
 {
   /* Allocate an edit baton to be stored in every directory baton.
@@ -357,9 +381,13 @@ svn_cl__get_trace_update_editor (const svn_delta_editor_t **editor,
   /* Set up the edit context. */
   eb->pool = subpool;
   eb->path = svn_stringbuf_dup (initial_path, eb->pool);
+  eb->target_revision = SVN_INVALID_REVNUM;
+  eb->is_checkout = is_checkout;
+  eb->suppress_final_line = suppress_final_line;
 
   /* Set up the editor. */
   trace_editor->open_root = open_root;
+  trace_editor->set_target_revision = set_target_revision;
   trace_editor->delete_entry = delete_entry;
   trace_editor->add_directory = add_directory;
   trace_editor->open_directory = open_directory;

@@ -9,6 +9,7 @@ Version X.X.X (unreleased)
  * 'svn mv' for WC->WC moves behaves like 'svn rm' with respect to
     the source, it requires --force for unversioned and/or modified items
     and removes files and uncommitted directories from source
+ * checkouts, updates, switches now print received revision on final line.
 
  Developer-visible changes:
  * updates can deal with disjoint urls.
