@@ -46,3 +46,4 @@ Commit access for specific areas:
         ballbach   Michael Ballbach <ballbach@rten.net>        (packages)
         niemeyer   Gustavo Niemeyer <niemeyer@conectiva.com>   (svnperms.py)
              dlr   Daniel Rall <dlr@finemaltcoding.com>        (bindings)
+          morten   Morten Ludvigsen <morten@2ps.dk>            (bindings)
