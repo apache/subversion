@@ -74,7 +74,7 @@
 @page
 @vskip 0pt plus 1filll
 Copyright @copyright{} 2002 CollabNet, Inc. @*
-See @xref{License} for details. @*
+See @ref{License} for details. @*
 First version: June 2002. @*
 $LastChangedDate$
 
@@ -96,12 +96,15 @@ This manual is a general guide to the Subversion revision control system.
 
 @menu
 * Getting Started::           History, installation and overview of Subversion.
-* Client Cookbook::           How to use the Subversion client.
-* Repository Administration:: Managing a repository.
-* Appendices::                Other useful documents and pointers.
+@c * Client Cookbook::           How to use the Subversion client.
+@c * Repository Administration:: Managing a repository.
+@c * Appendices::                Other useful documents and pointers.
+
+@c add this to ``Appendices'' chapter later:
+* License::
 @end menu
 
 @include getting_started.texi
-
+@include license.texi
 
 @bye
