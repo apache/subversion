@@ -36,7 +36,7 @@ class Config:
             else:
                 m = SECTION.match(line)
                 if m:
-                    sectname = m.group(1).lower()
+                    sectname = m.group(1)
                     cursectdict = self._sections_dict.setdefault(sectname, {})
                     cursectlist = []
                     self._sections_list.append((sectname, cursectlist))
@@ -48,7 +48,6 @@ class Config:
                     m = OPTION.match(line)
                     if m:
                         optname, optval = m.groups()
-                        optname = optname.lower()
                         optval = optval.strip()
                         cursectdict[optname] = optval
                         cursectlist.append([optname, optval])
@@ -63,12 +62,10 @@ class Config:
         return self._sections_dict.get(section, {}).keys()
 
     def get(self, section, option, default=None):
-        return self._sections_dict.get(option.lower(), default)
+        return self._sections_dict.get(option, default)
 
     def walk(self, section, option=None):
         ret = []
-        if option:
-            option = option.lower()
         for sectname, options in self._sections_list:
             if sectname == section:
                 for optname, value in options:
