@@ -19,6 +19,7 @@
 #include "svn_error.h"
 #include "svn_string.h"
 #include "svn_types.h"
+#include "svn_time.h"
 #include "fs_skels.h"
 #include "skel.h"
 #include "../id.h"
@@ -821,7 +822,8 @@ svn_fs_base__parse_lock_skel (svn_lock_t **lock_p,
   timestr = apr_pstrmemdup (pool,
                             skel->children->next->next->next->next->data,
                             skel->children->next->next->next->next->len);
-  SVN_ERR (svn_time_from_cstring (lock->creation_date, timestr, pool));
+  SVN_ERR (svn_time_from_cstring (&(lock->creation_date),
+                                  timestr, pool));
   
   /* EXPIRATION-DATE  (could be just an empty atom) */
   if (skel->children->next->next->next->next->next->len)
@@ -830,7 +832,8 @@ svn_fs_base__parse_lock_skel (svn_lock_t **lock_p,
         apr_pstrmemdup (pool,
                         skel->children->next->next->next->next->next->data,
                         skel->children->next->next->next->next->next->len);
-      SVN_ERR (svn_time_from_cstring (lock->expiration_date, timestr, pool));
+      SVN_ERR (svn_time_from_cstring (&(lock->expiration_date),
+                                      timestr, pool));
     }
 
   /* Return the structure. */
@@ -1367,12 +1370,11 @@ svn_fs_base__unparse_change_skel (skel_t **skel_p,
 
 
 svn_error_t *
-svn_fs_base__unparse_lock_skel (svn_lock_t **skel_p,
+svn_fs_base__unparse_lock_skel (skel_t **skel_p,
                                 const svn_lock_t *lock,
                                 apr_pool_t *pool)
 {
   skel_t *skel;
-  svn_string_t *tmp_str;
 
   /* Create the skel. */
   skel = svn_fs_base__make_empty_list (pool);

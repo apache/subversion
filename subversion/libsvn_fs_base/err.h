@@ -105,6 +105,14 @@ svn_error_t *svn_fs_base__err_no_such_copy (svn_fs_t *fs, const char *copy_id);
 /* SVN_ERR_FS_NOT_DIRECTORY: PATH does not refer to a directory in FS.  */
 svn_error_t *svn_fs_base__err_not_directory (svn_fs_t *fs, const char *path);
 
+/* SVN_ERR_FS_BAD_LOCK_TOKEN: LOCK_TOKEN does not refer to a lock in FS.  */
+svn_error_t *svn_fs_base__err_bad_lock_token (svn_fs_t *fs,
+                                              const char *lock_token);
+
+/* SVN_ERR_FS_CORRUPT: a lock in `locks' table is corrupt.  */
+svn_error_t *svn_fs_base__err_corrupt_lock (svn_fs_t *fs,
+                                            const char *lock_token);
+
 
 #ifdef __cplusplus
 }

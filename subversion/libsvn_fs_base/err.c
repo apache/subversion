@@ -221,3 +221,25 @@ svn_fs_base__err_not_directory (svn_fs_t *fs, const char *path)
      "'%s' is not a directory in filesystem '%s'",
      path, fs->path);
 }
+
+
+svn_error_t *
+svn_fs_base__err_bad_lock_token (svn_fs_t *fs, const char *lock_token)
+{
+  return
+    svn_error_createf
+    (SVN_ERR_FS_BAD_LOCK_TOKEN, 0,
+     "Token '%s' does not point to any existing lock in filesystem '%s'",
+     lock_token, fs->path);
+}
+
+
+svn_error_t *
+svn_fs_base__err_corrupt_lock (svn_fs_t *fs, const char *lock_token)
+{
+  return
+    svn_error_createf
+    (SVN_ERR_FS_CORRUPT, 0,
+     "Corrupt lock in 'locks' table for '%s' in filesystem '%s'",
+     lock_token, fs->path);
+}
