@@ -180,16 +180,19 @@ svn_base64_encode (svn_stream_t *output, apr_pool_t *pool)
 }
 
 
-svn_stringbuf_t *
-svn_base64_encode_string (svn_stringbuf_t *str, apr_pool_t *pool)
+const svn_string_t *
+svn_base64_encode_string (const svn_string_t *str, apr_pool_t *pool)
 {
   svn_stringbuf_t *encoded = svn_stringbuf_create ("", pool);
+  svn_string_t *retval = apr_pcalloc (pool, sizeof (*retval));
   unsigned char ingroup[3];
   int ingrouplen = 0, linelen = 0;
 
   encode_bytes (encoded, str->data, str->len, ingroup, &ingrouplen, &linelen);
   encode_partial_group (encoded, ingroup, ingrouplen, linelen);
-  return encoded;
+  retval->data = encoded->data;
+  retval->len = encoded->len;
+  return retval;
 }
 
 
@@ -316,16 +319,19 @@ svn_base64_decode (svn_stream_t *output, apr_pool_t *pool)
 }
 
 
-svn_stringbuf_t *
-svn_base64_decode_string (svn_stringbuf_t *str, apr_pool_t *pool)
+const svn_string_t *
+svn_base64_decode_string (const svn_string_t *str, apr_pool_t *pool)
 {
   svn_stringbuf_t *decoded = svn_stringbuf_create ("", pool);
+  svn_string_t *retval = apr_pcalloc (pool, sizeof (*retval));
   unsigned char ingroup[4];
   int ingrouplen = 0;
   svn_boolean_t done = FALSE;
 
   decode_bytes (decoded, str->data, str->len, ingroup, &ingrouplen, &done);
-  return decoded;
+  retval->data = decoded->data;
+  retval->len = decoded->len;
+  return retval;
 }
 
 
