@@ -24,6 +24,14 @@
  *
  *  For a much more complex example, the svn cmdline client might be
  *  considered the 'reference implementation'.
+ *
+ *  From a Linux system, a typical commandline compile might look like:
+ *
+ *  cc minimal_client.c -o minimal_client \
+ *  -I/usr/local/include/subversion-1 -I/usr/local/apache2/include \
+ *  -L/usr/local/apache2/lib -L/usr/local/lib \
+ *  -lsvn_client-1 -lapr-0 -laprutil-0
+ *
  */
 
 
@@ -57,6 +65,7 @@ my_simple_prompt_callback (svn_auth_cred_simple_t **cred,
                            void *baton,
                            const char *realm,
                            const char *username,
+                           svn_boolean_t may_save,
                            apr_pool_t *pool)
 {
   svn_auth_cred_simple_t *ret = apr_pcalloc (pool, sizeof (*ret));
@@ -88,9 +97,10 @@ my_simple_prompt_callback (svn_auth_cred_simple_t **cred,
    svn cmdline client. */
 static svn_error_t *
 my_username_prompt_callback (svn_auth_cred_username_t **cred,
-                           void *baton,
-                           const char *realm,
-                           apr_pool_t *pool)
+                             void *baton,
+                             const char *realm,
+                             svn_boolean_t may_save,
+                             apr_pool_t *pool)
 {
   svn_auth_cred_username_t *ret = apr_pcalloc (pool, sizeof (*ret));
   char answerbuf[100];
