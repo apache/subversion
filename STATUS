@@ -40,15 +40,6 @@ Candidate changes:
     Votes:
       +1: breser, kfogel
 
-  * r12117
-    Fix merges that replace directories.
-    Justification:
-      Without this fix it is impossible to merge some sets of revisions in one
-      step.
-    Branch: 1.1.x-r12117
-    Votes:
-      +1: breser, kfogel
-
   * r11871
     Support BDB 4.3.
     Justification:
