@@ -140,7 +140,6 @@ svn_error_t *svn_wc_get_update_editor (svn_string_t *dest,
                                        svn_vernum_t version,
                                        const svn_delta_edit_fns_t **editor,
                                        void **edit_baton,
-                                       void **dir_baton,
                                        apr_pool_t *pool);
 
 
