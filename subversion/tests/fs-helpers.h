@@ -104,9 +104,16 @@ svn_test__validate_tree (svn_fs_root_t *root,
    transaction using svn_test__txn_script_exec().  */
 typedef struct svn_test__txn_script_command_t
 {
-  int cmd; /* command: '+' (add), '-' (delete), '>' (replace) */
+  /* command: 
+
+     'a' -- add (PARAM1 is file contents, or NULL for directories)
+     'c' -- copy (PARAM1 is target path, copy source is txn base-rev)
+     'd' -- delete
+     'e' -- edit (PARAM1 is new file contents)
+  */
+  int cmd;
   const char *path; /* path to resource in the filesystem */
-  const char *contents; /* file contents, 0 for directories */
+  const char *param1; /* command parameter (see above) */
 } 
 svn_test__txn_script_command_t;
 
