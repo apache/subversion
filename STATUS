@@ -23,12 +23,12 @@ Candidate changes:
       +1: lundblad
 
   * r11064
-      Don't show 'Internal Server Error' when accessing the root of SVNParentPath
-      with mod_authz_svn.
+      Don't show 'Internal Server Error' when accessing the root of
+      SVNParentPath with mod_authz_svn.
     Justification:
       This looks ugly to the users and the fix is simple.
     Votes:
-      +1: jaa
+      +1: jaa, sussman
 
   * r11172
     Fix encoding bug in svnlook log and author.
@@ -51,14 +51,14 @@ Candidate changes:
       There is a performance regression from 1.0 when it's set to On
       (which is why it was implemented in the first place).
     Votes:
-      +1: bliss
+      +1: bliss, sussman
 
   * r11211, r11232, r11285
     Fix performance regression for ls/RA->get_dir over ra_rav.
     Justification:
       Positively huge performance regression.
     Votes:
-      +1: bliss, lundblad
+      +1: bliss, lundblad, sussman
       +1: brane (only r11211 so far)
 
   * r11224 (Issue 2070)
@@ -66,7 +66,7 @@ Candidate changes:
     Justification:
       Showstopper when using symlinks.  One-liner.
     Votes:
-      +1: bliss, lundblad
+      +1: bliss, lundblad, sussman
 
   * r11250, r11258
     Fix #2060, make ls work when path contains non-ASCII chars over ra_dav.
@@ -90,7 +90,7 @@ Candidate changes:
     Justification:
       Regression fix.
     Votes:
-      +1: lundblad
+      +1: lundblad, sussman
 
   * r11215, r11264
       SVN has needed a good packaging script for Win32 since forever.
@@ -113,4 +113,5 @@ Candidate changes:
       Makes it impossible to use, i.e. ISO-8859-1 non-svn: props over DAV.
       Simple fix.
     Votes:
-      +1: lundblad, bliss
+      +1: lundblad, bliss, sussman
+
