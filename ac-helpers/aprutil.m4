@@ -14,20 +14,7 @@ AC_DEFUN(SVN_LIB_APRUTIL,
 [
   AC_MSG_NOTICE([Apache Portable Runtime Utility (APRUTIL) library configuration])
 
-  APR_FIND_APU(apr-util, $abs_builddir)
-
-  if test $apu_found = "no" \
-     && test "$abs_srcdir" != "$abs_builddir" \
-     && test -d "$abs_srcdir/apr-util"; then
-    dnl HACKS to get builddir != srcdir to work, should APR_FIND_APU do this?
-    echo "using apr-util in Subversion source dir"
-    apu_found="reconfig"
-    apu_config=$abs_builddir/apr-util/apu-config
-    apu_srcdir=apr-util
-    dnl HACK to get apr-util to configure bundled xml/expat
-    test -d $abs_builddir/apr-util/xml/expat \
-         || $MKDIR $abs_builddir/apr-util/xml/expat
-  fi
+  APR_FIND_APU("$srcdir/apr-util", "./apr-util")
 
   if test $apu_found = "no"; then
     AC_MSG_WARN([APRUTIL not found])
@@ -35,30 +22,17 @@ AC_DEFUN(SVN_LIB_APRUTIL,
   fi
 
   if test $apu_found = "reconfig"; then
-    SVN_SUBDIR_CONFIG($apu_srcdir, --with-apr=../apr)
-    SVN_SUBDIRS="$SVN_SUBDIRS $apu_srcdir"
+    SVN_SUBDIR_CONFIG(apr-util, --with-apr=../apr)
+    SVN_SUBDIRS="$SVN_SUBDIRS apr-util"
   fi
 
   dnl Get libraries and thread flags from APRUTIL ---------------------
 
-  if test -x "$apu_config"; then
-    SVN_EXTRA_INCLUDES="$SVN_EXTRA_INCLUDES `$apu_config --includes`"
-    LDFLAGS="$LDFLAGS `$apu_config --ldflags`"
-  else
-    AC_MSG_WARN([apu-config not found])
-    SVN_DOWNLOAD_APRUTIL
-  fi
+  LDFLAGS="$LDFLAGS `$apu_config --ldflags`"
 
-  SVN_EXTRA_INCLUDES="$SVN_EXTRA_INCLUDES $apu_includes"
-  if test "$abs_srcdir" != "$abs_builddir" && test -d "$abs_srcdir/apr-util" ; then
-      SVN_EXTRA_INCLUDES="$SVN_EXTRA_INCLUDES -I$abs_srcdir/apr-util/include"
-  fi
+  SVN_EXTRA_INCLUDES="$SVN_EXTRA_INCLUDES `$apu_config --includes`"
 
-  if test -z "$apu_la_file" ; then
-    SVN_APRUTIL_LIBS="-laprutil $LIBTOOL_LIBS `$apu_config --libs`"
-  else
-    SVN_APRUTIL_LIBS="$apu_la_file $LIBTOOL_LIBS `$apu_config --libs`"
-  fi
+  SVN_APRUTIL_LIBS="`$apu_config --link-libtool --libs`"
   AC_SUBST(SVN_APRUTIL_LIBS)
 ])
 
