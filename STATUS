@@ -142,7 +142,7 @@ Candidate changes:
     Fix compressed streams on LP64 arch.
     Justification: potential seg fault
     Votes:
-       +1: kfogel
+       +1: kfogel, cmpilato
 
 Binding candidate changes:
 
