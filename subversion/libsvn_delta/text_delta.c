@@ -490,7 +490,6 @@ svn_txdelta__apply_instructions (svn_txdelta_window_t *window,
                                   ? op->length : *tlen - tpos);
 
       /* Check some invariants common to all instructions.  */
-      assert (op->offset >= 0 && op->length >= 0);
       assert (tpos + op->length <= window->tview_len);
 
       switch (op->action_code)
