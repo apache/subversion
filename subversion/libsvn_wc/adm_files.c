@@ -157,6 +157,23 @@ extend_with_adm_name (svn_string_t *path,
 }
 
 
+svn_string_t *
+svn_wc__adm_path (svn_string_t *path,
+                  svn_boolean_t tmp,
+                  apr_pool_t *pool, 
+                  ...)
+{
+  svn_string_t *newpath = svn_string_dup (path, pool);
+  va_list ap;
+
+  va_start (ap, pool);
+  v_extend_with_adm_name (path, tmp, pool, ap);
+  va_end (ap);
+
+  return newpath;
+}
+
+
 /* Restore PATH to what it was before a call to
  * extend_with_adm_name(), by lopping off NUM_COMPONENTS
  * components.

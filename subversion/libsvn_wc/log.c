@@ -299,6 +299,99 @@ svn_wc__run_log (svn_string_t *path, apr_pool_t *pool)
 
 
 
+/*** Recursively do log things. ***/
+
+
+/* Starting at PATH, write out log entries indicating that a commit
+   succeeded, using VERSION as the new version number.  run_log will
+   use these entries to complete the commit. */
+/* todo: this, along with all other recursers, will want to do 
+   svn_wc__compose_paths() someday. */
+svn_error_t *
+svn_wc__log_commit (svn_string_t *path,
+                    svn_vernum_t version,
+                    apr_pool_t *pool)
+{
+  svn_error_t *err;
+  apr_status_t apr_err;
+  apr_hash_t *entries = NULL;
+  apr_hash_index_t *hi;
+
+  err = svn_wc__entries_read (&entries, path, pool);
+  if (err)
+    return err;
+
+  for (hi = apr_hash_first (entries); hi; hi = apr_hash_next (hi))
+    {
+      const void *key;
+      apr_size_t keylen;
+      void *val;
+      svn_wc__entry_t *entry;
+
+      apr_hash_this (hi, &key, &keylen, &val);
+      entry = val;
+
+      if (entry->kind == svn_dir_kind)
+        {
+          svn_string_t *subdir = svn_string_dup (path, pool);
+          svn_path_add_component (subdir,
+                                  svn_string_create ((char *) key, pool),
+                                  svn_path_local_style,
+                                  pool);
+
+          err = svn_wc__log_commit (subdir, version, pool);
+          if (err)
+            return err;
+        }
+      else /* entry->kind == svn_file_kind */
+        {
+          svn_string_t *logtag = svn_string_create ("", pool);
+          char *verstr = apr_psprintf (pool, "%ld", version);
+          apr_file_t *log_fp = NULL;
+
+          err = svn_wc__open_adm_file (&log_fp,
+                                       path,
+                                       SVN_WC__ADM_LOG,
+                                       (APR_WRITE | APR_APPEND | APR_CREATE),
+                                       pool);
+          if (err)
+            return err;
+
+          svn_xml_make_open_tag (&logtag,
+                                 pool,
+                                 svn_xml_self_closing,
+                                 SVN_WC__LOG_COMMITTED,
+                                 SVN_WC__LOG_ATTR_NAME,
+                                 svn_string_create ((char *) key, pool),
+                                 SVN_WC__LOG_ATTR_VERSION,
+                                 svn_string_create (verstr, pool),
+                                 NULL);
+
+          apr_err = apr_full_write (log_fp, logtag->data, logtag->len, NULL);
+          if (apr_err)
+            {
+              apr_close (log_fp);
+              return svn_error_createf (apr_err, 0, NULL, pool,
+                                        "svn_wc__log_commit: "
+                                        "error writing %s's log file", 
+                                        path->data);
+            }
+
+          err = svn_wc__close_adm_file (log_fp,
+                                        path,
+                                        SVN_WC__ADM_LOG,
+                                        1, /* sync */
+                                        pool);
+          if (err)
+            return err;
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+
 /* 
  * local variables:
  * eval: (load-file "../svn-dev.el")

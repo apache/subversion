@@ -101,6 +101,10 @@ svn_error_t *svn_wc__lock (svn_string_t *path, int wait, apr_pool_t *pool);
 /* Unlock PATH, or error if can't. */
 svn_error_t *svn_wc__unlock (svn_string_t *path, apr_pool_t *pool);
 
+/* Set *LOCKED to non-zero if PATH is locked, else set it to zero. */
+svn_error_t *svn_wc__locked (svn_boolean_t *locked, 
+                             svn_string_t *path,
+                             apr_pool_t *pool);
 
 
 /*** Names and file/dir operations in the administrative area. ***/
@@ -131,6 +135,16 @@ svn_error_t *svn_wc__set_up_new_dir (svn_string_t *path,
 
 /* Return a string containing the admin subdir name. */
 svn_string_t *svn_wc__adm_subdir (apr_pool_t *pool);
+
+
+/* Return a path to something in PATH's administrative area.
+ * Return path to the thing in the tmp area if TMP is non-zero.
+ * Varargs are (const char *)'s, the final one must be NULL.
+ */
+svn_string_t * svn_wc__adm_path (svn_string_t *path,
+                                 svn_boolean_t tmp,
+                                 apr_pool_t *pool,
+                                 ...);
 
 
 /* Make `PATH/<adminstrative_subdir>/THING'. */
@@ -290,6 +304,15 @@ svn_error_t *svn_wc__ensure_adm (svn_string_t *path,
 #define SVN_WC__LOG_ATTR_NAME           "name"
 #define SVN_WC__LOG_ATTR_VERSION        "version"
 #define SVN_WC__LOG_ATTR_SAVED_MODS     "saved-mods"
+
+/* Starting at PATH, write out log entries indicating that a commit
+   succeeded, using VERSION as the new version number.  run_log will
+   use these entries to complete the commit. */
+/* todo: this, along with all other recursers, will want to use the
+   svn_wc__compose_paths() convention eventually. */
+svn_error_t *svn_wc__log_commit (svn_string_t *path,
+                                 svn_vernum_t version,
+                                 apr_pool_t *pool);
 
 /* Process the instructions in the log file for PATH. */
 svn_error_t *svn_wc__run_log (svn_string_t *path, apr_pool_t *pool);
