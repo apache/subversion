@@ -59,6 +59,7 @@ Here are some options:
   -V --verbose     Run with a wordily prolix verbositude.
   -D DATE          Like "cvs cmd -D DATE"
   -l               Local dir only, do not recurse.
+  -d               Target directory (like "cvs checkout -d DIR")
   -f               Force (probably useful for a few commands)
   -R REPOSITORY    Use REPOSITORY.
                      /* Issue: Perhaps -R is unnecessary, if arguments
