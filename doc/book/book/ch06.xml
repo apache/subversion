@@ -1239,7 +1239,7 @@ $ svn status
             <listitem>
               <para>This keyword is compressed combination of the
                 other keywords.  Its substitution looks something like
-                <literal>$Id: calc.c 148 2002-07-28 21:30:43 sally
+                <literal>$Id: calc.c 148 2002-07-28 21:30:43Z sally
                 $</literal>, and is interpreted to mean that the file
                 <filename>calc.c</filename> was last changed in revision
                 148 on the evening of July 28, 2002 by the user
