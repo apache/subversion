@@ -63,6 +63,7 @@ struct edit_baton
                                    elem_tree_delta, elem_file, or
                                    elem_file_prop_delta.  */
   struct file_baton *curfile;
+  svn_revnum_t target_revision;
   apr_pool_t *pool;
   int txdelta_id_counter;
 };
@@ -229,7 +230,7 @@ get_to_elem (struct edit_baton *eb, enum elemtype elem, apr_pool_t *pool)
 static svn_error_t *
 output_addreplace (struct edit_baton *eb, enum elemtype addreplace,
                    enum elemtype dirfile, svn_string_t *name,
-                   svn_string_t *ancestor_path, svn_revnum_t ancestor_revision)
+                   svn_string_t *base_path, svn_revnum_t base_revision)
 {
   svn_string_t *str;
   apr_pool_t *pool = svn_pool_create (eb->pool);
@@ -240,22 +241,25 @@ output_addreplace (struct edit_baton *eb, enum elemtype addreplace,
     SVN_DELTA__XML_TAG_ADD : SVN_DELTA__XML_TAG_REPLACE;
   const char *innertag = (dirfile == elem_dir) ? 
     SVN_DELTA__XML_TAG_DIR : SVN_DELTA__XML_TAG_FILE;
+  char buf[128];
 
   str = get_to_elem (eb, elem_tree_delta, pool);
   svn_xml_make_open_tag (&str, pool, svn_xml_normal, outertag,
                          SVN_DELTA__XML_ATTR_NAME, name, NULL);
 
   att = apr_hash_make (pool);
-  if (ancestor_path != NULL)
-    {
-      char buf[128];
-      apr_hash_set (att, SVN_DELTA__XML_ATTR_ANCESTOR, 
-                    strlen(SVN_DELTA__XML_ATTR_ANCESTOR), ancestor_path);
-      sprintf (buf, "%lu", (unsigned long) ancestor_revision);
-      apr_hash_set (att, SVN_DELTA__XML_ATTR_VER, 
-                    strlen(SVN_DELTA__XML_ATTR_VER), 
-                    svn_string_create (buf, pool));
-    }
+  if (base_path != NULL)
+  {
+    apr_hash_set (att, SVN_DELTA__XML_ATTR_BASE_PATH, 
+                  strlen(SVN_DELTA__XML_ATTR_BASE_PATH), base_path);
+  }
+  if (SVN_IS_VALID_REVNUM(base_revision))
+  {
+    sprintf (buf, "%lu", (unsigned long) base_revision);
+    apr_hash_set (att, SVN_DELTA__XML_ATTR_BASE_REV, 
+                  strlen(SVN_DELTA__XML_ATTR_BASE_REV), 
+                  svn_string_create (buf, pool));
+  }
   svn_xml_make_open_tag_hash (&str, pool, svn_xml_normal, innertag, att);
 
   eb->elem = dirfile;
@@ -301,18 +305,48 @@ output_propset (struct edit_baton *eb, enum elemtype elem,
 
 
 static svn_error_t *
-begin_edit (void *edit_baton,
-              void **dir_baton)
+set_target_revision (void *edit_baton, svn_revnum_t target_revision)
+{
+  struct edit_baton *eb = (struct edit_baton *) edit_baton;
+
+  /* Stick that target revision in the edit baton to be used when
+     we call replace_root() */
+  eb->target_revision = target_revision;
+  return SVN_NO_ERROR;
+}
+ 
+
+static svn_error_t *
+replace_root (void *edit_baton, svn_revnum_t base_revision, void **dir_baton)
 {
   struct edit_baton *eb = (struct edit_baton *) edit_baton;
   apr_pool_t *pool = svn_pool_create (eb->pool);
   svn_string_t *str = NULL;
   apr_size_t len;
+  apr_hash_t *att;
   svn_error_t *err;
+  char buf[128];
 
   svn_xml_make_header (&str, pool);
-  svn_xml_make_open_tag (&str, pool, svn_xml_normal, 
-                         SVN_DELTA__XML_TAG_DELTA_PKG, NULL);
+
+  att = apr_hash_make (pool);
+  if (SVN_IS_VALID_REVNUM(base_revision))
+  {
+    sprintf (buf, "%lu", (unsigned long) base_revision);
+    apr_hash_set (att, SVN_DELTA__XML_ATTR_BASE_REV, 
+                  strlen(SVN_DELTA__XML_ATTR_BASE_REV), 
+                  svn_string_create (buf, pool));
+  }
+  if (SVN_IS_VALID_REVNUM(eb->target_revision))
+  {
+    sprintf (buf, "%lu", (unsigned long) eb->target_revision);
+    apr_hash_set (att, SVN_DELTA__XML_ATTR_TARGET_REV, 
+                  strlen(SVN_DELTA__XML_ATTR_TARGET_REV), 
+                  svn_string_create (buf, pool));
+  }
+
+  svn_xml_make_open_tag_hash (&str, pool, svn_xml_normal, 
+                              SVN_DELTA__XML_TAG_DELTA_PKG, att);
 
   *dir_baton = make_dir_baton (eb, elem_delta_pkg);
   eb->elem = elem_dir;
@@ -349,8 +383,8 @@ delete_entry (svn_string_t *name, void *parent_baton)
 static svn_error_t *
 add_directory (svn_string_t *name,
                void *parent_baton,
-               svn_string_t *ancestor_path,
-               svn_revnum_t ancestor_revision,
+               svn_string_t *base_path,
+               svn_revnum_t base_revision,
                void **child_baton)
 {
   struct dir_baton *db = (struct dir_baton *) parent_baton;
@@ -358,15 +392,14 @@ add_directory (svn_string_t *name,
 
   *child_baton = make_dir_baton (eb, elem_add);
   return output_addreplace (eb, elem_add, elem_dir, name,
-                            ancestor_path, ancestor_revision);
+                            base_path, base_revision);
 }
 
 
 static svn_error_t *
 replace_directory (svn_string_t *name,
                    void *parent_baton,
-                   svn_string_t *ancestor_path,
-                   svn_revnum_t ancestor_revision,
+                   svn_revnum_t base_revision,
                    void **child_baton)
 {
   struct dir_baton *db = (struct dir_baton *) parent_baton;
@@ -374,7 +407,7 @@ replace_directory (svn_string_t *name,
 
   *child_baton = make_dir_baton (eb, elem_replace);
   return output_addreplace (eb, elem_replace, elem_dir, name,
-                            ancestor_path, ancestor_revision);
+                            NULL, base_revision);
 }
 
 
@@ -422,15 +455,15 @@ close_directory (void *dir_baton)
 static svn_error_t *
 add_file (svn_string_t *name,
           void *parent_baton,
-          svn_string_t *ancestor_path,
-          svn_revnum_t ancestor_revision,
+          svn_string_t *base_path,
+          svn_revnum_t base_revision,
           void **file_baton)
 {
   struct dir_baton *db = (struct dir_baton *) parent_baton;
   struct edit_baton *eb = db->edit_baton;
 
   SVN_ERR(output_addreplace (eb, elem_add, elem_file, name,
-                             ancestor_path, ancestor_revision));
+                             base_path, base_revision));
   *file_baton = make_file_baton (eb, elem_add);
   eb->curfile = *file_baton;
   return SVN_NO_ERROR;
@@ -440,15 +473,14 @@ add_file (svn_string_t *name,
 static svn_error_t *
 replace_file (svn_string_t *name,
               void *parent_baton,
-              svn_string_t *ancestor_path,
-              svn_revnum_t ancestor_revision,
+              svn_revnum_t base_revision,
               void **file_baton)
 {
   struct dir_baton *db = (struct dir_baton *) parent_baton;
   struct edit_baton *eb = db->edit_baton;
 
   SVN_ERR(output_addreplace (eb, elem_replace, elem_file, name,
-                             ancestor_path, ancestor_revision));
+                             NULL, base_revision));
   *file_baton = make_file_baton (eb, elem_replace);
   eb->curfile = *file_baton;
   return SVN_NO_ERROR;
@@ -605,7 +637,8 @@ close_edit (void *edit_baton)
 
 static const svn_delta_edit_fns_t tree_editor =
 {
-  begin_edit,
+  set_target_revision,
+  replace_root,
   delete_entry,
   add_directory,
   replace_directory,
@@ -635,6 +668,7 @@ svn_delta_get_xml_editor (svn_stream_t *output,
   eb->output = output;
   eb->curfile = NULL;
   eb->txdelta_id_counter = 1;
+  eb->target_revision = SVN_INVALID_REVNUM;
 
   *edit_baton = eb;
 

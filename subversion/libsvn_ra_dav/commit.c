@@ -305,7 +305,8 @@ static svn_error_t * do_proppatch(svn_ra_session_t *ras,
 }
 
 static svn_error_t *
-commit_begin_edit (void *edit_baton, void **root_baton)
+commit_replace_root (void *edit_baton, svn_revnum_t base_revision, 
+                     void **root_baton)
 {
   commit_ctx_t *cc = edit_baton;
   dir_baton_t *root = apr_pcalloc(cc->ras->pool, sizeof(*root));
@@ -399,7 +400,6 @@ commit_add_dir (svn_string_t *name,
 static svn_error_t *
 commit_rep_dir (svn_string_t *name,
                 void *parent_baton,
-   /* BOGUS: */ svn_string_t *ancestor_path,
                 svn_revnum_t ancestor_revision,
                 void **child_baton)
 {
@@ -500,7 +500,6 @@ commit_add_file (svn_string_t *name,
 static svn_error_t *
 commit_rep_file (svn_string_t *name,
                  void *parent_baton,
-    /* BOGUS: */ svn_string_t *ancestor_path,
                  svn_revnum_t ancestor_revision,
                  void **file_baton)
 {
@@ -632,7 +631,7 @@ svn_error_t * svn_ra_dav__get_commit_editor(
   ** uses these callbacks to describe all the changes in the working copy
   ** that must be committed to the server.
   */
-  commit_editor->begin_edit = commit_begin_edit;
+  commit_editor->replace_root = commit_replace_root;
   commit_editor->delete_entry = commit_delete_entry;
   commit_editor->add_directory = commit_add_dir;
   commit_editor->replace_directory = commit_rep_dir;

@@ -147,7 +147,21 @@ test_delete_entry (svn_string_t *filename, void *parent_baton)
 
 
 static svn_error_t *
-test_begin_edit (void *edit_baton,
+test_set_target_revision (void *edit_baton,
+                          svn_revnum_t target_revision)
+{
+  struct edit_baton *eb = (struct edit_baton *) edit_baton;
+  print_spaces (0);
+  printf ("SET_TARGET_REVISION:  name '%s', target revision '%ld'\n",
+          eb->root_path->data,
+          target_revision);
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+test_replace_root (void *edit_baton,
+                   svn_revnum_t base_revision,
                    void **root_baton)
 {
   struct edit_baton *eb = (struct edit_baton *) edit_baton;
@@ -159,7 +173,7 @@ test_begin_edit (void *edit_baton,
   *root_baton = d;
 
   print_spaces (d->indent_level);  /* probably a no-op */
-  printf ("BEGIN_EDIT:  name '%s', revision '%ld'\n",
+  printf ("REPLACE_ROOT:  name '%s', revision '%ld'\n",
           eb->root_path->data,
           eb->revision);
 
@@ -171,14 +185,14 @@ test_begin_edit (void *edit_baton,
 static svn_error_t *
 add_or_replace_dir (svn_string_t *name,
                     void *parent_baton,
-                    svn_string_t *ancestor_path,
-                    long int ancestor_revision,
+                    svn_string_t *base_path,
+                    long int base_revision,
                     void **child_baton,
                     const char *pivot_string)
 {
   struct dir_baton *pd = (struct dir_baton *) parent_baton;
   const char *Aname = name ? name->data : "(unknown)";
-  const char *ancestor = ancestor_path ? ancestor_path->data : "(unknown)";
+  const char *ancestor = base_path ? base_path->data : "(unknown)";
   struct dir_baton *d;
 
   /* Set child_baton to a new dir baton. */
@@ -193,7 +207,7 @@ add_or_replace_dir (svn_string_t *name,
   *child_baton = d;
 
   printf ("%s:  name '%s', ancestor '%s' revision %ld\n",
-          pivot_string, Aname, ancestor, ancestor_revision);
+          pivot_string, Aname, ancestor, base_revision);
 
   
   return SVN_NO_ERROR;
@@ -203,14 +217,14 @@ add_or_replace_dir (svn_string_t *name,
 static svn_error_t *
 test_add_directory (svn_string_t *name,
                     void *parent_baton,
-                    svn_string_t *ancestor_path,
-                    long int ancestor_revision,
+                    svn_string_t *base_path,
+                    long int base_revision,
                     void **child_baton)
 {
   return add_or_replace_dir (name,
                              parent_baton,
-                             ancestor_path,
-                             ancestor_revision,
+                             base_path,
+                             base_revision,
                              child_baton,
                              "ADD_DIR");
 }
@@ -219,14 +233,13 @@ test_add_directory (svn_string_t *name,
 static svn_error_t *
 test_replace_directory (svn_string_t *name,
                         void *parent_baton,
-                        svn_string_t *ancestor_path,
-                        long int ancestor_revision,
+                        long int base_revision,
                         void **child_baton)
 {
   return add_or_replace_dir (name,
                              parent_baton,
-                             ancestor_path,
-                             ancestor_revision,
+                             NULL,
+                             base_revision,
                              child_baton,
                              "REPLACE_DIR");
 }
@@ -295,15 +308,15 @@ test_apply_textdelta (void *file_baton,
 static svn_error_t *
 add_or_replace_file (svn_string_t *name,
                      void *parent_baton,
-                     svn_string_t *ancestor_path,
-                     long int ancestor_revision,
+                     svn_string_t *base_path,
+                     long int base_revision,
                      void **file_baton,
                      const char *pivot_string)
 {
   struct dir_baton *d = (struct dir_baton *) parent_baton;
   struct file_baton *fb;
   const char *Aname = name ? name->data : "(unknown)";
-  const char *ancestor = ancestor_path ? ancestor_path->data : "(unknown)";
+  const char *ancestor = base_path ? base_path->data : "(unknown)";
 
   /* Put the filename in file_baton */
   fb = apr_pcalloc (d->edit_baton->pool, sizeof (*fb));
@@ -314,7 +327,7 @@ add_or_replace_file (svn_string_t *name,
   *file_baton = fb;
 
   printf ("%s:  name '%s', ancestor '%s' revision %ld\n",
-          pivot_string, Aname, ancestor, ancestor_revision);
+          pivot_string, Aname, ancestor, base_revision);
 
   return SVN_NO_ERROR;
 }
@@ -323,14 +336,14 @@ add_or_replace_file (svn_string_t *name,
 static svn_error_t *
 test_add_file (svn_string_t *name,
                void *parent_baton,
-               svn_string_t *ancestor_path,
-               long int ancestor_revision,
+               svn_string_t *base_path,
+               long int base_revision,
                void **file_baton)
 {
   return add_or_replace_file (name,
                               parent_baton,
-                              ancestor_path,
-                              ancestor_revision,
+                              base_path,
+                              base_revision,
                               file_baton,
                               "ADD_FILE");
 }
@@ -339,14 +352,13 @@ test_add_file (svn_string_t *name,
 static svn_error_t *
 test_replace_file (svn_string_t *name,
                    void *parent_baton,
-                   svn_string_t *ancestor_path,
-                   long int ancestor_revision,
+                   long int base_revision,
                    void **file_baton)
 {
   return add_or_replace_file (name,
                               parent_baton,
-                              ancestor_path,
-                              ancestor_revision,
+                              NULL,
+                              base_revision,
                               file_baton,
                               "REPLACE_FILE");
 }
@@ -409,18 +421,19 @@ svn_test_get_editor (const svn_delta_edit_fns_t **editor,
 
   /* Set up the editor. */
   my_editor = svn_delta_default_editor (pool);
-  my_editor->begin_edit         = test_begin_edit;
-  my_editor->delete_entry       = test_delete_entry;
-  my_editor->add_directory      = test_add_directory;
-  my_editor->replace_directory  = test_replace_directory;
-  my_editor->close_directory    = test_close_directory;
-  my_editor->add_file           = test_add_file;
-  my_editor->replace_file       = test_replace_file;
-  my_editor->close_file         = test_close_file;
-  my_editor->apply_textdelta    = test_apply_textdelta;
-  my_editor->change_file_prop   = test_change_file_prop;
-  my_editor->change_dir_prop    = test_change_dir_prop;
-  my_editor->close_edit         = test_close_edit;
+  my_editor->set_target_revision = test_set_target_revision;
+  my_editor->replace_root        = test_replace_root;
+  my_editor->delete_entry        = test_delete_entry;
+  my_editor->add_directory       = test_add_directory;
+  my_editor->replace_directory   = test_replace_directory;
+  my_editor->close_directory     = test_close_directory;
+  my_editor->add_file            = test_add_file;
+  my_editor->replace_file        = test_replace_file;
+  my_editor->close_file          = test_close_file;
+  my_editor->apply_textdelta     = test_apply_textdelta;
+  my_editor->change_file_prop    = test_change_file_prop;
+  my_editor->change_dir_prop     = test_change_dir_prop;
+  my_editor->close_edit          = test_close_edit;
 
   /* Set up the edit baton. */
   my_edit_baton = apr_pcalloc (pool, sizeof (*my_edit_baton));

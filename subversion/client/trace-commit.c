@@ -53,7 +53,7 @@ struct file_baton
 
 
 static svn_error_t *
-begin_edit (void *edit_baton, void **root_baton)
+replace_root (void *edit_baton, svn_revnum_t base_revision, void **root_baton)
 {
   struct edit_baton *eb = edit_baton;
   struct dir_baton *rb = apr_pcalloc (eb->pool, sizeof (*rb));
@@ -108,7 +108,6 @@ add_directory (svn_string_t *name,
 static svn_error_t *
 replace_directory (svn_string_t *name,
                    void *parent_baton,
-                   svn_string_t *ancestor_path,
                    long int ancestor_revision,
                    void **child_baton)
 {
@@ -212,7 +211,6 @@ add_file (svn_string_t *name,
 static svn_error_t *
 replace_file (svn_string_t *name,
               void *parent_baton,
-              svn_string_t *ancestor_path,
               long int ancestor_revision,
               void **file_baton)
 {
@@ -273,7 +271,7 @@ svn_cl__get_trace_commit_editor (const svn_delta_edit_fns_t **editor,
   eb->initial_path = svn_string_dup (initial_path, eb->pool);
 
   /* Set up the editor. */
-  trace_editor->begin_edit = begin_edit;
+  trace_editor->replace_root = replace_root;
   trace_editor->delete_entry = delete_entry;
   trace_editor->add_directory = add_directory;
   trace_editor->replace_directory = replace_directory;
