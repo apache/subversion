@@ -1,4 +1,13 @@
-Last Update: Tue May 20 10:17:52 PDT 2003
+Last Update: Mon Jun 30 10:01:59 PDT 2003
+
+Noet: When I built the new RPMs - after some time having not built any -
+the svn binary that was produced was linked to libsvn_auth. That library
+is deprecated, and I can only imagine that because I had an old version
+sitting in /usr/lib it was picked up by some kind of errant build script.
+So, you may need to uninstall your subversion RPMs before making new ones.
+
+Note 2: You may need to change the Requires: line for swig to swig-runtime
+depending on the origin of your swig rpm.
 
 New Update: Look towards the bottom of the readme for some helpful notes
 from Mark Proctor <mproctor@cisco.com> experience with building subversion
@@ -51,19 +60,16 @@ This RPM includes the RA module for local repositories. This is so you
 can access repositories stored in DB files on the local mounts. This
 package requires the common client package, subversion-repos, and DB4.0.
 
+subversion-client-svn:
+----------------------
+This RPM includes the RA module for SVN network protocol hosted 
+repositories. This is a reasonably new way of accessing networked
+repositories without apache.
+
 subversion-devel:
 -----------------
 This RPM includes the static libraries, header files, and linker scripts
 for subversion.
-
-subversion-python:
-------------------
-
-  -- note: this is not building yet on mdk 9.1 --
-
-This RPM includes the python SWIG bindings for subversion. This package
-requires SWIG, the base subversion package, and any client packages one
-might want depending on what the python scripts you're writing will do.
 
 subversion-repos:
 -----------------
@@ -77,6 +83,11 @@ configuration file called 46_mod_dav_svn.conf in /etc/httpd/conf.d. The
 later file being the one you should modify to include your subversion
 directory roots. Setting up the repositories and adding any users or
 groups for the process is left to the user.
+
+subversion-tools:
+-----------------
+This packaged contains the python bindings and all the tools bundled
+with subversion - including cvs2svn.
 
 
 So, many combinations of packages are available depending on the type of
@@ -99,11 +110,15 @@ Mark's Installation Notes:
 
 I couldn't get SVN to pick up db4 so I downloaded the latest src and placed in top level dir as db. i did the same for neon.
 
+-- Note from Ballbach:
 !! NOTE -- db4.0 comes with mandrake 9.1, you should be able to compile subversion
 against it with the --with-berkeley-db=/usr switch to ./configure. Neon you will
 need to build and install a newer version of. You can either install it from a
 tarball, or get the source RPM and build a new one. I've done the later a few
 times and it was pretty simple.
+
+Also, try to build the RPMs before installing straight from CVS.
+-- end of note
 
 download
 http://www.sleepycat.com/update/snapshot/db-4.0.14.zip
@@ -139,7 +154,7 @@ cd subversion/libsvn_subr && /bin/sh /home/mproctor/subversion/libtool --silent 
 collect2: ld returned 1 exit status
 make: *** [subversion/libsvn_subr/libsvn_subr-1.la] Error 1
 
-update usr/bin/apu-conf and change the following line
+update usr/bin/apu-config and change the following line
 LIBS="-lldap -llber -lgdbm -ldb-4.0 -lexpat"
 to
 LIBS="-lgdbm -ldb-4.0 -lexpat"

@@ -33,16 +33,14 @@ SVN_VERSION_MINOR := $(shell grep 'define SVN_VER_MINOR' < $(VERSION_FILE) | (re
 SVN_VERSION_MICRO := $(shell grep 'define SVN_VER_MICRO' < $(VERSION_FILE) | (read one two three; echo $$three) )
 VERSION := $(SVN_VERSION_MAJOR).$(SVN_VERSION_MINOR).$(SVN_VERSION_MICRO)
 
-RELEASE := 1234# $(shell svn st -v $(SPECFILE) | cut -b 10- | ( read one two ; echo $$one ) )
+RELEASE := $(shell svn st -v $(SPECFILE) | cut -b 10- | ( read one two ; echo $$one ) )
 MDK_RELEASE := 1
 
 SPECS_RPM_DIR := $(HOME)/$(RPMDIR)/SPECS
 SOURCE_RPM_DIR := $(HOME)/$(RPMDIR)/SOURCES
-SOURCES := cvs2svn.patch \
-           python_swig_setup.py.patch \
+SOURCES := python_swig_setup.py.patch \
 	   svn-install.patch \
-	   46_mod_dav_svn.conf \
-           rcsparse.py
+	   46_mod_dav_svn.conf
 
 TARBALL := $(SOURCE_RPM_DIR)/$(NAME)-$(VERSION)-$(RELEASE).tar.bz2
 SRC_DIR := $(TMPDIR)/$(NAME)-$(VERSION)
