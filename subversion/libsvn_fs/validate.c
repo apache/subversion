@@ -27,9 +27,9 @@
 int
 svn_fs__count_id_components (const char *data, apr_size_t data_len)
 {
-  int i;
+  apr_size_t i;
   int id_len = 1;
-  int last_start = 0;
+  apr_size_t last_start = 0;
 
   for (i = 0; i < data_len; i++)
     if (data[i] == '.')

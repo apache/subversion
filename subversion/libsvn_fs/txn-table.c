@@ -341,7 +341,7 @@ svn_error_t *svn_fs__get_txn_list (char ***names_p,
                                    apr_pool_t *pool,
                                    trail_t *trail)
 {
-  int const next_id_key_len = strlen (next_id_key);
+  apr_size_t const next_id_key_len = strlen (next_id_key);
 
   char **names;
   apr_size_t names_count = 0;

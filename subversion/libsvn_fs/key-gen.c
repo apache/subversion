@@ -41,14 +41,14 @@ svn_fs__getsize (const char *data, apr_size_t len,
 
      So we do the check for overflow before we multiply value and add
      in the new digit.  */
-  int max_prefix = max / 10;
-  int max_digit = max % 10;
-  int i;
+  apr_size_t max_prefix = max / 10;
+  apr_size_t max_digit = max % 10;
+  apr_size_t i;
   apr_size_t value = 0;
 
   for (i = 0; i < len && '0' <= data[i] && data[i] <= '9'; i++)
     {
-      int digit = data[i] - '0';
+      apr_size_t digit = data[i] - '0';
 
       /* Check for overflow.  */
       if (value > max_prefix
@@ -81,7 +81,7 @@ svn_fs__getsize (const char *data, apr_size_t len,
 int
 svn_fs__putsize (char *data, apr_size_t len, apr_size_t value)
 {
-  int i = 0;
+  apr_size_t i = 0;
 
   /* Generate the digits, least-significant first.  */
   do 
