@@ -685,7 +685,7 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
      {svndumpfilter__drop_empty_revs, svndumpfilter__renumber_revs} },
 
     {"help", subcommand_help, {"?", "h"},
-     "usage: svn help [SUBCOMMAND1 [SUBCOMMAND2] ...]\n\n"
+     "usage: svndumpfilter help [SUBCOMMAND1 [SUBCOMMAND2] ...]\n\n"
      "Display this usage message.\n",
      {0} },
 
@@ -765,7 +765,7 @@ subcommand_help (apr_getopt_t *os, void *baton, apr_pool_t *pool)
 {
   const char *header =
     "general usage: svndumpfilter SUBCOMMAND [ARGS & OPTIONS ...]\n"
-    "Type \"svndumfilter help <subcommand>\" for help on a "
+    "Type \"svndumpfilter help <subcommand>\" for help on a "
     "specific subcommand.\n"
     "\n"
     "Available subcommands:\n";
