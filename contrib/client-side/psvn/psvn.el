@@ -222,6 +222,10 @@ In either case the mark gets the face
   (eq system-type 'windows-nt)
   "*Remove any trailing ^M from the *svn-process* buffer.")
 
+;;; experimental features
+(defvar svn-status-use-process-filter nil "Use the svn process filter for
+asynchronous calls to svn.")
+
 ;;; Customize group
 (defgroup psvn nil
   "Subversion interface for Emacs."
@@ -501,7 +505,9 @@ is prompted for give extra arguments, which are appended to ARGLIST."
                 (progn
                   ;;(message "running asynchron: %s %S" svn-exe arglist)
                   (setq svn-proc (apply 'start-process "svn" proc-buf svn-exe arglist))
-                  (set-process-sentinel svn-proc 'svn-process-sentinel))
+                  (set-process-sentinel svn-proc 'svn-process-sentinel)
+                  (when svn-status-use-process-filter
+                    (set-process-filter svn-proc 'svn-process-filter)))
               ;;(message "running synchron: %s %S" svn-exe arglist)
               (apply 'call-process svn-exe nil proc-buf nil arglist)
               (setq svn-status-mode-line-process-status "")
@@ -618,6 +624,12 @@ is prompted for give extra arguments, which are appended to ARGLIST."
           (t
            (message "svn process had unknown event: %s" event))
           (svn-status-show-process-buffer-internal t))))
+
+(defun svn-process-filter (process str)
+  (save-window-excursion
+    (set-buffer "*svn-process*")
+    (message "svn-process-filter: %s" str)
+    (insert str)))
 
 (defun svn-parse-rev-num (str)
   (if (and str (stringp str)
