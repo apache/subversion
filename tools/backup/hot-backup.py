@@ -28,7 +28,7 @@ import os, shutil, string
 # Global Settings
 
 # Path to repository
-db_dir = "/usr/www/repositories/svn"
+repo_dir = "/usr/www/repositories/svn"
 
 # Where to store the repository backup.  The backup will be placed in
 # a *subdirectory* of this location, named after the youngest
@@ -43,11 +43,12 @@ db_archive = "/usr/local/BerkeleyDB.3.3/bin/db_archive"
 
 ######################################################################
 
-print "Beginning hot backup of '"+ db_dir + "'."
+print "Beginning hot backup of '"+ repo_dir + "'."
+
 
 # Step 1:  get the youngest revision.
 
-infile, outfile, errfile = os.popen3(svnadmin + " youngest " + db_dir)
+infile, outfile, errfile = os.popen3(svnadmin + " youngest " + repo_dir)
 stdout_lines = outfile.readlines()
 stderr_lines = errfile.readlines()
 outfile.close()
@@ -62,14 +63,14 @@ print "Youngest revision is", youngest
 
 backup_subdir = os.path.join(backup_dir, "repo-bkp-" + youngest)
 print "Backing up repository to '" + backup_subdir + "'..."
-shutil.copytree(db_dir, backup_subdir)
+shutil.copytree(repo_dir, backup_subdir)
 print "Done."
 
 
 # Step 3:  re-copy the logfiles.  They must *always* be copied last.
 
 infile, outfile, errfile = os.popen3(db_archive + " -l -h "
-                                     + os.path.join(db_dir, "db"))
+                                     + os.path.join(repo_dir, "db"))
 stdout_lines = outfile.readlines()
 stderr_lines = errfile.readlines()
 outfile.close()
@@ -80,7 +81,7 @@ print "Re-copying logfiles:"
 
 for item in stdout_lines:
   logfile = string.strip(item)
-  src = os.path.join(db_dir, "db", logfile)
+  src = os.path.join(repo_dir, "db", logfile)
   dst = os.path.join(backup_subdir, "db", logfile)
   print "   Re-copying logfile '" + logfile + "'..."
   shutil.copy(src, dst)
@@ -88,10 +89,22 @@ for item in stdout_lines:
 print "Backup completed."
 
 
-# Step 4:  ask db_archive which logfiles can be expunged.
+# Step 4:  look for a write `lock' file in backup_dir, else make one.
+
+lockpath = os.path.join(backup_dir, 'lock')
+if os.path.exists(lockpath):
+  print "Cannot cleanup logs:  lockfile already exists in", backup_dir
+  sys.exit(0)
+
+print "Writing lock for logfile cleanup..."
+fp = open(lockpath, 'a')  # open in (a)ppend mode
+fp.write("cleaning logfiles for repository " + repo_dir)
+fp.close()
+
+# Step 5:  ask db_archive which logfiles can be expunged, and remove them.
 
 infile, outfile, errfile = os.popen3(db_archive + " -a -h "
-                                     + os.path.join(db_dir, "db"))
+                                     + os.path.join(repo_dir, "db"))
 stdout_lines = outfile.readlines()
 stderr_lines = errfile.readlines()
 outfile.close()
@@ -106,3 +119,9 @@ for item in stdout_lines:
   os.unlink(logfile)
 
 print "Done."
+
+# Step 6:  remove the write lock.
+
+os.unlink(lockpath)
+print "Lock removed.  Cleanup complete."
+
