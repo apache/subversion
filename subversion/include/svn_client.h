@@ -533,6 +533,8 @@ svn_client_log (svn_client_auth_baton_t *auth_baton,
    DIFF_OPTIONS is used to pass additional command line options to the diff
    processes invoked to compare files.  DIFF_OPTIONS is an array of
    svn_stringbuf_t * items.
+
+   Print the output of the diff to OUTFILE, and any errors to ERRFILE.
   
    AUTH_BATON is used to communicate with the repository.
  */
@@ -542,6 +544,8 @@ svn_error_t *svn_client_diff (const apr_array_header_t *diff_options,
                               const svn_client_revision_t *end,
                               svn_stringbuf_t *target,
                               svn_boolean_t recurse,
+                              apr_file_t *outfile,
+                              apr_file_t *errfile,
                               apr_pool_t *pool);
 
 
