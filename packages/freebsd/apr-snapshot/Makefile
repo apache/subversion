@@ -20,6 +20,8 @@ BUILD_DEPENDS=	autoconf:${PORTSDIR}/devel/autoconf \
 
 GNU_CONFIGURE=	yes
 
+WRKSRC=	${WRKDIR}
+
 pre-fetch:
 	${SH} pkg-install apr-snapshot PRE-INSTALL
 
