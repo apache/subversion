@@ -840,7 +840,7 @@ write_entry (svn_stringbuf_t **output,
                   svn_stringbuf_createf (pool, "%ld", entry->copyfrom_rev));
 
   if (entry->copyfrom_url)
-    apr_hash_set (atts, SVN_WC__ENTRY_ATTR_COPYFROM_REV, APR_HASH_KEY_STRING,
+    apr_hash_set (atts, SVN_WC__ENTRY_ATTR_COPYFROM_URL, APR_HASH_KEY_STRING,
                   entry->copyfrom_url);
 
   /* Timestamps */
