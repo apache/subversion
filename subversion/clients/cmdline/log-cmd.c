@@ -85,12 +85,16 @@ struct log_receiver_baton
   /* Don't print log message body nor line count.  This is ignored for
      xml output. */
   svn_boolean_t quiet;
+
+  /* Output stream */
+  svn_stream_t *out;
 };
 
 
 /* The separator between log messages. */
 #define SEP_STRING \
-  "------------------------------------------------------------------------\n"
+  "------------------------------------------------------------------------" \
+  APR_EOL_STR
 
 
 /* Implement `svn_log_message_receiver_t', printing the logs in
@@ -192,7 +196,8 @@ log_message_receiver (void *baton,
 
   if (rev == 0)
     {
-      printf ("No commit for revision 0.\n");
+      svn_stream_printf (lb->out, pool,
+                         "No commit for revision 0." APR_EOL_STR);
       return SVN_NO_ERROR;
     }
 
@@ -237,18 +242,20 @@ log_message_receiver (void *baton,
       }
     }
 
-  printf (SEP_STRING);
+  svn_stream_printf (lb->out, pool, SEP_STRING);
 
-  printf ("rev %" SVN_REVNUM_T_FMT ":  %s | %s",
-          rev, author_stdout, date_stdout);
+  svn_stream_printf (lb->out, pool,
+                     "rev %" SVN_REVNUM_T_FMT ":  %s | %s",
+                     rev, author_stdout, date_stdout);
 
   if (! lb->quiet)
     {
       lines = num_lines (msg_stdout);
-      printf (" | %d line%s", lines, (lines > 1) ? "s" : "");
+      svn_stream_printf (lb->out, pool,
+                         " | %d line%s", lines, (lines > 1) ? "s" : "");
     }
 
-  printf ("\n");
+  svn_stream_printf (lb->out, pool, APR_EOL_STR);
 
   if (changed_paths)
     {
@@ -260,7 +267,7 @@ log_message_receiver (void *baton,
                                            svn_sort_compare_items_as_paths, 
                                            pool);
 
-      printf ("Changed paths:\n");
+      svn_stream_printf (lb->out, pool, "Changed paths:" APR_EOL_STR);
       for (i = 0; i < sorted_paths->nelts; i++)
         {
           svn_item_t *item = &(APR_ARRAY_IDX (sorted_paths, i, svn_item_t));
@@ -282,14 +289,16 @@ log_message_receiver (void *baton,
                                 log_item->copyfrom_rev);
             }
           SVN_ERR (svn_cmdline_cstring_from_utf8 (&path_stdout, path, pool));
-          printf ("   %c %s%s\n", log_item->action, path_stdout, copy_data);
+          svn_stream_printf (lb->out, pool, "   %c %s%s" APR_EOL_STR,
+                             log_item->action, path_stdout, copy_data);
         }
     }
 
   if (! lb->quiet)
     {
-      printf ("\n");  /* A blank line always precedes the log message. */
-      printf ("%s\n", msg_stdout);
+      /* A blank line always precedes the log message. */
+      svn_stream_printf (lb->out, pool, APR_EOL_STR "%s" APR_EOL_STR,
+                         msg_stdout);
     }
 
   return SVN_NO_ERROR;
@@ -444,7 +453,7 @@ log_message_receiver_xml (void *baton,
   /* </logentry> */
   svn_xml_make_close_tag (&sb, pool, "logentry");
 
-  printf ("%s", sb->data);
+  svn_stream_printf (lb->out, pool, "%s", sb->data);
 
   return SVN_NO_ERROR;
 }
@@ -505,6 +514,7 @@ svn_cl__log (apr_getopt_t *os,
   lb.cancel_func = ctx->cancel_func;
   lb.cancel_baton = ctx->cancel_baton;
   lb.quiet = opt_state->quiet;
+  SVN_ERR (svn_stream_for_stdout (&lb.out, pool));
 
   if (! opt_state->quiet)
     svn_cl__get_notifier (&ctx->notify_func, &ctx->notify_baton, FALSE, FALSE,
@@ -525,7 +535,7 @@ svn_cl__log (apr_getopt_t *os,
           /* "<log>" */
           svn_xml_make_open_tag (&sb, pool, svn_xml_normal, "log", NULL);
 
-          printf ("%s", sb->data);  
+          svn_stream_printf (lb.out, pool, "%s", sb->data);  
         }
       
       SVN_ERR (svn_client_log (targets,
@@ -545,7 +555,7 @@ svn_cl__log (apr_getopt_t *os,
           /* "</log>" */
           svn_xml_make_close_tag (&sb, pool, "log");
 
-          printf ("%s", sb->data);
+          svn_stream_printf (lb.out, pool, "%s", sb->data);
         }
     }
   else  /* default output format */
@@ -568,7 +578,7 @@ svn_cl__log (apr_getopt_t *os,
                                pool));
 
       if (! opt_state->incremental)
-        printf (SEP_STRING);
+        svn_stream_printf (lb.out, pool, SEP_STRING);
     }
 
   return SVN_NO_ERROR;
