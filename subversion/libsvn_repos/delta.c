@@ -376,6 +376,7 @@ get_path_revision (svn_fs_root_t *root,
                    apr_pool_t *pool)
 {
   svn_revnum_t revision;
+  svn_error_t *err;
 
   /* Easy out -- if ROOT is a revision root, we can use the revision
      that it's a root of. */
@@ -384,8 +385,11 @@ get_path_revision (svn_fs_root_t *root,
 
   /* Else, this must be a transaction root, so ask the filesystem in
      what revision this path was created. */
-  if (svn_fs_node_created_rev (&revision, root, path, pool))
-    revision = SVN_INVALID_REVNUM;
+  if ((err = svn_fs_node_created_rev (&revision, root, path, pool)))
+    {
+      revision = SVN_INVALID_REVNUM;
+      svn_error_clear (err);
+    }
 
   /* If we don't get back a valid revision, this path is mutable in
      the transaction.  We should probably examing the node on which it
