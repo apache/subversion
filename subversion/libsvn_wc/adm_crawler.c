@@ -600,20 +600,17 @@ verify_deleted_tree (svn_string_t *dir,
       const void *key;
       apr_size_t klen;
       void *val;
-      svn_string_t *basename;
       svn_wc_entry_t *entry; 
       int is_this_dir;
 
       /* Get the next entry */
       apr_hash_this (hi, &key, &klen, &val);
       entry = (svn_wc_entry_t *) val;
-      basename = svn_string_create ((const char *) key, subpool);
-      is_this_dir = (strcmp (basename->data, 
-                             SVN_WC_ENTRY_THIS_DIR)) ? FALSE : TRUE;
+      is_this_dir = strcmp (key, SVN_WC_ENTRY_THIS_DIR) == 0;
 
       /* Construct the fullpath of this entry. */
       if (! is_this_dir)
-        svn_path_add_component (fullpath, basename, svn_path_local_style);
+        svn_path_add_component_nts (fullpath, key, svn_path_local_style);
 
       /* If this entry is not marked for deletion, quit here. */
       if (! (entry->state & SVN_WC_ENTRY_DELETED))
@@ -1009,6 +1006,7 @@ report_local_mods (svn_string_t *path,
 
   /* First thing to do is create a new subpool to hold all temporary
      work at this level of the working copy. */
+  /* ### this pool is not properly cleared/destroyed on exit */
   apr_pool_t *subpool = svn_pool_create (top_pool);
 
   /* Retrieve _all_ the entries in this subdir into subpool. */
