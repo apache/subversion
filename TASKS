@@ -22,10 +22,10 @@ to take something on.
    the desired operation.
 
 
-4. Macintosh/Windows GUI clients.
+4. Macintosh/Windows/Unix GUI clients.
 
    Once libsvn_client API is finalized (which, for a sufficiently
-   loose definition of "final", should be by Milestone 2 on Dec 7th),
+   loose definition of "final", should be by Milestone 2 on April 1st),
    it will be usable by any client, not just the command-line client.
 
    I'm not sure this argues definitively for native clients written in
@@ -33,6 +33,9 @@ to take something on.
    done.  Perhaps one client could be written for both platforms,
    using a Java class that links to the C libsvn_client API?
 
+   Volunteers / interested parties:
+   	  KDE/QT: Kevin Pilch-Bisson
+	  Java:	  Kevin Pilch-Bisson, maybe, if someone else does Java bindings :)
 
 5. Language bindings to the Subversion libraries.
 
