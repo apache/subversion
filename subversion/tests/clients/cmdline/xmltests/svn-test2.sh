@@ -111,7 +111,7 @@ check_status 11
 echo "Attempting to commit while conflicts are present:"
 ${SVN_PROG} commit  --xml-file ${COMMIT_RESULTFILE_NAME}-1.xml \
                    --revision 22 ${TEST_DIR_1}                 \
-2>/dev/null
+2>&1
 # (no check_status here, because we *expect* the commit to fail!)
 
 
@@ -126,7 +126,7 @@ check_status 12
 echo "Attempting to commit while conflicts are present:"
 ${SVN_PROG} commit --xml-file ${COMMIT_RESULTFILE_NAME}-1.xml \
                    --revision 23 ${TEST_DIR_1}                \
-2>/dev/null
+2>&1
 # (no check_status here, because we *expect* the commit to fail!)
 
 
