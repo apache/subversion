@@ -217,6 +217,11 @@ add_directory (svn_string_t *name,
   if (err)
     return err;
 
+  /* kff todo fooo: okay, now drop an `update' or `checkout' marker in
+     the doing/ area (may need to rework the arrangement of stuff in
+     doing/ a bit, to accomodate arbitrary levels of sub-actions).
+     Later, in finish_directory(), undrop the marker. */
+
   printf ("%s/    (ancestor == %s, %d)\n",
           npath->data, ancestor_path->data, (int) ancestor_version);
 
@@ -250,6 +255,8 @@ replace_directory (svn_string_t *name,
 {
   struct w_baton *wb = (struct w_baton *) walk_baton;
   svn_string_t *path_so_far = (svn_string_t *) parent_baton;
+
+  /* kff todo */
 
   maybe_prepend_dest (&path_so_far, wb);
 
