@@ -22,10 +22,15 @@
 
 
 /* The MD5 digest for the empty string. */
-const unsigned char svn_md5_empty_string_digest[] = {
+static const unsigned char svn_md5__empty_string_digest[] = {
   212, 29, 140, 217, 143, 0, 178, 4, 233, 128, 9, 152, 236, 248, 66, 126
 };
 
+const unsigned char *
+svn_md5_empty_string_digest ()
+{
+  return svn_md5__empty_string_digest;
+}
 
 
 const char *
