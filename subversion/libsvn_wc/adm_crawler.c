@@ -965,8 +965,9 @@ MAIN LOGIC:
    If COPY_MODE is set, this function will behave as though the entry
    is marked with the "copied" flag.
 
-   Perform all temporary allocation in STACK->pool, and any allocation
-   that must outlive the reporting process in TOP_POOL. 
+   Perform all temporary allocation in TMP_POOL, allocations related
+   to the stack in STACK->pool, and any allocation that must outlive
+   the reporting process in TOP_POOL.
 
    Temporary: use REVNUM_FN/REV_BATON/YOUNGEST_REV to determine if a
    dir is up-to-date when it has a propchange.  */
@@ -984,6 +985,7 @@ report_single_mod (const char *name,
                    void **dir_baton,
                    svn_boolean_t adds_only,
                    svn_boolean_t copy_mode,
+                   apr_pool_t *tmp_pool,
                    apr_pool_t *top_pool)
 {
   svn_stringbuf_t *full_path;
@@ -1005,7 +1007,7 @@ report_single_mod (const char *name,
   if (! strcmp (name, SVN_WC_ENTRY_THIS_DIR))
     return SVN_NO_ERROR;
   
-  entry_name = svn_stringbuf_create (name, (*stack)->pool);
+  entry_name = svn_stringbuf_create (name, tmp_pool);
   
   /* This entry gets deleted if marked for deletion or replacement. */
   if (! adds_only)
@@ -1059,7 +1061,7 @@ report_single_mod (const char *name,
 
 
   /* Construct a full path to the current entry */
-  full_path = svn_stringbuf_dup ((*stack)->path, (*stack)->pool);
+  full_path = svn_stringbuf_dup ((*stack)->path, tmp_pool);
   if (entry_name != NULL)
     svn_path_add_component (full_path, entry_name);
 
@@ -1067,7 +1069,7 @@ report_single_mod (const char *name,
      of conflict that has NOT yet been resolved, we abort the
      entire commit.  */
   SVN_ERR (bail_if_unresolved_conflict (full_path, entry, locks, 
-                                        (*stack)->pool));
+                                        tmp_pool));
 
 
   /* Here's a guide to the very long logic that extends below.
@@ -1094,7 +1096,7 @@ report_single_mod (const char *name,
          deletion.  If not, we're in a screwy state. */
       if (entry->kind == svn_node_dir) 
         SVN_ERR (verify_tree_deletion (full_path, entry->schedule, 
-                                       (*stack)->pool));
+                                       tmp_pool));
 
       /* Delete the entry */
       SVN_ERR (editor->delete_entry (entry_name, entry->revision,
@@ -1128,7 +1130,7 @@ report_single_mod (const char *name,
           /* A directory's interesting information is stored in
              its own THIS_DIR entry, so read that to get the real
              data for this directory. */
-          SVN_ERR (svn_wc_entry (&subdir_entry, full_path, (*stack)->pool));
+          SVN_ERR (svn_wc_entry (&subdir_entry, full_path, tmp_pool));
           
           if (! copyfrom_url)
             {              
@@ -1149,10 +1151,10 @@ report_single_mod (const char *name,
           
           /* History or not, decide if there are props to send. */
           SVN_ERR (svn_wc_props_modified_p (&prop_modified_p, full_path, 
-                                            (*stack)->pool));
+                                            tmp_pool));
           if (prop_modified_p)
             SVN_ERR (do_prop_deltas (full_path, entry, editor, 
-                                     new_dir_baton, (*stack)->pool));
+                                     new_dir_baton, tmp_pool));
         }
       
       /* Adding a new file: */
@@ -1182,15 +1184,15 @@ report_single_mod (const char *name,
                  we only *might* need to send contents.  Do a real
                  local-mod check on it. */
               SVN_ERR (svn_wc_text_modified_p (&(tb->text_modified_p),
-                                               full_path, (*stack)->pool));
+                                               full_path, tmp_pool));
             }
 
           /* History or not, decide if there are props to send. */
           SVN_ERR (svn_wc_props_modified_p (&prop_modified_p, full_path, 
-                                            (*stack)->pool));
+                                            tmp_pool));
           if (prop_modified_p)
             SVN_ERR (do_prop_deltas (full_path, entry, editor, 
-                                     tb->editor_baton, (*stack)->pool));
+                                     tb->editor_baton, tmp_pool));
 
           /* Store the (added) affected-target for safe keeping (possibly
              to be used later for postfix text-deltas) */
@@ -1209,7 +1211,7 @@ report_single_mod (const char *name,
           
       /* Is text modified? */
       SVN_ERR (svn_wc_text_modified_p (&text_modified_p, full_path, 
-                                       (*stack)->pool));
+                                       tmp_pool));
           
       /* Only check for local propchanges if we're looking at a file. 
          Our caller, crawl_dir(), is looking for propchanges on each
@@ -1218,7 +1220,7 @@ report_single_mod (const char *name,
         prop_modified_p = FALSE;
       else
         SVN_ERR (svn_wc_props_modified_p (&prop_modified_p, full_path, 
-                                          (*stack)->pool));
+                                          tmp_pool));
       
       if (text_modified_p || prop_modified_p)
         {
@@ -1254,7 +1256,7 @@ report_single_mod (const char *name,
               
               /* Send propchanges to editor. */
               SVN_ERR (do_prop_deltas (longpath, entry, editor, baton, 
-                                       (*stack)->pool));
+                                       tmp_pool));
                   
               /* Very important: if there are *only* propchanges, but
                  not textual ones, close the file here and now.
@@ -1350,10 +1352,14 @@ crawl_dir (svn_stringbuf_t *path,
   apr_hash_index_t *entry_index;  /* holds loop-state */
   svn_wc_entry_t *this_dir_entry; /* represents current working dir */
   apr_pool_t *subpool;            /* per-recursion pool */
+  apr_pool_t *iterpool;           /* per-iteration pool */
   svn_boolean_t prop_modified_p;
 
   /* Create the per-recusion subpool. */
   subpool = svn_pool_create (top_pool);
+
+  /* Create the per-iteration subpool. */
+  iterpool = svn_pool_create (subpool);
 
   /* Retrieve _all_ the entries in this subdir into subpool. */
   SVN_ERR (svn_wc_entries_read (&entries, path, subpool));
@@ -1452,9 +1458,9 @@ crawl_dir (svn_stringbuf_t *path,
          copied subtree.  So:  make sure the entry is _complete_. */
       if (current_entry->kind == svn_node_dir)
         {
-          svn_stringbuf_t *full_path = svn_stringbuf_dup (path, subpool);
+          svn_stringbuf_t *full_path = svn_stringbuf_dup (path, iterpool);
           svn_path_add_component_nts (full_path, keystring);
-          SVN_ERR (svn_wc_entry (&current_entry, full_path, subpool));
+          SVN_ERR (svn_wc_entry (&current_entry, full_path, iterpool));
         }
 
       /* Report mods for a single entry. */
@@ -1471,9 +1477,15 @@ crawl_dir (svn_stringbuf_t *path,
                                   &dir_baton,
                                   adds_only,
                                   copy_mode,
+                                  iterpool,
                                   top_pool));
       
+      /* Clear the iteration subpool. */
+      svn_pool_clear (iterpool);
     }
+
+  /* Destroy the iteration subpool. */
+  svn_pool_destroy (iterpool);
 
   /* The presence of a baton in this stack frame means that at some
      point, something was committed in this directory, and means we
@@ -1688,6 +1700,7 @@ crawl_local_mods (svn_stringbuf_t *parent_dir,
                                        &dir_baton,
                                        FALSE,
                                        FALSE,
+                                       subpool,
                                        pool);
               
               svn_pool_destroy (subpool);
