@@ -20,36 +20,111 @@ import os, sys, shutil, string
 
 # The list of test cases: [(name, params, expected) ...]
 cwd = os.getcwd().replace('\\', '/')    # Use forward slashes on Windows
-tests = [('normal use',
-          'z/A/B z/A z/A/C z/D/E z/D/F z/D z/G z/G/H z/G/I',
-          cwd + '/z: A, D, G, \n'),
-         ('identical dirs',
-          'z/A z/A z/A z/A',
-          cwd + '/z/A: \n'),
-         ('identical files',
-          'z/A/file z/A/file z/A/file z/A/file',
+tests = [# Depth Infinity
+         ('normal use (infinity)',
+          'infinity z/A/B z/A/B/file z/A z/A/C z/D/file z/D/E z/D/F z/D',
+          cwd + '/z: A, D, \n'),
+         ('identical dirs (infinity)',
+          'infinity z/A z/A z/A z/A',
+          cwd + '/z/A: , \n'),
+         ('identical files (infinity)',
+          'infinity z/A/file z/A/file z/A/file z/A/file',
           cwd + '/z/A: file, \n'),
-         ('single dir',
-          'z/A',
-          cwd + '/z/A: \n'),
-         ('single file',
-          'z/A/file',
+         ('single dir (infinity)',
+          'infinity z/A',
+          cwd + '/z/A: , \n'),
+         ('single file (infinity)',
+          'infinity z/A/file',
           cwd + '/z/A: file, \n'),
-         ('URLs',
-          'http://host/A/C http://host/A/C/D http://host/A/B/D',
+         ('single URL (infinity)',
+          'infinity http://host/A/C',
+          'http://host/A/C: , \n'),
+         ('URLs (infinity)',
+          'infinity http://host/A/C http://host/A/C/D http://host/A/B/D',
           'http://host/A: C, B/D, \n'),
-         ('URLs with no common prefix',
-          'http://host1/A/C http://host2/A/C/D http://host3/A/B/D',
+         ('URLs with no common prefix (infinity)',
+          'infinity http://host1/A/C http://host2/A/C/D http://host3/A/B/D',
           ': http://host1/A/C, http://host2/A/C/D, http://host3/A/B/D, \n'),
-         ('file URLs with no common prefix',
-          'file:///A/C file:///B/D',
+         ('file URLs with no common prefix (infinity)',
+          'infinity file:///A/C file:///B/D',
           ': file:///A/C, file:///B/D, \n'),
-         ('URLs with mixed protocols',
-          'http://host/A/C file:///B/D gopher://host/A',
+         ('URLs with mixed protocols (infinity)',
+          'infinity http://host/A/C file:///B/D gopher://host/A',
           ': http://host/A/C, file:///B/D, gopher://host/A, \n'),
-         ('mixed paths and URLs',
-          'z/A/B z/A http://host/A/C/D http://host/A/C',
-          ': ' + cwd + '/z/A, http://host/A/C, \n')]
+         ('mixed paths and URLs (infinity)',
+          'infinity z/A/B z/A http://host/A/C/D http://host/A/C',
+          ': ' + cwd + '/z/A, http://host/A/C, \n'),
+         # Depth 0
+         ('normal use (0)',
+          '0 z/A/B z/A/B/file z/A z/A/C z/D/file z/D/E z/D/F z/D',
+          cwd + '/z: A/B, A/B/file, A, A/C, D/file, D/E, D/F, D, \n'),
+         ('identical dirs (0)',
+          '0 z/A z/A z/A z/A',
+          cwd + '/z/A: , \n'),
+         ('identical files (0)',
+          '0 z/A/file z/A/file z/A/file z/A/file',
+          cwd + '/z/A: file, \n'),
+         ('single dir (0)',
+          '0 z/A',
+          cwd + '/z/A: , \n'),
+         ('single file (0)',
+          '0 z/A/file',
+          cwd + '/z/A: file, \n'),
+         ('single URL (0)',
+          '0 http://host/A/C',
+          'http://host/A/C: , \n'),
+         ('URLs (0)',
+          '0 http://host/A/C http://host/A/C/D http://host/A/B/D',
+          'http://host/A: C, C/D, B/D, \n'),
+         ('URLs with no common prefix (0)',
+          '0 http://host1/A/C http://host2/A/C/D http://host3/A/B/D',
+          ': http://host1/A/C, http://host2/A/C/D, http://host3/A/B/D, \n'),
+         ('file URLs with no common prefix (0)',
+          '0 file:///A/C file:///B/D',
+          ': file:///A/C, file:///B/D, \n'),
+         ('URLs with mixed protocols (0)',
+          '0 http://host/A/C file:///B/D gopher://host/A',
+          ': http://host/A/C, file:///B/D, gopher://host/A, \n'),
+         ('mixed paths and URLs (0)',
+          '0 z/A/B z/A http://host/A/C/D http://host/A/C',
+          ': ' + cwd + '/z/A/B, ' + cwd + '/z/A, ' + \
+          'http://host/A/C/D, http://host/A/C, \n'),
+         # Depth 1
+         ('normal use (1)',
+          '1 z/A/B z/A/B/file z/A z/A/C z/D/file z/D/E z/D/F z/D',
+          cwd + '/z: A/B, A, A/C, D/E, D/F, D, \n'),
+         ('identical dirs (1)',
+          '1 z/A z/A z/A z/A',
+          cwd + '/z/A: , \n'),
+         ('identical files (1)',
+          '1 z/A/file z/A/file z/A/file z/A/file',
+          cwd + '/z/A: file, \n'),
+         ('single dir (1)',
+          '1 z/A',
+          cwd + '/z/A: , \n'),
+         ('single file (1)',
+          '1 z/A/file',
+          cwd + '/z/A: file, \n'),
+         ('single URL (1)',
+          '1 http://host/A/C',
+          'http://host/A/C: , \n'),
+         ('URLs (1)',
+          '1 http://host/A/C http://host/A/C/D http://host/A/B/D',
+          'http://host/A: C, C/D, B/D, \n'),
+         ('URLs with no common prefix (1)',
+          '1 http://host1/A/C http://host2/A/C/D http://host3/A/B/D',
+          ': http://host1/A/C, http://host2/A/C/D, http://host3/A/B/D, \n'),
+         ('file URLs with no common prefix (1)',
+          '1 file:///A/C file:///B/D',
+          ': file:///A/C, file:///B/D, \n'),
+         ('URLs with mixed protocols (1)',
+          '1 http://host/A/C file:///B/D gopher://host/A',
+          ': http://host/A/C, file:///B/D, gopher://host/A, \n'),
+         ('mixed paths and URLs (1)',
+          '1 z/A/B z/A http://host/A/C/D http://host/A/C',
+          ': ' + cwd + '/z/A/B, ' + cwd + '/z/A, ' + \
+          'http://host/A/C/D, http://host/A/C, \n'),
+         ]
 
 # (re)Create the test directory
 if os.path.exists('z'):
@@ -61,10 +136,10 @@ os.mkdir('z/A/C')
 os.mkdir('z/D')
 os.mkdir('z/D/E')
 os.mkdir('z/D/F')
-os.mkdir('z/G')
-os.mkdir('z/G/H')
-os.mkdir('z/G/I')
 open('z/A/file', 'w').close()
+open('z/A/B/file', 'w').close()
+open('z/D/file', 'w').close()
+open('z/D/F/file', 'w').close()
 
 def _run_test(cmdline):
   if sys.platform == 'win32':
@@ -93,6 +168,7 @@ for n in range(len(tests)):
     failed = 1
   else:
     if output != tests[n][2]:
+      print output
       print 'FAIL:', test_name
       failed = 1
     else:
