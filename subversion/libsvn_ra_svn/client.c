@@ -335,16 +335,23 @@ static svn_error_t *ra_svn_open(void **sess, const char *url,
       conn = svn_ra_svn_create_conn(NULL, proc->out, proc->in, pool);
       conn->proc = proc;
 
+      /* Wait for the process after closing the files by registering
+       * the process cleanup before the file ones, as they are
+       * executed in LIFO order.  */
+      apr_pool_cleanup_register(pool, proc, cleanup_process,
+                                apr_pool_cleanup_null);
+
       /* APR pipe objects don't have a child cleanup handler.  Set one
        * up so child processes don't hold open the tunnel agent's
        * input and output.  Unfortunately, the child cleanup handler
        * will flush the child process's write buffer (APR gives no way
        * to avoid that); this means we have to be careful not to leave
        * stuff lying around in the write buffer between ra_lib
-       * calls. */
+       * calls.
+       *
+       * Also close the files when the pool is destroyed.  */
       apr_pool_cleanup_register(pool, proc->in, cleanup_file, cleanup_file);
       apr_pool_cleanup_register(pool, proc->out, cleanup_file, cleanup_file);
-      apr_pool_cleanup_register(pool, proc, cleanup_process, apr_pool_cleanup_null);
     }
   else
     {
