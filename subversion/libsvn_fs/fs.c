@@ -731,7 +731,7 @@ create_hooks (svn_fs_t *fs, const char *path)
       "# REPOS=${1}\n"
       "# REV=${2}\n"
       "#\n"
-      "# send-commit-emails.pl --repository ${REPOS} --rev ${REV}\n"
+      "# commit-email.pl ${REPOS} ${REV} commit-watchers@example.org\n"
       "# log-commit.py --repository ${REPOS} --revision ${REV}\n";
 
     apr_err = apr_file_write_full (f, contents, strlen (contents), &written);
