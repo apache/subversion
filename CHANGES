@@ -1,3 +1,51 @@
+Version 0.33.0 (released 13 November 2003, revision r7735)
+http://svn.collab.net/repos/svn/tags/0.33.0
+
+                              NOTICES:
+
+    1. This client may be incompatible with ra_dav servers <= 0.31.
+
+    2. In order to make commits more responsive, repository
+       deltification is no longer automatic.  However, you may want
+       to run deltification as a background process in your repository
+       post-commit hook.  For example, the new post-commit.tmpl file
+       recommends 'nice -2 svnadmin deltify "$REPOS" -r "$REV" &'.
+
+ User-visible changes:
+ * lose automatic deltification, but recommend it in post-commit (r7695, #1573)
+ * new configuration and authn/authz support in ra_svn (r7604, r7601)
+ * much faster checkouts and updates, over both svn:// and http:// (#1429)
+ * new partial-authz feature: checkouts/updates just skip unauthorized items
+ * new 'use-commit-times = yes' config option to use commit-time timestamps
+ * new 'svnadmin hotcopy' command, like hot-backup.py (#1567)
+ * fix Win32 "access denied" error in renames (r7598, #1576)
+ * unnecessary working copy tree locks now avoided, to save time (#1245)
+ * Compatibility changes:
+    - lose ra_dav compatibility with servers 0.31 and earlier
+    - lose support for working copy format "1" (not created for over a year)
+ * 'svn diff' and other read-only actions now work in read-only working copies
+ * 'svn blame -rX' now does the intuitive thing
+ * 'svn log' output headers now say "rXXXX | " instead of "rev XXXX:  "
+ * 'svnversion' no longer stymied by svn:externals
+ * new 'svn pd' alias for 'svn propdel'
+ * '-rCOMMITTED' keyword now works on more commands
+ * minor changes to output of 'svn ls -v' and 'svn st -v' (r7530)
+ * 'svn log --xml' now obeys the '-q' flag (r7555)
+ * cvs2svn.py bugfixes, especially issue #1440
+ * book and documentation updates
+ * many other enhancements, minor features, and bugfixes not listed here
+
+ Developer-visible changes:
+ * repair text- and prop-time in .svn/entries if spuriously wrong (r7565)
+ * speed up keyword translation (r7502)
+ * two new editor functions, absent_file() and absent_directory()
+ * ra_dav checkouts/updates no longer do O(n) number of GET, PROPFIND requests
+ * new svn_io_temp_dir function, will morph to apr_temp_dir_get soon
+ * new svn_io_file_close wrapper for apr_file_close
+ * new helper scripts for testing, see tools/test-scripts/svntest/
+ * many other changes not listed here
+
+
 Version 0.32.1 (released 23 October 2003, revision 7497)
 http://svn.collab.net/repos/svn/tags/0.32.1
 
