@@ -8,18 +8,25 @@ SUBDIRS = tests-common               \
           libsvn_subr                \
           libsvn_delta               \
           libsvn_wc                  \
+          libsvn_client              \
           libsvn_ra_dav              \
           @LIBSVN_FS@                \
           @APACHE_MODULES@
 
 ## Include these extra files when building `dist' target
 
-EXTRA_DIST = LICENSE \
+EXTRA_DIST = LICENSE                   \
 	     include/svn_types.h       \
              include/svn_string.h      \
-             include/svn_wc.h          \
              include/svn_svr.h         \
              include/svn_hash.h        \
              include/svn_error.h       \
-             include/svn_parse.h
-
+             include/svn_parse.h       \
+             include/svn_delta.h       \
+             include/svn_fs.h          \
+             include/svn_wc.h          \
+             include/svn_client.h      \
+             include/svn_io.h          \
+             include/svn_path.h        \
+             include/svn_ra.h          \
+             include/svn_xml.h
