@@ -18,7 +18,6 @@ AC_INIT([subversion],
         [esyscmd(python build/getversion.py subversion/include/svn_version.h)],
         [http://subversion.tigris.org/])
 
-dnl AC_CONFIG_SRCDIR is *required*;  sanity-checks that our src dir exists.
 AC_CONFIG_SRCDIR(subversion/include/svn_types.h)
 AC_CONFIG_AUX_DIR(ac-helpers)
 
@@ -57,9 +56,6 @@ sinclude(ac-helpers/libtool.m4)
 dnl Generate config.nice early (before the args are munged)
 SVN_CONFIG_NICE(config.nice)
 
-dnl AC_CONFIG_HEADER causes `autoheader' to produce svn_private_config.h.in for us.
-dnl   (We can add custom defines by creating ./acconfig.h if we wish.)
-AC_CONFIG_HEADER(subversion/svn_private_config.h)
 
 dnl Check for programs ---------------------
 
@@ -734,7 +730,9 @@ AC_SUBST(INCLUDE_OUTPUTS)
 
 dnl Final step:  create the Makefile ----------------------------
 
+AC_CONFIG_HEADER(subversion/svn_private_config.h)
 AC_CONFIG_FILES([Makefile])
+AC_CONFIG_COMMANDS(mkdir-init, [make mkdir-init])
 
 SVN_CONFIG_SCRIPT(svn-config)
 SVN_CONFIG_SCRIPT(tools/backup/hot-backup.py)
@@ -747,11 +745,6 @@ SVN_CONFIG_SCRIPT(tools/hook-scripts/propchange-email.pl)
 SVN_CONFIG_SCRIPT(subversion/bindings/swig/perl/native/Makefile.PL)
 
 AC_OUTPUT
-
-
-dnl Create all of the build directories
-make mkdir-init
-
 
 dnl  Print warning messages about what we did and didn't configure at the 
 dnl  end, where people will actually see them.
