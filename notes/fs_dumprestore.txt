@@ -52,154 +52,6 @@ would be stored in our dump format.
     The history values can be non-existent (meaning the node is
     completely new), or can have a value of {revision, path}.
 
------------------------------------------------------------------
-
-# PROPOSAL NUMBER 1
-
-# Okay, here's my first draft of a binary format for a filesystem
-# dump.  As mentioned before, it contains nothing but the abstract
-# structure of the filesystem -- independent of any node-id schema or
-# database back-end.  All of the data in this file can be acquired by
-# public function calls into svn_fs.h.  Similarly, one hopes that the
-# parser of this file can *rebuild* the fs using only public svn_fs.h
-# routines.
-
-# As gstein suggested, we're using rfc822-style headers to label
-# logical chunks of data.
-
-# The thing that makes this format -Large- is the fact that we're
-# storing bubble-up information.  Every bubbled-up directory is in
-# here, complete with node-ids.
-
-# Here is what a node looks like:
-
-# Each node has a unique ID, an opaque svn_fs_id_t.  By using
-# svn_fs_unparse_id, we can get a unique string_t blob to write out.
-# Later on, when something parses this file, the blob is opaque and
-# meaningless, but still acts as a unique identifier when rebuilding
-# a filesystem.
-Node-id-length:  13
-[node-id follows]
-
-# Where this node was created, and its kind.
-Revision: 1422
-Path:  foo/bar/baz/bop
-Node-kind: file | dir
-
-# This node was deleted in this revision, OR,
-# This node was added in this revision -- possibly with copy history, OR
-# This node was changed in this revision.
-#
-#   note1:  if added and Path already exists, infer a replacement.
-#   note2:  'changed' field is *only* so we detect pure bubble-up nodes;
-#           bubbled-up nodes won't have it at all.
-Action:  deleted | added | changed
-
-# Was this node copied from another revision and path?
-Copied-from: [revision, path]
-
-# For property lists, I'm reusing the same hashtable-on-disk format
-# that we currently use to write propfiles.  It's a simple way of
-# mapping const char * -> svn_string_t *.  It's human readable
-# (assuming your values aren't binary data), and most importantly, we
-# already have a parser for this format!
-Node-properties:
-K 12
-svn:keywords
-V 15
-LastChangedDate
-K 14
-svn:executable
-V 2
-on
-END
-
-# If the node is a file, then we store its fulltext like so:
-Text-checksum: [md5 checksum on fulltext]
-Content-length:  N
-[N bytes of data follow]
-
-# If the node is a directory, then we give a list of dirents.  I
-# realized that this is just another hashtable like our props, mapping
-# (const char *) names to (svn_string_t *) node-ids.  So it makes
-# sense to use the same hash-on-disk format here as well.
-Directory-entries:
-K 6
-README
-V 8
-[some node id]
-K 10
-autogen.sh
-V 9
-[some node id]
-END
-
-
-# Here's what a revision looks like, pretty simple.
-Revision-number:  1422
-Revision-root-node:  ID
-Revision-properties: 
-...
-...
-...
-END
-
-----------------------------------------------------------------
-
-# PROPOSAL NUMBER 2
-
-# This format is much, much smaller in terms of disk space.  It
-# doesn't mention node-ids at *all*, because it leaves out *all*
-# bubble-up nodes.  Really, it's essentially what an editor would
-# output during a commit: only changed nodes.  Directories don't list
-# entries at all.
-
-# The tradeoff here is that it's more work to reconstruct a particular
-# revision from the middle of a dumpfile.  For example, if I have a
-# dumpfile for revisions 1 to 500, and somebody wants to reconstruct
-# (load) revision 300 into a repository, the *only* way to do this is
-# by replaying commits 1-299 into some temporary repository.
-
-# Where this node was created, and its kind.
-Node-revision: 1422
-Node-path:  foo/bar/baz/bop
-Node-kind: file | dir
-
-# No need for 'changed' verb:  that was only for distinguishing
-# between bubble-up dirs and dirs with changed props.
-Node-action:  deleted | added
-
-# Was this node copied from another revision and path?
-Copied-from: [revision, path]
-
-# Property list.
-Node-properties:
-K 12
-svn:keywords
-V 15
-LastChangedDate
-K 14
-svn:executable
-V 2
-on
-END
-
-# If the node is a file, then we store its fulltext like so:
-Node-checksum: [md5 checksum on fulltext]
-Content-length:  N
-[N bytes of data follow]
-
-# If the node is a directory, then we add nothing.  No need for dirents.
-
-
-# Here's what a revision looks like.  No root-node-id needed.
-Revision-number:  1422
-Revision-properties: 
-...
-...
-...
-END
-
 
 ------------------------------------------------------------------------
 Refinement of proposal #2:  (after discussion with gstein)
@@ -215,10 +67,54 @@ by the "END" tag at the end of the prophash.  In the case of a
 directory node or a revision, only the prophash will be present in the
 content.
 
+-----------------------------------------------------------------
+
+SVN DUMPFILE VERSION 1 FORMAT
+
+  A single revision record is followed by a variable number of node
+  records that changed in the revision.  Fields in [braces] are optional.
+
+Revision-number:  N
+[Content-checksum:  blob]
+Content-length: L
+
+...N bytes of property data, terminated by END.  If no props, then
+just the word END.
+
+Node-path: /absolute/path/to/node/in/filesystem
+Node-rev: N  (1)
+Node-kind:  file | dir
+[Node-action: add | delete | replace] (2)
+[Copied-from: X, path ]
+[Copy-source-checksum: blob] (3) 
+[Content-checksum:  blob]
+Content-length: Y
+
+... Y bytes of content data, divided into a 'props' and 'text'
+section.  The word "END" divides the two sections no matter what:  if
+there are no props, then the content begins with "END";  if there is
+no text, the content finishes with "END".
+
+
+
+Notes:
+
+(1) this value N better be the same N in the last revision record we
+    saw, otherwise something is wrong.
+
+(2) the absence of this field implies that we're *modifying* the path,
+    that it must already exist in the previous revision.
+
+(3) this is a checksum of the source of the copy.  a loader process
+    can use this checksum to determine that the copyfrom path/rev
+    already present in a filesystem is really the *correct* one to use.
+
+-----------------------------------------------------------------
+EXAMPLE
+
 Here's an example of revision 1422, whereby I added a new directory
 "baz", added a new file "bop" inside it, and modified the file "foo.c":
 
----------------------------
 
 Revision-number: 1422
 Content-length: 74
@@ -234,7 +130,7 @@ Added two files, changed a third.
 END
 
 Node-path: /bar/baz
-Node-revision: 1422
+Node-rev: 1422
 Node-kind: dir
 Node-action: added
 Content-checksum:  oj3eu729
@@ -247,7 +143,7 @@ TAGS
 END
 
 Node-path: /bar/baz/bop
-Node-revision: 1422
+Node-rev: 1422
 Node-kind: file
 Node-action: added
 Content-checksum:  bzz35te7
@@ -266,7 +162,7 @@ Here is the text of the newly added 'bop' file.
 Whee.
 
 Node-path: /bar/foo.c
-Node-revision: 1422
+Node-rev: 1422
 Node-kind: file
 Node-action: added
 Content-checksum:  Ae73te7et
@@ -275,8 +171,5 @@ Content-length: 105
 END
 Here is the fulltext of my change to an existing /bar/foo.c.
 Notice that this file has no properties.
-
-
-
 
 
