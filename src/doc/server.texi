@@ -52,20 +52,17 @@ and the @dfn{Main Subversion} library.
   @end itemize
 @end itemize
 
+The @dfn{Subversion Filesystem} implements a hierarchical file system,
+which supports atomic changes to arbitrary groups of files, and records
+the complete history of the tree, including directory and file contents.
 
-The @dfn{Subversion Filesystem} (abbreviated: @dfn{svn_fs}) gives us an
-programmatic interface to talk about the storage and versioning of files
-in a repository -- independent of the actual means of storage.
-
-Like any typical UNIX-like filesystem, files are stored in a tree
-structure.  However, while CVS uses the actual UNIX filesystem to hold a
-repository, svn_fs implements filesystem objects abstractly.  This not
-only allows us to guarantee atomic writes to the repository, but also
-allows us to store @dfn{properties} (or ``meta-data'') with each file,
-directory, directory entry, and version number.  (For example, some
-useful properties might be @{author, creation date, modification date,
-Access Control List (ACL), file type (text, binary), file encoding,
-...@}.)
+While CVS uses the UNIX filesystem to hold a repository, svn_fs
+implements filesystem objects abstractly.  This allows us to store
+@dfn{properties} (or ``meta-data'') with each file, directory, directory
+entry, and version number.  For example, some useful properties might be
+@{author, creation date, modification date, Access Control List (ACL),
+file type (text, binary), file encoding, ...@}.  Similarly, a version in
+a repository's history can store the log message as a property.
 
 @subsection Schema
 
@@ -77,7 +74,7 @@ technical description of these terms.
 @c This is taken from jimb's very first Subversion spec!
 @c Is there some standardized notation for describing schemas like this?
 @c <jimb>
-
+ 
 @quotation
 
 A @dfn{text string} is a string of Unicode characters which is
@@ -210,55 +207,53 @@ A @dfn{diff} is a standard GNU diff, a textual context diff.
 A @dfn{delta} is a structure that describes a difference between two
 file trees.  For a detailed discussion, @xref{Protocol}.
 
-A @dfn{skelta} is a identical to a delta, but smaller.  It mentions only
-the files being changed, but does @emph{not} contain the actual diffs.
-This data type is for fast network negotiation (see the @code{submit ()}
-call below).
+A @dfn{skelta} A @dfn{skelta} is the skeleton of a delta: while it does
+indicate which files are changed, it does not describe the specific
+changes to the files' text.  This datatype allows the filesystem to
+detect conflicts between transactions before the client has computed or
+transmitted the (possibly large) textual deltas.
 
 A @dfn{token} is a token used to represent a write transaction in
 progress.
 
 
-@subsubsection Basic Reading
-
-There are two functions to retrieve information from the filesystem,
-designed to be fast and convenient for any process using svn_fs.
+@subsubsection Reading History
 
 @table @code
 @item ver latest (user)
  returns the latest global version of a repository's tree
-@item fs_obj read (user, version, path)
- if path is a file, return full contents in fs_obj;@*
- if path is a directory, return list of directory entries in fs_obj
+@item proplist get_ver_proplist(user, ver)
+  return all properties of a version
+@item propnames get_ver_propnames(user, ver)
+  return all property keys for a version
+@item char *get_ver_prop(user, ver, propname)
+  return the value of @emph{propname} for a version (such as the log message)
 @end table
 
 
-@subsubsection Property Reading
+@subsubsection Reading Nodes
 
-There are a total of nine functions for retrieving information about the
+These are routines for retrieving information about the
 properties of a file, dirent, or dir.
 
 @table @code
+@item fs_obj read (user, version, path)
+ if path is a file, return full contents in fs_obj;@*
+ if path is a directory, return list of directory entries in fs_obj
 @item char *get_node_prop(user, ver, path, propname)
   return the value of @emph{propname} for a file or directory
 @item char *get_dirent_prop(user, ver, path, propname)
   return the value of @emph{propname} for a directory entry
-@item char *get_ver_prop(user, ver, propname)
-  return the value of @emph{propname} for a version (such as the log message)
 @item proplist get_node_proplist(user, ver, path)
   return all properties of a file or directory
 @item proplist get_dirent_proplist(user, ver, path)
   return all properties of a directory entry
-@item proplist get_ver_proplist(user, ver)
-  return all properties of a version
 @item propnames get_node_propnames(user, ver, path)
   return all property keys for a file or directory
 @item propnames get_node_propnames(user, ver, path)
   return all property keys for a file or directory
 @item propnames get_dirent_propnames(user, ver, path)
   return all property keys for a directory entry
-@item propnames get_ver_propnames(user, ver)
-  return all property keys for a version
 @end table
 
 
@@ -277,7 +272,7 @@ properties of a file, dirent, or dir.
 @end table
 
 
-@subsubsection Basic Writing
+@subsubsection Writing
 
 If a program needs to modify a repository's filesystem in any way (even
 if just modifying properties), it must do three things:
@@ -295,11 +290,11 @@ if just modifying properties), it must do three things:
 @table @code
 @item token submit (user, skelta)
   ask filesystem's lock manager for approval of skelta; returns either a
-  transaction token or failure.  A skelta is used to speed this
-  round-trip over the network.
-@item write (user, delta, token)
+  transaction token or failure.  A skelta is used so that the caller can
+  check a transaction for conflicts without having to use text deltas.
+@item ver write (user, delta, token)
   actually write the delta into the filesystem
-@item abandon (user, token)
+@item bool abandon (user, token)
   tell lock manager that the delta will @emph{not} be written (despite
   previous approval)
 @end table
@@ -311,19 +306,11 @@ explained in the next section.
 @c -----------------
 @subsection Locking
 
-The Subversion Filesystem has a locking mechanism built into it.
+The Subversion Filesystem has a locking mechanism.
 
-The locking system was designed to have these features:
-
-@enumerate
-@item
-    There can be any number of concurrent filesystem @dfn{readers}, and a
-    reader never has to wait for any other process.
-@item
-    There can any number of concurrent filesystem @dfn{writers},
-    provided that their changes do not directly conflict.  When writers
-    @emph{do} need to wait, the waiting is kept to an absolute minimum.
-@end enumerate
+The locking mechanism deals with @dfn{readers} and @dfn{writers}.
+Readers never have to wait for writers;  writer only have to wait for
+other writers whose changes conflict with theirs.
 
 @subsubsection Read Locks
 
@@ -342,8 +329,7 @@ stumble upon an unfinished tree.
 Each Subversion filesystem has a process called a @dfn{lock manager}.
 The lock manager isn't always running; when a server process wishes to
 execute a @code{write()} on the filesystem, it must first determine if a
-lock manager is running.  If not, it starts one and speaks to it via
-IPC.
+lock manager is running.  If not, it creates one.
 
 @example
 
@@ -438,69 +424,20 @@ For the initial release of Subversion,
 @end itemize
 
 
+@subsection Multiplexing
+
 The Main Subversion Library (@dfn{svn_main}), in its simplest sense,
 acts a basic multiplexer for the repository API calls coming from the
 Subversion client.  (@xref{The repository access library}.)
 
-Specifically, note that all of the client's 
+Specifically, note that all of the client's calls into the repository
+begin with a @code{repos} argument.  The Main Subversion Library
+provides the exact same API as the client repository library;  when it
+receives the client's function call, it examines this argument, locates
+a particular repository on disk, and then makes the filesystem
+call.
 
-
-
-In general, it provides an API that maps to CVS concepts whereever
-possible.
-
-A @dfn{repository} (@dfn{repos}) represents the name of a particular
-repository. 
-
-
-
-@subsection Methods
-
-The Subversion server makes itself useful to clients by providing
-@dfn{methods}.  This term is used intentionally, because it lines up
-well with our initial implementation of the network layer (done with
-Apache and custom HTTP "methods", @xref{Protocol}.)
-
-@table @code
-@item available_methods ()
-  return a list of methods that the server supports 
-@end table
-
-@subsection Basic Methods
-
-These are the basic methods made available to clients.
-
-@table @code
-@item checkout (repository, version, path)
-  grab a working copy of a section of the filesystem, rooted at
-  @emph{path}
-@item commit (repository, delta)
-  check a delta object into the repository (the delta is generated by
-  the client)
-@end table
-
-@subsection Simple Filesystem Reads
-
-Here are some methods for doing quick, easy reads from the Subversion
-filesystem;  they're essentially identical to the direct Filesystem
-calls, except that they require the name of a specific repository as the
-first argument.
-
-@table @code
-@item latest (repository)
- returns the latest global version of the repository
-@item read (repository, version, path)
- if path is a file, return full text (which includes property stream);@*
- if path is a directory, return list of directory entries.
-@item get_node_props (repository, version, path)
- return a list of all props of a file or directory entry
-@item get_version_props (repository, version)
- return a list of all props of a version
-@item read_node_prop (repository, version, path, propname)
- read a particular property of a file or directory entry
-@item read_version_prop (repository, version, propname)
- read a particular property of a version (such as a log)
-@end table
+@subsection Policy Enforcement
 
 
 @subsection Plug-Ins
@@ -515,8 +452,8 @@ loaded into svn_main's address space.  This term is used intentionally
 Each plug-in can potentially implement a new set of server "methods"
 (@xref{Methods}.)
 
-When starting up, svn_main will read a configuration file @dfn{svn.conf}
-(much like Apache's @emph{httpd.conf}) which, among other things, will
+When starting up, svn_main will read a configuration file @file{svn.conf}
+(much like Apache's @file{httpd.conf}) which, among other things, will
 specify a list of available plug-ins, the new methods they provide, and
 their actual locations on disk.  If and when a client requests a
 particular method, svn_main then knows which plug-in to "auto-load" as
