@@ -45,7 +45,7 @@ svn_error_t *svn_time_from_cstring (apr_time_t *when, const char *data,
                                     apr_pool_t *pool);
 
 /** Convert @a when to a <tt>const char *</tt> representation allocated
- * in @a pool, suitable for human display.
+ * in @a pool, suitable for human display in UTF8.
  */
 const char *svn_time_to_human_cstring (apr_time_t when, apr_pool_t *pool);
 

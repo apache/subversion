@@ -1078,9 +1078,16 @@ do_date (svnlook_ctxt_t *c, apr_pool_t *pool)
     {
       /* Convert the date for humans. */
       apr_time_t aprtime;
+      const char *time_native;
+      const char *time_utf8;
       
       SVN_ERR (svn_time_from_cstring (&aprtime, prop_value->data, pool));
-      printf ("%s", svn_time_to_human_cstring (aprtime, pool));
+
+      time_utf8 = svn_time_to_human_cstring (aprtime, pool);
+      
+      SVN_ERR (svn_utf_cstring_from_utf8 (&time_native, time_utf8, pool));
+      
+      printf ("%s", time_native);
     }
 
   printf ("\n");

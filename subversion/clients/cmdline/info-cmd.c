@@ -39,7 +39,12 @@ svn_cl__info_print_time (apr_time_t atime,
                          const char *desc,
                          apr_pool_t *pool)
 {
-  printf ("%s: %s\n", desc, svn_time_to_human_cstring (atime,pool));
+  const char *time_utf8;
+  const char *time_stdout;
+
+  time_utf8 = svn_time_to_human_cstring (atime, pool);
+  SVN_ERR (svn_utf_cstring_from_utf8 (&time_stdout, time_utf8, pool));
+  printf ("%s: %s\n", desc, time_stdout);
 }
 
 

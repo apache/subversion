@@ -88,7 +88,7 @@ svn_subst_eol_style_from_value (svn_subst_eol_style_t *style,
 
 /* A helper function to convert the date property to something suitable for 
    printing out.  If LONG_P is TRUE, use the long format, otherwise use a 
-   shorter one. */
+   shorter one.  Returns a UTF8 encoded cstring. */
 static svn_error_t *
 date_prop_to_human (const char **human, svn_boolean_t long_p, apr_time_t when,
                     apr_pool_t *pool)
