@@ -94,7 +94,7 @@ call_authorization_hooks (svn_svr_policies_t *policy, svn_string_t *repos,
           authorized = (*my_hook) (repos, user, action, path);
         }
 
-      if (! authorized)
+      if (! authorized) 
         {
           return NULL;  /* no point in calling more auth_hooks! */
           /* TODO: return a more detailed description of failure? */

@@ -69,9 +69,10 @@ svn_svr_init (svn_string_t *config_file)
 
   /* builds a list of general security policies, */
 
-  /* use libltdl to load all server plugins, then look up the address
-     of each plugin structure in each plugin library, and store them
-     in a list */
+  /* use libltdl to load all server plugins, 
+     and call pluginname_init (&my_policies) in each one;
+     the result is a list of plugins inside my_policies
+  */
 
 
   return &my_policies;
@@ -79,6 +80,15 @@ svn_svr_init (svn_string_t *config_file)
 
 
 
+/* Add a plugin structure to a server policy structure.
+   Called by each plugin's init() routine. */
+
+void
+svn_svr_register_plugin (svn_svr_policies_t *policy,
+                         svn_svr_plugin_t *new_plugin)
+{
+  /* add new_plugin to policy->plugins[] */
+}
 
 
 
