@@ -28,7 +28,6 @@ BuildPreReq: apache >= %{apache_version}
 BuildPreReq: apache-devel >= %{apache_version}
 BuildPreReq: apache-libapr-devel >= %{apache_version}
 BuildPreReq: autoconf >= 2.53
-BuildPreReq: automake >= 1.6.3
 BuildPreReq: db4-devel >= 4.0.14
 BuildPreReq: expat-devel
 BuildPreReq: gdbm-devel
