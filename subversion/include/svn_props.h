@@ -276,6 +276,14 @@ svn_error_t *svn_prop_diffs (apr_array_header_t **propdiffs,
  */
 #define SVN_PROP_REVISION_ORIG_DATE  SVN_PROP_PREFIX "original-date"
 
+/*
+ * This is a list of all revision properties.
+ */ 
+#define SVN_PROP_REVISION_ALL_PROPS SVN_PROP_REVISION_AUTHOR, \
+                                    SVN_PROP_REVISION_LOG, \
+                                    SVN_PROP_REVISION_DATE, \
+                                    SVN_PROP_REVISION_ORIG_DATE,
+
 /** @} */
 
 

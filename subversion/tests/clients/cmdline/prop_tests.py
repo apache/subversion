@@ -549,6 +549,26 @@ def inappropriate_props(sbox):
                                      'svn:externals',
                                      'foo http://host.com/repos', iota_path)
 
+  svntest.actions.run_and_verify_svn('Illegal target', None,
+                                     svntest.SVNAnyOutput, 'propset',
+                                     'svn:author', 'socrates', iota_path)
+  
+  svntest.actions.run_and_verify_svn('Illegal target', None,
+                                     svntest.SVNAnyOutput, 'propset',
+                                     'svn:log', 'log message', iota_path)
+ 
+  svntest.actions.run_and_verify_svn('Illegal target', None,
+                                     svntest.SVNAnyOutput, 'propset',
+                                     'svn:date', 
+				     'Tue Jan 19 04:14:07 2038',
+				     iota_path)
+  
+  svntest.actions.run_and_verify_svn('Illegal target', None,
+                                     svntest.SVNAnyOutput, 'propset',
+                                     'svn:original-date',
+				     'Thu Jan  1 01:00:00 1970',
+				     iota_path)
+
   # Status unchanged
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
