@@ -57,17 +57,11 @@ main (int argc, char **argv)
 
   err = svn_ra_dav_init(0, pool, &plugin);
   if (err)
-    {
-      svn_handle_error (err, stdout, 0);
-      return 1;
-    }
+    goto error;
 
   err = (*plugin->open)(&session_baton, url, pool);
   if (err)
-    {
-      svn_handle_error (err, stdout, 0);
-      return 1;
-    }
+    goto error;
 
   /* ### hmm... */
   repos = url;
@@ -90,6 +84,7 @@ main (int argc, char **argv)
   if (err)
     goto error;
 
+  /* ### this should probably be inside of do_checkout */
   err = (*editor->close_edit)(edit_baton);
   if (err)
     goto error;

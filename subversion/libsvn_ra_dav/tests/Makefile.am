@@ -1,13 +1,24 @@
 ## Makefile.in is generated from this by automake.
 
-noinst_PROGRAMS = ra-dav-test
+noinst_PROGRAMS = ra-dav-test ra-commit
 ra_dav_test_SOURCES = ra-dav-test.c
+
+ra_commit_SOURCES = ra-commit.c
 
 ## Flags needed when compiling:
 INCLUDES = -I../../include -I../../../apr/include
 
 ## Libraries this binary depends upon:
 ra_dav_test_LDADD = ../libsvn_ra_dav.la                     \
+                    ../../libsvn_wc/libsvn_wc.la            \
+                    ../../libsvn_subr/libsvn_subr.la        \
+                    ../../libsvn_delta/libsvn_delta.la      \
+                    ../../../expat-lite/libexpat.la         \
+                    ../../../neon/libneon.la                \
+                    ../../../apr/libapr.a
+
+## Libraries this binary depends upon:
+ra_commit_LDADD = ../libsvn_ra_dav.la                     \
                     ../../libsvn_wc/libsvn_wc.la            \
                     ../../libsvn_subr/libsvn_subr.la        \
                     ../../libsvn_delta/libsvn_delta.la      \
