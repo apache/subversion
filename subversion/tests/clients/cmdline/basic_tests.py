@@ -989,6 +989,24 @@ def basic_delete(sbox):
     print "Forced delete 5 failed"
     return 1
 
+  # Deleting already removed from wc versioned item with --force
+  iota_path = os.path.join(wc_dir, 'iota')
+  os.remove(iota_path)
+  stdout_lines, stderr_lines = svntest.main.run_svn(None, 'rm', '--force',
+                                                    iota_path)
+  if len (stderr_lines) != 0:
+    print "Forced delete 6 failed"
+    return 1
+  # and without --force
+  gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
+  os.remove(gamma_path)
+  stdout_lines, stderr_lines = svntest.main.run_svn(None, 'rm',
+                                                    gamma_path)
+  if len (stderr_lines) != 0:
+    print "Unforced delete 1 failed"
+    return 1
+  
+
   # check status
   status_list = svntest.actions.get_virginal_status_list(wc_dir, '1')
   for item in status_list:
@@ -1004,7 +1022,9 @@ def basic_delete(sbox):
         or item[0] == os.path.join(E_path, 'alpha')
         or item[0] == os.path.join(E_path, 'beta')
         or item[0] == F_path
-        or item[0] == sigma_parent_path):
+        or item[0] == sigma_parent_path
+        or item[0] == iota_path
+        or item[0] == gamma_path):
       item[3]['status'] = 'D '
   expected_output_tree = svntest.tree.build_generic_tree(status_list)
   if svntest.actions.run_and_verify_status (wc_dir, expected_output_tree):
@@ -1036,6 +1056,25 @@ def basic_delete(sbox):
     return 1
   if can_cd_to_dir(X_path):
     print "Failed to remove added dir"
+    return 1
+
+  # Deleting unversioned file explicitly
+  foo_path = os.path.join(wc_dir, 'foo')
+  svntest.main.file_append(foo_path, 'unversioned foo')
+  stdout_lines, stderr_lines = svntest.main.run_svn(None, 'rm', '--force',
+                                                    foo_path)
+  if len (stderr_lines) != 0:
+    print "Forced delete 7 failed"
+    return 1
+  if can_open_file(foo_path):
+    print "Failed to remove unversioned file foo"
+    return 1
+
+  # Deleting non-existant unversioned item
+  stdout_lines, stderr_lines = svntest.main.run_svn(None, 'rm', '--force',
+                                                    foo_path)
+  if len (stderr_lines) != 0:
+    print "Forced delete 8 failed"
     return 1
 
 
