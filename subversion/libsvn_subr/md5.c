@@ -21,6 +21,13 @@
 
 
 
+/* The MD5 digest for the empty string. */
+const char svn_md5_empty_string_digest[] = {
+  212, 29, 140, 217, 143, 0, 178, 4, 233, 128, 9, 152, 236, 248, 66, 126
+};
+
+
+
 const char *
 svn_md5_digest_to_cstring (unsigned char digest[], apr_pool_t *pool)
 {
@@ -36,4 +43,15 @@ svn_md5_digest_to_cstring (unsigned char digest[], apr_pool_t *pool)
   str[i*2] = '\0';
 
   return str;
+}
+
+
+svn_boolean_t
+svn_md5_digests_match (unsigned const char d1[], unsigned const char d2[])
+{
+  static const unsigned char zeros[MD5_DIGESTSIZE] = { 0 };
+
+  return ((memcmp (d1, zeros, MD5_DIGESTSIZE) == 0)
+          || (memcmp (d2, zeros, MD5_DIGESTSIZE) == 0)
+          || (memcmp (d1, d2, MD5_DIGESTSIZE) == 0));
 }

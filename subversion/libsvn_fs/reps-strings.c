@@ -47,27 +47,6 @@ static int rep_is_mutable (svn_fs__representation_t *rep, const char *txn_id)
 }
 
 
-/* The MD5 digest for the empty string. */
-static const char empty_digest[] = {
-  212, 29, 140, 217, 143, 0, 178, 4, 233, 128, 9, 152, 236, 248, 66, 126
-};
-
-
-/* Compare digests D1 and D2, each MD5_DIGESTSIZE bytes long.  If
- * neither is all zeros, and they do not match, then return false.
- * Else return true.
- */
-static svn_boolean_t
-checksums_match (unsigned const char d1[], unsigned const char d2[])
-{
-  static const unsigned char zeros[MD5_DIGESTSIZE] = { 0 };
-
-  return ((memcmp (d1, zeros, MD5_DIGESTSIZE) == 0)
-          || (memcmp (d2, zeros, MD5_DIGESTSIZE) == 0)
-          || (memcmp (d1, d2, MD5_DIGESTSIZE) == 0));
-}
-
-
 /* Return a `fulltext' representation, allocated in POOL, which
  * references the string STR_KEY.
  * 
@@ -539,7 +518,8 @@ svn_fs__get_mutable_rep (const char **new_rep_key,
      we were provided was not mutable.  So, let's make a new
      representation and return its key to the caller. */
   SVN_ERR (svn_fs__bdb_string_append (fs, &new_str, 0, NULL, trail));
-  rep = make_fulltext_rep (new_str, txn_id, empty_digest, trail->pool);
+  rep = make_fulltext_rep (new_str, txn_id, svn_md5_empty_string_digest,
+                           trail->pool);
   SVN_ERR (svn_fs__bdb_write_new_rep (new_rep_key, fs, rep, trail));
 
   return SVN_NO_ERROR;
@@ -752,7 +732,7 @@ svn_fs__rep_contents (svn_string_t *str,
     apr_md5_final (checksum, &md5_context);
 
     SVN_ERR (svn_fs__bdb_read_rep (&rep, fs, rep_key, trail));
-    if (! checksums_match (checksum, rep->checksum))
+    if (! svn_md5_digests_match (checksum, rep->checksum))
       return svn_error_createf
         (SVN_ERR_FS_CORRUPT, NULL,
          "svn_fs__rep_contents: checksum mismatch on rep \"%s\":\n"
@@ -836,7 +816,7 @@ txn_body_read_rep (void *baton, trail_t *trail)
 
               SVN_ERR (svn_fs__bdb_read_rep (&rep, args->rb->fs,
                                              args->rb->rep_key, trail));
-              if (! checksums_match (checksum, rep->checksum))
+              if (! svn_md5_digests_match (checksum, rep->checksum))
                 return svn_error_createf
                   (SVN_ERR_FS_CORRUPT, NULL,
                    "txn_body_read_rep: checksum mismatch on rep \"%s\":\n"
@@ -1160,7 +1140,7 @@ rep_contents_clear (svn_fs_t *fs,
   if (str_key && *str_key)
     {
       SVN_ERR (svn_fs__bdb_string_clear (fs, str_key, trail));
-      memcpy (rep->checksum, empty_digest, MD5_DIGESTSIZE);
+      memcpy (rep->checksum, svn_md5_empty_string_digest, MD5_DIGESTSIZE);
       SVN_ERR (svn_fs__bdb_write_rep (fs, rep_key, rep, trail));
     }
   return SVN_NO_ERROR;
@@ -1600,7 +1580,7 @@ svn_fs__rep_undeltify (svn_fs_t *fs,
 
   apr_md5_final (digest, &context);
 
-  if (! checksums_match (rep->checksum, digest))
+  if (! svn_md5_digests_match (rep->checksum, digest))
     return svn_error_createf
       (SVN_ERR_FS_CORRUPT, NULL,
        "svn_fs__rep_undeltify: checksum mismatch on rep \"%s\":\n"
