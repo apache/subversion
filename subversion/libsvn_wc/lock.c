@@ -812,15 +812,8 @@ svn_wc_adm_open_anchor (svn_wc_adm_access_t **anchor_access,
 {
   const char *base_name = svn_path_basename (path, pool);
 
-  /* ### This check looks out of place here, perhaps it should be in
-     svn_path_canonicalize */
-  if ((strcmp (base_name, "..") == 0) || (strcmp (base_name, ".") == 0))
-    return svn_error_createf
-      (SVN_ERR_WC_BAD_PATH, NULL,
-       _("Path '%s' ends in '%s', which is unsupported for this operation"),
-       svn_path_local_style (path, pool), base_name);
-
-  if (svn_path_is_empty (path) || ! strcmp (path, "/"))
+  if (svn_path_is_empty (path)
+      || ! strcmp (path, "/") || ! strcmp (base_name, ".."))
     {
       SVN_ERR (do_open (anchor_access, NULL, path, write_lock, depth, FALSE,
                         cancel_func, cancel_baton, pool));

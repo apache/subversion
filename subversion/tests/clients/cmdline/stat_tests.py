@@ -728,12 +728,10 @@ def status_on_unversioned_dotdot(sbox):
   os.chdir(new_subdir)
   try:
     out, err = svntest.main.run_svn(1, 'st', '..')
-    matched = 0
     for line in err:
-      if re.match(".*which is unsupported for this operation", line):
-        matched = 1
+      if line.find('svn: \'..\' is not a working copy') != -1:
         break
-    if not matched:
+    else:
       raise svntest.Failure
   finally:
     os.chdir(saved_cwd)
