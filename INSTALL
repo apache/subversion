@@ -300,7 +300,7 @@ I.    BUILD REQUIREMENTS
 
       Windows users should just get the pre-built package:
 
-          http://www.gzip.org/zlib/contrib/zlib113-Win32.zip
+          http://www.gzip.org/zlib/contrib/zlib113-win32.zip
 
       The neon build scripts on Windows are set up to use those
       libraries.
