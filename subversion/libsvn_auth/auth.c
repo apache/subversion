@@ -80,8 +80,9 @@ struct svn_auth_iterstate_t
   int provider_idx;            /* the current provider (row) */
   svn_boolean_t got_first;     /* did we get the provider's first creds? */
   void *provider_iter_baton;   /* the provider's own iteration context */
-
+  void *last_creds;            /* the last set of credentials returned */
 };
+
 
 
 svn_error_t * 
@@ -189,6 +190,7 @@ svn_auth_first_credentials (void **credentials,
       iterstate->provider_idx = i;
       iterstate->got_first = TRUE;
       iterstate->provider_iter_baton = iter_baton;
+      iterstate->last_creds = creds;
       *state = iterstate;
     }
 
@@ -235,6 +237,7 @@ svn_auth_next_credentials (void **credentials,
       state->got_first = FALSE;
     }
 
+  state->last_creds = creds;
   *credentials = creds;
 
   return SVN_NO_ERROR;
@@ -242,9 +245,7 @@ svn_auth_next_credentials (void **credentials,
 
 
 svn_error_t *
-svn_auth_save_credentials (const char *cred_kind,
-                           void *credentials,
-                           svn_auth_baton_t *auth_baton,
+svn_auth_save_credentials (svn_auth_iterstate_t *state,
                            apr_pool_t *pool)
 {
   int i;
@@ -252,12 +253,10 @@ svn_auth_save_credentials (const char *cred_kind,
   provider_t *provider;
   svn_boolean_t save_succeeded = FALSE;
 
-  /* Get the appropriate table of providers for CRED_KIND. */
-  table = apr_hash_get (auth_baton->tables, cred_kind, APR_HASH_KEY_STRING);
-  if (! table)
-    return svn_error_createf (SVN_ERR_AUTH_NO_PROVIDER, NULL,
-                              "No provider registered for '%s' credentials.",
-                              cred_kind);
+  if (! state->last_creds)
+    return SVN_NO_ERROR;
+
+  table = state->table;
 
   /* Find a provider that can save the credentials. */
   for (i = 0; i < table->providers->nelts; i++)
@@ -265,7 +264,7 @@ svn_auth_save_credentials (const char *cred_kind,
       provider = APR_ARRAY_IDX(table->providers, i, provider_t *);
       if (provider->vtable->save_credentials)
         SVN_ERR (provider->vtable->save_credentials 
-                 (&save_succeeded, credentials,
+                 (&save_succeeded, state->last_creds,
                   provider->provider_baton, pool));
 
       if (save_succeeded)
@@ -275,8 +274,8 @@ svn_auth_save_credentials (const char *cred_kind,
   /* If all providers failed to save, throw an error. */
   if (! save_succeeded)                  
     return svn_error_createf (SVN_ERR_AUTH_PROVIDERS_EXHAUSTED, NULL,
-                              "%d provider(s) failed to save "
-                              "'%s' credentials.", i, cred_kind);
+                              "%d provider(s) failed to save credentials.",
+                              i);
 
   return SVN_NO_ERROR;
 }

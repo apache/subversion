@@ -53,6 +53,8 @@ typedef struct {
   const svn_ra_callbacks_t *callbacks;  /* callbacks to get auth data */
   void *callback_baton;
 
+  svn_auth_iterstate_t *auth_iterstate; /* state of authentication retries */
+
 } svn_ra_session_t;
 
 

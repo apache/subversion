@@ -52,42 +52,30 @@ static apr_status_t cleanup_session(void *sess)
 static int request_auth(void *userdata, const char *realm, int attempt,
                         char *username, char *password)
 {
-  void *a, *auth_baton;
-  const char *uname, *pword;
-  svn_ra_simple_password_authenticator_t *authenticator = NULL;
+  svn_error_t *err;
   svn_ra_session_t *ras = userdata;
+  svn_auth_cred_simple_t *creds;  
 
-  /* No authenticator callback?  Give up. */
-  if (! ras->callbacks->get_authenticator)
+  /* No auth_baton?  Give up. */
+  if (! ras->callbacks->auth_baton)
     return -1;
 
-  /* Only use two retries. */
-  if (attempt > 1) 
+  if (attempt == 0)
+    err = svn_auth_first_credentials ((void **) &creds,
+                                      &(ras->auth_iterstate), 
+                                      SVN_AUTH_CRED_SIMPLE,
+                                      ras->callbacks->auth_baton,
+                                      ras->pool);
+  else /* attempt > 0 */
+    err = svn_auth_next_credentials ((void **) &creds,
+                                     ras->auth_iterstate,
+                                     ras->pool);
+  if (err || ! creds)
     return -1;
-
-  /* Get an authenticator object. */
-  if (ras->callbacks->get_authenticator (&a, &auth_baton, 
-                                         svn_ra_auth_simple_password, 
-                                         ras->callback_baton,
-                                         ras->pool))
-    return -1;
-
-  /* Verify that we have a query callback. */
-  authenticator = (svn_ra_simple_password_authenticator_t *) a;      
-  if (! authenticator->get_user_and_pass)
-    return -1;
-
-  /* Use the authenticator to query for a username and password. */
-  if (authenticator->get_user_and_pass (&uname, &pword,
-                                        auth_baton, 
-                                        /* possibly force a user-prompt: */
-                                        attempt ? TRUE : FALSE,
-                                        ras->pool))
-    return -1;
-
+  
   /* ### silently truncates username/password to 256 chars. */
-  apr_cpystrn(username, uname, NE_ABUFSIZ);
-  apr_cpystrn(password, pword, NE_ABUFSIZ);
+  apr_cpystrn(username, creds->username, NE_ABUFSIZ);
+  apr_cpystrn(password, creds->password, NE_ABUFSIZ);
 
   return 0;
 }
