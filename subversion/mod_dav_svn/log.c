@@ -58,6 +58,20 @@ static void send_xml(struct log_receiver_baton *lrb, const char *fmt, ...)
 }
 
 
+/* If LRB->needs_header is true, send the "<S:log-report>" start
+   element and set LRB->needs_header to zero.  Else do nothing. */
+static void maybe_send_header(struct log_receiver_baton *lrb)
+{
+  if (lrb->needs_header)
+    {
+      send_xml(lrb,
+               DAV_XML_HEADER DEBUG_CR
+               "<S:log-report xmlns:S=\"" SVN_XML_NAMESPACE "\" "
+               "xmlns:D=\"DAV:\">" DEBUG_CR);
+      lrb->needs_header = FALSE;
+    }
+}
+
 /* This implements `svn_log_message_receiver_t'.
    BATON is a `struct log_receiver_baton *'.  */
 static svn_error_t * log_receiver(void *baton,
@@ -70,15 +84,7 @@ static svn_error_t * log_receiver(void *baton,
 {
   struct log_receiver_baton *lrb = baton;
 
-  if (lrb->needs_header)
-    {
-      /* Start the log report. */
-      send_xml(lrb,
-               DAV_XML_HEADER DEBUG_CR
-               "<S:log-report xmlns:S=\"" SVN_XML_NAMESPACE "\" "
-               "xmlns:D=\"DAV:\">" DEBUG_CR);
-      lrb->needs_header = FALSE;
-    }
+  maybe_send_header(lrb);
 
   send_xml(lrb,
            "<S:log-item>" DEBUG_CR
@@ -300,6 +306,7 @@ dav_error * dav_svn__log_report(const dav_resource *resource,
     }
   
   /* End the log report. */
+  maybe_send_header(&lrb);
   send_xml(&lrb, "</S:log-report>" DEBUG_CR);
 
   /* flush the contents of the brigade */
