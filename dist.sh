@@ -2,12 +2,9 @@
 
 #
 # USAGE: ./dist.sh -v VERSION -r REVISION [-rs REVISION-SVN] [-pr REPOS-PATH]
-#                  [-apr APR-PATH] [-apu APR-UTIL-PATH] 
-#                  [-api APR-ICONV-PATH] [-neon NEON-PATH]
-#                  [-apr-tag APR-TAG] [-apu-tag APR-UTIL-TAG] 
-#                  [-api-tag APR-ICONV-TAG] [-neon-tag NEON-TAG]
-#                  [-zip] [-sign] [-fetch]
-#                  [-alpha ALPHA_NUM|-beta BETA_NUM|-rc RC_NUM]
+#                  [-apr PATH-TO-APR ] [-apru PATH-TO-APR-UTIL] 
+#                  [-apri PATH-TO-APR-ICONV] [-neon PATH-TO-NEON]
+#                  [-zip] [-alpha ALPHA_NUM|-beta BETA_NUM|-rc RC_NUM]
 #
 #   Create a distribution tarball, labelling it with the given VERSION.
 #   The REVISION or REVISION-SVN will be used in the version string.
@@ -23,9 +20,9 @@
 #   specify the path to them with the -apr, -apru or -neon options.
 #   For example:
 #      ./dist.sh -v 1.1.0 -r 10277 -pr branches/1.1.x \
-#        -neon ~/in-tree-libraries/neon-0.24.7 \
+#        -apr -neon ~/in-tree-libraries/neon-0.24.7 \
 #        -apr ~/in-tree-libraries/httpd-2.0.50/srclib/apr \
-#        -apu ~/in-tree-libraries/httpd-2.0.50/srclib/apr-util/
+#        -apru ~/in-tree-libraries/httpd-2.0.50/srclib/apr-util/
 #
 #   When building a alpha, beta or rc tarballs pass the apppropriate flag
 #   followeb by the number for that releasse.  For example you'd do
@@ -40,13 +37,11 @@
 
 
 # A quick and dirty usage message
-USAGE="USAGE: ./dist.sh -v VERSION -r REVISION
-[-rs REVISION-SVN] [-pr REPOS-PATH]
-[-alpha ALPHA_NUM|-beta BETA_NUM|-rc RC_NUM]
-[-apr APR_DIR] [-apu APR_UTIL_DIR] [-api APR_ICONV_DIR] [-neon NEON_DIR]
-[-apr-tag APR_TAG] [-apu-tag APR_UTIL_TAG] [-api-tag APR_ICONV_TAG]
-[-neon-tag NEON_TAG]
-[-zip] [-sign] [-fetch]
+USAGE="USAGE: ./dist.sh -v VERSION -r REVISION \
+[-rs REVISION-SVN ] [-pr REPOS-PATH] \
+[-alpha ALPHA_NUM|-beta BETA_NUM|-rc RC_NUM] \
+[-apr APR_PATH ] [-apru APR_UTIL_PATH] [-apri APR_ICONV_PATH]
+[-neon NEON_PATH ] [-zip]
  EXAMPLES: ./dist.sh -v 0.36.0 -r 8278
            ./dist.sh -v 0.36.0 -r 8278 -pr trunk
            ./dist.sh -v 0.36.0 -r 8282 -rs 8278 -pr tags/0.36.0
@@ -65,15 +60,11 @@ do
          -r)  REVISION="$ARG" ;;
         -rs)  REVISION_SVN="$ARG" ;;
         -pr)  REPOS_PATH="$ARG" ;;
-        -rc)  RC="$ARG" ;;
+	-rc)  RC="$ARG" ;;
        -apr)  APR_PATH="$ARG" ;;
-       -apu)  APU_PATH="$ARG" ;;
-       -api)  API_PATH="$ARG" ;;
-   -apr-tag)  APR_TAG="$ARG" ;;
-   -apu-tag)  APU_TAG="$ARG" ;;
-   -api-tag)  API_TAG="$ARG" ;;
+       -apru) APRU_PATH="$ARG" ;;
+       -apri) APRI_PATH="$ARG" ;;
       -neon)  NEON_PATH="$ARG" ;;
-  -neon-tag)  NEON_TAG="$ARG" ;;
       -beta)  BETA="$ARG" ;;
      -alpha)  ALPHA="$ARG" ;;
           *)  ARG_PREV=$ARG ;;
@@ -84,21 +75,13 @@ do
   else
 
     case $ARG in
-      -v|-r|-rs|-pr|-beta|-rc|-alpha|-apr|-apr-tag|-apu|-apu-tag|-api|-api-tag|-neon|-neon-tag)
+      -v|-r|-rs|-pr|-beta|-rc|-alpha|-apr|-apru|-apri|-neon)
         ARG_PREV=$ARG
-        ;;
-      -fetch)
-        FETCH=1
-        ARG_PREV=""
-        ;;
-      -sign)
-        SIGN=1
-        ARG_PREV=""
         ;;
       -zip)
         ZIP=1
         ARG_PREV=""
-        ;;
+	;;
       *)
         echo " $USAGE"
         exit 1
@@ -139,54 +122,41 @@ if [ -z "$VERSION" ] || [ -z "$REVISION" ] ; then
   exit 1
 fi
 
-if [ -n "$FETCH" ]; then
-  if [ -z "$APR_PATH" -a -z "$APR_TAG" ]; then
-    APR_TAG='0.9.6'
-  fi
-  if [ -z "$APU_PATH" -a -z "$APU_TAG" ]; then
-    APU_TAG='0.9.6'
-  fi
-  if [ -z "$API_PATH" -a -z "$API_PATH" ]; then
-    API_TAG='0.9.6'
-  fi
-  if [ -z "$NEON_PATH" -a -z "$NEON_TAG" ]; then
-    NEON_TAG='0.24.7'
-  fi
-else
-  if [ -z "$APR_PATH" -a -z "$APR_TAG" ]; then
-    APR_PATH='apr'
-  fi
-  if [ -z "$APU_PATH" -a -z "$APU_TAG" ]; then
-    APU_PATH='apr-util'
-  fi
-  if [ -z "$API_PATH" -a -z "$API_PATH" ]; then
-    API_PATH='apr-iconv'
-  fi
-  if [ -z "$NEON_PATH" -a -z "$NEON_TAG" ]; then
-    NEON_PATH='neon'
-  fi
-
+if [ -z "$APR_PATH" ]; then
+  APR_PATH='apr'
 fi
 
-if [ -z "$APR_TAG" -a ! -d "$APR_PATH" ]; then
-  echo "Missing $APR_PATH directory.  Aborting."
-  echo " $USAGE"
-  exit 2
+if [ -z "$APRU_PATH" ]; then
+  APRU_PATH='apr-util'
 fi
-if [ -z "$APU_TAG" -a ! -d "$APU_PATH" ]; then
-  echo "Missing $APU_PATH directory.  Aborting."
-  echo " $USAGE"
-  exit 2
+
+if [ -z "$NEON_PATH" ]; then
+  NEON_PATH='neon'
 fi
-if [ -n "$ZIP" -a -z "$API_TAG" -a ! -d "$API_PATH" ]; then
-  echo "Missing $API_PATH directory.  Aborting."
-  echo " $USAGE"
-  exit 2
+
+if [ -z "$APRI_PATH" ]; then
+  APRI_PATH='apr-iconv'
 fi
-if [ -z "$NEON_TAG" -a ! -d "$NEON_PATH" ]; then
-  echo "Missing $NEON_PATH directory.  Aborting."
-  echo " $USAGE"
-  exit 2
+
+if [ ! -d "$APR_PATH" ]; then
+  echo "ERROR: '$APR_PATH' does not exist."
+  exit 1
+fi
+
+if [ ! -d "$APRU_PATH" ]; then
+  echo "ERROR: '$APRU_PATH' does not exist."
+  exit 1
+fi
+
+if [ ! -d "$NEON_PATH" ]; then
+  echo "ERROR: '$NEON_PATH' does not exist."
+  exit 1
+fi
+
+# apr-iconv is only included in zip files
+if [ -n "$ZIP" ] && [ ! -d "$APRI_PATH" ]; then
+  echo "ERROR: '$APRI_PATH' does not exist."
+  exit 1
 fi
 
 if [ -z "$REPOS_PATH" ]; then
@@ -195,25 +165,10 @@ else
   REPOS_PATH="`echo $REPOS_PATH | sed 's/^\/*//'`"
 fi
 
-# See comment when we 'roll' the tarballs as to why pax is required.
 type pax > /dev/null 2>&1
 if [ $? -ne 0 ] && [ -z "$ZIP" ]; then
   echo "ERROR: pax could not be found"
   exit 1
-fi
-
-# Default to 'wget', but allow 'curl' to be used if available.
-HTTP_FETCH=wget
-HTTP_FETCH_OUTPUT="-O"
-type wget > /dev/null 2>&1
-if [ $? -ne 0 ]; then
-  type curl > /dev/null 2>&1
-  if [ $? -ne 0 ]; then
-    echo "Neither curl or wget found."
-    exit 2
-  fi
-  HTTP_FETCH=curl
-  HTTP_FETCH_OUTPUT="-o"
 fi
 
 DISTNAME="subversion-${VERSION}${VER_NUMTAG}"
@@ -235,66 +190,51 @@ echo "Exporting revision $REVISION of Subversion into sandbox..."
      "http://svn.collab.net/repos/svn/$REPOS_PATH" \
      "$DISTNAME" --username none --password none)
 
-install_dependency()
-{
-  DEP_NAME=$1
-  DEP_TAG=$2
-  if [ -z $3 ]; then
-    DEP_PATH=/dev/null
-  else
-    DEP_PATH=$3
-  fi
-  if [ -d $DEP_PATH ]; then
-    if [ -d $DEP_PATH/.svn ]; then
-      echo "Exporting local $DEP_NAME into sandbox"
-      ${SVN:-svn} export -q $EXTRA_EXPORT_OPTIONS "$DEP_PATH" "$DISTPATH/$DEP_NAME"
-    else
-      echo "Copying local $DEP_NAME into sandbox"
-      cp -r "$DEP_PATH" "$DISTPATH/$DEP_NAME" 
-      (cd "$DISTPATH/$DEP_NAME" && [ -f Makefile ] && make distclean)
-      echo "Removing all CVS/ and .cvsignore files from $DEP_NAME..."
-      find "$DISTPATH/$DEP_NAME" -name CVS -type d -print | xargs rm -fr
-      find "$DISTPATH/$DEP_NAME" -name .cvsignore -print | xargs rm -f
-    fi
-  else
-    echo "Exporting $DEP_NAME into sandbox ($DEP_TAG)"
-    ${SVN:-svn} export -q $EXTRA_EXPORT_OPTIONS $DEP_TAG "$DISTPATH/$DEP_NAME"
-  fi
-}
+echo "Copying $APR_PATH into sandbox, making extraclean..."
+cp -r "$APR_PATH" "$DISTPATH/apr"
+(cd "$DISTPATH/apr" && [ -f Makefile ] && make extraclean)
+echo "Removing all CVS/ and .cvsignore files from apr..."
+find "$DISTPATH/apr" -name CVS -type d -print | xargs rm -fr
+find "$DISTPATH/apr" -name .cvsignore -print | xargs rm -f
 
-install_dependency apr http://svn.apache.org/repos/asf/apr/apr/tags/${APR_TAG} "$APR_PATH"
-install_dependency apr-util http://svn.apache.org/repos/asf/apr/apr-util/tags/${APU_TAG} "$APU_PATH"
+echo "Copying $APRU_PATH into sandbox, making extraclean..."
+cp -r "$APRU_PATH" "$DISTPATH/apr-util"
+(cd "$DISTPATH/apr-util" && [ -f Makefile ] && make extraclean)
+echo "Removing all CVS/ and .cvsignore files from apr-util..."
+find "$DISTPATH/apr-util" -name CVS -type d -print | xargs rm -fr
+find "$DISTPATH/apr-util" -name .cvsignore -print | xargs rm -f
 
 if [ -n "$ZIP" ]; then
-  install_dependency apr-iconv http://svn.apache.org/repos/asf/apr/apr-iconv/tags/${API_TAG} "$API_PATH"
+  echo "Copying $APRI_PATH into sandbox, making extraclean..."
+  cp -r "$APRI_PATH" "$DISTPATH/apr-iconv"
+  (cd "$DISTPATH/apr-iconv" && [ -f Makefile ] && make extraclean)
+  echo "Removing all CVS/ and .cvsignore files from apr-iconv..."
+  find "$DISTPATH/apr-iconv" -name CVS -type d -print | xargs rm -fr
+  find "$DISTPATH/apr-iconv" -name .cvsignore -print | xargs rm -f
 fi
 
-install_dependency neon http://svn.webdav.org/repos/projects/neon/tags/${NEON_TAG} "$NEON_PATH"
+echo "Coping neon into sandbox, making clean..."
+cp -r "$NEON_PATH" "$DISTPATH/neon"
+(cd "$DISTPATH/neon" && [ -f Makefile ] && make distclean)
+echo "Cleaning *.o in neon..."
+find "$DISTPATH/neon/src" -name '*.o' -print | xargs rm -f
 
 find "$DISTPATH" -name config.nice -print | xargs rm -f
 
 echo "Running ./autogen.sh in sandbox, to create ./configure ..."
 (cd "$DISTPATH" && ./autogen.sh --release) || exit 1
 
-if [ ! -f $DISTPATH/neon/configure ]; then
-  echo "Creating neon configure"
-  (cd "$DISTPATH/neon" && ./autogen.sh) || exit 1
-fi
-
 echo "Removing any autom4te.cache directories that might exist..."
 find "$DISTPATH" -depth -type d -name 'autom4te*.cache' -exec rm -rf {} \;
 
 echo "Downloading book into sandbox..."
 
-BOOK_PDF=http://svnbook.red-bean.com/en/1.1/svn-book.pdf
-BOOK_PDF_DEST="$DISTPATH/doc/book/book/svn-book.pdf"
-BOOK_HTML=http://svnbook.red-bean.com/en/1.1/svn-book.html
-BOOK_HTML_DEST="$DISTPATH/doc/book/book/svn-book.html"
-
-$HTTP_FETCH $BOOK_PDF $HTTP_FETCH_OUTPUT $BOOK_PDF_DEST ||
+wget http://svnbook.red-bean.com/svnbook-1.1/svn-book.pdf \
+  -O "$DISTPATH/doc/book/book/svn-book.pdf" ||
   ( echo "ERROR: Problem getting the svn-book.pdf file." && exit 1 )
 
-$HTTP_FETCH $BOOK_HTML $HTTP_FETCH_OUTPUT $BOOK_HTML_DEST ||
+wget http://svnbook.red-bean.com/svnbook-1.1/svn-book.html \
+  -O "$DISTPATH/doc/book/book/svn-book.html" ||
   ( echo "ERROR: Problem getting the svn-book.html file." && exit 1 )
 
 cat > "$DISTPATH/ChangeLog.CVS" <<EOF
@@ -350,38 +290,10 @@ fi
 echo "Removing sandbox..."
 rm -rf "$DIST_SANDBOX"
 
-sign_file()
-{
-  if [ -n "$SIGN" ]; then
-    type gpg > /dev/null 2>&1
-    if [ $? -eq 0 ]; then
-      if test -n "$user"; then
-        args="--default-key $user"
-      fi
-      for ARG in $@
-      do
-        gpg --armor $args --detach-sign $ARG
-      done
-    else
-      type pgp > /dev/null 2>&1
-      if [ $? -eq 0 ]; then
-        if test -n "$user"; then
-          args="-u $user"
-        fi
-        for ARG in $@
-        do
-          pgp -sba $ARG $args
-        done
-      fi
-    fi
-  fi
-}
-
 echo ""
 echo "Done:"
 if [ -z "$ZIP" ]; then
   ls -l "$DISTNAME.tar.gz" "$DISTNAME.tar.bz2"
-  sign_file $DISTNAME.tar.gz $DISTNAME.tar.bz2
   echo ""
   echo "md5sums:"
   md5sum "$DISTNAME.tar.gz" "$DISTNAME.tar.bz2"
@@ -393,7 +305,6 @@ if [ -z "$ZIP" ]; then
   fi
 else
   ls -l "$DISTNAME.zip"
-  sign_file $DISTNAME.zip
   echo ""
   echo "md5sum:"
   md5sum "$DISTNAME.zip"
