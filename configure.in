@@ -470,7 +470,7 @@ Berkeley DB version $db_version or newer, which you don't seem to have
 installed.  We have created makefiles which will build the Subversion
 client code only, and skip the server.  You can find latest version of
 Berkeley DB at http://www.sleepycat.com/.  You can find the latest
-version of Berkeley DB here: http://www.sleepycat.com/download.html
+version of Berkeley DB here: http://www.sleepycat.com/download/index.shtml
 
 As an option, you may build Berkeley DB directly within the Subversion
 source tree. Download and extract the Berkeley distribution, then
