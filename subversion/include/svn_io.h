@@ -324,6 +324,12 @@ svn_error_t *svn_io_file_lock (const char *lock_file,
                                svn_boolean_t exclusive,
                                apr_pool_t *pool);
 
+/** Flush any unwritten data from @a file to disk.  Use @a pool for
+ *  memory allocations.
+ */
+svn_error_t *svn_io_file_flush_to_disk (apr_file_t *file,
+                                        apr_pool_t *pool);
+
 /** Copy file @a file from location @a src_path to location @a dest_path.
  * Use @a pool for memory allocations.
  */

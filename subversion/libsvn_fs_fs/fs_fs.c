@@ -3482,6 +3482,8 @@ write_final_current (svn_fs_t *fs,
 
   SVN_ERR (svn_io_file_write_full (file, buf, strlen (buf), NULL, pool));
 
+  SVN_ERR (svn_io_file_flush_to_disk (file, pool));
+
   SVN_ERR (svn_io_file_close (file, pool));
 
   SVN_ERR (move_into_place (tmp_name, name, name, pool));
@@ -3594,6 +3596,8 @@ svn_fs_fs__commit (svn_revnum_t *new_rev_p,
                      changed_path_offset);
   SVN_ERR (svn_io_file_write_full (rev_file, buf, strlen (buf), NULL,
                                    subpool));
+
+  SVN_ERR (svn_io_file_flush_to_disk (rev_file, subpool));
   
   SVN_ERR (svn_io_file_close (rev_file, subpool));
 
