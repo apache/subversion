@@ -539,7 +539,7 @@ log_do_delete_entry (struct log_runner *loggy, const char *name)
           /* The directory is already missing, so don't try to recurse --
              just delete the entry in the parent directory. */
           apr_hash_t *entries;
-          SVN_ERR (svn_wc_entries_read (&entries, loggy->adm_access, FALSE,
+          SVN_ERR (svn_wc_entries_read (&entries, loggy->adm_access, TRUE,
                                         loggy->pool));
           svn_wc__entry_remove (entries, name);
           SVN_ERR (svn_wc__entries_write (entries, loggy->adm_access, 
