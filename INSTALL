@@ -721,7 +721,7 @@ III.  BUILDING A SUBVERSION SERVER
 
       Compile and install apache:
 
-          $ make depend && make && make install
+          $ make && make install
 
 
   B.  Making and Installing the Subversion Server
