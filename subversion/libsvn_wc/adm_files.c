@@ -246,6 +246,10 @@ svn_wc__make_adm_thing (svn_string_t *path,
  *      its size at the time of opening is reached.
  * @tip The dest file's permissions will be the same as the source file's.
  */
+
+apr_status_t
+apr_copy_file (const char *src, const char *dst, apr_pool_t *pool);
+
 apr_status_t
 apr_copy_file (const char *src, const char *dst, apr_pool_t *pool)
 {
