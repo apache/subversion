@@ -1478,6 +1478,19 @@ crawl_dir (svn_stringbuf_t *path,
           && (! current_entry->copied))
         continue;
       
+      /* If we're looking at a subdir entry, the structure has
+         incomplete information.  In particular, the revision is
+         undefined (-1).  This is bad, because report_single_mod is
+         trying to compare parent & child revisions when within a
+         copied subtree.  So:  make sure the entry is _complete_. */
+      if (current_entry->kind == svn_node_dir)
+        {
+          svn_stringbuf_t *full_path = svn_stringbuf_dup (path, subpool);
+          svn_path_add_component_nts (full_path, keystring,
+                                      svn_path_local_style);         
+          SVN_ERR (svn_wc_entry (&current_entry, full_path, subpool));
+        }
+
       /* Report mods for a single entry. */
       SVN_ERR (report_single_mod (keystring,
                                   current_entry,
