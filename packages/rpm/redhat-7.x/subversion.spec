@@ -105,6 +105,11 @@ Summary: Tools for Subversion
 Tools for Subversion.
 
 %changelog
+* Sun Jan 09 2005 David Summers <david@summersoft.fay.ar.us> r13202
+- Bye bye book;  it is now no longer a part of the Subversion repository but
+  is at the http://svn.red-bean.com/svnbook/ URL.
+  I will probably create a separate RPM package for it now...stay tuned.
+
 * Sun Jan 09 2005 David Summers <david@summersoft.fay.ar.us> 1.1.2-12650
 - Delete apr, apr-util, and neon from the distribution tree as those
   packages are already installed.
@@ -372,7 +377,6 @@ sed -e \
  "/#define SVN_VERSION/s/SVN_VER_NUM.*$/\"${RELEASE_NAME}\"/" \
   < "$vsn_file" > "${vsn_file}.tmp"
 mv "${vsn_file}.tmp" "$vsn_file"
-echo "${RELEASE_NAME}" > doc/book/book/package.version
 
 # Delete apr, apr-util, and neon from the tree as those packages should already
 # be installed.
@@ -483,17 +487,6 @@ cp svnadmin.static $RPM_BUILD_ROOT/usr/bin/svnadmin-%{version}-%{release}.static
 mkdir -p $RPM_BUILD_ROOT/usr/lib/subversion
 cp -r tools $RPM_BUILD_ROOT/usr/lib/subversion
 
-# Set up book generation and installation
-(cd doc/book;
-rm -f book/version.xml
-# Start patch by Ben Reser <ben@reser.org> to get documentation to build.
-%{__perl} -pi -e 's#href="xsl/(html/docbook.xsl)"#href="%{_datadir}/sgml/docbook/xsl-stylesheets/$1"#;' tools/html-stylesheet.xsl
-%{__perl} -pi -e 's#href="xsl/(html/chunk.xsl)"#href="%{_datadir}/sgml/docbook/xsl-stylesheets/$1"#;' tools/chunk-stylesheet.xsl
-# End patch by Ben Reser <ben@reser.org> to get documentation to build.
-make SVNVERSION=%{release} XSL_DIR=/usr/share/sgml/docbook/xsl-stylesheets all-html)
-cp -r doc/book/book/html-chunk book
-cp -r doc/book/book/images     book/images
-
 # Create doxygen documentation.
 doxygen doc/doxygen.conf
 
@@ -547,7 +540,6 @@ rm -rf $RPM_BUILD_ROOT
 %defattr(-,root,root)
 %doc BUGS CHANGES COMMITTERS COPYING HACKING INSTALL README
 %doc subversion/LICENSE
-%doc book
 /usr/bin/svn
 /usr/bin/svnadmin
 /usr/bin/svnadmin-%{version}-%{release}.static
