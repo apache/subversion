@@ -3706,14 +3706,11 @@ sort_keys (const void *a, const void *b)
 
 
 /* Derive the oldest of a set of copies which took place in filesystem
-   FS -- bounded by the revisions START_REV and END_REV, and
-   by the copy ids START_COPY_ID and END_COPY_ID -- which resulted in
-   the creation of DST_PATH.  Return the previous location of the
-   DST_PATH as *SRC_REV/SRC_PATH, and the revision in which the copy
-   occured as *DST_REV.  Do all of this as part of TRAIL.
-
-   NOTE: END_COPY_ID may be NULL to indicate "the youngest committed
-   copy".  */
+   FS -- bounded by the revisions START_REV and END_REV, and by the
+   copy id START_COPY_ID -- which resulted in the creation of
+   DST_PATH.  Return the previous location of the DST_PATH as
+   *SRC_REV/SRC_PATH, and the revision in which the copy occured as
+   *DST_REV.  Do all of this as part of TRAIL. */
 static svn_error_t *
 find_youngest_copy (svn_revnum_t *src_rev, /* return */
                     const char **src_path, /* return */
@@ -3723,12 +3720,11 @@ find_youngest_copy (svn_revnum_t *src_rev, /* return */
                     svn_revnum_t start_rev,
                     const char *start_copy_id,
                     svn_revnum_t end_rev,
-                    const char *end_copy_id, /* may be NULL */
                     trail_t *trail)
 {
   svn_revnum_t cur_rev = end_rev;
   const char *cur_path = dst_path;
-  const char *cur_copy_id = end_copy_id;
+  const char *cur_copy_id = NULL;
 
   *src_path = NULL;
   *src_rev = SVN_INVALID_REVNUM;
@@ -3769,11 +3765,6 @@ find_youngest_copy (svn_revnum_t *src_rev, /* return */
 
           /* Note the current copy id. */
           cur_copy_id = APR_ARRAY_IDX (txn->copies, i, const char *);
-
-          /* If the COPY_ID is younger than our END_COPY_ID, skip it. */
-          if (end_copy_id 
-              && (svn_fs__key_compare (cur_copy_id, end_copy_id) == 1))
-            continue;
 
           /* If the COPY_ID is older than our START_COPY_ID, we've
              nothing left to look for. */
@@ -3941,11 +3932,9 @@ txn_body_history_prev (void *baton, trail_t *trail)
 
   /* See if any copies took place between our path/revision and
      the location of the node's last commit. */
-  /* ### cmpilato todo: lazy branching means we can't know the
-         end_copy_id, so pass NULL here.  is this okay?  */
   SVN_ERR (find_youngest_copy (&src_rev, &src_path, &dst_rev, path,
                                fs, commit_rev, svn_fs__id_copy_id (node_id),
-                               revision, NULL, trail));
+                               revision, trail));
   if (src_path && SVN_IS_VALID_REVNUM (src_rev))
     {
       *prev_history = assemble_history (fs, apr_pstrdup (retpool, path), 
