@@ -253,15 +253,6 @@ class RevInfoParser(rcsparse.Sink):
     rcsparse.Parser().parse(rcsfile, self)
 
 
-class NodeError(Exception):
-  'Base class for exceptions in manipulating Node trees.'
-  pass
-
-class Node:
-  def __init__(self):
-    self.children = { }
-
-
 def ensure_directories(path, root, dumpfile):
   """Output to DUMPFILE any intermediate directories in PATH that are
   not already present under directory ROOT, adding them to ROOT's tree as
