@@ -1142,6 +1142,10 @@ This can be fixed in one of several ways:
 <li>Use a RedHat 9 kernel.</li>
 <li>Apply the NPTL patches to the kernel you're using.</li>
 <li>Use a recent (2.5.x) kernel with the NPTL support included.</li>
+<li>Check if environment variable <code>LD_ASSUME_KERNEL</code> is set
+    to <code>2.2.5</code>, and if so, unset it before starting
+    Subversion (Apache). (You usually would set this variable to run
+    Wine or Winex on RedHat 9)</li>
 </ul>
 </p>
 
