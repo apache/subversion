@@ -8,8 +8,6 @@ for execfile in gen-make.py \
                 build/buildcheck.sh \
                 build/PrintPath \
                 ac-helpers/get-neon-ver.sh \
-                ac-helpers/gnu-diff.sh \
-                ac-helpers/gnu-patch.sh \
                 ac-helpers/install-sh; do
   chmod +x $execfile                
 done

@@ -45,21 +45,15 @@
 /* FIXME: */
 #define SVN_CLIENT_DIFF "c:\\progra~1\\cygnus\\cygwin\\bin\\diff.exe"
 #define SVN_CLIENT_DIFF3 "c:\\progra~1\\cygnus\\cygwin\\bin\\diff.exe3"
-#define SVN_CLIENT_PATCH "c:\\progra~1\\cygnus\\cygwin\\bin\\patch.exe"
 
 /* Diff program */
 #ifndef SVN_CLIENT_DIFF
 #  define SVN_CLIENT_DIFF "X:/path/to/diff.exe"
 #endif
 
-/* Diff program */
+/* Diff3 program */
 #ifndef SVN_CLIENT_DIFF3
 #  define SVN_CLIENT_DIFF3 "X:/path/to/diff3.exe"
-#endif
-
-/* Patch program */
-#ifndef SVN_CLIENT_PATCH
-#  define SVN_CLIENT_PATCH "X:/path/to/patch.exe"
 #endif
 
 /* Path separator for local filesystem */
