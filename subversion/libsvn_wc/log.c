@@ -248,6 +248,7 @@ remove_from_version_control (struct log_runner *loggy, svn_string_t *name)
 }
 
 
+
 static void
 start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
 {
@@ -317,10 +318,9 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
       if (err)
         return signal_error (loggy, err);
     }
-  else if (strcmp (eltname, SVN_WC__LOG_SET_VERSION) == 0)
+  else if (strcmp (eltname, SVN_WC__LOG_MODIFY_ENTRY) == 0)
     {
-      const char *verstr 
-        = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_VERSION, atts);
+      apr_hash_t *ah = svn_xml_make_att_hash (atts, loggy->pool);
       
       if (! name)
         return signal_error
@@ -330,27 +330,73 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
                                      loggy->pool,
                                      "missing name attr in %s",
                                      loggy->path->data));
-      else if (! verstr)
-        return signal_error
-          (loggy, svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG,
-                                     0,
-                                     NULL,
-                                     loggy->pool,
-                                     "missing version attr for %s",
-                                     name));
       else
         {
-          apr_time_t timestamp = 0;
           svn_string_t *sname = svn_string_create (name, loggy->pool);
-          svn_string_t *working_file
-            = svn_string_dup (loggy->path, loggy->pool);
-          svn_path_add_component (working_file,
-                                  sname,
-                                  svn_path_local_style);
+          svn_string_t *verstr = apr_hash_get (ah,
+                                               SVN_WC__ENTRIES_ATTR_VERSION,
+                                               APR_HASH_KEY_STRING);
+          svn_vernum_t new_version = (verstr ? atoi (verstr->data)
+                                      : SVN_INVALID_VERNUM);
+          apr_time_t timestamp = 0;
+          int flags = 0;
+          
+          enum svn_node_kind kind = svn_node_unknown;
+          svn_string_t *kindstr = apr_hash_get (ah,
+                                                SVN_WC__ENTRIES_ATTR_KIND,
+                                                APR_HASH_KEY_STRING);
+          
+          svn_string_t *wfile = svn_string_dup (loggy->path, loggy->pool);
+          svn_path_add_component (wfile, sname, svn_path_local_style);
+          
+          /* kff todo: similar to code in entries.c:handle_start().
+             Would be nice to either write a function mapping string
+             to kind, and/or write an equivalent of
+             svn_wc__entry_merge_sync() that takes a hash and does the
+             same thing, without all the specialized args. */
+          if (! kindstr)
+            kind = svn_node_none;
+          else if (strcmp (kindstr->data, "file") == 0)
+            kind = svn_node_file;
+          else if (strcmp (kindstr->data, "dir") == 0)
+            kind = svn_node_dir;
+          else
+            kind = svn_node_none;
+          
+          /* Stuff state into flags. */
+          if (apr_hash_get (ah, SVN_WC__ENTRIES_ATTR_ADD,
+                            APR_HASH_KEY_STRING))
+            flags |= SVN_WC__ENTRY_ADD;
+          if (apr_hash_get (ah, SVN_WC__ENTRIES_ATTR_DELETE,
+                            APR_HASH_KEY_STRING))
+            flags |= SVN_WC__ENTRY_DELETE;
+          if (apr_hash_get (ah, SVN_WC__ENTRIES_ATTR_MERGED,
+                            APR_HASH_KEY_STRING))
+            flags |= SVN_WC__ENTRY_MERGED;
+          if (apr_hash_get (ah, SVN_WC__ENTRIES_ATTR_CONFLICT,
+                            APR_HASH_KEY_STRING))
+            flags |= SVN_WC__ENTRY_CONFLICT;
+          
+          /* Get the timestamp only if the working file exists. */
+          {
+            /* kff todo: there is an issue here.  The timestamp should
+               be done after the wfile is updated. */
+            enum svn_node_kind wfile_kind;
+            err = svn_io_check_path (wfile, &wfile_kind, loggy->pool);
+            if (err)
+              return signal_error (loggy, svn_error_createf
+                                   (SVN_ERR_WC_BAD_ADM_LOG,
+                                    0,
+                                    NULL,
+                                    loggy->pool,
+                                    "error checking path %s",
+                                    name));
+            if (kind == svn_node_file)
+              err = svn_wc__file_affected_time (&timestamp,
+                                                wfile,
+                                                loggy->pool);
+          }
 
-          err = svn_wc__file_affected_time (&timestamp,
-                                            working_file,
-                                            loggy->pool);
           if (err)
             return signal_error (loggy, svn_error_createf
                                  (SVN_ERR_WC_BAD_ADM_LOG,
@@ -362,9 +408,9 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
           
           err = svn_wc__entry_merge_sync (loggy->path,
                                           sname,
-                                          atoi (verstr),
-                                          svn_node_file,
-                                          0,
+                                          new_version,
+                                          kind,
+                                          flags,
                                           timestamp,
                                           loggy->pool,
                                           NULL);

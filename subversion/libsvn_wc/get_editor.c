@@ -1053,17 +1053,6 @@ close_file (void *file_baton)
 
   if (fb->text_changed)
     {
-      /* Merge text. */
-      svn_xml_make_open_tag (&entry_accum,
-                             fb->pool,
-                             svn_xml_self_closing,
-                             SVN_WC__LOG_MERGE_TEXT,
-                             SVN_WC__LOG_ATTR_NAME,
-                             fb->name,
-                             SVN_WC__LOG_ATTR_SAVED_MODS,
-                             svn_string_create ("kff todo", fb->pool),
-                             NULL);
-      
       /* Move new text base over old text base. */
       svn_xml_make_open_tag (&entry_accum,
                              fb->pool,
@@ -1103,22 +1092,6 @@ close_file (void *file_baton)
       err = save_prop_file (local_prop_tmp_path, fb->localprops, fb->pool);
       if (err) return err;
       
-
-      /* Generate proper *relative* pathnames for the logfile `mv'
-         entries.  For example, we want something like:
-
-           <mv name="SVN/tmp/prop-base/name"
-               dest="SVN/prop-base/name">
-
-        Rather than something like this:
-
-           <mv name="/home/joe/project/SVN/tmp/prop-base/name"
-               dest="/home/joe/project/SVN/prop-base/name">
-
-        The problem with the latter is that is violates the
-        separability of SVN subdirectories, should we ever need to do
-        cleanup or log recovery. 
-      */
       tmp_prop_base = svn_wc__adm_path (svn_string_create ("", fb->pool),
                                         1, /* tmp */
                                         fb->pool,
@@ -1177,10 +1150,10 @@ close_file (void *file_baton)
   svn_xml_make_open_tag (&entry_accum,
                          fb->pool,
                          svn_xml_self_closing,
-                         SVN_WC__LOG_SET_VERSION,
+                         SVN_WC__LOG_MODIFY_ENTRY,
                          SVN_WC__LOG_ATTR_NAME,
                          fb->name,
-                         SVN_WC__LOG_ATTR_VERSION,
+                         SVN_WC__ENTRIES_ATTR_VERSION,
                          svn_string_create (version_str, fb->pool),
                          NULL);
 
