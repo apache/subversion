@@ -45,9 +45,12 @@ To be fixed by cmpilato:
      not overwritten by a tarball explode wouldn't be missing, they'd
      be untouched).
 
-  - document the --ignore-externals option (added 'update',
-    'checkout', 'export', and 'status').  Don't forget the reference
-    section.
+   - document the --ignore-externals option (added 'update',
+     'checkout', 'export', and 'status').  Don't forget the reference
+     section.
+
+   - document the --use-[pre|post]-commit-hook option to 'svnadmin
+     load'.  Don't forget the reference section.
 
 --------------------------------------------------------------
 
@@ -62,12 +65,25 @@ ch04:
      versions and adding-with-history the older file versions.
      Definitely a big 'gotcha' to watch out for.
 
+   - "common use-cases for merging" shows -r405:HEAD.  let's not
+     encourage HEAD, since that can be a dangerous practice.  should
+     explain *why* we're not using head.
+
 
 ch06:  
 
-    svnserve->set access controls->last paragraph:
+   -  svnserve->set access controls->last paragraph:
        Don't just mention svnserve for path-based access;
        mention the pre-commit hooks for at controlling path-based write.
+
+   - explain shortcoming in http checkout authorization.  because
+     checkout is done as one http request, there's only one chance to
+     authenticate (or not).  if root-dir is anonymously readable, then
+     *whole tree* will be checked out anonymously.  if root-dir
+     requires authn, then *whole tree* will be checked out as that
+     user.  until we get pipelining and do checkouts as multiple GETs,
+     it's impossible to change authn halfway through a checkout.
+
 
 appA:
 
