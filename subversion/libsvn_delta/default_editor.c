@@ -18,6 +18,7 @@
 
 
 #include <apr_pools.h>
+#include <assert.h>
 #include <apr_strings.h>
 
 #include "svn_types.h"
@@ -117,7 +118,29 @@ apply_text (void *file_baton,
             svn_delta_editor_t *editor, /* ### temporary, for issue #510 */
             apr_pool_t *pool)
 {
-  /* ### todo#510: see doc string for what's about to happen here. */
+  svn_txdelta_window_handler_t handler;
+  void *handler_baton;
+
+  assert (target && editor);
+
+  SVN_ERR (editor->apply_textdelta (file_baton,
+                                    base_checksum, result_checksum,
+                                    pool,
+                                    &handler, &handler_baton));
+
+  if (base)
+    {
+      svn_txdelta_stream_t *txdelta_stream;
+
+      svn_txdelta (&txdelta_stream, base, target, pool);
+      SVN_ERR (svn_txdelta_send_txstream
+               (txdelta_stream, handler, handler_baton, pool));
+    }
+  else
+    {
+      SVN_ERR (svn_txdelta_send_stream (target, handler, handler_baton, pool));
+    }
+
   return SVN_NO_ERROR;
 }
 
