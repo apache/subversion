@@ -279,17 +279,19 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
      svn_cl__incremental_opt, svn_cl__xml_opt, SVN_CL__AUTH_OPTIONS} },
 
   { "merge", svn_cl__merge, {0},
-    "apply the differences between two URLs to a working copy path.\n"
-    "usage: 1. merge URL1[@N] URL2[@M] [PATH]\n"
-    "       2. merge -r N:M TARGET [PATH]\n\n"
-    "  1. In the first form, URL1 and URL2 are URLs specified at revisions\n"
+    "apply the differences between two sources to a working copy path.\n"
+    "usage: 1. merge sourceURL1[@N] sourceURL2[@M] [WCPATH]\n"
+    "       2. merge -r N:M SOURCE [WCPATH]\n\n"
+    "  1. In the first form, the source URLs are specified at revisions\n"
     "     N and M.  These are the two sources to be compared.  The revisions\n"
     "     default to HEAD if omitted.\n\n"
-    "  2. In the second form TARGET can be an URL, or it can be a working copy\n"
-    "     path in which case the corresponding URL is used.  This URL, at\n"
+    "  2. In the second form, SOURCE can be a URL or working copy item,\n"
+    "     in which case the corresponding URL is used.  This URL, at\n"
     "     revisions N and M, defines the two sources to be compared.\n\n"
-    "  PATH is the working copy path that will receive the changes.\n"
-    "  If omitted, a default value of '.' is assumed.\n\n",
+    "  WCPATH is the working copy path that will receive the changes.\n"
+    "  If WCPATH is omitted, a default value of '.' is assumed, unless\n"
+    "  the sources have identical basenames that match a file within '.':\n"
+    "  in which case, the differences will be applied to that file.\n",
     {'r', 'N', 'q', svn_cl__force_opt, svn_cl__dry_run_opt,
      svn_cl__merge_cmd_opt, SVN_CL__AUTH_OPTIONS} },
   

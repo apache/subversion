@@ -786,8 +786,10 @@ def simple_property_merges(sbox):
   return 0
 
 #----------------------------------------------------------------------
+# This is a regression for issue #1176.
+
 def merge_catches_nonexistent_target(sbox):
-  "merge should not die if a target file is absent (issue #1176)"
+  "merge should not die if a target file is absent"
   
   if sbox.build():
     return 1
@@ -993,6 +995,82 @@ def merge_one_file(sbox):
 
 
 #----------------------------------------------------------------------
+# This is a regression for the enhancement added in issue #785.
+
+def merge_with_implicit_target (sbox):
+  "merging a file, with no explicitly-specified target path"
+
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
+  
+  # Change mu for revision 2
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  orig_mu_text = svntest.tree.get_text(mu_path);
+  added_mu_text = ""
+  for x in range(2,11):
+    added_mu_text = added_mu_text + '\nThis is line ' + `x` + ' in mu'
+  added_mu_text += "\n"
+  svntest.main.file_append(mu_path, added_mu_text)
+
+  # Create expected output tree for initial commit
+  expected_output = wc.State(wc_dir, {
+    'A/mu' : Item(verb='Sending'),
+    })
+
+  # Create expected status tree; all local revisions should be at 1,
+  # but mu should be at revision 2.
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.tweak('A/mu', wc_rev=2)
+  
+  # Initial commit.
+  if svntest.actions.run_and_verify_commit (wc_dir,
+                                            expected_output,
+                                            expected_status,
+                                            None,
+                                            None, None, None, None,
+                                            wc_dir):
+    return 1
+
+  # Make the "other" working copy
+  other_wc = wc_dir + '.other'
+  svntest.actions.duplicate_dir(wc_dir, other_wc)
+
+  # Try the merge without an explicit target; it should succeed.
+  # Can't use run_and_verify_merge cuz it expects a directory argument.
+  mu_url = os.path.join(svntest.main.current_repo_url, 'A', 'mu')
+  was_cwd = os.getcwd()
+  try:
+    os.chdir(os.path.join(other_wc, 'A'))
+
+    # merge using URL for sourcepath
+    out, err = svntest.main.run_svn(0, 'merge', '-r', '2:1',
+                                    mu_url)
+    if err:
+      print err
+      return 1
+
+    # sanity-check resulting file
+    if (svntest.tree.get_text('mu') != orig_mu_text):
+      return 1
+
+    # merge using filename for sourcepath
+    out, err = svntest.main.run_svn(0, 'merge', '-r', '1:2',
+                                    'mu')
+    if err:
+      print err
+      return 1
+
+    # sanity-check resulting file
+    if (svntest.tree.get_text('mu') != orig_mu_text + added_mu_text):
+      return 1
+
+  finally:
+    os.chdir(was_cwd)
+
+#----------------------------------------------------------------------
 
 ########################################################################
 # Run the tests
@@ -1004,6 +1082,7 @@ test_list = [ None,
               add_with_history,
               delete_file_and_dir,
               simple_property_merges,
+              merge_with_implicit_target,
               merge_catches_nonexistent_target,
               # merge_one_file,          # See issue #1150.
               # property_merges_galore,  # Would be nice to have this.
