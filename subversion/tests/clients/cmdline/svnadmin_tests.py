@@ -74,6 +74,44 @@ def get_txns(repo_dir):
 
   return txns
 
+def load_and_verify_dumpstream(sbox, expected_stdout, expected_stderr,
+                               revs, dump):
+  """Load the array of lines passed in 'dump' into the
+  current tests' repository and verify the repository content
+  using the array of wc.States passed in revs"""
+
+  if type(dump) is type(""):
+    dump = [ dump ]
+
+  output, errput = \
+          svntest.main.run_command_stdin(
+    "%s load --quiet %s" % (svntest.main.svnadmin_binary, sbox.repo_dir),
+    expected_stderr, 1, dump)
+
+  if expected_stdout:
+    svntest.actions.compare_and_display_lines(
+      "Standard output", "STDOUT:", expected_stdout, output)
+
+  if expected_stderr:
+    svntest.actions.compare_and_display_lines(
+      "Standard error output", "STDERR:", expected_stderr, errput)
+
+  if revs:
+    # verify revs as wc states
+    for rev in xrange(len(revs)):
+      svntest.actions.run_and_verify_svn("Updating to r%s" % (rev+1),
+                                         svntest.SVNAnyOutput, [],
+                                         "update", "-r%s" % (rev+1),
+                                         sbox.wc_dir)
+
+      wc_tree = svntest.tree.build_tree_from_wc(sbox.wc_dir)
+      rev_tree = revs[rev].old_tree()
+
+      try:
+        svntest.tree.compare_trees (rev_tree, wc_tree)
+      except svntest.tree.SVNTreeError:
+        svntest.actions.display_trees(None, 'WC TREE', wc_tree, rev_tree)
+        raise
 
 
 ######################################################################
@@ -85,16 +123,107 @@ def get_txns(repo_dir):
 def test_create(sbox):
   "'svnadmin create'"
 
-  # This call tests the creation of repository.
-  # It also imports to the repository, and checks out from the repository.
-  sbox.build()
 
-  # ### TODO: someday this test should create an empty repo, checkout,
-  # ### and then look at the CR value using 'svn st -v'.  We're not
-  # ### parsing that value in our status regexp yet anyway.
+  repo_dir = sbox.repo_dir
+  wc_dir = sbox.wc_dir
+
+  svntest.main.safe_rmtree(repo_dir)
+  svntest.main.safe_rmtree(wc_dir)
+
+  svntest.main.create_repos(repo_dir)
+  svntest.main.set_repos_paths(repo_dir)
+
+  svntest.actions.run_and_verify_svn(
+    "Creating rev 0 checkout",
+    ["Checked out revision 0.\n"], [],
+    "--username", "jrandom", "--password", "rayjandom",
+    "checkout", svntest.main.current_repo_url, wc_dir)
+
+
+  svntest.actions.run_and_verify_svn(
+    "Running status",
+    [], [],
+    "status", wc_dir)
+
+  svntest.actions.run_and_verify_svn(
+    "Running verbose status",
+    ["                0        0  ?           %s\n" % wc_dir], [],
+    "status", "--verbose", wc_dir)
 
   # success
 
+
+# dump stream tests need a dump file
+
+clean_dumpfile = \
+  [ "SVN-fs-dump-format-version: 2\n\n",
+    "UUID: 668cc64a-31ed-0310-8ccb-b75d75bb44e3\n\n",
+    "Revision-number: 0\n",
+    "Prop-content-length: 56\n",
+    "Content-length: 56\n\n",
+    "K 8\nsvn:date\nV 27\n2005-01-08T21:48:13.838745Z\nPROPS-END\n\n\n",
+    "Revision-number: 1\n",
+    "Prop-content-length: 98\n",
+    "Content-length: 98\n\n",
+    "K 7\nsvn:log\nV 0\n\nK 10\nsvn:author\nV 4\nerik\n",
+    "K 8\nsvn:date\nV 27\n2005-01-08T21:51:16.313791Z\nPROPS-END\n\n\n",
+    "Node-path: A\n",
+    "Node-kind: file\n",
+    "Node-action: add\n",
+    "Prop-content-length: 35\n",
+    "Text-content-length: 5\n",
+    "Text-content-md5: e1cbb0c3879af8347246f12c559a86b5\n",
+    "Content-length: 40\n\n",
+    "K 12\nsvn:keywords\nV 2\nId\nPROPS-END\ntext\n\n\n"]
+
+dumpfile_revisions = \
+  [ svntest.wc.State('', { 'A' : svntest.wc.StateItem(contents="text\n") }) ]
+
+#----------------------------------------------------------------------
+def extra_headers(sbox):
+  "loading of dumpstream with extra headers"
+
+  test_create(sbox)
+
+  dumpfile = clean_dumpfile
+
+  dumpfile[3:3] = \
+       [ "X-Comment-Header: Ignored header normally not in dump stream\n" ]
+
+  load_and_verify_dumpstream(sbox,[],[], dumpfile_revisions, dumpfile)
+
+#----------------------------------------------------------------------
+def extra_blockcontent(sbox):
+  "ensure loading of dumpstream with C-L > P-C-L + T-C-L"
+
+  ###FIXME: This test fails but should succeed in the light of
+  # forward compatibility
+
+  test_create(sbox)
+
+  dumpfile = clean_dumpfile[0:-2] + \
+             [ "Extra-content-length: 10\n",
+               "Content-length: 50\n\n",
+               "K 12\nsvn:keywords\nV 2\nId\nPROPS-END\n",
+               "text\nextra text\n\n\n"]
+
+
+  load_and_verify_dumpstream(sbox,[],[], dumpfile_revisions, dumpfile)
+
+#----------------------------------------------------------------------
+def inconsistent_headers(sbox):
+  "ensure failure to load dumpstream with C-L < P-C-L + T-C-L"
+
+  ###FIXME: this test should fail in light of the inconsistent data
+  # fed into the dump parser (but succeeds)
+
+  test_create(sbox)
+
+  dumpfile = clean_dumpfile
+
+  dumpfile[-2] = "Content-length: 30\n\n"
+
+  load_and_verify_dumpstream(sbox,[],[], dumpfile_revisions, dumpfile)
 
 #----------------------------------------------------------------------
 
@@ -190,6 +319,9 @@ def hotcopy_dot(sbox):
 
 # list all tests here, starting with None:
 test_list = [ None,
+              extra_headers,
+              XFail(extra_blockcontent),
+              inconsistent_headers,
               dump_copied_dir,
               dump_move_dir_modify_child,
               dump_quiet,
