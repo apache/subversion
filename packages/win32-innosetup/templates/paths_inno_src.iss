@@ -16,8 +16,8 @@
 #define path_setup_in "in"
 ; This is where the final setup ends
 #define path_setup_out "out"
-; Path to ISX
-#define path_isx "E:\inno\isx"
+; Path to Inno Setup Executable
+#define path_is "E:\Inno Setup4"
 
 
 ; You should edit the paths below the examples according to your system
@@ -68,6 +68,5 @@
 ;Python bindings
 #define path_py_bind_libsvn "C:\work\Subversion\binaries_svn\python_bindings\libsvn"
 #define path_py_bind_svn "C:\work\Subversion\binaries_svn\python_bindings\svn"
-
 
 

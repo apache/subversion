@@ -1,7 +1,7 @@
 Information about the installation program for Subversion for Windows
 =====================================================================
-
 $LastChangedDate$
+
 
 CONTENTS:
 =========
@@ -9,7 +9,6 @@ CONTENTS:
   * Directory structure
   * Programs used for the Subversion installer and instructions
     - Inno Setup
-    - ISTool
     - 7-zip
     - Perl
     - Packages for converting XML documentation
@@ -21,49 +20,48 @@ Introduction
 ============
 
   This document describes the packages\win32-innosetup directory of the
-  Subversion repository and tells you how you can roll out your own
-  Windows installer for Subversion.
+  Subversion repository and tells you how you can roll out your own Windows
+  installer for Subversion.
+  This instructions are for anyone who wants to roll out a Windows installer
+  for Subversion.  
   
+  If you have trouble, make sure that you use the packages versions that are
+  noted here (if noted) before asking for help.
+
   If you haven't done it already:  -Please, Check out the subversion
   sources to a place you like and download the programs and packages
   from the links below. Reading the "Directory structure" part should
   be the next.
 
-
   Inno Setup
   ----------
-  Inno Setup (IS) 3.0.6.2 with "My Inno Setup Extentions"
-  (ISX) and "Inno Setup Pre Processor" (ISPP) included:
-    http://www.wintax.nl/isx/
-
-  ISTool
-  ------
-  ISTool 3.0.6.2:
-    http://www.bhenden.org/istool/
+  Inno Setup QuickStart Pack 4.10. This package gives you Inno Setup (IS) 4.10
+  and "Inno Setup Pre Processor" (ISPP) wich works with your downloaded version
+  of IS:
+    http://www.jrsoftware.org/isdl.php
 
   7-zip
   -----
-  7-Zip 2.30 Beta 28:
+  7-Zip 3.13:
     http://www.7-zip.org/
 
   Perl
   ----
-  Perl 5.8.0 or better with the libwin32 bundle (included in
-  ActivePerl):
+  Perl 5.8.0 or better with the libwin32 bundle (included in ActivePerl):
   	http://www.activestate.com/ActivePerl/
-  or make your own (and get the module libwin32):
+  or make your own (and compile the module libwin32):
     http://www.perl.com/
     http://www.cpan.org/modules/by-module/Win32/ (libwin32-X.XXX.zip)
 
   libxml
   ------
   Point your browser to:
-    http://www.zlatkovic.com/projects/libxml/binaries.html
+    http://www.zlatkovic.com/pub/libxml/
   and grab the following packages:
-    - libxml
-    - libxslt
-    - iconv
-    - xsldbg (if you want to write XML docs).
+    - libxml2-2.6.4
+    - libxslt-1.1.2
+    - iconv-1.9.1
+    - zlib-1.1.4
 
   docbook-xsl
   -----------
@@ -129,7 +127,7 @@ Directory structure
   path_setup_out      Where svn-X.XX.X-rXXXX-setup.exe is to find after
                       compiling the setup
   path_setup_in       Contains misc. files to include in the setup
-  path_isx            Path to ISX
+  path_is             Path to the Inno Setup executable's directory
   path_svnclient      svn.exe
   path_svnadmin       svnadmin.exe
   path_svnlook        svnlook.exe
@@ -153,42 +151,35 @@ Programs used for the Subversion Windows installer
 
   Inno Setup
   ----------
-  The installation program is the exellent Inno Setup made by Jordan Russell.
+  The installation program is the exellent Inno Setup made by Jordan Russell
+  (with a lot of additional code by Martijn Laan, mostly the scripting part).
   IS and friends are probably all you need for 99% of any Windows installer
   needs made for the various flavors of Windows and has proven to be extremely
   reliable and stable.
 
-  The Inno Setup used by Subversion are extended with "My Inno Setup
-  Extentions" made by Martijn Laan and "Inno Setup Pre Proccessor"
-  made by Alex Yackimoff. ISX includes IS and ISPP so all you need to
-  do, is to install "My Inno Setup Extentions"
-
-  Oh, you should visit Jordan Russell's (the Inno Setup creater) homepage at:
-    http://www.jrsoftware.org/
-  He are doing more than Inno Setup and you can get lot of info from his
-  homepage.
+  The Inno Setup used by Subversion are extended with "Inno Setup Pre
+  Proccessor" made by Alex Yackimoff. "Inno Setup QuickStart Pack" includes
+  both IS and ISPP so all you need is "Inno Setup QuickStart Pack"
 
   Installation notes: None
 
   ISTool
   ------
-  A good installation script for any installation programs are
-  usually very complicated and requires good script editing software.
-  The program used for this is ISTool and it's syntax high-lightning
-  makes it the perfect companion to IS and friends.
+  A good installation script for any installation programs are usually very
+  complicated and requires good script editing software.
+  The program used for this is ISTool and it's syntax high-lightning makes it
+  the perfect companion to IS and friends.
   
-  The author - Bjørnar Henden are doing a great job by updating his
-  program each time Inno Setup are updated.
-  It's also includes full support for "My Inno Setup Extentions" (see
-  above).
+  The author - Bjørnar Henden are doing a great job by updating his program
+  each time Inno Setup are updated.
 
-  Installation notes: None
+  Installation notes: Can be retrived by "Inno Setup QuickStart Pack"
 
   7-zip
   -----
   7-zip offers a very high compression ratio. Usually, one use the
-  compression Inno offers (gzip or bzip2) but 7-zip are compressing
-  about 25% better than bzip2!
+  compression Inno offers (gzip or bzip2) but 7-zip are compressing about 25%
+  better than bzip2!
   In practice this means that the Inno Setup installation itself are
   uncompressed and a 7-zip SFX archive are triggering the Inno Setup
   installation after extracting the SFX.
@@ -197,16 +188,14 @@ Programs used for the Subversion Windows installer
 
   svnpath
   -------
-  Inno Setup does not currently edit the systems PATH environment so
-  we need svnpath.
-  This C program are used for updating the user's path to include/
-  exclude the Subversion path after installing/un-installing
-  Subversion.
-  You can find the sources for this program in the Subversion source
-  tree under packages\win32-innosetup\tools\svnpath
+  Inno Setup does not currently edit the systems PATH environment so we need
+  svnpath.
+  This C program are used for updating the user's path to include/exclude the
+  Subversion path after installing/un-installing Subversion.
+  You can find the sources for this program in the Subversion source tree under
+  packages\win32-innosetup\tools\svnpath
   
-  Have a look in the file main.c for info on how to compile the
-  program.
+  Have a look in the file main.c for info on how to compile the program.
  
   libxml, libxslt and iconv
   -------------------------
@@ -235,8 +224,8 @@ Programs used for the Subversion Windows installer
 
   Installation notes:
     If you don't want to use Active Perl, then it's trivial to compile Perl by
-    yourself if you have MS VC5 or better. Just remember to compile the Perl
-    modules included in libwin32 when Perl itself is done.
+    yourself if you have MS VC5 (or better) or MinGW. Just remember to compile
+	the Perl modules included in libwin32 when Perl itself is done.
 
 Making a distro
 ===============
@@ -268,4 +257,3 @@ Making a distro
   folder if you have done everything right.
 
 Good luck!
-
