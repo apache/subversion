@@ -1,0 +1,80 @@
+Here's the first draft of a README I started a while back (very rough and
+slightly out of date already), which you'll eventually be able to find in
+the repository at trunk/subversion/bindings/java/README:
+
+
+
+		     Subversion Java integration
+		     ===========================
+
+$LastChangedDate$
+
+
+Contents:
+
+     I. STATUS
+    II. WHY NOT 100% PURE JAVA?
+   III. WHY SWIG?
+    IV. STATUS
+     V. TODO
+
+
+I.     STATUS
+
+       A SWIG-based JNI implementation of Java bindings for Subversion
+       are under development. They can be built via the
+       "swig-java-lib" target of the source tree's top-level make
+       file.  If you don't have such a make file, see the INSTALL
+       document in the same directory for further instructions.
+
+       The Subversion Java libraries require extensive development to
+       be reach a functional state.  Consumption by end users is not
+       yet advised.
+
+       Java bindings for Subversion were originally initiated by
+       Alexander Mueller (xela) as hand-coded JNI bindings, with the
+       intent of producing a desktop GUI client, and were eventually
+       discarded in favor of a C++/wxWindows implementation which
+       wraps the C reference libraries. Developers of the SWIG
+       implementation are encouraged to refer to xela's initial work
+       for guidance.
+
+
+II.    WHY NOT 100% PURE JAVA?
+
+       tigris.org's C library is the reference implementation of a
+       Subversion client's logic, and is the most robust client
+       implementation available.  An alternative to its rapidly
+       maturing code base and active developer community which is of
+       similar quality would require significant effort, effort more
+       efficiently contributed towards further development of the
+       loadable libraries shared by all existing implementations.
+
+
+III.   WHY SWIG?
+
+       It's likely that Greg Stein has already answered this on the
+       dev@subversion.tigris.org mailing list.  Search the archive
+       (http://subversion.tigris.org/servlets/SearchList?list=dev) and
+       fill in this space with answers of his from there.
+
+       The main accessor class for the SWIG-generated Java code is
+       org.tigris.subversion.swig.Subversion.  It consists of a set of
+       static methods which wrap the raw and hard to understand
+       generated code.
+
+
+IV.    TODO
+
+       Update xela's JUnit work, adding a swig-java-check target to
+       the top-level build system.
+
+           swig-java-check: swig-java-lib
+
+       Start making the client library functional:
+
+       * Add a file (to an existing working copy)
+       * Update to a specific global revision
+       * Commit a file
+       * Check out a working copy
+       * etc.
