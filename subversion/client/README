@@ -52,6 +52,12 @@ so.  Subversion will differ where it provides a feature CVS doesn't,
 or doesn't provide something CVS does, or where people generally agree
 that the CVS way is not successful and shouldn't be imitated.
 
+Note that since we're not building on top of RCS and directories are
+first class citizens, a lot of options just disappear. If you are
+concerned that a particular body of functionality is not in Subversion
+1.0, don't get upset, just mail dev@subversion.tigris.org and we'll
+talk about it like the civilized human beings that we all hope to be
+one day. :)
 
 
 Parsing Command-Line Arguments
@@ -84,71 +90,84 @@ asks for it, she can get keyword substitution.  And, if she asks for
 it, she can get line-end conversion.  These two filters are
 completely independent of one another.
 
-* Keyword substitution (on/off)
+* Keyword substitution (on/OFF) per filesystem object. Children of
+  directories inherit this property.
 
-* End-of-line conversion (on/off)
+* End-of-line conversion (on/OFF) per filesystem object. Children of
+  directories inherit this property.
 
-* Check for conflict markers/state prior to checkin (on/off)
+* Check for conflict markers in working copy files prior to checkin
+  (ON/off) per filesystem object. Children of directories inherit this
+  property. TODO SURVEY
 
-* Will we provide anything like the most basic tasks that .cvswrappers does?
+* .svnfiletypespecifics file. SVN will implement basic .cvswrapper
+  functionality (only that related to file types determined by regular
+  expressions. This may happen in .svnfiletypespecifics or in
+  .svnrc. TODO SURVEY
 
 
-Common options
+Options
 ==============
 
-  /* While these are listed under `common options', we would probably
-   be well-served to document which subcommands support which
-   options. -Fitz */
+* Options 
 
+  This lists *all* command line options available to the subversion 
+  client. Options that are command specific (that is, available only
+  to a single command are noted as such)
 
-  -? -h -H --help  Help.
-  -V --verbose  KWd     What level of chatter?
-The valid verbose option keywords are:
-	quiet
-	progress   ** default
-	detail     (verbose??;)
-	trace      
-	/* debug iff DEBUG is #define-d?? */
+  -? -h -H --help                Help.
+      
+  -V --verbosity KEY             [quiet|progress|verbose|pontifical]
+                                 Determines the level of spewage that the
+                                 client gives (progress is the default)
+      
+  -D --date DATESPEC             Like "cvs cmd -D DATESPEC"
+      
+  -v --version VER               Like "cvs -r" Subversion does not have revisions,
+                                 we have versions. Multiple version #s are
+                                 separated by a `,'
+      
+  -l --local-dir                 Local; run only in current working directory.
+      
+     --recursive                 Operate recursively (default).
+      
+  -d --destination DEST          Target directory (like "cvs checkout -d DEST")
+      
+  -f --force                     Force. 
+      
+  -m --message MSG               Use "MSG" for the log message
+      
+  -F --msg-file FILE             Read the log message from FILE.
+              
+  -p --stdout                    Check out/update/whatever files to standard output 
+              
+  -n --dry-run                   Like "cvs -n" 
+      
+     --no-rc                     Suppress reading of .svnrc.
+              
+  -e --editor EDITOR             Edit messages with EDITOR.
+      
+     --read-only                 Make new working files read-only.
+      
+     --writable                  Make new working files read-write (default)
+      
+     --                          End of option processing
 
-  -q --quiet       alias for --verbose=quiet
+  -I --ignore GLOB               Ignore entities whose names match GLOB
 
-  -D --date-ver    Like "cvs cmd -D DATE"
-  -l --current-dir Local dir only, do not recurse. 
-                   (-R doesn't apply as it is the default behavior)
-  -d --dest-dir    Target directory (like "cvs checkout -d DIR")
-  -f --force       Force (probably useful for a few commands)
-  -m --log-msg     Use "message" for the creation log.
-  -F --msg-file    Read the log message from file.
+  -K --keywords GLOB             Expand keywords in files whose names match GLOB.
 
-  -p --stdout      Check out/update/whatever files to standard output 
-                   (avoids stickiness).
+  -L --line-conversion GLOB      Do line-end conversion for files matching GLOB.
 
-  -n --dry-run     Like "cvs -n" /* then use the short option, too? */
-  --no-rc          Suppress reading of .svnrc.
+* Aliases (shorthand for commonly used options and option combinations)
 
-  -e --editor EDNM    Edit messages with EDITOR.
-  -k --keyword-expansion KWd  Set/Use keyword expansion
-  -l --local-dir      Local; run only in current working directory.
-  -R --recursive      Operate recursively (default).
-  -T --tempdir DIR    Put temporary files in TEMPDIR.
-  -r --read-only      Make new working files read-only.
-  -w --writable       Make new working files read-write.
+  -q --quiet                     alias for --verbose=quiet
+  -T --text-defaults GLOB        alias for '-L GLOB -K GLOB'
 
-  -R REPOSITORY    Use REPOSITORY.
-                     /* Issue: -R may be unnecessary, if arguments
-                        are URLs anyway.  See thoughts from Greg
-                        Stein.  That would be nice, it would free up
-                        another option letter. */
-
-  --               End of option processing (this is the standard, right?)
-                   (Yes, it is one of the standards) :)
 
 
-Subcommands and their Options
-=============================
-
-This is just a beginning.  We need to expand each command to describe
-exactly what it does and what options it honors.  
+Subcommands
+===========
 
 The commands will look a lot like CVS's, though there are some
 newcomers:
@@ -158,7 +177,7 @@ Summary:
    add      | ad | new
    annotate | an | ann
    apply    | ap
-   branch  /* implemented via copy, though may want to be its own command */
+   branch   | br
    checkout | co
    commit   | ci
    convert  | cv
@@ -166,163 +185,249 @@ Summary:
    delete   | rm | del
    diff     | di | dif
    import   | im | imp
+   keyword  | kw | key
    log      | lo
    merge    | me
    propget  | pg | pget
    propset  | ps | pset
-   rdiff
-   rename   | mv
-   repo
+   rdiff    | rd
+   rename   | mv | move
+   repo     | rp
    status   | st | stat
-   tag     /* implemented via copy, though may want to be its own command */
+   tag      | tg
    update   | up
 
-NOTE: For now, I am not including Common Options in the usage
-      statements for each subcommand -Fitz
+NOTE: For now, I am not including Options in the usage
+      statements for each subcommand. Once this document becomes a bit
+      less fluid, we should document them for each subcommand as the
+      behaviors of the Options may have subtle differences
+      depending on the subcommand -Fitz
 
-
+
   checkout
   ========
 
-  Usage: svn checkout [-N] [-c] [-s] modules...
+  Usage: svn checkout URL
+  
+  This checks out a working copy from a repository. 
 
-    -N    Don't shorten module paths if -d specified.
-    /* This feels *weird* to me. Why use -d if you don't want things short? */
-
-
-    Module specific commands 
-    /* I entertained the thought of making
-       `modules' a subcommand and merge the following--thoughts? -Fitz */
-
-    -c    "cat" the module database.
-    -s    Like -c, but include module status.
- 
-/* Do these apply to svn? 
- *  -A    Reset any sticky tags/date/kopts. 
- *  -f    Force a head revision match if tag/date not found. 
- *  -P    Prune empty directories.
- *  -n    Do not run module program (if any).
- */
+  e.g. svn checkout http://svn.tigris.org/repository1/subversion
 
 
-
   update
   ======
 
-  Usage: svn update [-C] [--dirs] [-I ign] files...
+  Usage: svn update [-b PATH] [[FILE|DIR] ...]
 
-    -C    Overwrite locally modified files with clean repository copies.
-    --dirs    Build directories, like checkout does.
+  This updates your working copy from the repository.
+  If PATH is specified, update based on PATH in the repository (Which
+  is presumed to share a lot of ancestry with the current working copy).
 
-    -I ign    More files to ignore (! to reset).
+  e.g. svn update foo.c bar.h baz/ bat/*.m 
+       svn update -b /some/branch/path
 
-/* Do these apply to svn? 
- *  -A    Reset any sticky tags/date/kopts.
- *  -P    Prune empty directories.
- *  -f    Force a head revision match if tag/date not found.
- *  -W spec    Wrappers specification line.
- */
- 
-
   commit
   ======
 
-  Usage: svn commit files...
+  Usage: svn commit [[FILE|DIR] ...]
 
-- Looks like all these guys have moved to Common Options.
- 
-/* Do these apply to svn? 
- *  -n    Do not run the module program (if any).
- *  -f    Force the file to be committed; disables recursion.
- *        (We're not dealing with revisions anymore, so this should 
- *         be deprecated)  
- */
+  Commit changes from your working copy into the repository.
 
-
+  e.g. svn commit foo.c bar.h baz/ bat/*.m 
+
+
   add
   === 
 
-  Usage: svn add files...
+  Usage: svn add [[FILE|DIR] ...]
 
-- Looks like all these guys have moved to Common Options.
+  Add files/directories to your working copy. Commit will check them
+  into the repository.
 
-
+  e.g. svn add foo.c bar.h baz/ bat/*.m 
+
+
   rename
   ======
 
   Usage: svn rename FILE1 FILE2
 
-  This command is syntactic sugar for 'svn repo mv FILE1 FILE2', no?
-
+  This command moves files/directories within your working copy. When
+  you commit after doing this, the files/directories are moved within
+  the repository (thus retaining all ancestry and version
+  history). 
  
-
+  e.g. svn rename foo.c bar.c 
+
+  Note that this command behaves in the way that unix `mv' does:
+
+  $ ls
+    foo.c bar/
+
+  $ svn rename foo.c bar
+
+  $ ls
+    bar/
+
+  $ ls bar
+    foo.c
+
+
   delete
   ======
  
-  Usage: cvs remove [-f] files...
+  Usage: svn remove [[FILE|DIR] ...]
 
-    -f    Delete the file before removing it.
+  Marks FILE|DIR for deletion upon commit. When you commit, the file
+  will be marked as deleted in the repository and deleted from your
+  working copy. TODO SURVEY
 
-
+  "I for one abhor cvs's current behavior for cvs rm" -Fitz
+  "I for two abhor cvs's current behavior for cvs rm" -Karl
+
+
   copy
   ====
- 
-  /* I fell asleep here */
+  
+  Usage: svn copy SOURCE DESTINATION
 
-  branch  /*  implemented via copy, though may want to be its own command */
-  ======
- 
-  tag     /* implemented via copy, though may want to be its own command */
+  Where SOURCE and DESTINATION can be directories or files. `copy' is
+  used where you want to make a copy of SOURCE so that DESTINATION
+  will share ancestry of SOURCE. Unless DESTINATION is a directory,
+  DESTINATION must not exist (In the spirit of unix cp, SOURCE will be
+  placed inside of DESTINATION if DESTINATION is a directory).
+
+  e.g. If you do this (MAINTAIN ANCESTRY)
+
+  $ svn copy foo.c bar.c
+
+  Then foo.c and bar.c will share a common ancestor in the repository.
+
+  But, if you do this (NO ANCESTRY)
+
+  $ cp foo.c bar.c 
+  $ svn add bar.c
+  $ svn ci -m "Initial Import"
+
+  Then you will have the identical file in your working copy, but
+  bar.c will have no revision history beyond the initial import that
+  you just did.
+
+
+  tag
   ===
+
+  Usage: svn tag PATH
+
+  Create a configuration in the repository at PATH, mirroring the tree
+  in the working copy and based on the versions found there.
+
+  TODO: this needs to be documented _very_ thoroughly.  These are not
+  much like CVS tags.
+ 
  
   status
   ======
- 
+
+  Usage: svn status [[FILE|DIR] ...]
+
+  Print out the status of each file (noting what --verbosity is set to
+  and behaving accordingly).
+
+
   diff
   ====
- 
+
+  Usage: svn diff [svn-diff-opts/args]
+
+  This is like cvs diff. Anyone have anything to add?
+
+
   rdiff
   =====
- 
+
+  Usage: svn rdiff URL1 URL2
+
+  Exactly the same as diff, but takes 2 URLs and requires no working
+  copy.
+
+  e.g. svn rdiff http://svn.tigris.org/1999-10-23-alpha \
+                 http://svn.tigris.org/2000-05-19-beta
+
+
   annotate
   ========
+
+  This is like cvs annotate. Anyone have anything to add?
  
+
   import
   ======
  
+  Usage: svn import URL [-I GLOB] [-K GLOB] [-L GLOB] [-T GLOB]
+
+  Import something new into the repository
+
+  e.g. svn import http://svn.tigris.org/blahblah -I '*.jpg' -T '*.txt *.c *.h'
+
+
   log
   ===
  
+  Usage: svn log [-D DATESPEC] [-v VERSPEC] [[FILE|DIR] ...]
+
+  Show log messages (and affected entities) for commits in which any
+  of the entities in question changed.  If none were specified, then
+  recursive inclusion is the default.  The set of messages can be
+  further restricted by a date or version range specification.
+
+
   propset
   =======
+
+  TODO Talk to ben about this
+
+   TODO
+   deal with keyword substitution and end-of-line conversion. We can
+   make aliases for these 2 particular functions in the future. For
+   example:
+
+   svn key STATE FILE
+   svn eol STATE FILE
  
+
   propget
   =======
 
-  apply
-  =====
+  TODO talk to ben about this
+
 
   merge
   =====
 
-    -j rev    Merge in changes made between current revision and rev. 
+  Merge is identifies some set of diffs (likely from a branch) and
+  applies them to your current working copy. merge ONLY changes your
+  working copy, not the repository. The repository is changed when you
+  commit.
+
     /* Taken from update */
+    -v ver    Merge in changes made between current revision and ver. 
 
-  convert
-  =======
+  Note: Merges cannot happen in the repository. The repository has no
+  way to resolve conflicts, so all merges have to be done in a working
+  copy. If you don't have a working copy for your trunk and your
+  branch, you can't merge (for now). In the future, there's no reason
+  why your branch can't be a URL (a reference directly to the repository). 
 
-svn convert local-dir remote-dir
-
-(svn vert)
-
-
-  repo
-  ====
+  TODO This is related to the ancestry sets mentioned in the spec and
+  must be described in careful detail. 
 
 
 
 Miscellaneous Notes and addenda
 ===============================
+
+Stuff anything you'd like (related to subversion, please) below here. 
 
 
 
