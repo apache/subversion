@@ -18,7 +18,7 @@
 
 %module _util
 
-%include "typemaps.i"
+%include typemaps.i
 
 %import apr.i
 %import svn_types.i
@@ -96,6 +96,17 @@
 
 %typemap(python, argout) (const char *data, apr_size_t *len) {
     $result = t_output_helper($result, PyInt_FromLong(*$2));
+}
+
+/* -----------------------------------------------------------------------
+   describe how to pass a FILE* as a parameter (svn_stream_from_stdio)
+*/
+%typemap(python, in) FILE * {
+    $1 = PyFile_AsFile($input);
+    if ($1 == NULL) {
+        PyErr_SetString(PyExc_ValueError, "Must pass in a valid file object");
+        return NULL;
+    }
 }
 
 /* -----------------------------------------------------------------------
