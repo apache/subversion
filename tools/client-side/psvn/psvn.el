@@ -4,7 +4,7 @@
 ;; Author: Stefan Reichoer, <reichoer@web.de>
 ;; Version: 0.2b
 
-;; $LastChangedDate: 2002-09-02 21:50:21 +0200 (Mo, 02 Sep 2002) $
+;; $Id$
 
 ;; psvn.el is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -43,6 +43,7 @@
 ;; c     - svn-status-commit-file           run 'svn commit'
 ;; a     - svn-status-add-file              run 'svn add'
 ;; M-c   - svn-status-cleanup               run 'svn cleanup'
+;; s     - svn-status-show-process-buffer
 ;; e     - svn-status-toggle-edit-cmd-flag
 ;; ?     - svn-status-toggle-hide-unknown
 ;; _     - svn-status-toggle-hide-unmodified
@@ -125,7 +126,7 @@
 (defvar svn-status-hide-unmodified nil "Hide unmodified files in *cvs-status* buffer.")
 (defvar svn-status-directory-history nil "List of visited svn working directories.")
 
-(require 'overlay)
+(require 'overlay nil t)
 
 ;; internal variables
 (defvar svn-process-cmd nil)
@@ -175,6 +176,11 @@
 				'local-map keymap)))
 		 str))
   str)
+
+; compatibility
+; emacs 20
+(unless (fboundp 'point-at-eol) (defalias 'point-at-eol 'line-end-position))
+(unless (fboundp 'point-at-bol) (defalias 'point-at-bol 'line-beginning-position))
 
 
 (defun svn-status (dir &optional arg)
@@ -251,24 +257,24 @@
                  (svn-parse-status-result)
                  (svn-status-update-buffer))
                 ((eq svn-process-cmd 'log)
-                 (svn-status-show-process-buffer t)
+                 (svn-status-show-process-buffer-internal t)
                  (message "svn log finished"))
                 ((eq svn-process-cmd 'info)
-                 (svn-status-show-process-buffer t)
+                 (svn-status-show-process-buffer-internal t)
                  (message "svn info finished"))
 ;;                ((eq svn-process-cmd 'diff)
-;;                 (svn-status-show-process-buffer t)
+;;                 (svn-status-show-process-buffer-internal t)
 ;;                 (save-excursion
 ;;                   (set-buffer "*svn-process*")
 ;;                   (diff-mode)
 ;;                   (font-lock-fontify-buffer))
 ;;                 (message "svn diff finished"))
                 ((eq svn-process-cmd 'commit)
-                 (svn-status-show-process-buffer t)
+                 (svn-status-show-process-buffer-internal t)
                  (svn-status-update)
                  (message "svn commit finished"))
                 ((eq svn-process-cmd 'update)
-                 (svn-status-show-process-buffer t)
+                 (svn-status-show-process-buffer-internal t)
                  (svn-status-update)
                  (message "svn update finished"))
                 ((eq svn-process-cmd 'add)
@@ -278,10 +284,10 @@
                  (svn-status-update)
                  (message "svn revert finished"))
                 ((eq svn-process-cmd 'cleanup)
-                 ;;(svn-status-show-process-buffer t)
+                 ;;(svn-status-show-process-buffer-internal t)
                  (message "svn cleanup finished"))
                 ((eq svn-process-cmd 'proplist)
-                 (svn-status-show-process-buffer t)
+                 (svn-status-show-process-buffer-internal t)
                  (message "svn proplist finished"))
                 ((eq svn-process-cmd 'proplist-parse)
                  (svn-status-property-parse-property-names))
@@ -292,7 +298,7 @@
                 ((eq svn-process-cmd 'propdel)
                  (svn-status-update))))
       ;;(message (format "SVN Error: :%s:" event))
-      (svn-status-show-process-buffer t)))
+      (svn-status-show-process-buffer-internal t)))
 
 (defun svn-parse-status-result ()
   (setq svn-status-head-revision nil)
@@ -370,6 +376,7 @@
 (when (not svn-status-mode-map)
   (setq svn-status-mode-map (make-sparse-keymap))
   (define-key svn-status-mode-map [return] 'svn-status-select-line)
+  (define-key svn-status-mode-map [?s] 'svn-status-show-process-buffer)
   (define-key svn-status-mode-map [?o] 'svn-status-find-file-other-window)
   (define-key svn-status-mode-map [?e] 'svn-status-toggle-edit-cmd-flag)
   (define-key svn-status-mode-map [?g] 'svn-status-update)
@@ -417,6 +424,7 @@
                     ["svn add" svn-status-add-file t]
                     ["svn revert" svn-status-revert-file t]
                     ["svn cleanup" svn-status-cleanup t]
+                    ["Show process buffer" svn-status-show-process-buffer t]
                     ("Property"
                      ["svn proplist" svn-status-property-list t]
                      ["set multiple properties" svn-status-property-set t]
@@ -437,7 +445,44 @@
                     ))
 
 (defun svn-status-mode ()
-  "Major mode for processing the svn status"
+  "Major mode for processing the svn status
+
+  psvn.el is an interface for the revision control tool subversion
+  (see http://subversion.tigris.org)
+  psvn.el provides a similar interface for subversion as pcl-cvs for cvs.
+  At the moment are the following commands implemented:
+  M-x svn-status: run 'svn -status -v'
+  and show the result in the *svn-status* buffer, this buffer uses the
+  svn-status mode. In this mode are the following keys defined:
+  g     - svn-status-update:               run 'svn status -v'
+  C-u g - svn-status-update:               run 'svn status -vu'
+  =     - svn-status-show-svn-diff         run 'svn diff'
+  l     - svn-status-show-svn-log          run 'svn log'
+  i     - svn-status-info                  run 'svn info'
+  r     - svn-status-revert-file           run 'svn revert'
+  U     - svn-status-update-cmd            run 'svn update'
+  c     - svn-status-commit-file           run 'svn commit'
+  a     - svn-status-add-file              run 'svn add'
+  M-c   - svn-status-cleanup               run 'svn cleanup'
+  s     - svn-status-show-process-buffer
+  e     - svn-status-toggle-edit-cmd-flag
+  ?     - svn-status-toggle-hide-unknown
+  _     - svn-status-toggle-hide-unmodified
+  m     - svn-status-set-user-mark
+  u     - svn-status-unset-user-mark
+  DEL   - svn-status-unset-user-mark-backwards
+  .     - svn-status-goto-root-or-return
+  o     - svn-status-find-file-other-window
+  P l   - svn-status-property-list
+  P s   - svn-status-property-set
+  P d   - svn-status-property-delete
+  P e   - svn-status-property-edit-one-entry
+  P i   - svn-status-property-ignore-file
+  P I   - svn-status-property-ignore-file-extension
+  P C-i - svn-status-property-edit-svn-ignore
+  P k   - svn-status-property-set-keyword-list
+  h     - svn-status-use-history
+  q     - svn-status-bury-buffer"
   (interactive)
   (kill-all-local-variables)
 
@@ -490,9 +535,11 @@
   ;;(message " %S %S %S %S - %s" svn-status-hide-unmodified (svn-status-line-info->propmark line-info) ?_
   ;;         (svn-status-line-info->filemark line-info) (svn-status-line-info->filename line-info))
   (and svn-status-hide-unmodified
-       (and (eq (svn-status-line-info->filemark line-info) ?_)
+       (and (or (eq (svn-status-line-info->filemark line-info) ?_)
+                (eq (svn-status-line-info->filemark line-info) ? ))
             (or (eq (svn-status-line-info->propmark line-info) ?_)
-                (eq (svn-status-line-info->propmark line-info) ? )))))
+                (eq (svn-status-line-info->propmark line-info) ? )
+                (eq (svn-status-line-info->propmark line-info) nil)))))
 
 
 (defun svn-insert-line-in-status-buffer (line-info)
@@ -727,7 +774,7 @@ Afterwards move one line up."
 
     (insert postfix))))
 
-(defun svn-status-show-process-buffer (&optional scroll-to-top)
+(defun svn-status-show-process-buffer-internal (&optional scroll-to-top)
   (when (eq (current-buffer) "*svn-status*")
     (delete-other-windows))
   (pop-to-buffer "*svn-process*")
@@ -754,11 +801,15 @@ Afterwards move one line up."
       (svn-run-svn nil clear-buf 'diff "diff" (svn-status-line-info->filename (car fl)))
       (setq clear-buf nil)
       (setq fl (cdr fl))))
-  (svn-status-show-process-buffer t)
+  (svn-status-show-process-buffer-internal t)
   (save-excursion
     (set-buffer "*svn-process*")
     (diff-mode)
     (font-lock-fontify-buffer)))
+
+(defun svn-status-show-process-buffer ()
+  (interactive)
+  (svn-status-show-process-buffer-internal))
 
 (defun svn-status-add-file ()
   (interactive)
@@ -846,7 +897,7 @@ Afterwards move one line up."
   (svn-status-proplist-start))
 
 (defun svn-status-property-parse-property-names ()
-  ;(svn-status-show-process-buffer t)
+  ;(svn-status-show-process-buffer-internal t)
   (message "svn-status-property-parse-property-names")
   (let ((pl)
         (pfl)
