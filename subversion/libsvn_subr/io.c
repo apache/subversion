@@ -780,17 +780,16 @@ svn_error_t *svn_io_copy_dir_recursively (const char *src,
 svn_error_t *
 svn_io_make_dir_recursively (const char *path, apr_pool_t *pool)
 {
-  svn_error_t *err;
-  char *dir;
+  const char *path_apr;
+  apr_status_t apr_err;
 
   if (svn_path_is_empty (path))
     /* Empty path (current dir) is assumed to always exist,
        so we do nothing, per docs. */
     return SVN_NO_ERROR;
 
-#if 0
-  /* ### Use this implementation if/when apr_dir_make_recursive is
-     available on all platforms, not just on Unix. --xbc */
+  SVN_ERR (svn_path_cstring_from_utf8 (&path_apr, path, pool));
+
   apr_err = apr_dir_make_recursive (path_apr, APR_OS_DEFAULT, pool);
 
   if (apr_err)
@@ -798,27 +797,6 @@ svn_io_make_dir_recursively (const char *path, apr_pool_t *pool)
                                path_for_err_msg (path, pool));
 
   return SVN_NO_ERROR;
-#else
-
-  /* Try to make PATH right out */
-  err = svn_io_dir_make (path, APR_OS_DEFAULT, pool);
-
-  if (! err || APR_STATUS_IS_EEXIST (err->apr_err))
-    {
-      /* We succeeded, or path already exists; either way we're done. */
-      svn_error_clear (err);
-      return SVN_NO_ERROR;
-    }
-  else if (APR_STATUS_IS_ENOENT (err->apr_err))
-    {
-      /* Missing an intermediate dir. */
-      dir = svn_path_dirname (path, pool);
-      SVN_ERR (svn_io_make_dir_recursively (dir, pool));
-      return svn_io_dir_make (path, APR_OS_DEFAULT, pool);
-    }
-  else
-    return err;
-#endif
 }
 
 svn_error_t *svn_io_file_create (const char *file,
