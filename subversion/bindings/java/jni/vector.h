@@ -1,4 +1,6 @@
-/**
+/*
+ * utility functions to handle the java class java.util.Vector
+ *
  * ====================================================================
  * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
  *
@@ -12,37 +14,33 @@
  * individuals.  For exact contribution history, see the revision
  * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
- *
  */
 
-import junit.framework.*;
+#ifndef SVN_JNI_VECTOR_H
+#define SVN_JNI_VECTOR_H
 
-public class AllTests {
+/* includes */
+#include <jni.h>
 
-    public static void main( String [] args )
-	{
-	    junit.textui.TestRunner.run( suite() );
-	}
+/* functions */
+jobject
+vector__create(JNIEnv *env, jboolean *hasException);
 
-    public static Test suite( )
-	{
-	    TestSuite suite = new TestSuite(
-		"All JUnit tests for the Java Subversion binding");
+void
+vector__add(JNIEnv *env, jobject vector, jobject value, 
+            jboolean *hasException);
 
-	    //add tests here
-	    //example:
-	    //suite.addTest( new StatusTest() );
-	    suite.addTestSuite(  VectorTests.class );
-
-	    return suite;
-	}
-}
+#endif
 
 /* 
  * local variables:
- * eval: (load-file "../../../../../../../svn-dev.el")
+ * eval: (load-file "../../../svn-dev.el")
  * end: 
  */
+
+
+
+
 
 
 

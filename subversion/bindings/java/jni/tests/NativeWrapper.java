@@ -14,28 +14,17 @@
  * ====================================================================
  *
  */
+import java.util.Vector;
 
-import junit.framework.*;
-
-public class AllTests {
-
-    public static void main( String [] args )
+public class NativeWrapper
+{
+    static
 	{
-	    junit.textui.TestRunner.run( suite() );
+	    System.loadLibrary("svn_jni_tests");
 	}
 
-    public static Test suite( )
-	{
-	    TestSuite suite = new TestSuite(
-		"All JUnit tests for the Java Subversion binding");
-
-	    //add tests here
-	    //example:
-	    //suite.addTest( new StatusTest() );
-	    suite.addTestSuite(  VectorTests.class );
-
-	    return suite;
-	}
+    public static native Vector vectorCreate();
+    public static native void vectorAdd(Vector vector, Object object);
 }
 
 /* 
@@ -43,7 +32,4 @@ public class AllTests {
  * eval: (load-file "../../../../../../../svn-dev.el")
  * end: 
  */
-
-
-
 

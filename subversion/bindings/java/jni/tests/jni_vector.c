@@ -15,27 +15,22 @@
  *
  */
 
-import junit.framework.*;
+#include <jni.h>
+#include "../svn_jni_tests.h"
+#include "../vector.h"
 
-public class AllTests {
+JNIEXPORT jobject JNICALL 
+Java_NativeWrapper_vectorCreate
+(JNIEnv *env, jclass vectorClass)
+{
+  return vector__create(env, NULL);
+}
 
-    public static void main( String [] args )
-	{
-	    junit.textui.TestRunner.run( suite() );
-	}
-
-    public static Test suite( )
-	{
-	    TestSuite suite = new TestSuite(
-		"All JUnit tests for the Java Subversion binding");
-
-	    //add tests here
-	    //example:
-	    //suite.addTest( new StatusTest() );
-	    suite.addTestSuite(  VectorTests.class );
-
-	    return suite;
-	}
+JNIEXPORT void JNICALL 
+Java_NativeWrapper_vectorAdd
+(JNIEnv *env, jclass clazz, jobject vector, jobject value)
+{
+  vector__add(env, vector, value, NULL);
 }
 
 /* 
@@ -43,7 +38,5 @@ public class AllTests {
  * eval: (load-file "../../../../../../../svn-dev.el")
  * end: 
  */
-
-
 
 
