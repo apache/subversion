@@ -182,7 +182,7 @@ svn_error_t *svn_fs_berkeley_recover (const char *path,
 
 
 
-/* Node and Node Revision ID's.  */
+/* Nodes.  */
 
 /* In a Subversion filesystem, a `node' corresponds roughly to an
    `inode' in a Unix filesystem:
@@ -205,77 +205,11 @@ svn_error_t *svn_fs_berkeley_recover (const char *path,
    a file from the filesystem, we don't delete the node, or any revision
    of it --- those stick around to allow us to recreate prior revisions of
    the filesystem.  Instead, we just remove the reference to the node
-   from the directory.
-
-   Within the database, we refer to nodes and node revisions using strings
-   of numbers separated by periods that look a lot like RCS revision
-   numbers.
-
-     node_id ::= number | node_revision_id "." number
-     node_revision_id ::= node_id "." number
-
-   So: 
-   - "100" is a node id.
-   - "100.10" is a node revision id, referring to revision 10 of node 100.
-   - "100.10.3" is a node id, referring to the third branch based on
-     revision 10 of node 100.
-   - "100.10.3.4" is a node revision id, referring to revision 4 of
-     of the third branch from revision 10 of node 100.
-   And so on.
-
-   Node revision numbers start with 1.  Thus, N.1 is the first revision
-   of node N.
-
-   Node / branch numbers start with 1.  Thus, N.M.1 is the first
-   branch off of N.M.
-
-   A directory entry identifies the file or subdirectory it refers to
-   using a node revision number --- not a node number.  This means that
-   a change to a file far down in a directory hierarchy requires the
-   parent directory of the changed node to be updated, to hold the new
-   node revision ID.  Now, since that parent directory has changed, its
-   parent needs to be updated.
-
-   If a particular subtree was unaffected by a given commit, the node
-   revision ID that appears in its parent will be unchanged.  When
-   doing an update, we can notice this, and ignore that entire
-   subtree.  This makes it efficient to find localized changes in
-   large trees.
-
-   Note that the number specifying a particular revision of a node is
-   unrelated to the global filesystem revision when that node revision
-   was created.  So 100.10 may have been created in filesystem revision
-   1218; 100.10.3.2 may have been created any time after 100.10; it
-   doesn't matter.
-
-   Since revision numbers increase by one each time a delta is added,
-   we can compute how many deltas separate two related node revisions
-   simply by comparing their ID's.  For example, the distance between
-   100.10.3.2 and 100.12 is the distance from 100.10.3.2 to their
-   common ancestor, 100.10 (two deltas), plus the distance from 100.10
-   to 100.12 (two deltas).
-
-   However, this is kind of a kludge, since the number of deltas is
-   not necessarily an accurate indicator of how different two files
-   are --- a single delta could be a minor change, or a complete
-   replacement.  Furthermore, the filesystem may decide arbitrary to
-   store a given node revision as a delta or as full text --- perhaps
-   depending on how recently the node was used --- so revision id
-   distance isn't necessarily an accurate predictor of retrieval time.
-
-   If you have insights about how this stuff could work better, let me
-   know.  I've read some of Josh MacDonald's stuff on this; his
-   discussion seems to be mostly about how to retrieve things quickly,
-   which is important, but only part of the issue.  I'd like to find
-   better ways to recognize renames, and find appropriate ancestors in
-   a source tree for changed files.  */
+   from the directory. */
 
 
-/* Within the code, we represent node and node revision ID's as arrays
-   of integers, terminated by a -1 element.  This is the type of an
-   element of a node ID.  */
-typedef svn_revnum_t svn_fs_id_t;
-
+/* An object representing a node-id.  */
+typedef struct svn_fs_id_t svn_fs_id_t;
 
 
 /* Return the distance between node revisions A and B.  Return -1 if

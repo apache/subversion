@@ -184,7 +184,7 @@ deltify_by_id (svn_fs_t *fs,
   /* Increment TMP_ID as a regular successor of TARGET_ID, and see if
      it exists in FS. */
   tmp_id = svn_fs__id_copy (target_id, trail->pool);
-  tmp_id[len - 1]++;
+  tmp_id->digits[len - 1]++;
   if (SVN_NO_ERROR == svn_fs__dag_get_node (&node, fs, tmp_id, trail))
     {
       source_id = tmp_id;
@@ -193,20 +193,15 @@ deltify_by_id (svn_fs_t *fs,
     {
       /* If that doesn't exist, we'll branch TARGET_ID, and see if
          that exists. */
-      apr_size_t i;
-      tmp_id = apr_pcalloc (trail->pool, sizeof (*tmp_id) * (len + 3));
-      for (i = 0; i < len; i++)
-        {
-          tmp_id[i] = target_id[i];
-        }
-      tmp_id[len] = 1;
-      tmp_id[len + 1] = 1;
-      tmp_id[len + 2] = -1;
-
+      tmp_id = apr_palloc (trail->pool, sizeof (*tmp_id));
+      tmp_id->digits = apr_pmemdup (trail->pool, target_id->digits, 
+                                    (len + 3) * sizeof (target_id->digits[0]));
+      tmp_id->digits[len] = 1;
+      tmp_id->digits[len + 1] = 1;
+      tmp_id->digits[len + 2] = -1;
+      
       if (SVN_NO_ERROR == svn_fs__dag_get_node (&node, fs, tmp_id, trail))
-        {
-          source_id = tmp_id;
-        }
+        source_id = tmp_id;
     }
 
   /* If we found a valid source ID, perform the deltification step. */

@@ -40,9 +40,9 @@ compare_ids (svn_fs_id_t *a, svn_fs_id_t *b)
 {
   int i = 0;
 
-  while (a[i] == b[i])
+  while (a->digits[i] == b->digits[i])
     {
-      if (a[i] == -1)
+      if (a->digits[i] == -1)
         return 0;
       i++;
     }
@@ -50,25 +50,25 @@ compare_ids (svn_fs_id_t *a, svn_fs_id_t *b)
   /* Different nodes, or different branches, are ordered by their
      node / branch numbers.  */
   if ((i & 1) == 0)
-    return a[i] - b[i];
+    return a->digits[i] - b->digits[i];
 
   /* This function is only prepared to handle node revision ID's.  */
-  if (a[i] == -1 || b[i] == -1)
+  if (a->digits[i] == -1 || b->digits[i] == -1)
     abort ();
 
   /* Different revisions of the same node are ordered by revision number.  */
-  if (a[i + 1] == -1 && b[i + 1] == -1)
-    return a[i] - b[i];
+  if (a->digits[i + 1] == -1 && b->digits[i + 1] == -1)
+    return a->digits[i] - b->digits[i];
 
   /* A branch off of any revision of a node comes after all revisions
      of that node.  */
-  if (a[i + 1] == -1)
+  if (a->digits[i + 1] == -1)
     return -1;
-  if (b[i + 1] == -1)
+  if (b->digits[i + 1] == -1)
     return 1;
 
   /* Branches are ordered by increasing revision number.  */
-  return a[i] - b[i];
+  return a->digits[i] - b->digits[i];
 }
 
 
@@ -318,9 +318,9 @@ svn_fs__new_node_id (svn_fs_id_t **id_p,
 
   /* Given the ID of the last node revision, what's the ID of the
      first revision of an entirely new node?  */
-  id[0]++;
-  id[1] = 1;
-  id[2] = -1;
+  id->digits[0]++;
+  id->digits[1] = 1;
+  id->digits[2] = -1;
 
   *id_p = id;
   return SVN_NO_ERROR;
@@ -400,10 +400,10 @@ svn_fs__new_successor_id (svn_fs_id_t **successor_p,
 
   /* Set NEW_ID to the next node revision after ID.  Allocate some
      extra room, in case we need to construct a branch ID below.  */
-  new_id = (svn_fs_id_t *) apr_palloc (pool,
-                                       (id_len + 3) * sizeof (*new_id));
-  memcpy (new_id, id, (id_len + 1) * sizeof (*id)); /* copy the -1 */
-  new_id[id_len - 1]++;         /* increment the revision number */
+  new_id = apr_palloc (pool, sizeof (*new_id));
+  new_id->digits = apr_palloc (pool, (id_len + 3) * sizeof (id->digits[0]));
+  memcpy (new_id->digits, id->digits, (id_len + 1) * sizeof (id->digits[0]));
+  new_id->digits[id_len - 1]++;         /* increment the revision number */
 
   /* Check to see if there already exists a node whose ID is NEW_ID.  */
   db_err = fs->nodes->get (fs->nodes, db_txn,
@@ -433,9 +433,9 @@ svn_fs__new_successor_id (svn_fs_id_t **successor_p,
      node is (perhaps a branch from) the last branch from N.V.
 
      NEW_ID is currently N.(V+1); stick on the ".1.1".  */
-  new_id[id_len + 0] = 1;
-  new_id[id_len + 1] = 1;
-  new_id[id_len + 2] = -1;
+  new_id->digits[id_len + 0] = 1;
+  new_id->digits[id_len + 1] = 1;
+  new_id->digits[id_len + 2] = -1;
   SVN_ERR (DB_WRAP (fs, "checking for next node branch",
                     last_key_before (fs->nodes, db_txn,
                                      svn_fs__id_to_dbt (&key, new_id, pool))));
@@ -459,10 +459,10 @@ svn_fs__new_successor_id (svn_fs_id_t **successor_p,
     if (last_branch_len == id_len)
       {
         /* The first branch from N.V is N.V.1.1.  */
-        memcpy (new_id, id, id_len * sizeof (*id));
-        new_id[id_len + 0] = 1;
-        new_id[id_len + 1] = 1;
-        new_id[id_len + 2] = -1;
+        memcpy (new_id->digits, id->digits, id_len * sizeof (id->digits[0]));
+        new_id->digits[id_len + 0] = 1;
+        new_id->digits[id_len + 1] = 1;
+        new_id->digits[id_len + 2] = -1;
 
         *successor_p = new_id;
         return SVN_NO_ERROR;
@@ -474,10 +474,11 @@ svn_fs__new_successor_id (svn_fs_id_t **successor_p,
       {
         /* The last key has the form N.V.B... so the first revision
            on our new branch is N.V.(B+1).1.  */
-        memcpy (new_id, last_branch_id, (id_len + 1) * sizeof (*id));
-        new_id[id_len + 0]++;
-        new_id[id_len + 1] = 1;
-        new_id[id_len + 2] = -1;
+        memcpy (new_id->digits, last_branch_id->digits, 
+                (id_len + 1) * sizeof (id->digits[0]));
+        new_id->digits[id_len + 0]++;
+        new_id->digits[id_len + 1] = 1;
+        new_id->digits[id_len + 2] = -1;
 
         *successor_p = new_id;
         return SVN_NO_ERROR;
