@@ -1310,6 +1310,18 @@ close_directory (void *dir_baton,
 }
 
 
+/* One implementation, shared for 'absent_file' and 'absent_directory'. */
+static svn_error_t *
+absent_xxx (const char *path,
+            void *parent_baton,
+            apr_pool_t *pool)
+{
+  printf ("BMCS: path '%s' is absent.\n", path);
+  fflush (stdout);
+
+  return SVN_NO_ERROR;
+}
+
 
 /* Common code for add_file() and open_file(). */
 static svn_error_t *
@@ -2413,11 +2425,13 @@ make_editor (svn_wc_adm_access_t *adm_access,
   tree_editor->open_directory = open_directory;
   tree_editor->change_dir_prop = change_dir_prop;
   tree_editor->close_directory = close_directory;
+  tree_editor->absent_directory = absent_xxx;
   tree_editor->add_file = add_file;
   tree_editor->open_file = open_file;
   tree_editor->apply_textdelta = apply_textdelta;
   tree_editor->change_file_prop = change_file_prop;
   tree_editor->close_file = close_file;
+  tree_editor->absent_file = absent_xxx;
   tree_editor->close_edit = close_edit;
 
   SVN_ERR (svn_delta_get_cancellation_editor (cancel_func,

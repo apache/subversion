@@ -106,7 +106,8 @@ static svn_error_t *authz_read(svn_boolean_t *allowed,
   /* See page 554 of Apache book about httpd subrequests. */
 
   /* For now, a silly test implementation. */
-  if (strstr ((char *) path, "/pi"))
+  if ((strstr ((char *) path, "/pi"))
+      || (strstr ((char *) path, "/E")))
     *allowed = FALSE;
   else
     *allowed = TRUE;
