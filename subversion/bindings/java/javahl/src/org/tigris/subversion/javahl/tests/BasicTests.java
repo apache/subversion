@@ -374,7 +374,7 @@ public class BasicTests extends SVNTests
     public void testBasicSwitch() throws Throwable
     {
         OneTest thisTest = new OneTest();
-        String iotaPath = thisTest.getWorkingCopy().getAbsolutePath() + "\\iota";
+        String iotaPath = thisTest.getWorkingCopy().getAbsolutePath() + "/iota";
         String gammaUrl = thisTest.getUrl() + "/A/D/gamma";
         thisTest.getWc().setItemContent("iota", greekWC.getItemContent("A/D/gamma"));
         thisTest.getWc().setItemIsSwitched("iota", true);
