@@ -41,8 +41,7 @@ Candidate changes:
     Justification:
       Simple fix for a nasty problem that has bitten at least one user.
     Votes:
-       +1: bliss, maxb, breser
-       +1 (r10819 only, so far): ghudson
+       +1: bliss, maxb, breser, ghudson
        -1: brane [until someone explains to me why this should be a
                   Unix-only change]
 
@@ -59,14 +58,14 @@ Candidate changes:
     Justification:
       Regression from 1.0.
     Votes:
-      +1: bliss, breser
+      +1: bliss, breser, ghudson
 
   * r10890
     Run external diff3 with full environment.
     Justification:
       X11 diff3 utilities won't work without it.  One-liner.
     Votes:
-      +1: bliss, breser
+      +1: bliss, breser, ghudson
 
   * r10868, r10884
     Improve handling of path to SWIG in configure.
@@ -74,11 +73,11 @@ Candidate changes:
       Handles passing the path to the executable and gives an error if
       they explicitly asked for SWIG but we are unable to find it. 
     Votes:
-      +1: breser
+      +1: breser, ghudson
 
   * r10894
     Allow cancelation during recursive addition of a dir without subdirs.
     Justification:
       Simple usability fix.
     Votes:
-      +1: breser
+      +1: breser, ghudson
