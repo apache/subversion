@@ -283,6 +283,7 @@ svn_error_t *svn_fs__fs_write_revision_zero (svn_fs_t *fs);
 #define SVN_FS_FS__TXNS_PROPS        "props"
 #define SVN_FS_FS__NEXT_IDS          "next-ids"
 #define SVN_FS_FS__CHILDREN_EXT      ".children"
+#define SVN_FS_FS__PROPS_EXT         ".props"
 #define SVN_FS_FS__REV               "rev"
 
 /* Headers used to describe node-revision in the revision file. */

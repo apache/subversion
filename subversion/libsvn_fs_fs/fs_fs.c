@@ -421,6 +421,7 @@ open_and_seek_transaction (apr_file_t **file,
                            const char *txn_id,
                            apr_off_t offset,
                            svn_boolean_t directory_contents,
+                           svn_boolean_t is_data_rep,
                            apr_pool_t *pool)
 {
   const char *filename;
@@ -433,7 +434,18 @@ open_and_seek_transaction (apr_file_t **file,
 
   if (! directory_contents)
     {
-      filename = svn_path_join (filename, SVN_FS_FS__REV, pool);
+      if (is_data_rep)
+        {
+          filename = svn_path_join (filename, SVN_FS_FS__REV, pool);
+        }
+      else
+        {
+          filename = svn_path_join (filename,
+                                    apr_psprintf (pool, "%s.%s"
+                                                  SVN_FS_FS__PROPS_EXT,
+                                                  id->node_id, id->copy_id),
+                                    pool);
+        }
     }
   else
     {
@@ -473,7 +485,8 @@ open_and_seek_representation (apr_file_t **file_p,
     {
       SVN_ERR (open_and_seek_transaction (file_p, fs, id, rep->txn_id,
                                           rep->offset,
-                                          rep->is_directory_contents, pool));
+                                          rep->is_directory_contents,
+                                          rep->is_data_rep, pool));
     }
 
   return SVN_NO_ERROR;
@@ -651,6 +664,7 @@ svn_fs__fs_get_node_revision (svn_fs__node_revision_t **noderev_p,
     {
       SVN_ERR (read_rep_offsets (&noderev->prop_rep, value, id->txn_id, pool));
       noderev->prop_rep->is_directory_contents = FALSE;
+      noderev->prop_rep->is_data_rep = FALSE;
     }
 
   /* Get the data location. */
@@ -658,6 +672,7 @@ svn_fs__fs_get_node_revision (svn_fs__node_revision_t **noderev_p,
   if (value)
     {
       SVN_ERR (read_rep_offsets (&noderev->data_rep, value, id->txn_id, pool));
+      noderev->data_rep->is_data_rep = TRUE;
     }
 
   /* Get the created path. */
@@ -2456,11 +2471,13 @@ open_and_seek_representation_write (apr_file_t **file_p,
                                     svn_fs_t *fs,
                                     const svn_fs_id_t *id,
                                     svn_boolean_t is_directory_contents,
+                                    svn_boolean_t is_data,
                                     apr_pool_t *pool)
 {
   apr_file_t *file;
-  const char *txn_dir;
+  const char *txn_dir, *filename;
   apr_off_t offset;
+  int open_flag;
 
   txn_dir = svn_path_join_many (pool, fs->fs_path, SVN_FS_FS__TXNS_DIR,
                                 apr_pstrcat (pool, id->txn_id,
@@ -2469,31 +2486,42 @@ open_and_seek_representation_write (apr_file_t **file_p,
 
   /* If this is a normal representation, i.e. not directory contents,
      then just open up the rev file in append mode. */
-  if (! is_directory_contents)
+  if ((! is_directory_contents) && is_data)
     {
-      SVN_ERR (svn_io_file_open (&file, svn_path_join (txn_dir,
-                                                       SVN_FS_FS__REV,
-                                                       pool),
-                                 APR_APPEND | APR_WRITE | APR_CREATE,
-                                 APR_OS_DEFAULT, pool));
-      offset = 0;
-      SVN_ERR (svn_io_file_seek (file, APR_END, &offset, 0));
+      /* A normal node data rep. */
+      filename = svn_path_join (txn_dir, SVN_FS_FS__REV, pool);
+      open_flag = APR_APPEND;
+    }
+  else if (! is_data)
+    {
+      /* This is a property. */
+
+      filename = svn_path_join (txn_dir,
+                                apr_psprintf (pool, "%s.%s"
+                                              SVN_FS_FS__PROPS_EXT,
+                                              id->node_id, id->copy_id),
+                                pool);
+      open_flag = APR_TRUNCATE;
     }
   else
     {
-      const char *children_name;
+      /* This is directory contents. */
 
-      children_name = svn_path_join (txn_dir,
-                                     apr_psprintf (pool, "%s.%s"
-                                                   SVN_FS_FS__CHILDREN_EXT,
-                                                   id->node_id, id->copy_id),
-                                     pool);
-
-      SVN_ERR (svn_io_file_open (&file, children_name,
-                                 APR_WRITE | APR_TRUNCATE | APR_CREATE,
-                                 APR_OS_DEFAULT, pool));
+      filename = svn_path_join (txn_dir,
+                                apr_psprintf (pool, "%s.%s"
+                                              SVN_FS_FS__CHILDREN_EXT,
+                                              id->node_id, id->copy_id),
+                                pool);
+      open_flag = APR_TRUNCATE;
     }
 
+  SVN_ERR (svn_io_file_open (&file, filename,
+                             open_flag | APR_WRITE | APR_CREATE,
+                             APR_OS_DEFAULT, pool));
+  
+  offset = 0;
+  SVN_ERR (svn_io_file_seek (file, APR_END, &offset, 0));
+  
   *file_p = file;
 
   return SVN_NO_ERROR;
@@ -2566,7 +2594,8 @@ rep_write_get_baton (struct rep_write_baton **wb_p,
 
   /* Open the file we are writing to. */
   SVN_ERR (open_and_seek_representation_write (&file, fs, noderev->id,
-                                               is_directory_contents, pool));
+                                               is_directory_contents,
+                                               is_data_rep, pool));
 
 
   b->file = file;
@@ -2946,6 +2975,14 @@ write_final_rev (const svn_fs_id_t **new_id_p,
   /* Fix up the property reps. */
   if (noderev->prop_rep && noderev->prop_rep->txn_id)
     {
+      apr_hash_t *proplist;
+      
+      SVN_ERR (svn_fs__fs_get_proplist (&proplist, fs, noderev, pool));
+      SVN_ERR (get_file_offset (&noderev->prop_rep->offset, file, pool));
+      SVN_ERR (write_hash_rep (&noderev->prop_rep->size,
+                               noderev->prop_rep->checksum, file,
+                               proplist, pool));
+                               
       noderev->prop_rep->txn_id = NULL;
       noderev->prop_rep->revision = rev;
     }

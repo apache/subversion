@@ -154,6 +154,10 @@ typedef struct
 
   /* Is this a data rep for a directory node? */
   svn_boolean_t is_directory_contents;
+
+  /* Is this a data rep? */
+  svn_boolean_t is_data_rep;
+  
 } svn_fs__representation_t;
 
 
