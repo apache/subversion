@@ -1,4 +1,4 @@
-Last updated: $Date: 2001-07-02 21:46:52 $
+Last updated: $Date: 2001/07/02 21:46:52 $
 
 Two things that need to happen in the filesystem:
 

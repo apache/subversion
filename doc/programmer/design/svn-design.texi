@@ -79,7 +79,7 @@
 Copyright @copyright{} 2000 Collab.Net, Inc. @*
 See @xref{License} for details. @*
 First version: June 2000.  @*
-Last updated:  $Date: 2001-06-04 22:00:52 $
+Last updated:  $Date: 2001/06/04 22:00:52 $
 
 @end titlepage
 @c -----------------------------------------------------------------

@@ -77,7 +77,7 @@
 Copyright @copyright{} 2001 CollabNet, Inc. @*
 See @xref{License} for details. @*
 First version: June 2001.  @*
-Last updated:  $Date: 2001-07-20 21:57:43 $
+Last updated:  $Date: 2001/07/20 21:57:43 $
 
 @end titlepage
 @c -----------------------------------------------------------------
