@@ -241,7 +241,7 @@ subcommand_create (apr_getopt_t *os, void *baton, apr_pool_t *pool)
     {
       fs_config = apr_hash_make (pool);
       apr_hash_set (fs_config, SVN_FS_CONFIG_BDB_TXN_NOSYNC,
-                    SVN_FS_CONFIG_BDB_TXN_NOSYNC_LEN, "1");
+                    APR_HASH_KEY_STRING, "1");
     }
 
   SVN_ERR (svn_config_get_config (&config, pool));
