@@ -501,15 +501,9 @@ take_from_entry (svn_wc_entry_t *src, svn_wc_entry_t *dst, apr_pool_t *pool)
   if ((dst->revision == SVN_INVALID_REVNUM) && (dst->kind != svn_node_dir))
     dst->revision = src->revision;
   
-  /* Inherits parent's url if doesn't have a url of one's own and is not
-     marked for addition.  An entry being added doesn't really have
-     url yet.  */
-  if ((! dst->url) 
-      && (! ((dst->schedule == svn_wc_schedule_add)
-             || (dst->schedule == svn_wc_schedule_replace))))
-    {
-      dst->url = svn_path_url_add_component (src->url, dst->name, pool);
-    }
+  /* Inherits parent's url if doesn't have a url of one's own. */
+  if (! dst->url) 
+    dst->url = svn_path_url_add_component (src->url, dst->name, pool);
 }
 
 

@@ -563,7 +563,6 @@ svn_client__harvest_committables (apr_hash_t **committables,
     {
       svn_wc_adm_access_t *adm_access;
       const svn_wc_entry_t *entry;
-      const char *url;
       const char *target;
 
       /* Add the relative portion of our full path (if there are no
@@ -582,59 +581,53 @@ svn_client__harvest_committables (apr_hash_t **committables,
       SVN_ERR (svn_wc_entry (&entry, target, adm_access, FALSE, subpool));
       if (! entry)
         return svn_error_create (SVN_ERR_ENTRY_NOT_FOUND, NULL, target);
-      
       if (! entry->url)
+        return svn_error_createf (SVN_ERR_WC_CORRUPT, NULL, 
+                                  "Entry for `%s' has no URL", target);
+
+      /* We have to be especially careful around entries scheduled for
+         addition or replacement. */
+      if ((entry->schedule == svn_wc_schedule_add)
+          || (entry->schedule == svn_wc_schedule_replace))
         {
           const char *parent, *base_name;
           svn_wc_adm_access_t *parent_access;
-          const svn_wc_entry_t *p_entry;
-          svn_boolean_t wc_root;
+          const svn_wc_entry_t *p_entry = NULL;
+          svn_error_t *err;
 
-          /* An entry with no URL should only come about when it is
-             scheduled for addition or replacement. */
-          if (! ((entry->schedule == svn_wc_schedule_add)
-                 || (entry->schedule == svn_wc_schedule_replace)))
-            return svn_error_createf 
-              (SVN_ERR_WC_CORRUPT, NULL, 
-               "Entry for `%s' has no URL, yet is not scheduled for addition",
-               target);
-
-          /* Check for WC-root-ness. */
-          SVN_ERR (svn_wc_is_wc_root (&wc_root, target, adm_access, subpool));
-          if (wc_root)
-            return svn_error_createf 
-              (SVN_ERR_ILLEGAL_TARGET, NULL, 
-               "Entry for `%s' has no URL, and none can be derived for it",
-               target);
-          
-          /* See if the parent is under version control (corruption if it
-             isn't) and possibly scheduled for addition (illegal target if
-             it is). */
           svn_path_split (target, &parent, &base_name, subpool);
-          SVN_ERR (svn_wc_adm_retrieve (&parent_access, parent_dir, parent,
-                                        subpool));
+          err = svn_wc_adm_retrieve (&parent_access, parent_dir, 
+                                     parent, subpool);
+          if (err && err->apr_err == SVN_ERR_WC_NOT_LOCKED)
+            {
+              svn_error_clear (err);
+              SVN_ERR (svn_wc_adm_open (&parent_access, NULL, parent,
+                                        FALSE, FALSE, subpool));
+            }
+          else if (err)
+            {
+              return err;
+            }
+
           SVN_ERR (svn_wc_entry (&p_entry, parent, parent_access, 
                                  FALSE, subpool));
           if (! p_entry)
             return svn_error_createf 
               (SVN_ERR_WC_CORRUPT, NULL, 
-               "Entry for `%s' has no URL, and its parent directory\n"
-               "does not appear to be under version control.", target);
+               "Entry for `%s' is scheduled for addition, yet its parent\n"
+               "directory does not appear to be under version control", 
+               target);
           if ((p_entry->schedule == svn_wc_schedule_add)
               || (p_entry->schedule == svn_wc_schedule_replace))
             {
-              /* Copy the parent and target into pool; subpool lasts
-                 only for this loop iteration, and we check danglers
-                 after the loop is over. */ 
+              /* Copy the parent and target into pool; subpool
+                 lasts only for this loop iteration, and we check
+                 danglers after the loop is over. */
               apr_hash_set (danglers, apr_pstrdup (pool, parent),
-                            APR_HASH_KEY_STRING, apr_pstrdup (pool, target));
+                            APR_HASH_KEY_STRING, 
+                            apr_pstrdup (pool, target));
             }
-
-          /* Manufacture a URL for this TARGET. */
-          url = svn_path_url_add_component (p_entry->url, base_name, subpool);
         }
-      else
-        url = entry->url;
       
       /* If this entry is marked as 'copied' but scheduled normally, then
          it should be the child of something else marked for addition with
@@ -654,8 +647,8 @@ svn_client__harvest_committables (apr_hash_t **committables,
                                        : svn_path_dirname (target, subpool)),
                                     subpool));
       SVN_ERR (harvest_committables (*committables, target, dir_access,
-                                     url, NULL, entry, NULL, FALSE, FALSE, 
-                                     nonrecursive, ctx, subpool));
+                                     entry->url, NULL, entry, NULL, FALSE, 
+                                     FALSE, nonrecursive, ctx, subpool));
 
       i++;
       svn_pool_clear (subpool);

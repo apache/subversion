@@ -919,22 +919,7 @@ log_do_committed (struct log_runner *loggy,
      possibly re-translate the working file. */
   if (! is_this_dir)
     {
-      /* We need to remove the `add' schedule flag before expanding
-         keywords, since the URL keyword is sensitive to schedule
-         flags.  It won't expand if it thinks an entry is scheduled
-         for addition, because such an entry doesn't yet have a URL. */
-      entry->schedule = svn_wc_schedule_normal;
-      if ((err = svn_wc__entry_modify
-           (loggy->adm_access, name, entry,
-            SVN_WC__ENTRY_MODIFY_SCHEDULE | SVN_WC__ENTRY_MODIFY_FORCE,
-            FALSE, pool)))
-        return svn_error_createf
-          (SVN_ERR_WC_BAD_ADM_LOG, err,
-           "error modifying entry: %s", name);
-      loggy->entries_modified = TRUE;
-
-      /* Okay, NOW install the new file, which may involve expanding
-         keywords. */
+      /* Install the new file, which may involve expanding keywords. */
       if ((err = install_committed_file
            (&overwrote_working, loggy->adm_access, name, pool)))
         return svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG, err,
