@@ -647,9 +647,6 @@ svn_fs__clean_logs(const char *live_path,
                                      TRUE,        /* Only unused logs */
                                      pool));
 
-  if (logfiles == NULL)
-    return SVN_NO_ERROR;
-
   {  /* Process unused logs from live area */
     int idx;
     apr_pool_t *sub_pool = svn_pool_create (pool);
@@ -661,10 +658,11 @@ svn_fs__clean_logs(const char *live_path,
         const char *live_log_path;
         const char *backup_log_path;
 
+        svn_pool_clear (sub_pool);
         live_log_path = svn_path_join (live_path, log_file, sub_pool);
         backup_log_path = svn_path_join (backup_path, log_file, sub_pool);
 
-        { /* Compare files. No point in using MD5 and waisting CPU cycles as we 
+        { /* Compare files. No point in using MD5 and wasting CPU cycles as we 
              got full copies of both logs */
           
           svn_boolean_t files_match = FALSE;
@@ -681,14 +679,13 @@ svn_fs__clean_logs(const char *live_path,
                                                    backup_log_path, 
                                                    sub_pool));
                                                    
-        /* If log files do not match, go to the next log filr. */
-        if (files_match == FALSE)
-          continue;
-      }
+          /* If log files do not match, go to the next log filr. */
+          if (files_match == FALSE)
+            continue;
+        }
 
-      SVN_ERR (svn_io_remove_file (live_log_path, sub_pool));
-      svn_pool_clear (sub_pool);
-    }
+        SVN_ERR (svn_io_remove_file (live_log_path, sub_pool));
+      }
 
     svn_pool_destroy (sub_pool);
   }
@@ -727,9 +724,6 @@ svn_fs_hotcopy_berkeley (const char *src_path,
                                        src_path,
                                        FALSE,   /* All logs */
                                        pool));
-
-    if (logfiles == NULL)
-      return SVN_NO_ERROR;
 
     /* Process log files. */
     for (idx = 0; idx < logfiles->nelts; idx++)
