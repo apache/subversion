@@ -2869,8 +2869,9 @@ Committed revision 4.
       @ENGLISH }}} -->
       <para>Hvis du lar v&#230;re &#229; angi <option>--message</option>- eller 
         <option>--file</option>-valget, vil Subversion starte 
-        favoritteditoren din automatisk (som definert i milj&#248;variabelen 
-        <literal>$EDITOR</literal>) s&#229; du kan skrive en 
+        favoritteditoren din automatisk (se seksjonen om 
+        <literal>editor-cmd</literal> i <xref 
+        linkend="svn-ch-7-sect-1.3.2"/>) s&#229; du kan skrive en 
         loggmelding.</para>
         
         
