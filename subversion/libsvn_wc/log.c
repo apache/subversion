@@ -341,9 +341,7 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
           return;
         }
 
-      svn_path_add_component(full_path,
-                             svn_string_create (name, loggy->pool),
-                             svn_path_local_style);
+      svn_path_add_component_nts (full_path, name, svn_path_local_style);
       status = apr_remove_file (full_path->data, loggy->pool);
       if (status)
         {
