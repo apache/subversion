@@ -191,7 +191,7 @@ int svn_path_compare_paths (const char *path1, const char *path2);
 /** Return the longest common path shared by both @a path1 and @a path2.
  *
  * Return the longest common path shared by both @a path1 and @a path2.  If
- * there's no common ancestor, return @c NULL.
+ * there's no common ancestor, return the empty path.
  *
  * @a path1 and @a path2 may be URLs.  In order for two URLs to have 
  * a common ancestor, they must (a) have the same protocol (since two URLs 

@@ -782,9 +782,6 @@ svn_client__condense_commit_items (const char **base_url,
       else
         *base_url = svn_path_get_longest_ancestor (*base_url, url, pool); 
 
-      if (! *base_url)
-        *base_url = "";
-
       /* If our BASE_URL is itself a to-be-committed item, and it is
          anything other than an already-versioned directory with
          property mods, we'll call its parent directory URL the
@@ -1219,7 +1216,7 @@ svn_client__do_commit (const char *base_url,
     {
       svn_wc_adm_access_t *item_access;
       const char *item_url, *item_dir, *item_name;
-      const char *common = NULL;
+      const char *common = "";
       size_t common_len;
       svn_client_commit_item_t *item
         = ((svn_client_commit_item_t **) commit_items->elts)[i];
@@ -1232,8 +1229,6 @@ svn_client__do_commit (const char *base_url,
            the empty string.  ***/
       if (i > 0)
         common = svn_path_get_longest_ancestor (last_url, item_url, pool);
-      if (! common)
-        common = "";
 
       common_len = strlen (common);
 

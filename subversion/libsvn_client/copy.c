@@ -224,8 +224,6 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
      checks on both paths, and so we can operate on both paths in the
      case of a move. */
   top_url = svn_path_get_longest_ancestor (src_url, dst_url, pool);
-  if (! top_url)
-    top_url = "";
 
   /* Special edge-case!  (issue #683)  If you're resurrecting a
      deleted item like this:  'svn cp -rN src_URL dst_URL', then it's
