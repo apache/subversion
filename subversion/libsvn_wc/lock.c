@@ -696,16 +696,29 @@ svn_wc_adm_close (svn_wc_adm_access_t *adm_access)
   return do_close (adm_access, FALSE);
 }
 
+svn_boolean_t
+svn_wc_adm_locked (svn_wc_adm_access_t *adm_access)
+{
+  return adm_access->type == svn_wc__adm_access_write_lock;
+}
+
 svn_error_t *
-svn_wc_adm_write_check (svn_wc_adm_access_t *adm_access)
+svn_wc__adm_write_check (svn_wc_adm_access_t *adm_access)
 {
   if (adm_access->type == svn_wc__adm_access_write_lock)
     {
       if (adm_access->lock_exists)
         {
+          /* Check physical lock still exists and hasn't been stolen.  This
+             really is paranoia, I have only ever seen one report of this
+             triggering (from someone using the 0.25 release) and that was
+             never reproduced.  The check accesses the physical filesystem
+             so it is expensive, but it only runs when we are going to
+             modify the admin area.  If it ever proves to be a bottleneck
+             the physical check could be removed, just leaving the logical
+             check. */
           svn_boolean_t locked;
 
-          /* Check physical lock still exists and hasn't been stolen */
           SVN_ERR (svn_wc_locked (&locked, adm_access->path, adm_access->pool));
           if (! locked)
             return svn_error_createf (SVN_ERR_WC_NOT_LOCKED, NULL, 

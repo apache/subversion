@@ -237,7 +237,7 @@ svn_wc_process_committed (const char *path,
   char *revstr = apr_psprintf (pool, "%" SVN_REVNUM_T_FMT, new_revnum);
   const char *hex_digest = NULL;
 
-  SVN_ERR (svn_wc_adm_write_check (adm_access));
+  SVN_ERR (svn_wc__adm_write_check (adm_access));
 
   /* Set PATH's working revision to NEW_REVNUM; if REV_DATE and
      REV_AUTHOR are both non-NULL, then set the 'committed-rev',

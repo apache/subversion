@@ -1395,6 +1395,30 @@ svn_wc_props_modified_p (svn_boolean_t *modified_p,
       *modified_p = TRUE;
     else
       *modified_p = FALSE;
+
+    /* If it turns out that there are no differences then we might be able
+       to "repair" the prop-time in the entries file and avoid the
+       expensive file contents comparison next time.
+
+       ### Unlike the text-time in svn_wc_text_modified_p the only
+       ### "legitimate" way to produce a prop-time variation with no
+       ### corresponding property variation, is by using the Subversion
+       ### property interface.  Perhaps those functions should detect the
+       ### change that restores the pristine values and reset the
+       ### prop-time?  This code would still be needed, to handle someone
+       ### or something manually changing the timestamp on the
+       ### prop-base. */
+    if (! *modified_p && svn_wc_adm_locked (adm_access))
+      {
+        svn_wc_entry_t tmp;
+        SVN_ERR (svn_io_file_affected_time (&tmp.prop_time, prop_path, pool));
+        SVN_ERR (svn_wc__entry_modify (adm_access,
+                                       (entry->kind == svn_node_dir
+                                        ? SVN_WC_ENTRY_THIS_DIR
+                                        : svn_path_basename (path, pool)),
+                                       &tmp, SVN_WC__ENTRY_MODIFY_PROP_TIME,
+                                       TRUE, pool));
+      }
   }
  
  cleanup:

@@ -185,11 +185,11 @@ const char *svn_wc_adm_access_path (svn_wc_adm_access_t *adm_access);
 /** Return the pool used by access baton @a adm_access */
 apr_pool_t *svn_wc_adm_access_pool (svn_wc_adm_access_t *adm_access);
 
-/** Ensure @a adm_access has a write lock, and that it is still valid. Returns
- * @c SVN_ERR_WC_NOT_LOCKED if this is not the case.
+/** Return @c TRUE is the access baton @a adm_access has a write lock,
+ * @c FALSE otherwise. Compared to @c svn_wc_locked this is a cheap, fast
+ * function that doesn't access the filesystem.
  */
-svn_error_t *svn_wc_adm_write_check (svn_wc_adm_access_t *adm_access);
-
+svn_boolean_t svn_wc_adm_locked(svn_wc_adm_access_t *adm_access);
 
 /** Set @a *locked to non-zero if @a path is locked, else set it to zero. */
 svn_error_t *svn_wc_locked (svn_boolean_t *locked, 

@@ -1064,7 +1064,7 @@ svn_wc__entries_write (apr_hash_t *entries,
   svn_wc_entry_t *this_dir;
   apr_pool_t *subpool = svn_pool_create (pool);
 
-  SVN_ERR (svn_wc_adm_write_check (adm_access));
+  SVN_ERR (svn_wc__adm_write_check (adm_access));
 
   /* Get a copy of the "this dir" entry for comparison purposes. */
   this_dir = apr_hash_get (entries, SVN_WC_ENTRY_THIS_DIR, 
