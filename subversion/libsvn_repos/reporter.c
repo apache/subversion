@@ -835,19 +835,21 @@ drive (report_baton_t *b, svn_revnum_t s_rev, path_info_t *info,
   if (info_is_set_path && !s_entry)
     s_fullpath = NULL;
 
+  /* If the anchor is the operand, the source and target must be dirs.
+     Check this before opening the root to avoid modifying the wc. */
+  if (!*b->s_operand && (!s_entry || s_entry->kind != svn_node_dir
+                         || !t_entry || t_entry->kind != svn_node_dir))
+    return svn_error_create (SVN_ERR_FS_PATH_SYNTAX, NULL,
+                             "Cannot replace a directory from within");
+
   SVN_ERR (b->editor->open_root (b->edit_baton, s_rev, pool, &root_baton));
 
+  /* If the anchor is the operand, diff the two directories; otherwise
+     update the operand within the anchor directory. */
   if (!*b->s_operand)
-    {
-      /* The wc anchor is the operand, so just diff the two directories. */
-      if (!s_entry || s_entry->kind != svn_node_dir
-          || !t_entry || t_entry->kind != svn_node_dir)
-        return svn_error_create (SVN_ERR_FS_PATH_SYNTAX, NULL,
-                                 "Cannot replace a directory from within");
-      SVN_ERR (delta_dirs (b, s_rev, s_fullpath, b->t_path, root_baton,
-                           "", info->start_empty, pool));
-    }
-  else  /* Update the operand within the anchor directory. */
+    SVN_ERR (delta_dirs (b, s_rev, s_fullpath, b->t_path, root_baton,
+                         "", info->start_empty, pool));
+  else
     SVN_ERR (update_entry (b, s_rev, s_fullpath, s_entry, b->t_path,
                            t_entry, root_baton, b->s_operand,
                            (info_is_set_path) ? NULL : info, TRUE, pool));
