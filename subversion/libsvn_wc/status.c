@@ -618,14 +618,8 @@ get_dir_status (apr_hash_t *statushash,
                 SVN_ERR (svn_wc_entry (&fullpath_entry, fullpath, 
                                        adm_access, FALSE, pool));
 
-              SVN_ERR (add_status_structure 
-                       (statushash, fullpath, adm_access, fullpath_entry, 
-                        dir_entry, fullpath_kind, get_all, FALSE,
-                        notify_func, notify_baton, pool));
-
               /* Descend only if the subdirectory is a working copy
                  directory (and DESCEND is non-zero ofcourse)  */
-
               if (descend && fullpath_entry != entry)
                 {
                   svn_wc_adm_access_t *dir_access;
@@ -637,6 +631,12 @@ get_dir_status (apr_hash_t *statushash,
                                            notify_baton, cancel_func,
                                            cancel_baton, pool));
                 }
+              else
+                SVN_ERR (add_status_structure 
+                         (statushash, fullpath, adm_access, fullpath_entry, 
+                          dir_entry, fullpath_kind, get_all, FALSE,
+                          notify_func, notify_baton, pool));
+
             }
           else
             {
