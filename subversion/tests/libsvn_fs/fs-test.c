@@ -257,56 +257,6 @@ validate_tree_entry (svn_fs_root_t *root,
                      
 
 
-/* Change this to 1 to get a function that prints a tree to stdout. */
-#if 0
-static svn_error_t *
-print_tree (svn_fs_root_t *root)
-{
-  apr_hash_t *entries;
-  apr_hash_index_t *hi;
-  
-  entries = apr_hash_make (pool);
-  SVN_ERR (get_dir_entries (entries, root, svn_string_create ("", pool)));
-
-  if (! entries)
-    return svn_error_create
-      (SVN_ERR_TEST_FAILED, 0, NULL, pool,
-       "validation requested against non-existant control data");
-
-  if (svn_fs_is_txn_root (root))
-    {
-      printf ("Transaction %s\n", svn_fs_txn_root_name (root, pool));
-      printf ("-------------------\n");
-    }
-  else if (svn_fs_is_revision_root (root))
-    {
-      printf ("Revision %d\n", (int) svn_fs_revision_root_revision (root));
-      printf ("-------------------\n");
-    }
-  else
-    return svn_error_create
-      (SVN_ERR_TEST_FAILED, 0, NULL, pool,
-       "validation requested against non-existant control data");
-
-  for (hi = apr_hash_first (entries); hi; hi = apr_hash_next (hi))
-    {
-      const void *key;
-      apr_size_t keylen;
-      void *val;
-      svn_string_t *path;
- 
-      apr_hash_this (hi, &key, &keylen, &val);
-      path = svn_string_ncreate (key, keylen, pool);
-      printf ("%s\n", path->data);
-    }
-
-  printf ("\n");
-
-  return SVN_NO_ERROR;
-}
-#endif /* 0/1 */
-
-
 /* Given a transaction or revision root (ROOT), check to see if the
    tree that grows from that root has all the path entries, and only
    those entries, passed in the array ENTRIES (which is an array of
