@@ -275,7 +275,7 @@ NewDirectory:
 }
 
 STDMETHODIMP 
-CSVNWorkingCopy::wc_statuses(BSTR bstrPath, BOOL getAll, SAFEARRAY **ppsa)
+CSVNWorkingCopy::wc_statuses(BSTR bstrPath, VARIANT_BOOL getAll, SAFEARRAY **ppsa)
 {
 	USES_CONVERSION;
 	HRESULT hr;
@@ -293,10 +293,11 @@ CSVNWorkingCopy::wc_statuses(BSTR bstrPath, BOOL getAll, SAFEARRAY **ppsa)
 	CHAR *pszKey;
 	CComObject<CSVNStatus> *com_status = NULL;
 	svn_boolean_t fLockedSA = FALSE;
+        svn_boolean_t get_all = (getAll != VARIANT_TRUE ? FALSE : TRUE);
 
 	hash = apr_hash_make(g_pool);
 	path = svn_stringbuf_create(W2A(bstrPath), g_pool);
-	error = svn_wc_statuses(hash, path, FALSE, getAll, g_pool);
+	error = svn_wc_statuses(hash, path, FALSE, get_all, g_pool);
 	if (error) {
 		hr = convert_err_to_hresult(error);
 		goto Cleanup;
