@@ -98,14 +98,6 @@ Candidate changes:
     Votes:
       +1: pmayweg
 
-  * r13222, r13223, r13232
-    Rewrite libsvn_fs_fs's auto-merge algorithm.
-    Justification:
-      unacceptable performance (>50 minutes for a small commit) in
-      a repository with 300,000 revisions
-    Votes:
-      +1: epg, ghudson
-
   * r13504
     Fix bindings build with SWIG 1.3.25-dev.
     Justification:
