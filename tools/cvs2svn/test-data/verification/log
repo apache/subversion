@@ -1,0 +1,384 @@
+$ grep LastChangedRevision cvs2svn.py
+# $LastChangedRevision: 6567 $
+
+$ svn log -v file://`pwd`/tmp/r
+------------------------------------------------------------------------
+rev 41:  unknown | 2003-08-07 13:04:48 -0500 (Thu, 07 Aug 2003) | 1 line
+Changed paths:
+   A /tags/after (from /trunk:11)
+   D /tags/after/partial-prune
+
+This commit was manufactured by cvs2svn to create tag 'after'.
+------------------------------------------------------------------------
+rev 40:  unknown | 2003-08-07 13:04:48 -0500 (Thu, 07 Aug 2003) | 2 lines
+Changed paths:
+   A /tags/T_ALL_INITIAL_FILES_BUT_ONE (from /branches/vendorbranch:17)
+   D /tags/T_ALL_INITIAL_FILES_BUT_ONE/single-files
+
+This commit was manufactured by cvs2svn to create tag
+'T_ALL_INITIAL_FILES_BUT_ONE'.
+------------------------------------------------------------------------
+rev 39:  unknown | 2003-08-07 13:04:48 -0500 (Thu, 07 Aug 2003) | 1 line
+Changed paths:
+   A /tags/vendortag (from /branches/vendorbranch:24)
+   A /tags/vendortag/full-prune-reappear (from /branches/vendorbranch/full-prune-reappear:31)
+
+This commit was manufactured by cvs2svn to create tag 'vendortag'.
+------------------------------------------------------------------------
+rev 38:  unknown | 2003-08-07 13:04:48 -0500 (Thu, 07 Aug 2003) | 2 lines
+Changed paths:
+   A /tags/T_ALL_INITIAL_FILES (from /branches/vendorbranch:17)
+   D /tags/T_ALL_INITIAL_FILES/single-files
+
+This commit was manufactured by cvs2svn to create tag
+'T_ALL_INITIAL_FILES'.
+------------------------------------------------------------------------
+rev 37:  unknown | 2003-08-07 13:04:48 -0500 (Thu, 07 Aug 2003) | 1 line
+Changed paths:
+   A /tags
+   A /tags/T_MIXED (from /trunk:19)
+   D /tags/T_MIXED/partial-prune
+   D /tags/T_MIXED/single-files
+
+This commit was manufactured by cvs2svn to create tag 'T_MIXED'.
+------------------------------------------------------------------------
+rev 35:  unknown | 2003-08-07 13:04:48 -0500 (Thu, 07 Aug 2003) | 2 lines
+Changed paths:
+   A /branches/B_FROM_INITIALS_BUT_ONE (from /branches/vendorbranch:17)
+   D /branches/B_FROM_INITIALS_BUT_ONE/single-files
+
+This commit was manufactured by cvs2svn to create branch
+'B_FROM_INITIALS_BUT_ONE'.
+------------------------------------------------------------------------
+rev 32:  unknown | 2003-08-07 13:04:48 -0500 (Thu, 07 Aug 2003) | 2 lines
+Changed paths:
+   A /branches/B_FROM_INITIALS (from /branches/vendorbranch:17)
+   D /branches/B_FROM_INITIALS/single-files
+
+This commit was manufactured by cvs2svn to create branch
+'B_FROM_INITIALS'.
+------------------------------------------------------------------------
+rev 31:  jrandom | 2003-06-10 15:19:48 -0500 (Tue, 10 Jun 2003) | 2 lines
+Changed paths:
+   A /branches/vendorbranch/full-prune-reappear (from /trunk/full-prune-reappear:30)
+
+Updated CVS
+
+------------------------------------------------------------------------
+rev 30:  jrandom | 2003-06-10 15:19:47 -0500 (Tue, 10 Jun 2003) | 2 lines
+Changed paths:
+   A /trunk/full-prune-reappear
+   A /trunk/full-prune-reappear/appears-later
+
+Initial revision
+
+------------------------------------------------------------------------
+rev 29:  jrandom | 2003-06-02 23:33:13 -0500 (Mon, 02 Jun 2003) | 4 lines
+Changed paths:
+   A /branches/B_SPLIT/proj/sub1/subsubB (from /trunk/proj/sub1/subsubB:28)
+   M /branches/B_SPLIT/proj/sub1/subsubB/default
+   M /branches/B_SPLIT/proj/sub3/default
+
+This change affects sub3/default and sub1/subsubB/default, on branch
+B_SPLIT.  Note that the latter file did not even exist on this branch
+until after some other files had had revisions committed on B_SPLIT.
+
+------------------------------------------------------------------------
+rev 28:  jrandom | 2003-06-02 23:29:14 -0500 (Mon, 02 Jun 2003) | 6 lines
+Changed paths:
+   M /trunk/proj/sub1/subsubB/default
+
+A trunk change to sub1/subsubB/default.  This was committed about an
+hour after an earlier change that affected most files on branch
+B_SPLIT.  This file is not on that branch yet, but after this commit,
+we'll branch to B_SPLIT, albeit rooted in a revision that didn't exist
+at the time the rest of B_SPLIT was created.
+
+------------------------------------------------------------------------
+rev 27:  jrandom | 2003-06-02 22:20:31 -0500 (Mon, 02 Jun 2003) | 5 lines
+Changed paths:
+   A /branches/B_SPLIT (from /trunk:19)
+   D /branches/B_SPLIT/partial-prune
+   M /branches/B_SPLIT/proj/default
+   M /branches/B_SPLIT/proj/sub1/default
+   M /branches/B_SPLIT/proj/sub1/subsubA/default
+   D /branches/B_SPLIT/proj/sub1/subsubB
+   M /branches/B_SPLIT/proj/sub2/default
+   M /branches/B_SPLIT/proj/sub2/subsubA/default
+   D /branches/B_SPLIT/single-files
+
+First change on branch B_SPLIT.
+
+This change excludes sub3/default, because it was not part of this
+commit, and sub1/subsubB/default, which is not even on the branch yet.
+
+------------------------------------------------------------------------
+rev 26:  jrandom | 2003-06-02 19:20:01 -0500 (Mon, 02 Jun 2003) | 2 lines
+Changed paths:
+   M /trunk/interleaved/1
+   M /trunk/interleaved/2
+   M /trunk/interleaved/3
+   M /trunk/interleaved/4
+   M /trunk/interleaved/5
+
+Committing numbers only.
+
+------------------------------------------------------------------------
+rev 25:  jrandom | 2003-06-02 19:20:01 -0500 (Mon, 02 Jun 2003) | 2 lines
+Changed paths:
+   M /trunk/interleaved/a
+   M /trunk/interleaved/b
+   M /trunk/interleaved/c
+   M /trunk/interleaved/d
+   M /trunk/interleaved/e
+
+Committing letters only.
+
+------------------------------------------------------------------------
+rev 24:  jrandom | 2003-05-23 20:02:01 -0500 (Fri, 23 May 2003) | 2 lines
+Changed paths:
+   A /branches/vendorbranch/interleaved (from /trunk/interleaved:23)
+
+Initial import.
+
+------------------------------------------------------------------------
+rev 23:  jrandom | 2003-05-23 20:02:00 -0500 (Fri, 23 May 2003) | 2 lines
+Changed paths:
+   A /trunk/interleaved
+   A /trunk/interleaved/1
+   A /trunk/interleaved/2
+   A /trunk/interleaved/3
+   A /trunk/interleaved/4
+   A /trunk/interleaved/5
+   A /trunk/interleaved/a
+   A /trunk/interleaved/b
+   A /trunk/interleaved/c
+   A /trunk/interleaved/d
+   A /trunk/interleaved/e
+
+Initial revision
+
+------------------------------------------------------------------------
+rev 22:  jrandom | 2003-05-22 19:48:51 -0500 (Thu, 22 May 2003) | 2 lines
+Changed paths:
+   M /branches/B_MIXED/proj/sub2/branch_B_MIXED_only
+   M /trunk/proj/sub2/default
+
+A single commit affecting one file on branch B_MIXED and one on trunk.
+
+------------------------------------------------------------------------
+rev 21:  jrandom | 2003-05-22 19:31:36 -0500 (Thu, 22 May 2003) | 2 lines
+Changed paths:
+   M /branches/B_MIXED/proj/default
+   M /branches/B_MIXED/proj/sub1/default
+   M /branches/B_MIXED/proj/sub2/subsubA/default
+
+Modify three files, on branch B_MIXED.
+
+------------------------------------------------------------------------
+rev 20:  jrandom | 2003-05-22 19:25:26 -0500 (Thu, 22 May 2003) | 2 lines
+## problem found, see notes in the 'commits' file. ##
+Changed paths:
+   A /branches/B_MIXED (from /trunk:19)
+   D /branches/B_MIXED/partial-prune
+   A /branches/B_MIXED/proj/sub2/branch_B_MIXED_only
+   D /branches/B_MIXED/single-files
+
+Add a file on branch B_MIXED.
+
+------------------------------------------------------------------------
+rev 19:  jrandom | 2003-05-22 19:17:53 -0500 (Thu, 22 May 2003) | 2 lines
+## verified ##
+Changed paths:
+   M /trunk/proj/default
+   M /trunk/proj/sub1/default
+   M /trunk/proj/sub1/subsubA/default
+   M /trunk/proj/sub1/subsubB/default
+   M /trunk/proj/sub2/default
+   M /trunk/proj/sub2/subsubA/default
+   M /trunk/proj/sub3/default
+
+Second commit to proj, affecting all 7 files.
+
+------------------------------------------------------------------------
+rev 18:  jrandom | 2003-05-22 19:15:26 -0500 (Thu, 22 May 2003) | 2 lines
+## verified ##
+Changed paths:
+   M /trunk/proj/sub1/subsubA/default
+   M /trunk/proj/sub3/default
+
+First commit to proj, affecting two files.
+
+------------------------------------------------------------------------
+rev 17:  jrandom | 2003-05-22 18:20:19 -0500 (Thu, 22 May 2003) | 2 lines
+## verified ##
+Changed paths:
+   A /branches/vendorbranch/proj (from /trunk/proj:16)
+
+Initial import.
+
+------------------------------------------------------------------------
+rev 16:  jrandom | 2003-05-22 18:20:18 -0500 (Thu, 22 May 2003) | 2 lines
+## verified ##
+Changed paths:
+   A /trunk/proj
+   A /trunk/proj/default
+   A /trunk/proj/sub1
+   A /trunk/proj/sub1/default
+   A /trunk/proj/sub1/subsubA
+   A /trunk/proj/sub1/subsubA/default
+   A /trunk/proj/sub1/subsubB
+   A /trunk/proj/sub1/subsubB/default
+   A /trunk/proj/sub2
+   A /trunk/proj/sub2/default
+   A /trunk/proj/sub2/subsubA
+   A /trunk/proj/sub2/subsubA/default
+   A /trunk/proj/sub3
+   A /trunk/proj/sub3/default
+
+Initial revision
+
+------------------------------------------------------------------------
+rev 15:  jrandom | 2003-01-25 07:43:57 -0600 (Sat, 25 Jan 2003) | 2 lines
+## verified ##
+Changed paths:
+   A /branches/vendorbranch/single-files/attr-exec (from /trunk/single-files/attr-exec:14)
+
+initial checkin
+
+------------------------------------------------------------------------
+rev 14:  jrandom | 2003-01-25 07:43:56 -0600 (Sat, 25 Jan 2003) | 2 lines
+## verified ##
+Changed paths:
+   A /trunk/single-files/attr-exec
+
+Initial revision
+
+------------------------------------------------------------------------
+rev 13:  jrandom | 2002-11-30 13:27:42 -0600 (Sat, 30 Nov 2002) | 2 lines
+## verified ##
+Changed paths:
+   A /branches/vendorbranch/single-files (from /trunk/single-files:12)
+   D /branches/vendorbranch/single-files/twoquick
+
+imported
+
+------------------------------------------------------------------------
+rev 12:  jrandom | 2002-11-30 13:27:41 -0600 (Sat, 30 Nov 2002) | 2 lines
+## verified ##
+Changed paths:
+   A /trunk/single-files/space fname
+
+Initial revision
+
+------------------------------------------------------------------------
+rev 11:  jrandom | 2002-09-28 19:00:01 -0500 (Sat, 28 Sep 2002) | 2 lines
+## verified ##
+Changed paths:
+   M /trunk/single-files/twoquick
+
+*** empty log message ***
+
+------------------------------------------------------------------------
+rev 10:  jrandom | 2002-09-28 19:00:00 -0500 (Sat, 28 Sep 2002) | 2 lines
+## verified ##
+Changed paths:
+   A /trunk/single-files
+   A /trunk/single-files/twoquick
+
+*** empty log message ***
+
+------------------------------------------------------------------------
+rev 9:  jrandom | 1996-08-20 18:53:47 -0500 (Tue, 20 Aug 1996) | 5 lines
+## verified ##
+Changed paths:
+   D /trunk/full-prune
+   D /trunk/full-prune-reappear
+   D /trunk/partial-prune/sub
+
+Remove the file 'second'.
+
+Since 'first' was already removed, removing 'second' empties the
+directory, so the directory itself gets pruned.
+
+------------------------------------------------------------------------
+rev 7:  jrandom | 1995-12-10 18:27:53 -0600 (Sun, 10 Dec 1995) | 4 lines
+## verified ##
+Changed paths:
+   D /trunk/full-prune/first
+   D /trunk/full-prune-reappear/sub/first
+   D /trunk/partial-prune/sub/first
+
+Remove the file 'first', for the first time.
+
+(Note that its sibling 'second' still exists.)
+
+------------------------------------------------------------------------
+rev 6:  jrandom | 1995-03-31 01:44:02 -0600 (Fri, 31 Mar 1995) | 3 lines
+## verified ##
+Changed paths:
+   M /trunk/full-prune/second
+   M /trunk/full-prune-reappear/sub/second
+   M /trunk/partial-prune/sub/second
+
+Original sources from CVS-1.4A2 munged to fit our directory structure.
+
+
+------------------------------------------------------------------------
+rev 5:  jrandom | 1995-03-31 01:44:01 -0600 (Fri, 31 Mar 1995) | 2 lines
+## verified ##
+Changed paths:
+   A /trunk/full-prune/second
+   A /trunk/full-prune-reappear/sub/second
+   A /trunk/partial-prune/sub/second
+
+Initial revision
+
+------------------------------------------------------------------------
+rev 4:  jrandom | 1994-06-18 00:46:08 -0500 (Sat, 18 Jun 1994) | 2 lines
+## verified (leaves only vendorbranch/partial-prune/permanent) ##
+Changed paths:
+   A /branches
+   A /branches/vendorbranch (from /trunk:3)
+   D /branches/vendorbranch/full-prune
+   D /branches/vendorbranch/full-prune-reappear
+   D /branches/vendorbranch/partial-prune/sub
+
+Updated CVS
+
+------------------------------------------------------------------------
+rev 3:  jrandom | 1994-06-18 00:46:07 -0500 (Sat, 18 Jun 1994) | 2 lines
+## verified ##
+Changed paths:
+   A /trunk/partial-prune/permanent
+
+Initial revision
+
+------------------------------------------------------------------------
+rev 2:  jrandom | 1993-06-18 00:46:08 -0500 (Fri, 18 Jun 1993) | 2 lines
+## verified ##
+Changed paths:
+   M /trunk/full-prune/first
+   M /trunk/full-prune-reappear/sub/first
+   M /trunk/partial-prune/sub/first
+
+Updated CVS
+
+------------------------------------------------------------------------
+rev 1:  jrandom | 1993-06-18 00:46:07 -0500 (Fri, 18 Jun 1993) | 2 lines
+## verified ##
+Changed paths:
+   A /trunk
+   A /trunk/full-prune
+   A /trunk/full-prune/first
+   A /trunk/full-prune-reappear
+   A /trunk/full-prune-reappear/sub
+   A /trunk/full-prune-reappear/sub/first
+   A /trunk/partial-prune
+   A /trunk/partial-prune/sub
+   A /trunk/partial-prune/sub/first
+
+Initial revision
+
+------------------------------------------------------------------------
+$ 

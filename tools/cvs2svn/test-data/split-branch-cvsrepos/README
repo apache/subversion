@@ -1,0 +1,11 @@
+This tree is for reproducing
+
+   http://subversion.tigris.org/issues/show_bug.cgi?id=1421
+
+It is based on issue-1421-small-cvsrepos.tgz from Blair Zajac. Previously, this
+directory contained a different set of test data, which began to pass after a
+partial fix in r6534. However, similar errors still occurred with other data
+sets. The issue was reopened, and the test data changed to more reliably test
+the bug. It continued to fail until the final fix in r7006.
+
+See the issue for more details.

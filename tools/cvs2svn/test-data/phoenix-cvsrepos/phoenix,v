@@ -1,0 +1,300 @@
+head	1.4;
+access;
+symbols
+	libogg2-zerocopy:1.4.0.4
+	vorbis1_0_public_release:1.4
+	volsung_flush:1.4.0.2
+	release_0_8_2:1.4
+	vorbis1_0_public_release_candidate_2:1.4
+	volsung_20010721:1.2.0.2
+	start:1.1.1.1
+	xiphophorus:1.1.1;
+locks; strict;
+comment	@# @;
+
+
+1.4
+date	2001.08.05.02.35.30;	author volsung;	state Exp;
+branches;
+next	1.3;
+
+1.3
+date	2001.08.04.02.56.08;	author volsung;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2000.10.31.07.08.41;	author jack;	state dead;
+branches
+	1.2.2.1;
+next	1.1;
+
+1.1
+date	2000.09.03.09.56.05;	author jack;	state Exp;
+branches
+	1.1.1.1;
+next	;
+
+1.1.1.1
+date	2000.09.03.09.56.05;	author jack;	state Exp;
+branches;
+next	;
+
+1.2.2.1
+date	2001.07.22.03.35.41;	author volsung;	state Exp;
+branches;
+next	1.2.2.2;
+
+1.2.2.2
+date	2001.07.24.17.51.09;	author volsung;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.4
+log
+@This file was supplied by Jack Moffitt <jack@@xiph.org> to help us
+reproduce a bug in which cvs2svn.py would throw an exception when it
+tried to create a file branch rooted in a 'dead' RCS revision.  See
+http://subversion.tigris.org/issues/show_bug.cgi?id=1417 for 
+more details.
+
+The original file was ao/doc/index.html,v, and the log message for
+this revision was:
+
+"Documentation update."
+@
+text
+@<html>
+
+<head>
+<title>libao - Documentation</title>
+<link rel=stylesheet href="style.css" type="text/css">
+</head>
+
+<body bgcolor=white text=black link="#5555ff" alink="#5555ff" vlink="#5555ff">
+<table border=0 width=100%>
+<tr>
+<td><p class=tiny>libao documentation</p></td>
+<td align=right><p class=tiny>libao version 0.8.0 - 20010804</p></td>
+</tr>
+</table>
+
+<h1>libao Documentation</h1>
+
+<p>
+Libao is a cross-platform library that allows programs to output
+PCM audio data to the native audio devices on a wide variety of
+platforms.  It currently supports:
+<ul>
+  <li>OSS (Open Sound System)
+  <li>ESD (ESounD)
+  <li>ALSA (Advanced Linux Sound Architecture)
+  <li>Sun audio system (used in Solaris, OpenBSD, and NetBSD)
+  <li>aRts (Analog Realtime Synthesizer)
+</ul>
+<p>
+<a href="overview.html">libao api overview</a><br>
+<a href="drivers.html">drivers</a><br>
+<a href="ao_example.c">example code</a><br>
+<a href="config.html">configuration files</a><br>
+<a href="libao-api.html">libao api reference</a><br>
+<a href="plugin-overview.html">plugin writer's overview</a><br>
+<a href="plugin-api.html">plugin api reference</a><br>
+
+<br><br>
+<hr noshade>
+<table border=0 width=100%>
+<tr valign=top>
+<td><p class=tiny>copyright &copy; 2001 Stan Seibert</p></td>
+<td align=right><p class=tiny><a href="http://www.xiph.org/">xiph.org</a><br><a href="mailto:indigo@@aztec.asu.edu">indigo@@aztec.asu.edu</a></p></td>
+</tr><tr>
+<td><p class=tiny>libao documentation</p></td>
+<td align=right><p class=tiny>libao version 0.8.0 - 20010804</p></td>
+</tr>
+</table>
+
+</body>
+
+</html>
+@
+
+
+1.3
+log
+@This file was supplied by Jack Moffitt <jack@@xiph.org> to help us
+reproduce a bug in which cvs2svn.py would throw an exception when it
+tried to create a file branch rooted in a 'dead' RCS revision.  See
+http://subversion.tigris.org/issues/show_bug.cgi?id=1417 for 
+more details.
+
+The original file was ao/doc/index.html,v, and the log message for
+this revision was:
+
+"Merger of new API branch (volsung_20010721) with head."
+@
+text
+@d12 1
+a12 1
+<td align=right><p class=tiny>libao version 0.90 - 20010528</p></td>
+d35 1
+a35 1
+<a href="plugin-overview.html">plugin overview</a><br>
+d46 1
+a46 1
+<td align=right><p class=tiny>libao version 0.90 - 20010528</p></td>
+@
+
+
+1.2
+log
+@This file was supplied by Jack Moffitt <jack@@xiph.org> to help us
+reproduce a bug in which cvs2svn.py would throw an exception when it
+tried to create a file branch rooted in a 'dead' RCS revision.  See
+http://subversion.tigris.org/issues/show_bug.cgi?id=1417 for 
+more details.
+
+The original file was ao/doc/index.html,v, and the log message for
+this revision was:
+
+"documetation????  WHAT!?!"
+
+jack.
+@
+text
+@d1 52
+a52 1
+There is no documentation yet.
+@
+
+
+1.2.2.1
+log
+@This file was supplied by Jack Moffitt <jack@@xiph.org> to help us
+reproduce a bug in which cvs2svn.py would throw an exception when it
+tried to create a file branch rooted in a 'dead' RCS revision.  See
+http://subversion.tigris.org/issues/show_bug.cgi?id=1417 for 
+more details.
+
+The original file was ao/doc/index.html,v, and the log message for
+this revision was:
+
+"Initial branch of libao to new API.  Great fear and trembling shall
+sweep the land..."
+@
+text
+@d1 1
+a1 52
+<html>
+
+<head>
+<title>libao - Documentation</title>
+<link rel=stylesheet href="style.css" type="text/css">
+</head>
+
+<body bgcolor=white text=black link="#5555ff" alink="#5555ff" vlink="#5555ff">
+<table border=0 width=100%>
+<tr>
+<td><p class=tiny>libao documentation</p></td>
+<td align=right><p class=tiny>libao version 0.90 - 20010528</p></td>
+</tr>
+</table>
+
+<h1>libao Documentation</h1>
+
+<p>
+Libao is a cross-platform library that allows programs to output
+PCM audio data to the native audio devices on a wide variety of
+platforms.  It currently supports:
+<ul>
+  <li>OSS (Open Sound System)
+  <li>ESD (ESounD)
+  <li>ALSA (Advanced Linux Sound Architecture)
+  <li>Sun audio system (used in Solaris, OpenBSD, and NetBSD)
+  <li>aRts (Analog Realtime Synthesizer)
+</ul>
+<p>
+<a href="overview.html">libao api overview</a><br>
+<a href="drivers.html">driver list</a><br>
+<a href="ao_example.c">example code</a><br>
+<a href="config.html">configuration files</a><br>
+<a href="libao-api.html">libao api reference</a><br>
+<a href="plugin-overview.html">plugin overview</a><br>
+<a href="plugin-api.html">plugin api reference</a><br>
+
+<br><br>
+<hr noshade>
+<table border=0 width=100%>
+<tr valign=top>
+<td><p class=tiny>copyright &copy; 2001 Stan Seibert</p></td>
+<td align=right><p class=tiny><a href="http://www.xiph.org/">xiph.org</a><br><a href="mailto:indigo@@aztec.asu.edu">indigo@@aztec.asu.edu</a></p></td>
+</tr><tr>
+<td><p class=tiny>libao documentation</p></td>
+<td align=right><p class=tiny>libao version 0.90 - 20010528</p></td>
+</tr>
+</table>
+
+</body>
+
+</html>
+@
+
+
+1.2.2.2
+log
+@This file was supplied by Jack Moffitt <jack@@xiph.org> to help us
+reproduce a bug in which cvs2svn.py would throw an exception when it
+tried to create a file branch rooted in a 'dead' RCS revision.  See
+http://subversion.tigris.org/issues/show_bug.cgi?id=1417 for 
+more details.
+
+The original file was ao/doc/index.html,v, and the log message for
+this revision was:
+
+"We now use a ranking system to select a defaut driver from the range of
+possible drivers.  Note that the null device is no longer a possible
+default device to prevent user confusion that we have had in the past."
+@
+text
+@d31 1
+a31 1
+<a href="drivers.html">drivers</a><br>
+@
+
+
+1.1
+log
+@This file was supplied by Jack Moffitt <jack@@xiph.org> to help us
+reproduce a bug in which cvs2svn.py would throw an exception when it
+tried to create a file branch rooted in a 'dead' RCS revision.  See
+http://subversion.tigris.org/issues/show_bug.cgi?id=1417 for 
+more details.
+
+The original file was ao/doc/index.html,v, and the log message for
+this revision was:
+
+"Initial revision"
+@
+text
+@@
+
+
+1.1.1.1
+log
+@This file was supplied by Jack Moffitt <jack@@xiph.org> to help us
+reproduce a bug in which cvs2svn.py would throw an exception when it
+tried to create a file branch rooted in a 'dead' RCS revision.  See
+http://subversion.tigris.org/issues/show_bug.cgi?id=1417 for 
+more details.
+
+The original file was ao/doc/index.html,v, and the log message for
+this revision was:
+
+"The first sample..."
+@
+text
+@@

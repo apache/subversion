@@ -1,0 +1,29 @@
+This data is for testing the resolution of:
+
+   http://subversion.tigris.org/issues/show_bug.cgi?id=1427
+   "cvs2svn: fails on GtkRadiant repository"
+
+But the data here is not the GtkRadiant data.  Instead, it comes from
+Jack Moffitt at xiph.org, who was able to narrow down the same bug to
+a much smaller repro set.  It might be possible to narrow it down even
+further, I don't know -- too lazy to try right now.  The important
+thing is that this data won't convert if revision 6567 is subtracted
+from cvs2svn.py.  The error message can look either like this
+
+   ----- pass 3 -----
+   ----- pass 4 -----
+   committing: Sun Sep  9 21:26:32 2001, over 3 seconds
+   No origin records for branch 'xiph'.
+
+or like this
+
+   File "./cvs2svn.py", line 960, in copy_path
+       entries)
+     File "./cvs2svn.py", line 661, in change_path
+       for ent in new_val.keys():
+   AttributeError: 'None' object has no attribute 'keys'
+
+the former if no part of the 'xiph' vendor import branch has been
+created in the Subversion repository by the time we get to the problem
+file, the latter if /branches/xiph/ already exists.  It could go
+either way, depending on how Python iterates over dictionary keys.

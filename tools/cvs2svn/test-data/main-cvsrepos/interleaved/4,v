@@ -1,0 +1,55 @@
+head	1.2;
+access;
+symbols
+	vendortag:1.1.1.1 vendorbranch:1.1.1;
+locks; strict;
+comment	@# @;
+
+
+1.2
+date	2003.06.03.00.20.01;	author jrandom;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2003.05.24.01.02.01;	author jrandom;	state Exp;
+branches
+	1.1.1.1;
+next	;
+
+1.1.1.1
+date	2003.05.24.01.02.01;	author jrandom;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.2
+log
+@Committing numbers only.
+@
+text
+@This is file 4, always committed with other numbers, never with letters.
+
+A random change on trunk.
+@
+
+
+1.1
+log
+@Initial revision
+@
+text
+@d2 2
+@
+
+
+1.1.1.1
+log
+@Initial import.
+@
+text
+@@

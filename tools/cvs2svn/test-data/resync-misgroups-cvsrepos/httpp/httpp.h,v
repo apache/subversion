@@ -1,0 +1,272 @@
+head	1.10;
+access;
+symbols
+	libshout-2_0:1.10
+	libshout-2_0b3:1.10
+	libshout-2_0b2:1.9
+	libshout_2_0b1:1.9
+	libogg2-zerocopy:1.4.0.2
+	start:1.1.1.1
+	xiph:1.1.1;
+locks; strict;
+comment	@ * @;
+
+
+1.10
+date	2003.07.07.01.49.27;	author brendan;	state Exp;
+branches;
+next	1.9;
+
+1.9
+date	2003.03.15.02.10.18;	author msmith;	state Exp;
+branches;
+next	1.8;
+
+1.8
+date	2003.03.09.22.56.46;	author karl;	state Exp;
+branches;
+next	1.7;
+
+1.7
+date	2003.03.08.04.57.02;	author msmith;	state Exp;
+branches;
+next	1.6;
+
+1.6
+date	2003.01.16.05.48.31;	author brendan;	state Exp;
+branches;
+next	1.5;
+
+1.5
+date	2002.12.31.06.28.39;	author msmith;	state Exp;
+branches;
+next	1.4;
+
+1.4
+date	2002.08.16.14.22.44;	author msmith;	state Exp;
+branches;
+next	1.3;
+
+1.3
+date	2002.08.05.14.48.03;	author msmith;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2002.05.03.15.04.56;	author msmith;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2001.09.10.02.28.47;	author jack;	state Exp;
+branches
+	1.1.1.1;
+next	;
+
+1.1.1.1
+date	2001.09.10.02.28.47;	author jack;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.10
+log
+@httpp goes through the rinse cycle
+@
+text
+@/* httpp.h
+**
+** http parsing library
+*/
+
+#ifndef __HTTPP_H
+#define __HTTPP_H
+
+#include <avl/avl.h>
+
+#define HTTPP_VAR_PROTOCOL "__protocol"
+#define HTTPP_VAR_VERSION "__version"
+#define HTTPP_VAR_URI "__uri"
+#define HTTPP_VAR_REQ_TYPE "__req_type"
+#define HTTPP_VAR_ERROR_MESSAGE "__errormessage"
+#define HTTPP_VAR_ERROR_CODE "__errorcode"
+#define HTTPP_VAR_ICYPASSWORD "__icy_password"
+
+typedef enum httpp_request_type_tag {
+    httpp_req_none, httpp_req_get, httpp_req_post, httpp_req_head,
+    httpp_req_source, httpp_req_play, httpp_req_stats, httpp_req_unknown
+} httpp_request_type_e;
+
+typedef struct http_var_tag {
+    char *name;
+    char *value;
+} http_var_t;
+
+typedef struct http_varlist_tag {
+    http_var_t var;
+    struct http_varlist_tag *next;
+} http_varlist_t;
+
+typedef struct http_parser_tag {
+    httpp_request_type_e req_type;
+    char *uri;
+    avl_tree *vars;
+    avl_tree *queryvars;
+} http_parser_t;
+
+#ifdef _mangle
+# define httpp_create_parser _mangle(httpp_create_parser)
+# define httpp_initialize _mangle(httpp_initialize)
+# define httpp_parse _mangle(httpp_parse)
+# define httpp_parse_icy _mangle(httpp_parse_icy)
+# define httpp_parse_response _mangle(httpp_parse_response)
+# define httpp_setvar _mangle(httpp_setvar)
+# define httpp_getvar _mangle(httpp_getvar)
+# define httpp_set_query_param _mangle(httpp_set_query_param)
+# define httpp_get_query_param _mangle(httpp_get_query_param)
+# define httpp_destroy _mangle(httpp_destroy)
+# define httpp_clear _mangle(httpp_clear)
+#endif
+
+http_parser_t *httpp_create_parser(void);
+void httpp_initialize(http_parser_t *parser, http_varlist_t *defaults);
+int httpp_parse(http_parser_t *parser, char *http_data, unsigned long len);
+int httpp_parse_icy(http_parser_t *parser, char *http_data, unsigned long len);
+int httpp_parse_response(http_parser_t *parser, char *http_data, unsigned long len, char *uri);
+void httpp_setvar(http_parser_t *parser, char *name, char *value);
+char *httpp_getvar(http_parser_t *parser, char *name);
+void httpp_set_query_param(http_parser_t *parser, char *name, char *value);
+char *httpp_get_query_param(http_parser_t *parser, char *name);
+void httpp_destroy(http_parser_t *parser);
+void httpp_clear(http_parser_t *parser);
+ 
+#endif
+@
+
+
+1.9
+log
+@Brendan was getting pissed off about inconsistent indentation styles.
+Convert all tabs to 4 spaces. All code must now use 4 space indents.
+@
+text
+@d41 14
+@
+
+
+1.8
+log
+@reduce include file namespace clutter for libshout and the associated
+smaller libs.
+@
+text
+@d20 2
+a21 2
+	httpp_req_none, httpp_req_get, httpp_req_post, httpp_req_head,
+	httpp_req_source, httpp_req_play, httpp_req_stats, httpp_req_unknown
+d25 2
+a26 2
+	char *name;
+	char *value;
+d30 2
+a31 2
+	http_var_t var;
+	struct http_varlist_tag *next;
+d35 4
+a38 4
+	httpp_request_type_e req_type;
+	char *uri;
+	avl_tree *vars;
+	avl_tree *queryvars;
+@
+
+
+1.7
+log
+@Added support for shoutcast login protocol (ewww...)
+@
+text
+@d9 1
+a9 1
+#include "avl.h"
+@
+
+
+1.6
+log
+@Indentation again, don't mind me
+@
+text
+@d17 1
+d44 1
+@
+
+
+1.5
+log
+@mp3 metadata complete. Still untested.
+@
+text
+@d19 2
+a20 1
+	httpp_req_none, httpp_req_get, httpp_req_post, httpp_req_head, httpp_req_source, httpp_req_play, httpp_req_stats, httpp_req_unknown
+d37 1
+a37 1
+    avl_tree *queryvars;
+a51 3
+
+
+
+@
+
+
+1.4
+log
+@bugfixes for httpp_parse_response
+@
+text
+@d36 1
+d45 2
+@
+
+
+1.3
+log
+@Cleaned up version of Ciaran Anscomb's relaying patch.
+@
+text
+@d16 1
+@
+
+
+1.2
+log
+@Memory leaks. Lots of little ones.
+@
+text
+@d15 1
+a33 1
+
+d40 1
+@
+
+
+1.1
+log
+@Initial revision
+@
+text
+@d43 1
+@
+
+
+1.1.1.1
+log
+@move to cvs
+@
+text
+@@

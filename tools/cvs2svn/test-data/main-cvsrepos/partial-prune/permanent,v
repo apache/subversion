@@ -1,0 +1,41 @@
+head	1.1;
+access;
+symbols
+	vendortag:1.1.1.1 vendorbranch:1.1.1;
+locks; strict;
+comment	@# @;
+
+
+1.1
+date	94.06.18.05.46.08;	author jrandom;	state Exp;
+branches
+	1.1.1.1;
+next	;
+
+1.1.1.1
+date	94.06.18.05.46.08;	author jrandom;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.1
+log
+@Initial revision
+@
+text
+@This file was added in between the addition of sub/first and
+sub/second, to demonstrate that when those two are both removed, the
+pruning stops with sub/.
+@
+
+
+1.1.1.1
+log
+@Updated CVS
+@
+text
+@@

@@ -1,0 +1,40 @@
+head     1.1;
+branch   1.1.1;
+access   ;
+symbols  vendortag:1.1.1.1 vendorbranch:1.1.1;
+locks    ; strict;
+comment  @# @;
+
+
+1.1
+date     2003.01.25.13.43.57;  author jrandom;  state Exp;
+branches 1.1.1.1;
+next     ;
+
+1.1.1.1
+date     2003.01.25.13.43.57;  author jrandom;  state Exp;
+branches ;
+next     ;
+
+
+desc
+@@
+
+
+
+1.1
+log
+@Initial revision
+@
+text
+@#!/bin/sh
+echo Hello world!
+@
+
+
+1.1.1.1
+log
+@initial checkin
+@
+text
+@@

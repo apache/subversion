@@ -1,0 +1,47 @@
+head	1.1;
+branch	1.1.1;
+access;
+symbols
+	libshout-2_0:1.1.1.1
+	libshout-2_0b3:1.1.1.1
+	libshout-2_0b2:1.1.1.1
+	libshout_2_0b1:1.1.1.1
+	libogg2-zerocopy:1.1.1.1.0.2
+	start:1.1.1.1
+	xiph:1.1.1;
+locks; strict;
+comment	@# @;
+
+
+1.1
+date	2001.09.10.02.28.47;	author jack;	state Exp;
+branches
+	1.1.1.1;
+next	;
+
+1.1.1.1
+date	2001.09.10.02.28.47;	author jack;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+
+1.1
+log
+@Initial revision
+@
+text
+@- nothing i can think of
+@
+
+
+1.1.1.1
+log
+@move to cvs
+@
+text
+@@

@@ -1,0 +1,176 @@
+All the symbolic names that appear on each file, with "+" signs
+following those associated with commits (in other words, branches on
+which no commits happened will lack the plus sign; every other
+symbolic name should have it).
+
+* full-prune/Attic/first
+
+* full-prune/Attic/second
+
+* full-prune-reappear/appears-later
+
+	vendortag:1.1.1.1 +
+        vendorbranch:1.1.1 +
+
+* full-prune-reappear/sub/Attic/first
+
+* full-prune-reappear/sub/Attic/second
+
+* interleaved/1
+
+	vendortag:1.1.1.1 +
+        vendorbranch:1.1.1 +
+
+* interleaved/2
+
+	vendortag:1.1.1.1 +
+        vendorbranch:1.1.1 +
+
+* interleaved/3
+
+	vendortag:1.1.1.1 +
+        vendorbranch:1.1.1 +
+
+* interleaved/4
+
+	vendortag:1.1.1.1 +
+        vendorbranch:1.1.1 +
+
+* interleaved/5
+
+	vendortag:1.1.1.1 +
+        vendorbranch:1.1.1 +
+
+* interleaved/a
+
+	vendortag:1.1.1.1 +
+        vendorbranch:1.1.1 +
+
+* interleaved/b
+
+	vendortag:1.1.1.1 +
+        vendorbranch:1.1.1 +
+
+* interleaved/c
+
+	vendortag:1.1.1.1 +
+        vendorbranch:1.1.1 +
+
+* interleaved/d
+
+	vendortag:1.1.1.1 +
+        vendorbranch:1.1.1 +
+
+* interleaved/e
+
+	vendortag:1.1.1.1 +
+        vendorbranch:1.1.1 +
+
+* partial-prune/permanent
+
+	vendortag:1.1.1.1 +
+        vendorbranch:1.1.1 +
+
+* partial-prune/sub/Attic/first
+
+* partial-prune/sub/Attic/second
+
+* proj/default
+
+	B_SPLIT:1.2.0.4 +
+	B_MIXED:1.2.0.2 +
+	T_MIXED:1.2 +
+	B_FROM_INITIALS_BUT_ONE:1.1.1.1.0.4
+	B_FROM_INITIALS:1.1.1.1.0.2
+	T_ALL_INITIAL_FILES_BUT_ONE:1.1.1.1 +
+	T_ALL_INITIAL_FILES:1.1.1.1 +
+	vendortag:1.1.1.1 +
+	vendorbranch:1.1.1 +
+
+* proj/sub1/default
+
+	B_SPLIT:1.2.0.4 +
+	B_MIXED:1.2.0.2 +
+	T_MIXED:1.2 +
+	B_FROM_INITIALS_BUT_ONE:1.1.1.1.0.4
+	B_FROM_INITIALS:1.1.1.1.0.2
+	T_ALL_INITIAL_FILES_BUT_ONE:1.1.1.1 +
+	T_ALL_INITIAL_FILES:1.1.1.1 +
+	vendortag:1.1.1.1 +
+	vendorbranch:1.1.1 +
+
+* proj/sub1/subsubA/default
+
+	B_SPLIT:1.3.0.4 +
+	B_MIXED:1.3.0.2
+	T_MIXED:1.3 +
+	B_FROM_INITIALS_BUT_ONE:1.1.1.1.0.4
+	B_FROM_INITIALS:1.1.1.1.0.2
+	T_ALL_INITIAL_FILES_BUT_ONE:1.1.1.1 +
+	T_ALL_INITIAL_FILES:1.1.1.1 +
+	vendortag:1.1.1.1 +
+	vendorbranch:1.1.1 +
+
+* proj/sub1/subsubB/default
+
+	B_SPLIT:1.3.0.2 +
+	B_MIXED:1.2.0.2
+	T_MIXED:1.2 +
+	B_FROM_INITIALS:1.1.1.1.0.2
+	T_ALL_INITIAL_FILES:1.1.1.1 +
+	vendortag:1.1.1.1 +
+	vendorbranch:1.1.1 +
+
+* proj/sub2/Attic/branch_B_MIXED_only
+
+	B_MIXED:1.1.0.2 +
+
+* proj/sub2/default
+
+	B_SPLIT:1.3.0.2 +
+	B_MIXED:1.2.0.2
+	T_MIXED:1.2 +
+	B_FROM_INITIALS_BUT_ONE:1.1.1.1.0.4
+	B_FROM_INITIALS:1.1.1.1.0.2
+	T_ALL_INITIAL_FILES_BUT_ONE:1.1.1.1 +
+	T_ALL_INITIAL_FILES:1.1.1.1 +
+	vendortag:1.1.1.1 +
+	vendorbranch:1.1.1 +
+
+* proj/sub2/subsubA/default
+
+	B_SPLIT:1.2.0.2 +
+	B_MIXED:1.1.0.2 +
+	T_MIXED:1.1 +
+	B_FROM_INITIALS_BUT_ONE:1.1.1.1.0.4
+	B_FROM_INITIALS:1.1.1.1.0.2
+	T_ALL_INITIAL_FILES_BUT_ONE:1.1.1.1 +
+	T_ALL_INITIAL_FILES:1.1.1.1 +
+	vendortag:1.1.1.1 +
+	vendorbranch:1.1.1 +
+
+* proj/sub3/default
+
+	B_SPLIT:1.3.0.2 +
+	B_MIXED:1.2.0.2
+	T_MIXED:1.2 +
+	B_FROM_INITIALS_BUT_ONE:1.1.1.1.0.4
+	B_FROM_INITIALS:1.1.1.1.0.2
+	T_ALL_INITIAL_FILES_BUT_ONE:1.1.1.1 +
+	T_ALL_INITIAL_FILES:1.1.1.1 +
+	vendortag:1.1.1.1 +
+	vendorbranch:1.1.1 +
+
+* single-files/attr-exec
+
+        vendortag:1.1.1.1 +
+        vendorbranch:1.1.1 +
+
+* single-files/space fname
+
+        vendortag:1.1.1.1 +
+        vendorbranch:1.1.1 +
+
+* single-files/twoquick
+
+	after:1.2

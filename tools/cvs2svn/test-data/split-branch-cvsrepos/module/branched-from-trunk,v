@@ -1,0 +1,39 @@
+head	1.1;
+access;
+symbols
+	demo-node-0:1.1.0.2;
+locks; strict;
+comment	@;; @;
+
+
+1.1
+date	98.02.19.21.28.43;	author russel;	state Exp;
+branches
+        1.1.2.1;
+next	;
+
+1.1.2.1
+date	98.02.25.18.56.53;	author adam;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.1
+log
+@Initial revision
+@
+text
+@@
+
+
+1.1.2.1
+log
+@This revision will go wrong
+@
+text
+@@
+

@@ -1,0 +1,58 @@
+head	1.2;
+access;
+symbols;
+locks; strict;
+comment	@# @;
+
+
+1.2
+date	96.08.20.23.53.47;	author jrandom;	state dead;
+branches;
+next	1.1;
+
+1.1
+date	95.03.31.07.44.01;	author jrandom;	state Exp;
+branches
+	1.1.1.1;
+next	;
+
+1.1.1.1
+date	95.03.31.07.44.02;	author jrandom;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.2
+log
+@Remove the file 'second'.
+
+Since 'first' was already removed, removing 'second' empties the
+directory, so the directory itself gets pruned.
+@
+text
+@The original text of this file was much longer, but we didn't
+need it for the regression test, so we removed it.  It was
+src/gnu/usr.bin/cvs/contrib/pcl-cvs/Attic/NEWS,v in the FreeBSD CVS
+repository.
+@
+
+
+1.1
+log
+@Initial revision
+@
+text
+@@
+
+
+1.1.1.1
+log
+@Original sources from CVS-1.4A2 munged to fit our directory structure.
+
+@
+text
+@@

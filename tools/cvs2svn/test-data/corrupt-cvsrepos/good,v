@@ -1,0 +1,42 @@
+head     1.1;
+branch   1.1.1;
+access   ;
+symbols
+	start:1.1.1.1 vendor:1.1.1;
+locks    ; strict;
+comment  @# @;
+
+
+1.1
+date     2002.11.30.19.27.42;  author jrandom;  state Exp;
+branches 1.1.1.1;
+next     ;
+
+1.1.1.1
+date     2002.11.30.19.27.42;  author jrandom;  state Exp;
+branches ;
+next     ;
+
+
+desc
+@@
+
+
+
+1.1
+log
+@The exact contents of this file are irrelevant.  The point is that
+it is a valid RCS file and gets converted despite the presence of an
+invalid RCS file elsewhere in the repository.
+@
+text
+@Nothing to see here.
+@
+
+
+1.1.1.1
+log
+@imported
+@
+text
+@@
