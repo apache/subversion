@@ -109,11 +109,11 @@ def test_misc(sbox):
   proplist = [prop.strip() for prop in proplist]
   proplist.sort()
 
-  expected = [ 'svn:author', 'svn:log', 'svn:date' ]
-  expected.sort()
-
-  expect('proplist', expected, proplist)
-
+  # We cannot rely on svn:author's presence. ra_svn doesn't set it.
+  if not (proplist == [ 'svn:author', 'svn:date', 'svn:log' ]
+      or proplist == [ 'svn:date', 'svn:log' ]):
+    print "Unexpected result from proplist: %s" % proplist
+    raise svntest.Failure
 
   output, errput = svntest.main.run_svnlook('propget', '--revprop', repo_dir,
       'foo:bar-baz-quux')
