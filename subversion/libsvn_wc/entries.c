@@ -191,11 +191,9 @@ typedef struct svn_wc__entry_baton_t
   svn_string_t *entryname; /* The name of the entry we're looking for. */
   svn_vernum_t version;    /* The version we will get or set. */
 
-  apr_hash_t *attributes;  /* The attribute list we want to set or
-                              get.  If the former, the values are
-                              svn_string_t *'s; if the latter, then
-                              the values are svn_string_t **'s. */
-
+  apr_hash_t *attributes;  /* The attribute list from XML, which will
+                              be read from and written to. */
+                              
 } svn_wc__entry_baton_t;
 
 
@@ -434,7 +432,7 @@ do_entry (svn_string_t *path,
           svn_vernum_t version,
           svn_vernum_t *version_receiver,
           svn_boolean_t setting,
-          va_list ap)
+          apr_hash_t *attributes)
 {
   svn_error_t *err;
   apr_file_t *infile = NULL;
@@ -466,7 +464,7 @@ do_entry (svn_string_t *path,
   baton->outfile    = outfile;
   baton->entryname  = entryname;
   baton->version    = version;
-  baton->attributes = svn_xml_ap_to_hash (ap, pool);
+  baton->attributes = attributes;
 
   /* Set the att. */
   err = do_parse (baton);
@@ -504,10 +502,18 @@ svn_wc__entry_set (svn_string_t *path,
                    ...)
 {
   svn_error_t *err;
+  apr_hash_t *att_hash;
   va_list ap;
 
   va_start (ap, pool);
-  err = do_entry (path, pool, entryname, version, NULL, 1, ap);
+
+  /* Convert the va_list into a hash of attributes */
+  att_hash = svn_xml_ap_to_hash (ap, pool);
+  
+  err = do_entry (path, pool, entryname,
+                  version, NULL,
+                  1,  /* "setting" flag */
+                  att_hash);
   va_end (ap);
 
   return err;
@@ -523,17 +529,14 @@ svn_wc__entry_get (svn_string_t *path,
                    apr_pool_t *pool,
                    apr_hash_t **hash)
 {
-  /* The internals of this routine are now FUBAR, but compilable at
-     least. :) */
+  svn_error_t *err;
+  
+  /* Create a new, empty hashtable */
+  apr_hash_t *ht = apr_make_hash (pool);
 
-  /*  svn_error_t *err;
-      va_list ap;
-      
-      va_start (ap, version);
-      err = do_entry (path, pool, entryname, 0, version, 0, ap);
-      va_end (ap);
-      
-      return err; */
+  err = do_entry (path, pool, entryname, 0, version, 0, ht);
+  
+  
 
   return SVN_NO_ERROR;
 }
