@@ -1734,7 +1734,6 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
   svn_stringbuf_t *pathbuf;
   apr_pool_t *subpool;
   const char *base_checksum = NULL;
-  const char *result_checksum = NULL;
 
   switch (elm->id)
     {
@@ -1885,12 +1884,6 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
       rb->file_pool = svn_pool_create(rb->ras->pool);
       rb->result_checksum = NULL;
 
-#ifdef SVN_DAV_OLD_UPDATE_CHECKSUMS
-      result_checksum = get_attr(atts, "result-checksum");
-      if (result_checksum)
-        rb->result_checksum = apr_pstrdup(rb->file_pool, result_checksum);
-#endif /* SVN_DAV_OLD_UPDATE_CHECKSUMS */
-
       /* Add this file's name into the directory's path buffer. It will be
          removed in end_element() */
       svn_path_add_component(parent_dir->pathbuf, rb->namestr->data);
@@ -1961,14 +1954,6 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
                                 rb->ras->callbacks->get_wc_prop,
                                 rb->ras->callback_baton,
                                 rb->file_pool) );
-
-#ifdef SVN_DAV_OLD_UPDATE_CHECKSUMS
-      /* Save result_checksum for a later call to editor->close_file(). */
-      result_checksum = get_attr(atts, "result-checksum");
-      if (result_checksum)
-        rb->result_checksum = apr_pstrdup(rb->file_pool, result_checksum);
-#endif /* SVN_DAV_OLD_UPDATE_CHECKSUMS */
-
       break;
 
     case ELEM_delete_entry:

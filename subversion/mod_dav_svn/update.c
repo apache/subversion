@@ -256,11 +256,6 @@ static svn_error_t * add_helper(svn_boolean_t is_dir,
                    (digest, uc->rev_root, real_path, pool));
           
           child->text_checksum = svn_md5_digest_to_cstring(digest, pool);
-#ifdef SVN_DAV_OLD_UPDATE_CHECKSUMS
-          if (child->text_checksum)
-            chk_attr = apr_pstrcat(pool, " result-checksum=\"", 
-                                   child->text_checksum, "\"", NULL);
-#endif /* SVN_DAV_OLD_UPDATE_CHECKSUMS */
         }
 
       if (copyfrom_path == NULL)
@@ -582,21 +577,10 @@ static svn_error_t * upd_close_file(void *file_baton,
   if ((! file->added) && file->text_changed)
     {
       const char *elt;
-#ifdef SVN_DAV_OLD_UPDATE_CHECKSUMS
-      elt = apr_psprintf(pool, "<S:fetch-file%s%s%s%s%s%s/>" DEBUG_CR,
-                         file->base_checksum ? " base-checksum=\"" : "",
-                         file->base_checksum ? file->base_checksum : "",
-                         file->base_checksum ? "\"" : "",
-                         file->text_checksum ? " result-checksum=\"" : "",
-                         file->text_checksum ? file->text_checksum : "",
-                         file->text_checksum ? "\"" : "");
-#else /* SVN_DAV_OLD_UPDATE_CHECKSUMS */
       elt = apr_psprintf(pool, "<S:fetch-file%s%s%s/>" DEBUG_CR,
                          file->base_checksum ? " base-checksum=\"" : "",
                          file->base_checksum ? file->base_checksum : "",
                          file->base_checksum ? "\"" : "");
-#endif /* SVN_DAV_OLD_UPDATE_CHECKSUMS */
-
       send_xml(file->uc, elt);
     }
 
