@@ -70,7 +70,7 @@ sub cmn_RegGetValue
 
 #-------------------------------------------------------------------------------
 # FUNCTION   incCmn_Template
-# RECEIVES	 An hash table with values, template name
+# RECEIVES   An hash table with values, template name
 # RETURNS    The contents of the template with the received values
 # DOES       Reading from a template and fills in values in <%..%> tags if any
 sub cmn_Template
@@ -100,7 +100,7 @@ sub cmn_ValuePathfile
     my $VarISPP = $_[0];
     my $RetVal='';
     my $ErrNoPathFile='';
-    my $IssFile = "..\\paths_inno_src.iss";
+    my $IssFile = "..\\svn_dynamics.iss";
 
     $ErrNoPathFile="ERROR: $IssFile not found. please, make sure that it's ";
     $ErrNoPathFile=$ErrNoPathFile . "where it\n should to be\n";
@@ -129,4 +129,3 @@ sub cmn_ValuePathfile
 }
 
 1;
-

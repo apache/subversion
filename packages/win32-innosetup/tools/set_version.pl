@@ -76,7 +76,7 @@ sub PathSetupOut
   
     if ( ! -e "../$SetupOut")
       {
-        die "ERROR: Could not find $SetupOut in ..\\paths_inno_src.iss\n";
+        die "ERROR: Could not find $SetupOut in ..\\svn_dynamics.iss\n";
       }
     
     return $SetupOut;
@@ -85,13 +85,13 @@ sub PathSetupOut
 #-------------------------------------------------------------------------------
 # FUNCTION PathSvn
 # DOES     Finding and returning the current svn.exe path as of
-#          ..\paths_inno_src.iss
+#          ..\svn_dynamics.iss
 sub PathSvn
 {
     my $RetVal = &cmn_ValuePathfile('path_svnclient');
     my $ErrMsg="ERROR: File not found: Could not find svn.exe in:\n  $RetVal\n";
     $ErrMsg=$ErrMsg . "Please, check that the path_svnclient variable in the ";
-    $ErrMsg=$ErrMsg . "..\\paths_inno_src.iss\n";
+    $ErrMsg=$ErrMsg . "..\\svn_dynamics.iss\n";
     $ErrMsg=$ErrMsg . "file are correct and try again\n";
     
     if (-e "$RetVal\\svn.exe")
@@ -118,7 +118,7 @@ sub SetVersion
     
     if (! $g_AutoRun)
       {
-        print "\nsvn.exe that's mentioned in your paths_inno_src.iss file have ",
+        print "\nsvn.exe that's mentioned in your svn_dynamics.iss file have ",
           "told me that the\n",
           "version you want to make a distro from is $SvnVersion and that the ",
           "revision is\n",
