@@ -17,16 +17,38 @@
  */
 package org.tigris.subversion.javahl;
 /**
- * instance of this interface will be called during the SVNClientInterface.lock
- * and SVNClientInterface.unlock methods
+ * @since 1.2
+ * what happened to a lock during an operation
  */
-public interface LockCallback
+public interface LockStatus
 {
     /**
-     * this method is the callback
-     * @param path      the item handled
-     * @param doLock    if the operation is lock
-     * @param lock      the lock attributes
+     * does not make sense for this operation
      */
-    public void lockNotify(String path, boolean doLock, Lock lock);
+    public static final int inapplicable = 0;
+    /**
+     * unknown lock state
+     */
+    public static final int unknown = 1;
+    /**
+     * the lock change did not change
+     */
+    public static final int unchanged = 2;
+    /**
+     * the item was locked
+     */
+    public static final int locked = 3;
+    /**
+     * the item was unlocked
+     */
+    public static final int unlocked = 4;
+
+    public static final String[] stateNames =
+    {
+        "inapplicable",
+        "unknown",
+        "unchanged",
+        "locked",
+        "unlocked",
+    };
 }

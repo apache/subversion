@@ -294,6 +294,13 @@ void JNIUtil::throwError(const char *message)
     setExceptionThrown();
     env->DeleteLocalRef(clazz);
 }
+jstring JNIUtil::makeSVNErrorMessage(svn_error_t *err)
+{
+    std::string buffer;
+    assembleErrorMessage(err, 0, APR_SUCCESS, buffer);
+    jstring jmessage = makeJString(buffer.c_str());
+    return jmessage;
+}
 /**
  * process a svn error by wraping in into a ClientExpection
  * and throwing that

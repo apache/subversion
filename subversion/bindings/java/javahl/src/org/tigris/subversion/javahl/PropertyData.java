@@ -94,6 +94,7 @@ public class PropertyData
     public static final String REV_ORIGINAL_DATE = "svn:original-date";
 
     /**
+     * @since 1.2
      * flag property if a lock is needed to modify this node
      */
     public static final String NEEDS_LOCK = "svn:needs-lock";

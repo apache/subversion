@@ -1266,7 +1266,7 @@ public class BasicTests extends SVNTests
     }
 
     /**
-     * test the basic SVNClientInfo.logMessage functionality
+     * test the basic SVNClient.logMessage functionality
      * @throws Throwable
      */
     public void testBasicLogMessage() throws Throwable
@@ -1290,6 +1290,11 @@ public class BasicTests extends SVNTests
         assertEquals("wrong action", 'A', cp[0].getAction());
     }
 
+    /**
+     * test the basic SVNClient.getVersionInfo functionality
+     * @throws Throwable
+     * @since 1.2
+     */
     public void testBasicVersionInfo() throws Throwable
     {
         // create the working copy
@@ -1298,6 +1303,11 @@ public class BasicTests extends SVNTests
                 client.getVersionInfo(thisTest.getWCPath(), null, false));        
     }
 
+    /**
+     * test the baisc SVNClient locking functionality
+     * @throws Throwable
+     * @since 1.2
+     */
     public void testBasicLocking() throws Throwable
     {
         // build the first working copy
@@ -1314,21 +1324,15 @@ public class BasicTests extends SVNTests
                                    "message", true));
         File f = new File(thisTest.getWCPath()+"/A/mu");
         assertEquals("file should be read only now", false, f.canWrite());
-        Lock[] lock = client.lock(new String[] {thisTest.getWCPath()+"/A/mu"},
-                                "comment", null, false);
+        client.lock(new String[] {thisTest.getWCPath()+"/A/mu"},
+                                "comment", false);
         assertEquals("file should be read write now", true, f.canWrite());
-        assertEquals("lock owner", "jrandom", lock[0].getOwner());
-        assertEquals("lock path", "/A/mu", lock[0].getPath());
-        assertEquals("lock comment", "comment", lock[0].getComment());
-        client.unlock(new String[]{thisTest.getWCPath()+"/A/mu"}, null,
-                      false);
+        client.unlock(new String[]{thisTest.getWCPath()+"/A/mu"},
+                false);
         assertEquals("file should be read only now", false, f.canWrite());
-        lock = client.lock(new String[]{thisTest.getWCPath()+"/A/mu"},
-                           "comment", null, false);
+        client.lock(new String[]{thisTest.getWCPath()+"/A/mu"},
+                           "comment", false);
         assertEquals("file should be read write now", true, f.canWrite());
-        assertEquals("lock owner", "jrandom", lock[0].getOwner());
-        assertEquals("lock path", "/A/mu", lock[0].getPath());
-        assertEquals("lock comment", "comment", lock[0].getComment());
         addExpectedCommitItem(thisTest.getWCPath(),
                 thisTest.getUrl(), "A/mu",NodeKind.file,
                     0);
@@ -1337,6 +1341,11 @@ public class BasicTests extends SVNTests
         assertEquals("file should be read write now", true, f.canWrite());
     }
 
+    /**
+     * test the baisc SVNClient.info2 functionality 
+     * @throws Throwable
+     * @since 1.2
+     */
     public void testBasicInfo2() throws Throwable
     {
         // build the first working copy

@@ -27,6 +27,7 @@
 #include "SVNClient.h"
 #include "Revision.h"
 #include "Notify.h"
+#include "Notify2.h"
 #include "CommitMessage.h"
 #include "Prompter.h"
 #include "Targets.h"
@@ -35,7 +36,6 @@
 #include "svn_private_config.h"
 #include "version.h"
 #include "Outputer.h"
-#include "LockCallback.h"
 #include <iostream>
 /*
  * Class:     org_tigris_subversion_javahl_SVNClient
@@ -356,6 +356,28 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_notification
         return;
     }
     cl->notification(notify);
+}
+/*
+ * Class:     org_tigris_subversion_javahl_SVNClient
+ * Method:    notification2
+ * Signature: (Lorg/tigris/subversion/javahl/Notify2;)V
+ */
+JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_notification2
+  (JNIEnv* env, jobject jthis, jobject jnotify2)
+{
+    JNIEntry(SVNClient, notification2);
+    SVNClient *cl = SVNClient::getCppObject(jthis);
+    if(cl == NULL)
+    {
+        JNIUtil::throwError(_("bad c++ this"));
+        return;
+    }
+    Notify2 *notify2 = Notify2::makeCNotify(jnotify2);
+    if(JNIUtil::isExceptionThrown())
+    {
+        return;
+    }
+    cl->notification2(notify2);
 }
 /*
  * Class:     org_tigris_subversion_javahl_SVNClient
@@ -1649,43 +1671,39 @@ JNIEXPORT jobject JNICALL Java_org_tigris_subversion_javahl_SVNClient_info
 /*
  * Class:     org_tigris_subversion_javahl_SVNClient
  * Method:    lock
- * Signature: ([Ljava/lang/String;Ljava/lang/String;
- *             Lorg/tigris/subversion/javahl/LockCallback;Z)
- *            [Lorg/tigris/subversion/javahl/Lock;
+ * Signature: ([Ljava/lang/String;Ljava/lang/String;Z)V
  */
-JNIEXPORT jobjectArray JNICALL Java_org_tigris_subversion_javahl_SVNClient_lock
+JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_lock
   (JNIEnv *env, jobject jthis, jobjectArray jtargets, jstring jcomment, 
-   jobject jlockCallback, jboolean jforce)
+   jboolean jforce)
 {
     JNIEntry(SVNClient, lock);
     SVNClient *cl = SVNClient::getCppObject(jthis);
     if(cl == NULL)
     {
         JNIUtil::throwError("bad c++ this");
-        return NULL;
+        return;
     }
     Targets targets(jtargets);    
     if(JNIUtil::isExceptionThrown())
     {
-        return NULL;
+        return;
     }
     JNIStringHolder comment(jcomment);
     if(JNIUtil::isExceptionThrown())
     {
-        return NULL;
+        return;
     }
-    LockCallback callback(jlockCallback);
-    return cl->lock(targets, comment, callback, jforce ? true : false);
+    cl->lock(targets, comment, jforce ? true : false);
 }
 
 /*
  * Class:     org_tigris_subversion_javahl_SVNClient
  * Method:    unlock
- * Signature: ([Ljava/lang/String;Lorg/tigris/subversion/javahl/LockCallback;Z)V
+ * Signature: ([Ljava/lang/String;Z)V
  */
 JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_unlock
-  (JNIEnv *env, jobject jthis, jobjectArray jtargets, jobject jlockCallback, 
-   jboolean jforce)
+  (JNIEnv *env, jobject jthis, jobjectArray jtargets, jboolean jforce)
 {
     JNIEntry(SVNClient, unlock);
     SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -1701,8 +1719,7 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_unlock
         return;
     }
 
-    LockCallback callback(jlockCallback);
-    cl->unlock(targets, callback, jforce ? true : false);
+    cl->unlock(targets, jforce ? true : false);
 }
 /*
  * Class:     org_tigris_subversion_javahl_SVNClient

@@ -13,6 +13,7 @@
  * individuals.  For exact contribution history, see the revision
  * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
+ * 
  * @endcopyright
  */
 package org.tigris.subversion.javahl;
@@ -20,6 +21,7 @@ package org.tigris.subversion.javahl;
 import java.util.Date;
 /**
  * class to describe a lock. It is return by the lock operation
+ * @since 1.2
  */
 public class Lock
 {

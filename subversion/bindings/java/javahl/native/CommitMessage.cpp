@@ -174,9 +174,6 @@ jstring CommitMessage::getCommitMessage(apr_array_header_t *commit_items)
         if(item->state_flags & SVN_CLIENT_COMMIT_ITEM_IS_COPY)
             jstateFlags |=
                 org_tigris_subversion_javahl_CommitItemStateFlags_IsCopy;
-        if(item->state_flags & SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN)
-            jstateFlags |=
-                org_tigris_subversion_javahl_CommitItemStateFlags_LockToken;
 
         jstring jurl = JNIUtil::makeJString(item->url);
 

@@ -22,6 +22,7 @@ import java.util.Date;
 /**
  * this class is returned by SVNClientInterface.info2 and contains information
  * about items in the repository or working copy
+ * @since 1.2
  */
 public class Info2
 {
@@ -38,7 +39,7 @@ public class Info2
      */
     private long rev;
     /**
-     * item kinds see NodeKind
+     * the item kinds (see NodeKind)
      */
     private int kind;
     /**
@@ -66,7 +67,7 @@ public class Info2
      */
     private Lock lock;
     /**
-     * flag if the remaining field are set
+     * the flag if the remaining fields are set
      */
     private boolean hasWcInfo;
     /**
@@ -165,41 +166,65 @@ public class Info2
         this.prejfile = prejfile;
     }
 
+    /**
+     * return the path of the item
+     */
     public String getPath()
     {
         return path;
     }
 
+    /**
+     * return the url of the item
+     */
     public String getUrl()
     {
         return url;
     }
 
+    /**
+     * return the revision of the item
+     */
     public long getRev()
     {
         return rev;
     }
 
+    /**
+     * return the item kinds (see NodeKind)
+     */
     public int getKind()
     {
         return kind;
     }
 
+    /**
+     * return the root URL of the repository
+     */
     public String getReposRootUrl()
     {
         return reposRootUrl;
     }
 
+    /**
+     * return the UUID of the repository
+     */
     public String getReposUUID()
     {
         return reposUUID;
     }
 
+    /**
+     * return the revision of the last change
+     */
     public long getLastChangedRev()
     {
         return lastChangedRev;
     }
 
+    /**
+     * return the date of the last change
+     */
     public Date getLastChangedDate()
     {
         if(lastChangedDate == 0)
@@ -208,36 +233,57 @@ public class Info2
             return new Date(lastChangedDate/1000);
     }
 
+    /**
+     * return the author of the last change
+     */
     public String getLastChangedAuthor()
     {
         return lastChangedAuthor;
     }
 
+    /**
+     * return the information about any lock (may be null)
+     */
     public Lock getLock()
     {
         return lock;
     }
 
+    /**
+     * return the flag if the working copy fields are set
+     */
     public boolean isHasWcInfo()
     {
         return hasWcInfo;
     }
 
+    /**
+     * return the scheduled operation at next commit (see ScheduleKind)
+     */
     public int getSchedule()
     {
         return schedule;
     }
 
+    /**
+     * return if the item was copied, the source url
+     */
     public String getCopyFromUrl()
     {
         return copyFromUrl;
     }
 
+    /**
+     * return if the item was copied, the source rev
+     */
     public long getCopyFromRev()
     {
         return copyFromRev;
     }
 
+    /**
+     * return the last time the item was changed
+     */
     public Date getTextTime()
     {
         if(textTime == 0)
@@ -246,6 +292,9 @@ public class Info2
             return new Date(textTime/1000);
     }
 
+    /**
+     * return the last time the properties of the items were changed
+     */
     public Date getPropTime()
     {
         if(propTime == 0)
@@ -254,26 +303,43 @@ public class Info2
             return new Date(propTime/1000);
     }
 
+    /**
+     * return the checksum of the item
+     */
     public String getChecksum()
     {
         return checksum;
     }
 
+    /**
+     * return if the item is in conflict, the filename of the base version file
+     */
     public String getConflictOld()
     {
         return conflictOld;
     }
 
+    /**
+     * return if the item is in conflict, the filename of the last repository
+     * version file
+     */
     public String getConflictNew()
     {
         return conflictNew;
     }
 
+    /**
+     * return if the item is in conflict, the filename of the working copy
+     * version file
+     */
     public String getConflictWrk()
     {
         return conflictWrk;
     }
 
+    /**
+     * return the property reject file
+     */
     public String getPrejfile()
     {
         return prejfile;

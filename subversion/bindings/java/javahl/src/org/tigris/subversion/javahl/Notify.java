@@ -25,6 +25,7 @@ package org.tigris.subversion.javahl;
  * class.
  * If you need to pass extra information to the notification
  * handler then just add these to you implementing class
+ * @deprecated Use Notify2 instead
  */
 public interface Notify
 {
