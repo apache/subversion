@@ -1492,21 +1492,23 @@ URL: http://svn.example.com/repos/calc/branches/my-calc-branch
   <!-- ======================== SECTION 6 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-ch-4-sect-6">
-    <title>Tags</title>
+    <title>Etiquetas</title>
 
-    <para>Another common version control concept is a
-      <firstterm>tag</firstterm>.  A tag is just a
-      <quote>snapshot</quote> of a project in time.  In Subversion,
-      this idea already seems to be everywhere.  Each repository
-      revision is exactly that&mdash;a snapshot of the filesystem
-      after each commit.</para>
+    <para>Otro concepto común en el control de versiones es la
+      <firstterm>etiqueta</firstterm>.  Una etiqueta no es
+      más que una <quote>instantánea</quote> del proyecto en
+      el tiempo. En Subversion, esta idea ya está presente en
+      todas partes. Cada revisión del repositorio es exáctamente
+      eso&mdash;una instantánea del sistema de ficheros tras cada
+      envío al repositorio.</para>
 
-    <para>However, people often want to give more human-friendly names
-      to tags, like <literal>release-1.0</literal>.  And they want to
-      make snapshots of smaller subdirectories of the filesystem.
-      After all, it's not so easy to remember that release-1.0 of a
-      piece of software is a particular subdirectory of revision
-      4822.</para>
+    <para>No obstante, las personas prefieren dar nombres más
+      familiares a las etiquetas, como <!-- TODO release
+      == lanzamiento? --> <literal>lanzamiento-1.0</literal>.
+      Y quieren hacer instantáneas de subdirectorios menores
+      del sistema de archivos. Después de todo, no es tan fácil
+      recordar que lanzamiento-1.0 de una parte del software es un
+      subdirectorio particular de la revisión 4822.</para>
 
     <sect2 id="svn-ch-4-sect-6.1">
       <title>Creating a Simple Tag</title>
