@@ -368,8 +368,8 @@ $ svn commit -m "They don't make Sunday."
 $ svn log -r 1729
 $ svn log -r 1729:HEAD
 $ svn log -r 1729:1744
-$ svn log -r {12/04/01}:{2/17/02}
-$ svn log -r 1729:{2/17/02}
+$ svn log -r {2001-12-04}:{2002-02-17}
+$ svn log -r 1729:{2002-02-17}
             </screen>
 
             <para>See <xref linkend="svn-ch-3-sect-3.2"/> for more
