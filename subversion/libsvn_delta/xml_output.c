@@ -2,7 +2,7 @@
  * xml_output.c:  output a Subversion "tree-delta" XML stream
  *
  * ====================================================================
- * Copyright (c) 2000 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
