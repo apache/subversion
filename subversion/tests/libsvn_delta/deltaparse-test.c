@@ -53,9 +53,6 @@ my_vcdiff_windoweater (svn_delta_window_t *window, void *baton)
               
     }
 
-  /* This deallocates the whole subpool created to hold the window.
-     We're done with the window, so we should clean up. */
-  svn_free_delta_window (window);
 
   return SVN_NO_ERROR;
 }

@@ -50,6 +50,9 @@
 /* ==================================================================== */
 
 
+#include "apr_pools.h"
+
+
 #ifndef DELTA_H
 #define DELTA_H
 
@@ -96,39 +99,12 @@ extern svn_error_t *svn_vcdiff_parse (svn_vcdiff_parser_t *parser,
                                       apr_off_t *len);
 
 
-svn_error_t *svn_vcdiff_flush_buffer (svn_vcdiff_parser_t *parser);
+extern svn_error_t *svn_vcdiff_flush_buffer (svn_vcdiff_parser_t *parser);
+
 
 
 
 
-/* A pdelta parser object.  */
-typedef struct svn_pdelta_chunk_parser_t
-{
-  /* Once this parser has enough data buffered to create a propchange
-     "chunk", it passes the window to the caller's consumer routine.  */
-  svn_prop_change_chunk_handler_t *consumer_func;
-  void *consumer_baton;
-
-  /* Pool to create subpools from; each developing chunk will live in
-     a subpool */
-  apr_pool_t *pool;
-
-  /* The current subpool which contains our current chunk */
-  apr_pool_t *subpool;
-
-  /* The actual parser data buffer, living within subpool. */
-  svn_string_t *buffer;
-
-} svn_pdelta_chunk_parser_t;
-
-
-
-/* Return a property delta parser. */
-svn_pdelta_chunk_parser_t *
-svn_make_pdelta_chunk_parser (svn_prop_change_chunk_handler_t *handler, 
-                              void *handler_baton,
-                              apr_pool_t *pool);
-
 /* These are the in-memory tree-delta stackframes; they are used to
  * keep track of a delta's state while the XML stream is being parsed.
  * 
@@ -164,7 +140,8 @@ typedef enum svn_XML_t
   svn_XML_file,
   svn_XML_dir,
   svn_XML_textdelta,
-  svn_XML_propdelta
+  svn_XML_propdelta,
+  svn_XML_set
 } svn_XML_t;
 
 
@@ -246,9 +223,60 @@ typedef struct svn_delta_digger_t
 
   /* A similar parser, used to break up large pdelta changes into
      chunks. */
-  svn_pdelta_chunk_parser_t *pdelta_chunk_parser;
+  struct svn_pdelta_parser_t *pdelta_parser;
 
 } svn_delta_digger_t;
+
+
+
+
+
+/* A pdelta parser object.  */
+typedef struct svn_pdelta_parser_t
+{
+  /* The routine that this parser will send the final propchange
+     to. */
+  svn_propchange_handler_t *handler;
+  void *baton;
+
+  /* Where is this propdelta taking place?  A file, dir, or dirent? */
+  svn_propchange_location_t loc;
+
+  /* Pool to create subpools from; each developing chunk will live in
+     a subpool */
+  apr_pool_t *pool;
+  
+  /* The current subpool which contains our current chunk */
+  apr_pool_t *subpool;
+  
+  /* The final propchange we're going to send to our caller, when
+     we're done. */
+  svn_propchange_t *propchange;
+
+} svn_pdelta_parser_t;
+
+
+
+/* Return a property delta parser. */
+extern svn_pdelta_parser_t *
+svn_make_pdelta_parser (svn_propchange_handler_t *handler,
+                        void *handler_baton,
+                        apr_pool_t *pool);
+
+
+
+/* Parse another block of bytes in the <prop-delta> */
+extern svn_error_t *
+svn_pdelta_parse (svn_delta_digger_t *digger,
+                  const char *buffer,
+                  apr_off_t *len);
+
+
+/* Deallocate parser's subpool (and propchange), and create a new one,
+   ready to buffer a new propchange. */
+extern void
+svn_reset_parser_subpool (svn_pdelta_parser_t *parser);
+
 
 
 

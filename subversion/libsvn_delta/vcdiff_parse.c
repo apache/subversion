@@ -117,13 +117,8 @@ svn_make_vcdiff_parser (svn_text_delta_window_handler_t *handler,
 /* Internal routine --
 
    Create a new window from PARSER->SUBPOOL, and send it off to the
-   caller's consumer routine.  (When that routine is done, it can call
-   svn_free_delta_window() any time it wishes to deallocate the window
-   & subpool.)
-
-   In the meantime, create a new SUBPOOL in PARSER so that it can
-   continue buffering data.
-*/
+   caller's consumer routine, then create a new SUBPOOL in PARSER so
+   that it can continue buffering data.  */
 static svn_error_t *
 svn_vcdiff_send_window (svn_vcdiff_parser_t *parser, apr_size_t len)
 {
@@ -159,9 +154,11 @@ svn_vcdiff_send_window (svn_vcdiff_parser_t *parser, apr_size_t len)
           (err, "svn_vcdiff_send_window: consumer_func choked.");
     }
   
-  /* It's now the _consumer routine's_ responsiblity to deallocate the
-     whole subpool containing {parser->buffer, window, new_op}.  In
-     the meantime, we need a new subpool to continue buffering. */
+  /* Now that the window consumer is done, free the window/sub-pool */
+
+  apr_destroy_pool (window->pool);
+
+  /* Make a new subpool to continue buffering. */
 
   parser->subpool = apr_make_sub_pool (parser->pool, NULL);
 
@@ -175,7 +172,7 @@ svn_vcdiff_send_window (svn_vcdiff_parser_t *parser, apr_size_t len)
 
 /* Parse another block of bytes in the vcdiff-format stream managed by
    PARSER.  When we've accumulated enough data for a complete window,
-   call PARSER's consumer function.  */
+   call svn_vcdiff_send_window().  */
 
 /* Note: this dummy routine thinks a "window" is just a certain number
    of bytes received.  The real vcdiff code will probably use a more
@@ -224,17 +221,6 @@ svn_vcdiff_parse (svn_vcdiff_parser_t *parser,
     return SVN_NO_ERROR;
 }
 
-
-
-
-/* Free the the entire sub-pool which contains WINDOW.  This is called
-   by the window consumer routine, once it's finished with the vcdiff
-   data.  */
-void 
-svn_free_delta_window (svn_delta_window_t *window)
-{
-  apr_destroy_pool (window->pool);
-}
 
 
 

@@ -49,8 +49,24 @@
 
 /* ==================================================================== */
 
+/* 
 
+  The property-parsing system is modeled closely after the
+  vcdiff-parser API, except that it has two alternate modes of
+  operation.  If the caller sets apply_*_propchange in the walker,
+  then we buffer and send off the entire* propchange in RAM.  If the
+  caller gives us an svn_prop_change_chunk_handler_t, however, then it
+  wants the propchange streamed in a chunky way, just like text
+  deltas.  These two methods are *not* mutually exclusive.  
 
+   NOTE that (at least in this model), our parser creates a new APR
+   sub-pool to buffer each incoming window of data.  It then passes
+   this window off to the consumer routine, and creates a *new*
+   sub-pool to start buffering again.  It's the consumer routine's
+   responsibility to free the sub-pool (when it's finished with it) by
+   calling svn_free_delta_chunk().
+
+*/
 
 
 #include <stdio.h>
@@ -63,30 +79,81 @@
 #include "delta.h"
 
 
-/* How many bytes should each prop-chunk be? */
 
-#define SVN_PROP_CHUNK_WINDOW_SIZE
+
+/* Utility: deallocate a parser's subpool (and the propchange inside
+   it), andthen create a new subpool with a new propchange, ready to
+   buffer the next change.  */
+void 
+svn_reset_parser_subpool (svn_pdelta_parser_t *parser)
+{
+  apr_destroy_pool (parser->subpool);
+
+  parser->subpool = apr_make_sub_pool (parser->pool, NULL);
+
+  parser->propchange = 
+    (svn_propchange_t *) apr_palloc (parser->subpool, 
+                                     sizeof(svn_propchange_t));
+ 
+  parser->propchange->value = 
+    svn_string_create ("", parser->subpool);
+}
 
 
 
 /* Return a prop-chunkparser object, PARSER.  If we're receiving a
    propchange byte stream, one block of bytes at a time, we can pass
-   each block in succession to svn_vcdiff_parse, with PARSER as the
+   each block in succession to svn_propchunk_parse, with PARSER as the
    other argument.  PARSER keeps track of where we are in the stream;
    each time we've received enough data for a complete chunk, we pass
    it to HANDLER, along with HANDLER_BATON.  POOL will be used to by
    PARSER to buffer the incoming data and create chunk to send off.  */
-svn_pdelta_chunk_parser_t *
-svn_make_pdelta_chunk_parser (svn_prop_change_chunk_handler_t *handler,
-                              void *handler_baton,
-                              apr_pool_t *pool)
+svn_pdelta_parser_t *
+svn_make_pdelta_parser (svn_propchange_handler_t *handler,
+                        void *handler_baton,
+                        apr_pool_t *pool)
 {
-  /* TODO : copy code from vcdiff_parse.c */
-  return 0;
+  /* Allocate a vcdiff_parser and fill out its fields */
+  svn_pdelta_parser_t *new_pdelta_parser = 
+    (svn_pdelta_parser_t *) 
+    apr_palloc (pool, sizeof(svn_pdelta_parser_t));
+
+  new_pdelta_parser->handler = handler;
+  new_pdelta_parser->baton = handler_baton;
+
+  new_pdelta_parser->pool = pool;
+  new_pdelta_parser->subpool = 
+    apr_make_sub_pool (new_pdelta_parser->pool, NULL);
+
+  /* Important:  notice that the parser's buffer lives in a subpool */
+  new_pdelta_parser->propchange = 
+    (svn_propchange_t *) apr_palloc (new_pdelta_parser->subpool, 
+                                     sizeof(svn_propchange_t));
+
+  new_pdelta_parser->propchange->value = 
+    svn_string_create ("", new_pdelta_parser->subpool);
+
+  return new_pdelta_parser;
 }
 
 
 
+
+
+/* Buffer up incoming data within a <set> tag. */
+svn_error_t *
+svn_pdelta_parse (svn_delta_digger_t *digger,
+                  const char *buffer,
+                  apr_off_t *len)
+{
+  svn_pdelta_parser_t *parser = digger->pdelta_parser;
+
+  svn_string_appendbytes (parser->propchange->value,
+                          buffer, *len,
+                          parser->subpool);
+
+  return SVN_NO_ERROR;
+}
 
 
 
