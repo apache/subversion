@@ -669,6 +669,68 @@ def status_on_unversioned_dotdot(sbox):
 
 #----------------------------------------------------------------------
 
+def status_on_partially_nonrecursive_wc(sbox):
+  "status -u in partially non-recursive wc"
+  # Based on issue #2122.
+  #
+  #    $ svn co -N -r 213 svn://svn.debian.org/pkg-kde .
+  #    A  README
+  #    Checked out revision 213.
+  #    
+  #    $ svn up -r 213 scripts www
+  #    [ List of scripts/* files.]
+  #    Updated to revision 213.
+  #    [ List of www/* files.]
+  #    Updated to revision 213.
+  #    
+  #    $ svn st -u
+  #       *      213   www/IGNORE-ME
+  #       *      213   www
+  #    svn: subversion/libsvn_wc/status.c:910: tweak_statushash:         \
+  #         Assertion `repos_text_status == svn_wc_status_added' failed. \
+  #         Aborted (core dumped)
+  #
+  # You might think that the intermediate "svn up -r 213 scripts www"
+  # step is unnecessary, but when I tried eliminating it, I got
+  #
+  #    $ svn st -u
+  #    subversion/libsvn_wc/lock.c:642: (apr_err=155005)
+  #    svn: Working copy 'www' not locked
+  #    $ 
+  #
+  # instead of the assertion error.
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  
+  top_url = svntest.main.current_repo_url
+  A_url = top_url + '/A'
+  D_url = top_url + '/A/D'
+  G_url = top_url + '/A/D/G'
+  H_url = top_url + '/A/D/H'
+  rho = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
+
+  # Commit a change to A/D/G/rho.  This will be our equivalent of
+  # whatever change it was that happened between r213 and HEAD in the
+  # reproduction recipe.  For us, it's r2.
+  svntest.main.file_append(rho, 'Whan that Aprille with his shoores soote\n')
+  svntest.main.run_svn(None, 'ci', '-m', 'log msg', rho)
+
+  # Make the working copy weird in the right way, then try status -u.
+  svntest.main.safe_rmtree(wc_dir)
+  svntest.main.run_svn(None, 'co', '-r1', '-N', D_url, 'D')
+  saved_cwd = os.getcwd()
+  os.chdir('D')
+  try:
+    svntest.main.run_svn(None, 'up', '-r1', 'H')
+    svntest.main.run_svn(None, 'st', '-u')
+  finally:
+    os.chdir(saved_cwd)
+
+
+#----------------------------------------------------------------------  
+
+
 ########################################################################
 # Run the tests
 
@@ -689,6 +751,7 @@ test_list = [ None,
               status_on_forward_deletion,
               timestamp_behaviour,
               status_on_unversioned_dotdot,
+              status_on_partially_nonrecursive_wc,
              ]
 
 if __name__ == '__main__':

@@ -905,9 +905,19 @@ tweak_statushash (apr_hash_t *statushash,
   /* If not, make it so. */
   if (! statstruct)
     {
-      /* This should only be missing from the hash if it's being added
-         from the repository status drive. */
-      assert (repos_text_status == svn_wc_status_added);
+      /* If this item isn't being added, then we're most likely
+         dealing with a non-recursive (or at least partially
+         non-recursive) working copy.  Due to bugs in how the client
+         reports the state of non-recursive working copies, the
+         repository can send back responses about paths that don't
+         even exist locally.  Our best course here is just to ignore
+         those responses.  After all, if the client had reported
+         correctly in the first, that path would either be mentioned
+         as an 'add' or not mentioned at all, depending on how we
+         eventually fix the bugs in non-recursivity.  See issue
+         #2122 for details. */
+      if (repos_text_status != svn_wc_status_added)
+        return SVN_NO_ERROR;
 
       /* Use the public API to get a statstruct, and put it into the hash. */
       SVN_ERR (svn_wc_status (&statstruct, path, NULL, pool));
@@ -1197,6 +1207,7 @@ delete_entry (const char *path,
   svn_node_kind_t kind;
   svn_wc_adm_access_t *adm_access;
   const char *hash_key;
+  svn_error_t *err;
 
   /* Note:  when something is deleted, it's okay to tweak the
      statushash immediately.  No need to wait until close_file or
@@ -1218,7 +1229,33 @@ delete_entry (const char *path,
       dir_path = svn_path_dirname (full_path, pool);
       hash_key = name;
     }
-  SVN_ERR (svn_wc_adm_retrieve (&adm_access, eb->adm_access, dir_path, pool));
+
+  err = svn_wc_adm_retrieve (&adm_access, eb->adm_access, dir_path, pool);
+  if (err)
+    {
+      if ((kind == svn_node_none) && (err->apr_err == SVN_ERR_WC_NOT_LOCKED))
+        {
+          /* We're probably dealing with a non-recursive, (or
+             partially non-recursive, working copy.  Due to deep bugs
+             in how the client reports the state of non-recursive
+             working copies, the repository can report that a path is
+             deleted in an area where we not only don't have the path
+             in question, we don't even have its parent(s).  A
+             complete fix would require a serious revamp of how
+             non-recursive working copies store and report themselves,
+             plus some thinking about the UI behavior we want when
+             someone runs 'svn st -u' in a [partially] non-recursive
+             working copy.
+
+             For now, we just do our best to detect the condition and
+             not report an error if it holds.  See issue #2122. */
+          svn_error_clear (err);
+          return SVN_NO_ERROR;
+        }
+      else
+        return err;
+    }
+
   SVN_ERR (svn_wc_entries_read (&entries, adm_access, FALSE, pool));
   if (apr_hash_get (entries, hash_key, APR_HASH_KEY_STRING))
     SVN_ERR (tweak_statushash (db->statii, eb->adm_access,
@@ -1303,7 +1340,7 @@ close_directory (void *dir_baton,
       enum svn_wc_status_kind repos_text_status;
       enum svn_wc_status_kind repos_prop_status;
   
-      /* If this is a new file, add it to the statushash. */
+      /* If this is a new directory, add it to the statushash. */
       if (db->added)
         {
           repos_text_status = svn_wc_status_added;
@@ -1315,7 +1352,9 @@ close_directory (void *dir_baton,
           repos_prop_status = db->prop_changed ? svn_wc_status_modified : 0;
         }
 
-      /* If this directory was added, add it to its parent's status hash. */
+      /* Maybe add this directory to its parent's status hash.  Note
+         that tweak_statushash won't do anything if repos_text_status
+         is not svn_wc_status_added. */
       if (pb)
         SVN_ERR (tweak_statushash (pb->statii,
                                    eb->adm_access,
@@ -1340,7 +1379,7 @@ close_directory (void *dir_baton,
       /* Now do the status reporting. */
       SVN_ERR (handle_statii (eb, dir_status ? dir_status->entry : NULL, 
                               db->path, db->statii, was_deleted, TRUE, pool));
-      if (is_sendable_status (dir_status, eb))
+      if (dir_status && is_sendable_status (dir_status, eb))
         (eb->status_func) (eb->status_baton, db->path, dir_status);
       apr_hash_set (pb->statii, db->path, APR_HASH_KEY_STRING, NULL);
     }
