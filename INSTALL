@@ -267,9 +267,9 @@ I.    BUILD REQUIREMENTS
       a parameter when you run Subversion's "./configure", and it will
       be passed on to the Neon build system.  If your OpenSSL
       installation is hard for Neon to find, you may need to use
-      "--with-ssl=/path/to/lib" instead.  The zlib library is included
+      "--with-libs=/path/to/lib" instead.  The zlib library is included
       in Neon by default, but you can also specify a path to the
-      library using "--with-zlib".  Consult the Neon documentation for
+      library using "--with-libs".  Consult the Neon documentation for
       more information on how to use these parameters and versions of
       libraries you need.
 
