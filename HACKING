@@ -938,24 +938,24 @@ through the logs later.  Don't hide names in wildcards, because the
 globbed portion may be what someone searches for later.  For example,
 this is bad:
 
-   * twirl.c
+   * subversion/libsvn_ra_pigeons/twirl.c
      (twirling_baton_*): Removed these obsolete structures.
      (handle_parser_warning): Pass data directly to callees, instead
      of storing in twirling_baton_*.
 
-   * twirl.h: Fix indentation.
+   * subversion/libsvn_ra_pigeons/twirl.h: Fix indentation.
 
 Later on, when someone is trying to figure out what happened to
 `twirling_baton_fast', they may not find it if they just search for
 "_fast".  A better entry would be:
 
-   * twirl.c 
+   * subversion/libsvn_ra_pigeons/twirl.c
      (twirling_baton_fast, twirling_baton_slow): Removed these
      obsolete structures. 
      (handle_parser_warning): Pass data directly to callees, instead
      of storing in twirling_baton_*. 
 
-   * twirl.h: Fix indentation.
+   * subversion/libsvn_ra_pigeons/twirl.h: Fix indentation.
 
 The wildcard is okay in the description for `handle_parser_warning',
 but only because the two structures were mentioned by full name
@@ -975,7 +975,7 @@ be:
 
    Fix issue #1729: Don't crash because of a missing file.
 
-   * get_editor.c
+   * subversion/libsvn_ra_ansible/get_editor.c
      (frobnicate_file): Check that file exists before frobnicating.
 
 For large changes or change groups, group the log entry into
