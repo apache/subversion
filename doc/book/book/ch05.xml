@@ -1408,7 +1408,7 @@ The latest repos revision is 19.
         output in your terminal window.  For example:</para>
 
       <screen>
-$ svnadmin youngest myrepos
+$ svnlook youngest myrepos
 26
 $ svnadmin dump myrepos &gt; dumpfile
 * Dumped revision 0.
