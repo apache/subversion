@@ -1,4 +1,18 @@
-Version 0.36.0 [Beta Interim 1] 
+Version 0.37.0 [Beta Interim 2]
+(branching 20 January 2004, from /branches/1.0-stabilization)
+http://svn.collab.net/repos/svn/tags/0.37.0
+
+ User-visible changes:
+ * bugfix: buffer overflow for AIX client
+
+ Developer-visible changes:
+ * apichange: Rewrite of date parser (r8327, r8328, r8329) (issue #408)
+ * numerous changes to language bindings, to keep up with C API.
+ * misc. internal code cleanup
+
+
+
+Version 0.36.0 [Beta Interim 1]
 (branching 13 January 2004, from /branches/1.0-stabilization)
 http://svn.collab.net/repos/svn/tags/0.36.0
 
