@@ -22,7 +22,7 @@
       having here, look at the most up-to-date version of the FAQ on
       Subversion's main website.  If you're still stuck, then send
       mail to <email>users@subversion.tigris.org</email> with a
-      detailed description of the problem you're having
+      detailed description of the problem you're having.
       <footnote><para>Remember that the amount of detail you provide
       about your setup and your problem is directly proportional to
       the likelihood of getting an answer from the mailing list.
@@ -83,7 +83,7 @@ $ svnadmin recover /path/to/repos
           logs everything it is about to do before it does so. If
           <command>svn</command> is interrupted while performing an
           action, then one or more lockfiles are left behind, along
-          with log files describing then unfinished
+          with log files describing the unfinished
           actions. (<command>svn status</command> will show an
           <literal>L</literal> next to locked directories.)</para>
         
@@ -156,7 +156,7 @@ svn_error: &hellip; The specified activity does not exist.
         <title>Under Windows XP, the Subversion server sometimes
           seems to send out corrupted data.</title>
         
-        <para>You need to install Window XP Service Pack 1 to fix a
+        <para>You need to install Windows XP Service Pack 1 to fix a
           TCP/IP stack bug in the operating system.  You can get all
           sorts of information about that Service Pack at <systemitem
           class="url">http://support.microsoft.com/default.aspx?scid=kb;EN-US;q317949</systemitem>.</para>
@@ -459,7 +459,7 @@ Changed paths:
           like <command>svn diff</command>, <command>svn
           merge</command>, and <command>svn cat</command> ought to
           understand and follow renames, but don't yet do this.  It's
-          scheduled as post-1.0 feature.  For example, if you ask
+          scheduled as a post-1.0 feature.  For example, if you ask
           <command>svn diff</command> to compare two earlier versions
           of <filename>/branches/mybranch/foo.c</filename>, the
           command will not automatically understand that the task

@@ -39,7 +39,7 @@
     
     <para>Apache is an extremely popular webserver; using the
       <command>mod_dav_svn</command> module, Apache can access a
-      repository and make it available to clients via WebDAV/DeltaV
+      repository and make it available to clients via the WebDAV/DeltaV
       protocol, which is an extension of HTTP.  In the other corner is
       <command>svnserve</command>: a small, standalone server
       program that speaks a custom protocol with clients.  Table 6-1
@@ -429,7 +429,7 @@ svn stream tcp nowait svnowner /usr/local/bin/svnserve svnserve -i
 </screen>
 
       <para>Make sure <quote>svnowner</quote> is a user which has
-        appopriate permissions to access your repositories.  Now, when
+        appropriate permissions to access your repositories.  Now, when
         a client connection comes into your server on port 3690,
         <command>inetd</command> will spawn an
         <command>svnserve</command> process to service it.  </para>
@@ -819,7 +819,7 @@ joessh = $JOESSH /opt/alternate/ssh -p 29934
       extension to HTTP 1.1 (see <systemitem
       class="url">http://www.webdav.org/</systemitem> for more
       information.) This protocol takes the ubiquitous HTTP protocol
-      that is core of the World Wide Web, and adds
+      that is the core of the World Wide Web, and adds
       writing&mdash;specifically, versioned
       writing&mdash;capabilities.  The result is a standardized,
       robust system that is conveniently packaged as part of the
@@ -1022,7 +1022,7 @@ LoadModule dav_svn_module     modules/mod_dav_svn.so
       <para>Be sure that when you define your new
         <literal>Location</literal>, it doesn't overlap with other
         exported Locations.  For example, if your main
-        <literal>DocumentRoot</literal> to <filename>/www</filename>,
+        <literal>DocumentRoot</literal> is <filename>/www</filename>,
         do not export a Subversion repository in <literal>&lt;Location
         /www/repos&gt;</literal>.  If a request comes in for the URI
         <filename>/www/repos/foo.c</filename>, Apache won't know
@@ -1125,7 +1125,7 @@ ServerName svn.example.com
       <sect3 id="svn-ch-6-sect-4.3.1">
         <title>Basic HTTP Authentication</title>
         
-        <para>The easiest way to authenticate an client is via the
+        <para>The easiest way to authenticate a client is via the
           HTTP Basic authentication mechanism, which simply uses a
           username and password to verify that a user is who she says
           she is.  Apache provides an <command>htpasswd</command>
@@ -1986,7 +1986,7 @@ umask 002
       <para>It can be quite tricky to get a bunch of users with
         existing SSH accounts to share a repository without
         permissions problems.  If you're confused about all the things
-        that you (as an admininstrator) need to do on a Unix-like
+        that you (as an administrator) need to do on a Unix-like
         system, here's a quick checklist that resummarizes some of
         things discussed in this section:</para>
 

@@ -833,7 +833,7 @@ C      stuff/loot/lump.c   # this file has conflicts from an update
           <varlistentry>
             <term><computeroutput>C     file</computeroutput></term>
             <listitem>
-              <para><filename>file_or_dir</filename> is in a state of
+              <para>The file <filename>file</filename> is in a state of
                 conflict.  That is, changes received from the server
                 during an update overlap with local changes that you
                 have in your working copy.  You must resolve this

@@ -395,7 +395,7 @@ collabnet = svn.collab.net
           <varlistentry>
             <term><literal>ssl-client-cert-file</literal></term>
             <listitem>
-              <para>If host (or set of hosts) requries an SSL client
+              <para>If a host (or set of hosts) requires an SSL client
                 certificate, you'll normally be prompted for a path to
                 your certificate.  By setting this variable to that
                 same path, Subversion will be able to find your client
@@ -1790,7 +1790,7 @@ Fetching external item into calc/third-party/skins
       not affect what gets checked out as an external (though the
       relative local target subdirectory will, of course, move with
       renamed directory).  This can be confusing&mdash;even
-      frustrating&mdash;in certain situtations.  For example, if you
+      frustrating&mdash;in certain situations.  For example, if you
       use externals definitions on a directory in your
       <filename>/trunk</filename> development line which point to
       other areas of that same line, and then you use <command>svn

@@ -132,7 +132,7 @@
           <para>Whether you're a user or administrator, eventually
             your project will grow larger.  You're going to want to
             learn how to do more advanced things with Subversion, such
-            as how to use branches and perform mergees (chapter 4),
+            as how to use branches and perform merges (chapter 4),
             how to use Subversion's property support, how to configure
             runtime options (chapter 7), and other things.  Chapters 4
             and 7 aren't vital at first, but be sure to read them once
