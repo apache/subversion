@@ -365,7 +365,7 @@ Changes to svn_delta_edit_fns_t:
    
    =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
    Change #7:  New filesystem "copy" nodes (and renaming add_*() args)
-   STATUS: Will be done by JimB, Ben, Mike, or self, unless get volunteer.
+   STATUS: Will be done by Brane, now that he's dug what this is all about.
    The Way It Works Now:
       When we copy (or move) a node in the filesystem, we're currently
       losing information about where it came from.  Our "lazy cloning"
