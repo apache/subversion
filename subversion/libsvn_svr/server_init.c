@@ -80,7 +80,7 @@ svr__load_plugins (ap_hash_t *plugins, svn_svr_policies_t *policy)
       svn_string_t *msg = 
         svn_string_create 
         ("svr__load_plugins(): fatal: can't ap_dso_init() ", pool);
-      svn_handle_error (svn_create_error (result, FALSE, msg, pool));
+      svn_handle_error (svn_create_error (result, SVN_NON_FATAL, msg, pool));
     }
 
   /* Loop through the hash of plugins from configdata */
@@ -144,7 +144,7 @@ svn_svr_init (ap_hash_t *configdata, ap_pool_t *pool)
       svn_string_t *msg = 
         svn_string_create 
         ("svr_init(): warning: can't alloc pool for policy structure", pool);
-      svn_handle_error (svn_create_error (result, FALSE, msg, pool));
+      svn_handle_error (svn_create_error (result, SVN_NON_FATAL, msg, pool));
 
       my_policies->pool = pool;
     }
@@ -212,7 +212,8 @@ svn_svr_init (ap_hash_t *configdata, ap_pool_t *pool)
                                  pool);
             svn_string_appendstr (msg, (svn_string_t *) key, pool);
             svn_handle_error (svn_create_error 
-                              (SVN_ERR_UNRECOGNIZED_SECTION, FALSE,
+                              (SVN_ERR_UNRECOGNIZED_SECTION, 
+                               SVN_NON_FATAL,
                                msg, pool));            
           }
       }    /* for (hash_index...)  */

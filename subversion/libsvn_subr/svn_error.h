@@ -84,6 +84,9 @@ typedef struct svn_error_t
 
 /* svn_error_t constructor */
 
+#define SVN_FATAL     1    /* Use instead of TRUE or 1, for readability. */
+#define SVN_NON_FATAL 0    /* Use instead of FALSE or 0, for readability. */
+
 svn_error_t *svn_create_error (ap_status_t err,
                                svn_boolean_t fatal,
                                svn_string_t *message,
