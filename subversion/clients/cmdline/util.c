@@ -313,15 +313,21 @@ truncate_buffer_at_prefix (apr_size_t *new_len,
                            const char *buffer,
                            const char *prefix)
 {
-  char *substring;
+  char *substring = (char *) buffer;
 
-  /* Find PREFIX in BUFFER. */
-  substring = strstr (buffer, prefix);
+  assert (buffer && prefix);
+
+  /* Initialize *NEW_LEN. */
   if (new_len)
     *new_len = strlen (buffer);
 
-  if (substring)
+  while (1)
     {
+      /* Find PREFIX in BUFFER. */
+      substring = strstr (substring, prefix);
+      if (! substring)
+        return;
+
       /* We found PREFIX.  Is it really a PREFIX?  Well, if it's the first
          thing in the file, or if the character before it is a
          line-terminator character, it sure is. */
@@ -333,7 +339,14 @@ truncate_buffer_at_prefix (apr_size_t *new_len,
           if (new_len)
             *new_len = substring - buffer;
         }
+      else if (substring)
+        {
+          /* Well, it wasn't really a prefix, so just advance by 1
+             character and continue. */
+          substring++;
+        }
     }
+
   return;
 }
 
