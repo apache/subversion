@@ -247,8 +247,7 @@ svn_cl__parse_options (int argc,
      in this framework.  In any event, the four commands that do need it
      are: add, commit, checkout and update */
   if ((! *xml_file)
-      && (  (command == svn_cl__add_command) 
-         || (command == svn_cl__commit_command)
+      && (  (command == svn_cl__commit_command)
          || (command == svn_cl__checkout_command)
          || (command == svn_cl__update_command)))
     {
