@@ -38,15 +38,13 @@
 
 
 
-/* Wait for input on @a *f for @a timeout miliseconds doing all allocations
- * in @a pool.  This functions is based on apr_wait_for_io_or_timeout(),
- * but we can't use it because APR doesn't export anyway to change
- * the timeout value set on the apr_file_t.
+/* Wait for input on @a *f.  Doing all allocations
+ * in @a pool.  This functions is based on apr_wait_for_io_or_timeout().
+ * Note that this will return an EINTR on a signal.
  *
  * ### FIX: When APR gives us a better way of doing this use it. */
-static apr_status_t wait_for_input_or_timeout(apr_file_t *f,
-                                              apr_interval_time_t timeout,
-                                              apr_pool_t *pool)
+static apr_status_t wait_for_input(apr_file_t *f,
+                                   apr_pool_t *pool)
 {
     apr_pollfd_t pollset;
     int srv, n;
@@ -56,14 +54,10 @@ static apr_status_t wait_for_input_or_timeout(apr_file_t *f,
     pollset.p = pool;
     pollset.reqevents = APR_POLLIN;
 
-    do
-      {
-        srv = apr_poll(&pollset, 1, &n, timeout);
+    srv = apr_poll(&pollset, 1, &n, -1);
 
-        if (n == 1 && pollset.rtnevents & APR_POLLIN)
-          return APR_SUCCESS;
-      }
-      while (APR_STATUS_IS_EINTR(srv));
+    if (n == 1 && pollset.rtnevents & APR_POLLIN)
+      return APR_SUCCESS;
 
     return srv;
 }
@@ -104,9 +98,9 @@ prompt (const char **result,
            * we can cancel. */
           if (ctx)
             SVN_ERR (ctx->cancel_func (ctx->cancel_baton));
-          status = wait_for_input_or_timeout (fp, 10, pool);
-          if (status == APR_TIMEUP)
-                continue;
+          status = wait_for_input (fp, pool);
+          if (APR_STATUS_IS_EINTR (status))
+              continue;
           else if (status && status != APR_ENOTIMPL)
             return svn_error_wrap_apr (status, _("Can't read stdin"));
              
