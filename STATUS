@@ -115,6 +115,13 @@ Approved changes (further review is welcome, but not required):
     Votes:
       +1: kfogel, jerenkrantz, ghudson
 
+  * r12003
+    Disallow cross-repository copies at the libsvn_fs* level.
+    Justification:
+      For BDB backends, this bug resulted in wedged repositories.
+    Votes:
+      +1: cmpilato
+
   * r12006, r12136, r12146
     Fix issue 2124 - bugs in svn switch over ra-dav.
     Justification:
