@@ -89,7 +89,7 @@ _svn()
 		cmdOpts="$rOpts -v --verbose --targets --xml $pOpts"
 		;;
 	merge)
-		cmdOpts="$rOpts $nOpts $pOpts"
+		cmdOpts="$rOpts --force $nOpts $pOpts"
 		;;
 	mkdir)
 		cmdOpts="$mOpts $pOpts"
