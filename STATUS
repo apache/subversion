@@ -38,6 +38,7 @@ Candidate changes:
       us to use it, we shouldn't abort ./configure, just don't use it.
     Votes:
       +1: maxb
+      +0: bliss
 
   * r10704
     Fix problem with javahl throwing IllegalArgumentException, with no error
@@ -55,7 +56,7 @@ Candidate changes:
       Remove the changes to add the version command in r10531, we don't have it
       in 1.1.x.  So only --force would be added to add from the r10531 rev.
     Votes:
-      +1: breser, maxb
+      +1: breser, maxb, bliss
 
   * r10711
     Fix a non-portable temp file creation in SVN::Ra::Callback.  This
@@ -71,7 +72,7 @@ Candidate changes:
     Justification:
       APR_STATUS_IS_SUCCESS is no longer defined in APR HEAD.
     Votes:
-      +1: mbk, lundblad
+      +1: mbk, lundblad, bliss
 
   * r10731
     Fix svn_path_dirname() so it returns canonical paths when passed a path
@@ -97,8 +98,7 @@ Candidate changes:
     Note: See discussion in
      http://www.contactor.se/~dast/svn/archive-2004-08/0804.shtml
     Votes:
-      +1: bliss
-      +1: mbk
+      +1: mbk, bliss
 
   * r10752
     Remove packages/rpm/mandrake-*.
@@ -106,7 +106,7 @@ Candidate changes:
       Foolish to include something that has been maintainerless since
       before 1.0.0 in 1.1.x.
     Votes:
-      +1: maxb
+      +1: maxb, bliss
 
   * r10775
     Wrap svn_config_enumerator_t for Perl bindings.
