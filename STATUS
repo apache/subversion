@@ -78,16 +78,6 @@ section for approved changes.)
        +0: ghudson
 
 
-    * r8368
-      The subversion SWIG bindings now require swig-1.3.19.
-      Justification: Without this the compile and RPM build breaks.
-      Votes:
-       +1: david
-       -1: breser (See thread at: http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=54911
-                   Message ID: 20040119001028.GQ25614@occipital.brain.org)
-
-
-
 Core changes that already have three +1 votes and no vetos.  (If you
 veto something below, or remove a threshold vote, please move it to
 the section for unapproved changes.)
@@ -172,14 +162,14 @@ Bindings changes that affect the build system:
       +1: patrick (if above is applied)
       +1 (concept): kfogel
 
-    * Issue #1690
-     Support SWIG 1.3.20 and newer.
+    * Issue #1690 AND r8368
+     Support SWIG 1.3.20 and newer and require at least 1.3.19.
      Justification: An increasingly common version of SWIG that we need
-                    to support.
+                    to support.  And have proper requirements.
      Votes:
-      +1: clkao
-      -1: breser (See thread at: http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=54911
-                  Message ID: 20040119001028.GQ25614@occipital.brain.org)
+      +1: clkao (invalidated updated patch)
+      +1: breser
+      +1: david (r8368)
      
 Bindings changes that don't affect the build system:
 
