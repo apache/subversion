@@ -7,6 +7,7 @@
 # For usage, see the usage subroutine or run the script with no
 # command line arguments.
 #
+# $HeadURL$
 # $LastChangedDate$
 # $LastChangedBy$
 # $LastChangedRevision$
@@ -491,6 +492,7 @@ sub new_project
           subject_prefix  => ''};
 }
 
+# Start a child process safely without using /bin/sh.
 sub safe_read_from_pipe
 {
   unless (@_)
@@ -535,6 +537,9 @@ sub safe_read_from_pipe
     }
 }
 
+# Use safe_read_from_pipe to start a child process safely and return
+# the output if it suceeded or an error message followed by the output
+# if it failed.
 sub read_from_process
 {
   unless (@_)
