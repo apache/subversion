@@ -59,12 +59,12 @@
 
 # Require Apache? 0/1
 # Setting this to 1 causes an abort if apache2 is not found
-REQUIRE_APACHE2 := 1
+# REQUIRE_APACHE2 := 0
 
 # Official Build
 # Setting this causes the system to use the build revision
 # This can only be set to sanctioned build numbers
-BLESSED := 7201
+# BLESSED := 7201
 
 # FOP location
 # FOP := /opt/fop
@@ -197,10 +197,10 @@ NO_ACTIVATION   := $(if $(NO_ACTIVATION),$(NO_ACTIVATION),1)
 NO_APACHE2      := $(if $(NO_APACHE2),$(NO_APACHE2),0)
 REQUIRE_APACHE2 := $(if $(REQUIRE_APACHE2),$(REQUIRE_APACHE2),1)
 AUTOMAKE_RPM    := $(if $(AUTOMAKE),$(AUTOMAKE),automake1.6)
-JAVAHL          := $(if $(JAVAHL),1,0)
+JAVAHL          := $(if $(JAVAHL),$(if $(GE_30),1,0),0)
 JDK             := $(if $(shell sh eq1 $(JAVAHL)),$(JDK),)
 JDK_PATH        := $(if $(JDK),\%define jdk_path $(shell echo $(JDK) | sed 's/\//\\\//g'),\%undefine jdk_path)
-DEFINE_JAVAHL   := \%define javahl $(JAVAHL)
+DEFINE_JAVAHL   := $(if $(shell sh eq1 $(JAVAHL)),\%define javahl $(JAVAHL),\%undefine javahl)
 NEON_RPM        := $(if $(NEON),$(NEON),libneon0)
 SWIG_RPM        := $(if $(SWIG),$(SWIG),swig)
 SWIG_BUILD_RPM  := $(if $(SWIG_BUILD),$(SWIG_BUILD),swig)
