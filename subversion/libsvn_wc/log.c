@@ -229,6 +229,58 @@ signal_error (struct log_runner *loggy, svn_error_t *err)
 
 
 static svn_error_t *
+recursive_rc_remove (svn_string_t *dir,
+                     apr_pool_t *pool)
+{
+  apr_pool_t *subpool = svn_pool_create (pool);
+  apr_hash_t *entries;
+  apr_hash_index_t *hi;
+  svn_string_t *fullpath = svn_string_dup (dir, pool);
+
+  SVN_ERR (svn_wc_entries_read (&entries, dir, pool));
+
+  /* Run through each entry in the entries file. */
+  for (hi = apr_hash_first (entries); hi; hi = apr_hash_next (hi))
+    {
+      const void *key;
+      apr_size_t klen;
+      void *val;
+      svn_string_t *basename;
+      svn_wc_entry_t *entry; 
+  
+      /* Get the next entry */
+      apr_hash_this (hi, &key, &klen, &val);
+      entry = (svn_wc_entry_t *) val;
+      basename = svn_string_create ((const char *) key, subpool);
+
+      if (entry->kind == svn_node_dir)
+        {
+          if (strcmp (basename->data, SVN_WC_ENTRY_THIS_DIR) != 0)
+            {
+              svn_path_add_component (fullpath, basename, 
+                                      svn_path_local_style);
+              SVN_ERR (recursive_rc_remove (fullpath, subpool));
+            }
+        }
+      /* Reset the fullpath variable. */
+      svn_string_set (fullpath, dir->data);
+
+      /* Clear our per-iteration pool. */
+      svn_pool_clear (subpool);
+    }
+  
+  /* Once all the subdirs of this dir have been removed from revision
+     control, we can wipe this one's administrative directory. */
+  SVN_ERR (svn_wc__adm_destroy (fullpath, subpool));
+
+  /* Destroy our per-iteration pool. */
+  svn_pool_destroy (subpool);
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
 remove_from_revision_control (struct log_runner *loggy, 
                               svn_string_t *name,
                               svn_boolean_t keep_wf)
@@ -273,8 +325,8 @@ remove_from_revision_control (struct log_runner *loggy,
     {
       /* This should be simple (I hope).  We just need to destroy
          the administrative directory associated with this
-         directory entry. */
-      SVN_ERR (svn_wc__adm_destroy (full_path, loggy->pool));
+         directory entry and those of any subdirs beneath it. */
+      SVN_ERR (recursive_rc_remove (full_path, loggy->pool));
     }
   else
     {

@@ -299,10 +299,73 @@ svn_wc_copy (svn_string_t *src, svn_string_t *dst, apr_pool_t *pool)
 }
 
 
+/* Recursively mark a tree DIR for deletion. */
+static svn_error_t *
+delete_tree (svn_string_t *dir, apr_pool_t *pool)
+{
+  apr_pool_t *subpool = svn_pool_create (pool);
+  apr_hash_t *entries;
+  apr_hash_index_t *hi;
+  svn_string_t *fullpath = svn_string_dup (dir, pool);
+
+  /* Read the entries file for this directory. */
+  SVN_ERR (svn_wc_entries_read (&entries, dir, pool));
+
+  /* Delete each entry in the entries file. */
+  for (hi = apr_hash_first (entries); hi; hi = apr_hash_next (hi))
+    {
+      const void *key;
+      apr_size_t klen;
+      void *val;
+      svn_string_t *basename;
+      svn_wc_entry_t *entry; 
+
+      /* Get the next entry */
+      apr_hash_this (hi, &key, &klen, &val);
+      entry = (svn_wc_entry_t *) val;
+      basename = svn_string_create ((const char *) key, subpool);
+
+      if (entry->kind == svn_node_dir)
+        {
+          if (strcmp (basename->data, SVN_WC_ENTRY_THIS_DIR) != 0)
+            {
+              svn_path_add_component (fullpath, basename, 
+                                      svn_path_local_style);
+              SVN_ERR (delete_tree (fullpath, subpool));
+            }
+        }
+
+      /* Mark this entry for deletion. */
+      SVN_ERR (svn_wc__entry_fold_sync_intelligently 
+               (dir, basename, SVN_INVALID_REVNUM, svn_node_none,
+                SVN_WC_ENTRY_DELETED, 0, 0, pool, NULL, NULL));
+
+      /* Reset FULLPATH to just hold this dir's name. */
+      svn_string_set (fullpath, dir->data);
+
+      /* Clear our per-iteration pool. */
+      svn_pool_clear (subpool);
+    }
+
+  /* Destroy our per-iteration pool. */
+  svn_pool_destroy (subpool);
+  return SVN_NO_ERROR;
+}
+
+
 svn_error_t *
 svn_wc_delete (svn_string_t *path, apr_pool_t *pool)
 {
   svn_string_t *dir, *basename;
+  svn_wc_entry_t *entry;
+
+  /* Get the entry for the path we are deleting. */
+  SVN_ERR (svn_wc_entry (&entry, path, pool));
+  if (entry->kind == svn_node_dir)
+    {
+      /* Recursively mark a whole tree for deletion. */
+      SVN_ERR (delete_tree (path, pool));
+    }
 
   /* We need to mark this entry for deletion in its parent's entries
      file, so we split off basename from the parent path, then fold in
@@ -310,7 +373,7 @@ svn_wc_delete (svn_string_t *path, apr_pool_t *pool)
   svn_path_split (path, &dir, &basename, svn_path_local_style, pool);
   if (svn_path_is_empty (dir, svn_path_local_style))
     svn_string_set (dir, ".");
-
+  
   SVN_ERR (svn_wc__entry_fold_sync_intelligently 
            (dir, basename, SVN_INVALID_REVNUM, svn_node_none,
             SVN_WC_ENTRY_DELETED, 0, 0, pool, NULL, NULL));
@@ -342,12 +405,17 @@ svn_wc_add_directory (svn_string_t *dir, apr_pool_t *pool)
      created inside of it */
   SVN_ERR (svn_wc__ensure_adm (dir, ancestor_path, 0, pool));
 
-  /* And finally, add the entry for this directory to the parent_dir's
-     entries file, marking it for addition. */
+  /* Now, add the entry for this directory to the parent_dir's entries
+     file, marking it for addition. */
   SVN_ERR (svn_wc__entry_fold_sync_intelligently 
            (parent_dir, basename, 0, svn_node_dir, SVN_WC_ENTRY_ADDED,
             0, 0, pool, NULL, NULL));
 
+  /* And finally, make sure this entry is marked for addition in its
+     own administrative directory. */
+  SVN_ERR (svn_wc__entry_fold_sync_intelligently 
+           (dir, NULL, 0, svn_node_dir, SVN_WC_ENTRY_ADDED,
+            0, 0, pool, NULL, NULL));
 
   return SVN_NO_ERROR;
 }

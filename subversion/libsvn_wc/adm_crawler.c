@@ -870,9 +870,11 @@ examine_and_report_entry (svn_string_t *path,
     }
   
   /* Finally: if the current entry is a directory (and not `.'),
-     we must recurse! */
+     and has been either not deleted, or deleted and re-added, we must
+     recurse! */
   if ((current_entry->kind == svn_node_dir) 
-      && (current_entry_name != NULL))
+      && (current_entry_name)
+      && (! (current_entry->state & SVN_WC_ENTRY_DELETED)))
     {
       /* Recurse, using new_dir_baton, which will most often be
          NULL (unless the entry is a newly added directory.)  Why
