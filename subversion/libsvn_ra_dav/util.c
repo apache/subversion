@@ -227,12 +227,7 @@ svn_error_t *svn_ra_dav__parsed_request(svn_ra_session_t *ras,
   SVN_ERR( svn_config_read_config(&cfg, pool) );
 
   svn_config_get(cfg, &do_compression, "miscellany", "compression", "yes");
-  if (strcasecmp(do_compression, "yes") == 0) {
-    decompress_on = 1;
-  }                              
-  else {
-    decompress_on = 0;
-  }
+  decompress_on = (strcasecmp(do_compression, "yes") == 0);
 
   /* create/prep the request */
   req = ne_request_create(ras->sess, method, url);

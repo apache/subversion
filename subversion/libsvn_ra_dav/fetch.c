@@ -461,12 +461,7 @@ static svn_error_t *custom_get_request(ne_session *sess,
   SVN_ERR( svn_config_read_config(&cfg, pool) );
 
   svn_config_get(cfg, &do_compression, "miscellany", "compression", "yes");
-  if (strcasecmp(do_compression, "yes") == 0) {
-    decompress_on = 1;
-  }
-  else {
-    decompress_on = 0;
-  }
+  decompress_on = (strcasecmp(do_compression, "yes") == 0);
   
   /* See if we can get a version URL for this resource. This will refer to
      what we already have in the working copy, thus we can get a diff against
