@@ -135,6 +135,7 @@ COMPILE_APACHE_MOD = $(LIBTOOL) $(LTFLAGS) --mode=compile $(CC) $(CPPFLAGS) $(CF
 # special compilation for files destined for libsvn_swig_* (e.g. swigutil_*.c)
 COMPILE_SWIG_PY = $(LIBTOOL) $(LTFLAGS) --mode=compile $(CC) $(CPPFLAGS) -DSWIGPYTHON $(CFLAGS) $(SWIG_PY_INCLUDES) $(INCLUDES) -o $@ -c
 COMPILE_SWIG_JAVA = $(LIBTOOL) $(LTFLAGS) --mode=compile $(CC) $(CPPFLAGS) $(CFLAGS) $(SWIG_JAVA_INCLUDES) $(INCLUDES) -o $@ -c
+COMPILE_SWIG_PL = $(LIBTOOL) $(LTFLAGS) --mode=compile $(CC) $(CPPFLAGS) $(CFLAGS) $(SWIG_PL_INCLUDES) $(INCLUDES) -o $@ -c
 
 LINK = $(LIBTOOL) $(LTFLAGS) --mode=link $(CC) $(LT_LDFLAGS) $(CFLAGS) $(LDFLAGS) -rpath $(libdir)
 
@@ -175,6 +176,8 @@ INSTALL_SWIG_PY = $(INSTALL_LIB)
 INSTALL_SWIG_PY_LIB = $(INSTALL_LIB)
 INSTALL_SWIG_JAVA = $(INSTALL_LIB)
 INSTALL_SWIG_JAVA_LIB = $(INSTALL_LIB)
+INSTALL_SWIG_PL = $(INSTALL_LIB)
+INSTALL_SWIG_PL_LIB = $(INSTALL_LIB)
 
 # additional installation rules for the SWIG wrappers
 INSTALL_EXTRA_SWIG_PY=\
