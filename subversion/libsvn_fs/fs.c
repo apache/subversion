@@ -53,6 +53,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <string.h>
 
 #include "apr_general.h"
 #include "apr_pools.h"
