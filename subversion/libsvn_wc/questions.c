@@ -139,6 +139,12 @@ timestamps_equal_p (svn_boolean_t *equal_p,
     return err;
   entry = apr_hash_get (entries, entryname->data, entryname->len);
 
+  /* Can't compare timestamps for an unversioned file. */
+  if (entry == NULL)
+    return svn_error_createf
+      (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL, pool,
+       "timestamps_equal_p: `%s' not under revision control", entryname->data);
+
   /* Get the timestamp from the working file and the entry */
   if (timestamp_kind == svn_wc__text_time)
     {
