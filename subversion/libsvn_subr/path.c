@@ -171,7 +171,7 @@ svn_path_split (const svn_string_t *path,
 
 
 int
-svn_path_isempty (const svn_string_t *path, enum svn_path_style style)
+svn_path_is_empty (const svn_string_t *path, enum svn_path_style style)
 {
   /* kff todo: `style' ignored presently. */
 

@@ -61,10 +61,62 @@
 
 
 void
-svn_cl__print_status (apr_hash_t *statushash, apr_pool_t *pool)
+svn_cl__print_status (svn_string_t *path, svn_wc_status_t *status)
+{
+  char statuschar;
+  svn_revnum_t entry_rev;
+
+  switch (status->flag)
+    {
+    case svn_wc_status_none:
+      statuschar = '-';
+      break;
+    case svn_wc_status_added:
+      statuschar = 'A';
+      break;
+    case svn_wc_status_deleted:
+      statuschar = 'D';
+      break;
+    case svn_wc_status_modified:
+      statuschar = 'M';
+      break;
+    case svn_wc_status_merged:
+      statuschar = 'G';
+      break;
+    case svn_wc_status_conflicted:
+      statuschar = 'C';
+    default:
+      statuschar = '?';
+      break;
+    }
+  
+  /* Grab the entry revision once, safely. */
+  if (status->entry)
+    entry_rev = status->entry->revision;
+  else
+    entry_rev = SVN_INVALID_REVNUM;
+
+  /* Use it. */
+  if ((entry_rev == SVN_INVALID_REVNUM)
+      && (status->repos_rev == SVN_INVALID_REVNUM))
+    printf ("%c  none     ( none )   %s\n",
+            statuschar, path->data);
+  else if (entry_rev == SVN_INVALID_REVNUM)
+    printf ("%c  none     (%6ld)   %s\n",
+            statuschar, status->repos_rev, path->data);
+  else if (status->repos_rev == SVN_INVALID_REVNUM)
+    printf ("%c  %-6ld  ( none )  %s\n",
+            statuschar, entry_rev, path->data);
+  else
+    printf ("%c  %-6ld  (%6ld)  %s\n",
+            statuschar, entry_rev, status->repos_rev, path->data);
+}
+
+
+void
+svn_cl__print_statuses (apr_hash_t *statushash, apr_pool_t *pool)
 {
   int i;
-  char statuschar;
   apr_array_header_t *statusarray;
 
   /* Convert the unordered hash to an ordered, sorted array */
@@ -83,43 +135,7 @@ svn_cl__print_status (apr_hash_t *statushash, apr_pool_t *pool)
       path = (const char *) item->key;
       status = (svn_wc_status_t *) item->data;
 
-      switch (status->flag)
-        {
-        case svn_wc_status_none:
-          statuschar = '-';
-          break;
-        case svn_wc_status_added:
-          statuschar = 'A';
-          break;
-        case svn_wc_status_deleted:
-          statuschar = 'D';
-          break;
-        case svn_wc_status_modified:
-          statuschar = 'M';
-          break;
-        case svn_wc_status_merged:
-          statuschar = 'G';
-          break;
-        case svn_wc_status_conflicted:
-          statuschar = 'C';
-        default:
-          statuschar = '?';
-          break;
-        }
-      
-      if ((status->entry->revision == SVN_INVALID_REVNUM)
-          && (status->repos_rev == SVN_INVALID_REVNUM))
-        printf ("%c  none     ( none )   %s\n",
-                statuschar, path);
-      else if (status->entry->revision == SVN_INVALID_REVNUM)
-        printf ("%c  none     (%6ld)   %s\n",
-                statuschar, status->repos_rev, path);
-      else if (status->repos_rev == SVN_INVALID_REVNUM)
-        printf ("%c  %-6ld  ( none )  %s\n",
-                statuschar, status->entry->revision, path);
-      else
-        printf ("%c  %-6ld  (%6ld)  %s\n",
-                statuschar, status->entry->revision, status->repos_rev, path);
+      svn_cl__print_status (svn_string_create (path, pool), status);
     }
 }
 
