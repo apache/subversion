@@ -751,6 +751,16 @@ svn_repos_get_logs (svn_repos_t *repos,
  * @a pool is used for all allocations.  See @c svn_fs_history_prev for
  * a discussion of interesting revisions.
  *
+ * If optional @a authz_read_func is non-NULL, then use this function
+ * (along with optional @a authz_read_baton) to check the readability
+ * of the rev-path in each interesting revision encountered.
+ *
+ * Revision discovery happens from @a end to @a start, and if an
+ * unreadable revision is encountered before @a start is reached, then
+ * revision discovery stops and only the revisions from @a end to the
+ * oldest readable revision are returned (So it will appear that @a
+ * path was added without history in the latter revision).
+ *
  * If there is an interesting revision of the file that is less than or
  * equal to start, the iteration will start at that revision.  Else, the
  * iteration will start at the first revision of the file in the repository,
@@ -764,6 +774,8 @@ svn_error_t *svn_repos_get_file_revs (svn_repos_t *repos,
                                       const char *path,
                                       svn_revnum_t start,
                                       svn_revnum_t end,
+                                      svn_repos_authz_func_t authz_read_func,
+                                      void *authz_read_baton,
                                       svn_repos_file_rev_handler_t handler,
                                       void *handler_baton,
                                       apr_pool_t *pool);
