@@ -581,18 +581,18 @@ svn_wc__do_property_merge (svn_stringbuf_t *path,
   if (err) return err;
   
   /* Write the merged pristine prop hash to either
-     path/SVN/tmp/prop-base/name or path/SVN/tmp/dir-prop-base */
+     path/.svn/tmp/prop-base/name or path/.svn/tmp/dir-prop-base */
   err = svn_wc__save_prop_file (base_prop_tmp_path, basehash, pool);
   if (err) return err;
   
-  /* Write the merged local prop hash to path/SVN/tmp/props/name or
-     path/SVN/tmp/dir-props */
+  /* Write the merged local prop hash to path/.svn/tmp/props/name or
+     path/.svn/tmp/dir-props */
   err = svn_wc__save_prop_file (local_prop_tmp_path, localhash, pool);
   if (err) return err;
   
   /* Compute pathnames for the "mv" log entries.  Notice that these
-     paths are RELATIVE pathnames (each beginning with "SVN/"), so
-     that each SVN subdir remains separable when executing run_log().  */
+     paths are RELATIVE pathnames (each beginning with ".svn/"), so
+     that each .svn subdir remains separable when executing run_log().  */
   if (is_dir)
     {
       tmp_prop_base = svn_wc__adm_path (svn_stringbuf_create ("", pool),
@@ -625,12 +625,14 @@ svn_wc__do_property_merge (svn_stringbuf_t *path,
                                         SVN_WC__ADM_PROP_BASE,
                                         name->data,
                                         NULL);
+      svn_stringbuf_appendcstr(tmp_prop_base, SVN_WC__BASE_EXT);
       real_prop_base = svn_wc__adm_path (svn_stringbuf_create ("", pool),
                                          0, /* no tmp */
                                          pool,
                                          SVN_WC__ADM_PROP_BASE,
                                          name->data,
                                          NULL);
+      svn_stringbuf_appendcstr(real_prop_base, SVN_WC__BASE_EXT);
       
       tmp_props = svn_wc__adm_path (svn_stringbuf_create ("", pool),
                                     1, /* tmp */
@@ -671,7 +673,7 @@ svn_wc__do_property_merge (svn_stringbuf_t *path,
 
   if (reject_tmp_fp)
     {
-      /* There's a .prej file sitting in SVN/tmp/ somewhere.  Deal
+      /* There's a .prej file sitting in .svn/tmp/ somewhere.  Deal
          with the conflicts.  */
 
       /* First, _close_ this temporary conflicts file.  We've been
@@ -693,7 +695,7 @@ svn_wc__do_property_merge (svn_stringbuf_t *path,
 
       if (! reject_path)
         {
-          /* Reserve a new .prej file *above* the SVN/ directory by
+          /* Reserve a new .prej file *above* the .svn/ directory by
              opening and closing it. */
           svn_stringbuf_t *reserved_path;
           svn_stringbuf_t *full_reject_path = svn_stringbuf_dup (path, pool);
@@ -734,7 +736,7 @@ svn_wc__do_property_merge (svn_stringbuf_t *path,
         }
 
       /* We've now guaranteed that some kind of .prej file exists
-         above the SVN/ dir.  We write log entries to append our
+         above the .svn/ dir.  We write log entries to append our
          conflicts to it. */      
       svn_xml_make_open_tag (entry_accum,
                              pool,

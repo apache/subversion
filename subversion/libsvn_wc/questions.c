@@ -83,11 +83,13 @@ svn_wc_check_wc (const svn_stringbuf_t *path,
 
 /* svn_wc_text_modified_p answers the question:
 
-   "Are the contents of F different than the contents of SVN/text-base/F?"
+   "Are the contents of F different than the contents of
+   .svn/text-base/F.svn-base?"
 
    or
 
-   "Are the contents of SVN/props/xxx different than SVN/prop-base/xxx?"
+   "Are the contents of .svn/props/xxx different than
+   .svn/prop-base/xxx.svn-base?"
 
    In other words, we're looking to see if a user has made local
    modifications to a file since the last update or commit.

@@ -1688,9 +1688,9 @@ report_revisions (svn_stringbuf_t *wc_path,
         apr_hash_this (hi, &key, &klen, &val);
         keystring = (const char *) key;
         
-        /* If the dirent isn't in `SVN/entries'... */
+        /* If the dirent isn't in `.svn/entries'... */
         if (! apr_hash_get (entries, key, klen))        
-          /* and we're not looking at SVN... */
+          /* and we're not looking at .svn... */
           if (strcmp (keystring, SVN_WC_ADM_DIR_NAME))
             {
               svn_boolean_t print_item = TRUE;
