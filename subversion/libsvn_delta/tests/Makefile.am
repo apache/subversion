@@ -14,6 +14,7 @@ INCLUDES = -I../../include -I../../../apr/include -I../../../expat-lite
 
 ## Libraries this binary depends upon:
 deltaparse_test_LDADD = ../libsvn_delta.la \
+                        ../../tests-common/libsvn_test_editor.la \
                         ../../libsvn_subr/libsvn_subr.la \
                         ../../../apr/libapr.a \
                         ../../../expat-lite/libexpat.la

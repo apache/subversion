@@ -19,6 +19,7 @@ checkout_test_LDADD = ../libsvn_wc.la                          \
 
 commit_test_LDADD = ../libsvn_wc.la                          \
                     ../../libsvn_delta/libsvn_delta.la       \
+                    ../../tests-common/libsvn_test_editor.la \
                     ../../libsvn_subr/libsvn_subr.la         \
                     ../../../apr/libapr.a                    \
                     ../../../expat-lite/libexpat.la
