@@ -1,5 +1,9 @@
 #!/usr/bin/env python
 #
+#
+# NOTICE: THIS SCRIPT IS OBSOLETE/DEPRECATED
+#
+#
 # setup.py:  Distutils-based config/build/install for the Python bindings
 #
 #  Subversion is a tool for revision control. 
@@ -20,6 +24,19 @@ import os
 import sys
 import getopt
 
+
+print """
+----------------------------------------------------------------------------
+
+WARNING WARNING -- THIS SCRIPT IS NOW OBSOLETE
+
+To build the Python bindings, you should use 'make swig-py' at the
+top-level. To install them, you should 'make install-swig-py'.
+
+For Windows ... ???
+
+----------------------------------------------------------------------------
+"""
 
 
 def _do_usage():

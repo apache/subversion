@@ -159,6 +159,7 @@ class MakefileGenerator(gen_base.GeneratorBase):
 
       elif area != 'test' and area != 'fs-test':
         area_var = string.replace(area, '-', '_')
+        upper_var = string.upper(area_var)
         self.ofile.write('install-%s: %s\n'
                          '\t$(MKDIR) $(DESTDIR)$(%sdir)\n'
                          % (area, string.join(files), area_var))
@@ -167,9 +168,12 @@ class MakefileGenerator(gen_base.GeneratorBase):
           dirname, fname = os.path.split(file)
           self.ofile.write('\tcd %s ; $(INSTALL_%s) %s $(DESTDIR)%s\n'
                            % (dirname,
-                              string.upper(area_var),
+                              upper_var,
                               fname,
                               os.path.join('$(%sdir)' % area_var, fname)))
+        ### we should turn AREA into an object, then test it instead of this
+        if area[:5] == 'swig-' and area[-4:] != '-lib':
+          self.ofile.write('\t$(INSTALL_EXTRA_%s)\n' % upper_var)
         self.ofile.write('\n')
 
     includedir = os.path.join('$(includedir)',
