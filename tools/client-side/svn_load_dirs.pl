@@ -575,7 +575,7 @@ sub safe_read_from_pipe {
     push(@output, $_);
   }
   close(SAFE_READ);
-  my $result = $?
+  my $result = $?;
   my $exit   = $result >> 8;
   my $signal = $result & 127;
   my $cd     = $result & 128 ? "with core dump" : "";
