@@ -207,7 +207,7 @@ SOURCE=.\status.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\win32\svn.rc
+SOURCE=..\..\..\build\win32\svn.rc
 # End Source File
 # Begin Source File
 

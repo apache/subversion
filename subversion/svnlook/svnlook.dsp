@@ -95,7 +95,7 @@ SOURCE=.\main.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\clients\win32\svn.rc
+SOURCE=..\..\build\win32\svn.rc
 # End Source File
 # End Group
 # Begin Group "Header Files"
