@@ -31,7 +31,7 @@
 $ svn -v status
 $ svn status -v 
 $ svn status -v myfile
-    </screen>
+</screen>
 
     <para>You can find many more examples of how to use most client
       commands in <xref linkend="svn-ch-3"/> and commands for managing
@@ -221,7 +221,7 @@ $ svn status -v myfile
             
             <screen>
 $ svn commit -m "They don't make Sunday."
-            </screen>
+</screen>
           </listitem>
         </varlistentry>
       
@@ -370,7 +370,7 @@ $ svn log -r 1729:HEAD
 $ svn log -r 1729:1744
 $ svn log -r {2001-12-04}:{2002-02-17}
 $ svn log -r 1729:{2002-02-17}
-            </screen>
+</screen>
 
             <para>See <xref linkend="svn-ch-3-sect-3.2"/> for more
               information.</para>
@@ -521,7 +521,7 @@ $ svn log -r 1729:{2002-02-17}
 --config-dir DIR
 --auto-props
 --no-auto-props
-          </screen>
+</screen>
         </refsect1>
         
         <refsect1>
@@ -532,7 +532,7 @@ $ svn log -r 1729:{2002-02-17}
           <screen>
 $ svn add foo.c 
 A         foo.c
-          </screen>
+</screen>
 
           <para>When adding a directory, the default behavior of
             <command>svn add</command> is to recurse:</para>
@@ -544,7 +544,7 @@ A         testdir/a
 A         testdir/b
 A         testdir/c
 A         testdir/d
-          </screen>
+</screen>
 
           <para>You can add a directory without adding its
             contents:</para>
@@ -552,7 +552,7 @@ A         testdir/d
           <screen>
 $ svn add --non-recursive otherdir
 A         otherdir
-          </screen>
+</screen>
         </refsect1>
       </refentry>
 
@@ -601,7 +601,7 @@ A         otherdir
 --no-auth-cache
 --non-interactive
 --config-dir DIR
-          </screen>
+</screen>
         </refsect1>
 
         <refsect1>
@@ -613,7 +613,7 @@ A         otherdir
 $ svn blame http://svn.red-bean.com/repos/test/readme.txt
      3      sally This is a README file.
      5      harry You should read this.
-          </screen>
+</screen>
 
         </refsect1>
       </refentry>
@@ -661,7 +661,7 @@ $ svn blame http://svn.red-bean.com/repos/test/readme.txt
 --no-auth-cache
 --non-interactive
 --config-dir DIR
-          </screen>
+</screen>
         </refsect1>
 
         <refsect1>
@@ -673,7 +673,7 @@ $ svn blame http://svn.red-bean.com/repos/test/readme.txt
 $ svn cat http://svn.red-bean.com/repos/test/readme.txt
 This is a README file.
 You should read this.
-          </screen>
+</screen>
 
           <tip>
             <para>If your working copy is out of date (or you have
@@ -690,7 +690,7 @@ and has changes that I've made.
 
 $ svn cat foo.c
 Latest revision fresh from the repository!
-          </screen>
+</screen>
           
         </refsect1>
       </refentry>
@@ -745,7 +745,7 @@ Latest revision fresh from the repository!
 --no-auth-cache
 --non-interactive
 --config-dir DIR
-          </screen>
+</screen>
         </refsect1>
         
         <refsect1>
@@ -761,7 +761,7 @@ A  mine/b
 Checked out revision 2.
 $ ls
 mine
-          </screen>
+</screen>
 
           <para>Check out 2 different directories into two separate
             working copies:</para>
@@ -776,7 +776,7 @@ A  quiz/m
 Checked out revision 2.
 $ ls
 quiz  test
-          </screen>
+</screen>
 
           <para>Check out 2 different directories into two separate
             working copies, but place both into a directory called
@@ -792,7 +792,7 @@ A  working-copies/quiz/m
 Checked out revision 2.
 $ ls
 working-copies
-          </screen>
+</screen>
 
           <para>If you interrupt a checkout (or something else
             interrupts your checkout like loss of connectivity, etc.),
@@ -820,7 +820,7 @@ $ svn update
 A  test/e
 A  test/f
 Updated to revision 3.
-          </screen>
+</screen>
 
         </refsect1>
       </refentry>
@@ -877,7 +877,7 @@ Updated to revision 3.
           <screen>
 --diff3-cmd CMD
 --config-dir DIR
-          </screen>
+</screen>
 
         </refsect1>
 
@@ -892,7 +892,7 @@ Updated to revision 3.
 $ svn cleanup
 
 $ svn cleanup /path/to/working-copy
-          </screen>
+</screen>
 
         </refsect1>
       </refentry>
@@ -966,7 +966,7 @@ $ svn cleanup /path/to/working-copy
 --non-interactive
 --encoding ENC
 --config-dir DIR
-          </screen>
+</screen>
         </refsect1>
 
         <refsect1>
@@ -981,7 +981,7 @@ $ svn commit -m "added howto section."
 Sending        a
 Transmitting file data .
 Committed revision 3.
-          </screen>
+</screen>
 
           <para>Commit a modification to the file
             <filename>foo.c</filename> (explicitly specified on the
@@ -993,7 +993,7 @@ $ svn commit -F msg foo.c
 Sending        foo.c
 Transmitting file data .
 Committed revision 5.
-          </screen>
+</screen>
 
           <para>If you want to use a file that's under version
             control for your commit message with
@@ -1009,7 +1009,7 @@ $ svn commit --force-log --file file_under_vc.txt foo.c
 Sending        foo.c
 Transmitting file data .
 Committed revision 6.
-          </screen>
+</screen>
 
           <para>To commit a file scheduled for deletion:</para>
 
@@ -1018,7 +1018,7 @@ svn commit -m "removed file 'c'."
 Deleting       c
 
 Committed revision 7.
-          </screen>
+</screen>
           
         </refsect1>
       </refentry>
@@ -1117,7 +1117,7 @@ Committed revision 7.
 --editor-cmd EDITOR
 --encoding ENC
 --config-dir DIR
-          </screen>
+</screen>
         </refsect1>
 
         <refsect1>
@@ -1132,7 +1132,7 @@ $ svn copy foo.txt bar.txt
 A         bar.txt
 $ svn status
 A  +   bar.txt
-          </screen>
+</screen>
 
           <para>Copy an item in your working copy to a URL in the
             repository (an immediate commit, so you must supply a
@@ -1142,7 +1142,7 @@ A  +   bar.txt
 $ svn copy near.txt file:///tmp/repos/test/far-away.txt -m "Remote copy."
 
 Committed revision 8.
-          </screen>
+</screen>
 
           <para>Copy an item from the repository to your working
             copy (just schedules the copy&mdash;nothing goes into the
@@ -1156,7 +1156,7 @@ Committed revision 8.
           <screen>
 $ svn copy file:///tmp/repos/test/far-away near-here
 A         near-here
-          </screen>
+</screen>
 
           <para>And finally, copying between two URLs:</para>
 
@@ -1164,7 +1164,7 @@ A         near-here
 $ svn copy file:///tmp/repos/test/far-away file:///tmp/repos/test/over-there -m "remote copy."
 
 Committed revision 9.
-          </screen>
+</screen>
 
           <tip>
             <para>This is the easiest way to 'tag' a revision in
@@ -1176,7 +1176,7 @@ Committed revision 9.
 $ svn copy file:///tmp/repos/test/trunk file:///tmp/repos/test/tags/0.6.32-prerelease -m "tag tree"
 
 Committed revision 12.
-          </screen>
+</screen>
 
           <para>And don't worry if you forgot to tag&mdash;you can
             always specify an older revision and tag anytime:</para>
@@ -1185,7 +1185,7 @@ Committed revision 12.
 $ svn copy -r 11 file:///tmp/repos/test/trunk file:///tmp/repos/test/tags/0.6.32-prerelease -m "Forgot to tag at rev 11"
 
 Committed revision 13.
-          </screen>
+</screen>
         </refsect1>
       </refentry>
 
@@ -1249,7 +1249,7 @@ Committed revision 13.
 --editor-cmd EDITOR
 --encoding ENC
 --config-dir DIR
-          </screen>
+</screen>
         </refsect1>
         
         <refsect1>
@@ -1268,7 +1268,7 @@ $ svn commit -m "Deleted file 'myfile'."
 Deleting       myfile
 Transmitting file data .
 Committed revision 14.
-          </screen>
+</screen>
 
           <para>Deleting a URL, however, is immediate, so you have
           to supply a log message:</para>
@@ -1277,7 +1277,7 @@ Committed revision 14.
 $ svn delete -m "Deleting file 'yourfile'" file:///tmp/repos/test/yourfile
 
 Committed revision 15.
-          </screen>
+</screen>
 
           <para>Here's an example of how to force deletion of a file
             that has local mods:</para>
@@ -1290,7 +1290,7 @@ svn: 'over-there' has local modifications
 
 $ svn delete --force over-there 
 D         over-there
-          </screen>
+</screen>
           
         </refsect1>
       </refentry>
@@ -1394,7 +1394,7 @@ D         over-there
 --non-interactive
 --no-diff-deleted
 --config-dir DIR
-          </screen>
+</screen>
         </refsect1>
 
         <refsect1>
@@ -1409,7 +1409,7 @@ Index: COMMITTERS
 ===================================================================
 --- COMMITTERS	(revision 4404)
 +++ COMMITTERS	(working copy)
-          </screen>
+</screen>
 
           <para>See how your working copy's modifications compare
             against an older revision:</para>
@@ -1420,7 +1420,7 @@ Index: COMMITTERS
 ===================================================================
 --- COMMITTERS	(revision 3900)
 +++ COMMITTERS	(working copy)
-          </screen>
+</screen>
 
           <para>Compare revision 3000 to revision 3500 using '@'
             syntax:</para>
@@ -1432,7 +1432,7 @@ Index: COMMITTERS
 --- COMMITTERS	(revision 3000)
 +++ COMMITTERS	(revision 3500)
 &hellip;
-          </screen>
+</screen>
 
           <para>Compare revision 3000 to revision 3500 using range
             notation (you only pass the one URL in this
@@ -1444,7 +1444,7 @@ Index: COMMITTERS
 ===================================================================
 --- COMMITTERS	(revision 3000)
 +++ COMMITTERS	(revision 3500)
-          </screen>
+</screen>
 
           <para>If you have a working copy, you can obtain the
             differences without typing in the long URLs:</para>
@@ -1455,7 +1455,7 @@ Index: COMMITTERS
 ===================================================================
 --- COMMITTERS	(revision 3000)
 +++ COMMITTERS	(revision 3500)
-          </screen>
+</screen>
 
           <para>Use <option>--diff-cmd</option>
             <replaceable>CMD</replaceable> <option>-x</option> to
@@ -1469,7 +1469,7 @@ Index: COMMITTERS
 0a1,2
 &gt; This is a test
 &gt; 
-          </screen>
+</screen>
           
         </refsect1>
       </refentry>
@@ -1527,7 +1527,7 @@ Index: COMMITTERS
 --no-auth-cache
 --non-interactive
 --config-dir DIR
-          </screen>
+</screen>
         </refsect1>
 
         <refsect1>
@@ -1539,7 +1539,7 @@ Index: COMMITTERS
           <screen>
 $ svn export a-wc my-export
 Export complete.
-          </screen>
+</screen>
 
           <para>Export directly from the repository (prints every
             file and directory):</para>
@@ -1550,7 +1550,7 @@ A  my-export/test
 A  my-export/quiz
 &hellip;
 Exported revision 15.
-          </screen>
+</screen>
 
         </refsect1>
       </refentry>
@@ -1593,7 +1593,7 @@ Exported revision 15.
           <screen>
 --version
 --quiet (-q)
-          </screen>
+</screen>
         </refsect1>
       </refentry>
 
@@ -1649,7 +1649,7 @@ Exported revision 15.
 --config-dir DIR
 --auto-props
 --no-auto-props
-          </screen>
+</screen>
         </refsect1>
 
         <refsect1>
@@ -1664,7 +1664,7 @@ Adding         myproj/sample.txt
 &hellip;
 Transmitting file data .........
 Committed revision 16.
-          </screen>
+</screen>
 
           <para>This imports the local directory 'myproj' into
             'trunk/vendors' in your repository.  The directory
@@ -1678,7 +1678,7 @@ Adding         myproj/sample.txt
 &hellip;
 Transmitting file data .........
 Committed revision 19.
-          </screen>
+</screen>
           
         </refsect1>
       </refentry>
@@ -1736,7 +1736,7 @@ Committed revision 19.
 --targets FILENAME
 --recursive (-R)
 --config-dir DIR
-          </screen>
+</screen>
         </refsect1>
 
         <refsect1>
@@ -1760,7 +1760,7 @@ Last Changed Date: 2003-01-13 16:43:13 -0600 (Mon, 13 Jan 2003)
 Text Last Updated: 2003-01-16 21:18:16 -0600 (Thu, 16 Jan 2003)
 Properties Last Updated: 2003-01-13 21:50:19 -0600 (Mon, 13 Jan 2003)
 Checksum: /3L38YwzhT93BWvgpdF6Zw==
-          </screen>
+</screen>
 
           <para>It will also show information for directories:</para>
 
@@ -1774,7 +1774,7 @@ Schedule: normal
 Last Changed Author: harry
 Last Changed Rev: 19
 Last Changed Date: 2003-01-16 23:21:19 -0600 (Thu, 16 Jan 2003)
-          </screen>
+</screen>
           
         </refsect1>
       </refentry>
@@ -1835,7 +1835,7 @@ Last Changed Date: 2003-01-16 23:21:19 -0600 (Thu, 16 Jan 2003)
 --no-auth-cache
 --non-interactive
 --config-dir DIR
-          </screen>
+</screen>
         </refsect1>
 
         <refsect1>
@@ -1851,7 +1851,7 @@ README.txt
 INSTALL
 examples/
 &hellip;
-          </screen>
+</screen>
 
           <para>Like UNIX <command>ls</command>, you can also pass
           the <option>--verbose</option> switch for additional
@@ -1862,7 +1862,7 @@ svn list --verbose file:///tmp/repos
      16 sally         28361 Jan 16 23:18 README.txt
      27 sally             0 Jan 18 15:27 INSTALL
      24 harry               Jan 18 11:27 examples/
-          </screen>
+</screen>
 
           <para>For further details, see <xref
               linkend="svn-ch-3-sect-5.4"/>.</para>
@@ -1943,7 +1943,7 @@ svn list --verbose file:///tmp/repos
 --no-auth-cache
 --non-interactive
 --config-dir DIR
-          </screen>
+</screen>
         </refsect1>
 
         <refsect1>
@@ -1962,7 +1962,7 @@ Tweak.
 ------------------------------------------------------------------------
 r17 | sally | 2003-01-16 23:21:19 -0600 (Thu, 16 Jan 2003) | 2 lines
 &hellip;
-          </screen>
+</screen>
 
           <para>Examine all log messages for a particular file in
             your working copy:</para>
@@ -1976,7 +1976,7 @@ Added defines.
 ------------------------------------------------------------------------
 r28 | sally | 2003-01-07 21:48:33 -0600 (Tue, 07 Jan 2003) | 3 lines
 &hellip;
-          </screen>
+</screen>
 
           <para>If you don't have a working copy handy, you can log
             a URL:</para>
@@ -1990,7 +1990,7 @@ Added defines.
 ------------------------------------------------------------------------
 r28 | sally | 2003-01-07 21:48:33 -0600 (Tue, 07 Jan 2003) | 3 lines
 &hellip;
-          </screen>
+</screen>
 
           <para>If you want several distinct paths underneath the
             same URL, you can use the <literal>URL [PATH...]</literal>
@@ -2009,7 +2009,7 @@ Added new file bar.c
 ------------------------------------------------------------------------
 r28 | sally | 2003-01-07 21:48:33 -0600 (Tue, 07 Jan 2003) | 3 lines
 &hellip;
-          </screen>
+</screen>
 
           <para>That is the same as explicitly placing both URLs on
             the command line:</para>
@@ -2018,7 +2018,7 @@ r28 | sally | 2003-01-07 21:48:33 -0600 (Tue, 07 Jan 2003) | 3 lines
 $ svn log http://svn.red-bean.com/repos/test/foo.c \
           http://svn.red-bean.com/repos/test/bar.c
 &hellip;
-          </screen>
+</screen>
 
           <para>When you're concatenating the results of multiple
             calls to the log command, you may want to use the
@@ -2037,7 +2037,7 @@ r14 | ...
 r15 | ... 
 
 ------------------------------------------------------------------------
-          </screen>
+</screen>
 
           <para>However, if you wanted to gather 2 non-sequential
             log messages into a file, you might do something like
@@ -2060,7 +2060,7 @@ r19 | ...
 r27 | ... 
 
 ------------------------------------------------------------------------
-          </screen>
+</screen>
 
           <para>You can avoid the clutter of the double dashed lines
             in your output by using the incremental switch:</para>
@@ -2079,7 +2079,7 @@ r19 | ...
 
 ------------------------------------------------------------------------
 r27 | ... 
-          </screen>
+</screen>
 
           <para>The <option>--incremental</option> switch provides
             similar output control when using the
@@ -2095,7 +2095,7 @@ r27 | ...
             <screen>
 $ svn log -r 20 http://svn.red-bean.com/untouched.txt
 ------------------------------------------------------------------------
-            </screen>
+</screen>
 
             <para>That just means that the path was not modified in
               that revision.  If you log from the top of the
@@ -2109,7 +2109,7 @@ r20 | sally | 2003-01-17 22:56:19 -0600 (Fri, 17 Jan 2003) | 1 line
 
 Made a change.
 ------------------------------------------------------------------------
-            </screen>
+</screen>
           </tip>
 
         </refsect1>
@@ -2183,7 +2183,7 @@ Made a change.
 --no-auth-cache
 --non-interactive
 --config-dir DIR
-          </screen>
+</screen>
         </refsect1>
 
         <refsect1>
@@ -2199,7 +2199,7 @@ U  myproj/tiny.txt
 U  myproj/thhgttg.txt
 U  myproj/win.txt
 U  myproj/flo.txt
-          </screen>
+</screen>
 
           <para>If you branched at revision 23, and you want to
             merge changes on trunk into your branch, you could do
@@ -2209,7 +2209,7 @@ U  myproj/flo.txt
 $ svn merge -r 23:30 file:///tmp/repos/trunk/vendors
 U  myproj/thhgttg.txt
 &hellip;
-          </screen>
+</screen>
           
         <para>To merge changes to a single file:</para>
 
@@ -2217,7 +2217,7 @@ U  myproj/thhgttg.txt
 $ cd myproj
 $ svn merge -r 30:31 thhgttg.txt 
 U  thhgttg.txt
-        </screen>
+</screen>
 
         </refsect1>
       </refentry>
@@ -2275,7 +2275,7 @@ U  thhgttg.txt
 --encoding ENC
 --force-log
 --config-dir DIR
-          </screen>
+</screen>
         </refsect1>
 
         <refsect1>
@@ -2286,7 +2286,7 @@ U  thhgttg.txt
           <screen>
 $ svn mkdir newdir
 A         newdir
-          </screen>
+</screen>
 
           <para>Create one in the repository (instant commit, so a
             log message is required):</para>
@@ -2295,7 +2295,7 @@ A         newdir
 $ svn mkdir -m "Making a new dir." http://svn.red-bean.com/repos/newdir
 
 Committed revision 26.
-          </screen>
+</screen>
           
         </refsect1>
       </refentry>
@@ -2381,7 +2381,7 @@ Committed revision 26.
 --encoding ENC
 --force-log
 --config-dir DIR
-          </screen>
+</screen>
         </refsect1>
 
         <refsect1>
@@ -2393,7 +2393,7 @@ Committed revision 26.
 $ svn move foo.c bar.c
 A         bar.c
 D         foo.c
-          </screen>
+</screen>
 
           <para>Move a file in the repository (an immediate commit,
             so it requires a commit message): </para>
@@ -2403,7 +2403,7 @@ $ svn move -m "Move a file" http://svn.red-bean.com/repos/foo.c \
                             http://svn.red-bean.com/repos/bar.c
 
 Committed revision 27.
-          </screen>
+</screen>
 
         </refsect1>
       </refentry>
@@ -2456,7 +2456,7 @@ Committed revision 27.
 --no-auth-cache
 --non-interactive
 --config-dir DIR
-          </screen>
+</screen>
         </refsect1>
 
         <refsect1>
@@ -2468,14 +2468,14 @@ Committed revision 27.
           <screen>
 $ svn propdel svn:mime-type  some-script
 property `svn:mime-type' deleted from 'some-script'.
-          </screen>
+</screen>
 
           <para>Delete a revision property:</para>
 
           <screen>
 $ svn propdel --revprop -r 26 release-date 
 property `release-date' deleted from repository revision '26'
-          </screen>
+</screen>
 
         </refsect1>
       </refentry>
@@ -2528,7 +2528,7 @@ property `release-date' deleted from repository revision '26'
 --encoding ENC
 --editor-cmd EDITOR
 --config-dir DIR
-          </screen>
+</screen>
         </refsect1>
 
         <refsect1>
@@ -2544,7 +2544,7 @@ $ svn propedit svn:keywords  foo.c
     can add multiple values to a property easily here by entering one
     value per line.&gt;
 Set new value for property `svn:keywords' on `foo.c'
-          </screen>
+</screen>
 
         </refsect1>
       </refentry>
@@ -2600,7 +2600,7 @@ Set new value for property `svn:keywords' on `foo.c'
 --no-auth-cache
 --non-interactive
 --config-dir DIR
-          </screen>
+</screen>
         </refsect1>
 
         <refsect1>
@@ -2614,14 +2614,14 @@ $ svn propget svn:keywords foo.c
 Author
 Date
 Rev
-          </screen>
+</screen>
 
           <para>The same goes for a revision property:</para>
 
           <screen>
 $ svn propget svn:log --revprop -r 20 
 Began journal.
-          </screen>
+</screen>
           
         </refsect1>
       </refentry>
@@ -2675,7 +2675,7 @@ Began journal.
 --no-auth-cache
 --non-interactive
 --config-dir DIR
-          </screen>
+</screen>
         </refsect1>
         
         <refsect1>
@@ -2690,7 +2690,7 @@ Properties on 'foo.c':
   svn:mime-type
   svn:keywords
   owner
-          </screen>
+</screen>
 
           <para>But with the <option>--verbose</option> flag, svn
             proplist is extremely handy as it also shows you the
@@ -2702,7 +2702,7 @@ Properties on 'foo.c':
   svn:mime-type : text/plain
   svn:keywords : Author Date Rev
   owner : sally
-          </screen>
+</screen>
           
         </refsect1>
       </refentry>
@@ -2768,7 +2768,7 @@ Properties on 'foo.c':
 --encoding ENC
 --force
 --config-dir DIR
-          </screen>
+</screen>
         </refsect1>
 
         <refsect1>
@@ -2779,7 +2779,7 @@ Properties on 'foo.c':
           <screen>
 $ svn propset svn:mime-type image/jpeg foo.jpg 
 property `svn:mime-type' set on 'foo.jpg'
-          </screen>
+</screen>
 
           <para>On a UNIX system, if you want a file to have the
             executable permission set:</para>
@@ -2787,7 +2787,7 @@ property `svn:mime-type' set on 'foo.jpg'
           <screen>
 $ svn propset svn:executable ON somescript
 property `svn:executable' set on 'somescript'
-          </screen>
+</screen>
 
           <para>Perhaps you have an internal policy to set certain
             properties for the benefit of your coworkers:</para>
@@ -2795,7 +2795,7 @@ property `svn:executable' set on 'somescript'
           <screen>
 $ svn propset owner sally foo.c
 property `owner' set on 'foo.c'
-          </screen>
+</screen>
 
           <para>If you made a mistake in a log message for a
             particular revision and want to change it, use
@@ -2805,7 +2805,7 @@ property `owner' set on 'foo.c'
           <screen>
 $ svn propset --revprop -r 25 svn:log "Journaled about trip to New York."
 property `svn:log' set on repository revision '25'
-          </screen>
+</screen>
 
           <para>Or, if you don't have a working copy, you can
           provide a URL.</para>
@@ -2813,7 +2813,7 @@ property `svn:log' set on repository revision '25'
           <screen>
 $ svn propset --revprop -r 26 svn:log "Document nap." http://svn.red-bean.com/repos
 property `svn:log' set on repository revision '25'
-          </screen>
+</screen>
 
           <para>Lastly, you can tell propset to take its input from
           a file.  You could even use this to set the contents of a
@@ -2822,7 +2822,7 @@ property `svn:log' set on repository revision '25'
           <screen>
 $ svn propset owner-pic -F sally.jpg moo.c 
 property `owner-pic' set on 'moo.c'
-          </screen>
+</screen>
 
           <warning>
             <para>By default, you cannot modify revision properties
@@ -2884,7 +2884,7 @@ property `owner-pic' set on 'moo.c'
 --recursive (-R)
 --quiet (-q)
 --config-dir DIR
-          </screen>
+</screen>
         </refsect1>
         
         <refsect1>
@@ -2902,7 +2902,7 @@ foo.c
 foo.c.mine
 foo.c.r30
 foo.c.r31
-          </screen>
+</screen>
 
           <para>Once you've resolved the conflict and
             <filename>foo.c</filename> is ready to be committed, run
@@ -2967,7 +2967,7 @@ foo.c.r31
 --recursive (-R)
 --quiet (-q)
 --config-dir DIR
-          </screen>
+</screen>
         </refsect1>
 
         <refsect1>
@@ -2978,7 +2978,7 @@ foo.c.r31
           <screen>
 $ svn revert foo.c
 Reverted foo.c
-          </screen>
+</screen>
 
           <para>If you want to revert a whole directory of files,
             use the <option>--recursive</option> flag:</para>
@@ -2988,7 +2988,7 @@ $ svn revert --recursive .
 Reverted newdir/afile
 Reverted foo.c
 Reverted bar.txt
-          </screen>
+</screen>
 
           <para>Lastly, you can undo any scheduling
             operations:</para>
@@ -3006,7 +3006,7 @@ Reverted whoops
 $ svn status
 ?      mistake.txt
 ?      whoops
-          </screen>
+</screen>
 
           <warning>
             <para>If you provide no targets to <command>svn
@@ -3282,7 +3282,7 @@ $ svn status
 --no-auth-cache
 --non-interactive
 --config-dir
-          </screen>
+</screen>
         </refsect1>
 
         <refsect1>
@@ -3295,7 +3295,7 @@ $ svn status
 $ svn status wc
  M     wc/bar.c
 A  +   wc/qax.c
-          </screen>
+</screen>
 
           <para>If you want to find out what files in your working
             copy are out-of-date, pass the
@@ -3312,7 +3312,7 @@ $ svn status --show-updates wc
        *     965    wc/foo.c
 A  +         965    wc/qax.c
 Status against revision:    981
-          </screen>
+</screen>
 
           <warning>
             <para><option>--show-updates</option>
@@ -3334,7 +3334,7 @@ $ svn status --show-updates --verbose wc
 A  +         965       687 harry        wc/qax.c
              965       687 harry        wc/zig.c
 Head revision:   981
-          </screen>
+</screen>
 
           <para>For many more examples of <command>svn status</command>,
             see <xref linkend="svn-ch-3-sect-4.3.1"/>.</para>
@@ -3393,7 +3393,7 @@ Head revision:   981
 --no-auth-cache
 --non-interactive
 --config-dir DIR
-          </screen>
+</screen>
         </refsect1>
         
         <refsect1>
@@ -3410,7 +3410,7 @@ U  myproj/bar.txt
 U  myproj/baz.c
 U  myproj/qux.c
 Updated to revision 31.
-          </screen>
+</screen>
 
           <para>And to switch back, just provide the URL to the
             location in the repository from which you originally
@@ -3423,7 +3423,7 @@ U  myproj/bar.txt
 U  myproj/baz.c
 U  myproj/qux.c
 Updated to revision 31.
-          </screen>
+</screen>
 
           <tip>
             <para>You can just switch part of your working copy to a
@@ -3454,7 +3454,7 @@ svn: Unable to open repository 'file:///tmp/repos'
 $ svn switch --relocate file:///tmp/repos file:///tmp/newlocation .
 $ svn update
 At revision 3.
-          </screen>
+</screen>
 
         </refsect1>
       </refentry>
@@ -3555,7 +3555,7 @@ At revision 3.
 --no-auth-cache
 --non-interactive
 --config-dir DIR
-          </screen>
+</screen>
         </refsect1>
 
         <refsect1>
@@ -3571,7 +3571,7 @@ A  newdir/disclose.c
 A  newdir/launch.c
 D  newdir/README
 Updated to revision 32.
-          </screen>
+</screen>
 
           <para>You can also update your working copy to an older
             revision (Subversion doesn't have the concept of
@@ -3586,7 +3586,7 @@ D  newdir/disclose.c
 D  newdir/launch.c
 U  foo.c
 Updated to revision 30.
-          </screen>
+</screen>
 
           <tip>
             <para>If you want to examine an older revision of a
@@ -3743,7 +3743,7 @@ Updated to revision 30.
           <screen>
 --bdb-txn-nosync
 --bdb-log-keep
-          </screen>
+</screen>
         </refsect1>
 
         <refsect1>
@@ -3753,7 +3753,7 @@ Updated to revision 30.
 
           <screen>
 $ svnadmin create /usr/local/svn/repos
-          </screen>
+</screen>
           
         </refsect1>
       </refentry>
@@ -3786,7 +3786,7 @@ $ svnadmin create /usr/local/svn/repos
 --revision (-r)
 --incremental
 --quiet
-          </screen>
+</screen>
         </refsect1>
         
         <refsect1>
@@ -3802,7 +3802,7 @@ Revision-number: 0
 Prop-content-length: 56
 Content-length: 56
 &hellip;
-          </screen>
+</screen>
 
           <para>Incrementally dump a single transaction from your
             repository: </para>
@@ -3815,7 +3815,7 @@ Revision-number: 21
 Prop-content-length: 101
 Content-length: 101
 &hellip;
-          </screen>
+</screen>
 
         </refsect1>
       </refentry>
@@ -3875,7 +3875,7 @@ Content-length: 101
           
           <screen>
 --clean-logs
-          </screen>
+</screen>
         </refsect1>
 
       </refentry>
@@ -3943,7 +3943,7 @@ $ svnadmin list-unused-dblogs /path/to/repos
 
 $ svnadmin list-unused-dblogs /path/to/repos | xargs rm
 ## disk space reclaimed!
-        </screen>
+</screen>
 
         </refsect1>
       </refentry>
@@ -3975,7 +3975,7 @@ $ svnadmin list-unused-dblogs /path/to/repos | xargs rm
 --ignore-uuid
 --force-uuid
 --parent-dir
-          </screen>
+</screen>
         </refsect1>
 
         <refsect1>
@@ -3991,7 +3991,7 @@ $ svnadmin load /usr/local/svn/restored &lt; repos-backup
      * adding path : test ... done.
      * adding path : test/a ... done.
 &hellip;
-          </screen>
+</screen>
 
           <para>Or if you want to load into a subdirectory:</para>
 
@@ -4001,7 +4001,7 @@ $ svnadmin load --parent-dir new/subdir/for/project /usr/local/svn/restored &lt;
      * adding path : test ... done.
      * adding path : test/a ... done.
 &hellip;
-          </screen>
+</screen>
 
         </refsect1>
       </refentry>
@@ -4035,7 +4035,7 @@ $ svnadmin load --parent-dir new/subdir/for/project /usr/local/svn/restored &lt;
 $ svnadmin lstxns /usr/local/svn/repos/ 
 1w
 1x
-          </screen>
+</screen>
 
         </refsect1>
       </refentry>
@@ -4068,7 +4068,7 @@ Acquiring exclusive lock on repository db.
 Recovery is running, please stand by...
 Recovery completed.
 The latest repos revision is 34.
-          </screen>
+</screen>
 
         </refsect1>
       </refentry>
@@ -4097,7 +4097,7 @@ The latest repos revision is 34.
           
           <screen>
 --quiet (-q)
-          </screen>
+</screen>
         </refsect1>
 
         <refsect1>
@@ -4107,14 +4107,14 @@ The latest repos revision is 34.
 
           <screen>
 $ svnadmin rmtxns /usr/local/svn/repos/ 1w 1x
-          </screen>
+</screen>
 
           <para>Fortunately, the output of svn lstxns works great as
             the input for rmtxns:</para>
 
           <screen>
 $ svnadmin rmtxns /usr/local/svn/repos/  `svnadmin lstxns /usr/local/svn/repos/`
-          </screen>
+</screen>
 
           <para>Which will remove all uncommitted transactions from
             your repository.</para>
@@ -4161,7 +4161,7 @@ $ svnadmin rmtxns /usr/local/svn/repos/  `svnadmin lstxns /usr/local/svn/repos/`
           <screen>
 --revision (-r)
 --bypass-hooks
-          </screen>
+</screen>
         </refsect1>
 
         <refsect1>
@@ -4170,7 +4170,7 @@ $ svnadmin rmtxns /usr/local/svn/repos/  `svnadmin lstxns /usr/local/svn/repos/`
           <screen>
 --revision (-r) ARG
 --bypass-hooks
-          </screen>
+</screen>
         </refsect1>
 
         <refsect1>
@@ -4181,7 +4181,7 @@ $ svnadmin rmtxns /usr/local/svn/repos/  `svnadmin lstxns /usr/local/svn/repos/`
 
           <screen>
 $ svnadmin setlog /usr/local/svn/repos/ -r 19 msg
-          </screen>
+</screen>
 
         </refsect1>
       </refentry>
@@ -4213,7 +4213,7 @@ $ svnadmin setlog /usr/local/svn/repos/ -r 19 msg
           <screen>
 $ svnadmin verify /usr/local/svn/repos/ 
 * Verified revision 1729.
-          </screen>
+</screen>
 
         </refsect1>
       </refentry>
@@ -4323,7 +4323,7 @@ $ svnadmin verify /usr/local/svn/repos/
           <screen>
 --revision (-r)
 --transaction (-t)
-          </screen>
+</screen>
         </refsect1>
 
         <refsect1>
@@ -4335,7 +4335,7 @@ $ svnadmin verify /usr/local/svn/repos/
           <screen>
 $ svnlook author -r 40 /usr/local/svn/repos 
 sally
-          </screen>            
+</screen>            
 
         </refsect1>
       </refentry>
@@ -4363,7 +4363,7 @@ sally
           <screen>
 --revision (-r)
 --transaction (-t)
-          </screen>
+</screen>
         </refsect1>
 
         <refsect1>
@@ -4387,7 +4387,7 @@ Contents:
     II. DOCUMENTATION
    III. PARTICIPATING IN THE SUBVERSION COMMUNITY
 &hellip;
-          </screen>
+</screen>
           
         </refsect1>
       </refentry>
@@ -4420,7 +4420,7 @@ Contents:
           <screen>
 --revision (-r)
 --transaction (-t)
-          </screen>
+</screen>
         </refsect1>
 
         <refsect1>
@@ -4435,7 +4435,7 @@ A   trunk/vendors/deli/
 A   trunk/vendors/deli/chips.txt
 A   trunk/vendors/deli/sandwich.txt
 A   trunk/vendors/deli/pickle.txt
-          </screen>
+</screen>
           
         </refsect1>
       </refentry>
@@ -4463,7 +4463,7 @@ A   trunk/vendors/deli/pickle.txt
           <screen>
 --revision (-r)
 --transaction (-t)
-          </screen>
+</screen>
         </refsect1>
         
         <refsect1>
@@ -4475,7 +4475,7 @@ A   trunk/vendors/deli/pickle.txt
           <screen>            
 $ svnlook date -r 40 /tmp/repos/
 2003-02-22 17:44:49 -0600 (Sat, 22 Feb 2003)
-          </screen>
+</screen>
 
         </refsect1>
       </refentry>
@@ -4504,7 +4504,7 @@ $ svnlook date -r 40 /tmp/repos/
 --revision (-r)
 --transaction (-t)
 --no-diff-deleted
-          </screen>
+</screen>
         </refsect1>
 
         <refsect1>
@@ -4532,7 +4532,7 @@ Deleted: trunk/vendors/deli/chips.txt
 
 Deleted: trunk/vendors/deli/pickle.txt
 ==============================================================================
-          </screen>
+</screen>
           
         </refsect1>
       </refentry>
@@ -4561,7 +4561,7 @@ Deleted: trunk/vendors/deli/pickle.txt
           <screen>
 --revision (-r)
 --transaction (-t)
-          </screen>
+</screen>
         </refsect1>
 
         <refsect1>
@@ -4573,7 +4573,7 @@ Deleted: trunk/vendors/deli/pickle.txt
           <screen>
 $ svnlook dirs-changed -r 40 /usr/local/svn/repos
 trunk/vendors/deli/
-          </screen>
+</screen>
           
         </refsect1>
       </refentry>
@@ -4630,7 +4630,7 @@ trunk/vendors/deli/
           <screen>
 --revision (-r)
 --show-ids
-          </screen>
+</screen>
         </refsect1>
 
         <refsect1>
@@ -4658,7 +4658,7 @@ REVISION   PATH &lt;ID&gt;
        4   /trunk &lt;1.0.6&gt;
        2   /trunk &lt;1.0.3&gt;
        1   /trunk &lt;1.0.2&gt;
-          </screen>
+</screen>
           
         </refsect1>
       </refentry>
@@ -4686,7 +4686,7 @@ REVISION   PATH &lt;ID&gt;
           <screen>
 --revision (-r)
 --transaction (-t)
-          </screen>
+</screen>
         </refsect1>
 
         <refsect1>
@@ -4700,7 +4700,7 @@ sally
 2003-02-22 17:44:49 -0600 (Sat, 22 Feb 2003)
 15
 Rearrange lunch.
-          </screen>
+</screen>
           
         </refsect1>
       </refentry>
@@ -4727,7 +4727,7 @@ Rearrange lunch.
           <screen>
 --revision (-r)
 --transaction (-t)
-          </screen>
+</screen>
         </refsect1>
         
         <refsect1>
@@ -4739,7 +4739,7 @@ Rearrange lunch.
           <screen>
 $ svnlook log /tmp/repos/
 Rearrange lunch.
-          </screen>
+</screen>
           
         </refsect1>
       </refentry>
@@ -4774,7 +4774,7 @@ Rearrange lunch.
           <screen>
 --revision (-r)
 --transaction (-t)
-          </screen>
+</screen>
         </refsect1>
 
         <refsect1>
@@ -4787,7 +4787,7 @@ Rearrange lunch.
           <screen>
 $ svnlook pg /usr/local/svn/repos seasonings /trunk/sandwich
 mustard
-          </screen>
+</screen>
 
         </refsect1>
       </refentry>
@@ -4823,7 +4823,7 @@ mustard
 --revision (-r)
 --transaction (-t)
 --verbose (-v)
-          </screen>
+</screen>
         </refsect1>
 
         <refsect1>
@@ -4836,7 +4836,7 @@ mustard
 $ svnlook proplist /usr/local/svn/repos /trunk/README
   original-author
   svn:mime-type
-          </screen>
+</screen>
 
           <para>This is the same command as in the previous example,
             but this time showing the property values as well:</para>
@@ -4845,7 +4845,7 @@ $ svnlook proplist /usr/local/svn/repos /trunk/README
 $ svnlook proplist /usr/local/svn/repos /trunk/README
   original-author : fitz
   svn:mime-type : text/plain
-          </screen>
+</screen>
           
         </refsect1>
       </refentry>
@@ -4875,7 +4875,7 @@ $ svnlook proplist /usr/local/svn/repos /trunk/README
 --revision (-r)
 --transaction (-t)
 --show-ids
-          </screen>
+</screen>
         </refsect1>
 
         <refsect1>
@@ -4893,7 +4893,7 @@ $ svnlook tree -r 40 /usr/local/svn/repos --show-ids
     egg.txt &lt;1i.e.2j&gt;
     soda.txt &lt;1k.0.2j&gt;
     sandwich.txt &lt;1j.0.2j&gt;
-          </screen>
+</screen>
           
         </refsect1>
       </refentry>
@@ -4926,7 +4926,7 @@ $ svnlook tree -r 40 /usr/local/svn/repos --show-ids
           <screen>          
 $ svnlook uuid /usr/local/svn/repos
 e7fe1b91-8cd5-0310-98dd-2f12e793c5e8
-          </screen>
+</screen>
 
         </refsect1>
       </refentry>
@@ -4956,7 +4956,7 @@ e7fe1b91-8cd5-0310-98dd-2f12e793c5e8
           <screen>          
 $ svnlook youngest /tmp/repos/ 
 42
-          </screen>
+</screen>
 
         </refsect1>
       </refentry>

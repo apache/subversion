@@ -254,7 +254,7 @@
 % svn status
 M     ./foo.c
 M     ./bar/baz.c
-    </screen>
+</screen>
 
     <para>If you specify the <option>--show-updates</option>
       (<option>-u</option>) switch, a longer output format is
@@ -267,7 +267,7 @@ M             1047    ./foo.c
        *         -    ./bloo.png
 M             1050    ./bar/baz.c
 Status against revision:   1066
-    </screen>
+</screen>
 
     <para>In this case, two new columns appear.  The second column
       contains an asterisk if the file or directory is out-of-date.
@@ -299,7 +299,7 @@ X    Resource is external to this working copy (comes from another
 ?    Resource is not under version control
 !    Resource is missing or incomplete (removed by another tool than
        Subversion)
-    </screen>
+</screen>
 
     <!-- ###TODO:  This paragraph should be moved elsewhere.  We are
                    talking about status codes here, and not update.
