@@ -56,6 +56,13 @@ typedef struct
   /* name of local prop to hold the version resource's URL */
   svn_string_t *vsn_url_name;
 
+  svn_ra_get_wc_prop_func_t get_func;
+  svn_ra_set_wc_prop_func_t set_func;
+  svn_ra_close_commit_prop_func_t close_func;
+  void *close_baton;
+
+  svn_string_t *log_msg;
+
 } commit_ctx_t;
 
 typedef struct
@@ -118,8 +125,7 @@ static svn_error_t * simple_request(svn_ra_session_t *ras, const char *method,
   return NULL;
 }
 
-static svn_error_t *
-create_activity (commit_ctx_t *cc)
+static svn_error_t * create_activity(commit_ctx_t *cc)
 {
   svn_string_t * activity_url;
   apr_uuid_t uuid;
@@ -127,20 +133,15 @@ create_activity (commit_ctx_t *cc)
   svn_string_t uuid_str = { uuid_buf, sizeof(uuid_buf), 0, NULL };
   int code;
 
-#if 0
   {
-    /* ### damn this is annoying to have to create a string */
+    /* ### damn, this is annoying to have to create strings */
     svn_string_t * propname = svn_string_create(SVN_RA_DAV__LP_ACTIVITY_URL,
                                                 cc->ras->pool);
-
-    /* ### what the hell to use for the path? and where to get it */
     svn_string_t * path = svn_string_create(".", cc->ras->pool);
 
     /* get the URL where we should create activities */
-    SVN_ERR( svn_wc_prop_get(&activity_url, propname, path,
-                             cc->ras->pool) );
+    SVN_ERR( (*cc->get_func)(cc->close_baton, path, propname, &activity_url) );
   }
-#endif
 
   /* the URL for our activity will be ACTIVITY_URL/UUID */
   apr_uuid_get(&uuid);
@@ -179,8 +180,8 @@ static resource_t * add_resource(commit_ctx_t *cc,
   return res;
 }
 
-static svn_error_t *
-checkout_resource (commit_ctx_t *cc, const char *url, const char **wr_url)
+static svn_error_t * checkout_resource(commit_ctx_t *cc, const char *url,
+                                       const char **wr_url)
 {
   resource_t *res = apr_hash_get(cc->resources, url, APR_HASH_KEY_STRING);
   http_req *req;
@@ -206,8 +207,8 @@ checkout_resource (commit_ctx_t *cc, const char *url, const char **wr_url)
       vsn_url = NULL;
 #if 0
       /* ### need the path */
-      SVN_ERR( svn_wc_prop_get(&vsn_url, cc->vsn_url_name, path,
-                               cc->ras->pool) );
+      SVN_ERR( (*cc->get_func)(cc->close_baton, path, cc->vsn_url_name,
+                               &vsn_url) );
 #endif
 
       /* ### check to see if we need the copy */
@@ -309,9 +310,9 @@ static svn_error_t * do_proppatch(svn_ra_session_t *ras,
   return NULL;
 }
 
-static svn_error_t *
-commit_replace_root (void *edit_baton, svn_revnum_t base_revision, 
-                     void **root_baton)
+static svn_error_t * commit_replace_root(void *edit_baton,
+                                         svn_revnum_t base_revision, 
+                                         void **root_baton)
 {
   commit_ctx_t *cc = edit_baton;
   dir_baton_t *root = apr_pcalloc(cc->ras->pool, sizeof(*root));
@@ -326,8 +327,8 @@ commit_replace_root (void *edit_baton, svn_revnum_t base_revision,
   return NULL;
 }
 
-static svn_error_t *
-commit_delete_entry (svn_string_t *name, void *parent_baton)
+static svn_error_t * commit_delete_entry(svn_string_t *name,
+                                         void *parent_baton)
 {
   dir_baton_t *parent = parent_baton;
   const char *workcol;
@@ -358,12 +359,11 @@ commit_delete_entry (svn_string_t *name, void *parent_baton)
   return NULL;
 }
 
-static svn_error_t *
-commit_add_dir (svn_string_t *name,
-                void *parent_baton,
-                svn_string_t *copyfrom_path,
-                svn_revnum_t copyfrom_revision,
-                void **child_baton)
+static svn_error_t * commit_add_dir(svn_string_t *name,
+                                    void *parent_baton,
+                                    svn_string_t *copyfrom_path,
+                                    svn_revnum_t copyfrom_revision,
+                                    void **child_baton)
 {
   dir_baton_t *parent = parent_baton;
   dir_baton_t *child = apr_pcalloc(parent->cc->ras->pool, sizeof(*child));
@@ -402,11 +402,10 @@ commit_add_dir (svn_string_t *name,
   return NULL;
 }
 
-static svn_error_t *
-commit_rep_dir (svn_string_t *name,
-                void *parent_baton,
-                svn_revnum_t base_revision,
-                void **child_baton)
+static svn_error_t * commit_rep_dir(svn_string_t *name,
+                                    void *parent_baton,
+                                    svn_revnum_t base_revision,
+                                    void **child_baton)
 {
   dir_baton_t *parent = parent_baton;
   dir_baton_t *child = apr_pcalloc(parent->cc->ras->pool, sizeof(*child));
@@ -429,10 +428,9 @@ commit_rep_dir (svn_string_t *name,
   return NULL;
 }
 
-static svn_error_t *
-commit_change_dir_prop (void *dir_baton,
-                        svn_string_t *name,
-                        svn_string_t *value)
+static svn_error_t * commit_change_dir_prop(void *dir_baton,
+                                            svn_string_t *name,
+                                            svn_string_t *value)
 {
   dir_baton_t *dir = dir_baton;
 
@@ -449,8 +447,7 @@ commit_change_dir_prop (void *dir_baton,
   return NULL;
 }
 
-static svn_error_t *
-commit_close_dir (void *dir_baton)
+static svn_error_t * commit_close_dir(void *dir_baton)
 {
   dir_baton_t *dir = dir_baton;
 
@@ -462,12 +459,11 @@ commit_close_dir (void *dir_baton)
   return NULL;
 }
 
-static svn_error_t *
-commit_add_file (svn_string_t *name,
-                 void *parent_baton,
-                 svn_string_t *copyfrom_path,
-                 svn_revnum_t copyfrom_revision,
-                 void **file_baton)
+static svn_error_t * commit_add_file(svn_string_t *name,
+                                     void *parent_baton,
+                                     svn_string_t *copyfrom_path,
+                                     svn_revnum_t copyfrom_revision,
+                                     void **file_baton)
 {
   dir_baton_t *parent = parent_baton;
   file_baton_t *file = apr_pcalloc(parent->cc->ras->pool, sizeof(*file));
@@ -502,11 +498,10 @@ commit_add_file (svn_string_t *name,
   return NULL;
 }
 
-static svn_error_t *
-commit_rep_file (svn_string_t *name,
-                 void *parent_baton,
-                 svn_revnum_t base_revision,
-                 void **file_baton)
+static svn_error_t * commit_rep_file(svn_string_t *name,
+                                     void *parent_baton,
+                                     svn_revnum_t base_revision,
+                                     void **file_baton)
 {
   dir_baton_t *parent = parent_baton;
   file_baton_t *file = apr_pcalloc(parent->cc->ras->pool, sizeof(*file));
@@ -536,10 +531,9 @@ static svn_error_t * commit_send_txdelta(svn_txdelta_window_t *window,
   return NULL;
 }
 
-static svn_error_t *
-commit_apply_txdelta (void *file_baton, 
-                      svn_txdelta_window_handler_t *handler,
-                      void **handler_baton)
+static svn_error_t * commit_apply_txdelta(void *file_baton, 
+                                          svn_txdelta_window_handler_t *handler,
+                                          void **handler_baton)
 {
   file_baton_t *file = file_baton;
 
@@ -553,10 +547,10 @@ commit_apply_txdelta (void *file_baton,
   return NULL;
 }
 
-static svn_error_t *
-commit_change_file_prop (void *file_baton,
-                         svn_string_t *name,
-                         svn_string_t *value)
+static svn_error_t * commit_change_file_prop(
+  void *file_baton,
+  svn_string_t *name,
+  svn_string_t *value)
 {
   file_baton_t *file = file_baton;
 
@@ -573,8 +567,7 @@ commit_change_file_prop (void *file_baton,
   return NULL;
 }
 
-static svn_error_t *
-commit_close_file (void *file_baton)
+static svn_error_t * commit_close_file(void *file_baton)
 {
   file_baton_t *file = file_baton;
 
@@ -587,8 +580,7 @@ commit_close_file (void *file_baton)
 }
 
 
-static svn_error_t *
-commit_close_edit (void *edit_baton)
+static svn_error_t * commit_close_edit(void *edit_baton)
 {
   commit_ctx_t *cc = edit_baton;
 
@@ -616,26 +608,31 @@ svn_error_t * svn_ra_dav__get_commit_editor(
   void *close_baton)
 {
   svn_ra_session_t *ras = session_baton;
-  commit_ctx_t *cc = apr_pcalloc(ras->pool, sizeof(*cc));
-  svn_delta_edit_fns_t *commit_editor = svn_delta_default_editor(ras->pool);
-  svn_error_t *err;
+  commit_ctx_t *cc;
+  svn_delta_edit_fns_t *commit_editor;
 
-  /* ### store log_msg, close_func, set_func, close_baton */
-
+  cc = apr_pcalloc(ras->pool, sizeof(*cc));
   cc->ras = ras;
   cc->resources = apr_hash_make(ras->pool);
   cc->vsn_url_name = svn_string_create(SVN_RA_DAV__LP_VSN_URL, ras->pool);
-  err = create_activity(cc);
-  if (err)
-    return err;
+  cc->get_func = get_func;
+  cc->set_func = set_func;
+  cc->close_func = close_func;
+  cc->close_baton = close_baton;
+  cc->log_msg = log_msg;
+
+  SVN_ERR( create_activity(cc) );
 
   /* ### check out the baseline and attach the log_msg */
 
-  /* Set up the editor.
+  /*
+  ** Set up the editor.
+  **
   ** This structure is used during the commit process. An external caller
   ** uses these callbacks to describe all the changes in the working copy
   ** that must be committed to the server.
   */
+  commit_editor = svn_delta_default_editor(ras->pool);
   commit_editor->replace_root = commit_replace_root;
   commit_editor->delete_entry = commit_delete_entry;
   commit_editor->add_directory = commit_add_dir;
