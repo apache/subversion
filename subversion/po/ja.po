@@ -4458,8 +4458,8 @@ msgstr ""
 
 #: libsvn_wc/lock.c:647
 #, c-format
-msgid "Working copy '%s' not locked"
-msgstr "作業コピー '%s' はロックされていません"
+msgid "Working copy '%s' is missing or not locked"
+msgstr "作業コピー '%s' がないか、ロックされていません"
 
 #: libsvn_wc/lock.c:841
 #, c-format
@@ -6096,3 +6096,6 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 
 #~ msgid "exported%s"
 #~ msgstr "エクスポートされたものです%s"
+
+#~ msgid "Working copy '%s' not locked"
+#~ msgstr "作業コピー '%s' はロックされていません"
