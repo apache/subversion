@@ -878,7 +878,7 @@ svn_path_get_absolute(const char **pabsolute,
 
   if (apr_err)
     return svn_error_createf(SVN_ERR_BAD_FILENAME, NULL,
-                             "Couldn't determine absolute path of %s.", 
+                             "Couldn't determine absolute path of '%s'.", 
                              relative);
 
   SVN_ERR (svn_path_cstring_to_utf8 (pabsolute, buffer, pool));
@@ -916,7 +916,7 @@ svn_path_split_if_file(const char *path,
   else 
     {
       return svn_error_createf(SVN_ERR_BAD_FILENAME, NULL,
-                               "%s is neither a file nor a directory name.",
+                               "'%s' is neither a file nor a directory name.",
                                path);
     }
 

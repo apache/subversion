@@ -108,7 +108,7 @@ svn_wc__entries_init (const char *path,
       apr_file_close (f);
       return svn_error_createf (apr_err, NULL,
                                 "svn_wc__entries_init: "
-                                "error writing %s's entries file",
+                                "error writing entries file for '%s'.",
                                 path);
     }
 
@@ -1629,7 +1629,7 @@ svn_wc_walk_entries (const char *path,
 
   if (! entry)
     return svn_error_createf (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                              "%s is not under revision control.", path);
+                              "'%s' is not under revision control.", path);
 
   if (entry->kind == svn_node_file)
     return walk_callbacks->found_entry (path, entry, walk_baton);

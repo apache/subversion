@@ -162,7 +162,7 @@ svn_io_open_unique_file (apr_file_t **f,
           *unique_name_p = NULL;
           return svn_error_createf
             (apr_err, NULL,
-             "svn_io_open_unique_file: error attempting %s", unique_name);
+             "svn_io_open_unique_file: error openning '%s'", unique_name);
         }
       else
         {
@@ -176,7 +176,7 @@ svn_io_open_unique_file (apr_file_t **f,
   return svn_error_createf (SVN_ERR_IO_UNIQUE_NAMES_EXHAUSTED,
                             NULL,
                             "svn_io_open_unique_file: unable to make name for "
-                            "%s", path);
+                            "'%s'", path);
 }
 
 
@@ -207,13 +207,13 @@ svn_io_copy_file (const char *src,
     {
       return svn_error_createf
         (apr_err, NULL,
-         "svn_io_copy_file: error closing %s", dst_tmp);
+         "svn_io_copy_file: error closing '%s'", dst_tmp);
     }
 
   apr_err = apr_file_copy (src_apr, dst_tmp_apr, APR_OS_DEFAULT, pool);
   if (apr_err)
     return svn_error_createf
-      (apr_err, NULL, "svn_io_copy_file: error copying %s to %s",
+      (apr_err, NULL, "svn_io_copy_file: error copying '%s' to '%s'",
        src, dst_tmp);
 
   /* If copying perms, set the perms on dst_tmp now, so they will be
@@ -233,7 +233,7 @@ svn_io_copy_file (const char *src,
       if (apr_err)
         return svn_error_createf
           (apr_err, NULL,
-           "svn_io_copy_file: opening %s for perms", src);
+           "svn_io_copy_file: opening '%s' for perms", src);
 
       apr_err = apr_file_info_get (&finfo, APR_FINFO_PROT, s);
       if (apr_err)
@@ -241,14 +241,14 @@ svn_io_copy_file (const char *src,
           apr_file_close (s);  /* toss any error */
           return svn_error_createf
             (apr_err, NULL,
-             "svn_io_copy_file: getting perm info for %s", src);
+             "svn_io_copy_file: getting perm info for '%s'", src);
         }
 
       apr_err = apr_file_close (s);
       if (apr_err)
         return svn_error_createf
           (apr_err, NULL,
-           "svn_io_copy_file: closing %s after reading perms", src);
+           "svn_io_copy_file: closing '%s' after reading perms", src);
 
       apr_err = apr_file_perms_set (dst_tmp_apr, finfo.protection);
 
@@ -263,7 +263,7 @@ svn_io_copy_file (const char *src,
         {
           return svn_error_createf
             (apr_err, NULL,
-             "svn_io_copy_file: setting perms on %s", dst_tmp);
+             "svn_io_copy_file: setting perms on '%s'", dst_tmp);
         }
     }
 #endif /* ! SVN_WIN32 */
@@ -413,7 +413,7 @@ svn_io_make_dir_recursively (const char *path, apr_pool_t *pool)
   if (apr_err)
     return svn_error_createf
       (apr_err, NULL,
-       "svn_io_make_dir_recursively: error making directory %s", path);
+       "svn_io_make_dir_recursively: error making directory '%s'", path);
 
   return SVN_NO_ERROR;
 #else
@@ -439,7 +439,7 @@ svn_io_make_dir_recursively (const char *path, apr_pool_t *pool)
           if (apr_err)
             svn_err = svn_error_createf
               (apr_err, NULL,
-               "svn_io_make_dir_recursively: error creating directory %s",
+               "svn_io_make_dir_recursively: error creating directory '%s'",
                path);
         }
 
@@ -449,7 +449,7 @@ svn_io_make_dir_recursively (const char *path, apr_pool_t *pool)
   /* If we get here, there must be an apr_err. */
   return svn_error_createf
     (apr_err, NULL,
-     "svn_io_make_dir_recursively: error making %s", path);
+     "svn_io_make_dir_recursively: error making '%s'", path);
 #endif
 }
 
@@ -983,7 +983,7 @@ svn_io_run_cmd (const char *path,
   if (apr_err)
     return svn_error_createf
       (apr_err, NULL,
-       "svn_io_run_cmd: error creating %s process attributes",
+       "svn_io_run_cmd: error creating '%s' process attributes",
        cmd);
 
   /* Make sure we invoke cmd directly, not through a shell. */
@@ -993,7 +993,7 @@ svn_io_run_cmd (const char *path,
   if (apr_err)
     return svn_error_createf 
       (apr_err, NULL,
-       "svn_io_run_cmd: error setting %s process cmdtype",
+       "svn_io_run_cmd: error setting '%s' process cmdtype",
        cmd);
 
   /* Set the process's working directory. */
@@ -1008,7 +1008,7 @@ svn_io_run_cmd (const char *path,
       if (apr_err)
         return svn_error_createf 
           (apr_err, NULL,
-           "svn_io_run_cmd: error setting %s process directory",
+           "svn_io_run_cmd: error setting '%s' process directory",
            cmd);
     }
 
@@ -1023,7 +1023,7 @@ svn_io_run_cmd (const char *path,
       if (apr_err)
         return svn_error_createf 
           (apr_err, NULL,
-           "svn_io_run_cmd: error setting %s process child input",
+           "svn_io_run_cmd: error setting '%s' process child input",
            cmd);
     }
   if (outfile)
@@ -1032,7 +1032,7 @@ svn_io_run_cmd (const char *path,
       if (apr_err)
         return svn_error_createf 
           (apr_err, NULL,
-           "svn_io_run_cmd: error setting %s process child outfile",
+           "svn_io_run_cmd: error setting '%s' process child outfile",
            cmd);
     }
   if (errfile)
@@ -1041,7 +1041,7 @@ svn_io_run_cmd (const char *path,
       if (apr_err)
         return svn_error_createf 
           (apr_err, NULL,
-           "svn_io_run_cmd: error setting %s process child errfile",
+           "svn_io_run_cmd: error setting '%s' process child errfile",
            cmd);
     }
 
@@ -1068,7 +1068,7 @@ svn_io_run_cmd (const char *path,
   if (apr_err)
     return svn_error_createf 
       (apr_err, NULL,
-       "svn_io_run_cmd: error starting %s process",
+       "svn_io_run_cmd: error starting '%s' process",
        cmd);
 
   /* The Win32 apr_proc_wait doesn't set this... */
@@ -1079,7 +1079,7 @@ svn_io_run_cmd (const char *path,
   if (APR_STATUS_IS_CHILD_NOTDONE (apr_err))
     return svn_error_createf
       (apr_err, NULL,
-       "svn_io_run_cmd: error waiting for %s process",
+       "svn_io_run_cmd: error waiting for '%s' process",
        cmd);
 
   if (exitwhy)
@@ -1087,7 +1087,7 @@ svn_io_run_cmd (const char *path,
   else if (! APR_PROC_CHECK_EXIT(exitwhy_val))
     return svn_error_createf
       (SVN_ERR_EXTERNAL_PROGRAM, NULL,
-       "svn_io_run_cmd: error exitwhy %d for process %s",
+       "svn_io_run_cmd: error exitwhy %d for process '%s'",
        exitwhy_val, cmd);
 
   if (exitcode)
@@ -1095,7 +1095,7 @@ svn_io_run_cmd (const char *path,
   else if (exitcode_val != 0)
     return svn_error_createf
       (SVN_ERR_EXTERNAL_PROGRAM, NULL,
-       "svn_io_run_cmd: error exitcode %d for process %s",
+       "svn_io_run_cmd: error exitcode %d for process '%s'",
        exitcode_val, cmd);
 
   return SVN_NO_ERROR;

@@ -642,7 +642,7 @@ svn_error_t *svn_ra_svn_handle_commands(svn_ra_svn_conn_t *conn,
         }
       else
         err = svn_error_createf(SVN_ERR_RA_SVN_UNKNOWN_CMD, NULL,
-                                "Unknown command %s", cmdname);
+                                "Unknown command '%s'", cmdname);
       if (err)
         {
           svn_ra_svn_write_cmd_failure(conn, subpool, err);

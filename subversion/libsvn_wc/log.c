@@ -233,7 +233,7 @@ install_committed_file (svn_boolean_t *overwrote_working,
   if (apr_err)
     return svn_error_createf
       (apr_err, NULL,
-       "install_committed_file: error closing %s", tmp_wfile);
+       "install_committed_file: error closing '%s'", tmp_wfile);
 
   /* Is there a tmp_text_base that needs to be installed?  */
   tmp_text_base = svn_wc__text_base_path (filepath, 1, pool);
@@ -287,7 +287,7 @@ signal_error (struct log_runner *loggy, svn_error_t *err)
   svn_xml_signal_bailout
     (svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG,
                         err,
-                        "in directory %s",
+                        "in directory '%s'",
                         svn_wc_adm_access_path (loggy->adm_access)),
      loggy->parser);
 }
@@ -376,7 +376,7 @@ log_do_run_cmd (struct log_runner *loggy,
                         infile, outfile, errfile, loggy->pool);
   if (err)
      return svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG, err,
-                               "error running %s in %s",
+                               "error running '%s' in '%s'",
                                name,
                                svn_wc_adm_access_path (loggy->adm_access));
 
@@ -400,12 +400,12 @@ log_do_merge (struct log_runner *loggy,
   left = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_ARG_1, atts);
   if (! left)
     return svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG, NULL,
-                              "missing 'left' attr in %s",
+                              "missing 'left' attr in '%s'",
                               svn_wc_adm_access_path (loggy->adm_access));
   right = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_ARG_2, atts);
   if (! right)
     return svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG, NULL,
-                              "missing 'right' attr in %s",
+                              "missing 'right' attr in '%s'",
                               svn_wc_adm_access_path (loggy->adm_access));
 
   /* Grab all three labels too.  If non-existent, we'll end up passing
@@ -446,7 +446,7 @@ log_do_file_xfer (struct log_runner *loggy,
   dest = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_DEST, atts);
   if (! dest)
     return svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG, NULL,
-                              "missing dest attr in %s",
+                              "missing dest attr in '%s'",
                               svn_wc_adm_access_path (loggy->adm_access));
 
   err = file_xfer_under_path (loggy->adm_access, name, dest, action,
@@ -664,7 +664,7 @@ log_do_committed (struct log_runner *loggy,
   /* If no new post-commit revision was given us, bail with an error. */
   if (! rev)
     return svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG, NULL,
-                              "missing revision attr for %s", name);
+                              "missing revision attr for '%s'", name);
       
   /* Read the entry for the affected item.  If we can't find the
      entry, or if the entry states that our item is not either "this
@@ -1078,7 +1078,7 @@ log_do_committed (struct log_runner *loggy,
                                         | SVN_WC__ENTRY_MODIFY_FORCE),
                                        TRUE, pool)))
         return svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG, err,
-                                  "error merge_syncing %s", name);
+                                  "error merge_syncing '%s'", name);
     }
 
   return SVN_NO_ERROR;
@@ -1190,7 +1190,7 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
     signal_error
       (loggy, svn_error_createf
        (SVN_ERR_WC_BAD_ADM_LOG, err,
-        "start_handler: error processing command '%s' in %s",
+        "start_handler: error processing command '%s' in '%s'",
         eltname, svn_wc_adm_access_path (loggy->adm_access)));
   
   return;
@@ -1241,7 +1241,7 @@ svn_wc__run_log (svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
       {
         apr_file_close (f);
         return svn_error_createf (apr_err, NULL,
-                                 "error reading adm log file in %s",
+                                 "error reading adm log file in '%s'",
                                   svn_wc_adm_access_path (adm_access));
       }
 

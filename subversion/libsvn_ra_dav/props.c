@@ -447,7 +447,7 @@ svn_error_t * svn_ra_dav__get_one_prop(const svn_string_t **propval,
     {
       /* ### need an SVN_ERR here */
       return svn_error_createf(SVN_ERR_RA_DAV_PROPS_NOT_FOUND, NULL,
-                               "%s was not present on the resource.", name);
+                               "'%s' was not present on the resource.", name);
     }
 
   /* ### hmm. we can't deal with embedded NULLs right now... */

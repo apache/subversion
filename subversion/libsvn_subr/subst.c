@@ -794,11 +794,11 @@ svn_subst_copy_and_translate (const char *src,
 
   apr_err = apr_file_close(s);
   if (apr_err)
-    return svn_error_createf (apr_err, NULL, "error closing %s", src);
+    return svn_error_createf (apr_err, NULL, "error closing '%s'", src);
 
   apr_err = apr_file_close(d);
   if (apr_err)
-    return svn_error_createf (apr_err, NULL, "error closing %s", dst);
+    return svn_error_createf (apr_err, NULL, "error closing '%s'", dst);
 
   /* Now that dst_tmp contains the translated data, do the atomic rename. */
   SVN_ERR (svn_io_file_rename (dst_tmp, dst, pool));

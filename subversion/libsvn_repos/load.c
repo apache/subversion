@@ -732,7 +732,7 @@ new_node_record (void **node_baton,
       }
     default:
       return svn_error_createf (SVN_ERR_STREAM_UNRECOGNIZED_DATA, NULL,
-                                "Unrecognized node-action on node %s.",
+                                "Unrecognized node-action on node '%s'.",
                                 nb->path);
     }
 

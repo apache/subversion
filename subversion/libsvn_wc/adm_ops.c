@@ -337,7 +337,7 @@ svn_wc_process_committed (const char *path,
       apr_file_close (log_fp);
       return svn_error_createf (apr_err, NULL,
                                 "process_committed: "
-                                "error writing %s's log file", 
+                                "error writing log file for '%s'", 
                                 path);
     }
       
@@ -1389,7 +1389,7 @@ svn_wc_revert (const char *path,
       else  /* Else it's `none', or something exotic like a symlink... */
         return svn_error_createf
           (SVN_ERR_NODE_UNKNOWN_KIND, NULL,
-           "Unknown or unexpected kind for path %s", path);
+           "Unknown or unexpected kind for path '%s'", path);
 
       /* Recursivity is taken care of by svn_wc_remove_from_revision_control, 
          and we've definitely reverted PATH at this point. */

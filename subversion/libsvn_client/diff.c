@@ -727,7 +727,7 @@ convert_to_url (const char **url,
   SVN_ERR (svn_wc_adm_close (adm_access));
   if (! entry)
     return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, NULL,
-                              "convert_to_url: %s is not versioned", path);
+                              "convert_to_url: '%s' is not versioned", path);
   
   *url = apr_pstrdup (pool, entry->url);
   return SVN_NO_ERROR;

@@ -104,7 +104,7 @@ static svn_error_t *make_connection(const char *hostname, unsigned short port,
   /* Resolve the hostname. */
   status = apr_sockaddr_info_get(&sa, hostname, APR_INET, port, 0, pool);
   if (status)
-    return svn_error_createf(status, NULL, "Unknown hostname %s", hostname);
+    return svn_error_createf(status, NULL, "Unknown hostname '%s'", hostname);
 
   /* Create the socket. */
   status = apr_socket_create(sock, APR_INET, SOCK_STREAM, pool);
@@ -113,7 +113,7 @@ static svn_error_t *make_connection(const char *hostname, unsigned short port,
 
   status = apr_connect(*sock, sa);
   if (status)
-    return svn_error_createf(status, NULL, "Can't connect to host %s",
+    return svn_error_createf(status, NULL, "Can't connect to host '%s'",
                              hostname);
 
   return SVN_NO_ERROR;
@@ -296,7 +296,7 @@ static svn_error_t *ra_svn_open(void **sess, const char *url,
 
   if (parse_url(url, &user, &port, &hostname, pool) != 0)
     return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
-                             "Illegal svn repository URL %s", url);
+                             "Illegal svn repository URL '%s'", url);
 
   SVN_ERR(find_tunnel_agent(hostname, &tunnel_agent, pool));
   if (tunnel_agent)
