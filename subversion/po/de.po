@@ -49,7 +49,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "POT-Creation-Date: 2004-08-17 09:36+0200\n"
-"PO-Revision-Date: 2004-08-23 10:53+0100\n"
+"PO-Revision-Date: 2004-08-24 11:04+0100\n"
 "Last-Translator: Subversion <dev@subversion.tigris.org>\n"
 "Language-Team: German <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -268,25 +268,23 @@ msgstr ""
 "%s:  (Keine versionierte Ressource)\n"
 "\n"
 
-#: clients/cmdline/log-cmd.c:195
-#, c-format
-msgid "No commit for revision 0.%s"
-msgstr "Keine Übertragung für Revision 0.%s"
+#: clients/cmdline/log-cmd.c:192
+msgid "No commit for revision 0.\n"
+msgstr "Keine Übertragung für Revision 0.\n"
 
-#: clients/cmdline/log-cmd.c:203
+#: clients/cmdline/log-cmd.c:198
 msgid "(no author)"
 msgstr "(kein Autor)"
 
-#: clients/cmdline/log-cmd.c:214
+#: clients/cmdline/log-cmd.c:209
 msgid "(no date)"
 msgstr "(kein Datum)"
 
-#: clients/cmdline/log-cmd.c:256
-#, c-format
-msgid "Changed paths:%s"
-msgstr "Geänderte Pfade: %s"
+#: clients/cmdline/log-cmd.c:239
+msgid "Changed paths:\n"
+msgstr "Geänderte Pfade:\n"
 
-#: clients/cmdline/log-cmd.c:271
+#: clients/cmdline/log-cmd.c:254
 #, c-format
 msgid " (from %s:%ld)"
 msgstr " (von %s:%ld)"
@@ -303,6 +301,8 @@ msgstr "Gültigkeit der Log-Meldung erzwingen"
 #: clients/cmdline/main.c:68
 #: svnadmin/main.c:199
 #: svnadmin/main.c:202
+#: svndumpfilter/main.c:699
+#: svndumpfilter/main.c:702
 #: svnlook/main.c:89
 #: svnlook/main.c:92
 msgid "show help on a subcommand"
@@ -3446,6 +3446,14 @@ msgstr "Unbekannte XML Codierung: '%s'"
 msgid "REPORT response handling failed to complete the editor drive"
 msgstr "Die Abwicklung der REPORT-Antwort konnte den Editorlauf nicht vollenden."
 
+#: libsvn_ra_dav/file_revs.c:360
+msgid "get-file-revs REPORT not implemented"
+msgstr "'get-file-revs' REPORT nicht implementiert"
+
+#: libsvn_ra_dav/file_revs.c:367
+msgid "The file-revs report didn't contain any revisions"
+msgstr "Der 'get-file-revs' Befehl gab keine Revisionen zurück"
+
 #: libsvn_ra_dav/merge.c:216
 #, c-format
 msgid "Protocol error: we told the server not to auto-merge any resources, but it said that '%s' was merged"
@@ -4636,7 +4644,7 @@ msgstr ""
 "Der Client ist zu alt, um mit der Arbeitskopie '%s' zusammen zu arbeiten;\n"
 "bitte besorgen Sie einen neueren Subversion-Client"
 
-#: libsvn_wc/questions.c:348
+#: libsvn_wc/questions.c:351
 #, c-format
 msgid ""
 "Checksum mismatch indicates corrupt text base: '%s'\n"
@@ -4739,6 +4747,7 @@ msgid "Unable to make any directories"
 msgstr "Kann keine Verzeichnisse erzeugen"
 
 #: svnadmin/main.c:72
+#: svndumpfilter/main.c:62
 msgid "Can't open stdio file"
 msgstr "Kann Standardeingabe nicht öffnen"
 
@@ -4752,6 +4761,7 @@ msgid "'%s' is an URL when it should be a path"
 msgstr "'%s' ist eine URL, obwohl es ein Pfad sein sollte"
 
 #: svnadmin/main.c:205
+#: svndumpfilter/main.c:705
 #: svnlook/main.c:95
 #: svnversion/main.c:201
 msgid "show version information"
@@ -5063,6 +5073,7 @@ msgid "Exactly one file argument required"
 msgstr "Genau ein Dateiparameter benötigt"
 
 #: svnadmin/main.c:1065
+#: svndumpfilter/main.c:1103
 #: svnlook/main.c:1939
 msgid "subcommand argument required\n"
 msgstr "Unterbefehl benötigt einen Parameter\n"
@@ -5076,6 +5087,19 @@ msgstr ""
 "Unterbefehl '%s' akzeptiert die Option '%s' nicht\n"
 "Geben Sie 'svnadmin help %s' ein, um Hilfe zu erhalten.\n"
 
+#: svndumpfilter/main.c:363
+#, c-format
+msgid "Invalid copy source path '%s'"
+msgstr "Ungültiger Quellpfad einer Kopie: '%s'"
+
+#: svndumpfilter/main.c:414
+msgid "Node with dropped parent sneaked in"
+msgstr "Knoten ohne Eltern hat sich eingeschlichen"
+
+#: svndumpfilter/main.c:586
+msgid "This is an empty revision for padding."
+msgstr "Dies ist eine Leere Revision zum Auffüllen"
+
 #: svndumpfilter/main.c:641
 #, c-format
 msgid "Revision %ld committed as %ld.\n"
@@ -5086,7 +5110,76 @@ msgstr "Revision %ld als %ld übertragen.\n"
 msgid "Revision %ld skipped.\n"
 msgstr "Revision: '%ld' übersprungen\n"
 
-#: svndumpfilter/main.c:883
+#: svndumpfilter/main.c:707
+msgid "Do not display filtering statistics."
+msgstr "Filterstatistik nicht anzeigen."
+
+#: svndumpfilter/main.c:709
+msgid "Remove revisions emptied by filtering."
+msgstr "Durch das Filtern geleerte Revisionen entfernen."
+
+#: svndumpfilter/main.c:711
+msgid "Renumber revisions left after filtering."
+msgstr "Revisionen nach dem Filtern neu nummerieren."
+
+#: svndumpfilter/main.c:713
+msgid "Don't filter revision properties."
+msgstr "Revisionseigenschaften nicht filtern."
+
+#: svndumpfilter/main.c:724
+msgid ""
+"Filter out nodes with given prefixes from dumpstream.\n"
+"usage: svndumpfilter exclude PATH_PREFIX...\n"
+msgstr ""
+"Knoten mit den angegebenen Präfixen aus dem Datenstrom ausfiltern.\n"
+"Aufruf: svndumpfilter exclude PFAD_PRÄFIX...\n"
+
+#: svndumpfilter/main.c:730
+msgid ""
+"Filter out nodes without given prefixes from dumpstream.\n"
+"usage: svndumpfilter include PATH_PREFIX...\n"
+msgstr ""
+"Knoten, die nicht den angegebenen Präfixen entsprechen, aus dem Datenstrom ausfiltern.\n"
+"Aufruf: svndumpfilter include PFAD_PRÄFIX...\n"
+
+#: svndumpfilter/main.c:736
+msgid ""
+"Describe the usage of this program or its subcommands.\n"
+"usage: svndumpfilter help [SUBCOMMAND...]\n"
+msgstr ""
+"Beschreibt die Anwendung dieses Programms und seiner Unterbefehle.\n"
+"Aufruf: svndumpfilter help [UNTERBEFEHL...]\n"
+
+#: svndumpfilter/main.c:799
+msgid ""
+"general usage: svndumpfilter SUBCOMMAND [ARGS & OPTIONS ...]\n"
+"Type \"svndumpfilter help <subcommand>\" for help on a specific subcommand.\n"
+"\n"
+"Available subcommands:\n"
+msgstr ""
+"Aufruf: svndumpfilter UNTERBEFEHL [Optionen] [Parameter]\n"
+"Geben Sie 'svndumpfilter help UNTERBEFEHL' ein, um Hilfe zu einem Unterbefehl\n"
+"zu erhalten.\n"
+"\n"
+"Verfügbare Unterbefehle:\n"
+
+#: svndumpfilter/main.c:854
+msgid "Excluding (and dropping empty revisions for) prefixes:\n"
+msgstr "Präfixe ausschließen (und leere Revisionen verwerfen):\n"
+
+#: svndumpfilter/main.c:856
+msgid "Excluding prefixes:\n"
+msgstr "Präfixe ausschließen:\n"
+
+#: svndumpfilter/main.c:858
+msgid "Including (and dropping empty revisions for) prefixes:\n"
+msgstr "Präfixe einschließen (und leere Revisionen verwerfen):\n"
+
+#: svndumpfilter/main.c:860
+msgid "Including prefixes:\n"
+msgstr "Präfixe einschließen:\n"
+
+#: svndumpfilter/main.c:887
 #, c-format
 msgid ""
 "Dropped %d revision(s).\n"
@@ -5095,26 +5188,31 @@ msgstr ""
 "%d Revision(en) fallen gelassen.\n"
 "\n"
 
-#: svndumpfilter/main.c:889
+#: svndumpfilter/main.c:893
 msgid "Revisions renumbered as follows:\n"
 msgstr "Revisionen folgendermaßen neu numeriert:\n"
 
-#: svndumpfilter/main.c:917
+#: svndumpfilter/main.c:921
 #, c-format
 msgid "   %ld => (dropped)\n"
 msgstr "   %ld => (fallen gelassen)\n"
 
-#: svndumpfilter/main.c:921
+#: svndumpfilter/main.c:925
 #, c-format
 msgid "   %ld => %ld\n"
 msgstr "   %ld => %ld\n"
 
-#: svndumpfilter/main.c:932
+#: svndumpfilter/main.c:936
 #, c-format
 msgid "Dropped %d node(s):\n"
 msgstr "%d Knoten fallen gelassen:\n"
 
-#: svndumpfilter/main.c:1140
+#: svndumpfilter/main.c:1125
+#, c-format
+msgid "unknown command: '%s'\n"
+msgstr "Unbekannte Anweisung: '%s'\n"
+
+#: svndumpfilter/main.c:1144
 msgid ""
 "\n"
 "Error: no prefixes supplied.\n"
@@ -5122,7 +5220,7 @@ msgstr ""
 "\n"
 "Fehler: keine Prefixe angegeben.\n"
 
-#: svndumpfilter/main.c:1183
+#: svndumpfilter/main.c:1187
 #, c-format
 msgid ""
 "subcommand '%s' doesn't accept option '%s'\n"
