@@ -1303,17 +1303,19 @@ $ svn status foo
 
         <note>
           <para><command>svn revert</command>
-          <replaceable>ITEM</replaceable> has exactly the same effect as
-          deleting <replaceable>ITEM</replaceable> from your working
-          copy and then running <command>svn update -r BASE</command>
-          <replaceable>ITEM</replaceable>.  However, if you're reverting
-          a file, <command>svn revert</command> has one very noticeable
-          difference&mdash;it doesn't have to communicate with the
-          repository to restore your file.</para>
+          <replaceable>ITEM</replaceable> tiene exactamente el mismo
+          efecto que suprimiendo <replaceable>ITEM</replaceable> de
+          su copia de trabajo local y despues ejecutando
+          <command>svn update -r BASE</command>
+          <replaceable>ITEM</replaceable>. Sin embargo, si está
+          revirtiendo<!--TODO:reverting... o mejor "invirtiendo"?-->
+          un fichero, <command>svn revert</command> tiene una diferencia
+          muy considerable&mdash;no tiene que comunicarse con el
+          repositorio para reponer<!--restore--> su fichero.</para>
         </note>
 
-        <para>Or perhaps you mistakenly removed a file from version
-          control:</para>
+        <para>O quizás usted quito equivocadamente un fichero del control
+          de versión:</para>
 
         <screen>
 $ svn status README 
@@ -1332,15 +1334,18 @@ $ svn status README
       </sect3>
 
       <sidebar>
-          <title>Look Ma! No Network!</title>
+          <title>¡Mira Mamá! ¡Sin red!</title>
+          <!--TODO:Look Ma! No Network!... supongo que lo habré traducido
+          bien, pero por si acaso-->
 
-        <para>All three of these commands (<command>svn
-          status</command>, <command>svn diff</command>, and
-          <command>svn revert</command>) can be used without any
-          network access.  This makes it easy to manage your
-          changes-in-progress when you are somewhere without a network
-          connection, such as traveling on an airplane, riding a
-          commuter train or hacking on the beach.</para>
+        <para>Estos tres comandos<!--TODO:all three of these commands-->
+          (<command>svn status</command>, <command>svn diff</command>, y
+          <command>svn revert</command>) pueden ser usados sin ningún
+          acceso de red. Esto lo hace sencillo para administrar sus
+          cambios-en-progreso cuando usted está en alguna parte sin
+          una conexión de red, tal como viajando en un avión, montando en
+          un tren<!--TODO:riding a commuter train--> o hackeando en
+          la playa.</para>
 
         <para>Subversion does this by keeping private caches of
           pristine versions of each versioned file inside of the
