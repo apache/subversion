@@ -104,6 +104,7 @@ SWIG_INCLUDES = -I$(SWIG_SRC_DIR) \
                 -I$(SWIG_LIBSWIG_DIR) \
                 -DSVN_SWIG_VERSION=$(SWIG_VERSION) \
                 $(SVN_APR_INCLUDES) $(SVN_APRUTIL_INCLUDES)
+SWIG_NORUNTIME_FLAG = @SWIG_NORUNTIME_FLAG@
 SWIG_LDFLAGS = @SWIG_LDFLAGS@
 SWIG_PY_INCLUDES = @SWIG_PY_INCLUDES@
 SWIG_PY_COMPILE = @SWIG_PY_COMPILE@
@@ -153,9 +154,9 @@ LINK_APACHE_MOD = $(LIBTOOL) $(LTFLAGS) --mode=link $(CC) $(LT_LDFLAGS) $(CFLAGS
 
 # these commands run SWIG to generate wrapper source files (*.c)
 ### should we protect against swig not being available?
-RUN_SWIG_PY = $(SWIG) -c -python $(SWIG_INCLUDES) $(SWIG_PY_INCLUDES) -o $@
-RUN_SWIG_PL = $(SWIG) -c -perl $(SWIG_INCLUDES) $(SWIG_PL_INCLUDES) -o $@
-RUN_SWIG_JAVA = cd ${SWIG_BUILD_DIR}/java/org/tigris/subversion/swig && $(SWIG) -c -java -package 'org.tigris.subversion.swig' $(SWIG_INCLUDES) -o ${abs_builddir}/$@
+RUN_SWIG_PY = $(SWIG) $(SWIG_NORUNTIME_FLAG) -python $(SWIG_INCLUDES) $(SWIG_PY_INCLUDES) -o $@
+RUN_SWIG_PL = $(SWIG) $(SWIG_NORUNTIME_FLAG) -perl $(SWIG_INCLUDES) $(SWIG_PL_INCLUDES) -o $@
+RUN_SWIG_JAVA = cd ${SWIG_BUILD_DIR}/java/org/tigris/subversion/swig && $(SWIG) $(SWIG_NORUNTIME_FLAG) -java -package 'org.tigris.subversion.swig' $(SWIG_INCLUDES) -o ${abs_builddir}/$@
 
 # Compilation of SWIG-generated C source code
 COMPILE_PY_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=compile $(SWIG_PY_COMPILE) $(CPPFLAGS) $(SWIG_INCLUDES) $(SWIG_PY_INCLUDES) -prefer-pic -c -o $@
