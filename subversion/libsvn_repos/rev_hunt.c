@@ -1,4 +1,5 @@
-/* rev_hunt.c --- routines to hunt down particular fs revisions.
+/* rev_hunt.c --- routines to hunt down particular fs revisions and
+ *                their properties.
  *
  * ====================================================================
  * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
@@ -132,6 +133,44 @@ svn_repos_dated_revision (svn_revnum_t *revision,
         }
     }
 
+  return SVN_NO_ERROR;
+}
+
+
+
+
+/*  Given a ROOT/PATH within some filesystem, return three pieces of
+    information allocated in POOL:
+
+      - set *COMMITTED_REV to the revision in which the object was
+        last modified.  (In fs parlance, this is the revision in which
+        the particular node-rev-id was 'created'.)
+    
+      - set *COMMITTED_DATE to the date of said revision.
+
+      - set *LAST_AUTHOR to the author of said revision.    
+ */
+svn_error_t *
+svn_repos_get_committed_info (svn_revnum_t *committed_rev,
+                              svn_string_t **committed_date,
+                              svn_string_t **last_author,
+                              svn_fs_root_t *root,
+                              svn_stringbuf_t *path,
+                              apr_pool_t *pool)
+{
+  svn_fs_t *fs = svn_fs_root_fs (root);
+  
+  /* Get the CR field out of the node's skel. */
+  SVN_ERR (svn_fs_node_created_rev (committed_rev, root, path->data, pool));
+
+  /* Get the date property of this revision. */
+  SVN_ERR (svn_fs_revision_prop (committed_date, fs, *committed_rev,
+                                 SVN_PROP_REVISION_DATE, pool));
+
+  /* Get the author property of this revision. */
+  SVN_ERR (svn_fs_revision_prop (last_author, fs, *committed_rev,
+                                 SVN_PROP_REVISION_AUTHOR, pool));
+  
   return SVN_NO_ERROR;
 }
 

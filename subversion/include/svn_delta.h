@@ -692,7 +692,7 @@ struct svn_pipe_handler_wrapper
  * sending to the wrapped editor.
  */
 void 
-svn_delta_default_pipe_editor (const svn_delta_edit_fns_t **new_editor,
+svn_delta_default_pipe_editor (svn_delta_edit_fns_t **new_editor,
                                struct svn_pipe_edit_baton **new_edit_baton,
                                const svn_delta_edit_fns_t *editor_to_wrap,
                                void *edit_baton_to_wrap,
@@ -716,7 +716,10 @@ svn_delta_get_xml_editor (svn_stream_t *output,
 typedef svn_error_t * (*svn_bump_func_t) (void *baton,
                                           svn_stringbuf_t *path,
                                           svn_boolean_t recurse,
-                                          svn_revnum_t new_rev);
+                                          svn_revnum_t new_rev,
+                                          svn_string_t *rev_date,
+                                          svn_string_t *rev_author);
+
 
 /* Return an *EDITOR (and *EDIT_BATON) which notices paths that are
    committed.  Store each commited path in HASH, with (char *) keys

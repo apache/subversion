@@ -316,7 +316,7 @@ close_edit (void *edit_baton)
 
       SVN_ERR (eb->bump_func (eb->bump_baton, &path_str,
                               (r == svn_recursive) ? TRUE : FALSE,
-                              eb->new_rev));
+                              eb->new_rev, NULL, NULL));
     }
 
   return SVN_NO_ERROR;

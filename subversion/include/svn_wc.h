@@ -450,14 +450,23 @@ struct svn_wc_close_commit_baton
   apr_pool_t *pool;
 };
 
-/* This is the "new" callback that the RA layer uses to bump each
-   committed TARGET to NEW_REVNUM, one-at-a-time.  If RECURSE is set,
-   then every child below TARGET will be bumped as well.  It's a
-   function of type svn_ra_close_commit_func_t.  */
-svn_error_t *svn_wc_set_revision (void *baton,
-                                  svn_stringbuf_t *target,
-                                  svn_boolean_t recurse,
-                                  svn_revnum_t new_revnum);
+/* This is the callback that the RA layer uses to bump each committed
+   TARGET to NEW_REVNUM, one-at-a-time, after a commit succeeds.
+
+   REV_DATE and REV_AUTHOR are the string values of the date &
+   author props attached to the new filesystem revision.
+
+   If RECURSE is set, then every child below TARGET will be bumped as
+   well.
+
+   This is a function of type svn_ra_close_commit_func_t.  */
+svn_error_t * svn_wc_process_committed (void *baton,
+                                        svn_stringbuf_t *target,
+                                        svn_boolean_t recurse,
+                                        svn_revnum_t new_revnum,
+                                        svn_string_t *rev_date,
+                                        svn_string_t *rev_author);
+
 
 
 /* Update working copy PATH with NEW_REVISION after a commit has succeeded.

@@ -60,7 +60,9 @@ typedef svn_error_t *(*svn_ra_set_wc_prop_func_t) (void *close_baton,
 typedef svn_error_t *(*svn_ra_close_commit_func_t) (void *close_baton,
                                                     svn_stringbuf_t *path,
                                                     svn_boolean_t recurse,
-                                                    svn_revnum_t new_rev);
+                                                    svn_revnum_t new_rev,
+                                                    svn_string_t *rev_date,
+                                                    svn_string_t *rev_author);
 
 /* A function type for retrieving the youngest revision from a repos.   */
 typedef svn_error_t *(*svn_ra_get_latest_revnum_func_t) 

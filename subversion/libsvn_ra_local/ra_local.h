@@ -71,6 +71,9 @@ typedef struct svn_ra_local__commit_closer_t
   /* Target paths that are considered committed */
   apr_hash_t *committed_targets;
 
+  /* The filesystem that we just committed to. */
+  svn_fs_t *fs;
+
   /* A function given to RA by the client;  allows RA to bump WC
      revision numbers of targets. */
   svn_ra_close_commit_func_t close_func;
@@ -169,6 +172,24 @@ svn_error_t *svn_ra_local__get_editor (svn_delta_edit_fns_t **editor,
                                        void *hook_baton,
                                        apr_pool_t *pool);
 
+
+
+/* Return an EDITOR and EDIT_BATON which "wrap" around a given
+   UPDATE_EDITOR and UPDATE_EDIT_BATON.  SESSION is the currently open
+   ra_local session object.
+
+   The editor returned is a customized 'pipe' editor that slightly
+   tweaks the way the UPDATE_EDITOR is driven; specifically, extra
+   'entry props' are inserted into the stream whenever {open_root,
+   open_file, open_dir, add_file, add_dir} are called.
+*/
+svn_error_t *
+svn_ra_local__get_update_pipe_editor (svn_delta_edit_fns_t **editor,
+                                      struct svn_pipe_edit_baton **edit_baton,
+                                      const svn_delta_edit_fns_t *update_editor,
+                                      void *update_edit_baton,
+                                      svn_ra_local__session_baton_t *session,
+                                      apr_pool_t *pool);
 
 
 
