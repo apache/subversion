@@ -74,7 +74,7 @@ svn_cl__print_file_diff (svn_string_t *path,
   /* todo: This printf is NOT "my final answer" -- placeholder for
      real work to be done. */ 
   printf( "Index: %s\n", path->data );
-  printf( "===================================================================\n", path->data );
+  printf( "===================================================================\n" );
 
   err = svn_wc_run_cmd_in_directory (svn_string_create (".", pool), 
                                      SVN_CLIENT_DIFF,
