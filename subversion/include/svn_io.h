@@ -388,16 +388,6 @@ svn_stream_t *svn_stream_empty (apr_pool_t *pool);
  */
 svn_stream_t *svn_stream_from_aprfile (apr_file_t *file, apr_pool_t *pool);
 
-/** Convenience function for creating a stream which operates on an stdio file.
- *
- * Convenience function for creating streams which operate on stdio
- * files.  For convenience, if @a fp is NULL then @c svn_stream_empty(pool) 
- * is returned.  Note that the stream returned by these operations is not 
- * considered to "own" the underlying file, meaning that @c svn_stream_close() 
- * on the stream will not close the file.
- */
-svn_stream_t *svn_stream_from_stdio (FILE *fp, apr_pool_t *pool);
-
 /** Return a generic stream connected to stringbuf @a str.
  *
  * Return a generic stream connected to stringbuf @a str.  Allocate the

@@ -252,63 +252,6 @@ svn_stream_from_aprfile (apr_file_t *file, apr_pool_t *pool)
 
 
 
-/*** Generic stream for stdio files ***/
-struct baton_stdio {
-  FILE *fp;
-  apr_pool_t *pool;
-};
-
-
-static svn_error_t *
-read_handler_stdio (void *baton, char *buffer, apr_size_t *len)
-{
-  struct baton_stdio *btn = baton;
-  svn_error_t *err = SVN_NO_ERROR;
-  apr_size_t count;
-
-  count = fread (buffer, 1, *len, btn->fp);
-  if (count < *len && ferror(btn->fp))
-    err = svn_error_create (0, NULL,
-                            "read_handler_stdio: error reading");
-  *len = count;
-  return err;
-}
-
-
-static svn_error_t *
-write_handler_stdio (void *baton, const char *data, apr_size_t *len)
-{
-  struct baton_stdio *btn = baton;
-  svn_error_t *err = SVN_NO_ERROR;
-  apr_size_t count;
-
-  count = fwrite (data, 1, *len, btn->fp);
-  if (count < *len)
-    err = svn_error_create (0, NULL,
-                            "write_handler_stdio: error writing");
-  *len = count;
-  return err;
-}
-
-
-svn_stream_t *svn_stream_from_stdio (FILE *fp, apr_pool_t *pool)
-{
-  struct baton_stdio *baton;
-  svn_stream_t *stream;
-
-  if (fp == NULL)
-    return svn_stream_empty (pool);
-  baton = apr_palloc (pool, sizeof (*baton));
-  baton->fp = fp;
-  baton->pool = pool;
-  stream = svn_stream_create (baton, pool);
-  svn_stream_set_read (stream, read_handler_stdio);
-  svn_stream_set_write (stream, write_handler_stdio);
-  return stream;
-}
-
-
-
 /* Miscellaneous stream functions. */
 struct string_stream_baton
 {
