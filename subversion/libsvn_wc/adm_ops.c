@@ -221,6 +221,48 @@ svn_wc_set_revision (void *baton,
 
 
 
+svn_error_t *svn_wc_get_wc_prop (void *baton,
+                                 svn_string_t *target,
+                                 svn_string_t *name,
+                                 svn_string_t **value)
+{
+  struct svn_wc_close_commit_baton *ccb =
+    (struct svn_wc_close_commit_baton *) baton;
+
+  /* Prepend the baton's prefix to the target. */
+  svn_string_t *path = svn_string_dup (ccb->prefix_path, ccb->pool);
+  svn_path_add_component (path, target, svn_path_local_style);
+
+  /* And use our public interface to get the property value. */
+  SVN_ERR (svn_wc_prop_get (value, name, path, ccb->pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *svn_wc_set_wc_prop (void *baton,
+                                 svn_string_t *target,
+                                 svn_string_t *name,
+                                 svn_string_t *value)
+{
+  struct svn_wc_close_commit_baton *ccb =
+    (struct svn_wc_close_commit_baton *) baton;
+
+  /* Prepend the baton's prefix to the target. */
+  svn_string_t *path = svn_string_dup (ccb->prefix_path, ccb->pool);
+  svn_path_add_component (path, target, svn_path_local_style);
+
+  /* And use our public interface to get the property value. */
+  SVN_ERR (svn_wc_prop_set (name, value, path, ccb->pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+
+
+
+
 
 /* kff todo: not all of these really belong in wc_adm.  Some may get
    broken out into other files later.  They're just here to satisfy

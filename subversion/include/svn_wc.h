@@ -285,8 +285,10 @@ svn_error_t *svn_wc_add_file (svn_string_t *file,
 
 /*** Commits. ***/
 
+/* The RA layer needs 3 functions when doing a commit: */
+
 /* Publically declared, so libsvn_client can pass it off to the RA
-   layer with svn_wc_bump_target(). */
+   layer to use with any of the next three functions. */
 struct svn_wc_close_commit_baton
 {
   /* The "prefix" path that must be prepended to each target that
@@ -299,30 +301,27 @@ struct svn_wc_close_commit_baton
 };
 
 /* This is the "new" callback that the RA layer uses to bump each
-   committed target, one-at-a-time.  It's a function of type
-   svn_ra_close_commit_func_t.  
-
-   Eventually, the "track" editor's close_edit() routine needs to call
-   this too, for those times when it's specifically comingled with the
-   XML-output editor.  (svn_wc_close_commit and its helpers will then
-   be deprecated!) */
-
+   committed TARGET to NEW_REVNUM, one-at-a-time.  It's a function of
+   type svn_ra_close_commit_func_t.  */
 svn_error_t *svn_wc_set_revision (void *baton,
                                   svn_string_t *target,
                                   svn_revnum_t new_revnum);
 
-/* Update working copy PATH with NEW_REVISION after a commit has succeeded.
- * TARGETS is a hash of files/dirs that actually got committed --
- * these are the only ones who we can write log items for, and whose
- * revision numbers will get set.  todo: eventually this hash will be
- * of the sort used by svn_wc__compose_paths(), as with all entries
- * recursers.
- */
-svn_error_t *
-svn_wc_close_commit (svn_string_t *path,
-                     svn_revnum_t new_revision,
-                     apr_hash_t *targets,
-                     apr_pool_t *pool);
+/* This is a function of type svn_ra_get_wc_prop_t.  Return *VALUE for
+   property NAME on TARGET.  */
+svn_error_t *svn_wc_get_wc_prop (void *baton,
+                                 svn_string_t *target,
+                                 svn_string_t *name,
+                                 svn_string_t **value);
+
+/* This is a function of type svn_ra_set_wc_prop_t. Set property NAME
+   to VALUE on TARGET. */
+svn_error_t *svn_wc_set_wc_prop (void *baton,
+                                 svn_string_t *target,
+                                 svn_string_t *name,
+                                 svn_string_t *value);
+
+
 
 
 /* Crawl a tree depth-first, to import new data or commit changes.

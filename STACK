@@ -163,47 +163,6 @@ Changes to svn_delta_edit_fns_t:
    discussed on the list; see the "STATUS" lines for more.
 
    =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-   Change #3:  New "WC" properties.
-   STATUS: Will be done by Ben, Mike, or self, unless someone volunteers.
-   The Way It Works Now:
-      Properties attached to objects in the repository also appear in the
-      WC.  Similarly, properties added to WC objects get committed to the
-      repository. 
-   
-   Proposed Change:
-      Create a new class of properties that *only* exist in the WC.
-      These properties are stored for the benefit of RA layers.  We add
-      new editor functions:
-   
-            set_wc_dir_props (dir_baton, name, val)
-            set_wc_file_props (file_baton, name, val)
-   
-      If driving an editor:  if WC props exist for the object you're
-      describing, you *must* send them via these functions.
-   
-      If implementing an editor: if you receive WC props, you *must*
-      store them somewhere.
-   
-   Rationale:
-      The idea here is that RA layers often need to store and retrieve
-      RA-specific information in the working copy.  This is "out of band"
-      data" that is irrelevant to the repository.
-   
-      In the case of ra_dav, these properties are actually the versioned
-      resource URLs.  In the case of ra_local, we may store
-      authentication information this way (instead of using a .cvspass
-      file).  There may be other ra layers someday that need to store
-      private data in the same way, so we now have a general method for
-      doing so.
-   
-      Note:  this is the only editor change that *truly* has nothing to
-      do with "describing a tree change", which should make all of us
-      raise our collective eyebrows suspiciously.  However, I don't think
-      the "plug n' play" vision of editors is lost here, although we're
-      skirting the near the line.
-   
-   
-   =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
    Change #6:  Move textdeltas to the "other side" of the editor.
    STATUS: Being discussed on list; holding off on making this change.
    The Way It Works Now:
