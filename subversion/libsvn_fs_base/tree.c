@@ -573,7 +573,7 @@ get_copy_inheritance (copy_id_inherit_t *inherit_p,
      branch as its parent if the child itself is not a branch point,
      or if it is a branch point that we are accessing via its original
      copy destination path. */
-  SVN_ERR (svn_fs_bdb__get_copy (&copy, fs, child_copy_id, trail));
+  SVN_ERR (svn_fs_bdb__get_copy (&copy, fs, child_copy_id, trail, trail->pool));
   if (svn_fs_base__id_compare (copy->dst_noderev_id, child_id) == -1)
     return SVN_NO_ERROR;
 
@@ -864,7 +864,7 @@ make_path_mutable (svn_fs_root_t *root,
           break;
 
         case copy_id_inherit_new:
-          SVN_ERR (svn_fs_bdb__reserve_copy_id (&copy_id, fs, trail));
+          SVN_ERR (svn_fs_bdb__reserve_copy_id (&copy_id, fs, trail, trail->pool));
           break;
 
         case copy_id_inherit_self:
@@ -896,7 +896,7 @@ make_path_mutable (svn_fs_root_t *root,
           SVN_ERR (svn_fs_bdb__create_copy (fs, copy_id, copy_src_path,
                                             svn_fs_base__id_txn_id (node_id),
                                             new_node_id,
-                                            copy_kind_soft, trail));
+                                            copy_kind_soft, trail, trail->pool));
           SVN_ERR (svn_fs_base__add_txn_copy (fs, txn_id, copy_id, trail));
         }
     }
@@ -969,7 +969,7 @@ add_change (svn_fs_t *fs,
   change.kind = change_kind;
   change.text_mod = text_mod;
   change.prop_mod = prop_mod;
-  return svn_fs_bdb__changes_add (fs, txn_id, &change, trail);
+  return svn_fs_bdb__changes_add (fs, txn_id, &change, trail, trail->pool);
 }
 
 
@@ -1519,7 +1519,7 @@ txn_body_pred_count (void *baton, trail_t *trail)
   struct txn_pred_count_args *args = baton;
 
   SVN_ERR (svn_fs_bdb__get_node_revision (&noderev, trail->fs,
-                                          args->id, trail));
+                                          args->id, trail, trail->pool));
   args->pred_count = noderev->predecessor_count;
   return SVN_NO_ERROR;
 }
@@ -1539,7 +1539,8 @@ txn_body_pred_id (void *baton, trail_t *trail)
   node_revision_t *nr;
   struct txn_pred_id_args *args = baton;
 
-  SVN_ERR (svn_fs_bdb__get_node_revision (&nr, trail->fs, args->id, trail));
+  SVN_ERR (svn_fs_bdb__get_node_revision (&nr, trail->fs, args->id, 
+                                          trail, trail->pool));
   if (nr->predecessor_id)
     args->pred_id = svn_fs_base__id_copy (nr->predecessor_id, args->pool);
   else
@@ -1772,12 +1773,14 @@ update_ancestry (svn_fs_t *fs,
     return svn_error_createf
       (SVN_ERR_FS_NOT_MUTABLE, NULL,
        _("Unexpected immutable node at '%s'"), target_path);
-  SVN_ERR (svn_fs_bdb__get_node_revision (&noderev, fs, target_id, trail));
+  SVN_ERR (svn_fs_bdb__get_node_revision (&noderev, fs, target_id, 
+                                          trail, trail->pool));
   noderev->predecessor_id = source_id;
   noderev->predecessor_count = source_pred_count;
   if (noderev->predecessor_count != -1)
     noderev->predecessor_count++;
-  return svn_fs_bdb__put_node_revision (fs, target_id, noderev, trail);
+  return svn_fs_bdb__put_node_revision (fs, target_id, noderev, 
+                                        trail, trail->pool);
 }
 
 
@@ -1795,7 +1798,7 @@ undelete_change (svn_fs_t *fs,
   path = svn_fs_base__canonicalize_abspath (path, trail->pool);
 
   /* First, get the changes associated with TXN_ID. */
-  SVN_ERR (svn_fs_bdb__changes_fetch (&changes, fs, txn_id, trail));
+  SVN_ERR (svn_fs_bdb__changes_fetch (&changes, fs, txn_id, trail, trail->pool));
 
   /* Now, do any of those changes apply to path and indicate deletion? */
   this_change = apr_hash_get (changes, path, APR_HASH_KEY_STRING);
@@ -2039,8 +2042,10 @@ merge (svn_stringbuf_t *conflict_p,
     node_revision_t *tgt_nr, *anc_nr;
 
     /* Get node revisions for our id's. */
-    SVN_ERR (svn_fs_bdb__get_node_revision (&tgt_nr, fs, target_id, trail));
-    SVN_ERR (svn_fs_bdb__get_node_revision (&anc_nr, fs, ancestor_id, trail));
+    SVN_ERR (svn_fs_bdb__get_node_revision (&tgt_nr, fs, target_id, 
+                                            trail, trail->pool));
+    SVN_ERR (svn_fs_bdb__get_node_revision (&anc_nr, fs, ancestor_id, 
+                                            trail, trail->pool));
 
     /* Now compare the prop-keys of the skels.  Note that just because
        the keys are different -doesn't- mean the proplists have
@@ -2487,7 +2492,7 @@ txn_body_commit (void *baton, trail_t *trail)
 
   /* Getting the youngest revision locks the revisions table until
      this trail is done. */
-  SVN_ERR (svn_fs_bdb__youngest_rev (&youngest_rev, fs, trail));
+  SVN_ERR (svn_fs_bdb__youngest_rev (&youngest_rev, fs, trail, trail->pool));
 
   /* If the root of the youngest revision is the same as txn's base,
      then no further merging is necessary and we can commit. */
@@ -3071,7 +3076,7 @@ txn_body_copied_from (void *baton, trail_t *trail)
       copy_t *copy;
       SVN_ERR (svn_fs_bdb__get_copy (&copy, fs,
                                      svn_fs_base__id_copy_id (node_id),
-                                     trail));
+                                     trail, trail->pool));
       if ((copy->kind == copy_kind_real)
           && svn_fs_base__id_eq (copy->dst_noderev_id, node_id))
         {
@@ -3807,7 +3812,8 @@ txn_body_paths_changed (void *baton,
   else
     txn_id = args->root->txn;
 
-  return svn_fs_bdb__changes_fetch (&(args->changes), fs, txn_id, trail);
+  return svn_fs_bdb__changes_fetch (&(args->changes), fs, txn_id, 
+                                    trail, trail->pool);
 }
 
 
@@ -3915,7 +3921,7 @@ examine_copy_inheritance (const char **copy_id,
       /* Get the COPY record.  If it was a real copy (not an implicit
          one), we have our answer.  Otherwise, we fall through to the
          recursive case. */
-      SVN_ERR (svn_fs_bdb__get_copy (copy, fs, *copy_id, trail));
+      SVN_ERR (svn_fs_bdb__get_copy (copy, fs, *copy_id, trail, trail->pool));
       if ((*copy)->kind != copy_kind_soft)
         return SVN_NO_ERROR;
     }
@@ -4051,7 +4057,8 @@ txn_body_history_prev (void *baton, trail_t *trail)
 
       /* Get the COPY record if we haven't already fetched it. */
       if (! copy)
-        SVN_ERR (svn_fs_bdb__get_copy (&copy, fs, end_copy_id, trail));
+        SVN_ERR (svn_fs_bdb__get_copy (&copy, fs, end_copy_id, trail, 
+                                       trail->pool));
 
       /* Figure out the destination path of the copy operation. */
       SVN_ERR (svn_fs_base__dag_get_node (&dst_node, fs,

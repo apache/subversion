@@ -74,20 +74,20 @@ svn_error_t *
 svn_fs_bdb__put_txn (svn_fs_t *fs,
                      const transaction_t *txn,
                      const char *txn_name,
-                     trail_t *trail)
+                     trail_t *trail,
+                     apr_pool_t *pool)
 {
   base_fs_data_t *bfd = fs->fsap_data;
   skel_t *txn_skel;
   DBT key, value;
 
   /* Convert native type to skel. */
-  SVN_ERR (svn_fs_base__unparse_transaction_skel (&txn_skel, txn,
-                                                  trail->pool));
+  SVN_ERR (svn_fs_base__unparse_transaction_skel (&txn_skel, txn, pool));
 
   /* Only in the context of this function do we know that the DB call
      will not attempt to modify txn_name, so the cast belongs here.  */
   svn_fs_base__str_to_dbt (&key, txn_name);
-  svn_fs_base__skel_to_dbt (&value, txn_skel, trail->pool);
+  svn_fs_base__skel_to_dbt (&value, txn_skel, pool);
   svn_fs_base__trail_debug (trail, "transactions", "put");
   SVN_ERR (BDB_WRAP (fs, "storing transaction record",
                      bfd->transactions->put (bfd->transactions, trail->db_txn,
@@ -98,11 +98,12 @@ svn_fs_bdb__put_txn (svn_fs_t *fs,
 
 
 /* Allocate a Subversion transaction ID in FS, as part of TRAIL.  Set
-   *ID_P to the new transaction ID, allocated in TRAIL->pool.  */
+   *ID_P to the new transaction ID, allocated in POOL.  */
 static svn_error_t *
 allocate_txn_id (const char **id_p,
                  svn_fs_t *fs,
-                 trail_t *trail)
+                 trail_t *trail,
+                 apr_pool_t *pool)
 {
   base_fs_data_t *bfd = fs->fsap_data;
   DBT query, result;
@@ -119,10 +120,10 @@ allocate_txn_id (const char **id_p,
                                              &query,
                                              svn_fs_base__result_dbt (&result),
                                              0)));
-  svn_fs_base__track_dbt (&result, trail->pool);
+  svn_fs_base__track_dbt (&result, pool);
 
   /* Set our return value. */
-  *id_p = apr_pstrmemdup (trail->pool, result.data, result.size);
+  *id_p = apr_pstrmemdup (pool, result.data, result.size);
 
   /* Bump to future key. */
   len = result.size;
@@ -142,19 +143,20 @@ svn_error_t *
 svn_fs_bdb__create_txn (const char **txn_name_p,
                         svn_fs_t *fs,
                         const svn_fs_id_t *root_id,
-                        trail_t *trail)
+                        trail_t *trail,
+                        apr_pool_t *pool)
 {
   const char *txn_name;
   transaction_t txn;
 
-  SVN_ERR (allocate_txn_id (&txn_name, fs, trail));
+  SVN_ERR (allocate_txn_id (&txn_name, fs, trail, pool));
   txn.kind = transaction_kind_normal;
   txn.root_id = root_id;
   txn.base_id = root_id;
   txn.proplist = NULL;
   txn.copies = NULL;
   txn.revision = SVN_INVALID_REVNUM;
-  SVN_ERR (svn_fs_bdb__put_txn (fs, &txn, txn_name, trail));
+  SVN_ERR (svn_fs_bdb__put_txn (fs, &txn, txn_name, trail, pool));
 
   *txn_name_p = txn_name;
   return SVN_NO_ERROR;
@@ -164,14 +166,15 @@ svn_fs_bdb__create_txn (const char **txn_name_p,
 svn_error_t *
 svn_fs_bdb__delete_txn (svn_fs_t *fs,
                         const char *txn_name,
-                        trail_t *trail)
+                        trail_t *trail,
+                        apr_pool_t *pool)
 {
   base_fs_data_t *bfd = fs->fsap_data;
   DBT key;
   transaction_t *txn;
 
   /* Make sure TXN is dead. */
-  SVN_ERR (svn_fs_bdb__get_txn (&txn, fs, txn_name, trail));
+  SVN_ERR (svn_fs_bdb__get_txn (&txn, fs, txn_name, trail, pool));
   if (is_committed (txn))
     return svn_fs_base__err_txn_not_mutable (fs, txn_name);
 
@@ -190,7 +193,8 @@ svn_error_t *
 svn_fs_bdb__get_txn (transaction_t **txn_p,
                      svn_fs_t *fs,
                      const char *txn_name,
-                     trail_t *trail)
+                     trail_t *trail,
+                     apr_pool_t *pool)
 {
   base_fs_data_t *bfd = fs->fsap_data;
   DBT key, value;
@@ -205,20 +209,19 @@ svn_fs_bdb__get_txn (transaction_t **txn_p,
                                    svn_fs_base__str_to_dbt (&key, txn_name),
                                    svn_fs_base__result_dbt (&value),
                                    0);
-  svn_fs_base__track_dbt (&value, trail->pool);
+  svn_fs_base__track_dbt (&value, pool);
 
   if (db_err == DB_NOTFOUND)
     return svn_fs_base__err_no_such_txn (fs, txn_name);
   SVN_ERR (BDB_WRAP (fs, "reading transaction", db_err));
 
   /* Parse TRANSACTION skel */
-  skel = svn_fs_base__parse_skel (value.data, value.size, trail->pool);
+  skel = svn_fs_base__parse_skel (value.data, value.size, pool);
   if (! skel)
     return svn_fs_base__err_corrupt_txn (fs, txn_name);
 
   /* Convert skel to native type. */
-  SVN_ERR (svn_fs_base__parse_transaction_skel (&transaction, skel,
-                                                trail->pool));
+  SVN_ERR (svn_fs_base__parse_transaction_skel (&transaction, skel, pool));
   *txn_p = transaction;
   return SVN_NO_ERROR;
 }
@@ -227,12 +230,12 @@ svn_fs_bdb__get_txn (transaction_t **txn_p,
 svn_error_t *
 svn_fs_bdb__get_txn_list (apr_array_header_t **names_p,
                           svn_fs_t *fs,
-                          apr_pool_t *pool,
-                          trail_t *trail)
+                          trail_t *trail,
+                          apr_pool_t *pool)
 {
   base_fs_data_t *bfd = fs->fsap_data;
   apr_size_t const next_id_key_len = strlen (NEXT_KEY_KEY);
-  apr_pool_t *subpool = svn_pool_create (trail->pool);
+  apr_pool_t *subpool = svn_pool_create (pool);
   apr_array_header_t *names;
   DBC *cursor;
   DBT key, value;
@@ -282,7 +285,7 @@ svn_fs_bdb__get_txn_list (apr_array_header_t **names_p,
         {
           cursor->c_close (cursor);
           return svn_fs_base__err_corrupt_txn
-            (fs, apr_pstrmemdup (trail->pool, key.data, key.size));
+            (fs, apr_pstrmemdup (pool, key.data, key.size));
         }
 
       /* Convert skel to native type. */

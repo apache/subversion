@@ -984,7 +984,8 @@ txn_body_check_id (void *baton, trail_t *trail)
   node_revision_t *noderev;
   svn_error_t *err;
 
-  err = svn_fs_bdb__get_node_revision (&noderev, args->fs, args->id, trail);
+  err = svn_fs_bdb__get_node_revision (&noderev, args->fs, args->id, 
+                                       trail, trail->pool);
 
   if (err && (err->apr_err == SVN_ERR_FS_ID_NOT_FOUND))
     args->present = FALSE;
@@ -5116,7 +5117,8 @@ static svn_error_t *
 txn_body_get_txn (void *baton, trail_t *trail)
 {
   struct get_txn_args *args = baton;
-  return svn_fs_bdb__get_txn (args->txn, args->fs, args->txn_name, trail);
+  return svn_fs_bdb__get_txn (args->txn, args->fs, args->txn_name, 
+                              trail, trail->pool);
 }
 
 
