@@ -175,6 +175,9 @@ a <tt>file:</tt> URL?</a></li>
     never seem to happen.</a></li>
 <li><a href="#diff-cmd">Why does my --diff-cmd complain about '-u'?
     I tried to override it with --extensions, but it's not working.</a></li>
+<li><a href="#plaintext-passwords">Ahhh!  I just discovered that my
+    Subversion client is caching passwords in plain-text on disk!
+    AHHH!</a></li>
 </ul>
 
 <h4>Developer questions:</h4>
@@ -247,14 +250,13 @@ stuck to that same standard.</p>
 <h3><a name="interop">What is Subversion's client/server
     interoperability policy?</a></h3>
 
-<p>For pre-1.0 releases of Subversion (which you shouldn't be using
- anymore!), the client and server are designed to work as long as they
- aren't more than one major release version apart.  (For example, a
- 0.25.X client will talk to a 0.24.X or 0.26.X server.)</p>
+<p>The client and server are designed to work as long as they aren't
+ more than one major release version apart.  For example, any 1.X
+ client will work with a 1.Y server.  However, if the client and
+ server versions don't match, certain features may not be available.</p>
 
-<p>Now that Subversion is beyond the 1.0 milestone, client/server
- interoperability policy is documented in the "Compatibility" section
- of the <a
+<p>See the client/server interoperability policy is documented in the
+ "Compatibility" section of the <a
  href="http://svn.collab.net/repos/svn/trunk/HACKING">HACKING
  file</a>.</p>
 
@@ -2156,6 +2158,35 @@ working copy.</p>
 
 <p>For further information, see issue
 <a href="http://subversion.tigris.org/issues/show_bug.cgi?id=2044">#2044</a>.</p>
+
+<![CDATA[-----------------------------------------------------------]]>
+
+<h3><a name="plaintext-passwords">Ahhh!  I just discovered that my
+    Subversion client is caching passwords in plain-text on disk!
+    AHHH!</a></h3>
+
+<p>Calm down, take a deep breath.</p>
+
+<p>First of all, notice that the directory which contains the cached
+passwords (usually ~/.subversion/auth/ on Unix systems) has permissions
+of 700, meaning only you can read them.  Trust your OS to protect data
+on disk.</p>
+
+<p>Secondly, if you're really worried, you can permanently turn off
+password caching.  With an svn 1.0 client, just set 'store-auth-creds
+= no' in your run-time config file.  With an svn 1.1 client or later,
+you can use the more narrowly-defined 'store-passwords = no' (so that
+server certs are still cached.)</p>
+
+<p>Lastly, we point out that CVS has been caching passwords for years
+in the .cvspass file.  It may look like the passwords in .cvspass are
+encrypted, but in fact they're only lightly scrambled with an
+algorithm that's the moral equivalent to rot13.  They can be cracked
+instantly.  The only utility of the the scrambling is to prevent users
+(like root) from accidentally seeing the password.  Nobody's cared
+enough to to do this for Subversion yet; if you're interested, send
+patches to the dev@ list.</p>
+
 
 
 <![CDATA[=========================================================]]>
