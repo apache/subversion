@@ -1459,9 +1459,8 @@ svn_wc__entry_modify (svn_wc_adm_access_t *adm_access,
   /* Ensure that NAME is valid. */
   if (name == NULL)
     name = SVN_WC_ENTRY_THIS_DIR;
-
-  pool = svn_wc_adm_access_pool (adm_access);
-  name = apr_pstrdup (pool, name);
+  else
+    name = apr_pstrdup (svn_wc_adm_access_pool (adm_access), name);
 
   if (modify_flags & SVN_WC__ENTRY_MODIFY_SCHEDULE)
     {
@@ -1473,7 +1472,8 @@ svn_wc__entry_modify (svn_wc_adm_access_t *adm_access,
       /* If scheduling changes were made, we have a special routine to
          manage those modifications. */
       SVN_ERR (fold_scheduling (entries, name, &modify_flags, 
-                                &entry->schedule, pool));
+                                &entry->schedule,
+                                svn_wc_adm_access_pool (adm_access)));
 
       /* Special case:  fold_state_changes() may have actually REMOVED
          the entry in question!  If so, don't try to fold_entry, as
@@ -1489,7 +1489,8 @@ svn_wc__entry_modify (svn_wc_adm_access_t *adm_access,
   /* If the entry wasn't just removed from the entries hash, fold the
      changes into the entry. */
   if (! entry_was_deleted_p)
-    fold_entry (entries, name, modify_flags, entry, pool);
+    fold_entry (entries, name, modify_flags, entry,
+                svn_wc_adm_access_pool (adm_access));
 
   /* Sync changes to disk. */
   SVN_ERR (svn_wc__entries_write (entries, adm_access, pool));
