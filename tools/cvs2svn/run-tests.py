@@ -332,7 +332,7 @@ def show_usage():
 
 def attr_exec():
   "detection of the executable flag"
-  repos, wc, logs = ensure_conversion('main', None, 1)
+  repos, wc, logs = ensure_conversion('main')
   st = os.stat(os.path.join(wc, 'trunk', 'single-files', 'attr-exec'))
   if not st[0] & stat.S_IXUSR:
     raise svntest.Failure
@@ -366,7 +366,7 @@ def tolerate_corruption():
 
 def space_fname():
   "conversion of filename with a space"
-  repos, wc, logs = ensure_conversion('main', None, 1)
+  repos, wc, logs = ensure_conversion('main')
   if not os.path.exists(os.path.join(wc, 'trunk', 'single-files',
                                      'space fname')):
     raise svntest.Failure
@@ -405,7 +405,7 @@ def phoenix_branch():
 
 def two_quick():
   "two commits in quick succession"
-  repos, wc, logs = ensure_conversion('main', None, 1)
+  repos, wc, logs = ensure_conversion('main')
   out = run_svn('log', os.path.join(wc, 'trunk', 'single-files', 'twoquick'))
   num_revisions = 0
   for line in out:
@@ -450,7 +450,7 @@ def prune_with_care():
   # In the test below, 'trunk/full-prune/first' represents
   # cookie, and 'trunk/full-prune/second' represents NEWS.
 
-  repos, wc, logs = ensure_conversion('main', None, 1)
+  repos, wc, logs = ensure_conversion('main')
 
   # Confirm that revision 4 removes '/trunk/full-prune/first',
   # and that revision 6 removes '/trunk/full-prune'.
@@ -464,25 +464,28 @@ def prune_with_care():
   # pruning from going farther than the subdirectory containing first
   # and second.
 
+  rev = 7
   for path in ('/trunk/full-prune/first',
                '/trunk/full-prune-reappear/sub/first',
                '/trunk/partial-prune/sub/first'):
-    if not (logs[4].changed_paths.get(path) == 'D'):
-      print "Revision 4 failed to remove '%s'." % path
+    if not (logs[rev].changed_paths.get(path) == 'D'):
+      print "Revision %d failed to remove '%s'." % (rev, path)
       raise svntest.Failure
 
+  rev = 9
   for path in ('/trunk/full-prune',
                '/trunk/full-prune-reappear',
                '/trunk/partial-prune/sub'):
-    if not (logs[6].changed_paths.get(path) == 'D'):
-      print "Revision 6 failed to remove '%s'." % path
+    if not (logs[rev].changed_paths.get(path) == 'D'):
+      print "Revision %d failed to remove '%s'." % (rev, path)
       raise svntest.Failure
 
+  rev = 30
   for path in ('/trunk/full-prune-reappear',
                '/trunk/full-prune-reappear',
                '/trunk/full-prune-reappear/appears-later'):
-    if not (logs[19].changed_paths.get(path) == 'A'):
-      print "Revision 19 failed to create path '%s'." % path
+    if not (logs[rev].changed_paths.get(path) == 'A'):
+      print "Revision %d failed to create path '%s'." % (rev, path)
       raise svntest.Failure
 
 
@@ -516,9 +519,10 @@ def double_delete():
 def simple_commits():
   "simple trunk commits"
   # See test-data/main-cvsrepos/proj/README.
-  repos, wc, logs = ensure_conversion('main', None, 1)
+  repos, wc, logs = ensure_conversion('main')
 
   # The initial import.
+  rev = 16
   for path in ('/trunk/proj', '/trunk/proj/default', '/trunk/proj/sub1',
                '/trunk/proj/sub1/default', '/trunk/proj/sub1/subsubA',
                '/trunk/proj/sub1/subsubA/default', '/trunk/proj/sub1/subsubB',
@@ -526,40 +530,43 @@ def simple_commits():
                '/trunk/proj/sub2/default', '/trunk/proj/sub2/subsubA',
                '/trunk/proj/sub2/subsubA/default', '/trunk/proj/sub3',
                '/trunk/proj/sub3/default'):
-    if not (logs[11].changed_paths.get(path) == 'A'):
+    if not (logs[rev].changed_paths.get(path) == 'A'):
       raise svntest.Failure
 
-  if logs[11].msg.find('Initial revision') != 0:
+  if logs[rev].msg.find('Initial revision') != 0:
     raise svntest.Failure
     
   # The first commit.
+  rev = 18
   for path in ('/trunk/proj/sub1/subsubA/default', '/trunk/proj/sub3/default'):
-    if not (logs[12].changed_paths.get(path) == 'M'):
+    if not (logs[rev].changed_paths.get(path) == 'M'):
       raise svntest.Failure
 
-  if logs[12].msg.find('First commit to proj, affecting two files.') != 0:
+  if logs[rev].msg.find('First commit to proj, affecting two files.') != 0:
     raise svntest.Failure
 
   # The second commit.
+  rev = 19
   for path in ('/trunk/proj/default', '/trunk/proj/sub1/default',
                '/trunk/proj/sub1/subsubA/default',
                '/trunk/proj/sub1/subsubB/default',
                '/trunk/proj/sub2/default',
                '/trunk/proj/sub2/subsubA/default',
                '/trunk/proj/sub3/default'):
-    if not (logs[13].changed_paths.get(path) == 'M'):
+    if not (logs[rev].changed_paths.get(path) == 'M'):
       raise svntest.Failure
 
-  if logs[13].msg.find('Second commit to proj, affecting all 7 files.') != 0:
+  if logs[rev].msg.find('Second commit to proj, affecting all 7 files.') != 0:
     raise svntest.Failure
 
 
 def interleaved_commits():
   "two interleaved trunk commits, different log msgs"
   # See test-data/main-cvsrepos/proj/README.
-  repos, wc, logs = ensure_conversion('main', None, 1)
+  repos, wc, logs = ensure_conversion('main')
 
   # The initial import.
+  rev = 23
   for path in ('/trunk/interleaved',
                '/trunk/interleaved/1',
                '/trunk/interleaved/2',
@@ -571,10 +578,10 @@ def interleaved_commits():
                '/trunk/interleaved/c',
                '/trunk/interleaved/d',
                '/trunk/interleaved/e',):
-    if not (logs[15].changed_paths.get(path) == 'A'):
+    if not (logs[rev].changed_paths.get(path) == 'A'):
       raise svntest.Failure
 
-  if logs[15].msg.find('Initial revision') != 0:
+  if logs[rev].msg.find('Initial revision') != 0:
     raise svntest.Failure
     
   # This PEP explains why we pass the 'logs' parameter to these two
@@ -610,15 +617,16 @@ def interleaved_commits():
   # One of the commits was letters only, the other was numbers only.
   # But they happened "simultaneously", so we don't assume anything
   # about which commit appeared first, we just try both ways.
-  if not ((check_letters(16, logs) and check_numbers(17, logs))
-          or (check_numbers(16, logs) and check_letters(17, logs))):
+  rev = 25
+  if not ((check_letters(rev, logs) and check_numbers(rev + 1, logs))
+          or (check_numbers(rev, logs) and check_letters(rev + 1, logs))):
     raise svntest.Failure
 
 
 def simple_tags():
   "simple tags"
   # See test-data/main-cvsrepos/proj/README.
-  repos, wc, logs = ensure_conversion('main', None, 1)
+  repos, wc, logs = ensure_conversion('main')
 
   ### The actual revision number here (and in other tests) will have
   ### to change when tags and branches are recognized.
@@ -674,34 +682,34 @@ def simple_tags():
 def simple_branch_commits():
   "simple branch commits"
   # See test-data/main-cvsrepos/proj/README.
-  repos, wc, logs = ensure_conversion('main', None, 1)
+  repos, wc, logs = ensure_conversion('main')
 
-  ### The actual revision number here (and in other tests) will have
-  ### to change when tags and branches are recognized.
-  if not logs.has_key(14):
+  rev = 21
+  if not logs.has_key(rev):
     raise svntest.Failure
 
   for path in ('/branches/B_MIXED/proj/default',
                '/branches/B_MIXED/proj/sub1/default',
                '/branches/B_MIXED/proj/sub2/subsubA/default'):
-    if not (logs[14].changed_paths.get(path) == 'M'):
+    if not (logs[rev].changed_paths.get(path) == 'M'):
       raise svntest.Failure
 
-  if logs[14].msg.find('Modify three files, on branch B_MIXED.') != 0:
+  if logs[rev].msg.find('Modify three files, on branch B_MIXED.') != 0:
     raise svntest.Failure
 
 
 def mixed_commit():
   "a commit affecting both trunk and a branch"
   # See test-data/main-cvsrepos/proj/README.
-  repos, wc, logs = ensure_conversion('main', None, 1)
+  repos, wc, logs = ensure_conversion('main')
 
+  rev = 22
   for path in ('/trunk/proj/sub2/default', 
                '/branches/B_MIXED/proj/sub2/branch_B_MIXED_only'):
-    if not (logs[13].changed_paths.get(path) == 'M'):
+    if not (logs[rev].changed_paths.get(path) == 'M'):
       raise svntest.Failure
 
-  if logs[13].msg.find('A single commit affecting one file on branch B_MIXED '
+  if logs[rev].msg.find('A single commit affecting one file on branch B_MIXED '
                        'and one on trunk.') != 0:
     raise svntest.Failure
 
@@ -746,8 +754,8 @@ test_list = [ None,
               simple_commits,
               interleaved_commits,
               XFail(simple_tags),
-              XFail(simple_branch_commits),
-              XFail(mixed_commit),
+              simple_branch_commits,
+              mixed_commit,
               split_branch,
               resync_misgroups,
              ]
