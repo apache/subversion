@@ -411,6 +411,40 @@ def log_with_empty_repos(sbox):
   return 0
 
 
+def log_where_nothing_changed(sbox):
+  "test 'svn log -rN some_dir_unchanged_in_N'"
+  if sbox.build():
+    return 1
+
+  # Fix bug whereby running 'svn log -rN SOMEPATH' would result in an
+  # xml protocol error if there were no changes in revision N
+  # underneath SOMEPATH.  This problem was introduced in revision
+  # 3811, which didn't cover the case where svn_repos_get_logs might
+  # invoke log_receiver zero times.  Since the reciever never ran, the
+  # lrb->needs_header flag never got cleared.  Control would proceed
+  # without error to the end of dav_svn__log_report(), which would
+  # send a closing tag even though no opening tag had ever been sent.
+
+  rho_path = os.path.join (sbox.wc_dir, 'A', 'D', 'G', 'rho')
+  svntest.main.file_append (rho_path, "some new material in rho")
+  stdout_lines, stderr_lines = svntest.main.run_svn \
+                               (None, 'ci', '-m', 'log msg', rho_path)
+  if (len(stderr_lines) != 0):
+    print stderr_lines
+    return 1
+
+  # Now run 'svn log -r2' on a directory unaffected by revision 2.
+  H_path = os.path.join (sbox.wc_dir, 'A', 'D', 'H')
+  stdout_lines, stderr_lines = svntest.main.run_svn(None, 'log', '-r', '2',
+                                                    H_path)
+
+  if (len(stderr_lines) != 0):
+    print stderr_lines
+    return 1
+
+  return 0
+
+
 ########################################################################
 # Run the tests
 
@@ -420,6 +454,7 @@ test_list = [ None,
               plain_log,
               versioned_log_message,
               log_with_empty_repos,
+              log_where_nothing_changed,
              ]
 
 if __name__ == '__main__':
