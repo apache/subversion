@@ -14,8 +14,9 @@ Packager: David Summers <david@summersoft.fay.ar.us>
 Requires: apr >= 2001.10.24
 Requires: db3 >= 3.3.11
 Requires: expat
-Requires: neon = %{neon_version}
 Requires: libxml
+Requires: neon = %{neon_version}
+Requires: w3c-libwww
 BuildPreReq: apr-devel >= 2001.10.24
 BuildPreReq: autoconf >= 2.52
 BuildPreReq: db3-devel >= 3.3.11
@@ -24,6 +25,7 @@ BuildPreReq: libtool >= 1.4.2
 BuildPreReq: libxml-devel
 BuildPreReq: neon = %{neon_version}
 BuildPreReq: python
+BuildPreReq: w3c-libwww-devel
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}
 Prefix: /usr
 %description
@@ -57,6 +59,7 @@ Group: Utilities/System
 Summary: Apache server module for Subversion server.
 Requires: apache-devel >= 2.0.16
 Requires: subversion
+BuildPreReq: apache-devel >= 2.0.16
 %description server
 The subversion-server package adds the Subversion server Apache module to
 the Apache directories and configuration.
@@ -125,7 +128,7 @@ rm -rf $RPM_BUILD_ROOT
 
 %files
 %defattr(-,root,root)
-%doc AUTHORS BUGS COPYING HACKING IDEAS INSTALL NEWS PORTING
+%doc BUGS COMMITTERS COPYING HACKING IDEAS INSTALL NEWS PORTING
 %doc README STACK TASKS
 %doc doc notes tools subversion/LICENSE
 /usr/bin/svn
@@ -142,4 +145,4 @@ rm -rf $RPM_BUILD_ROOT
 
 %files server
 %defattr(-,root,root)
-/usr/lib/apache/*
+/usr/lib/apache/libmod_dav_svn.*
