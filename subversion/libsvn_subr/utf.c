@@ -53,6 +53,8 @@ static apr_thread_mutex_t *xlate_handle_mutex = NULL;
 
 typedef struct xlate_handle_node_t {
   apr_xlate_t *handle;
+  /* The name of a char encoding or APR_LOCALE_CHARSET. */
+  const char *frompage, *topage;
   struct xlate_handle_node_t *next;
 } xlate_handle_node_t;
 
@@ -188,6 +190,11 @@ get_xlate_handle_node (xlate_handle_node_t **ret,
   /* Note that we still have the mutex locked (if it is initialized), so we
      can use the global pool for creating the new xlate handle. */
 
+  /* The error handling doesn't support the following cases, since we don't
+     use them currently.  Catch this here. */
+  assert (frompage != APR_DEFAULT_CHARSET && topage != APR_DEFAULT_CHARSET
+          && (frompage != APR_LOCALE_CHARSET || topage != APR_LOCALE_CHARSET));
+
   /* Use the correct pool for creating the handle. */
   if (userdata_key && xlate_handle_hash)
     pool = apr_hash_pool_get (xlate_handle_hash);
@@ -195,6 +202,10 @@ get_xlate_handle_node (xlate_handle_node_t **ret,
   /* Try to create a handle. */
   *ret = apr_palloc (pool, sizeof(xlate_handle_node_t));
   apr_err = apr_xlate_open (&(*ret)->handle, topage, frompage, pool);
+  (*ret)->frompage = ((frompage != APR_LOCALE_CHARSET)
+                      ? apr_pstrdup (pool, frompage) : frompage);
+  (*ret)->topage = ((topage != APR_LOCALE_CHARSET)
+                    ? apr_pstrdup (pool, topage) : topage);
   (*ret)->next = NULL;
 
   /* If we are called from inside a pool cleanup handler, the just created
@@ -222,13 +233,24 @@ get_xlate_handle_node (xlate_handle_node_t **ret,
       return SVN_NO_ERROR;
     }
   if (apr_err != APR_SUCCESS)
-    /* Can't use svn_error_wrap_apr here because it calls functions in
-       this file, leading to infinite recursion. */
-    return svn_error_createf
-      (apr_err, NULL, _("Can't create a converter from '%s' to '%s'"),
-       (topage == APR_LOCALE_CHARSET ? _("native") : topage),
-       (frompage == APR_LOCALE_CHARSET ? _("native") : frompage));
-
+    {
+      const char *errstr;
+      /* Can't use svn_error_wrap_apr here because it calls functions in
+         this file, leading to infinite recursion. */
+      if (frompage == APR_LOCALE_CHARSET)
+        errstr = apr_psprintf (pool,
+                               _("Can't create a character converter from "
+                                 "native encoding to '%s'"), topage);
+      else if (topage == APR_LOCALE_CHARSET)
+        errstr = apr_psprintf (pool,
+                               _("Can't create a character converter from "
+                                 "'%s' to native encoding"), frompage);
+      else
+        errstr = apr_psprintf (pool,
+                               _("Can't create a character converter from "
+                                 "'%s' to '%s'"), frompage, topage);
+      return svn_error_create (apr_err, NULL, errstr);
+    }
   return SVN_NO_ERROR;
 }
 
@@ -298,10 +320,62 @@ get_uton_xlate_handle_node (xlate_handle_node_t **ret, apr_pool_t *pool)
 }
 
 
-/* Convert SRC_LENGTH bytes of SRC_DATA in CONVSET, store the result
+/* Copy LEN bytes of SRC, converting non-ASCII and zero bytes to ?\nnn
+   sequences, allocating the result in POOL. */
+const char *
+fuzzy_escape (const char *src, apr_size_t len, apr_pool_t *pool)
+{
+  const char *src_orig = src, *src_end = src + len;
+  apr_size_t new_len = 0;
+  char *new;
+  const char *new_orig;
+
+  /* First count how big a dest string we'll need. */
+  while (src < src_end)
+    {
+      if (! apr_isascii (*src) || *src == '\0')
+        new_len += 5;  /* 5 slots, for "?\XXX" */
+      else
+        new_len += 1;  /* one slot for the 7-bit char */
+
+      src++;
+    }
+
+  /* Allocate that amount. */
+  new = apr_palloc (pool, new_len + 1);
+
+  new_orig = new;
+
+  /* And fill it up. */
+  while (src_orig < src_end)
+    {
+      if (! apr_isascii (*src_orig) || src_orig == '\0')
+        {
+          /* This is the same format as svn_xml_fuzzy_escape uses, but that
+             function escapes different characters.  Please keep in sync!
+             ### If we add another fuzzy escape somewhere, we should abstract
+             ### this out to a common function. */
+          sprintf (new, "?\\%03u", (unsigned char) *src_orig);
+          new += 5;
+        }
+      else
+        {
+          *new = *src_orig;
+          new += 1;
+        }
+
+      src_orig++;
+    }
+
+  *new = '\0';
+
+  return new_orig;
+}
+
+/* Convert SRC_LENGTH bytes of SRC_DATA in NODE->handle, store the result
    in *DEST, which is allocated in POOL. */
 static svn_error_t *
-convert_to_stringbuf (apr_xlate_t *convset,
+convert_to_stringbuf (xlate_handle_node_t *node,
                       const char *src_data,
                       apr_size_t src_length,
                       svn_stringbuf_t **dest,
@@ -342,7 +416,7 @@ convert_to_stringbuf (apr_xlate_t *convset,
       destlen = buflen - (*dest)->len;
 
       /* Attempt the conversion. */
-      apr_err = apr_xlate_conv_buffer (convset, 
+      apr_err = apr_xlate_conv_buffer (node->handle,
                                        src_data + (src_length - srclen), 
                                        &srclen,
                                        destbuf, 
@@ -356,10 +430,28 @@ convert_to_stringbuf (apr_xlate_t *convset,
 
   /* If we exited the loop with an error, return the error. */
   if (apr_err)
-    /* Can't use svn_error_wrap_apr here because it calls functions in
-       this file, leading to infinite recursion. */
-    return svn_error_create (apr_err, NULL, _("Can't recode string"));
-  
+    {
+      const char *errstr;
+      svn_error_t *err;
+
+      /* Can't use svn_error_wrap_apr here because it calls functions in
+         this file, leading to infinite recursion. */
+      if (node->frompage == APR_LOCALE_CHARSET)
+        errstr = apr_psprintf
+          (pool, _("Can't convert string from native encoding to '%s':"),
+           node->topage);
+      else if (node->topage == APR_LOCALE_CHARSET)
+        errstr = apr_psprintf
+          (pool, _("Can't convert string from '%s' to native encoding:"),
+           node->frompage);
+      else
+        errstr = apr_psprintf
+          (pool, _("Can't convert string from '%s' to '%s':"),
+           node->frompage, node->topage);
+      err = svn_error_create (apr_err, NULL, fuzzy_escape (src_data,
+                                                           src_length, pool));
+      return svn_error_create (apr_err, err, errstr);
+    }
   /* Else, exited due to success.  Trim the result buffer down to the
      right length. */
   (*dest)->data[(*dest)->len] = '\0';
@@ -489,8 +581,7 @@ svn_utf_stringbuf_to_utf8 (svn_stringbuf_t **dest,
 
   if (node->handle)
     {
-      err = convert_to_stringbuf (node->handle, src->data, src->len, dest,
-                                  pool);
+      err = convert_to_stringbuf (node, src->data, src->len, dest, pool);
       put_xlate_handle_node (node, SVN_UTF_NTOU_XLATE_HANDLE, pool);
       SVN_ERR (err);
       return check_utf8 ((*dest)->data, (*dest)->len, pool);
@@ -517,8 +608,7 @@ svn_utf_string_to_utf8 (const svn_string_t **dest,
 
   if (node->handle)
     {
-      err = convert_to_stringbuf (node->handle, src->data, src->len, 
-                                  &destbuf, pool);
+      err = convert_to_stringbuf (node, src->data, src->len, &destbuf, pool);
       put_xlate_handle_node (node, SVN_UTF_NTOU_XLATE_HANDLE, pool);
       SVN_ERR (err);
       SVN_ERR (check_utf8 (destbuf->data, destbuf->len, pool));
@@ -536,18 +626,18 @@ svn_utf_string_to_utf8 (const svn_string_t **dest,
 
 /* Common implementation for svn_utf_cstring_to_utf8,
    svn_utf_cstring_to_utf8_ex, svn_utf_cstring_from_utf8 and
-   svn_utf_cstring_from_utf8_ex. Convert SRC to DEST using CONVSET as
+   svn_utf_cstring_from_utf8_ex. Convert SRC to DEST using NODE->handle as
    the translator and allocating from POOL. */
 static svn_error_t *
 convert_cstring (const char **dest,
                  const char *src,
-                 apr_xlate_t *convset,
+                 xlate_handle_node_t *node,
                  apr_pool_t *pool)
 {
-  if (convset)
+  if (node->handle)
     {
       svn_stringbuf_t *destbuf;
-      SVN_ERR (convert_to_stringbuf (convset, src, strlen (src),
+      SVN_ERR (convert_to_stringbuf (node, src, strlen (src),
                                      &destbuf, pool));
       *dest = destbuf->data;
     }
@@ -570,7 +660,7 @@ svn_utf_cstring_to_utf8 (const char **dest,
   svn_error_t *err;
 
   SVN_ERR (get_ntou_xlate_handle_node (&node, pool));
-  err = convert_cstring (dest, src, node->handle, pool);
+  err = convert_cstring (dest, src, node, pool);
   put_xlate_handle_node (node, SVN_UTF_NTOU_XLATE_HANDLE, pool);
   SVN_ERR (err);
   SVN_ERR (check_cstring_utf8 (*dest, pool));
@@ -590,7 +680,7 @@ svn_utf_cstring_to_utf8_ex (const char **dest,
   svn_error_t *err;
 
   SVN_ERR (get_xlate_handle_node (&node, "UTF-8", frompage, convset_key, pool));
-  err = convert_cstring (dest, src, node->handle, pool);
+  err = convert_cstring (dest, src, node, pool);
   put_xlate_handle_node (node, convset_key, pool);
   SVN_ERR (err);
   SVN_ERR (check_cstring_utf8 (*dest, pool));
@@ -612,7 +702,7 @@ svn_utf_stringbuf_from_utf8 (svn_stringbuf_t **dest,
   if (node->handle)
     {
       SVN_ERR (check_utf8 (src->data, src->len, pool));
-      err = convert_to_stringbuf (node->handle, src->data, src->len, dest, pool);
+      err = convert_to_stringbuf (node, src->data, src->len, dest, pool);
       put_xlate_handle_node (node, SVN_UTF_UTON_XLATE_HANDLE, pool);
       return err;
     }
@@ -639,7 +729,7 @@ svn_utf_string_from_utf8 (const svn_string_t **dest,
   if (node->handle)
     {
       SVN_ERR (check_utf8 (src->data, src->len, pool));
-      err = convert_to_stringbuf (node->handle, src->data, src->len,
+      err = convert_to_stringbuf (node, src->data, src->len,
                                   &dbuf, pool);
       put_xlate_handle_node (node, SVN_UTF_UTON_XLATE_HANDLE, pool);
       SVN_ERR (err);
@@ -665,7 +755,7 @@ svn_utf_cstring_from_utf8 (const char **dest,
 
   SVN_ERR (get_uton_xlate_handle_node (&node, pool));
   SVN_ERR (check_utf8 (src, strlen (src), pool));
-  err = convert_cstring (dest, src, node->handle, pool);
+  err = convert_cstring (dest, src, node, pool);
   put_xlate_handle_node (node, SVN_UTF_UTON_XLATE_HANDLE, pool);
   SVN_ERR (err);
 
@@ -685,7 +775,7 @@ svn_utf_cstring_from_utf8_ex (const char **dest,
 
   SVN_ERR (get_xlate_handle_node (&node, topage, "UTF-8", convset_key, pool));
   SVN_ERR (check_utf8 (src, strlen (src), pool));
-  err = convert_cstring (dest, src, node->handle, pool);
+  err = convert_cstring (dest, src, node, pool);
   put_xlate_handle_node (node, convset_key, pool);
 
   return err;
@@ -698,61 +788,22 @@ svn_utf__cstring_from_utf8_fuzzy (const char *src,
                                   svn_error_t *(*convert_from_utf8)
                                   (const char **, const char *, apr_pool_t *))
 {
-  const char *src_orig = src;
-  apr_size_t new_len = 0;
-  char *new;
-  const char *new_orig;
+  const char *escaped, *converted;
   svn_error_t *err;
 
-  /* First count how big a dest string we'll need. */
-  while (*src)
-    {
-      if (! apr_isascii (*src))
-        new_len += 5;  /* 5 slots, for "?\XXX" */
-      else
-        new_len += 1;  /* one slot for the 7-bit char */
-
-      src++;
-    }
-
-  /* Allocate that amount. */
-  new = apr_palloc (pool, new_len + 1);
-
-  new_orig = new;
-
-  /* And fill it up. */
-  while (*src_orig)
-    {
-      if (! apr_isascii (*src_orig))
-        {
-          /* ### This is the same format as svn_xml_fuzzy_escape()
-             ### uses.  The two should probably share code, even
-             ### though they escape different characters. */
-          sprintf (new, "?\\%03u", (unsigned char) *src_orig);
-          new += 5;
-        }
-      else
-        {
-          *new = *src_orig;
-          new += 1;
-        }
-
-      src_orig++;
-    }
-
-  *new = '\0';
+  escaped = fuzzy_escape (src, strlen (src), pool);
 
   /* Okay, now we have a *new* UTF-8 string, one that's guaranteed to
      contain only 7-bit bytes :-).  Recode to native... */
-  err = convert_from_utf8 (((const char **) &new), new_orig, pool);
+  err = convert_from_utf8 (((const char **) &converted), escaped, pool);
 
   if (err)
     {
       svn_error_clear (err);
-      return new_orig;
+      return escaped;
     }
   else
-    return new;
+    return converted;
 
   /* ### Check the client locale, maybe we can avoid that second
    * conversion!  See Ulrich Drepper's patch at
@@ -798,7 +849,7 @@ svn_utf_cstring_from_utf8_string (const char **dest,
   if (node->handle)
     {
       SVN_ERR (check_utf8 (src->data, src->len, pool));
-      err = convert_to_stringbuf (node->handle, src->data, src->len,
+      err = convert_to_stringbuf (node, src->data, src->len,
                                   &dbuf, pool);
       put_xlate_handle_node (node, SVN_UTF_UTON_XLATE_HANDLE, pool);
       SVN_ERR (err);
