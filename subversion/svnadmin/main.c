@@ -191,7 +191,11 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
 
     {"lsdblogs", subcommand_lsdblogs, {0},
      "usage: svnadmin lsdblogs REPOS_PATH\n\n"
-     "List all Berkeley DB log files.\n\n",
+     "List Berkeley DB log files.\n\n"
+     "WARNING: if you do not specify the --only-unused flag to this command,\n"
+     "the list of displayed logfiles will include those still in use by your\n"
+     "repository.  Modifying or deleting logfiles which are still in use\n"
+     "will cause your repository to be corrupted.\n",
      {svnadmin__only_unused} },
 
 
