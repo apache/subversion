@@ -242,7 +242,7 @@ svn_error_t *dav_svn_simple_parse_uri(dav_svn_uri_info *info,
       || memcmp(path, relative->info->repos->root_path, len2) != 0)
     {
       return svn_error_create(SVN_ERR_APMOD_MALFORMED_URI, NULL,
-                              "Ununsable URI: it does not refer to this "
+                              "Unusable URI: it does not refer to this "
                               "repository");
     }
 
