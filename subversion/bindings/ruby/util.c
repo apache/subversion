@@ -14,6 +14,7 @@
  */
 #include <ruby.h>
 #include <svn_pools.h>
+#include <svn_string.h>
 
 #include <stdlib.h>
 #include <apr_general.h>
