@@ -70,6 +70,16 @@ svn_error_t *svn_fs__make_rep_immutable (svn_fs_t *fs,
                                          trail_t *trail);
 
 
+/* Delete representation KEY from FS if it's mutable, as part of
+   trail, or do nothing if the rep is immutable.  If a mutable rep is
+   deleted, the string it refers to is deleted as well.
+
+   If no such rep, return SVN_ERR_FS_NO_SUCH_REPRESENTATION.  */ 
+svn_error_t *svn_fs__delete_rep_if_mutable (svn_fs_t *fs,
+                                            const char *key,
+                                            trail_t *trail);
+
+
 /* Copy into BUF *LEN bytes starting at OFFSET from the string
    represented by REP in FS, as part of TRAIL.
    

@@ -1282,6 +1282,7 @@ svn_fs__dag_delete_if_mutable (svn_fs_t *fs,
 {
   svn_boolean_t is_mutable;
   dag_node_t *node;
+  skel_t *node_rev;
 
   SVN_ERR (svn_fs__dag_get_node (&node, fs, id, trail));
 
@@ -1309,9 +1310,29 @@ svn_fs__dag_delete_if_mutable (svn_fs_t *fs,
   /* ... then delete the node itself, after deleting any mutable
      representations and strings it points to. */
 
-  /* ### kff todo: not actually deleting those representations and
-     strings yet, coming soon. */
+  SVN_ERR (svn_fs__get_node_revision (&node_rev, fs, id, trail));
+
+  /* Delete any mutable property representation. */
+  {
+    const char *prop_rep_key;
+    prop_rep_key = apr_pstrndup (trail->pool,
+                                 node_rev->children->next->data,
+                                 node_rev->children->next->len);
+    if (prop_rep_key[0] != '\0')
+      SVN_ERR (svn_fs__delete_rep_if_mutable (fs, prop_rep_key, trail));
+  }
   
+  /* Delete any mutable data representation. */
+  {
+    const char *data_rep_key;
+    data_rep_key = apr_pstrndup (trail->pool,
+                                 node_rev->children->next->next->data,
+                                 node_rev->children->next->next->len);
+    if (data_rep_key[0] != '\0')
+      SVN_ERR (svn_fs__delete_rep_if_mutable (fs, data_rep_key, trail));
+  }
+
+  /* Delete the node revision itself. */
   SVN_ERR (svn_fs__delete_node_revision (fs, id, trail));
   
   return SVN_NO_ERROR;

@@ -200,6 +200,26 @@ svn_fs__make_rep_immutable (svn_fs_t *fs,
 
 
 svn_error_t *
+svn_fs__delete_rep_if_mutable (svn_fs_t *fs,
+                               const char *key,
+                               trail_t *trail)
+{
+  skel_t *rep;
+
+  SVN_ERR (svn_fs__read_rep (&rep, fs, key, trail));
+  if (svn_fs__rep_is_mutable (rep))
+    {
+      const char *string_key;
+      string_key = svn_fs__string_key_from_rep (rep, trail->pool);
+      SVN_ERR (svn_fs__string_delete (fs, string_key, trail));
+      SVN_ERR (svn_fs__delete_rep (fs, key, trail));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
 svn_fs__rep_read_range (svn_fs_t *fs,
                         skel_t *rep,
                         char *buf,
