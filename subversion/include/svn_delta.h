@@ -218,26 +218,26 @@ extern void svn_txdelta_free (svn_txdelta_stream_t *stream);
 
 /*** Producing and consuming VCDIFF-format text deltas.  ***/
 
-/* Given a delta stream STREAM, set *READ_FN and *READ_BATON to a
-   `read'-like function that will return a VCDIFF-format byte stream.
-   Do all allocation for the conversion in POOL.  */
+/* Given text delta windows, produce a VCDIFF-format diff.
+
+   Set *READ_FN and *READ_BATON to a `read'-like function that will
+   return a text delta in VCDIFF format.  READ_FN will draw windows as
+   needed from the text delta window stream STREAM, and convert them
+   to VCDIFF format.  Do all allocation for the conversion in POOL.  */
 extern svn_error_t *svn_txdelta_to_vcdiff (svn_delta_read_fn_t **read_fn,
                                            void **read_baton,
                                            svn_txdelta_stream_t *stream,
                                            apr_pool_t *pool);
      
 
-/* A function to consume a series of delta windows, in caller-pushes
-   form.  This function will typically apply each delta window to
-   produce some file, or save it somewhere.  */
+/* Definitions for converting VCDIFF -> text delta window streams.  */
+
+/* A typedef for functions that consume a series of delta windows, for
+   use in caller-pushes interfaces.  Such functions will typically
+   apply the delta windows to produce some file, or save the windows
+   somewhere.  */
 typedef svn_error_t *(svn_txdelta_window_handler_t)
                      (svn_txdelta_window_t *window, void *baton);
-
-
-
-/*----------------------------------------------------------------
-    vcdiff parsing, "push" interface
-*/
 
 /* A vcdiff parser object.  */
 typedef struct svn_vcdiff_parser_t
@@ -261,13 +261,14 @@ typedef struct svn_vcdiff_parser_t
 
 
 
-/* Return a vcdiff parser object, PARSER, in caller-pushes form.  If
-   we're receiving a vcdiff-format byte stream, one block of bytes at
-   a time, we can pass each block in succession to `svn_vcdiff_parse',
-   with PARSER as the other argument.  PARSER keeps track of where we
-   are in the stream; each time we've received enough data for a
-   complete svn_txdelta_window_t, we pass it to HANDLER, along with
-   HANDLER_BATON.  */
+/* Parse a VCDIFF-format stream, and invoke a text delta window
+   handler function on each window we get from it.  This is a
+   caller-pushes interface.
+
+   Return a new VCDIFF parser object, PARSER.  Use `svn_vcdiff_parse',
+   described below, to send VCDIFF-format data through the parser.
+   PARSER will invoke HANDLER to handle each window it recognizes,
+   passing it HANDLER_BATON.  */
 extern svn_vcdiff_parser_t *svn_make_vcdiff_parser
                             (svn_txdelta_window_handler_t *handler,
                              void *handler_baton,
