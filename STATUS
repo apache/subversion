@@ -9,13 +9,6 @@ Status of 1.0.6:
 
 Candidate changes:
 
-  * r8804
-    Stop unrelated errors being logged in the Apache error log.
-    Justification: Clarity; trivial fix.
-    Votes:
-      +1: dionisos, kfogel, breser
-
-
   * r8867, r8868, r8902
     Trivial performance fix for mod_authz_svn; cache the access file per
     connection instead of reloading it per request.
