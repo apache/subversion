@@ -17,10 +17,10 @@ This chapter describes the libraries, and the physical layout of working
 copies.
 
 @menu
-* Deltas
-* Working copies and the working copy library
-* The repository access library
-* The client operation library
+* Deltas::                      
+* Working copies and the working copy library::  
+* The repository access library::  
+* The client operation library::  
 @end menu
 
 @c -----------------------------------------------------------------------
@@ -51,10 +51,10 @@ The term @dfn{delta} without qualification generally means a tree delta,
 unless some other meaning is clear from context.
 
 @menu
-* Text Deltas::
-* Property Deltas::
-* Tree Deltas::
-* Skeltas::
+* Text Deltas::                 
+* Property Deltas::             
+* Tree Deltas::                 
+* Skeltas::                     
 @end menu
 
 
@@ -418,8 +418,8 @@ copy management library are the only functions in Subversion which
 operate on these trees.
 
 @menu
-* The layout of working copies
-* The working copy management library
+* The layout of working copies::  
+* The working copy management library::  
 @end menu
 
 @c -----------------------------------------------------------------------

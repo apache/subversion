@@ -4,6 +4,15 @@
 This chapter explains the user's view of Subversion --- what ``objects''
 you interact with, how they behave, and how they relate to each other.
 
+@menu
+* Working Directories and Repositories::  
+* Transactions and Version Numbers::  
+* How Working Directories Track the Repository::  
+* Subversion Does Not Lock Files::  
+* Properties::                  
+* Merging and Ancestry::        
+@end menu
+
 @c -----------------------------------------------------------------------
 @node Working Directories and Repositories
 @section Working Directories and Repositories
