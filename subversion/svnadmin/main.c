@@ -457,10 +457,11 @@ subcommand_deltify (apr_getopt_t *os, void *baton, apr_pool_t *pool)
       svn_pool_clear (subpool);
       SVN_ERR (check_cancel (NULL));
       if (! opt_state->quiet)
-        printf (_("Deltifying revision %ld..."), revision);
+        SVN_ERR (svn_cmdline_printf (subpool, _("Deltifying revision %ld..."),
+                                     revision));
       SVN_ERR (svn_fs_deltify_revision (fs, revision, subpool));
       if (! opt_state->quiet)
-        printf (_("done.\n"));
+        SVN_ERR (svn_cmdline_printf (subpool, _("done.\n")));
     }
   svn_pool_destroy (subpool);
 
@@ -589,7 +590,8 @@ subcommand_lstxns (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   /* Loop, printing revisions. */
   for (i = 0; i < txns->nelts; i++)
     {
-      printf ("%s\n", APR_ARRAY_IDX (txns, i, const char *));
+      SVN_ERR (svn_cmdline_printf (pool, "%s\n",
+                                   APR_ARRAY_IDX (txns, i, const char *)));
     }
   
   return SVN_NO_ERROR;
@@ -604,20 +606,22 @@ subcommand_recover (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   svn_repos_t *repos;
   struct svnadmin_opt_state *opt_state = baton;
 
-  printf (_("Please wait; recovering the repository may take some time...\n"));
-  fflush (stdout);
+  SVN_ERR (svn_cmdline_printf (pool,
+                               _("Please wait; recovering the repository may"
+                                 " take some time...\n")));
+  SVN_ERR (svn_cmdline_fflush (stdout));
 
   SVN_ERR (svn_repos_recover (opt_state->repository_path, pool));
 
-  printf (_("\nRecovery completed.\n"));
+  SVN_ERR (svn_cmdline_printf (pool, _("\nRecovery completed.\n")));
 
   /* Since db transactions may have been replayed, it's nice to tell
      people what the latest revision is.  It also proves that the
      recovery actually worked. */
   SVN_ERR (open_repos (&repos, opt_state->repository_path, pool));
   SVN_ERR (svn_fs_youngest_rev (&youngest_rev, svn_repos_fs (repos), pool));
-  printf (_("The latest repos revision is %ld.\n"),
-          youngest_rev);
+  SVN_ERR (svn_cmdline_printf (pool, _("The latest repos revision is %ld.\n"),
+                               youngest_rev));
 
   return SVN_NO_ERROR;
 }
@@ -639,16 +643,15 @@ list_dblogs (apr_getopt_t *os, void *baton, svn_boolean_t only_unused,
   
   /* Loop, printing log files.  We append the log paths to the
      repository path, making sure to return everything to the native
-     style and encoding before printing. */
+     style before printing. */
   for (i = 0; i < logfiles->nelts; i++)
     {
-      const char *log_utf8, *log_stdout;
+      const char *log_utf8;
       log_utf8 = svn_path_join (opt_state->repository_path,
                                 APR_ARRAY_IDX (logfiles, i, const char *),
                                 pool);
       log_utf8 = svn_path_local_style (log_utf8, pool);
-      SVN_ERR (svn_cmdline_cstring_from_utf8 (&log_stdout, log_utf8, pool));
-      printf ("%s\n", log_stdout);
+      SVN_ERR (svn_cmdline_printf (pool, "%s\n", log_utf8));
     }
   
   return SVN_NO_ERROR;
@@ -724,7 +727,9 @@ subcommand_rmtxns (apr_getopt_t *os, void *baton, apr_pool_t *pool)
         }
       else if (! opt_state->quiet)
         {
-          printf (_("Transaction '%s' removed.\n"), txn_name);
+          SVN_ERR
+            (svn_cmdline_printf (subpool, _("Transaction '%s' removed.\n"),
+                                 txn_name));
         }
 
       svn_pool_clear (subpool);
@@ -1014,7 +1019,9 @@ main (int argc, const char * const *argv)
     {
       if (os->ind >= os->argc)
         {
-          fprintf (stderr, _("subcommand argument required\n"));
+          svn_error_clear
+            (svn_cmdline_fprintf (stderr, pool,
+                                  _("subcommand argument required\n")));
           subcommand_help (NULL, NULL, pool);
           svn_pool_destroy (pool);
           return EXIT_FAILURE;
@@ -1025,7 +1032,19 @@ main (int argc, const char * const *argv)
           subcommand = svn_opt_get_canonical_subcommand (cmd_table, first_arg);
           if (subcommand == NULL)
             {
-              fprintf (stderr, _("Unknown command: '%s'\n"), first_arg);
+              const char* first_arg_utf8;
+              err = svn_utf_cstring_to_utf8 (&first_arg_utf8, first_arg, pool);
+              if (err)
+                {
+                  svn_handle_error (err, stderr, FALSE);
+                  svn_error_clear (err);
+                  svn_pool_destroy (pool);
+                  return EXIT_FAILURE;
+                }
+              svn_error_clear
+                (svn_cmdline_fprintf (stderr, pool,
+                                      _("Unknown command: '%s'\n"),
+                                      first_arg_utf8));
               subcommand_help (NULL, NULL, pool);
               svn_pool_destroy (pool);
               return EXIT_FAILURE;
@@ -1090,10 +1109,11 @@ main (int argc, const char * const *argv)
           const apr_getopt_option_t *badopt = 
             svn_opt_get_option_from_code (opt_id, options_table);
           svn_opt_format_option (&optstr, badopt, FALSE, pool);
-          fprintf (stderr,
-                   _("subcommand '%s' doesn't accept option '%s'\n"
-                     "Type 'svnadmin help %s' for usage.\n"),
-                   subcommand->name, optstr, subcommand->name);
+          svn_error_clear
+            (svn_cmdline_fprintf
+             (stderr, pool, _("subcommand '%s' doesn't accept option '%s'\n"
+                              "Type 'svnadmin help %s' for usage.\n"),
+              subcommand->name, optstr, subcommand->name));
           svn_pool_destroy (pool);
           return EXIT_FAILURE;
         }
@@ -1136,6 +1156,14 @@ main (int argc, const char * const *argv)
   else
     {
       svn_pool_destroy (pool);
+      /* Ensure that everything is written to stdout, so the user will
+         see any print errors. */
+      err = svn_cmdline_fflush (stdout);
+      if (err) {
+        svn_handle_error(err, stderr, FALSE);
+        svn_error_clear (err);
+        return EXIT_FAILURE;
+      }
       return EXIT_SUCCESS;
     }
 }
