@@ -216,7 +216,6 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
   svn_node_kind_t src_kind, tgt_kind;
   svn_revnum_t rootrev;
   int distance;
-  svn_boolean_t allowed = TRUE;  /* for authz checks */
   const char *authz_root_path;
 
   /* SRC_PARENT_DIR must be valid. */
@@ -314,24 +313,8 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
       SVN_ERR (authz_root_check (tgt_root, authz_root_path,
                                  authz_read_func, authz_read_baton, pool));
       SVN_ERR (editor->open_root (edit_baton, rootrev, pool, &root_baton));
-
-      if (authz_read_func)
-        {
-          SVN_ERR (authz_read_func (&allowed, tgt_root, tgt_fullpath,
-                                    authz_read_baton, pool));
-        }
-      
-      if (allowed)
-        {
-          SVN_ERR (add_file_or_dir (&c, root_baton, tgt_fullpath,
-                                    src_entry, tgt_kind, pool));
-        }
-      else
-        {
-          SVN_ERR (absent_file_or_dir (&c, root_baton,
-                                       src_entry, tgt_kind, pool));
-        }
-
+      SVN_ERR (add_file_or_dir (&c, root_baton, tgt_fullpath,
+                                src_entry, tgt_kind, pool));
       goto cleanup;
     }
 
@@ -357,23 +340,8 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
                                      authz_read_func, authz_read_baton, pool));
           SVN_ERR (editor->open_root (edit_baton, rootrev, pool, &root_baton));
           SVN_ERR (delete (&c, root_baton, src_entry, pool));
-
-          if (authz_read_func)
-            {
-              SVN_ERR (authz_read_func (&allowed, tgt_root, tgt_fullpath,
-                                        authz_read_baton, pool));
-            }
-          
-          if (allowed)
-            {
-              SVN_ERR (add_file_or_dir (&c, root_baton, tgt_fullpath, 
-                                        src_entry, tgt_kind, pool));
-            }
-          else
-            {
-              SVN_ERR (absent_file_or_dir (&c, root_baton,
-                                           src_entry, tgt_kind, pool));
-            }
+          SVN_ERR (add_file_or_dir (&c, root_baton, tgt_fullpath, 
+                                    src_entry, tgt_kind, pool));
         }
       /* Otherwise, we just replace the one with the other. */
       else
@@ -381,24 +349,9 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
           SVN_ERR (authz_root_check (tgt_root, authz_root_path,
                                      authz_read_func, authz_read_baton, pool));
           SVN_ERR (editor->open_root (edit_baton, rootrev, pool, &root_baton));
-
-          if (authz_read_func)
-            {
-              SVN_ERR (authz_read_func (&allowed, tgt_root, tgt_fullpath,
-                                        authz_read_baton, pool));
-            }
-
-          if (allowed)
-            {
-              SVN_ERR (replace_file_or_dir (&c, root_baton, src_fullpath,
-                                            tgt_fullpath, src_entry, 
-                                            tgt_kind, pool));
-            }
-          else
-            {
-              SVN_ERR (absent_file_or_dir (&c, root_baton,
-                                           src_entry, tgt_kind, pool));
-            }
+          SVN_ERR (replace_file_or_dir (&c, root_baton, src_fullpath,
+                                        tgt_fullpath, src_entry, 
+                                        tgt_kind, pool));
         }
     }
   else
@@ -824,9 +777,10 @@ delete (struct context *c,
 }
 
 
-/* Emit a delta to create the entry named TARGET_ENTRY in the
-   directory TARGET_PARENT.  Pass DIR_BATON through to editor
-   functions that require it. */
+/* If authorized, emit a delta to create the entry named TARGET_ENTRY
+   at the location EDIT_PATH.  If not authorized, indicate that
+   EDIT_PATH is absent.  Pass DIR_BATON through to editor functions
+   that require it. */
 static svn_error_t *
 add_file_or_dir (struct context *c, void *dir_baton,
                  const char *target_path,
@@ -835,9 +789,18 @@ add_file_or_dir (struct context *c, void *dir_baton,
                  apr_pool_t *pool)
 {
   struct context *context = c;
+  svn_boolean_t allowed;
 
   /* Sanity-check our input. */
   assert (target_path && edit_path);
+
+  if (c->authz_read_func)
+    {
+      SVN_ERR (c->authz_read_func (&allowed, c->target_root, target_path,
+                                   c->authz_read_baton, pool));
+      if (!allowed)
+        return absent_file_or_dir (c, dir_baton, edit_path, tgt_kind, pool);
+    }
 
   if (tgt_kind == svn_node_dir)
     {
@@ -869,9 +832,10 @@ add_file_or_dir (struct context *c, void *dir_baton,
 }
 
 
-/* Modify the directory TARGET_PARENT by replacing its entry named
-   TARGET_ENTRY with the SOURCE_ENTRY found in SOURCE_PARENT.  Pass
-   DIR_BATON through to editor functions that require it. */
+/* If authorized, emit a delta to modify EDIT_PATH with the changes
+   from SOURCE_PATH to TARGET_PATH.  If not authorized, indicate that
+   EDIT_PATH is absent.  Pass DIR_BATON through to editor functions
+   that require it. */
 static svn_error_t *
 replace_file_or_dir (struct context *c, 
                      void *dir_baton,
@@ -882,9 +846,18 @@ replace_file_or_dir (struct context *c,
                      apr_pool_t *pool)
 {
   svn_revnum_t base_revision = SVN_INVALID_REVNUM;
+  svn_boolean_t allowed;
 
   /* Sanity-check our input. */
   assert (target_path && source_path && edit_path);
+
+  if (c->authz_read_func)
+    {
+      SVN_ERR (c->authz_read_func (&allowed, c->target_root, target_path,
+                                   c->authz_read_baton, pool));
+      if (!allowed)
+        return absent_file_or_dir (c, dir_baton, edit_path, tgt_kind, pool);
+    }
 
   /* Get the base revision for the entry from the hash. */
   base_revision = get_path_revision (c->source_root, source_path, pool);
@@ -953,7 +926,6 @@ delta_dirs (struct context *c,
   apr_hash_t *s_entries = 0, *t_entries = 0;
   apr_hash_index_t *hi;
   apr_pool_t *subpool;
-  svn_boolean_t allowed = TRUE;
 
   assert (target_path);
 
@@ -1028,47 +1000,14 @@ delta_dirs (struct context *c,
                        || ((distance == -1) && (! c->ignore_ancestry)))
                 {
                   SVN_ERR (delete (c, dir_baton, e_fullpath, subpool));
-
-                  if (c->authz_read_func)
-                    {
-                      SVN_ERR (c->authz_read_func
-                               (&allowed, c->target_root, t_fullpath,
-                                c->authz_read_baton, subpool));
-                    }
-
-                  if (allowed)
-                    {
-                      SVN_ERR (add_file_or_dir (c, dir_baton, t_fullpath,
-                                                e_fullpath, tgt_kind,
-                                                subpool));
-                    }
-                  else
-                    {
-                      SVN_ERR (absent_file_or_dir (c, dir_baton, e_fullpath,
-                                                   tgt_kind, subpool));
-                    }
+                  SVN_ERR (add_file_or_dir (c, dir_baton, t_fullpath,
+                                            e_fullpath, tgt_kind, subpool));
                 }
               else
                 {
-                  if (c->authz_read_func)
-                    {
-                      SVN_ERR (c->authz_read_func
-                               (&allowed,
-                                c->target_root, t_fullpath,
-                                c->authz_read_baton, subpool));
-                    }
-
-                  if (allowed)
-                    {
-                      SVN_ERR (replace_file_or_dir (c, dir_baton, s_fullpath,
-                                                    t_fullpath, e_fullpath, 
-                                                    tgt_kind, subpool));
-                    }
-                  else
-                    {
-                      SVN_ERR (absent_file_or_dir (c, dir_baton, e_fullpath,
-                                                   tgt_kind, subpool));
-                    }
+                  SVN_ERR (replace_file_or_dir (c, dir_baton, s_fullpath,
+                                                t_fullpath, e_fullpath, 
+                                                tgt_kind, subpool));
                 }
             }
 
@@ -1079,27 +1018,8 @@ delta_dirs (struct context *c,
         {
           if (c->recurse || (tgt_kind != svn_node_dir))
             {
-              /* We didn't find an entry with this name in the source
-                 entries hash.  This must be something new that needs to
-                 be added. */
-              if (c->authz_read_func)
-                {
-                  SVN_ERR (c->authz_read_func
-                           (&allowed,
-                            c->target_root, t_fullpath,
-                            c->authz_read_baton, subpool));
-                }
-
-              if (allowed)
-                {
-                  SVN_ERR (add_file_or_dir (c, dir_baton, t_fullpath,
-                                            e_fullpath, tgt_kind, subpool));
-                }
-              else
-                {
-                  SVN_ERR (absent_file_or_dir (c, dir_baton, e_fullpath,
-                                               tgt_kind, subpool));
-                }
+              SVN_ERR (add_file_or_dir (c, dir_baton, t_fullpath,
+                                        e_fullpath, tgt_kind, subpool));
             }
         }
 
@@ -1117,14 +1037,13 @@ delta_dirs (struct context *c,
           const void *key;
           void *val;
           apr_ssize_t klen;
-          const char *s_fullpath, *e_fullpath;
+          const char *e_fullpath;
           svn_node_kind_t src_kind;
           
           /* KEY is the entry name in source, VAL the dirent */
           apr_hash_this (hi, &key, &klen, &val);
           s_entry = val;
           src_kind = s_entry->kind;
-          s_fullpath = svn_path_join (source_path, s_entry->name, subpool);
           e_fullpath = svn_path_join (edit_path, s_entry->name, subpool);
 
           /* Do we actually want to delete the dir if we're non-recursive? */
