@@ -1491,11 +1491,10 @@ svn_error_t *svn_fs_set_uuid (svn_fs_t *fs,
  *
  * @a comment is optional: it may describe the lock, or it may be NULL.
  *
- * If path is already locked by a different user, then return @c
- * SVN_ERR_FS_PATH_LOCKED.  If @a force is true, then "steal" the
- * existing lock anyway, even if the FS access-context's username does
- * not match the current lock's owner.  Delete any lock on @a path,
- * and unconditionally create a new lock.
+ * If path is already locked, then return @c SVN_ERR_FS_PATH_LOCKED.
+ * If @a force is true, then "steal" the existing lock anyway, even if
+ * the FS access-context's username does not match the current lock's
+ * owner: delete the existing lock on @a path, and create a new one.
  *
  * If @a timeout is zero, then create a non-expiring lock.  Else, the
  * lock will expire in @a timeout seconds after creation.
@@ -1529,11 +1528,11 @@ svn_error_t *svn_fs_lock (svn_lock_t **lock,
  * username associated with @a fs will be used to fill it in.  If
  * neither username is available, return SVN_ERR_FS_NO_USER.
  *
- * If path is already locked, then check to see whether @a lock->token
- * and @a lock->owner match the existing lock.  If not, return
- * SVN_ERR_PATH_LOCKED.  If the fields match, then interpret this call
- * as a request to "refresh" the the lock with a new expiration time
- * (using @a lock->expiration_date).
+ * If path is already locked, then return @c SVN_ERR_FS_PATH_LOCKED.
+ * If @a force is true, then "steal" the existing lock anyway, even if
+ * the @a lock->owner or @a lock->token don't match the current lock;
+ * delete the existing lock on @a path, and attach the new one.  This
+ * technique can be used to "refresh" the expiration on existing locks.
  *
  * If @a current_rev is a valid revnum, then do an out-of-dateness
  * check.  If the revnum is less than the last-changed-revision of @a
@@ -1541,12 +1540,13 @@ svn_error_t *svn_fs_lock (svn_lock_t **lock,
  *
  * If this function returns successfully, the caller can assume that
  * @a lock now represents the lock attached to @a lock->path.  Path is
- * allowed to be non-existent.
+ * allowed to be non-existent, so that locks can reserve names.
  *
  * ### Note:  at this time, only files can be locked.
 */
 svn_error_t *svn_fs_attach_lock (svn_lock_t *lock,
                                  svn_fs_t *fs,
+                                 svn_boolean_t force,
                                  svn_revnum_t current_rev,
                                  apr_pool_t *pool);
 

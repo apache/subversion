@@ -548,6 +548,7 @@ svn_fs_fs__lock (svn_lock_t **lock_p,
 svn_error_t *
 svn_fs_fs__attach_lock (svn_lock_t *lock,
                         svn_fs_t *fs,
+                        svn_boolean_t force,
                         svn_revnum_t current_rev,
                         apr_pool_t *pool)
 {
@@ -604,19 +605,17 @@ svn_fs_fs__attach_lock (svn_lock_t *lock,
 
   if (existing_lock)
     {
-      /* If token and owner match, set creation_date of the new lock
-         to the creation date of the existing lock--this is the only
-         field that has to be the same as the existing lock (path,
-         token, and owner are by definition already the same if we've
-         made it to this codepath). */
-      if ((strcmp (lock->owner, existing_lock->owner) == 0)
-          && (strcmp (lock->token, existing_lock->token) == 0))
+      if (! force)
         {
-          lock->creation_date = existing_lock->creation_date;
-          SVN_ERR (delete_lock (fs, existing_lock, pool));
+          /* Sorry, the path is already locked. */
+          return svn_fs_fs__err_path_locked (fs, existing_lock);
         }
       else
-        return svn_fs_fs__err_path_locked (fs, existing_lock);
+        {
+          /* Force was passed, so lock is being stolen. Destroy the
+             existing lock. */
+          SVN_ERR (delete_lock (fs, existing_lock, pool));
+        }          
     }
 
   save_lock (fs, lock, pool);

@@ -609,11 +609,10 @@ dav_svn_append_locks(dav_lockdb *lockdb,
   if (derr)
     return derr;
 
-  /* #### ARGHHHH, need to pass 'force' arg to svn_fs_attach_lock!!*/
-
   /* Now use the svn_lock_t to actually perform the lock. */
   serr = svn_repos_fs_attach_lock(slock,
                                   resource->info->repos->repos,
+                                  info->force,
                                   info->working_revnum,
                                   resource->pool);
 
@@ -766,6 +765,13 @@ dav_svn_refresh_locks(dav_lockdb *lockdb,
                                "Token doesn't point to a lock.",
                                resource->pool);
 
+  /* Sanity check: does the incoming token actually represent the
+     current lock on the incoming resource? */
+  if ((! resource->info->repos_path)
+      || (strcmp(resource->info->repos_path, slock->path) != 0))
+    return dav_new_error(resource->pool, HTTP_UNAUTHORIZED,
+                         DAV_ERR_LOCK_SAVE_LOCK,
+                         "Lock refresh request doesn't match existing lock.");
 
   /* Tweak the expiration_date to the new expiration time. */
   slock->expiration_date = (apr_time_t)new_time * APR_USEC_PER_SEC;
@@ -773,6 +779,7 @@ dav_svn_refresh_locks(dav_lockdb *lockdb,
   /* Now use the tweaked svn_lock_t to 'refresh' the existing lock. */
   serr = svn_repos_fs_attach_lock(slock,
                                   resource->info->repos->repos,
+                                  TRUE, /* forcibly steal existing lock */
                                   SVN_INVALID_REVNUM,
                                   resource->pool);
 

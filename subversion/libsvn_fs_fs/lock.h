@@ -38,6 +38,7 @@ svn_error_t *svn_fs_fs__lock (svn_lock_t **lock,
 
 svn_error_t *svn_fs_fs__attach_lock (svn_lock_t *lock,
                                      svn_fs_t *fs,
+                                     svn_boolean_t force,
                                      svn_revnum_t current_rev,
                                      apr_pool_t *pool);
 

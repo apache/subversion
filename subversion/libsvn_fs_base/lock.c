@@ -190,6 +190,7 @@ svn_fs_base__lock (svn_lock_t **lock,
 struct attach_lock_args
 {
   svn_lock_t *lock;
+  svn_boolean_t force;
   svn_revnum_t current_rev;
 };
 
@@ -247,21 +248,24 @@ txn_body_attach_lock (void *baton, trail_t *trail)
                                                    lock->path, kind, trail));
   if (existing_lock)
     {
-      /* If the path is already locked, this must be a refresh request. */
-      if (strcmp(lock->token, existing_lock->token) != 0)
-        return svn_fs_base__err_bad_lock_token (trail->fs, lock->token);
-
-      if (strcmp(lock->owner, existing_lock->owner) != 0)
-        return svn_fs_base__err_lock_owner_mismatch (trail->fs,
-                                                     lock->owner,
-                                                     existing_lock->owner);
-
-      /* Okay, safe to refresh.... so we simply allow the incoming
-         lock to overwrite the existing one.  The only difference
-         should be creation_date and expiration_date fields.  */
+      if (! args->force)
+        {
+          /* Sorry, the path is already locked. */
+          return svn_fs_base__err_path_locked (trail->fs, existing_lock);
+        }
+      else  /* forcibly locking anyway */
+        {
+          /* Force was passed, so fs_username is "stealing" the
+             lock from lock->owner.  Destroy the existing lock. */
+          SVN_ERR (svn_fs_bdb__lock_delete (trail->fs,
+                                            existing_lock->token, trail));
+          SVN_ERR (svn_fs_bdb__lock_token_delete (trail->fs,
+                                                  existing_lock->path,
+                                                  kind, trail));
+        }
     }
 
-  /* Write the lock into our tables. */
+  /* Write the incoming lock into our tables. */
   SVN_ERR (svn_fs_bdb__lock_add (trail->fs, lock->token, lock, trail));
   SVN_ERR (svn_fs_bdb__lock_token_add (trail->fs, lock->path, kind,
                                        lock->token, trail));
@@ -274,6 +278,7 @@ txn_body_attach_lock (void *baton, trail_t *trail)
 svn_error_t *
 svn_fs_base__attach_lock (svn_lock_t *lock,
                           svn_fs_t *fs,
+                          svn_boolean_t force,
                           svn_revnum_t current_rev,
                           apr_pool_t *pool)
 {
@@ -282,6 +287,7 @@ svn_fs_base__attach_lock (svn_lock_t *lock,
   SVN_ERR (svn_fs_base__check_fs (fs));
 
   args.lock = lock;
+  args.force = force;
   args.current_rev = current_rev;
 
   return svn_fs_base__retry_txn (fs, txn_body_attach_lock, &args, pool);
