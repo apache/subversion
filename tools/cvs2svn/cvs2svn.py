@@ -131,33 +131,20 @@ DIGEST_END_IDX = 9 + (sha.digestsize * 2)
 symbolic_name_re = re.compile('^[a-zA-Z].*$')
 symbolic_name_transtbl = string.maketrans('/\\',',;')
 
-# A custom database used to store simple python objects. If a filename
-# is passed, the anydbm database will be used, and all object will be
-# converted to strings using the marshal module. If filename is None,
-# an in-memory hash will be used.
+# A wrapper for anydbm that uses the marshal module to store items as
+# strings.
 class Database:
-  def __init__(self, filename=None):
-    if filename:
-      self.need_marshal = 1
-      self.db = anydbm.open(filename, 'n')
-    else:
-      self.need_marshal = 0
-      self.db = {}
+  def __init__(self, filename, mode):
+    self.db = anydbm.open(filename, mode)
 
   def has_key(self, key):
     return self.db.has_key(key)
 
   def __getitem__(self, key):
-    if self.need_marshal:
-      return marshal.loads(self.db[key])
-    else:
-      return self.db[key]
+    return marshal.loads(self.db[key])
 
   def __setitem__(self, key, value):
-    if self.need_marshal:
-      self.db[key] = marshal.dumps(value)
-    else:
-      self.db[key] = value
+    self.db[key] = marshal.dumps(value)
 
   def __delitem__(self, key):
     del self.db[key]
@@ -168,7 +155,7 @@ class CollectData(rcsparse.Sink):
     self.revs = open(log_fname_base + REVS_SUFFIX, 'w')
     self.resync = open(log_fname_base + RESYNC_SUFFIX, 'w')
     self.default_branches_db = default_branches_db
-    self.metadata_db = anydbm.open(METADATA_DB, 'n')
+    self.metadata_db = Database(METADATA_DB, 'n')
     # See set_fname() for initializations of other variables.
 
   def set_fname(self, fname):
@@ -416,7 +403,7 @@ class CollectData(rcsparse.Sink):
                     self.get_branches(revision))
 
     if not self.metadata_db.has_key(digest):
-      self.metadata_db[digest] = marshal.dumps([author, log])
+      self.metadata_db[digest] = (author, log)
 
 
 def make_path(ctx, path, branch_name = None, tag_name = None):
@@ -598,13 +585,13 @@ class RepositoryMirror:
   def __init__(self):
     # This corresponds to the 'revisions' table in a Subversion fs.
     self.revs_db_file = SVN_REVISIONS_DB
-    self.revs_db = Database(self.revs_db_file)
+    self.revs_db = Database(self.revs_db_file, 'n')
 
     # This corresponds to the 'nodes' table in a Subversion fs.  (We
     # don't need a 'representations' or 'strings' table because we
     # only track metadata, not file contents.)
     self.nodes_db_file = NODES_DB
-    self.nodes_db = Database(self.nodes_db_file)
+    self.nodes_db = Database(self.nodes_db_file, 'n')
 
     # This tracks which symbolic names the current "head" of a given
     # filepath could be the origin node for.  When the next commit on
@@ -615,7 +602,7 @@ class RepositoryMirror:
     # The values are tuples, (tags, branches), where each value is a
     # list.
     self.symroots_db_file = SYMBOLIC_NAME_ROOTS_DB
-    self.symroots_db = Database(self.symroots_db_file)
+    self.symroots_db = Database(self.symroots_db_file, 'n')
 
     # When copying a directory (say, to create part of a branch), we
     # pass change_path() a list of expected entries, so it can remove
@@ -1460,7 +1447,7 @@ class SymbolicNameTracker:
 
   def __init__(self):
     self.db_file = SYMBOLIC_NAMES_DB
-    self.db = Database(self.db_file)
+    self.db = Database(self.db_file, 'n')
     self.root_key = gen_key()
     self.db[self.root_key] = {}
 
@@ -2341,7 +2328,7 @@ def pass3(ctx):
 
 def pass4(ctx):
   sym_tracker = SymbolicNameTracker()
-  metadata_db = anydbm.open(METADATA_DB, 'r')
+  metadata_db = Database(METADATA_DB, 'r')
 
   # A dictionary of Commit objects, keyed by digest.  Each object
   # represents one logical commit, which may involve multiple files.
@@ -2398,7 +2385,7 @@ def pass4(ctx):
     if commits.has_key(id):
       c = commits[id]
     else:
-      author, log = marshal.loads(metadata_db[id])
+      author, log = metadata_db[id]
       c = commits[id] = Commit(author, log)
     c.add(timestamp, op, fname, rev, deltatext_code, branch_name,
           tags, branches)
@@ -2525,7 +2512,7 @@ def main():
   ctx.print_help = 0
   ctx.skip_cleanup = 0
   ctx.cvs_revnums = 0
-  ctx.default_branches_db = Database(DEFAULT_BRANCHES_DB)
+  ctx.default_branches_db = Database(DEFAULT_BRANCHES_DB, 'n')
 
   start_pass = 1
 
