@@ -214,9 +214,9 @@ static void add_props(const svn_ra_dav_resource_t *r,
       
       apr_hash_this(hi, (const void **)&key, NULL, (void *)&val);
       
-#define NSLEN (strlen(SVN_RA_DAV__CUSTOM_NAMESPACE))
+#define NSLEN (sizeof(SVN_PROP_CUSTOM_PREFIX) - 1)
       
-      if (strncmp(key, SVN_RA_DAV__CUSTOM_NAMESPACE, NSLEN) == 0)
+      if (strncmp(key, SVN_PROP_CUSTOM_PREFIX, NSLEN) == 0)
         {
           svn_stringbuf_t *skey, *sval;
           skey = svn_stringbuf_create(key + NSLEN, pool);

@@ -26,6 +26,7 @@
 #include "dav_svn.h"
 #include "svn_xml.h"
 
+
 struct dav_db {
   const dav_resource *resource;
   apr_pool_t *p;
@@ -34,29 +35,114 @@ struct dav_db {
   apr_hash_t *props;
   apr_hash_index_t *hi;
 
-  /* ### part of hack on prop name changes/mapping */
+  /* used for constructing repos-local names for properties */
   svn_stringbuf_t *work;
 };
 
-/* ### temp hack for fixing prop names */
-static void fix_name(dav_db *db, svn_string_t *propname)
+struct dav_deadprop_rollback {
+  dav_prop_name name;
+  svn_string_t value;
+};
+
+
+/* construct the repos-local name for the given DAV property name */
+static void get_repos_propname(dav_db *db, const dav_prop_name *name,
+                               svn_string_t *repos_propname)
 {
-  /* all properties have no prefix, or they have an svn: prefix */
-  if (*propname->data == ':')
+  if (strcmp(name->ns, SVN_PROP_PREFIX) == 0)
     {
-      /* not in a namespace, so drop the ':' */
-      ++propname->data;
-      --propname->len;
+      /* recombine the namespace ("svn:") and the name. */
+      svn_stringbuf_set(db->work, SVN_PROP_PREFIX);
+      svn_stringbuf_appendcstr(db->work, name->name);
+      repos_propname->data = db->work->data;
+      repos_propname->len = db->work->len;
+    }
+  else if (strcmp(name->ns, SVN_PROP_CUSTOM_PREFIX) == 0)
+    {
+      /* the name of a custom prop is just the name -- no ns URI */
+      repos_propname->data = name->name;
+      repos_propname->len = strlen(name->name);
     }
   else
     {
-      const char *s = ap_strchr_c(propname->data, ':');
-
-      svn_stringbuf_set(db->work, "svn:");
-      svn_stringbuf_appendcstr(db->work, s + 1);
-      propname->data = db->work->data;
-      propname->len = db->work->len;
+      repos_propname->data = NULL;
+      repos_propname->len = 0;
     }
+}
+
+static dav_error *get_value(dav_db *db, const dav_prop_name *name,
+                            svn_stringbuf_t **pvalue)
+{
+  svn_string_t propname;
+  svn_error_t *serr;
+
+  /* get the repos-local name */
+  get_repos_propname(db, name, &propname);
+
+  /* ### disallow arbitrary, non-SVN properties. this effectively shuts
+     ### off arbitrary DeltaV clients for now. */
+  if (propname.data == NULL)
+    {
+      /* we know these are not present. */
+      *pvalue = NULL;
+      return NULL;
+    }
+
+  /* ### if db->props exists, then try in there first */
+
+  /* Working Baseline, Baseline, or (Working) Version resource */
+  if (db->resource->baselined)
+    if (db->resource->type == DAV_RESOURCE_TYPE_WORKING)
+      serr = svn_fs_txn_prop(pvalue, db->resource->info->root.txn,
+                             &propname, db->p);
+    else
+      serr = svn_fs_revision_prop(pvalue, db->resource->info->repos->fs,
+                                  db->resource->info->root.rev,
+                                  &propname, db->p);
+  else
+    serr = svn_fs_node_prop(pvalue, db->resource->info->root.root,
+                            db->resource->info->repos_path,
+                            &propname, db->p);
+  if (serr != NULL)
+    return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                               "could not fetch a property");
+
+  return NULL;
+}
+
+static dav_error *save_value(dav_db *db, const dav_prop_name *name,
+                             const svn_string_t *value)
+{
+  svn_string_t propname;
+  svn_error_t *serr;
+
+  /* get the repos-local name */
+  get_repos_propname(db, name, &propname);
+
+  /* ### disallow arbitrary, non-SVN properties. this effectively shuts
+     ### off arbitrary DeltaV clients for now. */
+  if (propname.data == NULL)
+    return dav_new_error(db->p, HTTP_CONFLICT, 0,
+                         "Properties may only be defined in the "
+                         SVN_PROP_PREFIX " and " SVN_PROP_CUSTOM_PREFIX
+                         " namespaces.");
+
+  /* Working Baseline or Working (Version) Resource */
+  if (db->resource->baselined)
+    serr = svn_fs_change_txn_prop(db->resource->info->root.txn,
+                                  &propname, value, db->resource->pool);
+  else
+    serr = svn_fs_change_node_prop(db->resource->info->root.root,
+                                   db->resource->info->repos_path,
+                                   &propname, value, db->resource->pool);
+  if (serr != NULL)
+    return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                               "could not change a property");
+
+  /* a change to the props was made; make sure our cached copy is gone */
+  db->props = NULL;
+
+  return NULL;
 }
 
 static dav_error *dav_svn_db_open(apr_pool_t *p, const dav_resource *resource,
@@ -104,121 +190,109 @@ static void dav_svn_db_close(dav_db *db)
   /* nothing to do */
 }
 
-static dav_error *dav_svn_db_fetch(dav_db *db, dav_datum key,
-                                   dav_datum *pvalue)
+static dav_error *dav_svn_db_define_namespaces(dav_db *db, dav_xmlns_info *xi)
 {
-  svn_string_t propname = { key.dptr, key.dsize };
-  svn_stringbuf_t *propval, *xmlsafe = NULL;
-  svn_error_t *serr;
+  dav_xmlns_add(xi, "S", SVN_PROP_PREFIX);
+  dav_xmlns_add(xi, "C", SVN_PROP_CUSTOM_PREFIX);
 
-  if (strcmp(key.dptr, "METADATA") == 0)
-    {
-#define THE_METADATA "\004\000\000\002DAV:\0svn:" /* plus '\0' */
-      pvalue->dptr = (char *)THE_METADATA;
-      pvalue->dsize = sizeof(THE_METADATA);
-      return NULL;
-    }
-
-  /* ### temp hack to remap the name */
-  fix_name(db, &propname);
-
-  /* ### if db->props exists, then try in there first */
-
-  /* Working Baseline, Baseline, or (Working) Version resource */
-  if (db->resource->baselined)
-    if (db->resource->type == DAV_RESOURCE_TYPE_WORKING)
-      serr = svn_fs_txn_prop(&propval, db->resource->info->root.txn,
-                             &propname, db->p);
-    else
-      serr = svn_fs_revision_prop(&propval, db->resource->info->repos->fs,
-                                  db->resource->info->root.rev,
-                                  &propname, db->p);
-  else
-    serr = svn_fs_node_prop(&propval, db->resource->info->root.root,
-                            db->resource->info->repos_path,
-                            &propname, db->p);
-  if (serr != NULL)
-    return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                               "could not fetch a property");
-
-  if (propval == NULL)
-    {
-      /* the property wasn't present. */
-      pvalue->dptr = NULL;
-      pvalue->dsize = 0;
-      return NULL;
-    }
-
-  /* XML-escape our properties before sending them across the wire. */
-  svn_xml_escape_string (&xmlsafe, propval, db->p);
-  pvalue->dptr = xmlsafe->data;
-  pvalue->dsize = xmlsafe->len;
-
-  /* ### temp hack. fix the return value */
-  svn_stringbuf_setempty(db->work);
-  svn_stringbuf_appendbytes(db->work, "", 1);
-  svn_stringbuf_appendbytes(db->work, xmlsafe->data, xmlsafe->len);
-  pvalue->dptr = db->work->data;
-  pvalue->dsize = db->work->len + 1;    /* include null term */
+  /* ### we don't have any other possible namespaces right now. */
 
   return NULL;
 }
 
-static dav_error *dav_svn_db_store(dav_db *db, dav_datum key, dav_datum value)
+static dav_error *dav_svn_db_output_value(dav_db *db, const dav_prop_name *name,
+                                          dav_xmlns_info *xi,
+                                          apr_text_header *phdr, int *found)
 {
-  svn_string_t propname = { key.dptr, key.dsize };
-  svn_string_t propval = { value.dptr, value.dsize };
-  svn_error_t *serr;
-  svn_stringbuf_t *unxml = NULL;
+  svn_stringbuf_t *propval;
+  svn_stringbuf_t *xmlsafe = NULL;
+  const char *prefix;
+  const char *s;
+  dav_error *err;
 
-  /* ### hope node is open, and it is mutable */
+  if ((err = get_value(db, name, &propval)) != NULL)
+    return err;
 
-  /* don't store this */
-  if (strcmp(key.dptr, "METADATA") == 0)
+  /* return whether the prop was found, then punt or handle it. */
+  *found = propval != NULL;
+  if (propval == NULL)
     return NULL;
 
-  /* ### temp hack to remap the name. fix the value (skip lang; toss null). */
-  fix_name(db, &propname);
-  ++propval.data;
-  propval.len -= 2;
+  /* XML-escape our properties before sending them across the wire. */
+  svn_xml_escape_string(&xmlsafe, propval, db->p);
 
-  /* ### (another) temp hack.  Until mod_dav stops xml-escaping the
-     values of the properties, we need to perform another unescape of
-     the same. */
-  svn_xml_unescape_string 
-    (&unxml, 
-     svn_stringbuf_create (propval.data, db->resource->pool),
-     db->resource->pool);
-  propval.data = unxml->data;
-  propval.len = unxml->len;
-
-  /* Working Baseline or Working (Version) Resource */
-  if (db->resource->baselined)
-    serr = svn_fs_change_txn_prop(db->resource->info->root.txn,
-                                  &propname, &propval, db->resource->pool);
+  if (strcmp(name->ns, SVN_PROP_CUSTOM_PREFIX) == 0)
+    prefix = "C:";
   else
-    serr = svn_fs_change_node_prop(db->resource->info->root.root,
-                                   db->resource->info->repos_path,
-                                   &propname, &propval, db->resource->pool);
-  if (serr != NULL)
-    return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                               "could not change a property");
+    prefix = "S:";
 
-  /* a change to the props was made; make sure our cached copy is gone */
-  db->props = NULL;
+  if (xmlsafe->len == 0)
+    {
+      /* empty value. add an empty elem. */
+      s = apr_psprintf(db->p, "<%s%s/>" DEBUG_CR, prefix, name->name);
+      apr_text_append(db->p, phdr, s);
+    }
+  else
+    {
+      /* add <prefix:name>value</prefix:name> */
+
+      s = apr_psprintf(db->p, "<%s%s>" DEBUG_CR, prefix, name->name);
+      apr_text_append(db->p, phdr, s);
+
+      /* the value is in our pool which means it has the right lifetime. */
+      /* ### at least, per the current mod_dav architecture/API */
+      /* ### oops. apr_text is not binary-safe */
+      apr_text_append(db->p, phdr, xmlsafe->data);
+      
+      s = apr_psprintf(db->p, "</%s%s>" DEBUG_CR, prefix, name->name);
+      apr_text_append(db->p, phdr, s);
+    }
 
   return NULL;
 }
 
-static dav_error *dav_svn_db_remove(dav_db *db, dav_datum key)
+static dav_error *dav_svn_db_map_namespaces(
+    dav_db *db,
+    const apr_array_header_t *namespaces,
+    dav_namespace_map **mapping)
 {
-  svn_string_t propname = { key.dptr, key.dsize };
+  /* we don't need a namespace mapping right now. nothing to do */
+
+  return NULL;
+}
+
+static dav_error *dav_svn_db_store(dav_db *db, const dav_prop_name *name,
+                                   const apr_xml_elem *elem,
+                                   dav_namespace_map *mapping)
+{
+  svn_string_t propval;
+
+  /* ### oops. apr_xml is busted: it doesn't allow for binary data at the
+     ### moment. thankfully, we aren't using binary props yet. */
+
+  /* SVN sends property values as a big blob of bytes. Thus, there should be
+     no child elements of the property-name element. That also means that
+     the entire contents of the blob is located in elem->first_cdata. The
+     dav_xml_get_cdata() will figure it all out for us, but (normally) it
+     should be awfully fast and not need to copy any data. */
+
+  propval.data = dav_xml_get_cdata(elem, db->p, 0 /* strip_white */);
+  propval.len = strlen(propval.data);
+
+  return save_value(db, name, &propval);
+}
+
+static dav_error *dav_svn_db_remove(dav_db *db, const dav_prop_name *name)
+{
+  svn_string_t propname;
   svn_error_t *serr;
 
-  /* ### hope node is open, and it is mutable */
+  /* get the repos-local name */
+  get_repos_propname(db, name, &propname);
 
-  /* ### temp hack to remap the name */
-  fix_name(db, &propname);
+  /* ### non-svn props aren't in our repos, so punt for now */
+  if (propname.data == NULL)
+    return NULL;
 
   /* Working Baseline or Working (Version) Resource */
   if (db->resource->baselined)
@@ -238,14 +312,18 @@ static dav_error *dav_svn_db_remove(dav_db *db, dav_datum key)
   return NULL;
 }
 
-static int dav_svn_db_exists(dav_db *db, dav_datum key)
+static int dav_svn_db_exists(dav_db *db, const dav_prop_name *name)
 {
-  svn_string_t propname = { key.dptr, key.dsize };
+  svn_string_t propname;
   svn_stringbuf_t *propval;
   svn_error_t *serr;
 
-  /* ### temp hack to remap the name */
-  fix_name(db, &propname);
+  /* get the repos-local name */
+  get_repos_propname(db, name, &propname);
+
+  /* ### non-svn props aren't in our repos */
+  if (propname.data == NULL)
+    return 0;
 
   /* Working Baseline, Baseline, or (Working) Version resource */
   if (db->resource->baselined)
@@ -266,41 +344,33 @@ static int dav_svn_db_exists(dav_db *db, dav_datum key)
   return serr == NULL && propval != NULL;
 }
 
-static void get_key(apr_hash_index_t *hi, dav_datum *pkey,
-                    dav_db *db)
+static void get_name(dav_db *db, dav_prop_name *pname)
 {
-  if (hi == NULL)
+  if (db->hi == NULL)
     {
-      pkey->dptr = NULL;
-      pkey->dsize = 0;
+      pname->ns = pname->name = NULL;
     }
   else
     {
       const void *name;
-      apr_size_t namelen;
 
-      apr_hash_this(hi, &name, &namelen, NULL);
-      pkey->dptr = (char *)name;        /* hope the caller doesn't change */
-      pkey->dsize = namelen;
+      apr_hash_this(db->hi, &name, NULL, NULL);
 
-      /* ### temp hack for name remapping. a prop with the svn: prefix will
-         ### get a namespace index of 1. others will get "no namespace" */
-      if (strncmp(name, "svn:", 4) == 0)
+#define PREFIX_LEN (sizeof(SVN_PROP_PREFIX) - 1)
+      if (strncmp(name, SVN_PROP_PREFIX, PREFIX_LEN) == 0)
         {
-          svn_stringbuf_set(db->work, "1:");
-          svn_stringbuf_appendcstr(db->work, (const char *)name + 4);
+          pname->ns = SVN_PROP_PREFIX;
+          pname->name = (const char *)name + 4;
         }
       else
         {
-          svn_stringbuf_set(db->work, ":");
-          svn_stringbuf_appendcstr(db->work, name);
+          pname->ns = SVN_PROP_CUSTOM_PREFIX;
+          pname->name = name;
         }
-      pkey->dptr = db->work->data;
-      pkey->dsize = db->work->len + 1;  /* include null term */
     }
 }
 
-static dav_error *dav_svn_db_firstkey(dav_db *db, dav_datum *pkey)
+static dav_error *dav_svn_db_first_name(dav_db *db, dav_prop_name *pname)
 {
   /* if we don't have a copy of the properties, then get one */
   if (db->props == NULL)
@@ -329,38 +399,67 @@ static dav_error *dav_svn_db_firstkey(dav_db *db, dav_datum *pkey)
   db->hi = apr_hash_first(db->p, db->props);
 
   /* fetch the first key */
-  get_key(db->hi, pkey, db);
+  get_name(db, pname);
 
   return NULL;
 }
 
-static dav_error *dav_svn_db_nextkey(dav_db *db, dav_datum *pkey)
+static dav_error *dav_svn_db_next_name(dav_db *db, dav_prop_name *pname)
 {
   /* skip to the next hash entry */
   if (db->hi != NULL)
     db->hi = apr_hash_next(db->hi);
 
   /* fetch the key */
-  get_key(db->hi, pkey, db);
+  get_name(db, pname);
 
   return NULL;
 }
 
-static void dav_svn_db_freedatum(dav_db *db, dav_datum data)
+static dav_error *dav_svn_db_get_rollback(dav_db *db, const dav_prop_name *name,
+                                          dav_deadprop_rollback **prollback)
 {
-  /* nothing to do */
+  dav_error *err;
+  dav_deadprop_rollback *ddp;
+  svn_stringbuf_t *propval;
+
+  if ((err = get_value(db, name, &propval)) != NULL)
+    return err;
+
+  ddp = apr_palloc(db->p, sizeof(*ddp));
+  ddp->name = *name;
+  ddp->value.data = propval ? propval->data : NULL;
+  ddp->value.len = propval ? propval->len : 0;
+
+  *prollback = ddp;
+  return NULL;
 }
+
+static dav_error *dav_svn_db_apply_rollback(dav_db *db,
+                                            dav_deadprop_rollback *rollback)
+{
+  if (rollback->value.data == NULL)
+    {
+      return dav_svn_db_remove(db, &rollback->name);
+    }
+  
+  return save_value(db, &rollback->name, &rollback->value);
+}
+
 
 const dav_hooks_propdb dav_svn_hooks_propdb = {
   dav_svn_db_open,
   dav_svn_db_close,
-  dav_svn_db_fetch,
+  dav_svn_db_define_namespaces,
+  dav_svn_db_output_value,
+  dav_svn_db_map_namespaces,
   dav_svn_db_store,
   dav_svn_db_remove,
   dav_svn_db_exists,
-  dav_svn_db_firstkey,
-  dav_svn_db_nextkey,
-  dav_svn_db_freedatum
+  dav_svn_db_first_name,
+  dav_svn_db_next_name,
+  dav_svn_db_get_rollback,
+  dav_svn_db_apply_rollback,
 };
 
 

@@ -115,6 +115,10 @@ typedef int svn_boolean_t;
    "reporting" wc state before an update, too?)  */
 #define SVN_PROP_WC_PREFIX     SVN_PROP_PREFIX "wc:"
 
+/* When custom, user-defined properties are passed over the wire, they will
+   have this prefix added to their name */
+#define SVN_PROP_CUSTOM_PREFIX SVN_PROP_PREFIX "custom:"
+
 
 
 #ifdef __cplusplus

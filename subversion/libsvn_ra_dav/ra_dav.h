@@ -113,8 +113,6 @@ svn_error_t * svn_ra_dav__do_update(
 #define SVN_RA_DAV__LP_VSN_URL          SVN_RA_DAV__LP_NAMESPACE "version-url"
 
 
-#define SVN_RA_DAV__CUSTOM_NAMESPACE SVN_PROP_PREFIX "custom:"
-
 /*
 ** SVN_RA_DAV__PROP_*: properties that we fetch from the server
 **
