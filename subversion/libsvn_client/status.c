@@ -194,7 +194,7 @@ svn_client_status2 (svn_revnum_t *result_rev,
                     svn_opt_revision_t *revision,
                     svn_wc_status_func_t status_func,
                     void *status_baton,
-                    svn_boolean_t descend,
+                    svn_boolean_t recurse,
                     svn_boolean_t get_all,
                     svn_boolean_t update,
                     svn_boolean_t no_ignore,
@@ -216,7 +216,7 @@ svn_client_status2 (svn_revnum_t *result_rev,
   sb.deleted_in_repos = FALSE;
 
   SVN_ERR (svn_wc_adm_open_anchor (&anchor_access, &target_access, &target,
-                                   path, FALSE, descend ? -1 : 1,
+                                   path, FALSE, recurse ? -1 : 1,
                                    ctx->cancel_func, ctx->cancel_baton,
                                    pool));
   anchor = svn_wc_adm_access_path (anchor_access);
@@ -225,7 +225,7 @@ svn_client_status2 (svn_revnum_t *result_rev,
      as the callback pair. */
   SVN_ERR (svn_wc_get_status_editor2 (&editor, &edit_baton, &set_locks_baton,
                                       &edit_revision, anchor_access, target,
-                                      ctx->config, descend, get_all, no_ignore,
+                                      ctx->config, recurse, get_all, no_ignore,
                                       tweak_status, &sb, ctx->cancel_func,
                                       ctx->cancel_baton, traversal_info,
                                       pool));
@@ -297,7 +297,7 @@ svn_client_status2 (svn_revnum_t *result_rev,
           /* Do the deed.  Let the RA layer drive the status editor. */
           SVN_ERR (svn_ra_do_status (ra_session, &rb.wrapped_reporter,
                                      &rb.wrapped_report_baton,
-                                     target, revnum, descend, editor, 
+                                     target, revnum, recurse, editor, 
                                      edit_baton, pool));
 
           /* Init the report baton. */
@@ -312,7 +312,7 @@ svn_client_status2 (svn_revnum_t *result_rev,
              working copy and HEAD. */
           SVN_ERR (svn_wc_crawl_revisions2 (path, target_access,
                                             &lock_fetch_reporter, &rb, FALSE,
-                                            descend, FALSE, NULL, NULL, NULL,
+                                            recurse, FALSE, NULL, NULL, NULL,
                                             pool));
         }
     }
@@ -344,7 +344,7 @@ svn_client_status2 (svn_revnum_t *result_rev,
      are interesting to an svn:externals property to
      svn_wc_status_unversioned, otherwise we'll just remove the status
      item altogether. */
-  if (descend && (! ignore_externals))
+  if (recurse && (! ignore_externals))
     SVN_ERR (svn_client__do_external_status (traversal_info, status_func,
                                              status_baton, get_all, update,
                                              no_ignore, ctx, pool));
@@ -358,7 +358,7 @@ svn_client_status (svn_revnum_t *result_rev,
                    svn_opt_revision_t *revision,
                    svn_wc_status_func_t status_func,
                    void *status_baton,
-                   svn_boolean_t descend,
+                   svn_boolean_t recurse,
                    svn_boolean_t get_all,
                    svn_boolean_t update,
                    svn_boolean_t no_ignore,
@@ -367,6 +367,6 @@ svn_client_status (svn_revnum_t *result_rev,
 {
   return svn_client_status2 (result_rev, path, revision, 
                              status_func, status_baton,
-                             descend, get_all, update, no_ignore, FALSE,
+                             recurse, get_all, update, no_ignore, FALSE,
                              ctx, pool);
 }

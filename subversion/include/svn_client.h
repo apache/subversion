@@ -787,7 +787,7 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
  * @a status_func/status_baton with a set of @c svn_wc_status_t *
  * structures which describe the status of @a path and its children.
  *
- *    - If @a descend is non-zero, recurse fully, else do only
+ *    - If @a recurse is non-zero, recurse fully, else do only
  *      immediate children.
  *
  *    - If @a get_all is set, retrieve all entries; otherwise,
@@ -814,7 +814,7 @@ svn_client_status2 (svn_revnum_t *result_rev,
                     svn_opt_revision_t *revision,
                     svn_wc_status_func_t status_func,
                     void *status_baton,
-                    svn_boolean_t descend,
+                    svn_boolean_t recurse,
                     svn_boolean_t get_all,
                     svn_boolean_t update,
                     svn_boolean_t no_ignore,
@@ -834,7 +834,7 @@ svn_client_status (svn_revnum_t *result_rev,
                    svn_opt_revision_t *revision,
                    svn_wc_status_func_t status_func,
                    void *status_baton,
-                   svn_boolean_t descend,
+                   svn_boolean_t recurse,
                    svn_boolean_t get_all,
                    svn_boolean_t update,
                    svn_boolean_t no_ignore,

@@ -1536,7 +1536,7 @@ typedef void (*svn_wc_status_func_t) (void *baton,
  *   - If @a get_all is false, then only locally-modified entries will be
  *     returned.  If true, then all entries will be returned.
  *
- *   - If @a descend is false, status structures will be returned only
+ *   - If @a recurse is false, status structures will be returned only
  *     for the target and its immediate children.  Otherwise, this
  *     operation is fully recursive.
  *
@@ -1560,7 +1560,7 @@ svn_error_t *svn_wc_get_status_editor2 (const svn_delta_editor_t **editor,
                                         svn_wc_adm_access_t *anchor,
                                         const char *target,
                                         apr_hash_t *config,
-                                        svn_boolean_t descend,
+                                        svn_boolean_t recurse,
                                         svn_boolean_t get_all,
                                         svn_boolean_t no_ignore,
                                         svn_wc_status_func_t status_func,
@@ -1580,7 +1580,7 @@ svn_error_t *svn_wc_get_status_editor (const svn_delta_editor_t **editor,
                                        svn_wc_adm_access_t *anchor,
                                        const char *target,
                                        apr_hash_t *config,
-                                       svn_boolean_t descend,
+                                       svn_boolean_t recurse,
                                        svn_boolean_t get_all,
                                        svn_boolean_t no_ignore,
                                        svn_wc_status_func_t status_func,
@@ -1859,7 +1859,7 @@ svn_wc_remove_from_revision_control (svn_wc_adm_access_t *adm_access,
  * Assuming @a path is under version control and in a state of conflict, 
  * then take @a path *out* of this state.  If @a resolve_text is true then 
  * any text conflict is resolved, if @a resolve_props is true then any 
- * property conflicts are resolved.  If @a recursive is true, then search
+ * property conflicts are resolved.  If @a recurse is true, then search
  * recursively for conflicts to resolve.
  *
  * @a adm_access is an access baton, with a write lock, for @a path.
@@ -1887,7 +1887,7 @@ svn_error_t *svn_wc_resolved_conflict2 (const char *path,
                                         svn_wc_adm_access_t *adm_access,
                                         svn_boolean_t resolve_text,
                                         svn_boolean_t resolve_props,
-                                        svn_boolean_t recursive,
+                                        svn_boolean_t recurse,
                                         svn_wc_notify_func2_t notify_func,
                                         void *notify_baton,
                                         svn_cancel_func_t cancel_func,
@@ -1904,7 +1904,7 @@ svn_error_t *svn_wc_resolved_conflict (const char *path,
                                        svn_wc_adm_access_t *adm_access,
                                        svn_boolean_t resolve_text,
                                        svn_boolean_t resolve_props,
-                                       svn_boolean_t recursive,
+                                       svn_boolean_t recurse,
                                        svn_wc_notify_func_t notify_func,
                                        void *notify_baton,
                                        apr_pool_t *pool);

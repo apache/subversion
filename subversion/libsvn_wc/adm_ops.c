@@ -2144,14 +2144,14 @@ svn_wc_resolved_conflict (const char *path,
                           svn_wc_adm_access_t *adm_access,
                           svn_boolean_t resolve_text,
                           svn_boolean_t resolve_props,
-                          svn_boolean_t recursive,
+                          svn_boolean_t recurse,
                           svn_wc_notify_func_t notify_func,
                           void *notify_baton,                         
                           apr_pool_t *pool)
 {
   svn_wc__compat_notify_baton_t nb = { notify_func, notify_baton };
   return svn_wc_resolved_conflict2 (path, adm_access,
-                                    resolve_text, resolve_props, recursive,
+                                    resolve_text, resolve_props, recurse,
                                     svn_wc__compat_call_notify_func, &nb,
                                     NULL, NULL, pool);
 
@@ -2162,7 +2162,7 @@ svn_wc_resolved_conflict2 (const char *path,
                            svn_wc_adm_access_t *adm_access,
                            svn_boolean_t resolve_text,
                            svn_boolean_t resolve_props,
-                           svn_boolean_t recursive,
+                           svn_boolean_t recurse,
                            svn_wc_notify_func2_t notify_func,
                            void *notify_baton,                         
                            svn_cancel_func_t cancel_func,
@@ -2177,7 +2177,7 @@ svn_wc_resolved_conflict2 (const char *path,
   baton->notify_func = notify_func;
   baton->notify_baton = notify_baton;
 
-  if (! recursive)
+  if (! recurse)
     {
       const svn_wc_entry_t *entry;
       SVN_ERR (svn_wc_entry (&entry, path, adm_access, FALSE, pool));
