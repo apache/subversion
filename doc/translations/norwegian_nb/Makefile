@@ -193,7 +193,7 @@ copytobuild:
 	cp -a $(BOOK_HTML_TARGET) $(BUILDTMP_DIR)/
 	cp -a $(BOOK_IMAGES) $(BUILDTMP_DIR)/images/
 	cp -a $(BOOK_DIR)/styles.css $(BUILDTMP_DIR)/
-	cp -a $(MDOCS_DIR) $(BUILDTMP_DIR)/
+	cp -a $(MDOCS_HTML_TARGET) $(BUILDTMP_DIR)/$(MDOCS_DIR)/
 	cp -a $(BOOK_DIR)/styles.css $(BUILDTMP_DIR)/$(MDOCS_DIR)/
 
 editmode:
