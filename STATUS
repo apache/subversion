@@ -80,7 +80,7 @@ Candidate changes:
     Votes:
       +1: clkao
 
-  * r10465
+  * r10464
     Have mailer.py open repository via svn_repos.h, not svn_fs.h.
     Justification:
        Allows mailer.py to work with fsfs.
