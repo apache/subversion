@@ -92,7 +92,7 @@
    these types (as 'type **') will always be an OUT param
 */
 %apply SWIGTYPE **OUTPARAM {
-  svn_auth_baton_t **
+  svn_auth_baton_t **, svn_diff_t **
 }
 
 /* -----------------------------------------------------------------------
@@ -318,6 +318,10 @@ apr_pool_t *current_pool;
 
 %include svn_io.h
 
+#ifdef SWIGPERL
+%include svn_diff.h
+#endif
+
 %{
 #include <apr.h>
 #include <apr_general.h>
@@ -331,6 +335,7 @@ apr_pool_t *current_pool;
 #include "svn_auth.h"
 #include "svn_config.h"
 #include "svn_version.h"
+#include "svn_diff.h"
 
 #ifdef SWIGPYTHON
 #include "swigutil_py.h"

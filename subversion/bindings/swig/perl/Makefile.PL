@@ -2,7 +2,7 @@
 use ExtUtils::MakeMaker;
 
 my @modules = qw/client delta fs ra repos wc/;
-my @ldmodules = map {"-lsvn_$_-1"} (@modules, qw/subr/);
+my @ldmodules = map {"-lsvn_$_-1"} (@modules, qw/diff subr/);
 
 my $apr_config = $ENV{APR_CONFIG} || '/usr/local/lib/apache2/apr-config';
 $apr_config = 'apr-config' unless -e $apr_config;
