@@ -60,15 +60,22 @@ class GeneratorBase:
         vsn = self.version
       else:
         vsn = None
+
+      target_class = _build_types.get(type)
+      if not target_class:
+        print 'ERROR: unknown build type:', type
+        errors = 1
+        continue
+
       try:
-        target_ob = _Target(target,
-                            self.parser.get(target, 'path'),
-                            install,
-                            type,
-                            vsn,
-                            self._extension_map)
+        target_ob = target_class(target,
+                                 self.parser.get(target, 'path'),
+                                 install,
+                                 type,
+                                 vsn,
+                                 self._extension_map)
       except GenError, e:
-        print e
+        print 'ERROR:', e
         errors = 1
         continue
 
@@ -117,20 +124,19 @@ class _Target:
     self.path = path
     self.type = type
 
-    if type == 'exe' or type == 'script':
-      if not install:
-        install = 'bin'
-    elif type == 'lib':
-      if not install:
-        install = 'lib'
-    elif type == 'doc':
-      pass
-    else:
-      raise GenError('ERROR: unknown build type: ' + type)
+    if not install:
+      try:
+        install = self.default_install
+      except AttributeError:
+        raise GenError('build type "%s" has no default install location'
+                       % self.type)
 
     if type == 'doc':
       ### dunno what yet
       pass
+    elif type == 'swig':
+      ### this isn't right, but just fill something in for now
+      tfile = name
     else:
       # type == 'lib' or type == 'exe' or type == 'script'
       if vsn:
@@ -145,8 +151,9 @@ class _Target:
 
   def find_sources(self, patterns):
     if not patterns:
-      patterns = _default_sources.get(self.type)
-      if not patterns:
+      try:
+        patterns = self.default_sources
+      except AttributeError:
         raise GenError('build type "%s" has no default sources' % self.type)
     self.sources, errors = _collect_paths(patterns, self.path)
     self.sources.sort()
@@ -175,6 +182,34 @@ class _Target:
     fname = os.path.join(self.path, self.name + '.dsp-test')
     open(fname, 'wb').write(dsp)
 
+class _TargetExe(_Target):
+  default_install = 'bin'
+  default_sources = '*.c'
+
+class _TargetScript(_Target):
+  default_install = 'bin'
+  # no default_sources
+
+class _TargetLib(_Target):
+  default_install = 'lib'
+  default_sources = '*.c'
+
+class _TargetDoc(_Target):
+  # no default_install
+  default_sources = '*.texi'
+
+class _TargetSWIG(_Target):
+  default_install = 'swig'
+  # no default_sources
+
+_build_types = {
+  'exe' : _TargetExe,
+  'script' : _TargetScript,
+  'lib' : _TargetLib,
+  'doc' : _TargetDoc,
+  'swig' : _TargetSWIG,
+  }
+
 class GenError(Exception):
   pass
 
@@ -190,15 +225,8 @@ _cfg_defaults = {
   'add-deps' : '',
   }
 
-_default_sources = {
-  'lib' : '*.c',
-  'exe' : '*.c',
-  'doc' : '*.texi',
-  }
-
 _predef_sections = [
   'options',
-  'includes',
   'static-apache',
   'test-scripts',
   'fs-test-scripts',
