@@ -171,7 +171,7 @@ class MakefileGenerator(_GeneratorBase):
       targ_varname = string.replace(target, '-', '_')
       ldflags = self.parser.get(target, 'link-flags')
       add_deps = self.parser.get(target, 'add-deps')
-      objnames = string.join(map(os.path.basename, objects))
+      objnames = string.join(_strip_path(path, objects))
       self.ofile.write(
         '%s_DEPS = %s %s\n'
         '%s_OBJECTS = %s\n'
@@ -502,6 +502,17 @@ def _collect_paths(pats, path=None):
       continue
     result.extend(files)
   return result, errors
+
+def _strip_path(path, files):
+  "Strip the given path from each file."
+  if path[-1] != '/':
+    path = path + '/'
+  l = len(path)
+  result = [ ]
+  for file in files:
+    assert file[:l] == path
+    result.append(file[l:])
+  return result
 
 def _retreat_dots(path):
   "Given a relative directory, return ../ paths to retreat to the origin."
