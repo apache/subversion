@@ -217,7 +217,7 @@ svn_client_status (svn_revnum_t *youngest,
                                               path, pool));
           SVN_ERR (svn_wc_crawl_revisions (path, tgt_access, reporter, 
                                            report_baton, FALSE, descend, 
-                                           NULL, NULL, NULL, pool));
+                                           FALSE, NULL, NULL, NULL, pool));
         }
     }
   else

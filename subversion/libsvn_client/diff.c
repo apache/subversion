@@ -1707,7 +1707,7 @@ diff_repos_wc (const apr_array_header_t *options,
      diffs in reverse.  :-)  */
   SVN_ERR (svn_wc_crawl_revisions (path2, dir_access,
                                    reporter, report_baton,
-                                   FALSE, recurse,
+                                   FALSE, recurse, FALSE,
                                    NULL, NULL, /* notification is N/A */
                                    NULL, pool));
 

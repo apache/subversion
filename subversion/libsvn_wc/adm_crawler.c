@@ -42,24 +42,35 @@
 #include "adm_files.h"
 #include "props.h"
 #include "translate.h"
+#include "entries.h"
 
 
 /* Helper for report_revisions().
    
    Perform an atomic restoration of the file FILE_PATH; that is, copy
    the file's text-base to the administrative tmp area, and then move
-   that file to FILE_PATH with possible translations/expansions.  */
+   that file to FILE_PATH with possible translations/expansions.  If
+   USE_COMMIT_TIMES is set, then set working file's timestamp to
+   last-commit-time.  Either way, set entry-timestamp to match that of
+   the working file when all is finished. */
 static svn_error_t *
 restore_file (const char *file_path,
               svn_wc_adm_access_t *adm_access,
+              svn_boolean_t use_commit_times,
               apr_pool_t *pool)
 {
   const char *text_base_path, *tmp_text_base_path;
   svn_subst_keywords_t *keywords;
   const char *eol;
+  const svn_wc_entry_t *entry;
+  svn_wc_entry_t newentry;
+  apr_time_t tstamp;
+  const char *bname;
+  apr_uint32_t modify_flags = 0;
 
   text_base_path = svn_wc__text_base_path (file_path, FALSE, pool);
   tmp_text_base_path = svn_wc__text_base_path (file_path, TRUE, pool);
+  bname = svn_path_basename (file_path, pool);
 
   SVN_ERR (svn_io_copy_file (text_base_path, tmp_text_base_path,
                              FALSE, pool));
@@ -88,10 +99,27 @@ restore_file (const char *file_path,
   SVN_ERR (svn_wc_resolved_conflict (file_path, adm_access, TRUE, FALSE, FALSE,
                                      NULL, NULL, pool));
 
-  /* ### hey guys, shouldn't we recording the 'restored'
-     working-file's timestamp in its entry?  Right now, every time we
-     restore a file, the front-line-timestamp-check-for-modifiedness
-     is being destroyed. */
+  SVN_ERR (svn_wc_entry (&entry, file_path, adm_access, FALSE, pool));
+  assert(entry != NULL);
+
+  /* Possibly set timestamp to last-commit-time. */
+  if (use_commit_times)
+    {
+      SVN_ERR (svn_io_set_file_affected_time (entry->cmt_date,
+                                              file_path, pool));
+      tstamp = entry->cmt_date;
+    }
+  else
+    {
+      SVN_ERR (svn_io_file_affected_time (&tstamp, file_path, pool));
+    }
+  
+  /* Modify our entry's text-timestamp to match the working file. */
+  modify_flags |= SVN_WC__ENTRY_MODIFY_TEXT_TIME;
+  newentry.text_time = tstamp;
+  SVN_ERR (svn_wc__entry_modify (adm_access, bname,
+                                 &newentry, modify_flags,
+                                 TRUE /* do_sync now */, pool));
 
   return SVN_NO_ERROR;
 }
@@ -118,7 +146,8 @@ restore_file (const char *file_path,
 
    If RESTORE_FILES is set, then unexpectedly missing working files
    will be restored from text-base and NOTIFY_FUNC/NOTIFY_BATON
-   will be called to report the restoration. */
+   will be called to report the restoration.  USE_COMMIT_TIMES is
+   passed to restore_file() helper. */
 static svn_error_t *
 report_revisions (svn_wc_adm_access_t *adm_access,
                   const char *dir_path,
@@ -130,6 +159,7 @@ report_revisions (svn_wc_adm_access_t *adm_access,
                   svn_boolean_t restore_files,
                   svn_boolean_t recurse,
                   svn_boolean_t report_everything,
+                  svn_boolean_t use_commit_times,
                   svn_wc_traversal_info_t *traversal_info,
                   apr_pool_t *pool)
 {
@@ -248,7 +278,7 @@ report_revisions (svn_wc_adm_access_t *adm_access,
             {
               /* ... recreate file from text-base, and ... */
               SVN_ERR (restore_file (this_full_path, dir_access,
-                                     iterpool));
+                                     use_commit_times, iterpool));
               
               /* ... report the restoration to the caller.  */
               if (notify_func != NULL)
@@ -374,6 +404,7 @@ report_revisions (svn_wc_adm_access_t *adm_access,
                                      notify_func, notify_baton,
                                      restore_files, recurse,
                                      subdir_entry->incomplete,
+                                     use_commit_times,
                                      traversal_info,
                                      iterpool));
         } /* end directory case */
@@ -399,6 +430,7 @@ svn_wc_crawl_revisions (const char *path,
                         void *report_baton,
                         svn_boolean_t restore_files,
                         svn_boolean_t recurse,
+                        svn_boolean_t use_commit_times,
                         svn_wc_notify_func_t notify_func,
                         void *notify_baton,
                         svn_wc_traversal_info_t *traversal_info,
@@ -464,6 +496,7 @@ svn_wc_crawl_revisions (const char *path,
                                   notify_func, notify_baton,
                                   restore_files, recurse,
                                   entry->incomplete,
+                                  use_commit_times,
                                   traversal_info,
                                   pool);
           if (err)
@@ -478,7 +511,7 @@ svn_wc_crawl_revisions (const char *path,
       if (missing && restore_files)
         {
           /* Recreate file from text-base. */
-          err = restore_file (path, adm_access, pool);
+          err = restore_file (path, adm_access, use_commit_times, pool);
           if (err)
             goto abort_report;
 
