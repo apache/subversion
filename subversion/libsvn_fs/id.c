@@ -16,7 +16,6 @@
 
 #include "svn_fs.h"
 #include "id.h"
-#include "fs.h"
 #include "convert-size.h"
 
 
@@ -211,9 +210,9 @@ svn_fs_parse_id (const char *data,
       return 0;
   }
 
-  /* Allocate the ID array.  */
-  /* NOTE: if pool == NULL, then this memory will be malloc'd */
-  id = NEWARRAY (pool, svn_fs_id_t, id_len + 1);
+  /* Allocate the ID array.  Note that if pool is zero, apr_palloc
+     just calls malloc, which meets our promised interface.  */
+  id = apr_palloc (pool, sizeof (*id) * (id_len + 1));
 
   {
     int i = 0;
