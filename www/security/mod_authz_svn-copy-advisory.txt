@@ -40,4 +40,4 @@ Workarounds:
 Recommendations:
 ================
 
-We recommend all users upgrade to 1.0.6.
+We recommend all users upgrade to 1.0.6 or 1.1.0-rc1.
