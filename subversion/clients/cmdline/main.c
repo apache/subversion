@@ -366,7 +366,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
      svn_cl__editor_cmd_opt, svn_cl__encoding_opt, svn_cl__force_log_opt,
      svn_cl__config_dir_opt} },
   
-  { "propdel", svn_cl__propdel, {"pdel"},
+  { "propdel", svn_cl__propdel, {"pdel", "pd"},
     "Remove PROPNAME from files, dirs, or revisions.\n"
     "usage: 1. propdel PROPNAME [PATH...]\n"
     "       2. propdel PROPNAME --revprop -r REV [URL]\n\n"
