@@ -1522,7 +1522,7 @@ svn_fs__dag_get_contents (svn_stream_t **contents,
   SVN_ERR (get_node_revision (&node_rev, file, trail));
 
   /* Get the rep key. */
-  if (node_rev->children->next->next->len != 0)
+  if ((NR_DATA_KEY (node_rev))->len != 0)
     {
       baton->rep_key = apr_pstrndup (trail->pool,
                                      (NR_DATA_KEY (node_rev))->data,
