@@ -1051,7 +1051,7 @@ shim_svn_ra_dav__lock(svn_ra_session_t *session,
     }
 
   /* Build an svn_lock_t based on the returned ne_lock. */
-  slock = apr_pcalloc(pool, sizeof(*slock));
+  slock = svn_lock_create(pool);
   slock->path = fs_path.data;
   slock->token = apr_pstrdup(pool, nlock->token);
   if (nlock->owner)
@@ -1299,7 +1299,7 @@ lock_receiver(void *userdata,
   if (lock)
     {
       /* Convert the ne_lock into an svn_lock_t. */
-      rb->lock = apr_pcalloc(rb->pool, sizeof(*(rb->lock)));      
+      rb->lock = svn_lock_create(rb->pool);
       rb->lock->token = apr_pstrdup(rb->pool, lock->token);
       rb->lock->path = rb->fs_path;
       if (lock->owner)

@@ -42,7 +42,7 @@ generate_new_lock (svn_lock_t **lock_p,
                    long int timeout,
                    apr_pool_t *pool)
 {
-  svn_lock_t *lock = apr_pcalloc (pool, sizeof (*lock));
+  svn_lock_t *lock = svn_lock_create (pool);
 
   SVN_ERR (svn_fs_base__generate_lock_token (&(lock->token), fs, pool));
   

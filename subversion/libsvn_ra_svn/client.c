@@ -197,7 +197,7 @@ static svn_error_t *parse_lock(apr_array_header_t *list, apr_pool_t *pool,
                                svn_lock_t **lock)
 {
   const char *cdate, *edate;
-  *lock = apr_pcalloc(pool, sizeof(**lock));
+  *lock = svn_lock_create (pool);
   SVN_ERR(svn_ra_svn_parse_tuple(list, pool, "ccc(?c)c(?c)", &(*lock)->path,
                                  &(*lock)->token, &(*lock)->owner,
                                  &(*lock)->comment, &cdate, &edate));
