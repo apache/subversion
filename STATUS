@@ -77,6 +77,15 @@ section for approved changes.)
       Votes:
        +0: ghudson
 
+    * r8390
+      Make 'svn merge' notice ancestry by default.
+      Justification:  ignoring copies can produce garbage local mods,
+                      and you might never notice.
+      Notes:  see huge list discussion about this change:
+              http://www.contactor.se/~dast/svn/archive-2004-01/0481.shtml
+      Votes:
+       +1: sussman
+
 
 Core changes that already have three +1 votes and no vetos.  (If you
 veto something below, or remove a threshold vote, please move it to
