@@ -29,59 +29,59 @@ extern "C" {
    XXX FIXME: Modify before each snapshot, milestone or release. */
 
 /* Version numbers: <major>.<minor>.<micro> */
-#define SVN_VER_MAJOR      0    /* Major version number.
-                                   Will change when incompatible changes
-                                   are made to published interfaces. */
-#define SVN_VER_MINOR      0    /* Minor version number.
-                                   Will change when new functionality is
-                                   added or new interfaces are defined, but
-                                   all changes are backward compatible. */
-#define SVN_VER_MICRO      0    /* Patch number.
-                                   Will change with every released patch. */
+
+/* Major version number.
+   Modify when incompatible changes are made to published interfaces. */
+#define SVN_VER_MAJOR      0
+
+/* Minor version number.
+   Modify when new functionality is added or new interfaces are
+   defined, but all changes are backward compatible. */
+#define SVN_VER_MINOR      0
+
+/* Patch number.
+   Modify for every released patch. */
+#define SVN_VER_MICRO      0
 
 
-/* Milestone version: "M*".
-   If this is not a milestone release, this symbol should be #undef'd. */
-/* #undef SVN_VER_MILESTONE */
-#define SVN_VER_MILESTONE  "M3"
+/* Descriptive name: If a version number isn't appropriate (e.g., for
+   pre-1.0 milestone versions), use this string for the version name
+   instead. Otherwise, this symbol should be #undef'd. */
+/* #undef SVN_VER_NAME */
+#define SVN_VER_NAME       "M3"
 
 
-/* Version date: date of release or snapshot. */
-#define SVN_VER_DATE       "2001-08-30"
-
-
-/* Version tag: A string describing the stateus of the version.
+/* Version tag: A string describing the of the version.
    Typical values are "alpha", "beta", "prerelease", ...
-   This symbol should be #undef'd for major releases; for development
-   snapshots, it should be defined to SVN_VER_DATE.
-   This symbol is not used in the milestone version strings. */
+   This symbol may be #undef'd for major releases; for development
+   snapshots, it should be the number of the snapshot's revision. */
 /* #undef SVN_VER_TAG */
-#define SVN_VER_TAG        "N/A"
+#define SVN_VER_TAG        "r196"
 
 
 
 /* Version strings composed from the above definitions. */
 
 /* Complete version string */
-#ifndef SVN_VER_MILESTONE
-#  ifdef SVN_VER_TAG
-#    define SVN_VERSION    SVN_VERSION_NUMBER" ("SVN_VER_TAG")"
-#  else
-#    define SVN_VERSION    SVN_VERSION_NUMBER
-#  endif
+#ifdef SVN_VER_TAG
+#  define SVN_VERSION      SVN_VER_NUMBER" ("SVN_VER_TAG")"
 #else
-#  define SVN_VERSION      SVN_VER_MILESTONE
-#endif
+#  define SVN_VERSION      SVN_VER_NUMBER
+#endif /* SVN_VER_TAG */
 
 /* Version number */
-#define SVN_VERSION_NUMBER SVN_VER_STRINGIFY(SVN_VER_MAJOR) \
+#ifndef SVN_VER_NAME
+#  define SVN_VER_NUMBER   SVN_VER_STRINGIFY(SVN_VER_MAJOR) \
                            "."SVN_VER_STRINGIFY(SVN_VER_MINOR) \
                            "."SVN_VER_STRINGIFY(SVN_VER_MICRO)
+#else
+#  define SVN_VER_NUMBER   SVN_VER_NAME
+#endif /* SVN_VER_NAME */
 
 
 /* Yet another stringification macro. */
-#define GLOW_VER_STRINGIFY(X) GLOW_VER_REALLY_STRINGIFY(X)
-#define GLOW_VER_REALLY_STRINGIFY(X) #X
+#define SVN_VER_STRINGIFY(X) GLOW_VER_REALLY_STRINGIFY(X)
+#define SVN_VER_REALLY_STRINGIFY(X) #X
 
 
 #endif /* SVN_VERSION_H */
