@@ -2010,11 +2010,16 @@ read_change (change_t **change_p,
 /* Fetch all the changed path entries from FILE and store then in
  *CHANGED_PATHS.  Folding is done to remove redundant or unnecessary
  *data.  Store a hash of paths to copyfrom revisions/paths in
- COPYFROM_HASH if it is non-NULL.  Do all allocations in POOL. */
+ COPYFROM_HASH if it is non-NULL.  If PREFOLDED is true, assume that
+ the changed-path entries have already been folded (by
+ write_final_changed_paths) and may be out of order, so we shouldn't
+ remove children of replaced or deleted directories.  Do all
+ allocations in POOL. */
 static svn_error_t *
 fetch_all_changes (apr_hash_t *changed_paths,
                    apr_hash_t *copyfrom_hash,
                    apr_file_t *file,
+                   svn_boolean_t prefolded,
                    apr_pool_t *pool)
 {
   change_t *change;
@@ -2042,8 +2047,9 @@ fetch_all_changes (apr_hash_t *changed_paths,
          is already a temporary subpool.
       */
 
-      if ((change->kind == svn_fs_path_change_delete)
-          || (change->kind == svn_fs_path_change_replace))
+      if (((change->kind == svn_fs_path_change_delete)
+           || (change->kind == svn_fs_path_change_replace))
+          && ! prefolded)
         {
           apr_hash_index_t *hi;
 
@@ -2091,7 +2097,8 @@ svn_fs_fs__txn_changes_fetch (apr_hash_t **changed_paths_p,
   SVN_ERR (svn_io_file_open (&file, path_txn_changes (fs, txn_id, pool),
                              APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool));
 
-  SVN_ERR (fetch_all_changes (changed_paths, copyfrom_cache, file, pool));
+  SVN_ERR (fetch_all_changes (changed_paths, copyfrom_cache, file, FALSE,
+                              pool));
 
   SVN_ERR (svn_io_file_close (file, pool));
 
@@ -2122,7 +2129,7 @@ svn_fs_fs__paths_changed (apr_hash_t **changed_paths_p,
   changed_paths = apr_hash_make (pool);
 
   SVN_ERR (fetch_all_changes (changed_paths, copyfrom_cache, revision_file,
-                              pool));
+                              TRUE, pool));
   
   /* Close the revision file. */
   SVN_ERR (svn_io_file_close (revision_file, pool));
