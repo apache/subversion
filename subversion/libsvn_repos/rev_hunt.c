@@ -119,7 +119,7 @@ svn_repos_dated_revision (svn_revnum_t *revision,
           SVN_ERR (get_time (&next_time, fs, rev_mid + 1, pool));
           if (next_time > tm)
             {
-              *revision = rev_mid + 1;
+              *revision = rev_mid;
               break;
             }
 
