@@ -162,10 +162,16 @@ const apr_getopt_option_t svn_cl__options[] =
  * either a path or an url can be used.  Hmm, should this be part of the
  * help text?
  */
+/* Options for authentication. */
 #define SVN_CL__AUTH_OPTIONS svn_cl__auth_username_opt, \
                              svn_cl__auth_password_opt, \
                              svn_cl__no_auth_cache_opt, \
                              svn_cl__non_interactive_opt
+/* Options for giving a log message.  (Some of these also have other uses.) */
+#define SVN_CL__LOG_MSG_OPTIONS 'm', 'F', \
+                                svn_cl__force_log_opt, \
+                                svn_cl__editor_cmd_opt, \
+                                svn_cl__encoding_opt
  
 const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
 {
@@ -209,9 +215,8 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
      "\n"
      "  A log message must be provided, but it can be empty.  If it is not\n"
      "  given by a --message or --file option, an editor will be started.\n"),
-    {'m', 'F', 'q', 'N', svn_cl__targets_opt,
-     svn_cl__force_log_opt, SVN_CL__AUTH_OPTIONS,
-     svn_cl__editor_cmd_opt, svn_cl__encoding_opt, svn_cl__config_dir_opt} },
+    {'q', 'N', svn_cl__targets_opt,
+     SVN_CL__LOG_MSG_OPTIONS, SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
   
   { "copy", svn_cl__copy, {"cp"},
     N_("Duplicate something in working copy or repository, remembering "
@@ -223,8 +228,8 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
        "    WC  -> URL:  immediately commit a copy of WC to URL\n"
        "    URL -> WC:   check out URL into WC, schedule for addition\n"
        "    URL -> URL:  complete server-side copy;  used to branch & tag\n"),
-    {'m', 'F', 'r', 'q', SVN_CL__AUTH_OPTIONS, svn_cl__force_log_opt,
-     svn_cl__editor_cmd_opt, svn_cl__encoding_opt, svn_cl__config_dir_opt} },
+    {'r', 'q',
+     SVN_CL__LOG_MSG_OPTIONS, SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
   
   { "delete", svn_cl__delete, {"del", "remove", "rm"},
     N_("Remove files and directories from version control.\n"
@@ -239,9 +244,8 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
        "\n"
        "  2. Each item specified by a URL is deleted from the repository\n"
        "    via an immediate commit.\n"),
-    {svn_cl__force_opt, svn_cl__force_log_opt, 'm', 'F', 'q', 
-     svn_cl__targets_opt, SVN_CL__AUTH_OPTIONS,
-     svn_cl__editor_cmd_opt, svn_cl__encoding_opt, svn_cl__config_dir_opt} },
+    {svn_cl__force_opt, 'q', svn_cl__targets_opt,
+     SVN_CL__LOG_MSG_OPTIONS, SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
   
   { "diff", svn_cl__diff, {"di"},
     N_("Display the differences between two paths.\n"
@@ -323,9 +327,8 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
        "  Recursively commit a copy of PATH to URL.\n"
        "  If PATH is omitted '.' is assumed.  Parent directories are created\n"
        "  as necessary in the repository.\n"),
-    {'m', 'F', 'q', 'N', SVN_CL__AUTH_OPTIONS, svn_cl__force_log_opt,
-     svn_cl__editor_cmd_opt, svn_cl__encoding_opt, svn_cl__config_dir_opt,
-     svn_cl__autoprops_opt, svn_cl__no_autoprops_opt} },
+    {'q', 'N', svn_cl__autoprops_opt, svn_cl__no_autoprops_opt,
+     SVN_CL__LOG_MSG_OPTIONS, SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
  
   { "info", svn_cl__info, {0},
     N_("Display information about a file or directory.\n"
@@ -434,8 +437,8 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
        "\n"
        "  In both cases, all the intermediate directories must already "
        "exist.\n"),
-    {'m', 'F', 'q', SVN_CL__AUTH_OPTIONS, svn_cl__editor_cmd_opt,
-     svn_cl__encoding_opt, svn_cl__force_log_opt, svn_cl__config_dir_opt} },
+    {'q',
+     SVN_CL__LOG_MSG_OPTIONS, SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
 
   { "move", svn_cl__move, {"mv", "rename", "ren"},
     N_("Move and/or rename something in working copy or repository.\n"
@@ -446,9 +449,8 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
        "  SRC and DST can both be working copy (WC) paths or URLs:\n"
        "    WC  -> WC:   move and schedule for addition (with history)\n"
        "    URL -> URL:  complete server-side rename.\n"),    
-    {'m', 'F', 'r', 'q', svn_cl__force_opt, SVN_CL__AUTH_OPTIONS,
-     svn_cl__editor_cmd_opt, svn_cl__encoding_opt, svn_cl__force_log_opt,
-     svn_cl__config_dir_opt} },
+    {'r', 'q', svn_cl__force_opt,
+     SVN_CL__LOG_MSG_OPTIONS, SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
   
   { "propdel", svn_cl__propdel, {"pdel", "pd"},
     N_("Remove PROPNAME from files, dirs, or revisions.\n"
