@@ -531,13 +531,10 @@ svn_opt_parse_path (svn_opt_revision_t *rev,
 
 
 svn_error_t *
-svn_opt_args_to_target_array (apr_array_header_t **targets_p, 
-                              apr_getopt_t *os,
-                              apr_array_header_t *known_targets,
-                              svn_opt_revision_t *start_revision,
-                              svn_opt_revision_t *end_revision,
-                              svn_boolean_t extract_revisions,
-                              apr_pool_t *pool)
+svn_opt_args_to_target_array2 (apr_array_header_t **targets_p, 
+                               apr_getopt_t *os,
+                               apr_array_header_t *known_targets,
+                               apr_pool_t *pool)
 {
   int i;
   apr_array_header_t *input_targets =
@@ -647,6 +644,25 @@ svn_opt_args_to_target_array (apr_array_header_t **targets_p,
 
   /* kff todo: need to remove redundancies from targets before
      passing it to the cmd_func. */
+  
+  *targets_p = output_targets;
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_opt_args_to_target_array (apr_array_header_t **targets_p, 
+                              apr_getopt_t *os,
+                              apr_array_header_t *known_targets,
+                              svn_opt_revision_t *start_revision,
+                              svn_opt_revision_t *end_revision,
+                              svn_boolean_t extract_revisions,
+                              apr_pool_t *pool)
+{
+  apr_array_header_t *output_targets;
+
+  SVN_ERR (svn_opt_args_to_target_array2 (&output_targets, os,
+                                          known_targets, pool));
 
   if (extract_revisions)
     {

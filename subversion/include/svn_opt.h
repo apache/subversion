@@ -245,6 +245,23 @@ int svn_opt_parse_revision (svn_opt_revision_t *start_revision,
 /* Parsing arguments. */
 
 /**
+ * @since New in 1.2.
+ *
+ * Pull remaining target arguments from @a os into @a *targets_p, including
+ * targets stored in @a known_targets (which might come from, for
+ * example, the "--targets" command line option), converting them to
+ * UTF-8.  Allocate @a *targets_p and its elements in @a pool.
+ */
+svn_error_t *
+svn_opt_args_to_target_array2 (apr_array_header_t **targets_p,
+                               apr_getopt_t *os,
+                               apr_array_header_t *known_targets,
+                               apr_pool_t *pool);
+
+
+/**
+ * @deprecated Provided for backward compatibility with the 1.1 API.
+ *
  * Pull remaining target arguments from @a os into @a *targets_p, including
  * targets stored in @a known_targets (which might come from, for
  * example, the "--targets" command line option), converting them to
@@ -252,10 +269,12 @@ int svn_opt_parse_revision (svn_opt_revision_t *start_revision,
  *
  * If @a extract_revisions is set, then this function will attempt to
  * look for trailing "@rev" syntax on the paths.  If an @rev is found
- * for the first target in *TARGETS_P, it will overwrite the value of
- * @a *start_revision.  If an @rev is found for the second target in
- * *TARGETS_P,  it will overwrite @a *end_revision.  (Extra revisions 
- * beyond that are ignored.) 
+ * for the first target in @a *targets_p, it will be removed from the
+ * first target string and its value will overwrite the value of @a
+ * *start_revision.  If an @rev is found for the second target in @a
+ * *targets_p, it will be removed from the second target string and its
+ * value will overwrite @a *end_revision.  (Extra revisions beyond that
+ * are ignored.) 
  */
 svn_error_t *
 svn_opt_args_to_target_array (apr_array_header_t **targets_p,

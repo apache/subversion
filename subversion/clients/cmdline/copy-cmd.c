@@ -47,11 +47,8 @@ svn_cl__copy (apr_getopt_t *os,
   svn_boolean_t src_is_url, dst_is_url;
   svn_client_commit_info_t *commit_info = NULL;
 
-  SVN_ERR (svn_opt_args_to_target_array (&targets, os, 
-                                         opt_state->targets,
-                                         &(opt_state->start_revision),
-                                         &(opt_state->end_revision),
-                                         FALSE, pool));
+  SVN_ERR (svn_opt_args_to_target_array2 (&targets, os, 
+                                          opt_state->targets, pool));
   if (targets->nelts != 2)
     return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL);
 
