@@ -95,14 +95,25 @@ svn_test__stream_to_string (svn_stringbuf_t **string,
                             svn_stream_t *stream, 
                             apr_pool_t *pool)
 {
-  char buf[50];
+  char buf[10]; /* Making this really small because a) hey, they're
+                   just tests, not the prime place to beg for
+                   optimization, and b) we've had repository
+                   problems in the past that only showed up when
+                   reading a file into a buffer that couldn't hold the
+                   file's whole contents -- the kind of thing you'd
+                   like to catch while testing.  
+
+                   ### cmpilato todo: Perhaps some day this size can
+                   be passed in as a parameter.  Not high on my list
+                   of priorities today, though. */
+
   apr_size_t len;
   svn_stringbuf_t *str = svn_stringbuf_create ("", pool);
 
   do 
     {
       /* "please read 40 bytes into buf" */
-      len = 40;
+      len = sizeof (buf);
       SVN_ERR (svn_stream_read (stream, buf, &len));
       
       /* Now copy however many bytes were *actually* read into str. */
