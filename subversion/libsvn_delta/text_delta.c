@@ -40,7 +40,6 @@ struct svn_txdelta_stream_t {
   svn_boolean_t more;           /* TRUE if there are more data in the pool. */
   apr_off_t pos;                /* Offset of next read in source file. */
   char *buf;                    /* Buffer for vdelta data. */
-  apr_size_t saved_source_len;  /* Amount of source data saved in buf. */
 
   apr_md5_ctx_t context;        /* APR's MD5 context container. */
 
@@ -186,8 +185,7 @@ svn_txdelta (svn_txdelta_stream_t **stream,
   (*stream)->target = target;
   (*stream)->more = TRUE;
   (*stream)->pos = 0;
-  (*stream)->buf = apr_palloc (pool, 3 * SVN_STREAM_CHUNK_SIZE);
-  (*stream)->saved_source_len = 0;
+  (*stream)->buf = apr_palloc (pool, 2 * SVN_STREAM_CHUNK_SIZE);
 
   /* Initialize MD5 digest calculation. */
   apr_md5_init (&((*stream)->context));
@@ -242,21 +240,12 @@ svn_txdelta_next_window (svn_txdelta_window_t **window,
   else
     {
       svn_error_t *err;
-      apr_size_t total_source_len;
-      apr_size_t new_source_len = SVN_STREAM_CHUNK_SIZE;
+      apr_size_t source_len = SVN_STREAM_CHUNK_SIZE;
       apr_size_t target_len = SVN_STREAM_CHUNK_SIZE;
       svn_txdelta__ops_baton_t build_baton = { 0 };
 
-      /* If there is no saved source data yet, read an extra half
-         window of data this time to get things started. */
-      if (stream->saved_source_len == 0)
-        new_source_len += SVN_STREAM_CHUNK_SIZE / 2;
-
       /* Read the source stream. */
-      err = svn_stream_read (stream->source,
-                             stream->buf + stream->saved_source_len,
-                             &new_source_len);
-      total_source_len = stream->saved_source_len + new_source_len;
+      err = svn_stream_read (stream->source, stream->buf, &source_len);
 
       /* Update the MD5 accumulator with the freshly-read data in
          stream.
@@ -265,17 +254,15 @@ svn_txdelta_next_window (svn_txdelta_window_t **window,
          APR_SUCCESS.  As such, we are proposing to the APR folks that
          its interface change to be a void function.  In the meantime,
          we'll simply ignore the return value. */
-      apr_md5_update (&(stream->context), 
-                      stream->buf + stream->saved_source_len,
-                      new_source_len);
+      apr_md5_update (&(stream->context), stream->buf, source_len);
 
       /* Read the target stream. */
       if (err == SVN_NO_ERROR)
-        err = svn_stream_read (stream->target, stream->buf + total_source_len,
+        err = svn_stream_read (stream->target, stream->buf + source_len,
                                &target_len);
       if (err != SVN_NO_ERROR)
         return err;
-      stream->pos += new_source_len;
+      stream->pos += source_len;
 
       /* Forget everything if there's no target data. */
       if (target_len == 0)
@@ -288,21 +275,14 @@ svn_txdelta_next_window (svn_txdelta_window_t **window,
       /* Compute the delta operations. */
       build_baton.new_data = svn_stringbuf_create ("", pool);
       svn_txdelta__vdelta (&build_baton, stream->buf,
-                           total_source_len, target_len,
+                           source_len, target_len,
                            pool);
 
       /* Create the delta window. */
       *window = svn_txdelta__make_window (&build_baton, pool);
-      (*window)->sview_offset = stream->pos - total_source_len;
-      (*window)->sview_len = total_source_len;
+      (*window)->sview_offset = stream->pos - source_len;
+      (*window)->sview_len = source_len;
       (*window)->tview_len = target_len;
-
-      /* Save the last window's worth of data from the source view. */
-      stream->saved_source_len = (total_source_len < SVN_STREAM_CHUNK_SIZE)
-        ? total_source_len : SVN_STREAM_CHUNK_SIZE;
-      memmove (stream->buf,
-               stream->buf + total_source_len - stream->saved_source_len,
-               stream->saved_source_len);
 
       /* That's it. */
       return SVN_NO_ERROR;
