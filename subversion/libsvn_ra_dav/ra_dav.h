@@ -108,6 +108,15 @@ svn_error_t * svn_ra_dav__do_status(
   const svn_delta_edit_fns_t *wc_status,
   void *wc_status_baton);
 
+svn_error_t * svn_ra_dav__get_log(
+  void *session_baton,
+  apr_hash_t *paths,
+  svn_revnum_t *start,
+  svn_revnum_t *end,
+  svn_boolean_t discover_changed_paths,
+  svn_ra_log_entry_receiver_t receiver,
+  void *receiver_baton);
+
 /*
 ** SVN_RA_DAV__LP_*: local properties for RA/DAV
 **

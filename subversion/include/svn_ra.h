@@ -406,6 +406,9 @@ typedef struct svn_ra_plugin_t
    * The last call to receiver (i.e., for the last requested log
    * message) passes the FINAL_CALL flag.
    *
+   * If any invocation of RECEIVER returns error, return that error
+   * immediately and without wrapping it.
+   *
    * See also the documentation for `svn_ra_log_entry_receiver_t'.
    */
   svn_error_t *(*get_log) (void *session_baton,

@@ -1459,6 +1459,21 @@ svn_error_t * svn_ra_dav__do_status(void *session_baton,
                         TRUE); /* is_status */
 }
 
+
+svn_error_t * svn_ra_dav__get_log(void *session_baton,
+                                  apr_hash_t *paths,
+                                  svn_revnum_t *start,
+                                  svn_revnum_t *end,
+                                  svn_boolean_t discover_changed_paths,
+                                  svn_ra_log_entry_receiver_t receiver,
+                                  void *receiver_baton)
+{
+  /* ### todo */
+
+  return SVN_NO_ERROR;
+}
+
+
 
 /* 
  * local variables:
