@@ -582,7 +582,7 @@ svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
   return SVN_NO_ERROR;
 
 error:
-  (void) cleanup_fs (fs);
+  svn_error_clear (cleanup_fs (fs));
   return svn_err;
 }
 
@@ -654,7 +654,7 @@ svn_fs_open_berkeley (svn_fs_t *fs, const char *path)
   return SVN_NO_ERROR;
   
  error:
-  cleanup_fs (fs);
+  svn_error_clear (cleanup_fs (fs));
   return svn_err;
 }
 
