@@ -12,9 +12,9 @@ import time
 import fileinput
 import string
 import getopt
-import statcache
 import stat
 import math
+import md5
 
 from svn import fs, util, delta, repos
 
@@ -267,12 +267,106 @@ class RevInfoParser(rcsparse.Sink):
     rcsparse.Parser().parse(rcsfile, self)
 
 
+class NodeError(Exception):
+  'Base class for exceptions in manipulating Node trees.'
+  pass
+
+class Node:
+  # A tree of paths known to exist in HEAD at a given moment.
+  # When a path is added to the dumpfile, it is added here too; when
+  # a path is deleted from the dumpfile, it is deleted here too.
+  # This is how we know when to make intermediate dirs.
+  # 
+  ### FIXME: Of course, an in-memory tree is no good; ultimately, this
+  ### needs to live in a dbm file or something.  That's effectively
+  ### how it worked when we used the fs bindings, since the repository
+  ### itself was being used as the on-disk record of what paths
+  ### existed at any given moment.
+  ###
+  ### Hmmm...
+  ###
+  ### It occurs to me that our dump format technically doesn't
+  ### need to distinguish between added and changed paths.
+  ### Instead of the "add" and "change" node-actions, it could
+  ### have "tweak", which would mean "add" if the path is not
+  ### already present (including intermediate dirs?), and "change" if
+  ### it is.  Since we always dump fulltexts, we don't actually use
+  ### the previous node revision's data anyway.
+  ###
+  ### If the dump format worked like that, then we could avoid
+  ### checking to see whether a path already exists.  We'd just
+  ### use the "tweak" action, and let the loader figure it out.
+  ###
+  ### And this feature could be added backwards-compatibly...
+  def __init__(self):
+    self.children = { }
+
+
+def ensure_directories(path, root, dumpfile):
+  """Output to DUMPFILE any intermediate directories in PATH that are
+  not already present under node ROOT, adding them to ROOT's tree as
+  we go.  Return the last parent directory, that is, the parent
+  of PATH's basename.  Leading slash(es) on PATH are optional."""
+  path = path.lstrip('/')
+  path_so_far = None
+  components = string.split(path, '/')
+  last_idx = len(components) - 1
+  this_node = root
+
+  i = 0
+  while (i < last_idx):
+
+    component = components[i]
+
+    if path_so_far:
+      path_so_far += '/' + component
+    else:
+      path_so_far = component
+
+    if component not in this_node.children:
+      this_node.children[component] = Node()
+      dumpfile.write("Node-path: %s\n" % path_so_far)
+      dumpfile.write("Node-kind: dir\n")
+      dumpfile.write("Node-action: add\n")
+      dumpfile.write("Prop-content-length: 10\n")
+      dumpfile.write("Content-length: 10\n")
+      dumpfile.write("\n")
+      dumpfile.write("PROPS-END\n")
+      dumpfile.write("\n")
+      dumpfile.write("\n")
+    this_node = this_node.children[component]
+
+    i += 1
+
+  return this_node
+
+
+def get_md5(path):
+  """Return the hex md5 digest of file PATH."""
+  f = open(path, 'r')
+  checksum = md5.new()
+  buf = f.read(102400)
+  while buf:
+    checksum.update(buf)
+    buf = f.read(102400)
+  f.close()
+  return checksum.hexdigest()
+    
+
 class Dump:
   def __init__(self, dumpfile_path, revision):
     'Open DUMPFILE_PATH, and initialize revision to REVISION.'
     self.dumpfile_path = dumpfile_path
     self.revision = revision
+    self.tmpdir = os.tempnam('.', 'cvs2svn-tmp-')
     self.dumpfile = open(dumpfile_path, 'w')
+
+    # Keep track of what paths exist in the repository.
+    self.root = Node()
+
+    # Make the dumper's temp directory for this run.  RCS working
+    # files get checked out into here.
+    os.mkdir(self.tmpdir)
 
     # Initialize the dumpfile with the standard headers:
     ### (The source cvs repository doesn't have a UUID, hmm, what to do?)
@@ -280,17 +374,6 @@ class Dump:
     self.dumpfile.write('\n')
     self.dumpfile.write('UUID: ????????-????-????-????-????????????\n')
     self.dumpfile.write('\n')
-
-    # A dictionary of paths known to exist in HEAD at a given moment.
-    # When a path is added to the dumpfile, it is added here too; when
-    # a path is deleted from the dumpfile, it is deleted here too.
-    #
-    # This dictionary tells us whether to output a 'change' or 'add'
-    # fooo
-    # 
-    # ### FIXME: Of course, an in-memory dictionary is temporary.
-    # Ultimately, this will live in a dbm file or something.
-    self.paths = { }
 
   def start_revision(self, props):
     'Write a revision, with properties, to the dumpfile.'
@@ -350,6 +433,109 @@ class Dump:
     old_rev = self.revision
     self.revision += 1
     return old_rev
+
+  def add_or_change_path(self, cvs_path, svn_path, cvs_rev, rcs_file):
+
+    # figure out the real file path for "co"
+    try:
+      f_st = os.stat(rcs_file)
+    except os.error:
+      dirname, fname = os.path.split(rcs_file)
+      rcs_file = os.path.join(dirname, 'Attic', fname)
+      f_st = os.stat(rcs_file)
+
+    basename = os.path.basename(rcs_file[:-2])
+
+    save_cwd = os.getcwd()
+    abs_rcs_file = os.path.abspath(rcs_file)
+    try:
+      os.chdir(self.tmpdir)
+      os.system('co -f%s \'%s\'' % (cvs_rev, abs_rcs_file))
+    finally:
+      os.chdir(save_cwd)
+
+    working = os.path.join(self.tmpdir, basename)
+    # working_st = os.stat(working)
+    
+    parent_node = ensure_directories(svn_path, self.root, self.dumpfile)
+
+    # Anything ending in ".1" is a new file.
+    #
+    # ### We could also use the parent_node to determine this.
+    # ### Maybe we should, too, because ".1" is not perfectly
+    # ### reliable, because of 'cvs commit -r'...
+    if re.match('.*\\.1$', cvs_rev):
+      action = 'add'
+    else:
+      action = 'change'
+
+    self.dumpfile.write('Node-path: %s\n' % svn_path)
+    self.dumpfile.write('Node-kind: file\n')
+    self.dumpfile.write('Node-action: %s\n' % action)
+    self.dumpfile.write('Prop-content-length: %d\n' % 10)  ### svn:executable?
+    self.dumpfile.write('Text-content-length: %d\n' % os.path.getsize(working))
+    self.dumpfile.write('Text-content-md5: %s\n' % get_md5(working))
+    self.dumpfile.write('Content-length: %d\n' % 0) # todo
+    self.dumpfile.write('\n')
+    self.dumpfile.write('PROPS-END\n')
+
+    ### This is a pity.  We already ran over all the file's bytes to
+    ### get the checksum, now we have to do it again to insert the
+    ### file's contents into the dumpstream?  What a lose.
+    ###
+    ### A solution: write '00000000000000000000000000000000' for the
+    ### initial checksums, then go back and patch them up after the
+    ### entire dumpfile has been written.  (We'd calculate the
+    ### checksum as we get each file's contents, record it somewhere,
+    ### and look it up during the patchup phase.) 
+    ###
+    ### We could also use the `md5sum' utility to get the checksum,
+    ### and the OS's file append capability to append the file.  But
+    ### then we'd have a dependency on `md5sum' (yuck); and how would
+    ### our open filehandle interact with data being inserted behind
+    ### its back?  Not very well, I imagine.
+
+    # Insert the file's contents.
+    f = open(working, 'r')
+    buf = f.read(102400)
+    while buf:
+      self.dumpfile.write(buf)
+      buf = f.read(102400)
+    f.close()
+
+    self.dumpfile.write('\n')
+
+    parent_node.children[basename] = Node()
+
+    #  # if we just made the file, we can send it in one big hunk, rather
+    #  # than streaming it in.
+    #  ### we should watch out for file sizes here; we don't want to yank
+    #  ### in HUGE files...
+    #  if created_file:
+    #    delta.svn_txdelta_send_string(pipe.read(), handler, baton, f_pool)
+    #    if f_st[0] & stat.S_IXUSR:
+    #      fs.change_node_prop(root, svn_path, "svn:executable", "", f_pool)
+    #  else:
+    #    # open an SVN stream onto the pipe
+    #    stream2 = util.svn_stream_from_aprfile(pipe, f_pool)
+    #
+    #    # Get the current file contents from the repo, or, if we have
+    #    # multiple CVS revisions to the same file being done in this
+    #    # single commit, then get the contents of the previous
+    #    # revision from co, or else the delta won't be correct because
+    #    # the contents in the repo won't have changed yet.
+    #    if svn_path == lastcommit[0]:
+    #      infile2 = os.popen("co -q -p%s \'%s\'"
+    #                         % (lastcommit[1], rcs_file), "r", 102400)
+    #      stream1 = util.svn_stream_from_aprfile(infile2, f_pool)
+    #    else:
+    #      stream1 = fs.file_contents(root, svn_path, f_pool)
+    #
+    #    txstream = delta.svn_txdelta(stream1, stream2, f_pool)
+    #    delta.svn_txdelta_send_txstream(txstream, handler, baton, f_pool)
+    #
+    #    # shut down the previous-rev pipe, if we opened it
+    #    infile2 = None
 
   def close(self):
     self.dumpfile.close()
@@ -420,13 +606,13 @@ class Commit:
       for f, r, br, tags, branches in self.changes:
         # compute a repository path. ensure we have a leading "/" and drop
         # the ,v from the file name
-        repos_path = branch_path(ctx, br) + relative_name(ctx.cvsroot, f[:-2])
-        print '    changing %s : %s' % (r, repos_path)
+        svn_path = branch_path(ctx, br) + relative_name(ctx.cvsroot, f[:-2])
+        print '    changing %s : %s' % (r, svn_path)
       for f, r, br, tags, branches in self.deletes:
         # compute a repository path. ensure we have a leading "/" and drop
         # the ,v from the file name
-        repos_path = branch_path(ctx, br) + relative_name(ctx.cvsroot, f[:-2])
-        print '    deleting %s : %s' % (r, repos_path)
+        svn_path = branch_path(ctx, br) + relative_name(ctx.cvsroot, f[:-2])
+        print '    deleting %s : %s' % (r, svn_path)
       print '    (skipped; dry run enabled)'
       return
 
@@ -444,13 +630,13 @@ class Commit:
     # create a pool for each file; it will be cleared on each iteration
     f_pool = util.svn_pool_create(c_pool)
 
-    for f, r, br, tags, branches in self.changes:
+    for rcs_file, cvs_rev, br, tags, branches in self.changes:
       # compute a repository path. ensure we have a leading "/" and drop
       # the ,v from the file name
-      rel_name = relative_name(ctx.cvsroot, f[:-2])
-      repos_path = branch_path(ctx, br) + rel_name
+      cvs_path = relative_name(ctx.cvsroot, rcs_file[:-2])
+      svn_path = branch_path(ctx, br) + cvs_path
 
-      print '    changing %s : %s' % (r, repos_path)
+      print '    changing %s : %s' % (cvs_rev, svn_path)
 
       # get the metadata for this commit
       author, log, date = self.get_metadata(c_pool)
@@ -459,34 +645,30 @@ class Commit:
                 'svn:date' : date }
       dump.start_revision(props)
 
-      ### TODO: add, delete, and change paths here.
+      dump.add_or_change_path(cvs_path, svn_path, cvs_rev, rcs_file)
 
-      last_rev = dump.end_revision()
-      print '    new revision:', last_rev
+      previous_rev = dump.end_revision()
+      print '    new revision:', previous_rev
 
-#      dumpfile.write('ABOUT TO CHANGE:\n')
-#      dumpfile.write('rel_name: %s\nrepos_path: %s\n\n'
-#                      % (rel_name, repos_path))
-
-#      make_path(fs, root, repos_path, f_pool)
+#      make_path(fs, root, svn_path, f_pool)
 #
-#      if fs.check_path(root, repos_path, f_pool) == util.svn_node_none:
+#      if fs.check_path(root, svn_path, f_pool) == util.svn_node_none:
 #        created_file = 1
-#        fs.make_file(root, repos_path, f_pool)
+#        fs.make_file(root, svn_path, f_pool)
 #      else:
 #        created_file = 0
 #
-#      handler, baton = fs.apply_textdelta(root, repos_path, None, None, f_pool)
+#      handler, baton = fs.apply_textdelta(root, svn_path, None, None, f_pool)
 #
 #      # figure out the real file path for "co"
 #      try:
-#        f_st = statcache.stat(f)
+#        f_st = os.stat(rcs_file)
 #      except os.error:
-#        dirname, fname = os.path.split(f)
+#        dirname, fname = os.path.split(rcs_file)
 #        f = os.path.join(dirname, 'Attic', fname)
-#        f_st = statcache.stat(f)
+#        f_st = os.stat(rcs_file)
 #
-#      pipe = os.popen('co -q -p%s \'%s\'' % (r, f), 'r', 102400)
+#      pipe = os.popen('co -q -p%s \'%s\'' % (cvs_rev, rcs_file), 'r', 102400)
 #
 #      # if we just made the file, we can send it in one big hunk, rather
 #      # than streaming it in.
@@ -495,7 +677,7 @@ class Commit:
 #      if created_file:
 #        delta.svn_txdelta_send_string(pipe.read(), handler, baton, f_pool)
 #        if f_st[0] & stat.S_IXUSR:
-#          fs.change_node_prop(root, repos_path, "svn:executable", "", f_pool)
+#          fs.change_node_prop(root, svn_path, "svn:executable", "", f_pool)
 #      else:
 #        # open an SVN stream onto the pipe
 #        stream2 = util.svn_stream_from_aprfile(pipe, f_pool)
@@ -505,12 +687,12 @@ class Commit:
 #        # single commit, then get the contents of the previous
 #        # revision from co, or else the delta won't be correct because
 #        # the contents in the repo won't have changed yet.
-#        if repos_path == lastcommit[0]:
+#        if svn_path == lastcommit[0]:
 #          infile2 = os.popen("co -q -p%s \'%s\'"
-#                             % (lastcommit[1], f), "r", 102400)
+#                             % (lastcommit[1], rcs_file), "r", 102400)
 #          stream1 = util.svn_stream_from_aprfile(infile2, f_pool)
 #        else:
-#          stream1 = fs.file_contents(root, repos_path, f_pool)
+#          stream1 = fs.file_contents(root, svn_path, f_pool)
 #
 #        txstream = delta.svn_txdelta(stream1, stream2, f_pool)
 #        delta.svn_txdelta_send_txstream(txstream, handler, baton, f_pool)
@@ -526,34 +708,34 @@ class Commit:
 #      util.svn_pool_clear(f_pool)
 #
 #      # remember what we just did, for the next iteration
-#      lastcommit = (repos_path, r)
+#      lastcommit = (svn_path, cvs_rev)
 #
 #      for to_tag in tags:
 #        to_tag_path = get_tag_path(ctx, to_tag) + rel_name
-#        do_copies.append((repos_path, to_tag_path, 1))
+#        do_copies.append((svn_path, to_tag_path, 1))
 #      for to_branch in branches:
 #        to_branch_path = branch_path(ctx, to_branch) + rel_name
-#        do_copies.append((repos_path, to_branch_path, 2))
+#        do_copies.append((svn_path, to_branch_path, 2))
 #
-#    for f, r, br, tags, branches in self.deletes:
+#    for rcs_file, cvs_rev, br, tags, branches in self.deletes:
 #      # compute a repository path. ensure we have a leading "/" and drop
 #      # the ,v from the file name
 #      rel_name = relative_name(ctx.cvsroot, f[:-2])
-#      repos_path = branch_path(ctx, br) + rel_name
+#      svn_path = branch_path(ctx, br) + rel_name
 #
-#      print '    deleting %s : %s' % (r, repos_path)
+#      print '    deleting %s : %s' % (cvs_rev, svn_path)
 #
 #      # If the file was initially added on a branch, the first mainline
 #      # revision will be marked dead, and thus, attempts to delete it will
 #      # fail, since it doesn't really exist.
 #      if r != '1.1':
 #        ### need to discriminate between OS paths and FS paths
-#        fs.delete(root, repos_path, f_pool)
+#        fs.delete(root, svn_path, f_pool)
 #
 #      for to_branch in branches:
 #        to_branch_path = branch_path(ctx, to_branch) + rel_name
-#        print "file", f, "created on branch", to_branch, \
-#              "rev", r, "path", to_branch_path
+#        print "file", rcs_file, "created on branch", to_branch, \
+#              "rev", cvs_rev, "path", to_branch_path
 #
 #      # wipe the pool, in case the delete loads it up
 #      util.svn_pool_clear(f_pool)
