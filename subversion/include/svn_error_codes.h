@@ -130,6 +130,24 @@ SVN_ERROR_START
   SVN_ERRDEF (SVN_ERR_IO_CORRUPT_EOL,
               "Line endings other than expected")
 
+  SVN_ERRDEF (SVN_ERR_IO_UNIQUE_NAMES_EXHAUSTED,
+              "Ran out of unique names")
+
+  SVN_ERRDEF (SVN_ERR_ENTRY_NOT_FOUND,
+              "Can't find an entry")
+
+  SVN_ERRDEF (SVN_ERR_ENTRY_EXISTS,
+              "Entry already exists")
+
+  SVN_ERRDEF (SVN_ERR_ENTRY_MISSING_REVISION,
+              "Entry has no revision")
+
+  SVN_ERRDEF (SVN_ERR_ENTRY_MISSING_URL,
+              "Entry has no url")
+
+  SVN_ERRDEF (SVN_ERR_ENTRY_ATTRIBUTE_INVALID,
+              "Entry has an invalid attribute")
+
   SVN_ERRDEF (SVN_ERR_WC_OBSTRUCTED_UPDATE,
               "Obstructed update")
 
@@ -160,32 +178,14 @@ SVN_ERROR_START
   SVN_ERRDEF (SVN_ERR_WC_UNEXPECTED_KIND,
               "Unexpected node kind found")
 
-  SVN_ERRDEF (SVN_ERR_WC_ENTRY_NOT_FOUND,
-              "Can't find an entry")
-
-  SVN_ERRDEF (SVN_ERR_WC_ENTRY_EXISTS,
-              "Entry already exists")
-
-  SVN_ERRDEF (SVN_ERR_WC_ENTRY_MISSING_REVISION,
-              "Entry has no revision")
-
-  SVN_ERRDEF (SVN_ERR_WC_ENTRY_MISSING_URL,
-              "Entry has no url")
-
-  SVN_ERRDEF (SVN_ERR_WC_ENTRY_ATTRIBUTE_INVALID,
-              "Entry has an invalid attribute")
-
-  SVN_ERRDEF (SVN_ERR_WC_ENTRY_BOGUS_MERGE,
-              "Bogus entry attributes during entry merge")
-
   SVN_ERRDEF (SVN_ERR_WC_NOT_UP_TO_DATE,
               "Working copy is not up-to-date")
 
   SVN_ERRDEF (SVN_ERR_WC_LEFT_LOCAL_MOD,
               "Left locally modified or unversioned files")
 
-  SVN_ERRDEF (SVN_ERR_IO_UNIQUE_NAMES_EXHAUSTED,
-              "Ran out of unique names")
+  SVN_ERRDEF (SVN_ERR_WC_SCHEDULE_CONFLICT,
+              "Unmergeable scheduling requested on an entry")
 
   SVN_ERRDEF (SVN_ERR_WC_FOUND_CONFLICT,
               "Found a conflict in working copy")

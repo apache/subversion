@@ -355,7 +355,7 @@ svn_wc__get_existing_prop_reject_file (const svn_string_t **reject_file,
 
   if (! the_entry)
     return svn_error_createf
-      (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL, pool,
+      (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool,
        "get_existing_reject_prop_reject_file: can't find entry '%s' in '%s'",
        name, path);
 

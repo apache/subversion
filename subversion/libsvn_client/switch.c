@@ -112,7 +112,7 @@ svn_client_switch (const svn_delta_edit_fns_t *before_editor,
 
   if (! entry->url)
     return svn_error_createf
-      (SVN_ERR_WC_ENTRY_MISSING_URL, 0, NULL, pool,
+      (SVN_ERR_ENTRY_MISSING_URL, 0, NULL, pool,
        "svn_client_switch: entry '%s' has no URL", path->data);
   URL = svn_stringbuf_dup (entry->url, pool);
 

@@ -389,7 +389,7 @@ svn_error_t *svn_io_copy_dir_recursively (svn_stringbuf_t *src,
 
   SVN_ERR (svn_io_check_path (dst_path, &kind, subpool));
   if (kind != svn_node_none)
-    return svn_error_createf (SVN_ERR_WC_ENTRY_EXISTS, 0, NULL, subpool,
+    return svn_error_createf (SVN_ERR_ENTRY_EXISTS, 0, NULL, subpool,
                               "'%s' already exists.", dst_path->data);
   
   /* Create the new directory. */

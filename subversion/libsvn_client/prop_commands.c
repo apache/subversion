@@ -47,7 +47,7 @@ svn_client_propset (const char *propname,
 
   SVN_ERR (svn_wc_entry (&node, target_buf, pool));
   if (!node)
-    return svn_error_createf (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL, pool,
+    return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool,
                               "'%s' -- not a versioned resource", 
                               target);
 
@@ -180,7 +180,7 @@ svn_client_propget (apr_hash_t **props,
   SVN_ERR (svn_wc_entry(&node, target_buf, pool));
   if (!node)
     return svn_error_createf
-      (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL, pool,
+      (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool,
        "'%s' -- not a versioned resource", target);
 
 
@@ -283,7 +283,7 @@ svn_client_proplist (apr_array_header_t **props,
 
   SVN_ERR (svn_wc_entry(&node, target_buf, pool));
   if (!node)
-    return svn_error_createf (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL, pool,
+    return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool,
                               "'%s' -- not a versioned resource", 
                               target);
 
