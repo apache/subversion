@@ -55,3 +55,10 @@ Candidate changes:
       Simple fix that shows 60% speed up of "svn st" on my box
     Votes:
       +1: brane, philip
+
+  * r11439
+    Fix slow "svn st" where the targets are files by not locking the whole
+    anchor tree.
+    Votes:
+      (nominated by): Steve King
+
