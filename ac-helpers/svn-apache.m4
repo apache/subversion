@@ -32,7 +32,7 @@ AC_ARG_WITH(apache,
                 fi
 	else
 		dnl if they pointed us at the wrong place, then just bail
-		AC_MSG_ERROR(no - Unable to locate $withval/src/modules/dav/main/mod_dav.h)
+		AC_MSG_ERROR(no - Unable to locate $withval/modules/dav/main/mod_dav.h)
 	fi
 ],[
     AC_MSG_RESULT(no)
