@@ -66,7 +66,7 @@ Candidate changes:
     Votes:
       +1: cmpilato, dionisos
 
-  * r9697
+  * r9667
     Fix potential attack path in pre-commit-hook template.
     Justification: Don't offer templates we don't want to use ourselves.
     Votes:
