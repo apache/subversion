@@ -329,7 +329,8 @@ wrap_add_directory (svn_stringbuf_t *name,
 
   return (*db->eb->real_editor->add_directory) (db->path,
                                                 db_parent->real_dir_baton,
-                                                copyfrom_path->data,
+                                                copyfrom_path ? 
+                                                copyfrom_path->data : NULL,
                                                 copyfrom_revision,
                                                 db->dir_pool,
                                                 &db->real_dir_baton);
@@ -363,11 +364,15 @@ wrap_change_dir_prop (void *dir_baton,
   svn_string_t new_value;
   svn_error_t *err;
 
-  new_value.data = value->data;
-  new_value.len = value->len;
+  if (value)
+    {
+      new_value.data = value->data;
+      new_value.len = value->len;
+    }
+
   err = (*db->eb->real_editor->change_dir_prop) (db->real_dir_baton,
                                                  name->data,
-                                                 &new_value,
+                                                 value ? &new_value : NULL,
                                                  subpool);
   svn_pool_destroy (subpool);
   return err;
@@ -412,7 +417,8 @@ wrap_add_file (svn_stringbuf_t *name,
 
   return (*fb->eb->real_editor->add_file) (path,
                                            db->real_dir_baton,
-                                           copyfrom_path->data,
+                                           copyfrom_path ? 
+                                           copyfrom_path->data : NULL,
                                            copyfrom_revision,
                                            fb->file_pool,
                                            &fb->real_file_baton);
@@ -466,11 +472,15 @@ wrap_change_file_prop (void *file_baton,
   svn_string_t new_value;
   svn_error_t *err;
 
-  new_value.data = value->data;
-  new_value.len = value->len;
+  if (value)
+    {
+      new_value.data = value->data;
+      new_value.len = value->len;
+    }
+
   err = (*fb->eb->real_editor->change_file_prop) (fb->real_file_baton,
                                                   name->data,
-                                                  &new_value,
+                                                  value ? &new_value : NULL,
                                                   subpool);
   svn_pool_destroy (subpool);
   return err;
