@@ -158,8 +158,10 @@ assemble_status (svn_wc_status_t **status,
      to allocate a struct for an uninteresting entry. */
 
   if (! get_all)
-    if ((final_text_status == svn_wc_status_none)
-        && ((final_prop_status == svn_wc_status_none)))
+    if (((final_text_status == svn_wc_status_none)
+         || (final_text_status == svn_wc_status_normal))
+        && ((final_prop_status == svn_wc_status_none)
+            || (final_prop_status == svn_wc_status_normal)))
       {
         *status = NULL;
         return SVN_NO_ERROR;
