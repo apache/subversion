@@ -28,6 +28,37 @@ extern "C" {
 
 /*** Eol conversion and keyword expansion. ***/
 
+/* Valid states for 'svn:eol-style' property.  
+   Property nonexistence is equivalent to 'none'. */
+typedef enum svn_subst_eol_style
+{
+  svn_subst_eol_style_unknown, /* An unrecognized style */
+  svn_subst_eol_style_none,    /* EOL translation is "off" or ignored value */
+  svn_subst_eol_style_native,  /* Translation is set to client's native eol */
+  svn_subst_eol_style_fixed    /* Translation is set to one of LF, CR, CRLF */
+
+} svn_subst_eol_style_t;
+
+/* Set *STYLE to the appropriate svn_subst_eol_style_t and *EOL to the 
+   appropriate cstring for a given svn:eol-style property value.
+
+   Set *EOL to
+
+      - NULL for svn_subst_eol_style_none, or
+
+      - a null-terminated C string containing the native eol marker
+        for this platform, for svn_subst_eol_style_native, or
+              
+      - a null-terminated C string containing the eol marker indicated
+        by the property value, for svn_subst_eol_style_fixed.
+
+   If *STYLE is NULL, then VALUE was not a valid property value.
+*/
+void
+svn_subst_eol_style_from_value (svn_subst_eol_style_t *style,
+                                const char **eol,
+                                const char *value);
+
 
 /* Values used in keyword expansion. */
 typedef struct svn_subst_keywords_t

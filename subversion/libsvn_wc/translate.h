@@ -33,17 +33,7 @@ extern "C" {
 
 /* Newline and keyword translation properties */
 
-/* Valid states for 'svn:eol-style' property.  
-   Property nonexistence is equivalent to 'none'. */
-enum svn_wc__eol_style
-{
-  svn_wc__eol_style_unknown, /* An unrecognized style */
-  svn_wc__eol_style_none,    /* EOL translation is "off" or ignored value */
-  svn_wc__eol_style_native,  /* Translation is set to client's native style */
-  svn_wc__eol_style_fixed    /* Translation is set to one of LF, CR, CRLF */
-};
-
-/* The text-base eol style for files using svn_wc__eol_style_native
+/* The text-base eol style for files using svn_subst_eol_style_native
    style.  */
 #define SVN_WC__DEFAULT_EOL_MARKER "\n"
 
@@ -51,32 +41,23 @@ enum svn_wc__eol_style
 /* Query the SVN_PROP_EOL_STYLE property on file PATH.  If STYLE is
    non-null, set *STYLE to PATH's eol style.  Set *EOL to
 
-      - NULL for svn_wc__eol_style_none, or
+      - NULL for svn_subst_eol_style_none, or
 
       - a null-terminated C string containing the native eol marker
-        for this platform, for svn_wc__eol_style_native, or
+        for this platform, for svn_subst_eol_style_native, or
 
       - a null-terminated C string containing the eol marker indicated
-        by the property value, for svn_wc__eol_style_fixed.
+        by the property value, for svn_subst_eol_style_fixed.
 
    If STYLE is null on entry, ignore it.  If *EOL is non-null on exit,
    it is a static string not allocated in POOL.
 
    Use POOL for temporary allocation.
 */
-svn_error_t *svn_wc__get_eol_style (enum svn_wc__eol_style *style,
+svn_error_t *svn_wc__get_eol_style (svn_subst_eol_style_t *style,
                                     const char **eol,
                                     const char *path,
                                     apr_pool_t *pool);
-
-
-/* Variant of svn_wc__get_eol_style, but without the path argument.
-   It assumes that you already have the property VALUE.  This is for
-   more "abstract" callers that just want to know how values map to
-   EOL styles. */
-void svn_wc__eol_style_from_value (enum svn_wc__eol_style *style,
-                                   const char **eol,
-                                   const char *value);
 
 /* Reverse parser.  Given a real EOL string ("\n", "\r", or "\r\n"),
    return an encoded *VALUE ("LF", "CR", "CRLF") that one might see in

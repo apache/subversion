@@ -53,14 +53,14 @@ svn_wc_translated_file (const char **xlated_p,
                         svn_boolean_t force_repair,
                         apr_pool_t *pool)
 {
-  enum svn_wc__eol_style style;
+  svn_subst_eol_style_t style;
   const char *eol;
   svn_subst_keywords_t *keywords;
   
   SVN_ERR (svn_wc__get_eol_style (&style, &eol, vfile, pool));
   SVN_ERR (svn_wc__get_keywords (&keywords, vfile, adm_access, NULL, pool));
 
-  if ((style == svn_wc__eol_style_none) && (! keywords))
+  if ((style == svn_subst_eol_style_none) && (! keywords))
     {
       /* Translation would be a no-op, so return the original file. */
       *xlated_p = vfile;
@@ -93,7 +93,7 @@ svn_wc_translated_file (const char **xlated_p,
           (0, 0, NULL,
            "svn_wc_translated_file: unable to close %s", tmp_vfile);
       
-      if (style == svn_wc__eol_style_fixed)
+      if (style == svn_subst_eol_style_fixed)
         {
           SVN_ERR (svn_subst_copy_and_translate (vfile,
                                                  tmp_vfile,
@@ -103,7 +103,7 @@ svn_wc_translated_file (const char **xlated_p,
                                                  FALSE,
                                                  pool));
         }
-      else if (style == svn_wc__eol_style_native)
+      else if (style == svn_subst_eol_style_native)
         {
           SVN_ERR (svn_subst_copy_and_translate (vfile,
                                                  tmp_vfile,
@@ -113,7 +113,7 @@ svn_wc_translated_file (const char **xlated_p,
                                                  FALSE,
                                                  pool));
         }
-      else if (style == svn_wc__eol_style_none)
+      else if (style == svn_subst_eol_style_none)
         {
           SVN_ERR (svn_subst_copy_and_translate (vfile,
                                                  tmp_vfile,
@@ -139,7 +139,7 @@ svn_wc_translated_file (const char **xlated_p,
 
 
 svn_error_t *
-svn_wc__get_eol_style (enum svn_wc__eol_style *style,
+svn_wc__get_eol_style (svn_subst_eol_style_t *style,
                        const char **eol,
                        const char *path,
                        apr_pool_t *pool)
@@ -150,54 +150,9 @@ svn_wc__get_eol_style (enum svn_wc__eol_style *style,
   SVN_ERR (svn_wc_prop_get (&propval, SVN_PROP_EOL_STYLE, path, pool));
 
   /* Convert it. */
-  svn_wc__eol_style_from_value (style, eol, propval ? propval->data : NULL);
+  svn_subst_eol_style_from_value (style, eol, propval ? propval->data : NULL);
 
   return SVN_NO_ERROR;
-}
-
-
-void 
-svn_wc__eol_style_from_value (enum svn_wc__eol_style *style,
-                              const char **eol,
-                              const char *value)
-{
-  if (value == NULL)
-    {
-      /* property doesn't exist. */
-      *eol = NULL;
-      if (style)
-        *style = svn_wc__eol_style_none;
-    }
-  else if (! strcmp ("native", value))
-    {
-      *eol = APR_EOL_STR;       /* whee, a portability library! */
-      if (style)
-        *style = svn_wc__eol_style_native;
-    }
-  else if (! strcmp ("LF", value))
-    {
-      *eol = "\n";
-      if (style)
-        *style = svn_wc__eol_style_fixed;
-    }
-  else if (! strcmp ("CR", value))
-    {
-      *eol = "\r";
-      if (style)
-        *style = svn_wc__eol_style_fixed;
-    }
-  else if (! strcmp ("CRLF", value))
-    {
-      *eol = "\r\n";
-      if (style)
-        *style = svn_wc__eol_style_fixed;
-    }
-  else
-    {
-      *eol = NULL;
-      if (style)
-        *style = svn_wc__eol_style_unknown;
-    }
 }
 
 

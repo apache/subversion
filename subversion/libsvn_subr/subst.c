@@ -40,6 +40,50 @@
 #include "svn_hash.h"
 #include "svn_subst.h"
 
+void 
+svn_subst_eol_style_from_value (svn_subst_eol_style_t *style,
+                                const char **eol,
+                                const char *value)
+{
+  if (value == NULL)
+    {
+      /* property doesn't exist. */
+      *eol = NULL;
+      if (style)
+        *style = svn_subst_eol_style_none;
+    }
+  else if (! strcmp ("native", value))
+    {
+      *eol = APR_EOL_STR;       /* whee, a portability library! */
+      if (style)
+        *style = svn_subst_eol_style_native;
+    }
+  else if (! strcmp ("LF", value))
+    {
+      *eol = "\n";
+      if (style)
+        *style = svn_subst_eol_style_fixed;
+    }
+  else if (! strcmp ("CR", value))
+    {
+      *eol = "\r";
+      if (style)
+        *style = svn_subst_eol_style_fixed;
+    }
+  else if (! strcmp ("CRLF", value))
+    {
+      *eol = "\r\n";
+      if (style)
+        *style = svn_subst_eol_style_fixed;
+    }
+  else
+    {
+      *eol = NULL;
+      if (style)
+        *style = svn_subst_eol_style_unknown;
+    }
+}
+
 
 
 /*** Helpers for svn_subst_translate_stream ***/
