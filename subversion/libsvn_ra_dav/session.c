@@ -231,6 +231,7 @@ static const svn_ra_plugin_t dav_plugin = {
   svn_ra_dav__do_checkout,
   svn_ra_dav__do_update,
   svn_ra_dav__do_status,
+  NULL,
   svn_ra_dav__get_log,
   svn_ra_dav__do_check_path
 };

@@ -429,29 +429,56 @@ typedef struct svn_ra_plugin_t
                              const svn_delta_edit_fns_t *status_editor,
                              void *status_baton);
 
+
+  /* Ask the network layer to perform a merge of the differences
+     between START_PATH:START_REVISION and END_PATH:END_REVISION into
+     the working copy.  Return a *REPORTER object (and *REPORT_BATON)
+     that the caller can use to describe the working copy target.
+     START_PATH and END_PATH are relative to the *SESSION_BATON's URL.
+
+     When the callers has finished describing his working copy via the
+     *REPORTER interface, use SETUP_EDITOR/SETUP_EDIT_BATON and
+     FINISH_EDITOR/FINISH_EDIT_BATON to actually perform the merge.
+
+     MERGE_TARGET, also relative to the *SESSION_BATON's URL,
+     describes the filesystem path associated with the working copy
+     target. */
+  svn_error_t *(*do_merge) (void *session_baton,
+                            const svn_ra_reporter_t **reporter,
+                            void **report_baton,
+                            const char *start_path,
+                            svn_revnum_t start_revision,
+                            const char *end_path,
+                            svn_revnum_t end_revision,
+                            const char *merge_target,
+                            const svn_delta_edit_fns_t *setup_editor,
+                            void *setup_edit_baton,
+                            const svn_delta_edit_fns_t *finish_editor,
+                            void *finish_edit_baton);
+
+
   /* Invoke RECEIVER with RECEIVER_BATON on each log message from
-   * START to END.  START may be greater or less than END; this just
-   * controls whether the log messages are processed in descending or
-   * ascending revision number order.
-   *
-   * If START or END is SVN_INVALID_REVNUM, it defaults to youngest.
-   *
-   * If PATHS is non-null and has one or more elements, then only show
-   * revisions in which at least one of PATHS was changed (i.e., if
-   * file, text or props changed; if dir, props changed or an entry
-   * was added or deleted).  Each path is an svn_stringbuf_t *,
-   * relative to the session's common parent.
-   *
-   * If DISCOVER_CHANGED_PATHS, then each call to receiver passes a
-   * `const apr_hash_t *' for the receiver's CHANGED_PATHS argument;
-   * the hash's keys are all the paths committed in that revision.
-   * Otherwise, each call to receiver passes null for CHANGED_PATHS.
-   *
-   * If any invocation of RECEIVER returns error, return that error
-   * immediately and without wrapping it.
-   *
-   * See also the documentation for `svn_log_message_receiver_t'.
-   */
+     START to END.  START may be greater or less than END; this just
+     controls whether the log messages are processed in descending or
+     ascending revision number order.
+    
+     If START or END is SVN_INVALID_REVNUM, it defaults to youngest.
+    
+     If PATHS is non-null and has one or more elements, then only show
+     revisions in which at least one of PATHS was changed (i.e., if
+     file, text or props changed; if dir, props changed or an entry
+     was added or deleted).  Each path is an svn_stringbuf_t *,
+     relative to the session's common parent.
+    
+     If DISCOVER_CHANGED_PATHS, then each call to receiver passes a
+     `const apr_hash_t *' for the receiver's CHANGED_PATHS argument;
+     the hash's keys are all the paths committed in that revision.
+     Otherwise, each call to receiver passes null for CHANGED_PATHS.
+    
+     If any invocation of RECEIVER returns error, return that error
+     immediately and without wrapping it.
+    
+     See also the documentation for `svn_log_message_receiver_t'.  */
   svn_error_t *(*get_log) (void *session_baton,
                            const apr_array_header_t *paths,
                            svn_revnum_t start,
@@ -461,30 +488,28 @@ typedef struct svn_ra_plugin_t
                            void *receiver_baton);
 
   /* Yoshiki Hayashi <yoshiki@xemacs.org> points out that a more
-   * generic way to support 'discover_changed__paths' in logs would be
-   * to have these two functions:
-   *
-   *     svn_error_t *(*get_rev_prop) (void *session_baton,
-   *                                   svn_string_t **value,
-   *                                   svn_string_t *name,
-   *                                   svn_revnum_t revision);
-   *
-   *     svn_error_t *(get_changed_paths) (void *session_baton,
-   *                                       apr_array_header_t **changed_paths,
-   *                                       svn_revnum_t revision);
-   *
-   * Although log requests are common enough to deserve special
-   * support (to optimize network usage), these two more generic
-   * functions are still good ideas.  Don't want to implement them
-   * right now, as am concentrating on the log functionality, but
-   * we will probably want them eventually, hence this start block.
-   */
+     generic way to support 'discover_changed__paths' in logs would be
+     to have these two functions:
+    
+         svn_error_t *(*get_rev_prop) (void *session_baton,
+                                       svn_string_t **value,
+                                       svn_string_t *name,
+                                       svn_revnum_t revision);
+    
+         svn_error_t *(get_changed_paths) (void *session_baton,
+                                           apr_array_header_t **changed_paths,
+                                           svn_revnum_t revision);
+    
+     Although log requests are common enough to deserve special
+     support (to optimize network usage), these two more generic
+     functions are still good ideas.  Don't want to implement them
+     right now, as am concentrating on the log functionality, but we
+     will probably want them eventually, hence this start block.  */
 
 
   /* Set *KIND to node kind associated with PATH at REVISION.  If PATH
-   * does not exist under REVISION, set *KIND to svn_node_none.  PATH
-   * is relative to the session's parent URL.
-   */
+     does not exist under REVISION, set *KIND to svn_node_none.  PATH
+     is relative to the session's parent URL.  */
   svn_error_t *(*check_path) (svn_node_kind_t *kind,
                               void *session_baton,
                               const char *path,
