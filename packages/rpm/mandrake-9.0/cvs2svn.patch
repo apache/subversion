@@ -1,0 +1,19 @@
+--- subversion-3371/tools/cvs2svn/cvs2svn.py	2002-10-06 19:21:17.000000000 -0600
++++ subversion-3371/tools/cvs2svn/cvs2svn.py~	2002-10-15 18:21:30.000000000 -0600
+@@ -3,7 +3,6 @@
+ # cvs2svn: ...
+ #
+ 
+-import rcsparse
+ import os
+ import sys
+ import sha
+@@ -14,7 +13,7 @@
+ import getopt
+ import statcache
+ 
+-from svn import fs, util, _delta, _repos
++from svn import fs, util, _delta, _repos, rcsparse
+ 
+ ### these should go somewhere else. should have SWIG export them.
+ svn_node_none = 0
