@@ -48,7 +48,7 @@ extern "C" {
     displayed on the screen. */
 typedef svn_error_t *(*svn_client_auth_info_callback_t)
        (char **info,
-        char *prompt,
+        const char *prompt,
         svn_boolean_t hide,
         void *baton,
         apr_pool_t *pool);

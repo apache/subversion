@@ -26,6 +26,8 @@
 #include "svn_error.h"
 #include "cl.h"
 
+#include "apr_lib.h"
+
 
 /*** Our implementation of the 'auth info callback' routine, 
      as defined in svn_client.h.   This callback is passed to any
@@ -34,7 +36,7 @@
 
 svn_error_t *
 svn_cl__prompt_user (char **result,
-                     char *prompt,
+                     const char *prompt,
                      svn_boolean_t hide,
                      void *baton,
                      apr_pool_t *pool)
@@ -56,20 +58,35 @@ svn_cl__prompt_user (char **result,
 
   /* ### implement the HIDE flag later using apr_getpassword or
      something. */
-
-  printf (prompt);
-  while (1)
+  if (! hide)
     {
-      status = apr_file_getc (&c, fp);
-      if (status && (status != APR_EOF))
-        return svn_error_create (status, 0, NULL, pool,
-                                 "svn_cl__prompt_user:  error reading stdin.");
-      if ((c == '\n') || (c == '\r'))
-        break;
+      printf (prompt);
+      fflush (stdout);
 
-      svn_stringbuf_appendbytes (strbuf, &c, 1);
+      while (1)
+        {
+          status = apr_file_getc (&c, fp);
+          if (status && (status != APR_EOF))
+            return svn_error_create (status, 0, NULL, pool,
+                                     "error reading stdin.");
+          if ((c == '\n') || (c == '\r'))
+            break;
+          
+          svn_stringbuf_appendbytes (strbuf, &c, 1);
+        }
     }
-  
+  else
+    {
+      size_t bufsize = 300;
+      svn_stringbuf_ensure (strbuf, bufsize);
+
+      /* Hopefully this won't echo to the screen. */
+      status = apr_password_get (prompt, strbuf->data, &bufsize);
+      if (status)
+        return svn_error_create (status, 0, NULL, pool,
+                                 "error from apr_password_get().");      
+    }
+
   *result = strbuf->data;
 
   return SVN_NO_ERROR;

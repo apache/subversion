@@ -37,6 +37,8 @@
 static svn_error_t *
 authorize_username (void **session_baton,
                     svn_ra_plugin_t *ra_lib,
+                    svn_client_auth_info_callback_t cb,
+                    void *cb_baton,
                     void *authenticator,
                     apr_pool_t *pool)
 {
@@ -73,7 +75,7 @@ authorize_username (void **session_baton,
 
 /* For the SVN_RA_AUTH_SIMPLE_PASSWORD method.
 
-   This method is used only by `ra_local' right now. */
+   This method is used only by `ra_dav' right now. */
 static svn_error_t *
 authorize_simple_password (void **session_baton,
                            svn_ra_plugin_t *ra_lib,
@@ -82,20 +84,22 @@ authorize_simple_password (void **session_baton,
                            void *authenticator,
                            apr_pool_t *pool)
 {
-  /*  svn_ra_simple_password_authenticator_t *auth_obj =
-      (svn_ra_simple_password_authenticator_t *) authenticator; */
+  char *username, *password;
+  svn_ra_simple_password_authenticator_t *auth_obj =
+    (svn_ra_simple_password_authenticator_t *) authenticator;
 
-  /* ### TODO
+  /* ### check working copy for info first! */
 
-     If username/password not in working copy:
-        use callback/baton:  have app prompt for both
-        store them in working copy
+  /* Have the calling application prompt for username and password. */
+  SVN_ERR (cb (&username, "Username: ", 0, cb_baton, pool));
+  SVN_ERR (cb (&password, "Password: ", 1, cb_baton, pool));
 
-     set username
-     set password
-     authenticate()
-          
-  */
+  SVN_ERR (auth_obj->set_username (username, auth_obj->pbaton));
+  SVN_ERR (auth_obj->set_password (password, auth_obj->pbaton));
+  
+  /* Get the session baton. */
+  SVN_ERR (auth_obj->authenticate (session_baton, auth_obj->pbaton));
+
   return SVN_NO_ERROR;
 }
 
@@ -126,7 +130,9 @@ svn_client_authenticate (void **session_baton,
       SVN_ERR (ra_lib->get_authenticator (&obj, repos_URL,
                                           SVN_RA_AUTH_USERNAME, pool));
       
-      SVN_ERR (authorize_username (session_baton, ra_lib, obj, pool));
+      SVN_ERR (authorize_username (session_baton, ra_lib,
+                                   callback, callback_baton,
+                                   obj, pool));
     }
 
   /* Username and password authentication. */
