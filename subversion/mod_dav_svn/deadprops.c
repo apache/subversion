@@ -64,8 +64,7 @@ static void get_repos_propname(dav_db *db, const dav_prop_name *name,
       svn_stringbuf_appendcstr(db->work, name->name);
       *repos_propname = db->work->data;
     }
-  else if ((strcmp(name->ns, SVN_DAV_PROP_NS_CUSTOM) == 0)
-           || db->resource->info->repos->autoversioning)
+  else if (strcmp(name->ns, SVN_DAV_PROP_NS_CUSTOM) == 0)
     {
       /* the name of a custom prop is just the name -- no ns URI */
       *repos_propname = name->name;
@@ -138,11 +137,16 @@ static dav_error *save_value(dav_db *db, const dav_prop_name *name,
   get_repos_propname(db, name, &propname);
 
   if (propname == NULL)
-    return dav_new_error(db->p, HTTP_CONFLICT, 0,
-                         "Properties may only be defined in the "
-                         SVN_DAV_PROP_NS_SVN " and " SVN_DAV_PROP_NS_CUSTOM
-                         " namespaces.");
-
+    {
+      if (db->resource->info->repos->autoversioning)
+        /* ignore the unknown namespace of the incoming prop. */
+        propname = name->name;
+      else
+        return dav_new_error(db->p, HTTP_CONFLICT, 0,
+                             "Properties may only be defined in the "
+                             SVN_DAV_PROP_NS_SVN " and " SVN_DAV_PROP_NS_CUSTOM
+                             " namespaces.");
+    }
 
   /* Working Baseline or Working (Version) Resource */
   if (db->resource->baselined)
