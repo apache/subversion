@@ -652,7 +652,7 @@ svn_fs__parse_copy_skel (svn_fs__copy_t **copy_p,
   if (svn_fs__matches_atom (skel->children, "soft-copy"))
     copy->kind = svn_fs__copy_kind_soft;
   else
-    copy->kind = svn_fs__copy_kind_hard;
+    copy->kind = svn_fs__copy_kind_real;
 
   /* SRC-PATH */
   copy->src_path = apr_pstrmemdup (pool,
@@ -1119,7 +1119,7 @@ svn_fs__unparse_copy_skel (skel_t **skel_p,
     svn_fs__prepend (svn_fs__mem_atom (NULL, 0, pool), skel);
 
   /* "copy" */
-  if (copy->kind == svn_fs__copy_kind_hard)
+  if (copy->kind == svn_fs__copy_kind_real)
     svn_fs__prepend (svn_fs__str_atom ("copy", pool), skel);
   else
     svn_fs__prepend (svn_fs__str_atom ("soft-copy", pool), skel);
