@@ -189,7 +189,8 @@ svn_fs__record_rename (svn_fs_t *fs,
 
   /* Assemble the CLONE skel.  */
   clone = svn_fs__make_empty_list (pool);
-  svn_fs__prepend (svn_fs__str_atom (entry_name, pool), clone);
+  svn_fs__prepend (svn_fs__str_atom (apr_pstrdup (pool, entry_name), pool),
+		   clone);
   svn_fs__prepend (svn_fs__mem_atom (parent_id_string->data,
 				     parent_id_string->len,
 				     pool),

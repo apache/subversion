@@ -76,7 +76,7 @@ struct skel_t {
      the list.  */
   int is_atom;
 
-  const char *data;
+  char *data;
   apr_size_t len;
 
   /* If the string is a list, CHILDREN is a pointer to a
@@ -106,18 +106,18 @@ typedef struct skel_t skel_t;
    how the caller can use the structure.  We only want to say that
    *we* won't change it --- we don't want to prevent the caller from
    changing it --- but C's type system doesn't allow us to say that.  */
-skel_t *svn_fs__parse_skel (const char *data, apr_size_t len,
+skel_t *svn_fs__parse_skel (char *data, apr_size_t len,
 			    apr_pool_t *pool);
 
 
 /* Create an atom skel whose contents are the C string STR, allocated
    from POOL.  */
-skel_t *svn_fs__str_atom (const char *str, apr_pool_t *pool);
+skel_t *svn_fs__str_atom (char *str, apr_pool_t *pool);
 
 
 /* Create an atom skel whose contents are the LEN bytes at ADDR,
    allocated from POOL.  */
-skel_t *svn_fs__mem_atom (const char *addr, apr_size_t len, apr_pool_t *pool);
+skel_t *svn_fs__mem_atom (char *addr, apr_size_t len, apr_pool_t *pool);
 
 
 /* Create an empty list skel, allocated from POOL.  */
@@ -130,7 +130,7 @@ void svn_fs__prepend (skel_t *skel, skel_t *list);
 
 /* Return a string whose contents are a concrete representation of
    SKEL.  Allocate the string from POOL.  */
-svn_string_t *svn_fs__unparse_skel (const skel_t *skel, apr_pool_t *pool);
+svn_string_t *svn_fs__unparse_skel (skel_t *skel, apr_pool_t *pool);
 
 
 /* Return true iff SKEL is an atom whose data is the same as STR.  */

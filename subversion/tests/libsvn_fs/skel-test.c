@@ -54,7 +54,7 @@ parse_str (svn_string_t *str)
 
 /* Parse a skeleton from a C string.  */
 static skel_t *
-parse_cstr (const char *str)
+parse_cstr (char *str)
 {
   return svn_fs__parse_skel (str, strlen (str), pool);
 }
@@ -250,7 +250,7 @@ parse_implicit_length (const char **msg)
     return fail ();
 
   /* Try to parse some invalid atoms.  */
-  if (parse_cstr ("howdy"))
+  if (parse_cstr ((char *) "howdy"))
     return fail ();
 
   return 0;
@@ -355,7 +355,7 @@ parse_explicit_length (const char **msg)
   }
 
   /* Try to parse some invalid atoms.  */
-  if (parse_cstr ("6 howdy"))
+  if (parse_cstr ((char *) "6 howdy"))
     return fail ();
 
   return 0;
