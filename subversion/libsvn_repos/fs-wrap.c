@@ -456,8 +456,8 @@ svn_repos_fs_lock (svn_lock_t **lock,
 
 
 svn_error_t *
-svn_repos_fs_attach_lock (svn_lock_t *lock,
-                          svn_repos_t *repos,
+svn_repos_fs_attach_lock (svn_repos_t *repos,
+                          svn_lock_t *lock,
                           svn_boolean_t force,
                           svn_revnum_t current_rev,
                           apr_pool_t *pool)
@@ -474,7 +474,7 @@ svn_repos_fs_attach_lock (svn_lock_t *lock,
   SVN_ERR (svn_repos__hooks_pre_lock (repos, lock->path, lock->owner, pool));
 
   /* Lock. */
-  SVN_ERR (svn_fs_attach_lock (lock, repos->fs, force, current_rev, pool));
+  SVN_ERR (svn_fs_attach_lock (repos->fs, lock, force, current_rev, pool));
   
   /* Run post-lock hook. */
   if ((err = svn_repos__hooks_post_lock (repos, paths,

@@ -250,7 +250,7 @@ attach_lock (const char **msg,
   mylock.creation_date = apr_time_now();
   mylock.expiration_date = apr_time_now() + apr_time_from_sec(3);
 
-  SVN_ERR (svn_fs_attach_lock (&mylock, fs, FALSE, SVN_INVALID_REVNUM, pool));
+  SVN_ERR (svn_fs_attach_lock (fs, &mylock, FALSE, SVN_INVALID_REVNUM, pool));
 
   /* Can we look up the lock by path? */
   SVN_ERR (svn_fs_get_lock (&somelock, fs, "/A/D/G/rho", pool));
@@ -947,7 +947,7 @@ lock_break_steal_refresh (const char **msg,
     
   /* Refresh the lock, so that it never expires. */
   somelock->expiration_date = 0;
-  SVN_ERR (svn_fs_attach_lock (somelock, fs, TRUE, SVN_INVALID_REVNUM, pool));
+  SVN_ERR (svn_fs_attach_lock (fs, somelock, TRUE, SVN_INVALID_REVNUM, pool));
   SVN_ERR (svn_fs_get_lock (&somelock, fs, "/A/D/G/rho", pool));
   if (somelock->expiration_date)
     return svn_error_create (SVN_ERR_TEST_FAILED, NULL,
@@ -1012,7 +1012,7 @@ lock_out_of_date (const char **msg,
 
   /* 'Refresh' the lock, claiming to have r1... should fail. */
   mylock->expiration_date = apr_time_now() + (50 * APR_USEC_PER_SEC);
-  err = svn_fs_attach_lock (mylock, fs, TRUE, 1, pool);
+  err = svn_fs_attach_lock (fs, mylock, TRUE, 1, pool);
   if (! err)
     return svn_error_create 
       (SVN_ERR_TEST_FAILED, NULL,

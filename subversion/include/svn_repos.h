@@ -980,8 +980,8 @@ svn_error_t *svn_repos_fs_lock (svn_lock_t **lock,
  * SVN_ERR_REPOS_POST_LOCK_HOOK_FAILED.  If the caller sees this
  * error, it knows that the lock succeeded anyway.
  */
-svn_error_t *svn_repos_fs_attach_lock (svn_lock_t *lock,
-                                       svn_repos_t *repos,
+svn_error_t *svn_repos_fs_attach_lock (svn_repos_t *repos,
+                                       svn_lock_t *lock,
                                        svn_boolean_t force,
                                        svn_revnum_t current_rev,
                                        apr_pool_t *pool);
