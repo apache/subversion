@@ -1198,28 +1198,34 @@ def commit_in_dir_scheduled_for_addition(sbox):
 
   svntest.main.run_svn(None, 'move', A_path, Z_path)
 
-  out, err = svntest.main.run_svn(1, 'commit', '-m', '"logmsg"', mu_path)
+  # Commit a copied thing inside an added-with-history directory,
+  # expecting a specific error to occur!
+  if svntest.actions.run_and_verify_commit (wc_dir,
+                                            None,
+                                            None,
+                                            "unversioned",
+                                            None, None,
+                                            None, None,
+                                            mu_path):
+    return 1
+  
+  Q_path = os.path.join(wc_dir, 'Q')
+  bloo_path = os.path.join(Q_path, 'bloo')
 
-  ### FIXME:
-  #
-  # In commit 1275, sussman fixed subversion/libsvn_client/copy.c, and
-  # said:
-  # 
-  #    This was causing commit_test #15 to fail, but this test was
-  #    written only to expect generic failure, so it still passing, so
-  #    it looked as though 'make check' was passing.  If you ran
-  #    commit_tests.py by hand, though, you'd see the extra stderr
-  #    output.  The moral of the story is that commit_test #15 should
-  #    be using run_and_verify_commit() to look for a *specific*
-  #    expected errorstring.  Anyone wanna fix it?
-  #
-  # This is the test that needs to be fixed, right?
-
-  if len(err) == 0: 
-    return 1 
-
-  return 0
-
+  os.mkdir(Q_path)
+  svntest.main.file_append(bloo_path, "New contents.")
+  svntest.main.run_svn(None, 'add', '--recursive', Q_path)
+  
+  # Commit a regular added thing inside an added directory,
+  # expecting a specific error to occur!
+  return svntest.actions.run_and_verify_commit (wc_dir,
+                                                None,
+                                                None,
+                                                "unversioned",
+                                                None, None,
+                                                None, None,
+                                                bloo_path)
+  
 #----------------------------------------------------------------------
 
 def commit_rmd_and_deleted_file(sbox):
