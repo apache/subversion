@@ -25,7 +25,13 @@ Ben todo:
    - use karl's forthcoming "magic" adm/entryname routine whereever
      possible, once it exists.
 
-Karl working copy todo:
+Karl todo:
+   - Propagate changes down into libsvn_client.  Currently, the client
+     usually takes a `targets' list and iterates over it, invoking
+     some libsvn_client routine each time.  There are cases where the
+     libsvn_client routine should get the target list directly and do
+     the iteration internally, or even pass the list on down into
+     libsvn_wc.
    - make an is_textfile test, so at least we can create .alt files
      instead of .rej for those that `patch' can't handle.
    - write the log/lock recovery function.
