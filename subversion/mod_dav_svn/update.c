@@ -898,8 +898,12 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
          walk.  dir_delta would choke if we pass a filepath as the
          'target'.  Also, there's no need to do the walk, since the
          new vsn-rsc-url was already in the earlier part of the report. */
-      svn_node_kind_t dst_kind = svn_fs_check_path(uc.rev_root, dst_path,
-                                                   resource->pool);
+      svn_node_kind_t dst_kind;
+
+      serr = svn_fs_check_path(&dst_kind, uc.rev_root, dst_path,
+                               resource->pool);
+      /* ### what to do with this error? */
+
       if (dst_kind == svn_node_dir)
         {
           /* send a second embedded <S:resource-walk> tree that contains

@@ -172,7 +172,7 @@ delete_entry (const char *path,
   const char *full_path = svn_path_join (eb->base_path, path, pool);
 
   /* Check PATH in our transaction.  */
-  kind = svn_fs_check_path (eb->txn_root, full_path, pool);
+  SVN_ERR (svn_fs_check_path (&kind, eb->txn_root, full_path, pool));
 
   /* If PATH doesn't exist in the txn, that's fine (merge
      allows this). */
@@ -226,7 +226,7 @@ add_directory (const char *path,
          unless its parent directory was copied (in which case, the
          thing might have been copied in as well), else return an
          out-of-dateness error. */
-      kind = svn_fs_check_path (eb->txn_root, full_path, subpool);
+      SVN_ERR (svn_fs_check_path (&kind, eb->txn_root, full_path, subpool));
       if ((kind != svn_node_none) && (! pb->was_copied))
         return out_of_date (full_path, eb->txn_name);
 
@@ -290,7 +290,7 @@ open_directory (const char *path,
 
   /* Check PATH in our transaction.  Make sure it does not exist,
      else return an out-of-dateness error. */
-  kind = svn_fs_check_path (eb->txn_root, full_path, pool);
+  SVN_ERR (svn_fs_check_path (&kind, eb->txn_root, full_path, pool));
   if (kind == svn_node_none)
     return out_of_date (full_path, eb->txn_name);
 
@@ -359,7 +359,7 @@ add_file (const char *path,
          unless its parent directory was copied (in which case, the
          thing might have been copied in as well), else return an
          out-of-dateness error. */
-      kind = svn_fs_check_path (eb->txn_root, full_path, subpool);
+      SVN_ERR (svn_fs_check_path (&kind, eb->txn_root, full_path, subpool));
       if ((kind != svn_node_none) && (! pb->was_copied))
         return out_of_date (full_path, eb->txn_name);
 

@@ -171,7 +171,8 @@ make_txn_root (svn_fs_t *fs,
 
 /* Constructing nice error messages for roots.  */
 
-/* Return a detailed `file not found' error message for PATH in ROOT.  */
+/* Return the error SVN_ERR_FS_NOT_FOUND, with a detailed error text,
+   for PATH in ROOT. */
 static svn_error_t *
 not_found (svn_fs_root_t *root, const char *path)
 {
@@ -437,13 +438,13 @@ typedef enum open_path_flags_t {
    TRAIL->pool.  The resulting *PARENT_PATH_P value is guaranteed to
    contain at least one element, for the root directory.
 
-   If FLAGS & open_path_last_optional is zero, return an error if the
-   node PATH refers to does not exist.  If it is non-zero, require all
-   the parent directories to exist as normal, but if the final path
-   component doesn't exist, simply return a path whose bottom `node'
-   member is zero.  This option is useful for callers that create new
-   nodes --- we find the parent directory for them, and tell them
-   whether the entry exists already.  */
+   If FLAGS & open_path_last_optional is zero, return the error
+   SVN_ERR_FS_NOT_FOUND if the node PATH refers to does not exist.  If
+   non-zero, require all the parent directories to exist as normal,
+   but if the final path component doesn't exist, simply return a path
+   whose bottom `node' member is zero.  This option is useful for
+   callers that create new nodes --- we find the parent directory for
+   them, and tell them whether the entry exists already. */
 static svn_error_t *
 open_path (parent_path_t **parent_path_p,
            svn_fs_root_t *root,
@@ -755,7 +756,7 @@ make_path_mutable (svn_fs_root_t *root,
 
 /* Open the node identified by PATH in ROOT, as part of TRAIL.  Set
    *DAG_NODE_P to the node we find, allocated in TRAIL->pool.  Return
-   an error if this node doesn't exist. */
+   the error SVN_ERR_FS_NOT_FOUND if this node doesn't exist. */
 static svn_error_t *
 get_dag (dag_node_t **dag_node_p,
          svn_fs_root_t *root,
@@ -901,9 +902,11 @@ txn_body_node_kind (void *baton, trail_t *trail)
   return SVN_NO_ERROR;
 }
 
-svn_node_kind_t svn_fs_check_path (svn_fs_root_t *root,
-                                   const char *path,
-                                   apr_pool_t *pool)
+svn_error_t *
+svn_fs_check_path (svn_node_kind_t *kind_p,
+                   svn_fs_root_t *root,
+                   const char *path,
+                   apr_pool_t *pool)
 {
   struct node_kind_args args;
   svn_error_t *err;
@@ -912,13 +915,18 @@ svn_node_kind_t svn_fs_check_path (svn_fs_root_t *root,
   args.path = path;
 
   err = svn_fs__retry_txn (root->fs, txn_body_node_kind, &args, pool);
-  if (err)
+
+  if (err && (err->apr_err == SVN_ERR_FS_NOT_FOUND))
     {
       svn_error_clear (err);
-      return svn_node_none;
+      *kind_p = svn_node_none;
     }
+  else if (err)
+    return err;
+  else
+    *kind_p = args.kind;
 
-  return args.kind;
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
