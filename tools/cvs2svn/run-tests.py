@@ -25,6 +25,7 @@ import re
 import os
 import time
 import os.path
+import locale
 
 # This script needs to run in tools/cvs2svn/.  Make sure we're there.
 if not (os.path.exists('cvs2svn.py') and os.path.exists('test-data')):
@@ -256,7 +257,8 @@ def erase(path):
 # The log_dictionary comes from parse_log(svn_repos).
 already_converted = { }
 
-def ensure_conversion(name, error_re=None, trunk_only=None, no_prune=None):
+def ensure_conversion(name, error_re=None, trunk_only=None,
+                      no_prune=None, encoding=None):
   """Convert CVS repository NAME to Subversion, but only if it has not
   been converted before by this invocation of this script.  If it has
   been converted before, do nothing.
@@ -300,26 +302,21 @@ def ensure_conversion(name, error_re=None, trunk_only=None, no_prune=None):
       erase(svnrepos)
       erase(wc)
       
-      ### I'd have preferred to assemble an arg list conditionally and
-      ### then apply() it, or use extended call syntax.  But that
-      ### didn't work as expected; I don't know why, it's never been a
-      ### problem before.  But since the trunk_only arg will soon go
-      ### away anyway, no point spending much effort on supporting it
-      ### elegantly.  Hence the four way conditional below.
       try:
+        arg_list = [ '--create', '-s', svnrepos, cvsrepos ]
+
         if no_prune:
-          if trunk_only:
-            run_cvs2svn(error_re, '--trunk-only', '--no-prune',
-                        '--create', '-s', svnrepos, cvsrepos)
-          else:
-            run_cvs2svn(error_re, '--no-prune', '--create', '-s',
-                        svnrepos, cvsrepos)
-        else:
-          if trunk_only:
-            run_cvs2svn(error_re, '--trunk-only', '--create', '-s',
-                        svnrepos, cvsrepos)
-          else:
-            run_cvs2svn(error_re, '--create', '-s', svnrepos, cvsrepos)
+          arg_list[:0] = [ '--no-prune' ]
+
+        if trunk_only:
+          arg_list[:0] = [ '--trunk-only' ]
+
+        if encoding:
+          arg_list[:0] = [ '--encoding=' + encoding ]
+
+        arg_list[:0] = [ error_re ]
+
+        ret = apply(run_cvs2svn, arg_list)
       except RunProgramException:
         raise svntest.Failure
       except MissingErrorException:
@@ -817,7 +814,53 @@ def branch_delete_first():
     raise svntest.Failure
   if not os.path.exists(os.path.join(wc, 'branches', 'branch-3', 'file')):
     raise svntest.Failure
+
   
+def nonascii_filenames():
+  "non ascii files converted incorrectly"
+  # see issue #1255
+
+  # on a en_US.iso-8859-1 machine this test fails with
+  # svn: Can't recode ...
+  #
+  # as described in the issue
+
+  # on a en_US.UTF-8 machine this test fails with
+  # svn: Malformed XML ...
+  #
+  # which means at least it fails. Unfortunately it won't fail
+  # with the same error...
+
+  # mangle current locale settings so we know we're not running
+  # a UTF-8 locale (which does not exhibit this problem)
+  current_locale = locale.getlocale()
+  new_locale = 'en_US.ISO8859-1'
+
+  try:
+    # change locale to non-UTF-8 locale to generate latin1 names
+    locale.setlocale(locale.LC_ALL, # this might be too broad?
+                     new_locale)
+
+    testdata_path = os.path.abspath('test-data')
+    srcrepos_path = os.path.join(testdata_path,'main-cvsrepos')
+    dstrepos_path = os.path.join(testdata_path,'non-ascii-cvsrepos')
+    if not os.path.exists(dstrepos_path):
+      # create repos from existing main repos
+      shutil.copytree(srcrepos_path, dstrepos_path)
+      base_path = os.path.join(dstrepos_path, 'single-files')
+      shutil.copyfile(os.path.join(base_path, 'twoquick,v'),
+                      os.path.join(base_path, 'two\366uick,v'))
+      new_path = os.path.join(dstrepos_path, 'single\366files')
+      os.rename(base_path, new_path)
+
+    # if ensure_conversion can generate a 
+    repos, wc, logs = ensure_conversion('non-ascii', encoding='latin1')
+
+  finally:
+    shutil.rmtree(dstrepos_path)
+    locale.setlocale(locale.LC_ALL,
+                     current_locale)
+    
 
 #----------------------------------------------------------------------
 
@@ -849,6 +892,7 @@ test_list = [ None,
               tagged_branch_and_trunk,
               enroot_race,
               branch_delete_first,
+              XFail(nonascii_filenames),
              ]
 
 if __name__ == '__main__':
