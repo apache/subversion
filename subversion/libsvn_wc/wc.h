@@ -316,8 +316,8 @@ svn_error_t *svn_wc__ensure_adm (svn_string_t *path,
  * recursers.
  */
 svn_error_t *svn_wc__log_commit (svn_string_t *path,
-                                 svn_vernum_t version,
                                  apr_hash_t *targets,
+                                 svn_vernum_t version,
                                  apr_pool_t *pool);
 
 

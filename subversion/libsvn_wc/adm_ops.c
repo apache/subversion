@@ -110,7 +110,7 @@ svn_wc_close_commit (svn_string_t *path,
 {
   svn_error_t *err;
 
-  err = svn_wc__log_commit (path, new_version, targets, pool);
+  err = svn_wc__log_commit (path, targets, new_version, pool);
   if (err)
     return err;
 

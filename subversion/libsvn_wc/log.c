@@ -402,8 +402,8 @@ svn_wc__cleanup (svn_string_t *path,
 
 svn_error_t *
 svn_wc__log_commit (svn_string_t *path,
-                    svn_vernum_t version,
                     apr_hash_t *targets,
+                    svn_vernum_t version,
                     apr_pool_t *pool)
 {
   svn_error_t *err;
@@ -433,7 +433,7 @@ svn_wc__log_commit (svn_string_t *path,
                                   svn_path_local_style,
                                   pool);
 
-          err = svn_wc__log_commit (subdir, version, targets, pool);
+          err = svn_wc__log_commit (subdir, targets, version, pool);
           if (err)
             return err;
         }
