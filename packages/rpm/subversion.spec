@@ -4,6 +4,8 @@
 # If you don't have 360+ MB of free disk space or don't want to run checks then
 # set make_check to 0.
 %define make_check 1
+# If you want to try to build cvs2svn then change build_cvs2svn to 1
+%define build_cvs2svn 0
 Summary: A Concurrent Versioning system similar to but better than CVS.
 Name: subversion
 Version: @VERSION@
@@ -37,7 +39,9 @@ BuildPreReq: neon-devel = %{neon_version}
 BuildPreReq: openssl-devel
 BuildPreReq: python2
 BuildPreReq: python2-devel
+%if %{build_cvs2svn}
 BuildPreReq: swig >= 1.3.15
+%endif
 BuildPreReq: texinfo
 BuildPreReq: zlib-devel
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}
@@ -78,6 +82,7 @@ BuildPreReq: apache-devel >= %{apache_version}
 The subversion-server package adds the Subversion server Apache module to
 the Apache directories and configuration.
 
+%if %{build_cvs2svn}
 %package cvs2svn
 Group: Utilities/System
 Summary: Converts CVS repositories to Subversion repositories.
@@ -87,7 +92,13 @@ Converts CVS repositories to Subversion repositories.
 
 See /usr/share/doc/subversion*/tools/cvs2svn directory for more information.
 
+%endif
+
 %changelog
+* Fri Oct 04 2002 David Summers <david@summersoft.fay.ar.us> 0.14.3-3280
+- Made cvs2svn conditional (at least until we can get it to build consistently
+  and work).
+
 * Sat Sep 21 2002 David Summers <david@summersoft.fay.ar.us> 0.14.3-3205
 - Added SWIG dependencies to add cvs2svn capabilities.
 
@@ -186,16 +197,20 @@ LDFLAGS="-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_client/.libs \
 	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_wc/.libs \
 	" ./configure \
 	--prefix=/usr \
+%if %{build_cvs2svn}
+	--with-swig
+%endif
 	--with-apxs=%{apache_dir}/bin/apxs \
 	--with-apr=%{apache_dir}/bin/apr-config \
 	--with-apr-util=%{apache_dir}/bin/apu-config \
-	--with-swig
 
 # Fix up mod_dav_svn installation.
 %patch0 -p1
 
+%if %{build_cvs2svn}
 # Fix up cvs2svn python bindings
 %patch1 -p1
+%endif
 
 %build
 make
@@ -204,9 +219,11 @@ make
 make check
 %endif
 
+%if %{build_cvs2svn}
 # Build cvs2svn python bindings
 cd subversion/bindings/swig/python
 /usr/bin/python2 setup.py build
+%endif
 
 %install
 rm -rf $RPM_BUILD_ROOT
@@ -223,12 +240,14 @@ make install \
 # Add subversion.conf configuration file into httpd.conf directory.
 cp %{SOURCE1} $RPM_BUILD_ROOT/%{apache_dir}/conf
 
+%if %{build_cvs2svn}
 # Install cvs2svn and supporting files
 cd subversion/bindings/swig/python
 /usr/bin/python2 setup.py install --prefix $RPM_BUILD_ROOT/usr
 sed -e 's;#!/usr/bin/env python;#!/usr/bin/env python2;' < $RPM_BUILD_DIR/%{name}-%{version}/tools/cvs2svn/cvs2svn.py > $RPM_BUILD_ROOT/usr/bin/cvs2svn
 chmod a+x $RPM_BUILD_ROOT/usr/bin/cvs2svn
 cp %{SOURCE2} $RPM_BUILD_ROOT/usr/lib/python2.2/site-packages/svn
+%endif
 
 %post
 # Only add to INFO directory if this is the only instance installed.
@@ -335,7 +354,9 @@ rm -rf $RPM_BUILD_ROOT
 %{apache_dir}/modules/mod_dav_svn.la
 %{apache_dir}/modules/mod_dav_svn.so
 
+%if %{build_cvs2svn}
 %files cvs2svn
 %defattr(-,root,root)
 /usr/bin/cvs2svn
 /usr/lib/python2.2/site-packages/svn
+%endif
