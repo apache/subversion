@@ -1686,7 +1686,7 @@ svn_wc_get_status_editor2 (const svn_delta_editor_t **editor,
                            svn_wc_adm_access_t *anchor,
                            const char *target,
                            apr_hash_t *config,
-                           svn_boolean_t descend,
+                           svn_boolean_t recurse,
                            svn_boolean_t get_all,
                            svn_boolean_t no_ignore,
                            svn_wc_status_func_t status_func,
@@ -1701,7 +1701,7 @@ svn_wc_get_status_editor2 (const svn_delta_editor_t **editor,
 
   /* Construct an edit baton. */
   eb = apr_palloc (pool, sizeof (*eb));
-  eb->descend           = descend;
+  eb->descend           = recurse;
   eb->target_revision   = edit_revision;
   eb->adm_access        = anchor;
   eb->config            = config;
@@ -1761,7 +1761,7 @@ svn_wc_get_status_editor (const svn_delta_editor_t **editor,
                           svn_wc_adm_access_t *anchor,
                           const char *target,
                           apr_hash_t *config,
-                          svn_boolean_t descend,
+                          svn_boolean_t recurse,
                           svn_boolean_t get_all,
                           svn_boolean_t no_ignore,
                           svn_wc_status_func_t status_func,
@@ -1772,7 +1772,7 @@ svn_wc_get_status_editor (const svn_delta_editor_t **editor,
                           apr_pool_t *pool)
 {
   return svn_wc_get_status_editor2 (editor, edit_baton, NULL, edit_revision,
-                                    anchor, target, config, descend,
+                                    anchor, target, config, recurse,
                                     get_all, no_ignore, status_func,
                                     status_baton, cancel_func, cancel_baton,
                                     traversal_info, pool);
