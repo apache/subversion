@@ -42,6 +42,7 @@ class SVNShell:
   def cmd_help(self, *args):
     """print shell help"""
     print "Available commands:"
+    print "  cat FILE     : dump the contents of FILE"
     print "  cd DIR       : change the current working directory to DIR"
     print "  exit         : exit the shell"
     print "  ls [PATH]    : list the contents of the current directory"
@@ -49,6 +50,26 @@ class SVNShell:
     print "  setrev REV   : set the current revision to browse"
     print "  settxn TXN   : set the current transaction to browse"
     print "  youngest     : list the youngest browsable revision number"
+    
+  def cmd_cat(self, *args):
+    """dump the contents of a file"""
+    args = args[0]
+    if not len(args):
+      print "You must supply a file path."
+      return
+    catpath = self._parse_path(args[0])
+    kind = fs.check_path(self.root, catpath, self.taskpool)
+    if kind == util.svn_node_none:
+      print "Path '%s' does not exist." % catpath
+      return
+    if kind == util.svn_node_dir:
+      print "Path '%s' is not a file." % catpath
+      return
+    ### be nice to get some paging in here.  also, not reading the
+    ### whole contents of the file at once.  but whatever.
+    filelen = fs.file_length(self.root, catpath, self.taskpool)
+    stream = fs.file_contents(self.root, catpath, self.taskpool)
+    print util.svn_stream_read(stream, filelen)
     
   def cmd_cd(self, *args):
     """change directory"""
@@ -60,7 +81,7 @@ class SVNShell:
     # make sure that path actually exists in the filesystem as a directory
     kind = fs.check_path(self.root, newpath, self.taskpool)
     if kind != util.svn_node_dir:
-      print "Path '" + newpath + "' is not a valid filesystem directory."
+      print "Path '%s' is not a valid filesystem directory." % newpath
       return
     self.path = newpath
     util.svn_pool_clear(self.taskpool)
@@ -90,13 +111,13 @@ class SVNShell:
         entries = {}
         entries[name] = tmpentries[name]
       else:
-        print "Path not found: " + newpath
+        print "Path '%s' not found." % newpath
         return
       
     keys = entries.keys()
     keys.sort()
 
-    print "   REV    AUTHOR  NODE-REV-ID     SIZE         DATE NAME"
+    print "   REV   AUTHOR  NODE-REV-ID     SIZE         DATE NAME"
     print "----------------------------------------------------------------------------"
 
     for entry in keys:
@@ -113,9 +134,14 @@ class SVNShell:
       created_rev = fs.node_created_rev(self.root, fullpath, self.taskpool)
       author = fs.revision_prop(self.fs_ptr, created_rev,
                                 util.SVN_PROP_REVISION_AUTHOR, self.taskpool)
+      if not author:
+        author = ""
       date = fs.revision_prop(self.fs_ptr, created_rev,
                               util.SVN_PROP_REVISION_DATE, self.taskpool)
-      date = self._format_date(date, self.taskpool)
+      if not date:
+        date = ""
+      else:
+        date = self._format_date(date, self.taskpool)
      
       print "%6s %8s <%10s> %8s %12s %s" % (created_rev, author[:8],
                                             node_id, size, date, name)
@@ -142,7 +168,7 @@ class SVNShell:
       rev = int(args[0])
       newroot = fs.revision_root(self.fs_ptr, rev, self.pool)
     except:
-      print "Error setting the revision to '" + str(rev) + "'"
+      print "Error setting the revision to '" + str(rev) + "'."
       return
     fs.close_root(self.root)
     self.root = newroot
@@ -158,7 +184,7 @@ class SVNShell:
       txnobj = fs.open_txn(self.fs_ptr, txn, self.pool)
       newroot = fs.txn_root(txnobj, self.pool)
     except:
-      print "Error setting the transaction to '" + txn + "'"
+      print "Error setting the transaction to '" + txn + "'."
       return
     fs.close_root(self.root)
     self.root = newroot
@@ -238,20 +264,26 @@ class SVNShell:
     try:
       input = raw_input(prompt)
     except EOFError:
+      print "" # generate a new-line before returning control
       return
 
-    ### This will currently screw up when the arguments to the
-    ### commands have spaces in them, like 'cd "My Dir"'
-    args = filter(None, string.split(input, ' '))
-    if len(args) == 0:
-      pass
-    elif args[0] == 'exit':
-      return
-    elif not hasattr(self, 'cmd_' + args[0]):
-      msg = self._errors[randint(0, len(self._errors) - 1)]
-      print msg
-    else:
-      getattr(self, 'cmd_' + args[0])(args[1:])
+    cmds = filter(None, string.split(input, ';'))
+    for cmd in cmds:
+      cmd.strip()
+      
+      ### This will currently screw up when the arguments to the
+      ### commands have spaces in them, like 'cd "My Dir"'
+      args = filter(None, string.split(cmd, ' '))
+      if len(args) == 0:
+        pass
+      elif args[0] == 'exit':
+        return
+      elif not hasattr(self, 'cmd_' + args[0]):
+        msg = self._errors[randint(0, len(self._errors) - 1)]
+        print msg
+      else:
+        getattr(self, 'cmd_' + args[0])(args[1:])
+        
     self._do_prompt()
     
 
