@@ -1943,7 +1943,9 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
         ap_fputs(output, bb, "  <index");
         if (resource->info->repos->repo_name)
             ap_fprintf(output, bb, " name=\"%s\"",
-                       resource->info->repos->repo_name);
+                       apr_xml_quote_string(resource->pool, 
+                                            resource->info->repos->repo_name, 
+                                            1));
         if (SVN_IS_VALID_REVNUM(resource->info->root.rev))
           ap_fprintf(output, bb, " rev=\"%" SVN_REVNUM_T_FMT "\"",
                      resource->info->root.rev);
