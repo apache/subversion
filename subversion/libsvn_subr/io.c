@@ -31,6 +31,14 @@
 #endif
 #endif
 
+#ifndef APR_STATUS_IS_EPERM
+#ifdef EPERM
+#define APR_STATUS_IS_EPERM(s)   ((s) == EPERM)
+#else
+#define APR_STATUS_IS_EPERM(s)   (0)
+#endif
+#endif
+
 #include <apr_lib.h>
 #include <apr_pools.h>
 #include <apr_file_io.h>
@@ -792,6 +800,27 @@ svn_io_set_file_read_write (const char *path,
   return SVN_NO_ERROR;
 }
 
+/* Given the file specified by PATH_APR, attempt to create an
+   identical version of it owned by the current user.  This is done by
+   moving it to a temporary location, copying the file back to its old
+   path, then deleting the temporarily moved version.  All temporary
+   allocations are done in POOL. */
+static svn_error_t *
+reown_file (const char *path_apr,
+            apr_pool_t *pool)
+{
+  apr_file_t *fp;
+  const char *unique_name;
+
+  SVN_ERR (svn_io_open_unique_file (&fp, &unique_name, path_apr,
+                                    ".tmp", FALSE, pool));
+  SVN_ERR (svn_io_file_close (fp, pool));
+  SVN_ERR (svn_io_file_rename (path_apr, unique_name, pool));
+  SVN_ERR (svn_io_copy_file (unique_name, path_apr, TRUE, pool));
+  SVN_ERR (svn_io_remove_file (unique_name, pool));
+
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_io_set_file_executable (const char *path,
@@ -841,12 +870,33 @@ svn_io_set_file_executable (const char *path,
           status = apr_file_perms_set (path_apr, perms_to_set);
           if (status)
             {
-              if (ignore_enoent && APR_STATUS_IS_ENOENT (status))
+              if (APR_STATUS_IS_EPERM (status))
+                {
+                  /* We don't have permissions to change the
+                     permissions!  Try a move, copy, and delete
+                     workaround to see if we can get the file owned by
+                     us.  If these succeed, try the permissions set
+                     again.
+
+                     Note that we only attempt this in the
+                     stat-available path.  This assumes that the
+                     move-copy workaround will only be helpful on
+                     platforms that implement apr_stat. */
+                  SVN_ERR (reown_file (path_apr, pool));
+                  status = apr_file_perms_set (path_apr, perms_to_set);
+                }
+
+              if (status)
+                {
+                  if (ignore_enoent && APR_STATUS_IS_ENOENT (status))
+                    return SVN_NO_ERROR;
+                  else if (status != APR_ENOTIMPL)
+                    return svn_error_wrap_apr (status,
+                                               "Can't change executability of "
+                                               "file '%s'", path);
+                }
+              else
                 return SVN_NO_ERROR;
-              else if (status != APR_ENOTIMPL)
-                return svn_error_wrap_apr (status,
-                                           "Can't change executability of "
-                                           "file '%s'", path);
             }
           else
             return SVN_NO_ERROR;
