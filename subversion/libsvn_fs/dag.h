@@ -127,13 +127,11 @@ svn_error_t *svn_fs__dag_revision_root (dag_node_t **node_p,
                                         trail_t *trail);
 
 
-/* Open the mutable node in the transaction named TXN whose ID is ID
-   in FS, as part of TRAIL; set *NODE_P to the new node.  Allocate the
-   node in TRAIL->pool.  */
-svn_error_t *svn_fs__dag_txn_node (dag_node_t **node_p,
+/* Set *NODE_P to the root of transaction TXN in FS, as part of TRAIL.
+   Allocate the node in TRAIL->pool.  */
+svn_error_t *svn_fs__dag_txn_root (dag_node_t **node_p,
                                    svn_fs_t *fs,
                                    const char *txn,
-                                   const svn_fs_id_t *id,
                                    trail_t *trail);
 
 
