@@ -13,6 +13,8 @@ Two are copies of /trunk:13253.
 - patches
   Here I will store patches of the functionalities above; this is meant
   for people running of /trunk, who want to test this parts.
+  The patches for owner-group-mode will not depend on the text-time-patches;
+  they will include them.
 
 
 Why meta-data versioning?
