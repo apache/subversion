@@ -1370,11 +1370,25 @@ svn_error_t * svn_ra_dav__get_log(void *session_baton,
                                   svn_revnum_t start,
                                   svn_revnum_t end,
                                   svn_boolean_t discover_changed_paths,
-                                  svn_ra_log_message_receiver_t receiver,
+                                  svn_log_message_receiver_t receiver,
                                   void *receiver_baton)
 {
-  /* See logic in ../libsvn_ra_local/ra_plugin.c:get_log() for a start
-     on what needs to happen here. */
+  /* The Plan: Send a request to the server for a log report.
+   * Somewhere in mod_dav_svn, there will be an implementation, R, of
+   * the `svn_log_message_receiver_t' function type.  Some other
+   * function in mod_dav_svn will use svn_repos_get_logs() to loop R
+   * over the log messages, and the successive invocations of R will
+   * collectively transmit the report back here, where we parse the
+   * report and invoke RECEIVER (which is an entirely separate
+   * instance of `svn_log_message_receiver_t') on each individual
+   * message in that report.
+   *
+   * Question: where in mod_dav_svn to put this new stuff?
+   *
+   * See ../libsvn_ra_local/ra_plugin.c:get_log() for an example, not
+   * that very much can be shared beyond the svn_repos_get_logs()
+   * call.
+   */
 
   SVN_ERR( (*receiver)(receiver_baton,
                        NULL,

@@ -48,18 +48,6 @@ char *svn_strerror (apr_status_t statcode, char *buf, apr_size_t bufsize);
 
 /*** SVN error creation and destruction. ***/
 
-typedef struct svn_error
-{
-  apr_status_t apr_err;      /* APR error value, possibly SVN_ custom err */
-  int src_err;               /* native error code (e.g. errno, h_errno...) */
-  const char *message;       /* details from producer of error */
-  struct svn_error *child;   /* ptr to the error we "wrap" */
-  apr_pool_t *pool;          /* The pool holding this error and any
-                                child errors it wraps */
-} svn_error_t;
-
-
-
 /*
   svn_error_create() : for creating nested exception structures.
 

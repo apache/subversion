@@ -195,6 +195,52 @@ svn_repos_dated_revision (svn_revnum_t *revision,
      
 */
 
+
+/* ---------------------------------------------------------------*/
+
+/*** Retrieving log messages. */
+
+
+/* Invoke RECEIVER with RECEIVER_BATON on each log message from START
+ * to END in FS.  START may be greater or less than END; this just
+ * controls whether the log messages are processed in descending or
+ * ascending revision number order.
+ *
+ * If START or END is SVN_INVALID_REVNUM, it defaults to youngest.
+ *
+ * If PATHS is non-null and has one or more elements, then only show
+ * revisions in which at least one of PATHS was changed (i.e., if
+ * file, text or props changed; if dir, props changed or an entry was
+ * added or deleted).  Each path is an svn_stringbuf_t *, relative to
+ * the session's common parent.
+ * ### todo: Above paragraph not yet implemented.
+ *
+ * If DISCOVER_CHANGED_PATHS, then each call to receiver passes a
+ * `const apr_hash_t *' for the receiver's CHANGED_PATHS argument; the
+ * hash's keys are all the paths committed in that revision.
+ * Otherwise, each call to receiver passes null for CHANGED_PATHS.
+ *
+ * The last call to receiver (i.e., for the last requested log
+ * message) passes the FINAL_CALL flag.
+ *
+ * If any invocation of RECEIVER returns error, return that error
+ * immediately and without wrapping it.
+ *
+ * See also the documentation for `svn_log_message_receiver_t'.
+ *
+ * Use POOL for temporary allocations.
+ */
+svn_error_t *
+svn_repos_get_logs (svn_fs_t *fs,
+                    apr_array_header_t *paths,
+                    svn_revnum_t start,
+                    svn_revnum_t end,
+                    svn_boolean_t discover_changed_paths,
+                    svn_log_message_receiver_t receiver,
+                    void *receiver_baton,
+                    apr_pool_t *pool);
+
+
 /* ---------------------------------------------------------------*/
 
 /*** Hook-sensitive wrappers for libsvn_fs routines. ***/

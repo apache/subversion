@@ -351,56 +351,19 @@ get_log (void *session_baton,
          svn_revnum_t start,
          svn_revnum_t end,
          svn_boolean_t discover_changed_paths,
-         svn_ra_log_message_receiver_t receiver,
+         svn_log_message_receiver_t receiver,
          void *receiver_baton)
 {
   svn_ra_local__session_baton_t *sbaton = session_baton;
-  svn_revnum_t this_rev;
-  apr_pool_t *subpool = svn_pool_create (sbaton->pool);
 
-  if (start == SVN_INVALID_REVNUM)
-    SVN_ERR (svn_fs_youngest_rev (&start, sbaton->fs, sbaton->pool));
-
-  if (end == SVN_INVALID_REVNUM)
-    SVN_ERR (svn_fs_youngest_rev (&end, sbaton->fs, sbaton->pool));
-
-  /* ### todo: ignore `sbaton->fs_path' and `paths' for
-     now.  Probably want to convert them to a single hash containing
-     absolute paths first.  */
-
-  for (this_rev = start;
-       ((start >= end) ? (this_rev >= end) : (this_rev <= end));
-       ((start >= end) ? this_rev-- : this_rev++))
-    {
-      svn_stringbuf_t *author, *date, *message;
-      svn_string_t date_prop = {SVN_PROP_REVISION_DATE,
-                                strlen(SVN_PROP_REVISION_DATE)};
-      svn_string_t author_prop = {SVN_PROP_REVISION_AUTHOR,
-                                  strlen(SVN_PROP_REVISION_AUTHOR)};
-      svn_string_t message_prop = {SVN_PROP_REVISION_LOG,
-                                   strlen(SVN_PROP_REVISION_LOG)};
-
-      SVN_ERR (svn_fs_revision_prop
-               (&author, sbaton->fs, this_rev, &author_prop, subpool));
-      SVN_ERR (svn_fs_revision_prop
-               (&date, sbaton->fs, this_rev, &date_prop, subpool));
-      SVN_ERR (svn_fs_revision_prop
-               (&message, sbaton->fs, this_rev, &message_prop, subpool));
-
-      SVN_ERR ((*receiver) (receiver_baton,
-                            NULL,
-                            this_rev,
-                            author ? author->data : "",
-                            date ? date->data : "",
-                            message ? message->data : "",
-                            (this_rev == end)));
-      
-      svn_pool_clear (subpool);
-    }
-
-  svn_pool_destroy (subpool);
-
-  return SVN_NO_ERROR;
+  return svn_repos_get_logs (sbaton->fs,
+                             paths,
+                             start,
+                             end,
+                             discover_changed_paths,
+                             receiver,
+                             receiver_baton,
+                             sbaton->pool);
 }
 
 
