@@ -70,9 +70,7 @@ class GeneratorBase:
     # compute intra-library dependencies
     for section in self.sections.values():
       dep_types = ((DT_LINK, section.options.get('libs')),
-                   (DT_NONLIB, section.options.get('nonlibs')),
-                   (DT_MSVC, section.options.get('msvc-deps')),
-                   (DT_FAKE, section.options.get('msvc-fake-deps')))
+                   (DT_NONLIB, section.options.get('nonlibs')))
 
       for dt_type, deps_list in dep_types:
         if deps_list:
@@ -216,8 +214,6 @@ dep_types = [
   'DT_LINK',     # a libtool-linked filename, depending upon object fnames
   'DT_INCLUDE',  # filename includes (depends) on sources (all basenames)
   'DT_NONLIB',   # filename depends on object fnames, but isn't linked to them
-  'DT_MSVC',     # MSVC project dependency
-  'DT_FAKE',     # dependency through a do-nothing project, to prevent linking
   'DT_LIST',     # arbitrary listS of values, see list_types below
   ]
 
@@ -296,7 +292,7 @@ class Target(DependencyNode):
   def __init__(self, name, options, cfg, extmap):
     self.name = name
     self.desc = options.get('description')
-    self.path = options.get('path')
+    self.path = options.get('path', '')
     self.add_deps = options.get('add-deps', '')
 
     # true if several targets share the same directory, as is the case
@@ -345,7 +341,16 @@ class TargetLinked(Target):
     ### hmm. this is Makefile-specific
     self.link_cmd = '$(LINK)'
 
+    self.external_lib = options.get('external-lib')
+    self.external_project = options.get('external-project')
+    self.msvc_libs = string.split(options.get('msvc-libs', ''))
+
   def add_dependencies(self, graph, cfg, extmap):
+    if self.external_lib or self.external_project:
+      if self.external_project:
+        graph.add(DT_LIST, LT_PROJECT, self)
+      return
+
     # the specified install area depends upon this target
     graph.add(DT_INSTALL, self.install, self)
 
@@ -420,6 +425,9 @@ class TargetLib(TargetLinked):
     # the target file is the name, version, and appropriate extension
     tfile = '%s-%s%s' % (name, cfg.version, extmap['lib', 'target'])
     self.filename = os.path.join(self.path, tfile)
+
+    self.msvc_static = options.get('msvc-static') == 'yes' # is a static lib
+    self.msvc_fake = options.get('msvc-fake') == 'yes' # has fake target
 
 class TargetApacheMod(TargetLib):
 
@@ -520,7 +528,7 @@ class TargetSWIGRuntime(TargetSWIG):
     self.name = self.lang + '_runtime' 
     self.path = os.path.join(self.path, self.lang)
     self.filename = os.path.join(self.path, libname)
-    self.make_lib = '-lswig' + abbrev
+    self.external_lib = '-lswig' + abbrev
 
     cfile = SWIGObject(os.path.join(self.path, cname), self.lang)
     ofile = SWIGObject(os.path.join(self.path, oname), self.lang)
@@ -550,18 +558,6 @@ class TargetSWIGLib(TargetLib):
         return [ self.target ]
       return [ ]
 
-class TargetExternal(Target):
-  def __init__(self, name, options, cfg, extmap):
-    Target.__init__(self, name, options, cfg, extmap)
-    self.make_lib = options.get('make-lib')
-    self.msvc_project = options.get('msvc-project')
-    self.msvc_libs = string.split(options.get('msvc-libs', ''))
-    self.filename = name
-
-  def add_dependencies(self, graph, cfg, extmap):
-    if self.msvc_project:
-      graph.add(DT_LIST, LT_PROJECT, self)
-
 class TargetProject(Target):
   def __init__(self, name, options, cfg, extmap):
     Target.__init__(self, name, options, cfg, extmap)
@@ -584,7 +580,6 @@ _build_types = {
   'lib' : TargetLib,
   'doc' : TargetDoc,
   'swig' : TargetSWIG,
-  'external' : TargetExternal,
   'project' : TargetProject,
   'swig_runtime' : TargetSWIGRuntime,
   'swig_lib' : TargetSWIGLib,
