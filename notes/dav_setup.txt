@@ -43,11 +43,13 @@
 
 5.  make && make install
 
+    That installs Apache into /usr/local/apache2 (or wherever you told
+    it to go).
+
 6.  Go back into your subversion working copy and run ./autogen.sh if
     you need to.  Then run
  
       ./configure --with-apxs=/usr/local/apache2/bin/apxs
-      make
 
     This argument tells subversion to build mod_dav_svn, and where to
     find the required information to do so.
@@ -59,15 +61,9 @@
     and link it directly into Apache. Possible, but painful. Stick
     with the shared library for now; if you can't, then ask.
 
-7.  After compiling all of subversion as shared libs, enter these
-    directories one at a time and run `make install`:
+7. make && make install
 
-           libsvn_fs
-           libsvn_subr
-           libsvn_delta
-           mod_dav_svn
-
-    This will copy the shared libraries into /usr/local/lib.
+   That copies the Subversion shared libraries to /usr/local/lib/. 
 
 8.  cd into /usr/local/apache2/conf, or wherever your "httpd.conf" file was
     installed, and add these lines to the *bottom* of httpd.conf:
@@ -81,14 +77,17 @@
     process runs as) is able to read the berkeley db files.
 
 9.  Now go ahead and fire up apache 2.0, using the 'apachectl' script,
-    whereever it was installed:
+    wherever it was installed:
 
-           ./bin/apachectl start
+           /usr/local/apache2/bin/apachectl start
+
+    Check /usr/local/apache2/logs/error_log to make sure it started
+    up okay.
 
 10. Finally, try doing a network checkout from the repository:
 
           svn co http://localhost/svn/repos -d wc
 
-
-There now, wasn't that easy?  :)
-
+    The most common reason this might fail is permission problems
+    reading the repository.  If the checkout fails, chmod 777 and try
+    again. :-)
