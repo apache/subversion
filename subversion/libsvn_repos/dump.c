@@ -270,6 +270,34 @@ dump_node (struct edit_baton *eb,
                                       ": %s\n",                  
                                       copyfrom_rev, copyfrom_path));
           
+          /* Being careful here.  We only want to dump the copied
+             node's contents if there were local mods made.
+
+             All we're trying to do here is guarantee that when
+             comparing the source and copy nodes,
+             svn_fs_contents_changed() returns the same results both
+             before *and* after the the dump/load. */
+          {
+            int contents_changed;
+            svn_fs_root_t *src_root;
+
+            SVN_ERR (svn_fs_revision_root (&src_root, 
+                                           svn_fs_root_fs (eb->fs_root),
+                                           copyfrom_rev, pool));
+
+            SVN_ERR (svn_fs_contents_changed (&contents_changed,
+                                              src_root, copyfrom_path,
+                                              eb->fs_root, path, pool));
+
+            if (! contents_changed)
+              {
+                /* solo 'copy' record is enough, no need to dump contents */
+                len = 1;
+                SVN_ERR (svn_stream_write (eb->stream, "\n", &len));
+                return SVN_NO_ERROR;
+              }
+          }
+
           /* ### someday write a node-copyfrom-source-checksum. */
         }
     }
