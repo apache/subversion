@@ -61,7 +61,7 @@
 ** WR_URL can be NULL if the resource has not (yet) been checked out.
 **
 ** LOCAL_PATH is relative to the root of the commit. It will be used
-** for the get_func, set_func, and close_func callbacks.
+** for the get_func, push_func, and close_func callbacks.
 */
 typedef struct
 {
@@ -83,9 +83,8 @@ typedef struct
 
   apr_hash_t *valid_targets;
 
-  svn_ra_get_committed_rev_func_t get_committed_rev_func;
   svn_ra_get_wc_prop_func_t get_func;
-  svn_ra_set_wc_prop_func_t set_func;
+  svn_ra_push_wc_prop_func_t push_func;
   void *cb_baton;
 
   /* The (potential) author of this commit. */
@@ -182,66 +181,6 @@ static svn_error_t * get_version_url(commit_ctx_t *cc,
     {
       const svn_string_t *vsn_url_value;
 
-      /* If we can get a validating revision, but it does not match
-         the entry's committed revision, then there's a problem... */
-      if (cc->get_committed_rev_func != NULL)
-        {
-          const svn_string_t *vsn_url_rev_value;
-          svn_revnum_t entry_committed_rev, vsn_url_rev;
-
-          SVN_ERR( (*cc->get_committed_rev_func)(cc->cb_baton,
-                                                 rsrc->local_path,
-                                                 &entry_committed_rev,
-                                                 pool) );
-          
-          SVN_ERR( (*cc->get_func)(cc->cb_baton,
-                                   rsrc->local_path,
-                                   SVN_RA_DAV__LP_VSN_URL_REV,
-                                   &vsn_url_rev_value,
-                                   pool) );
-
-          if (vsn_url_rev_value)
-            vsn_url_rev = SVN_STR_TO_REV(vsn_url_rev_value->data);
-          else
-            vsn_url_rev = SVN_INVALID_REVNUM;
-
-          if (SVN_IS_VALID_REVNUM(vsn_url_rev)
-              && (vsn_url_rev != entry_committed_rev))
-            {
-              /* They don't match.  We could just remove the current
-                 version-url -- that would trigger a refetch from the
-                 server a bit later in this code, as part of which the
-                 validating rev will also be removed.  But the
-                 mismatch is a sign of some larger problem.  There's
-                 something wrong with this working copy, and we don't
-                 really know what happened.  So bolt right now.  But
-                 note that we don't return SVN_ERR_WC_CORRUPT; that's
-                 really for libsvn_wc to say.  We just point out the
-                 revision mismatch. */
-
-              return svn_error_createf
-                (SVN_ERR_BAD_REVISION, 0, NULL, cc->ras->pool,
-                 "get_version_url: Bad version resource url rev for %s.\n"
-                 "  (Expected revision %" SVN_REVNUM_T_FMT ", "
-                 "got revision %" SVN_REVNUM_T_FMT ".)\n"
-                 "\n"
-  "This may indicate a corrupt working copy, perhaps one in which a\n"
-  "Subversion operation was interrupted at an inauspicious time.  You should\n"
-  "probably check out a new working copy.\n"
-  "\n"
-  "It is also possible that no corruption has occurred, but Subversion\n"
-  "mistakenly thinks something is wrong.  This is a known bug, and will be\n"
-  "fixed soon.  See\n"
-  "\n"
-  "   http://subversion.tigris.org/issues/show_bug.cgi?id=806\n"
-  "\n"
-  "for details.\n",
-                 rsrc->local_path,
-                 entry_committed_rev,
-                 vsn_url_rev);
-            }
-        }
-
       SVN_ERR( (*cc->get_func)(cc->cb_baton,
                                rsrc->local_path,
                                SVN_RA_DAV__LP_VSN_URL,
@@ -298,7 +237,7 @@ static svn_error_t * get_version_url(commit_ctx_t *cc,
      a resource object. */
   rsrc->vsn_url = apr_pstrdup(cc->ras->pool, url);
 
-  if (cc->set_func != NULL)
+  if (cc->push_func != NULL)
     {
       /* save the (new) version resource URL into the item */
 
@@ -307,23 +246,12 @@ static svn_error_t * get_version_url(commit_ctx_t *cc,
       value.data = url;
       value.len = strlen(url);
 
-      /* Remove any validating version-url-rev.  Since we fetched
-         this version-url directly from the server, possibly using a
-         specified revision, we *know* it's correct, and furthermore
-         there wasn't any version-url here until we store this new
-         one anyway. */
-      SVN_ERR( (*cc->set_func)(cc->cb_baton,
-                               rsrc->local_path,
-                               SVN_RA_DAV__LP_VSN_URL_REV,
-                               NULL,
-                               pool) );
-
       /* Now we can store the new version-url. */
-      SVN_ERR( (*cc->set_func)(cc->cb_baton,
-                               rsrc->local_path,
-                               SVN_RA_DAV__LP_VSN_URL,
-                               &value,
-                               pool) );
+      SVN_ERR( (*cc->push_func)(cc->cb_baton,
+                                rsrc->local_path,
+                                SVN_RA_DAV__LP_VSN_URL,
+                                &value,
+                                pool) );
     }
 
   return SVN_NO_ERROR;
@@ -363,10 +291,10 @@ static svn_error_t * get_activity_collection(
                                                cc->ras->root.path,
                                                cc->ras->pool) );
 
-  if (cc->set_func != NULL)
+  if (cc->push_func != NULL)
     {
       /* save the (new) activity collection URL into the directory */
-      SVN_ERR( (*cc->set_func)(cc->cb_baton,
+      SVN_ERR( (*cc->push_func)(cc->cb_baton,
                                "",
                                SVN_RA_DAV__LP_ACTIVITY_COLL,
                                *activity_coll,
@@ -1312,9 +1240,8 @@ svn_error_t * svn_ra_dav__get_commit_editor(
   cc->ras = ras;
   cc->resources = apr_hash_make(ras->pool);
   cc->valid_targets = apr_hash_make(ras->pool);
-  cc->get_committed_rev_func = ras->callbacks->get_committed_rev;
   cc->get_func = ras->callbacks->get_wc_prop;
-  cc->set_func = ras->callbacks->set_wc_prop;
+  cc->push_func = ras->callbacks->push_wc_prop;
   cc->cb_baton = ras->callback_baton;
   cc->log_msg = log_msg;
   cc->new_rev = new_rev;

@@ -83,9 +83,9 @@ extern "C" {
         appropriate category, so that the real values of existing
         errors are not changed.
 
-      - When deleting an error, leave a placeholder by putting
-        "OBSOLETE" into the error's name ("SVN_OBSOLETE_ERR_BLAH"),
-        again so that the values of other errors are not perturbed.
+      - When deleting an error, leave a placeholder comment indicating
+        the offset, again so that the values of other errors are not
+        perturbed.
 */
 
 #define SVN_ERR_CATEGORY_SIZE 5000
@@ -151,9 +151,7 @@ SVN_ERROR_START
               SVN_ERR_BAD_CATEGORY_START + 4,
               "Bogus mime-type")
 
-  SVN_ERRDEF (SVN_ERR_BAD_REVISION,
-              SVN_ERR_BAD_CATEGORY_START + 5,
-              "Bogus revision number")
+  /* UNUSED error slot:                  + 5 */
 
   SVN_ERRDEF (SVN_ERR_BAD_VERSION_FILE_FORMAT,
               SVN_ERR_BAD_CATEGORY_START + 6,

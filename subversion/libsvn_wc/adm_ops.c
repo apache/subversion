@@ -191,6 +191,7 @@ svn_wc_process_committed (const char *path,
                           svn_revnum_t new_revnum,
                           const char *rev_date,
                           const char *rev_author,
+                          apr_array_header_t *wcprop_changes,
                           apr_pool_t *pool)
 {
   apr_status_t apr_err;
@@ -292,6 +293,27 @@ svn_wc_process_committed (const char *path,
                          NULL);
 
 
+  /* Do wcprops in the same log txn as revision, etc. */
+  if (wcprop_changes && (wcprop_changes->nelts > 0))
+    {
+      int i;
+
+      for (i = 0; i < wcprop_changes->nelts; i++)
+        {
+          svn_prop_t *prop = APR_ARRAY_IDX (wcprop_changes, i, svn_prop_t *);
+
+          svn_xml_make_open_tag (&logtags, pool, svn_xml_self_closing,
+                                 SVN_WC__LOG_MODIFY_WCPROP,
+                                 SVN_WC__LOG_ATTR_NAME,
+                                 base_name,
+                                 SVN_WC__LOG_ATTR_PROPNAME,
+                                 prop->name,
+                                 prop->value ? SVN_WC__LOG_ATTR_PROPVAL : NULL,
+                                 prop->value ? prop->value->data : NULL,
+                                 NULL);
+        }
+    }
+
   apr_err = apr_file_write_full (log_fp, logtags->data, logtags->len, NULL);
   if (apr_err)
     {
@@ -348,11 +370,13 @@ svn_wc_process_committed (const char *path,
              child_access = adm_access;
           
           /* Recurse, but only allow further recursion if the child is
-             a directory.  */
+             a directory.  Pass null for wcprop_changes, because the
+             ones present in the current call are only applicable to
+             this one committed item. */
           SVN_ERR (svn_wc_process_committed 
                    (this_path, child_access,
                     (current_entry->kind == svn_node_dir) ? TRUE : FALSE,
-                    new_revnum, rev_date, rev_author, subpool));
+                    new_revnum, rev_date, rev_author, NULL, subpool));
 
           svn_pool_clear (subpool);
         }

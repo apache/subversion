@@ -37,23 +37,6 @@ extern "C" {
 
 /* Misc. declarations */
 
-/* This is a function type which allows the RA layer to fetch an
-   item's committed revision (i.e., the committed rev in the entry).
-
-   Set *REV to the committed revision in the entry for RELPATH,
-   relative to the "root" of the session, defined by the repos_url
-   passed to the RA->open() vtable call.  Use POOL for any temporary
-   allocation.
-
-   The BATON is provided along with the function pointer and should
-   be passed back in.  It's usually the CALLBACK_BATON or the
-   CLOSE_BATON as appropriate.
-*/
-typedef svn_error_t *(*svn_ra_get_committed_rev_func_t) (void *baton,
-                                                         const char *relpath,
-                                                         svn_revnum_t *rev,
-                                                         apr_pool_t *pool);
-
 /* This is a function type which allows the RA layer to fetch working
    copy (WC) properties.
 
@@ -73,19 +56,24 @@ typedef svn_error_t *(*svn_ra_get_wc_prop_func_t) (void *baton,
                                                    const svn_string_t **value,
                                                    apr_pool_t *pool);
 
-/* This is a function type which allows the RA layer to store working
-   copy (WC) properties.
+/* This is a function type which allows the RA layer to store new
+   working copy properties as part of a commit.  See the comments for
+   svn_ra_get_wc_prop_func_t to for BATON, PATH, and NAME.  The VALUE
+   is the value that will be stored for the property; a null VALUE
+   means the property will be deleted.
 
-   See the comments for svn_ra_get_wc_prop_func_t to for BATON, PATH, and
-   NAME.
-
-   The VALUE is the value that will be stored for the property.
-*/
-typedef svn_error_t *(*svn_ra_set_wc_prop_func_t) (void *baton,
-                                                   const char *path,
-                                                   const char *name,
-                                                   const svn_string_t *value,
-                                                   apr_pool_t *pool);
+   Note that this might not actually store the new property before
+   returning, but instead schedule it to be changed as part of
+   post-commit processing (in which case a successful commit means the
+   properties got written).  Thus, during the commit, it is possible
+   to invoke this function to set a new value for a wc prop, then read
+   the wc prop back from the working copy and get the *old* value.
+   Callers beware.  */
+typedef svn_error_t *(*svn_ra_push_wc_prop_func_t) (void *baton,
+                                                    const char *path,
+                                                    const char *name,
+                                                    const svn_string_t *value,
+                                                    apr_pool_t *pool);
 
 /* A function type for retrieving the youngest revision from a repos.   */
 typedef svn_error_t *(*svn_ra_get_latest_revnum_func_t) 
@@ -256,13 +244,6 @@ typedef struct svn_ra_callbacks_t
        perform is a server-side only one that shouldn't do post-commit
        processing on a working copy path.  ***/
 
-  /* Fetch the committed rev of a working copy item.
-     ### We could offer a more generic interface to retrieving entry
-     properties, and even regular properties, from the working copy.
-     But right now the only one we know we need is the entry committed
-     rev, so that's all we offer right now. */
-  svn_ra_get_committed_rev_func_t get_committed_rev;
-
   /* Fetch working copy properties.
      ### we might have a problem if the RA layer ever wants a property
      ### that corresponds to a different revision of the file than
@@ -270,7 +251,7 @@ typedef struct svn_ra_callbacks_t
   svn_ra_get_wc_prop_func_t get_wc_prop;
 
   /* Set working copy properties. */
-  svn_ra_set_wc_prop_func_t set_wc_prop;
+  svn_ra_push_wc_prop_func_t push_wc_prop;
 
 } svn_ra_callbacks_t;
 

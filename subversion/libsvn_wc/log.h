@@ -98,6 +98,11 @@ extern "C" {
  */
 #define SVN_WC__LOG_COMMITTED           "committed"
 
+/* On target SVN_WC__LOG_ATTR_NAME, set wc property
+   SVN_WC__LOG_ATTR_PROPNAME to value SVN_WC__LOG_ATTR_PROPVAL.  If
+   SVN_WC__LOG_ATTR_PROPVAL is absent, then remove the property. */
+#define SVN_WC__LOG_MODIFY_WCPROP        "modify-wcprop"
+
 
 /* A log command which runs svn_wc_merge().
    See its documentation for details.
@@ -118,9 +123,12 @@ extern "C" {
 #define SVN_WC__LOG_MERGE        "merge"
 
 
-/** Log attributes. **/
+/** Log attributes.  See the documentation above for log actions for
+    how these are used. **/
 #define SVN_WC__LOG_ATTR_NAME           "name"
 #define SVN_WC__LOG_ATTR_DEST           "dest"
+#define SVN_WC__LOG_ATTR_PROPNAME       "propname"
+#define SVN_WC__LOG_ATTR_PROPVAL        "propval"
 #define SVN_WC__LOG_ATTR_REVISION       "revision"
 #define SVN_WC__LOG_ATTR_TEXT_REJFILE   "text-rejfile"
 #define SVN_WC__LOG_ATTR_PROP_REJFILE   "prop-rejfile"

@@ -785,7 +785,8 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
      has a hacked name until we have the entries files storing
      canonical repository URLs.  Then, the hacked name can go away
      and be replaced with a canonical repos URL, and from there we
-     are poised to started handling nested working copies. */
+     are poised to started handling nested working copies.  See
+     http://subversion.tigris.org/issues/show_bug.cgi?id=960. */
   if (! ((commit_items = apr_hash_get (committables,
                                        SVN_CLIENT__SINGLE_REPOS_NAME, 
                                        APR_HASH_KEY_STRING))))
@@ -923,6 +924,7 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
                                                     committed_rev, 
                                                     committed_date,
                                                     committed_author, 
+                                                    item->wcprop_changes,
                                                     subpool)))
             break;
 

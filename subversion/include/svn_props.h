@@ -24,12 +24,30 @@
 #include <apr_pools.h>
 #include <apr_tables.h>
 
+#include "svn_string.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
 
 
 
+
+/* A general in-memory representation of a single property.  Most of
+   the time, property lists will be stored completely in hashes.  But
+   sometimes it's useful to have an "ordered" collection of
+   properties, in which case we use an apr_array of the type below.
+
+   Also: sometimes we want a list that represents a set of property
+   *changes*, and in this case, an apr_hash_t won't work -- there's no
+   way to represent a property deletion, because we can't store a NULL
+   value in a hash.  So instead, we use these structures.  */
+typedef struct svn_prop_t
+{
+  const char *name;
+  const svn_string_t *value;
+} svn_prop_t;
+
 
 /* Subversion distinguishes among several kinds of properties,
    particularly on the client-side.  There is no "unknown" kind; if

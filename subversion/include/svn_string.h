@@ -264,27 +264,6 @@ void svn_cstring_split_append (apr_array_header_t *array,
 
 
 
-/* A general in-memory representation of a single property.  Most of
-   the time, property lists will be stored completely in hashes.  But
-   sometimes it's useful to have an "ordered" collection of
-   properties, in which case we use an apr_array of the type below.
-
-   Also: sometimes we want a list that represents a set of property
-   *changes*, and in this case, an apr_hash_t won't work -- there's no
-   way to represent a property deletion, because we can't store a NULL
-   value in a hash.  So instead, we use these structures.  */
-typedef struct svn_prop_t
-{
-  const char *name;
-  const svn_string_t *value;
-} svn_prop_t;
-
-
-/* ### This structure is in svn_string.h because it uses a binary
-   string as the value; ideally, we'd like it to be in svn_types.h,
-   but that file is always #included before this one. */
-
-
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

@@ -67,63 +67,6 @@ open_tmp_file (apr_file_t **fp,
 }
 
 
-/* This implements the `svn_ra_get_committed_rev_func_t' interface. */
-static svn_error_t *
-get_committed_rev (void *baton,
-                   const char *relpath,
-                   svn_revnum_t *rev,
-                   apr_pool_t *pool)
-{
-  svn_client__callback_baton_t *cb = baton;
-  const svn_wc_entry_t *ent;
-  const char *path;
-  svn_wc_adm_access_t *adm_access;
-
-  *rev = SVN_INVALID_REVNUM;
-
-  /* If we list of commit_items, search through that for a match for
-     this relative URL. */
-  if (cb->commit_items)
-    {
-      int i;
-      for (i = 0; i < cb->commit_items->nelts; i++)
-        {
-          svn_client_commit_item_t *item
-            = ((svn_client_commit_item_t **) cb->commit_items->elts)[i];
-          if (! strcmp (relpath, 
-                        svn_path_uri_decode (item->url, pool)))
-            {
-              svn_wc_adm_access_t *item_access;
-              SVN_ERR (svn_wc_adm_probe_retrieve (&item_access, cb->base_access,
-                                                  item->path, pool));
-              /* ### Passing `show_deleted_items' flag, is this right? */
-              SVN_ERR (svn_wc_entry (&ent, item->path, item_access, TRUE,
-                                     pool));
-              if (ent)
-                *rev = ent->cmt_rev;
-
-              return SVN_NO_ERROR;
-            }
-        }
-
-      return SVN_NO_ERROR;
-    }
-
-  /* If we don't have a base directory, then leave. */
-  else if (cb->base_dir == NULL)
-    return SVN_NO_ERROR;
-
-  path = svn_path_join (cb->base_dir, relpath, pool);
-  SVN_ERR (svn_wc_adm_probe_retrieve (&adm_access, cb->base_access, path,
-                                      pool));
-  SVN_ERR (svn_wc_entry (&ent, path, adm_access,
-                         TRUE, pool));
-  if (ent)
-    *rev = ent->cmt_rev;
-
-  return SVN_NO_ERROR;
-}
-
 /* This implements the `svn_ra_get_wc_prop_func_t' interface. */
 static svn_error_t *
 get_wc_prop (void *baton,
@@ -162,17 +105,17 @@ get_wc_prop (void *baton,
                           pool);
 }
 
-/* This implements the `svn_ra_set_wc_prop_func_t' interface. */
+/* This implements the `svn_ra_push_wc_prop_func_t' interface. */
 static svn_error_t *
-set_wc_prop (void *baton,
-             const char *relpath,
-             const char *name,
-             const svn_string_t *value,
-             apr_pool_t *pool)
+push_wc_prop (void *baton,
+              const char *relpath,
+              const char *name,
+              const svn_string_t *value,
+              apr_pool_t *pool)
 {
   svn_client__callback_baton_t *cb = baton;
 
-  /* If we have a list of commit_items, search through that for a
+  /* If we're committing, search through the commit_items list for a
      match for this relative URL. */
   if (cb->commit_items)
     {
@@ -181,27 +124,48 @@ set_wc_prop (void *baton,
         {
           svn_client_commit_item_t *item
             = ((svn_client_commit_item_t **) cb->commit_items->elts)[i];
-          if (! strcmp (relpath, 
-                        svn_path_uri_decode (item->url, pool)))
-            return svn_wc_set_wc_prop (item->path, name, value, pool);
 
-          /* ### svn_wc_set_wc_prop() is deprecated, and the above
-             call will soon change to a call into libsvn_wc that
-             schedules the property in the accumulating log.
-             See issue #806 for more. */
+          if (strcmp (relpath, svn_path_uri_decode (item->url, pool)) == 0)
+            {
+              apr_pool_t *cpool = item->wcprop_changes->pool;
+              svn_prop_t *prop = apr_palloc (cpool, sizeof (*prop));
+
+              prop->name = apr_pstrdup (cpool, name);
+              if (value)
+                {
+                  prop->value
+                    = svn_string_ncreate (value->data, value->len, cpool);
+                }
+              else
+                prop->value = NULL;
+
+              /* Buffer the propchange to take effect during the
+                 post-commit process. */
+
+              *((svn_prop_t **) apr_array_push (item->wcprop_changes)) = prop;
+
+              return SVN_NO_ERROR;
+            }
         }
+    }
+  else
+    {
+      /* We could just set the property directly here; technically,
+         this function's interface allows us to.  But right now, there
+         should be no code paths that call this function without
+         commit_items.   If someday there were, they would need to be
+         carefully investigated for us to know they were safe.  See
+         http://subversion.tigris.org/issues/show_bug.cgi?id=806 for
+         details why.  In the meantime, return an error so anyone who
+         starts down that road will encounter this comment. */
 
-
-      return SVN_NO_ERROR;
+      return svn_error_createf
+        (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL, pool,
+         "Attempt to set wc property '%s' on '%s' in a non-commit operation",
+         name, relpath);
     }
 
-  /* If we don't have a base directory, that's bad news. */
-  assert (cb->base_dir);
-  return svn_wc_set_wc_prop (svn_path_join (cb->base_dir, relpath, pool),
-                             name, value, pool);
-  /* ### svn_wc_set_wc_prop() is deprecated, and the above call will
-     soon change to a call into libsvn_wc that schedules the property
-     in the accumulating log.  See issue #806 for more. */ 
+  return SVN_NO_ERROR;
 }
 
 
@@ -222,9 +186,8 @@ svn_client__open_ra_session (void **session_baton,
 
   cbtable->open_tmp_file = use_admin ? open_admin_tmp_file : open_tmp_file;
   cbtable->get_authenticator = svn_client__get_authenticator;
-  cbtable->get_committed_rev = use_admin ? get_committed_rev : NULL;
   cbtable->get_wc_prop = use_admin ? get_wc_prop : NULL;
-  cbtable->set_wc_prop = commit_items ? set_wc_prop : NULL;
+  cbtable->push_wc_prop = commit_items ? push_wc_prop : NULL;
 
   cb->auth_baton = auth_baton;
   cb->base_dir = base_dir;
