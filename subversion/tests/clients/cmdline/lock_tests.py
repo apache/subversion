@@ -74,8 +74,10 @@ def lock_file(sbox):
   # attempt (and fail) to commit as user Sally
   svntest.actions.run_and_verify_commit (wc_b, None, None, err_re,
                                          None, None, None, None,
-                                         '--username', "Sally",
-                                         '--password', "bighair",
+                                         '--username',
+                                         svntest.main.wc_author2,
+                                         '--password',
+                                         svntest.main.wc_passwd,
                                          '-m', '', file_path_b)
 
   # Revert our change that we failed to commit
@@ -88,8 +90,10 @@ def lock_file(sbox):
   # attempt (and fail) to commit as user Sally
   svntest.actions.run_and_verify_commit (wc_b, None, None, err_re,
                                          None, None, None, None,
-                                         '--username', "Sally",
-                                         '--password', "bighair",
+                                         '--username',
+                                         svntest.main.wc_author2,
+                                         '--password',
+                                         svntest.main.wc_passwd,
                                          '-m', '', file_path_b)
 
 

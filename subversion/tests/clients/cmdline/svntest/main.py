@@ -98,6 +98,10 @@ svnversion_binary = os.path.abspath('../../../svnversion/svnversion' + _exe)
 wc_author = 'jrandom'
 wc_passwd = 'rayjandom'
 
+# Username and password used by the working copies for "second user"
+# scenarios
+wc_author2 = 'jconstant' # use the same password as wc_author
+
 # Global variable indicating if we want verbose output.
 verbose_mode = 0
 
