@@ -90,7 +90,7 @@ Candidate changes:
     Justification:
        Allows mailer.py to work with fsfs.
     Votes:
-      +1: sussman, cmpilato
+      +1: sussman, cmpilato, kfogel
       +0: breser
 
   * r10473
