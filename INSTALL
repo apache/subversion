@@ -225,28 +225,26 @@ I.    BUILD REQUIREMENTS
       provided for you.
 
 
-      10. A gnu-like diff and patch
+      10. A gnu-like diff and diff3
 
       Many of the features of the Subversion client require the ability
-      to call out to an external diff or patch program, one that
+      to call out to an external diff or diff3 program, one that
       conforms to the behaviour of the GNU versions of these programs.
 
       On some versions of Unix, this may involve getting a replacement
-      for your already existing diff and patch program. On FreeBSD
-      systems, for example, it requires getting gdiff and gpatch.
+      for your already existing diff and diff3 program. On FreeBSD
+      systems, for example, it requires getting gdiff and gdiff3.
 
       On a Windows platform, Subversion also requires a GNU diff.exe
-      and patch.exe. One implementation is provided by the Cygwin
+      and diff3.exe. One implementation is provided by the Cygwin
       project:
 
           http://sources.redhat.com/cygwin
 
-      Note that the diff.exe and patch.exe must be installed into the
-      "C:\Program Files\cygnus\cygwin\bin" directory in order for
-      Subversion to find them at this time. If you have Cygwin
-      installed somewhere else, you should create this directory
-      path and copy those two files to it. You'll also need to copy
-      the cygwin1.dll file into the same directory.
+      Note that the positions for diff.exe and diff3.exe are defined
+      in svn_private_config.hw and that the default path is
+      "C:\Program Files\cygnus\cygwin\bin". If you are using the Cygwin
+      versions the file cygwin1.dll needs to reside in the same directory.
 
 
       11. Libraries for our libraries
@@ -527,7 +525,7 @@ II.   INSTALLATION
 
       If you want to use this client for more than just downloading
       the latest sources, though, you will probably need to make sure
-      that Subversion has access to the diff.exe and patch.exe
+      that Subversion has access to the diff.exe and diff3.exe
       programs, as described in section I.10.
 
 
@@ -590,7 +588,7 @@ II.   INSTALLATION
       builds the test drivers.
 
       You will have to edit the file svn_private_config.hw to set the
-      correct paths for diff and patch.
+      correct paths for diff and diff3.
 
       [NOTE: There have been rumours that Subversion on Win32 can be built
           using the latest cygwin. ymmv.]
