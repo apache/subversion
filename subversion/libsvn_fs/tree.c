@@ -1452,10 +1452,7 @@ merge (svn_stringbuf_t *conflict_p,
    *
    * But the most common particular case is that target is an
    * immediate descendant of ancestor, and source is also a descendant
-   * of ancestor.  That is:
-   *
-   *    svn_fs_id_distance (ancestor, target) == 1
-   *    svn_fs_id_distance (ancestor, source) >= 1
+   * of ancestor.
    *
    * In such cases, we can record the successful merge for free, by
    * setting target's predecessor-id to s_entry->id.  This is safe
@@ -1469,10 +1466,25 @@ merge (svn_stringbuf_t *conflict_p,
    *   as a single step from source to target, which is an accurate
    *   reflection of the post-merge situation anyway.
    *
-   * Note that this trick should be used after any call to merge(),
-   * not just the recursive call above.  That means the transaction
-   * root should potentially have its predecessor-id updated after the
+   * Note: this trick should be used after any call to merge(), not
+   * just the recursive call above.  That means the transaction root
+   * should potentially have its predecessor-id updated after the
    * merge, too.
+   *
+   * Note Some More:  Bill Tutt explains that a more generic way of
+   * knowing when to update the predecessor-id is when S and T are
+   * related, but as cousins in the ancestry tree.  That is:
+   *
+   *    ((S.NodeId == T.NodeId)
+   *     && (! S == T)
+   *     && (! S ancestorof T)
+   *     && (! T ancestorof S))
+   *
+   * However, he has some uncertainty about how this holds up in the
+   * face of copies.
+   *
+   * See the following message for the full details:
+   * http://subversion.tigris.org/servlets/ReadMsg?msgId=75127&listName=dev
    */
 
   if ((! svn_fs__dag_is_directory (source))
@@ -1697,7 +1709,7 @@ merge (svn_stringbuf_t *conflict_p,
       else if ((t_entry = apr_hash_get (t_entries, key, klen))
                && (! apr_hash_get (s_entries, key, klen)))
         {
-          int distance = svn_fs_id_distance (t_entry->id, a_entry->id);
+          int distance = svn_fs_compare_ids (t_entry->id, a_entry->id);
           
           if (distance == 0)
             {

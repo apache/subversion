@@ -205,7 +205,7 @@ svn_fs_check_related (const svn_fs_id_t *id1,
 
 
 int 
-svn_fs_id_distance (const svn_fs_id_t *a, 
+svn_fs_compare_ids (const svn_fs_id_t *a, 
                     const svn_fs_id_t *b)
 {
   if (svn_fs__id_eq (a, b))

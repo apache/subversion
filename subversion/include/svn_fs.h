@@ -214,12 +214,17 @@ typedef struct svn_fs_id_t svn_fs_id_t;
 
 /* Return -1, 0, or 1 if node revisions A and B are unrelated,
    equivalent, or otherwise related (respectively).  */
-int svn_fs_id_distance (const svn_fs_id_t *a, const svn_fs_id_t *b);
+int svn_fs_compare_ids (const svn_fs_id_t *a, const svn_fs_id_t *b);
 
 
 
 /* Return non-zero IFF the nodes associated with ID1 and ID2 are
-   related, else return zero.  */
+   related, else return zero.  
+
+   NOTE: While this might seem redundent in the presence of
+   svn_fs_compare_ids (looking for a return value != -1), it is
+   slightly faster to run if the equality case is not interesting to
+   you. */
 int svn_fs_check_related (const svn_fs_id_t *id1,
                           const svn_fs_id_t *id2);
 
