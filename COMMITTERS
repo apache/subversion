@@ -47,3 +47,4 @@ Commit access for specific areas:
         niemeyer   Gustavo Niemeyer <niemeyer@conectiva.com>   (svnperms.py)
           morten   Morten Ludvigsen <morten@2ps.dk>            (bindings)
           zbrown   Zack Brown <zbrown@tumblerings.org>         (doc)
+          mmacek   Marko Macek <Marko.Macek@gmx.net>           (cvs2svn branch)
