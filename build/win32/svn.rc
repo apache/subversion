@@ -20,7 +20,7 @@
 #endif
 
 #include <winres.h>
-#include "../../apr/include/apr_general.h"
+#include <apr_general.h>
 #include "../../subversion/include/svn_version.h"
 
 #ifndef _DEBUG
