@@ -26,8 +26,6 @@ Ben todo:
      possible, once it exists.
 
 Karl working copy todo:
-   - get rid of gratuitous option requirements in client.  Don't need
-     --name and --value, rarely need --target, for example.
    - make an is_textfile test, so at least we can create .alt files
      instead of .rej for those that `patch' can't handle.
    - write the log/lock recovery function.
