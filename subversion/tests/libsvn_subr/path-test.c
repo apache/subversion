@@ -97,17 +97,15 @@ test_path_split (const char **msg,
 
   static const char * const paths[][3] = { 
     { "/foo/bar",        "/foo",          "bar" },
-    { "/foo/bar/ ",      "/foo/bar",      " " },
+    { "/foo/bar/ ",       "/foo/bar",      " " },
     { "/foo",            "/",             "foo" },
     { "foo",             SVN_EMPTY_PATH,  "foo" },
-    { "./foo",           SVN_EMPTY_PATH,  "foo" },
-    { "././.bar",        SVN_EMPTY_PATH,  ".bar" },
-    { "/././.bar",       "/",             ".bar" },
-    { "foo///bar",       "foo",           "bar" },
-    { "/foo///bar",      "/foo",          "bar" },
-    { "foo//.//bar",     "foo",           "bar" },
+    { ".bar",            SVN_EMPTY_PATH,  ".bar" },
+    { "/.bar",           "/",             ".bar" },
+    { "foo/bar",         "foo",           "bar" },
+    { "/foo/bar",        "/foo",          "bar" },
+    { "foo/bar",         "foo",           "bar" },
     { "foo./.bar",       "foo.",          ".bar" },
-    { "foo././.bar",     "foo.",          ".bar" },
     { "../foo",          "..",            "foo" },
     { SVN_EMPTY_PATH,   SVN_EMPTY_PATH,   SVN_EMPTY_PATH },
     { "/flu\\b/\\blarg", "/flu\\b",       "\\blarg" },
@@ -402,15 +400,15 @@ test_basename (const char **msg,
   static const char * const paths[][2] = {
     { "abc", "abc" },
     { "/abc", "abc" },
-    { "//abc", "abc" },
+    { "/abc", "abc" },
     { "/x/abc", "abc" },
     { "/xx/abc", "abc" },
-    { "/xx//abc", "abc" },
-    { "/xx//abc", "abc" },
+    { "/xx/abc", "abc" },
+    { "/xx/abc", "abc" },
     { "a", "a" },
     { "/a", "a" },
     { "/b/a", "a" },
-    { "/b//a", "a" },
+    { "/b/a", "a" },
     { "/", "/" },
     { SVN_EMPTY_PATH, SVN_EMPTY_PATH }
   };
@@ -447,14 +445,9 @@ test_decompose (const char **msg,
     "/foo", "/", "foo", NULL,
     "/foo/bar", "/", "foo", "bar", NULL,
     "foo/bar", "foo", "bar", NULL,
-    "foo/../bar", "foo", "..", "bar", NULL,
-    "./foo", SVN_EMPTY_PATH, "foo", NULL,
 
     /* Are these canonical? Should the middle bits produce SVN_EMPTY_PATH? */
-    "foo//bar", "foo", SVN_EMPTY_PATH, "bar", NULL,
-    "foo//.//bar",
-    "foo", SVN_EMPTY_PATH, SVN_EMPTY_PATH, SVN_EMPTY_PATH, "bar", NULL,
-
+    "foo/bar", "foo", "bar", NULL,
     NULL,
   };
   int i = 0;
@@ -522,15 +515,19 @@ test_canonicalize (const char **msg,
     { "foo./.",               "foo." },
     { "foo././/.",            "foo." },
     { "/foo/bar",             "/foo/bar" },
-    { "foo/..",               "foo/.." },
-    { "foo/../",              "foo/.." },
-    { "foo/../.",             "foo/.." },
-
-    /* Should canonicalization do these? */
-    { "foo//.//bar",          "foo//.//bar" },
-    { "///foo",               "///foo" },
-    { "/.//./.foo",           "/.//./.foo" },
-    { ".///.foo",             ".///.foo" },
+    { "foo/..",               "" },
+    { "foo/../",              "" },
+    { "foo/../.",             "" },
+    { "foo//.//bar",          "foo/bar" },
+    { "///foo",               "/foo" },
+    { "/.//./.foo",           "/.foo" },
+    { ".///.foo",             ".foo" },
+    { "../foo",               "../foo" },
+    { "../../foo/",           "../../foo" },
+    { "../../foo/..",         "../.." },
+    { "foo/bar/../foo/",       "foo/foo" },
+    { "/../../",              "/" },
+    { "bar/../../foo",        "../foo" },
     { NULL, NULL }
   };
   int i;
@@ -549,12 +546,6 @@ test_canonicalize (const char **msg,
                                   "svn_path_canonicalize(\"%s\") returned "
                                   "\"%s\" expected \"%s\"",
                                   paths[i][0], canonical, paths[i][1]);
-
-      if (strcmp (paths[i][0], paths[i][1]) == 0 && canonical != paths[i][0])
-        return svn_error_createf (SVN_ERR_TEST_FAILED, NULL,
-                                  "svn_path_canonicalize(\"%s\") alloc'd",
-                                  paths[i][0]);
-
       ++i;
     }
 

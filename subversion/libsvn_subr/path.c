@@ -90,50 +90,6 @@ svn_path_local_style (const char *path, apr_pool_t *pool)
 
 
 
-/* Identify trailing '/' and "/." suffix of PATH.  LEN is the number of
-   characters in PATH.  Returns the number characters without the
-   suffix. */
-static apr_size_t
-discount_trailing_dot_slash (const char *path,
-                             apr_size_t len)
-{
-  while (len > 0)
-    if (path[len - 1] == '/')
-      --len;
-    else if (len > 1
-             && SVN_PATH_IS_PLATFORM_EMPTY(path + len - 1, 1)
-             && path[len - 2] == '/')
-      len -= 2;
-    else
-      break;
-
-  return len;
-}
-
-const char *
-svn_path_canonicalize (const char *path, apr_pool_t *pool)
-{
-  /* At some point this could eliminate redundant components.
-     For now, it just makes sure there is no trailing slashes
-     or dots, and converts "." to "".  */
-
-  apr_size_t len, orig_len;
-
-  orig_len = strlen (path);
-  len = discount_trailing_dot_slash (path, orig_len);
-  if (len == 0 && orig_len > 0 && path[0] == '/')
-    len = 1;
-
-  if (SVN_PATH_IS_PLATFORM_EMPTY (path, len))
-    return SVN_EMPTY_PATH;      /* the canonical empty path */
-
-  if (len == orig_len)
-    return path;
-
-  return apr_pstrmemdup (pool, path, len);
-}
-
-
 #ifndef NDEBUG
 static svn_boolean_t
 is_canonical (const char *path,
@@ -333,8 +289,6 @@ svn_path_add_component (svn_stringbuf_t *path,
 void
 svn_path_remove_component (svn_stringbuf_t *path)
 {
-  apr_size_t len;
-
   assert (is_canonical (path->data, path->len));
 
   while (path->len > 0 && path->data[path->len - 1] != '/')
@@ -342,43 +296,28 @@ svn_path_remove_component (svn_stringbuf_t *path)
 
   path->data[path->len] = '\0';
 
-  /* ### Right now the input path could contain redundant components,
-     since svn_path_canonicalize doesn't remove them.  So we have to
-     check and strip those off. */
-  len = discount_trailing_dot_slash (path->data, path->len);
-  if (len == 0 && path->len > 0 && path->data[0] == '/')
-    len = 1;
-
-  if (SVN_PATH_IS_PLATFORM_EMPTY (path->data, len))
+  if (SVN_PATH_IS_PLATFORM_EMPTY (path->data, path->len))
     svn_stringbuf_set (path, SVN_EMPTY_PATH);
-  else
-    {
-      path->len = len;
-      path->data[path->len] = '\0';
-    }
 }
 
 
 char *
 svn_path_dirname (const char *path, apr_pool_t *pool)
 {
-  apr_size_t canonical_len, len = strlen (path);
+  apr_size_t len = strlen (path);
 
   assert (is_canonical (path, len));
 
-  while (len > 0 && path[len - 1] != '/')
+  while (len > 0 && path[len] != '/')
     --len;
 
-  /* ### Should canonicalization strip "//" and "/./" substrings? */
-  canonical_len = discount_trailing_dot_slash (path, len);
+  if (len == 0 && path[0] == '/')
+    ++len;
 
-  if (canonical_len == 0 && len > 0 && path[0] == '/')
-    canonical_len = 1;
-
-  if (SVN_PATH_IS_PLATFORM_EMPTY (path, canonical_len))
+  if (SVN_PATH_IS_PLATFORM_EMPTY (path, len))
     return apr_pmemdup (pool, SVN_EMPTY_PATH, sizeof (SVN_EMPTY_PATH));
 
-  return apr_pstrmemdup (pool, path, canonical_len);
+  return apr_pstrmemdup (pool, path, len);
 }
 
 
@@ -1030,6 +969,105 @@ svn_path_split_if_file(const char *path,
 
   return SVN_NO_ERROR;
 }
+
+
+const char *
+svn_path_canonicalize (const char *path, apr_pool_t *pool)
+{
+  char *canon, *dst, *start_path;
+  const char *src;
+  apr_size_t seglen;
+  apr_size_t canon_segments = 0;
+  svn_boolean_t absolute_path = FALSE;
+
+  dst = canon = apr_pcalloc (pool, strlen (path) + 1);
+
+  /* Copy over the URI shema if present. */
+  src = skip_uri_schema (path);
+  if (src)
+    {
+      memcpy (canon, path, src - path);
+      dst += (src - path);
+    }
+  else
+    src = path;
+
+  /* If this is an absolute path, then just copy over the initial
+     separator character. */
+  if (*src == '/')
+    {
+      *(dst++) = *(src++);
+      absolute_path = TRUE;
+    }
+
+  /* Let start_path remember the point beyond which we cannot
+     backtrack. */
+  start_path = dst;
+  
+  while (*src)
+    {
+      /* Parse each segment, find the closing '/' */
+      const char *next = src;
+      while (*next && (*next != '/'))
+        ++next;
+
+      seglen = next - src;
+
+      if (seglen == 0 || (seglen == 1 && src[0] == '.'))
+        {
+          /* Noop segment, so do nothing. */
+        }
+      else if (seglen == 2 && src[0] == '.' && src[1] == '.')
+        {
+          if ((! absolute_path) &&
+              (canon_segments == 0
+               || (canon_segments == 1
+                   && !memcmp (start_path, "../", 3))
+               || (canon_segments > 1
+                   && !memcmp (dst - 4, "/../", 4)))) {
+            /* Path is already backpathed or empty, append another backpath. */
+            memcpy (dst, "../", 3);
+            dst += 3;
+            canon_segments++;
+          } else if (canon_segments > 0)
+            {
+              /* Crop off the previous path. */
+              dst--;
+              do
+                {
+                  dst--;
+                }
+              while (*dst != '/' && (dst > start_path));
+              if (dst != start_path)
+                dst++;
+              canon_segments--;
+            }
+        }
+      else
+        {
+          /* An actual segment, append it to the destination path */
+          if (*next)
+            seglen++;
+          memcpy (dst, src, seglen);
+          dst += seglen;
+          canon_segments++;
+        }
+
+      /* Skip over trailing slash to the next segment. */
+      src = next;
+      if (*src)
+        src++;
+    }
+
+  /* Remove the trailing slash. */
+  if (canon_segments > 0 && *(dst - 1) == '/')
+    dst--;
+  
+  *dst = '\0';
+
+  return canon;
+}
+
 
 
 /** Get APR's internal path encoding. */

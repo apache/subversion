@@ -70,11 +70,12 @@ const char *svn_path_local_style (const char *path, apr_pool_t *pool);
  * use this function for constructing URLs, or for relative URLs or
  * repository paths.
  *
- * This function is NOT appropriate for native (local) file paths. Only
- * for "internal" paths, since it uses '/' for the separator. Further,
- * an absolute path (for @a component) is based on a leading '/' character.
- * Thus, an "absolute URI" for the @a component won't be detected. An
- * absolute URI can only be used for the base.
+ * This function is NOT appropriate for native (local) file
+ * paths. Only for "internal" canonicalized paths, since it uses '/'
+ * for the separator. Further, an absolute path (for @a component) is
+ * based on a leading '/' character.  Thus, an "absolute URI" for the
+ * @a component won't be detected. An absolute URI can only be used
+ * for the base.
  */
 char *svn_path_join (const char *base,
                      const char *component,
@@ -93,10 +94,11 @@ char *svn_path_join (const char *base,
 char *svn_path_join_many (apr_pool_t *pool, const char *base, ...);
 
 
-/** Get the basename of the specified @a path.  The basename is defined as
- * the last component of the path (ignoring any trailing slashes).  If
- * the @a path is root ("/"), then that is returned.  Otherwise, the
- * returned value will have no slashes in it.
+/** Get the basename of the specified canonicalized @a path.  The
+ * basename is defined as the last component of the path (ignoring any
+ * trailing slashes).  If the @a path is root ("/"), then that is
+ * returned.  Otherwise, the returned value will have no slashes in
+ * it.
  *
  * Example: svn_path_basename("/foo/bar") -> "bar"
  *
@@ -106,8 +108,8 @@ char *svn_path_join_many (apr_pool_t *pool, const char *base, ...);
  */
 char *svn_path_basename (const char *path, apr_pool_t *pool);
 
-/** Get the dirname of the specified @a path, defined as the path with its
- * basename removed.
+/** Get the dirname of the specified canonicalized @a path, defined as
+ * the path with its basename removed.
  *
  * Get the dirname of the specified @a path, defined as the path with its
  * basename removed.  If @a path is root ("/"), it is returned unchanged.
@@ -116,8 +118,9 @@ char *svn_path_basename (const char *path, apr_pool_t *pool);
  */
 char *svn_path_dirname (const char *path, apr_pool_t *pool);
 
-/** Add a @a component (a null-terminated C-string) to @a path.  @a component 
- * is allowed to contain directory separators.
+/** Add a @a component (a null-terminated C-string) to the
+ * canonicalized @a path.  @a component is allowed to contain
+ * directory separators.
  *
  * If @a path is non-empty, append the appropriate directory separator
  * character, and then @a component.  If @a path is empty, simply set it to
@@ -128,11 +131,12 @@ char *svn_path_dirname (const char *path, apr_pool_t *pool);
 void svn_path_add_component (svn_stringbuf_t *path, 
                              const char *component);
 
-/** Remove one component off the end of @a path. */
+/** Remove one component off the end of the canonicalized @a path. */
 void svn_path_remove_component (svn_stringbuf_t *path);
 
 
-/** Divide @a path into @a *dirpath and @a *base_name, allocated in @a pool.
+/** Divide the canonicalized @a path into @a *dirpath and @a
+ * *base_name, allocated in @a pool.
  *
  * If @a dirpath or @a base_name is null, then don't set that one.
  *
@@ -162,12 +166,16 @@ void svn_path_split (const char *path,
 int svn_path_is_empty (const char *path);
 
 
-/** Return a new path like @a path, but with any trailing separators that don't
- * affect @a path's meaning removed. Will convert a "." path to "".  Allocate
- * the new path in @a pool if anything changed, else just return @a path.
+/** Return a new path (or URL) like @a path, but transformed such that
+ * some types of path specification redundancies are removed.
  *
- * (At some future point, this may make other semantically inoperative
- * transformations.)
+ * This involves collapsing redundant "/./" and "/../" elements,
+ * removing multiple adjacent separator characters, removing trailing
+ * separator characters, and possibly other semantically inoperative
+ * transformations.
+ *
+ * The returned path may be statically allocated, equal to @a path, or
+ * allocated from @a pool.
  */
 const char *svn_path_canonicalize (const char *path, apr_pool_t *pool);
 
@@ -178,8 +186,9 @@ const char *svn_path_canonicalize (const char *path, apr_pool_t *pool);
 int svn_path_compare_paths (const char *path1, const char *path2);
 
 
-/** Return the longest common path shared by both @a path1 and @a path2.  If
- * there's no common ancestor, return the empty path.
+/** Return the longest common path shared by two canonicalized paths,
+ * @a path1 and @a path2.  If there's no common ancestor, return the
+ * empty path.
  *
  * @a path1 and @a path2 may be URLs.  In order for two URLs to have 
  * a common ancestor, they must (a) have the same protocol (since two URLs 
@@ -191,8 +200,8 @@ char *svn_path_get_longest_ancestor (const char *path1,
                                      const char *path2,
                                      apr_pool_t *pool);
 
-/** Convert @a relative path to an absolute path and return the results in
- * @a *pabsolute, allocated in @a pool.
+/** Convert @a relative canonicalized path to an absolute path and
+ * return the results in @a *pabsolute, allocated in @a pool.
  *
  * @a relative may be a URL, in which case no attempt is made to convert it, 
  * and a copy of the URL is returned. 
@@ -202,10 +211,11 @@ svn_path_get_absolute (const char **pabsolute,
                        const char *relative,
                        apr_pool_t *pool);
 
-/** Return the path part of @a path in @a *pdirectory, and the file part in 
- * @a *pfile.  If @a path is a directory, set @a *pdirectory to @a path, and 
- * @a *pfile to the empty string.  If @a path does not exist it is treated 
- * as if it is a file, since directories do not normally vanish.
+/** Return the path part of the canonicalized @a path in @a
+ * *pdirectory, and the file part in @a *pfile.  If @a path is a
+ * directory, set @a *pdirectory to @a path, and @a *pfile to the
+ * empty string.  If @a path does not exist it is treated as if it is
+ * a file, since directories do not normally vanish.
  */
 svn_error_t *
 svn_path_split_if_file(const char *path,
@@ -213,8 +223,8 @@ svn_path_split_if_file(const char *path,
                        const char **pfile,
                        apr_pool_t *pool);
 
-/** Find the common prefix of the paths in @a targets (an array of @a
- * const char *'s), and remove redundant paths if @a
+/** Find the common prefix of the canonicalized paths in @a targets
+ * (an array of @a const char *'s), and remove redundant paths if @a
  * remove_redundancies is true.
  *
  *   - Set @a *pcommon to the absolute path of the path or URL common to
@@ -251,11 +261,11 @@ svn_path_condense_targets (const char **pcommon,
                            apr_pool_t *pool);
 
 
-/** Copy a list of @a targets, one at a time, into @a pcondensed_targets,
- * omitting any targets that are found earlier in the list, or whose
- * ancestor is found earlier in the list.  Ordering of targets in the
- * original list is preserved in the condensed list of targets.  Use
- * @a pool for any allocations.  
+/** Copy a list of canonicalized @a targets, one at a time, into @a
+ * pcondensed_targets, omitting any targets that are found earlier in
+ * the list, or whose ancestor is found earlier in the list.  Ordering
+ * of targets in the original list is preserved in the condensed list
+ * of targets.  Use @a pool for any allocations.
  *
  * How does this differ in functionality from @c svn_path_condense_targets?
  *
@@ -294,9 +304,10 @@ svn_path_remove_redundancies (apr_array_header_t **pcondensed_targets,
                               apr_pool_t *pool);
 
 
-/** Decompose @a path into an array of <tt>const char *</tt> components, 
- * allocated in @a pool.  If @a path is absolute, the first component will 
- * be a lone dir separator (the root directory).
+/** Decompose the canonicalized @a path into an array of <tt>const
+ * char *</tt> components, allocated in @a pool.  If @a path is
+ * absolute, the first component will be a lone dir separator (the
+ * root directory).
  */
 apr_array_header_t *svn_path_decompose (const char *path,
                                         apr_pool_t *pool);
