@@ -1582,7 +1582,7 @@ sub digest_hash_file
   my $ctx = Digest::MD5->new;
   if (open(READ, $filename))
     {
-      binmode(READ);
+      binmode READ;
       $ctx->addfile(*READ);
       close(READ);
     }
@@ -1628,13 +1628,18 @@ sub determine_native_eol
       unlink($filename)
         or die "$0: cannot unlink `$filename': $!\n";
     }
+
+  # Write the \n in non-binary mode.
   open(NL_TEST, ">$filename")
     or die "$0: cannot open `$filename' for writing: $!\n";
   print NL_TEST "\n";
   close(NL_TEST)
     or die "$0: error in closing `$filename' for writing: $!\n";
+
+  # Read the \n in binary mode.
   open(NL_TEST, $filename)
     or die "$0: cannot open `$filename' for reading: $!\n";
+  binmode NL_TEST;
   local $/;
   undef $/;
   my $eol = <NL_TEST>;
