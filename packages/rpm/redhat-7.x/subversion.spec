@@ -114,8 +114,8 @@ Tools for Subversion.
   No need to support updated/custom versions of these.
 
 * Sun Mar 27 2005 David Summers <david@summersoft.fay.ar.us> r13714
-- Changed swig-1.3.19-3 RPM package to co-exist with swig package that comes
-  with Redhat.
+- Make use of new swig-1.3.19-3 RPM package which allows swig-1.3.19 to
+  co-exist with swig-1.1p5 package that comes with Redhat.
 
 * Sun Mar 27 2005 David Summers <david@summersoft.fay.ar.us> r13711
 - Take out "static build" feature that never actually worked as intended.
