@@ -1108,9 +1108,7 @@ close_file (void *file_baton)
           svn_string_appendcstr (diff_cmd, " > ");
           svn_string_appendstr (diff_cmd, received_diff_file_name);
           diff_status = system (diff_cmd->data);
-          /* kff todo: what the _heck_ is up with this return code?
-             Success as 256?  */
-          if (diff_status && (diff_status != 256))
+          if (diff_status & 255)
             return svn_error_createf
               (0, diff_status, NULL, fb->pool,
                "close_file: error diffing %s with %s, outputting to %s",
