@@ -65,16 +65,28 @@
 
 /*** kff todo: this trace editor will get moved to its own file ***/
 
-
-enum command 
-{ checkout_command = 1,
-  update_command,
-  add_command,
-  delete_command,
-  commit_command,
-  status_command,
-  propfind_command
+static svn_cl__t_cmd_desc cmd_table[] = {
+  { "ad",            2, TRUE,  svn_cl__add         },
+  { "add",           3, TRUE,  svn_cl__add         },
+  { "checkout",      8, TRUE,  svn_cl__checkout    },
+  { "ci",            2, TRUE,  svn_cl__commit      },
+  { "co",            2, TRUE,  svn_cl__checkout    },
+  { "commit",        6, TRUE,  svn_cl__commit      },
+  { "del",           3, TRUE,  svn_cl__delete      },
+  { "delete",        6, TRUE,  svn_cl__delete      },
+  { "help",          4, FALSE, svn_cl__help        },
+  { "new",           3, TRUE,  svn_cl__add         },
+  { "pf",            2, TRUE,  svn_cl__prop_find   },
+  { "pfind",         5, TRUE,  svn_cl__prop_find   },
+  { "prop-find",     9, TRUE,  svn_cl__prop_find   },
+  { "rm",            2, TRUE,  svn_cl__delete      },
+  { "st",            2, TRUE,  svn_cl__status      },
+  { "stat",          4, TRUE,  svn_cl__status      },
+  { "status",        6, TRUE,  svn_cl__status      },
+  { "up",            2, TRUE,  svn_cl__update      },
+  { "update",        6, TRUE,  svn_cl__update      }
 };
+
 
 
 
@@ -83,7 +95,6 @@ enum command
 static void
 parse_command_options (int argc,
                        char **argv,
-                       int i,
                        char *progname,
                        svn_string_t **xml_file,
                        svn_string_t **target,
@@ -92,7 +103,9 @@ parse_command_options (int argc,
                        svn_boolean_t *force,
                        apr_pool_t *pool)
 {
-  for (; i < argc; i++)
+  int i;
+
+  for (i = 0; i < argc; i++)
     {
       if (strcmp (argv[i], "--xml-file") == 0)
         {
@@ -149,10 +162,10 @@ parse_command_options (int argc,
 /* We'll want an off-the-shelf option parsing system soon... too bad
    GNU getopt is out for copyright reasons (?).  In the meantime,
    reinvent the wheel: */  
-static void
-parse_options (int argc,
+void
+svn_cl__parse_options (int argc,
                char **argv,
-               enum command *command,
+               svn_cl__te_command command,
                svn_string_t **xml_file,
                svn_string_t **target,  /* dest_dir or file to add */
                svn_revnum_t *revision,  /* ancestral or new */
@@ -161,188 +174,142 @@ parse_options (int argc,
                apr_pool_t *pool)
 {
   char *s = argv[0];  /* svn progname */
-  int i;
 
-  for (i = 1; i < argc; i++)
-    {
-      /* todo: do the cvs synonym thing eventually */
-      if (strcmp (argv[i], "checkout") == 0)
-        {
-          *command = checkout_command;
-          goto do_command_opts;
-        }
-      else if (strcmp (argv[i], "update") == 0)
-        {
-          *command = update_command;
-          goto do_command_opts;
-        }
-      else if (strcmp (argv[i], "add") == 0)
-        {
-          *command = add_command;
-          goto do_command_opts;
-        }
-      else if (strcmp (argv[i], "delete") == 0)
-        {
-          *command = delete_command;
-          goto do_command_opts;
-        }
-      else if (strcmp (argv[i], "commit") == 0)
-        {
-          *command = commit_command;
-          goto do_command_opts;
-        }
-      else if (strcmp (argv[i], "status") == 0)
-        {
-          *command = status_command;
-          goto do_command_opts;
-        }
-      else if (strcmp (argv[i], "propfind") == 0)
-        {
-          *command = propfind_command;
-          goto do_command_opts;
-        }
-
-      else
-        {
-          fprintf (stderr, "%s: unknown or untimely argument \"%s\"\n",
-                   s, argv[i]);
-          exit (1);
-        }
-    }
-
- do_command_opts:
-  parse_command_options (argc, argv, ++i, s,
+  /* Skip the program and subcommand names.  Parse the rest. */
+  parse_command_options (argc-2, argv+2, s,
                          xml_file, target, revision, ancestor_path, force,
                          pool);
 
   /* Sanity checks: make sure we got what we needed. */
-  if (! *command)
-    {
-      fprintf (stderr, "%s: no command given\n", s);
-      exit (1);
-    }
-  if ((! *xml_file) && ((*command != add_command)
-                        && (*command != status_command)
-                        && (*command != propfind_command)
-                        && (*command != delete_command)))
+  /* Any command may have an xml_file, but ADD, STATUS and DELETE
+     *must* have the xml_file option */
+  if ((! *xml_file)
+      && (command != ADD_COMMAND)
+      && (command != STATUS_COMMAND)
+      && (command != DELETE_COMMAND))
     {
       fprintf (stderr, "%s: need \"--xml-file FILE.XML\"\n", s);
       exit (1);
     }
-  if (*force && (*command != delete_command))
+  if (*force && (command != DELETE_COMMAND))
     {
       fprintf (stderr, "%s: \"--force\" meaningless except for delete\n", s);
       exit (1);
     }
-  if (((*command == commit_command) && (*revision == SVN_INVALID_REVNUM))
-      || ((*command == update_command) && (*revision == SVN_INVALID_REVNUM)))
+  /* COMMIT and UPDATE must have a valid revision */
+  if ((*revision == SVN_INVALID_REVNUM)
+      && (  (command == COMMIT_COMMAND)
+         || (command == UPDATE_COMMAND)))
     {
       fprintf (stderr, "%s: please use \"--revision VER\" "
                "to specify target revision\n", s);
       exit (1);
     }
-  if (((*command == checkout_command) 
-       || (*command == update_command)
-       || (*command == commit_command)
-       || (*command == status_command)
-       || (*command == propfind_command))
-      && (*target == NULL))
+  /* CHECKOUT, UPDATE, COMMIT and STATUS have a default target */
+  if ((*target == NULL)
+      &&  (  (command == CHECKOUT_COMMAND) 
+          || (command == UPDATE_COMMAND)
+          || (command == COMMIT_COMMAND)
+          || (command == STATUS_COMMAND)
+          || (command == PROP_FIND_COMMAND)))
     *target = svn_string_create (".", pool);
+}
+
+
+svn_error_t *
+svn_cl__help (int argc, char **argv, apr_pool_t* pool)
+{
+  static const char zUsage[] =
+    "What command do you need help with?\n"
+    "You must type the command you need help with along with the `--help'\n"
+    "command line option.  Choose from the following commands:\n\n";
+
+  int ix = 0;
+  svn_cl__t_cmd_desc* pCD = cmd_table;
+
+  fputs( zUsage, stdout );
+
+  for (;;)
+    {
+      printf( "  %-8s", (pCD++)->cmd_name );
+      if (++ix >= sizeof( cmd_table ) / sizeof( cmd_table[0] ))
+        break;
+      if ((ix % 7) == 0)
+        fputc( '\n', stdout );
+    }
+
+  fputc( '\n', stdout );
+  return NULL;
+}
+
+
+static svn_cl__t_cmd_desc*
+get_cmd_table_entry (char* pz_cmd)
+{
+  int  hi  = (sizeof( cmd_table )/sizeof( cmd_table[0] )) - 1;
+  int  lo  = 0;
+  int  av, cmp;
+
+  if (pz_cmd == NULL)
+    {
+      fputs( "svn error:  no command name provided\n", stderr );
+      (void)svn_cl__help( 0, NULL, NULL );
+      return NULL;
+    }
+
+  /* Regardless of the option chosen, the user gets --help :-) */
+  if (*pz_cmd == '-')
+    {
+      (void)svn_cl__help( 0, NULL, NULL );
+      return NULL;
+    }
+
+  for (;;)
+    {
+      av  = (hi + lo) / 2;
+      cmp = strcmp (pz_cmd, cmd_table[av].cmd_name);
+
+      if (cmp == 0)
+        break;
+
+      if (cmp > 0)
+        lo = av + 1;
+      else
+        hi = av - 1;
+
+      if (hi < lo)
+        {
+          fprintf (stderr, "svn error:  `%s' is an unknown command\n", pz_cmd);
+          (void)svn_cl__help( 0, NULL, NULL );
+          return NULL;
+        }
+    }
+
+  return cmd_table + av;
 }
 
 
 int
 main (int argc, char **argv)
 {
+  svn_cl__t_cmd_desc* p_cmd = get_cmd_table_entry (argv[1]);
   svn_error_t *err;
   apr_pool_t *pool;
-  svn_revnum_t revision = SVN_INVALID_REVNUM;
-  svn_string_t *xml_file = NULL;
-  svn_string_t *target = NULL;
-  svn_string_t *ancestor_path = NULL;
-  svn_boolean_t force = 0;
-  enum command command = 0;
-  const svn_delta_edit_fns_t *trace_editor;
-  void *trace_edit_baton;
+
+  if (p_cmd == NULL)
+    return EXIT_FAILURE;
 
   apr_initialize ();
   pool = svn_pool_create (NULL);
 
-  parse_options (argc, argv, &command,
-                 &xml_file, &target, &revision, &ancestor_path, &force,
-                 pool);
-  
-  switch (command)
-    {
-      /* kff todo: can combine checkout and update cases w/ flag */
-    case checkout_command:
-      {
-        err = svn_cl__get_trace_editor (&trace_editor,
-                                        &trace_edit_baton,
-                                        target,
-                                        pool);
-        if (err)
-          goto handle_error;
-      }
-      err = svn_client_checkout (NULL, NULL,
-                                 trace_editor,
-                                 trace_edit_baton,
-                                 target, xml_file,
-                                 ancestor_path, revision, pool);
-      break;
-    case update_command:
-      {
-        err = svn_cl__get_trace_editor (&trace_editor,
-                                        &trace_edit_baton,
-                                        target,
-                                        pool);
-        if (err)
-          goto handle_error;
-      }
-      err = svn_client_update (NULL, NULL,
-                               trace_editor, trace_edit_baton,
-                               target, xml_file, revision, pool);
-      break;
-    case add_command:
-      err = svn_client_add (target, pool);
-      break;
-    case delete_command:
-      err = svn_client_delete (target, force, pool);
-      break;
-    case commit_command:
-      err = svn_client_commit (target, xml_file, revision, pool);
-      break;
-    case status_command:
-      {
-        apr_hash_t *statushash;
-        err = svn_client_status (&statushash, target, pool);
-        if (! err) 
-          svn_cl__print_status_list (statushash, pool);
-        break;
-      }
-    case propfind_command:
-      {
-        apr_hash_t *prop_hash;
-        err = svn_wc_prop_find (&prop_hash, target, pool);
-        if (! err)
-          svn_cl__print_prop_hash (prop_hash, pool);
-        break;
-      }
-    default:
-      fprintf (stderr, "no command given");
-      exit (1);
-    }
-
- handle_error:
+  err = (*p_cmd->cmd_func) (argc, argv, pool);
   if (err)
     svn_handle_error (err, stdout, 0);
 
   apr_destroy_pool (pool);
 
-  return 0;
+  return EXIT_SUCCESS;
 }
-
-
 
 /* 
  * local variables:
