@@ -562,9 +562,10 @@ const char *svn_fs_txn_root_name (svn_fs_root_t *root,
 
 
 /** If @a root is the root of a revision, return the revision number.
- * Otherwise, return @c SVN_INVALID_REVNUM.
+ * Otherwise, it is the root of a transaction, so return the revision
+ * on which the transaction is based.
  */
-svn_revnum_t svn_fs_revision_root_revision (svn_fs_root_t *root);
+svn_revnum_t svn_fs_root_revision (svn_fs_root_t *root);
 
 /** @} */
 
