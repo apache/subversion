@@ -60,18 +60,18 @@ const char *lines[] =
        fourth should therefore remain a literal dollar sign. */
     "Line 24: keyword in a keyword: $Author: $Date$ $",
     "Line 25: fairly boring subst test data... blah blah.",
-    "Line 26: Emptily expanded keyword $Rev:$.",
+    "Line 26: Emptily expanded keyword $Rev: $.",
     "Line 27: fairly boring subst test data... blah blah.",
     "Line 28: fairly boring subst test data... blah blah.",
     "Line 29: Valid $LastChangedRevision: 1729 $, started expanded.",
-    "Line 30: Valid $Rev: 1729$, started expanded.",
+    "Line 30: Valid $Rev: 1729 $, started expanded.",
     "Line 31: fairly boring subst test data... blah blah.",
     "Line 32: fairly boring subst test data... blah blah."
     "Line 33: Valid $LastChangedDate: 2002-01-01 $, started expanded.",
     "Line 34: Valid $Date: 2002-01-01 $, started expanded.",
     "Line 35: fairly boring subst test data... blah blah.",
     "Line 36: fairly boring subst test data... blah blah.",
-    "Line 37: Valid $LastChangedBy: jrandom$ , started expanded.",
+    "Line 37: Valid $LastChangedBy: jrandom $ , started expanded.",
     "Line 38: Valid $Author: jrandom $, started expanded.",
     "Line 39: fairly boring subst test data... blah blah.",
     "Line 40: fairly boring subst test data... blah blah.",
@@ -79,12 +79,15 @@ const char *lines[] =
     "Line 42: Valid $URL: http://tomato/mauve $, started expanded.",
     "Line 43: fairly boring subst test data... blah blah.",
     "Line 44: fairly boring subst test data... blah blah.",
-    "Line 45: Valid $Rev$ fooo, started expanded.",
-    "Line 46: Valid $Rev$ fooo, started expanded.",
+    "Line 45: Invalid $LastChangedRevisionWithSuffix$, started unexpanded.",
+    "Line 46: Invalid $Rev:$ is missing a space.",
     "Line 47: fairly boring subst test data... blah blah.",
     "Line 48: Two keywords back to back: $Author$$Rev$.",
     "Line 49: One keyword, one not, back to back: $Author$Rev$.",
-    "Line 50: end of subst test data."
+    "Line 50: a series of dollar signs $$$$$$$$$$$$$$$$$$$$$$$$$$$$.",
+    "Line 51: same, but with embedded keyword $$$$$$$$Date$$$$$$$$$$$.",
+    "Line 52: same, with expanded, empty keyword $$$$$$Date: $$$$$$.",
+    "Line 53: end of subst test data."
   };
 
 
@@ -149,52 +152,6 @@ create_file (const char *fname, const char *eol_str, apr_pool_t *pool)
 }
 
 
-/* Verify that file FNAME contains the test data `lines', with no
- * keywords expanded or contracted, and uses EOL_STR as its eol marker
- * consistently.  If the test data itself appears to be wrong, return
- * SVN_ERR_MALFORMED_FILE, or if the eol marker is wrong return
- * SVN_ERR_CORRUPT_EOL.  Otherwise, return SVN_NO_ERROR.  Use pool for
- * any temporary allocation.
- */
-static svn_error_t *
-verify_unexpanded_file (const char *fname,
-                        const char *eol_str,
-                        apr_pool_t *pool)
-{
-  svn_stringbuf_t *contents;
-  int idx = 0;
-  int i;
-
-  SVN_ERR (svn_string_from_file (&contents, fname, pool));
-
-  for (i = 0; i < (sizeof (lines) / sizeof (*lines)); i++)
-    {
-      if (contents->len < idx)
-        return svn_error_createf
-          (SVN_ERR_MALFORMED_FILE, 0, NULL, pool, 
-           "%s has short contents: \"%s\"", fname, contents->data);
-
-      if (strncmp (contents->data + idx, lines[i], strlen (lines[i])) != 0)
-        return svn_error_createf
-          (SVN_ERR_MALFORMED_FILE, 0, NULL, pool, 
-           "%s has wrong contents: \"%s\"", fname, contents->data + idx);
-
-      /* else */
-
-      idx += strlen (lines[i]);
-
-      if (strncmp (contents->data + idx, eol_str, strlen (eol_str)) != 0)
-        return svn_error_createf
-          (SVN_ERR_IO_CORRUPT_EOL, 0, NULL, pool, 
-           "%s has wrong eol: \"%s\"", fname, contents->data + idx);
-
-      idx += strlen (eol_str);
-    }
-
-  return SVN_NO_ERROR;
-}
-
-
 /* Verify that file FNAME contains the test data `lines' (with
  * keywords expanded according to REV, AUTHOR, DATE, and URL), and
  * uses EOL_STR as its eol marker consistently.  If the test data
@@ -207,35 +164,187 @@ verify_unexpanded_file (const char *fname,
  * expanded.
  */
 static svn_error_t *
-verify_expanded_file (const char *fname,
-                      const char *eol_str,
-                      svn_revnum_t rev,
-                      const char *date,
-                      const char *author,
-                      const char *url,
-                      apr_pool_t *pool)
+verify_substitution (const char *fname,
+                     const char *eol_str,
+                     svn_revnum_t rev,
+                     const char *date,
+                     const char *author,
+                     const char *url,
+                     apr_pool_t *pool)
 {
   svn_stringbuf_t *contents;
   int idx = 0;
   int i;
 
+  const char *expect[(sizeof (lines) / sizeof (*lines))];
+
+  for (i = 0; i < (sizeof (expect) / sizeof (*expect)); i++)
+    expect[i] = lines[i];
+
+  /* Certain lines contain keywords; expect their expansions. */
+  if (SVN_IS_VALID_REVNUM (rev))
+    {
+      const char *rev_str = apr_psprintf (pool, "%ld", rev);
+
+      expect[3 - 1] =
+        apr_pstrcat (pool, "Line 3: ",
+                     "Valid $LastChangedRevision: ",
+                     rev_str,
+                     " $, started unexpanded.",
+                     NULL);
+      expect[5 - 1] =
+        apr_pstrcat (pool, "Line 5: ",
+                     "Valid $Rev: ", rev_str, " $, started unexpanded.",
+                     NULL);
+      expect[26 - 1] =
+        apr_pstrcat (pool, "Line 26: ",
+                     "Emptily expanded keyword $Rev: ", rev_str," $.",
+                     NULL);
+      expect[29 - 1] =
+        apr_pstrcat (pool, "Line 29: ",
+                     "Valid $LastChangedRevision: ",
+                     rev_str,
+                     " $, started expanded.",
+                     NULL);
+    }
+
+  if (date)
+    {
+      expect[12 - 1] =
+        apr_pstrcat (pool, "Line 12: ",
+                     "Valid $LastChangedDate: ",
+                     date,
+                     " $, started unexpanded.",
+                     NULL);
+      expect[13 - 1] =
+        apr_pstrcat (pool, "Line 13: ",
+                     "Valid $Date: ", date, " $, started unexpanded.",
+                     NULL);
+      expect[33 - 1] =
+        apr_pstrcat (pool, "Line 33: ",
+                     "Valid $LastChangedDate: ", date, " $, started expanded.",
+                     NULL);
+      expect[34 - 1] =
+        apr_pstrcat (pool, "Line 34: ",
+                     "Valid $Date: ", date, " $, started expanded.",
+                     NULL);
+      expect[51 - 1] =
+        apr_pstrcat (pool, "Line 51: ",
+                     "same, but with embedded keyword ",
+                     "$$$$$$$$Date: ", date, "$$$$$$$$$$$.",
+                     NULL);
+      expect[52 - 1] =
+        apr_pstrcat (pool, "Line 52: ",
+                     "same, with expanded, empty keyword ",
+                     "$$$$$$Date: ", date, " $$$$$$.",
+                     NULL);
+    }
+
+  if (author)
+    {
+      expect[8 - 1] =
+        apr_pstrcat (pool, "Line 8: ",
+                     "Valid $LastChangedBy: ",
+                     author,
+                     " $, started unexpanded.",
+                     NULL);
+      expect[9 - 1] =
+        apr_pstrcat (pool, "Line 9: ",
+                     "Valid $Author: ", author, " $, started unexpanded.",
+                     NULL);
+      expect[24 - 1] =
+        apr_pstrcat (pool, "Line 24: ",
+                     "keyword in a keyword: $Author: ", author, " $Date$ $",
+                     NULL);
+      expect[37 - 1] =
+        apr_pstrcat (pool, "Line 37: ",
+                     "Valid $LastChangedBy: ",
+                     author,
+                     " $ , started expanded.",
+                     NULL);
+      expect[38 - 1] =
+        apr_pstrcat (pool, "Line 38: ",
+                     "Valid $Author: ", author, " $, started expanded.",
+                     NULL);
+      expect[49 - 1] =
+        apr_pstrcat (pool, "Line 49: ",
+                     "One keyword, one not, back to back: "
+                     "$Author: ", author, " $Rev$.",
+                     NULL);
+    }
+
+  if (url)
+    {
+      expect[16 - 1] =
+        apr_pstrcat (pool, "Line 16: ",
+                     "Valid $HeadURL: ", url, " $, started unexpanded.",
+                     NULL);
+      expect[17 - 1] =
+        apr_pstrcat (pool, "Line 17: ",
+                     "Valid $URL: ", url, " $, started unexpanded.",
+                     NULL);
+      expect[41 - 1] =
+        apr_pstrcat (pool, "Line 41: ",
+                     "Valid $HeadURL: ", url, " $, started expanded.",
+                     NULL);
+      expect[42 - 1] =
+        apr_pstrcat (pool, "Line 42: ",
+                     "Valid $URL: ", url, " $, started expanded.",
+                     NULL);
+    }
+
+  /* Handle line 48 specially, as it contains two valid keywords. */
+  if ((SVN_IS_VALID_REVNUM (rev)) && author)
+    {
+      const char *rev_str = apr_psprintf (pool, "%ld", rev);
+
+      expect[48 - 1] =
+        apr_pstrcat (pool, "Line 48: ",
+                     "Two keywords back to back: "
+                     "$Author: ", author, " $"
+                     "$Rev: ", rev_str, " $.",
+                     NULL);
+    }
+  else if ((SVN_IS_VALID_REVNUM (rev)) && (! author))
+    {
+      const char *rev_str = apr_psprintf (pool, "%ld", rev);
+
+      expect[48 - 1] =
+        apr_pstrcat (pool, "Line 48: ",
+                     "Two keywords back to back: "
+                     "$Author$$Rev: ", rev_str, " $.",
+                     NULL);
+    }
+  else if ((! SVN_IS_VALID_REVNUM (rev)) && author)
+    {
+      expect[48 - 1] =
+        apr_pstrcat (pool, "Line 48: ",
+                     "Two keywords back to back: "
+                     "$Author: ", author, " $$Rev$.",
+                     NULL);
+    }
+  /* Else neither rev nor author, so line 48 remains unchanged. */
+
+
+  /** Ready to verify. **/
+
   SVN_ERR (svn_string_from_file (&contents, fname, pool));
 
-  for (i = 0; i < (sizeof (lines) / sizeof (*lines)); i++)
+  for (i = 0; i < (sizeof (expect) / sizeof (*expect)); i++)
     {
       if (contents->len < idx)
         return svn_error_createf
           (SVN_ERR_MALFORMED_FILE, 0, NULL, pool, 
            "%s has short contents: \"%s\"", fname, contents->data);
 
-      if (strncmp (contents->data + idx, lines[i], strlen (lines[i])) != 0)
+      if (strncmp (contents->data + idx, expect[i], strlen (expect[i])) != 0)
         return svn_error_createf
           (SVN_ERR_MALFORMED_FILE, 0, NULL, pool, 
            "%s has wrong contents: \"%s\"", fname, contents->data + idx);
 
       /* else */
 
-      idx += strlen (lines[i]);
+      idx += strlen (expect[i]);
 
       if (strncmp (contents->data + idx, eol_str, strlen (eol_str)) != 0)
         return svn_error_createf
@@ -290,10 +399,12 @@ crlf_to_crlf (const char **msg,
 
   SVN_ERR (remove_file (src, pool));
   SVN_ERR (create_file (src, "\r\n", pool));
-  SVN_ERR (verify_unexpanded_file (src, "\r\n", pool));
+  SVN_ERR (verify_substitution
+           (src, "\r\n", SVN_INVALID_REVNUM, NULL, NULL, NULL, pool));
   SVN_ERR (svn_io_copy_and_translate
            (src, dst, "\r\n", 0, NULL, NULL, NULL, NULL, pool));
-  SVN_ERR (verify_unexpanded_file (dst, "\r\n", pool));
+  SVN_ERR (verify_substitution
+           (dst, "\r\n", SVN_INVALID_REVNUM, NULL, NULL, NULL, pool));
 
   return SVN_NO_ERROR;
 }
@@ -314,10 +425,12 @@ lf_to_crlf (const char **msg,
 
   SVN_ERR (remove_file (src, pool));
   SVN_ERR (create_file (src, "\n", pool));
-  SVN_ERR (verify_unexpanded_file (src, "\n", pool));
+  SVN_ERR (verify_substitution
+           (src, "\n", SVN_INVALID_REVNUM, NULL, NULL, NULL, pool));
   SVN_ERR (svn_io_copy_and_translate
            (src, dst, "\r\n", 0, NULL, NULL, NULL, NULL, pool));
-  SVN_ERR (verify_unexpanded_file (dst, "\r\n", pool));
+  SVN_ERR (verify_substitution
+           (dst, "\r\n", SVN_INVALID_REVNUM, NULL, NULL, NULL, pool));
 
   return SVN_NO_ERROR;
 }
@@ -338,10 +451,12 @@ cr_to_crlf (const char **msg,
 
   SVN_ERR (remove_file (src, pool));
   SVN_ERR (create_file (src, "\r", pool));
-  SVN_ERR (verify_unexpanded_file (src, "\r", pool));
+  SVN_ERR (verify_substitution
+           (src, "\r", SVN_INVALID_REVNUM, NULL, NULL, NULL, pool));
   SVN_ERR (svn_io_copy_and_translate
            (src, dst, "\r\n", 0, NULL, NULL, NULL, NULL, pool));
-  SVN_ERR (verify_unexpanded_file (dst, "\r\n", pool));
+  SVN_ERR (verify_substitution
+           (dst, "\r\n", SVN_INVALID_REVNUM, NULL, NULL, NULL, pool));
 
   return SVN_NO_ERROR;
 }
@@ -364,7 +479,8 @@ mixed_to_crlf (const char **msg,
   SVN_ERR (create_file (src, NULL, pool));
   SVN_ERR (svn_io_copy_and_translate
            (src, dst, "\r\n", 0, NULL, NULL, NULL, NULL, pool));
-  SVN_ERR (verify_unexpanded_file (dst, "\r\n", pool));
+  SVN_ERR (verify_substitution
+           (dst, "\r\n", SVN_INVALID_REVNUM, NULL, NULL, NULL, pool));
 
   return SVN_NO_ERROR;
 }
@@ -385,10 +501,12 @@ lf_to_lf (const char **msg,
 
   SVN_ERR (remove_file (src, pool));
   SVN_ERR (create_file (src, "\n", pool));
-  SVN_ERR (verify_unexpanded_file (src, "\n", pool));
+  SVN_ERR (verify_substitution
+           (src, "\n", SVN_INVALID_REVNUM, NULL, NULL, NULL, pool));
   SVN_ERR (svn_io_copy_and_translate
            (src, dst, "\n", 0, NULL, NULL, NULL, NULL, pool));
-  SVN_ERR (verify_unexpanded_file (dst, "\n", pool));
+  SVN_ERR (verify_substitution
+           (dst, "\n", SVN_INVALID_REVNUM, NULL, NULL, NULL, pool));
 
   return SVN_NO_ERROR;
 }
@@ -409,10 +527,12 @@ crlf_to_lf (const char **msg,
 
   SVN_ERR (remove_file (src, pool));
   SVN_ERR (create_file (src, "\r\n", pool));
-  SVN_ERR (verify_unexpanded_file (src, "\r\n", pool));
+  SVN_ERR (verify_substitution
+           (src, "\r\n", SVN_INVALID_REVNUM, NULL, NULL, NULL, pool));
   SVN_ERR (svn_io_copy_and_translate
            (src, dst, "\n", 0, NULL, NULL, NULL, NULL, pool));
-  SVN_ERR (verify_unexpanded_file (dst, "\n", pool));
+  SVN_ERR (verify_substitution
+           (dst, "\n", SVN_INVALID_REVNUM, NULL, NULL, NULL, pool));
 
   return SVN_NO_ERROR;
 }
@@ -433,10 +553,12 @@ cr_to_lf (const char **msg,
 
   SVN_ERR (remove_file (src, pool));
   SVN_ERR (create_file (src, "\r", pool));
-  SVN_ERR (verify_unexpanded_file (src, "\r", pool));
+  SVN_ERR (verify_substitution
+           (src, "\r", SVN_INVALID_REVNUM, NULL, NULL, NULL, pool));
   SVN_ERR (svn_io_copy_and_translate
            (src, dst, "\n", 0, NULL, NULL, NULL, NULL, pool));
-  SVN_ERR (verify_unexpanded_file (dst, "\n", pool));
+  SVN_ERR (verify_substitution
+           (dst, "\n", SVN_INVALID_REVNUM, NULL, NULL, NULL, pool));
 
   return SVN_NO_ERROR;
 }
@@ -459,7 +581,8 @@ mixed_to_lf (const char **msg,
   SVN_ERR (create_file (src, NULL, pool));
   SVN_ERR (svn_io_copy_and_translate
            (src, dst, "\n", 0, NULL, NULL, NULL, NULL, pool));
-  SVN_ERR (verify_unexpanded_file (dst, "\n", pool));
+  SVN_ERR (verify_substitution
+           (dst, "\n", SVN_INVALID_REVNUM, NULL, NULL, NULL, pool));
 
   return SVN_NO_ERROR;
 }
