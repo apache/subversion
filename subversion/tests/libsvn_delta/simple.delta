@@ -1,4 +1,4 @@
-<delta-pkg>
+<delta-pkg ver="37" ancestor="/snorgle">
 
 <tree-delta>
   <add name="dir1">
