@@ -410,7 +410,8 @@ svn_error_t *svn_fs_begin_txn (svn_fs_txn_t **txn_p,
  * If @a conflict_p is non-zero, use it to provide details on any
  * conflicts encountered merging @a txn with the most recent committed
  * revisions.  If a conflict occurs, set @a *conflict_p to the path of
- * the conflict in @a txn.  Otherwise, set @a *conflict_p to null.
+ * the conflict in @a txn, with the same lifetime as @a txn;
+ * otherwise, set @a *conflict_p to null.
  *
  * If the commit succeeds, it frees @a txn, and any temporary resources
  * it holds.  Any root objects (see below) referring to the root
