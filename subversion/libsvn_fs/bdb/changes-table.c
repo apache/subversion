@@ -51,7 +51,7 @@ svn_fs__bdb_open_changes_table (DB **changes_p,
      one-per-row.  Note: this must occur before ->open().  */
   BDB_ERR (changes->set_flags (changes, DB_DUP));
 
-  BDB_ERR (changes->open (SVN_BDB_OPEN_PARAMS(changes, NULL),
+  BDB_ERR (changes->open (SVN_BDB_OPEN_PARAMS (changes, NULL),
                          "changes", 0, DB_BTREE,
                          open_flags | SVN_BDB_AUTO_COMMIT,
                          0666));
@@ -289,8 +289,8 @@ svn_fs__bdb_changes_fetch (apr_hash_t **changes_p,
         }
       else
         {
-          SVN_ERR (svn_fs__dag_get_node(&node, fs, change->noderev_id,
-                                        trail));
+          SVN_ERR (svn_fs__dag_get_node (&node, fs, change->noderev_id,
+                                         trail));
           SVN_ERR (svn_fs__dag_get_committed_path (&change_path, node, trail));
         }
       
