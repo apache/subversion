@@ -18,6 +18,9 @@ BUILD_DEPENDS=	autoconf:${PORTSDIR}/devel/autoconf \
 
 GNU_CONFIGURE=	yes
 
+pre-fetch:
+	${SH} pkg-install apr-snapshot PRE-INSTALL
+
 pre-configure:
 	(cd ${WRKDIR}/apr/ && ./buildconf)
 	(cd ${WRKDIR}/apr-util/ && ./buildconf)
