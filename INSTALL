@@ -382,10 +382,10 @@ II.   INSTALLATION
       subversion RPM depending on what packages you already have installed:
 
           subversion*.i386.rpm
-          apache*.i386.rpm (Version 2.0.42 or greater)
+          apache*.i386.rpm (Version 2.0.46 or greater)
           db*.i386.rpm     (Version 4.0.14 or greater)
           expat            (Comes with RedHat)
-          neon             (Version 0.23.7)
+          neon             (Version 0.23.9)
 
       After downloading, install it (as root user):
 
