@@ -9,10 +9,9 @@ last library uses the first two to provide user-level operations such as
 change the working copy.
 
 The initial client is a Unix-style command-line tool (like standard
-CVS), but there is no reason why that has to be the only client.  The
-libraries exist to separate Subversion-specific functionality from
-user-interface decisions; a GUI client can use the libraries as easily
-as a command-line client can.
+CVS), but it should be easy to write a GUI client as well, based on the
+same libraries.  The libraries capture the core Subversion
+functionality, segregating it from user interface concerns.
 
 This chapter describes the libraries, and the physical layout of working
 copies.
@@ -26,7 +25,7 @@ copies.
 
 @c -----------------------------------------------------------------------
 @node Terminology
-@subsection Terminology
+@section Terminology
 
 This chapter uses a few fundamental concepts that have not been
 introduced previously.  Here they are briefly defined, but see
@@ -69,7 +68,7 @@ A file or directory.
 
 @c -----------------------------------------------------------------------
 @node Working copies and the working copy library
-@subsection Working copies and the working copy library
+@section Working copies and the working copy library
 
 Working copies are client-side directory trees containing both versioned
 data and Subversion administrative files.  The functions in the working
@@ -386,7 +385,7 @@ library.
 
 @c -----------------------------------------------------------------------
 @node The client operation library
-@subsection The client operation library
+@section The client operation library
 
 @itemize @bullet
 @item
