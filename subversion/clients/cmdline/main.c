@@ -955,6 +955,17 @@ main (int argc, const char * const *argv)
         opt_state.message = apr_pstrdup (pool, opt_arg);
         break;
       case 'r':
+        if (opt_state.start_revision.kind != svn_client_revision_unspecified)
+          {
+            svn_handle_error (svn_error_create
+                              (SVN_ERR_CL_ARG_PARSING_ERROR,
+                               0, NULL, pool,
+                               "Multiple revision arguments encountered; "
+                               "try '-rM:N' instead of '-rM -rN'"),
+                              stderr, FALSE);
+            svn_pool_destroy (pool);
+            return EXIT_FAILURE;
+          }
         ret = svn_cl__parse_revision (&opt_state, opt_arg, pool);
         if (ret)
           {
