@@ -483,7 +483,7 @@ svn_error_free (svn_error_t *err)
 void
 svn_handle_error (svn_error_t *err, FILE *stream, svn_boolean_t fatal)
 {
-  char buf[100];
+  char buf[200];
 
   /* Pretty-print the error */
   /* Note: we can also log errors here someday. */
@@ -491,11 +491,12 @@ svn_handle_error (svn_error_t *err, FILE *stream, svn_boolean_t fatal)
   /* Is this a Subversion-specific error code? */
   if ((err->apr_err > APR_OS_START_USEERR) 
       && (err->apr_err <= APR_OS_START_CANONERR))
-    fprintf (stream, "\nsvn_error: #%d ", err->apr_err);
+    fprintf (stream, "\nsvn_error: #%d : <%s>\n", err->apr_err,
+             svn_strerror (err->apr_err, buf, sizeof(buf)));
 
   /* Otherwise, this must be an APR error code. */
   else
-    fprintf (stream, "\napr_error: #%d, src_err %d : %s\n",
+    fprintf (stream, "\napr_error: #%d, src_err %d : <%s>\n",
              err->apr_err,
              err->src_err,
              apr_strerror (err->apr_err, buf, sizeof(buf)));
@@ -528,6 +529,273 @@ svn_handle_warning (void *data, const char *fmt, ...)
   fflush (stderr);
 }
 
+
+
+/*-----------------------------------------------------------------*/
+/* svn_strerror() */
+
+
+/* The table used by svn_strerror().  Short descriptions of each of the
+   svn-specific errorcodes in svn_error.h.
+
+   BE SURE to keep these descriptions in sync with the errorcodes! */
+
+const char * svn_error_strings[] = 
+{
+ /* SVN_WARNING */
+ "Warning",
+
+ /* SVN_ERR_NOT_AUTHORIZED */
+ "Not authorized",
+
+ /* SVN_ERR_PLUGIN_LOAD_FAILURE */
+ "Failure loading plugin",
+
+ /* SVN_ERR_UNKNOWN_FS_ACTION */
+ "Unknown fs action",
+
+ /* SVN_ERR_UNEXPECTED_EOF */
+ "Unexpected end of file",
+
+ /* SVN_ERR_MALFORMED_FILE */
+ "Malformed file",
+
+ /* SVN_ERR_INCOMPLETE_DATA */
+ "Incomplete data",
+
+ /* SVN_ERR_MALFORMED_XML */
+ "XML data was not well-formed",
+
+ /* SVN_ERR_UNFRUITFUL_DESCENT */
+ "WC descent came up empty",
+
+ /* SVN_ERR_BAD_FILENAME */
+ "Bogus filename",
+
+ /* SVN_ERR_UNSUPPORTED_FEATURE */
+ "Trying to use unsupported feature",
+
+ /* SVN_ERR_XML_ATTRIB_NOT_FOUND */
+ "No such XML tag attribute",
+
+ /* SVN_ERR_XML_MISSING_ANCESTRY */
+ "<delta-pkg> is missing ancestry",
+
+ /* SVN_ERR_XML_UNKNOWN_ENCODING */
+ "Unrecognized binary data encoding; can't decode",
+
+ /* SVN_ERR_UNKNOWN_NODE_KIND */
+ "Unknown svn_node_kind",
+
+ /* SVN_ERR_WC_OBSTRUCTED_UPDATE */
+ "Obstructed update -- unversioned object in the way",
+
+ /* SVN_ERR_WC_UNWIND_MISMATCH */
+ "Mismatch popping the wc unwind stack",
+ 
+ /* SVN_ERR_WC_UNWIND_EMPTY */
+ "Attempt to pop empty wc unwind stack",
+
+ /* SVN_ERR_WC_UNWIND_NOT_EMPTY */
+ "Attempt to unlock with non-empty unwind stack",
+
+ /* SVN_ERR_WC_LOCKED */
+ "Attempted to lock an already-locked dir",
+
+ /* SVN_ERR_WC_BAD_ADM_LOG */
+ "Logfile is corrupted",
+
+ /* SVN_ERR_WC_PATH_NOT_FOUND */
+ "Can't find a working copy path",
+
+ /* SVN_ERR_WC_ENTRY_NOT_FOUND */
+ "Can't find an entry",
+
+ /* SVN_ERR_WC_ENTRY_EXISTS */
+ "Entry already exists",
+ 
+ /* SVN_ERR_WC_ENTRY_MISSING_REVISION */
+ "Entry has no revision",
+
+ /* SVN_ERR_WC_ENTRY_MISSING_ANCESTRY */
+ "Entry no has no ancestor",
+
+ /* SVN_ERR_WC_ENTRY_ATTRIBUTE_INVALID */
+ "Entry has an invalid attribute",
+
+ /* SVN_ERR_WC_ENTRY_BOGUS_MERGE */
+ "Bogus entry attributes during entry merge",
+
+ /* SVN_ERR_WC_NOT_UP_TO_DATE */
+ "Working copy is not up-to-date",
+
+ /* SVN_ERR_WC_LEFT_LOCAL_MOD */
+ "Left locally modified or unversioned files behind",
+
+ /* SVN_ERR_IO_UNIQUE_NAMES_EXHAUSTED */
+ "Ran out of unique names",
+
+ /* SVN_ERR_WC_FOUND_CONFLICT */
+ "Found a conflict in working copy",
+
+ /* SVN_ERR_WC_CORRUPT */
+ "Working copy is corrupt",
+
+ /* SVN_ERR_FS_GENERAL */
+ "General filesystem error",
+
+ /* SVN_ERR_FS_CLEANUP */
+ "Error closing filesystem",
+
+ /* SVN_ERR_FS_ALREADY_OPEN */
+ "Filesystem is already open",
+
+ /* SVN_ERR_FS_NOT_OPEN */
+ "Filesystem is not open",
+
+ /* SVN_ERR_FS_CORRUPT */
+ "Filesystem is corrupt",
+
+ /* SVN_ERR_FS_PATH_SYNTAX */
+ "Invalid filesystem path syntax",
+
+ /* SVN_ERR_FS_NO_SUCH_REVISION */
+ "Invalid filesytem revision number",
+
+ /* SVN_ERR_FS_NO_SUCH_TRANSACTION */
+ "Invalid filesystem transaction name",
+
+ /* SVN_ERR_FS_NO_SUCH_ENTRY */
+ "Filesystem dir has no such entry",
+
+ /* SVN_ERR_FS_NO_SUCH_REPRESENTATION */
+ "Filesystem has no such representation",
+
+ /* SVN_ERR_FS_NO_SUCH_STRING */
+ "Filesystem has no such string",
+
+ /* SVN_ERR_FS_NOT_FOUND */
+ "Filesystem has no such file",
+
+ /* SVN_ERR_FS_ID_NOT_FOUND */
+ "Filesystem has no such node-rev-id",
+
+ /* SVN_ERR_FS_NOT_ID */
+ "String does not represent a node or node-rev-id",
+
+ /* SVN_ERR_FS_NOT_DIRECTORY */
+ "Name does not refer to an filesystem directory",
+ 
+ /* SVN_ERR_FS_NOT_FILE */
+ "Name does not refer to an filesystem file",
+ 
+ /* SVN_ERR_FS_NOT_SINGLE_PATH_COMPONENT */
+ "Name is not a single path component",
+
+ /* SVN_ERR_FS_NOT_MUTABLE */
+ "Attempt to change immutable filesystem node",
+
+ /* SVN_ERR_FS_ALREADY_EXISTS */
+ "File already exists in revision.",
+
+ /* SVN_ERR_FS_DIR_NOT_EMPTY */
+ "Attempt to remove non-empty filesytem directory",
+
+ /* SVN_ERR_FS_ROOT_DIR */
+ "Attempt to remove or recreate filesystem root directory",
+
+ /* SVN_ERR_FS_NOT_TXN_ROOT */
+ "Object is not a transaction root",
+
+ /* SVN_ERR_FS_NOT_REVISION_ROOT */
+ "Object is not a revision root",
+
+ /* SVN_ERR_FS_CONFLICT */
+ "Merge conflict during commit",
+
+ /* SVN_ERR_TXN_OUT_OF_DATE */
+ "Transaction is out of date",
+
+ /* SVN_ERR_BERKELEY_DB */
+ "Berkeley DB error",
+
+ /* SVN_ERR_RA_ILLEGAL_URL */
+ "Bad URL passed to RA layer",
+
+ /* SVN_ERR_RA_SOCK_INIT */
+ "RA layer failed to init socket layer",
+
+ /* SVN_ERR_RA_HOSTNAME_LOOKUP */
+ "RA layer failed hostname lookup",
+
+ /* SVN_ERR_RA_CREATING_REQUEST */
+ "RA layer failed to create HTTP request",
+
+ /* SVN_ERR_RA_REQUEST_FAILED */
+ "RA layer's server request failed",
+
+ /* SVN_ERR_RA_MKACTIVITY_FAILED */
+ "RA layer failed to make activity for commit",
+ 
+ /* SVN_ERR_RA_DELETE_FAILED */
+ "RA layer failed to delete server resource",
+
+ /* SVN_ERR_RA_NOT_VERSIONED_RESOURCE */
+ "URL is not a versioned resource",
+
+ /* SVN_ERR_RA_BAD_REVISION_REPORT, */
+ "Bogus revision report",
+ 
+ /* SVN_ERR_BAD_CONTAINING_POOL */
+ "Bad parent pool passed to svn_make_pool",
+
+ /* SVN_ERR_APMOD_MISSING_PATH_TO_FS */
+ "Apache has no path to an SVN filesystem",
+
+ /* SVN_ERR_APMOD_MALFORMED_URI */
+ "Apache got a malformed URI",
+
+ /* SVN_ERR_TEST_FAILED */
+ "Test failed",
+
+ /* SVN_ERR_CL_ARG_PARSING_ERROR */
+ "Client error in parsing arguments",
+
+ /* SVN_ERR_CL_ADM_DIR_RESERVED */
+ "Attempted command in administrative dir",
+
+ /* SVN_ERR_LAST */
+ "The final error"
+};
+
+
+
+char *
+svn_strerror (apr_status_t apr_err, char *buf, apr_size_t bufsize)
+{
+  int lookup_index;
+  const char *description;
+
+  /* Make sure that apr_err is in the SVN-specific range */
+  if ((apr_err <= APR_OS_START_USEERR) 
+      || (apr_err > APR_OS_START_CANONERR))
+    {
+      snprintf (buf, bufsize, "not an SVN-specific errorcode");
+      return buf;
+    }
+
+  /* Calculate the correct index into svn_error_strings[] */
+  lookup_index = apr_err - (APR_OS_START_USEERR + 1);
+  description = svn_error_strings[lookup_index];
+
+  /* Return the error description. */
+  if (description)
+    snprintf (buf, bufsize, description);
+  else
+    snprintf (buf, bufsize, "no description available");
+
+  return buf;
+}
 
 
 
