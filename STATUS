@@ -173,8 +173,9 @@ These changes are to Subversion tools that do not use the bindings.
 As such, they may be updated independently of any "core" or API
 changes.
 
-    * r8357
+    * r8357, r8364
       Make svn_load_dirs.pl printed output easier to use.
-      Justification: Improve display, low risk.
+      Add default answers to yes no questions.
+      Justification: Improve display, ease of use, low risk.
       Votes:
        +1: blair
