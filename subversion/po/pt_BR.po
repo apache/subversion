@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2004-09-14 00:57-0300\n"
+"POT-Creation-Date: 2004-09-18 02:40-0300\n"
 "PO-Revision-Date: 2004-07-26 19:19-300\n"
 "Last-Translator: dev@subversion.tigris.org\n"
 "Language-Team: Brazilian Portuguese <dev@subversion.tigris.org>\n"
@@ -1621,6 +1621,7 @@ msgid "Set new value for property '%s' on revision %ld\n"
 msgstr "Seta novo valor para propriedade '%s' na revisão %ld\n"
 
 #: clients/cmdline/propedit-cmd.c:145
+#, c-format
 msgid "No changes to property '%s' on revision %ld\n"
 msgstr "Sem mudanças na propriedade '%s' na revisão %ld\n"
 
@@ -1724,7 +1725,7 @@ msgid "Can't write to '%s'"
 msgstr "Não é possível escrever em '%s'"
 
 #: clients/cmdline/util.c:187 clients/cmdline/util.c:211
-#: libsvn_fs_fs/fs_fs.c:3330
+#: libsvn_fs_fs/fs_fs.c:3330 libsvn_subr/io.c:2135
 #, c-format
 msgid "Can't stat '%s'"
 msgstr "Não é possível executar stat '%s'"
@@ -3912,6 +3913,272 @@ msgstr "Revisão final inválida %ld"
 msgid "Can't recode error string from APR"
 msgstr "Não pode gravar string de erro de APR"
 
+#: libsvn_subr/io.c:127
+#, c-format
+msgid "Can't check path '%s'"
+msgstr "Não foi possível verificar o caminho '%s'"
+
+#: libsvn_subr/io.c:245 libsvn_subr/io.c:330
+#, c-format
+msgid "Can't open '%s'"
+msgstr "Não é abrir '%s'"
+
+#: libsvn_subr/io.c:259 libsvn_subr/io.c:343
+#, c-format
+msgid "Unable to make name for '%s'"
+msgstr "Não foi possível criar o nome para '%s'"
+
+#: libsvn_subr/io.c:346 libsvn_subr/io.c:373 libsvn_subr/io.c:401
+msgid "Symbolic links are not supported on this platform"
+msgstr "'Symbolic links' não são suportados nesta plataforma"
+
+#: libsvn_subr/io.c:366
+msgid "Can't read contents of link"
+msgstr "Não é possível ler o conteúdo do link"
+
+#: libsvn_subr/io.c:1204
+#, c-format
+msgid "Can't get shared lock on file '%s'"
+msgstr "Não é possível obter trava compartilhada no arquivo '%s'"
+
+#: libsvn_subr/io.c:1207
+#, c-format
+msgid "Can't get exclusive lock on file '%s'"
+msgstr "Não foi possível obter trava exclusiva no arquivo '%s'"
+
+#: libsvn_subr/io.c:1237
+#, c-format
+msgid "Can't flush file '%s'"
+msgstr "Não foi possível descarregar o buffer do arquivo '%s'"
+
+#: libsvn_subr/io.c:1238
+msgid "Can't flush stream"
+msgstr "Não foi possível descarregar o buffer da cadeia"
+
+#: libsvn_subr/io.c:1250 libsvn_subr/io.c:1267
+msgid "Can't flush file to disk"
+msgstr "Não foi possível descarregar o buffer do arquivo pro disco"
+
+#: libsvn_subr/io.c:1288
+msgid "Reading from stdin is currently broken, so disabled"
+msgstr "Leitura de stdin está atualmente quebrada, então está desabilitada"
+
+#: libsvn_subr/io.c:1309
+msgid "Can't get file name"
+msgstr "Não foi possível obter o nome do arquivo"
+
+#: libsvn_subr/io.c:1377
+#, c-format
+msgid "Can't remove file '%s'"
+msgstr "Não é possível remover o arquivo '%s'"
+
+#: libsvn_subr/io.c:1405
+#, c-format
+msgid "Can't rewind directory '%s'"
+msgstr "Não foi possível reiniciar o diretório '%s'"
+
+#: libsvn_subr/io.c:1440 libsvn_subr/io.c:2277 libsvn_subr/io.c:2364
+#, c-format
+msgid "Can't open directory '%s'"
+msgstr "Não foi possível abrir o diretório '%s'"
+
+#: libsvn_subr/io.c:1476 libsvn_subr/io.c:1493
+#, c-format
+msgid "Can't remove '%s'"
+msgstr "Não é remover '%s'"
+
+#: libsvn_subr/io.c:1484 libsvn_subr/io.c:1552
+#, c-format
+msgid "Can't read directory '%s'"
+msgstr "Não foi possível ler o diretório '%s'"
+
+#: libsvn_subr/io.c:1488 libsvn_subr/io.c:1556 libsvn_subr/io.c:2424
+#, c-format
+msgid "Error closing directory '%s'"
+msgstr "Erro fechando o diretório '%s'"
+
+#: libsvn_subr/io.c:1586
+#, c-format
+msgid "Can't create process '%s' attributes"
+msgstr "Não foi possível criar atributos do processo '%s'"
+
+#: libsvn_subr/io.c:1592
+#, c-format
+msgid "Can't set process '%s' cmdtype"
+msgstr "Não foi possível setar cmdtype do processo '%s'"
+
+#: libsvn_subr/io.c:1604
+#, c-format
+msgid "Can't set process '%s' directory"
+msgstr "Não foi possível setar diretório do processo '%s'"
+
+#: libsvn_subr/io.c:1617
+#, c-format
+msgid "Can't set process '%s' child input"
+msgstr "Não foi possível setar entrada filha do processo '%s'"
+
+#: libsvn_subr/io.c:1624
+#, c-format
+msgid "Can't set process '%s' child outfile"
+msgstr "Não foi possível setar arquivo de saída filho do processo '%s'"
+
+#: libsvn_subr/io.c:1631
+#, c-format
+msgid "Can't set process '%s' child errfile"
+msgstr "Não foi possível setar arquivo de erro filho do processo '%s'"
+
+#: libsvn_subr/io.c:1655
+#, c-format
+msgid "Can't start process '%s'"
+msgstr "Não é possível iniciar o processo '%s'"
+
+#: libsvn_subr/io.c:1663
+#, c-format
+msgid "Error waiting for process '%s'"
+msgstr "Erro esperando pelo processo '%s'"
+
+#: libsvn_subr/io.c:1671
+#, c-format
+msgid "Process '%s' failed (exitwhy %d)"
+msgstr "Processo '%s' falhou (exitwhy %d)"
+
+#: libsvn_subr/io.c:1678
+#, c-format
+msgid "Process '%s' returned error exitcode %d"
+msgstr "Processo '%s' retornou código de erro de saída %d"
+
+#: libsvn_subr/io.c:1766
+#, c-format
+msgid "'%s' returned %d"
+msgstr "'%s' retornou %d"
+
+#: libsvn_subr/io.c:1867
+#, c-format
+msgid ""
+"Error running '%s':  exitcode was %d, args were:\n"
+"in directory '%s', basenames:\n"
+"%s\n"
+"%s\n"
+"%s"
+msgstr ""
+"Erro rodando '%s':  exitcode foi %d, args foram:\n"
+"no diretório '%s', basenames:\n"
+"%s\n"
+"%s\n"
+"%s"
+
+#: libsvn_subr/io.c:1897
+msgid "Can't detect MIME type of non-file '%s'"
+msgstr "Não é possível detectar o tipo MIME do não-arquivo '%s'"
+
+#: libsvn_subr/io.c:1964
+msgid "Can't open file '%s'"
+msgstr "Não foi possível abrir o arquivo '%s'"
+
+#: libsvn_subr/io.c:1998
+#, c-format
+msgid "Can't close file '%s'"
+msgstr "Não foi possível fechar o arquivo '%s'"
+
+#: libsvn_subr/io.c:1999
+msgid "Can't close stream"
+msgstr "Não foi possível fechar a cadeia"
+
+#: libsvn_subr/io.c:2009 libsvn_subr/io.c:2033 libsvn_subr/io.c:2046
+#, c-format
+msgid "Can't read file '%s'"
+msgstr "Não é possível ler o arquivo '%s'"
+
+#: libsvn_subr/io.c:2010 libsvn_subr/io.c:2034 libsvn_subr/io.c:2047
+msgid "Can't read stream"
+msgstr "Não foi possível ler a cadeia"
+
+#: libsvn_subr/io.c:2021
+#, c-format
+msgid "Can't get attribute information from file '%s'"
+msgstr "Não foi possível obter informações de atributo do arquivo '%s'"
+
+#: libsvn_subr/io.c:2022
+msgid "Can't get attribute information from stream"
+msgstr "Não foi possível obter informações de atributo da cadeia"
+
+#: libsvn_subr/io.c:2058
+#, c-format
+msgid "Can't set position pointer in file '%s'"
+msgstr "Não foi possível setar ponteiro de posição no arquivo '%s'"
+
+#: libsvn_subr/io.c:2059
+msgid "Can't set position pointer in stream"
+msgstr "Não foi possível setar ponteiro de posição na cadeia"
+
+#: libsvn_subr/io.c:2070 libsvn_subr/io.c:2083
+#, c-format
+msgid "Can't write to file '%s'"
+msgstr "Não é possível escrever no arquivo '%s'"
+
+#: libsvn_subr/io.c:2071 libsvn_subr/io.c:2084
+msgid "Can't write to stream"
+msgstr "Não é possível escrever na cadeia"
+
+#: libsvn_subr/io.c:2156
+#, c-format
+msgid "Can't move '%s' to '%s'"
+msgstr "Não é possível mover '%s' para '%s'"
+
+#: libsvn_subr/io.c:2195
+#, c-format
+msgid "Can't create directory '%s'"
+msgstr "Não foi possível criar diretório '%s'"
+
+#: libsvn_subr/io.c:2205
+#, c-format
+msgid "Can't hide directory '%s'"
+msgstr "Não foi possível esconder o diretório '%s'"
+
+#: libsvn_subr/io.c:2218
+#, c-format
+msgid "Can't stat directory '%s'"
+msgstr "Não foi possível executar 'stat' no diretório '%s'"
+
+#: libsvn_subr/io.c:2234
+#, c-format
+msgid "Can't stat new directory '%s'"
+msgstr "Não foi possível executar 'stat' no novo diretório '%s'"
+
+#: libsvn_subr/io.c:2294
+#, c-format
+msgid "Can't remove directory '%s'"
+msgstr "Não foi possível remover o diretório '%s'"
+
+#: libsvn_subr/io.c:2312
+msgid "Can't read directory"
+msgstr "Não foi possível ler o diretório '%s'"
+
+#: libsvn_subr/io.c:2381
+#, c-format
+msgid "Can't read directory entry in '%s'"
+msgstr "Não foi possível ler a entrada de diretório em '%s'"
+
+#: libsvn_subr/io.c:2505
+#, c-format
+msgid "Can't check directory '%s'"
+msgstr "Não foi possível verificar o diretório '%s'"
+
+#: libsvn_subr/io.c:2526
+#, c-format
+msgid "Version %d is not non-negative"
+msgstr "Versão %d não é não-negativa"
+
+#: libsvn_subr/io.c:2573
+#, c-format
+msgid "Reading '%s'"
+msgstr "Lendo '%s'"
+
+#: libsvn_subr/io.c:2588
+#, c-format
+msgid "First line of '%s' contains non-digit"
+msgstr "Primeira linha de '%s' contém um não-dígito"
+
 #: libsvn_subr/opt.c:148
 msgid ""
 "\n"
@@ -4924,13 +5191,12 @@ msgid ""
 "this if you've been getting errors indicating that recovery\n"
 "ought to be run.  Recovery requires exclusive access and will\n"
 "exit if the repository is in use by another process.\n"
-"\n"
 msgstr ""
 "uso: svnadmin recover CAMINHO_REP\n"
 "\n"
 "Roda o procedimento de recuperação do Berkeley DB em um repositório.  Faça\n"
-"isto se você tiver erros indicando que a recuperação deve ser executada.Esta "
-"recuperação necessita de acesso exclusivo ao repositório e terminará seeste "
+"isto se você tiver erros indicando que a recuperação deve ser executada.\n"
+"A recuperação requer acesso exclusivo ao repositório e terminará se este "
 "estiver em uso por outro processo.\n"
 "\n"
 
@@ -5578,10 +5844,11 @@ msgid "last changed rather than current revisions"
 msgstr "último modificado ao invés de revisão atual"
 
 #: svnversion/main.c:287
-msgid "exported\n"
-msgstr "exportado\n"
+#, c-format
+msgid "exported%s"
+msgstr "exportado%s"
 
-#: svnversion/main.c:295
+#: svnversion/main.c:296
 #, c-format
 msgid "'%s' not versioned, and not exported\n"
 msgstr "'%s' não versionado, e não exportado\n"
