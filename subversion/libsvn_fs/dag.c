@@ -381,7 +381,10 @@ svn_error_t *svn_fs__dag_set_proplist (dag_node_t *node,
      into node-rev.c to get the "fresh" content skel for our trail. */
   content_skel = node->contents;
   
-  /* Insert the new proplist into the content_skel.  */
+  /* Insert the new proplist into the content_skel.
+     jimb: Watch out!  Once we've got content caching working, this
+     will be changing the cached skel.  If the operation below fails
+     or deadlocks, the cache will be wrong.  */
   content_skel->children->children->next = proplist;
   
   /* Commit the new content_skel, within the given trail. */
