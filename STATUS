@@ -129,3 +129,11 @@ Candidate changes:
        (This is really a libtool bug.)
      Votes:
       +1: jerenkrantz
+
+   * r10794
+     Add the new boolean config file option store-passwords.
+     Justification:
+       Unintrusive change.  Much more user friendly than store-auth-creds
+       because username, SSL server cert trust, etc, is still saved.
+     Votes:
+        +1: bliss
