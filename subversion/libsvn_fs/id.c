@@ -270,6 +270,45 @@ svn_fs_copy_id (const svn_fs_id_t *id, apr_pool_t *pool)
 
 
 
+/* Predecessor ID's. */
+
+/* ### kff todo: might it be a good thing to abstract out the
+   successor logic from svn_fs__new_successor_id() and put it in a
+   function here, svn_fs_successor_id(), to match
+   svn_fs_predecessor_id()?  Investigate. */
+
+svn_fs_id_t *
+svn_fs_predecessor_id (const svn_fs_id_t *id, apr_pool_t *pool)
+{
+  svn_fs_id_t *predecessor_id;
+  int len;
+
+  len = svn_fs_id_length (id);
+  predecessor_id = svn_fs_copy_id (id, pool);
+
+  predecessor_id[len - 1]--;
+
+  if (predecessor_id[len - 1] > 0)
+    {
+      /* Decrementing the last digit still resulted in a valid node
+         revision number, so that must be the predecessor of ID.
+         Return the predecessor. */
+      return predecessor_id;
+    }
+
+  /* Else decrementing the last digit still resulted in a branch
+     number, so the predecessor is the node revision on which the
+     branch itself is based. */
+  if (len > 2)
+    predecessor_id[len - 2] = -1;
+  else
+    predecessor_id = NULL;
+  
+  return predecessor_id;
+}
+
+
+
 /* 
  * local variables:
  * eval: (load-file "../svn-dev.el")
