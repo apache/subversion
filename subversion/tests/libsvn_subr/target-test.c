@@ -16,8 +16,6 @@
  * ====================================================================
  */
 
-#include "../../clients/init_cmdline.h"
-
 #define APR_WANT_STDIO
 #include <apr_want.h>
 #include <apr_general.h>
@@ -42,7 +40,7 @@ int main(int argc, char **argv)
   }
 
   /* Initialize the app. */
-  if (init_cmdline("target-test", stderr) != EXIT_SUCCESS)
+  if (svn_cmdline_init("target-test", stderr) != EXIT_SUCCESS)
     return EXIT_FAILURE;
 
   /* Create our top-level pool. */

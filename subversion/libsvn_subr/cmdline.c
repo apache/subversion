@@ -1,5 +1,5 @@
 /*
- * init_cmdline.h : Initialization for command-line programs.
+ * cmdline.c :  Helpers for command-line programs.
  *
  * ====================================================================
  * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
@@ -17,27 +17,18 @@
  */
 
 
-
-#ifndef SVN_INIT_CMDLINE_H
-#define SVN_INIT_CMDLINE_H
-
 #include <stdlib.h>             /* for atexit() */
 #include <locale.h>             /* for setlocale() */
 
-#define APR_WANT_STDIO
-#include <apr_want.h>           /* for stdio stuff */
 #include <apr_errno.h>          /* for apr_strerror */
 #include <apr_general.h>        /* for apr_initialize/apr_terminate */
+
+#include <svn_pools.h>
 #include "svn_private_config.h" /* for SVN_WIN32 */
 
 
-/* Set up the locale for character conversion, and initialize APR. If
-   ERROR_STREAM is non-null, print error messages to the stream, using
-   PROGNAME as the program name. Return EXIT_SUCCESS if successful,
-   otherwise EXIT_FAILURE. */
-
-static int
-init_cmdline (const char *progname, FILE *error_stream)
+int
+svn_cmdline_init (const char *progname, FILE *error_stream)
 {
   apr_status_t status;
 
@@ -105,5 +96,3 @@ init_cmdline (const char *progname, FILE *error_stream)
 
   return EXIT_SUCCESS;
 }
-
-#endif /* SVN_INIT_CMDLINE_H */
