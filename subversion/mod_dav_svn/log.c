@@ -95,13 +95,9 @@ static svn_error_t * log_receiver(void *baton,
            "<D:comment>%s</D:comment>" DEBUG_CR
            "</S:log-item>" DEBUG_CR,
            rev,
-           /* ### The `1' in the calls below means replace `"' with
-              `&quot;'.  This seems safe to me, since the dequoter on
-              the other side will certainly handle it.  But is it
-              necessary?  I dunno. */
-           apr_xml_quote_string(lrb->pool, author, 1),
-           apr_xml_quote_string(lrb->pool, date, 1),
-           apr_xml_quote_string(lrb->pool, msg, 1));
+           apr_xml_quote_string(lrb->pool, author, 0),
+           apr_xml_quote_string(lrb->pool, date, 0),
+           apr_xml_quote_string(lrb->pool, msg, 0));
 
 
   if (last_call)
