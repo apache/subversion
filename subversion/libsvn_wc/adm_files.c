@@ -86,6 +86,7 @@ adm_subdir (void)
  * 
  * First, the adm subdir is appended to PATH as a component, then each
  * of the varargs in AP (char *'s) is appended as a path component.
+ * The list must be terminated with a NULL argument.
  *
  * Important: chances are you will want to call chop_admin_name() to
  * restore PATH to its original value before exiting anything that
@@ -100,12 +101,10 @@ static int
 v_extend_with_adm_name (svn_string_t *path,
                         svn_boolean_t use_tmp,
                         apr_pool_t *pool,
-                        int num_vaparams,  /* how annoying */
                         va_list ap)
 {
   const char *this;
   int components_added = 0;
-  int i;
 
   /* Tack on the administrative subdirectory. */
   svn_path_add_component_nts (path, adm_subdir (), SVN_PATH_LOCAL_STYLE, pool);
@@ -120,9 +119,8 @@ v_extend_with_adm_name (svn_string_t *path,
     }
 
   /* Tack on everything else. */
-  for (i = 0; i < num_vaparams; i++)
+  while ((this = va_arg (ap, const char *)) != NULL)
     {
-      this = va_arg (ap, const char *);
       svn_path_add_component_nts (path, this, SVN_PATH_LOCAL_STYLE, pool);
       components_added++;
     }
@@ -136,17 +134,15 @@ static int
 extend_with_adm_name (svn_string_t *path,
                       svn_boolean_t use_tmp,
                       apr_pool_t *pool,
-                      int num_vaparams,
                       ...)
 {
   va_list ap;
   int components_added;
 
-  va_start (ap, num_vaparams);
+  va_start (ap, pool);
   components_added = v_extend_with_adm_name (path,
                                              use_tmp,
                                              pool,
-                                             num_vaparams,
                                              ap);
   va_end (ap);
 
@@ -184,7 +180,7 @@ svn_wc__make_adm_thing (svn_string_t *path,
   apr_status_t apr_err = 0;
   int components_added;
 
-  components_added = extend_with_adm_name (path, tmp, pool, 1, thing);
+  components_added = extend_with_adm_name (path, tmp, pool, thing, NULL);
 
   if (type == svn_file_kind)
     {
@@ -342,7 +338,6 @@ copy_file (svn_string_t *src, svn_string_t *dst, apr_pool_t *pool)
 static svn_error_t *
 sync_adm_file (svn_string_t *path,
                apr_pool_t *pool,
-               int num_vaparams,
                ...)
 {
   /* kff todo: big code duplication with close_adm_file(), see comment
@@ -354,14 +349,14 @@ sync_adm_file (svn_string_t *path,
   va_list ap;
   
   /* Extend real name. */
-  va_start (ap, num_vaparams);
+  va_start (ap, pool);
   components_added
-    = v_extend_with_adm_name (path, 0, pool, num_vaparams, ap);
+    = v_extend_with_adm_name (path, 0, pool, ap);
   va_end (ap);
   
   /* Extend tmp name. */
-  va_start (ap, num_vaparams);
-  v_extend_with_adm_name (tmp_path, 1, pool, num_vaparams, ap);
+  va_start (ap, pool);
+  v_extend_with_adm_name (tmp_path, 1, pool, ap);
   va_end (ap);
   
   /* Rename. */
@@ -401,7 +396,6 @@ open_adm_file (apr_file_t **handle,
                svn_string_t *path,
                apr_int32_t flags,
                apr_pool_t *pool,
-               int num_vaparams,
                ...)
 {
   svn_error_t *err = NULL;
@@ -422,12 +416,12 @@ open_adm_file (apr_file_t **handle,
           opath    = svn_string_dup (path, pool);
           tmp_path = svn_string_dup (path, pool);
 
-          va_start (ap, num_vaparams);
-          v_extend_with_adm_name (opath, 0, pool, num_vaparams, ap);
+          va_start (ap, pool);
+          v_extend_with_adm_name (opath, 0, pool, ap);
           va_end (ap);
 
-          va_start (ap, num_vaparams);
-          v_extend_with_adm_name (tmp_path, 1, pool, num_vaparams, ap);
+          va_start (ap, pool);
+          v_extend_with_adm_name (tmp_path, 1, pool, ap);
           va_end (ap);
 
           /* Copy the original thing to the tmp location. */
@@ -437,17 +431,17 @@ open_adm_file (apr_file_t **handle,
         }
 
       /* Extend with tmp name. */
-      va_start (ap, num_vaparams);
+      va_start (ap, pool);
       components_added
-        = v_extend_with_adm_name (path, 1, pool, num_vaparams, ap);
+        = v_extend_with_adm_name (path, 1, pool, ap);
       va_end (ap);
     }
   else
     {
       /* Extend with regular adm name. */
-      va_start (ap, num_vaparams);
+      va_start (ap, pool);
       components_added
-        = v_extend_with_adm_name (path, 0, pool, num_vaparams, ap);
+        = v_extend_with_adm_name (path, 0, pool, ap);
       va_end (ap);
     }
 
@@ -468,7 +462,6 @@ close_adm_file (apr_file_t *fp,
                 svn_string_t *path,
                 svn_boolean_t sync,
                 apr_pool_t *pool,
-                int num_vaparams,
                 ...)
 {
   svn_string_t *tmp_path;
@@ -477,9 +470,9 @@ close_adm_file (apr_file_t *fp,
   va_list ap;
 
   /* Get the full name of the thing we want. */
-  va_start (ap, num_vaparams);
+  va_start (ap, pool);
   components_added =
-    v_extend_with_adm_name (path, sync, pool, num_vaparams, ap);
+    v_extend_with_adm_name (path, sync, pool, ap);
   va_end (ap);
 
   apr_err = apr_close (fp);
@@ -504,14 +497,14 @@ close_adm_file (apr_file_t *fp,
       int components_added;
       
       /* Extend real name. */
-      va_start (ap, num_vaparams);
+      va_start (ap, pool);
       components_added
-        = v_extend_with_adm_name (path, 0, pool, num_vaparams, ap);
+        = v_extend_with_adm_name (path, 0, pool, ap);
       va_end (ap);
       
       /* Extend tmp name. */
-      va_start (ap, num_vaparams);
-      v_extend_with_adm_name (tmp_path, 1, pool, num_vaparams, ap);
+      va_start (ap, pool);
+      v_extend_with_adm_name (tmp_path, 1, pool, ap);
       va_end (ap);
       
       /* Rename. */
@@ -542,7 +535,7 @@ svn_wc__open_adm_file (apr_file_t **handle,
                        apr_pool_t *pool)
 {
   *handle = NULL;  /* satisfy APR's bizarre requirement */
-  return open_adm_file (handle, path, flags, pool, 1, fname);
+  return open_adm_file (handle, path, flags, pool, fname, NULL);
 }
 
 
@@ -553,7 +546,7 @@ svn_wc__close_adm_file (apr_file_t *fp,
                         int sync,
                         apr_pool_t *pool)
 {
-  return close_adm_file (fp, path, sync, pool, 1, fname);
+  return close_adm_file (fp, path, sync, pool, fname, NULL);
 }
 
 
@@ -575,8 +568,8 @@ svn_wc__open_text_base (apr_file_t **handle,
 
   svn_path_remove_component (path, SVN_PATH_LOCAL_STYLE);
 
-  err = open_adm_file (handle, path, flags, pool, 2,
-                       SVN_WC__ADM_TEXT_BASE, last_component->data);
+  err = open_adm_file (handle, path, flags, pool,
+                       SVN_WC__ADM_TEXT_BASE, last_component->data, NULL);
 
   /* Restore caller's path unconditionally. */
   svn_path_add_component (path, last_component,
@@ -598,8 +591,8 @@ svn_wc__close_text_base (apr_file_t *fp,
 
   svn_path_remove_component (path, SVN_PATH_LOCAL_STYLE);
 
-  err = close_adm_file (fp, path, write, pool, 2,
-                        SVN_WC__ADM_TEXT_BASE, last_component->data);
+  err = close_adm_file (fp, path, write, pool,
+                        SVN_WC__ADM_TEXT_BASE, last_component->data, NULL);
   
   /* Restore caller's path unconditionally. */
   svn_path_add_component (path, last_component,
@@ -645,7 +638,7 @@ svn_wc__remove_adm_thing (svn_string_t *path,
   apr_status_t apr_err = 0;
   int components_added;
 
-  components_added = extend_with_adm_name (path, 0, pool, 1, thing);
+  components_added = extend_with_adm_name (path, 0, pool, thing, NULL);
 
   apr_err = apr_remove_file (path->data, pool);
   if (apr_err)
@@ -679,7 +672,7 @@ check_adm_exists (int *exists,
 
   /** Step 1: check that the directory exists. **/
 
-  components_added = extend_with_adm_name (path, 0, pool, 0);
+  components_added = extend_with_adm_name (path, 0, pool, NULL);
   apr_err = apr_opendir (&ignore_me, path->data, pool);
 
   if (apr_err && (apr_err != APR_ENOENT))
@@ -743,7 +736,7 @@ make_empty_adm (svn_string_t *path, apr_pool_t *pool)
   apr_status_t apr_err;
   int components_added;
 
-  components_added = extend_with_adm_name (path, 0, pool, 0);
+  components_added = extend_with_adm_name (path, 0, pool, NULL);
 
   apr_err = apr_make_dir (path->data, APR_OS_DEFAULT, pool);
   if (apr_err)
