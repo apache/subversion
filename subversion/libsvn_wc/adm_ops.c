@@ -537,6 +537,7 @@ svn_wc_remove_from_revision_control (svn_string_t *path,
         {
           /* Check for local mods. */
           svn_boolean_t text_modified_p;
+          svn_path_add_component (full_path, name, svn_path_local_style);
           SVN_ERR (svn_wc_text_modified_p (&text_modified_p, full_path,
                                            subpool));
           if (text_modified_p)  /* don't kill local mods */
@@ -545,7 +546,6 @@ svn_wc_remove_from_revision_control (svn_string_t *path,
           else
             {
               /* Remove the actual working file. */
-              svn_path_add_component (full_path, name, svn_path_local_style);
               apr_err = apr_file_remove (full_path->data, subpool);
               if (apr_err)
                 return svn_error_createf (apr_err, 0, NULL, subpool,
