@@ -118,7 +118,7 @@ for name in doc/programmer/design/svn-design.info   \
             doc/programmer/design/svn-design.html   \
             doc/programmer/design/svn-design.txt    \
             doc/book/book/*.html                    \
-            doc/book/book/*.pdf                     \
+            doc/book/book/*.pdf                     
 do
    cp "$name" "$DISTPATH/$name"
 done
