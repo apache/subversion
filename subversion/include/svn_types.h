@@ -252,19 +252,6 @@ typedef size_t svn_version_t;   /* Would they ever need to be signed? */
 typedef int pdelta_t;           /* todo: for now */
 typedef int vdelta_t;           /* todo: for now */
 
-/* It would have been more consistent to name this `svn_change_action_t', 
-   but the ambiguity is too great -- is "change" a noun or a verb? */
-typedef enum { 
-  svn_delta_action_delete = 1,  /* Delete the file or directory. */
-  svn_delta_action_new,         /* Create a new file or directory. */
-  svn_delta_action_replace,     /* Commit to an existing file or directory. */
-  changes_done                  /* End of change chain -- no more action. */
-} svn_delta_action_t;
-
-typedef enum { 
-  file_type = 1,
-  directory_type
-} svn_change_content_type_t;
 
 
 /* Change content is delta(s) against ancestors.  This is one kind of delta. */
@@ -289,32 +276,39 @@ typedef struct svn_ancestor_t
 
 
 /* A change is an action and some content.  This is the content. */
-typedef struct svn_change_content_t
+typedef struct svn_edit_content_t
 {
-  svn_change_content_type_t type;   /* One of the enumerated values. */
+  typedef enum { 
+    file_type = 1,
+    directory_type
+  } kind;                           /* what kind of object is this? */
   svn_ancestor_t *ancestor;         /* "Hoosier paw?!" */
   svn_pdelta_t *pdelta;             /* Change to property list, or NULL. */
   svn_vdelta_t *vdelta;             /* Change to file contents, or NULL. */
-} svn_change_content_t;
+} svn_edit_content_t;
 
 
 /* A tree delta is a list of changes.  This is a change. */
-typedef struct svn_change_t
+typedef struct svn_edit_t
 {
+  typedef enum { 
+    svn_delta_action_delete = 1,  /* Delete the file or directory. */
+    svn_delta_action_new,         /* Create a new file or directory. */
+    svn_delta_action_replace,     /* Replace an existing file or dir */
+  } kind;
   svn_delta_action_t action;      /* One of the enumerated values. */
-  svn_string_t *new_name;         /* Only for `new' and `replace'. */
-  svn_change_content_t *content;
-  struct svn_change_t *next;      /* Next one in the list, or NULL. */
-} svn_change_t;
+  svn_string_t *name;             /* name to add/del/replace */
+  svn_change_content_t *content;  /* the object we're adding/replacing */
+  struct svn_edit_t *next;        /* Next one in the list, or NULL. */
+} svn_edit_t;
 
 
 /* This is a tree delta. */
 typedef struct svn_delta_t
 {
-  svn_version_t version;       /* Directory to which this delta applies */
-  svn_string_t *source_root;   /* Indicates a particular version of... */
-  svn_string_t *source_dir;    /* ...this, which we're modifying to yield... */
-  svn_string_t *target_dir;    /* ...the directory we're constructing. */
+  svn_string_t *source_root;   /* Directory to which this delta applies */
+  svn_version_t base_version;  /* Base version of this directory */
+  svn_edit_t *edits;           /* list of changes to make */
 } svn_delta_t;
 
 
