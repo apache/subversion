@@ -496,6 +496,12 @@ ensure_auth_dirs (const char *path,
   if (kind == svn_node_none)
     apr_err = apr_dir_make (auth_subdir, APR_OS_DEFAULT, pool);
 
+  auth_subdir = svn_path_join_many (pool, auth_dir,
+                                    SVN_AUTH_CRED_SERVER_SSL, NULL);
+  svn_io_check_path (auth_subdir, &kind, pool);
+  if (kind == svn_node_none)
+    apr_err = apr_dir_make (auth_subdir, APR_OS_DEFAULT, pool);
+
 }
 
 
@@ -795,21 +801,20 @@ svn_config_ensure (const char *config_dir, apr_pool_t *pool)
         "### including HTTP proxy information, and HTTP timeout settings.\n"
         "###\n"
         "### The currently defined server options are:\n"
-        "###   http-proxy-host          Proxy host for HTTP connection\n"
-        "###   http-proxy-port          Port number of proxy host service\n"
-        "###   http-proxy-username      Username for auth to proxy service\n"
-        "###   http-proxy-password      Password for auth to proxy service\n"
-        "###   http-proxy-exceptions    List of sites that do not use proxy\n"
-        "###   http-timeout             Timeout for HTTP requests in seconds\n"
-        "###   http-compression         Whether to compress HTTP requests\n"
-        "###   neon-debug-mask          Debug mask for Neon HTTP library\n"
-        "###   ssl-authority-files      List of files, each of a trusted CAs\n"
-        "###   ssl-trust-default-ca     Trust the system 'default' CAs\n" 
-        "###   ssl-ignore-unknown-ca    Allow untrusted server certificates\n"
-        "###   ssl-ignore-invalid-date  Allow expired/postdated certificates\n"
-        "###   ssl-ignore-host-mismatch Allow certificates for other servers\n"
-        "###   ssl-client-cert-file     PKCS#12 format client certificate file\n"
-        "###   ssl-client-cert-password Client Key password, if needed.\n"
+        "###   http-proxy-host            Proxy host for HTTP connection\n"
+        "###   http-proxy-port            Port number of proxy host service\n"
+        "###   http-proxy-username        Username for auth to proxy service\n"
+        "###   http-proxy-password        Password for auth to proxy service\n"
+        "###   http-proxy-exceptions      List of sites that do not use proxy\n"
+        "###   http-timeout               Timeout for HTTP requests in seconds\n"
+        "###   http-compression           Whether to compress HTTP requests\n"
+        "###   neon-debug-mask            Debug mask for Neon HTTP library\n"
+        "###   ssl-authority-files        List of files, each of a trusted CAs\n"
+        "###   ssl-trust-default-ca       Trust the system 'default' CAs\n" 
+        "###   ssl-ignore-invalid-date    Allow expired/postdated certificates\n"
+        "###   ssl-override-cert-hostname Override the certificate hostname\n"
+        "###   ssl-client-cert-file       PKCS#12 format client certificate file\n"
+        "###   ssl-client-cert-password   Client Key password, if needed.\n"
         "###\n"
         "### HTTP timeouts, if given, are specified in seconds.  A timeout\n"
         "### of 0, i.e. zero, causes a builtin default to be used.\n"
@@ -822,10 +827,6 @@ svn_config_ensure (const char *config_dir, apr_pool_t *pool)
         "### access is matched against the patterns on the right.  If a\n"
         "### match is found, the server info is from the section with the\n"
         "### corresponding name.\n"
-        "\n"
-        "### Note that the ssl-ignore overrides significantly decrease the\n"
-        "### security of the connection, and may allow a third party to\n"
-        "### intercept or even modify the transmitted data.\n"
         "\n"
         "# [groups]\n"
         "# group1 = *.collab.net\n"
@@ -840,9 +841,8 @@ svn_config_ensure (const char *config_dir, apr_pool_t *pool)
         "# http-proxy-password = doubleblah\n"
         "# http-timeout = 60\n"
         "# neon-debug-mask = 130\n"
-        "# ssl-ignore-unknown-ca = true\n"
-        "# ssl-ignore-host-mismatch = true\n"
         "# ssl-ignore-invalid-date = true\n"
+        "# ssl-override-cert-hostname = snakeoil.com\n"
         "\n"
         "### Information for the second group:\n"
         "# [othergroup]\n"

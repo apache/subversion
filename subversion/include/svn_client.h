@@ -151,7 +151,10 @@ svn_client_get_username_provider (svn_auth_provider_object_t **provider,
  *        (@c SVN_AUTH_PARAM_SERVER_GROUP)
  *
  *     - the failure bitmask reported by the ssl certificate validator
- *        (@c SVN_AUTH_PARAM_SSL_SERVER_FAILURES_IN)
+ *        (@c SVN_AUTH_PARAM_SSL_SERVER_FAILURES)
+ *
+ *     - the certificate info (svn_auth_ssl_server_cert_info_t*)
+ *        (@c SVN_AUTH_PARAM_SSL_SERVER_CERT_INFO)
  */
 void 
 svn_client_get_ssl_server_file_provider (svn_auth_provider_object_t **provider,
@@ -208,7 +211,10 @@ svn_client_get_ssl_pw_file_provider (svn_auth_provider_object_t **provider,
  * the @c auth_baton:
  *
  *     - the failure bitmask reported by the ssl certificate validator
- *        (@c SVN_AUTH_PARAM_SSL_SERVER_FAILURES_IN)
+ *        (@c SVN_AUTH_PARAM_SSL_SERVER_FAILURES)
+ *
+ *     - the certificate info (svn_auth_ssl_server_cert_info_t*)
+ *        (@c SVN_AUTH_PARAM_SSL_SERVER_CERT_INFO)
  */
 void svn_client_get_ssl_server_prompt_provider
    (svn_auth_provider_object_t **provider,

@@ -117,21 +117,42 @@ server_ssl_callback(void *userdata,
                     const ne_ssl_certificate *cert)
 {
   svn_ra_session_t *ras = userdata;
+  svn_auth_cred_server_ssl_t *server_creds = NULL;
   void *creds;
-  svn_auth_cred_server_ssl_t *server_creds;
   svn_auth_iterstate_t *state;
   apr_pool_t *pool;
   svn_error_t *error;
-  int failures_allowed = 0;
+  char *ascii_cert = ne_ssl_cert_export(cert);
+  char *issuer_dname = ne_ssl_readable_dname(ne_ssl_cert_issuer(cert));
+  svn_auth_ssl_server_cert_info_t cert_info;
+  char fingerprint[NE_SSL_DIGESTLEN];
+  char valid_from[NE_SSL_VDATELEN], valid_until[NE_SSL_VDATELEN];
 
   svn_auth_set_parameter(ras->callbacks->auth_baton,
-                         SVN_AUTH_PARAM_SSL_SERVER_FAILURES_IN,
+                         SVN_AUTH_PARAM_SSL_SERVER_FAILURES,
                          (void*)failures);
+
+  /* Extract the info from the certificate */
+  cert_info.hostname = ne_ssl_cert_identity(cert);
+  if (ne_ssl_cert_digest(cert, fingerprint) != 0)
+    {
+      strcpy(fingerprint, "<unknown>");
+    }
+  cert_info.fingerprint = fingerprint;
+  ne_ssl_cert_validity(cert, valid_from, valid_until);
+  cert_info.valid_from = valid_from;
+  cert_info.valid_until = valid_until;
+  cert_info.issuer_dname = issuer_dname;
+  cert_info.ascii_cert = ascii_cert;
+
+  svn_auth_set_parameter(ras->callbacks->auth_baton,
+                         SVN_AUTH_PARAM_SSL_SERVER_CERT_INFO,
+                         &cert_info);
 
   apr_pool_create(&pool, ras->pool);
   error = svn_auth_first_credentials(&creds, &state,
                                      SVN_AUTH_CRED_SERVER_SSL,
-                                     "none", /* ### fix? */
+                                     ascii_cert,
                                      ras->callbacks->auth_baton,
                                      pool);
   if (error || !creds)
@@ -141,10 +162,25 @@ server_ssl_callback(void *userdata,
   else
     {
       server_creds = creds;
-      failures_allowed = (server_creds) ? server_creds->failures_allow : 0;
+      if (server_creds->trust_permanantly)
+        {
+          error = svn_auth_save_credentials(state, pool);
+          if (error)
+            {
+              /* It would be nice to show the error to the user
+               * somehow... */
+              svn_error_clear(error);
+            }
+        }
     }
+
+  free(issuer_dname);
+  free(ascii_cert);
+  svn_auth_set_parameter(ras->callbacks->auth_baton,
+                         SVN_AUTH_PARAM_SSL_SERVER_CERT_INFO, NULL);
+  
   apr_pool_destroy(pool);
-  return (failures & ~failures_allowed);
+  return !server_creds;
 }
 
 static int

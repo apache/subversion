@@ -275,10 +275,12 @@ svn_error_t *svn_cl__auth_username_prompt (svn_auth_cred_username_t **cred_p,
 
 /* This implements 'svn_auth_ssl_server_prompt_func_t'. */
 svn_error_t *
-svn_cl__auth_ssl_server_prompt (svn_auth_cred_server_ssl_t **cred_p,
-                                void *baton,
-                                int failures_in,
-                                apr_pool_t *pool);
+svn_cl__auth_ssl_server_prompt (
+  svn_auth_cred_server_ssl_t **cred_p,
+  void *baton,
+  int failures,
+  const svn_auth_ssl_server_cert_info_t *cert_info,
+  apr_pool_t *pool);
 
 
 
