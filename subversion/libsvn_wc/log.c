@@ -1101,7 +1101,10 @@ log_do_committed (struct log_runner *loggy,
     
     err = svn_wc_adm_retrieve (&paccess, loggy->adm_access, pdir, pool);
     if (err && (err->apr_err == SVN_ERR_WC_NOT_LOCKED))
-      SVN_ERR (svn_wc_adm_open (&paccess, NULL, pdir, TRUE, FALSE, pool));
+      {
+        svn_error_clear (err);
+        SVN_ERR (svn_wc_adm_open (&paccess, NULL, pdir, TRUE, FALSE, pool));
+      }
     else if (err)
       return err;
     
