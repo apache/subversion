@@ -28,7 +28,7 @@ done
 #
 echo "Copying libtool helper files..."
 
-libtoolize=$(which glibtoolize libtoolize | head -1)
+libtoolize=$(which glibtoolize libtoolize 2>/dev/null | head -1)
 if [ "x$libtoolize" = "x" ]; then
     echo "libtoolize not found in path"
     exit 1
@@ -111,6 +111,12 @@ if [ -f config.cache ]; then
     rm config.cache
   )
   rm -f configure.$$.tmp
+fi
+
+# Run apr/buildconf if it exists.
+if test -x "apr/buildconf" ; then
+  echo "Creating configuration files for apr." # apr's equivalent of autogen.sh
+  cd apr; ./buildconf
 fi
 
 echo ""

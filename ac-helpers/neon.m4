@@ -40,7 +40,7 @@ Please either remove that subdir or don't use the --with-neon option.])
   [
     AC_MSG_CHECKING([neon library version])
     if test -d $abs_srcdir/neon ; then
-      NEON_VERSION=`ac-helpers/get-neon-ver.sh neon`
+      NEON_VERSION=`$abs_srcdir/ac-helpers/get-neon-ver.sh $abs_srcdir/neon`
       AC_MSG_RESULT([$NEON_VERSION])
       if test "$NEON_WANTED" != "$NEON_VERSION"; then
         echo "You have a neon/ subdir containing version $NEON_VERSION,"
@@ -50,22 +50,22 @@ Please either remove that subdir or don't use the --with-neon option.])
         echo "Using neon found in source directory."
         SVN_NEON_INCLUDES=-'I$(abs_srcdir)/neon/src'
         NEON_LIBS="\$(abs_builddir)/neon/src/libneon.la"
-dnl Configure neon --------------------------
 
-        if test "$enable_subdir_config" = "yes"; then
-          # The arguments passed to this configure script are passed down to
-          # neon's configure script, but, since neon defaults to *not* building
-          # shared libs, and we default to building shared libs, we have to 
-          # explicitly pass down an --{enable,disable}-shared argument, to make
-          # sure neon does the same as we do.
-          if test "$enable_shared" = "yes"; then
-            args="--enable-shared"
-          else
-            args="--disable-shared"
-          fi
+dnl Configure neon --------------------------
+        # The arguments passed to this configure script are passed down to
+        # neon's configure script, but, since neon defaults to *not* building
+        # shared libs, and we default to building shared libs, we have to 
+        # explicitly pass down an --{enable,disable}-shared argument, to make
+        # sure neon does the same as we do.
+        if test "$enable_shared" = "yes"; then
+          args="--enable-shared"
+        else
+          args="--disable-shared"
+        fi
   
-          SVN_SUBDIR_CONFIG(neon, $args --with-expat="$abs_srcdir/expat-lite/libexpat.la")
-  
+        SVN_SUBDIR_CONFIG(neon, $args --with-expat="$abs_srcdir/expat-lite/libexpat.la")
+
+        if test -f "$abs_builddir/neon/neon-config" ; then
           AC_MSG_CHECKING([for any extra libraries neon needs])
           # this is not perfect since it will pick up extra -L flags too,
           # but that shouldn't do any real damage.
@@ -76,6 +76,7 @@ dnl Configure neon --------------------------
           # this will include -DNEON_SSL if neon was built with SSL support
           CFLAGS="$CFLAGS `$SHELL $abs_builddir/neon/neon-config --cflags | sed -e "s/-I[^ ]*//g"`"
         fi
+    
         NEON_SUBDIR=neon
       fi
     else
