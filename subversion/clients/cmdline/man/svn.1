@@ -1,0 +1,229 @@
+.\" You can view this file with:
+.\" nroff -man [filename]
+.\"
+.TH svn 1 "9 Oct 2001" "svn M4" "Subversion Command Line Tool"
+.SH NAME
+svn \- Subversion command line tool
+.SH SYNOPSIS
+.TP
+\fBsvn\fP \fIcommand\fP [\fIoptions\fP] [\fIargs\fP]
+.SH NOTE
+This manpage should cover all the features of the \fBsvn\fP command line
+tool. This is still a very early version. It lacks documentation, it includes
+not yet support features and it is generally still in a bad shape.  Beware.
+.SH OVERVIEW
+Subversion is a version control system, which allows you to keep old versions
+of files (usually source code), keep a log of who, when, and why changes
+occurred, etc., like CVS, RCS or SCCS.  \fBSubversion\fP keeps a single copy
+of the master sources.  This copy is called the source ``repository''; it
+contains all the information to permit extracting previous software releases
+at any time.
+
+More about \fBSubversion\fP as a general version control system is documented
+elsewhere.
+.SH OPTIONS
+.TP
+\fB-?\fP or \fB-h\fP or \fB-H\fP or \fB--help\fP
+Show help text.
+.TP
+\fB-V\fP or \fB--verbose\fP [\fBquiet|progress|verbose|trace\fP]
+Determines the level of spewage that the client gives (progress is the
+default, --verbose without argument defaults to verbose)
+.TP
+\fB-D\fP or \fB--date\fP \fBDATESPEC\fP
+Specify which date to operate on.
+.TP
+\fB-r\fP or \fB--revision\fP \fBREV\fP
+Specify repository revision to operate on. Separate multiple revisons with `,'.
+.TP
+\fB-v\fP or \fB--version\fP
+The subversion and svn version is printed.
+.TP
+\fB-l\fP or \fB--local-dir\fP
+Local; run only in current working directory.
+.TP
+\fB--recursive\fP
+Operate recursively (default).
+.TP
+\fB-d\fP or \fB--destination\fP \fBDEST\dP
+Target directory to operate on.
+.TP
+\fB-f\fP or \fB--force\fP
+Force. Don't ask any questions, I know what I'm doing.
+.TP
+\fB-m\fP or \fB--message\fP \fBMSG\fP
+Specify log message
+.TP
+\fB-F\fP or \fB--msg-file\fP \fBFILE\fP
+Read the log message from \fBFILE\fP.
+.TP
+\fB-p\fP or \fB--stdout\fP
+Check out/update/whatever files to standard output 
+.TP
+\fB-n\fP or \fB--dry-run\fP
+Don't actually do it, only show what would be done if the given command did
+run.
+.TP
+\fB--no-rc\fP
+Suppress reading of .svnrc.
+.TP
+\fB-e\fP or \fB--editor\fP \fBEDITOR\fP
+Edit messages with EDITOR.
+.TP
+\fB--read-only\fP
+Make new working files read-only.
+.TP
+\fB--writable\fP
+Make new working files read-write (default)
+.TP
+\fB-I\fP or \fB--ignore GLOB\fP
+Ignore entities whose names match GLOB
+.TP
+\fB-K\fP or \fB--keywords GLOB\fB
+Expand keywords in files whose names match GLOB.
+.TP
+\fB-L\fP or \fB --line-conversion GLOB\fP
+Do line-end conversion for files matching GLOB.
+.TP
+\fB--\fP
+End of option processing
+.TP
+\fB-q\fP or \fB--quiet\fP
+alias for --verbose=quiet
+.TP
+\fB-T\fP or \fB--text-defaults GLOB\fP
+alias for '-L GLOB -K GLOB'
+.SH COMMANDS
+svn has many options. Remember to run
+.B "svn help"
+to display a list of all commands, and to request a help text for a particular
+command, run
+\fBsvn help command\fP.
+.TP
+\fBadd\fP \fIfile\fP\|.\|.\|.
+(Aliases: ad, new) Use this command to enroll new files in \fBsvn\fP records
+of your working directory.  The files will be added to the repository the next
+time you run "svn commit". Note: You should use the "svn import" command to
+bootstrap new sources into the source repository. "svn add" is only used for
+adding new files to an already checked-out module.
+
+\fBexample:\fP svn add foo.c bar.h baz/ bat/*.m
+.TP
+\fBcheckout\fP \fIrepository\fP\|.\|.\|.
+(Alias: co)
+A necessary preliminary for most \fBsvn\fP work: creates your private copy of
+the source for \fIrepository\fP (the repository must be identified with a valid
+URL string). You can work with this copy without interfering with others'
+work.  At least one subdirectory level is always created.
+
+-d/--destination can be used to specify target dir, if the filepart of the URL
+is not what you want.
+
+\fBexample:\fP svn checkout http://site.com/repo/svn -d targetdir
+.TP
+\fBcleanup\fP \fItarget\fP\|.\|.\|.
+Recursively clean up the working copy, removing locks, resuming
+unfinished operations, etc.
+.TP
+\fBcommit\fP \fIfile\fP\|.\|.\|.
+(Alias: ci)
+Use this command when you wish to ``post'' your changes to other
+developers, by incorporating them into the source repository.
+
+-m/--message can be used to specify commit message on the command line.
+
+\fBexample:\fP svn commit foo.c bar.h baz/ bat/*.m
+.TP
+\fBcopy\fP \fIsource destination\fP
+(Alias: cp)
+Where \fBsource\fP and \fBdestination\fP can be directories or files. `copy'
+is used where you want to make a copy of \fBsource\fP so that
+\fBdestination\fP will share ancestry of \fBsource\fP. Unless
+\fBdestination\fP is a directory, \fBdestination\fP must not exist (In the
+spirit of unix cp, \fBsource\fP will be placed inside of \fBdestination\fP if
+\fBdestination\fP is a directory).
+
+\fBexample:\fP If you do this (MAINTAIN ANCESTRY)
+
+  $ svn copy foo.c bar.c
+
+Then foo.c and bar.c will share a common ancestor in the repository.
+
+\fBexample:\fP But, if you do this (NO ANCESTRY)
+
+  $ cp foo.c bar.c 
+  $ svn add bar.c
+  $ svn ci -m "Initial Import"
+
+Then you will have the identical file in your working copy, but bar.c will
+have no revision history beyond the initial import that you just did.
+.TP
+\fBdelete\fP \fIfile|dir\fP\|.\|.\|.
+(Alias: del, remove, rm)
+Mark the given files/directories for deletion upon commit. When you ocmmit,
+the entries will be marked as deleted in the repository and deleted from your
+working copy.
+
+\fBexample:\fP cvs delete foo.c bar.h
+.TP
+\fBdiff\fP \fIfile\fP\|.\|.\|.
+Display local file changes as contextual diffs.
+
+\fBexample:\fP svn diff README
+.TP
+\fBhelp\fP [\fIcommand\fP]
+(Alias: ?, h)
+Without a given command argument, this prints generic help. If a specific
+command is entered, a short description on how to use that command is
+presented.
+.TP
+\fBimport\fP \fIRepository-URL\fP [\fIPath\fP] [\fINew-Repository-Entry\fP]
+Import a file or tree into the repository.
+.TP
+\fBlog\fP [\fIfile|dir\fP]
+Show log messages (and affected entities) for commits in which any of the
+entities in question changed.  If none were specified, then recursive
+inclusion is the default.  The set of messages can be further restricted by a
+date or revision range specification (using -d or -r).
+.TP
+\fBpropdel\fP \fIname\fP [\fItargets\fP]
+(Alias: pdel)
+Remove property \fIname\fP on files and directories.
+.TP
+\fBpropget\fP
+(Alias: pget, pg)
+Not yet written. Find out, fill in, submit.
+.TP
+\fBproplist\fP
+(Alias: plist, pl)
+Not yet written. Find out, fill in, submit.
+.TP
+\fBpropset\fP \fIname\fP [\fIvalue\fP | \fI--valfile file\fP ] [\fItargets\fP]
+(Alias: pset, ps)
+Set property \fIname\fP to \fIvalue\fP on files and directories.
+.TP
+\fBrdiff\fP \fIURL1 URL2\fP
+Exactly the same as diff, but takes 2 URLs and requires no working copy.
+
+\fBexample:\fP svn rdiff http://svn.tigris.org/one http://svn.tigris.org/two
+.TP
+\fBrevert\fP [\fIfile\fP\|.\|.\|.]
+Not yet written. Find out, fill in, submit.
+.TP
+\fBstatus\fP [\fItargets\fP]
+(Alias: stat, st)
+Print the status of working copy files and directories.
+
+Options available for status include: -u/--show-updates, -v/--verbose and
+-n/--nonrecursive.
+.TP
+\fBupdate\fP [\fIfile\fP\|.\|.\|.]
+(Alias: up)
+Execute this command from \fIwithin\fP your private source directory when you
+wish to update your copies of source files from changes that other developers
+have made to the source in the repository. Without a given argument, this
+command will update everything, recursively.
+
+\fBexample:\fP svn update foo.c bar.h baz/ bat/*.m 
+.SH WWW
+http://subversion.tigris.org
