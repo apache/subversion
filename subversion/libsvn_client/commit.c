@@ -35,7 +35,11 @@
 /*** Public Interface. ***/
 
 svn_error_t *
-svn_client_commit (svn_string_t *path,
+svn_client_commit (const svn_delta_edit_fns_t *before_editor,
+                   void *before_edit_baton,
+                   const svn_delta_edit_fns_t *after_editor,
+                   void *after_edit_baton,                   
+                   svn_string_t *path,
                    svn_string_t *xml_dst,
                    svn_revnum_t revision,  /* this param is temporary */
                    apr_pool_t *pool)
@@ -56,6 +60,10 @@ svn_client_commit (svn_string_t *path,
     return svn_error_createf (apr_err, 0, NULL, pool,
                               "error opening %s", xml_dst->data);
 
+  /* Right now, we're committing to Greg Hudson's XML-output editor.
+     This needs to be changed; instead, it needs to get the
+     appropriate commit editor from the appropriate RA plugin
+     module. */
   err = svn_delta_get_xml_editor (svn_stream_from_aprfile (dst, pool),
                                   &editor,
                                   &edit_baton,
@@ -63,8 +71,19 @@ svn_client_commit (svn_string_t *path,
   if (err)
     return err;
 
-  if (! path)
-    path = svn_string_create (".", pool);
+  /* Compose the commit-editor with any other editors passed in */
+  svn_delta_wrap_editor (&editor,
+                         &edit_baton,
+                         before_editor,
+                         before_edit_baton,
+                         editor,
+                         edit_baton,
+                         after_editor,
+                         after_edit_baton,
+                         pool);
+
+
+  /* Drive the editor, reporting local changes. */
   err = svn_wc_crawl_local_mods (&targets,
                                  path,
                                  editor,

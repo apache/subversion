@@ -79,7 +79,11 @@ svn_client_delete (svn_string_t *file,
 
 
 svn_error_t *
-svn_client_commit (svn_string_t *path,
+svn_client_commit (const svn_delta_edit_fns_t *before_editor,
+                   void *before_edit_baton,
+                   const svn_delta_edit_fns_t *after_editor,
+                   void *after_edit_baton,                   
+                   svn_string_t *path,
                    svn_string_t *xml_dst,
                    svn_revnum_t revision,  /* this param is temporary */
                    apr_pool_t *pool);

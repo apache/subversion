@@ -100,9 +100,8 @@ check_status 11
 
 ### Try to commit;  the conflict should abort due to conflicts.
 echo "Attempting to commit while conflicts are present:"
-${SVN_PROG} commit --target-dir ${TEST_DIR_1} \
-                   --xml-file ${COMMIT_RESULTFILE_NAME}-1.xml \
-                   --revision 22
+${SVN_PROG} commit  --xml-file ${COMMIT_RESULTFILE_NAME}-1.xml \
+                   --revision 22 ${TEST_DIR_1}
 # (no check_status here, because we *expect* the commit to fail!)
 
 
@@ -115,9 +114,8 @@ check_status 12
 
 ### Try to commit again;  the conflict should abort due to text conflict.
 echo "Attempting to commit while conflicts are present:"
-${SVN_PROG} commit --target-dir ${TEST_DIR_1} \
-                   --xml-file ${COMMIT_RESULTFILE_NAME}-1.xml \
-                   --revision 23
+${SVN_PROG} commit --xml-file ${COMMIT_RESULTFILE_NAME}-1.xml \
+                   --revision 23 ${TEST_DIR_1}
 # (no check_status here, because we *expect* the commit to fail!)
 
 
@@ -133,9 +131,8 @@ check_status 14
 
 ### Try to commit;  the conflict should now succeed.
 echo "Attempting to commit again, with conflicts removed."
-${SVN_PROG} commit --target-dir ${TEST_DIR_1} \
-                   --xml-file ${COMMIT_RESULTFILE_NAME}-1.xml \
-                   --revision 24
+${SVN_PROG} commit --xml-file ${COMMIT_RESULTFILE_NAME}-1.xml \
+                   --revision 24 ${TEST_DIR_1}
 check_status 15
 
 ### Examine status; everything should be up-to-date.
