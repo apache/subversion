@@ -607,7 +607,7 @@ def status_add_deleted_directory(sbox):
   
   A_path = os.path.join(wc_dir, 'A')
   svntest.actions.run_and_verify_svn(None, None, [], 'rm', A_path)
-  shutil.rmtree(A_path)
+  svntest.main.safe_rmtree(A_path)
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'ci', '-m', 'log msg', wc_dir)
   svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', A_path)
