@@ -54,13 +54,13 @@ _svn()
 	mOpts="-m --message -F --file --message-encoding"
 	rOpts="-r --revision -D --date"
 	qOpts="-q --quiet"
-	nOpts="-n --nonrecursive"
+	nOpts="-N --nonrecursive"
 
 	# possible options for the command
 	cmdOpts=
 	case ${COMP_WORDS[1]} in
 	add)
-		cmdOpts="--targets --recursive"
+		cmdOpts="--targets -R --recursive"
 		;;
 	checkout|co)
 		cmdOpts="$nOpts $rOpts $pOpts $qOpts"
@@ -86,7 +86,7 @@ _svn()
 		cmdOpts="$mOpts $qOpts $nOpts $pOpts"
 		;; 
 	info)
-		cmdOpts="--targets --recursive"
+		cmdOpts="--targets -R --recursive"
 		;;
 	log)
 		cmdOpts="$rOpts -v --verbose --strict --targets --xml $pOpts"
@@ -101,25 +101,25 @@ _svn()
 		cmdOpts="$mOpts $rOpts $pOpts --force"
 		;;
 	propdel|pdel)
-		cmdOpts="$qOpts --recursive"
+		cmdOpts="$qOpts -R --recursive"
 		;;
 	propedit|pedit)
-		cmdOpts="$qOpts --recursive"
+		cmdOpts="$qOpts -R --recursive"
 		;;
 	propget|pget|pg)
-		cmdOpts="--recursive"
+		cmdOpts="-R --recursive"
 		;;
 	proplist|plist|pl)
-		cmdOpts="-v --verbose --recursive"
+		cmdOpts="-v --verbose -R --recursive"
 		;;
 	propset|pset|ps)
-		cmdOpts="$mOpts --targets --recursive"
+		cmdOpts="$mOpts --targets -R --recursive"
 		;;
 	revert)
-		cmdOpts="--targets --recursive"
+		cmdOpts="--targets -R --recursive"
 		;;
 	resolve)
-		cmdOpts="--targets --recursive"
+		cmdOpts="--targets -R --recursive"
 		;;
 	status|stat|st)
 		cmdOpts="-u --show-updates -v --verbose $nOpts $qOpts $pOpts"
@@ -144,8 +144,10 @@ _svn()
 		case $opt in
 		-v)             cmdOpts=${cmdOpts/ --verbose / } ;;
 		--verbose)      cmdOpts=${cmdOpts/ -v / } ;;
-		-n)             cmdOpts=${cmdOpts/ --nonrecursive / } ;;
-		--nonrecursive) cmdOpts=${cmdOpts/ -n / } ;;
+		-N)             cmdOpts=${cmdOpts/ --nonrecursive / } ;;
+		--nonrecursive) cmdOpts=${cmdOpts/ -N / } ;;
+		-R)             cmdOpts=${cmdOpts/ --recursive / } ;;
+		--recursive)    cmdOpts=${cmdOpts/ -R / } ;;
 		-x)             cmdOpts=${cmdOpts/ --extensions / } ;;
 		--extensions)   cmdOpts=${cmdOpts/ -x / } ;;
 		-q)             cmdOpts=${cmdOpts/ --quiet / } ;;
