@@ -26,15 +26,17 @@
  
  # Library needed by all subversion clients
  [libsvn_client]
-@@ -155,11 +155,11 @@
+@@ -155,12 +155,12 @@
  install = apache-mod
  
  # Simple XML-parsing lib
 -[libexpat]
 -type = lib
+-install = base-lib
 -path = expat-lite
 +#[libexpat]
 +#type = lib
++#install = base-lib
 +#path = expat-lite
  # there are some .c files included by others, so *.c isn't appropriate
 -sources = hashtable.c xmlparse.c xmlrole.c xmltok.c
