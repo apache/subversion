@@ -51,3 +51,9 @@ Candidate changes:
     http://cve.mitre.org/cgi-bin/cvename.cgi?name=CAN-2004-0179
     Votes:
       +1: blair, dlr
+
+  * r9551
+    Fix RPM build for Fedora and WBEL3/RHEL3.
+    Justification: This fixes the RPM build to work without patching.
+    Votes:
+      +1: david
