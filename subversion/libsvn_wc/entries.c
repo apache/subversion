@@ -848,7 +848,10 @@ svn_wc_entries_read (apr_hash_t **entries,
   new_entries = svn_wc__adm_access_entries (adm_access, show_hidden, pool);
   if (! new_entries)
     {
-      SVN_ERR (read_entries (adm_access, show_hidden, pool));
+      /* Ask for the deleted entries because most operations request them
+         at some stage, getting them now avoids a second file parse. */
+      SVN_ERR (read_entries (adm_access, TRUE, pool));
+
       new_entries = svn_wc__adm_access_entries (adm_access, show_hidden, pool);
     }
 
