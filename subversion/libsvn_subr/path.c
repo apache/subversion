@@ -70,7 +70,7 @@ svn_path_local_style (const char *path, apr_pool_t *pool)
 
   /* Internally, Subversion represents the current directory with the
      empty string.  But users like to see "." . */
-  if (path[0] == '\0')
+  if (SVN_PATH_IS_EMPTY(path))
     return ".";
 
   if ('/' != SVN_PATH_LOCAL_SEPARATOR)
