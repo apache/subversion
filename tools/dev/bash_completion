@@ -86,7 +86,7 @@ _svn()
 		cmdOpts="$mOpts $qOpts $nOpts $pOpts"
 		;; 
 	info)
-		cmdOpts="--targets"
+		cmdOpts="--targets --recursive"
 		;;
 	log)
 		cmdOpts="$rOpts -v --verbose --strict --targets --xml $pOpts"
@@ -119,7 +119,7 @@ _svn()
 		cmdOpts="--targets --recursive"
 		;;
 	resolve)
-		cmdOpts="--targets"
+		cmdOpts="--targets --recursive"
 		;;
 	status|stat|st)
 		cmdOpts="-u --show-updates -v --verbose $nOpts $qOpts $pOpts"
