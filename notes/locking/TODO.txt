@@ -16,8 +16,6 @@ MUST HAVE
 
 * fix svn_fs_access_t handling in svnserve (lundblad?)
    
-* automatic bumping of fs format file (kfogel)
-
 * autoversioning:
 
     - fix issue 2161 (sussman)
