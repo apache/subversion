@@ -1,0 +1,15 @@
+--- apr/Makefile.in.orig	Wed Jan 16 18:56:21 2002
++++ apr/Makefile.in	Wed Jan 16 18:53:02 2002
+@@ -71,8 +71,10 @@
+ 	if [ ! -d $(bindir) ]; then \
+ 	    $(top_srcdir)/build/mkdir.sh $(bindir); \
+ 	fi;
+-	$(LIBTOOL) --mode=install cp apr-config $(bindir)
+-	chmod 755 $(bindir)/apr-config
++	# don't install this because apache2 does now, and an apr port will 
++	# later, and we don't want to spam their binaries.
++	#$(LIBTOOL) --mode=install cp apr-config $(bindir)
++	#chmod 755 $(bindir)/apr-config
+ 	@if [ $(INSTALL_SUBDIRS) != "none" ]; then \
+             for i in $(INSTALL_SUBDIRS); do \
+ 	        ( cd $$i ; $(MAKE) install ); \

@@ -5,9 +5,9 @@
 # $FreeBSD$
 
 PORTNAME=	subversion
-PORTVERSION=	r727
+PORTVERSION=	r909
 CATEGORIES=	devel
-MASTER_SITES=	http://www.tigris.org/files/15/38/
+MASTER_SITES=	http://www.tigris.org/files/15/63/
 
 MAINTAINER=	rooneg@electricjellyfish.net
 
@@ -22,7 +22,7 @@ INSTALLS_SHLIBS=	yes
 LDCONFIG_DIRS=	%%PREFIX%%/lib/subversion
 MAN1=		svn.1
 
-WRKSRC=	${WRKDIR}/subversion-r727
+WRKSRC=	${WRKDIR}/subversion-r909
 GNU_CONFIGURE=	yes
 CONFIGURE_ARGS= --enable-maintainer-mode --disable-shared \
 		--libdir=${PREFIX}/lib/subversion         \

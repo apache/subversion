@@ -1,4 +1,3 @@
-bin/apr-config
 bin/svn
 bin/svnlook
 bin/svnadmin
@@ -36,10 +35,10 @@ include/subversion/apr_errno.h
 include/subversion/apr_dso.h
 include/subversion/apr_compat.h
 include/subversion/apr_xlate.h
-include/subversion/svn_hash.h
 include/subversion/svn_quoprint.h
 include/subversion/svn_test.h
 include/subversion/svn_client.h
+include/subversion/svn_dav.h
 include/subversion/svn_sorts.h
 include/subversion/svn_wc.h
 include/subversion/svn_fs.h
@@ -58,6 +57,7 @@ include/subversion/svn_error.h
 include/subversion/svn_repos.h
 include/subversion/svn_version.h
 include/subversion/svn_base64.h
+include/subversion/svn_hash.h
 info/svn-manual.info
 info/svn_for_cvs_users.info
 info/svn-design.info
