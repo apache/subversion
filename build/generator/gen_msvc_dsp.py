@@ -132,19 +132,7 @@ class Generator(gen_win.WinGeneratorBase):
 
     targets = [ ]
 
-    # Generate .dsp file names for the targets: replace dashes with
-    # underscores and replace *-test with test_* (so that the test
-    # programs are visually separare from the rest of the projects)
-    for target in install_targets:
-      name = target.name
-      pos = string.find(name, '-test')
-      if pos >= 0:
-        dsp_name = 'test_' + string.replace(name[:pos], '-', '_')
-      elif isinstance(target, gen_base.SWIGLibrary):
-        dsp_name = 'swig_' + string.replace(name, '-', '_')
-      else:
-        dsp_name = string.replace(name, '-', '_')
-      target.dsp_name = dsp_name
+    self.gen_proj_names(install_targets)
 
     # Traverse the targets and generate the project files
     for target in install_targets:
@@ -163,62 +151,20 @@ class Generator(gen_win.WinGeneratorBase):
         fname = project_path + '.dsp'
       else:
         fname = os.path.join(self.projfilesdir,
-                             "%s_msvc.dsp" % target.dsp_name)
+                             "%s_msvc.dsp" % target.proj_name)
         depth = string.count(self.projfilesdir, os.sep) + 1
         self.write_project(target, fname, string.join(['..']*depth, '\\'))
 
       if '-' in fname:
         fname = '"%s"' % fname
-
-      # For MSVC we need to hack around Apache modules &
-      # libsvn_ra because dependencies implies linking
-      # and there is no way around that
-      if name == '__CONFIG__':
-        depends = []
-      else:
-        depends = [self.targets['__CONFIG__']]
-
-      if target.is_apache_mod:
-        if target.name == 'mod_authz_svn':
-          depends.append(self.targets['mod_dav_svn'])
-        pass
-      elif name == 'depdelta':
-        depends.append(self.targets['libsvn_delta'])
-      elif name == 'libsvn_wc':
-        depends.append(self.targets['depdelta'])
-      elif name == 'depsubr':
-        depends.append(self.targets['libsvn_subr'])
-      elif name == 'libsvn_ra_svn':
-        depends.append(self.targets['depsubr'])
-      elif name == 'libsvn_ra_dav':
-        depends.append(self.targets['depsubr'])
-        depends.append(self.targets['neon'])
-      elif isinstance(target, gen_base.Target):
-        if isinstance(target, gen_base.TargetExe):
-          deps = { }
-          for obj in self.get_win_depends(target, 0):
-            deps[obj] = None
-          for obj in self.get_win_depends(target, 2):
-            if isinstance(obj, gen_base.TargetLib):
-              deps[obj] = None
-          deps = deps.keys()
-          deps.sort()
-          depends.extend(deps)
-        else:
-          depends.extend(self.get_unique_win_depends(target))
-      elif isinstance(target, gen_base.SWIGLibrary):
-        for lib in self.graph.get_sources(gen_base.DT_LINK, target):
-          if hasattr(lib, 'dsp_name'):
-            depends.append(lib)
-            depends.extend(self.get_win_depends(lib, 0))          
-      else:
-        assert 0
+        
+      depends = self.adjust_win_depends(target, name)
 
       dep_names = [ ]
       for dep in depends:
-        dep_names.append(dep.dsp_name)
+        dep_names.append(dep.proj_name)
 
-      targets.append(_item(name=target.dsp_name,
+      targets.append(_item(name=target.proj_name,
                            dsp=string.replace(fname, os.sep, '\\'),
                            depends=dep_names))
 

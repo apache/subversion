@@ -1,23 +1,23 @@
-# Microsoft Developer Studio Project File - Name="[target.dsp_name]" - Package Owner=<4>
+# Microsoft Developer Studio Project File - Name="[target.proj_name]" - Package Owner=<4>
 # Microsoft Developer Studio Generated Build File, Format Version 6.00
 # ** DO NOT EDIT **
 
 # TARGTYPE "[target_type]" [target_number]
 
-CFG=[target.dsp_name] - [default_platform] [default_config]
+CFG=[target.proj_name] - [default_platform] [default_config]
 !MESSAGE This is not a valid makefile. To build this project using NMAKE,
 !MESSAGE use the Export Makefile command and run
 !MESSAGE 
-!MESSAGE NMAKE /f "[target.dsp_name]_msvc.mak".
+!MESSAGE NMAKE /f "[target.proj_name]_msvc.mak".
 !MESSAGE 
 !MESSAGE You can specify a configuration when running NMAKE
 !MESSAGE by defining the macro CFG on the command line. For example:
 !MESSAGE 
-!MESSAGE NMAKE /f "[target.dsp_name]_msvc.mak" CFG="[target.dsp_name] - [default_platform] [default_config]"
+!MESSAGE NMAKE /f "[target.proj_name]_msvc.mak" CFG="[target.proj_name] - [default_platform] [default_config]"
 !MESSAGE 
 !MESSAGE Possible choices for configuration are:
 !MESSAGE 
-[for platforms][for configs]!MESSAGE "[target.dsp_name] - [platforms] [configs.name]" (based on "[target_type]")
+[for platforms][for configs]!MESSAGE "[target.proj_name] - [platforms] [configs.name]" (based on "[target_type]")
 [end][end]!MESSAGE 
 
 # Begin Project
@@ -27,7 +27,7 @@ CFG=[target.dsp_name] - [default_platform] [default_config]
 CPP=cl.exe
 RSC=rc.exe
 [for platforms][for configs]
-![if-index platforms first][if-index configs first][else]ELSE[end][else]ELSE[end]IF  "$(CFG)" == "[target.dsp_name] - [platforms] [configs.name]"
+![if-index platforms first][if-index configs first][else]ELSE[end][else]ELSE[end]IF  "$(CFG)" == "[target.proj_name] - [platforms] [configs.name]"
 
 # PROP Use_MFC 0
 # PROP Use_Debug_Libraries [is configs.name "Debug"]1[else]0[end]
@@ -52,12 +52,12 @@ LINK32=link.exe
 
 # Begin Target
 
-[for platforms][for configs]# Name "[target.dsp_name] - [platforms] [configs.name]"
+[for platforms][for configs]# Name "[target.proj_name] - [platforms] [configs.name]"
 [end][end][for sources]# Begin Source File
 
 SOURCE=[sources.path][if-any sources.reldir]
 [for platforms][for configs]
-![if-index platforms first][if-index configs first][else]ELSE[end][else]ELSE[end]IF  "$(CFG)" == "[target.dsp_name] - [platforms] [configs.name]"
+![if-index platforms first][if-index configs first][else]ELSE[end][else]ELSE[end]IF  "$(CFG)" == "[target.proj_name] - [platforms] [configs.name]"
 
 # PROP Intermediate_Dir "[rootpath]\[configs.name]\[target.path]\[sources.reldir]"
 [end][end]

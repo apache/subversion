@@ -2,7 +2,7 @@
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="7.00"
-	Name="[target.name]">
+	Name="[target.proj_name]">
 	<Platforms>
 [for platforms]		<Platform
 			Name="[platforms]"/>
@@ -10,10 +10,10 @@
 	<Configurations>
 [for platforms][for configs]		<Configuration
 			Name="[configs.name]|[platforms]"
-			OutputDirectory="$(SolutionDir)\[configs.name]"
-			IntermediateDirectory="[configs.name]"
+			OutputDirectory="..\..\..\[configs.name]\[target.path]"
+			IntermediateDirectory="..\..\..\[configs.name]\[target.path][if-any target.shared_dir]\[target.name][end]"
 			ConfigurationType="[target_type]"[is configs.name "Release"]
-			WholeProgramOptimization="TRUE"[end]>
+			WholeProgramOptimization="FALSE"[end]>
 			<Tool
 				Name="VCCLCompilerTool"
 [is configs.name "Debug"]				Optimization="0"
@@ -25,7 +25,7 @@
 				FavorSizeOrSpeed="1"
 				OmitFramePointers="TRUE"
 [end]				AdditionalIncludeDirectories="[for includes][includes][if-index includes last][else];[end][end]"
-				PreprocessorDefinitions="[for configs.defines][configs.defines][if-index configs.defines last][else];[end][end]"
+				PreprocessorDefinitions="[if-any instrument_apr_pools]APR_POOL_DEBUG=[instrument_apr_pools];[end][for configs.defines][configs.defines][if-index configs.defines last][else];[end][end]"
 [is configs.name "Debug"]				MinimalRebuild="TRUE"
 				RuntimeLibrary="3"
 				BufferSecurityCheck="TRUE"
@@ -34,30 +34,34 @@
 				RuntimeLibrary="2"
 				BufferSecurityCheck="FALSE"
 [end]				WarningLevel="3"
-				Detect64BitPortabilityProblems="TRUE"
-[is configs.name "Debug"]				DebugInformationFormat="4"
-[end]				CompileAsManaged="0"
+				Detect64BitPortabilityProblems="FALSE"
+				DebugInformationFormat="3"
+				CompileAsManaged="0"
 				CompileAs="0"[if-any is_exe][is configs.name "Release"]
 				OptimizeForWindowsApplication="TRUE"[end][end]/>
 			<Tool
 				Name="VCCustomBuildTool"/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="[for configs.libs][configs.libs][if-index configs.libs last][else] [end][end]"
-[is target_type "4"][else]				OutputFile="$(OutDir)\$(ProjectName).[if-any is_exe]exe[else]dll[end]"
+[is target_type "1"][if-any instrument_purify_quantify]				AdditionalOptions="/fixed:no"[end][end]
+				AdditionalDependencies="[for configs.libs][configs.libs] [end]"
+[is target_type "4"][else]				OutputFile="$(OutDir)\[target.output_name]"
 [end][is configs.name "Debug"]				LinkIncremental="2"
 [else]				LinkIncremental="1"
-[end]				AdditionalLibraryDirectories="[rootpath]\db4-win32\lib"
-[is configs.name "Debug"]				GenerateDebugInformation="TRUE"
-[else]				GenerateDebugInformation="FALSE"
-[end]				ProgramDatabaseFile="$(OutDir)\$(ProjectName).pdb"[is configs.name "Debug"]
+[end]				AdditionalLibraryDirectories="..\..\..\db4-win32\lib;[for configs.libdirs][configs.libdirs];[end]"
+				TargetMachine="1"
+				IgnoreDefaultLibraryNames="libc.lib"
+				GenerateDebugInformation="TRUE"
+				ProgramDatabaseFile="$(OutDir)\$(ProjectName).pdb"[is configs.name "Debug"]
 				OptimizeReferences="0"[else]
 				OptimizeReferences="2"
 				EnableCOMDATFolding="2"[end][is target_type "2"]
-				ImportLibrary="$(OutDir)\$(ProjectName).lib"[end]/>
-[is target_type "4"]			<Tool
+				ImportLibrary="$(OutDir)\$(ProjectName).lib"[end]
+[is target_type "1"]				Subsystem="1"[end]/>
+[is target_type "4"]
+			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="$(OutDir)\$(ProjectName).lib"/>
+				OutputFile="$(OutDir)\[target.output_name]"/>
 [end]			<Tool
 				Name="VCMIDLTool"/>
 			<Tool
@@ -74,11 +78,39 @@
 				Name="VCWebDeploymentTool"/>
 		</Configuration>
 [end][end]	</Configurations>
-	<Files>
+	<Files>[if-any target.desc]
+		<File
+			RelativePath="..\svn.rc">[for configs]
+			<FileConfiguration
+				Name="[configs.name]|Win32">
+				<Tool
+					Name="VCResourceCompilerTool"
+					PreprocessorDefinitions="SVN_FILE_NAME=[target.output_name];SVN_FILE_DESCRIPTION=[target.desc];[is configs.name "Debug"]_DEBUG[else]NDEBUG[end]"/>
+			</FileConfiguration>[end]
+		</File>[end]
 [for sources]		<File
-			RelativePath="[sources]">
+			RelativePath="[sources.path]">
+[if-any sources.swig_language][for configs]
+			<FileConfiguration
+				Name="[configs.name]|Win32">
+				<Tool
+					Name="VCCustomBuildTool"
+					CommandLine="swig -[sources.swig_language] -noproxy[for includes] -I&quot;[includes]&quot;[end] -o [sources.swig_output] $(InputPath)"
+					Outputs="[sources.swig_output]"/>
+			</FileConfiguration>
+[end][end]
+[if-any sources.reldir][for configs]
+			<FileConfiguration
+				Name="[configs.name]|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					ObjectFile="$(IntDir)/[sources.reldir]/"
+					ProgramDataBaseFileName="$(IntDir)/[sources.reldir]/"/>
+			</FileConfiguration>
+[end][end]
 		</File>
-[end]	</Files>
+[end]
+	</Files>
 	<Globals>
 	</Globals>
 </VisualStudioProject>
