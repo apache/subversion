@@ -36,8 +36,9 @@ public class EntryTests extends TestCase
 
     public void testEntryCreate()
 	{
-	    //test noexistent
-	    assertTrue(false);
+	    Entry entry=NativeWrapper.entryCreate();
+
+	    assertTrue( entry != null );
 	}
 
     public void testEntrySetUrl()
