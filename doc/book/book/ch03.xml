@@ -65,9 +65,15 @@
       <xref linkend="svn-ch-2-sect-3.2"/>, a revision is a
       <quote>snapshot</quote> of the repository at a particular moment
       in time.  As you continue to commit and grow your repository,
-      you need a mechanism for identifying these snapshots.
-      Subversion provides three ways for you to refer to them by
-      number, keyword, or date.</para>
+      you need a mechanism for identifying these snapshots.</para>
+
+    <para>You specify these revisions by using the
+      <option>--revision</option> (<option>-r</option>) switch plus
+      the revision you want (<command>svn --revision REV</command>) or
+      you can specify a range by separating 2 revisions with a colon
+      (<command>svn --revision REV1:REV2</command>).  And subversion
+      lets you refer to these revisions by number, keyword, or
+      date.</para>
     
     <sect2 id="svn-ch-3-sect-3.1">
       <title>Revision Numbers</title>
@@ -192,8 +198,8 @@ $ svn co --revision {"17 Feb 2002"}
 $ svn co --revision {"17 Feb 2002 15:30"}
 $ svn co --revision {"17 Feb 2002 15:30:12 GMT"}
 $ svn co --revision {"10 days ago"} 
+$ svn co --revision {"last week"} 
 $ svn co --revision {"yesterday"} 
-$ svn co --revision {"10 days ago"} 
 &hellip;
       </screen>
       
