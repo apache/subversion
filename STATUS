@@ -43,13 +43,14 @@ Candidate changes:
     Votes:
       +1: maxb, breser, ghudson
 
-  * r10132, r10136, 10138, 10139
+  * r10132, r10136, 10138, 10139, r10431
     Allow user to interrupt between auth prompts.
     Justification:  not a critical bugfix, but something users have 
                     repeatedly complained about.
     Votes:
       +0: sussman (not yet reviewed)
-      +1: breser, ghudson
+      +1: breser (including r10431)
+      +1: ghudson (without r10431)
 
   * r10190
     Allow properties with colons in their name to be read with propget
