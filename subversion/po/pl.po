@@ -35,7 +35,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2004-09-07 08:35+0200\n"
-"PO-Revision-Date: 2004-09-07 08:38+0200\n"
+"PO-Revision-Date: 2004-09-10 16:14+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Polish <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -4963,12 +4963,12 @@ msgstr ""
 "Proszę czekać; odtwarzanie repozytorium może trwać długo...\n"
 
 #: svnadmin/main.c:688
-#, fuzzy
 msgid ""
 "Failed to get exclusive repository access; perhaps another process\n"
 "such as httpd, svnserve or svn has it open?"
 msgstr ""
-"Oczekiwanie na blokadę repozytorium; możliwe, że inny proces blokuje dostęp\n"
+"Nie powiodło się założenie blokady na repozytorium; możliwe, że \n"
+"procesy takie jak httpd, svnserver lub svn blokują dostęp."
 
 #: svnadmin/main.c:693
 msgid "Waiting on repository lock; perhaps another process has it open?\n"
