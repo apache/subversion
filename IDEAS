@@ -145,6 +145,18 @@ Some ideas for the future.
   resource forks), a single database of data (rather than per-dir), or
   server-based storage (via DeltaV)
 
+  Benefit of a single database: apps/systems that nuke a directory and 
+  rewrite it will no longer "unhook" the working copy from SVN (since
+  the data is stored elsewhere). Fred Sanchez has pointed out this
+  could be important for MacOS Bundles (the OS nukes and rebuilds
+  subdirs, taking the CVS/ or SVN/ subdir with it)
+
+  Benefit of a "true" database: there is a lot of effort expended in
+  the current libsvn_wc to transact the changes, record logs of
+  changes, and to perform them in an atomic manner. A transacted
+  database on the client side could potentially simplify much of that
+  work (and the corresponding I/O to track it).
+
 
 * Server side project policy enforcement
 
