@@ -251,14 +251,14 @@ print_error (svn_error_t *err, FILE *stream, svn_boolean_t print_strerror)
   const char *err_string;
   svn_error_t *temp_err = NULL;  /* ensure initialized even if
                                     err->file == NULL */
-  const char *file_utf8;
-
   /* Pretty-print the error */
   /* Note: we can also log errors here someday. */
 
 #ifdef SVN_DEBUG
   /* Note: err->file is _not_ in UTF-8, because it's expanded from
            the __FILE__ preprocessor macro. */
+  const char *file_utf8;
+
   if (err->file
       && !(temp_err = svn_utf_cstring_to_utf8 (&file_utf8, err->file,
                                                err->pool)))

@@ -1082,7 +1082,7 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
   first = &APR_ARRAY_IDX(item->u.list, 0, svn_ra_svn_item_t);
   if (first->kind != SVN_RA_SVN_NUMBER)
     return SVN_NO_ERROR;
-  b.protocol_version = first->u.number;
+  b.protocol_version = (int) first->u.number;
   if (b.protocol_version == 1)
     {
       /* Version 1: auth exchange is mixed with client version and
