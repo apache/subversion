@@ -55,7 +55,7 @@
 #define SVN_BINARY_DIR "/usr/local/bin"
 
 /* Setup gettext macros */
-#define N_(x) (x)
+#define N_(x) x
 #define PACKAGE_NAME "subversion"
 
 #ifdef ENABLE_NLS
