@@ -111,7 +111,7 @@ tweak_entries (svn_wc_adm_access_t *dirpath,
                                         svn_wc_adm_access_pool (dirpath)));
         }
       
-      /* If a directory and recursiv... */
+      /* If a directory and recursive... */
       else if (recurse && (current_entry->kind == svn_node_dir))
         {
           const char *child_path

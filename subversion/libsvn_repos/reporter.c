@@ -43,7 +43,7 @@
          <length>:<bytes>     Length-counted link_path string
        +/-                    '+' indicates presence of revnum
        If previous is +:
-         <revnum>             Revnum of set_path or link_path
+         <revnum>:            Revnum of set_path or link_path
        +/-                    '+' indicates start_empty field set
 
    Terminology: for brevity, this file frequently uses the prefixes

@@ -80,8 +80,8 @@ my $svn = "@SVN_BINDIR@/svn";
 my @project_settings_list = (&new_project);
 
 # Process the command line arguments till there are none left.  The
-# first three arguments that are not used by a command line option are
-# the repository path, the revision number, and the property name.
+# first four arguments that are not used by a command line option are
+# the repository path, the revision number, the author, and the property name.
 my $repos;
 my $rev;
 my $author;
