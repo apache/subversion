@@ -4072,7 +4072,6 @@ find_youngest_copy (svn_revnum_t *src_rev, /* return */
                     trail_t *trail)
 {
   svn_revnum_t cur_rev = end_rev;
-  const char *cur_path = dst_path;
   const char *cur_copy_id = NULL;
 
   *src_path = NULL;
@@ -4137,10 +4136,10 @@ find_youngest_copy (svn_revnum_t *src_rev, /* return */
              Finally, if our current path doesn't meet one of these
              other criteria, just ignore this copy operation
              altogether. */
-          if (strcmp (cur_path, copy_dst) == 0)
+          if (strcmp (dst_path, copy_dst) == 0)
             remainder = "";
           else
-            remainder = svn_path_is_child (copy_dst, cur_path, trail->pool);
+            remainder = svn_path_is_child (copy_dst, dst_path, trail->pool);
 
           if (remainder)
             {
@@ -4191,28 +4190,21 @@ svn_error_t *svn_fs_node_history (svn_fs_history_t **history_p,
 
 /* Examine the PARENT_PATH structure chain to determine how copy IDs
    would be doled out in the event that PARENT_PATH was made mutable.
-   Return an existing copy ID that would be assigned to PARENT_PATH in
-   that case, or NULL if a new copy ID would have to be created.
+   Return the ID of the copy that last affected PARENT_PATH.
 
    NOTE:  All items in the PARENT_PATH chain are assumed to be immutable! 
 */
 static const char *
 examine_copy_inheritance (parent_path_t *parent_path)
 {
-  copy_id_inherit_t inherit = parent_path->copy_inherit;
-
   /* If we have no parent (we are looking at the root node), or if
      this node is supposed to inherit from itself, return that fact. */
-  if ((! parent_path->parent) || (inherit == copy_id_inherit_self))
+  if ((! parent_path->parent) 
+      || (parent_path->copy_inherit == copy_id_inherit_self))
     return svn_fs__id_copy_id (svn_fs__dag_get_id (parent_path->node));
 
-  /* If our inheritance depends on our parent, recurse into an
-     examination of our parent, and return what we find there. */
-  if (inherit == copy_id_inherit_parent)
-    return examine_copy_inheritance (parent_path->parent);
- 
-  /* If we get here, then our inheritence is "new".  Return NULL. */
-  return NULL;
+  /* Otherwise, our answer is dependent upon our parent. */
+  return examine_copy_inheritance (parent_path->parent);
 }
 
 
@@ -4239,8 +4231,8 @@ txn_body_history_prev (void *baton, trail_t *trail)
   dag_node_t *node;
   svn_fs_root_t *root;
   const svn_fs_id_t *node_id;
+  const char *end_copy_id = NULL;
   struct revision_root_args rr_args;
-  int skip_copy_hunt = 0;
   int reported = history->is_interesting;
 
   /* Initialize our return value. */
@@ -4299,12 +4291,8 @@ txn_body_history_prev (void *baton, trail_t *trail)
           if (! pred_id)
             return SVN_NO_ERROR;
 
-          /* We can avoid the copy hunt algorithm if our search would
-             be bounded by two distinct node-rev-ids, and those
-             node-rev-ids have the same copy-ID. */
-          if (svn_fs__key_compare (svn_fs__id_copy_id (node_id),
-                                   svn_fs__id_copy_id (pred_id)) == 0)
-            skip_copy_hunt = 1;
+          /* Remember the copy ID of our current node. */
+          end_copy_id = svn_fs__id_copy_id (node_id);
 
           /* Replace NODE and friends with the information from its
              predecessor. */
@@ -4314,34 +4302,72 @@ txn_body_history_prev (void *baton, trail_t *trail)
           SVN_ERR (svn_fs__dag_get_revision (&commit_rev, node, trail));
         }
     }
-  else if (strcmp (path, commit_path) == 0)
-    {
-      /* We are looking at a node via the same path as that at which
-         it was created, but at a different revision.  It is still
-         possible that some copies have occured betweent these two
-         locations (say, someone renamed a parent directory, and then
-         renamed it back, all without touching our node).  But let's
-         seek to rule out a copy hunt in any way we can.  For example,
-         we can avoid the hunt if we know that our node's copy ID
-         would not change if it were to be made mutable.  */
-      const char *new_copy_id = examine_copy_inheritance (parent_path);
-      if (new_copy_id
-          && (svn_fs__key_compare (svn_fs__id_copy_id (node_id), 
-                                   new_copy_id) == 0))
-        skip_copy_hunt = 1;
-    }
+
+  /* Calculate a possibly relevant copy ID if we don't have one
+     already. */
+  if (! end_copy_id)
+    end_copy_id = examine_copy_inheritance (parent_path);
 
   src_path = NULL;
   src_rev = SVN_INVALID_REVNUM;
-  if (! skip_copy_hunt)
+  dst_rev = SVN_INVALID_REVNUM;
+
+  /* If our current copy ID (which is either the real copy ID of our
+     node, or the last copy ID which would affect our node if it were
+     to be made mutable) diffs at all from that of its predecessor
+     (which is either a real predecessor, or is the node itself
+     playing the predecessor role to an imaginary mutable successor),
+     then we need to report a copy.  */
+  if (svn_fs__key_compare (svn_fs__id_copy_id (node_id), end_copy_id) != 0)
     {
-      /* We couldn't skip the copy hunt, so we gotta do the work.  See
-         if any copies took place between our path/revision and the
-         location of the node's last commit. */
-      SVN_ERR (find_youngest_copy (&src_rev, &src_path, &dst_rev, path,
-                                   fs, commit_rev, 
-                                   svn_fs__id_copy_id (node_id),
-                                   revision, trail));
+      svn_fs__copy_t *copy;
+      const char *remainder;
+      dag_node_t *dst_node;
+      const char *copy_dst;
+
+      /* Get the current COPY record. */
+      SVN_ERR (svn_fs__bdb_get_copy (&copy, fs, end_copy_id, trail));
+
+      /* Figure out the destination path of the copy operation. */
+      SVN_ERR (svn_fs__dag_get_node (&dst_node, fs, 
+                                     copy->dst_noderev_id, trail));
+      copy_dst = svn_fs__dag_get_created_path (node);
+
+      /* If our current path was the very destination of the copy,
+         then our new current path will be the copy source.  If our
+         current path was instead the *child* of the destination of
+         the copy, then figure out its previous location by taking its
+         path relative to the copy destination and appending that to
+         the copy source.  Finally, if our current path doesn't meet
+         one of these other criteria ... ### for now just fallback to
+         the old copy hunt algorithm. */
+      if (strcmp (path, copy_dst) == 0)
+        remainder = "";
+      else
+        remainder = svn_path_is_child (copy_dst, path, trail->pool);
+
+      if (remainder)
+        {
+          /* If we get here, then our current path is the destination 
+             of, or the child of the destination of, a copy.  Fill
+             in the return values and get outta here.  */
+          SVN_ERR (svn_fs__txn_get_revision 
+                   (&src_rev, fs, copy->src_txn_id, trail));
+          SVN_ERR (svn_fs__txn_get_revision 
+                   (&dst_rev, fs, 
+                    svn_fs__id_txn_id (copy->dst_noderev_id), trail));
+          src_path = svn_path_join (copy->src_path, remainder, 
+                                    trail->pool);
+        }
+      else
+        {
+          /* See if any copies took place between our path/revision
+             and the location of the node's last commit. */
+          SVN_ERR (find_youngest_copy (&src_rev, &src_path, &dst_rev, path,
+                                       fs, commit_rev, 
+                                       svn_fs__id_copy_id (node_id),
+                                       revision, trail));
+        }
     }
 
   if (src_path && SVN_IS_VALID_REVNUM (src_rev))
