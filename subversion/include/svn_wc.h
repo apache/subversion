@@ -874,8 +874,9 @@ svn_wc_create_tmp_file (apr_file_t **fp,
  * manner is indicated by VFILE's properties; otherwise, set *XLATED_P
  * to VFILE.
  *
- * Caller is responsible for detecting if they are different, and for
- * removing *XLATED_P if necessary.
+ * Caller is responsible for detecting if they are different (pointer
+ * comparison is sufficient), and for removing *XLATED_P if
+ * necessary.
  *
  * This function is generally used to get a file that can be compared
  * meaningfully against VFILE's text base.
