@@ -517,6 +517,7 @@ svn_error_t *svn_ra_dav__get_baseline_info(svn_boolean_t *is_dir,
        fine: just keep removing components and trying to get the
        starting_props from parent directories. */
     svn_error_t *err;
+    apr_size_t len;
     svn_stringbuf_t *path_s = svn_stringbuf_create (parsed_url.path, pool);
 
     while (! svn_path_is_empty (path_s))
@@ -533,8 +534,11 @@ svn_error_t *svn_ra_dav__get_baseline_info(svn_boolean_t *is_dir,
         lopped_path = svn_path_join(svn_path_basename (path_s->data, pool),
                                     lopped_path,
                                     pool);
+        len = path_s->len;
         svn_path_remove_component(path_s);
-
+        if (path_s->len == len)          
+            /* whoa, infinite loop, get out. */
+          return err;
       }
 
     if (svn_path_is_empty (path_s))
