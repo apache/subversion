@@ -242,7 +242,7 @@ svn_fs__open_transactions (svn_fs_t *fs)
 static svn_error_t *
 put_transaction_skel (svn_fs_t *fs, DB_TXN *db_txn,
 		      char *id,
-		      skel_t *txn_skel,
+		      const skel_t *txn_skel,
 		      int create,
 		      apr_pool_t *pool)
 {
@@ -360,9 +360,9 @@ begin_txn_body (void *baton,
   {
     /* An empty transaction skel, `(transaction 0 )', written out
        as a series of initialized `skel_t' objects.  */
-    static skel_t new_txn_skel[] = {
-      { 0, "", 0, &new_txn_skel[1], 0 },
-      { 1, "transaction", 11, 0, &new_txn_skel[2] },
+    static const skel_t new_txn_skel[] = {
+      { 0, "", 0, (skel_t *)&new_txn_skel[1], 0 },
+      { 1, "transaction", 11, 0, (skel_t *)&new_txn_skel[2] },
       { 1, "", 0, 0, 0 }
     };
     char id_text[200];
