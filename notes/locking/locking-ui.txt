@@ -102,19 +102,20 @@ II. New Client Behaviors
 
    B. The "svn:needs-lock" property
 
-      Create a new "svn:needs-lock" property to indicate that a path
+      Create a new "svn:needs-lock" property to indicate that a file
       must be locked before committing.  Just like "svn:executable",
       the value of the property is irrelevant and the property can be
       created (or deleted) by any user or administrator.
 
       1. Property as enforcement system
 
-         The presence of the "svn:needs-lock" property on a path means that
-         concurrency is disabled for the path and a user *must* obtain
-         a lock on that path before committing changes to it.  The
-         server rejects any commit which modifies this path unless the
-         user has a lock on the path.  Note: A user can delete a path
-         with this property, providing that the path is not locked.
+         The presence of the "svn:needs-lock" property on a file means
+         that concurrency is disabled for the file and a user *must*
+         obtain a lock on that file before committing changes to it.
+         The server rejects any commit which modifies this file unless
+         the user has a lock on the file.  Note: a user can delete a
+         file with this property, providing that the file is not
+         locked.
 
       2. Property as communication system
 
@@ -127,8 +128,6 @@ II. New Client Behaviors
          When the user releases the lock, or if the lock is found to
          be defunct (see next section), the Subversion client makes
          the path read-only again.
-
-
 
    C. Lock manipulation via client
 
@@ -143,14 +142,14 @@ II. New Client Behaviors
          a certain working copy.  Why is it important or useful for
          lock tokens to be attached to only one working copy?
 
-         An example: you might lock an unmergeable file using a
+         [An example: you might lock an unmergeable file using a
          computer at your office, perhaps as part of a changeset in
          progress.  It should not be possible for a working copy on
          your home computer to accidentally commit a change to that
          same file, just because you've authenticated as the user
          which owns the lock.  If you really want to change the file
          from home, you'd have to "steal" the lock from your other
-         working copy, which is discussed later in this document.
+         working copy, which is discussed later in this document.]
 
          Because locks can be broken or stolen, it is possible for a
          lock token to become "defunct".  A defunct lock cannot be
@@ -187,14 +186,6 @@ II. New Client Behaviors
             This means that similar to a commit action, 'svn lock'
             will launch $EDITOR, or accept -m or -F switches to
             accept a lock comment.
-
-            The 'svn lock' command automatically implies running 'svn
-            update' on a path.  In other words, it's not possible to
-            lock a non-HEAD version of a path.  If a file has the
-            'svn:needs-lock' property and has been hijacked, both 'svn lock'
-            will interactively ask the user whether to use the
-            repository or local version of the file, just as 'svn
-            update' does.
 
          b. Using a lock
 

@@ -12,7 +12,7 @@ I. Introduction
    A. Goals
 
       1. Provide a mechanism to ensure that a user has exclusive
-         rights to commit changes to a path from a particular working
+         rights to commit changes to a file from a particular working
          copy.
 
       2. Provide a communication mechanism to decrease the chances of
@@ -40,7 +40,7 @@ II. New Client Behaviors
       1. Definition of "lock"
 
          A lock grants one user the exclusive right to change a
-         certain path from a specific working copy.
+         certain file from a specific working copy.
 
       2. Lock restrictions
 
@@ -48,18 +48,12 @@ II. New Client Behaviors
          right to change the file's text and properties, to delete the
          file, and to move the file.
 
-         If a directory is locked, the owner of the lock has the
-         exclusive right to change the directory's list of entries and
-         properties, to delete the directory, and to move the
-         directory.  This lock applies recursively to all files and
-         directories under the locked directory.
-
    B. Client requirements for locking
 
       1. Enforcement system
 
-         It must be possible to declare that certain files or
-         directories absolutely require locks before committing.
+         It must be possible to declare that certain files absolutely
+         require locks before committing.
 
       2. Communication system
 
@@ -90,12 +84,12 @@ II. New Client Behaviors
 
          a. Creating a lock
 
-            To lock a path:
+            To lock a file:
 
                - A user must be authenticated to the server
-               - The path must not already be locked.  
+               - The file must not already be locked.  
 
-            Upon successfully locking a path, the working copy retains
+            Upon successfully locking a file, the working copy retains
             a representation of the lock.
 
          b. Using a lock
@@ -111,7 +105,7 @@ II. New Client Behaviors
 
             1. Using a lock to Commit
 
-               Upon successful commit, a locked path is released by
+               Upon successful commit, a locked file is released by
                default.  The Subversion client provides an option to
                retain the lock after commit.
 
@@ -128,27 +122,27 @@ II. New Client Behaviors
                  lock owner, or
                - The working-copy lock representation is unavailable.
 
-            (e.g. Harry locks path foo and is suddenly laid off.
+            (e.g. Harry locks file foo and is suddenly laid off.
             Sally decides to clean up his mess and breaks the lock on
-            path foo without using Harry's username or lock
+            foo, without using Harry's username or lock
             representation.)
 
          d. Stealing a lock
 
             "Stealing" a lock is a means of creating a lock when:
 
-               - The path is locked by you, but you don't have a
+               - The file is locked by you, but you don't have a
                  representation of the lock in your current working
                  copy, or
-               - The path is locked by someone else.
+               - The file is locked by someone else.
 
             In order to steal a lock, a user must be authenticated to
             the server.
 
-            (e.g. Harry locks path foo and goes on vacation.  Sally
-            needs to make changes to path foo and obtains a lock on
-            path foo by stealing Harry's lock, without using Harry's
-            username or lock representation.)
+            (e.g. Harry locks file foo and goes on vacation.  Sally
+            needs to make changes to foo and obtains a lock on foo by
+            stealing Harry's lock, without using Harry's username or
+            lock representation.)
 
          e. Discovering/examining locks
          
@@ -163,7 +157,7 @@ II. New Client Behaviors
               optionally displaying all attributes of the locks
               (Possibly able to restrict this query to a single user)
 
-            - Ask server whether a given path is locked
+            - Ask server whether a given file is locked
 
 
 III. New Server Behaviors
@@ -173,7 +167,7 @@ III. New Server Behaviors
       1. Definition of a lock
 
          As noted in section II.A.1, a lock grants one user the
-         exclusive right to change a certain path from a specific
+         exclusive right to change a certain file from a specific
          working copy.  
 
       2. Attributes of a lock
@@ -235,7 +229,7 @@ III. New Server Behaviors
          - List all locks in a repository underneath a given path
            (Possibly able to restrict this query to a single user)
 
-         - Ask whether a given repository path is locked
+         - Ask whether a given repository file is locked
 
       2. Unconditional release of locks
 
