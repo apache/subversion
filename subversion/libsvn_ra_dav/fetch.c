@@ -122,7 +122,7 @@ typedef struct {
   void *edit_baton;
 
   apr_array_header_t *dirs;	/* stack of directory batons/vsn_urls */
-#define TOP_DIR(rb) (((dir_item_t *)(rb)->dirs)[(rb)->dirs->nelts - 1])
+#define TOP_DIR(rb) (((dir_item_t *)(rb)->dirs->elts)[(rb)->dirs->nelts - 1])
 #define PUSH_BATON(rb,b) (*(void **)apr_array_push((rb)->dirs) = (b))
 
   void *file_baton;
@@ -147,15 +147,15 @@ static const char report_tail[] = ("</S:update-report>" DEBUG_CR);
 
 static const struct hip_xml_elm report_elements[] =
 {
-  { "SVN:", "update-report", ELEM_update_report, 0 },
-  { "SVN:", "target-revision", ELEM_target_revision, 0 },
-  { "SVN:", "replace-directory", ELEM_replace_directory, 0 },
-  { "SVN:", "add-directory", ELEM_add_directory, 0 },
-  { "SVN:", "replace-file", ELEM_replace_file, 0 },
-  { "SVN:", "add-file", ELEM_add_file, 0 },
-  { "SVN:", "delete-entry", ELEM_delete_entry, 0 },
-  { "SVN:", "fetch-props", ELEM_fetch_props, 0 },
-  { "SVN:", "fetch-file", ELEM_fetch_file, 0 },
+  { SVN_XML_NAMESPACE, "update-report", ELEM_update_report, 0 },
+  { SVN_XML_NAMESPACE, "target-revision", ELEM_target_revision, 0 },
+  { SVN_XML_NAMESPACE, "replace-directory", ELEM_replace_directory, 0 },
+  { SVN_XML_NAMESPACE, "add-directory", ELEM_add_directory, 0 },
+  { SVN_XML_NAMESPACE, "replace-file", ELEM_replace_file, 0 },
+  { SVN_XML_NAMESPACE, "add-file", ELEM_add_file, 0 },
+  { SVN_XML_NAMESPACE, "delete-entry", ELEM_delete_entry, 0 },
+  { SVN_XML_NAMESPACE, "fetch-props", ELEM_fetch_props, 0 },
+  { SVN_XML_NAMESPACE, "fetch-file", ELEM_fetch_file, 0 },
 
   { "DAV:", "checked-in", ELEM_checked_in, 0 },
   { "DAV:", "href", DAV_ELM_href, HIP_XML_CDATA },
@@ -317,6 +317,7 @@ static svn_error_t *simple_fetch_file(svn_ra_session_t *ras,
   svn_error_t *err2;
   int rv;
 
+  printf("[fetch_file]\n");
   err = (*editor->apply_textdelta)(file_baton,
                                    &frc.handler,
                                    &frc.handler_baton);
@@ -725,6 +726,8 @@ svn_error_t *svn_ra_dav__get_latest_revnum(void *session_baton,
 
 static int validate_element(hip_xml_elmid parent, hip_xml_elmid child)
 {
+  printf("validate: parent=%d  child=%d\n", parent, child);
+
   /* We're being very strict with the validity of XML elements here. If
      something exists that we don't know about, then we might not update
      the client properly. We also make various assumptions in the element
@@ -803,7 +806,10 @@ static const char *get_attr(const char **atts, const char *which)
 
 static void push_dir(report_baton_t *rb, void *baton)
 {
-  ((dir_item_t *)apr_array_push(rb->dirs))->baton = baton;
+  dir_item_t *di = (dir_item_t *)apr_array_push(rb->dirs);
+
+  di->baton = baton;
+  di->vsn_url = NULL;
 }
 
 static int start_element(void *userdata, const struct hip_xml_elm *elm,
@@ -817,6 +823,8 @@ static int start_element(void *userdata, const struct hip_xml_elm *elm,
   svn_revnum_t crev = SVN_INVALID_REVNUM;
   void *new_dir_baton;
   svn_error_t *err;
+
+  printf("start: id=%d\n", elm->id);
 
   switch (elm->id)
     {
@@ -834,8 +842,10 @@ static int start_element(void *userdata, const struct hip_xml_elm *elm,
 
       if (rb->dirs->nelts == 0)
         {
+          printf("[replace_root] base=%ld\n", base);
           err = (*rb->editor->replace_root)(rb->edit_baton, base,
                                             &new_dir_baton);
+          printf("[replace_root] new_dir_baton=0x%08lx\n", (long)new_dir_baton);
         }
       else
         {
@@ -843,6 +853,7 @@ static int start_element(void *userdata, const struct hip_xml_elm *elm,
           /* ### verify we got it. punt on error. */
           svn_string_set(rb->namestr, name);
 
+          printf("[replace_dir] name='%s' base=%ld\n", rb->namestr->data, base);
           err = (*rb->editor->replace_directory)(rb->namestr,
                                                  TOP_DIR(rb).baton, base,
                                                  &new_dir_baton);
@@ -870,6 +881,7 @@ static int start_element(void *userdata, const struct hip_xml_elm *elm,
           crev = atol(att);
         }
 
+      printf("[add_dir] name=%s\n", rb->namestr->data);
       CHKERR( (*rb->editor->add_directory)(rb->namestr, TOP_DIR(rb).baton,
                                            cpath, crev, &new_dir_baton) );
 
@@ -888,6 +900,7 @@ static int start_element(void *userdata, const struct hip_xml_elm *elm,
       /* ### verify we got it. punt on error. */
       svn_string_set(rb->namestr, name);
 
+      printf("[replace_file] name=%s\n", rb->namestr->data);
       CHKERR( (*rb->editor->replace_file)(rb->namestr, TOP_DIR(rb).baton, base,
                                           &rb->file_baton) );
       break;
@@ -908,14 +921,9 @@ static int start_element(void *userdata, const struct hip_xml_elm *elm,
           crev = atol(att);
         }
 
+      printf("[add_file] name=%s\n", rb->namestr->data);
       CHKERR( (*rb->editor->add_file)(rb->namestr, TOP_DIR(rb).baton,
                                       cpath, crev, &rb->file_baton) );
-
-      /* fetch file */
-      CHKERR( simple_fetch_file(rb->ras, rb->href->data, rb->file_baton,
-                                rb->editor, rb->ras->pool) );
-
-      /* ### not yet implemented: fetch file props */
       break;
 
     case ELEM_fetch_props:
@@ -940,6 +948,7 @@ static int start_element(void *userdata, const struct hip_xml_elm *elm,
       /* ### verify we got it. punt on error. */
       svn_string_set(rb->namestr, name);
 
+      printf("[delete_entry] name=%s\n", rb->namestr->data);
       CHKERR( (*rb->editor->delete_entry)(rb->namestr, TOP_DIR(rb).baton) );
       break;
 
@@ -961,23 +970,39 @@ static int end_element(void *userdata, const struct hip_xml_elm *elm,
   report_baton_t *rb = userdata;
   svn_error_t *err;
 
+  printf("end: id=%d\n", elm->id);
+
   switch (elm->id)
     {
     case ELEM_replace_directory:
     case ELEM_add_directory:
+      printf("[close_dir] baton=0x%08lx\n", (long)TOP_DIR(rb).baton);
       /* close the topmost directory, and pop it from the stack */
       CHKERR( (*rb->editor->close_directory)(TOP_DIR(rb).baton) );
       --rb->dirs->nelts;
       break;
 
-    case ELEM_replace_file:
     case ELEM_add_file:
+      /* we wait until the close element to do the work. this allows us to
+         retrieve the href before fetching. */
+
+      /* fetch file */
+      CHKERR( simple_fetch_file(rb->ras, rb->href->data, rb->file_baton,
+                                rb->editor, rb->ras->pool) );
+
+      /* ### not yet implemented: fetch file props */
+
+      /* FALLTHRU */
+
+    case ELEM_replace_file:
+      printf("[close_file] baton=0x%08lx\n", (long)rb->file_baton);
       /* close the file and mark that we are no longer operating on a file */
       CHKERR( (*rb->editor->close_file)(rb->file_baton) );
       rb->file_baton = NULL;
       break;
 
     case DAV_ELM_href:
+      printf("[got href] '%s'\n", cdata);
       /* record the href that we just found */
       svn_ra_dav__copy_href(rb->href, cdata);
 
@@ -1049,7 +1074,7 @@ static svn_error_t * reporter_finish_report(void *report_baton)
   int code;
 
   status = apr_file_write_full(rb->tmpfile,
-                               report_tail, sizeof(report_tail), NULL);
+                               report_tail, sizeof(report_tail) - 1, NULL);
   (void) apr_file_close(rb->tmpfile);
   if (status)
     {
@@ -1060,7 +1085,7 @@ static svn_error_t * reporter_finish_report(void *report_baton)
     }
 
   /* get the editor process prepped */
-  rb->dirs = apr_array_make(rb->ras->pool, 5, sizeof(void *));
+  rb->dirs = apr_array_make(rb->ras->pool, 5, sizeof(dir_item_t));
   rb->namestr = MAKE_BUFFER(rb->ras->pool);
   rb->cpathstr = MAKE_BUFFER(rb->ras->pool);
   rb->href = MAKE_BUFFER(rb->ras->pool);
@@ -1175,20 +1200,25 @@ svn_error_t * svn_ra_dav__do_update(void *session_baton,
 
   /* prep the file */
   status = apr_file_write_full(rb->tmpfile,
-                               report_head, sizeof(report_head), NULL);
+                               report_head, sizeof(report_head) - 1, NULL);
   if (status)
     {
       msg = "Could not write the header for the temporary report file.";
       goto error;
     }
 
-  s = apr_psprintf(ras->pool, "<S:target-revision>%ld</S:target-revision",
-                   revision_to_update_to);
-  status = apr_file_write_full(rb->tmpfile, s, strlen(s), NULL);
-  if (status)
+  /* an invalid revnum means "latest". we can just omit the target-revision
+     element in that case. */
+  if (SVN_IS_VALID_REVNUM(revision_to_update_to))
     {
-      msg = "Could not write the revision into the temporary report file.";
-      goto error;
+      s = apr_psprintf(ras->pool, "<S:target-revision>%ld</S:target-revision>",
+                       revision_to_update_to);
+      status = apr_file_write_full(rb->tmpfile, s, strlen(s), NULL);
+      if (status)
+        {
+          msg = "Could not write the revision into the temporary report file.";
+          goto error;
+        }
     }
 
   *reporter = &ra_dav_reporter;
