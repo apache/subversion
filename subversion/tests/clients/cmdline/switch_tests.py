@@ -400,11 +400,6 @@ def full_rev_update(sbox):
 def update_switched_things(sbox):
   "update switched wc things to HEAD"
 
-  ### Items below commented out with '#?#' need to be reinstated for
-  ### this test to be fully functional.  They are commented out right
-  ### now because dir_delta doesn't allow one to update a single
-  ### switched file by name.
-  
   if sbox.build():
     return 1
 
@@ -423,7 +418,7 @@ def update_switched_things(sbox):
     return 1
 
   # Some convenient path variables
-  #?# iota_path = os.path.join(wc_dir, 'iota')
+  iota_path = os.path.join(wc_dir, 'iota')
   H_path = os.path.join(wc_dir, 'A', 'D', 'H')
   Hpi_path = os.path.join(H_path, 'pi')
   HZ_path = os.path.join(H_path, 'Z')
@@ -431,7 +426,7 @@ def update_switched_things(sbox):
 
   # Create expected output tree for an update of wc_backup.
   expected_output = svntest.wc.State(wc_dir, {
-    #?# 'iota' : Item(status='U '),
+    'iota' : Item(status='U '),
     'A/D/H/pi' : Item(status='U '),
     'A/D/H/Z' : Item(status='A '),
     'A/D/H/Z/zeta' : Item(status='A '),
@@ -439,7 +434,7 @@ def update_switched_things(sbox):
 
   # Create expected disk tree for the update
   expected_disk = get_routine_disk_state(wc_dir)
-  #?#expected_disk.tweak('iota', contents="This is the file 'gamma'.apple")
+  expected_disk.tweak('iota', contents="This is the file 'gamma'.apple")
 
   expected_disk.tweak('A/D/H/pi', contents="This is the file 'pi'.watermelon")
   expected_disk.add({
@@ -450,8 +445,7 @@ def update_switched_things(sbox):
   # Create expected status tree for the update.
   expected_status = get_routine_status_state(wc_dir)
   expected_status.tweak(repos_rev=2)
-  expected_status.tweak('A/D/H', 'A/D/H/pi', 'A/D/H/rho', 'A/D/H/tau',
-                        #?# 'iota',
+  expected_status.tweak('A/D/H', 'A/D/H/pi', 'A/D/H/rho', 'A/D/H/tau', 'iota',
                         wc_rev=2)
   expected_status.add({
     'A/D/H/Z' : Item(status='_ ', wc_rev=2, repos_rev=2),
@@ -465,7 +459,7 @@ def update_switched_things(sbox):
                                                None, None, None,
                                                None, None, 0,
                                                H_path,
-                                               #?# iota_path,
+                                               iota_path,
                                                )
 
 #----------------------------------------------------------------------
@@ -473,11 +467,6 @@ def update_switched_things(sbox):
 def rev_update_switched_things(sbox):
   "reverse update switched wc things to an older rev"
 
-  ### Items below commented out with '#?#' need to be reinstated for
-  ### this test to be fully functional.  They are commented out right
-  ### now because dir_delta doesn't allow one to update a single
-  ### switched file by name.
-  
   if sbox.build():
     return 1
 
@@ -508,22 +497,17 @@ def rev_update_switched_things(sbox):
 
   # Now, reverse update, back to the pre-commit state.
   expected_output = svntest.wc.State(wc_dir, {
-    #?# 'iota' : Item(status='U '),
+    'iota' : Item(status='U '),
     'A/D/H/pi' : Item(status='U '),
     'A/D/H/Z' : Item(status='D '),
     })
 
   # Create expected disk tree
   expected_disk = get_routine_disk_state(wc_dir)
-
-  #?# Remove this next line once single-switched-file update has been fixed.
-  expected_disk.tweak('iota', contents="This is the file 'gamma'.apple")
-
   expected_disk.tweak('A/D/gamma', contents="This is the file 'gamma'.apple")
   expected_disk.tweak('A/D/G/pi', contents="This is the file 'pi'.watermelon")
   expected_disk.tweak('A/B/E/alpha',
                       contents="This is the file 'alpha'.orange")
-
   expected_disk.add({
     'A/D/G/Z' : Item(),
     'A/D/G/Z/zeta' : Item("This is the file 'zeta'."),
@@ -532,8 +516,7 @@ def rev_update_switched_things(sbox):
   # Create expected status tree for the update.
   expected_status = get_routine_status_state(wc_dir)
   expected_status.tweak(repos_rev=2, wc_rev=2)
-  expected_status.tweak('A/D/H', 'A/D/H/pi', 'A/D/H/rho', 'A/D/H/tau',
-                        #?#'iota',
+  expected_status.tweak('A/D/H', 'A/D/H/pi', 'A/D/H/rho', 'A/D/H/tau', 'iota',
                         wc_rev=1)
   expected_status.add({
     'A/D/G/Z' : Item(status='_ ', wc_rev=2, repos_rev=2),
@@ -548,7 +531,7 @@ def rev_update_switched_things(sbox):
                                                None, None, 1,
                                                '-r', '1',
                                                H_path,
-                                               #?# iota_path
+                                               iota_path
                                                )
 
 
