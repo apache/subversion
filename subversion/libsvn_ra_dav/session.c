@@ -53,9 +53,38 @@ static svn_error_t * auth_set_password (const char *password, void *auth_baton)
   return SVN_NO_ERROR;
 }
 
+static int request_auth(void *userdata, const char *realm,
+                        char **username, char **password)
+{
+  svn_ra_session_t *ras = userdata;
+  apr_size_t l;
+
+  l = strlen(ras->username) + 1;
+  *username = malloc(l);
+  memcpy(*username, ras->username, l);
+
+  if (ras->password == NULL)
+    {
+      *password = malloc(1);
+      **password = '\0';
+    }
+  else
+    {
+      l = strlen(ras->password) + 1;
+      *password = malloc(l);
+      memcpy(*password, ras->password, l);
+    }
+
+  return 0;
+}
+
 static svn_error_t * auth_authenticate (void **session_baton, void *auth_baton)
 {
-  *session_baton = auth_baton;
+  svn_ra_session_t *ras = auth_baton;
+
+  ne_set_server_auth(ras->sess, request_auth, ras);
+
+  *session_baton = ras;
 
   return SVN_NO_ERROR;
 }
