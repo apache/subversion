@@ -61,73 +61,73 @@ def externals_test_setup(sbox):
   other_repo_dir = repo_dir + ".other"
   other_repo_url = repo_url + ".other"
   
-  B_path = os.path.join (wc_dir, "A/B")
-  D_path = os.path.join (wc_dir, "A/D")
+  B_path = os.path.join(wc_dir, "A/B")
+  D_path = os.path.join(wc_dir, "A/D")
 
   # Create the "other" repository, the one to which the first
   # repository's `svn:externals' properties refer.
-  shutil.copytree (repo_dir, other_repo_dir)
+  shutil.copytree(repo_dir, other_repo_dir)
 
   stdout_lines, stderr_lines = svntest.main.run_svn \
                                (None, 'checkout', repo_url, '-d', wc_dir)
-  if len (stderr_lines) != 0:
+  if len(stderr_lines) != 0:
     return 1
 
   # Set up the externals properties on A/B/ and A/D/.
   externals_desc = \
-           "exdir_D  " + os.path.join (other_repo_url, "A/D/G") + "\n" + \
-           "exdir_H  " + os.path.join (other_repo_url, "A/D/H") + "\n"
+           "exdir_D  " + os.path.join(other_repo_url, "A/D/G") + "\n" + \
+           "exdir_H  " + os.path.join(other_repo_url, "A/D/H") + "\n"
 
-  tmp_f = os.tempnam (wc_dir, 'tmp')
+  tmp_f = os.tempnam(wc_dir, 'tmp')
   svntest.main.file_append(tmp_f, externals_desc)
   stdout_lines, stderr_lines = svntest.main.run_svn \
                                (None, 'propset', '-F', tmp_f,
                                 'svn:externals', B_path)
 
-  if len (stderr_lines) != 0:
+  if len(stderr_lines) != 0:
     return 1
    
-  os.remove (tmp_f)
+  os.remove(tmp_f)
 
   externals_desc = \
-           "exdir_A     " + os.path.join (other_repo_url, "A") + "\n"     + \
-           "exdir_A/G   " + os.path.join (other_repo_url, "A/D/G") + "\n" + \
-           "exdir_A/H   " + os.path.join (other_repo_url, "A/D/H") + "\n" + \
-           "x/y/z/blah  " + os.path.join (other_repo_url, "A/B/E") + "\n"
+           "exdir_A     " + os.path.join(other_repo_url, "A") + "\n"     + \
+           "exdir_A/G   " + os.path.join(other_repo_url, "A/D/G") + "\n" + \
+           "exdir_A/H   " + os.path.join(other_repo_url, "A/D/H") + "\n" + \
+           "x/y/z/blah  " + os.path.join(other_repo_url, "A/B/E") + "\n"
 
   svntest.main.file_append(tmp_f, externals_desc)
   stdout_lines, stderr_lines = svntest.main.run_svn \
                                (None, 'propset', '-F', tmp_f,
                                 'svn:externals', D_path)
-  if len (stderr_lines) != 0:
+  if len(stderr_lines) != 0:
     return 1
 
-  os.remove (tmp_f)
+  os.remove(tmp_f)
 
   # Commit the property changes.
 
   output_list = [ [B_path, None, {}, {'verb' : 'Sending' }],
                   [D_path, None, {}, {'verb' : 'Sending' }]]
-  expected_output_tree = svntest.tree.build_generic_tree (output_list)
+  expected_output_tree = svntest.tree.build_generic_tree(output_list)
 
-  status_list = svntest.actions.get_virginal_status_list (wc_dir, '1')
+  status_list = svntest.actions.get_virginal_status_list(wc_dir, '1')
   for item in status_list:
     item[3]['repos_rev'] = '2'
     if ((item[0] == B_path) or (item[0] == D_path)):
       item[3]['wc_rev'] = '2'
-  expected_status_tree = svntest.tree.build_generic_tree (status_list)
+  expected_status_tree = svntest.tree.build_generic_tree(status_list)
 
-  return svntest.actions.run_and_verify_commit (wc_dir,
-                                                expected_output_tree,
-                                                expected_status_tree,
-                                                None, None, None, None, None,
-                                                wc_dir)
+  return svntest.actions.run_and_verify_commit(wc_dir,
+                                               expected_output_tree,
+                                               expected_status_tree,
+                                               None, None, None, None, None,
+                                               wc_dir)
 
 
 def externals_test_cleanup(sbox):
   """Clean up the 'other' repository for SBOX."""
-  shutil.rmtree (sbox.repo_dir + ".other")
-  shutil.rmtree (sbox.wc_dir + ".init")
+  shutil.rmtree(sbox.repo_dir + ".other")
+  shutil.rmtree(sbox.wc_dir + ".init")
 
 
 #----------------------------------------------------------------------
@@ -135,8 +135,8 @@ def externals_test_cleanup(sbox):
 def checkout(sbox):
   "check out a directory with some external modules attached"
 
-  externals_test_cleanup (sbox)
-  if externals_test_setup (sbox):
+  externals_test_cleanup(sbox)
+  if externals_test_setup(sbox):
     return 1
 
   wc_dir = sbox.wc_dir
