@@ -132,6 +132,16 @@ extern "C" {
  */
 #define SVN_DAV_FEATURE_USE_OLD_NAMESPACES
 
+/** A temporary #define for enabling binary property support.
+ *
+ * Un-commit this #define to enable binary property support (and if
+ * you plan to leave it un-commented, you might as well remove it
+ * altogether and make the code in libsvn_ra_dav unconditionally
+ * live).
+ */
+/*
+#define SVN_DAV_FEATURE_BINARY_PROPS
+*/
 
 #ifdef __cplusplus
 }
