@@ -153,6 +153,9 @@ typedef enum svn_errno_t {
   /* The name given does not refer to a file.  */
   SVN_ERR_FS_NOT_FILE,
 
+  /* The name given is not a single path component.  */
+  SVN_ERR_FS_NOT_SINGLE_PATH_COMPONENT,
+
   /* The caller attempted to change a node which is not mutable.  */
   SVN_ERR_FS_NOT_MUTABLE,
 

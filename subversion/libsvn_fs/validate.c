@@ -71,6 +71,35 @@ svn_fs__is_valid_proplist (skel_t *skel)
 
 
 
+/* Validating paths. */
+
+int 
+svn_fs__is_single_path_component (const char *name)
+{
+  const char *c = name;
+  const char *eos = name + strlen (name);
+
+  /* Can't be empty */
+  if (c == eos) return 0;
+
+  /* Can't be `.' */
+  if (! strcmp (".", name)) return 0;
+
+  /* Can't be `..' */
+  if (! strcmp ("..", name)) return 0;
+
+  /* Run the string, looking for icky stuff. */
+  while (c < eos)
+    {
+      /* Can't have any forward slashes `/' */
+      if (*c == '/') return 0;
+    }
+  return 1;
+}
+
+
+
+
 /* 
  * local variables:
  * eval: (load-file "../svn-dev.el")

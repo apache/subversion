@@ -22,7 +22,7 @@
 #include "rev-table.h"
 #include "skel.h"
 #include "trail.h"
-
+#include "validate.h"
 
 
 /* Initializing a filesystem.  */
@@ -65,7 +65,7 @@ struct dag_node_t
      this yourself, but you're probably better off just calling
      `get_node_revision' and `set_node_revision', which take care of
      things for you.  */
- skel_t *node_revision;
+  skel_t *node_revision;
 
 };
 
@@ -380,10 +380,11 @@ svn_error_t *svn_fs__dag_dir_entries (skel_t **entries_p,
 
 
 /* Examines directory PARENT's list of entries, searching for a entry
-   named NAME.  If no such entry, *ENTRY is set to NULL.  Else *ENTRY
-   is populated with that `entry' list skel, allocated in either
-   PARENT->pool or TRAIL->pool (you don't get to choose, sorry), and
-   guaranteed to be well-formed. */
+   named NAME (which is assumed to be a single path component).  If no
+   such entry, *ENTRY is set to NULL.  Else *ENTRY is populated with
+   that `entry' list skel, allocated in either PARENT->pool or
+   TRAIL->pool (you don't get to choose, sorry), and guaranteed to be
+   well-formed. */
 static svn_error_t *
 find_dir_entry (skel_t **entry, 
                 dag_node_t *parent, 
@@ -584,6 +585,13 @@ svn_fs__dag_clone_child (dag_node_t **child_p,
     }
   }
 
+  /* Make sure that NAME is a single path component. */
+  if (! svn_fs__is_single_path_component (name))
+    return 
+      svn_error_createf 
+      (SVN_ERR_FS_NOT_SINGLE_PATH_COMPONENT, 0, NULL, trail->pool,
+       "Attempted to make a child clone with an illegal name `%s'", name);
+
   /* Find the node named NAME in PARENT's entries list if it exists. */
   SVN_ERR (svn_fs__dag_open (&cur_entry,
                              parent,
@@ -718,6 +726,13 @@ svn_error_t *svn_fs__dag_delete (dag_node_t *parent,
       }
   }
 
+  /* Make sure that NAME is a single path component. */
+  if (! svn_fs__is_single_path_component (name))
+    return 
+      svn_error_createf 
+      (SVN_ERR_FS_NOT_SINGLE_PATH_COMPONENT, 0, NULL, trail->pool,
+       "Attempted to delete a node with an illegal name `%s'", name);
+
   /* Go get a fresh NODE-REVISION for this node. */
   SVN_ERR (get_node_revision (&node_rev, parent, trail));
 
@@ -803,10 +818,14 @@ svn_error_t *svn_fs__dag_delete (dag_node_t *parent,
 /* Helper function for make_entry and svn_fs__dag_link */
 
 /* Adds to PARENT an ENTRY skel which refers to CHILD named NAME.
-   Allocations are done in TRAIL.  PARENT is assumed to be a
-   directory, and to NOT already have an entry named NAME.  Also,
-   callers must make sure that the addition of this entry does not
-   create a cyclic graph (CHILD may not be an ancestor of PARENT). */
+   Allocations are done in TRAIL.  
+
+   Assumptions:
+   - PARENT is a directory.
+   - PARENT does not already have an entry named NAME.
+   - CHILD is not an ancestor of parent
+   - NAME is a single path component
+*/
 static svn_error_t *
 add_new_entry (dag_node_t *parent,
                dag_node_t *child,
@@ -897,6 +916,13 @@ make_entry (dag_node_t **child_p,
            "Attempted to clone child of non-mutable node");
       }
   }
+
+  /* Make sure that NAME is a single path component. */
+  if (! svn_fs__is_single_path_component (name))
+    return 
+      svn_error_createf 
+      (SVN_ERR_FS_NOT_SINGLE_PATH_COMPONENT, 0, NULL, trail->pool,
+       "Attempted to create a node with an illegal name `%s'", name);
 
   /* Create and store the new node. */
   {
@@ -1024,6 +1050,14 @@ svn_error_t *svn_fs__dag_link (dag_node_t *parent,
         (SVN_ERR_FS_NOT_MUTABLE, 0, NULL, trail->pool,
          "Can't add a link to a mutable child");
   }
+
+  /* Make sure that NAME is a single path component. */
+  if (! svn_fs__is_single_path_component (name))
+    return 
+      svn_error_createf 
+      (SVN_ERR_FS_NOT_SINGLE_PATH_COMPONENT, 0, NULL, trail->pool,
+       "Attempted to link to a node with an illegal name `%s'", name);
+
   {
     skel_t *entry_skel;
 
@@ -1204,6 +1238,13 @@ svn_error_t *svn_fs__dag_open (dag_node_t **child_p,
          "Attempted to open non-existant child node \"%s\"", name);
     }
   
+  /* Make sure that NAME is a single path component. */
+  if (! svn_fs__is_single_path_component (name))
+    return 
+      svn_error_createf 
+      (SVN_ERR_FS_NOT_SINGLE_PATH_COMPONENT, 0, NULL, trail->pool,
+       "Attempted to open node with an illegal name `%s'", name);
+
   /* Get the node id this entry points to. */
   {
     skel_t *id_skel = entry_skel->children->next;
@@ -1264,8 +1305,16 @@ svn_error_t *svn_fs__dag_make_copy (dag_node_t **child_p,
       return 
         svn_error_createf 
         (SVN_ERR_FS_NOT_MUTABLE, 0, NULL, trail->pool,
-         "Attempted to clone child of non-mutable node");
+         "Attempted to make a copy node under a non-mutable parent");
   }
+
+  /* Make sure that NAME is a single path component. */
+  if (! svn_fs__is_single_path_component (name))
+    return 
+      svn_error_createf 
+      (SVN_ERR_FS_NOT_SINGLE_PATH_COMPONENT, 0, NULL, trail->pool,
+       "Attempted to make a copy node with an illegal name `%s'", name);
+    
   abort();
   /* NOTREACHED */
   return NULL;
