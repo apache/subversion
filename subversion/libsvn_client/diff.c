@@ -477,19 +477,14 @@ diff_props_changed (svn_wc_adm_access_t *adm_access,
                     void *diff_baton)
 {
   struct diff_cmd_baton *diff_cmd_baton = diff_baton;
-  apr_array_header_t *entry_props, *wc_props, *regular_props;
+  apr_array_header_t *props;
   apr_pool_t *subpool = svn_pool_create (diff_cmd_baton->pool);
 
-  SVN_ERR (svn_categorize_props (propchanges,
-                                 &entry_props, &wc_props, &regular_props,
-                                 subpool));
+  SVN_ERR (svn_categorize_props (propchanges, NULL, NULL, &props, subpool));
 
-  if (regular_props->nelts > 0)
-    SVN_ERR (display_prop_diffs (regular_props,
-                                 original_props,
-                                 path,
-                                 diff_cmd_baton->outfile,
-                                 subpool));
+  if (props->nelts > 0)
+    SVN_ERR (display_prop_diffs (props, original_props, path,
+                                 diff_cmd_baton->outfile, subpool));
 
   if (state)
     *state = svn_wc_notify_state_unknown;
@@ -832,18 +827,16 @@ merge_props_changed (svn_wc_adm_access_t *adm_access,
                      apr_hash_t *original_props,
                      void *baton)
 {
-  apr_array_header_t *entry_props, *wc_props, *regular_props;
+  apr_array_header_t *props;
   struct merge_cmd_baton *merge_b = baton;
   apr_pool_t *subpool = svn_pool_create (merge_b->pool);
 
-  SVN_ERR (svn_categorize_props (propchanges,
-                                 &entry_props, &wc_props, &regular_props,
-                                 subpool));
+  SVN_ERR (svn_categorize_props (propchanges, NULL, NULL, &props, subpool));
 
   /* We only want to merge "regular" version properties:  by
      definition, 'svn merge' shouldn't touch any data within .svn/  */
-  if (regular_props && regular_props->nelts)
-    SVN_ERR (svn_wc_merge_prop_diffs (state, path, adm_access, regular_props,
+  if (props->nelts)
+    SVN_ERR (svn_wc_merge_prop_diffs (state, path, adm_access, props,
                                       FALSE, merge_b->dry_run, subpool));
  
   svn_pool_destroy (subpool);
@@ -1113,7 +1106,7 @@ do_single_file_merge (const char *URL1,
   SVN_ERR (svn_io_remove_file (tmpfile2, pool));
   
   /* Deduce property diffs, and merge those too. */
-  SVN_ERR (svn_wc_get_local_propchanges (&propchanges, props2, props1, pool));
+  SVN_ERR (svn_prop_diffs (&propchanges, props2, props1, pool));
 
   SVN_ERR (merge_props_changed (adm_access,
                                 &prop_state,

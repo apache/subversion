@@ -460,15 +460,18 @@ delta_proplists (struct context *c,
 {
   apr_hash_t *s_props = 0;
   apr_hash_t *t_props = 0;
-  apr_hash_index_t *hi;
   apr_pool_t *subpool;
+  apr_array_header_t *prop_diffs;
+  int i;
+
+  assert (target_path);
 
   /* Make a subpool for local allocations. */ 
   subpool = svn_pool_create (pool);
 
   /* If we're supposed to send entry props for all non-deleted items,
      here we go! */
-  if (target_path && c->entry_props)
+  if (c->entry_props)
     {
       svn_revnum_t committed_rev = SVN_INVALID_REVNUM;
       svn_string_t *cr_str = NULL;
@@ -509,7 +512,7 @@ delta_proplists (struct context *c,
         }
     }
 
-  if (source_path && target_path)
+  if (source_path)
     {
       int changed;
 
@@ -518,61 +521,26 @@ delta_proplists (struct context *c,
                                      c->source_root, source_path, subpool));
       if (! changed)
         goto cleanup;
+
+      /* If so, go ahead and get the source path's properties. */
+      SVN_ERR (svn_fs_node_proplist (&s_props, c->source_root, 
+                                     source_path, subpool));
+    }
+  else
+    {
+      s_props = apr_hash_make (subpool);
     }
 
-  /* Get the source file's properties */
-  if (source_path)
-    SVN_ERR (svn_fs_node_proplist (&s_props, c->source_root, 
-                                   source_path, subpool));
+  /* Get the target path's properties */
+  SVN_ERR (svn_fs_node_proplist (&t_props, c->target_root, 
+                                 target_path, subpool));
 
-  /* Get the target file's properties */
-  if (target_path)
-    SVN_ERR (svn_fs_node_proplist (&t_props, c->target_root, 
-                                   target_path, subpool));
-
-  for (hi = apr_hash_first (subpool, t_props); hi; hi = apr_hash_next (hi))
+  /* Now transmit the differences. */
+  SVN_ERR (svn_prop_diffs (&prop_diffs, t_props, s_props, subpool));
+  for (i = 0; i < prop_diffs->nelts; i++)
     {
-      const svn_string_t *s_value;
-      const void *key;
-      void *val;
-      apr_ssize_t klen;
-          
-      /* KEY is property name in target, VAL the value */
-      apr_hash_this (hi, &key, &klen, &val);
-
-      /* See if this property existed in the source.  If so, and if
-         the values in source and target differ, open the value in
-         target with the one in source. */
-      if (s_props && ((s_value = apr_hash_get (s_props, key, klen)) != 0))
-        {
-          if (! svn_string_compare (s_value, val))
-            SVN_ERR (change_fn (c, object, key, val, subpool));
-
-          /* Remove the property from source list so we can track
-             which items have matches in the target list. */
-          apr_hash_set (s_props, key, klen, NULL);
-        }
-      else
-        {
-          /* This property didn't exist in the source, so this is just
-             an add. */
-          SVN_ERR (change_fn (c, object, key, val, subpool));
-        }
-    }
-
-  /* All the properties remaining in the source list are not present
-     in the target, and so must be deleted. */
-  if (s_props)
-    {
-      for (hi = apr_hash_first (subpool, s_props); hi; hi = apr_hash_next (hi))
-        {
-          const void *key;
-          
-          /* KEY is property name in target, VAL the value */
-          apr_hash_this (hi, &key, NULL, NULL);
-
-          SVN_ERR (change_fn (c, object, key, NULL, subpool));
-        }
+      const svn_prop_t *pc = &APR_ARRAY_IDX (prop_diffs, i, svn_prop_t);
+      SVN_ERR (change_fn (c, object, pc->name, pc->value, subpool));
     }
 
  cleanup:
@@ -636,6 +604,8 @@ delta_files (struct context *c,
 {
   apr_pool_t *subpool;
   int changed = 1;
+
+  assert (target_path);
 
   /* Make a subpool for local allocations. */
   subpool = svn_pool_create (pool);
@@ -838,21 +808,15 @@ delta_dirs (struct context *c,
   apr_hash_index_t *hi;
   apr_pool_t *subpool;
 
+  assert (target_path);
+
   /* Compare the property lists.  */
   SVN_ERR (delta_proplists (c, source_path, target_path,
                             change_dir_prop, dir_baton, pool));
 
   /* Get the list of entries in each of source and target.  */
-  if (target_path)
-    {
-      SVN_ERR (svn_fs_dir_entries (&t_entries, c->target_root,
-                                   target_path, pool));
-    }
-  else
-    {
-      /* Return a viscious error. */
-      abort();
-    }
+  SVN_ERR (svn_fs_dir_entries (&t_entries, c->target_root,
+                               target_path, pool));
 
   if (source_path)
     {

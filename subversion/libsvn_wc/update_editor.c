@@ -1469,10 +1469,8 @@ svn_wc_install_file (svn_wc_notify_state_t *content_state,
             }
           
           /* Deduce changes. */
-          SVN_ERR (svn_wc_get_local_propchanges (&propchanges,
-                                                 new_pristine_props,
-                                                 old_pristine_props,
-                                                 pool));
+          SVN_ERR (svn_prop_diffs (&propchanges, new_pristine_props,
+                                   old_pristine_props, pool));
         }
       else
         /* The user gave us a list prop diffs directly, yay. */

@@ -745,8 +745,7 @@ svn_wc_transmit_prop_deltas (const char *path,
     SVN_ERR (svn_wc__load_prop_file (props_base, baseprops, pool));
   
   /* Get an array of local changes by comparing the hashes. */
-  SVN_ERR (svn_wc_get_local_propchanges (&propmods, localprops, 
-                                         baseprops, pool));
+  SVN_ERR (svn_prop_diffs (&propmods, localprops, baseprops, pool));
 
   /* Apply each local change to the baton */
   for (i = 0; i < propmods->nelts; i++)
