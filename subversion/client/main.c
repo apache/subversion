@@ -125,7 +125,8 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
 /* Some commands take an implicit "." string argument when invoked
  * with no arguments. Those commands make use of this function to
  * add "." to the target array if the user passes no args */
-void svn_cl__push_implicit_dot_target(apr_array_header_t *targets, apr_pool_t *pool)
+void
+svn_cl__push_implicit_dot_target(apr_array_header_t *targets, apr_pool_t *pool)
 {
   if (targets->nelts == 0) {
     (*((svn_string_t **) apr_array_push (targets)))
