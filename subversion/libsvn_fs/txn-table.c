@@ -16,6 +16,7 @@
  */
 
 #include <string.h>
+
 #include "db.h"
 #include "fs.h"
 #include "err.h"
@@ -26,6 +27,7 @@
 #include "txn-table.h"
 #include "trail.h"
 #include "validate.h"
+#include "id.h"
 
 static const char next_id_key[] = "next-id";
 
@@ -308,7 +310,7 @@ svn_fs__set_txn_root (svn_fs_t *fs,
   SVN_ERR (svn_fs__get_txn (&txn_skel, fs, svn_txn, trail));
   SVN_ERR (get_ids_from_txn_skel (&old_root_id, &base_root_id,
                                   txn_skel, trail->pool));
-  if (! svn_fs_id_eq (old_root_id, root_id))
+  if (! svn_fs__id_eq (old_root_id, root_id))
     SVN_ERR (put_txn (fs, svn_txn, root_id, base_root_id, 
                       get_proplist_from_txn_skel (txn_skel), trail));
 
@@ -328,7 +330,7 @@ svn_fs__set_txn_base (svn_fs_t *fs,
   SVN_ERR (svn_fs__get_txn (&txn_skel, fs, svn_txn, trail));
   SVN_ERR (get_ids_from_txn_skel (&root_id, &base_root_id,
                                   txn_skel, trail->pool));
-  if (! svn_fs_id_eq (base_root_id, new_id))
+  if (! svn_fs__id_eq (base_root_id, new_id))
     SVN_ERR (put_txn (fs, svn_txn, root_id, new_id, 
                       get_proplist_from_txn_skel (txn_skel), trail));
 

@@ -20,6 +20,7 @@
 #include <apr_pools.h>
 #include <apr_time.h>
 #include <apr_md5.h>
+
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_time.h"
@@ -27,6 +28,7 @@
 #include "svn_path.h"
 #include "svn_delta.h"
 #include "svn_test.h"
+
 #include "../fs-helpers.h"
 
 #include "../../libsvn_fs/fs.h"
@@ -35,6 +37,8 @@
 #include "../../libsvn_fs/rev-table.h"
 #include "../../libsvn_fs/nodes-table.h"
 #include "../../libsvn_fs/trail.h"
+#include "../../libsvn_fs/id.h"
+
 #include "../../libsvn_delta/delta.h"
 
 #define SET_STR(ps, s) ((ps)->data = (s), (ps)->len = strlen(s))
@@ -1878,19 +1882,19 @@ merge_re_id (const char **msg,
   /* We fully expect revision 2's ids to not have branched, meaning
      that if the revision 1 ids are of the form `A.B', revision 2's will
      look like `A.B+1'. */
-  if ( !((svn_fs_id_length (root_1_id) == 2)
+  if ( !((svn_fs__id_length (root_1_id) == 2)
          && (root_2_id[0] == root_1_id[0])
          && (root_2_id[1] == root_1_id[1] + 1)
          && (root_2_id[2] == root_1_id[2])))
     return unexpected_node_id (rev_root, "", root_2_id, pool);
 
-  if ( !((svn_fs_id_length (A_1_id) == 2)
+  if ( !((svn_fs__id_length (A_1_id) == 2)
          && (A_2_id[0] == A_1_id[0])
          && (A_2_id[1] == A_1_id[1] + 1)
          && (A_2_id[2] == A_1_id[2])))
     return unexpected_node_id (rev_root, "", A_2_id, pool);
 
-  if ( !((svn_fs_id_length (D_1_id) == 2)
+  if ( !((svn_fs__id_length (D_1_id) == 2)
          && (D_2_id[0] == D_1_id[0])
          && (D_2_id[1] == D_1_id[1] + 1)
          && (D_2_id[2] == D_1_id[2])))
@@ -1922,19 +1926,19 @@ merge_re_id (const char **msg,
   SVN_ERR (svn_fs_node_id (&D_3_id, rev_root, "A/D", pool));
 
   /* Again, we expect revision 3's ids to not have branched. */
-  if ( !((svn_fs_id_length (root_3_id) == 2)
+  if ( !((svn_fs__id_length (root_3_id) == 2)
          && (root_3_id[0] == root_2_id[0])
          && (root_3_id[1] == root_2_id[1] + 1)
          && (root_3_id[2] == root_2_id[2])))
     return unexpected_node_id (rev_root, "", root_3_id, pool);
 
-  if ( !((svn_fs_id_length (A_3_id) == 2)
+  if ( !((svn_fs__id_length (A_3_id) == 2)
          && (A_3_id[0] == A_2_id[0])
          && (A_3_id[1] == A_2_id[1] + 1)
          && (A_3_id[2] == A_2_id[2])))
     return unexpected_node_id (rev_root, "", A_3_id, pool);
 
-  if ( !((svn_fs_id_length (D_3_id) == 2)
+  if ( !((svn_fs__id_length (D_3_id) == 2)
          && (D_3_id[0] == D_2_id[0])
          && (D_3_id[1] == D_2_id[1] + 1)
          && (D_3_id[2] == D_2_id[2])))
@@ -1979,21 +1983,21 @@ merge_re_id (const char **msg,
      of these nodes, appending `.1.1' to the node ids.  So we expect
      these node id's to make a second branch, having `.2.1' after the
      original node ids.  */
-  if ( !((svn_fs_id_length (root_4_id) == 4)
+  if ( !((svn_fs__id_length (root_4_id) == 4)
          && (root_4_id[0] == root_1_id[0])
          && (root_4_id[1] == root_1_id[1])
          && (root_4_id[2] == 2)
          && (root_4_id[3] == 1)))
     return unexpected_node_id (rev_root, "", root_4_id, pool);
 
-  if ( !((svn_fs_id_length (A_4_id) == 4)
+  if ( !((svn_fs__id_length (A_4_id) == 4)
          && (A_4_id[0] == A_1_id[0])
          && (A_4_id[1] == A_1_id[1])
          && (A_4_id[2] == 2)
          && (A_4_id[3] == 1)))
     return unexpected_node_id (rev_root, "", A_4_id, pool);
 
-  if ( !((svn_fs_id_length (D_4_id) == 4)
+  if ( !((svn_fs__id_length (D_4_id) == 4)
          && (D_4_id[0] == D_1_id[0])
          && (D_4_id[1] == D_1_id[1])
          && (D_4_id[2] == 2)
@@ -3153,7 +3157,7 @@ link_test (const char **msg,
     SVN_ERR (svn_fs_node_id (&orig_id, txn_root, "A/D/G/pi", pool));
     SVN_ERR (svn_fs_node_id (&link_id, txn_root, "A/D/G/pi2", pool));
 
-    if (! svn_fs_id_eq (orig_id, link_id))
+    if (! svn_fs__id_eq (orig_id, link_id))
       return svn_error_createf
         (SVN_ERR_FS_GENERAL, 0, NULL, pool,
          "link_test: orig id not same as link id (`%s', `%s')",
@@ -3197,7 +3201,7 @@ link_test (const char **msg,
     SVN_ERR (svn_fs_node_id (&orig_id, rev_root, "A/D/G/pi", pool));
     SVN_ERR (svn_fs_node_id (&link_id, rev_root, "A/D/G/pi2", pool));
 
-    if (svn_fs_id_eq (orig_id, link_id))
+    if (svn_fs__id_eq (orig_id, link_id))
       return svn_error_createf
         (SVN_ERR_FS_GENERAL, 0, NULL, pool,
          "link_test: orig id same as newly committed link id (`%s', `%s')",
@@ -3231,7 +3235,7 @@ link_test (const char **msg,
     SVN_ERR (svn_fs_node_id (&orig_id, rev_root, "A/D/G/pi", pool));
     SVN_ERR (svn_fs_node_id (&link_id, rev_root, "A/D/G/pi2", pool));
 
-    if (svn_fs_id_eq (orig_id, link_id))
+    if (svn_fs__id_eq (orig_id, link_id))
       return svn_error_createf
         (SVN_ERR_FS_GENERAL, 0, NULL, pool,
          "link_test: orig not same as unchanged committed link (`%s', `%s')",

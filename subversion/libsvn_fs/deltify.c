@@ -21,11 +21,13 @@
 #include "svn_fs.h"
 #include "svn_pools.h"
 #include "svn_path.h"
+
 #include "fs.h"
 #include "nodes-table.h"
 #include "node-rev.h"
 #include "reps-strings.h"
 #include "dag.h"
+#include "id.h"
 
 
 /* Stable nodes and deltification.  */
@@ -176,12 +178,12 @@ deltify_by_id (svn_fs_t *fs,
                trail_t *trail)
 {
   svn_fs_id_t *source_id = NULL, *tmp_id;
-  apr_size_t len = svn_fs_id_length (target_id);
+  apr_size_t len = svn_fs__id_length (target_id);
   dag_node_t *node;
 
   /* Increment TMP_ID as a regular successor of TARGET_ID, and see if
      it exists in FS. */
-  tmp_id = svn_fs_copy_id (target_id, trail->pool);
+  tmp_id = svn_fs__id_copy (target_id, trail->pool);
   tmp_id[len - 1]++;
   if (SVN_NO_ERROR == svn_fs__dag_get_node (&node, fs, tmp_id, trail))
     {
@@ -391,7 +393,7 @@ svn_fs__stable_node (svn_fs_t *fs,
                      svn_fs_id_t *id,
                      trail_t *trail)
 {
-  svn_fs_id_t *predecessor_id = svn_fs_predecessor_id (id, trail->pool);
+  svn_fs_id_t *predecessor_id = svn_fs__id_predecessor (id, trail->pool);
   int is_dir = 0;
   dag_node_t *node;
 

@@ -253,10 +253,10 @@ static dav_error *dav_svn_checkout(dav_resource *resource,
     {
       /* standard Version Resource */
 
-      svn_fs_id_t *res_id;
       svn_fs_txn_t *txn;
       svn_fs_root_t *txn_root;
       dav_error *err;
+      int matches;
 
       /* open the specified transaction so that we can verify this version
          resource corresponds to the current/latest in the transaction. */
@@ -274,23 +274,25 @@ static dav_error *dav_svn_checkout(dav_resource *resource,
 
       /* assert: repos_path != NULL (for this type of resource) */
 
-      /* get the ID of PATH within the TXN */
-      serr = svn_fs_node_id(&res_id, txn_root, resource->info->repos_path,
-                            resource->pool);
+      serr = svn_fs_txn_path_is_id(&matches, txn_root,
+                                   resource->info->repos_path,
+                                   resource->info->node_id,
+                                   resource->pool);
       if (serr != NULL)
         {
           /* ### correct HTTP error? */
           return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                     "Could not fetch the node ID of the "
-                                     "corresponding path within the "
-                                     "transaction tree.");
+                                     "Could not match the node ID.");
         }
 
-      if (!svn_fs_id_eq(res_id, resource->info->node_id))
+      if (!matches)
         {
-          svn_boolean_t invalid = TRUE;
+          /* The node ID they are trying to change does not match what was
+             found in the transaction. That means they are trying to modify
+             an old (out of date) revision of the resource, or they are
+             trying to modify a *newer* revision.
 
-          /* If the version resource is *newer* than the transaction
+             If the version resource is *newer* than the transaction
              root, then the client started a commit, a new revision was
              created within the repository, the client fetched the new
              resource from that new revision, changed it (or merged in
@@ -302,62 +304,41 @@ static dav_error *dav_svn_checkout(dav_resource *resource,
              that. We can stop the commit, and everything will be fine
              again if the user simply restarts it (because we'll use
              that new revision as the transaction root, thus incorporating
-             the new resource).
-
-             Special exception case:
-
-             If the nodes are directories, and the transaction's node is
-             an immediate child of the requested node, then we're okay.
-             The issue is that we generate a child for the directory when
-             it goes from an immutable node in a revision root, into a
-             mutable node in the transaction root. We should not consider
-             this a change, and there would be no way for the client to
-             check out the transaction root's directory node anyway.
-
-             Files do not have this behavior because they are not spuriously
-             placed into the transaction root (directories are because of
-             the bubble up algorithm). The only time a file will shift is
-             when a true change is being made, and we'll see that anyways.
+             the new resource, which they will then modify).
           */
-          if (svn_fs_is_parent(resource->info->node_id, res_id))
-            {
-              int is_dir;
-
-              serr = svn_fs_is_dir(&is_dir, txn_root,
-                                   resource->info->repos_path, resource->pool);
-              if (serr == NULL)
-                invalid = !is_dir;
-              /* else ignore the error and go with the "out of date" msg */
-            }
-
-          if (invalid)
-            {
 #if 1
-              return dav_new_error_tag
-                (resource->pool, HTTP_CONFLICT, SVN_ERR_FS_CONFLICT,
-                 "The version resource does not correspond "
-                 "to the resource within the transaction. "
-                 "Either the requested version resource is "
-                 "out of date (needs to be updated), or the "
-                 "requested version resource is newer than "
-                 "the transaction root (restart the "
-                 "commit).",
-                 SVN_DAV_ERROR_NAMESPACE,
-                 SVN_DAV_ERROR_TAG);
+          return dav_new_error_tag
+            (resource->pool, HTTP_CONFLICT, SVN_ERR_FS_CONFLICT,
+             "The version resource does not correspond "
+             "to the resource within the transaction. "
+             "Either the requested version resource is "
+             "out of date (needs to be updated), or the "
+             "requested version resource is newer than "
+             "the transaction root (restart the "
+             "commit).",
+             SVN_DAV_ERROR_NAMESPACE,
+             SVN_DAV_ERROR_TAG);
 
 #else
-              svn_stringbuf_t *r_id = svn_fs_unparse_id(resource->info->node_id,
-                                                     resource->pool);
-              svn_stringbuf_t *t_id = svn_fs_unparse_id(res_id, resource->pool);
-              const char *msg = apr_psprintf(resource->pool,
-                                             "id mismatch: r=%s  t=%s",
-                                             r_id->data, t_id->data);
-              return dav_new_error_tag(resource->pool, HTTP_CONFLICT, 
-                                       SVN_ERR_FS_CONFLICT, msg,
-                                       SVN_DAV_ERROR_NAMESPACE,
-                                       SVN_DAV_ERROR_TAG);
+          /* ### some debugging code */
+
+          svn_fs_id_t *res_id;
+          svn_stringbuf_t *r_id;
+          svn_stringbuf_t *t_id;
+          const char *msg;
+
+          (void) svn_fs_node_id (&res_id, txn_root,
+                                 resource->info->repos_path, resource->pool);
+          r_id = svn_fs_unparse_id(resource->info->node_id, resource->pool);
+          t_id = svn_fs_unparse_id(res_id, resource->pool);
+          msg = apr_psprintf(resource->pool, "id mismatch: r=%s  t=%s",
+                             r_id->data, t_id->data);
+
+          return dav_new_error_tag(resource->pool, HTTP_CONFLICT, 
+                                   SVN_ERR_FS_CONFLICT, msg,
+                                   SVN_DAV_ERROR_NAMESPACE,
+                                   SVN_DAV_ERROR_TAG);
 #endif
-            }
         }
     }
 

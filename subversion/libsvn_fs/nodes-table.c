@@ -16,8 +16,10 @@
  */
 
 #include <string.h>
-#include "db.h"
+
 #include "svn_fs.h"
+
+#include "db.h"
 #include "fs.h"
 #include "err.h"
 #include "dbt.h"
@@ -25,6 +27,7 @@
 #include "trail.h"
 #include "validate.h"
 #include "nodes-table.h"
+#include "id.h"
 
 
 
@@ -81,7 +84,7 @@ parse_node_revision_dbt (const DBT *d)
     return 0;
 
   /* It must be a node revision ID, not a node ID.  */
-  if (svn_fs_id_length (id) & 1)
+  if (svn_fs__id_length (id) & 1)
     {
       free (id);
       return 0;
@@ -303,7 +306,7 @@ svn_fs__new_node_id (svn_fs_id_t **id_p,
   /* Try to parse the key as a node revision ID.  */
   id = svn_fs_parse_id (key.data, key.size, trail->pool);
   if (! id
-      || svn_fs_id_length (id) < 2)
+      || svn_fs__id_length (id) < 2)
     {
       cursor->c_close (cursor);
       return svn_fs__err_corrupt_nodes_key (fs);
@@ -384,7 +387,7 @@ svn_fs__new_successor_id (svn_fs_id_t **successor_p,
                           const svn_fs_id_t *id,
                           trail_t *trail)
 {
-  int id_len = svn_fs_id_length (id);
+  int id_len = svn_fs__id_length (id);
   svn_fs_id_t *new_id;
   apr_pool_t *pool = trail->pool;
   DB_TXN *db_txn = trail->db_txn;
@@ -444,7 +447,7 @@ svn_fs__new_successor_id (svn_fs_id_t **successor_p,
     if (! last_branch_id)
       return svn_fs__err_corrupt_nodes_key (fs);
 
-    last_branch_len = svn_fs_id_length (last_branch_id);
+    last_branch_len = svn_fs__id_length (last_branch_id);
 
     /* Only node revision ID's may appear as keys in the `nodes' table.  */
     if (last_branch_len & 1)
