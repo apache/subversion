@@ -26,14 +26,17 @@ use Getopt::Long;
 
 my $log_file;
 my $invert = 0;
+my $caseless = 0;
 
 GetOptions('f|file=s' => \$log_file,
-           'v|invert' => \$invert) or &usage;
+           'v|invert' => \$invert,
+           'i|caseinsensitive' => \$caseless) or &usage;
 
 &usage("$0: too few arguments") unless @ARGV;
 &usage("$0: too many arguments") if @ARGV > 1;
 
 my $filter = shift;
+$filter = '(?i)' . $filter if $caseless;
 
 my $log_cmd = "svn log";
 
@@ -50,7 +53,7 @@ my $seen_blank_line;  # A blank line separates headers from body.
 
 while (<LOGDATA>)
 {
-  if (/^r([0-9]+) \| [^\|]+ \| [^\|]+ \| ([0-9]+) (line|lines)$/)
+  if (/^r([0-9]+) \| [^\|]* \| [^\|]* \| ([0-9]+) (line|lines)$/)
   {
     $this_rev = $1;
     $this_lines = $2 + 1;  # Compensate for blank line preceding body.
@@ -101,12 +104,14 @@ exit 0;
 
 sub usage {
   warn "@_\n" if @_;
-  die "usage: $0: [-v] [-f LOGFILE] REGEXP\n",
+  die "usage: $0: [-v] [-i] [-f LOGFILE] REGEXP\n",
       "\n",
       "Print only log messages matching REGEXP, either by running 'svn log'\n",
       "in the current working directory, or if '-f LOGFILE' is passed, then\n",
       "read the log data from LOGFILE (which should be in the same format\n",
       "as the output of 'svn log').\n",
       "\n",
-      "If '-v' is given, the matching is inverted (like 'grep -v').\n";
+      "If '-v' is given, the matching is inverted (like 'grep -v').\n",
+      "\n",
+      "If '-i' is given, the matching is case-insensitive (like 'grep -i').\n";
 }
