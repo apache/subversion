@@ -380,6 +380,273 @@ svn_xml_write_tag (apr_file_t *file,
 
 
 
+/*** XML output via a tree delta `editor'. ***/
+
+/* FIXME: I'm not sure we'll need all of these structures... unless
+   we're doing postfix vdeltas, hmmm, then we probably do, yeah. */
+
+struct edit_baton
+{
+  svn_boolean_t postfix_text_deltas;
+  apr_pool_t *pool;
+  /* FIXME: write constructor/destructor? */
+};
+
+
+struct dir_baton
+{
+  apr_file_t *outfile;
+  struct edit_baton *edit_baton;
+  apr_pool_t *pool;
+  /* FIXME: write constructor/destructor? */
+};
+
+
+struct file_baton
+{
+  struct dir_baton *dir_baton;
+  apr_pool_t *pool;
+  /* FIXME: write constructor/destructor? */
+};
+
+static svn_error_t *
+replace_root (svn_string_t *ancestor_path,
+              svn_vernum_t ancestor_version,
+              void *edit_baton,
+              void **dir_baton)
+{
+#if 0
+  struct edit_baton *eb = (struct edit_baton *) edit_baton;
+  struct dir_baton *d;
+#endif /* 0 */
+
+  /* FIXME */
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+delete (svn_string_t *name, void *parent_baton)
+{
+#if 0
+  struct dir_baton *parent_dir_baton = (struct dir_baton *) parent_baton;
+#endif /* 0 */
+
+  /* FIXME */
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+add_directory (svn_string_t *name,
+               void *parent_baton,
+               svn_string_t *ancestor_path,
+               svn_vernum_t ancestor_version,
+               void **child_baton)
+{
+#if 0
+  svn_error_t *err;
+  struct dir_baton *parent_dir_baton = (struct dir_baton *) parent_baton;
+#endif /* 0 */
+
+  /* FIXME */
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+replace_directory (svn_string_t *name,
+                   void *parent_baton,
+                   svn_string_t *ancestor_path,
+                   svn_vernum_t ancestor_version,
+                   void **child_baton)
+{
+#if 0
+  struct dir_baton *parent_dir_baton = (struct dir_baton *) parent_baton;
+#endif /* 0 */
+
+  /* FIXME */
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+change_dir_prop (void *dir_baton,
+                 svn_string_t *name,
+                 svn_string_t *value)
+{
+#if 0
+  struct dir_baton *this_dir_baton = (struct dir_baton *) dir_baton;
+#endif /* 0 */
+
+  /* FIXME */
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+change_dirent_prop (void *dir_baton,
+                    svn_string_t *entry,
+                    svn_string_t *name,
+                    svn_string_t *value)
+{
+#if 0
+  struct dir_baton *this_dir_baton = (struct dir_baton *) dir_baton;
+#endif /* 0 */
+
+  /* FIXME */
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+close_directory (void *dir_baton)
+{
+#if 0
+  struct dir_baton *this_dir_baton = (struct dir_baton *) dir_baton;
+#endif /* 0 */
+
+  /* FIXME */
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+add_file (svn_string_t *name,
+          void *parent_baton,
+          svn_string_t *ancestor_path,
+          svn_vernum_t ancestor_version,
+          void **file_baton)
+{
+#if 0
+  struct dir_baton *parent_dir_baton = (struct dir_baton *) parent_baton;
+  struct file_baton *fb;
+#endif /* 0 */
+
+  /* FIXME */
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+replace_file (svn_string_t *name,
+              void *parent_baton,
+              svn_string_t *ancestor_path,
+              svn_vernum_t ancestor_version,
+              void **file_baton)
+{
+#if 0
+  struct dir_baton *parent_dir_baton = (struct dir_baton *) parent_baton;
+#endif /* 0 */
+
+  /* FIXME */
+
+  return err;
+}
+
+
+static svn_error_t *
+apply_textdelta (void *file_baton, 
+                 svn_txdelta_window_handler_t **handler,
+                 void **handler_baton)
+{
+  /* FIXME */
+  
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+change_file_prop (void *file_baton,
+                  svn_string_t *name,
+                  svn_string_t *value)
+{
+#if 0
+  struct file_baton *fb = (struct file_baton *) file_baton;
+#endif /* 0 */
+
+  /* FIXME */
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+close_file (void *file_baton)
+{
+#if 0
+  struct file_baton *fb = (struct file_baton *) file_baton;
+#endif /* 0 */
+
+  /* FIXME */
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+close_edit (void *edit_baton)
+{
+#if 0
+  struct edit_baton *eb = (struct edit_baton *) edit_baton;
+#endif /* 0 */
+
+  /* FIXME */
+
+  return SVN_NO_ERROR;
+}
+
+
+static const svn_delta_edit_fns_t tree_editor =
+{
+  replace_root,
+  delete,
+  add_directory,
+  replace_directory,
+  change_dir_prop,
+  change_dirent_prop,
+  close_directory,
+  add_file,
+  replace_file,
+  apply_textdelta,
+  change_file_prop,
+  close_file,
+  close_edit
+};
+
+
+svn_error_t *
+svn_xml_get_editor (apr_file_t *outfile,
+                    const svn_delta_edit_fns_t **editor,
+                    void **edit_baton,
+                    apr_pool_t *pool)
+{
+  struct edit_baton *eb;
+  apr_pool_t *subpool = svn_pool_create (pool, NULL);
+
+  /* FIXME: this function may need more arguments, and use an
+     edit_baton constructor, etc. */
+
+  *editor = &tree_editor;
+  eb = apr_pcalloc (subpool, sizeof (*edit_baton));
+  eb->postfix_text_deltas = 1;   /* Or 0? */
+  eb->pool           = subpool;
+
+  *edit_baton = eb;
+
+  return SVN_NO_ERROR;
+}
+
+
+
 /* 
  * local variables:
  * eval: (load-file "../svn-dev.el")
