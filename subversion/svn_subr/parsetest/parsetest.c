@@ -1,8 +1,8 @@
 
 /* Testing svn_parse() */
 
-#include <svn_parse.h>
 #include <stdio.h>
+#include "svn_parse.h"
 
 int
 main ()

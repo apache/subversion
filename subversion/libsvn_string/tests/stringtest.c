@@ -3,7 +3,7 @@
    Ben Collins-Sussman, (C) 2000 Collab.Net */
 
 #include <stdio.h>
-#include <svn_string.h>   /* This includes <apr_*.h> */
+#include "svn_string.h"   /* This includes <apr_*.h> */
 
 int
 main ()

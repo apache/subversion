@@ -48,10 +48,10 @@
  */
 
 
-#include <svn_svr.h>
-#include <svn_parse.h>
 #include <apr_hash.h>
 #include <apr_dso.h>
+#include "svn_svr.h"
+#include "svn_parse.h"
 
 
 /* 
