@@ -2,6 +2,17 @@
 
 ### Run this to produce everything needed for configuration. ###
 
+# Ensure some permissions for executables used by this script
+for execfile in gen-make.py \
+                dist.sh \
+                ac-helpers/get-neon-ver.sh \
+                ac-helpers/gnu-diff.sh \
+                ac-helpers/gnu-patch.sh \
+                ac-helpers/install.sh; do
+  chmod +x $execfile                
+done
+
+
 # Make sure the APR directory is present
 if [ ! -d apr ]; then
   echo "You don't have an apr/ subdirectory here.  Please get one:"
@@ -56,6 +67,8 @@ fi
 
 # Run a quick test to ensure APR is kosher.
 (cd apr && build/buildcheck.sh) || exit 1
+
+
 
 
 #
