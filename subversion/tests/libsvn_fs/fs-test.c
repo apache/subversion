@@ -5503,7 +5503,6 @@ canonicalize_abspath (const char **msg,
 }
 
 
-#if 0
 static svn_error_t *
 branch_test (const char **msg,
              svn_boolean_t msg_only,
@@ -5538,31 +5537,6 @@ branch_test (const char **msg,
   SVN_ERR (svn_fs_copy (rev_root, "A/D/G/rho", txn_root, "A/D/G/rho2", spool));
   SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
   SVN_ERR (svn_fs_close_txn (txn));
-  {
-    const svn_fs_id_t *rho_id, *rho2_id, *G_id;
-
-    /* Now, A/D/G/rho and A/D/G/rho2 should have the same NodeId, but
-       A/D/G/rho2 should have earned a new CopyId. */
-    SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, spool));
-    SVN_ERR (svn_fs_node_id (&G_id, rev_root, "A/D/G", spool));
-    SVN_ERR (svn_fs_node_id (&rho_id, rev_root, "A/D/G/rho", spool));
-    SVN_ERR (svn_fs_node_id (&rho2_id, rev_root, "A/D/G/rho2", spool));
-    if (strcmp (svn_fs__id_node_id (rho_id),
-                svn_fs__id_node_id (rho2_id)) != 0)
-      return svn_error_createf 
-        (SVN_ERR_FS_CORRUPT, 0, NULL, pool,
-         "Expected matching node ids for 'A/D/G/rho' and 'A/D/G/rho2'");
-    if (strcmp (svn_fs__id_copy_id (rho_id),
-                svn_fs__id_copy_id (G_id)) != 0)
-      return svn_error_createf 
-        (SVN_ERR_FS_CORRUPT, 0, NULL, pool,
-         "Expected matching copy ids for 'A/D/G' and 'A/D/G/rho'");
-    if (strcmp (svn_fs__id_copy_id (rho_id),
-                svn_fs__id_copy_id (rho2_id)) == 0)
-      return svn_error_createf 
-        (SVN_ERR_FS_CORRUPT, 0, NULL, pool,
-         "Expected differing copy ids for 'A/D/G/rho' and 'A/D/G/rho2'");
-  }
   svn_pool_clear (spool);
 
   /*** Revision 3:  Copy A/D/G to A/D/G2.  ***/
@@ -5572,52 +5546,42 @@ branch_test (const char **msg,
   SVN_ERR (svn_fs_copy (rev_root, "A/D/G", txn_root, "A/D/G2", spool));
   SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
   SVN_ERR (svn_fs_close_txn (txn));
-  {
-    const svn_fs_id_t *G_rho_id, *G_rho2_id, 
-                      *G2_rho_id, *G2_rho2_id, 
-                      *G_id, *G2_id;
-
-    /* Now, A/D/G and A/D/G2 should have the same NodeId, but A/D/G2
-       should have earned a new CopyId.  Also, A/D/G/rho and
-       A/D/G/rho2 should be the same nodes as A/D/G2/rho and
-       A/D/G2/rho2, respectively.  */
-    SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, spool));
-    SVN_ERR (svn_fs_node_id (&G_id, rev_root, "A/D/G", spool));
-    SVN_ERR (svn_fs_node_id (&G2_id, rev_root, "A/D/G2", spool));
-    SVN_ERR (svn_fs_node_id (&G_rho_id, rev_root, "A/D/G/rho", spool));
-    SVN_ERR (svn_fs_node_id (&G_rho2_id, rev_root, "A/D/G/rho2", spool));
-    SVN_ERR (svn_fs_node_id (&G2_rho_id, rev_root, "A/D/G2/rho", spool));
-    SVN_ERR (svn_fs_node_id (&G2_rho2_id, rev_root, "A/D/G2/rho2", spool));
-    if (strcmp (svn_fs__id_node_id (G_id),
-                svn_fs__id_node_id (G2_id)) != 0)
-      return svn_error_createf 
-        (SVN_ERR_FS_CORRUPT, 0, NULL, pool,
-         "Expected matching node ids for 'A/D/G' and 'A/D/G2'");
-    if (strcmp (svn_fs__id_copy_id (G_id),
-                svn_fs__id_copy_id (G2_id)) == 0)
-      return svn_error_createf 
-        (SVN_ERR_FS_CORRUPT, 0, NULL, pool,
-         "Expected differing copy ids for 'A/D/G' and 'A/D/G2'");
-    if (svn_fs_compare_ids (G_rho_id, G2_rho_id) != 0)
-      return svn_error_createf 
-        (SVN_ERR_FS_CORRUPT, 0, NULL, pool,
-         "Expected equivalent ids for 'A/D/G/rho' and 'A/D/G2/rho'");
-    if (svn_fs_compare_ids (G_rho2_id, G2_rho2_id) != 0)
-      return svn_error_createf 
-        (SVN_ERR_FS_CORRUPT, 0, NULL, pool,
-         "Expected equivalent ids for 'A/D/G/rho2' and 'A/D/G2/rho2'");
-  }
   svn_pool_clear (spool);
 
-  /*** Revision 4:  Edit A/D/G2/rho and A/D/G2/rho2.  ***/
+  /*** Revision 4:  Copy A/D to A/D2.  ***/
   SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, spool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, spool));
-  SVN_ERR (svn_test__set_file_contents (txn_root, "A/D/G2/rho", 
-                                        "New contents.", spool));
-  SVN_ERR (svn_test__set_file_contents (txn_root, "A/D/G2/rho2", 
-                                        "New contents.", spool));
+  SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, spool));
+  SVN_ERR (svn_fs_copy (rev_root, "A/D", txn_root, "A/D2", spool));
   SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
   SVN_ERR (svn_fs_close_txn (txn));
+  svn_pool_clear (spool);
+
+  /*** Revision 5:  Edit all the rho's! ***/
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, spool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, spool));
+  SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, spool));
+  SVN_ERR (svn_test__set_file_contents (txn_root, "A/D/G/rho", 
+                                        "Edited text.", spool));
+  SVN_ERR (svn_test__set_file_contents (txn_root, "A/D/G/rho2", 
+                                        "Edited text.", spool));
+  SVN_ERR (svn_test__set_file_contents (txn_root, "A/D/G2/rho", 
+                                        "Edited text.", spool));
+  SVN_ERR (svn_test__set_file_contents (txn_root, "A/D/G2/rho2", 
+                                        "Edited text.", spool));
+  SVN_ERR (svn_test__set_file_contents (txn_root, "A/D2/G/rho", 
+                                        "Edited text.", spool));
+  SVN_ERR (svn_test__set_file_contents (txn_root, "A/D2/G/rho2", 
+                                        "Edited text.", spool));
+  SVN_ERR (svn_test__set_file_contents (txn_root, "A/D2/G2/rho", 
+                                        "Edited text.", spool));
+  SVN_ERR (svn_test__set_file_contents (txn_root, "A/D2/G2/rho2", 
+                                        "Edited text.", spool));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
+  SVN_ERR (svn_fs_close_txn (txn));
+  svn_pool_clear (spool);
+
+#if 0
   {
     const svn_fs_id_t *G2_id, *G2_rho_id, *G2_rho2_id;
 
@@ -5631,12 +5595,12 @@ branch_test (const char **msg,
     SVN_ERR (svn_fs_node_id (&G2_rho2_id, rev_root, "A/D/G2/rho2", spool));
   }
   svn_pool_clear (spool);
+#endif /* 0 */
 
   svn_pool_destroy (spool);
   svn_fs_close_fs (fs);
   return SVN_NO_ERROR;
 }
-#endif /* 0 */
 
 
 /* ------------------------------------------------------------------------ */
@@ -5681,7 +5645,7 @@ svn_error_t * (*test_funcs[]) (const char **msg,
   check_related,
   revisions_changed,
   canonicalize_abspath,
-  /* branch_test, */
+  branch_test,
   0
 };
 
