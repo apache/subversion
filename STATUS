@@ -148,3 +148,8 @@ Binding candidate changes:
     Fix perl bindings build on OS X.
     Votes:
       +1: breser
+
+  * r8864
+    Fix bug that rejects string revision numbers.
+    Votes:
+      +1: breser
