@@ -21,9 +21,13 @@ RPMDIRS := \
 	$(HOME)/$(RPMDIR)/srpms \
 	$(HOME)/$(RPMDIR)/tmp
 
-all : rpm
+all :
+	@echo "Usage: Make rpm RevisionNumber=<Number> APR_TAR_FILE=<arp_tar_file> NEON_TAR_FILE=<neon_tar_file>"
 
-rpm : $(HOME)/.rpmmacros $(HOME)/$(RPMDIR) subversion.spec
+rpm : build_srpm
+	echo "Making RPM Revision Number $(RevisionNumber)..."
+
+build_srpm : $(HOME)/.rpmmacros $(HOME)/$(RPMDIR) subversion.spec
 
 $(HOME)/.rpmmacros : .rpmmacros
 	@if [ ! -f $(HOME)/.rpmmacros ]; \

@@ -12,7 +12,7 @@ Source2: neon-%{neon_version}.tar.gz
 Vendor: Summersoft
 Packager: David Summers <david@summersoft.fay.ar.us>
 Requires: db3 >= 3.3.11
-BuildPreReq: autoconf >= 2.52, db3-devel >= 3.3.11 libtool >= 1.4.2
+BuildPreReq: autoconf >= 2.52, db3-devel >= 3.3.11, libtool >= 1.4.2, python
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}
 Prefix: /usr
 %description
