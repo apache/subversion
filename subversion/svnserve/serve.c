@@ -406,7 +406,7 @@ static svn_error_t *get_props(apr_hash_t **props, svn_fs_root_t *root,
   /* Hardcode the values for the committed revision, date, and author. */
   SVN_ERR(svn_repos_get_committed_info(&crev, &cdate, &cauthor, root,
                                        path, pool));
-  str = svn_string_create(apr_psprintf(pool, "%" SVN_REVNUM_T_FMT, crev),
+  str = svn_string_create(apr_psprintf(pool, "%ld", crev),
                           pool);
   apr_hash_set(*props, SVN_PROP_ENTRY_COMMITTED_REV, APR_HASH_KEY_STRING, str);
   str = (cdate) ? svn_string_create(cdate, pool) : NULL;

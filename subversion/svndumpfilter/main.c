@@ -251,8 +251,8 @@ new_revision_record (void **revision_baton,
 
 
   SVN_ERR (svn_stream_printf (header_stream, pool,
-                              SVN_REPOS_DUMPFILE_REVISION_NUMBER ": %"
-                              SVN_REVNUM_T_FMT "\n", rb->rev_actual));
+                              SVN_REPOS_DUMPFILE_REVISION_NUMBER ": %ld\n",
+                              rb->rev_actual));
 
   for (hi = apr_hash_first (pool, headers); hi; hi = apr_hash_next (hi))
     {
@@ -414,8 +414,8 @@ new_node_record (void **node_baton,
                 }
               SVN_ERR (svn_stream_printf
                        (header_stream, pool,
-                        SVN_REPOS_DUMPFILE_NODE_COPYFROM_REV ": %"
-                        SVN_REVNUM_T_FMT "\n", *cf_renum_rev));
+                        SVN_REPOS_DUMPFILE_NODE_COPYFROM_REV ": %ld\n",
+                        *cf_renum_rev));
               continue;
             }
 
@@ -635,14 +635,14 @@ close_revision (void *revision_baton)
       SVN_ERR (svn_stream_write (rb->pb->out_stream,
                                  rb->body->data   , &(rb->body->len)));
       if (! rb->pb->quiet)
-        fprintf (stderr, "Revision %" SVN_REVNUM_T_FMT " committed as %"
-                 SVN_REVNUM_T_FMT ".\n", rb->rev_orig, rb->rev_actual);
+        fprintf (stderr, "Revision %ld committed as %ld.\n",
+                 rb->rev_orig, rb->rev_actual);
     }
   else
     {
       rb->pb->rev_drop_count++;
       if (! rb->pb->quiet)
-        fprintf (stderr, "Revision %" SVN_REVNUM_T_FMT " skipped.\n",
+        fprintf (stderr, "Revision %ld skipped.\n",
                  rb->rev_orig);
     }
   return SVN_NO_ERROR;
@@ -885,12 +885,11 @@ do_filter (apr_getopt_t *os,
                                             &this_key,
                                             sizeof (this_key)));
           if (this_val == SVN_INVALID_REVNUM)
-            fprintf (stderr, "   '%" SVN_REVNUM_T_FMT "' => (dropped)\n",
+            fprintf (stderr, "   '%ld' => (dropped)\n",
                      this_key);
           else
             fprintf (stderr, 
-                     "   '%" SVN_REVNUM_T_FMT "' => '%" 
-                     SVN_REVNUM_T_FMT "'\n", 
+                     "   '%ld' => '%ld'\n", 
                      this_key, this_val);
         }
       fprintf (stderr, "\n");

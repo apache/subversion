@@ -308,9 +308,9 @@ main(int argc, const char *argv[])
         }
     }
 
-  printf ("%" SVN_REVNUM_T_FMT, sb.min_rev);
+  printf ("%ld", sb.min_rev);
   if (sb.min_rev != sb.max_rev)
-    printf (":%" SVN_REVNUM_T_FMT, sb.max_rev);
+    printf (":%ld", sb.max_rev);
   if (sb.modified)
     fputs ("M", stdout);
   if (sb.switched)

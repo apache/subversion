@@ -229,7 +229,7 @@ svn_wc_process_committed (const char *path,
   const char *base_name;
   svn_stringbuf_t *logtags;
   apr_file_t *log_fp = NULL;
-  char *revstr = apr_psprintf (pool, "%" SVN_REVNUM_T_FMT, new_revnum);
+  char *revstr = apr_psprintf (pool, "%ld", new_revnum);
   const char *hex_digest = NULL;
 
   SVN_ERR (svn_wc__adm_write_check (adm_access));

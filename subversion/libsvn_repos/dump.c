@@ -429,16 +429,16 @@ dump_node (struct edit_baton *eb,
               && eb->feedback_stream)
             svn_stream_printf 
               (eb->feedback_stream, pool,
-               "WARNING: Referencing data in revision %" SVN_REVNUM_T_FMT
+               "WARNING: Referencing data in revision %ld" 
                ", which is older than the oldest\nWARNING: dumped revision "
-               "(%" SVN_REVNUM_T_FMT ").  Loading this dump into an empty "
+               "(%ld).  Loading this dump into an empty "
                "repository\nWARNING: will fail.\n",
                cmp_rev, eb->oldest_dumped_rev);
 
           if (eb->stream)
             SVN_ERR (svn_stream_printf (eb->stream, pool,
                                         SVN_REPOS_DUMPFILE_NODE_COPYFROM_REV 
-                                        ": %" SVN_REVNUM_T_FMT "\n"
+                                        ": %ld\n"
                                         SVN_REPOS_DUMPFILE_NODE_COPYFROM_PATH
                                         ": %s\n",
                                         cmp_rev, cmp_path));
@@ -902,7 +902,7 @@ write_revision_record (svn_stream_t *stream,
 
   SVN_ERR (svn_stream_printf (stream, pool,
                               SVN_REPOS_DUMPFILE_REVISION_NUMBER 
-                              ": %" SVN_REVNUM_T_FMT "\n", rev));
+                              ": %ld\n", rev));
   SVN_ERR (svn_stream_printf (stream, pool,
                               SVN_REPOS_DUMPFILE_PROP_CONTENT_LENGTH
                               ": %" APR_SIZE_T_FMT "\n",
@@ -959,14 +959,13 @@ svn_repos_dump_fs2 (svn_repos_t *repos,
   /* Validate the revisions. */
   if (start_rev > end_rev)
     return svn_error_createf (SVN_ERR_REPOS_BAD_ARGS, NULL,
-                              "Start revision %" SVN_REVNUM_T_FMT
-                              " is greater than end revision %" 
-                              SVN_REVNUM_T_FMT,
+                              "Start revision %ld"
+                              " is greater than end revision %ld",
                               start_rev, end_rev);
   if (end_rev > youngest)
     return svn_error_createf (SVN_ERR_REPOS_BAD_ARGS, NULL,
-                              "End revision %" SVN_REVNUM_T_FMT " is invalid "
-                              "(youngest revision is %" SVN_REVNUM_T_FMT ")",
+                              "End revision %ld is invalid "
+                              "(youngest revision is %ld)",
                               end_rev, youngest);
   if ((start_rev == 0) && incremental)
     incremental = FALSE; /* revision 0 looks the same regardless of
@@ -1074,7 +1073,7 @@ svn_repos_dump_fs2 (svn_repos_t *repos,
       svn_pool_clear (subpool);
       if (feedback_stream)
         SVN_ERR (svn_stream_printf (feedback_stream, pool,
-                                    "* %s revision %" SVN_REVNUM_T_FMT ".\n",
+                                    "* %s revision %ld.\n",
                                     stream ? "Dumped" : "Verified", to_rev));
     }
 

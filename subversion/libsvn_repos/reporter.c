@@ -357,7 +357,7 @@ delta_proplists (report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
   if (SVN_IS_VALID_REVNUM (crev))
     {
       /* Transmit the committed-rev. */
-      cr_str = svn_string_createf (pool, "%" SVN_REVNUM_T_FMT, crev);
+      cr_str = svn_string_createf (pool, "%ld", crev);
       SVN_ERR (change_fn (b, object,
                           SVN_PROP_ENTRY_COMMITTED_REV, cr_str, pool));
 
@@ -928,7 +928,7 @@ write_path_info (report_baton_t *b, const char *path, const char *lpath,
   lrep = lpath ? apr_psprintf (pool, "+%" APR_SIZE_T_FMT ":%s",
                                strlen(lpath), lpath) : "-";
   rrep = (SVN_IS_VALID_REVNUM (rev)) ?
-    apr_psprintf (pool, "+%" SVN_REVNUM_T_FMT ":", rev) : "-";
+    apr_psprintf (pool, "+%ld:", rev) : "-";
   rep = apr_psprintf (pool, "+%" APR_SIZE_T_FMT ":%s%s%s%c",
                       strlen(path), path, lrep, rrep, start_empty ? '+' : '-');
   return svn_io_file_write_full (b->tempfile, rep, strlen(rep), NULL, pool);

@@ -188,9 +188,7 @@ test_set_target_revision (void *edit_baton,
   svn_stringbuf_t *str;
 
   str = svn_stringbuf_createf (pool,
-                               "[%s] set_target_revision (%"
-                               SVN_REVNUM_T_FMT
-                               ")\n",
+                               "[%s] set_target_revision (%ld)\n",
                                eb->editor_name,
                                target_revision);
   SVN_ERR (print (eb, 0, str));
@@ -228,7 +226,7 @@ test_open_root (void *edit_baton,
     return SVN_NO_ERROR;
 
   str = svn_stringbuf_createf (pool, 
-                               "base_revision: %" SVN_REVNUM_T_FMT "\n",
+                               "base_revision: %ld\n",
                                base_revision);
   SVN_ERR (print (eb, nb->indent_level, str));
   SVN_ERR (newline (eb));
@@ -277,15 +275,14 @@ add_or_open (const char *path,
                                    base_path ? base_path : "");
       SVN_ERR (print (eb, nb->indent_level, str));
 
-      str = svn_stringbuf_createf (pool, "copyfrom_revision: %" 
-                                   SVN_REVNUM_T_FMT "\n",
+      str = svn_stringbuf_createf (pool, "copyfrom_revision: %ld\n",
                                    base_revision);
       SVN_ERR (print (eb, nb->indent_level, str));
     }
   else
     {
-      str = svn_stringbuf_createf (pool, "base_revision: %" 
-                                   SVN_REVNUM_T_FMT "\n", base_revision);
+      str = svn_stringbuf_createf (pool, "base_revision: %ld\n",
+                                   base_revision);
       SVN_ERR (print (eb, nb->indent_level, str));
     }
 

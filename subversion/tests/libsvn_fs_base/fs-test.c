@@ -3796,9 +3796,7 @@ validate_revisions (svn_fs_t *fs,
       if (err)
         return svn_error_createf
           (SVN_ERR_FS_GENERAL, err, 
-           "Error validating revision %" SVN_REVNUM_T_FMT
-           " (youngest is %" SVN_REVNUM_T_FMT ")", i, max_rev);
-      
+           "Error validating revision %ld (youngest is %ld)", i, max_rev);
       svn_pool_clear (subpool);
     }
 
@@ -4267,7 +4265,7 @@ file_integrity_helper (apr_size_t filesize, apr_uint32_t *seed,
       if (memcmp (digest, digest_list[j], APR_MD5_DIGESTSIZE))
         return svn_error_createf
           (SVN_ERR_FS_GENERAL, NULL,
-           "MD5 checksum failure, revision %" SVN_REVNUM_T_FMT, j);
+           "MD5 checksum failure, revision %ld", j);
       svn_pool_clear (subpool);
     }
 
@@ -4346,8 +4344,7 @@ check_root_revision (const char **msg,
   if (test_rev != youngest_rev)
     return svn_error_createf
       (SVN_ERR_FS_GENERAL, NULL,
-       "Root node in revision %" SVN_REVNUM_T_FMT
-       " has unexpected stored revision %" SVN_REVNUM_T_FMT,
+       "Root node in revision %ld has unexpected stored revision %ld",
        youngest_rev, test_rev);
   svn_pool_clear (subpool);
 
@@ -4368,8 +4365,7 @@ check_root_revision (const char **msg,
       if (test_rev != youngest_rev)
         return svn_error_createf
           (SVN_ERR_FS_GENERAL, NULL,
-           "Root node in revision %" SVN_REVNUM_T_FMT
-           " has unexpected stored revision %" SVN_REVNUM_T_FMT,
+           "Root node in revision %ld has unexpected stored revision %ld",
            youngest_rev, test_rev);
       svn_pool_clear (subpool);
     }
@@ -4402,8 +4398,8 @@ verify_path_revs (svn_fs_root_t *root,
       if (rev != args[i].rev)
         return svn_error_createf
           (SVN_ERR_FS_GENERAL, NULL,
-           "verify_path_revs: '%s' has created rev '%" SVN_REVNUM_T_FMT "' "
-           "(expected '%" SVN_REVNUM_T_FMT "')", 
+           "verify_path_revs: '%s' has created rev '%ld' "
+           "(expected '%ld')", 
            args[i].path, rev, args[i].rev);
     }
 

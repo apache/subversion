@@ -2178,15 +2178,13 @@ static svn_error_t * reporter_set_path(void *report_baton,
   svn_xml_escape_cdata_cstring (&qpath, path, pool);
   if (start_empty)
     entry = apr_psprintf(pool,
-                         "<S:entry rev=\"%"
-                         SVN_REVNUM_T_FMT
-                         "\" start-empty=\"true\">%s</S:entry>" DEBUG_CR,
+                         "<S:entry rev=\"%ld\""
+                         " start-empty=\"true\">%s</S:entry>" DEBUG_CR,
                          revision, qpath->data);
   else
     entry = apr_psprintf(pool,
-                         "<S:entry rev=\"%"
-                         SVN_REVNUM_T_FMT
-                         "\">%s</S:entry>" DEBUG_CR,
+                         "<S:entry rev=\"%ld\">"
+                         "%s</S:entry>" DEBUG_CR,
                          revision, qpath->data);
 
   return svn_io_file_write_full(rb->tmpfile, entry, strlen(entry), NULL, pool);
@@ -2218,14 +2216,14 @@ static svn_error_t * reporter_link_path(void *report_baton,
   svn_xml_escape_attr_cstring (&qlinkpath, bc_relative.data, pool);
   if (start_empty)
     entry = apr_psprintf(pool,
-                         "<S:entry rev=\"%" SVN_REVNUM_T_FMT
-                         "\" linkpath=\"/%s\" start-empty=\"true\""
+                         "<S:entry rev=\"%ld\""
+                         " linkpath=\"/%s\" start-empty=\"true\""
                          ">%s</S:entry>" DEBUG_CR,
                          revision, qlinkpath->data, qpath->data);
   else
     entry = apr_psprintf(pool,
-                         "<S:entry rev=\"%" SVN_REVNUM_T_FMT
-                         "\" linkpath=\"/%s\">%s</S:entry>" DEBUG_CR,
+                         "<S:entry rev=\"%ld\""
+                         " linkpath=\"/%s\">%s</S:entry>" DEBUG_CR,
                          revision, qlinkpath->data, qpath->data);
 
   return svn_io_file_write_full(rb->tmpfile, entry, strlen(entry), NULL, pool);
@@ -2403,7 +2401,7 @@ make_reporter (void *session_baton,
   if (SVN_IS_VALID_REVNUM(revision))
     {
       s = apr_psprintf(pool, 
-                       "<S:target-revision>%" SVN_REVNUM_T_FMT
+                       "<S:target-revision>%ld"
                        "</S:target-revision>", revision);
       SVN_ERR( svn_io_file_write_full(rb->tmpfile, s, strlen(s), NULL, pool) );
     }

@@ -652,7 +652,7 @@ get_node_props (apr_hash_t **props,
   apr_hash_set (*props, 
                 SVN_PROP_ENTRY_COMMITTED_REV, 
                 APR_HASH_KEY_STRING, 
-                svn_string_createf (pool, "%" SVN_REVNUM_T_FMT, cmt_rev));
+                svn_string_createf (pool, "%ld", cmt_rev));
   apr_hash_set (*props, 
                 SVN_PROP_ENTRY_COMMITTED_DATE, 
                 APR_HASH_KEY_STRING, 

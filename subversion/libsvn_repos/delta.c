@@ -485,7 +485,7 @@ delta_proplists (struct context *c,
           const char *uuid;
 
           /* Transmit the committed-rev. */
-          cr_str = svn_string_createf (subpool, "%" SVN_REVNUM_T_FMT,
+          cr_str = svn_string_createf (subpool, "%ld",
                                        committed_rev);
           SVN_ERR (change_fn (c, object, SVN_PROP_ENTRY_COMMITTED_REV, 
                               cr_str, subpool));

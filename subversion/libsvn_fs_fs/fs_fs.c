@@ -303,8 +303,7 @@ svn_fs_fs__hotcopy (const char *src_path,
   
   for (rev = 0; rev <= youngest; rev++)
     SVN_ERR (svn_io_dir_file_copy (src_subdir, dst_subdir,
-                                   apr_psprintf (pool, "%"
-                                                 SVN_REVNUM_T_FMT, rev),
+                                   apr_psprintf (pool, "%ld", rev),
                                    pool));
 
   /* Copy the necessary revprop files. */
@@ -315,8 +314,7 @@ svn_fs_fs__hotcopy (const char *src_path,
 
   for (rev = 0; rev <= youngest; rev++)
     SVN_ERR (svn_io_dir_file_copy (src_subdir, dst_subdir,
-                                   apr_psprintf (pool, "%"
-                                                 SVN_REVNUM_T_FMT, rev),
+                                   apr_psprintf (pool, "%ld", rev),
                                    pool));
 
   /* Make an empty transactions directory for now.  Eventually some
@@ -410,7 +408,7 @@ open_and_seek_revision (apr_file_t **file,
   const char *rev_filename;
   apr_file_t *rev_file;
 
-  rev_filename = apr_psprintf (pool, "%" SVN_REVNUM_T_FMT, rev);
+  rev_filename = apr_psprintf (pool, "%ld", rev);
 
   SVN_ERR (svn_io_file_open (&rev_file,
                              svn_path_join_many (pool, 
@@ -807,7 +805,7 @@ representation_string (representation_t *rep,
 {
   const char *rev;
 
-  rev = apr_psprintf (pool, "%" SVN_REVNUM_T_FMT, rep->revision);
+  rev = apr_psprintf (pool, "%ld", rep->revision);
 
   return apr_psprintf (pool, "%s %" APR_OFF_T_FMT " %" APR_SIZE_T_FMT " %"
                        APR_SIZE_T_FMT " %s",
@@ -856,15 +854,15 @@ write_noderev_txn (apr_file_t *file,
                               noderev->created_path));
 
   if (noderev->copyfrom_path)
-    SVN_ERR (svn_stream_printf (outfile, pool, SVN_FS_FS__COPYFROM ": %"
-                                SVN_REVNUM_T_FMT " %s\n",
+    SVN_ERR (svn_stream_printf (outfile, pool, SVN_FS_FS__COPYFROM ": %ld"
+                                " %s\n",
                                 noderev->copyfrom_rev,
                                 noderev->copyfrom_path));
 
   if ((noderev->copyroot_rev != svn_fs_fs__id_rev (noderev->id)) ||
       (strcmp (noderev->copyroot_path, noderev->created_path) != 0))
-    SVN_ERR (svn_stream_printf (outfile, pool, SVN_FS_FS__COPYROOT ": %"
-                                SVN_REVNUM_T_FMT " %s\n",
+    SVN_ERR (svn_stream_printf (outfile, pool, SVN_FS_FS__COPYROOT ": %ld"
+                                " %s\n",
                                 noderev->copyroot_rev,
                                 noderev->copyroot_path));
 
@@ -1099,7 +1097,7 @@ svn_fs_fs__rev_get_root (svn_fs_id_t **root_id_p,
   apr_off_t root_offset;
   svn_fs_id_t *root_id;
 
-  revision_filename = apr_psprintf (pool, "%" SVN_REVNUM_T_FMT, rev);
+  revision_filename = apr_psprintf (pool, "%ld", rev);
 
   SVN_ERR (svn_io_file_open (&revision_file,
                              svn_path_join_many (pool, 
@@ -1129,7 +1127,7 @@ svn_fs_fs__set_revision_proplist (svn_fs_t *fs,
   char *revprop_filename;
   apr_file_t *revprop_file;
 
-  revprop_filename = apr_psprintf (pool, "%" SVN_REVNUM_T_FMT, rev);
+  revprop_filename = apr_psprintf (pool, "%ld", rev);
 
   SVN_ERR (svn_io_file_open (&revprop_file,
                              svn_path_join_many (pool,
@@ -1157,7 +1155,7 @@ svn_fs_fs__revision_proplist (apr_hash_t **proplist_p,
   apr_file_t *revprop_file;
   apr_hash_t *proplist;
 
-  revprop_filename = apr_psprintf (pool, "%" SVN_REVNUM_T_FMT, rev);
+  revprop_filename = apr_psprintf (pool, "%ld", rev);
 
   SVN_ERR (svn_io_file_open (&revprop_file,
                              svn_path_join_many (pool,
@@ -1797,7 +1795,7 @@ fold_change (apr_hash_t *changes,
           else
             {
               copyfrom_string = apr_psprintf (copyfrom_pool,
-                                              "%" SVN_REVNUM_T_FMT " %s",
+                                              "%ld %s",
                                               change->copyfrom_rev,
                                               change->copyfrom_path);
             }
@@ -1827,8 +1825,8 @@ fold_change (apr_hash_t *changes,
       new_change->prop_mod = change->prop_mod;
       if (change->copyfrom_rev != SVN_INVALID_REVNUM)
         {
-          copyfrom_string = apr_psprintf (copyfrom_pool, "%" SVN_REVNUM_T_FMT
-                                          " %s", change->copyfrom_rev,
+          copyfrom_string = apr_psprintf (copyfrom_pool, "%ld %s",
+                                          change->copyfrom_rev,
                                           change->copyfrom_path);
         }
       else
@@ -2117,7 +2115,7 @@ svn_fs_fs__paths_changed (apr_hash_t **changed_paths_p,
   apr_hash_t *changed_paths;
   apr_file_t *revision_file;
   
-  revision_filename = apr_psprintf (pool, "%" SVN_REVNUM_T_FMT, rev);
+  revision_filename = apr_psprintf (pool, "%ld", rev);
 
   SVN_ERR (svn_io_file_open (&revision_file,
                              svn_path_join_many (pool, 
@@ -2190,8 +2188,7 @@ svn_fs_fs__create_txn (svn_fs_txn_t **txn_p,
   svn_fs_id_t *root_id;
   char *txn_filename = svn_path_join_many (pool, fs->path,
                                            SVN_FS_FS__TXNS_DIR,
-                                           apr_psprintf (pool, "%"
-                                                         SVN_REVNUM_T_FMT,
+                                           apr_psprintf (pool, "%ld",
                                                          rev),
                                            NULL);
   const char *txn_dirname, *txn_tmpfile_orig;
@@ -2699,7 +2696,7 @@ svn_fs_fs__add_change (svn_fs_t *fs,
 
   if (copyfrom_rev != SVN_INVALID_REVNUM)
     {
-      copyfrom = apr_psprintf (pool, "%" SVN_REVNUM_T_FMT " %s",
+      copyfrom = apr_psprintf (pool, "%ld %s",
                                copyfrom_rev, copyfrom_path);
     }
   else
@@ -2951,8 +2948,8 @@ rep_write_get_baton (struct rep_write_baton **wb_p,
       /* Write out the rep header. */
       if (base_rep)
         {
-          header = apr_psprintf (b->pool, SVN_FS_FS__DELTA " %"
-                                 SVN_REVNUM_T_FMT " %" APR_OFF_T_FMT " %"
+          header = apr_psprintf (b->pool, SVN_FS_FS__DELTA " %ld"
+                                 " %" APR_OFF_T_FMT " %"
                                  APR_SIZE_T_FMT "\n",
                                  base_rep->revision, base_rep->offset,
                                  base_rep->size);
@@ -3506,7 +3503,7 @@ write_final_current (svn_fs_t *fs,
   svn_fs_fs__add_keys (start_copy_id, txn_copy_id, new_copy_id);
 
   /* Now we can just write out this line. */
-  buf = apr_psprintf (pool, "%" SVN_REVNUM_T_FMT " %s %s\n", rev, new_node_id,
+  buf = apr_psprintf (pool, "%ld %s %s\n", rev, new_node_id,
                       new_copy_id);
 
   name = svn_path_join (fs->path, SVN_FS_FS__CURRENT, pool);
@@ -3585,14 +3582,12 @@ svn_fs_fs__commit (svn_revnum_t *new_rev_p,
 
   old_rev_filename = svn_path_join_many (subpool, fs->path,
                                          SVN_FS_FS__REVS_DIR,
-                                         apr_psprintf (subpool, "%"
-                                                       SVN_REVNUM_T_FMT,
+                                         apr_psprintf (subpool, "%ld",
                                                        old_rev),
                                          NULL);
 
   rev_filename = svn_path_join_many (subpool, fs->path, SVN_FS_FS__REVS_DIR,
-                                     apr_psprintf (subpool, "%"
-                                                   SVN_REVNUM_T_FMT,
+                                     apr_psprintf (subpool, "%ld",
                                                    new_rev),
                                      NULL);
 
@@ -3642,7 +3637,7 @@ svn_fs_fs__commit (svn_revnum_t *new_rev_p,
 
   final_revprop = svn_path_join_many (subpool, fs->path,
                                       SVN_FS_FS__REVPROPS_DIR,
-                                      apr_psprintf (pool, "%" SVN_REVNUM_T_FMT,
+                                      apr_psprintf (pool, "%ld",
                                                     new_rev),
                                       NULL);
 

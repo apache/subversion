@@ -62,7 +62,7 @@ svn_wc__entries_init (const char *path,
   apr_file_t *f = NULL;
   svn_stringbuf_t *accum = NULL;
   apr_hash_t *atts = apr_hash_make (pool);
-  char *initial_revstr =  apr_psprintf (pool, "%" SVN_REVNUM_T_FMT,
+  char *initial_revstr =  apr_psprintf (pool, "%ld",
                                         initial_rev);
 
   /* Create the entries file, which must not exist prior to this. */
@@ -881,7 +881,7 @@ write_entry (svn_stringbuf_t **output,
   /* Revision */
   if (SVN_IS_VALID_REVNUM (entry->revision))
     apr_hash_set (atts, SVN_WC__ENTRY_ATTR_REVISION, APR_HASH_KEY_STRING,
-                  apr_psprintf (pool, "%" SVN_REVNUM_T_FMT, entry->revision));
+                  apr_psprintf (pool, "%ld", entry->revision));
   
   /* URL */
   if (entry->url)
@@ -953,7 +953,7 @@ write_entry (svn_stringbuf_t **output,
 
   if (SVN_IS_VALID_REVNUM (entry->copyfrom_rev))
     apr_hash_set (atts, SVN_WC__ENTRY_ATTR_COPYFROM_REV, APR_HASH_KEY_STRING,
-                  apr_psprintf (pool, "%" SVN_REVNUM_T_FMT,
+                  apr_psprintf (pool, "%ld",
                                 entry->copyfrom_rev));
 
   if (entry->copyfrom_url)
@@ -992,7 +992,7 @@ write_entry (svn_stringbuf_t **output,
   /* Last-commit Stuff */
   if (SVN_IS_VALID_REVNUM (entry->cmt_rev))
     apr_hash_set (atts, SVN_WC__ENTRY_ATTR_CMT_REV, APR_HASH_KEY_STRING,
-                  apr_psprintf (pool, "%" SVN_REVNUM_T_FMT, entry->cmt_rev));
+                  apr_psprintf (pool, "%ld", entry->cmt_rev));
 
   if (entry->cmt_author)
     apr_hash_set (atts, SVN_WC__ENTRY_ATTR_CMT_AUTHOR, APR_HASH_KEY_STRING,

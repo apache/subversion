@@ -685,7 +685,7 @@ generate_label (const char **label,
     *label = apr_psprintf (pool, "%s\t%s UTC (txn %s)", 
                            path, datestr, name); 
   else
-    *label = apr_psprintf (pool, "%s\t%s UTC (rev %" SVN_REVNUM_T_FMT ")",
+    *label = apr_psprintf (pool, "%s\t%s UTC (rev %ld)",
                            path, datestr, rev);
   return SVN_NO_ERROR;
 }
@@ -807,7 +807,7 @@ print_diff_tree (svn_fs_root_t *root,
 
       SVN_ERR (svn_utf_cstring_from_utf8 (&base_path_native, base_path, pool));
 
-      printf ("Copied: %s (from rev %" SVN_REVNUM_T_FMT ", %s)\n",
+      printf ("Copied: %s (from rev %ld, %s)\n",
               path_native, node->copyfrom_rev, base_path_native);
 
       SVN_ERR (svn_fs_revision_root (&base_root,
@@ -1356,12 +1356,12 @@ print_history (void *baton,
       SVN_ERR (svn_fs_revision_root (&rev_root, phb->fs, revision, pool));
       SVN_ERR (svn_fs_node_id (&node_id, rev_root, path, pool));
       id_string = svn_fs_unparse_id (node_id, pool);
-      printf ("%8" SVN_REVNUM_T_FMT "   %s <%s>\n", 
+      printf ("%8ld   %s <%s>\n", 
               revision, path, id_string->data);
     }
   else
     {
-      printf ("%8" SVN_REVNUM_T_FMT "   %s\n", revision, path);
+      printf ("%8ld   %s\n", revision, path);
     }
 
   return SVN_NO_ERROR;
@@ -1760,7 +1760,7 @@ subcommand_youngest (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   svnlook_ctxt_t *c;
 
   SVN_ERR (get_ctxt_baton (&c, opt_state, pool));
-  printf ("%" SVN_REVNUM_T_FMT "\n", c->rev_id);
+  printf ("%ld\n", c->rev_id);
   return SVN_NO_ERROR;
 }
 

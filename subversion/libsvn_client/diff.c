@@ -264,7 +264,7 @@ diff_label (const char *path,
 {
   const char *label;
   if (revnum != SVN_INVALID_REVNUM)
-    label = apr_psprintf (pool, "%s\t(revision %" SVN_REVNUM_T_FMT ")",
+    label = apr_psprintf (pool, "%s\t(revision %ld)",
                           path, revnum);
   else
     label = apr_psprintf (pool, _("%s\t(working copy)"), path);
@@ -658,10 +658,10 @@ merge_file_changed (svn_wc_adm_access_t *adm_access,
   apr_pool_t *subpool = svn_pool_create (merge_b->pool);
   const char *target_label = ".working";
   const char *left_label = apr_psprintf (subpool,
-                                         ".merge-left.r%" SVN_REVNUM_T_FMT,
+                                         ".merge-left.r%ld",
                                          older_rev);
   const char *right_label = apr_psprintf (subpool,
-                                          ".merge-right.r%" SVN_REVNUM_T_FMT,
+                                          ".merge-right.r%ld",
                                           yours_rev);
   svn_boolean_t has_local_mods;
   svn_boolean_t merge_required = TRUE;
@@ -1608,13 +1608,13 @@ diff_repos_repos (const apr_array_header_t *options,
   if (kind1 == svn_node_none)
     return svn_error_createf 
       (SVN_ERR_FS_NOT_FOUND, NULL,
-       "'%s' was not found in the repository at revision %"
-       SVN_REVNUM_T_FMT, url1, rev1);
+       "'%s' was not found in the repository at revision %ld",
+       url1, rev1);
   if (kind2 == svn_node_none)
     return svn_error_createf 
       (SVN_ERR_FS_NOT_FOUND, NULL,
-       "'%s' was not found in the repository at revision %"
-       SVN_REVNUM_T_FMT, url2, rev2);
+       "'%s' was not found in the repository at revision %ld",
+       url2, rev2);
   if ((kind1 == svn_node_file) || (kind2 == svn_node_file))
     {
       svn_path_split (url1, &anchor1, &target1, pool); 

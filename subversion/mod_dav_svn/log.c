@@ -98,8 +98,8 @@ static svn_error_t * log_receiver(void *baton,
 
   SVN_ERR( maybe_send_header(lrb) );
 
-  SVN_ERR( send_xml(lrb, "<S:log-item>" DEBUG_CR "<D:version-name>%" 
-                    SVN_REVNUM_T_FMT "</D:version-name>" DEBUG_CR, rev) );
+  SVN_ERR( send_xml(lrb, "<S:log-item>" DEBUG_CR "<D:version-name>%ld"
+                    "</D:version-name>" DEBUG_CR, rev) );
 
   if (author)
     SVN_ERR( send_xml(lrb, "<D:creator-displayname>%s</D:creator-displayname>" 
@@ -141,7 +141,7 @@ static svn_error_t * log_receiver(void *baton,
                 SVN_ERR( send_xml(lrb, 
                                   "<S:added-path"
                                   " copyfrom-path=\"%s\"" 
-                                  " copyfrom-rev=\"%" SVN_REVNUM_T_FMT "\">"
+                                  " copyfrom-rev=\"%ld\">"
                                   "%s</S:added-path>" DEBUG_CR,
                                   apr_xml_quote_string(pool, 
                                                        log_item->copyfrom_path,
@@ -160,7 +160,7 @@ static svn_error_t * log_receiver(void *baton,
                 SVN_ERR( send_xml(lrb, 
                                   "<S:replaced-path"
                                   " copyfrom-path=\"%s\"" 
-                                  " copyfrom-rev=\"%" SVN_REVNUM_T_FMT "\">"
+                                  " copyfrom-rev=\"%ld\">"
                                   "%s</S:replaced-path>" DEBUG_CR,
                                   apr_xml_quote_string(pool, 
                                                        log_item->copyfrom_path,

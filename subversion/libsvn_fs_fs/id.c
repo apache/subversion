@@ -88,7 +88,7 @@ svn_fs_fs__id_unparse (const svn_fs_id_t *id,
 
   if ((! pvt->txn_id))
     {
-      txn_rev_id = apr_psprintf (pool, "%" SVN_REVNUM_T_FMT "/%"
+      txn_rev_id = apr_psprintf (pool, "%ld/%"
                                  APR_OFF_T_FMT, pvt->rev, pvt->offset);
     }
   else

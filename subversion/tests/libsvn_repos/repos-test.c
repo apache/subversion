@@ -453,9 +453,7 @@ print_chrevs (const apr_array_header_t *revs_got,
           rev = ((svn_revnum_t *)revs_got->elts)[i];
           outstr = apr_pstrcat (pool, 
                                 outstr,
-                                apr_psprintf (pool, "%"
-                                              SVN_REVNUM_T_FMT
-                                              " ", rev),
+                                apr_psprintf (pool, "%ld ", rev),
                                 NULL);
         }
     }
@@ -464,7 +462,7 @@ print_chrevs (const apr_array_header_t *revs_got,
     {
       outstr = apr_pstrcat (pool, 
                             outstr,
-                            apr_psprintf (pool, "%" SVN_REVNUM_T_FMT " ",
+                            apr_psprintf (pool, "%ld ",
                                           revs_expected[i]),
                             NULL);
     }

@@ -55,7 +55,7 @@ svn_cl__print_commit_info (svn_client_commit_info_t *commit_info)
 {
   if ((commit_info) 
       && (SVN_IS_VALID_REVNUM (commit_info->revision)))
-    printf ("\nCommitted revision %" SVN_REVNUM_T_FMT ".\n",
+    printf ("\nCommitted revision %ld.\n",
             commit_info->revision);
 
   return;

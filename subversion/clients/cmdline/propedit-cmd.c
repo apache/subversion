@@ -128,13 +128,12 @@ svn_cl__propedit (apr_getopt_t *os,
                                            URL, &(opt_state->start_revision),
                                            &rev, opt_state->force, ctx, pool));
 
-          printf ("Set new value for property '%s' on revision %"
-                  SVN_REVNUM_T_FMT"\n", pname, rev);
+          printf ("Set new value for property '%s' on revision %ld\n",
+                  pname, rev);
         }
       else
         {
-          printf ("No changes to property '%s' on revision %"
-                  SVN_REVNUM_T_FMT"\n", pname, rev);
+          printf ("No changes to property '%s' on revision %ld", pname, rev);
         }
     }
   else if (opt_state->start_revision.kind != svn_opt_revision_unspecified)

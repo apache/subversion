@@ -206,7 +206,7 @@ svn_wc__get_keywords (svn_subst_keywords_t **keywords,
 
   SVN_ERR (svn_subst_build_keywords (&tmp_keywords,
                                      list,
-                                     apr_psprintf (pool, "%" SVN_REVNUM_T_FMT,
+                                     apr_psprintf (pool, "%ld",
                                                    entry->cmt_rev),
                                      entry->url,
                                      entry->cmt_date,

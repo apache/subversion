@@ -85,7 +85,7 @@ svn_cl__proplist (apr_getopt_t *os,
                                         URL, &(opt_state->start_revision),
                                         &rev, ctx, pool));
       
-      printf("Unversioned properties on revision %"SVN_REVNUM_T_FMT":\n",
+      printf("Unversioned properties on revision %ld:\n",
              rev);
 
       SVN_ERR (svn_cl__print_prop_hash

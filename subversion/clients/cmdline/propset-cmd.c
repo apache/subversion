@@ -122,8 +122,7 @@ svn_cl__propset (apr_getopt_t *os,
                                        &rev, opt_state->force, ctx, pool));
       if (! opt_state->quiet) 
         {
-          printf ("property '%s' set on repository revision '%"
-                  SVN_REVNUM_T_FMT"'\n",
+          printf ("property '%s' set on repository revision '%ld'\n",
                   pname, rev);
         }      
     }

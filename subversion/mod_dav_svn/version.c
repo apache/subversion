@@ -554,8 +554,7 @@ dav_error *dav_svn_checkout(dav_resource *resource,
               const char *msg;
               
               msg = apr_psprintf(resource->pool, 
-                                 "created-rev mismatch: r=%" SVN_REVNUM_T_FMT 
-                                 ", t=%" SVN_REVNUM_T_FMT,
+                                 "created-rev mismatch: r=%ld, t=%ld",
                                  resource->info->root.rev, txn_created_rev);
               
               return dav_new_error_tag(resource->pool, HTTP_CONFLICT, 
@@ -652,8 +651,8 @@ static apr_status_t cleanup_deltify(void *data)
   if (err)
     {
       ap_log_perror(APLOG_MARK, APLOG_ERR, err->apr_err, cdb->pool,
-                    "cleanup_deltify: error deltifying against revision %"
-                    SVN_REVNUM_T_FMT " in repository '%s'",
+                    "cleanup_deltify: error deltifying against revision %ld"
+                    " in repository '%s'",
                     cdb->revision, cdb->repos_path);
       svn_error_clear(err);
     }
@@ -864,7 +863,7 @@ static dav_error * dav_svn__drev_report(const dav_resource *resource,
                        DAV_XML_HEADER DEBUG_CR
                        "<S:dated-rev-report xmlns:S=\"" SVN_XML_NAMESPACE "\" "
                        "xmlns:D=\"DAV:\">" DEBUG_CR
-                       "<D:version-name>%" SVN_REVNUM_T_FMT "</D:version-name>"
+                       "<D:version-name>%ld</D:version-name>"
                        "</S:dated-rev-report>", rev);
   if (apr_err)
     derr = dav_svn_convert_err(svn_error_create(apr_err, 0, NULL),
