@@ -16,33 +16,38 @@
  */
 
 import junit.framework.*;
+import org.tigris.subversion.lib.*;
 
 /**
- * JUnits tests for the Java subversion binding helper functions
+ * JUnit Testcases
+ *
+ * @see org.tigris.subversion.lib.StatusKind
  */
-public class AllTests {
-
-    public static void main( String [] args )
+public class StatusKindTests extends TestCase
+{
+    public StatusKindTests(String name)
 	{
-	    junit.textui.TestRunner.run( suite() );
+	    super(name);
 	}
 
-    public static Test suite( )
+    public void testStatuskindCreate()
 	{
-	    TestSuite suite = new TestSuite(
-		"All JUnit tests for the Java Subversion binding");
+	    int kind = StatusKind.NONE;
+	    StatusKind statusKind = 
+		NativeWrapper.statuskindCreate(kind);
 
-	    //add tests here
-	    suite.addTestSuite( DateTests.class );
-	    suite.addTestSuite( EntryTests.class );
-	    suite.addTestSuite( VectorTests.class );
-	    suite.addTestSuite( HashtableTests.class );
-	    suite.addTestSuite( MiscTests.class );
-	    suite.addTestSuite( StatusTests.class );
-	    suite.addTestSuite( NodekindTests.class );
-	    suite.addTestSuite( RevisionTests.class );
-	    suite.addTestSuite( StatusKindTests.class );
+	    assertNotNull( statusKind );
+	}
 
-	    return suite;
+    public void testStatuskindCreateIntegrity()
+	{
+	    int kind = StatusKind.MERGED;
+	    StatusKind statusKind = 
+		NativeWrapper.statuskindCreate(kind);
+
+	    assertEquals( kind, statusKind.getKind() );
 	}
 }
+
+
+

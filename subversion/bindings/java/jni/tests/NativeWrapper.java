@@ -178,12 +178,13 @@ public class NativeWrapper
      * wrapper for function "revision__create" (revision.h)
      */
     public static native Revision revisionCreate(long rev);
+
+  /** 
+   * wrapper for function "statuskind__create" (statuskind.h)
+   */
+  public static native StatusKind statuskindCreate(int kind);
+
   
 }
 
-/* 
- * local variables:
- * eval: (load-file "../../../../../../../svn-dev.el")
- * end: 
- */
 
