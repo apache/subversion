@@ -127,18 +127,10 @@ svn_client_log2 (const apr_array_header_t *targets,
                                            FALSE, 0, pool));
           SVN_ERR (svn_wc_entry (&entry, target, adm_access, FALSE, pool));
           if (! entry)
-            {
-              /* Remove unversioned target from list, send 'skip' signal. */
-              if (ctx->notify_func)
-                (*ctx->notify_func) (ctx->notify_baton, target,
-                                     svn_wc_notify_skip, svn_node_unknown,
-                                     NULL, svn_wc_notify_state_unknown,
-                                     svn_wc_notify_state_unknown,
-                                     SVN_INVALID_REVNUM);
-
-              
-              continue;
-            }
+            return svn_error_createf (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
+                                      _("'%s' is not under version control"),
+                                      target);
+          
           if (! entry->url)
             return svn_error_createf
               (SVN_ERR_ENTRY_MISSING_URL, NULL,
