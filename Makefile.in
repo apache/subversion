@@ -27,6 +27,9 @@ fs_libdir= @libdir@
 bindir = @bindir@
 fs_bindir=@bindir@
 includedir = @includedir@
+mandir = @mandir@
+srcdir = @srcdir@
+infodir = @infodir@
 
 ### should search for these...
 MAKEINFO = makeinfo
@@ -74,6 +77,7 @@ INSTALL_FS_BIN = $(INSTALL_BIN)
 INSTALL_INCLUDE = $(INSTALL) -m 644
 INSTALL_MOD_SHARED = @APXS@ -i -a
 INSTALL_MOD_STATIC = $(INSTALL) -m 644
+INSTALL_DATA = $(INSTALL) -m 644
 
 PYTHON = @PYTHON@
 
@@ -235,3 +239,33 @@ dist:
 
 .dvi.pdf:
 	$(DVIPDF) $< $@
+
+install-docs: install-man install-info
+
+manroot = $(mandir)/man
+install-man:
+	@list='$(MANPAGES)'; \
+	for i in $$list; do \
+	  if test -f $(srcdir)/$$i; then file=$(srcdir)/$$i; \
+	  else file=$$i; fi; \
+	  ext=`echo $$i | sed -e 's/^.*\\.//'`; \
+	  $(MKDIR) $(DESTDIR)$(manroot)$$ext
+	  inst=`echo $$i | sed -e 's/\\.[0-9a-z]*$$//'`; \
+	  inst=`echo $$inst | sed -e 's/^.*\///'`; \
+	  inst=`echo $$inst`.$$ext; \
+	  echo "$(INSTALL_DATA) $$file $(DESTDIR)$(manroot)$$ext/$$inst"; \
+	  $(INSTALL_DATA) $$file $(DESTDIR)$(manroot)$$ext/$$inst; \
+	done
+
+# @ INSTALL_INFO @ gets replaced with a blank if makeinfo isn't found and
+# becomes $(INFOPAGES) if it is.
+install-info:
+	$(MKDIR) $(DESTDIR)$(infodir)
+	@list='@INSTALL_INFO@'; \
+	for i in $$list; do \
+	  if test -f $(srcdir)/$$i; then file=$(srcdir)/$$i; \
+	  else file=$$i; fi; \
+	  inst=`echo $$file | sed -e 's/^.*\///'`; \
+	  echo "$(INSTALL_DATA) $$file $(DESTDIR)$(infodir)/$$inst"; \
+	  $(INSTALL_DATA) $$file $(DESTDIR)$(infodir)/$$inst; \
+	done

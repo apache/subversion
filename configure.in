@@ -116,11 +116,11 @@ SVN_LIB_BERKELEY_DB($SVN_FS_WANT_DB_MAJOR, $SVN_FS_WANT_DB_MINOR,
                     $SVN_FS_WANT_DB_PATCH)
 
 # Only add *_APACHE_RULE if we also have db, since mod_dav_svn depends on it.
-INSTALL_RULES="install-lib install-bin install-include"
+INSTALL_RULES="install-lib install-bin install-include install-docs"
 BUILD_RULES="lib bin test"
 if test "$svn_lib_berkeley_db" = "yes"; then
   BUILD_RULES="lib fs-lib bin fs-bin $BUILD_APACHE_RULE test fs-test"
-  INSTALL_RULES="install-lib install-fs-lib install-bin install-fs-bin $INSTALL_APACHE_RULE install-include"
+  INSTALL_RULES="install-lib install-fs-lib install-bin install-fs-bin $INSTALL_APACHE_RULE install-include install-docs"
   FS_TEST_DEPS="\$(FS_TEST_DEPS)"
   FS_TEST_PROGRAMS="\$(FS_TEST_PROGRAMS)"
 fi
@@ -255,6 +255,15 @@ if test "$PYTHON2" = "none"; then
 else
 	PYTHON=$PYTHON2
 fi
+
+AC_PATH_PROG(CHECKMAKEINFO, makeinfo, none)
+if test "$CHECKMAKEINFO" = "none"; then
+        dnl we won't install/make any info pages then
+	INSTALL_INFO=""
+else
+	INSTALL_INFO='$(INFOPAGES)'
+fi
+AC_SUBST(INSTALL_INFO)
 
 dnl decide whether we want to link against the RA libraries
 if test "$enable_shared" = "no"; then
