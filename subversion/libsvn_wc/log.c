@@ -587,7 +587,7 @@ log_do_delete_entry (struct log_runner *loggy, const char *name)
 {
   svn_wc_adm_access_t *adm_access;
   const svn_wc_entry_t *entry;
-  svn_error_t *err = NULL;
+  svn_error_t *err = SVN_NO_ERROR;
   const char *full_path
     = svn_path_join (svn_wc_adm_access_path (loggy->adm_access), name,
                      loggy->pool);
@@ -1117,7 +1117,7 @@ log_do_modify_wcprop (struct log_runner *loggy,
 static void
 start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
 {
-  svn_error_t *err = NULL;
+  svn_error_t *err = SVN_NO_ERROR;
   struct log_runner *loggy = userData;
 
   /* All elements use the `name' attribute, so grab it now. */

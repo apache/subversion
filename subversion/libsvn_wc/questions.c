@@ -47,7 +47,7 @@ svn_wc_check_wc (const char *path,
                  int *wc_format,
                  apr_pool_t *pool)
 {
-  svn_error_t *err = NULL;
+  svn_error_t *err = SVN_NO_ERROR;
   svn_node_kind_t kind;
 
   SVN_ERR (svn_io_check_path (path, &kind, pool));

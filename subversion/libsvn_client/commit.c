@@ -758,8 +758,8 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
   apr_hash_t *committables, *tempfiles = NULL;
   svn_wc_adm_access_t *base_dir_access;
   apr_array_header_t *commit_items;
-  svn_error_t *cmt_err = NULL, *unlock_err = NULL;
-  svn_error_t *bump_err = NULL, *cleanup_err = NULL;
+  svn_error_t *cmt_err = SVN_NO_ERROR, *unlock_err = SVN_NO_ERROR;
+  svn_error_t *bump_err = SVN_NO_ERROR, *cleanup_err = SVN_NO_ERROR;
   svn_boolean_t commit_in_progress = FALSE;
   const char *display_dir = "";
   int i;
