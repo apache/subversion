@@ -46,7 +46,7 @@ RSC=rc.exe
 # ADD RSC /l [if-any is_exe]0x409[else]0x424[end]
 BSC32=bscmake.exe
 LINK32=link.exe
-[if-any is_exe is_apache_mod]# ADD LINK32 /nologo [is configs.name "Debug"]/debug[end] [if-any is_apache_mod]/dll[end] /machine:IX86[for libs] [libs][end][for configs.libdirs] /libpath:"[configs.libdirs]"[end] /out:"[rootpath]\[configs.name]\[target.path]\[target.name].[if-any is_exe]exe[else]so[end]"
+[if-any is_exe is_apache_mod]# ADD LINK32 /nologo [if-any is_exe]/subsystem:console[end] [is configs.name "Debug"]/debug[end] [if-any is_apache_mod]/dll[end] /machine:IX86[for libs] [libs][end][for configs.libdirs] /libpath:"[configs.libdirs]"[end] /out:"[rootpath]\[configs.name]\[target.path]\[target.name].[if-any is_exe]exe[else]so[end]"
 [end][end][end][end][end]
 !ENDIF 
 
@@ -59,7 +59,7 @@ SOURCE=[sources.path][if-any sources.reldir]
 [for platforms][for configs]
 ![if-index platforms first][if-index configs first][else]ELSE[end][else]ELSE[end]IF  "$(CFG)" == "[target.dsp_name] - [platforms] [configs.name]"
 
-# PROP Intermediate_Dir "[rootpath]\[configs.name]\[target.name]\[sources.reldir]"
+# PROP Intermediate_Dir "[rootpath]\[configs.name]\[target.path]\[sources.reldir]"
 [end][end]
 !ENDIF
 [end]
