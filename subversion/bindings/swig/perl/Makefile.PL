@@ -2,6 +2,8 @@
 use ExtUtils::MakeMaker;
 
 my @modules = qw/client delta fs ra repos wc/;
+my @ldpaths = ('../.libs',
+               map {"../../../libsvn_$_/.libs"} (@modules, qw/diff subr/));
 my @ldmodules = map {"-lsvn_$_-1"} (@modules, qw/diff subr/);
 
 my $apr_config = $ENV{APR_CONFIG} || '/usr/local/lib/apache2/apr-config';
@@ -17,9 +19,10 @@ my %config = (
     ABSTRACT => 'Perl bindings for Subversion',
     CCFLAGS  => join(' ', $apr_cflags, `perl -MExtUtils::Embed -e ccopts`,
 		     ' -I.. -I../../../include -g'),
+    LDDLFLAGS => '-shared',
     OBJECT => q/$(O_FILES)/,
     dynamic_lib => {
-	OTHERLDFLAGS => join(' ', $apr_ldflags, '-L/usr/local/lib',
+	OTHERLDFLAGS => join(' ', $apr_ldflags, (map {"-L$_"} @ldpaths),
 			     @ldmodules, '-lsvn_swig_perl-1',
 			     `swig -perl -ldflags`),
     },
@@ -66,6 +69,7 @@ sub MY::postamble {
 	       (map {"\nsvn_$_.c : ../svn_$_.i ra_plugin.hi ra_reporter.hi delta_editor.hi\n".
 			"\tswig -c -nopm -perl -I.. -I../../../include $apr_cflags -module SVN::_".main::perlish($_)." -o svn_$_.c ../svn_$_.i\n"}
 	       @modules),
-
+               "\nFULLPERLRUN=LD_LIBRARY_PATH=",join(':',@ldpaths),
+               " \$(FULLPERL)\n",
 	      );
 }
