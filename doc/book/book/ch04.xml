@@ -1435,7 +1435,8 @@ Committed revision 351.
 </screen>
 
       <para>This example assumes that a
-        <filename>/calc/tags</filename> directory already exists.
+        <filename>/calc/tags</filename> directory already exists.  (If it
+        doesn't, see <xref linkend="svn-ch-9-sect-1.2-re-mkdir"/>).
         After the copy completes, the new
         <filename>release-1.0</filename> directory is forever a
         snapshot of how the project looked in the
