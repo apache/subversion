@@ -9,7 +9,7 @@ Status of 1.1.0:
 
 Candidate changes:
 
-  * r10299, r10339:
+  * r10299, r10338:
     When configured without Berkeley DB, make libsvn_fs default to
     the fsfs back-end.
     Votes:
