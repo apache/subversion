@@ -83,7 +83,7 @@ libtool=`which glibtool 2>/dev/null`
 if test ! -x "$libtool"; then
   libtool=`which libtool`
 fi
-lt_pversion=`$libtool --version 2>/dev/null|sed -e 's/^[^0-9]*//' -e 's/[- ].*//'`
+lt_pversion=`$libtool --version 2>/dev/null|head -1|sed -e 's/^[^0-9]*//' -e 's/[- ].*//'`
 if test -z "$lt_pversion"; then
   echo "buildcheck: libtool not found."
   echo "            You need libtool version $LIBTOOL_WANTED_VERSION or newer installed"
@@ -93,7 +93,9 @@ lt_version=`echo $lt_pversion|sed -e 's/\([a-z]*\)$/.\1/'`
 IFS=.; set $lt_version; IFS=' '
 lt_status="good"
 if test "$1" = "$LIBTOOL_WANTED_MAJOR"; then
-   if test "$2" -lt "$LIBTOOL_WANTED_MINOR"; then
+   if test "$2" -gt "$LIBTOOL_WANTED_MINOR"; then
+      lt_status="good"
+   elif test "$2" -lt "$LIBTOOL_WANTED_MINOR"; then
       lt_status="bad"
    elif test ! -z "$LIBTOOL_WANTED_PATCH"; then
        if test "$3" -lt "$LIBTOOL_WANTED_PATCH"; then
