@@ -705,7 +705,7 @@ do_date (svnlook_ctxt_t *c, apr_pool_t *pool)
           apr_status_t apr_err;
               
           aprtime = svn_time_from_nts (prop_value->data);
-          apr_err = apr_explode_time (&extime, aprtime, 0);
+          apr_err = apr_time_exp_tz (&extime, aprtime, 0);
           if (apr_err)
             return svn_error_create (apr_err, 0, NULL, pool,
                                      "do_date: error exploding time");
