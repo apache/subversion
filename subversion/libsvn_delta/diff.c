@@ -133,9 +133,9 @@ svn_diff__tree_insert_token(svn_diff__tree_t *tree,
           position->next_in_node = parent->position[idx];
           position->node = parent;
           position->offset = offset;
-          
+
           parent->position[idx] = position;
-          
+
           return position;
         }
       else if (rv > 0)
@@ -216,9 +216,9 @@ svn_diff__get_tokens(svn_diff__position_t **position_list,
   apr_off_t offset;
 
   *position_list = NULL;
-  
+
   SVN_ERR(vtable->datasource_open(diff_baton, datasource));
-  
+
   position_ref = &start_position;
   offset = 0;
   while (1)
@@ -237,11 +237,11 @@ svn_diff__get_tokens(svn_diff__position_t **position_list,
     }
 
   *position_ref = start_position;
-  
+
   SVN_ERR(vtable->datasource_close(diff_baton, datasource));
 
   *position_list = position;
-  
+
   return NULL;
 }
 
@@ -353,7 +353,7 @@ svn_diff__lcs(svn_diff__tree_t *tree,
   length[1] = position_list2->offset - position_list2->next->offset + 1;
 
   idx = length[0] > length[1] ? 1 : 0;
-  
+
   fp = apr_pcalloc(pool, sizeof(*fp) * (apr_size_t)(length[0] + length[1] + 3));
   fp += length[idx] + 1;
 
@@ -402,7 +402,7 @@ svn_diff__lcs(svn_diff__tree_t *tree,
   lcs->position[1]->offset = position_list2->offset + 1;
   lcs->length = 0;
   lcs->next = fp[d].lcs;
-  
+
   return svn_diff__lcs_reverse(lcs);
 }
 
@@ -428,7 +428,7 @@ svn_diff(svn_diff_t **diff,
                                tree,
                                diff_baton, vtable,
                                svn_diff_datasource_original, 0));
-  
+
   SVN_ERR(svn_diff__get_tokens(&position_list[1],
                                tree,
                                diff_baton, vtable,
@@ -451,14 +451,14 @@ svn_diff(svn_diff_t **diff,
    * ### the tree pool is also used for the positions, so we can't get
    * ### rid of them.  Split this later.
    */
-  
+
   /* Produce a diff */
   {
     apr_off_t original_start;
     apr_off_t modified_start;
 
     svn_diff_t **diff_ref = diff;
-    
+
     original_start = 1;
     modified_start = 1;
     while (1)
@@ -503,10 +503,10 @@ svn_diff(svn_diff_t **diff,
 
         lcs = lcs->next;
       }
-          
+
     *diff_ref = NULL;
   }
-  
+
   /* Get rid of all the data we don't have a use for anymore */
   svn_pool_destroy(subpool);
 
@@ -531,8 +531,8 @@ svn_diff3(svn_diff_t **diff,
 
   svn_diff__tree_create(&tree, subpool);
 
-  SVN_ERR(svn_diff__get_tokens(&position_list[0], 
-                               tree, 
+  SVN_ERR(svn_diff__get_tokens(&position_list[0],
+                               tree,
                                diff_baton, vtable,
                                svn_diff_datasource_original, 0));
 
@@ -540,20 +540,20 @@ svn_diff3(svn_diff_t **diff,
                                tree,
                                diff_baton, vtable,
                                svn_diff_datasource_modified, 1));
-  
+
   SVN_ERR(svn_diff__get_tokens(&position_list[2],
                                tree,
                                diff_baton, vtable,
                                svn_diff_datasource_latest, 2));
-  
+
   /* Get rid of the tokens, we don't need them to calc the diff */
   if (vtable->token_discard_all != NULL)
     vtable->token_discard_all(diff_baton);
 
   /* Get the lcs for original-modified and original-latest */
-  lcs_om = svn_diff__lcs(tree, 
-                         position_list[0], position_list[1], 
-                         0, 1, 
+  lcs_om = svn_diff__lcs(tree,
+                         position_list[0], position_list[1],
+                         0, 1,
                          subpool);
   lcs_ol = svn_diff__lcs(tree,
                          position_list[0], position_list[2],
@@ -633,7 +633,7 @@ svn_diff3(svn_diff_t **diff,
 
         if (is_modified || is_latest)
           {
-	    svn_diff_t *resolved_diff = NULL;
+            svn_diff_t *resolved_diff = NULL;
 
             original_length = original_sync - original_start;
             modified_length = modified_sync - modified_start;
@@ -651,38 +651,37 @@ svn_diff3(svn_diff_t **diff,
                  */
                 while (position_list[1]->offset < modified_start)
                   position_list[1] = position_list[1]->next;
-                    
+
                 while (position_list[2]->offset < latest_start)
                   position_list[2] = position_list[2]->next;
 
                 start_position[0] = position_list[0];
                 start_position[1] = position_list[1];
-		  
-		common_length = modified_length < latest_length
-		              ? modified_length : latest_length;
+
+                common_length = modified_length < latest_length
+                              ? modified_length : latest_length;
 
                 if (modified_length != latest_length)
                   {
                     type = svn_diff__type_conflict;
                   }
 
-		while (common_length
+                while (common_length
                        && position_list[1]->node == position_list[2]->node)
-		  {
+                  {
                     position_list[1] = position_list[1]->next;
                     position_list[2] = position_list[2]->next;
 
                     common_length--;
                   }
-		
-		if (common_length)
-		  {
-		    type = svn_diff__type_conflict;
 
-		  }
+                if (common_length)
+                  {
+                    type = svn_diff__type_conflict;
+                  }
 
-		if (type == svn_diff__type_conflict)
-		  {
+                if (type == svn_diff__type_conflict)
+                  {
                     /* ### If we have a conflict we can try to find the
                      * ### common parts in it by getting an lcs between
                      * ### modified (start to start + length) and
@@ -692,7 +691,7 @@ svn_diff3(svn_diff_t **diff,
                      * ### a conflict.
                      * ### This raises a problem; several common diffs and
                      * ### conflicts can occur within the same original
-		     * ### block.  This needs some thought.
+                     * ### block.  This needs some thought.
                      * ###
                      * ### NB: We can use the node _pointers_ to identify
                      * ###     different tokens
@@ -700,55 +699,55 @@ svn_diff3(svn_diff_t **diff,
 
                     svn_diff__position_t *position[2];
                     svn_diff__lcs_t *lcs = NULL;
-		    svn_diff__lcs_t **lcs_ref = &lcs;
+                    svn_diff__lcs_t **lcs_ref = &lcs;
                     apr_pool_t *subpool2;
 
-		    subpool2 = svn_pool_create(pool);
+                    subpool2 = svn_pool_create(pool);
 
                     /* If there were matching symbols at the start of
-		     * both sequences, record that fact.
-		     */
+                     * both sequences, record that fact.
+                     */
                     if (common_length < modified_length
-		        && common_length < latest_length)
+                        && common_length < latest_length)
                       {
-		        lcs = apr_palloc(subpool2, sizeof(*lcs));
-		        lcs->next = NULL;
-		        lcs->position[0] = start_position[0];
-		        lcs->position[1] = start_position[1];
-		        lcs->length =  (modified_length < latest_length
-		                        ? modified_length : latest_length)
+                        lcs = apr_palloc(subpool2, sizeof(*lcs));
+                        lcs->next = NULL;
+                        lcs->position[0] = start_position[0];
+                        lcs->position[1] = start_position[1];
+                        lcs->length =  (modified_length < latest_length
+                                        ? modified_length : latest_length)
                                     - common_length;
 
-		        lcs_ref = &lcs->next;
+                        lcs_ref = &lcs->next;
 
                         start_position[0] = position_list[0];
                         start_position[1] = position_list[1];
                       }
 
-		    modified_length -= common_length;
-		    latest_length -= common_length;
+                    modified_length -= common_length;
+                    latest_length -= common_length;
 
-		    if (modified_length == 0 || latest_length == 0)
-		      {
-		        /* The second part of the lcs is a conflict,
-			 * simply tack on an EOF sentinel
-			 */
-			  
-		        while (modified_length--)
+                    if (modified_length == 0 || latest_length == 0)
+                      {
+                        /* The second part of the lcs is a conflict,
+                         * simply tack on an EOF sentinel
+                         */
+
+                        while (modified_length--)
                           position_list[1] = position_list[1]->next;
 
                         while (latest_length--)
                           position_list[2] = position_list[2]->next;
-			    
-			*lcs_ref = apr_palloc(subpool2, sizeof(**lcs_ref));
-			(*lcs_ref)->next = NULL;
-			(*lcs_ref)->length = 0;
-			(*lcs_ref)->position[0] = position_list[0];
-			(*lcs_ref)->position[1] = position_list[1];
-		      }
-	            else
-		      {
-		        while (--modified_length)
+
+                        *lcs_ref = apr_palloc(subpool2, sizeof(**lcs_ref));
+                        (*lcs_ref)->next = NULL;
+                        (*lcs_ref)->length = 0;
+                        (*lcs_ref)->position[0] = position_list[0];
+                        (*lcs_ref)->position[1] = position_list[1];
+                      }
+                    else
+                      {
+                        while (--modified_length)
                           position_list[1] = position_list[1]->next;
 
                         while (--latest_length)
@@ -764,23 +763,23 @@ svn_diff3(svn_diff_t **diff,
                         position_list[2] = position_list[2]->next;
                         position[0]->next = start_position[0];
                         position[1]->next = start_position[1];
-			
+
                         *lcs_ref = svn_diff__lcs(tree,
-			                         position[0], position[1],
-			                         1, 2,
-					         subpool2);
+                                                 position[0], position[1],
+                                                 1, 2,
+                                                 subpool2);
                       }
-			
-	            /* Restore modified_length and latest_length */
+
+                    /* Restore modified_length and latest_length */
                     modified_length = modified_sync - modified_start;
                     latest_length = latest_sync - latest_start;
 
-		    if (lcs != NULL)
-		      {
-		        svn_diff_t **rdiff_ref = &resolved_diff;
+                    if (lcs != NULL)
+                      {
+                        svn_diff_t **rdiff_ref = &resolved_diff;
                         apr_off_t cm_start;
                         apr_off_t cl_start;
-    
+
                         cm_start = 1;
                         cl_start = 1;
                         while (1)
@@ -789,22 +788,22 @@ svn_diff3(svn_diff_t **diff,
                                 || cl_start < lcs->position[1]->offset)
                               {
                                 (*rdiff_ref) = apr_palloc(pool,
-			                                  sizeof(**rdiff_ref));
+                                                          sizeof(**rdiff_ref));
 
                                 (*rdiff_ref)->type
-				  = svn_diff__type_conflict;
+                                  = svn_diff__type_conflict;
                                 (*rdiff_ref)->original_start = original_start;
                                 (*rdiff_ref)->original_length = original_length;
                                 (*rdiff_ref)->modified_start
-				  = cm_start - 1;
+                                  = cm_start - 1;
                                 (*rdiff_ref)->modified_length
-				  = lcs->position[0]->offset
-				  - cm_start;
+                                  = lcs->position[0]->offset
+                                  - cm_start;
                                 (*rdiff_ref)->latest_start
-				  = cl_start - 1;
+                                  = cl_start - 1;
                                 (*rdiff_ref)->latest_length
-				  = lcs->position[1]->offset
-				  - cl_start;
+                                  = lcs->position[1]->offset
+                                  - cl_start;
 
                                 rdiff_ref = &(*rdiff_ref)->next;
                               }
@@ -817,20 +816,20 @@ svn_diff3(svn_diff_t **diff,
                             cl_start = lcs->position[1]->offset;
 
                             (*rdiff_ref) = apr_palloc(pool,
-			                              sizeof(**rdiff_ref));
+                                                      sizeof(**rdiff_ref));
 
                             (*rdiff_ref)->type
-			      = svn_diff__type_diff_common;
+                              = svn_diff__type_diff_common;
                             (*rdiff_ref)->original_start = original_start;
                             (*rdiff_ref)->original_length = original_length;
                             (*rdiff_ref)->modified_start
-			      = modified_start - 1;
+                              = modified_start - 1;
                             (*rdiff_ref)->modified_length
-			      = lcs->length;
+                              = lcs->length;
                             (*rdiff_ref)->latest_start
-			      = latest_start - 1;
+                              = latest_start - 1;
                             (*rdiff_ref)->latest_length
-			      = lcs->length;
+                              = lcs->length;
 
                             rdiff_ref = &(*rdiff_ref)->next;
 
@@ -839,15 +838,15 @@ svn_diff3(svn_diff_t **diff,
 
                             lcs = lcs->next;
                           }
-          
+
                         *rdiff_ref = NULL;
                       }
-			  
+
                     svn_pool_destroy(subpool2);
                   }
 #else /* !USE_SMART_CONFLICT_DETECTION */
                 type = svn_diff__type_diff_common;
-		
+
                 if (modified_length != latest_length)
                   {
                     type = svn_diff__type_conflict;
@@ -859,10 +858,10 @@ svn_diff3(svn_diff_t **diff,
                      */
                     while (position_list[1]->offset < modified_start)
                          position_list[1] = position_list[1]->next;
-                        
+
                     while (position_list[2]->offset < latest_start)
                          position_list[2] = position_list[2]->next;
-			 
+
                       while (modified_length)
                         {
                           if (position_list[1]->node != position_list[2]->node)
@@ -876,7 +875,7 @@ svn_diff3(svn_diff_t **diff,
 
                           modified_length--;
                         }
-			
+
                     modified_length = latest_length;
                   }
 #endif /* !USE_SMART_CONFLICT_DETECTION */
@@ -899,7 +898,7 @@ svn_diff3(svn_diff_t **diff,
             (*diff_ref)->modified_length = modified_length;
             (*diff_ref)->latest_start = latest_start;
             (*diff_ref)->latest_length = latest_length;
-	    (*diff_ref)->resolved_diff = resolved_diff;
+            (*diff_ref)->resolved_diff = resolved_diff;
 
             diff_ref = &(*diff_ref)->next;
           }
@@ -907,13 +906,13 @@ svn_diff3(svn_diff_t **diff,
         /* Detect EOF */
         if (lcs_om->length == 0 && lcs_ol->length == 0)
             break;
-	    
-        modified_length = lcs_om->length 
-	                  - (original_sync - lcs_om->position[0]->offset);
-	latest_length = lcs_ol->length
-	                - (original_sync - lcs_ol->position[0]->offset);
-	common_length = modified_length < latest_length 
-	                ? modified_length : latest_length;
+
+        modified_length = lcs_om->length
+                          - (original_sync - lcs_om->position[0]->offset);
+        latest_length = lcs_ol->length
+                        - (original_sync - lcs_ol->position[0]->offset);
+        common_length = modified_length < latest_length
+                        ? modified_length : latest_length;
 
         (*diff_ref) = apr_palloc(pool, sizeof(**diff_ref));
 
@@ -924,7 +923,7 @@ svn_diff3(svn_diff_t **diff,
         (*diff_ref)->modified_length = common_length;
         (*diff_ref)->latest_start = latest_start;
         (*diff_ref)->latest_length = common_length;
-	(*diff_ref)->resolved_diff = NULL;
+        (*diff_ref)->resolved_diff = NULL;
 
         diff_ref = &(*diff_ref)->next;
 
@@ -948,7 +947,7 @@ svn_diff3(svn_diff_t **diff,
         while (original_start > lcs_ol->position[0]->offset)
           lcs_ol = lcs_ol->next;
       }
-           
+
     *diff_ref = NULL;
   }
 
@@ -999,7 +998,7 @@ svn_diff_output(svn_diff_t *diff,
                             apr_off_t, apr_off_t,
                             apr_off_t, apr_off_t,
                             apr_off_t, apr_off_t);
-    
+
   while (diff != NULL)
     {
       switch (diff->type)
@@ -1025,10 +1024,10 @@ svn_diff_output(svn_diff_t *diff,
           break;
 
         default:
-          output_fn = NULL; 
+          output_fn = NULL;
           break;
         }
-      
+
       if (output_fn != NULL)
         {
           SVN_ERR(output_fn(output_baton,
