@@ -135,7 +135,7 @@ svn_client_switch (const svn_delta_editor_t *before_editor,
 
       /* Open an RA session to 'source' URL */
       SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, path,
-                                            NULL, TRUE, TRUE, TRUE, 
+                                            NULL, TRUE, TRUE, FALSE, 
                                             auth_baton, pool));
       SVN_ERR (svn_client__get_revision_number
                (&revnum, ra_lib, session, revision, path->data, pool));

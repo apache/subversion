@@ -345,6 +345,8 @@ enum {
   ELEM_open_file,
   ELEM_target_revision,
   ELEM_update_report,
+  ELEM_resource_walk,
+  ELEM_resource,
   ELEM_prop,
   ELEM_name_version_name,
   ELEM_name_creationdate,

@@ -137,6 +137,8 @@ typedef struct {
 
   vsn_url_helper vuh;
 
+  const char *current_wcprop_path;
+
   svn_error_t *err;
 
 } report_baton_t;
@@ -149,6 +151,8 @@ static const char report_tail[] = "</S:update-report>" DEBUG_CR;
 static const struct ne_xml_elm report_elements[] =
 {
   { SVN_XML_NAMESPACE, "update-report", ELEM_update_report, 0 },
+  { SVN_XML_NAMESPACE, "resource-walk", ELEM_resource_walk, 0 },
+  { SVN_XML_NAMESPACE, "resource", ELEM_resource, 0 },
   { SVN_XML_NAMESPACE, "target-revision", ELEM_target_revision, 0 },
   { SVN_XML_NAMESPACE, "open-directory", ELEM_open_directory, 0 },
   /* ### Sat 24 Nov 2001: after all clients have upgraded, change the
@@ -1118,7 +1122,20 @@ static int validate_element(void *userdata,
 
     case ELEM_update_report:
       if (child == ELEM_target_revision
-          || child == ELEM_open_directory)
+          || child == ELEM_open_directory
+          || child == ELEM_resource_walk)
+        return NE_XML_VALID;
+      else
+        return NE_XML_INVALID;
+
+    case ELEM_resource_walk:
+      if (child == ELEM_resource)
+        return NE_XML_VALID;
+      else
+        return NE_XML_INVALID;
+
+    case ELEM_resource:
+      if (child == ELEM_checked_in)
         return NE_XML_VALID;
       else
         return NE_XML_INVALID;
@@ -1225,6 +1242,12 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
 
       CHKERR( (*rb->editor->set_target_revision)(rb->edit_baton,
                                                  SVN_STR_TO_REV(att)) );
+      break;
+
+    case ELEM_resource:
+      att = get_attr(atts, "path");
+      /* ### verify we got it. punt on error. */
+      rb->current_wcprop_path = apr_pstrdup(rb->ras->pool, att);
       break;
 
     case ELEM_open_directory:
@@ -1461,6 +1484,10 @@ static int end_element(void *userdata,
 
   switch (elm->id)
     {
+    case ELEM_resource:
+      rb->current_wcprop_path = NULL;
+      break;
+
     case ELEM_add_directory:
 
       /*** FALLTHRU ***/
@@ -1509,8 +1536,25 @@ static int end_element(void *userdata,
 
       /* record the href that we just found */
       svn_ra_dav__copy_href(rb->href, cdata);
+      
+      /* if we're within a <resource> tag, then just call the generic
+         RA set_wcprop_callback directly;  no need to use the
+         update-editor.  */
+      if ((rb->current_wcprop_path != NULL)
+          && rb->ras->callbacks->set_wc_prop)
+        {
+          svn_string_t *href_val = svn_string_create(rb->href->data,
+                                                     rb->ras->pool);
 
-      if (rb->file_baton == NULL)
+          CHKERR( rb->ras->callbacks->set_wc_prop(rb->ras->callback_baton,
+                                                  rb->current_wcprop_path,
+                                                  rb->vuh.name->data,
+                                                  href_val,
+                                                  rb->ras->pool) );
+        }
+      
+      /* else we're setting a wcprop in the context of an editor drive. */
+      else if (rb->file_baton == NULL)
         {
           CHKERR( simple_store_vsn_url(rb->href->data, TOP_DIR(rb).baton,
                                        rb->editor->change_dir_prop,
