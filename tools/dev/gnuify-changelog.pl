@@ -36,6 +36,7 @@
              "kbohling"    => 'Kirby C. Bohling <kbohling@birddog.com>', );
 
 $parse_next_line = 0;
+$last_rev = "";
 
 while (<>) {
   # axe windows style line endings, since we should try to be consistent, and 
@@ -45,14 +46,24 @@ while (<>) {
   if (/^-+$/) {
     # we're at the start of a log entry, so we need to parse the next line
     $parse_next_line = 1;
+
+    # Check to see if the final line of the commit message was blank,
+    # if not insert one
+    if ( $last_rev ne "") {
+	if ( $last_line !~ m/^\s*$/) {
+	    print "\n";
+	}
+    }
   } elsif ($parse_next_line) {
     # transform from svn style to GNU style
     $parse_next_line = 0;
 
     @parts = split (/ /, $_);
+    $last_rev = $parts[0];
 
     print "$parts[4] $hackers{$parts[2]}\n"
   } else {
     print "\t$_";
+    $last_line = $_;
   }
 }
