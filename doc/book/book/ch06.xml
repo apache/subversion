@@ -1134,16 +1134,33 @@ $
 &lt;/Location&gt;
 </screen>
 
-        <para>Now, at this stage, if you were to restart Apache, any
-          Subversion operations that required authentication would
-          harvest a username and password from the Subversion client,
-          which would either provide previously cached values for
-          these things, or prompt the user for the information.
-          What's missing here, however, are directives that tell
-          Apache <emphasis>which</emphasis> sorts of client requests
-          require authorization.  Wherever authorization is required,
-          Apache will demand authentication.  See the next section
-          (<xref linkend="svn-ch-6-sect-4.4"/>) to configure
+        <para>This <literal>&lt;Location&gt;</literal> block is not
+          yet complete, and will not do anything useful.  It's merely
+          telling Apache that whenever authorization is required,
+          Apache should harvest a username and password from the
+          Subversion client. What's missing here, however, are
+          directives that tell Apache <emphasis>which</emphasis> sorts
+          of client requests require authorization.  Wherever
+          authorization is required, Apache will demand
+          authentication as well.  The simplest thing to do is protect
+          all requests.  Adding <literal>Require valid-user</literal>
+          tells Apache that all requests require an authenticated
+          user:</para>
+
+        <screen>
+&lt;Location /svn&gt;
+  DAV svn
+  SVNParentPath /usr/local/svn
+  AuthType Basic
+  AuthName "Subversion repository"
+  AuthUserFile /etc/svn-auth-file
+  Require vaild-user
+&lt;/Location&gt;
+</screen>
+
+        <para>Be sure to read the next section (<xref
+          linkend="svn-ch-6-sect-4.4"/>) for more detail on the
+          <literal>Require</literal> directive and other ways to set
           authorization policies.</para>
 
         <para>One word of warning: HTTP Basic Auth passwords pass in
