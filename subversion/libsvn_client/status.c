@@ -103,8 +103,8 @@ svn_client_status (svn_revnum_t *result_rev,
 
   /* First checks do not require a lock on the working copy.  We will
      reopen the working copy with a lock later. */
-  SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, path, 
-                                  FALSE, FALSE, pool));
+  SVN_ERR (svn_wc_adm_probe_open2 (&adm_access, NULL, path, 
+                                   FALSE, 0, pool));
 
   /* Get the entry for this path so we can determine our anchor and
      target.  If the path is unversioned, and the caller requested
@@ -130,8 +130,8 @@ svn_client_status (svn_revnum_t *result_rev,
      ###        is a performance bug.  (But this is better than locking too
      ###        little, which would be a correctness bug).
    */
-  SVN_ERR (svn_wc_adm_probe_open_depth (&adm_access, NULL, anchor, 
-                                        FALSE, (descend ? -1 : 2), pool));
+  SVN_ERR (svn_wc_adm_probe_open2 (&adm_access, NULL, anchor, 
+                                   FALSE, (descend ? -1 : 2), pool));
 
   /* Get the status edit, and use our wrapping status function/baton
      as the callback pair. */
@@ -155,8 +155,8 @@ svn_client_status (svn_revnum_t *result_rev,
       /* Using pool cleanup to close it. This needs to be recursive so that
          auth data can be stored. */
       if (strlen (anchor) != strlen (path))
-        SVN_ERR (svn_wc_adm_open (&anchor_access, NULL, anchor, FALSE, 
-                                  TRUE, pool));
+        SVN_ERR (svn_wc_adm_open2 (&anchor_access, NULL, anchor, FALSE, 
+                                   -1, pool));
       else
         anchor_access = adm_access;
 

@@ -609,8 +609,8 @@ prep_directory (struct dir_baton *db,
         ? svn_wc_adm_access_pool (db->edit_baton->adm_access)
         : db->edit_baton->pool;
 
-      SVN_ERR (svn_wc_adm_open (&adm_access, db->edit_baton->adm_access,
-                                db->path, TRUE, FALSE, adm_access_pool));
+      SVN_ERR (svn_wc_adm_open2 (&adm_access, db->edit_baton->adm_access,
+                                 db->path, TRUE, 0, adm_access_pool));
       if (!db->edit_baton->adm_access)
         db->edit_baton->adm_access = adm_access;
     }
@@ -2667,8 +2667,8 @@ check_wc_root (svn_boolean_t *wc_root,
   /* If we cannot get an entry for PATH's parent, PATH is a WC root. */
   p_entry = NULL;
   svn_path_split (path, &parent, &base_name, pool);
-  err = svn_wc_adm_probe_open (&adm_access, NULL, parent, FALSE, FALSE,
-                               pool);
+  err = svn_wc_adm_probe_open2 (&adm_access, NULL, parent, FALSE, 0,
+                                pool);
   if (! err)
     err = svn_wc_entry (&p_entry, parent, adm_access, FALSE, pool);
   if (err || (! p_entry))
@@ -2719,7 +2719,8 @@ svn_wc_get_actual_target (const char *path,
   svn_boolean_t is_wc_root;
   svn_node_kind_t kind;
 
-  SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, path, FALSE, FALSE, pool));
+  SVN_ERR (svn_wc_adm_probe_open2 (&adm_access, NULL, path, FALSE, 0,
+                                   pool));
   SVN_ERR (check_wc_root (&is_wc_root, &kind, path, adm_access, pool));
   SVN_ERR (svn_wc_adm_close (adm_access));
 

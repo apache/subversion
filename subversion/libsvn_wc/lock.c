@@ -322,7 +322,7 @@ svn_wc__adm_steal_write_lock (svn_wc_adm_access_t **adm_access,
   return SVN_NO_ERROR;
 }
 
-/* This is essentially the guts of svn_wc_adm_open, with the additional
+/* This is essentially the guts of svn_wc_adm_open2, with the additional
  * parameter UNDER_CONSTRUCTION that gets set TRUE only when locking the
  * admin directory during initial creation.
  */
@@ -509,17 +509,17 @@ svn_wc_adm_open (svn_wc_adm_access_t **adm_access,
                  svn_boolean_t tree_lock,
                  apr_pool_t *pool)
 {
-  return svn_wc_adm_open_depth (adm_access, associated, path, write_lock,
-                                (tree_lock ? -1 : 0), pool);
+  return svn_wc_adm_open2 (adm_access, associated, path, write_lock,
+                           (tree_lock ? -1 : 0), pool);
 }
 
 svn_error_t *
-svn_wc_adm_open_depth (svn_wc_adm_access_t **adm_access,
-                       svn_wc_adm_access_t *associated,
-                       const char *path,
-                       svn_boolean_t write_lock,
-                       int depth,
-                       apr_pool_t *pool)
+svn_wc_adm_open2 (svn_wc_adm_access_t **adm_access,
+                  svn_wc_adm_access_t *associated,
+                  const char *path,
+                  svn_boolean_t write_lock,
+                  int depth,
+                  apr_pool_t *pool)
 {
   return do_open (adm_access, associated, path, write_lock, depth, FALSE,
                   pool);
@@ -543,18 +543,18 @@ svn_wc_adm_probe_open (svn_wc_adm_access_t **adm_access,
                        svn_boolean_t tree_lock,
                        apr_pool_t *pool)
 {
-  return svn_wc_adm_probe_open_depth (adm_access, associated, path,
-                                      write_lock, (tree_lock ? -1 : 0), pool);
+  return svn_wc_adm_probe_open2 (adm_access, associated, path,
+                                 write_lock, (tree_lock ? -1 : 0), pool);
 }
 
 
 svn_error_t *
-svn_wc_adm_probe_open_depth (svn_wc_adm_access_t **adm_access,
-                             svn_wc_adm_access_t *associated,
-                             const char *path,
-                             svn_boolean_t write_lock,
-                             int depth,
-                             apr_pool_t *pool)
+svn_wc_adm_probe_open2 (svn_wc_adm_access_t **adm_access,
+                        svn_wc_adm_access_t *associated,
+                        const char *path,
+                        svn_boolean_t write_lock,
+                        int depth,
+                        apr_pool_t *pool)
 {
   svn_error_t *err;
   const char *dir;
@@ -569,8 +569,8 @@ svn_wc_adm_probe_open_depth (svn_wc_adm_access_t **adm_access,
   if (dir != path)
     depth = 0;
 
-  err = svn_wc_adm_open_depth (adm_access, associated, dir, write_lock, 
-                               depth, pool);
+  err = svn_wc_adm_open2 (adm_access, associated, dir, write_lock, 
+                          depth, pool);
   if (err)
     {
       svn_error_t *err2;
@@ -676,17 +676,17 @@ svn_wc_adm_probe_try (svn_wc_adm_access_t **adm_access,
                       svn_boolean_t tree_lock,
                       apr_pool_t *pool)
 {
-  return svn_wc_adm_probe_try_depth (adm_access, associated, path, write_lock,
-                                     (tree_lock ? -1 : 0), pool);
+  return svn_wc_adm_probe_try2 (adm_access, associated, path, write_lock,
+                                (tree_lock ? -1 : 0), pool);
 }
 
 svn_error_t *
-svn_wc_adm_probe_try_depth (svn_wc_adm_access_t **adm_access,
-                            svn_wc_adm_access_t *associated,
-                            const char *path,
-                            svn_boolean_t write_lock,
-                            int depth,
-                            apr_pool_t *pool)
+svn_wc_adm_probe_try2 (svn_wc_adm_access_t **adm_access,
+                       svn_wc_adm_access_t *associated,
+                       const char *path,
+                       svn_boolean_t write_lock,
+                       int depth,
+                       apr_pool_t *pool)
 {
   svn_error_t *err;
 
@@ -698,9 +698,9 @@ svn_wc_adm_probe_try_depth (svn_wc_adm_access_t **adm_access,
   if (err && (err->apr_err == SVN_ERR_WC_NOT_LOCKED))
     {
       svn_error_clear (err);
-      err = svn_wc_adm_probe_open_depth (adm_access, associated,
-                                         path, write_lock, depth,
-                                         svn_wc_adm_access_pool (associated));
+      err = svn_wc_adm_probe_open2 (adm_access, associated,
+                                    path, write_lock, depth,
+                                    svn_wc_adm_access_pool (associated));
 
       /* If the path is not a versioned directory, we just return a
          null access baton with no error.  Note that of the errors we

@@ -209,8 +209,8 @@ svn_cl__propedit (apr_getopt_t *os,
             propval = svn_string_create ("", subpool);
           
           /* Split the path if it is a file path. */
-          SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, target,
-                                          FALSE, FALSE, subpool));
+          SVN_ERR (svn_wc_adm_probe_open2 (&adm_access, NULL, target,
+                                           FALSE, 0, subpool));
           SVN_ERR (svn_wc_entry (&entry, target, adm_access, FALSE, subpool));
           if (! entry)
             return svn_error_createf

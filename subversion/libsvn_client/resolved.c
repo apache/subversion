@@ -42,8 +42,8 @@ svn_client_resolved (const char *path,
 {
   svn_wc_adm_access_t *adm_access;
 
-  SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, path, TRUE, recursive,
-                                  pool));
+  SVN_ERR (svn_wc_adm_probe_open2 (&adm_access, NULL, path, TRUE,
+                                   recursive ? -1 : 0, pool));
 
   SVN_ERR (svn_wc_resolved_conflict (path, adm_access, TRUE, TRUE, recursive,
                                      ctx->notify_func, ctx->notify_baton, pool));

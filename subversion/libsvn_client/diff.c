@@ -1196,7 +1196,8 @@ convert_to_url (const char **url,
     }
 
   /* ### This may not be a good idea, see issue 880 */
-  SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, path, FALSE, FALSE, pool));
+  SVN_ERR (svn_wc_adm_probe_open2(&adm_access, NULL, path, FALSE,
+                                  0, pool));
   SVN_ERR (svn_wc_entry (&entry, path, adm_access, FALSE, pool));
   SVN_ERR (svn_wc_adm_close (adm_access));
   if (! entry)
@@ -1500,8 +1501,8 @@ diff_wc_wc (const apr_array_header_t *options,
 
   SVN_ERR (svn_wc_get_actual_target (path1, &anchor, &target, pool));
   SVN_ERR (svn_io_check_path (path1, &kind, pool));
-  SVN_ERR (svn_wc_adm_open (&adm_access, NULL, anchor, FALSE,
-                            (recurse && (! *target)), pool));
+  SVN_ERR (svn_wc_adm_open2 (&adm_access, NULL, anchor, FALSE,
+                             (recurse && (! *target)) ? -1 : 0, pool));
 
   if (*target && (kind == svn_node_dir))
     {
@@ -1511,8 +1512,8 @@ diff_wc_wc (const apr_array_header_t *options,
          in adm_access's set of associated batons, where the diff
          editor can find it. */
       svn_wc_adm_access_t *target_access;
-      SVN_ERR (svn_wc_adm_open (&target_access, adm_access, path1,
-                                FALSE, recurse, pool));
+      SVN_ERR (svn_wc_adm_open2 (&target_access, adm_access, path1,
+                                 FALSE, recurse ? -1 : 0, pool));
     }
 
   /* Resolve named revisions to real numbers. */
@@ -1732,8 +1733,8 @@ diff_repos_wc (const apr_array_header_t *options,
                                         ctx, pool));
       
   /* Set up diff editor according to path2's anchor/target. */
-  SVN_ERR (svn_wc_adm_open (&adm_access, NULL, anchor2, FALSE,
-                            (recurse && (! *target2)), pool));
+  SVN_ERR (svn_wc_adm_open2 (&adm_access, NULL, anchor2, FALSE,
+                             (recurse && (! *target2)) ? -1 : 0, pool));
   if (*target2 && (kind == svn_node_dir))
     {
       /* Associate a potentially tree-locked access baton for the
@@ -1742,8 +1743,8 @@ diff_repos_wc (const apr_array_header_t *options,
          in adm_access's set of associated batons, where the diff
          editor can find it. */
       svn_wc_adm_access_t *target_access;
-      SVN_ERR (svn_wc_adm_open (&target_access, adm_access, path2,
-                                FALSE, recurse, pool));
+      SVN_ERR (svn_wc_adm_open2 (&target_access, adm_access, path2,
+                                 FALSE, recurse ? -1 : 0, pool));
     }
 
   SVN_ERR (svn_wc_get_diff_editor (adm_access, target2,
@@ -2006,8 +2007,8 @@ svn_client_merge (const char *source1,
   else
     merge_cmd_baton.path = source2;
 
-  SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, target_wcpath,
-                                  ! dry_run, recurse, pool));
+  SVN_ERR (svn_wc_adm_probe_open2 (&adm_access, NULL, target_wcpath,
+                                   ! dry_run, recurse ? -1 : 0, pool));
 
   SVN_ERR (svn_wc_entry (&entry, target_wcpath, adm_access, FALSE, pool));
   if (entry == NULL)

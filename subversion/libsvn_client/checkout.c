@@ -129,8 +129,8 @@ svn_client__checkout_internal (svn_revnum_t *result_rev,
             }
 
           /* Get PATH's entry. */
-          SVN_ERR (svn_wc_adm_open (&adm_access, NULL, path,
-                                    FALSE, FALSE, pool));
+          SVN_ERR (svn_wc_adm_open2 (&adm_access, NULL, path,
+                                     FALSE, 0, pool));
           SVN_ERR (svn_wc_entry (&entry, path, adm_access, FALSE, pool));
           SVN_ERR (svn_wc_adm_close (adm_access));
 
