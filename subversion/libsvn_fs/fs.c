@@ -110,8 +110,8 @@ cleanup_fs (svn_fs_t *fs)
   SVN_ERR (cleanup_fs_db (fs, &fs->nodes, "nodes"));
   SVN_ERR (cleanup_fs_db (fs, &fs->revisions, "revisions"));
   SVN_ERR (cleanup_fs_db (fs, &fs->transactions, "transactions"));
-  SVN_ERR (cleanup_fs_db (fs, &fs->representations, "revisions"));
-  SVN_ERR (cleanup_fs_db (fs, &fs->strings, "transactions"));
+  SVN_ERR (cleanup_fs_db (fs, &fs->representations, "representations"));
+  SVN_ERR (cleanup_fs_db (fs, &fs->strings, "strings"));
 
   /* Checkpoint any changes.  */
   {
