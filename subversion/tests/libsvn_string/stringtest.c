@@ -9,6 +9,7 @@ int
 main ()
 {
   svn_string_t *a, *b, *c;
+  char *msg;
   ap_pool_t *pglobal;
 
   /* Initialize APR (Apache pools) */
@@ -62,6 +63,9 @@ main ()
   svn_string_fillchar (a, '#');
   svn_string_print (a, stdout);
 
+  /* Return a C string from a bytestring */
+  msg = svn_string_2cstring (b, pglobal);
+  printf ("The C string returned is: %s\n", msg);
 
   /* Free our entire memory pool when done. */
   ap_destroy_pool (pglobal);

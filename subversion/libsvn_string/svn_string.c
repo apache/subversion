@@ -235,6 +235,24 @@ svn_string_compare (const svn_string_t *str1, const svn_string_t *str2)
 }
 
 
+/* return an allocated C string from a bytestring */
+
+char *
+svn_string_2cstring (const svn_string_t *str, ap_pool_t *pool)
+{
+  /* allocate memory for C string, +1 for \0 */
+  size_t size = str->len + 1;
+  char *cstring = ap_palloc (pool, size);
+
+  /* copy bytes over */
+  memcpy (cstring, str->data, str->len);
+
+  /* add the trailing NULL */
+  cstring[size - 1] = 0;
+
+  return cstring;
+}
+
 
 /* Utility: print bytestring to stdout, assuming that the string
    contains ASCII.  */

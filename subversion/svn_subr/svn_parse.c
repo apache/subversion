@@ -63,11 +63,13 @@
    Subversion config file format (look in notes/).  
 
    The hash returned is a mapping from section-names to hash pointers;
-   each hash contains the keys/vals for each section.
+   each hash contains the keys/vals for each section.  All
+   section-names, keys and vals are stored as bytestrings pointers.
+   (These bytestrings are allocated in the same pool as the hashes.)
 
    This routine makes no attempt to understand the sections, keys or
-   values.  :)
- */
+   values.  :) 
+*/
 
 
 ap_hash_t *
@@ -92,16 +94,20 @@ svn_parse (svn_string_t *filename, ap_pool_t *pool)
     /* store this new hash in our uberhash */
     
     ap_hash_set (uberhash, 
-                 new_section->data,  /* the name of the new section */
-                 new_section->len,   /* the length of the name */
-                 new_section_hash);  /* ptr to the section's own hash */
+                 new_section,         /* key: ptr to new_section bytestring */
+                 sizeof(svn_string_t),/* the length of the key */
+                 new_section_hash);   /* val: ptr to the new hash */
   }
 
   /* 
-     each time we find a key/val pair: 
+     each time we find a key/val pair, put them in bytestrings called
+     "new_key" and "new_val", then:
   */
   {
-    
+    ap_hash_set (current_hash,
+                 new_key,
+                 sizeof(svn_string_t),
+                 new_val);
   }
 
   return uberhash;
