@@ -143,12 +143,15 @@ Bindings changes that don't affect the build system:
      * r8397, r8400
      Fix declaration after statement bug.
      Votes:
-      +1: epg
+      +1: epg, breser
 
      * r8398
      Use LIBS rather than OTHERLDFLAGS in Makefile.PL.
      Votes:
       +1: epg
+      -1: breser (See http://marc.theaimsgroup.com/?l=subversion-dev&m=107471006923406&w=2
+                  MSGID: 20040121183409.GC25614@occipital.brain.org)
+
 
 -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*-
 
