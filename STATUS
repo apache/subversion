@@ -115,7 +115,7 @@ Candidate changes:
     Votes:
       +1: cmpilato
 
-  * r12983
+  * r12983, r12986
     Treat a sharing violation as cause for retrying file ops on Windows.
     Justification:
       Better chance of client survival in the toxic environment of Win32.
