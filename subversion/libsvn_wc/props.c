@@ -1523,23 +1523,23 @@ svn_wc_parse_externals_description (apr_hash_t **externals_p,
              parent_directory, line);
         }
 
-      /* Make sure we don't have "." nor "../" in the tgt dir. */
+      item->target_dir = svn_path_internal_style
+        (svn_path_canonicalize (item->target_dir, pool), pool);
       {
         int tgt_dir_len = strlen (item->target_dir);
 
-        if ((strcmp (item->target_dir, ".") == 0)
-            || (strcmp (item->target_dir, "./") == 0)
+        if (item->target_dir[0] == '\0' || item->target_dir[0] == '/'
+            || (strcmp (item->target_dir, "..") == 0)
             || (strncmp (item->target_dir, "../", 3) == 0)
             || (strstr (item->target_dir, "/../") != NULL)
             || (strncmp ((item->target_dir + tgt_dir_len - 3), "/..", 3) == 0))
           return svn_error_createf
             (SVN_ERR_CLIENT_INVALID_EXTERNALS_DESCRIPTION, NULL,
              "Invalid " SVN_PROP_EXTERNALS " property on '%s': "
-             "target involves '.' or '..'",
+             "target involves '.' or '..' or is an absolute path",
              parent_directory);
       }
 
-      item->target_dir = svn_path_canonicalize (item->target_dir, pool);
       item->url = svn_path_canonicalize (item->url, pool);
 
       if (externals_p)
