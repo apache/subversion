@@ -145,7 +145,7 @@ svn_repos_get_logs (svn_fs_t *fs,
 
 #ifndef SVN_REPOS_ALLOW_LOG_WITH_PATHS
       discover_changed_paths = FALSE;
-      
+#else      
       if ((this_rev > 0) && 
           (discover_changed_paths || (paths && paths->nelts > 0)))
         {
