@@ -814,7 +814,8 @@ def hook_test(sbox):
   expected_output = (abs_repo_dir + "\n",
                      abs_repo_dir + " 1\n",
                      abs_repo_dir + " 2\n")
-  output, errput = svntest.main.run_svn (None, 'ci', '--quiet', wc_dir)
+  output, errput = svntest.main.run_svn (None, 'ci', '--quiet',
+                                         '-m', 'log msg', wc_dir)
 
   # Make sure we got the right output.
   if output != expected_output:
@@ -1368,8 +1369,7 @@ test_list = [ None,
               hudson_part_1_variation_1,
               hudson_part_1_variation_2,
               hudson_part_2,
-              ## ### todo: comment this back in when it's working
-              ## hook_test,
+              (hook_test, svntest.main.XFAIL),
               merge_mixed_revisions,
               commit_uri_unsafe,
               commit_deleted_edited,

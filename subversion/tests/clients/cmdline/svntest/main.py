@@ -303,6 +303,22 @@ class Sandbox:
 # Ideally, each test should also have a short, one-line docstring (so
 # it can be displayed by the 'list' command.)
 
+# Use this symbol in the test list to mark XFAIL tests
+XFAIL = 1
+
+# Interpret an entry in TEST_LIST
+def _func_and_fail_mode(elem):
+  "Return a tuple (func, xfail) based on the Nth element of TEST_LIST."
+  # If it's a tuple, the second element is the expected failure mode.
+  if type(elem) is type(()):
+    func = elem[0]
+    xfail = (elem[1] != 0)
+  else:
+    func = elem
+    xfail = 0
+  assert type(func) is type(lambda x: 0)
+  return func, xfail
+
 # Func to run one test in the list.
 def run_one_test(n, test_list):
   "Run the Nth client test in TEST_LIST, return the result."
@@ -315,7 +331,7 @@ def run_one_test(n, test_list):
   current_repo_dir = None
   current_repo_url = None
 
-  func = test_list[n]
+  func, xfail = _func_and_fail_mode(test_list[n])
   if func.func_code.co_argcount:
     # ooh! this function takes a sandbox argument
     module, unused = \
@@ -338,10 +354,10 @@ def run_one_test(n, test_list):
     print "caught unexpected exception"
     traceback.print_exc(file=sys.stdout)
   if error:
-    print "FAIL:",
+    print ('FAIL: ', 'XFAIL:')[xfail != 0],
   else:
-    print "PASS:",
-  print os.path.basename(sys.argv[0]), str(n) + ":", test_list[n].__doc__
+    print ('PASS: ', 'XPASS:')[xfail != 0],
+  print os.path.basename(sys.argv[0]), str(n) + ":", func.__doc__
   return error
 
 def _internal_run_tests(test_list, testnum=None):
@@ -379,11 +395,12 @@ def run_tests(test_list):
   for arg in sys.argv:
 
     if arg == "list":
-      print "Test #     Test Description"
-      print "------     ----------------"
+      print "Test #  Mode   Test Description"
+      print "------  -----  ----------------"
       n = 1
       for x in test_list[1:]:
-        print " %2d      %s" % (n, x.__doc__)
+        f, m = _func_and_fail_mode(x)
+        print " %2d     %5s  %s" % (n, ('', 'XFAIL')[m != 0], f.__doc__)
         n = n+1
 
       # done. just exit with success.
