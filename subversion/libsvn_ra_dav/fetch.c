@@ -518,7 +518,7 @@ static svn_error_t *fetch_file(ne_session *sess,
 
 static svn_error_t * begin_checkout(svn_ra_session_t *ras,
                                     svn_revnum_t revision,
-                                    svn_stringbuf_t **activity_url,
+                                    const svn_string_t **activity_url,
                                     svn_revnum_t *target_rev,
                                     const char **bc_root)
 {
@@ -665,8 +665,9 @@ svn_error_t * svn_ra_dav__do_checkout(void *session_baton,
   svn_error_t *err;
   void *root_baton;
   svn_stringbuf_t *act_url_name;
+  svn_stringbuf_t *act_url_value;
   vsn_url_helper vuh;
-  svn_stringbuf_t *activity_url;
+  const svn_string_t *activity_url;
   svn_revnum_t target_rev;
   const char *bc_root;
   subdir_t *subdir;
@@ -703,6 +704,7 @@ svn_error_t * svn_ra_dav__do_checkout(void *session_baton,
 
   /* ### damn. gotta build a string. */
   act_url_name = svn_stringbuf_create(SVN_RA_DAV__LP_ACTIVITY_URL, ras->pool);
+  act_url_value = svn_stringbuf_create_from_string(activity_url, ras->pool);
 
   /* prep the helper */
   vuh.name = svn_stringbuf_create(SVN_RA_DAV__LP_VSN_URL, ras->pool);
@@ -786,7 +788,8 @@ svn_error_t * svn_ra_dav__do_checkout(void *session_baton,
       /* ### use set_wc_dir_prop() */
 
       /* store the activity URL as a property */
-      err = (*editor->change_dir_prop)(this_baton, act_url_name, activity_url);
+      err = (*editor->change_dir_prop)(this_baton, act_url_name,
+                                       act_url_value);
       if (err)
         /* ### should we close the dir batons first? */
         return svn_error_quick_wrap(err,

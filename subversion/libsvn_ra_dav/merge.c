@@ -93,9 +93,6 @@ typedef struct {
   svn_stringbuf_t *committed_date; /* DAV:creationdate for this resource */
   svn_stringbuf_t *last_author; /* DAV:creator-displayname for this resource */
 
-  /* ### damned set_prop needs an svn_stringbuf_t for a constant */
-  svn_stringbuf_t *vsn_url_name;
-
   /* if resources arrive before we know the target revision, then we store
      their PATH -> VERSION-URL mappings in here. when the revision arrives,
      we empty this hash table, setting version URLs and bumping to the
@@ -161,7 +158,7 @@ static svn_error_t *bump_resource(merge_ctx_t *mc,
                                   char *vsn_url)
 {
   svn_stringbuf_t *path_str;
-  svn_stringbuf_t *vsn_url_str;
+  svn_string_t vsn_url_str;
 
   /* import case. just punt for now. */
   if (mc->close_commit == NULL)
@@ -174,13 +171,15 @@ static svn_error_t *bump_resource(merge_ctx_t *mc,
   if (! okay_to_bump_path (path, mc->valid_targets, mc->pool))
     return NULL;
 
-  /* set up two svn_stringbuf_t values around the path and vsn_url. */
+  /* set up two strin values around the path and vsn_url. */
   path_str = svn_stringbuf_create (path, mc->pool);
-  vsn_url_str = svn_stringbuf_create (vsn_url, mc->pool);
+
+  vsn_url_str.data = vsn_url;
+  vsn_url_str.len = strlen(vsn_url);
  
   /* store the version URL */
-  SVN_ERR( (*mc->set_prop)(mc->close_baton, path_str,
-                           mc->vsn_url_name, vsn_url_str) );
+  SVN_ERR( (*mc->set_prop)(mc->close_baton, path,
+                           SVN_RA_DAV__LP_VSN_URL, &vsn_url_str) );
       
   /* bump the revision/date/author and commit the file */
   return (*mc->close_commit)(mc->close_baton, path_str, FALSE,
@@ -595,9 +594,6 @@ svn_error_t * svn_ra_dav__merge_activity(
   mc.committed_date = MAKE_BUFFER(pool);
   mc.last_author = MAKE_BUFFER(pool);
 
-
-  /* ### damn it */
-  mc.vsn_url_name = svn_stringbuf_create(SVN_RA_DAV__LP_VSN_URL, pool);
 
   body = apr_psprintf(pool,
                       "<?xml version=\"1.0\" encoding=\"utf-8\"?>"

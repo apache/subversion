@@ -721,15 +721,15 @@ svn_wc__do_property_merge (svn_stringbuf_t *path,
 
 /* Get a single 'wcprop' NAME for versioned object PATH, return in
    *VALUE. */
-svn_error_t *svn_wc__wcprop_get (svn_stringbuf_t **value,
-                                 svn_stringbuf_t *name,
-                                 svn_stringbuf_t *path,
+svn_error_t *svn_wc__wcprop_get (const svn_string_t **value,
+                                 const char *name,
+                                 const char *path,
                                  apr_pool_t *pool);
 
 /* Set a single 'wcprop' NAME to VALUE for versioned object PATH. */
-svn_error_t * svn_wc__wcprop_set (svn_stringbuf_t *name,
-                                  svn_stringbuf_t *value,
-                                  svn_stringbuf_t *path,
+svn_error_t * svn_wc__wcprop_set (const char *name,
+                                  const svn_string_t *value,
+                                  const char *path,
                                   apr_pool_t *pool);
 
 /* Remove all wc properties under PATH, recursively.  Do any temporary

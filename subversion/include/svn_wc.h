@@ -512,16 +512,16 @@ svn_error_t *svn_wc_close_commit (svn_stringbuf_t *path,
 /* This is a function of type svn_ra_get_wc_prop_t.  Return *VALUE for
    property NAME on TARGET.  */
 svn_error_t *svn_wc_get_wc_prop (void *baton,
-                                 svn_stringbuf_t *target,
-                                 svn_stringbuf_t *name,
-                                 svn_stringbuf_t **value);
+                                 const char *target,
+                                 const char *name,
+                                 const svn_string_t **value);
 
 /* This is a function of type svn_ra_set_wc_prop_t. Set property NAME
    to VALUE on TARGET.  */
 svn_error_t *svn_wc_set_wc_prop (void *baton,
-                                 svn_stringbuf_t *target,
-                                 svn_stringbuf_t *name,
-                                 svn_stringbuf_t *value);
+                                 const char *target,
+                                 const char *name,
+                                 const svn_string_t *value);
 
 
 /* Crawl a working copy tree depth-first, describing all local mods to

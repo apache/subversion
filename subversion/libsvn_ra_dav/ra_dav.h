@@ -254,7 +254,7 @@ extern const ne_propname svn_ra_dav__checked_in_prop;
 
 
 /* send an OPTIONS request to fetch the activity-collection-set */
-svn_error_t * svn_ra_dav__get_activity_url(svn_stringbuf_t **activity_url,
+svn_error_t * svn_ra_dav__get_activity_url(const svn_string_t **activity_url,
                                            svn_ra_session_t *ras,
                                            const char *url,
                                            apr_pool_t *pool);
