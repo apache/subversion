@@ -66,6 +66,29 @@ Candidate changes:
      Votes:
        +1: maxb
 
+   * r12636
+     Dataloss bug in svndumpfilter - delete-all-properties-from-node operations
+     are lost.
+     Justification:
+       Dataloss!
+     Votes:
+       +1: maxb
+
+   * r12637, r12640
+     Very bad memory handling in svndumpfilter - caches an entire revision
+     of data in memory.
+     Justification:
+       Makes the use of svndumpfilter on dumpstreams containing files
+       larger than available RAM, or revisions in which the total size of
+       changed files is larger than available RAM, totally impossible.
+       This is a showstopper bug, since we do not have obliterate.
+     Notes:
+       r12637 is purely re-ordering of entire functions with no effective
+       code changes whatsoever, in order to make the diff of r12640 more
+       easily reviewable.
+     Votes:
+       +1: maxb
+
 Approved changes (further review is welcome, but not required):
 
 Status of 1.1.4:
