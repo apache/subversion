@@ -672,6 +672,8 @@ might
  Modify a filesystem
 @end itemize
 
+@end itemize
+
 Whatever the case, it's easy to "swap" editors around, and make client
 and server do new and interesting things.
 
