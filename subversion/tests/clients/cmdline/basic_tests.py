@@ -450,7 +450,7 @@ def basic_cleanup():
 def basic_revert():
   "basic revert command"
 
-  sbox = sandbox(basic_cleanup)
+  sbox = sandbox(basic_revert)
   wc_dir = os.path.join (svntest.main.general_wc_dir, sbox)
 
   if svntest.actions.make_repo_and_wc(sbox):
@@ -463,7 +463,7 @@ def basic_revert():
   svntest.main.file_append(beta_path, "Added some text to 'beta'.")
   svntest.main.file_append(iota_path, "Added some text to 'iota'.")
   svntest.main.file_append(rho_path, "Added some text to 'rho'.")
-  
+
   # Verify modified status.
   status_list = svntest.actions.get_virginal_status_list(wc_dir, '1')
   for item in status_list:
@@ -473,7 +473,7 @@ def basic_revert():
   expected_output_tree = svntest.tree.build_generic_tree(status_list)
   if svntest.actions.run_and_verify_status (wc_dir, expected_output_tree):
     return 1
-  
+
   # Run revert (### todo: revert doesn't currently print anything)
   stdout_lines, stderr_lines = svntest.main.run_svn(None, 'revert', beta_path)
   if len (stderr_lines) > 0:

@@ -134,28 +134,28 @@ add_update_info_to_status_hash (apr_hash_t *statushash,
 
 /*** Public Interface. ***/
 
-/* Given PATH to a working copy directory or file, allocate and return
-   a STATUSHASH structure containing the stati of all entries.  If
-   DESCEND is non-zero, recurse fully, else do only immediate
-   children.  (See svn_wc.h:svn_wc_statuses() for more verbiage on
-   this). */
+
 svn_error_t *
 svn_client_status (apr_hash_t **statushash,
                    svn_stringbuf_t *path,
-                   svn_boolean_t descend,
                    svn_client_auth_baton_t *auth_baton,
+                   svn_boolean_t descend,
+                   svn_boolean_t get_all,
                    apr_pool_t *pool)
 {
   apr_hash_t *hash = apr_hash_make (pool);
 
   /* Ask the wc to give us a list of svn_wc_status_t structures. 
-     These structures will contain -local mods- only.  */
-  SVN_ERR (svn_wc_statuses (hash, path, descend, pool));
+     These structures will contain -local mods- only.  (If GET_ALL is
+     set, then every single entry will be returned.) */
+  SVN_ERR (svn_wc_statuses (hash, path, descend, get_all, pool));
   
   /* ### Right here is where we might parse an incoming switch about
      whether to contact the network or not.  :-) */
 
-  /* Contact the repository, add -update info- to our structures. */
+  /* Contact the repository, add -update info- to our structures.  
+     (The GET_ALL flag is irrelevant here, because this function only
+     augments an existing hash with items that need to be updated.) */
   SVN_ERR (add_update_info_to_status_hash (hash, path,
                                            auth_baton, descend, pool));
 
