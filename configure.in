@@ -43,17 +43,18 @@ MKDIR="$INSTALL -d"
 AC_SUBST(MKDIR)
 
 dnl Grab our own macros
-sinclude(ac-helpers/berkeley-db.m4)
-sinclude(ac-helpers/svn-apache.m4)
-sinclude(ac-helpers/svn-macros.m4)
-sinclude(ac-helpers/neon.m4)
-sinclude(ac-helpers/find_apr.m4)
-sinclude(ac-helpers/apr.m4)
-sinclude(ac-helpers/find_apu.m4)
-sinclude(ac-helpers/aprutil.m4)
-sinclude(ac-helpers/java.m4)
-sinclude(ac-helpers/swig.m4)
-sinclude(ac-helpers/gnu-diff.m4)
+sinclude(build/ac-macros/berkeley-db.m4)
+sinclude(build/ac-macros/svn-apache.m4)
+sinclude(build/ac-macros/svn-macros.m4)
+sinclude(build/ac-macros/neon.m4)
+sinclude(build/ac-macros/find_apr.m4)
+sinclude(build/ac-macros/apr.m4)
+sinclude(build/ac-macros/find_apu.m4)
+sinclude(build/ac-macros/aprutil.m4)
+sinclude(build/ac-macros/java.m4)
+sinclude(build/ac-macros/swig.m4)
+
+sinclude(build/ac-diff-test/gnu-diff.m4)
 
 dnl Grab the libtool macros
 sinclude(ac-helpers/libtool.m4)
@@ -338,7 +339,7 @@ else
 fi
 
 dnl Find suitable diff utilities
-SVN_LIB_DIFFUTILS(${abs_srcdir}/ac-helpers)
+SVN_LIB_DIFFUTILS(${abs_srcdir}/build/ac-diff-test)
 
 dnl Since this is used only on Unix-y systems, define the path separator as '/'
 AC_DEFINE_UNQUOTED(SVN_PATH_LOCAL_SEPARATOR, '/',

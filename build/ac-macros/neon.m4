@@ -43,7 +43,7 @@ AC_DEFUN(SVN_LIB_NEON,
   [
     if test -d $abs_srcdir/neon ; then
       AC_MSG_CHECKING([neon library version])
-      NEON_VERSION=`$abs_srcdir/ac-helpers/get-neon-ver.sh $abs_srcdir/neon`
+      NEON_VERSION=`$abs_srcdir/build/get-neon-ver.sh $abs_srcdir/neon`
       AC_MSG_RESULT([$NEON_VERSION])
       case "$NEON_VERSION" in
         $NEON_WANTED_REGEX)
