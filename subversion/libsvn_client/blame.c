@@ -448,10 +448,8 @@ svn_client_blame (const char *target,
       SVN_ERR (ra_lib->get_file (session, rev->path + 1, rev->revision,
                                  stream, NULL, NULL, iterpool));
       SVN_ERR (svn_stream_close (stream));
-      apr_err = apr_file_close (file);
-      if (apr_err != APR_SUCCESS)
-        return svn_error_createf (apr_err, NULL, "error closing %s", 
-                                  rev->path);
+      SVN_ERR (svn_io_file_close (file, iterpool));
+
       if (last)
         {
           svn_diff_t *diff;
@@ -493,9 +491,7 @@ svn_client_blame (const char *target,
     }
 
   SVN_ERR (svn_stream_close (stream));
-  apr_err = apr_file_close (file);
-  if (apr_err != APR_SUCCESS)
-    return svn_error_createf (apr_err, NULL, "error closing %s", last);
+  SVN_ERR (svn_io_file_close (file, pool));
   apr_err = apr_file_remove (last, pool);
   if (apr_err != APR_SUCCESS)
     return svn_error_createf (apr_err, NULL, "error removing %s", last);

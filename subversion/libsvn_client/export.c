@@ -505,16 +505,12 @@ close_file (void *file_baton,
             apr_pool_t *pool)
 {
   struct file_baton *fb = file_baton;
-  apr_status_t apr_err;
 
   /* Was a txdelta even sent? */
   if (! fb->tmppath)
     return SVN_NO_ERROR;
 
-  apr_err = apr_file_close (fb->tmp_file);
-  if (apr_err)
-    return svn_error_createf (apr_err, NULL, "error closing file '%s'",
-                              fb->tmppath);
+  SVN_ERR (svn_io_file_close (fb->tmp_file, fb->pool));
 
   if (text_checksum)
     {

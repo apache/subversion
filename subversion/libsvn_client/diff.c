@@ -1300,7 +1300,6 @@ single_file_merge_get_file (const char **filename,
   svn_ra_plugin_t *ra_lib;
   void *session;
   apr_file_t *fp;
-  apr_status_t status;
 
   SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, url, pool));
   SVN_ERR (svn_client__open_ra_session (&session, ra_lib, url, auth_dir,
@@ -1314,9 +1313,7 @@ single_file_merge_get_file (const char **filename,
   SVN_ERR (ra_lib->get_file (session, "", *rev,
                              svn_stream_from_aprfile (fp, pool),
                              NULL, props, pool));
-  status = apr_file_close (fp);
-  if (status)
-    return svn_error_createf (status, NULL, "failed to close '%s'", *filename);
+  SVN_ERR (svn_io_file_close (fp, pool));
 
   return SVN_NO_ERROR;
 }

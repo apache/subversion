@@ -59,7 +59,6 @@ send_file_contents (const char *path,
   svn_txdelta_window_handler_t handler;
   void *handler_baton;
   apr_file_t *f = NULL;
-  apr_status_t apr_err;
 
   /* Get an apr file for PATH. */
   SVN_ERR (svn_io_file_open (&f, path, APR_READ, APR_OS_DEFAULT, pool));
@@ -76,10 +75,7 @@ send_file_contents (const char *path,
                                     digest, pool));
 
   /* Close the file. */
-  apr_err = apr_file_close (f);
-  if (apr_err)
-    return svn_error_createf
-      (apr_err, NULL, "error closing '%s'", path);
+  SVN_ERR (svn_io_file_close (f, pool));
 
   return SVN_NO_ERROR;
 }
