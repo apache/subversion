@@ -34,6 +34,7 @@ class Pool;
 #include <jni.h>
 #include <fstream>
 #include <apr_time.h>
+#include <string>
 
 #define JAVA_PACKAGE "org/tigris/subversion/javahl"
 
