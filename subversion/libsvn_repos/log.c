@@ -70,12 +70,6 @@ detect_changed (apr_hash_t **changed,
 
   *changed = apr_hash_make (pool);
   SVN_ERR (svn_fs_paths_changed (&changes, root, pool));
-
-  if (apr_hash_count (changes) == 0)
-    /* No paths changed in this revision?  Uh, sure, I guess the
-       revision is readable, then.  */
-    return SVN_NO_ERROR;
-
   for (hi = apr_hash_first (pool, changes); hi; hi = apr_hash_next (hi))
     {
       const void *key;
