@@ -49,13 +49,8 @@ static const ne_propname starting_props[] =
   { NULL }
 };
 
-/* if we need to directly ask the VCC for the "latest" baseline, these are
-   the properties to fetch. */
-static const ne_propname vcc_props[] =
-{
-  { "DAV:", "checked-in" },
-  { NULL }
-};
+/* we will fetch this from a Baseline to get the revision number */
+static const ne_propname version_name_prop = { "DAV:", "version-name" };
 
 /* when speaking to a Baseline to reach the Baseline Collection, fetch these
    properties. */
@@ -63,15 +58,6 @@ static const ne_propname baseline_props[] =
 {
   { "DAV:", "baseline-collection" },
   { "DAV:", "version-name" },
-  { NULL }
-};
-
-/* fetch these properties from all resources in the Baseline Collection
-   during a checkout. */
-static const ne_propname fetch_props[] =
-{
-  { "DAV:", "resourcetype" },
-  { "DAV:", "checked-in" },
   { NULL }
 };
 
@@ -465,25 +451,15 @@ static svn_error_t * begin_checkout(svn_ra_session_t *ras,
     {
       /* Fetch the latest revision */
 
-      const char *baseline;
+      const svn_string_t *baseline;
 
       /* Get the Baseline from the DAV:checked-in value, then fetch its
          DAV:baseline-collection property. */
-      SVN_ERR( svn_ra_dav__get_props_resource(&rsrc, ras, vcc, NULL,
-                                              vcc_props, pool) );
-      baseline = apr_hash_get(rsrc->propset, SVN_RA_DAV__PROP_CHECKED_IN,
-                              APR_HASH_KEY_STRING);
-      if (baseline == NULL)
-        {
-          /* ### better error reporting... */
+      /* ### should wrap this with info about rsrc==VCC */
+      SVN_ERR( svn_ra_dav__get_one_prop(&baseline, ras, vcc, NULL,
+                                        &svn_ra_dav__checked_in_prop, pool) );
 
-          /* ### need an SVN_ERR here */
-          return svn_error_create(APR_EGENERAL, 0, NULL, pool,
-                                  "DAV:checked-in was not present on the "
-                                  "version-controlled configuration.");
-        }
-
-      SVN_ERR( svn_ra_dav__get_props_resource(&rsrc, ras, baseline, NULL,
+      SVN_ERR( svn_ra_dav__get_props_resource(&rsrc, ras, baseline->data, NULL,
                                               baseline_props, pool) );
     }
   else
@@ -674,10 +650,9 @@ svn_error_t *svn_ra_dav__get_latest_revnum(void *session_baton,
 {
   svn_ra_session_t *ras = session_baton;
   apr_pool_t *pool = ras->pool;
-  svn_ra_dav_resource_t *rsrc;
-  const char *vcc;
-  const char *baseline;
-  const char *vsn_name;
+  const svn_string_t *vcc;
+  const svn_string_t *baseline;
+  const svn_string_t *vsn_name;
 
   /* ### this whole sequence can/should be replaced with an expand-property
      ### REPORT when that is available on the server. */
@@ -686,49 +661,18 @@ svn_error_t *svn_ra_dav__get_latest_revnum(void *session_baton,
      ### to talk to? */
 
   /* fetch the DAV:version-controlled-configuration from the session's URL */
-  SVN_ERR( svn_ra_dav__get_props_resource(&rsrc, ras, ras->root.path,
-                                          NULL, starting_props, pool) );
-  vcc = apr_hash_get(rsrc->propset, SVN_RA_DAV__PROP_VCC, APR_HASH_KEY_STRING);
-  if (vcc == NULL)
-    {
-      /* ### better error reporting... */
-
-      /* ### need an SVN_ERR here */
-      return svn_error_create(APR_EGENERAL, 0, NULL, pool,
-                              "Could not determine the VCC.");
-    }
+  SVN_ERR( svn_ra_dav__get_one_prop(&vcc, ras, ras->root.path, NULL,
+                                    &svn_ra_dav__vcc_prop, pool) );
 
   /* Get the Baseline from the DAV:checked-in value */
-  SVN_ERR( svn_ra_dav__get_props_resource(&rsrc, ras, vcc, NULL,
-                                          vcc_props, pool) );
-  baseline = apr_hash_get(rsrc->propset, SVN_RA_DAV__PROP_CHECKED_IN,
-                          APR_HASH_KEY_STRING);
-  if (baseline == NULL)
-    {
-      /* ### better error reporting... */
+  SVN_ERR( svn_ra_dav__get_one_prop(&baseline, ras, vcc->data, NULL,
+                                    &svn_ra_dav__checked_in_prop, pool) );
 
-      /* ### need an SVN_ERR here */
-      return svn_error_create(APR_EGENERAL, 0, NULL, pool,
-                              "DAV:checked-in was not present on the "
-                              "version-controlled configuration.");
-    }
+  /* The revision is in DAV:version-name on the latest Baseline */
+  SVN_ERR( svn_ra_dav__get_one_prop(&vsn_name, ras, baseline->data, NULL,
+                                    &version_name_prop, pool) );
 
-  /* rsrc will be the latest Baseline. The revision is in DAV:version-name */
-  SVN_ERR( svn_ra_dav__get_props_resource(&rsrc, ras, baseline, NULL,
-                                          baseline_props, pool) );
-  vsn_name = apr_hash_get(rsrc->propset,
-                          SVN_RA_DAV__PROP_VERSION_NAME, APR_HASH_KEY_STRING);
-  if (vsn_name == NULL)
-    {
-      /* ### better error reporting... */
-
-      /* ### need an SVN_ERR here */
-      return svn_error_create(APR_EGENERAL, 0, NULL, pool,
-                              "DAV:version-name was not present on the "
-                              "baseline resource.");
-    }
-
-  *latest_revnum = atol(vsn_name);
+  *latest_revnum = atol(vsn_name->data);
 
   return NULL;
 }

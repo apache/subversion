@@ -31,6 +31,15 @@
 #include "ra_dav.h"
 
 
+/* some definitions of various properties that may be fetched */
+const ne_propname svn_ra_dav__vcc_prop = {
+  "DAV:", "version-controlled-configuration"
+};
+const ne_propname svn_ra_dav__checked_in_prop = {
+  "DAV:", "checked-in"
+};
+
+
 typedef struct {
   ne_xml_elmid id;
   const char *name;
@@ -138,6 +147,7 @@ static int add_to_hash(void *userdata, const ne_propname *pname,
   name = apr_pstrcat(r->pool, pname->nspace, pname->name, NULL);
   value = apr_pstrdup(r->pool, value);
 
+  /* ### woah... what about a binary VALUE with a NULL character? */
   apr_hash_set(r->propset, name, APR_HASH_KEY_STRING, value);
 
   return 0;
@@ -338,6 +348,41 @@ svn_error_t * svn_ra_dav__get_props_resource(svn_ra_dav_resource_t **rsrc,
     {
       /* ### should have been in there... */
     }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t * svn_ra_dav__get_one_prop(const svn_string_t **propval,
+                                       svn_ra_session_t *ras,
+                                       const char *url,
+                                       const char *label,
+                                       const ne_propname *propname,
+                                       apr_pool_t *pool)
+{
+  svn_ra_dav_resource_t *rsrc;
+  ne_propname props[2] = { { 0 } };
+  const char *name;
+  const char *value;
+  svn_string_t *sv;
+
+  props[0] = *propname;
+  SVN_ERR( svn_ra_dav__get_props_resource(&rsrc, ras, url, label, props,
+                                          pool) );
+
+  name = apr_pstrcat(pool, propname->nspace, propname->name, NULL);
+  value = apr_hash_get(rsrc->propset, name, APR_HASH_KEY_STRING);
+  if (value == NULL)
+    {
+      /* ### need an SVN_ERR here */
+      return svn_error_createf(APR_EGENERAL, 0, NULL, pool,
+                               "%s was not present on the resource.", name);
+    }
+
+  /* ### hmm. we can't deal with embedded NULLs right now... */
+  sv = apr_palloc(pool, sizeof(*sv));
+  sv->data = value;
+  sv->len = strlen(value);
+  *propval = sv;
 
   return SVN_NO_ERROR;
 }
