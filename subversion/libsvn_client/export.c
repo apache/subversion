@@ -38,56 +38,7 @@
 
 /*** Code. ***/
 
-svn_error_t *
-svn_client__remove_admin_dirs (const char *dir,
-                               svn_client_ctx_t *ctx,
-                               apr_pool_t *pool)
-{
-  apr_pool_t *subpool = svn_pool_create (pool);
-  apr_hash_t *dirents;
-  apr_hash_index_t *hi;
 
-  SVN_ERR (svn_io_get_dirents (&dirents, dir, pool));
-
-  for (hi = apr_hash_first (pool, dirents); hi; hi = apr_hash_next (hi))
-    {
-      const svn_node_kind_t *type;
-      const char *item;
-      const void *key;
-      void *val;
-
-      apr_hash_this (hi, &key, NULL, &val);
-
-      item = key;
-      type = val;
-
-      if (ctx->cancel_func)
-        SVN_ERR (ctx->cancel_func (ctx->cancel_baton));
-
-      /* ### We could also invoke ctx->notify_func somewhere in
-         ### here... Is it called for, though?  Not sure. */ 
-
-      if (*type == svn_node_dir)
-        {
-          const char *dir_path = svn_path_join (dir, key, subpool);
-
-          if (strcmp (item, SVN_WC_ADM_DIR_NAME) == 0)
-            {
-              SVN_ERR (svn_io_remove_dir (dir_path, subpool));
-            }
-          else
-            {
-              SVN_ERR (svn_client__remove_admin_dirs (dir_path, ctx, subpool));
-            } 
-        }
-
-      svn_pool_clear (subpool);
-    }
-
-  svn_pool_destroy (subpool);
-
-  return SVN_NO_ERROR;
-}
 
 static svn_error_t *
 copy_versioned_files (const char *from,
@@ -194,7 +145,6 @@ svn_client_export (const char *from,
 {
   if (svn_path_is_url (from))
     {
-#if 0 /* new export-editor */
       const char *URL;
       svn_revnum_t revnum;
       void *ra_baton, *session;
@@ -224,20 +174,6 @@ svn_client_export (const char *from,
       SVN_ERR (ra_lib->do_checkout (session, revnum,
                                     TRUE, /* recurse */
                                     export_editor, edit_baton, pool));
-#else  /* old export method */
-
-      /* export directly from the repository by doing a checkout first. */
-      SVN_ERR (svn_client_checkout (from,
-                                    to,
-                                    revision,
-                                    TRUE,
-                                    ctx,
-                                    pool));
-      
-      /* walk over the wc and remove the administrative directories. */
-      SVN_ERR (svn_client__remove_admin_dirs (to, ctx, pool));
-
-#endif
     }
   else
     {
@@ -264,15 +200,9 @@ struct edit_baton
 };
 
 
-struct dir_baton
-{
-  struct edit_baton *edit_baton;
-};
-
-
 struct file_baton
 {
-  struct dir_baton *parent_dir_baton;
+  struct edit_baton *edit_baton;
 
   const char *path;
   const char *tmppath;
@@ -345,7 +275,7 @@ build_final_keyword_struct (struct file_baton *fb,
         {
           const char *url = 
             svn_path_url_add_component 
-            (fb->parent_dir_baton->edit_baton->root_url, fb->path, pool);
+            (fb->edit_baton->root_url, fb->path, pool);
           
           new_kw->url = svn_string_create (url, pool);         
         }
@@ -372,11 +302,8 @@ open_root (void *edit_baton,
            void **root_baton)
 {
   struct edit_baton *eb = edit_baton;  
-  struct dir_baton *db = apr_pcalloc (pool, sizeof(*db));
   svn_node_kind_t kind;
   
-  db->edit_baton = edit_baton;
-
   SVN_ERR (svn_io_check_path (eb->root_path, &kind, pool));
   if (kind != svn_node_none)
     return svn_error_create (SVN_ERR_WC_OBSTRUCTED_UPDATE,
@@ -384,17 +311,17 @@ open_root (void *edit_baton,
 
   SVN_ERR (svn_io_dir_make (eb->root_path, APR_OS_DEFAULT, pool));
 
-  if (db->edit_baton->notify_func)
-    (*db->edit_baton->notify_func) (db->edit_baton->notify_baton,
-                                    eb->root_path,
-                                    svn_wc_notify_update_add,
-                                    svn_node_dir,
-                                    NULL,
-                                    svn_wc_notify_state_unknown,
-                                    svn_wc_notify_state_unknown,
-                                    SVN_INVALID_REVNUM);
+  if (eb->notify_func)
+    (*eb->notify_func) (eb->notify_baton,
+                        eb->root_path,
+                        svn_wc_notify_update_add,
+                        svn_node_dir,
+                        NULL,
+                        svn_wc_notify_state_unknown,
+                        svn_wc_notify_state_unknown,
+                        SVN_INVALID_REVNUM);
 
-  *root_baton = db;
+  *root_baton = eb;
   return SVN_NO_ERROR;
 }
 
@@ -408,26 +335,23 @@ add_directory (const char *path,
                apr_pool_t *pool,
                void **baton)
 {
-  struct dir_baton *db = apr_pcalloc (pool, sizeof(*db));
-  struct dir_baton *parent = parent_baton;
-  const char *full_path = svn_path_join (parent->edit_baton->root_path,
+  struct edit_baton *eb = parent_baton;
+  const char *full_path = svn_path_join (eb->root_path,
                                          path, pool);
-
-  db->edit_baton = parent->edit_baton;
 
   SVN_ERR (svn_io_dir_make (full_path, APR_OS_DEFAULT, pool));
 
-  if (db->edit_baton->notify_func)
-    (*db->edit_baton->notify_func) (db->edit_baton->notify_baton,
-                                    full_path,
-                                    svn_wc_notify_update_add,
-                                    svn_node_dir,
-                                    NULL,
-                                    svn_wc_notify_state_unknown,
-                                    svn_wc_notify_state_unknown,
-                                    SVN_INVALID_REVNUM);
+  if (eb->notify_func)
+    (*eb->notify_func) (eb->notify_baton,
+                        full_path,
+                        svn_wc_notify_update_add,
+                        svn_node_dir,
+                        NULL,
+                        svn_wc_notify_state_unknown,
+                        svn_wc_notify_state_unknown,
+                        SVN_INVALID_REVNUM);
 
-  *baton = db;
+  *baton = eb;
   return SVN_NO_ERROR;
 }
 
@@ -441,12 +365,12 @@ add_file (const char *path,
           apr_pool_t *pool,
           void **baton)
 {
-  struct dir_baton *parent = parent_baton;
+  struct edit_baton *eb = parent_baton;
   struct file_baton *fb = apr_pcalloc (pool, sizeof(*fb));
-  const char *full_path = svn_path_join (parent->edit_baton->root_path,
+  const char *full_path = svn_path_join (eb->root_path,
                                          path, pool);
-
-  fb->parent_dir_baton = parent;
+  
+  fb->edit_baton = eb;
   fb->path = full_path;
 
   *baton = fb;
@@ -461,10 +385,7 @@ window_handler (svn_txdelta_window_t *window, void *baton)
   svn_error_t *err;
 
   err = hb->apply_handler (window, hb->apply_baton);
-  if (window != NULL && err == SVN_NO_ERROR)
-    return err;
-
-  if (err != SVN_NO_ERROR)
+  if (err)
     {
       /* We failed to apply the patch; clean up the temporary file.  */
       apr_file_remove (hb->tmppath, hb->pool);
@@ -547,7 +468,6 @@ close_file (void *file_baton,
             apr_pool_t *pool)
 {
   struct file_baton *fb = file_baton;
-  struct dir_baton *db = fb->parent_dir_baton;
 
   apr_status_t apr_err = apr_file_close (fb->tmp_file);
   if (apr_err)
@@ -583,7 +503,7 @@ close_file (void *file_baton,
     {
       svn_subst_eol_style_t style;
       const char *eol;
-      svn_subst_keywords_t final_kw;
+      svn_subst_keywords_t final_kw = {0};
 
       if (fb->eol_style_val)
         svn_subst_eol_style_from_value (&style, &eol, fb->eol_style_val->data);
@@ -605,8 +525,8 @@ close_file (void *file_baton,
   if (fb->executable_val)
     SVN_ERR (svn_io_set_file_executable (fb->path, TRUE, FALSE, pool));
 
-  if (db->edit_baton->notify_func)
-    (*db->edit_baton->notify_func) (db->edit_baton->notify_baton,
+  if (fb->edit_baton->notify_func)
+    (*fb->edit_baton->notify_func) (fb->edit_baton->notify_baton,
                                     fb->path,
                                     svn_wc_notify_update_add,
                                     svn_node_file,
