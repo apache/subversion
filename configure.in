@@ -276,7 +276,7 @@ if test "$SWIG" != "none"; then
     SWIG_INSTALL_RULES="$SWIG_INSTALL_RULES install-swig-py-lib"
 
     AC_CACHE_CHECK([for Python includes], [ac_cv_python_includes],[
-	ac_cv_python_includes="`$PYTHON ac-helpers/get-py-info.py --includes`"
+	ac_cv_python_includes="`$PYTHON ${abs_srcdir}/ac-helpers/get-py-info.py --includes`"
     ])
     SWIG_PY_INCLUDES="-I$ac_cv_python_includes"
   fi

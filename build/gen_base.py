@@ -297,17 +297,19 @@ class MakefileGenerator(_GeneratorBase):
                                                        'paths'))
     errors = errors or s_errors
 
-    script_dirs = []
-    for script in scripts:
-      script_dirs.append(re.compile("[-a-z0-9A-Z_.]*$").sub("", script))
-
     fs_scripts, fs_errors = _collect_paths(self.parser.get('fs-test-scripts',
                                                            'paths'))
     errors = errors or fs_errors
 
-    self.ofile.write('BUILD_DIRS = %s %s\n' %
-                     (string.join(self.target_dirs.keys()),
-                      string.join(script_dirs)))
+    # get all the test scripts' directories
+    script_dirs = map(os.path.dirname, scripts + fs_scripts)
+
+    # remove duplicate directories
+    build_dirs = self.target_dirs.copy()
+    for d in script_dirs:
+      build_dirs[d] = None
+
+    self.ofile.write('BUILD_DIRS = %s\n' % string.join(build_dirs.keys()))
 
     self.ofile.write('FS_TEST_DEPS = %s\n\n' %
                      string.join(self.fs_test_deps + fs_scripts))
