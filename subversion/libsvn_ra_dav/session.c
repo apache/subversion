@@ -172,7 +172,7 @@ client_ssl_keypw_callback(void *userdata, char *pwbuf, size_t len)
       pw_creds = creds;
       if (pw_creds)
         {
-          strncpy(pwbuf, pw_creds->password, len);
+          apr_cpystrn(pwbuf, pw_creds->password, len);
         }
     }
   apr_pool_destroy(pool);
