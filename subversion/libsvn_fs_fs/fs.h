@@ -176,11 +176,6 @@ typedef struct
      no data. */
   representation_t *data_rep;
   
-  /* representation key for this node's text-data-in-progess (files
-     only).  NULL if no edits are currently in-progress.  This field
-     is always NULL for kinds other than "file".  */
-  const char *edit_key;
-
   /* path at which this node first came into existence.  */
   const char *created_path;
 
