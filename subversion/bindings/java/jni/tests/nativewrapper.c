@@ -24,6 +24,10 @@
 #include "../misc.h"
 #include "../status.h"
 #include "../string.h"
+#include "../statuskind.h"
+#include "../nodekind.h"
+#include "../schedule.h"
+#include "../revision.h"
 
 JNIEXPORT jobject JNICALL 
 Java_NativeWrapper_vectorCreate
@@ -69,21 +73,21 @@ Java_NativeWrapper_entrySetUrl
 
 JNIEXPORT void JNICALL 
 Java_NativeWrapper_entrySetRevision
-(JNIEnv *env, jclass clazz, jobject entry, jlong revision)
+(JNIEnv *env, jclass clazz, jobject entry, jobject revision)
 {
   entry__set_revision(env, NULL, entry, revision);
 }
 
 JNIEXPORT void JNICALL 
-Java_NativeWrapper_entrySetNodekind
-(JNIEnv *env, jclass clazz, jobject entry, jint nodekind)
+Java_NativeWrapper_entrySetKind
+(JNIEnv *env, jclass clazz, jobject entry, jobject kind)
 {
-  entry__set_nodekind(env, NULL, entry, nodekind);
+  entry__set_kind(env, NULL, entry, kind);
 }
   
 JNIEXPORT void JNICALL 
 Java_NativeWrapper_entrySetSchedule
-(JNIEnv *env, jclass clazz, jobject entry, jint schedule)
+(JNIEnv *env, jclass clazz, jobject entry, jobject schedule)
 {
   entry__set_schedule(env, NULL, entry, schedule);
 }
@@ -182,14 +186,14 @@ Java_NativeWrapper_statusSetEntry
 
 JNIEXPORT void JNICALL 
 Java_NativeWrapper_statusSetTextStatus
-(JNIEnv *env, jclass clazz, jobject status, jint text_status)
+(JNIEnv *env, jclass clazz, jobject status, jobject text_status)
 {
   status__set_text_status(env, NULL, status, text_status);
 }
 
 JNIEXPORT void JNICALL 
 Java_NativeWrapper_statusSetPropStatus
-(JNIEnv *env, jclass clazz, jobject status, jint prop_status)
+(JNIEnv *env, jclass clazz, jobject status, jobject prop_status)
 {
   status__set_prop_status(env, NULL, status, prop_status);
 }
@@ -210,14 +214,14 @@ Java_NativeWrapper_statusSetLocked
 
 JNIEXPORT void JNICALL 
 Java_NativeWrapper_statusSetReposTextStatus
-(JNIEnv *env, jclass clazz, jobject status, jint repos_text_status)
+(JNIEnv *env, jclass clazz, jobject status, jobject repos_text_status)
 {
   status__set_repos_text_status(env, NULL, status, repos_text_status);
 }
 
 JNIEXPORT void JNICALL 
 Java_NativeWrapper_statusSetReposPropStatus
-(JNIEnv *env, jclass clazz, jobject status, jint repos_prop_status)
+(JNIEnv *env, jclass clazz, jobject status, jobject repos_prop_status)
 {
   status__set_repos_prop_status(env, NULL, status, repos_prop_status);
 }
