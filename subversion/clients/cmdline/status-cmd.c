@@ -115,12 +115,13 @@ svn_cl__status (apr_getopt_t *os,
       sb.show_last_committed = opt_state->verbose;
       sb.skip_unrecognized = opt_state->quiet;
       sb.pool = subpool;
-      SVN_ERR (svn_client_status (NULL, target, &rev, print_status, &sb,
-                                  opt_state->nonrecursive ? FALSE : TRUE,
-                                  opt_state->verbose,
-                                  opt_state->update,
-                                  opt_state->no_ignore,
-                                  ctx, subpool));
+      SVN_ERR (svn_client_status2 (NULL, target, &rev, print_status, &sb,
+                                   opt_state->nonrecursive ? FALSE : TRUE,
+                                   opt_state->verbose,
+                                   opt_state->update,
+                                   opt_state->no_ignore,
+                                   opt_state->ignore_externals,
+                                   ctx, subpool));
 
       svn_pool_clear (subpool);
     }

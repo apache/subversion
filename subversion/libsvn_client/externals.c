@@ -244,12 +244,12 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
         SVN_ERR (svn_client_export3 (NULL, new_item->url, path,
                                      &(new_item->revision),
                                      &(new_item->revision),
-                                     TRUE, NULL, ib->ctx, ib->pool));
+                                     TRUE, FALSE, NULL, ib->ctx, ib->pool));
       else
         SVN_ERR (svn_client__checkout_internal (NULL, new_item->url, path,
                                                 &(new_item->revision),
                                                 &(new_item->revision),
-                                                TRUE, /* recurse */
+                                                TRUE, FALSE,
                                                 ib->timestamp_sleep,
                                                 ib->ctx, ib->pool));
     }
@@ -309,7 +309,7 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
       SVN_ERR (svn_client__checkout_internal (NULL, new_item->url, path,
                                               &(new_item->revision),
                                               &(new_item->revision),
-                                              TRUE, /* recurse */
+                                              TRUE, FALSE,
                                               ib->timestamp_sleep,
                                               ib->ctx, ib->pool));
     }
@@ -350,7 +350,7 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
             {
               SVN_ERR (svn_client__update_internal (NULL, path,
                                                     &(new_item->revision),
-                                                    TRUE, /* recurse */
+                                                    TRUE, FALSE,
                                                     ib->timestamp_sleep,
                                                     ib->ctx, ib->pool));
             }
@@ -368,7 +368,7 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
                                                       path,
                                                       &(new_item->revision),
                                                       &(new_item->revision),
-                                                      TRUE, /* recurse */
+                                                      TRUE, FALSE,
                                                       ib->timestamp_sleep,
                                                       ib->ctx, ib->pool));
             }
@@ -384,7 +384,7 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
           SVN_ERR (svn_client__checkout_internal (NULL, new_item->url, path,
                                                   &(new_item->revision),
                                                   &(new_item->revision),
-                                                  TRUE, /* recurse */
+                                                  TRUE, FALSE,
                                                   ib->timestamp_sleep,
                                                   ib->ctx, ib->pool));
         }
@@ -432,13 +432,13 @@ handle_externals_desc_change (const void *key, apr_ssize_t klen,
   svn_wc_external_item_t *item;
 
   if ((old_desc_text = apr_hash_get (cb->externals_old, key, klen)))
-    SVN_ERR (svn_wc_parse_externals_description2 (&old_desc, (const char *) key,
+    SVN_ERR (svn_wc_parse_externals_description2 (&old_desc, key,
                                                   old_desc_text, cb->pool));
   else
     old_desc = NULL;
 
   if ((new_desc_text = apr_hash_get (cb->externals_new, key, klen)))
-    SVN_ERR (svn_wc_parse_externals_description2 (&new_desc, (const char *) key,
+    SVN_ERR (svn_wc_parse_externals_description2 (&new_desc, key,
                                                   new_desc_text, cb->pool));
   else
     new_desc = NULL;
