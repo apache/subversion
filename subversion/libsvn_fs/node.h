@@ -1,4 +1,4 @@
-/* convert-size.h : interface to ascii-to-size and vice-versa conversions
+/* node.h : interface to node functions, private to libsvn_fs
  *
  * ================================================================
  * Copyright (c) 2000 Collab.Net.  All rights reserved.
@@ -46,29 +46,20 @@
  * individuals on behalf of Collab.Net.
  */
 
-#ifndef SVN_LIBSVN_FS_CONVERT_SIZE_H
-#define SVN_LIBSVN_FS_CONVERT_SIZE_H
-
-#include "apr.h"
-
-/* Return the value of the string of digits at DATA as an ASCII
-   decimal number.  The string is at most LEN bytes long.  The value
-   of the number is at most MAX.  Set *END to the address of the first
-   byte after the number, or zero if an error occurred while
-   converting the number (overflow, for example).
-
-   We would like to use strtoul, but that family of functions is
-   locale-dependent, whereas we're trying to parse data in a
-   local-independent format.  */
-
-apr_size_t svn_fs__getsize (char *data, apr_size_t len, char **endptr,
-			    apr_size_t max);
+#ifndef SVN_LIBSVN_FS_NODE_H
+#define SVN_LIBSVN_FS_NODE_H
 
 
-/* Store the ASCII decimal representation of VALUE at DATA.  Return
-   the length of the representation if all goes well; return zero if
-   the result doesn't fit in LEN bytes.  */
-int svn_fs__putsize (char *data, apr_size_t len, apr_size_t value);
+/* Set *NODE to the node identified by ID in FS.
+
+   If POOL is non-zero, allocate the new node there.
+
+   Multiple opens of the same ID return the same object.  If we
+   already have a node object for that node, increment that object's
+   open count and, return a pointer to it.  */
+svn_error_t *svn_fs__open_id (svn_fs_node_t **node,
+			      svn_fs_t *fs,
+			      svn_fs_id_t *id);
 
 
-#endif /* SVN_LIBSVN_FS_CONVERT_SIZE_H */
+#endif /* SVN_LIBSVN_FS_NODE_H */

@@ -1,5 +1,4 @@
-/*
- * fs.h : interface to Subversion filesystem, private to libsvn_fs
+/* fs.h : interface to Subversion filesystem, private to libsvn_fs
  *
  * ================================================================
  * Copyright (c) 2000 Collab.Net.  All rights reserved.
@@ -55,6 +54,7 @@
 
 #include "db.h"			/* Berkeley DB interface */
 #include "apr_pools.h"
+#include "apr_hash.h"
 #include "svn_fs.h"
 
 
@@ -77,19 +77,17 @@ struct svn_fs_t {
      property lists.  See versions.c for the details.  */
   DB *versions;
 
-  /* A btree mapping node id's onto full texts.  If an entry is
-     missing here, there must exist a full text for some later
-     revision, and we will need to reconstruct the version we want by
-     composing deltas.  */
-  DB *full_texts;
-
-  /* A btree database mapping node id's onto text deltas.  */
-  DB *deltas;
+  /* A btree mapping node id's onto node representations.  */
+  DB *nodes;
 
   /* A callback function for printing warning messages, and a baton to
      pass through to it.  */
   svn_fs_warning_callback_t *warning;
   void *warning_baton;
+
+  /* A cache of nodes we've read in, mapping svn_fs_id_t arrays onto
+     pointers to nodes.  */
+  apr_hash_t *node_cache;
 
   /* A kludge for handling errors noticed by APR pool cleanup functions.
 
@@ -113,6 +111,113 @@ struct svn_fs_t {
      fs_cleanup won't overwrite a pointer to an existing svn_error_t
      if it finds one.  */
   svn_error_t **cleanup_error;
+};
+
+
+
+/* Property lists.  */
+
+
+/* The structure underlying the public svn_fs_proplist_t typedef.  */
+
+struct svn_fs_proplist_t {
+
+  /* A hash table, mapping property names (as byte strings) onto
+     svn_string_t objects holding the values.  */
+  apr_hash_t *hash;
+
+  /* The pool of the underlying object.  */
+  apr_pool_t *pool;
+
+};
+
+
+
+/* Nodes.  */
+
+
+/* The private structure underlying the public svn_fs_node_t typedef.
+
+   All the more specific node structures --- files, directories,
+   etc. --- include one of these as their first member.  ANSI
+   guarantees the right behavior when you cast a pointer to a
+   structure to a pointer to its first member, and back.  So this is
+   effectively the superclass for files and directories.
+
+   NODE ALLOCATION:
+
+   Nodes are not allocated the way you might assume.  Every node is
+   allocated in its own subpool, which is a subpool of the
+   filesystem's pool.  Note well: the node's pool is *never* a subpool
+   of the pool you may have passed in to the `open' function.
+
+   This is because the filesystem caches nodes.  Two separate `open'
+   calls may return the same node object.  If those two `open' calls
+   each specified a different pool, then that node object needs to
+   live for as long as *either* of those two pools are around.  It's
+   wrong to put the node in either pool (or a subpool of either pool),
+   since the other one might get freed last.
+
+   What actually happens is this: every node has an `open count',
+   indicating how many times it has been opened, minus the number of
+   times it has been closed.  When a node's open count reaches zero,
+   we know there are no more references to the node, so we can decide
+   arbitrarily to keep it around (in case someone opens it again) or
+   throw it away (to save memory), without annoying any users.
+
+   When someone passes their own pool to an `open' function, all we do
+   is register a cleanup function in that pool that closes the node.
+   That way, you can open the same node object in twenty different pools,
+
+
+   Thus, when the pool is freed, the node's open count is decreased.
+   If nobody else is using it, the open count will become zero, and we
+   will free the node when our caching policy tells is to.  If other
+   people are still using it, the open count will be greater than
+   zero, and the node will stick around.  */
+
+
+
+struct svn_fs_node_t {
+  
+  /* The `open count' --- how many times this object has been opened,
+     minus the number of times it has been closed.  If this count is
+     zero, then we can free the object (although we may keep it around
+     anyway as part of a cache).  */
+  int open_count;
+
+  /* The filesystem to which we belong.  */
+  svn_fs_t *fs;
+
+  /* The pool in which we do our allocation.  Possibly the same as
+     fs->pool.  */
+  apr_pool_t *pool;
+
+  /* The node version ID of this node.  */
+  svn_fs_id_t *id;
+
+  /* What kind of node this is, more specifically.  */
+  enum {
+    svn_fs_kind_file,
+    svn_fs_kind_dir
+  } kind;
+
+  /* The node's property list.  */
+  svn_fs_proplist_t *proplist;
+
+};
+
+
+
+/* Files.  */
+
+/* The private structure underlying the public svn_fs_file_t typedef.  */
+
+struct svn_fs_file_t {
+  
+  /* The node structure carries information common to all nodes.  */
+  struct svn_fs_node_t node;
+
 };
 
 

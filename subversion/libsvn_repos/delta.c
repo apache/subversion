@@ -80,11 +80,6 @@ typedef svn_error_t *proplist_change_fn_t (void *object,
 					   svn_string_t *value);
 
 
-/* This will soon be defined in svn_error.h.  When it is, delete this.  */
-#define SVN_ERR(expr) \
-  do { svn_error_t *svn_err = (expr); if (svn_err) return svn_err; } while (0)
-
-
 
 /* Forward declarations for each section's public functions.  */
 
@@ -246,8 +241,10 @@ delta_dir_props (struct context *c,
 		 svn_fs_dir_t *source,
 		 svn_fs_dir_t *target)
 {
-  svn_fs_proplist_t *source_props = svn_fs_dir_proplist (source);
-  svn_fs_proplist_t *target_props = svn_fs_dir_proplist (target);
+  svn_fs_proplist_t *source_props
+    = (source ? svn_fs_node_proplist (svn_fs_dir_to_node (source)) : 0);
+  svn_fs_proplist_t *target_props
+    = svn_fs_node_proplist (svn_fs_dir_to_node (target));
 
   return delta_proplists (c, source_props, target_props,
 			  c->editor->change_dir_prop, dir_baton);
@@ -359,40 +356,37 @@ static svn_error_t *
 replace_from_scratch (struct context *c, void *dir_baton,
 		      svn_fs_dir_t *target, svn_string_t *name)
 {
-  svn_fs_node_kind_t kind;
+  svn_fs_node_t *new;
+
+  /* Open the new node.  */
+  SVN_ERR (svn_fs_open_node (&new, target, name));
+  svn_fs_cleanup_node (c->pool, new);
 
   /* Is it a file or a directory?  */
-  SVN_ERR (svn_fs_type (&kind, target, name));
-  if (kind == svn_fs_node_file)
+  if (svn_fs_node_is_file (new))
     {
-      svn_fs_file_t *file;
       void *file_baton;
 
-      SVN_ERR (svn_fs_open_file (&file, target, name, c->pool));
       SVN_ERR (c->editor->replace_file (name, dir_baton, 0, 0, &file_baton));
-      SVN_ERR (file_from_scratch (c, file_baton, file));
-
-      svn_fs_close_file (file);
-
+      SVN_ERR (file_from_scratch (c, file_baton,
+				  svn_fs_node_to_file (new)));
       SVN_ERR (c->editor->close_file (file_baton));
     }
-  else if (kind == svn_fs_node_dir)
+  else if (svn_fs_node_is_dir (new))
     {
-      svn_fs_dir_t *subdir;
       void *subdir_baton;
 
-      SVN_ERR (svn_fs_open_subdir (&subdir, target, name, c->pool));
       SVN_ERR (c->editor->replace_directory (name, dir_baton,
 					     0, 0, &subdir_baton));
-
-      SVN_ERR (dir_from_scratch (c, subdir_baton, subdir));
-
-      svn_fs_close_dir (subdir);
-
+      SVN_ERR (dir_from_scratch (c, subdir_baton, 
+				 svn_fs_node_to_dir (new)));
       SVN_ERR (c->editor->close_directory (subdir_baton));
     }
   else
     abort ();
+
+  svn_fs_kill_cleanup_node (c->pool, new);
+  svn_fs_close_node (new);
 
   return 0;
 }
@@ -411,34 +405,26 @@ replace_related (struct context *c, void *dir_baton,
 		 svn_string_t *ancestor_name)
 {
   svn_string_t *ancestor_path;
-  svn_fs_node_kind_t kind;
+  svn_vernum_t ancestor_version;
+  svn_fs_node_t *a, *t;
+
+  /* Open the ancestor and target nodes.  */
+  SVN_ERR (svn_fs_open_node (&a, ancestor_dir, ancestor_name));
+  svn_fs_cleanup_node (c->pool, a);
+  SVN_ERR (svn_fs_open_node (&t, target, target_name));
+  svn_fs_cleanup_node (c->pool, t);
 
   /* Compute the full name of the ancestor.  */
   ancestor_path = svn_string_dup (ancestor_dir_path, c->pool);
   svn_path_add_component (ancestor_path, ancestor_name,
 			  svn_path_repos_style, c->pool);
 
-  SVN_ERR (svn_fs_type (&kind, target, target_name));
+  /* Get the ancestor's version number.  */
+  ancestor_version = svn_fs_node_version (a);
 
-  if (kind == svn_fs_node_file)
+  if (svn_fs_node_is_file (t))
     {
-      svn_fs_file_t *ancestor_file;
-      svn_fs_file_t *target_file;
       void *file_baton;
-      svn_vernum_t ancestor_version;
-
-      /* Open the ancestor file.  */
-      SVN_ERR (svn_fs_open_file (&ancestor_file,
-				 ancestor_dir, ancestor_name,
-				 c->pool));
-
-      /* Get the ancestor version.  */
-      ancestor_version = svn_fs_file_version (ancestor_file);
-
-      /* Open the target file.  */
-      SVN_ERR (svn_fs_open_file (&target_file,
-				 target, target_name,
-				 c->pool));
 
       /* Do the replace, yielding a baton for the file.  */
       SVN_ERR (c->editor->replace_file (target_name, dir_baton,
@@ -446,35 +432,17 @@ replace_related (struct context *c, void *dir_baton,
 					&file_baton));
 
       /* Apply the text delta.  */
-      SVN_ERR (delta_files (c, file_baton, ancestor_file, target_file));
-
-      /* Close the ancestor and target files.  */
-      svn_fs_close_file (ancestor_file);
-      svn_fs_close_file (target_file);
+      SVN_ERR (delta_files (c, file_baton,
+			    svn_fs_node_to_file (a),
+			    svn_fs_node_to_file (t)));
 
       /* Close the editor's file baton.  */
       SVN_ERR (c->editor->close_file (file_baton));
     }
-  else if (kind == svn_fs_node_dir)
+  else if (svn_fs_node_is_dir (t))
     {
-      svn_fs_dir_t *ancestor_subdir;
-      svn_fs_dir_t *target_subdir;
       void *subdir_baton;
-      svn_vernum_t ancestor_version;
 
-      /* Open the ancestor directory.  */
-      SVN_ERR (svn_fs_open_subdir (&ancestor_subdir,
-				   ancestor_dir, ancestor_name,
-				   c->pool));
-
-      /* Get the ancestor version.  */
-      ancestor_version = svn_fs_dir_version (ancestor_subdir);
-
-      /* Open the target directory.  */
-      SVN_ERR (svn_fs_open_subdir (&target_subdir,
-				   target, target_name,
-				   c->pool));
-      
       /* Do the replace, yielding a baton for the new subdirectory.  */
       SVN_ERR (c->editor->replace_directory (target_name,
 					     dir_baton,
@@ -483,17 +451,21 @@ replace_related (struct context *c, void *dir_baton,
 
       /* Compute the delta for those subdirs.  */
       SVN_ERR (delta_dirs (c, subdir_baton,
-			   ancestor_subdir, ancestor_path, target_subdir));
+			   svn_fs_node_to_dir (a),
+			   ancestor_path,
+			   svn_fs_node_to_dir (t)));
 
-      /* Close the ancestor and target directories.  */
-      svn_fs_close_dir (ancestor_subdir);
-      svn_fs_close_dir (target_subdir);
-      
       /* Close the editor's subdirectory baton.  */
       SVN_ERR (c->editor->close_directory (subdir_baton));
     }
   else
     abort ();
+
+  /* Close the ancestor and target files.  */
+  svn_fs_kill_cleanup_node (c->pool, a);
+  svn_fs_close_node (a);
+  svn_fs_kill_cleanup_node (c->pool, t);
+  svn_fs_close_node (t);
 
   return 0;
 }
@@ -520,7 +492,7 @@ add (struct context *c, void *dir_baton,
      svn_fs_dir_t *source, svn_string_t *source_path,
      svn_fs_dir_t *target, svn_string_t *name)
 {
-  ...;
+  /* ...; */
   return SVN_NO_ERROR;
 }
 
@@ -607,8 +579,12 @@ delta_file_props (struct context *c,
 		  svn_fs_file_t *ancestor_file,
 		  svn_fs_file_t *target_file)
 {
-  svn_fs_proplist_t *ancestor_props = svn_fs_file_proplist (ancestor_file);
-  svn_fs_proplist_t *target_props = svn_fs_file_proplist (target_file);
+  svn_fs_proplist_t *ancestor_props
+    = (ancestor_file
+       ? svn_fs_node_proplist (svn_fs_file_to_node (ancestor_file))
+       : 0);
+  svn_fs_proplist_t *target_props
+    = svn_fs_node_proplist (svn_fs_file_to_node (target_file));
 
   return delta_proplists (c, ancestor_props, target_props,
 			  c->editor->change_file_prop, file_baton);
@@ -687,13 +663,19 @@ delta_proplists (struct context *c,
 {
   /* It would be nice if we could figure out some way to use the
      history information to avoid reading in and scanning the entire
-     property lists.  */
+     property lists.
+
+     It's also kind of stupid to allocate two namelists, sort them,
+     and then iterate over them.  If you believe that hash accesses
+     are constant time, it's faster to walk once over each hash table.
+     You have to do that much work anyway just to generate the name
+     lists.  */
 
   svn_string_t **source_names, **target_names;
   apr_hash_t *source_values, *target_values;
   int si, ti;
 
-  /* Get the names and values of the source file's properties.  If
+  /* Get the names and values of the source object's properties.  If
      SOURCE is zero, treat that like an empty property list.  */
   if (source)
     {
@@ -710,7 +692,7 @@ delta_proplists (struct context *c,
       source_values = 0;
     }
 
-  /* Get the names and values of the target file's properties.  */
+  /* Get the names and values of the target object's properties.  */
   SVN_ERR (svn_fs_proplist_names (&target_names, target, c->pool));
   SVN_ERR (svn_fs_proplist_hash_table (&target_values, target, c->pool));
 
@@ -763,6 +745,6 @@ dir_from_scratch (struct context *c,
 		  void *dir_baton,
 		  svn_fs_dir_t *target)
 {
-  ...;
+  /* ...; */
   return SVN_NO_ERROR;
 }

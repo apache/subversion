@@ -1,4 +1,4 @@
-/* convert-size.h : interface to ascii-to-size and vice-versa conversions
+/* id.h : interface to node ID functions, private to libsvn_fs
  *
  * ================================================================
  * Copyright (c) 2000 Collab.Net.  All rights reserved.
@@ -46,29 +46,26 @@
  * individuals on behalf of Collab.Net.
  */
 
-#ifndef SVN_LIBSVN_FS_CONVERT_SIZE_H
-#define SVN_LIBSVN_FS_CONVERT_SIZE_H
+#ifndef SVN_LIBSVN_FS_ID_H
+#define SVN_LIBSVN_FS_ID_H
 
 #include "apr.h"
-
-/* Return the value of the string of digits at DATA as an ASCII
-   decimal number.  The string is at most LEN bytes long.  The value
-   of the number is at most MAX.  Set *END to the address of the first
-   byte after the number, or zero if an error occurred while
-   converting the number (overflow, for example).
-
-   We would like to use strtoul, but that family of functions is
-   locale-dependent, whereas we're trying to parse data in a
-   local-independent format.  */
-
-apr_size_t svn_fs__getsize (char *data, apr_size_t len, char **endptr,
-			    apr_size_t max);
+#include "apr_pools.h"
+#include "svn_fs.h"
 
 
-/* Store the ASCII decimal representation of VALUE at DATA.  Return
-   the length of the representation if all goes well; return zero if
-   the result doesn't fit in LEN bytes.  */
-int svn_fs__putsize (char *data, apr_size_t len, apr_size_t value);
+/* Parse the LEN bytes at DATA as a node ID.  Return zero if the bytes
+   are not a properly-formed node ID.  Allocate the parsed ID in POOL.  */
+svn_fs_id_t *svn_fs__parse_id (char *data, apr_size_t len,
+			       apr_pool_t *pool);
 
 
-#endif /* SVN_LIBSVN_FS_CONVERT_SIZE_H */
+/* Return a Subversion string containing the unparsed form of the node
+   id ID.  Allocate the buffer for the unparsed form in POOL.  */
+svn_string_t *svn_fs__unparse_id (svn_fs_id_t *id,
+				  apr_pool_t *pool);
+
+
+
+#endif /* SVN_LIBSVN_FS_ID_H */
+

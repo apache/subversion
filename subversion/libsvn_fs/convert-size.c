@@ -53,7 +53,7 @@
 /* Converting text to numbers.  */
 
 apr_size_t
-svn_fs__getsize (const char *data, apr_size_t len,
+svn_fs__getsize (char *data, apr_size_t len,
 		 char **endptr,
 		 apr_size_t max)
 {
@@ -61,11 +61,14 @@ svn_fs__getsize (const char *data, apr_size_t len,
      since multiplying value by ten can overflow in strange ways if
      max is close to the limits of apr_size_t.  For example, suppose
      that max is 54, and apr_size_t is six bits long; its range is
-     0..63.  If we're parsing the number "482", then value will be 48
-     after parsing the first two digits.  48 * 10 = 480.  But 480
-     doesn't fit in an apr_size_t, so it'll be truncated to 480 mod 64
-     = 32, which is less than max, so we'd fail to recognize the
-     overflow.
+     0..63.  If we're parsing the number "502", then value will be 50
+     after parsing the first two digits.  50 * 10 = 500.  But 500
+     doesn't fit in an apr_size_t, so it'll be truncated to 500 mod 64
+     = 52, which is less than max, so we'd fail to recognize the
+     overflow.  Furthermore, it *is* greater than 50, so you can't
+     detect overflow by checking whether value actually increased
+     after each multiplication --- sometimes it does increase, but
+     it's still wrong.
 
      So we do the check for overflow before we multiply value and add
      in the new digit.  */
@@ -97,9 +100,7 @@ svn_fs__getsize (const char *data, apr_size_t len,
     }
   else
     {
-      /* We have to throw away the const here, to avoid constraining
-	 the caller.  */
-      *endptr = (char *) data + i;
+      *endptr = data + i;
       return value;
     }
 }

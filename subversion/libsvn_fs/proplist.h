@@ -1,4 +1,4 @@
-/* convert-size.h : interface to ascii-to-size and vice-versa conversions
+/* proplist.c : interface to private proplist functions.
  *
  * ================================================================
  * Copyright (c) 2000 Collab.Net.  All rights reserved.
@@ -46,29 +46,19 @@
  * individuals on behalf of Collab.Net.
  */
 
-#ifndef SVN_LIBSVN_FS_CONVERT_SIZE_H
-#define SVN_LIBSVN_FS_CONVERT_SIZE_H
+#ifndef SVN_LIBSVN_FS_PROPLIST_H
+#define SVN_LIBSVN_FS_PROPLIST_H
 
-#include "apr.h"
-
-/* Return the value of the string of digits at DATA as an ASCII
-   decimal number.  The string is at most LEN bytes long.  The value
-   of the number is at most MAX.  Set *END to the address of the first
-   byte after the number, or zero if an error occurred while
-   converting the number (overflow, for example).
-
-   We would like to use strtoul, but that family of functions is
-   locale-dependent, whereas we're trying to parse data in a
-   local-independent format.  */
-
-apr_size_t svn_fs__getsize (char *data, apr_size_t len, char **endptr,
-			    apr_size_t max);
+#include "apr_pools.h"
+#include "svn_fs.h"
+#include "fs.h"
+#include "skel.h"
 
 
-/* Store the ASCII decimal representation of VALUE at DATA.  Return
-   the length of the representation if all goes well; return zero if
-   the result doesn't fit in LEN bytes.  */
-int svn_fs__putsize (char *data, apr_size_t len, apr_size_t value);
+/* Build a property list object based on the list skel PROPLIST, in
+   POOL.  If PROPLIST is misformed, return zero.  */
+svn_fs_proplist_t *svn_fs__make_proplist (skel_t *proplist,
+					  apr_pool_t *pool);
 
 
-#endif /* SVN_LIBSVN_FS_CONVERT_SIZE_H */
+#endif /* SVN_LIBSVN_FS_PROPLIST_H */

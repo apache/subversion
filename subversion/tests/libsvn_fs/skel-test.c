@@ -82,7 +82,7 @@ get_empty_string (void)
 static skel_t *
 parse_str (svn_string_t *str)
 {
-  return svn_fs__skel_parse (str->data, str->len, pool);
+  return svn_fs__parse_skel (str->data, str->len, pool);
 }
 
 
@@ -90,7 +90,7 @@ parse_str (svn_string_t *str)
 static skel_t *
 parse_cstr (char *str)
 {
-  return svn_fs__skel_parse (str, strlen (str), pool);
+  return svn_fs__parse_skel (str, strlen (str), pool);
 }
 
 
@@ -717,7 +717,7 @@ unparse_implicit_length (const char **msg)
 	  char buf = byte;
 	  skel_t *skel = build_atom (1, &buf);
 
-	  str = svn_fs__skel_unparse (skel, pool);
+	  str = svn_fs__unparse_skel (skel, pool);
 	  
 	  if (! (str
 		 && str->len == 2
@@ -755,8 +755,8 @@ unparse_list (const char **msg)
 
     /* Unparse that, parse it again, and see if we got the same thing
        back.  */
-    str = svn_fs__skel_unparse (list, pool);
-    reparsed = svn_fs__skel_parse (str->data, str->len, pool);
+    str = svn_fs__unparse_skel (list, pool);
+    reparsed = svn_fs__parse_skel (str->data, str->len, pool);
 
     if (! reparsed || reparsed->is_atom)
       return fail ();
@@ -819,8 +819,8 @@ unparse_list (const char **msg)
 	add (middle, top);
       }
 
-    str = svn_fs__skel_unparse (top, pool);
-    reparsed = svn_fs__skel_parse (str->data, str->len, pool);
+    str = svn_fs__unparse_skel (top, pool);
+    reparsed = svn_fs__parse_skel (str->data, str->len, pool);
 
     if (! skel_equal (top, reparsed))
       return fail ();
