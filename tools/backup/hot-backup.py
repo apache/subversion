@@ -33,6 +33,9 @@ svnadmin = "/usr/local/bin/svnadmin"
 # Path to db_archive program
 db_archive = "/usr/local/BerkeleyDB.4.0/bin/db_archive"
 
+# Path to db_recover progrem
+db_recover = "/usr/local/BerkeleyDB.4.0/bin/db_recover"
+
 # Number of backups to keep around
 num_backups = 64
 
@@ -113,7 +116,24 @@ fp = open(lockpath, 'a')  # open in (a)ppend mode
 fp.write("cleaning logfiles for repository " + repo_dir)
 fp.close()
 
-# Step 5:  ask db_archive which logfiles can be expunged, and remove them.
+# Step 5:  put the archived database in a consistent state and remove
+#          the shared-memory environment files.
+
+infile, outfile, errfile = os.popen3(db_recover + " -h "
+                                     + os.path.join(backup_subdir, "db"))
+stdout_lines = outfile.readlines()
+stderr_lines = errfile.readlines()
+outfile.close()
+infile.close()
+errfile.close()
+
+print "Running db_recover on the archived database:"
+map(sys.stdout.write, stdout_lines)
+map(sys.stdout.write, stderr_lines)
+
+print "Done."
+
+# Step 6:  ask db_archive which logfiles can be expunged, and remove them.
 
 infile, outfile, errfile = os.popen3(db_archive + " -a -h "
                                      + os.path.join(repo_dir, "db"))
@@ -132,12 +152,12 @@ for item in stdout_lines:
 
 print "Done."
 
-# Step 6:  remove the write lock.
+# Step 7:  remove the write lock.
 
 os.unlink(lockpath)
 print "Lock removed.  Cleanup complete."
 
-# Step 7:  finally, remove the repository back that's NUM_BACKUPS older
+# Step 8:  finally, remove the repository back that's NUM_BACKUPS older
 # than the one we just created.
 
 kill_rev = int(youngest) - num_backups
