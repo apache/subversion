@@ -20,6 +20,7 @@
 
 #include "svn_fs.h"
 #include "svn_xml.h"
+#include "svn_repos.h"
 
 #include "dav_svn.h"
 
@@ -440,7 +441,7 @@ static dav_error *dav_svn_merge(dav_resource *target, dav_resource *source,
     return err;
 
   /* all righty... commit the bugger. */
-  serr = svn_repos_fs_commit_txn (&conflict, &new_rev, txn);
+  serr = svn_repos_fs_commit_txn(&conflict, &new_rev, txn);
   if (serr != NULL)
     {
       const char *msg;
