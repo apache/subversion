@@ -47,7 +47,7 @@ tag, tagging -> etiqueta, etiquetar
 
 working copy -> copia (de trabajo) local/activa
     Traducción similar a la de "commit data" (razonamiento
-    cliente-servidor). Quizás se podría traducir como copia activa.
+    cliente-servidor).
 
 build -> comodín
     No es que se traduzca como comodín, sino que en función del
