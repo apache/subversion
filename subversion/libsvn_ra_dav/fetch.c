@@ -183,13 +183,9 @@ static const svn_ra_dav__xml_elm_t report_elements[] =
   { SVN_XML_NAMESPACE, "resource", ELEM_resource, 0 },
   { SVN_XML_NAMESPACE, "target-revision", ELEM_target_revision, 0 },
   { SVN_XML_NAMESPACE, "open-directory", ELEM_open_directory, 0 },
-  /* ### Sat 24 Nov 2001: after all clients have upgraded, change the
-     "replace-" elements here to "open-" and upgrade the server.  -kff */  
-  { SVN_XML_NAMESPACE, "replace-directory", ELEM_open_directory, 0 },
   { SVN_XML_NAMESPACE, "add-directory", ELEM_add_directory, 0 },
   { SVN_XML_NAMESPACE, "absent-directory", ELEM_absent_directory, 0 },
   { SVN_XML_NAMESPACE, "open-file", ELEM_open_file, 0 },
-  { SVN_XML_NAMESPACE, "replace-file", ELEM_open_file, 0 },
   { SVN_XML_NAMESPACE, "add-file", ELEM_add_file, 0 },
   { SVN_XML_NAMESPACE, "absent-file", ELEM_absent_file, 0 },
   { SVN_XML_NAMESPACE, "delete-entry", ELEM_delete_entry, 0 },
