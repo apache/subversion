@@ -51,7 +51,8 @@ typedef enum {
   svn_cl__auth_username_opt,
   svn_cl__auth_password_opt,
   svn_cl__targets_opt,
-  svn_cl__xml_opt
+  svn_cl__xml_opt,
+  svn_cl__strict_opt
 } svn_cl__longopt_t;
 
 
@@ -88,6 +89,7 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t verbose;
   svn_boolean_t very_verbose;
   svn_boolean_t update;
+  svn_boolean_t strict;
   apr_array_header_t *args;
   svn_stringbuf_t *filedata;
   svn_boolean_t help;

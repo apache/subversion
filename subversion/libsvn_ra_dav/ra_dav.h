@@ -135,6 +135,7 @@ svn_error_t * svn_ra_dav__get_log(
   svn_revnum_t start,
   svn_revnum_t end,
   svn_boolean_t discover_changed_paths,
+  svn_boolean_t strict_node_history,
   svn_log_message_receiver_t receiver,
   void *receiver_baton);
 

@@ -336,6 +336,9 @@ svn_repos_get_committed_info (svn_revnum_t *committed_rev,
  * see http://subversion.tigris.org/issues/show_bug.cgi?id=562 for
  * more information.
  *
+ * If STRICT_NODE_HISTORY is set, copy history (if any exists) will
+ * not be traversed while harvesting revision logs for each path.
+ *
  * If any invocation of RECEIVER returns error, return that error
  * immediately and without wrapping it.
  *
@@ -351,6 +354,7 @@ svn_repos_get_logs (svn_repos_t *repos,
                     svn_revnum_t start,
                     svn_revnum_t end,
                     svn_boolean_t discover_changed_paths,
+                    svn_boolean_t strict_node_history,
                     svn_log_message_receiver_t receiver,
                     void *receiver_baton,
                     apr_pool_t *pool);

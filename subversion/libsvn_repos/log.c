@@ -88,6 +88,7 @@ svn_repos_get_logs (svn_repos_t *repos,
                     svn_revnum_t start,
                     svn_revnum_t end,
                     svn_boolean_t discover_changed_paths,
+                    svn_boolean_t strict_node_history,
                     svn_log_message_receiver_t receiver,
                     void *receiver_baton,
                     apr_pool_t *pool)
@@ -129,7 +130,8 @@ svn_repos_get_logs (svn_repos_t *repos,
                (&rev_root, fs, (start > end) ? start : end, pool));
 
       /* And the search is on... */
-      SVN_ERR (svn_fs_revisions_changed (&revs, rev_root, paths, 1, pool));
+      SVN_ERR (svn_fs_revisions_changed (&revs, rev_root, paths, 
+                                         strict_node_history ? 0 : 1, pool));
 
       /* If no revisions were found for these entries, we have nothing
          to show. Just return now before we break a sweat.  */
