@@ -1,13 +1,13 @@
 ## No particular reason to use `make' for this, just that it allows us
 ## to have a more generalized conversion script while still saving
-## keystrokes when we want to convert inversion.txt.
+## keystrokes when we want to convert subversion.txt.
 
 all: html
 
-html: inversion.html inversion.txt
+html: subversion.html subversion.txt
 
-inversion.html: inversion.txt
-	./outline2html.pl inversion.txt
+subversion.html: subversion.txt
+	./outline2html.pl subversion.txt
 
 clean:
-	rm -f *~ inversion.html
+	rm -f *~ subversion.html

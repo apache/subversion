@@ -3,7 +3,7 @@
 <TR>
 <TD WIDTH="100%" BGCOLOR="#CCCC99"><STRONG><font color="000033"
 FACE="Arial, Helvetica, sans-serif">
-Inversion: Version Control Rethought
+Subversion: Version Control Rethought
 </font></STRONG></TD>
 </TR>
 
@@ -11,7 +11,7 @@ Inversion: Version Control Rethought
 <TD WIDTH="100%" HEIGHT="100" BGCOLOR="#f0f0f0">
 
 <p>
-The goal of the Inversion project is to build a version control system
+The goal of the Subversion project is to build a version control system
 that is a compelling replacement for CVS in the open source community.
 This system will have the following features:
 </p>
@@ -26,7 +26,7 @@ This system will have the following features:
     historical diffs, log messages, line-by-line history (<tt>cvs
     annotate</tt>), etc.
     <p>
-    Generally, Inversion's conceptual interface to a particular
+    Generally, Subversion's conceptual interface to a particular
     feature will be as similar to CVS's as possible, except where
     there's a compelling reason to do otherwise.
 </li>
@@ -36,7 +36,7 @@ This system will have the following features:
 <li><strong>Directories, renames, and file meta-data are versioned.</strong>
     <p>
     Lack of these features is the most common complaint against CVS --
-    basically, CVS only versions file contents.  Inversion will handle
+    basically, CVS only versions file contents.  Subversion will handle
     directory changes, file renames, and permission and other
     meta-data changes as well.
 </li>
@@ -45,7 +45,7 @@ This system will have the following features:
 
 <li><strong>Symbolic links, etc, are supported</strong>
     <p>
-    Inversion will handle symbolic links ("shortcuts"), multiple hard
+    Subversion will handle symbolic links ("shortcuts"), multiple hard
     links, and other special file types as long as their semantics are
     compatible with version control.
 </li>
@@ -62,7 +62,7 @@ This system will have the following features:
 
 <li><strong>Internationalization</strong>
     <p>
-    Inversion will have I18N support -- commands, user messages, and
+    Subversion will have I18N support -- commands, user messages, and
     errors can be customized to the appropriate human language at
     build-time.  Also, there will be I18N support for the <i>names</i>
     as well as the contents of versioned entities.
@@ -76,10 +76,10 @@ This system will have the following features:
     line-ending conversion, CVS makes a distinction between text and
     binary files, and treats the text files specially.
     <p>
-    Inversion will make the same distinction, but with a more generous
+    Subversion will make the same distinction, but with a more generous
     notion of what constitutes a text file: not only ASCII, but UTF-*
     encodings of Unicode too.  Not all such encodings will be handled
-    as text in the first release of Inversion, but the support will
+    as text in the first release of Subversion, but the support will
     become more complete over time.  UTF-8 is the first priority.
 </li>
 
@@ -106,7 +106,7 @@ This system will have the following features:
 
 <li><strong>Repeated merges are handled gracefully</strong>
     <p>
-    Inversion will have a way of remembering what has been merged, so
+    Subversion will have a way of remembering what has been merged, so
     that repeated merges from the same source do not require careful
     human calculation to avoid spurious conflicts (anyone who's done
     repeated CVS merges knows what we're talking about).
@@ -125,7 +125,7 @@ This system will have the following features:
 
 <li><strong>Support for plug-in client side diff programs</strong>
     <p>
-    Inversion knows how to show diffs for text files, and also gives
+    Subversion knows how to show diffs for text files, and also gives
     the user the option to plug in external diff programs for any kind
     of file.  The external program need merely conform to some simple
     invocation interface (i.e., "<tt>diffprog file1 file2
@@ -137,7 +137,7 @@ This system will have the following features:
 
 <li><strong>Natively client/server</strong>
     <p>
-    Inversion is designed to be client/server from the beginning; thus
+    Subversion is designed to be client/server from the beginning; thus
     avoiding some of the maintenance problems which have plagued CVS.
 </li>
 
@@ -155,10 +155,10 @@ This system will have the following features:
 
 <li><strong>Costs are proportional to change size, not project size</strong>
     <p>
-    In general, the time required for an Inversion operation is
+    In general, the time required for an Subversion operation is
     proportional to the size of the <i>changes</i> resulting from that
     operation, not to the absolute size of the project in which the
-    changes are taking place.  This is a property of the Inversion
+    changes are taking place.  This is a property of the Subversion
     repository model.
 </li>
 
@@ -203,7 +203,7 @@ Mailing lists, CVS repositories, and bugzilla are set up.
 
 <p>
 We are using CVS as an interim source code control system for
-Inversion, and getting Inversion to a point where it is stable enough
+Subversion, and getting Subversion to a point where it is stable enough
 to hold itself is one of our immediate goals (a read-only CVS mirror
 will be continued for some time after that, of course).
 </p>
@@ -233,7 +233,7 @@ Upcoming Events
 <FONT SIZE="2">
 02/29/00 -&nbsp;Project Invesion Launched
 <br>
-02/29/00 -&nbsp;Karl Fogel joins Inversion project
+02/29/00 -&nbsp;Karl Fogel joins Subversion project
 <br>
 03/06/00 -&nbsp;Draft requirements specification written.
 <br>

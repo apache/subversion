@@ -1,13 +1,13 @@
     Oh Most Noble and Virile Emacs, please be in -*- outline -*- mode!
 
-     Inversion: A Version Control System You Actually Want To Use
+     Subversion: A Version Control System You Actually Want To Use
      ------------------------------------------------------------
-              ($Revision: 1.41 $ of this document.)
+              ($Revision: 1.1 $ of this document.)
 
 * Introduction
 
-This document describes Inversion, a replacement for CVS.  We may
-sometimes call it "Ivn", to save space.  It will be described largely
+This document describes Subversion, a replacement for CVS.  We may
+sometimes call it "Svn", to save space.  It will be described largely
 in terms of how it differs, or doesn't differ, from CVS; if you don't
 already know CVS, this document will be pretty unreadable.
 
@@ -30,7 +30,7 @@ changes, detection of conflicting changes, branching, merging,
 historical diffs, log messages, line-by-line history ("cvs annotate"),
 the works.
 
-Generally, Inversion's conceptual interface to a particular feature
+Generally, Subversion's conceptual interface to a particular feature
 will be as similar to CVS's as possible, except when there's a
 compelling reason to do otherwise.
 
@@ -43,14 +43,14 @@ name *or* by entity.  For example, if you say "Give me version 12 of
 foo.c", do you mean version 12 of the file whose name is *now* foo.c
 (but perhaps it was named bar.c back at version 12), or the file whose
 name was foo.c in version 12 (perhaps that file no longer exists, or
-has a different name now)?  Inversion offers a way to specify which
+has a different name now)?  Subversion offers a way to specify which
 interpretation you want, while defaulting to the most reasonable
 interpretation in context.  We haven't decided what "reasonable" means
 yet, but we're working on that.
 
 ** Version numbers are project-wide and atomic.
 
-Unlike CVS, each Inversion commit results in a single new version
+Unlike CVS, each Subversion commit results in a single new version
 number, which applies to the project as a whole (i.e., it applies to
 every object in the project, whether changed or not).  There are no
 longer separate per-file version numbers, at least not user-visible
@@ -91,9 +91,9 @@ with plain text files.  CVS only recognizes two file types anyway:
 plain text, and binary.  CVS assumes files are plain text unless you
 tell it otherwise.
 
-Inversion, for its initial release at least, will recognize the same
+Subversion, for its initial release at least, will recognize the same
 two types (later, it may learn to do keyword substitution inside
-word-processor formats, etc).  The question is, how does Inversion
+word-processor formats, etc).  The question is, how does Subversion
 determine whether a file is plain text or not?
 
 Experience with CVS suggests that assuming text unless told otherwise
@@ -101,7 +101,7 @@ is a losing strategy -- people frequently forget to mark images and
 other opaque formats as binary, and then have to spend time figuring
 out why CVS mangled their data.
 
-So, Inversion assumes files are binary, unless they have a standard
+So, Subversion assumes files are binary, unless they have a standard
 text extension (.c, .h, .pl, .html, .txt, and so on), or if a user
 explicitly marks the file as being texty.  In addition to a
 pre-defined list of text extensions, each project can have a custom
@@ -130,12 +130,12 @@ implementation discussions farther down).
 
 ** I18N/Multilingual support.
 
-Inversion has I18N support -- commands, user messages, and errors can
+Subversion has I18N support -- commands, user messages, and errors can
 be customized to the appropriate human language at build-time.  Also,
 there will be I18N support for the *names* as well as the contents of
 versioned entities.
 
-For purposes of keyword expansion and line-end conversion, Inversion
+For purposes of keyword expansion and line-end conversion, Subversion
 also understands the UTF-* encodings (but this may be after the first
 release).
 
@@ -147,15 +147,15 @@ within the lost bytes, but that probably wouldn't happen too often...)
 
 *** User-visible messages
 
-Inversion can be localized so that its messages print out in a
+Subversion can be localized so that its messages print out in a
 build-time-configured language.
 
-** Branching and tagging are constant-time operations in Inversion.
+** Branching and tagging are constant-time operations in Subversion.
 
 CVS makes an unnecessary distinction between branches and tags, and
 then goes on to implement them in an inefficient way.
 
-Inversion supports them both with one efficient operation: `clone'.
+Subversion supports them both with one efficient operation: `clone'.
 To clone a project is to create another project exactly like it, except
 that the new project "knows" that the old project is its ancestor.
 Version numbers in the new project start at the ancestor's version
@@ -182,12 +182,12 @@ don't want cross-project name conflicts in tags and branches!)
 
 ** Repeated merges are handled gracefully.
 
-Inversion merges are the same, in principle, as CVS merges: merging
+Subversion merges are the same, in principle, as CVS merges: merging
 means taking the differences between version A and B, and applying
 those differences as a patch to version X (which may simply be the
 working copy, rather than a formal repository version).
 
-BUT, Ivn remembers what has already been merged, and doesn't merge
+BUT, Svn remembers what has already been merged, and doesn't merge
 anything twice unless forced to.  So if you merge the differences
 between <Branch A, Version N> and <Branch A, Tip> into
 <Branch B>, and then you do it again a month later, the second
@@ -209,12 +209,12 @@ sources is more difficult, due to the difficulty of distinguishing
 remote sources, but there are good "90%" solutions that will work in
 practice).
 
-** Inversion has flexible log message policy
+** Subversion has flexible log message policy
 
 A small matter, but one dear to our hearts...
 
 Log messages are a matter of project policy, not version control
-software policy.  If you give no log message, then Inversion defaults
+software policy.  If you give no log message, then Subversion defaults
 to an empty message.  Maybe there can be a per-project configuration
 option, requiring non-empty log messages for commits *in that project
 only*, though I have doubts about even the usefulness of that.
@@ -225,10 +225,10 @@ quotes, so let's please stop the madness now.)
 
 ** Conflicts are handled as in CVS, but a little better
 
-For text files, Inversion resolves conflicts similarly to CVS, by
+For text files, Subversion resolves conflicts similarly to CVS, by
 folding repository changes into the working files.
 
-For *both* text and binary files, Inversion also always puts the
+For *both* text and binary files, Subversion also always puts the
 pristine repository version in one temporary file, and the pristine
 working copy version in another temporary file.
 
@@ -242,7 +242,7 @@ CVS provides the first two, but doesn't directly provide the third.
 It's true that one could retrieve the repository version from the
 repository (using update -p or whatever), but it's more convenient to
 have it right at hand.  When the conflict has been resolved and the
-working copy is being committed, Inversion can automatically remove
+working copy is being committed, Subversion can automatically remove
 the two pristine files.
 
 *** Content knowledge allows better conflict resolution strategies
@@ -253,19 +253,19 @@ lines unique on username and/or user ID.  But when merging new
 repository data into a modified working copy of such a file, it's
 possible to get a textual conflict even with no "semantic conflict".
 
-If the Inversion client knew something about the format of passwd
+If the Subversion client knew something about the format of passwd
 files, then it could merge in the new lines without creating a
 conflict.
 
 A similar rule could be used for ChangeLogs, based on the date in the
 header lines.  And so on.
 
-These features may not be in the first release of Inversion, but let's
+These features may not be in the first release of Subversion, but let's
 keep them in mind.
 
 ** Support for plug-in client-side diff programs
 
-There is no need for Inversion to have every possible diff mechanism
+There is no need for Subversion to have every possible diff mechanism
 built in (or even any mechanism built in).  Instead, it invokes the
 appropriate client-side diff'er on the two versions of the file(s)
 locally.  For text files, the appropriate diff'er is the system `diff'
@@ -281,7 +281,7 @@ alternate (or additional) difference viewers even for text.
 Two commonly requested enhancements for CVS are "multisite" and "local
 repositories".  Although the two terms are sometimes used
 interchangably, they refer to two different things (explained below).
-Inversion could eventually support both, but they are not priorities
+Subversion could eventually support both, but they are not priorities
 for the first release.  Nothing in the design prevents them from being
 added on later.
 
@@ -298,7 +298,7 @@ to that user?  Hmmm.
 
 Anyway, CVS has gotten away with simply assuming decent Net access for
 all users; this doesn't satisfy everyone, but for the first release of
-Inversion we should probably do the same.
+Subversion we should probably do the same.
 
 *** Local repository
 
@@ -324,7 +324,7 @@ but frankly I could never understand them very well...)
 
 For now, similar effects are achievable without involving the version
 control system, so this feature is not a priority for the first
-release of Inversion.
+release of Subversion.
 
 * Design
 
@@ -911,7 +911,7 @@ alongside the name in the parent's dir_entry, and are unique within
 the project.  
 
 Having both the human-visible name and an internal identifier allows
-Inversion to choose between following a history by name or by
+Subversion to choose between following a history by name or by
 identity, which can result in two different retrieval scenarios
 (although such circumstances are unusual, we must support them).
 
@@ -1125,7 +1125,7 @@ repository's stability.  What if you think that source repository
 might disappear on you?  Then you want something more than just a
 surface clone.  
 
-Inversion offers two choices: "shallow" and "deep" clones.  Shallow
+Subversion offers two choices: "shallow" and "deep" clones.  Shallow
 clones locally duplicate all the data for the version in which this
 clone is rooted, but they don't duplicate anything older than that.
 Deep clones duplicate the *entire* project -- the whole node
@@ -1165,9 +1165,9 @@ type override (text, binary, whatever), whether or not to do
 platform-specific line-end conversions, etc.
 
 It might be good to have two plists, actually: `inv_props', and
-`user_props'.  Inversion only uses the ones in inv_props, and promises
+`user_props'.  Subversion only uses the ones in inv_props, and promises
 a "store-and-ignore" policy for user_props.  And users should never
-store anything in inv_props, only Inversion handles that.
+store anything in inv_props, only Subversion handles that.
 
 *** A closer look at the `node' data structure (and friends)
 
@@ -1188,8 +1188,8 @@ store anything in inv_props, only Inversion handles that.
                                         about pointer vs node_id.) */
       int type;                      /* File, directory, symlink, etc */
       BOOL diffy;                    /* Holds full text or diff? */
-      plist *inv_props;              /* Properties managed by Inversion. */
-      plist *usr_props;              /* Properties ignored by Inversion. */
+      plist *inv_props;              /* Properties managed by Subversion. */
+      plist *usr_props;              /* Properties ignored by Subversion. */
 
       /* I think we might need parent pointers to do multiple hard
          links correctly; but there might be another way... */
@@ -1223,11 +1223,11 @@ copies needs to be specified.
 
 *** Working copies
 
-The tentative plan is to use an IVN/ subdirectory, just like the CVS/
-subdirectory.  However, the IVN/ subdirectory will be at the top level
+The tentative plan is to use an SVN/ subdirectory, just like the CVS/
+subdirectory.  However, the SVN/ subdirectory will be at the top level
 of the checked-out portion of the project.
 
-The reason for this is that then an IVN/ administrative subdir in a
+The reason for this is that then an SVN/ administrative subdir in a
 subdirectory of the project signifies that this subtree comes from
 some other project (perhaps from a different repository).  This makes
 project "transclusion" easier.  If your project depends on a library
@@ -1235,7 +1235,7 @@ that someone else is maintaining, you can include a working copy of
 their project inside yours, without taking over versioning in any
 way.
 
-The contents of the IVN/ subdir are still under consideration, but it
+The contents of the SVN/ subdir are still under consideration, but it
 should be possible to sketch generally what's in there:
 
   A file indicating the base version of this working copy.
@@ -1256,8 +1256,8 @@ protocol specifications are done.
 
 *** Natively client/server.
 
-Even when accessing a local repository, the ivn client connects to a
-ivn server and talks the ivn protocol.  This is for maintainability --
+Even when accessing a local repository, the svn client connects to a
+svn server and talks the svn protocol.  This is for maintainability --
 in CVS, it's easy to write a bug by implementing something correctly
 for either the client/server or the standalone but not both (and more
 often neither, but that's another story).
@@ -1267,9 +1267,9 @@ investigation.
 
 *** The client/server protocol sends diffs in both directions
 
-Inversion transmits diffs both ways (unlike CVS, which transmits diffs
+Subversion transmits diffs both ways (unlike CVS, which transmits diffs
 from server to client, but full files going the other way, thus using
-more bandwidth than necessary).  Ivn accomplishes this either by
+more bandwidth than necessary).  Svn accomplishes this either by
 keeping pristine copies locally, or using the rsync algorithm; which
 way we do it is an implementation detail that hasn't been decided yet.
 
@@ -1417,7 +1417,7 @@ TODO: incorporate the WebDAV/DeltaV scenarios list here too.
 
 * Meta-implementation
 
-This section describes the process of implementing Inversion -- what
+This section describes the process of implementing Subversion -- what
 order we do things in, and how.
 
 Once the design is ready, the parallizable parts of the software
@@ -1451,18 +1451,18 @@ working, since they probably don't affect the rest of the design much.
 --------------------8-<-------cut-here---------8-<-----------------------
 
 >From: Jason Elliot Robbins <jrobbins@collab.net>
->Subject: Inversion feature outline (was: for meeting w/ Rational)
+>Subject: Subversion feature outline (was: for meeting w/ Rational)
 >To: kfogel@red-bean.com
 >cc: jrobbins@collab.net, npm@collab.net, brian@collab.net, jon@collab.net
 >Date: Thu, 02 Mar 2000 19:02:47 -0800
 >
 >Hi Karl,
 >
->Here are some comments I came up with while reading your Inversion
+>Here are some comments I came up with while reading your Subversion
 >document on my last plane trip.  Overall this document looks like a
 >good start, but there is a lot to work out.
 >
->When would you like to put this document on the inversion.tigris.org
+>When would you like to put this document on the subversion.tigris.org
 >web site?
 >
 >
@@ -1473,9 +1473,9 @@ working, since they probably don't affect the rest of the design much.
 >1. We should plan for web integration.  That could mean a lot of
 >things.  One idea off the top of my head is to actually use a URL for
 >the CVSROOT: I would make it an actual http:// scheme, rather than
->some new ivn: scheme, so that there is a clear place to host a web
+>some new svn: scheme, so that there is a clear place to host a web
 >page with instructions about that repository.  Alternatively, we could
->use a new scheme like ivn:argouml.tigris.org, so long as the CVSROOT
+>use a new scheme like svn:argouml.tigris.org, so long as the CVSROOT
 >is very memorable to people who know the web address. Right now the
 >maping between projects (e.g., www.webmacro.org, or java.tigris.org)
 >and their CVSROOT varies a lot from site to site.  It would be nice to
@@ -1514,12 +1514,12 @@ a reason for that.
 Hmmm, I can go into greater detail on this if you want; my hands are
 tired of typing right now so I'll leave this question here.
 
->2. I would like to make the difficult things in CVS easier in Ivn.  I
+>2. I would like to make the difficult things in CVS easier in Svn.  I
 >think you mention that you would like to make things like moving files
 >and directories, etc. easier.  Actually, the second paragraph in
 >Meta-implementation is definately the right idea.  Looking at all the
 >multi-step proceedures outlined in your CVS book and making them one
->step in Ivn would be great.
+>step in Svn would be great.
 
 Oh gosh you bet! :-)
 
@@ -1612,7 +1612,7 @@ arbitrary degree... I hope not too much though, 'cause it's neat.]
 >needs to be kept in synch.
 
 Yeah, some way of saying "default to the system users and access
-methods on this host", and then you can add inversion-only users as
+methods on this host", and then you can add subversion-only users as
 necessary. (?)
 
 >9. Some of the data in your tables is not as normalized as it cood
@@ -1676,7 +1676,7 @@ any point, by doing things carefully ("carefully" in the same sense as
 a filesystem that guarantees mv to be atomic even if the power goes
 out).
 
->14. Would you consider implementing Inversion in Java.  The advantage
+>14. Would you consider implementing Subversion in Java.  The advantage
 >is that it runs on all platforms, and JDBC connects to all database,
 >and RMI would make the client-server implementation easier.  Web
 >integration with java servles would certainly be easier.  Speed is
@@ -1687,7 +1687,7 @@ out).
 >Speed could be a problem for small (student) projects that dont have
 >good machines, but then again "small project" implies that they
 >probably dont have that many concurrent accesses anyway.  I think
->selling inversion as "version control that you actually want to use"
+>selling subversion as "version control that you actually want to use"
 >trumps speed claims anyway, we should make it easy in use and easy to
 >enhance.  Java would also give us no-brainer internationalization
 >support.  
@@ -1726,10 +1726,10 @@ Dunno. :)
 >action.  CVS has scripts that run on many actions, e.g., commit and
 >tagging.    Actually, if we use java it would be possible to define a
 >sandbox to run these scripts safely.  That would allow developers to
->upload "inversion agents" that are .class files invoked whenever an
+>upload "subversion agents" that are .class files invoked whenever an
 >action is taken on the server and do some kind of testing or
 >notification on behalf of that particular developer.  This could be a
->good hook for integrating Inversion with a server-farm build system,
+>good hook for integrating Subversion with a server-farm build system,
 >implementing the hierarchy of servers described in suggestion #7.
 
 Yeah; one of the things I want to do is go over the commit process
