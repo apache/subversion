@@ -243,7 +243,7 @@ log_message_receiver (void *baton,
   SVN_ERR (svn_stream_printf (lb->out, pool, SEP_STRING));
 
   SVN_ERR (svn_stream_printf (lb->out, pool,
-                              "rev %" SVN_REVNUM_T_FMT ":  %s | %s",
+                              "r%" SVN_REVNUM_T_FMT " | %s | %s",
                               rev, author_stdout, date_stdout));
 
   if (! lb->omit_log_message)

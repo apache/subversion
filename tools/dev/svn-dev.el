@@ -419,7 +419,7 @@ See also the function `svn-log-message-file'."
   "The line of dashes that separates log messages in 'svn log' output.")
 
 (defconst svn-log-msg-boundary-regexp
-  (concat "^" svn-log-msg-sep-line "\n" "rev [0-9]+:  ")
+  (concat "^" svn-log-msg-sep-line "\n" "r[0-9]+ | ")
   "Regular expression matching the start of a log msg.  The start is
 the beginning of the separator line, not the rev/author/date line that
 follows the separator line.")

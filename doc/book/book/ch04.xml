@@ -321,17 +321,17 @@ $ pwd
 
 $ svn log integer.c
 ------------------------------------------------------------------------
-rev 343:  user | 2002-11-07 15:27:56 -0600 (Thu, 07 Nov 2002) | 2 lines
+r343 | user | 2002-11-07 15:27:56 -0600 (Thu, 07 Nov 2002) | 2 lines
 
 * integer.c:  frozzled the wazjub.
 
 ------------------------------------------------------------------------
-rev 303:  sally | 2002-10-29 21:14:35 -0600 (Tue, 29 Oct 2002) | 2 lines
+r303 | sally | 2002-10-29 21:14:35 -0600 (Tue, 29 Oct 2002) | 2 lines
 
 * integer.c:  changed a docstring.
 
 ------------------------------------------------------------------------
-rev 98:  sally | 2002-02-22 15:35:29 -0600 (Fri, 22 Feb 2002) | 2 lines
+r98 | sally | 2002-02-22 15:35:29 -0600 (Fri, 22 Feb 2002) | 2 lines
 
 * integer.c:  adding this file to the project.
 
@@ -350,17 +350,17 @@ $ pwd
 
 $ svn log integer.c
 ------------------------------------------------------------------------
-rev 344:  sally | 2002-11-07 15:27:56 -0600 (Thu, 07 Nov 2002) | 2 lines
+r344 | sally | 2002-11-07 15:27:56 -0600 (Thu, 07 Nov 2002) | 2 lines
 
 * integer.c:  fix a bunch of spelling errors.
 
 ------------------------------------------------------------------------
-rev 303:  sally | 2002-10-29 21:14:35 -0600 (Tue, 29 Oct 2002) | 2 lines
+r303 | sally | 2002-10-29 21:14:35 -0600 (Tue, 29 Oct 2002) | 2 lines
 
 * integer.c:  changed a docstring.
 
 ------------------------------------------------------------------------
-rev 98:  sally | 2002-02-22 15:35:29 -0600 (Fri, 22 Feb 2002) | 2 lines
+r98 | sally | 2002-02-22 15:35:29 -0600 (Fri, 22 Feb 2002) | 2 lines
 
 * integer.c:  adding this file to the project.
 
