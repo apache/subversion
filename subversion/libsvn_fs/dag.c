@@ -305,6 +305,7 @@ txn_body_dag_init_fs (void *fs_baton, trail_t *trail)
 
   /* Create empty root directory with node revision 0.0. */
   {
+    /* ### this should be const. we should make parse_skel() take a const */
     static char unparsed_node_rev[] = "((dir 1 0) 0 0 )";
     skel_t *node_rev = svn_fs__parse_skel (unparsed_node_rev,
                                            sizeof (unparsed_node_rev) - 1,
@@ -318,6 +319,7 @@ txn_body_dag_init_fs (void *fs_baton, trail_t *trail)
   /* Link it into filesystem revision 0:
      "revisions" : 0 -> "(revision 3 0.0 ())" */
   {
+    /* ### this should be const. we should make parse_skel() take a const */
     static char rev_skel[] = "(revision 3 0.0 ())";
     svn_revnum_t rev = 0;
     SVN_ERR (svn_fs__put_rev (&rev, fs,

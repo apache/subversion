@@ -42,7 +42,7 @@
  * fix that, but converting the strings back is still a problem (see
  * the comment in svn_wc__time_to_string()).
  */
-static const char *timestamp_format =
+static const char * const timestamp_format =
 "%s %d %s %d %02d:%02d:%02d.%06d (day %03d, dst %d, gmt_off %06d)";
 
 
