@@ -85,6 +85,9 @@ section for approved changes.)
      Notes: bindings would need updating
      Votes:
       +1: mbk
+      -1: kfogel (see mailing list thread foo, meaning, I'll put the
+            URL and Message-ID here as soon as I've got them. :-) )
+
      
 Core changes that already have three +1 votes and no vetos.  (If you
 veto something below, or remove a threshold vote, please move it to
