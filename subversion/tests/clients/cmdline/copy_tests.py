@@ -389,9 +389,6 @@ def resurrect_deleted_dir(sbox):
                                             wc_dir):
     return 1
 
-  shutil.rmtree(wc_dir + '/A/D/G') # 'svn rm --force' won't remove the dir,
-                                   #  either before or after commit!
-
   # Use 'svn cp -r1 URL URL' to resurrect the deleted directory, where
   # the two URLs are identical.  This used to trigger a failure.  
   url = svntest.main.test_area_url + '/' \

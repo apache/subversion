@@ -1167,11 +1167,10 @@ svn_wc__run_log (const char *path, apr_pool_t *pool)
       svn_wc_entry_t *thisdir_entry, *parent_entry, *tmpentry;
       SVN_ERR (svn_wc_entry (&thisdir_entry, path, FALSE, pool));
 
-      /* Blow away the entire administrative dir, and all those below
-         it too.  Don't remove any working files, though. */
+      /* Blow away the entire directory, and all those below it too. */
       SVN_ERR (svn_wc_remove_from_revision_control (path,
                                                     SVN_WC_ENTRY_THIS_DIR,
-                                                    FALSE, pool));
+                                                    TRUE, pool));
 
       /* If revnum of this dir is greater than parent's revnum, then
          recreate 'deleted' entry in parent. */

@@ -640,7 +640,7 @@ def hudson_part_1_variation_1(sbox):
 
   # Expected disk tree:  everything except files in H
   expected_disk = svntest.main.greek_state.copy()
-  expected_disk.remove('A/D/H/chi', 'A/D/H/omega', 'A/D/H/psi')
+  expected_disk.remove('A/D/H', 'A/D/H/chi', 'A/D/H/omega', 'A/D/H/psi')
 
   # Expected status after update:  totally clean revision 2, minus H.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)

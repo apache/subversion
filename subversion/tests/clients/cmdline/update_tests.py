@@ -692,8 +692,6 @@ def update_delete_modified_files(sbox):
   if len(stderr_lines) != 0:
     print "updating after commit failed"
     return 1
-  # ### Bug! Directory is not deleted (issue #611). Use brute force
-  shutil.rmtree(G_path)
 
   # Backdate to restore deleted items
   stdout_lines, stderr_lines = svntest.main.run_svn(None, 'up', '-r1', wc_dir)
