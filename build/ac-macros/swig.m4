@@ -58,7 +58,7 @@ AC_DEFUN(SWIG_BINDINGS_ENABLE,
   bindings=$1
 
   if test "$bindings" = "all"; then
-    bindings="perl,python,java"
+    bindings="perl,python,java,ruby"
   fi
 
   for binding in `echo "$bindings" | sed -e "s/,/ /g"`; do
@@ -241,6 +241,49 @@ AC_DEFUN(SVN_FIND_SWIG,
       fi
     fi
 
+    if test "$RUBY" != "none" -a \
+        "$SWIG_SUITABLE" = "yes" -a \
+        "$SWIG_VERSION" -ge "103024" -a \
+        "$svn_swig_bindings_enable_ruby" = "yes"; then
+
+      AC_MSG_NOTICE([Configuring Ruby SWIG binding])
+      SWIG_CLEAN_RULES="$SWIG_CLEAN_RULES clean-swig-rb" 
+
+      ac_cv_default_ruby_sitedir="`$RUBY -rrbconfig -e 'print Config::CONFIG.fetch(%q(sitedir))'`"
+      AC_ARG_WITH([swig-ruby-sitedir],
+		  AC_HELP_STRING([--with-swig-ruby-sitedir=SITEDIR],
+                                 [install Ruby bindings in SITEDIR
+                                  (default is same as ruby's one)]),
+		  [ac_cv_ruby_sitedir=$withval],
+		  [ac_cv_ruby_sitedir=$ac_cv_default_ruby_sitedir])
+
+      AC_CACHE_CHECK([for Ruby includes], [ac_cv_ruby_includes],[
+        ac_cv_ruby_includes="-I. -I`$RUBY -rrbconfig -e 'print Config::CONFIG.fetch(%q(archdir))'`"
+      ])
+      SWIG_RB_INCLUDES="\$(SWIG_INCLUDES) $ac_cv_ruby_includes"
+
+      AC_CACHE_CHECK([for compiling Ruby extensions], [ac_cv_ruby_compile],[
+        ac_cv_ruby_compile="`$RUBY -rrbconfig -e 'print Config::CONFIG.fetch(%q(CC))'` -g \$(SWIG_RB_INCLUDES)"
+        # ac_cv_ruby_compile="`$RUBY -rrbconfig -e 'print Config::CONFIG.fetch(%q(CC)), %q( ), Config::CONFIG.fetch(%q(CFLAGS))'` \$(SWIG_RB_INCLUDES)"
+      ])
+      SWIG_RB_COMPILE="$ac_cv_ruby_compile"
+
+      AC_CACHE_CHECK([for linking Ruby extensions], [ac_cv_ruby_link],[
+        ac_cv_ruby_link="`$RUBY -rrbconfig -e 'print Config::CONFIG.fetch(%q(LDSHARED))'`"
+      ])
+      SWIG_RB_LINK="$ac_cv_ruby_link"
+
+      AC_CACHE_CHECK([for installing Ruby scripts], [ac_cv_ruby_site_lib],[
+        ac_cv_ruby_site_lib="`$RUBY -rrbconfig -e 'print Config::CONFIG.fetch(%q(sitelibdir)).sub(/^#{Config::CONFIG.fetch(%q(sitedir))}/, %q())'`"
+      ])
+      SWIG_RB_SITE_LIB_DIR="${ac_cv_ruby_sitedir}${ac_cv_ruby_site_lib}"
+
+      AC_CACHE_CHECK([for installing Ruby extensions], [ac_cv_ruby_site_arch],[
+        ac_cv_ruby_site_arch="`$RUBY -rrbconfig -e 'print Config::CONFIG.fetch(%q(sitearchdir)).sub(/^#{Config::CONFIG.fetch(%q(sitedir))}/, %q())'`"
+      ])
+      SWIG_RB_SITE_ARCH_DIR="${ac_cv_ruby_sitedir}${ac_cv_ruby_site_arch}"
+    fi
+
   fi
   AC_SUBST(SWIG_CLEAN_RULES)
   AC_SUBST(SWIG_NORUNTIME_FLAG)
@@ -252,6 +295,11 @@ AC_DEFUN(SVN_FIND_SWIG,
   AC_SUBST(SWIG_JAVA_COMPILE)
   AC_SUBST(SWIG_JAVA_LINK)
   AC_SUBST(SWIG_PL_INCLUDES)
+  AC_SUBST(SWIG_RB_LINK)
+  AC_SUBST(SWIG_RB_INCLUDES)
+  AC_SUBST(SWIG_RB_COMPILE)
+  AC_SUBST(SWIG_RB_SITE_LIB_DIR)
+  AC_SUBST(SWIG_RB_SITE_ARCH_DIR)
   AC_SUBST(SWIG_LIBSWIG_DIR)
   AC_SUBST(LSWIGPL)
   AC_SUBST(LSWIGPY)

@@ -60,6 +60,13 @@ void svn_swig_py_make_editor(const svn_delta_editor_t **editor,
     svn_delta_make_editor(&$1, &$2, $input, _global_pool);
 }
 
+#ifdef SWIGRUBY
+void svn_swig_rb_make_editor(const svn_delta_editor_t **editor,
+                             void **edit_baton,
+                             VALUE rb_editor,
+                             apr_pool_t *pool);
+#endif
+
 /* ----------------------------------------------------------------------- */
 
 %{
@@ -82,6 +89,7 @@ void svn_swig_py_make_editor(const svn_delta_editor_t **editor,
 #include "swigutil_rb.h"
 #endif
 %}
+%include svn_delta.h
 
 %include svn_delta.h
 
@@ -95,4 +103,10 @@ void svn_swig_py_make_editor(const svn_delta_editor_t **editor,
 
 #ifdef SWIGPERL
 %include delta_editor.hi
+#endif
+
+#ifdef SWIGRUBY
+REMOVE_DESTRUCTOR(svn_txdelta_op_t)
+REMOVE_DESTRUCTOR(svn_txdelta_window_t)
+REMOVE_DESTRUCTOR(svn_delta_editor_t)
 #endif

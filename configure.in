@@ -580,6 +580,8 @@ SVN_CHECK_JDK
 
 AC_PATH_PROG(PERL, perl, none)
 
+AC_PATH_PROG(RUBY, ruby, none)
+
 SVN_CHECK_SWIG
 
 dnl try to find the "makeinfo" program
