@@ -82,7 +82,12 @@ SPECIFIC LANGUAGE BINDINGS
 
 
 
-*  Java?
+*  Java
+
+   The Java bindings are still under development, and have not yet
+   reached a functional state.  You can attempt to build them by
+   running 'make swig-java-ext' from the top level of the Subversion
+   source tree.
 
 
 *  Perl?
