@@ -306,7 +306,7 @@ open_directory (const char *path,
   new_dirb->parent = pb;
   new_dirb->pool = pool;
   new_dirb->path = full_path;
-  new_dirb->was_copied = FALSE;
+  new_dirb->was_copied = pb->was_copied;
   new_dirb->base_rev = base_revision;
 
   *child_baton = new_dirb;
