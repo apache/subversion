@@ -308,43 +308,59 @@ typedef struct svn_delta_walk_t
      since CHILD_BATON won't be used any more.  */
   svn_error_t *(*finish_directory) (void *child_baton);
 
-  /* We are going to add a new file named NAME, whose ancestry comes
-     from ANCESTOR_PATH and ANCESTORE_VERSION.  If ANCESTOR_PATH is
-     zero, the changes are relative to the empty file.
+  /* We are done processing a file */
+  svn_error_t *(*finish_file) (void *child_baton);
 
-     The final four arguments must be "filled in" by the callback, so
-     the parser knows where to send file data:
+  
+  /* We're about to start receiving text-delta windows. HANDLER and
+     HANDLER_BATON specify a function to consume a series of these
+     windows.  If ANCESTOR_PATH is zero, the changes are relative to
+     the empty file. */
+  svn_error_t *(*begin_textdelta) (void *walk_baton, void *parent_baton,
+                                   svn_text_delta_window_handler_t **handler,
+                                   void **handler_baton);
 
-     TEXT_HANDLER and TEXT_HANDLER_BATON specify a function to consume
-     a series of text-delta "windows".  PROP_HANDLER and
-     PROP_HANDLER_BATON specifiy a function to consume a series
-     propchange chunks.  If one or both of these handlers is not
-     passed back to the parser (i.e. set to NULL), then the parser
-     will simply ignore text-delta or prop-delta data as appropriate.  */
+
+  /* We're about to start receiving a prop-delta. HANDLER and
+     HANDLER_BATON specify a function to consume a series of
+     propchange chunks.  If ANCESTOR_PATH is zero, the changes are
+     relative to the empty file. 
+  
+     Note: this is the "fully streamy" interface referred to earlier.
+     You probably don't want to use it right now, unless we've had a
+     problem with property sizes, in which case please remove this
+     comment. 
+  */
+  svn_error_t *(*begin_propdelta) (void *walk_baton, void *parent_baton,
+                                   svn_prop_change_chunk_handler_t **handler,
+                                   void **handler_baton);
+
+  
+  /* The first two batons are the familiar story, the last is the
+     handler_baton that was passed to the begin_* function. */
+  svn_error_t *(*finish_textdelta) (void *walk_baton, 
+                                    void *parent_baton,
+                                    void *handler_baton);
+
+  svn_error_t *(*finish_propdelta) (void *walk_baton, 
+                                    void *parent_baton,
+                                    void *handler_baton);
+
+
+  /* We are going to add a new file named NAME.    */
   svn_error_t *(*add_file) (svn_string_t *name,
 			    void *walk_baton, void *parent_baton,
 			    svn_string_t *ancestor_path,
-			    svn_vernum_t ancestor_version,
-                            svn_text_delta_window_handler_t **text_handler,
-                            void **text_handler_baton,
-                            svn_prop_change_chunk_handler_t **prop_handler,
-                            void **prop_handler_baton);
+			    svn_vernum_t ancestor_version);
 
 
-  /* We are going to replace a dirent called NAME.  Same as add_file,
-     see previous comment. */
+  /* We are going to change the directory entry named NAME to a file.
+     TEXT_DELTA specifies the file contents as a delta relative to the
+     base, or the empty file if ANCESTOR_PATH is zero.  */
   svn_error_t *(*replace_file) (svn_string_t *name,
 				void *walk_baton, void *parent_baton,
 				svn_string_t *ancestor_path,
-				svn_vernum_t ancestor_version,
-                                svn_text_delta_window_handler_t **text_handler,
-                                void **text_handler_baton,
-                                svn_prop_change_chunk_handler_t **prop_handler,
-                                void **prop_handler_baton);
-
-
-  /* We are done processing a file */
-  svn_error_t *(*finish_file) (void *child_baton);
+				svn_vernum_t ancestor_version);
 
 
 } svn_delta_walk_t;
