@@ -462,14 +462,14 @@ mark_tree (svn_stringbuf_t *dir,
       entry->schedule = schedule;
       entry->copied = copied; 
       SVN_ERR (svn_wc__entry_modify (dir, basename, entry, 
-                                     modify_flags, pool));
+                                     modify_flags, subpool));
 
       /* Tell someone what we've done. */
       if (schedule == svn_wc_schedule_delete && notify_func != NULL)
         (*notify_func) (notify_baton, svn_wc_notify_delete, fullpath->data);
 
       /* Reset FULLPATH to just hold this dir's name. */
-      svn_stringbuf_set (fullpath, dir->data);
+      svn_stringbuf_chop (fullpath, klen + (dir->len ? 1 : 0));
 
       /* Clear our per-iteration pool. */
       svn_pool_clear (subpool);
@@ -479,7 +479,7 @@ mark_tree (svn_stringbuf_t *dir,
   entry = apr_hash_get (entries, SVN_WC_ENTRY_THIS_DIR, APR_HASH_KEY_STRING);
   entry->schedule = schedule;
   entry->copied = copied;
-  SVN_ERR (svn_wc__entry_modify (dir, NULL, entry, modify_flags, pool));
+  SVN_ERR (svn_wc__entry_modify (dir, NULL, entry, modify_flags, subpool));
   
   /* Destroy our per-iteration pool. */
   svn_pool_destroy (subpool);
