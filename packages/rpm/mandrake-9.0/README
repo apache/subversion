@@ -22,13 +22,11 @@ may find that no libneon.so file exists in your /usr/lib. This may cause
 problems when subversion tries to build. Just create the link and it
 should work okay.
 
-The way the version number works right now is:
-
-project_ver-repos_ver.rpm_ver == 0.14.3-3399.1mdk
-
-So when you make RPMs, you'll want to update the versions tat the top of the
-spec file. I like having the repository version in here, especially for
-incremental development builds.
+To build the RPMs directly from this directory, you should be able to
+just `make'. You must have followed the setup directions in the mandrake
+rpm howto though, and, of course, you must have the appropriate
+development packages. (also available at the above url) You might want to
+read the top of the makefile for some other notes.
 
 Now notes on the RPMs this spec file produces:
 
