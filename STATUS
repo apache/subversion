@@ -52,8 +52,11 @@ Candidate changes:
       It used to work.  It should work now.
     Notes:
       r11490 is just cleanups.  But makes it merge cleanly.
+      OTOH, r11490 breaks file://localhost//machine/repos unnecessarily.
     Votes:
       +1: breser, jszakmeister
+      -1: lundblad (r11490)
+      +1: lundblad (r11501)
 
   * r11483 (Issue #2091)
     Unitialized variable on Win98.
