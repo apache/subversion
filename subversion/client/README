@@ -47,9 +47,7 @@ example, "svn --help".)
 
 Here are some options:
 
-  -h -H --help     Like CVS: get general or cmd-specific help.
-  --dry-run        Like cvs -n
-  --no-rc          Suppress reading of .svnrc.
+  -? -h -H --help  Like CVS: get general or cmd-specific help.
   -q               Quiet.  (CVS has two levels of this, but that's overkill?)
   -v VERSION       Like "cvs cmd -r REV"
   --version        Print program name, version, and url.
@@ -61,6 +59,9 @@ Here are some options:
   -l               Local dir only, do not recurse.
   -d               Target directory (like "cvs checkout -d DIR")
   -f               Force (probably useful for a few commands)
+  --dry-run        Like "cvs -n"
+  --no-rc          Suppress reading of .svnrc.
+  --trace          Like "cvs -t"
   --               End of option processing (this is the standard, right?)
   -R REPOSITORY    Use REPOSITORY.
                      /* Issue: -R may be unnecessary, if arguments
@@ -88,9 +89,6 @@ newcomers:
    log      | lo
    propset  | pset
    propget  | pget
-
-Some command-specific options are unique to that command, but others
-are common to several commands, for example:
 
 This is just a beginning.  We need to expand each command to describe
 exactly what it does and what options it honors.  Also, keyword
