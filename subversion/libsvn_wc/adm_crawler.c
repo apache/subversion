@@ -533,6 +533,12 @@ svn_wc_transmit_text_deltas (const char *path,
   if (tmpf != path)
     SVN_ERR (svn_io_remove_file (tmpf, pool));
 
+  /* ### todo: If tmpf != path, then instead of svn_io_copy_file()
+     above, we could do a rename, which would be much more efficient.
+     In the case where tmpf == path, we'd still have to do a copy of
+     course, because we can't affect path.  So why aren't we at least
+     checking for the efficient case?  Beats me. */
+
   /* If we're not sending fulltext, we'll be sending diffs against the
      text-base. */
   if (! fulltext)
@@ -595,8 +601,8 @@ svn_wc_transmit_text_deltas (const char *path,
                 }
             }
         }
-      else
-        SVN_ERR (svn_wc__open_text_base (&basefile, path, APR_READ, pool));
+
+      SVN_ERR (svn_wc__open_text_base (&basefile, path, APR_READ, pool));
     }
 
   /* ### This is a pity.  tmp_base was created with svn_io_copy_file()
