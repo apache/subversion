@@ -405,28 +405,9 @@ def interleaved_commits():
   if logs[14].msg.find('Initial revision') != 0:
     raise svntest.Failure
     
-  ### According to my (possibly wrong) understanding of Python scoping
-  ### rules, we shouldn't have to pass 'logs' as a parameter below,
-  ### because it's already in-scope for these two inner functions.  But
-  ### although that seems to be true in Python 2.2.2, we get warnings
-  ### and errors in 2.1.2:
-  ###
-  ###    ./run-tests.py:383: SyntaxWarning: local name 'logs' in  \
-  ###       'interleaved_commits' shadows use of 'logs' as global \
-  ###       in nested scope 'check_letters'
-  ###    [...]
-  ###    UNEXPECTED EXCEPTION:
-  ###    Traceback (most recent call last):
-  ###      File ".../clients/cmdline/svntest/testcase.py", line 87, in run
-  ###        rc = apply(self.pred.func, args)
-  ###      File "./run-tests.py", line 439, in interleaved_commits
-  ###        if not ((check_letters(15) and check_numbers(16))
-  ###      File "./run-tests.py", line 415, in check_letters
-  ###        if not (logs[rev].changed_paths.has_key(path)
-  ###    NameError: global name 'logs' is not defined
-  ###
-  ### Don't know which version is correct and which buggy, but we
-  ### might as well be portable to 2.1.2, so they take 'logs' params.
+  # This PEP explains why we pass the 'logs' parameter to these two
+  # nested functions, instead of just inheriting it from the enclosing
+  # scope:   http://www.python.org/peps/pep-0227.html
 
   def check_letters(rev, logs):
     'Return 1 if REV is the rev where only letters were committed, else None.'
