@@ -98,14 +98,6 @@ Candidate changes:
 
 Approved changes (further review is welcome, but not required):
 
-  * r11936
-    Fixes a 'working copy not locked' error.
-    Justification:
-      It's a regression from 1.0.x.
-    Votes:
-      +1: philip, epg, kfogel
-      Nominated by: Chris AtLee <catlee@sidefx.com>
-
   * r11708
     Fix a bug which caused certain unfinished switch operations to leave
     the working copy in a busticated state.
