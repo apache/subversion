@@ -30,8 +30,6 @@
 
 #include "swigutil_pl.h"
 
-apr_pool_t *current_pool;
-
 const apr_hash_t *svn_swig_pl_objs_to_hash(SV *source, swig_type_info *tinfo,
 					   apr_pool_t *pool)
 {
@@ -744,6 +742,32 @@ svn_error_t *svn_ra_make_callbacks(svn_ra_callbacks_t **cb,
     SvREFCNT_inc(perl_callbacks);
 
     return SVN_NO_ERROR;
+}
+
+/* default pool support */
+apr_pool_t *current_pool;
+
+apr_pool_t *svn_swig_pl_make_pool (SV *obj)
+{
+    apr_pool_t *pool;
+
+    if (obj && sv_isobject (obj)) {
+	swig_type_info *poolinfo = SWIG_TypeQuery("apr_pool_t *");
+	if (sv_derived_from (obj, "SVN::Pool")) {
+	    obj = SvRV(obj);
+	}
+	if (sv_derived_from(obj, "_p_apr_pool_t")) {
+	    SWIG_ConvertPtr(obj, (void **)&pool, poolinfo, 0);
+	    return pool;
+	}
+    }
+
+    if (!current_pool)
+	perl_callback_thunk (CALL_METHOD, "new_default",
+			     &obj, "s", "SVN::Pool");
+    pool = current_pool;
+
+    return pool;
 }
 
 /* stream interpolability with io::handle */

@@ -273,6 +273,13 @@ apr_status_t *apr_file_open_stderr (apr_file_t **out, apr_pool_t *pool);
 }
 
 /* -----------------------------------------------------------------------
+   Default pool handling for perl.
+*/
+#ifdef SWIGPERL
+apr_pool_t *current_pool;
+#endif
+
+/* -----------------------------------------------------------------------
    wrap config functions
 */
 

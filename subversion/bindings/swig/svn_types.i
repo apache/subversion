@@ -214,31 +214,9 @@
                     (void **)&$1, $1_descriptor, SWIG_POINTER_EXCEPTION | 0);
     _global_pool = $1;
 }
-
 %typemap(perl5, in) apr_pool_t *pool "";
-
 %typemap(perl5, default) apr_pool_t *pool(apr_pool_t *_global_pool) {
-    SV *pool = ST(items-1);
-    if (pool && sv_isobject(pool) && sv_derived_from(pool, "_p_apr_pool_t")) {
-	SWIG_ConvertPtr(ST(items-1), (void **)&$1, $1_descriptor, 0);
-	current_pool = $1;
-    }
-    else {
-	if (current_pool)
-	    $1 = current_pool;
-	else {
-	    apr_pool_create(&$1, NULL);
-	    current_pool = $1;
-	}
-    }
-    _global_pool = $1;
-}
-
-%typemap(perl5, freearg) apr_pool_t *pool {
-    /*
-    if (_global_pool_flag)
-	apr_pool_destroy(_global_pool);
-    */
+    _global_pool = $1 = svn_swig_pl_make_pool (ST(items-1));
 }
 
 %typemap(java, arginit) apr_pool_t *pool(apr_pool_t *_global_pool) {
