@@ -70,7 +70,7 @@ send_file_contents (const char *path,
   contents = svn_stream_from_aprfile (f, pool);
 
   /* Get an editor func that wants to consume the delta stream. */
-  SVN_ERR (editor->apply_textdelta (file_baton, pool,
+  SVN_ERR (editor->apply_textdelta (file_baton, NULL, NULL, pool,
                                     &handler, &handler_baton));
 
   /* Send the file's contents to the delta-window handler. */

@@ -226,6 +226,8 @@ static svn_error_t *ra_svn_svndiff_close_handler(void *baton)
 }
 
 static svn_error_t *ra_svn_apply_textdelta(void *file_baton,
+                                           const char *base_checksum,
+                                           const char *result_checksum,
                                            apr_pool_t *pool,
                                            svn_txdelta_window_handler_t *wh,
                                            void **wh_baton)
@@ -561,7 +563,8 @@ static svn_error_t *ra_svn_handle_apply_textdelta(svn_ra_svn_conn_t *conn,
   /* Parse arguments, make the editor call, and respond. */
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c", &token));
   SVN_CMD_ERR(lookup_token(ds, token, &entry, pool));
-  SVN_CMD_ERR(ds->editor->apply_textdelta(entry->baton, pool, &wh, &wh_baton));
+  SVN_CMD_ERR(ds->editor->apply_textdelta(entry->baton, NULL, NULL,
+                                          pool, &wh, &wh_baton));
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, "b", (wh != NULL)));
 
   /* If we said we didn't want text delta information, we're done. */

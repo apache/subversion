@@ -538,7 +538,8 @@ svn_wc_transmit_text_deltas (const char *path,
      file baton; the editor returns to us a window consumer routine
      and baton.  If there is no handler provided, just close the file
      and get outta here.  */
-  SVN_ERR (editor->apply_textdelta (file_baton, pool, &handler, &wh_baton));
+  SVN_ERR (editor->apply_textdelta (file_baton, NULL, NULL, pool,
+                                    &handler, &wh_baton));
   if (! handler)
     return editor->close_file (file_baton, pool);
 
