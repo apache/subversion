@@ -143,6 +143,11 @@ struct svn_fs_root_t
   int node_cache_idx;
 };
 
+/* Declared here to resolve the circular dependency in
+   get_copy_inheritance. */
+static svn_error_t * get_dag (dag_node_t **dag_node_p, svn_fs_root_t *root,
+                              const char *path, apr_pool_t *pool);
+
 
 
 /* Creating root objects.  */
@@ -604,7 +609,9 @@ get_copy_inheritance (copy_id_inherit_t *inherit_p,
   const svn_fs_id_t *child_id, *parent_id;
   const char *child_copy_id, *parent_copy_id;
   const char *id_path = NULL;
-  svn_fs__node_revision_t *noderev;
+  svn_fs_root_t *copyroot_root;
+  dag_node_t *copyroot_node;
+  svn_fs__node_revision_t *noderev, *copyroot_noderev;
 
   /* Make some assertions about the function input. */
   assert (child && child->parent && txn_id);
@@ -648,7 +655,14 @@ get_copy_inheritance (copy_id_inherit_t *inherit_p,
      or if it is a branch point that we are accessing via its original
      copy destination path. */
   SVN_ERR (svn_fs__fs_get_node_revision (&noderev, fs, child_id, pool));
-  if (svn_fs_compare_ids (noderev->copyroot, child_id) == -1)
+  SVN_ERR (svn_fs_revision_root (&copyroot_root, fs, noderev->copyroot_rev,
+                                 pool));
+  SVN_ERR (get_dag (&copyroot_node, copyroot_root, noderev->copyroot_path,
+                    pool));
+  SVN_ERR (svn_fs__fs_get_node_revision (&copyroot_noderev, fs,
+                                         svn_fs__dag_get_id (copyroot_node),
+                                         pool));
+  if (svn_fs_compare_ids (copyroot_noderev->id, child_id) == -1)
     return SVN_NO_ERROR;
 
   /* Determine if we are looking at the child via its original path or
@@ -914,11 +928,15 @@ make_path_mutable (svn_fs_root_t *root,
   /* Are we trying to clone the root, or somebody's child node?  */
   if (parent_path->parent)
     {
-      const svn_fs_id_t *parent_id;
+      const svn_fs_id_t *parent_id, *child_id, *copyroot_id;
       const char *copy_id = NULL;
       copy_id_inherit_t inherit = parent_path->copy_inherit;
-      const char *clone_path;
-
+      const char *clone_path, *copyroot_path;
+      svn_revnum_t copyroot_rev;
+      svn_boolean_t is_parent_copyroot = FALSE;
+      svn_fs_root_t *copyroot_root;
+      dag_node_t *parent, *copyroot_node;
+  
       /* We're trying to clone somebody's child.  Make sure our parent
          is mutable.  */
       SVN_ERR (make_path_mutable (root, parent_path->parent, 
@@ -945,7 +963,20 @@ make_path_mutable (svn_fs_root_t *root,
           abort(); /* uh-oh -- somebody didn't calculate copy-ID
                       inheritance data. */
         }
-          
+
+      /* Determine what copyroot our new child node should use. */
+      SVN_ERR (svn_fs__dag_get_copyroot (&copyroot_rev, &copyroot_path,
+                                         parent_path->node, pool));
+      SVN_ERR (svn_fs_revision_root (&copyroot_root, root->fs, copyroot_rev,
+                                     pool));
+      SVN_ERR (get_dag (&copyroot_node, copyroot_root, copyroot_path, pool));
+
+      child_id = svn_fs__dag_get_id (parent_path->node);
+      copyroot_id = svn_fs__dag_get_id (copyroot_node);
+      if (strcmp (svn_fs__id_node_id (child_id),
+                  svn_fs__id_node_id (copyroot_id)) != 0)
+        is_parent_copyroot = TRUE;
+      
       /* Now make this node mutable.  */
       clone_path = parent_path_path (parent_path->parent, pool);
       SVN_ERR (svn_fs__dag_clone_child (&clone,
@@ -953,7 +984,7 @@ make_path_mutable (svn_fs_root_t *root,
                                         clone_path,
                                         parent_path->entry, 
                                         copy_id, txn_id,
-                                        (inherit == copy_id_inherit_new),
+                                        is_parent_copyroot, 
                                         pool));
     }
   else
@@ -3296,47 +3327,33 @@ svn_error_t *svn_fs_node_history (svn_fs_history_t **history_p,
    filesystem FS, and store the node-id for this copyroot in
    *COPYROOT_P.  Perform all allocations in POOL. */
 static svn_error_t *
-find_youngest_copyroot (const svn_fs_id_t **copyroot_p,
+find_youngest_copyroot (svn_revnum_t *rev_p,
+                        const char **path_p,
                         svn_fs_t *fs,
                         parent_path_t *parent_path,
                         apr_pool_t *pool)
 {
-  const svn_fs_id_t *node_id_mine, *node_id_parent = NULL;
-  svn_revnum_t rev_mine, rev_parent;
+  svn_revnum_t rev_mine, rev_parent = -1;
+  const char *path_mine, *path_parent;
 
   /* First find our parent's youngest copyroot. */
   if (parent_path->parent)
-    SVN_ERR (find_youngest_copyroot (&node_id_parent, fs, parent_path->parent,
-                                     pool));
+    SVN_ERR (find_youngest_copyroot (&rev_parent, &path_parent, fs,
+                                     parent_path->parent, pool));
 
   /* Find our copyroot. */
-  SVN_ERR (svn_fs__dag_get_copyroot (&node_id_mine, parent_path->node, pool));
-
-  if (node_id_mine)
-    {
-      rev_mine = svn_fs__id_rev (node_id_mine);
-    }
-  else
-    {
-      rev_mine = 0;
-    }
-
-  if (node_id_parent)
-    {
-      rev_parent = svn_fs__id_rev (node_id_parent);
-    }
-  else
-    {
-      rev_parent = 0;
-    }
+  SVN_ERR (svn_fs__dag_get_copyroot (&rev_mine, &path_mine, parent_path->node,
+                                     pool));
 
   if (rev_mine > rev_parent)
     {
-      *copyroot_p = node_id_mine;
+      *rev_p = rev_mine;
+      *path_p = path_mine;
     }
   else
     {
-      *copyroot_p = node_id_parent;
+      *rev_p = rev_parent;
+      *path_p = path_parent;
     }
 
   return SVN_NO_ERROR;
@@ -3359,16 +3376,18 @@ txn_body_history_prev (void *baton, apr_pool_t *pool)
   svn_fs_history_t **prev_history = args->prev_history_p;
   svn_fs_history_t *history = args->history;
   const char *commit_path, *src_path, *path = history->path;
-  svn_revnum_t commit_rev, copyroot_rev, src_rev, dst_rev;
+  svn_revnum_t commit_rev, src_rev, dst_rev;
   svn_revnum_t revision = history->revision;
   apr_pool_t *retpool = args->pool;
   svn_fs_t *fs = history->fs;
   parent_path_t *parent_path;
   dag_node_t *node;
   svn_fs_root_t *root;
-  const svn_fs_id_t *node_id, *copyroot_id;
+  const svn_fs_id_t *node_id;
   svn_boolean_t reported = history->is_interesting;
   svn_boolean_t retry = FALSE;
+  svn_revnum_t copyroot_rev;
+  const char *copyroot_path;
 
   /* Initialize our return value. */
   *prev_history = NULL;
@@ -3438,17 +3457,9 @@ txn_body_history_prev (void *baton, apr_pool_t *pool)
 
   /* Find the youngest copyroot in the path of this node, including
      itself. */
-  SVN_ERR (find_youngest_copyroot (&copyroot_id, fs, parent_path, pool));
+  SVN_ERR (find_youngest_copyroot (&copyroot_rev, &copyroot_path, fs,
+                                   parent_path, pool));
 
-  if (copyroot_id)
-    {
-      copyroot_rev = svn_fs__id_rev (copyroot_id);
-    }
-  else
-    {
-      copyroot_rev = 0;
-    }
-  
   /* Initialize some state variables. */
   src_path = NULL;
   src_rev = SVN_INVALID_REVNUM;
@@ -3459,8 +3470,10 @@ txn_body_history_prev (void *baton, apr_pool_t *pool)
       const char *remainder;
       const char *copy_dst, *copy_src;
       svn_fs__copy_kind_t copy_kind;
+      svn_fs_root_t *copyroot_root;
 
-      SVN_ERR (svn_fs__dag_get_node (&node, fs, copyroot_id, pool));
+      SVN_ERR (svn_fs_revision_root (&copyroot_root, fs, copyroot_rev, pool));
+      SVN_ERR (get_dag (&node, copyroot_root, copyroot_path, pool));
       copy_dst = svn_fs__dag_get_created_path (node);
 
       /* If our current path was the very destination of the copy,
@@ -3481,16 +3494,11 @@ txn_body_history_prev (void *baton, apr_pool_t *pool)
           /* If we get here, then our current path is the destination 
              of, or the child of the destination of, a copy.  Fill
              in the return values and get outta here.  */
-          SVN_ERR (svn_fs__dag_get_copy_kind (&copy_kind, node, pool));
-          
           SVN_ERR (svn_fs__dag_get_copyfrom_rev (&src_rev, node, pool));
           SVN_ERR (svn_fs__dag_get_copyfrom_path (&copy_src, node, pool));
           
-          dst_rev = svn_fs__id_rev (copyroot_id);
+          dst_rev = copyroot_rev;
           src_path = svn_path_join (copy_src, remainder, pool);
-          
-          if (copy_kind == svn_fs__copy_kind_soft)
-            retry = TRUE;
         }
     }
 
