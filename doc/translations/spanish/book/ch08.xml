@@ -1604,13 +1604,15 @@ crawl_dir (apr_array_header_t *files,
       esta función si tuviese que reservar y liberar cada pieza
       individual de datos usados!</para>
     
-    <para>Pools might not be ideal for every application, but they are
-      extremely useful in Subversion.  As a Subversion developer,
-      you'll need to grow comfortable with pools and how to wield them
-      correctly.  Memory usage bugs and bloating can be difficult to
-      diagnose and fix regardless of the API, but the pool construct
-      provided by APR has proven a tremendously convenient,
-      time-saving bit of functionality.</para>
+    <para>Quizás las áreas de memoria no sean ideales para todas las
+      aplicaciones, pero son extremadamente útiles en
+      Subversion. Como desarrollador de Subversion, tendrá que
+      acostumbrarse a las áreas de memoria y a su uso correcto. Los
+      fallos relacionados con el uso de memoria y exceso de código
+      pueden ser difíciles de diagnosticar y corregir se la API
+      que sea, pero la estructura de área de memoria proporcionada
+      por APR ha resultado ser una funcionalidad tremendamente
+      conveniente y ahorradora de tiempo.</para>
 
   </sect1>
 
@@ -1618,17 +1620,18 @@ crawl_dir (apr_array_header_t *files,
   <!-- *** SECTION 6:  CONTRIBUTING TO SUBVERSION                      *** -->
   <!-- ******************************************************************* -->
   <sect1 id="svn-ch-8-sect-6">
-    <title>Contributing to Subversion</title>
+    <title>Contribuyendo a Subversion</title>
     
-    <para>The official source of information about the Subversion
-      project is, of course, the project's website at <systemitem
-      class="url">http://subversion.tigris.org/</systemitem>.  There
-      you can find information about getting access to the source code
-      and participating on the discussion lists.  The Subversion
-      community always welcomes new members.  If you are
-      interested in participating in this community by contributing
-      changes to the source code, here are some hints on how to get
-      started.</para>
+    <para>La fuente oficial de información sobre el proyecto
+      Subversion es, por supuesto, la
+      página web del proyecto en <systemitem
+      class="url">http://subversion.tigris.org/</systemitem>.
+      Ahí puede encontrar información sobre cómo obtener acceso al
+      código fuente y participar en las listas de discusión. La
+      comunidad de Subversion siempre da la bienvenida a nuevos
+      miembros. Si está interesado en participar en esta comunidad
+      contribuyendo cambios al código fuente, aquí tiene algunas
+      pistas para ponerse en marcha.</para>
 
     <!-- ***************************************************************** -->
     <sect2 id="svn-ch-8-sect-6.1">
