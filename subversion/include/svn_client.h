@@ -616,9 +616,17 @@ svn_error_t *svn_client_diff (const apr_array_header_t *diff_options,
                               apr_pool_t *pool);
 
 
-/* Merge changes from PATH1/REVISION1 to PATH2/REVISION2 into the
-   working-copy path TARGET_WCPATH.  PATH1 and PATH2 can be either
+/* Merge changes from PATH1/REVISION1 to PATH2/REVISION2 [into the
+   working-copy path TARGET_WCPATH.]  PATH1 and PATH2 can be either
    working-copy paths or URLs.
+
+   ******* NOTE!! *********
+   *** Issue #748 indicates a bug in this function, whereby merge
+   *** diffs are always applied to '.', no matter what the value of
+   *** TARGET_WCPATH is.  This issue is being deferred to Beta, and in
+   *** the meantime the TARGET_WCPATH arg is being temporarily
+   *** removed, to prevent people from accidentally merging in the
+   *** wrong place.
 
    By "merging", we mean:  apply file differences using
    svn_wc_merge(), and schedule additions & deletions when appopriate.
@@ -650,7 +658,6 @@ svn_client_merge (const svn_delta_editor_t *after_editor,
                   const svn_client_revision_t *revision1,
                   const char *path2,
                   const svn_client_revision_t *revision2,
-                  const char *target_wcpath,
                   svn_boolean_t recurse,
                   svn_boolean_t force,
                   apr_pool_t *pool);
