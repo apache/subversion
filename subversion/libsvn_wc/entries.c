@@ -611,9 +611,9 @@ read_entries (apr_hash_t *entries,
     err = svn_xml_parse (svn_parser, buf, bytes_read,
                          APR_STATUS_IS_EOF(apr_err));
     if (err)
-      return svn_error_quick_wrap 
-        (err,
-         "read_entries: xml parser failed.");
+      return svn_error_createf (err->apr_err, 0, err, pool, 
+                                "read_entries: xml parser failed (%s).", 
+                                path->data);
   } while (!APR_STATUS_IS_EOF(apr_err));
 
   /* Close the entries file. */
