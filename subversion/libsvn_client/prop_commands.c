@@ -221,10 +221,55 @@ recursive_propget (apr_hash_t *props,
   return SVN_NO_ERROR;
 }
 
+
+/* If REVISION represents a revision not present in the working copy,
+ * then set *NEW_TARGET to the url for TARGET, allocated in POOL, else
+ * set *NEW_TARGET to TARGET (just assign, do not copy).
+ *
+ * *NEW_TARGET may be the same as TARGET.
+ */
+static svn_error_t *
+maybe_convert_to_url (const char **new_target,
+                      const char *target,
+                      const svn_opt_revision_t *revision,
+                      apr_pool_t *pool)
+{
+  if ((revision->kind != svn_opt_revision_unspecified)
+      && (revision->kind != svn_opt_revision_base)
+      && (revision->kind != svn_opt_revision_working)
+      && (! svn_path_is_url (target)))
+    {
+      svn_wc_adm_access_t *adm_access;
+      svn_node_kind_t kind;
+      const char *pdir;
+      const svn_wc_entry_t *entry;
+      
+      SVN_ERR (svn_io_check_path (target, &kind, pool));
+      if (kind == svn_node_file)
+        svn_path_split (target, &pdir, NULL, pool);
+      else
+        pdir = target;
+      
+      SVN_ERR (svn_wc_adm_open (&adm_access, NULL, pdir, FALSE, FALSE, pool));
+      SVN_ERR (svn_wc_entry (&entry, target, adm_access, FALSE, pool));
+      if (! entry)
+        return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL,
+                                  "'%s' is not a versioned resource", 
+                                  target);
+      *new_target = entry->url;
+    }
+  else
+    *new_target = target;
+
+  return SVN_NO_ERROR;
+}
+
+
 svn_error_t *
 svn_client_propget (apr_hash_t **props,
                     const char *propname,
                     const char *target,
+                    const svn_opt_revision_t *revision,
                     svn_boolean_t recurse,
                     apr_pool_t *pool)
 {
@@ -232,27 +277,41 @@ svn_client_propget (apr_hash_t **props,
   svn_wc_adm_access_t *adm_access;
   const svn_wc_entry_t *node;
 
-  SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, target, FALSE, TRUE,
-                                  pool));
-  SVN_ERR (svn_wc_entry (&node, target, adm_access, FALSE, pool));
-  if (!node)
-    return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL,
-                              "'%s' -- not a versioned resource", target);
+  SVN_ERR (maybe_convert_to_url (&target, target, revision, pool));
 
-  if (recurse && node->kind == svn_node_dir)
+  if (svn_path_is_url (target))
     {
-      SVN_ERR (recursive_propget (prop_hash, propname, adm_access, pool));
+      /* ### This will change when svn_client_propget takes a
+         revision arg and can access the repository, see issue #943. */  
+      return svn_error_create
+        (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL,
+         "URL argument to propget not yet supported (see issue #943)");
     }
-  else
+  else  /* working copy path */
     {
-      const svn_string_t *propval;
-      SVN_ERR (svn_wc_prop_get (&propval, propname, target, pool));
-      if (propval)
-        apr_hash_set (prop_hash, target, APR_HASH_KEY_STRING, propval);
+      SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, target, FALSE, TRUE,
+                                      pool));
+      SVN_ERR (svn_wc_entry (&node, target, adm_access, FALSE, pool));
+      if (!node)
+        return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL,
+                                  "'%s' -- not a versioned resource", target);
+      
+      if (recurse && node->kind == svn_node_dir)
+        {
+          SVN_ERR (recursive_propget (prop_hash, propname, adm_access, pool));
+        }
+      else
+        {
+          const svn_string_t *propval;
+          SVN_ERR (svn_wc_prop_get (&propval, propname, target, pool));
+          if (propval)
+            apr_hash_set (prop_hash, target, APR_HASH_KEY_STRING, propval);
+        }
+      SVN_ERR (svn_wc_adm_close (adm_access));
+      
+      *props = prop_hash;
     }
-  SVN_ERR (svn_wc_adm_close (adm_access));
 
-  *props = prop_hash;
   return SVN_NO_ERROR;
 }
 
@@ -372,6 +431,7 @@ recursive_proplist (apr_array_header_t *props,
 svn_error_t *
 svn_client_proplist (apr_array_header_t **props,
                      const char *target, 
+                     const svn_opt_revision_t *revision,
                      svn_boolean_t recurse,
                      apr_pool_t *pool)
 {
@@ -380,22 +440,36 @@ svn_client_proplist (apr_array_header_t **props,
   svn_wc_adm_access_t *adm_access;
   const svn_wc_entry_t *entry;
 
-  SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, target, FALSE, TRUE,
-                                  pool));
-  SVN_ERR (svn_wc_entry (&entry, target, adm_access, FALSE, pool));
-  if (! entry)
-    return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL,
-                              "'%s' -- not a versioned resource", 
-                              target);
+  SVN_ERR (maybe_convert_to_url (&target, target, revision, pool));
 
-  if (recurse && entry->kind == svn_node_dir)
-    SVN_ERR (recursive_proplist (prop_list, adm_access, pool));
-  else 
-    SVN_ERR (add_to_proplist (prop_list, target, pool));
+  if (svn_path_is_url (target))
+    {
+      /* ### This will change when svn_client_proplist takes a
+         revision arg and can access the repository, see issue #943. */  
+      return svn_error_create
+        (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL,
+         "URL argument to proplist not yet supported (see issue #943)");
+    }
+  else  /* working copy path */
+    {
+      SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, target, FALSE, TRUE,
+                                      pool));
+      SVN_ERR (svn_wc_entry (&entry, target, adm_access, FALSE, pool));
+      if (! entry)
+        return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL,
+                                  "'%s' -- not a versioned resource", 
+                                  target);
+      
+      if (recurse && entry->kind == svn_node_dir)
+        SVN_ERR (recursive_proplist (prop_list, adm_access, pool));
+      else 
+        SVN_ERR (add_to_proplist (prop_list, target, pool));
+      
+      SVN_ERR (svn_wc_adm_close (adm_access));
+      
+      *props = prop_list;
+    }
 
-  SVN_ERR (svn_wc_adm_close (adm_access));
-
-  *props = prop_list;
   return SVN_NO_ERROR;
 }
 

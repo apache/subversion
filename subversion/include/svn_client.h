@@ -814,13 +814,19 @@ svn_client_revprop_set (const char *propname,
                         apr_pool_t *pool);
                         
 /* Set *PROPS to a hash table whose keys are `char *' paths,
-   prefixed by TARGET, of items in the working copy on which 
-   property PROPNAME is set, and whose values are `svn_string_t *'
-   representing the property value for PROPNAME at that path.
+   prefixed by TARGET (a working copy path or a url), of items on
+   which property PROPNAME is set, and whose values are `svn_string_t
+   *' representing the property value for PROPNAME at that path.
+
    Allocate *PROPS, its keys, and its values in POOL.
              
    Don't store any path, not even TARGET, if it does not have a
    property named PROPNAME.
+
+   If REVISION->kind is svn_opt_revision_unspecified, then get
+   properties from the working copy, if TARGET is a working copy path,
+   or from the repository head if TARGET is a url.  Else get the
+   properties as of REVISION.
 
    If TARGET is a file or RECURSE is false, *PROPS will have
    at most one element.
@@ -831,6 +837,7 @@ svn_error_t *
 svn_client_propget (apr_hash_t **props,
                     const char *propname,
                     const char *target,
+                    const svn_opt_revision_t *revision,
                     svn_boolean_t recurse,
                     apr_pool_t *pool);
 
@@ -854,17 +861,26 @@ svn_client_revprop_get (const char *propname,
                         svn_revnum_t *set_rev,
                         apr_pool_t *pool);
 
-/* Returns an apr_array_header_t of svn_client_proplist_item_t's in *PROPS,
-   allocated from POOL. Each item will contain the node_name relative to the
-   same base as target in item->node_name, and a property hash of 
-   (const char *) property names, and (svn_string_t *) property values.
+/* Set *PROPS to the properties of TARGET, a working copy path or a url. 
+   Each element of the returned array is (svn_client_proplist_item_t *).
+   For each item, item->node_name contains the name relative to the
+   same base as TARGET, and item->prop_hash maps (const char *)
+   property names to (svn_string_t *) values.
+   
+   Allocate *PROPS and its contents in POOL.
 
-   If recurse is false, or TARGET is a file, *PROPS will contain only a single
-   element.  Otherwise, it will contain one for each versioned entry below
-   (and including) TARGET. */
+   If REVISION->kind is svn_opt_revision_unspecified, then get
+   properties from the working copy, if TARGET is a working copy path,
+   or from the repository head if TARGET is a url.  Else get the
+   properties as of REVISION.
+
+   If RECURSE is false, or TARGET is a file, *PROPS will contain only
+   a single element.  Otherwise, it will contain one element for each
+   versioned entry below (and including) TARGET. */
 svn_error_t *
 svn_client_proplist (apr_array_header_t **props,
                      const char *target, 
+                     const svn_opt_revision_t *revision,
                      svn_boolean_t recurse,
                      apr_pool_t *pool);
 

@@ -166,6 +166,7 @@ svn_cl__propedit (apr_getopt_t *os,
           
           /* Fetch the current property. */
           SVN_ERR (svn_client_propget (&props, pname_utf8, target,
+                                       &(opt_state->start_revision),
                                        FALSE, pool));
           
           /* Get the property value. */
