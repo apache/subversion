@@ -115,11 +115,15 @@ svn_make_vcdiff_parser (svn_txdelta_window_handler_t *handler,
 
 
 
-/* Internal routine --
-
-   Create a new window from PARSER->SUBPOOL, and send it off to the
+/* Create a new window from PARSER->SUBPOOL, and send it off to the
    caller's consumer routine, then create a new SUBPOOL in PARSER so
    that it can continue buffering data.  */
+
+/* Note: this dummy routine assumes there's nothing but raw ASCII in
+   the buffer, and only creates a single kind of txdelta_op: the
+   "append new text" kind.  It places one such op into a window and
+   sends the window off.  The *real* vcdiff code will place a number
+   of ops into a window, based on the decoded bytestream.  */
 svn_error_t *
 svn_vcdiff_send_window (svn_vcdiff_parser_t *parser, apr_size_t len)
 {
@@ -177,17 +181,30 @@ svn_vcdiff_send_window (svn_vcdiff_parser_t *parser, apr_size_t len)
    call svn_vcdiff_send_window().  */
 
 /* Note: this dummy routine thinks a "window" is just a certain number
-   of bytes received.  The real vcdiff code will probably use a more
-   sophisticated algorithm than that.  :) */
-
+   of bytes received.  The *real* vcdiff code will decode the vcdiff
+   bytestream into a number of semantic svn_txdelta_ops, place these
+   ops into a window, and send it off.  This routine only works right
+   now so long as our text-deltas are just plain, uncoded ASCII.  */
 svn_error_t *
 svn_vcdiff_parse (svn_vcdiff_parser_t *parser,
                   const char *buffer,
-                  apr_off_t *len)
+                  apr_off_t len)
 {
   svn_error_t *err;
-
   apr_off_t i = 0;  /* This is our offset into BUFFER */
+
+  if (len == 0)  
+    {
+      /* This means the caller has finished sending the vcdiff
+         bytestream, so flush any remaining bytes in our buffer.  */
+      err = svn_vcdiff_send_window (parser, parser->buffer->len);
+      if (err)
+        return err;
+
+      return SVN_NO_ERROR;
+    }
+
+  /* else... */
 
   do    /* Loop over all bytes received in BUFFER */
     {
@@ -212,13 +229,8 @@ svn_vcdiff_parse (svn_vcdiff_parser_t *parser,
           i++;
         }
       
-    } while (i < *len);
+    } while (i < len);
 
-
-    /* TODO: are we supposed to set *len to the number of bytes we
-       processed and buffered overall?  The number of windows we sent
-       off?  The number of unsent bytes still sitting in the parser's
-       buffer? */
 
     return SVN_NO_ERROR;
 }
