@@ -1155,6 +1155,8 @@ $ svn status
 
       </sect3>
 
+      <!-- cmpilato was here -->
+
       <sect3 id="svn-ch-6-sect-2.3.4">
         <title><literal>svn:keywords</literal></title>
 
@@ -1682,26 +1684,17 @@ Fetching external item into calc/third-party/skins
       </listitem>
     </orderedlist>
 
-    <para>Let's illustrate this scenario with an example.  Our project
-      will be maintaining custom modifications against a third-party
-      library, lib3rd_party.</para>
+    <!-- ### cmpilato todo: finish this section. -->
 
-    <para>We'll begin tracking lib3rd_party with its first public
-      release, version 1.0.  As stated previously, our first step is
-      to create a new vendor branch for lib3rd_party, and import our
-      first vendor drop (the contents of the version 1.0 release) into
-      that branch.</para>
+    <para>Let's try and make this a bit clearer with an
+      example.</para>
+
+    <para>First, the initial import.</para>
     
     <screen>
-$ svn mkdir -m "Make a directory for vendor branches." \
-    http://svn.red-bean.com/repos/vendor
-$ svn mkdir -m "Make a vendor branch for lib3rd_party." \
-    http://svn.red-bean.com/repos/vendor/lib3rd_party
-$ svn import -m "Import lib3rd_party 1.0 into its vendor branch." \
-    http://svn.red-bean.com/repos/vendor/lib3rd_party lib3rd_party-1.0
-</screen>
-
-    <!-- ### cmpilato todo: finish this section. -->
+      $ svn mkdir http://svnhost/repos/vendor/foobar
+      $ svn import http://svnhost/repos/vendor/foobar ~/foobar-1.0 current
+    </screen>
     
     <para>Now we've got the current version of the foobar project in
       <filename>/vendor/foobar/current</filename>.  We make another
