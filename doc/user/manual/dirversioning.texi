@@ -91,7 +91,7 @@ it to."  Committing changes to the repository is a server-write
 operation only; it should @emph{not} modify your working data!
 
 Another solution is to do the naive thing:  after committing the
-deletion of @file{foo}, simply stop tracking the file in the @file{SVN}
+deletion of @file{foo}, simply stop tracking the file in the @file{.svn}
 administrative directory.  The client then loses all knowledge of the
 file.
 
@@ -110,7 +110,7 @@ This problem is solved through tricky administrative tracking in the
 client.
 
 After deleting @file{foo} and committing, the file is @emph{not} is not
-totally forgotten by the @file{SVN} directory.  While the file is no
+totally forgotten by the @file{.svn} directory.  While the file is no
 longer considered to be under revision control, it is still secretly
 remembered as having been `deleted'.
 

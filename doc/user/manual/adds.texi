@@ -93,7 +93,7 @@ For example, recall our old working copy:
 write/Makefile
       document.c
       search.c
-      SVN/
+      .svn/
 @end example
 
 Say we add a new directory @file{fonts} to the working copy:

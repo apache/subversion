@@ -82,13 +82,13 @@ directory like this:
 write/Makefile
       document.c
       search.c
-      SVN/
+      .svn/
 @end example
 This working directory is a copy of the repository's @file{/trunk/write}
-directory, with one additional entry --- @file{SVN} --- which holds the
+directory, with one additional entry --- @file{.svn} --- which holds the
 extra information needed by Subversion, as mentioned above.
 
-Suppose you make changes to @file{search.c}.  Since the @file{SVN}
+Suppose you make changes to @file{search.c}.  Since the @file{.svn}
 directory remembers the file's modification date and original contents,
 Subversion can tell that you've changed the file.  However, Subversion
 does not make your changes public until you explicitly tell it to.
@@ -97,8 +97,8 @@ To publish your changes, you can use Subversion's @samp{commit} command:
 @example
 $ pwd
 /home/jimb/write
-$ ls
-Makefile   SVN/    document.c    search.c
+$ ls -a
+.svn/   Makefile   document.c    search.c
 $ svn commit search.c
 $
 @end example
@@ -120,8 +120,8 @@ he checked it out.
 @example
 $ pwd
 /home/felix/write
-$ ls
-Makefile    SVN/   document.c    search.c
+$ ls -a
+.svn/    Makefile    document.c    search.c
 $ svn update
 U search.c
 $
@@ -130,7 +130,7 @@ $
 The output from the @samp{svn update} command indicates that Subversion
 updated the contents of @file{search.c}.  Note that Felix didn't need to
 specify which files to update; Subversion uses the information in the
-@file{SVN} directory, and further information in the repository, to
+@file{.svn} directory, and further information in the repository, to
 decide which files need to be brought up to date.
 
 We explain below what happens when both you and Felix make changes to
