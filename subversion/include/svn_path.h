@@ -16,8 +16,8 @@
 extern "C" {
 #endif /* __cplusplus */
 
-#ifndef SVN_PATHS_H
-#define SVN_PATHS_H
+#ifndef SVN_PATH_H
+#define SVN_PATH_H
 
 
 
@@ -248,7 +248,7 @@ svn_stringbuf_t * svn_path_is_child (const svn_stringbuf_t *path1,
                                   apr_pool_t *pool);
 
 
-#endif /* SVN_PATHS_H */
+#endif /* SVN_PATH_H */
 
 #ifdef __cplusplus
 }
