@@ -193,6 +193,9 @@ struct dav_resource_private {
   /* ### record the base for computing a delta during a GET */
   const char *delta_base;
 
+  /* the value of any SVN_DAV_OPTIONS_HEADER that came in the request */
+  const char *svn_client_options;
+
   /* Pool to allocate temporary data from */
   apr_pool_t *pool;
 };
@@ -443,6 +446,7 @@ dav_error * dav_svn__merge_response(ap_filter_t *output,
                                     const dav_svn_repos *repos,
                                     svn_revnum_t new_rev,
                                     apr_xml_elem *prop_elem,
+                                    svn_boolean_t disable_merge_response,
                                     apr_pool_t *pool);
 
 dav_error * dav_svn__update_report(const dav_resource *resource,

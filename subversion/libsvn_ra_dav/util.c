@@ -208,6 +208,7 @@ svn_error_t *svn_ra_dav__parsed_request(svn_ra_session_t *ras,
                                         ne_xml_startelm_cb startelm_cb, 
                                         ne_xml_endelm_cb endelm_cb,
                                         void *baton,
+                                        apr_hash_t *extra_headers,
                                         apr_pool_t *pool)
 {
   ne_request *req;
@@ -239,6 +240,20 @@ svn_error_t *svn_ra_dav__parsed_request(svn_ra_session_t *ras,
 
   /* ### use a symbolic name somewhere for this MIME type? */
   ne_add_request_header(req, "Content-Type", "text/xml");
+
+  /* add any extra headers passed in by caller. */
+  if (extra_headers != NULL)
+    {
+      apr_hash_index_t *hi;
+      for (hi = apr_hash_first (pool, extra_headers);
+           hi; hi = apr_hash_next (hi))
+        {
+          const void *key;
+          void *val;
+          apr_hash_this (hi, &key, NULL, &val);
+          ne_add_request_header(req, (const char *) key, (const char *) val); 
+        }
+    }
 
   /* create a parser to read the normal response body */
   success_parser = ne_xml_create();

@@ -1393,7 +1393,7 @@ svn_error_t *svn_ra_dav__get_dated_revision (void *session_baton,
                                    drev_report_elements,
                                    drev_validate_element,
                                    drev_start_element, drev_end_element,
-                                   revision, ras->pool);
+                                   revision, NULL, ras->pool);
   if (err && err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE)
     return svn_error_quick_wrap(err, "Server does not support date-based "
                                 "operations.");
@@ -2306,7 +2306,7 @@ static svn_error_t * reporter_finish_report(void *report_baton)
                                    NULL, fdesc,
                                    report_elements, validate_element,
                                    start_element, end_element, rb,
-                                   rb->ras->pool);
+                                   NULL, rb->ras->pool);
 
   /* we're done with the file */
   (void) apr_file_close(rb->tmpfile);

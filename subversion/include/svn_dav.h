@@ -39,6 +39,12 @@ extern "C" {
    server. It contains a version resource URL for what is on the client. */
 #define SVN_DAV_DELTA_BASE_HEADER "X-SVN-VR-Base"
 
+/* This header is used when an svn client wants to trigger specific
+   svn server behaviors.  Normal WebDAV or DeltaV clients won't use it. */
+#define SVN_DAV_OPTIONS_HEADER "X-SVN-Options"
+
+/* Specific options that can appear in the options-header: */
+#define SVN_DAV_OPTION_NO_MERGE_RESPONSE "no-merge-response"
 
 /* ### should add strings for the various XML elements in the reports
    ### and things. also the custom prop names. etc.

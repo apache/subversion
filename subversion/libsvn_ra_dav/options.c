@@ -118,7 +118,7 @@ svn_error_t * svn_ra_dav__get_activity_collection(
                                       "</D:options>", 0,
                                       options_elements, validate_element,
                                       start_element, end_element, &oc,
-                                      pool) );
+                                      NULL, pool) );
 
   if (oc.activity_coll == NULL)
     {

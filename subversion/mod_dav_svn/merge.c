@@ -297,6 +297,7 @@ dav_error * dav_svn__merge_response(ap_filter_t *output,
                                     const dav_svn_repos *repos,
                                     svn_revnum_t new_rev,
                                     apr_xml_elem *prop_elem,
+                                    svn_boolean_t disable_merge_response,
                                     apr_pool_t *pool)
 {
   apr_bucket_brigade *bb;
@@ -379,49 +380,56 @@ dav_error * dav_svn__merge_response(ap_filter_t *output,
 
                      NULL);
 
-  /* Now we need to generate responses for all the resources which changed.
-     This is done through a delta of the two roots.
-
-     Note that a directory is not marked when open_dir is seen (since it
-     typically is used just for changing members in that directory); instead,
-     we want for a property change (the only reason the client would need to
-     fetch a new directory).
-
-     ### we probably should say something about the dirs, so that we can
-     ### pass back the new version URL */
-
-  /* set up the editor for the delta process */
-  editor = svn_delta_default_editor(pool);
-  editor->open_root = mr_open_root;
-  editor->delete_entry = mr_delete_entry;
-  editor->add_directory = mr_add_directory;
-  editor->open_directory = mr_open_directory;
-  editor->change_dir_prop = mr_change_dir_prop;
-  editor->close_directory = mr_close_directory;
-  editor->add_file = mr_add_file;
-  editor->open_file = mr_open_file;
-  editor->close_file = mr_close_file;
-
-  /* set up the merge response context */
-  mrc.pool = pool;
-  mrc.output = output;
-  mrc.bb = bb;
-  mrc.root = committed_root;
-  mrc.repos = repos;
-
-  serr = svn_repos_dir_delta(previous_root, "/",
-                             NULL,      /* ### should fix */
-                             committed_root, "/",
-                             editor, &mrc, 
-                             FALSE, /* don't bother with text-deltas */
-                             TRUE, /* Do recurse into subdirectories */
-                             FALSE, /* Do not allow entry props */
-                             FALSE, /* Do not allow copyfrom args */
-                             pool);
-  if (serr != NULL)
+  /* ONLY have dir_delta drive the editor if the caller asked us to
+     generate a full MERGE response.  svn clients can ask us to
+     suppress this walk by sending specific request headers. */
+  if (! disable_merge_response)
     {
-      return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                 "could not process the merge delta.");
+      /* Now we need to generate responses for all the resources which
+         changed.  This is done through a delta of the two roots.
+         
+         Note that a directory is not marked when open_dir is seen
+         (since it typically is used just for changing members in that
+         directory); instead, we want for a property change (the only
+         reason the client would need to fetch a new directory).
+         
+         ### we probably should say something about the dirs, so that
+         ### we can pass back the new version URL */
+      
+      /* set up the editor for the delta process */
+      editor = svn_delta_default_editor(pool);
+      editor->open_root = mr_open_root;
+      editor->delete_entry = mr_delete_entry;
+      editor->add_directory = mr_add_directory;
+      editor->open_directory = mr_open_directory;
+      editor->change_dir_prop = mr_change_dir_prop;
+      editor->close_directory = mr_close_directory;
+      editor->add_file = mr_add_file;
+      editor->open_file = mr_open_file;
+      editor->close_file = mr_close_file;
+      
+      /* set up the merge response context */
+      mrc.pool = pool;
+      mrc.output = output;
+      mrc.bb = bb;
+      mrc.root = committed_root;
+      mrc.repos = repos;
+      
+      serr = svn_repos_dir_delta(previous_root, "/",
+                                 NULL,      /* ### should fix */
+                                 committed_root, "/",
+                                 editor, &mrc, 
+                                 FALSE, /* don't bother with text-deltas */
+                                 TRUE, /* Do recurse into subdirectories */
+                                 FALSE, /* Do not allow entry props */
+                                 FALSE, /* Do not allow copyfrom args */
+                                 pool);
+      if (serr != NULL)
+        {
+          return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                     "could not process the merge delta.");
+        }
+
     }
 
   /* wrap up the merge response */

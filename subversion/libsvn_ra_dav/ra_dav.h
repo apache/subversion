@@ -351,6 +351,9 @@ svn_error_t * svn_ra_dav__get_activity_collection(
  * element, and end element handlers, respectively.  BATON is passed
  * to each as userdata.
  *
+ * EXTRA_HEADERS is a hash of (const char *) key/value pairs to be
+ * inserted as extra headers in the request.  Can be NULL.
+ *
  * Use POOL for any temporary allocation.
  */
 svn_error_t *svn_ra_dav__parsed_request(svn_ra_session_t *ras,
@@ -363,6 +366,7 @@ svn_error_t *svn_ra_dav__parsed_request(svn_ra_session_t *ras,
                                         ne_xml_startelm_cb startelm_cb, 
                                         ne_xml_endelm_cb endelm_cb,
                                         void *baton,
+                                        apr_hash_t *extra_headers,
                                         apr_pool_t *pool);
 
 
@@ -430,6 +434,7 @@ svn_error_t * svn_ra_dav__merge_activity(
     const char *repos_url,
     const char *activity_url,
     apr_hash_t *valid_targets,
+    svn_boolean_t disable_merge_response,
     apr_pool_t *pool);
 
 

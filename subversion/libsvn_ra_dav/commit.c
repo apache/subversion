@@ -87,6 +87,8 @@ typedef struct
   svn_ra_push_wc_prop_func_t push_func;
   void *cb_baton;
 
+  svn_boolean_t disable_merge_response;
+
   /* The (potential) author of this commit. */
   const char *user;
 
@@ -1152,6 +1154,7 @@ static svn_error_t * commit_close_edit(void *edit_baton,
                                       cc->ras->root.path,
                                       cc->activity_url,
                                       cc->valid_targets,
+                                      cc->disable_merge_response,
                                       cc->ras->pool) );
 
   SVN_ERR( svn_ra_dav__maybe_store_auth_info(cc->ras) );
@@ -1232,6 +1235,11 @@ svn_error_t * svn_ra_dav__get_commit_editor(
   cc->new_rev = new_rev;
   cc->committed_date = committed_date;
   cc->committed_author = committed_author;
+
+  /* If the caller didn't give us any way of storing wcprops, then
+     there's no point in getting back a MERGE response full of VR's. */
+  if (ras->callbacks->push_wc_prop == NULL)
+    cc->disable_merge_response = TRUE;
 
   /* ### should we perform an OPTIONS to validate the server we're about
      ### to talk to? */

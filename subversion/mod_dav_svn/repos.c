@@ -1115,6 +1115,10 @@ static dav_error * dav_svn_get_resource(request_rec *r,
   comb->priv.delta_base = apr_table_get(r->headers_in,
                                         SVN_DAV_DELTA_BASE_HEADER);
 
+  /* Gather any options requested by an svn client. */
+  comb->priv.svn_client_options = apr_table_get(r->headers_in,
+                                                SVN_DAV_OPTIONS_HEADER);
+
   /* "relative" is part of the "uri" string, so it has the proper
      lifetime to store here. */
   /* ### that comment no longer applies. we're creating a string with its
