@@ -1495,6 +1495,113 @@ svn_io_dir_read (apr_finfo_t *finfo,
 
 
 svn_error_t *
+svn_io_dir_walk (const char *dirname,
+                 apr_int32_t wanted,
+                 svn_io_walk_func_t walk_func,
+                 void *walk_baton,
+                 apr_pool_t *pool)
+{
+  apr_status_t apr_err;
+  apr_dir_t *handle;
+  apr_pool_t *subpool;
+  const char *dirname_apr;
+
+  wanted |= APR_FINFO_TYPE | APR_FINFO_NAME;
+
+  SVN_ERR (svn_path_cstring_from_utf8 (&dirname_apr, dirname, pool));
+
+  apr_err = apr_dir_open (&handle, dirname_apr, pool);
+  if (apr_err)
+    return svn_error_createf (apr_err, NULL,
+                              "svn_io_dir_walk: unable to open "
+                              "directory `%s'",
+                              dirname);
+
+  /* iteration subpool */
+  subpool = svn_pool_create (pool);
+
+  for ( ; ; svn_pool_clear (subpool))
+    {
+      apr_finfo_t finfo;
+      const char *name_utf8;
+      const char *full_path;
+
+      apr_err = apr_dir_read (&finfo, wanted, handle);
+      if (APR_STATUS_IS_ENOENT (apr_err))
+        break;
+      else if (apr_err)
+        {
+          return svn_error_createf (apr_err, NULL,
+                                    "svn_io_dir_walk: error reading "
+                                    "directory entry in `%s'", dirname);
+        }
+
+      if (finfo.filetype == APR_DIR)
+        {
+          if (finfo.name[0] == '.')
+            {
+              if (finfo.name[1] == '\0')
+                {
+                  /* current directory. pass the full directory name to
+                     the callback */
+
+                  SVN_ERR ((*walk_func) (walk_baton,
+                                         dirname,
+                                         &finfo,
+                                         subpool));
+
+                  /* done with this entry; move to next */
+                  continue;
+                }
+              else if (finfo.name[1] == '.' && finfo.name[2] == '\0')
+                {
+                  /* skip the parent directory; move to next */
+                  continue;
+                }
+            }
+
+          /* some other directory. recurse. it will be passed to the
+             callback inside the recursion. */
+          SVN_ERR (svn_path_cstring_to_utf8 (&name_utf8, finfo.name,
+                                             subpool));
+          full_path = svn_path_join (dirname, name_utf8, subpool);
+          SVN_ERR (svn_io_dir_walk (full_path,
+                                    wanted,
+                                    walk_func,
+                                    walk_baton,
+                                    subpool));
+        }
+      else if (finfo.filetype == APR_REG)
+        {
+          /* some other directory. pass it to the callback. */
+          SVN_ERR (svn_path_cstring_to_utf8 (&name_utf8, finfo.name,
+                                             subpool));
+          full_path = svn_path_join (dirname, name_utf8, subpool);
+          SVN_ERR ((*walk_func) (walk_baton,
+                                 full_path,
+                                 &finfo,
+                                 subpool));
+        }
+      /* else:
+         some other type of file; skip it.
+      */
+
+    }
+
+  svn_pool_destroy (subpool);
+
+  apr_err = apr_dir_close (handle);
+  if (apr_err)
+    return svn_error_createf (apr_err, NULL,
+                              "svn_io_dir_walk: error closing "
+                              "directory `%s'",
+                              dirname);
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
 svn_io_file_printf (apr_file_t *fptr, const char *format, ...)
 {
   apr_status_t status;
