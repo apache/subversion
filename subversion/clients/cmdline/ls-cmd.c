@@ -36,7 +36,7 @@
 /*** Code. ***/
 
 static int
-compare_cstring_as_paths (const svn_item_t *a, const svn_item_t *b)
+compare_items_as_paths (const svn_item_t *a, const svn_item_t *b)
 {
   return svn_path_compare_paths_nts ((char *)a->key, (char *)b->key);
 }
@@ -44,19 +44,19 @@ compare_cstring_as_paths (const svn_item_t *a, const svn_item_t *b)
 static svn_error_t *
 print_dirents (const char *url,
                apr_hash_t *dirents,
+               svn_boolean_t verbose,
                apr_pool_t *pool)
 {
   apr_array_header_t *array;
   int i;
 
-  array = apr_hash_sorted_keys (dirents, compare_cstring_as_paths, pool);
+  array = apr_hash_sorted_keys (dirents, compare_items_as_paths, pool);
   
   printf ("%s:\n", url);
 
   for (i = 0; i < array->nelts; ++i)
     {
       const char *utf8_entryname, *native_entryname;
-      const char *native_author;
       svn_dirent_t *dirent;
       svn_item_t *item;
       char timestr[20];
@@ -69,34 +69,44 @@ print_dirents (const char *url,
 
       SVN_ERR (svn_utf_cstring_from_utf8 (&native_entryname,
                                           utf8_entryname, pool));      
-      SVN_ERR (svn_utf_cstring_from_utf8 (&native_author,
-                                          dirent->last_author, pool));
+      if (verbose)
+        {
+          const char *native_author;
 
-      {
-        /* svn_time_to_human_nts gives us something *way* to long to use for 
-           this, so we have to roll our own. */
-        apr_time_exp_t exp_time;
-        apr_status_t apr_err;
-        apr_size_t size;
+          SVN_ERR (svn_utf_cstring_from_utf8 (&native_author,
+                                              dirent->last_author, pool));
 
-        apr_time_exp_lt (&exp_time, dirent->time);
+          {
+            /* svn_time_to_human_nts gives us something *way* to long to use 
+               for this, so we have to roll our own. */
+            apr_time_exp_t exp_time;
+            apr_status_t apr_err;
+            apr_size_t size;
 
-        apr_err = apr_strftime (timestr, &size, sizeof (timestr), "%b %d %H:%m",
-                                &exp_time);
+            apr_time_exp_lt (&exp_time, dirent->time);
 
-        /* if that failed, just zero out the string and print nothing */
-        if (apr_err)
-          timestr[0] = '\0';
-      }
+            apr_err = apr_strftime (timestr, &size, sizeof (timestr),
+                                    "%b %d %H:%m", &exp_time);
 
-      printf ("%c %7"SVN_REVNUM_T_FMT" %8.8s %8ld %12s %s%s\n", 
-              dirent->has_props ? 'P' : '_',
-              dirent->created_rev,
-              native_author ? native_author : "      ? ",
-              (long int) dirent->size,
-              timestr,
-              native_entryname,
-              (dirent->kind == svn_node_dir) ? "/" : "");
+            /* if that failed, just zero out the string and print nothing */
+            if (apr_err)
+              timestr[0] = '\0';
+          }
+
+          printf ("%c %7"SVN_REVNUM_T_FMT" %8.8s %8ld %12s %s%s\n", 
+                  dirent->has_props ? 'P' : '_',
+                  dirent->created_rev,
+                  native_author ? native_author : "      ? ",
+                  (long int) dirent->size,
+                  timestr,
+                  native_entryname,
+                  (dirent->kind == svn_node_dir) ? "/" : "");
+        }
+      else
+        {
+          printf ("%s%s\n", native_entryname, 
+                  (dirent->kind == svn_node_dir) ? "/" : "");
+        }
     }
 
   return SVN_NO_ERROR;
@@ -140,7 +150,8 @@ svn_cl__ls (apr_getopt_t *os,
       SVN_ERR (svn_client_ls (&dirents, target, &(opt_state->start_revision),
                               auth_baton, subpool));
 
-      SVN_ERR (print_dirents (target_native, dirents, subpool));
+      SVN_ERR (print_dirents (target_native, dirents, opt_state->verbose, 
+                              subpool));
 
       svn_pool_clear (subpool);
     }

@@ -1593,17 +1593,29 @@ rolling source distributions.)
 
 @subheading @samp{svn ls}
 
-The ls command lets you find out information about files in a repository
-directory.
+The ls command lets you find what files are in a repository directory.
 
 @example
 $ svn ls http://svn.collab.net/repos/svn
 http://svn.collab.net/repos/svn:
-_    2738 bmatzell        0 Jul 26 13:07 clients/
-_    2743   rooneg        0 Jul 26 18:07 trunk/
-_    2703    brane        0 Jul 24 22:07 branches/
-P    2734   kfogel     2331 Jul 26 10:07 COMMITTERS
+README
+branches/
+clients/
+tags/
+trunk/
+@end example
+
+If you want a more detailed listing, pass the @option{-v} flag and you 
+will get output like this.
+
+@example
+$ svn ls -v http://svn.collab.net/repos/svn
+http://svn.collab.net/repos/svn:
+_    2755   kfogel     1331 Jul 28 02:07 README
+_    2773  sussman        0 Jul 29 15:07 branches/
+_    2769 cmpilato        0 Jul 29 12:07 clients/
 _    2698   rooneg        0 Jul 24 18:07 tags/
+_    2785    brane        0 Jul 29 19:07 trunk/
 @end example
 
 The columns tell you if there file has any properties (``P'' if it does, 
