@@ -699,12 +699,13 @@ def copy_should_use_copied_executable_and_mime_type_values(sbox):
     status = 1
 
   # Check the svn:executable value.
+  # The value of the svn:executable property is now always forced to '*'
   if os.name == 'posix':
     actual_stdout, actual_stderr = svntest.main.run_svn(None,
                                                         'pg',
                                                         'svn:executable',
                                                         new_path2)
-    expected_stdout = ['on\n']
+    expected_stdout = ['*\n']
     if actual_stdout != expected_stdout:
       print "svn pg svn:executable output does not match expected."
       print "Expected standard output: ", expected_stdout, "\n"
@@ -737,6 +738,103 @@ def revprop_change(sbox):
 
   return 0
 
+#----------------------------------------------------------------------
+
+def strip_or_add_whitespace(sbox):
+  "some svn: properties should have whitespace stripped or added"
+
+  # Bootstrap
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
+  A_path = os.path.join(wc_dir, 'A')
+  iota_path = os.path.join(wc_dir, 'iota')
+
+  # We'll use a file to set the prop values, so that weird characters
+  # in the props don't confuse the shell.
+  propval_path = os.path.join(wc_dir, 'propval.tmp')
+  propval_file = open(propval_path, 'wb')
+
+  def set_prop(name, value, path):
+    propval_file.seek(0)
+    propval_file.truncate(0)
+    propval_file.write(value)
+    propval_file.flush()
+    svntest.main.run_svn(None, 'propset', '-F', propval_path, name, path)
+
+  # Leading and trailing whitespace should be stripped
+  set_prop('svn:mime-type', ' text/html\n\n', iota_path)
+
+  # Leading and trailing whitespace should be stripped
+  set_prop('svn:eol-style', '\nnative\n', iota_path)
+
+  # A trailing newline should be added
+  set_prop('svn:ignore', '*.o\nfoo.c', A_path)
+
+  # A trailing newline should be added
+  set_prop('svn:externals', 'foo http://foo.com/repos', A_path)
+
+  # Leading and trailing whitespace should be stripped, but not internal
+  # whitespace
+  set_prop('svn:keywords', ' Rev Date \n', iota_path)
+
+  # Close and remove the prop value file
+  propval_file.close()
+  os.unlink(propval_path)
+
+  # Check svn:mime-type
+  out, err = svntest.main.run_svn(None, 'pg', 'svn:mime-type', iota_path)
+  exp_out = ['text/html\n']
+  if out != exp_out:
+    print "svn pg svn:mime-type output does not match expected."
+    print "Expected standard output: ", exp_out, "\n"
+    print "Actual standard output: ", out, "\n"
+    return 1
+
+  # Check svn:eol-style
+  out, err = svntest.main.run_svn(None, 'pg', 'svn:eol-style', iota_path)
+  exp_out = ['native\n']
+  if out != exp_out:
+    print "svn pg svn:eol-style output does not match expected."
+    print "Expected standard output: ", exp_out, "\n"
+    print "Actual standard output: ", out, "\n"
+    return 1
+
+  # Check svn:ignore
+  # FIXME: Temporarily disabled on Windows due to \r\n vs. \n issues
+  if not svntest.main.windows:
+    out, err = svntest.main.run_svn(None, 'pg', 'svn:ignore', A_path)
+    exp_out = ['*.o\n', 'foo.c\n', '\n']
+    if out != exp_out:
+      print "svn pg svn:ignore output does not match expected."
+      print "Expected standard output: ", exp_out, "\n"
+      print "Actual standard output: ", out, "\n"
+      return 1
+
+  # Check svn:externals
+  # FIXME: Temporarily disabled on Windows due to \r\n vs. \n issues
+  if not svntest.main.windows:
+    out, err = svntest.main.run_svn(None, 'pg', 'svn:externals', A_path)
+    exp_out = ['foo http://foo.com/repos\n', '\n']
+    if out != exp_out:
+      print "svn pg svn:externals output does not match expected."
+      print "Expected standard output: ", exp_out, "\n"
+      print "Actual standard output: ", out, "\n"
+      return 1
+
+  # Check svn:keywords
+  out, err = svntest.main.run_svn(None, 'pg', 'svn:keywords', iota_path)
+  exp_out = ['Rev Date\n']
+  if out != exp_out:
+    print "svn pg svn:keywords output does not match expected."
+    print "Expected standard output: ", exp_out, "\n"
+    print "Actual standard output: ", out, "\n"
+    return 1
+
+  return 0
+
+
 
 ########################################################################
 # Run the tests
@@ -757,6 +855,7 @@ test_list = [ None,
               # If we learn how to write a pre-revprop-change hook for
               # non-Posix platforms, we won't have to skip here:
               Skip(revprop_change, (os.name != 'posix')),
+              strip_or_add_whitespace,
              ]
 
 if __name__ == '__main__':

@@ -931,16 +931,10 @@ $
               <literal>.COM</literal>) to denote executable
               files.</para>
           </footnote>
-          Also, while it has no defined values, some people choose as
-          a convention a value (such as <literal>on</literal>) to use
-          when setting this property.  Subversion doesn't
-          care&mdash;it won't even read the property value.  But be
-          careful when choosing such conventions&mdash;inexperienced
-          users might mistakenly believe that the way to disable this
-          functionality is to change the property value to its
-          idiomatic <!-- is that the right word? --> opposite (in this
-          case, <literal>off</literal>).  Finally, this property is
-          valid only on files, not on directories.</para>
+          Also, although it has no defined values, Subversion will force
+          its value to <literal>*</literal> when setting this property.
+          Finally, this property is valid only on files, not on
+          directories.</para>
 
       </sect3>
 
