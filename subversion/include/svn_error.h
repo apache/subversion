@@ -62,23 +62,25 @@
 #define SVN_NO_ERROR   0   /* the best kind of (svn_error_t *) ! */
 
 /* 
-   Theoretically, this is the header file where we can define our own
-   *custom* Subversion errno's, specifically between the ranges of
-   APR_OS_START_USEERR and APR_OS_START_SYSERR (see apr_errno.h)
-
-   These values represent the "kind" of error structure that one might
-   receive from a Subversion routine.
+   Define custom Subversion error numbers, in the range reserved for
+   that in APR: from APR_OS_START_USEERR to APR_OS_START_SYSERR (see
+   apr_errno.h).
 */
-
 #define SVN_WARNING                              (APR_OS_START_USEERR + 1)
 #define SVN_ERR_NOT_AUTHORIZED                   (APR_OS_START_USEERR + 2)
 #define SVN_ERR_PLUGIN_LOAD_FAILURE              (APR_OS_START_USEERR + 3)
 #define SVN_ERR_UNKNOWN_FS_ACTION                (APR_OS_START_USEERR + 4)
 #define SVN_ERR_UNEXPECTED_EOF                   (APR_OS_START_USEERR + 5)
 #define SVN_ERR_MALFORMED_FILE                   (APR_OS_START_USEERR + 6)
+
+/* The xml delta we got was not valid. */
 #define SVN_ERR_MALFORMED_XML                    (APR_OS_START_USEERR + 7)
 
+/* Can't do this update or checkout, because something was in the way. */
+#define SVN_ERR_OBSTRUCTED_UPDATE                (APR_OS_START_USEERR + 8)
 
+
+
 typedef struct svn_error
 {
   apr_status_t apr_err;       /* APR error value, possibly SVN_ custom err */
