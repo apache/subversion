@@ -234,12 +234,12 @@ class ObjectFile(DependencyNode):
     self.source_generated = 0
 
 class SWIGObject(ObjectFile):
-  def __init__(self, filename, lang):
+  def __init__(self, filename, target):
     ObjectFile.__init__(self, filename)
-    self.lang = lang
-    self.lang_abbrev = lang_abbrev[lang]
+    self.target = target
     ### hmm. this is Makefile-specific
-    self.compile_cmd = '$(COMPILE_%s_WRAPPER)' % string.upper(self.lang_abbrev)
+    self.compile_cmd = '$(COMPILE_%s_WRAPPER)' \
+                       % string.upper(lang_abbrev[target.lang])
     self.source_generated = 1
 
 class HeaderFile(DependencyNode):
@@ -518,8 +518,8 @@ class TargetSWIG(TargetLib):
       self.filename = build_path_join(self.path, libfile)
 
     ifile = SWIGSource(ipath)
-    cfile = SWIGObject(build_path_join(self.path, cname), self.lang)
-    ofile = SWIGObject(build_path_join(self.path, oname), self.lang)
+    cfile = SWIGObject(build_path_join(self.path, cname), self)
+    ofile = SWIGObject(build_path_join(self.path, oname), self)
 
     # the .c file depends upon the .i file
     graph.add(DT_SWIG_C, cfile, ifile)

@@ -324,9 +324,12 @@ class Generator(gen_base.GeneratorBase):
     for objname, sources in swig_c_deps:
       deps = string.join(map(str, sources))
       source = build_path_join('$(abs_srcdir)', str(sources[0]))
-      self.ofile.write('%s: %s\n\t$(RUN_SWIG_%s) %s\n'
-                       % (objname, deps, string.upper(objname.lang_abbrev),
-                          source))
+      if objname.target.include_runtime:
+        cmd = '$(RUN_SWIG_%s)'
+      else:
+        cmd = '$(RUN_SWIG_NORUN_%s)'
+      cmd = cmd % string.upper(gen_base.lang_abbrev[objname.target.lang])
+      self.ofile.write('%s: %s\n\t%s %s\n' % (objname, deps, cmd, source))
 
     obj_deps = self.graph.get_deps(gen_base.DT_OBJECT)
     obj_deps.sort(lambda (t1, s1), (t2, s2): cmp(t1.filename, t2.filename))
