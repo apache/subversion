@@ -493,6 +493,15 @@ svn_wc_entry_t *svn_wc__entry_dup (svn_wc_entry_t *entry, apr_pool_t *pool);
 svn_error_t *svn_wc__ensure_directory (svn_string_t *path, apr_pool_t *pool);
 
 
+/* Ensure that every file or dir underneath PATH is at REVISION.  If
+   not, bump it to exactly that value.  (Used at the end of an
+   update.) */
+svn_error_t *svn_wc__ensure_uniform_revision (svn_string_t *path,
+                                              svn_revnum_t revision,
+                                              apr_pool_t *pool);
+
+
+
 /* Convert WHEN to an svn string representation, which can be
    converted back by svn_wc__string_to_time(). */
 svn_string_t *svn_wc__time_to_string (apr_time_t when, apr_pool_t *pool);

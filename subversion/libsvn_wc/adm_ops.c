@@ -66,6 +66,71 @@ svn_wc__ensure_wc (svn_string_t *path,
 
 /*** Closing commits. ***/
 
+
+svn_error_t *
+svn_wc__ensure_uniform_revision (svn_string_t *dir_path,
+                                 svn_revnum_t revision,
+                                 apr_pool_t *pool)
+{
+  apr_hash_t *entries;
+  apr_hash_index_t *hi;
+  apr_pool_t *subpool = svn_pool_create (pool);
+
+  struct svn_wc_close_commit_baton *cbaton =
+    apr_pcalloc (subpool, sizeof (*cbaton));
+  cbaton->pool = subpool;
+  cbaton->prefix_path = svn_string_create ("", subpool);
+
+  SVN_ERR (svn_wc_entries_read (&entries, dir_path, subpool));
+
+  /* Loop over this directory's entries: */
+  for (hi = apr_hash_first (entries); hi; hi = apr_hash_next (hi))
+    {
+      const void *key;
+      const char *keystring;
+      apr_size_t klen;
+      void *val;
+      svn_string_t *current_entry_name;
+      svn_wc_entry_t *current_entry; 
+      svn_string_t *full_entry_path;
+
+      /* Get the next entry */
+      apr_hash_this (hi, &key, &klen, &val);
+      keystring = (const char *) key;
+      current_entry = (svn_wc_entry_t *) val;
+
+      /* Compute the name of the entry */
+      if (! strcmp (keystring, SVN_WC_ENTRY_THIS_DIR))
+        current_entry_name = NULL;
+      else
+        current_entry_name = svn_string_create (keystring, subpool);
+
+      /* Compute the complete path of the entry */
+      full_entry_path = svn_string_dup (dir_path, subpool);
+      if (current_entry_name)
+        svn_path_add_component (full_entry_path, current_entry_name,
+                                svn_path_url_style);
+
+      /* If the entry is a file or SVN_WC_ENTRY_THIS_DIR, and it has a
+         different rev than REVISION, fix it. */
+      if (((current_entry->kind == svn_node_file) || (! current_entry_name))
+          && (current_entry->revision != revision))
+        SVN_ERR (svn_wc_set_revision (cbaton, full_entry_path, revision));
+      
+      /* If entry is a dir (and not `.'), recurse. */
+      if ((current_entry->kind == svn_node_dir) && current_entry_name)
+        SVN_ERR (svn_wc__ensure_uniform_revision (full_entry_path,
+                                                  revision, subpool));
+    }
+
+  /* We're done examining this dir's entries, so free them. */
+  apr_pool_destroy (subpool);
+
+  return SVN_NO_ERROR;
+}
+
+
+
 svn_error_t *
 svn_wc_set_revision (void *baton,
                      svn_string_t *target,
