@@ -60,7 +60,6 @@
 
 
 
-
 /* Local "stack" objects used by the crawler to keep track of dir
    batons. */
 struct stack_object
@@ -87,7 +86,7 @@ append_stack (struct stack_object **stack,
   new_top->path = svn_string_dup (path, pool);
   new_top->baton = baton;
 
-  *stack->next = new_top;
+  (*stack)->next = new_top;
   new_top->previous = *stack;
 
   *stack = new_top;
@@ -98,7 +97,7 @@ append_stack (struct stack_object **stack,
 static void
 remove_stack (struct stack_object **stack)
 {
-  struct stack_object *new_top = *stack->previous;
+  struct stack_object *new_top = (*stack)->previous;
 
   *stack = new_top;
 }
@@ -223,7 +222,7 @@ do_dir_replaces (svn_string_t *path,
           err = 
             editor->replace_directory (stackptr->path, /* current dir */
                                        stackptr->previous->path, /* parent */
-                                       ?, ?, /* Ancestry??? */
+                                       NULL, NULL,  /* TODO:  FIX THIS!!! */
                                        &dir_baton);
           if (err) return err;
 
@@ -347,7 +346,7 @@ process_subdirectory (svn_string_t *path,
                       apr_pool_t *pool)
 {
   svn_error_t *err;
-  svn_wc__entries_index *index;
+  struct svn_wc__entries_index *index;
   
   /* Vars that we automatically get when fetching a directory entry */
   svn_string_t *current_entry_name;
@@ -401,8 +400,7 @@ process_subdirectory (svn_string_t *path,
               /* Add the new directory, getting a new dir baton.  */
               err = editor->add_directory (current_entry_name,
                                            dir_baton,
-                                           ancestor_path,
-                                           ancestor_version,
+                                           NULL, NULL, /* TODO:  FIX ME !!! */
                                            &new_dir_baton);
               if (err) return err;
 
@@ -501,7 +499,7 @@ process_subdirectory (svn_string_t *path,
                                       editor, edit_baton, stack, pool);
         }
 
-    } while (current_entry_name)
+    } while (current_entry_name);
   
   /* If the current stackframe has a real directory baton, then we
   must have issued an add_dir() or replace_dir() call already.  Since
@@ -510,7 +508,7 @@ process_subdirectory (svn_string_t *path,
   directory. */
   if (stack->baton)
     {
-      err = editor->close_dir (stack->baton);
+      err = editor->close_directory (stack->baton);
       if (err) return err;
     }
 
@@ -555,7 +553,7 @@ svn_wc_crawl_local_mods (svn_string_t *root_directory,
 
   /* Note that the first thing the crawler will do is push a new stack
      object onto the stack with PATH="root_directory" and BATON=NULL.  */
-  err = process_subdirectory (svn_string_t *root_directory,
+  err = process_subdirectory (root_directory,
                               NULL,             /* No baton to start with. */
                               edit_fns,
                               edit_baton,
