@@ -413,7 +413,8 @@ merge_file_changed (svn_wc_adm_access_t *adm_access,
      diff-editor-mechanisms are doing the hard work of getting the
      fulltexts! */
 
-  SVN_ERR (svn_wc_text_modified_p (&has_local_mods, mine, adm_access, subpool));
+  SVN_ERR (svn_wc_text_modified_p (&has_local_mods, mine, 0,
+                                   adm_access, subpool));
   SVN_ERR (svn_wc_merge (older, yours, mine, adm_access,
 
                          left_label, right_label, target_label,

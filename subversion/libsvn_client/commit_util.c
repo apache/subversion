@@ -95,6 +95,30 @@ add_committable (apr_hash_t *committables,
 }
 
 
+static svn_error_t *
+check_prop_mods (svn_boolean_t *props_changed,
+                 svn_boolean_t *eol_prop_changed,
+                 const char *path,
+                 svn_wc_adm_access_t *adm_access,
+                 apr_pool_t *pool)
+{
+  apr_array_header_t *prop_mods;
+  int i;
+
+  *eol_prop_changed = *props_changed = FALSE;
+  SVN_ERR (svn_wc_props_modified_p (props_changed, path, adm_access, pool));
+  if (! props_changed)
+    return SVN_NO_ERROR;
+  SVN_ERR (svn_wc_get_prop_diffs (&prop_mods, NULL, path, pool));
+  for (i = 0; i < prop_mods->nelts; i++)
+    {
+      svn_prop_t *prop_mod = &APR_ARRAY_IDX (prop_mods, i, svn_prop_t);
+      if (strcmp (prop_mod->name, SVN_PROP_EOL_STYLE) == 0)
+        *eol_prop_changed = TRUE;
+    }
+  return SVN_NO_ERROR;
+}
+
 /* Recursively search for commit candidates in (and under) PATH (with
    entry ENTRY and ancestry URL), and add those candidates to
    COMMITTABLES.  If in ADDS_ONLY modes, only new additions are
@@ -279,15 +303,18 @@ harvest_committables (apr_hash_t *committables,
      information about it. */
   if (state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)
     {
+      svn_boolean_t eol_prop_changed;
+
       /* See if there are property modifications to send. */
-      SVN_ERR (svn_wc_props_modified_p (&prop_mod, path, adm_access, pool));
+      SVN_ERR (check_prop_mods (&prop_mod, &eol_prop_changed, path, 
+                                adm_access, pool));
 
       /* Regular adds of files have text mods, but for copies we have
          to test for textual mods.  Directories simply don't have text! */
       if (entry->kind == svn_node_file)
         {
           if (state_flags & SVN_CLIENT_COMMIT_ITEM_IS_COPY)
-            SVN_ERR (svn_wc_text_modified_p (&text_mod, path,
+            SVN_ERR (svn_wc_text_modified_p (&text_mod, path, eol_prop_changed,
                                              adm_access, pool));
           else
             text_mod = TRUE;
@@ -299,13 +326,14 @@ harvest_committables (apr_hash_t *committables,
      committable. */
   else if (! (state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE))
     {
-      /* Check for local mods: text+props for files, props alone for dirs. */
+      svn_boolean_t eol_prop_changed;
+
+      /* See if there are property modifications to send. */
+      SVN_ERR (check_prop_mods (&prop_mod, &eol_prop_changed, path, 
+                                adm_access, pool));
       if (entry->kind == svn_node_file)
-        {
-          SVN_ERR (svn_wc_text_modified_p (&text_mod, path, 
-                                           adm_access, pool));
-        }
-      SVN_ERR (svn_wc_props_modified_p (&prop_mod, path, adm_access, pool));
+        SVN_ERR (svn_wc_text_modified_p (&text_mod, path, eol_prop_changed, 
+                                         adm_access, pool));
     }
 
   /* Set text/prop modification flags accordingly. */
