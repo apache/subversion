@@ -24,7 +24,7 @@ class Generator(gen_win.WinGeneratorBase):
   def quote(self, str):
     return '&quot;%s&quot;' % str
 
-  def write_project(self, target, fname, rootpath):
+  def write_project(self, target, fname):
     "Write a Project (.vcproj)"
 
     if isinstance(target, gen_base.TargetExe):
@@ -48,23 +48,23 @@ class Generator(gen_win.WinGeneratorBase):
     target.output_dir = self.get_output_dir(target)
     target.intermediate_dir = self.get_intermediate_dir(target)
 
-    configs = self.get_configs(target, rootpath)
+    configs = self.get_configs(target)
 
-    sources = self.get_proj_sources(False, target, rootpath)
+    sources = self.get_proj_sources(False, target)
 
     data = {
       'target' : target,
       'target_type' : config_type,
 #      'target_number' : targval,
-      'rootpath' : rootpath,
+      'rootpath' : self.rootpath,
       'platforms' : self.platforms,
       'configs' : configs,
-      'includes' : self.get_win_includes(target, rootpath),
+      'includes' : self.get_win_includes(target),
       'sources' : sources,
       'swig_options': self.swig_options,
       'default_platform' : self.platforms[0],
       'default_config' : configs[0].name,
-      'def_file' : self.get_def_file(target, rootpath),
+      'def_file' : self.get_def_file(target),
       'is_exe' : ezt.boolean(isinstance(target, gen_base.TargetExe)),
       'is_external' : ezt.boolean((isinstance(target, gen_base.TargetProject)
                                    or isinstance(target, gen_base.TargetI18N))
@@ -146,8 +146,7 @@ class Generator(gen_win.WinGeneratorBase):
       if fname is None:
         fname = os.path.join(self.projfilesdir,
                              "%s_vcnet.vcproj" % target.proj_name)
-        depth = string.count(self.projfilesdir, os.sep) + 1
-        self.write_project(target, fname, string.join(['..']*depth, '\\'))
+        self.write_project(target, fname)
 
       if '-' in fname:
         fname = '"%s"' % fname

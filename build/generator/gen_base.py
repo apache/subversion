@@ -116,9 +116,9 @@ class GeneratorBase:
     # a second variable around for mapping the short to long names is more
     # than I cared to do right now)
     #
-    include_deps = _create_include_deps(self.includes)
+    include_deps = _create_include_deps(map(native_path, self.includes))
     for d in unique(self.graph.get_sources(DT_LIST, LT_TARGET_DIRS)):
-      hdrs = glob.glob(os.path.join(d, '*.h'))
+      hdrs = glob.glob(os.path.join(native_path(d), '*.h'))
       if hdrs:
         more_deps = _create_include_deps(hdrs, include_deps)
         include_deps.update(more_deps)
@@ -128,8 +128,10 @@ class GeneratorBase:
       if isinstance(objname, SWIGObject):
         for ifile in self.graph.get_sources(DT_SWIG_C, sources[0]):
           if isinstance(ifile, SWIGSource):
-            for short in _find_includes(ifile.filename, include_deps):
-              self.graph.add(DT_SWIG_C, sources[0], include_deps[short][0])
+            for short in _find_includes(native_path(ifile.filename),
+                                        include_deps):
+              self.graph.add(DT_SWIG_C, sources[0], 
+                             build_path(include_deps[short][0]))
         continue
 
       if isinstance(sources[0], ObjectFile) or \
@@ -137,12 +139,15 @@ class GeneratorBase:
         if sources[0].source_generated == 1:
           continue
 
-      if not os.path.isfile(sources[0].filename):
+      filename = native_path(sources[0].filename)
+
+      if not os.path.isfile(filename):
         continue
 
       hdrs = [ ]
-      for short in _find_includes(sources[0].filename, include_deps):
-        self.graph.add(DT_OBJECT, objname, include_deps[short][0])
+      for short in _find_includes(filename, include_deps):
+        self.graph.add(DT_OBJECT, objname,
+                       build_path(include_deps[short][0]))
 
 
 class DependencyGraph:
@@ -249,7 +254,7 @@ class SourceFile(DependencyNode):
     self.reldir = reldir
 class SWIGSource(SourceFile):
   def __init__(self, filename):
-    SourceFile.__init__(self, filename, os.path.dirname(filename))
+    SourceFile.__init__(self, filename, build_path_dirname(filename))
   pass
 
 lang_abbrev = {
@@ -366,19 +371,17 @@ class TargetLinked(Target):
     ### the sources. "what dir are you going to put yourself into?"
     graph.add(DT_LIST, LT_TARGET_DIRS, self.path)
     for pattern in string.split(self.sources):
-      idx = string.rfind(pattern, '/')
-      if idx != -1:
-        ### hmm. probably shouldn't be os.path.join() right here
-        ### (at this point in the control flow; defer to output)
-        graph.add(DT_LIST, LT_TARGET_DIRS, os.path.join(self.path,
-                                                        pattern[:idx]))
+      dirname = build_path_dirname(pattern)
+      if dirname:
+        graph.add(DT_LIST, LT_TARGET_DIRS, 
+                  build_path_join(self.path, dirname))
 
 class TargetExe(TargetLinked):
   def __init__(self, name, options, cfg, extmap):
     TargetLinked.__init__(self, name, options, cfg, extmap)
 
     self.objext = extmap['exe', 'object']
-    self.filename = os.path.join(self.path, name + extmap['exe', 'target'])
+    self.filename = build_path_join(self.path, name + extmap['exe', 'target'])
 
     self.manpages = options.get('manpages', '')
     self.testing = options.get('testing')
@@ -414,7 +417,7 @@ class TargetLib(TargetLinked):
 
     # the target file is the name, version, and appropriate extension
     tfile = '%s-%s%s' % (name, cfg.version, extmap['lib', 'target'])
-    self.filename = os.path.join(self.path, tfile)
+    self.filename = build_path_join(self.path, tfile)
 
     # Is a library referencing symbols which are undefined at link time.
     self.undefined_lib_symbols = options.get('undefined-lib-symbols') == 'yes'
@@ -429,7 +432,7 @@ class TargetApacheMod(TargetLib):
     TargetLib.__init__(self, name, options, cfg, extmap)
 
     tfile = name + extmap['lib', 'target']
-    self.filename = os.path.join(self.path, tfile)
+    self.filename = build_path_join(self.path, tfile)
 
     # we have a custom linking rule
     ### hmm. this is Makefile-specific
@@ -495,7 +498,7 @@ class TargetSWIG(TargetLib):
 
     # get path to SWIG .i file
     ipath = sources[0][0]
-    iname = os.path.split(ipath)[1]
+    iname = build_path_basename(ipath)
 
     assert iname[-2:] == '.i'
     cname = iname[:-2] + '.c'
@@ -506,15 +509,16 @@ class TargetSWIG(TargetLib):
     libfile = libname + extmap['lib', 'target']
 
     self.name = self.lang + libname
-    self.path = os.path.join(self.path, self.lang)
+    self.path = build_path_join(self.path, self.lang)
     if self.lang == "perl":
-      self.filename = os.path.join(self.path, libfile[0]+string.capitalize(libfile[1:]))
+      self.filename = build_path_join(self.path, libfile[0]
+                                      + string.capitalize(libfile[1:]))
     else:
-      self.filename = os.path.join(self.path, libfile)
+      self.filename = build_path_join(self.path, libfile)
 
     ifile = SWIGSource(ipath)
-    cfile = SWIGObject(os.path.join(self.path, cname), self.lang)
-    ofile = SWIGObject(os.path.join(self.path, oname), self.lang)
+    cfile = SWIGObject(build_path_join(self.path, cname), self.lang)
+    ofile = SWIGObject(build_path_join(self.path, oname), self.lang)
 
     # the .c file depends upon the .i file
     graph.add(DT_SWIG_C, cfile, ifile)
@@ -554,12 +558,12 @@ class TargetSWIGRuntime(TargetSWIG):
     libname = name + extmap['lib', 'target']
 
     self.name = self.lang + '_runtime' 
-    self.path = os.path.join(self.path, self.lang)
-    self.filename = os.path.join(self.path, libname)
+    self.path = build_path_join(self.path, self.lang)
+    self.filename = build_path_join(self.path, libname)
     self.external_lib = '-lswig' + abbrev
 
-    cfile = SWIGObject(os.path.join(self.path, cname), self.lang)
-    ofile = SWIGObject(os.path.join(self.path, oname), self.lang)
+    cfile = SWIGObject(build_path_join(self.path, cname), self.lang)
+    ofile = SWIGObject(build_path_join(self.path, oname), self.lang)
     graph.add(DT_OBJECT, ofile, cfile)
     graph.add(DT_LINK, self.name, ofile)
     graph.add(DT_INSTALL, 'swig_runtime-' + abbrev, self)
@@ -628,21 +632,19 @@ class TargetJavaHeaders(TargetJava):
       if src[-5:] != '.java':
         raise GenError('ERROR: unknown file extension on ' + src)
 
-      class_path = os.path.split(src[:-5])
+      class_name = build_path_basename(src[:-5])
 
-      class_header = os.path.join(self.headers, class_path[1] + '.h')
-      class_header_win = os.path.join(self.headers, 
-                                      self.package.replace(".", "_")
-                                      + "_" + class_path[1] + '.h')
+      class_header = build_path_join(self.headers, class_name + '.h')
+      class_header_win = build_path_join(self.headers, 
+                                         self.package.replace(".", "_")
+                                         + "_" + class_name + '.h')
       class_pkg_list = string.split(self.package, '.')
-      class_pkg = ''
-      for dir in class_pkg_list:
-        class_pkg = os.path.join(class_pkg, dir)
-      class_file = ObjectFile(os.path.join(self.classes, class_pkg,
-                                            class_path[1] + self.objext))
+      class_pkg = build_path_join(*class_pkg_list)
+      class_file = ObjectFile(build_path_join(self.classes, class_pkg,
+                                              class_name + self.objext))
       class_file.source_generated = 1
-      class_file.class_name = class_path[1]
-      hfile = HeaderFile(class_header, self.package + '.' + class_path[1],
+      class_file.class_name = class_name
+      hfile = HeaderFile(class_header, self.package + '.' + class_name,
                          self.compile_cmd)
       hfile.filename_win = class_header_win
       hfile.source_generated = 1
@@ -660,12 +662,12 @@ class TargetJavaHeaders(TargetJava):
     graph.add(DT_LIST, LT_TARGET_DIRS, self.classes)
     graph.add(DT_LIST, LT_TARGET_DIRS, self.headers)
     for pattern in string.split(self.sources):
-      idx = string.rfind(pattern, '/')
-      if idx != -1:
+      dirname = build_path_dirname(pattern)
+      if dirname:
         ### hmm. probably shouldn't be os.path.join() right here
         ### (at this point in the control flow; defer to output)
-        graph.add(DT_LIST, LT_TARGET_DIRS, os.path.join(self.path,
-                                                        pattern[:idx]))
+        graph.add(DT_LIST, LT_TARGET_DIRS,
+                  build_path_join(self.path, dirname))
 
     graph.add(DT_INSTALL, self.name, self)
 
@@ -688,12 +690,12 @@ class TargetJavaClasses(TargetJava):
         # directory as the source files, the object path may need
         # adjustment.  To this effect, take "target_ob.classes" into
         # account.
-        dirs = string.split(objname, '/')
+        dirs = build_path_split(objname)
         sourcedirs = dirs[:-1]  # Last element is the .class file name.
         while sourcedirs:
           if sourcedirs.pop() in self.packages:
-            sourcepath = os.path.join(*sourcedirs)
-            objname = os.path.join(self.classes, *dirs[len(sourcedirs):])
+            sourcepath = build_path_join(*sourcedirs)
+            objname = build_path_join(self.classes, *dirs[len(sourcedirs):])
             break
         else:
           raise GenError('Unable to find Java package root in path "%s"' % objname)
@@ -717,12 +719,12 @@ class TargetJavaClasses(TargetJava):
     graph.add(DT_LIST, LT_TARGET_DIRS, self.path)
     graph.add(DT_LIST, LT_TARGET_DIRS, self.classes)
     for pattern in string.split(self.sources):
-      idx = string.rfind(pattern, '/')
-      if idx != -1:
+      dirname = build_path_dirname(pattern)
+      if dirname:
         ### hmm. probably shouldn't be os.path.join() right here
         ### (at this point in the control flow; defer to output)
-        graph.add(DT_LIST, LT_TARGET_DIRS, os.path.join(self.path,
-                                                        pattern[:idx]))
+        graph.add(DT_LIST, LT_TARGET_DIRS,
+                  build_path_join(self.path, dirname))
 
     graph.add(DT_INSTALL, self.name, self)
 
@@ -771,6 +773,65 @@ def _filter_sections(t):
   t.sort()
   return t
 
+# Path Handling Functions
+#
+# Build paths specified in build.conf are assumed to be always separated
+# by forward slashes, regardless of the current running os.
+#
+# Native paths are paths seperated by os.sep.
+
+def native_path(path):
+  """Convert a build path to a native path"""
+  return string.replace(path, '/', os.sep)
+
+def build_path(path):
+  """Convert a native path to a build path"""
+  path = string.replace(path, os.sep, '/')
+  if os.altsep:
+    path = string.replace(path, os.altsep, '/')
+  return path
+
+def build_path_join(*path_parts):
+  """Join path components into a build path"""
+  return string.join(path_parts, '/')
+
+def build_path_split(path):
+  """Return list of components in a build path"""
+  return string.split(path, '/')
+
+def build_path_splitfile(path):
+  """Return the filename and directory portions of a file path"""
+  pos = string.rfind(path, '/')
+  if pos > 0:
+    return path[:pos], path[pos+1:]
+  elif pos == 0:
+    return path[0], path[1:]
+  else:
+    return "", path
+
+def build_path_dirname(path):
+  """Return the directory portion of a file path"""
+  return build_path_splitfile(path)[0]
+
+def build_path_basename(path):
+  """Return the filename portion of a file path"""
+  return build_path_splitfile(path)[1]
+
+def build_path_retreat(path):
+  "Given a relative directory, return ../ paths to retreat to the origin."
+  return ".." + "/.." * string.count(path, '/')
+
+def build_path_strip(path, files):
+  "Strip the given path from each file."
+  l = len(path)
+  result = [ ]
+  for file in files:
+    if len(file) > l and file[:l] == path and file[l] == '/':
+      result.append(file[l+1:])
+    else:
+      result.append(file)
+  return result
+
 def _collect_paths(pats, path=None):
   """Find files matching a space separated list of globs
   
@@ -787,44 +848,23 @@ def _collect_paths(pats, path=None):
   result = [ ]
   for base_pat in string.split(pats):
     if path:
-      ### these paths are actually '/'-based
-      pattern = os.path.join(path, base_pat)
+      pattern = build_path_join(path, base_pat)
     else:
       pattern = base_pat
-    files = glob.glob(pattern) or [pattern]
+    files = glob.glob(native_path(pattern)) or [pattern]
 
     if path is None:
       # just append the names to the result list
-      result.extend(files)
+      for file in files:
+        result.append(build_path(file))
     else:
       # if we have paths, then we need to record how each source is located
       # relative to the specified path
-      idx = string.rfind(base_pat, '/')
-      if idx == -1:
-        reldir = ''
-      else:
-        reldir = base_pat[:idx]
-        assert not glob.has_magic(reldir)
+      reldir = build_path_dirname(base_pat)
       for file in files:
-        result.append((file, reldir))
+        result.append((build_path(file), reldir))
 
   return result
-
-def _strip_path(path, files):
-  "Strip the given path from each file."
-  if path[-1] not in (os.sep, os.altsep):
-    path = path + os.sep
-  l = len(path)
-  result = [ ]
-  for file in files:
-    assert file[:l] == path
-    result.append(file[l:])
-  return result
-
-def _retreat_dots(path):
-  "Given a relative directory, return ../ paths to retreat to the origin."
-  parts = string.split(path, os.sep)
-  return (os.pardir + os.sep) * len(parts)
 
 def _find_includes(fname, include_deps):
   """Return list of files in include_deps included by fname"""
@@ -912,7 +952,7 @@ def _scan_for_includes(fname, limit):
   for line in fileinput.input(fname):
     match = _re_include.match(line)
     if match:
-      h = match.group(1)
+      h = native_path(match.group(1))
       if h in limit:
         hdrs[h] = None
   return hdrs

@@ -24,7 +24,7 @@ class Generator(gen_win.WinGeneratorBase):
   def quote(self, str):
     return '"%s"' % str
 
-  def write_project(self, target, fname, rootpath):
+  def write_project(self, target, fname):
     "Write a Project (.dsp)"
 
     if isinstance(target, gen_base.TargetExe):
@@ -54,18 +54,18 @@ class Generator(gen_win.WinGeneratorBase):
     target.output_dir = self.get_output_dir(target)
     target.intermediate_dir = self.get_intermediate_dir(target)
 
-    configs = self.get_configs(target, rootpath)
+    configs = self.get_configs(target)
 
-    sources = self.get_proj_sources(True, target, rootpath)
+    sources = self.get_proj_sources(True, target)
 
     data = {
       'target' : target,
       'target_type' : targtype,
       'target_number' : targval,
-      'rootpath' : rootpath,
+      'rootpath' : self.rootpath,
       'platforms' : self.platforms,
       'configs' : configs,
-      'includes' : self.get_win_includes(target, rootpath),
+      'includes' : self.get_win_includes(target),
       'sources' : sources,
       'swig_options': self.swig_options,
       'default_platform' : self.platforms[0],
@@ -100,8 +100,7 @@ class Generator(gen_win.WinGeneratorBase):
       if fname is None:
         fname = os.path.join(self.projfilesdir,
                              "%s_msvc.dsp" % target.proj_name)
-        depth = string.count(self.projfilesdir, os.sep) + 1
-        self.write_project(target, fname, string.join(['..']*depth, '\\'))
+        self.write_project(target, fname)
 
       if '-' in fname:
         fname = '"%s"' % fname
