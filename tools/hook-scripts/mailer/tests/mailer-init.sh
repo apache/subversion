@@ -25,7 +25,7 @@ echo file3 > dir1/file3
 echo file4 > dir1/file4
 echo file5 > dir2/file5
 echo file6 > dir2/file6
-svn add -R *
+svn add *
 svn commit -m "initial load"
 
 # make some changes
