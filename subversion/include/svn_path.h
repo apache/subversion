@@ -15,20 +15,19 @@
  * ====================================================================
  */
 
-
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
-
 #ifndef SVN_PATH_H
 #define SVN_PATH_H
-
 
 
 #include <apr_pools.h>
 #include <apr_tables.h>
 #include "svn_string.h"
 #include "svn_error.h"
+
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
 
 /*** Notes:
@@ -320,12 +319,12 @@ const char *svn_path_uri_encode (const char *path, apr_pool_t *pool);
 /* Return a URI-decoded copy of PATH, allocated in POOL. */
 const char *svn_path_uri_decode (const char *path, apr_pool_t *pool);
 
-
-#endif /* SVN_PATH_H */
-
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
+
+
+#endif /* SVN_PATH_H */
 
 
 /* ----------------------------------------------------------------

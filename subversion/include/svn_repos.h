@@ -15,12 +15,6 @@
  * ====================================================================
  */
 
-/* ==================================================================== */
-
-
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
 
 #ifndef SVN_REPOS_H
 #define SVN_REPOS_H
@@ -32,6 +26,10 @@ extern "C" {
 #include "svn_types.h"
 #include "svn_error.h"
 
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
 /* ---------------------------------------------------------------*/
 
@@ -659,12 +657,12 @@ svn_repos_get_fs_build_parser (const svn_repos_parser_fns_t **parser,
                                svn_stream_t *outstream,
                                apr_pool_t *pool);
 
-
-#endif /* SVN_REPOS_H */
 
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
+
+#endif /* SVN_REPOS_H */
 
 
 /* ----------------------------------------------------------------

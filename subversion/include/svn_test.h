@@ -16,12 +16,6 @@
  * ====================================================================
  */
 
-/* ==================================================================== */
-
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
-
 #ifndef SVN_TEST_H
 #define SVN_TEST_H
 
@@ -32,6 +26,10 @@ extern "C" {
 #include "svn_error.h"
 #include "svn_string.h"
 
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
 
 /* Set *EDITOR and *EDIT_BATON to an editor that prints its arguments
@@ -150,12 +148,12 @@ svn_error_t *svn_test_get_editor (const svn_delta_edit_fns_t **editor,
                                   svn_boolean_t verbose,
                                   svn_stringbuf_t *path,
                                   apr_pool_t *pool);
-     
-#endif /* SVN_TEST_H */
 
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
+     
+#endif /* SVN_TEST_H */
 
 
 /* ----------------------------------------------------------------
