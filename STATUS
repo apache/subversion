@@ -26,6 +26,7 @@ Candidate changes:
       Regression and annoying for people using non-ASCII chars in log messages.
     Votes:
       +1: lundblad, brane
+      +1 (concept): nori
 
   * r11202, r11243
     Fix eol-style translation error for propget.
