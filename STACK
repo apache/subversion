@@ -1,0 +1,24 @@
+This file lists immediate, short-term (next few days) stuff on the
+stack.  It makes reference to phone conversations and private emails,
+so a given item may not make much sense unless you are familiar the
+out-of-band context.  We just keep it here because this is a
+convenient location.
+
+Karl todo:
+   - ancestry args to replace_root go away
+   - error rewrite, reorder of args, namespace fix too.
+   - reorder svn_delta editor ref args, then EDIT_BATON.
+   - apply_textdelta, change_file_prop: get rid of parent_baton.
+     Actually, reduce everything to its most specific baton.
+
+Ben todo:
+   - update delta/xml_parser.c to use new parser creation stuff
+   - read over vdelta stuff
+   - look over Greg Hudson's big vdelta patch
+
+Ben later:
+   - crawler
+
+Ben and Karl more later:
+   - xml dtd, for both xml deltas and wc formats
+   - more tasks for TASKS, if possible
