@@ -1,5 +1,5 @@
 %define apache_version 2.0.41-0.1
-%define neon_version 0.21.3
+%define neon_version 0.22.0
 %define apache_dir /usr/local/apache2
 # If you don't have 360+ MB of free disk space or don't want to run checks then
 # set make_check to 0.
@@ -68,6 +68,9 @@ The subversion-server package adds the Subversion server Apache module to
 the Apache directories and configuration.
 
 %changelog
+* Fri Aug 16 2002 David Summers <david@summersoft.fay.ar.us> 0.14.1-2984
+- Now requires neon-0.22.0.
+
 * Thu Aug 15 2002 David Summers <david@summersoft.fay.ar.us> 0.14.1-2978
 - Took out loading mod_dav_svn from subversion.spec file and put it in
   subversion.conf file which goes into the apache conf directory.

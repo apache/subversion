@@ -366,7 +366,7 @@ II.   INSTALLATION
       subversion RPM depending on what packages you already have installed:
 
           subversion*.i386.rpm
-          apache*.i386.rpm (Version 2.0.40 or greater)
+          apache*.i386.rpm (Version 2.0.41 or greater)
           db*.i386.rpm     (Version 4.0.14 or greater)
           expat            (Comes with RedHat)
           neon             (Version 0.22.0)
@@ -611,7 +611,7 @@ III.  BUILDING A SUBVERSION SERVER
 
       (Following the BOOTSTRAPPING FROM RPM procedures above will install and
       build the latest Subversion server for Linux RedHat 7.1, 7.2, and PPC
-      Linux systems *IF* the apache-devel-2.0.40 or greater package is already
+      Linux systems *IF* the apache-devel-2.0.41 or greater package is already
       installed when the SUBVERSION RPM is built.)
 
 
