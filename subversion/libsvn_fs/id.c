@@ -213,9 +213,9 @@ svn_fs__is_parent (svn_fs_id_t *parent,
 /* Parsing and unparsing node ID's.  */
 
 svn_fs_id_t *
-svn_fs__parse_id (char *data,
-		  apr_size_t data_len,
-		  apr_pool_t *pool)
+svn_fs_parse_id (char *data,
+                 apr_size_t data_len,
+                 apr_pool_t *pool)
 {
   svn_fs_id_t *id;
   int id_len;
@@ -248,10 +248,8 @@ svn_fs__parse_id (char *data,
   }
 
   /* Allocate the ID array.  */
-  if (pool)
-    id = NEWARRAY (pool, svn_fs_id_t, id_len + 1);
-  else
-    id = (svn_fs_id_t *) malloc (sizeof (*id) * (id_len + 1));
+  /* NOTE: if pool == NULL, then this memory will be malloc'd */
+  id = NEWARRAY (pool, svn_fs_id_t, id_len + 1);
 
   {
     int i = 0;
@@ -283,8 +281,8 @@ svn_fs__parse_id (char *data,
 /* Set UNPARSED to the unparsed form of the node id ID.
    Allocate the buffer for the unparsed form in POOL.  */
 svn_string_t *
-svn_fs__unparse_id (svn_fs_id_t *id,
-		    apr_pool_t *pool)
+svn_fs_unparse_id (svn_fs_id_t *id,
+		   apr_pool_t *pool)
 {
   svn_string_t *unparsed = svn_string_ncreate (0, 0, pool);
   int i;

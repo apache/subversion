@@ -60,7 +60,6 @@
 #include "node.h"
 #include "file.h"
 #include "dir.h"
-#include "id.h"
 #include "skel.h"
 #include "err.h"
 #include "dbt.h"
@@ -118,7 +117,7 @@ struct svn_fs_node_t {
 static svn_error_t *
 corrupt_id (const char *fmt, svn_fs_id_t *id, svn_fs_t *fs)
 {
-  svn_string_t *unparsed_id = svn_fs__unparse_id (id, fs->pool);
+  svn_string_t *unparsed_id = svn_fs_unparse_id (id, fs->pool);
 
   return svn_error_createf (SVN_ERR_FS_CORRUPT, 0, 0, fs->pool,
 			    fmt, unparsed_id->data, fs->env_path);
@@ -411,7 +410,7 @@ compare_ids (svn_fs_id_t *a, svn_fs_id_t *b)
 static svn_fs_id_t *
 parse_node_revision_dbt (const DBT *d)
 {
-  svn_fs_id_t *id = svn_fs__parse_id (d->data, d->size, 0);
+  svn_fs_id_t *id = svn_fs_parse_id (d->data, d->size, 0);
 
   if (! id)
     return 0;
@@ -746,7 +745,7 @@ new_node_id (svn_fs_id_t **id_p,
   svn_fs__track_dbt (&key, pool);
 
   /* Try to parse the key as a node ID.  */
-  id = svn_fs__parse_id (key.data, key.size, pool);
+  id = svn_fs_parse_id (key.data, key.size, pool);
   if (! id)
     {
       cursor->c_close (cursor);
@@ -926,7 +925,7 @@ new_successor_id (svn_fs_id_t **successor_p,
 				     svn_fs__result_dbt (&key))));
 
   {
-    svn_fs_id_t *last_branch_id = svn_fs__parse_id (key.data, key.size, pool);
+    svn_fs_id_t *last_branch_id = svn_fs_parse_id (key.data, key.size, pool);
     int last_branch_len;
     if (! last_branch_id)
       return corrupt_nodes_key (fs);

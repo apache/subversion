@@ -283,6 +283,20 @@ int svn_fs_id_distance (svn_fs_id_t *a, svn_fs_id_t *b);
 /* Return a copy of ID, allocated from POOL.  */
 svn_fs_id_t *svn_fs_copy_id (svn_fs_id_t *id, apr_pool_t *pool);
 
+
+/* Parse the LEN bytes at DATA as a node ID.  Return zero if the bytes
+   are not a properly-formed node ID.
+
+   Allocate the parsed ID in POOL.  As a special case for the Berkeley
+   DB comparison function, if POOL is zero, malloc the ID.  It's
+   generally better to use a pool if you can.  */
+svn_fs_id_t *svn_fs_parse_id (char *data, apr_size_t len, apr_pool_t *pool);
+
+
+/* Return a Subversion string containing the unparsed form of the node
+   id ID.  Allocate the buffer for the unparsed form in POOL.  */
+svn_string_t *svn_fs_unparse_id (svn_fs_id_t *id, apr_pool_t *pool);
+
 
 /* Nodes.  */
 

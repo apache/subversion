@@ -54,7 +54,6 @@
 #include "dir.h"
 #include "revision.h"
 #include "err.h"
-#include "id.h"
 #include "skel.h"
 
 
@@ -88,7 +87,7 @@ corrupt_node_revision (svn_fs_node_t *node)
 {
   svn_fs_t *fs = svn_fs__node_fs (node);
   svn_fs_id_t *id = svn_fs__node_id (node);
-  svn_string_t *unparsed_id = svn_fs__unparse_id (id, fs->pool);
+  svn_string_t *unparsed_id = svn_fs_unparse_id (id, fs->pool);
 
   return
     svn_error_createf
@@ -103,7 +102,7 @@ node_not_mutable (svn_fs_node_t *node)
 {
   svn_fs_t *fs = svn_fs__node_fs (node);
   svn_fs_id_t *id = svn_fs__node_id (node);
-  svn_string_t *unparsed_id = svn_fs__unparse_id (id, fs->pool);
+  svn_string_t *unparsed_id = svn_fs_unparse_id (id, fs->pool);
 
   return
     svn_error_createf
@@ -254,9 +253,9 @@ search (svn_fs_id_t **id_p,
       if (entry_name->len == name_len
 	  && ! memcmp (entry_name->data, name, name_len))
 	{
-	  svn_fs_id_t *id = svn_fs__parse_id (entry_id->data,
-					      entry_id->len,
-					      pool);
+	  svn_fs_id_t *id = svn_fs_parse_id (entry_id->data,
+					     entry_id->len,
+					     pool);
 	  if (! id) 
 	    return corrupt_node_revision (dir_node);
 
@@ -412,7 +411,7 @@ svn_fs_dir_entries (apr_hash_t **table_p,
 	dirent->name = svn_string_ncreate (name_skel->data, name_skel->len,
 					   pool);
 
-      dirent->id = svn_fs__parse_id (id_skel->data, id_skel->len, pool);
+      dirent->id = svn_fs_parse_id (id_skel->data, id_skel->len, pool);
 
       if (! dirent->id)
 	return corrupt_node_revision (dir_node);

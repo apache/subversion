@@ -49,24 +49,7 @@
 #ifndef SVN_LIBSVN_FS_ID_H
 #define SVN_LIBSVN_FS_ID_H
 
-#include "apr.h"
-#include "apr_pools.h"
 #include "svn_fs.h"
-
-
-/* Parse the LEN bytes at DATA as a node ID.  Return zero if the bytes
-   are not a properly-formed node ID.
-
-   Allocate the parsed ID in POOL.  As a special case for the Berkeley
-   DB comparison function, if POOL is zero, malloc the ID.  It's
-   generally better to use a pool if you can.  */
-svn_fs_id_t *svn_fs__parse_id (char *data, apr_size_t len, apr_pool_t *pool);
-
-
-/* Return a Subversion string containing the unparsed form of the node
-   id ID.  Allocate the buffer for the unparsed form in POOL.  */
-svn_string_t *svn_fs__unparse_id (svn_fs_id_t *id,
-				  apr_pool_t *pool);
 
 
 /* Return true iff PARENT is a direct ancestor of CHILD.  */

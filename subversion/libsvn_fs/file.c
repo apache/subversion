@@ -58,7 +58,6 @@
 #include "file.h"
 #include "node.h"
 #include "skel.h"
-#include "id.h"
 #include "proplist.h"
 
 
@@ -67,7 +66,7 @@
 static svn_error_t *
 corrupt_node_revision (svn_fs_t *fs, svn_fs_id_t *id)
 {
-  svn_string_t *unparsed_id = svn_fs__unparse_id (id, fs->pool);
+  svn_string_t *unparsed_id = svn_fs_unparse_id (id, fs->pool);
 
   return
     svn_error_createf
