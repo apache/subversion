@@ -117,7 +117,7 @@ generate_status_codes (char *str_status,
            text_statuschar, 
            prop_statuschar,
            locked ? 'L' : ' ',
-           copied ? '@' : ' ');
+           copied ? '+' : ' ');
 }
 
 
@@ -192,6 +192,8 @@ print_long_format (const char *path,
   /* Otherwise, go ahead and show the local revision number. */
   else if (local_rev == SVN_INVALID_REVNUM)
     printf ("%s   %c      ?       %s\n", str_status, update_char, path);
+  else if (status->copied)
+    printf ("%s   %c         -    %s\n", str_status, update_char, path);
   else
     printf ("%s   %c    %6ld    %s\n", str_status, update_char,
             local_rev, path);
