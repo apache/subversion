@@ -23,6 +23,7 @@
 /*** Includes. ***/
 
 #include <string.h>
+#include <apr_lib.h>
 #include <apr_fnmatch.h>
 #include "svn_wc.h"
 #include "svn_client.h"
@@ -59,6 +60,22 @@ typedef struct
   apr_pool_t *pool;
 } auto_props_baton_t;
 
+/* Remove leading and trailing white space from a C string, in place. */
+static void
+trim_string (char **pstr)
+{
+  char *str = *pstr;
+  int i;
+
+  while (apr_isspace (*str))
+    str++;
+  *pstr = str;
+  i = strlen (str);
+  while ((i > 0) && apr_isspace (str[i-1]))
+    i--;
+  str[i] = '\0';
+}
+
 /* For one auto-props config entry (NAME, VALUE), if the filename pattern
    NAME matches BATON->filename then add the properties listed in VALUE
    into BATON->properties.  BATON must point to an auto_props_baton_t.
@@ -92,15 +109,15 @@ auto_props_enumerator (const char *name,
       this_value = strchr (property, '=');
       if (this_value)
         {
-          *this_value = 0;
+          *this_value = '\0';
           this_value++;
-          apr_collapse_spaces (this_value, this_value);
+          trim_string (&this_value);
         }
       else
         {
           this_value = (char *)"";
         }
-      apr_collapse_spaces (property, property);
+      trim_string (&property);
       len = strlen (property);
       if (len > 0)
         {

@@ -91,6 +91,7 @@ def create_config(config_dir, enable_flag):
   fd.write('*.jpg = jpgfile=ja\n')
   fd.write('fubar* = tarfile=si\n')
   fd.write('foobar.lha = lhafile=da;lzhfile=niet\n')
+  fd.write('spacetest = a b c = d e f ; g h i = j k l ; m n o = ; = p \n')
   fd.write('* = auto=oui\n')
   fd.write('\n')
   fd.close()
@@ -180,6 +181,8 @@ def autoprops_test(sbox, cmd, cfgtype, paramtype, subdir):
   create_test_file(files_dir, filenames[len(filenames)-1])
   filenames = filenames + ['foobar.lha']
   create_test_file(files_dir, filenames[len(filenames)-1])
+  filenames = filenames + ['spacetest']
+  create_test_file(files_dir, filenames[len(filenames)-1])
 
   if len(subdir) == 0:
     # add/import the files
@@ -224,6 +227,12 @@ def autoprops_test(sbox, cmd, cfgtype, paramtype, subdir):
     check_prop('auto', filename, ['oui'])
     check_prop('lhafile', filename, ['da'])
     check_prop('lzhfile', filename, ['niet'])
+    filename = os.path.join(files_wc_dir, 'spacetest' )
+    check_proplist(filename,['a b c', 'g h i', 'm n o', 'auto'])
+    check_prop('auto', filename, ['oui'])
+    check_prop('a b c', filename, ['d e f'])
+    check_prop('g h i', filename, ['j k l'])
+    check_prop('m n o', filename, [])
   else:
     filename = os.path.join(files_wc_dir, 'foo.h' )
     check_proplist(filename,[])
