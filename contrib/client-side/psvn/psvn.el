@@ -174,6 +174,20 @@ However, it is possible, that the sorting is wrong in this case.")
   "*List of operations after which all user marks will be removed.
 Possible values are: commit, revert.")
 
+(defvar svn-status-short-mod-flag-p t
+  "*Whether the mark for out of date files is short or long.
+
+If this variable is is t, and a file is out of date (i.e., there is a newer
+version in the repository than the working copy), then the file will
+be marked by \"**\"
+
+If this variale is nil, and the file is out of date then the longer phrase
+\"(Update Available)\" is used.
+
+In either case the mark gets the face
+`svn-status-update-available-face', and will only be visible if
+`\[svn-status-update]' is run with a prefix argument")
+
 ;;; default arguments to pass to svn commands
 (defvar svn-status-default-log-arguments ""
   "*Arguments to pass to svn log.
@@ -217,7 +231,6 @@ Possible values are: commit, revert.")
 (defvar svn-status-default-revision-width 4)
 (defvar svn-status-default-author-width 9)
 (defvar svn-status-line-format " %c%c%c %4s %4s %-9s")
-(defvar svn-status-short-mod-flag-p t)
 (defvar svn-start-of-file-list-line-number 0)
 (defvar svn-status-files-to-commit nil)
 (defvar svn-status-pre-commit-window-configuration nil)
@@ -262,12 +275,16 @@ Possible values are: commit, revert.")
   "Face to highlight the actual file, if a popup menu is activated."
   :group 'psvn-faces)
 
-(defface svn-status-modified-external-face
+(defface svn-status-update-available-face
   '((((type tty) (class color)) (:foreground "magenta" :weight light))
     (((class color) (background light)) (:foreground "magenta"))
     (((class color) (background dark)) (:foreground "yellow"))
     (t (:weight bold)))
-  "Face to highlight the phrase \"externally modified\" in *svn-status* buffers."
+  "Face used to highlight the 'out of date' mark.
+\(i.e., the mark used when there is a newer version in the repository
+than the working copy.\)
+
+See also `svn-status-short-mod-flag-p'."
   :group 'psvn-faces)
 
 ;based on cvs-filename-face
@@ -416,14 +433,18 @@ CMDTYPE is a symbol such as 'mv, 'revert, or 'add, representing the
 command to run.
 
 ARGLIST is a list of arguments \(which must include the command name,
-for  example: '(\"revert\" \"file1\"\)"
+for example: '(\"revert\" \"file1\"\)
+
+If the variable `svn-status-edit-svn-command' is non-nil then the user
+is prompted for give extra arguments, which are appended to ARGLIST."
   (if (eq (process-status "svn") nil)
       (progn
         (when svn-status-edit-svn-command
           (setq arglist (append arglist
                                 (split-string
                                  (read-from-minibuffer
-                                  (format "svn %s %S " cmdtype arglist)))))
+                                  (format "Run `svn %s %s' with extra arguments: "
+                                          cmdtype (mapconcat 'identity arglist " "))))))
           (when (eq svn-status-edit-svn-command t)
             (svn-status-toggle-edit-cmd-flag t))
           (message "svn-run-svn %s: %S" cmdtype arglist))
@@ -677,8 +698,6 @@ The results are used to build the `svn-status-info' variable."
                                     (length (number-to-string last-change-rev))))
           (setq author-width (max author-width (length author)))))
         (forward-line 1))
-      ;; With subversion 0.29.0 and above, `svn -u st' returns files in
-      ;; a random order (especially if we have a mixed revision wc)
       (unless svn-status-verbose
         (setq svn-status-info (svn-status-make-dummy-dirs dir-set)))
       (setq svn-status-default-column
@@ -1060,7 +1079,11 @@ EVENT could be \"mouse clicked\" or similar."
         l
       nil)))
 (defun svn-status-line-info->author (line-info) (nth 6 line-info))
-(defun svn-status-line-info->modified-external (line-info) (nth 7 line-info))
+(defun svn-status-line-info->update-available (line-info)
+  "Return whether LINE-INFO is out of date.
+In other words, whether there is a newer version available in the
+repository than the working copy."
+  (nth 7 line-info))
 (defun svn-status-line-info->locked (line-info)
   "Return whether LINE-INFO represents a locked file.
 This is column three of the `svn status' output.
@@ -1137,11 +1160,10 @@ The result will be nil or \"S\"."
       (setq len-fname (length fname))
       (when (and (>= len-fname len-test)
                  (string= (substring fname 0 len-test) test))
-        ;;(message "elide: %s %s" fname (svn-status-line-info->user-elide (car st-info)))
         (setq elide-mark new-elide-mark)
         (when (or (string= fname ".")
                   (and (= len-fname len-test) (svn-status-line-info->directory-p (car st-info))))
-          (message "Elide directory %s and all its files." fname)
+          (message "Elided directory %s and all its files." fname)
           (setq new-elide-mark (not (svn-status-line-info->user-elide (car st-info))))
           (setq elide-mark (if new-elide-mark 'directory nil)))
         ;;(message "elide-mark: %S member: %S" elide-mark (member fname svn-status-elided-list))
@@ -1251,7 +1273,6 @@ Return a list that is suitable for `svn-status-update-with-command-list'"
     (set-buffer "*svn-process*")
     (let ((action)
           (name)
-          (done)
           (skip)
           (result))
       (goto-char (point-min))
@@ -1281,7 +1302,6 @@ Return a list that is suitable for `svn-status-update-with-command-list'"
             ;; from the svn output
             (search-forward "/" nil t))
           (setq name (buffer-substring-no-properties (point) (point-at-eol)))
-          ;;(message "%S %S" action name)
           (setq result (cons (list name action)
                              result))
           (setq skip nil))
@@ -1312,26 +1332,28 @@ Symbolic links to directories count as directories (see `file-directory-p')."
 (defun svn-insert-line-in-status-buffer (line-info)
   "Format LINE-INFO and insert the result in the current buffer."
   (let ((usermark (if (svn-status-line-info->has-usermark line-info) "*" " "))
-        (external (if (svn-status-line-info->modified-external line-info)
-                      (svn-add-face (if svn-status-short-mod-flag-p
-                                        "** "
-                                      " (modified external)")
-                                    'svn-status-modified-external-face)
-                    (if svn-status-short-mod-flag-p "   " "")))
-        ;; To add indentation based on the
-        ;; directory that the file is in, we just insert 2*(number of "/" in
-        ;; filename) spaces, which is rather hacky (but works)!
-        (filename (svn-status-choose-face-to-add
-                   (svn-status-line-info->directory-p line-info)
-                   (concat (make-string
-                            (* 2 (svn-status-count-/
-                                  (svn-status-line-info->filename line-info)))
-                            32)
-                           (if svn-status-hide-unmodified
-                               (svn-status-line-info->filename line-info)
-                             (svn-status-line-info->filename-nondirectory line-info)))
-                   'svn-status-directory-face
-                   'svn-status-filename-face))
+        (update-available (if (svn-status-line-info->update-available line-info)
+                              (svn-add-face (if svn-status-short-mod-flag-p
+                                                "** "
+                                              " (Update Available)")
+                                            'svn-status-update-available-face)
+                            (if svn-status-short-mod-flag-p "   " "")))
+        (filename  ;; <indentation>file or /path/to/file
+                     (concat
+                      (if svn-status-hide-unmodified
+                          (svn-add-face
+                           (file-name-as-directory
+                            (svn-status-line-info->directory-containing-line-info line-info nil))
+                           'svn-status-directory-face)
+                        ;; showing all files, so add indentation
+                        (make-string (* 2 (svn-status-count-/
+                                           (svn-status-line-info->filename line-info)))
+                                     32))
+                      (svn-status-choose-face-to-add
+                       (svn-status-line-info->directory-p line-info)
+                       (svn-status-line-info->filename-nondirectory line-info)
+                       'svn-status-directory-face
+                       'svn-status-filename-face)))
         (elide-hint (if (svn-status-line-info->show-user-elide-continuation line-info) " ..." "")))
     (insert (svn-status-maybe-add-face
              (svn-status-line-info->has-usermark line-info)
@@ -1342,15 +1364,15 @@ Symbolic links to directories count as directories (see `file-directory-p')."
                              (or (svn-status-line-info->historymark line-info) ? )
                              (or (svn-status-line-info->localrev line-info) "")
                              (or (svn-status-line-info->lastchangerev line-info) "")
-                             (svn-status-line-info->author line-info)))
+                             (svn-status-line-info->author line-info))
+                     (if svn-status-short-mod-flag-p update-available filename)
+                     (if svn-status-short-mod-flag-p filename update-available)
+                     (svn-status-maybe-add-string (svn-status-line-info->locked line-info)
+                                                  " [ LOCKED ]" 'svn-status-locked-face)
+                     (svn-status-maybe-add-string (svn-status-line-info->switched line-info)
+                                                  " (switched)" 'svn-status-switched-face)
+                     elide-hint)
              'svn-status-marked-face)
-            (if svn-status-short-mod-flag-p external filename)
-            (if svn-status-short-mod-flag-p filename external)
-            (svn-status-maybe-add-string (svn-status-line-info->locked line-info)
-                                         " [ LOCKED ]" 'svn-status-locked-face)
-            (svn-status-maybe-add-string (svn-status-line-info->switched line-info)
-                                         " (switched)" 'svn-status-switched-face)
-            elide-hint
             "\n")))
 
 (defun svn-status-update-buffer ()
@@ -1367,9 +1389,10 @@ Symbolic links to directories count as directories (see `file-directory-p')."
         (buffer-read-only nil)
         (start-pos)
         (overlay)
-        (unmodified-count 0)
-        (unknown-count 0)
-        (marked-count 0)
+        (unmodified-count 0)            ;how many unmodified files are hidden
+        (unknown-count 0)               ;how many unknown files are hidden
+        (marked-count 0)                ;how many files are elided
+        (user-elide-count 0)
         (fname (svn-status-line-info->filename (svn-status-get-line-information)))
         (fname-pos (point))
         (column (current-column)))
@@ -1382,11 +1405,11 @@ Symbolic links to directories count as directories (see `file-directory-p')."
              ;; Show a marked file always
              (svn-insert-line-in-status-buffer (car st-info)))
             ((svn-status-line-info->hide-because-user-elide (car st-info))
-             );(message "user wanted to hide %s" (svn-status-line-info->filename (car st-info))))
+             (setq user-elide-count (1+ user-elide-count)))
             ((svn-status-line-info->hide-because-unknown (car st-info))
-             (setq unknown-count (+ unknown-count 1)))
+             (setq unknown-count (1+ unknown-count)))
             ((svn-status-line-info->hide-because-unmodified (car st-info))
-             (setq unmodified-count (+ unmodified-count 1)))
+             (setq unmodified-count (1+ unmodified-count)))
             (t
              (svn-insert-line-in-status-buffer (car st-info))))
       (when (svn-status-line-info->has-usermark (car st-info))
@@ -1405,13 +1428,15 @@ Symbolic links to directories count as directories (see `file-directory-p')."
       (insert (concat "Repository: " (svn-status-base-info->url) "\n")))
     (when svn-status-hide-unknown
       (insert
-       (format "%d Unknown files are hidden - press ? to toggle hiding\n"
+       (format "%d Unknown file(s) are hidden - press ? to toggle hiding\n"
                unknown-count)))
     (when svn-status-hide-unmodified
       (insert
-       (format "%d Unmodified files are hidden - press _ to toggle hiding\n"
+       (format "%d Unmodified file()s are hidden - press _ to toggle hiding\n"
                unmodified-count)))
-    (insert (format "%d files marked\n" marked-count))
+    (when (> user-elide-count 0)
+      (insert (format "%d file(s) elided\n" user-elide-count)))
+    (insert (format "%d file(s) marked\n" marked-count))
     (insert "\n "
             (format svn-status-line-format
                     70 80 72 "locl" "chgd" "author")
@@ -1540,11 +1565,19 @@ otherwise return the directory containing the file under point."
                        '(nil nil nil ""))))
     (file-name-as-directory
      (expand-file-name
-      (if (and allow-self (svn-status-line-info->directory-p line-info))
-          (svn-status-line-info->filename line-info)
-        ;;The next `or' is because (file-name-directory "file") returns nil
-        (or (file-name-directory (svn-status-line-info->filename line-info))
-            "."))))))
+      (svn-status-line-info->directory-containing-line-info line-info allow-self)))))
+
+(defun svn-status-line-info->directory-containing-line-info (line-info allow-self)
+  "Find the directory containing for LINE-INFO.
+
+If ALLOW-SELF is t and LINE-INFO refers to a directory then return the
+directory itself, in all other cases find the parent directory"
+  (if (and allow-self (svn-status-line-info->directory-p line-info))
+      (svn-status-line-info->filename line-info)
+    ;;The next `or' is because (file-name-directory "file") returns nil
+    (or (file-name-directory (svn-status-line-info->filename line-info))
+        ".")))
+
 
 (defun svn-status-set-user-mark (arg)
   "Set a user mark on the current file or directory.
@@ -1848,7 +1881,7 @@ If ARG then prompt for revision to diff against, else compare working copy with 
                        (svn-status-read-revision-string "Diff with files for version: " "PREV")
                      (if use-all-marked-files
                          "BASE"
-                       (if (svn-status-line-info->modified-external (car fl)) "HEAD" "BASE")))))
+                       (if (svn-status-line-info->update-available (car fl)) "HEAD" "BASE")))))
     (while fl
       (svn-run-svn nil clear-buf 'diff "diff" "-r" revision (svn-status-line-info->filename (car fl)))
       (setq clear-buf nil)
@@ -2016,6 +2049,8 @@ When called with a prefix argument add the command line switch --force."
   (svn-run-svn t t 'update "update"))
 
 (defun svn-status-commit-file ()
+  "Commit selected files.
+See `svn-status-marked-files' for what counts as selected."
   (interactive)
   (let* ((marked-files (svn-status-marked-files)))
     (setq svn-status-files-to-commit marked-files)
