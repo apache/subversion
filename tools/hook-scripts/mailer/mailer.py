@@ -23,6 +23,7 @@ import popen2
 import cStringIO
 import smtplib
 import re
+import types
 
 import svn.fs
 import svn.delta
@@ -49,11 +50,92 @@ def main(pool, cmd, config_fname, repos_dir, rev, author, propname):
   messenger.generate()
 
 
+# ============================================================================
+if sys.platform == "win32":
+  _escape_shell_arg_re = re.compile(r'(\\+)(\"|$)')
+
+  def escape_shell_arg(arg):
+    # The (very strange) parsing rules used by the C runtime library are
+    # described at:
+    # http://msdn.microsoft.com/library/en-us/vclang/html/_pluslang_Parsing_C.2b2b_.Command.2d.Line_Arguments.asp
+
+    # double up slashes, but only if they are followed by a quote character
+    arg = re.sub(_escape_shell_arg_re, r'\1\1\2', arg)
+
+    # surround by quotes and escape quotes inside
+    arg = '"' + string.replace(arg, '"', '"^""') + '"'
+    return arg
+
+
+  def argv_to_command_string(argv):
+    """Flatten a list of command line arguments into a command string.
+
+    The resulting command string is expected to be passed to the system
+    shell which os functions like popen() and system() invoke internally.
+    """
+
+    # According cmd's usage notes (cmd /?), it parses the command line by
+    # "seeing if the first character is a quote character and if so, stripping
+    # the leading character and removing the last quote character."
+    # So to prevent the argument string from being changed we add an extra set
+    # of quotes around it here.
+    return '"' + string.join(map(escape_shell_arg, argv), " ") + '"'
+
+else:
+  def escape_shell_arg(str):
+    return "'" + string.replace(str, "'", "'\\''") + "'"
+
+  def argv_to_command_string(argv):
+    """Flatten a list of command line arguments into a command string.
+
+    The resulting command string is expected to be passed to the system
+    shell which os functions like popen() and system() invoke internally.
+    """
+
+    return string.join(map(escape_shell_arg, argv), " ")
+# ============================================================================
+
+# Minimal, incomplete, versions of popen2.Popen[34] for those platforms
+# for which popen2 does not provide them.
+try:
+  Popen3 = popen2.Popen3
+  Popen4 = popen2.Popen4
+except AttributeError:
+  class Popen3:
+    def __init__(self, cmd, capturestderr = False):
+      if type(cmd) != types.StringType:
+        cmd = argv_to_command_string(cmd)
+      if capturestderr:
+        self.fromchild, self.tochild, self.childerr \
+            = popen2.popen3(cmd, mode='b')
+      else:
+        self.fromchild, self.tochild = popen2.popen2(cmd, mode='b')
+        self.childerr = None
+
+    def wait(self):
+      rv = self.fromchild.close()
+      rv = self.tochild.close() or rv
+      if self.childerr is not None:
+        rv = self.childerr.close() or rv
+      return rv
+
+  class Popen4:
+    def __init__(self, cmd):
+      if type(cmd) != types.StringType:
+        cmd = argv_to_command_string(cmd)
+      self.fromchild, self.tochild = popen2.popen4(cmd, mode='b')
+
+    def wait(self):
+      rv = self.fromchild.close()
+      rv = self.tochild.close() or rv
+      return rv
+
 class MailedOutput:
   def __init__(self, cfg, repos, prefix_param):
     self.cfg = cfg
     self.repos = repos
     self.prefix_param = prefix_param
+    self._CHUNKSIZE = 128 * 1024
 
   def start(self, group, params):
     # whitespace-separated list of addresses; split into a clean list:
@@ -79,6 +161,18 @@ class MailedOutput:
       hdrs = '%sReply-To: %s\n' % (hdrs, self.reply_to)
     return hdrs + '\n'
 
+  def run(self, cmd):
+    # By default we choose to incorporate child stderr into the output
+    pipe_ob = Popen4(cmd)
+
+    buf = pipe_ob.fromchild.read(self._CHUNKSIZE)
+    while buf:
+      self.write(buf)
+      buf = pipe_ob.fromchild.read(self._CHUNKSIZE)
+
+    # wait on the child so we don't end up with a billion zombies
+    pipe_ob.wait()
+
 
 class SMTPOutput(MailedOutput):
   "Deliver a mail message to an MTA using SMTP."
@@ -90,15 +184,6 @@ class SMTPOutput(MailedOutput):
     self.write = self.buffer.write
 
     self.write(self.mail_headers(group, params))
-
-  def run(self, cmd):
-    # we're holding everything in memory, so we may as well read the
-    # entire diff into memory and stash that into the buffer
-    pipe_ob = popen2.Popen3(cmd)
-    self.write(pipe_ob.fromchild.read())
-
-    # wait on the child so we don't end up with a billion zombies
-    pipe_ob.wait()
 
   def finish(self):
     server = smtplib.SMTP(self.cfg.general.smtp_hostname)
@@ -115,6 +200,7 @@ class StandardOutput:
   def __init__(self, cfg, repos, prefix_param):
     self.cfg = cfg
     self.repos = repos
+    self._CHUNKSIZE = 128 * 1024
 
     self.write = sys.stdout.write
 
@@ -125,23 +211,16 @@ class StandardOutput:
     pass
 
   def run(self, cmd):
-    # flush our output to keep the parent/child output in sync
-    sys.stdout.flush()
-    sys.stderr.flush()
+    # By default we choose to incorporate child stderr into the output
+    pipe_ob = Popen4(cmd)
 
-    # we can simply fork and exec the diff, letting it generate all the
-    # output to our stdout (and stderr, if necessary).
-    pid = os.fork()
-    if pid:
-      # in the parent. we simply want to wait for the child to finish.
-      ### should we deal with the return values?
-      os.waitpid(pid, 0)
-    else:
-      # in the child. run the diff command.
-      try:
-        os.execvp(cmd[0], cmd)
-      finally:
-        os._exit(1)
+    buf = pipe_ob.fromchild.read(self._CHUNKSIZE)
+    while buf:
+      self.write(buf)
+      buf = pipe_ob.fromchild.read(self._CHUNKSIZE)
+
+    # wait on the child so we don't end up with a billion zombies
+    pipe_ob.wait()
 
 
 class PipeOutput(MailedOutput):
@@ -153,9 +232,6 @@ class PipeOutput(MailedOutput):
     # figure out the command for delivery
     self.cmd = string.split(cfg.general.mail_command)
 
-    # we want a descriptor to /dev/null for hooking up to the diffs' stdin
-    self.null = os.open('/dev/null', os.O_RDONLY)
-
   def start(self, group, params, **args):
     MailedOutput.start(self, group, params, **args)
 
@@ -164,7 +240,7 @@ class PipeOutput(MailedOutput):
     cmd = self.cmd + [ '-f', self.from_addr ] + self.to_addrs
 
     # construct the pipe for talking to the mailer
-    self.pipe = popen2.Popen3(cmd)
+    self.pipe = Popen3(cmd)
     self.write = self.pipe.tochild.write
 
     # we don't need the read-from-mailer descriptor, so close it
@@ -172,39 +248,6 @@ class PipeOutput(MailedOutput):
 
     # start writing out the mail message
     self.write(self.mail_headers(group, params))
-
-  def run(self, cmd):
-    # flush the buffers that write to the mailer. we're about to fork, and
-    # we don't want data sitting in both copies of the buffer. we also
-    # want to ensure the parts are delivered to the mailer in the right order.
-    self.pipe.tochild.flush()
-
-    pid = os.fork()
-    if pid:
-      # in the parent
-
-      # wait for the diff to finish
-      ### do anything with the return value?
-      os.waitpid(pid, 0)
-
-      return
-
-    # in the child
-
-    # duplicate the write-to-mailer descriptor to our stdout and stderr
-    os.dup2(self.pipe.tochild.fileno(), 1)
-    os.dup2(self.pipe.tochild.fileno(), 2)
-
-    # hook up stdin to /dev/null
-    os.dup2(self.null, 0)
-
-    ### do we need to bother closing self.null and self.pipe.tochild ?
-
-    # run the diff command, now that we've hooked everything up
-    try:
-      os.execvp(cmd[0], cmd)
-    finally:
-      os._exit(1)
 
   def finish(self):
     # signal that we're done sending content
