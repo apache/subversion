@@ -1267,6 +1267,7 @@ struct delete_args
 {
   svn_fs_root_t *root;
   const char *path;
+  svn_boolean_t require_empty_dir;
 };
 
 
@@ -1277,6 +1278,7 @@ txn_body_delete (void *baton,
   struct delete_args *args = baton;
   svn_fs_root_t *root = args->root;
   const char *path = args->path;
+  svn_boolean_t require_empty_dir = args->require_empty_dir;
   parent_path_t *parent_path;
 
   SVN_ERR (open_path (&parent_path, root, path, 0, trail));
@@ -1288,6 +1290,24 @@ txn_body_delete (void *baton,
 
   /* Make the parent directory mutable.  */
   SVN_ERR (make_path_mutable (root, parent_path->parent, path, trail));
+
+  /* If this is a directory, we have to check to see if it is required
+     by our caller to be empty before deleting it. */
+  if (svn_fs__dag_is_directory (parent_path->node)
+      && require_empty_dir)
+    {
+      skel_t *entries;
+
+      SVN_ERR (svn_fs__dag_dir_entries_skel (&entries,
+                                             parent_path->node, 
+                                             trail));
+      if (svn_fs__list_length (entries))
+        {
+          return svn_error_create (SVN_ERR_FS_DIR_NOT_EMPTY, 0, 
+                                   NULL, trail->pool,
+                                   "unable to delete non-empty tree");
+        }
+    }
 
   /* We have a (semi-)bug here: we'll happily delete non-empty directories,
      if they're shared with the base revision.  */
@@ -1308,6 +1328,7 @@ svn_fs_delete (svn_fs_root_t *root,
 
   args.root = root;
   args.path = path;
+  args.require_empty_dir = TRUE;
   return svn_fs__retry_txn (root->fs, txn_body_delete, &args, pool);
 }
 
@@ -1317,7 +1338,12 @@ svn_fs_delete_tree (svn_fs_root_t *root,
                     const char *path,
                     apr_pool_t *pool)
 {
-  abort ();
+  struct delete_args args;
+
+  args.root = root;
+  args.path = path;
+  args.require_empty_dir = FALSE;
+  return svn_fs__retry_txn (root->fs, txn_body_delete, &args, pool);
 }
 
 
@@ -1549,13 +1575,19 @@ write_to_string (void *baton, const char *data, apr_size_t *len)
 /* Helper function: takes a txdelta_baton_t and converts its file
    information into a readable generic stream. */
 static svn_error_t *
-txn_body_get_source_stream (void *baton, trail_t *trail)
+txn_body_get_mutable_source_stream (void *baton, trail_t *trail)
 {
   txdelta_baton_t *tb = (txdelta_baton_t *) baton;
+  parent_path_t *parent_path;
 
-  /* First create a dag_node_t from the root/path pair. */
-  SVN_ERR (get_dag (&(tb->node), tb->root, tb->path, trail));
-  
+  /* Call open_path with no flags, as we want this to return an error
+     if the node for which we are searching doesn't exist. */
+  SVN_ERR (open_path (&parent_path, tb->root, tb->path, 0, trail));
+
+  /* Now, make sure this path is mutable. */
+  SVN_ERR (make_path_mutable (tb->root, parent_path, tb->path, trail));
+  tb->node = parent_path->node;
+
   /* If we get here without error, then the path to the file must
      exist.  Now convert the dag_node into a generic readable
      stream. */
@@ -1623,7 +1655,7 @@ svn_fs_apply_textdelta (svn_txdelta_window_handler_t **contents_p,
      ROOT/PATH; obviously, this must done in the context of a
      db_txn.  The stream is returned in tb->source_stream. */
   SVN_ERR (svn_fs__retry_txn (svn_fs_root_fs (root),
-                              txn_body_get_source_stream, tb, pool));
+                              txn_body_get_mutable_source_stream, tb, pool));
 
   /* Make a writable "target" stream which writes data to
      tb->target_string. */
