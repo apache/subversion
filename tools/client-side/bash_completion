@@ -205,7 +205,7 @@ _svnadmin ()
 	COMPREPLY=()
 	cur=${COMP_WORDS[COMP_CWORD]}
 
-	cmds='create createtxn dump help h ? load lscr list-dblogs \
+	cmds='create dump help h ? load lscr list-dblogs \
 	      list-unused-dblogs lstxns recover rmtxns setlog verify'
 
 	if [[ $COMP_CWORD -eq 1 ]] ; then
@@ -230,9 +230,6 @@ _svnadmin ()
 	case ${COMP_WORDS[1]} in
 	create)
 		cmdOpts="--bdb-txn-nosync --config-dir"
-		;;
-	createtxn)
-		cmdOpts="-r --revision"
 		;;
 	dump)
 		cmdOpts="-r --revision --incremental -q --quiet"
