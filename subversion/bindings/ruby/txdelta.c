@@ -177,6 +177,32 @@ send_string (VALUE self, VALUE aStr)
 }
 
 static VALUE
+send_stream (VALUE self, VALUE aStream)
+{
+  svn_stream_t *stream;
+  apr_pool_t *pool;
+  svn_error_t *err;
+  svn_ruby_txdelta_t *delta;
+
+  Data_Get_Struct (self, svn_ruby_txdelta_t, delta);
+  if (delta->closed)
+    closed_txdelta_error ();
+
+  stream = svn_ruby_stream (aStream);
+  pool = svn_pool_create (delta->pool);
+
+  err = svn_txdelta_send_stream (stream, delta->handler, delta->handler_baton,
+                                 pool);
+
+  apr_pool_destroy (pool);
+  if (err)
+    svn_ruby_raise (err);
+  delta->closed = TRUE;
+
+  return Qnil;
+}
+
+static VALUE
 apply (VALUE self, VALUE aWindow)
 {
   svn_ruby_txdelta_t *handler;
@@ -350,6 +376,7 @@ svn_ruby_init_txdelta (void)
   rb_define_singleton_method (cSvnTextDelta, "new", txdelta_new, 2);
   rb_define_method (cSvnTextDelta, "initialize", txdelta_init, -1);
   rb_define_method (cSvnTextDelta, "sendString", send_string, 1);
+  rb_define_method (cSvnTextDelta, "sendStream", send_stream, 1);
   rb_define_method (cSvnTextDelta, "apply", apply, 1);
   rb_define_method (cSvnTextDelta, "close", close, 0);
   cSvnTextDeltaWindow = rb_define_class_under (svn_ruby_mSvn, "TextDeltaWindow",
