@@ -232,6 +232,61 @@ check_non_ascii (const char *data, apr_size_t len, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+/* Construct an error with a suitable message to describe the invalid UTF-8
+ * sequence DATA of length LEN (which may have embedded NULLs).  We can't
+ * simply print the data, almost by definition we don't really know how it
+ * is encoded.
+ */
+static svn_error_t *
+invalid_utf8 (const char *data, apr_size_t len, apr_pool_t *pool)
+{
+  const char *last = svn_utf__last_valid (data, len);
+  const char *msg = "Valid UTF-8 data\n(hex:";
+  int i, valid, invalid;
+
+  /* We will display at most 24 valid octets (this may split a leading
+     multi-byte character) as that should fit on one 80 character line. */
+  valid = last - data;
+  if (valid > 24)
+    valid = 24;
+  for (i = 0; i < valid; ++i)
+    msg = apr_pstrcat (pool, msg, apr_psprintf (pool, " %02x",
+                                                (unsigned char)last[i-valid]),
+                       NULL);
+  msg = apr_pstrcat (pool, msg,
+                     ")\nfollowed by invalid UTF-8 sequence\n(hex:", NULL);
+
+  /* 4 invalid octets will guarantee that the faulty octet is displayed */
+  invalid = data + len - last;
+  if (invalid > 4)
+    invalid = 4;
+  for (i = 0; i < invalid; ++i)
+    msg = apr_pstrcat (pool, msg, apr_psprintf (pool, " %02x",
+                                                (unsigned char)last[i]), NULL);
+  msg = apr_pstrcat (pool, msg, ")", NULL);
+
+  return svn_error_create (APR_EINVAL, NULL, msg);
+}
+
+/* Verify that the sequence DATA of length LEN is valid UTF-8 */
+static svn_error_t *
+check_utf8 (const char *data, apr_size_t len, apr_pool_t *pool)
+{
+  if (! svn_utf__is_valid (data, len))
+    return invalid_utf8 (data, len, pool);
+  return SVN_NO_ERROR;
+}
+
+/* Verify that the NULL terminated sequence DATA is valid UTF-8 */
+static svn_error_t *
+check_cstring_utf8 (const char *data, apr_pool_t *pool)
+{
+
+  if (! svn_utf__cstring_is_valid (data))
+    return invalid_utf8 (data, strlen (data), pool);
+  return SVN_NO_ERROR;
+}
+
 
 svn_error_t *
 svn_utf_stringbuf_to_utf8 (svn_stringbuf_t **dest,
@@ -243,7 +298,10 @@ svn_utf_stringbuf_to_utf8 (svn_stringbuf_t **dest,
   SVN_ERR (get_ntou_xlate_handle (&convset, pool));
 
   if (convset)
-    return convert_to_stringbuf (convset, src->data, src->len, dest, pool);
+    {
+      SVN_ERR (convert_to_stringbuf (convset, src->data, src->len, dest, pool));
+      return check_utf8 ((*dest)->data, (*dest)->len, pool);
+    }
   else
     {
       SVN_ERR (check_non_ascii (src->data, src->len, pool));
@@ -267,6 +325,7 @@ svn_utf_string_to_utf8 (const svn_string_t **dest,
     {
       SVN_ERR (convert_to_stringbuf (convset, src->data, src->len, 
                                      &destbuf, pool));
+      SVN_ERR (check_utf8 (destbuf->data, destbuf->len, pool));
       *dest = svn_string_create_from_buf (destbuf, pool);
     }
   else
@@ -315,6 +374,7 @@ svn_utf_cstring_to_utf8 (const char **dest,
 
   SVN_ERR (get_ntou_xlate_handle (&convset, pool));
   SVN_ERR (convert_cstring (dest, src, convset, pool));
+  SVN_ERR (check_cstring_utf8 (*dest, pool));
 
   return SVN_NO_ERROR;
 }
@@ -331,6 +391,7 @@ svn_utf_cstring_to_utf8_ex (const char **dest,
 
   SVN_ERR (get_xlate_handle (&convset, "UTF-8", frompage, convset_key, pool));
   SVN_ERR (convert_cstring (dest, src, convset, pool));
+  SVN_ERR (check_cstring_utf8 (*dest, pool));
 
   return SVN_NO_ERROR;
 }
