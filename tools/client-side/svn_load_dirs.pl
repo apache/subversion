@@ -1,4 +1,4 @@
-#!/opt/i386-linux/perl/bin/perl -w
+#!/usr/bin/perl -w
 
 # $HeadURL$
 # $LastChangedDate$
