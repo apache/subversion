@@ -93,34 +93,33 @@ typedef enum svn_diff_datasource_e
 typedef struct svn_diff_fns_t
 {
   /** Open the datasource of type @a datasource. */
-  svn_error_t *(*datasource_open) (void *diff_baton,
-                                   svn_diff_datasource_e datasource);
+  svn_error_t *(*datasource_open)(void *diff_baton,
+                                  svn_diff_datasource_e datasource);
 
   /** Close the datasource of type @a datasource. */
-  svn_error_t *(*datasource_close) (void *diff_baton,
-                                    svn_diff_datasource_e datasource);
+  svn_error_t *(*datasource_close)(void *diff_baton,
+                                   svn_diff_datasource_e datasource);
 
   /** Get the next "token" from the datasource of type @a datasource. */
-  svn_error_t *(*datasource_get_next_token) (void **token,
-                                             void *diff_baton,
-                                             svn_diff_datasource_e datasource);
+  svn_error_t *(*datasource_get_next_token)(void **token,
+                                            void *diff_baton,
+                                            svn_diff_datasource_e datasource);
 
   /** A function for ordering the tokens with the same interface as
    * 'strcmp': If @a ltoken and @a rtoken are "equal", return 0.  If 
    * @a ltoken is "less than" @a rtoken, return a number < 0.  If @a ltoken 
-   * is "greater than" @a rtoken, return a number > 0.  [The diff algorithm
-   * uses this routine to assemble the tokens into a binary tree.]
+   * is "greater than" @a rtoken, return a number > 0.
    */
-  int (*token_compare) (void *diff_baton,
-                        void *ltoken,
-                        void *rtoken);
+  int (*token_compare)(void *diff_baton,
+                       void *ltoken,
+                       void *rtoken);
 
   /** Free @a token from memory, the diff algorithm is done with it. */
-  void (*token_discard) (void *diff_baton,
-                         void *token);
+  void (*token_discard)(void *diff_baton,
+                        void *token);
 
   /** Free *all* tokens from memory, they're no longer needed. */
-  void (*token_discard_all) (void *diff_baton);
+  void (*token_discard_all)(void *diff_baton);
 } svn_diff_fns_t;
 
 
