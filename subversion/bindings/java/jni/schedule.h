@@ -24,6 +24,10 @@
 #include <jni.h>
 #include <svn_wc.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 /* functions */
 
 /**
@@ -43,6 +47,10 @@ schedule__create(JNIEnv *env, jboolean *hasException, jint schedule);
 jobject
 schedule__create_from_svn_wc_schedule_t(JNIEnv *env, jboolean *hasException,
                                         enum svn_wc_schedule_t schedule);
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif
 /* 

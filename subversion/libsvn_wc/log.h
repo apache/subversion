@@ -17,6 +17,9 @@
  */
 
 
+#ifndef SVN_LIBSVN_WC_LOG_H
+#define SVN_LIBSVN_WC_LOG_H
+
 #include <apr_pools.h>
 #include "svn_types.h"
 #include "svn_string.h"
@@ -25,6 +28,11 @@
 #include "svn_xml.h"
 #include "svn_wc.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
+
 /* Note: every entry in the logfile is either idempotent or atomic.
  * This allows us to remove the entire logfile when every entry in it
  * has been completed -- if you crash in the middle of running a
@@ -150,6 +158,12 @@ svn_error_t *svn_wc__log_commit (svn_stringbuf_t *path,
 /* Process the instructions in the log file for PATH. */
 svn_error_t *svn_wc__run_log (svn_stringbuf_t *path, apr_pool_t *pool);
 
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
+#endif /* SVN_LIBSVN_WC_LOG_H */
 
 
 /* 

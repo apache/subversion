@@ -25,7 +25,11 @@
 #include "svn_error.h"
 #include "svn_fs.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
+
 /* Return an svn_error_t object that reports a Berkeley DB error.
    DB_ERR is the error value returned by the Berkeley DB routine.
    Allocate the error object from POOL.  */
@@ -138,8 +142,11 @@ svn_error_t *svn_fs__err_no_such_txn (svn_fs_t *fs, const char *txn);
 svn_error_t *svn_fs__err_not_directory (svn_fs_t *fs, const char *path);
 
 
-#endif /* SVN_LIBSVN_FS_ERR_H */
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
+#endif /* SVN_LIBSVN_FS_ERR_H */
 
 
 /* 

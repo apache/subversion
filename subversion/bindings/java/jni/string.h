@@ -27,6 +27,10 @@
 #include <svn_string.h>
 #include <apr_pools.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 /*** Functions ***/
 
 /*
@@ -68,6 +72,11 @@ string__c_to_stringbuf(JNIEnv *env,
                        jstring jstr,
                        jboolean *hasException,
                        apr_pool_t *pool);
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
 #endif
 
 /* 

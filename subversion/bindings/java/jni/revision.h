@@ -24,6 +24,10 @@
 #include <jni.h>
 #include <svn_wc.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 /* functions */
 
 /**
@@ -35,6 +39,10 @@
  */
 jobject 
 revision__create(JNIEnv *env, jboolean *hasException, jlong revision);
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif
 /* 

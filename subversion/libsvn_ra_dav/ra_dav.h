@@ -18,8 +18,8 @@
 
 
 
-#ifndef RA_DAV_H
-#define RA_DAV_H
+#ifndef SVN_LIBSVN_RA_DAV_H
+#define SVN_LIBSVN_RA_DAV_H
 
 #include <apr_pools.h>
 #include <apr_tables.h>
@@ -35,7 +35,11 @@
 #include "svn_delta.h"
 #include "svn_ra.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
+
 typedef struct {
   apr_pool_t *pool;
 
@@ -394,7 +398,12 @@ svn_ra_dav__request_dispatch(int *code,
                              const char *url,
                              apr_pool_t *pool);
 
-#endif  /* RA_DAV_H */
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
+#endif  /* SVN_LIBSVN_RA_DAV_H */
 
 
 /* 

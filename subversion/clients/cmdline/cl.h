@@ -31,6 +31,10 @@
 #include "svn_client.h"
 #include "svn_string.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 
 /*** Option processing ***/
 
@@ -369,10 +373,13 @@ svn_error_t *svn_cl__get_log_message (svn_stringbuf_t **log_msg,
                                       void *baton,
                                       apr_pool_t *pool);
 
-
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif /* SVN_CL_H */
 
+
 /* 
  * local variables:
  * eval: (load-file "../../../tools/dev/svn-dev.el")

@@ -17,8 +17,8 @@
  */
 
 
-#ifndef CLIENT_H
-#define CLIENT_H
+#ifndef SVN_LIBSVN_CLIENT_H
+#define SVN_LIBSVN_CLIENT_H
 
 
 #include <apr_pools.h>
@@ -29,6 +29,9 @@
 #include "svn_ra.h"
 #include "svn_client.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
 
 /* Set *REVNUM to the revision number identified by REVISION.
@@ -373,7 +376,11 @@ svn_client__do_commit (svn_stringbuf_t *base_url,
 
 
 
-#endif /* CLIENT_H */
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
+#endif /* SVN_LIBSVN_CLIENT_H */
 
 
 /* 

@@ -273,7 +273,7 @@ svn_wc__files_contents_same_p (svn_boolean_t *same,
   svn_error_t *err;
   svn_boolean_t q;
 
-  err = svn_io__filesizes_different_p (&q, file1->data, file2->data, pool);
+  err = svn_io_filesizes_different_p (&q, file1->data, file2->data, pool);
   if (err)
     return err;
 

@@ -22,7 +22,11 @@
 #include "apr_pools.h"
 #include "svn_fs.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
+
 /* "How do I get a trail object?  All these functions in the
    filesystem expect them, and I can't find a function that returns
    one."
@@ -216,8 +220,11 @@ void svn_fs__record_completion (trail_t *trail,
                                      
 
 
-#endif /* SVN_LIBSVN_FS_TRAIL_H */
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
+#endif /* SVN_LIBSVN_FS_TRAIL_H */
 
 
 /* 

@@ -24,6 +24,10 @@
 #include <jni.h>
 #include <svn_types.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 /* functions */
 
 /**
@@ -43,6 +47,10 @@ nodekind__create(JNIEnv *env, jboolean *hasException, jint nodekind);
 jobject
 nodekind__create_from_svn_node_kind(JNIEnv *env, jboolean *hasException,
                                    enum svn_node_kind nodekind);
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif
 /* 

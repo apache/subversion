@@ -17,6 +17,9 @@
  */
 
 
+#ifndef SVN_LIBSVN_WC_H
+#define SVN_LIBSVN_WC_H
+
 #include <apr_pools.h>
 #include "svn_types.h"
 #include "svn_string.h"
@@ -25,6 +28,9 @@
 #include "svn_xml.h"
 #include "svn_wc.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
 
 #define SVN_WC__DIFF_EXT      ".diff"
@@ -93,6 +99,12 @@ svn_error_t *svn_wc__set_up_new_dir (svn_stringbuf_t *path,
 
 /* Ensure that DIR exists. */
 svn_error_t *svn_wc__ensure_directory (svn_stringbuf_t *path, apr_pool_t *pool);
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
+#endif /* SVN_LIBSVN_WC_H */
 
 
 /* 

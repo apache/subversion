@@ -13,8 +13,12 @@
  * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
-#ifndef LOG_H
-#define LOG_H
+#ifndef SVN_RUBY__LOG_H
+#define SVN_RUBY__LOG_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
 typedef struct svn_ruby_log_receiver_baton_t
 {
@@ -42,4 +46,8 @@ svn_ruby_get_log_args (int argc,
                        apr_pool_t *pool);
 
 
-#endif /* LOG_H */
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
+#endif /* SVN_RUBY__LOG_H */

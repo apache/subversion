@@ -24,6 +24,10 @@
 #include <jni.h>
 #include <apr_time.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 /* functions */
 
 /**
@@ -53,6 +57,11 @@ date__create(JNIEnv *env, jboolean *hasException, jlong time);
 jobject
 date__create_from_apr_time_t(JNIEnv *env, jboolean *hasException, 
                              apr_time_t time);
+
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif
 /* 

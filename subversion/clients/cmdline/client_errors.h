@@ -80,17 +80,16 @@ SVN_ERROR_END
 #undef SVN_ERRDEF
 #undef SVN_ERROR_END
 
+#endif /* SVN_ERROR_BUILD_ARRAY || !SVN_CMDLINE_ERROR_ENUM_DEFINED */
+
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
 
-
-
 #endif /* SVN_CLIENT_ERRORS_H */
 
-#endif /* SVN_ERROR_BUILD_ARRAY || !SVN_CMDLINE_ERROR_ENUM_DEFINED */
-
-
+
 /* ----------------------------------------------------------------
  * local variables:
  * eval: (load-file "../../../tools/dev/svn-dev.el")

@@ -23,6 +23,9 @@
 #include "svn_fs.h"
 #include "trail.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
 
 /* Special strings-table keys for commonly used strings.  */
@@ -124,8 +127,11 @@ svn_error_t *svn_fs__string_copy (svn_fs_t *fs,
                                   trail_t *trail);
 
 
-#endif /* SVN_LIBSVN_FS_STRINGS_TABLE_H */
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
+#endif /* SVN_LIBSVN_FS_STRINGS_TABLE_H */
 
 
 /* 

@@ -13,12 +13,20 @@
  * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
-#ifndef DELTA_EDITOR_H
-#define DELTA_EDITOR_H
+#ifndef SVN_RUBY__DELTA_EDITOR_H
+#define SVN_RUBY__DELTA_EDITOR_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
 void svn_ruby_delta_editor (const svn_delta_edit_fns_t **editor,
                             void **edit_baton, VALUE aEditor);
 VALUE svn_ruby_commit_editor_new (const svn_delta_edit_fns_t *editor,
                                   void *edit_baton,
                                   apr_pool_t *pool);
-#endif /* DELTA_EDITOR_H */
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
+#endif /* SVN_RUBY__DELTA_EDITOR_H */

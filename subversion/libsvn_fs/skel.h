@@ -21,6 +21,10 @@
 #include "svn_string.h"
 #include "apr_pools.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 
 /* What is a skel?  */
 
@@ -167,8 +171,12 @@ int svn_fs__skels_are_equal (skel_t *skel1, skel_t *skel2);
 /* Make a copy of SKEL and its data in POOL.  */
 skel_t *svn_fs__copy_skel (skel_t *skel, apr_pool_t *pool);
 
-#endif /* SVN_LIBSVN_FS_SKEL_H */
 
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
+#endif /* SVN_LIBSVN_FS_SKEL_H */
 
 
 /* 

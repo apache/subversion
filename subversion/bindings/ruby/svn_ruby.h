@@ -16,6 +16,10 @@
 #ifndef SVN_RUBY_H
 #define SVN_RUBY_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 /* New macro in 1.7 */
 #ifndef StringValuePtr
 #define StringValuePtr(v) RSTRING(v)->ptr
@@ -46,5 +50,9 @@ void svn_ruby_init_stream (void);
 void svn_ruby_init_txdelta (void);
 void svn_ruby_init_types (void);
 void svn_ruby_init_wc (void);
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif /* SVN_RUBY_H */

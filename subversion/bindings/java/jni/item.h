@@ -23,11 +23,19 @@
 /* includes */
 #include <jni.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 /* functions */
 jobject
 item__create(JNIEnv *env, jobject jpath, jobject jstatus, 
 	     jboolean *hasException);
 
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif
 

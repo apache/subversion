@@ -24,6 +24,10 @@
 #include <jni.h>
 #include <svn_wc.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 /*** Code ***/
 jobject
 status__create(JNIEnv *env, jboolean *hasException);
@@ -62,6 +66,10 @@ void
 status__set_repos_prop_status(JNIEnv *env, jboolean *hasException,
                               jobject jstatus,
                               jobject jrepos_prop_status);
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif
 

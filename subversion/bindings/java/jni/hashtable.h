@@ -22,6 +22,10 @@
 /* includes */
 #include <jni.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 /* functions */
 jobject
 hashtable__create(JNIEnv *env, jboolean *hasException);
@@ -29,6 +33,10 @@ hashtable__create(JNIEnv *env, jboolean *hasException);
 void
 hashtable__put(JNIEnv *env, jobject hashtable, jobject key,
                jobject value, jboolean *hasException);
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif
 

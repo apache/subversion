@@ -29,6 +29,11 @@
 #include "svn_fs.h"
 #include "svn_repos.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
+
 #define DAV_SVN_DEFAULT_VCC_NAME        "default"
 
 /* dav_svn_repos
@@ -374,6 +379,11 @@ dav_error * dav_svn__log_report(const dav_resource *resource,
                                 ap_filter_t *output);
 
 int dav_svn_find_ns(apr_array_header_t *namespaces, const char *uri);
+
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif /* DAV_SVN_H */
 

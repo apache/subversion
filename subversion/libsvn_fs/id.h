@@ -20,7 +20,11 @@
 
 #include "svn_fs.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
+
 /* Return non-zero iff the node or node revision ID's A and B are equal.  */
 int svn_fs__id_eq (const svn_fs_id_t *a, const svn_fs_id_t *b);
 
@@ -54,8 +58,11 @@ int svn_fs__id_is_parent (const svn_fs_id_t *parent,
                           const svn_fs_id_t *child);
 
 
-#endif /* SVN_LIBSVN_FS_ID_H */
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
+#endif /* SVN_LIBSVN_FS_ID_H */
 
 
 /* 

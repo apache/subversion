@@ -24,6 +24,10 @@
 #include <jni.h>
 #include <svn_wc.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 /*** Functions ***/
 jobject
 entry__create(JNIEnv *env, jboolean *hasException);
@@ -103,6 +107,10 @@ entry__set_attributes(JNIEnv *env, jboolean *hasException,
 jobject
 entry__get_attributes(JNIEnv *env, jboolean *hasException,
                       jobject jentry);
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif
 

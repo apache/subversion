@@ -26,6 +26,12 @@
 #include "strings-table.h"
 
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
+
+
 /************************************************************************
  *                                                                      *
  * Note: all the functions here use representation keys, never rep      *
@@ -37,8 +43,6 @@
    
 
 
-
-
 /* Get or create a mutable representation in FS, store the new rep's
    key in *NEW_REP.
 
@@ -166,8 +170,11 @@ svn_error_t *svn_fs__rep_undeltify (svn_fs_t *fs,
 
 
 
-#endif /* SVN_LIBSVN_FS_REPS_STRINGS_H */
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
+#endif /* SVN_LIBSVN_FS_REPS_STRINGS_H */
 
 
 /* 

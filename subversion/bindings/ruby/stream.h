@@ -13,11 +13,21 @@
  * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
-#ifndef STREAM_H
-#define STREAM_H
+#ifndef SVN_RUBY__STREAM_H
+#define SVN_RUBY__STREAM_H
 
 #include <svn_io.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 VALUE svn_ruby_stream_new (VALUE class, svn_stream_t *stream, apr_pool_t *pool);
 svn_stream_t *svn_ruby_stream (VALUE aStream);
 
-#endif /* STREAM_H */
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
+#endif /* SVN_RUBY__STREAM_H */
