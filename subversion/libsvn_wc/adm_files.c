@@ -1071,7 +1071,9 @@ init_adm (const char *path,
      efficient than just having one around. It doesn't take up much space
      after all. */
   SVN_ERR (svn_wc__make_adm_thing (adm_access, SVN_WC__ADM_EMPTY_FILE,
-                                   svn_node_file, APR_UREAD, 0, pool));
+                                   svn_node_file,
+                                   APR_UREAD | APR_GREAD | APR_WREAD,
+                                   0, pool));
 
   /* SVN_WC__ADM_README */
   SVN_ERR (init_adm_file (path, SVN_WC__ADM_README, readme_contents, pool));
