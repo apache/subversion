@@ -196,6 +196,8 @@ class SMTPOutput(MailedOutput):
 
   def finish(self):
     server = smtplib.SMTP(self.cfg.general.smtp_hostname)
+    if self.cfg.is_set('general.smtp_username'):
+	server.login(self.cfg.general.smtp_username, self.cfg.general.smtp_password)
     server.sendmail(self.from_addr, [ self.to_addr ], self.buffer.getvalue())
     server.quit()
 
