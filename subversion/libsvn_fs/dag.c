@@ -236,21 +236,12 @@ find_dir_entry (dag_node_t *node, const char *name)
           /* The entry list is the 2nd element of the node-revision
              skel. */
           skel_t *entry_list = node->contents->children->next;
-
-          /* The entries are the children of the entry list,
-             naturally. */
           skel_t *entry = entry_list->children;
 
-          /* Loop through all the entries in this node-revision... */
-          while (entry)
-            {
-              /* ...returning true if we find one whose name matches
-                 the entry name passed into this function. */
-              if (svn_fs__matches_atom (entry->children, name))
-                return entry;
-
-              entry = entry->next;
-            }
+          /* search the entry list for one whose name matches NAME.  */
+          for (entry = entry_list->children; entry; entry->entry->next)
+            if (svn_fs__matches_atom (entry->children, name))
+              return entry;
         }
     }
   return (skel_t *)NULL;
