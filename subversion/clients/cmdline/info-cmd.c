@@ -25,6 +25,7 @@
 #include "svn_wc.h"
 #include "svn_string.h"
 #include "svn_error.h"
+#include "svn_path.h"
 #include "cl.h"
 
 
@@ -64,6 +65,7 @@ svn_cl__info (apr_getopt_t *os,
     {
       svn_stringbuf_t *target = ((svn_stringbuf_t **) (targets->elts))[i];
       svn_wc_entry_t *entry;
+      svn_boolean_t text_conflict = FALSE, props_conflict = FALSE;
 
       printf ("Path: %s\n", target->data);
 
@@ -96,10 +98,18 @@ svn_cl__info (apr_getopt_t *os,
         {
         case svn_node_file:
           printf ("Node Kind: file\n");
+          {
+            svn_stringbuf_t *dir_name;
+            svn_path_split (target, &dir_name, NULL, pool);
+            SVN_ERR (svn_wc_conflicted_p (&text_conflict, &props_conflict,
+                                          dir_name, entry, pool));
+          }
           break;
           
         case svn_node_dir:
           printf ("Node Kind: directory\n");
+          SVN_ERR (svn_wc_conflicted_p (&text_conflict, &props_conflict,
+                                        target, entry, pool));
           break;
           
         case svn_node_none:
@@ -161,6 +171,19 @@ svn_cl__info (apr_getopt_t *os,
 
       if (entry->checksum)
         printf ("Checksum: %s\n", entry->checksum->data);
+
+      if (text_conflict && entry->conflict_old)
+        printf ("Conflict Previous Base File: %s\n", entry->conflict_old->data);
+
+      if (text_conflict && entry->conflict_wrk)
+        printf ("Conflict Previous Working File: %s\n",
+                entry->conflict_wrk->data);
+
+      if (text_conflict && entry->conflict_new)
+        printf ("Conflict Current Base File: %s\n", entry->conflict_new->data);
+
+      if (props_conflict && entry->prejfile)
+        printf ("Conflict Properties File: %s\n", entry->prejfile->data);
 
       /* Print extra newline separator. */
       printf ("\n");
