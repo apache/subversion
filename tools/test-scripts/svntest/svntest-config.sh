@@ -47,11 +47,11 @@ TEST_BDB=${TEST_BDB:="yes"}
 TEST_FSFS=${TEST_FSFS:="yes"}
 
 #
-# Whether to test varius bindings
+# Whether to test various bindings
 #
 TEST_BINDINGS_SWIG_PERL=${TEST_BINDINGS_SWIG_PERL:="no"}
 TEST_BINDINGS_JAVAHL=${TEST_BINDINGS_JAVAHL:="no"}
-TEST_BINDINGS_SWIG_PYHTON=${TEST_BINDINGS_SWIG_PYHTON:="no"}
+TEST_BINDINGS_SWIG_PYTHON=${TEST_BINDINGS_SWIG_PYTHON:="no"}
 
 # This should correspond with your httpd Listen directive
 RA_DAV_CHECK_ARGS="BASE_URL=http://localhost:42024"
