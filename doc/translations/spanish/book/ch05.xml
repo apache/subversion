@@ -1,38 +1,44 @@
 <!-- originated from English revision 10817 -->
 <chapter id="svn-ch-5">
-<title>Repository Administration</title>
+<title>Administración del Repositorio</title>
 
   <simplesect>
 
-    <para>The Subversion repository is the central storehouse of
-      versioned data for any number of projects.  As such, it becomes
-      an obvious candidate for all the love and attention an
-      administrator can offer.  While the repository is generally a
-      low-maintenance item, it is important to understand how to
-      properly configure and care for it so that potential problems
-      are avoided, and actual problems are safely resolved.</para>
+    <para>El repositorio de Subversion es el almacén central
+      de datos y versiones para un número indeterminado de proyectos;
+      de esta manera se convierte en el destinatario obvio
+      de todo el amor y atención que un administrador puede ofrecer.
+      Aunque el repositorio es, en general, un elemento de bajo
+      mantenimiento, es importante entender cómo configurarlo
+      y cuidarlo correctamente para evitar problemas potenciales
+      y para solucionar los problemas actuales de forma segura.</para>
 
-    <para>In this chapter, we'll discuss how to create and configure a
-      Subversion repository, and how to expose that repository for
-      network accessibility.  We'll also talk about repository
-      maintenance, including the use of the <command>svnlook</command>
-      and <command>svnadmin</command> tools (which are provided with
-      Subversion).  We'll address some common questions and mistakes,
-      and give some suggestions on how to arrange the data in the
-      repository.</para>
+    <para>En este capítulo, explicaremos cómo crear y configurar
+      un repositorio Subversion, y cómo publicarlo para acceder a él
+      por red. También hablaremos acerca del mantenimiento del
+      repositorio, incluyendo el uso de las herramientas
+      <command>svnlook</command> y <command>svnadmin</command>
+      ( que están disponibles junto con Subversion ). <!--TODO: address?
+      We'll address some common questions and mistakes ... -->
+      Incidiremos en algunas preguntas y errores, y haremos sugerencias
+      sobre la forma de <!--TODO: arrange how to arrange the data in ... -->
+      arreglar los datos en el repositorio.</para>
 
-    <para>If you plan to access a Subversion repository only in the
-      role of a user whose data is under version control (that is, via
-      a Subversion client), you can skip this chapter altogether.
-      However, if you are, or wish to become, a Subversion repository
-      administrator,
+    <para>Si planea acceder al repositorio Subversion sólo desde el
+      punto de vista de un usuario cuyos datos están bajo control
+      de versiones ( es decir, un cliente Subversion ), puede saltarse
+      este capítulo en conjunto.
+      Sin embargo, si vd. es, o quiere convertirse en un administrador
+      de repositorios Subversion,
       <footnote>
-        <para>This may sound really prestigious and lofty, but we're
-          just talking about anyone who is interested in that
-          mysterious realm beyond the working copy where everyone's
-          data hangs out.</para>
+        <para>Puede sonar realmente prestigioso y <!--TODO: lofty: alto?
+        This may sound really prestigious and lofty -->, pero sólo
+        estamos hablando de cualquier personal que esté interesada en 
+        el misterioso reino más allá de la copia de trabajo, donde
+        los datos de todos <!--TODO: hang out?
+        where everyone's data hangs out. --></para>
       </footnote>
-      you should definitely pay attention to this chapter.</para>
+      debería sin lugar a dudas prestar atención a este capítulo.</para>
 
   </simplesect>
 
