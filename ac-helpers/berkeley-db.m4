@@ -81,7 +81,7 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB,
   else
 
     if test "$places" = "search"; then
-      places="std /usr/local /usr/local/include/db3:/usr/local/lib/db3"
+      places="std /usr/local /usr/local/include/db3:/usr/local/lib/db3 /usr/local/BerkeleyDB.3.1"
     fi
     # Now `places' is guaranteed to be a list of place specs we should
     # search, no matter what flags the user passed.
