@@ -772,8 +772,6 @@ do_diff (svnlook_ctxt_t *c, apr_pool_t *pool)
   SVN_ERR (generate_delta_tree (&tree, c->fs, root, base_rev_id, pool)); 
   if (tree)
     {
-      apr_status_t apr_err;
-
       SVN_ERR (svn_fs_revision_root (&base_root, c->fs, base_rev_id, pool));
       SVN_ERR (print_diff_tree 
                (root, base_root, tree, svn_stringbuf_create ("", pool), pool));
