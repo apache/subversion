@@ -963,7 +963,7 @@ report_single_mod (const char *name,
   
 
   /* LOCAL MOD CHECK */
-  else if (! adds_only)
+  else if (! (adds_only || do_delete))
     {
       svn_boolean_t text_modified_p, prop_modified_p;
           
