@@ -9,7 +9,7 @@ AC_INIT(subversion/include/svn_types.h)
 AC_CONFIG_AUX_DIR(ac-helpers)
 
 dnl $MKDIR is required for configuring apr and neon in a vpath build
-MKDIR="$srcdir/apr/helpers/mkdir.sh"
+MKDIR="$srcdir/apr/build/mkdir.sh"
 
 dnl Generate config.nice early (before the args are munged)
 SVN_CONFIG_NICE(config.nice)
