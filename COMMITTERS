@@ -43,3 +43,4 @@ Commit access for specific areas:
              mbk   Mark Benedetto King <bking@inquira.com>     (libsvn_ra_pipe)
           xsteve   Stefan Reichör <reichoer@web.de>            (psvn)
         josander   Jostein Andersen <jostein@josander.net>     (innosetup)
+        ballbach   Michael Ballbach <ballbach@rten.net>        (packages)
