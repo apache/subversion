@@ -58,6 +58,7 @@
 #include <mod_dav.h>
 
 #include <apr_strings.h>
+#include <apr_hash.h>
 
 #include "svn_types.h"
 #include "svn_error.h"
@@ -162,10 +163,7 @@ typedef struct {
   /* the current resource */
   dav_resource res;             /* wres.resource refers here */
   dav_resource_private info;    /* the info in res */
-  svn_string_t *path;           /* the path within info */
   svn_string_t *uri;            /* the uri within res */
-
-  dav_buffer locknull_buf;
 
 } dav_svn_walker_context;
 
@@ -698,6 +696,126 @@ static dav_error * dav_svn_remove_resource(dav_resource *resource,
 
 static dav_error * dav_svn_do_walk(dav_svn_walker_context *ctx, int depth)
 {
+  const dav_walk_params *params = ctx->params;
+  int isdir = ctx->res.collection;
+  dav_error *err;
+  svn_error_t *serr;
+  svn_fs_dir_t *dir;
+  apr_hash_index_t *hi;
+  apr_size_t path_len;
+  apr_size_t uri_len;
+  svn_fs_node_t *save_node;
+  apr_hash_t *children;
+
+  /* The current resource is a collection (possibly here thru recursion)
+     and this is the invocation for the collection. Alternatively, this is
+     the first [and only] entry to do_walk() for a member resource, so
+     this will be the invocation for the member. */
+  err = (*params->func)(&ctx->wres,
+                        isdir ? DAV_CALLTYPE_COLLECTION : DAV_CALLTYPE_MEMBER);
+  if (err != NULL)
+    return err;
+
+  /* if we are not to recurse, or this is a member, then we're done */
+  if (depth == 0 || !isdir)
+    return NULL;
+
+  /* assert: collection resource. isdir == TRUE */
+
+  /* append "/" to the path, in preparation for appending child names */
+  svn_string_appendcstr(ctx->info.path, "/");
+
+  /* NOTE: the URI should already have a trailing "/" */
+
+  /* all of the children exist. also initialize the collection flag. */
+  ctx->res.exists = 1;
+  ctx->res.collection = 0;
+
+  /* save away the node, so we can shove new nodes into the resource */
+  save_node = ctx->info.node;
+
+  /* remember these values so we can chop back to them after each time
+     we append a child name to the path/uri */
+  path_len = ctx->info.path->len;
+  uri_len = ctx->uri->len;
+
+  /* fetch this collection's children */
+  /* ### shall we worry about filling params->pool? */
+  dir = svn_fs_node_to_dir(save_node);
+  serr = svn_fs_dir_entries(&children, dir, params->pool);
+  if (serr != NULL)
+    return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                               "could not fetch collection members");
+
+  /* iterate over the children in this collection */
+  for (hi = apr_hash_first(children); hi; hi = apr_hash_next(hi))
+    {
+      const void *key;
+      apr_size_t klen;
+      void *val;
+      svn_fs_dirent_t *dirent;
+
+      /* fetch one of the children */
+      apr_hash_this(hi, &key, &klen, &val);
+      dirent = val;
+
+      /* authorize access to this resource, if applicable */
+      if (params->walk_type & DAV_WALKTYPE_AUTH)
+        {
+          /* ### how/what to do? */
+        }
+
+      /* append this child to our buffers */
+      svn_string_appendbytes(ctx->info.path, key, klen);
+      svn_string_appendbytes(ctx->uri, key, klen);
+
+      /* reset the URI pointer since the above may have changed it */
+      ctx->res.uri = ctx->uri->data;
+
+      /* open the child node */
+      /* ### faster to use dirent->id? (svn_fs__open_node_by_id) */
+      /* ### shall we worry about filling params->pool? */
+      serr = svn_fs_open_node(&ctx->info.node, dir, dirent->name,
+                              params->pool);
+      if (serr != NULL)
+        return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                   "could not open resource");
+
+      if ( svn_fs_node_is_file(ctx->info.node) )
+        {
+          err = (*params->func)(&ctx->wres, DAV_CALLTYPE_MEMBER);
+          if (err != NULL)
+            return err;
+        }
+      else
+        {
+          /* this resource is a collection */
+          ctx->res.collection = 1;
+
+          /* append a slash to the URI (the path doesn't need it yet) */
+          svn_string_appendcstr(ctx->uri, "/");
+          ctx->res.uri = ctx->uri->data;
+
+          /* recurse on this collection */
+          err = dav_svn_do_walk(ctx, depth - 1);
+          if (err != NULL)
+            return err;
+
+          /* restore the data */
+          ctx->res.collection = 0;
+        }
+
+      /* chop the child off the path and uri. NOTE: no null-term. */
+      ctx->info.path->len = path_len;
+      ctx->uri->len = uri_len;
+
+      /* done with this child's node */
+      svn_fs_close_node(ctx->info.node);
+    }
+
+  /* restore the resource's node */
+  ctx->info.node = save_node;
+
   return NULL;
 }
 
@@ -726,12 +844,15 @@ static dav_error * dav_svn_walk(const dav_walk_params *params, int depth,
   ctx.uri = svn_string_create(params->root->uri, params->pool);
 
   /* if we have a collection, then ensure the URI has a trailing "/" */
+  /* ### get_resource always kills the trailing slash... */
   if (ctx.res.collection && ctx.uri->data[ctx.uri->len - 1] != '/') {
     svn_string_appendcstr(ctx.uri, "/");
   }
 
   /* the current resource's URI is stored in the (telescoping) ctx.uri */
   ctx.res.uri = ctx.uri->data;
+
+  /* ### is the node always open? need to verify */
 
   /* always return the error, and any/all multistatus responses */
   err = dav_svn_do_walk(&ctx, depth);
