@@ -200,34 +200,32 @@ svn_fs__dag_clone_root (dag_node_t **root_p,
   dag_node_t *root_node;  /* The node we'll return. */
   skel_t *root_skel;      /* Skel contents of the node we'll return. */
 
-  /* See if this transaction's root has already been cloned.
-     If it has, return the clone.  Else clone it, and return the
-     clone. */
-
+  /* Get the node ID's of the root directories of the transaction and
+     its base revision.  */
   SVN_ERR (svn_fs__get_txn (&root_id, &base_root_id, fs, svn_txn, trail));
 
-  /* Oh, give me a clone... */
-  if (svn_fs_id_eq (root_id, base_root_id))  /* root as yet uncloned */
+  /* Oh, give me a clone...
+     (If they're the same, we haven't cloned the transaction's root
+     directory yet.)  */
+  if (svn_fs_id_eq (root_id, base_root_id)) 
     {
-      skel_t *base_skel;
-
       /* Of my own flesh and bone...
-         (Get the skel for the base node.) */
-      SVN_ERR (svn_fs__get_node_revision (&base_skel, fs, base_root_id,
+         (Get the NODE-REVISION skel for the base node, and then write
+         it back out as the clone.) */
+      SVN_ERR (svn_fs__get_node_revision (&root_skel, fs, base_root_id,
                                           trail));
-
-      /* With its Y-chromosome changed to X
-         (Create the new, mutable root node.) */
-      /* kff todo: put_representation_skel doesn't seem to do anything
-         with mutability yet... */
-      SVN_ERR (svn_fs__create_successor (&root_id, fs, base_root_id, base_skel,
+      SVN_ERR (svn_fs__create_successor (&root_id, fs, base_root_id, root_skel,
                                          trail));
     }
+  else
+    {
+      /* With its Y-chromosome changed to X...
+         (If the root has already been cloned, read its current contents.)  */
+      SVN_ERR (svn_fs__get_node_revision (&root_skel, fs, root_id, trail));
+    }
 
-  /* One way or another, base_root_id now identifies a cloned root node. */
-
-  /* Get the skel for the new root node. */
-  SVN_ERR (svn_fs__get_node_revision (&root_skel, fs, root_id, trail));
+  /* One way or another, root_id now identifies a cloned root node,
+     and root_skel is its NODE-REVISION skel.  */
 
   /* kff todo: Hmm, time for a constructor?  Do any of these need to
      be copied?  I don't think so... */
