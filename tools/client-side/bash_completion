@@ -61,7 +61,7 @@ _svn()
 		cmdOpts="--auto-props --no-auto-props --targets $nOpts $qOpts"
 		;;
 	blame|annotate|ann|praise)
-		cmdOpts="$rOpts $pOpts"
+		cmdOpts="$rOpts $pOpts -v --verbose"
 		;;
 	cat)
 		cmdOpts="$rOpts $pOpts"
