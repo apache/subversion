@@ -2,7 +2,7 @@
 
      Inversion: A Version Control System You Actually Want To Use
      ------------------------------------------------------------
-              ($Revision: 1.25 $ of this document.)
+              ($Revision: 1.26 $ of this document.)
 
 * Introduction
 
@@ -308,8 +308,8 @@ It doesn't even know what version it belongs to; we'll get to that in
 a moment.
 
 Next, link the new node into the tree, where the previous node was,
-and create a "cross-link" (I forgot to tell you, nodes have a
-cross-link field) from the new node to the old node.  Cross-links are
+and create a "back-link" (I forgot to tell you, nodes have a
+back-link field) from the new node to the old node.  Back-links are
 shown as parenthesized numbers with an arrow leading to the older
 node:
 
@@ -362,10 +362,10 @@ node:
                            |________|          |________|
 
 
-A cross-link is a version number attached to a pointer into the past.
+A back-link is a version number attached to a pointer into the past.
 The version number tells you the version of what the links points to,
 not what it points from.  So if you're looking for FILE:N, and when
-you get a node for that file you find a cross-link pointing to a
+you get a node for that file you find a back-link pointing to a
 version >=N, then you know you must follow that link.
 
 But I digress.  Right now, we're learning how to commit foo:2, and
@@ -434,7 +434,7 @@ Here's how to retrieve foo:N, in general:
 
    2. Walk down the tree in the obvious way, starting from the root
       node N points to.  As you walk, anytime you get to a node with a
-      cross-link >=N, follow the link before continuing downward.
+      back-link >=N, follow the link before continuing downward.
       (Follow this rule even when you get to a node for `foo'.)
 
    3. When you have nowhere else to go, this is the droid you're
@@ -591,11 +591,12 @@ There, wasn't that pretty?  I knew you would.
 
 ** Crash-proof repository mutation and locking
 
-One wants to make repository changes in a such way that the repository
-is in a "sane" (unambiguous and usable) state at every step.  At the
-same time, one wants to keep locking to a minimum: no operation should
-ever lock out readers, no read-only operation should ever lock out
-anyone, and write operations should lock out other writers for as
+We want to make repository changes in a such way that the repository
+is in a "sane" (unambiguous and readable) state at every step.  
+
+At the same time, we want to keep locking to a minimum: no operation
+should ever lock out readers, no read-only operation should ever lock
+out anyone, and write operations should lock out other writers for as
 little time as possible.
 
 Although these two issues are not directly related, they both affect
@@ -619,7 +620,7 @@ the unreachable node).
 
 The new node has the full contents of foo:2.
 
-Step 2:  Create the cross-link from foo:2 to foo:1.
+Step 2:  Create the back-link from foo:2 to foo:1.
 
             ________                ________
            |F       |              |F       |
@@ -629,7 +630,7 @@ Step 2:  Create the cross-link from foo:2 to foo:1.
 
 
 Again, the repository doesn't yet know that the new node even exists.
-The cross-link is a pointer from foo:2 to foo:1, not the other way
+The back-link is a pointer from foo:2 to foo:1, not the other way
 around, so foo:1 isn't even aware of the link.
 
 Both nodes have the full contents of their respective version; no
@@ -641,20 +642,65 @@ Now, there are at least two ways we can do locks: the naive way, and
 the right way.  The naive way is:
 
   You make a lock on version 2.  If anyone else tries to commit
-  version 2 from now until your lock is removed, they'll get bounced
-  out with a message about a commit being in progress right now.
-  Conversely, if someone else has beaten you to the lock for version
-  2, then your lock fails, so delete any new nodes you created and
-  get out, telling the user there's a commit in progress.
+  from now until your lock is removed, they'll get bounced out with a
+  message about a commit being in progress right now.  Conversely, if
+  someone else has beaten you to the lock for version 2, then your
+  lock fails, so delete any new nodes you created and get out, telling
+  the user there's a commit in progress.
 
 However, that loses the nice property (which CVS has) that
 simultaneous commits don't interfere with each other unless they
-involve the same files.  Actually, CVS locks by directory, but still,
+involve the same files.  (Actually, CVS locks by directory, but still,
 it's not as bad as locking the entire repository, even if only for a
-moment!
+moment!)  Also, CVS doesn't require that your entire tree be
+up-to-date to commit, only the files you're committing.
 
-We may be able to do CVS one better, by locking *exactly* the entities
-involved in the commit.  Here's how:
+We can be that mellow and then some.  Here's how:
+
+  Below, a "lock" is a cookie consisting of user:num, where num is
+  the same for all locks in this commit, and different from any other
+  current locks (even ones with the same user).  Locks persist through
+  server crashes (todo: can we implement such a thing efficiently?)
+
+  1. Lock the nodes you're committing new versions for (not for adding
+     new files, though).  These primary locks will last throughout the
+     commit.  If you block on any of these locks, block on all of
+     them, so your commit will be atomic.  
+
+  2. Create the new, unattached nodes that will hold the new versions.
+     Fill them up with the new contents.  Create the back-links.
+
+  3. Lock the parents of the nodes you're committing (secondary
+     locks).  Again, if you block on any of these, block on all of 
+     them.
+
+  4. Set dir_entries in parents to point at the newly created
+     children.  Although this cannot be atomic if there are multiple
+     parents, it is safe because the server knows that a node doesn't
+     really exist if its parent is locked (amend the node-finding
+     algorithm given earlier to always follow back-links from a node
+     whose parent is locked, until you find a node with the same
+     lock as that parent).
+
+  5. Okay, very quickly now: lock the next available version number!
+
+  6. Remove all the other locks.
+
+  7. Unlock that version number!
+
+
+The only nodes involved in a commit are the ones being committed and
+their parents.  Furthermore, we don't actually care what version
+number this commit gets, as long as it's higher than the previous
+version number.  So the goal is not to prevent other commits from
+happening while this one is in progress, it's merely to guarantee that
+they don't interfere -- we don't care who finishes first and ends up
+called version 2 as opposed to version 3 (or 4, or whatever).
+
+Let's look more closely at the changing nodes.  The subject of the
+commit is not actually changing `foo'
+
+fooo
 
   You don't lock any particular version, you just make a lock holding
   the entities you're committing.  If anyone else tries to make a lock
@@ -662,6 +708,8 @@ involved in the commit.  Here's how:
   to come back later.  Conversely, if any of the entities you're
   trying to lock are already locked by someone else, then you get
   bounced and told to come back later.
+
+fooo
 
 For reasons I will go into below, it's not clear that the right way is
 better than the naive way.  The jury is still out on this one...
@@ -707,7 +755,7 @@ Step 5: Replace foo:1's contents with a diff from foo:2.  This is
 optional, in that if you don't do it, the repository just uses more
 storage than it actually needs.  (Of course, there's a "diff-bit" on
 each node saying whether its contents are stored full-text or as a
-diff against the next youngest node that cross-links to this one.)
+diff against the next youngest node that back-links to this one.)
 
               \
             ___\____                    
@@ -816,7 +864,7 @@ store anything in inv_props, only Inversion handles that.
 
    typedef struct node
    {
-      int type;                      /* Regular file, directory, or...? */
+      int type;                      /* File, directory, symlink, etc */
       struct node **parent_list;     /* Can have multiple parents. */
       BOOL diffy;                    /* Holds full text or diff? */
       plist *inv_props;              /* Properties managed by Inversion. */
