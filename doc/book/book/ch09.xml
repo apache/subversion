@@ -3560,7 +3560,7 @@ Updated to revision 31.
              beginnings of all the URLs in your working copy.  Use the
              <option>--relocate</option> command to do the
              substitution.  No file contents are changed, nor is the
-             repository contacted.  It's similar to running a perl
+             repository contacted.  It's similar to running a Perl
              script over your working copy <filename>.svn/</filename>
              directories which runs
              <command>s/OldRoot/NewRoot/</command>.</para>
