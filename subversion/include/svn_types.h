@@ -54,74 +54,74 @@
 
 
 /* a string of bytes.  "bytes is bytes" */
-struct _svn_string_t
+typedef struct svn_string_t
 {
   char *data;                /* pointer to the bytestring */
   unsigned long len;         /* length of bytestring */
   unsigned long blocksize;   /* total size of buffer */
-}
+} svn_string_t;
 
 
 /* a property is a pair of strings */
-struct _svn_prop_t
+typedef struct svn_prop_t
 {
-  struct _svn_string_t *name;
-  struct _svn_string_t *value;
-}
+  svn_string_t *name;
+  svn_string_t *value;
+} svn_prop_t;
 
 
 /* a property list is an unordered list of properties */
-struct _svn_proplist_t
+typedef struct svn_proplist_t
 {
-  struct _svn_prop_t *list; /* an array of props */
+  svn_prop_t *list;         /* an array of props */
   unsigned long len;        /* length of array */
-}
+} svn_proplist_t;
 
 
 /* a file is a proplist and a string */
-struct _svn_file_t
+typedef struct svn_file_t
 {
-  struct _svn_proplist_t *proplist;  /* the file's properties */
-  struct _svn_string_t *text;        /* the file's main content */
-}
+  svn_proplist_t *proplist;  /* the file's properties */
+  svn_string_t *text;        /* the file's main content */
+} svn_file_t;
 
 
 /* a directory entry points to a node */
-struct _svn_direent_t
+typedef struct svn_dirent_t
 {
-  unsigned long node_num;            /* a node pointed to */
-  struct _svn_string_t *name;        /* name of the node pointed to */
-  struct _svn_proplist_t *proplist;  /* entry's properties */
-}
+  unsigned long node_num;    /* a node pointed to */
+  svn_string_t *name;        /* name of the node pointed to */
+  svn_proplist_t *proplist;  /* entry's properties */
+} svn_dirent_t;
 
 
 /* a directory is an unordered list of directory entries, and a proplist */
-struct _svn_directory_t
+typedef struct svn_directory_t
 {
-  struct _svn_direent_t *list;       /* an array of direents */
-  unsigned long len;                 /* length of array */
-  struct _svn_proplist_t *proplist;  /* directory's properties */
-}
+  svn_dirent_t *list;        /* an array of dirents */
+  unsigned long len;         /* length of array */
+  svn_proplist_t *proplist;  /* directory's properties */
+} svn_directory_t;
 
 
 /* a node is either a file or directory, a distinguished union  */
-struct _svn_node_t
+typedef struct svn_node_t
 {
   enum node_kind {file, directory} kind;  /* am I a file or directory? */
   union node_union 
   {
-    struct _svn_file_t *file;
-    struct _svn_directory_t *directory;
+    svn_file_t *file;
+    svn_directory_t *directory;
   } contents;                             /* my contents */
-}
+} svn_node_t;
 
 
 /* a version is a node number and property list */
-struct _svn_ver_t
+typedef struct svn_ver_t
 {
   unsigned long node_num;             /* the root node of a tree */
-  struct _svn_proplist_t *proplist;   /* version's properties */
-}
+  svn_proplist_t *proplist;           /* version's properties */
+} svn_ver_t
 
 
 /* These things aren't critical to define yet; I'll leave them to
@@ -134,18 +134,6 @@ struct _svn_ver_t
 /* a repository is a node table and a history */
 
 
-
-
-/* Now we typedef all our structures, removing the prefix. */
-
-typedef struct _svn_string_t          svn_string_t;
-typedef struct _svn_prop_t            svn_prop_t;
-typedef struct _svn_proplist_t        svn_proplist_t;
-typedef struct _svn_file_t            svn_file_t;
-typedef struct _svn_direent_t         svn_dirrent_t;
-typedef struct _svn_directory_t       svn_directory_t;
-typedef struct _svn_node_t            svn_node_t;
-typedef struct _svn_ver_t             svn_ver_t;
 
 /* temporary placeholders, till we write the real thing!  */
 typedef unsigned long                 svn_token_t;
