@@ -16,7 +16,6 @@ http://svn.collab.net/repos/svn/tags/0.37.0
  * require SWIG >=1.3.19 (issue #1690)
  * numerous changes to language bindings, to keep up with C API.
  * fix: apr build issues (r8279, r8280, r8318) (issue #1666)
- * more bigger and smaller internal code cleanups and fixes to mention
  * changed the auth-provider C API to use 'realmstring' on all funcs
  * check the ra plugin ABI versions.
  * fix: ABI problem with blame.  (r8494) (issue #1705)
