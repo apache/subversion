@@ -1234,8 +1234,8 @@ typedef struct svn_wc_keywords_t
  * A and/or B may be NULL; for purposes of comparison, NULL is
  * equivalent to holding no keywords.
  */
-svn_boolean_t svn_wc_keywords_differ (svn_wc_keywords_t *a,
-                                      svn_wc_keywords_t *b,
+svn_boolean_t svn_wc_keywords_differ (const svn_wc_keywords_t *a,
+                                      const svn_wc_keywords_t *b,
                                       svn_boolean_t compare_values);
 
 
@@ -1278,7 +1278,7 @@ svn_error_t *svn_wc_copy_and_translate (const char *src,
                                         const char *dst,
                                         const char *eol_str,
                                         svn_boolean_t repair,
-                                        svn_wc_keywords_t *keywords,
+                                        const svn_wc_keywords_t *keywords,
                                         svn_boolean_t expand,
                                         apr_pool_t *pool);
 
