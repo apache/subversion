@@ -50,43 +50,18 @@
 #define COMMENT_KEY "comment"
 
 
-/* Join P1 and P2 with directory separators to create RESULT. */
-static svn_error_t *
-merge_paths (const char **result,
-             const char *p1,
-             const char *p2,
-             apr_pool_t *pool)
-{
-  apr_status_t status;
-  const char *p2_rel = p2;
-  char *tmp;
-  if (*p2 == '/')
-    p2_rel = p2 + 1;
-
-  status = apr_filepath_merge (&tmp, p1, p2_rel, APR_FILEPATH_NATIVE, pool);
-  if (status)
-    return svn_error_wrap_apr (status, _("Can't merge paths '%s' and '%s'"),
-                               p1, p2);
-  *result = tmp;
-  return SVN_NO_ERROR;
-}
-
 /* Set ABS_PATH to the absolute path to the lock file or lock entries
    file for which DIGEST is the hashed repository relative path. */
-
-
-/* Where DIGEST is the MD5 hash of the path to the lock file or lock
-   entries file in FS, set ABS_PATH to the absolute path to file. */
 static svn_error_t *
 abs_path_to_lock_digest_file (const char **abs_path,
                               svn_fs_t *fs,
                               const char *digest,
                               apr_pool_t *pool)
 {
-  SVN_ERR (merge_paths (abs_path, fs->path, LOCK_ROOT_DIR, pool));
+  *abs_path = svn_path_join_many (pool, fs->path, LOCK_ROOT_DIR,
+                                  digest, NULL);
   /* ###TODO create a 1 or 2 char subdir to spread the love across
      many directories */
-  SVN_ERR (merge_paths (abs_path, *abs_path, digest, pool));
   
   return SVN_NO_ERROR;
 }
@@ -112,13 +87,12 @@ abs_path_to_lock_file (const char **abs_path,
 {
   const char *digest_cstring;
 
-  SVN_ERR (merge_paths (abs_path, fs->path, LOCK_ROOT_DIR, pool));
-
   digest_cstring = make_digest (rel_path, pool);
 
+  *abs_path = svn_path_join_many (pool, fs->path, LOCK_ROOT_DIR,
+                                  digest_cstring, NULL);
   /* ###TODO create a 1 or 2 char subdir to spread the love across
      many directories */
-  SVN_ERR (merge_paths (abs_path, *abs_path, digest_cstring, pool));
 
   return SVN_NO_ERROR;
 }
@@ -133,7 +107,7 @@ base_path_to_lock_file (const char **base_path,
                         svn_fs_t *fs,
                         apr_pool_t *pool)
 {
-  SVN_ERR (merge_paths (base_path, fs->path, LOCK_ROOT_DIR, pool));
+  *base_path = svn_path_join (fs->path, LOCK_ROOT_DIR, pool);
   /* ###TODO create a 1 or 2 char subdir to spread the love across
      many directories (and take the hash as an optional arg. */
 
@@ -376,7 +350,7 @@ merge_array_components (const char **path,
     {
       char *component;
       component = APR_ARRAY_IDX (components, i, char *);
-      SVN_ERR (merge_paths (path, *path, component, pool));
+      *path = svn_path_join (*path, component, pool);
     }
   return SVN_NO_ERROR;
 }
@@ -559,21 +533,22 @@ read_lock_from_abs_path (svn_lock_t **lock_p,
   svn_lock_t *lock;
   apr_hash_t *hash;
   svn_stream_t *stream;
-  apr_status_t status;
+  svn_error_t *err;
   apr_file_t *fd;
   const char *val;
   apr_finfo_t finfo;
 
-  status = apr_stat (&finfo, abs_path, APR_FINFO_TYPE, pool);
+  err = svn_io_stat (&finfo, abs_path, APR_FINFO_TYPE, pool);
+
   /* If file doesn't exist, then there's no lock, so return immediately. */
-  if (APR_STATUS_IS_ENOENT (status))
+  if (err && APR_STATUS_IS_ENOENT (err->apr_err))
     {
+      svn_error_clear (err);
       *lock_p = NULL;
       return svn_fs_fs__err_no_such_lock (fs, abs_path);
     }      
-
-  if (status  && !APR_STATUS_IS_ENOENT (status))
-    return svn_error_wrap_apr (status, _("Can't stat '%s'"), abs_path);
+  if (err)
+    return err;
 
   /* Only open the file if we haven't been passed an apr_file_t. */
   if (!existing_fd)
@@ -1018,7 +993,7 @@ svn_fs_fs__get_locks (apr_hash_t **locks,
                       apr_pool_t *pool)
 {
   apr_finfo_t finfo;
-  apr_status_t status;
+  svn_error_t *err;
   const char *digest_str, *abs_path;
 
   /* Make the hash that we'll return. */
@@ -1035,11 +1010,16 @@ svn_fs_fs__get_locks (apr_hash_t **locks,
       tmp[strlen (abs_path) - 1] = '\0';
       abs_path = tmp;
     }
-  status = apr_stat (&finfo, abs_path, APR_FINFO_TYPE, pool);
+  err = svn_io_stat (&finfo, abs_path, APR_FINFO_TYPE, pool);
 
   /* If base dir doesn't exist, then we don't have any locks. */
-  if (APR_STATUS_IS_ENOENT (status))
+  if (err && APR_STATUS_IS_ENOENT (err->apr_err))
+    {
+      svn_error_clear (err);
       return SVN_NO_ERROR;
+    }
+  if (err)
+    return err;
 
   digest_str = make_digest (path, pool);
   abs_path = repository_abs_path (path, pool);
