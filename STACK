@@ -37,40 +37,6 @@ Ben todo:
    - finish svn_fs_is_different, make status command use it.
 
 
-Karl M3 stack:
-
-   - conservative mime type detection
-
-   - Greg's suggested rewrite (unwrite) of hook system
-
-   - DB_RUN_RECOVERY, about which Greg writes:
-
-     As much of that as you'd like to do :-) The bulk of the code
-     would go into libsvn_repos since ra_local needs to handle it,
-     too. We can talk implementation details on the dev list.
-
-     The main reason it was on my plate is to deal with interprocess
-     locking details. However, it should simply be a matter of putting
-     a known lock file (e.g. "recovery-lock") into the repos directory
-     and having code open it and use apr_file_(un)lock() on it (using
-     SHARED locks for readers and EXCLUSIVE locks for writers). We'd
-     keep the file open as long as possible, and use locks on either a
-     per-op basis or across groups of ops (we should discuss tradeoffs
-     on the list; I've got ideas but would like discussion).
-
-     See in apache cvs tree this file, for an example of APR lock usage:
-
-         srclib/apr-util/dbm/sdbm/sdbm_lock.c   // Has two funcs in it.
-                                  sdbm.c        // Calls above to do
-                                                   locking and unlocking.
-
-     Summary: you have an open file handle, just call the file lock
-              functions on it.
-
-    
-
-
-
 Karl post-M3:
 
    - Propagate changes down into libsvn_client.  Currently, the client
