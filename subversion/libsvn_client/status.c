@@ -134,13 +134,24 @@ reporter_finish_report (void *report_baton, apr_pool_t *pool)
   apr_hash_t *locks;
   const char *repos_root;
   apr_pool_t *subpool = svn_pool_create (pool);
+  svn_error_t *err = SVN_NO_ERROR;
 
   /* Open an RA session to our common ancestor and grab the locks under it.
    */
   SVN_ERR (svn_client__open_ra_session (&ras, rb->ancestor, NULL, NULL, NULL,
                                         FALSE, TRUE, rb->ctx, subpool));
-  /* The locks need to live throughout the edit. */
-  SVN_ERR (svn_ra_get_locks (ras, &locks, "", rb->pool));
+
+  /* The locks need to live throughout the edit.  Note that if the
+     server doesn't support lock discovery, we'll just not do locky
+     stuff. */
+  err = svn_ra_get_locks (ras, &locks, "", rb->pool);
+  if (err && err->apr_err == SVN_ERR_RA_NOT_IMPLEMENTED)
+    {
+      svn_error_clear (err);
+      err = SVN_NO_ERROR;
+      locks = apr_hash_make (rb->pool);
+    }
+  SVN_ERR (err);
 
   SVN_ERR (svn_ra_get_repos_root (ras, &repos_root, pool));
 
