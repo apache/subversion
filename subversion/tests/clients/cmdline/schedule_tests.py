@@ -409,6 +409,7 @@ def commit_add_files(sbox):
   if add_files(sbox):
     return 1
 
+  return 1
   return 0
 
 #----------------------------------------------------------------------
@@ -419,6 +420,7 @@ def commit_add_directories(sbox):
   if add_directories(sbox):
     return 1
 
+  return 1
   return 0
 
 #----------------------------------------------------------------------
@@ -429,6 +431,7 @@ def commit_nested_adds(sbox):
   if nested_adds(sbox):
     return 1
 
+  return 1
   return 0
 
 #----------------------------------------------------------------------
@@ -439,6 +442,7 @@ def commit_delete_files(sbox):
   if delete_files(sbox):
     return 1
 
+  return 1
   return 0
 
 #----------------------------------------------------------------------
@@ -449,6 +453,7 @@ def commit_delete_dirs(sbox):
   if delete_dirs(sbox):
     return 1
 
+  return 1
   return 0
 
 
@@ -468,11 +473,11 @@ test_list = [ None,
               revert_nested_adds,
               revert_delete_files,
               revert_delete_dirs,
-              # commit_add_files,
-              # commit_add_directories,
-              # commit_nested_adds,
-              # commit_delete_files,
-              # commit_delete_dirs,
+              (commit_add_files, svntest.main.XFAIL),
+              (commit_add_directories, svntest.main.XFAIL),
+              (commit_nested_adds, svntest.main.XFAIL),
+              (commit_delete_files, svntest.main.XFAIL),
+              (commit_delete_dirs, svntest.main.XFAIL),
              ]
 
 if __name__ == '__main__':

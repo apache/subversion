@@ -234,7 +234,7 @@ def enable_translation(sbox):
   "enable translation, check status, commit"
 
   wc_dir = sbox.wc_dir
-  
+  return 1
   # TODO: Turn on newline conversion and/or keyword substition for all
   # sorts of files, with and without local mods, and verify that
   # status shows the right stuff.  The, commit those mods.
@@ -246,6 +246,7 @@ def enable_translation(sbox):
 def checkout_translated():
   "checkout files that have translation enabled"
 
+  return 1
   # TODO: Checkout a tree which contains files with translation
   # enabled.
 
@@ -256,6 +257,7 @@ def checkout_translated():
 def disable_translation():
   "disable translation, check status, commit"
 
+  return 1
   # TODO: Disable translation on files which have had it enabled,
   # with and without local mods, check status, and commit.
   
@@ -367,9 +369,9 @@ This is the file 'rho'.>>>>>>> .r1
 # list all tests here, starting with None:
 test_list = [ None,
               keywords_from_birth,
-              # enable_translation,
-              # checkout_translated,
-              # disable_translation,
+              (enable_translation, svntest.main.XFAIL),
+              (checkout_translated, svntest.main.XFAIL),
+              (disable_translation, svntest.main.XFAIL),
               update_modified_with_translation,
              ]
 
