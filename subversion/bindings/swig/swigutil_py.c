@@ -358,13 +358,7 @@ static svn_error_t * convert_python_error(void)
 typedef struct {
   PyObject *editor;     /* the editor handling the callbacks */
   PyObject *baton;      /* the dir/file baton (or NULL for edit baton) */
-  apr_pool_t *pool;     /* pool to use for errors */
 } item_baton;
-
-typedef struct {
-  PyObject *handler;    /* the window handler (a callable) */
-  apr_pool_t *pool;     /* a pool for constructing errors */
-} handler_baton;
 
 static item_baton * make_baton(apr_pool_t *pool,
                                PyObject *editor, PyObject *baton)
@@ -378,7 +372,6 @@ static item_baton * make_baton(apr_pool_t *pool,
 
   newb->editor = editor;
   newb->baton = baton;
-  newb->pool = pool;
 
   return newb;
 }
@@ -674,7 +667,7 @@ static svn_error_t * thunk_open_file(const char *path,
 static svn_error_t * thunk_window_handler(svn_txdelta_window_t *window,
                                           void *baton)
 {
-  handler_baton *hb = baton;
+  PyObject *handler = baton;
   PyObject *result;
   svn_error_t *err;
 
@@ -686,16 +679,16 @@ static svn_error_t * thunk_window_handler(svn_txdelta_window_t *window,
 
       /* invoke the handler with None for the window */
       /* ### python doesn't have 'const' on the format */
-      result = PyObject_CallFunction(hb->handler, (char *)"O", Py_None);
+      result = PyObject_CallFunction(handler, (char *)"O", Py_None);
 
       /* we no longer need to refer to the handler object */
-      Py_DECREF(hb->handler);
+      Py_DECREF(handler);
     }
   else
     {
       /* invoke the handler with the window */
       /* ### python doesn't have 'const' on the format */
-      result = PyObject_CallFunction(hb->handler,
+      result = PyObject_CallFunction(handler,
                                      (char *)"O&", make_ob_window, window);
     }
 
@@ -748,15 +741,10 @@ thunk_apply_textdelta(void *file_baton,
     }
   else
     {
-      handler_baton *hb = apr_palloc(ib->pool, sizeof(*hb));
-
       /* return the thunk for invoking the handler. the baton takes our
-         'result' reference. */
-      hb->handler = result;
-      hb->pool = ib->pool;
-
+         'result' reference, which is the handler. */
       *handler = thunk_window_handler;
-      *h_baton = hb;
+      *h_baton = result;
     }
 
   err = SVN_NO_ERROR;
