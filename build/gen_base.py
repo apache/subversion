@@ -1,6 +1,5 @@
-#!/usr/bin/env python
 #
-# gen-base.py -- infrastructire for generateing makefiles, dependencies, etc.
+# gen_base.py -- infrastructure for generating makefiles, dependencies, etc.
 #
 
 import os, sys
@@ -13,11 +12,22 @@ __all__ = ['MakefileGenerator', 'MsvcProjectGenerator']
 
 
 class _GeneratorBase:
-  def __init__(self, fname, oname):
+
+  #
+  # Derived classes should define a class attribute named _extension_map.
+  # This attribute should be a dictionary of the form:
+  #     { (target-type, file-type): file-extension ...}
+  #
+  # where: target-type is 'exe', 'lib', ...
+  #        file-type is 'target', 'object', ...
+  #
+
+  def __init__(self, fname):
     self.parser = ConfigParser.ConfigParser(_cfg_defaults)
     self.parser.read(fname)
-    self.oname = oname
+
     self.targets = { }
+    self.includes = [ ]
     self.install = { }                       # install area name -> targets
     self.test_progs = [ ]
     self.test_deps = [ ]
@@ -36,7 +46,8 @@ class _GeneratorBase:
         target_ob = _Target(target,
                             self.parser.get(target, 'path'),
                             self.parser.get(target, 'install'),
-                            self.parser.get(target, 'type'))
+                            self.parser.get(target, 'type'),
+                            self._extension_map)
       except GenError, e:
         print e
         errors = 1
@@ -53,25 +64,266 @@ class _GeneratorBase:
       self.target_dirs[target_ob.path] = None
 
     if errors:
-      raise GenError('Target generation failed, exiting.')
+      raise GenError('Target generation failed.')
 
 
 class MsvcProjectGenerator(_GeneratorBase):
+
+  _extension_map = {
+    ('exe', 'target'): '.exe',
+    ('exe', 'object'): '.obj',
+    ('lib', 'target'): '.dll',
+    ('lib', 'object'): '.obj',
+    }
+
   def __init__(self, fname, oname):
-    _GeneratorBase.__init__(self, fname, oname)
+    _GeneratorBase.__init__(self, fname)
 
   def write(self):
     raise NotImplementedError
 
 
 class MakefileGenerator(_GeneratorBase):
+
+  _extension_map = {
+    ('exe', 'target'): '',
+    ('exe', 'object'): '.o',
+    ('lib', 'target'): '.la',
+    ('lib', 'object'): '.lo',
+    }
+
   def __init__(self, fname, oname):
-    _GeneratorBase.__init__(self, fname, oname)
-    self.ofile = open(self.oname, 'w')
+    _GeneratorBase.__init__(self, fname)
+
+    self.ofile = open(oname, 'w')
     self.ofile.write('# DO NOT EDIT -- AUTOMATICALLY GENERATED\n\n')
 
   def write(self):
-    pass
+    errors = 0
+    for target in self.target_names:
+      target_ob = self.targets[target]
+
+      path = target_ob.path
+      bldtype = target_ob.type
+      objext = target_ob.objext
+
+      tpath = target_ob.output
+      tfile = os.path.basename(tpath)
+
+      if target_ob.install == 'test' and bldtype == 'exe':
+        self.test_deps.append(tpath)
+        if self.parser.get(target, 'testing') != 'skip':
+          self.test_progs.append(tpath)
+
+      if target_ob.install == 'fs-test' and bldtype == 'exe':
+        self.fs_test_deps.append(tpath)
+        if self.parser.get(target, 'testing') != 'skip':
+          self.fs_test_progs.append(tpath)
+
+      s_errors = target_ob.find_sources(self.parser.get(target, 'sources'))
+      errors = errors or s_errors
+
+      objects = [ ]
+      for src in target_ob.sources:
+        if src[-2:] == '.c':
+          objname = src[:-2] + objext
+          objects.append(objname)
+          self.file_deps.append((src, objname))
+        else:
+          print 'ERROR: unknown file extension on', src
+          errors = 1
+
+      retreat = _retreat_dots(path)
+      libs = [ ]
+      deps = [ ]
+      for lib in string.split(self.parser.get(target, 'libs')):
+        if lib in self.target_names:
+          tlib = self.targets[lib]
+          target_ob.deps.append(tlib)
+          deps.append(tlib.output)
+
+          # link in the library by simply referring to the .la file
+          ### hmm. use join() for retreat + ... ?
+          libs.append(retreat + os.path.join(tlib.path, lib + '.la'))
+        else:
+          # something we don't know, so just include it directly
+          libs.append(lib)
+
+      for man in string.split(self.parser.get(target, 'manpages')):
+        self.manpages.append(man)
+
+      for info in string.split(self.parser.get(target, 'infopages')):
+        self.infopages.append(info)
+
+      targ_varname = string.replace(target, '-', '_')
+      ldflags = self.parser.get(target, 'link-flags')
+      add_deps = self.parser.get(target, 'add-deps')
+      objnames = string.join(map(os.path.basename, objects))
+      self.ofile.write(
+        '%s_DEPS = %s %s\n'
+        '%s_OBJECTS = %s\n'
+        '%s: $(%s_DEPS)\n'
+        '\tcd %s && $(LINK) -o %s %s $(%s_OBJECTS) %s $(LIBS)\n\n'
+        % (targ_varname, string.join(objects + deps), add_deps,
+           targ_varname, objnames,
+           tpath, targ_varname,
+           path, tfile, ldflags, targ_varname, string.join(libs))
+        )
+
+      custom = self.parser.get(target, 'custom')
+      if custom == 'apache-mod':
+        # special build, needing Apache includes
+        self.ofile.write('# build these special -- use APACHE_INCLUDES\n')
+        for src in target_ob.sources:
+          if src[-2:] == '.c':
+            self.ofile.write('%s%s: %s\n\t$(COMPILE_APACHE_MOD)\n'
+                             % (src[:-2], objext, src))
+        self.ofile.write('\n')
+      elif custom == 'swig-py':
+        self.ofile.write('# build this with -DSWIGPYTHON\n')
+        for src in target_ob.sources:
+          if src[-2:] == '.c':
+            self.ofile.write('%s%s: %s\n\t$(COMPILE_SWIG_PY)\n'
+                             % (src[:-2], objext, src))
+        self.ofile.write('\n')
+
+    for g_name, g_targets in self.install.items():
+      self.target_names = [ ]
+      for i in g_targets:
+        self.target_names.append(i.output)
+
+      self.ofile.write('%s: %s\n\n' % (g_name, string.join(self.target_names)))
+
+    cfiles = [ ]
+    for target in self.targets.values():
+      # .la files are handled by the standard 'clean' rule; clean all the
+      # other targets
+      if target.output[-3:] != '.la':
+        cfiles.append(target.output)
+    self.ofile.write('CLEAN_FILES = %s\n\n' % string.join(cfiles))
+
+    for area, inst_targets in self.install.items():
+      # get the output files for these targets, sorted in dependency order
+      files = _sorted_files(inst_targets)
+
+      if area == 'apache-mod':
+        self.ofile.write('install-mods-shared: %s\n' % (string.join(files),))
+        la_tweaked = { }
+        for file in files:
+          # cd to dirname before install to work around libtool 1.4.2 bug.
+          dirname, fname = os.path.split(file)
+          base, ext = os.path.splitext(fname)
+          name = string.replace(base, 'libmod_', '')
+          self.ofile.write('\tcd %s ; $(INSTALL_MOD_SHARED) -n %s %s\n'
+                           % (dirname, name, fname))
+          if ext == '.la':
+            la_tweaked[file + '-a'] = None
+
+        for t in inst_targets:
+          for dep in t.deps:
+            bt = dep.output
+            if bt[-3:] == '.la':
+              la_tweaked[bt + '-a'] = None
+        la_tweaked = la_tweaked.keys()
+
+        s_files, s_errors = _collect_paths(self.parser.get('static-apache',
+                                                           'paths'))
+        errors = errors or s_errors
+
+        # Construct a .libs directory within the Apache area and populate it
+        # with the appropriate files. Also drop the .la file in the target dir.
+        self.ofile.write('\ninstall-mods-static: %s\n'
+                         '\t$(MKDIR) %s\n'
+                         % (string.join(la_tweaked + s_files),
+                            os.path.join('$(APACHE_TARGET)', '.libs')))
+        for file in la_tweaked:
+          dirname, fname = os.path.split(file)
+          base = os.path.splitext(fname)[0]
+          self.ofile.write('\t$(INSTALL_MOD_STATIC) %s %s\n'
+                           '\t$(INSTALL_MOD_STATIC) %s %s\n'
+                           % (os.path.join(dirname, '.libs', base + '.a'),
+                              os.path.join('$(APACHE_TARGET)',
+                                           '.libs',
+                                           base + '.a'),
+                              file,
+                              os.path.join('$(APACHE_TARGET)', base + '.la')))
+
+        # copy the other files to the target dir
+        for file in s_files:
+          self.ofile.write('\t$(INSTALL_MOD_STATIC) %s %s\n'
+                           % (file, os.path.join('$(APACHE_TARGET)',
+                                                 os.path.basename(file))))
+        self.ofile.write('\n')
+
+      elif area != 'test' and area != 'fs-test':
+        area_var = string.replace(area, '-', '_')
+        self.ofile.write('install-%s: %s\n'
+                         '\t$(MKDIR) $(%sdir)\n'
+                         % (area, string.join(files), area_var))
+        for file in files:
+          # cd to dirname before install to work around libtool 1.4.2 bug.
+          dirname, fname = os.path.split(file)
+          self.ofile.write('\tcd %s ; $(INSTALL_%s) %s %s\n'
+                           % (dirname,
+                              string.upper(area_var),
+                              fname,
+                              os.path.join('$(%sdir)' % area_var, fname)))
+        self.ofile.write('\n')
+
+      # generate .dsp files for each target
+      #for t in inst_targets:
+      #  t.write_dsp()
+      #  pass
+
+    self.includes, i_errors = _collect_paths(self.parser.get('includes',
+                                                             'paths'))
+    errors = errors or i_errors
+
+    self.ofile.write('install-include: %s\n'
+                     '\t$(MKDIR) $(includedir)\n'
+                     % (string.join(self.includes),))
+    for file in self.includes:
+      self.ofile.write('\t$(INSTALL_INCLUDE) %s %s\n'
+                       % (os.path.join('$(top_srcdir)', file),
+                          os.path.join('$(includedir)',
+                                       os.path.basename(file))))
+
+    self.ofile.write('\n# handy shortcut targets\n')
+    for name, target in self.targets.items():
+      self.ofile.write('%s: %s\n' % (name, target.output))
+    self.ofile.write('\n')
+
+    scripts, s_errors = _collect_paths(self.parser.get('test-scripts',
+                                                       'paths'))
+    errors = errors or s_errors
+
+    script_dirs = []
+    for script in scripts:
+      script_dirs.append(re.compile("[-a-z0-9A-Z_.]*$").sub("", script))
+
+    fs_scripts, fs_errors = _collect_paths(self.parser.get('fs-test-scripts',
+                                                           'paths'))
+    errors = errors or fs_errors
+
+    self.ofile.write('BUILD_DIRS = %s %s\n' %
+                     (string.join(self.target_dirs.keys()),
+                      string.join(script_dirs)))
+
+    self.ofile.write('FS_TEST_DEPS = %s\n\n' %
+                     string.join(self.fs_test_deps + fs_scripts))
+    self.ofile.write('FS_TEST_PROGRAMS = %s\n\n' %
+                     string.join(self.fs_test_progs + fs_scripts))
+    self.ofile.write('TEST_DEPS = %s\n\n' %
+                     string.join(self.test_deps + scripts))
+    self.ofile.write('TEST_PROGRAMS = %s\n\n' %
+                     string.join(self.test_progs + scripts))
+
+    self.ofile.write('MANPAGES = %s\n\n' % string.join(self.manpages))
+    self.ofile.write('INFOPAGES = %s\n\n' % string.join(self.infopages))
+
+    if errors:
+      raise GenError("Makefile generation failed.")
+
 
   def write_depends(self):
     #
@@ -93,13 +345,13 @@ class MakefileGenerator(_GeneratorBase):
     # than I cared to do right now)
     #
     include_deps = _create_include_deps(self.includes)
-    for d in target_dirs.keys():
+    for d in self.target_dirs.keys():
       hdrs = glob.glob(os.path.join(d, '*.h'))
       if hdrs:
         more_deps = _create_include_deps(hdrs, include_deps)
         include_deps.update(more_deps)
 
-    for src, objname in file_deps:
+    for src, objname in self.file_deps:
       hdrs = [ ]
       for short in _find_includes(src, include_deps):
         hdrs.append(include_deps[short][0])
@@ -107,244 +359,27 @@ class MakefileGenerator(_GeneratorBase):
 
 
 
-def main(fname, oname=None, skip_depends=0):
-  # PASS 2: generate the outputs
-  for target in target_names:
-    target_ob = targets[target]
-
-    path = target_ob.path
-    bldtype = target_ob.type
-    objext = target_ob.objext
-
-    tpath = target_ob.output
-    tfile = os.path.basename(tpath)
-
-    if target_ob.install == 'test' and bldtype == 'exe':
-      test_deps.append(tpath)
-      if parser.get(target, 'testing') != 'skip':
-        test_progs.append(tpath)
-
-    if target_ob.install == 'fs-test' and bldtype == 'exe':
-      fs_test_deps.append(tpath)
-      if parser.get(target, 'testing') != 'skip':
-        fs_test_progs.append(tpath)
-
-    s_errors = target_ob.find_sources(parser.get(target, 'sources'))
-    errors = errors or s_errors
-
-    objects = [ ]
-    for src in target_ob.sources:
-      if src[-2:] == '.c':
-        objname = src[:-2] + objext
-        objects.append(objname)
-        file_deps.append((src, objname))
-      else:
-        print 'ERROR: unknown file extension on', src
-        errors = 1
-
-    retreat = _retreat_dots(path)
-    libs = [ ]
-    deps = [ ]
-    for lib in string.split(parser.get(target, 'libs')):
-      if lib in target_names:
-        tlib = targets[lib]
-        target_ob.deps.append(tlib)
-        deps.append(tlib.output)
-
-        # link in the library by simply referring to the .la file
-        ### hmm. use join() for retreat + ... ?
-        libs.append(retreat + os.path.join(tlib.path, lib + '.la'))
-      else:
-        # something we don't know, so just include it directly
-        libs.append(lib)
-
-    for man in string.split(parser.get(target, 'manpages')):
-      manpages.append(man)
-
-    for info in string.split(parser.get(target, 'infopages')):
-      infopages.append(info)
-
-    targ_varname = string.replace(target, '-', '_')
-    ldflags = parser.get(target, 'link-flags')
-    add_deps = parser.get(target, 'add-deps')
-    objnames = string.join(map(os.path.basename, objects))
-    ofile.write('%s_DEPS = %s %s\n'
-                '%s_OBJECTS = %s\n'
-                '%s: $(%s_DEPS)\n'
-                '\tcd %s && $(LINK) -o %s %s $(%s_OBJECTS) %s $(LIBS)\n\n'
-                % (targ_varname, string.join(objects + deps), add_deps,
-                   targ_varname, objnames,
-                   tpath, targ_varname,
-                   path, tfile, ldflags, targ_varname, string.join(libs)))
-
-    custom = parser.get(target, 'custom')
-    if custom == 'apache-mod':
-      # special build, needing Apache includes
-      ofile.write('# build these special -- use APACHE_INCLUDES\n')
-      for src in target_ob.sources:
-        if src[-2:] == '.c':
-          ofile.write('%s%s: %s\n\t$(COMPILE_APACHE_MOD)\n'
-                      % (src[:-2], objext, src))
-      ofile.write('\n')
-    elif custom == 'swig-py':
-      ofile.write('# build this with -DSWIGPYTHON\n')
-      for src in target_ob.sources:
-        if src[-2:] == '.c':
-          ofile.write('%s%s: %s\n\t$(COMPILE_SWIG_PY)\n'
-                      % (src[:-2], objext, src))
-      ofile.write('\n')
-
-  for g_name, g_targets in install.items():
-    target_names = [ ]
-    for i in g_targets:
-      target_names.append(i.output)
-
-    ofile.write('%s: %s\n\n' % (g_name, string.join(target_names)))
-
-  cfiles = [ ]
-  for target in targets.values():
-    # .la files are handled by the standard 'clean' rule; clean all the
-    # other targets
-    if target.output[-3:] != '.la':
-      cfiles.append(target.output)
-  ofile.write('CLEAN_FILES = %s\n\n' % string.join(cfiles))
-
-  for area, inst_targets in install.items():
-    # get the output files for these targets, sorted in dependency order
-    files = _sorted_files(inst_targets)
-
-    if area == 'apache-mod':
-      ofile.write('install-mods-shared: %s\n' % (string.join(files),))
-      la_tweaked = { }
-      for file in files:
-        # cd to dirname before install to work around libtool 1.4.2 bug.
-        dirname, fname = os.path.split(file)
-        base, ext = os.path.splitext(fname)
-        name = string.replace(base, 'libmod_', '')
-        ofile.write('\tcd %s ; $(INSTALL_MOD_SHARED) -n %s %s\n'
-                    % (dirname, name, fname))
-        if ext == '.la':
-          la_tweaked[file + '-a'] = None
-
-      for t in inst_targets:
-        for dep in t.deps:
-          bt = dep.output
-          if bt[-3:] == '.la':
-            la_tweaked[bt + '-a'] = None
-      la_tweaked = la_tweaked.keys()
-
-      s_files, s_errors = _collect_paths(parser.get('static-apache', 'paths'))
-      errors = errors or s_errors
-
-      # Construct a .libs directory within the Apache area and populate it
-      # with the appropriate files. Also drop the .la file in the target dir.
-      ofile.write('\ninstall-mods-static: %s\n'
-                  '\t$(MKDIR) %s\n'
-                  % (string.join(la_tweaked + s_files),
-                     os.path.join('$(APACHE_TARGET)', '.libs')))
-      for file in la_tweaked:
-        dirname, fname = os.path.split(file)
-        base = os.path.splitext(fname)[0]
-        ofile.write('\t$(INSTALL_MOD_STATIC) %s %s\n'
-                    '\t$(INSTALL_MOD_STATIC) %s %s\n'
-                    % (os.path.join(dirname, '.libs', base + '.a'),
-                       os.path.join('$(APACHE_TARGET)', '.libs', base + '.a'),
-                       file,
-                       os.path.join('$(APACHE_TARGET)', base + '.la')))
-
-      # copy the other files to the target dir
-      for file in s_files:
-        ofile.write('\t$(INSTALL_MOD_STATIC) %s %s\n'
-                    % (file, os.path.join('$(APACHE_TARGET)',
-                                          os.path.basename(file))))
-      ofile.write('\n')
-
-    elif area != 'test' and area != 'fs-test':
-      area_var = string.replace(area, '-', '_')
-      ofile.write('install-%s: %s\n'
-                  '\t$(MKDIR) $(%sdir)\n'
-                  % (area, string.join(files), area_var))
-      for file in files:
-        # cd to dirname before install to work around libtool 1.4.2 bug.
-        dirname, fname = os.path.split(file)
-        ofile.write('\tcd %s ; $(INSTALL_%s) %s %s\n'
-                    % (dirname,
-                       string.upper(area_var),
-                       fname,
-		       os.path.join('$(%sdir)' % area_var, fname)))
-      ofile.write('\n')
-
-    # generate .dsp files for each target
-    for t in inst_targets:
-      #t.write_dsp()
-      pass
-
-  includes, i_errors = _collect_paths(parser.get('includes', 'paths'))
-  errors = errors or i_errors
-
-  ofile.write('install-include: %s\n'
-              '\t$(MKDIR) $(includedir)\n'
-              % (string.join(includes),))
-  for file in includes:
-    ofile.write('\t$(INSTALL_INCLUDE) %s %s\n'
-                % (os.path.join('$(top_srcdir)', file),
-                   os.path.join('$(includedir)', os.path.basename(file))))
-
-  ofile.write('\n# handy shortcut targets\n')
-  for name, target in targets.items():
-    ofile.write('%s: %s\n' % (name, target.output))
-  ofile.write('\n')
-
-  scripts, s_errors = _collect_paths(parser.get('test-scripts', 'paths'))
-  errors = errors or s_errors
-
-  script_dirs = []
-  for script in scripts:
-    script_dirs.append(re.compile("[-a-z0-9A-Z_.]*$").sub("", script))
-
-  fs_scripts, fs_errors = _collect_paths(parser.get('fs-test-scripts', 'paths'))
-  errors = errors or fs_errors
-
-  ofile.write('BUILD_DIRS = %s %s\n' % (string.join(target_dirs.keys()),
-					string.join(script_dirs)))
-
-  ofile.write('FS_TEST_DEPS = %s\n\n' % string.join(fs_test_deps + fs_scripts))
-  ofile.write('FS_TEST_PROGRAMS = %s\n\n' % 
-                              string.join(fs_test_progs + fs_scripts))
-  ofile.write('TEST_DEPS = %s\n\n' % string.join(test_deps + scripts))
-  ofile.write('TEST_PROGRAMS = %s\n\n' % string.join(test_progs + scripts))
-
-  ofile.write('MANPAGES = %s\n\n' % string.join(manpages))
-  ofile.write('INFOPAGES = %s\n\n' % string.join(infopages))
-
-  if not skip_depends:
-    ##gone to Generator.write_depends
-
-  if errors:
-    sys.exit(1)
-
-
 class _Target:
-  def __init__(self, name, path, install, type):
+  def __init__(self, name, path, install, type, extmap):
     self.name = name
     self.deps = [ ]	# dependencies (list of other Target objects)
     self.path = path
     self.type = type
 
     if type == 'exe':
-      tfile = name
-      self.objext = '.o'
       if not install:
         install = 'bin'
     elif type == 'lib':
-      tfile = name + '.la'
-      self.objext = '.lo'
       if not install:
         install = 'lib'
     elif type == 'doc':
       pass
     else:
       raise GenError('ERROR: unknown build type: ' + type)
+
+    if type == 'exe' or type == 'lib':
+      tfile = name + extmap[(type, 'target')]
+      self.objext = extmap[(type, 'object')]
 
     self.install = install
     self.output = os.path.join(path, tfile)
