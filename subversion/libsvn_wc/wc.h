@@ -290,10 +290,6 @@ svn_error_t *svn_wc__ensure_adm (svn_string_t *path,
    working file SVN_WC__LOG_ATTR_NAME. */
 #define SVN_WC__LOG_MERGE_TEXT          "merge-text"
 
-/* Copy SVN/tmp/text-base/SVN_WC__LOG_ATTR_NAME to
-   SVN/text-base/SVN_WC__LOG_ATTR_NAME. */
-#define SVN_WC__LOG_REPLACE_TEXT_BASE   "replace-text-base"
-
 /* Merge property changes for SVN_WC__LOG_ATTR_NAME.  todo: not yet
    done. */
 #define SVN_WC__LOG_MERGE_PROPS         "merge-props"
@@ -302,8 +298,8 @@ svn_error_t *svn_wc__ensure_adm (svn_string_t *path,
    done. */
 #define SVN_WC__LOG_REPLACE_PROP_BASE   "replace-prop-base"
 
-/* Bump SVN_WC__LOG_ATTR_NAME's version to SVN_WC__LOG_ATTR_VERSION */
-#define SVN_WC__LOG_SET_VERSION         "set-version"
+/* Set attributes on SVN_WC__LOG_ATTR_NAME's entry. */
+#define SVN_WC__LOG_MODIFY_ENTRY        "modify-entry"
 
 /* Delete the entry SVN_WC__LOG_ATTR_NAME. */
 #define SVN_WC__LOG_DELETE_ENTRY        "delete-entry"
@@ -384,6 +380,8 @@ svn_error_t *svn_wc__run_log (svn_string_t *path, apr_pool_t *pool);
 #define SVN_WC__ENTRIES_ATTR_CHECKSUM  "checksum"
 #define SVN_WC__ENTRIES_ATTR_ADD       "add"
 #define SVN_WC__ENTRIES_ATTR_DELETE    "delete"
+#define SVN_WC__ENTRIES_ATTR_MERGED    "merged"
+#define SVN_WC__ENTRIES_ATTR_CONFLICT  "conflict"
 #define SVN_WC__ENTRIES_ATTR_ANCESTOR  "ancestor"
 
 
@@ -412,7 +410,8 @@ typedef struct svn_wc__entry_t
 #define SVN_WC__ENTRY_CLEAR     1     /* special flag, means clear flags */
 #define SVN_WC__ENTRY_ADD       2     /* entry marked for addition */
 #define SVN_WC__ENTRY_DELETE    4     /* entry marked for deletion */
-#define SVN_WC__ENTRY_CONFLICT  8     /* entry in a state of conflict */
+#define SVN_WC__ENTRY_MERGED    8     /* wfile merged as of timestamp */
+#define SVN_WC__ENTRY_CONFLICT  16    /* wfile conflicted as of timestamp */
 
 /* How an entries file's owner dir is named in the entries file. */
 #define SVN_WC__ENTRIES_THIS_DIR       ""

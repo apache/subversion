@@ -249,6 +249,32 @@ analogous to CVS/ sudirs:
    Probably the same routine will be used by finish_file() and in
    crash recovery.
 
+   Note that foo/SVN/log always uses paths relative to foo/, for
+   example, this:
+   
+       <!-- THIS IS GOOD -->
+       <mv name="SVN/tmp/prop-base/name"
+           dest="SVN/prop-base/name">
+           
+   rather than this:
+
+       <!-- THIS WOULD BE BAD -->
+       <mv name="/home/joe/project/SVN/tmp/prop-base/name"
+           dest="/home/joe/project/SVN/prop-base/name">
+
+   or this:
+
+       <!-- THIS WOULD ALSO BE BAD -->
+       <mv name="tmp/prop-base/name"
+           dest="prop-base/name">
+
+   The problem with the second way is that is violates the
+   separability of SVN subdirectories -- a subdir should be operable
+   independent of its location in the local filesystem.  
+
+   The problem with the third way is that it can't conveniently refer
+   to the user's actual working files, only to files inside SVN/.
+
 `tmp'
 
    A shallow mirror of the working directory (i.e., the parent of the
