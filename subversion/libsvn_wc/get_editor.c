@@ -689,7 +689,7 @@ close_directory (void *dir_baton)
                              SVN_WC__LOG_MODIFY_ENTRY,
                              SVN_WC__LOG_ATTR_NAME,
                              db->name,
-                             SVN_WC__ENTRIES_ATTR_REVISION,
+                             SVN_WC_ENTRY_ATTR_REVISION,
                              svn_string_create (revision_str, db->pool),
                              NULL);
       
@@ -747,7 +747,7 @@ add_or_replace_file (svn_string_t *name,
   struct file_baton *fb;
   svn_error_t *err;
   apr_hash_t *entries = NULL;
-  svn_wc__entry_t *entry;
+  svn_wc_entry_t *entry;
 
   err = svn_wc__entries_read (&entries,
                               parent_dir_baton->path,
@@ -1211,7 +1211,7 @@ close_file (void *file_baton)
                          SVN_WC__LOG_MODIFY_ENTRY,
                          SVN_WC__LOG_ATTR_NAME,
                          fb->name,
-                         SVN_WC__ENTRIES_ATTR_REVISION,
+                         SVN_WC_ENTRY_ATTR_REVISION,
                          svn_string_create (revision_str, fb->pool),
                          NULL);
 

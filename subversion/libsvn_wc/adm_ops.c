@@ -156,7 +156,7 @@ svn_wc_delete_file (svn_string_t *file, apr_pool_t *pool)
                                   basename,
                                   SVN_INVALID_REVNUM,
                                   svn_node_file,
-                                  SVN_WC__ENTRY_DELETE,
+                                  SVN_WC_ENTRY_DELETE,
                                   0,
                                   pool,
                                   NULL);
@@ -179,7 +179,7 @@ svn_wc_add_file (svn_string_t *file, apr_pool_t *pool)
                                   basename,
                                   0,
                                   svn_node_file,
-                                  SVN_WC__ENTRY_ADD,
+                                  SVN_WC_ENTRY_ADD,
                                   0,
                                   pool,
                                   NULL);

@@ -373,18 +373,18 @@ append_prop_conflict (apr_file_t *fp,
 svn_error_t *
 svn_wc__get_existing_reject_file (svn_string_t **reject_file,
                                   svn_string_t *path,
-                                  svn_string_t *name,
+                                  const svn_string_t *name,
                                   apr_pool_t *pool)
 {
   svn_error_t *err;
   apr_hash_t *entries, *atts;
-  svn_wc__entry_t *the_entry;
+  svn_wc_entry_t *the_entry;
 
   err = svn_wc__entries_read (&entries, path, pool);
   if (err) return err;
 
   the_entry = 
-    (svn_wc__entry_t *) apr_hash_get (entries, name->data, name->len);
+    (svn_wc_entry_t *) apr_hash_get (entries, name->data, name->len);
   
   if (the_entry == NULL)
     return svn_error_createf
@@ -395,7 +395,7 @@ svn_wc__get_existing_reject_file (svn_string_t **reject_file,
   atts = the_entry->attributes;
   
   *reject_file = 
-    (svn_string_t *) apr_hash_get (atts, SVN_WC__ENTRIES_ATTR_REJFILE,
+    (svn_string_t *) apr_hash_get (atts, SVN_WC_ENTRY_ATTR_REJFILE,
                                    APR_HASH_KEY_STRING);
 
   return SVN_NO_ERROR;
@@ -742,9 +742,9 @@ svn_wc__do_property_merge (svn_string_t *path,
                              SVN_WC__LOG_MODIFY_ENTRY,
                              SVN_WC__LOG_ATTR_NAME,
                              name,
-                             SVN_WC__ENTRIES_ATTR_CONFLICT,
+                             SVN_WC_ENTRY_ATTR_CONFLICT,
                              svn_string_create ("true", pool),
-                             SVN_WC__ENTRIES_ATTR_REJFILE,
+                             SVN_WC_ENTRY_ATTR_REJFILE,
                              reject_path,
                              NULL);
     }  

@@ -67,22 +67,22 @@
 static svn_error_t *
 add_status_structure (apr_hash_t *statushash,
                       svn_string_t *path,
-                      svn_wc__entry_t *entry,
+                      svn_wc_entry_t *entry,
                       apr_pool_t *pool)
 {
   svn_error_t *err;
   svn_wc_status_t *statstruct = apr_pcalloc (pool, sizeof(*statstruct));
 
   /* Copy info from entry struct to status struct */
-  statstruct->local_ver = entry->revision;
-  statstruct->repos_ver = SVN_INVALID_REVNUM;  /* svn_client_status()
+  statstruct->entry = entry;
+  statstruct->repos_rev = SVN_INVALID_REVNUM;  /* svn_client_status()
                                                   will fill this in */
   
-  if (entry->flags & SVN_WC__ENTRY_ADD)
+  if (entry->flags & SVN_WC_ENTRY_ADD)
     statstruct->flag = svn_wc_status_added;
-  else if (entry->flags & SVN_WC__ENTRY_DELETE)
+  else if (entry->flags & SVN_WC_ENTRY_DELETE)
     statstruct->flag = svn_wc_status_deleted;
-  else if (entry->flags & SVN_WC__ENTRY_CONFLICT)
+  else if (entry->flags & SVN_WC_ENTRY_CONFLICT)
     statstruct->flag = svn_wc_status_conflicted;
   else 
     {
@@ -117,7 +117,7 @@ svn_wc_get_status (apr_hash_t *statushash,
   svn_error_t *err;
   enum svn_node_kind kind;
   apr_hash_t *entries;
-  svn_wc__entry_t *entry;
+  svn_wc_entry_t *entry;
   void *value;
   
   /* Is PATH a directory or file? */
@@ -144,7 +144,7 @@ svn_wc_get_status (apr_hash_t *statushash,
       value = apr_hash_get (entries, basename->data, APR_HASH_KEY_STRING);
 
       if (value)  
-        entry = (svn_wc__entry_t *) value;
+        entry = (svn_wc_entry_t *) value;
       else
         return svn_error_createf (SVN_ERR_BAD_FILENAME, 0, NULL, pool,
                                   "svn_wc_get_status:  bogus path `%s'",
@@ -179,10 +179,10 @@ svn_wc_get_status (apr_hash_t *statushash,
           basename = (const char *) key;
           svn_path_add_component_nts (fullpath, basename,
                                       svn_path_local_style);
-          entry = (svn_wc__entry_t *) val;
+          entry = (svn_wc_entry_t *) val;
 
           /* Recurse on the dirent, provided it's not "."  */
-          if (strcmp (basename, SVN_WC__ENTRIES_THIS_DIR))
+          if (strcmp (basename, SVN_WC_ENTRY_THIS_DIR))
             {
               err = svn_wc_get_status (statushash, fullpath, pool);
               if (err) return err;

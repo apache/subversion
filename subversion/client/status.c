@@ -107,19 +107,19 @@ svn_cl__print_status (apr_hash_t *statushash, apr_pool_t *pool)
           break;
         }
       
-      if ((status->local_ver == SVN_INVALID_REVNUM)
-          && (status->repos_ver == SVN_INVALID_REVNUM))
+      if ((status->entry->revision == SVN_INVALID_REVNUM)
+          && (status->repos_rev == SVN_INVALID_REVNUM))
         printf ("%c  none     ( none )   %s\n",
                 statuschar, path);
-      else if (status->local_ver == SVN_INVALID_REVNUM)
+      else if (status->entry->revision == SVN_INVALID_REVNUM)
         printf ("%c  none     (%6ld)   %s\n",
-                statuschar, status->repos_ver, path);
-      else if (status->repos_ver == SVN_INVALID_REVNUM)
+                statuschar, status->repos_rev, path);
+      else if (status->repos_rev == SVN_INVALID_REVNUM)
         printf ("%c  %-6ld  ( none )  %s\n",
-                statuschar, status->local_ver, path);
+                statuschar, status->entry->revision, path);
       else
         printf ("%c  %-6ld  (%6ld)  %s\n",
-                statuschar, status->local_ver, status->repos_ver, path);
+                statuschar, status->entry->revision, status->repos_rev, path);
     }
 }
 

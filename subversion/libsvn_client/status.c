@@ -84,7 +84,7 @@ svn_client_status (apr_hash_t **statushash,
   if (err) return err;
 
   /* TODO: each status structure in the hash now has all fields filled
-     in *except* the repos_ver field.  Once libsvn_ra works, we'll
+     in *except* the repos_rev field.  Once libsvn_ra works, we'll
      need to query the repository for this information.  For now, the
      field is just SVN_INVALID_REVNUM.  */
 
