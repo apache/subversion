@@ -31,23 +31,23 @@ track changes to files and directories.  There are two kinds of
 changes, "direct" and "indirect":
 
                Direct Change        Indirect Change
-          ._____________________._____________________.
-          | Change to file's    |                     |
-   file   | contents; OR, file  |                     |
-          | was added, removed, |  [No such thing]    |
-          | or renamed          |                     |
-          |_____________________|_____________________|
-          |                     |  An immediate child |
-   dir    | This dir was added, |  of this dir was    |
-          | removed, or renamed |  added, removed, or |
-          |                     |  renamed            |
-          |_____________________|_____________________|
+          ._______________________._______________________.
+          | Change to file's      |                       |
+   file   | contents; OR, file    |                       |
+          | was added, removed,   |  [No such thing]      |
+          | or renamed            |                       |
+          |_______________________|_______________________|
+          |                       |  A descendant of this |
+   dir    | This dir was added,   |  dir was added,       |
+          | removed, or renamed   |  removed, renamed,    |
+          |                       |  or modified          |
+          |_______________________|_______________________|
 
 In other words, a change that directly affects an entity's textual
 contents, its name, or its existence is a "direct" change.  A change
-that affects the name or existence of an directory's immediate child
-is an "indirect" change to the directory (although it's a direct
-change to the child, of course).  Only directories can have indirect
+that affects the name or existence of a directory's descendant is an
+"indirect" change to the directory (although it's a direct change to
+the descendant, of course).  Only directories can have indirect
 changes.
 
 
@@ -100,11 +100,11 @@ For the moment, let's treat the snapshot as a black box (in practice,
 it's probably a skelta).  It contains one entry per entity, and each
 entry consists of:
 
-   Original Name      (a full path, of course)
-   Original Version   (i.e., "base" version)
-   Action             (content change, add, remove, rename...)
-   New Name           (if any)
-   New Version        (only if other than repository latest)
+   oName              (Original Name, a full path, of course)
+   oVersion           (Original Version, also called "base" version)
+   Action             (modify, add, remove, rename...)
+   nName              (New Name, if any)
+   nVersion           (New Version, == repos Latest if left empty)
 
 
 How the server uses the snapshot to perform a pre-commit check.
@@ -117,9 +117,8 @@ or something equally ridiculous, it is rejected out of hand.
 Assuming the snapshot is consistent, the server checks whether each
 entity in it has changed in the repository, or will change due to a
 pending commit, since the given base version.  A direct change would
-make the pre-commit check fail definitely; indirect changes cause
-failure iff they mention the same child name as some change in the
-snapshot.
+make the pre-commit check fail definitely; an indirect change causes
+failure iff it mentions the same name as the change in the snapshot.
 
 (See the section "Conflict/Merge Tables" farther down for a formal
 accounting of these rules.)
@@ -127,15 +126,14 @@ accounting of these rules.)
 The server *never* accepts a commit based on a working copy state that
 conflicts with the repository.  The client is always responsible for
 sending non-conflicting deltas.  Therefore, the client may need to
-update and resolve any conflicts before committing.
+update and resolve any conflicts before committing.  So when a
+pre-commit check fails, the server doesn't just send back a terse
+denial.  It tells the client exactly which entities are out of date,
+so the client can update efficiently.
 
-Of course, when a pre-commit check fails, the server doesn't just send
-back a terse denial.  It tells the client exactly which entities are
-out of date, so the client can update efficiently.
-
-If the check succeeds, the server sends back a token (unique among all
-other pending commits), which the client will use to complete the
-commit.
+If the pre-commit check succeeds, the server sends back a token
+(unique among all other pending commits), which the client will use to
+complete the commit.
 
 
 How the client completes the commit.
@@ -171,37 +169,39 @@ update.  See also "Conflict/Merge Tables" below.]
 How the client applies an update delta.
 ---------------------------------------
 
-Updating is more than bringing changes down from the repository; it's
-also about folding those changes into the working copy.  Bringing the
-right changes down is the easy part -- folding them in is hard.
+Updating is more than just bringing changes down from the repository;
+it's also folding those changes into the working copy.  Getting the
+right changes is the easy part -- folding them in is hard.
 
 Before we examine how Subversion handles this, let's look at what CVS
 does:
 
    1. Unmodified portions of the working copy are simply brought
-      up-to-date.
+      up-to-date.  The server sends a forward diff, the client applies
+      it.
 
    2. Locally modified portions are "merged", where possible.  That
       is, the changes from the repository are incorporated into the
-      local changes in an intelligent way.
+      local changes in an intelligent way (if the diff application
+      succeeds, then no conflict, else go to 3...)
 
    3. Where merging is not possible, a conflict is flagged, and *both*
       sides of the conflict are folded into the local file in such a
       way that it's easy for the developer to figure out what
-      happened.  (And the un-updated locally-modified file is saved
-      under a tmp name, just in case.)
+      happened.  (And the old locally-modified file is saved under a
+      temp name, just in case.)
 
 It would be nice for Subversion to do things this way too;
 unfortunately, that's not possible in every case.
 
-CVS has a wonderfully simplifying limitation: because it doesn't
-version directories, it never has tree-structure conflicts.  Since
-only textual conflicts are possible, there is always a natural way to
+CVS has a wonderfully simplifying limitation: it doesn't version
+directories, so never has tree-structure conflicts.  Given that only
+textual conflicts are possible, there is usually a natural way to
 express both sides of a conflict -- just include the opposing texts
 inside the file, delimited with conflict markers.  (Or for binary
 files, make both versions available under temporary names.)
 
-While Subversion can do the same thing for file conflicts, the
+While Subversion can behave the same way for textual conflicts, the
 situation is more complex for trees.  There is often no way to reflect
 both sides of a tree conflict in the working copy without being more
 confusing than helpful.  How does one put "conflict markers" into a
@@ -209,26 +209,26 @@ directory, especially when what was a directory might now be a file,
 or vice-versa?
 
 Therefore, while Subversion does everything it can to fold conflicts
-intelligently (at least as well as CVS does), it is acceptable for the
-Subversion client to punt, saying in effect "Your working copy is too
-out of whack; please move it aside, check out a fresh one, redo your
-changes in the fresh copy as much as you can, and commit from that."
+intelligently (at least as well as CVS does), in extreme cases it is
+acceptable for the Subversion client to punt, saying in effect "Your
+working copy is too out of whack; please move it aside, check out a
+fresh one, redo your changes in the fresh copy, and commit from that."
 (This response may apply to subtrees of the working copy, of course).
 
-Usually it includes more detail than that, of course.  In addition to
-the overall out-of-whackness message, it can say "Directory foo was
+Usually it gives more detail than that, of course.  In addition to the
+overall out-of-whackness message, it can say "Directory foo was
 renamed to bar, conflicting with your new file bar; file blah was
 deleted, conflicting with your local change to file blah, ..." and so
 on.  The important thing is that these are informational only -- they
 tell the user what's wrong, but they don't try to fix it
 automatically.
 
-Note that this is purely a matter of *client-side* intelligence.
-Nothing in the repository logic or protocol affects the client's
-ability to fold conflicts.  So as we get smarter, and/or as there is
-demand for more informative conflicting updates, the client's behavior
-can improve and punting can become a rare event.  We should start out
-with a _simple_ conflict-folding algorithm initially, though.
+All this is purely a matter of *client-side* intelligence.  Nothing in
+the repository logic or protocol affects the client's ability to fold
+conflicts.  So as we get smarter, and/or as there is demand for more
+informative conflicting updates, the client's behavior can improve and
+punting can become a rare event.  We should start out with a _simple_
+conflict-folding algorithm initially, though.
 
 
 Conflict/Merge Tables.
@@ -244,7 +244,7 @@ happens when one change meets another on the same entity.
 
 In each cell
 
-   C   means    "Conflict, not even foldable"
+   C   means    "Conflict, straight up and not foldable"
 
    M   means    "Mergeable"
 
@@ -252,34 +252,29 @@ In each cell
                  Possibly a conflict for client, but might be foldable
                  (either via straight merge, or folding conflict)"
 
-The principles involved are symmetrical, so the immediate source of
-each change (working copy or repository) doesn't matter.
+The principles involved are symmetrical, so the immediate origin of
+each change (working copy vs repository) doesn't matter.
 
-Let's justify this claim of symmetry:  
+Let's justify this claim of symmetry:
 
 It's tempting to think of a change as being either "from" the working
-copy or "in" the repository.  But the true source of every change is
-some committer -- each change represents some developer's intention
-toward a file or a tree, and a conflict is what happens when two
-intentions are incompatible (or at any rate not automatically
-compatible).  It doesn't matter in what order the intentions were
-discovered, i.e., which has already made it into the repository vs
-which is only expressed in someone's working copy.  Incompatibility is
-incompatibility, independent of timing.
+copy or "in" the repository.  But the true source of a change is some
+committer -- each change represents some developer's intention toward
+a file or a tree, and a conflict is what happens when two intentions
+are incompatible (or at any rate are not automatically compatible).
 
-So what these tables really show is "How do we decide when two changes
-are compatible?"  They're a brute force guide to the changespace,
-mapping each kind of change against each other kind of change, and
-telling what happens in each scenario.
+It doesn't matter in what order the intentions were discovered, i.e.,
+which has already made it into the repository versus which exists only
+in someone's working copy.  Incompatibility is incompatibility,
+independent of timing.
 
-fooo working here
+So what these tables really show is how to decide when two changes are
+compatible.  They're a brute force guide to the changespace, mapping
+each kind of change against each other kind of change, and telling
+what happens in each scenario.
 
-For example, it's not a conflict if the client changes a directory
-name while the repository has added a new child in that directory, nor
-is it a conflict if the client adds a child while the repository has
-changed the directory's name.  It is a conflict if the client removes
-a directory while someone else has committed a change to a file in
-that directory fooo
+Following the tables are some scenarios that explore a few of the
+intersections in depth.
 
 
           Table 1: Direct changes against indirect changes
@@ -314,7 +309,11 @@ that directory fooo
               |. . . . . . . . . . . . . . . . . . . . . . . . . . . .
 
 
-
+A note about Table 1: technically, it is possible for the horizontal
+axis to include a change on a file, not a directory.  But this would
+mean a directory's type had changed to file, which would mean an add
+or remove at some point in the past, and that would conflict (by
+columns one and two).
 
 
          Table 2: Indirect changes against indirect changes
@@ -347,12 +346,16 @@ that directory fooo
             |. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 
 
-Explain the name conflict rules!  The use of "mention" above is very
-specific: it means any two of the entity's four possible names are the
-same (that is, the original and names on the working copy side, and
-the original and new names in the repository).
+[Yes, the table mirrors itself across the diagonal -- I filled in both
+sides anyway, to see if my mind would come to the same conclusions for
+the same intersections.  It did. :-) -kff]
 
+A note about Table 2: the "if name conflicts" clause means there's a
+conflict if the same child name is mentioned in both changes.  (It
+doesn't matter if it's oName or nName; if it appears anywhere on both
+sides, it's a conflict.)
 
+todo: still verifying this table
 
            Table 3: Direct changes against direct changes
            **********************************************
@@ -383,94 +386,15 @@ the original and new names in the repository).
               |. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 
 
+Scenarios.
+----------
 
-[Not clear if `rename' shoud be a separate operation...]
-
-
-
-
+todo: Write some scenarios here, using the tables.
 
 
- (i.e., what gets merged vs what is
-     flagged as a conflict, and especially what the verb "flag as a
-     conflict" *means* in different kinds of conflicts).
-
-WC State
-R State
-conflict
-
-Def: Modifying a file's contents is a "direct change" to that file.
-
-Def: A rename, add, or delete is considered a direct change to the
-      target(s), and an "indirect change" to the parent(s).
-
-Def: A working copy's "WC state" is a snapshot (maybe a skelta?) that
-      shows the base versions, and any changes, for all entities in
-
-Def: given a WC state, the repository could
-      theoretically reconstruct the entire working copy, except for
-      the actual content of uncomitted local changes.)
-      [Define the black box way drawn on the board?]
-
-Def: A "R state" is a list of all entities that have changed in the
-      repository *relative* to a given WC state.  The repository can
-      calculate the R state for a given a WC state.
-
-Def: A WC state and a R state "conflict" iff they have any
-      conflicting changes -- defined in (F) below.
-
-Def: Changes conflict according to the following rules:
-
-         - Two direct changes to the same entity always conflict.
-
-         - An indirect and a direct change to the same entity conflict
-           iff the direct change affects the entity's type (e.g., wc
-           modifies foo/bar.c, but in the repository foo has been
-           changed to a regular file).
-
-         - Two indirect changes to the same entity never conflict.
-           ??? or just if same name ???
-
-         - Changes to different entities never conflict.
-
-Def: The server never accepts a delta based on a WC state that
-      conflicts with the repository.  The client is always responsible
-      for sending non-conflicting deltas.
-
-Given these principles [though see footnote 1], the process for
-updates is largely the same as for commits, so the two are described
-together here:
-
-   1. The working copy creates a snapshot (W) of its state, and sends
-      it to the server.
-
-   2. The server checks if the entities listed in W have changed in
-      the repository too [see footnote 2].  If there are no conflicts,
-      then the commit is registered and a token sent back (or, if this
-      is an update, the server sends back the appropriate delta).
-
-   3. If there is a conflict, then...
-
-         - commit case:
-             Server sends back a message telling the working
-             copy it must update.  By principle (G), the client can
-             only commit based on a non-conflicting state, therefore
-             the client must not only update, but also resolve any
-             conflicts, before it can successfully commit.
-
-         - update case:
 
 --------------------------- Footnotes -----------------------------------
 
 [1] Haven't thought carefully about whether this all works smoothly
 when directory *entries* are considered entities.  I think so, but am
 not sure yet.
-
-[2] The working copy doesn't always want to compare against the pure
-latest version in the repository -- it may be comparing against some
-other version, or perhaps even different versions for different parts.
-In fact, every entity in the working copy snapshot might have a
-different "latest" to compare against, in addition to the possiblity
-of a different base version.  I haven't thought about this carefully
-yet either, but see no reason the snapshots can't include both sides
-of the comparison for each entity.
