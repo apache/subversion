@@ -1366,15 +1366,18 @@ Exported revision 15.
           </refnamediv>
           <refsect1>
             <title>Synopsis</title>
-            <programlisting>svn import URL [PATH] [NEW_ENTRY_IN_REPOS]</programlisting>
+            <programlisting>svn import URL [PATH [NEW_ENTRY_IN_REPOS]]</programlisting>
           </refsect1>
           <refsect1>
             <title>Description</title>
 
-            <para>Recursively commit a copy of PATH to URL.  If no 3rd
-              arg, copy top-level contents of PATH into URL directly.
-              Otherwise, create NEW_ENTRY underneath URL and begin
-              copy there.</para>
+            <para>Recursively commit a copy of <literal>PATH</literal>
+              to <literal>URL</literal>.  If there is no third
+              argument, copy the top-level contents of
+              <literal>PATH</literal> into <literal>URL</literal>
+              directly.  Otherwise, create
+              <literal>NEW_ENTRY</literal> underneath
+              <literal>URL</literal> and begin copy there.</para>
           </refsect1>
 
           <refsect1>
@@ -1411,8 +1414,8 @@ Exported revision 15.
           <refsect1>
             <title>Examples</title>
 
-            <para>Import local directory 'myproj' into the root of
-              your repository:</para>
+            <para>This imports the local directory 'myproj' into the
+              root of your repository:</para>
 
             <screen>
 $ svn import -m "New import" http://svn.red-bean.com/repos/test myproj
@@ -1422,11 +1425,11 @@ Transmitting file data .........
 Committed revision 16.
             </screen>
 
-            <para>Import local directory 'myproj' into 'trunk/vendors'
-              in your repository.  Note that the directory
+            <para>This imports the local directory 'myproj' into
+              'trunk/vendors' in your repository.  The directory
               'trunk/vendors' must exist before you import into
-              it--svn import will not recursively create directories
-              for you:</para>
+              it&mdash;<command>svn import</command> will not
+              recursively create directories for you:</para>
 
             <screen>
 $ svn import -m "New import" http://svn.red-bean.com/repos/test myproj trunk/vendors/myproj
@@ -1452,21 +1455,22 @@ Committed revision 19.
           <refsect1>
             <title>Description</title>
 
-            <para>Print information about PATHs, including:</para>
+            <para>Print information about paths in your working copy,
+            including:</para>
 
-            <simplelist>
-              <member>Path</member>
-              <member>Name</member>
-              <member>Url</member>
-              <member>Revision</member>
-              <member>Node Kind</member>
-              <member>Last Changed Author</member>
-              <member>Last Changed Revision</member>
-              <member>Last Changed Date</member>
-              <member>Text Last Updated</member>
-              <member>Properties Last Updated</member>
-              <member>Checksum</member>
-            </simplelist>
+            <itemizedlist>
+              <listitem><para>Path</para></listitem>
+              <listitem><para>Name</para></listitem>
+              <listitem><para>Url</para></listitem>
+              <listitem><para>Revision</para></listitem>
+              <listitem><para>Node Kind</para></listitem>
+              <listitem><para>Last Changed Author</para></listitem>
+              <listitem><para>Last Changed Revision</para></listitem>
+              <listitem><para>Last Changed Date</para></listitem>
+              <listitem><para>Text Last Updated</para></listitem>
+              <listitem><para>Properties Last Updated</para></listitem>
+              <listitem><para>Checksum</para></listitem>
+            </itemizedlist>
           </refsect1>
 
           <refsect1>
@@ -1496,8 +1500,9 @@ Committed revision 19.
           <refsect1>
             <title>Examples</title>
 
-            <para><command>svn info</command> will show you all the useful metadata that
-              it has for items in your workinqg copy.  Both files:</para>
+            <para><command>svn info</command> will show you all the
+              useful information that it has for items in your working
+              copy.  It will show informtion for files:</para>
 
             <screen>
 $ svn info foo.c
@@ -1515,7 +1520,7 @@ Properties Last Updated: 2003-01-13 21:50:19 -0600 (Mon, 13 Jan 2003)
 Checksum: /3L38YwzhT93BWvgpdF6Zw==
             </screen>
 
-            <para>and directories:</para>
+            <para>It will also show information for directories:</para>
 
             <screen>
 $ svn info vendors
@@ -1546,7 +1551,9 @@ Last Changed Date: 2003-01-16 23:21:19 -0600 (Thu, 16 Jan 2003)
             <title>Description</title>
 
             <para>List directory entries of a URL.  If URL is a file,
-            just file entry will be displayed.</para>
+              just file entry will be displayed.  <command>svn
+              list</command> does not work on paths in your working
+              copy.</para>
           </refsect1>
 
           <refsect1>
@@ -1589,8 +1596,23 @@ Last Changed Date: 2003-01-16 23:21:19 -0600 (Thu, 16 Jan 2003)
 $ svn list http://svn.red-bean.com/repos/test/support
 README.txt
 INSTALL
-...
+examples/
+&hellip;
             </screen>
+
+            <para>Like UNIX <command>ls</command>, you can also pass
+            the <option>--verbose</option> switch for additional
+            information:</para>
+
+            <screen>
+svn list --verbose file:///tmp/repos
+P      16     sally   28361 Jan 16 23:18 README.txt
+_      27     sally       0 Jan 18 15:27 INSTALL
+_      24     harry       0 Jan 18 11:27 examples/
+            </screen>
+
+            <para>For further details, see <xref
+                linkend="svn-ch-3-sect-5.4"/>.</para>
 
           </refsect1>
         </refentry>
@@ -1598,8 +1620,8 @@ INSTALL
         <!-- ================================================================= -->
         <refentry>
           <refnamediv>
-            <refname>svn log</refname>
-            <refpurpose>Show the log messages for a set of revision(s) and/or file(s).</refpurpose>
+            <refname>svn log</refname> <refpurpose>Displays commit log
+            messages.</refpurpose>
           </refnamediv>
           <refsect1>
             <title>Synopsis</title>
@@ -1608,18 +1630,33 @@ INSTALL
           <refsect1>
             <title>Description</title>
 
-            <para>Print the log messages for local PATHs, or for PATHs
-              under URL, if URL is given.  If URL is given by itself,
-              then print log messages for everything under it.  With
-              <option>--verbose</option>, also print all affected
-              paths with each log message.  With
-              <option>--quiet</option>, don't print the log message
-              body itself (note that this is compatible with
-              <option>--verbose</option>).</para>
+            <para>When using the log command, you can operate on
+              either URLs or PATHs.</para>
+
+            <para>The default target is the path of your current
+              directory.  If no arguments are supplied, <command>svn
+              log</command> shows the log messages for all files and
+              directories inside of (and including) the current
+              working directory of your working copy.  You can refine
+              the results by specifying one or more paths, one or more
+              revisions, or any combination of the two.</para>
+
+            <para>If you specify a URL alone, then it prints log
+              messages for everything that the URL contains.  If you
+              add paths past the URL, only messages for those paths
+              under that URL will be printed.</para>
+
+            <para>With <option>--verbose</option>, also print all
+              affected paths with each log message.  With
+              <option>--quiet</option>, <command>svn log</command>
+              don't print the log message body itself (this is
+              compatible with <option>--verbose</option>).</para>
 
             <para>Each log message is printed just once, even if more
               than one of the affected paths for that revision were
-              explicitly requested.  Logs cross copy history by
+              explicitly requested.  
+
+              Logs cross copy history by
               default; use <option>--strict</option> to disable
               this.</para>
 
@@ -1703,6 +1740,34 @@ rev 28:  sally | 2003-01-07 21:48:33 -0600 (Tue, 07 Jan 2003) | 3 lines
 ...
             </screen>
 
+            <para>If you want several distinct paths underneath the
+              same URL, you can use the <literal>[URL PATH
+              ...]]</literal> syntax.</para>
+
+            <screen>
+$ svn log http://svn.red-bean.com/repos/test/ foo.c bar.c
+------------------------------------------------------------------------
+rev 32:  sally | 2003-01-13 16:43:13 -0600 (Mon, 13 Jan 2003) | 1 line
+
+Added defines.
+------------------------------------------------------------------------
+rev 31:  harry | 2003-01-10 12:25:08 -0600 (Fri, 10 Jan 2003) | 1 line
+
+Added new file bar.c
+------------------------------------------------------------------------
+rev 28:  sally | 2003-01-07 21:48:33 -0600 (Tue, 07 Jan 2003) | 3 lines
+...
+            </screen>
+
+            <para>That is the same as explicitly placing both URLs on
+              the command line:</para>
+
+            <screen>
+$ svn log http://svn.red-bean.com/repos/test/foo.c \
+          http://svn.red-bean.com/repos/test/foo.c
+...
+            </screen>
+
             <warning>
               <para>If you run svn log on a specific path and provide
                 a specific revision and get no output at all</para>
@@ -1739,6 +1804,7 @@ Made a change.
           <refsect1>
             <title>Synopsis</title>
             <programlisting>svn merge URL1[@N] URL2[@M] [PATH]</programlisting>
+            <programlisting>merge -r N:M TARGET [PATH]</programlisting>
           </refsect1>
           <refsect1>
             <title>Description</title>
@@ -1747,10 +1813,10 @@ Made a change.
               at revisions N and M.  These are the two sources to be
               compared.  The revisions default to HEAD if omitted.</para>
 
-            <para>In the second form TARGET can be an URL, or it can
-              be a working copy path in which case the corresponding
-              URL is used.  This URL, at revisions N and M, defines
-              the two sources to be compared.</para>
+            <para>In the second form TARGET can be a URL, or it can be
+              a working copy path, in which case the corresponding URL
+              is used.  This URL, at revisions N and M, defines the
+              two sources to be compared.</para>
 
             <para>PATH is the working copy path that will receive the
               changes.  If omitted, a default value of '.' is
@@ -1791,7 +1857,7 @@ Made a change.
             <title>Examples</title>
 
             <para>Merge a branch back into the trunk (assuming that
-              you are a working copy of the trunk):</para>
+              you have a working copy of the trunk):</para>
 
             <screen>
 $ svn merge http://svn.red-bean.com/repos/trunk/vendors http://svn.red-bean.com/repos/branches/vendors-with-fix
@@ -1892,7 +1958,7 @@ Committed revision 26.
         <refentry>
           <refnamediv>
             <refname>svn move</refname>
-            <refpurpose>Move/rename something in working copy or repository.</refpurpose>
+            <refpurpose>Move a file or directory.</refpurpose>
           </refnamediv>
           <refsect1>
             <title>Synopsis</title>
@@ -1901,12 +1967,19 @@ Committed revision 26.
           <refsect1>
             <title>Description</title>
 
-            <para>Move/rename something in working copy or
-              repository. NOTE: This command is equivalent to a 'copy'
-              then 'delete'.</para>
+            <para>This command moves a file or directory in your
+              working copy or in the repository.</para>
 
-            <para>SRC and DST can both be working copy (WC) paths or
-              URLs:</para>
+            <tip>
+              <para>This command is equivalent to a <command>svn
+                copy</command> followed by <command>svn
+                delete</command>.</para>
+            </tip>
+
+            <warning>
+              <para>Subversion does not support moving between working
+              copies and URLs.</para>
+            </warning>
 
             <variablelist>
 
@@ -1935,7 +2008,7 @@ Committed revision 26.
 
           <refsect1>
             <title>Changes</title>
-            <para>Working copyyy, repository if operating on a URL</para>
+            <para>Working copy, repository if operating on a URL</para>
           </refsect1>
 
           <refsect1>
@@ -1980,11 +2053,6 @@ $ svn mv -m "Move a file" http://svn.red-bean.com/repos/foo.c http://svn.red-bea
 Committed revision 27.
             </screen>
 
-            <warning>
-              <para>Currently, Subversion does not support copying between URLs and
-                your working copy.</para>
-            </warning>
-
           </refsect1>
         </refentry>
 
@@ -2008,40 +2076,11 @@ Committed revision 27.
             propchange in working copy, and the second creates an
             unversioned, remote propchange on a repository revision.</para>
 
-            <para>Note: svn recognizes the following special versioned properties
-              but will store any arbitrary properties set:</para>
+            <para>Note: Subversion has a number of
+              <quote>special</quote> properties that affect its
+              behavior.  See <xref linkend="svn-ch-6-sect-2.3"/> for
+              more on these properties.</para>
 
-            <screen>###TODO Reformat all of this and/or pull it out.
-
-  svn:ignore     - A newline separated list of file patterns to ignore.
-
-  svn:keywords   - Keywords to be expanded.  Valid keywords are:
-    URL, HeadURL             - The URL for the head version of the object.
-    Author, LastChangedBy    - The last person to modify the file.
-    Date, LastChangedDate    - The date/time the object was last modified.
-    Rev, LastChangedRevision - The last revision the object changed.
-    Id                       - A compressed summary of the previous
-                                 4 keywords.
-
-  svn:executable - If present, make the file executable. This
-    property cannot be set on a directory.  A non-recursive attempt
-    will fail, and a recursive attempt will set the property only
-    on the file children of the directory.
-
-  svn:eol-style  - One of 'native', 'LF', 'CR', 'CRLF'. 
-
-  svn:mime-type - The mimetype of the file.  Used to determine whether
-    to merge the file, and how to serve it from Apache.  A mimetype
-    beginning with 'text/' (or an absent mimetype) is treated as text.
-    Anything else is treated as binary. The Internet media type
-    registry is at http://www.iana.org/assignments/media-types/
-
-  svn:externals  - A newline separated list of module specifiers,
-    each of which consists of a relative directory path, optional
-    revision flags, and an URL.  For example
-      foo             http://example.com/repos/zig
-      foo/bar -r 1234 http://example.com/repos/zag
-            </screen>
           </refsect1>
           <refsect1>
             <title>Alternate names</title>
@@ -2078,12 +2117,12 @@ Committed revision 27.
             <para>Set the mimetype on a file:</para>
 
             <screen>
-$ svn propest svn:mime-type image/jpeg foo.jpg 
+$ svn propset svn:mime-type image/jpeg foo.jpg 
 property `svn:mime-type' set on 'foo.jpg'
             </screen>
 
-            <para>If you want a file to have the executable bit
-              set:</para>
+            <para>On a UNIX system, if you want a file to have the
+              executable permission set:</para>
 
             <screen>
 $ svn ps svn:executable ON somescript
@@ -2116,6 +2155,15 @@ $ svn propset --revprop -r 26 svn:log "Document nap." http://svn.red-bean.com/re
 property `svn:log' set on repository revision '25'
             </screen>
 
+            <para>Lastly, you can tell propset to take its input from
+            a file.  You could even use this to set the contents of a
+            property to something binary:</para>
+
+            <screen>
+$ svn propset owner-pic -F sally.jpg moo.c 
+property `owner-pic' set on 'moo.c'
+            </screen>
+
             <warning>
               <para>By default, you cannot modify revprops in a
                 Subversion repository.  Your repository administrator
@@ -2132,7 +2180,7 @@ property `svn:log' set on repository revision '25'
         <refentry>
           <refnamediv>
             <refname>svn propdel</refname>
-            <refpurpose>Remove PROPNAME from files, dirs, or revisions.</refpurpose>
+            <refpurpose>Remove a property from an item.</refpurpose>
           </refnamediv>
           <refsect1>
             <title>Synopsis</title>
@@ -2142,10 +2190,10 @@ property `svn:log' set on repository revision '25'
           <refsect1>
             <title>Description</title>
 
-            <para>Remove PROPNAME from files, dirs, or revisions.  The
-              first example removes versioned props in working copy,
-              while the second removes unversioned remote prop on
-              repos revision.</para>
+            <para>This removes properties from files, directories, or
+              revisions.  The first form removes versioned properties
+              in working copy, while the second removes unversioned
+              remote properties on a repository revision.</para>
           </refsect1>
 
           <refsect1>
@@ -2185,7 +2233,7 @@ $ svn propdel svn:mime-type  some-script
 property `svn:mime-type' deleted from 'some-script'.
             </screen>
 
-            <para>Delete a revprop:</para>
+            <para>Delete a revision property:</para>
 
             <screen>
 $ svn propdel --revprop -r 26 release-date 
@@ -2199,7 +2247,7 @@ property `release-date' deleted from repository revision '26'
         <refentry>
           <refnamediv>
             <refname>svn propedit</refname>
-            <refpurpose>Edit property PROPNAME with $EDITOR on targets.</refpurpose>
+            <refpurpose>Edit the property of one or more items under version control.</refpurpose>
           </refnamediv>
           <refsect1>
             <title>Synopsis</title>
@@ -2209,10 +2257,10 @@ property `release-date' deleted from repository revision '26'
           <refsect1>
             <title>Description</title>
 
-            <para>Edit property PROPNAME with $EDITOR on targets. The
-              first sample edits versioned props in working copy,
-              while the second edits unversioned remote prop on repos
-              revision.</para>
+            <para>Edits one or more properties using your favorite
+              editor. The first form edits versioned properties in
+              your working copy, while the second edits unversioned
+              remote properties on a repository revision.</para>
           </refsect1>
 
           <refsect1>
@@ -2247,7 +2295,7 @@ property `release-date' deleted from repository revision '26'
               modify properties that have multiple values:</para>
 
             <screen>
-$ svn propedit svn:keywords  foo.jpg 
+$ svn propedit svn:keywords  foo.c 
     &lt;svn will launch your favorite editor here, with a buffer open
     containing the current contents of the svn:keywords property.  You
     can add multiple values to a property easily here by entering one
@@ -2262,7 +2310,7 @@ Set new value for property `svn:keywords' on `foo.c'
         <refentry>
           <refnamediv>
             <refname>svn propget</refname>
-            <refpurpose>Print value of PROPNAME on files, dirs, or revisions.</refpurpose>
+            <refpurpose>Prints the value of a property.</refpurpose>
           </refnamediv>
           <refsect1>
             <title>Synopsis</title>
@@ -2272,10 +2320,13 @@ Set new value for property `svn:keywords' on `foo.c'
           <refsect1>
             <title>Description</title>
 
-            <para>Print value of PROPNAME on files, dirs, or
-              revisions.  The first sample prints versioned prop in
-              working copy, while the second prints unversioned remote
-              prop on repos revision.</para>
+            <para>Prints the value of a property on files,
+              directories, or revisions.  The first form prints the
+              versioned property of an item or items in your working
+              copy, while the second prints unversioned remote
+              property on a repository revision.  See <xref
+              linkend="svn-ch-6-sect-2"/> for more information on
+              properties.</para>
           </refsect1>
 
           <refsect1>
@@ -2285,7 +2336,7 @@ Set new value for property `svn:keywords' on `foo.c'
 
           <refsect1>
             <title>Changes</title>
-            <para>working copy, repository only if operating on a URL</para>
+            <para>Working copy, repository only if operating on a URL</para>
           </refsect1>
 
           <refsect1>
@@ -2306,16 +2357,17 @@ Set new value for property `svn:keywords' on `foo.c'
           <refsect1>
             <title>Examples</title>
 
-            <para>Examine a prop for a file in your working
+            <para>Examine a property of a file in your working
               copy:</para>
             
             <screen>
 $ svn propget svn:keywords foo.c
-AuthorLastChangedBy
+Author
+Date
 Rev
             </screen>
 
-            <para>The same goes for a revprop:</para>
+            <para>The same goes for a revision property:</para>
 
             <screen>
 $ svn propget svn:log --revprop -r 20 
@@ -2329,7 +2381,7 @@ Began journal.
         <refentry>
           <refnamediv>
             <refname>svn proplist</refname>
-            <refpurpose>List all properties on files, dirs, or revisions.</refpurpose>
+            <refpurpose>Lists all properties.</refpurpose>
           </refnamediv>
           <refsect1>
             <title>Synopsis</title>
@@ -2339,10 +2391,10 @@ Began journal.
           <refsect1>
             <title>Description</title>
 
-            <para>List all properties on files, dirs, or revisions.
-              The first sample lists versioned props in working copy,
-              while the second lists unversioned remote props on repos
-              revision.</para>
+            <para>Lists all properties on files, directories, or
+              revisions.  The first form lists versioned properties in
+              working copy, while the second lists unversioned remote
+              properties on a repository revision.</para>
           </refsect1>
 
           <refsect1>
@@ -2352,7 +2404,7 @@ Began journal.
 
           <refsect1>
             <title>Changes</title>
-            <para>working copy, repository only if operating on a URL</para>
+            <para>Working copy, repository only if operating on a URL</para>
           </refsect1>
 
           <refsect1>
@@ -2393,8 +2445,7 @@ Properties on 'foo.c':
 $ svn proplist --verbose foo.c
 Properties on 'foo.c':
   svn:mime-type : text/plain
-  svn:keywords : AuthorLastChangedBy
-Rev
+  svn:keywords : Author Date Rev
   owner : sally
             </screen>
             
@@ -2414,8 +2465,14 @@ Rev
           <refsect1>
             <title>Description</title>
 
-            <para>Reverts any local changes to a file and resolves any
-              conflicted states.</para>
+            <para>Reverts any local changes to a file or directory and
+              resolves any conflicted states.  <command>svn
+              revert</command> will not only revert the contents of an
+              item in your working copy, but also any property
+              changes.  Finally, you can use it to undo any scheduling
+              operations that you may have done (e.g. files scheduled
+              for addition or deletion can be
+              <quote>unscheduled</quote>).</para>
           </refsect1>
 
           <refsect1>
@@ -2463,11 +2520,29 @@ Reverted foo.c
 Reverted bar.txt
             </screen>
 
+            <para>Lastly, you can undo any scheduling
+              operations:</para>
+
+            <screen>
+$ svn add mistake.txt whoops
+A         mistake.txt
+A         whoops
+A         whoops/oopsie.c
+
+$ svn revert mistake.txt whoops
+Reverted mistake.txt
+Reverted whoops
+
+$ svn status
+?      mistake.txt
+?      whoops
+            </screen>
+
             <warning>
               <para>If you provide no targets to svn revert, it will
-                do nothing--to protect you from accidentally losing
-                changes in your working copy, svn revert requires you
-                to provide at least one target.</para>
+                do nothing&mdash;to protect you from accidentally
+                losing changes in your working copy, svn revert
+                requires you to provide at least one target.</para>
             </warning>
 
           </refsect1>
@@ -2491,7 +2566,9 @@ Reverted bar.txt
               copy files or directories. Note: this routine does not
               semantically resolve conflict markers; it merely removes
               conflict-related artifact files and allows PATH to be
-              committed again.</para>
+              committed again.  See <xref
+              linkend="svn-ch-3-sect-4.4"/> for an in-depth look at
+              resolving conflicts.</para>
           </refsect1>
 
           <refsect1>
@@ -2568,47 +2645,213 @@ foo.c.r31
 
             <para>Print the status of working copy files and
               directories.  With no args, it prints only locally
-              modified items (no network access).  With
+              modified items (no repository access).  With
               <option>--show-updates</option>, add working revision
               and server out-of-date information.  With
               <option>--verbose</option>, print full revision
               information on every item.</para>
 
-            <screen>###TODO Reformat all of this and/or pull it out.
-The first five columns in the output are each one character wide:
-    First column: Says if item was added, deleted, or otherwise changed
-      ' ' no modifications
-      'A' Added
-      'D' Deleted
-      'M' Modified
-      'C' Conflicted
-      '?' item is not under revision control
-      '!' item is missing and was removed via a non-svn command
-      '~' versioned as a directory, but is a file, or vice versa
-    Second column: Modifications of a file's or directory's properties
-      ' ' no modifications
-      'M' Modified
-      'C' Conflicted
-    Third column: Whether the working copy directory is locked
-      ' ' not locked
-      'L' locked
-    Fourth column: Scheduled commit will contain addition-with-history
-      ' ' no history scheduled with commit
-      '+' history scheduled with commit
-    Fifth column: Whether the item is switched relative to its parent
-      ' ' normal
-      'S' switched
-    The out-of-date information appears in the eighth column
-      '*' a newer revision exists on the server
-      ' ' the working copy is up to date
+            <para>The first five columns in the output are each one
+              character wide, and each column gives you information
+              about different aspects of each working copy
+              item.</para>
+            
+            <para>The first column indicates that an item
+              was added, deleted, or otherwise changed.</para>
 
-Remaining fields are variable width and delimited by spaces:
+            <variablelist>
+              
+              <varlistentry>
+                <term>' '</term>
+                <listitem>
+                  <para>No modifications.</para>
+                </listitem>
+              </varlistentry>
 
-The working revision is the next field if -u or -v is given, followed
-by both the last committed revision and last committed author if -v is
-given.  The working copy path is always the final field, so it can
-include spaces.
-            </screen>
+              <varlistentry>
+                <term>'A'</term>
+                <listitem>
+                  <para>Item is scheduled for Addition.</para>
+                </listitem>
+              </varlistentry>
+
+              <varlistentry>
+                <term>'D'</term>
+                <listitem>
+                  <para>Item is scheduled for Addition.</para>
+                </listitem>
+              </varlistentry>
+
+              <varlistentry>
+                <term>'M'</term>
+                <listitem>
+                  <para>Item has been modified.</para>
+                </listitem>
+              </varlistentry>
+
+              <varlistentry>
+                <term>'C'</term>
+                <listitem>
+                  <para>Item is in conflict with updates received from
+                  the repository.</para>
+                </listitem>
+              </varlistentry>
+
+              <varlistentry>
+                <term>'?'</term>
+                <listitem>
+                  <para>Item is not under version control.</para>
+                </listitem>
+              </varlistentry>
+
+              <varlistentry>
+                <term>'!'</term>
+                <listitem>
+                  <para>Item is missing (e.g. you moved or deleted it
+                  without using <command>svn</command>).</para>
+                </listitem>
+              </varlistentry>
+
+              <varlistentry>
+                <term>'~'</term>
+                <listitem>
+                  <para>Item is versioned as a directory, but has
+                    been replaced by a file, or vice versa</para>
+                </listitem>
+              </varlistentry>
+
+            </variablelist>
+
+            <para>The second column tells the status of a file's or
+              directory's properties.</para>
+
+            <variablelist>
+              
+              <varlistentry>
+                <term>' '</term>
+                <listitem>
+                  <para>No modifications.</para>
+                </listitem>
+              </varlistentry>
+
+              <varlistentry>
+                <term>'M'</term>
+                <listitem>
+                  <para>Properties for this item have been
+                    modified.</para>
+                </listitem>
+              </varlistentry>
+
+              <varlistentry>
+                <term>'C'</term>
+                <listitem>
+                  <para>Properties for this item are in conflict with
+                  property updates received from the
+                  repository.</para>
+                </listitem>
+              </varlistentry>
+
+            </variablelist>
+
+            <para>The third column is populated only if the
+              working copy directory is locked.</para>
+
+            <variablelist>
+              
+              <varlistentry>
+                <term>' '</term>
+                <listitem>
+                  <para>Item is not locked.</para>
+                </listitem>
+              </varlistentry>
+              
+              <varlistentry>
+                <term>'L'</term>
+                <listitem>
+                  <para>Item is locked.</para>
+                </listitem>
+              </varlistentry>
+
+            </variablelist>
+
+            <para>The fourth column is populated only if the item is
+              scheduled for addition-with-history.</para>
+            
+            <variablelist>
+              
+              <varlistentry>
+                <term>' '</term>
+                <listitem>
+                  <para>No history scheduled with commit.</para>
+                </listitem>
+              </varlistentry>
+              
+              <varlistentry>
+                <term>'+'</term>
+                <listitem>
+                  <para>History scheduled with commit.</para>
+                </listitem>
+              </varlistentry>
+
+            </variablelist>
+
+            <para>The fifth column is populated only if the item is
+              switched relative to its parent (See <xref
+              linkend="svn-ch-4-sect-5"/>).</para>
+
+            <variablelist>
+              
+              <varlistentry>
+                <term>' '</term>
+                <listitem>
+                  <para>Item is child of its parent directory.</para>
+                </listitem>
+              </varlistentry>
+              
+              <varlistentry>
+                <term>'S'</term>
+                <listitem>
+                  <para>Item is switched.</para>
+                </listitem>
+              </varlistentry>
+
+            </variablelist>
+
+            <para>The out-of-date information appears in the eighth
+              column (only if you pass the
+              <option>--show-updates</option> switch).</para>
+
+            <variablelist>
+              
+              <varlistentry>
+                <term>' '</term>
+                <listitem>
+                  <para>The item in your working copy is up-to-date.</para>
+                </listitem>
+              </varlistentry>
+              
+              <varlistentry>
+                <term>'*'</term>
+                <listitem>
+                  <para>A newer revision of the item exists on the
+                    server.</para>
+                </listitem>
+              </varlistentry>
+
+            </variablelist>
+
+            <para>The remaining fields are variable width and
+              delimited by spaces.  The working revision is the next
+              field if the <option>--show-updates</option> or
+              <option>--verbose</option>switches are passed.</para>
+            
+            <para>If the <option>--verbose</option> switch is passed,
+              the last committed revision and last committed author
+              are displayed next.</para>
+            
+            <para>The working copy path is always the final field, so
+              it can include spaces.</para>
+
           </refsect1>
 
           <refsect1>
@@ -2623,7 +2866,7 @@ include spaces.
 
           <refsect1>
             <title>Accesses Repository</title>
-            <para>Only if using --show-updates</para>
+            <para>Only if using <option>--show-updates</option></para>
           </refsect1>
 
           <refsect1>
@@ -2645,7 +2888,8 @@ include spaces.
           <refsect1>
             <title>Examples</title>
 
-            <para>###TODO This example needs a description</para>
+            <para>This is the easiest way to find out what changes you
+              have made to your working copy:</para>
 
             <screen>
 $ svn status wc
@@ -2653,7 +2897,14 @@ $ svn status wc
 A  +   wc/qax.c
             </screen>
 
-            <para>###TODO This example needs a description</para>
+            <para>If you want to find out what files in your working
+              copy are out-of-date, pass the
+              <option>--show-updates</option> switch (This will
+              <emphasis>not</emphasis> make any changes to your
+              working copy).  Here you can see that
+              <filename>wc/foo.c</filename> has changed in the
+              repository since we last updated our working
+              copy:</para>
 
             <screen>
 $ svn status --show-updates wc
@@ -2663,14 +2914,15 @@ A  +         965    wc/qax.c
 Head revision:   981
             </screen>
 
-            <para>###TODO This example needs a description</para>
+            <para>And finally, the most information you can get out of
+              the status subcommand:</para>
 
             <screen>
 $ svn status --show-updates --verbose wc
- M           965       938     kfogel   wc/bar.c
-       *     965       922    sussman   wc/foo.c
-A  +         965       687        joe   wc/qax.c
-             965       687        joe   wc/zig.c
+ M           965       938      sally   wc/bar.c
+       *     965       922      harry   wc/foo.c
+A  +         965       687      harry   wc/qax.c
+             965       687      harry   wc/zig.c
 Head revision:   981
             </screen>
 
@@ -2684,7 +2936,7 @@ Head revision:   981
         <refentry>
           <refnamediv>
             <refname>svn switch</refname>
-            <refpurpose>Update working copy to mirror a new URL</refpurpose>
+            <refpurpose>Update working copy to a different URL.</refpurpose>
           </refnamediv>
           <refsect1>
             <title>Synopsis</title>
@@ -2693,8 +2945,13 @@ Head revision:   981
           <refsect1>
             <title>Description</title>
 
-            <para>Update working copy to mirror a new URL.  Note: this
-            is the way to move a working copy to a new branch.</para>
+            <para>This subcommand updates your working copy to mirror
+              a new URL&mdash;usually a URL which shares a common
+              ancestor with your working copy, although not
+              necessarily.  This is the Subversion way to move a
+              working copy to a new branch.  (See <xref
+              linkend="svn-ch-4-sect-5"/>) for an in-depth look at
+              switching.</para>
           </refsect1>
 
           <refsect1>
@@ -2743,8 +3000,8 @@ Updated to revision 31.
             </screen>
 
             <para>And to switch back, just provide the URL to the
-              location in the repository that your working copy was at
-              before:</para>
+              location in the repository from which you originally
+              checked out your working copy:</para>
 
             <screen>
 $ svn switch http://svn.red-bean.com/repos/trunk/vendors .
@@ -2756,9 +3013,9 @@ Updated to revision 31.
             </screen>
 
             <tip>
-              <para>You can just switch a subdirectory deep inside of
-                your working copy if you don't want to switch your
-                entire working copy.</para>
+              <para>You can just switch part of your working copy to a
+                branch if you don't want to switch your entire working
+                copy.</para>
             </tip>
 
           </refsect1>
@@ -2768,7 +3025,7 @@ Updated to revision 31.
         <refentry>
           <refnamediv>
             <refname>svn update</refname>
-            <refpurpose>Bring changes from the repository into the working copy.</refpurpose>
+            <refpurpose>Updates your working copy.</refpurpose>
           </refnamediv>
           <refsect1>
             <title>Synopsis</title>
@@ -2777,10 +3034,12 @@ Updated to revision 31.
           <refsect1>
             <title>Description</title>
 
-            <para>Bring changes from the repository into the working
-              copy.  If no revision given, bring working copy
-              up-to-date with HEAD rev.  Else synchronize working copy
-              to revision given by <option>--revision</option>.</para>
+            <para><command>svn update</command> brings changes from
+              the repository into your working copy.  If no revision
+              given, it brings your working copy up-to-date with the
+              HEAD revision.  Otherwise, it synchronizes the working
+              copy to the revision given by the
+              <option>--revision</option> switch.</para>
 
             <para>For each updated item a line will start with a
               character reporting the action taken.  These characters
@@ -2844,7 +3103,9 @@ Updated to revision 32.
             </screen>
 
             <para>You can also update your working copy to an older
-              revision:</para>
+              revision (Subversion doesn't have the concept of
+              <quote>sticky</quote> files like CVS does.  See <xref
+              linkend="svn-ap-a"/>):</para>
 
             <screen>
 svn up -r30
