@@ -796,6 +796,23 @@ svn_io_remove_file (const char *path, apr_pool_t *pool)
   apr_status_t apr_err;
   const char *path_apr;
 
+#ifdef SVN_WIN32
+  /* ### On Unix a read-only file can still be removed, because
+     removal is really an edit of the parent directory, not of the
+     file itself.  Windows apparently has different semantics, and so
+     when the svn_io_set_file_read_write() call below was temporarily
+     removed in revision 5663, Subversion stopped working on Windows.
+
+     Still, this chmod should probably should be controlled by a flag.
+     Certain callers, namely libsvn_wc when dealing with the read-only
+     files in .svn/, frequently have read-only files to remove; but
+     many others don't, and the chmod is a waste of time for them.
+
+     But see http://subversion.tigris.org/issues/show_bug.cgi?id=1294
+     for a more thorough discussion of long term solutions to this. */
+  SVN_ERR (svn_io_set_file_read_write (path, TRUE, pool));
+#endif /* SVN_WIN32 */
+
   SVN_ERR (svn_path_cstring_from_utf8 (&path_apr, path, pool));
 
   apr_err = apr_file_remove (path_apr, pool);
