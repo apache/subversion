@@ -107,7 +107,6 @@ static const char *timestamp_format =
 svn_string_t *
 svn_wc__time_to_string (apr_time_t t, apr_pool_t *pool)
 {
-#if 0  /* need apr fix */
   char *t_cstr;
   apr_exploded_time_t exploded_time;
 
@@ -138,9 +137,6 @@ svn_wc__time_to_string (apr_time_t t, apr_pool_t *pool)
                          exploded_time.tm_gmtoff);
 
   return svn_string_create (t_cstr, pool);
-#else
-  return svn_string_create ("must fix apr", pool);
-#endif /* 0/1 */
 }
 
 
@@ -160,7 +156,6 @@ find_matching_string (char *str, const char strings[][4])
 apr_time_t
 svn_wc__string_to_time (svn_string_t *tstr)
 {
-#if 0
   apr_exploded_time_t exploded_time;
   char wday[4], month[4];
   apr_time_t time;
@@ -185,14 +180,11 @@ svn_wc__string_to_time (svn_string_t *tstr)
   /* I highly doubt these matter to apr_implode_time(), but we'll
      convert them just to be safe. */
   exploded_time.tm_wday = find_matching_string (wday, apr_day_snames);
-  exploded_time.tm_mon = find_matching_string (wday, apr_month_snames);
+  exploded_time.tm_mon = find_matching_string (month, apr_month_snames);
 
   apr_implode_time (&time, &exploded_time);
 
   return time;
-#else
-  return 0;  /* must fix apr */
-#endif /* 0/1 */
 }
 
 
