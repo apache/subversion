@@ -423,9 +423,6 @@ static const struct special_defn
  * URI will contain a path relative to our configured root URI. It should
  * not have a leading "/". The root is identified by "".
  *
- * SPECIAL_URI is the component of the URI path configured by the
- * SVNSpecialPath directive (defaults to "$svn").
- *
  * On output: *COMB will contain all of the information parsed out of
  * the URI -- the resource type, activity ID, path, etc.
  *
@@ -1148,6 +1145,9 @@ static dav_error * dav_svn_get_resource(request_rec *r,
   /* An XSL transformation */
   repos->xslt_uri = xslt_uri;
 
+  /* Is autoversioning active in this repos? */
+  repos->autoversioning = dav_svn_get_autoversioning_flag(r);
+
   /* Remember various bits for later URL construction */
   repos->base_url = ap_construct_url(r->pool, "", r);
   repos->special_uri = dav_svn_get_special_uri(r);
@@ -1245,6 +1245,7 @@ static dav_error * dav_svn_get_parent_resource(const dav_resource *resource,
   switch (resource->type)
     {
     case DAV_RESOURCE_TYPE_WORKING:
+    case DAV_RESOURCE_TYPE_REGULAR:
       /* The "/" occurring within the URL of working resources is part of
          its identifier; it does not establish parent resource relationships.
          All working resources have the same parent, which is:
@@ -2100,21 +2101,37 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
 static dav_error * dav_svn_create_collection(dav_resource *resource)
 {
   svn_error_t *serr;
+  dav_error *err;
 
-  if (resource->type != DAV_RESOURCE_TYPE_WORKING)
+  if (resource->type != DAV_RESOURCE_TYPE_WORKING
+      && resource->type != DAV_RESOURCE_TYPE_REGULAR)
     {
       return dav_new_error(resource->pool, HTTP_METHOD_NOT_ALLOWED, 0,
                            "Collections can only be created within a working "
-                           "collection [at this time].");
+                           "or regular collection [at this time].");
     }
+
+  /* ...regular resources allowed only if autoversioning is turned on. */
+  if (resource->type == DAV_RESOURCE_TYPE_REGULAR
+      && ! (resource->info->repos->autoversioning))
+    return dav_new_error(resource->pool, HTTP_METHOD_NOT_ALLOWED, 0,
+                         "MKCOL called on regular resource, but "
+                         "autoversioning is not active.");
 
   /* ### note that the parent was checked out at some point, and this
      ### is being preformed relative to the working rsrc for that parent */
 
-  /* note: when writing, we don't need to use DAV_SVN_REPOS_PATH since
-     we cannot write into an "id root". Partly because the FS may not
-     let us, but mostly that we have an id root only to deal with Version
-     Resources, and those are read only. */
+  /* Auto-versioning mkcol of regular resource: */
+  if (resource->type == DAV_RESOURCE_TYPE_REGULAR)
+    {
+      /* Change the VCR into a WR, in place.  This creates a txn and
+         changes resource->info->root from a rev-root into a txn-root. */
+      err = dav_svn_checkout(resource,
+                             1 /* auto-checkout */,
+                             0, 0, 0, NULL, NULL);
+      if (err)
+        return err;
+    }
 
   if ((serr = svn_fs_make_dir(resource->info->root.root,
                               resource->info->repos_path,
@@ -2123,6 +2140,15 @@ static dav_error * dav_svn_create_collection(dav_resource *resource)
       /* ### need a better error */
       return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                  "Could not create the collection.");
+    }
+
+  /* Auto-versioning commit of the txn. */
+  if (resource->info->auto_checked_out)
+    {
+      /* This also changes the WR back into a VCR, in place. */
+      err = dav_svn_checkin(resource, 0, NULL);
+      if (err)
+        return err;
     }
 
   return NULL;
@@ -2134,6 +2160,7 @@ static dav_error * dav_svn_copy_resource(const dav_resource *src,
                                          dav_response **response)
 {
   svn_error_t *serr;
+  dav_error *err;
 
   /* ### source must be from a collection under baseline control. the
      ### baseline will (implicitly) indicate the source revision, and the
@@ -2158,6 +2185,23 @@ static dav_error * dav_svn_copy_resource(const dav_resource *src,
     return dav_new_error(src->pool, HTTP_PRECONDITION_FAILED, 0,
                          "Illegal: COPY Destination is a baseline.");
 
+  if (dst->type == DAV_RESOURCE_TYPE_REGULAR
+      && !(dst->info->repos->autoversioning))
+    return dav_new_error(dst->pool, HTTP_METHOD_NOT_ALLOWED, 0,
+                         "COPY called on regular resource, but "
+                         "autoversioning is not active.");
+
+  /* Auto-versioning copy of regular resource: */
+  if (dst->type == DAV_RESOURCE_TYPE_REGULAR)
+    {
+      /* Change the VCR into a WR, in place.  This creates a txn and
+         changes dst->info->root from a rev-root into a txn-root. */
+      err = dav_svn_checkout(dst,
+                             1 /* auto-checkout */,
+                             0, 0, 0, NULL, NULL);
+      if (err)
+        return err;
+    }
   
   serr = svn_fs_copy (src->info->root.root,  /* the root object of src rev*/
                       src->info->repos_path, /* the relative path of src */
@@ -2168,34 +2212,37 @@ static dav_error * dav_svn_copy_resource(const dav_resource *src,
     return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                "Unable to make a filesystem copy.");
 
+  /* Auto-versioning commit of the txn. */
+  if (dst->info->auto_checked_out)
+    {
+      /* This also changes the WR back into a VCR, in place. */
+      err = dav_svn_checkin(dst, 0, NULL);
+      if (err)
+        return err;
+    }
+
   return NULL;
 }
 
-static dav_error * dav_svn_move_resource(dav_resource *src,
-                                         dav_resource *dst,
-                                         dav_response **response)
-{
-  /* NOTE: Subversion does not use the MOVE method. Strictly speaking,
-     we do not need to implement this repository function. */
-
-  /* ### fill this in */
-
-  return dav_new_error(src->pool, HTTP_NOT_IMPLEMENTED, 0,
-                       "MOVE is not available "
-                       "[at this time].");
-}
 
 static dav_error * dav_svn_remove_resource(dav_resource *resource,
                                            dav_response **response)
 {
   svn_error_t *serr;
+  dav_error *err;
 
-  if (resource->type != DAV_RESOURCE_TYPE_WORKING)
-    {
-      return dav_new_error(resource->pool, HTTP_METHOD_NOT_ALLOWED, 0,
-                           "Resources can only be deleted from within a "
-                           "working collection [at this time].");
-    }
+  /* Only working or regular resources can be deleted... */
+  if (resource->type != DAV_RESOURCE_TYPE_WORKING
+      && resource->type != DAV_RESOURCE_TYPE_REGULAR)
+    return dav_new_error(resource->pool, HTTP_METHOD_NOT_ALLOWED, 0,
+                           "DELETE called on invalid resource type.");
+
+  /* ...and regular resources only if autoversioning is turned on. */
+  if (resource->type == DAV_RESOURCE_TYPE_REGULAR
+      && ! (resource->info->repos->autoversioning))
+    return dav_new_error(resource->pool, HTTP_METHOD_NOT_ALLOWED, 0,
+                         "DELETE called on regular resource, but "
+                         "autoversioning is not active.");
 
   /* ### note that the parent was checked out at some point, and this
      ### is being preformed relative to the working rsrc for that parent */
@@ -2207,10 +2254,17 @@ static dav_error * dav_svn_remove_resource(dav_resource *resource,
      this does imply we are not enforcing the "checkout the parent, then
      delete from within" semantic. */
 
-  /* note: when writing, we don't need to use DAV_SVN_REPOS_PATH since
-     we cannot write into an "id root". Partly because the FS may not
-     let us, but mostly that we have an id root only to deal with Version
-     Resources, and those are read only. */
+  /* Auto-versioning delete of regular resource: */
+  if (resource->type == DAV_RESOURCE_TYPE_REGULAR)
+    {
+      /* Change the VCR into a WR, in place.  This creates a txn and
+         changes resource->info->root from a rev-root into a txn-root. */
+      err = dav_svn_checkout(resource,
+                             1 /* auto-checkout */,
+                             0, 0, 0, NULL, NULL);
+      if (err)
+        return err;
+    }
 
   if ((serr = svn_fs_delete_tree(resource->info->root.root,
                                  resource->info->repos_path,
@@ -2221,9 +2275,77 @@ static dav_error * dav_svn_remove_resource(dav_resource *resource,
                                  "Could not delete the resource.");
     }
 
-  /* ### fill this in */
+  /* Auto-versioning commit of the txn. */
+  if (resource->info->auto_checked_out)
+    {
+      /* This also changes the WR back into a VCR, in place. */
+      err = dav_svn_checkin(resource, 0, NULL);
+      if (err)
+        return err;
+    }
+
   return NULL;
 }
+
+
+static dav_error * dav_svn_move_resource(dav_resource *src,
+                                         dav_resource *dst,
+                                         dav_response **response)
+{
+  svn_error_t *serr;
+  dav_error *err;
+
+  /* NOTE: The svn client does not call the MOVE method yet. Strictly
+     speaking, we do not need to implement this repository function.
+     But we do so anyway, so non-deltaV clients can work against the
+     repository when autoversioning is turned on.  Like the svn client,
+     itself, we define a move to be a copy + delete within a single txn. */
+
+  /* Because we have no 'atomic' move, we only allow this method on
+     two regular resources with autoversioning active.  That way we
+     can auto-checkout a single resource and do the copy + delete
+     within a single txn.  (If we had two working resources, which txn
+     would we use?) */
+  if (src->type != DAV_RESOURCE_TYPE_REGULAR
+      || dst->type != DAV_RESOURCE_TYPE_REGULAR
+      || !(src->info->repos->autoversioning))
+    return dav_new_error(dst->pool, HTTP_METHOD_NOT_ALLOWED, 0,
+                         "MOVE only allowed on two public URIs, and "
+                         "autoversioning must be active.");
+
+  /* Change the dst VCR into a WR, in place.  This creates a txn and
+     changes dst->info->root from a rev-root into a txn-root. */
+  err = dav_svn_checkout(dst,
+                         1 /* auto-checkout */,
+                         0, 0, 0, NULL, NULL);
+  if (err)
+    return err;
+
+  /* Copy the src to the dst. */
+  serr = svn_fs_copy (src->info->root.root,  /* the root object of src rev*/
+                      src->info->repos_path, /* the relative path of src */
+                      dst->info->root.root,  /* the root object of dst txn*/ 
+                      dst->info->repos_path, /* the relative path of dst */
+                      src->pool);
+  if (serr)
+    return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                               "Unable to make a filesystem copy.");
+
+  /* Notice: we're deleting the src repos path from the dst's txn_root. */
+  if ((serr = svn_fs_delete_tree(dst->info->root.root,
+                                 src->info->repos_path,
+                                 dst->pool)) != NULL)
+    return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                               "Could not delete the src resource.");
+
+  /* Commit:  this also changes the WR back into a VCR, in place. */
+  err = dav_svn_checkin(dst, 0, NULL);
+  if (err)
+    return err;
+
+  return NULL;
+}
+
 
 static dav_error * dav_svn_do_walk(dav_svn_walker_context *ctx, int depth)
 {
@@ -2432,12 +2554,13 @@ static dav_error * dav_svn_walk(const dav_walk_params *params, int depth,
 
 /*** Utility functions for resource management ***/
 
-dav_resource *dav_svn_create_working_resource(const dav_resource *base,
+dav_resource *dav_svn_create_working_resource(dav_resource *base,
                                               const char *activity_id,
-                                              const char *txn_name)
+                                              const char *txn_name,
+                                              int tweak_in_place)
 {
-  dav_resource_combined *comb;
   const char *path;
+  dav_resource *res;
 
   if (base->baselined)
     path = apr_psprintf(base->pool,
@@ -2450,30 +2573,109 @@ dav_resource *dav_svn_create_working_resource(const dav_resource *base,
                         activity_id, base->info->repos_path);
   path = svn_path_uri_encode(path, base->pool);
 
-  comb = apr_pcalloc(base->pool, sizeof(*comb));
+  if (tweak_in_place)
+    res = base;
+  else
+    {
+      res = apr_pcalloc(base->pool, sizeof(*res));
+      res->info = apr_pcalloc(base->pool, sizeof(*res->info));
+    }
 
-  comb->res.type = DAV_RESOURCE_TYPE_WORKING;
-  comb->res.exists = TRUE;      /* ### not necessarily correct */
-  comb->res.versioned = TRUE;
-  comb->res.working = TRUE;
-  comb->res.baselined = base->baselined;
+  res->type = DAV_RESOURCE_TYPE_WORKING;
+  res->exists = TRUE;      /* ### not necessarily correct */
+  res->versioned = TRUE;
+  res->working = TRUE;
+  res->baselined = base->baselined;
   /* collection = FALSE.   ### not necessarily correct */
 
-  comb->res.uri = apr_pstrcat(base->pool, base->info->repos->root_path,
-                              path, NULL);
-  comb->res.info = &comb->priv;
-  comb->res.hooks = &dav_svn_hooks_repos;
-  comb->res.pool = base->pool;
+  res->uri = apr_pstrcat(base->pool, base->info->repos->root_path,
+                         path, NULL);
+  res->hooks = &dav_svn_hooks_repos;
+  res->pool = base->pool;
 
-  comb->priv.uri_path = svn_stringbuf_create(path, base->pool);
-  comb->priv.repos = base->info->repos;
-  comb->priv.repos_path = base->info->repos_path;
-  comb->priv.root.rev = base->info->root.rev;
-  comb->priv.root.activity_id = activity_id;
-  comb->priv.root.txn_name = txn_name;
+  res->info->uri_path = svn_stringbuf_create(path, base->pool);
+  res->info->repos = base->info->repos;
+  res->info->repos_path = base->info->repos_path;
+  res->info->root.rev = base->info->root.rev;
+  res->info->root.activity_id = activity_id;
+  res->info->root.txn_name = txn_name;
 
-  return &comb->res;
+  if (tweak_in_place)
+    return NULL;
+  else
+    return res;
 }
+
+
+dav_error * dav_svn_working_to_regular_resource(dav_resource *resource)
+{
+  dav_resource_private *priv = resource->info;
+  dav_svn_repos *repos = priv->repos;
+  const char *path;
+  svn_error_t *serr;
+
+  /* no need to change the repos object or repos_path */
+
+  /* set type back to REGULAR */
+  resource->type = DAV_RESOURCE_TYPE_REGULAR;
+
+  /* remove the working flag */
+  resource->working = FALSE;
+
+  /* Change the url into a either a baseline-collecton or public one. */
+  if (priv->root.rev == SVN_INVALID_REVNUM)
+    {
+      serr = svn_fs_youngest_rev(&priv->root.rev, repos->fs, resource->pool);
+      if (serr != NULL)
+        return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                   "Could not determine youngest rev.");
+      
+      /* create public url */
+      path = apr_psprintf(resource->pool, "%s", priv->repos_path);
+    }
+  else
+    {
+      /* if rev was specific, create baseline-collection url */
+      path = dav_svn_build_uri(repos, DAV_SVN_BUILD_URI_BC,
+                               priv->root.rev, priv->repos_path,
+                               0, resource->pool);
+    }
+  path = svn_path_uri_encode(path, resource->pool);
+  priv->uri_path = svn_stringbuf_create(path, resource->pool);
+
+  /* change root.root back into a revision root. */
+  serr = svn_fs_revision_root(&priv->root.root, repos->fs,
+                              priv->root.rev, resource->pool);
+  if (serr != NULL)
+    return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                               "Could not open revision root.");
+     
+  return NULL;
+}
+
+
+dav_error * dav_svn_create_version_resource(dav_resource **version_res,
+                                            const char *uri,
+                                            apr_pool_t *pool)
+{
+  int result;
+  dav_error *err;
+
+  dav_resource_combined *comb = apr_pcalloc(pool, sizeof(*comb));
+
+  result = dav_svn_parse_version_uri(comb, uri, NULL, 0);
+  if (result != 0)
+    return dav_new_error(pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                         "Could not parse version resource uri.");
+
+  err = dav_svn_prep_version(comb);
+  if (err)
+    return err;
+  
+  *version_res = &comb->res;
+  return NULL;
+}
+
 
 
 const dav_hooks_repository dav_svn_hooks_repos =
