@@ -71,7 +71,7 @@
       <option>--revision</option> (<option>-r</option>) switch plus
       the revision you want (<command>svn --revision REV</command>) or
       you can specify a range by separating two revisions with a colon
-      (<command>svn --revision REV1:REV2</command>).  And subversion
+      (<command>svn --revision REV1:REV2</command>).  And Subversion
       lets you refer to these revisions by number, keyword, or
       date.</para>
     
