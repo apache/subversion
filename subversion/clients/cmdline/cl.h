@@ -56,7 +56,7 @@ typedef enum {
   svn_cl__no_ignore_opt,
   svn_cl__no_auth_cache_opt,
   svn_cl__non_interactive_opt,
-  svn_cl__dry_run
+  svn_cl__dry_run_opt
 } svn_cl__longopt_t;
 
 
