@@ -128,6 +128,7 @@ typedef struct svn_ra_username_authenticator_t
   /* Get a username from the client. */
   svn_error_t *(*get_username) (char **username,
                                 void *auth_baton,
+                                svn_boolean_t force_prompt,
                                 apr_pool_t *pool);
 
   /* If authentication was successful, tell the client to store the
@@ -143,10 +144,13 @@ typedef struct svn_ra_username_authenticator_t
    (matches type SVN_RA_AUTH_SIMPLE_PASSWORD above.)  */
 typedef struct svn_ra_simple_password_authenticator_t
 {
-  /* Get a username and password from the client. */
+  /* Get a username and password from the client.  If FORCE_PROMPT is
+     set, then a prompt will be displayed to the user automatically
+     (rather than looking for cached info from command-line or file.) */
   svn_error_t *(*get_user_and_pass) (char **username,
                                      char **password,
                                      void *auth_baton,
+                                     svn_boolean_t force_prompt,
                                      apr_pool_t *pool);
 
   /* If authentication was successful, tell the client to store the

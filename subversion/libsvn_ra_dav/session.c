@@ -56,21 +56,26 @@ static int request_auth(void *userdata, const char *realm,
   svn_ra_simple_password_authenticator_t *authenticator = NULL;
   svn_ra_session_t *ras = userdata;
 
+  /* if set, then this is at least the 2nd time neon has called this
+     callback, meaning that previous authentication failed. */
+  static int retry = 0;
+
   /* ### my only worry is that we're not catching any svn_errors from
      get_authenticator, get_username, get_password... */
-  
-  if ((! ras->username) || (! ras->password))
-    {
-      /* pull the username and password from the client */
-      ras->callbacks->get_authenticator (&a, &auth_baton, 
-                                         SVN_RA_AUTH_SIMPLE_PASSWORD, 
-                                         ras->callback_baton, ras->pool);      
-      authenticator = (svn_ra_simple_password_authenticator_t *) a;      
-      authenticator->get_user_and_pass (&uname, &pword,
-                                        auth_baton, ras->pool);
-      ras->username = uname;
-      ras->password = pword;
-    }
+
+  /* pull the username and password from the client */
+  ras->callbacks->get_authenticator (&a, &auth_baton, 
+                                     SVN_RA_AUTH_SIMPLE_PASSWORD, 
+                                     ras->callback_baton, ras->pool);      
+  authenticator = (svn_ra_simple_password_authenticator_t *) a;      
+  authenticator->get_user_and_pass (&uname, &pword,
+                                    auth_baton, 
+                                    retry, /* possibly tell this
+                                              function to force a
+                                              prompt */
+                                    ras->pool);
+  ras->username = uname;
+  ras->password = pword;
 
   /* send a malloc'd copy of the username to neon */
   l = strlen(ras->username) + 1;
@@ -82,6 +87,8 @@ static int request_auth(void *userdata, const char *realm,
   *password = malloc(l);
   memcpy(*password, ras->password, l);
 
+  retry = 1;  /* if this callback is called a second time, this flag
+                 will be noticed */
   return 0;
 }
 
