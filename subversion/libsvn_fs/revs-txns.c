@@ -128,54 +128,6 @@ svn_fs_youngest_rev (svn_revnum_t *youngest_p,
 
 /* Generic revision operations.  */
 
-
-struct revision_prop_args {
-  svn_string_t **value_p;
-  svn_fs_t *fs;
-  svn_revnum_t rev;
-  const char *propname;
-};
-
-
-static svn_error_t *
-txn_body_revision_prop (void *baton,
-                        trail_t *trail)
-{
-  struct revision_prop_args *args = baton;
-  svn_fs__transaction_t *txn;
-
-  SVN_ERR (get_rev_txn (&txn, NULL, args->fs, args->rev, trail));
-  *(args->value_p) = NULL;
-  if (txn->proplist)
-    *(args->value_p) = apr_hash_get (txn->proplist, args->propname,
-                                     APR_HASH_KEY_STRING);
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_fs_revision_prop (svn_string_t **value_p,
-                      svn_fs_t *fs,
-                      svn_revnum_t rev,
-                      const char *propname,
-                      apr_pool_t *pool)
-{
-  struct revision_prop_args args;
-  svn_string_t *value;
-
-  SVN_ERR (svn_fs__check_fs (fs));
-
-  args.value_p = &value;
-  args.fs = fs;
-  args.rev = rev;
-  args.propname = propname;
-  SVN_ERR (svn_fs__retry (fs, txn_body_revision_prop, &args, 1, pool));
-
-  *value_p = value;
-  return SVN_NO_ERROR;
-}
-
-
 struct revision_proplist_args {
   apr_hash_t **table_p;
   svn_fs_t *fs;
@@ -188,10 +140,9 @@ txn_body_revision_proplist (void *baton, trail_t *trail)
 {
   struct revision_proplist_args *args = baton;
   svn_fs__transaction_t *txn;
-  apr_pool_t *pool = trail->pool;
 
   SVN_ERR (get_rev_txn (&txn, NULL, args->fs, args->rev, trail));
-  *(args->table_p) = txn->proplist ? txn->proplist : apr_hash_make (pool);
+  *(args->table_p) = txn->proplist;
   return SVN_NO_ERROR;
 }
 
@@ -212,7 +163,34 @@ svn_fs_revision_proplist (apr_hash_t **table_p,
   args.rev = rev;
   SVN_ERR (svn_fs__retry (fs, txn_body_revision_proplist, &args, 1, pool));
 
-  *table_p = table;
+  *table_p = table ? table : apr_hash_make (pool);
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_fs_revision_prop (svn_string_t **value_p,
+                      svn_fs_t *fs,
+                      svn_revnum_t rev,
+                      const char *propname,
+                      apr_pool_t *pool)
+{
+  struct revision_proplist_args args;
+  apr_hash_t *table;
+
+  SVN_ERR (svn_fs__check_fs (fs));
+
+  /* Get the proplist. */
+  args.table_p = &table;
+  args.fs = fs;
+  args.rev = rev;
+  SVN_ERR (svn_fs__retry (fs, txn_body_revision_proplist, &args, 1, pool));
+
+  /* And then the prop from that list (if there was a list). */
+  *value_p = NULL;
+  if (table)
+    *value_p = apr_hash_get (table, propname, APR_HASH_KEY_STRING);
+
   return SVN_NO_ERROR;
 }
 
@@ -420,57 +398,6 @@ svn_fs__add_txn_copy (svn_fs_t *fs,
 
 /* Generic transaction operations.  */
 
-
-struct txn_prop_args {
-  svn_string_t **value_p;
-  svn_fs_t *fs;
-  const char *id;
-  const char *propname;
-};
-
-
-static svn_error_t *
-txn_body_txn_prop (void *baton,
-                   trail_t *trail)
-{
-  struct txn_prop_args *args = baton;
-  svn_fs__transaction_t *txn;
-  
-  SVN_ERR (svn_fs__bdb_get_txn (&txn, args->fs, args->id, trail)); 
-  if (is_committed (txn))
-    return svn_fs__err_txn_not_mutable (args->fs, args->id);
-
-  *(args->value_p) = NULL;
-  if (txn->proplist)
-    *(args->value_p) = apr_hash_get (txn->proplist, 
-                                     args->propname, APR_HASH_KEY_STRING);
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_fs_txn_prop (svn_string_t **value_p,
-                 svn_fs_txn_t *txn,
-                 const char *propname,
-                 apr_pool_t *pool)
-{
-  struct txn_prop_args args;
-  svn_string_t *value;
-  svn_fs_t *fs = svn_fs_txn_fs (txn);
-
-  SVN_ERR (svn_fs__check_fs (fs));
-
-  args.value_p = &value;
-  args.fs = fs;
-  svn_fs_txn_name (&args.id, txn, pool);
-  args.propname = propname;
-  SVN_ERR (svn_fs__retry (fs, txn_body_txn_prop, &args, 1, pool));
-
-  *value_p = value;
-  return SVN_NO_ERROR;
-}
-
-
 struct txn_proplist_args {
   apr_hash_t **table_p;
   svn_fs_t *fs;
@@ -489,8 +416,7 @@ txn_body_txn_proplist (void *baton, trail_t *trail)
   if (is_committed (txn))
     return svn_fs__err_txn_not_mutable (args->fs, args->id);
 
-  *(args->table_p) = txn->proplist 
-                     ? txn->proplist : apr_hash_make (trail->pool);
+  *(args->table_p) = txn->proplist; 
   return SVN_NO_ERROR;
 }
 
@@ -511,9 +437,36 @@ svn_fs_txn_proplist (apr_hash_t **table_p,
   svn_fs_txn_name (&args.id, txn, pool);
   SVN_ERR (svn_fs__retry (fs, txn_body_txn_proplist, &args, 1, pool));
 
-  *table_p = table;
+  *table_p = table ? table : apr_hash_make (pool);
   return SVN_NO_ERROR;
 }
+
+
+svn_error_t *
+svn_fs_txn_prop (svn_string_t **value_p,
+                 svn_fs_txn_t *txn,
+                 const char *propname,
+                 apr_pool_t *pool)
+{
+  struct txn_proplist_args args;
+  apr_hash_t *table;
+  svn_fs_t *fs = svn_fs_txn_fs (txn);
+
+  SVN_ERR (svn_fs__check_fs (fs));
+
+  /* Get the proplist. */
+  args.table_p = &table;
+  args.fs = fs;
+  svn_fs_txn_name (&args.id, txn, pool);
+  SVN_ERR (svn_fs__retry (fs, txn_body_txn_proplist, &args, 1, pool));
+
+  /* And then the prop from that list (if there was a list). */
+  *value_p = NULL;
+  if (table)
+    *value_p = apr_hash_get (table, propname, APR_HASH_KEY_STRING);
+  return SVN_NO_ERROR;
+}
+
 
 
 struct change_txn_prop_args {
