@@ -441,7 +441,7 @@ jlong SVNAdmin::recover(const char *path)
     if(path == NULL)
     {
         JNIUtil::throwNullPointerException("path");
-        return NULL;
+        return -1;
     }
   path = svn_path_internal_style(path, subpool.pool());
   svn_revnum_t youngest_rev;
