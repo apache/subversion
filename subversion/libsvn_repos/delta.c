@@ -393,18 +393,6 @@ delta_proplists (struct context *c,
   /* Make a subpool for local allocations. */ 
   subpool = svn_pool_create (pool);
 
-  /* Get the source file's properties */
-  if (source_path)
-    SVN_ERR (svn_fs_node_proplist 
-             (&s_props, c->source_root, source_path->data,
-              subpool));
-
-  /* Get the target file's properties */
-  if (target_path)
-    SVN_ERR (svn_fs_node_proplist 
-             (&t_props, c->target_root, target_path->data,
-              subpool));
-
   if (source_path && target_path)
     {
       int changed;
@@ -422,6 +410,18 @@ delta_proplists (struct context *c,
           return SVN_NO_ERROR;
         }
     }
+
+  /* Get the source file's properties */
+  if (source_path)
+    SVN_ERR (svn_fs_node_proplist 
+             (&s_props, c->source_root, source_path->data,
+              subpool));
+
+  /* Get the target file's properties */
+  if (target_path)
+    SVN_ERR (svn_fs_node_proplist 
+             (&t_props, c->target_root, target_path->data,
+              subpool));
 
   for (hi = apr_hash_first (subpool, t_props); hi; hi = apr_hash_next (hi))
     {
@@ -472,7 +472,7 @@ delta_proplists (struct context *c,
           s_name = svn_stringbuf_ncreate (key, klen, subpool);
           s_value = val;
 
-          SVN_ERR (change_fn (c, object, s_name, s_value, subpool));
+          SVN_ERR (change_fn (c, object, s_name, NULL, subpool));
         }
     }
 
