@@ -61,6 +61,8 @@
     Windows domain controller using SSPI Authentication?</a></li>
 <li><a href="#deltification">How do I enable repository deltification,
     and why?</a></li>
+<li><a href="#adm-dir">I don't like the ".svn" directory name, and
+    prefer "SVN" or something else.  How do I change it?</a></li>
 <p>
 <strong>Troubleshooting:</strong>
 </p>
@@ -946,6 +948,33 @@ plan to improve it, see:</p>
 </blockquote>
 </p>
 
+
+<![CDATA[=========================================================]]>
+ 
+<h3><a name="adm-dir">I don't like the ".svn" directory name, and
+    prefer "SVN" or something else.  How do I change it?</h3>
+
+<p>We recommend that you live with ".svn" if you possibly can.  If you
+use some other name, your working copy may not work with Subversion
+clients other than the one you regularly use.  However, if you
+absolutely must, you can simply change this line in
+<tt>subversion/include/svn_wc.h</tt> from </p>
+
+<p><pre>
+#define SVN_WC_ADM_DIR_NAME   ".svn"
+</pre></p>
+
+<p>
+to
+</p>
+
+<p><pre>
+#define SVN_WC_ADM_DIR_NAME   "SVN"
+</pre></p>
+
+<p>
+then recompile your client.
+</p>
 
 <![CDATA[=========================================================]]>
 
