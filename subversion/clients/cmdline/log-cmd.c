@@ -182,10 +182,10 @@ log_message_receiver (void *baton,
   if (! lb->omit_log_message)
     {
       lines = svn_cstring_count_newlines (msg) + 1;
-      /*### FIXME: how do we translate this without ngettext?! */
       SVN_ERR (svn_cmdline_printf (pool,
-                                   " | %d line%s", lines,
-                                   (lines > 1) ? "s" : ""));
+                                   (lines != 1)
+                                   ? " | %d lines"
+                                   : " | %d line", lines));
     }
 
   SVN_ERR (svn_cmdline_printf (pool, "\n"));
