@@ -17,7 +17,6 @@ our ($opt_e, $opt_h) =
     (     0,      0);
 getopts('eh') || die("Option error. Use -h for help.\n");
 
-my $Debug = 0;
 my $SEP = "&#64738;";
 
 $opt_h && usage(0);
@@ -36,16 +35,16 @@ if ($opt_e) {
 } else {
     # Prepare the file for commit or building.
 
-    # Insert a character from the private use area between double dashes 
-    # in the English text. In the memory of the CBM-64 we’ll use "ﳢ" — 
-    # U+FCE2, also known as &#64738;. Necessary to stuff something 
-    # between the dashes because it’s forbidden to use double dashes 
-    # inside comments. ☠.
+    # Insert a character from the Unicode private use area between 
+    # double dashes in the English text. In the memory of the CBM-64 
+    # we’ll use "ﳢ" — U+FCE2, also known as &#64738;. Necessary to stuff 
+    # something between the dashes because it’s forbidden to use double 
+    # dashes inside comments. ☠.
     $Data =~ s/(<!-- \@ENGLISH {{{)(.*?)(\@ENGLISH }}} -->)/
                sprintf("%s%s%s", $1, cleanup_english($2), $3)/ges;
 
     # Convert all UTF-8 sequences into numerical entities. To make 
-    # RFC3629 happy, only use four bytes.
+    # RFC 3629 happy, only use four bytes.
     $Data =~ s/([\xF0-\xF7][\x80-\xBF][\x80-\xBF][\x80-\xBF])/
                decode_char($1)/ge;
     $Data =~ s/([\xE0-\xEF][\x80-\xBF][\x80-\xBF])/
@@ -73,8 +72,7 @@ sub cleanup_english {
 }
 
 sub decode_char {
-    # Converts an UTF-sequence into a numerical SGML/HTML/XML entity.
-    # Comes from "u2h r42 2004-08-12 16:49:00Z sunny256".
+    # Converts an UTF-8 sequence into a numerical SGML/HTML/XML entity.
     # {{{
 
     my $Msg = shift;
@@ -86,7 +84,7 @@ sub decode_char {
     # Use base 10 in entities. ☹
     my $use_decimal   = 1;
 
-    # Convert U+0080 through U+00FF to ISO-8859-1 instead of entities
+    # Treat U+0080 through U+00FF as ISO-8859-1 characters
     my $use_latin1    = 0;
 
     if ($Msg =~ /^([\x20-\x7F])$/) {
@@ -99,14 +97,17 @@ sub decode_char {
         }
     } elsif ($Msg =~ /^([\xE0-\xEF])([\x80-\xBF])([\x80-\xBF])/) {
         if (!$allow_invalid && $Msg =~ /^\xE0[\x80-\x9F]/) {
+            # Overlong sequence
             $Val = 0xFFFD;
         } else {
             $Val = ((ord($1) & 0x0F) << 12) |
                    ((ord($2) & 0x3F) <<  6) |
                    ( ord($3) & 0x3F);
         }
-    } elsif ($Msg =~ /^([\xF0-\xF7])([\x80-\xBF])([\x80-\xBF])([\x80-\xBF])/) {
+    } elsif ($Msg =~ /^([\xF0-\xF7])([\x80-\xBF])
+                       ([\x80-\xBF])([\x80-\xBF])/x) {
         if (!$allow_invalid && $Msg =~ /^\xF0[\x80-\x8F]/) {
+            # Overlong sequence
             $Val = 0xFFFD;
         } else {
             $Val = ((ord($1) & 0x07) << 18) |
@@ -114,8 +115,10 @@ sub decode_char {
                    ((ord($3) & 0x3F) <<  6) |
                    ( ord($4) & 0x3F);
         }
-    } elsif ($Msg =~ /^([\xF8-\xFB])([\x80-\xBF])([\x80-\xBF])([\x80-\xBF])([\x80-\xBF])/) {
+    } elsif ($Msg =~ /^([\xF8-\xFB])([\x80-\xBF])
+                       ([\x80-\xBF])([\x80-\xBF])([\x80-\xBF])/x) {
         if (!$allow_invalid && $Msg =~ /^\xF8[\x80-\x87]/) {
+            # Overlong sequence
             $Val = 0xFFFD;
         } else {
             $Val = ((ord($1) & 0x03) << 24) |
@@ -124,8 +127,10 @@ sub decode_char {
                    ((ord($4) & 0x3F) <<  6) |
                    ( ord($5) & 0x3F);
         }
-    } elsif ($Msg =~ /^([\xFC-\xFD])([\x80-\xBF])([\x80-\xBF])([\x80-\xBF])([\x80-\xBF])([\x80-\xBF])/) {
+    } elsif ($Msg =~ /^([\xFC-\xFD])([\x80-\xBF])([\x80-\xBF])
+                       ([\x80-\xBF])([\x80-\xBF])([\x80-\xBF])/x) {
         if (!$allow_invalid && $Msg =~ /^\xFC[\x80-\x83]/) {
+            # Overlong sequence
             $Val = 0xFFFD;
         } else {
             $Val = ((ord($1) & 0x01) << 30) |
@@ -142,22 +147,22 @@ sub decode_char {
             ($Val >= 0xD800  &&  $Val <= 0xDFFF) ||
             ($Val eq 0xFFFE) || ($Val eq 0xFFFF)
         ) {
+            # Surrogate char or non-existing chars U+FFFE or U+FFFF
             $Val = 0xFFFD;
         }
     }
 
-    return ($use_latin1 && ($Val <= 0xFF)) ?
-                chr($Val) :
-            sprintf(($use_decimal ?
-                "&#%u;" :
-                "&#x%X;"), $Val);
+    return ($use_latin1 && ($Val <= 0xFF))
+                ? chr($Val)
+                : sprintf(($use_decimal ? "&#%u;"
+                                        : "&#x%X;"),
+                          $Val
+                  );
     # }}}
 } # decode_char()
 
 sub widechar {
-    # Convert numeric entities to UTF-8.
-    # Comes from "h2u 42 2004-08-12 16:49:00Z sunny256".
-    # {{{
+    # Convert numeric value into the corresponding UTF-8 sequence {{{
 
     my $Val = shift;
 
@@ -168,8 +173,10 @@ sub widechar {
     if ($Val < 0x80) {
         return sprintf("%c", $Val);
     } elsif ($Val < 0x800) {
-        return sprintf("%c%c", 0xC0 | ($Val >> 6),
-                               0x80 | ($Val & 0x3F));
+        return sprintf("%c%c",
+                       0xC0 | ($Val >> 6),
+                       0x80 | ($Val & 0x3F)
+               );
     } elsif ($Val < 0x10000) {
         unless ($allow_invalid) {
             if  (($Val >= 0xD800 && $Val <= 0xDFFF) ||
@@ -177,27 +184,35 @@ sub widechar {
                 $Val = 0xFFFD;
             }
         }
-        return sprintf("%c%c%c", 0xE0 |  ($Val >> 12),
-                                 0x80 | (($Val >>  6) & 0x3F),
-                                 0x80 |  ($Val        & 0x3F));
+        return sprintf("%c%c%c",
+                       0xE0 |  ($Val >> 12),
+                       0x80 | (($Val >>  6) & 0x3F),
+                       0x80 |  ($Val        & 0x3F)
+               );
     } elsif ($Val < 0x200000) {
-        return sprintf("%c%c%c%c", 0xF0 |  ($Val >> 18),
-                                   0x80 | (($Val >> 12) & 0x3F),
-                                   0x80 | (($Val >>  6) & 0x3F),
-                                   0x80 |  ($Val        & 0x3F));
+        return sprintf("%c%c%c%c",
+                       0xF0 |  ($Val >> 18),
+                       0x80 | (($Val >> 12) & 0x3F),
+                       0x80 | (($Val >>  6) & 0x3F),
+                       0x80 |  ($Val        & 0x3F)
+               );
     } elsif ($Val < 0x4000000) {
-        return sprintf("%c%c%c%c%c", 0xF8 |  ($Val >> 24),
-                                     0x80 | (($Val >> 18) & 0x3F),
-                                     0x80 | (($Val >> 12) & 0x3F),
-                                     0x80 | (($Val >>  6) & 0x3F),
-                                     0x80 | ( $Val        & 0x3F));
+        return sprintf("%c%c%c%c%c",
+                       0xF8 |  ($Val >> 24),
+                       0x80 | (($Val >> 18) & 0x3F),
+                       0x80 | (($Val >> 12) & 0x3F),
+                       0x80 | (($Val >>  6) & 0x3F),
+                       0x80 | ( $Val        & 0x3F)
+               );
     } elsif ($Val < 0x80000000) {
-        return sprintf("%c%c%c%c%c%c", 0xFC |  ($Val >> 30),
-                                       0x80 | (($Val >> 24) & 0x3F),
-                                       0x80 | (($Val >> 18) & 0x3F),
-                                       0x80 | (($Val >> 12) & 0x3F),
-                                       0x80 | (($Val >>  6) & 0x3F),
-                                       0x80 | ( $Val        & 0x3F));
+        return sprintf("%c%c%c%c%c%c",
+                       0xFC |  ($Val >> 30),
+                       0x80 | (($Val >> 24) & 0x3F),
+                       0x80 | (($Val >> 18) & 0x3F),
+                       0x80 | (($Val >> 12) & 0x3F),
+                       0x80 | (($Val >>  6) & 0x3F),
+                       0x80 | ( $Val        & 0x3F)
+               );
     } else {
         return widechar(0xFFFD);
     }
@@ -211,17 +226,18 @@ sub usage {
 
 Usage: $0 [options] [file [...]]
 
-Default action is to prepare the file for commit. Characters above 
-U+007F are converted to numerical 7-bit entities and $SEP is inserted 
-between double dashes in the English text.
+Convert the xml files of the svnbook for commit or editing. Default 
+action is to prepare the file for commit: Characters above U+007F are 
+converted to numerical 7-bit entities and $SEP is inserted between 
+double dashes in the English text.
 
 Everything is written to stdout.
 
 Options:
 
--e  Prepare file for editing or merging. The file or stdin is converted 
-    to UTF-8 and all occurences of $SEP are removed.
--h  Print this help.
+  -e  Prepare file for editing or merging. The file or stdin is 
+      converted to UTF-8 and all occurences of $SEP are removed.
+  -h  Print this help.
 
 END
     exit($Retval);
