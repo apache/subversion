@@ -129,7 +129,7 @@ push_wc_prop (void *baton,
     return svn_error_createf
       (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
        _("Attempt to set wc property '%s' on '%s' in a non-commit operation"),
-       name, relpath);
+       name, svn_path_local_style (relpath, pool));
 
   for (i = 0; i < cb->commit_items->nelts; i++)
     {
@@ -327,7 +327,8 @@ svn_client_uuid_from_path (const char **uuid,
 
   if (! entry)
     return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, NULL,
-                              _("Can't find entry for '%s'"), path);
+                              _("Can't find entry for '%s'"),
+                              svn_path_local_style (path, pool));
 
   if (entry->uuid)
     {
@@ -455,7 +456,7 @@ svn_client__prev_log_path (const char **prev_path_p,
         return svn_error_createf (SVN_ERR_CLIENT_UNRELATED_RESOURCES, NULL,
                                   _("Missing changed-path information for "
                                     "'%s' in revision %ld"),
-                                  path, revision);
+                                  svn_path_local_style (path, pool), revision);
     }
   
   *prev_path_p = prev_path;
@@ -704,7 +705,8 @@ svn_client__repos_locations (const char **start_url,
       else
         {
           return svn_error_createf (SVN_ERR_ENTRY_MISSING_URL, NULL,
-                                    _("'%s' has no URL"), path);
+                                    _("'%s' has no URL"),
+                                    svn_path_local_style (path, pool));
         }
     }
   else

@@ -380,7 +380,7 @@ check_mimetype (apr_array_header_t *prop_diffs, const char *target,
         return svn_error_createf 
           (SVN_ERR_CLIENT_IS_BINARY_FILE, 0,
            _("Cannot calculate blame information for binary file '%s'"),
-           target);
+           svn_path_local_style (target, pool));
     }
   return SVN_NO_ERROR;
 }
@@ -733,7 +733,7 @@ old_blame (const char *target, const char *url,
                                 "revision %ld of '%s' "
                                 "lacks a prior revision"),
                               lmb.action, lmb.eldest->revision,
-                              lmb.eldest->path);
+                              svn_path_local_style (lmb.eldest->path, pool));
 
   /* Walk the revision list in chronological order, downloading
      each fulltext, diffing it with its predecessor, and accumulating
@@ -772,7 +772,7 @@ old_blame (const char *target, const char *url,
             return svn_error_createf 
               (SVN_ERR_CLIENT_IS_BINARY_FILE, 0,
                _("Cannot calculate blame information for binary file '%s'"),
-               target);
+               svn_path_local_style (target, frb->currpool));
         }
 
       if (frb->ctx->notify_func)

@@ -176,7 +176,7 @@ svn_client_propset2 (const char *propname,
   if (!node)
     return svn_error_createf (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
                               _("'%s' is not under version control"), 
-                              target);
+                              svn_path_local_style (target, pool));
 
   if (recurse && node->kind == svn_node_dir)
     {
@@ -405,7 +405,7 @@ maybe_convert_to_url (const char **new_target,
       if (! entry)
         return svn_error_createf (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
                                   _("'%s' is not under version control"), 
-                                  target);
+                                  svn_path_local_style (target, pool));
       *new_target = entry->url;
     }
   else
@@ -556,7 +556,8 @@ svn_client_propget2 (apr_hash_t **props,
       if (! node)
         return svn_error_createf 
           (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-           _("'%s' is not under version control"), target);
+           _("'%s' is not under version control"),
+           svn_path_local_style (target, pool));
       
       SVN_ERR (svn_client__get_revision_number
                (&revnum, NULL, NULL, revision, target, pool));
@@ -913,7 +914,8 @@ svn_client_proplist2 (apr_array_header_t **props,
       if (! node)
         return svn_error_createf 
           (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-           _("'%s' is not under version control"), target);
+           _("'%s' is not under version control"),
+           svn_path_local_style (target, pool));
       
       SVN_ERR (svn_client__get_revision_number
                (&revnum, NULL, NULL, revision, target, pool));
