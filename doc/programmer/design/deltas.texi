@@ -608,7 +608,7 @@ The client now has an opaque object, @dfn{root_baton}, which represents
 the root of the repository's filesystem.
 
 @item
-   @code{dir1_baton = editor->open_dir("dir1", root_baton);}
+@code{dir1_baton = editor->open_dir("dir1", root_baton);}
 
 Notice that @emph{root_baton} gives the client free license to make any
 changes it wants in the repository's root directory -- until, of course,
@@ -619,20 +619,20 @@ client now has a new opaque data structure that can be used to change
 @file{dir1}.
 
 @item
-  @code{dir2_baton = editor->open_dir("dir2", "/dir1/dir3", dir1_baton);}
+@code{dir2_baton = editor->open_dir("dir2", "/dir1/dir3", dir1_baton);}
 
 The @emph{dir1_baton} is now used to replace @file{dir2} with a
 directory whose ancestor is @file{/dir1/dir3}.
 
 @item
-  @code{file_baton = editor->add_file("file3", "/dir1/dir2/file3", dir2_baton);}
+@code{file_baton = editor->add_file("file3", "/dir1/dir2/file3", dir2_baton);}
 
 Edits are now made to @file{dir2} (using @emph{dir2_baton}).  In
 particular, a new file is added to this directory whose ancestor is
 @file{/dir1/dir2/file3}. 
 
 @item
-  Now the text-delta associated with @emph{file_baton} needs to be
+Now the text-delta associated with @emph{file_baton} needs to be
 transmitted:
 
   @code{window_handler = editor->apply_textdelta(file_baton);}
@@ -647,13 +647,13 @@ here;  but suffice it to say that these routines are used for sending
 svndiff data to the @emph{window_handler} routine.
 
 @item
-  @code{editor->close_file(file_baton);}
+@code{editor->close_file(file_baton);}
 
 The client is done sending the file's text-delta, so it releases the
 file baton.
 
 @item
-  @code{editor->close_dir(dir2_baton));}
+@code{editor->close_dir(dir2_baton));}
 
 The client is done making changes to @file{dir2}, so it releases its
 baton as well.
@@ -716,11 +716,11 @@ might
 
 @itemize @bullet
 @item
- Output XML that matches the tree-delta DTD above;
+Output XML that matches the tree-delta DTD above;
 @item
- Output human-readable descriptions of the edits taking place;
+Output human-readable descriptions of the edits taking place;
 @item
- Modify a filesystem
+Modify a filesystem
 @end itemize
 
 @end itemize

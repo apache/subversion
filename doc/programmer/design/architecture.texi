@@ -96,17 +96,17 @@ an Apache server.  Apache is used for the following reasons:
 
 @itemize @bullet
 @item
-      it is time-tested and extremely stable;
+it is time-tested and extremely stable;
 @item
-      it has built-in load-balancing;
+it has built-in load-balancing;
 @item
-      it has built-in proxy and firewall support;
+it has built-in proxy and firewall support;
 @item
-      it has authentication and encryption features;
+it has authentication and encryption features;
 @item
-      it allows client-side caching;
+it allows client-side caching;
 @item
-      it has an extensible module system
+it has an extensible module system
 @end itemize
 
 Our suspicion is that any attempt to write a dedicated "Subversion
