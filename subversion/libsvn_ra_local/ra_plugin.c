@@ -299,13 +299,14 @@ static svn_error_t *
 svn_ra_local__change_rev_prop (void *session_baton,
                                svn_revnum_t rev,
                                const char *name,
-                               const svn_string_t *value)
+                               const svn_string_t *value,
+                               apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *baton = 
     (svn_ra_local__session_baton_t *) session_baton;
 
   SVN_ERR (svn_repos_fs_change_rev_prop (baton->repos, rev, baton->username,
-                                         name, value, baton->pool));
+                                         name, value, pool));
 
   return SVN_NO_ERROR;
 }
