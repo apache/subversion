@@ -36,7 +36,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2004-12-09 02:59+0100\n"
+"POT-Creation-Date: 2004-12-09 04:16+0100\n"
 "PO-Revision-Date: 2004-07-13 11:59+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Norwegian <dev@subversion.tigris.org>\n"
@@ -383,8 +383,8 @@ msgid "specify a password ARG"
 msgstr "angi passordet ARG"
 
 #: clients/cmdline/main.c:98
-msgid "pass ARG as bundled options to diff (default: '-u')"
-msgstr "bruk ARG som pakkede valg til diff (standard: '-u')"
+msgid "pass ARG to --diff-cmd as options (default: '-u')"
+msgstr "levér ARG til --diff-cmd som valg (standard: '-u')"
 
 #: clients/cmdline/main.c:100
 msgid "pass contents of file ARG as additional args"
@@ -4076,7 +4076,8 @@ msgstr "Klarte ikke kjøre '%s'-påhakning"
 msgid ""
 "'%s' hook failed with error output:\n"
 "%s"
-msgstr "'%s'-påhakning feilet med feilmeldinger:\n"
+msgstr ""
+"'%s'-påhakning feilet med feilmeldinger:\n"
 "%s"
 
 #: libsvn_repos/hooks.c:116
