@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 
-### commit-email.pl: send a commit email for commit NEW-REVISION to
-### the listed addresses.  Usage:
+### commit-email.pl: send a commit email for commit NEW-REVISION in
+### REPOSITORY to some email addresses.  Usage:
 ###
 ###    commit-email.pl REPOSITORY NEW-REVISION [EMAIL-ADDR ...]
 ###
