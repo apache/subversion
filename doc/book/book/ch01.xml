@@ -322,9 +322,10 @@
       libraries).  But optional portions of Subversion have many other
       dependencies, such as Berkeley DB and possibly Apache httpd.  If
       you want to do a complete build, make sure you have all of the
-      packages documented in the INSTALL file.  If you plan to work on
-      Subversion itself, you can use your client program to grab the
-      latest, bleeding-edge source code.  This is documented in <xref
+      packages documented in the <filename>INSTALL</filename> file.
+      If you plan to work on Subversion itself, you can use your
+      client program to grab the latest, bleeding-edge source code.
+      This is documented in <xref
       linkend="svn-ch-8-sect-6.2"/>.</para>
 
   </sect1>
