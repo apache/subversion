@@ -288,6 +288,7 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
   const char *auth_dir;
   svn_boolean_t resurrection = FALSE;
   struct path_driver_cb_baton cb_baton;
+  svn_error_t *err;
 
   /* We have to open our session to the longest path common to both
      SRC_URL and DST_URL in the repository so we can do existence
@@ -321,7 +322,39 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
 
   /* Get the RA vtable that matches URL. */
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
-  SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, top_url, pool));
+  err = svn_ra_get_ra_library (&ra_lib, ra_baton, top_url, pool);
+
+  /* If the two URLs appear not to be in the same repository, then
+   * top_url will be empty and the call to svn_ra_get_ra_library()
+   * above will have failed.  Below we check for that, and propagate a
+   * descriptive error back to the user.
+   *
+   * Ideally, we'd contact the repositories and compare their UUIDs to
+   * determine whether or not src and dst are in the same repository,
+   * instead of depending on an essentially textual comparison.
+   * However, it is simpler to assume that if someone is using the
+   * same repository, then they will use the same hostname/path to
+   * refer to it both times.  Conversely, if the repositories are
+   * different, then they can't share a non-empty prefix, so top_url
+   * would still be "" and svn_ra_get_library() would still error.
+   * Thus we can get this check without extra network turnarounds to
+   * fetch the UUIDs.
+   */
+  if (err)
+    {
+      if ((err->apr_err == SVN_ERR_RA_ILLEGAL_URL)
+          && ((top_url == NULL) || (top_url[0] == '\0')))
+        {
+          return svn_error_createf
+            (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+             "Source and dest appear not to be in the same repository:\n"
+             "   src is '%s'\n"
+             "   dst is '%s'",
+             src_url, dst_url);
+        }
+      else
+        return err;
+    }
 
   /* Get the auth dir. */
   SVN_ERR (svn_client__dir_if_wc (&auth_dir, "", pool));
@@ -332,7 +365,6 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
                                         auth_dir,
                                         NULL, NULL, FALSE, TRUE, 
                                         ctx, pool));
-
   /* Pass NULL for the path, to ensure error if trying to get a
      revision based on the working copy. */
   SVN_ERR (svn_client__get_revision_number
