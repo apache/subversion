@@ -151,7 +151,7 @@ Approved changes (further review is welcome, but not required):
       +1: josander
       +0: maxb
 
-  * r12100
+  * r12100, r12111
     Fix output of notifications when merging a deletion of a directory.
     Justification:
       It just looks ugly and sloppy.
