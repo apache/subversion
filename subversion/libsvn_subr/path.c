@@ -1142,8 +1142,9 @@ svn_path_canonicalize (const char *path, apr_pool_t *pool)
 
 #ifdef WIN32
       /* On Windows permit two leading separator characters which means an
-       * UNC path. */
-      if (*src == '/')
+       * UNC path.  However, a double slash in a URI after the scheme is never
+       * valid. */
+      if (!uri && *src == '/')
         *(dst++) = *(src++);
 #endif /* WIN32 */
       
