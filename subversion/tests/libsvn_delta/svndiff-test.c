@@ -21,6 +21,7 @@
 #include <apr_general.h>
 #include "svn_base64.h"
 #include "svn_quoprint.h"
+#include "svn_pools.h"
 #include "svn_delta.h"
 #include "svn_error.h"
 
@@ -34,28 +35,35 @@ main (int argc, char **argv)
   svn_txdelta_window_handler_t svndiff_handler;
   svn_stream_t *encoder;
   void *svndiff_baton;
+  apr_pool_t *pool = svn_pool_create (NULL);
+
+  if (argc < 3)
+    {
+      printf ("usage: %s source target\n", argv[0]);
+      exit (0);
+    }
 
   source_file = fopen (argv[1], "rb");
   target_file = fopen (argv[2], "rb");
 
   apr_initialize();
-  svn_txdelta (&txdelta_stream, svn_stream_from_stdio (source_file, NULL),
-	       svn_stream_from_stdio (target_file, NULL), NULL);
+  svn_txdelta (&txdelta_stream, svn_stream_from_stdio (source_file, pool),
+	       svn_stream_from_stdio (target_file, pool), pool);
 
 #ifdef QUOPRINT_SVNDIFFS
-  encoder = svn_quoprint_encode (svn_stream_from_stdio (stdout, NULL), NULL);
+  encoder = svn_quoprint_encode (svn_stream_from_stdio (stdout, pool), pool);
 #else
-  encoder = svn_base64_encode (svn_stream_from_stdio (stdout, NULL), NULL);
+  encoder = svn_base64_encode (svn_stream_from_stdio (stdout, pool), pool);
 #endif
-  svn_txdelta_to_svndiff (encoder, NULL, &svndiff_handler, &svndiff_baton);
+  svn_txdelta_to_svndiff (encoder, pool, &svndiff_handler, &svndiff_baton);
   svn_txdelta_send_txstream (txdelta_stream,
                              svndiff_handler,
                              svndiff_baton,
-                             NULL);
+                             pool);
 
   fclose (source_file);
   fclose (target_file);
-
+  svn_pool_destroy (pool);
   apr_terminate();
   exit (0);
 }

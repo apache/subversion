@@ -127,13 +127,13 @@ main (int argc, char **argv)
     }
 
   apr_initialize();
+  wpool = svn_pool_create (NULL);
   svn_txdelta (&stream,
-               svn_stream_from_stdio (source_file, NULL),
-               svn_stream_from_stdio (target_file, NULL),
-               NULL);
+               svn_stream_from_stdio (source_file, wpool),
+               svn_stream_from_stdio (target_file, wpool),
+               wpool);
 
   /* ### urm. we should have a pool here! */
-  wpool = svn_pool_create (NULL);
   do {
     svn_txdelta_next_window (&window, stream, wpool);
     if (window != NULL)
