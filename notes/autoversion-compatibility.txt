@@ -5,7 +5,8 @@ DAV clients.  Feel free to update this as we learn more.
 First, a general note: the one big feature we're lacking is support
 for the LOCK and UNLOCK dav requests.  This pretty much means that you
 won't be able to open a file (in write mode) directly from the dav
-share; every client tries to LOCK in that case.
+share; every client tries to LOCK in that case.  [Note: mod_dav_lock
+in httpd-2.1 addresses this.]
 
 The workaround, for now, is to copy (or drag) the file out of the
 share, edit it, then copy (or drag) it back.
@@ -103,6 +104,9 @@ This works pretty well:  the details needs to be filled in below.
 7. Delete a file    (DELETE)
 8. Delete a folder  (DELETE)
 9. Open remote file directly  (LOCK)
+
+LOCK is not supported by WebFolders.
+
 10. Copy/drag remote file to local disk (GET)
 11. Copy/drag local file back on top of remote file. 
                             (PUT, or DELETE/PUT, or LOCK, PUT, UNLOCK)
