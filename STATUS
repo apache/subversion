@@ -78,3 +78,9 @@ Candidate changes:
     is referenced. Without it a crash can happen.
     Votes:
       +1: pmayweg
+
+  * r9732
+    Wrap svn_txdelta_parse_svndiff properly for Perl.
+    Justification: Perl bindings completeness.
+    Votes:
+      +1: clkao
