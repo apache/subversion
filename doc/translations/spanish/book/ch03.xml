@@ -1806,42 +1806,42 @@ svn: Out of date: 'rules.txt' in transaction 'g'
       into</emphasis> the past instead of <emphasis>going
       into</emphasis> the past.</para>
            
-    <para>There are several commands that can provide you with
-      historical data from the repository:</para>
+    <para>Hay varios comandos que pueden proporcionarle datos históricos
+      del repositorio:</para>
 
       <variablelist>
 
         <varlistentry>
           <term><command>svn log </command></term>
           <listitem>
-            <para>Shows you broad information: log messages attached
-              to revisions, and which paths changed in each
-              revision.</para>
+            <para>Le muestra amplia información: mensajes de registro
+              unidos a las revisions, y que ruta de fichero cambió en
+              cada revisión.</para>
           </listitem>
         </varlistentry>
 
         <varlistentry>
           <term><command>svn diff </command></term>
           <listitem>
-            <para>Shows you the specific details of how a file changed
-              over time.</para>
+            <para>Le muestra los detalles específicos de cómo cambió un
+              fichero en un cierto plazo<!--TODO:over time-->.</para>
           </listitem>
         </varlistentry>
 
         <varlistentry>
           <term><command>svn cat </command></term>
           <listitem>
-            <para>This is used to retrieve any file as it existed in a
-              particular revision number and display it on your
-              screen.</para>
+            <para>Este se utiliza para recuperar cualquier fichero tal
+              como existió en un un número de revisión particular y
+              lo muestra en su pantalla.</para>
           </listitem>
         </varlistentry>
 
         <varlistentry>
           <term><command>svn list </command></term>
           <listitem>
-            <para>Displays the files in a directory for any given
-              revision.</para>
+            <para>Muestra los ficheros en un directorio para cualquier
+              revisión dada.</para>
           </listitem>
         </varlistentry>
 
@@ -1851,13 +1851,12 @@ svn: Out of date: 'rules.txt' in transaction 'g'
     <sect2 id="svn-ch-3-sect-5.1">
       <title><command>svn log</command></title>
 
-      <para>To find out information about the history of a file or
-        directory, use the <command>svn log</command>
-        command. <command>svn log</command> will provide you with a
-        record of who made changes to a file or directory, at what
-        revision it changed, the time and date of that revision, and,
-        if it was provided, the log message that accompanied the
-        commit.</para>
+      <para>Para descubrir información sobre la historia de un fichero o
+        directorio, use el comando <command>svn log</command>.
+        <command>svn log</command> le proporcionará un registro de quién
+        hizo cambios a un fichero o directorio, en qué revisión cambió,
+        la hora y fecha de esa revisión, y, si fue proporcionado, el
+        mensaje de registro que acompañaba al envío.</para>
            
       <screen>
 $ svn log
