@@ -19,8 +19,9 @@
 ### Rolling block.
 DIST_SANDBOX=.dist_sandbox
 
-### The "X.Y" part of ${DISTNAME}-X.Y.tar.gz
-VERSION=`svn st README | sed  -e 's/.*(\(.*\)).*/\1/' | sed -e 's/ //g'`
+### The "REV" part of ${DISTNAME}-rREV.tar.gz
+###  Somebody please make this filter better!!!
+VERSION=`svn st -v README | cut -c 16-18`
 
 ### The tarball's basename, also the name of the subdirectory into which
 ### it should unpack.
