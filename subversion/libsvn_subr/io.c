@@ -1897,8 +1897,8 @@ svn_io_read_version_file (int *version,
   *version = atoi (version_str->data);
   apr_err = apr_file_close (format_file);
   if (apr_err)
-    return svn_error_createf (apr_err, 0, 0, pool,
-                              "closing `%s'", format_file);
+    return svn_error_createf (apr_err, 0, 0, pool, "closing `%s'", path);
+
   return SVN_NO_ERROR;
 }
 
