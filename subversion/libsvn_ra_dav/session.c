@@ -162,7 +162,7 @@ server_ssl_callback(void *userdata,
   else
     {
       server_creds = creds;
-      if (server_creds->trust_permanantly)
+      if (server_creds->trust_permanently)
         {
           error = svn_auth_save_credentials(state, pool);
           if (error)

@@ -529,7 +529,7 @@ server_ssl_file_first_credentials (void **credentials,
   if (!failures)
     {
       svn_auth_cred_server_ssl_t *creds = apr_pcalloc (pool, sizeof(*creds));
-      creds->trust_permanantly = FALSE; /* No need to save it again... */
+      creds->trust_permanently = FALSE; /* No need to save it again... */
       *credentials = creds;
     }
 
