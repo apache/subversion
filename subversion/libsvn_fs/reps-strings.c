@@ -458,7 +458,7 @@ window_handler (svn_txdelta_window_t *window, void *baton)
               {
                 /* This could be done in bigger blocks, at the expense
                    of some more complexity. */
-                int t;
+                apr_size_t t;
                 for (t = op->offset; t < op->offset + op->length; t++)
                   tbuf[len_read++] = tbuf[t];
               }

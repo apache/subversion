@@ -452,7 +452,7 @@ svn_wc__merge_prop_diffs (const char *path,
   int i;
   svn_boolean_t is_dir;
   const char * str;
-  apr_off_t len;
+  apr_size_t len;
   
   /* Zillions of pathnames to compute!  yeargh!  */
   svn_stringbuf_t *base_propfile_path, *local_propfile_path;
@@ -658,7 +658,7 @@ svn_wc__merge_prop_diffs (const char *path,
      paths are RELATIVE pathnames (each beginning with ".svn/"), so
      that each .svn subdir remains separable when executing run_log().  */
   str = strstr (base_prop_tmp_path->data, SVN_WC_ADM_DIR_NAME);
-  len = base_prop_tmp_path->data + base_prop_tmp_path->len - str;
+  len = (apr_size_t)(base_prop_tmp_path->data - str) + base_prop_tmp_path->len;
   tmp_prop_base = svn_stringbuf_ncreate (str, len, pool);
 
   str = strstr (base_propfile_path->data, SVN_WC_ADM_DIR_NAME);

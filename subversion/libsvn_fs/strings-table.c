@@ -218,7 +218,7 @@ string_read (svn_fs_t *fs,
   svn_fs__clear_dbt (&result);
   result.data = buf;
   result.ulen = *len;
-  result.doff = offset;
+  result.doff = (u_int32_t)offset;
   result.dlen = *len;
   result.flags |= (DB_DBT_USERMEM | DB_DBT_PARTIAL);
   db_err = cursor->c_get (cursor, &query, &result, DB_CURRENT);
