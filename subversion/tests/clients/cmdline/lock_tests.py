@@ -477,6 +477,31 @@ def deleted_path_lock(sbox):
                                      iota_url)
 
 
+
+#----------------------------------------------------------------------
+# Tests dealing with directory deletion and locks
+def deleted_dir_lock(sbox):
+  "verify removal of a directory with locks inside"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  parent_dir = os.path.join(wc_dir, 'A', 'D', 'G')
+  pi_path = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
+  rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
+  tau_path = os.path.join(wc_dir, 'A', 'D', 'G', 'tau')
+
+  svntest.actions.run_and_verify_svn(None, None, None, 'lock',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     '-m', '', pi_path, rho_path, tau_path)
+
+  svntest.actions.run_and_verify_svn(None, None, None, 'commit',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     '--no-unlock',
+                                     '-m', '', parent_dir)
+
 #----------------------------------------------------------------------
 
 ########################################################################
@@ -493,6 +518,7 @@ test_list = [ None,
               enforce_lock,
               Skip(defunct_lock, (os.name != 'posix')),
               deleted_path_lock,
+              deleted_dir_lock,
              ]
 
 if __name__ == '__main__':
