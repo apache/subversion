@@ -703,15 +703,9 @@ generate_label (const char **label,
     }
   
   if (date)
-    {
-      datestr = date->data;
-      ((char *)datestr)[10] = ' ';
-      ((char *)datestr)[19] = '\0';
-    }
+      datestr = apr_psprintf (pool, "%.10s %.8s", date->data, date->data + 11);
   else
-    {
       datestr = "                      ";
-    }
 
   if (name)
     *label = apr_psprintf (pool, "%s\t%s UTC (txn %s)", 
