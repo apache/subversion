@@ -38,6 +38,7 @@ svn_wc_merge (const char *left,
               const char *target_label,
               svn_boolean_t dry_run,
               enum svn_wc_merge_outcome_t *merge_outcome,
+              apr_hash_t *config,
               apr_pool_t *pool)
 {
   const char *tmp_target, *result_target, *tmp_left, *tmp_right;

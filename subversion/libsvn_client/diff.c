@@ -128,10 +128,6 @@ display_prop_diffs (const apr_array_header_t *propchanges,
 
 
 struct diff_cmd_baton {
-  /* Full path of external command to run to perform the 'diff',
-     NULL for the internal library.
-   */
-  const char *cmd;
   const apr_array_header_t *options;
   apr_pool_t *pool;
   apr_file_t *outfile;
@@ -154,6 +150,9 @@ struct diff_cmd_baton {
   */
   svn_revnum_t revnum1;
   svn_revnum_t revnum2;
+
+  /* Client config hash (may be NULL). */
+  apr_hash_t *config;
 };
 
 
@@ -189,7 +188,7 @@ diff_file_changed (svn_wc_adm_access_t *adm_access,
                    void *diff_baton)
 {
   struct diff_cmd_baton *diff_cmd_baton = diff_baton;
-  const char *diff_cmd = diff_cmd_baton->cmd;
+  const char *diff_cmd = NULL;
   const char **args = NULL;
   int nargs, exitcode;
   apr_file_t *outfile = diff_cmd_baton->outfile;
@@ -257,22 +256,28 @@ diff_file_changed (svn_wc_adm_access_t *adm_access,
       label1 = diff_label (path, rev1, subpool);
       label2 = diff_label (path, rev2, subpool);
     }
-    
+
+  /* Find out if we need to run an external diff */
+  if (diff_cmd_baton->config)
+    {
+      svn_config_t *cfg = apr_hash_get (diff_cmd_baton->config,
+                                        SVN_CONFIG_CATEGORY_CONFIG,
+                                        APR_HASH_KEY_STRING);
+      svn_config_get (cfg, &diff_cmd, "helpers", "diff-cmd", NULL);
+    }
+
   if (diff_cmd)
     {
-      const char *diff_utf8;
- 
-      SVN_ERR (svn_path_cstring_to_utf8 (&diff_utf8, diff_cmd, subpool));
- 
       /* Print out the diff header. */
       SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, subpool));
       SVN_ERR (svn_io_file_printf (outfile, "Index: %s\n%s\n",
                                    path_native, equal_string));
 
-      /* XXX: Find a way to pass diff_cmd to svn_io_run_diff */
       SVN_ERR (svn_io_run_diff (".", args, nargs, label1, label2,
                                 tmpfile1, tmpfile2, 
-                                &exitcode, outfile, errfile, subpool));
+                                &exitcode, outfile, errfile,
+                                diff_cmd_baton->config,
+                                subpool));
     }
   else
     {
@@ -449,10 +454,9 @@ merge_file_changed (svn_wc_adm_access_t *adm_access,
   SVN_ERR (svn_wc_text_modified_p (&has_local_mods, mine, FALSE,
                                    adm_access, subpool));
   SVN_ERR (svn_wc_merge (older, yours, mine, adm_access,
-
                          left_label, right_label, target_label,
-                         merge_b->dry_run, &merge_outcome,
-                         subpool));
+                         merge_b->dry_run, &merge_outcome, 
+                         merge_b->ctx->config, subpool));
 
   /* Philip asks "Why?"  Why does the notification depend on whether the
      file had modifications before the merge?  If the merge didn't change
@@ -529,7 +533,8 @@ merge_file_added (svn_wc_adm_access_t *adm_access,
                                     "already exists.", mine);
         SVN_ERR (svn_wc_merge (older, yours, mine, adm_access,
                                ".older", ".yours", ".working", /* ###? */
-                               merge_b->dry_run, &merge_outcome, subpool));
+                               merge_b->dry_run, &merge_outcome, 
+                               merge_b->ctx->config, subpool));
         break;      
       }
     default:
@@ -1363,8 +1368,7 @@ svn_client_diff (const apr_array_header_t *options,
 {
   struct diff_cmd_baton diff_cmd_baton;
   svn_wc_diff_callbacks_t diff_callbacks;
-  svn_config_t *cfg;
- 
+
   diff_callbacks.file_changed = diff_file_changed;
   diff_callbacks.file_added = diff_file_added;
   diff_callbacks.file_deleted = no_diff_deleted ? diff_file_deleted_no_diff :
@@ -1373,10 +1377,6 @@ svn_client_diff (const apr_array_header_t *options,
   diff_callbacks.dir_deleted = diff_dir_deleted;
   diff_callbacks.props_changed = diff_props_changed;
     
-  cfg = apr_hash_get (ctx->config, SVN_CONFIG_CATEGORY_CONFIG,
-                      APR_HASH_KEY_STRING);
-  svn_config_get (cfg, &diff_cmd_baton.cmd, "helpers", "diff-cmd", NULL);
-
   diff_cmd_baton.orig_path_1 = path1;
   diff_cmd_baton.orig_path_2 = path2;
 
@@ -1386,6 +1386,8 @@ svn_client_diff (const apr_array_header_t *options,
   diff_cmd_baton.errfile = errfile;
   diff_cmd_baton.revnum1 = SVN_INVALID_REVNUM;
   diff_cmd_baton.revnum2 = SVN_INVALID_REVNUM;
+
+  diff_cmd_baton.config = ctx->config;
 
   if ((svn_path_is_url (path1)) != (svn_path_is_url (path2)))
     return svn_error_create

@@ -524,6 +524,7 @@ main (int argc, const char * const *argv)
   apr_status_t apr_err;
   svn_cl__cmd_baton_t command_baton;
   svn_auth_baton_t *ab;
+  svn_config_t *cfg;
 
   /* Initialize the app. */
   if (svn_cmdline_init ("svn", stderr) != EXIT_SUCCESS)
@@ -921,20 +922,15 @@ main (int argc, const char * const *argv)
       return EXIT_FAILURE;
     }
 
-    /* Update the options in the config */
-    /* XXX: Only diff_cmd for now, overlay rest later and stop passing
-       opt_state altogether? */
-    if (opt_state.diff_cmd)
-      svn_config_set (cfg, "helpers", "diff-cmd", opt_state.diff_cmd);
-
-    err = svn_config_read_servers (&cfg, pool);
-    if (err)
-      svn_handle_error (err, stderr, 0);
-    else
-      apr_hash_set (ctx.config, SVN_CONFIG_CATEGORY_SERVERS,
-                    APR_HASH_KEY_STRING, cfg);
-  }
+  cfg = apr_hash_get (ctx.config, SVN_CONFIG_CATEGORY_CONFIG,
+                      APR_HASH_KEY_STRING);
   
+  /* Update the options in the config */
+  /* XXX: Only diff_cmd for now, overlay rest later and stop passing
+     opt_state altogether? */
+  if (opt_state.diff_cmd)
+    svn_config_set (cfg, "helpers", "diff-cmd", opt_state.diff_cmd);
+ 
   ctx.log_msg_func = svn_cl__get_log_message;
   ctx.log_msg_baton = svn_cl__make_log_msg_baton (&opt_state, NULL, 
                                                   ctx.config, pool);
