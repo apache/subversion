@@ -119,7 +119,7 @@ encode_data (void *baton, const char *data, apr_size_t *len)
   enclen = encoded->len;
   if (enclen != 0)
     err = svn_stream_write (eb->output, encoded->data, &enclen);
-  apr_pool_destroy (subpool);
+  svn_pool_destroy (subpool);
   return err;
 }
 
@@ -142,7 +142,7 @@ finish_encoding_data (void *baton)
   /* Pass on the close request and clean up the baton.  */
   if (err == SVN_NO_ERROR)
     err = svn_stream_close (eb->output);
-  apr_pool_destroy (eb->pool);
+  svn_pool_destroy (eb->pool);
   return err;
 }
 
@@ -251,7 +251,7 @@ decode_data (void *baton, const char *data, apr_size_t *len)
   declen = decoded->len;
   if (declen != 0)
     err = svn_stream_write (db->output, decoded->data, &declen);
-  apr_pool_destroy (subpool);
+  svn_pool_destroy (subpool);
   return err;
 }
 
@@ -265,7 +265,7 @@ finish_decoding_data (void *baton)
 
   /* Pass on the close request and clean up the baton.  */
   err = svn_stream_close (db->output);
-  apr_pool_destroy (db->pool);
+  svn_pool_destroy (db->pool);
   return err;
 }
 

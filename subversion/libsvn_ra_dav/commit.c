@@ -631,7 +631,7 @@ static svn_error_t * commit_stream_close(void *baton)
   http_request_destroy(req);
 
   /* toss the pool. all things pb are now history */
-  apr_pool_destroy(pb->pool);
+  svn_pool_destroy(pb->pool);
 
   if (rv != HTTP_OK)
     {

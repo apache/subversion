@@ -127,7 +127,7 @@ main (int argc, const char * const *argv)
           break;
         }
     }
-  apr_pool_destroy (pool);
+  svn_pool_destroy (pool);
   if (!APR_STATUS_IS_EOF(status))
     {
       fprintf (stderr, "Usage: %s [-s seed]\n", argv[0]);
@@ -188,7 +188,7 @@ main (int argc, const char * const *argv)
           exit (1);
         }
       svn_txdelta_free (txdelta_stream);
-      apr_pool_destroy (pool);
+      svn_pool_destroy (pool);
 
       /* Compare the two files.  */
       rewind (target);

@@ -245,7 +245,7 @@ mutable_root_node (dag_node_t **node_p,
 void
 svn_fs_close_root (svn_fs_root_t *root)
 {
-  apr_pool_destroy (root->pool);
+  svn_pool_destroy (root->pool);
 }
 
 

@@ -88,11 +88,11 @@ main (int argc, char *argv[])
   if (err)
     {
       svn_handle_error (err, stderr, 0);
-      apr_pool_destroy (globalpool);
+      svn_pool_destroy (globalpool);
       exit (err->apr_err);
     }
 
-  apr_pool_destroy (globalpool);
+  svn_pool_destroy (globalpool);
 
   exit (0);
 }

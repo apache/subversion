@@ -274,6 +274,7 @@ typedef enum svn_errno_t {
 
 /*** Wrappers around APR pools, so we get error pools. ***/
 
+
 /* THE ERROR POOL
  *
  * When SVN allocates an svn_error_t, it must do so from a pool. There is
@@ -326,6 +327,13 @@ typedef enum svn_errno_t {
  */
 apr_status_t svn_error_init_pool (apr_pool_t *top_pool);
 
+
+/* Calculate and return the size in bytes of all allocations in POOL,
+ * including its possible tree of subpools.
+ */
+apr_size_t svn_pool_get_size (apr_pool_t *pool);
+
+
 /* Return a new pool.  If PARENT_POOL is non-null, then the new
  * pool will be a subpool of it, and will inherit the containing
  * pool's dedicated error subpool.
@@ -341,6 +349,21 @@ apr_status_t svn_error_init_pool (apr_pool_t *top_pool);
 apr_pool_t *svn_pool_create (apr_pool_t *parent_pool);
 
 
+/* Destroy a POOL */
+void svn_pool_destroy (apr_pool_t *pool);
+
+
+/* Clear the passed in pool.
+ *
+ * The reason we need this wrapper to apr_pool_clear, is because
+ * apr_pool_clear removes the association with the appropriate error
+ * pool. This wrapper calls apr_pool_clear, and then reattaches the
+ * error pool.
+ *
+ * If anything goes wrong, an abort function will be called.
+ */
+void svn_pool_clear (apr_pool_t *p);
+
 
 
 /*** SVN error creation and destruction. ***/
@@ -354,18 +377,6 @@ typedef struct svn_error
   apr_pool_t *pool;          /* The pool holding this error and any
                                 child errors it wraps */
 } svn_error_t;
-
-
-/* Clear the passed in pool.
- *
- * The reason we need this wrapper to apr_pool_clear, is because
- * apr_pool_clear removes the association with the appropriate error
- * pool. This wrapper calls apr_pool_clear, and then reattaches the
- * error pool.
- *
- * If anything goes wrong, an abort function will be called.
- */
-void svn_pool_clear (apr_pool_t *p);
 
 
 /*

@@ -182,6 +182,30 @@ svn_error_init_pool (apr_pool_t *top_pool)
 }
 
 
+apr_size_t
+svn_pool_get_size (apr_pool_t *p)
+{
+  apr_size_t num_bytes = 0;
+  
+  /* Do nothing if P is NULL */
+  if (p == NULL)
+    return 0;
+
+  num_bytes = apr_pool_num_bytes (p);
+  if (p->sub_pools)
+    {
+      apr_pool_t *this_pool = p->sub_pools;
+      num_bytes += svn_pool_get_size (this_pool);
+      while (this_pool->sub_next)
+        {
+          this_pool = this_pool->sub_next;
+          num_bytes += svn_pool_get_size (this_pool);
+        }
+    }
+  return num_bytes;
+}
+
+
 apr_pool_t *
 svn_pool_create (apr_pool_t *parent_pool)
 {
@@ -235,6 +259,14 @@ svn_pool_clear (apr_pool_t *p)
 
   svn_error__set_error_pool (p, error_pool, subpool_of_p_p);
 }
+
+
+void
+svn_pool_destroy (apr_pool_t *p)
+{
+  apr_pool_destroy (p);
+}
+
 
 
 /*** Creating and destroying errors. ***/
@@ -292,7 +324,7 @@ svn_error_quick_wrap (svn_error_t *child, const char *new_msg)
 void
 svn_error_free (svn_error_t *err)
 {
-  apr_pool_destroy (err->pool);
+  svn_pool_destroy (err->pool);
 }
 
 

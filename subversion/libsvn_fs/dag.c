@@ -1133,7 +1133,6 @@ delete_entry (dag_node_t *parent,
       if (svn_fs__matches_atom (entry->children, name))
         {
           /* Found the entry. */
-
           skel_t *id_atom = entry->children->next;
           dag_node_t *node; 
           svn_boolean_t is_mutable = 0;
@@ -1759,15 +1758,15 @@ make_node_immutable (dag_node_t *node, trail_t *trail)
   skel_t *node_rev;
   skel_t *header;
   skel_t *flag, *prev;
+  apr_pool_t *subpool = svn_pool_create (trail->pool);
 
   /* Go get a fresh NODE-REVISION for this node. */
   SVN_ERR (get_node_revision (&node_rev, node, trail));
 
-  /* This copy will be wasted if no mutable flag is found.
-     Nevertheless, we copy unconditionally, since most callers are
-     probably checking mutability themselves first anyway, and we
-     might as well only walk over the header once here. */
-  node_rev = svn_fs__copy_skel (node_rev, trail->pool);
+  /* Copy the node_rev skel into our subpool.  todo:  One day, when
+     the entire contents of a file aren't stored in the node_rev skel,
+     we might not bother with this copy. */
+  node_rev = svn_fs__copy_skel (node_rev, subpool);
 
   /* The node HEADER is the first element of a node-revision skel,
      itself a list. */
@@ -1788,11 +1787,14 @@ make_node_immutable (dag_node_t *node, trail_t *trail)
             header->children->next->next = 0;
 
           SVN_ERR (set_node_revision (node, node_rev, trail));
+
+          svn_pool_destroy (subpool);
           return SVN_NO_ERROR;
         }
       prev = flag;
     }
 
+  svn_pool_destroy (subpool);
   return SVN_NO_ERROR;
 }
 

@@ -188,7 +188,7 @@ walk_tree (svn_fs_root_t *root,
   /* Close the dir and remove the subpool we used at this level. */
   SVN_ERR (editor->close_directory (dir_baton));
 
-  apr_pool_destroy (subpool);
+  svn_pool_destroy (subpool);
 
   return SVN_NO_ERROR;
 }

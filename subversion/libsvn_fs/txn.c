@@ -150,7 +150,7 @@ svn_fs_close_txn (svn_fs_txn_t *txn)
      the filesystem (database), so there's no pending state to flush.
      We can just destroy the pool; the transaction will persist, but
      this handle on it will go away, which is the goal. */
-  apr_pool_destroy (txn->pool);
+  svn_pool_destroy (txn->pool);
 
   return SVN_NO_ERROR;
 }

@@ -166,7 +166,7 @@ main (int argc, const char * const *argv)
   if (argc <= 1)
     {
       svn_cl__help (NULL, NULL, pool);
-      apr_pool_destroy (pool);
+      svn_pool_destroy (pool);
       return EXIT_FAILURE;
     }
 
@@ -182,7 +182,7 @@ main (int argc, const char * const *argv)
       else if (! APR_STATUS_IS_SUCCESS (apr_err))
         {
           svn_cl__help (NULL, NULL, pool);
-          apr_pool_destroy (pool);
+          svn_pool_destroy (pool);
           return EXIT_FAILURE;
         }
 
@@ -235,7 +235,7 @@ main (int argc, const char * const *argv)
         {
           fprintf (stderr, "subcommand argument required\n");
           svn_cl__help (NULL, NULL, pool);
-          apr_pool_destroy (pool);
+          svn_pool_destroy (pool);
           return EXIT_FAILURE;
         }
       else
@@ -247,7 +247,7 @@ main (int argc, const char * const *argv)
               /* FIXME: should we print "unknown foo" ?? seems ok */
               fprintf (stderr, "unknown command: %s\n", first_arg);
               svn_cl__help (NULL, NULL, pool);
-              apr_pool_destroy (pool);
+              svn_pool_destroy (pool);
               return EXIT_FAILURE;
             }
         }
@@ -260,12 +260,12 @@ main (int argc, const char * const *argv)
     {
       if (err->apr_err != SVN_ERR_CL_ARG_PARSING_ERROR)
         svn_handle_error (err, stdout, 0);
-      apr_pool_destroy (pool);
+      svn_pool_destroy (pool);
       return EXIT_FAILURE;
     }
   else
     {
-      apr_pool_destroy (pool);
+      svn_pool_destroy (pool);
       return EXIT_SUCCESS;
     }
 }

@@ -197,7 +197,7 @@ main (int argc, const char * const *argv)
           print_tree (this_root, "", 1, this_pool);
           printf ("\n");
 
-          apr_pool_destroy (this_pool);
+          svn_pool_destroy (this_pool);
         }
     }
   else if (is_lsrevs)
@@ -241,14 +241,14 @@ main (int argc, const char * const *argv)
           print_tree (this_root, "", 1, this_pool);
           printf ("\n");
 
-          apr_pool_destroy (this_pool);
+          svn_pool_destroy (this_pool);
         }
     }
 
   err = svn_fs_close_fs(fs);
   if (err) goto error;
 
-  apr_pool_destroy (pool);
+  svn_pool_destroy (pool);
   apr_terminate();
 
   return EXIT_SUCCESS;

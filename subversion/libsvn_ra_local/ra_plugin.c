@@ -116,7 +116,7 @@ close (void *session_baton)
   SVN_ERR (svn_fs_close_fs (baton->fs));
 
   /* Free all memory allocated during this ra session.  */
-  apr_pool_destroy (baton->pool);
+  svn_pool_destroy (baton->pool);
 
   return SVN_NO_ERROR;
 }
