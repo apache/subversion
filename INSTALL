@@ -37,7 +37,7 @@ I.  THEORY AND DOCUMENTATION
       doc/user/manual/ for this project.
 
 
-II.  PARTICPATING
+II.  PARTICIPATING
 
    Read the HACKING file!  It describes Subversion coding and log
    message standards, as well as how to join discussion lists.
@@ -50,17 +50,16 @@ II.  PARTICPATING
 
 III.  INSTALLATION
 
-  A.  BOOTSTRAPPING FROM TARBALL
+  A.  BOOTSTRAPPING FROM A TARBALL
 
-      In order to get the latest Subversion source code, you need to
-      check it out of a Subversion repository, and thus need a working
-      Subversion client.
-
-      Download the latest distribution tarball from:
+      In order to get the very latest Subversion source code, you need
+      to check it out of a Subversion repository, and therefore you
+      first need a Subversion client.  Download the most recent
+      distribution tarball from:
 
         http://subversion.tigris.org/servlets/ProjectDownloadList
 
-      Unpack this tarball, and use the standard GNU procedure to compile:
+      Unpack it, and use the standard GNU procedure to compile:
 
          $ ./configure --enable-maintainer-mode --disable-shared
          $ make
