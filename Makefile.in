@@ -7,7 +7,7 @@ VPATH = @top_srcdir@
 SVN_RA_LIB_DEPS = @SVN_RA_LIB_DEPS@
 SVN_RA_LIB_LINK = @SVN_RA_LIB_LINK@
 
-DOC_DIRS = doc/programmer/design doc/user/manual
+DOC_DIRS = doc/programmer/design doc/handbook
 
 EXTERNAL_PROJECT_DIRS = @SVN_SUBDIRS@
 
