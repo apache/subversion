@@ -1617,7 +1617,14 @@ class SymbolicNameTracker:
       branch_base_key = parent[ctx.branches_base]
       branch_base = marshal.loads(self.db[branch_base_key])
       for this_source in branch_base.keys():
-        if this_source[0] != '/':
+        # We skip special names beginning with '/' for the usual
+        # reason.  We skip cases where (this_source == name) for a
+        # different reason: if a CVS branch were rooted in itself,
+        # that would imply that the same symbolic name appeared on two
+        # different branches in an RCS file, which CVS doesn't
+        # permit.  So while it wouldn't hurt to descend, it would be a
+        # waste of time.
+        if (this_source[0] != '/') and (this_source != name):
           src_path = ctx.branches_base + '/' + this_source
           self.copy_descend(dumper, ctx, name, branch_base, this_source,
                             SVN_INVALID_REVNUM, src_path, "",
