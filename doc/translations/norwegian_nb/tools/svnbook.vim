@@ -10,7 +10,7 @@ set tw=72
 set fo+=w fo-=2
 set ts=2 sw=2 sts=2 et
 set si
-set cinw=<para>,<variablelist>,<varlistentry>,<orderedlist>,<itemizedlist>,<listitem>,<simplesect>,<chapter,<note>,<figure,<sect1,<sect2,<sidebar,<figure,<table,<tgroup,<thead,<row>,<tbody>,<entry>
+set cinw=<para>,<variablelist>,<varlistentry>,<orderedlist>,<itemizedlist>,<listitem>,<simplesect>,<chapter,<note>,<figure,<sect1,<sect2,<sidebar,<figure,<table,<tgroup,<thead,<row>,<tbody>,<entry>,<title>
 set fdm=marker
 set nowrap
 
