@@ -860,7 +860,9 @@ log_do_committed (struct log_runner *loggy,
                    after its done with this logfile.  */
                 SVN_ERR (svn_wc__make_adm_thing (loggy->path,
                                                  SVN_WC__ADM_KILLME,
-                                                 svn_node_file, 0,
+                                                 svn_node_file, 
+                                                 APR_OS_DEFAULT,
+                                                 0,
                                                  loggy->pool));
               else
                 /* We can safely remove files from revision control

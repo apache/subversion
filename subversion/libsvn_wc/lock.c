@@ -28,7 +28,7 @@ svn_wc__lock (svn_stringbuf_t *path, int wait_for, apr_pool_t *pool)
 
   do {
     err = svn_wc__make_adm_thing (path, SVN_WC__ADM_LOCK,
-                                  svn_node_file, 0, pool);
+                                  svn_node_file, APR_OS_DEFAULT, 0, pool);
     if (err && APR_STATUS_IS_EEXIST(err->apr_err))
       {
         svn_error_free (err);

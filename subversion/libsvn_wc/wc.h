@@ -129,6 +129,7 @@ svn_boolean_t svn_wc__adm_path_exists (svn_stringbuf_t *path,
 svn_error_t *svn_wc__make_adm_thing (svn_stringbuf_t *path,
                                      const char *thing,
                                      int type,
+                                     apr_fileperms_t perms,
                                      svn_boolean_t tmp,
                                      apr_pool_t *pool);
 

@@ -183,7 +183,7 @@ chop_admin_name (svn_stringbuf_t *path, int num_components)
 /*** Making and using files in the adm area. ***/
 
 
-/* Create an empty THING in the adm area. 
+/* Create an empty THING in the adm area with permissions set to PERMS. 
  * If TMP is non-zero, then create THING in the tmp dir.
  *
  * Does not check if THING already exists, so be careful -- THING will
@@ -193,6 +193,7 @@ svn_error_t *
 svn_wc__make_adm_thing (svn_stringbuf_t *path,
                         const char *thing,
                         int type,
+                        apr_fileperms_t perms,
                         svn_boolean_t tmp,
                         apr_pool_t *pool)
 {
@@ -207,7 +208,7 @@ svn_wc__make_adm_thing (svn_stringbuf_t *path,
     {
       apr_err = apr_file_open (&f, path->data,
                           (APR_WRITE | APR_CREATE | APR_EXCL),
-                          APR_OS_DEFAULT,
+                          perms,
                           pool);
 
       if (apr_err)
@@ -222,7 +223,7 @@ svn_wc__make_adm_thing (svn_stringbuf_t *path,
     }
   else if (type == svn_node_dir)
     {
-      apr_err = apr_dir_make (path->data, APR_OS_DEFAULT, pool);
+      apr_err = apr_dir_make (path->data, perms, pool);
       if (apr_err)
         err = svn_error_create (apr_err, 0, NULL, pool, path->data);
     }
@@ -1060,30 +1061,34 @@ static svn_error_t *
 init_adm_tmp_area (svn_stringbuf_t *path,
                    apr_pool_t *pool)
 {
+  /* Default perms */
+  apr_fileperms_t perms = APR_OS_DEFAULT;
+
   /* SVN_WC__ADM_TMP */
   SVN_ERR (svn_wc__make_adm_thing (path, SVN_WC__ADM_TMP,
-                                   svn_node_dir, 0, pool));
+                                   svn_node_dir, perms, 0, pool));
   
   /* SVN_WC__ADM_TMP/SVN_WC__ADM_TEXT_BASE */
   SVN_ERR (svn_wc__make_adm_thing (path, SVN_WC__ADM_TEXT_BASE,
-                                   svn_node_dir, 1, pool));
+                                   svn_node_dir, perms, 1, pool));
 
   /* SVN_WC__ADM_TMP/SVN_WC__ADM_PROP_BASE */
   SVN_ERR (svn_wc__make_adm_thing (path, SVN_WC__ADM_PROP_BASE,
-                                   svn_node_dir, 1, pool));
+                                   svn_node_dir, perms, 1, pool));
 
   /* SVN_WC__ADM_TMP/SVN_WC__ADM_PROPS */
   SVN_ERR (svn_wc__make_adm_thing (path, SVN_WC__ADM_PROPS,
-                                   svn_node_dir, 1, pool));
+                                   svn_node_dir, perms, 1, pool));
 
   /* SVN_WC__ADM_TMP/SVN_WC__ADM_WCPROPS */
   SVN_ERR (svn_wc__make_adm_thing (path, SVN_WC__ADM_WCPROPS,
-                                   svn_node_dir, 1, pool));
+                                   svn_node_dir, perms, 1, pool));
 
   /* SVN_WC__ADM_TMP/SVN_WC__ADM_AUTH_DIR */
   SVN_ERR (svn_wc__make_adm_thing (path, SVN_WC__ADM_AUTH_DIR,
-                                   svn_node_dir, 1, pool));
-
+                                   svn_node_dir,
+                                   (APR_UREAD | APR_UWRITE | APR_UEXECUTE),
+                                   1, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1096,6 +1101,9 @@ init_adm (svn_stringbuf_t *path,
           svn_stringbuf_t *ancestor_path,
           apr_pool_t *pool)
 {
+  /* Default perms */
+  apr_fileperms_t perms = APR_OS_DEFAULT;
+
   /* Initial contents for certain adm files. */
   const char *format_contents = "1\n";
   const char *readme_contents =
@@ -1115,23 +1123,25 @@ init_adm (svn_stringbuf_t *path,
 
   /* SVN_WC__ADM_TEXT_BASE */
   SVN_ERR (svn_wc__make_adm_thing (path, SVN_WC__ADM_TEXT_BASE,
-                                   svn_node_dir, 0, pool));
+                                   svn_node_dir, perms, 0, pool));
 
   /* SVN_WC__ADM_PROP_BASE */
   SVN_ERR (svn_wc__make_adm_thing (path, SVN_WC__ADM_PROP_BASE,
-                                   svn_node_dir, 0, pool));
+                                   svn_node_dir, perms, 0, pool));
 
   /* SVN_WC__ADM_PROPS */
   SVN_ERR (svn_wc__make_adm_thing (path, SVN_WC__ADM_PROPS,
-                                   svn_node_dir, 0, pool));
+                                   svn_node_dir, perms, 0, pool));
 
   /* SVN_WC__ADM_WCPROPS */
   SVN_ERR (svn_wc__make_adm_thing (path, SVN_WC__ADM_WCPROPS,
-                                   svn_node_dir, 0, pool));
+                                   svn_node_dir, perms, 0, pool));
 
   /* SVN_WC__ADM_AUTH_DIR */
   SVN_ERR (svn_wc__make_adm_thing (path, SVN_WC__ADM_AUTH_DIR,
-                                   svn_node_dir, 0, pool));
+                                   svn_node_dir, 
+                                   (APR_UREAD | APR_UWRITE | APR_UEXECUTE),
+                                   0, pool));
 
   /** Init the tmp area. ***/
   SVN_ERR (init_adm_tmp_area (path, pool));
@@ -1147,15 +1157,15 @@ init_adm (svn_stringbuf_t *path,
 
   /* SVN_WC__ADM_DIR_PROPS */
   SVN_ERR (svn_wc__make_adm_thing (path, SVN_WC__ADM_DIR_PROPS,
-                                   svn_node_file, 0, pool));
+                                   svn_node_file, perms, 0, pool));
 
   /* SVN_WC__ADM_DIR_PROP_BASE */
   SVN_ERR (svn_wc__make_adm_thing (path, SVN_WC__ADM_DIR_PROP_BASE,
-                                   svn_node_file, 0, pool));
+                                   svn_node_file, perms, 0, pool));
 
   /* SVN_WC__ADM_DIR_WCPROPS */
   SVN_ERR (svn_wc__make_adm_thing (path, SVN_WC__ADM_DIR_WCPROPS,
-                                   svn_node_file, 0, pool));
+                                   svn_node_file, perms, 0, pool));
 
   /* THIS FILE MUST BE CREATED LAST: 
      After this exists, the dir is considered complete. */
