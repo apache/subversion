@@ -121,7 +121,6 @@ static const struct special_defn
 
 static dav_resource * dav_svn_get_resource(request_rec *r,
                                            const char *root_uri,
-                                           const char *workspace,
                                            const char *target,
                                            int is_label)
 {
