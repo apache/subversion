@@ -740,11 +740,11 @@ svn_error_t *svn_swig_pl_thunk_history_func(void *baton,
     return SVN_NO_ERROR;
 }
 
-svn_error_t *svn_swig_pl_thunk_authz_read_func (svn_boolean_t *allowed,
-						svn_fs_root_t *root,
-						const char *path,
-						void *baton,
-						apr_pool_t *pool)
+svn_error_t *svn_swig_pl_thunk_authz_func (svn_boolean_t *allowed,
+                                           svn_fs_root_t *root,
+                                           const char *path,
+                                           void *baton,
+                                           apr_pool_t *pool)
 {
     SV *func = baton, *result;
     swig_type_info *poolinfo = SWIG_TypeQuery("apr_pool_t *");
