@@ -27,7 +27,7 @@ Candidate changes:
       Tiny patch. If a user has an old apache on their system, but didn't ask
       us to use it, we shouldn't abort ./configure, just don't use it.
     Votes:
-      +1: maxb, ghudson
+      +1: maxb, ghudson, sussman
       +0: bliss
 
   * r10775
@@ -57,7 +57,7 @@ Candidate changes:
   * r10860
     Trivial message fixes.
     Votes:
-      +1: lundblad
+      +1: lundblad, sussman
 
   * Issue #2046
     Add placeholder svn_utf_initialize().
@@ -66,7 +66,7 @@ Candidate changes:
      complex for 1.1.0, but can go into 1.1.1 if we add a placeholder
      to the 1.1.0 API.
     Votes:
-      +1: ghudson, jpieper
+      +1: ghudson, jpieper, sussman
 
   * r10772, r10858
     Allow 'svn commit' to delete schedule-delete symlinks. (issue 2045)
