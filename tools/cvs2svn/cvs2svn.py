@@ -95,6 +95,9 @@ class CollectData(rcsparse.Sink):
       return []
 
   def define_tag(self, name, revision):
+    ### disable tag/branch generation until it stops making so many copies
+    return
+
     self.tags.write('%s %s %s\n' % (name, revision, self.fname))
     if branch_tag.match(revision):
       self.add_cvs_branch(revision, name)
@@ -659,6 +662,13 @@ def pass4(ctx):
   for line in fileinput.FileInput(ctx.log_fname_base + SORTED_REVS_SUFFIX):
     timestamp, id, op, rev, fname, branch_name, tags, branches = \
       parse_revs_line(line)
+
+    ### for now, only handle changes on the trunk until we get the tag
+    ### and branch processing to stop making so many copies
+    if not trunk_rev.match(rev):
+      ### note this could/should have caused a flush, but the next item
+      ### will take care of that for us
+      continue
 
     # Each time we read a new line, we scan the commits we've
     # accumulated so far to see if any are ready for processing now.
