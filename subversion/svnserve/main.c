@@ -92,6 +92,7 @@ enum run_mode {
 #define SVNSERVE_OPT_LISTEN_HOST 257
 #define SVNSERVE_OPT_FOREGROUND  258
 #define SVNSERVE_OPT_TUNNEL_USER 259
+#define SVNSERVE_OPT_VERSION     260
 
 static const apr_getopt_option_t svnserve__options[] =
   {
@@ -103,6 +104,8 @@ static const apr_getopt_option_t svnserve__options[] =
     {"foreground",        SVNSERVE_OPT_FOREGROUND, 0,
      "run in foreground (useful for debugging)"},
     {"help",             'h', 0, "display this help"},
+    {"version",           SVNSERVE_OPT_VERSION, 0,
+     "show version information"},
     {"inetd",            'i', 0, "inetd mode"},
     {"root",             'r', 1, "root of directory to serve"},
     {"read-only",        'R', 0, "deprecated; use repository config file"},
@@ -142,6 +145,13 @@ static void help(apr_pool_t *pool)
   fprintf(stdout, "\n");
   exit(1);
 }
+
+static svn_error_t * version(apr_getopt_t *os, apr_pool_t *pool)
+{
+  return svn_opt_print_help(os, "svnserve", TRUE, FALSE, NULL, NULL,
+                            NULL, NULL, NULL, pool);
+}
+  
 
 #if APR_HAS_FORK
 static void sigchld_handler(int signo)
@@ -238,6 +248,11 @@ int main(int argc, const char *const *argv)
           help(pool);
           break;
 
+        case SVNSERVE_OPT_VERSION:
+          SVN_INT_ERR(version(os, pool));
+          exit(0);
+          break;
+          
         case 'd':
           run_mode = run_mode_daemon;
           break;
