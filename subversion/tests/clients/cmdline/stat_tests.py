@@ -642,6 +642,33 @@ def timestamp_behaviour(sbox):
 
 #----------------------------------------------------------------------
 
+def status_on_unversioned_dotdot(sbox):
+  "status on '..' where '..' is not versioned"
+  # See issue #1617.
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  
+  new_dir = os.path.join(wc_dir, 'new_dir')
+  new_subdir = os.path.join(new_dir, 'new_subdir')
+  os.mkdir(new_dir)
+  os.mkdir(new_subdir)
+  
+  saved_cwd = os.getcwd()
+  os.chdir(new_subdir)
+  try:
+    out, err = svntest.main.run_svn(1, 'st', '..')
+    matched = 0
+    for line in err:
+      if re.match(".*which is unsupported for this operation", line):
+        matched = 1
+        break
+    if not matched:
+      raise svntest.Failure
+  finally:
+    os.chdir(saved_cwd)
+
+#----------------------------------------------------------------------
+
 ########################################################################
 # Run the tests
 
@@ -661,6 +688,7 @@ test_list = [ None,
               status_uninvited_parent_directory,
               status_on_forward_deletion,
               timestamp_behaviour,
+              status_on_unversioned_dotdot,
              ]
 
 if __name__ == '__main__':
