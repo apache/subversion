@@ -61,6 +61,7 @@ void SWIG_MakePtr(SV *, void *, swig_type_info *, int flags);
 #endif /* SVN_NEED_SWIG_TYPES */
 
 extern apr_pool_t *current_pool;
+apr_pool_t *svn_swig_pl_make_pool (SV *obj);
 
 SV *svn_swig_pl_prophash_to_hash (apr_hash_t *hash);
 SV *svn_swig_pl_convert_hash (apr_hash_t *hash, swig_type_info *tinfo);

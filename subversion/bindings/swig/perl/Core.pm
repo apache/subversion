@@ -166,6 +166,60 @@ sub DESTROY {
     $self->close;
 }
 
+package SVN::Pool;
+use SVN::Base qw/Core svn_pool_/;
+no strict 'refs';
+*{"apr_pool_$_"} = *{"SVN::_Core::apr_pool_$_"}
+    for qw/clear destroy/;
+
+my @POOLSTACK;
+
+sub new {
+    my ($class, $parent) = @_;
+    $parent = $$parent if ref ($parent) eq 'SVN::Pool';
+    my $self = bless \create ($parent), $class;
+    return $self;
+}
+
+sub new_default_sub {
+    my $parent = ref ($_[0]) ? ${+shift} : $SVN::_Core::current_pool;
+    my $self = SVN::Pool->new_default ($parent);
+    return $self;
+}
+
+sub new_default {
+    my $self = new(@_);
+    $self->default;
+    return $self;
+}
+
+sub default {
+    my $self = shift;
+    push @POOLSTACK, $SVN::_Core::current_pool
+	unless $$SVN::_Core::current_pool == 0;
+    $SVN::_Core::current_pool = $$self;
+}
+
+sub clear {
+    my $self = shift;
+    apr_pool_clear ($$self);
+}
+
+my $globaldestroy;
+
+END {
+    $globaldestroy = 1;
+}
+
+sub DESTROY {
+    return if $globaldestroy;
+    my $self = shift;
+    if ($$self eq $SVN::_Core::current_pool) {
+	$SVN::_Core::current_pool = pop @POOLSTACK;
+    }
+    apr_pool_destroy ($$self);
+}
+
 package _p_svn_opt_revision_t;
 use SVN::Base qw(Core svn_opt_revision_t_);
 
