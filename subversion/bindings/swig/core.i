@@ -281,7 +281,20 @@ apr_status_t apr_file_open_stderr (apr_file_t **out, apr_pool_t *pool);
    Default pool handling for perl.
 */
 #ifdef SWIGPERL
+
+%typemap (varin) apr_pool_t *current_pool {
+        $1_ltype argp;
+        if (SWIG_ConvertPtr($input, (void **) &argp, $1_descriptor,0) < 0) {
+            croak("Type error in assignment to $symname. Expected $1_mangle");
+        }
+        svn_swig_pl_set_current_pool(argp);
+}
+
+%typemap (varout,type="$1_descriptor") apr_pool_t *current_pool
+  "sv_setiv(SvRV($result),(IV) svn_swig_pl_get_current_pool());";
+
 apr_pool_t *current_pool;
+
 #endif
 
 /* -----------------------------------------------------------------------
