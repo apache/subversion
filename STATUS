@@ -85,7 +85,7 @@ already know about.)
      Votes:
       -0: gstein
       +0: jerenkrantz
-      +1: ghudson, dionisos
+      +1: ghudson, dionisos, epg
 
 
    * r8003
@@ -93,7 +93,7 @@ already know about.)
      Justification: Fixes arguable privacy leak in client.
      Notes: svnserve -u (believe usernames) was deprecated in 0.34.
      Votes:
-      +1: jerenkrantz, rooneg, ghudson
+      +1: jerenkrantz, rooneg, ghudson, epg
       +0: gstein
 
 
@@ -101,7 +101,7 @@ already know about.)
      apr_ and APR_ namespace symbols in Subversion
      Justification: API stability, non-interference w/ APR's namespace
      Votes:
-      +1: jerenkrantz, ghudson (#1644 attachment Dec 19 17:03:00)
+      +1: jerenkrantz, ghudson (#1644 attachment Dec 19 17:03:00), epg
 
 
    * r8023, r8030, r8040
@@ -133,7 +133,7 @@ already know about.)
      'svn revert' performance improvement (timestamp sleep once, not N times)
      Justification: trivial; API change; makes error returns correct priority
      Votes:
-      +1: jerenkrantz, rooneg, ghudson, dionisos
+      +1: jerenkrantz, rooneg, ghudson, dionisos, epg
       -0: gstein (revert of many files is uncommon)
 
 
@@ -148,7 +148,7 @@ already know about.)
      Add prompting and retry count (at most 2) to SSL auth providers
      Justification: API, consistency with other auth provider behavior
      Votes:
-      +1: jerenkrantz, bliss, ghudson
+      +1: jerenkrantz, bliss, ghudson, epg
       +0: gstein
 
 
@@ -168,7 +168,7 @@ already know about.)
        r8101 below solves the problem, I believe, so will remove this
        veto when that one has got approval.
      Votes:
-      +1: jerenkrantz, bliss, ghudson
+      +1: jerenkrantz, bliss, ghudson, epg
       -0: gstein
       -1: kfogel
 
@@ -200,7 +200,7 @@ already know about.)
      Justification: low impact (though huge); better user experience
      Votes:
       +1 (concept): jerenkrantz
-      +1: ghudson, dionisos
+      +1: ghudson, dionisos, epg
       -0: gstein (we seem to be doing fine with our current msgs so far)
 
 
@@ -215,7 +215,7 @@ already know about.)
      Rename 'svn_repos_authz_read_func_t' to 'svn_repos_authz_func_t'.
      Justification: API stability; and, old name was overly restrictive.
      Votes:
-      +1: jerenkrantz, jszakmeister
+      +1: jerenkrantz, jszakmeister, epg
       -0: gstein
 
 
@@ -223,7 +223,7 @@ already know about.)
      Add a pool parameter to finish_abort and abort_report.
      Justification: API stability; low risk
      Votes:
-      +1: jerenkrantz, ghudson, bliss, jszakmeister
+      +1: jerenkrantz, ghudson, bliss, jszakmeister, epg
       -0: gstein
 
 
@@ -231,7 +231,7 @@ already know about.)
      Return result_rev from svn_client_checkout properly.
      Justification: Conform to docstring; correctness; low risk
      Votes:
-      +1: jerenkrantz, rooneg, jszakmeister
+      +1: jerenkrantz, rooneg, jszakmeister, epg
       +0: gstein
 
 
@@ -239,7 +239,7 @@ already know about.)
      Load RA modules as foo-MAJOR.so.0 instead of foo-MAJOR.so.
      Justification: Low risk; we should be nice to binary packagers.
      Votes:
-      +1: ghudson
+      +1: ghudson, epg
 
 
    * Issue #8014 (r8014)
@@ -269,7 +269,7 @@ already know about.)
      Constify two svn_fs_dirent_t fields
      Justification: API stability; essentially zero risk
      Votes:
-      +1: ghudson, jszakmeister
+      +1: ghudson, jszakmeister, epg
       +0: gstein
 
 
@@ -277,7 +277,7 @@ already know about.)
      Fix bug in unexercised part of status editor
      Justification: Low risk, makes client robust in face of server changes.
      Votes:
-      +1: ghudson, jszakmeister
+      +1: ghudson, jszakmeister, epg
       +0: gstein
 
 
@@ -285,14 +285,14 @@ already know about.)
      Fix bugs in update with specified target
      Justification: Fixes embarassing #1676, makes client more robust.
      Votes:
-      +1: ghudson, jszakmeister, gstein
+      +1: ghudson, jszakmeister, gstein, epg
 
 
    * Issue #1678
      Document reporter requirements and require depth-first.
      Justification: API change; allow better report processing; no risk.
      Votes:
-      +1: ghudson, jszakmeister
+      +1: ghudson, jszakmeister, epg
       +0: gstein
 
 
@@ -301,7 +301,7 @@ already know about.)
      Justification: API change; avoid permanent support for bizarre and
      unpredictable date formats.
      Votes:
-      +1: mbk, ghudson, dionisos
+      +1: mbk, ghudson, dionisos, epg
       -1: gstein (why such a change now? sheesh)
 
 
@@ -309,7 +309,7 @@ already know about.)
      Fix a compiler warning.
      Justification: trivially fixes embarassing warning; zero risk.
      Votes:
-      +1: mbk, ghudson, dionisos, jszakmeister, gstein
+      +1: mbk, ghudson, dionisos, jszakmeister, gstein, epg
 
 
    * r8035, r8036, r8037, r8128, r8156
@@ -360,7 +360,7 @@ already know about.)
      Ignore SIGPIPE in svnserve.
      Justification: Avoid uncontrolled svnserve termination, low risk.
      Votes:
-      +1: bliss, mbk, rooneg, jszakmeister
+      +1: bliss, mbk, rooneg, jszakmeister, epg
       +0: gstein
 
 
@@ -368,7 +368,7 @@ already know about.)
      Fix an svnserve crash bug for network errors.
      Justification: Avoid uncontrolled svnserve termination, low risk.
      Votes:
-      +1: bliss, mbk, ghudson, rooneg, jszakmeister
+      +1: bliss, mbk, ghudson, rooneg, jszakmeister, epg
       -0: gstein
 
 
@@ -387,7 +387,7 @@ already know about.)
                     1.0, the maintainer wishes svn to include the
                     latest version in order to provide better supports.
      Votes:
-      +1: clkao
+      +1: clkao, epg
      
 
    * r8106
@@ -395,4 +395,4 @@ already know about.)
      included in standard make.
 
      Votes:
-      +1: clkao
+      +1: clkao, epg
