@@ -52,8 +52,8 @@ echo "Removed and recreated ${DIST_SANDBOX}"
 echo "Checking out latest revision of Subversion into sandbox..."
 (cd ${DIST_SANDBOX} && svn co http://svn.collab.net/repos/svn/trunk \
                               -d ${DISTNAME} --username none --password none)
-echo "Removing all SVN/ and .svnignore files from the checkout..."
-rm -rf `find ${DIST_SANDBOX}/${DISTNAME} -name SVN -print`
+echo "Removing all .svn/ and .svnignore files from the checkout..."
+rm -rf `find ${DIST_SANDBOX}/${DISTNAME} -name .svn -print`
 rm -rf `find ${DIST_SANDBOX}/${DISTNAME} -name .svnignore -print`
 
 ### Ship with (relatively) clean APR and neon working copies
