@@ -89,6 +89,11 @@ class CollectData(rcsparse.Sink):
     self.cvsroot = cvsroot
     self.revs = open(log_fname_base + REVS_SUFFIX, 'w')
     self.resync = open(log_fname_base + RESYNC_SUFFIX, 'w')
+
+    # rcsparse calls this the "principal branch", but CVS and RCS
+    # usually call it the "default branch", so that's what we say
+    # internally, even though the rcsparse API setter method is
+    # 'set_principal_branch'.
     self.default_branch = None
 
   def set_principal_branch(self, branch):
