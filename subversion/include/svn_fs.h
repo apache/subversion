@@ -87,6 +87,34 @@ void svn_fs_set_warning_func (svn_fs_t *fs,
                               void *warning_baton);
 
 
+/** 
+ * @since New in 1.2.
+ *
+ * The type of a lock-token callback function.  When the filesystem
+ * needs a lock-token to change a locked path, it calls this callback
+ * to retrieve it.
+ *
+ * Set @a *token to a lock-token representing a lock on @a path.  If
+ * no token for the path is available, then set @a *token to NULL.
+ *
+ * @a baton is the value specified in the call to @c
+ * svn_fs_set_lock_token_func; the filesystem passes it through to the
+ * callback.
+ */
+typedef void (*svn_fs_lock_token_callback_t) (svn_lock_token_t **token,
+                                              const char *path,
+                                              void *baton);
+
+
+/** Provide a callback function, @a token_func, that @a fs should use
+ * to retrieve lock-tokens.  If no such callback is registered with @a
+ * fs, then lock-tokens cannot be retrieved, most likely resulting in
+ * the inability of any fs routine to validate or work with locks.
+ */
+void svn_fs_set_lock_token_func (svn_fs_t *fs,
+                                 svn_fs_lock_token_callback_t token_func,
+                                 void *warning_baton);
+
 
 
 /**
