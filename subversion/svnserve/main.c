@@ -53,7 +53,6 @@ enum connection_handling_mode {
 
 /* The mode in which to run svnserve */
 enum run_mode {
-  run_mode_none,
   run_mode_inetd,
   run_mode_daemon,
   run_mode_tunnel,
@@ -222,7 +221,7 @@ check_lib_versions(void)
 
 int main(int argc, const char *const *argv)
 {
-  enum run_mode run_mode = run_mode_none;
+  enum run_mode run_mode;
   svn_boolean_t foreground = FALSE;
   apr_socket_t *sock, *usock;
   apr_file_t *in_file, *out_file;
@@ -248,6 +247,7 @@ int main(int argc, const char *const *argv)
   apr_uint16_t port = SVN_RA_SVN_PORT;
   const char *host = NULL;
   int family = APR_INET;
+  int mode_opt_count = 0;
 
   /* Initialize the app. */
   if (svn_cmdline_init("svn", stderr) != EXIT_SUCCESS)
@@ -292,6 +292,7 @@ int main(int argc, const char *const *argv)
           
         case 'd':
           run_mode = run_mode_daemon;
+          mode_opt_count++;
           break;
 
         case SVNSERVE_OPT_FOREGROUND:
@@ -300,6 +301,7 @@ int main(int argc, const char *const *argv)
 
         case 'i':
           run_mode = run_mode_inetd;
+          mode_opt_count++;
           break;
 
         case SVNSERVE_OPT_LISTEN_PORT:
@@ -312,6 +314,7 @@ int main(int argc, const char *const *argv)
 
         case 't':
           run_mode = run_mode_tunnel;
+          mode_opt_count++;
           break;
 
         case SVNSERVE_OPT_TUNNEL_USER:
@@ -320,6 +323,7 @@ int main(int argc, const char *const *argv)
 
         case 'X':
           run_mode = run_mode_listen_once;
+          mode_opt_count++;
           break;
 
         case 'r':
@@ -359,10 +363,10 @@ int main(int argc, const char *const *argv)
       exit(1);
     }
 
-  if (run_mode == run_mode_none)
+  if (mode_opt_count != 1)
     {
       svn_error_clear(svn_cmdline_fputs
-                      (_("You must specify one of -d, -i, -t or -X.\n"),
+                      (_("You must specify exactly one of -d, -i, -t or -X.\n"),
                        stderr, pool));
       usage(argv[0], pool);
     }
