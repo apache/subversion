@@ -131,6 +131,9 @@ svn_fs__write_new_rep (const char **key,
                             24151197232629947748581376.  Somebody warn
                             my grandchildren. */
   
+  /* ### todo: see issue #409 for why bumping the key as part of this
+     trail is problematic. */
+
   /* Get the current value associated with `next-key'.  */
   svn_fs__str_to_dbt (&query, (char *) svn_fs__next_key_key);
   SVN_ERR (DB_WRAP (fs, "allocating new representation (getting next-key)",
