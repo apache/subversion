@@ -71,20 +71,18 @@ DIGEST_END_IDX = 9 + (sha.digestsize * 2)
 verbose = 1
 
 
+# Officially, CVS symbolic names must use a fairly restricted set of
+# characters.  Unofficially, we don't care if some repositories out
+# there don't abide by this, as long as their tags start with a letter
+# and don't include '/' or '\' (both of which are prohibited by
+# official restrictions anyway).
+symbolic_name_re = re.compile('^[a-zA-Z][^/\\\\]*$')
+
 class CollectData(rcsparse.Sink):
   def __init__(self, cvsroot, log_fname_base):
     self.cvsroot = cvsroot
     self.revs = open(log_fname_base + REVS_SUFFIX, 'w')
     self.resync = open(log_fname_base + RESYNC_SUFFIX, 'w')
-
-    self.symbolic_name_re = re.compile('^[a-zA-Z][a-zA-Z0-9_-]*$')
-
-    # Officially, CVS symbolic names must use a fairly restricted set
-    # of characters.  Unofficially, we don't care if some repositories
-    # out there don't abide by this, as long as their tags start with
-    # a letter and don't include '/' or '\' (both of which are
-    # prohibited by official restrictions anyway).
-    self.symbolic_name_re = re.compile('^[a-zA-Z][^/\\\\]*$')
 
   def set_fname(self, fname):
     "Prepare to receive data for a new file."
@@ -163,7 +161,7 @@ class CollectData(rcsparse.Sink):
     header, for example: '1.7', '1.7.0.2', or '1.1.1' or '1.1.1.1'.
     This function will determine what kind of symbolic name it is by
     inspection, and record it in the right places."""
-    if not self.symbolic_name_re.match(name):
+    if not symbolic_name_re.match(name):
       sys.stderr.write("Error while parsing %s:\n"
                        "   '%s' is not a valid tag or branch name.\n" \
                        % (self.fname, name))
