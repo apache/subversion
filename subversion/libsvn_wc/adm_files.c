@@ -294,10 +294,6 @@ apr_copy_file (const char *src, const char *dst, apr_pool_t *pool)
         }
 
       /* Write 'em. */
-      /* kff note: I wonder why apr_read() and apr_write() use a
-         single argument to say both how much data is desired and how
-         much actually got read, but apr_full_read() and
-         apr_full_write() use two separate args? */
       write_err = apr_full_write (d, buf, bytes_this_time, NULL);
       if (write_err)
         {
