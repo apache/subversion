@@ -208,7 +208,7 @@ Changes to svn_delta_edit_fns_t:
    
    =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
    Change #2:  Modify prototypes of replace_*() and add_*(
-   STATUS: Being discussed on list; don't make this change yet.
+   STATUS: Will be done by Ben, Mike, or self, unless someone volunteers.
    The Way It Works Now:
       These editor functions now take arguments "ancestor_path" and
       "ancestor_revision".
