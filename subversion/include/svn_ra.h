@@ -1036,7 +1036,7 @@ svn_error_t *svn_ra_print_ra_libraries (svn_stringbuf_t **descriptions,
 
 
 
-/** @deprecated Provided for backwards compatibility with the 1.1. API.
+/** @deprecated Provided for backwards compatibility with the 1.1 API.
  *
  * Using this callback struct is similar to calling the public interface above.
  */
@@ -1313,18 +1313,21 @@ typedef svn_error_t *(*svn_ra_init_func_t) (int abi_version,
 /* Public RA implementations. */
 
 /** @deprecated Provided for backwards compatibility with the 1.1 API.
+ *
  * Initialize libsvn_ra_dav. */
 svn_error_t * svn_ra_dav_init (int abi_version,
                                apr_pool_t *pool,
                                apr_hash_t *hash);
 
 /** @deprecated Provided for backwards compatibility with the 1.1 API.
+ *
  * Initialize libsvn_ra_local. */
 svn_error_t * svn_ra_local_init (int abi_version,
                                  apr_pool_t *pool,
                                  apr_hash_t *hash);
 
 /** @deprecated Provided for backwards compatibility with the 1.1 API.
+ *
  * Initialize libsvn_ra_svn. */
 svn_error_t * svn_ra_svn_init (int abi_version,
                                apr_pool_t *pool,
