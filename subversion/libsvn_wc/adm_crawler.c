@@ -503,6 +503,7 @@ do_postfix_text_deltas (apr_hash_t *affected_targets,
   apr_ssize_t keylen;
   enum svn_wc__eol_style eol_style;
   const char *eol_str;
+  char *revision, *date, *author, *url;
 
   for (hi = apr_hash_first (pool, affected_targets); 
        hi; 
@@ -519,42 +520,62 @@ do_postfix_text_deltas (apr_hash_t *affected_targets,
       entrypath = svn_stringbuf_create ((char *) key, pool);
       local_tmp_path = svn_wc__text_base_path (entrypath, TRUE, pool);
 
+      /* The 'eol-style' and 'keywords' properties matter, because we
+         might need to make sure the file we commit is (de)translated
+         correctly. */
+
+      /* ### NOTE:  Karl has written a general "de-translator" routine
+         that this function ('svn ci'), diff ('svn diff') and
+         svn_wc_text_modified_p() all need to share.  We will rewrite
+         this shortly to use that interface. */
+
       SVN_ERR (svn_wc__get_eol_style (&eol_style, &eol_str,
                                       entrypath->data, pool));
+      SVN_ERR (svn_wc__get_keywords (&revision, &author, &date, &url,
+                                     entrypath->data, NULL, pool));
 
-      if (eol_style == svn_wc__eol_style_native)
+      if (eol_style == svn_wc__eol_style_fixed)
         {
           /* Copy the file with the fixed eol, since that's what
-             text-base has. */
+             text-base has.  Also if any keywords are currently
+             expanded, be sure to unexpand them. */
           SVN_ERR (svn_io_copy_and_translate (entrypath->data,
                                               local_tmp_path->data,
                                               eol_str,
-                                              FALSE,  /* don't repair */
-                                              NULL, NULL, NULL, NULL,
-                                              FALSE,
+                                              TRUE,  /* repair eol */
+                                              revision, author, date, url,
+                                              FALSE, /* contract keywords */
                                               pool));
         }
-      else if (eol_style == svn_wc__eol_style_fixed)
+      else if (eol_style == svn_wc__eol_style_native)
         {
           /* Copy the file with the default eol, since that's what
-             text-base has. */
+             text-base has.  Also unexpand any keywords that may be
+             expanded. */
           SVN_ERR (svn_io_copy_and_translate (entrypath->data,
                                               local_tmp_path->data,
                                               SVN_WC__DEFAULT_EOL_MARKER,
-                                              TRUE,  /* repair */
-                                              NULL, NULL, NULL, NULL,
-                                              FALSE,
+                                              FALSE,  /* don't repair eol */
+                                              revision, author, date, url,
+                                              FALSE, /* contract keywords */
                                               pool));
         }
       else if (eol_style == svn_wc__eol_style_none)
         {
-          /* Just copy the file unchanged. */
-          SVN_ERR (svn_io_copy_file (entrypath, local_tmp_path, pool));
+          /* Don't translate any newlines, but still possibly unexpand
+             any expanded keywords. */
+          SVN_ERR (svn_io_copy_and_translate (entrypath->data,
+                                              local_tmp_path->data,
+                                              NULL, /* don't touch eol*/
+                                              FALSE,  /* don't repair eol */
+                                              revision, author, date, url,
+                                              FALSE, /* contract keywords */
+                                              pool));
         }
       else  /* unknown eol style */
         {
           return svn_error_createf
-            (SVN_ERR_IO_INCONSISTENT_EOL, 0, NULL, pool,
+            (SVN_ERR_IO_UNKNOWN_EOL, 0, NULL, pool,
              "do_postfix_text_deltas: %s has unknown eol style property",
              entrypath->data);
         }

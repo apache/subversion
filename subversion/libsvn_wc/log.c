@@ -125,6 +125,7 @@ replace_text_base (svn_stringbuf_t *path,
   svn_stringbuf_t *tmp_text_base;
   svn_error_t *err;
   enum svn_node_kind kind;
+  char *revision, *date, *author, *url;
 
   filepath = svn_stringbuf_dup (path, pool);
   svn_path_add_component_nts (filepath, name, svn_path_local_style);
@@ -143,19 +144,34 @@ replace_text_base (svn_stringbuf_t *path,
 
       SVN_ERR (svn_wc__get_eol_style (&eol_style, &eol_str,
                                       filepath->data, pool));
+      SVN_ERR (svn_wc__get_keywords (&revision, &author, &date, &url,
+                                     filepath->data, NULL, pool));
 
-      /* If the eol-style is 'fixed', then the committed
-         tmp/text-base/file need to be copied back out on top of the
-         working file in the correct 'fixed' eol style.  We do this
-         because it may have been repaired during commit, and we want
-         the working file to look exactly like text-base after a
-         commit. */
-      if (eol_style == svn_wc__eol_style_fixed)
-        SVN_ERR (svn_io_copy_and_translate (tmp_text_base->data,
-                                            filepath->data,
-                                            eol_str, TRUE /* repair */,
-                                            NULL, NULL, NULL, NULL, FALSE,
-                                            pool));
+      /* The tmpfile which we committed *may* have had keywords
+         contracted, and now the keyword values have changed in the
+         entries file.  Furthermore, the tmpfile *may* also have had
+         line-endings repaired (if eol-style==fixed) or set to LF (if
+         eol-style==native).
+
+         Therefore, we copy the tmpfile back on top of the working
+         file, re-doing any EOL translation and keyword substitution
+         that the properties declare necessary.  The effect is to end
+         up with a working file identical to what we would get if we
+         had just checked it out.
+
+         Note: if both the eol and keyword props are completely turned
+         off, then this copy isn't strictly necessary.  But it doesn't
+         harm anything to do it anyway;  the copy just won't do any
+         translation at all. */
+      SVN_ERR (svn_io_copy_and_translate (tmp_text_base->data,
+                                          filepath->data,
+                                          eol_str, TRUE /* repair */,
+                                          revision, author, date, url, 
+                                          TRUE, /* expand keywords */
+                                          pool));
+
+      /* The commit is finished, */
+
 
       /* Move committed tmp/text-base to real text-base. */
       SVN_ERR (svn_wc__sync_text_base (filepath, pool));     
