@@ -128,6 +128,7 @@ svn_repos_begin_report (void **report_baton,
                         svn_stringbuf_t *fs_base,
                         svn_stringbuf_t *target,
                         svn_boolean_t text_deltas,
+                        svn_boolean_t recurse,
                         const svn_delta_edit_fns_t *editor,
                         void *edit_baton,
                         apr_pool_t *pool);
@@ -214,6 +215,7 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
                      const svn_delta_edit_fns_t *editor,
                      void *edit_baton,
                      svn_boolean_t text_deltas,
+                     svn_boolean_t recurse,
                      apr_pool_t *pool);
 
 

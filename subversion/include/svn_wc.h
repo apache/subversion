@@ -498,6 +498,7 @@ svn_wc_crawl_revisions (svn_stringbuf_t *path,
                         void *report_baton,
                         svn_boolean_t print_unrecognized,
                         svn_boolean_t restore_files,
+                        svn_boolean_t recurse,
                         apr_pool_t *pool);
 
 
@@ -522,6 +523,7 @@ svn_wc_crawl_revisions (svn_stringbuf_t *path,
 svn_error_t *svn_wc_get_update_editor (svn_stringbuf_t *anchor,
                                        svn_stringbuf_t *target,
                                        svn_revnum_t target_revision,
+                                       svn_boolean_t recurse,
                                        const svn_delta_edit_fns_t **editor,
                                        void **edit_baton,
                                        apr_pool_t *pool);
@@ -581,6 +583,7 @@ svn_error_t *svn_wc_get_actual_target (svn_stringbuf_t *path,
 svn_error_t *svn_wc_get_checkout_editor (svn_stringbuf_t *dest,
                                          svn_stringbuf_t *ancestor_path,
                                          svn_revnum_t target_revision,
+                                         svn_boolean_t recurse,
                                          const svn_delta_edit_fns_t **editor,
                                          void **edit_baton,
                                          apr_pool_t *pool);

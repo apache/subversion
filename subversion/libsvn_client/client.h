@@ -74,6 +74,7 @@ svn_client__checkout_internal (const svn_delta_edit_fns_t *before_editor,
                                svn_stringbuf_t *xml_src,
                                svn_stringbuf_t *ancestor_path,
                                svn_revnum_t ancestor_revision,
+                               svn_boolean_t recurse,
                                apr_pool_t *pool);
 
 
@@ -85,6 +86,7 @@ svn_client__update_internal (const svn_delta_edit_fns_t *before_editor,
                              svn_stringbuf_t *path,
                              svn_stringbuf_t *xml_src,
                              svn_revnum_t ancestor_revision,
+                             svn_boolean_t recurse,
                              apr_pool_t *pool);
 
 

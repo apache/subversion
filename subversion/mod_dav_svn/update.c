@@ -383,6 +383,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
   svn_stringbuf_t *pathstr;
   const dav_svn_repos *repos = resource->info->repos;
   svn_stringbuf_t *target = NULL;
+  svn_boolean_t recurse = TRUE;
 
   if (resource->type != DAV_RESOURCE_TYPE_REGULAR)
     {
@@ -413,6 +414,12 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
           /* ### assume no white space, no child elems, etc */
           target = svn_stringbuf_create (child->first_cdata.first->text, 
                                          resource->pool);
+        }
+      if (child->ns == ns && strcmp(child->name, "recursive") == 0)
+        {
+          /* ### assume no white space, no child elems, etc */
+          if (strcmp(child->first_cdata.first->text, "no") == 0)
+              recurse = FALSE;
         }
     }
   if (revnum == SVN_INVALID_REVNUM)
@@ -455,7 +462,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
   fs_base = svn_stringbuf_create(resource->info->repos_path, resource->pool);
   uc.anchor = fs_base->data;
   serr = svn_repos_begin_report(&rbaton, revnum, repos->username, 
-                                repos->fs, fs_base, target, FALSE,
+                                repos->fs, fs_base, target, FALSE, recurse,
                                 editor, &uc, resource->pool);
 
   if (serr != NULL)
