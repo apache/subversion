@@ -1035,8 +1035,6 @@ main (int argc, const char * const *argv)
           svn_wc_adm_access_t *adm_access;
           const svn_wc_entry_t *e;
           const char *fname_utf8 = svn_path_internal_style (dash_F_arg, pool);
-
-          printf ("STAT\n");
           err = svn_wc_adm_probe_open (&adm_access, NULL, fname_utf8,
                                        FALSE, FALSE, pool);
           if (! err)
@@ -1061,7 +1059,6 @@ main (int argc, const char * const *argv)
       if (dash_m_arg)
         {
           apr_finfo_t finfo;
-          printf ("STAT\n");
           if (apr_stat (&finfo, dash_m_arg, 
                         APR_FINFO_MIN, pool) == APR_SUCCESS)
             {
