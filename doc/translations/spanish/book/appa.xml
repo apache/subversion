@@ -354,27 +354,31 @@ X    Resource is external to this working copy (comes from another
   <!-- ======================== SECTION 5 ============================= -->
   <!-- ================================================================= -->
   <sect1 id="svn-ap-a-sect-5">
-    <title>Branches and Tags</title>
+    <title>Ramas y etiquetas</title>
 
-    <para>Subversion doesn't distinguish between filesystem space and
-      <quote>branch</quote> space; branches and tags are ordinary
-      directories within the filesystem.  This is probably the single
-      biggest mental hurdle a CVS user will need to climb.  Read all
-      about it in <xref linkend="svn-ch-4"/>.</para>
+    <para>Subversion no distingue entre el espacio del sistema de
+      ficheros y el espacio de <quote>rama</quote>; las ramas y
+      etiquetas son directorios ordinarios dentro del sistema de
+      ficheros. Ésta es probablemente la única gran valla mental
+      que un usuario de CVS tiene que superar. Lea todo sobre esto
+      en <xref linkend="svn-ch-4"/>.</para>
 
 
     <warning>
-      <para>Since Subversion treats branches and tags as ordinary
-      directories, always remember to check out the
-      <literal>trunk</literal>
-      (<literal>http://svn.example.com/repos/calc/trunk/</literal>) of
-      your project, and not the project itself
-      (<literal>http://svn.example.com/repos/calc/</literal>).  If you
-      make the mistake of checking out the project itself, you'll wind
-      up with a working copy that contains a copy of your project for
-      every branch and tag you have.<footnote><para>That is, providing
-      you don't run out of disk space before your checkout
-      finishes.</para> </footnote></para>
+      <para>Puesto que Subversion trata las ramas y etiquetas como
+        directorios ordinarios, recuerde siempre descargar el directorio
+        <literal>trunk</literal>
+        (<literal>http://svn.example.com/repos/calc/trunk/</literal>)
+        de su proyecto, y no el proyecto en si mismo<!--TODO:itself-->
+        (<literal>http://svn.example.com/repos/calc/</literal>). Si
+        comete el error de descargar el proyecto en sí mismo, obtendrá
+        una copia<!--TODO:you'll wind up with a working copy that contains
+        a copy--> de trabajo que contendrá una copia de su proyecto
+        para cada rama y etiqueta que tenga.<footnote><para>Esto es,
+        <!--TODO:providing you don't run out of disk space before
+        your checkout finishes....no tengo ni idea de como traducirlo-->
+        proporcionando no ejecute hacia afuera el espacio en disco
+        antes de que su descarga finalice.</para> </footnote></para>
     </warning>
 
   </sect1>
@@ -384,20 +388,21 @@ X    Resource is external to this working copy (comes from another
   <!-- ======================== SECTION 6 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-ap-a-sect-6">
-    <title>Metadata Properties</title>
+    <title>Propiedades de los metadatos</title>
 
-    <para>A new feature of Subversion is that you can attach arbitrary
-      metadata (or <quote>properties</quote>) to files and
-      directories.  Properties are arbitrary name/value pairs
-      associated with files and directories in your working
-      copy.</para>
+    <para>Una característica nueva de Subversion es que usted puede
+      unir metadatos arbitrarios (o <quote>propiedades</quote>) a
+      ficheros y directorios. Las propiedades son pares arbitrarios
+      nombre/valor asociados con ficheros y directorios en su copia
+      de trabajo.</para>
     
-    <para>To set or get a property name, use the <command>svn
-      propset</command> and <command>svn propget</command>
-      subcommands.  To list all properties on an object, use
-      <command>svn proplist</command>.</para>
+    <para>Para fijar u obtener un nombre de propiedad, use los
+      subcomandos <command>svn propset</command> y
+      <command>svn propget</command>. Para enumerar todas las
+      propiedades de un objeto, use <command>svn proplist</command>.
+    </para>
 
-    <para>For more information, see <xref linkend="svn-ch-7-sect-2"/>.</para>
+    <para>Para más información, vea <xref linkend="svn-ch-7-sect-2"/>.</para>
 
   </sect1>
 
@@ -405,38 +410,44 @@ X    Resource is external to this working copy (comes from another
   <!-- ======================== SECTION 7 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-ap-a-sect-7">
-    <title>Conflict Resolution</title>
+    <title>Resolución de conflictos </title>
 
-    <para>CVS marks conflicts with in-line <quote>conflict
-      markers</quote>, and prints a <command>C</command> during an
-      update.  Historically, this has caused problems, because CVS
-      isn't doing enough.  Many users forget about (or don't see) the
-      <command>C</command> after it whizzes by on their terminal.
-      They often forget that the conflict-markers are even present,
-      and then accidentally commit files containing
-      conflict-markers.</para>
+    <para>CVS marca conflictos en linea con <quote>marcas de
+      conflicto</quote>, e imprime una <command>C</command>
+      durante la actualización. Historicamente, esto ha causado
+      promlemas, porque CVS no está haciendo bastante. Muchos
+      usuarios se olvidan (o no ven) la <command>C</command>
+      después de que <!--TODO:after it whizzes by on their terminal-->
+      esta silbe en sus terminales. Se olvidan a menudo de que las
+      marcas de conflicto están incluso presentes, y después
+      accidentalmente envian los ficheros conteniendo las marcas
+      de conflicto.</para>
 
-    <para>Subversion solves this problem by making conflicts more
-      tangible.  It remembers that a file is in a state of conflict,
-      and won't allow you to commit your changes until you run
-      <command>svn resolved</command>.  See <xref
-      linkend="svn-ch-3-sect-4.4"/> for more details.</para>
+    <para>Subversion solventa este problema haciendo los conflictos
+      más tangibles. Recuerde que un fichero está en estado de
+      conflicto, y no permitirá que envie sus cambios hasta que
+      ejecute <command>svn resolved</command>.  Vea <xref
+      linkend="svn-ch-3-sect-4.4"/> para más detalles.</para>
   </sect1>
 
   <!-- ================================================================= -->
   <!-- ======================== SECTION 8 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-ap-a-sect-8">
-    <title>Binary Files and Translation</title>
+    <title>Ficheros binarios y traducción</title>
 
-    <para>In the most general sense, Subversion handles binary files
-      more gracefully than CVS does.  Because CVS uses RCS, it can
-      only store successive full copies of a changing binary file.
-      But internally, Subversion expresses differences between files
-      using a binary-differencing algorithm, regardless of whether they
-      contain textual or binary data.  That means that all files are
-      stored differentially (compressed) in the repository, and small
-      differences are always sent over the network.</para>
+    <para>En el sentido más general, Subversion maneja ficheros
+      binarios más elegantemente que CVS. Porque CVS usa RCS, solo
+      puede almacenar copias completas sucesivas de un fichero
+      binario que cambia. Pero internamente, Subversion expresa
+      diferencias entre ficheros usando un algoritmo de
+      diferenciador de binarios<!--TODO:binary-differencing-->,
+      sin importar si contienen datos o datos binarios. Esto
+      significa que todos los ficheros son almacenados
+      diferenciados<!--TODO:differentially--> (comprimidos) en el
+      repositorio, y las pequeñas diferencias son siempre enviadas
+      a traves <!--TODO:over the network...a traves o sobre la red?-->
+      de la red.</para>
     
     <para>CVS users have to mark binary files with
       <option>-kb</option> flags, to prevent data from being garbled
