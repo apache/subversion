@@ -609,17 +609,22 @@ static svn_error_t *add_lock_tokens(apr_array_header_t *lock_tokens,
   for (i = 0; i < lock_tokens->nelts; ++i)
     {
       const char *token;
-      svn_ra_svn_item_t *token_item;
+      svn_ra_svn_item_t *path_item, *token_item;
       svn_ra_svn_item_t *item = &APR_ARRAY_IDX(lock_tokens, i,
                                                svn_ra_svn_item_t);
       if (item->kind != SVN_RA_SVN_LIST)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
-                                "Lock tokens aren't a list of lists.");
+                                "Lock tokens aren't a list of lists");
+
+      path_item = &APR_ARRAY_IDX(item->u.list, 0, svn_ra_svn_item_t);
+      if (path_item->kind != SVN_RA_SVN_STRING)
+        return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
+                                "Lock path isn't a string.");
 
       token_item = &APR_ARRAY_IDX(item->u.list, 1, svn_ra_svn_item_t);
       if (token_item->kind != SVN_RA_SVN_STRING)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
-                                "Lock token isn't a string.");
+                                "Lock token isn't a string");
 
       token = token_item->u.string->data;
       SVN_ERR(svn_fs_access_add_lock_token(fs_access, token));
@@ -646,19 +651,8 @@ static svn_error_t *unlock_paths(apr_array_header_t *lock_tokens,
       svn_pool_clear(iterpool);
 
       item = &APR_ARRAY_IDX(lock_tokens, i, svn_ra_svn_item_t);
-      if (item->kind != SVN_RA_SVN_LIST)
-        return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
-                                "Lock tokens aren't a list of lists.");
-
       path_item = &APR_ARRAY_IDX(item->u.list, 0, svn_ra_svn_item_t);
-      if (token_item->kind != SVN_RA_SVN_STRING)
-        return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
-                                "Lock path isn't a string.");
-
       token_item = &APR_ARRAY_IDX(item->u.list, 1, svn_ra_svn_item_t);
-      if (token_item->kind != SVN_RA_SVN_STRING)
-        return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
-                                "Lock token isn't a string.");
 
       path = path_item->u.string->data;
       token = token_item->u.string->data;
