@@ -3137,11 +3137,9 @@ history_prev (void *baton, apr_pool_t *pool)
         }
     }
 
-  /* If we calculated a copy source path and revision, and the
-     copy source revision doesn't pre-date a revision in which we
-     *know* our node was modified, we'll make a 'copy-style' history
-     object. */
-  if (src_path && SVN_IS_VALID_REVNUM (src_rev) && (src_rev >= commit_rev))
+  /* If we calculated a copy source path and revision, we'll make a
+     'copy-style' history object. */
+  if (src_path && SVN_IS_VALID_REVNUM (src_rev))
     {
       /* It's possible for us to find a copy location that is the same
          as the history point we've just reported.  If that happens,
