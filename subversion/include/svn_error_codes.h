@@ -264,7 +264,7 @@ SVN_ERROR_START
               "Filesystem has no such copy")
 
   SVN_ERRDEF (SVN_ERR_FS_TRANSACTION_NOT_MUTABLE,
-              "Filesystem has no such file")
+              "The specified transaction is not mutable")
 
   SVN_ERRDEF (SVN_ERR_FS_NOT_FOUND,
               "Filesystem has no item")
