@@ -779,17 +779,15 @@ svn_repos_create (svn_repos_t **repos_p, const char *path, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_repos_open (svn_repos_t **repos_p,
-                const char *path,
-                apr_pool_t *pool)
+
+/* Verify that the repository's 'format' file is a suitable version. */
+static svn_error_t *
+check_repos_version (const char *path,
+                     apr_pool_t *pool)
 {
-  apr_status_t apr_err;
-  svn_repos_t *repos;
   int version;
   svn_error_t *err;
 
-  /* Verify the validity of our repository format. */
   /* ### for now, an error here might occur because we *just*
      introduced the whole format thing.  Until the next time we
      *change* our format, we'll ignore the error (and default to a 0
@@ -812,6 +810,32 @@ svn_repos_open (svn_repos_t **repos_p,
        "Expected version '%d' of repository; found version '%d'", 
        SVN_REPOS__VERSION, version);
 
+  return SVN_NO_ERROR;
+}
+
+
+/* Set *REPOS_P to a repository at PATH which has been opened with
+   some kind of lock.  LOCKTYPE is one of APR_FLOCK_SHARED (for
+   standard readers/writers), or APR_FLOCK_EXCLUSIVE (for processes
+   that need exclusive access, like db_recover.)  OPEN_FS indicates
+   whether the database should be opened and placed into repos->fs.
+
+   Do all allocation in POOL.  When POOL is destroyed, the lock will
+   be released as well. */
+static svn_error_t *
+get_repos (svn_repos_t **repos_p,
+           const char *path,
+           int locktype,
+           svn_boolean_t open_fs,
+           apr_pool_t *pool)
+{
+  apr_status_t apr_err;
+  svn_repos_t *repos;
+  svn_error_t *err;
+
+  /* Verify the validity of our repository format. */
+  SVN_ERR (check_repos_version (path, pool));
+
   /* Allocate a repository object. */
   repos = apr_pcalloc (pool, sizeof (*repos));
   repos->pool = pool;
@@ -824,32 +848,64 @@ svn_repos_open (svn_repos_t **repos_p,
   repos->fs = svn_fs_new (pool);
 
   /* Open up the Berkeley filesystem. */
-  SVN_ERR (svn_fs_open_berkeley (repos->fs, repos->db_path));
+  if (open_fs)
+    SVN_ERR (svn_fs_open_berkeley (repos->fs, repos->db_path));
 
   /* Locking. */
   {
     const char *lockfile_path;
     apr_file_t *lockfile_handle;
+    apr_int32_t flags;
 
     /* Get a filehandle for the repository's db lockfile. */
     lockfile_path = svn_repos_db_lockfile (repos, pool);
+    flags = APR_READ;
+    if (locktype == APR_FLOCK_EXCLUSIVE)
+      flags |= APR_WRITE;
     SVN_ERR_W (svn_io_file_open (&lockfile_handle, lockfile_path,
-                                 APR_READ, APR_OS_DEFAULT, pool),
-               "svn_repos_open: error opening db lockfile");
+                                 flags, APR_OS_DEFAULT, pool),
+               "get_repos: error opening db lockfile");
     
-    /* Get shared lock on the filehandle. */
-    apr_err = apr_file_lock (lockfile_handle, APR_FLOCK_SHARED);
+    /* Get some kind of lock on the filehandle. */
+    apr_err = apr_file_lock (lockfile_handle, locktype);
     if (apr_err)
-      return svn_error_createf
-        (apr_err, 0, NULL, pool,
-         "svn_repos_open: shared db lock on repository `%s' failed", path);
+      {
+        const char *lockname = "unknown";
+        if (locktype == APR_FLOCK_SHARED)
+          lockname = "shared";
+        if (locktype == APR_FLOCK_EXCLUSIVE)
+          lockname = "exclusive";
+        
+        return svn_error_createf
+          (apr_err, 0, NULL, pool,
+           "get_repos: %s db lock on repository `%s' failed",
+           lockname, path);
+      }
     
-    /* Register an unlock function for the shared lock. */
+    /* Register an unlock function for the lock. */
     apr_pool_cleanup_register (pool, lockfile_handle, clear_and_close,
                                apr_pool_cleanup_null);
   }
 
   *repos_p = repos;
+  return SVN_NO_ERROR;
+}
+
+
+
+svn_error_t *
+svn_repos_open (svn_repos_t **repos_p,
+                const char *path,
+                apr_pool_t *pool)
+{
+  /* Fetch a repository object initialized with a shared read/write
+     lock on the database. */
+
+  SVN_ERR (get_repos (repos_p, path,
+                      APR_FLOCK_SHARED,
+                      TRUE,     /* open the db into repos->fs. */
+                      pool));
+
   return SVN_NO_ERROR;
 }
 
@@ -888,6 +944,75 @@ svn_repos_fs (svn_repos_t *repos)
   if (! repos)
     return NULL;
   return repos->fs;
+}
+
+
+svn_error_t *
+svn_repos_recover (const char *path,
+                   apr_pool_t *pool)
+{
+  svn_repos_t *repos;
+  apr_pool_t *subpool = svn_pool_create (pool);
+
+  /* Destroy ALL existing svn locks on the repository.  If we're
+     recovering, we need to ensure we have exclusive access.  The
+     theory is that the caller *knows* that all existing locks are
+     'dead' ones, left by dead processes.  (The caller might be a
+     human running 'svnadmin recover', or maybe some future repository
+     lock daemon.) */
+  {
+    const char *lockfile_path;
+    apr_file_t *lockfile_handle;
+    apr_status_t apr_err;
+    svn_repos_t *locked_repos;
+
+    /* We're not calling get_repos to fetch a repository structure,
+       because this routine actually tries to open the db environment,
+       which would hang.   So we replicate a bit of get_repos's code
+       here: */
+    SVN_ERR (check_repos_version (path, subpool));
+    locked_repos = apr_pcalloc (subpool, sizeof (*locked_repos));
+    locked_repos->pool = subpool;
+    locked_repos->path = apr_pstrdup (subpool, path);
+    init_repos_dirs (locked_repos, subpool);
+    
+    /* Get a filehandle for the wedged repository's db lockfile. */
+    lockfile_path = svn_repos_db_lockfile (locked_repos, subpool);
+    SVN_ERR_W (svn_io_file_open (&lockfile_handle, lockfile_path,
+                                 APR_READ, APR_OS_DEFAULT, pool),
+               "svn_repos_recover: error opening db lockfile");
+    
+    apr_err = apr_file_unlock (lockfile_handle);
+    if (apr_err)
+      return svn_error_createf
+        (apr_err, 0, NULL, subpool,
+         "svn_repos_recover: failed to delete all locks on repository `%s'.",
+         path);
+
+    apr_err = apr_file_close (lockfile_handle);
+    if (apr_err)
+      return svn_error_createf
+        (apr_err, 0, NULL, subpool,
+         "svn_repos_recover: failed to close lockfile on repository `%s'.",
+         path);
+  }
+  
+  /* Fetch a repository object initialized with an EXCLUSIVE lock on
+     the database.   This will at least prevent others from trying to
+     read or write to it while we run recovery. */
+  SVN_ERR (get_repos (&repos, path,
+                      APR_FLOCK_EXCLUSIVE,
+                      FALSE,    /* don't try to open the db yet. */
+                      subpool));
+
+  /* Recover the database to a consistent state. */
+  SVN_ERR (svn_fs_berkeley_recover (repos->db_path, subpool));
+
+  /* Close shop and free the subpool, to release the exclusive lock. */
+  SVN_ERR (svn_repos_close (repos));
+  svn_pool_destroy (subpool);
+
+  return SVN_NO_ERROR;
 }
 
 

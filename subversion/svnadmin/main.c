@@ -131,9 +131,7 @@ static svn_opt_subcommand_t
   subcommand_lscr,
   subcommand_lsrevs,
   subcommand_lstxns,
-#if 0  /* see subcommand_recover() */
   subcommand_recover,
-#endif /* 0 */ 
   subcommand_rmtxns,
   subcommand_setlog,
   subcommand_shell,
@@ -250,14 +248,14 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
      "(Printing a tree shows its structure, node ids, and file sizes.)\n",
      {svnadmin__long_output} },
 
-#if 0  /* not currently implemented, see subcommand_recover() */
     {"recover", subcommand_recover, {0},
      "usage: svnadmin recover REPOS_PATH\n\n"
      "Run the Berkeley DB recovery procedure on a repository.  Do\n"
      "this if you've been getting errors indicating that recovery\n"
-     "ought to be run.\n",
+     "ought to be run.\n\n"
+     "WARNING: only run this when you are SURE you're the only process\n"
+     "accessing the repository.  Requires exclusive access.\n\n",
      {0} },
-#endif /* 0 */
 
     {"rmtxns", subcommand_rmtxns, {0},
      "usage: svnadmin rmtxns REPOS_PATH TXN_NAME [TXN_NAME2 ...]\n\n"
@@ -678,101 +676,33 @@ subcommand_lstxns (apr_getopt_t *os, void *baton, apr_pool_t *pool)
 }
 
 
-#if 0
+/* This implements `svn_opt_subcommand_t'. */
 svn_error_t *
 subcommand_recover (apr_getopt_t *os, void *baton, apr_pool_t *pool)
 {
-  /* ### TODO: This code was copied from rev 3257, when the recover
-   * code was inlined in main as one case in a big switch statement.
-   * It probably needs some new declarations, etc, to become a
-   * standalone function.  Also, rev 3257 had this comment:
-   *
-   *    Get this working with new libsvn_repos API.  We need the repos
-   *    API to access the lockfile paths and such, but we apparently
-   *    don't want the locking that comes along with the repos API.
-   *
-   * So there you have it.
-   */
+  svn_revnum_t youngest_rev;
+  svn_repos_t *repos;
+  struct svnadmin_opt_state *opt_state = baton;
 
-  apr_status_t apr_err;
-  const char *lockfile_path, *env_path;
-  apr_file_t *lockfile_handle = NULL;
-  svn_error_t *err;
-  const char *progname_utf8;
+  printf ("Acquiring exclusive lock on repository db, and running "
+          "recovery procedures.\nPlease stand by...");
+  fflush(stdout);
 
-  SVN_ERR (svn_utf_cstring_to_utf8 (argv[0], &progname_urf8,
-                                    NULL, pool));
+  SVN_ERR (svn_repos_recover (opt_state->repository_path, pool));
 
-  /* Don't use svn_repos_open() here, because we don't want the
-     usual locking behavior. */
-  fs = svn_fs_new (pool);
-  err = svn_fs_open_berkeley (fs, path);
-  if (err && (err->src_err != DB_RUNRECOVERY))
-    goto error;
+  printf ("\nRecovery completed.\n");
 
-  /* Exclusively lock the repository.  This blocks on other locks,
-     including shared locks. */
-  lockfile_path = svn_fs_db_lockfile (fs, pool);
-  err = svn_io_file_open (&lockfile_handle, lockfile_path,
-                          (APR_WRITE | APR_APPEND), APR_OS_DEFAULT, pool);
-  if (err)
-    {
-      err = svn_error_createf
-        (err->apr_err, err->src_err, err, pool,
-         "%s: error opening db lockfile `%s'", progname_utf8, lockfile_path);
-      goto error;
-    }
-
-  apr_err = apr_file_lock (lockfile_handle, APR_FLOCK_EXCLUSIVE);
-  if (apr_err)
-    {
-      err = svn_error_createf
-        (apr_err, 0, NULL, pool,
-         "%s: exclusive lock on `%s' failed", progname_utf8, lockfile_path);
-      goto error;
-    }
-
-  /* Run recovery on the Berkeley environment, using FS to get the
-     path to said environment. */ 
-  env_path = svn_fs_db_env (fs, pool);
-  /* ### todo: this usually seems to get an error -- namely, that
-     the DB needs recovery!  Why would that be, when we just
-     recovered it?  Is it an error to recover a DB that doesn't
-     need recovery, perhaps?  See issue #430. */
-  SVN_ERR (svn_fs_berkeley_recover (env_path, pool));
-
-  /* Release the exclusive lock. */
-  apr_err = apr_file_unlock (lockfile_handle);
-  if (apr_err)
-    {
-      err = svn_error_createf
-        (apr_err, 0, NULL, pool,
-         "%s: error unlocking `%s'", progname_utf8, lockfile_path);
-      goto error;
-    }
-
-  apr_err = apr_file_close (lockfile_handle);
-  if (apr_err)
-    {
-      err = svn_error_createf
-        (apr_err, 0, NULL, pool,
-         "%s: error closing `%s'", progname_utf8, lockfile_path);
-      goto error;
-    }
-
-  if (0)
-    {
-    error:
-      svn_handle_error(err, stderr, FALSE);
-      return svn_error_createf (...);
-    }
-
-  /* ### What about error case? */
+  /* Since db transactions may have been replayed, it's nice to tell
+     people what the latest revision is.  It also proves that the
+     recovery actually worked. */
+  SVN_ERR (svn_repos_open (&repos, opt_state->repository_path, pool));
+  SVN_ERR (svn_fs_youngest_rev (&youngest_rev, svn_repos_fs (repos), pool));
+  printf ("The latest repos revision is %"
+          SVN_REVNUM_T_FMT ".\n", youngest_rev);
   SVN_ERR (svn_repos_close (repos));
 
   return SVN_NO_ERROR;
 }
-#endif /* 0 */
 
 
 /* This implements `svn_opt_subcommand_t'. */
