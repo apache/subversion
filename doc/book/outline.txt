@@ -40,9 +40,9 @@ III. Guided Tour
       3.  initial checkout
       4.  basic workcycle:
            a. svn update
-           b. make changes:  edit directly, svn add, rm, cp, mv
+           b. make changes:  edit directly, svn add, remove, copy, move
            c. examine changes:  svn status, info, diff, revert
-           d. resolve conflicts:  svn up, resolved
+           d. resolve conflicts:  svn update, resolved
            e. svn commit
       5.  examining history:  svn log, diff
 
@@ -55,13 +55,13 @@ IV. Branching and Merging
    Opening explanation of what branches are, how they're used.
    (Ben has a great explanation for this.)
 
-   A. Creating branches  (svn cp)
+   A. Creating branches  (svn copy)
 
    B. Porting changes  (svn merge)
 
    C. Removing changes  (svn merge)
 
-   D. Branch maintentance (layout, svn mv, svn rm)
+   D. Branch maintentance (layout, svn move, svn delete)
 
    E. "Advanced shortcuts": switching to a Branch with svn switch.
        Show clever use-cases in here too. (Ben has some examples.)
@@ -106,7 +106,8 @@ VI.  Advanced Topics
 
    B. Properties
 
-       1. General use (pset, pget, plist, pdel, pedit), including -r switch.
+       1. General use (propset, propget, proplist, propdel, propedit),
+          including -r switch.
        2. EOL translation
        3. Keyword substitution
        4. Other special keywords (executable, mime-type, ignore)

@@ -228,11 +228,11 @@
       new repository, just run:</para>
           
     <screen>
-$ svnadmin create path/to/repos
+$ svnadmin create /path/to/repos
 </screen>
           
     <para>This creates a new repository in the directory
-      <filename>path/to/repos</filename>.  This new repository begins
+      <filename>/path/to/repos</filename>.  This new repository begins
       life at revision 0, which is defined to consist of nothing but
       the top-level root (<filename>/</filename>) filesystem
       directory.  Initially, revision 0 also has a single revision
@@ -418,7 +418,9 @@ pre-commit.tmpl
               arguments to this program: the path to the repository,
               and username which is attempting the commit.  If the
               program returns a non-zero exit value, the commit is
-              stopped before the transaction is even created.</para>
+              stopped before the transaction is even created.  If the
+              hook program writes data to stderr, it will be
+              marshalled back to the client.</para>
           </listitem>
         </varlistentry>
             
@@ -435,19 +437,22 @@ pre-commit.tmpl
               arguments to this program: the path to the repository,
               and the name of the transaction being committed.  If the
               program returns a non-zero exit value, the commit is
-              aborted and the transaction is removed.</para>
+              aborted and the transaction is removed.  If the hook
+              program writes data to stderr, it will be marshalled
+              back to the client.</para>
 
             <para>The Subversion distribution includes some access
               control scripts (located in the
               <filename>tools/hook-scripts</filename> directory of the
               Subversion source tree) that can be called from
               <command>pre-commit</command> to implement fine-grained
-              access control.  At this time, this is the only method
-              by which administrators can implement finer-grained access
-              control beyond what Apache's <filename>httpd.conf</filename>
-              offers.  In a future version of Subversion, we plan to
-              implement access control lists (ACLs) directly in the
-              filesystem.</para>
+              write-access control.  Another option is to use the
+              <command>mod_authz_svn</command> Apache httpd module,
+              which provides both read and write access control on
+              individual directories (see <xref
+              linkend="svn-ch-6-sect-4.4.2"/>).  In a future version
+              of Subversion, we plan to implement access control lists
+              (ACLs) directly in the filesystem.</para>
           </listitem>
         </varlistentry>
 
@@ -700,7 +705,7 @@ $ svnlook youngest /path/to/repos
           of the <literal>info</literal> subcommand:</para>
 
         <screen>
-$ svnlook info path/to/repos
+$ svnlook info /path/to/repos
 sally
 2002-11-04 09:29:13 -0600 (Mon, 04 Nov 2002)
 27
@@ -751,7 +756,7 @@ Greek tree.
           users).</para>
 
         <screen>
-$ svnlook tree path/to/repos --show-ids
+$ svnlook tree /path/to/repos --show-ids
 / &lt;0.0.1&gt;
  A/ &lt;2.0.1&gt;
   B/ &lt;4.0.1&gt;
@@ -1458,7 +1463,7 @@ $
           <filename>db</filename> subdirectory of your repository.
           This subdirectory is a regular Berkeley DB environment
           directory, and can therefore be used in conjunction with any
-          of Berkeley's database tools (you can see the documentation
+          of the Berkeley database tools (you can see the documentation
           for these tools at SleepyCat's website, <systemitem
           class="url">http://www.sleepycat.com/</systemitem>).</para>
 
@@ -1468,7 +1473,7 @@ $
           <command>svnadmin</command> tool.  For example,
           <command>svnadmin list-unused-dblogs</command> and
           <command>svnadmin list-dblogs</command> perform a
-          subset of what is provided by Berkeley's
+          subset of what is provided by the Berkeley
           <command>db_archive</command> command, and <command>svnadmin
           recover</command> reflects the common use-cases of the
           <command>db_recover</command> utility.</para>
@@ -1934,13 +1939,22 @@ The latest repos revision is 19.
             their respective, just-created repositories.</para>
         </listitem>
         <listitem>
-          <para>Finally, be sure to copy any customizations from your
-            old repositories to the new ones, including
+          <para>Be sure to copy any customizations from your old
+            repositories to the new ones, including
             <filename>DB_CONFIG</filename> files and hook scripts.
             You'll want to pay attention to the release notes for the
             new release of Subversion to see if any changes since your
             last upgrade affect those hooks or configuration
             options.</para>
+        </listitem>
+        <listitem>
+          <para>If the migration process made your repository
+           accessible at a different URL (e.g. moved to a different
+           computer, or is being accessed via a different schema),
+           then you'll probably want to tell your users to run
+           <command>svn switch --relocate</command> on their existing
+           working copies.  See <xref
+           linkend="svn-ch-9-sect-1.2-re-switch"/>.</para>
         </listitem>
       </orderedlist>
 
@@ -2201,12 +2215,12 @@ $
         repository access at all&mdash;and then will clean out the
         dead Berkeley log files from your live repository.</para>
 
-      <para>Even if you also have an incremental backup, you might want to run
-        this program on a regular basis.  For example, you might
-        consider adding <command>hot-backup.py</command> to a program
-        scheduler (such as <command>crond</command> on Unix systems).
-        Or, if you prefer fine-grained backup solutions, you could
-        have your post-commit hook script call
+      <para>Even if you also have an incremental backup, you might
+        want to run this program on a regular basis.  For example, you
+        might consider adding <command>hot-backup.py</command> to a
+        program scheduler (such as <command>cron</command> on Unix
+        systems).  Or, if you prefer fine-grained backup solutions,
+        you could have your post-commit hook script call
         <command>hot-backup.py</command> (see <xref
         linkend="svn-ch-5-sect-2.1" />), which will then cause a new
         backup of your repository to occur with every new revision
@@ -2235,7 +2249,7 @@ $
       <para>Incremental backups using the repository dump format are
         excellent to have on hand if the database schema changes
         between successive versions of Subversion itself.  Since a
-        full repository dump and load are generally required to
+        complete repository dump and load are generally required to
         upgrade your repository to the new schema, it's very
         convenient to already have half of that process (the dump
         part) finished.  Unfortunately, the creation of&mdash;and

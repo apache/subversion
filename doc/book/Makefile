@@ -9,11 +9,11 @@ SVNVERSION = svnversion
 BOOK_TOP = .
 BOOK_HTML_CHUNK_DIR = $(BOOK_DIR)/html-chunk
 BOOK_DIR = ${BOOK_TOP}/book
-BOOK_HTML_TARGET = $(BOOK_DIR)/book.html
+BOOK_HTML_TARGET = $(BOOK_DIR)/svn-book.html
 BOOK_HTML_CHUNK_TARGET = $(BOOK_HTML_CHUNK_DIR)/index.html  # index.html is created last
-BOOK_PDF_TARGET = $(BOOK_DIR)/book.pdf
-BOOK_PS_TARGET = $(BOOK_DIR)/book.ps
-BOOK_FO_TARGET = $(BOOK_DIR)/book.fo
+BOOK_PDF_TARGET = $(BOOK_DIR)/svn-book.pdf
+BOOK_PS_TARGET = $(BOOK_DIR)/svn-book.ps
+BOOK_FO_TARGET = $(BOOK_DIR)/svn-book.fo
 BOOK_XML_SOURCE = $(BOOK_DIR)/book.xml
 BOOK_VERSION_SOURCE =  $(BOOK_DIR)/version.xml
 BOOK_ALL_SOURCE = $(BOOK_DIR)/*.xml
@@ -43,6 +43,9 @@ BOOK_HTML_XSLTPROC_OPTS =
 # Book xsltproc options for PDF and PostScript output
 # BOOK_PDF_XSLTPROC_OPTS = --stringparam page.height 9in --stringparam page.width 6.4in
 # BOOK_PS_XSLTPROC_OPTS = --stringparam page.height 9in --stringparam page.width 6.4in
+
+# Uncomment the following line if you'd like to print on A4 paper
+# BOOK_PDF_XSLTPROC_OPTS = --stringparam paper.type A4
 
 all: all-html all-pdf all-ps
 
@@ -91,11 +94,12 @@ book-html-chunk: $(BOOK_HTML_CHUNK_TARGET)
 $(BOOK_HTML_CHUNK_TARGET): $(BOOK_ALL_SOURCE) $(BOOK_VERSION_SOURCE) \
                            $(BOOK_DIR)/styles.css $(BOOK_IMAGES)
 	mkdir -p $(BOOK_HTML_CHUNK_DIR)
+	mkdir -p $(BOOK_HTML_CHUNK_DIR)/images
 	$(XSLTPROC) $(BOOK_HTML_XSLTPROC_OPTS) \
            --output $(BOOK_HTML_CHUNK_DIR)/ \
 	   $(XSL_HTML_CHUNK) $(BOOK_XML_SOURCE)
 	cp $(BOOK_DIR)/styles.css $(BOOK_HTML_CHUNK_DIR)
-	cp $(BOOK_IMAGES) $(BOOK_HTML_CHUNK_DIR)
+	cp $(BOOK_IMAGES) $(BOOK_HTML_CHUNK_DIR)/images
 
 book-pdf: $(BOOK_PDF_TARGET)
 

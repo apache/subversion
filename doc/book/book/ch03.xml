@@ -550,8 +550,9 @@ Updated to revision 2.
           <listitem>
             <para>File <filename>foo</filename> received new changes
               from the repository, but your local copy of the file had
-              your modifications.  The changes did not intersect,
-              however, so Subversion has
+              your modifications.  Either the changes did not intersect,
+              or the changes were exactly the same as your local
+              modifications, so Subversion has successfully
               mer<computeroutput>G</computeroutput>ed the repository's
               changes into the file without a problem.</para>
           </listitem>
@@ -1840,7 +1841,7 @@ $
         <para>As we've seen, invoking <command>svn diff</command> with
           no switches will compare your working files to the cached
           <quote>pristine</quote> copies in
-          the<filename>.svn</filename> area:</para>
+          the <filename>.svn</filename> area:</para>
         
         <screen>
 $ svn diff
@@ -2102,6 +2103,11 @@ bar.c
 foo.c
 subdir/
 </screen>
+
+      <para>Note that after the import is finished, the original tree
+        is <emphasis>not</emphasis> converted into a working copy.  To
+        start working, you still need to <command>svn
+        checkout</command> a fresh working copy of the tree.</para>
 
     </sect2>
 
