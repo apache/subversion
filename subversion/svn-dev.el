@@ -12,6 +12,14 @@
 
 
 
+;; Helper for referring to issue numbers in a user-friendly way.
+(defun svn-bug-url (n)
+  "Insert the url for Subversion issue number N.  Interactively, prompt for N."
+  (interactive "nSubversion issue number: ")
+  (insert (format "http://subversion.tigris.org/issues/show_bug.cgi?id=%d" n)))
+
+
+
 ;;; Subversion C conventions
 (if (eq major-mode 'c-mode)
     (progn
