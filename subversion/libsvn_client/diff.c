@@ -625,8 +625,8 @@ struct merge_cmd_baton {
   svn_boolean_t force;
   svn_boolean_t dry_run;
   const char *added_path;             /* Set to the dir path whenever the
-                                         added dir is not a child of the
-                                         current added_path (dry-run only) */
+                                         dir is added as a child of a
+                                         versioned dir (dry-run only) */
   const char *target;                 /* Working copy target of merge */
   const char *url;                    /* The second URL in the merge */
   const char *path;                   /* The wc path of the second target, this
@@ -1011,9 +1011,7 @@ merge_dir_added (svn_wc_adm_access_t *adm_access,
                                merge_b->pool));
 
         }
-      if (merge_b->dry_run
-          && (! merge_b->added_path
-              || ! svn_path_is_child (merge_b->added_path, path, subpool)))
+      if (merge_b->dry_run)
         merge_b->added_path = apr_pstrdup (merge_b->pool, path);
       if (state)
         *state = svn_wc_notify_state_changed;
@@ -1031,9 +1029,7 @@ merge_dir_added (svn_wc_adm_access_t *adm_access,
                                  merge_b->ctx->cancel_baton,
                                  NULL, NULL, /* no notification func! */
                                  merge_b->pool));
-          if (merge_b->dry_run
-              && (! merge_b->added_path
-                  || ! svn_path_is_child (merge_b->added_path, path, subpool)))
+          if (merge_b->dry_run)
             merge_b->added_path = apr_pstrdup (merge_b->pool, path);
           if (state)
             *state = svn_wc_notify_state_changed;
