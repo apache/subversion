@@ -82,13 +82,6 @@ section for approved changes.)
       Votes:
        +1: ghudson
 
-    * r8368, r8394, r8467
-      Add capability to build Subversion Perl bindings RPM.
-      Justification: Additional capability.
-      Notes:
-      Votes:
-       +1: david
-
     * r8463  (fix for issue #1709)
       Make mod_dav_svn stop spewing huge responses at dead sockets.
       Justification:  serious DoS attack potential!
