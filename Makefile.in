@@ -358,11 +358,6 @@ java-api:
 	@$(MAKE) -C $(abs_srcdir)/subversion/bindings/java "JAVAC=$(JAVAC)"
 
 
-### Build a tarball.
-dist: 
-	./dist.sh
-
-
 #
 # Implicit rules for creating outputs from input files
 #
