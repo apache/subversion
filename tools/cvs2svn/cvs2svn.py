@@ -67,6 +67,12 @@ OP_CHANGE = 'C'
 
 DIGEST_END_IDX = 9 + (sha.digestsize * 2)
 
+# Warnings and errors start with these strings.  They are typically
+# followed by a colon and a space, as in "%s: " ==> "Warning: ".
+warning_prefix = "Warning"
+error_prefix = "Error"
+
+
 # Officially, CVS symbolic names must use a fairly restricted set of
 # characters.  Unofficially, CVS 1.10 allows any character but [$,.:;@]
 # We don't care if some repositories out there use characters outside the
@@ -98,10 +104,10 @@ class CollectData(rcsparse.Sink):
     REVISION is an RCS branch number with an odd number of components,
     for example '1.7.2' (never '1.7.0.2')."""
     if self.branch_names.has_key(revision):
-      sys.stderr.write("Error while parsing '%s':\n"
-                       "   branch %s already has name '%s',\n"
+      sys.stderr.write("%s: in '%s':\n"
+                       "   branch '%s' already has name '%s',\n"
                        "   cannot also have name '%s'.\n" \
-                       % (self.fname, revision,
+                       % (error_prefix, self.fname, revision,
                           self.branch_names[revision], name))
       sys.exit(1)
     self.branch_names[revision] = name
@@ -151,9 +157,9 @@ class CollectData(rcsparse.Sink):
     This function will determine what kind of symbolic name it is by
     inspection, and record it in the right places."""
     if not symbolic_name_re.match(name):
-      sys.stderr.write("Error while parsing %s:\n"
+      sys.stderr.write("%s: in '%s':\n"
                        "   '%s' is not a valid tag or branch name.\n" \
-                       % (self.fname, name))
+                       % (error_prefix, self.fname, name))
       sys.exit(1)
     if branch_tag.match(revision):
       self.add_cvs_branch(revision, name)
@@ -213,7 +219,7 @@ class CollectData(rcsparse.Sink):
             self.rev_data[prev][0] = t_c - 1	# new timestamp
             self.rev_data[prev][3] = t_p	# old timestamp
 
-            print 'RESYNC: %s (%s) : old time="%s" new time="%s"' \
+            print "RESYNC: '%s' (%s) : old time='%s' new time='%s'" \
                   % (relative_name(self.cvsroot, self.fname),
                      prev, time.ctime(t_p), time.ctime(t_c - 1))
 
@@ -319,8 +325,8 @@ def relative_name(cvsroot, fname):
     if fname[l] == os.sep:
       return string.replace(fname[l+1:], os.sep, '/')
     return string.replace(fname[l:], os.sep, '/')
-  sys.stderr.write('relative_path("%s", "%s"): fname is not a sub-path of'
-                   ' cvsroot\n' % (cvsroot, fname))
+  sys.stderr.write("relative_path('%s', '%s'): fname is not a sub-path of"
+                   " cvsroot\n" % (cvsroot, fname))
   sys.exit(1)
 
 
@@ -341,7 +347,8 @@ def visit_file(arg, dirname, files):
       p.parse(open(pathname, 'rb'), cd)
       stats[0] = stats[0] + 1
     except rcsparse.common.RCSExpected:
-      print "Warning: '%s' is not a valid ,v file, ignoring" % pathname
+      print "%s: '%s' is not a valid ,v file, ignoring" \
+            % (warning_prefix, pathname)
 
 
 def is_vendor_first_revision(cvs_rev):
@@ -379,9 +386,9 @@ class RevInfoParser(rcsparse.Sink):
         rcsfile = open(rcs_pathname, 'rb')
       except:
         ### should use a better error
-        raise RuntimeError, ('error: %s appeared to be under CVS control, '
-                             'but the RCS file is inaccessible.'
-                             % rcs_pathname)
+        raise RuntimeError, ("%s: '%s' appeared to be under CVS control, "
+                             "but the RCS file is inaccessible."
+                             % (error_prefix, rcs_pathname))
 
     rcsparse.Parser().parse(rcsfile, self)
 
@@ -584,8 +591,8 @@ class RepositoryMirror:
     without risking erroneously adding a path."""
     if ((copyfrom_rev and not copyfrom_path) or
         (copyfrom_path and not copyfrom_rev)):
-      sys.stderr.write("error: change_path() called with one copyfrom "
-                       "argument but not the other.\n")
+      sys.stderr.write("%s: change_path() called with one copyfrom "
+                       "argument but not the other.\n" % error_prefix)
       sys.exit(1)
 
     components = string.split(path, '/')
@@ -814,8 +821,8 @@ class RepositoryMirror:
     self.revs_db[str(self.youngest)] = new_key
 
     if pruned_count > len(components):
-      sys.stderr.write("Error: deleting '%s' tried to prune %d components.\n"
-                       % (path, pruned_count))
+      sys.stderr.write("%s: deleting '%s' tried to prune %d components.\n"
+                       % (error_prefix, path, pruned_count))
       sys.exit(1)
 
     if pruned_count:
@@ -862,7 +869,7 @@ class Dumper:
     if self.dump_only:
       self.init_dumpfile()
     elif ctx.create_repos:
-      print 'creating repos %s' % (self.target)
+      print "creating repos '%s'" % (self.target)
       os.system('%s create %s' % (self.svnadmin, self.target))
 
     
@@ -882,7 +889,7 @@ class Dumper:
     if self.dumpfile is None:
       return
     self.dumpfile.close()
-    print 'loading revision %d into %s' % (self.revision, self.target)
+    print "loading revision %d into '%s'" % (self.revision, self.target)
     os.system('%s load -q %s < %s'
               % (self.svnadmin, self.target, self.dumpfile_path))
     os.remove(self.dumpfile_path)
@@ -1140,7 +1147,7 @@ class Dumper:
                   = self.repos_mirror.delete_path(svn_path, tags,
                                                   branches, prune)
     if deleted_path:
-      print '    (deleted %s)' % deleted_path
+      print "    (deleted '%s')" % deleted_path
       self.dumpfile.write('Node-path: %s\n'
                           'Node-action: delete\n'
                           '\n' % deleted_path)
@@ -1806,17 +1813,18 @@ class Commit:
     seconds = self.t_max - self.t_min
     print 'committing: %s, over %d seconds' % (time.ctime(self.t_min), seconds)
     if seconds > COMMIT_THRESHOLD:
-      print 'WARNING: commit spans more than %d seconds' % COMMIT_THRESHOLD
+      print '%s: commit spans more than %d seconds' \
+            % (warning_prefix, COMMIT_THRESHOLD)
 
     if ctx.dry_run:
       for f, r, br, tags, branches in self.changes:
         # compute a repository path, dropping the ,v from the file name
         svn_path = make_path(ctx, relative_name(ctx.cvsroot, f[:-2]), br)
-        print '    adding or changing %s : %s' % (r, svn_path)
+        print "    adding or changing '%s' : '%s'" % (r, svn_path)
       for f, r, br, tags, branches in self.deletes:
         # compute a repository path, dropping the ,v from the file name
         svn_path = make_path(ctx, relative_name(ctx.cvsroot, f[:-2]), br)
-        print '    deleting %s : %s' % (r, svn_path)
+        print "    deleting '%s' : '%s'" % (r, svn_path)
       print '    (skipped; dry run enabled)'
       return
 
@@ -1833,7 +1841,7 @@ class Commit:
                 'svn:log' : unicode_log.encode('utf8'),
                 'svn:date' : date }
     except UnicodeError:
-      print 'Problem encoding author or log message:'
+      print '%s: problem encoding author or log message:' % error_prefix
       print "  author: '%s'" % author
       print "  log:    '%s'" % log
       print "  date:   '%s'" % date
@@ -1868,7 +1876,7 @@ class Commit:
       # always the same as 1.1, so there's no need to further modify
       # 1.1.1.1 from however it is in the copy from 1.1.
       if not (br and is_vendor_first_revision(cvs_rev)):
-        print '    adding or changing %s : %s' % (cvs_rev, svn_path)
+        print "    adding or changing %s : '%s'" % (cvs_rev, svn_path)
         closed_tags, closed_branches = dumper.add_or_change_path(cvs_path,
                                                                  svn_path,
                                                                  cvs_rev,
@@ -1882,7 +1890,7 @@ class Commit:
       # compute a repository path, dropping the ,v from the file name
       cvs_path = relative_name(ctx.cvsroot, rcs_file[:-2])
       svn_path = make_path(ctx, cvs_path, br)
-      print '    deleting %s : %s' % (cvs_rev, svn_path)
+      print "    deleting %s : '%s'" % (cvs_rev, svn_path)
       if svn_rev == SVN_INVALID_REVNUM:
         svn_rev = dumper.start_revision(props)
       # Uh, can this even happen on a deleted path?  Hmmm.  If not,
@@ -2025,7 +2033,7 @@ def pass2(ctx):
         write_revs_line(output, record[2], digest, op, rev, fname,
                         branch_name, tags, branches)
 
-        print 'RESYNC: %s (%s) : old time="%s" new time="%s"' \
+        print "RESYNC: '%s' (%s) : old time=\"%s\" new time=\"%s\"" \
               % (relative_name(ctx.cvsroot, fname),
                  rev, time.ctime(timestamp), time.ctime(record[2]))
 
@@ -2211,7 +2219,7 @@ def main():
                                  "trunk-only", "no-prune",
                                  "dump-only", "dumpfile=", "svnadmin="])
   except getopt.GetoptError, e:
-    sys.stderr.write('Error: ' + str(e) + '\n\n')
+    sys.stderr.write(error_prefix + ': ' + str(e) + '\n\n')
     usage(ctx)
     sys.exit(1)
 
@@ -2219,8 +2227,9 @@ def main():
     if opt == '-p':
       start_pass = int(value)
       if start_pass < 1 or start_pass > len(_passes):
-        print 'ERROR: illegal value (%d) for starting pass. ' \
-              'must be 1 through %d.' % (start_pass, len(_passes))
+        print '%s: illegal value (%d) for starting pass. ' \
+              'must be 1 through %d.' % (error_prefix, start_pass,
+                                         len(_passes))
         sys.exit(1)
     elif (opt == '--help') or (opt == '-h'):
       ctx.print_help = 1
@@ -2263,26 +2272,30 @@ def main():
     sys.exit(1)
 
   if len(args) > 1:
-    sys.stderr.write("Error: must pass only one CVS repository.\n")
+    sys.stderr.write(error_prefix +
+                     ": must pass only one CVS repository.\n")
     usage(ctx)
     sys.exit(1)
 
   if (not ctx.target) and (not ctx.dump_only):
-    sys.stderr.write("Error: must pass one of '-s' or '--dump-only'.\n")
+    sys.stderr.write(error_prefix +
+                     ": must pass one of '-s' or '--dump-only'.\n")
     sys.exit(1)
 
   if ctx.target and ctx.dump_only:
-    sys.stderr.write("Error: cannot pass both '-s' and '--dump-only'.\n")
+    sys.stderr.write(error_prefix +
+                     ": cannot pass both '-s' and '--dump-only'.\n")
     sys.exit(1)
 
   if ctx.create_repos and ctx.dump_only:
-    sys.stderr.write("Error: cannot pass both '--create' and '--dump-only'.\n")
+    sys.stderr.write(error_prefix +
+                     ": cannot pass both '--create' and '--dump-only'.\n")
     sys.exit(1)
 
   if ((string.find(ctx.trunk_base, '/') > -1)
       or (string.find(ctx.tags_base, '/') > -1)
       or (string.find(ctx.branches_base, '/') > -1)):
-    sys.stderr.write("Error: cannot pass multicomponent path to ")
+    sys.stderr.write(error_prefix + ": cannot pass multicomponent path to ")
     sys.stderr.write("--trunk, --tags, or --branches yet.\n")
     sys.stderr.write("  See http://subversion.tigris.org/issues/show_bug.cgi?")
     sys.stderr.write("id=1409 ")
