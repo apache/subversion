@@ -197,6 +197,45 @@ svn_repos__history2 (svn_fs_t *fs,
 
 
 
+/* Included only for 1.0.7 security fix.  Allows use of
+   authz_read_func, which is supplied by mod_dav_svn. */
+svn_error_t *
+svn_repos__fs_revision_prop (svn_string_t **value_p,
+                             svn_repos_t *repos,
+                             svn_revnum_t rev,
+                             const char *propname,
+                             svn_repos_authz_func_t
+                             authz_read_func,
+                             void *authz_read_baton,
+                             apr_pool_t *pool);
+
+
+/* Included only for 1.0.7 security fix.  Allows use of
+   authz_read_func, which is supplied by mod_dav_svn. */
+svn_error_t *
+svn_repos__fs_revision_proplist (apr_hash_t **table_p,
+                                 svn_repos_t *repos,
+                                 svn_revnum_t rev,
+                                 svn_repos_authz_func_t
+                                 authz_read_func,
+                                 void *authz_read_baton,
+                                 apr_pool_t *pool);
+
+
+/* Included only for 1.0.7 security fix.  Allows use of
+   authz_read_func, which is supplied by mod_dav_svn. */
+svn_error_t *
+svn_repos__fs_change_rev_prop2 (svn_repos_t *repos,
+                                svn_revnum_t rev,
+                                const char *author,
+                                const char *name,
+                                const svn_string_t *new_value,
+                                svn_repos_authz_func_t
+                                authz_read_func,
+                                void *authz_read_baton,
+                                apr_pool_t *pool);
+  
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
