@@ -23,4 +23,5 @@ SUBDIRS = .                          \
           libsvn_delta               \
           libsvn_wc                  \
           libsvn_ra_dav              \
+          libsvn_ra_local            \
           @LIBSVN_FS@

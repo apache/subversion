@@ -43,9 +43,6 @@ typedef struct svn_ra_local__session_baton_t
   /* A repository filesystem */
   svn_fs_t *fs;
 
-  /* The revision number of the filesystem */
-  svn_revnum_t revision;
-
 } svn_ra_local__session_baton_t;
 
 
@@ -103,12 +100,6 @@ svn_ra_local__split_URL (svn_string_t **repos_path,
 
 
 
-/** The One Public Function **/
-
-svn_error_t *
-svn_ra_local_init (int abi_version,
-                   apr_pool_t *pool,
-                   const svn_ra_plugin_t **plugin);
 
 
 
