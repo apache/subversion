@@ -35,7 +35,7 @@ main (int argc, char **argv)
   svn_revnum_t new_revision;
   const char *url_type;
   const svn_ra_plugin_t *plugin;
-  apr_hash_t *targets, *locks;
+  apr_hash_t *targets;
   svn_string_t *root_dir;
 
   apr_initialize ();
@@ -61,9 +61,10 @@ main (int argc, char **argv)
   /* ### this whole thing needs to be updated for the close_commit stuff
      ### and tossing svn_wc_close_commit */
 
-  err = (*plugin->get_commit_editor)(session_baton, &editor, &edit_baton,
-                                     -1, svn_string_create ("", pool),
-                                     NULL, NULL, NULL, NULL);
+  err = (*plugin->get_commit_editor)(session_baton, &editor,
+                                     &edit_baton,
+                                     svn_string_create ("dummy log msg", pool),
+                                     NULL, NULL, NULL);
   if (err)
     goto error;
 
@@ -71,7 +72,7 @@ main (int argc, char **argv)
   root_dir = svn_string_create(".", pool);
 
   printf("Beginning crawl...\n");
-  err = svn_wc_crawl_local_mods(&targets, &locks, root_dir,
+  err = svn_wc_crawl_local_mods(&targets, root_dir,
                                 editor, edit_baton, pool);
   if (err)
     goto error;

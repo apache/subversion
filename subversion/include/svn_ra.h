@@ -117,8 +117,11 @@ typedef struct svn_ra_plugin_t
                                      svn_revnum_t *latest_revnum);
 
 
-  /* Begin a commit against BASE_REVISION:BASE_PATH using LOG_MSG.  RA
-     returns an *EDITOR and *EDIT_BATON capable of transmitting a
+  /* Begin a commit against `rev:path' using LOG_MSG.  `rev' is the
+     argument passed to replace_root(), and `path' is built into the
+     SESSION_BATON's URL.
+     
+     RA returns an *EDITOR and *EDIT_BATON capable of transmitting a
      commit to the repository, which is then driven by the client.
 
      RA must guarantee:
@@ -133,8 +136,6 @@ typedef struct svn_ra_plugin_t
   svn_error_t *(*get_commit_editor) (void *session_baton,
                                      const svn_delta_edit_fns_t **editor,
                                      void **edit_baton,
-                                     svn_revnum_t base_revision,
-                                     svn_string_t *base_path,
                                      svn_string_t *log_msg,
                                      svn_ra_close_commit_func_t close_func,
                                      svn_ra_set_wc_prop_func_t set_func,

@@ -97,7 +97,7 @@ svn_client_delete (svn_string_t *file,
 
 /* Perform an commit, providing pre- and post-commit hook editors and
    batons (BEFORE_EDITOR, BEFORE_EDIT_BATON / AFTER_EDITOR,
-   AFTER_EDIT_BATON).  
+   AFTER_EDIT_BATON).  Store LOG_MSG as the log for the commit.
 
    PATH is where the commit will begin in the working copy.
 
@@ -116,6 +116,7 @@ svn_client_commit (const svn_delta_edit_fns_t *before_editor,
                    const svn_delta_edit_fns_t *after_editor,
                    void *after_edit_baton,                   
                    svn_string_t *path,
+                   svn_string_t *log_msg,
                    svn_string_t *xml_dst,
                    svn_revnum_t revision,  /* this param is temporary */
                    apr_pool_t *pool);

@@ -101,7 +101,7 @@ main (int argc, char *argv[])
     }
 
   /* Call the commit-crawler with the editor. */
-  err = svn_wc_crawl_local_mods (&targets, &locks, rootdir,
+  err = svn_wc_crawl_local_mods (&targets, rootdir,
                                  my_editor, my_edit_baton,
                                  globalpool);
   if (err)

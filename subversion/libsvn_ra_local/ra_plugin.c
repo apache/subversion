@@ -177,8 +177,6 @@ static svn_error_t *
 get_commit_editor (void *session_baton,
                    const svn_delta_edit_fns_t **editor,
                    void **edit_baton,
-                   svn_revnum_t base_revision,
-                   svn_string_t *base_path,
                    svn_string_t *log_msg,
                    svn_ra_close_commit_func_t close_func,
                    svn_ra_set_wc_prop_func_t set_func,
@@ -205,18 +203,21 @@ get_commit_editor (void *session_baton,
   /* Get the filesystem commit-editor */     
   SVN_ERR (svn_fs_get_editor (&commit_editor, &commit_editor_baton,
                               sess_baton->fs, 
-                              base_revision, base_path,
+                              sess_baton->fs_path,
                               log_msg,
                               cleanup_commit, closer, /* fs will call
                                                          this when done.*/
                               sess_baton->pool));
 
   /* Get the commit `tracking' editor, telling it to store committed
-     targets inside our `closer' object. */
+     targets inside our `closer' object, and NOT to bump revisions.
+     (The FS editor will do this for us.)  */
   SVN_ERR (svn_delta_get_commit_track_editor (&tracking_editor,
                                               &tracking_editor_baton,
                                               sess_baton->pool,
-                                              closer->target_array));
+                                              closer->target_array,
+                                              SVN_INVALID_REVNUM,
+                                              NULL, NULL));
 
   /* Set up a pipeline between the editors, creating a composed editor. */
   svn_delta_compose_editors (&composed_editor, &composed_editor_baton,
