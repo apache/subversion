@@ -388,9 +388,9 @@ import (svn_stringbuf_t *path,
  */
 static svn_error_t *
 send_to_repos (svn_client_commit_info_t **commit_info,
-               const svn_delta_edit_fns_t *before_editor,
+               const svn_delta_editor_t *before_editor,
                void *before_edit_baton,
-               const svn_delta_edit_fns_t *after_editor,
+               const svn_delta_editor_t *after_editor,
                void *after_edit_baton,                   
                svn_stringbuf_t *base_path,
                apr_array_header_t *condensed_targets,
@@ -406,13 +406,13 @@ send_to_repos (svn_client_commit_info_t **commit_info,
   svn_error_t *err;
   apr_file_t *dst = NULL; /* old habits die hard */
   const svn_delta_editor_t *track_editor, *commit_editor;
-  const svn_delta_edit_fns_t *wrap_cmt_editor, *wrap_trk_editor;
   void *commit_edit_baton, *track_edit_baton;
-  void *wrap_cmt_edit_baton, *wrap_trk_edit_baton;
-  const svn_delta_edit_fns_t *editor;
+  const svn_delta_editor_t *editor;
   void *edit_baton;
+  const svn_delta_edit_fns_t *wrap_editor;
+  void *wrap_edit_baton;
 #if 0  /* restore post-M2, see related #if farther down */
-  const svn_delta_edit_fns_t *test_editor;
+  const svn_delta_editor_t *test_editor;
   void *test_edit_baton;
 #endif /* 0 */
   void *ra_baton, *session;
@@ -461,16 +461,10 @@ send_to_repos (svn_client_commit_info_t **commit_info,
                                          &commit_editor, &commit_edit_baton,
                                          pool));
 
-      /* ### todo: This is a TEMPORARY wrapper around our editor so we
-         can use it with an old driver. */
-      svn_delta_compat_wrap (&wrap_cmt_editor, &wrap_cmt_edit_baton, 
-                             commit_editor, commit_edit_baton, pool);
-
-
       if (! SVN_IS_VALID_REVNUM (revision))
         {
-          editor = wrap_cmt_editor;
-          edit_baton = wrap_cmt_edit_baton;
+          editor = commit_editor;
+          edit_baton = commit_edit_baton;
         }
       else
         {
@@ -486,15 +480,10 @@ send_to_repos (svn_client_commit_info_t **commit_info,
                                                       svn_wc_process_committed,
                                                       &ccb));
 
-          /* ### todo:  This is a TEMPORARY wrapper around our editor so we
-             can use it with an old driver. */
-          svn_delta_compat_wrap (&wrap_trk_editor, &wrap_trk_edit_baton, 
-                                 track_editor, track_edit_baton, pool);
-                                                      
-          svn_delta_compose_old_editors (&editor, &edit_baton,
-                                         wrap_cmt_editor, wrap_cmt_edit_baton,
-                                         wrap_trk_editor, wrap_trk_edit_baton, 
-                                         pool);
+          svn_delta_compose_editors (&editor, &edit_baton,
+                                     commit_editor, commit_edit_baton,
+                                     track_editor, track_edit_baton, 
+                                     pool);
         }        
     }
   else   /* Else we're committing to an RA layer. */
@@ -557,29 +546,34 @@ send_to_repos (svn_client_commit_info_t **commit_info,
                                 base_path,
                                 pool));
   
-  svn_delta_compose_old_editors (&editor, &edit_baton,
-                                 editor, edit_baton,
-                                 test_editor, test_edit_baton, pool);
+  svn_delta_compose_editors (&editor, &edit_baton,
+                             editor, edit_baton,
+                             test_editor, test_edit_baton, pool);
 #endif /* 0 */
 
 
   /* Wrap the resulting editor with BEFORE and AFTER editors. */
-  svn_delta_wrap_old_editor (&editor, &edit_baton,
-                             before_editor, before_edit_baton,
-                             editor, edit_baton, 
-                             after_editor, after_edit_baton, pool);
+  svn_delta_wrap_editor (&editor, &edit_baton,
+                         before_editor, before_edit_baton,
+                         editor, edit_baton, 
+                         after_editor, after_edit_baton, pool);
+
+  /* ### todo:  This is a TEMPORARY wrapper around our editor so we
+     can use it with an old driver. */
+  svn_delta_compat_wrap (&wrap_editor, &wrap_edit_baton, 
+                         editor, edit_baton, pool);
   
   /* Do the commit. */
   if (is_import)
     {
       /* Crawl a directory tree, importing. */
-      err = import (base_path, new_entry, editor, edit_baton, pool);
+      err = import (base_path, new_entry, wrap_editor, wrap_edit_baton, pool);
       if (err)
         {
           /* ignoring the return value of this.  we're *already* about
              to die.  we just want to give the editor a chance to
              clean up the fs transaction. */
-          editor->abort_edit (edit_baton);
+          wrap_editor->abort_edit (wrap_edit_baton);
           return err;
         }
     }
@@ -592,14 +586,14 @@ send_to_repos (svn_client_commit_info_t **commit_info,
         /* committing to XML */
         err = svn_wc_crawl_local_mods (base_path,
                                        condensed_targets,
-                                       editor, edit_baton,
+                                       wrap_editor, wrap_edit_baton,
                                        NULL, NULL,
                                        pool);
       else 
         /* committing to RA layer */
         err = svn_wc_crawl_local_mods (base_path,
                                        condensed_targets,
-                                       editor, edit_baton,
+                                       wrap_editor, wrap_edit_baton,
                                        &(ra_lib->get_latest_revnum), session,
                                        pool);
 
@@ -608,7 +602,7 @@ send_to_repos (svn_client_commit_info_t **commit_info,
           /* ignoring the return value of this.  we're *already* about
              to die.  we just want to give the editor a chance to
              clean up the fs transaction. */
-          editor->abort_edit (edit_baton);
+          wrap_editor->abort_edit (wrap_edit_baton);
           return err;
         }
     }
@@ -644,9 +638,9 @@ send_to_repos (svn_client_commit_info_t **commit_info,
 
 svn_error_t *
 svn_client_import (svn_client_commit_info_t **commit_info,
-                   const svn_delta_edit_fns_t *before_editor,
+                   const svn_delta_editor_t *before_editor,
                    void *before_edit_baton,
-                   const svn_delta_edit_fns_t *after_editor,
+                   const svn_delta_editor_t *after_editor,
                    void *after_edit_baton,
                    svn_client_auth_baton_t *auth_baton,
                    svn_stringbuf_t *path,
@@ -673,9 +667,9 @@ svn_client_import (svn_client_commit_info_t **commit_info,
 
 svn_error_t *
 svn_client_commit (svn_client_commit_info_t **commit_info,
-                   const svn_delta_edit_fns_t *before_editor,
+                   const svn_delta_editor_t *before_editor,
                    void *before_edit_baton,
-                   const svn_delta_edit_fns_t *after_editor,
+                   const svn_delta_editor_t *after_editor,
                    void *after_edit_baton, 
                    svn_client_auth_baton_t *auth_baton,
                    const apr_array_header_t *targets,

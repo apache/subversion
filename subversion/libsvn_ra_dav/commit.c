@@ -1092,7 +1092,7 @@ static svn_error_t * apply_log_message(commit_ctx_t *cc,
 
 svn_error_t * svn_ra_dav__get_commit_editor(
   void *session_baton,
-  const svn_delta_edit_fns_t **editor,
+  const svn_delta_editor_t **editor,
   void **edit_baton,
   svn_revnum_t *new_rev,
   const char **committed_date,
@@ -1115,12 +1115,6 @@ svn_error_t * svn_ra_dav__get_commit_editor(
      bumping directories on commit. */
   const svn_delta_editor_t *tracking_editor;
   void *tracking_baton;
-
-  /* ### temporary, until we can use the new-style editor directly */
-  const svn_delta_edit_fns_t *wrapped_editor;
-  void *wrapped_baton;
-  const svn_delta_edit_fns_t *wrapped_trk_editor;
-  void *wrapped_trk_baton;
 
   /* Build the main commit editor's baton. */
   cc = apr_pcalloc(ras->pool, sizeof(*cc));
@@ -1175,11 +1169,6 @@ svn_error_t * svn_ra_dav__get_commit_editor(
   commit_editor->close_file = commit_close_file;
   commit_editor->close_edit = commit_close_edit;
 
-  /* ### temporary: wrap our commit editor */
-  svn_delta_compat_wrap(&wrapped_editor, &wrapped_baton,
-                        commit_editor, cc,
-                        ras->pool);
-
   /* Get the tracking editor. */
   SVN_ERR( svn_delta_get_commit_track_editor(&tracking_editor,
                                              &tracking_baton,
@@ -1189,17 +1178,11 @@ svn_error_t * svn_ra_dav__get_commit_editor(
                                              NULL,
                                              NULL) );
 
-  /* ### temporary: wrap our commit editor */
-  svn_delta_compat_wrap(&wrapped_trk_editor, &wrapped_trk_baton,
-                        tracking_editor, tracking_baton,
-                        ras->pool);
-
-
   /* Compose the two editors, returning the composition by reference. */
-  svn_delta_compose_old_editors(editor, edit_baton,
-                                wrapped_trk_editor, wrapped_trk_baton,
-                                wrapped_editor, wrapped_baton,
-                                ras->pool);
+  svn_delta_compose_editors(editor, edit_baton,
+                            tracking_editor, tracking_baton,
+                            commit_editor, cc,
+                            ras->pool);
 
   return NULL;
 }

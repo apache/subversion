@@ -46,8 +46,6 @@ svn_cl__copy (apr_getopt_t *os,
   svn_stringbuf_t *message = NULL;
   const svn_delta_editor_t *trace_editor = NULL;
   void *trace_edit_baton = NULL;
-  const svn_delta_edit_fns_t *wrap_editor;
-  void *wrap_edit_baton;
   svn_boolean_t src_is_url, dst_is_url;
   svn_client_commit_info_t *commit_info = NULL;
 
@@ -121,17 +119,12 @@ svn_cl__copy (apr_getopt_t *os,
     /* URL->URL : No trace editor needed. */
     ;
 
-  /* ### todo: This is a TEMPORARY wrapper around our editor so we
-     can use it with an old driver. */
-  svn_delta_compat_wrap (&wrap_editor, &wrap_edit_baton, 
-                         trace_editor, trace_edit_baton, pool);
-
   SVN_ERR (svn_client_copy 
            (&commit_info,
             src_path, &(opt_state->start_revision), dst_path, auth_baton, 
             message ? message : svn_stringbuf_create ("", pool),
             NULL, NULL,                   /* no before_editor */
-            wrap_editor, wrap_edit_baton, /* one after_editor */
+            trace_editor, trace_edit_baton, /* one after_editor */
             SVN_CL_NOTIFY(opt_state),
             svn_cl__make_notify_baton (pool),
             pool));

@@ -5,7 +5,7 @@ DONE    clients/cmdline/trace-commit.c
 DONE    clients/cmdline/trace-update.c
         libsvn_client/cancellation_editor.c
         libsvn_client/repos_diff.c
-        libsvn_delta/compose_editors.c
+DONE    libsvn_delta/compose_editors.c
         libsvn_delta/pipe_editors.c
 DONE    libsvn_delta/track_editor.c
 DONE    libsvn_delta/xml_output.c

@@ -69,7 +69,7 @@ svn_error_t *svn_ra_dav__get_dated_revision (void *session_baton,
 
 svn_error_t * svn_ra_dav__get_commit_editor(
   void *session_baton,
-  const svn_delta_edit_fns_t **editor,
+  const svn_delta_editor_t **editor,
   void **edit_baton,
   svn_revnum_t *new_rev,
   const char **committed_date,

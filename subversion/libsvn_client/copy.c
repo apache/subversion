@@ -129,8 +129,11 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
   void *ra_baton, *sess;
   svn_ra_plugin_t *ra_lib;
   svn_node_kind_t src_kind, dst_kind;
+  const svn_delta_editor_t *new_editor;
+  void *new_edit_baton;
   const svn_delta_edit_fns_t *editor;
-  void *edit_baton, *root_baton, *baton;
+  void *edit_baton;
+  void *root_baton, *baton;
   void **batons;
   int i = 0;
   svn_revnum_t committed_rev = SVN_INVALID_REVNUM;
@@ -232,11 +235,16 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
 
   /* Fetch RA commit editor. */
   SVN_ERR (ra_lib->get_commit_editor
-           (sess, &editor, &edit_baton,
+           (sess, &new_editor, &new_edit_baton,
             &committed_rev,
             &committed_date,
             &committed_author,
             message, NULL, NULL, NULL, NULL));
+
+  /* ### todo:  This is a TEMPORARY wrapper around our editor so we
+     can use it with an old driver. */
+  svn_delta_compat_wrap (&editor, &edit_baton, 
+                         new_editor, new_edit_baton, pool);
 
   /* Drive that editor, baby! */
   SVN_ERR (editor->open_root (edit_baton, youngest, &root_baton));
@@ -334,17 +342,19 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
                   svn_stringbuf_t *dst_url, 
                   svn_client_auth_baton_t *auth_baton,
                   svn_stringbuf_t *message,
-                  const svn_delta_edit_fns_t *before_editor,
+                  const svn_delta_editor_t *before_editor,
                   void *before_edit_baton,
-                  const svn_delta_edit_fns_t *after_editor,
+                  const svn_delta_editor_t *after_editor,
                   void *after_edit_baton,
                   apr_pool_t *pool)
 {
   svn_stringbuf_t *anchor, *target, *parent, *basename;
   void *ra_baton, *sess;
   svn_ra_plugin_t *ra_lib;
-  const svn_delta_edit_fns_t *editor;
+  const svn_delta_editor_t *editor;
   void *edit_baton;
+  const svn_delta_edit_fns_t *wrapped_old_editor;
+  void *wrapped_old_edit_baton;
   svn_node_kind_t src_kind, dst_kind;
   svn_revnum_t committed_rev = SVN_INVALID_REVNUM;
   const char *committed_date = NULL;
@@ -399,15 +409,21 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
 
   /* Co-mingle the before- and after-editors with the commit
      editor. */
-  svn_delta_wrap_old_editor (&editor, &edit_baton,
-                             before_editor, before_edit_baton,
-                             editor, edit_baton,
-                             after_editor, after_edit_baton, pool);
+  svn_delta_wrap_editor (&editor, &edit_baton,
+                         before_editor, before_edit_baton,
+                         editor, edit_baton,
+                         after_editor, after_edit_baton, pool);
+
+  /* ### todo:  This is a TEMPORARY wrapper around our editor so we
+     can use it with an old driver. */
+  svn_delta_compat_wrap (&wrapped_old_editor, &wrapped_old_edit_baton, 
+                         editor, edit_baton, pool);
 
   /* Crawl the working copy, committing as if SRC_PATH was scheduled
      for a copy. */
   SVN_ERR (svn_wc_crawl_as_copy (parent, basename, target,
-                                 editor, edit_baton, pool));
+                                 wrapped_old_editor, wrapped_old_edit_baton,
+                                 pool));
 
   /* Fill in the commit_info structure. */
   *commit_info = svn_client__make_commit_info (committed_rev,
@@ -428,9 +444,9 @@ repos_to_wc_copy (svn_stringbuf_t *src_url,
                   svn_stringbuf_t *dst_path, 
                   svn_client_auth_baton_t *auth_baton,
                   svn_stringbuf_t *message,
-                  const svn_delta_edit_fns_t *before_editor,
+                  const svn_delta_editor_t *before_editor,
                   void *before_edit_baton,
-                  const svn_delta_edit_fns_t *after_editor,
+                  const svn_delta_editor_t *after_editor,
                   void *after_edit_baton,
                   svn_wc_notify_func_t notify_func,
                   void *notify_baton,
@@ -519,8 +535,10 @@ repos_to_wc_copy (svn_stringbuf_t *src_url,
     {    
       const svn_delta_editor_t *editor;
       void *edit_baton;
-      const svn_delta_edit_fns_t *wrap_editor;
+      const svn_delta_editor_t *wrap_editor;
       void *wrap_edit_baton;
+      const svn_delta_edit_fns_t *wrapped_old_editor;
+      void *wrapped_old_edit_baton;
 
       /* Get a checkout editor and wrap it. */
       SVN_ERR (svn_wc_get_checkout_editor (dst_path,
@@ -530,22 +548,23 @@ repos_to_wc_copy (svn_stringbuf_t *src_url,
                                            &editor,
                                            &edit_baton,
                                            pool));
+      
+      svn_delta_wrap_editor (&wrap_editor, &wrap_edit_baton,
+                             before_editor, before_edit_baton,
+                             editor, edit_baton,
+                             after_editor, after_edit_baton, pool);
 
       /* ### todo:  This is a TEMPORARY wrapper around our editor so we
          can use it with an old driver. */
-      svn_delta_compat_wrap (&wrap_editor, &wrap_edit_baton, 
-                             editor, edit_baton, pool);
+      svn_delta_compat_wrap (&wrapped_old_editor, &wrapped_old_edit_baton, 
+                             wrap_editor, wrap_edit_baton, pool);
 
-      
-      svn_delta_wrap_old_editor (&wrap_editor, &wrap_edit_baton,
-                                 before_editor, before_edit_baton,
-                                 wrap_editor, wrap_edit_baton,
-                                 after_editor, after_edit_baton, pool);
       
       /* Check out the new tree.  The parent dir will get no entry, so
          it will be as if the new tree isn't really there yet. */
       SVN_ERR (ra_lib->do_checkout (sess, src_revnum, 1, 
-                                    wrap_editor, wrap_edit_baton));
+                                    wrapped_old_editor,
+                                    wrapped_old_edit_baton));
 
       if (! SVN_IS_VALID_REVNUM(src_revnum))
         {
@@ -655,9 +674,9 @@ setup_copy (svn_client_commit_info_t **commit_info,
             svn_stringbuf_t *dst_path,
             svn_client_auth_baton_t *auth_baton,
             svn_stringbuf_t *message,
-            const svn_delta_edit_fns_t *before_editor,
+            const svn_delta_editor_t *before_editor,
             void *before_edit_baton,
-            const svn_delta_edit_fns_t *after_editor,
+            const svn_delta_editor_t *after_editor,
             void *after_edit_baton,
             svn_boolean_t is_move,
             svn_wc_notify_func_t notify_func,
@@ -758,9 +777,9 @@ svn_client_copy (svn_client_commit_info_t **commit_info,
                  svn_stringbuf_t *dst_path,
                  svn_client_auth_baton_t *auth_baton,
                  svn_stringbuf_t *message,
-                 const svn_delta_edit_fns_t *before_editor,
+                 const svn_delta_editor_t *before_editor,
                  void *before_edit_baton,
-                 const svn_delta_edit_fns_t *after_editor,
+                 const svn_delta_editor_t *after_editor,
                  void *after_edit_baton,
                  svn_wc_notify_func_t notify_func,
                  void *notify_baton,

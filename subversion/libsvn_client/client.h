@@ -148,9 +148,9 @@ svn_client_commit_info_t *svn_client__make_commit_info (svn_revnum_t revision,
 /*** Checkout and update ***/
 
 svn_error_t *
-svn_client__checkout_internal (const svn_delta_edit_fns_t *before_editor,
+svn_client__checkout_internal (const svn_delta_editor_t *before_editor,
                                void *before_edit_baton,
-                               const svn_delta_edit_fns_t *after_editor,
+                               const svn_delta_editor_t *after_editor,
                                void *after_edit_baton,
                                svn_stringbuf_t *path,
                                svn_stringbuf_t *xml_src,
@@ -161,9 +161,9 @@ svn_client__checkout_internal (const svn_delta_edit_fns_t *before_editor,
 
 
 svn_error_t *
-svn_client__update_internal (const svn_delta_edit_fns_t *before_editor,
+svn_client__update_internal (const svn_delta_editor_t *before_editor,
                              void *before_edit_baton,
-                             const svn_delta_edit_fns_t *after_editor,
+                             const svn_delta_editor_t *after_editor,
                              void *after_edit_baton,
                              svn_stringbuf_t *path,
                              svn_stringbuf_t *xml_src,
