@@ -403,23 +403,254 @@ $ svn checkout -r 1729:{2/17/02}
     </sect2>
     
     <sect2 id="svn-ch-8-sect-1.2">
-      <title><command>svn add</command></title>
-      <para>###TODO Write this</para>
-    </sect2>
+    <title><command>svn add</command></title>
+    
+    <para><literal>svn add PATH [PATH [PATH ... ]]</literal></para>
+    
+    <para>Adds files and directories to your working copy and
+      schedules them for addition to the repository.  They will be
+      uploaded and added to the repository on your next commit.  If
+      you add something and change your mind before committing, you
+      can unschedule the file's addition using <command>svn
+        revert</command>.</para>
+
+    <variablelist>
+      
+      <varlistentry>
+        <term>Requires</term>
+        <listitem>
+          <para>Working copy</para>
+        </listitem>
+      </varlistentry>
+      
+      <varlistentry>
+        <term>Changes</term>
+        <listitem>
+          <para>Working copy</para>
+        </listitem>
+      </varlistentry>
+      
+      <varlistentry>
+        <term>Needs Network</term>
+        <listitem>
+          <para>No</para>
+        </listitem>
+      </varlistentry>
+      
+      <varlistentry>
+        <term>Switches</term>
+        <listitem>
+          <itemizedlist>
+
+            <listitem>
+              <para><option>--quiet</option></para>
+            </listitem>
+
+            <listitem>
+              <para><option>--recursive</option> (The default
+                behavior is to not recurse).</para>
+            </listitem>
+
+            <listitem>
+              <para><option>--targets</option></para>
+            </listitem>
+
+          </itemizedlist>
+
+        </listitem>
+      </varlistentry>
+
+    </variablelist>
+
+  </sect2>
 
     <sect2 id="svn-ch-8-sect-1.3">
       <title><command>svn cat</command></title>
-      <para>###TODO Write this</para>
+
+      
+      <para><literal>svn cat TARGET [TARGET [TARGET ... ]]</literal></para>
+      
+      <para>Outputs the contents of the specified files or URLs.
+        For listing the contents of directories, see <xref
+          linkend="svn-ch-8-sect-1.14"/></para>
+
+      <variablelist>
+        
+        <varlistentry>
+          <term>Requires</term>
+          <listitem>
+            <para>Working copy (Only if operating on files)</para>
+
+            <para>Repository (Only if operating on URLs)</para>
+          </listitem>
+        </varlistentry>
+        
+        <varlistentry>
+          <term>Changes</term>
+          <listitem>
+            <para>Nothing</para>
+          </listitem>
+        </varlistentry>
+        
+        <varlistentry>
+          <term>Needs Network</term>
+          <listitem>
+            <para>Only if operating on URLs</para>
+          </listitem>
+        </varlistentry>
+        
+        <varlistentry>
+          <term>Switches</term>
+          <listitem>
+            <itemizedlist>
+
+              <listitem>
+                <para><option>--password</option>
+                  <replaceable>PASS</replaceable></para>
+              </listitem>
+
+              <listitem>
+                <para><option>--revision</option></para>
+              </listitem>
+
+              <listitem>
+                <para><option>--username</option>
+                  <replaceable>USER</replaceable></para>
+              </listitem>
+
+            </itemizedlist>
+
+          </listitem>
+        </varlistentry>
+
+      </variablelist>
+
     </sect2>
 
     <sect2 id="svn-ch-8-sect-1.4">
       <title><command>svn checkout</command></title>
-      <para>###TODO Write this</para>
+
+      <para><literal>svn checkout URL [URL [URL ... ]] [PATH]</literal></para>
+      
+      <para>Checks out a working copy from a repository. If
+        <replaceable>PATH</replaceable> is omitted, the basename of
+        the URL will be used as the destination. If multiple URLs
+        are given each will be checked out into a sub-directory of
+        PATH, with the name of the sub-directory being the basename
+        of the URL.</para>
+
+      <variablelist>
+        
+        <varlistentry>
+          <term>Alternate name</term>
+          <listitem>
+            <para><command>co</command></para>
+          </listitem>
+        </varlistentry>
+        
+        <varlistentry>
+          <term>Requires</term>
+          <listitem>
+            <para>Repository</para>
+          </listitem>
+        </varlistentry>
+        
+        <varlistentry>
+          <term>Changes</term>
+          <listitem>
+            <para>Nothing</para>
+          </listitem>
+        </varlistentry>
+        
+        <varlistentry>
+          <term>Needs Network</term>
+          <listitem>
+            <para>Yes</para>
+          </listitem>
+        </varlistentry>
+        
+        <varlistentry>
+          <term>Switches</term>
+          <listitem>
+            <itemizedlist>
+
+              <listitem>
+                <para><option>--no-auth-cache</option></para>
+              </listitem>
+
+              <listitem>
+                <para><option>--non-interactive</option></para>
+              </listitem>
+
+              <listitem>
+                <para><option>--non-recursive</option></para>
+              </listitem>
+
+              <listitem>
+                <para><option>--revision</option></para>
+              </listitem>
+
+              <listitem>
+                <para><option>--quiet</option></para>
+              </listitem>
+
+              <listitem>
+                <para><option>--username</option>
+                  <replaceable>USER</replaceable></para>
+              </listitem>
+
+              <listitem>
+                <para><option>--password</option>
+                  <replaceable>PASS</replaceable></para>
+              </listitem>
+
+            </itemizedlist>
+
+          </listitem>
+        </varlistentry>
+
+      </variablelist>
+
     </sect2>
 
     <sect2 id="svn-ch-8-sect-1.5">
       <title><command>svn cleanup</command></title>
-      <para>###TODO Write this</para>
+
+      <para><literal>svn cleanup [PATH [PATH ... ]]</literal></para>
+      
+      <para>Recursively clean up the working copy, removing locks
+        and resuming unfinished operations.  If you ever get a
+        <quote>working copy locked</quote> error, run this command
+        to remove stale locks and get your working copy into a
+        useable state again.</para>
+
+      <variablelist>
+        
+        <varlistentry>
+          <term>Requires</term>
+          <listitem>
+            <para>Working copy</para>
+          </listitem>
+        </varlistentry>
+        
+        <varlistentry>
+          <term>Changes</term>
+          <listitem>
+            <para>Administrative data in the working copy</para>
+          </listitem>
+        </varlistentry>
+        
+        <varlistentry>
+          <term>Needs Network</term>
+          <listitem>
+            <para>No</para>
+          </listitem>
+        </varlistentry>
+        
+      </variablelist>
+      
+      
+      
     </sect2>
 
     <sect2 id="svn-ch-8-sect-1.6">
@@ -451,12 +682,12 @@ $ svn checkout -r 1729:{2/17/02}
         <filename>.svn</filename> directories:</para>
       
       <screen>
-$ svn export file:///usr/local/svn/newrepos/fooproject
-A  fooproject/foo.c
-A  fooproject/bar.c
-A  fooproject/subdir
-A  fooproject/subdir/quux.h
-Checked out revision 3.
+        $ svn export file:///usr/local/svn/newrepos/fooproject
+        A  fooproject/foo.c
+        A  fooproject/bar.c
+        A  fooproject/subdir
+        A  fooproject/subdir/quux.h
+        Checked out revision 3.
       </screen>
       
       <para>The resulting directory will not contain any
@@ -488,19 +719,19 @@ Checked out revision 3.
         most of the tracked information:</para>
       
       <screen>
-$ svn info rules.txt
-Path: rules.txt
-Name: rules.txt
-Url: http://svn.red-bean.com/repos/example/trunk/text/rules.txt
-Revision: 8
-Node Kind: file
-Schedule: normal
-Last Changed Author: harry
-Last Changed Rev: 7
-Last Changed Date: 2002-11-15 23:03:54 -0500 (Fri, 15 Nov 2002)
-Text Last Updated: 2002-11-16 08:48:04 -0500 (Sat, 16 Nov 2002)
-Properties Last Updated: 2002-11-16 08:48:03 -0500 (Sat, 16 Nov 2002)
-Checksum: 8sfaU+5dqyOgkhuSdyxGrQ==
+        $ svn info rules.txt
+        Path: rules.txt
+        Name: rules.txt
+        Url: http://svn.red-bean.com/repos/example/trunk/text/rules.txt
+        Revision: 8
+        Node Kind: file
+        Schedule: normal
+        Last Changed Author: harry
+        Last Changed Rev: 7
+        Last Changed Date: 2002-11-15 23:03:54 -0500 (Fri, 15 Nov 2002)
+        Text Last Updated: 2002-11-16 08:48:04 -0500 (Sat, 16 Nov 2002)
+        Properties Last Updated: 2002-11-16 08:48:03 -0500 (Sat, 16 Nov 2002)
+        Checksum: 8sfaU+5dqyOgkhuSdyxGrQ==
       </screen>
       
     </sect2>
@@ -514,14 +745,14 @@ Checksum: 8sfaU+5dqyOgkhuSdyxGrQ==
       <title><command>svn log</command></title>
       <para>###TODO Write this</para>
 
-        <para>###TODO finish this.  Note that by default, svn log will
-          provide log messages for a file all the way back to the
-          file's creation in Subversion--even if it's been moved or
-          copied.  If you use the --strict switch, Subversion will
-          print out log messages only for the current path in the
-          filesystem and will not provide log messages for the item
-          prior to its relocation.
-        </para>
+      <para>###TODO finish this.  Note that by default, svn log will
+        provide log messages for a file all the way back to the
+        file's creation in Subversion--even if it's been moved or
+        copied.  If you use the --strict switch, Subversion will
+        print out log messages only for the current path in the
+        filesystem and will not provide log messages for the item
+        prior to its relocation.
+      </para>
     </sect2>
 
     <sect2 id="svn-ch-8-sect-1.16">
@@ -537,18 +768,18 @@ Checksum: 8sfaU+5dqyOgkhuSdyxGrQ==
       
       <para>First, it can be used to simultaneously create a new
         working copy directory and schedule it for addition:</para>
-    
+      
       <screen>
-$ svn mkdir new-dir
-A     new-dir
+        $ svn mkdir new-dir
+        A     new-dir
       </screen>
 
       <para>Or, it can be used to instantly create a directory in a
         repository (no working copy needed):</para>
 
       <screen>
-$ svn mkdir file:///usr/local/svn/newrepos/branches --message "made new dir"
-Committed revision 1123.
+        $ svn mkdir file:///usr/local/svn/newrepos/branches --message "made new dir"
+        Committed revision 1123.
       </screen>
 
       <para>Again, this is a form of immediate commit, so some sort
