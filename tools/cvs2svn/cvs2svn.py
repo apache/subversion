@@ -1636,7 +1636,7 @@ class Commit:
         ### keyed on full paths, to reduce the check to a quick
         ### constant time query.
         if not dumper.probe_path(svn_path):
-          sym_tracker.fill_branch(dumper, ctx, br, svn_rev, svn_path)
+          sym_tracker.fill_branch(dumper, ctx, br)
       # The first revision on a vendor branch is always the same as
       # the revision from which the branch sprouts, e.g., 1.1.1.1 is
       # always the same as 1.1, so there's no need to further modify
