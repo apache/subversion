@@ -124,7 +124,7 @@ svn_fs_dir_delta (svn_fs_dir_t *source,
 		  apr_pool_t *parent_pool)
 {
   svn_error_t *svn_err = 0;
-  apr_pool_t *pool = svn_pool_create (parent_pool, svn_fs__pool_abort);
+  apr_pool_t *pool = svn_pool_create (parent_pool);
   svn_string_t source_path;
   void *root_baton;
   struct context c;
@@ -518,16 +518,17 @@ delta_files (struct context *c, void *file_baton,
 	     svn_fs_file_t *ancestor_file,
 	     svn_fs_file_t *target_file)
 {
-  svn_txdelta_stream_t *stream;
+  svn_txdelta_stream_t *delta_stream;
 
   /* Compare the files' property lists.  */
   SVN_ERR (delta_file_props (c, file_baton, ancestor_file, target_file));
 
   /* Get a delta stream turning ANCESTOR_FILE's contents into
      TARGET_FILE's contents.  */
-  SVN_ERR (svn_fs_file_delta (&stream, ancestor_file, target_file, c->pool));
+  SVN_ERR (svn_fs_file_delta (&delta_stream, ancestor_file, target_file,
+                              c->pool));
 
-  SVN_ERR (send_text_delta (c, file_baton, stream));
+  SVN_ERR (send_text_delta (c, file_baton, delta_stream));
 
   svn_txdelta_free (delta_stream);
 
@@ -751,10 +752,10 @@ svn_fs_file_delta (svn_txdelta_stream_t **stream,
 				 target_file, pool));
 
   /* Create a delta stream that turns the ancestor into the target.  */
-  SVN_ERR (svn_txdelta (&delta_stream,
-			source_read_fn, source_read_baton,
-			target_read_fn, target_read_baton,
-			pool));
+  svn_txdelta (&delta_stream,
+               source_read_fn, source_read_baton,
+               target_read_fn, target_read_baton,
+               pool);
 
   *stream = delta_stream;
   return 0;
