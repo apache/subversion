@@ -27,9 +27,8 @@ def main(fname, oname=None, skip_depends=0):
 
   errors = 0
   targets = { }
-  groups = { }
-  build_targets = { }
-  install = { }
+  groups = { }		# group name -> targets
+  install = { }		# install area name -> targets
   test_progs = [ ]
   file_deps = [ ]
   target_dirs = { }
@@ -56,6 +55,12 @@ def main(fname, oname=None, skip_depends=0):
     else:
       groups[group] = [ target_ob.output ]
 
+    itype = target_ob.install
+    if install.has_key(itype):
+      install[itype].append(target_ob)
+    else:
+      install[itype] = [ target_ob ]
+
   if errors:
     sys.exit(1)
 
@@ -64,7 +69,6 @@ def main(fname, oname=None, skip_depends=0):
     target_ob = targets[target]
 
     path = target_ob.path
-    install_type = target_ob.install
     bldtype = target_ob.type
     objext = target_ob.objext
 
@@ -72,14 +76,8 @@ def main(fname, oname=None, skip_depends=0):
     tfile = os.path.basename(tpath)
 
     target_dirs[path] = None
-    build_targets[target] = tpath
 
-    if install.has_key(install_type):
-      install[install_type].append(target)
-    else:
-      install[install_type] = [ target ]
-
-    if install_type == 'test' and bldtype == 'exe' \
+    if target_ob.install == 'test' and bldtype == 'exe' \
        and parser.get(target, 'testing') != 'skip':
       test_progs.append(tpath)
 
@@ -127,17 +125,15 @@ def main(fname, oname=None, skip_depends=0):
 
     targ_varname = string.replace(target, '-', '_')
     ldflags = parser.get(target, 'link-flags')
-    objstr = string.join(objects)
     objnames = string.join(map(os.path.basename, objects))
-    libstr = string.join(libs)
     ofile.write('%s_DEPS = %s %s\n'
                 '%s_OBJECTS = %s\n'
                 '%s: $(%s_DEPS)\n'
                 '\tcd %s && $(LINK) -o %s %s $(%s_OBJECTS) %s $(LIBS)\n\n'
-                % (targ_varname, objstr, string.join(deps),
+                % (targ_varname, string.join(objects), string.join(deps),
                    targ_varname, objnames,
                    tpath, targ_varname,
-                   path, tfile, ldflags, targ_varname, libstr))
+                   path, tfile, ldflags, targ_varname, string.join(libs)))
 
     custom = parser.get(target, 'custom')
     if custom == 'apache-mod':
@@ -154,13 +150,18 @@ def main(fname, oname=None, skip_depends=0):
 
   ofile.write('CLEAN_DIRS = %s\n' % string.join(target_dirs.keys()))
 
-  cfiles = filter(_filter_clean_files, build_targets.values())
+  cfiles = [ ]
+  for target in targets.values():
+    # .la files are handled by the standard 'clean' rule; clean all the
+    # other targets
+    if target.output[-3:] != '.la':
+      cfiles.append(target.output)
   ofile.write('CLEAN_FILES = %s\n\n' % string.join(cfiles))
 
   for area, inst_targets in install.items():
     files = [ ]
     for t in inst_targets:
-      files.append(build_targets[t])
+      files.append(t.output)
 
     if area == 'apache-mod':
       ofile.write('install-mods-shared: %s\n' % (string.join(files),))
@@ -173,7 +174,7 @@ def main(fname, oname=None, skip_depends=0):
           la_tweaked[file + '-a'] = None
 
       for t in inst_targets:
-        for dep in targets[t].deps:
+        for dep in t.deps:
           bt = dep.output
           if bt[-3:] == '.la':
             la_tweaked[bt + '-a'] = None
@@ -224,8 +225,8 @@ def main(fname, oname=None, skip_depends=0):
                    os.path.join('$(includedir)', os.path.basename(file))))
 
   ofile.write('\n# handy shortcut targets\n')
-  for target, tpath in build_targets.items():
-    ofile.write('%s: %s\n' % (target, tpath))
+  for name, target in targets.items():
+    ofile.write('%s: %s\n' % (name, target.output))
   ofile.write('\n')
 
   scripts, s_errors = _collect_paths(parser.get('test-scripts', 'paths'))
@@ -324,11 +325,6 @@ def _filter_targets(t):
     if s in t:
       t.remove(s)
   return t
-
-def _filter_clean_files(fname):
-  "Filter files which have a suffix handled by the standard 'clean' rule."
-  # for now, we only look for .la which keeps this code simple.
-  return fname[-3:] != '.la'
 
 def _collect_paths(pats, path=None):
   errors = 0
