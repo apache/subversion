@@ -682,6 +682,10 @@ svn_error_t *svn_wc_has_binary_prop (svn_boolean_t *has_binary_prop,
  *
  * If @a force_comparison is @c TRUE, this function will not allow
  * early return mechanisms that avoid actual content comparison.
+ * Instead, if there is a text base, a full byte-by-byte comparison
+ * will be done, and the entry checksum verified as well.  (This means
+ * that if the text base is much longer than the working file, every
+ * byte of the text base will still be examined.)
  *
  * If @a filename does not exist, consider it unmodified.  If it exists
  * but is not under revision control (not even scheduled for
