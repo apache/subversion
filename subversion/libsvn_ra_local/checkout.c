@@ -111,7 +111,7 @@ set_any_props (svn_fs_root_t *root,
     {
       const void *key;
       void *val;
-      apr_size_t klen;
+      apr_ssize_t klen;
       svn_stringbuf_t *name, *value;
 
       apr_hash_this (hi, &key, &klen, &val);
@@ -166,7 +166,7 @@ walk_tree (svn_fs_root_t *root,
       int is_dir, is_file;
       const void *key;
       void *val;
-      apr_size_t klen;
+      apr_ssize_t klen;
       svn_fs_dirent_t *dirent;
       svn_stringbuf_t *dirent_name;
       svn_stringbuf_t *URL_path = svn_stringbuf_dup (URL, iter_pool);

@@ -100,12 +100,11 @@ cleanup_commit (svn_revnum_t new_rev,
            hi = apr_hash_next (hi))
         {
           char *path;
-          apr_size_t ignored_len;
           void *val;
           svn_stringbuf_t path_str;
           enum svn_recurse_kind r;
           
-          apr_hash_this (hi, (void *) &path, &ignored_len, &val);
+          apr_hash_this (hi, (void *) &path, NULL, &val);
           
           /* Oh yes, the flogging ritual, how could I forget. */
           path_str.data = path;
