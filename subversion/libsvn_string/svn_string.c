@@ -48,48 +48,68 @@
  */
 
 #include <string.h>      /* for memcpy(), memcmp(), strlen() */
-#include <stdlib.h>      /* for size_t, malloc(), realloc() */
-#include <stdio.h>       /* for svn_string_print() utility */
-#include <svn_string.h>  /* loads <svn_types.h> and string prototypes */
+#include <stdio.h>       /* for putch() and printf() */
+#include <svn_string.h>  /* loads <svn_types.h> and <apr_pools.h> */
 
 
-/* create a new bytestring containing a C string (null-terminated) */
+
+/* Our own realloc, since APR doesn't have one.  Note: this is a
+   generic realloc for memory pools, *not* for strings.  append()
+   calls this on the svn_string_t's *data field.  */
+
+void *
+my__realloc (char *data, size_t oldsize, size_t request, 
+             struct ap_pool_t *pool)
+{
+  void *new_area;
+
+  /* malloc new area */
+  new_area = ap_palloc (pool, request);
+
+  /* copy data to new area */
+  memcpy (new_area, data, oldsize);
+
+  /* I'm NOT freeing old area here -- cuz we're using pools, ugh. */
+  
+  /* return new area */
+  return new_area;
+}
+
+
+
+/* create a new bytestring containing a C string (null-terminated);
+   requires a memory pool to allocate from.  */
 
 svn_string_t *
-svn_string_create (char *cstring)
+svn_string_create (char *cstring, struct ap_pool_t *pool)
 {
   svn_string_t *new_string;
   
-  /* TODO:  xmalloc */
-  new_string = (svn_string_t *) malloc (sizeof(svn_string_t)); 
+  new_string = (svn_string_t *) ap_palloc (pool, sizeof(svn_string_t)); 
   new_string->data = NULL;
   new_string->len = 0;
   new_string->blocksize = 0;
 
-  /* This routine will actually call realloc(); realloc() behaves like
-     malloc() as long as data == NULL */
-
-  svn_string_appendbytes (new_string, cstring, strlen(cstring));
+  svn_string_appendbytes (new_string, cstring, strlen(cstring), pool);
 
   return new_string;
 }
 
 
 /* create a new bytestring containing a specific array of bytes
-   (NOT null-terminated!) */
+   (NOT null-terminated!);  requires a memory pool to allocate from */
 
 svn_string_t *
-svn_string_ncreate (char *bytes, size_t size)
+svn_string_ncreate (char *bytes, size_t size, struct ap_pool_t *pool)
 {
   svn_string_t *new_string;
 
-  /* TODO:  xmalloc */
-  new_string = (svn_string_t *) malloc (sizeof(svn_string_t)); 
+  new_string = (svn_string_t *) ap_palloc (pool, sizeof(svn_string_t)); 
   new_string->data = NULL;
   new_string->len = 0;
   new_string->blocksize = 0;
 
-  svn_string_appendbytes (new_string, bytes, size);
+  svn_string_appendbytes (new_string, bytes, size, pool);
 
   return new_string;
 }
@@ -170,7 +190,8 @@ svn_string_isempty (svn_string_t *str)
 /* append a number of bytes onto a bytestring */
 
 void
-svn_string_appendbytes (svn_string_t *str, char *bytes, size_t count)
+svn_string_appendbytes (svn_string_t *str, char *bytes, size_t count,
+                        struct ap_pool_t *pool)
 {
   size_t total_len;
   void *start_address;
@@ -183,8 +204,10 @@ svn_string_appendbytes (svn_string_t *str, char *bytes, size_t count)
   if (total_len >= str->blocksize)
     {
       str->blocksize = total_len * 2;
-      /* TODO: xrealloc instead */
-      str->data = (char *) realloc (str->data, str->blocksize); 
+      str->data = (char *) my__realloc (str->data, 
+                                        str->len,
+                                        str->blocksize,
+                                        pool); 
     }
 
   /* get address 1 byte beyond end of original bytestring */
@@ -198,9 +221,11 @@ svn_string_appendbytes (svn_string_t *str, char *bytes, size_t count)
 /* append one bytestring type onto another */
 
 void
-svn_string_appendstr (svn_string_t *targetstr, svn_string_t *appendstr)
+svn_string_appendstr (svn_string_t *targetstr, svn_string_t *appendstr,
+                      struct ap_pool_t *pool)
 {
-  svn_string_appendbytes (targetstr, appendstr->data, appendstr->len);
+  svn_string_appendbytes (targetstr, appendstr->data, 
+                          appendstr->len, pool);
 }
 
 
@@ -208,10 +233,10 @@ svn_string_appendstr (svn_string_t *targetstr, svn_string_t *appendstr)
 /* duplicate a bytestring */
 
 svn_string_t *
-svn_string_dup (svn_string_t *original_string)
+svn_string_dup (svn_string_t *original_string, struct ap_pool_t *pool)
 {
   return (svn_string_ncreate (original_string->data,
-                              original_string->len));
+                              original_string->len, pool));
 }
 
 

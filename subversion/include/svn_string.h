@@ -53,14 +53,16 @@
 
 
 #include <svn_types.h>       /* defines svn_string_t and svn_boolean_t */
-
+#include <apr_pools.h>       /* defines ap_pool_t (apr memory pools) */
 
 
 /* Create a new bytestring containing a C string (null-terminated), or
    containing a generic string of bytes (NON-null-terminated) */
 
-svn_string_t * svn_string_create (char *cstring);
-svn_string_t * svn_string_ncreate (char *bytes, size_t size);
+svn_string_t * svn_string_create (char *cstring, 
+                                  struct ap_pool_t *pool);
+svn_string_t * svn_string_ncreate (char *bytes, size_t size, 
+                                   struct ap_pool_t *pool);
 
 /* Free a string structure (includes freeing its internal string) */
 
@@ -82,12 +84,15 @@ svn_boolean_t svn_string_isempty (svn_string_t *str);
 /* Append either a string of bytes or an svn_string_t onto a
    svn_string_t.  reallocs() if necessary. */
 
-void svn_string_appendbytes (svn_string_t *str, char *bytes, size_t count);
-void svn_string_appendstr (svn_string_t *targetstr, svn_string_t *appendstr);
+void svn_string_appendbytes (svn_string_t *str, char *bytes, size_t count,
+                             struct ap_pool_t *pool);
+void svn_string_appendstr (svn_string_t *targetstr, svn_string_t *appendstr,
+                           struct ap_pool_t *pool);
 
 /* Duplicate a bytestring;  returns freshly malloc'd copy.  */
 
-svn_string_t * svn_string_dup (svn_string_t *original_string);
+svn_string_t * svn_string_dup (svn_string_t *original_string,
+                               struct ap_pool_t *pool);
 
 
 /* compare if two bytestrings' data fields are identical,
