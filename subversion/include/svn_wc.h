@@ -535,7 +535,7 @@ svn_error_t *svn_wc_conflicted_p (svn_boolean_t *text_conflicted_p,
                                   apr_pool_t *pool);
 
 /* Set *URL and *REV to the ancestor url and revision for PATH,
-   allocating in POOL.  ADM_ACCESS must ba an access baton for PATH. */
+   allocating in POOL.  ADM_ACCESS must be an access baton for PATH. */
 svn_error_t *svn_wc_get_ancestry (char **url,
                                   svn_revnum_t *rev,
                                   const char *path,
