@@ -49,6 +49,7 @@
 
 
 
+#include <stdlib.h>
 #include <stdarg.h>
 #include <db.h>
 #include "apr_strings.h"
@@ -80,3 +81,9 @@ svn_fs__dberrf (apr_pool_t *pool, int db_err, char *fmt, ...)
 			    "%s%s", msg, db_strerror (db_err));
 }
 
+
+int
+svn_fs__pool_abort (int retcode)
+{
+  abort ();
+}

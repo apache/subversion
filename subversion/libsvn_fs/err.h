@@ -76,4 +76,8 @@ extern svn_error_t *svn_fs__dberr (apr_pool_t *pool, int db_err);
 extern svn_error_t *svn_fs__dberrf (apr_pool_t *pool, int db_err,
 				    char *fmt, ...);
 
+
+/* A dumb abort function for use with pools.  */
+extern int svn_fs__pool_abort (int retcode);
+
 #endif /* SVN_LIBSVN_FS_ERR_H */

@@ -60,20 +60,26 @@
 #include "svn_io.h"
 
 
-/* A lot of the functions in this interface take a POOL argument; if
+/* [[Decide how these pool arguments should behave.]]
+
+   A lot of the functions in this interface take a POOL argument; if
    it is zero, they try to choose a good default pool.  If you find
    that a different default pool would be more helpful, let me know.
 
    Perhaps having default pools is not a smart idea.  Will it lead to
-   lifetime bugs?  */
+   lifetime bugs?
 
+   Is it a good idea to require that pools be subpools of the FS pool?
+   Sure, once the filesystem is closed, they shouldn't be used, but
+   that's a weaker condition.  The `FS subpool' condition might be
+   annoyingly strong.  */
 
 
 /* Opening and creating filesystems.  */
 
 
 /* An object representing a Subversion filesystem.  */
-typedef struct svn_fs svn_fs_t;
+typedef struct svn_fs_t svn_fs_t;
 
 
 /* Create a new filesystem object in POOL.  It doesn't refer to any
@@ -164,6 +170,76 @@ svn_error_t *svn_fs_berkeleydb_recover (const char *path,
 
 
 
+/* Node and Node Version ID's  */
+
+/* Within the database, we refer to nodes and node versions using strings
+   of numbers separated by periods that look a lot like RCS revision
+   numbers.
+
+     node_id ::= number | node_version_id "." number
+     node_version_id ::= node_id "." number
+
+   So: 
+   - "100" is a node id.
+   - "100.10" is a node version id, referring to version 10 of node 100.
+   - "100.10.3" is a node id, referring to the third branch based on
+     version 10 of node 100.
+   - "100.10.3.4" is a node version id, referring to version 4 of
+     of the third branch from version 10 of node 100.
+   And so on.
+
+   Node version numbers start with 1.  Thus, N.1 is the first version
+   of node N.
+
+   A directory entry identifies the file or subdirectory it refers to
+   using a node version number.  Changes to files far down in a
+   directory hierarchy require all the parents of the changed nodes to
+   be updated to hold the new node version ID.  This makes it easy to
+   find changes in large trees.
+
+   Note that the number specifying a particular version of a node is
+   unrelated to the global filesystem version when that node version
+   was created.  So 100.10 may have been created in filesystem version
+   1218; 100.10.3.2 may have been created any time after 100.10; it
+   doesn't matter.  Since version numbers increase by one each time a
+   delta is added, we can compute how many deltas separate two related
+   node versions simply by comparing their ID's.  For example, the
+   distance between 100.10.3.2 and 100.12 is the distance from
+   100.10.3.2 to their common ancestor, 100.10 (two deltas), plus the
+   distance from 100.10 to 100.12 (two deltas).  */
+
+
+/* Within the code, we represent node and node version ID's as arrays
+   of integers, terminated by a -1 element.  This is the type of an
+   element of a node ID.  */
+typedef svn_vernum_t svn_fs_id_t;
+
+
+/* Return non-zero iff the node or node version ID's A and B are equal.  */
+int svn_fs_id_eq (svn_fs_id_t *a, svn_fs_id_t *b);
+
+
+/* Return non-zero iff node version A is an ancestor of node version B.  
+   If A == B, then we consider A to be an ancestor of B.  */
+int svn_fs_id_is_ancestor (svn_fs_id_t *a, svn_fs_id_t *b);
+
+
+/* Return the distance between node versions A and B.  Return -1 if
+   they are completely unrelated.  */
+int svn_fs_id_distance (svn_fs_id_t *a, svn_fs_id_t *b);
+
+
+/* Compute the closest common ancestor of the node version ID's A and
+   B in the filesystem's delta tree.  Return zero if A and B are
+   unrelated; otherwise, allocate the result in POOL.  The result is
+   guaranteed to be freshly allocated, even if it is identical to A or
+   B.  */
+svn_fs_id_t *svn_fs_id_common_ancestor (svn_fs_id_t *a,
+					svn_fs_id_t *b,
+					apr_pool_t *pool);
+
+
+
 /* Reading and traversing directories.  */
 
 
@@ -206,15 +282,50 @@ apr_pool_t *svn_fs_dir_subpool (svn_fs_dir_t *dir);
 void svn_fs_close_dir (svn_fs_dir_t *dir);
 
 
-/* Return a list of DIR's contents.  Set *ENTRIES to point to a
-   null-terminated array of pointers to `svn_string_t' structures.
+/* Return the filesystem version number of the directory object DIR.  */
+svn_vernum_t svn_fs_dir_version (svn_fs_dir_t *dir);
 
-   If POOL is zero, allocate *ENTRIES in DIR's pool; it will be freed
-   when the directory object is freed.  If POOL is non-zero, do
-   allocation there.  */
-svn_error_t *svn_fs_dir_entries (svn_string_t ***entries,
-				 svn_fs_dir_t *dir,
-				 apr_pool_t *pool);
+
+/* The type of a Subversion directory entry.  */
+typedef struct svn_fs_dirent_t {
+
+  /* The name of this directory entry.  */
+  svn_string_t *name;
+
+  /* The node version ID it names.  */
+  svn_fs_id_t *id;
+
+} svn_fs_dirent_t;
+
+
+/* Return a list of DIR's contents.  Set *ENTRIES to point to a
+   null-terminated array of pointers to `svn_fs_dirent_t' structures.
+   The entries are sorted, according to `svn_fs_compare_dirents'.
+
+   All calls to `svn_fs_dir_entries' on a given directory object will
+   return a pointer to the same array; the directory object caches the
+   list of entries, so calls after the first one should be very quick.
+   The array will live as long as the directory object.  
+
+   The caller must not free or modify the elements of the array, or
+   the strings or ID's it refers to.  */
+svn_error_t *svn_fs_dir_entries (svn_fs_dirent_t ***entries,
+				 svn_fs_dir_t *dir);
+
+
+/* Compare the names of two directory entries, A and B.  If the
+   entries are identical, return zero.  If A precedes B, return a
+   number < 0.  If A comes after B, return a number > 0.
+
+   As a convenience, a null pointer is considered to come "after" any
+   real directory entry.  This means that the null pointer terminating
+   an array returned by `svn_fs_dir_entries' can be safely compared
+   with valid entries.
+
+   Within any given directory, every entry is guaranteed to be
+   distinct, according to this comparison.  */
+int svn_fs_compare_dirents (const svn_fs_dirent_t *a,
+			    const svn_fs_dirent_t *b);
 
 
 /* An enum for the different kinds of objects one might find in a
@@ -223,8 +334,7 @@ svn_error_t *svn_fs_dir_entries (svn_string_t ***entries,
    You know, it would be really nice if files and directories were
    just subclasses of a common `node' class.  Then we could use
    `instanceof' to decide whether something was a file, directory,
-   etc.  I can't wait until native code Java compilers are installed
-   by default on every system we care about.  */
+   etc.  */
 typedef enum svn_fs_node_kind_t {
   svn_fs_node_nothing = 0,
   svn_fs_node_file,
@@ -266,6 +376,10 @@ apr_pool_t *svn_fs_file_subpool (svn_fs_file_t *file);
 
 /* Free the file object FILE.  */
 void svn_fs_close_file (svn_fs_file_t *file);
+
+
+/* Return the filesystem version number of the file object FILE.  */
+svn_vernum_t svn_fs_file_version (svn_fs_file_t *file);
 
 
 /* Set *LENGTH to the length of FILE, in bytes.  */
@@ -344,7 +458,9 @@ svn_error_t *svn_fs_proplist_get (svn_string_t **value,
 
 
 /* Set *NAMES to point to a null-terminated array of pointers to
-   strings giving the names of the properties in PROPLIST.
+   strings giving the names of the properties in PROPLIST.  The name
+   list is sorted, according to the order defined by
+   `svn_fs_compare_prop_names', below.
 
    If POOL is zero, allocate *NAMES in the pool of the object PROPLIST
    came from; it will be freed when the filesystem is closed.  If POOL
@@ -359,15 +475,60 @@ svn_error_t *svn_fs_proplist_names (svn_string_t ***names,
    value is a pointer to an `svn_string_t' object.
 
    If POOL is zero, allocate *TABLE in the pool of the object PROPLIST
-   came from; it will be freed when the filesystem is closed.  If POOL
-   is non-zero, do allocation there.  */
-svn_error_t *svn_fs_proplist_table (apr_hash_t *table,
-				    svn_fs_proplist_t *proplist,
-				    apr_pool_t *pool);
+   came from; it will be freed when that object is closed.  If POOL is
+   non-zero, do allocation there.  */
+svn_error_t *svn_fs_proplist_hash_table (apr_hash_t **table,
+					 svn_fs_proplist_t *proplist,
+					 apr_pool_t *pool);
+
+
+/* Compare two property names A and B, with the same ordering used by
+   `svn_fs_proplist_names' and `svn_fs_proplist_table'.  Return zero
+   if the names are equivalent, a value < 0 if A precedes B, or a
+   value > 0 if B precedes A.
+
+   As a convenience, a null pointer is considered to come "after" any
+   non-zero string pointer.  This means that the null pointer
+   terminating an array returned by `svn_fs_proplist_names' can be
+   safely compared with valid entries.
+
+   Within any given property list, every entry is guaranteed to be
+   distinct, according to this comparison.  */
+int svn_fs_compare_prop_names (svn_string_t *a, svn_string_t *b);
 
 
 
 /* Computing deltas.  */
+
+/* Compute the differences between SOURCE_DIR and TARGET_DIR, and make
+   calls describing those differences on EDITOR, using the provided
+   EDIT_BATON.  SOURCE_DIR and TARGET_DIR must be from the same
+   filesystem.
+
+   The caller must call editor->close_edit on EDIT_BATON;
+   svn_fs_dir_delta does not close the edit itself.
+
+   If POOL is zero, allocate *TABLE in the pool of the filesystem
+   SOURCE_DIR and TARGET_DIR came from; it will be freed when the
+   filesystem is closed.  If POOL is non-zero, do allocation there.  */
+
+svn_error_t *svn_fs_dir_delta (svn_fs_dir_t *source_dir,
+			       svn_fs_dir_t *target_dir,
+			       svn_delta_edit_fns_t *editor,
+			       void *edit_baton,
+			       apr_pool_t *pool);
+
+/* Set *STREAM to a pointer to a delta stream that will turn the
+   contents of SOURCE_FILE into the contents of TARGET_FILE.
+   [[What about the changes to the file's properties?]]
+   
+   If POOL is zero, allocate *TABLE in the pool of the filesystem
+   SOURCE_FILE and TARGET_FILE came from; it will be freed when the
+   filesystem is closed.  If POOL is non-zero, do allocation there.  */
+svn_error_t *svn_fs_file_delta (svn_txdelta_stream_t **stream,
+				svn_fs_file_t *source_file,
+				svn_fs_file_t *target_file,
+				apr_pool_t *pool);
 
 
 
