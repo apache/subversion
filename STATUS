@@ -92,21 +92,6 @@ section for approved changes.)
       +1: gstein
 
 
-   * r8125
-     Rename server directories from to "bin" from "i386".
-     Justification: I changed my directory structure because I've now got
-        non-i386 binaries.
-     Notes: this shouldn't be applicable -- this page from the website
-            shouldn't even be in the release. maybe move /trunk/www up
-            to a peer of trunk, tags, and branches?
-            BEN SEZ:  why is a www/ change in here?  www/ changes don't
-                      need to be merged to a 1.0-branch.
-     Votes:
-      +1: jszakmeister
-      -0: gstein
-      -1: sussman:  can I remove this item?  it's just a website change.
-
-
    * Issue #1681
      Make svnserve require --inetd to use stdin/stdout.
      Justification: Make svnserve more user friendly, low risk.
