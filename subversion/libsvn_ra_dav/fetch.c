@@ -1548,18 +1548,18 @@ static int end_element(void *userdata,
       /* if we're within a <resource> tag, then just call the generic
          RA set_wcprop_callback directly;  no need to use the
          update-editor.  */
-      if ((rb->current_wcprop_path != NULL)
-          && rb->ras->callbacks->set_wc_prop)
+      if (rb->current_wcprop_path != NULL)
         {
           svn_string_t href_val;
           href_val.data = rb->href->data;
           href_val.len = rb->href->len;
 
-          CHKERR( rb->ras->callbacks->set_wc_prop(rb->ras->callback_baton,
-                                                  rb->current_wcprop_path,
-                                                  SVN_RA_DAV__LP_VSN_URL,
-                                                  &href_val,
-                                                  rb->ras->pool) );
+          if (rb->ras->callbacks->set_wc_prop != NULL)
+            CHKERR( rb->ras->callbacks->set_wc_prop(rb->ras->callback_baton,
+                                                    rb->current_wcprop_path,
+                                                    SVN_RA_DAV__LP_VSN_URL,
+                                                    &href_val,
+                                                    rb->ras->pool) );
         }
       
       /* else we're setting a wcprop in the context of an editor drive. */
