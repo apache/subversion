@@ -54,7 +54,7 @@ svn_client_checkout (const svn_delta_editor_t *before_editor,
 {
   const svn_delta_editor_t *checkout_editor;
   void *checkout_edit_baton;
-  void *traversal_info;
+  svn_wc_traversal_info_t *traversal_info;
   svn_error_t *err;
   svn_revnum_t revnum;
 

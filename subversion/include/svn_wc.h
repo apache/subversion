@@ -685,12 +685,17 @@ svn_error_t *svn_wc_get_actual_target (const char *path,
                                        apr_pool_t *pool);
 
 
+
+/*** Update and update-like functionality. ***/
+
+typedef struct svn_wc_traversal_info_t svn_wc_traversal_info_t;
+
+
 /* Set *EDITOR and *EDIT_BATON to an editor and baton for updating a
  * working copy.
  *
- * If TRAVERSAL_INFO is non-null, set *TRAVERSAL_INFO to an object
- * suitable for use by post-update accessor functions, such as
- * svn_wc_edited_externals().  The traversal info has the same
+ * If TI_P is non-null, set *TI_P for use by post-update accessor
+ * functions, such as svn_wc_edited_externals().  *TI_P has the same
  * lifetime as POOL, but is useable only after (*EDITOR)->close_edit
  * has been called.
  * 
@@ -707,7 +712,7 @@ svn_error_t *svn_wc_get_update_editor (const char *anchor,
                                        svn_boolean_t recurse,
                                        const svn_delta_editor_t **editor,
                                        void **edit_baton,
-                                       void **traversal_info,
+                                       svn_wc_traversal_info_t **ti_p,
                                        apr_pool_t *pool);
 
 
@@ -732,7 +737,7 @@ svn_error_t *svn_wc_get_checkout_editor (const char *dest,
                                          svn_boolean_t recurse,
                                          const svn_delta_editor_t **editor,
                                          void **edit_baton,
-                                         void **traversal_info,
+                                         svn_wc_traversal_info_t **ti_p,
                                          apr_pool_t *pool);
 
 
@@ -743,9 +748,8 @@ svn_error_t *svn_wc_get_checkout_editor (const char *dest,
  * within the same repository that the working copy already comes
  * from.)  SWITCH_URL must not be NULL.
  *
- * If TRAVERSAL_INFO is non-null, set *TRAVERSAL_INFO to an object
- * suitable for use by post-update accessor functions, such as
- * svn_wc_edited_externals().  The traversal info has the same
+ * If TI_P is non-null, set *TI_P for use by post-update accessor
+ * functions, such as svn_wc_edited_externals().  *TI_P has the same
  * lifetime as POOL, but is useable only after (*EDITOR)->close_edit
  * has been called.
  * 
@@ -763,7 +767,7 @@ svn_error_t *svn_wc_get_switch_editor (const char *anchor,
                                        svn_boolean_t recurse,
                                        const svn_delta_editor_t **editor,
                                        void **edit_baton,
-                                       void **traversal_info,
+                                       svn_wc_traversal_info_t **ti_p,
                                        apr_pool_t *pool);
 
 
@@ -786,7 +790,7 @@ svn_error_t *svn_wc_get_switch_editor (const char *anchor,
  */
 void svn_wc_edited_externals (apr_hash_t **externals_new,
                               apr_hash_t **externals_old,
-                              void *traversal_info);
+                              svn_wc_traversal_info_t *traversal_info);
 
 
 /* Given a FILE_PATH already under version control, fully "install" a
