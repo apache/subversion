@@ -16,11 +16,20 @@ Candidate changes:
       Slow "svn status" annoys people, especially TSVN users.
     Notes:
       Proposed during 1.1.0 preparation, but it is too late and complicated
-      to put in 1.1.0 at this stage.
+       to put in 1.1.0 at this stage.
       This conflicts with the branch.  A patch against r11308 is here:
-      http://www.contactor.se/~dast/svn/archive-2004-10/0521.shtml
+       http://www.contactor.se/~dast/svn/archive-2004-10/0521.shtml
+      Causes httpd to crash on exit in some cases without r11458.
     Votes:
       +1: lundblad, ghudson
+
+  * r11458
+    Fix mod_dav_svn error leaks.
+    Justification:
+      Without this fix and with r10788 and friends, httpd can crash on
+      exit.
+    Votes:
+      +1: ghudson
 
   * r11215, r11264
       SVN has needed a good packaging script for Win32 since forever.
