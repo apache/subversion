@@ -544,7 +544,7 @@ def get_text_timestamp(path):
   raise svntest.Failure
 
 # Helper for timestamp_behaviour test
-def prop_time_behaviour(wc_dir, wc_path, status_path, expected_status):
+def prop_time_behaviour(wc_dir, wc_path, status_path, expected_status, cmd):
   "prop-time behaviour"
 
   # Pristine prop-time
@@ -568,11 +568,51 @@ def prop_time_behaviour(wc_dir, wc_path, status_path, expected_status):
   if prop_time != pre_prop_time:
     raise svntest.Failure
 
-  # svn revert changes the prop-time even though the properties don't change
-  svntest.actions.run_and_verify_svn(None, None, [], 'revert', wc_path)
+  # revert/cleanup change the prop-time even though the properties don't change
+  if cmd == 'cleanup':
+    svntest.actions.run_and_verify_svn(None, None, [], cmd, wc_dir)
+  else:
+    svntest.actions.run_and_verify_svn(None, None, [], cmd, wc_path)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
   prop_time = get_prop_timestamp(wc_path)
   if prop_time == pre_prop_time:
+    raise svntest.Failure
+
+# Helper for timestamp_behaviour test
+def text_time_behaviour(wc_dir, wc_path, status_path, expected_status, cmd):
+  "text-time behaviour"
+
+  # Pristine text and text-time
+  fp = open(wc_path, 'r')
+  pre_text = fp.readlines()
+  pre_text_time = get_text_timestamp(wc_path)
+
+  # Modifying the text does not affect text-time
+  svntest.main.file_append (wc_path, "some mod")
+  expected_status.tweak(status_path, status='M ')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+  text_time = get_text_timestamp(wc_path)
+  if text_time != pre_text_time:
+    raise svntest.Failure
+
+  # Manually reverting the text does not affect the text-time
+  fp = open(wc_path, 'w')
+  fp.writelines(pre_text)
+  fp.close()
+  expected_status.tweak(status_path, status='  ')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+  text_time = get_text_timestamp(wc_path)
+  if text_time != pre_text_time:
+    raise svntest.Failure
+
+  # revert/cleanup change the text-time even though the text doesn't change
+  if cmd == 'cleanup':
+    svntest.actions.run_and_verify_svn(None, None, [], cmd, wc_dir)
+  else:
+    svntest.actions.run_and_verify_svn(None, None, [], cmd, wc_path)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+  text_time = get_text_timestamp(wc_path)
+  if text_time == pre_text_time:
     raise svntest.Failure
 
 
@@ -604,41 +644,20 @@ def timestamp_behaviour(sbox):
   # Sleep to ensure timestamps change
   time.sleep(2)
 
-  # Check behaviour of prop-time
-  prop_time_behaviour(wc_dir, iota_path, 'iota', expected_status)
-  prop_time_behaviour(wc_dir, A_path, 'A', expected_status)
+  # Check behaviour of revert on prop-time
+  prop_time_behaviour(wc_dir, iota_path, 'iota', expected_status, 'revert')
+  prop_time_behaviour(wc_dir, A_path, 'A', expected_status, 'revert')
+  # Check behaviour of revert on text-time
+  text_time_behaviour(wc_dir, iota_path, 'iota', expected_status, 'revert')
 
-  # Check behaviour of text-time
+  # Sleep to ensure timestamps change
+  time.sleep(2)
 
-  # Pristine text and text-time
-  fp = open(iota_path, 'r')
-  pre_text = fp.readlines()
-  pre_text_time = get_text_timestamp(iota_path)
-
-  # Modifying the text does not affect text-time
-  svntest.main.file_append (iota_path, "some mod")
-  expected_status.tweak('iota', status='M ')
-  svntest.actions.run_and_verify_status(wc_dir, expected_status)
-  text_time = get_text_timestamp(iota_path)
-  if text_time != pre_text_time:
-    raise svntest.Failure
-
-  # Manually reverting the text does not affect the text-time
-  fp = open(iota_path, 'w')
-  fp.writelines(pre_text)
-  fp.close()
-  expected_status.tweak('iota', status='  ')
-  svntest.actions.run_and_verify_status(wc_dir, expected_status)
-  text_time = get_text_timestamp(iota_path)
-  if text_time != pre_text_time:
-    raise svntest.Failure
-
-  # svn revert changes the text-time even though the text doesn't change
-  svntest.actions.run_and_verify_svn(None, None, [], 'revert', iota_path)
-  svntest.actions.run_and_verify_status(wc_dir, expected_status)
-  text_time = get_text_timestamp(iota_path)
-  if text_time == pre_text_time:
-    raise svntest.Failure
+  # Check behaviour of cleanup on prop-time
+  prop_time_behaviour(wc_dir, iota_path, 'iota', expected_status, 'cleanup')
+  prop_time_behaviour(wc_dir, A_path, 'A', expected_status, 'cleanup')
+  # Check behaviour of cleanup on text-time
+  text_time_behaviour(wc_dir, iota_path, 'iota', expected_status, 'cleanup')
 
 #----------------------------------------------------------------------
 
