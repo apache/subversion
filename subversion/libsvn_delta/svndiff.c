@@ -130,7 +130,7 @@ window_handler (svn_txdelta_window_t *window, void *baton)
          tell our user that everything related to the output stream is done,
          and a cleanup of the user pool should occur. However, that user
          pool could include the subpool we created for our work (eb->pool),
-         which would then make our call to svn_pool_destory() puke.
+         which would then make our call to svn_pool_destroy() puke.
        */
       svn_pool_destroy (eb->pool);
 
