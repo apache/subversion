@@ -178,6 +178,10 @@ SOURCE=".\status-cmd.c"
 # End Source File
 # Begin Source File
 
+SOURCE=".\switch-cmd.c"
+# End Source File
+# Begin Source File
+
 SOURCE=.\status.c
 # End Source File
 # Begin Source File
