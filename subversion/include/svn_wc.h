@@ -346,7 +346,7 @@ svn_wc_parse_externals_description2 (apr_array_header_t **externals_p,
 
 
 /**
- * @deprecated Provided for backward compatability with the 1.0.0 API.
+ * @deprecated Provided for backward compatibility with the 1.0.0 API.
  *
  * Similar to svn_wc_parse_externals_description2, but returns the
  * parsed externals in a hash instead of an array.  This function

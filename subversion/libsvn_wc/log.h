@@ -136,7 +136,7 @@ extern "C" {
    string will be allocated from POOL.
 
    For log number 0, this will just be SVN_WC__ADM_LOG to maintain
-   compatability with 1.0.x.  Higher numbers have the digits of the
+   compatibility with 1.0.x.  Higher numbers have the digits of the
    number appended to SVN_WC__ADM_LOG so that they look like "log.1",
    "log.2", etc. */
 const char *svn_wc__logfile_path (int log_number,

@@ -159,7 +159,7 @@ fs_recover (const char *path,
 
 
 
-/* This function is included for Subversion 1.0.x compatability.  It
+/* This function is included for Subversion 1.0.x compatibility.  It
    has no effect for fsfs backed Subversion filesystems. */
 static svn_error_t *
 fs_logfiles (apr_array_header_t **logfiles,
