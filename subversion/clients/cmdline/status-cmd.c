@@ -28,6 +28,7 @@
 #include "svn_path.h"
 #include "svn_delta.h"
 #include "svn_error.h"
+#include "svn_pools.h"
 #include "cl.h"
 
 
@@ -43,6 +44,7 @@ svn_cl__status (apr_getopt_t *os,
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_hash_t *statushash;
   apr_array_header_t *targets;
+  apr_pool_t * subpool;
   int i;
   svn_revnum_t youngest = SVN_INVALID_REVNUM;
 
@@ -59,6 +61,8 @@ svn_cl__status (apr_getopt_t *os,
   /* Add "." if user passed 0 arguments */
   svn_opt_push_implicit_dot_target(targets, pool);
 
+  subpool = svn_pool_create (pool);
+
   for (i = 0; i < targets->nelts; i++)
     {
       const char *target = ((const char **) (targets->elts))[i];
@@ -74,7 +78,7 @@ svn_cl__status (apr_getopt_t *os,
                                   opt_state->verbose,
                                   opt_state->update,
                                   opt_state->no_ignore,
-                                  ctx, pool));
+                                  ctx, subpool));
 
       /* Now print the structures to the screen.
          The flag we pass indicates whether to use the 'detailed'
@@ -84,8 +88,11 @@ svn_cl__status (apr_getopt_t *os,
                                  (opt_state->verbose || opt_state->update),
                                  opt_state->verbose,
                                  opt_state->quiet,
-                                 pool);
+                                 subpool);
+      svn_pool_clear (subpool);
     }
 
+  svn_pool_destroy (subpool);
+  
   return SVN_NO_ERROR;
 }
