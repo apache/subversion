@@ -153,7 +153,7 @@ handle_start_tag (void *userData, const char *tagname, const char **atts)
         svn_string_t *name
           = apr_hash_get (entry->attributes,
                           SVN_WC_ENTRY_ATTR_NAME, APR_HASH_KEY_STRING);
-        char *nstr = name ? name->data : SVN_WC_ENTRY_THIS_DIR;
+        const char *nstr = name ? name->data : SVN_WC_ENTRY_THIS_DIR;
         apr_size_t len = name ? name->len : strlen (SVN_WC_ENTRY_THIS_DIR);
 
         apr_hash_set (accum->entries, nstr, len, entry);

@@ -131,7 +131,7 @@ do_edits (const svn_delta_edit_fns_t *before_editor,
   apr_file_t *in = NULL;
 
   /* kff todo: obviously, this will work differently. :-) */
-  char *repos = ":ssh:jrandom@subversion.tigris.org/repos";
+  const char *repos = ":ssh:jrandom@subversion.tigris.org/repos";
 
   assert (path != NULL);
   assert (xml_src != NULL);

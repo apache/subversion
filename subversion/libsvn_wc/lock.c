@@ -22,7 +22,7 @@
 
 
 svn_error_t *
-svn_wc__lock (svn_string_t *path, int wait, apr_pool_t *pool)
+svn_wc__lock (svn_string_t *path, int wait_for, apr_pool_t *pool)
 {
   svn_error_t *err;
 
@@ -34,11 +34,11 @@ svn_wc__lock (svn_string_t *path, int wait, apr_pool_t *pool)
         svn_error_free (err);
         /* kff todo: hey, apr_sleep() is broken. */
         apr_sleep (1000);  /* micro-seconds */
-        wait--;
+        wait_for--;
       }
     else
       return SVN_NO_ERROR;
-  } while (wait > 0);
+  } while (wait_for > 0);
 
   return svn_error_createf (SVN_ERR_WC_LOCKED, 0, NULL, pool, 
                             "working copy locked: %s", path->data); 

@@ -14,6 +14,9 @@
 
 
 #include <assert.h>
+
+#include <apr_general.h>        /* for APR_INLINE */
+
 #include "svn_delta.h"
 #include "delta.h"
 

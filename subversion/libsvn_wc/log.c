@@ -16,6 +16,8 @@
 
 #include <apr_pools.h>
 #include <apr_strings.h>
+#include <apr_thread_proc.h>
+
 #include "svn_wc.h"
 #include "svn_error.h"
 #include "svn_xml.h"
@@ -53,7 +55,7 @@ enum svn_wc__xfer_action {
 static svn_error_t *
 run_cmd_in_directory (svn_string_t *path,
                       const char *cmd,
-                      char *const *args,
+                      const char *const *args,
                       apr_file_t *infile,
                       apr_file_t *outfile,
                       apr_file_t *errfile,
@@ -68,7 +70,7 @@ run_cmd_in_directory (svn_string_t *path,
   if (! APR_STATUS_IS_SUCCESS (apr_err))
     return svn_error_createf
       (apr_err, 0, NULL, pool,
-       "run_cmd_under_directory: error creating %s process attributes",
+       "run_cmd_in_directory: error creating %s process attributes",
        cmd);
 
   /* Make sure we invoke cmd directly, not through a shell. */
@@ -76,7 +78,7 @@ run_cmd_in_directory (svn_string_t *path,
   if (! APR_STATUS_IS_SUCCESS (apr_err))
     return svn_error_createf 
       (apr_err, 0, NULL, pool,
-       "run_cmd_under_directory: error setting %s process cmdtype",
+       "run_cmd_in_directory: error setting %s process cmdtype",
        cmd);
 
   /* Set the process's working directory. */
@@ -86,7 +88,7 @@ run_cmd_in_directory (svn_string_t *path,
       if (! APR_STATUS_IS_SUCCESS (apr_err))
         return svn_error_createf 
           (apr_err, 0, NULL, pool,
-           "run_cmd_under_directory: error setting %s process directory",
+           "run_cmd_in_directory: error setting %s process directory",
            cmd);
     }
 
@@ -96,7 +98,7 @@ run_cmd_in_directory (svn_string_t *path,
   if (! APR_STATUS_IS_SUCCESS (apr_err))
     return svn_error_createf
       (apr_err, 0, NULL, pool,
-       "run_cmd_under_directory: error setting %s process io attributes",
+       "run_cmd_in_directory: error setting %s process io attributes",
        cmd);
 
   /* Use requested inputs and outputs. */
@@ -106,7 +108,7 @@ run_cmd_in_directory (svn_string_t *path,
       if (! APR_STATUS_IS_SUCCESS (apr_err))
         return svn_error_createf 
           (apr_err, 0, NULL, pool,
-           "run_cmd_under_directory: error setting %s process child input",
+           "run_cmd_in_directory: error setting %s process child input",
            cmd);
     }
   if (outfile)
@@ -115,7 +117,7 @@ run_cmd_in_directory (svn_string_t *path,
       if (! APR_STATUS_IS_SUCCESS (apr_err))
         return svn_error_createf 
           (apr_err, 0, NULL, pool,
-           "run_cmd_under_directory: error setting %s process child outfile",
+           "run_cmd_in_directory: error setting %s process child outfile",
            cmd);
     }
   if (errfile)
@@ -124,7 +126,7 @@ run_cmd_in_directory (svn_string_t *path,
       if (! APR_STATUS_IS_SUCCESS (apr_err))
         return svn_error_createf 
           (apr_err, 0, NULL, pool,
-           "run_cmd_under_directory: error setting %s process child errfile",
+           "run_cmd_in_directory: error setting %s process child errfile",
            cmd);
     }
 
@@ -134,7 +136,7 @@ run_cmd_in_directory (svn_string_t *path,
   if (! APR_STATUS_IS_SUCCESS (apr_err))
     return svn_error_createf 
       (apr_err, 0, NULL, pool,
-       "run_cmd_under_directory: error starting %s process",
+       "run_cmd_in_directory: error starting %s process",
        cmd);
 
   /* Wait for the cmd command to finish. */
@@ -142,7 +144,7 @@ run_cmd_in_directory (svn_string_t *path,
   if (APR_STATUS_IS_CHILD_NOTDONE (apr_err))
     return svn_error_createf
       (apr_err, 0, NULL, pool,
-       "run_cmd_under_directory: error waiting for %s process",
+       "run_cmd_in_directory: error waiting for %s process",
        cmd);
 
   return SVN_NO_ERROR;
@@ -392,7 +394,7 @@ log_do_run_cmd (struct log_runner *loggy,
   
   err = run_cmd_in_directory (loggy->path,
                               name,
-                              (char *const *) args,
+                              args,
                               infile,
                               outfile,
                               errfile,

@@ -18,6 +18,9 @@
 #ifndef SVN_IO_H
 #define SVN_IO_H
 
+#include <apr_pools.h>
+#include <apr_file_io.h>
+
 #include "svn_types.h"
 #include "svn_error.h"
 #include "svn_string.h"

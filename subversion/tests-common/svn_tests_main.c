@@ -19,6 +19,7 @@
 #include <stdlib.h>
 #include <apr_pools.h>
 #include <apr_strings.h>
+#include <apr_general.h>
 
 #include "svn_error.h"
 

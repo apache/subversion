@@ -31,11 +31,8 @@ apr_pool_t *pool = NULL;
 
 /* Our own global variables */
 apr_hash_t *proplist, *new_proplist;
-svn_string_t *key;
-apr_file_t *f = NULL;     /* init to NULL very important! */
-apr_status_t err;
 
-char *review =
+const char *review =
 "A forthright entrance, yet coquettish on the tongue, its deceptively\n"
 "fruity exterior hides the warm mahagony undercurrent that is the\n"
 "hallmark of Chateau Fraisant-Pitre.  Connoisseurs of the region will\n"
@@ -50,6 +47,8 @@ static int
 test1 (const char **msg)
 {
   apr_status_t result;
+  svn_string_t *key;
+  apr_file_t *f;
 
   *msg = "write a hash to a file";
 
@@ -94,6 +93,7 @@ static int
 test2 (const char **msg)
 {
   apr_status_t result;
+  apr_file_t *f;
 
   *msg = "read a file into a hash";
 

@@ -531,8 +531,7 @@ close_adm_file (apr_file_t *fp,
 
   /* Get the full name of the thing we want. */
   va_start (ap, pool);
-  components_added =
-    v_extend_with_adm_name (path, sync, pool, ap);
+  components_added = v_extend_with_adm_name (path, sync, pool, ap);
   va_end (ap);
 
   apr_err = apr_close (fp);
@@ -551,13 +550,10 @@ close_adm_file (apr_file_t *fp,
          given how C va_lists work. */
 
       svn_string_t *tmp_path = svn_string_dup (path, pool);
-      apr_status_t apr_err;
-      int components_added;
       
       /* Extend real name. */
       va_start (ap, pool);
-      components_added
-        = v_extend_with_adm_name (path, 0, pool, ap);
+      components_added = v_extend_with_adm_name (path, 0, pool, ap);
       va_end (ap);
       
       /* Extend tmp name. */

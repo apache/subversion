@@ -19,9 +19,12 @@
 /*** Includes. ***/
 
 #include <string.h>
+
 #include <apr_strings.h>
 #include <apr_getopt.h>
 #include <apr_tables.h>
+#include <apr_general.h>
+
 #include "svn_wc.h"
 #include "svn_client.h"
 #include "svn_string.h"

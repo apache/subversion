@@ -34,7 +34,7 @@ svn_fs__dberr (apr_pool_t *pool, int db_err)
 
 
 svn_error_t *
-svn_fs__dberrf (apr_pool_t *pool, int db_err, char *fmt, ...)
+svn_fs__dberrf (apr_pool_t *pool, int db_err, const char *fmt, ...)
 {
   va_list ap;
   char *msg;

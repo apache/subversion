@@ -17,11 +17,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+
 #include <apr_pools.h>
 #include <apr_hash.h>
 #include <apr_tables.h>
 #include <apr_file_io.h>
 #include <apr_strings.h>
+#include <apr_thread_proc.h>
+
 #include "svn_types.h"
 #include "svn_delta.h"
 #include "svn_string.h"
@@ -1014,7 +1017,7 @@ close_file (void *file_baton)
           
           apr_proc_t diff_proc;
           apr_procattr_t *diffproc_attr;
-          char *diff_args[6];
+          const char *diff_args[6];
 
           apr_file_t *received_diff_file;
           svn_string_t *tmp_txtb_full_path
@@ -1137,7 +1140,6 @@ close_file (void *file_baton)
             return err;
           else
             {
-              apr_status_t apr_err;
               apr_err = apr_close (reject_file);
               if (apr_err)
                 return svn_error_createf (apr_err, 0, NULL, fb->pool,

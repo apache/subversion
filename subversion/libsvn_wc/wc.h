@@ -64,10 +64,10 @@ svn_error_t *svn_wc__files_contents_same_p (svn_boolean_t *same,
 /*** Locking. ***/
 
 /* Lock the working copy administrative area.
-   Wait for WAIT seconds if encounter another lock, trying again every
+   Wait for WAIT_FOR seconds if encounter another lock, trying again every
    second, then return 0 if success or an SVN_ERR_WC_LOCKED error if
    failed to obtain the lock. */
-svn_error_t *svn_wc__lock (svn_string_t *path, int wait, apr_pool_t *pool);
+svn_error_t *svn_wc__lock (svn_string_t *path, int wait_for, apr_pool_t *pool);
 
 /* Unlock PATH, or error if can't. */
 svn_error_t *svn_wc__unlock (svn_string_t *path, apr_pool_t *pool);
@@ -477,9 +477,9 @@ svn_wc_entry_t *svn_wc__entry_dup (svn_wc_entry_t *entry, apr_pool_t *pool);
 svn_error_t *svn_wc__ensure_directory (svn_string_t *path, apr_pool_t *pool);
 
 
-/* Convert TIME to an svn string representation, which can be
+/* Convert WHEN to an svn string representation, which can be
    converted back by svn_wc__string_to_time(). */
-svn_string_t *svn_wc__time_to_string (apr_time_t time, apr_pool_t *pool);
+svn_string_t *svn_wc__time_to_string (apr_time_t when, apr_pool_t *pool);
 
 
 /* Convert TIMESTR to an apr_time_t.  TIMESTR should be of the form
