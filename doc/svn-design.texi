@@ -1,10 +1,10 @@
 \input texinfo  @c -*-texinfo-*-
 
 @comment Subversion Design
-@comment Copyright (C) 1999, 2000 Collab.Net
+@comment Copyright (C) 1999, 2000 CollabNet
 
 @c  ================================================================
-@c  Copyright (c) 2000 Collab.Net.  All rights reserved.
+@c  Copyright (c) 2000 CollabNet.  All rights reserved.
 @c  
 @c  Redistribution and use in source and binary forms, with or without
 @c  modification, are permitted provided that the following conditions are
@@ -19,7 +19,7 @@
 @c  
 @c  3. The end-user documentation included with the redistribution, if
 @c  any, must include the following acknowlegement: "This product includes
-@c  software developed by Collab.Net (http://www.Collab.Net/)."
+@c  software developed by CollabNet (http://www.Collab.Net/)."
 @c  Alternately, this acknowlegement may appear in the software itself, if
 @c  and wherever such third-party acknowlegements normally appear.
 @c  
@@ -29,12 +29,12 @@
 @c  
 @c  5. Products derived from this software may not use the "Tigris" name
 @c  nor may "Tigris" appear in their names without prior written
-@c  permission of Collab.Net.
+@c  permission of CollabNet.
 @c  
 @c  THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESSED OR IMPLIED
 @c  WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
 @c  MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-@c  IN NO EVENT SHALL COLLAB.NET OR ITS CONTRIBUTORS BE LIABLE FOR ANY
+@c  IN NO EVENT SHALL COLLABNET OR ITS CONTRIBUTORS BE LIABLE FOR ANY
 @c  DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
 @c  DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
 @c  GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
@@ -46,7 +46,7 @@
 @c  ====================================================================
 @c  
 @c  This software consists of voluntary contributions made by many
-@c  individuals on behalf of Collab.Net.
+@c  individuals on behalf of CollabNet.
 
 
 @c %**start of header
