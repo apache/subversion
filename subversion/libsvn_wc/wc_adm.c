@@ -144,7 +144,6 @@ make_adm_subdir (svn_string_t *path, apr_pool_t *pool)
  * If not file type, but RETURN_FILE is non-null, then return an
  * error, because the caller is probably making a mistake.
  */ 
-enum { file_type = 1, dir_type };
 static svn_error_t *
 create_adm_thing (svn_string_t *path,
                   char *thing,
@@ -158,7 +157,7 @@ create_adm_thing (svn_string_t *path,
 
   extend_with_admin_name (path, thing, pool);
 
-  if (type == file_type)
+  if (type == svn_file_kind)
     {
       apr_err = apr_open (&f, path->data,
                           (APR_WRITE | APR_CREATE),
@@ -180,7 +179,7 @@ create_adm_thing (svn_string_t *path,
             err = svn_create_error (apr_err, 0, path->data, NULL, pool);
         }
     }
-  else if (type == dir_type)
+  else if (type == svn_directory_kind)
     {
       apr_err = apr_make_dir (path->data, APR_OS_DEFAULT, pool);
       if (apr_err)
@@ -232,7 +231,7 @@ adm_init_versions (svn_string_t *path,
   apr_file_t *v = NULL;
   apr_status_t apr_err = 0;
 
-  err = create_adm_thing (path, SVN_WC__ADM_VERSIONS, file_type, &v, pool);
+  err = create_adm_thing (path, SVN_WC__ADM_VERSIONS, svn_file_kind, &v, pool);
   if (err)
     return err;
 
@@ -299,7 +298,7 @@ svn_wc__lock (svn_string_t *path, int wait, apr_pool_t *pool)
   svn_error_t *err = NULL;
 
   /* kff todo: fooo, in progress */
-  err = create_adm_thing (path, SVN_WC__ADM_LOCK, file_type, NULL, pool);
+  err = create_adm_thing (path, SVN_WC__ADM_LOCK, svn_file_kind, NULL, pool);
   if (err)
     return err;
 
