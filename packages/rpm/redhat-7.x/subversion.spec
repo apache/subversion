@@ -73,6 +73,7 @@ for developers interacting with the subversion package.
 %package server
 Group: Utilities/System
 Summary: Apache server module for Subversion server.
+Requires: apache >= %{apache_version}
 Requires: apache-libapr >= 0.%{apache_version}
 Requires: apache-libapr-utils >= 0.%{apache_version}
 Requires: subversion = %{version}-%{release}
