@@ -28,8 +28,6 @@ The goal of the Subversion project is to build a version control
 system that is a compelling replacement for CVS in the open source
 community.  The software is released under an <a
 href="/license-1.html">Apache/BSD-style</a> open source license.
-See the <a href="/project_status.html">status page</a> for current
-progress.
 </p>
 
 <p>
@@ -40,7 +38,7 @@ progress.
 </p>
 
 <p>
-<h2>Features of Subversion</h2>
+<h2>Subversion 1.0 Features</h2>
 <p>
 
 <ul>  <!-- list of features -->
@@ -136,59 +134,39 @@ progress.
 </ul>  <!-- end list of features -->
 
 <p>
-<h2>Features planned for after 1.0</h2>
+<h2>Planned Subversion 1.1 Features</h2>
 <p>
 
-<ul>
+<p>For a more complete list, see <a
+href="svn_1.1_releasenotes.html">the 1.1 release notes</a>.</p>
 
-<li><strong>Exclusive locking</strong>
-    <p>Occasionally, a model of change control where files are
-       explicitly checked out for exclusive editing is most
-       appropriate, particularly with binary files which cannot be
-       merged.  CVS calls this reserved checkouts.  This feature has
-       high priority for post-1.0 implementation, probably in
-       Subversion 1.2.</p>
+<ul>  <!-- list of features -->
 
-<li><strong>Better merge support</strong>
-    <p>Improved support for selective merges from related lines of
-       development, and for repeated merges.  (Currently,
-       Subversion's merge support is essentially the same as
-       CVS's.)</p>
+<li><strong>Non-database repository back-end</strong> 
+  <p>Repositories can be created with either a traditional database
+     back-end (BerkeleyDB) or with normal flat-file back-end, which
+     uses a proprietary binary format.</p>
 </li>
 
-<li><strong>Broader WebDAV compatibility</strong>
-    <p>Currently, the Subversion server only responds to a subset of
-    WebDAV requests -- the subset necessary to support Subversion's
-    own functionality.  Increased support for WebDAV is a high
-    priority after the 1.0 release, however.</p>
+<li><strong>Versioning of symbolic links</strong>
+  <p>Unix users can place symbolic links under version control.  The
+     links are recreated in Unix working copies, but not in win32
+     working copies.</p>
 </li>
 
-<li><strong>Support for plug-in client side diff programs</strong>
-    <p>Subversion knows how to show diffs for text files, and can also
-    use an external diff program to do so.  Later, the user will
-    have the option to plug in external diff programs for any kind of
-    file.</p>
-</li>
-
-<li><strong>Internationalization</strong>
-    <p>Subversion will have I18N support -- commands, user messages, and
-    errors can be customized to the appropriate human language at
-    runtime.  Also, there will be I18N support for the <i>names</i>
-    as well as the contents of versioned entities.
-</li>
-
-<li><strong>Progressive multi-lingual support</strong>
-    <p>In order to support keyword expansion and platform-dependent
-    line-ending conversion, CVS makes a distinction between text and
-    binary files, and treats the text files specially.</p>
-
-    <p>Subversion makes the same distinction, but will offer a more
-    generous notion of what constitutes a text file: not only ASCII,
-    but UTF-* encodings of Unicode too.  UTF-8 is the first priority,
-    with other encodings following if needed.</p>
+<li><strong>Localized messages</strong>
+  <p>Subversion uses gettext() to display translated error,
+     informational, and help messages, based on current locale
+     settings.</p>
 </li>
 
 </ul>
+
+<p>
+<h2>Future Subversion Features</h2>
+<p>
+
+<p>See the <a href="project_roadmap.html">Roadmap</a> page.</p>
 
 
 <br>
