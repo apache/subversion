@@ -1,0 +1,9 @@
+The files here are a hand-constructed verification (in progress) of
+what cvs2svn.py should produce when run on 'main-cvsrepos'.  The
+regression suite's expectations will eventually be based on this.
+
+I'm just saving this data here because it took long enough to
+generate, and is undergoing complex enough massages, that it's worth
+versioning.  You probably want to ignore it unless you're me.
+
+-kfogel
