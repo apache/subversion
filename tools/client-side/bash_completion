@@ -34,7 +34,7 @@ _svn()
 	optsParam="-r|--revision|--username|--password|--targets|
 	           |-x|--extensions|-m|--message|-F|--file|--encoding|
 	           |--diff-cmd|--diff3-cmd|--editor-cmd|--old|--new|
-	           |--config-dir"
+	           |--config-dir|--native-eol"
 
 	# if not typing an option, or if the previous option required a
 	# parameter, then fallback on ordinary filename expansion
@@ -86,7 +86,7 @@ _svn()
 		         $nOpts $pOpts --old --new --notice-ancestry"
 		;;
 	export)
-		cmdOpts="$rOpts $qOpts $pOpts --force"
+		cmdOpts="$rOpts $qOpts $pOpts --force --native-eol"
 		;;
 	help|h|\?)
 		cmdOpts="$cmds $qOpts"
