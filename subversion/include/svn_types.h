@@ -143,8 +143,16 @@ typedef struct svn_ver_t
 /* This is totally wrong right now; these should be filesystem-level
    actions, not client-level actions.  */
 
-typedef enum {add, rm, mv, checkout, 
-              commit, import, update} svn_svr_action_t;
+typedef enum 
+{
+  latest,
+  get_ver_prop,
+  get_ver_proplist,
+  get_ver_propnames
+
+  
+
+} svn_svr_action_t;
 
 
 
