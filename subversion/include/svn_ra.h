@@ -272,7 +272,11 @@ svn_error_t *svn_ra_get_ra_library (svn_ra_plugin_t **library,
                                     const char *URL,
                                     apr_pool_t *pool);
 
-
+/* Return a *DESCRIPTIONS string (allocated in POOL) that is a textual
+   list of all available RA libraries. */
+svn_error_t *svn_ra_print_ra_libraries (svn_string_t **descriptions,
+                                        void *ra_baton,
+                                        apr_pool_t *pool);
 
 
 

@@ -151,6 +151,7 @@ main (int argc, const char * const *argv)
     {"help",          'h', 0},
     {"message",       'm', 1},
     {"revision",      'r', 1},
+    {"version",       'v', 0},
     {"filedata",      'F', 1},
     {"xml-file",      svn_cl__xml_file_opt, 1},
     {0,               0, 0}
@@ -192,6 +193,8 @@ main (int argc, const char * const *argv)
       case 'r':
         opt_state.revision = (svn_revnum_t) atoi (optarg);
         break;
+      case 'v':
+        opt_state.version = TRUE;
       case 'h':
       case '?':
         opt_state.help = TRUE;

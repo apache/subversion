@@ -200,6 +200,40 @@ svn_ra_get_ra_library (svn_ra_plugin_t **library,
 }
 
 
+
+svn_error_t *
+svn_ra_print_ra_libraries (svn_string_t **descriptions,
+                           void *ra_baton,
+                           apr_pool_t *pool)
+{
+  apr_hash_index_t *this;
+  apr_hash_t *hash = ra_baton;
+  *descriptions = svn_string_create ("", pool);
+
+  for (this = apr_hash_first (hash); this; this = apr_hash_next (this))
+    {
+      const void *key;
+      void *val;
+      size_t keylen;
+      const char *keystr;
+      char *libdesc;
+      svn_ra_plugin_t *lib;
+
+      /* Get key and val. */
+      apr_hash_this (this, &key, &keylen, &val);
+      keystr = (const char *) key;
+      lib = (svn_ra_plugin_t *) val;
+
+      libdesc = apr_psprintf (pool, "* %s : handles '%s' schema\n (%s)\n",
+                              lib->name, keystr, lib->description);
+      svn_string_appendcstr (*descriptions, libdesc);
+    }      
+     
+  return SVN_NO_ERROR;
+}
+
+
+
 /* --------------------------------------------------------------
  * local variables:
  * eval: (load-file "../svn-dev.el")

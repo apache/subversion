@@ -275,7 +275,7 @@ do_update (void *session_baton,
 static const svn_ra_plugin_t ra_local_plugin = 
 {
   "ra_local",
-  "RA module for accessing repository on local disk. (file:// URLs)",
+  "Module for accessing a repository on local disk.",
   open,
   close,
   get_latest_revnum,
