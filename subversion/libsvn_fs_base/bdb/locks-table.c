@@ -43,7 +43,7 @@ svn_fs_bdb__open_locks_table (DB **locks_p,
   DB *locks;
   int error;
 
-  BDB_ERR (svn_fs_bdb__check_version());
+  BDB_ERR (svn_fs_bdb__check_version ());
   BDB_ERR (db_create (&locks, env, 0));
   error = locks->open (SVN_BDB_OPEN_PARAMS(locks, NULL),
                        "locks", 0, DB_BTREE,
@@ -147,7 +147,7 @@ svn_fs_bdb__lock_get (svn_lock_t **lock_p,
   SVN_ERR (svn_fs_base__parse_lock_skel (&lock, skel, pool));
 
   /* Possibly auto-expire the lock. */
-  if (lock->expiration_date && (apr_time_now() > lock->expiration_date))
+  if (lock->expiration_date && (apr_time_now () > lock->expiration_date))
     {
       SVN_ERR (svn_fs_bdb__lock_delete (fs, lock_token, trail, pool));
       return svn_fs_base__err_lock_expired (fs, lock_token); 
@@ -193,13 +193,14 @@ svn_fs_bdb__locks_get (apr_hash_t **locks_p,
   /* Get the first matching key that is either equal or greater
    * than the one passed in, by passing in the DB_RANGE_SET flag.
    */
-  db_err = cursor->c_get(cursor, &key, svn_fs_base__result_dbt (&value),
-                         DB_SET_RANGE);
+  db_err = cursor->c_get (cursor, &key, svn_fs_base__result_dbt (&value),
+                          DB_SET_RANGE);
 
   /* As long as the prefix of the returned KEY matches LOOKUP_PATH 
    * we know it is either LOOKUP_PATH or a decendant thereof.
    */
-  while (! db_err && strncmp(lookup_path, key.data, strlen(lookup_path)) == 0)
+  while ((! db_err) && 
+         strncmp (lookup_path, key.data, strlen (lookup_path)) == 0)
     {
       const char *lock_token;
       char *child_path;
@@ -253,7 +254,7 @@ svn_fs_bdb__locks_get (apr_hash_t **locks_p,
     }
 
   svn_pool_destroy (subpool);
-  cursor->c_close(cursor);
+  cursor->c_close (cursor);
 
   if (db_err && (db_err != DB_NOTFOUND)) 
     SVN_ERR (BDB_WRAP (fs, "fetching lock tokens", db_err));
