@@ -164,7 +164,7 @@ convert_to_stringbuf (apr_xlate_t *convset,
          churned out so far from this loop. */
       (*dest)->len += ((buflen - (*dest)->len) - destlen);
 
-    } while ((! apr_err || apr_err == APR_INCOMPLETE) && srclen);
+    } while (! apr_err && srclen);
 
   /* If we exited the loop with an error, return the error. */
   if (apr_err)
