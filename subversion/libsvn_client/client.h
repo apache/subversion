@@ -99,25 +99,11 @@ svn_client__revision_is_local (const svn_opt_revision_t *revision);
    the callback table we provide to RA. */
 typedef struct
 {
-  /* This is provided by the calling application for handling authentication
-     information for this session. */
-  svn_client_auth_baton_t *auth_baton;
-
   /* Holds the directory that corresponds to the REPOS_URL at RA->open()
      time. When callbacks specify a relative path, they are joined with
      this base directory. */
   const char *base_dir;
   svn_wc_adm_access_t *base_access;
-
-  /* Record whether we should attempt store the user/pass into the WC.
-     If true, then store the username, and consult the run-time config
-     option `store_password' to decide whether or not to store the
-     password. */
-  svn_boolean_t do_store;
-
-  /* Record whether or not we have new auth info to consider storing
-     in the WC. */
-  svn_boolean_t got_new_auth_info;
 
   /* An array of svn_client_commit_item_t * structures, present only
      during working copy commits. */
@@ -144,12 +130,6 @@ typedef struct
       - COMMIT_ITEMS is an array of svn_client_commit_item_t *
         structures, present only for working copy commits, NULL otherwise.
 
-      - DO_STORE indicates whether the RA layer should attempt to
-        store authentication info.  If DO_STORE is set, then store the
-        username, and consult the run-time config option
-        `store_password' to determine whether or not to store the
-        password.
-
       - USE_ADMIN indicates that the RA layer should create tempfiles
         in the administrative area instead of in the working copy itself.
 
@@ -157,8 +137,8 @@ typedef struct
         modify the WC props directly.
 
    BASE_DIR may be NULL if the RA operation does not correspond to a
-   working copy (in which case, DO_STORE and USE_ADMIN should both
-   be FALSE, and BASE_ACCESS should be null).
+   working copy (in which case, USE_ADMIN should be FALSE, and
+   BASE_ACCESS should be null).
 
    The calling application's authentication baton is provided in CTX,
    and allocations related to this session are performed in POOL.  */
@@ -168,20 +148,11 @@ svn_error_t * svn_client__open_ra_session (void **session_baton,
                                            const char *base_dir,
                                            svn_wc_adm_access_t *base_access,
                                            apr_array_header_t *commit_items,
-                                           svn_boolean_t do_store,
                                            svn_boolean_t use_admin,
                                            svn_boolean_t read_only_wc,
                                            svn_client_ctx_t *ctx,
                                            apr_pool_t *pool);
 
-
-/* Retrieve an AUTHENTICATOR/AUTH_BATON pair from the client,
-   which represents the protocol METHOD.  */
-svn_error_t * svn_client__get_authenticator (void **authenticator,
-                                             void **auth_baton,
-                                             enum svn_ra_auth_method method,
-                                             void *callback_baton,
-                                             apr_pool_t *pool);
 
 /* Set *DIR_P to DIR if DIR is a working copy directory, else set to NULL.
  * DIR may not be a file.  Use POOL only for temporary allocation.

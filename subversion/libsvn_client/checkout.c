@@ -99,7 +99,7 @@ svn_client__checkout_internal (const char *URL,
          for storing temp files.  We do, however, want to store auth data
          after the checkout builds the WC. */
       SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, path,
-                                            NULL, NULL, TRUE, FALSE, TRUE,
+                                            NULL, NULL, FALSE, TRUE,
                                             ctx, pool));
 
       SVN_ERR (svn_client__get_revision_number

@@ -147,14 +147,14 @@ svn_client_log (const apr_array_header_t *targets,
      the working copy. */
   if (NULL != base_name)
     SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, base_name,
-                                          NULL, NULL, TRUE, TRUE, TRUE, 
+                                          NULL, NULL, TRUE, TRUE, 
                                           ctx, pool));
   else
     {
       SVN_ERR (svn_client__dir_if_wc (&auth_dir, "", pool));
       SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL,
                                             auth_dir,
-                                            NULL, NULL, FALSE, FALSE, TRUE, 
+                                            NULL, NULL, FALSE, TRUE, 
                                             ctx, pool));
     }
 

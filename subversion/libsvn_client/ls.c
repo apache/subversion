@@ -91,7 +91,7 @@ svn_client_ls (apr_hash_t **dirents,
   /* Open a repository session to the URL. */
   SVN_ERR (svn_client__open_ra_session (&session, ra_lib, url,
                                         auth_dir,
-                                        NULL, NULL, FALSE, FALSE, TRUE, 
+                                        NULL, NULL, FALSE, TRUE, 
                                         ctx, pool));
 
   /* Resolve REVISION into a real revnum. */
@@ -123,7 +123,7 @@ svn_client_ls (apr_hash_t **dirents,
       SVN_ERR (ra_lib->close (session));
       SVN_ERR (svn_client__open_ra_session (&session, ra_lib, parent_url,
                                             auth_dir,
-                                            NULL, NULL, FALSE, FALSE, TRUE, 
+                                            NULL, NULL, FALSE, TRUE, 
                                             ctx, pool));
 
       /* Get all parent's entries, no props. */

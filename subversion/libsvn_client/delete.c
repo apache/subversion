@@ -158,7 +158,7 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
          current directory. */
       SVN_ERR (svn_client__dir_if_wc (&auth_dir, "", pool));
       SVN_ERR (svn_client__open_ra_session (&session, ra_lib, anchor, auth_dir,
-                                            NULL, NULL, FALSE, FALSE, TRUE,
+                                            NULL, NULL, FALSE, TRUE,
                                             ctx, pool));
 
       /* Verify that the thing to be deleted actually exists. */

@@ -144,7 +144,7 @@ svn_client_switch (const char *path,
       /* Open an RA session to 'source' URL */
       SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL,
                                             path, adm_access,
-                                            NULL, TRUE, TRUE, FALSE, 
+                                            NULL, TRUE, FALSE, 
                                             ctx, pool));
       SVN_ERR (svn_client__get_revision_number
                (&revnum, ra_lib, session, revision, path, pool));
@@ -229,7 +229,7 @@ svn_client_switch (const char *path,
          WC, so that ra_dav's implementation of get_file() can use the
          svndiff data to construct a fulltext.  */
       SVN_ERR (svn_client__open_ra_session (&session, ra_lib, switch_url, NULL,
-                                            NULL, NULL, TRUE, TRUE, TRUE,
+                                            NULL, NULL, TRUE, TRUE,
                                             ctx, pool));
       SVN_ERR (svn_client__get_revision_number
                (&revnum, ra_lib, session, revision, path, pool));

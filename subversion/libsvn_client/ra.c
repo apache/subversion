@@ -234,7 +234,6 @@ svn_client__open_ra_session (void **session_baton,
                              const char *base_dir,
                              svn_wc_adm_access_t *base_access,
                              apr_array_header_t *commit_items,
-                             svn_boolean_t do_store,
                              svn_boolean_t use_admin,
                              svn_boolean_t read_only_wc,
                              svn_client_ctx_t *ctx,
@@ -244,17 +243,14 @@ svn_client__open_ra_session (void **session_baton,
   svn_client__callback_baton_t *cb = apr_pcalloc (pool, sizeof(*cb));
   
   cbtable->open_tmp_file = use_admin ? open_admin_tmp_file : open_tmp_file;
-  cbtable->get_authenticator = svn_client__get_authenticator;
   cbtable->get_wc_prop = use_admin ? get_wc_prop : NULL;
   cbtable->set_wc_prop = read_only_wc ? NULL : set_wc_prop;
   cbtable->push_wc_prop = commit_items ? push_wc_prop : NULL;
   cbtable->invalidate_wc_props = read_only_wc ? NULL : invalidate_wc_props;
   cbtable->auth_baton = ctx->auth_baton; /* new-style */
 
-  cb->auth_baton = ctx->old_auth_baton; /* old-style */
   cb->base_dir = base_dir;
   cb->base_access = base_access;
-  cb->do_store = do_store;
   cb->pool = pool;
   cb->commit_items = commit_items;
   cb->config = ctx->config;
@@ -278,12 +274,6 @@ svn_client__open_ra_session (void **session_baton,
                                     SVN_AUTH_PARAM_DEFAULT_USERNAME);
     passwd = svn_auth_get_parameter (ctx->auth_baton,
                                      SVN_AUTH_PARAM_DEFAULT_PASSWORD);
-    cb->got_new_auth_info = (uname || passwd) ? TRUE : FALSE;
-
-    /* ### if --no-auth-cache were represented in auth_baton as a
-       runtime parameter as well, then its existence could just
-       prevent cb->got_new_auth_info from being set, no?  would that
-       be enough?  */
   }
 
   SVN_ERR (ra_lib->open (session_baton, base_url, cbtable, cb, ctx->config,

@@ -35,38 +35,6 @@
 #include "cl.h"
 
 
-
-/*** Build an authentication object from commandline args. ***/
-
-svn_client_auth_baton_t *
-svn_cl__make_auth_baton (svn_cl__opt_state_t *opt_state,
-                         apr_pool_t *pool)
-{
-  svn_client_auth_baton_t *auth_obj;
-  auth_obj = apr_pcalloc (pool, sizeof(*auth_obj));
-
-  if (! opt_state->non_interactive)
-    auth_obj->prompt_callback = svn_cl__prompt_user;
-
-  /* The prompt baton is currently unused. */
-  auth_obj->prompt_baton = NULL;
-
-  if (opt_state->no_auth_cache)
-    auth_obj->store_auth_info = FALSE;
-  else
-    auth_obj->store_auth_info = TRUE;
-
-  if (opt_state->auth_username)
-    auth_obj->username = opt_state->auth_username;
-
-  if (opt_state->auth_password)
-    auth_obj->password = opt_state->auth_password;
-
-  /* Add more authentication args here as necessary... */
-
-  return auth_obj;
-}
-
 
 
 /*** Our implementation of the 'prompt callback' routine, as defined
