@@ -58,6 +58,56 @@ struct svn_xml_parser_t
 };
 
 
+/*** XML character validation ***/
+
+/* The values in this table represent validity of char input for
+   Subversion's XML encoders.  Basically, we'll claim that we can
+   handle anything between 0x20 and 0x7F, plus 0x09, 0x0A, and
+   0x0D (the XML-safe whitespace chars).  */
+static const int xml_char_validity[256] = {
+  0, 0, 0, 0, 0, 0, 0, 0,   0, 1, 1, 0, 0, 1, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0,   0, 0, 0, 0, 0, 0, 0, 0,
+  1, 1, 1, 1, 1, 1, 1, 1,   1, 1, 1, 1, 1, 1, 1, 1,
+  1, 1, 1, 1, 1, 1, 1, 1,   1, 1, 1, 1, 1, 1, 1, 1,
+
+  /* 64 */
+  1, 1, 1, 1, 1, 1, 1, 1,   1, 1, 1, 1, 1, 1, 1, 1,
+  1, 1, 1, 1, 1, 1, 1, 1,   1, 1, 1, 1, 1, 1, 1, 1,
+  1, 1, 1, 1, 1, 1, 1, 1,   1, 1, 1, 1, 1, 1, 1, 1,
+  1, 1, 1, 1, 1, 1, 1, 1,   1, 1, 1, 1, 1, 1, 1, 1,
+
+  /* 128 */
+  0, 0, 0, 0, 0, 0, 0, 0,   0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0,   0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0,   0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0,   0, 0, 0, 0, 0, 0, 0, 0,
+
+  /* 092 */
+  0, 0, 0, 0, 0, 0, 0, 0,   0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0,   0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0,   0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0,   0, 0, 0, 0, 0, 0, 0, 0,
+};
+
+
+svn_boolean_t
+svn_xml_is_xml_safe (const char *data, apr_size_t len)
+{
+  const char *end = data + len;
+  const char *p = data;
+
+  while (end > p++)
+    {
+      if (! xml_char_validity[(int)*p])
+        return FALSE;
+    }
+  return TRUE;
+}
+
+
+
+
+
 /*** XML escaping. ***/
 
 static void

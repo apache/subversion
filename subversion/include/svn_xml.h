@@ -35,7 +35,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
-
+  
 /** The namespace all Subversion XML uses. */
 #define SVN_XML_NAMESPACE "svn:"
 
@@ -50,6 +50,25 @@ enum svn_xml_open_tag_style {
   /** <tag .../>  */
   svn_xml_self_closing
 };
+  
+
+
+/** Determine if a string of character @a data of length @a len is a
+ * safe bet for use with the svn_xml_escape_* functions found in this
+ * header. 
+ * 
+ * Determine if a string of character @a data of length @a len is a
+ * safe bet for use with the svn_xml_escape_* functions found in this
+ * header.  Return @c TRUE if it is, @c FALSE otherwise.
+ *
+ * Essentially, this function exists to determine whether or not
+ * simply running a string of bytes through the Subversion XML escape
+ * routines will produce legitimate XML.  It should only be necessary
+ * for data which might contain bytes that cannot be safely encoded
+ * into XML (upper ASCII and control characters, for example). 
+ */
+svn_boolean_t svn_xml_is_xml_safe (const char *data, 
+                                   apr_size_t len);
 
 
 /** Create or append in @a *outstr an xml-escaped version of @a string.
