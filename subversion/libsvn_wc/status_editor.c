@@ -123,7 +123,7 @@ tweak_statushash (void *edit_baton,
       if (repos_text_status == svn_wc_status_added)
         {
           /* Make a status struct */
-          statstruct = apr_pcalloc (pool, sizeof(svn_wc_status_t *));
+          statstruct = apr_pcalloc (pool, sizeof(*statstruct));
           
           /* Make an entry struct inside it */
           statstruct->entry = apr_pcalloc (pool, sizeof(svn_wc_entry_t *));

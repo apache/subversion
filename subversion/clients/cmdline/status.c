@@ -30,8 +30,8 @@
 
 
 
-/* Fill in the first three characters of STR_STATUS with status code
-   characters, based on TEXT_STATUS, PROP_STATUS, and LOCKED.
+/* Fill in the first four characters of STR_STATUS with status code
+   characters, based on TEXT_STATUS, PROP_STATUS, LOCKED, and COPIED.
    PROP_TIME is used to determine if properties exist in the first
    place (when prop_status is 'none').  */
 static void
@@ -39,7 +39,8 @@ generate_status_codes (char *str_status,
                        enum svn_wc_status_kind text_status,
                        enum svn_wc_status_kind prop_status,
                        apr_time_t prop_time,
-                       svn_boolean_t locked)
+                       svn_boolean_t locked,
+                       svn_boolean_t copied)
 {
   char text_statuschar, prop_statuschar;
 
@@ -112,10 +113,11 @@ generate_status_codes (char *str_status,
       break;
     }
 
-  sprintf (str_status, "%c%c%c", 
+  sprintf (str_status, "%c%c%c%c", 
            text_statuschar, 
            prop_statuschar,
-           locked ? 'L' : ' ');
+           locked ? 'L' : ' ',
+           copied ? '@' : ' ');
 }
 
 
@@ -124,7 +126,7 @@ static void
 print_short_format (const char *path,
                     svn_wc_status_t *status)
 {
-  char str_status[4];
+  char str_status[5];
 
   if (! status)
     return;
@@ -134,7 +136,8 @@ print_short_format (const char *path,
                          status->text_status,
                          status->prop_status,
                          status->entry->prop_time,
-                         status->locked);
+                         status->locked,
+                         status->copied);
 
   printf ("%s   %s\n", str_status, path);
 }
@@ -145,7 +148,7 @@ static void
 print_long_format (const char *path,
                    svn_wc_status_t *status)
 {
-  char str_status[4];
+  char str_status[5];
   char update_char;
   svn_revnum_t local_rev;
 
@@ -157,7 +160,8 @@ print_long_format (const char *path,
                          status->text_status,
                          status->prop_status,
                          status->entry->prop_time,
-                         status->locked);
+                         status->locked,
+                         status->copied);
 
   /* Create update indicator. */
   if ((status->repos_text_status != svn_wc_status_none)
@@ -187,9 +191,9 @@ print_long_format (const char *path,
 
   /* Otherwise, go ahead and show the local revision number. */
   else if (local_rev == SVN_INVALID_REVNUM)
-    printf ("%s    %c      ?       %s\n", str_status, update_char, path);
+    printf ("%s   %c      ?       %s\n", str_status, update_char, path);
   else
-    printf ("%s    %c    %6ld    %s\n", str_status, update_char,
+    printf ("%s   %c    %6ld    %s\n", str_status, update_char,
             local_rev, path);
 }
 

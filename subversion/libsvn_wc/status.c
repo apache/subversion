@@ -123,8 +123,7 @@ assemble_status (svn_wc_status_t **status,
         these states are of medium precedence.  They also override any
         C or M that may be in the prop_status field at this point.*/
 
-  if ((entry->schedule == svn_wc_schedule_add)
-      || (entry->copied))
+  if (entry->schedule == svn_wc_schedule_add)
     {
       final_text_status = svn_wc_status_added;
       final_prop_status = svn_wc_status_none;
@@ -179,13 +178,14 @@ assemble_status (svn_wc_status_t **status,
   stat->repos_text_status = svn_wc_status_none;   /* default */
   stat->repos_prop_status = svn_wc_status_none;   /* default */
   stat->locked = FALSE;
-
+  stat->copied = FALSE;
   
-  /* 6. Check for locked directory. */
+  /* 6. Check for locked directory, or if the item is 'copied'. */
 
   if (entry->kind == svn_node_dir)
     SVN_ERR (svn_wc__locked (&(stat->locked), path, pool));
-  
+  if (entry->copied)
+    stat->copied = TRUE;
 
   *status = stat;
 

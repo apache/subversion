@@ -178,7 +178,6 @@ def guarantee_repos_and_wc():
   status_list.pop(path_index(status_list, os.path.join(wc_path, alpha_path)))
   status_list.append([os.path.join(wc_path, epsilon_path), None, {},
                       {'status' : '_ ',
-                       'locked' : ' ',
                        'wc_rev' : '9',
                        'repos_rev' : '9'}])
 

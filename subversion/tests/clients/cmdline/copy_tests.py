@@ -176,22 +176,18 @@ def basic_copy_and_move_files():
   # New items in the status tree:
   status_list.append([rho_copy_path, None, {},
                       {'status' : '_ ',
-                       'locked' : ' ',
                        'wc_rev' : '2',
                        'repos_rev' : '2'}])
   status_list.append([alpha2_path, None, {},
                       {'status' : '_ ',
-                       'locked' : ' ',
                        'wc_rev' : '2',
                        'repos_rev' : '2'}])
   status_list.append([new_mu_path, None, {},
                       {'status' : '_ ',
-                       'locked' : ' ',
                        'wc_rev' : '2',
                        'repos_rev' : '2'}])
   status_list.append([new_iota_path, None, {},
                       {'status' : '_ ',
-                       'locked' : ' ',
                        'wc_rev' : '2',
                        'repos_rev' : '2'}])
   # Items that are gone:

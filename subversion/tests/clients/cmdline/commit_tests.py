@@ -73,22 +73,18 @@ def get_standard_status_list(wc_dir):
   # New things
   status_list.append([os.path.join(wc_dir, 'Q'), None, {},
                       {'status' : 'A ',
-                       'locked' : ' ',
                        'wc_rev' : '0',
                        'repos_rev' : '1'}])
   status_list.append([os.path.join(wc_dir, 'Q', 'floo'), None, {},
                       {'status' : 'A ',
-                       'locked' : ' ',
                        'wc_rev' : '0',
                        'repos_rev' : '1'}])
   status_list.append([os.path.join(wc_dir, 'A', 'D', 'H', 'gloo'), None, {},
                       {'status' : 'A ',
-                       'locked' : ' ',
                        'wc_rev' : '0',
                        'repos_rev' : '1'}])
   status_list.append([os.path.join(wc_dir, 'A', 'B', 'E', 'bloo'), None, {},
                       {'status' : 'A ',
-                       'locked' : ' ',
                        'wc_rev' : '0',
                        'repos_rev' : '1'}])
 
@@ -544,7 +540,6 @@ def nested_dir_replacements():
   sl[path_index(sl, os.path.join(wc_dir, 'A', 'D', 'H'))][3]['wc_rev'] = "0"  
   sl.append([os.path.join(wc_dir, 'A', 'D', 'bloo'), None, {},
              {'status' : 'A ',
-              'locked' : ' ',
               'wc_rev' : '0',
               'repos_rev' : '1'}])
 
@@ -580,7 +575,6 @@ def nested_dir_replacements():
   sl[path_index(sl, os.path.join(wc_dir, 'A', 'D', 'H'))][3]['wc_rev'] = "2"  
   sl.append([os.path.join(wc_dir, 'A', 'D', 'bloo'), None, {},
              {'status' : '_ ',
-              'locked' : ' ',
               'wc_rev' : '2',
               'repos_rev' : '2'}])
 
@@ -963,16 +957,16 @@ def merge_mixed_revisions():
   # 2. svn up A/D/H
   status_list = []
   status_list.append([H_path, None, {},
-                      {'status' : '_ ', 'locked' : ' ',
+                      {'status' : '_ ',
                        'wc_rev' : '2', 'repos_rev' : '2'}])
   status_list.append([chi_path, None, {},
-                      {'status' : '_ ', 'locked' : ' ',
+                      {'status' : '_ ', 
                        'wc_rev' : '2', 'repos_rev' : '2'}])
   status_list.append([omega_path, None, {},
-                      {'status' : '_ ', 'locked' : ' ',
+                      {'status' : '_ ', 
                        'wc_rev' : '2', 'repos_rev' : '2'}])
   status_list.append([psi_path, None, {},
-                      {'status' : '_ ', 'locked' : ' ',
+                      {'status' : '_ ', 
                        'wc_rev' : '2', 'repos_rev' : '2'}])
   expected_status_tree = svntest.tree.build_generic_tree(status_list)
   my_greek_tree = [['omega', "This is the file 'omega'.", {}, {}],
@@ -1159,7 +1153,7 @@ def commit_uri_unsafe():
   # Items in our add list will be at rev 2
   for item in add_list:
     item_list = [item, None, {}, {'wc_rev': '2', 'repos_rev': '2',
-                                  'locked': ' ', 'status': '_ '}]
+                                  'status': '_ '}]
     status_list.append(item_list)
 
   expected_status_tree = svntest.tree.build_generic_tree(status_list)
