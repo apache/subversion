@@ -118,8 +118,8 @@ def changed_items(title, type, items)
   rv
 end
 
-def changed_files(title, files)
-  changed_items(title, "files", files)
+def changed_files(title, files, &block)
+  changed_items(title, "files", files, &block)
 end
 
 def added_files(info)
@@ -142,8 +142,8 @@ def copied_files(info)
   end
 end
 
-def changed_dirs(title, files)
-  changed_items(title, "directories", files)
+def changed_dirs(title, files, &block)
+  changed_items(title, "directories", files, &block)
 end
 
 def added_dirs(info)
