@@ -71,7 +71,8 @@ typedef struct svn_error_t
 {
   ap_status_t errno;           /* native OS errno */
   svn_boolean_t fatal;         /* is this a fatal error? */
-  svn_string_t description;    /* textual description from ap_strerror() */
+  svn_string_t *message;       /* description from top-level caller */
+  svn_string_t *description;   /* generic description from ap_strerror() */
   int canonical_errno;         /* "canonicalized" errno from APR */ 
 
 } svn_error_t;
@@ -81,6 +82,7 @@ typedef struct svn_error_t
 
 svn_error_t *svn_create_error (ap_status_t errno, 
                                svn_boolean_t fatal,
+                               svn_string_t *message,
                                ap_pool_t *pool);
 
 
