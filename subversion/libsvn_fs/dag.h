@@ -160,7 +160,8 @@ svn_error_t *svn_fs__dag_link (dag_node_t *parent,
 
 /* Delete the directory entry named NAME from PARENT, as part of
    TRAIL.  PARENT must be mutable.  NAME must be a single path
-   component; it cannot be a slash-separated directory path.  */
+   component; it cannot be a slash-separated directory path.  If the
+   node being deleted is a mutable directory, it must be empty.  */
 svn_error_t *svn_fs__dag_delete (dag_node_t *parent,
 				 const char *name,
 				 trail_t *trail);
