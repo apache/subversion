@@ -1,10 +1,10 @@
 \input texinfo  @c -*-texinfo-*-
 
 @comment Subversion Handbook
-@comment Copyright (C) 2000-2003 CollabNet
+@comment Copyright (C) 2000-2004 CollabNet
 
 @c  ================================================================
-@c  Copyright (c) 2000-2003 CollabNet.  All rights reserved.
+@c  Copyright (c) 2000-2004 CollabNet.  All rights reserved.
 @c  
 @c  Redistribution and use in source and binary forms, with or without
 @c  modification, are permitted provided that the following conditions are
