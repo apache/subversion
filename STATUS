@@ -106,5 +106,4 @@ Candidate changes:
     Justification: Leaves working copy locked.
     Notes:  This bug manifests itself on obstructed updates.
     Votes:
-      +1: dionisos, ghudson
-
+      +1: dionisos, ghudson, kfogel
