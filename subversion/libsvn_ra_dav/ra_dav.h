@@ -44,14 +44,28 @@ svn_error_t *svn_ra_dav_init(int abi_version,
 
 /** plugin function prototypes */
 
+
 svn_error_t * svn_ra_dav__get_commit_editor(
   void *session_baton,
   const svn_delta_edit_fns_t **editor,
   void **edit_baton,
-  svn_revnum_t *new_revision);
-svn_error_t * svn_ra_dav__checkout (void *session_baton,
-                                    const svn_delta_edit_fns_t *editor,
-                                    void *edit_baton);
+  svn_string_t *log_msg,
+  svn_ra_close_commit_func_t close_func,
+  svn_ra_set_wc_prop_func_t set_func,
+  void *close_baton);
+
+svn_error_t * svn_ra_dav__do_checkout (
+  void *session_baton,
+  const svn_delta_edit_fns_t *editor,
+  void *edit_baton);
+
+svn_error_t * svn_ra_dav__do_update(
+  void *session_baton,
+  const svn_ra_reporter_t **reporter,
+  void **report_baton,
+  apr_array_header_t *targets,
+  const svn_delta_edit_fns_t *wc_update,
+  void *wc_update_baton);
 
 /*
 ** SVN_RA_DAV__LP_*: local properties for RA/DAV

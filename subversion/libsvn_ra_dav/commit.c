@@ -53,9 +53,6 @@ typedef struct
 
   apr_hash_t *resources;        /* URL (const char *) -> RESOURCE_T */
 
-  /* This is how we pass back the new revision number to our callers. */
-  svn_revnum_t *new_revision;
-
   /* name of local prop to hold the version resource's URL */
   svn_string_t *vsn_url_name;
 
@@ -590,7 +587,6 @@ static svn_error_t *
 commit_close_edit (void *edit_baton)
 {
   commit_ctx_t *cc = edit_baton;
-  svn_revnum_t new_revision = SVN_INVALID_REVNUM;
 
   /* ### MERGE the activity */
   printf("[close_edit] MERGE: %s\n",
@@ -599,9 +595,7 @@ commit_close_edit (void *edit_baton)
   /* ### set new_revision according to response from server */
   /* ### get the new version URLs for all affected resources */
 
-  /* Make sure the caller (most likely the working copy library, or
-     maybe its caller) knows the new revision. */
-  *cc->new_revision = new_revision;
+  /* ### invoke close_func, set_func */
 
   return NULL;
 }
@@ -611,12 +605,17 @@ svn_error_t * svn_ra_dav__get_commit_editor(
   void *session_baton,
   const svn_delta_edit_fns_t **editor,
   void **edit_baton,
-  svn_revnum_t *new_revision)
+  svn_string_t *log_msg,
+  svn_ra_close_commit_func_t close_func,
+  svn_ra_set_wc_prop_func_t set_func,
+  void *close_baton)
 {
   svn_ra_session_t *ras = session_baton;
   commit_ctx_t *cc = apr_pcalloc(ras->pool, sizeof(*cc));
   svn_delta_edit_fns_t *commit_editor = svn_delta_default_editor(ras->pool);
   svn_error_t *err;
+
+  /* ### store log_msg, close_func, set_func, close_baton */
 
   cc->ras = ras;
   cc->resources = apr_make_hash(ras->pool);
@@ -624,6 +623,8 @@ svn_error_t * svn_ra_dav__get_commit_editor(
   err = create_activity(cc);
   if (err)
     return err;
+
+  /* ### check out the baseline and attach the log_msg */
 
   /* Set up the editor.
   ** This structure is used during the commit process. An external caller

@@ -119,8 +119,8 @@ static const svn_ra_plugin_t dav_plugin = {
   svn_ra_close,
   NULL,         /* ### need get_latest_revnum */
   svn_ra_dav__get_commit_editor,
-  svn_ra_dav__checkout,
-  NULL          /* ### need do_update */
+  svn_ra_dav__do_checkout,
+  svn_ra_dav__do_update
 };
 
 svn_error_t *svn_ra_dav_init(int abi_version,
