@@ -221,6 +221,7 @@ svn_wc_proplist_write (ap_hash_t *proplist,
   ap_status_t res;
   ap_pool_t *pool = NULL;
   ap_hash_index_t *this;      /* current hash entry */
+  const char *dest_fname;
   
   res = ap_create_pool (&pool, NULL);
   if (res != APR_SUCCESS)
@@ -236,36 +237,37 @@ svn_wc_proplist_write (ap_hash_t *proplist,
       exit (1);
     }
 
+  dest_fname = svn_string_2cstring (destfile_name, pool);
+
   /* kff todo: maybe this whole file-opening thing wants to be
      abstracted?  We jump through these same hoops in svn_parse.c as
      well, after all... */
 
   res = ap_open (&destfile,
-                 svn_string_2cstring (destfile_name, pool),
+                 dest_fname,
                  (APR_WRITE | APR_CREATE),
                  APR_OS_DEFAULT,  /* kff todo: what's this about? */
                  pool);
 
   if (res != APR_SUCCESS)
     {
-      svn_string_t *msg;
-      msg = svn_string_create ("svn_wc_proplist_write(): "
-                               "can't open for writing, file ",
-                               pool);
-      svn_string_appendstr (msg, destfile_name, pool);
+      const char *msg;
+
+      msg = ap_pstrcat(pool,
+                       "svn_wc_proplist_write(): "
+                       "can't open for writing, file ",
+                       dest_fname, NULL);
 
       /* Declare this a fatal error! */
-      svn_handle_error (svn_create_error (res, SVN_FATAL,
-                                          svn_string_2cstring (msg, pool),
-                                          NULL, pool),
-                        stderr);
+      svn_handle_error (svn_create_error (res, msg, NULL, pool), stderr);
     }
 
   /* Else file successfully opened.  Continue. */
 
   for (this = ap_hash_first (proplist); this; this = ap_hash_next (this))
     {
-      void *key, *val;
+      const void *key;
+      void *val;
       size_t keylen;
       size_t num_len;
       char buf[100];   /* Only holds lengths expressed in decimal digits. */
@@ -295,15 +297,14 @@ svn_wc_proplist_write (ap_hash_t *proplist,
   res = ap_close (destfile);
   if (res != APR_SUCCESS)
     {
-      svn_string_t *msg = svn_string_create 
-        ("svn_parse(): warning: can't close file ", pool);
-      svn_string_appendstr (msg, destfile_name, pool);
+      const char *msg;
+
+      msg = ap_pstrcat(pool, 
+                       "svn_parse(): warning: can't close file ",
+                       dest_fname, NULL);
       
       /* Not fatal, just annoying */
-      svn_handle_error (svn_create_error (res, SVN_NON_FATAL,
-                                          svn_string_2cstring (msg, pool),
-                                          NULL, pool),
-                        stderr);
+      svn_handle_error (svn_create_error (res, msg, NULL, pool), stderr);
     }
   
   ap_destroy_pool (pool);
