@@ -176,12 +176,12 @@ svn_time_from_cstring(apr_time_t *when, const char *data, apr_pool_t *pool)
   exploded_time.tm_isdst  = 0;
   exploded_time.tm_gmtoff = 0;
 
-  apr_err = apr_implode_gmt(when, &exploded_time);
+  apr_err = apr_time_exp_gmt_get(when, &exploded_time);
   if (apr_err == APR_SUCCESS)
     return SVN_NO_ERROR;
 
-  return svn_error_createf(SVN_ERR_BAD_DATE, NULL,
-                           "Date conversion failed.");
+  return svn_error_create(SVN_ERR_BAD_DATE, NULL,
+                          "Date conversion failed.");
 
  fail:
   /* Try the compatibility option.  This does not need to be fast,
@@ -208,7 +208,7 @@ svn_time_from_cstring(apr_time_t *when, const char *data, apr_pool_t *pool)
       exploded_time.tm_wday = find_matching_string (wday, 7, apr_day_snames);
       exploded_time.tm_mon = find_matching_string (month, 12, apr_month_snames);
 
-      apr_err = apr_implode_gmt (when, &exploded_time);
+      apr_err = apr_time_exp_gmt_get (when, &exploded_time);
       if(apr_err != APR_SUCCESS)
         {
           return svn_error_createf (SVN_ERR_BAD_DATE, NULL,

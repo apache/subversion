@@ -707,17 +707,17 @@ svn_io_is_file_executable(svn_boolean_t *executable,
   SVN_ERR (svn_io_stat (&file_info, path, 
                         (APR_FINFO_PROT | APR_FINFO_OWNER), 
                         pool));
-  apr_err = apr_current_userid (&uid, &gid, pool);
+  apr_err = apr_uid_current (&uid, &gid, pool);
 
   if (apr_err)
     return svn_error_create(apr_err, NULL,
                             "Error getting UID of process.");
     
   /* Check executable bit for current user. */
-  if (apr_compare_users(uid, file_info.user) == APR_SUCCESS)
+  if (apr_uid_compare(uid, file_info.user) == APR_SUCCESS)
     *executable = (file_info.protection & APR_UEXECUTE);
 
-  else if (apr_compare_groups(gid, file_info.group) == APR_SUCCESS)
+  else if (apr_gid_compare(gid, file_info.group) == APR_SUCCESS)
     *executable = (file_info.protection & APR_GEXECUTE);
 
   else

@@ -319,15 +319,15 @@ svn_config__user_config_path (const char *config_dir,
     char *username;
     char *homedir;
 
-    apr_err = apr_current_userid (&uid, &gid, pool);
+    apr_err = apr_uid_current (&uid, &gid, pool);
     if (apr_err)
       return SVN_NO_ERROR;
     
-    apr_err = apr_get_username (&username, uid, pool);
+    apr_err = apr_uid_name_get (&username, uid, pool);
     if (apr_err)
       return SVN_NO_ERROR;
     
-    apr_err = apr_get_home_directory (&homedir, username, pool);
+    apr_err = apr_uid_homepath_get (&homedir, username, pool);
     if (apr_err)
       return SVN_NO_ERROR;
     

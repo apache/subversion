@@ -85,7 +85,7 @@ static svn_error_t *writebuf_output(svn_ra_svn_conn_t *conn,
     {
       count = end - data;
       if (conn->sock)
-        status = apr_send(conn->sock, data, &count);
+        status = apr_socket_send(conn->sock, data, &count);
       else
         status = apr_file_write(conn->out_file, data, &count);
       if (status)
@@ -157,7 +157,7 @@ static svn_error_t *readbuf_input(svn_ra_svn_conn_t *conn, char *data,
   apr_status_t status;
 
   if (conn->sock)
-    status = apr_recv(conn->sock, data, len);
+    status = apr_socket_recv(conn->sock, data, len);
   else
     status = apr_file_read(conn->in_file, data, len);
   if (status && !APR_STATUS_IS_EOF(status))

@@ -44,7 +44,7 @@
  */
 static svn_error_t *
 prompt (const char **result,
-        const char *prompt,
+        const char *prompt_msg,
         svn_boolean_t hide,
         apr_pool_t *pool)
 {
@@ -59,7 +59,7 @@ prompt (const char **result,
   if (status)
     return svn_error_create (status, NULL, "couldn't open stdin");
 
-  SVN_ERR (svn_utf_cstring_from_utf8 (&prompt_native, prompt, pool));
+  SVN_ERR (svn_utf_cstring_from_utf8 (&prompt_native, prompt_msg, pool));
 
   if (! hide)
     {
@@ -108,8 +108,7 @@ prompt (const char **result,
         return svn_error_create (status, NULL, "error from apr_password_get");
     }
 
-  SVN_ERR (svn_utf_cstring_to_utf8 ((const char **)result, strbuf->data,
-                                    NULL, pool));
+  SVN_ERR (svn_utf_cstring_to_utf8 (result, strbuf->data, NULL, pool));
 
   return SVN_NO_ERROR;
 }
