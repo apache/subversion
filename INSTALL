@@ -56,6 +56,34 @@ I.    BUILD REQUIREMENTS
       libraries. At the time of this writing, there were no official
       release versions of APR/APRUTIL available.
 
+      If you already have the APR libraries compiled and do not wish to
+      regenerate them from source code, then Subversion needs to be
+      able to find them.
+
+      There are a couple of options to "./configure" that tell it where
+      to look for the APR and APRUTIL libraries. By default, it will look
+      for and use the apr-config and apu-config scripts. These scripts
+      provide all the relevant information for the APR and APRUTIL
+      installations. If the libraries are installed in the default Apache
+      HTTP 2.0 location (/usr/local/apache2/lib) then these scripts will
+      be found and used.
+
+      If you want to specify the location of the APR library, you can use
+      the "--with-apr=" option of "./configure". It should be able to find
+      the apr-config script in the standard location under that directory
+      (e.g. ${prefix}/bin).
+
+      Similar, you can specify the location of APRUTIL using the
+      "--with-apr-util=" option to "./configure". It will look for the
+      apu-config script relative to that directory.
+
+      For example, if you want to use the APR libraries you built
+      with the Apache HTTP 2.0 server, and which you have installed in
+      a non-standard location, you could run:
+
+          $ ./configure --with-apr=/home/fred/apache2 \
+            --with-apr-util=/home/fred/apache2  ...
+
       If you want Subversion to build the APR libraries from source code
       as part of the Subversion build process, you can put their source
       code into the "./apr" and "./apr-util" directories. The Subversion
@@ -76,29 +104,8 @@ I.    BUILD REQUIREMENTS
           $ cvs -d :pserver:anoncvs@cvs.apache.org:/home/cvspublic co apr
           $ cvs -d :pserver:anoncvs@cvs.apache.org:/home/cvspublic co apr-util
 
-      If you already have the APR libraries compiled and do not wish to
-      regenerate it from source code, then Subversion needs to be
-      able to find it.
-
-      There are a couple of options for Subversion to find where the APR
-      libraries are. By default, it will look for and use the apr-config
-      and apu-config scripts. These scripts provide all the relevant
-      information for the APR and APRUTIL installations.
-
-      If you want to specify the location of the APR library, you can use
-      the "--with-apr=" option of "./configure". It should be able to find
-      the apr-config script in the standard location under that directory
-      (e.g. ${prefix}/bin).
-
-      Similar, you can specify the location of APRUTIL using the
-      "--with-apr-util=" option to "./configure". It will look for the
-      apu-config script relative to that directory.
-
-      For example, if you wanted to use the APR libraries you had built
-      with the Apache HTTP 2.0 server, you could run:
-
-          $ ./configure --with-apr=/usr/local/apache2 \
-            --with-apr-util=/usr/local/apache2  ...
+      The "./apr" and "./apr-util" directories will not be considered
+      if the search for apr-config and apu-config scripts is successful.
 
 
       2.  autoconf 2.50 or newer (Unix only)
@@ -359,10 +366,10 @@ II.   INSTALLATION
       subversion RPM depending on what packages you already have installed:
 
           subversion*.i386.rpm
-          apache*.i386.rpm (Version 2.0.32 or greater)
+          apache*.i386.rpm (Version 2.0.36 or greater)
           db*.i386.rpm     (Version 4.0.14 or greater)
           expat            (Comes with RedHat)
-          neon             (Version 0.19.[2-3])
+          neon             (Version 0.19.4)
 
       After downloading, install it (as root user):
 
@@ -537,7 +544,7 @@ II.   INSTALLATION
       supported at this time.
 
       To build the client components, you'll need a copy of neon
-      0.19.[2-3].  See section I.5 for details on where to get one and
+      0.19.4.  See section I.5 for details on where to get one and
       what to do with it when you get it.
 
       [NOTE: The neon library supports secure connections with OpenSSL
@@ -598,7 +605,7 @@ III.  BUILDING A SUBVERSION SERVER
 
       (Following the BOOTSTRAPPING FROM RPM procedures above will install and
       build the latest Subversion server for Linux RedHat 7.1, 7.2, and PPC
-      Linux systems *IF* the apache-devel-2.0.31 or greater package is already
+      Linux systems *IF* the apache-devel-2.0.36 or greater package is already
       installed when the SUBVERSION RPM is built.)
 
 
@@ -664,16 +671,22 @@ III.  BUILDING A SUBVERSION SERVER
       -------------------------------------------
 
       Go back into your subversion working copy and run ./autogen.sh if
-      you need to.  Then run:
+      you need to.  Then, assuming Apache HTTP 2.0 is installed in the
+      standard location, run:
 
-          $ ./configure --with-apxs=/usr/local/apache2/bin/apxs
-
-      This argument tells subversion to build mod_dav_svn, and where to
-      find the required information to do so.
+          $ ./configure
 
       Note: do *not* configure subversion with "--disable-shared"!
       mod_dav_svn *must* be built as a shared library, and it will
       look for other libsvn_*.so libraries on your system.
+
+      If you see a warning message that the build of mod_dav_svn is being
+      skipped, this may be because you have Apache HTTP 2.0 installed
+      in a non-standard location.  You can use the "--with-apxs=" option
+      to locate the apxs script:
+
+          $ ./configure --with-apxs=/home/fred/apache2/bin/apxs
+ 
 
       Note: it *is* possible to build mod_dav_svn as a static library
       and link it directly into Apache. Possible, but painful. Stick
