@@ -66,14 +66,14 @@
 %apply const char **OUTPUT { const char ** };
 
 /* -----------------------------------------------------------------------
-   list_transaction's "char ***" is returning a list of strings
+   list_transaction's "apr_array_header_t **" is returning a list of strings
 */
 
-%typemap(ignore) char *** (char **temp) {
+%typemap(ignore) apr_array_header_t ** (apr_array_header_t *temp) {
     $1 = &temp;
 }
-%typemap(python, argout) char *** {
-    $result = t_output_helper($result, svn_swig_py_c_strings_to_list(*$1));
+%typemap(python, argout) apr_array_header_t ** {
+    $result = t_output_helper($result, svn_swig_py_array_to_list(*$1));
 }
 
 /* -----------------------------------------------------------------------
