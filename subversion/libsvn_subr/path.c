@@ -666,9 +666,11 @@ svn_path_decompose (const char *path,
 
       i++;
       oldi++;
+      if (path[i] == '\0') /* path is a single '/' */
+        return components;
     }
 
-  while (path[i])
+  do
     {
       if ((path[i] == SVN_PATH_SEPARATOR) || (path[i] == '\0'))
         {
@@ -681,6 +683,7 @@ svn_path_decompose (const char *path,
         }
       i++;
     }
+  while (path[i-1]);
 
   return components;
 }
@@ -792,8 +795,7 @@ const char *
 svn_path_uri_encode (const char *path, apr_pool_t *pool)
 {
   svn_stringbuf_t *retstr;
-  apr_size_t i;
-  int copied = 0;
+  apr_size_t i, copied = 0;
   char c;
 
   if (! path)
@@ -843,7 +845,7 @@ svn_path_uri_decode (const char *path, apr_pool_t *pool)
 {
   svn_stringbuf_t *retstr;
   apr_size_t i;
-  int query_start = 0;
+  svn_boolean_t query_start = FALSE;
 
   if (! path)
     return NULL;
@@ -861,7 +863,7 @@ svn_path_uri_decode (const char *path, apr_pool_t *pool)
       if (c == '?')
         {
           /* Mark the start of the query string, if it exists. */
-          query_start = 1;
+          query_start = TRUE;
         }
       else if (c == '+' && query_start)
         {

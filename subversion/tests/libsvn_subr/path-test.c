@@ -368,6 +368,59 @@ test_basename (const char **msg,
 }
 
 
+static svn_error_t *
+test_decompose (const char **msg,
+                svn_boolean_t msg_only,
+                apr_pool_t *pool)
+{
+  static const char * const paths[] = {
+    "/", "/", NULL,
+    "foo", "foo", NULL,
+    "/foo", "/", "foo", NULL,
+    "/foo/bar", "/", "foo", "bar", NULL,
+    "foo/bar", "foo", "bar", NULL,
+    NULL,
+  };
+  apr_size_t i = 0;
+
+  *msg = "test svn_path_decompose";
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  for (;;)
+    {
+      if (! paths[i])
+        break;
+      else
+        {
+          apr_array_header_t *components = svn_path_decompose(paths[i], pool);
+          apr_size_t j;
+          for (j = 0; j < components->nelts; ++j)
+            {
+              const char *component = APR_ARRAY_IDX(components, j, const char*);
+              if (! paths[i+j+1])
+                return svn_error_createf(SVN_ERR_TEST_FAILED, 0, NULL, pool,
+                                         "svn_path_decompose(\"%s\") returned "
+                                         "unexpected component \"%s\"",
+                                         paths[i], component);
+              if (strcmp (component, paths[i+j+1])) 
+                return svn_error_createf(SVN_ERR_TEST_FAILED, 0, NULL, pool,
+                                         "svn_path_decompose(\"%s\") returned "
+                                         "\"%s\" expected \"%s\"",
+                                         paths[i], component, paths[i+j+1]);
+            }
+          if (paths[i+j+1])
+            return svn_error_createf(SVN_ERR_TEST_FAILED, 0, NULL, pool,
+                                     "svn_path_decompose(\"%s\") failed "
+                                     "to return \"%s\"",
+                                     paths[i], paths[i+j+1]);
+          i += components->nelts + 2;
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
 
 /* The test table.  */
 
@@ -381,6 +434,7 @@ svn_error_t * (*test_funcs[]) (const char **msg,
   test_uri_encode,
   test_join,
   test_basename,
+  test_decompose,
   0
 };
 
