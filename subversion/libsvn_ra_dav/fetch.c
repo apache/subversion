@@ -1186,8 +1186,11 @@ svn_error_t * svn_ra_dav__do_checkout(void *session_baton,
 
       if (strlen(url) > strlen(bc_root))
         {
-          svn_path_add_component_nts(edit_path, 
-                                     svn_path_basename(url, ras->pool));
+          const char *comp;
+          comp = svn_path_uri_decode(svn_path_basename(url, subpool), 
+                                     subpool);
+          svn_path_add_component_nts(edit_path, comp);
+                                     
           SVN_ERR_W( (*editor->add_directory) (edit_path->data, parent_baton,
                                                NULL, SVN_INVALID_REVNUM,
                                                ras->pool, &this_baton),
@@ -1235,9 +1238,11 @@ svn_error_t * svn_ra_dav__do_checkout(void *session_baton,
       for (i = files->nelts; i--; )
         {
           apr_size_t edit_len = edit_path->len;
+          const char *comp;
           rsrc = ((svn_ra_dav_resource_t **)files->elts)[i];
-          svn_path_add_component_nts(edit_path, 
-                                     svn_path_basename (rsrc->url, subpool));
+          comp = svn_path_uri_decode(svn_path_basename(rsrc->url, subpool), 
+                                     subpool);
+          svn_path_add_component_nts(edit_path, comp);
 
           /* ### should we close the dir batons first? */
           SVN_ERR_W( fetch_file(ras->sess, rsrc, this_baton, editor,
