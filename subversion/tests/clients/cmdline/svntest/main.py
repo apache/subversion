@@ -191,18 +191,19 @@ def get_post_commit_hook_path(repo_dir):
   return os.path.join(repo_dir, "hooks", "post-commit")
 
 
+# Run any binary, logging the command line (TODO: and return code)
+def _run_command(command, error_expected, *varargs):
+  """Run COMMAND with VARARGS; return stdout, stderr as lists of lines.
+  If ERROR_EXPECTED is None, any stderr also will be printed."""
 
-# For running subversion and returning the output
-def run_svn(error_expected, *varargs):
-  """Run svn with VARARGS; return stdout, stderr as lists of lines.
- 
-     If ERROR_EXPECTED is None, any stderr also will be printed. """
-
-  command = svn_binary
+  args = ''
   for arg in varargs:                   # build the command string
-    command = command + ' "' + str(arg) + '"'
+    args = args + ' "' + str(arg) + '"'
 
-  infile, outfile, errfile = os.popen3(command)
+  # Log the command line
+  print 'CMD:', os.path.basename(command) + args
+
+  infile, outfile, errfile = os.popen3(command + args)
   stdout_lines = outfile.readlines()
   stderr_lines = errfile.readlines()
 
@@ -215,23 +216,17 @@ def run_svn(error_expected, *varargs):
 
   return stdout_lines, stderr_lines
 
+# For running subversion and returning the output
+def run_svn(error_expected, *varargs):
+  """Run svn with VARARGS; return stdout, stderr as lists of lines.
+  If ERROR_EXPECTED is None, any stderr also will be printed."""
+  return _run_command(svn_binary, error_expected, *varargs)
+
 # For running svnadmin.  Ignores the output.
 def run_svnadmin(*varargs):
   "Run svnadmin with VARARGS, returns stdout, stderr as list of lines."
+  return _run_command(svnadmin_binary, 1, *varargs)
 
-  command = svnadmin_binary
-  for arg in varargs:                   # build the command string
-    command = command + ' "' + str(arg) + '"'
-
-  infile, outfile, errfile = os.popen3(command)
-  stdout_lines = outfile.readlines()
-  stderr_lines = errfile.readlines()
-
-  outfile.close()
-  infile.close()
-  errfile.close()
-
-  return stdout_lines, stderr_lines
 
 # Chmod recursively on a whole subtree
 def chmod_tree(path, mode, mask):
