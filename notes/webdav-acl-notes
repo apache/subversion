@@ -76,15 +76,13 @@ Justin: Greg hints that ra_local doesn't use ACLs as it would be possible
   items from the provider to achieve this.
 
 - Allow mod_dav to handle principal URLs via authentication rewrite.
-  - Current Apache httpd authentication doesn't allow reuse of authentication
-    backends.
-  - Apache httpd authentication must switch to a provider model.
   - mod_dav can be written to use these backends and expose provider URLs and
     handle the DAV methods on them.
 
 ===Completed items===
 
-Nada
+- Apache httpd authentication switched to a provider model for post-2.0.42
+  releases.
 
 ===30,000ft summary of WebDAV ACL draft===
 ****
