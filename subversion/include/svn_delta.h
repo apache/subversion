@@ -240,7 +240,8 @@ extern svn_error_t *svn_txdelta_to_vcdiff (svn_read_fn_t **read_fn,
 /* A typedef for functions that consume a series of delta windows, for
    use in caller-pushes interfaces.  Such functions will typically
    apply the delta windows to produce some file, or save the windows
-   somewhere.  */
+   somewhere.  At the end of the delta window stream, you must call
+   this function passing zero for the WINDOW argument.  */
 typedef svn_error_t *(svn_txdelta_window_handler_t)
                      (svn_txdelta_window_t *window, void *baton);
 
