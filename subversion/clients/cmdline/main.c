@@ -198,7 +198,7 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
     "   2. exports a clean directory tree from the working copy specified by\n"
     "      PATH1 into PATH2.  all local changes will be preserved, but files\n"
     "      not under revision control will not be copied.\n",
-    {'r', 'q', svn_cl__auth_username_opt, svn_cl__auth_password_opt} },
+    {'r', 'D', 'q', svn_cl__auth_username_opt, svn_cl__auth_password_opt} },
 
   { "help", svn_cl__help, {"?", "h"},
     "Display this usage message.\n"
