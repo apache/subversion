@@ -37,8 +37,7 @@ svn_error_t *
 svn_wc__ensure_directory (svn_stringbuf_t *path, apr_pool_t *pool)
 {
   enum svn_node_kind kind;
-  svn_stringbuf_t *npath = svn_stringbuf_dup (path, pool);
-  svn_error_t *err = svn_io_check_path (npath->data, &kind, pool);
+  svn_error_t *err = svn_io_check_path (path->data, &kind, pool);
 
   if (err)
     return err;
@@ -48,14 +47,14 @@ svn_wc__ensure_directory (svn_stringbuf_t *path, apr_pool_t *pool)
       /* If got an error other than dir non-existence, then we can't
          ensure this directory's existence, so just return the error.
          Might happen if there's a file in the way, for example. */
-      return svn_error_create (APR_ENOTDIR, 0, NULL, pool, npath->data);
+      return svn_error_create (APR_ENOTDIR, 0, NULL, pool, path->data);
     }
   else if (kind == svn_node_none)
     {
       /* The dir doesn't exist, and it's our job to change that. */
 
       apr_status_t apr_err =
-        apr_dir_make (npath->data, APR_OS_DEFAULT, pool);
+        apr_dir_make (path->data, APR_OS_DEFAULT, pool);
 
       if (apr_err && !APR_STATUS_IS_ENOENT(apr_err))
         {
@@ -63,7 +62,7 @@ svn_wc__ensure_directory (svn_stringbuf_t *path, apr_pool_t *pool)
              other than non-existence of intermediate dirs.  We can't
              ensure the desired directory's existence, so just return
              the error. */ 
-          return svn_error_create (apr_err, 0, NULL, pool, npath->data);
+          return svn_error_create (apr_err, 0, NULL, pool, path->data);
         }
       else if (APR_STATUS_IS_ENOENT(apr_err))
         /* (redundant conditional and comment) */
@@ -71,7 +70,7 @@ svn_wc__ensure_directory (svn_stringbuf_t *path, apr_pool_t *pool)
           /* Okay, so the problem is a missing intermediate
              directory.  We don't know which one, so we recursively
              back up one level and try again. */
-          svn_stringbuf_t *shorter = svn_stringbuf_dup (npath, pool);
+          svn_stringbuf_t *shorter = svn_stringbuf_dup (path, pool);
           svn_path_remove_component (shorter);
 
           if (svn_stringbuf_isempty (shorter))
@@ -87,12 +86,12 @@ svn_wc__ensure_directory (svn_stringbuf_t *path, apr_pool_t *pool)
               if (err)
                 return (err);
               else
-                return svn_wc__ensure_directory (npath, pool);
+                return svn_wc__ensure_directory (path, pool);
             }
         }
 
       if (apr_err)
-        return svn_error_create (apr_err, 0, NULL, pool, npath->data);
+        return svn_error_create (apr_err, 0, NULL, pool, path->data);
     }
   else  /* No problem, the dir already existed, so just leave. */
     assert (kind == svn_node_dir);
