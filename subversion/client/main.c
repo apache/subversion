@@ -67,39 +67,48 @@
 /*** Command dispatch. ***/
 static const svn_cl__cmd_opts_t add_opts = {
   svn_cl__add_command,
-  "Add a new file or directory to version control." };
+  "Add new files and directories to version control.\n\n"
+  "usage: add [TARGETSPEC]\n" };
 
 static const svn_cl__cmd_opts_t checkout_opts = {
   svn_cl__checkout_command,
-  "Check out a working directory from a repository." };
+  "Check out a working directory from a repository.\n\n"
+  "usage: checkout REPOSPATH\n" };
 
 static const svn_cl__cmd_opts_t commit_opts = {
   svn_cl__commit_command,
-  "Commit changes from your working copy to the repository." };
+  "Commit changes from your working copy to the repository.\n\n"
+  "usage: commit [TARGETSPEC]\n" };
 
 static const svn_cl__cmd_opts_t delete_opts = {
   svn_cl__delete_command,
-  "Remove a file or directory from version control." };
+  "Remove files and directories from version control.\n\n"
+  "usage: delete [TARGETSPEC]\n" };
 
 static const svn_cl__cmd_opts_t proplist_opts = {
   svn_cl__proplist_command,
-  "List all properties for given files and directories." };
+  "List all properties for given files and directories.\n\n"
+  "usage: proplist [TARGETSPEC]\n" };
 
 static const svn_cl__cmd_opts_t propget_opts = {
   svn_cl__propget_command,
-  "Get the value of a file or directory property." };
+  "Get the value of property PROPNAME on files and directories.\n\n"
+  "usage: propget PROPNAME [TARGETSPEC]\n" };
 
 static const svn_cl__cmd_opts_t propset_opts = {
   svn_cl__propset_command,
-  "Set the value of a file or directory property." };
+  "Set property PROPNAME to PROPVAL on the named files and directories.\n\n"
+  "usage: propset PROPNAME PROPVAL [TARGET1 [TARGET2] ...]\n" };
 
 static const svn_cl__cmd_opts_t status_opts = {
   svn_cl__status_command,
-  "Print the status of working copy files and directories." };
+  "Print the status of working copy files and directories.\n\n"
+  "usage: status [TARGETSPEC]\n" };
 
 static const svn_cl__cmd_opts_t update_opts = {
   svn_cl__update_command,
-  "Bring changes from the repository into the working copy." };
+  "Bring changes from the repository into the working copy.\n\n"
+  "usage: update [TARGETSPEC]\n" };
 
 
 /* Map names to command routine, option descriptor and
@@ -148,14 +157,11 @@ static const svn_cl__cmd_desc_t cmd_table[] = {
 static const svn_cl__cmd_desc_t *
 get_cmd_table_entry (const char *cmd_name)
 {
-  int max = sizeof (cmd_table) / sizeof (cmd_table[0]);
+  int max = (sizeof (cmd_table) / sizeof (cmd_table[0])) - 1;
   int i;
 
   if (cmd_name == NULL)
-    {
-      fprintf (stderr, "svn error: no command name provided\n");
-      return NULL;
-    }
+    return NULL;
 
   /* Special case: treat `--help' and friends as though they were the
      `help' command, so they work the same as the command. */
@@ -426,11 +432,17 @@ print_command_info (const char *cmd,
 static void
 print_generic_help (apr_pool_t *pool)
 {
-  size_t max = sizeof (cmd_table) / sizeof (cmd_table[0]);
+  size_t max = (sizeof (cmd_table) / sizeof (cmd_table[0])) - 1;
   static const char usage[] =
     "usage: svn <subcommand> [options] [args]\n"
     "Type \"svn help <subcommand>\" for help on a specific subcommand.\n"
-    "Available subcommands are:\n";
+    "\n"
+    "Many subcommands take a TARGETSPEC argument.  A TARGETSPEC is a list\n"
+    "of files and directories for Subversion to act on recursively.\n"
+    "If no explicit TARGETSPEC is given, Subversion recurses starting at\n"
+    "the current directory.\n"
+    "\n"
+    "Available subcommands:\n";
   int i;
 
   printf ("%s", usage);
@@ -485,7 +497,7 @@ main (int argc, const char **argv)
 
   apr_initialize ();
   pool = svn_pool_create (NULL);
-  memset ((void*)&opt_state, 0, sizeof (opt_state));
+  memset (&opt_state, 0, sizeof (opt_state));
   opt_state.cmd_opts = p_cmd->cmd_opts;
 
   /*  If the command descriptor has an option processing descriptor,

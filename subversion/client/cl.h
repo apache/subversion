@@ -116,16 +116,16 @@ typedef struct svn_cl__opt_state_t
 
 
 /* All client command procedures conform to this prototype.
-
-   The main routine is responsible for creating the base apr pool.
-   It is responsible for cleaning it up, too.
-
-   argc/argv specify only the post-option arguments.
-
-   The error result will generally be that returned by the
-   command implementation procedures. */
-typedef svn_error_t *(svn_cl__cmd_proc_t) \
-  (int argc, const char **argv, svn_cl__opt_state_t *, apr_pool_t *);
+ *
+ * ARGC/ARGV specify only the post-option arguments.  kff todo: this
+ * is not true yet, I think. 
+ *
+ * OPT_STATE likewise should hold the result of processing the options.
+ */
+typedef svn_error_t *(svn_cl__cmd_proc_t) (int argc, 
+                                           const char **argv,
+                                           svn_cl__opt_state_t *opt_state,
+                                           apr_pool_t *pool);
 
 
 /* One element of the command dispatch table. */
