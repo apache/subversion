@@ -61,7 +61,129 @@ svn_wc__ensure_wc (svn_stringbuf_t *path,
 
 
 
-/*** Closing commits. ***/
+/*** Finishing updates and commits. ***/
+
+
+/* The main recursive body of svn_wc__do_update_cleanup. */
+static svn_error_t *
+recursively_tweak_entries (svn_stringbuf_t *dirpath,
+                           const svn_stringbuf_t *base_url,
+                           const svn_revnum_t new_rev,
+                           apr_pool_t *pool)
+{
+  apr_hash_t *entries;
+  apr_hash_index_t *hi;
+  apr_pool_t *subpool = svn_pool_create (pool);
+  
+  /* Read DIRPATH's entries. */
+  SVN_ERR (svn_wc_entries_read (&entries, dirpath, subpool));
+
+  /* Tweak "this_dir" */
+  SVN_ERR (svn_wc__tweak_entry (entries, 
+                                svn_stringbuf_create (SVN_WC_ENTRY_THIS_DIR,
+                                                      subpool),
+                                base_url, new_rev, subpool));
+
+  /* Recursively loop over all children. */
+  for (hi = apr_hash_first (subpool, entries); hi; hi = apr_hash_next (hi))
+    {
+      const void *key;
+      apr_ssize_t keylen;
+      void *val;
+      const char *name;
+      svn_wc_entry_t *current_entry;
+      svn_stringbuf_t *child_url = NULL;
+
+      apr_hash_this (hi, &key, &keylen, &val);
+      name = (const char *) key;
+      current_entry = (svn_wc_entry_t *) val;
+
+      /* Ignore the "this dir" entry. */
+      if (! strcmp (name, SVN_WC_ENTRY_THIS_DIR))
+        continue;
+
+      /* Derive the new URL for the current (child) entry */
+      if (base_url)
+        {
+          child_url = svn_stringbuf_dup (base_url, subpool);
+          svn_path_add_component_nts (child_url, name);
+        }
+      
+      /* If a file, tweak the entry. */
+      if (current_entry->kind == svn_node_file)
+        SVN_ERR (svn_wc__tweak_entry (entries, 
+                                      svn_stringbuf_create (name, subpool),
+                                      child_url, new_rev, subpool));
+      
+      /* If a dir, recurse. */
+      else if (current_entry->kind == svn_node_dir)
+        {
+          svn_stringbuf_t *child_path = svn_stringbuf_dup (dirpath, subpool);
+          svn_path_add_component_nts (child_path, name);
+          SVN_ERR (recursively_tweak_entries 
+                   (child_path, child_url, new_rev, subpool));
+        }
+    }
+
+  /* Write a shiny new entries file to disk. */
+  SVN_ERR (svn_wc__entries_write (entries, dirpath, subpool));
+
+  /* Cleanup */
+  svn_pool_destroy (subpool);
+
+  return SVN_NO_ERROR;
+}
+
+
+
+svn_error_t *
+svn_wc__do_update_cleanup (svn_stringbuf_t *path,
+                           const svn_boolean_t recursive,
+                           const svn_stringbuf_t *base_url,
+                           const svn_revnum_t new_revision,
+                           apr_pool_t *pool)
+{
+  apr_hash_t *entries;
+  svn_wc_entry_t *entry;
+
+  SVN_ERR (svn_wc_entry (&entry, path, pool));
+
+  if (entry->kind == svn_node_file)
+    {
+      svn_stringbuf_t *parent, *basename;
+      svn_path_split (path, &parent, &basename, pool);
+      SVN_ERR (svn_wc_entries_read (&entries, parent, pool));
+      SVN_ERR (svn_wc__tweak_entry (entries, basename,
+                                    base_url, new_revision, pool));
+      SVN_ERR (svn_wc__entries_write (entries, parent, pool));
+    }
+
+  else if (entry->kind == svn_node_dir)
+    {
+      if (! recursive) 
+        {
+          SVN_ERR (svn_wc_entries_read (&entries, path, pool));
+          SVN_ERR (svn_wc__tweak_entry (entries,
+                                        svn_stringbuf_create 
+                                          (SVN_WC_ENTRY_THIS_DIR,
+                                           pool),
+                                        base_url, new_revision, pool));
+          SVN_ERR (svn_wc__entries_write (entries, path, pool));
+        }
+      else
+        SVN_ERR (recursively_tweak_entries (path, base_url,
+                                            new_revision, pool));
+    }
+
+  else
+    return svn_error_createf (SVN_ERR_UNKNOWN_NODE_KIND, 0, NULL, pool,
+                              "Unrecognized node kind: '%s'\n", path->data);
+
+  return SVN_NO_ERROR;
+}
+
+
+
 
 
 svn_error_t *

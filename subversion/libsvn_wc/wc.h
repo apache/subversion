@@ -623,20 +623,54 @@ void svn_wc__entry_remove (apr_hash_t *entries, svn_stringbuf_t *name);
 svn_wc_entry_t *svn_wc__entry_dup (svn_wc_entry_t *entry, apr_pool_t *pool);
 
 
-/* Set the url field of DIRPATH's entry to URL, and recursively tweak
-   all its children to have urls derived therefrom. */
-svn_error_t *svn_wc__recursively_rewrite_urls (svn_stringbuf_t *dirpath,
-                                               svn_stringbuf_t *url,
-                                               apr_pool_t *pool);
-
-
-
 
 
 /*** General utilities that may get moved upstairs at some point. */
 
 /* Ensure that DIR exists. */
 svn_error_t *svn_wc__ensure_directory (svn_stringbuf_t *path, apr_pool_t *pool);
+
+/* Modify the entry of working copy PATH, presumably after an update
+   completes. 
+
+   Set the entry's 'url' and 'working revision' fields to BASE_URL and
+   NEW_REVISION.  If BASE_URL is null, the url field is untouched; if
+   NEW_REVISION in invalid, the working revision field is untouched.
+   The modifications are mutually exclusive.
+
+   If PATH is a directory and RECURSIVE is set, then recursively walk
+   over all entries files below PATH.  While doing this, if
+   NEW_REVISION is valid, then tweak every entry to have this new
+   working revision (excluding files that are scheduled for addition
+   or replacement.)  Likewise, if BASE_URL is non-null, then rewrite
+   all urls to be "telescoping" children of the base_url.
+*/
+svn_error_t *svn_wc__do_update_cleanup (svn_stringbuf_t *path,
+                                        const svn_boolean_t recursive,
+                                        const svn_stringbuf_t *base_url,
+                                        const svn_revnum_t new_revision,
+                                        apr_pool_t *pool);
+
+/* Helper for svn_wc__do_update_cleanup:
+
+   Tweak the entry NAME within hash ENTRIES.  If NEW_URL is non-null,
+   make this the entry's new url.  If NEW_REV is valid, make this the
+   entry's working revision.  (This is purely an in-memory operation.)
+*/
+svn_error_t *
+svn_wc__tweak_entry (apr_hash_t *entries,
+                     const svn_stringbuf_t *name,
+                     const svn_stringbuf_t *new_url,
+                     const svn_revnum_t new_rev,
+                     apr_pool_t *pool);
+
+
+/* Set the url field of DIRPATH's entry to URL, and recursively tweak
+   all its children to have urls derived therefrom. */
+svn_error_t *svn_wc__recursively_rewrite_urls (svn_stringbuf_t *dirpath,
+                                               svn_stringbuf_t *url,
+                                               apr_pool_t *pool);
+
 
 
 /* Ensure that every file or dir underneath PATH is at REVISION.  If
@@ -646,6 +680,7 @@ svn_error_t *svn_wc__ensure_uniform_revision (svn_stringbuf_t *path,
                                               svn_revnum_t revision,
                                               svn_boolean_t recurse,
                                               apr_pool_t *pool);
+
 
 
 

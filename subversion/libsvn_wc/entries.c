@@ -1433,6 +1433,42 @@ svn_wc__entry_dup (svn_wc_entry_t *entry, apr_pool_t *pool)
 
 
 
+/* Helper for svn_wc__do_update_cleanup and recursively_tweak_entries.
+
+   Tweak the entry NAME within hash ENTRIES.  If NEW_URL is non-null,
+   make this the entry's new url.  If NEW_REV is valid, make this the
+   entry's working revision.  (This is purely an in-memory operation.)
+*/
+svn_error_t *
+svn_wc__tweak_entry (apr_hash_t *entries,
+                     const svn_stringbuf_t *name,
+                     const svn_stringbuf_t *new_url,
+                     const svn_revnum_t new_rev,
+                     apr_pool_t *pool)
+{
+  svn_wc_entry_t *entry;
+
+  entry = apr_hash_get (entries, name->data, APR_HASH_KEY_STRING);
+  if (! entry)
+    return svn_error_createf (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL, pool,
+                              "No such entry: '%s'", name->data);
+
+  if (new_url != NULL)
+    fold_entry (entries, name, SVN_WC__ENTRY_MODIFY_URL,
+                SVN_INVALID_REVNUM, svn_node_none, 0, 0, 0, 0, 0,
+                new_url, NULL, pool, NULL);
+
+  if ((SVN_IS_VALID_REVNUM (new_rev))
+      && (entry->schedule != svn_wc_schedule_add)
+      && (entry->schedule != svn_wc_schedule_replace))
+    fold_entry (entries, name, SVN_WC__ENTRY_MODIFY_REVISION,
+                new_rev, svn_node_none, 0, 0, 0, 0, 0,
+                NULL, NULL, pool, NULL);
+
+  return SVN_NO_ERROR;
+}
+
+
 
 svn_error_t *
 svn_wc__recursively_rewrite_urls (svn_stringbuf_t *dirpath,
