@@ -63,3 +63,11 @@ Candidate changes:
     Votes:
       +1: striker, sussman (though I think he'll change his mind)
       -1: breser (violates compatbility rules) 
+
+  * r10072
+    Have 'svnadmin hotcopy' pass APR_LARGEFILE flag to apr_file_open().
+    Justification:  allows this command to copy largefiles, regardless
+                    of whether largefile support is compiled into APR.
+    Notes:  many users have hit this problem (issue #1819).
+    Votes:
+      +1: sussman
