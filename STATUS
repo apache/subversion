@@ -40,10 +40,12 @@ Candidate changes:
     Votes:
       +1: cmpilato
 
-  * r11862, r11921 (part of issue #1997)
+  * r11862, r11921, r12061 (part of issue #1997)
     Fix encoding bug in svnserve -h.
     Justification:
       Encoding bugs look ugly.
+    Note:
+      r12061 is just a docstring clarification.
     Votes:
       +1: lundblad
       +0: nori
