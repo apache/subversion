@@ -15,6 +15,11 @@ Stuff that needs more discussion:
     long repository URLs.  useful for lots of branching/tagging commands.
 
 --------------------------------------------------------------
+To be fixed by someone:
+
+  - svnadmin docs sorely need to be updated.  See Ch05 and Ch08.
+
+--------------------------------------------------------------
 
 To be fixed by cmpilato:
 
