@@ -71,8 +71,7 @@ add_status_structure (apr_hash_t *statushash,
                       apr_pool_t *pool)
 {
   svn_error_t *err;
-  svn_wc__status_t *statstruct = apr_pcalloc (pool,
-                                              sizeof(*statstruct));
+  svn_wc_status_t *statstruct = apr_pcalloc (pool, sizeof(*statstruct));
 
   /* Copy info from entry struct to status struct */
   statstruct->local_ver = entry->version;

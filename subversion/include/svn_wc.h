@@ -82,7 +82,7 @@
    "repos_ver" fields, and status structs don't want full xml
    attribute hashes.  :) 
 */
-typedef struct svn_wc__status_t 
+typedef struct svn_wc_status_t 
 {
   svn_vernum_t local_ver;        /* working copy version number */
   svn_vernum_t repos_ver;        /* repository version number */
@@ -95,6 +95,7 @@ typedef struct svn_wc__status_t
     svn_wc_status_added,
     svn_wc_status_deleted,
     svn_wc_status_modified,
+    svn_wc_status_merged,
     svn_wc_status_conflicted
     
   }  flag;
@@ -102,7 +103,7 @@ typedef struct svn_wc__status_t
   /* For the future: we can place information in here about ancestry
      "sets". */
 
-} svn_wc__status_t;
+} svn_wc_status_t;
 
 
 /* Given a PATH to a working copy file or dir, return a STATUS
