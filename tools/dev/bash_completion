@@ -16,15 +16,22 @@ _svn()
 	COMPREPLY=()
 	cur=${COMP_WORDS[COMP_CWORD]}
 
-	if [[ $COMP_CWORD -eq 1 ]] ; then
-		cmds='add checkout co cleanup commit ci copy cp delete del \
-		      remove rm diff di import log merge mkdir move mv rename \
-		      ren propdel pdel propedit pedit pe propget pget pg \
-		      proplist plist pl propset pset ps revert resolve status \
-		      stat st switch sw update up --version'
+	cmds='add checkout co cleanup commit ci copy cp delete del remove \
+	      rm diff di import h help log merge mkdir move mv rename ren \
+	      propdel pdel propedit pedit pe propget pget pg proplist     \
+	      plist pl propset pset ps revert resolve status stat st      \
+	      switch sw update up --version'
 
+	if [[ $COMP_CWORD -eq 1 ]] ; then
 		COMPREPLY=( $( compgen -W "$cmds" -- $cur ) )
 		return 0
+	else
+		# if our first command was "help", then complete on any 
+		# svn command, since they all have valid help messages
+		if [[ ${COMP_WORDS[1]} = "help" ]] ; then
+			COMPREPLY=( $( compgen -W "$cmds" -- $cur ) )
+			return 0
+		fi
 	fi
 
 	# options that require a parameter
@@ -67,8 +74,6 @@ _svn()
 	diff|di)
 		# multi-occurence options added later
 		cmdOpts="$nOpts $pOpts -x --extensions"
-		;;
-	help|h)
 		;;
 	import)
 		cmdOpts="$mOpts $qOpts $nOpts $pOpts"
