@@ -29,6 +29,7 @@
 
 #include <assert.h>
 
+#include <assert.h>
 
 
 /* Note:  this binary search assumes that the datestamp properties on
@@ -419,3 +420,143 @@ svn_repos_trace_node_locations (svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_repos_get_file_revs (svn_repos_t *repos,
+                         const char *path,
+                         svn_revnum_t start,
+                         svn_revnum_t end,
+                         svn_repos_file_rev_handler_t handler,
+                         void *handler_baton,
+                         apr_pool_t *pool)
+{
+  apr_pool_t *iter_pool, *last_pool;
+  svn_fs_history_t *history;
+  apr_array_header_t *revnums = apr_array_make (pool, 0,
+                                                sizeof (svn_revnum_t));
+  apr_array_header_t *paths = apr_array_make (pool, 0, sizeof (char *));
+  apr_hash_t *last_props;
+  svn_fs_root_t *root, *last_root;
+  const char *last_path;
+  int i;
+
+  /* We switch betwwen two pools while looping, since we need information from
+     the last iteration to be available. */
+  iter_pool = svn_pool_create (pool);
+  last_pool = svn_pool_create (pool);
+
+  /* Open revision root for path@end. */
+  /* ### Can we use last_pool for this? How long does the history
+     object need the root? */
+  SVN_ERR (svn_fs_revision_root (&root, repos->fs, end, pool));
+
+  /* Open a history object. */
+  SVN_ERR (svn_fs_node_history (&history, root, path, last_pool));
+  
+  /* Get the revisions we are interested in. */
+  while (1)
+    {
+      const char* rev_path;
+      svn_revnum_t rev;
+      apr_pool_t *tmp_pool;
+
+      svn_pool_clear (iter_pool);
+
+      SVN_ERR (svn_fs_history_prev (&history, history, TRUE, iter_pool));
+      if (!history)
+        break;
+      SVN_ERR (svn_fs_history_location (&rev_path, &rev, history, iter_pool));
+      *(svn_revnum_t*) apr_array_push (revnums) = rev;
+      *(char **) apr_array_push (paths) = apr_pstrdup (pool, rev_path);
+      if (rev <= start)
+        break;
+
+      /* Swap pools. */
+      tmp_pool = iter_pool;
+      iter_pool = last_pool;
+      last_pool = tmp_pool;
+    }
+
+  /* We must have at least one revision to get. */
+  assert (revnums->nelts > 0);
+
+  /* We want the first txdelta to be against the empty file. */
+  last_root = NULL;
+  last_path = NULL;
+
+  /* Create an empty hash table for the first property diff. */
+  last_props = apr_hash_make (last_pool);
+
+  /* Walk through the revisions in chronological order. */
+  for (i = revnums->nelts; i > 0; --i)
+    {
+      svn_revnum_t rev = APR_ARRAY_IDX (revnums, i - 1, svn_revnum_t);
+      const char *rev_path = APR_ARRAY_IDX (paths, i - 1, const char *);
+      apr_hash_t *rev_props;
+      apr_hash_t *props;
+      apr_array_header_t *prop_diffs;
+      svn_txdelta_stream_t *delta_stream;
+      svn_txdelta_window_handler_t delta_handler = NULL;
+      void *delta_baton = NULL;
+      apr_pool_t *tmp_pool;  /* For swapping */
+      svn_boolean_t contents_changed;
+
+      svn_pool_clear (iter_pool);
+
+      /* Get the revision properties. */
+      SVN_ERR (svn_fs_revision_proplist (&rev_props, repos->fs,
+                                         rev, iter_pool));
+
+      /* Open the revision root. */
+      SVN_ERR (svn_fs_revision_root (&root, repos->fs, rev, iter_pool));
+
+      /* Get the file's properties for this revision and compute the diffs. */
+      SVN_ERR (svn_fs_node_proplist (&props, root, rev_path, iter_pool));
+      SVN_ERR (svn_prop_diffs (&prop_diffs, props, last_props, pool));
+
+      /* Check if the contents changed. */
+      /* Special case: In the first revision, we always provide a delta. */
+      if (last_root)
+        SVN_ERR (svn_fs_contents_changed (&contents_changed,
+                                          last_root, last_path,
+                                          root, rev_path, iter_pool));
+      else
+        contents_changed = TRUE;
+
+      /* We have all we need, give to the handler. */
+      SVN_ERR (handler (handler_baton, rev_path, rev, rev_props,
+                        contents_changed ? &delta_handler : NULL,
+                        contents_changed ? &delta_baton : NULL,
+                        prop_diffs, iter_pool));
+
+      /* Compute and send delta if client asked for it.
+         Note that this was initialized to NULL, so if !contents_changed,
+         no deltas will be computed. */
+      if (delta_handler)
+        {
+          /* Get the content delta. */
+          SVN_ERR (svn_fs_get_file_delta_stream (&delta_stream,
+                                                 last_root, last_path,
+                                                 root, rev_path,
+                                                 iter_pool));
+          /* And send. */
+          SVN_ERR (svn_txdelta_send_txstream (delta_stream,
+                                              delta_handler, delta_baton,
+                                              iter_pool));
+        }
+
+      /* Remember root, path and props for next iteration. */
+      last_root = root;
+      last_path = rev_path;
+      last_props = props;
+
+      /* Swap the pools. */
+      tmp_pool = iter_pool;
+      iter_pool = last_pool;
+      last_pool = tmp_pool;
+    }
+
+  svn_pool_destroy (last_pool);
+  svn_pool_destroy (iter_pool);
+
+  return SVN_NO_ERROR;
+}
