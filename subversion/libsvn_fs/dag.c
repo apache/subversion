@@ -747,7 +747,6 @@ svn_error_t *svn_fs__dag_delete (dag_node_t *parent,
                                  const char *name,
                                  trail_t *trail)
 {
-  /* cmpilato todo:  Make this not suck. */
   skel_t *node_rev, *new_dirent_list, *prev_entry, *entry;
   int deleted = FALSE;
 
@@ -807,36 +806,47 @@ svn_error_t *svn_fs__dag_delete (dag_node_t *parent,
       /* entry looks like "(NAME ID)" */
       if (svn_fs__matches_atom (entry->children, name))
         {
-          /* Aha!  We want to remove this entry from the list. */
+          /* Found it.  This is the entry we want to remove from the
+           * list.  But:
+           *
+           *    - If it's a mutable and *non-empty* directory, flag an
+           *      error.  Part of this routine's promise is that it
+           *      won't remove non-empty mutable dirs.
+           * 
+           *    - Otherwise, if it's mutable, delete it from the
+           *      database entirely, because this is the last handle 
+           *      anyone has on it.
+           */
 
-          /* We actually have to *retrieve* this entry, however, and
-             make sure that we're not trying to remove a non-empty
-             mutable dir.  (This is part of this routine's promise.) */
           skel_t *id_atom = entry->children->next;
           dag_node_t *node; 
+          svn_boolean_t is_mutable = 0;
           svn_fs_id_t *id = svn_fs_parse_id (id_atom->data, id_atom->len,
                                              trail->pool);
 
           SVN_ERR (svn_fs__dag_get_node (&node, parent->fs, id, trail));
-          
-          if (svn_fs__dag_is_directory (node))
+          SVN_ERR (svn_fs__dag_check_mutable (&is_mutable, node, trail));
+
+          if (is_mutable)
             {
-              skel_t *content;
-              SVN_ERR (svn_fs__get_node_revision (&content,
-                                                  parent->fs,
-                                                  id,
-                                                  trail));
-              
-              if (has_mutable_flag (content))
+              if (svn_fs__dag_is_directory (node))
                 {
-                  int len = svn_fs__list_length (content->children->next);
-                  if (len != 0)
-                    return 
-                      svn_error_createf
-                      (SVN_ERR_FS_DIR_NOT_EMPTY, 0, NULL, parent->pool,
-                       "Attempted to delete non-empty mutable directory `%s'.",
-                       name);                        
+                  skel_t *content;
+                  SVN_ERR (svn_fs__get_node_revision (&content, parent->fs,
+                                                      id, trail));
+                  
+                  if (svn_fs__list_length (content->children->next) != 0)
+                    {
+                      return
+                        svn_error_createf
+                        (SVN_ERR_FS_DIR_NOT_EMPTY, 0, NULL, parent->pool,
+                         "Attempt to delete non-empty mutable directory `%s'.",
+                         name);
+                    }
                 }
+
+              /* Delete the mutable node from the database. */
+              SVN_ERR (svn_fs__delete_node_revision (parent->fs, id, trail));
             }
 
           /* Just "lose" this entry by setting the *previous* entry's
@@ -861,13 +871,11 @@ svn_error_t *svn_fs__dag_delete (dag_node_t *parent,
     
   /* Else, the linked list has been appropriately modified.  Hook it
      back into the content skel and re-write the node-revision. */
-  node_rev->children->next = new_dirent_list;
-
   SVN_ERR (svn_fs__put_node_revision (parent->fs,
                                       parent->id,
                                       node_rev,
                                       trail));
-  
+
   return SVN_NO_ERROR;
 }
 

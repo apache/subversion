@@ -424,50 +424,50 @@ create_mini_tree_transaction (const char **msg)
    creates the Greek Tree under TXN_ROOT.  See ../xml/co1.txt for a
    diagram of the tree. */ 
 static svn_error_t *
-greek_tree_under_root (svn_fs_root_t *txn_root, apr_pool_t *subpool)
+greek_tree_under_root (svn_fs_root_t *txn_root)
 {
-  SVN_ERR (svn_fs_make_file (txn_root, "iota", subpool));
+  SVN_ERR (svn_fs_make_file (txn_root, "iota", pool));
   SVN_ERR (set_file_contents (txn_root, "iota",
                               "This is the file 'iota'."));
-  SVN_ERR (svn_fs_make_dir  (txn_root, "A", subpool));
-  SVN_ERR (svn_fs_make_file (txn_root, "A/mu", subpool));
+  SVN_ERR (svn_fs_make_dir  (txn_root, "A", pool));
+  SVN_ERR (svn_fs_make_file (txn_root, "A/mu", pool));
   SVN_ERR (set_file_contents (txn_root, "A/mu",
                               "This is the file 'mu'."));
-  SVN_ERR (svn_fs_make_dir  (txn_root, "A/B", subpool));
-  SVN_ERR (svn_fs_make_file (txn_root, "A/B/lambda", subpool));
+  SVN_ERR (svn_fs_make_dir  (txn_root, "A/B", pool));
+  SVN_ERR (svn_fs_make_file (txn_root, "A/B/lambda", pool));
   SVN_ERR (set_file_contents (txn_root, "A/B/lambda",
                               "This is the file 'lambda'."));
-  SVN_ERR (svn_fs_make_dir  (txn_root, "A/B/E", subpool));
-  SVN_ERR (svn_fs_make_file (txn_root, "A/B/E/alpha", subpool));
+  SVN_ERR (svn_fs_make_dir  (txn_root, "A/B/E", pool));
+  SVN_ERR (svn_fs_make_file (txn_root, "A/B/E/alpha", pool));
   SVN_ERR (set_file_contents (txn_root, "A/B/E/alpha",
                               "This is the file 'alpha'."));
-  SVN_ERR (svn_fs_make_file (txn_root, "A/B/E/beta", subpool));
+  SVN_ERR (svn_fs_make_file (txn_root, "A/B/E/beta", pool));
   SVN_ERR (set_file_contents (txn_root, "A/B/E/beta",
                               "This is the file 'beta'."));
-  SVN_ERR (svn_fs_make_dir  (txn_root, "A/B/E/F", subpool));
-  SVN_ERR (svn_fs_make_dir  (txn_root, "A/B/C", subpool));
-  SVN_ERR (svn_fs_make_dir  (txn_root, "A/D", subpool));
-  SVN_ERR (svn_fs_make_file (txn_root, "A/D/gamma", subpool));
+  SVN_ERR (svn_fs_make_dir  (txn_root, "A/B/E/F", pool));
+  SVN_ERR (svn_fs_make_dir  (txn_root, "A/C", pool));
+  SVN_ERR (svn_fs_make_dir  (txn_root, "A/D", pool));
+  SVN_ERR (svn_fs_make_file (txn_root, "A/D/gamma", pool));
   SVN_ERR (set_file_contents (txn_root, "A/D/gamma",
                               "This is the file 'gamma'."));
-  SVN_ERR (svn_fs_make_dir  (txn_root, "A/D/G", subpool));
-  SVN_ERR (svn_fs_make_file (txn_root, "A/D/G/pi", subpool));
+  SVN_ERR (svn_fs_make_dir  (txn_root, "A/D/G", pool));
+  SVN_ERR (svn_fs_make_file (txn_root, "A/D/G/pi", pool));
   SVN_ERR (set_file_contents (txn_root, "A/D/G/pi",
                               "This is the file 'pi'."));
-  SVN_ERR (svn_fs_make_file (txn_root, "A/D/G/rho", subpool));
+  SVN_ERR (svn_fs_make_file (txn_root, "A/D/G/rho", pool));
   SVN_ERR (set_file_contents (txn_root, "A/D/G/rho",
                               "This is the file 'rho'."));
-  SVN_ERR (svn_fs_make_file (txn_root, "A/D/G/tau", subpool));
+  SVN_ERR (svn_fs_make_file (txn_root, "A/D/G/tau", pool));
   SVN_ERR (set_file_contents (txn_root, "A/D/G/tau",
                               "This is the file 'tau'."));
-  SVN_ERR (svn_fs_make_dir  (txn_root, "A/D/H", subpool));
-  SVN_ERR (svn_fs_make_file (txn_root, "A/D/H/chi", subpool));
+  SVN_ERR (svn_fs_make_dir  (txn_root, "A/D/H", pool));
+  SVN_ERR (svn_fs_make_file (txn_root, "A/D/H/chi", pool));
   SVN_ERR (set_file_contents (txn_root, "A/D/H/chi",
                               "This is the file 'chi'."));
-  SVN_ERR (svn_fs_make_file (txn_root, "A/D/H/psi", subpool));
+  SVN_ERR (svn_fs_make_file (txn_root, "A/D/H/psi", pool));
   SVN_ERR (set_file_contents (txn_root, "A/D/H/psi",
                               "This is the file 'psi'."));
-  SVN_ERR (svn_fs_make_file (txn_root, "A/D/H/omega", subpool));
+  SVN_ERR (svn_fs_make_file (txn_root, "A/D/H/omega", pool));
   SVN_ERR (set_file_contents (txn_root, "A/D/H/omega",
                               "This is the file 'omega'."));
   return SVN_NO_ERROR;
@@ -490,7 +490,7 @@ create_greek_tree_transaction (const char **msg)
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
 
   /* Create the greek tree. */
-  SVN_ERR (greek_tree_under_root (txn_root, pool));
+  SVN_ERR (greek_tree_under_root (txn_root));
 
   /* Close the transaction and fs. */
   SVN_ERR (svn_fs_close_txn (txn));
@@ -500,7 +500,8 @@ create_greek_tree_transaction (const char **msg)
 }
 
 
-/* Helper for list_directory. */
+/* Verify that entry KEY is present in ENTRIES, and that its value is
+   an svn_fs_dirent_t whose name and id are not null. */
 static svn_error_t *
 verify_entry (apr_hash_t *entries, const char *key)
 {
@@ -723,6 +724,62 @@ revision_props (const char **msg)
 }
 
 
+/* Helpers for testing deletion -- see if an entry is present or
+   absent. */
+
+static svn_error_t *
+check_entry (svn_fs_root_t *root,
+             const char *path,
+             const char *name,
+             svn_boolean_t *present)
+{
+  apr_hash_t *entries;
+  svn_fs_dirent_t *ent;
+
+  SVN_ERR (svn_fs_dir_entries (&entries, root, path, pool));
+  ent = apr_hash_get (entries, name, strlen (name));
+
+  if (ent)
+    *present = TRUE;
+  else
+    *present = FALSE;
+
+  return SVN_NO_ERROR;
+}
+
+
+/* Return an error if entry NAME is absent in directory PATH under ROOT. */
+static svn_error_t *
+check_entry_present (svn_fs_root_t *root, const char *path, const char *name)
+{
+  svn_boolean_t present;
+  SVN_ERR (check_entry (root, path, name, &present));
+
+  if (! present)
+    return svn_error_createf
+      (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+       "entry \"%s\" absent when it should be present", name);
+
+  return SVN_NO_ERROR;
+}
+
+
+/* Return an error if entry NAME is present in directory PATH under ROOT. */
+static svn_error_t *
+check_entry_absent (svn_fs_root_t *root, const char *path, const char *name)
+{
+  svn_boolean_t present;
+  return check_entry (root, path, name, &present);
+
+  if (present)
+    return svn_error_createf
+      (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+       "entry \"%s\" present when it should be absent", name);
+
+  return SVN_NO_ERROR;
+}
+
+
 /* Test deleting of mutable nodes.  We build a tree in a transaction,
    then try to delete various items in the tree.  We never commit the
    tree, so every entry being deleted points to a mutable node. */
@@ -734,7 +791,7 @@ delete_mutables (const char **msg)
   svn_fs_root_t *txn_root;
   svn_error_t *err;
 
-  *msg = "delete mutable nodes from directories (INCOMPLETE TEST)";
+  *msg = "delete mutable nodes from directories";
 
   /* Prepare a txn to receive the greek tree. */
   SVN_ERR (create_fs_and_repos (&fs, "test-repo-del-from-dir"));
@@ -742,29 +799,10 @@ delete_mutables (const char **msg)
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
   
   /* Create the greek tree. */
-  SVN_ERR (greek_tree_under_root (txn_root, pool));
+  SVN_ERR (greek_tree_under_root (txn_root));
 
-#if 0 /* in progress */
-
-  /*
-   * We now have the greek tree:
-   * 
-   *      /iota
-   *
-   *      /A/                        /A/D/
-   *      /A/mu                      /A/D/gamma
-   *                                 /A/D/H/
-   *      /A/B/                      /A/D/H/chi
-   *      /A/B/lambda                /A/D/H/psi
-   *      /A/B/E                     /A/D/H/omega
-   *      /A/B/E/alpha
-   *      /A/B/E/beta                /A/D/G/
-   *      /A/B/F                     /A/D/G/pi
-   *                                 /A/D/G/rho
-   *      /A/C/                      /A/D/G/tau
-   *
-   * Baby, it's time to test like you've never tested before.  We're
-   * going to try these things, in this order:
+  /* Baby, it's time to test like you've never tested before.  We do
+   * the following, in this order:
    *
    *    1. Delete a single file somewhere, succeed.
    *    2. Delete two files of three, then make sure the third remains.
@@ -788,18 +826,28 @@ delete_mutables (const char **msg)
    *    8. Try to delete A/D, fail.
    *    9. Try to delete iota, succeed.
    *
-   * Before and after some tests, we'll list the affected directory,
-   * to make sure that what we think happened really did happen.
+   * Before and after each deletion or attempted deletion, we probe
+   * the affected directory, to make sure everything is as it should
+   * be.
    */
 
-  /* kff todo fooo working here */
-
   /* 1 */
+  SVN_ERR (check_entry_present (txn_root, "A/D", "gamma"));
   SVN_ERR (svn_fs_delete (txn_root, "A/D/gamma", pool));
+  SVN_ERR (check_entry_absent (txn_root, "A/D", "gamma"));
 
   /* 2 */
+  SVN_ERR (check_entry_present (txn_root, "A/D/G", "pi"));
+  SVN_ERR (check_entry_present (txn_root, "A/D/G", "rho"));
+  SVN_ERR (check_entry_present (txn_root, "A/D/G", "tau"));
   SVN_ERR (svn_fs_delete (txn_root, "A/D/G/pi", pool));
+  SVN_ERR (check_entry_absent (txn_root, "A/D/G", "pi"));
+  SVN_ERR (check_entry_present (txn_root, "A/D/G", "rho"));
+  SVN_ERR (check_entry_present (txn_root, "A/D/G", "tau"));
   SVN_ERR (svn_fs_delete (txn_root, "A/D/G/rho", pool));
+  SVN_ERR (check_entry_absent (txn_root, "A/D/G", "pi"));
+  SVN_ERR (check_entry_absent (txn_root, "A/D/G", "rho"));
+  SVN_ERR (check_entry_present (txn_root, "A/D/G", "tau"));
 
   /* 3 */
   err = svn_fs_delete (txn_root, "A/D/G", pool);
@@ -815,15 +863,23 @@ delete_mutables (const char **msg)
         (SVN_ERR_FS_GENERAL, 0, NULL, pool,
          "deleting non-empty directory failed to get error");
     }
+  SVN_ERR (check_entry_present (txn_root, "A/D", "G"));
 
   /* 4 */
   SVN_ERR (svn_fs_delete (txn_root, "A/D/G/tau", pool));
+  SVN_ERR (check_entry_absent (txn_root, "A/D/G", "pi"));
+  SVN_ERR (check_entry_absent (txn_root, "A/D/G", "rho"));
+  SVN_ERR (check_entry_absent (txn_root, "A/D/G", "tau"));
 
   /* 5 */
+  SVN_ERR (check_entry_present (txn_root, "A/D", "G"));
   SVN_ERR (svn_fs_delete (txn_root, "A/D/G", pool));      /* succeed */
+  SVN_ERR (check_entry_absent (txn_root, "A/D", "G"));
 
   /* 6 */
+  SVN_ERR (check_entry_present (txn_root, "A", "C"));
   SVN_ERR (svn_fs_delete (txn_root, "A/C", pool));
+  SVN_ERR (check_entry_absent (txn_root, "A", "C"));
 
   /* 7 */
   err = svn_fs_delete (txn_root, "", pool);
@@ -854,11 +910,12 @@ delete_mutables (const char **msg)
         (SVN_ERR_FS_GENERAL, 0, NULL, pool,
          "deleting non-empty directory failed to get error");
     }
+  SVN_ERR (check_entry_present (txn_root, "A", "D"));
 
   /* 9 */
+  SVN_ERR (check_entry_present (txn_root, "", "iota"));
   SVN_ERR (svn_fs_delete (txn_root, "iota", pool));
-
-#endif /* 0 */
+  SVN_ERR (check_entry_absent (txn_root, "", "iota"));
 
   /* Close the transaction and fs. */
   SVN_ERR (svn_fs_close_txn (txn));
