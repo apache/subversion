@@ -220,7 +220,7 @@ svn_error_t *svn_ver_check_list (const svn_version_t *my_version,
 /* libsvn_subr doesn't have an svn_subr header, so put the prototype here. */
 /**
  * Get libsvn_subr version information.
- * @since New in version 1.1.
+ * @since New in 1.1.
  */
 const svn_version_t *svn_subr_version (void);
 

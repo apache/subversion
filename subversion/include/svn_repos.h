@@ -669,7 +669,7 @@ svn_repos_trace_node_locations (svn_fs_t *fs,
 
 
 /**
- * @since new in 1.2.
+ * @since New in 1.2.
  *
  * Invoke @a receiver with @a receiver_baton on each log message from 
  * @a start to @a end in @a repos's filesystem.  @a start may be greater 
@@ -876,7 +876,7 @@ svn_error_t *svn_repos_fs_begin_txn_for_update (svn_fs_txn_t **txn_p,
 
 
 /** 
- * @since New in 1.1. 
+ * @since New in 1.1.
  *
  * Like @c svn_fs_change_rev_prop(), but invoke the @a repos's pre- and
  * post-revprop-change hooks around the change.  Use @a pool for
