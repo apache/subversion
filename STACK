@@ -17,12 +17,17 @@ Ben & Karl todo:
 
 Ben todo:
 
-   - update-after-editor: isn't printing `G' for prop merges.  isn't
-     printing `C' for either textual or property conflicts.  fix this.
-     (is this still true??)
-
    - start implementing the generic ra library -- just a system for
      loading the "real" ra-plugin libraries.
+
+     Notes:  libsvn_client needs a global hash which maps ra_FOO names
+     to svn_ra_library_t's.  libsvn_client will internalize the logic
+     that determines exactly which kind of repository URL causes which
+     kind of ra_FOO module to be dso_loaded().  To keep this
+     threadsafe, each thread will first check the hash for the vtable
+     it wants; if not there, lock with a mutex, check again, possibly
+     load the library, unlock.  This way, once a vtable is loaded up,
+     all threads get to share it.
 
    - make a new mini-crawler (lots of shared code with adm_crawler.c)
      which reports "version differences" to an editor.  this will be
