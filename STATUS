@@ -76,7 +76,7 @@ Candidate changes:
     Votes:
       +1: breser
 
-  * r9212
+  * r9212, r9231
     Added VC7 support and defines for including debug symbol files.
     Justification: The setup in 1.0.x branch is useless if VC7 is used
     Notes:  The 1.0.1 zip file content was build with VC7 and the Windows
