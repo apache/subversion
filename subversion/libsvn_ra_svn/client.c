@@ -789,9 +789,6 @@ static svn_error_t *ra_svn_log(void *sess, const apr_array_header_t *paths,
   SVN_ERR(svn_ra_svn_end_list(conn, pool));
   SVN_ERR(svn_ra_svn_end_list(conn, pool));
 
-  /* Read the response. */
-  SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, ""));
-
   /* Read the log messages. */
   subpool = svn_pool_create(pool);
   while (1)
@@ -832,6 +829,10 @@ static svn_error_t *ra_svn_log(void *sess, const apr_array_header_t *paths,
       apr_pool_clear(subpool);
     }
   apr_pool_destroy(subpool);
+
+  /* Read the response. */
+  SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, ""));
+
   return SVN_NO_ERROR;
 }
 

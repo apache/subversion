@@ -761,6 +761,7 @@ static svn_error_t *log_receiver(void *baton, apr_hash_t *changed_paths,
 static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                             apr_array_header_t *params, void *baton)
 {
+  svn_error_t *err;
   server_baton_t *b = baton;
   svn_revnum_t start_rev, end_rev;
   const char *full_path;
@@ -785,17 +786,17 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
       *((const char **) apr_array_push(full_paths)) = full_path;
     }
 
-  /* Write an empty command-reponse, telling the client logs are coming. */
-  SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
-
   /* Get logs.  (Can't report errors back to the client at this point.) */
   lb.fs_path = b->fs_path;
   lb.conn = conn;
-  SVN_ERR(svn_repos_get_logs(b->repos, full_paths, start_rev, end_rev,
-                             changed_paths, strict_node, log_receiver, &lb,
-                             pool));
+  err = svn_repos_get_logs(b->repos, full_paths, start_rev, end_rev,
+                           changed_paths, strict_node, log_receiver, &lb,
+                           pool);
 
-  return svn_ra_svn_write_word(conn, pool, "done");
+  SVN_ERR(svn_ra_svn_write_word(conn, pool, "done"));
+  SVN_CMD_ERR(err);
+  SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *check_path(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
