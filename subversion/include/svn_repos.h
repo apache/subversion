@@ -224,19 +224,20 @@ svn_error_t *svn_repos_abort_report (void *report_baton);
    paths that have a base revision that differs from that of their
    parent directory.
 
-   If TEXT_DELTAS is FALSE, only a single NULL txdelta window will be
-   sent to the window handler returned by EDITOR->apply_textdelta().
+   If TEXT_DELTAS is FALSE, send a single NULL txdelta window to the
+   window handler returned by EDITOR->apply_textdelta().
 
-   If ENTRY_PROPS is TRUE, each open/added entry will be accompanied
-   by propchange editor calls that relay special "entry props" (this
+   If ENTRY_PROPS is TRUE, accompany each opened/added entry with
+   propchange editor calls that relay special "entry props" (this
    is typically used only for working copy updates).
 
-   USE_COPYFROM_ARGS determines whether or not the editor's add_file
-   and add_directory functions will be called with copyfrom_*
-   arguments.  That is to say, if a node that needs to be added can be
-   optimized by simply copying another node that already exists in the
-   source tree, svn_repos_dir_delta might ask that such a copy take
-   place.
+   If USE_COPY_HISTORY is TRUE, then when recursing on a node with
+   copy history, express differences as against the node referred to
+   by that copy history.  Else if USE_COPY_HISTORY is FALSE, then
+   express differences as full adds (i.e., all directory entries are
+   reported as adds, and text deltas are sent against the empty
+   string).  Either way, pass `copyfrom' arguments through to the
+   EDITOR's add_file and add_directory when copy history is present.
 
    Before completing successfully, this function calls EDITOR's
    close_edit(), so the caller should expect its EDIT_BATON to be
@@ -259,7 +260,7 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
                      svn_boolean_t text_deltas,
                      svn_boolean_t recurse,
                      svn_boolean_t entry_props,
-                     svn_boolean_t use_copyfrom_args,
+                     svn_boolean_t use_copy_history,
                      apr_pool_t *pool);
 
 
