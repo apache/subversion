@@ -60,3 +60,17 @@ Candidate changes:
     Votes:
       +1: sussman, jpieper
       +0: (philip?  sussman is guessing here)
+
+  * r10889 (Issue #1914)
+    Make external diff3 work again.
+    Justification:
+        Regression from 1.0.
+    Votes:
+      +1: bliss
+
+  * r10890
+    Run external diff3 with full environment.
+    Justification:
+        X11 diff3 utilities won't work without it.  One-liner.
+    Votes:
+      +1: bliss
