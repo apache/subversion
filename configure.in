@@ -71,7 +71,7 @@ SVN_CONFIG_NICE(config.nice)
 
 dnl AC_CONFIG_HEADER causes `autoheader' to produce svn_private_config.h.in for us.
 dnl   (We can add custom defines by creating ./acconfig.h if we wish.)
-AC_CONFIG_HEADER(svn_private_config.h)
+AC_CONFIG_HEADER(subversion/svn_private_config.h)
 
 dnl Check for programs ---------------------
 
@@ -103,7 +103,7 @@ AC_ARG_ENABLE(subdir-config,
   ])
 
 dnl the extra bits to include into our build process
-SVN_EXTRA_INCLUDES='-I$(top_srcdir)/subversion/include -I$(top_builddir)'
+SVN_EXTRA_INCLUDES='-I$(top_srcdir)/subversion/include -I$(top_builddir)/subversion'
 SVN_EXTRA_LIBS=
 
 SVN_SUBDIRS=
