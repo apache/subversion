@@ -51,18 +51,20 @@ extensibility.  The following fields are defined:
 
   id        The ID of the node-rev
   type      "file" or "dir"
-  pred      "<rev> <offset>" giving offset of predecessor node-rev
+  pred      "<rev> <offset>" giving location of predecessor node-rev
   count     Count of node-revs since the base of the node
   rep       Offset of text representation
   props     Offset of property list
-  copyfrom  "<rev> <path>" of copyfrom data
+  copyfrom  "{soft|hard} <rev> <path>" of copyfrom data
+  copyroot  "<base> <offset>" giving location of root of node-copy
   cpath     FS pathname node was created at [clarify]
 
 The predecessor of a node-rev crosses copy history; together with the
 count field, it allows efficient determination of the base for
-skip-deltas.  The root of a node contains no "pred" field.  The
-"copyfrom" field is only present for the root of a node-copy, of
-course.
+skip-deltas.  The root of a node contains no "pred" field.  In the
+first node-revision of a node-copy, the "copyfrom" field gives the
+copyfrom data; in other node-revs of a node-copy, the "copyroot" field
+gives the location of the first node-rev of the node-copy.
 
 [Don't know how changed-path data is represented yet.]
 
