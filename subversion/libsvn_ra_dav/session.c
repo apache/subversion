@@ -127,10 +127,11 @@ svn_ra_dav__open (void **session_baton,
   ne_debug_init(stderr, NE_DBG_HTTP|NE_DBG_HTTPBODY);
 #endif
 
-  /* ### persistent connection problems in Apache 2.0?  seeing some
-   * "Could not read status line" errors, and connections being closed
-   * prematurely, etc. Turn them off for now. */
+#if 0
+  /* Turn off persistent connections. */
   ne_set_persist(sess, 0);
+  ne_set_persist(sess2, 0);
+#endif
 
   /* make sure we will eventually destroy the session */
   apr_pool_cleanup_register(pool, sess, cleanup_session, apr_pool_cleanup_null);
