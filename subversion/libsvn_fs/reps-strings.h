@@ -49,9 +49,9 @@ int svn_fs__rep_is_mutable (skel_t *rep);
    KEY, else *NEW_KEY is set to a new rep key allocated in
    TRAIL->pool.  In the latter case, if KEY referred to an immutable
    representation, then *NEW_KEY refers to a mutable copy of it (a
-   deep copy, including the underlying string), but if KEY is the
-   empty string or null, *NEW_KEY refers to a new, empty mutable
-   representation.
+   deep copy, including a new copy of the underlying string), but if
+   KEY is the empty string or null, *NEW_KEY refers to a new, empty
+   mutable representation (referring to a new, empty string).
 
    If KEY is neither null nor empty, but does not refer to any
    representation, the error SVN_ERR_FS_NO_SUCH_REPRESENTATION is
