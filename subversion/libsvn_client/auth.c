@@ -122,7 +122,7 @@ get_username (const char **username,
                                     FALSE, /* screen echo ok */
                                     ab->prompt_baton, pool));
       
-      ab->got_new_auth_info = TRUE;
+      cb->got_new_auth_info = TRUE;
 
       /* Store a copy of the username in the auth_baton too. */
       ab->username = apr_pstrdup (pool, *username);
@@ -133,7 +133,7 @@ get_username (const char **username,
     {
       /* The auth_baton already has the value, probably from argv[]. */
       *username = apr_pstrdup (pool, ab->username);
-      ab->got_new_auth_info = TRUE;
+      cb->got_new_auth_info = TRUE;
     }
 
   /* Else, try to get it from file cached in working copy. */
@@ -213,7 +213,7 @@ get_password (const char **password,
                                     TRUE, /* don't echo to the screen */
                                     ab->prompt_baton, pool));
       
-      ab->got_new_auth_info = TRUE;
+      cb->got_new_auth_info = TRUE;
 
       /* Store a copy of the password in the auth_baton too. */
       ab->password = apr_pstrdup (pool, *password);
@@ -224,7 +224,7 @@ get_password (const char **password,
     {
       /* The auth_baton already has the value, probably from argv[]. */
       *password = apr_pstrdup (pool, ab->password);
-      ab->got_new_auth_info = TRUE;
+      cb->got_new_auth_info = TRUE;
     }
 
   /* Else, try to get it from file cached in working copy. */
@@ -246,7 +246,7 @@ get_password (const char **password,
                                         TRUE, /* don't echo to the screen */
                                         ab->prompt_baton, pool));
 
-          ab->got_new_auth_info = TRUE;
+          cb->got_new_auth_info = TRUE;
         }
       else
         *password = apr_pstrdup (pool, "");
@@ -328,7 +328,7 @@ maybe_store_username (const char *username, void *baton)
 {
   svn_client__callback_baton_t *cb = baton;
   
-  if (cb->auth_baton->store_auth_info)
+  if ((cb->auth_baton->store_auth_info) && (cb->got_new_auth_info))
     return store_auth_info (SVN_CLIENT_AUTH_USERNAME, username, cb);
   else
     return SVN_NO_ERROR;
@@ -340,7 +340,7 @@ maybe_store_password (const char *password, void *baton)
 {
   svn_client__callback_baton_t *cb = baton;
       
-  if (cb->auth_baton->store_auth_info)
+  if ((cb->auth_baton->store_auth_info) && (cb->got_new_auth_info))
     {
       /* There's a separate config option for preventing passwords
          from being stored, so check it. */

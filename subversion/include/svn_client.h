@@ -86,17 +86,14 @@ typedef struct svn_client_auth_baton_t
      there's only a single --no-auth-cache option, and it applies to
      both the username and password, we don't offer any framework for
      storing just the username but not the password.  If we wanted to
-     do that, each of the two variables below should probably be split
-     into two, one pair for username, one pair for password. 
+     do that, the variable below should probably be split into two,
+     one for username, one for password.
 
      But note that we already check the `store_password' config
      option, so the important case is already covered. */
 
   /** true means ok to overwrite wc auth info, i.e., not --no-auth-cache */
   svn_boolean_t store_auth_info;
-
-  /** true means there's new auth info to store */
-  svn_boolean_t got_new_auth_info;
 
 } svn_client_auth_baton_t;
 

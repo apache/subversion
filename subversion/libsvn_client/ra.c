@@ -241,7 +241,7 @@ svn_client__open_ra_session (void **session_baton,
 {
   svn_ra_callbacks_t *cbtable = apr_pcalloc (pool, sizeof(*cbtable));
   svn_client__callback_baton_t *cb = apr_pcalloc (pool, sizeof(*cb));
-
+  
   cbtable->open_tmp_file = use_admin ? open_admin_tmp_file : open_tmp_file;
   cbtable->get_authenticator = svn_client__get_authenticator;
   cbtable->get_wc_prop = use_admin ? get_wc_prop : NULL;
@@ -275,6 +275,8 @@ svn_client__open_ra_session (void **session_baton,
   cb->do_store = do_store;
   cb->pool = pool;
   cb->commit_items = commit_items;
+  cb->got_new_auth_info = svn_client_ctx_get_default_simple_creds (ctx)
+                          ? TRUE : FALSE;
 
   SVN_ERR (ra_lib->open (session_baton, base_url, cbtable, cb, pool));
 
