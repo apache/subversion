@@ -87,10 +87,12 @@ public:
     jlong checkout(const char *moduleName, const char *destPath,
                        Revision &revision, bool recurse);
     jobjectArray logMessages(const char *path, Revision &revisionStart,
-                                 Revision &revisionEnd, bool stopOnCopy);
+                                 Revision &revisionEnd, bool stopOnCopy,
+                                 bool discoverPaths);
     void setPrompt(Prompter *prompter);
     void password(const char *password);
     void username(const char *username);
+    jobject info(const char *path);
     jobject singleStatus(const char *path, bool onServer);
     jobjectArray status(const char *path, bool descend, bool onServer,
                             bool getAll, bool noIgnore);
@@ -116,6 +118,7 @@ private:
     jobject createJavaProperty(jobject jthis, const char *path,
                                    const char *name, svn_string_t *value);
     jobject createJavaDirEntry(const char *path, svn_dirent_t *dirent);
+    jobject createJavaInfo(const svn_wc_entry_t *entry);
     svn_client_ctx_t * getContext(const char *message);
     Notify *m_notify;
     Prompter *m_prompter;
@@ -134,6 +137,8 @@ private:
     static jobject createJavaStatus(const char *path,
                                         svn_wc_status_t *status);
     static jint mapStatusKind(int svnKind);
+    static jint mapScheduleKind(int schedule);
+    static jint mapNodeKind(int nodeKind);
     static svn_error_t *messageReceiver(void *baton,
                                             apr_hash_t * changed_paths,
                                             svn_revnum_t rev,
