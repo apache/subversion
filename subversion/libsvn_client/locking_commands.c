@@ -322,7 +322,7 @@ fetch_tokens (svn_ra_session_t *ra_session, apr_hash_t *path_tokens,
 svn_error_t *
 svn_client_lock (const apr_array_header_t *targets,
                  const char *comment,
-                 svn_boolean_t force,
+                 svn_boolean_t steal_lock,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool)
 {
@@ -345,7 +345,7 @@ svn_client_lock (const apr_array_header_t *targets,
     }
 
   SVN_ERR (organize_lock_targets (&common_parent, &entry, &adm_access,
-                                  &path_revs, targets, TRUE, force, ctx,
+                                  &path_revs, targets, TRUE, steal_lock, ctx,
                                   pool));
 
   is_url = svn_path_is_url (common_parent);
@@ -366,7 +366,7 @@ svn_client_lock (const apr_array_header_t *targets,
 
   /* Lock the paths. */
   SVN_ERR (svn_ra_lock (ra_session, path_revs, comment, 
-                        force, store_locks_callback, &cb, pool));
+                        steal_lock, store_locks_callback, &cb, pool));
 
   /* Unlock the wc. */
   if (adm_access)
@@ -377,7 +377,7 @@ svn_client_lock (const apr_array_header_t *targets,
 
 svn_error_t *
 svn_client_unlock (const apr_array_header_t *targets,
-                   svn_boolean_t force,
+                   svn_boolean_t break_lock,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
@@ -391,7 +391,7 @@ svn_client_unlock (const apr_array_header_t *targets,
   svn_boolean_t is_url;
 
   SVN_ERR (organize_lock_targets (&common_parent, &entry, &adm_access,
-                                  &path_tokens, targets, FALSE, force, ctx,
+                                  &path_tokens, targets, FALSE, break_lock, ctx,
                                   pool));
 
   is_url = svn_path_is_url (common_parent);
@@ -407,10 +407,10 @@ svn_client_unlock (const apr_array_header_t *targets,
             svn_path_is_url (common_parent) ? NULL : common_parent,
             adm_access, NULL, FALSE, FALSE, ctx, pool));
 
-  /* If force is not set, lock tokens are required.  Ensure that we provide
-     lock tokens, so the repository will only check that the user
-     owns the locks. */
-  if (is_url && !force)
+  /* If break_lock is not set, lock tokens are required.  Ensure that
+     we provide lock tokens, so the repository will only check that
+     the user owns the locks. */
+  if (is_url && !break_lock)
     SVN_ERR (fetch_tokens (ra_session, path_tokens, pool));
 
   cb.pool = pool;
@@ -418,7 +418,7 @@ svn_client_unlock (const apr_array_header_t *targets,
   cb.ctx = ctx;
 
   /* Unlock the paths. */
-  SVN_ERR (svn_ra_unlock (ra_session, path_tokens, force, 
+  SVN_ERR (svn_ra_unlock (ra_session, path_tokens, break_lock, 
                           store_locks_callback, &cb, pool));
 
   /* Unlock the wc. */

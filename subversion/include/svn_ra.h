@@ -937,10 +937,10 @@ svn_error_t *svn_ra_get_file_revs (svn_ra_session_t *session,
  * which describes the lock, or it is NULL.
  *
  * If any path is already locked by a different user, then call @a
- * lock_func/@a lock_baton with an error.  If @a force is true, then
- * "steal" the existing lock(s) anyway, even if the RA username does
- * not match the current lock's owner.  Delete any lock on the path,
- * and unconditionally create a new lock.
+ * lock_func/@a lock_baton with an error.  If @a steal_lock is true,
+ * then "steal" the existing lock(s) anyway, even if the RA username
+ * does not match the current lock's owner.  Delete any lock on the
+ * path, and unconditionally create a new lock.
  *
  * For each path, if its base revision (in @a path_revs) is a valid
  * revnum, then do an out-of-dateness check.  If the revnum is less
@@ -956,7 +956,7 @@ svn_error_t *svn_ra_get_file_revs (svn_ra_session_t *session,
 svn_error_t *svn_ra_lock (svn_ra_session_t *session,
                           apr_hash_t *path_revs,
                           const char *comment,
-                          svn_boolean_t force,
+                          svn_boolean_t steal_lock,
                           svn_ra_lock_callback_t lock_func, 
                           void *lock_baton,
                           apr_pool_t *pool);
@@ -967,17 +967,17 @@ svn_error_t *svn_ra_lock (svn_ra_session_t *session,
  * Remove the repository lock for each path in @a path_tokens.
  * @a path_tokens is a hash whose keys are the paths to be locked, and
  * whose values are the corresponding lock tokens for each path.  If
- * the path has no corresponding lock token, or if @a force is TRUE,
+ * the path has no corresponding lock token, or if @a break_lock is TRUE,
  * then the corresponding value shall be "".
  * 
  * Note that unlocking is never anonymous, so any server
  * implementing this function will have to "pull" a username from
  * the client, if it hasn't done so already.
  *
- * If @a token points to a lock, but the RA username doesn't match
- * the lock's owner, call @a lockfunc/@a lock_baton with an error.  If
- * @a force is true, however, instead allow the lock to be "broken" by the
- * RA user.
+ * If @a token points to a lock, but the RA username doesn't match the
+ * lock's owner, call @a lockfunc/@a lock_baton with an error.  If @a
+ * break_lock is true, however, instead allow the lock to be "broken"
+ * by the RA user.
  *
  * After successfully unlocking a path, @a lock_func is called with
  * the @a lock_baton.
@@ -986,7 +986,7 @@ svn_error_t *svn_ra_lock (svn_ra_session_t *session,
  */
 svn_error_t *svn_ra_unlock (svn_ra_session_t *session,
                             apr_hash_t *path_tokens,
-                            svn_boolean_t force,
+                            svn_boolean_t break_lock,
                             svn_ra_lock_callback_t lock_func, 
                             void *lock_baton,
                             apr_pool_t *pool);

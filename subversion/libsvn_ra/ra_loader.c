@@ -495,7 +495,7 @@ svn_error_t *svn_ra_get_file_revs (svn_ra_session_t *session,
 svn_error_t *svn_ra_lock (svn_ra_session_t *session,
                           apr_hash_t *path_revs,
                           const char *comment,
-                          svn_boolean_t force,
+                          svn_boolean_t steal_lock,
                           svn_ra_lock_callback_t lock_func, 
                           void *lock_baton,
                           apr_pool_t *pool)
@@ -505,18 +505,18 @@ svn_error_t *svn_ra_lock (svn_ra_session_t *session,
       (SVN_ERR_XML_UNESCAPABLE_DATA, NULL,
        _("Lock comment has illegal characters"));
   
-  return session->vtable->lock (session, path_revs, comment, force,
+  return session->vtable->lock (session, path_revs, comment, steal_lock,
                                 lock_func, lock_baton, pool);
 }
 
 svn_error_t *svn_ra_unlock (svn_ra_session_t *session,
                             apr_hash_t *path_tokens,
-                            svn_boolean_t force,
+                            svn_boolean_t break_lock,
                             svn_ra_lock_callback_t lock_func, 
                             void *lock_baton,
                             apr_pool_t *pool)
 {
-  return session->vtable->unlock (session, path_tokens, force, 
+  return session->vtable->unlock (session, path_tokens, break_lock,
                                   lock_func, lock_baton, pool);
 }
 

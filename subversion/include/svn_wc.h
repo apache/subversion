@@ -2250,15 +2250,16 @@ svn_error_t *svn_wc_prop_get (const svn_string_t **value,
  * null, remove property @a name from @a path.  @a adm_access is an
  * access baton with a write lock for @a path.
  *
- * If @a force is true, do no validity checking.  But if @a force is
- * false, and @a name is not a valid property for @a path, return an
- * error, either @c SVN_ERR_ILLEGAL_TARGET (if the property is not
- * appropriate for @a path), or @c SVN_ERR_BAD_MIME_TYPE (if @a name
- * is "svn:mime-type", but @a value is not a valid mime-type).
+ * If @a skip_checks is true, do no validity checking.  But if @a
+ * skip_checks is false, and @a name is not a valid property for @a
+ * path, return an error, either @c SVN_ERR_ILLEGAL_TARGET (if the
+ * property is not appropriate for @a path), or @c
+ * SVN_ERR_BAD_MIME_TYPE (if @a name is "svn:mime-type", but @a value
+ * is not a valid mime-type).
  *
  * @a name may be a wc property or a regular property; but if it is an
  * entry property, return the error @c SVN_ERR_BAD_PROP_KIND, even if
- * @a force is true.
+ * @a skip_checks is true.
  *
  * Use @a pool for temporary allocation.  
  */
@@ -2266,7 +2267,7 @@ svn_error_t *svn_wc_prop_set2 (const char *name,
                                const svn_string_t *value,
                                const char *path,
                                svn_wc_adm_access_t *adm_access,
-                               svn_boolean_t force,
+                               svn_boolean_t skip_checks,
                                apr_pool_t *pool);
 
 

@@ -166,7 +166,7 @@ svn_client_propset2 (const char *propname,
                      const svn_string_t *propval,
                      const char *target,
                      svn_boolean_t recurse,
-                     svn_boolean_t force,
+                     svn_boolean_t skip_checks,
                      svn_client_ctx_t *ctx,
                      apr_pool_t *pool)
 {
@@ -174,7 +174,7 @@ svn_client_propset2 (const char *propname,
   const svn_wc_entry_t *node;
 
   /* Since Subversion controls the "svn:" property namespace, we
-     don't honor the 'force' flag here.  Unusual property
+     don't honor the 'skip_checks' flag here.  Unusual property
      combinations, like svn:eol-style with a non-text svn:mime-type,
      are understandable, but revprops on local targets are not. */
   if (is_revision_prop_name (propname))
@@ -222,7 +222,7 @@ svn_client_propset2 (const char *propname,
       wb.base_access = adm_access;
       wb.propname = propname;
       wb.propval = propval;
-      wb.force = force;
+      wb.force = skip_checks;
 
       SVN_ERR (svn_wc_walk_entries2 (target, adm_access,
                                      &walk_callbacks, &wb, FALSE,
@@ -232,7 +232,7 @@ svn_client_propset2 (const char *propname,
   else
     {
       SVN_ERR (svn_wc_prop_set2 (propname, propval, target,
-                                 adm_access, force, pool));
+                                 adm_access, skip_checks, pool));
     }
 
   SVN_ERR (svn_wc_adm_close (adm_access));
