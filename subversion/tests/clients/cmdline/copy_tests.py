@@ -660,6 +660,76 @@ def copy_files_with_properties(sbox):
                                            wc_dir):
     return 1
 
+#----------------------------------------------------------------------
+
+# Issue 918
+def copy_delete_commit(sbox):
+  "copy a tree and delete part of it before commit"
+
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
+
+  # copy a tree
+  outlines, errlines = svntest.main.run_svn(None, 'cp',
+                                            wc_dir + '/A/B', wc_dir + '/A/B2',
+                                            '-m', 'fooogle')
+  if errlines:
+    print "Whoa, failed to copy A/B to A/B2"
+    return 1
+  
+  # delete a file
+  alpha_path = os.path.join(wc_dir, 'A', 'B2', 'E', 'alpha')
+  outlines, errlines = svntest.main.run_svn(None, 'rm', alpha_path)
+  if errlines:
+    print "Whoa, failed to delete A/B2/E/alpha"
+    return 1
+
+  # commit copied tree containing a deleted file
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B2' : Item(verb='Adding'),
+    'A/B2/E/alpha' : Item(verb='Deleting'),
+    })
+  if svntest.actions.run_and_verify_commit (wc_dir,
+                                            expected_output,
+                                            None,
+                                            None,
+                                            None, None,
+                                            None, None,
+                                            wc_dir):
+    return 1
+
+  # copy a tree
+  outlines, errlines = svntest.main.run_svn(None, 'cp',
+                                            wc_dir + '/A/B', wc_dir + '/A/B3',
+                                            '-m', 'fooogle')
+  if errlines:
+    print "Whoa, failed to copy A/B to A/B3"
+    return 1
+  
+  # delete a directory
+  E_path = os.path.join(wc_dir, 'A', 'B3', 'E')
+  outlines, errlines = svntest.main.run_svn(None, 'rm', E_path)
+  if errlines:
+    print "Whoa, failed to delete A/B3/E"
+    return 1
+
+  # commit copied tree containing a deleted directory
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B3' : Item(verb='Adding'),
+    'A/B3/E' : Item(verb='Deleting'),
+    })
+  if svntest.actions.run_and_verify_commit (wc_dir,
+                                            expected_output,
+                                            None,
+                                            None,
+                                            None, None,
+                                            None, None,
+                                            wc_dir):
+    return 1
+
+
 ########################################################################
 # Run the tests
 
@@ -674,6 +744,7 @@ test_list = [ None,
               no_wc_copy_overwrites,
               copy_modify_commit,
               copy_files_with_properties,
+              copy_delete_commit,
              ]
 
 if __name__ == '__main__':

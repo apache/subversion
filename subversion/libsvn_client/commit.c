@@ -905,6 +905,7 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
           svn_boolean_t recurse = FALSE;
           const char *adm_access_path;
           svn_wc_adm_access_t *adm_access;
+          const svn_wc_entry_t *entry;
 
           if (item->kind == svn_node_dir)
             adm_access_path = item->path;
@@ -913,7 +914,15 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
           if ((bump_err = svn_wc_adm_retrieve (&adm_access, base_dir_access,
                                                adm_access_path, pool)))
             goto cleanup;
-          
+
+          /* This item may have been processed as a child of an earlier
+             item, and may have deleted at that stage. */
+          if ((bump_err = svn_wc_entry (&entry, item->path, adm_access, TRUE,
+                                        pool)))
+            goto cleanup;
+          if (! entry)
+            continue;
+
           if ((item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD) 
               && (item->kind == svn_node_dir)
               && (item->copyfrom_url))
