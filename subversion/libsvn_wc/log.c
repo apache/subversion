@@ -34,6 +34,8 @@
 #include "log.h"
 #include "adm_files.h"
 #include "entries.h"
+#include "translate.h"
+#include "questions.h"
 
 
 /*** Userdata for the callbacks. ***/

@@ -32,6 +32,7 @@
 #include "svn_types.h"
 #include "svn_delta.h"
 #include "svn_string.h"
+#include "svn_pools.h"
 #include "svn_path.h"
 #include "svn_xml.h"
 #include "svn_error.h"
@@ -44,6 +45,9 @@
 #include "log.h"
 #include "adm_files.h"
 #include "entries.h"
+#include "props.h"
+#include "translate.h"
+#include "questions.h"
 
 
 /*---------------------------------------------------------------------*/
@@ -1164,238 +1168,225 @@ svn_wc__strip_entry_prefix (svn_stringbuf_t *name)
 
 
 
-svn_error_t *
-svn_wc__get_eol_style (enum svn_wc__eol_style *style,
-                       const char **eol,
-                       const char *path,
-                       apr_pool_t *pool)
+/* Helper to optimize svn_wc_props_modified_p().
+
+   If PATH_TO_PROP_FILE is nonexistent, or is of size 4 bytes ("END"),
+   then set EMPTY_P to true.   Otherwise set EMPTY_P to false, which
+   means that the file must contain real properties.  */
+static svn_error_t *
+empty_props_p (svn_boolean_t *empty_p,
+               svn_stringbuf_t *path_to_prop_file,
+               apr_pool_t *pool)
 {
-  const svn_string_t *propval;
+  enum svn_node_kind kind;
 
-  /* Get the property value. */
-  SVN_ERR (svn_wc_prop_get (&propval, SVN_PROP_EOL_STYLE, path, pool));
+  SVN_ERR (svn_io_check_path (path_to_prop_file->data, &kind, pool));
 
-  /* Convert it. */
-  svn_wc__eol_style_from_value (style, eol,
-                                propval ? propval->data : NULL);
+  if (kind == svn_node_none)
+    *empty_p = TRUE;
+
+  else 
+    {
+      apr_finfo_t finfo;
+      apr_status_t status;
+
+      status = apr_stat (&finfo, path_to_prop_file->data, APR_FINFO_MIN, pool);
+      if (status)
+        return svn_error_createf (status, 0, NULL, pool,
+                                  "couldn't stat '%s'...",
+                                  path_to_prop_file->data);
+
+      /* If we remove props from a propfile, eventually the file will
+         contain nothing but "END\n" */
+      if (finfo.size == 4)  
+        *empty_p = TRUE;
+
+      else
+        *empty_p = FALSE;
+
+      /* ### really, if the size is < 4, then something is corrupt.
+         If the size is between 4 and 16, then something is corrupt,
+         because 16 is the -smallest- the file can possibly be if it
+         contained only one property.  someday we should check for
+         this. */
+
+    }
 
   return SVN_NO_ERROR;
 }
 
 
-void 
-svn_wc__eol_style_from_value (enum svn_wc__eol_style *style,
-                              const char **eol,
-                              const char *value)
+/* Simple wrapper around empty_props_p, and inversed. */
+svn_error_t *
+svn_wc__has_props (svn_boolean_t *has_props,
+                   svn_stringbuf_t *path,
+                   apr_pool_t *pool)
 {
-  if (value == NULL)
-    {
-      /* property dosen't exist. */
-      *style = svn_wc__eol_style_none;
-      *eol = NULL;
-    }
-  else if (! strcmp ("native", value))
-    {
-      *style = svn_wc__eol_style_native;
-      *eol = APR_EOL_STR;       /* whee, a portability library! */
-    }
-  else if (! strcmp ("LF", value))
-    {
-      *style = svn_wc__eol_style_fixed;
-      *eol = "\n";
-    }
-  else if (! strcmp ("CR", value))
-    {
-      *style = svn_wc__eol_style_fixed;
-      *eol = "\r";
-    }
-  else if (! strcmp ("CRLF", value))
-    {
-      *style = svn_wc__eol_style_fixed;
-      *eol = "\r\n";
-    }
+  svn_boolean_t is_empty;
+  svn_stringbuf_t *prop_path;
+
+  SVN_ERR (svn_wc__prop_path (&prop_path, path, 0, pool));
+  SVN_ERR (empty_props_p (&is_empty, prop_path, pool));
+
+  if (is_empty)
+    *has_props = FALSE;
   else
-    {
-      *style = svn_wc__eol_style_unknown;
-      *eol = NULL;
-    }
+    *has_props = TRUE;
+
+  return SVN_NO_ERROR;
 }
 
 
-void svn_wc__eol_value_from_string (const char **value,
-                                    const char *eol)
+svn_error_t *
+svn_wc_props_modified_p (svn_boolean_t *modified_p,
+                         svn_stringbuf_t *path,
+                         apr_pool_t *pool)
 {
-  if (eol == NULL)
-    *value = NULL;
-  else if (! strcmp ("\n", eol))
-    *value = "LF";
-  else if (! strcmp ("\r", eol))
-    *value = "CR";
-  else if (! strcmp ("\r\n", eol))
-    *value = "CRLF";
-  else
-    *value = NULL;
-}
+  svn_boolean_t bempty, wempty;
+  svn_stringbuf_t *prop_path;
+  svn_stringbuf_t *prop_base_path;
+  svn_boolean_t different_filesizes, equal_timestamps;
+  apr_pool_t *subpool = svn_pool_create (pool);
 
+  /* First, get the paths of the working and 'base' prop files. */
+  SVN_ERR (svn_wc__prop_path (&prop_path, path, 0, subpool));
+  SVN_ERR (svn_wc__prop_base_path (&prop_base_path, path, 0, subpool));
 
-/* Helper for svn_wc__get_keywords().
-   
-   If KEYWORD is a valid keyword, look up its value in ENTRY, fill in
-   the appropriate field in KEYWORDS with that value (allocated in
-   POOL), and set *IS_VALID_P to TRUE.  If the value is not available,
-   use "" instead.
+  /* Decide if either path is "empty" of properties. */
+  SVN_ERR (empty_props_p (&wempty, prop_path, subpool));
+  SVN_ERR (empty_props_p (&bempty, prop_base_path, subpool));
 
-   If KEYWORD is not a valid keyword, set *IS_VALID_P to FALSE and
-   return with no error.
-*/
-static svn_error_t *
-expand_keyword (svn_wc_keywords_t *keywords,
-                svn_boolean_t *is_valid_p,
-                const char *keyword,
-                svn_wc_entry_t *entry,
-                apr_pool_t *pool)
-{
-  *is_valid_p = TRUE;
-
-  /* Using strcasecmp() to accept downcased short versions of
-   * keywords.  Note that this doesn't apply to the strings being
-   * expanded in the file -- rather, it's so users can do
-   *
-   *    $ svn propset svn:keywords "date url" readme.txt
-   *
-   * and not have to worry about capitalization in the property
-   * value.
-   */
-
-  if ((! strcmp (keyword, SVN_KEYWORD_REVISION_LONG))
-      || (! strcasecmp (keyword, SVN_KEYWORD_REVISION_SHORT)))
+  /* Easy out:  if the base file is empty, we know the answer
+     immediately. */
+  if (bempty)
     {
-      if ((entry) && (entry->cmt_rev))
-        keywords->revision = svn_string_createf (pool, "%ld", entry->cmt_rev);
+      if (! wempty)
+        {
+          /* base is empty, but working is not */
+          *modified_p = TRUE;
+          goto cleanup;
+        }
       else
-        /* We found a recognized keyword, so it needs to be expanded
-           no matter what.  If the expansion value isn't available,
-           we at least send back an empty string.  */
-        keywords->revision = svn_string_create ("", pool);
+        {
+          /* base and working are both empty */
+          *modified_p = FALSE;
+          goto cleanup;
+        }
     }
-  else if ((! strcmp (keyword, SVN_KEYWORD_DATE_LONG))
-           || (! strcasecmp (keyword, SVN_KEYWORD_DATE_SHORT)))
+
+  /* OK, so the base file is non-empty.  One more easy out: */
+  if (wempty)
     {
-      if (entry && (entry->cmt_date))
-        keywords->date = svn_wc__friendly_date 
-          (svn_time_to_nts (entry->cmt_date, pool), pool);
-      else
-        keywords->date = svn_string_create ("", pool);
+      /* base exists, working is empty */
+      *modified_p = TRUE;
+      goto cleanup;
     }
-  else if ((! strcmp (keyword, SVN_KEYWORD_AUTHOR_LONG))
-           || (! strcasecmp (keyword, SVN_KEYWORD_AUTHOR_SHORT)))
+
+  /* At this point, we know both files exists.  Therefore we have no
+     choice but to start checking their contents. */
+  
+  /* There are at least three tests we can try in succession. */
+  
+  /* Easy-answer attempt #1:  */
+  
+  /* Check if the the local and prop-base file have *definitely*
+     different filesizes. */
+  SVN_ERR (svn_io__filesizes_different_p (&different_filesizes,
+                                          prop_path->data,
+                                          prop_base_path->data,
+                                          subpool));
+  if (different_filesizes) 
     {
-      if (entry && (entry->cmt_author))
-        keywords->author = svn_string_create_from_buf (entry->cmt_author, pool);
-      else
-        keywords->author = svn_string_create ("", pool);
+      *modified_p = TRUE;
+      goto cleanup;
     }
-  else if ((! strcmp (keyword, SVN_KEYWORD_URL_LONG))
-           || (! strcasecmp (keyword, SVN_KEYWORD_URL_SHORT)))
+  
+  /* Easy-answer attempt #2:  */
+      
+  /* See if the local file's prop timestamp is the same as the one
+     recorded in the administrative directory.  */
+  SVN_ERR (svn_wc__timestamps_equal_p (&equal_timestamps, path,
+                                       svn_wc__prop_time, subpool));
+  if (equal_timestamps)
     {
-      if (entry && (entry->url))
-        keywords->url = svn_string_create_from_buf (entry->url, pool);
-      else
-        keywords->url = svn_string_create ("", pool);
+      *modified_p = FALSE;
+      goto cleanup;
     }
-  else
-    *is_valid_p = FALSE;
+  
+  /* Last ditch attempt:  */
+  
+  /* If we get here, then we know that the filesizes are the same,
+     but the timestamps are different.  That's still not enough
+     evidence to make a correct decision;  we need to look at the
+     files' contents directly.
+
+     However, doing a byte-for-byte comparison won't work.  The two
+     properties files may have the *exact* same name/value pairs, but
+     arranged in a different order.  (Our hashdump format makes no
+     guarantees about ordering.)
+
+     Therefore, rather than use contents_identical_p(), we use
+     svn_wc__get_local_propchanges(). */
+  {
+    apr_array_header_t *local_propchanges;
+    apr_hash_t *localprops = apr_hash_make (subpool);
+    apr_hash_t *baseprops = apr_hash_make (subpool);
+
+    SVN_ERR (svn_wc__load_prop_file (prop_path->data, localprops, subpool));
+    SVN_ERR (svn_wc__load_prop_file (prop_base_path->data,
+                                     baseprops,
+                                     subpool));
+    SVN_ERR (svn_wc__get_local_propchanges (&local_propchanges,
+                                            localprops,
+                                            baseprops,
+                                            subpool));
+                                         
+    if (local_propchanges->nelts > 0)
+      *modified_p = TRUE;
+    else
+      *modified_p = FALSE;
+  }
+ 
+ cleanup:
+  svn_pool_destroy (subpool);
   
   return SVN_NO_ERROR;
 }
 
 
+
 svn_error_t *
-svn_wc__get_keywords (svn_wc_keywords_t **keywords,
-                      const char *path,
-                      const char *force_list,
-                      apr_pool_t *pool)
+svn_wc_get_prop_diffs (apr_array_header_t **propchanges,
+                       apr_hash_t **original_props,
+                       const char *path,
+                       apr_pool_t *pool)
 {
-  const char *list;
-  int offset = 0;
-  svn_stringbuf_t *found_word;
-  svn_wc_keywords_t tmp_keywords;
-  svn_boolean_t got_one = FALSE;
-  svn_wc_entry_t *entry = NULL;
+  svn_stringbuf_t *path_s, *prop_path, *prop_base_path;
+  apr_array_header_t *local_propchanges;
+  apr_hash_t *localprops = apr_hash_make (pool);
+  apr_hash_t *baseprops = apr_hash_make (pool);
 
-  /* Start by assuming no keywords. */
-  *keywords = NULL;
-  memset (&tmp_keywords, 0, sizeof (tmp_keywords));
+  path_s = svn_stringbuf_create (path, pool);
 
-  /* Choose a property list to parse:  either the one that came into
-     this function, or the one attached to PATH. */
-  if (force_list == NULL)
-    {
-      const svn_string_t *propval;
+  SVN_ERR (svn_wc__prop_path (&prop_path, path_s, 0, pool));
+  SVN_ERR (svn_wc__prop_base_path (&prop_base_path, path_s, 0, pool));
 
-      SVN_ERR (svn_wc_prop_get (&propval, SVN_PROP_KEYWORDS, path, pool));
-      
-      list = propval ? propval->data : NULL;
-    }
-  else
-    list = force_list;
+  SVN_ERR (svn_wc__load_prop_file (prop_path->data, localprops, pool));
+  SVN_ERR (svn_wc__load_prop_file (prop_base_path->data, baseprops, pool));
 
-  /* Now parse the list for words.  For now, this parser assumes that
-     the list will contain keywords separated by whitespaces.  This
-     can be made more complex later if somebody cares. */
+  /* At this point, if either of the propfiles are non-existent, then
+     the corresponding hash is simply empty. */
 
-  /* The easy answer. */
-  if (list == NULL)
-    return SVN_NO_ERROR;
+  SVN_ERR (svn_wc__get_local_propchanges (&local_propchanges,
+                                          localprops,
+                                          baseprops,
+                                          pool));
 
-  do 
-    {
-      /* Find the start of a word by skipping past whitespace. */
-      while ((list[offset] != '\0') && (apr_isspace (list[offset])))
-        offset++;
-    
-      /* Hit either a non-whitespace or NULL char. */
+  if (original_props != NULL)
+    *original_props = baseprops;
 
-      if (list[offset] != '\0') /* found non-whitespace char */
-        {
-          svn_boolean_t is_valid;
-          int word_start, word_end;
-          
-          word_start = offset;
-          
-          /* Find the end of the word by skipping non-whitespace chars */
-          while ((list[offset] != '\0') && (! apr_isspace (list[offset])))
-            offset++;
-          
-          /* Hit either a whitespace or NULL char.  Either way, it's the
-             end of the word. */
-          word_end = offset;
-          
-          /* Make a temporary copy of the word */
-          found_word = svn_stringbuf_ncreate (list + word_start,
-                                              (word_end - word_start),
-                                              pool);
-          
-          /* If we haven't already read the entry in, do so now. */
-          if (! entry)
-            SVN_ERR (svn_wc_entry (&entry, 
-                                   svn_stringbuf_create (path, pool), pool));
+  *propchanges = local_propchanges;
 
-          /* Now, try to expand the keyword. */
-          SVN_ERR (expand_keyword (&tmp_keywords, &is_valid,
-                                   found_word->data, entry, pool));
-          if (is_valid)
-            got_one = TRUE;
-        }
-      
-    } while (list[offset] != '\0');
-
-  if (got_one)
-    {
-      *keywords = apr_pcalloc (pool, sizeof (**keywords));
-      memcpy (*keywords, &tmp_keywords, sizeof (**keywords));
-    }
-      
   return SVN_NO_ERROR;
 }
 

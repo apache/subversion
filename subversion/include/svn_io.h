@@ -184,6 +184,21 @@ svn_error_t *svn_io_file_affected_time (apr_time_t *apr_time,
                                         apr_pool_t *pool);
 
 
+/* Set *DIFFERENT_P to non-zero if FILE1 and FILE2 have different
+ * sizes, else set to zero.
+ *
+ * Setting *DIFFERENT_P to zero does not mean the files definitely
+ * have the same size, it merely means that the sizes are not
+ * definitely different.  That is, if the size of one or both files
+ * cannot be determined, then the sizes are not known to be different,
+ * so *DIFFERENT_P is set to 0.
+ */
+svn_error_t *svn_io__filesizes_different_p (svn_boolean_t *different_p,
+                                            const char *file1,
+                                            const char *file2,
+                                            apr_pool_t *pool);
+
+
 /* Return a POSIX-like file descriptor from FILE.
 
    We need this because on some platforms, notably Windows, apr_file_t

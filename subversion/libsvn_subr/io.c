@@ -348,6 +348,48 @@ svn_io_file_affected_time (apr_time_t *apr_time,
   return SVN_NO_ERROR;
 }
 
+
+svn_error_t *
+svn_io__filesizes_different_p (svn_boolean_t *different_p,
+                               const char *file1,
+                               const char *file2,
+                               apr_pool_t *pool)
+{
+  apr_finfo_t finfo1;
+  apr_finfo_t finfo2;
+  apr_status_t status;
+
+  /* Stat both files */
+  status = apr_stat (&finfo1, file1, APR_FINFO_MIN, pool);
+  if (status)
+    {
+      /* If we got an error stat'ing a file, it could be because the
+         file was removed... or who knows.  Whatever the case, we
+         don't know if the filesizes are definitely different, so
+         assume that they're not. */
+      *different_p = FALSE;
+      return SVN_NO_ERROR;
+    }
+
+  status = apr_stat (&finfo2, file2, APR_FINFO_MIN, pool);
+  if (status)
+    {
+      /* See previous comment. */
+      *different_p = FALSE;
+      return SVN_NO_ERROR;
+    }
+
+
+  /* Examine file sizes */
+  if (finfo1.size == finfo2.size)
+    *different_p = FALSE;
+  else
+    *different_p = TRUE;
+
+  return SVN_NO_ERROR;
+}
+
+
 
 /*** Permissions and modes. ***/
 
@@ -1242,8 +1284,6 @@ apr_check_dir_empty (const char *path,
 
   return retval;
 }
-
-
 
 
 

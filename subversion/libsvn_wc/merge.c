@@ -21,6 +21,7 @@
 #include "svn_wc.h"
 #include "wc.h"
 #include "entries.h"
+#include "translate.h"
 
 
 

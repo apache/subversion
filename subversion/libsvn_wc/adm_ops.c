@@ -41,6 +41,8 @@
 #include "adm_files.h"
 #include "adm_ops.h"
 #include "entries.h"
+#include "props.h"
+#include "translate.h"
 
 
 /*** Finishing updates and commits. ***/
