@@ -21,11 +21,13 @@
 #ifndef SERVER_H
 #define SERVER_H
 
+#include <apr_network_io.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
 
-svn_error_t *serve(int sock, const char *root, apr_pool_t *pool);
+svn_error_t *serve(apr_socket_t *sock, const char *root, apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

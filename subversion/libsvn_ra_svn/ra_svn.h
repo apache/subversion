@@ -28,7 +28,7 @@ extern "C" {
 /* This structure is opaque to the server; the client needs to get at
  * the pool element because the ra interface doesn't pass pools. */
 struct svn_ra_svn_conn_st {
-  int sock;
+  apr_socket_t *sock;
   char read_buf[4096];
   char *read_ptr;
   char *read_end;

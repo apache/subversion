@@ -19,25 +19,13 @@
 
 
 
-#ifdef SVN_WIN32
-#include <winsock2.h>
-#else
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <netdb.h>
-#include <fcntl.h>
-#include <unistd.h>
-#endif
-
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
 #include <apr_general.h>
 #include <apr_lib.h>
 #include <apr_strings.h>
 #include <apr_getopt.h>
+#include <apr_network_io.h>
 
 #include "svn_types.h"
 #include "svn_string.h"
@@ -57,15 +45,16 @@ static void usage(const char *progname)
 
 int main(int argc, const char *const *argv)
 {
-  int sock, usock, one = 1, len, debug = 0;
-  struct sockaddr_in si;
+  int debug = 0;
+  apr_socket_t *sock, *usock;
+  apr_sockaddr_t *sa;
   apr_pool_t *pool;
   svn_error_t *err;
   apr_getopt_t *os;
-  char opt;
+  char opt, errbuf[256];
   const char *arg, *root = "/";
   apr_status_t status;
-  pid_t pid;
+  apr_proc_t proc;
 
   apr_initialize();
   atexit(apr_terminate);
@@ -93,39 +82,39 @@ int main(int argc, const char *const *argv)
   if (os->ind != argc)
     usage(argv[0]);
 
+  status = apr_socket_create(&sock, APR_INET, SOCK_STREAM, pool);
+  if (status)
+    {
+      fprintf(stderr, "Can't create server socket: %s\n",
+              apr_strerror(status, errbuf, sizeof(errbuf)));
+      exit(1);
+    }
+
+  /* Prevents "socket in use" errors when server is killed and quickly
+   * restarted. */
+  apr_socket_opt_set(sock, APR_SO_REUSEADDR, 1);
+
+  apr_sockaddr_info_get(&sa, NULL, APR_INET, SVN_RA_SVN_PORT, 0, pool);
+  status = apr_bind(sock, sa);
+  if (status)
+    {
+      fprintf(stderr, "Can't bind server socket: %s\n",
+              apr_strerror(status, errbuf, sizeof(errbuf)));
+      exit(1);
+    }
+
+  apr_listen(sock, 7);
+
   if (!debug)
     apr_proc_detach(1);
 
-  sock = socket(PF_INET, SOCK_STREAM, 0);
-  if (sock == -1)
-    {
-      perror("socket");
-      exit(1);
-    }
-
-  /* This prevents "socket in use" errors when the main server process
-   * is killed and quickly restarted.  I'm not sure if it works on
-   * Windows. -ghudson */
-  setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one));
-
-  si.sin_family = AF_INET;
-  si.sin_port = htons(SVN_RA_SVN_PORT);
-  memset(&si.sin_addr, 0, sizeof(si.sin_addr));
-  if (bind(sock, (struct sockaddr *) &si, sizeof(si)) != 0)
-    {
-      perror("bind");
-      exit(1);
-    }
-
-  listen(sock, 7);
-
   while (1)
     {
-      len = sizeof(si);
-      usock = accept(sock, &si, &len);
-      if (usock == -1)
+      status = apr_accept(&usock, sock, pool);
+      if (status)
         {
-          perror("accept");
+          fprintf(stderr, "Can't accept client connection: %s\n",
+                  apr_strerror(status, errbuf, sizeof(errbuf)));
           exit(1);
         }
 
@@ -139,28 +128,34 @@ int main(int argc, const char *const *argv)
           exit(0);
         }
 
+#ifdef APR_HAS_FORK
       /* This definitely won't work on Windows, which doesn't have the
        * concept of forking a process at all.  I'm not sure how to
        * structure a forking daemon process under Windows.  (Threads?
        * Our library code isn't perfectly thread-safe at the
        * moment.) -ghudson */
-      pid = fork();
-      if (pid < 0)
-        {
-          /* Log something, when we support logging. */
-          close(usock);
-          continue;
-        }
-      if (pid == 0)
+      status = apr_proc_fork(&proc, pool);
+      if (status == APR_INCHILD)
         {
           svn_error_clear(serve(usock, root, pool));
           exit(0);
         }
-      close(usock);
-      while (waitpid(pid, NULL, 0) != pid)
-        ;
+      else if (status == APR_INPARENT)
+        {
+          apr_socket_close(usock);
+          while (apr_proc_wait(&proc, NULL, NULL, APR_WAIT) != APR_CHILD_DONE)
+            ;
+        }
+      else
+        {
+          /* Log an error, when we support logging. */
+          apr_socket_close(usock);
+        }
+#else
+      /* Serve one connection at a time. */
+      svn_error_clear(serve(usock, root, pool));
+#endif
     }
-
 
   return 0;
 }
