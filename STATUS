@@ -120,15 +120,6 @@ the section for unapproved changes.)
        +1: epg, ghudson, philip
 
 
-    * r8343
-      Use 'unsigned char secret[64]' instead of 'char secret[64]'.
-      Justification: SVN won't compile on AIX with xlc without this.
-      Comments: ghudson (Doesn't actually make us build with xlc,
-                         but doesn't hurt either.)
-      Votes:
-       +1: kfogel, philip, ghudson, brane
-
-
     * r8361
       Fix wc-to-wc copies with non-ASCII characters in a non-UTF-8 locale.
       Justification: obvious run-time bug, trivial fix

@@ -78,7 +78,7 @@ static void hex_encode(char *hexval, const char *hashval)
 static void compute_digest(char *digest, const char *challenge,
                            const char *password)
 {
-  char secret[64];
+  unsigned char secret[64];
   apr_size_t len = strlen(password), i;
   apr_md5_ctx_t ctx;
 
