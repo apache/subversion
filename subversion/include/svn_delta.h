@@ -91,24 +91,31 @@
 
 
 /* An `svn_txdelta_window_t' object describes how to reconstruct a
-   contiguous section of the target string.  It contains a series of
-   instructions which assemble the new target string text by pulling
-   together substrings from:
-     - the source file,
-     - the target file text so far, and
-     - a string of new data (accessible to this window only).  */
+   contiguous section of the target string (the "target view") using a
+   specified contiguous region of the source string (the "source
+   view").  It contains a series of instructions which assemble the
+   new target string text by pulling together substrings from:
+     - the source view,
+     - the previously constructed portion of the target view,
+     - a string of new data contained within the window structure
+
+   The source view must always slide forward from one window to the
+   next; that is, neither the beginning nor the end of the source view
+   may move to the left as we read from a window stream.  This
+   property allows us to apply deltas to non-seekable source streams
+   without making a full copy of the source stream.  */
 
 /* A single text delta instruction.  */
 typedef struct svn_txdelta_op_t {
   enum {
-    /* Append the LEN bytes at OFFSET in the source string to the
+    /* Append the LEN bytes at OFFSET in the source view to the
        target.  It must be the case that 0 <= OFFSET < OFFSET + LEN <=
-       size of source string.  */
+       size of source view.  */
     svn_txdelta_source,
 
-    /* Append the LEN bytes at OFFSET in the target file, to the
-       target.  It must be the case that 0 <= OFFSET < current size of
-       the target string.
+    /* Append the LEN bytes at OFFSET in the target view, to the
+       target.  It must be the case that 0 <= OFFSET < current
+       position in the target view.
 
        However!  OFFSET + LEN may be *beyond* the end of the existing
        target data.  "Where the heck does the text come from, then?"
@@ -135,6 +142,14 @@ typedef struct svn_txdelta_op_t {
 
 /* How to produce the next stretch of the target string.  */
 typedef struct svn_txdelta_window_t {
+
+  /* The offset and length of the source view for this window.  */
+  apr_off_t sview_offset;
+  apr_size_t sview_len;
+
+  /* The length of the target view for this window, i.e. the number of
+   * bytes which will be reconstructed by the instruction stream.  */
+  apr_size_t tview_len;
 
   /* The number of instructions in this window.  */
   int num_ops;
@@ -188,6 +203,17 @@ extern svn_error_t *svn_txdelta (svn_txdelta_stream_t **stream,
                                  svn_read_fn_t *target_fn,
                                  void *target_baton,
                                  apr_pool_t *pool);
+
+
+/* Apply DELTA to a source stream to produce a target stream.  Call
+ * SOURCE_FN to gather as much source data as needed and TARGET_FN to
+ * output the generated target data.  Do any necessary allocation in a
+ * sub-pool of DELTA's pool.  */
+extern svn_error_t *svn_txdelta_apply (svn_txdelta_stream_t *delta,
+                                       svn_read_fn_t *source_fn,
+                                       void *source_baton,
+                                       svn_write_fn_t *target_fn,
+                                       void *target_baton);
 
 
 /* Free the delta stream STREAM.  */
