@@ -79,7 +79,7 @@
 
 
 /* An object representing a Subversion filesystem.  */
-typedef struct svn_fs_t svn_fs_t;
+typedef struct svn_fs svn_fs_t;
 
 
 /* Create a new filesystem object in POOL.  It doesn't refer to any
