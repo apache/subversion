@@ -1270,4 +1270,12 @@ test_list = [ None,
               commit_rmd_and_deleted_file,
              ]
 
-if __name__
+if __name__ == '__main__':
+  svntest.main.run_tests(test_list)
+  # NOTREACHED
+
+
+### End of file.
+# local variables:
+# eval: (load-file "../../../../tools/dev/svn-dev.el")
+# end:
