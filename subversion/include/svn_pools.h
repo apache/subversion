@@ -124,6 +124,12 @@ typedef struct svn_pool_feedback_t
   /* Report items just un-scheduled for removal to revision control. */
   apr_status_t (*report_undeleted_item) (const char *path, apr_pool_t *pool);
 
+  /* Report items just reverted ('svn revert'). */
+  apr_status_t (*report_reversion) (const char *path, apr_pool_t *pool);
+
+  /* Report items just restored ('svn up'). */
+  apr_status_t (*report_restoration) (const char *path, apr_pool_t *pool);
+  
   /* Generic human-readable we-think-it's-non-fatal warning.  This
      function can parse STATUS and decide whether a "real" error
      should be returned. */

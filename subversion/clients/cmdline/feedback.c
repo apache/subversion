@@ -107,6 +107,16 @@ report_undeleted_item (const char *path, apr_pool_t *pool)
 
 
 static apr_status_t 
+report_restoration (const char *path, apr_pool_t *pool)
+{
+  printf ("Restored %s\n", path);
+          
+  return APR_SUCCESS;
+}
+
+
+
+static apr_status_t 
 report_warning (apr_status_t status, const char *warning)
 {
   printf ("WARNING: %s\n", warning);
@@ -140,6 +150,7 @@ svn_cl__init_feedback_vtable (apr_pool_t *top_pool)
   feedback_vtable->report_unadded_item = report_unadded_item;
   feedback_vtable->report_deleted_item = report_deleted_item;
   feedback_vtable->report_undeleted_item = report_undeleted_item;
+  feedback_vtable->report_restoration = report_restoration;
   feedback_vtable->report_warning = report_warning;
   /* we're -not- overriding report_progress;  we have no need for it
      yet. */

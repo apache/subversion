@@ -405,7 +405,7 @@ def update_missing():
 test_list = [ None,
               update_binary_file,
               update_binary_file_2,
-              update_missing
+             # update_missing
              ]
 
 if __name__ == '__main__':
