@@ -88,9 +88,10 @@ Content-length: L
 Node-path: /absolute/path/to/node/in/filesystem
 Node-kind: file | dir  (1)
 Node-action: change | add | delete | replace
+Node-notice: text | props | all | none  (2)
 [Node-copyfrom-rev: X]
 [Node-copyfrom-path: /path ]
-[Node-copy-source-md5: blob] (2)
+[Node-copy-source-md5: blob] (3)
 [Node-content-md5: blob]
 Content-length: Y
 
@@ -106,7 +107,10 @@ Notes:
 
 (1) if the node represents a deletion, this field is optional.
 
-(2) this is a checksum of the source of the copy.  a loader process
+(2) if the node represents a deletion, this field is optional, and
+    "none" is the default value.
+
+(3) this is a checksum of the source of the copy.  a loader process
     can use this checksum to determine that the copyfrom path/rev
     already present in a filesystem is really the *correct* one to use.
 
