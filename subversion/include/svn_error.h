@@ -86,7 +86,12 @@ typedef enum svn_errno_t {
 
   /* The error is a Berkeley DB error.  `src_err' is the Berkeley DB
      error code, and `message' is an error message.  */
-  SVN_ERR_BERKELEY_DB
+  SVN_ERR_BERKELEY_DB,
+
+  /* What happens if a non-blocking call to svn_wc__lock() encounters
+     another lock. */
+  SVN_ERR_ENCOUNTERED_LOCK
+
 } svn_errno_t;
 
 
