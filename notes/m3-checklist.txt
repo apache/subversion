@@ -27,20 +27,6 @@ What's left to do:
        * modifying python tests to run over RA_DAV (sussman will do.)
 
 
-* Make a tarball dist.  (kfogel -- in progress)
-
-  Make sure "make dist" works, establish release process, do a
-  release. :-)  lucas@collab.net has volunteered to review the release
-  procedure doc.
-
-
-* Repository preparations (tbd)
-    - Get httpd 2.0 ready, and new repository area
-    - Get list of committers & get passwords from them
-    - Come up with repository layout & import cmd
-    - Write a commit email script.  :-)
-
-
 * New material on Web site (tbd)
     - post instructions for downloading tarball, building
     - especially, put dav_setup.txt up!
@@ -53,3 +39,8 @@ What's left to do:
 
   Commit diffs should be backed up, so we don't lose data if there's
   an fs bug.  Set up a system.
+
+
+Immediate Post-M3 stuff:
+   - write up release procedure, lucas@collab.net has volunteered to
+     review it.
