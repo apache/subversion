@@ -2,7 +2,7 @@
 
      Inversion: A Version Control System You Actually Want To Use
      ------------------------------------------------------------
-              ($Revision: 1.18 $ of this document.)
+              ($Revision: 1.19 $ of this document.)
 
 * Introduction
 
@@ -589,7 +589,6 @@ README was added to the project's top level directory:
      
 There, wasn't that pretty?  I knew you would.          
 
-
 ** How renames work
 
 Exactly how you think they do.
@@ -608,7 +607,7 @@ automatically tags; and once you start committing on a copy, it
 becomes a branch as well.
 
 The big principle to keep in mind with branches is that they *never*
-affect the original project -- that project's data structure remains
+affect the original project -- the original data structure remains
 untouched, it does not even know there's a branch attached to it.  As
 you'll see below, this forces us to do a little more node duplication
 than some other schemes might, but it wins overall because it allows
@@ -644,7 +643,8 @@ platform-specific line-end conversions, etc.
 
 It might be good to have two plists, actually: `inv_props', and
 `user_props'.  Inversion only uses the ones in inv_props, and promises
-a "store-and-ignore" policy for user_props.
+a "store-and-ignore" policy for user_props.  And users should never
+store anything in inv_props, only Inversion handles that.
 
 ** Other miscellaneous design goals
 
