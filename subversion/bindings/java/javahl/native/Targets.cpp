@@ -42,6 +42,10 @@ Targets::Targets(const char *path)
 	m_targetArray = NULL;
     m_targets.push_back (path);
 }
+void Targets::add(const char *path)
+{
+	m_targets.push_back (path);
+}
 const apr_array_header_t *Targets::array (const Pool & pool)
 {
 	if(m_targetArray != NULL)

@@ -1127,3 +1127,69 @@ JNIEXPORT jint JNICALL Java_org_tigris_subversion_javahl_SVNClient_versionMicro
 	JNIEntryStatic(SVNClient, versionMicro);
 	return JNI_VER_MICRO;
 }
+/*
+ * Class:     org_tigris_subversion_javahl_SVNClient
+ * Method:    relocate
+ * Signature: (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lorg/tigris/subversion/javahl/Revision;Z)V
+ */
+JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_relocate
+  (JNIEnv *env, jobject jthis, jstring jfrom, jstring jto, jstring jpath, jboolean jrecurse)
+{
+	JNIEntry(SVNClient, relocate);
+	SVNClient *cl = SVNClient::getCppObject(jthis);
+	if(cl == NULL)
+	{
+		JNIUtil::throwError("bad c++ this");
+		return;
+	}
+	JNIStringHolder from(jfrom);
+	if(JNIUtil::isExceptionThrown())
+	{
+		return;
+	}	
+	JNIStringHolder to(jto);
+	if(JNIUtil::isExceptionThrown())
+	{
+		return;
+	}	
+	JNIStringHolder path(jpath);
+	if(JNIUtil::isExceptionThrown())
+	{
+		return;
+	}	
+	cl->relocate(from, to, path, jrecurse ? true: false);
+	return;
+}
+
+/*
+ * Class:     org_tigris_subversion_javahl_SVNClient
+ * Method:    blame
+ * Signature: (Ljava/lang/String;Lorg/tigris/subversion/javahl/Revision;Lorg/tigris/subversion/javahl/Revision;Z)[B
+ */
+JNIEXPORT jbyteArray JNICALL Java_org_tigris_subversion_javahl_SVNClient_blame
+  (JNIEnv *env, jobject jthis, jstring jpath, jobject jrevisionStart, jobject jrevisionEnd, jboolean jstrict)
+{
+	JNIEntry(SVNClient, blame);
+	SVNClient *cl = SVNClient::getCppObject(jthis);
+	if(cl == NULL)
+	{
+		JNIUtil::throwError("bad c++ this");
+		return NULL;
+	}
+	JNIStringHolder path(jpath);
+	if(JNIUtil::isExceptionThrown())
+	{
+		return NULL;
+	}	
+	Revision revisionStart(jrevisionStart);
+	if(JNIUtil::isExceptionThrown())
+	{
+		return NULL;
+	}	
+	Revision revisionEnd(jrevisionEnd);
+	if(JNIUtil::isExceptionThrown())
+	{
+		return NULL;
+	}	
+	return cl->blame(path, revisionStart, revisionEnd, jstrict? true:false);
+}

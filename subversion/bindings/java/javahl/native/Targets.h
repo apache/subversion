@@ -40,6 +40,7 @@ private:
 public:
 	Targets(jobjectArray jtargets);
 	Targets(const char *path);
+	void add(const char *path);
 	~Targets();
     const apr_array_header_t *array (const Pool & pool);
 

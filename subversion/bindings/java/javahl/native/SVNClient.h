@@ -38,6 +38,8 @@ class Prompter;
 class SVNClient
 {
 public:
+	jbyteArray blame(const char *path, Revision& revisionStart, Revision &revisionEnd, bool strict);
+	void relocate(const char *from, const char *to, const char *path, bool recurse);
 	jbyteArray fileContent(const char *path, Revision &revision);
 	void propertyCreate(const char *path, const char *name, JNIByteArray &value, bool recurse);
 	void propertyCreate(const char *path, const char *name, const char *value, bool recurse);

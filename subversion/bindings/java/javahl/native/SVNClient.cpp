@@ -1638,3 +1638,99 @@ jobject SVNClient::revProperty(jobject jthis, const char *path, const char *name
 
   return createJavaProperty(jthis, path, name, propval);
 }
+void SVNClient::relocate(const char *from, const char *to, const char *path, bool recurse)
+{
+  Pool subPool;
+  apr_pool_t * apr_pool = subPool.pool ();
+  m_lastPath = path;
+	
+  svn_client_ctx_t *ctx = getContext(NULL);
+  if(ctx == NULL)
+  {
+	return;
+  }
+
+  if(from == NULL || to == NULL)
+  {
+	  JNIUtil::handleSVNError(svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, ""));
+	  return;
+  }
+	
+  svn_error_t * error = svn_client_relocate (path != NULL? path:"", from, to, recurse, ctx, apr_pool);	
+
+  if(error != SVN_NO_ERROR)
+  {
+ 	JNIUtil::handleSVNError(error);
+	return;
+  }
+	
+}
+static svn_error_t *
+blame_receiver (void *baton,
+                apr_off_t line_no,
+                svn_revnum_t revision,
+                const char *author,
+                const char *date,
+                const char *line,
+                apr_pool_t *pool)
+{
+  svn_stream_t *out = (svn_stream_t*)baton;
+  return svn_stream_printf (out, pool, "%6"SVN_REVNUM_T_FMT" %10s %s\n",
+                            revision, author, line);
+}
+jbyteArray SVNClient::blame(const char *path, Revision &revisionStart, Revision &revisionEnd, bool strict)
+{
+  Pool subPool;
+  apr_pool_t * apr_pool = subPool.pool ();
+  m_lastPath = path;
+	
+  svn_client_ctx_t *ctx = getContext(NULL);
+  if(ctx == NULL)
+  {
+	return NULL;
+  }
+  svn_stringbuf_t *buf = svn_stringbuf_create("", apr_pool);
+  svn_stream_t *read_stream = svn_stream_from_stringbuf(buf, apr_pool);
+  svn_error_t * error = svn_client_blame (path,
+                                 revisionStart.revision(),
+                                 revisionEnd.revision(),
+                                 strict,
+                                 blame_receiver,
+								 read_stream,
+                                 ctx,
+                                 apr_pool);
+  if(error != SVN_NO_ERROR)
+  {
+ 	JNIUtil::handleSVNError(error);
+	return NULL;
+  }
+  size_t size = buf->len;
+
+	JNIEnv *env = JNIUtil::getEnv();
+	jbyteArray ret = env->NewByteArray(size);
+	if(JNIUtil::isJavaExceptionThrown())
+	{
+		return NULL;
+	}
+	jbyte *retdata = env->GetByteArrayElements(ret, NULL);
+	if(JNIUtil::isJavaExceptionThrown())
+	{
+		return NULL;
+	}
+	svn_error_t *err = svn_stream_read (read_stream, (char *)retdata,
+                              &size);
+
+	if(err != NULL)
+	{
+		env->ReleaseByteArrayElements(ret, retdata, 0);
+		JNIUtil::handleSVNError(err);
+		return NULL;
+	}
+	env->ReleaseByteArrayElements(ret, retdata, 0);
+	if(JNIUtil::isJavaExceptionThrown())
+	{
+		return NULL;
+	}
+
+	return ret;
+}
