@@ -251,13 +251,20 @@ class DependencyNode:
     self.fname = fname
 
   def __str__(self):
-    return self.fname
+    return _node_str(self)
 
   def __cmp__(self, ob):
-    return cmp(self.fname, ob)
+    return _node_cmp(self, ob)
 
   def __hash__(self):
     return hash(self.fname)
+
+def _node_str(a):
+  return getattr(a, 'output', None) or getattr(a, 'fname', None) \
+    or os.path.join(a.path, a.name)
+
+def _node_cmp(a, b):
+  return cmp(_node_str(a), _node_str(b))
 
 class ObjectFile(DependencyNode):
   def __init__(self, fname, build_cmd = None):
@@ -344,10 +351,11 @@ class Target:
     # subclasses should override to provide behavior, as appropriate
     pass
 
+  def __str__(self):
+    return _node_str(self)
+
   def __cmp__(self, ob):
-    if isinstance(ob, Target):
-      return cmp(self.name, ob.name)
-    return cmp(self.name, ob)
+    return _node_cmp(self, ob)
 
   def __hash__(self):
     return hash(self.name)
@@ -480,10 +488,6 @@ class TargetSWIG(Target):
                             lang + libname, lang, self.desc)
       graph.add(DT_LINK, library.name, ofile)
 
-      # add some more libraries
-      for lib in self.swig_libs:
-        graph.add(DT_LINK, library.name, lib)
-
       # add some language-specific libraries for languages other than
       # Java (SWIG doesn't seem to provide a libswigjava.so)
       if abbrev != 'java':
@@ -493,6 +497,10 @@ class TargetSWIG(Target):
       ### will be only one.
       util = graph.get_sources(DT_INSTALL, 'swig-%s-lib' % abbrev)[0]
       graph.add(DT_LINK, library.name, util)
+
+      # add some more libraries
+      for lib in self.swig_libs:
+        graph.add(DT_LINK, library.name, lib)
 
       # the specified install area depends upon the library
       graph.add(DT_INSTALL, 'swig-' + abbrev, library)

@@ -370,7 +370,7 @@ class WinGeneratorBase(gen_base.GeneratorBase):
         if runtime: depends.append(runtime)
     else:
       assert 0
-      
+    depends.sort() ### temporary
     return depends
     
   
