@@ -434,6 +434,45 @@ svn_txdelta_apply (svn_stream_t *source,
 
 
 
+/* Convenience routines */
+
+svn_error_t * 
+svn_txdelta_send_string (svn_string_t *string,
+                         svn_txdelta_window_handler_t *handler,
+                         void *handler_baton,
+                         apr_pool_t *pool)
+{
+  svn_txdelta_window_t window = { 0 };
+  svn_txdelta_op_t op;
+  svn_error_t *err;
+
+  /* Build a single `new' op */
+  op.action_code = svn_txdelta_new;
+  op.offset = 0;
+  op.length = string->len;
+
+  /* Build a single window containing a ptr to the string. */
+  window.tview_len = string->len;
+  window.num_ops = 1;
+  window.ops_size = 1;          
+  window.ops = &op;
+  window.new_data = string;
+  window.pool = pool;
+
+  /* Push the one window at the handler. */
+  err = (*handler) (&window, handler_baton);
+  if (err) return err;
+  
+  /* Push a NULL at the handler, because we're done. */
+  err = (*handler) (NULL, handler_baton);
+  if (err) return err;
+  
+  return SVN_NO_ERROR;
+}
+
+
+
+
 /* 
  * local variables:
  * eval: (load-file "../svn-dev.el")
