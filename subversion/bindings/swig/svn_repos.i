@@ -80,6 +80,22 @@
   $2 = $input; /* our function is the baton. */
 }
 
+
+/* -----------------------------------------------------------------------
+   handle svn_repos_authz_read_func_t/baton pairs
+*/
+
+%typemap(perl5, in) (svn_repos_authz_read_func_t authz_read_func, void *authz_read_baton) {
+  if (SvOK ($input)) {
+    $1 = svn_swig_pl_thunk_authz_read_func;
+    $2 = $input; /* our function is the baton */
+  }
+  else {
+    $1 = NULL;
+    $2 = NULL;
+  }
+}
+
 /* ----------------------------------------------------------------------- */
 
 %include svn_repos.h
