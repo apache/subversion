@@ -146,16 +146,6 @@ svn_error_t *svn_utf_cstring_from_utf8_string (const char **dest,
                                                const svn_string_t *src,
                                                apr_pool_t *pool);
 
-
-/** Convert @a utf8_string to native encoding and store in @a buf, storing
- * no more than @a bufsize octets.  Note: this function is meant for
- * error message printing.
- */
-const char *svn_utf_utf8_to_native (const char *utf8_string,
-                                    char *buf,
-                                    apr_size_t bufsize);
-
-
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
