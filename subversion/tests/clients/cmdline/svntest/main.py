@@ -234,14 +234,6 @@ def run_svnadmin(*varargs):
 
   return stdout_lines, stderr_lines
 
-
-# For clearing away working copies
-def remove_wc(dirname):
-  "Remove a working copy named DIRNAME."
-
-  if os.path.exists(dirname):
-    shutil.rmtree(dirname)
-
 # Chmod recursively on a whole subtree
 def chmod_tree(path, mode, mask):
   def visit(arg, dirname, names):
@@ -251,6 +243,14 @@ def chmod_tree(path, mode, mask):
       new_mode = (os.stat(fullname)[stat.ST_MODE] & ~mask) | mode
       os.chmod(fullname, new_mode)
   os.path.walk(path, visit, (mode, mask))
+
+# For clearing away working copies
+def remove_wc(dirname):
+  "Remove a working copy named DIRNAME."
+
+  if os.path.exists(dirname):
+    chmod_tree(dirname, 0666, 0666)
+    shutil.rmtree(dirname)
 
 # For making local mods to files
 def file_append(path, new_text):

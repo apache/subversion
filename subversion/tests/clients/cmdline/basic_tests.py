@@ -279,6 +279,7 @@ def basic_corruption(sbox):
   # Restore the uncorrupted text base.
   os.chmod (tb_dir_path, 0777)
   os.chmod (mu_tb_path, 0666)
+  os.remove (mu_tb_path)
   os.rename (mu_saved_tb_path, mu_tb_path)
   os.chmod (tb_dir_path, tb_dir_saved_mode)
   os.chmod (mu_tb_path, mu_tb_saved_mode)
@@ -328,6 +329,7 @@ def basic_corruption(sbox):
   # Restore the uncorrupted text base.
   os.chmod (tb_dir_path, 0777)
   os.chmod (mu_tb_path, 0666)
+  os.remove (mu_tb_path)
   os.rename (mu_saved_tb_path, mu_tb_path)
   os.chmod (tb_dir_path, tb_dir_saved_mode)
   os.chmod (mu_tb_path, mu_tb_saved_mode)
