@@ -16,7 +16,7 @@
  * @endcopyright
  *
  * @file svn_delta.h
- * @brief Structures related to delta-parsing
+ * @brief Delta-parsing
  */
 
 /* ==================================================================== */

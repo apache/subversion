@@ -16,7 +16,7 @@
  * @endcopyright
  *
  * @file svn_md5.h
- * @brief Code for converting and comparing MD5 checksums.
+ * @brief Converting and comparing MD5 checksums.
  */
 
 #ifndef SVN_MD5_H

@@ -16,7 +16,7 @@
  * @endcopyright
  *
  * @file svn_subst.h
- * @brief routines to perform data substitution
+ * @brief Data substitution (keywords and EOL style)
  */
 
 

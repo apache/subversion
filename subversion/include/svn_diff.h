@@ -16,7 +16,7 @@
  * @endcopyright
  *
  * @file svn_diff.h
- * @brief Structures related to contextual diffing.
+ * @brief Contextual diffing.
  *
  * This is an internalized library for performing contextual diffs
  * between sources of data.
