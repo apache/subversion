@@ -178,17 +178,22 @@ svn_fs__get_txn (svn_fs_id_t **root_id_p,
 		 trail_t *trail)
 {
   DBT key, value;
+  int db_err;
   skel_t *transaction;
 
   /* Only in the context of this function do we know that the DB call
      will not attempt to modify svn_txn, so the cast belongs here.  */
-  svn_fs__str_to_dbt (&key, (char *) svn_txn);
-  SVN_ERR (DB_WRAP (fs, "reading transaction",
-		    fs->transactions->get (fs->transactions, trail->db_txn,
-					   &key,
-					   svn_fs__result_dbt (&value),
-					   0)));
+  db_err = fs->transactions->get (fs->transactions, trail->db_txn,
+                                  svn_fs__str_to_dbt (&key, (char *) svn_txn),
+                                  svn_fs__result_dbt (&value),
+                                  0);
+
+  if (db_err == DB_NOTFOUND)
+    return svn_fs__err_no_such_txn (fs, svn_txn);
+  SVN_ERR (DB_WRAP (fs, "reading transaction", db_err));
+
   svn_fs__track_dbt (&value, trail->pool);
+
   transaction = svn_fs__parse_skel (value.data, value.size, trail->pool);
   if (! transaction
       || ! is_valid_transaction (transaction))
