@@ -107,12 +107,15 @@ typedef struct svn_node_t
 } svn_node_t;
 
 
-/* a version is a node number and property list */
+/* a version object is a node number and property list */
 typedef struct svn_ver_t
 {
   unsigned long node_num;             /* the root node of a tree */
   apr_hash_t *proplist;           /* version's properties */
 } svn_ver_t;
+
+
+typedef long int svn_vernum_t;
 
 
 /* These things aren't critical to define yet; I'll leave them to

@@ -66,8 +66,11 @@
 #ifndef SVN_WC_H
 #define SVN_WC_H
 
-#include <svn_types.h>
-#include <svn_delta.h>
+#include <apr_tables.h>
+#include "svn_types.h"
+#include "svn_string.h"
+#include "svn_delta.h"
+#include "svn_error.h"
 
 
 
@@ -86,19 +89,21 @@ svn_error_t *svn_wc_add    (apr_array_header_t *paths);
 svn_error_t *svn_wc_delete (apr_array_header_t *paths);
 
 /* Update working copy to reflect the changes in DELTA. */
-svn_error_t *svn_wc_apply_delta (svn_delta_stream_t *delta_stream,
+svn_error_t *svn_wc_apply_delta (void *delta_src,
                                  svn_delta_read_fn_t *delta_stream_reader,
-                                 svn_delta_t *delta);
+                                 svn_string_t *target,
+                                 apr_pool_t *pool);
+
 
 #if 0
 /* Will have to think about the interface here a bit more. */
 
-svn_error_t *svn_wc_make_skelta (svn_delta_stream_t *delta_stream,
+svn_error_t *svn_wc_make_skelta (void *delta_src,
                                  svn_delta_write_fn_t *delta_stream_writer,
                                  apr_array_header_t *paths);
 
 
-svn_error_t *svn_wc_make_delta (svn_delta_stream_t *delta_stream,
+svn_error_t *svn_wc_make_delta (void *delta_src,
                                 svn_delta_write_fn_t *delta_stream_writer,
                                 apr_array_header_t *paths);
 #endif /* 0 */

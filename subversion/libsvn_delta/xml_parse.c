@@ -887,7 +887,7 @@ svn_delta_parse (svn_delta_read_fn_t *source_fn,
   do {
     /* Read BUFSIZ bytes into buf using the supplied read function. */
     len = BUFSIZ;
-    err = (*(source_fn)) (source_baton, buf, &len);
+    err = (*(source_fn)) (source_baton, buf, &len, digger->pool);
     if (err)
       return 
         svn_quick_wrap_error (err, "svn_delta_parse: can't read data source");

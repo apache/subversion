@@ -60,6 +60,7 @@
 #include "svn_string.h"
 #include "svn_error.h"
 #include "svn_hash.h"
+#include "svn_wc.h"
 
 
 
@@ -102,6 +103,7 @@ check_existence (svn_string_t *path,
 }
 
 
+
 /* kff todo: this will want to be somewhere else, and get decided at
    configure time too probably.  For now let's just get checkout
    working. */
@@ -110,9 +112,22 @@ check_existence (svn_string_t *path,
 #define SVN_DIR_SEPARATOR '/'
 
 
+struct w_baton
+{
+
+};
+
+
+struct p_baton
+{
+  svn_string_t *name;
+};
+
+
 static svn_error_t *
 delete (svn_string_t *name, void *walk_baton, void *parent_baton)
 {
+  return 0;
 }
 
 
@@ -121,6 +136,7 @@ entry_pdelta (svn_string_t *name,
               void *walk_baton, void *parent_baton,
               svn_pdelta_t *entry_pdelta)
 {
+  return 0;
 }
 
 
@@ -128,10 +144,13 @@ static svn_error_t *
 add_directory (svn_string_t *name,
                void *walk_baton, void *parent_baton,
                svn_string_t *base_path,
-               svn_version_t base_version,
+               svn_vernum_t base_version,
                svn_pdelta_t *pdelta,
                void **child_baton)
 {
+  printf ("dir \"%s\" (%s, %ld)\n",
+          name->data, base_path->data, base_version);
+  return 0;
 }
 
 
@@ -139,22 +158,25 @@ static svn_error_t *
 replace_directory (svn_string_t *name,
                    void *walk_baton, void *parent_baton,
                    svn_string_t *base_path,
-                   svn_version_t base_version,
+                   svn_vernum_t base_version,
                    svn_pdelta_t *pdelta,
                    void **child_baton)
 {
+  return 0;
 }
 
 
 static svn_error_t *
 finish_directory (void *child_baton)
 {
+  return 0;
 }
 
 
 static svn_error_t *
 finish_file (void *child_baton)
 {
+  return 0;
 }
 
 
@@ -162,11 +184,12 @@ static svn_error_t *
 add_file (svn_string_t *name,
           void *walk_baton, void *parent_baton,
           svn_string_t *base_path,
-          svn_version_t base_version,
+          svn_vernum_t base_version,
           svn_pdelta_t *pdelta,
           svn_delta_handler_t **handler,
           void **handler_baton)
 {
+  return 0;
 }
 
 
@@ -174,11 +197,12 @@ static svn_error_t *
 replace_file (svn_string_t *name,
               void *walk_baton, void *parent_baton,
               svn_string_t *base_path,
-              svn_version_t base_version,
+              svn_vernum_t base_version,
               svn_pdelta_t *pdelta,
-              svn_delta_handler_t *handler,
-              void *handler_baton)
+              svn_delta_handler_t **handler,
+              void **handler_baton)
 {
+  return 0;
 }
 
 
@@ -196,15 +220,15 @@ replace_file (svn_string_t *name,
  * the top directory mentioned in the delta?
  */
 svn_error_t *
-svn_wc_apply_delta (svn_delta_stream_t *src, 
+svn_wc_apply_delta (void *delta_src,
                     svn_delta_read_fn_t *read_fn,
                     svn_string_t *target,
                     apr_pool_t *pool)
 {
-  char buf[BUFSIZ];
-  apr_status_t err;
+  svn_error_t *err;
   svn_delta_walk_t walker;
-  int len;
+  struct w_baton w_baton;
+  struct p_baton p_baton;
 
   /* Check existence of TARGET.  If present, just error out for now -- we
      can't do real updates, only fresh checkouts.  In the future, if
@@ -212,7 +236,6 @@ svn_wc_apply_delta (svn_delta_stream_t *src,
      out if it's not. */
   if (target)
     {
-      svn_error_t *err;
       err = check_existence (target, SVN_ERR_OBSTRUCTED_UPDATE, pool);
 
       /* Whether or not err->apr_err == SVN_ERR_OBSTRUCTED_UPDATE, we
@@ -234,7 +257,8 @@ svn_wc_apply_delta (svn_delta_stream_t *src,
   walker.replace_file      = replace_file;
 
   /* ... and walk! */
-  err = svn_delta_parse (read_fn, src, &walker, walk_baton, dir_baton, pool);
+  err = svn_delta_parse (read_fn, delta_src,
+                         &walker, &w_baton, &p_baton, pool);
 
   return err;
 }
