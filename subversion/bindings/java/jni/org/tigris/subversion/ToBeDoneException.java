@@ -16,14 +16,19 @@ package org.tigris.subversion;
  * ====================================================================
  */
 
-public class SubversionException extends Exception 
+/**
+ * Exception that might be thrown whenever you want to let
+ * the user of the class/method know that there is some
+ * unfinished work that has to be done
+ */
+public class ToBeDoneException extends SubversionException 
 {
-    public SubversionException(String message)
+    public ToBeDoneException(String message)
 	{
 	    super(message);
 	}
-
-    public SubversionException() 
+    
+    public ToBeDoneException() 
 	{
 	    this(null);
 	}
