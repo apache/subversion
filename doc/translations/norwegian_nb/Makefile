@@ -196,6 +196,12 @@ copytobuild:
 	cp -a book/styles.css build.tmp/
 
 editmode:
+	$(MAKE) convfiles CONV_PARAM=-e
+
+commitmode:
+	$(MAKE) convfiles CONV_PARAM=
+
+convfiles:
 	for _prc in $(BOOKFILES); do \
 		echo -n "$$_prc: convert..."; \
 		dest=book/$$_prc; \
@@ -204,22 +210,7 @@ editmode:
 			echo "$$swp: Swap file found. Is the file being edited?" >&2; \
 			exit 1; \
 		fi; \
-		bin/clean_files -e $$dest >$$dest.tmp || exit 1; \
-		echo -n "move..."; \
-		mv $$dest.tmp $$dest; \
-		echo "OK."; \
-	done
-
-commitmode:
-	for _prc in $(BOOKFILES); do \
-		echo -n "$$_prc: clean..."; \
-		dest=book/$$_prc; \
-		swp=book/.$$_prc.swp; \
-		if [ -e $$swp ]; then \
-			echo "$$swp: Swap file found. Is the file being edited?" >&2; \
-			exit 1; \
-		fi; \
-		bin/clean_files $$dest >$$dest.tmp || exit 1; \
+		bin/clean_files $(CONV_PARAM) $$dest >$$dest.tmp || exit 1; \
 		echo -n "move..."; \
 		mv $$dest.tmp $$dest; \
 		echo "OK."; \
