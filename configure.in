@@ -503,6 +503,7 @@ if test "$PYTHON" != "none"; then
   ${PYTHON} "${abs_srcdir}/build/pycheck.py"
 fi
 
+# SVN_CHECK_JDK sets $JAVA_CLASSPATH
 SVN_CHECK_JDK
 
 AC_PATH_PROG(PERL, perl, none)
@@ -585,7 +586,6 @@ if test "$do_javahl_build" = "yes"; then
 fi
 AC_SUBST(INSTALL_EXTRA_JAVAHL_LIB)
 
-JAVA_CLASSPATH=""
 AC_ARG_WITH(junit,
 AC_HELP_STRING([--with-junit=PATH],
                [Specify a path to the junit JAR file.]),
@@ -593,7 +593,11 @@ AC_HELP_STRING([--with-junit=PATH],
     if test "$withval" = "yes" ; then
       AC_MSG_ERROR([--with-junit requires an argument.])
     else
-      JAVA_CLASSPATH="$withval"
+      if test -n "$JAVA_CLASSPATH"; then
+        JAVA_CLASSPATH="$withval:$JAVA_CLASSPATH"
+      else
+        JAVA_CLASSPATH="$withval"
+      fi
       JAVAHL_TESTS_TARGET="javahl-tests"
     fi
 ])

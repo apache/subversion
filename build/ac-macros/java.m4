@@ -80,12 +80,22 @@ AC_DEFUN(SVN_FIND_JDK,
   if test "$JDK_SUITABLE" = "yes"; then
     JAVA_BIN='$(JDK)/bin'
 
-    dnl TODO: Test for Jikes, which should be preferred (for speed) if available
     JAVA="$JAVA_BIN/java"
     JAVAC="$JAVA_BIN/javac"
     JAVAH="$JAVA_BIN/javah"
     JAR="$JAVA_BIN/jar"
 
+    dnl Prefer Jikes (for speed) if available.
+    dnl ### Improve following test.
+    for jikes in /usr/bin/jikes /usr/local/bin/jikes; do
+      if test -x "$jikes"; then
+        JAVAC="$jikes"
+        JAVA_CLASSPATH="$JDK/jre/lib"
+        for jar in $JDK/jre/lib/*.jar; do
+          JAVA_CLASSPATH="$JAVA_CLASSPATH:$jar"
+        done
+      fi
+    done
     dnl Add javac flags.
     if test "$enable_debugging" = "yes"; then
       JAVAC_FLAGS="-g"
@@ -96,7 +106,6 @@ AC_DEFUN(SVN_FIND_JDK,
     for dir in $list; do
       JNI_INCLUDES="$JNI_INCLUDES -I$dir"
     done
-
   fi
 
   dnl We use JDK in both the swig.m4 macros and the Makefile
