@@ -270,6 +270,7 @@ class CollectData(rcsparse.Sink):
     branch_name = self.get_branch_name(revision)
 
     if self.default_branch:
+      pass
       # default_branch_name = self.get_branch_name(self.default_branch)
       # Name might be None, if it's an unlabeled branch.
       # todo: kff fooo: issue #1510 working here
