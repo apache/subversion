@@ -9,7 +9,7 @@ Status of 1.1.2:
 
 Candidate changes:
 
-  * r11483 (Issue #2091)
+  * r11483, r12072 (Issue #2091)
     Unitialized variable on Win98.
     Justification:
       It was causing random failures for our Win98 users.  The fix
@@ -19,7 +19,9 @@ Candidate changes:
       it only because I don't have the environment to test nor the
       docs to review the MultiByteToWideChar() call.  -kfogel
     Votes:
-      +1: jszakmeister, dionisos
+      +1: jszakmeister
+    Votes without r12072:
+      +1: dionisos
       +0: kfogel, lundblad
 
   * r11050
