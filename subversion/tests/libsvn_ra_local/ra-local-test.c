@@ -174,7 +174,7 @@ try_split_url (const char *url, apr_pool_t *pool)
 
 static svn_error_t *
 split_url_syntax (const char **msg, svn_boolean_t msg_only,
-                  svn_test_opts_t *opts, apr_pool_t *pool)
+                   svn_test_opts_t *opts, apr_pool_t *pool)
 {
   apr_status_t apr_err;
 
@@ -211,7 +211,8 @@ split_url_syntax (const char **msg, svn_boolean_t msg_only,
 }
 
 static svn_error_t *
-split_url_bad_host (const char **msg, svn_boolean_t msg_only, apr_pool_t *pool)
+split_url_bad_host (const char **msg, svn_boolean_t msg_only,
+                    svn_test_opts_t *opts, apr_pool_t *pool)
 {
   apr_status_t apr_err;
 
@@ -231,7 +232,8 @@ split_url_bad_host (const char **msg, svn_boolean_t msg_only, apr_pool_t *pool)
 }
 
 static svn_error_t *
-split_url_host (const char **msg, svn_boolean_t msg_only, apr_pool_t *pool)
+split_url_host (const char **msg, svn_boolean_t msg_only,
+                svn_test_opts_t *opts, apr_pool_t *pool)
 {
   apr_status_t apr_err;
 
