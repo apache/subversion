@@ -1,3 +1,28 @@
+Version 0.19.0 (released 10 Mar 2003, revision 5240)
+
+ User-visible changes:
+ * svn ls works on wc paths (#1130)
+ * new cvs2svn.py features and bug fixes (1105)
+ * new svnlook subcommand 'uuid'
+ * new svnadmin create option '--bdb-txn-nosync' (use with care)
+ * fix svnserve help output
+ * SVN_EDITOR now overrides svn-editor in ~/.subversion/config
+ * miscellaneous performance improvements (memory and speed)
+ * more work on the Book
+
+ Developer-visible changes:
+ * start implementing cancellation of long-running functions
+ * misc windows build fixes and features (DSP generator)
+ * -W and -P options to stress.pl
+ * start adding support for multiple fs backends
+ * work on bindings and bindings build system (#1132, #1149)
+ * bug fixes: ra_dav import/checkout memory usage (#995), control chars
+   in commit messages (#1025), svn merge memory usage (#1069, #1077),
+   pre-existing ~/.subversion (#1121), keyword expansion (#1151), line
+   number in config error message (#1157), svn-tunnel-agent in [default]
+   (#1158), RA->close RIP (#1164), config-test non-source (#1172)
+
+
 Version 0.18.1 (released 26 Feb 2003, revision 5118)
 
  User-visible changes:
