@@ -1259,7 +1259,7 @@ svn_delta_parse (svn_delta_read_fn_t *source_fn,
   char buf[BUFSIZ];
   apr_off_t len;
   int done;
-  svn_error_t *err;
+  svn_error_t *err = NULL;
   XML_Parser expat_parser;
 
   /* Create a digger structure */
@@ -1292,8 +1292,11 @@ svn_delta_parse (svn_delta_read_fn_t *source_fn,
     len = BUFSIZ;
     err = (*(source_fn)) (source_baton, buf, &len, digger->pool);
     if (err)
-      return 
-        svn_quick_wrap_error (err, "svn_delta_parse: can't read data source");
+      {
+        err = svn_quick_wrap_error (err,
+                                    "svn_delta_parse: can't read data source");
+        goto error;
+      }
 
     /* How many bytes were actually read into buf?  According to the
        definition of an svn_delta_read_fn_t, we should keep reading
@@ -1304,29 +1307,31 @@ svn_delta_parse (svn_delta_read_fn_t *source_fn,
     if (! XML_Parse (expat_parser, buf, len, done))
     {
       /* Uh oh, expat *itself* choked somehow.  Return its message. */
-      svn_error_t *err
-        = svn_create_error
+      err = svn_create_error
         (SVN_ERR_MALFORMED_XML, 0,
          apr_psprintf (pool, "%s at line %d",
                        XML_ErrorString (XML_GetErrorCode (expat_parser)),
                        XML_GetCurrentLineNumber (expat_parser)),
          NULL, pool);
-      XML_ParserFree (expat_parser);
-      return err;
+      goto error;
     }
 
     /* After parsing our chunk, check to see if anybody called
        signal_expat_bailout() */
     if (digger->validation_error)
-      return digger->validation_error;
+      {
+        err = digger->validation_error;
+        goto error;
+      }
 
   } while (! done);
 
 
+ error:
   /* Done parsing entire SRC_BATON stream, so clean up and return. */
   XML_ParserFree (expat_parser);
 
-  return SVN_NO_ERROR;
+  return err;
 }
 
 
