@@ -69,18 +69,11 @@ static int thread_req_count = 0;
 static thread_req_t *thread_req_head = NULL;
 static thread_req_t *thread_req_tail = NULL;
 
-/* Return TRUE if the request queue is empty.
-   The caller must own the queue lock. */
-static APR_INLINE svn_boolean_t queue_empty(void)
-{
-  return (thread_req_head == NULL);
-}
-
 /* Insert a new request into the queue. Assumes that REQUEST->next is NULL.
    The caller must own the queue lock. */
 static APR_INLINE void queue_put(thread_req_t *request)
 {
-  if (queue_empty())
+  if (thread_req_head == NULL)
     thread_req_head = thread_req_tail = request;
   else
     {
@@ -94,14 +87,19 @@ static APR_INLINE void queue_put(thread_req_t *request)
    The caller must own the queue lock. */
 static APR_INLINE thread_req_t *queue_get(void)
 {
-  thread_req_t *request = thread_req_head;
-  thread_req_head = thread_req_head->next;
-  --thread_req_count;
-  return request;
+  if (thread_req_head == NULL)
+    return NULL;
+  else
+    {
+      thread_req_t *request = thread_req_head;
+      thread_req_head = thread_req_head->next;
+      --thread_req_count;
+      return request;
+    }
 }
 
 
-/* The thread main function. DATA is the first request to serve. */
+/* The thread main function. DATA is the thread's private pool. */
 static void *APR_THREAD_FUNC thread_main(apr_thread_t *tid, void *data)
 {
   apr_pool_t *const thread_pool = data;
@@ -110,10 +108,10 @@ static void *APR_THREAD_FUNC thread_main(apr_thread_t *tid, void *data)
     {
       apr_status_t status = APR_SUCCESS;
       thread_req_t *request;
-      apr_thread_mutex_lock(thread_req_lock);
 
       /* Poll the request queue. */
-      while (queue_empty())
+      apr_thread_mutex_lock(thread_req_lock);
+      while (!(request = queue_get()))
         {
           if (thread_idle_count >= thread_idle_max
               && APR_STATUS_IS_TIMEUP(status))
@@ -129,9 +127,6 @@ static void *APR_THREAD_FUNC thread_main(apr_thread_t *tid, void *data)
                                              thread_idle_timeout);
           --thread_idle_count;
         }
-
-      /* If we got here, the queue is not empty and we own the lock. */
-      request = queue_get();
       apr_thread_mutex_unlock(thread_req_lock);
 
       /* Serve the request. */
