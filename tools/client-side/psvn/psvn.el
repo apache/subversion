@@ -2,7 +2,7 @@
 ;; Copyright (C) 2002 by Stefan Reichoer
 
 ;; Author: Stefan Reichoer, <reichoer@web.de>
-;; Version: 0.2a
+;; Version: 0.2b
 
 ;; $LastChangedDate: 2002-09-02 21:50:21 +0200 (Mo, 02 Sep 2002) $
 
@@ -23,7 +23,8 @@
 
 ;;; Commentary
 
-;; psvn.el is tested with GNU Emacs 21.1.1 on windows with svn 0.14.0
+;; psvn.el is tested with GNU Emacs 21.1.1 on windows, debian linux
+;; with svn 0.14.3
 
 ;; psvn.el is an interface for the revision control tool subversion
 ;; (see http://subversion.tigris.org)
@@ -67,6 +68,8 @@
 
 ;; The latest version of psvn.el can be found at:
 ;;   http://xsteve.nit.at/prg/emacs/psvn.el
+;; Or you can check it out from the subversion repository:
+;;   svn co http://svn.collab.net/repos/svn/trunk/tools/client-side/psvn psvn
 
 ;; TODO:
 ;; * shortcut for svn propset svn:keywords "Date" psvn.el
@@ -80,7 +83,6 @@
 ;; * add support for svn rename, svn delete
 ;; * Parse the following line correct:
 ;;  A  +            -       ?          ?    ./psvn.el -- show the + also
-;; * Show the svn-status output in different colors
 ;;
 
 ;; Overview over the implemented/not (yet) implemented svn sub-commands:
@@ -125,7 +127,7 @@
 
 (require 'overlay)
 
-; internal variables
+;; internal variables
 (defvar svn-process-cmd nil)
 (defvar svn-status-info nil)
 (defvar svn-status-default-column 23)
@@ -148,6 +150,32 @@
    "/tmp/"))
 (defvar svn-status-temp-arg-file (concat svn-status-temp-dir "svn.arg"))
 (defconst svn-xemacsp (featurep 'xemacs))
+
+;; faces
+(defface svn-status-marked-face
+  '((((type tty) (class color)) (:foreground "green" :weight light))
+    (((class color) (background light)) (:foreground "green3"))
+    (t (:weight bold)))
+  "Face to highlight the mark for user marked files in svn status buffers")
+
+(defface svn-status-modified-external-face
+  '((((type tty) (class color)) (:foreground "magenta" :weight light))
+    (((class color) (background light)) (:foreground "magenta"))
+    (t (:weight bold)))
+  "Face to highlight the externaly modified phrase in svn status buffers")
+
+(defvar svn-highlight t)
+;; stolen from PCL-CVS
+(defun svn-add-face (str face &optional keymap)
+  (when svn-highlight
+    (add-text-properties 0 (length str)
+		 (list* 'face face
+			(when keymap
+			  (list 'mouse-face 'highlight
+				'local-map keymap)))
+		 str))
+  str)
+
 
 (defun svn-status (dir &optional arg)
   (interactive (list (read-file-name "SVN status directory: "
@@ -304,6 +332,8 @@
           (setq svn-file-mark (string-to-char (car file-svn-info)))
           (setq svn-property-mark (string-to-char (substring (car file-svn-info) 1)))
           (when (eq svn-property-mark 0) (setq svn-property-mark nil))
+          ;is this necessary?
+          (when (eq svn-property-mark ?\ ) (setq svn-property-mark nil))
           (cond ((eq svn-file-mark ??)
                  (setq path (nth 1 file-svn-info)
                        local-rev -1
@@ -314,6 +344,7 @@
                        local-rev (string-to-number (nth 1 file-svn-info))
                        last-change-rev (string-to-number (nth 2 file-svn-info))
                        author (nth 3 file-svn-info))))
+          (unless path (setq path "."))
           (setq user-mark (not (not (member path old-marked-files))))
           (setq svn-status-info (append svn-status-info
                                         (list
@@ -328,7 +359,9 @@
                                                ;;file-svn-info
           (next-line 1)))))
 
-(easy-menu-add-item nil '("tools") ["SVN Status" svn-status t] "PCL-CVS")
+(condition-case nil
+    (easy-menu-add-item nil '("tools") ["SVN Status" svn-status t] "PCL-CVS")
+  (error (message "psvn: could not install menu")))
 
 (defvar svn-status-mode-map () "Keymap used in svn-status-mode buffers.")
 (defvar svn-status-mode-property-map ()
@@ -461,21 +494,25 @@
             (or (eq (svn-status-line-info->propmark line-info) ?_)
                 (eq (svn-status-line-info->propmark line-info) ? )))))
 
+
 (defun svn-insert-line-in-status-buffer (line-info)
-  (font-lock-mode t)
-  ;;(insert (propertize "*" 'font-lock-face 'font-lock-constant-face))
-  (insert (format "%s %c%c %3s %3s %-9s %s%s\n"
-                  (if (svn-status-line-info->has-usermark line-info)
-                      (propertize "*" 'font-lock-face 'font-lock-constant-face)
-                    " ")
-                  (svn-status-line-info->filemark line-info)
-                  (or (svn-status-line-info->propmark line-info) ? )
-                  (or (svn-status-line-info->localrev line-info) "")
-                  (or (svn-status-line-info->lastchangerev line-info) "")
-                  (svn-status-line-info->author line-info)
-                  (svn-status-line-info->filename line-info)
-                  (if (svn-status-line-info->modified-external line-info)
-                      " (modified external)" ""))))
+  (let ((s "*"))
+    (let ((usermark (if (svn-status-line-info->has-usermark line-info)
+                        (svn-add-face "*" 'svn-status-marked-face)
+                      " "))
+          (external (if (svn-status-line-info->modified-external line-info)
+                        (svn-add-face " (modified external)" 'svn-status-modified-external-face)
+                      "")))
+      (insert (concat usermark
+                      (format " %c%c %3s %3s %-9s %s"
+                              (svn-status-line-info->filemark line-info)
+                              (or (svn-status-line-info->propmark line-info) ? )
+                              (or (svn-status-line-info->localrev line-info) "")
+                              (or (svn-status-line-info->lastchangerev line-info) "")
+                              (svn-status-line-info->author line-info)
+                              (svn-status-line-info->filename line-info))
+                      external
+                      "\n")))))
 
 (defun svn-status-update-buffer ()
   (interactive)
