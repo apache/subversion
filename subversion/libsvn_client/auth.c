@@ -449,6 +449,7 @@ server_ssl_file_first_credentials (void **credentials,
   cred->failures_allow |=
     temp_setting ? (SVN_AUTH_SSL_NOTYETVALID | SVN_AUTH_SSL_EXPIRED) : 0;
 
+  *credentials = cred;
   return SVN_NO_ERROR;
 }
 
