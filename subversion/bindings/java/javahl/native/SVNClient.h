@@ -167,7 +167,7 @@ private:
     std::string m_passWord;
     std::string m_configDir;
     static jobject createJavaStatus(const char *path,
-                                        svn_wc_status_t *status);
+                                        svn_wc_status2_t *status);
     static svn_error_t *messageReceiver(void *baton,
                                             apr_hash_t * changed_paths,
                                             svn_revnum_t rev,
@@ -176,7 +176,7 @@ private:
                                             const char *msg,
                                             apr_pool_t * pool);
     static void statusReceiver(void *baton,
-                                   const char *path, svn_wc_status_t *status);
+                                   const char *path, svn_wc_status2_t *status);
     static svn_error_t *infoReceiver(void *baton, 
                                      const char *path,
                                      const svn_info_t *info,
