@@ -1,6 +1,5 @@
 /*
- * mod_dav_svn.c: an Apache mod_dav sub-module to provide a Subversion
- *                repository.
+ * dav_svn.h: types, functions, macros for the DAV/SVN Apache module
  *
  * ================================================================
  * Copyright (c) 2000 CollabNet.  All rights reserved.
@@ -51,85 +50,31 @@
  * sourceXchange project sponsored by SapphireCreek.
  */
 
-
 
+#ifndef DAV_SVN_H
+#define DAV_SVN_H
 
 #include <httpd.h>
-#include <http_config.h>
+#include <util_xml.h>
+#include <apr_tables.h>
 #include <mod_dav.h>
 
-#include "dav_svn.h"
+int dav_svn_hook_get_resource(request_rec *r, const char *root_dir,
+                              const char *workspace);
+
+const dav_hooks_propdb *dav_svn_get_propdb_hooks(request_rec *r);
+
+void dav_svn_gather_propsets(apr_array_header_t *uris);
+int dav_svn_find_liveprop(request_rec *r, const char *ns_uri, const char *name,
+                          const dav_hooks_liveprop **hooks);
+void dav_svn_insert_all_liveprops(request_rec *r, const dav_resource *resource,
+                                  int insvalue, ap_text_header *phdr);
+void dav_svn_register_uris(apr_pool_t *p);
+
+const dav_hooks_vsn *dav_svn_get_vsn_hooks(request_rec *r);
 
 
-/* per-server configuration */
-typedef struct {
-    int not_yet_used;
-
-} dav_svn_server_conf;
-
-/* Note: the "dav_svn" prefix is mandatory */
-extern module MODULE_VAR_EXPORT dav_svn_module;
-
-
-static void *dav_svn_create_server_config(apr_pool_t *p, server_rec *s)
-{
-    return apr_pcalloc(p, sizeof(dav_svn_server_conf));
-}
-
-static void *dav_svn_merge_server_config(apr_pool_t *p,
-                                         void *base, void *overrides)
-{
-/*    dav_svn_server_conf *parent = base;
-      dav_svn_server_conf *child = overrides; */
-    dav_svn_server_conf *newconf;
-
-    newconf = apr_pcalloc(p, sizeof(*newconf));
-
-    return newconf;
-}
-
-static const command_rec dav_svn_cmds[] =
-{
-    { NULL }
-};
-
-static void register_hooks(void)
-{
-    /* repository provider */
-    ap_hook_get_resource(dav_svn_hook_get_resource, NULL, NULL,
-                         AP_HOOK_MIDDLE);
-
-    /* live property handling */
-    ap_hook_gather_propsets(dav_svn_gather_propsets, NULL, NULL,
-                            AP_HOOK_MIDDLE);
-    ap_hook_find_liveprop(dav_svn_find_liveprop, NULL, NULL, AP_HOOK_MIDDLE);
-    ap_hook_insert_all_liveprops(dav_svn_insert_all_liveprops, NULL, NULL,
-                                 AP_HOOK_MIDDLE);
-    dav_svn_register_uris(NULL /* ### pconf */);
-
-    /* versioning provider stuff */
-    ap_hook_get_vsn_hooks(dav_svn_get_vsn_hooks, NULL, NULL, AP_HOOK_MIDDLE);
-
-#if 0
-    /* ### we don't have these yet */
-
-    /* dead property handling */
-    ap_hook_get_propdb_hooks(dav_fs_get_propdb_hooks, NULL, NULL,
-                             AP_HOOK_MIDDLE);
-#endif
-}
-
-module MODULE_VAR_EXPORT dav_svn_module =
-{
-    STANDARD20_MODULE_STUFF,
-    NULL,			/* dir config creater */
-    NULL,			/* dir merger --- default is to override */
-    dav_svn_create_server_config,	/* server config */
-    dav_svn_merge_server_config,	/* merge server config */
-    dav_svn_cmds,		/* command table */
-    NULL,                       /* handlers */
-    register_hooks,             /* register hooks */
-};
+#endif /* DAV_SVN_H */
 
 
 /* 
