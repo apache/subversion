@@ -367,15 +367,9 @@ svn_wc_rename (svn_stringbuf_t *src, svn_stringbuf_t *dst, apr_pool_t *pool)
 }
 
 
-
-enum mark_tree_state {
-  mark_tree_state_delete = 1,
-};
-
-
 /* Recursively mark a tree DIR for some STATE. */
 static svn_error_t *
-mark_tree (svn_stringbuf_t *dir, enum mark_tree_state state, apr_pool_t *pool)
+delete_tree (svn_stringbuf_t *dir, apr_pool_t *pool)
 {
   apr_pool_t *subpool = svn_pool_create (pool);
   apr_hash_t *entries;
@@ -412,30 +406,25 @@ mark_tree (svn_stringbuf_t *dir, enum mark_tree_state state, apr_pool_t *pool)
 
       /* If this is a directory, recurse. */
       if (entry->kind == svn_node_dir)
-        SVN_ERR (mark_tree (fullpath, state, subpool));
+        SVN_ERR (delete_tree (fullpath, subpool));
 
       /* Mark this entry. */
-      switch (state)
+      SVN_ERR (svn_wc__entry_modify
+               (dir, basename, 
+                SVN_WC__ENTRY_MODIFY_SCHEDULE,
+                SVN_INVALID_REVNUM, entry->kind,
+                svn_wc_schedule_delete,
+                svn_wc_existence_normal,
+                FALSE, 0, 0, NULL, NULL, subpool, NULL));
+      if (fbtable)
         {
-        case mark_tree_state_delete:
-          SVN_ERR (svn_wc__entry_modify
-                   (dir, basename, 
-                    SVN_WC__ENTRY_MODIFY_SCHEDULE,
-                    SVN_INVALID_REVNUM, entry->kind,
-                    svn_wc_schedule_delete,
-                    svn_wc_existence_normal,
-                    FALSE, 0, 0, NULL, NULL, subpool, NULL));
-          if (fbtable)
-            {
-              apr_status_t apr_err;
-
-              apr_err = fbtable->report_deleted_item (fullpath->data, pool);
-              if (apr_err)
-                return svn_error_createf 
-                  (apr_err, 0, NULL, pool,
-                   "Error reporting deleted item `%s'", fullpath->data);
-            }
-          break;
+          apr_status_t apr_err;
+          
+          apr_err = fbtable->report_deleted_item (fullpath->data, pool);
+          if (apr_err)
+            return svn_error_createf 
+              (apr_err, 0, NULL, pool,
+               "Error reporting deleted item `%s'", fullpath->data);
         }
 
       /* Reset FULLPATH to just hold this dir's name. */
@@ -446,15 +435,14 @@ mark_tree (svn_stringbuf_t *dir, enum mark_tree_state state, apr_pool_t *pool)
     }
 
   /* Handle "this dir" for states that need it done post-recursion. */
-  if (state == mark_tree_state_delete)
-    SVN_ERR (svn_wc__entry_modify
-             (dir, NULL, 
-              SVN_WC__ENTRY_MODIFY_SCHEDULE,
-              SVN_INVALID_REVNUM, svn_node_dir,
-              svn_wc_schedule_delete,
-              svn_wc_existence_normal,
-              FALSE, 0, 0, NULL, NULL, pool, NULL));
-
+  SVN_ERR (svn_wc__entry_modify
+           (dir, NULL, 
+            SVN_WC__ENTRY_MODIFY_SCHEDULE,
+            SVN_INVALID_REVNUM, svn_node_dir,
+            svn_wc_schedule_delete,
+            svn_wc_existence_normal,
+            FALSE, 0, 0, NULL, NULL, pool, NULL));
+  
   /* Destroy our per-iteration pool. */
   svn_pool_destroy (subpool);
   return SVN_NO_ERROR;
@@ -466,6 +454,7 @@ svn_wc_delete (svn_stringbuf_t *path, apr_pool_t *pool)
 {
   svn_stringbuf_t *dir, *basename;
   svn_wc_entry_t *entry;
+  svn_boolean_t dir_unadded = FALSE;
 
   /* Get the entry for the path we are deleting. */
   SVN_ERR (svn_wc_entry (&entry, path, pool));
@@ -481,24 +470,41 @@ svn_wc_delete (svn_stringbuf_t *path, apr_pool_t *pool)
 
   if (entry->kind == svn_node_dir)
     {
-      /* Recursively mark a whole tree for deletion. */
-      SVN_ERR (mark_tree (path, mark_tree_state_delete, pool));
+      /* Special case, delete of a newly added dir. */
+      if (entry->schedule == svn_wc_schedule_add)
+        dir_unadded = TRUE;
+      else
+        /* Recursively mark a whole tree for deletion. */
+        SVN_ERR (delete_tree (path, pool));
     }
 
-  /* We need to mark this entry for deletion in its parent's entries
-     file, so we split off basename from the parent path, then fold in
-     the addition of a delete flag. */
-  svn_path_split (path, &dir, &basename, svn_path_local_style, pool);
-  if (svn_path_is_empty (dir, svn_path_local_style))
-    svn_stringbuf_set (dir, ".");
+  /* Deleting a directory that has been added but not yet
+     committed is easy, just remove the adminstrative dir. */
+  if (dir_unadded)
+    {
+      svn_stringbuf_t *this_dir =
+        svn_stringbuf_create (SVN_WC_ENTRY_THIS_DIR, pool);
+      SVN_ERR (svn_wc_remove_from_revision_control (path,
+                                                    this_dir,
+                                                    FALSE, pool));
+    }
+  else
+    {
+      /* We need to mark this entry for deletion in its parent's entries
+         file, so we split off basename from the parent path, then fold in
+         the addition of a delete flag. */
+      svn_path_split (path, &dir, &basename, svn_path_local_style, pool);
+      if (svn_path_is_empty (dir, svn_path_local_style))
+        svn_stringbuf_set (dir, ".");
   
-  SVN_ERR (svn_wc__entry_modify
-           (dir, basename, 
-            SVN_WC__ENTRY_MODIFY_SCHEDULE,
-            SVN_INVALID_REVNUM, entry->kind,
-            svn_wc_schedule_delete,
-            svn_wc_existence_normal,
-            FALSE, 0, 0, NULL, NULL, pool, NULL));
+      SVN_ERR (svn_wc__entry_modify
+               (dir, basename, 
+                SVN_WC__ENTRY_MODIFY_SCHEDULE,
+                SVN_INVALID_REVNUM, entry->kind,
+                svn_wc_schedule_delete,
+                svn_wc_existence_normal,
+                FALSE, 0, 0, NULL, NULL, pool, NULL));
+    }
 
   /* Now, call our client feedback function. */
   {
@@ -1174,6 +1180,9 @@ svn_wc_remove_from_revision_control (svn_stringbuf_t *path,
       /* Remove self from parent's entries file */
       svn_path_split (full_path, &parent_dir, &basename,
                       svn_path_local_style, pool);
+      if (svn_path_is_empty (parent_dir, svn_path_local_style))
+        svn_stringbuf_set (parent_dir, ".");
+
       /* ### sanity check:  is parent_dir even a working copy?
          if not, it should not be a fatal error.  we're just removing
          the top of the wc. */
