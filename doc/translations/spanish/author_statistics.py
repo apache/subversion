@@ -21,7 +21,7 @@ import xml.parsers.expat
 
 
 # Some globals.
-LOOKING_FOR = ["gradha", "ruben", "beerfrick"]
+LOOKING_FOR = ["gradha", "ruben", "beerfrick", "dbrouard"]
 STATISTICS = []
 SECONDS_A_DAY = 60 * 60 * 24
 
