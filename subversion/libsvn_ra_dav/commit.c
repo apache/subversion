@@ -467,9 +467,10 @@ static svn_error_t * checkout_resource(commit_ctx_t *cc,
   if (err)
     {
       if (err->apr_err == SVN_ERR_FS_CONFLICT)
-        return svn_error_createf(err->apr_err, err,
-                                 "Your file '%s' is probably out-of-date.",
-                                 res->local_path);
+        return svn_error_createf
+          (err->apr_err, err,
+           "Your file or directory '%s' is probably out-of-date.",
+           res->local_path);
       return err;
     }
 
