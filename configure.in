@@ -107,8 +107,8 @@ dnl Configure APR, and local Berkeley DB if any --------------------------
 
 dnl verify apr version and set apr flags
 changequote(<<, >>)
-APR_VER_REGEX="0\.9\.[3-9]"
-APU_VER_REGEX="0\.9\.[3-9]"
+APR_VER_REGEX="0\.9\.[4-9]"
+APU_VER_REGEX="0\.9\.[4-9]"
 changequote([, ])
 
 SVN_LIB_APR($APR_VER_REGEX)
