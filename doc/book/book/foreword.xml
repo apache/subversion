@@ -74,21 +74,24 @@ ch00.xml. -->
 
     <para>During the entire time they wrote this book, Ben, Mike, and
     Brian haunted the Subversion mailing lists and chat rooms
-    incessantly, carefully noting the problems real people were having
-    in real situations.  The book they produced reflects this.
-    Grounded firmly in the bedrock of experience, not in the shifting
-    sands of wishful thinking, it combines the best aspects of user
-    manual and FAQ sheet.  This duality might not be noticeable on a
-    first reading.  Taken in order, front to back, the book is simply
-    a straightforward description of a piece of software.  There's the
-    overview, the obligatory guided tour, the chapter on
-    administrative configuration, some advanced topics, and of course
-    a command reference and troubleshooting guide.  Only when you come
-    back to it later, seeking the solution to some specific problem,
-    does its authenticity shine out: the telling details that can only
-    result from encounters with the unexpected, the examples honed
-    from genuine use cases, and most of all the sensitivity to the
-    user's needs and the user's point of view. </para>
+    incessantly, carefully noting the problems users were having in
+    real-life situations.  Monitoring such feedback is part of their
+    job descriptions at CollabNet anyway, and it gave them a huge
+    advantage when they set out to document Subversion.  The book they
+    produced is grounded firmly in the bedrock of experience, not in
+    the shifting sands of wishful thinking; it combines the best
+    aspects of user manual and FAQ sheet.  This duality might not be
+    noticeable on a first reading.  Taken in order, front to back, the
+    book is simply a straightforward description of a piece of
+    software.  There's the overview, the obligatory guided tour, the
+    chapter on administrative configuration, some advanced topics, and
+    of course a command reference and troubleshooting guide.  Only
+    when you come back to it later, seeking the solution to some
+    specific problem, does its authenticity shine out: the telling
+    details that can only result from encounters with the unexpected,
+    the examples honed from genuine use cases, and most of all the
+    sensitivity to the user's needs and the user's point of
+    view. </para>
 
     <para> Of course, no one can promise that this book will answer
     every question you have about Subversion.  Sometimes, the
