@@ -337,7 +337,14 @@ int main(int argc, const char *const *argv)
    * restarted. */
   apr_socket_opt_set(sock, APR_SO_REUSEADDR, 1);
 
-  apr_sockaddr_info_get(&sa, host, APR_INET, port, 0, pool);
+  status = apr_sockaddr_info_get(&sa, host, APR_INET, port, 0, pool);
+  if (status)
+    {
+      fprintf(stderr, "Can't get address info: %s\n",
+              apr_strerror(status, errbuf, sizeof(errbuf)));
+      exit(1);
+    }
+
   status = apr_socket_bind(sock, sa);
   if (status)
     {
