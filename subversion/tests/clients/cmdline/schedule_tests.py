@@ -165,6 +165,36 @@ def nested_adds(sbox):
 
   return svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
+#----------------------------------------------------------------------
+
+def add_executable(sbox):
+  "schedule: add some executable files"
+
+  if os.name == 'posix':
+    if sbox.build():
+      return 1
+    def runTest(wc_dir, fileName, perm, executable):
+      fileName = os.path.join(wc_dir, fileName)
+      if executable:
+        expected = (["\n"], [])
+      else:
+        expected = ([], [])
+      f = open(fileName,"w")
+      f.close()
+      os.chmod(fileName,perm)
+      svntest.main.run_svn(None, 'add', fileName)
+      return expected != svntest.main.run_svn(None, 'propget',
+                                              "svn:executable", fileName)
+    test_cases = [
+      ("all_exe",  0777, True),
+      ("none_exe", 0666, False),
+      ("user_exe", 0766, True),
+      ("group_exe", 0676, False),
+      ("other_exe", 0667, False),
+      ]
+    for test_case in test_cases:
+      if runTest(sbox.wc_dir, *test_case):
+        return 1
 
 #----------------------------------------------------------------------
 
@@ -324,6 +354,44 @@ def revert_nested_adds(sbox):
 
 #----------------------------------------------------------------------
 
+def revert_add_executable(sbox):
+  "revert: add some executable files"
+
+  if os.name == 'posix':
+    if add_executable(sbox):
+      return 1
+
+    wc_dir = sbox.wc_dir
+    all_path = os.path.join(wc_dir, 'all_exe')
+    none_path = os.path.join(wc_dir, 'none_exe')
+    user_path = os.path.join(wc_dir, 'user_exe')
+    group_path = os.path.join(wc_dir, 'group_exe')
+    other_path = os.path.join(wc_dir, 'other_exe')
+
+    expected_output = ["Reverted " + all_path + "\n",
+                       "Reverted " + none_path + "\n",
+                       "Reverted " + user_path + "\n",
+                       "Reverted " + group_path + "\n",
+                       "Reverted " + other_path + "\n"]
+
+    output, errput = svntest.main.run_svn (None, 'revert', 
+                                           '--recursive', wc_dir)
+
+    # Make sure we got the right output.
+    if len(errput) > 0:
+      print errput
+      return 1
+
+    ### do we really need to sort these?
+    output.sort()
+    expected_output.sort()
+    if output != expected_output:
+      return 1
+
+    return 0
+
+#----------------------------------------------------------------------
+
 def revert_delete_files(sbox):
   "revert: delete some files"
 
@@ -436,6 +504,17 @@ def commit_nested_adds(sbox):
 
 #----------------------------------------------------------------------
 
+def commit_add_executable(sbox):
+  "commit: add some executable files"
+
+  if add_executable(sbox):
+    return 1
+
+  return 1
+  return 0
+
+#----------------------------------------------------------------------
+
 def commit_delete_files(sbox):
   "commit: delete some files"
 
@@ -466,16 +545,19 @@ test_list = [ None,
               add_files,
               add_directories,
               nested_adds,
+              add_executable,
               delete_files,
               delete_dirs,
               revert_add_files,
               revert_add_directories,
               revert_nested_adds,
+              revert_add_executable,
               revert_delete_files,
               revert_delete_dirs,
               svntest.main.XFAIL(commit_add_files),
               svntest.main.XFAIL(commit_add_directories),
               svntest.main.XFAIL(commit_nested_adds),
+              svntest.main.XFAIL(commit_add_executable),
               svntest.main.XFAIL(commit_delete_files),
               svntest.main.XFAIL(commit_delete_dirs),
              ]

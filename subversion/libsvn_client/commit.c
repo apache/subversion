@@ -112,6 +112,7 @@ import_file (apr_hash_t *files,
   apr_pool_t *subpool = svn_pool_create (hash_pool);
   const char *filepath = apr_pstrdup (hash_pool, path);
   struct imported_file *value = apr_palloc (hash_pool, sizeof (*value));
+  svn_boolean_t executable;
 
   /* Add the file, using the pool from the FILES hash. */
   SVN_ERR (editor->add_file (edit_path, dir_baton, NULL, SVN_INVALID_REVNUM, 
@@ -123,6 +124,13 @@ import_file (apr_hash_t *files,
   if (mimetype)
     SVN_ERR (editor->change_file_prop (file_baton, SVN_PROP_MIME_TYPE,
                                        svn_string_create (mimetype, pool), 
+                                       pool));
+
+  /* If the file is executable, add that as a property to the file. */
+  SVN_ERR (svn_io_is_file_executable (&executable, path, pool));
+  if (executable)
+    SVN_ERR (editor->change_file_prop (file_baton, SVN_PROP_EXECUTABLE,
+                                       svn_string_create ("", pool), 
                                        pool));
   
   if (notify_func)

@@ -731,6 +731,7 @@ svn_wc_add (const char *path,
   enum svn_node_kind kind;
   apr_uint32_t modify_flags = 0;
   const char *mimetype = NULL;
+  svn_boolean_t executable = FALSE;
   svn_error_t *err;
   svn_wc_adm_access_t *adm_access;
   
@@ -847,6 +848,17 @@ svn_wc_add (const char *path,
           mt_str.data = mimetype;
           mt_str.len = strlen(mimetype);
           SVN_ERR (svn_wc_prop_set (SVN_PROP_MIME_TYPE, &mt_str, path,
+                                    parent_access, pool));
+        }
+
+      /* Set svn:executable if the new addition is executable. */
+      SVN_ERR (svn_io_is_file_executable (&executable, path, pool));
+      if (executable)
+        {
+          svn_string_t emptystr;
+          emptystr.data = "";
+          emptystr.len = 0;
+          SVN_ERR (svn_wc_prop_set (SVN_PROP_EXECUTABLE, &emptystr, path,
                                     parent_access, pool));
         }
     }  

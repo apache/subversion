@@ -199,7 +199,7 @@ def basic_update(sbox):
     })
 
   # Create expected disk tree for the update.
-  expected_disk = svntest.main.greek_state.copy()
+  expected_disk = svntest.actions.get_virginal_disk()
   expected_disk.tweak('A/mu',
                       contents=expected_disk.desc['A/mu'].contents
                       + 'appended mu text')
@@ -299,7 +299,7 @@ def basic_corruption(sbox):
     })
 
   # Create expected disk tree for the update.
-  expected_disk = svntest.main.greek_state.copy()
+  expected_disk = svntest.actions.get_virginal_disk()
   expected_disk.tweak('A/mu',
                       contents=expected_disk.desc['A/mu'].contents
                       + 'appended mu text')
@@ -441,7 +441,7 @@ def basic_merging_update(sbox):
     })
   
   # Create expected disk tree for the update.
-  expected_disk = svntest.main.greek_state.copy()
+  expected_disk = svntest.actions.get_virginal_disk()
   expected_disk.tweak('A/mu',
                       contents=backup_mu_text + ' Appended to line 10 of mu')
   expected_disk.tweak('A/D/G/rho',
@@ -512,7 +512,7 @@ def basic_conflict(sbox):
     })
   
   # Create expected disk tree for the update.
-  expected_disk = svntest.main.greek_state.copy()
+  expected_disk = svntest.actions.get_virginal_disk()
   expected_disk.tweak('A/mu', contents="""<<<<<<< .mine
 This is the file 'mu'.
 Conflicting appended text for mu=======
@@ -748,7 +748,7 @@ def basic_switch(sbox):
     })
 
   # Create expected disk tree (iota will have gamma's contents)
-  expected_disk = svntest.main.greek_state.copy()
+  expected_disk = svntest.actions.get_virginal_disk()
   expected_disk.tweak('iota',
                       contents=expected_disk.desc['A/D/gamma'].contents)
 
@@ -786,7 +786,7 @@ def basic_switch(sbox):
 
   # Create expected disk tree (iota will have gamma's contents,
   # A/D/H/* will look like A/D/G/*)
-  expected_disk = svntest.main.greek_state.copy()
+  expected_disk = svntest.actions.get_virginal_disk()
   expected_disk.tweak('iota',
                       contents=expected_disk.desc['A/D/gamma'].contents)
   expected_disk.remove('A/D/H/chi', 'A/D/H/omega', 'A/D/H/psi')
@@ -1201,6 +1201,28 @@ def basic_node_kind_change(sbox):
   if svntest.actions.run_and_verify_status(wc_dir, expected_status):
     return 1
 
+#----------------------------------------------------------------------
+
+def basic_executable_file(sbox):
+  "basic checkout of executable file"
+
+  if sbox.build():
+    return 1
+
+  if os.name == 'posix':
+    wc_dir = sbox.wc_dir
+
+    # What we expect the disk tree to look like:
+    expected_disk = svntest.actions.get_virginal_disk(1)
+
+    # Read the real disk tree.  Notice we are passing the (normally
+    # disabled) "load props" flag to this routine.  This will run 'svn
+    # proplist' on every item in the working copy!  
+    actual_disk_tree = svntest.tree.build_tree_from_wc(wc_dir, 1)
+
+    # Compare actual vs. expected disk trees.
+    return svntest.tree.compare_trees(expected_disk.old_tree(), actual_disk_tree)
+
 
 #----------------------------------------------------------------------
 def nonexistent_repository(sbox):
@@ -1264,6 +1286,7 @@ test_list = [ None,
               basic_delete,
               basic_checkout_deleted,
               basic_node_kind_change,
+              basic_executable_file,
               nonexistent_repository,
               ### todo: more tests needed:
               ### test "svn rm http://some_url"

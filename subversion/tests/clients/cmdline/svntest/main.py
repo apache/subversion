@@ -142,6 +142,7 @@ greek_dump_dir = os.path.join(temp_dir, "greekfiles")
 _item = wc.StateItem
 greek_state = wc.State('', {
   'iota'        : _item("This is the file 'iota'."),
+  'kappa'       : _item("This is the executable file 'kappa'."),
   'A'           : _item(),
   'A/mu'        : _item("This is the file 'mu'."),
   'A/B'         : _item(),

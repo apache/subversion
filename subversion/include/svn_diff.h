@@ -64,7 +64,6 @@ extern "C" {
    svn_diff3() below, and consumed by a number of other routines. */
 typedef struct svn_diff_t svn_diff_t;
 
-
 /* There are three types of datasources.  In GNU diff3 terminology,
    these types correspond to the phrases "older", "mine", and "yours". */
 typedef enum svn_diff_datasource_e

@@ -223,7 +223,7 @@ def textual_merges_galore(sbox):
                                         'A/D/G/tau'  : Item(status='C '),
                                         })
 
-  expected_disk = svntest.main.greek_state.copy()
+  expected_disk = svntest.actions.get_virginal_disk()
   expected_disk.tweak('A/mu',
                       contents=expected_disk.desc['A/mu'].contents
                       + mu_text)
