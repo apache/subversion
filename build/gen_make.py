@@ -5,7 +5,6 @@
 import os
 import sys
 import string
-import glob
 
 import gen_base
 
@@ -74,11 +73,6 @@ class MakefileGenerator(gen_base.GeneratorBase):
       targ_varname = string.replace(target, '-', '_')
       objnames = string.join(gen_base._strip_path(path, objects))
 
-      if target_ob.custom == 'apache-mod':
-        linkcmd = '$(LINK_APACHE_MOD)'
-      else:
-        linkcmd = '$(LINK)'
-
       self.ofile.write(
         '%s_DEPS = %s %s\n'
         '%s_OBJECTS = %s\n'
@@ -90,7 +84,7 @@ class MakefileGenerator(gen_base.GeneratorBase):
 
            target_ob.output, targ_varname,
 
-           path, linkcmd, os.path.basename(target_ob.output),
+           path, target_ob.link_cmd, os.path.basename(target_ob.output),
            target_ob.ldflags, targ_varname, string.join(libs))
         )
 
@@ -227,7 +221,7 @@ class MakefileGenerator(gen_base.GeneratorBase):
       wrappers[lang] = [ ]
 
     for target in self.graph.get_all_sources(gen_base.DT_INSTALL):
-      if getattr(target, 'custom', '') == 'ra-module':
+      if getattr(target, 'is_ra_module', 0):
         # name of the RA module: strip 'libsvn_' and upper-case it
         name = string.upper(target.name[7:])
 
