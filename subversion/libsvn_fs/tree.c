@@ -3509,28 +3509,23 @@ revisions_changed_callback (void *baton,
       svn_revnum_t *rev = apr_palloc (apr_hash_pool_get (b->revs), 
                                       sizeof (*rev));
 
-      /* Check B->CROSS_COPY_HISTORY.  If we are not supposed to cross
-         copy history, we'll do some checks to ensure that we aren't
-         about to cross that history. */
-      if (! b->cross_copy_history)
+      /* Compare NODE's ID against B->SUCCESSOR_ID, and compare NODE's
+         CMT-PATH against B->SUCCESSOR_PATH, to see if we
+         just crossed a copy boundary.  If so, we either need to quit
+         here (if we're not crossing copy history) or go figure out
+         which copies took place. */
+      if ((strcmp (node_cp_id, succ_cp_id) != 0)
+          || (strcmp (node_cr_path, b->successor_path) != 0))
         {
-          /* Compare NODE's ID against B->SUCCESSOR_ID to see if we
-             just crossed a copy boundary.  If so, set the DONE flag
-             and exit. */
-          if (strcmp (node_cp_id, succ_cp_id) != 0)
+          /* Check B->CROSS_COPY_HISTORY.  If we are not supposed to cross
+             copy history, quit. */
+          if (! b->cross_copy_history)
             {
               *done = 1;
               return SVN_NO_ERROR;
             }
 
-          /* Compare NODE's CMT-PATH against B->SUCCESSOR_PATH to see
-             if we just crossed a copy boundary.  If so, set the DONE
-             flag and exit. */
-          if (strcmp (node_cr_path, b->successor_path) != 0)
-            {
-              *done = 1;
-              return SVN_NO_ERROR;
-            }
+          /* ### todo: derive the copies that took place here. */
         }
 
       /* See what NODE's created revision is. */
