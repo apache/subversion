@@ -14,6 +14,7 @@ Version X.X.X (unreleased)
  * updates can deal with disjoint urls.
  * python tests now run on Win32.
  * svn_cl__diff/svn_client_diff gutted and rewritten
+ * NEW internalized diff/diff3 library.  Not yet integrated/tested.
 
 Version 0.11.1 (released 12 April 2002, revision 1682)
 

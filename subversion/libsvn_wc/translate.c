@@ -1040,6 +1040,69 @@ svn_wc__get_keywords (svn_wc_keywords_t **keywords,
 }
 
 
+
+svn_error_t *
+svn_wc__get_executable_prop (svn_boolean_t **wants_exec,
+                             const char *path,
+                             apr_pool_t *pool)
+{
+  const svn_string_t *propval;
+  
+  SVN_ERR (svn_wc_prop_get (&propval, SVN_PROP_EXECUTABLE, path, pool));
+
+  if (propval == NULL)
+    *wants_exec = NULL;
+  
+  else if ((! apr_strnatcasecmp (propval->data, "true"))
+           || (! apr_strnatcasecmp (propval->data, "on")))
+    {
+      *wants_exec = apr_pcalloc (pool, sizeof (*wants_exec));
+      **wants_exec = TRUE;
+    }
+  
+  else if ((! apr_strnatcasecmp (propval->data, "false"))
+           || (! apr_strnatcasecmp (propval->data, "off")))
+    {
+      *wants_exec = apr_pcalloc (pool, sizeof (*wants_exec));
+      **wants_exec = FALSE;
+    }
+
+  else
+    /* propval is some other bogus value. */
+    *wants_exec = NULL;
+
+  return SVN_NO_ERROR;
+}
+
+
+/* If the SVN_PROP_EXECUTABLE property is present, then toggle PATH's
+   executable bit one way or another.  Set *TOGGLED to TRUE if a
+   toggle happened, or FALSE if not. */
+svn_error_t *
+svn_wc__maybe_toggle_working_executable_bit (svn_boolean_t *toggled,
+                                             const char *path,
+                                             apr_pool_t *pool)
+{
+  svn_boolean_t *wants_exec;
+  SVN_ERR (svn_wc__get_executable_prop (&wants_exec, path, pool));
+
+  if (wants_exec != NULL)
+    {
+      if (*wants_exec)
+        SVN_ERR (svn_io_set_file_executable (path, TRUE, FALSE, pool));
+      else
+        SVN_ERR (svn_io_set_file_executable (path, FALSE, FALSE, pool));     
+
+      *toggled = TRUE;
+    }
+  else
+    *toggled = FALSE;
+
+  return SVN_NO_ERROR;
+}
+
+
+
 
 /*
  * local variables:

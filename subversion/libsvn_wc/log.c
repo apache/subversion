@@ -59,6 +59,7 @@ enum svn_wc__xfer_action {
   svn_wc__xfer_cp_and_detranslate,
 };
 
+
 /* Perform some sort of copy-related ACTION on NAME and DEST:
 
       svn_wc__xfer_cp:                 just do a copy of NAME to DEST.
@@ -106,18 +107,26 @@ file_xfer_under_path (svn_stringbuf_t *path,
         svn_wc_keywords_t *keywords;
         const char *eol_str;
         enum svn_wc__eol_style style;
+        svn_boolean_t toggled;
+
         SVN_ERR (svn_wc__get_keywords (&keywords, full_dest_path->data,
                                        NULL, pool));
         SVN_ERR (svn_wc__get_eol_style (&style, &eol_str, full_dest_path->data,
                                         pool));
 
-        return svn_wc_copy_and_translate (full_from_path->data,
-                                          full_dest_path->data,
-                                          eol_str,
-                                          TRUE,
-                                          keywords,
-                                          TRUE,
-                                          pool);
+        SVN_ERR (svn_wc_copy_and_translate (full_from_path->data,
+                                            full_dest_path->data,
+                                            eol_str,
+                                            TRUE,
+                                            keywords,
+                                            TRUE,
+                                            pool));
+
+        /* After copying, toggle the executable bit if props dictate. */
+        return svn_wc__maybe_toggle_working_executable_bit 
+          (&toggled,
+           full_dest_path->data,
+           pool);
       }
 
     case svn_wc__xfer_cp_and_detranslate:
@@ -166,8 +175,14 @@ file_xfer_under_path (svn_stringbuf_t *path,
  * change, then overwrite the working file with a translated copy of
  * the new text base (but only if the translated copy differs from the
  * current working file -- if they are the same, do nothing, to avoid
- * clobbering timestamps unnecessarily), and set OVERWROTE_WORKING to
- * TRUE.  If the working file isn't touched, then set to FALSE.
+ * clobbering timestamps unnecessarily).
+ *
+ * If the executable property is set, the appropriately toggle the
+ * working file's executability.
+ *
+ * If the working file was re-translated or had permissions toggled,
+ * then set OVERWROTE_WORKING to TRUE.  If the working file isn't
+ * touched at all, then set to FALSE.
  * 
  * Use POOL for any temporary allocation.
  */
@@ -183,10 +198,13 @@ install_committed_file (svn_boolean_t *overwrote_working,
   svn_wc_keywords_t *keywords;
   apr_status_t apr_err;
   apr_file_t *ignored;
-  svn_boolean_t same;
+  svn_boolean_t same, toggled;
   svn_stringbuf_t *tmp_wfile, *pdir, *bname;
   enum svn_wc__eol_style eol_style;
   const char *eol_str;
+
+  /* start off assuming that the working file isn't touched. */
+  *overwrote_working = FALSE;
 
   filepath = svn_stringbuf_dup (path, pool);
   svn_path_add_component_nts (filepath, name);
@@ -255,11 +273,18 @@ install_committed_file (svn_boolean_t *overwrote_working,
                                  FALSE, pool));
       *overwrote_working = TRUE;
     }
-  else
-    *overwrote_working = FALSE;
 
   SVN_ERR (svn_io_remove_file (tmp_wfile->data, pool));
-  
+
+  /* Toggle the working file's execute bit if props dictate. */
+  SVN_ERR (svn_wc__maybe_toggle_working_executable_bit (&toggled,
+                                                        filepath->data, pool));
+  if (toggled)
+    /* okay, so we didn't -overwrite- the working file, but we changed
+       its timestamp, which is the point of returning this flag. :-) */
+    *overwrote_working = TRUE;
+
+  /* Install the new text base if one is waiting. */
   if (kind == svn_node_file)  /* tmp_text_base exists */
     SVN_ERR (svn_wc__sync_text_base (filepath, pool));
 

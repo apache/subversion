@@ -53,6 +53,7 @@ restore_file (svn_stringbuf_t *file_path,
   svn_wc_keywords_t *keywords;
   enum svn_wc__eol_style eol_style;
   const char *eol;
+  svn_boolean_t toggled;
 
   text_base_path = svn_wc__text_base_path (file_path, FALSE, pool);
   tmp_text_base_path = svn_wc__text_base_path (file_path, TRUE, pool);
@@ -77,6 +78,15 @@ restore_file (svn_stringbuf_t *file_path,
                                       pool));
   
   SVN_ERR (svn_io_remove_file (tmp_text_base_path->data, pool));
+
+  /* If necessary, tweak the new working file's executable bit. */
+  SVN_ERR (svn_wc__maybe_toggle_working_executable_bit 
+           (&toggled, file_path->data, pool));
+
+  /* ### hey guys, shouldn't we recording the 'restored'
+     working-file's timestamp in its entry?  Right now, every time we
+     restore a file, the front-line-timestamp-check-for-modifiedness
+     is being destroyed. */
 
   return SVN_NO_ERROR;
 }

@@ -39,7 +39,7 @@ svn_wc_merge (const char *left,
   svn_stringbuf_t *tmp_target, *result_target, *tmp_left, *tmp_right;
   svn_stringbuf_t *pt, *bn, *bn_left, *bn_right, *mt_pt, *mt_bn;
   apr_file_t *tmp_f, *result_f;
-  svn_boolean_t is_binary;
+  svn_boolean_t is_binary, toggled;
   svn_wc_keywords_t *keywords;
   enum svn_wc__eol_style eol_style;
   const char *eol;
@@ -359,6 +359,11 @@ svn_wc_merge (const char *left,
       exit_code = 1;  /* a conflict happened */
 
     } /* end of binary conflict handling */
+
+  /* Merging is complete.  Regardless of text or binariness, we might
+     need to tweak the executable bit on the new working file.  */
+  SVN_ERR (svn_wc__maybe_toggle_working_executable_bit (&toggled,
+                                                        merge_target, pool));
 
   /* The docstring promises we'll return a CONFLICT error if
      appropriate;  presumably callers will specifically look for this. */

@@ -489,6 +489,33 @@ svn_io_set_file_read_write (const char *path,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_io_set_file_executable (const char *path,
+                            svn_boolean_t executable,
+                            svn_boolean_t ignore_enoent,
+                            apr_pool_t *pool)
+{
+  apr_status_t status;
+
+  if (executable)
+    status = apr_file_attrs_set (path,
+                                 APR_FILE_ATTR_EXECUTABLE,
+                                 APR_FILE_ATTR_EXECUTABLE,
+                                 pool);
+  else
+    status = apr_file_attrs_set (path,
+                                 0,
+                                 APR_FILE_ATTR_EXECUTABLE,
+                                 pool);
+    
+  if (status && status != APR_ENOTIMPL)
+    if (!ignore_enoent || !APR_STATUS_IS_ENOENT(status))
+      return svn_error_createf (status, 0, NULL, pool,
+                               "failed to change executability of file '%s'",
+                                path);
+  
+  return SVN_NO_ERROR;
+}
 
 
 
