@@ -14,10 +14,11 @@
 #include <db.h>
 
 #include "svn_fs.h"
-#include "node-rev.h"
 #include "fs.h"
 #include "dbt.h"
 #include "err.h"
+#include "nodes-table.h"
+#include "node-rev.h"
 
 
 /* Storing and retrieving NODE-REVISION skels.  */
@@ -122,6 +123,24 @@ svn_fs__create_successor (svn_fs_id_t **new_id_p,
   SVN_ERR (svn_fs__put_node_revision (fs, new_id, new_skel, trail));
 
   *new_id_p = new_id;
+  return SVN_NO_ERROR;
+}
+
+
+
+/* Stable nodes and deltification.  */
+
+
+svn_error_t *
+svn_fs__stable_node (svn_fs_t *fs,
+                     svn_fs_id_t *id,
+                     trail_t *trail)
+{
+  /* As remarked above, we don't actually store anything in a
+     deltified form yet, so this function is a no-op.  This
+     implementation, along with the definitions of
+     svn_fs__get_node_revision and svn_fs__put_node_revision, is
+     completely correct, but not efficient.  */
   return SVN_NO_ERROR;
 }
 
