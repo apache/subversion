@@ -568,6 +568,7 @@ static svn_error_t *ra_svn_handle_apply_textdelta(svn_ra_svn_conn_t *conn,
   apr_pool_t *subpool;
   svn_ra_svn_item_t *item;
   char *base_checksum;
+  svn_error_t *err, *read_err;
 
   /* Parse arguments, make the editor call, and respond. */
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c(?c)",
@@ -588,25 +589,29 @@ static svn_error_t *ra_svn_handle_apply_textdelta(svn_ra_svn_conn_t *conn,
 
   stream = svn_txdelta_parse_svndiff(wh, wh_baton, TRUE, entry->pool);
   subpool = svn_pool_create(entry->pool);
+  err = SVN_NO_ERROR;
   while (1)
     {
-      SVN_ERR(svn_ra_svn_read_item(conn, subpool, &item));
+      apr_pool_clear(subpool);
+      read_err = svn_ra_svn_read_item(conn, subpool, &item);
+      if (read_err)
+        {
+          svn_error_clear(err);
+          return read_err;
+        }
       if (item->kind != SVN_RA_SVN_STRING)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 "Non-string as part of text delta");
       if (item->u.string->len == 0)
-        break;
-      /* Maybe we should operate in lock-step, and send a response
-         after each string is received.  Then the following could be a
-         SVN_CMD_ERR and the client could learn of errors in svndiff
-         processing.  But that could be a big performance penalty, so
-         for now we won't operate that way. */
-      SVN_ERR(svn_stream_write(stream, item->u.string->data,
-                               &item->u.string->len));
-      apr_pool_clear(subpool);
+          break;
+      if (!err)
+        err = svn_stream_write(stream, item->u.string->data,
+                               &item->u.string->len);
     }
+  if (!err)
+    err = svn_stream_close(stream);
   apr_pool_destroy(subpool);
-  SVN_CMD_ERR(svn_stream_close(stream));
+  SVN_CMD_ERR(err);
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
   return SVN_NO_ERROR;
 }

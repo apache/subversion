@@ -425,6 +425,7 @@ static svn_error_t *get_file(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   apr_size_t len;
   svn_boolean_t want_props, want_contents;
   unsigned char digest[MD5_DIGESTSIZE];
+  svn_error_t *err, *write_err;
 
   /* Parse arguments. */
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c(?r)bb", &path, &rev,
@@ -458,21 +459,33 @@ static svn_error_t *get_file(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   /* Now send the file's contents. */
   if (want_contents)
     {
+      err = SVN_NO_ERROR;
       while (1)
         {
           len = sizeof(buf);
-          SVN_ERR(svn_stream_read(contents, buf, &len));
-          write_str.data = buf;
-          write_str.len = len;
+          err = svn_stream_read(contents, buf, &len);
+          if (err)
+            break;
           if (len > 0)
-            SVN_ERR(svn_ra_svn_write_string(conn, pool, &write_str));
+            {
+              write_str.data = buf;
+              write_str.len = len;
+              SVN_ERR(svn_ra_svn_write_string(conn, pool, &write_str));
+            }
           if (len < sizeof(buf))
             {
-              SVN_ERR(svn_ra_svn_write_cstring(conn, pool, ""));
+              err = svn_stream_close(contents);
               break;
             }
         }
-      SVN_ERR(svn_stream_close(contents));
+      write_err = svn_ra_svn_write_cstring(conn, pool, "");
+      if (write_err)
+        {
+          svn_error_clear(err);
+          return write_err;
+        }
+      SVN_CMD_ERR(err);
+      SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
     }
 
   return SVN_NO_ERROR;
@@ -731,7 +744,7 @@ static svn_error_t *log_receiver(void *baton, apr_hash_t *changed_paths,
 static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                             apr_array_header_t *params, void *baton)
 {
-  svn_error_t *err;
+  svn_error_t *err, *write_err;
   server_baton_t *b = baton;
   svn_revnum_t start_rev, end_rev;
   const char *full_path;
@@ -763,7 +776,12 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                            changed_paths, strict_node, log_receiver, &lb,
                            pool);
 
-  SVN_ERR(svn_ra_svn_write_word(conn, pool, "done"));
+  write_err = svn_ra_svn_write_word(conn, pool, "done");
+  if (write_err)
+    {
+      svn_error_clear(err);
+      return write_err;
+    }
   SVN_CMD_ERR(err);
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
   return SVN_NO_ERROR;
