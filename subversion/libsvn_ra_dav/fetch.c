@@ -2038,12 +2038,12 @@ static int end_element(void *userdata, int state,
         if (rb->file_baton)
           {
             rb->editor->change_file_prop(rb->file_baton, rb->namestr->data, 
-                                         &decoded_value, pool);
+                                         decoded_value_p, pool);
           }
         else
           {
             rb->editor->change_dir_prop(TOP_DIR(rb).baton, rb->namestr->data, 
-                                        &decoded_value, pool);
+                                        decoded_value_p, pool);
           }
       }
 
