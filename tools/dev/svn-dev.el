@@ -209,4 +209,118 @@ Same for the ANSI bold and normal escape sequences."
 
 
 
+;;; Help developers write log messages.
+
+;; How to use this: just run `svn-log-message'.  You might want to
+;; bind it to a key, for example,
+;;
+;;   (define-key "\C-cl" 'svn-log-message)
+;;
+;; The log message will accumulate in a file.  Later, you can use
+;; that file when you commit:
+;;
+;;   $ svn ci -F msg ...
+
+(defun svn-log-path-derive (path)
+  "Derive a relative directory path for absolute PATH, for a log entry."
+  (save-match-data
+    (let ((base (file-name-nondirectory path))
+          (chop-spot (string-match
+                      "\\(code/\\)\\|\\(src/\\)\\|\\(projects/\\)"
+                      path)))
+      (if chop-spot
+          (progn
+            (setq path (substring path (match-end 0)))
+            ;; Kluge for Subversion developers.
+            (if (string-match "subversion/subversion" path)
+                (substring path (+ (match-beginning 0) 11))
+              path))
+        (string-match (expand-file-name "~/") path)
+        (substring path (match-end 0))))))
+
+
+(defun svn-log-message-file ()
+  "Return the name of the appropriate log message accumulation file.
+Usually this is just the file `msg' in the current directory, but
+certain areas are treated specially, for example, the Subversion
+source tree."
+  (save-match-data
+    (if (string-match "subversion" default-directory)
+        (concat (substring default-directory 0 (match-end 0)) "/msg")
+      "msg")))
+
+
+(defun svn-log-message (short-file-names)
+  "Add to an in-progress log message, based on context around point.
+If prefix arg SHORT-FILE-NAMES is non-nil, then use basenames only in
+log messages, otherwise use full paths.  The current defun name is
+always used.
+
+If the log message already contains material about this defun, then put
+point there, so adding to that material is easy.
+
+Else if the log message already contains material about this file, put
+point there, and push onto the kill ring the defun name with log
+message dressing around it, plus the raw defun name, so yank and
+yank-next are both useful.
+
+Else if there is no material about this defun nor file anywhere in the
+log message, then put point at the end of the message and insert a new
+entry for file with defun.
+
+See also the function `svn-log-message-file'."
+  (interactive "P")
+  (let ((this-file (if short-file-names
+                       (file-name-nondirectory buffer-file-name)
+                     (svn-log-path-derive buffer-file-name)))
+        (this-defun (or (add-log-current-defun)
+                        (save-excursion
+                          (save-match-data
+                            (if (eq major-mode 'c-mode)
+                                (progn
+                                  (c-beginning-of-statement)
+                                  (search-forward "(" nil t)
+                                  (forward-char -1)
+                                  (forward-sexp -1)
+                                  (buffer-substring
+                                   (point)
+                                   (progn (forward-sexp 1) (point)))))))))
+        (log-file (svn-log-message-file)))
+    (find-file log-file)
+    (goto-char (point-min))
+    ;; Strip text properties from strings
+    (set-text-properties 0 (length this-file) nil this-file)
+    (set-text-properties 0 (length this-defun) nil this-defun)
+    ;; If log message for defun already in progress, add to it
+    (if (and
+         this-defun                        ;; we have a defun to work with
+         (search-forward this-defun nil t) ;; it's in the log msg already
+         (save-excursion                   ;; and it's about the same file
+           (save-match-data
+             (if (re-search-backward  ; Ick, I want a real filename regexp!
+                  "^\\*\\s-+\\([a-zA-Z0-9-_.@=+^$/%!?(){}<>]+\\)" nil t)
+                 (string-equal (match-string 1) this-file)
+               t))))
+        (if (re-search-forward ":" nil t)
+            (if (looking-at " ") (forward-char 1)))
+      ;; Else no log message for this defun in progress...
+      (goto-char (point-min))
+      ;; But if log message for file already in progress, add to it.
+      (if (search-forward this-file nil t)
+          (progn 
+            (if this-defun (progn
+                             (kill-new (format "(%s): " this-defun))
+                             (kill-new this-defun)))
+            (search-forward ")" nil t)
+            (if (looking-at " ") (forward-char 1)))
+        ;; Found neither defun nor its file, so create new entry.
+        (goto-char (point-max))
+        (if (not (bolp)) (insert "\n"))
+        (insert (format "\n* %s (%s): " this-file (or this-defun "")))
+        ;; Finally, if no derived defun, put point where the user can
+        ;; type it themselves.
+        (if (not this-defun) (forward-char -3))))))
+
+
+
 (message "loaded svn-dev.el")
