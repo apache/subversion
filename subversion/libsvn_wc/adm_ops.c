@@ -67,13 +67,14 @@ recursively_tweak_entries (svn_wc_adm_access_t *dirpath,
   apr_hash_t *entries;
   apr_hash_index_t *hi;
   apr_pool_t *subpool = svn_pool_create (pool);
+  svn_boolean_t write_required = FALSE;
   
   /* Read DIRPATH's entries. */
   SVN_ERR (svn_wc_entries_read (&entries, dirpath, TRUE, subpool));
 
   /* Tweak "this_dir" */
   SVN_ERR (svn_wc__tweak_entry (entries, SVN_WC_ENTRY_THIS_DIR,
-                                base_url, new_rev,
+                                base_url, new_rev, &write_required,
                                 svn_wc_adm_access_pool (dirpath)));
 
   /* Recursively loop over all children. */
@@ -101,7 +102,7 @@ recursively_tweak_entries (svn_wc_adm_access_t *dirpath,
       if ((current_entry->kind == svn_node_file)
           || (current_entry->deleted))
         SVN_ERR (svn_wc__tweak_entry (entries, name,
-                                      child_url, new_rev,
+                                      child_url, new_rev, &write_required,
                                       svn_wc_adm_access_pool (dirpath)));
       
       /* If a directory... */
@@ -141,7 +142,8 @@ recursively_tweak_entries (svn_wc_adm_access_t *dirpath,
     }
 
   /* Write a shiny new entries file to disk. */
-  SVN_ERR (svn_wc__entries_write (entries, dirpath, subpool));
+  if (write_required)
+    SVN_ERR (svn_wc__entries_write (entries, dirpath, subpool));
 
   /* Cleanup */
   svn_pool_destroy (subpool);
@@ -173,13 +175,15 @@ svn_wc__do_update_cleanup (const char *path,
     {
       const char *parent, *base_name;
       svn_wc_adm_access_t *dir_access;
+      svn_boolean_t write_required = FALSE;
       svn_path_split (path, &parent, &base_name, pool);
       SVN_ERR (svn_wc_adm_retrieve (&dir_access, adm_access, parent, pool));
       SVN_ERR (svn_wc_entries_read (&entries, dir_access, TRUE, pool));
       SVN_ERR (svn_wc__tweak_entry (entries, base_name,
-                                    base_url, new_revision,
+                                    base_url, new_revision, &write_required,
                                     svn_wc_adm_access_pool (dir_access)));
-      SVN_ERR (svn_wc__entries_write (entries, dir_access, pool));
+      if (write_required)
+        SVN_ERR (svn_wc__entries_write (entries, dir_access, pool));
     }
 
   else if (entry->kind == svn_node_dir)
@@ -189,11 +193,13 @@ svn_wc__do_update_cleanup (const char *path,
 
       if (! recursive) 
         {
+          svn_boolean_t write_required = FALSE;
           SVN_ERR (svn_wc_entries_read (&entries, dir_access, TRUE, pool));
           SVN_ERR (svn_wc__tweak_entry (entries, SVN_WC_ENTRY_THIS_DIR,
-                                        base_url, new_revision,
+                                        base_url, new_revision, &write_required,
                                         svn_wc_adm_access_pool (dir_access)));
-          SVN_ERR (svn_wc__entries_write (entries, dir_access, pool));
+          if (write_required)
+            SVN_ERR (svn_wc__entries_write (entries, dir_access, pool));
         }
       else
         SVN_ERR (recursively_tweak_entries (dir_access, base_url,
