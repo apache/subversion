@@ -1885,21 +1885,21 @@ merge_re_id (const char **msg,
      that if the revision 1 ids are of the form `A.B', revision 2's will
      look like `A.B+1'. */
   if ( !((svn_fs__id_length (root_1_id) == 2)
-         && (root_2_id[0] == root_1_id[0])
-         && (root_2_id[1] == root_1_id[1] + 1)
-         && (root_2_id[2] == root_1_id[2])))
+         && (root_2_id->digits[0] == root_1_id->digits[0])
+         && (root_2_id->digits[1] == root_1_id->digits[1] + 1)
+         && (root_2_id->digits[2] == root_1_id->digits[2])))
     return unexpected_node_id (rev_root, "", root_2_id, pool);
 
   if ( !((svn_fs__id_length (A_1_id) == 2)
-         && (A_2_id[0] == A_1_id[0])
-         && (A_2_id[1] == A_1_id[1] + 1)
-         && (A_2_id[2] == A_1_id[2])))
+         && (A_2_id->digits[0] == A_1_id->digits[0])
+         && (A_2_id->digits[1] == A_1_id->digits[1] + 1)
+         && (A_2_id->digits[2] == A_1_id->digits[2])))
     return unexpected_node_id (rev_root, "", A_2_id, pool);
 
   if ( !((svn_fs__id_length (D_1_id) == 2)
-         && (D_2_id[0] == D_1_id[0])
-         && (D_2_id[1] == D_1_id[1] + 1)
-         && (D_2_id[2] == D_1_id[2])))
+         && (D_2_id->digits[0] == D_1_id->digits[0])
+         && (D_2_id->digits[1] == D_1_id->digits[1] + 1)
+         && (D_2_id->digits[2] == D_1_id->digits[2])))
     return unexpected_node_id (rev_root, "", D_2_id, pool);
        
   /* Now, if we try to commit a transaction based on the greek tree
@@ -1929,21 +1929,21 @@ merge_re_id (const char **msg,
 
   /* Again, we expect revision 3's ids to not have branched. */
   if ( !((svn_fs__id_length (root_3_id) == 2)
-         && (root_3_id[0] == root_2_id[0])
-         && (root_3_id[1] == root_2_id[1] + 1)
-         && (root_3_id[2] == root_2_id[2])))
+         && (root_3_id->digits[0] == root_2_id->digits[0])
+         && (root_3_id->digits[1] == root_2_id->digits[1] + 1)
+         && (root_3_id->digits[2] == root_2_id->digits[2])))
     return unexpected_node_id (rev_root, "", root_3_id, pool);
 
   if ( !((svn_fs__id_length (A_3_id) == 2)
-         && (A_3_id[0] == A_2_id[0])
-         && (A_3_id[1] == A_2_id[1] + 1)
-         && (A_3_id[2] == A_2_id[2])))
+         && (A_3_id->digits[0] == A_2_id->digits[0])
+         && (A_3_id->digits[1] == A_2_id->digits[1] + 1)
+         && (A_3_id->digits[2] == A_2_id->digits[2])))
     return unexpected_node_id (rev_root, "", A_3_id, pool);
 
   if ( !((svn_fs__id_length (D_3_id) == 2)
-         && (D_3_id[0] == D_2_id[0])
-         && (D_3_id[1] == D_2_id[1] + 1)
-         && (D_3_id[2] == D_2_id[2])))
+         && (D_3_id->digits[0] == D_2_id->digits[0])
+         && (D_3_id->digits[1] == D_2_id->digits[1] + 1)
+         && (D_3_id->digits[2] == D_2_id->digits[2])))
     return unexpected_node_id (rev_root, "", D_3_id, pool);
 
   /* Now, for a case where we *do* expect node id branching to occur.
@@ -1986,24 +1986,24 @@ merge_re_id (const char **msg,
      these node id's to make a second branch, having `.2.1' after the
      original node ids.  */
   if ( !((svn_fs__id_length (root_4_id) == 4)
-         && (root_4_id[0] == root_1_id[0])
-         && (root_4_id[1] == root_1_id[1])
-         && (root_4_id[2] == 2)
-         && (root_4_id[3] == 1)))
+         && (root_4_id->digits[0] == root_1_id->digits[0])
+         && (root_4_id->digits[1] == root_1_id->digits[1])
+         && (root_4_id->digits[2] == 2)
+         && (root_4_id->digits[3] == 1)))
     return unexpected_node_id (rev_root, "", root_4_id, pool);
 
   if ( !((svn_fs__id_length (A_4_id) == 4)
-         && (A_4_id[0] == A_1_id[0])
-         && (A_4_id[1] == A_1_id[1])
-         && (A_4_id[2] == 2)
-         && (A_4_id[3] == 1)))
+         && (A_4_id->digits[0] == A_1_id->digits[0])
+         && (A_4_id->digits[1] == A_1_id->digits[1])
+         && (A_4_id->digits[2] == 2)
+         && (A_4_id->digits[3] == 1)))
     return unexpected_node_id (rev_root, "", A_4_id, pool);
 
   if ( !((svn_fs__id_length (D_4_id) == 4)
-         && (D_4_id[0] == D_1_id[0])
-         && (D_4_id[1] == D_1_id[1])
-         && (D_4_id[2] == 2)
-         && (D_4_id[3] == 1)))
+         && (D_4_id->digits[0] == D_1_id->digits[0])
+         && (D_4_id->digits[1] == D_1_id->digits[1])
+         && (D_4_id->digits[2] == 2)
+         && (D_4_id->digits[3] == 1)))
     return unexpected_node_id (rev_root, "", D_3_id, pool);
 
   /* Abort the hanging transaction. */
