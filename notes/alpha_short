@@ -123,6 +123,21 @@ scenario in both the commit and update case.
 
 *** deltification (branko working on)
 
+*** revision props
+
+svn_fs_commit_txn() needs to automatically add some properties to the
+new revision if the commit is successful.  Specifically, it needs to
+add a `timestamp' property, and possibly a `user' property, so we know
+who did the commit.
+
+Then some library (libsvn_repos?) needs to provide an interface that
+allows the caller to ask the questions, "on what date was revision N
+committed?" and "which revision number was the HEAD on a particular
+date?"
+
+This is important, because we need 'svn co/up' to not only take the
+'-r' flag, but a --date flag.
+
 
 
 ** cvs2svn (Thom and Greg)
