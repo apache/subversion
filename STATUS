@@ -45,6 +45,13 @@ Candidate changes:
     Votes:
       +1: david
 
+  * r13717
+    Fixed Redhat 7.3 build to use the libtool and autoconf253 packages
+    already installed.  No need to use separate/updated versions.  I obviously
+    didn't do my homework a couple of years ago.
+    Votes:
+      +1: david
+
 Approved changes (further review is welcome, but not required):
 
   
