@@ -30,6 +30,8 @@
 #include "svn_error.h"
 #include "cl.h"
 
+#include "svn_private_config.h"
+
 
 
 /*** Code. ***/
@@ -65,12 +67,17 @@ svn_cl__move (apr_getopt_t *os,
 
   SVN_ERR (svn_cl__make_log_msg_baton (&(ctx->log_msg_baton), opt_state,
                                        NULL, ctx->config, pool));
-  err = svn_client_move 
-           (&commit_info, 
-            src_path, &(opt_state->start_revision), dst_path,
-            opt_state->force,
-            ctx,
-            pool);
+
+  if (opt_state->start_revision.kind != svn_opt_revision_unspecified
+      && opt_state->start_revision.kind != svn_opt_revision_head)
+    {
+      return svn_error_create
+        (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+         _("Cannot specify revisions (except HEAD) with move operations"));
+    }
+
+  err = svn_client_move2 (&commit_info, src_path, dst_path,
+                          opt_state->force, ctx, pool);
 
   if (err)
     err = svn_cl__may_need_force (err);
