@@ -49,6 +49,7 @@
 #include "revs-txns.h"
 #include "fs_fs.h"
 #include "id.h"
+#include "svn_utf.h"
 
 #include "../libsvn_fs/fs-loader.h"
 
@@ -143,7 +144,7 @@ dag_node_cache_get (svn_fs_root_t *root,
   dag_node_cache_t *item;
 
   /* Assert valid input. */
-  assert (*path == '/');
+  assert (*path == SVN_UTF8_FSLASH);
 
   /* Look in the cache for our desired item. */
   item = apr_hash_get (frd->node_cache, path, APR_HASH_KEY_STRING);
@@ -186,7 +187,7 @@ dag_node_cache_set (svn_fs_root_t *root,
      pool. */
 
   /* Assert valid input and state. */
-  assert (*path == '/');
+  assert (*path == SVN_UTF8_FSLASH);
 
   /* If we have an existing entry for this path, reuse it. */
   item = apr_hash_get (frd->node_cache, path, APR_HASH_KEY_STRING);
@@ -238,7 +239,8 @@ dag_node_cache_invalidate (svn_fs_root_t *root,
   for (item = frd->node_list.next; item != &frd->node_list; item = item->next)
     {
       key = item->path;
-      if (strncmp (key, path, len) == 0 && (key[len] == '/' || !key[len]))
+      if (strncmp (key, path, len) == 0 && 
+          (key[len] == SVN_UTF8_FSLASH || !key[len]))
         item->node = NULL;
     }
 }
@@ -425,7 +427,7 @@ static const char *
 parent_path_path (parent_path_t *parent_path,
                   apr_pool_t *pool)
 {
-  const char *path_so_far = "/";
+  const char *path_so_far = SVN_UTF8_FSLASH_STR;
   if (parent_path->parent)
     path_so_far = parent_path_path (parent_path->parent, pool);
   return parent_path->entry 
@@ -481,7 +483,7 @@ get_copy_inheritance (copy_id_inherit_t *inherit_p,
 
   /* Special case: if the child's copy ID is '0', use the parent's
      copy ID. */
-  if (strcmp (child_copy_id, "0") == 0)
+  if (strcmp (child_copy_id, SVN_UTF8_0_STR) == 0)
     return SVN_NO_ERROR;
   
   /* Compare the copy IDs of the child and its parent.  If they are
@@ -566,7 +568,7 @@ next_entry_name (const char **next_p,
   const char *end;
 
   /* Find the end of the current component.  */
-  end = strchr (path, '/');
+  end = strchr (path, SVN_UTF8_FSLASH);
 
   if (! end)
     {
@@ -580,7 +582,7 @@ next_entry_name (const char **next_p,
       /* There's a slash after the first component.  Skip over an arbitrary
          number of slashes to find the next one.  */
       const char *next = end;
-      while (*next == '/')
+      while (*next == SVN_UTF8_FSLASH)
         next++;
       *next_p = next;
       return apr_pstrndup (pool, path, end - path);
@@ -637,7 +639,7 @@ open_path (parent_path_t **parent_path_p,
   parent_path_t *parent_path; /* The path from HERE up to the root.  */
   const char *rest; /* The portion of PATH we haven't traversed yet.  */
   const char *canon_path = svn_fs_fs__canonicalize_abspath (path, pool);
-  const char *path_so_far = "/";
+  const char *path_so_far = SVN_UTF8_FSLASH_STR;
 
   /* Make a parent_path item for the root node, using its own current
      copy id.  */
@@ -924,7 +926,8 @@ fs_node_id (const svn_fs_id_t **id_p,
   fs_root_data_t *frd = root->fsap_data;
   
   if ((! root->is_txn_root)
-      && (path[0] == '\0' || ((path[0] == '/') && (path[1] == '\0'))))
+      && (path[0] == '\0'
+      || ((path[0] == SVN_UTF8_FSLASH) && (path[1] == '\0'))))
     {
       /* Optimize the case where we don't need any db access at all. 
          The root directory ("" or "/") node is stored in the
@@ -2040,7 +2043,10 @@ fs_copied_from (svn_revnum_t *rev_p,
         {
           /* Parse the copyfrom string for our cached entry. */
           buf = apr_pstrdup (pool, copyfrom_str);
-          str = apr_strtok (buf, " ", &last_str);
+          str = apr_strtok (buf, SVN_UTF8_SPACE_STR, &last_str);
+#if APR_CHARSET_EBCDIC
+          SVN_ERR (svn_utf_cstring_from_utf8 (&str, str, pool));
+#endif          
           copyfrom_rev = atol (str);
           copyfrom_path = last_str;
         }
@@ -2904,14 +2910,15 @@ fs_history_prev (svn_fs_history_t **prev_history_p,
      revision, no exceptions.  And, the root can't be the target (or
      child of a target -- duh) of a copy.  So, if that's our path,
      then we need only decrement our revision by 1, and there you go. */
-  if (strcmp (fhd->path, "/") == 0)
+  if (strcmp (fhd->path, SVN_UTF8_FSLASH_STR) == 0)
     {
       if (! fhd->is_interesting)
-        prev_history = assemble_history (fs, "/", fhd->revision,
+        prev_history = assemble_history (fs, SVN_UTF8_FSLASH_STR, fhd->revision,
                                          1, NULL, SVN_INVALID_REVNUM, pool);
       else if (fhd->revision > 0)
-        prev_history = assemble_history (fs, "/", fhd->revision - 1,
-                                         1, NULL, SVN_INVALID_REVNUM, pool);
+        prev_history = assemble_history (fs, SVN_UTF8_FSLASH_STR,
+                                         fhd->revision - 1, 1, NULL,
+                                         SVN_INVALID_REVNUM, pool);
     }
   else
     {

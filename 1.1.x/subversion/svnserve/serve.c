@@ -40,6 +40,7 @@
 #include <svn_utf.h>
 #include <svn_md5.h>
 #include <svn_config.h>
+#include <svn_utf.h>
 
 #include "server.h"
 
@@ -84,6 +85,32 @@ typedef struct {
 enum authn_type { UNAUTHENTICATED, AUTHENTICATED };
 enum access_type { NO_ACCESS, READ_ACCESS, WRITE_ACCESS };
 
+#define ANONYMOUS_STR "\x41\x4e\x4f\x4e\x59\x4d\x4f\x55\x53" /* "ANONYMOUS" */
+#define CRAM_MD5_STR  "\x43\x52\x41\x4d\x2d\x4d\x44\x35"     /* "CRAM-MD5" */
+#define DONE_STR      "\x64\x6f\x6e\x65"                     /* "done" */
+#define EXTERNAL_STR  "\x45\x58\x54\x45\x52\x4e\x41\x4c"     /* "EXTERNAL" */
+#define FAILURE_STR   "\x66\x61\x69\x6c\x75\x72\x65"         /* "failure" */
+#define FALSE_STR     "\x66\x61\x6c\x73\x65"                 /* "false" */
+#define READ_STR      "\x72\x65\x61\x64"                     /* "read" */
+#define SUCCESS_STR   "\x73\x75\x63\x63\x65\x73\x73"         /* "success" */
+#define TRUE_STR      "\x74\x72\x75\x65"                     /* "true" */
+#define WRITE_STR     "\x77\x72\x69\x74\x65"                 /* "write" */
+
+#define EDIT_PIPELINE_STR     "\x65\x64\x69\x74\x2d\x70\x69\x70\x65\x6c\x69" \
+                              "\x6e\x65"
+                              /* "edit-pipeline" */
+                          
+#define USR_NO_MATCH_STR      "\x52\x65\x71\x75\x65\x73\x74\x65\x64\x20\x75" \
+                              "\x73\x65\x72\x6e\x61\x6d\x65\x20\x64\x6f\x65" \
+                              "\x73\x20\x6e\x6f\x74\x20\x6d\x61\x74\x63\x68"
+                              /* "Requested username does not match" */
+
+#define MUST_AUTHENTICATE_STR "\x4d\x75\x73\x74\x20\x61\x75\x74\x68\x65\x6e" \
+                              "\x74\x69\x63\x61\x74\x65\x20\x77\x69\x74\x68" \
+                              "\x20\x6c\x69\x73\x74\x65\x64\x20\x6d\x65\x63" \
+                              "\x68\x61\x6e\x69\x73\x6d"
+                              /* "Must authenticate with listed mechanism" */
+                              
 /* Verify that URL is inside REPOS_URL and get its fs path. Assume that 
    REPOS_URL and URL are already URI-decoded. */
 static svn_error_t *get_fs_path(const char *repos_url, const char *url,
@@ -106,12 +133,12 @@ static enum access_type get_access(server_baton_t *b, enum authn_type auth)
 {
   const char *var = (auth == AUTHENTICATED) ? SVN_CONFIG_OPTION_AUTH_ACCESS :
     SVN_CONFIG_OPTION_ANON_ACCESS;
-  const char *val, *def = (auth == AUTHENTICATED) ? "write" : "read";
+  const char *val, *def = (auth == AUTHENTICATED) ? WRITE_STR : READ_STR;
   enum access_type result;
 
   svn_config_get(b->cfg, &val, SVN_CONFIG_SECTION_GENERAL, var, def);
-  result = (strcmp(val, "write") == 0 ? WRITE_ACCESS :
-            strcmp(val, "read") == 0 ? READ_ACCESS : NO_ACCESS);
+  result = (strcmp(val, WRITE_STR) == 0 ? WRITE_ACCESS :
+            strcmp(val, READ_STR) == 0 ? READ_ACCESS : NO_ACCESS);
   return (result == WRITE_ACCESS && b->read_only) ? READ_ACCESS : result;
 }
 
@@ -124,11 +151,11 @@ static svn_error_t *send_mechs(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                server_baton_t *b, enum access_type required)
 {
   if (get_access(b, UNAUTHENTICATED) >= required)
-    SVN_ERR(svn_ra_svn_write_word(conn, pool, "ANONYMOUS"));
+    SVN_ERR(svn_ra_svn_write_word(conn, pool, ANONYMOUS_STR));
   if (b->tunnel_user && get_access(b, AUTHENTICATED) >= required)
-    SVN_ERR(svn_ra_svn_write_word(conn, pool, "EXTERNAL"));
+    SVN_ERR(svn_ra_svn_write_word(conn, pool, EXTERNAL_STR));
   if (b->pwdb && get_access(b, AUTHENTICATED) >= required)
-    SVN_ERR(svn_ra_svn_write_word(conn, pool, "CRAM-MD5"));
+    SVN_ERR(svn_ra_svn_write_word(conn, pool, CRAM_MD5_STR));
   return SVN_NO_ERROR;
 }
 
@@ -145,31 +172,31 @@ static svn_error_t *auth(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   *success = FALSE;
 
   if (get_access(b, AUTHENTICATED) >= required
-      && b->tunnel_user && strcmp(mech, "EXTERNAL") == 0)
+      && b->tunnel_user && strcmp(mech, EXTERNAL_STR) == 0)
     {
       b->user = b->tunnel_user;
       if (*mecharg && strcmp(mecharg, b->user) != 0)
-        return svn_ra_svn_write_tuple(conn, pool, "w(c)", "failure",
-                                      "Requested username does not match");
-      SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w()", "success"));
+        return svn_ra_svn_write_tuple(conn, pool, "w(c)", FAILURE_STR,
+                                      USR_NO_MATCH_STR);
+      SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w()", SUCCESS_STR));
       *success = TRUE;
       return SVN_NO_ERROR;
     }
 
   if (get_access(b, UNAUTHENTICATED) >= required
-      && strcmp(mech, "ANONYMOUS") == 0)
+      && strcmp(mech, ANONYMOUS_STR) == 0)
     {
-      SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w()", "success"));
+      SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w()", SUCCESS_STR));
       *success = TRUE;
       return SVN_NO_ERROR;
     }
 
   if (get_access(b, AUTHENTICATED) >= required
-      && b->pwdb && strcmp(mech, "CRAM-MD5") == 0)
+      && b->pwdb && strcmp(mech, CRAM_MD5_STR) == 0)
     return svn_ra_svn_cram_server(conn, pool, b->pwdb, &b->user, success);
 
-  return svn_ra_svn_write_tuple(conn, pool, "w(c)", "failure",
-                                "Must authenticate with listed mechanism");
+  return svn_ra_svn_write_tuple(conn, pool, "w(c)", FAILURE_STR,
+                                MUST_AUTHENTICATE_STR);
 }
 
 /* Perform an authentication request in order to get an access level of
@@ -182,7 +209,7 @@ static svn_error_t *auth_request(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   svn_boolean_t success;
   const char *mech, *mecharg;
 
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w((!", "success"));
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w((!", SUCCESS_STR));
   SVN_ERR(send_mechs(conn, pool, b, required));
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)c)", b->realm));
   do
@@ -302,6 +329,9 @@ static svn_error_t *abort_report(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   return SVN_NO_ERROR;
 }
 
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
 static const svn_ra_svn_cmd_entry_t report_commands[] = {
   { "set-path",      set_path },
   { "delete-path",   delete_path },
@@ -310,6 +340,9 @@ static const svn_ra_svn_cmd_entry_t report_commands[] = {
   { "abort-report",  abort_report,  TRUE },
   { NULL }
 };
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
 
 /* Accept a report from the client, drive the network editor with the
  * result, and then write an empty command response.  If there is a
@@ -407,13 +440,13 @@ static const char *kind_word(svn_node_kind_t kind)
   switch (kind)
     {
     case svn_node_none:
-      return "none";
+      return "\x6e\x6f\x6e\x65"             /* "none"    */;
     case svn_node_file:
-      return "file";
+      return "\x66\x69\x6c\x65"             /* "file"    */;
     case svn_node_dir:
-      return "dir";
+      return "\x64\x69\x72"                 /* "dir"     */;
     case svn_node_unknown:
-      return "unknown";
+      return "\x75\x6e\x6b\x6e\x6f\x77\x6e" /* "unknown" */;
     default:
       abort();
     }
@@ -436,6 +469,9 @@ static svn_error_t *get_props(apr_hash_t **props, svn_fs_root_t *root,
                                        path, pool));
   str = svn_string_create(apr_psprintf(pool, "%ld", crev),
                           pool);
+#if APR_CHARSET_EBCDIC
+  SVN_ERR(svn_utf_string_to_utf8(&str, str, pool));
+#endif                          
   apr_hash_set(*props, SVN_PROP_ENTRY_COMMITTED_REV, APR_HASH_KEY_STRING, str);
   str = (cdate) ? svn_string_create(cdate, pool) : NULL;
   apr_hash_set(*props, SVN_PROP_ENTRY_COMMITTED_DATE, APR_HASH_KEY_STRING,
@@ -506,7 +542,7 @@ static svn_error_t *rev_proplist(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   SVN_ERR(trivial_auth_request(conn, pool, b));
   SVN_CMD_ERR(svn_repos_fs_revision_proplist(&props, b->repos, rev,
                                               NULL, NULL, pool));
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w((!", "success"));
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w((!", SUCCESS_STR));
   SVN_ERR(write_proplist(conn, pool, props));
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!))"));
   return SVN_NO_ERROR;
@@ -619,7 +655,7 @@ static svn_error_t *get_file(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
     SVN_CMD_ERR(svn_fs_file_contents(&contents, root, full_path, pool));
 
   /* Send successful command response with revision and props. */
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w((?c)r(!", "success",
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w((?c)r(!", SUCCESS_STR,
                                  hex_digest, rev));
   SVN_ERR(write_proplist(conn, pool, props));
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!))"));
@@ -740,7 +776,7 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
     }
 
   /* Write out response. */
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(r(!", "success", rev));
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(r(!", SUCCESS_STR, rev));
   SVN_ERR(write_proplist(conn, pool, props));
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)(!"));
   if (want_contents)
@@ -925,7 +961,7 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                             changed_paths, strict_node, NULL, NULL,
                             log_receiver, &lb, pool);
 
-  write_err = svn_ra_svn_write_word(conn, pool, "done");
+  write_err = svn_ra_svn_write_word(conn, pool, DONE_STR);
   if (write_err)
     {
       svn_error_clear(err);
@@ -1022,7 +1058,7 @@ static svn_error_t *get_locations(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
         }
     }
 
-  write_err = svn_ra_svn_write_word(conn, pool, "done");
+  write_err = svn_ra_svn_write_word(conn, pool, DONE_STR);
   if (write_err)
     {
       svn_error_clear(err);
@@ -1116,7 +1152,7 @@ static svn_error_t *get_file_revs(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
   err = svn_repos_get_file_revs(b->repos, full_path, start_rev, end_rev, NULL,
                                 NULL, file_rev_handler, &frb, pool);
-  write_err = svn_ra_svn_write_word(conn, pool, "done");
+  write_err = svn_ra_svn_write_word(conn, pool, DONE_STR);
   if (write_err)
     {
       svn_error_clear(err);
@@ -1128,7 +1164,9 @@ static svn_error_t *get_file_revs(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   return SVN_NO_ERROR;
 }
 
-
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
 static const svn_ra_svn_cmd_entry_t main_commands[] = {
   { "get-latest-rev",  get_latest_rev },
   { "get-dated-rev",   get_dated_rev },
@@ -1148,17 +1186,20 @@ static const svn_ra_svn_cmd_entry_t main_commands[] = {
   { "get-file-revs",   get_file_revs },
   { NULL }
 };
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
 
 /* Skip past the scheme part of a URL, including the tunnel specification
  * if present.  Return NULL if the scheme part is invalid for ra_svn. */
 static const char *skip_scheme_part(const char *url)
 {
-  if (strncmp(url, "svn", 3) != 0)
+  if (strncmp(url, "\x73\x76\x6E" /* "svn" */, 3) != 0)
     return NULL;
   url += 3;
-  if (*url == '+')
-    url += strcspn(url, ":");
-  if (strncmp(url, "://", 3) != 0)
+  if (*url == SVN_UTF8_PLUS)
+    url += strcspn(url, SVN_UTF8_COLON_STR);
+  if (strncmp(url, "\x3A\x2F\x2F" /* "://" */, 3) != 0)
     return NULL;
   return url + 3;
 }
@@ -1179,7 +1220,7 @@ static svn_error_t *find_repos(const char *url, const char *root,
   if (path == NULL)
     return svn_error_createf(SVN_ERR_BAD_URL, NULL,
                              "Non-svn URL passed to svn server: '%s'", url);
-  path = strchr(path, '/');
+  path = strchr(path, SVN_UTF8_FSLASH);
   path = (path == NULL) ? "" : path + 1;
 
   /* Decode URI escapes from the path. */
@@ -1295,7 +1336,7 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
 
   /* Send greeting.   When we drop support for version 1, we can
    * start sending an empty mechlist. */
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(nn(!", "success",
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(nn(!", SUCCESS_STR,
                                  (apr_uint64_t) 1, (apr_uint64_t) 2));
   SVN_ERR(send_mechs(conn, pool, &b, READ_ACCESS));
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)(w))",

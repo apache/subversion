@@ -25,6 +25,7 @@
 #include "svn_pools.h"
 #include "svn_base64.h"
 #include "svn_dav.h"
+#include "svn_utf.h"
 
 #include "dav_svn.h"
 
@@ -86,6 +87,9 @@ static svn_error_t *
 send_prop(struct file_rev_baton *frb, const char *elem_name,
           const char *name, const svn_string_t *val, apr_pool_t *pool)
 {
+#if APR_CHARSET_EBCDIC
+  SVN_ERR(svn_utf_cstring_from_netccsid(&name, name, pool));
+#endif	
   name = apr_xml_quote_string(pool, name, 1);
 
   if (svn_xml_is_xml_safe(val->data, val->len))
@@ -93,6 +97,9 @@ send_prop(struct file_rev_baton *frb, const char *elem_name,
       svn_stringbuf_t *tmp = NULL;
       svn_xml_escape_cdata_string(&tmp, val, pool);
       val = svn_string_create(tmp->data, pool);
+#if APR_CHARSET_EBCDIC
+      SVN_ERR(svn_utf_string_from_netccsid(&val, val, pool));
+#endif        
       SVN_ERR(send_xml(frb, "<S:%s name=\"%s\">%s</S:%s>" DEBUG_CR,
                        elem_name, name, val->data, elem_name));
     }
@@ -144,7 +151,9 @@ file_rev_handler(void *baton,
   int i;
 
   SVN_ERR(maybe_send_header(frb));
-
+#if APR_CHARSET_EBCDIC
+  SVN_ERR(svn_utf_cstring_from_netccsid(&path, path, pool));
+#endif     
   SVN_ERR(send_xml(frb, "<S:file-rev path=\"%s\" rev=\"%ld\">" DEBUG_CR,
                    apr_xml_quote_string(pool, path, 1), revnum));
 
@@ -167,16 +176,21 @@ file_rev_handler(void *baton,
   for (i = 0; i < props->nelts; ++i)
     {
       const svn_prop_t *prop = &APR_ARRAY_IDX(props, i, svn_prop_t);
+      const char *prop_name = prop->name;
+      svn_string_t *prop_value;
 
       if (prop->value)
         SVN_ERR(send_prop(frb, "set-prop", prop->name, prop->value,
                           subpool));
       else
         {
+#if APR_CHARSET_EBCDIC
+          SVN_ERR(svn_utf_cstring_from_netccsid(&prop_name, prop_name, pool));
+#endif         	
           /* Property was removed. */
           SVN_ERR(send_xml(frb,
                            "<S:remove-prop name=\"%s\"/>" DEBUG_CR,
-                           apr_xml_quote_string (subpool, prop->name, 1)));
+                           apr_xml_quote_string (subpool, prop_name, 1)));
         }
     }
 
@@ -256,7 +270,13 @@ dav_svn__file_revs_report(const dav_resource *resource,
           /* Convert this relative path to an absolute path in the
              repository. */
           path = apr_pstrdup(resource->pool, resource->info->repos_path);
-
+#if APR_CHARSET_EBCDIC
+          if (svn_utf_cstring_to_netccsid(&path, path, resource->pool))
+            return dav_new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR,
+                                 0, apr_psprintf(resource->pool,
+                                                 "Error converting string '%s'",
+                                                 path));
+#endif
           if (child->first_cdata.first)
             {
               if ((derr = dav_svn__test_canonical 

@@ -144,7 +144,7 @@ svn_error_t *svn_prop_diffs (apr_array_header_t **propdiffs,
 /* Defines for reserved ("svn:") property names.  */
 
 /** All Subversion property names start with this. */
-#define SVN_PROP_PREFIX "svn:"
+#define SVN_PROP_PREFIX "\x73\x76\x6e\x3a" /* "svn:" */
 
 
 /** Visible properties
@@ -165,28 +165,40 @@ svn_error_t *svn_prop_diffs (apr_array_header_t **propdiffs,
  */
 
 /** The mime-type of a given file. */
-#define SVN_PROP_MIME_TYPE  SVN_PROP_PREFIX "mime-type"
+#define SVN_PROP_MIME_TYPE  SVN_PROP_PREFIX \
+        "\x6d\x69\x6d\x65\x2d\x74\x79\x70\x65"
+        /* "mime-type" */
 
 /** The ignore patterns for a given directory. */
-#define SVN_PROP_IGNORE  SVN_PROP_PREFIX "ignore"
+#define SVN_PROP_IGNORE  SVN_PROP_PREFIX \
+        "\x69\x67\x6e\x6f\x72\x65"
+        /* "ignore" */
 
 /** The line ending style for a given file. */
-#define SVN_PROP_EOL_STYLE  SVN_PROP_PREFIX "eol-style"
+#define SVN_PROP_EOL_STYLE  SVN_PROP_PREFIX \
+        "\x65\x6f\x6c\x2d\x73\x74\x79\x6c\x65"
+        /* "eol-style" */
 
 /** The "activated" keywords (for keyword substitution) for a given file. */
-#define SVN_PROP_KEYWORDS  SVN_PROP_PREFIX "keywords"
+#define SVN_PROP_KEYWORDS  SVN_PROP_PREFIX \
+        "\x6b\x65\x79\x77\x6f\x72\x64\x73"
+        /* "keywords" */
 
 /** Set to either TRUE or FALSE if we want a file to be executable or not. */
-#define SVN_PROP_EXECUTABLE  SVN_PROP_PREFIX "executable"
+#define SVN_PROP_EXECUTABLE  SVN_PROP_PREFIX \
+        "\x65\x78\x65\x63\x75\x74\x61\x62\x6c\x65"
+        /* "executable" */
 
 /** The value to force the executable property to when set */
-#define SVN_PROP_EXECUTABLE_VALUE "*"
+#define SVN_PROP_EXECUTABLE_VALUE "\x2a"  /* "*" */
 
 /** Set if the file should be treated as a special file. */
-#define SVN_PROP_SPECIAL  SVN_PROP_PREFIX "special"
+#define SVN_PROP_SPECIAL  SVN_PROP_PREFIX \
+        "\x73\x70\x65\x63\x69\x61\x6c"
+        /* "special" */
 
 /** The value to force the special property to when set. */
-#define SVN_PROP_SPECIAL_VALUE "*"
+#define SVN_PROP_SPECIAL_VALUE "\x2a"  /* "*" */
 
 /** Describes external items to check out into this directory. 
  *
@@ -202,7 +214,9 @@ svn_error_t *svn_prop_diffs (apr_array_header_t **propdiffs,
  * The subdir names on the left side are relative to the directory on
  * which this property is set.
  */
-#define SVN_PROP_EXTERNALS  SVN_PROP_PREFIX "externals"
+#define SVN_PROP_EXTERNALS  SVN_PROP_PREFIX \
+        "\x65\x78\x74\x65\x72\x6e\x61\x6c\x73"
+        /* "externals" */
 
 /** @} */
 
@@ -225,29 +239,43 @@ svn_error_t *svn_prop_diffs (apr_array_header_t **propdiffs,
  * changing them.  The client will also send them back to the RA layer
  * when committing.
  */
-#define SVN_PROP_WC_PREFIX     SVN_PROP_PREFIX "wc:"
+#define SVN_PROP_WC_PREFIX  SVN_PROP_PREFIX \
+        "\x77\x63\x3a"
+        /* "wc:" */
 
 /** Another type of non-user-visible property.  "Entry properties" are
  * stored as fields with the administrative 'entries' file.  
  */
-#define SVN_PROP_ENTRY_PREFIX  SVN_PROP_PREFIX "entry:"
+#define SVN_PROP_ENTRY_PREFIX  SVN_PROP_PREFIX \
+        "\x65\x6e\x74\x72\x79\x3a"
+        /* "entry:" */
 
 /** The revision this entry was last committed to on. */
-#define SVN_PROP_ENTRY_COMMITTED_REV     SVN_PROP_ENTRY_PREFIX "committed-rev"
+#define SVN_PROP_ENTRY_COMMITTED_REV  SVN_PROP_ENTRY_PREFIX \
+        "\x63\x6f\x6d\x6d\x69\x74\x74\x65\x64\x2d\x72\x65\x76"
+        /* "committed-rev" */
 
 /** The date this entry was last committed to on. */
-#define SVN_PROP_ENTRY_COMMITTED_DATE    SVN_PROP_ENTRY_PREFIX "committed-date"
+#define SVN_PROP_ENTRY_COMMITTED_DATE  SVN_PROP_ENTRY_PREFIX \
+        "\x63\x6f\x6d\x6d\x69\x74\x74\x65\x64\x2d\x64\x61\x74\x65"
+        /* "committed-date" */
 
 /** The author who last committed to this entry. */
-#define SVN_PROP_ENTRY_LAST_AUTHOR       SVN_PROP_ENTRY_PREFIX "last-author"
+#define SVN_PROP_ENTRY_LAST_AUTHOR  SVN_PROP_ENTRY_PREFIX \
+        "\x6c\x61\x73\x74\x2d\x61\x75\x74\x68\x6f\x72"
+        /* "last-author" */
 
 /** The UUID of this entry's repository. */
-#define SVN_PROP_ENTRY_UUID       SVN_PROP_ENTRY_PREFIX "uuid"
+#define SVN_PROP_ENTRY_UUID  SVN_PROP_ENTRY_PREFIX \
+        "\x75\x75\x69\x64"
+        /* "uuid" */
 
 /** When custom, user-defined properties are passed over the wire, they will
  * have this prefix added to their name.
  */
-#define SVN_PROP_CUSTOM_PREFIX SVN_PROP_PREFIX "custom:"
+#define SVN_PROP_CUSTOM_PREFIX SVN_PROP_PREFIX \
+        "\x63\x75\x73\x74\x6f\x6d\x3a"
+        /* "custom:" */
 
 /** @} */
 
@@ -261,13 +289,19 @@ svn_error_t *svn_prop_diffs (apr_array_header_t **propdiffs,
  */
 
 /** The fs revision property that stores a commit's author. */
-#define SVN_PROP_REVISION_AUTHOR  SVN_PROP_PREFIX "author"
+#define SVN_PROP_REVISION_AUTHOR  SVN_PROP_PREFIX \
+        "\x61\x75\x74\x68\x6f\x72"
+        /* "author" */
 
 /** The fs revision property that stores a commit's log message. */
-#define SVN_PROP_REVISION_LOG  SVN_PROP_PREFIX "log"
+#define SVN_PROP_REVISION_LOG  SVN_PROP_PREFIX \
+        "\x6c\x6f\x67"
+        /* "log" */
 
 /** The fs revision property that stores a commit's date. */
-#define SVN_PROP_REVISION_DATE  SVN_PROP_PREFIX "date"
+#define SVN_PROP_REVISION_DATE  SVN_PROP_PREFIX \
+        "\x64\x61\x74\x65"
+        /* "date" */
 
 /** The fs revision property that stores a commit's "original" date.
  *
@@ -280,7 +314,9 @@ svn_error_t *svn_prop_diffs (apr_array_header_t **propdiffs,
  * repositories are combined. This property can be used to record the
  * true, original date of the commit.
  */
-#define SVN_PROP_REVISION_ORIG_DATE  SVN_PROP_PREFIX "original-date"
+#define SVN_PROP_REVISION_ORIG_DATE  SVN_PROP_PREFIX \
+        "\x6f\x72\x69\x67\x69\x6e\x61\x6c\x2d\x64\x61\x74\x65"
+        /* "original-date" */
 
 /*
  * This is a list of all revision properties.

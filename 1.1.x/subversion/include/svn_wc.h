@@ -751,7 +751,7 @@ svn_error_t *svn_wc_props_modified_p (svn_boolean_t *modified_p,
  * against importing administrative subdirs, so now the name is a
  * matter of public record.
  */
-#define SVN_WC_ADM_DIR_NAME   ".svn"
+#define SVN_WC_ADM_DIR_NAME  "\x2e\x73\x76\x6e" /* ".svn" */
 
 
 

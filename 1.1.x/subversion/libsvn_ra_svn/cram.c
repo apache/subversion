@@ -34,19 +34,55 @@
 #include <svn_error.h>
 #include <svn_ra_svn.h>
 #include <svn_config.h>
+#include <svn_utf.h>
 
 #include "ra_svn.h"
 
+#define FAILURE_STR \
+        "\x66\x61\x69\x6c\x75\x72\x65"
+        /* "failure" */
+
+#define INERNAL_SERVER_ERR_STR \
+        "\x49\x6e\x74\x65\x72\x6e\x61\x6c\x20\x73\x65\x72\x76\x65\x72\x20" \
+        "\x65\x72\x72\x6f\x72\x20\x69\x6e\x20\x61\x75\x74\x68\x65\x6e\x74" \
+        "\x69\x63\x61\x74\x69\x6f\x6e"
+        /* "Internal server error in authentication" */
+
+#define MALFORMED_CLIENT_RESP_STR \
+        "\x4d\x61\x6c\x66\x6f\x72\x6d\x65\x64\x20\x63\x6c\x69\x65\x6e\x74" \
+        "\x20\x72\x65\x73\x70\x6f\x6e\x73\x65\x20\x69\x6e\x20\x61\x75\x74" \
+        "\x68\x65\x6e\x74\x69\x63\x61\x74\x69\x6f\x6e"
+        /* "Malformed client response in authentication" */
+
+#define PASSWORD_INCORRECT_STR \
+        "\x50\x61\x73\x73\x77\x6f\x72\x64\x20\x69\x6e\x63\x6f\x72\x72\x65" \
+        "\x63\x74"
+        /* "Password incorrect" */
+        
+#define STEP_STR \
+        "\x73\x74\x65\x70"
+        /* "step" */
+
+#define SUCCESS_STR \
+        "\x73\x75\x63\x63\x65\x73\x73"
+        /* "success" */
+        
+#define USER_NOT_FOUND_STR \
+        "\x55\x73\x65\x72\x6e\x61\x6d\x65\x20\x6e\x6f\x74\x20\x66\x6f\x75" \
+        "\x6e\x64"
+        /* "Username not found" */
+        
+                
 static int hex_to_int(char c)
 {
-  return (c >= '0' && c <= '9') ? c - '0'
-    : (c >= 'a' && c <= 'f') ? c - 'a' + 10
+  return (c >= SVN_UTF8_0 && c <= SVN_UTF8_9) ? c - SVN_UTF8_0
+    : (c >= SVN_UTF8_a && c <= SVN_UTF8_f) ? c - SVN_UTF8_a + 10
     : -1;
 }
 
 static char int_to_hex(int v)
 {
-  return (v < 10) ? '0' + v : 'a' + (v - 10);
+  return (v < 10) ? SVN_UTF8_0 + v : SVN_UTF8_a + (v - 10);
 }
 
 static svn_boolean_t hex_decode(unsigned char *hashval, const char *hexval)
@@ -109,7 +145,7 @@ static void compute_digest(unsigned char *digest, const char *challenge,
 static svn_error_t *fail(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                          const char *msg)
 {
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(c)", "failure", msg));
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(c)", FAILURE_STR, msg));
   return svn_ra_svn_flush(conn, pool);
 }
 
@@ -146,33 +182,37 @@ svn_error_t *svn_ra_svn_cram_server(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   if (!status)
     status = apr_gethostname(hostbuf, sizeof(hostbuf), pool);
   if (status)
-    return fail(conn, pool, "Internal server error in authentication");
+    return fail(conn, pool, INERNAL_SERVER_ERR_STR);
+
   challenge = apr_psprintf(pool,
-                           "<%" APR_UINT64_T_FMT ".%" APR_TIME_T_FMT "@%s>",
-                           nonce, apr_time_now(), hostbuf);
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(c)", "step", challenge));
+                           "<%" APR_UINT64_T_FMT ".%" APR_TIME_T_FMT
+                           "@%s>", nonce, apr_time_now(), hostbuf);                           
+#if APR_CHARSET_EBCDIC
+  SVN_ERR (svn_utf_cstring_to_utf8(&challenge, challenge, pool));
+#endif
+                           
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(c)", STEP_STR, challenge));
 
   /* Read the client's response and decode it into *user and cdigest. */
   SVN_ERR(svn_ra_svn_read_item(conn, pool, &item));
   if (item->kind != SVN_RA_SVN_STRING)  /* Very wrong; don't report failure */
     return SVN_NO_ERROR;
   resp = item->u.string;
-  sep = strrchr(resp->data, ' ');
+  sep = strrchr(resp->data, SVN_UTF8_SPACE);
   if (!sep || resp->len - (sep + 1 - resp->data) != APR_MD5_DIGESTSIZE * 2
       || !hex_decode(cdigest, sep + 1))
-    return fail(conn, pool, "Malformed client response in authentication");
+    return fail(conn, pool, MALFORMED_CLIENT_RESP_STR);
   *user = apr_pstrmemdup(pool, resp->data, sep - resp->data);
-
+  
   /* Verify the digest against the password in pwfile. */
   svn_config_get(pwdb, &password, SVN_CONFIG_SECTION_USERS, *user, NULL);
   if (!password)
-    return fail(conn, pool, "Username not found");
+    return fail(conn, pool, USER_NOT_FOUND_STR);
   compute_digest(sdigest, challenge, password);
   if (memcmp(cdigest, sdigest, sizeof(sdigest)) != 0)
-    return fail(conn, pool, "Password incorrect");
-
+    return fail(conn, pool, PASSWORD_INCORRECT_STR);
   *success = TRUE;
-  return svn_ra_svn_write_tuple(conn, pool, "w()", "success");
+  return svn_ra_svn_write_tuple(conn, pool, "w()", SUCCESS_STR);
 }
 
 svn_error_t *svn_ra_svn__cram_client(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
@@ -184,13 +224,14 @@ svn_error_t *svn_ra_svn__cram_client(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   char hex[2 * APR_MD5_DIGESTSIZE + 1];
 
   /* Read the server challenge. */
-  SVN_ERR(svn_ra_svn_read_tuple(conn, pool, "w(?c)", &status, &str));
-  if (strcmp(status, "failure") == 0 && str)
+  SVN_ERR(svn_ra_svn_read_tuple(conn, pool,
+                                "w(?c)", &status, &str));
+  if (strcmp(status, FAILURE_STR) == 0 && str)
     {
       *message = str;
       return SVN_NO_ERROR;
     }
-  else if (strcmp(status, "step") != 0 || !str)
+  else if (strcmp(status, STEP_STR) != 0 || !str)
     return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
                             "Unexpected server response to authentication");
 
@@ -198,17 +239,19 @@ svn_error_t *svn_ra_svn__cram_client(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   compute_digest(digest, str, password);
   hex_encode(hex, digest);
   hex[sizeof(hex) - 1] = '\0';
-  reply = apr_psprintf(pool, "%s %s", user, hex);
+  reply = apr_psprintf(pool, "%s\x20%s", user, hex);
   SVN_ERR(svn_ra_svn_write_cstring(conn, pool, reply));
 
   /* Read the success or failure response from the server. */
-  SVN_ERR(svn_ra_svn_read_tuple(conn, pool, "w(?c)", &status, &str));
-  if (strcmp(status, "failure") == 0 && str)
+  SVN_ERR(svn_ra_svn_read_tuple(conn, pool,
+                                "w(?c)", &status, &str));
+  if (strcmp(status, FAILURE_STR) == 0 && str)
     {
       *message = str;
       return SVN_NO_ERROR;
     }
-  else if (strcmp(status, "success") != 0 || str)
+  else if (strcmp(status, SUCCESS_STR) != 0 ||
+           str)
     return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
                             "Unexpected server response to authentication");
 

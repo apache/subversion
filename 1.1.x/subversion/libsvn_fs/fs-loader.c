@@ -27,17 +27,27 @@
 #include "svn_pools.h"
 #include "svn_fs.h"
 #include "svn_path.h"
+#include "svn_utf.h"
 #include "svn_private_config.h"
 
 #include "fs-loader.h"
 
+#if !AS400
 /* This is defined by configure on platforms which use configure, but
    we need to define a fallback for Windows. */
-#ifndef DEFAULT_FS_TYPE
-#define DEFAULT_FS_TYPE "bdb"
+  #ifndef DEFAULT_FS_TYPE
+    #define DEFAULT_FS_TYPE "bdb"
+  #endif
+#else
+  /* ...and a fallback for the iSeries.  As the iSeries port presumes no bdb
+   * support, fsfs it is.
+   */
+  #ifndef DEFAULT_FS_TYPE
+    #define DEFAULT_FS_TYPE "\x66\x73\x66\x73" /* "fsfs" */
+  #endif  
 #endif
 
-#define FS_TYPE_FILENAME "fs-type"
+#define FS_TYPE_FILENAME "\x66\x73\x2D\x74\x79\x70\x65" /* "fs-type" */
 
 /* The implementation of this library is deliberately not separated
    into multiple files, to avoid circular dependency problems with
@@ -54,14 +64,14 @@ static const struct fs_type_defn {
   fs_init_func_t initfunc;
 } fs_modules[] = {
   {
-    SVN_FS_TYPE_BDB, "base",
+    SVN_FS_TYPE_BDB, "\x62\x61\x73\x65", /* "base" */
 #ifdef SVN_LIBSVN_FS_LINKS_FS_BASE
     svn_fs_base__init
 #endif
   },
 
   {
-    SVN_FS_TYPE_FSFS, "fs",
+    SVN_FS_TYPE_FSFS, "\x66\x73", /* "fs" */
 #ifdef SVN_LIBSVN_FS_LINKS_FS_FS
     svn_fs_fs__init
 #endif
@@ -196,7 +206,7 @@ write_fs_type (const char *path, const char *fs_type, apr_pool_t *pool)
                              APR_OS_DEFAULT, pool));
   SVN_ERR (svn_io_file_write_full (file, fs_type, strlen(fs_type), NULL,
                                    pool));
-  SVN_ERR (svn_io_file_write_full (file, "\n", 1, NULL, pool));
+  SVN_ERR (svn_io_file_write_full (file, SVN_UTF8_NEWLINE_STR, 1, NULL, pool));
   SVN_ERR (svn_io_file_close (file, pool));
   return SVN_NO_ERROR;
 }

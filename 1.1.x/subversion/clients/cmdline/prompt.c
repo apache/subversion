@@ -63,7 +63,11 @@ static apr_status_t wait_for_input (apr_file_t *f,
   pollset.p = pool;
   pollset.reqevents = APR_POLLIN;
 
+#ifdef AS400
+  srv = apr_poll(&pollset, 1, &n, -1, pool);
+#else
   srv = apr_poll(&pollset, 1, &n, -1);
+#endif  
 
   if (n == 1 && pollset.rtnevents & APR_POLLIN)
     return APR_SUCCESS;

@@ -24,6 +24,8 @@
 #include "delta.h"
 #include "svn_pools.h"
 
+#define SVN__HEADER "\x53\x56\x4E\0" /* "SVN\0" */
+
 #define NORMAL_BITS 7
 #define LENGTH_BITS 5
 
@@ -115,7 +117,7 @@ window_handler (svn_txdelta_window_t *window, void *baton)
   if (eb->header_done == FALSE)
     {
       len = 4;
-      SVN_ERR (svn_stream_write (eb->output, "SVN\0", &len));
+      SVN_ERR (svn_stream_write (eb->output, SVN__HEADER, &len));
       eb->header_done = TRUE;
     }
 
@@ -465,7 +467,7 @@ write_handler (void *baton,
       apr_size_t nheader = 4 - db->header_bytes;
       if (nheader > buflen)
         nheader = buflen;
-      if (memcmp (buffer, "SVN\0" + db->header_bytes, nheader) != 0)
+      if (memcmp (buffer, SVN__HEADER + db->header_bytes, nheader) != 0)
         return svn_error_create (SVN_ERR_SVNDIFF_INVALID_HEADER, NULL,
                                  "Svndiff has invalid header");
       buflen -= nheader;

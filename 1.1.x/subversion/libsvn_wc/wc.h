@@ -32,12 +32,29 @@ extern "C" {
 #endif /* __cplusplus */
 
 
-#define SVN_WC__DIFF_EXT      ".diff"
-#define SVN_WC__TMP_EXT       ".tmp"
-#define SVN_WC__TEXT_REJ_EXT  ".rej"
-#define SVN_WC__PROP_REJ_EXT  ".prej"
-#define SVN_WC__BASE_EXT      ".svn-base" /* for text and prop bases */
-#define SVN_WC__WORK_EXT      ".svn-work" /* for working propfiles */
+#define SVN_WC__DIFF_EXT \
+        "\x2e\x64\x69\x66\x66"
+        /* ".diff" */
+
+#define SVN_WC__TMP_EXT \
+        "\x2e\x74\x6d\x70"
+        /* ".tmp" */
+
+#define SVN_WC__TEXT_REJ_EXT \
+        "\x2e\x72\x65\x6a"
+        /* ".rej" */
+
+#define SVN_WC__PROP_REJ_EXT \
+        "\x2e\x70\x72\x65\x6a"
+        /* ".prej" */
+
+#define SVN_WC__BASE_EXT \
+        "\x2e\x73\x76\x6e\x2d\x62\x61\x73\x65"
+        /* ".svn-base" for text and prop bases */
+
+#define SVN_WC__WORK_EXT \
+        "\x2e\x73\x76\x6e\x2d\x77\x6f\x72\x6b"
+        /* ".svn-work" for working propfiles */
 
 
 
@@ -93,7 +110,9 @@ struct svn_wc_traversal_info_t
    
    <modify-entry name="foo.c" revision="5" timestamp="working"/>
  */
-#define SVN_WC_TIMESTAMP_WC   "working"
+#define SVN_WC_TIMESTAMP_WC \
+        "\x77\x6f\x72\x6b\x69\x6e\x67"
+        /* "working" */
 
 
 
@@ -104,28 +123,77 @@ struct svn_wc_traversal_info_t
    be defined in svn_wc.h. */
 
 /** The files within the administrative subdir. **/
-#define SVN_WC__ADM_FORMAT              "format"
-#define SVN_WC__ADM_README              "README.txt"
-#define SVN_WC__ADM_ENTRIES             "entries"
-#define SVN_WC__ADM_LOCK                "lock"
-#define SVN_WC__ADM_TMP                 "tmp"
-#define SVN_WC__ADM_TEXT_BASE           "text-base"
-#define SVN_WC__ADM_PROPS               "props"
-#define SVN_WC__ADM_PROP_BASE           "prop-base"
-#define SVN_WC__ADM_DIR_PROPS           "dir-props"
-#define SVN_WC__ADM_DIR_PROP_BASE       "dir-prop-base"
-#define SVN_WC__ADM_WCPROPS             "wcprops"
-#define SVN_WC__ADM_DIR_WCPROPS         "dir-wcprops"
-#define SVN_WC__ADM_LOG                 "log"
-#define SVN_WC__ADM_KILLME              "KILLME"
-#define SVN_WC__ADM_AUTH_DIR            "auth"
-#define SVN_WC__ADM_EMPTY_FILE          "empty-file"
+#define SVN_WC__ADM_FORMAT \
+        "\x66\x6f\x72\x6d\x61\x74"
+        /* "format" */
+
+#define SVN_WC__ADM_README \
+        "\x52\x45\x41\x44\x4d\x45\x2e\x74\x78\x74"
+        /* "README.txt" */
+
+#define SVN_WC__ADM_ENTRIES \
+        "\x65\x6e\x74\x72\x69\x65\x73"
+        /* "entries" */
+
+#define SVN_WC__ADM_LOCK \
+        "\x6c\x6f\x63\x6b"
+        /* "lock" */
+
+#define SVN_WC__ADM_TMP \
+        "\x74\x6d\x70"
+        /* "tmp" */
+
+#define SVN_WC__ADM_TEXT_BASE \
+        "\x74\x65\x78\x74\x2d\x62\x61\x73\x65"
+        /* "text-base" */
+
+#define SVN_WC__ADM_PROPS \
+        "\x70\x72\x6f\x70\x73"
+        /* "props" */
+
+#define SVN_WC__ADM_PROP_BASE \
+        "\x70\x72\x6f\x70\x2d\x62\x61\x73\x65"
+        /* "prop-base" */
+
+#define SVN_WC__ADM_DIR_PROPS \
+        "\x64\x69\x72\x2d\x70\x72\x6f\x70\x73"
+        /* "dir-props" */
+
+#define SVN_WC__ADM_DIR_PROP_BASE \
+       "\x64\x69\x72\x2d\x70\x72\x6f\x70\x2d\x62\x61\x73\x65"
+       /* "dir-prop-base" */
+
+#define SVN_WC__ADM_WCPROPS \
+        "\x77\x63\x70\x72\x6f\x70\x73"
+        /* "wcprops" */
+
+#define SVN_WC__ADM_DIR_WCPROPS \
+        "\x64\x69\x72\x2d\x77\x63\x70\x72\x6f\x70\x73"
+        /* "dir-wcprops" */
+
+#define SVN_WC__ADM_LOG \
+        "\x6c\x6f\x67"
+        /* "log" */
+
+#define SVN_WC__ADM_KILLME \
+        "\x4b\x49\x4c\x4c\x4d\x45"
+        /* "KILLME" */
+
+#define SVN_WC__ADM_AUTH_DIR \
+        "\x61\x75\x74\x68"
+        /* "auth" */
+
+#define SVN_WC__ADM_EMPTY_FILE \
+        "\x65\x6d\x70\x74\x79\x2d\x66\x69\x6c\x65"
+        /* "empty-file" */
 
 
 /* The basename of the ".prej" file, if a directory ever has property
    conflicts.  This .prej file will appear *within* the conflicted
    directory.  */
-#define SVN_WC__THIS_DIR_PREJ           "dir_conflicts"
+#define SVN_WC__THIS_DIR_PREJ \
+        "\x64\x69\x72\x5f\x63\x6f\x6e\x66\x6c\x69\x63\x74\x73"
+        /* "dir_conflicts" */
 
 
 

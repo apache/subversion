@@ -24,6 +24,7 @@
 #include <apr_lib.h>     /* for apr_isspace() */
 #include <apr_md5.h>
 #include <apr_fnmatch.h>
+#include "svn_utf.h"
 #include "svn_string.h"  /* loads "svn_types.h" and <apr_pools.h> */
 
 
@@ -167,7 +168,7 @@ svn_string_first_non_whitespace (const svn_string_t *str)
 
   for (i = 0; i < str->len; i++)
     {
-      if (! apr_isspace (str->data[i]))
+      if (! APR_IS_ASCII_SPACE (str->data[i]))
         {
           return i;
         }
@@ -416,7 +417,7 @@ svn_stringbuf_first_non_whitespace (const svn_stringbuf_t *str)
 
   for (i = 0; i < str->len; i++)
     {
-      if (! apr_isspace (str->data[i]))
+      if (! APR_IS_ASCII_SPACE (str->data[i]))
         {
           return i;
         }
@@ -439,7 +440,7 @@ svn_stringbuf_strip_whitespace (svn_stringbuf_t *str)
   str->blocksize -= offset;
 
   /* Now that we've trimmed the front, trim the end, wasting more RAM. */
-  while ((str->len > 0) && apr_isspace (str->data[str->len - 1]))
+  while ((str->len > 0) && APR_IS_ASCII_SPACE (str->data[str->len - 1]))
     str->len--;
   str->data[str->len] = '\0';
 }
@@ -498,12 +499,12 @@ svn_cstring_split_append (apr_array_header_t *array,
     {
       if (chop_whitespace)
         {
-          while (apr_isspace (*p))
+          while (APR_IS_ASCII_SPACE (*p))
             p++;
           
           {
             char *e = p + (strlen (p) - 1);
-            while ((e >= p) && (apr_isspace (*e)))
+            while ((e >= p) && (APR_IS_ASCII_SPACE (*e)))
               e--;
             *(++e) = '\0';
           }

@@ -24,6 +24,7 @@
 #include "svn_error.h"
 #include "svn_fs.h"
 #include "svn_dav.h"
+#include "svn_utf.h"
 
 #include "dav_svn.h"
 
@@ -106,7 +107,27 @@ svn_revnum_t dav_svn_get_safe_cr(svn_fs_root_t *root,
   svn_fs_t *fs = svn_fs_root_fs(root);
   const svn_fs_id_t *id, *other_id;
   svn_error_t *err;
-
+#if APR_CHARSET_EBCDIC
+  /* Some callers to this function pass utf-8 paths:
+   * 
+   *   DAV_UPDATE: add_helper()
+   *   DAV_UPDATE: send_vsn_url()
+   *   DAV_MERGE: send_response()
+   * 
+   * While others send ebcdic paths:
+   * 
+   *   LIVEPROPS:dav_svn_insert_prop()
+   * 
+   * So we test the first character of the path, if it's an ebcdic '/' then
+   * convert it to utf-8, otherwise do nothing.
+   */
+   if (path && path[0] == '/')
+     {
+       const char *path_utf8;
+       if (!svn_utf_cstring_to_netccsid (&path_utf8, path, pool))
+         path = path_utf8;
+     }
+#endif
   if ((err = svn_fs_node_id(&id, root, path, pool)))
     {
       svn_error_clear(err);
@@ -150,7 +171,12 @@ const char *dav_svn_build_uri(const dav_svn_repos *repos,
 {
   const char *root_path = repos->root_path;
   const char *special_uri = repos->special_uri;
+#if !APR_CHARSET_EBCDIC
   const char *path_uri = path ? svn_path_uri_encode (path, pool) : NULL;
+#else  
+  const char *path_uri = path ?
+                         svn_path_uri_encode_native_full (path, pool) : NULL;
+#endif
   const char *href1 = add_href ? "<D:href>" : "";
   const char *href2 = add_href ? "</D:href>" : "";
 
@@ -271,7 +297,11 @@ svn_error_t *dav_svn_simple_parse_uri(dav_svn_uri_info *info,
     {
       /* this is an ordinary "public" URI, so back up to include the
          leading '/' and just return... no need to parse further. */
+#if !APR_CHARSET_EBCDIC
       info->repos_path = svn_path_uri_decode (path - 1, pool);
+#else
+      info->repos_path = svn_path_uri_decode_native (path - 1, pool);
+#endif
       return NULL;
     }
 
@@ -310,7 +340,7 @@ svn_error_t *dav_svn_simple_parse_uri(dav_svn_uri_info *info,
         {
           created_rev_str = apr_pstrndup(pool, path, slash - path);
           info->rev = SVN_STR_TO_REV(created_rev_str);
-          info->repos_path = svn_path_uri_decode (slash, pool);
+          info->repos_path = svn_path_uri_decode_native (slash, pool);
         }
       if (info->rev == SVN_INVALID_REVNUM)
         goto malformed_uri;

@@ -52,15 +52,21 @@ typedef struct svn_fs_t svn_fs_t;
 
 
 /** Filesystem configuration options. */
-#define SVN_FS_CONFIG_BDB_TXN_NOSYNC            "bdb-txn-nosync"
-#define SVN_FS_CONFIG_BDB_LOG_AUTOREMOVE        "bdb-log-autoremove"
+#define SVN_FS_CONFIG_BDB_TXN_NOSYNC \
+        "\x62\x64\x62\x2d\x74\x78\x6e\x2d\x6e\x6f\x73\x79\x6e\x63"
+        /* "bdb-txn-nosync" */
+
+#define SVN_FS_CONFIG_BDB_LOG_AUTOREMOVE \
+        "\x62\x64\x62\x2d\x6c\x6f\x67\x2d\x61" \
+        "\x75\x74\x6f\x72\x65\x6d\x6f\x76\x65"
+        /* "bdb-log-autoremove" */
 
 /* @since New in 1.1. */
-#define SVN_FS_CONFIG_FS_TYPE                   "fs-type"
+#define SVN_FS_CONFIG_FS_TYPE  "\x66\x73\x2d\x74\x79\x70\x65"  /* "fs-type" */
 /* @since New in 1.1. */
-#define SVN_FS_TYPE_BDB                         "bdb"
+#define SVN_FS_TYPE_BDB        "\x62\x64\x62"                  /* "bdb"     */
 /* @since New in 1.1. */
-#define SVN_FS_TYPE_FSFS                        "fsfs"
+#define SVN_FS_TYPE_FSFS       "\x66\x73\x66\x73"              /* "fsfs"    */
 
 
 /** The type of a warning callback function.  @a baton is the value specified

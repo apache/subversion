@@ -30,9 +30,9 @@
 #include "svn_xml.h"
 #include "svn_path.h"
 #include "svn_dav.h"
+#include "svn_utf.h"
 
 #include "dav_svn.h"
-
 
 struct log_receiver_baton
 {
@@ -103,24 +103,36 @@ static svn_error_t * log_receiver(void *baton,
                     "</D:version-name>" DEBUG_CR, rev) );
 
   if (author)
+    {
+#if APR_CHARSET_EBCDIC
+    SVN_ERR (svn_utf_cstring_from_netccsid(&author, author, pool));
+#endif    
     SVN_ERR( send_xml(lrb, "<D:creator-displayname>%s</D:creator-displayname>" 
                       DEBUG_CR, apr_xml_quote_string(pool, author, 0)) );
-
+    }
   /* ### this should be DAV:creation-date, but we need to format
      ### that date a bit differently */
   if (date)
+    {
+#if APR_CHARSET_EBCDIC
+    SVN_ERR (svn_utf_cstring_from_netccsid(&date, date, pool));    
+#endif 
     SVN_ERR( send_xml(lrb, "<S:date>%s</S:date>" DEBUG_CR,
                       apr_xml_quote_string(pool, date, 0)) );
-
+    }
   if (msg)
-    SVN_ERR( send_xml(lrb, "<D:comment>%s</D:comment>" DEBUG_CR,
-                      apr_xml_quote_string(pool, msg, 0)) );
-
+    {
+#if   APR_CHARSET_EBCDIC
+      SVN_ERR (svn_utf_cstring_from_netccsid(&msg, msg, pool));        
+#endif   
+      SVN_ERR( send_xml(lrb, "<D:comment>%s</D:comment>" DEBUG_CR,
+                        apr_xml_quote_string(pool, msg, 0)) );
+    }
 
   if (changed_paths)
     {
       apr_hash_index_t *hi;
-      char *path;
+      const char *path;
 
       for (hi = apr_hash_first(pool, changed_paths);
            hi != NULL;
@@ -131,12 +143,16 @@ static svn_error_t * log_receiver(void *baton,
           
           apr_hash_this(hi, (void *) &path, NULL, &val);
           log_item = val;
-
+#if APR_CHARSET_EBCDIC
+          SVN_ERR (svn_utf_cstring_from_netccsid(&path, path, pool));
+          SVN_ERR (svn_utf_cstring_from_netccsid(&(log_item->copyfrom_path),
+                                                log_item->copyfrom_path, pool));              
+#endif 
           /* ### todo: is there a D: namespace equivalent for
              `changed-path'?  Should use it if so. */
           switch (log_item->action)
             {
-            case 'A':
+            case SVN_UTF8_A:
               if (log_item->copyfrom_path 
                   && SVN_IS_VALID_REVNUM(log_item->copyfrom_rev))
                 SVN_ERR( send_xml(lrb, 
@@ -155,7 +171,7 @@ static svn_error_t * log_receiver(void *baton,
                                   apr_xml_quote_string(pool, path, 0)) );
               break;
 
-            case 'R':
+            case SVN_UTF8_R:
               if (log_item->copyfrom_path 
                   && SVN_IS_VALID_REVNUM(log_item->copyfrom_rev))
                 SVN_ERR( send_xml(lrb, 
@@ -174,13 +190,13 @@ static svn_error_t * log_receiver(void *baton,
                                   apr_xml_quote_string(pool, path, 0)) );
               break;
 
-            case 'D':
+            case SVN_UTF8_D:
               SVN_ERR( send_xml(lrb, "<S:deleted-path>%s</S:deleted-path>" 
                                 DEBUG_CR,
                                 apr_xml_quote_string(pool, path, 0)) );
               break;
 
-            case 'M':
+            case SVN_UTF8_M:
               SVN_ERR( send_xml(lrb, "<S:modified-path>%s</S:modified-path>" 
                                 DEBUG_CR,
                                 apr_xml_quote_string(pool, path, 0)) );
@@ -263,6 +279,15 @@ dav_error * dav_svn__log_report(const dav_resource *resource,
           /* Convert these relative paths to absolute paths in the
              repository. */
           target = apr_pstrdup (resource->pool, resource->info->repos_path);
+#if APR_CHARSET_EBCDIC
+          if (svn_utf_cstring_to_netccsid (&target, target, resource->pool))
+            {
+  	          return dav_new_error(repos->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                                   apr_psprintf (resource->pool,
+                                                 "Error converting string"
+                                                 " '%s'", target));
+            }
+#endif         
 
           /* Don't add on an empty string, but do add the target to the
              path.  This special case means that we have passed a single
@@ -270,10 +295,21 @@ dav_error * dav_svn__log_report(const dav_resource *resource,
              svn_fs_revisions_changed on. */
           if (child->first_cdata.first)
             {
+              const char *first_text = child->first_cdata.first->text;
               if ((derr = dav_svn__test_canonical
                    (child->first_cdata.first->text, resource->pool)))
                 return derr;
-              target = svn_path_join(target, child->first_cdata.first->text,
+#if APR_CHARSET_EBCDIC
+              if (svn_utf_cstring_to_netccsid (&first_text, first_text,
+                                               resource->pool))
+                {
+                  return dav_new_error(repos->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                                       apr_psprintf (resource->pool,
+                                                     "Error converting string"
+                                                     " '%s'", target));
+                } 
+#endif 
+              target = svn_path_join(target, first_text,
                                      resource->pool);
             }
 

@@ -68,7 +68,9 @@ svn_error_t *svn_config__parse_file (svn_config_t *cfg,
                                      svn_boolean_t must_exist);
 
 /* The name of the magic [DEFAULT] section. */
-#define SVN_CONFIG__DEFAULT_SECTION "DEFAULT"
+#define SVN_CONFIG__DEFAULT_SECTION \
+        "\x44\x45\x46\x41\x55\x4c\x54"
+        /* "DEFAULT" */
 
 
 #ifdef WIN32
@@ -85,13 +87,22 @@ svn_error_t *svn_config__parse_registry (svn_config_t *cfg,
 /* ### It's unclear to me whether this registry stuff should get the
    double underscore or not, and if so, where the extra underscore
    would go.  Thoughts?  -kff */
-#  define SVN_REGISTRY_PREFIX "REGISTRY:"
+
+#  define SVN_REGISTRY_PREFIX \
+          "\x52\x45\x47\x49\x53\x54\x52\x59\x3a"
+          /* "REGISTRY:" */
+
 #  define SVN_REGISTRY_PREFIX_LEN ((sizeof (SVN_REGISTRY_PREFIX)) - 1)
-#  define SVN_REGISTRY_HKLM "HKLM\\"
+#  define SVN_REGISTRY_HKLM "\x48\x4b\x4c\x4d\x5c"  /* "HKLM\" */
 #  define SVN_REGISTRY_HKLM_LEN ((sizeof (SVN_REGISTRY_HKLM)) - 1)
-#  define SVN_REGISTRY_HKCU "HKCU\\"
+#  define SVN_REGISTRY_HKCU "\x48\x4b\x43\x55\x5c"  /* "HKCU\" */
 #  define SVN_REGISTRY_HKCU_LEN ((sizeof (SVN_REGISTRY_HKCU)) - 1)
-#  define SVN_REGISTRY_PATH "Software\\Tigris.org\\Subversion\\"
+
+#  define SVN_REGISTRY_PATH "\x53\x6f\x66\x74\x77\x61\x72\x65\x5c\x54\x69\x67" \
+                            "\x72\x69\x73\x2e\x6f\x72\x67\x5c\x53\x75\x62\x76" \
+                            "\x65\x72\x73\x69\x6f\x6e\x5c"
+                            /* "Software\Tigris.org\Subversion\" */
+
 #  define SVN_REGISTRY_PATH_LEN ((sizeof (SVN_REGISTRY_PATH)) - 1)
 #  define SVN_REGISTRY_SYS_CONFIG_PATH \
                                SVN_REGISTRY_PREFIX     \
@@ -109,15 +120,26 @@ svn_error_t *svn_config__parse_registry (svn_config_t *cfg,
 #ifdef WIN32
 #  define SVN_CONFIG__SUBDIRECTORY    "Subversion"
 #else  /* ! WIN32 */
-#  define SVN_CONFIG__SYS_DIRECTORY   "/etc/subversion"
-#  define SVN_CONFIG__USR_DIRECTORY   ".subversion"
+
+#  define SVN_CONFIG__SYS_DIRECTORY \
+          "\x2f\x65\x74\x63\x2f\x73\x75\x62\x76\x65\x72\x73\x69\x6f\x6e"
+          /* "/etc/subversion" */
+
+#  define SVN_CONFIG__USR_DIRECTORY \
+          "\x2e\x73\x75\x62\x76\x65\x72\x73\x69\x6f\x6e"
+          /* ".subversion" */
+
 #endif /* WIN32 */
 
 /* The description/instructions file in the config directory. */
-#define SVN_CONFIG__USR_README_FILE    "README.txt"
+#define SVN_CONFIG__USR_README_FILE \
+        "\x52\x45\x41\x44\x4d\x45\x2e\x74\x78\x74"
+        /* "README.txt" */
 
 /* The name of the main authentication subdir in the config directory */
-#define SVN_CONFIG__AUTH_SUBDIR        "auth"
+#define SVN_CONFIG__AUTH_SUBDIR  \
+        "\x61\x75\x74\x68"
+        /* "auth" */
 
 /* Set *PATH_P to the path to config file FNAME in the system
    configuration area, allocated in POOL.  If FNAME is NULL, set

@@ -36,35 +36,85 @@ extern "C" {
 
 /* The top-level repository dir contains a README and various
    subdirectories.  */
-#define SVN_REPOS__README      "README.txt" /* Explanation for trespassers. */
-#define SVN_REPOS__FORMAT      "format"     /* Stores the current version
-                                               of the repository. */
-#define SVN_REPOS__DB_DIR      "db"         /* Where Berkeley lives. */
-#define SVN_REPOS__DAV_DIR     "dav"        /* DAV sandbox. */
-#define SVN_REPOS__LOCK_DIR    "locks"      /* Lock files live here. */
-#define SVN_REPOS__HOOK_DIR    "hooks"      /* Hook programs. */
-#define SVN_REPOS__CONF_DIR    "conf"       /* Configuration files. */
+#define SVN_REPOS__README \
+        "\x52\x45\x41\x44\x4d\x45\x2e\x74\x78\x74"
+        /* "README.txt" - Explanation for trespassers. */
+
+#define SVN_REPOS__FORMAT \
+        "\x66\x6f\x72\x6d\x61\x74"
+        /* "format" - Stores the current version of the repository. */
+        
+#define SVN_REPOS__DB_DIR \
+        "\x64\x62"
+        /* "db" - Where Berkeley lives. */
+
+#define SVN_REPOS__DAV_DIR \
+        "\x64\x61\x76"  
+        /* "dav" - DAV sandbox. */
+
+#define SVN_REPOS__LOCK_DIR \
+        "\x6c\x6f\x63\x6b\x73"
+        /* "locks" - Lock files live here. */
+
+#define SVN_REPOS__HOOK_DIR \
+        "\x68\x6f\x6f\x6b\x73"
+        /* "hooks" - Hook programs. */
+
+#define SVN_REPOS__CONF_DIR \
+        "\x63\x6f\x6e\x66"
+        /* "conf" - Configuration files. */
 
 /* Things for which we keep lockfiles. */
-#define SVN_REPOS__DB_LOCKFILE "db.lock" /* Our Berkeley lockfile. */
-#define SVN_REPOS__DB_LOGS_LOCKFILE "db-logs.lock" /* BDB logs lockfile. */
+#define SVN_REPOS__DB_LOCKFILE \
+        "\x64\x62\x2e\x6c\x6f\x63\x6b"
+        /* "db.lock" - Our Berkeley lockfile. */
+
+#define SVN_REPOS__DB_LOGS_LOCKFILE \
+        "\x64\x62\x2d\x6c\x6f\x67\x73\x2e\x6c\x6f\x63\x6b"
+        /* "db-logs.lock" - BDB logs lockfile. */
 
 /* In the repository hooks directory, look for these files. */
-#define SVN_REPOS__HOOK_START_COMMIT    "start-commit"
-#define SVN_REPOS__HOOK_PRE_COMMIT      "pre-commit"
-#define SVN_REPOS__HOOK_POST_COMMIT     "post-commit"
-#define SVN_REPOS__HOOK_READ_SENTINEL   "read-sentinels"
-#define SVN_REPOS__HOOK_WRITE_SENTINEL  "write-sentinels"
-#define SVN_REPOS__HOOK_PRE_REVPROP_CHANGE  "pre-revprop-change"
-#define SVN_REPOS__HOOK_POST_REVPROP_CHANGE "post-revprop-change"
+#define SVN_REPOS__HOOK_START_COMMIT \
+        "\x73\x74\x61\x72\x74\x2d\x63\x6f\x6d\x6d\x69\x74"
+        /* "start-commit" */
+
+#define SVN_REPOS__HOOK_PRE_COMMIT \
+        "\x70\x72\x65\x2d\x63\x6f\x6d\x6d\x69\x74"
+        /* "pre-commit" */
+
+#define SVN_REPOS__HOOK_POST_COMMIT \
+        "\x70\x6f\x73\x74\x2d\x63\x6f\x6d\x6d\x69\x74"
+        /* "post-commit" */
+
+#define SVN_REPOS__HOOK_READ_SENTINEL \
+        "\x72\x65\x61\x64\x2d\x73\x65\x6e\x74\x69\x6e\x65\x6c\x73"
+        /* "read-sentinels" */
+
+#define SVN_REPOS__HOOK_WRITE_SENTINEL \
+        "\x77\x72\x69\x74\x65\x2d\x73\x65\x6e\x74\x69\x6e\x65\x6c\x73"
+        /* "write-sentinels" */
+
+#define SVN_REPOS__HOOK_PRE_REVPROP_CHANGE \
+        "\x70\x72\x65\x2d\x72\x65\x76\x70\x72\x6f\x70\x2d\x63\x68\x61\x6e" \
+        "\x67\x65"
+        /* "pre-revprop-change" */
+
+#define SVN_REPOS__HOOK_POST_REVPROP_CHANGE \
+        "\x70\x6f\x73\x74\x2d\x72\x65\x76\x70\x72\x6f\x70\x2d\x63\x68\x61" \
+        "\x6e\x67\x65"
+        /* "post-revprop-change" */
 
 
 /* The extension added to the names of example hook scripts. */
-#define SVN_REPOS__HOOK_DESC_EXT        ".tmpl"
+#define SVN_REPOS__HOOK_DESC_EXT \
+        "\x2e\x74\x6d\x70\x6c"
+        /* ".tmpl" */
 
 
 /* In the repository conf directory, look for these files. */
-#define SVN_REPOS__CONF_SVNSERVE_CONF "svnserve.conf"
+#define SVN_REPOS__CONF_SVNSERVE_CONF \
+        "\x73\x76\x6e\x73\x65\x72\x76\x65\x2e\x63\x6f\x6e\x66"
+        /* "svnserve.conf" */ 
 
 
 /* The Repository object, created by svn_repos_open() and

@@ -20,6 +20,9 @@
 
 #include "id.h"
 #include "../libsvn_fs/fs-loader.h"
+#include "svn_utf.h"
+#include "svn_ebcdic.h"
+
 
 
 
@@ -88,16 +91,16 @@ svn_fs_fs__id_unparse (const svn_fs_id_t *id,
 
   if ((! pvt->txn_id))
     {
-      txn_rev_id = apr_psprintf (pool, "%ld/%"
-                                 APR_OFF_T_FMT, pvt->rev, pvt->offset);
+      txn_rev_id = APR_PSPRINTF2 (pool, "%ld/%"
+                                  APR_OFF_T_FMT, pvt->rev, pvt->offset);                              
     }
   else
     {
       txn_rev_id = pvt->txn_id;
     }
-  return svn_string_createf (pool, "%s.%s.%c%s",
+  return svn_string_createf (pool, "%s\x2E%s\x2E%c%s",
                              pvt->node_id, pvt->copy_id,
-                             (pvt->txn_id ? 't' : 'r'),
+                             (pvt->txn_id ? SVN_UTF8_t : SVN_UTF8_r),
                              txn_rev_id);
 }
 
@@ -138,7 +141,7 @@ svn_fs_fs__id_check_related (const svn_fs_id_t *a,
     return TRUE;
   /* If both node_ids start with _ and they have differing transaction
      IDs, then it is impossible for them to be related. */
-  if (pvta->node_id[0] == '_')
+  if (pvta->node_id[0] == SVN_UTF8_UNDERSCORE)
     {
       if (pvta->txn_id && pvtb->txn_id &&
           (strcmp (pvta->txn_id, pvtb->txn_id) != 0))
@@ -235,6 +238,9 @@ svn_fs_fs__id_parse (const char *data,
   svn_fs_id_t *id;
   id_private_t *pvt;
   char *data_copy, *str, *last_str;
+#if APR_CHARSET_EBCDIC
+  char *str_native;
+#endif
 
   /* Dup the ID data into POOL.  Our returned ID will have references
      into this memory. */
@@ -252,38 +258,48 @@ svn_fs_fs__id_parse (const char *data,
      reference string locations inside our duplicate string.*/
 
   /* Node Id */
-  str = apr_strtok (data_copy, ".", &last_str);
+  str = apr_strtok (data_copy, SVN_UTF8_DOT_STR, &last_str);
   if (str == NULL)
     return NULL;
   pvt->node_id = str;
 
   /* Copy Id */
-  str = apr_strtok (NULL, ".", &last_str);
+  str = apr_strtok (NULL, SVN_UTF8_DOT_STR, &last_str);
   if (str == NULL)
     return NULL;
   pvt->copy_id = str;
 
   /* Txn/Rev Id */
-  str = apr_strtok (NULL, ".", &last_str);
+  str = apr_strtok (NULL, SVN_UTF8_DOT_STR, &last_str);
   if (str == NULL)
     return NULL;
 
-  if (str[0] == 'r')
+  if (str[0] == SVN_UTF8_r)
     {
       /* This is a revision type ID */
       pvt->txn_id = NULL;
 
-      str = apr_strtok (str + 1, "/", &last_str);
+      str = apr_strtok (str + 1, SVN_UTF8_FSLASH_STR, &last_str);
       if (str == NULL)
         return NULL;
+#if !APR_CHARSET_EBCDIC
       pvt->rev = SVN_STR_TO_REV (str);
+#else
+      if (svn_utf_cstring_from_utf8 (&str_native, str, pool))
+        str_native = str;
+      pvt->rev = SVN_STR_TO_REV (str_native);      
+#endif           
 
-      str = apr_strtok (NULL, "/", &last_str);
+      str = apr_strtok (NULL, SVN_UTF8_FSLASH_STR, &last_str);
       if (str == NULL)
         return NULL;
+#if APR_CHARSET_EBCDIC
+      if (!svn_utf_cstring_from_utf8 (&str_native, str, pool))
+        str = str_native;    
+#endif        
       pvt->offset = apr_atoi64 (str);
     }
-  else if (str[0] == 't')
+  else if (str[0] == SVN_UTF8_t)
     {
       /* This is a transaction type ID */
       pvt->txn_id = str + 1;

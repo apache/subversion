@@ -39,17 +39,25 @@
 #include "svn_config.h"
 #include "client.h"
 #include <assert.h>
+#include "svn_ebcdic.h"
 
 #include "svn_private_config.h"
 
 /*
  * Constant separator strings
  */
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
+
 static const char equal_string[] = 
   "===================================================================";
 static const char under_string[] =
   "___________________________________________________________________";
 
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
 
 /*-----------------------------------------------------------------*/
 
@@ -65,11 +73,17 @@ file_printf_from_utf8 (apr_file_t *fptr, const char *format, ...)
   const char *buf, *buf_apr;
 
   va_start (ap, format);
-  buf = apr_pvsprintf (apr_file_pool_get (fptr), format, ap); 
+  buf = APR_PVSPRINTF2 (apr_file_pool_get (fptr), format, ap);
   va_end(ap);
 
+#if !APR_CHARSET_EBCDIC
+  /* On ebcdic platforms we produce utf-8 output so no conversion is
+   * performed */
   SVN_ERR (svn_path_cstring_from_utf8 (&buf_apr, buf,
                                        apr_file_pool_get (fptr)));
+#else
+  buf_apr = buf;                                       
+#endif                                       
 
   return svn_io_file_write_full (fptr, buf_apr, strlen (buf_apr), 
                                  NULL, apr_file_pool_get (fptr));
@@ -264,10 +278,10 @@ diff_label (const char *path,
 {
   const char *label;
   if (revnum != SVN_INVALID_REVNUM)
-    label = apr_psprintf (pool, _("%s\t(revision %ld)"),
-                          path, revnum);
+    label = APR_PSPRINTF2 (pool, _("%s\t(revision %ld)"),
+                           path, revnum);
   else
-    label = apr_psprintf (pool, _("%s\t(working copy)"), path);
+    label = APR_PSPRINTF2 (pool, _("%s\t(working copy)"), path);
 
   return label;
 }
@@ -373,9 +387,9 @@ diff_file_changed (svn_wc_adm_access_t *adm_access,
   if (mt1_binary || mt2_binary)
     {
       /* Print out the diff header. */
-      SVN_ERR (svn_stream_printf (os, subpool,
-                                  "Index: %s" APR_EOL_STR
-                                  "%s" APR_EOL_STR, path, equal_string));
+      char *out = APR_PSPRINTF2(subpool, "Index: %s" APR_EOL_STR "%s"
+                                APR_EOL_STR, path, equal_string);
+      SVN_ERR (svn_stream_printf (os, subpool, out));
 
       SVN_ERR (svn_stream_printf
                (os, subpool,
@@ -425,9 +439,10 @@ diff_file_changed (svn_wc_adm_access_t *adm_access,
   if (diff_cmd)
     {
       /* Print out the diff header. */
-      SVN_ERR (svn_stream_printf (os, subpool,
-                                  "Index: %s" APR_EOL_STR
-                                  "%s" APR_EOL_STR, path, equal_string));
+      char *out = APR_PSPRINTF2(subpool, "Index: %s" APR_EOL_STR "%s"
+                                APR_EOL_STR, path, equal_string);      
+      SVN_ERR (svn_stream_printf (os, subpool, out));
+
       /* Close the stream (flush) */
       SVN_ERR (svn_stream_close (os));
 
@@ -463,9 +478,9 @@ diff_file_changed (svn_wc_adm_access_t *adm_access,
       if (svn_diff_contains_diffs (diff) || diff_cmd_baton->force_diff_output)
         {
           /* Print out the diff header. */
-          SVN_ERR (svn_stream_printf (os, subpool,
-                                      "Index: %s" APR_EOL_STR
-                                      "%s" APR_EOL_STR, path, equal_string));
+          char *out = APR_PSPRINTF2(subpool, "Index: %s" APR_EOL_STR "%s"
+                                    APR_EOL_STR, path, equal_string);      
+          SVN_ERR (svn_stream_printf (os, subpool, out));          
 
           /* Output the actual diff */
           SVN_ERR (svn_diff_file_output_unified (os, diff,

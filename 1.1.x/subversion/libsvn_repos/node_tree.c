@@ -35,6 +35,8 @@
 #include "svn_fs.h"
 #include "svn_repos.h"
 #include "repos.h"
+#include "svn_utf.h"
+#include "svn_ebcdic.h"
 
 /*** NOTE: This editor is unique in that it currently is hard-coded to
      be anchored at the root directory of the filesystem.  This
@@ -50,7 +52,7 @@ create_node (const char *name,
              apr_pool_t *pool)
 {
   svn_repos_node_t *node = apr_pcalloc (pool, sizeof (svn_repos_node_t));
-  node->action = 'R';
+  node->action = SVN_UTF8_R;
   node->kind = svn_node_unknown;
   node->name = apr_pstrdup (pool, name);
   node->parent = parent;
@@ -137,7 +139,7 @@ find_real_base_location (const char **path_p,
 {
   /* If NODE is an add-with-history, then its real base location is
      the copy source. */
-  if ((node->action == 'A') 
+  if ((node->action == SVN_UTF8_A) 
       && node->copyfrom_path 
       && SVN_IS_VALID_REVNUM (node->copyfrom_rev))
     {
@@ -162,7 +164,7 @@ find_real_base_location (const char **path_p,
 
   /* Finally, if the node has no parent, then its name is "/", and it
      has no interesting base revision.  */
-  *path_p = "/";
+  *path_p = SVN_UTF8_FSLASH_STR;
   *rev_p = SVN_INVALID_REVNUM;
   return;
 }
@@ -210,7 +212,7 @@ delete_entry (const char *path,
   node = find_child_by_name (d->node, name);
   if (! node)
     node = create_child_node (d->node, name, eb->node_pool);
-  node->action = 'D';
+  node->action = SVN_UTF8_D;
 
   /* We need to look up this node's parents to see what its original
      path in the filesystem was.  Why?  Because if this deletion
@@ -288,7 +290,7 @@ open_root (void *edit_baton,
   d->parent_baton = NULL;
   d->node = (eb->node = create_node ("", NULL, eb->node_pool));
   d->node->kind = svn_node_dir;
-  d->node->action = 'R';
+  d->node->action = SVN_UTF8_R;
   *root_baton = d;
   
   return SVN_NO_ERROR;
@@ -302,7 +304,7 @@ open_directory (const char *path,
                 apr_pool_t *pool,
                 void **child_baton)
 {
-  SVN_ERR (add_open_helper (path, 'R', svn_node_dir, parent_baton,
+  SVN_ERR (add_open_helper (path, SVN_UTF8_R, svn_node_dir, parent_baton,
                             NULL, SVN_INVALID_REVNUM,
                             pool, child_baton));
   return SVN_NO_ERROR;
@@ -317,7 +319,7 @@ add_directory (const char *path,
                apr_pool_t *pool,
                void **child_baton)
 {
-  SVN_ERR (add_open_helper (path, 'A', svn_node_dir, parent_baton,
+  SVN_ERR (add_open_helper (path, SVN_UTF8_A, svn_node_dir, parent_baton,
                             copyfrom_path, copyfrom_revision, 
                             pool, child_baton));
   return SVN_NO_ERROR;
@@ -331,7 +333,7 @@ open_file (const char *path,
            apr_pool_t *pool,
            void **file_baton)
 {
-  SVN_ERR (add_open_helper (path, 'R', svn_node_file, parent_baton,
+  SVN_ERR (add_open_helper (path, SVN_UTF8_R, svn_node_file, parent_baton,
                             NULL, SVN_INVALID_REVNUM,
                             pool, file_baton));
   return SVN_NO_ERROR;
@@ -346,7 +348,7 @@ add_file (const char *path,
           apr_pool_t *pool,
           void **file_baton)
 {
-  SVN_ERR (add_open_helper (path, 'A', svn_node_file, parent_baton,
+  SVN_ERR (add_open_helper (path, SVN_UTF8_A, svn_node_file, parent_baton,
                             copyfrom_path, copyfrom_revision, 
                             pool, file_baton));
   return SVN_NO_ERROR;

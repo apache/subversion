@@ -31,6 +31,7 @@
 #include "svn_time.h"
 #include "svn_pools.h"
 #include "svn_dav.h"
+#include "svn_utf.h"
 
 #include "dav_svn.h"
 
@@ -65,7 +66,14 @@ static dav_error *set_auto_log_message(dav_resource *resource)
                         "a change to\n%s", resource->info->repos_path);
 
   logval = svn_string_create(logmsg, resource->pool);
-
+#if APR_CHARSET_EBCDIC  
+  if (svn_utf_string_to_netccsid(&logval, logval,
+                                 resource->pool))
+    return dav_new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                         apr_psprintf(resource->pool,
+                                      "Error converting string '%s'",
+                                      logval->data));
+#endif   
   serr = svn_repos_fs_change_txn_prop(resource->info->root.txn,
                                       SVN_PROP_REVISION_LOG, logval,
                                       resource->pool);
@@ -216,6 +224,16 @@ dav_error *dav_svn_checkout(dav_resource *resource,
   svn_error_t *serr;
   dav_error *derr;
   dav_svn_uri_info parse;
+  const char *repos_path_utf8 = resource->info->repos_path;
+#if APR_CHARSET_EBCDIC
+  if (svn_utf_cstring_to_netccsid(&repos_path_utf8,
+                                  resource->info->repos_path,
+                                  resource->pool))
+    return dav_new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                         apr_psprintf(resource->pool,
+                                      "Error converting string '%s'",
+                                       resource->info->repos_path));
+#endif   
 
   /* Auto-Versioning Stuff */
   if (auto_checkout)
@@ -445,7 +463,7 @@ dav_error *dav_svn_checkout(dav_resource *resource,
          in the txn against the created-rev of the version resource
          being changed. */
       serr = svn_fs_node_created_rev(&txn_created_rev,
-                                     txn_root, resource->info->repos_path,
+                                     txn_root, repos_path_utf8,
                                      resource->pool);
       if (serr != NULL)
         {
@@ -510,7 +528,7 @@ dav_error *dav_svn_checkout(dav_resource *resource,
               const svn_fs_id_t *url_noderev_id, *txn_noderev_id;
 
               if ((serr = svn_fs_node_id(&txn_noderev_id, txn_root, 
-                                         resource->info->repos_path,
+                                         repos_path_utf8,
                                          resource->pool)))
                 {
                   err = dav_new_error_tag
@@ -524,7 +542,7 @@ dav_error *dav_svn_checkout(dav_resource *resource,
                 }
               if ((serr = svn_fs_node_id(&url_noderev_id,
                                          resource->info->root.root,
-                                         resource->info->repos_path,
+                                         repos_path_utf8,
                                          resource->pool)))
                 {
                   err = dav_new_error_tag
@@ -910,8 +928,13 @@ static apr_status_t send_get_locations_report(ap_filter_t *output,
       const void *key;
       void *value;
       const char *path_quoted;
-
       apr_hash_this(hi, &key, NULL, &value);
+#if APR_CHARSET_EBCDIC
+      if (svn_utf_cstring_from_netccsid((const char **)(&value),
+                                        (const char *)value, 
+                                        pool))
+        return APR_EGENERAL;
+#endif 
       path_quoted = apr_xml_quote_string(pool, value, 1);
       apr_err = ap_fprintf(output, bb, "<S:location "
                            "rev=\"%ld\" path=\"%s\"/>" DEBUG_CR,
@@ -931,6 +954,7 @@ dav_error *dav_svn__get_locations_report(const dav_resource *resource,
   apr_status_t apr_err;
   apr_bucket_brigade *bb;
   dav_svn_authz_read_baton arb;
+  const char *repos_path_utf8 = resource->info->repos_path;
 
   /* The parameters to do the operation on. */
   const char *relative_path = NULL;
@@ -992,11 +1016,24 @@ dav_error *dav_svn__get_locations_report(const dav_resource *resource,
                                SVN_DAV_ERROR_NAMESPACE,
                                SVN_DAV_ERROR_TAG);       
     }
-
+#if APR_CHARSET_EBCDIC
+  if (svn_utf_cstring_to_netccsid(&repos_path_utf8,
+                                  resource->info->repos_path,
+                                  resource->pool))
+    return dav_new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                         apr_psprintf(resource->pool,
+                                      "Error converting string '%s'",
+                                       resource->info->repos_path));
+  if (svn_utf_cstring_to_netccsid(&relative_path, relative_path, 
+                                  resource->pool))
+    return dav_new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                         apr_psprintf(resource->pool,
+                                      "Error converting string '%s'",
+                                       relative_path));                                       
+#endif 
   /* Append the relative paths to the base FS path to get an
      absolute repository path. */
-  abs_path = svn_path_join(resource->info->repos_path, relative_path,
-                           resource->pool);
+  abs_path = svn_path_join(repos_path_utf8, relative_path, resource->pool);
 
   /* Build an authz read baton */
   arb.r = resource->info->r;

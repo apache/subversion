@@ -31,6 +31,8 @@
 #include "svn_error.h"
 #include "svn_io.h"
 #include "svn_ra.h"
+#include "svn_utf.h"
+#include "svn_ebcdic.h"
 #include "svn_private_config.h"
 
 
@@ -44,6 +46,17 @@
    ### current implementation just loads everything, and asks the libraries
    ### what they handle. */
 
+#define DAV_STR \
+        "\x64\x61\x76"
+        /* "dav" */
+
+#define SVN_STR \
+        "\x73\x76\x6e"
+        /* "svn" */
+
+#define LOCAL_STR \
+        "\x6c\x6f\x63\x61\x6c"
+        /* "local" */
 
 
 static const struct ra_lib_defn {
@@ -55,21 +68,21 @@ static const struct ra_lib_defn {
 
 } ra_libraries[] = {
   {
-    "dav",
+    DAV_STR,
 #ifdef SVN_LIBSVN_CLIENT_LINKS_RA_DAV
     svn_ra_dav_init
 #endif
   },
 
   {
-    "svn",
+    SVN_STR,
 #ifdef SVN_LIBSVN_CLIENT_LINKS_RA_SVN
     svn_ra_svn_init
 #endif
   },
 
   {
-    "local",
+    LOCAL_STR,
 #ifdef SVN_LIBSVN_CLIENT_LINKS_RA_LOCAL
     svn_ra_local_init
 #endif
@@ -96,9 +109,9 @@ load_ra_module (svn_ra_init_func_t *func,
     const char *funcname;
     apr_status_t status;
 
-    libname = apr_psprintf (pool, "libsvn_ra_%s-%d.so.0",
+    libname = APR_PSPRINTF (pool, "libsvn_ra_%s-%d.so.0",
                             ra_name, SVN_VER_MAJOR);
-    funcname = apr_psprintf (pool, "svn_ra_%s_init", ra_name);
+    funcname = APR_PSPRINTF (pool, "svn_ra_%s_init", ra_name);
 
     /* find/load the specified library */
     status = apr_dso_load (&dso, libname, pool);
@@ -197,7 +210,7 @@ svn_ra_get_ra_library (svn_ra_plugin_t **library,
           URL to contain a trailing "+foo" section in the scheme, since
           that's how we specify tunnel schemes in ra_svn. */
        if (strncasecmp (keystr, URL, keylen) == 0 &&
-           (URL[keylen] == ':' || URL[keylen] == '+'))
+           (URL[keylen] == SVN_UTF8_COLON || URL[keylen] == SVN_UTF8_PLUS))
         {
           const svn_version_t *my_version = svn_ra_version();
           const svn_version_t *ra_version;
@@ -278,6 +291,7 @@ svn_ra_print_ra_libraries (svn_stringbuf_t **descriptions,
   for (idx = 0; idx < count; ++idx)
     {
       char *line;
+      char *ra_lib_name_native = apr_pstrdup(pool, list[idx].schema);
 
       if (list[idx].ra_lib != prev_ra_lib)
         {
@@ -287,8 +301,8 @@ svn_ra_print_ra_libraries (svn_stringbuf_t **descriptions,
           svn_stringbuf_appendcstr (*descriptions, line);
         }
 
-      line = apr_psprintf (pool, _("  - handles '%s' schema\n"),
-                           list[idx].schema);
+      line = APR_PSPRINTF (pool, _("  - handles '%s' schema\n"),
+                           ra_lib_name_native);
       svn_stringbuf_appendcstr (*descriptions, line);
       prev_ra_lib = list[idx].ra_lib;
     }

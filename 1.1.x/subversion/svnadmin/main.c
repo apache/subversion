@@ -443,11 +443,11 @@ subcommand_create (apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   apr_hash_set (fs_config, SVN_FS_CONFIG_BDB_TXN_NOSYNC,
                 APR_HASH_KEY_STRING,
-                (opt_state->bdb_txn_nosync ? "1" : "0"));
+                (opt_state->bdb_txn_nosync ? SVN_UTF8_1_STR : SVN_UTF8_0_STR));
 
   apr_hash_set (fs_config, SVN_FS_CONFIG_BDB_LOG_AUTOREMOVE,
                 APR_HASH_KEY_STRING,
-                (opt_state->bdb_log_keep ? "0" : "1"));
+                (opt_state->bdb_log_keep ? SVN_UTF8_0_STR : SVN_UTF8_1_STR));
 
   if (opt_state->fs_type)
     apr_hash_set (fs_config, SVN_FS_CONFIG_FS_TYPE,
@@ -627,6 +627,7 @@ subcommand_lstxns (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   svn_fs_t *fs;
   apr_array_header_t *txns;
   int i;
+  const char *txn_name;
   
   SVN_ERR (open_repos (&repos, opt_state->repository_path, pool));
   fs = svn_repos_fs (repos);
@@ -635,8 +636,11 @@ subcommand_lstxns (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   /* Loop, printing revisions. */
   for (i = 0; i < txns->nelts; i++)
     {
-      SVN_ERR (svn_cmdline_printf (pool, "%s\n",
-                                   APR_ARRAY_IDX (txns, i, const char *)));
+      txn_name = APR_ARRAY_IDX (txns, i, const char *);	
+#if APR_CHARSET_EBCDIC
+      SVN_ERR (svn_utf_cstring_from_utf8 (&txn_name, txn_name, pool));
+#endif
+      SVN_ERR (svn_cmdline_printf (pool, "%s\n", txn_name));
     }
   
   return SVN_NO_ERROR;
@@ -850,14 +854,23 @@ subcommand_setlog (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   SVN_ERR (svn_utf_cstring_to_utf8 (&filename_utf8,
                                     APR_ARRAY_IDX (args, 0, const char *),
                                     pool));
+                               
   filename_utf8 = svn_path_internal_style (filename_utf8, pool);
   SVN_ERR (svn_stringbuf_from_file (&file_contents, filename_utf8, pool)); 
 
   log_contents->data = file_contents->data;
   log_contents->len = file_contents->len;
 
-  SVN_ERR (svn_subst_translate_string (&log_contents, log_contents,
-                                       NULL, pool));
+#if !APR_CHARSET_EBCDIC
+  /* svn_subst_translate_string() assumes log_contents is natively encoded, 
+   * but on ebcdic platforms we require all files to be encoded in utf8 and 
+   * force svn_utf_io_file_open to always open files as binary.  On ebcdic
+   * platforms therefore the log_contents are already in utf8 and we don't
+   * want to make this call. 
+   */
+  SVN_ERR (svn_subst_translate_string (&log_contents, log_contents, NULL,
+                                       pool));
+#endif                                       
 
   /* Open the filesystem  */
   SVN_ERR (open_repos (&repos, opt_state->repository_path, pool));

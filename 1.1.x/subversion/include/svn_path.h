@@ -81,6 +81,17 @@ char *svn_path_join (const char *base,
                      const char *component,
                      apr_pool_t *pool);
 
+
+#if APR_CHARSET_EBCDIC
+/** Same as svn_path_join but operates on @a path and @a component which are
+ *  encoded in ebcdic.
+ */
+char *svn_path_join_ebcdic (const char *base,
+                            const char *component,
+                            apr_pool_t *pool);
+#endif
+
+
 /** Join multiple components onto a @a base path, allocated in @a pool. The
  * components are terminated by a @c NULL.
  *
@@ -108,6 +119,14 @@ char *svn_path_join_many (apr_pool_t *pool, const char *base, ...);
  */
 char *svn_path_basename (const char *path, apr_pool_t *pool);
 
+
+#if APR_CHARSET_EBCDIC
+/** Same as svn_path_basename but operates on ebcdic encoded @a path.
+ */
+char *svn_path_basename_ebcdic (const char *path, apr_pool_t *pool);
+#endif
+
+
 /** Get the dirname of the specified canonicalized @a path, defined as
  * the path with its basename removed.
  *
@@ -117,6 +136,14 @@ char *svn_path_basename (const char *path, apr_pool_t *pool);
  * The returned dirname will be allocated in @a pool.
  */
 char *svn_path_dirname (const char *path, apr_pool_t *pool);
+
+
+#if APR_CHARSET_EBCDIC
+/** Same as svn_path_dirname but operates on ebcdic encoded @a path.
+ */
+char *svn_path_dirname_ebcdic (const char *path, apr_pool_t *pool);
+#endif
+
 
 /** Return the number of components in the canonicalized @a path. */
 apr_size_t
@@ -164,6 +191,16 @@ void svn_path_split (const char *path,
                      const char **dirpath,
                      const char **base_name,
                      apr_pool_t *pool);
+
+
+#if APR_CHARSET_EBCDIC
+/** Same as svn_path_split but operates on ebcdic encoded @a path. 
+ */
+void svn_path_split_ebcdic (const char *path, 
+                            const char **dirpath,
+                            const char **base_name,
+                            apr_pool_t *pool);
+#endif
 
 
 /** Return non-zero iff @a path is empty ("") or represents the current
@@ -372,8 +409,41 @@ svn_boolean_t svn_path_is_uri_safe (const char *path);
 /** Return a URI-encoded copy of @a path, allocated in @a pool. */
 const char *svn_path_uri_encode (const char *path, apr_pool_t *pool);
 
+/** Return a URI-encoded copy of native (ebcdic) encoded @a path, 
+ *  allocated in @a pool.  IBM's utf-ebcdic-esque two-byte seqences in @a path
+ *  are left as is.  One-byte characters in @path that need escaping are escaped
+ *  with the utf-8 value.
+ * 
+ *  e.g. "Bj" "\x66" "\xB6" "rns Dir" --> "Bj" "\x66" "\xB6" "rns%20Dir"
+ */
+const char *svn_path_uri_encode_native_partial (const char *path,
+                                                apr_pool_t *pool);
+
+/** Return a URI-encoded copy of native (ebcdic) encoded @a path, 
+ *  allocated in @a pool.  IBM's utf-ebcdic-esque two-byte seqences in @a path
+ *  are left as is.  One-byte characters in @path that need escaping are escaped
+ *  with the ebcdic value.
+ * 
+ *  e.g. "Bj" "\x66" "\xB6" "rns Dir" --> "Bj" "\x66" "\xB6" "rns%40Dir"
+ */
+const char *svn_path_uri_encode_native_partial_2 (const char *path,
+                                                  apr_pool_t *pool);
+                                                
+/** Return a URI-encoded copy of native (ebcdic) encoded @a path, 
+ *  allocated in @a pool. IBM's utf-ebcdic-esque two-byte seqences in @a path
+ *  are escaped with their utf-8 equivalents.
+ * 
+ *  e.g. "Bj" "\x66" "\xB6" "rns Dir" --> "Bj%C3%B6rns%20Dir"
+ */
+const char *svn_path_uri_encode_native_full (const char *path,
+                                             apr_pool_t *pool);
+
 /** Return a URI-decoded copy of @a path, allocated in @a pool. */
 const char *svn_path_uri_decode (const char *path, apr_pool_t *pool);
+
+/** Return a URI-decoded copy of ebcdic encoded @a path,
+ *  allocated in @a pool. */
+const char *svn_path_uri_decode_native (const char *path, apr_pool_t *pool);
 
 /** Extend @a url by a single @a component, URI-encoding that @a component
  * before adding it to the @a url.  Return the new @a url, allocated in
@@ -421,7 +491,6 @@ svn_error_t *svn_path_cstring_from_utf8 (const char **path_apr,
 svn_error_t *svn_path_cstring_to_utf8 (const char **path_utf8,
                                        const char *path_apr,
                                        apr_pool_t *pool);
-
 
 /** @} */
 

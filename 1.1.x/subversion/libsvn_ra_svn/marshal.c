@@ -34,10 +34,28 @@
 #include "svn_error.h"
 #include "svn_pools.h"
 #include "svn_ra_svn.h"
+#include "svn_utf.h"
+#include "svn_ebcdic.h"
 
 #include "ra_svn.h"
 
-#define svn_iswhitespace(c) ((c) == ' ' || (c) == '\n')
+#define svn_iswhitespace(c) ((c) == SVN_UTF8_SPACE || (c) == SVN_UTF8_NEWLINE)
+
+#define FAILURE_STR \
+        "\x66\x61\x69\x6c\x75\x72\x65"
+        /* "failure"*/
+
+#define SUCCESS_STR \
+        "\x73\x75\x63\x63\x65\x73\x73"
+        /* "success"*/
+
+#define FALSE_STR \
+        "\x66\x61\x6c\x73\x65"
+        /*"false"*/
+
+#define TRUE_STR \
+        "\x74\x72\x75\x65" \
+        /* "true" */
 
 /* --- CONNECTION INITIALIZATION --- */
 
@@ -120,7 +138,16 @@ svn_boolean_t svn_ra_svn__input_waiting(svn_ra_svn_conn_t *conn,
     }
   pfd.p = pool;
   pfd.reqevents = APR_POLLIN;
+#ifdef AS400
+{
+  /* IBM's apr_poll() implmentation behaves badly with some large values of n
+   * (apr_palloc fails) so we initialize it. */
+  n = 0;
+  return ((apr_poll(&pfd, 1, &n, 0, pool) == APR_SUCCESS) && n);
+}
+#else
   return ((apr_poll(&pfd, 1, &n, 0) == APR_SUCCESS) && n);
+#endif  
 }
 
 /* --- WRITE BUFFER MANAGEMENT --- */
@@ -210,7 +237,7 @@ static svn_error_t *writebuf_printf(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   char *str;
 
   va_start(ap, fmt);
-  str = apr_pvsprintf(pool, fmt, ap);
+  str = APR_PVSPRINTF2(pool, fmt, ap);
   va_end(ap);
   return writebuf_write(conn, pool, str, strlen(str));
 }
@@ -336,7 +363,7 @@ static svn_error_t *readbuf_skip_leading_garbage(svn_ra_svn_conn_t *conn)
           if (lparen && svn_iswhitespace(*p))
             break;
           else
-            lparen = (*p == '(');
+            lparen = (*p == SVN_UTF8_LPAREN);
         }
       if (p < end)
         break;
@@ -345,7 +372,7 @@ static svn_error_t *readbuf_skip_leading_garbage(svn_ra_svn_conn_t *conn)
   /* p now points to the whitespace just after the left paren.  Fake
    * up the left paren and then copy what we have into the read
    * buffer. */
-  conn->read_buf[0] = '(';
+  conn->read_buf[0] = SVN_UTF8_LPAREN;
   memcpy(conn->read_buf + 1, p, end - p);
   conn->read_ptr = conn->read_buf;
   conn->read_end = conn->read_buf + 1 + (end - p);
@@ -357,22 +384,22 @@ static svn_error_t *readbuf_skip_leading_garbage(svn_ra_svn_conn_t *conn)
 svn_error_t *svn_ra_svn_write_number(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                      apr_uint64_t number)
 {
-  return writebuf_printf(conn, pool, "%" APR_UINT64_T_FMT " ", number);
+  return writebuf_printf(conn, pool, "%" APR_UINT64_T_FMT " ", number);                       
 }
 
 svn_error_t *svn_ra_svn_write_string(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                      const svn_string_t *str)
 {
-  SVN_ERR(writebuf_printf(conn, pool, "%" APR_SIZE_T_FMT ":", str->len));
+  SVN_ERR(writebuf_printf(conn, pool, "%" APR_SIZE_T_FMT ":", str->len));                      
   SVN_ERR(writebuf_write(conn, pool, str->data, str->len));
-  SVN_ERR(writebuf_write(conn, pool, " ", 1));
+  SVN_ERR(writebuf_write(conn, pool, SVN_UTF8_SPACE_STR, 1));
   return SVN_NO_ERROR;
 }
 
 svn_error_t *svn_ra_svn_write_cstring(svn_ra_svn_conn_t *conn,
                                       apr_pool_t *pool, const char *s)
 {
-  return writebuf_printf(conn, pool, "%" APR_SIZE_T_FMT ":%s ", strlen(s), s);
+  return writebuf_printf(conn, pool, "%" APR_SIZE_T_FMT ":%s ", strlen(s), s);                       
 }
 
 svn_error_t *svn_ra_svn_write_word(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
@@ -383,12 +410,12 @@ svn_error_t *svn_ra_svn_write_word(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
 svn_error_t *svn_ra_svn_start_list(svn_ra_svn_conn_t *conn, apr_pool_t *pool)
 {
-  return writebuf_write(conn, pool, "( ", 2);
+  return writebuf_write(conn, pool, "\x28\x20" /* "( " */, 2);
 }
 
 svn_error_t *svn_ra_svn_end_list(svn_ra_svn_conn_t *conn, apr_pool_t *pool)
 {
-  return writebuf_write(conn, pool, ") ", 2);
+  return writebuf_write(conn, pool, "\x29\x20" /* ") " */, 2);
 }
 
 svn_error_t *svn_ra_svn_flush(svn_ra_svn_conn_t *conn, apr_pool_t *pool)
@@ -444,7 +471,7 @@ static svn_error_t *vwrite_tuple(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
         }
       else if (*fmt == 'b' && !opt)
         {
-          cstr = va_arg(ap, svn_boolean_t) ? "true" : "false";
+          cstr = va_arg(ap, svn_boolean_t) ? TRUE_STR : FALSE_STR;
           SVN_ERR(svn_ra_svn_write_word(conn, pool, cstr));
         }
       else if (*fmt == '?')
@@ -528,22 +555,22 @@ static svn_error_t *read_item(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   /* Determine the item type and read it in.  Make sure that c is the
    * first character at the end of the item so we can test to make
    * sure it's whitespace. */
-  if (apr_isdigit(c))
+  if (APR_IS_ASCII_DIGIT(c))
     {
       /* It's a number or a string.  Read the number part, either way. */
-      val = c - '0';
+      val = c - SVN_UTF8_0;
       while (1)
         {
           prev_val = val;
           SVN_ERR(readbuf_getchar(conn, pool, &c));
-          if (!apr_isdigit(c))
+          if (!APR_IS_ASCII_DIGIT(c))
             break;
-          val = val * 10 + (c - '0');
+          val = val * 10 + (c - SVN_UTF8_0);
           if ((val / 10) != prev_val) /* val wrapped past maximum value */
             return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                     "Number is larger than maximum"); 
         }
-      if (c == ':')
+      if (c == SVN_UTF8_COLON)
         {
           /* It's a string. */
           SVN_ERR(read_string(conn, pool, item, val));
@@ -556,21 +583,21 @@ static svn_error_t *read_item(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
           item->u.number = val;
         }
     }
-  else if (apr_isalpha(c))
+  else if (APR_IS_ASCII_ALPHA(c))
     {
       /* It's a word. */
       str = svn_stringbuf_ncreate(&c, 1, pool);
       while (1)
         {
           SVN_ERR(readbuf_getchar(conn, pool, &c));
-          if (!apr_isalnum(c) && c != '-')
+          if (!APR_IS_ASCII_ALNUM(c) && c != SVN_UTF8_MINUS)
             break;
           svn_stringbuf_appendbytes(str, &c, 1);
         }
       item->kind = SVN_RA_SVN_WORD;
       item->u.word = str->data;
     }
-  else if (c == '(')
+  else if (c == SVN_UTF8_LPAREN)
     {
       /* Read in the list items. */
       item->kind = SVN_RA_SVN_LIST;
@@ -578,7 +605,7 @@ static svn_error_t *read_item(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
       while (1)
         {
           SVN_ERR(readbuf_getchar_skip_whitespace(conn, pool, &c));
-          if (c == ')')
+          if (c == SVN_UTF8_RPAREN)
             break;
           listitem = apr_array_push(item->u.list);
           SVN_ERR(read_item(conn, pool, listitem, c));
@@ -638,9 +665,9 @@ static svn_error_t *vparse_tuple(apr_array_header_t *list, apr_pool_t *pool,
         *va_arg(*ap, const char **) = elt->u.word;
       else if (**fmt == 'b' && elt->kind == SVN_RA_SVN_WORD)
         {
-          if (strcmp(elt->u.word, "true") == 0)
+          if (strcmp(elt->u.word, TRUE_STR) == 0)
             *va_arg(*ap, svn_boolean_t *) = TRUE;
-          else if (strcmp(elt->u.word, "false") == 0)
+          else if (strcmp(elt->u.word, FALSE_STR) == 0)
             *va_arg(*ap, svn_boolean_t *) = FALSE;
           else
             break;
@@ -742,14 +769,14 @@ svn_error_t *svn_ra_svn_read_cmd_response(svn_ra_svn_conn_t *conn,
   apr_uint64_t apr_err, line;
 
   SVN_ERR(svn_ra_svn_read_tuple(conn, pool, "wl", &status, &params));
-  if (strcmp(status, "success") == 0)
+  if (strcmp(status, SUCCESS_STR) == 0)
     {
       va_start(ap, fmt);
       err = vparse_tuple(params, pool, &fmt, &ap);
       va_end(ap);
       return err;
     }
-  else if (strcmp(status, "failure") == 0)
+  else if (strcmp(status, FAILURE_STR) == 0)
     {
       /* Rebuild the error list from the end, to avoid reversing the order. */
       if (params->nelts == 0)
@@ -763,11 +790,16 @@ svn_error_t *svn_ra_svn_read_cmd_response(svn_ra_svn_conn_t *conn,
             return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                     "Malformed error list");
           SVN_ERR(svn_ra_svn_parse_tuple(elt->u.list, pool, "nccn", &apr_err,
-                                          &message, &file, &line));
+                                         &message, &file, &line));
           /* The message field should have been optional, but we can't
              easily change that, so "" means a nonexistent message. */
           if (!*message)
             message = NULL;
+#if APR_CHARSET_EBCDIC
+          /* On ebcdic platforms we always assume errors are created with 
+           * natively encoded messages. */
+          SVN_ERR (svn_utf_cstring_from_utf8(&message, message, pool));
+#endif            
           err = svn_error_create(apr_err, err, message);
           err->file = apr_pstrdup(err->pool, file);
           err->line = line;
@@ -850,7 +882,7 @@ svn_error_t *svn_ra_svn_write_cmd_response(svn_ra_svn_conn_t *conn,
   svn_error_t *err;
 
   SVN_ERR(svn_ra_svn_start_list(conn, pool));
-  SVN_ERR(svn_ra_svn_write_word(conn, pool, "success"));
+  SVN_ERR(svn_ra_svn_write_word(conn, pool, SUCCESS_STR));
   va_start(ap, fmt);
   err = vwrite_tuple(conn, pool, fmt, ap);
   va_end(ap);
@@ -864,10 +896,17 @@ svn_error_t *svn_ra_svn_write_cmd_failure(svn_ra_svn_conn_t *conn,
                                           apr_pool_t *pool, svn_error_t *err)
 {
   SVN_ERR(svn_ra_svn_start_list(conn, pool));
-  SVN_ERR(svn_ra_svn_write_word(conn, pool, "failure"));
+  SVN_ERR(svn_ra_svn_write_word(conn, pool, FAILURE_STR));
+                                            
   SVN_ERR(svn_ra_svn_start_list(conn, pool));
   for (; err; err = err->child)
     {
+#if APR_CHARSET_EBCDIC
+      /* ebcdic platforms must convert the string representation of 
+       * err->message and err->file to utf8. */
+      SVN_ERR(svn_utf_cstring_to_utf8(&(err->message), err->message, pool));
+      SVN_ERR(svn_utf_cstring_to_utf8(&(err->file), err->file, pool)); 
+#endif      
       /* The message string should have been optional, but we can't
          easily change that, so marshal nonexistent messages as "". */
       SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "nccn",
