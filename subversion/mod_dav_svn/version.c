@@ -1000,17 +1000,17 @@ static dav_error * dav_svn__get_locks_report(const dav_resource *resource,
           encoded_owner = svn_base64_encode_string(&owner_string, subpool);
           owner_to_send = encoded_owner->data;
           owner_base64 = TRUE;
-          
-          apr_err = ap_fprintf(output, bb,
-                               "<S:owner %s>%s</S:owner>" DEBUG_CR,
-                               owner_base64 ? "encoding=\"base64\"" : "",
-                               owner_to_send);
-          if (apr_err)
-            return dav_svn_convert_err(svn_error_create(apr_err, 0, NULL),
-                                       HTTP_INTERNAL_SERVER_ERROR,
-                                       "Error writing REPORT response.",
-                                       resource->pool);          
         }
+          
+      apr_err = ap_fprintf(output, bb,
+                           "<S:owner %s>%s</S:owner>" DEBUG_CR,
+                           owner_base64 ? "encoding=\"base64\"" : "",
+                           owner_to_send);
+      if (apr_err)
+        return dav_svn_convert_err(svn_error_create(apr_err, 0, NULL),
+                                   HTTP_INTERNAL_SERVER_ERROR,
+                                   "Error writing REPORT response.",
+                                   resource->pool);          
 
       if (lock->comment)
         {
@@ -1043,7 +1043,7 @@ static dav_error * dav_svn__get_locks_report(const dav_resource *resource,
                                        resource->pool);
         }
           
-      apr_err = ap_fprintf(output, bb, "<S:/lock>" DEBUG_CR);
+      apr_err = ap_fprintf(output, bb, "</S:lock>" DEBUG_CR);
       if (apr_err)
         return dav_svn_convert_err(svn_error_create(apr_err, 0, NULL),
                                    HTTP_INTERNAL_SERVER_ERROR,
@@ -1053,9 +1053,7 @@ static dav_error * dav_svn__get_locks_report(const dav_resource *resource,
   svn_pool_destroy(subpool);
 
   /* finish the report */
-  apr_err = ap_fprintf(output, bb,
-                       DAV_XML_HEADER DEBUG_CR
-                       "</S:get-locks-report>");
+  apr_err = ap_fprintf(output, bb, "</S:get-locks-report>" DEBUG_CR);
   if (apr_err)
     return dav_svn_convert_err(svn_error_create(apr_err, 0, NULL),
                                HTTP_INTERNAL_SERVER_ERROR,

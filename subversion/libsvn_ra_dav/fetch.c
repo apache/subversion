@@ -1549,6 +1549,9 @@ svn_ra_dav__get_locks(svn_ra_session_t *session,
   baton.lock_hash = apr_hash_make (pool);
   baton.pool = pool;
   baton.scratchpool = svn_pool_create(pool);
+  baton.err = NULL;
+  baton.current_lock = NULL;
+  baton.encoding = NULL;
 
   baton.cdata_accum.pool = baton.scratchpool;
   baton.cdata_accum.data = NULL;
