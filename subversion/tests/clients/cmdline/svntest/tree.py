@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#  svn_tree.py: tools for comparing directory trees
+#  tree.py: tools for comparing directory trees
 #
 #  Subversion is a tool for revision control. 
 #  See http://subversion.tigris.org for more information.
