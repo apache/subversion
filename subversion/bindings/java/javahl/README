@@ -23,12 +23,9 @@ After building libsvnjavahl.dynlib it has to be renamed to libsvnjavahl.jnilib.
 
 Windows:
 
-You need the bin directory of the JDK (>= 1.2) in your path.
+You need the bin directory of the JDK (>= 1.2) in your path and the include
+and the include\win32 directory have to be in the include path of your visual
+studio.
 
-In subdirectory native there is a Visual Studio Project javahl.dsw
-It has been developed with Visual Studio Version 6
-
-Open this and start a build.
-
-This creates the svnjavahl.dll library in the debug/release
-subdirectory.
+To build use the project/target "__JAVAHL__" of the main subversion workspace.
+The private project/workspace is not used anymore.

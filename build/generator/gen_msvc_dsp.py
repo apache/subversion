@@ -21,6 +21,9 @@ class Generator(gen_win.WinGeneratorBase):
   def default_output(self, conf_path):
     return 'subversion_msvc.dsw'
 
+  def get_project_quote(self):
+    return '"'
+
   def write_project(self, target, fname, rootpath):
     "Write a Project (.dsp)"
 
@@ -28,6 +31,10 @@ class Generator(gen_win.WinGeneratorBase):
       targtype = "Win32 (x86) Console Application"
       targval = "0x0103"
       target.output_name = target.name + '.exe'
+    elif isinstance(target, gen_base.TargetJava):
+        targtype = "Win32 (x86) Generic Project"
+        targval = "0x010a"
+        target.output_name = None
     elif isinstance(target, gen_base.TargetLib):
       if target.msvc_static:
         targtype = "Win32 (x86) Static Library"
@@ -109,6 +116,9 @@ class Generator(gen_win.WinGeneratorBase):
       depends = [ ]
       if not isinstance(target, gen_base.TargetI18N):
         depends = self.adjust_win_depends(target, name)
+	#print name
+	#for dep in depends:
+	#  print "	",dep.name
 
       dep_names = [ ]
       for dep in depends:

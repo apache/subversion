@@ -21,6 +21,9 @@ class Generator(gen_win.WinGeneratorBase):
   def default_output(self, oname):
     return 'subversion_vcnet.sln'
 
+  def get_project_quote(self):
+    return '&quot;'
+
   def write_project(self, target, fname, rootpath):
     "Write a Project (.vcproj)"
 
@@ -28,6 +31,9 @@ class Generator(gen_win.WinGeneratorBase):
       #EXE
       config_type=1
       target.output_name = target.name + '.exe'
+    elif isinstance(target, gen_base.TargetJava):
+      config_type=1
+      target.output_name = None
     elif isinstance(target, gen_base.TargetLib):
       if target.msvc_static:
         config_type=4

@@ -49,6 +49,7 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     self.httpd_path = None
     self.zlib_path = None
     self.openssl_path = None
+    self.junit_path = None
     self.skip_sections = { 'mod_dav_svn': None,
                            'mod_authz_svn': None }
 
@@ -72,6 +73,8 @@ class WinGeneratorBase(gen_base.GeneratorBase):
         self.httpd_path = os.path.abspath(val)
         del self.skip_sections['mod_dav_svn']
         del self.skip_sections['mod_authz_svn']
+      elif opt == '--with-junit':
+        self.junit_path = os.path.abspath(val)
       elif opt == '--with-zlib':
         self.zlib_path = os.path.abspath(val)
       elif opt == '--with-openssl':
@@ -240,12 +243,17 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     "Get the list of source files for each project"
     sources = [ ]
     if not isinstance(target, gen_base.TargetProject):
+      cbuild = None
+      ctarget = None
       for src, reldir in self.get_win_sources(target):
         rsrc = string.replace(os.path.join(rootpath, src), os.sep, '\\')
         if quote_path and '-' in rsrc:
           rsrc = '"%s"' % rsrc
+        if target.needs_windows_custom_build is not None:
+          cbuild = target.get_windows_custom_build(self, rsrc, rootpath)
+          ctarget = target.get_windows_custom_target(rsrc, rootpath)
         sources.append(ProjectItem(path=rsrc, reldir=reldir, user_deps=[],
-                                   custom_build=None))
+                                   custom_build=cbuild, custom_target=ctarget))
 
     if isinstance(target, gen_base.TargetSWIG):
       for obj in self.graph.get_sources(gen_base.DT_LINK, target.name):
@@ -256,13 +264,13 @@ class WinGeneratorBase(gen_base.GeneratorBase):
 
               if isinstance(target, gen_base.TargetSWIGRuntime):
                 bsrc = rootpath + "\\build\\win32\\gen_swig_runtime.py"
+                cbuild = "python $(InputPath) " + target.lang + " " + csrc + " "
+                cbuild = cbuild + self.get_project_quote()+self.swig_libdir
+                cbuild = cbuild + self.get_project_quote()
                 sources.append(ProjectItem(path=bsrc, reldir=None, 
-                                           custom_build="swigrun", 
+                                           custom_build=cbuild, 
                                            custom_target=csrc,
-                                           user_deps=[],
-                                           swig_language=target.lang, 
-                                           swig_output=None,
-                                           swig_libdir=self.swig_libdir))
+                                           user_deps=[]))
                 continue
 
               # output path passed to swig has to use forward slashes,
@@ -280,14 +288,17 @@ class WinGeneratorBase(gen_base.GeneratorBase):
                 if not isinstance(iobj, gen_base.SWIGSource):
                   user_deps.append(isrc)
                   continue
+		cbuild = "swig "+self.swig_options+" -"+target.lang
+		for include in self.get_win_includes(target, rootpath):
+		  cbuild = cbuild + " -I" + self.get_project_quote() + include
+		  cbuild = cbuild + self.get_project_quote()
+		cbuild = cbuild + " -o " + self.get_project_quote() + cout
+		cbuild = cbuild + self.get_project_quote() + " $(InputPath)"
 
                 sources.append(ProjectItem(path=isrc, reldir=None,
-                                           custom_build="swiglib",
+                                           custom_build=cbuild,
                                            custom_target=csrc,
-                                           user_deps=user_deps,
-                                           swig_language=target.lang,
-                                           swig_output=cout,
-                                           swig_libdir=self.swig_libdir))
+                                           user_deps=user_deps))
 
     sources.sort(lambda x, y: cmp(x.path, y.path))
     return sources
@@ -314,7 +325,7 @@ class WinGeneratorBase(gen_base.GeneratorBase):
   
   def adjust_win_depends(self, target, name):
     "Handle special dependencies if needed"
-    
+
     if name == '__CONFIG__':
       depends = []
     else:
