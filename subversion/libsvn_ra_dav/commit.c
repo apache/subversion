@@ -32,7 +32,6 @@
 /*
 ** resource_t: identify the relevant pieces of a resource on the server
 **
-** PATH is the local path (from the WC or server-repository root)
 ** URL refers to the public/viewable/original resource.
 ** VSN_URL refers to the version resource that we stored locally
 ** WR_URL refers to a working resource for this resource
@@ -162,34 +161,110 @@ create_activity (commit_ctx_t *cc)
   return NULL;
 }
 
+static resource_t * add_resource(commit_ctx_t *cc,
+                                 const char *url, const char *vsn_url,
+                                 const char *wr_url)
+{
+  resource_t *res;
+
+  res = apr_pcalloc(cc->ras->pool, sizeof(*res));
+  res->url = url;
+  res->vsn_url = vsn_url;
+  res->wr_url = wr_url;
+
+  apr_hash_set(cc->resources, url, APR_HASH_KEY_STRING, res);
+
+  return res;
+}
+
 static svn_error_t *
 checkout_resource (commit_ctx_t *cc, const char *url, const char **wr_url)
 {
   resource_t *res = apr_hash_get(cc->resources, url, APR_HASH_KEY_STRING);
+  http_req *req;
+  int rv;
+  int code;
+  const char *body;
+  const char *locn = NULL;
+
+  printf("[checkout_resource] CHECKOUT: %s\n", url);
 
   if (res != NULL && res->wr_url != NULL)
     {
-      *wr_url = res->wr_url;
+      if (wr_url != NULL)
+        *wr_url = res->wr_url;
       return NULL;
     }
 
   if (res == NULL)
     {
-      res = apr_pcalloc(cc->ras->pool, sizeof(*res));
+      const char *vsn_url;
 
-      /* ### check to see if we need the copy */
-      res->url = apr_pstrdup(cc->ras->pool, url);
-
-      /* ### need the path */
+      /* ### fetch vsn_url from the local prop store */
+      vsn_url = NULL;
 #if 0
-      SVN_ERR( svn_wc_prop_get(&res->vsn_url, cc->vsn_url_name, path,
+      /* ### need the path */
+      SVN_ERR( svn_wc_prop_get(&vsn_url, cc->vsn_url_name, path,
                                cc->ras->pool) );
 #endif
-      /* ### fetch vsn_url from the local prop store */
+
+      /* ### check to see if we need the copy */
+      res = add_resource(cc, apr_pstrdup(cc->ras->pool, url), vsn_url, NULL);
     }
 
   /* ### send a CHECKOUT resource on res->vsn_url; include cc->activity_url;
      ### place result into res->wr_url and return it */
+
+  /* create/prep the request */
+  req = http_request_create(cc->ras->sess, "CHECKOUT", res->vsn_url);
+  if (req == NULL)
+    {
+      return svn_error_createf(SVN_ERR_RA_CREATING_REQUEST, 0, NULL,
+                               cc->ras->pool,
+                               "Could not create a CHECKOUT request (%s)",
+                               res->vsn_url);
+    }
+
+  /* ### store this into cc to avoid pool growth */
+  body = apr_psprintf(cc->ras->pool,
+                      "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+                      "<D:checkout xmlns:D=\"DAV:\">"
+                      "<D:activity-set>"
+                      "<D:href>%s</D:href>"
+                      "</D:activity-set></D:checkout>", cc->activity_url);
+  http_set_request_body_buffer(req, body);
+
+  http_add_response_header_handler(req, "location",
+                                   http_duplicate_header, &locn);
+
+  /* run the request and get the resulting status code. */
+  rv = http_request_dispatch(req);
+  if (rv != HTTP_OK)
+    {
+      /* ### need to be more sophisticated with reporting the failure */
+      return svn_error_createf(SVN_ERR_RA_REQUEST_FAILED, 0, NULL,
+                               cc->ras->pool,
+                               "The CHECKOUT request failed (#%d) (%s)",
+                               rv, res->vsn_url);
+    }
+
+  code = http_get_status(req)->code;
+
+  http_request_destroy(req);
+
+  if (code != 201)
+    {
+      /* ### error */
+    }
+
+  if (locn == NULL)
+    {
+      /* ### error */
+    }
+
+  res->wr_url = locn;
+  if (wr_url != NULL)
+    *wr_url = locn;
 
   return NULL;
 }
@@ -227,6 +302,8 @@ static svn_error_t * do_proppatch(svn_ra_session_t *ras,
   /* ### we should have res->wr_url */
   /* ### maybe pass wr_url rather than resource_t* */
 
+  printf("[do_proppatch] PROPPATCH: %s\n", res->url);
+
   return NULL;
 }
 
@@ -252,11 +329,10 @@ commit_delete_item (svn_string_t *name, void *parent_baton)
   dir_baton_t *parent = parent_baton;
   const char *workcol;
   const char *child;
-#if 0
   int code;
-#endif
 
   /* get the URL to the working collection */
+  printf("[delete_item] ");
   SVN_ERR( checkout_resource(parent->cc, parent->res.url, &workcol) );
 
   /* create the URL for the child resource */
@@ -264,7 +340,6 @@ commit_delete_item (svn_string_t *name, void *parent_baton)
   /* ### what if the child is already checked out? possible? */
   child = apr_pstrcat(parent->cc->ras->pool, workcol, "/", name->data, NULL);
 
-#if 0
   /* delete the child resource */
   SVN_ERR( simple_request(parent->cc->ras, "DELETE", child, &code) );
   if (code != 200)
@@ -274,11 +349,8 @@ commit_delete_item (svn_string_t *name, void *parent_baton)
                                parent->cc->ras->pool,
                                "Could not DELETE %s", child);
     }
-#endif
 
-  /* ### CHECKOUT parent collection, then DELETE */
-  printf("[delete] CHECKOUT: %s\n[delete] DELETE: %s\n",
-         parent->res.url, child);
+  printf("[delete] DELETE: %s\n", child);
 
   return NULL;
 }
@@ -292,15 +364,36 @@ commit_add_dir (svn_string_t *name,
 {
   dir_baton_t *parent = parent_baton;
   dir_baton_t *child = apr_pcalloc(parent->cc->ras->pool, sizeof(*child));
+  const char *workcol;
+  const char *newcol;
+  int code;
 
   child->cc = parent->cc;
   child->res.url = apr_pstrcat(child->cc->ras->pool, parent->res.url,
                                "/", name->data, NULL);
 
-  /* ### CHECKOUT parent, then: if ancestor: COPY; if no ancestor: MKCOL */
+  /* get the URL to the working collection */
+  printf("[add_dir] ");
+  SVN_ERR( checkout_resource(parent->cc, parent->res.url, &workcol) );
 
-  printf("[add_dir] CHECKOUT: %s\n[add_dir] MKCOL: %s\n",
-         parent->res.url, child->res.url);
+  /* create the URL for the child resource */
+  /* ### does the workcol have a trailing slash? do some extra work */
+  newcol = apr_pstrcat(parent->cc->ras->pool, workcol, "/", name->data, NULL);
+
+  /* ### no support for ancestor right now. that will use COPY */
+
+  /* create the new collection */
+  SVN_ERR( simple_request(parent->cc->ras, "MKCOL", newcol, &code) );
+  if (code != 201)
+    {
+      /* ### need to be more sophisticated with reporting the failure */
+      /* ### need error */
+    }
+
+  printf("[add_dir] MKCOL: %s\n", child->res.url);
+
+  /* record information about the new collection */
+  add_resource(parent->cc, child->res.url, NULL, newcol);
 
   *child_baton = child;
   return NULL;
@@ -309,7 +402,7 @@ commit_add_dir (svn_string_t *name,
 static svn_error_t *
 commit_rep_dir (svn_string_t *name,
                 void *parent_baton,
-                svn_string_t *ancestor_path,
+   /* BOGUS: */ svn_string_t *ancestor_path,
                 svn_revnum_t ancestor_revision,
                 void **child_baton)
 {
@@ -320,14 +413,15 @@ commit_rep_dir (svn_string_t *name,
   child->res.url = apr_pstrcat(child->cc->ras->pool, parent->res.url,
                                "/", name->data, NULL);
 
-  /* ### if replacing with ancestor of something else, then CHECKOUT target
-     ### and COPY ancestor over the target (Overwrite: update)
-     ### replace w/o an ancestor is just a signal for change within the
-     ### dir and we do nothing
+  /*
+  ** Note: replace_dir simply means that a change has occurred somewhere
+  **       within this directory. We have nothing to do, to prepare for
+  **       those changes (each will be considered independently).
+  **
+  ** Note: if a directory is replaced by something else, then this callback
+  **       will not be used: a true replacement is modeled with a "delete"
+  **       followed by an "add".
   */
-
-  printf("[rep_dir] CHECKOUT: %s\n[rep_dir] COPY: %s -> %s\n",
-         parent->res.url, ancestor_path->data, child->res.url);
 
   *child_baton = child;
   return NULL;
@@ -340,14 +434,15 @@ commit_change_dir_prop (void *dir_baton,
 {
   dir_baton_t *dir = dir_baton;
 
-  /* ### do the CHECKOUT now, or wait for close_dir? probably sooner rather
-     ### than later is better. */
-
+  /* record the change. it will be applied at close_dir time. */
   record_prop_change(dir->cc->ras->pool, &dir->prop_changes, name, value);
 
-  printf("[change_dir_prop] CHECKOUT: %s\n"
-         "[change_dir_prop] PROPPATCH: %s (%s=%s)\n",
-         dir->res.url, dir->res.url, name->data, value->data);
+  /* do the CHECKOUT sooner rather than later */
+  printf("[change_dir_prop] ");
+  SVN_ERR( checkout_resource(dir->cc, dir->res.url, NULL) );
+
+  printf("[change_dir_prop] %s: %s=%s\n",
+         dir->res.url, name->data, value->data);
 
   return NULL;
 }
@@ -357,8 +452,9 @@ commit_close_dir (void *dir_baton)
 {
   dir_baton_t *dir = dir_baton;
 
-  /* ### maybe do the CHECKOUT here? */
-  /* ### issue a PROPPATCH with dir_baton->prop_changes */
+  /* Perform all of the property changes on the directory. Note that we
+     checked out the directory when the first prop change was noted. */
+  printf("[close_dir] ");
   SVN_ERR( do_proppatch(dir->cc->ras, &dir->res, dir->prop_changes) );
 
   return NULL;
@@ -379,8 +475,20 @@ commit_add_file (svn_string_t *name,
                               "/", name->data, NULL);
   /* ### store name, parent? */
 
-  /* ### CHECKOUT parent (then PUT in apply_txdelta) */
-  printf("[add_file] CHECKOUT: %s\n", file->res.url);
+  /*
+  ** To add a new file into the repository, we CHECKOUT the parent
+  ** collection, then PUT the file as a member of the resuling working
+  ** collection.
+  **
+  ** If the file was copied from elsewhere, then we will use the COPY
+  ** method to copy from [### where?] into the working collection.
+  */
+
+  /* ### ancestor_path is ignored for now */
+
+  /* do the CHECKOUT now. we'll PUT the new file later on. */
+  printf("[add_file] ");
+  SVN_ERR( checkout_resource(parent->cc, parent->res.url, NULL) );
 
   /* ### wait for apply_txdelta before doing a PUT. it might arrive a
      ### "long time" from now. certainly after many other operations, so
@@ -395,7 +503,7 @@ commit_add_file (svn_string_t *name,
 static svn_error_t *
 commit_rep_file (svn_string_t *name,
                  void *parent_baton,
-                 svn_string_t *ancestor_path,
+    /* BOGUS: */ svn_string_t *ancestor_path,
                  svn_revnum_t ancestor_revision,
                  void **file_baton)
 {
@@ -407,11 +515,9 @@ commit_rep_file (svn_string_t *name,
                               "/", name->data, NULL);
   /* ### store more info? */
 
-  /* ### CHECKOUT (then PUT in apply_txdelta) */
-  /* ### if replacing with a specific ancestor, then COPY */
-  /* ### what about "replace with ancestor, *plus* these changes"? that
-     ### would be a COPY followed by a PUT */
-  printf("[rep_file] CHECKOUT: %s\n", file->res.url);
+  /* do the CHECKOUT now. we'll PUT the new file contents later on. */
+  printf("[rep_file] ");
+  SVN_ERR( checkout_resource(parent->cc, file->res.url, NULL) );
 
   /* ### wait for apply_txdelta before doing a PUT. it might arrive a
      ### "long time" from now. certainly after many other operations, so
@@ -453,14 +559,15 @@ commit_change_file_prop (void *file_baton,
 {
   file_baton_t *file = file_baton;
 
-  /* ### do the CHECKOUT now, or wait for close_file? probably sooner rather
-     ### than later is better. */
-
+  /* record the change. it will be applied at close_file time. */
   record_prop_change(file->cc->ras->pool, &file->prop_changes, name, value);
 
-  printf("[change_file_prop] CHECKOUT: %s\n"
-         "[change_file_prop] PROPPATCH: %s (%s=%s)\n",
-         file->res.url, file->res.url, name->data, value->data);
+  /* do the CHECKOUT sooner rather than later */
+  printf("[change_file_prop] ");
+  SVN_ERR( checkout_resource(file->cc, file->res.url, NULL) );
+
+  printf("[change_file_prop] %s: %s=%s\n",
+         file->res.url, name->data, value->data);
 
   return NULL;
 }
@@ -470,8 +577,9 @@ commit_close_file (void *file_baton)
 {
   file_baton_t *file = file_baton;
 
-  /* ### maybe do the CHECKOUT here? */
-  /* ### issue a PROPPATCH with file_baton->prop_changes */
+  /* Perform all of the property changes on the file. Note that we
+     checked out the file when the first prop change was noted. */
+  printf("[close_file] ");
   SVN_ERR( do_proppatch(file->cc->ras, &file->res, file->prop_changes) );
 
   return NULL;
@@ -483,8 +591,8 @@ commit_close_edit (void *edit_baton)
   commit_ctx_t *cc = edit_baton;
   svn_revnum_t new_revision = SVN_INVALID_REVNUM;
 
-  /* ### CHECKIN the activity */
-  printf("[close_edit] CHECKIN: %s\n",
+  /* ### MERGE the activity */
+  printf("[close_edit] MERGE: %s\n",
          cc->activity_url ? cc->activity_url : "(activity)");
 
   /* ### set new_revision according to response from server */
@@ -531,8 +639,7 @@ svn_error_t * svn_ra_dav__get_commit_editor(
   cc->resources = apr_make_hash(ras->pool);
   cc->vsn_url_name = svn_string_create(SVN_RA_DAV__LP_VSN_URL, ras->pool);
 
-  /* ### disable for now */
-  err = 0 && create_activity(cc);
+  err = create_activity(cc);
   if (err)
     return err;
 
