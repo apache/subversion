@@ -60,3 +60,10 @@ Candidate changes:
       User complaint.  Simple fix in javahl binding only.
     Votes:
       +1: pmayweg
+
+  * r11486 (Issue 2082)
+    Fix a compiler error on IRIX.
+    Justification:  
+      Shouldn't fail to compile due to syntax errors.
+    Votes:
+      +1: breser
