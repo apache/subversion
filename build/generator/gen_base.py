@@ -382,13 +382,6 @@ class TargetLinked(Target):
     Target.__init__(self, name, options, cfg, extmap)
     self.install = options.get('install')
 
-    if not self.install:
-      try:
-        self.install = self.default_install
-      except AttributeError:
-        raise GenError('Class "%s" has no default install location'
-                       % self.__class__.__name__)
-
     # default output name; subclasses can/should change this
     self.output = os.path.join(self.path, name)    
 
@@ -435,7 +428,6 @@ class TargetLinked(Target):
     return sources
 
 class TargetExe(TargetLinked):
-  default_install = 'bin'
   default_sources = '*.c'
 
   def __init__(self, name, options, cfg, extmap):
@@ -445,7 +437,6 @@ class TargetExe(TargetLinked):
     self.output = os.path.join(self.path, name + extmap['exe', 'target'])
 
 class TargetScript(Target):
-  default_install = 'bin'
   # no default_sources
 
   def add_dependencies(self, src_patterns, graph):
@@ -456,7 +447,6 @@ class TargetScript(Target):
     graph.add(DT_INSTALL, self.install, self)
 
 class TargetLib(TargetLinked):
-  default_install = 'lib'
   default_sources = '*.c'
 
   def __init__(self, name, options, cfg, extmap):
@@ -478,15 +468,13 @@ class TargetLib(TargetLinked):
     self.output = os.path.join(self.path, tfile)
 
 class TargetDoc(Target):
-  # no default_install
   default_sources = '*.texi'
 
-class TargetSWIG(TargetLinked):
-  default_install = 'swig'
+class TargetSWIG(Target):
   # no default_sources
 
   def __init__(self, name, options, cfg, extmap):
-    TargetLinked.__init__(self, name, options, cfg, extmap)
+    Target.__init__(self, name, options, cfg, extmap)
     self._objext = extmap['lib', 'object']
     self._libext = extmap['lib', 'target']
 
@@ -546,11 +534,9 @@ class TargetSWIG(TargetLinked):
       graph.add(DT_LINK, library.name, util)
 
       # the specified install area depends upon the library
-      graph.add(DT_INSTALL, self.install + '-' + abbrev, library)
+      graph.add(DT_INSTALL, 'swig-' + abbrev, library)
 
 class TargetSWIGRuntime(TargetSWIG):
-  default_install = 'swig_runtime'
-
   def add_dependencies(self, src_patterns, graph):
     self._libraries = {}
     for lang in self.cfg.swig_lang:
@@ -574,7 +560,7 @@ class TargetSWIGRuntime(TargetSWIG):
       graph.add(DT_LINK, library.name, ofile)
 
       self._libraries[lang] = library
-      graph.add(DT_INSTALL, self.install + '-' + abbrev, library)
+      graph.add(DT_INSTALL, self.name + '-' + abbrev, library)
 
   def get_library(self, lang):
     return self._libraries.get(lang, None)
@@ -590,25 +576,19 @@ class TargetSpecial(Target):
     pass
 
 class TargetProject(TargetSpecial):
-  default_install = 'project'
-
   def __init__(self, name, options, cfg, extmap):
     TargetSpecial.__init__(self, name, options, cfg, extmap)
     self.project_name = options.get('project_name')
 
 class TargetExternal(TargetSpecial):
-  default_install = 'external'
-
   def __init__(self, name, options, cfg, extmap):
     TargetSpecial.__init__(self, name, options, cfg, extmap)
     self.cmd = options.get('cmd')
 
 class TargetUtility(TargetSpecial):
-  default_install = 'utility'
+  pass
 
 class TargetSWIGUtility(TargetUtility):
-  default_install = 'swig_utility'
-
   def __init__(self, name, options, cfg, extmap):
     TargetSpecial.__init__(self, name, options, cfg, extmap)  
     self.language = options.get('language')
