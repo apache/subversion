@@ -55,7 +55,7 @@ svn_error_t *svn_fs__get_rev (svn_fs__revision_t **revision_p,
    allocation in TRAIL->pool.  */
 svn_error_t *svn_fs__put_rev (svn_revnum_t *rev,
                               svn_fs_t *fs,
-                              svn_fs__revision_t *revision,
+                              const svn_fs__revision_t *revision,
                               trail_t *trail);
 
 
