@@ -214,8 +214,7 @@ def textual_merges_galore(sbox):
 
   # Do the first merge, revs 1:3.  This tests all the cases except
   # case 4, which we'll handle in a second pass.
-  expected_output = wc.State(other_wc, {'A/mu'       : Item(status='  '),
-                                        'A/B/lambda' : Item(status='U '),
+  expected_output = wc.State(other_wc, {'A/B/lambda' : Item(status='U '),
                                         'A/D/G/rho'  : Item(status='U '),
                                         'A/D/G/pi'   : Item(status='G '),
                                         'A/D/G/tau'  : Item(status='C '),
@@ -831,13 +830,6 @@ def merge_catches_nonexistent_target(sbox):
     os.chdir(G_path)
     out, err = svntest.main.run_svn(0, 'merge', '-r', '2:3', Q_url)
     if err:
-      raise svntest.Failure
-    found = None
-    for line in out:
-      if re.match("\\s+newfile", line):
-        found = 1
-    if not found:
-      print "Did not see expected output for unmerged file \'newfile\'\n"
       raise svntest.Failure
   finally:
     os.chdir(saved_cwd)

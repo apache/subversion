@@ -151,7 +151,11 @@ notify (void *baton,
             else if (prop_state == svn_wc_notify_state_changed)
               statchar_buf[1] = 'U';
 
-            printf ("%s %s\n", statchar_buf, path_native);
+            if (! ((content_state == svn_wc_notify_state_unchanged
+                    || content_state == svn_wc_notify_state_unknown)
+                   && (prop_state == svn_wc_notify_state_unchanged
+                       || prop_state == svn_wc_notify_state_unknown)))
+              printf ("%s %s\n", statchar_buf, path_native);
           }
       }
       break;
