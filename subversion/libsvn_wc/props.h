@@ -23,7 +23,7 @@
 #include <apr_pools.h>
 #include "svn_types.h"
 #include "svn_string.h"
-#include "svn_error.h"
+#include "svn_props.h"
 
 
 #ifdef __cplusplus

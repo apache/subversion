@@ -22,8 +22,8 @@
 #define SVN_LIBSVN_SUBR_UTF_IMPL_H
 
 
-#include "svn_error.h"
-#include "svn_pools.h"
+#include <apr_pools.h>
+#include "svn_types.h"
 
 #ifdef __cplusplus
 extern "C" {
