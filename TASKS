@@ -17,9 +17,3 @@ to take something on.
 
 4. Start writing a basic command-line client, to talk over the network
    to the Apache-connected Subversion server (see 3).
-
-
-5. Finish the xml outputter in xml.c (hey, this one is doable right
-   now -- anyone wanna pick it up?  It's *begging*, can't you hear
-   it?... :-)  It will be useful for Milestone 1 and for Bob Miller's
-   cvs2svn conversion tool, probably.)
