@@ -188,7 +188,7 @@ svn_wc_statuses (apr_hash_t *statushash,
       if (err) return err;
 
       /* Get the entry by looking up file's basename */
-      value = apr_hash_get (entries, basename->data, APR_HASH_KEY_STRING);
+      value = apr_hash_get (entries, basename->data, basename->len);
 
       if (value)  
         entry = (svn_wc_entry_t *) value;
