@@ -7,21 +7,22 @@ rm -rf test1
 CVSROOT="`pwd`/test1/repo" export CVSROOT
 
 mkdir -p test1
+cd test1
 cvs -Q init
 
 # Create and import some files.
 
-mkdir -p test1/import
+mkdir -p import
 (
-    cd test1/import
+    cd import
     echo "This is file1.txt." > file1.txt
     echo "This is deadfile." > deadfile
     cvs -Q import -m 'Initial import.' main vendor-tag release-tag
 )
 
-mkdir -p test1/work1
+mkdir -p work1
 (
-    cd test1/work1
+    cd work1
     cvs -Q checkout main
     cd main
     {
@@ -30,7 +31,7 @@ mkdir -p test1/work1
 	echo ' '
 	echo end
     } | uudecode
-    rm deadfile
+    rm -f deadfile
     cvs -Q add -kb file2.bin
     cvs -Q remove deadfile
     cvs -Q commit -m 'Log message one.'
