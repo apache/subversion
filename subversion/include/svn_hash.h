@@ -1,6 +1,5 @@
-/*
- * svn_hash.h :  dumping and reading hash tables to/from files.
- *
+/**
+ * @copyright
  * ====================================================================
  * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
  *
@@ -14,6 +13,12 @@
  * individuals.  For exact contribution history, see the revision
  * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
+ * @endcopyright
+ *
+ * @file svn_hash.h
+ * @brief Dumping and reading hash tables to/from files.
+ *
+ * @{
  */
 
 
@@ -31,63 +36,83 @@ extern "C" {
 #endif /* __cplusplus */
 
 
-/* The longest the "K <number>" line can be in one of our hashdump files. */
+/** The longest the "K <number>" line can be in one of our hashdump files. */
 #define SVN_KEYLINE_MAXLEN 100
 
 
 /*----------------------------------------------------*/
 
-/*** Reading/writing hashtables to disk ***/
+/** Reading/writing hashtables to disk
+ *
+ * @defgroup svn_hash_read_write reading and writing hashtables to disk
+ * @{
+ */
 
-/* Read a hash table from SRCFILE, storing the resultants names and
- * values in HASH.  Use a POOL for all allocations.  HASH will have
- * const char * keys and svn_string_t * values.  
+/** Read a hash table from a file.
+ *
+ * Read a hash table from @a srcfile, storing the resultants names and
+ * values in @a hash.  Use a @a pool for all allocations.  @a hash will 
+ * have <tt>const char *</tt> keys and <tt>svn_string_t *</tt> values.  
  */
 apr_status_t svn_hash_read (apr_hash_t *hash, 
                             apr_file_t *srcfile,
                             apr_pool_t *pool);
 
-/* Dump HASH to DESTFILE.  Use POOL for all allocations.  HASH has
- * const char * keys and svn_string_t values.  
+/** Write a hash to a file.
+ *
+ * Dump @a hash to @a destfile.  Use @a pool for all allocations.  @a hash 
+ * has <tt>const char *</tt> keys and <tt>svn_string_t *</tt> values.  
  */
 apr_status_t svn_hash_write (apr_hash_t *hash, 
                              apr_file_t *destfile,
                              apr_pool_t *pool);
 
+/** @} */
 
 
-/*** Taking the "diff" of two hash tables. ***/
+/** Taking the "diff" of two hash tables.
+ *
+ * @defgroup svn_hash_diff taking the diff of two hash tables.
+ * @{
+ */
 
-/* Hash key status indicator for svn_hash_diff_func_t.  */
+/** Hash key status indicator for svn_hash_diff_func_t.  */
 enum svn_hash_diff_key_status
   {
-    svn_hash_diff_key_both,  /* Key is present in both hashes. */
-    svn_hash_diff_key_a,     /* Key is present in first hash only. */
-    svn_hash_diff_key_b      /* Key is present in second hash only. */
+    /* Key is present in both hashes. */
+    svn_hash_diff_key_both,
+
+    /* Key is present in first hash only. */
+    svn_hash_diff_key_a,
+
+    /* Key is present in second hash only. */
+    svn_hash_diff_key_b
   };
 
 
-/* Function type for expressing a key's status between two hash tables. */
+/** Function type for expressing a key's status between two hash tables. */
 typedef svn_error_t *(*svn_hash_diff_func_t)
        (const void *key, apr_ssize_t klen,
         enum svn_hash_diff_key_status status,
         void *baton);
 
 
-/* For each key in the union of HASH_A's and HASH_B's keys, invoke
- * DIFF_FUNC exactly once, passing the key, the key's length, an enum
- * svn_hash_diff_key_status indicating which table(s) the key appears
- * in, and DIFF_FUNC_BATON.
+/** Take the diff of two hashtables.
  *
- * Process all keys of HASH_A first, then all remaining keys of HASH_B. 
+ * For each key in the union of @a hash_a's and @a hash_b's keys, invoke
+ * @a diff_func exactly once, passing the key, the key's length, an enum
+ * @c svn_hash_diff_key_status indicating which table(s) the key appears
+ * in, and @a diff_func_baton.
  *
- * If DIFF_FUNC returns error, return that error immediately, without
- * applying DIFF_FUNC to anything else.
+ * Process all keys of @a hash_a first, then all remaining keys of @a hash_b. 
  *
- * HASH_A or HASH_B or both may be null; treat a null table as though
+ * If @a diff_func returns error, return that error immediately, without
+ * applying @a diff_func to anything else.
+ *
+ * @a hash_a or @a hash_b or both may be null; treat a null table as though
  * empty.
  *
- * Use POOL for temporary allocation.
+ * Use @a pool for temporary allocation.
  */
 svn_error_t *svn_hash_diff (apr_hash_t *hash_a,
                             apr_hash_t *hash_b,
@@ -95,6 +120,7 @@ svn_error_t *svn_hash_diff (apr_hash_t *hash_a,
                             void *diff_func_baton,
                             apr_pool_t *pool);
 
+/** @} */
 
 #ifdef __cplusplus
 }
