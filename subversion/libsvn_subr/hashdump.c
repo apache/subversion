@@ -128,14 +128,21 @@ svn_unpack_bytestring (char **returndata, void *value)
  *
  *  Input:  some bytes, a length, a pool
  *
- *  Returns:  an svn_string_t to store as a hash value
+ *  Returns:  an svn_string_t containing them, to store as a hash
+ *            value.
+ *
+ *  Just copies the pointer, does not duplicate the data!
  *
  */
 
 void *
 svn_pack_bytestring (size_t len, const char *val, ap_pool_t *pool)
 {
-  svn_string_t *valstring = svn_string_ncreate (val, len, pool);
+  svn_string_t *valstring = ap_palloc (pool, sizeof(svn_string_t)); 
+
+  valstring->len       = len;
+  valstring->blocksize = len;
+  valstring->data      = val;
 
   return valstring;
 }
