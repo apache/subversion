@@ -37,10 +37,7 @@ svn_path_get_absolute(svn_stringbuf_t **pabsolute,
                       const svn_stringbuf_t *relative,
                       apr_pool_t *pool)
 {
-  /* Why do I get an warning if I just use &real_buffer, in the call to 
-     apr_filepath_merge?? */
-  char real_buffer[APR_PATH_MAX];
-  char * buffer = real_buffer;
+  char * buffer;
   int apr_err = apr_filepath_merge(&buffer, NULL, relative->data,
                                    APR_FILEPATH_NOTRELATIVE &
                                    APR_FILEPATH_NATIVE & 
