@@ -845,6 +845,7 @@ svn_repos_get_logs3 (svn_repos_t *repos,
 
 /**
  * @deprecated Provided for backward compatibility with the 1.1 API.
+ * Same as svn_get_logs3(), but with @a limit always set to 0.
  */
 svn_error_t *
 svn_repos_get_logs2 (svn_repos_t *repos,
@@ -862,7 +863,7 @@ svn_repos_get_logs2 (svn_repos_t *repos,
 /** 
  * @deprecated Provided for backward compatibility with the 1.0 API.
  *
- * Same as to svn_repos_dump_fs2(), but with @a authz_read_func and
+ * Same as svn_get_logs2(), but with @a authz_read_func and
  * @a authz_read_baton always set to NULL.
  */
 svn_error_t *
