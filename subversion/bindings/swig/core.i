@@ -18,23 +18,11 @@
 
 %module core
 
-#ifdef SWIGPERL
-    /* We want the error code enums wrapped so we must include error_codes.h
-       before anything else does. */
-    %include svn_error_codes.h
-#endif
-
 %include typemaps.i
 
 %{
 #include "svn_opt.h"
 %}
-
-/* ----------------------------------------------------------------------- 
-   include svn_types.h early. other .i files will import svn_types.i which
-   then includes svn_types.h, making further includes get skipped. we want
-   to actually generate wrappers, so manage svn_types.h right here.
-*/
 
 /* We don't want to hear about supposedly bad constant values */
 #pragma SWIG nowarn=305
@@ -52,6 +40,19 @@
 %immutable svn_dirent_t::last_author;
 %immutable svn_error_t::message;
 %immutable svn_error_t::file;
+
+/* ----------------------------------------------------------------------- 
+   We want the error code enums wrapped so we must include svn_error_codes.h
+   before anything else does. 
+*/
+
+%include svn_error_codes.h
+
+/* ----------------------------------------------------------------------- 
+   Include svn_types.h early. other .i files will import svn_types.i which
+   then includes svn_types.h, making further includes get skipped. we want
+   to actually generate wrappers, so manage svn_types.h right here.
+*/
 
 %include svn_types.h
 
@@ -318,7 +319,6 @@ PyObject *svn_swig_py_exception_type(void);
 %include svn_auth.h
 %include svn_config.h
 %include svn_version.h
-%include svn_error_codes.h
 
 
 /* SWIG won't follow through to APR's defining this to be empty, so we
