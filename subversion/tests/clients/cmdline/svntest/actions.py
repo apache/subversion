@@ -219,6 +219,47 @@ def run_and_verify_checkout(URL, wc_dir_name, output_tree, disk_tree,
                       singleton_handler_b, b_baton)
 
 
+def run_and_verify_export(URL, export_dir_name, output_tree, disk_tree,
+                          singleton_handler_a = None,
+                          a_baton = None,
+                          singleton_handler_b = None,
+                          b_baton = None):
+  """Export the URL into a new directory WC_DIR_NAME.
+
+  The subcommand output will be verified against OUTPUT_TREE,
+  and the exported copy itself will be verified against DISK_TREE.
+  SINGLETON_HANDLER_A and SINGLETON_HANDLER_B will be passed to
+  tree.compare_trees - see that function's doc string for more details.
+  Returns if successful and raise on failure."""
+
+  if isinstance(output_tree, wc.State):
+    output_tree = output_tree.old_tree()
+  if isinstance(disk_tree, wc.State):
+    disk_tree = disk_tree.old_tree()
+
+  # Export and make a tree of the output, using l:foo/p:bar
+  ### todo: svn should not be prompting for auth info when using
+  ### repositories with no auth/auth requirements
+  output, errput = main.run_svn (None, 'export',
+                                 '--username', main.wc_author,
+                                 '--password', main.wc_passwd,
+                                 URL, export_dir_name)
+  mytree = tree.build_tree_from_checkout (output)
+
+  # Verify actual output against expected output.
+  tree.compare_trees (mytree, output_tree)
+
+  # Create a tree by scanning the working copy.  Don't ignore
+  # the .svn directories so that we generate an error if they
+  # happen to show up.
+  mytree = tree.build_tree_from_wc (export_dir_name, ignore_svn=0)
+
+  # Verify expected disk against actual disk.
+  tree.compare_trees (mytree, disk_tree,
+                      singleton_handler_a, a_baton,
+                      singleton_handler_b, b_baton)
+
+
 def verify_update(actual_output, wc_dir_name,
                   output_tree, disk_tree, status_tree,
                   singleton_handler_a, a_baton,
