@@ -77,7 +77,7 @@ Prompter *Prompter::makeCPrompter(jobject jpromper)
 	bool v3 = false;
 	if(v2)
 	{
-		jclass clazz3 = env->FindClass(JAVA_PACKAGE"/PromptUserPassword2");
+		jclass clazz3 = env->FindClass(JAVA_PACKAGE"/PromptUserPassword3");
 		if(JNIUtil::isJavaExceptionThrown())
 		{
 			return NULL;
@@ -412,7 +412,7 @@ bool Prompter::prompt(const char *realm, const char *username, bool maySave)
 		static jmethodID mid2 = 0;
 		if(mid == 0)
 		{
-			jclass clazz = env->FindClass(JAVA_PACKAGE"/PromptUserPassword");
+			jclass clazz = env->FindClass(JAVA_PACKAGE"/PromptUserPassword3");
 			if(JNIUtil::isJavaExceptionThrown())
 			{
 				return false;
@@ -422,7 +422,7 @@ bool Prompter::prompt(const char *realm, const char *username, bool maySave)
 			{
 				return false;
 			}
-			mid = env->GetMethodID(clazz, "userAllowedSave", "()Z");
+			mid2 = env->GetMethodID(clazz, "userAllowedSave", "()Z");
 			if(JNIUtil::isJavaExceptionThrown() || mid == 0)
 			{
 				return false;
@@ -444,7 +444,8 @@ bool Prompter::prompt(const char *realm, const char *username, bool maySave)
 		{
 			return false;
 		}
-		jboolean ret = env->CallBooleanMethod(m_prompter, mid, jrealm, jusername);
+        jboolean ret = env->CallBooleanMethod(m_prompter, mid, jrealm, 
+                                    jusername, maySave ? JNI_TRUE: JNI_FALSE);
 		if(JNIUtil::isJavaExceptionThrown())
 		{
 			return false;
