@@ -320,7 +320,7 @@ subcommand_deltify (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   svn_repos_t *repos;
   svn_fs_t *fs;
   svn_revnum_t start = SVN_INVALID_REVNUM, end = SVN_INVALID_REVNUM;
-  svn_revnum_t youngest, revision, increment;
+  svn_revnum_t youngest, revision;
   apr_pool_t *subpool = svn_pool_create (pool);
 
   SVN_ERR (svn_repos_open (&repos, opt_state->repository_path, pool));
@@ -348,6 +348,10 @@ subcommand_deltify (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   if (end == SVN_INVALID_REVNUM)
     end = start;
         
+  if (start > end)
+    return svn_error_create
+      (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+       "first revision cannot be higher than second");
   if ((start > youngest) || (end > youngest))
     return svn_error_createf
       (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
@@ -356,9 +360,7 @@ subcommand_deltify (apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   /* Loop over the requested revision range, performing the
      predecessor deltification on paths changed in each. */
-  increment = (start > end) ? -1 : 1;
-  end = end + increment;
-  for (revision = start; revision != end; revision += increment)
+  for (revision = start; revision <= end; revision++)
     {
       svn_pool_clear (subpool);
       if (! opt_state->quiet)
