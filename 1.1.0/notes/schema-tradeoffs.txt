@@ -1,0 +1,114 @@
+
+The Tradeoff
+============
+
+CVS indexes data in a certain way.  When you create a CVS tag, a label
+must be applied to every single file in the repository.  It takes O(N)
+time, where N is the size of the tree you're tagging.  The tradeoff,
+however, is that someone can look at a specific version of a file, and
+see *all* the tag-labels attached to it.
+
+Subversion's repository has the data indexed in the other direction.
+When you create an SVN tag, it makes a single new directory node that
+points to an existing tree.  It takes O(1) (constant) time.  The
+tradeoff, however, is that a version of a file is 'shared' by any
+number of directory paths.  That means it takes O(N) time to find
+every tag that contains the specific file.
+
+
+Why?
+===
+
+Why does Subversion index data this way?  There are a few reasons the
+designers chose to do this.  Having branches and tags in normal
+directory space makes it easy to browse them, easy to do access
+control on them, and (of course) they're automatically versioned.
+
+Also, the designers thought this would be optimizing the right
+operations.  Organizations tend to create branches and tags quite
+frequently -- much more frequently than asking the question "which
+tags contain a specific file?"  So if you can only make one of these
+operations O(1), you want it to be tagging.  (Of course, if we knew a
+way to make them *both* cheap, that would be the best solution!  But
+we haven't found a way yet.)
+
+
+
+Questions that Users Ask
+========================
+
+Here are some questions subversion users might ask, and how subversion
+deals with each question.
+
+
+1. "What version of foo.c is in tag X?"
+
+This is the easiest question to answer.  Go into the tag-tree, and
+look at the version of foo.c it contains.
+
+(This can be done with a simple "svn ls -v URL", where URL is a path
+to the specific tag directory.  Look at the first column of numbers.)
+
+
+
+2.  "Does tag X contain the latest version of foo.c?"
+
+This is a bit harder to answer.  From question 1, it's easy to see
+that tag X contains version N of foo.c.  But how do we know if that's
+the *latest* foo.c?  
+
+Running 'svn log' on version N of foo.c won't help, because it only
+goes backwards in time.  That is, it only shows predecessor nodes, not
+successor nodes.
+
+Subversion-1.0 uses BerkeleyDB.  The only reason 'svn log' shows
+predecessor nodes easily is because each node contains a back-pointer
+to its predecessor.  It would be extremely painful to search BDB for
+successors;  BDB is mostly a glorified hashtable with transactions.
+
+   [Note from kfogel: Is there some reason we can't store successor
+   nodes at commit time?  That is if N is a director successor of M,
+   then when we create N, we add it to M's "successors list".  Then we
+   could track forward as well as backward... Nothing against having
+   an SQL backend someday, of course, just pointing out that this
+   particular problem can be solved simply in Berkeley DB.]
+
+Post-1.0 Subversion, however, will be able to use a SQL backend, and
+then it will be very quick and easy to query for node successors.  At
+that point, Subversion could make nice "complete history" graphs of
+nodes, just like Clearcase does.
+
+
+
+3.  "Which tags contain version N of foo.c?"
+
+This is the killer question, and the crux of the Tradeoff mentioned at
+the beginning of this document.  Because Subversion has O(1) tagging,
+the only way to answer this question is by brute-force searching.  
+
+But there are two consolations to this tradeoff:
+
+   A) "Rethink your work habits"
+
+      From experience, when users ask question #3, it can very often
+      be rephrased as a question about a *specific* tag.  Very often,
+      the manager doesn't really want to see the exhaustive list of
+      every tag containing the file; instead, they simply want to know
+      if a *certain* tag has the file.  ("Did we give that file to a
+      particular customer?")  It turns into a "type-1" question.
+
+      If you're used to CVS, it's very easy to instantly get the list
+      of all tags attached to a file-version.  And therefore you
+      habituate to that, and use the tags-list as your main means of
+      answering all your type-1 questions.  But it's certainly not
+      *required* to answer type-1 questions.
+
+   B) "Build a cache"
+
+      If a brute-force search is ever performed, it shouldn't be too
+      difficult to cache the results of the search, because repository
+      trees are immutable.  That means the next time somebody runs the
+      search, the search becomes *much* smaller.  Eventually, the
+      search can dwindle down into what feels like O(1) time, at least
+      when viewed from a distance.  :-)
+

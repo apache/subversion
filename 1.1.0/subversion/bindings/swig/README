@@ -1,0 +1,87 @@
+								-*-text-*-
+
+
+==> For instructions on how to get swig bindings working, read the
+     INSTALL file in this directory.
+
+
+SVN HEADER -> SWIG MODULE
+-------------------------
+
+Subversion has a bunch of includes files, some are interesting for
+wrapping with language bindings, and others which are simple type
+declarations and constants. Below is the table which maps each header
+to its disposition:
+
+INCLUDE           SWIG MODULE NAME
+svn_base64.h	  (1)
+svn_client.h	  _client
+svn_config.h	  ?
+svn_delta.h	  _delta
+svn_error.h	  (2)
+svn_error_codes.h (2)
+svn_fs.h	  _fs
+svn_hash.h	  (1)
+svn_io.h	  (4) (only stream functions)
+svn_path.h	  (1)
+svn_pools.h	  (4) (only pool manipulation)
+svn_quoprint.h	  (1)
+svn_ra.h	  _ra
+svn_repos.h	  _repos
+svn_sorts.h	  (1)
+svn_string.h	  (3)
+svn_test.h	  (2)
+svn_time.h	  (1)
+svn_types.h	  (3)
+svn_version.h	  (4) (some symbols)
+svn_wc.h	  _wc
+svn_xml.h	  (1)
+
+apr*.h		  (3)
+
+n/a		  _util
+
+(1) it is assumed that the binding languages will provide this
+    functionality separately.
+    ### HELP: Java does not provide base-64 natively.  Should we wrap
+    ### SVN's with SWIG, or include a stand-alone ASF implementation
+    ### (such as from Jakarta Commons Codec)?
+(2) no significant/interesting functionality to export
+(3) only the types are exported; a SWIG interface file is present
+(4) limited symbols/functionality exported via the _util module
+
+
+NOTE: the bindings code is being developed using SWIG 1.3.19 or
+later.  Earlier versions of SWIG will simply *not* work.
+
+
+
+
+SWIG MODULES
+------------
+
+We will produce a number of modules/classes, expecting the binding
+languages to organize these into a package, and present the Subversion
+libraries' API in a manner familiar to programmers of a given
+language.  For instance, the Python bindings are handled as follows:
+
+svn.client
+svn.delta
+svn.error
+svn.fs
+svn.io
+svn.ra
+svn.wc
+
+
+
+
+THUNK EDITORS
+-------------
+
+"Thunk" is Windows programming term describing a "go between."  Our
+SWIG bindings generally implement editors in C which delegate to the
+language-specific extension API (e.g. its C API for Python, JNI for
+Java, etc.).  This transitional object implements a Subversion editor
+interface, allowing it to be passed between its native library code
+and the runtime of the language which the bindings were written for.

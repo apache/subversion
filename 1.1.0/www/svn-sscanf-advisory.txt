@@ -1,0 +1,49 @@
+Subversion versions up to and including 1.0.2 have a buffer overflow in
+the date parsing code.
+
+Both client and server are vulnerable.  The server is vulnerable over
+both httpd/DAV and svnserve (that is, over http://, https://, svn://,
+svn+ssh:// and other tunneled svn+*:// methods).
+
+Additionally, clients with shared working copies, or permissions that
+allow files in the administrative area of the working copy to be
+written by other users, are potentially exploitable.
+
+Severity:
+=========
+
+Severity ranges from "Denial of Service" to, potentially, "Arbitrary
+Code Execution", depending upon how skilled the attacker is and the
+ABI specifics of your platform.
+
+The server vulnerabilities can be triggered without write/commit access
+to the repository.  So repositories with anonymous/public read access
+are vulnerable.
+
+Workarounds:
+============
+
+There are no workarounds except to disallow public access.  Even then
+you'd still be vulnerable to attack by someone who still has access
+(perhaps you trust those people, though).
+
+Recommendations:
+================
+
+We recommend all users upgrade to 1.0.3.
+
+References:
+===========
+
+CAN-2004-0397: subversion sscanf stack overflow via revision date
+               in REPORT query
+
+Note:
+=====
+
+There was a similar vulnerability in the Neon HTTP library up to and including
+version 0.24.5.  Because Subversion ships with Neon, we have included (in
+Subversion 1.0.3) Neon 0.24.6, which is being released simultaneously.
+Subversion does not actually invoke the vulnerable code in Neon; we are
+updating our copy of Neon simply as a reassuring gesture, so people don't
+worry.  See CAN-2004-0398 for details.

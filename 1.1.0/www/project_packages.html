@@ -1,0 +1,202 @@
+<title>Subversion Distributions</title>
+
+<h1>Get Subversion!</h1>
+
+<p>Subversion packages exist for a number of different operating
+    systems.  Remember, once you have it installed, most of your
+    questions can be answered by reading the <a
+    href="http://svnbook.red-bean.com">Subversion Book</a>.</p>
+<center>
+<TABLE BORDER="0" CELLPADDING="2" WIDTH="98%" BGCOLOR="white">
+<TR>
+<TD WIDTH="100%" BGCOLOR="yellow">
+<font color="red">
+<b>
+Subversion versions up to and including 1.0.4 have an <a href="/security/CAN-2004-0413-advisory.txt">exploitable bug in the parsing of the svn protocol.</a>.  All users are advised to upgrade to 1.0.5.
+</b>
+</font>
+</TD>
+</TR>
+</table>
+</center>
+
+<center>
+<TABLE BORDER="0" CELLPADDING="2" WIDTH="98%" BGCOLOR="white">
+<TR>
+<TD WIDTH="100%" BGCOLOR="yellow">
+<font color="red">
+<b>
+Note: binary packages are usually available about a week after
+Subversion source releases.  If you're looking for the latest
+Subversion binaries, you might not yet find them below. In this case,
+we recommend either grabbing <a href="getting_subversion.html">the
+latest source release</a>, or checking back for binary packages a bit
+later.
+</b>
+</font>
+</TD>
+</TR>
+</table>
+</center>
+
+<hr/>
+
+<h2><img src="images/src-pkg.png"/>Source Code</h2>
+
+<p>The latest source release can be found <a
+href="http://subversion.tigris.org/servlets/ProjectDocumentList?folderID=260">
+in this directory</a>, in the file-sharing area of the Subversion
+website.  Be sure to read the <a
+href="getting_subversion.html">general instructions</a> for building
+from the source tarball, and the <a
+href="http://svn.collab.net/repos/svn/trunk/INSTALL">specific
+instructions</a> within the source code itself.</p>
+
+
+ <!-- list all dependencies!!!  with links-->
+
+<hr/>   
+
+<h2><img src="images/redhat.png"/> RedHat Linux</h2>
+
+
+<p><em>Maintainer: <a href="mailto:david@summersoft.fay.ar.us">David Summers</a></em></p>
+
+<p>RPMs for Intel (i386) Redhat 7.X, 8.0, 9.0, Fedora 1, Whitebox Enterprise
+Linux 3 / Redhat Enterprise Linux 3 : <a href=
+"http://summersoft.fay.ar.us/pub/subversion/latest/">http://summersoft.fay.ar.us/pub/subversion/latest/</a>
+(<a href="http://the.earth.li/pub/subversion/summersoft.fay.ar.us/pub/subversion/latest/"><em>UK Mirror</em></a>)
+</p>
+
+<hr/>
+
+<h2><img src="images/debian.jpg"/> Debian GNU/Linux</h2>
+
+<p><em>Maintainer: <a href="mailto:dwhedon@debian.org">David Kimdon</a>
+</em></p>
+
+<p>Information on the latest .deb packages for Debian Unstable ('sid')
+can be found here: <a
+href="http://packages.debian.org/subversion">http://packages.debian.org/subversion</a>.</p>
+
+<p>If you are running Debian unstable, just run 'apt-get
+install subversion'.</p>
+
+<p>Backported .deb packages for Debian Stable ('woody') can be found
+here: <a
+href="http://people.debian.org/~adconrad/">http://people.debian.org/~adconrad/</a>.</p>
+
+<hr/>
+
+<h2><img src="images/suse.png"/> SuSE Linux</h2>
+
+<p><em>Maintainer: <a href="mailto:olh@suse.de">Olaf Hering</a></em></p>
+
+<p>RPM packages for various older SuSE Linux versions: <a
+href="ftp://ftp.suse.com/pub/people/poeml/">ftp://ftp.suse.com/pub/people/poeml/</a></p>
+
+<p>A list of available mirror sites can be found here: <a
+href="http://www.suse.de/en/private/download/ftp/int_mirrors.html">http://www.suse.de/en/private/download/ftp/int_mirrors.html</a></p>
+
+<hr/>
+
+<h2><img src="images/mandrake.png"/> Mandrake Linux</h2>
+
+<p><em>Maintainer: <a href="mailto:ben@reser.org">Ben Reser</a></em></p>
+
+<p>RPM packages for various versions of Mandrake Linux: <a href="http://mirror.brain.org/linux/breser/mandrake">http://mirror.brain.org/linux/breser/mandrake/</a></p>
+
+<p>Users wanting to use urpmi to install can find instructions for adding that
+site as a urpmi media here: <a href="http://ben.reser.org/mandrake/breser">http://ben.reser.org/mandrake/breser</a></p>
+
+<hr/>   
+
+<h2><img src="images/bsddaemon.png"/>FreeBSD</h2>
+
+<p><em>Maintainer:
+<a href="mailto:lev@freebsd.org">Lev Serebryakov</a></em></p>
+
+<p>Information about the latest port can be found here:<a
+href="http://www.freebsd.org/cgi/cvsweb.cgi/ports/devel/subversion/">http://www.freebsd.org/cgi/cvsweb.cgi/ports/devel/subversion/</a>.
+</p>
+
+<p>Assuming your ports tree is up-to-date, just 'cd
+/usr/ports/devel/subversion; make install'.</p>
+
+<hr/>
+
+<h2><img src="images/bsddaemon.png"/>pkgsrc ({Net,Open,Free}BSD, Linux, Solaris, etc.)</h2>
+
+<p><em>Maintainer:
+<a href="mailto:epg@NetBSD.org">Eric Gillespie</a></em></p>
+
+<p><a
+href="http://www.NetBSD.org/Documentation/software/packages.html">pkgsrc</a>
+is the cross-platform package system used by the NetBSD project,
+originally derived from FreeBSD ports.</a>
+
+<p>Information about the latest package can be found here:<a
+href="http://cvsweb.netbsd.org/bsdweb.cgi/pkgsrc/devel/subversion/">http://cvsweb.netbsd.org/bsdweb.cgi/pkgsrc/devel/subversion/</a>.
+</p>
+
+<p>Assuming your pkgsrc tree is up-to-date, just 'cd
+/usr/pkgsrc/devel/subversion; make install clean'.</p>
+
+<hr/>
+
+<h2><img src="images/sol7logo.gif"/>Solaris</h2>
+
+<p><em>Maintainer: 
+<a href="mailto:steve@smc.vnet.net">Steven M. Christensen</a></em</p>
+
+<p>Binary builds of Subversion for Solaris 2.5-9 on SPARC and Solaris 8-9 on 
+x86/Intel are available at: 
+<a href="http://www.sunfreeware.com">http://www.sunfreeware.com/</a>.</p>
+
+<hr/>
+
+<h2>Mac OS X</h2>
+
+<p><em>Maintainer: 
+<a href="mailto:chris01@users.sourceforge.net">Christian Schaffner</a></em></p>
+
+<p>Information about the latest <a href="http://fink.sourceforge.net/">Fink</a> 
+packages can be found here:
+<a href="http://fink.sourceforge.net/pdb/search.php?s=svn">http://fink.sourceforge.net/pdb/search.php?s=svn</a>.</p>
+
+<p>Be sure to read the documentation of the different packages.</p>
+
+<hr/>
+
+<h2><img src="images/win32.png"/>Win32</h2>
+
+<p><em>Maintainer:  <a href="mailto:brane@xbc.nu">Branko Cibej</a></em></p>
+          
+<p>The latest command-line binaries and libraries for Windows can be
+found in <a
+href="http://subversion.tigris.org/servlets/ProjectDocumentList?folderID=91"
+>this directory</a> of the file-sharing area.  The packages are ".zip"
+files.</p>
+
+<p><em>Maintainer:
+<a href="mailto:jostein@josander.net">Jostein Andersen</a></em></p>
+
+<p>The same command-line binaries and libraries, but packaged within a
+friendly Installer program, are in <a
+href="http://subversion.tigris.org/servlets/ProjectDocumentList?folderID=91"
+>the same directory</a> of the file-sharing area, but end with
+"-setup.exe".</p>
+
+<p><em>Maintainer:
+<a href="mailto:steveking@tigris.org">Steve King</a></em></p>
+
+<p>If you want a pretty Win32 GUI, <a
+   href="http://tortoisesvn.tigris.org">TortoiseSVN</a> integrates
+   nicely with the Windows Explorer.  <strong>Note:</strong>
+   TortoiseSVN is a separate project.  Please post questions and
+   problems to the <a
+   href="http://tortoisesvn.tigris.org/servlets/ProjectMailingListList">TortoiseSVN
+   project's own mailing lists.</a>, not Subversion's mailing
+   lists.</p>
+
+

@@ -1,0 +1,261 @@
+This documents highlights the current WebDAV ACL specification and
+should start to identify how Subversion can implement the requisite
+functionality to become compliant.  Note that some of these items may
+require work in Apache HTTP Server and/or its included mod_dav to succeed.
+
+Current WebDAV ACL draft:
+
+http://www.webdav.org/acl/protocol/draft-ietf-webdav-acl-09.htm
+
+===Open questions===
+
+* Are WebDAV ACLs version independent, version dependent, or up to impl?
+Justin: Seems up to impl.  I'd believe that ACLs are properties of the
+        resource and should be versioned.
+Brane: ACLs should be version-specific with history, but that's not the
+       same as versioned, as you should be able to change the access
+       permissions for a path in an old (i.e., non-HEAD) revision.
+
+* What inheritance model should Subversion support?  If so, how?
+Justin: WebDAV ACLs indicate inheritance via DAV:inherited property and
+        DAV:inherited-acl property (for ACE and ACLs, respectively).  So, the
+        inheritance is directly known and explicit (i.e. X inherits from Y).
+        I believe a similar model would work fine within Subversion.
+Brane: Agreed. This is very similar to the NTFS inheritance model (no
+       surprise there :-) I'd add the restriction that ACLs and ACEs
+       can only be inherited from "..", i.e., not from anywhere
+       in the repos.
+
+* Should ACLs themselves be versioned?
+Justin: See above, yes, I think they should.  (Those that aren't derived.)
+
+* What sub/superset of WebDAV privileges should Subversion have, and how
+  should they map to WebDAV's privilege model?
+Brane: We should at least have a create-child privilege (subsumed in DAV:write,
+       and never inherited -- ouch!) that can be applied to tags dirs
+       so that tags can be created there, but not modified (e.g.,
+       set DAV:read and SVN:create-child on the dir, and make all ACLs
+       inherited by default (unless overriden))
+
+* What other types of access control mechanisms are we going to require?
+Justin: Bill has mentioned that we might want to control who can change
+        the log.  Indeed, there seems to be a separate class of repository
+        specific attributes.  Could we key them off of the Subversion root?
+        These would seem to be an extension of the WebDAV ACL model, but
+        necessary ones for uses.
+
+* What are the real semantics of DAV:owner?  Could it be the person who
+  create this file?  The site admin?  What?
+Brane: The owner=creator variant seems most common, although on Windows
+       I've seen setups where the creator doesn't have the "Object
+       Ownership" privilege, and the ownership reverts to the creator
+       of the enclosing composite entity (directory, that is).
+       This makes sense in a role-based authz system, which is
+       probably the way Subversion wants to go...
+
+* What to do about inherited and protected ACEs on MOVEs? (up to impl.)
+
+* What ACLs would be required for deletion?  (up to impl.)
+Brane: There are three options: DAV:write on containing directory (that's
+       the Unix way, and consistent with our directory structuring),
+       DAV:write on the object (that's close to the Windows way),
+       or DAV:owner on the object.
+
+* Can the repository structure be itself unchanged with only modifications
+  contained within ra_dav and mod_dav_svn?
+Justin says: Just might be possible.  If Subversion implemented the ACLs
+             and related items as simple properties on the file, this
+             approach may work as mod_dav/mod_dav_svn handles enforcement.
+Brane says: Even if it's possible, it's evil. Access control must be part
+            of the FS semantics in order to behave the same across all
+            RA layers.
+
+===Answered questions===
+
+* Can Subversion handle the principal data model?  That is, can it enumerate
+  what users it recognizes.  Similarly, can we represent the groups in a
+  controlled fashion?
+Justin: Isn't the concept of a user foreign to Subversion?  Indeed, Greg says
+        it is.  So, mod_dav would have to introduce a model to map backend
+        authentication models and present a unified principal model.  Still,
+        work would have to be done in Apache httpd to achieve this.  But,
+        storage of users doesn't occur with SVN.  All SVN would receive is an
+        authenticated username.
+Brane: Agreed. But note that there must be a mapping between WebDAV
+       principals and Subversion users that is compatible for different
+       access methods. Note also that the concept of groups is important
+       for generating sane ACLs, yet the FS must also know the actual
+       user. It seems that a user->list-of-groups mapping has to be
+       available to the FS somehow.
+
+* Given Subversion does not know about users, what sorts of ACLs could be
+  placed on other non-DAV access to the repository (say ra_local)? 
+Justin: Greg hints that ra_local doesn't use ACLs as it would be possible
+        to just bypass SVN and edit the BDB backend directly.  ACLs are
+        therefore only desired for ra_dav access.
+Brane: Nonsense. What if I, as an admin, want to administer the database
+       (and modify ACLs) using ra_local? (E.g., while Apache is down
+       for database recovery/upgrade/etc.)
+
+===Required to-do items===
+
+- Contemplate the nature of ACLs
+
+- Construct a mapping of WebDAV ACL properties and values to potential SVN
+  counterparts.
+
+- Define extensions to the mod_dav provider API that allows ACLs to be
+  implemented in a provider-neutral fashion.  mod_dav should be able to
+  handle most of the protocol logic, but it will have to retrieve certain
+  items from the provider to achieve this.
+
+- Allow mod_dav to handle principal URLs via authentication rewrite.
+  - mod_dav can be written to use these backends and expose provider URLs and
+    handle the DAV methods on them.
+
+===Completed items===
+
+- Apache httpd authentication switched to a provider model for post-2.0.42
+  releases.
+
+===30,000ft summary of WebDAV ACL draft===
+****
+Note: You are encouraged to read the draft in its entirety, but this is
+      just a rough sketch so that I can remember what is in it.
+****
+
+Principal:
+  - Single URL which identifies a person
+  - Certain DAV methods must be implemented on these URLs
+
+Privileges:
+
+- DAV:read
+  - Controls: GET/PROPFIND
+  - MAY control: OPTIONS
+- DAV:write
+  - Controls: PUT/PROPPATCH
+  - Locking interacts with it
+  - Includes DAV:write-properties and DAV:write-content (3.10)
+- DAV:write-properties
+  - Controls: PROPPATCH.
+  - Modify dead properties, but (optionally) live ones
+- DAV:write-content
+  - Controls: PUT/DELETE
+- DAV:unlock
+  - Controls: UNLOCK
+- DAV:read-acl
+  - Controls: PROPFIND (on DAV:acl)
+- DAV:read-current-user-privilege-set
+  - Controls: PROPFIND (on DAV:current-user-privilege-set)
+- DAV:write-acl
+  - Modify ACLs
+- DAV:all
+  - Everything
+
+Principal properties:
+- DAV:alternate-URI-set
+  - Required
+  - HREF
+  - More knowledge about principal
+- DAV:principal-URL
+  - Required
+  - Definitive singular URL
+- DAV:group-member-set (group principals)
+  - Direct members of group
+- DAV:group-membership
+  - Required
+  - What groups a principal belongs to
+
+ACL properties:
+- DAV:owner
+  - Protected
+- DAV:supported-privilege-set
+  - Protected
+  - What properties are allowed
+- DAV:current-user-privilege-set
+  - Protected
+  - Computed effective access for current principal
+- DAV:acl
+  - Collection of ACEs (see below)
+- DAV:acl-semantics
+  - Protected
+  - Describes current behavior of implementing access checks
+- DAV:inherited-acl-set
+  - Indicates which entities that this ACL inherits from
+- DAV:principal-collection-set
+  - Collection of principals for this server
+
+ACE properties:
+- DAV:ace
+  - Invert
+  - DAV:principal
+    - href to a principal URL
+    - DAV:All
+      - All users
+    - DAV:Authenticated
+    - DAV:Unauthenticated
+    - DAV:Property
+      - If specified property value matches what we know, success.
+        - DAV:Owner matching (?)
+    - DAV:Self
+      - Only for principal URLs if authenticated as that principal
+  - grant or deny privilege:
+    - See above for ACE privileges
+  - DAV:protected
+    - Any attempt to remove this MUST fail
+  - DAV:inherited
+    - This ACE comes from resource in href
+ 
+ACE combinations:
+- Describes how ACEs are evaluated
+- DAV:first-match
+- DAV:all-grant-before-any-deny
+- DAV:specific-deny-overrides-grant
+  
+ACE ordering:
+- DAV:deny-before-grant
+
+Allowed ACE:
+- DAV:principal-only-one-ace
+  - A principal may only appearing in one ACE per ACL
+- DAV:grant-only
+- DAV:no-invert
+
+Required principals
+- DAV:required-principal
+  - Defines that a principal must be defined for this property ACE
+    - Usually for DAV:owner (?)
+
+DAV methods changes:
+- OPTIONS
+  - Must return literal "access-control"
+- MOVE
+  - Must move non-inherited and non-protected ACEs from DAV:acl
+- COPY
+  - Permissions must not be copied.  Default ACL may apply.
+  - If wish to preserve ACL, retrieve before COPY, then reapply ACLs.
+- DELETE
+- LOCK
+  - Only lock owner may modify ACEs
+
+Access control methods:
+- ACL
+  - Allows updating of ACLs
+
+Reporting:
+- REPORT
+  - Must support DAV:expand-property
+- DAV:acl-principal-prop-set 
+  - Required
+  - Returns property requested for all principals
+    - Client access?
+- DAV:principal-match
+  - Required
+  - Lists which ACEs you are the principal on
+- DAV:principal-property-search
+  - Required
+  - Does a search for principals who match the criteria
+- DAV:principal-search-property-set
+  - Required
+  - Returns what properties may be searched on DAV:principal-property-search

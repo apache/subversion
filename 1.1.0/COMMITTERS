@@ -1,0 +1,99 @@
+﻿The following people have commit access to the Subversion sources.
+Note that this is not a full list of Subversion's authors, however --
+for that, you'd need to look over the log messages to see all the
+patch contributors.
+
+If you have a question or comment, it's probably best to mail
+dev@subversion.tigris.org, rather than mailing any of these people
+directly.
+
+Blanket commit access:
+
+          jimb   Jim Blandy <jimb@redhat.com>
+       sussman   Ben Collins-Sussman <sussman@collab.net>
+        kfogel   Karl Fogel <kfogel@collab.net>
+        gstein   Greg Stein <gstein@lyra.org>
+         brane   Branko Čibej <brane@xbc.nu>
+           joe   Joe Orton <joe@light.plus.com>
+       ghudson   Greg Hudson <ghudson@mit.edu>
+          fitz   Brian W. Fitzpatrick <fitz@red-bean.com>
+        daniel   Daniel Stenberg <daniel@haxx.se>
+      cmpilato   C. Michael Pilato <cmpilato@collab.net>
+         kevin   Kevin Pilch-Bisson <kevin@pilchie.homeip.net>
+        philip   Philip Martin <philip@codematters.co.uk>
+   jerenkrantz   Justin Erenkrantz <justin@erenkrantz.com>
+        rooneg   Garrett Rooney <rooneg@electricjellyfish.net>
+      bcollins   Ben Collins <bcollins@debian.org>
+         blair   Blair Zajac <blair@orcaware.com>
+       striker   Sander Striker <striker@apache.org>
+         naked   Nuutti Kotivuori <naked@iki.fi>
+       dwhedon   David Kimdon <David_Kimdon@alumni.hmc.edu>
+           dlr   Daniel Rall <dlr@finemaltcoding.com>
+         kraai   Matt Kraai <kraai@alumni.cmu.edu>
+           mbk   Mark Benedetto King <mbk@lowlatency.com>
+           epg   Eric Gillespie <epg@pretzelnet.org>
+           jaa   Jani Averbach <jaa@iki.fi>
+    julianfoad   Julian Foad <julianfoad@btopenworld.com>
+         bliss   Tobias Ringström <tobias@ringstrom.mine.nu>
+       jpieper   Josh Pieper <jpieper@andrew.cmu.edu>
+  jszakmeister   John Szakmeister <john@szakmeister.net>
+      dionisos   Erik Hülsmann <e.huelsmann@gmx.net>
+        breser   Ben Reser <ben@reser.org>
+           djh   D.J. Heap <dj@shadyvale.net>
+          maxb   Max Bowsher <maxb@ukf.net>
+      lundblad   Peter N. Lundblad <peter@famlundblad.se>
+
+Commit access for specific areas:
+
+          xela   Alexander Müller <alex@littleblue.de>       (Java bindings)
+       yoshiki   Yoshiki Hayashi <yoshiki@xemacs.org>        (Ruby bindings)
+         david   David Summers <david@summersoft.fay.ar.us>  (RPMs)
+      rassilon   Bill Tutt <rassilon@lyra.org>               (Win32 / COM)
+      kbohling   Kirby C. Bohling <kbohling@birddog.com>     (tools/dev)
+           nsd   Nick Duffek <nick@duffek.com>               (doc)
+       fmatias   Féliciano Matias <feliciano.matias@free.fr> (French docs)
+      dimentiy   Dmitriy O. Popkov <dimentiy@dimentiy.info>  (Russian docs)
+        xsteve   Stefan Reichör <reichoer@web.de>            (psvn)
+      josander   Jostein Andersen <jostein@josander.net>     (various)
+      ballbach   Michael Ballbach <ballbach@rten.net>        (packages)
+      niemeyer   Gustavo Niemeyer <niemeyer@conectiva.com>   (svnperms.py)
+        morten   Morten Ludvigsen <morten@2ps.dk>            (bindings)
+        zbrown   Zack Brown <zbrown@tumblerings.org>         (doc)
+        mmacek   Marko Maček <Marko.Macek@gmx.net>           (cvs2svn branch)
+          mass   David Waite <mass@akuma.org>                (certs branch)
+      jespersm   Jesper Steen Møller <jesper@selskabet.org>  (bindings)
+        knacke   Kai Nacke <kai.nacke@redstar.de>            (bindings)
+        mprice   Michael Price <mprice@atl.lmco.com>         (releases)
+           pll   Paul lussier <p.lussier@comcast.net>        (releases)
+     gthompson   Glenn A. Thompson <gthompson@cdr.net>       (fs/db branch)
+           kon   Kalle Olavi Niemitalo <kon@iki.fi>          (Emacs Lisp)
+       pmayweg   Patrick Mayweg <mayweg@qint.de>             (Java bindings)
+          rey4   Russell Yanofsky <rey4@columbia.edu>        (bindings)
+         clkao   Chia-liang Kao <clkao@clkao.org>            (perl bindings)
+    jrepenning   Jack Repenning <jrepenning@collab.net>      (tools/dev)
+      sergeyli   Sergey A. Lipnevich <sergey@optimaltec.com> (neon-0.24 port)
+      lonestar   Martin Maurer <martin.maurer@email.de>      (svnshow)
+       shlomif   Shlomi Fish <shlomif@vipe.technion.ac.il>   (svn-push)
+       niqueco   Nicolás Lichtmaier <nick@reloco.com.ar>     (po: es)
+        luebbe   Lübbe Onken <luebbe@tigris.org>             (po: de)
+       mthelen   Michael W Thelen <thelenm@cs.utah.edu>      (doc)
+  jeremybettis   Jeremy Bettis <jeremy@deadbeef.com>         (hook script)
+      martinto   Martin Tomes <lists@tomes.org>              (hook script)
+    khmarbaise   Karl Heinz Marbaise <khmarbaise@gmx.de>     (German docs)
+      oyvindmo   Øyvind Møll <svn@moll.no>                   (doc, po: nb)
+      sunny256   Øyvind A. Holm <sunny@sunbase.org>          (doc, po: nb)
+          nori   KOBAYASHI Noritada <nori1@dolphin.c.u-tokyo.ac.jp> (po: jp)
+        jzgoda   Jaroslaw Zgoda <jzgoda@o2.pl>               (po: pl)
+      karolszk   Karol Szkudlarek <karol@mikronika.com.pl>   (po: pl)
+        plasma   Wei-Hon Chen <plasma@ms9.hinet.net>         (po: zh_TW)
+       jihuang   June-Yen Huang <jihuang@iis.sinica.edu.tw>  (po: zh_TW)
+       marcosc   Marcos Chaves <mchvs@hotmail.com>           (po: pt_BR)
+
+Committers who have asked to be listed as dormant:
+
+        bdenny   Brian Denny <brian@briandenny.net>
+
+## Local Variables:
+## coding:utf-8
+## End:
+## vim:encoding=utf8

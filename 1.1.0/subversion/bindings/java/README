@@ -1,0 +1,59 @@
+
+		     Subversion Java integration
+		     ===========================
+
+$LastChangedDate$
+
+
+Contents:
+
+     I. STATUS
+    II. BUILDING
+   III. JAVAHL
+    IV. INTERFACES
+     V. SWIG
+
+
+I.     STATUS
+
+       Subversion has two core sets of Java bindings, JavaHL and
+       SWIG/Java.  The JavaHL bindings are currently more mature than
+       the Java/SWIG bindings, and can be considered for production
+       use.
+
+
+II.    BUILDING
+
+       The associated README for each Java bindings implementation is
+       the best reference on building.  A few comments apply across
+       the board:
+
+       * Passing the --with-maintainer-mode to configure will
+         compile Java bytecode with debugging information.
+
+       * Jikes will be the preferred compiler if it is be
+         auto-detected.  If not auto-detected, you can force its use
+         via the --with-jikes=path flag to configure.
+
+
+III.   JAVAHL
+
+       See the README under subversion/bindings/java/javahl/ for
+       details.
+
+
+IV.   INTERFACES
+
+       The interface code exists to present an API which is familiar
+       Subversion Java programmers regardless of the binding
+       implementation method.  You can find it under the org/
+       sub-directory.  The SWIG/Java bindings currently conform to
+       this interface.  The API is likely to be adjusted to more
+       closely align with the JavaHL implementation in hopes of its
+       eventual adoption.  If that doesn't work out, it's likely that
+       the interface concept will be dropped entirely.
+
+
+IV.    SWIG
+
+       See the README under subversion/bindings/swig/java/ for details.

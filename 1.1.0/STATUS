@@ -1,0 +1,48 @@
+This file tracks the status of releases in the 1.1.x line.
+
+See "Stabilizing and maintaining releases" in trunk/HACKING for
+details on how release lines and voting work, what kinds of bugs can
+delay a release, etc.
+
+Status of 1.1.0:
+================
+
+As of 1.1.0-rc3, 1.1.0 is in its final one-week soak period.  Any code
+changes made to 1.1.0 necessitate restarting the final one-week soak.
+(See HACKING for the precise definition of which changes necessitate a
+resoak.)  If you are proposing a code change for 1.1.0, make a note of
+whether it warrants a resoak on its own; otherwise, the change may be
+folded in if some other change warrants a resoak, but will be moved to
+1.1.1 if not.
+
+Candidate changes:
+
+Status of 1.1.1:
+================
+
+Candidate changes:
+
+  * r10788, r10796, r10904, r10914
+    Fix performance regression in character encoding translations.  Most
+    noticable on Win32, but impacts other platforms as well.
+    Justification:
+      Slow "svn status" annoys people, especially TSVN users.
+    Notes:
+      Proposed during 1.1.0 preparation, but it is too late and complicated
+      to put in 1.1.0 at this stage.
+    Votes:
+      +1: lundblad
+
+  * r11137
+    Fix the verbose log code for revisions with no changed paths.
+    Justification:
+      Shallow silly bug.
+    Votes:
+      +1: bliss, kfogel, lundblad
+
+  * r11172
+    Fix encoding bug in svnlook log and author.
+    Justification:
+      Regression and annoying for people using non-ASCII chars in log messages.
+    Votes:
+      +1: lundblad

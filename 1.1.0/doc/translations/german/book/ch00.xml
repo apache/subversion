@@ -1,0 +1,609 @@
+<preface id="svn-ch-0">
+  <title>Vorwort</title>
+  
+  <simplesect>
+    
+    <blockquote>
+      <para><quote>Wenn C Ihnen genügend Seil liefert, um sich aufzuhängen,
+        denken Sie bei Subversion an eine Seilkammer.</quote>
+        &mdash;Brian W. Fitzpatrick.
+      </para>
+    </blockquote>
+
+	<para>In der Welt von Open-Source Software war das Concurrent
+        Versions System (CVS) lange Zeit das Werkzeug der Wahl
+        zur Versionkontrolle. Und das mit Recht. CVS selbst ist
+        freie Software und seine nicht restriktive Handhabung und
+     	  die Unterstützung von Netzwerkoperationen, die es Dutzenden
+        von Programmierern erlaubt, ihre Arbeit zu teilen, passt sehr
+        gut in das gemeinschaftliche Wesen der Open-Source Welt.
+        CVS und sein semi-chaotisches Entwicklungsmodell ist
+        zu einem Grundstein der Open-Source Kultur geworden.
+      </para>
+
+	<para>Aber wie bei vielen Werkzeugen zeigt sich auch bei CVS 
+        langsam sein Alter. Subversion ist ein ziemlich neues 
+        Versionskontrollsystem, entwickelt als Nachfolger von CVS.
+        Die Designer setzten darauf die Herzen der CVS-Benutzer 
+        auf zwei Wegen zu gewinnen: Einmal durch die Erstellung
+        eines Open-Source Systems mit einem Design ähnlich wie bei
+        CVS und zum anderen mit dem Versuch, die meisten der bei CVS
+        festzustellenden Probleme zu lösen. Wenn das Ergebnis auch 
+        nicht notwendigerweise der große Wurf im Version Control 
+        Design ist, so ist Subversion dennoch sehr leistungsfähig,
+        sehr nützlich und sehr flexibel ist.
+      </para>
+
+	<para>Das vorliegende Buch dokumentiert die Version 1.0.1 des
+        Subversion Versions Kontrollsystems. Wir haben den Versuch
+        unternommen sehr gründlich in unserer Betrachtung
+        zu sein. Wie auch immer, Subversion hat eine wachsende
+        und motivierte Entwicklergemeinde, daher ist bereits eine
+        Reihe von Features und Verbesserungen für zukünftige Versionen
+        von Subversion geplant, wodurch sich einige der in diesem 
+        Buch beschriebenen Kommandos und spezifischen Anmerkungen
+        ändern können.
+      </para>
+
+  </simplesect>
+
+
+  <!-- ================================================================= -->
+  <!-- ======================== SECTION 1 ============================== -->
+  <!-- ================================================================= -->
+  <sect1 id="svn-ch-0-sect-1">
+
+    <title>Die Zielgruppe</title>
+    
+	<para>Das Buch ist für Computer erfahrene Leute geschrieben,
+        die ihre Daten mithilfe von Subversion verwalten möchten.
+        Weil Subversion auf einer Anzahl unterschiedlicher Betriebssysteme
+        läuft, ist das primäre Interface die Kommandozeile.
+        Genau dieses Kommandozeilen Werkzeug (<command>svn</command>) ist es , 
+        dessen Benutzung und Anwendung in diesem Buch beschrieben ist.
+        Der Einfachheit halber setzen die Beispiele in diesem Buch voraus,
+        dass der Leser ein Unix-ähnliches Betriebssystem benutzt und
+        einigermaßen vertraut mit Unix und Kommandozeilen Interfaces ist.
+      </para>
+
+      <para>Nichtsdestoweniger läuft das <command>svn</command>
+        Programm auch auf Nicht-Unix-Plattformen wie Microsoft Windows.
+        Mit einigen wenigen Ausnahmen, wie z.B. der Verwendung von 
+        Back-Slashes (<literal>\</literal>) anstatt 
+        Forward-Slashes (<literal>/</literal>) als Verzeichnisunterteilungen
+        laufen die Eingaben in das Tool und auch die Ausgaben im Betrieb 
+        unter Windows identisch zu dem Unix-Gegenschtück. Dennoch dürften 
+        Windows Anwender mehr Erfolg haben, wenn die Beispiele in der Cygwin Unix
+        Emulation laufen gelassen werden.
+     </para>
+
+     <para>Die meisten Leser sind vermutlich Programmierer oder 
+        Systemadministratoren, die Änderungen eines Quellcodes verfolgen 
+        möchten. Das ist die gebräuchlichste Anwendung für Subversion 
+        und somit auch das dem Buch zu Grunde liegende Szenario aller 
+        im Buch genannten Beispiele. Aber Subversion kann bei der Verwaltung 
+        von Änderungen in allen möglichen Bereichen verwendet werden: 
+        bei Bildern, Musik, Datenbanken, Dokumentationen usw. Aus der Sicht 
+        von Subversion sind Daten einfach Daten.
+     </para>
+    
+     <para>Das vorliegende Buch ist unter der Prämisse geschrieben worden,
+       dass der Leser nie zuvor ein Versionskontrollsystem verwendet hat.
+       Wir haben aber versucht es für CVS Anwender leicht zu machen in Subversion
+       einzusteigen. Spezielle Randbemerkungen gehen von Zeit zu Zeit auf CVS ein,
+       und ein gesonderter Anhang fasst die meisten Unterschiede zwischen CVS und 
+       Subversion zusammen.
+     </para>
+
+  </sect1>
+
+  <!-- ================================================================= -->
+  <!-- ======================== SECTION 2 ============================== -->
+  <!-- ================================================================= -->
+  <sect1 id="svn-ch-0-sect-2">
+    <title>Wie soll das Buch gelesen werden?</title>
+
+    <para>Das Buch hat die Zielsetzung für Leute mit unterschiedlichstem
+      Hintergrund nützlich zu sein &mdash; angefangen bei Leuten ohne vorherige
+      Erfahrungen im Bereich Versionskontrolle bis hin zu geübten Systemadministratoren.
+      Basierend auf Ihrem eigenen Erfahrungen sind bestimmte Kapitel
+      mehr oder weniger interessant für Sie. Im folgenden stellen wir eine Art von 
+      Leselisten für die unterschiedlichen Lesertypen zusammen.
+    </para>
+
+    <variablelist>
+      <varlistentry>
+        <term>Erfahrende Systemadministratoren</term>
+          <listitem>
+            <para>Wir gehen davon aus, dass Sie vermutlich 
+              CVS vorher schon verwendet haben und darauf
+              brennen einen Subversion Server so schnell wie möglich
+              zum Laufen zu bekommen. Kapitel 5 und 6 zeigen 
+              Ihnen wie ein erstes Repository erzeugt wird und wie
+              es über das Netzwerk zur Verfügung gestellt wird.
+              Nachdem das erledigt ist, ist Kapitel 3 und der Anhang
+              A der schnellste Weg um die Anwendung des Subversion
+              Client zu lernen in Anlehnung an Ihre CVS Erfahrungen.
+            </para>
+         </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>Neue Benutzer</term>
+        <listitem>
+          <para>Ihr Systemadministrator hat wahrscheinlich Subversion
+            schon installiert und Sie möchten lernen wie der Subversion
+            Client verwendet wird. Wenn Sie noch nie ein Versionskontrollsystem
+            verwendet haben (wie z.B. CVS), dann sind die Kapitel 2 und 3 eine 
+            unbedingt erforderliche Einführung. Wenn Sie aber schon Erfahrungen
+            bei der Anwendung von CVS gesammelt haben, sind Kapitel 3 und der 
+            Anhang A der beste Startpunkt.
+          </para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>Erfahrene Anwender</term>
+        <listitem>
+          <para>Egal, ob Sie ein Systemadministrator oder Anwender sind,
+            schließlich wird Ihr Projekt wachsen. Nun möchten Sie auch 
+            weitergehende Dinge mit Subversion ausführen, wie z.B. die 
+            Verwendung von Branches oder die Durchführung
+            von Mergings (Kapitel 4), die Verwendung der Subversion 
+            Property Unterstützung, die Konfiguration von Laufzeit Optionen (Kapitel 7) 
+            und andere Dinge. Kapitel 4 und 7 sind fürs Erste nicht unbedingt 
+            erforderlich, sollten aber auf jeden Fall gelesen werden, wenn Sie
+            die Grundlagen gemeistert haben.
+          </para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>Entwickler</term>
+        <listitem>
+          <para>Vermutlich sind Sie bereits mit Subversion vertraut
+            und möchten nun Erweiterungen anbringen oder neue Software
+            auf der vorhandenen API aufsetzen, dann ist Kapitel 8 genau
+            das Richtige für Sie.
+          </para>
+        </listitem>
+      </varlistentry>
+    </variablelist>
+
+    <para>Das Buch endet mit Referenzlisten, Kapitel 9 ist eine Liste 
+      aller Subversion Kommandos und die Anhänge behandeln noch eine 
+      Reihe nützlicher Themen. Das sind die Kapitel, die Sie wahrscheinlich
+      auch dann immer wieder zur Hand nehmen, wenn Sie das Buch gelesen haben.
+    </para>
+
+  </sect1>
+
+  <!-- ================================================================= -->
+  <!-- ======================== SECTION 3 ============================== -->
+  <!-- ================================================================= -->
+  <sect1 id="svn-ch-0-sect-3">
+    <title>Konventionen innerhalb des Buches</title>
+
+      <para>Dieser Abschnitt behandelt die verschiedenen Konventionen 
+         die innerhalb des Buches Anwendung finden.
+      </para>
+    
+    <!-- ***************************************************************** -->
+    <sect2 id="svn-ch-0-sect3.1">
+      <title>Typographische Konventionen</title>
+      
+      <variablelist>
+        
+        <varlistentry>
+          <term><command>Nichtproportionalschrift</command></term>
+          <listitem>
+             <para>Anwendung für Kommandos, Ausgaben von Kommandos und Optionsschaltern</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+			<term><replaceable>Nichtproportionalschrift kursiv</replaceable></term>
+          <listitem>
+            <para>Verwendet für Ersetzbare Elemente und Texte</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term><filename>Nichtproportionalschrift kursiv</filename></term>
+          <listitem>
+            <para>Für Datei- und Verzeichnisnamen</para>
+          </listitem>
+        </varlistentry>
+        
+      </variablelist>
+
+    </sect2>
+
+    <!-- ***************************************************************** -->
+    <sect2 id="svn-ch-0-sect3.2">
+      <title>Icons</title>
+
+      <note>
+        <para>This icon designates a note relating to the surrounding
+          text.</para>
+      </note>
+
+      <tip>
+        <para>This icon designates a helpful tip relating to the surrounding
+          text.</para>
+      </tip>
+
+      <warning>
+        <para>This icon designates a warning relating to the surrounding
+          text.</para>
+      </warning>
+    </sect2>
+
+    <para>Beachten Sie bitte, dass die Quellcode Beispiele nichts anderes 
+      sind als eben &mdash; Beispiele. Sie mögen zwar mit den richtigen
+      Compilereinstellung kompilierbar sein, aber sie sollen lediglich
+      die gerade geschilderten Probleme veranschaulichen und dienen nicht 
+      notwendigerweise auch als Beispiel guten Programmierstils.
+    </para>
+
+  </sect1>
+
+  <!-- ================================================================= -->
+  <!-- ======================== SECTION 4 ============================== -->
+  <!-- ================================================================= -->
+  <sect1 id="svn-ch-0-sect-4">
+    <title>Aufbau des Buches</title>
+
+      <para>Hier ist eine Liste der nachfolgenden Kapitel und deren Inhalt: 
+      </para>
+
+      <variablelist>
+        
+        <varlistentry>
+          <term>Kapitel 1, <emphasis>Einführung</emphasis></term>
+          <listitem>
+            <para>Behandelt die Geschichte von Subversion, seine
+              Features, den Aufbau, die Komponenten und die Installationsmethoden.
+            </para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term>Kapitel 2, <emphasis>Grundlegende Konzepte</emphasis></term>
+          <listitem>
+            <para>Erklärt die Grundlagen der Versionskontrolle und unterschiedliche
+              Versionierungsmodelle, außerdem werden die Repository Struktur von Subversion, 
+              Arbeitskopien und Revisions behandelt.
+            </para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term>Kapitel 3, <emphasis>Angeleitete Führung</emphasis></term>
+          <listitem>
+            <para>Führt durch einen Tag im Leben eines Subversion-Anwenders.
+              Es erklärt die Anwendung von Subversion bei der Erfassung, der 
+              Änderung und der Übermittlung von Daten.
+            </para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term>Kapitel 4, <emphasis>Branching und Merging</emphasis></term>
+          <listitem>
+            <para>Hier werden Branches, Mergings und Tagging diskutiert, 
+              außerdem die besten Verfahren zum  Branching und Merging,
+              allgemeine Anwendungsfälle, die Rücknahme von Änderungen 
+              und wie man einfach von einem auf den anderen Branch wechseln kann.
+            </para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term>Kapitel 5, <emphasis>Repository Administration</emphasis></term>
+          <listitem>
+            <para>Erläutert die Grundlangen der Subversion Repositories, 
+              wie die Erzeugung, Konfiguration und die Pflege des Repositories 
+              und die Anwendug der Werkzeuge mit denen all das gemacht wird.
+            </para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term>Kapitel 6, <emphasis>Server Konfiguration</emphasis></term>
+          <listitem>
+            <para>Erklärt wie ein Subversion Server zu konfigurieren ist und
+              die drei unterschiedlichen Wege, um auf ein Subversion
+              Repository zu zugreifen: <literal>HTTP</literal>
+              <literal>svn</literal> und das <literal>local</literal> Protokoll.
+              für den Zugriff. Es werden auch die Bereiche authentifizierung, 
+              autorization und anonymer zugriff erläutert.
+
+              Explains how to configure your Subversion server and
+              the three ways to access your repository:
+              <literal>HTTP</literal>, the <literal>svn</literal>
+              protocol, and local access.  It also covers the details
+              of authentication, authorization and anonymous
+              access.</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term>Kapitel 7     Chapter 7, <emphasis>Fortgeschritten Bereiche</emphasis></term>
+          <listitem>
+			<para>
+              Erkundet die Subversion Client Konfigurationsdateien,
+              Datei- und Verzeichnis Eigenschaften (properties), wie
+              Dateien in der Arbeitskopie <literal>ignoriert</literal> werden können
+              wie externe Verzeichnisbäume in die Arbeitskopie eingebracht werden
+              und zu guter letzt, wie Vendor Branches gehandhabt werden.
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+            <term>Kapitel 8<emphasis>Informationen für Entwickler</emphasis></term>
+          <listitem>
+            <para>Beschreibt die Internas von Subversions, das Subversion Dateisystem, 
+             die Arbeitskopie, Administrativen Dateien aus der Sicht des Programmieres.
+             Demonstriert wie öffentliche API's dazu verwendet werden können 
+             ein Programm zu schreiben, dass Subversion nutzt, und sehr wichtig
+             wie bei der Entwicklung von Subversion mitgearbeitet werden kann.
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+            <term>Kapitel 9<emphasis>Referenz zu Subversion</emphasis></term>
+          <listitem>
+            <para>Erläutert ausführlich jedes Sub-Komnando von 
+              <command>svn</command>, <command>svnadmin</command>
+              und <command>svnlook</command> mit vielen Beispielen für die Ganze Familie.
+            </para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+            <term>Anhang A, <emphasis>Subversion für CVS Benutzer</emphasis></term>
+            <listitem>
+              <para>Deckt die Ähnlichkeiten und 
+                Unterschiede zwischen Subversion und CVS ab, mit einer Menge 
+                von Vorschlägen wie die über Jahre angeeigneten schlechten 
+                Angewohnheiten abgelegt werden können. Enthalten sind auch 
+                Beschreibungen der Revisionsnummern von Subversion, Versionierte 
+                Verzeichnisse, offline Operationen unterschied 
+                <command>update</command> und <command>status</command>
+                Branches, Tags, Metadaten, Konfliktbewältigung und autorisierung.
+              </para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term>Anhang B<emphasis>Fehlerbehebung</emphasis></term>
+          <listitem>
+            <para>
+              Zielt auf algemeine Probleme Aufgaben und Problem in der Anwendung
+              und der Compilierung von Subversion.
+              </para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term>Anhang C, <emphasis>WebDAV und Autoversionierung</emphasis></term>
+          <listitem>
+            <para>Beschreibt die Details von WebDAV und DeltaV und wie
+              ein Subversion Repository als lese/schreib DAV Share verbunden
+              werden kann.</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term>Anhang D, <emphasis>Werkzeuge von dritt Herstellern</emphasis></term>
+          <listitem>
+            <para>
+              Hier werden Werkzeuge besprochen, die Subversion unterstützen oder
+              Verwenden inklusive alternativener Client Programme,
+              Repository Browser Werkzeugen usw.</para>
+          </listitem>
+        </varlistentry>
+
+    </variablelist>
+
+  </sect1>
+
+  <!-- ================================================================= -->
+  <!-- ======================== SECTION 5 ============================== -->
+  <!-- ================================================================= -->
+  <sect1 id="svn-ch-0-sect-5">
+	  <title>Dieses Buch ist Frei</title>
+
+      <para>Das Buch fing als eine stück weise Dokumentation an,
+		  dass durch die Entwickler des Subversion Projektes
+		  geschrieben wurde und dann als ein eigenständiges
+              Werk vereinigt wurde und umgeschrieben wurde.
+		  Als ein solches hat es die gleiche Freie, Open-Source Lizenz 
+		  wie Subversion selbst.
+		  In der Tat, das Buch wurde in der Öffentlichkeit geschrieben
+		  als Teil des Subversion Projektes.
+		  Das bedeutet zwei Dinge:</para>
+
+    <itemizedlist>
+      <listitem>
+		  <para>Die Aktuellste Version des Buches
+          finden Sie immer im Subversion eigenen Quellcode Baum</para>
+      </listitem>
+
+      <listitem>
+        <para>Sie können das Buch verteilen und Änderungen an 
+          diesem Buch vornehmen. Wie auch immer Sie möchten &mdash;
+          es ist unter freier Lizenz. Selbstverständlich?? 
+          Entgegen ihre eigen private Version diese Buches zu verteilen
+          würden wir es eher begrüßen, dass Sie uns Feedback
+          und Änderungen zukommen lassen um es in die Subversion
+          Entwickler Gemeinde einzubringen.
+          <xref linkend="svn-ch-8-sect-6"/>Teilnahme an der Gemeinde.</para>
+      </listitem>
+    </itemizedlist>
+    
+      <para>Sie können Kommentare zur Veröffentlichung und Fragen
+          an O'Reilly unter der foldenen Adresse.....</para>
+
+      <para>Eine relativ neue Version des Buches kann Online ...
+          <systemitem class="url">http://svnbook.red-bean.com</systemitem></para>
+  </sect1>
+
+  <!-- ================================================================= -->
+  <!-- ======================== SECTION 6 ============================== -->
+  <!-- ================================================================= -->
+  <sect1 id="svn-ch-0-sect-6">
+    <title>Danksagungen</title>
+
+    <para>Das Buch wäre nicht möglich gewesen (noch sehr Nützlich)
+      wenn Subverison nicht existiert hätte. 
+      Dafür möchte der Autor Brina Behlendorf und CollabNet danken
+      für die Vision und ergeiziges Projekt zu gründen.
+      Jim Blandy für den Ursprünglichen Subversion Namen und Design;
+      Wir lieben Dich Jim;
+      Karl Fogel dafür dass er ein so guter Freund und ein großer
+      Gemeinschaftsführer??, in der Reihenfolge.
+      <footnote><para>Danke dafür, dass Du selbst zu überarbeitet warst um das Buch
+              selbst zu schreiben.</footnote></para>
+      </para>
+		
+    <para>Thanks to O'Reilly and our editors, Linda Mui and Tatiana
+      Diaz for their patience and support.</para>
+
+    <para>
+      Abschliessen danken wir einer ungezählten Menge von Menschen
+      die zu diesem Buch mit Korrekturlesen, Vorschlägen,
+      und Korrekturen .....Das ist selbstverständlich keine vollständige
+      Liste, dieses Buch wäre unvollständig und unrichtig ohne die Hilfe
+      von: ....	  
+	  
+      Finally, we thank the countless people who contributed to
+      this book with informal reviews, suggestions, and fixes: While
+      this is undoubtedly not a complete list, this book would be
+      incomplete and incorrect without the help of: Jani Averbach,
+      Ryan Barrett, Francois Beausoleil, Jennifer Bevan, Matt Blais,
+      Zack Brown, Martin Buchholz, Brane Cibej, John R. Daily, Peter
+      Davis, Olivier Davy, Robert P. J. Day, Mo DeJong, Brian Denny,
+      Joe Drew, Nick Duffek, Ben Elliston, Justin Erenkrantz, Shlomi
+      Fish, Julian Foad, Chris Foote, Martin Furter, Dave Gilbert,
+      Eric Gillespie, Matthew Gregan, Art Haas, Greg Hudson, Alexis
+      Huxley, Jens B. Jorgensen, Tez Kamihira, David Kimdon, Mark
+      Benedetto King, Andreas J. Koenig, Nuutti Kotivuori, Matt Kraai,
+      Scott Lamb, Vincent Lefevre, Morten Ludvigsen, Paul Lussier,
+      Bruce A. Mah, Philip Martin, Feliciano Matias, Patrick Mayweg,
+      Gareth McCaughan, Jon Middleton, Tim Moloney, Mats Nilsson, Joe
+      Orton, Amy Lyn Pilato, Kevin Pilch-Bisson, Dmitriy Popkov,
+      Michael Price, Mark Proctor, Steffen Prohaska, Daniel Rall,
+      Tobias Ringstrom, Garrett Rooney, Joel Rosdahl, Christian Sauer,
+      Larry Shatzer, Russell Steicke, Sander Striker, Erik Sjoelund,
+      Johan Sundstroem, John Szakmeister, Mason Thomas, Eric
+      Wadsworth, Colin Watson, Alex Waugh, Chad Whitacre, Josef Wolf,
+      Blair Zajac, and the entire Subversion community.</para>
+
+    <!-- ***************************************************************** -->
+    <sect2 id="svn-ch-0-sect-6.1">
+      <title>Von Ben Collins-Sussman</title>
+
+      <para>Danke an meine Frau Frances, die für viele Monate
+        zu hören bekommen hat, "Aber liebling, ich arbeite noch
+        an dem Buch" anstatt das übliche "Aber liebling, ich bearbeite
+        gerade meine Emails". Ich weiß nicht woher Sie all diese Geduld
+        her hat. Sie ist mein perfektes Gegengewicht.</para>
+      
+      <para>Dank an meinen weiteren Familienkreis für Ihre herzlichen
+        Ermunterungen, trotz des nicht vorhandenen Interesse für die 
+        Sache. (Sie kennen die die sagen "Oh Du schreibst ein Buch?", 
+        und dann Sagst Du ihnen, dass es ein Computer Buch ist,
+        und das Interesse ist vorbei...).</para>
+
+      <para>Dank an alle meine engen Freunde, die mich zu einem
+        sehr reichen Mann machen. Schaut mich nicht so an, Ihr wisst
+        wer ihr seid.</para>
+
+    </sect2>
+
+    <!-- ***************************************************************** -->
+    <sect2 id="svn-ch-0-sect-6.2">
+      <title>Von Brian W. Fitzpatrick</title>
+
+      <para>Großer Dank an meine Frau Marie, unglaublich 
+        verständnisvoll, Unterstützend und am meisten geduldig.
+        Danke Dir Bruder Eric, für die Einführung in die 
+        Unix-Programierung Rückweg ???. Danke an meine Mutter und
+        Großmutter für all Ihre Unterstützung, nicht zu vergessen
+        ...enduring... Weinachtsferien als ich nach Hause kam und 
+        und Meinen Kopf sofort in den Laptop vergrub und weiter an
+        meinem Buch arbeitet.
+        
+
+        Huge thanks to my wife Marie for being incredibly
+        understanding, supportive, and most of all, patient.  Thank
+        you to my brother Eric who first introduced me to UNIX
+        programming way back when. Thanks to my Mom and Grandmother
+        for all their support, not to mention enduring a Christmas
+        holiday where I came home and promptly buried my head in my
+        laptop to work on the book.</para>
+
+      <para>An Mike und Ben: Es war eine Freude mit euch an
+        dem Buch zu arbeiten. Es ist eine Freude mit euch
+        an der Arbeit zusammen zu arbeiten.</para>
+
+      <para>An alle in der Subverion Gemeinde und die Apache
+        Software Vereinigung, danke ..... Nicht ein Tag vergeht,
+        an dem ich nicht wenigstens von einem von euch lerne.
+
+        To everyone in the Subversion community and the Apache
+        Software Foundation, thanks for having me.  Not a day goes by
+        where I don't learn something from at least one of you.
+      </para>
+
+      <para>Schließlich Danke an meinen Großvater der mir immer
+         wieder gesagt hat: <quote>Freiheit ist gleich Verantwortung</quote>.
+         Ich kann nicht mehr zustimmen.
+
+         Lastly, thanks to my Grandfather who always told me that
+        <quote>freedom equals responsibility.</quote> I couldn't agree
+        more.</para>
+
+    </sect2>
+
+    <!-- ***************************************************************** -->
+    <sect2 id="svn-ch-0-sect-6.3">
+      <title>Vom C. Michael Pilato</title>
+
+      <para>Speziellem Dank an meine Frau, Amy, für Ihre Liebe und
+        geduld, Unterstützung, ..for putting up with late nights,
+        und selbstverständlich auch für das Korrekturlesen ganze 
+        Kapitel des Buches. ...
+
+        Special thanks to my wife, Amy, for her love and patient
+        support, for putting up with late nights, and for even
+        reviewing entire sections of this book&mdash;you always go the
+        extra mile, and do so with incredible grace.  Gavin, when
+        you're old enough to read, I hope you're as proud of your
+        Daddy as he is of you.  Mom and Dad (and the rest of the
+        family), thanks for your constant support and enthusiasm.</para>
+
+      <para>Hats off to Shep Kendall, through whom the world of
+        computers was first opened to me; Ben Collins-Sussman, my
+        tour-guide through the open-source world; Karl Fogel&mdash;you
+        <emphasis>are</emphasis> my <filename>.emacs</filename>; Greg
+        Stein, for oozing practical programming know-how; Brian
+        Fitzpatrick&mdash;for sharing this writing experience with me.
+        To the many folks from whom I am constantly picking up new
+        knowledge&mdash;keep dropping it!</para>
+
+      <para>Finally, to the One who perfectly demonstrates creative
+        excellence&mdash;thank you.</para>
+
+    </sect2>
+
+  </sect1>
+</preface>
+
+<!--
+local variables: 
+sgml-parent-document: ("book.xml" "chapter")
+end:
+-->
