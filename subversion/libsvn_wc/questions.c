@@ -38,6 +38,8 @@
 #include "questions.h"
 #include "entries.h"
 
+#include "svn_md5.h"
+#include <apr_md5.h>
 
 
 /* ### todo: make this compare repository too?  Or do so in parallel
@@ -257,6 +259,123 @@ svn_wc__versioned_file_modcheck (svn_boolean_t *modified_p,
 }
 
 
+/* Set *MODIFIED_P to true if (after translation) VERSIONED_FILE
+ * differs from BASE_FILE, else to false if not.  Also, verify that
+ * BASE_FILE matches the entry checksum for VERSIONED_FILE; if it
+ * does not match, return the error SVN_ERR_WC_CORRUPT_TEXT_BASE.
+ *
+ * ADM_ACCESS is an access baton for VERSIONED_FILE.  Use POOL for
+ * temporary allocation.
+ */
+static svn_error_t *
+compare_and_verify (svn_boolean_t *modified_p,
+                    const char *versioned_file,
+                    svn_wc_adm_access_t *adm_access,
+                    const char *base_file,
+                    apr_pool_t *pool)
+
+{
+  const char *tmp_vfile;
+  svn_error_t *err = SVN_NO_ERROR, *err2 = SVN_NO_ERROR;
+  const svn_wc_entry_t *entry;
+
+  SVN_ERR (svn_wc_entry (&entry, versioned_file, adm_access, TRUE, pool));
+
+
+  SVN_ERR (svn_wc_translated_file (&tmp_vfile, versioned_file, adm_access,
+                                   TRUE, pool));
+
+  /* Compare the files, while calculating the base file's checksum. */
+  {
+    /* "v_" means versioned_file, "b_" means base_file. */
+    svn_error_t *v_err = SVN_NO_ERROR;
+    svn_error_t *b_err = SVN_NO_ERROR;
+    apr_size_t v_file_bytes_read, b_file_bytes_read;
+    char v_buf[BUFSIZ], b_buf[BUFSIZ];
+    apr_file_t *v_file_h = NULL;
+    apr_file_t *b_file_h = NULL;
+    apr_pool_t *loop_pool;
+
+    int identical = TRUE;
+    unsigned char digest[APR_MD5_DIGESTSIZE];
+    apr_md5_ctx_t context;
+    const char *checksum;
+
+    SVN_ERR (svn_io_file_open (&v_file_h, tmp_vfile,
+                               APR_READ, APR_OS_DEFAULT, pool));
+    SVN_ERR (svn_io_file_open (&b_file_h, base_file, APR_READ, APR_OS_DEFAULT,
+                               pool));
+    apr_md5_init (&context);
+
+    loop_pool = svn_pool_create (pool);
+    do
+      {
+        svn_pool_clear (loop_pool);
+
+        /* The only way v_err can be true here is if we hit EOF. */
+        if (! v_err)
+          {
+            v_err = svn_io_file_read_full (v_file_h, v_buf, sizeof(v_buf),
+                                           &v_file_bytes_read, loop_pool);
+            if (v_err && !APR_STATUS_IS_EOF(v_err->apr_err))
+              return v_err;
+          }
+        
+        b_err = svn_io_file_read_full (b_file_h, b_buf, sizeof(b_buf),
+                                       &b_file_bytes_read, loop_pool);
+        if (b_err && !APR_STATUS_IS_EOF(b_err->apr_err))
+          return b_err;
+        
+        apr_md5_update (&context, b_buf, b_file_bytes_read);
+
+        if ((v_err && (! b_err))
+            || (v_file_bytes_read != b_file_bytes_read)
+            || (memcmp (v_buf, b_buf, v_file_bytes_read)))
+          {
+            identical = FALSE;
+          }
+      } while (! b_err);
+    
+    svn_pool_destroy (loop_pool);
+
+    /* Clear any errors, but don't set the error variables to null, as
+       we still depend on them for conditionals. */
+    svn_error_clear (v_err);
+    svn_error_clear (b_err);
+    
+    SVN_ERR (svn_io_file_close (v_file_h, pool));
+    SVN_ERR (svn_io_file_close (b_file_h, pool));
+
+    apr_md5_final (digest, &context);
+
+    checksum = svn_md5_digest_to_cstring (digest, pool);
+    if (strcmp (checksum, entry->checksum) != 0)
+      {
+        return svn_error_createf
+          (SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
+           "Checksum mismatch indicates corrupt text base: '%s'\n"
+           "   expected:  %s\n"
+           "     actual:  %s\n",
+           base_file, entry->checksum, checksum);
+      }
+
+    *modified_p = ! identical;
+  }
+  
+  if (tmp_vfile != versioned_file)
+    err2 = svn_io_remove_file (tmp_vfile, pool);
+
+  if (err)
+    {
+      if (err2)
+        svn_error_compose (err, err2);
+      return err;
+    }
+
+  return err2;
+}
+
+
 svn_error_t *
 svn_wc_text_modified_p (svn_boolean_t *modified_p,
                         const char *filename,
@@ -305,12 +424,23 @@ svn_wc_text_modified_p (svn_boolean_t *modified_p,
       goto cleanup;
     }
   
-  /* Otherwise, fall back on the standard mod detector. */
-  SVN_ERR (svn_wc__versioned_file_modcheck (modified_p,
-                                            filename,
-                                            adm_access,
-                                            textbase_filename,
-                                            subpool));
+  
+  if (force_comparison)  /* Check all bytes, and verify checksum. */
+    {
+      SVN_ERR (compare_and_verify (modified_p,
+                                   filename,
+                                   adm_access,
+                                   textbase_filename,
+                                   subpool));
+    }
+  else  /* Else, fall back on the standard mod detector. */
+    {
+      SVN_ERR (svn_wc__versioned_file_modcheck (modified_p,
+                                                filename,
+                                                adm_access,
+                                                textbase_filename,
+                                                subpool));
+    }
 
   /* It is quite legitimate for modifications to the working copy to
      produce a timestamp variation with no text variation. If it turns out

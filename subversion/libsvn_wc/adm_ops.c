@@ -1248,62 +1248,7 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
       SVN_ERR (svn_io_check_path (fullpath, &kind, pool));
       base_thing = svn_wc__text_base_path (fullpath, 0, pool);
 
-      if (entry->checksum)
-        {
-          /* The Two Temptations:
-           * 
-           *    "Wouldn't it be nice for svn_wc_text_modifed_p() to
-           *     to verify the checksum too?  Then we wouldn't have to
-           *     make a separate pass over the bytes here."
-           *
-           * The trouble is, svn_text_modified_p() often doesn't have
-           * to make a complete pass over the text base, it just goes
-           * far enough to establish that there's a difference.  If
-           * it's going to verify the checksum too, it will have to
-           * examine all the bytes of the text-base.  Of course, it
-           * might not get to that stage, because of the early out
-           * based on timestamps.  But its *other* early out (the
-           * filesizes-differ check) would also become pointless; if
-           * we're doing a checksum verification, then it doesn't
-           * matter whether the filesizes differ or not, we still have
-           * to run over the entire text base once we've made it past
-           * the timestamp check.  All this behavior could be
-           * conditional on the passing of a checksum, but still, it's
-           * a pretty big code change just to get checksum
-           * verification in revert.
-           *
-           *    "Okay, I see why svn_text_modified_p() can't do it.
-           *     But still, couldn't we verify by passing an expected
-           *     checksum to svn_subst_copy_and_translate(), which
-           *     could calculate the actual checksum while copying,
-           *     thus still avoiding the extra scan?"  
-           * 
-           * The problem here is that if there's no translation to be
-           * done, svn_subst_copy_and_translate() just falls back to
-           * svn_io_file_copy(), which in turn calls apr_file_copy(),
-           * which has no checksum interface.  So to really do this
-           * efficiently, we'd need to either add a checksumming copy
-           * to APR, or have our own copy implementation that we use
-           * when checksums are desired.  None of this seems worth it
-           * for a non-performance-critical operation like 'revert'.
-           */
-
-          unsigned char digest[APR_MD5_DIGESTSIZE];
-          const char *actual_checksum;
-          SVN_ERR (svn_io_file_checksum (digest, base_thing, pool));
-          actual_checksum = svn_md5_digest_to_cstring (digest, pool);
-          if (strcmp (actual_checksum, entry->checksum) != 0)
-            {
-              return svn_error_createf
-                (SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
-                 "Checksum mismatch indicates corrupt text base: '%s'\n"
-                 "   expected:  %s\n"
-                 "     actual:  %s\n",
-                 base_thing, entry->checksum, actual_checksum);
-            }
-        }
-
-      SVN_ERR (svn_wc_text_modified_p (&modified_p, fullpath, FALSE,
+      SVN_ERR (svn_wc_text_modified_p (&modified_p, fullpath, TRUE,
                                        adm_access, pool));
       if ((modified_p) || (kind == svn_node_none))
         {
