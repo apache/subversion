@@ -250,8 +250,7 @@ static svn_boolean_t init_ssl_ctx(apr_pool_t *pool,
   SSL_library_init();
   
   /* TODO :  Seed the randum number generator (RNG)
-   * for those operating systems that does not have /dev/urandom.
-   */
+   * for those operating systems that does not have /dev/urandom. */
 
   params->ssl_ctx = SSL_CTX_new(SSLv23_server_method());
   if (params->ssl_ctx == NULL) 
@@ -280,7 +279,6 @@ static svn_boolean_t init_ssl_ctx(apr_pool_t *pool,
               ssl_key_file, ssl_last_error(pool));
       return FALSE;  
     }
-
           
   if (!SSL_CTX_check_private_key(params->ssl_ctx))
     {
@@ -428,7 +426,8 @@ int main(int argc, const char *const *argv)
         case SVNSERVE_OPT_CERT_FILE:
           SVN_INT_ERR(svn_utf_cstring_to_utf8(&ssl_cert_file, arg, pool));
           ssl_cert_file = svn_path_internal_style(ssl_cert_file, pool);
-          SVN_INT_ERR(svn_path_get_absolute(&ssl_cert_file, ssl_cert_file, pool));
+          SVN_INT_ERR(svn_path_get_absolute(&ssl_cert_file, ssl_cert_file, 
+                                            pool));
           break;
 
         case SVNSERVE_OPT_KEY_FILE:

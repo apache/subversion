@@ -273,9 +273,7 @@ static svn_error_t *read_success(svn_ra_svn_conn_t *conn, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
-/* Format an ASN1 time to a string.
- */
-
+/* Format an ASN1 time to a string. */
 static svn_boolean_t asn1time_to_string(ASN1_TIME *tm, char *buffer, 
                                         apr_size_t len)
 {
@@ -303,8 +301,7 @@ static svn_boolean_t asn1time_to_string(ASN1_TIME *tm, char *buffer,
 }
 
 /* Compare peername against hostname. Allow wildcard in leftmost 
- * position in peername, and the comparision is case insensitive. 
- */
+ * position in peername, and the comparision is case insensitive. */
 static svn_boolean_t match_hostname(const char *peername, 
                                     const char *hostname, apr_pool_t *pool)
 {
@@ -330,8 +327,7 @@ static svn_boolean_t match_hostname(const char *peername,
 
 /* Verify that the certificates common name matches the hostname.
  * Adapted from verify_callback() in postfixtls patch by Lutz Jaenicke
- * at http://www.aet.tu-cottbus.de/personen/jaenicke/postfix_tls/
- */
+ * at http://www.aet.tu-cottbus.de/personen/jaenicke/postfix_tls/ */
 static svn_boolean_t verify_hostname(ra_svn_session_baton_t *sess,
                                      apr_pool_t *pool,
                                      svn_auth_ssl_server_cert_info_t *cert_info)
@@ -342,15 +338,12 @@ static svn_boolean_t verify_hostname(ra_svn_session_baton_t *sess,
   X509 *peer = SSL_get_peer_certificate(sess->conn->ssl);
   STACK_OF(GENERAL_NAME) *gens;
 
-  /*
-   * Check out the name certified against the hostname expected.
+  /* Check out the name certified against the hostname expected.
    * Standards are not always clear with respect to the handling of
    * dNSNames. RFC3207 does not specify the handling. We therefore follow
    * the strict rules in RFC2818 (HTTP over TLS), Section 3.1:
    * The Subject Alternative Name/dNSName has precedence over CommonName
-   * (CN). If dNSName entries are provided, CN is not checked anymore.
-   */
-
+   * (CN). If dNSName entries are provided, CN is not checked anymore. */
   gens = X509_get_ext_d2i(peer, NID_subject_alt_name, 0, 0);
   if (gens) 
     {
@@ -374,12 +367,11 @@ static svn_boolean_t verify_hostname(ra_svn_session_baton_t *sess,
 }
 
 /* Fill in the server certificate information, as well as check for some
- * errors in the certificate.
- */
+ * errors in the certificate. */
 static svn_error_t *fill_server_cert_info(ra_svn_session_baton_t *sess,
-                                          apr_pool_t *pool,
-                                          svn_auth_ssl_server_cert_info_t *cert_info,
-                                          apr_uint32_t *cert_failures)
+                                     apr_pool_t *pool,
+                                     svn_auth_ssl_server_cert_info_t *cert_info,
+                                     apr_uint32_t *cert_failures)
 {
   #define CERT_BUFFER_SIZE 256
   const char hexcodes[] = "0123456789ABCDEF";
@@ -501,8 +493,7 @@ static svn_error_t *fill_server_cert_info(ra_svn_session_baton_t *sess,
   return SVN_NO_ERROR;
 }
 
-/* Authenticate the server certificate. 
- */
+/* Authenticate the server certificate. */
 static svn_error_t *do_ssl_auth(ra_svn_session_baton_t *sess, 
                                 apr_pool_t *pool)
 {

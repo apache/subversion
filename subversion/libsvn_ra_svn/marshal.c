@@ -959,15 +959,13 @@ svn_error_t *svn_ra_svn_write_cmd_failure(svn_ra_svn_conn_t *conn,
 
 /* --- SSL FUNCTIONS --- */
 
-/*
- * The interface layer between network and BIO-pair. The BIO-pair buffers
+/* The interface layer between network and BIO-pair. The BIO-pair buffers
  * the data to/from the TLS layer. Hence, at any time, there may be data
  * in the buffer that must be written to the network. This writing has
  * highest priority because the handshake might fail otherwise.
  * Only then a read_request can be satisfied.
  * Adapted from network_biopair_interop() in postfixtls patch by Lutz Jaenicke
- * at http://www.aet.tu-cottbus.de/personen/jaenicke/postfix_tls/
- */
+ * at http://www.aet.tu-cottbus.de/personen/jaenicke/postfix_tls/ */
 static svn_error_t *network_biopair_interop(svn_ra_svn_conn_t *conn)
 {
   int want_write;
@@ -987,14 +985,11 @@ static svn_error_t *network_biopair_interop(svn_ra_svn_conn_t *conn)
           want_write = NETLAYER_BUFFERSIZE;
         from_bio = BIO_read(conn->network_bio, buffer, want_write);
         
-      /*
-      * Write the complete contents of the buffer. Since TLS performs
-      * underlying handshaking, we cannot afford to leave the buffer
-      * unflushed, as we could run into a deadlock trap (the peer
-      * waiting for a final byte and we already waiting for his reply
-      * in read position).
-      */
-  
+      /* Write the complete contents of the buffer. Since TLS performs
+       * underlying handshaking, we cannot afford to leave the buffer
+       * unflushed, as we could run into a deadlock trap (the peer
+       * waiting for a final byte and we already waiting for his reply
+       * in read position). */ 
       write_pos = 0;
       do {
           num_write = from_bio - write_pos;
@@ -1027,8 +1022,7 @@ static svn_error_t *network_biopair_interop(svn_ra_svn_conn_t *conn)
   return SVN_NO_ERROR;
 }
 
-/*
- * Function to perform the handshake for SSL_accept(), SSL_connect(),
+/* Function to perform the handshake for SSL_accept(), SSL_connect(),
  * and SSL_shutdown() and perform the SSL_read(), SSL_write() operations.
  * Call the underlying network_biopair_interop-layer to make sure the
  * write buffer is flushed after every operation (that did not fail with
@@ -1038,8 +1032,7 @@ static svn_error_t *network_biopair_interop(svn_ra_svn_conn_t *conn)
  * if the operation was successfull.
  * 
  * Adapted from do_tls_operation() in postfixtls patch by Lutz Jaenicke
- * at http://www.aet.tu-cottbus.de/personen/jaenicke/postfix_tls/
- */
+ * at http://www.aet.tu-cottbus.de/personen/jaenicke/postfix_tls/ */
 static svn_error_t *do_ssl_operation(svn_ra_svn_conn_t *conn, 
                                      int (*hsfunc)(SSL *),
                                      int (*rfunc)(SSL *, void *, int),
@@ -1089,8 +1082,8 @@ static svn_error_t *do_ssl_operation(svn_ra_svn_conn_t *conn,
   if (ret_status > 0)
     return SVN_NO_ERROR;
   else
-     return svn_error_create(SVN_ERR_RA_SVN_SSL_ERROR, NULL,
-                             _("SSL network problem"));
+    return svn_error_create(SVN_ERR_RA_SVN_SSL_ERROR, NULL,
+                            _("SSL network problem"));
 }
 
 /* Releases the resources allocated by SSL. */
@@ -1102,7 +1095,7 @@ static apr_status_t cleanup_ssl(void *data)
     return APR_SUCCESS;;
 
   /* The connection has been setup between client and server,
-     so we tell the other side that we are finished. */
+   * so we tell the other side that we are finished. */
   if (conn->use_ssl)
     {
       if (!do_ssl_operation(conn, SSL_shutdown, NULL, NULL, NULL, NULL))
@@ -1116,10 +1109,10 @@ static apr_status_t cleanup_ssl(void *data)
   conn->internal_bio = NULL;
 
   if (conn->network_bio)
-  {
-    BIO_free(conn->network_bio);
-    conn->network_bio = NULL;
-  }
+    {
+      BIO_free(conn->network_bio);
+      conn->network_bio = NULL;
+    }
 
   return APR_SUCCESS;
 }
@@ -1137,7 +1130,6 @@ static apr_status_t cleanup_ssl(void *data)
  *    +----------< BIO-pair (network_bio)
  *    |        |
  *  socket     |
- *
  */
 svn_error_t *svn_ra_svn_ssl_init(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                  void *ssl_ctx)
@@ -1146,7 +1138,7 @@ svn_error_t *svn_ra_svn_ssl_init(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
   /* Need to release SSL resources when the connection is destroyed.
    * Assumes that the owning SSL_CTX is destroyed after cleanup
-   * of SSL.*/
+   * of SSL. */
   apr_pool_cleanup_register(pool, conn, cleanup_ssl, apr_pool_cleanup_null);
 
   conn->ssl = SSL_new(ssl_context);
