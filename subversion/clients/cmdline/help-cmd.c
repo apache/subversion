@@ -32,20 +32,19 @@
 #include "svn_private_config.h"
 
 const char svn_cl__help_header[] =
-    N_("usage: svn <subcommand> [options] [args]\n"
-       "Type 'svn help <subcommand>' for help on a specific subcommand.\n"
-       "\n"
-       "Most subcommands take file and/or directory arguments, recursing\n"
-       "on the directories.  If no arguments are supplied to such a\n"
-       "command, it will recurse on the current directory (inclusive) by\n" 
-       "default.\n"
-       "\n"
-       "Available subcommands:\n");
+   N_("usage: svn <subcommand> [options] [args]\n"
+      "Subversion command-line client, version " SVN_VER_NUMBER ".\n"
+      "Type 'svn help <subcommand>' for help on a specific subcommand.\n"
+      "\n"
+      "Most subcommands take file and/or directory arguments, recursing\n"
+      "on the directories.  If no arguments are supplied to such a\n"
+      "command, it recurses on the current directory (inclusive) by default.\n"
+      "\n"
+      "Available subcommands:\n");
 
 const char svn_cl__help_footer[] =
-    N_("Subversion is a tool for version control.\n"
-       "For additional information, see http://subversion.tigris.org/\n"
-       "\n");
+   N_("Subversion is a tool for version control.\n"
+      "For additional information, see http://subversion.tigris.org/\n");
 
 
 /*** Code. ***/
