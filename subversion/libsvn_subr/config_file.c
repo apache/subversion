@@ -18,9 +18,6 @@
 
 
 
-#define APR_WANT_STDIO
-#include <apr_want.h>
-
 #include <apr_lib.h>
 #include <apr_md5.h>
 #include "config_impl.h"
@@ -30,6 +27,7 @@
 #include "svn_auth.h"
 #include "svn_md5.h"
 #include "svn_hash.h"
+#include "svn_utf.h"
 
 
 
@@ -345,20 +343,37 @@ svn_config__user_config_path (const char *config_dir,
 
 /*** Exported interfaces. ***/
 
+#ifndef WIN32
+svn_error_t *
+svn_config__open_file (FILE **pfile,
+                       const char *filename,
+                       const char *mode,
+                       apr_pool_t *pool)
+{
+  const char *filename_native;
+  SVN_ERR (svn_utf_cstring_from_utf8 (&filename_native, filename, pool));
+  *pfile = fopen (filename_native, mode);
+  return SVN_NO_ERROR;
+}
+#endif /* WIN32 */
+
+
 svn_error_t *
 svn_config__parse_file (svn_config_t *cfg, const char *file,
                         svn_boolean_t must_exist)
 {
+  apr_pool_t *pool = svn_pool_create (cfg->pool);
   svn_error_t *err = SVN_NO_ERROR;
   parse_context_t ctx;
   int ch, count;
+  FILE *fd;
   /* "Why," you ask yourself, "is he using stdio FILE's instead of
      apr_file_t's?"  The answer is simple: newline translation.  For
      all that it has an APR_BINARY flag, APR doesn't do newline
      translation in files.  The only portable way I know to get
      translated text files is to use the standard stdio library. */
 
-  FILE *fd = fopen (file, "rt");
+  SVN_ERR (svn_config__open_file (&fd, file, "rt", pool));
   if (fd == NULL)
     {
       if (errno != ENOENT)
@@ -375,7 +390,7 @@ svn_config__parse_file (svn_config_t *cfg, const char *file,
   ctx.file = file;
   ctx.fd = fd;
   ctx.line = 1;
-  ctx.pool = svn_pool_create (cfg->pool);
+  ctx.pool = pool;
   ctx.section = svn_stringbuf_create("", ctx.pool);
   ctx.option = svn_stringbuf_create("", ctx.pool);
   ctx.value = svn_stringbuf_create("", ctx.pool);
