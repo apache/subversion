@@ -383,7 +383,7 @@ class Commit:
         delta.svn_txdelta_send_string(pipe.read(), handler, baton, f_pool)
       else:
         # open an SVN stream onto the pipe
-        stream2 = util.svn_stream_from_stdio(pipe, f_pool)
+        stream2 = util.svn_stream_from_aprfile(pipe, f_pool)
 
         # Get the current file contents from the repo, or, if we have
         # multiple CVS revisions to the same file being done in this
@@ -392,7 +392,7 @@ class Commit:
         # the contents in the repo won't have changed yet.
         if repos_path == lastcommit[0]:
           infile2 = os.popen("co -q -p%s \'%s\'" % (lastcommit[1], f), "r", 102400)
-          stream1 = util.svn_stream_from_stdio(infile2, f_pool)
+          stream1 = util.svn_stream_from_aprfile(infile2, f_pool)
         else:
           stream1 = fs.file_contents(root, repos_path, f_pool)
 
