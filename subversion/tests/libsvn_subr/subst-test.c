@@ -303,6 +303,12 @@ substitute_and_verify (const char *test_name,
                          rev,
                          " $, started expanded.",
                          NULL);
+          expect[30 - 1] =
+            apr_pstrcat (pool, "Line 30: ",
+                         "Valid $Rev: ",
+                         rev,
+                         " $, started expanded.",
+                         NULL);
         }
       else  /* unexpand */
         {
@@ -310,6 +316,8 @@ substitute_and_verify (const char *test_name,
           expect[26 - 1] = "Line 26: Emptily expanded keyword $Rev$.";
           expect[29 - 1] =
             "Line 29: Valid $LastChangedRevision$, started expanded.";
+          expect[30 - 1] =
+            "Line 30: Valid $Rev$, started expanded.";
         }
     }
 
@@ -358,7 +366,7 @@ substitute_and_verify (const char *test_name,
           expect[51 - 1] =
             "Line 51: same, but with embedded keyword $$$$$$$$Date$$$$$$$$$$.";
           expect[52 - 1] =
-            "same, with expanded, empty keyword $$$$$$Date$$$$$$.";
+            "Line 52: same, with expanded, empty keyword $$$$$$Date$$$$$$.";
         }
     }
 
@@ -482,7 +490,7 @@ substitute_and_verify (const char *test_name,
     }
   /* Else neither rev nor author, so Lines 48 and 49 remain unchanged. */
 
-  /* Handle line 48 specially, as it contains two valid keywords. */
+  /* Handle line 24 specially, as it contains two valid keywords. */
   if (date && author)
     {
       if (expand)
@@ -498,7 +506,7 @@ substitute_and_verify (const char *test_name,
         {
           expect[24 - 1] =
             apr_pstrcat (pool, "Line 24: ",
-                         "keyword in a keyword: $Author$",
+                         "keyword in a keyword: $Author$Date$ $",
                          NULL);
         }
     }
@@ -530,7 +538,7 @@ substitute_and_verify (const char *test_name,
         {
           expect[24 - 1] =
             apr_pstrcat (pool, "Line 24: ",
-                         "keyword in a keyword: $Author$",
+                         "keyword in a keyword: $Author$Date$ $",
                          NULL);
         }
     }
