@@ -203,7 +203,7 @@
 14. Copy svn_version.h.dist (that dist.sh made in the top level of your wc)
     to subversion/includes/svn_version.h and commit.
 
-      cp svn_version.h subversion/include/svn_version.h
+      cp svn_version.h.dist subversion/include/svn_version.h
       svn commit -m "Update svn_version.h to match tarball." \
           subversion/include/svn_version.h
 
@@ -216,7 +216,7 @@
 
     a) Switch your working copy back to the branch.
 
-         svn switch http://svn.collab.net/repos/svn/branch/X.Y.x
+         svn switch http://svn.collab.net/repos/svn/branches/X.Y.x
 
     b) Modify subversion/include/svn_version.h
        If you just did 1.0.2 then svn_version.h should have the proper
