@@ -59,7 +59,7 @@ cl_prompt (char **info,
 }
 
 static svn_client_revision_t
-svn_ruby_parse_revision (VALUE revOrDate)
+parse_revision (VALUE revOrDate)
 {
   svn_client_revision_t revision;
   if (rb_obj_is_kind_of (revOrDate, rb_cTime) == Qtrue)
@@ -173,7 +173,7 @@ cl_checkout (int argc, VALUE *argv, VALUE self)
   rb_scan_args (argc, argv, "3*", &aURL, &aPath, &aRevOrTime, &rest);
   Check_Type (aURL, T_STRING);
   Check_Type (aPath, T_STRING);
-  revision = svn_ruby_parse_revision (aRevOrTime);
+  revision = parse_revision (aRevOrTime);
   cl_get_parse_arg (rest, &before_editor, &before_edit_baton,
                     &after_editor, &after_edit_baton, &xml);
   
@@ -218,7 +218,7 @@ cl_update (int argc, VALUE *argv, VALUE self)
 
   rb_scan_args (argc, argv, "3*", &aPath, &aRevOrTime, &recurse, &rest);
   Check_Type (aPath, T_STRING);
-  revision = svn_ruby_parse_revision (aRevOrTime);
+  revision = parse_revision (aRevOrTime);
 
   cl_get_parse_arg (rest, &before_editor, &before_edit_baton,
                     &after_editor, &after_edit_baton, &xml);
@@ -573,8 +573,8 @@ cl_log (int argc, VALUE *argv, VALUE self)
   svn_ruby_get_log_args (argc, argv, self, &paths, &aStart, &aEnd,
                          &discover_changed_paths, &baton, NULL);
 
-  start = svn_ruby_parse_revision (aStart);
-  end = svn_ruby_parse_revision (aEnd);
+  start = parse_revision (aStart);
+  end = parse_revision (aEnd);
 
   err = svn_client_log (auth_baton,
                         paths, &start, &end,
@@ -656,7 +656,7 @@ cl_copy (int argc, VALUE *argv, VALUE self)
     Check_Type (aMessage, T_STRING);
 
   Data_Get_Struct (self, svn_client_auth_baton_t, auth_baton);
-  src_revision = svn_ruby_parse_revision (srcRev);
+  src_revision = parse_revision (srcRev);
   if (beforeEditor != Qnil)
       svn_ruby_delta_editor (&before_editor, &before_edit_baton, beforeEditor);
   if (afterEditor != Qnil)
