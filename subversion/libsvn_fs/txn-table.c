@@ -175,6 +175,22 @@ svn_fs__create_txn (char **txn_id_p,
 
 
 svn_error_t *
+svn_fs__delete_txn (svn_fs_t *fs,
+                    const char *svn_txn,
+                    trail_t *trail)
+{
+  DBT key;
+
+  svn_fs__str_to_dbt (&key, (char *) svn_txn);
+  SVN_ERR (DB_WRAP (fs, "deleting entry from `transactions' table",
+                    fs->transactions->del (fs->transactions,
+                                           trail->db_txn, &key, 0)));
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
 svn_fs__get_txn (svn_fs_id_t **root_id_p,
                  svn_fs_id_t **base_root_id_p,
                  svn_fs_t *fs,

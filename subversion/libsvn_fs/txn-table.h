@@ -35,6 +35,13 @@ svn_error_t *svn_fs__create_txn (char **txn_id_p,
                                  trail_t *trail);
 
 
+/* Remove the transaction whose ID is SVN_TXN from the `transactions'
+   table of FS, as part of TRAIL.  */
+svn_error_t *svn_fs__delete_txn (svn_fs_t *fs,
+                                 const char *svn_txn,
+                                 trail_t *trail);
+
+ 
 /* Retrieve information about the Subversion transaction SVN_TXN from
    the `transactions' table of FS, as part of TRAIL.
    Set *ROOT_ID_P to the ID of the transaction's root directory.
