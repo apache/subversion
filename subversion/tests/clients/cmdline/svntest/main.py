@@ -355,6 +355,8 @@ def run_tests(test_list):
   global test_area_url
   testnum = None
 
+  url_re = re.compile('^(?:--url|BASE_URL)=(.+)')
+
   for arg in sys.argv:
 
     if arg == "list":
@@ -373,10 +375,15 @@ def run_tests(test_list):
       test_area_url = sys.argv[index + 1]
 
     else:
-      try:
-        testnum = int(arg)
-      except ValueError:
-        pass
+      match = url_re.search(arg)
+      if match:
+        test_area_url = match.group(1)
+    
+      else:
+        try:
+          testnum = int(arg)
+        except ValueError:
+          pass
 
   exit_code = _internal_run_tests(test_list, testnum)
 
