@@ -1079,10 +1079,10 @@ svn_ra_dav__do_proppatch (svn_ra_session_t *ras,
 
 
 svn_error_t *
-svn_ra_dav__do_check_path(svn_node_kind_t *kind,
-                          void *session_baton,
+svn_ra_dav__do_check_path(void *session_baton,
                           const char *path,
                           svn_revnum_t revision,
+                          svn_node_kind_t *kind,
                           apr_pool_t *pool)
 {
   svn_ra_session_t *ras = session_baton;

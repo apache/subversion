@@ -108,7 +108,7 @@ svn_client_ls (apr_hash_t **dirents,
     SVN_ERR (ra_lib->get_latest_revnum (session, &rev, pool));
 
   /* Decide if the URL is a file or directory. */
-  SVN_ERR (ra_lib->check_path (&url_kind, session, "", rev, pool));
+  SVN_ERR (ra_lib->check_path (session, "", rev, &url_kind, pool));
 
   if (url_kind == svn_node_dir)
     {

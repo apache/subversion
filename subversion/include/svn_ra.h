@@ -669,10 +669,10 @@ typedef struct svn_ra_plugin_t
    *
    * Use @a pool for memory allocation.
    */
-  svn_error_t *(*check_path) (svn_node_kind_t *kind,
-                              void *session_baton,
+  svn_error_t *(*check_path) (void *session_baton,
                               const char *path,
                               svn_revnum_t revision,
+                              svn_node_kind_t *kind,
                               apr_pool_t *pool);
 
   /** Set @a *uuid to the repository's UUID.

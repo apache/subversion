@@ -923,8 +923,8 @@ static svn_error_t *ra_svn_log(void *sess, const apr_array_header_t *paths,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *ra_svn_check_path(svn_node_kind_t *kind, void *sess,
-                                      const char *path, svn_revnum_t rev,
+static svn_error_t *ra_svn_check_path(void *sess, const char *path,
+                                      svn_revnum_t rev, svn_node_kind_t *kind,
                                       apr_pool_t *pool)
 {
   svn_ra_svn_conn_t *conn = sess;

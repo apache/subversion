@@ -177,8 +177,8 @@ svn_client_status (svn_revnum_t *youngest,
          us a whole lot of hassle; if it does, the cost of this
          request should be minimal compared to the size of getting
          back the average amount of "out-of-date" information. */
-      SVN_ERR (ra_lib->check_path (&kind, session, "", 
-                                   SVN_INVALID_REVNUM, pool));
+      SVN_ERR (ra_lib->check_path (session, "", SVN_INVALID_REVNUM,
+                                   &kind, pool));
       if (kind == svn_node_none)
         {
           /* Note that our status target has been deleted from HEAD of

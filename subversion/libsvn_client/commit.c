@@ -506,8 +506,8 @@ get_ra_editor (void **ra_baton,
     {
       svn_node_kind_t kind;
 
-      SVN_ERR ((*ra_lib)->check_path (&kind, *session, "", 
-                                      SVN_INVALID_REVNUM, pool));
+      SVN_ERR ((*ra_lib)->check_path (*session, "", SVN_INVALID_REVNUM,
+                                      &kind, pool));
       if (kind == svn_node_none)
         return svn_error_createf (SVN_ERR_FS_NO_SUCH_ENTRY, NULL,
                                   "the path '%s' does not exist",
