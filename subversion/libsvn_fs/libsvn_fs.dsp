@@ -84,10 +84,10 @@ LIB32=link.exe -lib
 # Name "libsvn_fs - Win32 Debug"
 # Begin Group "Source Files"
 
-# PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
+# PROP Default_Filter ".c"
 # Begin Source File
 
-SOURCE=".\copies-table.c"
+SOURCE=".\bdb\copies-table.c"
 # End Source File
 # Begin Source File
 
@@ -95,7 +95,7 @@ SOURCE=.\dag.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\dbt.c
+SOURCE=.\bdb\dbt.c
 # End Source File
 # Begin Source File
 
@@ -111,7 +111,7 @@ SOURCE=.\fs.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\fs_skels.c
+SOURCE=.\util\fs_skels.c
 # End Source File
 # Begin Source File
 
@@ -127,7 +127,7 @@ SOURCE=".\node-rev.c"
 # End Source File
 # Begin Source File
 
-SOURCE=".\nodes-table.c"
+SOURCE=".\bdb\nodes-table.c"
 # End Source File
 # Begin Source File
 
@@ -135,19 +135,23 @@ SOURCE=".\reps-strings.c"
 # End Source File
 # Begin Source File
 
-SOURCE=".\reps-table.c"
+SOURCE=".\bdb\reps-table.c"
 # End Source File
 # Begin Source File
 
-SOURCE=".\rev-table.c"
+SOURCE=".\bdb\rev-table.c"
 # End Source File
 # Begin Source File
 
-SOURCE=.\skel.c
+SOURCE=".\revs-txns.c"
 # End Source File
 # Begin Source File
 
-SOURCE=".\strings-table.c"
+SOURCE=.\util\skel.c
+# End Source File
+# Begin Source File
+
+SOURCE=".\bdb\strings-table.c"
 # End Source File
 # Begin Source File
 
@@ -159,23 +163,19 @@ SOURCE=.\tree.c
 # End Source File
 # Begin Source File
 
-SOURCE=".\txn-table.c"
+SOURCE=".\bdb\txn-table.c"
 # End Source File
 # Begin Source File
 
 SOURCE=.\txn.c
 # End Source File
-# Begin Source File
-
-SOURCE=.\validate.c
-# End Source File
 # End Group
 # Begin Group "Header Files"
 
-# PROP Default_Filter "h;hpp;hxx;hm;inl"
+# PROP Default_Filter ".h"
 # Begin Source File
 
-SOURCE=".\copies-table.h"
+SOURCE=".\bdb\copies-table.h"
 # End Source File
 # Begin Source File
 
@@ -183,7 +183,7 @@ SOURCE=.\dag.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\dbt.h
+SOURCE=.\bdb\dbt.h
 # End Source File
 # Begin Source File
 
@@ -191,15 +191,11 @@ SOURCE=.\err.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\file.h
-# End Source File
-# Begin Source File
-
 SOURCE=.\fs.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\fs_skels.h
+SOURCE=.\util\fs_skels.h
 # End Source File
 # Begin Source File
 
@@ -215,7 +211,7 @@ SOURCE=".\node-rev.h"
 # End Source File
 # Begin Source File
 
-SOURCE=".\nodes-table.h"
+SOURCE=".\bdb\nodes-table.h"
 # End Source File
 # Begin Source File
 
@@ -223,19 +219,23 @@ SOURCE=".\reps-strings.h"
 # End Source File
 # Begin Source File
 
-SOURCE=".\reps-table.h"
+SOURCE=".\bdb\reps-table.h"
 # End Source File
 # Begin Source File
 
-SOURCE=".\rev-table.h"
+SOURCE=".\bdb\rev-table.h"
 # End Source File
 # Begin Source File
 
-SOURCE=.\skel.h
+SOURCE=".\revs-txns.h"
 # End Source File
 # Begin Source File
 
-SOURCE=".\strings-table.h"
+SOURCE=.\util\skel.h
+# End Source File
+# Begin Source File
+
+SOURCE=".\bdb\strings-table.h"
 # End Source File
 # Begin Source File
 
@@ -247,15 +247,11 @@ SOURCE=.\tree.h
 # End Source File
 # Begin Source File
 
-SOURCE=".\txn-table.h"
+SOURCE=".\bdb\txn-table.h"
 # End Source File
 # Begin Source File
 
 SOURCE=.\txn.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\validate.h
 # End Source File
 # End Group
 # End Target
