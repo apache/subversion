@@ -204,11 +204,17 @@ do_stack_append (svn_delta_digger_t *digger,
           && (youngest_frame->tag != svn_XML_dir))
         return XML_validation_error (pool, tagname, FALSE);
       
-      /* <new>, <replace>, <delete> must all follow <tree-delta> */
+      /* <new>, <replace> must follow <tree-delta> */
       else if ( ((new_frame->tag == svn_XML_new)
                  || (new_frame->tag == svn_XML_replace)
                  || (new_frame->tag == svn_XML_delete))
                 && (youngest_frame->tag != svn_XML_treedelta) )
+        return XML_validation_error (pool, tagname, FALSE);
+
+      /* <delete> must follow either <tree-delta> or <prop-delta> */
+      else if ( (new_frame->tag == svn_XML_delete)
+                && (youngest_frame->tag != svn_XML_treedelta)
+                && (youngest_frame->tag != svn_XML_propdelta) )
         return XML_validation_error (pool, tagname, FALSE);
       
       /* <file>, <dir> must follow either <new> or <replace> */
@@ -235,7 +241,13 @@ do_stack_append (svn_delta_digger_t *digger,
                && (youngest_frame->tag != svn_XML_file))
         return XML_validation_error (pool, tagname, FALSE);
 
-      /* The XML is valid.  Do the usual bookkeeping. */
+      /* <set> must follow <prop-delta> */
+      else if ((new_frame->tag == svn_XML_textdelta)
+               && (youngest_frame->tag != svn_XML_file))
+        return XML_validation_error (pool, tagname, FALSE);
+
+
+      /* The XML is valid.  Do the append.  */
       youngest_frame->next = new_frame;
       new_frame->baton = youngest_frame->baton; /* Inherit parent's baton. */
     }
@@ -298,6 +310,10 @@ do_stack_remove (svn_delta_digger_t *digger, const char *tagname)
            && (youngest_frame->tag != svn_XML_propdelta))
     return XML_validation_error (pool, tagname, TRUE);
 
+  else if ((strcmp (tagname, "set") == 0)
+           && (youngest_frame->tag != svn_XML_set))
+    return XML_validation_error (pool, tagname, TRUE);
+
 
   /* Passed validity check, do the removal. */
 
@@ -335,6 +351,8 @@ set_tag_type (svn_delta_stackframe_t *frame,
     frame->tag = svn_XML_textdelta;
   else if (strcmp (name, "prop-delta") == 0)
     frame->tag = svn_XML_propdelta;
+  else if (strcmp (name, "set") == 0)
+    frame->tag = svn_XML_set;
   else 
     return XML_validation_error (digger->pool, name, TRUE);
 
@@ -416,7 +434,7 @@ do_directory_callback (svn_delta_digger_t *digger,
 
 
 
-/* Called when we find a <delete> tag */
+/* Called when we find a <delete> tag after a <tree-delta> tag. */
 static svn_error_t *
 do_delete_dirent (svn_delta_digger_t *digger, 
                   svn_delta_stackframe_t *youngest_frame)
@@ -429,7 +447,7 @@ do_delete_dirent (svn_delta_digger_t *digger,
     return SVN_NO_ERROR;
   
   /* Retrieve the "name" field from the current <delete> tag */
-  dir_name = youngest_frame->previous->name;
+  dir_name = youngest_frame->name;
   if (dir_name == NULL)
     return 
       svn_create_error 
@@ -446,6 +464,52 @@ do_delete_dirent (svn_delta_digger_t *digger,
 
   return SVN_NO_ERROR;
 }
+
+
+
+/* Called when we find a <delete> tag after a <prop-delta> tag. */
+static svn_error_t *
+do_delete_prop (svn_delta_digger_t *digger, 
+                svn_delta_stackframe_t *youngest_frame)
+{
+  svn_string_t *dir_name = NULL;
+  svn_error_t *err;
+  
+  /* If there's no pdelta_parser, then that means the caller just
+     doesn't care about the particular <prop-delta> in progress.  Just
+     go home. */
+  if (! digger->pdelta_parser)
+    return SVN_NO_ERROR;
+      
+  /* Retrieve the "name" field from the current <delete> tag */
+  dir_name = youngest_frame->name;
+  if (dir_name == NULL)
+    return 
+      svn_create_error 
+      (SVN_ERR_MALFORMED_XML, 0,
+       "do_delete_prop: <delete> tag has no 'name' field.",
+       NULL, digger->pool);
+  
+  /* Finish filling out the propchange object in the parser: */
+  digger->pdelta_parser->propchange->kind = svn_prop_delete;
+  digger->pdelta_parser->propchange->name = 
+    svn_string_dup (dir_name, digger->pdelta_parser->subpool);
+  digger->pdelta_parser->propchange->value = NULL;
+  
+  err = (*(digger->pdelta_parser->handler)) (digger->pdelta_parser->propchange,
+                                             digger->pdelta_parser->baton);
+  if (err)
+    return err;
+  
+  /* Now deallocate the parser's subpool, the one which was holding
+     the propchange, and then create a new subpool for the next
+     propchange. */
+  svn_reset_parser_subpool (digger->pdelta_parser);
+
+
+  return SVN_NO_ERROR;
+}
+
 
 
 
@@ -541,8 +605,9 @@ do_finish_file (svn_delta_digger_t *digger)
 {
   svn_error_t *err;
 
-  /* Drop the current vcdiff parser! */
+  /* Drop the current parsers! */
   digger->vcdiff_parser = NULL;
+  digger->pdelta_parser = NULL;
 
   /* Only proceed further if the walker callback exists. */
   if (! (digger->walker->finish_file))
@@ -591,30 +656,67 @@ do_begin_textdelta (svn_delta_digger_t *digger)
 
 
 
-/* When we find a new prop-delta, a walker callback returns to us a
-   pdelta-chunk-consumption routine that we use to create a unique
-   pdelta-chunk parser. */
+/* When we find a new prop-delta */
 static svn_error_t *
 do_begin_propdelta (svn_delta_digger_t *digger)
 {
   svn_error_t *err;
-  svn_prop_change_chunk_handler_t *chunk_consumer;
+  svn_delta_stackframe_t *youngest_frame;
+  svn_propchange_location_t location;
+  svn_propchange_handler_t *consumer;
   void *consumer_baton = NULL;
 
   if (digger->walker->begin_propdelta == NULL)
     return SVN_NO_ERROR;
 
-  /* Get a chunk consumer & baton! */
+  /* First, figure out our context.  Is this a propdelta on a file,
+     dir, or dirent? */
+
+  /* Get a grip on the youngest frame of the stack */
+  youngest_frame = find_stack_newest (digger->stack);
+  if (!youngest_frame->previous)
+    return 
+      svn_create_error 
+      (SVN_ERR_MALFORMED_XML, 0,
+       "do_begin_propdelta: <prop-delta> tag has no parent context",
+       NULL, digger->pool);
+  
+  switch (youngest_frame->previous->tag)
+    {
+    case svn_XML_file:
+      location = svn_prop_file;
+    case svn_XML_dir:
+      location = svn_prop_dir;
+    case svn_XML_new:
+      location = svn_prop_dirent;
+    case svn_XML_replace:
+      location = svn_prop_dirent;
+    default:
+      return 
+        svn_create_error 
+        (SVN_ERR_MALFORMED_XML, 0,
+         "do_begin_propdelta: <prop-delta> tag has wonky context",
+         NULL, digger->pool);
+    }
+   
+
+  /* Get a propdelta consumer & baton! */
   err = (* (digger->walker->begin_propdelta)) (digger->walk_baton,
                                                digger->dir_baton,
-                                               &chunk_consumer,
+                                               location,
+                                               &consumer,
                                                &consumer_baton);
 
-  /* Now create a pdelta_chunk parser based on the consumer/baton we
-     got. */
-  digger->pdelta_chunk_parser = svn_make_pdelta_chunk_parser (chunk_consumer,
-                                                              consumer_baton,
-                                                              digger->pool);
+  /* Now create a pdelta parser based on the consumer/baton we got. */
+  digger->pdelta_parser = svn_make_pdelta_parser (consumer,
+                                                  consumer_baton,
+                                                  digger->pool);
+
+  /* Fill out what fields we can in the parser's propchange object: */
+  digger->pdelta_parser->loc = location;
+  digger->pdelta_parser->propchange->loc = location;
+
+
   return SVN_NO_ERROR;
 }
 
@@ -652,24 +754,17 @@ static svn_error_t *
 do_finish_propdelta (svn_delta_digger_t *digger)
 {
   svn_error_t *err;
-  void *cbaton = NULL;
 
-  /* First, don't forget to flush out any remaining bytes sitting in
-     the buffer of our prop-chunk parser!  */
-  /* err = svn_prop_chunk_flush_buffer (digger->pdelta_chunk_parser); */
+  if (!digger->pdelta_parser)
+    return SVN_NO_ERROR;
 
-  if (digger->pdelta_chunk_parser
-      && digger->pdelta_chunk_parser->consumer_baton)
-    {
-      cbaton = digger->pdelta_chunk_parser->consumer_baton;
-    }
-
-  /* Now call the walker callback, if it exists */
+  /* Call the walker callback, if it exists */
   if (digger->walker->finish_propdelta)
     {
       err = digger->walker->finish_propdelta (digger->walk_baton,
                                               digger->dir_baton,
-                                              cbaton);
+                                              digger->pdelta_parser->baton,
+                                              digger->pdelta_parser->loc);
       if (err)
         return err;
     }
@@ -678,6 +773,38 @@ do_finish_propdelta (svn_delta_digger_t *digger)
 }
 
 
+
+
+/* When we get a </set>, send off the buffered name/value within
+   digger->pdelta_parser->propchange */
+static svn_error_t *
+do_finish_setprop (svn_delta_digger_t *digger)
+{
+  svn_error_t *err;
+
+  if (!digger->pdelta_parser)
+    return SVN_NO_ERROR;
+
+  /* Our pdelta_parser must have buffered a complete "value" string.
+     Let's send it off! */
+
+  /* Finish filling out the propchange object: */
+  digger->pdelta_parser->propchange->kind = svn_prop_set;
+  /* propchange->value has been growing all along */
+
+  err = (*(digger->pdelta_parser->handler)) (digger->pdelta_parser->propchange,
+                                             digger->pdelta_parser->baton);
+
+  if (err)
+    return err;
+
+  /* Now deallocate the parser's subpool, the one which was holding
+     the propchange, and then create a new subpool for the next
+     propchange. */
+  svn_reset_parser_subpool (digger->pdelta_parser);
+
+  return SVN_NO_ERROR;
+}
 
 
 
@@ -753,13 +880,27 @@ xml_handle_start (void *userData, const char *name, const char **atts)
       }  
 
   /* EVENT:  Are we deleting a directory entry?  */
-  if (new_frame->tag == svn_XML_delete)
-    {
-      err = do_delete_dirent (my_digger, new_frame);
-      if (err)
-        signal_expat_bailout (err, my_digger);
-      return;
-    }
+  if (new_frame->previous)
+    if ( (new_frame->tag == svn_XML_delete) &&
+         (new_frame->previous->tag == svn_XML_treedelta) )
+      {
+        err = do_delete_dirent (my_digger, new_frame);
+        if (err)
+          signal_expat_bailout (err, my_digger);
+        return;
+      }
+
+  /* EVENT:  Are we deleting a directory entry?  */
+  if (new_frame->previous)
+    if ( (new_frame->tag == svn_XML_delete) &&
+         (new_frame->previous->tag == svn_XML_propdelta) )
+      {
+        err = do_delete_prop (my_digger, new_frame);
+        if (err)
+          signal_expat_bailout (err, my_digger);
+        return;
+      }
+
 
   /* EVENT:  Are we adding a new file?  */
   if (new_frame->previous)
@@ -829,7 +970,7 @@ xml_handle_end (void *userData, const char *name)
   /* Now look for special events that the uber-caller (of
      svn_delta_parse()) might want to know about.  */
 
-  /* EVENT:  Are we finished processing a directory? */
+  /* EVENT:  When we get a </dir> pass back the dir_baton. */
   if (strcmp (name, "dir") == 0)
     {
       err = do_finish_directory (my_digger);
@@ -838,9 +979,7 @@ xml_handle_end (void *userData, const char *name)
       return;
     }      
 
-  /* EVENT: Are we finished processing a file?  Our uber-caller
-     doesn't really care, but we should clear out any vcdiff parser
-     that we were using on this file.  */
+  /* EVENT: when we get a </file>, drop our digger's parsers. */
   if (strcmp (name, "file") == 0)
     {
       err = do_finish_file (my_digger);
@@ -864,6 +1003,16 @@ xml_handle_end (void *userData, const char *name)
       if (err)
         signal_expat_bailout (err, my_digger);
     }
+
+
+  /* EVENT: when we get a </set>, send off the propchange. */
+  if (strcmp (name, "set") == 0)
+    {
+      err = do_finish_setprop (my_digger);
+      if (err)
+        signal_expat_bailout (err, my_digger);
+    }
+
 
 
   /* This is a void expat callback, don't return anything. */
@@ -921,9 +1070,30 @@ xml_handle_data (void *userData, const char *data, int len)
         }                          
     }
 
-  else if (youngest_frame->tag == svn_XML_propdelta)
+  else if (youngest_frame->tag == svn_XML_set)
     {
-      /* TODO:  we don't handle prop-deltas yet.  Just ignore for now. */
+      /* We're about to receive the "value" data for a prop-delta
+         `set' command.  (The "name" data is already stored in the
+         current stackframe's "name" field, since expat gave us the
+         whole thing as an XML attribute.) */
+      svn_error_t *err;
+      
+      /* Check that we have a pdelta parser to deal with the incoming
+         data. */
+      if (! digger->pdelta_parser)
+        return;
+
+      /* Pass the data to our current pdelta parser, so it can buffer
+         up the whole value in RAM. */
+      err = svn_pdelta_parse (digger, data, &numbytes);
+      if (err)
+        {
+          signal_expat_bailout
+            (svn_quick_wrap_error
+             (err, "xml_handle_data: pdelta parser choked."),
+             digger);
+          return;
+        }                          
     }
 
   else
@@ -995,6 +1165,7 @@ svn_delta_parse (svn_delta_read_fn_t *source_fn,
   digger->dir_baton        = dir_baton;
   digger->validation_error = SVN_NO_ERROR;
   digger->vcdiff_parser    = NULL;
+  digger->pdelta_parser    = NULL;
 
   /* Create a custom expat parser (uses our own svn callbacks and
      hands them the digger on each XML event) */

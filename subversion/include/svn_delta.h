@@ -170,6 +170,12 @@ typedef svn_error_t *(svn_text_delta_window_handler_t)
 
 /* Property deltas.  */
 
+typedef enum
+{
+  svn_prop_file = 1,
+  svn_prop_dir,
+  svn_prop_dirent
+} svn_propchange_location_t;
 
 
 /* This represents an *entire* propchange, all in memory. */
@@ -179,6 +185,9 @@ typedef struct svn_propchange_t
     svn_prop_set = 1,
     svn_prop_delete
   } kind;
+
+  svn_propchange_location_t loc;
+
   svn_string_t *name;
   svn_string_t *value;
 
@@ -277,14 +286,11 @@ typedef struct svn_delta_walk_t
      currently XML attributes and therefore can't really be streamed
      at parse time anyway). */
   svn_error_t *(*begin_propdelta) (void *walk_baton, void *parent_baton,
-                                   svn_propchange_handler_t **file_handler,
-                                   void **file_handler_baton;
-                                   svn_propchange_handler_t **dir_handler,
-                                   void **dir_handler_baton;
-                                   svn_propchange_handler_t **dirent_handler,
-                                   void **dirent_handler_baton);
+                                   svn_propchange_location_t location,
+                                   svn_propchange_handler_t **handler,
+                                   void **baton);
 
-  
+
   /* The first two batons are the familiar story, the last is the
      handler_baton that was passed to the begin_* function. */
   svn_error_t *(*finish_textdelta) (void *walk_baton, 
@@ -293,7 +299,8 @@ typedef struct svn_delta_walk_t
 
   svn_error_t *(*finish_propdelta) (void *walk_baton, 
                                     void *parent_baton,
-                                    void *handler_baton);
+                                    void *handler_baton,
+                                    svn_propchange_location_t location);
 
 
   /* We are going to add a new file named NAME.    */
