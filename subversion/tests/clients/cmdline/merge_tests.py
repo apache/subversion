@@ -256,7 +256,7 @@ def textual_merges_galore(sbox):
     if (not re.match("tau.*\.(r\d+|working)", a.name)):
       print "Merge got unexpected singleton", a.name
       raise svntest.main.SVNTreeUnequal
-  return 0
+
   svntest.actions.run_and_verify_merge(other_wc, '1', '3',
                                        svntest.main.current_repo_url,
                                        expected_output,
