@@ -244,8 +244,7 @@ do_stack_append (svn_delta__digger_t *digger,
       
       /* <new>, <replace> must follow <tree-delta> */
       else if ( ((new_frame->tag == svn_delta__XML_new)
-                 || (new_frame->tag == svn_delta__XML_replace)
-                 || (new_frame->tag == svn_delta__XML_delete))
+                 || (new_frame->tag == svn_delta__XML_replace))
                 && (youngest_frame->tag != svn_delta__XML_treedelta) )
         return XML_validation_error (pool, tagname, FALSE);
 
@@ -834,6 +833,21 @@ do_finish_propdelta (svn_delta__digger_t *digger)
 }
 
 
+/* When we get a <set>, add the "name" field to the pdelta_parser's
+   propchange object. */
+static svn_error_t *
+do_begin_setprop (svn_delta__digger_t *digger,
+                  svn_delta__stackframe_t *youngest_frame)
+{
+  if (!digger->pdelta_parser)
+    return SVN_NO_ERROR;
+
+  digger->pdelta_parser->propchange->name =
+    svn_string_dup (youngest_frame->name, digger->pdelta_parser->subpool);
+  
+  return SVN_NO_ERROR;
+}
+
 
 
 /* When we get a </set>, send off the buffered name/value within
@@ -964,7 +978,7 @@ xml_handle_start (void *userData, const char *name, const char **atts)
         return;
       }
 
-  /* EVENT:  Are we deleting a directory entry?  */
+  /* EVENT:  Are we deleting a property?  */
   if (new_frame->previous)
     if ( (new_frame->tag == svn_delta__XML_delete) &&
          (new_frame->previous->tag == svn_delta__XML_propdelta) )
@@ -1016,6 +1030,14 @@ xml_handle_start (void *userData, const char *name, const char **atts)
       return;
     }
 
+  /* EVENT:  Are we starting a new prop-delta?  */
+  if (new_frame->tag == svn_delta__XML_set) 
+    {
+      err = do_begin_setprop (my_digger, new_frame);
+      if (err)
+        signal_expat_bailout (err, my_digger);
+      return;
+    }
 
 
   /* This is a void expat callback, don't return anything. */

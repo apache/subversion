@@ -5,7 +5,11 @@
         <new name="mu">
           <file ancestor="/A/mu">
             <text-delta>This is the file 'mu'.</text-delta>
-            <prop-delta><set name="fruit">apple</set></prop-delta>
+            <prop-delta>
+                <set name="fruit">apple</set>
+                <set name="banana">yummilicious</set>
+                <delete name="glorb"/>
+            </prop-delta>
           </file>
         </new>
         <new name="B">
@@ -36,6 +40,7 @@
             <tree-delta>
               <new name="gamma">
                 <file ancestor="/A/D/gamma">
+                  <prop-delta><delete name="banana"/></prop-delta>      
                   <text-delta>This is the file 'gamma'.</text-delta>
                 </file>
               </new>

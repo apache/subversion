@@ -62,15 +62,29 @@ my_vcdiff_windoweater (svn_delta_window_t *window, void *baton)
 svn_error_t *
 my_fileprop_handler (svn_propchange_t *propchange, void *baton)
 {
-  printf ("GOT FILE-PROPCHANGE: name = %s, value = %s, ", 
-          propchange->name->data, propchange->value->data);
+  char *propname = "<none>";
+  char *propvalue = "<none>";
+
+  if (propchange->name)
+    propname = propchange->name->data;
+
+  if (propchange->value)
+    propvalue = propchange->value->data;
+
+  printf ("GOT FILE-PROPCHANGE: name = %s, value = %s, ", propname, propvalue);
   
   switch (propchange->kind)
     {
     case svn_prop_set:
-      printf ("kind = svn_prop_set\n");
+      {
+        printf ("kind = svn_prop_set\n");
+        break;
+      }
     case svn_prop_delete:
-      printf ("kind = svn_prop_delete\n");
+      {
+        printf ("kind = svn_prop_delete\n");
+        break;
+      }
     }
 
   return SVN_NO_ERROR;

@@ -81,13 +81,14 @@
 
 
 
-/* Utility: deallocate a parser's subpool (and the propchange inside
-   it), andthen create a new subpool with a new propchange, ready to
-   buffer the next change.  */
+/* Utility: deallocate a parser's subpool if it exists (and thereby
+   the propchange inside it), and then create a new subpool with a new
+   propchange, ready to buffer the next change.  */
 void 
 svn_delta__reset_parser_subpool (svn_delta__pdelta_parser_t *parser)
 {
-  apr_destroy_pool (parser->subpool);
+  if (parser->subpool)
+    apr_destroy_pool (parser->subpool);
 
   parser->subpool = apr_make_sub_pool (parser->pool, NULL);
 
@@ -122,16 +123,9 @@ svn_delta__make_pdelta_parser (svn_propchange_handler_t *handler,
   new_pdelta_parser->baton = handler_baton;
 
   new_pdelta_parser->pool = pool;
-  new_pdelta_parser->subpool = 
-    apr_make_sub_pool (new_pdelta_parser->pool, NULL);
 
-  /* Important:  notice that the parser's buffer lives in a subpool */
-  new_pdelta_parser->propchange = 
-    (svn_propchange_t *) apr_palloc (new_pdelta_parser->subpool, 
-                                     sizeof(svn_propchange_t));
-
-  new_pdelta_parser->propchange->value = 
-    svn_string_create ("", new_pdelta_parser->subpool);
+  /* Create a subpool containing an empty propchange object. */
+  svn_delta__reset_parser_subpool (new_pdelta_parser);
 
   return new_pdelta_parser;
 }

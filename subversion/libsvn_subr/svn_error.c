@@ -125,13 +125,8 @@ svn_quick_wrap_error (svn_error_t *child, const char *new_msg)
 
 
 
-/* Very dumb "default" error handler that anyone can use if they wish.
-
-   Just prints out error stack (recursively), 
-   and quits if the fatal flag is set.
-
-*/
-
+/* Very dumb "default" error handler: Just prints out error stack
+   (recursively), and quits if the fatal flag is set.  */
 void
 svn_handle_error (svn_error_t *err, FILE *stream)
 {
@@ -139,13 +134,20 @@ svn_handle_error (svn_error_t *err, FILE *stream)
 
   /* Pretty-print the error */
   /* Note: we can also log errors here someday. */
-  
-  fprintf (stream, "\nsvn_error: apr_err %d, src_err %d", 
-           err->apr_err,
-           err->src_err);
-  fprintf (stream, "  canonical err %d : %s\n",
-           apr_canonical_error (err->apr_err),
-           apr_strerror (err->apr_err, buf, sizeof(buf)));
+
+  /* Is this a Subversion-specific error code? */
+  if ((err->apr_err > APR_OS_START_USEERR) 
+      && (err->apr_err <= APR_OS_START_CANONERR))
+    fprintf (stream, "\nsvn_error: #%d ", err->apr_err);
+
+  /* Otherwise, this must be an APR error code. */
+  else
+    fprintf (stream, "\napr_error: #%d, src_err %d, canonical err %d : %s\n",
+             err->apr_err,
+             err->src_err,
+             apr_canonical_error (err->apr_err),
+             apr_strerror (err->apr_err, buf, sizeof(buf)));
+
   fprintf (stream, "  %s\n", err->message);
   fflush (stream);
 
