@@ -1513,6 +1513,24 @@ sally = rw
           parts.  Harry, meanwhile, continues to have complete
           read-write access to the whole branch.</para>
 
+        <para>It's also possible to explicitly deny permission to
+          someone via inheritance rules, by setting the username
+          variable to nothing:</para>
+
+        <screen>
+[/branches/calc/bug-142]
+harry = rw
+sally = r
+
+[/branches/calc/bug-142/secret]
+harry =
+</screen>
+        
+        <para>In this example, harry has read-write access to the
+          entire <filename>bug-142</filename> tree, but has absolutely no
+          access at all to the <filename>secret</filename>
+          subdirectory within it.</para>
+
         <para>By default, nobody has any access to the repository at
           all.  That means that if you're starting with an empty file,
           you'll probably want to give at least read permission to all
