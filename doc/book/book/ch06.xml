@@ -35,8 +35,8 @@
     <para>Before reading this chapter, you should be familiar with the
       basic file and directory versioning capabilities of Subversion.
       If you haven't already read about those, or if you need a
-      refresher, we crecommend that you check out <xref
-      linkend="svn-ch-1" /> and <xref linkend="svn-ch-2" />.  Once
+      refresher, we recommend that you check out <xref
+      linkend="svn-ch-2" /> and <xref linkend="svn-ch-3" />.  Once
       you've mastered the basics and consumed this chapter, you'll be
       a Subversion power-user&mdash;or we'll refund your money!
       <footnote>
@@ -62,7 +62,7 @@
       segregated into a Subversion configuration area.</para>
 
     <para>The Subversion <firstterm>configuration area</firstterm> is
-      a two-tiered heirarchy of option names and their values.
+      a two-tiered hierarchy of option names and their values.
       Usually, this boils down to a special directory which contains
       <firstterm>configuration files</firstterm> (the first tier),
       which are just text files in standard INI format (with
@@ -134,7 +134,7 @@
         Subversion clients running on Windows platforms may also use
         the Windows registry to hold the configuration data.  The
         option names and their values are the same as in the INI
-        files.  The <quote>file/section</quote> heirarchy is
+        files.  The <quote>file/section</quote> hierarchy is
         preserved as well, though addressed in a slightly different
         fashion&mdash;in this schema, files and sections are just
         levels in the registry key tree.</para>
@@ -231,10 +231,11 @@ REGEDIT4
 
     <!-- ***************************************************************** -->
     <sect2 id="svn-ch-6-sect-1.3">
-      <title>The Configuration Options</title>
+      <title>Configuration Options</title>
       
-      <para>In this section, we will discuss the currently supported
-        run-time configuration options.</para>
+      <para>In this section, we will discuss the specific
+        run-time configuration options which are currently supported
+        by Subversion.</para>
 
       <sect3 id="svn-ch-6-sect-1.3.1">
         <title>Servers</title>
@@ -244,9 +245,11 @@ REGEDIT4
           layers.  There are two special section names in this
           file&mdash;<literal>groups</literal> and
           <literal>default</literal>.  The <literal>groups</literal>
-          section is cross-reference table of sort.  The keys in this
-          section are the names of other sections in the file; their
-          values are globs which are compared against the hostnames of
+          section is essentially a cross-reference table.  The keys in
+          this section are the names of other sections in the file;
+          their values are <firstterm>globs</firstterm>&mdash;textual
+          tokens which possibly contain wildcard
+          characters&mdash;which are compared against the hostnames of
           the machine to which Subversion requests are sent.</para>
 
         <programlisting>
@@ -272,7 +275,7 @@ collabnet = svn.collab.net
         <para>The <literal>default</literal> section contains the
           settings which are meant for all of the servers not matched
           by one of the globs under the <literal>groups</literal>
-          section.  The available options under this section are
+          section.  The options available in this section are
           exactly the same as those valid for the other server
           sections in the file (except, of course, the special
           <literal>groups</literal> section), and are as
@@ -331,7 +334,8 @@ collabnet = svn.collab.net
                 library, Neon, uses for choosing what type of
                 debugging output to yield.  The default value is
                 <literal>0</literal>, which will silence all debugging
-                output.</para>
+                output.  For more information about how Subversion
+                makes use of Neon, see <xref linkend="svn-ch-7" />.</para>
             </listitem>
           </varlistentry>
           <!--
@@ -352,7 +356,7 @@ collabnet = svn.collab.net
         <para>The <filename>config</filename> file contains the rest
           of the currently available Subversion run-time options,
           those not related to networking.  There are only a few
-          options in use at this time, but they are again group into
+          options in use at this time, but they are again grouped into
           sections in expectation of future additions.</para>
 
         <para>The <literal>auth</literal> section contains settings
@@ -385,15 +389,19 @@ collabnet = svn.collab.net
             <term><literal>editor-cmd</literal></term>
             <listitem>
               <para>This specifies the program Subversion will use to
-                query the user for a commit log.  This program is also
-                used with the <command>svn propedit</command>
-                command&mdash;a temporary file is populated with the
-                current value of the property the user wishes to edit,
-                and the edits take places right in the editor program
-                (see <xref linkend="svn-ch-6-sect-2" />).  This
-                option's default value is empty.  If the option is not
-                set, Subversion will fall back to checking the
-                environment variables <literal>SVN_EDITOR</literal>,
+                query the user for a log message during a commit
+                operation, such as when using <command>svn
+                commit</command> without either the <option>--message
+                (-m)</option> or <option>--file (-F)</option> options.
+                This program is also used with the <command>svn
+                propedit</command> command&mdash;a temporary file is
+                populated with the current value of the property the
+                user wishes to edit, and the edits take places right
+                in the editor program (see <xref
+                linkend="svn-ch-6-sect-2" />).  This option's default
+                value is empty.  If the option is not set, Subversion
+                will fall back to checking the environment variables
+                <literal>SVN_EDITOR</literal>,
                 <literal>VISUAL</literal>, and
                 <literal>EDITOR</literal> (in that order) for an
                 editor command.</para>
@@ -497,9 +505,9 @@ collabnet = svn.collab.net
     <para>We've already covered in detail how Subversion stores and
       retrieves various versions of files and directories in its
       repository.  Whole chapters have been devoted to this most
-      foundational piece of functionality provided by the tool.  And
+      fundamental piece of functionality provided by the tool.  And
       if the versioning support stopped there, Subversion would still
-      be complete from version control perspective.  But it
+      be complete from a version control perspective.  But it
       doesn't stop there.</para>
 
     <para>In addition to versioning your directories and files,
@@ -673,14 +681,6 @@ $
         paths) and a property name, print the value of the property to
         the standard output stream.</para>
 
-      <para>You can add file or directory properties with the
-        <command>svn propset</command> command.  provides a To set or
-        get a property on a file or directory, use the <command>svn
-        propset</command> and <command>svn propget</command> commands.
-        To list all properties attached to an item, use <command>svn
-        proplist</command>.  To delete a property, use <command>svn
-        propdel</command>.</para>
-
       <screen>
 $ svn proplist calc/button.c
 Properties on 'calc/button.c':
@@ -755,27 +755,35 @@ $
         <title>Modifying Revision Properties</title>
 
         <para>Remember those unversioned revision properties?  You can
-          modify those with the <command>svn</command> program, too.
+          modify those, too, with the <command>svn</command> program.
           Simply add the <option>--revprop</option> command-line
           parameter, and specify the revision whose property you wish
           to modify.  Since revisions are global, you don't need to
           specify a path in this case as long as you are positioned in
           the working copy of the repository whose revision property
-          you wish to modify.</para>
+          you wish to modify.  For example, you might want to replace
+          the commit log message of an existing revision.
+          <footnote>
+            <para>Fixing spelling errors, grammatical gotchas, and
+              <quote>just-plain-wrongness</quote> in commit log
+              messages is perhaps the most common use-case for the
+              <option>--revprop</option> option.</para>
+          </footnote></para>
 
         <screen>
-$ svn pset status 'compiles, but does not work' -r11 --revprop
+$ svn pset svn:log '* button.c: Fix a compiler warning.' -r11 --revprop
 property `status' set on repository revision '11'
 $
 </screen>
 
         <para>Note that the ability to modify these unversioned
           properties must be explicitly added by the repository
-          administrator.  Since the properties aren't versioned, you
-          run the risk of losing information if you aren't careful
-          with your edits.  The repository administrator can setup
-          methods to protect against this lossage, but by default,
-          modification of unversioned properties is disabled.</para>
+          administrator (see <xref linkend="svn-ch-5-sect-2.1" />).
+          Since the properties aren't versioned, you run the risk of
+          losing information if you aren't careful with your edits.
+          The repository administrator can setup methods to protect
+          against this lossage, but by default, modification of
+          unversioned properties is disabled.</para>
 
       </sidebar>
 
@@ -808,11 +816,52 @@ $
         <filename>calc/button.c</filename>, but not modified its
         textual contents.  Had we changed both, we would have seen
         <literal>M</literal> in the first column, too (see <xref
-        linkend="svn-ch-3-sect-4.3.1" />).  As as with file contents,
-        if someone else makes property changes that clash with your
-        own, you will see a <literal>C</literal> in that second
-        column, denoting a conflicted state which will need to be
-        resolved before committing.</para>
+        linkend="svn-ch-3-sect-4.3.1" />).</para>
+
+      <sidebar>
+        <title>Property Conflicts</title>
+
+        <para>As with file contents, local property modifications can
+          conflict with changes committed by someone else.  If you
+          update your working copy directory and receive property
+          changes on a versioned resource that clash with your own,
+          Subversion will report that the resource is in a conflicted
+          state.</para>
+ 
+        <screen>
+% svn up calc
+M  calc/Makefile.in
+ C calc/button.c
+Updated to revision 143.
+$ 
+</screen>
+         
+        <para>Subversion will also create, in the same directory as
+          the conflicted resource, a file with a
+          <filename>.prej</filename> extension which contains the
+          details of the conflict.  You should examine the contents of
+          this file so you can decide how to resolve the conflict.
+          Until the conflict is resolved, you will see a
+          <literal>C</literal> in the second column of <command>svn
+          status</command> output for that resource, and attempts to
+          commit your local modifications will fail.</para>
+
+        <screen>
+$ svn st calc
+ C     calc/button.c
+?      calc/button.c.prej
+$ cat calc/button.c.prej 
+prop `linecount': user set to '1256', but update set to '1301'.
+$
+</screen>
+ 
+        <para>To resolve property conflicts, simply ensure that the
+          conflicting properties contain the values that they should,
+          and then use the <command>svn resolve</command> command to
+          alert Subversion that you have manually resolved the
+          problem.</para>
+
+      </sidebar>
 
       <para>You might also have noticed the non-standard way that
         Subversion currently displays property differences.  You can
@@ -861,7 +910,7 @@ $
           no defined values&mdash;its mere presence indicates a desire
           the execute permission bit to be kept enabled by Subversion.
           Removing this property will restore full control of the
-          execute bit back to the operation system.</para>
+          execute bit back to the operating system.</para>
 
         <para>On many operating systems, the ability to execute a file
           as a command is governed by the presence of an execute
@@ -917,24 +966,23 @@ $
           the benefits that Subversion typically provides is
           contextual, line-based merging of changes received from the
           server during an update into your working file.  But for
-          files that are believe to contain binary data, there is no
-          concept of <quote>line</quote> of data.  So, for those
-          files, Subversion does not attempt to perform contextual
-          merges during updates.  Instead, any time you have locally
-          modified a binary working copy file that is also being
-          updated, your file is renamed with a
-          <filename>.orig</filename> extension, and then Subversion
-          stores a new working copy file that contains the changes
-          received during the update, but not your own local
-          modifications, at the original filename.  This behavior is
-          really for the protection of the user against failed
-          attempts at performing contextual merges on files that
-          simply cannot be contextually merged.</para>
+          files believed to contain binary data, there is no concept
+          of a <quote>line</quote>.  So, for those files, Subversion
+          does not attempt to perform contextual merges during
+          updates.  Instead, any time you have locally modified a
+          binary working copy file that is also being updated, your
+          file is renamed with a <filename>.orig</filename> extension,
+          and then Subversion stores a new working copy file that
+          contains the changes received during the update, but not
+          your own local modifications, at the original filename.
+          This behavior is really for the protection of the user
+          against failed attempts at performing contextual merges on
+          files that simply cannot be contextually merged.</para>
 
         <para>Subversion assists users by running a binary-detection
           algorithm in the <command>svn import</command> and
           <command>svn add</command> subcommands.  These subcommands
-          make a heuristical guess at a file's
+          use a heuristic to guess at a file's
           <quote>binary-ness</quote>, and then set the
           <literal>svn:mime-type</literal> property to
           <literal>application/octet-stream</literal> (the generic
@@ -1009,24 +1057,29 @@ $
         
           <para>The Subversion <literal>svn:ignore</literal> property
             is very similar in syntax and function to the CVS
-            <filename>.cvsignore</filename> file.  The two systems use
-            the ignore patterns at some different times, and there are
-            slight discrepencies in what the ignore patterns apply to.
-            Also, Subversion does not recognize the use of the
-            <literal>!</literal> pattern as a reset back to having no
-            ignore patterns at all.  But the most common uses of the
-            <filename>.cvsignore</filename> are quite functional in
-            Subversion.  In fact, if you are migrating a CVS working
-            copy to Subversion, you can directly migrate the ignore
-            patterns by the <filename>.cvsignore</filename> file as
-            input file to the <command>svn propset</command>
-            command:</para>
+            <filename>.cvsignore</filename> file.  In fact, if you are
+            migrating a CVS working copy to Subversion, you can
+            directly migrate the ignore patterns by the
+            <filename>.cvsignore</filename> file as input file to the
+            <command>svn propset</command> command:</para>
        
           <screen>
 $ svn pset svn:ignore -F .cvsignore .
 property `svn:ignore' set on '.'
 $
 </screen>        
+
+          <para>There are, however, some differences in the ways that
+            CVS and Subversion handle ignore patters.  The two systems
+            use the ignore patterns at some different times, and there
+            are slight discrepencies in what the ignore patterns apply
+            to.  Also, Subversion does not recognize the use of the
+            <literal>!</literal> pattern as a reset back to having no
+            ignore patterns at all.  Finally, while the
+            <filename>.cvsignore</filename> patterns apply recursively
+            from the directory in which they reside, Subversion's
+            <literal>svn:ignore</literal> property applies only to the
+            directory on which it is set.</para>
 
         </sidebar>
 
@@ -1077,7 +1130,7 @@ $ svn status calc
           <literal>svn:ignore</literal> property:</para>
 
         <programlisting>
-calc
+calculator
 debug_log*
 </programlisting>
 
@@ -1112,17 +1165,17 @@ $ svn status
           <firstterm>keywords</firstterm>&mdash;pieces of useful,
           dynamic information about a versioned file&mdash;into the
           contents of the file itself.  Keywords generally describe
-          information about the last time the file was modified.
-          Because this information changes each time the file changes,
-          and more importantly, just <emphasis>after</emphasis> the
-          file changes, it is a hassle for any process except the
-          version control system to keep the data completely
-          up-to-date.  Left to human authors, the information would
-          inevitably grow stale.</para>
+          information about the last time the file was known to be
+          modified.  Because this information changes each time the
+          file changes, and more importantly, just
+          <emphasis>after</emphasis> the file changes, it is a hassle
+          for any process except the version control system to keep
+          the data completely up-to-date.  Left to human authors, the
+          information would inevitably grow stale.</para>
 
         <para>For example, say you have a document in which you would
           like to display the last date on which it was modified.  You
-          could burder every author of that document to, just before
+          could burden every author of that document to, just before
           committing their changes, also tweak the part of the
           document that describes when it was last changed.  But
           sooner or later, someone would forget to do that.  Instead
@@ -1144,17 +1197,18 @@ $ svn status
             <term><literal>LastChangedDate</literal></term>
             <listitem>
               <para>This keyword describes the last time the file was
-                changed in the repository, and looks something like
-                <literal>$LastChangedDate: 2002-07-22 21:42:37 -0700
-                (Mon, 22 Jul 2002) $</literal>.  It may be abbreviated
-                as <literal>Date</literal>.</para>
+                known to have been changed in the repository, and
+                looks something like <literal>$LastChangedDate:
+                2002-07-22 21:42:37 -0700 (Mon, 22 Jul 2002)
+                $</literal>.  It may be abbreviated as
+                <literal>Date</literal>.</para>
             </listitem>
           </varlistentry>
           <varlistentry>
             <term><literal>LastChangedRevision</literal></term>
             <listitem>
-              <para>This keyword describes the last revision in which
-                this file changed in the repository, and looks
+              <para>This keyword describes the last known revision in
+                which this file changed in the repository, and looks
                 something like <literal>$LastChangedRevision: 144
                 $</literal>.  It may be abbreviated as
                 <literal>Rev</literal>.</para>
@@ -1163,10 +1217,11 @@ $ svn status
           <varlistentry>
             <term><literal>LastChangedBy</literal></term>
             <listitem>
-              <para>This keyword describes the last user to change
-                this file in the repository, and looks something like
-                <literal>$LastChangedBy: joe $</literal>.  It may be
-                abbreviated as <literal>Author</literal></para>
+              <para>This keyword describes the last known user to
+                change this file in the repository, and looks
+                something like <literal>$LastChangedBy: joe
+                $</literal>.  It may be abbreviated as
+                <literal>Author</literal></para>
             </listitem>
           </varlistentry>
           <varlistentry>
@@ -1285,8 +1340,8 @@ Cumulus clouds are appearing more frequently as summer approaches.
         
         <para>If someone else now commits a change to
           <filename>weather.txt</filename>, your copy of that file
-          will continue to display the same substituted keyword
-          value&mdash;until you update your working copy.  At that
+          will continue to display the same substituted keyword value
+          as before&mdash;until you update your working copy.  At that
           time the keywords in your <filename>weather.txt</filename>
           file will be re-substituted again with information that
           reflects the most recent known commit to that file.</para>
@@ -1315,7 +1370,7 @@ Cumulus clouds are appearing more frequently as summer approaches.
           the <literal>LF</literal> character to denote the end of a
           line.</para>
 
-        <para>Not all of the various tools on these operation systems
+        <para>Not all of the various tools on these operating systems
           are prepared to understand files that contain line endings
           in a format that differs from the <firstterm>native line
           ending style</firstterm> of the operating system on which
@@ -1345,12 +1400,12 @@ Cumulus clouds are appearing more frequently as summer approaches.
           <command>unix2dos</command>) to prepare the file for
           editing.  The latter case requires no extra preparation.
           But both cases result in a file that differs from the
-          original quite literally on every line of the file!  Prior
-          to committing his changes, the has two choices.  Either he
-          can use a conversion utility to restore the modified file to
-          the same line ending style that it was in before his edits
-          were made.  Or, he can simply commit the file&mdash;new EOL
-          markers and all.</para>
+          original quite literally on every line!  Prior to committing
+          his changes, the user has two choices.  Either he can use a
+          conversion utility to restore the modified file to the same
+          line ending style that it was in before his edits were made.
+          Or, he can simply commit the file&mdash;new EOL markers and
+          all.</para>
 
         <para>The result of scenarios like there include wasted time
           and unnecessary modifications to committed files.  Wasted
@@ -1395,24 +1450,27 @@ Cumulus clouds are appearing more frequently as summer approaches.
             <term><literal>CRLF</literal></term>
             <listitem>
               <para>This causes the file to contain
-                <literal>CRLF</literal> sequences for EOL markers.</para>
+                <literal>CRLF</literal> sequences for EOL markers,
+                regardless of the operating system in use.</para>
             </listitem>
           </varlistentry>
           <varlistentry>
             <term><literal>LF</literal></term>
             <listitem>
               <para>This causes the file to contain
-                <literal>LF</literal> characters for EOL markers.</para>
+                <literal>LF</literal> characters for EOL markers.
+                regardless of the operating system in use.</para>
             </listitem>
           </varlistentry>
           <varlistentry>
             <term><literal>CR</literal></term>
             <listitem>
               <para>This causes the file to contain
-                <literal>CR</literal> characters for EOL markers.
-                This line ending style is not very common.  It was
-                used on older Macintosh platforms (on which Subversion
-                doesn't even run).</para>
+                <literal>CR</literal> characters for EOL markers,
+                regardless of the operating system in use.  This line
+                ending style is not very common.  It was used on older
+                Macintosh platforms (on which Subversion doesn't even
+                run).</para>
             </listitem>
           </varlistentry>
         </variablelist>
@@ -1436,7 +1494,7 @@ Cumulus clouds are appearing more frequently as summer approaches.
   <!-- *** SECTION 3:  EXTERNALS DEFINITIONS                           *** -->
   <!-- ******************************************************************* -->
   <sect1 id="svn-ch-6-sect-3">
-    <title>Externals</title>
+    <title>Externals Definitions</title>
     
     <para>Sometimes it is useful to construct a working copy that is
       made out of a number of different checkouts.  For example, you
