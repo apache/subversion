@@ -5,7 +5,7 @@
 ### in relation to Apache to figure out how to always build a shared
 ### library (for an Apache module)
 
-noinst_LTLIBRARIES = libmod_dav_svn.la
+lib_LTLIBRARIES = libmod_dav_svn.la
 
 libmod_dav_svn_la_SOURCES = mod_dav_svn.c deadprops.c liveprops.c repos.c \
 				version.c util.c
@@ -17,16 +17,30 @@ SUBDIRS = . tests
 ## Make libtool be quiet
 LIBTOOL = @LIBTOOL@ --silent
 
+## override these -- we have special installation requirements
+## occurs below: install-libLTLIBRARIES: $(lib_LTLIBRARIES)
+uninstall-libLTLIBRARIES:
+
+## copy files into Apache for static-linking
 if IS_STATIC_APACHE
 
 STATIC_FILES = Makefile.in config.m4
+APLIB = libmod_dav_svn
 
-install-data-local: libmod_dav_svn.la
+## create a .la file with no shared library names (eg. force static lib usage)
+$(APLIB).la-a: $(APLIB).la
+	sed "/library_names/s/'.*'/''/" $< > $@
+
+install-libLTLIBRARIES: libmod_dav_svn.la-a
 	$(mkinstalldirs) @APACHE_TARGET@
-	$(INSTALL_DATA) .libs/libmod_dav_svn.a @APACHE_TARGET@/.libs/libmod_dav_svn.a
-	$(INSTALL_DATA) libmod_dav_svn.la @APACHE_TARGET@/libapachemod_dav_svn.la
+	$(INSTALL_DATA) .libs/$(APLIB).a @APACHE_TARGET@/.libs/$(APLIB).a
+	$(INSTALL_DATA) $(APLIB).la-a @APACHE_TARGET@/$(APLIB).la
 	@list='$(STATIC_FILES)'; for p in $$list; do \
 	  echo " $(INSTALL_DATA) static/$$p @APACHE_TARGET@/$$p"; \
 	  $(INSTALL_DATA) static/$$p @APACHE_TARGET@/$$p; \
 	done
+else
+
+install-libLTLIBRARIES: libmod_dav_svn.la-a
+
 endif
