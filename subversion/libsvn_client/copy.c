@@ -129,8 +129,22 @@ wc_to_wc_copy (const char *src_path,
 
   if (is_move)
     {
-      SVN_ERR (svn_wc_delete (src_path,
+      /* We don't handle optional_adm_access here.  The merge code that
+         sets it calls svn_client_copy rather than svn_client_move */
+      const char *src_parent;
+      assert (! optional_adm_access);
+
+      svn_path_split_nts (src_path, &src_parent, NULL, pool);
+      if (svn_path_is_empty_nts (src_parent))
+        src_parent = ".";
+
+      SVN_ERR (svn_wc_adm_open (&adm_access, NULL, src_parent, TRUE,
+                                src_kind == svn_node_dir, pool));
+
+      SVN_ERR (svn_wc_delete (src_path, adm_access,
                               notify_func, notify_baton, pool));
+
+      SVN_ERR (svn_wc_adm_close (adm_access));
     }
 
   return SVN_NO_ERROR;

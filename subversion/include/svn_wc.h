@@ -724,7 +724,8 @@ svn_error_t *svn_wc_copy (const char *src,
 
 /* Schedule PATH for deletion, it will be deleted from the repository on
    the next commit.  If PATH refers to a directory, then a recursive
-   deletion will occur.
+   deletion will occur. ADM_ACCESS must hold a write lock for the parent of
+   PATH.
 
    This function immediately deletes all files, modified and unmodified,
    versioned and unversioned from the working copy. It also immediately
@@ -736,6 +737,7 @@ svn_error_t *svn_wc_copy (const char *src,
    the NOTIFY_BATON and that path. The NOTIFY_FUNC callback may be
    NULL if notification is not needed.  */
 svn_error_t *svn_wc_delete (const char *path,
+                            svn_wc_adm_access_t *adm_access,
                             svn_wc_notify_func_t notify_func,
                             void *notify_baton,
                             apr_pool_t *pool);

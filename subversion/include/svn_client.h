@@ -367,6 +367,12 @@ svn_client_mkdir (svn_client_commit_info_t **commit_info,
    contains locally modified and/or unversioned items. If FORCE is set such
    items will be deleted.
 
+   If deleting from a working copy, OPTIONAL_ADM_ACCESS can either be a
+   baton that holds a write lock for the parent of PATH, or it can be
+   NULL. If it is NULL the lock for the parent will be acquired and
+   released by the function.  If deleting from a repository (PATH is an
+   URL) then OPTIONAL_ADM_ACCESS is irrelevant.
+
    LOG_MSG_FUNC/LOG_MSG_BATON are a callback/baton combo that this
    function can use to query for a commit log message when one is
    needed.
@@ -377,6 +383,7 @@ svn_client_mkdir (svn_client_commit_info_t **commit_info,
 svn_error_t *
 svn_client_delete (svn_client_commit_info_t **commit_info,
                    const char *path,
+                   svn_wc_adm_access_t *optional_adm_access,
                    svn_boolean_t force,
                    svn_client_auth_baton_t *auth_baton,
                    svn_client_get_commit_log_t log_msg_func,

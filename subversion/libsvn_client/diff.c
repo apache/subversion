@@ -424,12 +424,19 @@ merge_file_deleted (svn_wc_adm_access_t *adm_access,
   struct merge_cmd_baton *merge_b = baton;
   apr_pool_t *subpool = svn_pool_create (merge_b->pool);
   enum svn_node_kind kind;
+  svn_wc_adm_access_t *parent_access;
+  const char *parent_path;
 
   SVN_ERR (svn_io_check_path (mine, &kind, subpool));
   switch (kind)
     {
     case svn_node_file:
-      SVN_ERR (svn_client_delete (NULL, mine, merge_b->force,
+      svn_path_split_nts (mine, &parent_path, NULL, merge_b->pool);
+      if (svn_path_is_empty_nts (parent_path))
+        parent_path = ".";
+      SVN_ERR (svn_wc_adm_retrieve (&parent_access, adm_access, parent_path,
+                                    merge_b->pool));
+      SVN_ERR (svn_client_delete (NULL, mine, parent_access, merge_b->force,
                                   NULL, NULL, NULL, NULL, NULL, subpool));
       break;
     case svn_node_dir:
@@ -507,12 +514,19 @@ merge_dir_deleted (svn_wc_adm_access_t *adm_access,
   struct merge_cmd_baton *merge_b = baton;
   apr_pool_t *subpool = svn_pool_create (merge_b->pool);
   enum svn_node_kind kind;
+  svn_wc_adm_access_t *parent_access;
+  const char *parent_path;
   
   SVN_ERR (svn_io_check_path (path, &kind, subpool));
   switch (kind)
     {
     case svn_node_dir:
-      SVN_ERR (svn_client_delete (NULL, path, merge_b->force,
+      svn_path_split_nts (path, &parent_path, NULL, merge_b->pool);
+      if (svn_path_is_empty_nts (parent_path))
+        parent_path = ".";
+      SVN_ERR (svn_wc_adm_retrieve (&parent_access, adm_access, parent_path,
+                                    merge_b->pool));
+      SVN_ERR (svn_client_delete (NULL, path, parent_access, merge_b->force,
                                   NULL, NULL, NULL, NULL, NULL, subpool));
       break;
     case svn_node_file:
