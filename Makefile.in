@@ -227,7 +227,7 @@ INSTALL_EXTRA_JAVAHL_LIB=@INSTALL_EXTRA_JAVAHL_LIB@
 
 INSTALL_EXTRA_SWIG_RB=\
   for i in $(abs_srcdir)/subversion/bindings/swig/ruby/svn/*.rb; do \
-    $(INSTALL_DATA) "$$i" $(DESTDIR)$(SWIG_RB_SITE_LIB_DIR); \
+    $(INSTALL_DATA) "$$i" $(DESTDIR)$(SWIG_RB_SITE_LIB_DIR)/svn; \
   done
 
 APXS = @APXS@ 
