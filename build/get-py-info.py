@@ -13,8 +13,11 @@ from distutils import sysconfig
 
 def usage():
   print 'USAGE: %s WHAT' % sys.argv[0]
-  print '  where WHAT may be one of:'
-  print "    --includes : return the directory for Python's includes"
+  print '  Returns information about how to build Python extensions.'
+  print '  WHAT may be one of:'
+  print "    --includes : return -I include flags"
+  print "    --compile  : return a compile command"
+  print "    --link     : return a link command"
   sys.exit(1)
 
 if len(sys.argv) != 2:
