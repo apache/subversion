@@ -82,6 +82,43 @@ svn_error_t *svn_utf_cstring_from_utf8 (const char **dest,
                                         apr_pool_t *pool);
 
 
+/* Return a fuzzily native-encoded C string from utf8 C string SRC,
+ * allocated in POOL.  A fuzzy recoding leaves all 7-bit ascii
+ * characters the same, and substitutes "?\XXX" for others, where XXX
+ * is the unsigned decimal code for that character.
+ *
+ * This function cannot error; it is guaranteed to return something.
+ * First it will recode as described above and then attempt to convert
+ * the (new) 7-bit UTF-8 string to native encoding.  If that fails, it
+ * will return the raw fuzzily recoded string, which may or may not be
+ * meaningful in the client's locale, but is (presumably) better than
+ * nothing.
+ *
+ * ### Notes:
+ *
+ * Improvement is possible, even imminent.  The original problem was
+ * that if you converted a UTF-8 string (say, a log message) into a
+ * locale that couldn't represent all the characters, you'd just get a
+ * static placeholder saying "[unconvertible log message]".  Then
+ * Justin Erenkrantz pointed out how on platforms that didn't support
+ * conversion at all, "svn log" would still fail completely when it
+ * encountered unconvertible data.
+ *
+ * Now for both cases, the caller can at least fall back on this
+ * function, which converts the message as best it can, substituting
+ * ?\XXX escape codes for the non-ascii characters.
+ *
+ * Ultimately, some callers may prefer the iconv "//TRANSLIT" option,
+ * so when we can detect that at configure time, things will change.
+ * Also, this should (?) be moved to apr/apu eventually.
+ *
+ * See http://subversion.tigris.org/issues/show_bug.cgi?id=807 for
+ * details.
+ */
+const char *svn_utf_cstring_from_utf8_fuzzy (const char *src,
+                                             apr_pool_t *pool);
+
+
 /* Set *DEST to a natively-encoded C string from utf8 stringbuf SRC;
    allocate *DEST in POOL. */
 svn_error_t *svn_utf_cstring_from_utf8_stringbuf (const char **dest,
