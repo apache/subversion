@@ -740,6 +740,50 @@ def simple_property_merges(sbox):
     return 1
   if svntest.actions.run_and_verify_status(wc_dir, expected_status):
     return 1
+  
+  # issue 1109 : single file property merge.  This test performs a merge
+  # that should be a no-op (adding properties that are already present).
+  outlines, errlines = svntest.main.run_svn(None, 'revert', '--recursive',
+                                            wc_dir)
+  
+  A_url = os.path.join(svntest.main.current_repo_url, 'A')
+  A2_url = os.path.join(svntest.main.current_repo_url, 'A2')
+ 
+  # Copy to make revision 5
+  outlines,errlines = svntest.main.run_svn(None, 'copy', '-m', 'fumble',
+                                           '--username', svntest.main.wc_author,
+                                           '--password', svntest.main.wc_passwd,
+                                           A_url, A2_url)
+  if errlines:
+    return 1
+  
+  outlines, errlines = svntest.main.run_svn(None, 'switch', A2_url, wc_dir)
+  
+  A_url = os.path.join(svntest.main.current_repo_url, 'A', 'B', 'E', 'alpha')
+  alpha_path = os.path.join(wc_dir, 'B', 'E', 'alpha')
+  
+  outlines, errlines = svntest.main.run_svn(None, 'merge',
+                                          '-r', '3:4', A_url, alpha_path)
+  if errlines:
+    return 1
+  
+  outlines,errlines = svntest.main.run_svn(None, 'pl', alpha_path)
+  
+  if errlines:
+    return 1
+
+  saw_foo = 0
+  saw_bar = 0
+  for line in outlines:
+    if re.match("\\s*foo\\s*$", line):
+      saw_foo = 1
+    if re.match("\\s*bar\\s*$", line):
+      saw_bar = 1
+
+  if not saw_foo or not saw_bar:
+    return 1
+ 
+  return 0
 
 #----------------------------------------------------------------------
 def merge_one_file(sbox):
