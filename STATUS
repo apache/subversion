@@ -110,6 +110,14 @@ section for approved changes.)
      Votes:
       +1: cmpilato
 
+
+   * r8167
+     Fix a doc bug in svn_client.h.
+     Justification: Obvious doc string typo, no risk.
+     Votes:
+      +1: kfogel
+
+
 Core changes that already have three +1 votes and no vetos.  (If you
 veto something below, or remove a threshold vote, please move it to
 the section for unapproved changes.)
