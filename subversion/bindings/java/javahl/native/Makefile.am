@@ -2,7 +2,7 @@ lib_LTLIBRARIES = libsvnjavahl.la
 
 libsvnjavahl_la_LIBADD = -lstdc++ @SVN_LIBS@ 
 
-libsvnjavahl_la_SOURCES=SVNClient.cpp JNICriticalSection.cpp JNIMutex.cpp JNIStackElement.cpp JNIStringHolder.cpp JNIThreadData.cpp JNIUtil.cpp JNIByteArray.cpp Notify.cpp Path.cpp Pool.cpp Prompter.cpp Revision.cpp Targets.cpp org_tigris_subversion_javahl_SVNClient.cpp libsvnjavahl.la.c
+libsvnjavahl_la_SOURCES=SVNClient.cpp JNICriticalSection.cpp JNIMutex.cpp JNIStackElement.cpp JNIStringHolder.cpp JNIThreadData.cpp JNIUtil.cpp JNIByteArray.cpp Notify.cpp Path.cpp Pool.cpp Prompter.cpp Revision.cpp Targets.cpp org_tigris_subversion_javahl_SVNClient.cpp libsvnjavahl.la.c BlameCallback.cpp
 
 BUILT_SOURCES = org_tigris_subversion_javahl_SVNClient.h \
 		org_tigris_subversion_javahl_SVNClient_LogLevel.h \
@@ -16,7 +16,7 @@ BUILT_SOURCES = org_tigris_subversion_javahl_SVNClient.h \
 
 EXTRA_DIST = svnjavahl.dsw svnjavahl.dsp 
 
-noinst_HEADERS = SVNClient.h JNICriticalSection.h JNIMutex.h JNIStackElement.h JNIStringHolder.h JNIThreadData.h JNIUtil.h JNIByteArray.h Notify.h Path.h Pool.h Prompter.h Revision.h Targets.h version.h
+noinst_HEADERS = SVNClient.h JNICriticalSection.h JNIMutex.h JNIStackElement.h JNIStringHolder.h JNIThreadData.h JNIUtil.h JNIByteArray.h Notify.h Path.h Pool.h Prompter.h Revision.h Targets.h version.h BlameCallback.h
 
 JNI_CLS_DIR=../cls/org/tigris/subversion/javahl
 JNI_PACKAGE=org.tigris.subversion.javahl
