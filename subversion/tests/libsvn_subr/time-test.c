@@ -83,6 +83,26 @@ test_time_from_cstring (const char **msg,
   return SVN_NO_ERROR;
 }
 
+/* Before editing these tests cases please see the comment in
+ * test_time_from_cstring_old regarding the requirements to exercise the bug
+ * that they exist to test. */
+static const char *failure_old_tests[] = {
+  /* Overflow Day */
+  "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+  "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+  "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+  "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+  " 3 Oct 2000 HH:MM:SS.UUU (day 277, dst 1, gmt_off -18000)",
+  
+  /* Overflow Month */
+  "Tue 3 AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+  "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+  "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+  "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+  " 2000 HH:MM:SS.UUU (day 277, dst 1, gmt_off -18000)",
+
+  NULL
+};
 
 static svn_error_t *
 test_time_from_cstring_old (const char **msg,
@@ -90,6 +110,7 @@ test_time_from_cstring_old (const char **msg,
                             apr_pool_t *pool)
 {
   apr_time_t timestamp;
+  const char **ft;
 
   *msg = "test svn_time_from_cstring (old format)";
 
@@ -106,6 +127,22 @@ test_time_from_cstring_old (const char **msg,
          "' instead of '%" APR_TIME_T_FMT "'",
          test_old_timestring,timestamp,test_timestamp);
     }
+
+    /* These tests should fail.  They've been added to cover a string overflow
+     * found in our code.  However, even if they fail that may not indicate
+     * that there is no problem.  The strings being tested need to be
+     * sufficently long to cause a segmentation fault in order to exercise
+     * this bug.  Unfortunately due to differences in compilers, architectures,
+     * etc. there is no way to be sure that the bug is being exerercised on
+     * all platforms. */
+    for (ft = failure_old_tests; *ft; ft++)
+      {
+        if (SVN_NO_ERROR == svn_time_from_cstring (&timestamp, *ft, pool))
+          return svn_error_createf
+            (SVN_ERR_TEST_FAILED, NULL,
+             "svn_time_from_cstring (%s) succeeded when it should have failed",
+             *ft);
+      }
 
   return SVN_NO_ERROR;
 }
