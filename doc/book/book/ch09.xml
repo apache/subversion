@@ -51,6 +51,26 @@ $ svn status -v myfile
       <variablelist>
         
         <varlistentry>
+          <term><option>--auto-props</option></term>
+          <listitem>
+            <para>Enable auto-props, overriding the
+            <literal>enable-auto-props</literal> directive in the
+            <filename>config</filename> file.</para>
+          </listitem>
+        </varlistentry>
+        
+        <varlistentry>
+          <term><option>--config-dir</option>
+            <replaceable>DIR</replaceable></term>
+          <listitem>
+            <para>Instructs Subversion to read configuration
+            information from the specified specified directory instead
+            of the default location (<filename>.subversion</filename>
+            in the user's home directory).</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
           <term><option>--diff-cmd</option>
             <replaceable>CMD</replaceable></term>
           <listitem>
@@ -175,10 +195,10 @@ $ svn status -v myfile
         </varlistentry>
         
         <varlistentry>
-          <term><option>--notice-ancestry</option></term>
+          <term><option>--ignore-ancestry</option></term>
           <listitem>
-            <para>Pay attention to ancestry when calculating 
-              differences.</para>
+            <para>Ignore ancestry when calculating differences (rely
+            on path contents alone).</para>
           </listitem>
         </varlistentry>
       
@@ -222,6 +242,15 @@ $ svn commit -m "They don't make Sunday."
         </varlistentry>
       
         <varlistentry>
+          <term><option>--no-auto-props</option></term>
+          <listitem>
+            <para>Disable auto-props, overriding the
+            <literal>enable-auto-props</literal> directive in the
+            <filename>config</filename> file.</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
           <term><option>--no-diff-deleted</option></term>
         <listitem>
             <para>Prevents Subversion from printing differences for
@@ -263,6 +292,14 @@ $ svn commit -m "They don't make Sunday."
               but some subcommands&mdash;usually those that have the
               potential to remove or undo your local
               modifications&mdash;do not.</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term><option>--notice-ancestry</option></term>
+          <listitem>
+            <para>Pay attention to ancestry when calculating 
+              differences.</para>
           </listitem>
         </varlistentry>
 
@@ -481,6 +518,9 @@ $ svn log -r 1729:{2/17/02}
 --targets FILENAME
 --non-recursive (-N)
 --quiet (-q)
+--config-dir DIR
+--auto-props
+--no-auto-props
           </screen>
         </refsect1>
         
@@ -513,6 +553,68 @@ A         testdir/d
 $ svn add --non-recursive otherdir
 A         otherdir
           </screen>
+        </refsect1>
+      </refentry>
+
+      <!-- ================================================================= -->
+      <refentry>
+        <refnamediv>
+          <refname>svn blame</refname>
+          <refpurpose>Shows author and revision information in-line
+            for the specified files or URLs.</refpurpose>
+        </refnamediv>
+        <refsect1>
+          <title>Synopsis</title>
+          <programlisting>svn blame TARGET...</programlisting>
+        </refsect1>
+        <refsect1>
+          <title>Description</title>
+          
+          <para>Shows author and revision information in-line for the
+            specified files or URLs.  Each line of text is annotated
+            at the beginning with the author (username) and the
+            revision number for the last change to that line.</para>
+        </refsect1>
+
+        <refsect1>
+          <title>Alternate Names</title>
+          <para>praise, annotate, ann</para>
+        </refsect1>
+
+        <refsect1>
+          <title>Changes</title>
+          <para>Nothing</para>
+        </refsect1>
+
+        <refsect1>
+          <title>Accesses Repository</title>
+          <para>Yes</para>
+        </refsect1>
+
+        <refsect1>
+          <title>Switches</title>
+
+          <screen>
+--revision (-r) REV
+--username USER
+--password PASS
+--no-auth-cache
+--non-interactive
+--config-dir DIR
+          </screen>
+        </refsect1>
+
+        <refsect1>
+          <title>Examples</title>
+
+          <para>If you want to see blame annotated source for
+          readme.txt in your test repository:</para>
+          <screen>
+$ svn blame http://svn.red-bean.com/repos/test/readme.txt
+     3      sally This is a README file.
+     5      harry You should read this.
+          </screen>
+
         </refsect1>
       </refentry>
 
@@ -556,6 +658,9 @@ A         otherdir
 --revision (-r) REV
 --username USER
 --password PASS
+--no-auth-cache
+--non-interactive
+--config-dir DIR
           </screen>
         </refsect1>
 
@@ -639,6 +744,7 @@ Latest revision fresh from the repository!
 --password PASS
 --no-auth-cache
 --non-interactive
+--config-dir DIR
           </screen>
         </refsect1>
         
@@ -845,6 +951,7 @@ $ svn cleanup /path/to/working-copy
 --no-auth-cache
 --non-interactive
 --encoding ENC
+--config-dir DIR
           </screen>
         </refsect1>
 
@@ -993,7 +1100,9 @@ Committed revision 7.
 --no-auth-cache
 --non-interactive
 --force-log
+--editor-cmd EDITOR
 --encoding ENC
+--config-dir DIR
           </screen>
         </refsect1>
 
@@ -1123,7 +1232,9 @@ Committed revision 13.
 --password PASS
 --no-auth-cache
 --non-interactive
+--editor-cmd EDITOR
 --encoding ENC
+--config-dir DIR
           </screen>
         </refsect1>
         
@@ -1225,6 +1336,16 @@ D         over-there
             either N or M are omitted, a value of HEAD is
             assumed.</para>
 
+          <para>By default, <command>svn diff</command> ignores the
+            ancestry of files and merely compares the contents of the
+            two files being compared.  If you use
+            <option>--notice-ancestry</option>, the ancestry of the
+            paths in question will be taken into consideration when
+            comparing revisions (that is, if you run <command>svn
+            diff</command> on two files with identical contents but
+            different ancestry you will see the entire contents of the
+            file as having been removed and added again).</para>
+
         </refsect1>
         <refsect1>
           <title>Alternate Names</title>
@@ -1247,14 +1368,18 @@ D         over-there
 
           <screen>
 --revision (-r) REV
+--old OLD-TARGET
+--new NEW-TARGET
 --extensions (-x) "ARGS"
 --non-recursive (-N)
 --diff-cmd CMD
+--notice-ancestry
 --username USER
 --password PASS
 --no-auth-cache
 --non-interactive
 --no-diff-deleted
+--config-dir DIR
           </screen>
         </refsect1>
 
@@ -1382,10 +1507,12 @@ Index: COMMITTERS
           <screen>
 --revision (-r) REV
 --quiet (-q)
+--force
 --username USER
 --password PASS
 --no-auth-cache
 --non-interactive
+--config-dir DIR
           </screen>
         </refsect1>
 
@@ -1397,7 +1524,7 @@ Index: COMMITTERS
 
           <screen>
 $ svn export a-wc my-export
-pantheon: /tmp&gt;
+Export complete.
           </screen>
 
           <para>Export directly from the repository (prints every
@@ -1503,7 +1630,11 @@ Exported revision 15.
 --no-auth-cache
 --non-interactive
 --force-log
+--editor-cmd EDITOR
 --encoding ENC
+--config-dir DIR
+--auto-props
+--no-auto-props
           </screen>
         </refsect1>
 
@@ -1590,6 +1721,7 @@ Committed revision 19.
           <screen>
 --targets FILENAME
 --recursive (-R)
+--config-dir DIR
           </screen>
         </refsect1>
 
@@ -1688,6 +1820,7 @@ Last Changed Date: 2003-01-16 23:21:19 -0600 (Thu, 16 Jan 2003)
 --password PASS
 --no-auth-cache
 --non-interactive
+--config-dir DIR
           </screen>
         </refsect1>
 
@@ -1788,13 +1921,14 @@ svn list --verbose file:///tmp/repos
 --quiet (-q)
 --verbose (-v)
 --targets FILENAME
+--stop-on-copy
+--incremental
+--xml
 --username USER
 --password PASS
 --no-auth-cache
 --non-interactive
---stop-on-copy
---incremental
---xml
+--config-dir DIR
           </screen>
         </refsect1>
 
@@ -1995,6 +2129,14 @@ Made a change.
             '.' is assumed, unless the sources have identical
             basenames that match a file within '.': in which case,
             the differences will be applied to that file.</para>
+
+          <para>Unlike <command>svn diff</command>, the merge command
+            takes the ancestry of a file into consideration when
+            performing a merge operation.  This is very important when
+            you're merging changes from one branch into another and
+            you've renamed a file on one branch but not the other.
+          </para>
+
         </refsect1>
         <refsect1>
           <title>Alternate Names</title>
@@ -2020,10 +2162,13 @@ Made a change.
 --quiet (-q)
 --force
 --dry-run
+--diff3-cmd CMD
+--ignore-ancestry
 --username USER
 --password PASS
 --no-auth-cache
 --non-interactive
+--config-dir DIR
           </screen>
         </refsect1>
 
@@ -2112,8 +2257,10 @@ U  thhgttg.txt
 --password PASS
 --no-auth-cache
 --non-interactive
+--editor-cmd EDITOR
 --encoding ENC
 --force-log
+--config-dir DIR
           </screen>
         </refsect1>
 
@@ -2216,8 +2363,10 @@ Committed revision 26.
 --password PASS
 --no-auth-cache
 --non-interactive
+--editor-cmd EDITOR
 --encoding ENC
 --force-log
+--config-dir DIR
           </screen>
         </refsect1>
 
@@ -2288,6 +2437,11 @@ Committed revision 27.
 --recursive (-R)
 --revision (-r) REV
 --revprop
+--username USER
+--password PASS
+--no-auth-cache
+--non-interactive
+--config-dir DIR
           </screen>
         </refsect1>
 
@@ -2353,7 +2507,13 @@ property `release-date' deleted from repository revision '26'
           <screen>
 --revision (-r) REV
 --revprop
+--username USER
+--password PASS
+--no-auth-cache
+--non-interactive
 --encoding ENC
+--editor-cmd EDITOR
+--config-dir DIR
           </screen>
         </refsect1>
 
@@ -2420,6 +2580,12 @@ Set new value for property `svn:keywords' on `foo.c'
 --recursive (-R)
 --revision (-r) REV
 --revprop
+--strict
+--username USER
+--password PASS
+--no-auth-cache
+--non-interactive
+--config-dir DIR
           </screen>
         </refsect1>
 
@@ -2488,7 +2654,13 @@ Began journal.
 --verbose (-v)
 --recursive (-R)
 --revision (-r) REV
+--quiet (-q)
 --revprop
+--username USER
+--password PASS
+--no-auth-cache
+--non-interactive
+--config-dir DIR
           </screen>
         </refsect1>
         
@@ -2575,7 +2747,13 @@ Properties on 'foo.c':
 --targets FILENAME
 --recursive (-R)
 --revprop
+--username USER
+--password PASS
+--no-auth-cache
+--non-interactive
 --encoding ENC
+--force
+--config-dir DIR
           </screen>
         </refsect1>
 
@@ -2691,6 +2869,7 @@ property `owner-pic' set on 'moo.c'
 --targets FILENAME
 --recursive (-R)
 --quiet (-q)
+--config-dir DIR
           </screen>
         </refsect1>
         
@@ -2773,6 +2952,7 @@ foo.c.r31
 --targets FILENAME
 --recursive (-R)
 --quiet (-q)
+--config-dir DIR
           </screen>
         </refsect1>
 
@@ -3082,11 +3262,12 @@ $ svn status
 --verbose (-v)
 --non-recursive (-N)
 --quiet (-q)
+--no-ignore
 --username USER
 --password PASS
 --no-auth-cache
 --non-interactive
---no-ignore
+--config-dir
           </screen>
         </refsect1>
 
@@ -3197,6 +3378,7 @@ Head revision:   981
 --password PASS
 --no-auth-cache
 --non-interactive
+--config-dir DIR
           </screen>
         </refsect1>
         
@@ -3353,10 +3535,12 @@ At revision 3.
 --revision (-r) REV
 --non-recursive (-N)
 --quiet (-q)
+--diff3-cmd CMD
 --username USER
 --password PASS
 --no-auth-cache
 --non-interactive
+--config-dir DIR
           </screen>
         </refsect1>
 
