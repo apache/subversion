@@ -273,7 +273,13 @@ static dav_resource * dav_svn_get_resource(request_rec *r,
          ### corresponds to a Version Resource, then we have a specific
          ### version to ask for.
       */
+#if 0
       serr = svn_fs_youngest_rev(&repos->root_rev);
+#else
+      /* ### svn_fs_youngest_rev() is not in the library (yet) */
+      serr = NULL;
+      repos->root_rev = 1;
+#endif
       if (serr != NULL)
         {
           /* ### do something with serr */
@@ -285,8 +291,13 @@ static dav_resource * dav_svn_get_resource(request_rec *r,
         }
 
       /* get the root of the tree */
+#if 0
       serr = svn_fs_open_rev_root(&repos->root_dir, repos->fs,
                                   repos->root_rev, r->pool);
+#else
+      serr = svn_error_create(0, 0, NULL, r->pool,
+                              "svn_fs_open_rev_root is not implemented");
+#endif
       if (serr != NULL)
         {
           /* ### do something with serr */
