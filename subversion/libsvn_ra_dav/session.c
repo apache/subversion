@@ -84,11 +84,12 @@ svn_ra_open (svn_ra_session_t **p_ras,
   struct uri uri = { 0 };
   svn_ra_session_t *ras;
 
-  if (uri_parse(repository, &uri, NULL)
-      || uri.path == NULL || uri.host == NULL || uri.port == -1) {
-    return svn_error_create(SVN_ERR_ILLEGAL_URL, 0, NULL, pool,
-                            "illegal URL for repository");
-  }
+  if (uri_parse(repository, &uri, NULL) 
+      || uri.path == NULL || uri.path == NULL)
+    {
+      return svn_error_create(SVN_ERR_ILLEGAL_URL, 0, NULL, pool,
+                              "illegal URL for repository");
+    }
 
   if (sock_init() != 0) {
     return svn_error_create(SVN_ERR_SOCK_INIT, 0, NULL, pool,
@@ -107,7 +108,7 @@ svn_ra_open (svn_ra_session_t **p_ras,
 
   if (strcasecmp(uri.scheme, "https") == 0)
     {
-      if (uri.port == 0)
+      if (uri.port == -1)
         {
           uri.port = 443;
         }
@@ -118,7 +119,7 @@ svn_ra_open (svn_ra_session_t **p_ras,
                                   "SSL is not supported");
         }
     }
-  if (uri.port == 0)
+  if (uri.port == -1)
     {
       uri.port = 80;
     }
