@@ -17,6 +17,7 @@ package org.tigris.subversion.client;
  */
 
 import java.io.File;
+import java.util.List;
 
 import org.tigris.subversion.NodeKind;
 import org.tigris.subversion.Revision;
@@ -41,6 +42,5 @@ public interface CommitItem
 
     byte getFlags();
 
-    // FIXME: What is an apr_array_header_t analogous to?
-    Object getPropChanges();
+    List getPropChanges();
 }
