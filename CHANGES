@@ -1,4 +1,4 @@
-Version 0.12.X (unreleased)
+Version 0.12.0 (released 3 May 2002, revision 1868)
 
  User-visible changes:
  * 'svn diff' can now compare two arbitrary URLs

@@ -43,11 +43,11 @@ extern "C" {
 /* Minor version number.
    Modify when new functionality is added or new interfaces are
    defined, but all changes are backward compatible. */
-#define SVN_VER_MINOR      11
+#define SVN_VER_MINOR      12
 
 /* Patch number.
    Modify for every released patch. */
-#define SVN_VER_MICRO      1
+#define SVN_VER_MICRO      0
 
 
 /* Version tag: a string describing the version.
