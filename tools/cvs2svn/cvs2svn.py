@@ -1989,6 +1989,16 @@ class Commit:
       # be clearer to know for sure and simply not call it.
       sym_tracker.enroot_tags(svn_path, svn_rev, tags)
       sym_tracker.enroot_branches(svn_path, svn_rev, branches)
+      if br:
+        ### FIXME: Here is an obvious optimization point.  Probably
+        ### dump.probe_path(PATH) is kind of slow, because it does N
+        ### database lookups for the N components in PATH.  If this
+        ### turns out to be a performance bottleneck, we can just
+        ### maintain a database mirroring just the head tree, but
+        ### keyed on full paths, to reduce the check to a quick
+        ### constant time query.
+        if not dumper.probe_path(svn_path):
+          sym_tracker.fill_branch(dumper, ctx, br)
       ### FIXME: this will return path_deleted == None if no path
       ### was deleted.  But we'll already have started the revision
       ### by then, so it's a bit late to use the knowledge!  Need to
