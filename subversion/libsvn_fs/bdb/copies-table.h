@@ -19,8 +19,8 @@
 #define SVN_LIBSVN_FS_COPIES_TABLE_H
 
 #include "svn_fs.h"
-#include "fs.h"
-#include "trail.h"
+#include "../fs.h"
+#include "../trail.h"
 
 #ifdef __cplusplus
 extern "C" {

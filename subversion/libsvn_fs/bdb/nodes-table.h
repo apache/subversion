@@ -18,9 +18,9 @@
 #ifndef SVN_LIBSVN_FS_NODES_TABLE_H
 #define SVN_LIBSVN_FS_NODES_TABLE_H
 
-#include "db.h"
+#include <db.h>
 #include "svn_fs.h"
-#include "trail.h"
+#include "../trail.h"
 
 #ifdef __cplusplus
 extern "C" {

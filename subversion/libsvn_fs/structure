@@ -15,14 +15,18 @@ Nodes and Node Revisions
 
 In a Subversion filesystem, a `node' corresponds roughly to an
 `inode' in a Unix filesystem:
-- A node is either a file or a directory.
-- A node's contents change over time.
-- When you change a node's contents, it's still the same node; it's
-  just been changed.  So a node's identity isn't bound to a specific
-  set of contents.
-- If you rename a node, it's still the same node, just under a
-  different name.  So a node's identity isn't bound to a particular
-  filename.
+
+   * A node is either a file or a directory.
+
+   * A node's contents change over time.
+
+   * When you change a node's contents, it's still the same node; it's
+     just been changed.  So a node's identity isn't bound to a specific
+     set of contents.
+
+   * If you rename a node, it's still the same node, just under a
+     different name.  So a node's identity isn't bound to a particular
+     filename.
 
 A `node revision' refers to a node's contents at a specific point in
 time.  Changing a node's contents always creates a new revision of that
@@ -182,8 +186,10 @@ where each entry is
     (NAME ID)
 
 where:
-  - NAME is the name of the directory entry, in UTF-8, and
-  - ID is the ID of the node revision to which this entry refers
+
+   * NAME is the name of the directory entry, in UTF-8, and
+
+   * ID is the ID of the node revision to which this entry refers
 
 
 
@@ -332,11 +338,11 @@ the youngest strings in "fulltext" form, and older strings as "delta"s
 against them.  However, there's nothing magic about that particular
 arrangement.  Other interesting alternatives:
 
-   - We could store the N most recently accessed strings as fulltexts,
+   * We could store the N most recently accessed strings as fulltexts,
      letting access patterns determine the most appropriate
      representation for each revision.
 
-   - We could occasionally store deltas against the N'th younger
+   * We could occasionally store deltas against the N'th younger
      revision, storing larger jumps with a frequency inverse to the
      distance covered, yielding a tree-structured history.
 
@@ -381,9 +387,10 @@ arrange the nodes for quick traversal, given our access patterns.
 
 Here's the sort order we use:
 
-- Nodes are sorted by their node ID.
-- All the revisions of a given node come together, ordered first by
-  their copy ID, and then by their txn ID.
+   * Nodes are sorted by their node ID.
+
+   * All the revisions of a given node come together, ordered first by
+     their copy ID, and then by their txn ID.
 
 Assuming that we store the most recent revision on every branch as
 fulltext, and all other revisions as deltas, we can retrieve any node
@@ -401,12 +408,11 @@ ID, and two mis-formed IDs are compared byte-by-byte.
 REVISION: filesystem revisions, and the Berkeley DB "revisions" table
 
 We represent a filesystem revision using a skel of the form:
-    ("revision" ROOT-ID TXN PROPLIST)
-where:
-- ROOT-ID is the node revision ID of this revision's root directory,
-- TXN is the key into the `transactions' table (which see) whose
-  value is the transaction that was committed to create this revision, and
-- PROPLIST is the revision's property list
+
+    ("revision" TXN)
+
+where TXN is the key into the `transactions' table (which see) whose
+value is the transaction that was committed to create this revision.
 
 The database contains a table called "revisions", which is a
 record-number table mapping revision numbers onto REVISION skels.
@@ -433,7 +439,7 @@ The Berkeley DB `transactions' table records both unfinished and
 committed transactions.  Every key in this table is a transaction ID.
 Unfinished transactions have values that are skels of the form:
 
-   ("transaction" ROOT-ID BASE-ID PROPLIST COPIES)
+   ("transaction" ROOT-ID BASE-ID PROP-KEY COPIES)
 
 where:
 
@@ -443,7 +449,9 @@ where:
    * BASE-ID is the node revision ID of the root of the transaction's
      base revision.
 
-   * PROPLIST is the transaction's property list.
+   * PROP-KEY is a key into the `representations' table (which see),
+     whose value is a representation pointing to a string (see `strings'
+     table) that is a PROPLIST skel.
 
    * COPIES contains a list of keys into the `copies' table,
      referencing all the filesystem copies created
@@ -452,10 +460,19 @@ where:
 
 Committed transaction, however, have values that are skels of the form:
 
-   ("committed" REVISION)
+   ("committed" REVISION ROOT-ID PROP-KEY)
 
-where REVISION represents the revision that was created when the
-transaction was committed.
+where:
+
+   * REVISION represents the revision that was created when the
+     transaction was committed.
+
+   * ROOT-ID is the node revision ID of the committed transaction's (or
+     revision's) root node.
+
+   * PROP-KEY is a key into the `representations' table (which see),
+     whose value is a representation pointing to a string (see `strings'
+     table) that is a PROPLIST skel.
 
 As the sole exception to the rule above, the `transactions' table
 always has one entry whose key is `next-id', and whose value is the
@@ -665,14 +682,14 @@ Property lists:
 
 Filesystem revisions:
 
-               REVISION ::= ("revision" ROOT-ID TXN PROPLIST) ;
+               REVISION ::= ("revision" TXN) ;
 
 
 Transactions:
 
             TRANSACTION ::= UNFINISHED-TXN | COMMITTED-TXN
          UNFINISHED-TXN ::= ("transaction" ROOT-ID BASE-ID PROPLIST COPIES) ;
-          COMMITTED-TXN ::= ("committed" REV) ;
+          COMMITTED-TXN ::= ("committed" REV ROOT-ID PROPLIST) ;
                 ROOT-ID ::= NODE-REV-ID ;
                 BASE-ID ::= NODE-REV-ID ;
                  COPIES ::= (CPY ...) ;

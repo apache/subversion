@@ -30,10 +30,10 @@
 #include "txn.h"
 #include "err.h"
 #include "trail.h"
-#include "rev-table.h"
-#include "txn-table.h"
-#include "copies-table.h"
 #include "tree.h"
+#include "bdb/rev-table.h"
+#include "bdb/txn-table.h"
+#include "bdb/copies-table.h"
 
 
 /* The private structure underlying the public svn_fs_txn_t typedef.  */

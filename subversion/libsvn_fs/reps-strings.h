@@ -22,8 +22,9 @@
 #include "svn_io.h"
 #include "svn_fs.h"
 #include "trail.h"
-#include "reps-table.h"
-#include "strings-table.h"
+
+#include "bdb/reps-table.h"
+#include "bdb/strings-table.h"
 
 
 #ifdef __cplusplus

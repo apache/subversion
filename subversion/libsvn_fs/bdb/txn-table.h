@@ -19,7 +19,9 @@
 #define SVN_LIBSVN_FS_TXN_TABLE_H
 
 #include "svn_fs.h"
-#include "trail.h"
+#include "svn_error.h"
+#include "../trail.h"
+#include "../fs.h"
 
 #ifdef __cplusplus
 extern "C" {

@@ -21,11 +21,11 @@
 #include "svn_fs.h"
 #include "svn_pools.h"
 #include "fs.h"
-#include "dbt.h"
 #include "err.h"
-#include "nodes-table.h"
 #include "node-rev.h"
 #include "reps-strings.h"
+#include "bdb/dbt.h"
+#include "bdb/nodes-table.h"
 
 
 /* Creating completely new nodes.  */

@@ -23,11 +23,12 @@
 #include "svn_path.h"
 
 #include "fs.h"
-#include "nodes-table.h"
 #include "node-rev.h"
-#include "reps-strings.h"
 #include "dag.h"
 #include "id.h"
+#include "reps-strings.h"
+
+#include "bdb/nodes-table.h"
 
 
 

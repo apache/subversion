@@ -27,19 +27,21 @@
 #include "dag.h"
 #include "err.h"
 #include "fs.h"
-#include "nodes-table.h"
-#include "node-rev.h"
 #include "key-gen.h"
-#include "txn-table.h"
-#include "rev-table.h"
-#include "copies-table.h"
-#include "reps-table.h"
-#include "strings-table.h"
+#include "node-rev.h"
 #include "reps-strings.h"
-#include "fs_skels.h"
 #include "trail.h"
 #include "validate.h"
 #include "id.h"
+
+#include "util/fs_skels.h"
+
+#include "bdb/txn-table.h"
+#include "bdb/rev-table.h"
+#include "bdb/nodes-table.h"
+#include "bdb/copies-table.h"
+#include "bdb/reps-table.h"
+#include "bdb/strings-table.h"
 
 
 /* Initializing a filesystem.  */

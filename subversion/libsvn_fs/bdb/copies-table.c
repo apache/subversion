@@ -17,17 +17,17 @@
 
 #include <string.h>
 
-#include "db.h"
-#include "fs.h"
-#include "err.h"
-#include "key-gen.h"
+#include <db.h>
+#include "../fs.h"
+#include "../err.h"
+#include "../key-gen.h"
 #include "dbt.h"
-#include "skel.h"
-#include "fs_skels.h"
+#include "../util/skel.h"
+#include "../util/fs_skels.h"
+#include "../trail.h"
+#include "../validate.h"
+#include "../id.h"
 #include "copies-table.h"
-#include "trail.h"
-#include "validate.h"
-#include "id.h"
 
 
 int

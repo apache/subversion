@@ -17,12 +17,12 @@
 
 #include <db.h>
 #include "svn_fs.h"
-#include "fs.h"
-#include "err.h"
+#include "../fs.h"
+#include "../err.h"
+#include "../validate.h"
 #include "dbt.h"
-#include "skel.h"
-#include "fs_skels.h"
-#include "validate.h"
+#include "../util/skel.h"
+#include "../util/fs_skels.h"
 #include "rev-table.h"
 
 
