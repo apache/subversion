@@ -390,6 +390,7 @@
 
 (when (not svn-status-mode-map)
   (setq svn-status-mode-map (make-sparse-keymap))
+  (suppress-keymap svn-status-mode-map)
   (define-key svn-status-mode-map [return] 'svn-status-select-line)
   (define-key svn-status-mode-map [?s] 'svn-status-show-process-buffer)
   (define-key svn-status-mode-map [?f] 'svn-status-find-file)
