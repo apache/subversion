@@ -69,10 +69,11 @@
 /*** Names in the SVN/ directory. ***/
 
 /* Cache the SVN/ directory name. */
-static svn_string_t *adm_dir_str = NULL;
 svn_string_t *
 svn_wc__adm_subdir (apr_pool_t *pool)
 {
+  static svn_string_t *adm_dir_str = NULL;
+
   if (! adm_dir_str)
     adm_dir_str = svn_string_create (SVN_WC__ADM_DIR_DEFAULT, pool);
 
@@ -290,7 +291,7 @@ adm_init_versions (svn_string_t *path,
   if (err)
     return err;
 
-  return 0;
+  return SVN_NO_ERROR;
 }
 
 
@@ -347,7 +348,7 @@ svn_wc__set_up_new_dir (svn_string_t *path,
   
   /* kff todo: to be continued. */
 
-  return 0;
+  return SVN_NO_ERROR;
 }
 
 
@@ -378,10 +379,10 @@ svn_wc__lock (svn_string_t *path, int wait, apr_pool_t *pool)
           return err;
       }
     else
-      return 0;
+      return SVN_NO_ERROR;
   } while (wait > 0);
 
-  return 0;
+  return SVN_NO_ERROR;
 }
 
 
@@ -407,28 +408,28 @@ svn_wc__working_name (svn_string_t *path, apr_pool_t *pool)
 svn_error_t *
 svn_wc_rename (svn_string_t *src, svn_string_t *dst)
 {
-  return 0;
+  return SVN_NO_ERROR;
 }
 
 
 svn_error_t *
 svn_wc_copy (svn_string_t *src, svn_string_t *dst)
 {
-  return 0;
+  return SVN_NO_ERROR;
 }
 
 
 svn_error_t *
 svn_wc_add (apr_array_header_t *paths)
 {
-  return 0;
+  return SVN_NO_ERROR;
 }
 
 
 svn_error_t *
 svn_wc_delete (apr_array_header_t *paths)
 {
-  return 0;
+  return SVN_NO_ERROR;
 }
 
 
@@ -437,7 +438,7 @@ svn_wc_get_path_prop (svn_string_t **value,
                       svn_string_t *propname,
                       svn_string_t *path)
 {
-  return 0;
+  return SVN_NO_ERROR;
 }
 
 
@@ -446,7 +447,7 @@ svn_wc_get_dirent_prop (svn_string_t **value,
                         svn_string_t *propname,
                         svn_string_t *path)
 {
-  return 0;
+  return SVN_NO_ERROR;
 }
 
 
