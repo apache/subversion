@@ -1354,7 +1354,7 @@ static dav_error * dav_svn_set_headers(request_rec *r,
       if (resource->info->repos->xslt_uri)
         mimetype = "text/xml";
       else
-        mimetype = "text/html";
+        mimetype = "text/html; charset=UTF-8";
     }
   else if (resource->info->delta_base != NULL)
     {
