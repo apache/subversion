@@ -735,7 +735,7 @@ static svn_error_t *ra_svn_diff(void *sess,
     target = "";
 
   /* Tell the server we want to start a diff. */
-  SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "switch", "(?r)cbc", rev, target,
+  SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "diff", "(?r)cbc", rev, target,
                                recurse, versus_url));
   SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, ""));
 
