@@ -255,6 +255,10 @@ svn_cl__print_status_list (apr_hash_t *statushash,
       if (err)
         svn_handle_error (err, stderr, FALSE);
 
+      /* Always print some path */
+      if (path[0] == '\0')
+        path = ".";
+
       if (detailed)
         print_long_format (path, show_last_committed, status);
       else
