@@ -121,6 +121,8 @@ const apr_getopt_option_t svn_cl__options[] =
                       "operate on a revision property (use with -r)"},
     {"relocate",      svn_cl__relocate_opt, 0,
                       "relocate via url-rewriting"},
+    {"config-dir",    svn_cl__config_dir_opt, 1,
+                      "read user configuration files from directory ARG"},
     {0,               0, 0, 0}
   };
 
@@ -141,18 +143,19 @@ const apr_getopt_option_t svn_cl__options[] =
                              svn_cl__auth_password_opt, \
                              svn_cl__no_auth_cache_opt, \
                              svn_cl__non_interactive_opt
+ 
 const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
 {
   { "add", svn_cl__add, {0},
     "Put files and directories under revision control, scheduling\n"
     "them for addition to repository.  They will be added in next commit.\n"
     "usage: add PATH...\n",
-    {svn_cl__targets_opt, 'N', 'q'} },
+    {svn_cl__targets_opt, 'N', 'q', svn_cl__config_dir_opt} },
 
   { "cat", svn_cl__cat, {0},
     "Output the content of specified files or URLs.\n"
     "usage: cat TARGET...\n",
-    {'r', SVN_CL__AUTH_OPTIONS} },
+    {'r', SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
 
   { "checkout", svn_cl__checkout, {"co"},
     "Check out a working copy from a repository.\n"
@@ -161,13 +164,13 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "  the destination. If multiple URLs are given each will be checked\n"
     "  out into a sub-directory of PATH, with the name of the sub-directory\n"
     "  being the basename of the URL.\n",
-    {'r', 'q', 'N', SVN_CL__AUTH_OPTIONS} },
+    {'r', 'q', 'N', SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
 
   { "cleanup", svn_cl__cleanup, {0},
     "Recursively clean up the working copy, removing locks, resuming\n"
     "unfinished operations, etc.\n"
     "usage: cleanup [PATH...]\n",
-    {svn_cl__merge_cmd_opt} },
+    {svn_cl__merge_cmd_opt, svn_cl__config_dir_opt} },
   
   { "commit", svn_cl__commit, {"ci"},
     "Send changes from your working copy to the repository.\n"
@@ -175,7 +178,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "  Be sure to use one of -m or -F to send a log message.\n",
     {'m', 'F', 'q', 'N', svn_cl__targets_opt,
      svn_cl__force_log_opt, SVN_CL__AUTH_OPTIONS,
-     svn_cl__editor_cmd_opt, svn_cl__encoding_opt} },
+     svn_cl__editor_cmd_opt, svn_cl__encoding_opt, svn_cl__config_dir_opt} },
   
   { "copy", svn_cl__copy, {"cp"},
     "Duplicate something in working copy or repos, remembering history.\n"
@@ -186,7 +189,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "    URL -> WC:   check out URL into WC, schedule for addition\n"
     "    URL -> URL:  complete server-side copy;  used to branch & tag\n",
     {'m', 'F', 'r', 'q', SVN_CL__AUTH_OPTIONS, svn_cl__force_log_opt,
-     svn_cl__editor_cmd_opt, svn_cl__encoding_opt} },
+     svn_cl__editor_cmd_opt, svn_cl__encoding_opt, svn_cl__config_dir_opt} },
   
   { "delete", svn_cl__delete, {"del", "remove", "rm"},
     "Remove files and directories from version control.\n"
@@ -202,7 +205,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "  immediate commit.\n",
     {svn_cl__force_opt, svn_cl__force_log_opt, 'm', 'F', 'q', 
      svn_cl__targets_opt, SVN_CL__AUTH_OPTIONS,
-     svn_cl__editor_cmd_opt, svn_cl__encoding_opt} },
+     svn_cl__editor_cmd_opt, svn_cl__encoding_opt, svn_cl__config_dir_opt} },
   
   { "diff", svn_cl__diff, {"di"},
     "display the differences between two paths.\n"
@@ -224,7 +227,8 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "  Use just 'svn diff' to display local modifications in a working copy\n",
     {'r', svn_cl__old_cmd_opt, svn_cl__new_cmd_opt, 'x', 'N',
      svn_cl__diff_cmd_opt, svn_cl__no_diff_deleted,
-     svn_cl__notice_ancestry_opt, SVN_CL__AUTH_OPTIONS} },
+     svn_cl__notice_ancestry_opt, SVN_CL__AUTH_OPTIONS,
+     svn_cl__config_dir_opt} },
 
   { "export", svn_cl__export, {0},
     "export stuff.\n"
@@ -237,12 +241,13 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "  2. Exports a clean directory tree from the working copy specified by\n"
     "     PATH1 into PATH2.  all local changes will be preserved, but files\n"
     "     not under revision control will not be copied.\n",
-    {'r', 'q', svn_cl__force_opt, SVN_CL__AUTH_OPTIONS} },
+    {'r', 'q', svn_cl__force_opt, SVN_CL__AUTH_OPTIONS,
+     svn_cl__config_dir_opt} },
 
   { "help", svn_cl__help, {"?", "h"},
     "Display this usage message.\n"
     "usage: help [SUBCOMMAND...]\n",
-    {svn_cl__version_opt, 'q'} },
+    {svn_cl__version_opt, 'q', svn_cl__config_dir_opt} },
   /* We need to support "--help", "-?", and all that good stuff, of
      course.  But those options, since unknown, will result in the
      help message being printed out anyway, so there's no need to
@@ -255,19 +260,19 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "  If PATH is omitted '.' is assumed.  Parent directories are created\n"
     "  as necessary in the repository.\n",
     {'m', 'F', 'q', 'N', SVN_CL__AUTH_OPTIONS, svn_cl__force_log_opt,
-     svn_cl__editor_cmd_opt, svn_cl__encoding_opt} },
+     svn_cl__editor_cmd_opt, svn_cl__encoding_opt, svn_cl__config_dir_opt} },
  
   { "info", svn_cl__info, {0},
     "Display info about a resource.\n"
     "usage: info [PATH...]\n\n"
     "  Print information about PATHs.\n",
-    {svn_cl__targets_opt, 'R'} },
+    {svn_cl__targets_opt, 'R', svn_cl__config_dir_opt} },
  
   { "list", svn_cl__ls, {"ls"},
     "List directory entries of a URL.\n"
     "usage: list URL...\n\n"
     "  If URL is a file, just file entry will be displayed.\n",
-    {'r', 'v', 'R', SVN_CL__AUTH_OPTIONS} },
+    {'r', 'v', 'R', SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
   
   { "log", svn_cl__log, {0},
     "Show the log messages for a set of revision(s) and/or file(s).\n"
@@ -288,7 +293,8 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "    svn log http://www.example.com/repo/project/foo.c\n"
     "    svn log http://www.example.com/repo/project foo.c bar.c\n",
     {'r', 'q', 'v', svn_cl__targets_opt, svn_cl__strict_opt,
-     svn_cl__incremental_opt, svn_cl__xml_opt, SVN_CL__AUTH_OPTIONS} },
+     svn_cl__incremental_opt, svn_cl__xml_opt, SVN_CL__AUTH_OPTIONS, 
+     svn_cl__config_dir_opt} },
 
   { "merge", svn_cl__merge, {0},
     "apply the differences between two sources to a working copy path.\n"
@@ -310,7 +316,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "  in which case, the differences will be applied to that file.\n",
     {'r', 'N', 'q', svn_cl__force_opt, svn_cl__dry_run_opt,
      svn_cl__merge_cmd_opt, svn_cl__notice_ancestry_opt, 
-     SVN_CL__AUTH_OPTIONS} },
+     SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
   
   { "mkdir", svn_cl__mkdir, {0},
     "Create a new directory under revision control.\n"
@@ -323,7 +329,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "  immediate commit.\n\n"
     "  In both cases, all the intermediate directories must already exist.\n",
     {'m', 'F', 'q', SVN_CL__AUTH_OPTIONS, svn_cl__editor_cmd_opt,
-     svn_cl__encoding_opt, svn_cl__force_log_opt} },
+     svn_cl__encoding_opt, svn_cl__force_log_opt, svn_cl__config_dir_opt} },
 
   { "move", svn_cl__move, {"mv", "rename", "ren"},
     "Move/rename something in working copy or repository.\n"
@@ -333,7 +339,8 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "    WC  -> WC:   move and schedule for addition (with history)\n"
     "    URL -> URL:  complete server-side rename.\n",    
     {'m', 'F', 'r', 'q', svn_cl__force_opt, SVN_CL__AUTH_OPTIONS,
-     svn_cl__editor_cmd_opt, svn_cl__encoding_opt, svn_cl__force_log_opt} },
+     svn_cl__editor_cmd_opt, svn_cl__encoding_opt, svn_cl__force_log_opt,
+     svn_cl__config_dir_opt} },
   
   { "propdel", svn_cl__propdel, {"pdel"},
     "Remove PROPNAME from files, dirs, or revisions.\n"
@@ -341,7 +348,8 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "       2. propdel PROPNAME --revprop -r REV [URL]\n\n"
     "  1. Removes versioned props in working copy.\n"
     "  2. Removes unversioned remote prop on repos revision.\n",
-    {'q', 'R', 'r', svn_cl__revprop_opt, SVN_CL__AUTH_OPTIONS} },
+    {'q', 'R', 'r', svn_cl__revprop_opt, SVN_CL__AUTH_OPTIONS,
+     svn_cl__config_dir_opt} },
   
   { "propedit", svn_cl__propedit, {"pedit", "pe"},
     "Edit property PROPNAME with $EDITOR on targets.\n"
@@ -350,7 +358,8 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "  1. Edits versioned props in working copy.\n"
     "  2. Edits unversioned remote prop on repos revision.\n",
     {'r', svn_cl__revprop_opt, SVN_CL__AUTH_OPTIONS,
-     svn_cl__encoding_opt, svn_cl__editor_cmd_opt, svn_cl__force_opt} },
+     svn_cl__encoding_opt, svn_cl__editor_cmd_opt, svn_cl__force_opt,
+     svn_cl__config_dir_opt} },
   
   { "propget", svn_cl__propget, {"pget", "pg"},
     "Print value of PROPNAME on files, dirs, or revisions.\n"
@@ -365,7 +374,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "  the --strict option to disable these beautifications (useful,\n"
     "  for example, when redirecting binary property values to a file).\n",
     {'R', 'r', svn_cl__revprop_opt, svn_cl__strict_opt, 
-     SVN_CL__AUTH_OPTIONS} },
+     SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
 
   { "proplist", svn_cl__proplist, {"plist", "pl"},
     "List all properties on files, dirs, or revisions.\n"
@@ -373,7 +382,8 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "       2. proplist --revprop -r REV [URL]\n\n"
     "  1. Lists versioned props in working copy.\n"
     "  2. Lists unversioned remote props on repos revision.\n",
-    {'v', 'R', 'r', 'q', svn_cl__revprop_opt, SVN_CL__AUTH_OPTIONS} },
+    {'v', 'R', 'r', 'q', svn_cl__revprop_opt, SVN_CL__AUTH_OPTIONS,
+     svn_cl__config_dir_opt} },
 
   { "propset", svn_cl__propset, {"pset", "ps"},
     "Set PROPNAME to PROPVAL on files, dirs, or revisions.\n\n"
@@ -409,7 +419,8 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "        foo             http://example.com/repos/zig\n"
     "        foo/bar -r 1234 http://example.com/repos/zag\n",
     {'F', 'q', 'r', svn_cl__targets_opt, 'R', svn_cl__revprop_opt,
-     SVN_CL__AUTH_OPTIONS, svn_cl__encoding_opt, svn_cl__force_opt} },
+     SVN_CL__AUTH_OPTIONS, svn_cl__encoding_opt, svn_cl__force_opt,
+     svn_cl__config_dir_opt} },
   
   { "resolved", svn_cl__resolved, {0},
     "Remove 'conflicted' state on working copy files or directories.\n"
@@ -417,14 +428,14 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "  Note:  this routine does not semantically resolve conflict markers;\n"
     "  it merely removes conflict-related artifact files and allows PATH\n"
     "  to be committed again.\n",
-    {svn_cl__targets_opt, 'R', 'q'} },
+    {svn_cl__targets_opt, 'R', 'q', svn_cl__config_dir_opt} },
  
   { "revert", svn_cl__revert, {0},
     "Restore pristine working copy file (undo all local edits)\n"
     "usage: revert PATH...\n\n"
     "  Note:  this routine does not require network access, and \n"
     "  resolves any conflicted states.\n",
-    {svn_cl__targets_opt, 'R', 'q'} },
+    {svn_cl__targets_opt, 'R', 'q', svn_cl__config_dir_opt} },
 
   { "status", svn_cl__status, {"stat", "st"},
     "Print the status of working copy files and directories.\n"
@@ -486,7 +497,8 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "    A  +         965       687        joe   wc/qax.c\n"
     "                 965       687        joe   wc/zig.c\n"
     "    Head revision:   981\n",
-    { 'u', 'v', 'N', 'q', svn_cl__no_ignore_opt, SVN_CL__AUTH_OPTIONS} },
+    { 'u', 'v', 'N', 'q', svn_cl__no_ignore_opt, SVN_CL__AUTH_OPTIONS, 
+      svn_cl__config_dir_opt} },
   
   { "switch", svn_cl__switch, {"sw"},
     "Update working copy to mirror a new URL\n"
@@ -494,7 +506,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "       switch --relocate FROM TO [PATH...]\n\n"
     "  Note:  this is the way to move a working copy to a new branch.\n",
     { 'r', 'N', 'q', svn_cl__merge_cmd_opt, svn_cl__relocate_opt,
-      SVN_CL__AUTH_OPTIONS} },
+      SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
  
   { "update", svn_cl__update, {"up"}, 
     "Bring changes from the repository into the working copy.\n"
@@ -513,7 +525,8 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "\n"
     "  A character in the first column signifies an update to the actual file,\n"
     "  while updates to the file's props are shown in the second column.\n",
-    {'r', 'N', 'q', svn_cl__merge_cmd_opt, SVN_CL__AUTH_OPTIONS} },
+    {'r', 'N', 'q', svn_cl__merge_cmd_opt, SVN_CL__AUTH_OPTIONS, 
+     svn_cl__config_dir_opt} },
 
   { NULL, NULL, {0}, NULL, {0} }
 };
@@ -809,6 +822,11 @@ main (int argc, const char * const *argv)
       case svn_cl__new_cmd_opt:
         opt_state.new_target = apr_pstrdup (pool, opt_arg);
         break;
+      case svn_cl__config_dir_opt:
+        opt_state.config_dir = apr_pstrdup (pool,
+                                            svn_path_canonicalize (opt_arg,
+                                                                   pool));
+        break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away
            opts that commands like svn diff might need. Hmmm indeed. */
@@ -826,7 +844,7 @@ main (int argc, const char * const *argv)
      hand, the alternative is effective to demand that they call
      svn_config_ensure() instead, so maybe we should have a generic
      init function anyway.  Thoughts?  */
-  err = svn_config_ensure (pool);
+  err = svn_config_ensure (opt_state.config_dir, pool);
   if (err)
     {
       svn_handle_error (err, stderr, 0);
@@ -944,7 +962,7 @@ main (int argc, const char * const *argv)
   ctx.prompt_func = svn_cl__prompt_user; 
   ctx.prompt_baton = NULL;
 
-  if ((err = svn_config_get_config (&(ctx.config), pool)))
+  if ((err = svn_config_get_config (&(ctx.config), opt_state.config_dir, pool)))
     {
       svn_handle_error (err, stderr, 0);
       svn_pool_destroy (pool);
@@ -1042,6 +1060,10 @@ main (int argc, const char * const *argv)
     if (opt_state.non_interactive)
       svn_auth_set_parameter(ab, SVN_AUTH_PARAM_NON_INTERACTIVE,
                              (void *) "");
+
+    if (opt_state.config_dir)
+      svn_auth_set_parameter(ab, SVN_AUTH_PARAM_CONFIG_DIR,
+                             opt_state.config_dir);
 
     /* There are two different ways the user can disable disk caching
        of credentials:  either via --no-auth-cache, or in the config

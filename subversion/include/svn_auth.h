@@ -294,6 +294,9 @@ const void * svn_auth_get_parameter(svn_auth_baton_t *auth_baton,
 #define SVN_AUTH_PARAM_CONFIG SVN_AUTH_PARAM_PREFIX "config"
 #define SVN_AUTH_PARAM_SERVER_GROUP SVN_AUTH_PARAM_PREFIX "server-group"
 
+/** A configuration directory that overrides the default 
+    ~/.subversion. */
+#define SVN_AUTH_PARAM_CONFIG_DIR SVN_AUTH_PARAM_PREFIX "config-dir"
 /** Get an initial set of credentials.
  *
  * Ask @a auth_baton to set @a *credentials to a set of credentials

@@ -78,7 +78,8 @@ enum
     svnadmin__force_uuid,
     svnadmin__parent_dir,
     svnadmin__bdb_txn_nosync,
-    svnadmin__only_unused
+    svnadmin__only_unused,
+    svnadmin__config_dir
   };
 
 /* Option codes and descriptions.
@@ -118,19 +119,22 @@ static const apr_getopt_option_t options_table[] =
      "no progress (only errors) to stderr"},
 
     {"ignore-uuid", svnadmin__ignore_uuid, 0,
-     "ignore any repos UUID found in the stream."},
+     "ignore any repos UUID found in the stream"},
 
     {"force-uuid", svnadmin__force_uuid, 0,
-     "set repos UUID to that found in stream, if any."},
+     "set repos UUID to that found in stream, if any"},
 
     {"parent-dir", svnadmin__parent_dir, 1,
      "load at specified directory in repository"},
 
     {SVN_FS_CONFIG_BDB_TXN_NOSYNC, svnadmin__bdb_txn_nosync, 0,
-     "disable fsync at database transaction commit [Berkeley DB]."},
+     "disable fsync at transaction commit [Berkeley DB]"},
 
     {"only-unused", svnadmin__only_unused, 0,
-     "list only unused log files, that can be archived."},
+     "list only unused log files, that can be archived"},
+
+    {"config-dir", svnadmin__config_dir, 1,
+     "read user configuration files from directory ARG"},
 
     {NULL}
   };
@@ -145,7 +149,7 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
      "usage: svnadmin create REPOS_PATH\n\n"
      "Create a new, empty repository at REPOS_PATH.\n",
      {svnadmin__on_disk_template, svnadmin__in_repos_template,
-      svnadmin__bdb_txn_nosync} },
+      svnadmin__bdb_txn_nosync, svnadmin__config_dir} },
     
     {"createtxn", subcommand_createtxn, {0},
      "usage: svnadmin createtxn REPOS_PATH -r REVISION\n\n"
@@ -238,6 +242,8 @@ struct svnadmin_opt_state
   const char *on_disk;
   const char *in_repos;
   const char *parent_dir;
+
+  const char *config_dir;    /* Overriding Configuration Directory */
 };
 
 /* This implements `svn_opt_subcommand_t'. */
@@ -256,7 +262,7 @@ subcommand_create (apr_getopt_t *os, void *baton, apr_pool_t *pool)
                     APR_HASH_KEY_STRING, "1");
     }
 
-  SVN_ERR (svn_config_get_config (&config, pool));
+  SVN_ERR (svn_config_get_config (&config, opt_state->config_dir, pool));
   SVN_ERR (svn_repos_create (&repos, opt_state->repository_path,
                              opt_state->on_disk, opt_state->in_repos, 
                              config, fs_config, pool));
@@ -763,6 +769,10 @@ main (int argc, const char * const *argv)
         break;
       case svnadmin__only_unused:
         opt_state.only_unused = TRUE;
+        break;
+      case svnadmin__config_dir:
+        opt_state.config_dir = apr_pstrdup(pool, svn_path_canonicalize(opt_arg,
+                                                                       pool));
         break;
       default:
         {

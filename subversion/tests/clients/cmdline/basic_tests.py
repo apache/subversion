@@ -1479,15 +1479,17 @@ def basic_add_ignores(sbox):
   open(foo_c_path, 'w')
   open(foo_o_path, 'w')
 
-  (output, errput) = svntest.main.run_svn (None, 'add', dir_path)
+  (output, errput) = svntest.main.run_svn (None, 'add',
+                                           '--config-dir', 'config',
+                                           dir_path)
 
   if not output:
-    raise svntest.main.SVNUnexpectedOutput
+    raise svntest.actions.SVNUnexpectedOutput
 
   for line in output:
     # If we see foo.o in the add output, fail the test.
     if re.match(r'^A\s+.*foo.o$', line):
-      raise svntest.main.SVNUnexpectedOutput
+      raise svntest.actions.SVNUnexpectedOutput
 
   # Else never matched the unwanted output, so the test passed.
 
@@ -1527,6 +1529,7 @@ def basic_import_ignores(sbox):
     '--username', svntest.main.wc_author,
     '--password', svntest.main.wc_passwd,
     '-m', 'Log message for new import',
+    '--config-dir', 'config',
     dir_path, url)
 
   lastline = string.strip(output.pop())
@@ -1534,7 +1537,7 @@ def basic_import_ignores(sbox):
   match = cm.search (lastline)
   if not match:
     ### we should raise a less generic error here. which?
-    raise svntest.SVNUnexpectedOutput
+    raise svntest.actions.SVNUnexpectedOutput
 
   # remove (uncontrolled) local dir
   shutil.rmtree(dir_path)

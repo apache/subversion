@@ -31,7 +31,8 @@ _svn()
 	# note: continued lines must end '|' continuing lines must start '|'
 	optsParam="-r|--revision|--username|--password|--targets|
 	           |-x|--extensions|-m|--message|-F|--file|--encoding|
-	           |--diff-cmd|--diff3-cmd|--editor-cmd|--old|--new"
+	           |--diff-cmd|--diff3-cmd|--editor-cmd|--old|--new|
+	           |--config-dir"
 
 	# if not typing an option, or if the previous option required a
 	# parameter, then fallback on ordinary filename expansion
@@ -146,7 +147,7 @@ _svn()
 		;;
 	esac
 
-	cmdOpts="$cmdOpts --help -h"
+	cmdOpts="$cmdOpts --help -h --config-dir"
 
 	# take out options already given
 	for (( i=2; i<=$COMP_CWORD-1; ++i )) ; do
@@ -233,7 +234,7 @@ _svnadmin ()
 		         --bdb-txn-nosync"
 		;;
 	create)
-		cmdOpts="-r --revision"
+		cmdOpts="-r --revision --config-dir"
 		;;
 	dump)
 		cmdOpts="-r --revision --incremental -q --quiet"

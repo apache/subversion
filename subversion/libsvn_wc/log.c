@@ -30,7 +30,6 @@
 #include "svn_xml.h"
 #include "svn_pools.h"
 #include "svn_io.h"
-#include "svn_config.h"
 #include "svn_path.h"
 
 #include "wc.h"
@@ -340,9 +339,6 @@ log_do_merge (struct log_runner *loggy,
                          loggy->pool);
   name = svn_path_join (svn_wc_adm_access_path (loggy->adm_access), name,
                         loggy->pool);
-
-  /* Read the configuration. */
-  SVN_ERR (svn_config_get_config (&config, loggy->pool));
 
   /* Now do the merge with our full paths. */
   SVN_ERR (svn_wc_merge (left, right, name, loggy->adm_access,
