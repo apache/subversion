@@ -69,6 +69,11 @@ display_prop_diffs (const apr_array_header_t *propchanges,
   SVN_ERR (svn_io_file_printf (file,
                                APR_EOL_STR "Property changes on: %s"
                                APR_EOL_STR, path));
+
+  /* ### todo [issue #1533]: Use svn_io_file_printf() to convert this
+     line of dashes to native encoding, at least conditionally?  Or is
+     it better to have under_string always output the same, so
+     programs can find it?  Also, what about checking for error? */
   apr_file_printf (file, "%s" APR_EOL_STR, under_string);
 
   for (i = 0; i < propchanges->nelts; i++)
@@ -92,33 +97,45 @@ display_prop_diffs (const apr_array_header_t *propchanges,
          therefore be converted before printing.  Otherwise, just
          print whatever's there and hope for the best. */
       {
-        svn_boolean_t val_to_utf8 = svn_prop_is_svn_prop (propchange->name);
-        const char *printable_val;
+        svn_boolean_t val_is_utf8 = svn_prop_is_svn_prop (propchange->name);
         
         if (original_value != NULL)
           {
-            if (val_to_utf8)
-              SVN_ERR (svn_utf_cstring_from_utf8
-                       (&printable_val, original_value->data, pool));
+            if (val_is_utf8)
+              {
+                SVN_ERR (svn_io_file_printf
+                         (file, "   - %s" APR_EOL_STR, original_value->data));
+              }
             else
-              printable_val = original_value->data;
-            
-            apr_file_printf (file, "   - %s" APR_EOL_STR, printable_val);
+              {
+                /* ### todo: check for error? */
+                apr_file_printf
+                  (file, "   - %s" APR_EOL_STR, original_value->data);
+              }
           }
         
         if (propchange->value != NULL)
           {
-            if (val_to_utf8)
-              SVN_ERR (svn_utf_cstring_from_utf8
-                       (&printable_val, propchange->value->data, pool));
+            if (val_is_utf8)
+              {
+                SVN_ERR (svn_io_file_printf
+                         (file, "   + %s" APR_EOL_STR,
+                          propchange->value->data));
+              }
             else
-              printable_val = propchange->value->data;
-
-            apr_file_printf (file, "   + %s" APR_EOL_STR, printable_val);
+              {
+                /* ### todo: check for error? */
+                apr_file_printf (file, "   + %s" APR_EOL_STR,
+                                 propchange->value->data);
+              }
           }
       }
     }
 
+  /* ### todo [issue #1533]: Use svn_io_file_printf() to convert this
+     to native encoding, at least conditionally?  Or is it better to
+     have under_string always output the same eol, so programs can
+     find it consistently?  Also, what about checking for error? */
   apr_file_printf (file, APR_EOL_STR);
 
   return SVN_NO_ERROR;
@@ -260,7 +277,7 @@ diff_file_changed (svn_wc_adm_access_t *adm_access,
   apr_file_t *outfile = diff_cmd_baton->outfile;
   apr_file_t *errfile = diff_cmd_baton->errfile;
   apr_pool_t *subpool = svn_pool_create (diff_cmd_baton->pool);
-  const char *label1, *label2, *path_native;
+  const char *label1, *label2;
 
   /* Execute local diff command on these two paths, print to stdout. */
   nargs = diff_cmd_baton->options->nelts;
@@ -336,10 +353,8 @@ diff_file_changed (svn_wc_adm_access_t *adm_access,
   if (diff_cmd)
     {
       /* Print out the diff header. */
-      SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, subpool));
       SVN_ERR (svn_io_file_printf (outfile, "Index: %s" APR_EOL_STR
-                                   "%s" APR_EOL_STR,
-                                   path_native, equal_string));
+                                   "%s" APR_EOL_STR, path, equal_string));
 
       SVN_ERR (svn_io_run_diff (".", args, nargs, label1, label2,
                                 tmpfile1, tmpfile2, 
@@ -376,10 +391,8 @@ diff_file_changed (svn_wc_adm_access_t *adm_access,
           svn_boolean_t mt1_binary = FALSE, mt2_binary = FALSE;
 
           /* Print out the diff header. */
-          SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, subpool));
           SVN_ERR (svn_io_file_printf (outfile, "Index: %s" APR_EOL_STR
-                                       "%s" APR_EOL_STR,
-                                       path_native, equal_string));
+                                       "%s" APR_EOL_STR, path, equal_string));
 
           /* If either file is marked as a known binary type, just
              print a warning. */
@@ -390,37 +403,40 @@ diff_file_changed (svn_wc_adm_access_t *adm_access,
 
           if (mt1_binary || mt2_binary)
             {
-              svn_io_file_printf 
-                (outfile,
-                 "Cannot display: file marked as a binary type." APR_EOL_STR);
+              SVN_ERR (svn_io_file_printf 
+                       (outfile,
+                        "Cannot display: file marked as a binary type."
+                        APR_EOL_STR));
               
               if (mt1_binary && !mt2_binary)
-                svn_io_file_printf (outfile,
-                                    "svn:mime-type = %s" APR_EOL_STR,
-                                    mimetype1);
+                SVN_ERR (svn_io_file_printf (outfile,
+                                             "svn:mime-type = %s" APR_EOL_STR,
+                                             mimetype1));
               else if (mt2_binary && !mt1_binary)
-                svn_io_file_printf (outfile,
-                                    "svn:mime-type = %s" APR_EOL_STR,
-                                    mimetype2);
+                SVN_ERR (svn_io_file_printf (outfile,
+                                             "svn:mime-type = %s" APR_EOL_STR,
+                                             mimetype2));
               else if (mt1_binary && mt2_binary)
                 {
                   if (strcmp (mimetype1, mimetype2) == 0)
-                    svn_io_file_printf (outfile,
-                                        "svn:mime-type = %s" APR_EOL_STR,
-                                        mimetype1);
+                    SVN_ERR (svn_io_file_printf
+                             (outfile,
+                              "svn:mime-type = %s" APR_EOL_STR,
+                              mimetype1));
                   else
-                    svn_io_file_printf (outfile,
-                                        "svn:mime-type = (%s, %s)" APR_EOL_STR,
-                                        mimetype1, mimetype2);
+                    SVN_ERR (svn_io_file_printf
+                             (outfile,
+                              "svn:mime-type = (%s, %s)" APR_EOL_STR,
+                              mimetype1, mimetype2));
                 }
             }
           else
             {
               /* Output the actual diff */
-              SVN_ERR(svn_diff_file_output_unified(outfile, diff,
-                                                   tmpfile1, tmpfile2,
-                                                   label1, label2,
-                                                   subpool));
+              SVN_ERR (svn_diff_file_output_unified (outfile, diff,
+                                                     tmpfile1, tmpfile2,
+                                                     label1, label2,
+                                                     subpool));
             }
         }
     }
@@ -503,9 +519,10 @@ diff_file_deleted_no_diff (svn_wc_adm_access_t *adm_access,
   if (state)
     *state = svn_wc_notify_state_unknown;
 
-  svn_io_file_printf(diff_cmd_baton->outfile,
-                     "Index: %s (deleted)" APR_EOL_STR "%s" APR_EOL_STR, 
-                     path, equal_string);
+  SVN_ERR (svn_io_file_printf
+           (diff_cmd_baton->outfile,
+            "Index: %s (deleted)" APR_EOL_STR "%s" APR_EOL_STR, 
+            path, equal_string));
 
   return SVN_NO_ERROR;
 }
