@@ -1350,14 +1350,15 @@ close_directory (void *dir_baton,
                 {
                   svn_wc_adm_access_t *dir_access;
                   SVN_ERR (svn_wc_adm_retrieve (&dir_access, eb->adm_access, 
-                                                eb->target, pool));
+                                                path, pool));
                   SVN_ERR (get_dir_status 
                            (eb, tgt_status->entry, dir_access, NULL,
                             eb->ignores, TRUE, eb->get_all, eb->no_ignore, 
                             TRUE, eb->status_func, eb->status_baton, 
                             eb->cancel_func, eb->cancel_baton, pool));
                 }
-              (eb->status_func) (eb->status_baton, path, tgt_status);
+              if (is_sendable_status (tgt_status, eb))
+                (eb->status_func) (eb->status_baton, path, tgt_status);
             }
         }
       else
