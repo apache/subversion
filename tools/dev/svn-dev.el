@@ -69,14 +69,16 @@ entries file, instead of just detecting PATH among the entries."
           (basename (file-name-nondirectory path))
           (found    nil))
       (save-excursion
-        (let ((find-file-hooks nil))
-          (set-buffer (find-file-noselect entries t)))
-        (goto-char (point-min))
-        (if (search-forward (format "name=\"%s\"" basename) nil t)
-            (setq found t)
-          (setq found nil))
-        (kill-buffer nil))
-      found))))
+	(if (file-directory-p (concat (file-name-directory path) svn-adm-area))
+	    (progn
+	      (let ((find-file-hooks nil))
+		(set-buffer (find-file-noselect entries t)))
+	      (goto-char (point-min))
+	      (if (search-forward (format "name=\"%s\"" basename) nil t)
+		  (setq found t)
+		(setq found nil))
+	      (kill-buffer nil)))
+	found)))))
 
 (defun svn-find-file-hook ()
   "Function for find-file-hooks.
@@ -89,9 +91,7 @@ Inhibit backup files unless `vc-make-backup-files' is non-nil."
           (make-local-variable 'backup-inhibited)
           (setq backup-inhibited t)))))
 
-;; ### GJS: disabled. When visiting an APR header, this asked me about
-;; ###      creating the include/.svn directory. Feh.
-;; (add-hook 'find-file-hooks 'svn-find-file-hook)
+(add-hook 'find-file-hooks 'svn-find-file-hook)
 
 
 
