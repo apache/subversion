@@ -9,11 +9,12 @@ Status of 1.1.2:
 
 Candidate changes:
 
-  * r12273
+  * r12273, r12393
     Fix simple bug in 'svn ls "local file with space(s) in its name"'.
     Justification: Trivial change, annoying bug.
     Votes:
-      +1: kfogel
+      +1: maxb
+      (r12273 only) +1: kfogel
 
   * r12075
     Add pre-0.14 dumpfile compatability.
