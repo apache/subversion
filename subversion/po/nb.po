@@ -39,7 +39,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2005-02-26 10:20+0100\n"
+"POT-Creation-Date: 2005-02-27 10:44+0100\n"
 "PO-Revision-Date: 2004-07-13 11:59+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Norwegian <dev@subversion.tigris.org>\n"
@@ -1377,11 +1377,12 @@ msgstr "--auto-props og --no-auto-props utelukker hverandre gjensidig"
 msgid "Syntax error in native-eol argument '%s'"
 msgstr "Syntaksfeil i «native-eol»-argumentet «%s»"
 
-#: clients/cmdline/main.c:1082
+#: clients/cmdline/main.c:1082 svndumpfilter/main.c:1166 svnlook/main.c:1993
 msgid "Subcommand argument required\n"
 msgstr "Delkommandoen må ha et argument\n"
 
-#: clients/cmdline/main.c:1100 svnadmin/main.c:1200 svnlook/main.c:2016
+#: clients/cmdline/main.c:1100 svnadmin/main.c:1200 svndumpfilter/main.c:1188
+#: svnlook/main.c:2016
 #, c-format
 msgid "Unknown command: '%s'\n"
 msgstr "Ukjent kommando: «%s»\n"
@@ -3921,31 +3922,31 @@ msgstr "Loggpost er ikke en liste"
 msgid "Changed-path entry not a list"
 msgstr "Post med stiforandring er ikke en liste"
 
-#: libsvn_ra_svn/client.c:1174
+#: libsvn_ra_svn/client.c:1173
 msgid "get-locations not implemented"
 msgstr "get-locations ikke implementert"
 
-#: libsvn_ra_svn/client.c:1187
+#: libsvn_ra_svn/client.c:1186
 msgid "Location entry not a list"
 msgstr "Post for beliggenhet er ikke en liste"
 
-#: libsvn_ra_svn/client.c:1241
+#: libsvn_ra_svn/client.c:1240
 msgid "get-file-revs not implemented"
 msgstr "get-file-revs ikke implementert"
 
-#: libsvn_ra_svn/client.c:1255
+#: libsvn_ra_svn/client.c:1254
 msgid "Revision entry not a list"
 msgstr "Revisjonspost er ikke en liste"
 
-#: libsvn_ra_svn/client.c:1268 libsvn_ra_svn/client.c:1293
+#: libsvn_ra_svn/client.c:1267 libsvn_ra_svn/client.c:1292
 msgid "Text delta chunk not a string"
 msgstr "Porsjon med tekst-delta (forskjeller) er ikke en streng"
 
-#: libsvn_ra_svn/client.c:1305
+#: libsvn_ra_svn/client.c:1304
 msgid "The get-file-revs command didn't return any revisions"
 msgstr "«get-file-revs»-kommandoen returnerte ingen revisjoner"
 
-#: libsvn_ra_svn/client.c:1359
+#: libsvn_ra_svn/client.c:1358
 #, c-format
 msgid "Unsupported RA loader version (%d) for ra_svn"
 msgstr "Ustøttet versjon av RA-laster (%d) for ra_svn"
@@ -4934,8 +4935,8 @@ msgid ""
 "Safe data '%s' was followed by non-ASCII byte %d: unable to convert to/from "
 "UTF-8"
 msgstr ""
-"Trygge data «%s» ble etterfulgt av ikke-ASCII-byte %d: Klarer ikke å konvertere til/fra "
-"UTF-8"
+"Trygge data «%s» ble etterfulgt av ikke-ASCII-byte %d: Klarer ikke å "
+"konvertere til/fra UTF-8"
 
 #: libsvn_subr/utf.c:501
 #, c-format
@@ -5971,6 +5972,15 @@ msgstr ""
 "\n"
 "Kontrollerer data lagret i depotet.\n"
 
+#: svnadmin/main.c:435
+msgid "Invalid revision specifier"
+msgstr "Ugyldig revisjonsspesifikator"
+
+#: svnadmin/main.c:440
+#, c-format
+msgid "Revisions must not be greater than the youngest revision (%ld)"
+msgstr "Revisjoner kan ikke være større enn den yngste revisjonen (%ld)"
+
 #: svnadmin/main.c:508 svnadmin/main.c:589
 msgid "First revision cannot be higher than second"
 msgstr "Den første revisjonen kan ikke være høyere enn den andre"
@@ -6046,7 +6056,7 @@ msgstr "Kun én revisjon er tillatt"
 msgid "Exactly one file argument required"
 msgstr "Kun ett filargument behøves"
 
-#: svnadmin/main.c:1178 svndumpfilter/main.c:1166 svnlook/main.c:1993
+#: svnadmin/main.c:1178
 msgid "subcommand argument required\n"
 msgstr "Delkommandoen må ha et argument\n"
 
@@ -6180,11 +6190,6 @@ msgstr "   %ld => (droppet)\n"
 msgid "Dropped %d node(s):\n"
 msgstr "Droppet %d node(r):\n"
 
-#: svndumpfilter/main.c:1188
-#, c-format
-msgid "unknown command: '%s'\n"
-msgstr "ukjent kommando: «%s»\n"
-
 #: svndumpfilter/main.c:1207
 msgid ""
 "\n"
@@ -6196,10 +6201,10 @@ msgstr ""
 #: svndumpfilter/main.c:1250
 #, c-format
 msgid ""
-"subcommand '%s' doesn't accept option '%s'\n"
+"Subcommand '%s' doesn't accept option '%s'\n"
 "Type 'svndumpfilter help %s' for usage.\n"
 msgstr ""
-"delkommandoen «%s» tar ikke argumentet «%s»\n"
+"Delkommandoen «%s» tar ikke argumentet «%s»\n"
 "Skriv «svndumpfilter help %s» for bruk.\n"
 
 #: svnlook/main.c:98
@@ -6503,8 +6508,8 @@ msgstr ""
 "Argumentene «--transaction» (-t) og «--revision» (-r) kan ikke brukes sammen"
 
 #: svnlook/main.c:2049
-msgid "repository argument required\n"
-msgstr "Det er påkrevet med argument for depot\n"
+msgid "Repository argument required\n"
+msgstr "Depot-argument påkrevd\n"
 
 #: svnlook/main.c:2058
 #, c-format
@@ -6514,7 +6519,7 @@ msgstr "«%s» er en nettadresse men skulle vært en filsti\n"
 #: svnlook/main.c:2106
 #, c-format
 msgid ""
-"subcommand '%s' doesn't accept option '%s'\n"
+"Subcommand '%s' doesn't accept option '%s'\n"
 "Type 'svnlook help %s' for usage.\n"
 msgstr ""
 "Delkommandoen «%s» tar ikke valget «%s»\n"
@@ -6623,6 +6628,10 @@ msgstr "Kan ikke få tak i adresseinfo: %s\n"
 #, c-format
 msgid "Can't bind server socket: %s\n"
 msgstr "Kan ikke binde tjenersokkel: %s\n"
+
+#: svnversion/main.c:108
+msgid "Finished"
+msgstr "Ferdig"
 
 #: svnversion/main.c:123
 msgid "Type 'svnversion --help' for usage.\n"
