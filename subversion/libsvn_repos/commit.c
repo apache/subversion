@@ -129,6 +129,7 @@ open_root (void *edit_baton,
   struct dir_baton *dirb;
   struct edit_baton *eb = edit_baton;
   svn_revnum_t youngest;
+  svn_fs_txn_t *txn;
 
   /* Ignore BASE_REVISION.  We always build our transaction against
      HEAD.  However, we will keep it in our dir baton for out of
@@ -137,12 +138,13 @@ open_root (void *edit_baton,
 
   /* Begin a subversion transaction, cache its name, and get its
      root object. */
-  SVN_ERR (svn_repos_fs_begin_txn_for_commit (&(eb->txn), 
+  SVN_ERR (svn_repos_fs_begin_txn_for_commit (&txn,
                                               eb->repos, 
                                               youngest,
                                               eb->user, 
                                               eb->log_msg,
                                               eb->pool));
+  eb->txn = txn;
   SVN_ERR (svn_fs_txn_root (&(eb->txn_root), eb->txn, eb->pool));
   SVN_ERR (svn_fs_txn_name (&(eb->txn_name), eb->txn, eb->pool));
   
