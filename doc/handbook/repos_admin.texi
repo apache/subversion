@@ -568,7 +568,7 @@ AuthGroupFile /my/svn/group/file
 @end example
 
 These are only a few simple examples.  For a complete tutorial on
-Apache access contol, please consider taking a look at the
+Apache access control, please consider taking a look at the
 ``Security'' tutorials found at
 @url{http://httpd.apache.org/docs-2.0/misc/tutorials.html}.
 

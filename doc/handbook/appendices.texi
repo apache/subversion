@@ -60,10 +60,10 @@ documentation and/or other materials provided with the distribution.
 
 @item
 The end-user documentation included with the redistribution, if
-any, must include the following acknowlegement: "This product includes
+any, must include the following acknowledgment: "This product includes
 software developed by CollabNet (http://www.Collab.Net/)."
-Alternately, this acknowlegement may appear in the software itself, if
-and wherever such third-party acknowlegements normally appear.
+Alternately, this acknowledgment may appear in the software itself, if
+and wherever such third-party acknowledgments normally appear.
 
 @item
 The hosted project names must not be used to endorse or promote
