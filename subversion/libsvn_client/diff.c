@@ -757,20 +757,6 @@ do_diff (const apr_array_header_t *options,
   const svn_delta_edit_fns_t *diff_editor;
   void *diff_edit_baton;
 
-  /* Return an error if PATH1 and PATH2 aren't the same (for now). */
-  if (! svn_stringbuf_compare (path1, path2))
-    return svn_error_createf (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL, pool,
-                              "Multi-path diff is currently unsupprted");
-
-  /* Sanity check -- ensure that we have valid revisions to look at. */
-  if ((revision1->kind == svn_client_revision_unspecified)
-      || (revision2->kind == svn_client_revision_unspecified))
-    {
-      return svn_error_create
-        (SVN_ERR_CLIENT_BAD_REVISION, 0, NULL, pool,
-         "do_diff: caller failed to specify any revisions");
-    }
-
   /* Determine if the target we have been given is a path or an URL.
      If it is a working copy path, we'll need to extract the URL from
      the entry for that path. */
@@ -816,7 +802,7 @@ do_diff (const apr_array_header_t *options,
   SVN_ERR (svn_client__get_revision_number
            (&start_revnum, ra_lib, session, revision1, path1->data, pool));
   SVN_ERR (svn_client__get_revision_number
-           (&end_revnum, ra_lib, session, revision2, path1->data, pool));
+           (&end_revnum, ra_lib, session, revision2, path2->data, pool));
 
   /* ### todo: For the moment, we'll maintain the two distinct diff
      editors, svn_wc vs svn_client, in order to get this change done
@@ -849,7 +835,8 @@ do_diff (const apr_array_header_t *options,
       /* Pure repository comparison. */
       const svn_delta_editor_t *new_diff_editor;
       void *new_diff_edit_baton;
-
+      svn_stringbuf_t *URL2;
+      
       /* Open a second session used to request individual file
          contents. Although a session can be used for multiple requests, it
          appears that they must be sequential. Since the first request, for
@@ -864,6 +851,8 @@ do_diff (const apr_array_header_t *options,
       SVN_ERR (svn_client__open_ra_session (&session2, ra_lib, URL, NULL,
                                             NULL, FALSE, FALSE, TRUE,
                                             auth_baton, pool));
+
+      SVN_ERR (convert_to_url (&URL2, path2, pool));
 
       /* Get the true diff editor. */
       SVN_ERR (svn_client__get_diff_editor (target,
@@ -880,12 +869,13 @@ do_diff (const apr_array_header_t *options,
       svn_delta_compat_wrap (&diff_editor, &diff_edit_baton,
                              new_diff_editor, new_diff_edit_baton, pool);
 
-      SVN_ERR (ra_lib->do_update (session,
+      SVN_ERR (ra_lib->do_switch (session,
                                   &reporter, &report_baton,
                                   end_revnum,
                                   target,
                                   recurse,
-                                  diff_editor, diff_edit_baton));
+                                  URL2,
+                                  diff_editor, diff_edit_baton));      
 
       SVN_ERR (reporter->set_path (report_baton, "", start_revnum));
 

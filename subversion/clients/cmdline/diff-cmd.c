@@ -42,102 +42,153 @@ svn_cl__diff (apr_getopt_t *os,
 {
   apr_array_header_t *options;
   apr_array_header_t *targets;
-  apr_array_header_t *condensed_targets;
   svn_client_auth_baton_t *auth_baton;
   apr_file_t *outfile, *errfile;
   apr_status_t status;
   int i;
 
+  auth_baton = svn_cl__make_auth_baton (opt_state, pool);
   options = svn_cl__stringlist_to_array (opt_state->extensions, pool);
 
-  targets = svn_cl__args_to_target_array (os, opt_state, TRUE, pool);
-  svn_cl__push_implicit_dot_target (targets, pool);
-  SVN_ERR (svn_path_remove_redundancies (&condensed_targets,
-                                         targets,
-                                         pool));
-
-  auth_baton = svn_cl__make_auth_baton (opt_state, pool);
-
-  if (opt_state->start_revision.kind == svn_client_revision_unspecified)
-    opt_state->start_revision.kind = svn_client_revision_base;
-
-  if (opt_state->end_revision.kind == svn_client_revision_unspecified)
-    opt_state->end_revision.kind = svn_client_revision_working;
-
   /* Get an apr_file_t representing stdout and stderr, which is where
-     we'll have the diff program print to. */
+     we'll have the external 'diff' program print to. */
   if ((status = apr_file_open_stdout (&outfile, pool)))
     return svn_error_create (status, 0, NULL, pool, "can't open stdout");
   if ((status = apr_file_open_stderr (&errfile, pool)))
     return svn_error_create (status, 0, NULL, pool, "can't open stderr");
-
-  /* ### To make "svn diff URL1 URL2" work, we have a problem -- how
-     to distinguish between these two different behaviors
-
-        $ svn diff http://foo@X http://bar@Y
-
-          and
-
-        $ svn diff -rX:Y foo.c bar.c baz.c sub/qux.c sub/quux.c
-
-     That is, multiple targets might mean we want the diff between
-     revisions X and Y for *each* target -- or it might mean we want
-     to diff two paths (a branch vs trunk, for example), which might
-     or might not be at the same revision.  How do we know the
-     intention?
-
-     I think the answer is something like:
-
-        svn_stringbuf_t *target1
-          = ((svn_stringbuf_t **) (condensed_targets->elts))[0];
-   
-        svn_stringbuf_t *target2
-          = ((svn_stringbuf_t **) (condensed_targets->elts))[1];
-   
-        if ((condensed_targets->nelts == 2)
-            && ((is_a_url (target1)) || (is_a_url (target2))))
-          {
-            // start_revision corresponds to target1, end_revision to target2
-            SVN_ERR (svn_client_diff (options,
-                                      auth_baton,
-                                      target1,
-                                      &(opt_state->start_revision),
-                                      target2,
-                                      &(opt_state->end_revision),
-                                      opt_state->nonrecursive ? FALSE : TRUE,
-                                      outfile,
-                                      errfile,
-                                      pool));
-          }
-        else
-          {
-             for (i = 0; i < condensed_targets->nelts; ++i)
-               {
-                  etc, etc, see the code immediately below;
-               }
-          }
-
-    Of course, this assumes we've first fixed svn_client_diff() to
-    handle two distinct paths, ahem.
-  */
-
-  for (i = 0; i < condensed_targets->nelts; ++i)
+  
+  if ((opt_state->start_revision.kind == svn_client_revision_unspecified)
+      && (opt_state->end_revision.kind == svn_client_revision_unspecified))
     {
-      svn_stringbuf_t *target
-        = ((svn_stringbuf_t **) (condensed_targets->elts))[i];
+      /* No '-r' was supplied, so this is either the form 
+         'svn diff URL1@N URL2@M', or 'svn diff wcpath ...' */
 
-      SVN_ERR (svn_client_diff (options,
-                                auth_baton,
-                                target,
-                                &(opt_state->start_revision),
-                                target,
-                                &(opt_state->end_revision),
-                                opt_state->nonrecursive ? FALSE : TRUE,
-                                outfile,
-                                errfile,
-                                pool));
+      svn_string_t ts;
+      svn_stringbuf_t *target1, *target2;
+
+      targets = svn_cl__args_to_target_array (os, opt_state,
+                                              TRUE, /* extract @revs */
+                                              pool);      
+      svn_cl__push_implicit_dot_target (targets, pool);
+
+      target1 = ((svn_stringbuf_t **) (targets->elts))[0];
+
+      ts.data = target1->data;
+      ts.len = target1->len;
+      if (svn_path_is_url (&ts))
+        {
+          /* The form 'svn diff URL1@N URL2@M'. */
+
+          /* The @revs have already been parsed out if they were
+             present, and assigned to start_revision and end_revision.
+             If not present, we set HEAD as default. */
+          if (opt_state->start_revision.kind ==svn_client_revision_unspecified)
+            opt_state->start_revision.kind = svn_client_revision_head;
+          if (opt_state->end_revision.kind == svn_client_revision_unspecified)
+            opt_state->end_revision.kind = svn_client_revision_head;
+
+          if (targets->nelts < 2)
+            return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0,
+                                     NULL, pool, 
+                                     "Second URL is required.");
+          
+          target2 = ((svn_stringbuf_t **) (targets->elts))[1];
+          
+          /* Notice that we're passing DIFFERENT paths to
+             svn_client_diff.  This is the only use-case which does so! */
+          SVN_ERR (svn_client_diff (options,
+                                    auth_baton,
+                                    target1,
+                                    &(opt_state->start_revision),
+                                    target2,
+                                    &(opt_state->end_revision),
+                                    opt_state->nonrecursive ? FALSE : TRUE,
+                                    outfile,
+                                    errfile,
+                                    pool));
+        }
+      else
+        {
+          /* The form 'svn diff wcpath1 wcpath2 ...' */
+          
+          opt_state->start_revision.kind = svn_client_revision_base;
+          opt_state->end_revision.kind = svn_client_revision_working;
+
+          for (i = 0; i < targets->nelts; ++i)
+            {
+              svn_stringbuf_t *target
+                = ((svn_stringbuf_t **) (targets->elts))[i];
+              
+              /* We're running diff on each TARGET independently;  also
+                 notice that we pass TARGET twice, since we're always
+                 comparing it to itself.  */
+              SVN_ERR (svn_client_diff (options,
+                                        auth_baton,
+                                        target,
+                                        &(opt_state->start_revision),
+                                        target,
+                                        &(opt_state->end_revision),
+                                        opt_state->nonrecursive ? FALSE : TRUE,
+                                        outfile,
+                                        errfile,
+                                        pool));
+            }
+        }      
     }
+  else
+    {
+      /* This is the form 'svn diff -rN[:M] path1 path2 ...' 
 
+         The code in main.c has already parsed '-r' and filled in
+         start_revision and (possibly) end_revision for us.
+      */
+
+      targets = svn_cl__args_to_target_array (os, opt_state,
+                                              FALSE, /* don't extract @revs */
+                                              pool);      
+      svn_cl__push_implicit_dot_target (targets, pool);
+      
+      for (i = 0; i < targets->nelts; ++i)
+        {
+          svn_string_t ts;
+          svn_stringbuf_t *target
+            = ((svn_stringbuf_t **) (targets->elts))[i];
+  
+          if (opt_state->end_revision.kind == svn_client_revision_unspecified)
+            {
+              /* The user specified only '-r N'.  Therefore, each path
+                 -must- be a working copy path.  No URLs allowed! */        
+              ts.data = target->data;
+              ts.len = target->len;
+              if (svn_path_is_url (&ts))
+                return svn_error_createf (SVN_ERR_CL_ARG_PARSING_ERROR, 0,
+                                          NULL, pool, "You passed only one "
+                                          "revision, but %s is a URL. "
+                                          "URLs require two revisions.",
+                                          ts.data);
+
+              /* URL or not, if the 2nd revision wasn't given by the
+                 user, they must want to compare the 1st repsository
+                 revision to their working files. */
+              opt_state->end_revision.kind = svn_client_revision_working;
+            }
+        
+          /* We're running diff on each TARGET independently;  also
+             notice that we pass TARGET twice, since we're always
+             comparing it to itself.  */
+          SVN_ERR (svn_client_diff (options,
+                                    auth_baton,
+                                    target,
+                                    &(opt_state->start_revision),
+                                    target,
+                                    &(opt_state->end_revision),
+                                    opt_state->nonrecursive ? FALSE : TRUE,
+                                    outfile,
+                                    errfile,
+                                    pool));
+        }
+    }
+  
   return SVN_NO_ERROR;
 }
 

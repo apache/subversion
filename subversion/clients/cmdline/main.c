@@ -164,9 +164,19 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
      svn_cl__auth_username_opt, svn_cl__auth_password_opt} },
   
   { "diff", svn_cl__diff, {"di"},
-    "Display local changes in the working copy, or changes between the\n"
-    "working copy and the repository if a revision is given.\n"
-    "usage: svn diff [-r REV1[:REV2]] [TARGETS]\n",
+    "display the differences between two paths.\n"
+    "usage: 1. svn diff [-r N[:M]] [PATH1 [PATH2 [PATH3 ...]]]\n"
+    "       2. svn diff URL1[@N] URL2[@M]\n\n"
+    "   1. each PATH can be either a working-copy path or URL.\n"
+    "      If no PATHs are specified, a value of '.' is assumed.\n\n"
+    "        + if PATH is a URL, then revs N and M must be given via -r.\n\n"
+    "        + if PATH is a working-copy path, then -r switch means:\n"
+    "            -r N:M  : server compares PATH@N and PATH@M,\n"
+    "            -r N    : client compares PATH@N against working copy\n"
+    "            (no -r) : client compares base and working copies of PATH\n\n"
+    "   2. if alternate syntax is used, the server compares URL1 and URL2\n"
+    "      at revisions N and M respectively.  If either N or M are\n"
+    "      ommitted, value of HEAD is assumed.\n",
     {'r', 'D', 'x', 'n',
      svn_cl__auth_username_opt, svn_cl__auth_password_opt} },
   

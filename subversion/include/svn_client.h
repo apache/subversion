@@ -592,16 +592,14 @@ svn_client_log (svn_client_auth_baton_t *auth_baton,
 
 /* Produce diff output which describes the delta between
    PATH1/REVISION1 and PATH2/REVISION2.  Print the output of the diff
-   to OUTFILE, and any errors to ERRFILE.
+   to OUTFILE, and any errors to ERRFILE.  PATH1 and PATH can be
+   either working-copy paths or URLs.
 
    PATH1 and PATH2 must both represent the same node kind -- that is,
    if PATH1 is a directory, PATH2 must also be, and if PATH1 is a
    file, PATH2 must also be.  (Currently, PATH1 and PATH2 must be the
    exact same path)
 
-   If either REVISION1 or REVISION2 has an `unspecified' or
-   unrecognized `kind', return SVN_ERR_CLIENT_BAD_REVISION.
-  
    If RECURSE is true (and the PATHs are directories) this will be a
    recursive operation.
   
