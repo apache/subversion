@@ -22,6 +22,11 @@ import string, sys, re, os.path
 # Our testing module
 import svntest
 
+# (abbreviation)
+Skip = svntest.testcase.Skip
+XFail = svntest.testcase.XFail
+Item = svntest.wc.StateItem
+
 
 ######################################################################
 # Diff output checker
@@ -679,6 +684,131 @@ def diff_only_property_change(sbox):
     os.chdir(current_dir)
 
 
+#----------------------------------------------------------------------
+# Regression test for issue #1019: make sure we don't try to display
+# diffs when the file is marked as a binary type.  This tests all 3
+# uses of 'svn diff':  wc-wc, wc-repos, repos-repos.
+
+def dont_diff_binary_file(sbox):
+  "don't diff file marked as binary type"
+
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
+  
+  # Add a binary file to the project.
+  fp = open(os.path.join(sys.path[0], "theta.bin"))
+  theta_contents = fp.read()  # suck up contents of a test .png file
+  fp.close()
+
+  theta_path = os.path.join(wc_dir, 'A', 'theta')
+  fp = open(theta_path, 'w')
+  fp.write(theta_contents)    # write png filedata into 'A/theta'
+  fp.close()
+  
+  svntest.main.run_svn(None, 'add', theta_path)  
+
+  # Created expected output tree for 'svn ci'
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/theta' : Item(verb='Adding  (bin)'),
+    })
+
+  # Create expected status tree
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.add({
+    'A/theta' : Item(status='  ', wc_rev=2, repos_rev=2),
+    })
+
+  # Commit the new binary file, creating revision 2.
+  if svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                           expected_status, None,
+                                           None, None, None, None, wc_dir):
+    return 1
+
+  # Update the whole working copy to HEAD (rev 2)
+  expected_output = svntest.wc.State(wc_dir, {})
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    'A/theta' : Item(theta_contents,
+                     props={'svn:mime-type' : 'application/octet-stream'}),
+    })
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.add({
+    'A/theta' : Item(status='  ', wc_rev=2, repos_rev=2),
+    })
+
+  if svntest.actions.run_and_verify_update(wc_dir,
+                                           expected_output,
+                                           expected_disk,
+                                           expected_status,
+                                           None, None, None, None, None,
+                                           1):  # verify props, too.
+    return 1
+
+  # Make a local mod to the binary file.
+  svntest.main.file_append(theta_path, "some extra junk")
+
+  # First diff use-case: plain old 'svn diff wc' will display any
+  # local changes in the working copy.  (diffing working
+  # vs. text-base)
+
+  re_nodisplay = re.compile('^Cannot display:')
+
+  stdout, stderr = svntest.main.run_svn(None, 'diff', wc_dir)
+
+  failed_to_display = 0;
+  for line in stdout:
+    if (re_nodisplay.match(line)):
+      failed_to_display = 1;
+  if not failed_to_display:
+    return 1
+
+  # Second diff use-case: 'svn diff -r1 wc' compares the wc against a
+  # the first revision in the repository.
+
+  stdout, stderr = svntest.main.run_svn(None, 'diff', '-r', '1', wc_dir)
+
+  failed_to_display = 0;
+  for line in stdout:
+    if (re_nodisplay.match(line)):
+      failed_to_display = 1;
+  if not failed_to_display:
+    return 1
+
+  # Now commit the local mod, creating rev 3.
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/theta' : Item(verb='Sending'),
+    })
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  expected_status.tweak(wc_rev=2)
+  expected_status.add({
+    'A/theta' : Item(status='  ', wc_rev=3, repos_rev=3),
+    })
+
+  if svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                           expected_status, None,
+                                           None, None, None, None, wc_dir):
+    return 1
+
+  # Third diff use-case: 'svn diff -r2:3 wc' will compare two
+  # repository trees.
+
+  stdout, stderr = svntest.main.run_svn(None, 'diff', '-r', '2:3', wc_dir)
+
+  failed_to_display = 0;
+  for line in stdout:
+    if (re_nodisplay.match(line)):
+      failed_to_display = 1;
+  if not failed_to_display:
+    return 1
+
+  return 0
+
 
 ########################################################################
 # Run the tests
@@ -695,7 +825,8 @@ test_list = [ None,
               diff_repo_subset,
               diff_non_version_controlled_file,
               diff_pure_repository_update_a_file,
-              diff_only_property_change
+              diff_only_property_change,
+              dont_diff_binary_file,
               ]
 
 if __name__ == '__main__':
