@@ -967,7 +967,6 @@ subcommand_lock (apr_getopt_t *os, void *baton, apr_pool_t *pool)
                         opt_state->path_to_lock,
                         0,      /* don't steal an existing lock. */
                         0,      /* no expiration time. */
-                        NULL,   /* we don't have a token to refresh. */
                         pool));
   
   SVN_ERR (svn_cmdline_printf (pool, _("Created lock on '%s', owned by %s.\n"),

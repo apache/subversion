@@ -831,7 +831,6 @@ svn_ra_dav__lock(void *session_baton,
                  svn_lock_t **lock,
                  const char *path,
                  svn_boolean_t force,
-                 const char *current_token,
                  apr_pool_t *pool)
 {
   return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, 0,

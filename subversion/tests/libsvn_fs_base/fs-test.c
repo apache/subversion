@@ -5229,7 +5229,7 @@ basic_lock (const char **msg,
   SVN_ERR (svn_fs_set_access (fs, access));
 
   /* Lock /A/D/G/rho. */
-  SVN_ERR (svn_fs_lock (&mylock, fs, "/A/D/G/rho", 0, 0, NULL, pool));
+  SVN_ERR (svn_fs_lock (&mylock, fs, "/A/D/G/rho", 0, 0, pool));
 
   /* Can we look up the lock by path? */
   SVN_ERR (svn_fs_get_lock_from_path (&somelock, fs, "/A/D/G/rho", pool));
@@ -5290,7 +5290,7 @@ lock_credentials (const char **msg,
   SVN_ERR (svn_fs_set_access (fs, access));
 
   /* Lock /A/D/G/rho. */
-  SVN_ERR (svn_fs_lock (&mylock, fs, "/A/D/G/rho", 0, 0, NULL, pool));
+  SVN_ERR (svn_fs_lock (&mylock, fs, "/A/D/G/rho", 0, 0, pool));
 
   /* Push the proper lock-token into the fs access context. */
   SVN_ERR (svn_fs_access_add_lock_token (access, mylock->token));
@@ -5384,7 +5384,7 @@ final_lock_check (const char **msg,
   /* Become 'bubba' and lock "/A/D/G/rho". */
   SVN_ERR (svn_fs_create_access (&access, "bubba", pool));
   SVN_ERR (svn_fs_set_access (fs, access));
-  SVN_ERR (svn_fs_lock (&mylock, fs, "/A/D/G/rho", 0, 0, NULL, pool));
+  SVN_ERR (svn_fs_lock (&mylock, fs, "/A/D/G/rho", 0, 0, pool));
 
   /* We are no longer 'bubba'.  We're nobody. */
   SVN_ERR (svn_fs_set_access (fs, NULL));
@@ -5439,7 +5439,7 @@ lock_dir_propchange (const char **msg,
   /* Become 'bubba' and lock "/A/D/G/rho". */
   SVN_ERR (svn_fs_create_access (&access, "bubba", pool));
   SVN_ERR (svn_fs_set_access (fs, access));
-  SVN_ERR (svn_fs_lock (&mylock, fs, "/A/D/G/rho", 0, 0, NULL, pool));
+  SVN_ERR (svn_fs_lock (&mylock, fs, "/A/D/G/rho", 0, 0, pool));
 
   /* We are no longer 'bubba'.  We're nobody. */
   SVN_ERR (svn_fs_set_access (fs, NULL));
@@ -5493,7 +5493,7 @@ lock_name_reservation (const char **msg,
   /* Become 'bubba' and lock imaginary path  "/A/D/G2/blooga". */
   SVN_ERR (svn_fs_create_access (&access, "bubba", pool));
   SVN_ERR (svn_fs_set_access (fs, access));
-  SVN_ERR (svn_fs_lock (&mylock, fs, "/A/D/G2/blooga", 0, 0, NULL, pool));
+  SVN_ERR (svn_fs_lock (&mylock, fs, "/A/D/G2/blooga", 0, 0, pool));
 
   /* We are no longer 'bubba'.  We're nobody. */
   SVN_ERR (svn_fs_set_access (fs, NULL));
@@ -5556,7 +5556,7 @@ lock_expiration (const char **msg,
   SVN_ERR (svn_fs_set_access (fs, access));
 
   /* Lock /A/D/G/rho, with an expiration 5 seconds from now. */
-  SVN_ERR (svn_fs_lock (&mylock, fs, "/A/D/G/rho", 0, 5, NULL, pool));
+  SVN_ERR (svn_fs_lock (&mylock, fs, "/A/D/G/rho", 0, 5, pool));
 
   /* Become nobody. */
   SVN_ERR (svn_fs_set_access (fs, NULL));
@@ -5608,7 +5608,7 @@ lock_break_steal_refresh (const char **msg,
   /* Become 'bubba' and lock "/A/D/G/rho". */
   SVN_ERR (svn_fs_create_access (&access, "bubba", pool));
   SVN_ERR (svn_fs_set_access (fs, access));
-  SVN_ERR (svn_fs_lock (&mylock, fs, "/A/D/G/rho", 0, 0, NULL, pool));
+  SVN_ERR (svn_fs_lock (&mylock, fs, "/A/D/G/rho", 0, 0, pool));
 
   /* Become 'hortense' and break bubba's lock, then verify it's gone. */
   SVN_ERR (svn_fs_create_access (&access, "hortense", pool));
@@ -5620,7 +5620,7 @@ lock_break_steal_refresh (const char **msg,
                              "Tried to break a lock, but it's still there.");
 
   /* As hortense, create a new lock, and verify that we own it. */
-  SVN_ERR (svn_fs_lock (&mylock, fs, "/A/D/G/rho", 0, 0, NULL, pool));
+  SVN_ERR (svn_fs_lock (&mylock, fs, "/A/D/G/rho", 0, 0, pool));
   SVN_ERR (svn_fs_get_lock_from_path (&somelock, fs, "/A/D/G/rho", pool));
   if (strcmp (somelock->owner, mylock->owner) != 0)
     return svn_error_create (SVN_ERR_TEST_FAILED, NULL,
@@ -5632,7 +5632,7 @@ lock_break_steal_refresh (const char **msg,
   SVN_ERR (svn_fs_lock (&mylock, fs, "/A/D/G/rho",
                         1 /* FORCE STEAL */,
                         300 /* expire in 5 minutes */,
-                        NULL, pool));
+                        pool));
   SVN_ERR (svn_fs_get_lock_from_path (&somelock, fs, "/A/D/G/rho", pool));
   if (strcmp (somelock->owner, mylock->owner) != 0)
     return svn_error_create (SVN_ERR_TEST_FAILED, NULL,
@@ -5642,10 +5642,8 @@ lock_break_steal_refresh (const char **msg,
                              "Made expiring lock, but seems not to expire.");
     
   /* Refresh the lock, so that it never expires. */
-  SVN_ERR (svn_fs_lock (&mylock, fs, "/A/D/G/rho", 0,
-                        0 /* never expire */,
-                        somelock->token, /* refresh using existing token */
-                        pool));
+  somelock->expiration_date = 0;
+  SVN_ERR (svn_fs_attach_lock (somelock, fs, pool));
   SVN_ERR (svn_fs_get_lock_from_path (&somelock, fs, "/A/D/G/rho", pool));
   if (somelock->expiration_date)
     return svn_error_create (SVN_ERR_TEST_FAILED, NULL,

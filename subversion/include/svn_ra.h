@@ -843,10 +843,6 @@ typedef struct svn_ra_plugin_t
    * this function will have to "pull" a username from the client, if
    * it hasn't done so already.
    *
-   * If path is already locked by the same user, and @a current_token
-   * points to the same lock, then "refresh" the lock and return a new
-   * lock in @a *lock.
-   *
    * If path is already locked by a different user, then return error.
    * If @a force is true, then "steal" the existing lock anyway, even
    * if the RA username does not match the current lock's owner.
@@ -860,7 +856,6 @@ typedef struct svn_ra_plugin_t
                         svn_lock_t **lock,
                         const char *path,
                         svn_boolean_t force,
-                        const char *current_token,
                         apr_pool_t *pool);
 
   /**

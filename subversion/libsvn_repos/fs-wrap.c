@@ -406,7 +406,6 @@ svn_repos_fs_lock (svn_lock_t **lock,
                    const char *path,
                    svn_boolean_t force,
                    long int timeout,
-                   const char *current_token,
                    apr_pool_t *pool)
 {
   svn_error_t *err;
@@ -428,10 +427,36 @@ svn_repos_fs_lock (svn_lock_t **lock,
 
   /* Lock. */
   SVN_ERR (svn_fs_lock (lock, repos->fs, path, force,
-                        timeout, current_token, pool));
+                        timeout, pool));
 
   /* Run post-lock hook. */
   if ((err = svn_repos__hooks_post_lock (repos, path, username, pool)))
+    return svn_error_create
+      (SVN_ERR_REPOS_POST_LOCK_HOOK_FAILED, err,
+       "Lock succeeded, but post-lock hook failed");
+
+  return SVN_NO_ERROR;
+}
+
+
+
+svn_error_t *
+svn_repos_fs_attach_lock (svn_lock_t *lock,
+                          svn_repos_t *repos,
+                          apr_pool_t *pool)
+{
+  svn_error_t *err;
+
+  /* Run pre-lock hook.  This could throw error, preventing
+     svn_fs_lock() from happening. */
+  SVN_ERR (svn_repos__hooks_pre_lock (repos, lock->path, lock->owner, pool));
+
+  /* Lock. */
+  SVN_ERR (svn_fs_attach_lock (lock, repos->fs, pool));
+  
+  /* Run post-lock hook. */
+  if ((err = svn_repos__hooks_post_lock (repos, lock->path,
+                                         lock->owner, pool)))
     return svn_error_create
       (SVN_ERR_REPOS_POST_LOCK_HOOK_FAILED, err,
        "Lock succeeded, but post-lock hook failed");

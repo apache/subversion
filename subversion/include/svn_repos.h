@@ -904,8 +904,25 @@ svn_error_t *svn_repos_fs_lock (svn_lock_t **lock,
                                 const char *path,
                                 svn_boolean_t force,
                                 long int timeout,
-                                const char *current_token,
                                 apr_pool_t *pool);
+
+
+/** 
+ * @since New in 1.2. 
+ *
+ * Like @c svn_fs_attach_lock(), but invoke the @a repos's pre- and
+ * post-lock hooks before and after the locking action.  Use @a pool
+ * for any necessary allocations.
+ *
+ * If the pre-lock hook or svn_fs_attach_lock() fails, throw the
+ * original error to caller.  If an error occurs when running the
+ * post-lock hook, return the original error wrapped with
+ * SVN_ERR_REPOS_POST_LOCK_HOOK_FAILED.  If the caller sees this
+ * error, it knows that the lock succeeded anyway.
+ */
+svn_error_t *svn_repos_fs_attach_lock (svn_lock_t *lock,
+                                       svn_repos_t *repos,
+                                       apr_pool_t *pool);
 
 
 /** 

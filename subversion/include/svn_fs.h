@@ -1455,11 +1455,6 @@ svn_error_t *svn_fs_set_uuid (svn_fs_t *fs,
  * svn_fs_access_t), else return @c SVN_ERR_FS_NO_USER.  Set the
  * 'owner' field in the new lock to the fs username.
  *
- * If path is already locked by the same user, and @a current_token
- * points to the same lock, then "refresh" the lock and return a new
- * lock in @a *lock.  (If @a current_token doesn't match the existing
- * lock, don't refresh, return SVN_ERR_FS_BAD_LOCK_TOKEN.)
- *
  * If path is already locked by a different user, then return @c
  * SVN_ERR_FS_PATH_LOCKED.  If @a force is true, then "steal" the
  * existing lock anyway, even if the FS access-context's username does
@@ -1479,8 +1474,31 @@ svn_error_t *svn_fs_lock (svn_lock_t **lock,
                           const char *path,
                           svn_boolean_t force,
                           long int timeout,
-                          const char *current_token,
                           apr_pool_t *pool);
+
+
+/** Lock a path in @a fs by attaching @a lock.  Specifically, apply
+ * the lock to @a lock->path.  Do all temporary work in @a pool.
+ *
+ * The caller is responsible for creating and initializing all fields
+ * in @a lock before invoking this routine, including the generation
+ * of a string representation of an apr_uuid_t in @a lock->token.
+ *
+ * If path is already locked, then check to see whether @a lock->token
+ * and @a lock->owner match the existing lock.  If not, return
+ * SVN_ERR_PATH_LOCKED.  If the fields match, then interpret this call
+ * as a request to "refresh" the the lock with a new expiration time
+ * (using @a lock->expiration_date).
+ *
+ * If this function returns successfully, the caller can assume that
+ * @a lock now represents the lock attached to @a lock->path.
+ *
+ * ### Note:  at this time, only files can be locked.
+*/
+svn_error_t *svn_fs_attach_lock (svn_lock_t *lock,
+                                 svn_fs_t *fs,                                 
+                                 apr_pool_t *pool);
+
 
 
 /**  Remove lock on the path represented by @a token in @a fs.

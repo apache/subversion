@@ -80,6 +80,7 @@ static fs_vtable_t fs_vtable = {
   svn_fs_fs__list_transactions,
   svn_fs_fs__deltify,
   svn_fs_fs__lock,
+  svn_fs_fs__attach_lock,
   svn_fs_fs__unlock,
   svn_fs_fs__get_lock_from_path,
   svn_fs_fs__get_lock_from_token,

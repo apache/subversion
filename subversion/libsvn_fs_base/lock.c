@@ -67,7 +67,6 @@ struct lock_args
   const char *path;
   svn_boolean_t force;
   long int timeout;
-  const char *current_token;
 };
 
 
@@ -78,6 +77,7 @@ txn_body_lock (void *baton, trail_t *trail)
   svn_node_kind_t kind = svn_node_file;
   svn_lock_t *existing_lock;
   const char *fs_username;
+  svn_lock_t *new_lock;
 
   SVN_ERR (svn_fs_base__get_path_kind (&kind, args->path, trail));
 
@@ -107,70 +107,31 @@ txn_body_lock (void *baton, trail_t *trail)
                                                    args->path, kind, trail));
   if (existing_lock)
     {
-      if (strcmp(existing_lock->owner, fs_username) != 0)
+      if (! args->force)
         {
-          if (! args->force)
-            {
-              /* You can't steal someone else's lock, silly. */
-              return svn_fs_base__err_path_locked (trail->fs, existing_lock);
-            }
-          else
-            {
-              /* Force was passed, so fs_username is "stealing" the
-                 lock from lock->owner.  Destroy the existing lock,
-                 and create a new one. */
-              SVN_ERR (svn_fs_bdb__lock_delete (trail->fs,
-                                                existing_lock->token, trail));
-              SVN_ERR (svn_fs_bdb__lock_token_delete (trail->fs,
-                                                      existing_lock->path,
-                                                      kind, trail));
-              goto make_new_lock;
-            }
-          
+          /* Sorry, the path is already locked. */
+          return svn_fs_base__err_path_locked (trail->fs, existing_lock);
         }
       else
         {
-          /* So the fs_username owns the existing lock:  we interpret
-             that as a 'refresh' request. */
-
-          if ((! args->current_token)
-              || (strcmp(args->current_token, existing_lock->token) != 0))
-            {
-              /* Whoops, you may own the existing lock, but you gotta
-                 show me the right token for it. */
-              return svn_fs_base__err_bad_lock_token (trail->fs,
-                                                      existing_lock->token);
-            }
-          else
-            {
-              /* Destroy the existing lock, and create a new one. */
-              SVN_ERR (svn_fs_bdb__lock_delete (trail->fs,
-                                                existing_lock->token, trail));
-              SVN_ERR (svn_fs_bdb__lock_token_delete (trail->fs,
-                                                      existing_lock->path,
-                                                      kind, trail));
-              goto make_new_lock;
-            }
-        }
-    }
-  else
-    {
-      /* There's no existing lock at all, so make a new one. */
-      goto make_new_lock;
+          /* Force was passed, so fs_username is "stealing" the
+             lock from lock->owner.  Destroy the existing lock. */
+          SVN_ERR (svn_fs_bdb__lock_delete (trail->fs,
+                                            existing_lock->token, trail));
+          SVN_ERR (svn_fs_bdb__lock_token_delete (trail->fs,
+                                                  existing_lock->path,
+                                                  kind, trail));
+        }          
     }
 
- make_new_lock:
-  {
-    svn_lock_t *new_lock;
-    
-    SVN_ERR (generate_new_lock (&new_lock, args->path, fs_username,
-                                args->timeout, trail->pool));
-    SVN_ERR (svn_fs_bdb__lock_add (trail->fs, new_lock->token,
-                                   new_lock, trail));
-    SVN_ERR (svn_fs_bdb__lock_token_add (trail->fs, args->path, kind,
-                                         new_lock->token, trail));
-    *(args->lock_p) = new_lock;
-  }
+  /* Create a new lock, and add it to the tables. */    
+  SVN_ERR (generate_new_lock (&new_lock, args->path, fs_username,
+                              args->timeout, trail->pool));
+  SVN_ERR (svn_fs_bdb__lock_add (trail->fs, new_lock->token,
+                                 new_lock, trail));
+  SVN_ERR (svn_fs_bdb__lock_token_add (trail->fs, args->path, kind,
+                                       new_lock->token, trail));
+  *(args->lock_p) = new_lock;
 
   return SVN_NO_ERROR;
 }
@@ -183,7 +144,6 @@ svn_fs_base__lock (svn_lock_t **lock,
                    const char *path,
                    svn_boolean_t force,
                    long int timeout,
-                   const char *current_token,
                    apr_pool_t *pool)
 {
   struct lock_args args;
@@ -194,11 +154,68 @@ svn_fs_base__lock (svn_lock_t **lock,
   args.path = svn_fs_base__canonicalize_abspath (path, pool);
   args.force =  force;
   args.timeout = timeout;
-  args.current_token = current_token;
 
   return svn_fs_base__retry_txn (fs, txn_body_lock, &args, pool);
 
 }
+
+
+
+static svn_error_t *
+txn_body_attach_lock (void *baton, trail_t *trail)
+{
+  svn_lock_t *lock = baton;
+  svn_node_kind_t kind = svn_node_file;
+  svn_lock_t *existing_lock;
+
+  SVN_ERR (svn_fs_base__get_path_kind (&kind, lock->path, trail));
+
+  /* Until we implement directory locks someday, we only allow locks
+     on files or non-existent paths. */
+  if (kind == svn_node_dir)
+    return svn_fs_base__err_not_file (trail->fs, lock->path);
+  if (kind == svn_node_none)
+    kind = svn_node_file;    /* pretend, so the name can be reserved */
+
+  /* Is the path already locked? */
+  SVN_ERR (svn_fs_base__get_lock_from_path_helper (&existing_lock,
+                                                   lock->path, kind, trail));
+  if (existing_lock)
+    {
+      /* If the path is already locked, this must be a refresh request. */
+      if (strcmp(lock->token, existing_lock->token) != 0)
+        return svn_fs_base__err_bad_lock_token (trail->fs, lock->token);
+
+      if (strcmp(lock->owner, existing_lock->owner) != 0)
+        return svn_fs_base__err_lock_owner_mismatch (trail->fs,
+                                                     lock->owner,
+                                                     existing_lock->owner);
+
+      /* Okay, safe to refresh.... so we simply allow the incoming
+         lock to overwrite the existing one.  The only difference
+         should be creation_date and expiration_date fields.  */
+    }
+
+  /* Write the lock into our tables. */
+  SVN_ERR (svn_fs_bdb__lock_add (trail->fs, lock->token, lock, trail));
+  SVN_ERR (svn_fs_bdb__lock_token_add (trail->fs, lock->path, kind,
+                                       lock->token, trail));
+
+  return SVN_NO_ERROR;
+}
+
+
+
+svn_error_t *
+svn_fs_base__attach_lock (svn_lock_t *lock,
+                          svn_fs_t *fs,                                 
+                          apr_pool_t *pool)
+{
+  SVN_ERR (svn_fs_base__check_fs (fs));
+
+  return svn_fs_base__retry_txn (fs, txn_body_attach_lock, lock, pool);
+}
+
 
 
 struct unlock_args

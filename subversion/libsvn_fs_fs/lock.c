@@ -31,8 +31,17 @@ svn_fs_fs__lock (svn_lock_t **lock,
                  const char *path,
                  svn_boolean_t force,
                  long int timeout,
-                 const char *current_token,
                  apr_pool_t *pool)
+{
+  return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, 0,
+                           "Function not yet implemented.");
+}
+
+
+svn_error_t *
+svn_fs_fs__attach_lock (svn_lock_t *lock,
+                        svn_fs_t *fs,
+                        apr_pool_t *pool)
 {
   return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, 0,
                            "Function not yet implemented.");
