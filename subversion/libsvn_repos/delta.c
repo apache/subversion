@@ -184,7 +184,7 @@ svn_repos_update (svn_fs_root_t *target_root,
     }
     
   /* Target root must be a revision. */
-  if (svn_fs_is_revision_root (target_root))
+  if (! svn_fs_is_revision_root (target_root))
     {
       return
         svn_error_create
@@ -272,7 +272,7 @@ svn_repos_update (svn_fs_root_t *target_root,
                                     parent_dir,
                                     entry,
                                     parent_dir,
-                                        entry,
+                                    entry,
                                     pool));
     }
 
