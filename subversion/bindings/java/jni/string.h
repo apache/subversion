@@ -25,6 +25,7 @@
 /*** Includes ***/
 #include <jni.h>
 #include <svn_string.h>
+#include <apr_pools.h>
 
 /*** Functions ***/
 
