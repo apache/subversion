@@ -86,13 +86,13 @@
 
 /* Add a COMPONENT (a null-terminated C-string) to PATH. */
 void svn_path_add_component_nts (svn_string_t *path, 
-                                 char *component,
+                                 const char *component,
                                  int style,
                                  apr_pool_t *pool);
 
 /* Add COMPONENT to PATH. */
 void svn_path_add_component (svn_string_t *path,
-                             svn_string_t *component,
+                             const svn_string_t *component,
                              int style,
                              apr_pool_t *pool);
 
@@ -109,6 +109,6 @@ svn_string_t *svn_path_last_component (svn_string_t *path,
    directory -- that is, if it is NULL or if prepending it as a
    component to an existing path would result in no meaningful
    change. */
-int svn_path_isempty (svn_string_t *path, int style);
+int svn_path_isempty (const svn_string_t *path, int style);
 
 #endif /* SVN_PATHS_H */
