@@ -30,16 +30,6 @@ Candidate changes:
       +1: maxb, ghudson
       +0: bliss
 
-  * r10731
-    Fix svn_path_dirname() so it returns canonical paths when passed a path
-      with the last segment separated by multiple slashes.
-    Justification:
-      API contract violation.
-    Votes:
-      +1: breser
-      -1: ghudson
-          (http://www.contactor.se/~dast/svn/archive-2004-08/0754.shtml)
-
   * r10775
     Wrap svn_config_enumerator_t for Perl bindings.
     Justification:
