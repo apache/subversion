@@ -31,7 +31,7 @@ use CGI qw(:standard);
 
 my $gSvnlookCmd = '/usr/local/bin/svnlook';
 my $gSvnadminCmd = '/usr/local/bin/svnadmin';
-my $gReposPath = '/home/cmpilato/tests/repos';
+my $gReposPath = '/usr/www/repositories/svn';
 my $gActionURL = './tweak-log.cgi';
 my $gTempfilePrefix = '/tmp/tweak-cgi';
 ###############################################################################
@@ -135,6 +135,19 @@ sub isValidRev
 }
 
 
+
+#-----------------------------------------------------------------------------#
+sub html_escape
+# (log)
+#-----------------------------------------------------------------------------#
+{
+  my $str = shift;
+  $str =~ s/&/&amp;/g;
+  $str =~ s/>/&gt;/g;
+  $str =~ s/</&lt;/g;
+  return $str;
+}
+
 #-----------------------------------------------------------------------------#
 sub doFetchLog
 # (void)
@@ -142,6 +155,7 @@ sub doFetchLog
 {
     my $rev = $gCGIValues{'REV'};
     my $log;
+    my $escaped_log;   ## HTML-escaped version of $log
 
     # Make sure we've requested a valid revision.
     if( not &isValidRev( $rev ))
@@ -152,12 +166,14 @@ sub doFetchLog
     # Fetch the log for that revision.
     $log = `$gSvnlookCmd $gReposPath rev $rev log`;
 
+    $escaped_log = &html_escape ($log);
+
     # Display the form for editing the revision
     print "<html>\n<head>\n<title>Tweak Log - Log Edit</title>\n</head>\n";
     print "<body>\n";
     print "<h1>Editing Log Message for Revision $rev</h1>\n";
     print "<h2>Current log message:</h2>\n";
-    print "<blockquote><hr /><pre>$log</pre><hr /></blockquote>\n";
+    print "<blockquote><hr /><pre>$escaped_log</pre><hr /></blockquote>\n";
     print "<form action=\"$gActionURL\" method=\"post\">\n";
     print "<h2>New log message:</h2>\n";
     print "<blockquote>\n";
@@ -218,6 +234,7 @@ sub doCommitLog
 
     # Now, re-read that logfile
     $log = `$gSvnlookCmd $gReposPath rev $rev log`;
+    $log = &html_escape ($log);
 
     print "<html>\n<head>\n<title>Tweak Log - Log Changed</title>\n</head>\n";
     print "<body>\n";
