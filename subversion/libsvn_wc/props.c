@@ -430,7 +430,7 @@ svn_wc__do_property_merge (const char *path,
       /* We must be merging props on the file PATH/NAME */
       entryname = name;
       full_path = svn_stringbuf_create (path, pool);
-      svn_path_add_component_nts (full_path, name, svn_path_local_style);
+      svn_path_add_component_nts (full_path, name);
       is_dir = FALSE;
     }
 
@@ -545,9 +545,7 @@ svn_wc__do_property_merge (const char *path,
                 /* reject_tmp_path is an absolute path at this point,
                    but that's no good for us.  We need to convert this
                    path to a *relative* path to use in the logfile. */
-                tmpname = svn_path_last_component (reject_tmp_path,
-                                                   svn_path_local_style,
-                                                   pool);
+                tmpname = svn_path_last_component (reject_tmp_path, pool);
 
                 if (is_dir)
                   {
@@ -691,11 +689,9 @@ svn_wc__do_property_merge (const char *path,
             svn_path_add_component (full_reject_path,
                                     svn_stringbuf_create
                                     (SVN_WC__THIS_DIR_PREJ,
-                                     pool),
-                                    svn_path_local_style);
+                                     pool));
           else
-            svn_path_add_component_nts (full_reject_path, name,
-                                        svn_path_local_style);
+            svn_path_add_component_nts (full_reject_path, name);
 
           err = svn_io_open_unique_file (&reject_fp,
                                          &reserved_path,
@@ -717,9 +713,7 @@ svn_wc__do_property_merge (const char *path,
 
           /* Now just get the name of the reserved file.  This is the
              "relative" path we will use in the log entry. */
-          reject_pathbuf = svn_path_last_component (reserved_path,
-                                                    svn_path_local_style,
-                                                    pool);
+          reject_pathbuf = svn_path_last_component (reserved_path, pool);
         }
 
       /* We've now guaranteed that some kind of .prej file exists
@@ -1038,8 +1032,7 @@ svn_wc_prop_set (const char *name,
              a real (albeit slow) check later on. */
           svn_stringbuf_t *pdir, *basename;
 
-          svn_path_split (pathbuf, &pdir, &basename, svn_path_local_style,
-                          pool);
+          svn_path_split (pathbuf, &pdir, &basename, pool);
           SVN_ERR (svn_wc__entry_modify (pdir,
                                          basename,
                                          SVN_WC__ENTRY_MODIFY_TEXT_TIME,

@@ -37,10 +37,7 @@ extern "C" {
 /* Set *EDITOR and *EDIT_BATON to an editor that prints its arguments
  * to OUT_STREAM.  The edit starts at PATH, that is, PATH will be
  * prepended to the appropriate paths in the output.  Allocate the
- * editor in POOL.  The STYLE parameter exists to make this editor
- * fully compatible with all supported Subversion path types, and
- * should of course represent the path style appropriate for the
- * supplied PATH.
+ * editor in POOL.
  *
  * EDITOR_NAME is a name for the editor, a string that will be
  * prepended to the editor output as shown below.  EDITOR_NAME may
@@ -152,7 +149,6 @@ svn_error_t *svn_test_get_editor (const svn_delta_edit_fns_t **editor,
                                   int indentation,
                                   svn_boolean_t verbose,
                                   svn_stringbuf_t *path,
-                                  enum svn_path_style style,
                                   apr_pool_t *pool);
      
 #endif /* SVN_TEST_H */

@@ -139,14 +139,14 @@ static svn_boolean_t okay_to_bump_path (const char *path,
   parent_path = svn_stringbuf_create (path, pool);
   
   do {
-    svn_path_remove_component (parent_path, svn_path_local_style);
+    svn_path_remove_component (parent_path);
     r = (enum svn_recurse_kind) apr_hash_get (valid_targets,
                                               parent_path->data,
                                               APR_HASH_KEY_STRING);
     if (r == svn_recursive)
       return TRUE;
 
-  } while (! svn_path_is_empty (parent_path, svn_path_local_style));
+  } while (! svn_path_is_empty (parent_path));
 
   /* Default answer: if we get here, don't allow the bumping. */
   return FALSE;

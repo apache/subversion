@@ -215,7 +215,7 @@ make_dir_baton (svn_stringbuf_t *name,
   if (name)
     {
       d->name = svn_stringbuf_dup (name, subpool);
-      svn_path_add_component (path, name, svn_path_local_style);
+      svn_path_add_component (path, name);
     }
 
   d->path         = path;
@@ -317,9 +317,7 @@ make_file_baton (struct dir_baton *parent_dir_baton, svn_stringbuf_t *name)
   svn_stringbuf_t *path = svn_stringbuf_dup (parent_dir_baton->path,
                                        subpool);
 
-  svn_path_add_component (path,
-                          name,
-                          svn_path_local_style);
+  svn_path_add_component (path, name);
 
   f->pool       = subpool;
   f->dir_baton  = parent_dir_baton;
@@ -394,7 +392,7 @@ delete_entry (svn_stringbuf_t *name, svn_revnum_t revision, void *parent_baton)
 
   /* Mark the deleted object as such. */
   svn_stringbuf_t *deleted_path = svn_stringbuf_dup (db->path, db->pool);
-  svn_path_add_component (deleted_path, name, svn_path_local_style);
+  svn_path_add_component (deleted_path, name);
 
   /* Read the parent's entries file.  If the deleted thing is not
      versioned in this working copy, it was probably deleted via this
@@ -671,7 +669,7 @@ svn_wc_get_status_editor (svn_delta_edit_fns_t **editor,
   SVN_ERR (svn_wc_get_actual_target (path, &anchor, &target, pool));
   tempbuf = svn_stringbuf_dup (anchor, pool);
   if (target)
-    svn_path_add_component (tempbuf, target, svn_path_local_style);
+    svn_path_add_component (tempbuf, target);
 
   if (! svn_stringbuf_compare (path, tempbuf))
     eb->path = svn_stringbuf_create ("", pool);

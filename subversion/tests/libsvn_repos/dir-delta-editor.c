@@ -66,7 +66,7 @@ test_delete_entry (svn_stringbuf_t *filename,
 
   /* Construct the full path of this entry based on its parent. */
   full_path = svn_stringbuf_dup (d->path, d->edit_baton->pool);
-  svn_path_add_component (full_path, filename, svn_path_repos_style);
+  svn_path_add_component (full_path, filename);
 
   /* Now delete item from the txn. */
   return svn_fs_delete_tree (d->edit_baton->txn_root,
@@ -103,7 +103,7 @@ test_open_directory (svn_stringbuf_t *name,
 
   /* Construct the full path of the new directory */
   d->path = svn_stringbuf_dup (pd->path, pd->edit_baton->pool);
-  svn_path_add_component (d->path, name, svn_path_local_style);
+  svn_path_add_component (d->path, name);
 
   /* Fill in other baton members */
   d->edit_baton = pd->edit_baton;
@@ -137,7 +137,7 @@ test_add_directory (svn_stringbuf_t *name,
 
   /* Construct the full path of the new directory */
   d->path = svn_stringbuf_dup (pd->path, pd->edit_baton->pool);
-  svn_path_add_component (d->path, name, svn_path_local_style);
+  svn_path_add_component (d->path, name);
 
   /* Fill in other baton members */
   d->edit_baton = pd->edit_baton;
@@ -181,7 +181,7 @@ test_open_file (svn_stringbuf_t *name,
 
   /* Construct the full path of the new directory */
   fb->path = svn_stringbuf_dup (pd->path, pd->edit_baton->pool);
-  svn_path_add_component (fb->path, name, svn_path_local_style);
+  svn_path_add_component (fb->path, name);
 
   /* Fill in other baton members */
   fb->dir_baton = pd;
@@ -215,7 +215,7 @@ test_add_file (svn_stringbuf_t *name,
 
   /* Construct the full path of the new directory */
   fb->path = svn_stringbuf_dup (pd->path, pd->edit_baton->pool);
-  svn_path_add_component (fb->path, name, svn_path_local_style);
+  svn_path_add_component (fb->path, name);
 
   /* Fill in other baton members */
   fb->dir_baton = pd;

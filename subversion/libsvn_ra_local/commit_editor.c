@@ -196,7 +196,7 @@ delete_entry (svn_stringbuf_t *name,
   svn_node_kind_t kind;
   svn_revnum_t cr_rev;
   svn_stringbuf_t *path = svn_stringbuf_dup (parent->path, parent->subpool);
-  svn_path_add_component (path, name, svn_path_repos_style);
+  svn_path_add_component (path, name);
 
   /* Check PATH in our transaction.  */
   kind = svn_fs_check_path (eb->txn_root, path->data, parent->subpool);
@@ -234,7 +234,7 @@ add_directory (svn_stringbuf_t *name,
   struct edit_baton *eb = pb->edit_baton;
   apr_pool_t *subpool = svn_pool_create (pb->subpool);
   svn_stringbuf_t *path = svn_stringbuf_dup (pb->path, subpool);
-  svn_path_add_component (path, name, svn_path_repos_style);
+  svn_path_add_component (path, name);
 
   /* Sanity check. */  
   if (copyfrom_path && (copyfrom_revision <= 0))
@@ -318,7 +318,7 @@ open_directory (svn_stringbuf_t *name,
   apr_pool_t *subpool = svn_pool_create (pb->subpool);
   svn_node_kind_t kind;
   svn_stringbuf_t *path = svn_stringbuf_dup (pb->path, subpool);
-  svn_path_add_component (path, name, svn_path_repos_style);
+  svn_path_add_component (path, name);
 
   /* Check PATH in our transaction.  Make sure it does not exist,
      else return an out-of-dateness error. */
@@ -402,7 +402,7 @@ add_file (svn_stringbuf_t *name,
   struct edit_baton *eb = pb->edit_baton;
   apr_pool_t *subpool = svn_pool_create (pb->subpool);
   svn_stringbuf_t *path = svn_stringbuf_dup (pb->path, subpool);
-  svn_path_add_component (path, name, svn_path_repos_style);
+  svn_path_add_component (path, name);
 
   /* Sanity check. */  
   if (copy_path && (copy_revision <= 0))
@@ -485,7 +485,7 @@ open_file (svn_stringbuf_t *name,
   svn_revnum_t cr_rev;
   apr_pool_t *subpool = svn_pool_create (pb->subpool);
   svn_stringbuf_t *path = svn_stringbuf_dup (pb->path, subpool);
-  svn_path_add_component (path, name, svn_path_repos_style);
+  svn_path_add_component (path, name);
 
   /* Build a new file baton */
   new_fb = apr_pcalloc (subpool, sizeof (*new_fb));

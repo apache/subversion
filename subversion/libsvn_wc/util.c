@@ -72,7 +72,7 @@ svn_wc__ensure_directory (svn_stringbuf_t *path, apr_pool_t *pool)
              directory.  We don't know which one, so we recursively
              back up one level and try again. */
           svn_stringbuf_t *shorter = svn_stringbuf_dup (npath, pool);
-          svn_path_remove_component (shorter, svn_path_local_style);
+          svn_path_remove_component (shorter);
 
           if (svn_stringbuf_isempty (shorter))
             {
@@ -130,8 +130,7 @@ svn_wc_translated_file (svn_stringbuf_t **xlated_p,
 
       /* First, reserve a tmp file name. */
 
-      svn_path_split (vfile, &tmp_dir, &tmp_vfile,
-                      svn_path_local_style, pool);
+      svn_path_split (vfile, &tmp_dir, &tmp_vfile, pool);
       
       tmp_vfile = svn_wc__adm_path (tmp_dir, 1, pool,
                                     tmp_vfile->data, NULL);

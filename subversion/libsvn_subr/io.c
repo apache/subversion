@@ -371,7 +371,7 @@ svn_error_t *svn_io_copy_dir_recursively (svn_stringbuf_t *src,
 
   /* The 'dst_path' is simply dst_parent/dst_basename */
   dst_path = svn_stringbuf_dup (dst_parent, pool);
-  svn_path_add_component (dst_path, dst_basename, svn_path_local_style);
+  svn_path_add_component (dst_path, dst_basename);
 
   /* Sanity checks:  SRC and DST_PARENT are directories, and
      DST_BASENAME doesn't already exist in DST_PARENT. */
@@ -419,18 +419,16 @@ svn_error_t *svn_io_copy_dir_recursively (svn_stringbuf_t *src,
       entrykind = (enum svn_node_kind *) val;
 
       /* Telescope the entryname onto the source dir. */
-      svn_path_add_component_nts (src_target, entryname,
-                                  svn_path_local_style);
+      svn_path_add_component_nts (src_target, entryname);
 
       /* If it's a file, just copy it over. */
       if (*entrykind == svn_node_file)
         {
           /* Telescope and de-telescope the dst_target in here */
-          svn_path_add_component_nts (dst_target, entryname,
-                                      svn_path_local_style);
+          svn_path_add_component_nts (dst_target, entryname);
           SVN_ERR (svn_io_copy_file (src_target->data, dst_target->data,
                                      subpool));
-          svn_path_remove_component (dst_target, svn_path_local_style);
+          svn_path_remove_component (dst_target);
         }          
 
       /* If it's a directory, recurse. */
@@ -444,7 +442,7 @@ svn_error_t *svn_io_copy_dir_recursively (svn_stringbuf_t *src,
       /* ### someday deal with other node kinds? */
 
       /* De-telescope the source dir for the next iteration. */
-      svn_path_remove_component (src_target, svn_path_local_style);
+      svn_path_remove_component (src_target);
     }
     
 

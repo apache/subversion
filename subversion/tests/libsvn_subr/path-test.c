@@ -59,9 +59,7 @@ test_path_is_child (const char **msg,
           svn_stringbuf_t *path2 = svn_stringbuf_create (paths[j], pool);
           svn_stringbuf_t *remainder;
 
-          remainder = svn_path_is_child (path1, path2, 
-                                         svn_path_repos_style,
-                                         pool);
+          remainder = svn_path_is_child (path1, path2, pool);
 
           if (((remainder) && (! remainders[i][j]))
               || ((! remainder) && (remainders[i][j]))
@@ -104,7 +102,7 @@ test_path_split (const char **msg,
       svn_stringbuf_t *path = svn_stringbuf_create (paths[i][0], pool);
       svn_stringbuf_t *dir, *basename;
 
-      svn_path_split (path, &dir, &basename, svn_path_repos_style, pool);
+      svn_path_split (path, &dir, &basename, pool);
 
       if (strcmp (dir->data, paths[i][1]))
         {

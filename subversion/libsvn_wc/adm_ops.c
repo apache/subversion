@@ -101,8 +101,7 @@ svn_wc__ensure_uniform_revision (svn_stringbuf_t *dir_path,
       /* Compute the complete path of the entry */
       full_entry_path = svn_stringbuf_dup (dir_path, subpool);
       if (current_entry_name)
-        svn_path_add_component (full_entry_path, current_entry_name,
-                                svn_path_local_style);
+        svn_path_add_component (full_entry_path, current_entry_name);
 
       /* If the entry is a file or SVN_WC_ENTRY_THIS_DIR, and it has a
          different rev than REVISION, fix it.  (But ignore the entry
@@ -172,9 +171,8 @@ process_committed (svn_stringbuf_t *path,
     {
       /* (Ah, PATH must be a file.  So create a logfile in its
          parent instead.) */      
-      svn_path_split (path, &log_parent, &basename,
-                      svn_path_local_style, pool);
-      if (svn_path_is_empty (log_parent, svn_path_local_style))
+      svn_path_split (path, &log_parent, &basename, pool);
+      if (svn_path_is_empty (log_parent))
         svn_stringbuf_set (log_parent, ".");
 
       SVN_ERR (svn_wc__open_adm_file (&log_fp, log_parent, SVN_WC__ADM_LOG,
@@ -186,7 +184,7 @@ process_committed (svn_stringbuf_t *path,
       /* PATH must be a dir */
       svn_stringbuf_t *pdir;
 
-      if (svn_path_is_empty (log_parent, svn_path_local_style))
+      if (svn_path_is_empty (log_parent))
         {
           /* We have an empty path.  Since there is no way to examine
              the parent of an empty path, we ensure that the parent
@@ -295,7 +293,7 @@ process_committed (svn_stringbuf_t *path,
             continue;
           
           /* Create child path by telescoping the main path. */
-          svn_path_add_component_nts (path, name, svn_path_local_style);
+          svn_path_add_component_nts (path, name);
           
           /* Recurse, but only allow further recursion if the child is
              a directory.  */
@@ -307,7 +305,7 @@ process_committed (svn_stringbuf_t *path,
                                       pool));
 
           /* De-telescope the path. */
-          svn_path_remove_component (path, svn_path_local_style);
+          svn_path_remove_component (path);
         }
     }
 
@@ -330,7 +328,7 @@ svn_wc_process_committed (void *baton,
   /* Construct the -full- path by using the baton */
   svn_stringbuf_t *path = svn_stringbuf_dup (bumper->prefix_path, 
                                              bumper->pool);
-  svn_path_add_component (path, target, svn_path_local_style);
+  svn_path_add_component (path, target);
 
   /* Call the real function. */
   return process_committed (path, recurse, new_revnum,
@@ -348,7 +346,7 @@ svn_error_t *svn_wc_get_wc_prop (void *baton,
 
   /* Prepend the baton's prefix to the target. */
   svn_stringbuf_t *path = svn_stringbuf_dup (ccb->prefix_path, ccb->pool);
-  svn_path_add_component_nts (path, target, svn_path_local_style);
+  svn_path_add_component_nts (path, target);
 
   /* And use our public interface to get the property value. */
   SVN_ERR (svn_wc__wcprop_get (value, name, path->data, ccb->pool));
@@ -366,7 +364,7 @@ svn_error_t *svn_wc_set_wc_prop (void *baton,
 
   /* Prepend the baton's prefix to the target. */
   svn_stringbuf_t *path = svn_stringbuf_dup (ccb->prefix_path, ccb->pool);
-  svn_path_add_component_nts (path, target, svn_path_local_style);
+  svn_path_add_component_nts (path, target);
 
   /* And use our public interface to get the property value. */
   SVN_ERR (svn_wc__wcprop_set (name, value, path->data, ccb->pool));
@@ -431,7 +429,7 @@ mark_tree (svn_stringbuf_t *dir,
         continue;
           
       basename = svn_stringbuf_create ((const char *) key, subpool);
-      svn_path_add_component (fullpath, basename, svn_path_local_style);
+      svn_path_add_component (fullpath, basename);
 
       /* If this is a directory, recurse. */
       if (entry->kind == svn_node_dir)
@@ -520,8 +518,8 @@ svn_wc_delete (svn_stringbuf_t *path, apr_pool_t *pool)
       /* We need to mark this entry for deletion in its parent's entries
          file, so we split off basename from the parent path, then fold in
          the addition of a delete flag. */
-      svn_path_split (path, &dir, &basename, svn_path_local_style, pool);
-      if (svn_path_is_empty (dir, svn_path_local_style))
+      svn_path_split (path, &dir, &basename, pool);
+      if (svn_path_is_empty (dir))
         svn_stringbuf_set (dir, ".");
   
       SVN_ERR (svn_wc__entry_modify
@@ -624,8 +622,8 @@ svn_wc_add (svn_stringbuf_t *path,
     }
     
   /* Split off the basename from the parent directory. */
-  svn_path_split (path, &parent_dir, &basename, svn_path_local_style, pool);
-  if (svn_path_is_empty (parent_dir, svn_path_local_style))
+  svn_path_split (path, &parent_dir, &basename, pool);
+  if (svn_path_is_empty (parent_dir))
     parent_dir = svn_stringbuf_create (".", pool);
 
   /* If a copy ancestor was given, put the proper ancestry info in a hash. */
@@ -695,7 +693,7 @@ svn_wc_add (svn_stringbuf_t *path,
   
       /* Derive the parent path for our new addition here. */
       p_path = svn_stringbuf_dup (p_entry->url, pool);
-      svn_path_add_component (p_path, basename, svn_path_url_style);
+      svn_path_add_component (p_path, basename);
   
       /* Make sure this new directory has an admistrative subdirectory
          created inside of it */
@@ -736,7 +734,7 @@ svn_wc_add (svn_stringbuf_t *path,
           svn_stringbuf_t *url;
           SVN_ERR (svn_wc_entry (&parent_entry, parent_dir, pool));
           url = svn_stringbuf_dup (parent_entry->url, pool);
-          svn_path_add_component (url, basename, svn_path_url_style);
+          svn_path_add_component (url, basename);
 
           /* Change the entry urls recursively. */
           SVN_ERR (svn_wc__recursively_rewrite_urls (path, url, pool));
@@ -850,7 +848,7 @@ revert_admin_things (svn_stringbuf_t *parent_dir,
   /* Build the full path of the thing we're reverting. */
   fullpath = svn_stringbuf_dup (parent_dir, pool);
   if (name && (strcmp (name->data, SVN_WC_ENTRY_THIS_DIR)))
-    svn_path_add_component (fullpath, name, svn_path_local_style);
+    svn_path_add_component (fullpath, name);
 
   /* Check for prop changes. */
   SVN_ERR (svn_wc_props_modified_p (&modified_p, fullpath, pool));  
@@ -929,7 +927,7 @@ revert_admin_things (svn_stringbuf_t *parent_dir,
                                     APR_HASH_KEY_STRING)))
         {
           rmfile = svn_stringbuf_dup (parent_dir, pool);
-          svn_path_add_component (rmfile, rej_file, svn_path_local_style);
+          svn_path_add_component (rmfile, rej_file);
           SVN_ERR (remove_file_if_present (rmfile, pool));
           *modify_flags |= SVN_WC__ENTRY_MODIFY_ATTRIBUTES;
         }
@@ -940,7 +938,7 @@ revert_admin_things (svn_stringbuf_t *parent_dir,
                                     APR_HASH_KEY_STRING)))
         {
           rmfile = svn_stringbuf_dup (parent_dir, pool);
-          svn_path_add_component (rmfile, rej_file, svn_path_local_style);
+          svn_path_add_component (rmfile, rej_file);
           SVN_ERR (remove_file_if_present (rmfile, pool));
           *modify_flags |= SVN_WC__ENTRY_MODIFY_ATTRIBUTES;
         }
@@ -996,8 +994,8 @@ svn_wc_revert (svn_stringbuf_t *path,
   if (! wc_root)
     {
       /* Split the basename from the parent path. */
-      svn_path_split (path, &p_dir, &bname, svn_path_local_style, pool);
-      if (svn_path_is_empty (p_dir, svn_path_local_style))
+      svn_path_split (path, &p_dir, &bname, pool);
+      if (svn_path_is_empty (p_dir))
         p_dir = svn_stringbuf_create (".", pool);
     }
 
@@ -1153,9 +1151,7 @@ svn_wc_revert (svn_stringbuf_t *path,
             continue;
 
           /* Add the entry name to FULL_ENTRY_PATH. */
-          svn_path_add_component_nts (full_entry_path,
-                                      keystring,
-                                      svn_path_local_style);
+          svn_path_add_component_nts (full_entry_path, keystring);
 
           /* Revert the entry. */
           SVN_ERR (svn_wc_revert (full_entry_path, TRUE, pool));
@@ -1198,7 +1194,7 @@ svn_wc_remove_from_revision_control (svn_stringbuf_t *path,
       
   if (is_file)
     {
-      svn_path_add_component (full_path, name, svn_path_local_style);
+      svn_path_add_component (full_path, name);
 
       if (destroy_wf)
         {
@@ -1254,9 +1250,8 @@ svn_wc_remove_from_revision_control (svn_stringbuf_t *path,
       /* ### sanity check:  check 2 places for DELETED flag? */
 
       /* Remove self from parent's entries file */
-      svn_path_split (full_path, &parent_dir, &basename,
-                      svn_path_local_style, pool);
-      if (svn_path_is_empty (parent_dir, svn_path_local_style))
+      svn_path_split (full_path, &parent_dir, &basename, pool);
+      if (svn_path_is_empty (parent_dir))
         svn_stringbuf_set (parent_dir, ".");
 
       /* ### sanity check:  is parent_dir even a working copy?
@@ -1302,8 +1297,7 @@ svn_wc_remove_from_revision_control (svn_stringbuf_t *path,
               svn_stringbuf_t *this_dir = svn_stringbuf_create
                 (SVN_WC_ENTRY_THIS_DIR, subpool);
               svn_stringbuf_t *entrypath = svn_stringbuf_dup (path, subpool);
-              svn_path_add_component (entrypath, current_entry_name,
-                                      svn_path_local_style);
+              svn_path_add_component (entrypath, current_entry_name);
               err = svn_wc_remove_from_revision_control (entrypath, this_dir,
                                                          destroy_wf, subpool);
               if (err && (err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD))
@@ -1423,8 +1417,7 @@ svn_wc_set_auth_file (svn_stringbuf_t *path,
               
               childpath = svn_stringbuf_dup (path, pool);
               svn_path_add_component (childpath, 
-                                      svn_stringbuf_create (basename, pool),
-                                      svn_path_local_style);
+                                      svn_stringbuf_create (basename, pool));
 
               SVN_ERR (svn_wc_set_auth_file (childpath, TRUE,
                                              filename, contents, pool));

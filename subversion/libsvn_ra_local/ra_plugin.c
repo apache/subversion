@@ -332,12 +332,6 @@ get_commit_editor (void *session_baton,
 
 
 
-/* todo: the fs_path inside session_baton is currently in
-   svn_path_url_style.  To be *formally* correct, this routine needs
-   to dup that path and convert it to svn_path_repos_style.  That's
-   the style that svn_ra_local__checkout expects in its starting path.
-   We punt on this for now, since the two styles are equal at the
-   moment. */
 static svn_error_t *
 do_checkout (void *session_baton,
              svn_revnum_t revision,
@@ -471,8 +465,7 @@ get_log (void *session_baton,
       if (abs_path->len == 0)
         svn_stringbuf_appendcstr (abs_path, "/");
 
-      svn_path_add_component (abs_path, relative_path,
-                              svn_path_repos_style);
+      svn_path_add_component (abs_path, relative_path);
       (*((svn_stringbuf_t **)(apr_array_push (abs_paths)))) = abs_path;
     }
 
@@ -509,7 +502,7 @@ do_check_path (svn_node_kind_t *kind,
 
   /* If we were given a relative path to append, append it. */
   if (path)
-    svn_path_add_component_nts (abs_path, path, svn_path_repos_style);
+    svn_path_add_component_nts (abs_path, path);
 
   if (! SVN_IS_VALID_REVNUM (revision))
     SVN_ERR (svn_fs_youngest_rev (&revision, sbaton->fs, sbaton->pool));
@@ -549,7 +542,7 @@ get_file (void *session_baton,
 
   /* If we were given a relative path to append, append it. */
   if (path)
-    svn_path_add_component_nts (abs_path, path, svn_path_repos_style);
+    svn_path_add_component_nts (abs_path, path);
 
   /* Open the revision's root. */
   if (! SVN_IS_VALID_REVNUM (revision))

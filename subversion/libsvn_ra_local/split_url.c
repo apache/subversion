@@ -67,7 +67,7 @@ svn_ra_local__split_URL (svn_stringbuf_t **repos_path,
      the last component from the URL, then try again. */
   while (1)
     {
-      /* Attempt to open a repository at URL.  */
+      /* Attempt to open a repository at URL. */
       err = svn_repos_open (&repos, url->data, subpool);
 
       /* Hey, cool, we were successfully.  Stop loopin'. */
@@ -77,13 +77,13 @@ svn_ra_local__split_URL (svn_stringbuf_t **repos_path,
       /* If we're down to an empty path here, and we still haven't
          found the repository, we're just out of luck.  Time to bail
          and face the music. */
-      if (svn_path_is_empty (url, svn_path_url_style))
+      if (svn_path_is_empty (url))
         break;
 
       /* We didn't successfully open the repository, and we haven't
          hacked this path down to a bare nub yet, so we'll chop off
          the last component of this path. */
-      svn_path_remove_component (url, svn_path_url_style);
+      svn_path_remove_component (url);
     }
 
   /* If we are still sitting in an error-ful state, we must not have

@@ -114,8 +114,7 @@ typedef struct svn_ra_reporter_t
 {
   /* Describe a working copy PATH as being at a particular REVISION;
      this will *override* any previous set_path() calls made on parent
-     paths.  PATH is relative to the URL specified in open(), and must
-     be given in `svn_path_url_style'. */
+     paths.  PATH is relative to the URL specified in open(). */
   svn_error_t *(*set_path) (void *report_baton,
                             svn_stringbuf_t *path,
                             svn_revnum_t revision);

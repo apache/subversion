@@ -184,8 +184,8 @@ walk_tree (svn_fs_root_t *root,
       apr_hash_this (hi, &key, &klen, &val);
       dirent = (svn_fs_dirent_t *) val;
       dirent_name = svn_stringbuf_create (dirent->name, iter_pool);
-      svn_path_add_component (dirent_path, dirent_name, svn_path_repos_style);
-      svn_path_add_component (URL_path, dirent_name, svn_path_url_style);
+      svn_path_add_component (dirent_path, dirent_name);
+      svn_path_add_component (URL_path, dirent_name);
 
       /* What is dirent? */
       SVN_ERR (svn_fs_is_dir (&is_dir, root, dirent_path->data, iter_pool));

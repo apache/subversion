@@ -396,7 +396,7 @@ take_from_entry (svn_wc_entry_t *src, svn_wc_entry_t *dst, apr_pool_t *pool)
                                          SVN_WC_ENTRY_ATTR_NAME,
                                          APR_HASH_KEY_STRING);
       dst->url = svn_stringbuf_dup (src->url, pool);
-      svn_path_add_component (dst->url, name, svn_path_url_style);
+      svn_path_add_component (dst->url, name);
     }
 }
 
@@ -695,9 +695,9 @@ svn_wc_entry (svn_wc_entry_t **entry,
          a file.  So look split and look in parent for entry info. */
 
       svn_stringbuf_t *dir, *basename;
-      svn_path_split (path, &dir, &basename, svn_path_local_style, pool);
+      svn_path_split (path, &dir, &basename, pool);
 
-      if (svn_path_is_empty (dir, svn_path_local_style))
+      if (svn_path_is_empty (dir))
         svn_stringbuf_set (dir, ".");
 
       err = svn_wc_check_wc (dir, &is_wc, pool);
@@ -902,8 +902,7 @@ write_entry (svn_stringbuf_t **output,
           if (this_entry->url)
             {
               this_path = svn_stringbuf_dup (this_dir->url, pool);
-              svn_path_add_component_nts (this_path, this_entry_name,
-                                          svn_path_url_style);
+              svn_path_add_component_nts (this_path, this_entry_name);
               if (svn_stringbuf_compare (this_path, this_entry->url))
                 apr_hash_set (this_entry->attributes, 
                               SVN_WC_ENTRY_ATTR_URL,
@@ -1500,7 +1499,7 @@ svn_wc__recursively_rewrite_urls (svn_stringbuf_t *dirpath,
 
       /* Derive the new URL for the current entry */
       child_url = svn_stringbuf_dup (url, subpool);
-      svn_path_add_component_nts (child_url, name, svn_path_url_style);
+      svn_path_add_component_nts (child_url, name);
 
       /* If a file, tweak the entry's URL. */
       if (current_entry->kind == svn_node_file)
@@ -1513,7 +1512,7 @@ svn_wc__recursively_rewrite_urls (svn_stringbuf_t *dirpath,
       else if (current_entry->kind == svn_node_dir)
         {
           svn_stringbuf_t *child_path = svn_stringbuf_dup (dirpath, subpool);
-          svn_path_add_component_nts (child_path, name, svn_path_local_style);
+          svn_path_add_component_nts (child_path, name);
 
           SVN_ERR (svn_wc__recursively_rewrite_urls 
                    (child_path, child_url, subpool));
@@ -1635,7 +1634,7 @@ svn_wc__compose_paths (apr_hash_t *paths, apr_pool_t *pool)
       path = val;
 
       apr_hash_set (paths, key, keylen, NULL);
-      svn_path_canonicalize (path, svn_path_local_style);
+      svn_path_canonicalize (path);
       apr_hash_set (paths, path->data, path->len, path);
     }
 
@@ -1655,9 +1654,9 @@ svn_wc__compose_paths (apr_hash_t *paths, apr_pool_t *pool)
          the original path from the hash. */
       {
         svn_stringbuf_t *shrinking = svn_stringbuf_dup (path, pool);
-        for (svn_path_remove_component (shrinking, svn_path_local_style);
+        for (svn_path_remove_component (shrinking);
              (! svn_stringbuf_isempty (shrinking));
-             svn_path_remove_component (shrinking, svn_path_local_style))
+             svn_path_remove_component (shrinking))
           {
             if (apr_hash_get (paths, shrinking->data, shrinking->len))
               apr_hash_set (paths, path->data, path->len, NULL);

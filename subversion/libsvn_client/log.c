@@ -63,7 +63,7 @@ svn_client_log (svn_client_auth_baton_t *auth_baton,
   apr_array_header_t *condensed_targets;
 
   SVN_ERR (svn_path_condense_targets (&basename, &condensed_targets,
-                                      targets, svn_path_local_style, pool));
+                                      targets, pool));
 
   /* Get full URL from the common path, carefully. */
   SVN_ERR (svn_wc_entry (&entry, basename, pool));

@@ -74,8 +74,7 @@ add_dir_recursive (const char *dirname,
       fullpath = svn_stringbuf_create (dirname, subpool);
       svn_path_add_component 
         (fullpath,
-         svn_stringbuf_create (this_entry.name, subpool),
-         svn_path_local_style);
+         svn_stringbuf_create (this_entry.name, subpool));
 
       if (this_entry.filetype == APR_DIR)
         /* Recurse. */
@@ -158,7 +157,7 @@ svn_client_mkdir (svn_client_commit_info_t **commit_info,
       const char *committed_date = NULL;
       const char *committed_author = NULL;
 
-      svn_path_split (path, &anchor, &target, svn_path_url_style, pool);
+      svn_path_split (path, &anchor, &target, pool);
 
       /* Get the RA vtable that matches URL. */
       SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));

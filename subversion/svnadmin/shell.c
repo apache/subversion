@@ -37,8 +37,7 @@ path_stat (svn_boolean_t *exists,
      'svn_fs_stat', so they only way we can check is by opening its
      -parent- and doing a hash lookup! */
 
-  svn_path_split (path, &parent, &basename,
-                  svn_path_repos_style, pool);
+  svn_path_split (path, &parent, &basename, pool);
     
   err = svn_fs_dir_entries (&dirents, shcxt->root, parent->data, pool);
   if (err)
@@ -86,7 +85,7 @@ compute_new_path (svn_stringbuf_t **new_path,
   else if (! strcmp (given_path, ".."))
     {
       /* go up a level */
-      svn_path_remove_component (final_path, svn_path_repos_style);
+      svn_path_remove_component (final_path);
 
       /* our path library is so broken, sigh. */
       if (svn_stringbuf_isempty (final_path))
@@ -95,8 +94,7 @@ compute_new_path (svn_stringbuf_t **new_path,
   else 
     {
       /* just append path to cwd */
-      svn_path_add_component_nts (final_path, given_path,
-                                  svn_path_repos_style);
+      svn_path_add_component_nts (final_path, given_path);
     }
 
   SVN_ERR (path_stat (&exists, final_path, shcxt, pool));
@@ -201,7 +199,7 @@ cr (svn_revnum_t rev,
   SVN_ERR (path_stat (&exists, shcxt->cwd, shcxt, pool));
   while (exists == FALSE)
     {
-      svn_path_remove_component (shcxt->cwd, svn_path_repos_style);
+      svn_path_remove_component (shcxt->cwd);
       /* again, broken path library */
       if (svn_stringbuf_isempty (shcxt->cwd))
         svn_stringbuf_appendcstr (shcxt->cwd, "/");
@@ -313,11 +311,11 @@ ls (shcxt_t *shcxt,
       apr_hash_this (hi, &key, NULL, &val);
       entryname = (const char *) key;
       entry = (svn_fs_dirent_t *) val;
-      svn_path_add_component_nts (tmp_path, entry->name, svn_path_repos_style);
+      svn_path_add_component_nts (tmp_path, entry->name);
       
       SVN_ERR (print_dirent (tmp_path, entry, shcxt, pool));
 
-      svn_path_remove_component (tmp_path, svn_path_repos_style);
+      svn_path_remove_component (tmp_path);
     }
 
   fflush (stdout);

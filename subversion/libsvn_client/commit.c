@@ -164,8 +164,7 @@ import_dir (const svn_delta_edit_fns_t *editor,
     {
       svn_stringbuf_t *new_path = svn_stringbuf_dup (path, subpool);
       svn_path_add_component (new_path,
-                              svn_stringbuf_create (this_entry.name, subpool),
-                              svn_path_local_style);
+                              svn_stringbuf_create (this_entry.name, subpool));
 
       if (this_entry.filetype == APR_DIR)
         {
@@ -700,7 +699,6 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
   SVN_ERR (svn_path_condense_targets (&base_dir,
                                       &condensed_targets,
                                       targets,
-                                      svn_path_local_style,
                                       pool));
 
   /* If we calculated only a base_dir and no relative targets, this

@@ -38,106 +38,62 @@
    portability for us, and we just get to use `/' everywhere.  Check
    up on this. */
 
+/* Working on exactly that --xbc */
+
 /* Path separator defines. */
 /* SVN_PATH_LOCAL_SEPARATOR (the local filesystem path separator)
    _should_ have been defined external this file by the build stuffs */
-#define SVN_PATH_REPOS_SEPARATOR '/' /* repository separators */
-#define SVN_PATH_URL_SEPARATOR   '/' /* url separators */
+#define SVN_PATH_SEPARATOR  '/' /* internal path separator */
+
 
 
-typedef struct path_style_context_t
+void
+svn_path_internal_style (svn_stringbuf_t *path)
 {
-  /* The path separator used by this style. */
-  char dirsep;
-
-  /* An alternate separator which is accepted, but converted to the
-     primary separator. Should be 0 if unused. */
-  char alt_dirsep;
-
-  /* Whether the trailing "/." in a path should be stripped. This is
-     necessary, e.g., on Win32, where some API functions barf if the
-     "/." is present. */
-  svn_boolean_t strip_slashdot;
-} path_style_context_t;
-
-
-static const path_style_context_t *
-get_path_style_context (enum svn_path_style style)
-{
-  static const path_style_context_t local_style = {
-    SVN_PATH_LOCAL_SEPARATOR,
-    SVN_PATH_ALTERNATE_SEPARATOR,
-    SVN_PATH_STRIP_TRAILING_SLASHDOT
-  };
-
-  /* FIXME: Should we strip trailing /.'s in repos and url paths? */
-  static const path_style_context_t repos_style = {
-    SVN_PATH_REPOS_SEPARATOR,
-    0,                          /* alt_dirsep */
-    0                           /* strip_slashdot */
-  };
-  static const path_style_context_t url_style = {
-    SVN_PATH_URL_SEPARATOR,
-    0,                          /* alt_dirsep */
-    0                           /* strip_slashdot */
-  };
-
-  switch (style)
+  if (SVN_PATH_SEPARATOR != SVN_PATH_LOCAL_SEPARATOR)
     {
-    case svn_path_local_style:
-      /* local style - used by local filesystem */
-      return &local_style;
-
-    case svn_path_url_style:
-      /* url style - used in urls */
-      return &url_style;
-
-    case svn_path_repos_style:
-      /* repos style - used in repository paths */
-      return &repos_style;
-
-    default:
-      /* default case - error (we should never hit this...) */
-      assert (!"Our paths are too stylish.");
-      return NULL;
+      /* Convert all local-style separators to the canonical ones. */
+      char *p;
+      for (p = path->data; *p != '\0'; ++p)
+        if (*p == SVN_PATH_LOCAL_SEPARATOR)
+          *p = SVN_PATH_SEPARATOR;
     }
-}
- 
 
-/* Check if CH is a directory separator in CTX */
-static APR_INLINE int
-char_is_dirsep (char ch, const path_style_context_t *ctx)
+  svn_path_canonicalize (path);
+  /* FIXME: Should also remove trailing /.'s, if the style says so. */
+}
+
+
+void
+svn_path_local_style (svn_stringbuf_t *path)
 {
-  return (ch == ctx->dirsep
-          || (ctx->alt_dirsep && ch == ctx->alt_dirsep));
+  svn_path_canonicalize (path);
+  /* FIXME: Should also remove trailing /.'s, if the style says so. */
+
+  if (SVN_PATH_SEPARATOR != SVN_PATH_LOCAL_SEPARATOR)
+    {
+      /* Convert all canonical separators to the local-style ones. */
+      char *p;
+      for (p = path->data; *p != '\0'; ++p)
+        if (*p == SVN_PATH_SEPARATOR)
+          *p = SVN_PATH_LOCAL_SEPARATOR;
+    }
 }
 
 
 
 void
-svn_path_canonicalize (svn_stringbuf_t *path, enum svn_path_style style)
+svn_path_canonicalize (svn_stringbuf_t *path)
 {
-  const path_style_context_t *ctx = get_path_style_context (style);
-
   /* At some point this could eliminate redundant components.
      For now, it just makes sure there is no trailing slash. */
 
   /* kff todo: maybe should be implemented with a new routine in
      libsvn_string. */
 
-  /* Convert alternate separators in the path to primary separators. */
-  if (ctx->alt_dirsep)
-    {
-      char *p;
-      for (p = path->data; *p != '\0'; ++p)
-        if (*p == ctx->alt_dirsep)
-          *p = ctx->dirsep;
-    }
-
-  /* FIXME: Should also remove trailing /.'s, if the style says so. */
   /* Remove trailing separators from the end of the path. */
   while ((path->len > 0)
-         && path->data[(path->len - 1)] == ctx->dirsep)
+         && path->data[(path->len - 1)] == SVN_PATH_SEPARATOR)
     {
       path->data[(path->len - 1)] = '\0';
       path->len--;
@@ -148,57 +104,56 @@ svn_path_canonicalize (svn_stringbuf_t *path, enum svn_path_style style)
 static void
 add_component_internal (svn_stringbuf_t *path,
                         const char *component,
-                        size_t len,
-                        enum svn_path_style style)
+                        size_t len)
 {
-  const path_style_context_t *ctx = get_path_style_context (style);
-
   /* Check if we're trying to add a trailing "." */
+  /* FIXME: *Should* we remove trailing /.'s from internal paths, or not? */
+  /*
   if (ctx->strip_slashdot
       && len == 1 && component[0] == '.')
     return;
+  */
 
   /* Append a dir separator, but only if this path is neither empty
      nor consists of a single dir separator already. */
   if ((! svn_stringbuf_isempty (path))
-      && (! ((path->len == 1) && (*(path->data) == ctx->dirsep))))
-    svn_stringbuf_appendbytes (path, &ctx->dirsep, sizeof (ctx->dirsep));
+      && (! ((path->len == 1) && (*(path->data) == SVN_PATH_SEPARATOR))))
+    {
+      char dirsep = SVN_PATH_SEPARATOR;
+      svn_stringbuf_appendbytes (path, &dirsep, sizeof (dirsep));
+    }
 
   svn_stringbuf_appendbytes (path, component, len);
-  svn_path_canonicalize (path, style);
+  svn_path_canonicalize (path);
 }
 
 
 void
 svn_path_add_component_nts (svn_stringbuf_t *path, 
-                            const char *component,
-                            enum svn_path_style style)
+                            const char *component)
 {
-  add_component_internal (path, component, strlen (component), style);
+  add_component_internal (path, component, strlen (component));
 }
 
 
 void
 svn_path_add_component (svn_stringbuf_t *path, 
-                        const svn_stringbuf_t *component,
-                        enum svn_path_style style)
+                        const svn_stringbuf_t *component)
 {
-  add_component_internal (path, component->data, component->len, style);
+  add_component_internal (path, component->data, component->len);
 }
 
 
 void
-svn_path_remove_component (svn_stringbuf_t *path, enum svn_path_style style)
+svn_path_remove_component (svn_stringbuf_t *path)
 {
-  const path_style_context_t *ctx = get_path_style_context (style);
+  svn_path_canonicalize (path);
 
-  svn_path_canonicalize (path, style);
-
-  if (! svn_stringbuf_chop_back_to_char (path, ctx->dirsep))
+  if (! svn_stringbuf_chop_back_to_char (path, SVN_PATH_SEPARATOR))
     svn_stringbuf_setempty (path);
   else
     {
-      if (path->data[path->len - 1] == ctx->dirsep)
+      if (path->data[path->len - 1] == SVN_PATH_SEPARATOR)
           path->data[--path->len] = '\0';
     }
 }
@@ -206,20 +161,9 @@ svn_path_remove_component (svn_stringbuf_t *path, enum svn_path_style style)
 
 svn_stringbuf_t *
 svn_path_last_component (const svn_stringbuf_t *path,
-                         enum svn_path_style style,
                          apr_pool_t *pool)
 {
-  const path_style_context_t *ctx = get_path_style_context (style);
-  apr_size_t i = svn_stringbuf_find_char_backward (path, ctx->dirsep);
-
-  if (ctx->alt_dirsep)
-    {
-      /* Must check if we skipped an alternate separator. */
-      apr_size_t alt_i =
-        svn_stringbuf_find_char_backward (path, ctx->alt_dirsep);
-      if (i < alt_i && alt_i < path->len)
-        i = alt_i;
-    }
+  apr_size_t i = svn_stringbuf_find_char_backward (path, SVN_PATH_SEPARATOR);
 
   if (i < path->len)
     {
@@ -236,7 +180,6 @@ void
 svn_path_split (const svn_stringbuf_t *path, 
                 svn_stringbuf_t **dirpath,
                 svn_stringbuf_t **basename,
-                enum svn_path_style style,
                 apr_pool_t *pool)
 {
   svn_stringbuf_t *n_dirpath, *n_basename = NULL;
@@ -244,13 +187,13 @@ svn_path_split (const svn_stringbuf_t *path,
   assert (dirpath != basename);
 
   n_dirpath = svn_stringbuf_dup (path, pool);
-  svn_path_canonicalize (n_dirpath, style);
+  svn_path_canonicalize (n_dirpath);
 
   if (basename)
-    n_basename = svn_path_last_component (n_dirpath, style, pool);
+    n_basename = svn_path_last_component (n_dirpath, pool);
 
   if (dirpath)
-    svn_path_remove_component (n_dirpath, style);
+    svn_path_remove_component (n_dirpath);
 
   if (dirpath)
     *dirpath = n_dirpath;
@@ -261,15 +204,13 @@ svn_path_split (const svn_stringbuf_t *path,
 
 
 int
-svn_path_is_thisdir (const svn_stringbuf_t *path, enum svn_path_style style)
+svn_path_is_thisdir (const svn_stringbuf_t *path)
 {
-  const path_style_context_t *ctx = get_path_style_context (style);
-
   if ((path->len == 1) && (path->data[0] == '.'))
     return 1;
 
   if ((path->len == 2) && (path->data[0] == '.')
-      && char_is_dirsep (path->data[1], ctx))
+      && path->data[1] == SVN_PATH_SEPARATOR)
     return 1;
 
   return 0;
@@ -277,35 +218,30 @@ svn_path_is_thisdir (const svn_stringbuf_t *path, enum svn_path_style style)
 
 
 int
-svn_path_is_empty (const svn_stringbuf_t *path, enum svn_path_style style)
+svn_path_is_empty (const svn_stringbuf_t *path)
 {
   return ((path == NULL)
           || (svn_stringbuf_isempty (path))
-          || (svn_path_is_thisdir (path, style)));
+          || (svn_path_is_thisdir (path)));
 }
 
 
 int
 svn_path_compare_paths (const svn_stringbuf_t *path1,
-                        const svn_stringbuf_t *path2,
-                        enum svn_path_style style)
+                        const svn_stringbuf_t *path2)
 {
-  const path_style_context_t *ctx = get_path_style_context (style);
   apr_size_t min_len = ((path1->len < path2->len) ? path1->len : path2->len);
   apr_size_t i = 0;
   
   /* Skip past common prefix. */
-  while (i < min_len
-         && (path1->data[i] == path2->data[i]
-             || (char_is_dirsep (path1->data[i], ctx)
-                 && char_is_dirsep (path2->data[i], ctx))))
+  while (i < min_len && path1->data[i] == path2->data[i])
     ++i;
 
   if ((path1->len == path2->len) && (i >= min_len))
     return 0;     /* the paths are the same */
-  if (char_is_dirsep (path1->data[i], ctx))
+  if (path1->data[i] == SVN_PATH_SEPARATOR)
     return 1;     /* path1 child of path2, parent always comes before child */
-  if (char_is_dirsep (path2->data[i], ctx))
+  if (path2->data[i] == SVN_PATH_SEPARATOR)
     return -1;    /* path2 child of path1, parent always comes before child */
 
   /* Common prefix was skipped above, next character is compared to
@@ -318,10 +254,8 @@ svn_path_compare_paths (const svn_stringbuf_t *path1,
 svn_stringbuf_t *
 svn_path_get_longest_ancestor (const svn_stringbuf_t *path1,
                                const svn_stringbuf_t *path2,
-                               enum svn_path_style style,
                                apr_pool_t *pool)
 {
-  const path_style_context_t *ctx = get_path_style_context (style);
   svn_stringbuf_t *common_path;
   apr_size_t i = 0;
   apr_size_t last_dirsep = 0;
@@ -332,12 +266,10 @@ svn_path_get_longest_ancestor (const svn_stringbuf_t *path1,
       || (svn_stringbuf_isempty (path1)) || (svn_stringbuf_isempty (path2)))
     return NULL;
   
-  while (path1->data[i] == path2->data[i]
-         || (char_is_dirsep (path1->data[i], ctx)
-             && char_is_dirsep (path2->data[i], ctx)))
+  while (path1->data[i] == path2->data[i])
     {
       /* Keep track of the last directory separator we hit. */
-      if (char_is_dirsep (path1->data[i], ctx))
+      if (path1->data[i] == SVN_PATH_SEPARATOR)
         last_dirsep = i;
 
       i++;
@@ -350,14 +282,14 @@ svn_path_get_longest_ancestor (const svn_stringbuf_t *path1,
   /* last_dirsep is now the offset of the last directory separator we
      crossed before reaching a non-matching byte.  i is the offset of
      that non-matching byte. */
-  if (((i == path1->len) && char_is_dirsep (path2->data[i], ctx))
-      || ((i == path2->len) && char_is_dirsep (path1->data[i], ctx))
+  if (((i == path1->len) && (path2->data[i] == SVN_PATH_SEPARATOR))
+      || ((i == path2->len) && (path1->data[i] == SVN_PATH_SEPARATOR))
       || ((i == path1->len) && (i == path2->len)))
     common_path = svn_stringbuf_ncreate (path1->data, i, pool);
   else
     common_path = svn_stringbuf_ncreate (path1->data, last_dirsep, pool);
     
-  svn_path_canonicalize (common_path, style);
+  svn_path_canonicalize (common_path);
 
   return common_path;
 }
@@ -371,10 +303,8 @@ svn_path_get_longest_ancestor (const svn_stringbuf_t *path1,
 svn_stringbuf_t *
 svn_path_is_child (const svn_stringbuf_t *path1,
                    const svn_stringbuf_t *path2,
-                   enum svn_path_style style,
                    apr_pool_t *pool)
 {
-  const path_style_context_t *ctx = get_path_style_context (style);
   apr_size_t i = 0;
       
   /* If either path is empty, return NULL. */
@@ -390,9 +320,7 @@ svn_path_is_child (const svn_stringbuf_t *path1,
      NULL. */
   while (i < path1->len)
     {
-      if (path1->data[i] != path2->data[i]
-          && !char_is_dirsep (path1->data[i], ctx)
-          && !char_is_dirsep (path2->data[i], ctx))
+      if (path1->data[i] != path2->data[i])
         return NULL;
 
       i++;
@@ -404,14 +332,14 @@ svn_path_is_child (const svn_stringbuf_t *path1,
      more pathy stuff, then path2 is a child of path1. */
   if (i == path1->len)
     {
-      if (char_is_dirsep (path1->data[i - 1], ctx))
-        return svn_stringbuf_ncreate (path2->data + i, 
-                                   path2->len - i, 
-                                   pool);
-      else if (char_is_dirsep (path2->data[i], ctx))
+      if (path1->data[i - 1] == SVN_PATH_SEPARATOR)
+        return svn_stringbuf_ncreate (path2->data + i,
+                                      path2->len - i,
+                                      pool);
+      else if (path2->data[i] == SVN_PATH_SEPARATOR)
         return svn_stringbuf_ncreate (path2->data + i + 1,
-                                   path2->len - i - 1,
-                                   pool);
+                                      path2->len - i - 1,
+                                      pool);
     }
 
   return NULL;
@@ -436,10 +364,8 @@ store_component (apr_array_header_t *array,
 
 apr_array_header_t *
 svn_path_decompose (const svn_stringbuf_t *path,
-                    enum svn_path_style style,
                     apr_pool_t *pool)
 {
-  const path_style_context_t *ctx = get_path_style_context (style);
   apr_size_t i, oldi;
 
   apr_array_header_t *components = 
@@ -447,20 +373,21 @@ svn_path_decompose (const svn_stringbuf_t *path,
 
   i = oldi = 0;
 
-  if (svn_path_is_empty (path, style))
+  if (svn_path_is_empty (path))
     return components;
 
   /* If PATH is absolute, store the '/' as the first component. */
-  if (char_is_dirsep (path->data[i], ctx))
+  if (path->data[i] == SVN_PATH_SEPARATOR)
     {
-      store_component (components, &ctx->dirsep, 1, pool);
+      char dirsep = SVN_PATH_SEPARATOR;
+      store_component (components, &dirsep, sizeof (dirsep), pool);
       i++;
       oldi++;
     }
 
   while (i <= path->len)
     {
-      if (char_is_dirsep (path->data[i], ctx) || (path->data[i] == '\0'))
+      if ((path->data[i] == SVN_PATH_SEPARATOR) || (path->data[i] == '\0'))
         {
           store_component (components, path->data + oldi, i - oldi, pool);
           i++;
@@ -475,11 +402,8 @@ svn_path_decompose (const svn_stringbuf_t *path,
 
 
 svn_boolean_t
-svn_path_is_single_path_component (svn_stringbuf_t *path,
-                                   enum svn_path_style style)
+svn_path_is_single_path_component (svn_stringbuf_t *path)
 {
-  const path_style_context_t *ctx = get_path_style_context (style);
-
   /* Can't be NULL */
   if (! path)
     return 0;
@@ -495,9 +419,7 @@ svn_path_is_single_path_component (svn_stringbuf_t *path,
     return 0;
 
   /* slashes are bad, m'kay... */
-  if (strchr (path->data, ctx->dirsep) != NULL
-      || (ctx->alt_dirsep
-          && strchr (path->data, ctx->alt_dirsep) != NULL))
+  if (strchr (path->data, SVN_PATH_SEPARATOR) != NULL)
     return 0;
 
   /* it is valid */
@@ -512,7 +434,7 @@ svn_path_is_single_path_component (svn_stringbuf_t *path,
 svn_boolean_t 
 svn_path_is_url (const svn_string_t *path)
 {
-  int j;
+  apr_size_t j;
 
   /* ### This function is reaaaaaaaaaaaaaally stupid right now.
      We're just going to look for:

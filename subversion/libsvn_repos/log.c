@@ -39,9 +39,6 @@
  * The key is allocated in POOL; the value is (void *) 'A', 'D', or
  * 'R', for added, deleted, or opened, respectively.
  * 
- * The paths are constructed by adding components to PATH in
- * repository style.
- * 
  * Standard practice is to call this on the root node of delta tree
  * generated from svn_repos_dir_delta() and its node accessor,
  * svn_repos_node_from_baton(), with PATH representing "/".
@@ -63,9 +60,7 @@ detect_changed (apr_hash_t *changed,
      screw everything up anyway). */ 
   if (node->name && *(node->name))
     {
-      svn_path_add_component_nts (path,
-                                  node->name,
-                                  svn_path_repos_style);
+      svn_path_add_component_nts (path, node->name);
     }
 
   /* Recurse downward before processing this node. */
@@ -86,7 +81,7 @@ detect_changed (apr_hash_t *changed,
     }
 
   /* "Leave" this node. */
-  svn_path_remove_component (path, svn_path_repos_style);
+  svn_path_remove_component (path);
 
   /* ### todo: See issue #559.  This workaround is slated for
      demolition in the next ten microseconds. */

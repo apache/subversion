@@ -51,7 +51,7 @@ open_tmp_file (apr_file_t **fp,
   svn_stringbuf_t *ignored_filename;
 
   /* Tack on a made-up filename. */
-  svn_path_add_component_nts (truepath, "tempfile", svn_path_local_style);
+  svn_path_add_component_nts (truepath, "tempfile");
 
   /* Open a unique file;  use APR_DELONCLOSE. */  
   SVN_ERR (svn_io_open_unique_file (fp, &ignored_filename,
