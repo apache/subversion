@@ -405,7 +405,7 @@ my $wc_top_dir_cwd = cwd;
   # Assume that the last portion of the tag directory contains the
   # version number and remove it from the directories to create,
   # because the tag directory will be created by svn cp.
-  foreach my $load_tag (sort keys %load_tags)
+  foreach my $load_tag (sort values %load_tags)
     {
       # Skip this tag if there is only one segment in its name.
       next unless $load_tag =~ m#/#;
