@@ -87,7 +87,7 @@ library SVNCOMLib
 		[id(2), helpstring("method watch_dir")] 
 		HRESULT watch_dir([in] BSTR bstrDir);
 		[id(3), helpstring("method wc_statuses")] 
-		HRESULT wc_statuses([in] BSTR bstrPath, [out] SAFEARRAY(ISVNStatus) *ppsa);
+		HRESULT wc_statuses([in] BSTR bstrPath, [in] BOOL getAll, [out] SAFEARRAY(ISVNStatus) *ppsa);
 	};
 
 	[
