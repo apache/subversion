@@ -597,6 +597,24 @@ def delete_subdir(sbox):
                                         expected_status)
 
 #----------------------------------------------------------------------
+# Issue 1532: Switch a file to a dir: can't switch it back to the file
+
+def file_dir_file(sbox):
+  "switch a file to a dir and back to the file"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  file_path = os.path.join(wc_dir, 'iota')
+  file_url = svntest.main.current_repo_url + '/iota'
+  dir_url = svntest.main.current_repo_url + '/A/C'
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'switch', dir_url, file_path)
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'switch', file_url, file_path)
+
+#----------------------------------------------------------------------
 
 ### ...and a slew of others...
 
@@ -614,8 +632,9 @@ test_list = [ None,
               rev_update_switched_things,
               log_switched_file,
               relocate_deleted_and_missing,
-              delete_subdir
-              ]
+              delete_subdir,
+              XFail(file_dir_file),
+             ]
 
 if __name__ == '__main__':
   svntest.main.run_tests(test_list)
