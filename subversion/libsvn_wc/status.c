@@ -617,11 +617,13 @@ get_dir_status (apr_hash_t *statushash,
                 void *notify_baton,
                 svn_cancel_func_t cancel_func,
                 void *cancel_baton,
+                svn_wc_traversal_info_t *traversal_info,
                 apr_pool_t *pool)
 {
   apr_hash_t *entries;
   apr_hash_index_t *hi;
   const svn_wc_entry_t *dir_entry;
+  const char *path;
 
   if (cancel_func)
     SVN_ERR (cancel_func (cancel_baton));
@@ -633,9 +635,27 @@ get_dir_status (apr_hash_t *statushash,
   SVN_ERR (add_unversioned_items (adm_access, entries, statushash,
                                   ignores, no_ignore,
                                   notify_func, notify_baton, pool));
+  path = svn_wc_adm_access_path (adm_access);
+  SVN_ERR (svn_wc_entry (&dir_entry, path, adm_access, FALSE, pool));
 
-  SVN_ERR (svn_wc_entry (&dir_entry, svn_wc_adm_access_path (adm_access),
-                         adm_access, FALSE, pool));
+  /* If "this dir" has "svn:externals" property set on it, store its name
+     in traversal_info. */
+  if (traversal_info)
+    {
+      const svn_string_t *val;
+      SVN_ERR (svn_wc_prop_get (&val, SVN_PROP_EXTERNALS, path, adm_access,
+                                pool));
+      if (val)
+        {
+          apr_pool_t *dup_pool = traversal_info->pool;
+          const char *dup_path = apr_pstrdup (dup_pool, path);
+          const char *dup_val = apr_pstrmemdup (dup_pool, val->data, val->len);
+          apr_hash_set (traversal_info->externals_old,
+                        dup_path, APR_HASH_KEY_STRING, dup_val);
+          apr_hash_set (traversal_info->externals_new,
+                        dup_path, APR_HASH_KEY_STRING, dup_val);
+        }
+    }
 
   /* Loop over entries hash */
   for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
@@ -709,7 +729,8 @@ get_dir_status (apr_hash_t *statushash,
                                            dir_access, ignores, descend,
                                            get_all, no_ignore, notify_func,
                                            notify_baton, cancel_func,
-                                           cancel_baton, pool));
+                                           cancel_baton, traversal_info, 
+                                           pool));
                 }
               else
                 SVN_ERR (add_status_structure 
@@ -744,6 +765,7 @@ svn_wc_statuses (apr_hash_t *statushash,
                  svn_cancel_func_t cancel_func,
                  void *cancel_baton,
                  apr_hash_t *config,
+                 svn_wc_traversal_info_t *traversal_info,
                  apr_pool_t *pool)
 {
   svn_node_kind_t kind;
@@ -828,7 +850,7 @@ svn_wc_statuses (apr_hash_t *statushash,
       SVN_ERR (get_dir_status(statushash, parent_entry, adm_access,
                               ignores, descend, get_all, no_ignore,
                               notify_func, notify_baton,
-                              cancel_func, cancel_baton,
+                              cancel_func, cancel_baton, traversal_info,
                               pool));
     }
 
