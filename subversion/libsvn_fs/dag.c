@@ -1858,12 +1858,12 @@ make_node_immutable (dag_node_t *node,
 }
 
 
-/* If NODE is mutable, call svn_fs__stable_node(NODE) and make NODE
-   immutable (after recursively stabilizing all of its mutable
-   descendants), by setting it's revision to REV and immutating any
-   mutable representations referred to by NODE, as part of TRAIL.
-   NODE's revision skel is not reallocated, however its data field
-   will be allocated in TRAIL->pool.
+/* If NODE is mutable, make it immutable (after recursively
+   stabilizing all of its mutable descendants), by setting it's
+   revision to REV and immutating any mutable representations referred
+   to by NODE, as part of TRAIL.  NODE's revision skel is not
+   reallocated, however its data field will be allocated in
+   TRAIL->pool.
 
    If NODE is immutable, do nothing. */
 static svn_error_t *
@@ -1900,7 +1900,6 @@ stabilize_node (dag_node_t *node, svn_revnum_t rev, trail_t *trail)
         abort ();
       
       SVN_ERR (make_node_immutable (node, rev, trail));
-      SVN_ERR (svn_fs__stable_node (node->fs, node->id, trail));
     }
 
   return SVN_NO_ERROR;
