@@ -188,18 +188,42 @@ class Generator(gen_base.GeneratorBase):
         self.ofile.write('%s: %s\n' % (target.name, target.filename))
     self.ofile.write('\n')
 
-    self.ofile.write('BUILD_DIRS = %s\n\n' % string.join(self.build_dirs))
+    # get target directories
+    target_dirs = self.graph.get_sources(gen_base.DT_LIST, 
+                                         gen_base.LT_TARGET_DIRS)
+
+    # get all the test scripts' directories
+    script_dirs = map(os.path.dirname, self.scripts + self.fs_scripts)
+
+    # remove duplicate directories between targets and tests
+    build_dirs = gen_base.unique(target_dirs + script_dirs + self.swig_dirs)
+
+    self.ofile.write('BUILD_DIRS = %s\n\n' % string.join(build_dirs))
+
+    # pull lists of test files from dependency graph
+    test_progs = self.graph.get_sources(gen_base.DT_LIST,
+                                        gen_base.LT_TEST_PROGS)
+
+    test_deps = self.graph.get_sources(gen_base.DT_LIST,
+                                       gen_base.LT_TEST_DEPS)
+
+    fs_test_progs = self.graph.get_sources(gen_base.DT_LIST,
+                                           gen_base.LT_FS_TEST_PROGS)
+
+    fs_test_deps = self.graph.get_sources(gen_base.DT_LIST,
+                                          gen_base.LT_FS_TEST_DEPS)
 
     self.ofile.write('FS_TEST_DEPS = %s\n\n' %
-                     string.join(self.fs_test_deps + self.fs_scripts))
+                     string.join(fs_test_deps + self.fs_scripts))
     self.ofile.write('FS_TEST_PROGRAMS = %s\n\n' %
-                     string.join(self.fs_test_progs + self.fs_scripts))
+                     string.join(fs_test_progs + self.fs_scripts))
     self.ofile.write('TEST_DEPS = %s\n\n' %
-                     string.join(self.test_deps + self.scripts))
+                     string.join(test_deps + self.scripts))
     self.ofile.write('TEST_PROGRAMS = %s\n\n' %
-                     string.join(self.test_progs + self.scripts))
+                     string.join(test_progs + self.scripts))
 
-    self.ofile.write('MANPAGES = %s\n\n' % string.join(self.manpages))
+    manpages = self.graph.get_sources(gen_base.DT_LIST, gen_base.LT_MANPAGES)
+    self.ofile.write('MANPAGES = %s\n\n' % string.join(manpages))
 
     for objname, sources in self.graph.get_deps(gen_base.DT_SWIG_C):
       deps = string.join(map(str, sources))
