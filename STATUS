@@ -36,7 +36,7 @@ Candidate changes:
     Python bindings build fix. Make the compile flags more like distutils uses,
     avoiding large amounts of compiler warnings.
     Votes:
-      +1: maxb, ghudson
+      +1: maxb, ghudson, kfogel
       +0: breser
 
   * r10410, r10450
@@ -44,7 +44,7 @@ Candidate changes:
     bindings.  r10410 is a trivial usage message update, included to
     avoid merge conflicts.
     Votes:
-      +1: maxb
+      +1: maxb, kfogel
       +0: breser (don't fully understand the python code but looks okay to me)
 
   * r10379,r10380,r10384,r10469,r10470,r10487
