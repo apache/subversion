@@ -566,6 +566,100 @@ def copy_modify_commit(sbox):
                                             wc_dir):
     return 1
 
+#----------------------------------------------------------------------
+
+# Issue 591, at one point copying a file from URL to WC didn't copy
+# properties.
+
+def copy_files_with_properties(sbox):
+  "copy files with properties"
+
+  if sbox.build():
+    return 1
+  wc_dir = sbox.wc_dir
+
+  # Set a property on a file
+  rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
+  outlines, errlines = svntest.main.run_svn(None, 'propset', 'pname', 'pval',
+                                            rho_path)
+  if errlines:
+    return 1
+
+  # and commit it
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/G/rho' : Item(verb='Sending'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak(repos_rev=2)
+  expected_status.tweak('A/D/G/rho', status='__', wc_rev=2)
+  if svntest.actions.run_and_verify_commit(wc_dir,
+                                           expected_output, expected_status,
+                                           None, None, None, None, None,
+                                           wc_dir):
+    return 1
+
+  # Set another property, but don't commit it yet
+  outlines, errlines = svntest.main.run_svn(None, 'propset', 'pname2', 'pval2',
+                                            rho_path)
+  if errlines:
+    return 1
+
+  # WC to WC copy of file with committed and uncommitted properties
+  rho_wc_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho_wc')
+  outlines, errlines = svntest.main.run_svn(None, 'copy', rho_path, rho_wc_path)
+  if errlines:
+    return 1
+
+  # REPOS to WC copy of file with properties
+  rho_url_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho_url')
+  rho_url = svntest.main.test_area_url + '/' \
+            + svntest.main.current_repo_dir + '/A/D/G/rho'
+  outlines, errlines = svntest.main.run_svn(None, 'copy', rho_url, rho_url_path)
+  if errlines:
+    return 1
+
+  # Properties are not visible in WC status 'A'
+  expected_status.add({
+    'A/D/G/rho' : Item(status='_M', wc_rev='2', repos_rev='2'),
+    'A/D/G/rho_wc' : Item(status='A ', wc_rev='-', repos_rev='2', copied='+'),
+    'A/D/G/rho_url' : Item(status='A ', wc_rev='-', repos_rev='2', copied='+'),
+    })
+  if svntest.actions.run_and_verify_status(wc_dir, expected_status):
+    return 1
+
+  # Check properties explicitly
+  outlines, errlines = svntest.main.run_svn(None, 'propget', 'pname',
+                                            rho_wc_path)
+  if (errlines or not outlines or outlines[0] != 'pval\n'):
+    return 1
+  outlines, errlines = svntest.main.run_svn(None, 'propget', 'pname2',
+                                            rho_wc_path)
+  if (errlines or not outlines or outlines[0] != 'pval2\n'):
+    return 1
+  outlines, errlines = svntest.main.run_svn(None, 'propget', 'pname',
+                                            rho_url_path)
+  if (errlines or not outlines or outlines[0] != 'pval\n'):
+    return 1
+
+  # Commit and properties are visible in status
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/G/rho' : Item(verb='Sending'),
+    'A/D/G/rho_wc' : Item(verb='Adding'),
+    'A/D/G/rho_url' : Item(verb='Adding'),
+    })
+  expected_status.tweak(repos_rev=3)
+  expected_status.tweak('A/D/G/rho', status='__', wc_rev=3)
+  expected_status.remove('A/D/G/rho_wc', 'A/D/G/rho_url')
+  expected_status.add({
+    'A/D/G/rho_wc' : Item(status='__', wc_rev=3, repos_rev=3),
+    'A/D/G/rho_url' : Item(status='__', wc_rev=3, repos_rev=3),
+    })
+  if svntest.actions.run_and_verify_commit(wc_dir,
+                                           expected_output, expected_status,
+                                           None, None, None, None, None,
+                                           wc_dir):
+    return 1
+
 ########################################################################
 # Run the tests
 
@@ -579,6 +673,7 @@ test_list = [ None,
               no_copy_overwrites,
               no_wc_copy_overwrites,
               copy_modify_commit,
+              copy_files_with_properties,
              ]
 
 if __name__ == '__main__':

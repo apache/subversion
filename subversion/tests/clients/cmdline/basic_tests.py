@@ -59,6 +59,8 @@ def basic_checkout(sbox):
   stdout_lines, stderr_lines = svntest.main.run_svn ("Obstructed update",
                                                      'checkout', A_url,
                                                      wc_dir)
+  if not stderr_lines:
+    return 1
 
   # Make some changes to the working copy
   mu_path = os.path.join(wc_dir, 'A', 'mu')
@@ -67,8 +69,9 @@ def basic_checkout(sbox):
   os.remove(lambda_path)
   G_path = os.path.join(wc_dir, 'A', 'D', 'G')
   stdout_lines, stderr_lines = svntest.main.run_svn(None, 'rm', G_path)
+  if stderr_lines:
+    return 1
   extra_files = ['lambda']
-
   expected_output = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_output.tweak('A/mu', status='M ')
   expected_output.tweak('A/B/lambda', status='! ')
