@@ -196,7 +196,7 @@ get_xlate_handle_node (xlate_handle_node_t **ret,
 
   /* Don't need the lock anymore. */
 #if APR_HAS_THREADS
-  if (xlate_handle_hash)
+  if (userdata_key && xlate_handle_hash)
     {
       apr_status_t unlock_err = apr_thread_mutex_unlock (xlate_handle_mutex);
       if (unlock_err != APR_SUCCESS)
