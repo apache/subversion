@@ -180,19 +180,43 @@ struct dav_resource_private {
   int is_svndiff;
 };
 
+
+/*
+  For a given resource, return the path that should be used when talking
+  to the FS. If a NODE_ID is present, then we must have opened an ID root,
+  and that NODE_ID should be used. Otherwise, we opened a revision or txn
+  root and should use a normal REPOS_PATH.
+*/
 #define DAV_SVN_REPOS_PATH(res) ((res)->info->node_id_str != NULL \
                                  ? (res)->info->node_id_str \
                                  : (res)->info->repos_path)
 
+/*
+  LIVE PROPERTY HOOKS
 
+  These are standard hooks defined by mod_dav. We implement them to expose
+  various live properties on the resources under our control.
+
+  gather_propsets: appends URIs into the array; the property set URIs are
+                   used to specify which sets of custom properties we
+                   define/expose.
+  find_liveprop: given a namespace and name, return the hooks for the
+                 provider who defines that property.
+  insert_all_liveprops: for a given resource, insert all of the live
+                        properties defined on that resource. The properties
+                        are inserted according to the WHAT parameter.
+*/
 void dav_svn_gather_propsets(apr_array_header_t *uris);
 int dav_svn_find_liveprop(const dav_resource *resource,
                           const char *ns_uri, const char *name,
                           const dav_hooks_liveprop **hooks);
 void dav_svn_insert_all_liveprops(request_rec *r, const dav_resource *resource,
                                   dav_prop_insert what, apr_text_header *phdr);
+
+/* register our live property URIs with mod_dav. */
 void dav_svn_register_uris(apr_pool_t *p);
 
+/* generate an ETag for the given resource and return it. */
 const char * dav_svn_getetag(const dav_resource *resource);
 
 /* our hooks structures; these are gathered into a dav_provider */
@@ -250,7 +274,15 @@ dav_error *dav_svn_create_activity(const dav_svn_repos *repos,
                                    const char **ptxn_name,
                                    apr_pool_t *pool);
 
-/* construct a working resource */
+/*
+  Construct a working resource for a given resource.
+
+  The internal information (repository, URL parts, etc) for the new
+  resource comes from BASE, the activity to use is specified by
+  ACTIVITY_ID, and the name of the transaction is specified by
+  TXN_NAME. These will be assembled into a new dav_resource and
+  returned.
+*/
 dav_resource *dav_svn_create_working_resource(const dav_resource *base,
                                               const char *activity_id,
                                               const char *txn_name);
@@ -265,8 +297,23 @@ enum dav_svn_build_what {
   DAV_SVN_BUILD_URI_VCC         /* a Version Controlled Configuration */
 };
 
-/* PATH should be NULL, or should start with a leading slash. */
-/* ### more docco. talk about expected params for each variant. */
+/*
+  Construct various kinds of URIs.
+
+  REPOS is always required, as all URIs will be built to refer to elements
+  within that repository. WHAT specifies the type of URI to build. The
+  ADD_HREF flag determines whether the URI is to be wrapped inside of
+  <D:href>uri</D:href> elements (for inclusion in a response).
+
+  Different pieces of information are required for the various URI types:
+
+  ACT_COLLECTION: no additional params required
+  BASELINE:       REVISION should be specified
+  BC:             REVISION should be specified
+  PUBLIC:         PATH should be specified with a leading slash
+  VERSION:        PATH should be specified as a STABLE_ID ("/ID/PATH")
+  VCC:            no additional params required
+*/
 const char *dav_svn_build_uri(const dav_svn_repos *repos,
                               enum dav_svn_build_what what,
                               svn_revnum_t revision,
