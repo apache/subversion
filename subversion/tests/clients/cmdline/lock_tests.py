@@ -109,8 +109,8 @@ def lock_file(sbox):
 # II.C.2.b.[12]: Lock a file and commit using the lock.  Make sure the
 # lock is released.  Repeat, but request that the lock not be
 # released.  Make sure the lock is retained.
-def unlock_file(sbox):
-  "unlock a file and verify release behavior"
+def commit_file(sbox):
+  "commit a file and verify release behavior"
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -479,6 +479,29 @@ def deleted_path_lock(sbox):
 
 
 #----------------------------------------------------------------------
+# Tests dealing with locking and unlocking
+def lock_unlock(sbox):
+  "lock and unlock some files"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  pi_path = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
+  rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
+  tau_path = os.path.join(wc_dir, 'A', 'D', 'G', 'tau')
+
+  svntest.actions.run_and_verify_svn(None, None, None, 'lock',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     '-m', '', pi_path, rho_path, tau_path)
+
+  svntest.actions.run_and_verify_svn(None, None, None, 'unlock',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     pi_path, rho_path, tau_path)
+
+
+#----------------------------------------------------------------------
 # Tests dealing with directory deletion and locks
 def deleted_dir_lock(sbox):
   "verify removal of a directory with locks inside"
@@ -496,6 +519,8 @@ def deleted_dir_lock(sbox):
                                      '--password', svntest.main.wc_passwd,
                                      '-m', '', pi_path, rho_path, tau_path)
 
+  svntest.actions.run_and_verify_svn(None, None, None, 'delete', parent_dir)
+
   svntest.actions.run_and_verify_svn(None, None, None, 'commit',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
@@ -510,7 +535,7 @@ def deleted_dir_lock(sbox):
 # list all tests here, starting with None:
 test_list = [ None,
               lock_file,
-              unlock_file,
+              commit_file,
               break_lock,
               steal_lock,
               examine_lock,
@@ -518,6 +543,7 @@ test_list = [ None,
               enforce_lock,
               Skip(defunct_lock, (os.name != 'posix')),
               deleted_path_lock,
+              lock_unlock,
               deleted_dir_lock,
              ]
 

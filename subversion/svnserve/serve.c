@@ -1419,7 +1419,7 @@ static svn_error_t *unlock(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   /* Username required unless force was specified. */
   SVN_ERR(must_have_write_access(conn, pool, b, ! force));
 
-  SVN_CMD_ERR(svn_repos_fs_unlock(b->repos, path, token, force, pool));
+  SVN_CMD_ERR(svn_repos_fs_unlock(b->repos, full_path, token, force, pool));
 
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
 
