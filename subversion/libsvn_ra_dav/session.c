@@ -121,7 +121,8 @@ static const int neon_failure_map[][2] =
 static int
 convert_neon_failures(int neon_failures)
 {
-  int i, svn_failures = 0;
+  apr_size_t i;
+  int svn_failures = 0;
 
   for (i = 0; i < sizeof(neon_failure_map) / (2 * sizeof(int)); ++i)
     {
