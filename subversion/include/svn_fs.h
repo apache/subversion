@@ -376,7 +376,7 @@ svn_error_t *svn_fs_access_add_lock_token (svn_fs_access_t *access_ctx,
 typedef struct svn_fs_id_t svn_fs_id_t;
 
 
-/** Return -1, 0, or 1 if node revisions @a a and @a B are unrelated,
+/** Return -1, 0, or 1 if node revisions @a a and @a b are unrelated,
  * equivalent, or otherwise related (respectively).
  */
 int svn_fs_compare_ids (const svn_fs_id_t *a, const svn_fs_id_t *b);
@@ -1408,7 +1408,7 @@ svn_error_t *svn_fs_revision_proplist (apr_hash_t **table_p,
  * - @a fs is a filesystem, and @a rev is the revision in that filesystem
  *   whose property should change.
  * - @a name is the name of the property to change.
- * - @a VALUE is the new value of the property, or zero if the property should
+ * - @a value is the new value of the property, or zero if the property should
  *   be removed altogether.
  *
  * Note that revision properties are non-historied --- you can change

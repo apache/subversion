@@ -196,7 +196,7 @@ typedef struct svn_ra_reporter2_t
 {
   /** Describe a working copy @a path as being at a particular @a revision.  
    *
-   * If @a START_EMPTY is set and @a path is a directory, the
+   * If @a start_empty is set and @a path is a directory, the
    * implementor should assume the directory has no entries or props.
    *
    * This will *override* any previous @c set_path() calls made on parent
@@ -227,7 +227,7 @@ typedef struct svn_ra_reporter2_t
    * opening the RA layer), but is instead a reflection of a different
    * repository @a url at @a revision.
    *
-   * If @a START_EMPTY is set and @a path is a directory,
+   * If @a start_empty is set and @a path is a directory,
    * the implementor should assume the directory has no entries or props.
    *
    * If @a lock_token is non-NULL, it is the lock token for @a path in the WC.
