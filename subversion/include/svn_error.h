@@ -19,6 +19,7 @@
 
 #include <apr.h>
 #include <apr_errno.h>     /* APR's error system */
+#include <apr_pools.h>
 
 #define APR_WANT_STDIO
 #include <apr_want.h>
@@ -453,7 +454,7 @@ void svn_handle_warning (void *data, const char *fmt, ...);
 }
 #endif /* __cplusplus */
 
-#endif   /* SVN_ERROR_H */
+#endif /* SVN_ERROR_H */
 
 
 /* ----------------------------------------------------------------

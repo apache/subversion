@@ -16,21 +16,21 @@
 
 
 
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
-
 #ifndef SVN_DELTA_H
 #define SVN_DELTA_H
 
+#include <apr.h>
 #include <apr_pools.h>
-#include <apr_file_io.h>
 #include <apr_tables.h>
+
 #include "svn_types.h"
 #include "svn_string.h"
 #include "svn_error.h"
 #include "svn_io.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
 
 
@@ -696,12 +696,11 @@ typedef struct svn_prop_t
 
 
 
-#endif  /* SVN_DELTA_H */
-
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
 
+#endif /* SVN_DELTA_H */
 
 /* ----------------------------------------------------------------
  * local variables:

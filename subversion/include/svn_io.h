@@ -15,13 +15,10 @@
 /* ==================================================================== */
 
 
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
-
 #ifndef SVN_IO_H
 #define SVN_IO_H
 
+#include <apr.h>
 #include <apr_pools.h>
 #include <apr_file_io.h>
 
@@ -29,6 +26,9 @@ extern "C" {
 #include "svn_error.h"
 #include "svn_string.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
 
 /* If PATH exists, set *KIND to the appropriate kind, else set it to
@@ -219,12 +219,11 @@ svn_error_t *svn_string_from_file (svn_string_t **result,
                                    apr_pool_t *pool);
 
 
-#endif /* SVN_IO_H */
-
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
 
+#endif /* SVN_IO_H */
 
 /* ----------------------------------------------------------------
  * local variables:
