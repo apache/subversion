@@ -91,7 +91,7 @@ class CollectData(rcsparse.Sink):
     self.resync = open(log_fname_base + RESYNC_SUFFIX, 'w')
     self.default_branch = None
 
-  def set_default_branch(self, branch):
+  def set_principal_branch(self, branch):
     self.default_branch = branch
 
   def set_fname(self, fname):
