@@ -482,19 +482,19 @@ Changed paths:
   <!-- ======================== SECTION 3 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-ch-4-sect-3">
-    <title>Copying Changes Between Branches</title>
+    <title>Copiando cambios entre ramas</title>
 
-    <para>Now you and Sally are working on parallel branches of the
-      project: you're working on a private branch, and Sally is
-      working on the <firstterm>trunk</firstterm>, or main line of
-      development.</para>
+    <para>Ahora usted y Sally están trabajando en ramas paralelas del
+      proyecto: usted está trabajando en una rama privada, y Sally
+      está trabajando en el <firstterm>trunk</firstterm>, o línea
+      principal de desarrollo.<!-- TODO trunk --></para>
 
-    <para>For projects that have a large number of contributors, it's
-      common for most people to have working copies of the trunk.
-      Whenever someone needs to make a long-running change that is
-      likely to disrupt the trunk, a standard procedure is to create a
-      private branch and commit changes there until all the work is
-      complete.</para>
+    <para>En proyectos que tienen grandes cantidades de
+      contribuyentes, es habitual que la mayoría tengan copias
+      locales del trunk.  Cuando alguien necesita hacer un cambio a
+      largo plazo que puede molestar en el trunk, un procedimiento
+      estándar es crear una rama privada y realizar ahí los cambios
+      hasta que todo el trabajo esté completo.</para>
 
     <para>So, the good news is that you and Sally aren't interfering
       with each other.  The bad news is that it's very easy to drift
