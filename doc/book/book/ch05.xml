@@ -1470,8 +1470,9 @@ Content-length: 0
           <para>If you do plan on manually editing the dump file to
             remove a top-level directory, make sure that your editor is
             not set to automatically convert end-lines to the native
-            format (e.g. \r\n to \n) as this will change the MD5 of the
-            contained files and will render the dumpfile useless.</para>
+            format (e.g. \r\n to \n) as the content will then not agree
+            with the metadata and this will render the dump file
+            useless.</para>
         </warning>
 
         <para>All that remains now is to create your three new
