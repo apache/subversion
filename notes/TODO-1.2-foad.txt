@@ -8,12 +8,6 @@
 I've left svn_client_move2 with force--I just couldn't come up with a
 replacement that was under 30 characters long. :) -Fitz
 
-> svn_cmdline_init2
->    I'm not terribly happy with this.  I don't think it makes clear
->    what "server mode" is and why.
-
-Where is this?
- 
 > svn_error_is_lock_error
 > svn_error_is_unlock_error
 >    Someone raised a concern about whether these belong in svn_error.h.
@@ -56,4 +50,4 @@ in the future."
 >    details.
 >    Bug: The "err" field is not documented.
 
-Lundblad?
+Lundblad
