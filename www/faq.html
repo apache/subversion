@@ -182,9 +182,7 @@ a <tt>file:</tt> URL?</a></li>
     with Apache on Win32 and I'm getting an error saying that the 
     module cannot be found, yet the mod_dav_svn.so file is right 
     there in <tt>\Apache\modules.</tt></a></li>
-<li><a href="#hook-environment">Why aren't my repository hooks working?
-    They're supposed to invoke external programs, but the invocations
-    never seem to happen.</a></li>
+<li><a href="#hook-debugging">Why aren't my repository hooks working?</a></li>
 <li><a href="#diff-cmd">Why does my --diff-cmd complain about '-u'?
     I tried to override it with --extensions, but it's not working.</a></li>
 <li><a href="#plaintext-passwords">Ahhh!  I just discovered that my
@@ -2388,10 +2386,13 @@ dependencies.</p>
 <![CDATA[-----------------------------------------------------------]]>
 
 <a name="win32-hooks"></a> <!-- for compatibility with old question -->
-<h3><a name="hook-environment" title="#hook-environment"
-    >Why aren't my repository hooks working?
+<a name="hook-environment"></a> <!-- for yet more compatibility with old question -->
+<h3><a name="hook-debugging" title="#hook-debugging"
+    >Why aren't my repository hooks working?</a></h3>
+          <ul>
+            <li>
     They're supposed to invoke external programs, but the invocations
-    never seem to happen.</a></h3>
+    never seem to happen.
 
 <p>When invoking other programs from repository hook scripts, try
 using absolute paths.  The environment the hooks get when Subversion
@@ -2400,7 +2401,30 @@ Subversion server runs as, which might be different from the
 environment the hooks get when you test them by hand.  In particular,
 $PATH on Unix, or %PATH% on Windows, may not have all the directories
 you expect.</p>
-
+</li>
+      <li>General tips</li>
+<p>
+If you're using Linux or Unix, try running the script "by hand", after
+          doing the following preparation:
+          <ol>
+            <li>Use "sudo" or similar to become the user who normally
+              would run the script.  This might be <tt>httpd</tt> or
+              <tt>www-data</tt>, for example, if you're using Apache;
+              it might be a user like <tt>svn</tt> if you're running
+              svnserve and have created a special user.</li>
+            <li>
+              Invoke the script with the "env" program.  Here's an
+              example for the post-commit hook:
+<blockquote><pre>
+                  $ env - ./pre-commit /var/lib/svn-repos 1234
+</pre></blockquote>
+            </li>
+            <li>
+              Check your console for errors.
+            </li>
+          </ol>
+</p>
+</ul>
 
 <![CDATA[-----------------------------------------------------------]]>
 
