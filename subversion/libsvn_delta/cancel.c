@@ -240,6 +240,22 @@ close_file (void *file_baton,
 }
 
 static svn_error_t *
+absent_file (const char *path,
+             void *file_baton,
+             apr_pool_t *pool)
+{
+  struct file_baton *fb = file_baton;
+  struct edit_baton *eb = fb->edit_baton;
+
+  SVN_ERR (eb->cancel_func (eb->cancel_baton));
+
+  SVN_ERR (eb->wrapped_editor->absent_file (path, fb->wrapped_file_baton,
+                                            pool));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 close_directory (void *dir_baton,
                  apr_pool_t *pool)
 {
@@ -250,6 +266,22 @@ close_directory (void *dir_baton,
 
   SVN_ERR (eb->wrapped_editor->close_directory (db->wrapped_dir_baton,
                                                 pool));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+absent_directory (const char *path,
+                  void *dir_baton,
+                  apr_pool_t *pool)
+{
+  struct dir_baton *db = dir_baton;
+  struct edit_baton *eb = db->edit_baton;
+
+  SVN_ERR (eb->cancel_func (eb->cancel_baton));
+
+  SVN_ERR (eb->wrapped_editor->absent_directory (path, db->wrapped_dir_baton,
+                                                 pool));
 
   return SVN_NO_ERROR;
 }
@@ -326,11 +358,13 @@ svn_delta_get_cancellation_editor (svn_cancel_func_t cancel_func,
       tree_editor->open_directory = open_directory;
       tree_editor->change_dir_prop = change_dir_prop;
       tree_editor->close_directory = close_directory;
+      tree_editor->absent_directory = absent_directory;
       tree_editor->add_file = add_file;
       tree_editor->open_file = open_file;
       tree_editor->apply_textdelta = apply_textdelta;
       tree_editor->change_file_prop = change_file_prop;
       tree_editor->close_file = close_file;
+      tree_editor->absent_file = absent_file;
       tree_editor->close_edit = close_edit;
 
       eb->wrapped_editor = wrapped_editor;

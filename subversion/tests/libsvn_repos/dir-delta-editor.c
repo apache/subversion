@@ -258,6 +258,10 @@ dir_delta_get_editor (const svn_delta_editor_t **editor,
   svn_delta_editor_t *my_editor;
   struct edit_baton *my_edit_baton;
 
+  /* Wondering why we don't include test_close_directory,
+     test_close_file, test_absent_directory, and test_absent_file
+     here...?  -kfogel, 3 Nov 2003 */
+
   /* Set up the editor. */
   my_editor = svn_delta_default_editor (pool);
   my_editor->open_root           = test_open_root;

@@ -1495,6 +1495,8 @@ get_test_editor (const svn_delta_editor_t **editor,
   eb->real_editor = real_editor;
   eb->real_eb = real_eb;
 
+  /* We don't implement absent_file() or absent_directory() in this
+     editor, because presumably commit would never send that. */
   ed->set_target_revision = set_target_revision;
   ed->open_root = open_root;
   ed->add_directory = add_directory;
