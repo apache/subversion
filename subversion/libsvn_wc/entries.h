@@ -175,6 +175,9 @@ void svn_wc__entry_remove (apr_hash_t *entries, const char *name);
 /* Tweak the entry NAME within hash ENTRIES.  If NEW_URL is non-null,
  * make this the entry's new url.  If NEW_REV is valid, make this the
  * entry's working revision.  (This is purely an in-memory operation.)
+ * If ALLOW_REMOVAL is TRUE the tweaks might cause the entry NAME to
+ * be removed from the hash, if ALLOW_REMOVAL is FALSE this will not
+ * happen.
  *
  * *WRITE_REQUIRED will be set to TRUE if the tweaks make changes that
  * require the entries to be written to disk, otherwise *WRITE_REQUIRED
@@ -187,6 +190,7 @@ svn_wc__tweak_entry (apr_hash_t *entries,
                      const char *name,
                      const char *new_url,
                      svn_revnum_t new_rev,
+                     svn_boolean_t allow_removal,
                      svn_boolean_t *write_required,
                      apr_pool_t *pool);
 
