@@ -123,11 +123,16 @@ svn_wc_merge (const char *left,
       SVN_ERR (svn_io_copy_file (left, tmp_left->data, TRUE, pool));
       SVN_ERR (svn_io_copy_file (right, tmp_right->data, TRUE, pool));
 
-      /* Do the Deed, using all four scratch files. */
       svn_path_split (tmp_left, &pt, &bn_left, pool);
       svn_path_split (tmp_right, &pt, &bn_right, pool);
       svn_path_split (tmp_target, &pt, &bn, pool);
-      SVN_ERR (svn_io_run_diff3 (pt->data,
+      
+      /* sanity check */
+      if (svn_stringbuf_isempty(mt_pt))
+        svn_stringbuf_set (mt_pt, ".");
+
+      /* Do the Deed, using all four scratch files. */
+      SVN_ERR (svn_io_run_diff3 (mt_pt->data,
                                  bn->data, bn_left->data, bn_right->data,
                                  target_label, left_label, right_label,
                                  result_f,

@@ -1,3 +1,18 @@
+
+Verison 0.11.0 (released ?, revision ?)
+
+ User-visible changes:
+ * new ~/.subversion configuration directory
+ * proxy support via ~/.subversion/proxies file
+          
+ Developer-visible changes:
+ * beginnings of new commit process
+ * beginnings of 'svn merge'
+ * mod_dav_svn now generates "streamy" report responses
+ * stringbuf cleanups and bugfixes
+ * tweaks to build system and freebsd port
+ * miscellaneous bugfixes in path escaping, pool usage, hp-ux compilation,
+
 Version 0.10.1 (released 17 Mar 2002, revision 1537)
 
  User-visible changes:
