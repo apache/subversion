@@ -40,7 +40,6 @@ svn_cl__propset (apr_getopt_t *os,
 {
   svn_stringbuf_t *propname;
   svn_stringbuf_t *propval;
-  svn_error_t *err;
   apr_array_header_t *targets;
   int i;
   int num_args_wanted = 2;
