@@ -379,6 +379,13 @@ class WinGeneratorBase(gen_base.GeneratorBase):
                             string.join(map(lambda x: "-I%s" % self.quote(x),
                                             includes)),
                             self.quote(csrc))
+                elif target.lang == 'java':
+                  outdir = "%s\\subversion\\bindings\\swig\\java\\org\\tigris\\subversion\\swig" % rootpath
+                  cbuild = "swig %s -%s -package org.tigris.subversion.swig -outdir %s %s -o %s $(InputPath)" % \
+                           (self.swig_options, target.lang, outdir,
+                            string.join(map(lambda x: "-I%s" % self.quote(x),
+                                            includes)),
+                            self.quote(cout))
                 else:      
                   cbuild = "swig %s -%s %s -o %s $(InputPath)" % \
                            (self.swig_options, target.lang,
@@ -550,6 +557,8 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     if isinstance(target, gen_base.TargetSWIG):
       fakedefines.append("SWIG_GLOBAL")
       fakedefines.append(self.swig_defines)
+      if target.lang == 'java':
+        fakedefines.append('SWIGJAVA')
 
     if isinstance(target, gen_base.TargetSWIGLib):
       fakedefines.append(self.swig_defines)
