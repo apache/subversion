@@ -977,27 +977,27 @@ $ svn status
         borrado</emphasis> de cambios en el tronco que nunca
         ocurrieron en su rama.</para>.
 
-      <para>To express only the changes that happened on your branch,
-        you need to compare the initial state of your branch to its
-        final state.  Using <command>svn log</command> on your branch,
-        you can see that your branch was created in revision 341.  And
-        the final state of your branch is simply a matter of using the
-        <literal>HEAD</literal> revision.  That means you want to
-        compare revisions 341 and <literal>HEAD</literal> of your
-        branch directory, and apply those differences to a working
-        copy of the trunk.</para>
+      <para>Para expresar únicamente los cambios que ocurrieron en
+        su rama, necesita comparar el estado inicial de su rama
+        con su estado final.  Usando <command>svn log</command>
+        en su rama, puede ver que ésta fue creada en la revisión
+        341. Y el estado final puede obtenerlo con la revisión
+        <literal>HEAD</literal>. Esto significa que quiere comparar
+        las revisiones 341 y <literal>HEAD</literal> del directorio
+        de su rama, y aplicar esas diferencias a una copia local
+        del tronco.</para>
 
       <tip>
-        <para>A nice way of finding the revision in which a branch was
-        created (the "base" of the branch) is to use the
-        <option>--stop-on-copy</option> option to <command>svn
-        log</command>.  The log subcommand will normally show every
-        change ever made to the branch, including tracing back through
-        the copy which created the branch.  So normally, you'll see
-        history from the trunk as well.  The
-        <option>--stop-on-copy</option> will halt log output as soon
-        as <command>svn log</command> detects that its target was
-        copied or renamed.</para>
+        <para>Un buen método para encontrar la revisión en
+        la cual fue creada una rama (la "base" de la misma)
+        es usar la opción <option>--stop-on-copy</option> con
+        <command>svn log</command>. El subcomando log normalmente
+        muestra todo cambio realizado en la rama, incluyendo
+        los de la copia a partir de la cual fue creada. Así que
+        normalmente verá también la historia del tronco. La opción
+        <option>--stop-on-copy</option> detendrá la salida del
+        comando en cuanto <command>svn log</command> detecte que
+        la rama fue copiada o renombrada.</para>
 
         <para>So in our continuing example,</para>
 
