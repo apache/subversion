@@ -33,7 +33,10 @@ if sys.argv[1] == '--includes':
   sys.exit(0)
 
 if sys.argv[1] == '--compile':
-  cc, opt, ccshared = sysconfig.get_config_vars('CC', 'OPT', 'CCSHARED')
+  cc, basecflags, opt, ccshared = \
+      sysconfig.get_config_vars('CC', 'BASECFLAGS', 'OPT', 'CCSHARED')
+  if basecflags:
+    opt = basecflags + ' ' + opt
   print cc, opt, ccshared
   sys.exit(0)
 
