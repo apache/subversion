@@ -543,21 +543,24 @@ svn_repos_fs_get_locks (apr_hash_t **locks,
   SVN_ERR (svn_fs_revision_root (&head_root, repos->fs, head_rev, pool));
 
   /* But then remove the ones attached to unreadable paths. */
-  for (hi = apr_hash_first (pool, all_locks); hi; hi = apr_hash_next (hi))
+  if (authz_read_func)
     {
-      const void *key;
-      void *val;
-      apr_ssize_t keylen;
-      svn_boolean_t readable;
-
-      svn_pool_clear (subpool);
-
-      apr_hash_this (hi, &key, &keylen, &val);
-
-      SVN_ERR (authz_read_func (&readable, head_root, key,
-                                authz_read_baton, subpool));
-      if (! readable)
-        apr_hash_set (all_locks, key, keylen, NULL);
+      for (hi = apr_hash_first (pool, all_locks); hi; hi = apr_hash_next (hi))
+        {
+          const void *key;
+          void *val;
+          apr_ssize_t keylen;
+          svn_boolean_t readable;
+          
+          svn_pool_clear (subpool);
+          
+          apr_hash_this (hi, &key, &keylen, &val);
+          
+          SVN_ERR (authz_read_func (&readable, head_root, key,
+                                    authz_read_baton, subpool));
+          if (! readable)
+            apr_hash_set (all_locks, key, keylen, NULL);
+        }
     }
 
   svn_pool_destroy (subpool);
