@@ -32,54 +32,232 @@ import svn.core
 SEPARATOR = '=' * 78
 
 
-def main(pool, config_fname, repos_dir, rev):
+def main(pool, cmd, config_fname, repos_dir, rev, author, propname):
   repos = Repository(repos_dir, rev, pool)
-
   cfg = Config(config_fname, repos)
 
-  editor = svn.repos.RevisionChangeCollector(repos.fs_ptr, rev, pool)
-
-  e_ptr, e_baton = svn.delta.make_editor(editor, pool)
-  svn.repos.svn_repos_replay(repos.root_this, e_ptr, e_baton, pool)
-
-  # get all the changes and sort by path
-  changelist = editor.changes.items()
-  changelist.sort()
-
-  ### hunh. this code isn't actually needed for StandardOutput. refactor?
-  # collect the set of groups and the unique sets of params for the options
-  groups = { }
-  for path, change in changelist:
-    for (group, params) in cfg.which_groups(path):
-      # turn the params into a hashable object and stash it away
-      param_list = params.items()
-      param_list.sort()
-      groups[group, tuple(param_list)] = params
-
-  output = determine_output(cfg, repos, changelist)
-  output.generate(groups, pool)
-
-
-def determine_output(cfg, repos, changelist):
-  if cfg.is_set('general.mail_command'):
-    cls = PipeOutput
-  elif cfg.is_set('general.smtp_hostname'):
-    cls = SMTPOutput
+  if cmd == 'commit':
+    messenger = Commit(pool, cfg, repos)
+  elif cmd == 'propchange':
+    messenger = PropChange(pool, cfg, repos, author, propname)
   else:
-    cls = StandardOutput
+    raise UnknownSubcommand(cmd)
 
-  return cls(cfg, repos, changelist)
+  messenger.generate()
 
 
 class MailedOutput:
-  def __init__(self, cfg, repos, changelist):
+  def __init__(self, cfg, repos, prefix_param):
     self.cfg = cfg
     self.repos = repos
-    self.changelist = changelist
+    self.prefix_param = prefix_param
+
+  def start(self, group, params, override_author = None):
+    self.to_addr = self.cfg.get('to_addr', group, params)
+    author = self.cfg.get('from_addr', group, params)
+    if not author:
+      if override_author:
+        author = override_author
+      else:
+        author = self.repos.author or 'no_author'
+    self.from_addr = author
+    self.reply_to = self.cfg.get('reply_to', group, params)
+
+  def mail_headers(self, group, params):
+    prefix = self.cfg.get(self.prefix_param, group, params)
+    if prefix:
+      subject = prefix + ' ' + self.subject
+    else:
+      subject = self.subject
+    hdrs = 'From: %s\n'    \
+           'To: %s\n'      \
+           'Subject: %s\n' \
+           'MIME-Version: 1.0\n' \
+           'Content-Type: text/plain; charset=UTF-8\n' \
+           % (self.from_addr, self.to_addr, subject)
+    if self.reply_to:
+      hdrs = '%sReply-To: %s\n' % (hdrs, self.reply_to)
+    return hdrs + '\n'
+
+
+class SMTPOutput(MailedOutput):
+  "Deliver a mail message to an MTA using SMTP."
+
+  def start(self, group, params, **args):
+    MailedOutput.start(self, group, params, **args)
+
+    self.buffer = cStringIO.StringIO()
+    self.write = self.buffer.write
+
+    self.write(self.mail_headers(group, params))
+
+  def run(self, cmd):
+    # we're holding everything in memory, so we may as well read the
+    # entire diff into memory and stash that into the buffer
+    pipe_ob = popen2.Popen3(cmd)
+    self.write(pipe_ob.fromchild.read())
+
+    # wait on the child so we don't end up with a billion zombies
+    pipe_ob.wait()
+
+  def finish(self):
+    server = smtplib.SMTP(self.cfg.general.smtp_hostname)
+    if self.cfg.is_set('general.smtp_username'):
+      server.login(self.cfg.general.smtp_username,
+                   self.cfg.general.smtp_password)
+    server.sendmail(self.from_addr, [ self.to_addr ], self.buffer.getvalue())
+    server.quit()
+
+
+class StandardOutput:
+  "Print the commit message to stdout."
+
+  def __init__(self, cfg, repos, prefix_param):
+    self.cfg = cfg
+    self.repos = repos
+
+    self.write = sys.stdout.write
+
+  def start(self, group, params, **args):
+    pass
+
+  def finish(self):
+    pass
+
+  def run(self, cmd):
+    # flush our output to keep the parent/child output in sync
+    sys.stdout.flush()
+    sys.stderr.flush()
+
+    # we can simply fork and exec the diff, letting it generate all the
+    # output to our stdout (and stderr, if necessary).
+    pid = os.fork()
+    if pid:
+      # in the parent. we simply want to wait for the child to finish.
+      ### should we deal with the return values?
+      os.waitpid(pid, 0)
+    else:
+      # in the child. run the diff command.
+      try:
+        os.execvp(cmd[0], cmd)
+      finally:
+        os._exit(1)
+
+
+class PipeOutput(MailedOutput):
+  "Deliver a mail message to an MDA via a pipe."
+
+  def __init__(self, cfg, repos, prefix_param):
+    MailedOutput.__init__(self, cfg, repos, prefix_param)
+
+    # figure out the command for delivery
+    self.cmd = string.split(cfg.general.mail_command)
+
+    # we want a descriptor to /dev/null for hooking up to the diffs' stdin
+    self.null = os.open('/dev/null', os.O_RDONLY)
+
+  def start(self, group, params, **args):
+    MailedOutput.start(self, group, params, **args)
+
+    ### gotta fix this. this is pretty specific to sendmail and qmail's
+    ### mailwrapper program. should be able to use option param substitution
+    cmd = self.cmd + [ '-f', self.from_addr, self.to_addr ]
+
+    # construct the pipe for talking to the mailer
+    self.pipe = popen2.Popen3(cmd)
+    self.write = self.pipe.tochild.write
+
+    # we don't need the read-from-mailer descriptor, so close it
+    self.pipe.fromchild.close()
+
+    # start writing out the mail message
+    self.write(self.mail_headers(group, params))
+
+  def run(self, cmd):
+    # flush the buffers that write to the mailer. we're about to fork, and
+    # we don't want data sitting in both copies of the buffer. we also
+    # want to ensure the parts are delivered to the mailer in the right order.
+    self.pipe.tochild.flush()
+
+    pid = os.fork()
+    if pid:
+      # in the parent
+
+      # wait for the diff to finish
+      ### do anything with the return value?
+      os.waitpid(pid, 0)
+
+      return
+
+    # in the child
+
+    # duplicate the write-to-mailer descriptor to our stdout and stderr
+    os.dup2(self.pipe.tochild.fileno(), 1)
+    os.dup2(self.pipe.tochild.fileno(), 2)
+
+    # hook up stdin to /dev/null
+    os.dup2(self.null, 0)
+
+    ### do we need to bother closing self.null and self.pipe.tochild ?
+
+    # run the diff command, now that we've hooked everything up
+    try:
+      os.execvp(cmd[0], cmd)
+    finally:
+      os._exit(1)
+
+  def finish(self):
+    # signal that we're done sending content
+    self.pipe.tochild.close()
+
+    # wait to avoid zombies
+    self.pipe.wait()
+
+
+class Messenger:
+  def __init__(self, pool, cfg, repos, prefix_param):
+    self.pool = pool
+    self.cfg = cfg
+    self.repos = repos
+    self.determine_output(cfg, repos, prefix_param)
+
+  def determine_output(self, cfg, repos, prefix_param):
+    if cfg.is_set('general.mail_command'):
+      cls = PipeOutput
+    elif cfg.is_set('general.smtp_hostname'):
+      cls = SMTPOutput
+    else:
+      cls = StandardOutput
+
+    self.output = cls(cfg, repos, prefix_param)
+
+
+class Commit(Messenger):
+  def __init__(self, pool, cfg, repos):
+    Messenger.__init__(self, pool, cfg, repos, 'commit_subject_prefix')
+
+    # get all the changes and sort by path
+    editor = svn.repos.RevisionChangeCollector(repos.fs_ptr, repos.rev,
+                                               self.pool)
+    e_ptr, e_baton = svn.delta.make_editor(editor, self.pool)
+    svn.repos.svn_repos_replay(repos.root_this, e_ptr, e_baton, self.pool)
+
+    self.changelist = editor.changes.items()
+    self.changelist.sort()
+
+    ### hunh. this code isn't actually needed for StandardOutput. refactor?
+    # collect the set of groups and the unique sets of params for the options
+    self.groups = { }
+    for path, change in self.changelist:
+      for (group, params) in self.cfg.which_groups(path):
+        # turn the params into a hashable object and stash it away
+        param_list = params.items()
+        param_list.sort()
+        self.groups[group, tuple(param_list)] = params
 
     # figure out the changed directories
     dirs = { }
-    for path, change in changelist:
+    for path, change in self.changelist:
       if change.item_kind == svn.core.svn_node_dir:
         dirs[path] = None
       else:
@@ -121,194 +299,55 @@ class MailedOutput:
     dirlist.sort()
     dirlist = string.join(dirlist)
     if commondir:
-      self.subject = 'r%d - in %s: %s' % (repos.rev, commondir, dirlist)
+      self.output.subject = 'r%d - in %s: %s' % (repos.rev, commondir, dirlist)
     else:
-      self.subject = 'r%d - %s' % (repos.rev, dirlist)
+      self.output.subject = 'r%d - %s' % (repos.rev, dirlist)
 
-  def generate(self, groups, pool):
+  def generate(self):
     "Generate email for the various groups and option-params."
 
-    ### these groups need to be further compressed. if the headers and
+    ### the groups need to be further compressed. if the headers and
     ### body are the same across groups, then we can have multiple To:
     ### addresses. SMTPOutput holds the entire message body in memory,
     ### so if the body doesn't change, then it can be sent N times
     ### rather than rebuilding it each time.
 
-    subpool = svn.util.svn_pool_create(pool)
+    subpool = svn.util.svn_pool_create(self.pool)
 
-    for (group, param_tuple), params in groups.items():
-      self.start(group, params)
+    for (group, param_tuple), params in self.groups.items():
+      self.output.start(group, params)
 
       # generate the content for this group and set of params
-      generate_content(self, self.cfg, self.repos, self.changelist,
+      generate_content(self.output, self.cfg, self.repos, self.changelist,
                        group, params, subpool)
 
-      self.finish()
+      self.output.finish()
       svn.util.svn_pool_clear(subpool)
 
     svn.util.svn_pool_destroy(subpool)
 
-  def start(self, group, params):
-    self.to_addr = self.cfg.get('to_addr', group, params)
-    self.from_addr = self.cfg.get('from_addr', group, params) or \
-                     self.repos.author or 'no_author'
-    self.reply_to = self.cfg.get('reply_to', group, params)
 
-  def mail_headers(self, group, params):
-    prefix = self.cfg.get('subject_prefix', group, params)
-    if prefix:
-      subject = prefix + ' ' + self.subject
-    else:
-      subject = self.subject
-    hdrs = 'From: %s\n'    \
-           'To: %s\n'      \
-           'Subject: %s\n' \
-           'MIME-Version: 1.0\n' \
-           'Content-Type: text/plain; charset=UTF-8\n' \
-           % (self.from_addr, self.to_addr, subject)
-    if self.reply_to:
-      hdrs = '%sReply-To: %s\n' % (hdrs, self.reply_to)
-    return hdrs + '\n'
+class PropChange(Messenger):
+  def __init__(self, pool, cfg, repos, author, propname):
+    Messenger.__init__(self, pool, cfg, repos, 'propchange_subject_prefix')
+    self.author = author
+    self.propname = propname
+
+    self.output.subject = 'r%d - %s' % (repos.rev, propname)
 
 
-class SMTPOutput(MailedOutput):
-  "Deliver a mail message to an MTA using SMTP."
+  def generate(self):
+    self.output.start([], [], override_author = author)
 
-  def __init__(self, cfg, repos, changelist):
-    MailedOutput.__init__(self, cfg, repos, changelist)
+    self.output.write('Author: %s\nRevision: %s\nProperty Name: %s\n\n'
+                      % (self.author, self.repos.rev, self.propname))
 
-  def start(self, group, params):
-    MailedOutput.start(self, group, params)
+    propvalue = self.repos.get_rev_prop(self.propname)
 
-    self.buffer = cStringIO.StringIO()
-    self.write = self.buffer.write
+    self.output.write('New Property Value:\n')
+    self.output.write(propvalue)
 
-    self.write(self.mail_headers(group, params))
-
-  def run_diff(self, cmd):
-    # we're holding everything in memory, so we may as well read the
-    # entire diff into memory and stash that into the buffer
-    pipe_ob = popen2.Popen3(cmd)
-    self.write(pipe_ob.fromchild.read())
-
-    # wait on the child so we don't end up with a billion zombies
-    pipe_ob.wait()
-
-  def finish(self):
-    server = smtplib.SMTP(self.cfg.general.smtp_hostname)
-    if self.cfg.is_set('general.smtp_username'):
-      server.login(self.cfg.general.smtp_username,
-                   self.cfg.general.smtp_password)
-    server.sendmail(self.from_addr, [ self.to_addr ], self.buffer.getvalue())
-    server.quit()
-
-
-class StandardOutput:
-  "Print the commit message to stdout."
-
-  def __init__(self, cfg, repos, changelist):
-    self.cfg = cfg
-    self.repos = repos
-    self.changelist = changelist
-
-    self.write = sys.stdout.write
-
-  def generate(self, groups, pool):
-    "Generate the output; the groups are ignored."
-
-    # use the default group and no parameters
-    ### is that right?
-    generate_content(self, self.cfg, self.repos, self.changelist,
-                     None, { }, pool)
-
-  def run_diff(self, cmd):
-    # flush our output to keep the parent/child output in sync
-    sys.stdout.flush()
-    sys.stderr.flush()
-
-    # we can simply fork and exec the diff, letting it generate all the
-    # output to our stdout (and stderr, if necessary).
-    pid = os.fork()
-    if pid:
-      # in the parent. we simply want to wait for the child to finish.
-      ### should we deal with the return values?
-      os.waitpid(pid, 0)
-    else:
-      # in the child. run the diff command.
-      try:
-        os.execvp(cmd[0], cmd)
-      finally:
-        os._exit(1)
-
-
-class PipeOutput(MailedOutput):
-  "Deliver a mail message to an MDA via a pipe."
-
-  def __init__(self, cfg, repos, changelist):
-    MailedOutput.__init__(self, cfg, repos, changelist)
-
-    # figure out the command for delivery
-    self.cmd = string.split(cfg.general.mail_command)
-
-    # we want a descriptor to /dev/null for hooking up to the diffs' stdin
-    self.null = os.open('/dev/null', os.O_RDONLY)
-
-  def start(self, group, params):
-    MailedOutput.start(self, group, params)
-
-    ### gotta fix this. this is pretty specific to sendmail and qmail's
-    ### mailwrapper program. should be able to use option param substitution
-    cmd = self.cmd + [ '-f', self.from_addr, self.to_addr ]
-
-    # construct the pipe for talking to the mailer
-    self.pipe = popen2.Popen3(cmd)
-    self.write = self.pipe.tochild.write
-
-    # we don't need the read-from-mailer descriptor, so close it
-    self.pipe.fromchild.close()
-
-    # start writing out the mail message
-    self.write(self.mail_headers(group, params))
-
-  def run_diff(self, cmd):
-    # flush the buffers that write to the mailer. we're about to fork, and
-    # we don't want data sitting in both copies of the buffer. we also
-    # want to ensure the parts are delivered to the mailer in the right order.
-    self.pipe.tochild.flush()
-
-    pid = os.fork()
-    if pid:
-      # in the parent
-
-      # wait for the diff to finish
-      ### do anything with the return value?
-      os.waitpid(pid, 0)
-
-      return
-
-    # in the child
-
-    # duplicate the write-to-mailer descriptor to our stdout and stderr
-    os.dup2(self.pipe.tochild.fileno(), 1)
-    os.dup2(self.pipe.tochild.fileno(), 2)
-
-    # hook up stdin to /dev/null
-    os.dup2(self.null, 0)
-
-    ### do we need to bother closing self.null and self.pipe.tochild ?
-
-    # run the diff command, now that we've hooked everything up
-    try:
-      os.execvp(cmd[0], cmd)
-    finally:
-      os._exit(1)
-
-  def finish(self):
-    # signal that we're done sending content
-    self.pipe.tochild.close()
-
-    # wait to avoid zombies
-    self.pipe.wait()
+    self.output.finish()
 
 
 def generate_content(output, cfg, repos, changelist, group, params, pool):
@@ -450,7 +489,7 @@ def generate_diff(output, cfg, repos, date, change, group, params, pool):
 
   src_fname, dst_fname = diff.get_files()
 
-  output.run_diff(cfg.get_diff_cmd({
+  output.run(cfg.get_diff_cmd({
     'label_from' : label1,
     'label_to' : label2,
     'from' : src_fname,
@@ -615,6 +654,9 @@ class _sub_section:
 class MissingConfig(Exception):
   pass
 
+class UnknownSubcommand(Exception):
+  pass
+
 
 # enable True/False in older vsns of Python
 try:
@@ -625,30 +667,52 @@ except NameError:
 
 
 if __name__ == '__main__':
-  if len(sys.argv) < 3 or len(sys.argv) > 4:
-    sys.stderr.write('USAGE: %s REPOS-DIR REVISION [CONFIG-FILE]\n'
-                     % sys.argv[0])
+  def usage():
+    sys.stderr.write(
+'''USAGE: %s commit     REPOS-DIR REVISION [CONFIG-FILE]
+       %s propchange REPOS-DIR REVISION AUTHOR PROPNAME [CONFIG-FILE]
+'''
+                     % (sys.argv[0], sys.argv[0]))
     sys.exit(1)
 
-  repos_dir = sys.argv[1]
-  revision = int(sys.argv[2])
+  if len(sys.argv) < 4:
+    usage()
 
-  if len(sys.argv) == 3:
+  cmd = sys.argv[1]
+  repos_dir = sys.argv[2]
+  revision = int(sys.argv[3])
+  config_fname = None
+  author = None
+  propname = None
+
+  if cmd == 'commit':
+    if len(sys.argv) > 5:
+      usage()
+    if len(sys.argv) > 4:
+      config_fname = sys.argv[4]
+  elif cmd == 'propchange':
+    if len(sys.argv) < 6 or len(sys.argv) > 7:
+      usage()
+    author = sys.argv[4]
+    propname = sys.argv[5]
+    if len(sys.argv) > 6:
+      config_fname = sys.argv[6]
+  else:
+    usage()
+
+  if config_fname is None:
     # default to REPOS-DIR/conf/mailer.conf
     config_fname = os.path.join(repos_dir, 'conf', 'mailer.conf')
     if not os.path.exists(config_fname):
       # okay. look for 'mailer.conf' as a sibling of this script
       config_fname = os.path.join(os.path.dirname(sys.argv[0]), 'mailer.conf')
-  else:
-    # the config file was explicitly provided
-    config_fname = sys.argv[3]
 
   if not os.path.exists(config_fname):
     raise MissingConfig(config_fname)
 
   ### run some validation on these params
-  svn.util.run_app(main, config_fname, repos_dir, revision)
-
+  svn.util.run_app(main, cmd, config_fname, repos_dir, revision,
+                   author, propname)
 
 # ------------------------------------------------------------------------
 # TODO
@@ -676,4 +740,4 @@ if __name__ == '__main__':
 #       file(s) or DBM
 #   - put the commit author into the params dict  [DONE]
 #   - if the subject line gets too long, then trim it. configurable?
-#
+# * get rid of global functions that should properly be class methods
