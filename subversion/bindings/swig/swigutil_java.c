@@ -596,18 +596,6 @@ static svn_error_t * thunk_apply_textdelta(
   return SVN_NO_ERROR;
 }
 
-static svn_error_t * thunk_apply_text(void *file_baton, 
-                                      const char *base_checksum,
-                                      const char *result_checksum,
-                                      svn_stream_t *base,
-                                      svn_stream_t *target,
-                                      const struct svn_delta_editor_t *editor,
-                                      apr_pool_t *pool)
-{
-  /* TODO */
-  return SVN_NO_ERROR;
-}
-
 static svn_error_t * thunk_change_file_prop(void *file_baton,
                                             const char *name,
                                             const svn_string_t *value,
