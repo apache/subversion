@@ -406,7 +406,7 @@ make_new_directory (const char *repos_path,
      which includes our added directory path.  */
   err = svn_repos_fs_commit_txn (&amp;conflict_str, repos, 
                                  &amp;youngest_rev, txn);
-  if (err == SVN_NO_ERROR)
+  if (! err)
     {
       /* No error?  Excellent!  Print a brief report of our success.  */
       printf ("Directory '%s' was successfully added as new revision "
