@@ -36,25 +36,27 @@
 #include "ra_dav.h"
 
 
-static const struct ne_xml_elm merge_elements[] =
+static const svn_ra_dav__xml_elm_t merge_elements[] =
 {
   { "DAV:", "updated-set", ELEM_updated_set, 0 },
   { "DAV:", "merged-set", ELEM_merged_set, 0 },
   { "DAV:", "ignored-set", ELEM_ignored_set, 0 },
-  { "DAV:", "href", NE_ELM_href, NE_XML_CDATA },
+  { "DAV:", "href", ELEM_href, SVN_RA_DAV__XML_CDATA },
   { "DAV:", "merge-response", ELEM_merge_response, 0 },
   { "DAV:", "checked-in", ELEM_checked_in, 0 },
-  { "DAV:", "response", NE_ELM_response, 0 },
-  { "DAV:", "propstat", NE_ELM_propstat, 0 },
-  { "DAV:", "status", NE_ELM_status, NE_XML_CDATA },
-  { "DAV:", "responsedescription", NE_ELM_responsedescription, NE_XML_CDATA },
-  { "DAV:", "prop", NE_ELM_prop, 0 },
+  { "DAV:", "response", ELEM_response, 0 },
+  { "DAV:", "propstat", ELEM_propstat, 0 },
+  { "DAV:", "status", ELEM_status, SVN_RA_DAV__XML_CDATA },
+  { "DAV:", "responsedescription", ELEM_responsedescription,
+    SVN_RA_DAV__XML_CDATA },
+  { "DAV:", "prop", ELEM_prop, 0 },
   { "DAV:", "resourcetype", ELEM_resourcetype, 0 },
   { "DAV:", "collection", ELEM_collection, 0 },
   { "DAV:", "baseline", ELEM_baseline, 0 },
-  { "DAV:", "version-name", ELEM_version_name, NE_XML_CDATA },
-  { "DAV:", "creationdate", ELEM_creationdate, NE_XML_CDATA },
-  { "DAV:", "creator-displayname", ELEM_creator_displayname, NE_XML_CDATA },
+  { "DAV:", "version-name", ELEM_version_name, SVN_RA_DAV__XML_CDATA },
+  { "DAV:", "creationdate", ELEM_creationdate, SVN_RA_DAV__XML_CDATA },
+  { "DAV:", "creator-displayname", ELEM_creator_displayname,
+    SVN_RA_DAV__XML_CDATA },
 
   { NULL }
 };
@@ -267,102 +269,108 @@ static svn_error_t * handle_resource(merge_ctx_t *mc,
   return bump_resource(mc, relative, mc->vsn_url->data, pool);
 }
 
-static int validate_element(void *userdata, ne_xml_elmid parent,
-                            ne_xml_elmid child)
+static int validate_element(void *userdata, svn_ra_dav__xml_elmid parent,
+                            svn_ra_dav__xml_elmid child)
 {
   if ((child == ELEM_collection || child == ELEM_baseline)
       && parent != ELEM_resourcetype) {
     /* ### technically, they could occur elsewhere, but screw it */
-    return NE_XML_INVALID;
+    return SVN_RA_DAV__XML_INVALID;
   }
 
   switch (parent)
     {
-    case NE_ELM_root:
+    case ELEM_root:
       if (child == ELEM_merge_response)
-        return NE_XML_VALID;
+        return SVN_RA_DAV__XML_VALID;
       else
-        return NE_XML_INVALID;
+        return SVN_RA_DAV__XML_INVALID;
 
     case ELEM_merge_response:
       if (child == ELEM_updated_set
           || child == ELEM_merged_set
           || child == ELEM_ignored_set)
-        return NE_XML_VALID;
+        return SVN_RA_DAV__XML_VALID;
       else
-        return NE_XML_DECLINE; /* any child is allowed */
+        return SVN_RA_DAV__XML_DECLINE; /* any child is allowed */
 
     case ELEM_updated_set:
     case ELEM_merged_set:
-      if (child == NE_ELM_response)
-        return NE_XML_VALID;
+      if (child == ELEM_response)
+        return SVN_RA_DAV__XML_VALID;
       else
-        return NE_XML_DECLINE; /* ignore if something else was in there */
+        return SVN_RA_DAV__XML_DECLINE; /* ignore if something else
+                                           was in there */
 
     case ELEM_ignored_set:
-      if (child == NE_ELM_href)
-        return NE_XML_VALID;
+      if (child == ELEM_href)
+        return SVN_RA_DAV__XML_VALID;
       else
-        return NE_XML_DECLINE; /* ignore if something else was in there */
+        return SVN_RA_DAV__XML_DECLINE; /* ignore if something else
+                                           was in there */
 
-    case NE_ELM_response:
-      if (child == NE_ELM_href
-          || child == NE_ELM_status
-          || child == NE_ELM_propstat)
-        return NE_XML_VALID;
-      else if (child == NE_ELM_responsedescription)
+    case ELEM_response:
+      if (child == ELEM_href
+          || child == ELEM_status
+          || child == ELEM_propstat)
+        return SVN_RA_DAV__XML_VALID;
+      else if (child == ELEM_responsedescription)
         /* ### I think we want this... to save a message for the user */
-        return NE_XML_DECLINE; /* valid, but we don't need to see it */
+        return SVN_RA_DAV__XML_DECLINE; /* valid, but we don't need to see it */
       else
-        return NE_XML_DECLINE; /* ignore if something else was in there */
+        return SVN_RA_DAV__XML_DECLINE; /* ignore if something else
+                                           was in there */
 
-    case NE_ELM_propstat:
-      if (child == NE_ELM_prop || child == NE_ELM_status)
-        return NE_XML_VALID;
-      else if (child == NE_ELM_responsedescription)
+    case ELEM_propstat:
+      if (child == ELEM_prop || child == ELEM_status)
+        return SVN_RA_DAV__XML_VALID;
+      else if (child == ELEM_responsedescription)
         /* ### I think we want this... to save a message for the user */
-        return NE_XML_DECLINE; /* valid, but we don't need to see it */
+        return SVN_RA_DAV__XML_DECLINE; /* valid, but we don't need to see it */
       else
-        return NE_XML_DECLINE; /* ignore if something else was in there */
+        return SVN_RA_DAV__XML_DECLINE; /* ignore if something else
+                                           was in there */
 
-    case NE_ELM_prop:
+    case ELEM_prop:
       if (child == ELEM_checked_in
           || child == ELEM_resourcetype
           || child == ELEM_version_name
           || child == ELEM_creationdate
           || child == ELEM_creator_displayname
           /* other props */)
-        return NE_XML_VALID;
+        return SVN_RA_DAV__XML_VALID;
       else
-        return NE_XML_DECLINE; /* ignore other props */
+        return SVN_RA_DAV__XML_DECLINE; /* ignore other props */
 
     case ELEM_checked_in:
-      if (child == NE_ELM_href)
-        return NE_XML_VALID;
+      if (child == ELEM_href)
+        return SVN_RA_DAV__XML_VALID;
       else
-        return NE_XML_DECLINE; /* ignore if something else was in there */
+        return SVN_RA_DAV__XML_DECLINE; /* ignore if something else
+                                           was in there */
 
     case ELEM_resourcetype:
       if (child == ELEM_collection || child == ELEM_baseline)
-        return NE_XML_VALID;
+        return SVN_RA_DAV__XML_VALID;
       else
-        return NE_XML_DECLINE; /* ignore if something else was in there */
+        return SVN_RA_DAV__XML_DECLINE; /* ignore if something else
+                                           was in there */
 
     default:
-      return NE_XML_DECLINE;
+      return SVN_RA_DAV__XML_DECLINE;
     }
 
   /* NOTREACHED */
 }
 
-static int start_element(void *userdata, const struct ne_xml_elm *elm,
+static int start_element(void *userdata, const svn_ra_dav__xml_elm_t *elm,
                          const char **atts)
 {
   merge_ctx_t *mc = userdata;
 
   switch (elm->id)
     {
-    case NE_ELM_response:
+    case ELEM_response:
       mc->response_has_error = FALSE;
 
       /* for each response (which corresponds to one resource), note that we
@@ -387,7 +395,7 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
       mc->response_parent = elm->id;
       break;
 
-    case NE_ELM_propstat:
+    case ELEM_propstat:
       /* initialize the status so we can figure out if we ever saw a
          status element in the propstat */
       mc->status = 0;
@@ -408,29 +416,29 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
       break;
 
     default:
-      /* one of: NE_ELM_href, NE_ELM_status, NE_ELM_prop,
+      /* one of: ELEM_href, ELEM_status, ELEM_prop,
          ELEM_version_name */
       break;
     }
 
-  return 0;
+  return SVN_RA_DAV__XML_VALID;
 }
 
-static int end_element(void *userdata, const struct ne_xml_elm *elm,
+static int end_element(void *userdata, const svn_ra_dav__xml_elm_t *elm,
                        const char *cdata)
 {
   merge_ctx_t *mc = userdata;
 
   switch (elm->id)
     {
-    case NE_ELM_href:
+    case ELEM_href:
       switch (mc->href_parent)
         {
         case ELEM_ignored_set:
           add_ignored(mc, cdata);
           break;
 
-        case NE_ELM_response:
+        case ELEM_response:
           /* we're now working on this href... */
           svn_ra_dav__copy_href(mc->href, cdata);
           break;
@@ -441,12 +449,12 @@ static int end_element(void *userdata, const struct ne_xml_elm *elm,
         }
       break;
 
-    case NE_ELM_responsedescription:
+    case ELEM_responsedescription:
       /* ### I don't think we'll see this right now, due to validate_element */
       /* ### remember this for error messages? */
       break;
 
-    case NE_ELM_status:
+    case ELEM_status:
       {
         ne_status hs;
 
@@ -472,7 +480,7 @@ static int end_element(void *userdata, const struct ne_xml_elm *elm,
       }
       break;
 
-    case NE_ELM_propstat:
+    case ELEM_propstat:
       /* ### does Neon have a symbol for 200? */
       if (mc->status == 200 /* OK */)
         {
@@ -481,7 +489,7 @@ static int end_element(void *userdata, const struct ne_xml_elm *elm,
       /* ### else issue an error? status==0 means we never saw one */
       break;
 
-    case NE_ELM_response:
+    case ELEM_response:
       {
         svn_error_t *err;
 
@@ -503,7 +511,7 @@ static int end_element(void *userdata, const struct ne_xml_elm *elm,
       /* When we leave a DAV:checked-in element, the parents are DAV:prop,
          DAV:propstat, then DAV:response. If we see a DAV:href "on the way
          out", then it is going to belong to the DAV:response. */
-      mc->href_parent = NE_ELM_response;
+      mc->href_parent = ELEM_response;
       break;
 
     case ELEM_version_name:
@@ -520,11 +528,11 @@ static int end_element(void *userdata, const struct ne_xml_elm *elm,
 
     default:
       /* one of: ELEM_updated_set, ELEM_merged_set, ELEM_ignored_set,
-         NE_ELM_prop, ELEM_resourcetype, ELEM_collection, ELEM_baseline */
+         ELEM_prop, ELEM_resourcetype, ELEM_collection, ELEM_baseline */
       break;
     }
 
-  return 0;
+  return SVN_RA_DAV__XML_VALID;
 }
 
 svn_error_t * svn_ra_dav__merge_activity(
