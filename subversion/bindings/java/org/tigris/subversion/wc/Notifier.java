@@ -16,6 +16,9 @@ package org.tigris.subversion.wc;
  * ====================================================================
  */
 
+import org.tigris.subversion.NodeKind;
+import org.tigris.subversion.Revision;
+
 /**
  * The methods of this interface correspond to the types and functions
  * described in the subversion C api located in 'svn_wc.h'.
