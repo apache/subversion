@@ -41,6 +41,8 @@
 #include <apr.h>
 #include <apr_errno.h>     /* APR's error system */
 
+#include "svn_types.h"     /* For SVN_PROP_EXTERNALS and other names. */
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
@@ -424,6 +426,9 @@ SVN_ERROR_START
 
   SVN_ERRDEF (SVN_ERR_CLIENT_UNVERSIONED,
               "Attempting restricted operation for unversioned resource")
+
+  SVN_ERRDEF (SVN_ERR_CLIENT_INVALID_EXTERNALS_DESCRIPTION,
+              "Format of an " SVN_PROP_EXTERNALS " property was invalid.")
 
   SVN_ERRDEF (SVN_ERR_CLIENT_MODIFIED,
               "Attempting restricted operation for modified resource")

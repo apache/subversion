@@ -386,7 +386,34 @@ svn_client__do_commit (const char *base_url,
                        apr_pool_t *pool);
 
 
+
+/*** Externals (Modules) ***/
 
+/* One external item.  This usually represents one line from an
+   svn:externals description. 
+
+   ### 
+*/
+typedef struct svn_client__external_item_t
+{
+  /* The name of the subdirectory into which this external should be
+     checked out.  (But note that these structs are often stored in
+     hash tables with the target dirs as keys, so this field will
+     often be redundant.) */
+  const char *target_dir;
+
+  /* Where to check out from. */
+  const char *url;
+
+  /* What revision to check out.  Only svn_client_revision_number,
+     svn_client_revision_date, and svn_client_revision_head are
+     valid.  ### Any reason to make this inline instead of pointer? */
+  svn_client_revision_t *revision;
+
+} svn_client__external_item_t;
+
+
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
