@@ -116,7 +116,8 @@ print_version_info (apr_pool_t *pool)
     "Subversion is released under CollabNet's open source license,\n"
     "which is available at http://subversion.tigris.org\n";
 
-  printf ("\nSubversion, version %s  (client)\n\n", SVN_VERSION);
+  printf ("\nSubversion, version %s  (client)\n", SVN_VERSION);
+  printf ("      compiled %s, %s\n\n", __DATE__, __TIME__);
   printf ("%s\n", info);
 
   printf ("The following repository access (RA) modules are available:\n\n");
