@@ -125,22 +125,31 @@
         users:</para>
 
       <itemizedlist>
-        <listitem><para>Sometimes Joe will lock a file and then forget
-            about it.  Meanwhile, because Jane is still waiting to
-            edit the file, her hands are tied.  And then Joe goes on
-            vacation.  Now Jane has to get an administrator to release
-            Joe's lock.  The situation ends up causing a lot of
-            unnecessary delay and wasted time.</para></listitem>
+        <listitem><para>
+            <emphasis>Locking may cause administrative problems.</emphasis>
+
+            Sometimes Joe will lock a file and then forget about it.
+            Meanwhile, because Jane is still waiting to edit the file,
+            her hands are tied.  And then Joe goes on vacation.  Now
+            Jane has to get an administrator to release Joe's lock.
+            The situation ends up causing a lot of unnecessary delay
+            and wasted time.</para></listitem>
         
-        <listitem><para>What if Joe is editing the beginning of a text
-            file, and Jane simply wants to edit the end of the same
-            file?  These changes don't overlap at all.  They could
-            easily edit the file simultaneously, and no great harm
-            would come, assuming the changes were properly merged
-            together.  There's no need for them to take turns in this
+        <listitem><para>
+            <emphasis>Locking may cause unnecessary serialization.</emphasis>
+
+            What if Joe is editing the beginning of a text file,
+            and Jane simply wants to edit the end of the same file?
+            These changes don't overlap at all.  They could easily
+            edit the file simultaneously, and no great harm would
+            come, assuming the changes were properly merged together.
+            There's no need for them to take turns in this
             situation.</para></listitem>
     
-        <listitem><para>Pretend that Joe locks and edits file A, while
+        <listitem><para>
+            <emphasis>Locking may create a false sense of security.</emphasis>
+
+            Pretend that Joe locks and edits file A, while
             Jane simultaneously locks and edits file B.  But suppose
             that A and B depend on one another, and the changes made
             to each are semantically incompatible.  Suddenly A and B
