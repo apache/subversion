@@ -164,6 +164,35 @@ AC_DEFUN(SVN_FIND_SWIG,
         ac_cv_python_libs="`$PYTHON ${abs_srcdir}/build/get-py-info.py --libs`"
       ])
       SWIG_PY_LIBS="$ac_cv_python_libs"
+
+      AC_CACHE_CHECK([for apr_int64_t Python/C API format string],
+                     [svn_cv_pycfmt_apr_int64_t], [
+        if test "x$svn_cv_pycfmt_apr_int64_t" = "x"; then
+          AC_EGREP_CPP([MaTcHtHiS \"lld\" EnDeNd],
+                       [#include <apr.h>
+                        MaTcHtHiS APR_INT64_T_FMT EnDeNd],
+                       [svn_cv_pycfmt_apr_int64_t="L"])
+        fi
+        if test "x$svn_cv_pycfmt_apr_int64_t" = "x"; then
+          AC_EGREP_CPP([MaTcHtHiS \"ld\" EnDeNd],r
+                       [#include <apr.h>
+                        MaTcHtHiS APR_INT64_T_FMT EnDeNd],
+                       [svn_cv_pycfmt_apr_int64_t="l"])
+        fi
+        if test "x$svn_cv_pycfmt_apr_int64_t" = "x"; then
+          AC_EGREP_CPP([MaTcHtHiS \"d\" EnDeNd],
+                       [#include <apr.h>
+                        MaTcHtHiS APR_INT64_T_FMT EnDeNd],
+                       [svn_cv_pycfmt_apr_int64_t="i"])
+        fi
+      ])
+      if test "x$svn_cv_pycfmt_apr_int64_t" = "x"; then
+        AC_MSG_ERROR([failed to recognize APR_INT64_T_FMT on this platform])
+      fi
+      AC_DEFINE_UNQUOTED([SVN_APR_INT64_T_PYCFMT],
+                         ["$svn_cv_pycfmt_apr_int64_t"],
+                         [Define to the Python/C API format character suitable]
+                         [ for apr_int64_t])
     fi
 
     if test "$JDK" != "none" -a "$SWIG_SUITABLE" = "yes" -a "$svn_swig_bindings_enable_java" = "yes"; then

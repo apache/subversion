@@ -33,6 +33,8 @@
 #include "svn_delta.h"
 #include "svn_auth.h"
 
+#include "svn_private_config.h" /* for SVN_APR_INT64_T_PYCFMT */
+
 #include "swigutil_py.h"
 
 
@@ -1388,6 +1390,43 @@ svn_error_t *svn_swig_py_log_receiver(void *baton,
     }
 
   Py_DECREF(chpaths);
+  svn_swig_py_release_py_lock();
+  return err;
+}
+
+
+svn_error_t *svn_swig_py_client_blame_receiver_func(void *baton,
+                                                    apr_int64_t line_no,
+                                                    svn_revnum_t revision,
+                                                    const char *author,
+                                                    const char *date,
+                                                    const char *line,
+                                                    apr_pool_t *pool)
+{
+  PyObject *receiver = baton;
+  PyObject *result;
+  svn_error_t *err = SVN_NO_ERROR;
+ 
+  if ((receiver == NULL) || (receiver == Py_None))
+    return SVN_NO_ERROR;
+
+  svn_swig_py_acquire_py_lock();
+
+  if ((result = PyObject_CallFunction(receiver, 
+                                      (char *)
+                                      (SVN_APR_INT64_T_PYCFMT "lsssO&"), 
+                                      line_no, revision, author, date, line, 
+                                      make_ob_pool, pool)) == NULL)
+    {
+      err = callback_exception_error();
+    }
+  else
+    {
+      if (result != Py_None)
+        err = callback_bad_return_error("Not None");
+      Py_DECREF(result);
+    }
+
   svn_swig_py_release_py_lock();
   return err;
 }
