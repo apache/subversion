@@ -339,7 +339,7 @@ def attr_exec():
 
 
 def bogus_tag():
-  "fail early on encountering an invalid symbolic name"
+  "fail on encountering an invalid symbolic name"
   ret, ign, ign = ensure_conversion('bogus-tag',
                                     '.*is not a valid tag or branch name')
   if ret:
@@ -373,7 +373,8 @@ def space_fname():
 
 
 def ctrl_char_in_log():
-  "handle a control char in a log message (issue #1106)"
+  "handle a control char in a log message"
+  # This was issue #1106.
   repos, wc, logs = ensure_conversion('ctrl-char-in-log')
   if not ((logs[1].changed_paths.get('/trunk') == 'A')
           and (logs[1].changed_paths.get('/trunk/ctrl-char-in-log') == 'A')
@@ -554,7 +555,7 @@ def simple_commits():
 
 
 def interleaved_commits():
-  "two interleaved trunk commits, with different log msgs"
+  "two interleaved trunk commits, different log msgs"
   # See test-data/main-cvsrepos/proj/README.
   repos, wc, logs = ensure_conversion('main', None, 1)
 
@@ -706,7 +707,7 @@ def mixed_commit():
 
 
 def split_branch():
-  "branch created from both trunk and from another branch"
+  "branch created from both trunk and another branch"
   # See test-data/split-branch-cvsrepos/README.
   #
   # The conversion will fail if the bug is present, and
