@@ -415,6 +415,8 @@ close_directory (void *dir_baton)
       SVN_ERR (dump_node (eb->fs_root, path,
                           svn_node_unknown, svn_node_action_delete,
                           eb->stream, eb->buffer, eb->bufsize, subpool));     
+
+      svn_pool_clear (subpool);
     }
 
   svn_pool_destroy (subpool);

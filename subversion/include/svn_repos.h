@@ -564,22 +564,23 @@ svn_error_t *svn_repos_load_fs (svn_repos_t *repos,
 /* A vtable that is driven by svn_repos_parse_dumpstream. */
 typedef struct svn_repos_parse_fns_t
 {
-  /* The parser has discovered a new revision record.  All the headers
-     are placed in HEADERS (allocated in POOL), which maps (const char
-     *) header-name ==> (const char *) header-value.  The
-     REVISION_BATON received back (also allocated in POOL) represents
-     the revision, and will be used for setting properties. */
+  /* The parser has discovered a new revision record within the
+     parsing session represented by PARSE_BATON.  All the headers are
+     placed in HEADERS (allocated in POOL), which maps (const char *)
+     header-name ==> (const char *) header-value.  The REVISION_BATON
+     received back (also allocated in POOL) represents the revision. */
   svn_error_t *(*new_revision_record) (void **revision_baton,
                                        apr_hash_t *headers,
+                                       void *parse_baton,
                                        apr_pool_t *pool);
 
   /* The parser has discovered a new node record within the current
-     revision.  All the headers are placed in HEADERS as above,
-     allocated in POOL.  The NODE_BATON received back is allocated in
-     POOL and represents the node, and will be used for setting
-     properties and fulltext. */
+     revision represented by REVISION_BATON.  All the headers are
+     placed in HEADERS as above, allocated in POOL.  The NODE_BATON
+     received back is allocated in POOL and represents the node. */
   svn_error_t *(*new_node_record) (void **node_baton,
                                    apr_hash_t *headers,
+                                   void *revision_baton,
                                    apr_pool_t *pool);
 
   /* For a given REVISION_BATON, set a property NAME to VALUE. */
@@ -616,7 +617,7 @@ typedef struct svn_repos_parse_fns_t
 
 
 /* Read and parse dumpfile-formatted STREAM, calling callbacks in
-   PARSE_FNS and using POOL for allocations.
+   PARSE_FNS/PARSE_BATON, and using POOL for allocations.
 
    This parser has built-in knowledge of the dumpfile format, but only
    in a general sense:
@@ -636,6 +637,7 @@ typedef struct svn_repos_parse_fns_t
 svn_error_t *
 svn_repos_parse_dumpstream (svn_stream_t *stream,
                             const svn_repos_parser_fns_t *parse_fns,
+                            void *parse_baton,
                             apr_pool_t *pool);
 
 
