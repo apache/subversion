@@ -47,9 +47,10 @@
  * individuals on behalf of Collab.Net.
  */
 
-#include <svn_string.h>  /* defines svn_string_t */
-#include <string.h>      /* for memcpy() and memcmp() */
+#include <string.h>      /* for memcpy(), memcmp() */
+#include <stdlib.h>      /* for size_t, malloc(), realloc() */
 #include <stdio.h>       /* for svn_string_print() utility */
+#include <svn_string.h>  /* loads <svn_types.h> and string prototypes */
 
 
 /* create a new bytestring containing a C string (null-terminated) */
@@ -59,7 +60,8 @@ svn_string_create (char *cstring)
 {
   svn_string_t *new_string;
   
-  new_string = xmalloc (sizeof(svn_string_t)); /* TODO:  xmalloc */
+  /* TODO:  xmalloc */
+  new_string = (svn_string_t *) malloc (sizeof(svn_string_t)); 
   new_string->data = NULL;
   new_string->len = 0;
   new_string->blocksize = 0;
@@ -81,7 +83,8 @@ svn_string_ncreate (char *bytes, size_t size)
 {
   svn_string_t *new_string;
 
-  new_string = xmalloc (sizeof(svn_string_t)); /* TODO:  xmalloc */
+  /* TODO:  xmalloc */
+  new_string = (svn_string_t *) malloc (sizeof(svn_string_t)); 
   new_string->data = NULL;
   new_string->len = 0;
   new_string->blocksize = 0;
@@ -118,7 +121,7 @@ svn_string_setnull (svn_string_t *str)
 void 
 svn_string_fillchar (svn_string_t *str, unsigned char c)
 {
-  int i;
+  size_t i;
   
   if (c == 0) 
     {
@@ -176,11 +179,12 @@ svn_string_appendbytes (svn_string_t *str, char *bytes, size_t count)
   if (total_len >= str->blocksize)
     {
       str->blocksize = total_len * 2;
-      str->data = xrealloc (str->data, str->blocksize); /* TODO: xrealloc */
+      /* TODO: xrealloc instead */
+      str->data = (char *) realloc (str->data, str->blocksize); 
     }
 
   /* get address 1 byte beyond end of original bytestring */
-  start_address = str->data[str->len];
+  start_address = &str->data[str->len];
 
   memcpy (start_address, (void *) bytes, count);
   str->len = total_len;
@@ -200,7 +204,7 @@ svn_string_appendstr (svn_string_t *targetstr, svn_string_t *appendstr)
 /* duplicate a bytestring */
 
 svn_string_t *
-svn_string_dup (svn_string_t original_string)
+svn_string_dup (svn_string_t *original_string)
 {
   return (svn_string_ncreate (original_string->data,
                               original_string->len));
@@ -214,8 +218,6 @@ svn_string_dup (svn_string_t original_string)
 svn_boolean_t
 svn_string_compare (svn_string_t *str1, svn_string_t *str2)
 {
-  int i;
-
   /* easy way out :)  */
   if (str1->len != str2->len)
     return FALSE;
@@ -240,14 +242,17 @@ svn_string_print (svn_string_t *str)
 
   if (str->len >= 0) 
     {
+      printf("String blocksize: %d, length: %d\n", 
+             str->blocksize, str->len);
       while (i < str->len) 
         {
           if (putchar (str->data[i]) == EOF)
             {
-              printf(stderr, "putchar() error at position %d !\n", i);
+              fprintf(stderr, "putchar() error at position %d !\n", i);
             }
           i++;
         }
+      putchar('\n');
     }
 }
 
