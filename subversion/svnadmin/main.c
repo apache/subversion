@@ -56,70 +56,6 @@ create_stdio_stream (svn_stream_t **stream,
 
 
 
-/*** Tree printing. ***/
-
-/* Print the tree at ROOT:PATH, indenting by INDENTATION spaces.
-   Use POOL for any allocation.  */
-static svn_error_t *
-print_tree (svn_fs_root_t *root,
-            const char *path,
-            int indentation,
-            apr_pool_t *pool)
-{
-  apr_hash_t *entries;
-  apr_hash_index_t *hi;
-  apr_pool_t *subpool = svn_pool_create (pool);
-
-  SVN_ERR (svn_fs_dir_entries (&entries, root, path, pool));
-  for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
-    {
-      const void *key;
-      apr_ssize_t keylen;
-      void *val;
-      svn_fs_dirent_t *this_entry;
-      const char *this_full_path, *native_name;
-      int is_dir;
-      int i;
-      const svn_fs_id_t *id;
-      svn_string_t *id_str;
-
-      apr_hash_this (hi, &key, &keylen, &val);
-      this_entry = val;
-
-      this_full_path = apr_psprintf (subpool, "%s/%s", path, this_entry->name);
-
-      /* Indent. */
-      for (i = 0; i < indentation; i++)
-        printf (" ");
-
-      SVN_ERR (svn_utf_cstring_from_utf8 (&native_name, this_entry->name,
-                                          subpool));
-      printf ("%s", native_name);
-      
-      SVN_ERR (svn_fs_node_id (&id, root, this_full_path, subpool));
-      id_str = svn_fs_unparse_id (id, pool);
-
-      SVN_ERR (svn_fs_is_dir (&is_dir, root, this_full_path, subpool));
-      if (is_dir)
-        {
-          printf ("/ <%s>\n", id_str->data);  /* trailing slash for dirs */
-          print_tree (root, this_full_path, indentation + 1, subpool);
-        }
-      else   /* assume it's a file */
-        {
-          apr_off_t len;
-          SVN_ERR (svn_fs_file_length (&len, root, this_full_path, subpool));
-          printf (" <%s> [%" APR_OFF_T_FMT "]\n", id_str->data, len);
-        }
-      svn_pool_clear (subpool);
-    }
-
-  svn_pool_destroy (subpool);
-  return SVN_NO_ERROR;
-}
-
-
-
 /** Subcommands. **/
 
 static svn_opt_subcommand_t
