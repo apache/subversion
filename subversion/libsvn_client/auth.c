@@ -76,7 +76,8 @@ authorize_username (void **session_baton,
                     svn_ra_plugin_t *ra_lib,
                     svn_stringbuf_t *path,
                     svn_client_auth_t *auth_obj,
-                    void *authenticator,
+                    const void *authenticator,
+                    void *auth_baton,
                     apr_pool_t *pool)
 {
   apr_uid_t uid;
@@ -124,10 +125,10 @@ authorize_username (void **session_baton,
     }
 
   /* Send username to the RA layer. */
-  SVN_ERR (auth_vtable->set_username (username->data, auth_vtable->pbaton));
+  SVN_ERR (auth_vtable->set_username (username->data, auth_baton));
 
   /* Get (and implicitly return) the session baton. */
-  SVN_ERR (auth_vtable->authenticate (session_baton, auth_vtable->pbaton));
+  SVN_ERR (auth_vtable->authenticate (session_baton, auth_baton));
 
   if (need_to_store)
     {
@@ -160,7 +161,8 @@ authorize_simple_password (void **session_baton,
                            svn_ra_plugin_t *ra_lib,
                            svn_stringbuf_t *path,
                            svn_client_auth_t *auth_obj,
-                           void *authenticator,
+                           const void *authenticator,
+                           void *auth_baton,
                            apr_pool_t *pool)
 {
   svn_error_t *err;
@@ -224,11 +226,11 @@ authorize_simple_password (void **session_baton,
     }
 
   /* Send username/password to the RA layer. */
-  SVN_ERR (auth_vtable->set_username (username->data, auth_vtable->pbaton));
-  SVN_ERR (auth_vtable->set_password (password->data, auth_vtable->pbaton));
+  SVN_ERR (auth_vtable->set_username (username->data, auth_baton));
+  SVN_ERR (auth_vtable->set_password (password->data, auth_baton));
   
   /* Get (and implicitly return) the session baton. */
-  SVN_ERR (auth_vtable->authenticate (session_baton, auth_vtable->pbaton));
+  SVN_ERR (auth_vtable->authenticate (session_baton, auth_baton));
 
   /* If we had to display a prompt to the user... */
   if (need_to_store)
@@ -266,7 +268,8 @@ svn_client_authenticate (void **session_baton,
                          svn_client_auth_t *auth_obj,
                          apr_pool_t *pool)
 {
-  void *obj;
+  const void *obj;
+  void *auth_baton;
 
   /* Search for available authentication methods, moving from simplest
      to most complex. */
@@ -275,25 +278,25 @@ svn_client_authenticate (void **session_baton,
   /* Simple username-only authentication. */
   if (ra_lib->auth_methods & SVN_RA_AUTH_USERNAME)
     {
-      SVN_ERR (ra_lib->get_authenticator (&obj, repos_URL,
+      SVN_ERR (ra_lib->get_authenticator (&obj, &auth_baton, repos_URL,
                                           SVN_RA_AUTH_USERNAME, /* method */
                                           pool));
       
       SVN_ERR (authorize_username (session_baton,
                                    ra_lib, path, auth_obj,
-                                   obj, pool));
+                                   obj, auth_baton, pool));
     }
 
   /* Username and password authentication. */
   else if (ra_lib->auth_methods & SVN_RA_AUTH_SIMPLE_PASSWORD)
     {
-      SVN_ERR (ra_lib->get_authenticator (&obj, repos_URL,
+      SVN_ERR (ra_lib->get_authenticator (&obj, &auth_baton, repos_URL,
                                           SVN_RA_AUTH_SIMPLE_PASSWORD,
                                           pool));
       
       SVN_ERR (authorize_simple_password (session_baton,
                                           ra_lib, path, auth_obj,
-                                          obj, pool));
+                                          obj, auth_baton, pool));
     }
 
   else

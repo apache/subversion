@@ -120,17 +120,14 @@ typedef struct svn_ra_reporter_t
 /* A protocol which only needs a username.  (like ra_local) */
 typedef struct svn_ra_username_authenticator_t
 {
-  /* Private baton;  pass to all routines below. */
-  void *pbaton;
-
   /* Set the username to USERNAME. */
-  svn_error_t *(*set_username) (char *username, void *pbaton);
+  svn_error_t *(*set_username) (const char *username, void *auth_baton);
 
-  /* Authenticate the set username, passing the private PBATON field.
-     If successful, return a valid session handle in *SESSION_BATON.
-     If authentication fails, SVN_ERR_RA_NOT_AUTHORIZED is
-     returned. */
-  svn_error_t *(*authenticate) (void **session_baton, void *pbaton);
+  /* Authenticate the set username, passing the AUTH_BATON returned with
+     this authenticator structure. If successful, return a valid session
+     handle in *SESSION_BATON. If authentication fails,
+     SVN_ERR_RA_NOT_AUTHORIZED is returned. */
+  svn_error_t *(*authenticate) (void **session_baton, void *auth_baton);
 
 } svn_ra_username_authenticator_t;
 
@@ -140,20 +137,17 @@ typedef struct svn_ra_username_authenticator_t
 /* A protocol which only needs a name and password.  (like ra_dav) */
 typedef struct svn_ra_simple_password_authenticator_t
 {
-  /* Private baton;  pass to all routines below. */
-  void *pbaton;
-
   /* Set the username to USERNAME. */
-  svn_error_t *(*set_username) (char *username, void *pbaton);
+  svn_error_t *(*set_username) (const char *username, void *auth_baton);
   
   /* Set the password to PASSWORD. */
-  svn_error_t *(*set_password) (char *password, void *pbaton);
+  svn_error_t *(*set_password) (const char *password, void *auth_baton);
 
-  /* Authenticate the set username & password, passing the private
-     PBATON field.  If successful, return a valid session handle in
-     *SESSION_BATON.  If authentication fails,
+  /* Authenticate the set username & password, passing the AUTH_BATON
+     returned with this authenticator structure. If successful, return a
+     valid session handle in *SESSION_BATON.  If authentication fails,
      SVN_ERR_RA_NOT_AUTHORIZED is returned. */
-  svn_error_t *(*authenticate) (void **session_baton, void *pbaton);
+  svn_error_t *(*authenticate) (void **session_baton, void *auth_baton);
 
 } svn_ra_simple_password_authenticator_t;
 
@@ -189,13 +183,15 @@ typedef struct svn_ra_plugin_t
   
   /* Begin an RA session to REPOS_URL, using authentication method
      METHOD.  Return a vtable structure in *AUTHENTICATOR that handles
-     the method. If authenticator object is driven successfully, the
-     reward will be a session_baton. (See previous auth section.)
+     the method; its corresponding baton is returned in *AUTH_BATON. If
+     authenticator object is driven successfully, the reward will be a
+     session_baton. (See previous auth section.)
 
-     POOL will be the place where the authenticator and session_baton
-     are allocated, as well as the storage area used by further calls
-     to RA routines. */
-  svn_error_t *(*get_authenticator) (void **authenticator,
+     POOL will be the place where the authenticator, auth_baton and
+     session_baton are allocated, as well as the storage area used by
+     further calls to RA routines. */
+  svn_error_t *(*get_authenticator) (const void **authenticator,
+                                     void **auth_baton,
                                      svn_stringbuf_t *repos_URL,
                                      apr_uint64_t method,
                                      apr_pool_t *pool);

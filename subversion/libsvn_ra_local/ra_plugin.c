@@ -101,7 +101,7 @@ authenticate (void **sbaton, void *pbaton)
 
 /* Lives within the authenticator. */
 static svn_error_t *
-set_username (char *username, void *pbaton)
+set_username (const char *username, void *pbaton)
 {
   svn_ra_local__session_baton_t *session_baton =
     (svn_ra_local__session_baton_t *) pbaton;
@@ -113,15 +113,20 @@ set_username (char *username, void *pbaton)
   return SVN_NO_ERROR;
 }
 
+static const svn_ra_username_authenticator_t username_authenticator =
+{
+  set_username,
+  authenticate
+};
 
 /* Return the authenticator vtable for username-only auth. */
 static svn_error_t *
-get_authenticator (void **authenticator,
+get_authenticator (const void **authenticator,
+                   void **auth_baton,
                    svn_stringbuf_t *repos_URL,
                    apr_uint64_t method,
                    apr_pool_t *pool)
 {
-  svn_ra_username_authenticator_t *auth_obj;
   svn_ra_local__session_baton_t *session_baton;
 
   /* Sanity check -- this RA library only supports one method. */
@@ -130,19 +135,13 @@ get_authenticator (void **authenticator,
       svn_error_create (SVN_ERR_RA_UNKNOWN_AUTH, 0, NULL, pool,
                         "ra_local only supports the AUTH_USERNAME method.");
 
-  /* Allocate the authenticator object;  be sneaky and optimize by
-     creating the session_baton as the 'pbaton' field as well.  */
-  auth_obj = apr_pcalloc (pool, sizeof(*auth_obj));
+  /* Allocate and stash the session_baton args we have already. */
   session_baton = apr_pcalloc (pool, sizeof(*session_baton));
-  auth_obj->pbaton = session_baton;
-  auth_obj->set_username = set_username;
-  auth_obj->authenticate = authenticate;
-
-  /* Stash the session_baton args we have already. */
   session_baton->pool = pool;
   session_baton->repository_URL = repos_URL;
   
-  *authenticator = auth_obj;
+  *authenticator = &username_authenticator;
+  *auth_baton = session_baton;
   
   return SVN_NO_ERROR;
 }
