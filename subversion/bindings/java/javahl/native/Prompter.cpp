@@ -451,7 +451,9 @@ svn_error_t *Prompter::username_prompt(svn_auth_cred_username_t **cred_p, void *
 	return SVN_NO_ERROR;
 }
 svn_error_t *Prompter::ssl_server_trust_prompt(svn_auth_cred_ssl_server_trust_t **cred_p,
-										void *baton,int failures, 
+										void *baton,
+										const char *realm,
+										int failures, 
 										const svn_auth_ssl_server_cert_info_t *cert_info,
 										apr_pool_t *pool)
 {
@@ -460,7 +462,9 @@ svn_error_t *Prompter::ssl_server_trust_prompt(svn_auth_cred_ssl_server_trust_t 
 	
 	bool allow_perm_accept = (failures & SVN_AUTH_SSL_UNKNOWNCA) ? true : false;
 
-	std::string question = "Error validating server certificate:\n";
+	std::string question = "Error validating server certificate for";
+	question += realm;
+	question += ":\n";
 	
 	if(failures & SVN_AUTH_SSL_UNKNOWNCA)
 	{

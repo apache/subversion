@@ -108,7 +108,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 ws2_32.lib Rpcrt4.lib Mswsock.lib ../../../../../db4-win32\lib\libdb41.lib ../../../../../Release/subversion/libsvn_fs/libsvn_fs-1.lib ../../../../../Release/subversion/libsvn_diff/libsvn_diff-1.lib ../../../../../Release/subversion/libsvn_repos/libsvn_repos-1.lib ../../../../../Release/subversion/libsvn_delta/libsvn_delta-1.lib ../../../../../Release/subversion/libsvn_ra_dav/libsvn_ra_dav-1.lib ../../../../../Release/subversion/libsvn_ra_svn/libsvn_ra_svn-1.lib ../../../../../Release/subversion/libsvn_ra_local/libsvn_ra_local-1.lib ../../../../../Release/subversion/libsvn_ra/libsvn_ra-1.lib ../../../../../Release/subversion/libsvn_wc/libsvn_wc-1.lib ../../../../../apr/LibR/apr.lib ../../../../../apr-iconv/LibR/apriconv.lib ../../../../../apr-util/LibR/aprutil.lib ../../../../../Release/subversion/libsvn_subr/libsvn_subr-1.lib ../../../../../Release/subversion/libsvn_client/libsvn_client-1.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /dll /machine:I386
-# ADD LINK32 "C:\programme\microsoft sdk\lib\shfolder.lib" ws2_32.lib Rpcrt4.lib Mswsock.lib ../../../../../db4-win32\lib\libdb40.lib ../../../../../Release/subversion/libsvn_fs/libsvn_fs-1.lib ../../../../../Release/subversion/libsvn_diff/libsvn_diff-1.lib ../../../../../Release/subversion/libsvn_repos/libsvn_repos-1.lib ../../../../../Release/subversion/libsvn_delta/libsvn_delta-1.lib ../../../../../Release/subversion/libsvn_ra_dav/libsvn_ra_dav-1.lib ../../../../../Release/subversion/libsvn_ra_svn/libsvn_ra_svn-1.lib ../../../../../Release/subversion/libsvn_ra_local/libsvn_ra_local-1.lib ../../../../../Release/subversion/libsvn_ra/libsvn_ra-1.lib ../../../../../Release/subversion/libsvn_wc/libsvn_wc-1.lib ../../../../../apr/LibR/apr.lib ../../../../../apr-iconv/LibR/apriconv.lib ../../../../../apr-util/LibR/aprutil.lib ../../../../../Release/subversion/libsvn_subr/libsvn_subr-1.lib ../../../../../Release/subversion/libsvn_client/libsvn_client-1.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /dll /machine:I386
+# ADD LINK32 "C:\programme\microsoft sdk\lib\shfolder.lib" ws2_32.lib Rpcrt4.lib Mswsock.lib ../../../../../db4-win32\lib\libdb40.lib ../../../../../Release/subversion/libsvn_fs/libsvn_fs-1.lib ../../../../../Release/subversion/libsvn_diff/libsvn_diff-1.lib ../../../../../Release/subversion/libsvn_repos/libsvn_repos-1.lib ../../../../../Release/subversion/libsvn_delta/libsvn_delta-1.lib ../../../../../Release/subversion/libsvn_ra_dav/libsvn_ra_dav-1.lib ../../../../../Release/subversion/libsvn_ra_svn/libsvn_ra_svn-1.lib ../../../../../Release/subversion/libsvn_ra_local/libsvn_ra_local-1.lib ../../../../../Release/subversion/libsvn_ra/libsvn_ra-1.lib ../../../../../Release/subversion/libsvn_wc/libsvn_wc-1.lib ../../../../../apr/LibR/apr.lib ../../../../../apr-iconv/LibR/apriconv.lib ../../../../../apr-util/LibR/aprutil.lib ../../../../../apr-util/xml/expat/lib/libR/xml.lib ../../../../../Release/subversion/libsvn_subr/libsvn_subr-1.lib ../../../../../Release/subversion/libsvn_client/libsvn_client-1.lib ../../../../../neon/libneon.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /dll /machine:I386
 # SUBTRACT LINK32 /pdb:none
 
 !ELSEIF  "$(CFG)" == "svnjavahl - Win32 Debug DB40"
@@ -136,7 +136,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 Rpcrt4.lib Mswsock.lib ../../../../../db4-win32\lib\libdb41d.lib ../../../../../Debug/subversion/libsvn_fs/libsvn_fs-1.lib ../../../../../Debug/subversion/libsvn_repos/libsvn_repos-1.lib ../../../../../Debug/subversion/libsvn_delta/libsvn_delta-1.lib ../../../../../Debug/subversion/libsvn_ra_dav/libsvn_ra_dav-1.lib ../../../../../Debug/subversion/libsvn_ra_svn/libsvn_ra_svn-1.lib ../../../../../Debug/subversion/libsvn_ra_local/libsvn_ra_local-1.lib ../../../../../Debug/subversion/libsvn_ra/libsvn_ra-1.lib ../../../../../Debug/subversion/libsvn_wc/libsvn_wc-1.lib ../../../../../apr/LibD/apr.lib ../../../../../apr-iconv/LibD/apriconv.lib ../../../../../apr-util/LibD/aprutil.lib ../../../../../Debug/subversion/libsvn_subr/libsvn_subr-1.lib ../../../../../Debug/subversion/libsvn_diff/libsvn_diff-1.lib ../../../../../Debug/subversion/libsvn_client/libsvn_client-1.lib ws2_32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /dll /debug /machine:I386 /pdbtype:sept
-# ADD LINK32 "C:\programme\microsoft sdk\lib\shfolder.lib" Rpcrt4.lib Mswsock.lib ../../../../../db4-win32\lib\libdb40d.lib ../../../../../Debug/subversion/libsvn_fs/libsvn_fs-1.lib ../../../../../Debug/subversion/libsvn_repos/libsvn_repos-1.lib ../../../../../Debug/subversion/libsvn_delta/libsvn_delta-1.lib ../../../../../Debug/subversion/libsvn_ra_dav/libsvn_ra_dav-1.lib ../../../../../Debug/subversion/libsvn_ra_svn/libsvn_ra_svn-1.lib ../../../../../Debug/subversion/libsvn_ra_local/libsvn_ra_local-1.lib ../../../../../Debug/subversion/libsvn_ra/libsvn_ra-1.lib ../../../../../Debug/subversion/libsvn_wc/libsvn_wc-1.lib ../../../../../apr/LibD/apr.lib ../../../../../apr-iconv/LibD/apriconv.lib ../../../../../apr-util/LibD/aprutil.lib ../../../../../Debug/subversion/libsvn_subr/libsvn_subr-1.lib ../../../../../Debug/subversion/libsvn_diff/libsvn_diff-1.lib ../../../../../Debug/subversion/libsvn_client/libsvn_client-1.lib ws2_32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /dll /debug /machine:I386 /pdbtype:sept
+# ADD LINK32 "C:\programme\microsoft sdk\lib\shfolder.lib" Rpcrt4.lib Mswsock.lib ../../../../../db4-win32\lib\libdb40d.lib ../../../../../Debug/subversion/libsvn_fs/libsvn_fs-1.lib ../../../../../Debug/subversion/libsvn_repos/libsvn_repos-1.lib ../../../../../Debug/subversion/libsvn_delta/libsvn_delta-1.lib ../../../../../Debug/subversion/libsvn_ra_dav/libsvn_ra_dav-1.lib ../../../../../Debug/subversion/libsvn_ra_svn/libsvn_ra_svn-1.lib ../../../../../Debug/subversion/libsvn_ra_local/libsvn_ra_local-1.lib ../../../../../Debug/subversion/libsvn_ra/libsvn_ra-1.lib ../../../../../Debug/subversion/libsvn_wc/libsvn_wc-1.lib ../../../../../apr/LibD/apr.lib ../../../../../apr-iconv/LibD/apriconv.lib ../../../../../apr-util/LibD/aprutil.lib ../../../../../apr-util/xml/expat/lib/libD/xml.lib ../../../../../Debug/subversion/libsvn_subr/libsvn_subr-1.lib ../../../../../Debug/subversion/libsvn_diff/libsvn_diff-1.lib ../../../../../Debug/subversion/libsvn_client/libsvn_client-1.lib ../../../../../neon/libneonD.lib ws2_32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /dll /debug /machine:I386 /pdbtype:sept
 # SUBTRACT LINK32 /pdb:none
 
 !ENDIF 
@@ -657,7 +657,7 @@ SOURCE=..\src\org\tigris\subversion\javahl\PromptUserPassword2.java
 InputPath=..\src\org\tigris\subversion\javahl\PromptUserPassword2.java
 
 "..\cls\org\tigris\subversion\javahl\PromptUserPassword2.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	avac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/PromptUserPassword2.java
+	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/PromptUserPassword2.java
 
 # End Custom Build
 
@@ -667,7 +667,7 @@ InputPath=..\src\org\tigris\subversion\javahl\PromptUserPassword2.java
 InputPath=..\src\org\tigris\subversion\javahl\PromptUserPassword2.java
 
 "..\cls\org\tigris\subversion\javahl\PromptUserPassword2.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	avac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/PromptUserPassword2.java
+	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/PromptUserPassword2.java
 
 # End Custom Build
 
@@ -677,7 +677,7 @@ InputPath=..\src\org\tigris\subversion\javahl\PromptUserPassword2.java
 InputPath=..\src\org\tigris\subversion\javahl\PromptUserPassword2.java
 
 "..\cls\org\tigris\subversion\javahl\PromptUserPassword2.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	avac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/PromptUserPassword2.java
+	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/PromptUserPassword2.java
 
 # End Custom Build
 
@@ -687,7 +687,7 @@ InputPath=..\src\org\tigris\subversion\javahl\PromptUserPassword2.java
 InputPath=..\src\org\tigris\subversion\javahl\PromptUserPassword2.java
 
 "..\cls\org\tigris\subversion\javahl\PromptUserPassword2.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	avac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/PromptUserPassword2.java
+	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/PromptUserPassword2.java
 
 # End Custom Build
 
@@ -1120,7 +1120,7 @@ SOURCE=..\cls\org\tigris\subversion\javahl\PromptUserPassword2.class
 # Begin Custom Build
 InputPath=..\cls\org\tigris\subversion\javahl\PromptUserPassword2.class
 
-"org_tigris_subversion_javahl_PrompUserPassword2.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+"org_tigris_subversion_javahl_PromptUserPassword2.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
 	javah -force -classpath ../cls org.tigris.subversion.javahl.PromptUserPassword2
 
 # End Custom Build
@@ -1130,7 +1130,7 @@ InputPath=..\cls\org\tigris\subversion\javahl\PromptUserPassword2.class
 # Begin Custom Build
 InputPath=..\cls\org\tigris\subversion\javahl\PromptUserPassword2.class
 
-"org_tigris_subversion_javahl_PrompUserPassword2.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+"org_tigris_subversion_javahl_PromptUserPassword2.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
 	javah -force -classpath ../cls org.tigris.subversion.javahl.PromptUserPassword2
 
 # End Custom Build
@@ -1140,7 +1140,7 @@ InputPath=..\cls\org\tigris\subversion\javahl\PromptUserPassword2.class
 # Begin Custom Build
 InputPath=..\cls\org\tigris\subversion\javahl\PromptUserPassword2.class
 
-"org_tigris_subversion_javahl_PrompUserPassword2.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+"org_tigris_subversion_javahl_PromptUserPassword2.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
 	javah -force -classpath ../cls org.tigris.subversion.javahl.PromptUserPassword2
 
 # End Custom Build
