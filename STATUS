@@ -150,3 +150,11 @@ Bindings changes that don't affect the build system:
      Justification: Perl bindings won't even build now without this.
      Votes:
       +1: breser
+
+     * r8348
+     Don't assume an int is the same size as a long in perl bindings.
+     Justification: Prevent potential bizzare breakage on 64-bit platforms.
+     And make blame work right when/if the apr_off_t thing gets handled
+     on 32-bit platforms.
+     Votes:
+      +1: breser
