@@ -20,7 +20,10 @@ close TOPMAKE;
 
 my @modules = qw/client delta fs ra repos wc/;
 my @ldpaths = ('../.libs',
-               map {"../../../libsvn_$_/.libs"} (@modules, qw/diff subr/));
+               map {"../../../libsvn_$_/.libs"} (@modules, qw/diff subr
+                                                              ra_local
+                                                              ra_svn
+                                                              ra_dav/));
 my @ldmodules = map {"-lsvn_$_-1"} (@modules, qw/diff subr/);
 
 my $apr_config = $ENV{APR_CONFIG} || '/usr/local/lib/apache2/apr-config';
