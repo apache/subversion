@@ -167,40 +167,6 @@ typedef svn_error_t *(svn_text_delta_window_handler_t)
 
 
 
-/* Property deltas.  */
-
-typedef enum
-{
-  svn_prop_file = 1,
-  svn_prop_dir,
-  svn_prop_dirent
-} svn_propchange_location_t;
-
-
-/* This represents an *entire* propchange, all in memory. */
-typedef struct svn_propchange_t
-{
-  enum {
-    svn_prop_set = 1,
-    svn_prop_delete
-  } kind;
-
-  svn_propchange_location_t loc;
-
-  svn_string_t *name;
-  svn_string_t *value;
-
-} svn_propchange_t;
-
-
-
-/* A function to consume an entire in-memory propchange structure. */
-typedef svn_error_t *(svn_propchange_handler_t) 
-     (svn_propchange_t *propchange, void *baton);
-
-
-
-
 /* Traversing tree deltas.  */
 
 /* A structure of callback functions the parser will invoke as it
@@ -229,10 +195,17 @@ typedef struct svn_delta_walk_t
        the empty property list (for the `add_FOO' functions).
 
      So there.  */
+
+
+  /* Deleting things.  */
        
   /* Remove the directory entry named NAME.  */
   svn_error_t *(*delete) (svn_string_t *name,
-			  void *walk_baton, void *parent_baton);
+			  void *walk_baton,
+                          void *parent_baton);
+
+
+  /* Creating and modifying directories.  */
   
   /* We are going to add a new subdirectory named NAME.  We will use
      the value this callback stores in *CHILD_BATON as the
@@ -241,7 +214,8 @@ typedef struct svn_delta_walk_t
      ANCESTOR_PATH is zero, the changes are relative to an empty
      directory. */
   svn_error_t *(*add_directory) (svn_string_t *name,
-				 void *walk_baton, void *parent_baton,
+				 void *walk_baton,
+                                 void *parent_baton,
 				 svn_string_t *ancestor_path,
 				 svn_vernum_t ancestor_version,
 				 void **child_baton);
@@ -253,78 +227,98 @@ typedef struct svn_delta_walk_t
      changes to the base; if ANCESTOR_PATH is zero, the changes are
      relative to an empty directory.  */
   svn_error_t *(*replace_directory) (svn_string_t *name,
-				     void *walk_baton, void *parent_baton,
+				     void *walk_baton,
+                                     void *parent_baton,
 				     svn_string_t *ancestor_path,
 				     svn_vernum_t ancestor_version,
 				     void **child_baton);
 
-  /* We are done processing a subdirectory, whose baton is
-     CHILD_BATON.  This lets the caller do any cleanups necessary,
-     since CHILD_BATON won't be used any more.  */
+  /* Change the value of a directory's property.
+     - DIR_BATON specifies the directory whose property should change.
+     - NAME is the name of the property to change.
+     - VALUE is the new value of the property, or zero if the property
+     should be removed altogether.  */
+  svn_error_t *(*change_dir_prop) (void *walk_baton,
+                                   void *dir_baton,
+                                   svn_string_t *name,
+                                   svn_string_t *value);
+
+  /* Change the value of a directory entry's property.
+     - DIR_BATON specifies the directory.
+     - ENTRY is the name of the entry in that directory whose property 
+       should be changed.
+     - NAME is the name of the property to change.
+     - VALUE is the new value of the property, or zero if the property
+     should be removed altogether.  */
+  svn_error_t *(*change_dirent_prop) (void *walk_baton,
+                                      void *dir_baton,
+                                      svn_string_t *entry,
+                                      svn_string_t *name,
+                                      svn_string_t *value);
+
+  /* We are done processing a subdirectory, whose baton is CHILD_BATON
+     (set by add_directory or replace_directory).  We won't be using
+     the baton any more, so whatever resources it refers to may now be
+     freed.  */
   svn_error_t *(*finish_directory) (void *child_baton);
 
-  /* We are done processing a file */
-  svn_error_t *(*finish_file) (void *child_baton);
 
-  
-  /* We're about to start receiving text-delta windows. HANDLER and
-     HANDLER_BATON specify a function to consume a series of these
-     windows.  If ANCESTOR_PATH is zero, the changes are relative to
-     the empty file. */
-  svn_error_t *(*begin_textdelta) (void *walk_baton, void *parent_baton,
-                                   svn_text_delta_window_handler_t **handler,
-                                   void **handler_baton);
+  /* Creating and modifying files.  */
 
-
-  /* Handle property changes a full change at a time.  This is not a
-     completely streamy interface, but it's probably what we'll use
-     for the forseeable future.  If we ever get properties whose names
-     or values are huge, there is a fully streamy interface available
-     too (see (1) above, but note that this would imply a change to
-     how property names are set in XML as well, since names are
-     currently XML attributes and therefore can't really be streamed
-     at parse time anyway). */
-  svn_error_t *(*begin_propdelta) (void *walk_baton, void *parent_baton,
-                                   svn_propchange_location_t location,
-                                   svn_propchange_handler_t **handler,
-                                   void **baton);
-
-
-  /* The first two batons are the familiar story, the last is the
-     handler_baton that was passed to the begin_* function. */
-  svn_error_t *(*finish_textdelta) (void *walk_baton, 
-                                    void *parent_baton,
-                                    void *handler_baton);
-
-  svn_error_t *(*finish_propdelta) (void *walk_baton, 
-                                    void *parent_baton,
-                                    void *handler_baton,
-                                    svn_propchange_location_t location);
-
-
-  /* We are going to add a new file named NAME.  The callback can store
-     a baton for the new file in **FILE_BATON; whatever value is stored there
-     can be passed on to 
-
-should store
-     whatever state it needs for that file in **FILE_BATON
-
-     **FILE_BATON to 
+  /* We are going to add a new file named NAME.  The callback can
+     store a baton for this new file in **FILE_BATON; whatever value
+     it stores there will be passed through to apply_textdelta and/or
+     apply_propdelta.  */
   svn_error_t *(*add_file) (svn_string_t *name,
-			    void *walk_baton, void *parent_baton,
+			    void *walk_baton,
+                            void *parent_baton,
 			    svn_string_t *ancestor_path,
-			    svn_vernum_t ancestor_version);
-
+			    svn_vernum_t ancestor_version,
+                            void **file_baton);
 
   /* We are going to change the directory entry named NAME to a file.
-     TEXT_DELTA specifies the file contents as a delta relative to the
-     base, or the empty file if ANCESTOR_PATH is zero.  */
+     The callback can store a baton for this new file in **FILE_BATON;
+     whatever value it stores there will be passed through to
+     apply_textdelta and/or apply_propdelta.  */
   svn_error_t *(*replace_file) (svn_string_t *name,
-				void *walk_baton, void *parent_baton,
+				void *walk_baton,
+                                void *parent_baton,
 				svn_string_t *ancestor_path,
 				svn_vernum_t ancestor_version,
                                 void **file_baton);
 
+  /* Apply a text delta, yielding the new version of a file.
+
+     FILE_BATON indicates the file we're creating or updating, and the
+     ancestor file on which it is based; it is the baton set by some
+     prior `add_file' or `replace_file' callback.
+
+     The callback should set *HANDLER to a text delta window
+     handler; we will then call *HANDLER on successive text
+     delta windows as we recieve them.  The callback should set
+     *HANDLER_BATON to the value we should pass as the BATON
+     argument to *HANDLER.  */
+  svn_error_t *(*apply_textdelta) (void *walk_baton,
+                                   void *parent_baton,
+                                   void *file_baton, 
+                                   svn_text_delta_window_handler_t **handler,
+                                   void **handler_baton);
+
+  /* Change the value of a file's property.
+     - FILE_BATON specifies the file whose property should change.
+     - NAME is the name of the property to change.
+     - VALUE is the new value of the property, or zero if the property
+     should be removed altogether.  */
+  svn_error_t *(*change_file_prop) (void *walk_baton,
+                                    void *parent_baton,
+                                    void *file_baton,
+                                    svn_string_t *name,
+                                    svn_string_t *value);
+
+  /* We are done processing a file, whose baton is FILE_BATON (set by
+     `add_file' or `replace_file').  We won't be using the baton any
+     more, so whatever resources it refers to may now be freed.  */
+  svn_error_t *(*finish_file) (void *file_baton);
 
 } svn_delta_walk_t;
 
