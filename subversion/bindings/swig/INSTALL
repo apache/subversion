@@ -4,7 +4,7 @@ BUILDING SWIG BINDINGS FOR SVN ON UNIX
 
 
 Step 1:  Build & install the proper version of SWIG (which is
-         currently swig 1.3.16).
+         currently swig 1.3.19 or newer).
 
     * Go to http://www.swig.org/, download the sourceball, unpack.
 
@@ -19,7 +19,15 @@ Step 1:  Build & install the proper version of SWIG (which is
        to the configure script.  You certainly don't want to use any
        version of python older than 2.0.
 
-    * run 'make && make install'
+       If you plan to build the perl bindings, and have a system
+       with more than one version of perl installed, you may need
+       to pass
+
+             --with-perl5=/path/to/correct/perl/binary
+
+       to the configure script.  You need Perl 5.8.0 or above.
+
+    * run 'make && make runtime && make install && make install-runtime'
 
     * To verify you have the goodz installed, check that these things
       were created, assuming your $PREFIX was /usr/local/lib:
@@ -28,7 +36,7 @@ Step 1:  Build & install the proper version of SWIG (which is
            - /usr/local/lib/libswig*.so
            - /usr/local/bin/swig
 
-      In particular, you want to make sure that libswig_py.so was
+      In particular, you want to make sure that libswigpy.so was
       built and installed, since the python bindings are the most-used
       ones at the moment.
 
@@ -87,6 +95,9 @@ Step 3:  Install Specific Language Bindings
 
    2.  Go to subversion/bindings/swig/perl and run
        `env APR_CONFIG=/path/to/apr-config perl Makefile.PL'.
+
+       Be sure to use the same perl binary here that you configured
+       SWIG to run against during the SWIG configure (see above).
 
    3.  run `make all test'.
 

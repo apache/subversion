@@ -52,11 +52,11 @@ extern "C" {
 
 #ifdef SVN_NEED_SWIG_TYPES
 
-/* XXX: this has to be set by configure and also swig -swiglib needs
-   to be added to include paths.
-*/
-#if SWIG_VERSION >= 0x010320
+#if SVN_SWIG_VERSION >= 103020
 #include "perl5/precommon.swg"
+/* The following two aren't handled by the precommon.swg.  */
+#define SWIG_MakePtr SWIG_Perl_MakePtr
+#define SWIG_ConvertPtr SWIG_Perl_ConvertPtr
 #endif
 
 typedef struct _unnamed swig_type_info;
