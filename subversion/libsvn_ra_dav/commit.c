@@ -37,6 +37,7 @@
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_delta.h"
+#include "svn_io.h"
 #include "svn_ra.h"
 #include "svn_wc.h"
 #include "svn_path.h"
@@ -766,7 +767,7 @@ static svn_error_t * commit_stream_close(void *baton)
   commit_ctx_t *cc = pb->file->cc;
   resource_t *rsrc = pb->file->rsrc;
   ne_request *req;
-  apr_os_file_t fdesc;
+  int fdesc;
   int rv;
   int code;
   apr_status_t status;
@@ -794,7 +795,7 @@ static svn_error_t * commit_stream_close(void *baton)
                               "Couldn't rewind tmpfile.");
     }
   /* Convert the (apr_file_t *)tmpfile into a file descriptor for neon. */
-  status = apr_os_file_get(&fdesc, pb->tmpfile);
+  status = svn_io_fd_from_file(&fdesc, pb->tmpfile);
   if (status)
     {
       (void) apr_file_close(pb->tmpfile);

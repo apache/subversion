@@ -150,6 +150,16 @@ svn_error_t *svn_io_file_affected_time (apr_time_t *apr_time,
                                         apr_pool_t *pool);
 
 
+/* Return a POSIX-like file descriptor from FILE.
+
+   We need this because on some platforms, notably Windows, apr_file_t
+   is not based on a file descriptor; but we have to pass an FD to neon.
+
+   FIXME: This function will hopefully go away if/when neon gets
+          replaced by apr-serf. */
+apr_status_t svn_io_fd_from_file (int *fd_p, apr_file_t *file);
+
+
 
 /* Generic byte-streams */
 
