@@ -61,12 +61,6 @@ svn_error_t *svn_ra_dav__parsed_request(svn_ra_session_t *ras,
 
   /* create/prep the request */
   req = ne_request_create(ras->sess, method, url);
-  if (req == NULL)
-    {
-      return svn_error_createf(SVN_ERR_RA_CREATING_REQUEST, 0, NULL, pool,
-                               "Could not create a %s request (%s)",
-                               method, url);
-    }
 
   if (body != NULL)
     ne_set_request_body_buffer(req, body, strlen(body));
