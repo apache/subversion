@@ -785,25 +785,26 @@ svn_fs__dag_set_contents (dag_node_t *file,
 /* THE LAND OF CMPILATO */
 /* cmpilato todo:  all this stuff down here. */
 
-/* Return a new dag_node_t object referring to the same node as NODE,
-   allocated in TRAIL->pool.  */
 dag_node_t *svn_fs__dag_dup (dag_node_t *node,
                              trail_t *trail)
 {
-  /* cmpilato has a call into jimb to discern the vision behind this
-     function's existance.  Best guess:  lifetime stuff (the important
-     thing is not the dup'ing of the node, but the fact that the dup
-     gets alloc'ed from a specific pool. */
-
   /* Allocate our new node. */
-  dag_node_t *new_node = apr_pcalloc (trail->pool, sizeof (*new_node));
-  new_node->fs = node->fs;
-  new_node->id = node->id;
-  new_node->contents = node->contents;
+  dag_node_t *new_node = apr_pcalloc (trail->pool, sizeof
+                                      (*new_node));
+  /* Allocate a new fs structure, then copy the contents from our old
+     one.  Not sure if this level of copying needs to extend deeper
+     than this memcpy for the fs. */
+  new_node->fs = apr_pcalloc (trail->pool, sizeof (*(node->fs)));
+  memcpy (new_node->fs, node->fs, sizeof (*(node->fs)));
+
+  /* Copy our node's id. */
+  new_node->id = svn_fs_copy_id (node->id, trail->pool);
+
+  /* Copy the contents skel over. */
+  new_node->contents = svn_fs_copy_skel (node->contents, trail->pool);
+
+  /* Finally, update our pool reference. */
   new_node->pool = trail->pool;
-
-  /* $5 sez the above is NOT done right...waiting to hear from jimb */
-
   return new_node;
 }
 
