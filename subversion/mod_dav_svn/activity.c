@@ -25,7 +25,7 @@
 
 #include "dav_svn.h"
 
-#define ACTIVITY_DB     SVN_FS__REPOS_DAV_DIR "/activities"
+#define ACTIVITY_DB "dav/activities"
 
 
 const char *dav_svn_get_txn(const dav_svn_repos *repos,
