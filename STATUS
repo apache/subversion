@@ -136,7 +136,7 @@ Bindings changes that affect the build system:
      Justification: An increasingly common version of SWIG that we need
                     to support.
      Votes:
-      +1: breser
+      +1: breser, clkao
      
 Bindings changes that don't affect the build system:
 
@@ -144,7 +144,7 @@ Bindings changes that don't affect the build system:
      Fix perl bindings to work with new date format. 
      Justification: Perl bindings won't even build now without this.
      Votes:
-      +1: breser, epg
+      +1: breser, epg, clkao
 
      * r8348
      Don't assume an int is the same size as a long in perl bindings.
@@ -152,7 +152,7 @@ Bindings changes that don't affect the build system:
      And make blame work right when/if the apr_off_t thing gets handled
      on 32-bit platforms.
      Votes:
-      +1: breser
+      +1: breser, clkao
 
 -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*-
 
