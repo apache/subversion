@@ -57,6 +57,47 @@
 %apply const char **OUTPUT { const char ** };
 
 /* -----------------------------------------------------------------------
+   fix up the svn_stream_read() ptr/len arguments
+*/
+%typemap(python, in) (char *buffer, apr_size_t *len) {
+    if (!PyInt_Check($input)) {
+        PyErr_SetString(PyExc_TypeError,
+                        "expecting an integer for the buffer size");
+        return NULL;
+    }
+    $2 = PyInt_AsLong($input);
+    if ($2 < 0) {
+        PyErr_SetString(PyExc_ValueError,
+                        "buffer size must be a positive integer");
+        return NULL;
+    }
+    $1 = malloc($2);
+}
+
+%typemap(python, argout) (char *buffer, apr_size_t *len) {
+    $result = t_output_helper($result, PyString_FromStringAndSize($1, *$2));
+    free($1);
+}
+
+/* -----------------------------------------------------------------------
+   fix up the svn_stream_write() ptr/len arguments
+*/
+%typemap(python, in) (const char *data, apr_size_t *len) ($*2_type temp) {
+    if (!PyString_Check($input)) {
+        PyErr_SetString(PyExc_TypeError,
+                        "expecting a string for the buffer");
+        return NULL;
+    }
+    $1 = PyString_AS_STRING($input);
+    temp = PyString_GET_SIZE($input);
+    $2 = ($2_ltype)&temp;
+}
+
+%typemap(python, argout) (const char *data, apr_size_t *len) {
+    $result = t_output_helper($result, PyInt_FromLong(*$2));
+}
+
+/* -----------------------------------------------------------------------
    wrap some specific APR functionality
 */
 

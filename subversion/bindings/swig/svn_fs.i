@@ -55,14 +55,8 @@
 /* -----------------------------------------------------------------------
    define the data/len pair of svn_fs_parse_id to be a single argument
 */
-
-%typemap(python, in) (const char *data, apr_size_t len) {
-    if (!PyString_Check($input)) {
-        PyErr_SetString(PyExc_TypeError, "expecting a string");
-        return NULL;
-    }
-    $1 = PyString_AS_STRING($input);
-    $2 = PyString_GET_SIZE($input);
+%apply (const char *PTR, apr_size_t LEN) {
+    (const char *data, apr_size_t len)
 }
 
 /* -----------------------------------------------------------------------

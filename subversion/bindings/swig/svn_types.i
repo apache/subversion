@@ -63,10 +63,23 @@
     $result = Py_None;
 }
 
-/* ----------------------------------------------------------------------- */
-
-/* 'svn_renum_t *' will always be an OUTPUT parameter */
+/* -----------------------------------------------------------------------
+   'svn_renum_t *' will always be an OUTPUT parameter
+*/
 %apply long *OUTPUT { svn_revnum_t * };
+
+/* -----------------------------------------------------------------------
+   Define a general ptr/len typemap. This takes a single script argument
+   and expands it into a ptr/len pair for the native call.
+*/
+%typemap(python, in) (const char *PTR, apr_size_t LEN) {
+    if (!PyString_Check($input)) {
+        PyErr_SetString(PyExc_TypeError, "expecting a string");
+        return NULL;
+    }
+    $1 = PyString_AS_STRING($input);
+    $2 = PyString_GET_SIZE($input);
+}
 
 /* ----------------------------------------------------------------------- */
 
