@@ -291,8 +291,8 @@ static svn_error_t *ra_svn_open(void **sess, const char *url,
   unsigned short port;
   apr_uint64_t minver, maxver;
   apr_array_header_t *mechlist, *caplist, *status_param;
-      apr_procattr_t *attr;
-      apr_proc_t *proc;
+  apr_procattr_t *attr;
+  apr_proc_t *proc;
 
   if (parse_url(url, &user, &port, &hostname, pool) != 0)
     return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
