@@ -117,7 +117,7 @@ def guarantee_greek_repository(path):
 # For all the functions below, the OUTPUT_TREE and DISK_TREE args need
 # to be created by feeding carefully constructed lists to
 # tree.build_generic_tree().  A STATUS_TREE can be built by
-# hand, or by editing the tree returned by get_virginal_status_list().
+# hand, or by editing the tree returned by get_virginal_state().
 
 
 def run_and_verify_checkout(URL, wc_dir_name, output_tree, disk_tree,
