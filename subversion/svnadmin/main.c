@@ -473,7 +473,7 @@ subcommand_lstxns (apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
 
 /* This implements `svn_opt_subcommand_t'. */
-svn_error_t *
+static svn_error_t *
 subcommand_recover (apr_getopt_t *os, void *baton, apr_pool_t *pool)
 {
   svn_revnum_t youngest_rev;
@@ -482,7 +482,7 @@ subcommand_recover (apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   printf ("Acquiring exclusive lock on repository db.\n"
           "Recovery is running, please stand by...");
-  fflush(stdout);
+  fflush (stdout);
 
   SVN_ERR (svn_repos_recover (opt_state->repository_path, pool));
 
@@ -793,7 +793,7 @@ main (int argc, const char * const *argv)
         opt_state.bdb_txn_nosync = TRUE;
         break;
       case svnadmin__config_dir:
-        opt_state.config_dir = apr_pstrdup(pool, svn_path_canonicalize(opt_arg,
+        opt_state.config_dir = apr_pstrdup (pool, svn_path_canonicalize(opt_arg,
                                                                        pool));
         break;
       default:
