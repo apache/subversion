@@ -81,7 +81,7 @@ Candidate changes:
     Notes: This was originally reported here: http://bugs.debian.org/235755
     This fix doesn't try to fix the ipv6 issue, just the SIGSEGV.
     Votes:
-      +1: dwhedon, jerenkrantz
+      +1: dwhedon, jerenkrantz, rooneg
 
   * r8867, r8868, r8902
     Trivial performance fix for mod_authz_svn; cache the access file per
