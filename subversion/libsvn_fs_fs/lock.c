@@ -277,6 +277,7 @@ generate_new_lock (svn_lock_t **lock_p,
                    svn_fs_t *fs,
                    const char *path,
                    const char *owner,
+                   const char *comment,
                    long int timeout,
                    apr_pool_t *pool)
 {
@@ -286,6 +287,7 @@ generate_new_lock (svn_lock_t **lock_p,
   
   lock->path = apr_pstrdup (pool, path);
   lock->owner = apr_pstrdup (pool, owner);
+  lock->comment = apr_pstrdup (pool, comment);
   /* ### this function should take a 'comment' argument!  */
   lock->creation_date = apr_time_now();
 
@@ -534,9 +536,8 @@ svn_fs_fs__lock (svn_lock_t **lock_p,
     }
 
   /* Create a new lock, and add it to the tables. */    
-  /* ### FITZ TODO:  pass 'comment' into generate_new_lock!! */
   SVN_ERR (generate_new_lock (&new_lock, fs, path, fs->access_ctx->username,
-                              timeout, pool));
+                              comment, timeout, pool));
   SVN_ERR (save_lock (fs, new_lock, pool));
   *lock_p = new_lock;
 
@@ -577,8 +578,26 @@ svn_fs_fs__attach_lock (svn_lock_t *lock,
         lock->owner = fs->access_ctx->username;
     }
 
-  /* ### FITZ TODO:  if vaild, use current_rev here to do an
-     out-of-dateness check.  See how fs_base is doing it. */
+  /* Is the caller attempting to lock an out-of-date working file? */
+  if (SVN_IS_VALID_REVNUM(current_rev))
+    {
+      svn_revnum_t created_rev;
+      SVN_ERR (svn_fs_fs__node_created_rev (&created_rev, root, lock->path, pool));
+
+      /* SVN_INVALID_REVNUM means the path doesn't exist.  So
+         apparently somebody is trying to lock something in their
+         working copy, but somebody else has deleted the thing
+         from HEAD.  That counts as being 'out of date'. */     
+      if (! SVN_IS_VALID_REVNUM(created_rev))
+        return svn_error_createf (SVN_ERR_FS_OUT_OF_DATE, NULL,
+                                  "Path '%s' doesn't exist in HEAD revision.",
+                                  lock->path);
+
+      if (current_rev < created_rev)
+        return svn_error_createf (SVN_ERR_FS_OUT_OF_DATE, NULL,
+                                  "Lock failed: newer version of '%s' exists.",
+                                  lock->path);
+    }
 
   /* Try and get a lock from lock->path */ 
   SVN_ERR (get_lock_from_path_helper (fs, &existing_lock, lock->path, pool));
