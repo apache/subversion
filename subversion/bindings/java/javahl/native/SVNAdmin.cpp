@@ -8,6 +8,7 @@
 #include "svn_config.h"
 #include "svn_pools.h"
 #include "svn_path.h"
+#include "svn_private_config.h"
 //////////////////////////////////////////////////////////////////////
 // Construction/Destruction
 //////////////////////////////////////////////////////////////////////
@@ -168,15 +169,15 @@ void SVNAdmin::deltify(const char *path, Revision &revStart, Revision &revEnd)
   {
 	  JNIUtil::handleSVNError( svn_error_create
       (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-       "First revision cannot be higher than second"));
+       _("First revision cannot be higher than second")));
 	  return;
   }
   if ((start > youngest) || (end > youngest))
   {
 	  JNIUtil::handleSVNError(svn_error_createf
       (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-       "Revisions must not be greater than the youngest revision (%" 
-       SVN_REVNUM_T_FMT ")", youngest));
+       _("Revisions must not be greater than the youngest revision (%" 
+       SVN_REVNUM_T_FMT ")"), youngest));
 	  return;
   }
 
@@ -251,15 +252,15 @@ void SVNAdmin::dump(const char *path, Outputer &dataOut, Outputer &messageOut, R
   {
 	  JNIUtil::handleSVNError(svn_error_create
       (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-       "First revision cannot be higher than second"));
+       _("First revision cannot be higher than second")));
 	  return;
   }
   if ((lower > youngest) || (upper > youngest))
   {
 	  JNIUtil::handleSVNError(svn_error_createf
       (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-       "Revisions must not be greater than the youngest revision (%" 
-       SVN_REVNUM_T_FMT ")", youngest));
+       _("Revisions must not be greater than the youngest revision (%" 
+       SVN_REVNUM_T_FMT ")"), youngest));
 	  return;
   }
 
@@ -490,13 +491,13 @@ void SVNAdmin::setLog(const char *path, Revision &revision, const char *message,
   if (revision.revision()->kind != svn_opt_revision_number)
   {
 	  JNIUtil::handleSVNError(svn_error_createf (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                              "Missing revision"));
+                              _("Missing revision")));
 	  return;
   }
   else if (revision.revision()->kind != svn_opt_revision_unspecified)
   {
 	  JNIUtil::handleSVNError(svn_error_createf (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                              "Only one revision allowed"));
+                              _("Only one revision allowed")));
 	  return;
   } 
   /* Open the filesystem  */

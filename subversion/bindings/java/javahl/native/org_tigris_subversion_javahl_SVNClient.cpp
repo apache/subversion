@@ -31,6 +31,7 @@
 #include "Targets.h"
 #include "BlameCallback.h"
 #include "svn_version.h"
+#include "svn_private_config.h"
 #include "version.h"
 #include <iostream>
 /*
@@ -58,7 +59,7 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_dispose
 	SVNClient *cl = SVNClient::getCppObject(jthis);
 	if(cl == NULL)
 	{
-		JNIUtil::throwError("bad c++ this");
+		JNIUtil::throwError(_("bad c++ this"));
 		return;
 	}
 	cl->dispose(jthis);
@@ -92,7 +93,7 @@ JNIEXPORT jstring JNICALL Java_org_tigris_subversion_javahl_SVNClient_getLastPat
 	SVNClient *cl = SVNClient::getCppObject(jthis);
 	if(cl == NULL)
 	{
-		JNIUtil::throwError("bad c++ this");
+		JNIUtil::throwError(_("bad c++ this"));
 		return NULL;
 	}
 	const char *ret = cl->getLastPath();
@@ -182,7 +183,7 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_username
 	SVNClient *cl = SVNClient::getCppObject(jthis);
 	if(cl == NULL)
 	{
-		JNIUtil::throwError("bad c++ this");
+		JNIUtil::throwError(_("bad c++ this"));
 		return;
 	}
 	JNIStringHolder username(jusername);
@@ -205,7 +206,7 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_password
 	SVNClient *cl = SVNClient::getCppObject(jthis);
 	if(cl == NULL)
 	{
-		JNIUtil::throwError("bad c++ this");
+		JNIUtil::throwError(_("bad c++ this"));
 		return;
 	}
 	JNIStringHolder password(jpassword);
@@ -228,7 +229,7 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_setPrompt
 	SVNClient *cl = SVNClient::getCppObject(jthis);
 	if(cl == NULL)
 	{
-		JNIUtil::throwError("bad c++ this");
+		JNIUtil::throwError(_("bad c++ this"));
 		return;
 	}
 	Prompter *prompter = Prompter::makeCPrompter(jprompter);
@@ -251,7 +252,7 @@ JNIEXPORT jobjectArray JNICALL Java_org_tigris_subversion_javahl_SVNClient_logMe
 	SVNClient *cl = SVNClient::getCppObject(jthis);
 	if(cl == NULL)
 	{
-		JNIUtil::throwError("bad c++ this");
+		JNIUtil::throwError(_("bad c++ this"));
 		return NULL;
 	}
 	Revision revisionStart(jrevisionStart);
@@ -284,7 +285,7 @@ JNIEXPORT jlong JNICALL Java_org_tigris_subversion_javahl_SVNClient_checkout
 	SVNClient *cl = SVNClient::getCppObject(jthis);
 	if(cl == NULL)
 	{
-		JNIUtil::throwError("bad c++ this");
+		JNIUtil::throwError(_("bad c++ this"));
 		return -1;
 	}
 	Revision revision(jrevision, true);
@@ -317,7 +318,7 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_notification
 	SVNClient *cl = SVNClient::getCppObject(jthis);
 	if(cl == NULL)
 	{
-		JNIUtil::throwError("bad c++ this");
+		JNIUtil::throwError(_("bad c++ this"));
 		return;
 	}
 	Notify *notify = Notify::makeCNotify(jnotify);
@@ -339,7 +340,7 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_remove
 	SVNClient *cl = SVNClient::getCppObject(jthis);
 	if(cl == NULL)
 	{
-		JNIUtil::throwError("bad c++ this");
+		JNIUtil::throwError(_("bad c++ this"));
 		return;
 	}
 	Targets targets(jtargets);
@@ -363,7 +364,7 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_revert
 	SVNClient *cl = SVNClient::getCppObject(jthis);
 	if(cl == NULL)
 	{
-		JNIUtil::throwError("bad c++ this");
+		JNIUtil::throwError(_("bad c++ this"));
 		return;
 	}
 	JNIStringHolder path(jpath);
@@ -386,7 +387,7 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_add
 	SVNClient *cl = SVNClient::getCppObject(jthis);
 	if(cl == NULL)
 	{
-		JNIUtil::throwError("bad c++ this");
+		JNIUtil::throwError(_("bad c++ this"));
 		return;
 	}
 	JNIStringHolder path(jpath);
@@ -409,7 +410,7 @@ JNIEXPORT jlong JNICALL Java_org_tigris_subversion_javahl_SVNClient_update
 	SVNClient *cl = SVNClient::getCppObject(jthis);
 	if(cl == NULL)
 	{
-		JNIUtil::throwError("bad c++ this");
+		JNIUtil::throwError(_("bad c++ this"));
 		return -1;
 	}
 	Revision revision(jrevision);
@@ -437,7 +438,7 @@ JNIEXPORT jlong JNICALL Java_org_tigris_subversion_javahl_SVNClient_commit
 	SVNClient *cl = SVNClient::getCppObject(jthis);
 	if(cl == NULL)
 	{
-		JNIUtil::throwError("bad c++ this");
+		JNIUtil::throwError(_("bad c++ this"));
 		return -1;
 	}
 	Targets targets(jtargets);
@@ -461,7 +462,7 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_copy
 	SVNClient *cl = SVNClient::getCppObject(jthis);
 	if(cl == NULL)
 	{
-		JNIUtil::throwError("bad c++ this");
+		JNIUtil::throwError(_("bad c++ this"));
 		return;
 	}
 	JNIStringHolder srcPath(jsrcPath);
@@ -499,7 +500,7 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_move
 	SVNClient *cl = SVNClient::getCppObject(jthis);
 	if(cl == NULL)
 	{
-		JNIUtil::throwError("bad c++ this");
+		JNIUtil::throwError(_("bad c++ this"));
 		return;
 	}
 	Revision revision(jrevision);
@@ -537,7 +538,7 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_mkdir
 	SVNClient *cl = SVNClient::getCppObject(jthis);
 	if(cl == NULL)
 	{
-		JNIUtil::throwError("bad c++ this");
+		JNIUtil::throwError(_("bad c++ this"));
 		return;
 	}
 	Targets targets(jtargets);
@@ -561,7 +562,7 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_cleanup
 	SVNClient *cl = SVNClient::getCppObject(jthis);
 	if(cl == NULL)
 	{
-		JNIUtil::throwError("bad c++ this");
+		JNIUtil::throwError(_("bad c++ this"));
 		return;
 	}
 	JNIStringHolder path(jpath);
@@ -584,7 +585,7 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_resolved
 	SVNClient *cl = SVNClient::getCppObject(jthis);
 	if(cl == NULL)
 	{
-		JNIUtil::throwError("bad c++ this");
+		JNIUtil::throwError(_("bad c++ this"));
 		return;
 	}
 	JNIStringHolder path(jpath);
@@ -607,7 +608,7 @@ JNIEXPORT jlong JNICALL Java_org_tigris_subversion_javahl_SVNClient_doExport
 	SVNClient *cl = SVNClient::getCppObject(jthis);
 	if(cl == NULL)
 	{
-		JNIUtil::throwError("bad c++ this");
+		JNIUtil::throwError(_("bad c++ this"));
 		return -1;
 	}
 	Revision revision(jrevision);
@@ -640,7 +641,7 @@ JNIEXPORT jlong JNICALL Java_org_tigris_subversion_javahl_SVNClient_doSwitch
 	SVNClient *cl = SVNClient::getCppObject(jthis);
 	if(cl == NULL)
 	{
-		JNIUtil::throwError("bad c++ this");
+		JNIUtil::throwError(_("bad c++ this"));
 		return -1;
 	}
 	Revision revision(jrevision);
@@ -673,7 +674,7 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_doImport
 	SVNClient *cl = SVNClient::getCppObject(jthis);
 	if(cl == NULL)
 	{
-		JNIUtil::throwError("bad c++ this");
+		JNIUtil::throwError(_("bad c++ this"));
 		return;
 	}
 	JNIStringHolder path(jpath);
@@ -706,7 +707,7 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_merge
 	SVNClient *cl = SVNClient::getCppObject(jthis);
 	if(cl == NULL)
 	{
-		JNIUtil::throwError("bad c++ this");
+		JNIUtil::throwError(_("bad c++ this"));
 		return;
 	}
 	Revision revision1(jrevision1);
@@ -749,7 +750,7 @@ JNIEXPORT jobjectArray JNICALL Java_org_tigris_subversion_javahl_SVNClient_prope
 	SVNClient *cl = SVNClient::getCppObject(jthis);
 	if(cl == NULL)
 	{
-		JNIUtil::throwError("bad c++ this");
+		JNIUtil::throwError(_("bad c++ this"));
 		return NULL;
 	}
 	JNIStringHolder path(jpath);
@@ -772,7 +773,7 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_propertySet__
 	SVNClient *cl = SVNClient::getCppObject(jthis);
 	if(cl == NULL)
 	{
-		JNIUtil::throwError("bad c++ this");
+		JNIUtil::throwError(_("bad c++ this"));
 		return;
 	}
 	JNIStringHolder path(jpath);
@@ -805,7 +806,7 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_propertySet__
 	SVNClient *cl = SVNClient::getCppObject(jthis);
 	if(cl == NULL)
 	{
-		JNIUtil::throwError("bad c++ this");
+		JNIUtil::throwError(_("bad c++ this"));
 		return;
 	}
 	JNIStringHolder path(jpath);
@@ -838,7 +839,7 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_propertyRemov
 	SVNClient *cl = SVNClient::getCppObject(jthis);
 	if(cl == NULL)
 	{
-		JNIUtil::throwError("bad c++ this");
+		JNIUtil::throwError(_("bad c++ this"));
 		return;
 	}
 	JNIStringHolder path(jpath);
@@ -866,7 +867,7 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_propertyCreat
 	SVNClient *cl = SVNClient::getCppObject(jthis);
 	if(cl == NULL)
 	{
-		JNIUtil::throwError("bad c++ this");
+		JNIUtil::throwError(_("bad c++ this"));
 		return;
 	}
 	JNIStringHolder path(jpath);
@@ -900,7 +901,7 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_propertyCreat
 	SVNClient *cl = SVNClient::getCppObject(jthis);
 	if(cl == NULL)
 	{
-		JNIUtil::throwError("bad c++ this");
+		JNIUtil::throwError(_("bad c++ this"));
 		return;
 	}
 	JNIStringHolder path(jpath);
@@ -932,7 +933,7 @@ JNIEXPORT jobject JNICALL Java_org_tigris_subversion_javahl_SVNClient_revPropert
 	SVNClient *cl = SVNClient::getCppObject(jthis);
 	if(cl == NULL)
 	{
-		JNIUtil::throwError("bad c++ this");
+		JNIUtil::throwError(_("bad c++ this"));
 		return NULL;
 	}
 	JNIStringHolder path(jpath);
@@ -964,7 +965,7 @@ JNIEXPORT jobject JNICALL Java_org_tigris_subversion_javahl_SVNClient_propertyGe
 	SVNClient *cl = SVNClient::getCppObject(jthis);
 	if(cl == NULL)
 	{
-		JNIUtil::throwError("bad c++ this");
+		JNIUtil::throwError(_("bad c++ this"));
 		return NULL;
 	}
 	JNIStringHolder path(jpath);
@@ -993,7 +994,7 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_diff
 	SVNClient *cl = SVNClient::getCppObject(jthis);
 	if(cl == NULL)
 	{
-		JNIUtil::throwError("bad c++ this");
+		JNIUtil::throwError(_("bad c++ this"));
 		return;
 	}
 	JNIStringHolder target1(jtarget1);
@@ -1037,7 +1038,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_tigris_subversion_javahl_SVNClient_fileCon
 	SVNClient *cl = SVNClient::getCppObject(jthis);
 	if(cl == NULL)
 	{
-		JNIUtil::throwError("bad c++ this");
+		JNIUtil::throwError(_("bad c++ this"));
 		return NULL;
 	}
 	JNIStringHolder path(jpath);
@@ -1140,7 +1141,7 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_relocate
 	SVNClient *cl = SVNClient::getCppObject(jthis);
 	if(cl == NULL)
 	{
-		JNIUtil::throwError("bad c++ this");
+		JNIUtil::throwError(_("bad c++ this"));
 		return;
 	}
 	JNIStringHolder from(jfrom);
@@ -1174,7 +1175,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_tigris_subversion_javahl_SVNClient_blame__
 	SVNClient *cl = SVNClient::getCppObject(jthis);
 	if(cl == NULL)
 	{
-		JNIUtil::throwError("bad c++ this");
+		JNIUtil::throwError(_("bad c++ this"));
 		return NULL;
 	}
 	JNIStringHolder path(jpath);
@@ -1206,7 +1207,7 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_blame__Ljava_
 	SVNClient *cl = SVNClient::getCppObject(jthis);
 	if(cl == NULL)
 	{
-		JNIUtil::throwError("bad c++ this");
+		JNIUtil::throwError(_("bad c++ this"));
 		return;
 	}
 	JNIStringHolder path(jpath);
@@ -1239,7 +1240,7 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_setConfigDire
 	SVNClient *cl = SVNClient::getCppObject(jthis);
 	if(cl == NULL)
 	{
-		JNIUtil::throwError("bad c++ this");
+		JNIUtil::throwError(_("bad c++ this"));
 		return;
 	}
 
@@ -1263,7 +1264,7 @@ JNIEXPORT jstring JNICALL Java_org_tigris_subversion_javahl_SVNClient_getConfigD
 	SVNClient *cl = SVNClient::getCppObject(jthis);
 	if(cl == NULL)
 	{
-		JNIUtil::throwError("bad c++ this");
+		JNIUtil::throwError(_("bad c++ this"));
 		return NULL;
 	}
 

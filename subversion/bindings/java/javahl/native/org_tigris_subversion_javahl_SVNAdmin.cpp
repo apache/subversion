@@ -28,6 +28,8 @@
 #include "Inputer.h"
 #include "Outputer.h"
 #include "MessageReceiver.h"
+#include "svn_private_config.h"
+
 /*
  * Class:     org_tigris_subversion_javahl_SVNAdmin
  * Method:    ctNative
@@ -53,7 +55,7 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNAdmin_dispose
 	SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
 	if(cl == NULL)
 	{
-		JNIUtil::throwError("bad c++ this");
+		JNIUtil::throwError(_("bad c++ this"));
 		return;
 	}
 	cl->dispose(jthis);
@@ -87,7 +89,7 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNAdmin_create
 	SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
 	if(cl == NULL)
 	{
-		JNIUtil::throwError("bad c++ this");
+		JNIUtil::throwError(_("bad c++ this"));
 		return;
 	}
 
@@ -118,7 +120,7 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNAdmin_deltify
 	SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
 	if(cl == NULL)
 	{
-		JNIUtil::throwError("bad c++ this");
+		JNIUtil::throwError(_("bad c++ this"));
 		return;
 	}
 
@@ -155,7 +157,7 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNAdmin_dump
 	SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
 	if(cl == NULL)
 	{
-		JNIUtil::throwError("bad c++ this");
+		JNIUtil::throwError(_("bad c++ this"));
 		return;
 	}
 
@@ -202,7 +204,7 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNAdmin_hotcopy
 	SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
 	if(cl == NULL)
 	{
-		JNIUtil::throwError("bad c++ this");
+		JNIUtil::throwError(_("bad c++ this"));
 		return;
 	}
 
@@ -232,7 +234,7 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNAdmin_listDBLogs
 	SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
 	if(cl == NULL)
 	{
-		JNIUtil::throwError("bad c++ this");
+		JNIUtil::throwError(_("bad c++ this"));
 		return;
 	}
 
@@ -263,7 +265,7 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNAdmin_listUnusedDBLo
 	SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
 	if(cl == NULL)
 	{
-		JNIUtil::throwError("bad c++ this");
+		JNIUtil::throwError(_("bad c++ this"));
 		return;
 	}
 
@@ -295,7 +297,7 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNAdmin_load
 	SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
 	if(cl == NULL)
 	{
-		JNIUtil::throwError("bad c++ this");
+		JNIUtil::throwError(_("bad c++ this"));
 		return;
 	}
 
@@ -338,7 +340,7 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNAdmin_lstxns
 	SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
 	if(cl == NULL)
 	{
-		JNIUtil::throwError("bad c++ this");
+		JNIUtil::throwError(_("bad c++ this"));
 		return;
 	}
 
@@ -368,7 +370,7 @@ JNIEXPORT jlong JNICALL Java_org_tigris_subversion_javahl_SVNAdmin_recover
 	SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
 	if(cl == NULL)
 	{
-		JNIUtil::throwError("bad c++ this");
+		JNIUtil::throwError(_("bad c++ this"));
 		return -1;
 	}
 
@@ -393,7 +395,7 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNAdmin_rmtxns
 	SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
 	if(cl == NULL)
 	{
-		JNIUtil::throwError("bad c++ this");
+		JNIUtil::throwError(_("bad c++ this"));
 		return;
 	}
 
@@ -424,7 +426,7 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNAdmin_setLog
 	SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
 	if(cl == NULL)
 	{
-		JNIUtil::throwError("bad c++ this");
+		JNIUtil::throwError(_("bad c++ this"));
 		return;
 	}
 
@@ -460,7 +462,7 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNAdmin_verify
 	SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
 	if(cl == NULL)
 	{
-		JNIUtil::throwError("bad c++ this");
+		JNIUtil::throwError(_("bad c++ this"));
 		return;
 	}
 

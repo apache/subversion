@@ -25,6 +25,7 @@
 #include "JNIStringHolder.h"
 #include "org_tigris_subversion_javahl_PromptUserPassword2.h"
 #include <svn_client.h>
+#include "svn_private_config.h"
 //////////////////////////////////////////////////////////////////////
 // Construction/Destruction
 //////////////////////////////////////////////////////////////////////
@@ -323,7 +324,7 @@ const char *Prompter::askQuestion(const char *realm, const char *question, bool 
 		{
 			m_answer = answer;
 			if(maySave)
-				m_maySave = askYesNo(realm, "May save the answer ?", true);
+				m_maySave = askYesNo(realm, _("May save the answer ?"), true);
 			else
 				m_maySave = false;
 		}
@@ -382,11 +383,11 @@ int Prompter::askTrust(const char *question, bool maySave)
 		std::string q = question;
 		if(maySave)
 		{
-			q += "(R)eject, accept (t)emporarily or accept (p)ermanently?";
+			q += _("(R)eject, accept (t)emporarily or accept (p)ermanently?");
 		}
 		else
 		{
-			q += "(R)eject or accept (t)emporarily?";
+			q += _("(R)eject or accept (t)emporarily?");
 		}
 		const char *answer = askQuestion(NULL, q.c_str(), true, false); 
 		if(*answer == 't' || *answer == 'T')
@@ -515,7 +516,7 @@ bool Prompter::prompt(const char *realm, const char *username, bool maySave)
 			return false;
 		}
 		if(maySave)
-			m_maySave = askYesNo(realm, "May save the answer ?", true);
+			m_maySave = askYesNo(realm, _("May save the answer ?"), true);
 		else
 			m_maySave = false;
 		return ret ? true:false;
@@ -580,18 +581,18 @@ svn_error_t *Prompter::simple_prompt(svn_auth_cred_simple_t **cred_p, void *bato
 	svn_auth_cred_simple_t *ret = (svn_auth_cred_simple_t*)apr_pcalloc(pool, sizeof(*ret));
 	if(!that->prompt(realm, username, may_save ? true : false))
 		return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
-                        "User canceled dialog");
+                        _("User canceled dialog"));
 	jstring juser = that->username();
 	JNIStringHolder user(juser);
 	if(user == NULL)
 		return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
-                        "User canceled dialog");
+                        _("User canceled dialog"));
 	ret->username = apr_pstrdup(pool,user);
 	jstring jpass = that->password();
 	JNIStringHolder pass(jpass);
 	if(pass == NULL)
 		return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
-                            "User canceled dialog");
+                            _("User canceled dialog"));
 	else
 	{
 		ret->password  = apr_pstrdup(pool, pass);
@@ -608,7 +609,7 @@ svn_error_t *Prompter::username_prompt(svn_auth_cred_username_t **cred_p, void *
 	const char *user = that->askQuestion(realm, "Username: ", true, may_save ? true : false);
 	if(user == NULL)
 		return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
-                        "User canceled dialog");
+                        _("User canceled dialog"));
 	ret->username = apr_pstrdup(pool,user);
 	ret->may_save = that->m_maySave;
     *cred_p = ret;
@@ -625,40 +626,40 @@ svn_error_t *Prompter::ssl_server_trust_prompt(svn_auth_cred_ssl_server_trust_t 
 	Prompter *that = (Prompter*)baton;
 	svn_auth_cred_ssl_server_trust_t *ret = (svn_auth_cred_ssl_server_trust_t*)apr_pcalloc(pool, sizeof(*ret));
 	
-	std::string question = "Error validating server certificate for";
+	std::string question = _("Error validating server certificate for");
 	question += realm;
 	question += ":\n";
 	
 	if(failures & SVN_AUTH_SSL_UNKNOWNCA)
 	{
-		question += " - Unknown certificate issuer\n";
-		question += "   Fingerprint: ";
+		question += _(" - Unknown certificate issuer\n");
+		question += _("   Fingerprint: ");
 		question += cert_info->fingerprint;
 		question += "\n";
-		question += "   Distinguished name: ";
+		question += _("   Distinguished name: ");
 		question += cert_info->issuer_dname;
 		question += "\n";
 	}
 
 	if(failures & SVN_AUTH_SSL_CNMISMATCH)
 	{
-		question += " - Hostname mismatch (";
+		question += _(" - Hostname mismatch (");
 		question += cert_info->hostname;
-		question += ")\n";
+		question += _(")\n");
 	}
 
 	if(failures & SVN_AUTH_SSL_NOTYETVALID)
 	{
-		question += " - Certificate is not yet valid\n";
-		question += "   Valid from ";
+		question += _(" - Certificate is not yet valid\n");
+		question += _("   Valid from ");
 		question += cert_info->valid_from;
 		question += "\n";
 	}
 
 	if(failures & SVN_AUTH_SSL_EXPIRED)
 	{
-		question += " - Certificate is expired\n";
-		question += "   Valid until ";
+		question += _(" - Certificate is expired\n");
+		question += _("   Valid until ");
 		question += cert_info->valid_until;
 		question += "\n";
 	}
@@ -688,7 +689,7 @@ svn_error_t *Prompter::ssl_client_cert_prompt(svn_auth_cred_ssl_client_cert_t **
 	const char *cert_file = that->askQuestion(realm, "client certificate filename: ", true, may_save ? true : false);
 	if(cert_file == NULL)
 		return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
-                        "User canceled dialog");
+                        _("User canceled dialog"));
 	ret->cert_file = apr_pstrdup(pool, cert_file);
 	ret->may_save = that->m_maySave;
     *cred_p = ret;
@@ -703,7 +704,7 @@ svn_error_t *Prompter::ssl_client_cert_pw_prompt(svn_auth_cred_ssl_client_cert_p
     const char *info = that->askQuestion(realm, "client certificate passphrase: ", false, may_save ? true : false);
 	if(info == NULL)
 		return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
-                        "User canceled dialog");
+                        _("User canceled dialog"));
 	ret->password = apr_pstrdup(pool, info);
 	ret->may_save = that->m_maySave;
     *cred_p = ret;
