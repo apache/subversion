@@ -452,6 +452,38 @@ def update_ignores_added():
                                                expected_status_tree)
   
 
+#----------------------------------------------------------------------
+
+def update_to_rev_zero():
+  "update to revision 0"
+
+  sbox = sandbox(update_to_rev_zero)
+  wc_dir = os.path.join (svntest.main.general_wc_dir, sbox)
+  
+  if svntest.actions.make_repo_and_wc(sbox):
+    return 1
+
+  iota_path = os.path.join(wc_dir, 'iota')
+  A_path = os.path.join(wc_dir, 'A')
+
+  # Create expected output tree for an update to rev 0
+  output_list = [[iota_path, None, {}, {'status' : 'D '}],
+                 [A_path, None, {}, {'status' : 'D '}]]
+  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+
+  # Create expected disk tree for the update to rev 0
+  empty_tree = []
+  expected_disk_tree = svntest.tree.build_generic_tree(empty_tree)
+  
+  # Do the update and check the results.
+  return svntest.actions.run_and_verify_update(wc_dir,
+                                               expected_output_tree,
+                                               expected_disk_tree,
+                                               None,
+                                               None, None, None, None, 0,
+                                               '-r', '0')
+
+
 ########################################################################
 # Run the tests
 
@@ -461,6 +493,7 @@ test_list = [ None,
               update_binary_file,
               update_binary_file_2,
               update_ignores_added,
+              update_to_rev_zero,
               # update_missing,
              ]
 

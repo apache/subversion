@@ -96,17 +96,24 @@ send_entry_props (svn_fs_root_t *root,
                                          &last_author,
                                          root, path, subpool));
 
+  /* A root/path will always have a "created rev" field. */
   revision_str = apr_psprintf (subpool, "%ld", committed_rev);
   name = svn_stringbuf_create (SVN_PROP_ENTRY_COMMITTED_REV, subpool);
   value = svn_stringbuf_create (revision_str, subpool);
   SVN_ERR ((*pset_func) (real_baton, name, value));
-
-  name = svn_stringbuf_create (SVN_PROP_ENTRY_COMMITTED_DATE, subpool);
-  value = svn_stringbuf_create_from_string (committed_date, subpool);
+  
+  if (committed_date)
+    {
+      name = svn_stringbuf_create (SVN_PROP_ENTRY_COMMITTED_DATE, subpool);
+      value = svn_stringbuf_create_from_string (committed_date, subpool);
+    }
   SVN_ERR ((*pset_func) (real_baton, name, value));
 
-  name = svn_stringbuf_create (SVN_PROP_ENTRY_LAST_AUTHOR, subpool);
-  value = svn_stringbuf_create_from_string (last_author, subpool);
+  if (last_author)
+    {
+      name = svn_stringbuf_create (SVN_PROP_ENTRY_LAST_AUTHOR, subpool);
+      value = svn_stringbuf_create_from_string (last_author, subpool);
+    }
   SVN_ERR ((*pset_func) (real_baton, name, value));
 
   svn_pool_destroy (subpool);

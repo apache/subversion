@@ -671,11 +671,16 @@ change_dir_prop (void *dir_baton,
       apr_pool_t *subpool = svn_pool_create (db->pool);
       apr_hash_t *att_hash = apr_hash_make (subpool);
 
-      /* remove the 'svn:entry:' prefix from the property name. */
+      /* remove the 'svn:wc:entry:' prefix from the property name. */
       svn_wc__strip_entry_prefix (local_name);
 
-      /* push the property into the hash */
-      apr_hash_set (att_hash, local_name->data, local_name->len, local_value);
+      /* push the property into the att hash. */
+      if (local_value)
+        apr_hash_set (att_hash, local_name->data,
+                      local_name->len, local_value);
+      else
+        apr_hash_set (att_hash, local_name->data,
+                      local_name->len, "");
 
       /* write out the new attribute (via the hash) to the directory's
          THIS_DIR entry. */
@@ -1486,7 +1491,7 @@ close_file (void *file_baton)
           svn_prop_t *prop;
           prop = (((svn_prop_t **)(fb->entrypropchanges)->elts)[i]);
 
-          /* strip the 'svn:entry:' prefix from the property name. */
+          /* strip the 'svn:wc:entry:' prefix from the property name. */
           svn_wc__strip_entry_prefix (prop->name);
 
           /* append a command to the log which will append the
@@ -1498,7 +1503,9 @@ close_file (void *file_baton)
                                  SVN_WC__LOG_ATTR_NAME,
                                  fb->name,
                                  prop->name->data,
-                                 prop->value,
+                                 prop->value ? 
+                                      prop->value : 
+                                      svn_stringbuf_create ("", fb->pool),
                                  NULL);         
         }
     }
