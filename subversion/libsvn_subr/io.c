@@ -319,6 +319,19 @@ svn_error_t *svn_io_copy_dir_recursively (const char *src,
 }
 
 
+svn_error_t *
+svn_io_make_dir_recursively (const char *path, apr_pool_t *pool)
+{
+  apr_status_t apr_err = apr_dir_make_recursive (path, APR_OS_DEFAULT, pool);
+
+  if (apr_err)
+    return svn_error_createf
+      (apr_err, 0, NULL, pool,
+       "svn_io_make_dir_recursively: error making directory %s", path);
+
+  return SVN_NO_ERROR;
+}
+
 
 
 /*** Modtime checking. ***/
