@@ -202,17 +202,16 @@ svn_parse (apr_hash_t **uberhash, const char *filename, apr_pool_t *pool)
         ("svn_parse(): can't open for reading, file ", pool);
       svn_string_appendstr (msg, filename, pool);
 
-      return (svn_create_error (result, NULL, msg->data, NULL, pool));
+      return svn_create_error (result, NULL, NULL, pool, msg->data);
     }
 
   /* Create a scratch memory pool for buffering our file as we read it */
   if ((result = apr_create_pool (&scratchpool, pool)) != APR_SUCCESS)
     {
       return
-        (svn_create_error 
-         (result, NULL,
-          "svn_parse(): can't create sub-pool for parser use",
-          NULL, pool));
+        svn_create_error 
+        (result, NULL, NULL, pool,
+         "svn_parse(): can't create sub-pool for parser use");
     }
 
 

@@ -15,10 +15,8 @@ libsvn_wc_la_SOURCES = get_editor.c                      \
                        adm_crawler.c
 
 ## Libraries this binary depends upon:
-libsvn_wc_la_LIBADD = ../libsvn_subr/libsvn_subr.la         \
-                      ../libsvn_string/libsvn_string.la  \
-                      ../../apr/libapr.a                 \
-                      ../../expat-lite/libexpat.la
+libsvn_wc_la_LIBADD = ../libsvn_subr/libsvn_subr.la     \
+	              ../../expat-lite/libexpat.la
 
 ## Build flags ---------
 

@@ -76,12 +76,20 @@ end_handler (void *userData, const XML_Char *name)
 
 /*** Using the parser to run the log file. ***/
 
+struct log_runner
+{
+  
+};
+
+
 svn_error_t *
 svn_wc__run_log (svn_string_t *path, apr_pool_t *pool)
 {
   svn_error_t *err = NULL;
-  XML_Parser parser;
+  apr_status_t apr_err;
   int placeholder;
+  XML_Parser parser;
+  struct log_runner logress;
 
   parser = svn_xml_make_parser (&placeholder,
                                 start_handler,

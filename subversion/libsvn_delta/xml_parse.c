@@ -141,7 +141,7 @@ xml_validation_error (apr_pool_t *pool,
                         "XML validation error: got unexpected <%s>",
                         name);
 
-  return svn_create_error (SVN_ERR_MALFORMED_XML, 0, msg, NULL, pool);
+  return svn_create_error (SVN_ERR_MALFORMED_XML, 0, NULL, pool, msg);
 }
 
 
@@ -270,16 +270,15 @@ check_dirent_namespace (svn_xml__digger_t *digger,
   if (namespace == NULL)
     return 
       svn_create_error 
-      (SVN_ERR_MALFORMED_XML, 0, 
-       "check_dirent_namespace: parent frame has no namespace hash.",
-       NULL, digger->pool);
+      (SVN_ERR_MALFORMED_XML, 0, NULL, digger->pool,
+       "check_dirent_namespace: parent frame has no namespace hash.");
 
   if ((frame->name == NULL) || (svn_string_isempty (frame->name)))
     return
       svn_create_error
       (SVN_ERR_MALFORMED_XML, 0,
-       "check_dirent_namespace: <add> or <replace> has no `name' attribute.",
-       NULL, digger->pool);
+       NULL, digger->pool,
+       "check_dirent_namespace: <add> or <replace> has no `name' attribute.");
   
   /* Is "name" in the namespace already? */
   dirent_exists = apr_hash_get (namespace,
@@ -289,8 +288,8 @@ check_dirent_namespace (svn_xml__digger_t *digger,
     return 
       svn_create_errorf
       (SVN_ERR_MALFORMED_XML, 0, NULL, digger->pool,
-       "check_dirent_namespace: non-unique dirent name '%s'",
-       frame->name->data);
+       frame->name->data,
+       "check_dirent_namespace: non-unique dirent name '%s'");
 
   else /* dirent_exists == NULL, so this is a unique dirent name */
     apr_hash_set (namespace, frame->name->data, frame->name->len, (void *) 1);
@@ -476,8 +475,8 @@ do_directory_callback (svn_xml__digger_t *digger,
     return
       svn_create_error 
       (SVN_ERR_MALFORMED_XML, 0,
-       "do_directory_callback: <dir>'s parent tag has no 'name' field.",
-       NULL, digger->pool);
+       NULL, digger->pool,
+       "do_directory_callback: <dir>'s parent tag has no 'name' field.");
                              
   /* Search through ATTS, looking for any "ancestor" or "ver"
      attributes of the current <dir> tag. */
@@ -535,8 +534,8 @@ do_delete_dirent (svn_xml__digger_t *digger,
     return 
       svn_create_error 
       (SVN_ERR_MALFORMED_XML, 0,
-       "do_delete_dirent: <delete> tag has no 'name' field.",
-       NULL, digger->pool);
+       NULL, digger->pool,
+       "do_delete_dirent: <delete> tag has no 'name' field.");
 
   /* Call our editor's callback */
   err = (* (digger->editor->delete)) (dirent_name, 
@@ -574,8 +573,8 @@ do_file_callback (svn_xml__digger_t *digger,
     return 
       svn_create_error 
       (SVN_ERR_MALFORMED_XML, 0,
-       "do_file_callback: <file>'s parent tag has no 'name' field.",
-       NULL, digger->pool);
+       NULL, digger->pool,
+       "do_file_callback: <file>'s parent tag has no 'name' field.");
                              
   /* Search through ATTS, looking for any "ancestor" or "ver"
      attributes of the current <dir> tag. */
@@ -687,8 +686,8 @@ lookup_file_baton (void **file_baton,
          "lookup_file_baton: ref_id `%s' has no associated file",
          ref_id->data);
         
-      return svn_create_error (SVN_ERR_MALFORMED_XML, 0, msg,
-                               NULL, digger->pool);
+      return svn_create_error (SVN_ERR_MALFORMED_XML, 0, NULL,
+                               digger->pool, msg);
     }
   
   return SVN_NO_ERROR;
@@ -720,8 +719,8 @@ do_begin_textdelta (svn_xml__digger_t *digger)
         && (digger->stack->ref_id))
       return 
         svn_create_error (SVN_ERR_MALFORMED_XML, 0,
-                          "do_begin_textdelta: in-line text-delta has ID.",
-                          NULL, digger->pool);
+                          NULL, digger->pool,
+                          "do_begin_textdelta: in-line text-delta has ID.");
 
   /* Error check: if this is a "postfix" text-delta, is MUST have a
      ref_id field. */
@@ -730,8 +729,8 @@ do_begin_textdelta (svn_xml__digger_t *digger)
         && (! digger->stack->ref_id))
       return 
         svn_create_error (SVN_ERR_MALFORMED_XML, 0,
-                          "do_begin_textdelta: postfix text-delta lacks ID.",
-                          NULL, digger->pool);
+                          NULL, digger->pool,
+                          "do_begin_textdelta: postfix text-delta lacks ID.");
   
   /* Now fetch the appropriate file_baton. */
   if (digger->stack->ref_id) 
@@ -778,8 +777,8 @@ do_begin_textdeltaref (svn_xml__digger_t *digger)
   /* Error check:  there *must* be a ref_id field in this frame. */
   if (! digger->stack->ref_id)
     return svn_create_error (SVN_ERR_MALFORMED_XML, 0,
-                             "do_begin_textdeltaref:  reference has no `id'.",
-                             NULL, digger->pool);
+                             NULL, digger->pool,
+                             "do_begin_textdeltaref:  reference has no `id'.");
 
   /* Store the parent <file> frame's `file_baton' in a hash table,
      keyed by the ref_id string. */
@@ -819,9 +818,8 @@ do_begin_propdelta (svn_xml__digger_t *digger)
   if (!youngest_frame->previous)
     return 
       svn_create_error 
-      (SVN_ERR_MALFORMED_XML, 0,
-       "do_begin_propdelta: <prop-delta> tag has no parent context",
-       NULL, digger->pool);
+      (SVN_ERR_MALFORMED_XML, 0, NULL, digger->pool,
+       "do_begin_propdelta: <prop-delta> tag has no parent context");
   
   switch (youngest_frame->previous->tag)
     {
@@ -867,8 +865,8 @@ do_begin_propdelta (svn_xml__digger_t *digger)
       return 
         svn_create_error 
         (SVN_ERR_MALFORMED_XML, 0,
-         "do_begin_propdelta: <prop-delta> tag has unknown context!",
-         NULL, digger->pool);
+         NULL, digger->pool,
+         "do_begin_propdelta: <prop-delta> tag has unknown context!");
     }
    
 
@@ -908,8 +906,8 @@ do_delete_prop (svn_xml__digger_t *digger,
     return 
       svn_create_error 
       (SVN_ERR_MALFORMED_XML, 0,
-       "do_delete_prop: <delete> tag has no 'name' field.",
-       NULL, digger->pool);
+       NULL, digger->pool,
+       "do_delete_prop: <delete> tag has no 'name' field.");
   
   /* Finish filling out current propdelta. */
   digger->current_propdelta->name =
@@ -971,9 +969,8 @@ do_prop_delta_callback (svn_xml__digger_t *digger)
     default:
       {
         return svn_create_error 
-          (SVN_ERR_MALFORMED_XML, 0,
-           "do_prop_delta_callback: unknown digger->current_propdelta->kind",
-           NULL, digger->pool);
+          (SVN_ERR_MALFORMED_XML, 0, NULL, digger->pool,
+           "do_prop_delta_callback: unknown digger->current_propdelta->kind");
       }
     }
 
@@ -1307,8 +1304,8 @@ xml_handle_data (void *userData, const char *data, int len)
 
   if (youngest_frame == NULL) {
     svn_error_t *err = svn_create_error (SVN_ERR_MALFORMED_XML, 0,
-                                         "xml_handle_data: no XML context!",
-                                         NULL, digger->pool);
+                                         NULL, digger->pool,
+                                         "xml_handle_data: no XML context!");
     signal_expat_bailout (err, digger);
     return;
   }
@@ -1488,12 +1485,11 @@ svn_delta_xml_parsebytes (const char *buffer, apr_size_t len, int isFinal,
   if (! XML_Parse (expat_parser, buffer, len, isFinal))
     {
       /* Uh oh, expat *itself* choked somehow! */
-      err = svn_create_error
-        (SVN_ERR_MALFORMED_XML, 0,
-         apr_psprintf (pool, "%s at line %d",
-                       XML_ErrorString (XML_GetErrorCode (expat_parser)),
-                       XML_GetCurrentLineNumber (expat_parser)),
-         NULL, pool);
+      err = svn_create_errorf
+        (SVN_ERR_MALFORMED_XML, 0, NULL, pool, 
+         "%s at line %d",
+         XML_ErrorString (XML_GetErrorCode (expat_parser)),
+         XML_GetCurrentLineNumber (expat_parser));
 
       /* Kill the expat parser and return its error */
       XML_ParserFree (expat_parser);      

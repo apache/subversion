@@ -60,9 +60,9 @@ svn_fs__dberr (apr_pool_t *pool, int db_err)
 {
   return svn_create_error (SVN_ERR_BERKELEY_DB,
 			   db_err,
-			   db_strerror (db_err),
 			   0,
-			   pool);
+			   pool,
+                           db_strerror (db_err));
 }
 
 

@@ -249,12 +249,11 @@ svn_wc__parse_versions (svn_read_fn_t *source_fn,
     if (! XML_Parse (expat_parser, buf, len, done))
     {
       /* Uh oh, expat *itself* choked somehow.  Return its message. */
-      err = svn_create_error
-        (SVN_ERR_MALFORMED_XML, 0,
-         apr_psprintf (pool, "%s at line %d",
-                       XML_ErrorString (XML_GetErrorCode (expat_parser)),
-                       XML_GetCurrentLineNumber (expat_parser)),
-         NULL, pool);
+      err = svn_create_errorf
+        (SVN_ERR_MALFORMED_XML, 0, NULL, pool,
+         "%s at line %d",
+         XML_ErrorString (XML_GetErrorCode (expat_parser)),
+         XML_GetCurrentLineNumber (expat_parser));
       goto error;
     }
 

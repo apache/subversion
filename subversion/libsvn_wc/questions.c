@@ -166,12 +166,12 @@ contents_identical_p (svn_boolean_t *identical_p,
       status = apr_full_read (file1, buf1, BUFSIZ, &bytes_read1);
       if (status)
         return svn_create_error
-          (status, 0, "apr_full_read() failed.", NULL, pool);
+          (status, 0, NULL, pool, "apr_full_read() failed.");
 
       status = apr_full_read (file2, buf2, BUFSIZ, &bytes_read2);
       if (status)
         return svn_create_error
-          (status, 0, "apr_full_read() failed.", NULL, pool);
+          (status, 0, NULL, pool, "apr_full_read() failed.");
       
       if (memcmp (buf1, buf2, bytes_read1)) 
         {
@@ -208,8 +208,7 @@ svn_wc__file_modified_p (svn_boolean_t *modified_p,
                      APR_READ, APR_OS_DEFAULT, pool);
   if (status)
     return svn_create_error
-      (status, 0,
-       "svn_wc__file_modified_p: apr_open failed.", NULL, pool);
+      (status, 0, NULL, pool, "svn_wc__file_modified_p: apr_open failed.");
 
   err = svn_wc__open_text_base (&textbase_file, filename, APR_READ, pool);
   if (err)
@@ -225,15 +224,15 @@ svn_wc__file_modified_p (svn_boolean_t *modified_p,
   /* Get stat info on both files */
   status = apr_getfileinfo (&current_stat, current_file);
   if (status)
-    return svn_create_error 
-      (status, 0,
-       "svn_wc__file_modified_p: apr_get_fileinfo failed.", NULL, pool);
+    return svn_create_error
+      (status, 0, NULL, pool,
+       "svn_wc__file_modified_p: apr_get_fileinfo failed.");
 
   status = apr_getfileinfo (&textbase_stat, textbase_file);
   if (status)
-    return svn_create_error 
-      (status, 0,
-       "svn_wc__file_modified_p: apr_get_fileinfo failed.", NULL, pool);
+    return svn_create_error
+      (status, 0, NULL, pool,
+       "svn_wc__file_modified_p: apr_get_fileinfo failed.");
 
 
   /* Easy-answer attempt #1:  */
@@ -267,9 +266,8 @@ svn_wc__file_modified_p (svn_boolean_t *modified_p,
 
   status = apr_close (current_file);
   if (status)
-    return svn_create_error (status, 0, 
-                             "svn_wc__file_modified_p: apr_close failed.",
-                             NULL, pool);
+    return svn_create_error (status, 0, NULL, pool,
+                             "svn_wc__file_modified_p: apr_close failed.");
 
 
   return SVN_NO_ERROR;
