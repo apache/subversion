@@ -16,8 +16,9 @@ package org.tigris.subversion;
  * ====================================================================
  */
 
-public class SubversionException extends Exception {
-
-    public SubversionException() {
-    }
+public class SubversionException extends Exception 
+{
+  public SubversionException() 
+  {
+  }
 }
