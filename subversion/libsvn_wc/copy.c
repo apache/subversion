@@ -225,9 +225,23 @@ copy_dir_administratively (svn_stringbuf_t *src_path,
                            svn_stringbuf_t *dst_basename,
                            apr_pool_t *pool)
 {
+  svn_wc_entry_t *src_entry;
+
   /* The 'dst_path' is simply dst_parent/dst_basename */
   svn_stringbuf_t *dst_path = svn_stringbuf_dup (dst_parent, pool);
   svn_path_add_component (dst_path, dst_basename, svn_path_local_style);
+
+  /* Sanity check:  you cannot make a copy of something that's not
+     in the repository.  See comment at the bottom of this file for an
+     explanation. */
+  SVN_ERR (svn_wc_entry (&src_entry, src_path, pool));
+  if ((src_entry->schedule == svn_wc_schedule_add)
+      || (! src_entry->url))
+    return svn_error_createf 
+      (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL, pool,
+       "Not allowed to copy or move '%s' -- it's not in the repository yet.\n"
+       "Try committing first.",
+       src_path->data);
 
   /* Recursively copy the whole directory over. 
      
