@@ -141,9 +141,10 @@ usage (const char *progname, int exit_code)
      "      new revisions into the repository's filesystem.\n"
      "      Send progress feedback to stdout.\n"
      "\n"
-     "   lscr      REPOS_PATH PATH\n"
+     "   lscr      REPOS_PATH PATH [COPIES]\n"
      "      Print, one-per-line and youngest-to-eldest, the revisions in\n"
-     "      which PATH was modified.\n"
+     "      which PATH was modified.  Use the COPIES flag to allow this\n"
+     "      operation to cross copy history while searching for revisions.\n"
      "      (For directories, this is, for now, almost guaranteed to be\n"
      "      uninteresting.  Also, PATH must exist in the HEAD of the\n"
      "      repository.)\n"
@@ -298,9 +299,18 @@ main (int argc, const char * const *argv)
         svn_revnum_t youngest_rev;
         svn_fs_root_t *rev_root;
         apr_array_header_t *revs, *paths;
-        int i;
+        int i, copies = 0;
 
-        if (argc != 4)
+        /* There are either 4 arguments (no "copies"), or there are 5
+           arguments, the last of which is "copies".  Anything else is
+           bogus.  */
+        if ((argc == 4) 
+            || ((argc == 5) && (! strcmp (argv[4], "copies"))))
+          {
+            if (argc == 5)
+              copies = 1;
+          }
+        else
           {
             usage (argv[0], 1);
             /* NOTREACHED */
@@ -313,7 +323,8 @@ main (int argc, const char * const *argv)
         fs = svn_repos_fs (repos);
         svn_fs_youngest_rev (&youngest_rev, fs, pool);
         INT_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, pool));
-        INT_ERR (svn_fs_revisions_changed (&revs, rev_root, paths, pool));
+        INT_ERR (svn_fs_revisions_changed (&revs, rev_root, paths,
+                                           copies, pool));
         for (i = 0; i < revs->nelts; i++)
           {
             svn_revnum_t this_rev = ((svn_revnum_t *)revs->elts)[i];

@@ -598,14 +598,25 @@ svn_node_kind_t svn_fs_check_path (svn_fs_root_t *root,
    which PATHS under ROOT were modified.  Use POOL for all allocations.
    The array of *REVS are sorted in descending order. All duplicates
    will also be removed. PATHS is an array of `const char *' entries.
+   
+   If CROSS_COPY_HISTORY is not set, this function will halt the
+   search for revisions in which a given path was changed when it
+   detects that the path was copied.
 
    NOTE: This function uses node-id ancestry alone to determine
    modifiedness, and therefore does NOT claim that in any of the
    returned revisions file contents changed, properties changed,
-   directory entries lists changed, etc.  */
+   directory entries lists changed, etc.  
+
+   ALSO NOTE: The revisions returned for a given path will be older
+   than or the same age as the revision of that path in ROOT.  That
+   is, if ROOT is a revision root based on revision X, and a path was
+   modified in some revision(s) younger than X, those revisions
+   younger than X will not be included for that path. */
 svn_error_t *svn_fs_revisions_changed (apr_array_header_t **revs,
                                        svn_fs_root_t *root,
                                        const apr_array_header_t *paths,
+                                       int cross_copy_history,
                                        apr_pool_t *pool);
 
 
