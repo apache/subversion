@@ -60,8 +60,7 @@ dag_init_fs (void *fs_baton, trail_t *trail)
                               svn_fs__parse_skel (rep_skel,
                                                   sizeof (rep_skel) - 1,
                                                   trail->pool),
-                              trail->db_txn,
-                              trail->pool));
+                              trail));
   } 
 
   /* Link it into filesystem revision 0:
@@ -209,37 +208,6 @@ svn_error_t *svn_fs__dag_open (dag_node_t **child_p,
   /* NOTREACHED */
   return NULL;
 }
-
-svn_error_t *
-svn_fs__dag_open_path (dag_node_t **child_p,
-                       dag_node_t **parent_p,
-                       const char **name_p,
-                       dag_node_t *root,
-                       const char *path,
-                       trail_t *trail)
-{
-#if 0
-  dag_node_t *child = root;
-  dag_node_t *parent = NULL;
-  char *mutable_path = apr_pstrdup (trail->pool, path);
-  const char *name;
-
-  while (svn_path_first_component(&name, &mutable_path,
-                                  svn_path_repos_style))
-    {
-      parent = child;
-      SVN_ERR (svn_fs__dag_open (&child, parent, name, trail));
-    }
-
-  *child_p = child;
-  *parent_p = parent;
-  *name_p = name;
-#else
-  abort ();
-#endif
-  return SVN_NO_ERROR;
-}
-
 
 svn_error_t *svn_fs__dag_delete (dag_node_t *parent,
                                  const char *name,
