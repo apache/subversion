@@ -890,6 +890,29 @@ svn_client_merge (const char *source1,
                   apr_pool_t *pool);
 
 
+/**
+ * @since New in 1.1.
+ *
+ * Merge the changes between the filesystem object @a source in peg
+ * revision @a peg_revision, as it changed between @a revision1 and @a
+ * revision2.  
+ *
+ * All other options are handled identically to svn_client_merge.
+ */
+svn_error_t *
+svn_client_merge_peg (const char *source,
+                      const svn_opt_revision_t *revision1,
+                      const svn_opt_revision_t *revision2,
+                      const svn_opt_revision_t *peg_revision,
+                      const char *target_wcpath,
+                      svn_boolean_t recurse,
+                      svn_boolean_t ignore_ancestry,
+                      svn_boolean_t force,
+                      svn_boolean_t dry_run,
+                      svn_client_ctx_t *ctx,
+                      apr_pool_t *pool);
+
+
 /** Recursively cleanup a working copy directory @a dir, finishing any
  * incomplete operations, removing lockfiles, etc.
  *

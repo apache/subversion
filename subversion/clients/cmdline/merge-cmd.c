@@ -47,6 +47,7 @@ svn_cl__merge (apr_getopt_t *os,
   const char *sourcepath1, *sourcepath2, *targetpath;
   svn_boolean_t using_alternate_syntax = FALSE;
   svn_error_t *err;
+  svn_opt_revision_t peg_revision;
 
   /* If the first opt_state revision is filled in at this point, then
      we know the user must have used the '-r' switch. */
@@ -67,7 +68,7 @@ svn_cl__merge (apr_getopt_t *os,
                                          opt_state->targets,
                                          &(opt_state->start_revision),
                                          &(opt_state->end_revision),
-                                         TRUE, /* extract @rev revisions */
+                                         ! using_alternate_syntax,
                                          pool));
 
   /* If there are no targets at all, then let's just give the user a
@@ -85,9 +86,15 @@ svn_cl__merge (apr_getopt_t *os,
                                    "Wrong number of paths given");
         }
 
-      /* the first path becomes both of the 'sources' */
-      sourcepath1 = sourcepath2 = ((const char **)(targets->elts))[0];
-      
+      SVN_ERR (svn_opt_parse_path (&peg_revision, &sourcepath1,
+                                   ((const char **)(targets->elts))[0], pool));
+      sourcepath2 = sourcepath1;
+
+      /* Set the default peg revision if one was not specified. */
+      if (peg_revision.kind == svn_opt_revision_unspecified)
+        peg_revision.kind = svn_path_is_url (sourcepath1)
+          ? svn_opt_revision_head : svn_opt_revision_working;
+
       /* decide where to apply the diffs, defaulting to '.' */
       if (targets->nelts == 2)
         targetpath = ((const char **) (targets->elts))[1];
@@ -156,17 +163,34 @@ svn_cl__merge (apr_getopt_t *os,
     svn_cl__get_notifier (&ctx->notify_func, &ctx->notify_baton, FALSE, FALSE,
                           FALSE, pool);
 
-  err = svn_client_merge (sourcepath1,
-                          &(opt_state->start_revision),
-                          sourcepath2,
-                          &(opt_state->end_revision),
-                          targetpath,
-                          opt_state->nonrecursive ? FALSE : TRUE,
-                          opt_state->ignore_ancestry,
-                          opt_state->force,
-                          opt_state->dry_run,
-                          ctx,
-                          pool); 
+  if (using_alternate_syntax)
+    {
+      err = svn_client_merge_peg (sourcepath1,
+                                  &(opt_state->start_revision),
+                                  &(opt_state->end_revision),
+                                  &peg_revision,
+                                  targetpath,
+                                  opt_state->nonrecursive ? FALSE : TRUE,
+                                  opt_state->ignore_ancestry,
+                                  opt_state->force,
+                                  opt_state->dry_run,
+                                  ctx,
+                                  pool);
+    }
+  else
+    {
+      err = svn_client_merge (sourcepath1,
+                              &(opt_state->start_revision),
+                              sourcepath2,
+                              &(opt_state->end_revision),
+                              targetpath,
+                              opt_state->nonrecursive ? FALSE : TRUE,
+                              opt_state->ignore_ancestry,
+                              opt_state->force,
+                              opt_state->dry_run,
+                              ctx,
+                              pool);
+    }
   if (err)
      return svn_cl__may_need_force (err);
 
