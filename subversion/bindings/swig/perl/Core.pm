@@ -220,6 +220,9 @@ sub DESTROY {
     apr_pool_destroy ($$self);
 }
 
+package SVN::Node;
+use SVN::Base qw(Core svn_node_);
+
 package _p_svn_opt_revision_t;
 use SVN::Base qw(Core svn_opt_revision_t_);
 
