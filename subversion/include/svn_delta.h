@@ -266,7 +266,7 @@ typedef struct svn_pdelta_parser_t
   /* The actual parser data buffer, living within subpool. */
   svn_string_t *buffer;
 
-} svn_vcdiff_parser_t;
+} svn_pdelta_parser_t;
 
 
 
