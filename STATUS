@@ -92,3 +92,9 @@ Candidate changes:
     Votes:
       +1: maxb
 
+  * r10410, r10450
+    Python bindings build fix. Explicitly link libpython to the python bindings.
+    r10410 is a trivial usage message update, included to avoid merge conflicts.
+    Votes:
+      +1: maxb
+
