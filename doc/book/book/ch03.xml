@@ -70,14 +70,14 @@
     
 
     <screen>
-      $ svn co http://svn.collab.net/repos/svn/trunk
-      A  trunk/subversion.dsw
-      A  trunk/svn_check.dsp
-      A  trunk/COMMITTERS
-      A  trunk/configure.in
-      A  trunk/IDEAS
-      &hellip;
-      Checked out revision 2499.
+$ svn co http://svn.collab.net/repos/svn/trunk
+A  trunk/subversion.dsw
+A  trunk/svn_check.dsp
+A  trunk/COMMITTERS
+A  trunk/configure.in
+A  trunk/IDEAS
+&hellip;
+Checked out revision 2499.
     </screen>
     
     <sidebar>
@@ -139,14 +139,14 @@ Checked out revision 3678.
       copy into the new directory that you name.  For example:</para>
     
     <screen>
-      $ svn co http://svn.collab.net/repos/svn/trunk subv
-      A  subv/subversion.dsw
-      A  subv/svn_check.dsp
-      A  subv/COMMITTERS
-      A  subv/configure.in
-      A  subv/IDEAS
-      &hellip;
-      Checked out revision 2499.
+$ svn co http://svn.collab.net/repos/svn/trunk subv
+A  subv/subversion.dsw
+A  subv/svn_check.dsp
+A  subv/COMMITTERS
+A  subv/configure.in
+A  subv/IDEAS
+&hellip;
+Checked out revision 2499.
     </screen>
     
     <para>That will place your working copy in a directory named
@@ -202,10 +202,10 @@ Checked out revision 3678.
         in-sync with the latest revision in the repository.</para>
       
       <screen>
-        $ svn up
-        U  ./foo.c
-        U  ./bar.c
-        Updated to revision 2.
+$ svn up
+U  ./foo.c
+U  ./bar.c
+Updated to revision 2.
       </screen>
       
       <para>In this case, someone else checked in modifications to
@@ -436,17 +436,17 @@ Checked out revision 3678.
           status</command>.</para>
       
       <screen>
-        $ svn status
-        _ L    ./abc.c               [svn has a lock in its .svn directory for abc.c]
-        M      ./bar.c               [the content in bar.c has local modifications]
-        _M     ./baz.c               [baz.c has property but no content modifications]
-        ?      ./foo.o               [svn doesn't manage foo.o]
-        !      ./foo.c               [svn knows foo.c but a non-svn program deleted it]
-        ~      ./qux                 [versioned as dir, but is file, or vice versa]
-        A  +   ./moved_dir           [added with history of where it came from]
-        M  +   ./moved_dir/README    [added with history and has local modifications]
-        D      ./stuff/fish.c        [this file is scheduled for deletion]
-        A      ./stuff/things/bloo.h [this file is scheduled for addition]
+$ svn status
+_ L    ./abc.c               [svn has a lock in its .svn directory for abc.c]
+M      ./bar.c               [the content in bar.c has local modifications]
+_M     ./baz.c               [baz.c has property but no content modifications]
+?      ./foo.o               [svn doesn't manage foo.o]
+!      ./foo.c               [svn knows foo.c but a non-svn program deleted it]
+~      ./qux                 [versioned as dir, but is file, or vice versa]
+A  +   ./moved_dir           [added with history of where it came from]
+M  +   ./moved_dir/README    [added with history and has local modifications]
+D      ./stuff/fish.c        [this file is scheduled for deletion]
+A      ./stuff/things/bloo.h [this file is scheduled for addition]
       </screen><!-- ###TODO The above should probably be a talble. -Fitz -->
       
       <para>In this output format <command>svn status</command> prints
@@ -597,8 +597,8 @@ Checked out revision 3678.
       you about it:</para>
            
       <screen>
-        $ svn status stuff/fish.c
-        D      stuff/fish.c
+$ svn status stuff/fish.c
+D      stuff/fish.c
       </screen>
            
       <para>This command also has a <option>--verbose</option>
@@ -607,16 +607,16 @@ Checked out revision 3678.
            copy:</para>
            
       <screen>
-        $ svn status -v
-        M               44        23    joe       ./README
-        _               44        30    frank     ./INSTALL
-        M               44        20    frank     ./bar.c
-        _               44        18    joe       ./stuff
-        _               44        35    mary      ./stuff/trout.c
-        D               44        19    frank     ./stuff/fish.c
-        _               44        21    mary      ./stuff/things
-        A                0         ?     ?        ./stuff/things/bloo.h
-        _               44        36    joe       ./stuff/things/gloo.c
+$ svn status -v
+M               44        23    joe       ./README
+_               44        30    frank     ./INSTALL
+M               44        20    frank     ./bar.c
+_               44        18    joe       ./stuff
+_               44        35    mary      ./stuff/trout.c
+D               44        19    frank     ./stuff/fish.c
+_               44        21    mary      ./stuff/things
+A                0         ?     ?        ./stuff/things/bloo.h
+_               44        36    joe       ./stuff/things/gloo.c
       </screen>
            
       <para>This is the <quote>long form</quote> output of
@@ -637,12 +637,12 @@ Checked out revision 3678.
         <firstterm>out-of-date</firstterm>:</para>
       
       <screen>
-        $ svn status -u -v
-        M      *        44        23    joe       ./README
-        M               44        20    frank     ./bar.c
-        _      *        44        35    mary      ./stuff/trout.c
-        D               44        19    frank     ./stuff/fish.c
-        A                0         ?     ?        ./stuff/things/bloo.h
+$ svn status -u -v
+M      *        44        23    joe       ./README
+M               44        20    frank     ./bar.c
+_      *        44        35    mary      ./stuff/trout.c
+D               44        19    frank     ./stuff/fish.c
+A                0         ?     ?        ./stuff/things/bloo.h
       </screen>
            
       <para>Notice the two asterisks: if you were to run <command>svn
@@ -661,44 +661,44 @@ Checked out revision 3678.
         out file changes in unified diff format:</para>
       
       <screen>
-        $ svn diff
-        Index: ./bar.c
-        ===================================================================
-        --- ./bar.c
-        +++ ./bar.c	Mon Jul 15 17:58:18 2002
-        @@ -1,7 +1,12 @@
-        +#include &lt;sys/types.h&gt;
-        +#include &lt;sys/stat.h&gt;
-        +#include &lt;unistd.h&gt;
-        +
-        +#include &lt;stdio.h&gt;
-        
-        int main(void) {
-        -  printf("Sixty-four slices of American Cheese...\n");
-        +  printf("Sixty-five slices of American Cheese...\n");
-        return 0;
-        }
-        
-        Index: ./README
-        ===================================================================
-        --- ./README
-        +++ ./README	Mon Jul 15 17:58:18 2002
-        @@ -193,3 +193,4 @@ 
-        +Note to self:  pick up laundry.
-        
-        Index: ./stuff/fish.c
-        ===================================================================
-        --- ./stuff/fish.c
-        +++ ./stuff/fish.c  Mon Jul 15 17:58:18 2002
-        -Welcome to the file known as 'fish'.
-        -Information on fish will be here soon.
-        
-        Index: ./stuff/things/bloo.h
-        ===================================================================
-        --- ./stuff/things/bloo.h
-        +++ ./stuff/things/bloo.h  Mon Jul 15 17:58:18 2002
-        +Here is a new file to describe
-        +things about bloo.
+$ svn diff
+Index: ./bar.c
+===================================================================
+--- ./bar.c
++++ ./bar.c	Mon Jul 15 17:58:18 2002
+@@ -1,7 +1,12 @@
++#include &lt;sys/types.h&gt;
++#include &lt;sys/stat.h&gt;
++#include &lt;unistd.h&gt;
++
++#include &lt;stdio.h&gt;
+
+int main(void) {
+-  printf("Sixty-four slices of American Cheese...\n");
++  printf("Sixty-five slices of American Cheese...\n");
+return 0;
+}
+
+Index: ./README
+===================================================================
+--- ./README
++++ ./README	Mon Jul 15 17:58:18 2002
+@@ -193,3 +193,4 @@ 
++Note to self:  pick up laundry.
+
+Index: ./stuff/fish.c
+===================================================================
+--- ./stuff/fish.c
++++ ./stuff/fish.c  Mon Jul 15 17:58:18 2002
+-Welcome to the file known as 'fish'.
+-Information on fish will be here soon.
+
+Index: ./stuff/things/bloo.h
+===================================================================
+--- ./stuff/things/bloo.h
++++ ./stuff/things/bloo.h  Mon Jul 15 17:58:18 2002
++Here is a new file to describe
++things about bloo.
       </screen>
            
       <para>The <command>svn diff</command> command produces this
@@ -717,8 +717,8 @@ Checked out revision 3678.
           throws away all changes to your file:</command></para>
            
       <screen>
-        $ svn revert README
-        Reverted ./README
+$ svn revert README
+Reverted ./README
       </screen>
         
       <para>The file is reverted to its pre-modified state by
@@ -762,10 +762,10 @@ Checked out revision 3678.
           update</command> and some interesting things occur:</para>
       
       <screen>
-        $ svn up
-        U  ./INSTALL
-        G  ./README
-        C  ./bar.c
+$ svn up
+U  ./INSTALL
+G  ./README
+C  ./bar.c
       </screen>
            
       <para>The <computeroutput>U</computeroutput> and
@@ -855,11 +855,11 @@ Checked out revision 3678.
            to the new revision you create.</para>
            
       <screen>
-        $ svn commit -m "Added include lines and corrected # of cheese slices."
-        Sending        bar.c
-        Transmitting file data .
-        Committed revision 3.
-        $
+$ svn commit -m "Added include lines and corrected # of cheese slices."
+Sending        bar.c
+Transmitting file data .
+Committed revision 3.
+$
       </screen>
            
       <para>Another way to specify a log message is to place it in a
@@ -917,20 +917,20 @@ Checked out revision 3678.
         commit.</para>
            
       <screen>
-        $ svn log
-        ------------------------------------------------------------------------
-        rev 3:  fitz | Mon, 15 Jul 2002 18:03:46 -0500 | 1 line
-        
-        Added include lines and corrected # of cheese slices.
-        ------------------------------------------------------------------------
-        rev 2:  someguy | Mon, 15 Jul 2002 17:47:57 -0500 | 1 line
-        
-        Added main() methods.
-        ------------------------------------------------------------------------
-        rev 1:  fitz | Mon, 15 Jul 2002 17:40:08 -0500 | 2 lines
-        
-        Initial import
-        ------------------------------------------------------------------------
+$ svn log
+------------------------------------------------------------------------
+rev 3:  fitz | Mon, 15 Jul 2002 18:03:46 -0500 | 1 line
+
+Added include lines and corrected # of cheese slices.
+------------------------------------------------------------------------
+rev 2:  someguy | Mon, 15 Jul 2002 17:47:57 -0500 | 1 line
+
+Added main() methods.
+------------------------------------------------------------------------
+rev 1:  fitz | Mon, 15 Jul 2002 17:40:08 -0500 | 2 lines
+
+Initial import
+------------------------------------------------------------------------
       </screen>
            
       <para>Note that the log messages are printed in reverse
@@ -940,22 +940,22 @@ Checked out revision 3678.
         (<option>-r</option>) switch:</para>
            
       <screen>
-        $ svn log -r 5:19
-        &hellip; # shows logs 5 through 19 in chronological order
-        $ svn log -r 19:5
-        &hellip; # shows logs 5 through 19 in reverse order
-        $ svn log -r 8
-        &hellip;
+$ svn log -r 5:19
+&hellip; # shows logs 5 through 19 in chronological order
+$ svn log -r 19:5
+&hellip; # shows logs 5 through 19 in reverse order
+$ svn log -r 8
+&hellip;
       </screen>
         
       <para>You can also examine the log history on a single file or directory.
       The commands</para>
            
       <screen>
-        $ svn log foo.c
-        &hellip;
-        $ svn log http://foo.com/svn/trunk/code/foo.c
-        &hellip;
+$ svn log foo.c
+&hellip;
+$ svn log http://foo.com/svn/trunk/code/foo.c
+&hellip;
       </screen>
            
       <para>will display log messages <emphasis>only</emphasis> for
@@ -968,17 +968,17 @@ Checked out revision 3678.
         changed-paths in each revision:</para>
            
       <screen>
-        $ svn log -r 8 -v
-        ------------------------------------------------------------------------
-        rev 8:  jrandom | 2002-07-14 08:15:29 -0500 | 1 line
-        Changed paths:
-        U /trunk/code/foo.c
-        U /trunk/code/bar.h
-        A /trunk/code/doc/README
-        
-        Frozzled the sub-space winch.
-        
-        ------------------------------------------------------------------------
+$ svn log -r 8 -v
+------------------------------------------------------------------------
+rev 8:  jrandom | 2002-07-14 08:15:29 -0500 | 1 line
+Changed paths:
+U /trunk/code/foo.c
+U /trunk/code/bar.h
+A /trunk/code/doc/README
+
+Frozzled the sub-space winch.
+
+------------------------------------------------------------------------
       </screen>
            
     </sect2>
@@ -1004,14 +1004,14 @@ Checked out revision 3678.
           the<filename>.svn</filename> area:</para>
         
         <screen>
-          $ svn diff foo
-          Index: ./foo
-          ===================================================================
-          --- ./foo
-          +++ ./foo	Tue Jul 16 15:19:53 2002
-          @@ -1 +1,2 @@
-          An early version of the file
-          +...extra edits
+$ svn diff foo
+Index: ./foo
+===================================================================
+--- ./foo
++++ ./foo	Tue Jul 16 15:19:53 2002
+@@ -1 +1,2 @@
+An early version of the file
++...extra edits
         </screen>
         
       </sect3>
@@ -1025,15 +1025,15 @@ Checked out revision 3678.
           repository.</para>
           
         <screen>
-          $ svn diff -r 3 foo
-          Index: ./foo
-          ===================================================================
-          --- ./foo
-          +++ ./foo	Tue Jul 16 15:19:53 2002
-          @@ -1,2 +1,2 @@
-          An early version of the file
-          -Second version of the file
-          +...extra edits
+$ svn diff -r 3 foo
+Index: ./foo
+===================================================================
+--- ./foo
++++ ./foo	Tue Jul 16 15:19:53 2002
+@@ -1,2 +1,2 @@
+An early version of the file
+-Second version of the file
++...extra edits
         </screen>
           
       </sect3>
@@ -1046,15 +1046,15 @@ Checked out revision 3678.
           directly compared.</para>
           
         <screen>
-          $ svn diff -r 2:3 foo
-          
-          Index: ./foo
-          ===================================================================
-          --- ./foo
-          +++ tmp.280.00001	Tue Jul 16 15:22:19 2002
-          @@ -1 +1,2 @@
-          An early version of the file
-          +Second version of the file
+$ svn diff -r 2:3 foo
+
+Index: ./foo
+===================================================================
+--- ./foo
++++ tmp.280.00001	Tue Jul 16 15:22:19 2002
+@@ -1 +1,2 @@
+An early version of the file
++Second version of the file
         </screen>
           
         <para>If you read the help for <command>svn diff</command>, you'll discover that you
@@ -1064,8 +1064,8 @@ Checked out revision 3678.
            working copy available:</para>
            
         <screen>
-          $ svn diff -r 23:24 http://foo.com/some/project
-          &hellip;
+$ svn diff -r 23:24 http://foo.com/some/project
+&hellip;
         </screen>
 
       </sect3>
