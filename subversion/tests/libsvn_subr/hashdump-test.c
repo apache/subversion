@@ -111,7 +111,7 @@ test1()
             (APR_WRITE | APR_CREATE),
             APR_OS_DEFAULT, pool);
 
-  result = hash_write (proplist, svn_unpack_bytestring, f);
+  result = svn_hash_write (proplist, svn_unpack_bytestring, f);
 
   apr_close (f);
 
@@ -129,12 +129,63 @@ test2()
   new_proplist = apr_make_hash (pool);
 
   apr_open (&f, "hashdump.out", APR_READ, APR_OS_DEFAULT, pool);
-  result = hash_read (&new_proplist, svn_pack_bytestring, f, pool);
+
+  result = svn_hash_read (&new_proplist, svn_pack_bytestring, f, pool);
+
   apr_close (f);
 
   return ((int) result);
 }
 
+
+
+static int
+test3()
+{
+  apr_hash_index_t *this;
+  int err;
+  int found_discrepancy = 0;
+
+  /* Build a hash in global variable "proplist", then write to a file. */
+  err = test1();
+  if (err)
+    return err;
+
+  /* Read this file back into global variable "new_proplist" */
+  err = test2();
+  if (err)
+    return err;
+
+  /* Now let's make sure that proplist and new_proplist contain the
+     same data. */
+  
+  /* Loop over our original hash */
+  for (this = apr_hash_first (proplist); this; this = apr_hash_next (this))
+    {
+      const void *key;
+      size_t keylen;
+      void *val;
+      svn_string_t *orig_str, *new_str;
+      
+      /* Get a key and val. */
+      apr_hash_this (this, &key, &keylen, &val);
+      orig_str = (svn_string_t *) val;
+
+      /* Look up the key in the new hash */
+      new_str = (svn_string_t *) apr_hash_get (new_proplist, key, keylen);
+
+      /* Does the new hash contain the key at all? */
+      if (new_str == NULL)
+        found_discrepancy = 1;
+
+      /* Do the two strings contain identical data? */
+      else if (! svn_string_compare (orig_str, new_str))
+        found_discrepancy = 1;
+    }
+
+
+  return found_discrepancy;
+}
 
 
 
@@ -151,6 +202,7 @@ int (*test_funcs[])() =
   NULL,
   test1,
   test2,
+  test3
 };
 
 /* Descriptions of each test we can run */
@@ -158,7 +210,8 @@ static char *descriptions[] =
 {
   NULL,
   "test 1: write a hash to a file",
-  "test 2: read a file into a hash"
+  "test 2: read a file into a hash",
+  "test 3: write hash out, read back in, compare"
 };
 
 /* ================================================================= */
