@@ -293,6 +293,11 @@ client_ssl_callback(void *userdata, ne_session *sess,
               ne_ssl_clicert_decrypt(clicert, pw);
               ne_ssl_set_clicert(sess, clicert);
             }
+          else if (clicert != NULL)
+            {
+              /* Cert isn't encrypted, so just attach it. */
+              ne_ssl_set_clicert(sess, clicert);
+            }
         }
     }
   apr_pool_destroy(pool);
