@@ -578,11 +578,11 @@ PROPS-END
                             "and a Ctrl-I \(\t\)\."
   match_escaped_ctrl_re = "^This msg contains a Ctrl-T \(\?\\\\020\) " \
                           "and a Ctrl-I \(\t\)\."
-  matched = False
+  matched = None
   for line in output:
     if re.match (match_unescaped_ctrl_re, line) \
        or re.match (match_escaped_ctrl_re, line):
-      matched = True
+      matched = 1
 
   if not matched:
     raise svntest.Failure ("log message not transmitted properly:" +
