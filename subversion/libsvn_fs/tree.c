@@ -761,12 +761,53 @@ svn_fs_dir_entries (apr_hash_t **table_p,
 }
 
 
+
+struct make_dir_args
+{
+  svn_fs_root_t *root;
+  const char *path;
+};
+
+
+static svn_error_t *
+txn_body_make_dir (void *baton,
+                   trail_t *trail)
+{
+  struct make_dir_args *args = baton;
+  svn_fs_root_t *root = args->root;
+  const char *path = args->path;
+  parent_path_t *parent_path;
+  dag_node_t *sub_dir;
+  
+  SVN_ERR (open_path (&parent_path, root, path, open_path_last_optional,
+                      trail));
+
+  /* If there's already a sub-directory by that name, complain.  This
+     also catches the case of trying to make a subdirectory named `/'.  */
+  if (parent_path->node)
+    return already_exists (root, path);
+
+  /* Create the subdirectory.  */
+  SVN_ERR (make_path_mutable (root, parent_path->parent, path, trail));
+  SVN_ERR (svn_fs__dag_make_dir (&sub_dir,
+                                 parent_path->parent->node, 
+                                 parent_path->entry,
+                                 trail));
+
+  return SVN_NO_ERROR;
+}
+
+
 svn_error_t *
 svn_fs_make_dir (svn_fs_root_t *root,
                  const char *path,
                  apr_pool_t *pool)
 {
-  abort ();
+  struct make_dir_args args;
+
+  args.root = root;
+  args.path = path;
+  return svn_fs__retry_txn (root->fs, txn_body_make_dir, &args, pool);
 }
                               
 
