@@ -722,8 +722,8 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
      specified, abort the operation. */
   if (log_msg_func)
     {
-      if (((*log_msg_func)(&log_msg, commit_items, log_msg_baton, pool))
-          || (! log_msg))
+      cmt_err = (*log_msg_func)(&log_msg, commit_items, log_msg_baton, pool);
+      if (cmt_err || (! log_msg))
         goto cleanup;
     }
   else
