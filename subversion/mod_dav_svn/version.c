@@ -174,6 +174,7 @@ static dav_error *dav_svn_checkout(dav_resource *resource,
 
       svn_fs_id_t *res_id;
       svn_fs_txn_t *txn;
+      svn_fs_root_t *txn_root;
 
       /* open the specified transaction so that we can verify this version
          resource corresponds to the current/latest in the transaction. */
@@ -196,10 +197,19 @@ static dav_error *dav_svn_checkout(dav_resource *resource,
                                      "activity.");
         }
 
+      serr = svn_fs_txn_root(&txn_root, txn, resource->pool);
+      if (serr != NULL)
+        {
+          /* ### correct HTTP error? */
+          return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                     "Could not open the transaction tree.");
+        }
+
       /* assert: repos_path != NULL (for this type of resource) */
 
-      serr = svn_fs_node_id(&res_id, resource->info->root.root,
-                            resource->info->repos_path, resource->pool);
+      /* get the ID of PATH within the TXN */
+      serr = svn_fs_node_id(&res_id, txn_root, resource->info->repos_path,
+                            resource->pool);
       if (serr != NULL)
         {
           /* ### correct HTTP error? */
