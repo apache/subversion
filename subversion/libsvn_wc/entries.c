@@ -392,32 +392,32 @@ sync_entry (svn_wc_entry_t *entry, apr_pool_t *pool)
                   NULL);
   
   /* Flags. */
-  if (entry->flags & SVN_WC_ENTRY_CLEAR)
-    {
-      apr_hash_set (entry->attributes, SVN_WC_ENTRY_ATTR_ADD,
-                    APR_HASH_KEY_STRING, NULL);
-      apr_hash_set (entry->attributes, SVN_WC_ENTRY_ATTR_DELETE,
-                    APR_HASH_KEY_STRING, NULL);
-    }
-  else  /* don't lose any existing flags, but maybe set some new ones */
-    {
-      if (entry->flags & SVN_WC_ENTRY_ADD)
-        apr_hash_set (entry->attributes,
-                      SVN_WC_ENTRY_ATTR_ADD, APR_HASH_KEY_STRING,
-                      svn_string_create ("true", pool));
-      if (entry->flags & SVN_WC_ENTRY_DELETE)
-        apr_hash_set (entry->attributes,
-                      SVN_WC_ENTRY_ATTR_DELETE, APR_HASH_KEY_STRING,
-                      svn_string_create ("true", pool));
-      if (entry->flags & SVN_WC_ENTRY_MERGED)
-        apr_hash_set (entry->attributes,
-                      SVN_WC_ENTRY_ATTR_MERGED, APR_HASH_KEY_STRING,
-                      svn_string_create ("true", pool));
-      if (entry->flags & SVN_WC_ENTRY_CONFLICT)
-        apr_hash_set (entry->attributes,
-                      SVN_WC_ENTRY_ATTR_CONFLICT, APR_HASH_KEY_STRING,
-                      svn_string_create ("true", pool));
-    }
+  {
+    svn_boolean_t clearall = (entry->flags & SVN_WC_ENTRY_CLEAR_ALL);
+    svn_string_t *val;
+    
+    /* Are we clearing or setting the affected bits? */
+    if (clearall || (entry->flags & SVN_WC_ENTRY_CLEAR_NAMED))
+      val = NULL;
+    else
+      val = svn_string_create ("true", pool);
+    
+    if (clearall || (entry->flags & SVN_WC_ENTRY_ADD))
+      apr_hash_set (entry->attributes,
+                    SVN_WC_ENTRY_ATTR_ADD, APR_HASH_KEY_STRING, val);
+
+    if (clearall || (entry->flags & SVN_WC_ENTRY_DELETE))
+      apr_hash_set (entry->attributes,
+                    SVN_WC_ENTRY_ATTR_DELETE, APR_HASH_KEY_STRING, val);
+
+    if (clearall || (entry->flags & SVN_WC_ENTRY_MERGED))
+      apr_hash_set (entry->attributes,
+                    SVN_WC_ENTRY_ATTR_MERGED, APR_HASH_KEY_STRING, val);
+
+    if (clearall || (entry->flags & SVN_WC_ENTRY_CONFLICT))
+      apr_hash_set (entry->attributes,
+                    SVN_WC_ENTRY_ATTR_CONFLICT, APR_HASH_KEY_STRING, val);
+  }
   
   /* Timestamps. */
   if (entry->text_time)

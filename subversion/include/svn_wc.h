@@ -139,12 +139,15 @@ typedef struct svn_wc_entry_t
 #define SVN_WC_ENTRY_ATTR_PREJFILE  "prop-reject-file"
 
 
-/* Bitmasks stored in the `flags' field above.  */
-#define SVN_WC_ENTRY_CLEAR     1     /* special flag, means clear flags */
-#define SVN_WC_ENTRY_ADD       2     /* entry marked for addition */
-#define SVN_WC_ENTRY_DELETE    4     /* entry marked for deletion */
-#define SVN_WC_ENTRY_MERGED    8     /* wfile merged as of timestamp */
-#define SVN_WC_ENTRY_CONFLICT  16    /* wfile conflicted as of timestamp */
+/* Bitmasks for svn_wc_entry_t.flags. 
+   REMINDER: if you add a new mask here, make sure to update
+   sync_entry() in entries.c. */
+#define SVN_WC_ENTRY_ADD           1  /* entry marked for addition */
+#define SVN_WC_ENTRY_DELETE        2  /* entry marked for deletion */
+#define SVN_WC_ENTRY_MERGED        4  /* wfile merged as of timestamp */
+#define SVN_WC_ENTRY_CONFLICT      8  /* wfile conflicted as of timestamp */
+#define SVN_WC_ENTRY_CLEAR_NAMED  16  /* action: clear mentioned flags */
+#define SVN_WC_ENTRY_CLEAR_ALL    32  /* action: clear all flags */
 
 /* How an entries file's owner dir is named in the entries file. */
 #define SVN_WC_ENTRY_THIS_DIR  ""
