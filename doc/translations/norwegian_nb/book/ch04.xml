@@ -3168,7 +3168,7 @@ Committed revision 352.
       @ENGLISH }}} -->
       <para>En annen fin funksjonalitet med Subversions modell er at 
         grener og merker kan ha begrenset levetid, akkurat som ethvert 
-        annet versjoner element.
+        annet versjonert element.
         For eksempel, tenk at du etterhvert blir ferdig med alt arbeidet 
         p&#229; din personlige gren i <filename>calc</filename>-prosjektet.
         Etter at du har flettet alle dine forandringer tilbake til 
@@ -3250,7 +3250,7 @@ Committed revision 376.
         <filename>calc</filename>-prosjektet til offentligheten, og du 
         vet at det kommer til &#229; ta noen m&#229;neder &#229; luke ut feil av 
         programmet.
-        Du vil ikke at folk skal legge til ny funksjonalitet til 
+        Du vil ikke at folk skal legge inn ny funksjonalitet til 
         prosjektet, men du vil heller ikke at utviklerne skal stoppe 
         programmeringen.
         S&#229; istedenfor lager du en <quote>stabil</quote> gren av 
