@@ -1785,7 +1785,7 @@ svn_io_read_version_file (int *version,
 
   /* Check that the first line contains only digits. */
   {
-    int i;
+    apr_size_t i;
 
     for (i = 0; i < len; ++i)
       {
