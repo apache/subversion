@@ -51,12 +51,15 @@ for (@modules) {
 sub MY::postamble {
    package MY ;
    return join('', "all :: modules\ntest :: modules\ninstall :: modules\n\n",
+	       "par :: all\n\t",
+	       q{perl -MPAR::Dist -e"blib_to_par(name=>'SVN',version=>'`perl -Mblib -MSVN::Core -e'print $$SVN::Core::VERSION'`')"},"\n\n",
 	       # h2i
 	       "ra_plugin.hi: ../../../include/svn_ra.h\n\tperl h2i.pl ../../../include/svn_ra.h svn_ra_plugin_t > \$@\n\n",
 	       "ra_reporter.hi: ../../../include/svn_ra.h\n\tperl h2i.pl ../../../include/svn_ra.h svn_ra_reporter_t > \$@\n\n",
 	       "delta_editor.hi: ../../../include/svn_delta.h\n\tperl h2i.pl ../../../include/svn_delta.h svn_delta_editor_t > \$@\n\n",
 	       "modules :: ",(map { " svn_$_.c"} @modules),"\n",
 	       (map {"\tmake -f Makefile.$_\n"} @modules),
+	       "\t\$(NOECHO) \$(TOUCH) \$\@",
 	       # swig
 	       "\ncore.c :: ../core.i\n",
 	       "\tswig -c -nopm -perl -I.. -I../../../include $apr_cflags -module SVN::_Core -o core.c ../core.i\n", 
