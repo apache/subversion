@@ -144,7 +144,7 @@ const apr_getopt_option_t svn_cl__options[] =
                       "with a native svn:eol-style\n"
                       "                             property.  ARG may be one "
                       "of 'LF', 'CR', 'CRLF'")},
-    {"limit",         'l', 1,
+    {"limit",         svn_cl__limit_opt, 1,
                       N_("maximum number of log entries")},
     {0,               0, 0, 0}
   };
@@ -383,9 +383,9 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
        "    svn log foo.c\n"
        "    svn log http://www.example.com/repo/project/foo.c\n"
        "    svn log http://www.example.com/repo/project foo.c bar.c\n"),
-    {'r', 'q', 'v', 'l', svn_cl__targets_opt, svn_cl__stop_on_copy_opt,
+    {'r', 'q', 'v', svn_cl__targets_opt, svn_cl__stop_on_copy_opt,
      svn_cl__incremental_opt, svn_cl__xml_opt, SVN_CL__AUTH_OPTIONS, 
-     svn_cl__config_dir_opt} },
+     svn_cl__config_dir_opt, svn_cl__limit_opt} },
 
   { "merge", svn_cl__merge, {0},
     N_("Apply the differences between two sources to a working copy path.\n"
@@ -813,8 +813,8 @@ main (int argc, const char * const *argv)
       num_opts++;
 
       switch (opt_id) {
-      case 'l':
-        opt_state.limit = atol (opt_arg);
+      case svn_cl__limit_opt:
+        opt_state.limit = atoi (opt_arg);
         break;
       case 'm':
         /* Note that there's no way here to detect if the log message
