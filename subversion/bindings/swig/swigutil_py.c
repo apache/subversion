@@ -724,6 +724,7 @@ thunk_apply_textdelta(void *file_baton,
   item_baton *ib = file_baton;
   PyObject *result;
   svn_error_t *err;
+  handler_baton *hb;
 
   acquire_py_lock();
 
@@ -736,7 +737,7 @@ thunk_apply_textdelta(void *file_baton,
       goto finished;
     }
 
-  handler_baton *hb = apr_palloc(ib->pool, sizeof(*hb));
+  hb = apr_palloc(ib->pool, sizeof(*hb));
 
   /* return the thunk for invoking the handler. the baton takes our
      'result' reference. */
