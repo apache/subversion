@@ -146,6 +146,9 @@ typedef struct
      -1 if not known (for backward compatibility). */
   int predecessor_count;
 
+  /* path committed at */
+  const char *committed_path;
+  
   /* representation key for this node's properties.  may be NULL if
      there are no properties.  */
   const char *prop_key;

@@ -115,6 +115,10 @@ svn_error_t *svn_fs__dag_get_predecessor_count (int *count,
                                                 dag_node_t *node,
                                                 trail_t *trail);
 
+/* Set *PATH to the initial committed path of this node. */
+svn_error_t *svn_fs__dag_get_committed_path (const char **path,
+                                             dag_node_t *node,
+                                             trail_t *trail);
 
 /* Callback function type for svn_fs__dag_walk_predecessors() */
 typedef svn_error_t *(*svn_fs__dag_pred_func_t) (void *baton,
@@ -282,12 +286,16 @@ svn_error_t *svn_fs__dag_set_entry (dag_node_t *node,
    indicates that this new node is being created as the result of a
    copy operation, and specifically which operation that was.  
 
-   TXN_ID is the Subversion transaction under which this occurs.  */
+   TXN_ID is the Subversion transaction under which this occurs.
+
+   PATH, if non-NULL, is the commit path for the cloned child.
+   */
 svn_error_t *svn_fs__dag_clone_child (dag_node_t **child_p,
                                       dag_node_t *parent,
                                       const char *name,
                                       const char *copy_id,
-                                      const char *txn_id, 
+                                      const char *txn_id,
+                                      const char *path,
                                       trail_t *trail);
 
 
@@ -354,11 +362,12 @@ svn_error_t *svn_fs__dag_delete_if_mutable (svn_fs_t *fs,
    cannot be a slash-separated directory path.  PARENT must not
    currently have an entry named NAME.  Do any temporary allocation in
    TRAIL->pool.  TXN_ID is the Subversion transaction under which this
-   occurs.  */
+   occurs.  PATH is the initial committed path of this dag node.*/
 svn_error_t *svn_fs__dag_make_dir (dag_node_t **child_p,
                                    dag_node_t *parent,
                                    const char *name,
                                    const char *txn_id,
+                                   const char *path,
                                    trail_t *trail);
 
 
@@ -412,11 +421,13 @@ svn_error_t *svn_fs__dag_file_length (apr_size_t *length,
    TRAIL->pool.  The new file's contents are the empty string, and it
    has no properties.  PARENT must be mutable.  NAME must be a single
    path component; it cannot be a slash-separated directory path.
-   TXN_ID is the Subversion transaction under which this occurs.  */
+   TXN_ID is the Subversion transaction under which this occurs.
+   PATH is the committed tree path for this new file. */
 svn_error_t *svn_fs__dag_make_file (dag_node_t **child_p,
                                     dag_node_t *parent,
                                     const char *name,
                                     const char *txn_id,
+                                    const char *path,
                                     trail_t *trail);
 
 
@@ -439,7 +450,8 @@ svn_error_t *svn_fs__dag_copy (dag_node_t *to_node,
                                svn_boolean_t preserve_history,
                                svn_revnum_t from_rev,
                                const char *from_path,
-                               const char *txn_id, 
+                               const char *txn_id,
+                               const char *to_path,
                                trail_t *trail);
 
 

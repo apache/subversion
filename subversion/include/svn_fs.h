@@ -1047,6 +1047,10 @@ typedef struct svn_fs_dirent_t {
   /** The node revision ID it names.  */
   svn_fs_id_t *id;
 
+  /* The first revision that this node revision appeared
+     at this path. */
+  svn_revnum_t created_rev;
+
 } svn_fs_dirent_t;
 
 

@@ -107,9 +107,10 @@ We represent a given revision of a file or directory node using a list
 skel (see skel.h for an explanation of skels).  A node revision skel
 has the form:
 
-    (HEADER PROP-KEY KIND-SPECIFIC ...)
+    (HEADER COMMIT-PATH PROP-KEY KIND-SPECIFIC ...)
 
 where HEADER is a header skel, whose structure is common to all nodes,
+COMMIT-PATH is the path this NODE-REVISION was initially committed at,
 PROP-KEY is the key of the representation that contains this node's
 properties list, and the KIND-SPECIFIC elements carry data dependent
 on what kind of node this is --- file, directory, etc.
@@ -161,7 +162,7 @@ FILE: how files are represented.
 If a NODE-REVISION's header's KIND is "file", then the node-revision
 skel represents a file, and has the form:
 
-    (HEADER PROP-KEY DATA-KEY [EDIT-DATA-KEY])
+    (HEADER COMMIT-PATH PROP-KEY DATA-KEY [EDIT-DATA-KEY])
 
 where DATA-KEY identifies the representation for the file's current
 contents, and EDIT-DATA-KEY identifies the a representation currently
@@ -176,7 +177,7 @@ DIR: how directories are represented.
 If the header's KIND is "dir", then the node-revision skel
 represents a directory, and has the form:
 
-    (HEADER PROP-KEY ENTRIES-KEY)
+    (HEADER COMMIT-PATH PROP-KEY ENTRIES-KEY)
 
 where ENTRIES-KEY identifies the representation for the directory's
 entries list (see discussion of representations later).  An entries
@@ -781,8 +782,8 @@ Entries lists:
 Node revisions:
 
           NODE-REVISION ::= FILE | DIR ;
-                   FILE ::= (HEADER PROP-KEY DATA-KEY [EDIT-DATA-KEY]) ;
-                    DIR ::= (HEADER PROP-KEY ENTRIES-KEY) ;
+                   FILE ::= (HEADER COMMIT-PATH PROP-KEY DATA-KEY [EDIT-DATA-KEY]) ;
+                    DIR ::= (HEADER COMMIT-PATH PROP-KEY ENTRIES-KEY) ;
 
                  HEADER ::= (KIND [PREDECESSOR-ID [PREDECESSOR-COUNT]]) ;
                    KIND ::= "file" | "dir" ;
@@ -790,6 +791,7 @@ Node revisions:
       PREDECESSOR-COUNT ::= number ;
                PROP-KEY ::= atom ;
                 REP-KEY ::= atom ;
+            COMMIT-PATH ::= atom ;
 
 
 Representations:

@@ -5585,26 +5585,564 @@ branch_test (const char **msg,
   SVN_ERR (svn_fs_close_txn (txn));
   svn_pool_clear (spool);
 
-#if 0
   {
-    const svn_fs_id_t *G2_id, *G2_rho_id, *G2_rho2_id;
+    const svn_fs_id_t *D_G2_id, *D_G2_rho_id, *D_G2_rho2_id, *D_G_id,
+        *D_G_rho_id, *D_G_rho2_id;
+    const svn_fs_id_t *D2_id, *D2_G_id, *D2_G2_id, *D2_G_rho_id,
+        *D2_G_rho2_id, *D2_G2_rho_id, *D2_G2_rho2_id, *D_id;
+    svn_string_t *s1, *s2;
 
     /* Now, A/D/G and A/D/G2 should have the same NodeId, but A/D/G2
        should have earned a new CopyId.  Also, A/D/G/rho and
        A/D/G/rho2 should be the same nodes as A/D/G2/rho and
        A/D/G2/rho2, respectively.  */
     SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, spool));
-    SVN_ERR (svn_fs_node_id (&G2_id, rev_root, "A/D/G2", spool));
-    SVN_ERR (svn_fs_node_id (&G2_rho_id, rev_root, "A/D/G2/rho", spool));
-    SVN_ERR (svn_fs_node_id (&G2_rho2_id, rev_root, "A/D/G2/rho2", spool));
-  }
-  svn_pool_clear (spool);
-#endif /* 0 */
+    
+    SVN_ERR (svn_fs_node_id (&D_G2_id, rev_root, "A/D/G2", spool));
+    SVN_ERR (svn_fs_node_id (&D_G_id, rev_root, "A/D/G", spool));
+    s1 = svn_fs_unparse_id (D_G2_id, spool);
+    s2 = svn_fs_unparse_id (D_G_id, spool);
 
+    SVN_ERR (svn_fs_node_id (&D_G2_rho_id, rev_root, "A/D/G2/rho", spool));
+    SVN_ERR (svn_fs_node_id (&D_G2_rho2_id, rev_root, "A/D/G2/rho2", spool));
+    SVN_ERR (svn_fs_node_id (&D_G_rho_id, rev_root, "A/D/G/rho", spool));
+    SVN_ERR (svn_fs_node_id (&D_G_rho2_id, rev_root, "A/D/G/rho2", spool));
+    
+    s1 = svn_fs_unparse_id (D_G2_rho_id, spool);
+    s2 = svn_fs_unparse_id (D_G_rho_id, spool);
+
+    if (strcmp (s2->data, "f.0.5") != 0)
+      return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
+                                "/A/D/G/rho id: expected f.0.5 got: %s", s2);
+    if (strcmp (s1->data, "f.2.5") != 0)
+      return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
+                                "/A/D/G2/rho id: expected d.2.5 got: %s", s1);
+    
+    s1 = svn_fs_unparse_id (D_G2_rho2_id, spool);
+    s2 = svn_fs_unparse_id (D_G_rho2_id, spool);
+    
+    if (strcmp (s2->data, "f.1.5") != 0)
+      return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
+                                "/A/D/G/rho2 id: expected d.1.5 got: %s", s2);
+    if (strcmp (s1->data, "f.4.5") != 0)
+      return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
+                                "/A/D/G2/rho2 id: expected f.4.5 got: %s", s1);
+
+    SVN_ERR (svn_fs_node_id (&D_id, rev_root, "A/D", spool));
+    SVN_ERR (svn_fs_node_id (&D2_id, rev_root, "A/D2", spool));
+    s1 = svn_fs_unparse_id (D_id, spool);
+    s2 = svn_fs_unparse_id (D2_id, spool);
+    
+    if (strcmp(s1->data, "b.0.5") != 0)
+      return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
+                                "/A/D id: expected b.0.5 got: %s", s1);
+    if (strcmp(s2->data, "b.3.5") != 0)
+      return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
+                                "/A/D2 id: expected b.3.5 got: %s", s2);
+    
+    SVN_ERR (svn_fs_node_id (&D2_G_id, rev_root, "A/D2/G", spool));
+    SVN_ERR (svn_fs_node_id (&D2_G2_id, rev_root, "A/D2/G2", spool));
+    s1 = svn_fs_unparse_id (D2_G_id, spool);
+    s2 = svn_fs_unparse_id (D2_G2_id, spool);
+
+    if (strcmp(s1->data, "d.3.5") != 0)
+      return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
+                                "/A/D2/G id: expected d.3.5 got: %s", s1);
+    if (strcmp(s2->data, "d.6.5") != 0)
+      return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
+                                "/A/D2/G2 id: expected d.6.5 got: %s", s2);
+    
+    SVN_ERR (svn_fs_node_id (&D2_G_rho_id, rev_root, "A/D2/G/rho", spool));
+    SVN_ERR (svn_fs_node_id (&D2_G2_rho_id, rev_root, "A/D2/G2/rho", spool));
+
+    s1 = svn_fs_unparse_id (D2_G_rho_id, spool);
+    s2 = svn_fs_unparse_id (D2_G2_rho_id, spool);
+    
+    if (strcmp(s1->data, "f.3.5") != 0)
+      return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
+                                "/A/D2/G/rho id: expected f.3.5 got: %s", s1);
+    if (strcmp(s2->data, "f.6.5") != 0)
+      return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
+                                "/A/D2/G2/rho id: expected f.6.5 got: %s", s2);
+
+    SVN_ERR (svn_fs_node_id (&D2_G_rho2_id, rev_root, "A/D2/G/rho2", spool));
+    SVN_ERR (svn_fs_node_id (&D2_G2_rho2_id, rev_root, "A/D2/G2/rho2", spool));
+
+    s1 = svn_fs_unparse_id (D2_G_rho2_id, spool);
+    s2 = svn_fs_unparse_id (D2_G2_rho2_id, spool);
+    
+    if (strcmp(s1->data, "f.5.5") != 0)
+      return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
+                                "/A/D2/G/rho2 id: expected f.5.5 got: %s", s1);
+    if (strcmp(s2->data, "f.7.5") != 0)
+      return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
+                                "/A/D2/G2/rho2 id: expected f.7.5 got: %s", s2);
+    svn_pool_clear (spool);
+  }
+  
   svn_pool_destroy (spool);
   svn_fs_close_fs (fs);
   return SVN_NO_ERROR;
 }
+
+static svn_error_t *
+lazy_copies_created_rev (const char **msg,
+             svn_boolean_t msg_only,
+             apr_pool_t *pool)
+{ 
+  apr_pool_t *spool = svn_pool_create (pool);
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root, *rev_root;
+  svn_revnum_t youngest_rev = 0;
+  svn_revnum_t rev = 0;
+  
+  *msg = "seeing through lazy copies (node_created_rev)";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  /* Create a filesystem and repository. */
+  SVN_ERR (svn_test__create_fs (&fs, "test-repo-see-through-lazy-copies", pool));
+
+  /*** Revision 1:  Create the greek tree in revision.  ***/
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, spool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, spool));
+  SVN_ERR (svn_test__create_greek_tree (txn_root, spool));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
+  SVN_ERR (svn_fs_close_txn (txn));
+  svn_pool_clear (spool);
+
+  /*** Revision 2:  Copy A/D/G/rho to A/D/G/rho2.  ***/
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, spool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, spool));
+  SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, spool));
+  SVN_ERR (svn_fs_copy (rev_root, "A/D/G/rho", txn_root, "A/D/G/rho2", spool));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
+  SVN_ERR (svn_fs_close_txn (txn));
+  svn_pool_clear (spool);
+
+  /*** Revision 3:  Copy A/D/G to A/D/G2.  ***/
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, spool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, spool));
+  SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, spool));
+  SVN_ERR (svn_fs_copy (rev_root, "A/D/G", txn_root, "A/D/G2", spool));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
+  SVN_ERR (svn_fs_close_txn (txn));
+  svn_pool_clear (spool);
+
+  /*** Revision 4:  Copy A/D to A/D2.  ***/
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, spool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, spool));
+  SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, spool));
+  SVN_ERR (svn_fs_copy (rev_root, "A/D", txn_root, "A/D2", spool));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
+  SVN_ERR (svn_fs_close_txn (txn));
+  svn_pool_clear (spool);
+
+  /*** Now verify that all rho's, and rho2's have the correct
+       created-rev value. ***/
+  SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, spool));
+  SVN_ERR (svn_fs_node_created_rev (&rev, rev_root, "A/D/G/rho", spool));
+  if (rev != 1)
+    return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
+                              "/A/D/G/rho created rev mistmatch expeceted 1, got: %d", rev);
+
+  SVN_ERR (svn_fs_node_created_rev (&rev, rev_root, "A/D/G/rho2", spool));
+  if (rev != 2)
+    return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
+                              "/A/D/G/rho2 created rev mismatch expected 2, got: %d", rev);
+
+  SVN_ERR (svn_fs_node_created_rev(&rev, rev_root, "A/D/G2/rho", spool));
+  if (rev != 3)
+    return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
+                              "/A/D/G2/rho created rev mismatch expected 3, got: %d", rev);
+  
+  SVN_ERR (svn_fs_node_created_rev (&rev, rev_root, "A/D/G2/rho2", spool));
+  if (rev != 3)
+    return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
+                              "/A/D/G2/rho2 created rev mismatch expected 3, got: %d", rev);
+
+  SVN_ERR (svn_fs_node_created_rev (&rev, rev_root, "A/D2/G/rho", spool));
+  if (rev != 4)
+    return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
+                              "/A/D2/G/rho created rev mismatch expected 4, got: %d", rev);
+  
+  SVN_ERR (svn_fs_node_created_rev (&rev, rev_root, "A/D2/G/rho2", spool));
+  if (rev != 4)
+    return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
+                              "/A/D2/G/rho2 created rev mismatch expected 4, got: %d", rev);
+  
+  SVN_ERR (svn_fs_node_created_rev (&rev, rev_root, "A/D2/G2/rho", spool));
+  if (rev != 4)
+    return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
+                              "/A/D2/G2/rho created rev mismatch expected 4, got: %d", rev);
+
+  SVN_ERR (svn_fs_node_created_rev (&rev, rev_root, "A/D2/G2/rho2", spool));
+  if (rev != 4)
+    return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
+                              "/A/D2/G2/rho2 created rev mismatch expected 4, got: %d", rev);
+
+  svn_pool_clear (spool);
+  
+  /* Revision 5: Modify some lazy copies, and re-verify the created-revs. */
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, spool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, spool));
+  SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, spool));
+  SVN_ERR (svn_test__set_file_contents (txn_root, "A/D2/G2/rho", 
+                                        "Edited text.", spool));
+  SVN_ERR (svn_test__set_file_contents (txn_root, "A/D2/G2/rho2", 
+                                        "Edited text.", spool));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
+  SVN_ERR (svn_fs_close_txn (txn));
+  svn_pool_clear (spool);
+
+  /* Verify the created-revs on our modified paths. */
+  SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, spool));
+  SVN_ERR (svn_fs_node_created_rev (&rev, rev_root, "A/D2/G2/rho", spool));
+  if (rev != 5)
+    return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
+                              "/A/D2/G2/rho created rev mismatch expected 5, got: %d", rev);
+
+  SVN_ERR (svn_fs_node_created_rev (&rev, rev_root, "A/D2/G2/rho2", spool));
+  if (rev != 5)
+    return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
+                              "/A/D2/G2/rho2 created rev mismatch expected 5, got: %d", rev);
+  /* Also verify the created-revs on our bubble up directories. */
+  SVN_ERR (svn_fs_node_created_rev (&rev, rev_root, "A/D2/G2", spool));
+  if (rev != 5)
+    return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
+                              "/A/D2/G2 created rev mismatch expected 5, got: %d", rev);
+  SVN_ERR (svn_fs_node_created_rev (&rev, rev_root, "A/D2", spool));
+  if (rev != 5)
+    return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
+                              "/A/D2 created rev mismatch expected 5, got: %d", rev);
+  
+  svn_pool_destroy (spool);
+  svn_fs_close_fs (fs);
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+lazy_copies_dir_entries (const char **msg,
+             svn_boolean_t msg_only,
+             apr_pool_t *pool)
+{ 
+  apr_pool_t *spool = svn_pool_create (pool);
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root, *rev_root;
+  svn_revnum_t youngest_rev = 0;
+  svn_revnum_t rev = 0;
+  apr_hash_t *entries;
+  svn_fs_dirent_t *entry;
+  
+  *msg = "seeing through lazy copies (dir_entries)";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  /* Create a filesystem and repository. */
+  SVN_ERR (svn_test__create_fs (&fs, "test-repo-lazy-copies-dir-entries", pool));
+
+  /*** Revision 1:  Create the greek tree in revision.  ***/
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, spool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, spool));
+  SVN_ERR (svn_test__create_greek_tree (txn_root, spool));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
+  SVN_ERR (svn_fs_close_txn (txn));
+  svn_pool_clear (spool);
+
+  /*** Revision 2:  Copy A/D/G/rho to A/D/G/rho2.  ***/
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, spool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, spool));
+  SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, spool));
+  SVN_ERR (svn_fs_copy (rev_root, "A/D/G/rho", txn_root, "A/D/G/rho2", spool));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
+  SVN_ERR (svn_fs_close_txn (txn));
+  svn_pool_clear (spool);
+
+  /*** Revision 3:  Copy A/D/G to A/D/G2.  ***/
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, spool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, spool));
+  SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, spool));
+  SVN_ERR (svn_fs_copy (rev_root, "A/D/G", txn_root, "A/D/G2", spool));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
+  SVN_ERR (svn_fs_close_txn (txn));
+  svn_pool_clear (spool);
+
+  /*** Revision 4:  Copy A/D to A/D2.  ***/
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, spool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, spool));
+  SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, spool));
+  SVN_ERR (svn_fs_copy (rev_root, "A/D", txn_root, "A/D2", spool));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
+  SVN_ERR (svn_fs_close_txn (txn));
+  svn_pool_clear (spool);
+
+  /*** Now verify that all rho's, and rho2's have the correct created-rev value. ***/
+  SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, spool));
+  SVN_ERR (svn_fs_dir_entries (&entries, rev_root, "A/D/G", spool));
+  entry = apr_hash_get (entries, "rho", APR_HASH_KEY_STRING);
+  if (entry == NULL
+      || entry->created_rev != 1)
+    return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
+                              "/A/D/G/rho created rev mistmatch expeceted 1, got: %d", rev);
+
+  SVN_ERR (svn_fs_dir_entries (&entries, rev_root, "A/D/G", spool));
+  entry = apr_hash_get (entries, "rho2", APR_HASH_KEY_STRING);
+  if (entry == NULL
+      || entry->created_rev != 2)
+    return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
+                              "/A/D/G/rho2 created rev mistmatch expeceted 2, got: %d", rev);
+
+  SVN_ERR (svn_fs_dir_entries (&entries, rev_root, "A/D/G2", spool));
+  entry = apr_hash_get (entries, "rho", APR_HASH_KEY_STRING);
+  if (entry == NULL
+      || entry->created_rev != 3)
+    return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
+                              "/A/D/G2/rho created rev mismatch expected 3, got: %d", rev);
+  
+  SVN_ERR (svn_fs_dir_entries (&entries, rev_root, "A/D/G2", spool));
+  entry = apr_hash_get (entries, "rho2", APR_HASH_KEY_STRING);
+  if (entry == NULL
+      || entry->created_rev != 3)
+    return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
+                              "/A/D/G2/rho2 created rev mismatch expected 3, got: %d", rev);
+
+  SVN_ERR (svn_fs_dir_entries (&entries, rev_root, "A/D2/G", spool));
+  entry = apr_hash_get (entries, "rho", APR_HASH_KEY_STRING);
+  if (entry == NULL
+      || entry->created_rev != 4)
+    return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
+                              "/A/D2/G/rho created rev mismatch expected 4, got: %d", rev);
+  
+  SVN_ERR (svn_fs_dir_entries (&entries, rev_root, "A/D2/G", spool));
+  entry = apr_hash_get (entries, "rho2", APR_HASH_KEY_STRING);
+  if (entry == NULL
+      || entry->created_rev != 4)
+    return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
+                              "/A/D2/G/rho2 created rev mismatch expected 4, got: %d", rev);
+  
+  SVN_ERR (svn_fs_dir_entries (&entries, rev_root, "A/D2/G2", spool));
+  entry = apr_hash_get (entries, "rho", APR_HASH_KEY_STRING);
+  if (entry == NULL
+      || entry->created_rev != 4)
+    return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
+                              "/A/D2/G2/rho created rev mismatch expected 4, got: %d", rev);
+
+  SVN_ERR (svn_fs_dir_entries (&entries, rev_root, "A/D2/G2", spool));
+  entry = apr_hash_get (entries, "rho2", APR_HASH_KEY_STRING);
+  if (entry == NULL
+      || entry->created_rev != 4)
+    return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
+                              "/A/D2/G2/rho2 created rev mismatch expected 4, got: %d", rev);
+
+  svn_pool_clear (spool);
+  
+  /* Revision 5: Modify some lazy copies, and re-verify the created-revs. */
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, spool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, spool));
+  SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, spool));
+  SVN_ERR (svn_test__set_file_contents (txn_root, "A/D2/G2/rho", 
+                                        "Edited text.", spool));
+  SVN_ERR (svn_test__set_file_contents (txn_root, "A/D2/G2/rho2", 
+                                        "Edited text.", spool));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
+  SVN_ERR (svn_fs_close_txn (txn));
+  svn_pool_clear (spool);
+
+  /* Verify the created-revs on our modified paths. */
+  SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, spool));
+  SVN_ERR (svn_fs_dir_entries (&entries, rev_root, "A/D2/G2", spool));
+  entry = apr_hash_get (entries, "rho", APR_HASH_KEY_STRING);
+  if (entry == NULL
+      || entry->created_rev != 5)
+    return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
+                              "/A/D2/G2/rho created rev mismatch expected 5, got: %d", rev);
+
+  SVN_ERR (svn_fs_dir_entries (&entries, rev_root, "A/D2/G2", spool));
+  entry = apr_hash_get (entries, "rho2", APR_HASH_KEY_STRING);
+  if (entry == NULL
+      || entry->created_rev != 5)
+    return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
+                              "/A/D2/G2/rho2 created rev mismatch expected 5, got: %d", rev);
+  
+  /* Also verify the created-revs on our bubble up directories. */
+  SVN_ERR (svn_fs_dir_entries (&entries, rev_root, "A/D2", spool));
+  entry = apr_hash_get (entries, "G2", APR_HASH_KEY_STRING);
+  if (entry == NULL
+      || entry->created_rev != 5)
+    return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
+                              "/A/D2/G2 created rev mismatch expected 5, got: %d", rev);
+  SVN_ERR (svn_fs_dir_entries (&entries, rev_root, "A", spool));
+  entry = apr_hash_get (entries, "D2", APR_HASH_KEY_STRING);
+  if (entry == NULL
+      || entry->created_rev != 5)
+    return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
+                              "/A/D2 created rev mismatch expected 5, got: %d", rev);
+  
+  svn_pool_destroy (spool);
+  svn_fs_close_fs (fs);
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+lazy_copies_rev_changed (const char **msg,
+             svn_boolean_t msg_only,
+             apr_pool_t *pool)
+{ 
+  apr_pool_t *spool = svn_pool_create (pool);
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root, *rev_root;
+  svn_revnum_t youngest_rev = 0;
+  svn_revnum_t rev = 0;
+  apr_array_header_t *revs = NULL;
+  apr_array_header_t *path = NULL;
+  
+  *msg = "seeing through lazy copies (revisions_changed)";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  /* Create a filesystem and repository. */
+  SVN_ERR (svn_test__create_fs (&fs, "test-repo-lazy-copies-rev-changed", pool));
+
+  /*** Revision 1:  Create the greek tree in revision.  ***/
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, spool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, spool));
+  SVN_ERR (svn_test__create_greek_tree (txn_root, spool));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
+  SVN_ERR (svn_fs_close_txn (txn));
+  svn_pool_clear (spool);
+
+  /*** Revision 2:  Copy A/D/G/rho to A/D/G/rho2.  ***/
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, spool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, spool));
+  SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, spool));
+  SVN_ERR (svn_fs_copy (rev_root, "A/D/G/rho", txn_root, "A/D/G/rho2", spool));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
+  SVN_ERR (svn_fs_close_txn (txn));
+  svn_pool_clear (spool);
+
+  /*** Revision 3:  Copy A/D/G to A/D/G2.  ***/
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, spool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, spool));
+  SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, spool));
+  SVN_ERR (svn_fs_copy (rev_root, "A/D/G", txn_root, "A/D/G2", spool));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
+  SVN_ERR (svn_fs_close_txn (txn));
+  svn_pool_clear (spool);
+
+  /*** Revision 4:  Copy A/D to A/D2.  ***/
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, spool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, spool));
+  SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, spool));
+  SVN_ERR (svn_fs_copy (rev_root, "A/D", txn_root, "A/D2", spool));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
+  SVN_ERR (svn_fs_close_txn (txn));
+  svn_pool_clear (spool);
+
+  /*** Now verify that for all lazy paths svn_fs_revisions_changed doesn't cross
+       the copy barrier. ***/
+  SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, spool));
+  path = apr_array_make (spool, 1, sizeof(const char *));
+  (*(const char **)apr_array_push (path)) = "A/D/G2/rho";
+  SVN_ERR (svn_fs_revisions_changed (&revs, rev_root, path, 0, spool));
+  if (revs->nelts != 0)
+    return svn_error_create (SVN_ERR_TEST_FAILED, 0, NULL,
+                             "/A/D/G2/rho revisions changed failure.");
+
+  path = apr_array_make (spool, 1, sizeof(const char *));
+  (*(const char **)apr_array_push (path)) = "A/D/G2/rho2";
+  SVN_ERR (svn_fs_revisions_changed (&revs, rev_root, path, 0, spool));
+  if (revs->nelts != 0)
+    return svn_error_create (SVN_ERR_TEST_FAILED, 0, NULL,
+                             "/A/D/G2/rho2 revisions changed failure.");
+
+  path = apr_array_make (spool, 1, sizeof(const char *));
+  (*(const char **)apr_array_push (path)) = "A/D2/G/rho";
+  SVN_ERR (svn_fs_revisions_changed (&revs, rev_root, path, 0, spool));
+  if (revs->nelts != 0)
+    return svn_error_create (SVN_ERR_TEST_FAILED, 0, NULL,
+                             "/A/D2/G/rho revisions changed failure.");
+
+  path = apr_array_make (spool, 1, sizeof(const char *));
+  (*(const char **)apr_array_push (path)) = "A/D2/G2/rho";
+  SVN_ERR (svn_fs_revisions_changed (&revs, rev_root, path, 0, spool));
+  if (revs->nelts != 0)
+    return svn_error_create (SVN_ERR_TEST_FAILED, 0, NULL,
+                             "/A/D2/G2/rho revisions changed failure.");
+  
+  path = apr_array_make (spool, 1, sizeof(const char *));
+  (*(const char **)apr_array_push (path)) = "A/D2/G/rho2";
+  SVN_ERR (svn_fs_revisions_changed (&revs, rev_root, path, 0, spool));
+  if (revs->nelts != 0)
+    return svn_error_create (SVN_ERR_TEST_FAILED, 0, NULL,
+                             "/A/D2/G/rho2 revisions changed failure.");
+
+  path = apr_array_make (spool, 1, sizeof(const char *));
+  (*(const char **)apr_array_push (path)) = "A/D2/G2/rho2";
+  SVN_ERR (svn_fs_revisions_changed (&revs, rev_root, path, 0, spool));
+  if (revs->nelts != 0)
+    return svn_error_create (SVN_ERR_TEST_FAILED, 0, NULL,
+                             "/A/D2/G2/rho2 revisions changed failure.");
+
+  path = apr_array_make (spool, 1, sizeof(const char *));
+  (*(const char **)apr_array_push (path)) = "A/D2/G";
+  SVN_ERR (svn_fs_revisions_changed (&revs, rev_root, path, 0, spool));
+  if (revs->nelts != 0)
+    return svn_error_create (SVN_ERR_TEST_FAILED, 0, NULL,
+                             "/A/D2/G revisions changed failure.");
+
+  path = apr_array_make (spool, 1, sizeof(const char *));
+  (*(const char **)apr_array_push (path)) = "A/D2/G2";
+  SVN_ERR (svn_fs_revisions_changed (&revs, rev_root, path, 0, spool));
+  if (revs->nelts != 0)
+    return svn_error_create (SVN_ERR_TEST_FAILED, 0, NULL,
+                             "/A/D2/G2 revisions changed failure.");
+
+  svn_pool_clear (spool);
+  
+  /* Revision 5: Modify some lazy copies, and re-verify the created-revs. */
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, spool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, spool));
+  SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, spool));
+  SVN_ERR (svn_test__set_file_contents (txn_root, "A/D2/G2/rho", 
+                                        "Edited text.", spool));
+  SVN_ERR (svn_test__set_file_contents (txn_root, "A/D2/G2/rho2", 
+                                        "Edited text.", spool));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
+  SVN_ERR (svn_fs_close_txn (txn));
+  svn_pool_clear (spool);
+
+  /* Verify the changed revisiosn on our modified paths. */
+  SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, spool));
+  path = apr_array_make (spool, 1, sizeof(const char *));
+  (*(const char **)apr_array_push (path)) = "A/D2/G2/rho";
+  SVN_ERR (svn_fs_revisions_changed (&revs, rev_root, path, 0, spool));
+  rev = ((svn_revnum_t *)revs->elts)[0];
+  if (rev != 5
+      || revs->nelts != 2)
+    return svn_error_create (SVN_ERR_TEST_FAILED, 0, NULL,
+                             "/A/D2/G2/rho revisions changed failure.");
+  
+  path = apr_array_make (spool, 1, sizeof(const char *));
+  (*(const char **)apr_array_push (path)) = "A/D2/G2/rho2";
+  SVN_ERR (svn_fs_revisions_changed (&revs, rev_root, path, 0, spool));
+  rev = ((svn_revnum_t *)revs->elts)[0];
+  if (rev != 5
+      || revs->nelts != 2)
+    return svn_error_create (SVN_ERR_TEST_FAILED, 0, NULL,
+                             "/A/D2/G2/rho revisions changed failure.");
+  
+  svn_pool_destroy (spool);
+  svn_fs_close_fs (fs);
+  return SVN_NO_ERROR;
+}
+
+
 
 
 /* ------------------------------------------------------------------------ */
@@ -5649,5 +6187,8 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS (revisions_changed),
     SVN_TEST_PASS (canonicalize_abspath),
     SVN_TEST_PASS (branch_test),
+    SVN_TEST_PASS (lazy_copies_created_rev),
+    SVN_TEST_PASS (lazy_copies_dir_entries),
+    SVN_TEST_PASS (lazy_copies_rev_changed),
     SVN_TEST_NULL
   };

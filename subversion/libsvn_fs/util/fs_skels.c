@@ -244,17 +244,17 @@ is_valid_node_revision_skel (skel_t *skel)
       if (is_valid_node_revision_header_skel (header, &kind))
         {
           if (svn_fs__matches_atom (kind, "dir")
-              && len == 3
+              && len == 4
               && header->next->is_atom
               && header->next->next->is_atom)
             return 1;
           
           if (svn_fs__matches_atom (kind, "file")
-              && ((len == 3) || (len == 4))
-              && header->next->is_atom
-              && header->next->next->is_atom)
+              && ((len == 4) || (len == 5))
+              && header->next->next->is_atom
+              && header->next->next->next->is_atom)
             {
-              if ((len == 4) && (! header->next->next->next->is_atom))
+              if ((len == 5) && (! header->next->next->next->next->is_atom))
                 return 0;
               return 1;
             }
@@ -591,24 +591,29 @@ svn_fs__parse_node_revision_skel (svn_fs__node_revision_t **noderev_p,
       else if (noderev->predecessor_id)
         noderev->predecessor_count = -1;
     }
+
+  /* COMMITTED-PATH */
+  noderev->committed_path = apr_pstrmemdup (pool, skel->children->next->data,
+                                              skel->children->next->len);
       
   /* PROP-KEY */
-  if (skel->children->next->len)
-    noderev->prop_key = apr_pstrmemdup (pool, skel->children->next->data,
-                                        skel->children->next->len);
+  if (skel->children->next->next->len)
+    noderev->prop_key = apr_pstrmemdup (pool, skel->children->next->next->data,
+                                        skel->children->next->next->len);
 
   /* DATA-KEY */
-  if (skel->children->next->next->len)
-    noderev->data_key = apr_pstrmemdup (pool, skel->children->next->next->data,
-                                        skel->children->next->next->len);
+  if (skel->children->next->next->next->len)
+    noderev->data_key = apr_pstrmemdup (pool,
+                                        skel->children->next->next->next->data,
+                                        skel->children->next->next->next->len);
 
   /* EDIT-DATA-KEY (optional, files only) */
   if ((noderev->kind == svn_node_file) 
-      && skel->children->next->next->next
-      && skel->children->next->next->next->len)
+      && skel->children->next->next->next->next
+      && skel->children->next->next->next->next->len)
     noderev->edit_key 
-      = apr_pstrmemdup (pool, skel->children->next->next->next->data,
-                        skel->children->next->next->next->len);
+      = apr_pstrmemdup (pool, skel->children->next->next->next->next->data,
+                        skel->children->next->next->next->next->len);
 
   /* Return the structure. */
   *noderev_p = noderev;
@@ -1061,6 +1066,12 @@ svn_fs__unparse_node_revision_skel (skel_t **skel_p,
   else
     svn_fs__prepend (svn_fs__mem_atom (NULL, 0, pool), skel);
 
+  /* COMMITTED-PATH */
+  svn_fs__prepend (svn_fs__mem_atom (noderev->committed_path,
+                                     strlen(noderev->committed_path),
+                                     pool),
+                   skel);
+  
   /* HEADER */
   svn_fs__prepend (header_skel, skel);
 
