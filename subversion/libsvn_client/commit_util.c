@@ -363,6 +363,12 @@ svn_client__harvest_committables (apr_hash_t **committables,
            "Entry for `%s' has no URL.  Perhaps you're committing "
            "inside of an unversioned (or not-yet-versioned) directory?",
            target->data);
+      if ((entry->copied) && (entry->schedule == svn_wc_schedule_normal))
+        return svn_error_createf 
+          (SVN_ERR_ILLEGAL_TARGET, 0, NULL, pool, 
+           "Entry for `%s' is marked as `copied'.  Perhaps you're committing "
+           "inside of an unversioned (or not-yet-versioned) directory?",
+           target->data);
 
       /* Handle our TARGET. */
       SVN_ERR (harvest_committables (*committables, *locked_dirs, target, 
