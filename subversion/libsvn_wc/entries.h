@@ -72,12 +72,14 @@ extern "C" {
 
 
 /* Initialize an entries file based on URL at INITIAL_REV, in the adm
-   area for PATH.  The adm area must not already have an entries file.
+   area for PATH.  The adm area must not already have an entries
+   file.  UUID is the repository UUID, and may be NULL.
 
    If initial rev is valid and non-zero, then mark the 'this_dir'
    entry as being incomplete.
 */
 svn_error_t *svn_wc__entries_init (const char *path,
+                                   const char *uuid,
                                    const char *url,
                                    svn_revnum_t initial_rev,
                                    apr_pool_t *pool);

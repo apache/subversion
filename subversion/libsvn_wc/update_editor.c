@@ -606,8 +606,8 @@ prep_directory (struct dir_baton *db,
 
   /* Make sure it's the right working copy, either by creating it so,
      or by checking that it is so already. */
-  SVN_ERR (svn_wc_ensure_adm (db->path, ancestor_url, ancestor_revision,
-                              pool));
+  SVN_ERR (svn_wc_ensure_adm (db->path, NULL,
+                              ancestor_url, ancestor_revision, pool));
 
   if (! db->edit_baton->adm_access
       || strcmp (svn_wc_adm_access_path (db->edit_baton->adm_access),

@@ -75,6 +75,7 @@ svn_client__checkout_internal (const char *URL,
       void *ra_baton, *session;
       svn_ra_plugin_t *ra_lib;
       svn_node_kind_t kind;
+      const char *uuid;
 
       /* Get the RA vtable that matches URL. */
       SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
@@ -95,6 +96,9 @@ svn_client__checkout_internal (const char *URL,
         return svn_error_createf (SVN_ERR_RA_ILLEGAL_URL, NULL,
                                   "Source URL doesn't exist: %s.", URL);
 
+      /* Get the repos UUID. */
+      SVN_ERR (ra_lib->get_uuid (session, &uuid, pool));
+
       SVN_ERR (svn_io_check_path (path, &kind, pool));
 
       if (kind == svn_node_none)
@@ -103,7 +107,7 @@ svn_client__checkout_internal (const char *URL,
              entries file should only have an entry for THIS_DIR with a
              URL, revnum, and an 'incomplete' flag.  */
           SVN_ERR (svn_io_make_dir_recursively (path, pool));          
-          SVN_ERR (svn_wc_ensure_adm (path, URL, revnum, pool));
+          SVN_ERR (svn_wc_ensure_adm (path, uuid, URL, revnum, pool));
           
           /* Have update fix the incompleteness. */
           err = svn_client_update (path, revision, recurse, ctx, pool);
@@ -118,7 +122,7 @@ svn_client__checkout_internal (const char *URL,
           if (! wc_format)
             {
               /* Make the unversioned directory into a versioned one. */
-              SVN_ERR (svn_wc_ensure_adm (path, URL, revnum, pool));
+              SVN_ERR (svn_wc_ensure_adm (path, uuid, URL, revnum, pool));
               err = svn_client_update (path, revision, recurse, ctx, pool);
               goto done;
             }
