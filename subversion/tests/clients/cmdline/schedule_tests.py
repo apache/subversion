@@ -250,6 +250,19 @@ def delete_dirs(sbox):
 #  Stage II - Reversion of changes made in Stage I
 #
 
+def check_reversion(files, output):
+  expected_output = []
+  for file in files:
+    expected_output = expected_output + ["Reverted " + file + "\n"]
+  output.sort()
+  expected_output.sort()
+  if output != expected_output:
+    print "Expected output:", expected_output
+    print "Actual output:  ", output
+    raise svntest.Failure
+    
+#----------------------------------------------------------------------
+
 def revert_add_files(sbox):
   "revert: add some files"
 
@@ -260,18 +273,12 @@ def revert_add_files(sbox):
   delta_path = os.path.join(wc_dir, 'delta')
   zeta_path = os.path.join(wc_dir, 'A', 'B', 'zeta')
   epsilon_path = os.path.join(wc_dir, 'A', 'D', 'G', 'epsilon')
-  expected_output = ["Reverted " + delta_path + "\n",
-                     "Reverted " + zeta_path + "\n",
-                     "Reverted " + epsilon_path + "\n"]
+  files = [delta_path, zeta_path, epsilon_path]
+
   output, err = svntest.actions.run_and_verify_svn(None, None, [],
                                                    'revert',
                                                    '--recursive', wc_dir)
-
-  ### do we really need to sort these?
-  output.sort()
-  expected_output.sort()
-  if output != expected_output:
-    raise svntest.Failure
+  check_reversion(files, output)
 
 #----------------------------------------------------------------------
 
@@ -285,18 +292,12 @@ def revert_add_directories(sbox):
   X_path = os.path.join(wc_dir, 'X')
   Y_path = os.path.join(wc_dir, 'A', 'C', 'Y')
   Z_path = os.path.join(wc_dir, 'A', 'D', 'H', 'Z')
-  expected_output = ["Reverted " + X_path + "\n",
-                     "Reverted " + Y_path + "\n",
-                     "Reverted " + Z_path + "\n"]
+  files = [X_path, Y_path, Z_path]
+  
   output, err = svntest.actions.run_and_verify_svn(None, None, [],
                                                    'revert',
                                                    '--recursive', wc_dir)
-
-  ### do we really need to sort these?
-  output.sort()
-  expected_output.sort()
-  if output != expected_output:
-    raise svntest.Failure
+  check_reversion(files, output)
 
 #----------------------------------------------------------------------
 
@@ -310,17 +311,12 @@ def revert_nested_adds(sbox):
   X_path = os.path.join(wc_dir, 'X')
   Y_path = os.path.join(wc_dir, 'A', 'C', 'Y')
   Z_path = os.path.join(wc_dir, 'A', 'D', 'H', 'Z')
-  expected_output = ["Reverted " + X_path + "\n",
-                     "Reverted " + Y_path + "\n",
-                     "Reverted " + Z_path + "\n"]
+  files = [X_path, Y_path, Z_path]
+
   output, err = svntest.actions.run_and_verify_svn(None, None, [],
                                                    'revert',
                                                    '--recursive', wc_dir)
-  ### do we really need to sort these?
-  output.sort()
-  expected_output.sort()
-  if output != expected_output:
-    raise svntest.Failure
+  check_reversion(files, output)
   
 #----------------------------------------------------------------------
 
@@ -335,22 +331,12 @@ def revert_add_executable(sbox):
   user_path = os.path.join(wc_dir, 'user_exe')
   group_path = os.path.join(wc_dir, 'group_exe')
   other_path = os.path.join(wc_dir, 'other_exe')
-
-  expected_output = ["Reverted " + all_path + "\n",
-                     "Reverted " + none_path + "\n",
-                     "Reverted " + user_path + "\n",
-                     "Reverted " + group_path + "\n",
-                     "Reverted " + other_path + "\n"]
+  files = [all_path, none_path, user_path, group_path, other_path]
 
   output, err = svntest.actions.run_and_verify_svn(None, None, [],
                                                    'revert',
                                                    '--recursive', wc_dir)
-
-  ### do we really need to sort these?
-  output.sort()
-  expected_output.sort()
-  if output != expected_output:
-    raise svntest.Failure
+  check_reversion(files, output)
 
 #----------------------------------------------------------------------
 
@@ -365,18 +351,12 @@ def revert_delete_files(sbox):
   mu_path = os.path.join(wc_dir, 'A', 'mu')
   rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
   omega_path = os.path.join(wc_dir, 'A', 'D', 'H', 'omega')
-  expected_output = ["Reverted " + iota_path + "\n",
-                     "Reverted " + mu_path + "\n",
-                     "Reverted " + omega_path + "\n",
-                     "Reverted " + rho_path + "\n"]
+  files = [iota_path, mu_path, omega_path, rho_path]
+  
   output, err = svntest.actions.run_and_verify_svn(None, None, [],
                                                    'revert',
                                                    '--recursive', wc_dir)
-  ### do we really need to sort these?
-  output.sort()
-  expected_output.sort()
-  if output != expected_output:
-    raise svntest.Failure
+  check_reversion(files, output)
 
 #----------------------------------------------------------------------
 
@@ -395,22 +375,13 @@ def revert_delete_dirs(sbox):
   chi_path   = os.path.join(H_path, 'chi')
   omega_path = os.path.join(H_path, 'omega')
   psi_path   = os.path.join(H_path, 'psi')
-  expected_output = ["Reverted " + E_path + "\n",
-                     "Reverted " + F_path + "\n",
-                     "Reverted " + H_path + "\n",
-                     "Reverted " + alpha_path + "\n",
-                     "Reverted " + beta_path + "\n",
-                     "Reverted " + chi_path + "\n",
-                     "Reverted " + omega_path + "\n",
-                     "Reverted " + psi_path + "\n"]
+  files = [E_path, F_path, H_path,
+           alpha_path, beta_path, chi_path, omega_path, psi_path]
+
   output, err = svntest.actions.run_and_verify_svn(None, None, [],
                                                    'revert',
                                                    '--recursive', wc_dir)
-  ### do we really need to sort these?
-  output.sort()
-  expected_output.sort()
-  if output != expected_output:
-    raise svntest.Failure
+  check_reversion(files, output)
 
 #######################################################################
 #  Stage III - Commit of modifications made in Stage 1
