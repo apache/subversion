@@ -34,6 +34,7 @@
 #include "svn_error.h"
 #include "svn_pools.h"
 #include "svn_ra_svn.h"
+#include "svn_private_config.h"
 
 #include "ra_svn.h"
 
@@ -74,7 +75,7 @@ svn_error_t *svn_ra_svn_set_capabilities(svn_ra_svn_conn_t *conn,
       item = &APR_ARRAY_IDX(list, i, svn_ra_svn_item_t);
       if (item->kind != SVN_RA_SVN_WORD)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
-                                "Capability entry is not a word");
+                                _("Capability entry is not a word"));
       word = apr_pstrdup(conn->pool, item->u.word);
       apr_hash_set(conn->capabilities, word, APR_HASH_KEY_STRING, word);
     }
@@ -156,7 +157,7 @@ static svn_error_t *writebuf_output(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
       else
         status = apr_file_write(conn->out_file, data, &count);
       if (status)
-        return svn_error_wrap_apr(status, "Can't write to connection");
+        return svn_error_wrap_apr(status, _("Can't write to connection"));
       if (count == 0)
         {
           if (!subpool)
@@ -246,10 +247,10 @@ static svn_error_t *readbuf_input(svn_ra_svn_conn_t *conn, char *data,
   if (conn->sock && conn->block_handler)
     apr_socket_timeout_set(conn->sock, 0);
   if (status && !APR_STATUS_IS_EOF(status))
-    return svn_error_wrap_apr(status, "Can't read from connection");
+    return svn_error_wrap_apr(status, _("Can't read from connection"));
   if (*len == 0)
     return svn_error_create(SVN_ERR_RA_SVN_CONNECTION_CLOSED, NULL,
-                            "Connection closed unexpectedly");
+                            _("Connection closed unexpectedly"));
   return SVN_NO_ERROR;
 }
 
@@ -493,7 +494,7 @@ static svn_error_t *read_string(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
    * so check for wrapping */
   if (((apr_size_t) len) < len) 
     return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
-                            "String length larger than maximum");
+                            _("String length larger than maximum"));
 
   while (len)
     {
@@ -541,7 +542,7 @@ static svn_error_t *read_item(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
           val = val * 10 + (c - '0');
           if ((val / 10) != prev_val) /* val wrapped past maximum value */
             return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
-                                    "Number is larger than maximum"); 
+                                    _("Number is larger than maximum"));
         }
       if (c == ':')
         {
@@ -588,7 +589,7 @@ static svn_error_t *read_item(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
   if (!svn_iswhitespace(c))
     return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
-                            "Malformed network data");
+                            _("Malformed network data"));
   return SVN_NO_ERROR;
 }
 
@@ -693,7 +694,7 @@ static svn_error_t *vparse_tuple(apr_array_header_t *list, apr_pool_t *pool,
     }
   if (**fmt && **fmt != ')')
     return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
-                            "Malformed network data");
+                            _("Malformed network data"));
   return SVN_NO_ERROR;
 }
 
@@ -720,7 +721,7 @@ svn_error_t *svn_ra_svn_read_tuple(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   SVN_ERR(svn_ra_svn_read_item(conn, pool, &item));
   if (item->kind != SVN_RA_SVN_LIST)
     return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
-                            "Malformed network data");
+                            _("Malformed network data"));
   va_start(ap, fmt);
   err = vparse_tuple(item->u.list, pool, &fmt, &ap);
   va_end(ap);
@@ -754,14 +755,14 @@ svn_error_t *svn_ra_svn_read_cmd_response(svn_ra_svn_conn_t *conn,
       /* Rebuild the error list from the end, to avoid reversing the order. */
       if (params->nelts == 0)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
-                                "Empty error list");
+                                _("Empty error list"));
       err = NULL;
       for (i = params->nelts - 1; i >= 0; i--)
         {
           elt = &((svn_ra_svn_item_t *) params->elts)[i];
           if (elt->kind != SVN_RA_SVN_LIST)
             return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
-                                    "Malformed error list");
+                                    _("Malformed error list"));
           SVN_ERR(svn_ra_svn_parse_tuple(elt->u.list, pool, "nccn", &apr_err,
                                           &message, &file, &line));
           /* The message field should have been optional, but we can't
@@ -776,7 +777,8 @@ svn_error_t *svn_ra_svn_read_cmd_response(svn_ra_svn_conn_t *conn,
     }
 
   return svn_error_createf(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
-                           "Unknown status '%s' in command response", status);
+                           _("Unknown status '%s' in command response"),
+                           status);
 }
 
 svn_error_t *svn_ra_svn_handle_commands(svn_ra_svn_conn_t *conn,
@@ -804,7 +806,7 @@ svn_error_t *svn_ra_svn_handle_commands(svn_ra_svn_conn_t *conn,
       else
         {
           err = svn_error_createf(SVN_ERR_RA_SVN_UNKNOWN_CMD, NULL,
-                                  "Unknown command '%s'", cmdname);
+                                  _("Unknown command '%s'"), cmdname);
           err = svn_error_create(SVN_ERR_RA_SVN_CMD_ERR, err, NULL);
         }
 

@@ -34,6 +34,7 @@
 #include <svn_error.h>
 #include <svn_ra_svn.h>
 #include <svn_config.h>
+#include "svn_private_config.h"
 
 #include "ra_svn.h"
 
@@ -192,7 +193,7 @@ svn_error_t *svn_ra_svn__cram_client(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
     }
   else if (strcmp(status, "step") != 0 || !str)
     return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
-                            "Unexpected server response to authentication");
+                            _("Unexpected server response to authentication"));
 
   /* Write our response. */
   compute_digest(digest, str, password);
@@ -210,7 +211,7 @@ svn_error_t *svn_ra_svn__cram_client(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
     }
   else if (strcmp(status, "success") != 0 || str)
     return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
-                            "Unexpected server response to authentication");
+                            _("Unexpected server response to authentication"));
 
   *message = NULL;
   return SVN_NO_ERROR;

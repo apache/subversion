@@ -134,7 +134,8 @@ static svn_error_t *make_connection(const char *hostname, unsigned short port,
   /* Resolve the hostname. */
   status = apr_sockaddr_info_get(&sa, hostname, APR_INET, port, 0, pool);
   if (status)
-    return svn_error_createf(status, NULL, "Unknown hostname '%s'", hostname);
+    return svn_error_createf(status, NULL, _("Unknown hostname '%s'"),
+                             hostname);
 
   /* Create the socket. */
 #ifdef MAX_SECS_TO_LINGER
@@ -144,11 +145,12 @@ static svn_error_t *make_connection(const char *hostname, unsigned short port,
   status = apr_socket_create(sock, APR_INET, SOCK_STREAM, APR_PROTO_TCP, pool);
 #endif
   if (status)
-    return svn_error_wrap_apr(status, "Can't create socket");
+    return svn_error_wrap_apr(status, _("Can't create socket"));
 
   status = apr_socket_connect(*sock, sa);
   if (status)
-    return svn_error_wrap_apr(status, "Can't connect to host '%s'", hostname);
+    return svn_error_wrap_apr(status, _("Can't connect to host '%s'"),
+                              hostname);
 
   return SVN_NO_ERROR;
 }
@@ -168,7 +170,7 @@ static svn_error_t *parse_proplist(apr_array_header_t *list, apr_pool_t *pool,
       elt = &((svn_ra_svn_item_t *) list->elts)[i];
       if (elt->kind != SVN_RA_SVN_LIST)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
-                                "Proplist element not a list");
+                                _("Proplist element not a list"));
       SVN_ERR(svn_ra_svn_parse_tuple(elt->u.list, pool, "cs", &name, &value));
       apr_hash_set(*props, name, APR_HASH_KEY_STRING, value);
     }
@@ -213,7 +215,8 @@ static svn_error_t *interpret_kind(const char *str, apr_pool_t *pool,
     *kind = svn_node_unknown;
   else
     return svn_error_createf(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
-                             "Unrecognized node kind '%s' from server", str);
+                             _("Unrecognized node kind '%s' from server"),
+                             str);
   return SVN_NO_ERROR;
 }
 
@@ -257,10 +260,10 @@ static svn_error_t *read_success(svn_ra_svn_conn_t *conn, apr_pool_t *pool)
   SVN_ERR(svn_ra_svn_read_tuple(conn, pool, "w(?c)", &status, &arg));
   if (strcmp(status, "failure") == 0 && arg)
     return svn_error_createf(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
-                             "Authentication error from server: %s", arg);
+                             _("Authentication error from server: %s"), arg);
   else if (strcmp(status, "success") != 0 || arg)
     return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
-                            "Unexpected server response to authentication");
+                            _("Unexpected server response to authentication"));
   return SVN_NO_ERROR;
 }
 
@@ -298,7 +301,7 @@ static svn_error_t *do_auth(ra_svn_session_baton_t *sess,
                                          sess->auth_baton, pool));
       if (!creds)
         return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
-                                "Can't get password");
+                                _("Can't get password"));
       while (creds)
         {
           user = ((svn_auth_cred_simple_t *) creds)->username;
@@ -311,13 +314,14 @@ static svn_error_t *do_auth(ra_svn_session_baton_t *sess,
         }
       if (!creds)
         return svn_error_createf(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
-                                 "Authentication error from server: %s", msg);
+                                 _("Authentication error from server: %s"),
+                                 msg);
       SVN_ERR(svn_auth_save_credentials(iterstate, pool));
       return SVN_NO_ERROR;
     }
   else
     return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
-                            "Cannot negotiate authentication mechanism");
+                            _("Cannot negotiate authentication mechanism"));
 }
 
 static svn_error_t *handle_auth_request(ra_svn_session_baton_t *sess,
@@ -444,7 +448,7 @@ static svn_error_t *find_tunnel_agent(const char *tunnel, const char *user,
 
   if (!val || !*val)
     return svn_error_createf(SVN_ERR_BAD_URL, NULL,
-                             "Undefined tunnel scheme '%s'", tunnel);
+                             _("Undefined tunnel scheme '%s'"), tunnel);
 
   /* If the scheme definition begins with "$varname", it means there
    * is an environment variable which can override the command. */
@@ -461,8 +465,9 @@ static svn_error_t *find_tunnel_agent(const char *tunnel, const char *user,
             cmd++;
           if (!*cmd)
             return svn_error_createf(SVN_ERR_BAD_URL, NULL,
-                                     "Tunnel scheme %s requires environment "
-                                     "variable %s to be defined", tunnel, var);
+                                     _("Tunnel scheme %s requires environment "
+                                       "variable %s to be defined"), tunnel,
+                                     var);
         }
     }
   else
@@ -471,7 +476,7 @@ static svn_error_t *find_tunnel_agent(const char *tunnel, const char *user,
   /* Tokenize the command into a list of arguments. */
   status = apr_tokenize_to_argv(cmd, &cmd_argv, pool);
   if (status != APR_SUCCESS)
-    return svn_error_wrap_apr(status, "Can't tokenize command '%s'", cmd);
+    return svn_error_wrap_apr(status, _("Can't tokenize command '%s'"), cmd);
 
   /* Append the fixed arguments to the result. */
   for (n = 0; cmd_argv[n] != NULL; n++)
@@ -500,7 +505,7 @@ static void handle_child_process_error(apr_pool_t *pool, apr_status_t status,
   apr_file_open_stdin(&in_file, pool);
   apr_file_open_stdout(&out_file, pool);
   conn = svn_ra_svn_create_conn(NULL, in_file, out_file, pool);
-  err = svn_error_wrap_apr(status, NULL, "Error in child process: %s", desc);
+  err = svn_error_wrap_apr(status, NULL, _("Error in child process: %s"), desc);
   svn_error_clear(svn_ra_svn_write_cmd_failure(conn, pool, err));
   svn_error_clear(svn_ra_svn_flush(conn, pool));
 }
@@ -523,7 +528,7 @@ static svn_error_t *make_tunnel(const char **args, svn_ra_svn_conn_t **conn,
   if (status == APR_SUCCESS)
     status = apr_proc_create(proc, *args, args, NULL, attr, pool);
   if (status != APR_SUCCESS)
-    return svn_error_wrap_apr(status, NULL, "Can't create tunnel");
+    return svn_error_wrap_apr(status, NULL, _("Can't create tunnel"));
 
   /* Arrange for the tunnel agent to get a SIGKILL on pool
    * cleanup.  This is a little extreme, but the alternatives
@@ -567,7 +572,7 @@ static svn_error_t *ra_svn_open(void **baton, const char *url,
 
   if (parse_url(url, &tunnel, &user, &port, &hostname, pool) != 0)
     return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
-                             "Illegal svn repository URL '%s'", url);
+                             _("Illegal svn repository URL '%s'"), url);
 
   if (tunnel)
     {
@@ -586,7 +591,7 @@ static svn_error_t *ra_svn_open(void **baton, const char *url,
   /* We support protocol versions 1 and 2. */
   if (minver > 2)
     return svn_error_createf(SVN_ERR_RA_SVN_BAD_VERSION, NULL,
-                             "Server requires minimum version %d",
+                             _("Server requires minimum version %d"),
                              (int) minver);
   SVN_ERR(svn_ra_svn_set_capabilities(conn, caplist));
 
@@ -691,7 +696,7 @@ static svn_error_t *ra_svn_get_repos_root(void *baton, const char **url,
 
   if (!conn->repos_root)
     return svn_error_create(SVN_ERR_RA_SVN_BAD_VERSION, NULL,
-                            "Server did not send repository root");
+                            _("Server did not send repository root"));
   *url = conn->repos_root;
   return SVN_NO_ERROR;
 }
@@ -812,7 +817,7 @@ static svn_error_t *ra_svn_get_file(void *baton, const char *path,
       SVN_ERR(svn_ra_svn_read_item(conn, pool, &item));
       if (item->kind != SVN_RA_SVN_STRING)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
-                                "Non-string as part of file contents");
+                                _("Non-string as part of file contents"));
       if (item->u.string->len == 0)
         break;
 
@@ -832,9 +837,9 @@ static svn_error_t *ra_svn_get_file(void *baton, const char *path,
       if (strcmp(hex_digest, expected_checksum) != 0)
         return svn_error_createf
           (SVN_ERR_CHECKSUM_MISMATCH, NULL,
-           "Checksum mismatch for '%s':\n"
-           "   expected checksum:  %s\n"
-           "   actual checksum:    %s\n",
+           _("Checksum mismatch for '%s':\n"
+             "   expected checksum:  %s\n"
+             "   actual checksum:    %s\n"),
            path, expected_checksum, hex_digest);
     }
 
@@ -881,7 +886,7 @@ static svn_error_t *ra_svn_get_dir(void *baton, const char *path,
       elt = &((svn_ra_svn_item_t *) dirlist->elts)[i];
       if (elt->kind != SVN_RA_SVN_LIST)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
-                                "Dirlist element not a list");
+                                _("Dirlist element not a list"));
       SVN_ERR(svn_ra_svn_parse_tuple(elt->u.list, pool, "cwnbr(?c)(?c)",
                                      &name, &kind, &size, &has_props,
                                      &crev, &cdate, &cauthor));
@@ -1032,7 +1037,7 @@ static svn_error_t *ra_svn_log(void *baton, const apr_array_header_t *paths,
         break;
       if (item->kind != SVN_RA_SVN_LIST)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
-                                "Log entry not a list");
+                                _("Log entry not a list"));
       SVN_ERR(svn_ra_svn_parse_tuple(item->u.list, subpool, "lr(?c)(?c)(?c)",
                                      &cplist, &rev, &author, &date,
                                      &message));
@@ -1045,7 +1050,7 @@ static svn_error_t *ra_svn_log(void *baton, const apr_array_header_t *paths,
               elt = &((svn_ra_svn_item_t *) cplist->elts)[i];
               if (elt->kind != SVN_RA_SVN_LIST)
                 return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
-                                        "Changed-path entry not a list");
+                                        _("Changed-path entry not a list"));
               SVN_ERR(svn_ra_svn_parse_tuple(elt->u.list, subpool, "cw(?cr)",
                                              &cpath, &action, &copy_path,
                                              &copy_rev));
@@ -1130,7 +1135,7 @@ static svn_error_t *ra_svn_get_locations(void *session_baton,
         is_done = 1;
       else if (item->kind != SVN_RA_SVN_LIST)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
-                                "Location entry not a list");
+                                _("Location entry not a list"));
       else
         {
           SVN_ERR(svn_ra_svn_parse_tuple (item->u.list, pool, "rc",
@@ -1257,7 +1262,7 @@ static svn_error_t *ra_svn_get_file_revs(void *session_baton, const char *path,
 
 static const svn_ra_plugin_t ra_svn_plugin = {
   "ra_svn",
-  "Module for accessing a repository using the svn network protocol.",
+  N_("Module for accessing a repository using the svn network protocol."),
   ra_svn_open,
   ra_svn_get_latest_rev,
   ra_svn_get_dated_rev,
@@ -1293,8 +1298,8 @@ svn_error_t *svn_ra_svn_init(int abi_version, apr_pool_t *pool,
   if (abi_version < 1
       || abi_version > SVN_RA_ABI_VERSION)
     return svn_error_createf(SVN_ERR_RA_UNSUPPORTED_ABI_VERSION, NULL,
-                             "Unsupported RA plugin ABI version (%d) "
-                             "for ra_svn.", abi_version);
+                             _("Unsupported RA plugin ABI version (%d) "
+                               "for ra_svn."), abi_version);
   SVN_ERR(svn_ver_check_list(svn_ra_svn_version(), checklist));
 
   apr_hash_set(hash, "svn", APR_HASH_KEY_STRING, &ra_svn_plugin);
