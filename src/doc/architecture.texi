@@ -11,10 +11,6 @@ new servers, and new database back-ends are possible.
 The following diagram illustrates the "layered" architecture, and where
 each particular interface lies.
 
-@c Should we bother to maintain the "dia"/postscript version of this
-@c diagram?  It would look much nicer when printed.  But maybe it's just
-@c not worth it.
-
 @example
 
              +--------------------+  
@@ -70,7 +66,7 @@ In order to communicate properly, the Subversion client and server must
 agree on a set of high-level operations that are required to perform
 version control.  This includes:
 
-@itemize *
+@itemize @bullet
 @item
       the ability to discuss differences between repository and working
       copy (by exchanging "delta" objects)
