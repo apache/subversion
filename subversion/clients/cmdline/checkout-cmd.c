@@ -109,6 +109,8 @@ svn_cl__checkout (apr_getopt_t *os,
   for (i = 0; i < targets->nelts - 1; ++i)
     {
       const char *target_dir;
+      const char *true_url;
+      svn_opt_revision_t peg_revision;
 
       SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
 
@@ -119,7 +121,11 @@ svn_cl__checkout (apr_getopt_t *os,
           (SVN_ERR_BAD_URL, NULL, 
            _("'%s' does not appear to be a URL"), repos_url);
 
-      repos_url = svn_path_canonicalize (repos_url, subpool);
+      /* Get a possible peg revision. */
+      SVN_ERR (svn_opt_parse_path (&peg_revision, &true_url, repos_url,
+                                   subpool));
+
+      true_url = svn_path_canonicalize (true_url, subpool);
 
       /* Use sub-directory of destination if checking-out multiple URLs */
       if (targets->nelts == 2)
@@ -128,7 +134,7 @@ svn_cl__checkout (apr_getopt_t *os,
         }
       else
         {
-          target_dir = svn_path_basename (repos_url, subpool);
+          target_dir = svn_path_basename (true_url, subpool);
           target_dir = svn_path_uri_decode (target_dir, subpool);
           target_dir = svn_path_join (local_dir, target_dir, subpool);
         }
@@ -138,10 +144,11 @@ svn_cl__checkout (apr_getopt_t *os,
       if (opt_state->start_revision.kind == svn_opt_revision_unspecified)
         opt_state->start_revision.kind = svn_opt_revision_head;
 
-      SVN_ERR (svn_client_checkout (NULL, repos_url, target_dir,
-                                    &(opt_state->start_revision),
-                                    opt_state->nonrecursive ? FALSE : TRUE,
-                                    ctx, subpool));
+      SVN_ERR (svn_client_checkout2 (NULL, true_url, target_dir,
+                                     &peg_revision,
+                                     &(opt_state->start_revision),
+                                     opt_state->nonrecursive ? FALSE : TRUE,
+                                     ctx, subpool));
       svn_pool_clear (subpool);
     }
   svn_pool_destroy (subpool);

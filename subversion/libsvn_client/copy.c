@@ -893,9 +893,10 @@ repos_to_wc_copy (const char *src_url,
   }
 
   if (src_kind == svn_node_dir)
-    {    
+    {
       SVN_ERR (svn_client__checkout_internal
-               (NULL, src_url, dst_path, &revision, TRUE, NULL, ctx, pool));
+               (NULL, src_url, dst_path, &revision, &revision,
+                TRUE, NULL, ctx, pool));
 
       if ((revision.kind == svn_opt_revision_head) && same_repositories)
         {

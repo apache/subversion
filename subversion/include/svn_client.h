@@ -417,11 +417,12 @@ svn_error_t *
 svn_client_create_context (svn_client_ctx_t **ctx,
                            apr_pool_t *pool);
 
-/** Checkout a working copy of @a URL at @a revision, using @a path as
- * the root directory of the newly checked out working copy, and
- * authenticating with the authentication baton cached in @a ctx.  If
- * @a result_rev is not @c NULL, set @a *result_rev to the value of
- * the revision actually checked out from the repository.
+/** Checkout a working copy of @a URL at @a revision, looked up at @a
+ * peg_revision, using @a path as the root directory of the newly
+ * checked out working copy, and authenticating with the
+ * authentication baton cached in @a ctx.  If @a result_rev is not @c
+ * NULL, set @a *result_rev to the value of the revision actually
+ * checked out from the repository.
  *
  * @a revision must be of kind @c svn_opt_revision_number,
  * @c svn_opt_revision_head, or @c svn_opt_revision_date.  If
@@ -432,6 +433,23 @@ svn_client_create_context (svn_client_ctx_t **ctx,
  * @a ctx->notify_baton as the checkout progresses.
  *
  * Use @a pool for any temporary allocation.
+ */
+svn_error_t *
+svn_client_checkout2 (svn_revnum_t *result_rev,
+                      const char *URL,
+                      const char *path,
+                      const svn_opt_revision_t *peg_revision,
+                      const svn_opt_revision_t *revision,
+                      svn_boolean_t recurse,
+                      svn_client_ctx_t *ctx,
+                      apr_pool_t *pool);
+
+
+/**
+ * @deprecated Provided for backward compatibility with the 1.1 API.
+ *
+ * Similar to svn_client_checkout2(), but with the @a peg_revision
+ * parameter always set to @c svn_opt_revision_unspecified.
  */
 svn_error_t *
 svn_client_checkout (svn_revnum_t *result_rev,

@@ -248,6 +248,7 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
       else
         SVN_ERR (svn_client__checkout_internal (NULL, new_item->url, path,
                                                 &(new_item->revision),
+                                                &(new_item->revision),
                                                 TRUE, /* recurse */
                                                 ib->timestamp_sleep,
                                                 ib->ctx, ib->pool));
@@ -307,6 +308,7 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
 
       SVN_ERR (svn_client__checkout_internal (NULL, new_item->url, path,
                                               &(new_item->revision),
+                                              &(new_item->revision),
                                               TRUE, /* recurse */
                                               ib->timestamp_sleep,
                                               ib->ctx, ib->pool));
@@ -365,6 +367,7 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
               SVN_ERR (svn_client__checkout_internal (NULL, new_item->url,
                                                       path,
                                                       &(new_item->revision),
+                                                      &(new_item->revision),
                                                       TRUE, /* recurse */
                                                       ib->timestamp_sleep,
                                                       ib->ctx, ib->pool));
@@ -379,6 +382,7 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
 
           /* Checking out... */
           SVN_ERR (svn_client__checkout_internal (NULL, new_item->url, path,
+                                                  &(new_item->revision),
                                                   &(new_item->revision),
                                                   TRUE, /* recurse */
                                                   ib->timestamp_sleep,

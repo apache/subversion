@@ -1446,7 +1446,8 @@ def nested_in_read_only(sbox):
   # could be part of the containing wc
   B_url = svntest.main.current_repo_url + '/A/B'
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     'checkout', '-r', '1', B_url, B_path)
+                                     'checkout', '-r', '1', B_url + "@1",
+                                     B_path)
   expected_status = svntest.wc.State(B_path, {
     ''           : Item(),
     'lambda'     : Item(),
