@@ -459,7 +459,7 @@ get_ra_editor (void **ra_baton,
 
   /* Fetch the latest revision if requested. */
   if (latest_rev)
-    SVN_ERR ((*ra_lib)->get_latest_revnum (*session, latest_rev));
+    SVN_ERR ((*ra_lib)->get_latest_revnum (*session, latest_rev, pool));
   
   /* Fetch RA commit editor. */
   return (*ra_lib)->get_commit_editor (*session, editor, edit_baton, 

@@ -287,7 +287,7 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
   SVN_ERR (svn_client__get_revision_number
            (&src_revnum, ra_lib, sess, src_revision, NULL, pool));
 
-  SVN_ERR (ra_lib->get_latest_revnum (sess, &youngest));
+  SVN_ERR (ra_lib->get_latest_revnum (sess, &youngest, pool));
 
   /* Use YOUNGEST for copyfrom args if not provided. */
   if (! SVN_IS_VALID_REVNUM (src_revnum))

@@ -71,7 +71,8 @@ typedef struct {
 /** plugin function prototypes */
 
 svn_error_t *svn_ra_dav__get_latest_revnum(void *session_baton,
-                                           svn_revnum_t *latest_revnum);
+                                           svn_revnum_t *latest_revnum,
+                                           apr_pool_t *pool);
 
 svn_error_t *svn_ra_dav__get_dated_revision (void *session_baton,
                                              svn_revnum_t *revision,
