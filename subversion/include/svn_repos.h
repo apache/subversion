@@ -537,7 +537,10 @@ svn_repos_history (svn_fs_t *fs,
                    svn_boolean_t cross_copies,
                    apr_pool_t *pool);
 
-/** Set @a *locations to be a mapping of the revisions to the paths of
+/**
+ * @since New in 1.1.
+ *
+ * Set @a *locations to be a mapping of the revisions to the paths of
  * the file @a fs_path present at the repository in revision
  * @a peg_revision, where the revisions are taken out of the array
  * @a location_revisions.
