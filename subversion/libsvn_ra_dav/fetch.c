@@ -946,7 +946,9 @@ svn_error_t *svn_ra_dav__get_dir(void *session_baton,
           if (propval != NULL)
             entry->last_author = propval->data;
           
-          apr_hash_set(*dirents, svn_path_basename(childname, pool),
+          apr_hash_set(*dirents, 
+                       svn_path_uri_decode(svn_path_basename(childname, pool),
+                                           pool),
                        APR_HASH_KEY_STRING, entry);
         }
     }
