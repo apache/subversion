@@ -41,6 +41,7 @@ Candidate changes:
     Justification: Fix svnlook.py example.
     Votes:
       +1: cmpilato
+      +0: dlr
 
   * r8684
     Fix "problem" in svnserve man page.
@@ -158,10 +159,11 @@ Candidate changes:
     Notes:  This has the potential to burn a whole lot of new users.
     Votes:
       +1: sussman, brane
+      +0: dlr
 
   * r8681
     Fix issue 1692: obscure bugs in formatting of time/date strings.
     Justification: Simple fix; affects all "svn log" output in time zone
       "Canada/Newfoundland".
     Votes:
-      +1: julianfoad
+      +1: julianfoad, dlr
