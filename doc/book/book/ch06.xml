@@ -1062,11 +1062,7 @@ $
             are slight discrepancies in what the ignore patterns apply
             to.  Also, Subversion does not recognize the use of the
             <literal>!</literal> pattern as a reset back to having no
-            ignore patterns at all.  Finally, while the
-            <filename>.cvsignore</filename> patterns apply recursively
-            from the directory in which they reside, Subversion's
-            <literal>svn:ignore</literal> property applies only to the
-            directory on which it is set.</para>
+            ignore patterns at all.</para>
 
         </sidebar>
 

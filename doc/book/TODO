@@ -39,8 +39,6 @@ Here is a list of all the things that the Subversion Book DOESN'T yet cover.
   - document new svn+ssh:// syntax.  also explain 'svnserve -t' flag.
     and the new SVN_SSH environment variable.
 
-  - ch06:  .cvsignore files aren't recursive.  neither is svn:ignore prop.
-
   - ch07: maybe a explanation for the person writing a new main()
     application... what are all those callbacks in the ctx_t used for?
     people have asked this in irc.  what sort of things does an
