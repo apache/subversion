@@ -172,6 +172,12 @@
           operation against a new, updated (and yet still static) view
           of the database.</para>
 
+        <para>Another great feature of Berkeley DB is <firstterm>hot
+          backups</firstterm>&mdash;the ability to backup the database
+          environment without taking it <quote>offline</quote>.  We'll
+          discuss how to backup your repository in <xref
+          linkend="svn-ch-5-sect-3.6"/>.</para>
+
         <para>Berkeley DB is also a very reliable database system.
           Subversion uses Berkeley DB's logging facilities, which
           means that the database first writes to on-disk logfiles a
@@ -184,12 +190,22 @@
           state.  See <xref linkend="svn-ch-5-sect-3.3"/> for more
           about Berkeley DB logfiles.</para>
 
-        <para>Another great feature of Berkeley DB is <firstterm>hot
-          backups</firstterm>&mdash;the ability to backup the database
-          environment without taking it <quote>offline</quote>.  We'll
-          discuss how to backup your repository in <xref
-          linkend="svn-ch-5-sect-3.6"/>.</para>
- 
+        <para>But every rose has its thorn, and so we must note some
+          known limitations of Berkeley DB.  First, Berkeley DB
+          environments are not portable.  As such, you cannot simply
+          copy a Subversion repository that was created on a Unix
+          system onto a Windows system and expect it to work.  While
+          much of the Berkeley DB database format is architecture
+          independent, there are other aspects of the environment that
+          are not.  Secondly, Subversion uses Berkeley DB in a way
+          that will not operate on Windows 9x systems&mdash;if you
+          need to house a repository on a Windows machine, stick with
+          Windows 2000 or Windows XP.  Finally, you should never keep
+          a Subversion repository on a network share.  While Berkeley
+          DB promises to behave correctly on network shares that meet
+          a particular set of specifications, almost no known shares
+          actually meet all those specifications.</para>
+
     </sect2>
   </sect1>
 
@@ -1140,7 +1156,7 @@ $
           Subversion repositories has been duplicated in the
           <command>svnadmin</command> tool.  For example,
           <command>svnadmin list-unused-dblogs</command> and
-          <command>svnadmin list-used-dblogs</command> perform a
+          <command>svnadmin list-dblogs</command> perform a
           subset of what is provided by Berkeley's
           <command>db_archive</command> command, and <command>svnadmin
           recover</command> reflects the common use-cases of the
