@@ -545,15 +545,10 @@ svn_error_t *svn_fs_file_length (apr_off_t *length_p,
 				 apr_pool_t *pool);
 
 
-/* Set *CONTENTS_FN_P to a `read'-like function which will return the
-   contents of FILE; see the description of svn_read_fn_t in
-   `svn_delta.h'.  Set *CONTENTS_BATON_P to a baton to pass to
-   CONTENTS.  Allocate the baton in POOL.
-
-   You may only use CONTENTS and CONTENTS_BATON for as long as the
-   underlying filesystem is open.  */
-svn_error_t *svn_fs_file_contents (svn_read_fn_t **contents_fn_p,
-				   void **contents_baton_p,
+/* Set *CONTENTS to a readable generic stream will yield the contents
+   of FILE.  Allocate the stream in POOL.  You can only use *CONTENTS
+   for as long as the underlying filesystem is open.  */
+svn_error_t *svn_fs_file_contents (svn_stream_t **contents,
 				   svn_fs_node_t *file,
 				   apr_pool_t *pool);
 

@@ -32,8 +32,7 @@
 struct dav_stream {
   const dav_resource *res;
   svn_fs_node_t *file;
-  svn_read_fn_t *readfn;
-  void *baton;
+  svn_stream_t *input;
 };
 
 typedef struct {
@@ -446,8 +445,7 @@ static dav_error * dav_svn_open_stream(const dav_resource *resource,
 
   /* ### assuming mode == read for now */
 
-  serr = svn_fs_file_contents(&(*stream)->readfn, &(*stream)->baton,
-                              (*stream)->file, info->pool);
+  serr = svn_fs_file_contents(&(*stream)->input, (*stream)->file, info->pool);
   if (serr != NULL)
     {
       return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
@@ -474,8 +472,7 @@ static dav_error * dav_svn_read_stream(dav_stream *stream, void *buf,
 {
   svn_error_t *serr;
 
-  serr = (*stream->readfn)(stream->baton, buf, bufsize,
-                           stream->res->info->pool);
+  serr = svn_stream_read (stream->input, buf, bufsize);
   if (serr != NULL)
     {
       return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
