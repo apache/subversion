@@ -247,14 +247,10 @@ svn_error_create (apr_status_t apr_err,
                   const char *message)
 {
   svn_error_t *err;
-  char *permanent_msg;
 
   err = make_error_internal (apr_err, src_err, child, pool);
   
-  permanent_msg = apr_palloc (err->pool, (strlen (message) + 1));
-  strcpy (permanent_msg, message);
-
-  err->message = permanent_msg;
+  err->message = (const char *) apr_pstrdup (err->pool, message);
 
   return err;
 }
