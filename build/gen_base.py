@@ -94,8 +94,19 @@ class GeneratorBase:
       self.manpages.extend(string.split(self.parser.get(target, 'manpages')))
       self.infopages.extend(string.split(self.parser.get(target, 'infopages')))
 
-      # collect all the paths where stuff might get built
       if type != 'script':
+        # collect test programs
+        if type == 'exe':
+          if install == 'test':
+            self.test_deps.append(target_ob.output)
+            if self.parser.get(target, 'testing') != 'skip':
+              self.test_progs.append(target_ob.output)
+          if install == 'fs-test':
+            self.fs_test_deps.append(target_ob.output)
+            if self.parser.get(target, 'testing') != 'skip':
+              self.fs_test_progs.append(target_ob.output)
+
+        # collect all the paths where stuff might get built
         self.target_dirs[target_ob.path] = None
         for pattern in string.split(self.parser.get(target, 'sources')):
           if string.find(pattern, os.sep) != -1:
@@ -120,6 +131,38 @@ class GeneratorBase:
     for d in script_dirs:
       build_dirs[d] = None
     self.build_dirs = build_dirs.keys()
+
+  def compute_hdr_deps(self):
+    #
+    # Find all the available headers and what they depend upon. the
+    # include_deps is a dictionary mapping a short header name to a tuple
+    # of the full path to the header and a dictionary of dependent header
+    # names (short) mapping to None.
+    #
+    # Example:
+    #   { 'short.h' : ('/path/to/short.h',
+    #                  { 'other.h' : None, 'foo.h' : None }) }
+    #
+    # Note that this structure does not allow for similarly named headers
+    # in per-project directories. SVN doesn't have this at this time, so
+    # this structure works quite fine. (the alternative would be to use
+    # the full pathname for the key, but that is actually a bit harder to
+    # work with since we only see short names when scanning, and keeping
+    # a second variable around for mapping the short to long names is more
+    # than I cared to do right now)
+    #
+    include_deps = _create_include_deps(self.includes)
+    for d in self.target_dirs.keys():
+      hdrs = glob.glob(os.path.join(d, '*.h'))
+      if hdrs:
+        more_deps = _create_include_deps(hdrs, include_deps)
+        include_deps.update(more_deps)
+
+    for objname, sources in self.graph.get_deps(DT_OBJECT):
+      assert len(sources) == 1
+      hdrs = [ ]
+      for short in _find_includes(sources[0], include_deps):
+        self.graph.add(DT_OBJECT, objname, include_deps[short][0])
 
 
 class MsvcProjectGenerator(GeneratorBase):
@@ -178,6 +221,7 @@ dep_types = [
   'DT_OBJECT',   # an object filename, depending upon .c filenames
   'DT_SWIG_C',   # a swig-generated .c file, depending upon .i filename(s)
   'DT_LINK',     # a libtool-linked filename, depending upon object fnames
+  'DT_INCLUDE',  # filename includes (depends) on sources (all basenames)
   ]
 
 # create some variables for these
@@ -388,7 +432,7 @@ def _scan_for_includes(fname, limit):
     if match:
       h = match.group(1)
       if h in limit:
-        hdrs[match.group(1)] = None
+        hdrs[h] = None
   return hdrs
 
 def _sorted_files(targets):

@@ -38,30 +38,15 @@ class MakefileGenerator(gen_base.GeneratorBase):
     for target in self.target_names:
       target_ob = self.targets[target]
 
-      bldtype = target_ob.type
-
-      if bldtype == 'script':
+      if target_ob.type == 'script':
         # there is nothing to build
         continue
 
-      if bldtype == 'swig':
+      if target_ob.type == 'swig':
         ### nothing defined yet
         continue
 
       path = target_ob.path
-      objext = target_ob.objext
-      tpath = target_ob.output
-      tfile = os.path.basename(tpath)
-
-      if target_ob.install == 'test' and bldtype == 'exe':
-        self.test_deps.append(tpath)
-        if self.parser.get(target, 'testing') != 'skip':
-          self.test_progs.append(tpath)
-
-      if target_ob.install == 'fs-test' and bldtype == 'exe':
-        self.fs_test_deps.append(tpath)
-        if self.parser.get(target, 'testing') != 'skip':
-          self.fs_test_progs.append(tpath)
 
       objects = self.graph.get(gen_base.DT_LINK, target)
 
@@ -96,9 +81,13 @@ class MakefileGenerator(gen_base.GeneratorBase):
         '%s: $(%s_DEPS)\n'
         '\tcd %s && %s -o %s %s $(%s_OBJECTS) %s $(LIBS)\n\n'
         % (targ_varname, string.join(objects + deps), add_deps,
+
            targ_varname, objnames,
-           tpath, targ_varname,
-           path, linkcmd, tfile, ldflags, targ_varname, string.join(libs))
+
+           target_ob.output, targ_varname,
+
+           path, linkcmd, os.path.basename(target_ob.output), ldflags,
+           targ_varname, string.join(libs))
         )
 
       if custom == 'apache-mod':
@@ -107,14 +96,14 @@ class MakefileGenerator(gen_base.GeneratorBase):
         for src in target_ob.sources:
           if src[-2:] == '.c':
             self.ofile.write('%s%s: %s\n\t$(COMPILE_APACHE_MOD)\n'
-                             % (src[:-2], objext, src))
+                             % (src[:-2], target_ob.objext, src))
         self.ofile.write('\n')
       elif custom == 'swig-py':
         self.ofile.write('# build this with -DSWIGPYTHON\n')
         for src in target_ob.sources:
           if src[-2:] == '.c':
             self.ofile.write('%s%s: %s\n\t$(COMPILE_SWIG_PY)\n'
-                             % (src[:-2], objext, src))
+                             % (src[:-2], target_ob.objext, src))
         self.ofile.write('\n')
 
     # for each install group, write a rule to install its outputs
@@ -233,38 +222,9 @@ class MakefileGenerator(gen_base.GeneratorBase):
     self.ofile.write('INFOPAGES = %s\n\n' % string.join(self.infopages))
 
   def write_depends(self):
-    #
-    # Find all the available headers and what they depend upon. the
-    # include_deps is a dictionary mapping a short header name to a tuple
-    # of the full path to the header and a dictionary of dependent header
-    # names (short) mapping to None.
-    #
-    # Example:
-    #   { 'short.h' : ('/path/to/short.h',
-    #                  { 'other.h' : None, 'foo.h' : None }) }
-    #
-    # Note that this structure does not allow for similarly named headers
-    # in per-project directories. SVN doesn't have this at this time, so
-    # this structure works quite fine. (the alternative would be to use
-    # the full pathname for the key, but that is actually a bit harder to
-    # work with since we only see short names when scanning, and keeping
-    # a second variable around for mapping the short to long names is more
-    # than I cared to do right now)
-    #
-    include_deps = gen_base._create_include_deps(self.includes)
-    for d in self.target_dirs.keys():
-      hdrs = glob.glob(os.path.join(d, '*.h'))
-      if hdrs:
-        more_deps = gen_base._create_include_deps(hdrs, include_deps)
-        include_deps.update(more_deps)
-
+    self.compute_hdr_deps()
     for objname, sources in self.graph.get_deps(gen_base.DT_OBJECT):
-      assert len(sources) == 1
-      hdrs = [ ]
-      for short in gen_base._find_includes(sources[0], include_deps):
-        hdrs.append(include_deps[short][0])
-      self.ofile.write('%s: %s %s\n' % (objname, sources[0],
-                                        string.join(hdrs)))
+      self.ofile.write('%s: %s\n' % (objname, string.join(sources)))
 
   def write_ra_modules(self):
     for target in self.target_names:
