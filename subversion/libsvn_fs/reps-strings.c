@@ -337,7 +337,8 @@ rep_undeltify_range (svn_fs_t *fs,
         }
       else
         {
-          source_buf = (char *) "";      /* Won't read anything from here. */
+          static char empty_buf[] = "";
+          source_buf = empty_buf; /* Won't read anything from here. */
         }
 
       if (offset > 0)
