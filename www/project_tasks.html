@@ -42,6 +42,38 @@ Here are the tasks:
 
 <ul>
 
+   <li> <b>Rename some fields and functions throughout code</b> <p>
+   This is 
+   <a
+   href="http://subversion.tigris.org/issues/show_bug.cgi?id=560">issue
+   #560</a>.  It involves tweaks across quite a bit of code.  A
+   one-day task, at most.  Description:
+   <p>
+   <pre>
+   There are many, many instances of "editors" in our codebase. (See
+   'svn_delta_edit_fns_t' in svn_delta.h).
+
+   Due to Bad Planning, we would like to rename the editor functions
+   "replace_dir" and "replace_file" to "open_dir" and "open_file".
+   The word replace is historical baggage, and it doesn't mean what
+   people think it does.  Really, these functions exists for no
+   purpose but to return a baton that the editor-driver can use to
+   explore deeper and/or send a txdelta against.  Hence the "open"
+   terminology.  Besides, "close_file" and "close_dir" already exist
+   as counterparts.  This rename makes perfect sense.
+
+   Also: we'd like to rename a field in an svn_wc_entry_t (see
+   svn_wc.h) structure.  For Hysterical Raisins, an entry's
+   corresponding repository URL is named "ancestor".  This is a
+   horribly loaded term, and the field has nothing to do with ancestry
+   relationships.  Instead, we simply want to call it "URL".
+
+   This is a lot of searching-and-replacing, and will give any newbie
+   the chance to survey the codebase, too.  :-)
+   </pre>
+   </li>
+   <p>
+
    <li> <b>Convert to more appropriate string types throughout code</b> <p>
    This is 
    <a
