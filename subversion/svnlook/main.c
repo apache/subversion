@@ -689,29 +689,29 @@ print_diff_tree (svn_fs_root_t *root,
 }
 
 
-/* Recursively print all nodes, and their node revision ids, in the
-   tree rooted at NODE.  
+/* Recursively print all nodes, and (optionally) their node revision ids.
 
    ROOT is the revision or transaction root used to build that tree.
-   PATH is the currently path being printed, and INDENTATION the
-   number of spaces to prepent to that path's printed output.  Use
-   POOL for all allocations.  */
-static svn_error_t *
-print_ids_tree (svn_repos_node_t *node,
-                svn_fs_root_t *root,
-                const char *path /* UTF-8! */,
-                int indentation,
-                apr_pool_t *pool)
-{
-  const char *full_path;
-  int i;
-  const svn_fs_id_t *id;
-  svn_string_t *unparsed_id = NULL;
-  apr_pool_t *subpool;
-  const char *name_native;
+   PATH and ID are the current path and node revision id being
+   printed, and INDENTATION the number of spaces to prepent to that
+   path's printed output.  ID may be NULL if SHOW_IDS is FALSE (in
+   which case, ids won't be printed at all).  
 
-  if (! node)
-    return SVN_NO_ERROR;
+   Use POOL for all allocations.  */
+static svn_error_t *
+print_tree (svn_fs_root_t *root,
+            const char *path /* UTF-8! */,
+            const svn_fs_id_t *id,
+            int indentation,
+            svn_boolean_t show_ids,
+            apr_pool_t *pool)
+{
+  apr_pool_t *subpool;
+  int i;
+  const char *name_native;
+  int is_dir;
+  apr_hash_t *entries;
+  apr_hash_index_t *hi;
 
   /* Print the indentation. */
   for (i = 0; i < indentation; i++)
@@ -719,82 +719,46 @@ print_ids_tree (svn_repos_node_t *node,
       printf (" ");
     }
 
-  /* Get the node's ID */
-  svn_fs_node_id (&id, root, path, pool);
-  if (id)
-    unparsed_id = svn_fs_unparse_id (id, pool);
-  
   /* Print the node. */
-  SVN_ERR (svn_utf_cstring_from_utf8 (&name_native, node->name, pool));
-  printf ("%s%s <%s>\n", 
-          name_native, 
-          node->kind == svn_node_dir ? "/" : "",
-          unparsed_id ? unparsed_id->data : "unknown");
+  SVN_ERR (svn_fs_is_dir (&is_dir, root, path, pool));
+  SVN_ERR (svn_utf_cstring_from_utf8 (&name_native, 
+                                      svn_path_basename (path, pool), 
+                                      pool));
+  printf ("%s%s", name_native, is_dir ? "/" : "");
 
-  /* Return here if the node has no children. */
-  node = node->child;
-  if (! node)
-    return SVN_NO_ERROR;
-
-  /* Recursively handle the node's children. */
-  subpool = svn_pool_create (pool);
-  full_path = svn_path_join (path, node->name, subpool);
-  SVN_ERR (print_ids_tree (node, root, full_path, indentation + 1, subpool));
-  while (node->sibling)
+  if (show_ids)
     {
+      svn_string_t *unparsed_id = NULL;
+      if (id)
+        unparsed_id = svn_fs_unparse_id (id, pool);
+      printf (" <%s>", unparsed_id ? unparsed_id->data : "unknown");
+    }
+  printf ("\n");
+
+  /* Return here if PATH is not a directory. */
+  if (! is_dir)
+    return SVN_NO_ERROR;
+  
+  /* Recursively handle the node's children. */
+  SVN_ERR (svn_fs_dir_entries (&entries, root, path, pool));
+  subpool = svn_pool_create (pool);
+  for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
+    {
+      const void *key;
+      apr_ssize_t keylen;
+      void *val;
+      svn_fs_dirent_t *entry;
+
+      apr_hash_this (hi, &key, &keylen, &val);
+      entry = val;
+      SVN_ERR (print_tree (root, svn_path_join (path, entry->name, pool),
+                           entry->id, indentation + 1, show_ids, subpool));
       svn_pool_clear (subpool);
-      node = node->sibling;
-      full_path = svn_path_join (path, node->name, pool);
-      SVN_ERR (print_ids_tree (node, root, full_path, indentation + 1,
-                               subpool));
     }
   svn_pool_destroy (subpool);
 
   return SVN_NO_ERROR;
 }
-
-
-/* Recursively print all nodes in the tree.  If SHOW_IDS is non-zero,
-   print the id of each node next to its name. */
-static svn_error_t *
-print_tree (svn_repos_node_t *node,
-            int indentation,
-            apr_pool_t *pool)
-{
-  int i;
-  const char *name_native;
-
-  if (! node)
-    return SVN_NO_ERROR;
-
-  /* Print the indentation. */
-  for (i = 0; i < indentation; i++)
-    {
-      printf (" ");
-    }
-
-  /* Print the node. */
-  SVN_ERR (svn_utf_cstring_from_utf8 (&name_native, node->name, pool));
-  printf ("%s%s\n", 
-          name_native, 
-          node->kind == svn_node_dir ? "/" : "");
-
-  /* Return here if the node has no children. */
-  node = node->child;
-  if (! node)
-    return SVN_NO_ERROR;
-
-  /* Recursively handle the node's children. */
-  SVN_ERR (print_tree (node, indentation + 1, pool));
-  while (node->sibling)
-    {
-      node = node->sibling;
-      SVN_ERR (print_tree (node, indentation + 1, pool));
-    }
-
-  return SVN_NO_ERROR;
-}
-
 
 
 
@@ -965,18 +929,11 @@ static svn_error_t *
 do_tree (svnlook_ctxt_t *c, svn_boolean_t show_ids, apr_pool_t *pool)
 {
   svn_fs_root_t *root;
-  svn_repos_node_t *tree;
+  const svn_fs_id_t *id;
 
   SVN_ERR (get_root (&root, c, pool));
-  SVN_ERR (generate_delta_tree (&tree, c->repos, root, 0, FALSE, pool)); 
-  if (tree)
-    {
-      if (show_ids)
-        SVN_ERR (print_ids_tree (tree, root, "", 0, pool));
-      else
-        SVN_ERR (print_tree (tree, 0, pool));
-    }
-
+  SVN_ERR (svn_fs_node_id (&id, root, "", pool));
+  SVN_ERR (print_tree (root, "", id, 0, show_ids, pool));
   return SVN_NO_ERROR;
 }
 
