@@ -1,5 +1,7 @@
 
-Last updated: $Date: 2001-04-16 22:30:38 $
+   DOCUMENT IN PROGRESS -- PLEASE DO NOT READ YET.  -kff
+
+Last updated: $Date: 2001-04-16 22:34:16 $
 
 Three related things that need to happen in the filesystem before we
 get to alpha:
@@ -74,6 +76,11 @@ Next,
      svn_fs__get_node_rev_header(), yay, they'll never need to touch
      the contents.
 
+I think only files store their data in the `strings' table, which
+would mean that svn_fs__get_node_rev_data() would have one code path
+to retrieve a directory's entries list, and a different path to get a
+file's data.  Not a huge deal, just something to think about.
+
 
 b) Reverse-delta storage.
 =========================
@@ -103,13 +110,9 @@ If it's a write operation, and dbt->size != dbt->dlen, then that range
 of the record will grow or shrink accordingly.  See
 http://www.sleepycat.com/docs/ref/am/partial.html for details.
 
-To take advantage of 
+To take advantage of it, we change some interfaces:
 
-   - Replace dag_node_t->node_revision with two fields:
-     dag_node_t->node_rev_header and dag_node_t->node_rev_data.
-
-   - Replace svn_fs__get_node_revision() with, you guessed it,
-     svn_fs__get_node_rev_header() and svn_fs__get_node_rev_data().
+   - svn_fs__get_node_rev_header() and svn_fs__get_node_rev_data().
 
    - Find all callers of svn_fs__get_node_revision().  You know what
      to do.  Some of them will only need to call
