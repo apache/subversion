@@ -68,7 +68,8 @@ svn_client_switch (svn_revnum_t *result_rev,
   svn_ra_plugin_t *ra_lib;
   svn_revnum_t revnum;
   svn_error_t *err = SVN_NO_ERROR;
-  svn_wc_adm_access_t *adm_access;
+  svn_wc_adm_access_t *adm_access, *dir_access;
+  svn_node_kind_t kind;
   const char *diff3_cmd;
   svn_boolean_t timestamp_sleep = FALSE;  
   svn_boolean_t use_commit_times;
@@ -96,14 +97,16 @@ svn_client_switch (svn_revnum_t *result_rev,
   /* Use PATH to get the update's anchor and targets and get a write lock */
   SVN_ERR (svn_wc_get_actual_target (path, &anchor, &target, pool));
 
-  /* ### Note: we don't pass the `recurse' flag as the tree_lock
-     argument to probe_open below, only because the RA layer is
-     planning to blindly invalidate all wcprops below path anyway, and
-     it needs a full tree lock to do so.  If someday the RA layer gets
-     smarter about this, then we can start passing `recurse' below
-     again.  See issue #1000 and related commits for details. */
-  SVN_ERR (svn_wc_adm_open2 (&adm_access, NULL, anchor, TRUE, -1,
-                             pool));
+  /* Get a write-lock on the anchor and target.  We need a lock on
+     the whole target tree so we can invalidate wcprops on it. */
+  SVN_ERR (svn_wc_adm_open2 (&adm_access, NULL, anchor, TRUE,
+                             *target ? 0 : -1, pool));
+  SVN_ERR (svn_io_check_path (path, &kind, pool));
+  if (*target && (kind == svn_node_dir))
+    SVN_ERR (svn_wc_adm_open2 (&dir_access, adm_access, path,
+                               TRUE, -1, pool));
+  else
+    dir_access = adm_access;
 
   SVN_ERR (svn_wc_entry (&entry, anchor, adm_access, FALSE, pool));
   if (! entry)
@@ -156,7 +159,7 @@ svn_client_switch (svn_revnum_t *result_rev,
      We pass NULL for traversal_info because this is a switch, not an
      update, and therefore we don't want to handle any externals
      except the ones directly affected by the switch. */ 
-  err = svn_wc_crawl_revisions (path, adm_access, reporter, report_baton,
+  err = svn_wc_crawl_revisions (path, dir_access, reporter, report_baton,
                                 TRUE, recurse, use_commit_times,
                                 ctx->notify_func, ctx->notify_baton,
                                 NULL, /* no traversal info */
