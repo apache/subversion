@@ -862,6 +862,9 @@ enum svn_wc_status_kind
     /** local mods received conflicting repos mods */
     svn_wc_status_conflicted,
 
+    /** a resource marked as ignored */
+    svn_wc_status_ignored,
+
     /** an unversioned resource is in the way of the versioned resource */
     svn_wc_status_obstructed
 };

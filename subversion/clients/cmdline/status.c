@@ -45,6 +45,7 @@ generate_status_code (enum svn_wc_status_kind status)
     case svn_wc_status_merged:      return 'G';
     case svn_wc_status_conflicted:  return 'C';
     case svn_wc_status_obstructed:  return '~';
+    case svn_wc_status_ignored:     return 'I';
     case svn_wc_status_unversioned: return '?';
     default:                        return '?';
     }
@@ -164,7 +165,9 @@ svn_cl__print_status_list (apr_hash_t *statushash,
       item = &APR_ARRAY_IDX(statusarray, i, const svn_item_t);
       status = item->value;
 
-      if (! status || (skip_unrecognized && ! status->entry))
+      if (! status 
+          || (skip_unrecognized && ! status->entry)
+          || (status->text_status == svn_wc_status_none))
         continue;
 
       err = svn_utf_cstring_from_utf8 (&path, item->key, pool);

@@ -421,6 +421,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "      'D' Deleted\n"
     "      'M' Modified\n"
     "      'C' Conflicted\n"
+    "      'I' Ignored\n"
     "      '?' item is not under revision control\n"
     "      '!' item is missing and was removed via a non-svn command\n"
     "      '~' versioned item obstructed by some item of a different kind\n"

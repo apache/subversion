@@ -2716,6 +2716,14 @@ foo.c.r31
               </varlistentry>
 
               <varlistentry>
+                <term>'I'</term>
+                <listitem>
+                  <para>Item is being ignored (e.g. with the 
+                    svn:ignore) property</para>
+                </listitem>
+              </varlistentry>
+
+              <varlistentry>
                 <term>'?'</term>
                 <listitem>
                   <para>Item is not under version control.</para>
