@@ -965,7 +965,7 @@ make_empty_adm (const char *path, apr_pool_t *pool)
 {
   path = extend_with_adm_name (path, NULL, 0, pool, NULL);
 
-  SVN_ERR (svn_io_dir_make (path, APR_OS_DEFAULT, pool));
+  SVN_ERR (svn_io_dir_make_hidden (path, APR_OS_DEFAULT, pool));
 
   return SVN_NO_ERROR;
 }

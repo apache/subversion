@@ -612,6 +612,11 @@ svn_io_file_rename (const char *from_path, const char *to_path,
 svn_error_t *
 svn_io_dir_make (const char *path, apr_fileperms_t perm, apr_pool_t *pool);
 
+/** Same as svn_io_dir_make, but sets the hidden attribute on the
+    directory on systems that support it. */
+svn_error_t *
+svn_io_dir_make_hidden (const char *path, apr_fileperms_t perm,
+                        apr_pool_t *pool);
 
 /** Wrapper for @c apr_dir_open(), which see.  @a dirname is utf8-encoded. */
 svn_error_t *

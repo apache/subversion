@@ -1454,8 +1454,12 @@ svn_io_file_rename (const char *from_path, const char *to_path,
 }
 
 
-svn_error_t *
-svn_io_dir_make (const char *path, apr_fileperms_t perm, apr_pool_t *pool)
+/* Common implementation of svn_io_dir_make and svn_io_dir_make_hidden.
+   HIDDEN determines if the hidden attribute
+   should be set on the newly created directory. */
+static svn_error_t *
+dir_make (const char *path, apr_fileperms_t perm,
+          svn_boolean_t hidden, apr_pool_t *pool)
 {
   apr_status_t status;
   const char *path_apr;
@@ -1466,10 +1470,35 @@ svn_io_dir_make (const char *path, apr_fileperms_t perm, apr_pool_t *pool)
 
   if (status)
     return svn_error_createf (status, NULL,
-                              "svn_io_dir_make: can't create directory '%s'",
-                              path);
-  else
-    return SVN_NO_ERROR;
+                              "can't create directory '%s'", path);
+
+#ifdef APR_FILE_ATTR_HIDDEN
+  if (hidden)
+    {
+      status = apr_file_attrs_set (path_apr,
+                                   APR_FILE_ATTR_HIDDEN,
+                                   APR_FILE_ATTR_HIDDEN,
+                                   pool);
+      if (status)
+        return svn_error_createf (status, NULL,
+                                  "can't hide directory '%s'", path);
+    }
+#endif
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_io_dir_make (const char *path, apr_fileperms_t perm, apr_pool_t *pool)
+{
+  return dir_make (path, perm, FALSE, pool);
+}
+
+svn_error_t *
+svn_io_dir_make_hidden (const char *path, apr_fileperms_t perm,
+                        apr_pool_t *pool)
+{
+  return dir_make (path, perm, TRUE, pool);
 }
 
 
