@@ -878,7 +878,8 @@ setup_copy (svn_client_commit_info_t **commit_info,
          happens to be the HEAD.  It's fair enough to punt then, IMHO,
          and just demand that the user not specify a revision at all;
          beats mucking up this function with RA calls and such. */ 
-      if (src_revision->kind != svn_client_revision_unspecified)
+      if (src_revision->kind != svn_client_revision_unspecified
+          && src_revision->kind != svn_client_revision_head)
         {
           return svn_error_create
             (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL, pool,
@@ -889,7 +890,8 @@ setup_copy (svn_client_commit_info_t **commit_info,
     {
       if (!src_is_url)
         {
-          if (src_revision->kind != svn_client_revision_unspecified)
+          if (src_revision->kind != svn_client_revision_unspecified
+              && src_revision->kind != svn_client_revision_head)
             {
               /* We can convert the working copy path to a URL based on the
                  entries file. */
