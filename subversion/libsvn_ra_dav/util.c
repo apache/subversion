@@ -661,6 +661,7 @@ svn_ra_dav__request_dispatch(int *code_p,
   int rv;
   const ne_status *statstruct;
   const char *code_desc;
+  int code;
   const char *msg;
   svn_error_t *err = SVN_NO_ERROR;
 
@@ -677,16 +678,16 @@ svn_ra_dav__request_dispatch(int *code_p,
 
   statstruct = ne_get_status(request);
   code_desc = apr_pstrdup(pool, statstruct->reason_phrase);
+  code = statstruct->code;
   if (code_p)
-     *code_p = statstruct->code;
+     *code_p = code;
 
   ne_request_destroy(request);
   ne_xml_destroy(error_parser);
 
   /* If the status code was one of the two that we expected, then go
      ahead and return now. IGNORE any marshalled error. */
-  if (rv == NE_OK
-      && (statstruct->code == okay_1 || statstruct->code == okay_2))
+  if (rv == NE_OK && (code == okay_1 || code == okay_2))
     return SVN_NO_ERROR;
 
   /* next, check to see if a <D:error> was discovered */
