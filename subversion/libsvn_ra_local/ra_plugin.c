@@ -622,7 +622,8 @@ static svn_error_t *
 svn_ra_local__do_check_path (svn_node_kind_t *kind,
                              void *session_baton,
                              const char *path,
-                             svn_revnum_t revision)
+                             svn_revnum_t revision,
+                             apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *sbaton = session_baton;
   svn_fs_root_t *root;
@@ -639,12 +640,12 @@ svn_ra_local__do_check_path (svn_node_kind_t *kind,
 
   /* If we were given a relative path to append, append it. */
   if (path)
-    abs_path = svn_path_join (abs_path, path, sbaton->pool);
+    abs_path = svn_path_join (abs_path, path, pool);
 
   if (! SVN_IS_VALID_REVNUM (revision))
-    SVN_ERR (svn_fs_youngest_rev (&revision, sbaton->fs, sbaton->pool));
-  SVN_ERR (svn_fs_revision_root (&root, sbaton->fs, revision, sbaton->pool));
-  *kind = svn_fs_check_path (root, abs_path, sbaton->pool);
+    SVN_ERR (svn_fs_youngest_rev (&revision, sbaton->fs, pool));
+  SVN_ERR (svn_fs_revision_root (&root, sbaton->fs, revision, pool));
+  *kind = svn_fs_check_path (root, abs_path, pool);
   return SVN_NO_ERROR;
 }
 

@@ -747,7 +747,8 @@ svn_error_t *
 svn_ra_dav__do_check_path(svn_node_kind_t *kind,
                           void *session_baton,
                           const char *path,
-                          svn_revnum_t revision)
+                          svn_revnum_t revision,
+                          apr_pool_t *pool)
 {
   svn_ra_session_t *ras = session_baton;
   const char *url = ras->url;
@@ -784,10 +785,10 @@ svn_ra_dav__do_check_path(svn_node_kind_t *kind,
 
   /* If we were given a relative path to append, append it. */
   if (path)
-    url = svn_path_url_add_component(url, path, ras->pool);
+    url = svn_path_url_add_component(url, path, pool);
 
   err = svn_ra_dav__get_baseline_info(&is_dir, NULL, NULL, NULL,
-                                      ras->sess, url, revision, ras->pool);
+                                      ras->sess, url, revision, pool);
 
   if (err == SVN_NO_ERROR)
     {

@@ -835,10 +835,10 @@ static svn_error_t *ra_svn_log(void *sess, const apr_array_header_t *paths,
 }
 
 static svn_error_t *ra_svn_check_path(svn_node_kind_t *kind, void *sess,
-                                      const char *path, svn_revnum_t rev)
+                                      const char *path, svn_revnum_t rev,
+                                      apr_pool_t *pool)
 {
   svn_ra_svn_conn_t *conn = sess;
-  apr_pool_t *pool = conn->pool;
   const char *kind_word;
 
   SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "check-path", "c(?r)", path, rev));

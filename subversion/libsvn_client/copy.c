@@ -294,7 +294,7 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
     src_revnum = youngest;
   
   /* Verify that SRC_URL exists in the repository. */
-  SVN_ERR (ra_lib->check_path (&src_kind, sess, src_rel, src_revnum));
+  SVN_ERR (ra_lib->check_path (&src_kind, sess, src_rel, src_revnum, pool));
   if (src_kind == svn_node_none)
     return svn_error_createf 
       (SVN_ERR_FS_NOT_FOUND, NULL,
@@ -302,7 +302,7 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
        src_url, src_revnum);
 
   /* Figure out the basename that will result from this operation. */
-  SVN_ERR (ra_lib->check_path (&dst_kind, sess, dst_rel, youngest));
+  SVN_ERR (ra_lib->check_path (&dst_kind, sess, dst_rel, youngest, pool));
   if ((dst_kind == svn_node_none)
       || (dst_kind == svn_node_file))
     {
@@ -323,7 +323,7 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
         = svn_path_join (dst_rel ? dst_rel : "", 
                          svn_path_uri_decode (base_name, pool), pool);
       SVN_ERR (ra_lib->check_path (&some_kind, sess,
-                                   hypothetical_repos_path, youngest));
+                                   hypothetical_repos_path, youngest, pool));
       if (some_kind != svn_node_none)
         return svn_error_createf (SVN_ERR_FS_ALREADY_EXISTS, NULL,
                                   "fs path `%s' already exists.",
@@ -574,7 +574,7 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
   /* Figure out the basename that will result from this operation. */
   SVN_ERR (ra_lib->check_path (&dst_kind, session, 
                                svn_path_uri_decode (target, pool),
-                               SVN_INVALID_REVNUM));
+                               SVN_INVALID_REVNUM, pool));
   
   /* BASE_URL defaults to DST_URL. */
   base_url = apr_pstrdup (pool, dst_url);
@@ -718,7 +718,7 @@ repos_to_wc_copy (const char *src_url,
            (&src_revnum, ra_lib, sess, src_revision, NULL, pool));
 
   /* Verify that SRC_URL exists in the repository. */
-  SVN_ERR (ra_lib->check_path (&src_kind, sess, "", src_revnum));
+  SVN_ERR (ra_lib->check_path (&src_kind, sess, "", src_revnum, pool));
   if (src_kind == svn_node_none)
     {
       if (SVN_IS_VALID_REVNUM (src_revnum))
