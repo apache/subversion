@@ -1,6 +1,7 @@
 
 noinst_JAVA =   ${wildcard org/tigris/subversion/javahl/*.java} \
-		${wildcard org/tigris/subversion/javahl/test/*.java} 
+#		${wildcard org/tigris/subversion/javahl/tests/*.java} 
+
 
 EXTRA_DIST = ${noinst_JAVA} 
 

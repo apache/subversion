@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -16,44 +16,46 @@
  * @endcopyright
  */
 package org.tigris.subversion.javahl;
+
 import java.util.Date;
 
 
 /**
  * Subversion status API.
  * @author Patrick Mayweg
- * @author Cédric Chabanois 
- *         <a href="mailto:cchabanois@ifrance.com">cchabanois@ifrance.com</a> 
+ * @author Cédric Chabanois
+ *         <a href="mailto:cchabanois@ifrance.com">cchabanois@ifrance.com</a>
  */
 public class Status
 {
-    private String url;              // url in repository    
+    private String url;              // url in repository
     private String path;
     private int nodeKind;                // node kind (file, dir, ...)
     private long revision;           // base revision
     private long lastChangedRevision;// last revision this was changed
-    private long lastChangedDate;    // last date this was changed 
+    private long lastChangedDate;    // last date this was changed
     private String lastCommitAuthor; // last commit author of this item
     private int textStatus;
     private int propStatus;
     private boolean locked;
-    private boolean copied;          // in a copied state 
+    private boolean copied;          // in a copied state
+    private boolean switched;
     private int repositoryTextStatus;
     private int repositoryPropStatus;
-    private String conflictNew;      // new version of conflicted file 
+    private String conflictNew;      // new version of conflicted file
     private String conflictOld;      // old version of conflicted file
     private String conflictWorking;  // working version of conflicted file
     private String urlCopiedFrom;
     private long revisionCopiedFrom;
 
-    
-    public Status(String path, String url, int nodeKind, long revision, 
-        long lastChangedRevision, long lastChangedDate, String lastCommitAuthor, 
-        int textStatus, int propStatus, 
-        int repositoryTextStatus, int repositoryPropStatus,
-        boolean locked, boolean copied, 
-        String conflictOld, String conflictNew, String conflictWorking,
-        String urlCopiedFrom, long revisionCopiedFrom)
+
+    public Status(String path, String url, int nodeKind, long revision,
+                  long lastChangedRevision, long lastChangedDate, String lastCommitAuthor,
+                  int textStatus, int propStatus,
+                  int repositoryTextStatus, int repositoryPropStatus,
+                  boolean locked, boolean copied,
+                  String conflictOld, String conflictNew, String conflictWorking,
+                  String urlCopiedFrom, long revisionCopiedFrom, boolean switched)
     {
         this.path = path;
         this.url = url;
@@ -73,6 +75,7 @@ public class Status
         this.conflictWorking = conflictWorking;
         this.urlCopiedFrom = urlCopiedFrom;
         this.revisionCopiedFrom = revisionCopiedFrom;
+        this.switched = switched;
     }
 
     /**
@@ -108,8 +111,9 @@ public class Status
         if (lastChangedDate == 0)
             return null;
         else
-            return new Date(lastChangedDate/1000);
+            return new Date(lastChangedDate / 1000);
     }
+
     /**
      * @return name of author if versioned, NULL otherwise
      */
@@ -130,6 +134,7 @@ public class Status
     {
         return Kind.getDescription(textStatus);
     }
+
     /**
      * @return file status property enum of the "property" component.
      */
@@ -162,10 +167,11 @@ public class Status
     /**
      * @return true if locked
      */
-     public boolean isLocked()
+    public boolean isLocked()
     {
         return locked;
     }
+
     /**
      * @return true if copied
      */
@@ -173,14 +179,17 @@ public class Status
     {
         return copied;
     }
+
     public String getConflictNew()
     {
         return conflictNew;
     }
+
     public String getConflictOld()
     {
         return conflictOld;
     }
+
     public String getConflictWorking()
     {
         return conflictWorking;
@@ -189,7 +198,8 @@ public class Status
     /**
      * @return url in repository or null if not known
      */
-    public String getUrl() {
+    public String getUrl()
+    {
         return url;
     }
 
@@ -223,7 +233,7 @@ public class Status
     {
         return urlCopiedFrom;
     }
-    
+
     public Revision.Number getRevisionCopiedFrom()
     {
         return new Revision.Number(revisionCopiedFrom);
@@ -233,6 +243,12 @@ public class Status
     {
         return revisionCopiedFrom;
     }
+
+    public boolean isSwitched()
+    {
+        return switched;
+    }
+
     /**
      * tells if is managed by svn (added, normal, modified ...)
      * @return
@@ -240,11 +256,11 @@ public class Status
     public boolean isManaged()
     {
         int textStatus = getTextStatus();
-        return ((textStatus != Status.Kind.unversioned) && 
+        return ((textStatus != Status.Kind.unversioned) &&
                 (textStatus != Status.Kind.none) &&
                 (textStatus != Status.Kind.ignored));
     }
-    
+
     /**
      * tells if the resource has a remote counter-part
      * @return
@@ -254,7 +270,7 @@ public class Status
         int textStatus = getTextStatus();
         return ((isManaged()) && (textStatus != Status.Kind.added));
     }
-    
+
     public boolean isAdded()
     {
         int textStatus = getTextStatus();
@@ -264,19 +280,19 @@ public class Status
     public boolean isDeleted()
     {
         int textStatus = getTextStatus();
-        return textStatus == Status.Kind.deleted;        
+        return textStatus == Status.Kind.deleted;
     }
 
     public boolean isMerged()
     {
         int textStatus = getTextStatus();
-        return textStatus == Status.Kind.merged;        
+        return textStatus == Status.Kind.merged;
     }
 
     public boolean isIgnored()
     {
         int textStatus = getTextStatus();
-        return textStatus == Status.Kind.ignored;        
+        return textStatus == Status.Kind.ignored;
     }
 
     /**
@@ -297,8 +313,8 @@ public class Status
         /** exists, but uninteresting. */
         public static final int normal = 1;
 
-	/** text or props have been modified */
-	public static final int modified = 2;
+        /** text or props have been modified */
+        public static final int modified = 2;
 
         /** is scheduled for additon */
         public static final int added = 3;
@@ -306,11 +322,11 @@ public class Status
         /** scheduled for deletion */
         public static final int deleted = 4;
 
-	/** is not a versioned thing in this wc */
-	public static final int unversioned = 5;
+        /** is not a versioned thing in this wc */
+        public static final int unversioned = 5;
 
-	/** under v.c., but is missing */
-	public static final int missing = 6;
+        /** under v.c., but is missing */
+        public static final int missing = 6;
 
         /** was deleted and then re-added */
         public static final int replaced = 7;
@@ -326,7 +342,7 @@ public class Status
 
         /** a resource marked as ignored */
         public static final int ignored = 11;
-        
+
         /** a directory doesn't contain a complete entries list  */
         public static final int incomplete = 12;
 
@@ -338,32 +354,32 @@ public class Status
             switch (kind)
             {
             case none:
-              return "non-svn";
+                return "non-svn";
             case normal:
-              return "normal";
+                return "normal";
             case added:
-              return "added";
+                return "added";
             case missing:
-              return "missing";
+                return "missing";
             case deleted:
-              return "deleted";
+                return "deleted";
             case replaced:
-              return "replaced";
+                return "replaced";
             case modified:
-              return "modified";
+                return "modified";
             case merged:
-              return "merged";
+                return "merged";
             case conflicted:
-              return "conflicted";
+                return "conflicted";
             case ignored:
-              return "ignored";
+                return "ignored";
             case incomplete:
-              return "incomplete";
+                return "incomplete";
             case external:
-              return "external";
+                return "external";
             case unversioned:
             default:
-              return "unversioned";
+                return "unversioned";
             }
         }
     }

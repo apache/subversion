@@ -230,7 +230,7 @@ void SVNClient::statusReceiver(void *baton, const char *path, svn_wc_status_t *s
 }
 
 
-jobjectArray SVNClient::status(const char *path, bool descend, bool onServer, bool getAll)
+jobjectArray SVNClient::status(const char *path, bool descend, bool onServer, bool getAll, bool noIgnore)
 {
 	status_baton statusBaton;
     Pool subPool;
@@ -252,7 +252,7 @@ jobjectArray SVNClient::status(const char *path, bool descend, bool onServer, bo
 							 descend ? TRUE : FALSE,
 							 getAll ? TRUE : FALSE,
 							 onServer ? TRUE : FALSE,     //update
-                             FALSE,     //no_ignore,
+                             noIgnore ? TRUE : FALSE,     //no_ignore,
 							 ctx,
                              subPool.pool());
     if (Err == NULL)
@@ -439,8 +439,6 @@ jlong SVNClient::checkout(const char *moduleName, const char *destPath, Revision
     m_lastPath = svn_path_internal_style (destPath, apr_pool);
     svn_revnum_t retval;
 
-    if(m_notify == NULL)
-      return -1;
 	svn_client_ctx_t *ctx = getContext(NULL);
 	if(ctx == NULL)
 	{
@@ -1085,7 +1083,7 @@ svn_client_ctx_t * SVNClient::getContext(const char *message)
 	ctx->log_msg_baton = getCommitMessageBaton(message);
 	ctx->cancel_func = NULL;
 	ctx->cancel_baton = NULL;
-    if (( err = svn_config_get_config (&(ctx->config), NULL, pool)))
+    if (( err = svn_config_get_config (&(ctx->config), m_configDir.c_str(), pool)))
     {
 		JNIUtil::handleSVNError(err);
         return NULL;
@@ -1137,7 +1135,7 @@ jobject SVNClient::createJavaStatus(const char *path, svn_wc_status_t *status)
 	if(mid == 0)
 	{
 		mid = env->GetMethodID(clazz, "<init>", 
-			"(Ljava/lang/String;Ljava/lang/String;IJJJLjava/lang/String;IIIIZZLjava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;J)V");
+			"(Ljava/lang/String;Ljava/lang/String;IJJJLjava/lang/String;IIIIZZLjava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;JZ)V");
 		if(JNIUtil::isJavaExceptionThrown())
 		{
 			return NULL;
@@ -1161,6 +1159,7 @@ jobject SVNClient::createJavaStatus(const char *path, svn_wc_status_t *status)
 	jint jRepositoryPropType = org_tigris_subversion_javahl_Status_Kind_none;
 	jboolean jIsLocked = JNI_FALSE;
 	jboolean jIsCopied = JNI_FALSE;
+	jboolean jIsSwitched = JNI_FALSE;
 	jstring jConflictOld = NULL;
 	jstring jConflictNew = NULL;
 	jstring jConflictWorking = NULL;
@@ -1176,7 +1175,7 @@ jobject SVNClient::createJavaStatus(const char *path, svn_wc_status_t *status)
 		jRepositoryPropType = mapStatusKind(status->repos_prop_status);
 		jIsCopied = (status->copied == 1) ? JNI_TRUE: JNI_FALSE;
 		jIsLocked = (status->locked == 1) ? JNI_TRUE: JNI_FALSE;
-
+		jIsSwitched = (status->switched == 1) ? JNI_TRUE: JNI_FALSE;
 
 	    svn_wc_entry_t * entry = status->entry;
 		if (entry != NULL)
@@ -1222,7 +1221,7 @@ jobject SVNClient::createJavaStatus(const char *path, svn_wc_status_t *status)
 
 	jobject ret = env->NewObject(clazz, mid, jPath, jUrl, jNodeKind, jRevision, jLastChangedRevision, jLastChangedDate, jLastCommitAuthor,
 		jTextType, jPropType, jRepositoryTextType, jRepositoryPropType, jIsLocked, jIsCopied, jConflictOld, jConflictNew, jConflictWorking,
-		jURLCopiedFrom, jRevisionCopiedFrom);
+		jURLCopiedFrom, jRevisionCopiedFrom,jIsSwitched);
 	if(JNIUtil::isJavaExceptionThrown())
 	{
 		return NULL;
@@ -1803,4 +1802,14 @@ void SVNClient::blame(const char *path, Revision &revisionStart, Revision &revis
  	JNIUtil::handleSVNError(error);
 	return;
   }
+}
+
+void SVNClient::setConfigDirectory(const char *configDir)
+{
+	m_configDir = configDir;
+}
+
+const char * SVNClient::getConfigDirectory()
+{
+	return m_configDir.c_str();
 }

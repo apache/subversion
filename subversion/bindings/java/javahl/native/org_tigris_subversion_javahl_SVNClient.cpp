@@ -129,10 +129,10 @@ JNIEXPORT jobjectArray JNICALL Java_org_tigris_subversion_javahl_SVNClient_list
 /*
  * Class:     org_tigris_subversion_javahl_SVNClient
  * Method:    status
- * Signature: (Ljava/lang/String;ZZZ)[Lorg/tigris/subversion/javahl/Status;
+ * Signature: (Ljava/lang/String;ZZZZ)[Lorg/tigris/subversion/javahl/Status;
  */
 JNIEXPORT jobjectArray JNICALL Java_org_tigris_subversion_javahl_SVNClient_status
-  (JNIEnv* env, jobject jthis, jstring jpath, jboolean jrecurse, jboolean jonServer, jboolean jgetAll)
+  (JNIEnv* env, jobject jthis, jstring jpath, jboolean jrecurse, jboolean jonServer, jboolean jgetAll, jboolean jnoIgnore)
 {
 	JNIEntry(SVNClient, status);
 	SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -145,7 +145,7 @@ JNIEXPORT jobjectArray JNICALL Java_org_tigris_subversion_javahl_SVNClient_statu
 	{
 		return NULL;
 	}
-	return cl->status(path, jrecurse ? true: false, jonServer ? true:false, jgetAll ? true:false);
+	return cl->status(path, jrecurse ? true: false, jonServer ? true:false, jgetAll ? true:false, jnoIgnore ? true:false);
 }
 
 /*
@@ -287,7 +287,7 @@ JNIEXPORT jlong JNICALL Java_org_tigris_subversion_javahl_SVNClient_checkout
 		JNIUtil::throwError("bad c++ this");
 		return -1;
 	}
-	Revision revision(jrevision);
+	Revision revision(jrevision, true);
 	if(JNIUtil::isExceptionThrown())
 	{
 		return -1;
@@ -1226,4 +1226,47 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_blame__Ljava_
 	}	
 	BlameCallback callback(jblameCallback);
 	cl->blame(path, revisionStart, revisionEnd, &callback);
+}
+/*
+ * Class:     org_tigris_subversion_javahl_SVNClient
+ * Method:    setConfigDirectory
+ * Signature: (Ljava/lang/String;)V
+ */
+JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_setConfigDirectory
+  (JNIEnv *env, jobject jthis, jstring jconfigDir)
+{
+	JNIEntry(SVNClient, setConfigDirectory);
+	SVNClient *cl = SVNClient::getCppObject(jthis);
+	if(cl == NULL)
+	{
+		JNIUtil::throwError("bad c++ this");
+		return;
+	}
+
+	JNIStringHolder configDir(jconfigDir);
+	if(JNIUtil::isExceptionThrown())
+	{
+		return;
+	}	
+
+	cl->setConfigDirectory(configDir);
+}
+/*
+ * Class:     org_tigris_subversion_javahl_SVNClient
+ * Method:    getConfigDirectory
+ * Signature: ()Ljava/lang/String;
+ */
+JNIEXPORT jstring JNICALL Java_org_tigris_subversion_javahl_SVNClient_getConfigDirectory
+  (JNIEnv *env, jobject jthis)
+{
+	JNIEntry(SVNClient, getConfigDirectory);
+	SVNClient *cl = SVNClient::getCppObject(jthis);
+	if(cl == NULL)
+	{
+		JNIUtil::throwError("bad c++ this");
+		return NULL;
+	}
+
+	const char *configDir = cl->getConfigDirectory();
+	return JNIUtil::makeJString(configDir);
 }

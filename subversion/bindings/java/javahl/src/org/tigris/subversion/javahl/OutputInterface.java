@@ -1,7 +1,11 @@
+package org.tigris.subversion.javahl;
+
+import java.io.IOException;
+
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -15,12 +19,21 @@
  * ====================================================================
  * @endcopyright
  */
-package org.tigris.subversion.javahl;
-
-public interface PromptUserPassword2 extends PromptUserPassword
+/**
+ * interface to receive data from subversion
+ */
+public interface OutputInterface
 {
-    public static final int Reject = 0;
-    public static final int AccecptTemporary = 1;
-    public static final int AcceptPermanently = 2;
-    public int askTrustSSLServer(String info, boolean allowPermanently);
+    /**
+     * write the bytes in data to java
+     * @param data          the data to be writtem
+     * @throws IOException  throw in case of problems.
+     */
+    public int write(byte[] data) throws IOException;
+
+    /**
+     * close the output
+     * @throws IOException throw in case of problems.
+     */
+    public void close() throws IOException;
 }

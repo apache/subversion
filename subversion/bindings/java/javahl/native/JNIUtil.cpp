@@ -30,14 +30,14 @@
 #include <svn_config.h>
 //#include <ios>
 
-#include "SVNClient.h"
+#include "SVNBase.h"
 #include "JNIMutex.h"
 #include "JNICriticalSection.h"
 #include "JNIThreadData.h"
 #include "JNIStringHolder.h"
 
 apr_pool_t *JNIUtil::g_pool = NULL;
-std::list<SVNClient*> JNIUtil::g_finalizedObjects;
+std::list<SVNBase*> JNIUtil::g_finalizedObjects;
 JNIMutex *JNIUtil::g_finalizedObjectsMutex = NULL;
 JNIMutex *JNIUtil::g_logMutex = NULL;
 bool JNIUtil::g_initException;
@@ -61,7 +61,7 @@ bool JNIUtil::JNIInit(JNIEnv *env)
 			return false;
 		}
 
-		for(std::list<SVNClient*>::iterator it = g_finalizedObjects.begin(); it != g_finalizedObjects.end(); it++)
+		for(std::list<SVNBase*>::iterator it = g_finalizedObjects.begin(); it != g_finalizedObjects.end(); it++)
 		{
 			delete *it;
 		}
@@ -226,7 +226,7 @@ void JNIUtil::handleSVNError(svn_error_t *err)
 }
 
 
-void JNIUtil::putFinalizedClient(SVNClient *cl)
+void JNIUtil::putFinalizedClient(SVNBase *cl)
 {
 	if(getLogLevel() >= errorLog)
 	{

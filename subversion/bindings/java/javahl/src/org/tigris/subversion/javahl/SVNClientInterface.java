@@ -3,7 +3,7 @@ package org.tigris.subversion.javahl;
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -40,9 +40,23 @@ public interface SVNClientInterface
      *
      * @param path Path to explore.
      * @param descend Recurse into subdirectories if existant.
+     * @param onServer Request status information from server.
+     * @param getAll get status for uninteristing files (unchanged).
      * @return Array of Status entries.
      */
     Status[]status(String path, boolean descend, boolean onServer, boolean getAll) throws ClientException;
+
+    /**
+     * List directory entries of a URL.
+     *
+     * @param path Path to explore.
+     * @param descend Recurse into subdirectories if existant.
+     * @param onServer Request status information from server.
+     * @param getAll get status for uninteristing files (unchanged).
+     * @param noIgnore get status for normaly ignored files and directories.
+     * @return Array of Status entries.
+     */
+    Status[]status(String path, boolean descend, boolean onServer, boolean getAll, boolean noIgnore) throws ClientException;
 
     /**
      *
@@ -234,6 +248,8 @@ public interface SVNClientInterface
 
     void propertyCreate(String path, String name, byte[] value, boolean recurse) throws ClientException;
 
+    void propertyRemove(String path, String name, boolean recure) throws ClientException;
+
     PropertyData revProperty(String path, String name, Revision rev) throws ClientException;
 
     /**
@@ -248,4 +264,8 @@ public interface SVNClientInterface
     byte[] blame(String path, Revision revisionStart, Revision revisionEnd) throws ClientException;
 
     void blame(String path, Revision revisionStart, Revision revisionEnd, BlameCallback callback) throws ClientException;
+
+    void setConfigDirectory(String configDir) throws ClientException;
+
+    String getConfigDirectory() throws ClientException;
 }

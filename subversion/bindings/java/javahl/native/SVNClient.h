@@ -35,10 +35,13 @@ class JNIByteArray;
 class Prompter;
 class BlameCallback;
 #include <svn_client.h>
+#include "SVNBase.h"
 
-class SVNClient
+class SVNClient :public SVNBase
 {
 public:
+	const char * getConfigDirectory();
+	void setConfigDirectory(const char *configDir);
 	jbyteArray blame(const char *path, Revision& revisionStart, Revision &revisionEnd);
 	void blame(const char *path, Revision &revisionStart, Revision &revisionEnd, BlameCallback *callback);
 	void relocate(const char *from, const char *to, const char *path, bool recurse);
@@ -70,7 +73,7 @@ public:
 	void password(const char *password);
 	void username(const char *username);
 	jobject singleStatus(const char *path, bool onServer);
-	jobjectArray status(const char *path, bool descend, bool onServer, bool getAll);
+	jobjectArray status(const char *path, bool descend, bool onServer, bool getAll, bool noIgnore);
 	jobjectArray list(const char *url, Revision &revision, bool recurse);
 	jobject revProperty(jobject jthis, const char *path, const char *name, Revision &rev);
 	jobject propertyGet(jobject jthis, const char *path, const char *name);
@@ -97,6 +100,7 @@ private:
 	void *getCommitMessageBaton(const char *message, const char *baseDir = NULL);
     std::string m_userName;
     std::string m_passWord;
+	std::string m_configDir;
 	static jobject createJavaStatus(const char *path, svn_wc_status_t *status);
 	static jint mapStatusKind(int svnKind);
 	static svn_error_t *messageReceiver (void *baton, apr_hash_t * changed_paths,
