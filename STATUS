@@ -57,12 +57,6 @@ Candidate changes:
 
 Approved changes (further review is welcome, but not required):
 
-  * r12278 (Issue #2159)
-    Better log region max size in default DB_CONFIG.
-    Justification: Trivial change, helps some sites avoid problems.
-    Votes:
-      +1: kfogel, jerenkrantz, ghudson
-
   * r12006, r12136, r12146
     Fix issue 2124 - bugs in svn switch over ra-dav.
     Justification:
