@@ -36,6 +36,8 @@
 #include "svn_md5.h"
 #include "client.h"
 
+#include "svn_private_config.h"
+
 
 /*** Code. ***/
 
@@ -103,8 +105,8 @@ copy_versioned_files (const char *from,
       if (! APR_STATUS_IS_EEXIST (err->apr_err))
         return err;
       if (! force)
-        SVN_ERR_W (err, "Destination directory exists, and will not be "
-                   "overwritten unless forced");
+        SVN_ERR_W (err, _("Destination directory exists, and will not be "
+                          "overwritten unless forced"));
       else
         svn_error_clear (err);
     }
@@ -282,10 +284,10 @@ open_root_internal (const char *path,
     SVN_ERR (svn_io_dir_make (path, APR_OS_DEFAULT, pool));
   else if (kind == svn_node_file)
     return svn_error_createf (SVN_ERR_WC_NOT_DIRECTORY, NULL,
-                              "'%s' exists and is not a directory", path);
+                              _("'%s' exists and is not a directory"), path);
   else if ((kind != svn_node_dir) || (! force))
     return svn_error_createf (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-                              "'%s' already exists", path);
+                              _("'%s' already exists"), path);
 
   if (notify_func)
     (*notify_func) (notify_baton,
@@ -422,10 +424,11 @@ add_directory (const char *path,
     SVN_ERR (svn_io_dir_make (full_path, APR_OS_DEFAULT, pool));
   else if (kind == svn_node_file)
     return svn_error_createf (SVN_ERR_WC_NOT_DIRECTORY, NULL,
-                              "'%s' exists and is not a directory", full_path);
+                              _("'%s' exists and is not a directory"),
+                              full_path);
   else if (! (kind == svn_node_dir && eb->force))
     return svn_error_createf (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-                              "'%s' already exists", full_path);
+                              _("'%s' already exists"), full_path);
 
   if (eb->notify_func)
     (*eb->notify_func) (eb->notify_baton,
@@ -592,7 +595,7 @@ close_file (void *file_baton,
         {
           return svn_error_createf
             (SVN_ERR_CHECKSUM_MISMATCH, NULL,
-             "Checksum mismatch for '%s'; expected: '%s', actual: '%s'",
+             _("Checksum mismatch for '%s'; expected: '%s', actual: '%s'"),
              fb->path, text_checksum, actual_checksum);
         }
     }
@@ -679,7 +682,7 @@ svn_client_export (svn_revnum_t *result_rev,
           SVN_ERR (svn_client_url_from_path (&URL, from, pool));
           if (! URL)
             return svn_error_createf (SVN_ERR_ENTRY_MISSING_URL, NULL,
-                                      "'%s' has no URL", from);
+                                      _("'%s' has no URL"), from);
         }
     }
   else

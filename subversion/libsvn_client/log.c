@@ -36,6 +36,7 @@
 #include "svn_error.h"
 #include "svn_path.h"
 
+#include "svn_private_config.h"
 
 
 /*** Getting update information ***/
@@ -70,7 +71,7 @@ svn_client_log (const apr_array_header_t *targets,
     {
       return svn_error_create
         (SVN_ERR_CLIENT_BAD_REVISION, NULL,
-         "Missing required revision specification");
+         _("Missing required revision specification"));
     }
 
   start_revnum = end_revnum = SVN_INVALID_REVNUM;
@@ -140,7 +141,7 @@ svn_client_log (const apr_array_header_t *targets,
           if (! entry->url)
             return svn_error_createf
               (SVN_ERR_ENTRY_MISSING_URL, NULL,
-              "Entry '%s' has no URL", target);
+              _("Entry '%s' has no URL"), target);
           URL = apr_pstrdup (pool, entry->url);
           SVN_ERR (svn_wc_adm_close (adm_access));
           (*((const char **)apr_array_push (target_urls))) = URL;
@@ -301,7 +302,7 @@ svn_client_log (const apr_array_header_t *targets,
             /* Log receivers are free to handle revision 0 specially... But
                just in case some don't, we make up a message here. */
             SVN_ERR (receiver (receiver_baton,
-                               NULL, 0, "", "", "No commits in repository",
+                               NULL, 0, "", "", _("No commits in repository."),
                                pool));
           }
       }

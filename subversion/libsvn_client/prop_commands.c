@@ -31,6 +31,7 @@
 #include "client.h"
 #include "svn_path.h"
 
+#include "svn_private_config.h"
 
 
 /*** Code. ***/
@@ -143,8 +144,8 @@ svn_client_propset (const char *propname,
   if (is_revision_prop_name (propname))
     {
       return svn_error_createf (SVN_ERR_CLIENT_PROPERTY_NAME, NULL,
-                                "Revision property '%s' not allowed "
-                                "in this context", propname);
+                                _("Revision property '%s' not allowed "
+                                  "in this context"), propname);
     }
 
   if (svn_path_is_url (target))
@@ -153,20 +154,20 @@ svn_client_propset (const char *propname,
          if it's ever to support setting properties remotely. */
       return svn_error_createf
         (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-         "Setting property on non-local target '%s' not yet supported",
+         _("Setting property on non-local target '%s' not yet supported"),
          target);
     }
 
   if (propval && ! is_valid_prop_name (propname))
     return svn_error_createf (SVN_ERR_CLIENT_PROPERTY_NAME, NULL,
-                              "Bad property name: '%s'", propname);
+                              _("Bad property name: '%s'"), propname);
 
   SVN_ERR (svn_wc_adm_probe_open2 (&adm_access, NULL, target, TRUE,
                                    recurse ? -1 : 0, pool));
   SVN_ERR (svn_wc_entry (&node, target, adm_access, FALSE, pool));
   if (!node)
     return svn_error_createf (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                              "'%s' is not under version control", 
+                              _("'%s' is not under version control"), 
                               target);
 
   if (recurse && node->kind == svn_node_dir)
@@ -210,11 +211,11 @@ svn_client_revprop_set (const char *propname,
       && strchr (propval->data, '\n') != NULL 
       && (! force))
     return svn_error_create (SVN_ERR_CLIENT_REVISION_AUTHOR_CONTAINS_NEWLINE,
-                             NULL, "Value will not be set unless forced");
+                             NULL, _("Value will not be set unless forced"));
 
   if (propval && ! is_valid_prop_name (propname))
     return svn_error_createf (SVN_ERR_CLIENT_PROPERTY_NAME, NULL,
-                              "Bad property name: '%s'", propname);
+                              _("Bad property name: '%s'"), propname);
 
   /* Open an RA session for the URL. Note that we don't have a local
      directory, nor a place to put temp files. */
@@ -382,7 +383,7 @@ maybe_convert_to_url (const char **new_target,
       SVN_ERR (svn_wc_entry (&entry, target, adm_access, FALSE, pool));
       if (! entry)
         return svn_error_createf (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                                  "'%s' is not under version control", 
+                                  _("'%s' is not under version control"), 
                                   target);
       *new_target = entry->url;
     }
@@ -436,7 +437,7 @@ remote_propget (apr_hash_t *props,
     {
       return svn_error_createf
         (SVN_ERR_NODE_UNKNOWN_KIND, NULL,
-         "Unknown node kind for '%s'",
+         _("Unknown node kind for '%s'"),
          svn_path_join (target_prefix, target_relative, pool));
     }
   
@@ -539,8 +540,8 @@ svn_client_propget (apr_hash_t **props,
             {
               return svn_error_createf
                 (SVN_ERR_ILLEGAL_TARGET, NULL,
-                 "'%s' is a URL, but revision kind requires a working copy",
-                 target);
+                 _("'%s' is a URL, but revision kind requires a "
+                   "working copy"), target);
             }
 
           /* target is a working copy path */
@@ -550,7 +551,7 @@ svn_client_propget (apr_hash_t **props,
       else
         {
           return svn_error_create
-            (SVN_ERR_CLIENT_BAD_REVISION, NULL, "Unknown revision kind");
+            (SVN_ERR_CLIENT_BAD_REVISION, NULL, _("Unknown revision kind"));
         }
 
       SVN_ERR (ra_lib->check_path (session, "", revnum, &kind, pool));
@@ -567,8 +568,9 @@ svn_client_propget (apr_hash_t **props,
                                        FALSE, recurse ? -1 : 0, pool));
       SVN_ERR (svn_wc_entry (&node, target, adm_access, FALSE, pool));
       if (! node)
-        return svn_error_createf (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                                  "'%s' is not under version control", target);
+        return svn_error_createf 
+          (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
+           _("'%s' is not under version control"), target);
       
       SVN_ERR (svn_client__get_revision_number
                (&revnum, NULL, NULL, revision, target, pool));
@@ -715,7 +717,7 @@ remote_proplist (apr_array_header_t *proplist,
     {
       return svn_error_createf
         (SVN_ERR_NODE_UNKNOWN_KIND, NULL,
-         "Unknown node kind for '%s'",
+         _("Unknown node kind for '%s'"),
          svn_path_join (target_prefix, target_relative, pool));
     }
   
@@ -896,8 +898,8 @@ svn_client_proplist (apr_array_header_t **props,
             {
               return svn_error_createf
                 (SVN_ERR_ILLEGAL_TARGET, NULL,
-                 "'%s' is a URL, but revision kind requires a working copy",
-                 target);
+                 _("'%s' is a URL, but revision kind requires a "
+                   "working copy"), target);
             }
 
           /* target is a working copy path */
@@ -907,7 +909,7 @@ svn_client_proplist (apr_array_header_t **props,
       else
         {
           return svn_error_create
-            (SVN_ERR_CLIENT_BAD_REVISION, NULL, "Unknown revision kind");
+            (SVN_ERR_CLIENT_BAD_REVISION, NULL, _("Unknown revision kind"));
         }
 
       SVN_ERR (ra_lib->check_path (session, "", revnum, &kind, pool));
@@ -924,8 +926,9 @@ svn_client_proplist (apr_array_header_t **props,
                                        FALSE, recurse ? -1 : 0, pool));
       SVN_ERR (svn_wc_entry (&node, target, adm_access, FALSE, pool));
       if (! node)
-        return svn_error_createf (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                                  "'%s' is not under version control", target);
+        return svn_error_createf 
+          (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
+           _("'%s' is not under version control"), target);
       
       SVN_ERR (svn_client__get_revision_number
                (&revnum, NULL, NULL, revision, target, pool));

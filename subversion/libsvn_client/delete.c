@@ -32,6 +32,7 @@
 #include "svn_path.h"
 #include "client.h"
 
+#include "svn_private_config.h"
 
 
 /*** Code. ***/
@@ -58,11 +59,11 @@ find_undeletables (void *baton,
   /* Check for error-ful states. */
   if (status->text_status == svn_wc_status_obstructed)
     sb->err = svn_error_createf (SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
-                                 "'%s' is in the way of the resource "
-                                 "actually under version control", path);
+                                 _("'%s' is in the way of the resource "
+                                   "actually under version control"), path);
   else if (! status->entry)
     sb->err = svn_error_createf (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                                 "'%s' is not under version control", path);
+                                 _("'%s' is not under version control"), path);
   
   else if ((status->text_status != svn_wc_status_normal
             && status->text_status != svn_wc_status_deleted
@@ -71,7 +72,7 @@ find_undeletables (void *baton,
            (status->prop_status != svn_wc_status_none
             && status->prop_status != svn_wc_status_normal))
     sb->err = svn_error_createf (SVN_ERR_CLIENT_MODIFIED, NULL,
-                             "'%s' has local modifications", path);
+                             _("'%s' has local modifications"), path);
 }
 
 

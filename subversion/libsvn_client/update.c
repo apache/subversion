@@ -34,6 +34,7 @@
 #include "svn_time.h"
 #include "client.h"
 
+#include "svn_private_config.h"
 
 
 /*** Code. ***/
@@ -81,10 +82,10 @@ svn_client__update_internal (svn_revnum_t *result_rev,
   SVN_ERR (svn_wc_entry (&entry, anchor, adm_access, FALSE, pool));
   if (! entry)
     return svn_error_createf (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL, 
-                              "'%s' is not under version control", anchor);
+                              _("'%s' is not under version control"), anchor);
   if (! entry->url)
     return svn_error_createf (SVN_ERR_ENTRY_MISSING_URL, NULL,
-                              "Entry '%s' has no URL", anchor);
+                              _("Entry '%s' has no URL"), anchor);
   URL = apr_pstrdup (pool, entry->url);
 
   /* Get revnum set to something meaningful, so we can fetch the
