@@ -637,20 +637,51 @@ svn_repos_parse_dumpstream2 (svn_stream_t *stream,
         }
 
       /* Is there a text content-block to parse? */
-      if (text_cl || old_v1_with_cl)
+      if (text_cl)
         {
           const char *delta = apr_hash_get (headers,
                                             SVN_REPOS_DUMPFILE_TEXT_DELTA,
                                             APR_HASH_KEY_STRING);
           svn_boolean_t is_delta = (delta && strcmp (delta, "true") == 0);
-          svn_filesize_t cl_value = (old_v1_with_cl) ?
-            svn__atoui64 (content_length) - actual_prop_length :
-            svn__atoui64 (text_cl);
 
-          if (! (old_v1_with_cl && ! cl_value))
+          SVN_ERR (parse_text_block (stream,
+                                     svn__atoui64 (text_cl),
+                                     is_delta,
+                                     parse_fns,
+                                     found_node ? node_baton : rev_baton,
+                                     buffer,
+                                     buflen,
+                                     found_node ? nodepool : revpool));
+        }
+      else if (old_v1_with_cl)
+        {
+          /* An old-v1 block with a Content-length might have a text block.
+             If the property block did not consume all the bytes of the
+             Content-length, then it clearly does have a text block.
+             If not, then we must deduce whether we have an *empty* text
+             block or an *absent* text block.  The rules are:
+             - "Node-kind: file" blocks have an empty (i.e. present, but
+               zero-length) text block, since they represent a file
+               modification.  Note that file-copied-text-unmodified blocks
+               have no Content-length - even if they should have contained
+               a modified property block, the pre-0.14 dumper forgets to
+               dump the modified properties. 
+             - If it is not a file node, then it is a revision or directory,
+               and so has an absent text block.
+          */
+          const char *node_kind;
+          svn_filesize_t cl_value = svn__atoui64 (content_length)
+                                    - actual_prop_length;
+
+          if (cl_value || 
+              ((node_kind = apr_hash_get (headers,
+                                          SVN_REPOS_DUMPFILE_NODE_KIND,
+                                          APR_HASH_KEY_STRING))
+               && strcmp (node_kind, "file") == 0)
+             )
             SVN_ERR (parse_text_block (stream,
                                        cl_value,
-                                       is_delta,
+                                       FALSE,
                                        parse_fns,
                                        found_node ? node_baton : rev_baton,
                                        buffer,
