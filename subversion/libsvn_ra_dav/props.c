@@ -48,75 +48,6 @@ const ne_propname svn_ra_dav__checked_in_prop = {
   "DAV:", "checked-in"
 };
 
-typedef struct {
-  ne_xml_elmid id;
-  const char *name;
-  int is_property;      /* is it a property, or part of some structure? */
-} elem_defn;
-
-static const elem_defn elem_definitions[] =
-{
-  /* DAV elements */
-  { ELEM_baseline_coll, SVN_RA_DAV__PROP_BASELINE_COLLECTION, 0 },
-  { ELEM_checked_in, SVN_RA_DAV__PROP_CHECKED_IN, 0 },
-  { ELEM_vcc, SVN_RA_DAV__PROP_VCC, 0 },
-  { ELEM_version_name, SVN_RA_DAV__PROP_VERSION_NAME, 1 },
-  { ELEM_get_content_length, SVN_RA_DAV__PROP_GETCONTENTLENGTH, 1 },
-
-  /* SVN elements */
-  { ELEM_baseline_relpath, SVN_RA_DAV__PROP_BASELINE_RELPATH, 1 },
-  { ELEM_md5_checksum, SVN_RA_DAV__PROP_MD5_CHECKSUM, 1 },
-  { ELEM_repository_uuid, SVN_RA_DAV__PROP_REPOSITORY_UUID, 1 },
-  { 0 }
-};
-
-static const struct ne_xml_elm neon_descriptions[] =
-{
-  /* DAV elements */
-  { "DAV:", "baseline-collection", ELEM_baseline_coll, NE_XML_CDATA },
-  { "DAV:", "checked-in", ELEM_checked_in, 0 },
-  { "DAV:", "collection", ELEM_collection, NE_XML_CDATA },
-  { "DAV:", "href", NE_ELM_href, NE_XML_CDATA },
-  { "DAV:", "resourcetype", ELEM_resourcetype, 0 },
-  { "DAV:", "version-controlled-configuration", ELEM_vcc, 0 },
-  { "DAV:", "version-name", ELEM_version_name, NE_XML_CDATA },
-  { "DAV:", "getcontentlength", ELEM_get_content_length, NE_XML_CDATA },
-
-  /* SVN elements */
-  { SVN_DAV_PROP_NS_DAV, "baseline-relative-path", ELEM_baseline_relpath,
-    NE_XML_CDATA },
-  { SVN_DAV_PROP_NS_DAV, "md5-checksum", ELEM_md5_checksum,
-    NE_XML_CDATA },
-  { SVN_DAV_PROP_NS_DAV, "repository-uuid", ELEM_repository_uuid,
-    NE_XML_CDATA },
- 
-  /* Unknown things (we use this so that Neon let's us examine custom
-     properties). */
-#if 0
-  /* ### if we do this, then Neon will not recognize and parse any of the
-     ### properties. that means that process_results will not be called,
-     ### which means that some properties won't be added to the propset
-     ### hash. we could do all that in end_element, but since we're
-     ### disabling Neon's property processing, it also means that we're
-     ### losing Neon's propstatus checks.
-     ###
-     ### disabling for now...
-  */
-  { "", "", NE_ELM_unknown, NE_XML_COLLECT },
-#endif
-
-  { NULL }
-};
-
-typedef struct {
-  apr_hash_t *props; /* const char *URL-PATH -> svn_ra_dav_resource_t
-                        RESOURCE */
-  const char *encoding; /* property encoding (or NULL) */
-  apr_pool_t *pool;
-  ne_propfind_handler *dph;
-  ne_xml_parser *hip;
-} prop_ctx_t;
-
 /* when we begin a checkout, we fetch these from the "public" resources to
    steer us towards a Baseline Collection. we fetch the resourcetype to
    verify that we're accessing a collection. */
@@ -138,9 +69,103 @@ static const ne_propname baseline_props[] =
 };
 
 
+
+/*** Propfind Implementation ***/
 
-/* look up an element definition. may return NULL if the elem is not
-   recognized. */
+typedef struct {
+  ne_xml_elmid id;
+  const char *name;
+  int is_property;      /* is it a property, or part of some structure? */
+} elem_defn;
+
+
+static const elem_defn elem_definitions[] =
+{
+  /*** NOTE: Make sure that every item in here is also represented in
+       propfind_elements[] ***/
+
+  /* DAV elements */
+  { NE_ELM_multistatus, "DAV:multistatus", 0 },
+  { NE_ELM_response, "DAV:response", 0 },
+  { NE_ELM_href, "DAV:href", NE_XML_CDATA },
+  { NE_ELM_propstat, "DAV:propstat", 0 },
+  { NE_ELM_prop, "DAV:prop", 0 },
+  { NE_ELM_status, "DAV:status", NE_XML_CDATA },
+  { ELEM_baseline, "DAV:baseline", NE_XML_CDATA },
+  { ELEM_collection, "DAV:collection", NE_XML_CDATA },
+  { ELEM_resourcetype, "DAV:resourcetype", 0 },
+  { ELEM_baseline_coll, SVN_RA_DAV__PROP_BASELINE_COLLECTION, 0 },
+  { ELEM_checked_in, SVN_RA_DAV__PROP_CHECKED_IN, 0 },
+  { ELEM_vcc, SVN_RA_DAV__PROP_VCC, 0 },
+  { ELEM_version_name, SVN_RA_DAV__PROP_VERSION_NAME, 1 },
+  { ELEM_get_content_length, SVN_RA_DAV__PROP_GETCONTENTLENGTH, 1 },
+  { ELEM_creationdate, SVN_RA_DAV__PROP_CREATIONDATE, 1 },
+  { ELEM_creator_displayname, SVN_RA_DAV__PROP_CREATOR_DISPLAYNAME, 1 },
+
+  /* SVN elements */
+  { ELEM_baseline_relpath, SVN_RA_DAV__PROP_BASELINE_RELPATH, 1 },
+  { ELEM_md5_checksum, SVN_RA_DAV__PROP_MD5_CHECKSUM, 1 },
+  { ELEM_repository_uuid, SVN_RA_DAV__PROP_REPOSITORY_UUID, 1 },
+  { 0 }
+};
+
+
+static const struct ne_xml_elm propfind_elements[] = 
+{
+  /*** NOTE: Make sure that every item in here is also represented in
+       elem_definitions[] ***/
+
+  /* DAV elements */
+  { "DAV:", "multistatus", NE_ELM_multistatus, 0 },
+  { "DAV:", "response", NE_ELM_response, 0 },
+  { "DAV:", "href", NE_ELM_href, NE_XML_CDATA },
+  { "DAV:", "propstat", NE_ELM_propstat, 0 },
+  { "DAV:", "prop", NE_ELM_prop, 0 },
+  { "DAV:", "status", NE_ELM_status, NE_XML_CDATA },
+  { "DAV:", "baseline", ELEM_baseline, NE_XML_CDATA },
+  { "DAV:", "baseline-collection", ELEM_baseline_coll, NE_XML_CDATA },
+  { "DAV:", "checked-in", ELEM_checked_in, 0 },
+  { "DAV:", "collection", ELEM_collection, NE_XML_CDATA },
+  { "DAV:", "resourcetype", ELEM_resourcetype, 0 },
+  { "DAV:", "version-controlled-configuration", ELEM_vcc, 0 },
+  { "DAV:", "version-name", ELEM_version_name, NE_XML_CDATA },
+  { "DAV:", "getcontentlength", ELEM_get_content_length, NE_XML_CDATA },
+  { "DAV:", "creationdate", ELEM_creationdate, NE_XML_CDATA },
+  { "DAV:", "creator-displayname", ELEM_creator_displayname, NE_XML_CDATA },
+
+  /* SVN elements */
+  { SVN_DAV_PROP_NS_DAV, "baseline-relative-path", ELEM_baseline_relpath,
+    NE_XML_CDATA },
+  { SVN_DAV_PROP_NS_DAV, "md5-checksum", ELEM_md5_checksum,
+    NE_XML_CDATA },
+  { SVN_DAV_PROP_NS_DAV, "repository-uuid", ELEM_repository_uuid,
+    NE_XML_CDATA },
+
+  /* Unknowns */
+  { "", "", NE_ELM_unknown, NE_XML_COLLECT },
+
+  { NULL } 
+};
+
+
+typedef struct propfind_ctx_t
+{
+  apr_hash_t *props; /* const char *URL-PATH -> svn_ra_dav_resource_t */
+
+  svn_ra_dav_resource_t *rsrc; /* the current resource. */
+  const char *encoding; /* property encoding (or NULL) */
+  int status; /* status for the current <propstat> (or 0 if unknown). */
+  apr_hash_t *propbuffer; /* holds properties until their status is known. */
+  ne_xml_elmid last_open_id; /* the id of the last opened tag. */
+
+  ne_xml_parser *parser;
+  apr_pool_t *pool;
+
+} propfind_ctx_t;
+
+
+/* Look up an element definition ID.  May return NULL if the elem is
+   not recognized. */
 static const elem_defn *defn_from_id(ne_xml_elmid id)
 {
   const elem_defn *defn;
@@ -154,95 +179,64 @@ static const elem_defn *defn_from_id(ne_xml_elmid id)
   return NULL;
 }
 
-static void *create_private(void *userdata, const char *url)
+
+/* Assign URL to RSRC.  Use POOL for any allocations. */
+static void assign_rsrc_url(svn_ra_dav_resource_t *rsrc, 
+                            const char *url,
+                            apr_pool_t *pool)
 {
-  prop_ctx_t *pc = userdata;
-  ne_uri parsed_url;
   char *url_path;
-  svn_ra_dav_resource_t *r = apr_pcalloc(pc->pool, sizeof(*r));
   apr_size_t len;
+  ne_uri parsed_url;
 
-  r->pool = pc->pool;
-
-  /* parse the PATH element out of the URL
-
-     Note: mod_dav does not (currently) use an absolute URL, but simply a
+  /* Parse the PATH element out of the URL.
+     NOTE: mod_dav does not (currently) use an absolute URL, but simply a
      server-relative path (i.e. this uri_parse is effectively a no-op).
   */
   (void) ne_uri_parse(url, &parsed_url);
-  url_path = apr_pstrdup(pc->pool, parsed_url.path);
+  url_path = apr_pstrdup(pool, parsed_url.path);
   ne_uri_free(&parsed_url);
 
-  /* clean up trailing slashes from the URL */
+  /* Clean up trailing slashes from the URL. */
   len = strlen(url_path);
   if (len > 1 && url_path[len - 1] == '/')
     url_path[len - 1] = '\0';
-  r->url = url_path;
-
-  /* the properties for this resource */
-  r->propset = apr_hash_make(pc->pool);
-
-  /* store this resource into the top-level hash table */
-  apr_hash_set(pc->props, url_path, APR_HASH_KEY_STRING, r);
-
-  return r;
+  rsrc->url = url_path;
 }
 
-static int add_to_hash(void *userdata, const ne_propname *pname,
-                       const char *value, const ne_status *status)
-{
-  svn_ra_dav_resource_t *r = userdata;
-  const svn_string_t *valstr;
-  const char *name;
 
-  if (value == NULL)
-    /* According to neon's docstrings, this means that there was an
-       error fetching this property.  We don't care about the exact
-       error status code, though. */
-    return 0;
-  
-  name = apr_pstrcat(r->pool, pname->nspace, pname->name, NULL);
-  valstr = svn_string_create(value, r->pool);
-
-  /* ### woah... what about a binary VALUE with a NULL character? */
-  apr_hash_set(r->propset, name, APR_HASH_KEY_STRING, valstr);
-
-  return 0;
-}
-
-static void process_results(void *userdata, const char *uri,
-                            const ne_prop_result_set *rset)
-{
-  /*  prop_ctx_t *pc = userdata; */
-  svn_ra_dav_resource_t *r = ne_propset_private(rset);
-
-  /* Only call iterate() on the 200-status properties. */
-  (void) ne_propset_iterate(rset, add_to_hash, r);
-}
-
-static int validate_element(void *userdata, ne_xml_elmid parent, ne_xml_elmid child)
+static int validate_element(void *userdata, 
+                            ne_xml_elmid parent, 
+                            ne_xml_elmid child)
 {
   switch (parent)
     {
-    case NE_ELM_prop:
-        switch (child)
-          {
-          case ELEM_baseline_coll:
-          case ELEM_baseline_relpath:
-          case ELEM_md5_checksum:
-          case ELEM_repository_uuid:
-          case ELEM_checked_in:
-          case ELEM_resourcetype:
-          case ELEM_vcc:
-          case ELEM_version_name:
-          case ELEM_get_content_length:
-          case NE_ELM_unknown:
-            return NE_XML_VALID;
+    case NE_ELM_root:
+      if (child == NE_ELM_multistatus)
+        return NE_XML_VALID;
+      else
+        return NE_XML_INVALID;
 
-          default:
-            /* some other, unrecognized property */
-            return NE_XML_VALID;
-          }
+    case NE_ELM_multistatus:
+      if (child == NE_ELM_response)
+        return NE_XML_VALID;
+      else
+        return NE_XML_DECLINE;
+
+    case NE_ELM_response:
+      if ((child == NE_ELM_href) || (child == NE_ELM_propstat))
+        return NE_XML_VALID;
+      else
+        return NE_XML_DECLINE;
+
+    case NE_ELM_propstat:
+      if ((child == NE_ELM_prop) || (child == NE_ELM_status))
+        return NE_XML_VALID;
+      else
+        return NE_XML_DECLINE;
+
+    case NE_ELM_prop:
+      return NE_XML_VALID; /* handle all children of <prop> */
         
     case ELEM_baseline_coll:
     case ELEM_checked_in:
@@ -253,7 +247,7 @@ static int validate_element(void *userdata, ne_xml_elmid parent, ne_xml_elmid ch
         return NE_XML_DECLINE; /* not concerned with other types */
       
     case ELEM_resourcetype:
-      if (child == ELEM_collection)
+      if ((child == ELEM_collection) || (child == ELEM_baseline))
         return NE_XML_VALID;
       else
         return NE_XML_DECLINE; /* not concerned with other types (### now) */
@@ -266,28 +260,43 @@ static int validate_element(void *userdata, ne_xml_elmid parent, ne_xml_elmid ch
 }
 
 
-static int start_element(void *userdata, const struct ne_xml_elm *elm,
+static int start_element(void *userdata, 
+                         const struct ne_xml_elm *elm, 
                          const char **atts)
 {
-  prop_ctx_t *pc = userdata;
-  svn_ra_dav_resource_t *r = ne_propfind_current_private(pc->dph);
+  propfind_ctx_t *pc = userdata;
 
   switch (elm->id)
     {
-    case ELEM_collection:
-      r->is_collection = 1;
+    case NE_ELM_response:
+      if (pc->rsrc)
+        return 1;
+      /* Create a new resource. */
+      pc->rsrc = apr_pcalloc(pc->pool, sizeof(*(pc->rsrc)));
+      pc->rsrc->pool = pc->pool;
+      pc->rsrc->propset = apr_hash_make(pc->pool);
+      pc->status = 0;
       break;
 
-    case ELEM_baseline_coll:
-    case ELEM_checked_in:
-    case ELEM_vcc:
-      /* each of these contains a DAV:href element that we want to process */
-      r->href_parent = elm->id;
+    case NE_ELM_propstat:
+      pc->status = 0;
+      break;
+
+    case NE_ELM_href:
+      /* Remember this <href>'s parent so that when we close this tag,
+         we know to whom the URL assignment belongs.  Could be the
+         resource itself, or one of the properties:
+         ELEM_baseline_coll, ELEM_checked_in, ELEM_vcc: */
+      pc->rsrc->href_parent = pc->last_open_id;
+      break;
+
+    case ELEM_collection:
+      pc->rsrc->is_collection = 1;
       break;
 
     case NE_ELM_unknown:
       /* these are our user-visible properties, presumably. */
-      pc->encoding = ne_xml_get_attr(pc->hip, atts, SVN_DAV_PROP_NS_DAV,
+      pc->encoding = ne_xml_get_attr(pc->parser, atts, SVN_DAV_PROP_NS_DAV,
                                      "encoding");
       break;
 
@@ -295,43 +304,119 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
       /* nothing to do for these */
       break;
     }
-  
+
+  /* Remember the last tag we opened. */
+  pc->last_open_id = elm->id;
   return 0;
 }
 
-static int end_element(void *userdata, const struct ne_xml_elm *elm,
+
+static int end_element(void *userdata, 
+                       const struct ne_xml_elm *elm,
                        const char *cdata)
 {
-  prop_ctx_t *pc = userdata;
-  svn_ra_dav_resource_t *r = ne_propfind_current_private(pc->dph);
+  propfind_ctx_t *pc = userdata;
+  svn_ra_dav_resource_t *rsrc = pc->rsrc;
   const char *name;
   const svn_string_t *value = NULL;
   const elem_defn *parent_defn;
   const elem_defn *defn;
-
-  /* Reset the encoding. */
+  ne_status status;
 
   switch (elm->id)
     {
+    case NE_ELM_response:
+      /* Verify that we've received a URL for this resource. */
+      if (!pc->rsrc->url)
+        return 1;
+
+      /* Store the resource in the top-level hash table. */
+      apr_hash_set(pc->props, pc->rsrc->url, APR_HASH_KEY_STRING, pc->rsrc);
+      pc->rsrc = NULL;
+      return 0;
+
+    case NE_ELM_propstat:
+      /* We're at the end of a set of properties.  Do the right thing
+         status-wise. */
+      if (pc->status)
+        {
+          /* We have a status.  Loop over the buffered properties, and
+             if the status is a good one (200), copy them into the
+             resources's property hash.  Regardless of the status,
+             we'll be removing these from the temporary buffer as we
+             go along. */
+          apr_hash_index_t *hi = apr_hash_first(pc->pool, pc->propbuffer);
+          for (; hi; hi = apr_hash_next(hi))
+            {
+              const void *key;
+              apr_size_t klen;
+              void *val;
+              apr_hash_this(hi, &key, &klen, &val);
+              if (pc->status == 200)
+                apr_hash_set(rsrc->propset, key, klen, val);
+              apr_hash_set(pc->propbuffer, key, klen, NULL);
+            }
+        }
+      else if (! pc->status)
+        {
+          /* No status at all?  Bogosity. */
+          return 1;
+        }
+      return 0;
+
+    case NE_ELM_status:
+      /* Parse the <status> tag's CDATA for a status code. */
+      if (ne_parse_statusline(cdata, &status))
+        return 1;
+      pc->status = status.code;
+      return 0;
+
     case NE_ELM_href:
-      /* use the parent element's name, not the href */
-      parent_defn = defn_from_id(r->href_parent);
-      name = parent_defn ? apr_pstrdup(pc->pool, parent_defn->name) : NULL;
-        
-      /* if name == NULL, then we don't know about this DAV:href. */
-      if (name == NULL)
+      /* Special handling for <href> that belongs to the <response> tag. */
+      if (rsrc->href_parent == NE_ELM_response)
+        {
+          assign_rsrc_url(pc->rsrc, cdata, pc->pool);
+          return 0;
+        }
+
+      /* Use the parent element's name, not the href. */
+      parent_defn = defn_from_id(rsrc->href_parent);
+
+      /* No known parent?  Get outta here. */
+      if (!parent_defn)
         return 0;
 
+      /* All other href's we'll treat as property values. */
+      name = parent_defn->name;
       value = svn_string_create(cdata, pc->pool);
       break;
 
-    case NE_ELM_unknown:
-      /* if this is not a user-visible property, we don't care about it.  */
-      if (! ((strcmp(elm->nspace, SVN_DAV_PROP_NS_CUSTOM) == 0)
-             || (strcmp(elm->nspace, SVN_DAV_PROP_NS_SVN) == 0)))
-        return 0;
+    default:
+      /*** This case is, as usual, for everything not covered by other
+           cases.  ELM->id should be either NE_ELM_unknown, or one of
+           the ids in the elem_definitions[] structure.  In this case,
+           we seek to handle properties.  Since NE_ELM_unknown should
+           only occur for properties, we will handle that id.  All
+           other ids will be searched for in the elem_definitions[]
+           structure to determine if they are properties.  Properties,
+           we handle; all else hits the road.  ***/
 
-      /* is there an encoding on this property?  handle it. */
+      if (elm->id == NE_ELM_unknown)
+        {
+          name = apr_pstrcat(pc->pool, elm->nspace, elm->name, NULL);
+        }
+      else
+        {
+          defn = defn_from_id(elm->id);
+          if (! (defn && defn->is_property))
+            return 0;
+          name = defn->name;          
+        }
+
+      /* Handle the property value. */
+      value = svn_string_create(cdata, pc->pool);
+
+      /* Is there an encoding on this property?  Handle it. */
       if (pc->encoding)
         {
           if (strcmp(pc->encoding, "base64") == 0)
@@ -350,28 +435,17 @@ static int end_element(void *userdata, const struct ne_xml_elm *elm,
         {
           value = svn_string_create(cdata, pc->pool);
         }
-
-      /* slap the name back together so that other processors know
-         what they are looking at. */
-      name = apr_pstrcat(pc->pool, elm->nspace, elm->name, NULL);
-      break;
-
-    default:
-      defn = defn_from_id(elm->id);
-
-      /* if this element isn't a property, then skip it */
-      if (defn == NULL || !defn->is_property)
-        return 0;
-
-      name = apr_pstrdup(pc->pool, defn->name);
-      value = svn_string_create(cdata, pc->pool);
     }
 
-  /* store VALUE in the property hash (keyed with NAME). */
-  apr_hash_set(r->propset, name, APR_HASH_KEY_STRING, value);
+  /*** Handling resource properties from here out. ***/
 
+  /* Add properties to the temporary propbuffer.  At the end of the
+     <propstat>, we'll either dump the props as invalid or move them
+     into the resource's property hash. */
+  apr_hash_set(pc->propbuffer, name, APR_HASH_KEY_STRING, value);
   return 0;
 }
+
 
 svn_error_t * svn_ra_dav__get_props(apr_hash_t **results,
                                     ne_session *sess,
@@ -381,51 +455,66 @@ svn_error_t * svn_ra_dav__get_props(apr_hash_t **results,
                                     const ne_propname *which_props,
                                     apr_pool_t *pool)
 {
-  int rv;
-  prop_ctx_t pc = { 0 };
-  ne_request *req;
-  int status_code;
+  svn_error_t *err = SVN_NO_ERROR;
+  propfind_ctx_t pc;
+  ne_buffer *body;
+  apr_hash_t *extra_headers = apr_hash_make(pool);
 
-  pc.pool = pool;
-  pc.props = apr_hash_make(pc.pool);
-
-  pc.dph = ne_propfind_create(sess, url, depth);
-  ne_propfind_set_private(pc.dph, create_private, &pc);
-  pc.hip = ne_propfind_get_parser(pc.dph);
-  ne_xml_push_handler(pc.hip, neon_descriptions,
-                      validate_element, start_element, end_element, &pc);
-  req = ne_propfind_get_request(pc.dph);
-
-  if (label != NULL)
-    {
-      /* get the request pointer and add a Label header */
-      ne_add_request_header(req, "Label", label);
-    }
-  
-  if (which_props) 
-    {
-      rv = ne_propfind_named(pc.dph, which_props, process_results, &pc);
-    } 
+  /* Add a Depth header. */
+  if (depth == NE_DEPTH_ZERO)
+    apr_hash_set(extra_headers, "Depth", 5, "0");
+  else if (depth == NE_DEPTH_ONE)
+    apr_hash_set(extra_headers, "Depth", 5, "1");
+  else if (depth == NE_DEPTH_INFINITE)
+    apr_hash_set(extra_headers, "Depth", 5, "infinite");
   else
-    { 
-      rv = ne_propfind_allprop(pc.dph, process_results, &pc);
-    }
+    abort(); /* somebody passed some poo to our function. */
 
-  status_code = ne_get_status(req)->code;
+  /* If we have a label, use it. */
+  if (label != NULL)
+    apr_hash_set(extra_headers, "Label", 5, label);
 
-  ne_propfind_destroy(pc.dph);
+  /* It's easier to roll our own PROPFIND here than use neon's current
+     interfaces. */
+  body = ne_buffer_create();
 
-  if (rv != NE_OK
-      /* No error if any 2XX status code is returned. */
-      || !(200 <= status_code && status_code <= 299))
+  /* The start of the request body is fixed: */
+  ne_buffer_zappend(body, 
+                   "<?xml version=\"1.0\" encoding=\"utf-8\"?>" DEBUG_CR
+                   "<propfind xmlns=\"DAV:\">" DEBUG_CR);
+
+  /* Are we asking for specific propert(y/ies), or just all of them? */
+  if (which_props)
     {
-      const char *msg = apr_psprintf(pool, "PROPFIND of %s", url);
-      return svn_ra_dav__convert_error(sess, msg, rv);
+      int n;
+      ne_buffer_zappend(body, "<prop>" DEBUG_CR);
+      for (n = 0; which_props[n].name != NULL; n++) 
+        {
+          ne_buffer_concat(body, "<", which_props[n].name, " xmlns=\"", 
+                           which_props[n].nspace, "\"/>" DEBUG_CR, NULL);
+        }
+      ne_buffer_zappend(body, "</prop></propfind>" DEBUG_CR);
+    }
+  else
+    {
+      ne_buffer_zappend(body, "<allprop/></propfind>" DEBUG_CR);
     }
 
-  *results = pc.props;
+  /* Initialize our baton. */
+  memset(&pc, 0, sizeof(pc));
+  pc.pool = pool;
+  pc.propbuffer = apr_hash_make(pool);
+  pc.props = apr_hash_make(pool);
 
-  return SVN_NO_ERROR;
+  /* Create and dispatch the request! */
+  err = svn_ra_dav__parsed_request(sess, "PROPFIND", url, body->data, 0,
+                                   propfind_elements, validate_element,
+                                   start_element, end_element, 
+                                   &pc, extra_headers, pool);
+
+  ne_buffer_destroy(body);
+  *results = pc.props;
+  return err;
 }
 
 svn_error_t * svn_ra_dav__get_props_resource(svn_ra_dav_resource_t **rsrc,
