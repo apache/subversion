@@ -5,7 +5,7 @@ Este documento contiene las siguientes secciones:
   Obteniendo acceso de escritura al repositorio
   Cambios futuros que se realizarán en el libro
   Herramientas para ayudar en la traducción
-  Reglas mínimas para traductores
+  Reglas mínimas para traductores con acceso de escritura
   Traducción de la web del libro
   Lista de correo para discutir la traducción
 
@@ -266,14 +266,21 @@ conversación natural. Si algo le suena "raro", márquelo como un
 TODO para revisar/discutir en el futuro.
 
 
-Reglas mínimas para traductores
-===============================
+Reglas mínimas para todos los traductores
+=========================================
 
+Las siguientes reglas deben ser cumplidas tanto por aquellos que
+tienen acceso de escritura al servidor, como aquellos que no lo
+tienen y envían parches a la lista de correo:
+
+- Si se desea colaborar con la traducción de un fichero, hay que
+  anunciarlo en la lista de correo para que éste se le asigne de
+  forma oficial y así asegurar que otra persona no está traduciendo
+  por su cuenta lo mismo.
+  
 - Se pierde el "acceso" a un fichero listado en TRABAJO si no se
-  ha colaborado ningún cambio en 14 días.
-
-- Se pierde acceso de escritura al repositorio (en caso de tenerlo)
-  tras 90 días sin realizar ningún cambio en el repositorio.
+  ha colaborado ningún cambio en 14 días. Se recomienda traducir
+  un párrafo al día, y enviar los cambios acumulados semanalmente.
 
 - No usar tabuladores "duros". Usar espacios al salvar ficheros.
 
@@ -281,6 +288,33 @@ Reglas mínimas para traductores
   que se considere y poner una etiqueta <!-- TODO explicación del
   problema --> dentro del propio texto. Así luego se puede hacer
   "grep TODO *" para ver qué falta.
+
+- Por ahora ningún ejemplo de línea de comando o imagen será
+  traducido. Dejar las cosas tal cual (ej: lo que viene dentro de
+  las etiquetas screen).
+
+- A veces es necesario añadir una nota de traductor ya sea para
+  indicar un uso inusual de una palabra o comando, explicar alguna
+  traducción rebuscada, cosas así. El formato es:
+
+    <footnote><para>N.T.: xxx.</para></footnote>.
+
+  Da igual si se empotra todo en una línea o se formatea (si la
+  nota es larga), eso queda a gusto del traductor. Hay un ejemplo
+  al comienzo de ch00.xml.
+
+- Recuerde que para obtener acceso de escritura no tiene más que
+  pedirlo.
+
+Reglas mínimas para traductores con acceso de escritura
+=======================================================
+
+Las siguientes reglas están orientadas a quellos que tienen acceso
+de escritura al servidor y trabajan de forma activa sobre algún
+fichero en particular:
+
+- Se pierde acceso de escritura al repositorio (en caso de tenerlo)
+  tras 90 días sin realizar ningún cambio en el repositorio.
 
 - Estar apuntado a la lista de correo de cambios realizados en el
   repositorio principal de Subversion: svn@subversion.tigris.org.
@@ -305,23 +339,9 @@ Reglas mínimas para traductores
   tarea inusual al tener ya todos los documentos del libro original
   en el repositorio.
 
-- Por ahora ningún ejemplo de línea de comando o imagen será
-  traducido. Dejar las cosas tal cual (ej: lo que viene dentro de
-  las etiquetas screen).
-
-- A veces es necesario añadir una nota de traductor ya sea para
-  indicar un uso inusual de una palabra o comando, explicar alguna
-  traducción rebuscada, cosas así. El formato es:
-
-    <footnote><para>N.T.: xxx.</para></footnote>.
-
-  Da igual si se empotra todo en una línea o se formatea (si la
-  nota es larga), eso queda a gusto del traductor. Hay un ejemplo
-  al comienzo de ch00.xml.
-
-  No obstante, como esto es contenido nuevo no existente en el libro,
-  siempre que se añade una nota de este estilo hay que publicar en
-  la lista de correo en qué revisión se ha añadido la nota (no hace
+- Dado que las notas de traductor son contenido nuevo no existente
+  en el libro, siempre que se añada una hay que publicar en la
+  lista de correo en qué revisión se ha añadido la nota (no hace
   falta incluir el parche en el email) para recibir comentarios
   sobre la misma y si es necesario, modificarla.
 
