@@ -65,6 +65,8 @@ struct edit_context
   struct file_baton *curfile;
   apr_pool_t *pool;
   int txdelta_id_counter;
+  int open_file_count;
+  svn_boolean_t root_dir_closed;
 };
 
 
@@ -74,17 +76,6 @@ struct dir_baton
   enum elemtype addreplace;     /* elem_add or elem_replace, or
                                    elem_delta_pkg for the root
                                    directory.  */
-
-  /* Baton for this dir's parent directory, null if this is root. */
-  struct dir_baton *parent_dir_baton;
-
-  /* The number of other changes associated with this directory.
-     Starts at 1, is incremented for each file and subdir opened here,
-     and decremented for each one closed.  When ref_count reaches 0,
-     final cleanups may be performed and the directory freed.  See
-     free_dir_baton() for details. */
-  int ref_count;
-
   apr_pool_t *pool;
 };
 
@@ -97,17 +88,12 @@ struct file_baton
                                    0 means we're still working on the file,
                                    -1 means we already saw a text delta.  */
   int closed;			/* 1 if we closed the element already.  */
-
-  struct dir_baton *parent_dir_baton; /* This file's parent directory. */
-
   apr_pool_t *pool;
 };
 
 
 static struct dir_baton *
-make_dir_baton (struct edit_context *ec,
-                struct dir_baton *parent_dir_baton,
-                enum elemtype addreplace)
+make_dir_baton (struct edit_context *ec, enum elemtype addreplace)
 {
   apr_pool_t *subpool = svn_pool_create (ec->pool);
   struct dir_baton *db = apr_palloc (subpool, sizeof (*db));
@@ -115,20 +101,12 @@ make_dir_baton (struct edit_context *ec,
   db->edit_context = ec;
   db->addreplace = addreplace;
   db->pool = subpool;
-  db->ref_count = 1;
-  db->parent_dir_baton = parent_dir_baton;
-
-  if (parent_dir_baton)
-    parent_dir_baton->ref_count++;
-
   return db;
 }
 
 
 static struct file_baton *
-make_file_baton (struct edit_context *ec,
-                 struct dir_baton *parent_dir_baton,
-                 enum elemtype addreplace)
+make_file_baton (struct edit_context *ec, enum elemtype addreplace)
 {
   apr_pool_t *subpool = svn_pool_create (ec->pool);
   struct file_baton *fb = apr_palloc (subpool, sizeof (*fb));
@@ -138,81 +116,10 @@ make_file_baton (struct edit_context *ec,
   fb->txdelta_id = 0;
   fb->closed = 0;
   fb->pool = subpool;
-  fb->parent_dir_baton = parent_dir_baton;
-
-  if (parent_dir_baton)
-    parent_dir_baton->ref_count++;
-
   return fb;
 }
 
 
-/* Prototypes. */
-static svn_error_t *decrement_ref_count (struct dir_baton *d);
-static svn_string_t *get_to_elem (struct edit_context *ec,
-                                  enum elemtype elem,
-                                  apr_pool_t *pool);
-
-
-static svn_error_t *
-free_dir_baton (struct dir_baton *db)
-{
-  struct dir_baton *pb = db->parent_dir_baton;
-  svn_error_t *err;
-
-  if (pb)
-    {
-      apr_destroy_pool (db->pool);
-
-      err = decrement_ref_count (pb);
-      if (err)
-        return err;
-    }
-  else
-    {
-      /* We're freeing the root directory.  Most of the work was
-         done long ago by close_directory(), but there's some
-         end-of-edit bookkeeping to take care of now. */
-
-      svn_string_t *str = NULL;
-      apr_size_t len;
-
-      svn_xml_make_close_tag (&str, db->edit_context->pool, "delta-pkg");
-      len = str->len;
-      err = svn_stream_write (db->edit_context->output, str->data, &len);
-      if (err == SVN_NO_ERROR)
-        err = svn_stream_close (db->edit_context->output);
-      
-      apr_destroy_pool (db->edit_context->pool); /* destroys db->pool too */
-    }
-
-  if (err)
-    return err;
-
-  return SVN_NO_ERROR;
-}
-
-
-/* Decrement DIR_BATON's ref count, and if the count hits 0, call
- * free_dir_baton().
- *
- * Note: There is no corresponding function for incrementing the
- * ref_count.  As far as we know, nothing special depends on that, so
- * it's always done inline.
- */
-static svn_error_t *
-decrement_ref_count (struct dir_baton *db)
-{
-  db->ref_count--;
-
-  if (db->ref_count == 0)
-    return free_dir_baton (db);
-
-  return SVN_NO_ERROR;
-}
-
-
-
 /* The meshing between the edit_fns interface and the XML delta format
    is such that we can't usually output the end of an element until we
    go on to the next thing, and for a given call we may or may not
@@ -415,7 +322,7 @@ add_directory (svn_string_t *name,
   struct dir_baton *db = (struct dir_baton *) parent_baton;
   struct edit_context *ec = db->edit_context;
 
-  *child_baton = make_dir_baton (ec, db, elem_add);
+  *child_baton = make_dir_baton (ec, elem_add);
   return output_addreplace (ec, elem_add, elem_dir, name,
                             ancestor_path, ancestor_revision);
 }
@@ -431,7 +338,7 @@ replace_directory (svn_string_t *name,
   struct dir_baton *db = (struct dir_baton *) parent_baton;
   struct edit_context *ec = db->edit_context;
 
-  *child_baton = make_dir_baton (ec, db, elem_replace);
+  *child_baton = make_dir_baton (ec, elem_replace);
   return output_addreplace (ec, elem_replace, elem_dir, name,
                             ancestor_path, ancestor_revision);
 }
@@ -454,44 +361,31 @@ close_directory (void *dir_baton)
 {
   struct dir_baton *db = (struct dir_baton *) dir_baton;
   struct edit_context *ec = db->edit_context;
-  svn_string_t *str = NULL;
-  svn_error_t *err;
+  svn_string_t *str;
   apr_size_t len;
 
+  str = get_to_elem (ec, elem_dir, db->pool);
   if (db->addreplace != elem_delta_pkg)
     {
-      /* Not the root directory. */
+      /* Not the root directory.  */
       const char *outertag = (db->addreplace == elem_add) ? "add" : "replace";
-      str = get_to_elem (ec, elem_dir, db->pool);
       svn_xml_make_close_tag (&str, db->pool, "dir");
       svn_xml_make_close_tag (&str, db->pool, outertag);
       ec->elem = elem_tree_delta;
-      
-      len = str->len;
-      err = svn_stream_write (ec->output, str->data, &len);
-      if (err)
-        return err;
     }
-  else  /* root directory */
+  else
     {
-      /* Unconditionally output the "</tree-delta>" for the root
-       * directory, since the only things that could possibly follow
-       * this call should also follow that close tag.
-       *
-       * kff todo: my solution here is an offensive kluge.  I hope
-       * that Greg Hudson, with his better understanding of the XML
-       * output editor, will show me The Way. */
-      svn_xml_make_close_tag (&str, db->pool, "tree-delta");
-      len = str->len;
-      err = svn_stream_write (ec->output, str->data, &len);
-      if (err)
-        return err;
+      /* We're closing the root directory.  */
+      ec->elem = elem_delta_pkg;
+      ec->root_dir_closed = TRUE;
     }
-  
-  err = decrement_ref_count (db);
-  if (err)
-    return err;
 
+  len = str->len;
+  if (len != 0)
+    SVN_ERR (svn_stream_write (ec->output, str->data, &len));
+  apr_destroy_pool (db->pool);
+  if (ec->root_dir_closed && ec->open_file_count == 0)
+    SVN_ERR (close_edit (ec));
   return SVN_NO_ERROR;
 }
 
@@ -508,8 +402,9 @@ add_file (svn_string_t *name,
 
   SVN_ERR(output_addreplace (ec, elem_add, elem_file, name,
                              ancestor_path, ancestor_revision));
-  *file_baton = make_file_baton (ec, db, elem_add);
+  *file_baton = make_file_baton (ec, elem_add);
   ec->curfile = *file_baton;
+  ec->open_file_count++;
   return SVN_NO_ERROR;
 }
 
@@ -526,8 +421,9 @@ replace_file (svn_string_t *name,
 
   SVN_ERR(output_addreplace (ec, elem_replace, elem_file, name,
                              ancestor_path, ancestor_revision));
-  *file_baton = make_file_baton (ec, db, elem_replace);
+  *file_baton = make_file_baton (ec, elem_replace);
   ec->curfile = *file_baton;
+  ec->open_file_count++;
   return SVN_NO_ERROR;
 }
 
@@ -635,10 +531,8 @@ static svn_error_t *
 close_file (void *file_baton)
 {
   struct file_baton *fb = (struct file_baton *) file_baton;
-  struct dir_baton *pb = fb->parent_dir_baton;
   struct edit_context *ec = fb->edit_context;
   svn_string_t *str;
-  svn_error_t *err = SVN_NO_ERROR;
   apr_size_t len;
 
   /* Close the file element if we are still working on it.  */
@@ -650,22 +544,30 @@ close_file (void *file_baton)
       svn_xml_make_close_tag (&str, fb->pool, outertag);
 
       len = str->len;
-      err = svn_stream_write (ec->output, str->data, &len);
+      SVN_ERR (svn_stream_write (ec->output, str->data, &len));
       ec->curfile = NULL;
       ec->elem = elem_tree_delta;
     }
-
-  if (err)
-    return err;
-
-  /* Free the file baton. */
   apr_destroy_pool (fb->pool);
 
-  /* Tell parent its gone. */
-  err = decrement_ref_count (pb);
-  if (err)
-    return err;
+  ec->open_file_count--;
+  if (ec->root_dir_closed && ec->open_file_count == 0)
+    SVN_ERR (close_edit (ec));
+  return SVN_NO_ERROR;
+}
 
+
+static svn_error_t *
+close_edit (struct edit_context *ec)
+{
+  svn_error_t *err;
+  svn_string_t *str = NULL;
+  apr_size_t len;
+
+  svn_xml_make_close_tag (&str, ec->pool, "delta-pkg");
+  len = str->len;
+  SVN_ERR (svn_stream_write (ec->output, str->data, &len));
+  SVN_ERR (svn_stream_close (ec->output));
   return SVN_NO_ERROR;
 }
 
@@ -691,43 +593,31 @@ svn_delta_get_xml_editor (svn_stream_t *output,
 			  void **root_dir_baton,
 			  apr_pool_t *pool)
 {
-  struct dir_baton *rb;
   struct edit_context *ec;
-  apr_pool_t *subpool = svn_pool_create (pool);
+  svn_string_t *str = NULL;
+  apr_size_t len;
 
-  *editor = &tree_editor;
-
-  /* Set up an edit_context. */
-  ec = apr_palloc (subpool, sizeof (*ec));
-  ec->pool = subpool;
+  /* Construct and initialize the editor context.  */
+  ec = apr_palloc (pool, sizeof (*ec));
+  ec->pool = pool;
   ec->output = output;
+  ec->elem = elem_dir;
   ec->curfile = NULL;
   ec->txdelta_id_counter = 1;
+  ec->open_file_count = 0;
+  ec->root_dir_closed = FALSE;
 
-  /* Set up a root_dir_baton, initialized with that edit_context, and
-     output the start of the xml. */
-  {
-    svn_error_t *err;
-    svn_string_t *str = NULL;
-    apr_size_t len;
-    apr_pool_t *this_pool = svn_pool_create (subpool);
+  /* Now set up the editor and root baton for the caller.  */
+  *editor = &tree_editor;
+  *root_dir_baton = make_dir_baton (ec, elem_delta_pkg);
 
-    svn_xml_make_header (&str, this_pool);
-    svn_xml_make_open_tag (&str, this_pool, svn_xml_normal, "delta-pkg", NULL);
+  /* Construct and write out the header.  This should probably be
+     deferred until the first editor call.  */
+  svn_xml_make_header (&str, pool);
+  svn_xml_make_open_tag (&str, pool, svn_xml_normal, "delta-pkg", NULL);
 
-    rb = make_dir_baton (ec, NULL, elem_delta_pkg);
-    ec->elem = elem_dir;
-
-    len = str->len;
-    err = svn_stream_write (ec->output, str->data, &len);
-    apr_destroy_pool (this_pool);
-  
-    if (err)
-      return err;
-  }
-
-  *root_dir_baton = rb;
-  return SVN_NO_ERROR;
+  len = str->len;
+  return svn_stream_write (ec->output, str->data, &len);
 }
 
 
