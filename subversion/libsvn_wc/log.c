@@ -30,6 +30,7 @@
 #include "svn_xml.h"
 #include "svn_pools.h"
 #include "svn_io.h"
+#include "svn_config.h"
 
 #include "wc.h"
 #include "log.h"
@@ -398,6 +399,7 @@ log_do_merge (struct log_runner *loggy,
   const char *left_label, *right_label, *target_label;
   enum svn_wc_merge_outcome_t merge_outcome;
   apr_pool_t *subpool = svn_pool_create (loggy->pool);
+  apr_hash_t *config;
 
   /* NAME is the basename of our merge_target.  Pull out LEFT and RIGHT. */
   left = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_ARG_1, atts);
@@ -425,11 +427,14 @@ log_do_merge (struct log_runner *loggy,
                          subpool);
   name = svn_path_join (svn_wc_adm_access_path (loggy->adm_access), name,
                         subpool);
-  
+
+  /* Read the configuration. */
+  SVN_ERR (svn_config_get_config (&config, loggy->pool));
+
   /* Now do the merge with our full paths. */
   SVN_ERR (svn_wc_merge (left, right, name, loggy->adm_access,
                          left_label, right_label, target_label,
-                         FALSE, &merge_outcome, subpool));
+                         FALSE, &merge_outcome, config, subpool));
 
   svn_pool_destroy (subpool);
   return SVN_NO_ERROR;
@@ -1227,7 +1232,7 @@ svn_wc__run_log (svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
   loggy->pool = pool;
   loggy->parser = parser;
   loggy->entries_modified = FALSE;
-  
+
   /* Expat wants everything wrapped in a top-level form, so start with
      a ghost open tag. */
   SVN_ERR (svn_xml_parse (parser, log_start, strlen (log_start), 0));

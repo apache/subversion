@@ -100,7 +100,7 @@ svn_cl__propedit (apr_getopt_t *os,
          original property value... */
       SVN_ERR (svn_cl__edit_externally (&new_propval, NULL, ".",
                                         propval->data, "svn-prop",
-                                        pool));
+                                        ctx->config, pool));
       
       /* ...and re-set the property's value accordingly. */
       if (new_propval)
@@ -214,6 +214,7 @@ svn_cl__propedit (apr_getopt_t *os,
                                             base_dir,
                                             propval->data,
                                             "svn-prop",
+                                            ctx->config,
                                             pool));
           
           SVN_ERR (svn_utf_cstring_from_utf8 (&target_native, target, pool));

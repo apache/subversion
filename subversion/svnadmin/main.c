@@ -24,6 +24,7 @@
 #include "svn_utf.h"
 #include "svn_subst.h"
 #include "svn_path.h"
+#include "svn_config.h"
 
 #include "svnadmin.h"
 
@@ -223,9 +224,12 @@ subcommand_create (apr_getopt_t *os, void *baton, apr_pool_t *pool)
 {
   struct svnadmin_opt_state *opt_state = baton;
   svn_repos_t *repos;
-
+  apr_hash_t *config;
+  
+  SVN_ERR (svn_config_get_config (&config, pool));
   SVN_ERR (svn_repos_create (&repos, opt_state->repository_path,
-                             opt_state->on_disk, opt_state->in_repos, pool));
+                             opt_state->on_disk, opt_state->in_repos, 
+                             config, pool));
 
   return SVN_NO_ERROR;
 }

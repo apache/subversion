@@ -908,28 +908,16 @@ main (int argc, const char * const *argv)
   ctx.prompt_func = svn_cl__prompt_user; 
   ctx.prompt_baton = NULL;
 
+  if ((err = svn_config_get_config (&(ctx.config), pool)))
+    {
+      svn_handle_error (err, stderr, 0);
+      svn_pool_destroy (pool);
+      return EXIT_FAILURE;
+    }
+
   ctx.log_msg_func = svn_cl__get_log_message;
-  ctx.log_msg_baton = svn_cl__make_log_msg_baton (&opt_state, NULL, pool);
-
-  ctx.config = apr_hash_make (pool);
-
-  {
-    svn_config_t *cfg;
-
-    err = svn_config_read_config (&cfg, pool);
-    if (err)
-      svn_handle_error (err, stderr, 0);
-    else
-      apr_hash_set (ctx.config, SVN_CONFIG_CATEGORY_CONFIG,
-                    APR_HASH_KEY_STRING, cfg);
-
-    err = svn_config_read_servers (&cfg, pool);
-    if (err)
-      svn_handle_error (err, stderr, 0);
-    else
-      apr_hash_set (ctx.config, SVN_CONFIG_CATEGORY_SERVERS,
-                    APR_HASH_KEY_STRING, cfg);
-  }
+  ctx.log_msg_baton = svn_cl__make_log_msg_baton (&opt_state, NULL, 
+                                                  ctx.config, pool);
 
   err = (*subcommand->cmd_func) (os, &command_baton, pool);
   if (err)

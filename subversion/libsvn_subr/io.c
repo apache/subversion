@@ -1113,19 +1113,20 @@ svn_io_run_diff (const char *dir,
                  int *pexitcode, 
                  apr_file_t *outfile, 
                  apr_file_t *errfile, 
+                 apr_hash_t *config,
                  apr_pool_t *pool)
 {
   const char **args;
   int i; 
   int exitcode;
   int nargs = 4; /* the diff command itself, two paths, plus a trailing NULL */
-  const char *diff_utf8;
-
-  apr_pool_t *subpool = svn_pool_create (pool);
-
-  svn_config_t *cfg;
   const char *diff_cmd;
-  SVN_ERR (svn_config_read_config (&cfg, subpool));
+  const char *diff_utf8;
+  apr_pool_t *subpool = svn_pool_create (pool);
+  svn_config_t *cfg = config ? apr_hash_get (config, 
+                                             SVN_CONFIG_CATEGORY_CONFIG,
+                                             APR_HASH_KEY_STRING) : NULL;
+  
   svn_config_get (cfg, &diff_cmd, "helpers", "diff-cmd", SVN_CLIENT_DIFF);
   SVN_ERR (svn_path_cstring_to_utf8 (&diff_utf8, diff_cmd, pool));
 
@@ -1207,15 +1208,17 @@ svn_io_run_diff3 (const char *dir,
                   const char *yours_label,
                   apr_file_t *merged,
                   int *exitcode,
+                  apr_hash_t *config,
                   apr_pool_t *pool)
 {
   const char *args[14];
   const char *diff3_utf8;
   int nargs = 13, i = 0;
-
-  svn_config_t *cfg;
   const char *diff3_cmd;
-  SVN_ERR (svn_config_read_config (&cfg, pool));
+  svn_config_t *cfg = config ? apr_hash_get (config, 
+                                             SVN_CONFIG_CATEGORY_CONFIG,
+                                             APR_HASH_KEY_STRING) : NULL;
+
   svn_config_get (cfg, &diff3_cmd, "helpers", "diff3-cmd", SVN_CLIENT_DIFF3);
   SVN_ERR (svn_path_cstring_to_utf8 (&diff3_utf8, diff3_cmd, pool));
 

@@ -345,9 +345,10 @@ maybe_store_password (const char *password, void *baton)
     {
       /* There's a separate config option for preventing passwords
          from being stored, so check it. */
-      struct svn_config_t *cfg = apr_hash_get (cb->config,
-                                               SVN_CONFIG_CATEGORY_CONFIG, 
-                                               APR_HASH_KEY_STRING);
+      struct svn_config_t *cfg = 
+        cb->config ? apr_hash_get (cb->config,
+                                   SVN_CONFIG_CATEGORY_CONFIG, 
+                                   APR_HASH_KEY_STRING) : NULL;
       const char *val;
 
       svn_config_get (cfg, &val, "auth", "store-password", "yes");

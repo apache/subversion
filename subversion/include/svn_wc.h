@@ -1724,6 +1724,8 @@ typedef enum svn_wc_merge_outcome_t
  * is @c TRUE the merge will be carried out to determine the result but
  * @a merge_target will not be modified.
  *
+ * @a config is a hash mapping @c SVN_CONFIG_CATEGORY's to @c svn_config_t's.
+ *
  * The outcome of the merge is returned in @a *merge_outcome. If there is
  * a conflict and @a dry_run is @c FALSE, then
  *
@@ -1759,6 +1761,7 @@ svn_error_t *svn_wc_merge (const char *left,
                            const char *target_label,
                            svn_boolean_t dry_run,
                            enum svn_wc_merge_outcome_t *merge_outcome,
+                           apr_hash_t *config,
                            apr_pool_t *pool);
 
 

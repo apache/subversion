@@ -760,11 +760,11 @@ svn_repos_create (svn_repos_t **repos_p,
                   const char *path,
                   const char *on_disk_template,
                   const char *in_repos_template,
+                  apr_hash_t *config,
                   apr_pool_t *pool)
 {
   svn_repos_t *repos;
   svn_error_t *err;
-  svn_config_t *cfg = NULL;
   const char *template_root = NULL;
   const char *template_path;
   struct copy_ctx_t cc;
@@ -781,7 +781,9 @@ svn_repos_create (svn_repos_t **repos_p,
   if (on_disk_template == NULL || strchr(on_disk_template, '/') == NULL)
     {
       /* Get the root directory of the standard templates */
-      SVN_ERR (svn_config_read_config (&cfg, pool));
+      svn_config_t *cfg = config ? apr_hash_get (config, 
+                                                 SVN_CONFIG_CATEGORY_CONFIG, 
+                                                 APR_HASH_KEY_STRING) : NULL;
       svn_config_get (cfg, &template_root, "miscellany", "template_root",
                       SVN_TEMPLATE_ROOT_DIR);
 

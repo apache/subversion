@@ -37,6 +37,7 @@ svn_wc_merge (const char *left,
               const char *target_label,
               svn_boolean_t dry_run,
               enum svn_wc_merge_outcome_t *merge_outcome,
+              apr_hash_t *config,
               apr_pool_t *pool)
 {
   const char *tmp_target, *result_target, *tmp_left, *tmp_right;
@@ -125,8 +126,7 @@ svn_wc_merge (const char *left,
       SVN_ERR (svn_io_run_diff3 (".",
                                  tmp_target, tmp_left, tmp_right,
                                  target_label, left_label, right_label,
-                                 result_f,
-                                 &exit_code,
+                                 result_f, &exit_code, config,
                                  pool));
   
       /* Close the output file */

@@ -84,28 +84,24 @@ svn_error_t *svn_config__parse_registry (svn_config_t *cfg,
 #  define SVN_REGISTRY_HKCU_LEN ((sizeof (SVN_REGISTRY_HKCU)) - 1)
 #  define SVN_REGISTRY_PATH "Software\\Tigris.org\\Subversion\\"
 #  define SVN_REGISTRY_PATH_LEN ((sizeof (SVN_REGISTRY_PATH)) - 1)
-#  define SVN_REGISTRY_CONFIG_SERVERS_KEY "Servers"
-#  define SVN_REGISTRY_SYS_CONFIG_SERVERS_PATH \
+#  define SVN_REGISTRY_SYS_CONFIG_PATH \
                                SVN_REGISTRY_PREFIX     \
                                SVN_REGISTRY_HKLM       \
                                SVN_REGISTRY_PATH       \
-                               SVN_REGISTRY_CONFIG_SERVERS_KEY
-#  define SVN_REGISTRY_USR_CONFIG_SERVERS_PATH \
+#  define SVN_REGISTRY_USR_CONFIG_PATH \
                                SVN_REGISTRY_PREFIX     \
                                SVN_REGISTRY_HKCU       \
                                SVN_REGISTRY_PATH       \
-                               SVN_REGISTRY_CONFIG_SERVERS_KEY
-#  define SVN_REGISTRY_CONFIG_CONFIG_KEY "Config"
 #  define SVN_REGISTRY_SYS_CONFIG_CONFIG_PATH \
                                SVN_REGISTRY_PREFIX     \
                                SVN_REGISTRY_HKLM       \
                                SVN_REGISTRY_PATH       \
-                               SVN_REGISTRY_CONFIG_CONFIG_KEY
+                               SVN_CONFIG_CATEGORY_CONFIG
 #  define SVN_REGISTRY_USR_CONFIG_CONFIG_PATH \
                                SVN_REGISTRY_PREFIX     \
                                SVN_REGISTRY_HKCU       \
                                SVN_REGISTRY_PATH       \
-                               SVN_REGISTRY_CONFIG_CONFIG_KEY
+                               SVN_CONFIG_CATEGORY_CONFIG
 #endif /* SVN_WIN32 */
 
 /* System-wide and configuration subdirectory names.
