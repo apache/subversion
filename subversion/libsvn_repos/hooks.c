@@ -141,8 +141,6 @@ check_hook_cmd (const char *hook, apr_pool_t *pool)
   return NULL;
 }
 
-/* Run the start-commit hook for REPOS.  Use POOL for any temporary
-   allocations.  If the hook fails, return SVN_ERR_REPOS_HOOK_FAILURE.  */
 svn_error_t *
 svn_repos__hooks_start_commit (svn_repos_t *repos,
                                const char *user,
@@ -166,8 +164,6 @@ svn_repos__hooks_start_commit (svn_repos_t *repos,
 }
 
 
-/* Run the pre-commit hook for REPOS.  Use POOL for any temporary
-   allocations.  If the hook fails, return SVN_ERR_REPOS_HOOK_FAILURE.  */
 svn_error_t  *
 svn_repos__hooks_pre_commit (svn_repos_t *repos,
                              const char *txn_name,
@@ -191,8 +187,6 @@ svn_repos__hooks_pre_commit (svn_repos_t *repos,
 }
 
 
-/* Run the post-commit hook for REPOS.  Use POOL for any temporary
-   allocations.  If the hook fails, run SVN_ERR_REPOS_HOOK_FAILURE.  */
 svn_error_t  *
 svn_repos__hooks_post_commit (svn_repos_t *repos,
                               svn_revnum_t rev,
@@ -216,9 +210,6 @@ svn_repos__hooks_post_commit (svn_repos_t *repos,
 }
 
 
-/* Run the pre-revprop-change hook for REPOS.  Use POOL for any
-   temporary allocations.  If the hook fails, return
-   SVN_ERR_REPOS_HOOK_FAILURE.  */
 svn_error_t  *
 svn_repos__hooks_pre_revprop_change (svn_repos_t *repos,
                                      svn_revnum_t rev,
@@ -261,9 +252,6 @@ svn_repos__hooks_pre_revprop_change (svn_repos_t *repos,
 }
 
 
-/* Run the pre-revprop-change hook for REPOS.  Use POOL for any
-   temporary allocations.  If the hook fails, return
-   SVN_ERR_REPOS_HOOK_FAILURE.  */
 svn_error_t  *
 svn_repos__hooks_post_revprop_change (svn_repos_t *repos,
                                       svn_revnum_t rev,
