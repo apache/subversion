@@ -66,16 +66,13 @@ hash_read (apr_hash_t *hash,
 {
   svn_stringbuf_t *stringbuf;
   svn_boolean_t eof;
-  char buf[SVN_KEYLINE_MAXLEN];
+  apr_size_t len;
   char c;
   int first_time = 1;
-
 
   while (1)
     {
       /* Read a key length line.  Might be END, though. */
-      apr_size_t len = sizeof (buf);
-
       SVN_ERR (svn_stream_readline (stream, &stringbuf, "\n", &eof, pool));
       if (eof)
         {

@@ -234,7 +234,6 @@ log_message_receiver (void *baton,
                       const char *message,
                       apr_pool_t *pool)
 {
-  svn_log_changed_path_t *change;
   struct log_message_baton *lmb = baton;
   struct rev *rev;
 
