@@ -25,8 +25,8 @@ UPDATE_REBUILD_FLAG () {
     local RB_FILE="$2"
     local CVS_UP_STATUS=1
 
-    $GREP -qv "$UPDATE_REGEXP_1" "$CVS_UP_LOGFILE" \
-	| $GREP -q "$UPDATE_REGEXP_2" > /dev/null 2>&1
+    $GREP -v "$CVS_UPDATE_REGEXP_1" "$CVS_UP_LOGFILE" \
+	| $GREP -q "$CVS_UPDATE_REGEXP_2" > /dev/null 2>&1
     CVS_UP_STATUS="$?"
     
     if test ! -f "$RB_FILE" 
