@@ -34,25 +34,36 @@ typedef struct svn_repos_report_baton_t
   /* Which user is doing the update (building the temporary txn) */
   const char *username;
 
-  /* The location under which all reporting will happen (in the fs) */
+  /* The fs path under which all reporting will happen */
   const char *base_path;
 
   /* The actual target of the report */
   svn_stringbuf_t *target;
 
-  /* These items are used by finish_report() when it calls
-     svn_repos_dir_delta() */
-  svn_boolean_t text_deltas; /* whether or not to generate text-deltas */
-  svn_revnum_t revnum_to_update_to; /* which revision to compare against */
-  const svn_delta_edit_fns_t *update_editor; /* the editor to use... */
-  void *update_edit_baton; /* ...and its baton */
+  /* -- These items are used by finish_report() when it calls
+        svn_repos_dir_delta(): --  */
+
+  /* whether or not to generate text-deltas */
+  svn_boolean_t text_deltas; 
+
+  /* which revision to compare against */
+  svn_revnum_t revnum_to_update_to; 
+
+  /* The fs path that will be the 'target' of dir_delta.
+     In the case of 'svn switch', this is probably distinct from BASE_PATH.
+     In the case of 'svn update', this is should be identical to BASE_PATH */
+  const char *switch_path;
+
+  /* Whether or not to recurse into the directories */
+  svn_boolean_t recurse;
+
+  /* the editor to drive */
+  const svn_delta_edit_fns_t *update_editor;
+  void *update_edit_baton; 
 
   /* This hash describes the mixed revisions in the transaction; it
      maps pathnames (char *) to revision numbers (svn_revnum_t). */
   apr_hash_t *path_rev_hash;
-
-  /* Whether or not to recurse into the directories */
-  svn_boolean_t recurse;
 
   /* Pool from the session baton. */
   apr_pool_t *pool;
@@ -164,7 +175,6 @@ svn_repos_finish_report (void *report_baton)
 {
   svn_fs_root_t *rev_root;
   svn_repos_report_baton_t *rbaton = (svn_repos_report_baton_t *) report_baton;
-  svn_stringbuf_t *rev_path;
 
   /* If nothing was described, then we have an error */
   if (rbaton->txn == NULL)
@@ -172,12 +182,6 @@ svn_repos_finish_report (void *report_baton)
                             rbaton->pool,
                             "svn_repos_finish_report: no transaction was "
                             "present, meaning no data was provided.");
-
-  /* Construct the target path.  For our purposes, it's the same as
-     the full source path.  */
-  rev_path = svn_stringbuf_create (rbaton->base_path, rbaton->pool);
-  if (rbaton->target)
-    svn_path_add_component (rev_path, rbaton->target);
 
   /* Get the root of the revision we want to update to. */
   SVN_ERR (svn_fs_revision_root (&rev_root, rbaton->repos->fs,
@@ -190,7 +194,7 @@ svn_repos_finish_report (void *report_baton)
                                 rbaton->target ? rbaton->target->data : NULL,
                                 rbaton->path_rev_hash,
                                 rev_root, 
-                                rev_path->data,
+                                rbaton->switch_path,
                                 rbaton->update_editor,
                                 rbaton->update_edit_baton,
                                 rbaton->text_deltas,
@@ -229,6 +233,7 @@ svn_repos_begin_report (void **report_baton,
                         svn_repos_t *repos,
                         const char *fs_base,
                         const char *target,
+                        const char *switch_path,
                         svn_boolean_t text_deltas,
                         svn_boolean_t recurse,
                         const svn_delta_edit_fns_t *editor,
@@ -253,6 +258,7 @@ svn_repos_begin_report (void **report_baton,
   rbaton->username = apr_pstrdup (pool, username);
   rbaton->base_path = apr_pstrdup (pool, fs_base);
   rbaton->target = target ? svn_stringbuf_create (target, pool) : NULL;
+  rbaton->switch_path = apr_pstrdup (pool, switch_path);
 
   /* Hand reporter back to client. */
   *report_baton = rbaton;

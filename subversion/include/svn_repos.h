@@ -121,6 +121,10 @@ const char *svn_repos_write_sentinel_hook (svn_repos_t *repos, apr_pool_t *pool)
    component, used to limit the scope of the update to a single entry
    of FS_BASE, or NULL if all of FS_BASE is meant to be updated.
 
+   SWITCH_PATH is the fs path that the working copy should be
+   transformed into.  (In the case of updates, the caller should make
+   sure it's identical to FS_BASE or FS_BASE/TARGET.)
+
    TEXT_DELTAS instructs the driver of the EDITOR to enable to disable
    the generation of text deltas.
 
@@ -133,6 +137,7 @@ svn_repos_begin_report (void **report_baton,
                         svn_repos_t *repos,
                         const char *fs_base,
                         const char *target,
+                        const char *switch_path,
                         svn_boolean_t text_deltas,
                         svn_boolean_t recurse,
                         const svn_delta_edit_fns_t *editor,
