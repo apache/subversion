@@ -44,7 +44,7 @@ svn_wc__remove_wcprops (svn_stringbuf_t *path, apr_pool_t *pool)
   apr_pool_t *subpool = svn_pool_create (pool);
   enum svn_node_kind kind;
   
-  SVN_ERR (svn_io_check_path (path, &kind, subpool));
+  SVN_ERR (svn_io_check_path (path->data, &kind, subpool));
   if (kind != svn_node_dir)
     return svn_error_createf
       (SVN_ERR_WC_NOT_DIRECTORY, 0, NULL, pool,
@@ -130,7 +130,7 @@ copy_file_administratively (svn_stringbuf_t *src_path,
   svn_path_add_component (dst_path, dst_basename);
 
   /* Sanity check:  if dst file exists already, don't allow overwrite. */
-  SVN_ERR (svn_io_check_path (dst_path, &dst_kind, pool));
+  SVN_ERR (svn_io_check_path (dst_path->data, &dst_kind, pool));
   if (dst_kind != svn_node_none)
     return svn_error_createf (SVN_ERR_ENTRY_EXISTS, 0, NULL, pool,
                               "'%s' already exists and is in the way.",
@@ -191,12 +191,12 @@ copy_file_administratively (svn_stringbuf_t *src_path,
     SVN_ERR (svn_io_copy_file (src_txtb->data, dst_txtb->data, TRUE, pool));
 
     /* Copy the props over if they exist. */
-    SVN_ERR (svn_io_check_path (src_wprop, &kind, pool));
+    SVN_ERR (svn_io_check_path (src_wprop->data, &kind, pool));
     if (kind == svn_node_file)
       SVN_ERR (svn_io_copy_file (src_wprop->data, dst_wprop->data, TRUE, pool));
       
     /* Copy the base-props over if they exist */
-    SVN_ERR (svn_io_check_path (src_bprop, &kind, pool));
+    SVN_ERR (svn_io_check_path (src_bprop->data, &kind, pool));
     if (kind == svn_node_file)
       SVN_ERR (svn_io_copy_file (src_bprop->data, dst_bprop->data, TRUE, pool));
   }
@@ -299,7 +299,7 @@ svn_wc_copy (svn_stringbuf_t *src_path,
 {
   enum svn_node_kind src_kind;
 
-  SVN_ERR (svn_io_check_path (src_path, &src_kind, pool));
+  SVN_ERR (svn_io_check_path (src_path->data, &src_kind, pool));
   
   if (src_kind == svn_node_file)
     SVN_ERR (copy_file_administratively (src_path, dst_parent, dst_basename,

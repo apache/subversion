@@ -49,7 +49,7 @@ extern "C" {
  * If intermediate directories on the way to PATH don't exist, an
  * error is returned, and *KIND's value is undefined.
  */
-svn_error_t *svn_io_check_path (const svn_stringbuf_t *path,
+svn_error_t *svn_io_check_path (const char *path,
                                 enum svn_node_kind *kind,
                                 apr_pool_t *pool);
 

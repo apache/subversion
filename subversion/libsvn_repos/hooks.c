@@ -74,7 +74,7 @@ run_start_commit_hook (svn_repos_t *repos,
   enum svn_node_kind kind;
   const char *hook = svn_repos_start_commit_hook (repos, pool);
 
-  if ((! svn_io_check_path (svn_stringbuf_create (hook, pool), &kind, pool)) 
+  if ((! svn_io_check_path (hook, &kind, pool)) 
       && (kind == svn_node_file))
     {
       svn_error_t *err;
@@ -107,7 +107,7 @@ run_pre_commit_hook (svn_repos_t *repos,
   enum svn_node_kind kind;
   const char *hook = svn_repos_pre_commit_hook (repos, pool);
 
-  if ((! svn_io_check_path (svn_stringbuf_create (hook, pool), &kind, pool)) 
+  if ((! svn_io_check_path (hook, &kind, pool)) 
       && (kind == svn_node_file))
     {
       svn_error_t *err;
@@ -148,7 +148,7 @@ run_post_commit_hook (svn_repos_t *repos,
   enum svn_node_kind kind;
   const char *hook = svn_repos_post_commit_hook (repos, pool);
 
-  if ((! svn_io_check_path (svn_stringbuf_create (hook, pool), &kind, pool)) 
+  if ((! svn_io_check_path (hook, &kind, pool)) 
       && (kind == svn_node_file))
     {
       svn_error_t *err;

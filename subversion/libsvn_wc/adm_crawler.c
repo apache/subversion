@@ -193,7 +193,7 @@ remove_all_tmpfiles (apr_hash_t *targets, apr_pool_t *pool)
         svn_wc__text_base_path (svn_stringbuf_create ((char *)key, pool), 
                                 TRUE, pool);
       
-      SVN_ERR (svn_io_check_path (tmpfile_path, &kind, pool));
+      SVN_ERR (svn_io_check_path (tmpfile_path->data, &kind, pool));
       if (kind == svn_node_file)
         {
           apr_err = apr_file_remove (tmpfile_path->data, pool);

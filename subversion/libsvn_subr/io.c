@@ -47,21 +47,22 @@ struct svn_stream_t {
 
 
 svn_error_t *
-svn_io_check_path (const svn_stringbuf_t *path,
+svn_io_check_path (const char *path,
                    enum svn_node_kind *kind,
                    apr_pool_t *pool)
 {
   apr_finfo_t finfo;
   apr_status_t apr_err;
-  const char *path_name = (path->len == 0 ? "." : path->data);
 
-  apr_err = apr_stat (&finfo, path_name, APR_FINFO_MIN, pool);
+  if (path[0] == '\0')
+    path = ".";
+
+  apr_err = apr_stat (&finfo, path, APR_FINFO_MIN, pool);
 
   if (apr_err && !APR_STATUS_IS_ENOENT(apr_err))
-    return svn_error_createf (apr_err, 0, NULL, pool,
-                              "svn_io_check_path: "
-                              "problem checking path \"%s\"",
-                              path->data);
+    return svn_error_createf
+      (apr_err, 0, NULL, pool,
+       "svn_io_check_path: problem checking path \"%s\"", path);
   else if (APR_STATUS_IS_ENOENT(apr_err))
     *kind = svn_node_none;
   else if (finfo.filetype == APR_NOFILE)
@@ -241,19 +242,19 @@ svn_error_t *svn_io_copy_dir_recursively (svn_stringbuf_t *src,
 
   /* Sanity checks:  SRC and DST_PARENT are directories, and
      DST_BASENAME doesn't already exist in DST_PARENT. */
-  SVN_ERR (svn_io_check_path (src, &kind, subpool));
+  SVN_ERR (svn_io_check_path (src->data, &kind, subpool));
   if (kind != svn_node_dir)
     return svn_error_createf (SVN_ERR_WC_UNEXPECTED_KIND, 0, NULL, subpool,
                               "svn_io_copy_dir: '%s' is not a directory.",
                               src->data);
 
-  SVN_ERR (svn_io_check_path (dst_parent, &kind, subpool));
+  SVN_ERR (svn_io_check_path (dst_parent->data, &kind, subpool));
   if (kind != svn_node_dir)
     return svn_error_createf (SVN_ERR_WC_UNEXPECTED_KIND, 0, NULL, subpool,
                               "svn_io_copy_dir: '%s' is not a directory.",
                               dst_parent->data);
 
-  SVN_ERR (svn_io_check_path (dst_path, &kind, subpool));
+  SVN_ERR (svn_io_check_path (dst_path->data, &kind, subpool));
   if (kind != svn_node_none)
     return svn_error_createf (SVN_ERR_ENTRY_EXISTS, 0, NULL, subpool,
                               "'%s' already exists.", dst_path->data);
@@ -1090,7 +1091,7 @@ svn_io_detect_mimetype (const char **mimetype,
   *mimetype = NULL;
 
   /* See if this file even exists, and make sure it really is a file. */
-  SVN_ERR (svn_io_check_path (svn_stringbuf_create (file, pool), &kind, pool));
+  SVN_ERR (svn_io_check_path (file, &kind, pool));
   if (kind != svn_node_file)
     return svn_error_createf (SVN_ERR_BAD_FILENAME, 0, NULL, pool,
                               "Can't detect mimetype of non-file '%s'",

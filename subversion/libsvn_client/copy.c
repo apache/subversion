@@ -69,7 +69,7 @@ wc_to_wc_copy (svn_stringbuf_t *src_path,
   svn_stringbuf_t *unused, *parent = dst_path, *basename;
 
   /* Verify that SRC_PATH exists. */
-  SVN_ERR (svn_io_check_path (src_path, &src_kind, pool));
+  SVN_ERR (svn_io_check_path (src_path->data, &src_kind, pool));
   if (src_kind == svn_node_none)
     return svn_error_createf (SVN_ERR_UNKNOWN_NODE_KIND, 0, NULL, pool,
                               "path `%s' does not exist.", src_path->data);
@@ -79,7 +79,7 @@ wc_to_wc_copy (svn_stringbuf_t *src_path,
      DST_PATH is a dir, then SRC_PATH's basename will become a new
      file or dir within DST_PATH itself.  Else if it's a file, just
      error out. */
-  SVN_ERR (svn_io_check_path (dst_path, &dst_kind, pool));
+  SVN_ERR (svn_io_check_path (dst_path->data, &dst_kind, pool));
   if (dst_kind == svn_node_none)
     svn_path_split (dst_path, &parent, &basename, pool);
   else if (dst_kind == svn_node_dir)
@@ -361,7 +361,7 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
   const char *committed_author = NULL;
 
   /* Check the SRC_PATH. */
-  SVN_ERR (svn_io_check_path (src_path, &src_kind, pool));
+  SVN_ERR (svn_io_check_path (src_path->data, &src_kind, pool));
 
   /* Split the SRC_PATH into a parent and basename. */
   svn_path_split (src_path, &parent, &basename, pool);
@@ -510,7 +510,7 @@ repos_to_wc_copy (svn_stringbuf_t *src_url,
    */
 
   /* First, figure out about dst. */
-  SVN_ERR (svn_io_check_path (dst_path, &dst_kind, pool));
+  SVN_ERR (svn_io_check_path (dst_path->data, &dst_kind, pool));
   if (dst_kind == svn_node_dir)
     {
       svn_stringbuf_t *unused, *basename;
@@ -527,7 +527,7 @@ repos_to_wc_copy (svn_stringbuf_t *src_url,
 
   /* Now that dst_path has possibly been reset, check that there's
      nothing in the way of the upcoming checkout. */
-  SVN_ERR (svn_io_check_path (dst_path, &dst_kind, pool));
+  SVN_ERR (svn_io_check_path (dst_path->data, &dst_kind, pool));
   if (dst_kind != svn_node_none)
     return svn_error_createf (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL, pool,
                               "`%s' is in the way", dst_path->data);

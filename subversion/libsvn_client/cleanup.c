@@ -40,7 +40,7 @@ svn_client_cleanup (svn_stringbuf_t *dir,
 {
   enum svn_node_kind kind;
 
-  SVN_ERR (svn_io_check_path (dir, &kind, pool));
+  SVN_ERR (svn_io_check_path (dir->data, &kind, pool));
   if (kind != svn_node_dir)
     return svn_error_createf (SVN_ERR_WC_NOT_DIRECTORY, 0, NULL, pool,
                               "Cannot cleanup '%s' -- not a directory", 

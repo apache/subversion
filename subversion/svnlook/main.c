@@ -328,7 +328,7 @@ open_writable_binary_file (apr_file_t **fh,
       enum svn_node_kind kind;
       svn_stringbuf_t *piece = ((svn_stringbuf_t **) (path_pieces->elts))[i];
       svn_path_add_component (full_path, piece);
-      SVN_ERR (svn_io_check_path (full_path, &kind, pool));
+      SVN_ERR (svn_io_check_path (full_path->data, &kind, pool));
 
       /* Does this path component exist at all? */
       if (kind == svn_node_none)

@@ -123,7 +123,7 @@ assemble_status (svn_wc_status_t **status,
   enum svn_wc_status_kind final_prop_status = svn_wc_status_none;
 
   /* Check the path kind for PATH. */
-  SVN_ERR( svn_io_check_path (path, &path_kind, pool));
+  SVN_ERR( svn_io_check_path (path->data, &path_kind, pool));
 
   if (! entry)
     {
@@ -415,7 +415,7 @@ svn_wc_statuses (apr_hash_t *statushash,
   svn_wc_entry_t *entry;
 
   /* Is PATH a directory or file? */
-  SVN_ERR (svn_io_check_path (path, &kind, pool));
+  SVN_ERR (svn_io_check_path (path->data, &kind, pool));
   
   /* kff todo: this has to deal with the case of a type-changing edit,
      i.e., someone removed a file under vc and replaced it with a dir,
@@ -479,7 +479,7 @@ svn_wc_statuses (apr_hash_t *statushash,
 
           entry = (svn_wc_entry_t *) val;
 
-          SVN_ERR (svn_io_check_path (fullpath, &kind, pool));
+          SVN_ERR (svn_io_check_path (fullpath->data, &kind, pool));
 
           /* In deciding whether or not to descend, we use the actual
              kind of the entity, not the kind claimed by the entries

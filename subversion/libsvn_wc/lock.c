@@ -63,7 +63,7 @@ svn_wc__locked (svn_boolean_t *locked, svn_stringbuf_t *path, apr_pool_t *pool)
   svn_stringbuf_t *lockfile
     = svn_wc__adm_path (path, 0, pool, SVN_WC__ADM_LOCK, NULL);
                                              
-  err = svn_io_check_path (lockfile, &kind, pool);
+  err = svn_io_check_path (lockfile->data, &kind, pool);
   if (err)
     return err;
   else if (kind == svn_node_file)

@@ -124,7 +124,7 @@ svn_client_add (svn_stringbuf_t *path,
   enum svn_node_kind kind;
   svn_error_t *err = NULL;
 
-  SVN_ERR (svn_io_check_path (path, &kind, pool));
+  SVN_ERR (svn_io_check_path (path->data, &kind, pool));
   if ((kind == svn_node_dir) && (recursive))
     err = add_dir_recursive (path->data, notify_func, notify_baton, pool);
   else

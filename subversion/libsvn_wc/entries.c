@@ -557,7 +557,7 @@ svn_wc_entry (svn_wc_entry_t **entry,
 
   *entry = NULL;
 
-  SVN_ERR (svn_io_check_path (path, &kind, pool));
+  SVN_ERR (svn_io_check_path (path->data, &kind, pool));
 
   /* ### todo:
      Make an innocent way to discover that a dir/path is or is not

@@ -224,7 +224,7 @@ store_auth_info (const char *filename,
   enum svn_node_kind kind;
 
   /* Sanity check -- store only in a directory. */
-  SVN_ERR (svn_io_check_path (wc_path, &kind, pool));
+  SVN_ERR (svn_io_check_path (wc_path->data, &kind, pool));
   if (kind != svn_node_dir)
     return SVN_NO_ERROR;  /* ### is this really not an error? */
 

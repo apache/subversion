@@ -435,7 +435,7 @@ remove_file_if_present (svn_stringbuf_t *file, apr_pool_t *pool)
   svn_node_kind_t kind;
 
   /* Does this file exist?  If not, get outta here. */
-  SVN_ERR (svn_io_check_path (file, &kind, pool));
+  SVN_ERR (svn_io_check_path (file->data, &kind, pool));
   if (kind == svn_node_none)
     return SVN_NO_ERROR;
 
@@ -614,7 +614,7 @@ svn_wc_add (svn_stringbuf_t *path,
   apr_uint32_t modify_flags = 0;
   
   /* Make sure something's there. */
-  SVN_ERR (svn_io_check_path (path, &kind, pool));
+  SVN_ERR (svn_io_check_path (path->data, &kind, pool));
   if (kind == svn_node_none)
     return svn_error_createf (SVN_ERR_WC_PATH_NOT_FOUND, 0, NULL, pool,
                               "'%s' not found", path->data);
@@ -877,7 +877,7 @@ revert_admin_things (svn_stringbuf_t *parent_dir,
       /* If there is a pristing property file, copy it out as the
          working property file, else just remove the working property
          file. */
-      SVN_ERR (svn_io_check_path (pthing, &kind, pool));
+      SVN_ERR (svn_io_check_path (pthing->data, &kind, pool));
       if (kind == svn_node_file)
         {
           if ((err = svn_io_set_file_read_write (thing->data, FALSE, pool)))
@@ -902,7 +902,7 @@ revert_admin_things (svn_stringbuf_t *parent_dir,
 
   if (entry->kind == svn_node_file)
     {
-      SVN_ERR (svn_io_check_path (fullpath, &kind, pool));
+      SVN_ERR (svn_io_check_path (fullpath->data, &kind, pool));
       SVN_ERR (svn_wc_text_modified_p (&modified_p, fullpath, pool));
       if ((modified_p) || (kind == svn_node_none))
         {
@@ -1012,7 +1012,7 @@ svn_wc_revert (svn_stringbuf_t *path,
 
   /* Safeguard 3:  can we deal with the node kind of PATH current in
      the working copy? */
-  SVN_ERR (svn_io_check_path (path, &kind, pool));
+  SVN_ERR (svn_io_check_path (path->data, &kind, pool));
   if ((kind != svn_node_none)
       && (kind != svn_node_file)
       && (kind != svn_node_dir))
