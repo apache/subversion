@@ -673,7 +673,7 @@ svn_wc_delete (const char *path,
       SVN_ERR (svn_wc_adm_retrieve (&parent_access, adm_access, parent, pool));
       SVN_ERR (svn_wc_entries_read (&entries, parent_access, TRUE, pool));
       entry_in_parent = apr_hash_get (entries, base_name, APR_HASH_KEY_STRING);
-      was_deleted = entry_in_parent->deleted;
+      was_deleted = entry_in_parent ? entry_in_parent->deleted : FALSE;
 
       if (was_schedule_add && !was_deleted)
         {
