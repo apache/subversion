@@ -103,7 +103,8 @@ svn_client_lock (const svn_lock_t **lock_p, const char *path,
                               svn_path_local_style (path, pool));
   if (! entry->url)
     return svn_error_createf (SVN_ERR_ENTRY_MISSING_URL, NULL,
-                              "'%s' has no URL");
+                              _("'%s' has no URL"),
+                              svn_path_local_style (path, pool));
 
   /* Open an RA session. */
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
@@ -150,7 +151,8 @@ svn_client_unlock (const char *path, svn_boolean_t force,
                               svn_path_local_style (path, pool));
   if (! entry->url)
     return svn_error_createf (SVN_ERR_ENTRY_MISSING_URL, NULL,
-                              "'%s' has no URL");
+                              _("'%s' has no URL"),
+                              svn_path_local_style (path, pool));
   /* If not force, get the lock token from the WC entry. */
   if (! force)
     {
