@@ -141,12 +141,12 @@ analogous to CVS/ sudirs:
         <entry name="baz.c" version="6"/>
         <entry name="X" new="true" version="0"/>
         <entry name="Y" new="true" ancestor="ancestor/path/Y" version="3"/>
-        <entry name="qux" type="dir" />
+        <entry name="qux" kind="dir" />
       </wc-entries>
 
    Where:
 
-      1. `type' defaults to "file".
+      1. `kind' defaults to "file".
 
       2. `version' defaults to the directory's version (in the
          directory's own entry, the version may not be omitted).
