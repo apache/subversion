@@ -159,7 +159,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
 
   { "checkout", svn_cl__checkout, {"co"},
     "Check out a working copy from a repository.\n"
-    "usage: checkout URL... [PATH]\n"
+    "usage: checkout URL... [PATH]\n\n"
     "  Note: If PATH is omitted, the basename of the URL will be used as\n"
     "  the destination. If multiple URLs are given each will be checked\n"
     "  out into a sub-directory of PATH, with the name of the sub-directory\n"
@@ -208,7 +208,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
      svn_cl__editor_cmd_opt, svn_cl__encoding_opt, svn_cl__config_dir_opt} },
   
   { "diff", svn_cl__diff, {"di"},
-    "display the differences between two paths.\n"
+    "Display the differences between two paths.\n"
     "usage: 1. diff [-r N[:M]] [--old OLD-TGT] [--new NEW-TGT] [PATH...]\n"
     "       2. diff -r N:M URL\n"
     "       3. diff [-r N[:M]] URL1[@N] URL2[@M]\n\n"
@@ -231,7 +231,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
      svn_cl__config_dir_opt} },
 
   { "export", svn_cl__export, {0},
-    "export stuff.\n"
+    "Create an unversioned copy of a tree.\n"
     "usage: 1. export [-r REV] URL [PATH]\n"
     "       2. export PATH1 PATH2\n\n"
     "  1. Exports a clean directory tree from the repository specified by\n"
@@ -239,7 +239,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "     PATH. If PATH is omitted, the last component of the URL is used\n"
     "     for the local directory name.\n\n"
     "  2. Exports a clean directory tree from the working copy specified by\n"
-    "     PATH1 into PATH2.  all local changes will be preserved, but files\n"
+    "     PATH1 into PATH2.  All local changes will be preserved, but files\n"
     "     not under revision control will not be copied.\n",
     {'r', 'q', svn_cl__force_opt, SVN_CL__AUTH_OPTIONS,
      svn_cl__config_dir_opt} },
@@ -276,7 +276,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
   
   { "log", svn_cl__log, {0},
     "Show the log messages for a set of revision(s) and/or file(s).\n"
-    "usage: log [URL] [PATH...]\n"
+    "usage: log [URL] [PATH...]\n\n"
     "  Print the log messages for local PATHs, or for PATHs under\n"
     "  URL, if URL is given.  If URL is given by itself, then print log\n"
     "  messages for everything under it.  With -v, also print all affected\n"
@@ -297,7 +297,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
      svn_cl__config_dir_opt} },
 
   { "merge", svn_cl__merge, {0},
-    "apply the differences between two sources to a working copy path.\n"
+    "Apply the differences between two sources to a working copy path.\n"
     "usage: 1. merge sourceURL1[@N] sourceURL2[@M] [WCPATH]\n"
     "       2. merge sourceWCPATH1@N sourceWCPATH2@M [WCPATH]\n"
     "       3. merge -r N:M SOURCE [WCPATH]\n\n"
@@ -431,7 +431,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     {svn_cl__targets_opt, 'R', 'q', svn_cl__config_dir_opt} },
  
   { "revert", svn_cl__revert, {0},
-    "Restore pristine working copy file (undo all local edits)\n"
+    "Restore pristine working copy file (undo all local edits).\n"
     "usage: revert PATH...\n\n"
     "  Note:  this routine does not require network access, and \n"
     "  resolves any conflicted states.\n",
@@ -501,10 +501,14 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
       svn_cl__config_dir_opt} },
   
   { "switch", svn_cl__switch, {"sw"},
-    "Update working copy to mirror a new URL\n"
-    "usage: switch URL [PATH]   or\n"
-    "       switch --relocate FROM TO [PATH...]\n\n"
-    "  Note:  this is the way to move a working copy to a new branch.\n",
+    "Update the working copy to a different URL.\n"
+    "usage: 1. switch URL [PATH]\n"
+    "       2. switch --relocate FROM TO [PATH...]\n\n"
+    "  1. Update the working copy to mirror a new URL.  This behaviour is a\n"
+    "     superset of \"svn update\".\n"
+    "     Note:  this is the way to move a working copy to a new branch.\n\n"
+    "  2. Reconnect the working copy when the repository URL has changed.\n"
+    ,
     { 'r', 'N', 'q', svn_cl__merge_cmd_opt, svn_cl__relocate_opt,
       SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
  

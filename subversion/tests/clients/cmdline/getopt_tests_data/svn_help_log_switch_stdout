@@ -1,5 +1,6 @@
 log: Show the log messages for a set of revision(s) and/or file(s).
 usage: log [URL] [PATH...]
+
   Print the log messages for local PATHs, or for PATHs under
   URL, if URL is given.  If URL is given by itself, then print log
   messages for everything under it.  With -v, also print all affected
@@ -35,11 +36,15 @@ Valid options:
   --non-interactive        : do no interactive prompting
   --config-dir arg         : read user configuration files from directory ARG
 
-switch (sw): Update working copy to mirror a new URL
-usage: switch URL [PATH]   or
-       switch --relocate FROM TO [PATH...]
+switch (sw): Update the working copy to a different URL.
+usage: 1. switch URL [PATH]
+       2. switch --relocate FROM TO [PATH...]
 
-  Note:  this is the way to move a working copy to a new branch.
+  1. Update the working copy to mirror a new URL.  This behaviour is a
+     superset of "svn update".
+     Note:  this is the way to move a working copy to a new branch.
+
+  2. Reconnect the working copy when the repository URL has changed.
 
 Valid options:
   -r [--revision] arg      : revision X or X:Y range.  X or Y can be one of:
