@@ -71,14 +71,16 @@ typedef svn_error_t *(*svn_ra_svn_command_handler)(svn_ra_svn_conn_t *conn,
  * If @c terminate is set, command-handling will cease after command is
  * processed.
  */
-typedef struct {
+typedef struct svn_ra_svn_cmd_entry_t 
+{
   const char *cmdname;
   svn_ra_svn_command_handler handler;
   svn_boolean_t terminate;
 } svn_ra_svn_cmd_entry_t;
 
 /** Memory representation of an on-the-wire data item. */
-typedef struct {
+typedef struct svn_ra_svn_item_t 
+{
   enum {
     SVN_RA_SVN_NUMBER,
     SVN_RA_SVN_STRING,

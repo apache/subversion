@@ -202,7 +202,8 @@ enum svn_opt_revision_kind {
 
 
 /** A revision, specified in one of @c svn_opt_revision_kind ways. */
-typedef struct svn_opt_revision_t {
+typedef struct svn_opt_revision_t
+{
   enum svn_opt_revision_kind kind;
   union {
     svn_revnum_t number;
