@@ -51,8 +51,7 @@ Candidate changes:
     Fix OS X build.
     Justification: Should work out of the tarball.
     Votes:
-      +1: breser
-      +0: kfogel (looks good to me, but I don't have an OS X system here)
+      +1: breser, kfogel
 
   * r10379,r10380,r10384,r10469,r10470,r10487
     Support creation of zip archives for Windows.
