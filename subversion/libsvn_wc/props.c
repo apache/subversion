@@ -1223,7 +1223,7 @@ svn_wc_prop_set (const char *name,
           tmp_entry.text_time = 0;
           SVN_ERR (svn_wc__entry_modify (adm_access, base_name, &tmp_entry,
                                          SVN_WC__ENTRY_MODIFY_TEXT_TIME,
-                                         pool));
+                                         TRUE, pool));
         }
     }
 

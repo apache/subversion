@@ -243,7 +243,8 @@ svn_wc_process_committed (const char *path,
       tmp_entry.kind = svn_node_dir;
       tmp_entry.revision = new_revnum;
       SVN_ERR (svn_wc__entry_modify (adm_access, base_name, &tmp_entry, 
-                                     SVN_WC__ENTRY_MODIFY_REVISION, pool));
+                                     SVN_WC__ENTRY_MODIFY_REVISION, TRUE,
+                                     pool));
     }
 
   logtags = svn_stringbuf_create ("", pool);
@@ -459,7 +460,7 @@ mark_tree (svn_wc_adm_access_t *adm_access,
       dup_entry->schedule = schedule;
       dup_entry->copied = copied; 
       SVN_ERR (svn_wc__entry_modify (adm_access, base_name, dup_entry, 
-                                     modify_flags, subpool));
+                                     modify_flags, TRUE, subpool));
 
       /* Tell someone what we've done. */
       if (schedule == svn_wc_schedule_delete && notify_func != NULL)
@@ -490,7 +491,7 @@ mark_tree (svn_wc_adm_access_t *adm_access,
     if (modify_flags & SVN_WC__ENTRY_MODIFY_COPIED)
       dup_entry->copied = copied;
     SVN_ERR (svn_wc__entry_modify (adm_access, NULL, dup_entry, modify_flags,
-                                   subpool));
+                                   TRUE, subpool));
   }
   
   /* Destroy our per-iteration pool. */
@@ -697,7 +698,8 @@ svn_wc_delete (const char *path,
       
       tmp_entry.schedule = svn_wc_schedule_delete;
       SVN_ERR (svn_wc__entry_modify (adm_access, base_name, &tmp_entry,
-                                     SVN_WC__ENTRY_MODIFY_SCHEDULE, pool));
+                                     SVN_WC__ENTRY_MODIFY_SCHEDULE, TRUE,
+                                     pool));
     }
 
   /* Report the deletion to the caller. */
@@ -855,7 +857,7 @@ svn_wc_add (const char *path,
   /* Now, add the entry for this item to the parent_dir's
      entries file, marking it for addition. */
   SVN_ERR (svn_wc__entry_modify (parent_access, base_name, &tmp_entry, 
-                                 modify_flags, pool));
+                                 modify_flags, TRUE, pool));
 
 
   /* If this is a replacement, we need to reset the properties for
@@ -938,7 +940,7 @@ svn_wc_add (const char *path,
                            ? svn_wc_schedule_replace 
                            : svn_wc_schedule_add;
       SVN_ERR (svn_wc__entry_modify (adm_access, NULL, &tmp_entry, 
-                                     modify_flags, pool));
+                                     modify_flags, TRUE, pool));
 
       if (copyfrom_url)
         {
@@ -1338,12 +1340,12 @@ svn_wc_revert (const char *path,
             SVN_ERR (svn_wc__entry_modify (parent_access, basey, tmpentry,
                                            SVN_WC__ENTRY_MODIFY_KIND
                                            | SVN_WC__ENTRY_MODIFY_DELETED,
-                                           pool));
+                                           TRUE, pool));
           else
               SVN_ERR (svn_wc__entry_modify (parent_access, bname, tmpentry,
                                              SVN_WC__ENTRY_MODIFY_KIND
                                              | SVN_WC__ENTRY_MODIFY_DELETED,
-                                             pool));
+                                             TRUE, pool));
         }
     }
 
@@ -1393,7 +1395,7 @@ svn_wc_revert (const char *path,
         SVN_ERR (svn_wc__entry_modify (parent_access, bname, tmp_entry,
                                        modify_flags 
                                        | SVN_WC__ENTRY_MODIFY_FORCE,
-                                       pool));
+                                       TRUE, pool));
 
       /* For directories, reset the schedule to normal in the
          directory itself. */
@@ -1403,7 +1405,7 @@ svn_wc_revert (const char *path,
                                          SVN_WC__ENTRY_MODIFY_SCHEDULE 
                                          | SVN_WC__ENTRY_MODIFY_PREJFILE
                                          | SVN_WC__ENTRY_MODIFY_FORCE,
-                                         pool));
+                                         TRUE, pool));
         }
 
       /* Note that this was reverted. */
@@ -1753,7 +1755,7 @@ resolve_conflict_on_entry (const char *path,
       SVN_ERR (svn_wc__entry_modify
                (conflict_dir,
                 (entry->kind == svn_node_dir ? NULL : base_name),
-                entry, modify_flags, pool));
+                entry, modify_flags, TRUE, pool));
 
       /* No feedback if no files were deleted and all we did was change the
          entry, such a file did not appear as a conflict */

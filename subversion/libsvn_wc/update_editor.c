@@ -313,7 +313,7 @@ maybe_bump_dir_info (struct edit_baton *eb,
                                         pool));
           
           SVN_ERR (svn_wc__entry_modify (adm_access, NULL, &tmp_entry,
-                                         modify_flags, pool));
+                                         modify_flags, TRUE, pool));
         }
 
       /* If this directory is newly added, then it probably doesn't
@@ -333,7 +333,7 @@ maybe_bump_dir_info (struct edit_baton *eb,
           SVN_ERR (svn_wc__entry_modify (adm_access, name, &tmp_entry,
                                          (SVN_WC__ENTRY_MODIFY_KIND
                                           | SVN_WC__ENTRY_MODIFY_DELETED),
-                                         pool));
+                                         TRUE, pool));
         }
     }
   /* we exited the for loop because there are no more parents */
@@ -770,7 +770,7 @@ change_dir_prop (void *dir_baton,
           SVN_ERR (svn_wc_adm_retrieve (&adm_access, db->edit_baton->adm_access,
                                         db->path, pool));
           return svn_wc__entry_modify (adm_access, NULL, &entry,
-                                       modify_flags, pool);
+                                       modify_flags, TRUE, pool);
         }
     }
 
