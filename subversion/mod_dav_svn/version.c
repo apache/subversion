@@ -799,8 +799,16 @@ static dav_error *dav_svn_make_activity(dav_resource *resource)
   const char *txn_name;
   dav_error *err;
 
-  /* ### need to check some preconditions? */
-
+  /* sanity check:  make sure the resource is a valid activity, in
+     case an older mod_dav doesn't do the check for us. */
+  if (! dav_svn_can_be_activity(resource))
+    return dav_new_error_tag(resource->pool, HTTP_FORBIDDEN,
+                             SVN_ERR_APMOD_MALFORMED_URI,
+                             "Activities cannot be created at that location; "
+                             "query the DAV:activity-collection-set property.",
+                             SVN_DAV_ERROR_NAMESPACE,
+                             SVN_DAV_ERROR_TAG);
+   
   err = dav_svn_create_activity(resource->info->repos, &txn_name,
                                 resource->pool);
   if (err != NULL)
