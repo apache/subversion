@@ -494,6 +494,10 @@ def run_tests(test_list):
   global cleanup_mode
   testnum = None
 
+  # Explicitly set this so that commands that commit but don't supply a
+  # log message will fail rather than invoke an editor.
+  os.environ['SVN_EDITOR'] = ''
+
   url_re = re.compile('^(?:--url|BASE_URL)=(.+)')
 
   for arg in sys.argv:
