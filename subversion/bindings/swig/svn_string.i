@@ -74,7 +74,6 @@ typedef struct svn_string_t svn_string_t;
    TYPE: svn_string_t
 */
 
-
 /* const svn_string_t * is always an input parameter */
 %typemap(python,in) const svn_string_t * (svn_string_t value) {
     if ($input == Py_None)
@@ -97,15 +96,17 @@ typedef struct svn_string_t svn_string_t;
     $1 = svn_string_dup($input, pool);
 }
 
-//%typemap(python,out) svn_string_t * {
-//    $result = PyBuffer_FromMemory($1->data, $1->len);
-//}
+%typemap(python,out) svn_string_t * {
+    $result = PyString_FromStringAndSize($1->data, $1->len);
+}
 
 /* svn_string_t ** is always an output parameter */
 %typemap(ignore) svn_string_t ** (svn_string_t *temp) {
     $1 = &temp;
 }
 %apply RET_STRING { svn_string_t ** };
+
+
 
 /* -----------------------------------------------------------------------
    define a way to return a 'const char *'

@@ -43,6 +43,11 @@
     const apr_array_header_t *paths
 };
 
+/* -----------------------------------------------------------------------
+   dir_delta's src_entry parameter needs to be NULL sometimes
+*/
+%typemap(python,in,parse="z") const char *src_entry "";
+
 /* ----------------------------------------------------------------------- */
 
 %include svn_repos.h
