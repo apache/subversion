@@ -55,7 +55,16 @@ Candidate changes:
       Not worth a resoak on its own.
     Votes:
       +1: pmayweg
-      
+
+  * r10978
+    Install and configure Apache modules, install Berkeley DB DLL in Apache's
+	module directory and use dynamic APR libs (DLLs)
+    Justification:
+     The packaged programs will not work without the DLLs and the module and
+     and Berkeley DB-DLL handling are higly requested items.
+    Votes:
+     +1: josander
+
 Status of 1.1.1:
 ================
 
