@@ -319,22 +319,10 @@ finish_textdelta (void *walk_baton, void *parent_baton, void *handler_baton)
 
 
 
-/* Apply a delta to a working copy, or to create a working copy.
- * 
- * If TARGET exists and is a working copy, or a subtree of a working
- * copy, then it is massaged into the updated state.
- *
- * If TARGET does not exist, a working copy is created there.
- *
- * If TARGET exists but is not a working copy, return error.
- *
- * todo: if TARGET == NULL, above rules apply with TARGET set to
- * the top directory mentioned in the delta?
- */
 svn_error_t *
 svn_wc_apply_delta (void *delta_src,
                     svn_delta_read_fn_t *read_fn,
-                    svn_string_t *target,
+                    svn_string_t *encasing_dir,
                     apr_pool_t *pool)
 {
   svn_error_t *err;
@@ -342,13 +330,13 @@ svn_wc_apply_delta (void *delta_src,
   struct w_baton w_baton;
   svn_string_t *telescoping_path;
 
-  /* Check existence of TARGET.  If present, just error out for now -- we
+  /* Check existence of ENCASING_DIR.  If present, just error out for now -- we
      can't do real updates, only fresh checkouts.  In the future, if
-     TARGET exists we'll check if it's a working copy and only error
+     ENCASING_DIR exists we'll check if it's a working copy and only error
      out if it's not. */
-  if (target)
+  if (encasing_dir)
     {
-      err = check_existence (target, SVN_ERR_OBSTRUCTED_UPDATE, pool);
+      err = check_existence (encasing_dir, SVN_ERR_OBSTRUCTED_UPDATE, pool);
 
       /* Whether or not err->apr_err == SVN_ERR_OBSTRUCTED_UPDATE, we
          want to return it to caller. */
@@ -372,7 +360,7 @@ svn_wc_apply_delta (void *delta_src,
 
   /* Set up the batons... */
   memset (&w_baton, 0, sizeof (w_baton));
-  w_baton.top_dir = target;   /* Remember, target might be null. */
+  w_baton.top_dir = encasing_dir;   /* Remember, encasing_dir might be null. */
   w_baton.pool = pool;
   telescoping_path = svn_string_create ("", pool);
 

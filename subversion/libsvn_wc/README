@@ -80,7 +80,8 @@ Structure of the Working Copy
 Working copy meta-information is stored in SVN/ subdirectories,
 analogous to CVS/ sudirs:
 
-   SVN/versions                 /* Version numbers for this directory */
+   SVN/repository               /* Where this stuff came from. */
+       versions                 /* Version numbers for this directory */
        properties               /* Properties for this directory */
        tree-edits               /* Records changes to tree structure */
        prop-edits               /* Records changes to properties */
