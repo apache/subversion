@@ -400,9 +400,9 @@ $ svn checkout file://localhost/path/to/repos
           resides:</para>
 
         <screen>
-C:\> svn checkout file:///X:/path/to/repos
+C:\&gt; svn checkout file:///X:/path/to/repos
 &hellip;
-C:\> svn checkout "file:///X|/path/to/repos"
+C:\&gt; svn checkout "file:///X|/path/to/repos"
 &hellip;
 </screen>
  
@@ -711,7 +711,7 @@ calc/Makefile:6
     <title>Summary</title>
     
     <para>We've covered a number of fundamental Subversion concepts in
-    this chapter:</para>
+      this chapter:</para>
 
     <itemizedlist>
       <listitem>
@@ -722,8 +722,9 @@ calc/Makefile:6
 
       <listitem>
         <para>We've seen some simple examples of how two collaborators
-        can use Subversion to publish and receive changes from one
-        another, using the 'copy-modify-merge' model.</para>
+          can use Subversion to publish and receive changes from one
+          another, using the <quote>copy-modify-merge</quote>
+          model.</para>
       </listitem>
 
       <listitem>
@@ -734,9 +735,9 @@ calc/Makefile:6
     </itemizedlist>
     
     <para>At this point, you should have a good idea of how Subversion
-    works in the most general sense.  Armed with this knowledge, you
-    should now be ready to jump into the next chapter, which is a
-    detailed tour of Subversion's commands and features. </para>
+      works in the most general sense.  Armed with this knowledge, you
+      should now be ready to jump into the next chapter, which is a
+      detailed tour of Subversion's commands and features.</para>
       
   </sect1>
 
