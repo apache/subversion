@@ -467,10 +467,6 @@ svn_repos_get_committed_info (svn_revnum_t *committed_rev,
  * argument; the hash's keys are all the paths committed in that revision.
  * Otherwise, each call to @a receiver passes null for @a changed_paths.
  *
- * ### NOTE: @a paths and @a discover_changed_paths are currently ignored,
- * see http://subversion.tigris.org/issues/show_bug.cgi?id=562 for
- * more information.
- *
  * If @a strict_node_history is set, copy history (if any exists) will
  * not be traversed while harvesting revision logs for each path.
  *
