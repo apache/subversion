@@ -223,11 +223,13 @@ static svn_error_t * handle_resource(merge_ctx_t *mc)
 #endif
 
   if (mc->rtype == RTYPE_BASELINE)
-    /* cool. the DAV:version-name tells us the new revision */
-    mc->rev = SVN_STR_TO_REV(mc->vsn_name->data);
+    {
+      /* cool. the DAV:version-name tells us the new revision */
+      mc->rev = SVN_STR_TO_REV(mc->vsn_name->data);
+      return SVN_NO_ERROR;
+    }
 
   /* a collection or regular resource */
-
   if (mc->href->len < mc->base_len)
     {
       /* ### need something better than APR_EGENERAL */
