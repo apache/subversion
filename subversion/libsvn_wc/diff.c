@@ -351,7 +351,7 @@ get_local_mimetypes (const char **pristine_mimetype,
                      const char *path,
                      apr_pool_t *pool)
 {
-  const svn_string_t *pristine_val, *working_val;
+  const svn_string_t *working_val;
 
   if (working_mimetype)
     {
@@ -376,7 +376,7 @@ get_local_mimetypes (const char **pristine_mimetype,
 
   if (pristine_mimetype)
     {
-      svn_boolean_t found_prop = FALSE;
+      const svn_string_t *pristine_val = NULL;
 
       if (b && b->propchanges)
         {
@@ -390,12 +390,11 @@ get_local_mimetypes (const char **pristine_mimetype,
               if (strcmp (propchange->name, SVN_PROP_MIME_TYPE) == 0)
                 {
                   pristine_val = propchange->value;
-                  found_prop = TRUE;
                   break;
                 }
             }          
         }
-      if (! found_prop)
+      if (! pristine_val)
         {
           /* otherwise, try looking in the pristine props in the wc */
           const char *props_base_path;
