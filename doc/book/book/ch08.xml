@@ -5,8 +5,8 @@ this point. -->
   <title>Subversion Complete Reference</title>
   
   <simplesect>
-    <para>This chapter is intended to be a complete reference to
-      using Subversion. This includes the command line client
+    <para>This chapter is intended to be a complete reference to using
+      Subversion. This includes the command line client
       (<command>svn</command>) and all its commands, repository
       administration programs (<command>svnadmin</command> and
       <command>svnlook</command>) and their respective commands,
@@ -23,13 +23,383 @@ this point. -->
     <title>The Subversion Command Line Client:
       <command>svn</command></title>
     
-    <para>###TODO Talk about the client, how commands are laid out,
-      cover global switches, long form vs. short form, plus xrefs to
-      the rest of the book for more info.</para>
+    <para>To use the command line client, you type
+      <command>svn</command>, the subcommand you wish to use,
+      <footnote><para>Yes, yes, you don't need a subcommand to use the
+      <option>--version</option> switch, but we'll get to that in just
+      a minute.</para> </footnote> and any switches or targets that
+      you wish to operate on.  You should note that there is no
+      specific order that the subcommand and the switches must appear
+      in (the targets, however, are always last in the command line).
+      For example, all of the following are valid ways to use
+      <command>svn status</command>:</para>
+
+    <screen>
+$ svn -v status
+$ svn status -v 
+$ svn status -v myfile
+    </screen>
+
+    <para>You can find many more examples of how to use most client
+      commands, in <xref linkend="svn-ch-3"/>, commands for managing
+      properties in <xref linkend="svn-ch-6-sect-2"/></para>
     
     <sect2 id="svn-ch-8-sect-1.1">
-      <title></title>
-      <para>###TODO Write this</para>
+      <title>Switches</title> 
+      
+      <para>While Subversion has different switches for its
+        subcommands, all switches are global&mdash;that is, each
+        switch is guaranteed to mean the same thing regardless of
+        the subcommand you use it with.  For example,
+        <option>--verbose</option> (<option>-v</option>) always
+        means <quote>verbose output</quote>, regardless of the
+        subcommand you use it with.</para>
+      
+<!-- ###TODO remove *any* command specific stuff and put it in that command. -->
+      <variablelist>
+        
+        <varlistentry>
+          <term><option>--dry-run</option></term>
+          <listitem>
+            <para>Go through all the motions of running a command,
+              but make no actual changes&mdash;either on disk or in
+              the repository. </para>
+          </listitem>
+        </varlistentry>
+      
+        <varlistentry>
+          <term><option>--file</option>
+            <replaceable>FILENAME</replaceable>
+            (<option>-f</option>)</term>
+          <listitem>
+            <para>Use the contents of the file passed as an argument
+              to this switch as a commit message for the subcommand
+              that you're running.</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term><option>--encoding</option><replaceable>ENC</replaceable></term>
+          <listitem>
+            <para>Tells Subversion that your commit message is
+              encoded in the charset provided.  The default is UTF8,
+              and you should specify the encoding if your commit
+              message is in any other encoding.</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term><option>--extensions</option><replaceable>"ARGS"</replaceable></term>
+          <listitem>
+            <para>Specifies an argument or arguments that Subversion
+              should pass to GNU diff when providing diffs.  Note
+              that if you wish to pass multiple arguments, you must
+              enclose all of them in quotes.  For example,
+              <command>svn diff -x "-b -E"</command>.  Note also
+              that Subversion will display unified diffs by default,
+              so if you want default diff output, you can pass the
+              <option>--normal</option> switch to diff
+              (e.g. <command>svn diff -x "--normal"</command>.
+              </para>
+          </listitem>
+        </varlistentry>
+      
+        <varlistentry>
+          <term><option>--force</option></term>
+          <listitem>
+            <para>Forces a particular command or operation to run.
+              There are some operations that Subversion will prevent
+              you from doing in normal usage, but you can pass the
+              force switch to tell Subversion <quote>I know what I'm
+              doing as well as the possible repercussions of doing
+              it, so let me at 'em.</quote>. This switch is the
+              programmatic equivalent of doing your own electrical
+              work with the power on&mdash;if you don't know what
+              you're doing, you're likely to get a shock.</para>
+          </listitem>
+        </varlistentry>
+        
+        <varlistentry>
+          <term><option>--help</option> (<option>-h or -?</option>)</term>
+          <listitem>
+            <para>Shows the built in help text for a subcommand (if
+              used with a subcommand), or the general client help if
+              used alone.</para>
+          </listitem>
+        </varlistentry>
+        
+        <varlistentry>
+          <term><option>--incremental</option></term>
+          <listitem>
+            <para>Prints output in a format suitable for
+              concatenation.  For example, <command>svn
+              log</command> normally prints out a dashed line at the
+              beginning of a log message, after each subsequent log
+              message, and following the final log message.  If you
+              ran svn log on a range of two revisions, you would get
+              this:</para>
+<!-- ###TODO move this to svn log's section. -->
+            <screen>
+$ svn log -r 14:15
+------------------------------------------------------------------------
+rev 14: ...
+
+------------------------------------------------------------------------
+rev 15: ...
+
+------------------------------------------------------------------------
+            </screen>
+
+            <para>However, if you wanted to gather 2 non-sequential
+              log messages into a file, you might do something like
+              this:</para>
+
+            <screen>
+$ svn log -r 14 > mylog
+$ svn log -r 19 >> mylog
+$ svn log -r 27 >> mylog
+$ cat mylog
+------------------------------------------------------------------------
+rev 14: ...
+
+------------------------------------------------------------------------
+------------------------------------------------------------------------
+rev 19: ...
+
+------------------------------------------------------------------------
+------------------------------------------------------------------------
+rev 27: ...
+
+------------------------------------------------------------------------
+            </screen>
+
+            <para>Note the double dashed lines that you get in your
+            output. You can avoid this clutter by using the
+            incremental switch:</para>
+
+
+            <screen>
+$ svn log --incremental -r 14 > mylog
+$ svn log --incremental -r 19 >> mylog
+$ svn log --incremental -r 27 >> mylog
+$ cat mylog
+------------------------------------------------------------------------
+rev 14: ...
+
+------------------------------------------------------------------------
+rev 19: ...
+
+------------------------------------------------------------------------
+rev 27: ...
+              </screen>
+
+            <para>Note that the incremental switch does provides
+              similar output control when using the
+              <option>--xml</option> switch.</para>
+            
+          </listitem>
+        </varlistentry>
+        
+        <varlistentry>
+          <term><option>--message</option>
+            <replaceable>MESSAGE</replaceable>
+            (<option>-m</option>)</term>
+          <listitem>
+            <para>Indicates that you will specify a commit message
+              on the command line, following this switch. For
+              example:</para>
+            
+            <para><command>$ svn checkin -m "Initial
+                import."</command></para>
+          </listitem>
+        </varlistentry>
+      
+        <varlistentry>
+          <term><option>--no-auth-cache</option></term>
+          <listitem>
+            <para>Do not cache authentication information
+              (e.g. username and password) in the Subversion
+              administrative directories.</para>
+          </listitem>
+        </varlistentry>
+      
+        <varlistentry>
+          <term><option>--no-diff-deleted</option></term>
+        <listitem>
+            <para>Prevents Subversion from printing differences for
+              deleted files.  The default behavior when you remove a
+              file is for <command>svn diff</command> to print the
+              same differences that you would see if you had left
+              the file but removed all the content.</para>
+          </listitem>
+        </varlistentry>
+        
+        <varlistentry>
+          <term><option>--no-ignore</option></term>
+          <listitem>
+            <para>Shows files in the status listing that would
+              normally be omitted since they match a pattern in the
+              svn:ignore property.</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term><option>--non-interactive</option></term>
+          <listitem>
+            <para>In the case of an authentication failure, or
+            insufficient credentials, do not prompt for credentials
+            (e.g. username or password).  This is useful if you're
+            running Subversion inside of an automated script and
+            it's more appropriate to have Subversion fail then to
+            prompt for more information.</para>
+          </listitem>
+        </varlistentry>
+      
+        <varlistentry>
+          <term><option>--non-recursive</option> (<option>-N</option>)</term>
+          <listitem>
+            <para>Stops a subcommand from recursing into
+              subdirectories.  Note that some subcommands do not
+              recurse by default, while others do.</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+        <term><option>--password</option><replaceable>PASS</replaceable></term>
+          <listitem>
+            <para>Indicates that you are providing your password for
+              authentication on the command line&mdash;otherwise, if
+              it is needed, Subversion will prompt you for
+              it.</para>
+          </listitem>
+        </varlistentry>
+      
+        <varlistentry>
+          <term><option>--quiet</option> (<option>-q</option>)</term>
+          <listitem>
+            <para>Requests that the client print only essential
+              information while performing an operation.</para>
+          </listitem>
+        </varlistentry>
+        
+        <varlistentry>
+          <term><option>--recursive</option> (<option>-R</option>)</term>
+          <listitem>
+            <para>Makes a subcommand to recurse into subdirectories.
+              Note that some subcommands recurse by default, while
+              others don't.</para>
+          </listitem>
+        </varlistentry>
+        
+        <varlistentry>
+          <term><option>--revision</option>
+            <replaceable>REV</replaceable>
+            (<option>-r</option>)</term>
+          <listitem>
+            <para>The revision flag indicates that you're going to
+              supply a revision (or range of revisions) for a
+              particular operation.  You can provide revision
+              numbers, revision keywords, or dates (in curly
+              braces), as arguments to the revision switch.  If you
+              wish to provide a range of revisions, you can provide
+              two revisions separated by a colon. For example:</para>
+
+            <screen>
+$ svn checkout -r 1729
+$ svn checkout -r 1729:HEAD
+$ svn checkout -r 1729:1744
+$ svn checkout -r {12/04/02}:{2/17/02}
+$ svn checkout -r 1729:{2/17/02}
+            </screen>
+          </listitem>
+        </varlistentry>
+        
+        <varlistentry>
+          <term><option>--revprop</option></term>
+          <listitem>
+            <para>Operate on a revision property instead of a
+              regular Subversion property.  This switch requires
+              that you also pass a revision with the
+              <option>--revision</option> (<option>-r</option>)
+              switch.</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term><option>--show-updates</option></term>
+          <listitem>
+            <para>Causes the client to make a roundtrip to the
+              server to retrieve and display information about which
+              files in your working copy are out-of-date.  This
+              doesn't actually update any of your files&mdash;it
+              just shows you which files will be updated if you run
+              <command>svn update </command>.
+            </para>
+          </listitem>
+        </varlistentry>
+      
+        <varlistentry>
+          <term><option>--strict</option></term>
+          <listitem>
+            <para>Use strict semantics.  See <xref
+                linkend="svn-ch-8-sect-1.15"/> for more details </para>
+          </listitem>
+        </varlistentry>
+        
+        <varlistentry>
+          <term><option>--targets</option>
+            <replaceable>FILENAME</replaceable></term>
+          <listitem>
+            <para>You can use the targets switch to tell Subversion to
+              get the list of files that you wish to operate on from
+              the filename you provide instead of listing all the
+              files on the command line.
+            </para>
+          </listitem>
+        </varlistentry>
+        
+        <varlistentry>
+          <term><option>--username</option><replaceable>NAME</replaceable></term>
+          <listitem>
+            <para>Indicates that you are providing your username for
+              authentication on the command line&mdash;otherwise, if
+              it is needed, Subversion will prompt you for
+              it.</para>
+          </listitem>
+        </varlistentry>
+      
+        <varlistentry>
+          <term><option>--verbose</option></term>
+          <listitem>
+            <para>Requests that the client print out as much
+              information as it can while running any subcommand.
+              This may result in Subversion printing out additional
+              fields, detailed information about every file, or
+              additional information regarding its actions.</para>
+          </listitem>
+        </varlistentry>
+        
+        <varlistentry>
+          <term><option>--version</option></term>
+          <listitem>
+            <para>Prints the client version info.  This information
+              not only includes the version number of the client,
+              but als a listing of all repository access modules
+              that the client can use to access a Subversion
+              repository.</para>
+          </listitem>
+        </varlistentry>
+        
+        <varlistentry>
+          <term><option>--xml</option></term>
+          <listitem>
+            <para>Prints <command>svn log</command> output in xml
+              format.</para>
+          </listitem>
+        </varlistentry>
+        
+      </variablelist>
+
     </sect2>
     
     <sect2 id="svn-ch-8-sect-1.2">
@@ -143,6 +513,15 @@ Checksum: 8sfaU+5dqyOgkhuSdyxGrQ==
     <sect2 id="svn-ch-8-sect-1.15">
       <title><command>svn log</command></title>
       <para>###TODO Write this</para>
+
+        <para>###TODO finish this.  Note that by default, svn log will
+          provide log messages for a file all the way back to the
+          file's creation in Subversion--even if it's been moved or
+          copied.  If you use the --strict switch, Subversion will
+          print out log messages only for the current path in the
+          filesystem and will not provide log messages for the item
+          prior to its relocation.
+        </para>
     </sect2>
 
     <sect2 id="svn-ch-8-sect-1.16">
