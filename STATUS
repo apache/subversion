@@ -38,13 +38,6 @@ Candidate changes:
     Votes:
       +1: bliss, sussman
 
-  * r11224 (Issue 2070)
-    Exporting symlinks with use-commit times set fails.
-    Justification:
-      Showstopper when using symlinks.  One-liner.
-    Votes:
-      +1: bliss, lundblad, sussman
-
   * r11250, r11258
     Fix #2060, make ls work when path contains non-ASCII chars over ra_dav.
     Justification:
