@@ -14,7 +14,7 @@ Candidate changes:
     Justification:
       Shallow silly bug.
     Votes:
-      +1: bliss
+      +1: bliss, lundblad
 
   * r11143,11145
     Fix broken RPM build caused by changes to book Makefile right before
