@@ -322,7 +322,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
        "  If specified, PEGREV determines in which revision the target is "
        "first\n"
        "  looked up.\n"),
-    {'r', 'q', svn_cl__force_opt, SVN_CL__AUTH_OPTIONS,
+    {'r', 'q', 'N', svn_cl__force_opt, SVN_CL__AUTH_OPTIONS,
      svn_cl__config_dir_opt, svn_cl__native_eol_opt, 
      svn_cl__ignore_externals_opt} },
 

@@ -1588,6 +1588,12 @@ svn_client_revprop_list (apr_hash_t **props,
  * will use the standard eol marker.  Any other value will cause the
  * SVN_ERR_IO_UNKNOWN_EOL error to be returned.
  *
+ * If @a recurse is TRUE, export recursively.  Otherwise, export
+ * just the directory represented by @a from and its immediate
+ * non-directory children, but none of its child directories (if any).
+ * Also, if @a recurse is FALSE, the export will behave as if
+ * @a ignore_externals is TRUE.
+ *
  * All allocations are done in @a pool.
  */ 
 svn_error_t *
@@ -1598,6 +1604,7 @@ svn_client_export3 (svn_revnum_t *result_rev,
                     const svn_opt_revision_t *revision,
                     svn_boolean_t force, 
                     svn_boolean_t ignore_externals,
+                    svn_boolean_t recurse,
                     const char *native_eol,
                     svn_client_ctx_t *ctx,
                     apr_pool_t *pool);

@@ -214,6 +214,7 @@ copy_versioned_files (const char *from,
                       const char *to,
                       svn_opt_revision_t *revision,
                       svn_boolean_t force,
+                      svn_boolean_t recurse,
                       const char *native_eol,
                       svn_client_ctx_t *ctx,
                       apr_pool_t *pool)
@@ -301,12 +302,17 @@ copy_versioned_files (const char *from,
                 }
               else
                 {
-                  const char *new_from = svn_path_join (from, item, iterpool);
-                  const char *new_to = svn_path_join (to, item, iterpool);
+                  if (recurse)
+                    {
+                      const char *new_from = svn_path_join (from, item, 
+                                                            iterpool);
+                      const char *new_to = svn_path_join (to, item, iterpool);
                   
-                  SVN_ERR (copy_versioned_files (new_from, new_to, revision,
-                                                 force, native_eol, ctx,
-                                                 iterpool));
+                      SVN_ERR (copy_versioned_files (new_from, new_to, 
+                                                     revision, force, recurse,
+                                                     native_eol, ctx,
+                                                     iterpool));
+                    }
                 }
             }
           else if (*type == svn_node_file)
@@ -745,6 +751,7 @@ svn_client_export3 (svn_revnum_t *result_rev,
                     const svn_opt_revision_t *revision,
                     svn_boolean_t force, 
                     svn_boolean_t ignore_externals,
+                    svn_boolean_t recurse,
                     const char *native_eol,
                     svn_client_ctx_t *ctx,
                     apr_pool_t *pool)
@@ -852,7 +859,7 @@ svn_client_export3 (svn_revnum_t *result_rev,
                                       &reporter, &report_baton,
                                       revnum,
                                       "", /* no sub-target */
-                                      TRUE, /* recurse */
+                                      recurse,
                                       export_editor, edit_baton, pool));
 
           SVN_ERR (reporter->set_path (report_baton, "", revnum,
@@ -876,7 +883,7 @@ svn_client_export3 (svn_revnum_t *result_rev,
             SVN_ERR (open_root_internal
                      (to, force, ctx->notify_func, ctx->notify_baton, pool));
 
-          if (! ignore_externals)
+          if (! ignore_externals && recurse)
             SVN_ERR (svn_client__fetch_externals (eb->externals, TRUE, 
                                                   &use_sleep, ctx, pool));
         }
@@ -894,7 +901,7 @@ svn_client_export3 (svn_revnum_t *result_rev,
       
       /* just copy the contents of the working copy into the target path. */
       SVN_ERR (copy_versioned_files (from, to, &working_revision, force, 
-                                     native_eol, ctx, pool));
+                                     recurse, native_eol, ctx, pool));
     }
   
 
@@ -930,7 +937,8 @@ svn_client_export2 (svn_revnum_t *result_rev,
   peg_revision.kind = svn_opt_revision_unspecified;
 
   return svn_client_export3 (result_rev, from, to, &peg_revision,
-                             revision, force, FALSE, native_eol, ctx, pool);
+                             revision, force, FALSE, TRUE,
+                             native_eol, ctx, pool);
 }
 
   
