@@ -1,4 +1,4 @@
-%define apache_version 2.0.44-0.1
+%define apache_version 2.0.45-0.1
 %define neon_version 0.23.2
 %define apache_dir /usr
 # If you don't have 360+ MB of free disk space or don't want to run checks then
@@ -91,6 +91,10 @@ Summary: Tools for Subversion
 Tools for Subversion.
 
 %changelog
+* Fri Apr 04 2003 David Summers <david@summersoft.fay.ar.us> 0.18.1-5549
+- Updated to Apache 2.0.45.
+- Took out libsvn_auth as it is no longer needed or used.
+
 * Sat Mar 01 2003 David Summers <david@summersoft.fay.ar.us> 0.18.1-5173
 - Enabled RA_DAV checking.
   Now requires httpd package to build because of RA_DAV tests.
@@ -386,7 +390,6 @@ rm -rf $RPM_BUILD_ROOT
 /usr/bin/svnlook
 /usr/bin/svnserve
 /usr/bin/svnversion
-/usr/lib/libsvn_auth*so*
 /usr/lib/libsvn_client*so*
 /usr/lib/libsvn_delta*so*
 /usr/lib/libsvn_fs*so*
