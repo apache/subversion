@@ -103,21 +103,24 @@ void svn_cl__notify_func (void *baton,
   switch (action)
     {
     case svn_wc_notify_add:
-      return notify_added (baton, path);
+      notify_added (baton, path);
+      return;
 
     case svn_wc_notify_delete:
-      return notify_deleted (baton, path);
+      notify_deleted (baton, path);
+      return;
 
     case svn_wc_notify_restore:
-      return notify_restored (baton, path);
+      notify_restored (baton, path);
+      return;
 
     case svn_wc_notify_revert:
-      return notify_reverted (baton, path);
+      notify_reverted (baton, path);
+      return;
 
     default:
       break;
     }
-  return;
 }
 
 
