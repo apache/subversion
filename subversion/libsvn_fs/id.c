@@ -108,32 +108,12 @@ svn_fs_parse_id (const char *data,
   char *data_copy;
   char *dot;
 
-  /* Dup the ID data into POOL, if we have one, or just malloc a copy
-     it otherwise. */
-  if (pool)
-    {
-      data_copy = apr_pstrmemdup (pool, data, data_len);
-    }
-  else
-    {
-      data_copy = malloc (sizeof (*data_copy) * data_len + 1);
-      if (! data_copy)
-        abort (); /* couldn't malloc */
-      memcpy (data_copy, data, data_len);
-      data_copy[data_len] = 0;
-    }
-  
+  /* Dup the ID data into POOL.  Our returned ID will have references
+     into this memory. */
+  data_copy = apr_pstrmemdup (pool, data, data_len);
+
   /* Alloc a new svn_fs_id_t structure. */
-  if (pool)
-    {
-      id = apr_palloc (pool, sizeof (*id));
-    }
-  else
-    {
-      id = malloc (sizeof (*id));
-      if (! id)
-        abort (); /* couldn't malloc */
-    }
+  id = apr_palloc (pool, sizeof (*id));
 
   /* Now, we basically just need to "split" this data on `.'
      characters.  There should be exactly three pieces (around two
@@ -144,37 +124,24 @@ svn_fs_parse_id (const char *data,
   id->node_id = data_copy;
   dot = strchr (id->node_id, '.');
   if ((! dot) || (dot <= id->node_id))
-    goto cleanup;
+    return NULL;
   *dot = 0;
 
   /* Copy Id */
   id->copy_id = dot + 1;
   dot = strchr (id->copy_id, '.');
   if ((! dot) || (dot <= id->copy_id))
-    goto cleanup;
+    return NULL;
   *dot = 0;
   
   /* Txn Id */
   id->txn_id = dot + 1;
   dot = strchr (id->copy_id, '.');
   if (dot)
-    goto cleanup;
+    return NULL;
 
   /* Return our ID */
   return id;
-
- cleanup:
-
-  /* Don't bother cleaning up if we have a POOL ... this will happen
-     when someone else clears/destroys the pool. */
-  if (! pool)
-    {
-      if (id)
-        free (id);
-      if (data_copy)
-        free (data_copy);
-    }
-  return NULL;
 }
 
 
