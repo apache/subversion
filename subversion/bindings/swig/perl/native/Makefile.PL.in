@@ -86,8 +86,8 @@ sub MY::postamble {
    
    my $swig_command = "swig $flags -nopm -perl " .
                       "-I$swig_srcdir " .
-											"-I$swig_srcdir/perl/libsvn_swig_perl".
-											" -I$svnlib_srcdir/include" .
+                      "-I$swig_srcdir/perl/libsvn_swig_perl".
+                      " -I$svnlib_srcdir/include" .
                       $apr_cflags;
 
    my $swig_modules_command = join ('',
