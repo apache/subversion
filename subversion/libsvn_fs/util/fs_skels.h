@@ -19,7 +19,8 @@
 #ifndef SVN_LIBSVN_FS_FS_SKELS_H
 #define SVN_LIBSVN_FS_FS_SKELS_H
 
-#include <db.h>                 /* Berkeley DB interface */
+#define APU_WANT_DB
+#include <apu_want.h>
 
 #include <apr_pools.h>
 #include <apr_hash.h>

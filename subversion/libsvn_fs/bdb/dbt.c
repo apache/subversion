@@ -18,7 +18,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <apr_pools.h>
-#include <db.h>
+
+#define APU_WANT_DB
+#include <apu_want.h>
+
 #include "dbt.h"
 
 

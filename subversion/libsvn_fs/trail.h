@@ -18,7 +18,9 @@
 #ifndef SVN_LIBSVN_FS_TRAIL_H
 #define SVN_LIBSVN_FS_TRAIL_H
 
-#include <db.h>
+#define APU_WANT_DB
+#include <apu_want.h>
+
 #include <apr_pools.h>
 #include "svn_fs.h"
 

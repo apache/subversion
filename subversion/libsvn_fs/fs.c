@@ -19,7 +19,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>              /* for EINVAL */
-#include <db.h>
+
+#define APU_WANT_DB
+#include <apu_want.h>
 
 #include <apr_general.h>
 #include <apr_pools.h>

@@ -20,7 +20,10 @@
 
 #include <stdlib.h>
 #include <stdarg.h>
-#include <db.h>
+
+#define APU_WANT_DB
+#include <apu_want.h>
+
 #include <apr_strings.h>
 
 #include "svn_fs.h"
