@@ -1050,7 +1050,7 @@ do_diff (svnlook_ctxt_t *c, apr_pool_t *pool)
       SVN_ERR (svn_io_check_path (SVNLOOK_TMPDIR, &kind, pool));
       if (kind == svn_node_dir)
         SVN_ERR (svn_io_remove_dir (SVNLOOK_TMPDIR, pool));
-    }
+      }
   return SVN_NO_ERROR;
 }
 
@@ -1068,7 +1068,7 @@ do_pget (svnlook_ctxt_t *c,
   svn_string_t *prop;
   svn_node_kind_t kind;
   svn_stream_t *stdout_stream;
-  apr_size_t len = prop->len;
+  apr_size_t len;
   
   SVN_ERR (get_root (&root, c, pool));
   SVN_ERR (verify_path (&kind, root, path, pool));
@@ -1087,6 +1087,7 @@ do_pget (svnlook_ctxt_t *c,
      value or print a trailing newline here.  We just output the raw
      bytes of whatever's in the repository, as svnlook is more likely
      to be used for automated inspections. */
+  len = prop->len;
   SVN_ERR (svn_stream_write (stdout_stream, prop->data, &len));
 
   return SVN_NO_ERROR;
