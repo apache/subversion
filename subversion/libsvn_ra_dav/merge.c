@@ -251,7 +251,7 @@ static svn_error_t * handle_resource(merge_ctx_t *mc)
   return bump_resource(mc, relative, mc->vsn_url->data);
 }
 
-static int validate_element(ne_xml_elmid parent, ne_xml_elmid child)
+static int validate_element(void *userdata, ne_xml_elmid parent, ne_xml_elmid child)
 {
   if ((child == ELEM_collection || child == ELEM_baseline)
       && parent != ELEM_resourcetype) {

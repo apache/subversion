@@ -28,7 +28,7 @@ if [ ! -d apr ]; then
 fi
 
 # Make sure the Neon directory is present
-NEON_WANTED=0.15.3
+NEON_WANTED=0.17.0
 NEON_URL="http://www.webdav.org/neon/neon-${NEON_WANTED}.tar.gz"
 
 if [ ! -d neon ]; then
@@ -158,6 +158,9 @@ if [ -d apr ]; then
   echo "Creating config files for APR..."
   (cd apr; ./buildconf)  # this is apr's equivalent of autogen.sh
 fi
+
+echo "Creating config files for Neon..."
+(cd neon ; ./autogen.sh)
 
 # If we have a config.cache file, toss it if the configure script has
 # changed, or if we just built it for the first time.
