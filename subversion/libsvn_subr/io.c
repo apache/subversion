@@ -1254,7 +1254,7 @@ svn_io_run_diff3 (const char *dir,
       {
         const char *diff_cmd;
         svn_config_get (cfg, &diff_cmd,
-                        "helpers", "diff_cmd", SVN_CLIENT_DIFF);
+                        "helpers", "diff-cmd", SVN_CLIENT_DIFF);
         args[i++] = apr_pstrcat(pool, "--diff-program=", diff_cmd, NULL);
         ++nargs;
       }
