@@ -38,6 +38,7 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     self.zlib_path = None
     self.openssl_path = None
     self.junit_path = None
+    self.vsnet_version = '7.00'
     self.skip_sections = { 'mod_dav_svn': None,
                            'mod_authz_svn': None }
 
@@ -80,6 +81,16 @@ class WinGeneratorBase(gen_base.GeneratorBase):
         self.enable_nls = 1
       elif opt == '--enable-bdb-in-apr-util':
         self.configure_apr_util = 1
+      elif opt == '--vsnet-version':
+        if val == '2002' or re.match('7(\.\d+)?', val):
+          self.vsnet_version = '7.00'
+          sys.stderr.write('Generating for VS.NET 2002\n')
+        elif val == '2003' or re.match('8(\.\d+)?', val):
+          self.vsnet_version = '8.00'
+          sys.stderr.write('Generating for VS.NET 2003\n')
+        else:
+          sys.stderr.write('WARNING: Unknown VS.NET version "%s",'
+                           ' assumimg "%s"\n' % (val, self.vsnet_version))
 
   def __init__(self, fname, verfname, options, subdir):
     """

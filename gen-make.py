@@ -108,6 +108,10 @@ def _usage_exit():
   print
   print "  --enable-bdb-in-apr-util"
   print "           configure APR-Util to use Berkeley DB"
+  print
+  print "  --vsnet-version=VER"
+  print "           generate for VS.NET version VER (2002 or 2003)"
+  print "           [only valid in combination with '-t vcproj']"
   sys.exit(0)
 
 
@@ -138,7 +142,8 @@ if __name__ == '__main__':
                                 'enable-purify',
                                 'enable-quantify',
                                 'enable-nls',
-                                'enable-bdb-in-apr-util'
+                                'enable-bdb-in-apr-util',
+                                'vsnet-version=',
                                 ])
     if len(args) > 1:
       _usage_exit()
