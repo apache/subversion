@@ -23,22 +23,23 @@ higher priority items first.
 How do we do this?
 
 Let TL be an apr_array_header_t representing the target list, in the
-order the targets appeared on the command line.  Assume that no
-"../blah" paths are allowed in the targets.
+order the targets appeared on the command line.
 
-   1. Remove redundancies from the target list: all targets that are
+   1. Convert each path in TL to an absolute path.
+
+   2. Remove redundancies from the target list: all targets that are
       descendants of some other target are removed.
 
 
-   2. Find the longest common prefix ending with "/" for all the
+   3. Find the longest common prefix ending with "/" for all the
       targets.  Strip that prefix off all targets and save it for
       later.
 
-      (Kevin Pilch-Bisson has written code to help with 1 and 2, see
-      svn_path.c.)
+      (Kevin Pilch-Bisson has written code to help with 1, 2 and 3, see
+      libsvn_subr/target.c.)
 
 
-   3. Report the working copy state to the repository, to build a
+   4. Report the working copy state to the repository, to build a
       transaction TXN that reflects the state of the working copy _as
       necessary to update the requested targets_.  For example:
 
@@ -73,14 +74,14 @@ order the targets appeared on the command line.  Assume that no
       if the update won't affect it anyway.
 
 
-   4. Get an update editor, using the common prefix we saved earlier
+   5. Get an update editor, using the common prefix we saved earlier
       as the path argument, and pass TL too.
 
       /* TODO: interface change to svn_wc_get_update_editor: Take
          `apr_array_header_t *targets'. */
 
 
-   5. Drive the update editor:
+   6. Drive the update editor:
 
          a) Call set_target_revision (edit_baton);
 
