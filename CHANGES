@@ -1,3 +1,28 @@
+Version 1.0.2
+(15 April 2004, from /branches/1.0.x)
+http://svn.collab.net/repos/svn/tags/1.0.2
+
+ User-visible changes:
+ * fixed: segfault when remotely deleting svn:author property.
+ * fixed: mod_dav_svn accepting too many authors. (issue #1786)
+ * fixed: create runtime config files with native EOLs. (Issue #1802)
+ * fixed: recursive propset can corrupt .svn/entries (issue #1794)
+ * fixed: allow shared working copies [mostly working now] (issue #1509)
+ * fixed: mod_authz_svn should ignore uri on MERGE request (partial #1821)
+ * fixed: svnserve assertion failure on empty error messages
+ * fixed: commit/update memory leaks when working on many targets (issue #1635)
+ * fixed: don't display repos-paths or URLs with '\' on win32.
+ * new example script:  svnserve 'sgid' wrapper.
+ * minor book fixes, new 'best-practices' doc.
+
+ Developer-visible changes:
+ * fixed: deprecation warning from SWIG 1.3.20_
+ * fixed: broken win32 python-swig bindings compilation.
+ * fixed: bug in libsvn_fs changes-table change-folding code.
+ * fixed: perl bindings: wrap root->paths_changed, apply_txdelta return values
+ * added VC7 support and defines for including debug symbol files.
+
+
 Version 1.0.1
 (12 March 2004, from /branches/1.0.x)
 http://svn.collab.net/repos/svn/tags/1.0.1
