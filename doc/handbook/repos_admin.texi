@@ -349,7 +349,7 @@ repository's Berkeley DB files.
 @item
 Switch to the user who owns and manages the database.
 @item
-Run the command @command{db_recover -ve -h @var{repos}/db}, where
+Run the command @command{db_recover -v -h @var{repos}/db}, where
 @var{repos} is the repository's directory name.  You should see
 output like this:
 @example
@@ -383,7 +383,7 @@ logfile to log transactions; when the `current' logfile grows to 10
 megabytes, a new logfile is started, and the old one continues to
 exist.
 
-Thus, after a while, you may see a whole group of 10MB logfiles lying
+Thus, after a while, you may see a whole group of 1MB logfiles lying
 around the environment.  At this point, you can make a choice: if you
 leave every single logfile behind, it's guaranteed that
 @command{db_recover} will always be able to replay every single DB
@@ -407,12 +407,14 @@ excess logfiles.  (In the Subversion source tree, see
 This script also illustrates the safe way to perform a backup of the
 repository while it's still up and running: recursively copy the
 entire repository directory, then re-copy the logfiles listed by
-@samp{db_recover -l}.
+@samp{db_archive -l}.
 
 To start using a repository backup that you've restored, be sure to
-run @samp{db_recover -ve} command in the @file{db} area first.
+run @samp{db_recover -v} command in the @file{db} area first.
 This guarantees that any unfinished log transactions are fully played
-before the repository goes live again.
+before the repository goes live again.  (The @file{hot-backup.py}
+script does that for you during backup, so you can skip this step
+if you decide to use it.)
 
 Finally, note that Berkeley DB has a whole locking subsystem; in
 extremely intensive svn operations, we have seen situations where the
