@@ -39,20 +39,13 @@ dag_init_fs (void *fs_baton, trail_t *trail)
 {
   svn_fs_t *fs = fs_baton;
 
-  /* xbc FIXME: We're creating skels from constant data here. That
-     means the compiler is going to complain about discarding `const',
-     but I refuse to cast away the const, and I'm certainly not about
-     to go building skels by hand; the code is much clearer this
-     way. Maybe svn_fs__parse_skel should take a `const char*'
-     parameter after all.  */
-
   /* Create empty root directory with node revision 0.0:
      "nodes" : "0.0" -> "(fulltext [(dir ()) ()])" */
   {
-    static const char rep_skel[] = "(fulltext ((dir ()) ()))";
+    static char rep_skel[] = "(fulltext ((dir ()) ()))";
     SVN_ERR (svn_fs__put_rep (fs,
                               svn_fs_parse_id ("0.0", 3, trail->pool),
-                              svn_fs__parse_skel ((char *) rep_skel,
+                              svn_fs__parse_skel (rep_skel,
                                                   sizeof (rep_skel) - 1,
                                                   trail->pool),
                               trail->db_txn,
@@ -62,10 +55,10 @@ dag_init_fs (void *fs_baton, trail_t *trail)
   /* Link it into filesystem revision 0:
      "revisions" : 0 -> "(revision  3 0.0  ())" */
   {
-    static const char rev_skel[] = "(revision  3 0.0  ())";
+    static char rev_skel[] = "(revision  3 0.0  ())";
     svn_revnum_t rev = 0;
     SVN_ERR (svn_fs__put_rev (&rev, fs,
-                              svn_fs__parse_skel ((char *) rev_skel,
+                              svn_fs__parse_skel (rev_skel,
                                                   sizeof (rev_skel) - 1,
                                                   trail->pool),
                               trail->db_txn,
