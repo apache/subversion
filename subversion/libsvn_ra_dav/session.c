@@ -156,7 +156,7 @@ static svn_error_t *get_server_settings(const char **proxy_host,
 
   /* If there are defaults, use them, but only if the requested host
      is not one of the exceptions to the defaults. */
-  svn_config_get(cfg, &exceptions, "default", "no-http-proxy", NULL);
+  svn_config_get(cfg, &exceptions, "default", "http-proxy-exceptions", NULL);
   if ((! exceptions) || (! svn_cstring_match_glob_list(requested_host,
                                                        exceptions, pool)))
     {
