@@ -46,16 +46,10 @@ i386 OpenBSD 3.0-current:
          3.0-current, with a few hacks to the ac-helper files as gnu
          patch and gnu diff is not currently available as ports."
 
-i386-unknown-freebsd4.2:
+i386-unknown-freebsd4.5:
      Client:     Build OK, Check OK
      Filesystem: Build OK, Check OK
-     Last Check: 22 May 2001, revision ???
-     Tester:     Ben Collins-Sussman <sussman@collab.net>
-
-i386-unknown-freebsd4.3:
-     Client:     Build OK, Check OK
-     Filesystem: Build OK, Check OK
-     Last Check: 7 June 2001, revision ???
+     Last Check: 15 Feb 2002, revision 1302
      Tester:     Ben Collins-Sussman <sussman@collab.net>
 
 i386-unknown-freebsd4.4:
@@ -63,6 +57,27 @@ i386-unknown-freebsd4.4:
      Filesystem: Build OK, Check OK
      Last Check: 7 November 2001, revision ???
      Tester:     Ben Collins-Sussman <sussman@collab.net>
+     Notes:
+     -- See the freebsd4.5 entry; conjecture that the rev 1302
+        distribution works on 4.4 as well. 
+
+i386-unknown-freebsd4.3:
+     Client:     Build OK, Check OK
+     Filesystem: Build OK, Check OK
+     Last Check: 7 June 2001, revision ???
+     Tester:     Ben Collins-Sussman <sussman@collab.net>
+     Notes:
+     -- See the freebsd4.5 entry; conjecture that the rev 1302
+        distribution works on 4.3 as well. 
+
+i386-unknown-freebsd4.2:
+     Client:     Build OK, Check OK
+     Filesystem: Build OK, Check OK
+     Last Check: 22 May 2001, revision ???
+     Tester:     Ben Collins-Sussman <sussman@collab.net>
+     Notes:
+     -- See the freebsd4.5 entry; conjecture that the rev 1302
+        distribution works on 4.2 as well. 
 
 i686-pc-cygwin (cygwin 1.3.6 on Win2K):
      Client:     Build OK, Check OK
