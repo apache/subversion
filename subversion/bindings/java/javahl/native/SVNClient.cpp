@@ -39,6 +39,7 @@
 #include "../include/org_tigris_subversion_javahl_StatusKind.h"
 #include "../include/org_tigris_subversion_javahl_Revision.h"
 #include "../include/org_tigris_subversion_javahl_NodeKind.h"
+#include "../include/org_tigris_subversion_javahl_ScheduleKind.h"
 #include "JNIStringHolder.h"
 #include <vector>
 #include <iostream>
@@ -1468,7 +1469,7 @@ jobject SVNClient::createJavaStatus(const char *path, svn_wc_status_t *status)
             {
                 return NULL;
             }
-            jNodeKind = entry->kind;
+            jNodeKind = mapNodeKind(entry->kind);
             jRevision = entry->revision;
             jLastChangedRevision = entry->cmt_rev;
             jLastChangedDate = entry->cmt_date;
@@ -1922,7 +1923,7 @@ jobject SVNClient::createJavaDirEntry(const char *path, svn_dirent_t *dirent)
     {
         return NULL;
     }
-    jint jNodeKind = dirent->kind;
+    jint jNodeKind = mapNodeKind(dirent->kind);
     jlong jSize = dirent->size;
     jboolean jHasProps = (dirent->has_props? JNI_TRUE : JNI_FALSE);
     jlong jLastChangedRevision = dirent->created_rev;
@@ -2200,4 +2201,231 @@ svn_error_t * SVNClient::checkCancel(void *cancelBaton)
             _("Operation canceled"));
     else
         return SVN_NO_ERROR;
+}
+/**
+ * get information about a file or directory
+ */
+jobject SVNClient::info(const char *path)
+{
+    Pool requestPool;
+    svn_wc_adm_access_t *adm_access;
+    const svn_wc_entry_t *entry;
+
+    if(path == NULL)
+    {
+        JNIUtil::throwNullPointerException("path");
+        return NULL;
+    }
+    apr_pool_t * apr_pool = requestPool.pool ();
+    const char *intpath = svn_path_internal_style (path, apr_pool);
+    
+    svn_error_t *err = svn_wc_adm_probe_open2(&adm_access, NULL, intpath, 
+        FALSE, 0, apr_pool);
+    if(err != NULL)
+    {
+        JNIUtil::handleSVNError(err);
+        return NULL;
+    }
+    err = svn_wc_entry(&entry, intpath, adm_access, FALSE, apr_pool);
+    if(err != NULL)
+    {
+        JNIUtil::handleSVNError(err);
+        return NULL;
+    }
+    return createJavaInfo(entry);
+}
+jobject SVNClient::createJavaInfo(const svn_wc_entry_t *entry)
+{
+    if(entry == NULL)
+        return NULL;
+
+    JNIEnv *env = JNIUtil::getEnv();
+
+    jclass clazz = env->FindClass(JAVA_PACKAGE"/Info");
+    if(JNIUtil::isJavaExceptionThrown())
+    {
+        return NULL;
+    }
+
+    static jmethodID mid = 0;
+    if(mid == 0)
+    {
+        mid = env->GetMethodID(clazz, "<init>", 
+            "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;"
+            "Ljava/lang/String;IILjava/lang/String;JJLjava/util/Date;"
+            "Ljava/util/Date;Ljava/util/Date;ZZZZJLjava/lang/String;)V");
+        if(JNIUtil::isJavaExceptionThrown())
+        {
+            return NULL;
+        }
+    }
+
+    jstring jName = JNIUtil::makeJString(entry->name);
+    if(JNIUtil::isJavaExceptionThrown())
+    {
+        return NULL;
+    }
+    jstring jUrl = JNIUtil::makeJString(entry->url);
+    if(JNIUtil::isJavaExceptionThrown())
+    {
+        return NULL;
+    }
+    jstring jUuid = JNIUtil::makeJString(entry->uuid);
+    if(JNIUtil::isJavaExceptionThrown())
+    {
+        return NULL;
+    }
+    jstring jRepository = JNIUtil::makeJString(entry->repos);
+    if(JNIUtil::isJavaExceptionThrown())
+    {
+        return NULL;
+    }
+    jint jSchedule = mapScheduleKind(entry->schedule);
+    jint jNodeKind = mapNodeKind(entry->kind);
+    jstring jAuthor = JNIUtil::makeJString(entry->cmt_author);
+    if(JNIUtil::isJavaExceptionThrown())
+    {
+        return NULL;
+    }
+    jlong jRevision = entry->revision;
+    jlong jLastChangedRevision = entry->cmt_rev;
+    jobject jLastChangedDate = JNIUtil::createDate(entry->cmt_date);
+    if(JNIUtil::isJavaExceptionThrown())
+    {
+        return NULL;
+    }
+    jobject jLastDateTextUpdate = JNIUtil::createDate(entry->text_time);
+    if(JNIUtil::isJavaExceptionThrown())
+    {
+        return NULL;
+    }
+    jobject jLastDatePropsUpdate = JNIUtil::createDate(entry->prop_time);
+    if(JNIUtil::isJavaExceptionThrown())
+    {
+        return NULL;
+    }
+    jboolean jCopied = entry->copied ? JNI_TRUE : JNI_FALSE;
+    jboolean jDeleted = entry->deleted ? JNI_TRUE : JNI_FALSE;
+    jboolean jAbsent = entry->absent ? JNI_TRUE : JNI_FALSE;
+    jboolean jIncomplete = entry->incomplete ? JNI_TRUE : JNI_FALSE;
+    jlong jCopyRev = entry->copyfrom_rev;
+    jstring jCopyUrl = JNIUtil::makeJString(entry->copyfrom_url);
+    if(JNIUtil::isJavaExceptionThrown())
+    {
+        return NULL;
+    }
+
+    jobject ret = env->NewObject(clazz, mid, jName, jUrl, jUuid, jRepository,
+        jSchedule, jNodeKind, jAuthor, jRevision, jLastChangedRevision, 
+        jLastChangedDate, jLastDateTextUpdate, jLastDatePropsUpdate, jCopied,
+        jDeleted, jAbsent, jIncomplete, jCopyRev, jCopyUrl);
+    if(JNIUtil::isJavaExceptionThrown())
+    {
+        return NULL;
+    }
+
+    env->DeleteLocalRef(clazz);
+    if(JNIUtil::isJavaExceptionThrown())
+    {
+        return NULL;
+    }
+
+    env->DeleteLocalRef(jName);
+    if(JNIUtil::isJavaExceptionThrown())
+    {
+        return NULL;
+    }
+
+    env->DeleteLocalRef(jUrl);
+    if(JNIUtil::isJavaExceptionThrown())
+    {
+        return NULL;
+    }
+
+    env->DeleteLocalRef(jUuid);
+    if(JNIUtil::isJavaExceptionThrown())
+    {
+        return NULL;
+    }
+
+    env->DeleteLocalRef(jRepository);
+    if(JNIUtil::isJavaExceptionThrown())
+    {
+        return NULL;
+    }
+
+    env->DeleteLocalRef(jAuthor);
+    if(JNIUtil::isJavaExceptionThrown())
+    {
+        return NULL;
+    }
+
+    env->DeleteLocalRef(jLastChangedDate);
+    if(JNIUtil::isJavaExceptionThrown())
+    {
+        return NULL;
+    }
+
+    env->DeleteLocalRef(jLastDateTextUpdate);
+    if(JNIUtil::isJavaExceptionThrown())
+    {
+        return NULL;
+    }
+
+    env->DeleteLocalRef(jLastDatePropsUpdate);
+    if(JNIUtil::isJavaExceptionThrown())
+    {
+        return NULL;
+    }
+
+    env->DeleteLocalRef(jCopyUrl);
+    if(JNIUtil::isJavaExceptionThrown())
+    {
+        return NULL;
+    }
+
+    return ret;
+}
+
+jint SVNClient::mapNodeKind(int nodeKind)
+{
+    switch(nodeKind)
+    {
+    case svn_node_none:
+        return org_tigris_subversion_javahl_NodeKind_none;
+    case svn_node_file:
+        return org_tigris_subversion_javahl_NodeKind_file;
+    case svn_node_dir:
+        return org_tigris_subversion_javahl_NodeKind_dir;
+    case svn_node_unknown:
+        return org_tigris_subversion_javahl_NodeKind_unknown;
+    case svn_node_special:
+        return org_tigris_subversion_javahl_NodeKind_special;
+    default:
+        return org_tigris_subversion_javahl_NodeKind_unknown;
+    }
+}
+jint SVNClient::mapScheduleKind(int schedule)
+{
+    switch(schedule)
+    {
+    /** Nothing special here */
+    case svn_wc_schedule_normal:
+        return org_tigris_subversion_javahl_ScheduleKind_normal;
+
+    /** Slated for addition */
+    case svn_wc_schedule_add:
+        return org_tigris_subversion_javahl_ScheduleKind_add;
+
+    /** Slated for deletion */
+    case svn_wc_schedule_delete:
+        return org_tigris_subversion_javahl_ScheduleKind_delete;
+
+    /** Slated for replacement (delete + add) */
+    case svn_wc_schedule_replace:
+        return org_tigris_subversion_javahl_ScheduleKind_replace;
+
+    default:
+        return org_tigris_subversion_javahl_ScheduleKind_normal;
+    }
 }

@@ -698,4 +698,18 @@ public class SVNClientSynchronized implements SVNClientInterface
         worker.cancelOperation();
     }
 
+    /**
+     * Retrieves the working copy information for an item
+     * @param path  path of the item
+     * @return      the information object
+     * @throws ClientException
+     */
+    public Info info(String path) throws ClientException
+    {
+        synchronized(clazz)
+        {
+            return worker.info(path);
+        }
+    }
+
 }

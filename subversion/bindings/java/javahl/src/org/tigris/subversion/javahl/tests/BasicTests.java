@@ -1245,4 +1245,21 @@ public class BasicTests extends SVNTests
         // test the working copy status
         thisTest.checkStatus();
     }
+
+    /**
+     * test the basis SVNClient.info functionality
+     * @throws Throwable
+     */
+    public void testBasicInfo() throws Throwable
+    {
+        // create the working copy
+        OneTest thisTest = new OneTest();
+        Info info = client.info(thisTest.getWCPath()+"/A/mu");
+        assertEquals("wrong revision from info", 1,
+                info.getLastChangedRevision());
+        assertEquals("wrong schedule kind from info", ScheduleKind.normal,
+                info.getSchedule());
+        assertEquals("wrong node kind from info", NodeKind.file,
+                info.getNodeKind());
+    }
 }
