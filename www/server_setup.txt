@@ -1,8 +1,26 @@
+<h1>Subversion Server Setup</h1>
+
+<p>
+
+This page describes how to install the Subversion server (which
+involves installing Apache 2 with mod_dav + mod_dav_svn), how to
+create a repository, and how to import some data.  The server only
+works under Unix right now, though patches for other OS's are welcome.
+If you try it under Windows, try NT, not the 9x series -- Berkeley DB
+3 (and Apache?) have known issues under 95 and 98.
+
+<p>
+
+<i>Note: this is the same document that used to be called
+<tt>dav_setup.txt</tt> notes; all this will eventually be fleshed out
+and moved into the master documentation, of course.</i>
+
+<p>
+
+<plaintext>
 
                         Subversion Server HOWTO
                         =======================
-            installing Apache + mod_dav + mod_dav_svn on Unix
-
 
 1.  Checkout the "httpd-2.0" cvs module from apache.org.  Put it
     whereever you wish;  it's an independent project.

@@ -14,7 +14,7 @@
 rather than an unpacked distribution.)
 
 (Also, if you are trying to set up a subversion server, also look at
-notes/dav_setup.txt for instructions on compiling and installing 
+www/server_setup.html for instructions on compiling and installing 
 Apache 2.0 and mod_dav_svn).
 
 Subversion installs using the usual GNU procedure:
@@ -51,6 +51,8 @@ to use -jN, use the following instead:
    $ make -jN local-all
    $ make check
    # make install
+
+(See www/server_setup.html for how to set up the Subversion server.)
 
 
 PREREQUISITES:
