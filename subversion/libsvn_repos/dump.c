@@ -262,7 +262,7 @@ dump_node (svn_fs_root_t *fs_root,
 
   /* This is the last header before we dump the content. */
   SVN_ERR (svn_stream_printf (stream, pool,
-                              SVN_REPOS_DUMPFILE_NODE_CONTENT_LENGTH 
+                              SVN_REPOS_DUMPFILE_CONTENT_LENGTH 
                               ": %" APR_SIZE_T_FMT "\n\n", content_length));
 
   /* Dump property content. */
@@ -562,7 +562,7 @@ write_revision_record (svn_stream_t *stream,
                               SVN_REPOS_DUMPFILE_REVISION_NUMBER 
                               ": %" SVN_REVNUM_T_FMT "\n", rev));
   SVN_ERR (svn_stream_printf (stream, pool,
-                              SVN_REPOS_DUMPFILE_REVISION_CONTENT_LENGTH
+                              SVN_REPOS_DUMPFILE_CONTENT_LENGTH
                               ": %" APR_SIZE_T_FMT "\n\n",
                               encoded_prophash->len));
   
