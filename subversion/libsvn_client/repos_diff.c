@@ -99,7 +99,9 @@ struct file_baton {
   apr_file_t *file_start_revision;
 
   /* The path and APR file handle to the temporary file that contains the
-     second repository version */
+     second repository version.  These fields are set when processing
+     textdelta and file deletion, and will be NULL if there's no
+     textual difference between the two revisions. */
   svn_stringbuf_t *path_end_revision;
   apr_file_t *file_end_revision;
 
@@ -571,7 +573,13 @@ close_file (void *file_baton)
 {
   struct file_baton *b = file_baton;
 
-  SVN_ERR (run_diff_cmd (b));
+  /* Maybe only the properties changed, not the text content.  In that
+     case, no difference is reported, and no need to run diff.
+     ### todo: of course, if some day we have an extended diff format
+     that shows property differences, then there will be appropriate
+     changes to the file_baton, and probably more code here.  */
+  if (b->path_end_revision)
+    SVN_ERR (run_diff_cmd (b));
 
   svn_pool_destroy (b->pool);
 

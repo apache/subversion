@@ -621,6 +621,33 @@ def diff_pure_repository_update_a_file(sbox):
 
   return 0
 
+# test 10
+def diff_only_property_change(sbox):
+  "diff when property was changed but text was not"
+
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
+
+  current_dir = os.getcwd();
+  os.chdir(sbox.wc_dir);
+
+  svntest.main.run_svn(None, 'propset', 'svn:eol-style', 'none', "iota")
+  svntest.main.run_svn(None, 'ci', '-m', 'empty-msg')
+
+  result = 0
+
+  if os.system(svntest.main.svn_binary + " diff -r1:2"):
+    result = 1
+
+  if not result and os.system(svntest.main.svn_binary + " diff -r2:1"):
+    result = 1
+
+  os.chdir(current_dir)
+  return result
+
+
 
 ########################################################################
 # Run the tests
@@ -636,8 +663,9 @@ test_list = [ None,
               diff_non_recursive,
               diff_repo_subset,
               diff_non_version_controlled_file,
-              diff_pure_repository_update_a_file
-             ]
+              diff_pure_repository_update_a_file,
+              diff_only_property_change
+              ]
 
 if __name__ == '__main__':
   svntest.main.run_tests(test_list)
