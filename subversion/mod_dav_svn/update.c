@@ -596,7 +596,7 @@ static svn_error_t * upd_apply_textdelta(void *file_baton,
 
   file->base_checksum = apr_pstrdup(file->pool, base_checksum);
   file->text_changed = TRUE;
-  *handler = svn_delta_null_window_handler;
+  *handler = svn_delta_noop_window_handler;
 
   return SVN_NO_ERROR;
 }
