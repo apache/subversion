@@ -1,6 +1,34 @@
 If you are contributing code to the Subversion project, please read
 this first.
 
+
+Building from a working copy
+============================
+
+Unlike a packaged distribution, the Subversion working tree does not
+contain a `configure' script nor any other of the generated files
+normally used in configuration and building.  You have to regenerate
+them inside your working copy first, then configure, and then build.
+So, first run
+
+   ./autogen.sh
+
+which invokes `autoheader', `automake', `aclocal', and `autoconf' (so
+make sure you have those tools installed).  Afterwards, do
+
+   ./configure
+   make
+
+to build Subversion.
+
+
+Coding
+================================
+
+To understand how things work, read doc/svn-design.{texi,info,ps,pdf},
+and read the header files, which tend to have thoroughly-commented
+data structures.
+
 We're using ANSI C, and following the GNU coding standards.  Emacs
 users can just load svn-dev.el to get the right indentation behavior
 (most source files here will load it automatically, if
