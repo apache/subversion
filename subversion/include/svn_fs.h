@@ -47,7 +47,10 @@ typedef struct svn_fs_t svn_fs_t;
 /** Filesystem configuration options. */
 #define SVN_FS_CONFIG_BDB_TXN_NOSYNC            "bdb-txn-nosync"
 #define SVN_FS_CONFIG_BDB_LOG_AUTOREMOVE        "bdb-log-autoremove"
-#define SVN_FS_CONFIG_FSAP_NAME                 "fsap-name"
+#define SVN_FS_CONFIG_FS_TYPE                   "fs-type"
+
+#define SVN_FS_TYPE_BDB                         "bdb"
+#define SVN_FS_TYPE_FSFS                        "fsfs"
 
 
 /** The type of a warning callback function.  @a baton is the value specified
@@ -88,16 +91,16 @@ void svn_fs_set_warning_func (svn_fs_t *fs,
  * pool's. It's a good idea to allocate @a fs_config from @a pool or
  * one of its ancestors.
  *
- * If @a fs_config contains a value for @c SVN_FS_CONFIG_FSAP_NAME,
- * that value determines the filesystem abstract provider used for the
- * new filesystem.  Currently defined values are:
+ * If @a fs_config contains a value for @c SVN_FS_CONFIG_FS_TYPE, that
+ * value determines the filesystem type for the new filesystem.
+ * Currently defined values are:
  *
- *   "base"  Berkeley-DB implementation (perhaps other DBs later)
- *   "fsfs"  Native-filesystem implementation
+ *   SVN_FS_TYPE_BDB   Berkeley-DB implementation
+ *   SVN_FS_TYPE_FSFS  Native-filesystem implementation
  *
- * Otherwise, the base abstract provider is assumed.  Once the
- * filesystem is created, its type will be recorded so that other
- * functions will know how to operate on it.
+ * Otherwise, the BDB filesystem type is assumed.  Once the filesystem
+ * is created, its type will be recorded so that other functions will
+ * know how to operate on it.
  */
 svn_error_t *svn_fs_create (svn_fs_t **fs_p, const char *path,
                             apr_hash_t *fs_config, apr_pool_t *pool);

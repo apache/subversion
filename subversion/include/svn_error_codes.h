@@ -491,6 +491,10 @@ SVN_ERROR_START
               SVN_ERR_FS_CATEGORY_START + 32,
               "Transaction is not dead")
 
+  SVN_ERRDEF (SVN_ERR_FS_UNKNOWN_FS_TYPE,
+              SVN_ERR_FS_CATEGORY_START + 33,
+              "Unknown FS type")
+
   /* repos errors */
 
   SVN_ERRDEF (SVN_ERR_REPOS_LOCKED,

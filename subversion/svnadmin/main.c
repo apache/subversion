@@ -375,20 +375,9 @@ subcommand_create (apr_getopt_t *os, void *baton, apr_pool_t *pool)
                 (opt_state->bdb_log_keep ? "0" : "1"));
 
   if (opt_state->fs_type)
-    {
-      if (strcmp (opt_state->fs_type, "fsfs") == 0)
-        apr_hash_set (fs_config, SVN_FS_CONFIG_FSAP_NAME,
-                      APR_HASH_KEY_STRING,
-                      "fsfs");
-      else if (strcmp (opt_state->fs_type, "bdb") == 0)
-        apr_hash_set (fs_config, SVN_FS_CONFIG_FSAP_NAME,
-                      APR_HASH_KEY_STRING,
-                      "base");
-      else
-        return svn_error_createf (SVN_ERR_CL_ARG_PARSING_ERROR, NULL, 
-                                  _("Unrecognized FS type '%s'"),
-                                  opt_state->fs_type);
-    }
+    apr_hash_set (fs_config, SVN_FS_CONFIG_FS_TYPE,
+                  APR_HASH_KEY_STRING,
+                  opt_state->fs_type);
 
   SVN_ERR (svn_config_get_config (&config, opt_state->config_dir, pool));
   SVN_ERR (svn_repos_create (&repos, opt_state->repository_path,
