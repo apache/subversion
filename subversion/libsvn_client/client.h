@@ -205,7 +205,7 @@ svn_client__get_diff_editor (svn_stringbuf_t *target,
                              svn_ra_plugin_t *ra_lib,
                              void *ra_session, 
                              svn_revnum_t revision,
-                             const svn_delta_edit_fns_t **editor,
+                             const svn_delta_editor_t **editor,
                              void **edit_baton,
                              apr_pool_t *pool);
 
