@@ -232,15 +232,41 @@ static svn_error_t *readbuf_read(svn_ra_svn_conn_t *conn,
 
 static svn_error_t *readbuf_skip_leading_garbage(svn_ra_svn_conn_t *conn)
 {
+  char buf[256];  /* Must be smaller than sizeof(conn->read_buf) - 2. */
+  const char *p, *end;
+  apr_size_t len;
+  enum { NOTHING, LPAREN, WHITESPACE } state = NOTHING;
+
+  assert(conn->read_ptr == conn->read_end);
   while (1)
     {
-      if (conn->read_ptr == conn->read_end)
-        SVN_ERR(readbuf_fill(conn));
-      while (conn->read_ptr < conn->read_end && *conn->read_ptr != '(')
-        conn->read_ptr++;
-      if (conn->read_ptr < conn->read_end)
+      /* Read some data directly from the connection input source. */
+      len = sizeof(buf);
+      SVN_ERR(readbuf_input(conn, buf, &len));
+      end = buf + len;
+
+      /* Scan the data for '(' <ws>* <digit> with a simple state machine. */
+      for (p = buf; p < end; p++)
+        {
+          if (state == WHITESPACE && apr_isdigit(*p))
+            break;
+          if (state != NOTHING && svn_iswhitespace(*p))
+            state = WHITESPACE;
+          else
+            state = (*p == '(') ? LPAREN : NOTHING;
+        }
+      if (p < end)
         break;
     }
+
+  /* p now points to the first digit of the greeting.  Fake up the '('
+   * and whitespace character, and then copy the digit and remaining
+   * buffered data into the read buffer. */
+  conn->read_buf[0] = '(';
+  conn->read_buf[1] = ' ';
+  memcpy(conn->read_buf + 2, p, end - p);
+  conn->read_ptr = conn->read_buf;
+  conn->read_end = conn->read_buf + 2 + (end - p);
   return SVN_NO_ERROR;
 }
 

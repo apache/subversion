@@ -176,12 +176,11 @@ svn_error_t *svn_ra_svn_read_item(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                   svn_ra_svn_item_t **item);
 
 /** Scan data on @c conn until we find something which looks like the
- * beginning of an svn server greeting.  As currently implemented,
- * that just means looking for a '('; a more sophisticated
- * implementation might look for '(' followed by whitespace followed
- * by a digit.  This function is appropriate for beginning a client
- * connection opened in tunnel mode, since people's dotfiles sometimes
- * write output to stdout.
+ * beginning of an svn server greeting (an open paren followed by some
+ * amount of whitespace followed by a digit).  This function is
+ * appropriate for beginning a client connection opened in tunnel
+ * mode, since people's dotfiles sometimes write output to stdout.  It
+ * may only be called at the beginning of a client connection.
  */
 svn_error_t *svn_ra_svn_skip_leading_garbage(svn_ra_svn_conn_t *conn,
                                              apr_pool_t *pool);
