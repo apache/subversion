@@ -93,12 +93,12 @@ svn_client_update (const svn_delta_edit_fns_t *before_editor,
 
 
 svn_error_t *
-svn_client_add (svn_string_t *file,
+svn_client_add (svn_string_t *path,
                 apr_pool_t *pool);
 
 
 svn_error_t *
-svn_client_delete (svn_string_t *file,
+svn_client_delete (svn_string_t *path,
                    svn_boolean_t force,
                    apr_pool_t *pool);
 

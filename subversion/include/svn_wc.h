@@ -265,6 +265,12 @@ svn_error_t *svn_wc_copy (svn_string_t *src,
 svn_error_t *svn_wc_delete_file (svn_string_t *file,
                                  apr_pool_t *pool);
 
+/* Add an entry for DIR, and create an administrative directory for
+   it.  Does not check that DIR exists on disk; caller should take
+   care of that, if it cares. */
+svn_error_t *svn_wc_add_directory (svn_string_t *dir,
+                                   apr_pool_t *pool);
+
 /* Add an entry for FILE.  Does not check that FILE exists on disk;
    caller should take care of that, if it cares. */
 svn_error_t *svn_wc_add_file (svn_string_t *file,

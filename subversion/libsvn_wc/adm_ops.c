@@ -162,22 +162,46 @@ svn_error_t *
 svn_wc_delete_file (svn_string_t *file, apr_pool_t *pool)
 {
   svn_string_t *dir, *basename;
-  svn_error_t *err;
 
   svn_path_split (file, &dir, &basename, svn_path_local_style, pool);
 
-  err = svn_wc__entry_fold_sync_intelligently (dir,
-                                               basename,
-                                               SVN_INVALID_REVNUM,
-                                               svn_node_file,
-                                               SVN_WC_ENTRY_DELETED,
-                                               0,
-                                               0,
-                                               pool,
-                                               NULL,
-                                               NULL);
-  if (err)
-    return err;
+  SVN_ERR (svn_wc__entry_fold_sync_intelligently 
+           (dir, basename, SVN_INVALID_REVNUM, svn_node_file,
+            SVN_WC_ENTRY_DELETED, 0, 0, pool, NULL, NULL));
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc_add_directory (svn_string_t *dir, apr_pool_t *pool)
+{
+  svn_string_t *parent_dir, *basename;
+  svn_wc_entry_t *entry;
+  svn_string_t *ancestor_path;
+
+  svn_path_split (dir, &parent_dir, &basename, svn_path_local_style, pool);
+
+  /* Get the entry for this directory's parent.  We need to snatch the
+     ancestor path out of there. */
+  if (svn_path_is_empty (parent_dir, svn_path_local_style))
+    parent_dir = svn_string_create (".", pool);
+  SVN_ERR (svn_wc_entry (&entry, parent_dir, pool));
+  
+  /* Derive the ancestor path for our new addition here. */
+  ancestor_path = svn_string_dup (entry->ancestor, pool);
+  svn_path_add_component (ancestor_path, basename, svn_path_repos_style);
+  
+  /* Make sure this new directory has an admistrative subdirectory
+     created inside of it */
+  SVN_ERR (svn_wc__ensure_adm (dir, ancestor_path, 0, pool));
+
+  /* And finally, add the entry for this directory to the parent_dir's
+     entries file, marking it for addition. */
+  SVN_ERR (svn_wc__entry_fold_sync_intelligently 
+           (parent_dir, basename, 0, svn_node_dir, SVN_WC_ENTRY_ADDED,
+            0, 0, pool, NULL, NULL));
+
 
   return SVN_NO_ERROR;
 }
@@ -187,22 +211,12 @@ svn_error_t *
 svn_wc_add_file (svn_string_t *file, apr_pool_t *pool)
 {
   svn_string_t *dir, *basename;
-  svn_error_t *err;
 
   svn_path_split (file, &dir, &basename, svn_path_local_style, pool);
 
-  err = svn_wc__entry_fold_sync_intelligently (dir,
-                                               basename,
-                                               0,
-                                               svn_node_file,
-                                               SVN_WC_ENTRY_ADDED,
-                                               0,
-                                               0,
-                                               pool,
-                                               NULL,
-                                               NULL);
-  if (err)
-    return err;
+  SVN_ERR (svn_wc__entry_fold_sync_intelligently 
+           (dir, basename, 0, svn_node_file, SVN_WC_ENTRY_ADDED,
+            0, 0, pool, NULL, NULL));
 
   return SVN_NO_ERROR;
 }
