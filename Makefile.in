@@ -455,8 +455,8 @@ doc-design: doc-design-info doc-design-html doc-design-txt
 
 # Build all docs of a certain type.
 doc-all-html: doc-design-html doc-misc-docs-html
-doc-all-pdf: doc-design-pdf dock-misc-docs-pdf
-doc-all-ps: doc-design-ps dock-misc-docs-ps
+doc-all-pdf: doc-design-pdf doc-misc-docs-pdf
+doc-all-ps: doc-design-ps doc-misc-docs-ps
 doc-all-info: doc-design-info
 
 # Different outputs for the 'design' document, written in texinfo.
@@ -471,11 +471,11 @@ doc-design-pdf: doc/programmer/design/svn-design.pdf
 # Different outputs for the misc docs.
 # Assumes you have {xsltproc, fop, stylesheets} installed.
 doc-misc-docs-html:
-	cd ${BOOK_TOP} && $(MAKE) misc-docs-html
+	cd $(top_srcdir)/doc && $(MAKE) misc-docs-html
 doc-misc-docs-pdf:
-	cd ${BOOK_TOP} && $(MAKE) misc-docs-pdf
+	cd $(top_srcdir)/doc && $(MAKE) misc-docs-pdf
 doc-misc-docs-ps:
-	cd ${BOOK_TOP} && $(MAKE) misc-docs-ps
+	cd $(top_srcdir)/doc && $(MAKE) misc-docs-ps
 
 
 doc-clean:
