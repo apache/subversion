@@ -37,6 +37,7 @@ svn_cl__print_file_diff (svn_string_t *path,
   svn_error_t *err;
   svn_string_t *pristine_copy_path;
   const char *args[5];
+  apr_os_file_t stdout_fileno = STDOUT_FILENO;
 
   apr_file_t *outhandle = NULL;
 
@@ -49,7 +50,7 @@ svn_cl__print_file_diff (svn_string_t *path,
 
   /* Get an apr_file_t representing stdout, which is where we'll have
      the diff program print to. */
-  status = apr_put_os_file (&outhandle, (apr_os_file_t *) STDOUT_FILENO, pool);
+  status = apr_put_os_file (&outhandle, &stdout_fileno, pool);
   if (status)
     return svn_error_create (status, 0, NULL, pool,
                              "error: can't open handle to stdout");
