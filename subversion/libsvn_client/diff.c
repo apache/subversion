@@ -33,6 +33,7 @@
 #include "svn_path.h"
 #include "svn_test.h"
 #include "svn_io.h"
+#include "svn_utf.h"
 #include "svn_pools.h"
 #include "client.h"
 #include <assert.h>
@@ -54,7 +55,7 @@ display_prop_diffs (const apr_array_header_t *propchanges,
 {
   int i;
 
-  svn_io_file_printf (file, "\nProperty changes on: %s\n", path);
+  SVN_ERR (svn_io_file_printf (file, "\nProperty changes on: %s\n", path));
   apr_file_printf (file, 
      "___________________________________________________________________\n");
 
@@ -71,13 +72,38 @@ display_prop_diffs (const apr_array_header_t *propchanges,
       else
         original_value = NULL;
       
-      svn_io_file_printf (file, "Name: %s\n", propchange->name);
+      SVN_ERR (svn_io_file_printf (file, "Name: %s\n", propchange->name));
 
-      if (original_value != NULL)
-        apr_file_printf (file, "   - %s\n", original_value->data);
+      /* For now, we have a rather simple heuristic: if this is an
+         "svn:" property, then assume the value is UTF-8 and must
+         therefore be converted before printing.  Otherwise, just
+         print whatever's there and hope for the best. */
+      {
+        svn_boolean_t val_to_utf8 = svn_prop_is_svn_prop (propchange->name);
+        const char *printable_val;
+        
+        if (original_value != NULL)
+          {
+            if (val_to_utf8)
+              SVN_ERR (svn_utf_cstring_from_utf8
+                       (&printable_val, original_value->data, pool));
+            else
+              printable_val = original_value->data;
+            
+            apr_file_printf (file, "   - %s\n", printable_val);
+          }
+        
+        if (propchange->value != NULL)
+          {
+            if (val_to_utf8)
+              SVN_ERR (svn_utf_cstring_from_utf8
+                       (&printable_val, propchange->value->data, pool));
+            else
+              printable_val = propchange->value->data;
 
-      if (propchange->value != NULL)
-        apr_file_printf (file, "   + %s\n", propchange->value->data);
+            apr_file_printf (file, "   + %s\n", printable_val);
+          }
+      }
     }
 
   apr_file_printf (file, "\n");
@@ -136,7 +162,8 @@ diff_file_changed (svn_wc_notify_state_t *state,
     }
 
   /* Print out the diff header. */
-  svn_io_file_printf (outfile, "Index: %s\n", label ? label : tmpfile1);
+  SVN_ERR (svn_io_file_printf (outfile, "Index: %s\n",
+                               label ? label : tmpfile1));
   apr_file_printf (outfile, 
      "===================================================================\n");
 

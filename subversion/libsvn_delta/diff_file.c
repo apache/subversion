@@ -631,10 +631,10 @@ svn_diff_file_output_unified(apr_file_t *output_file,
             svn_diff__file_output_unified_default_hdr(pool, modified_path);
         }
 
-      svn_io_file_printf(output_file,
-                         "--- %s\n"
-                         "+++ %s\n",
-                         original_header, modified_header);
+      SVN_ERR( svn_io_file_printf(output_file,
+                                  "--- %s\n"
+                                  "+++ %s\n",
+                                  original_header, modified_header) );
 
       SVN_ERR(svn_diff_output(diff, &baton,
                               &svn_diff__file_output_unified_vtable));

@@ -569,6 +569,7 @@ apply_textdelta (void *file_baton,
 {
   struct file_baton *b = file_baton;
 
+  /* Open the file to be used as the base for second revision */
   SVN_ERR (svn_io_file_open (&(b->file_start_revision),
                              b->path_start_revision,
                              APR_READ, APR_OS_DEFAULT, b->pool));

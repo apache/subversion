@@ -63,7 +63,7 @@ const apr_getopt_option_t svn_cl__options[] =
     {"xml-file",      svn_cl__xml_file_opt, 1,
                       "read/write xml to specified file ARG"},
     {"message-encoding", svn_cl__msg_encoding_opt, 1,
-                      "use ARG as encoding for log message taken from -F"},
+                      "take log message in charset encoding ARG"},
     {"version",       svn_cl__version_opt, 0, "print client version info"},
     {"verbose",       'v', 0, "print extra information"},
     {"very-verbose",  'V', 0, "print maxmimum information"},
