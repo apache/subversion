@@ -137,7 +137,7 @@ Before you can contribute code, you'll need to familiarize yourself
 with the existing code base and interfaces.
 
 Check out a copy of Subversion (anonymously, if you don't yet have an
-account with commit-access) -- so you can look at the code base.
+account with commit access) -- so you can look at the code.
 
 Within 'subversion/include/' are a bunch of header files with huge
 doc comments.  If you read through these, you'll have a pretty good
@@ -158,7 +158,7 @@ perusal order:
 Subversion tries to stay portable by using only ANSI/ISO C and by
 using the Apache Portable Runtime (APR) library.  APR is the
 portability layer used by the Apache httpd server, and more
-information can be found at http://apr.apache.org.
+information can be found at http://apr.apache.org/.
 
 Because Subversion depends so heavily on APR, it may be hard to
 understand Subversion without first glancing over certain header files
@@ -172,7 +172,7 @@ in APR (look in 'apr/include/'):
 
 
 Subversion also tries to deliver reliable and secure software. This can
-only be achieved by educating the developers on secure programming in
+only be achieved by developers who understand secure programming in
 the C programming language. Please see 'notes/assurance.txt' for the
 full rationale behind this.  Specifically, you should make it a point to
 carefully read David Wheeler's Secure Programming (as mentioned in
@@ -491,7 +491,7 @@ In addition to the GNU standards, Subversion uses these conventions:
       file).  This is to discourage territoriality -- even when a file
       has only one author, we want to make sure others feel free to
       make changes.  People might be unnecessarily hesitant if someone
-      appears to have staked ownership on the file.
+      appears to have staked a personal claim to the file.
 
    *  There are many other unspoken conventions maintained throughout
       the code, that are only noticed when someone unintentionally
@@ -1589,7 +1589,7 @@ Stabilizing and maintaining releases
 
 Minor and major number releases go through a stabilization period
 before release, and remain in maintenance (bugfix) mode after release.
-To start the release process, we create a "A.B.x" branch based on the
+To start the release process, we create an "A.B.x" branch based on the
 previous release, for example:
 
    $ svn cp http://svn.collab.net/repos/svn/tags/A.(B-1).C \
@@ -1636,7 +1636,7 @@ After the A.B.0 release is out, patch releases (A.B.1, A.B.2, etc.)
 follow when bugfixes warrant them.  Patch releases do not require a
 four week soak, because only conservative changes go into the line.
 
-Certain kinds of commits can into A.B.0 without restarting the soak
+Certain kinds of commits can go into A.B.0 without restarting the soak
 period, or into a later release without affecting the testing schedule
 or release date:
 
