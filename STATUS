@@ -83,13 +83,6 @@ Candidate changes:
       -1: ghudson
           (http://www.contactor.se/~dast/svn/archive-2004-08/0754.shtml)
 
-  * r10760
-    Make "svn info" check for and refuse URL targets.
-    Justification:
-      Avoids assertion failure (the same one avoided by r10731).
-    Votes:
-      +1: ghudson, bliss
-
   * r10467, r10734, rXXXXX
     Detect and report lock-contention at recovery time.
     Justification:
