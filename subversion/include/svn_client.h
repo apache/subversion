@@ -886,12 +886,16 @@ svn_client_export (const char *from,
    The hash maps entrynames (const char *) to svn_dirent_t *'s.  Do
    all allocation in POOL.
 
-   Use AUTH_BATON to authenticate against the repository.  */
+   Use AUTH_BATON to authenticate against the repository.
+
+   If RECURSE is true (and the URL is a directory) this will be a
+   recursive operation. */
 svn_error_t *
 svn_client_ls (apr_hash_t **dirents,
                const char *url,
                svn_client_revision_t *revision,
-               svn_client_auth_baton_t *auth_baton,               
+               svn_client_auth_baton_t *auth_baton,
+               svn_boolean_t recurse,
                apr_pool_t *pool);
 
 
