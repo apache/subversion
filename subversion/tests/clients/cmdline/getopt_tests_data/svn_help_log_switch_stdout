@@ -35,7 +35,7 @@ Valid options:
   --targets arg            : pass contents of file ARG as additional args
   --strict                 : use strict semantics
   --incremental            : give output suitable for concatenation
-  --xml                    : output in xml
+  --xml                    : output in XML
   --username arg           : specify a username ARG
   --password arg           : specify a password ARG
   --no-auth-cache          : do not cache authentication tokens

@@ -90,7 +90,7 @@ const apr_getopt_option_t svn_cl__options[] =
     {"extensions",    'x', 1, "pass ARG as bundled options to GNU diff"},
     {"targets",       svn_cl__targets_opt, 1,
                       "pass contents of file ARG as additional args"},
-    {"xml",           svn_cl__xml_opt, 0, "output in xml"},
+    {"xml",           svn_cl__xml_opt, 0, "output in XML"},
     {"strict",        svn_cl__strict_opt, 0, "use strict semantics"},
     {"no-ignore",     svn_cl__no_ignore_opt, 0,
                       "disregard default and svn:ignore property ignores"},

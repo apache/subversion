@@ -83,7 +83,7 @@ svn_wc__entries_init (const char *path,
 
   /* Add an entry for the dir itself.  The directory has no name.  It
      might have a UUID, but otherwise only the revision and default
-     ancestry are present as xml attributes, and possibly an
+     ancestry are present as XML attributes, and possibly an
      'incomplete' flag if the revnum is > 0. */
 
   apr_hash_set (atts, SVN_WC__ENTRY_ATTR_KIND, 
@@ -635,7 +635,7 @@ read_entries (svn_wc_adm_access_t *adm_access,
                          APR_STATUS_IS_EOF(apr_err));
     if (err)
       return svn_error_createf (err->apr_err, err, 
-                                "read_entries: xml parser failed (%s).", 
+                                "read_entries: XML parser failed (%s).", 
                                 svn_wc_adm_access_path (adm_access));
   } while (!APR_STATUS_IS_EOF(apr_err));
 
@@ -643,7 +643,7 @@ read_entries (svn_wc_adm_access_t *adm_access,
   SVN_ERR (svn_wc__close_adm_file (infile, svn_wc_adm_access_path (adm_access),
                                    SVN_WC__ADM_ENTRIES, 0, pool));
 
-  /* Clean up the xml parser */
+  /* Clean up the XML parser */
   svn_xml_free_parser (svn_parser);
 
   /* Fill in any implied fields. */
