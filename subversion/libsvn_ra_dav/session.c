@@ -383,7 +383,7 @@ static svn_error_t *get_server_settings(const char **proxy_host,
       svn_config_get(cfg, &timeout_str, SVN_CONFIG_SECTION_GLOBAL, 
                      SVN_CONFIG_OPTION_HTTP_TIMEOUT, NULL);
       SVN_ERR(svn_config_get_bool(cfg, compression, SVN_CONFIG_SECTION_GLOBAL,
-                                  SVN_CONFIG_OPTION_HTTP_COMPRESSION, FALSE));
+                                  SVN_CONFIG_OPTION_HTTP_COMPRESSION, TRUE));
       svn_config_get(cfg, &debug_str, SVN_CONFIG_SECTION_GLOBAL, 
                      SVN_CONFIG_OPTION_NEON_DEBUG_MASK, NULL);
     }
