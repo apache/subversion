@@ -95,11 +95,13 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB,
   if test "$status" = "builtin"; then
     # Use the include and lib files in the build dir.
     dbdir=`cd db/dist ; pwd`
-	SVN_DB_INCLUDES="-I$dbdir"
-    # Note that once we upgrade to libtool 1.4 this should be changed to 
-    # SVN_DB_LIBS="$dbdir/libdb-3.3.la" 
-	SVN_DB_LIBS="-L$dbdir/.libs -ldb-3.3"
+    SVN_DB_INCLUDES="-I$dbdir"
     svn_lib_berkeley_db=yes
+    if test "$enable_shared" = "yes"; then
+        SVN_DB_LIBS="$dbdir/libdb-3.3.la"
+    else
+        SVN_DB_LIBS="-L$dbdir -ldb"
+    fi
   elif test "$status" = "skip"; then
     svn_lib_berkeley_db=no
   else
