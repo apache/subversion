@@ -427,37 +427,37 @@ pre-commit.tmpl
         programs, and <filename>.bat</filename> for batch
         files.</para>
 
-      <para>Currently there are five hooks implemented by the
-        Subversion repository:</para>
+      <para>Actualmente hay cinco hooks implementados por el 
+        repositorio Subversion:</para>
 
       <variablelist>
         <varlistentry>
           <term><filename>start-commit</filename></term>
           <listitem>
-            <para>This is run before the commit transaction is even
-              created.  It is typically used to decide if the user has
-              commit privileges at all.  The repository passes two
-              arguments to this program: the path to the repository,
-              and username which is attempting the commit.  If the
-              program returns a non-zero exit value, the commit is
-              stopped before the transaction is even created.</para>
+            <para>Se ejecuta antes de la transacción commit haya sido
+              creada. Se usa normalmente para decidir si el usuario
+              tiene los privilegios suficientes. El repositorio pasa
+              dos argumentos a este programa: la ruta al repositorio,
+              y el nombre de usuario que intenta realizar el commit.
+              Si el programa devuelve algún valor distinto de cero, se
+              paraliza el commit antes de haber creado la transacción.</para>
           </listitem>
         </varlistentry>
             
         <varlistentry>
           <term><filename>pre-commit</filename></term>
           <listitem>
-            <para>This is run when the transaction is complete, but
-              before it is committed.  Typically, this hook is used to
-              protect against commits that are disallowed due to
-              content or location (for example, your site might
-              require that all commits to a certain branch include a
-              ticket number from the bug tracker, or that the incoming
-              log message is non-empty).  The repository passes two
-              arguments to this program: the path to the repository,
-              and the name of the transaction being committed.  If the
-              program returns a non-zero exit value, the commit is
-              aborted and the transaction is removed.</para>
+            <para>Se ejecuta cuando se completa la transacción, pero
+              antes de ser enviados los datos al respositorio. Este hook
+              se usa normalmente como protección contra commits que no se
+              permiten debido a contenido o localización ( por ejemplo, tu
+              sitio puede requerir que todos los commits a una rama
+              determinada incluyan un número de ticket del seguimiento de
+              fallos, o que el mensaje de log entrante no esté vacío).
+              El repositorio pasa dos argumentos a este programa: la ruta
+              al repositorio, y el nombre de la transacción que va a sufrir
+              el commmit. Si el programa devuelve una salida que no sea cero,
+              el commit se aborta y la transacción se borra.</para>
 
             <para>The Subversion distribution includes some access
               control scripts (located in the
