@@ -74,11 +74,12 @@ typedef struct
      understands. */
   const char *cred_kind;
   
-  /* Set *CREDENTIALS to a set of valid credentials, or NULL if none
-     available.  Set *ITER_BATON to context that allows a subsequent
-     call to next_credentials(), in case the first credentials fail to
-     authenticate.  PROVIDER_BATON is general context for the
-     vtable. */
+  /* Set *CREDENTIALS to a set of valid credentials.  If no
+     credentials are available, return an error describing why (in
+     which case *CREDENTIALS are undefined.)  Set *ITER_BATON to
+     context that allows a subsequent call to next_credentials(), in
+     case the first credentials fail to authenticate.  PROVIDER_BATON
+     is general context for the vtable. */
   svn_error_t * (*first_credentials) (void **credentials,
                                       void **iter_baton,
                                       void *provider_baton,
@@ -86,7 +87,8 @@ typedef struct
 
   /* Set *CREDENTIALS to another set of valid credentials, (using
      ITER_BATON as the context from previous call to first_credentials
-     or next_credentials), or NULL if no more options are available. */  
+     or next_credentials).  If no more credentials are available,
+     return an error describing why. */
   svn_error_t * (*next_credentials) (void **credentials,
                                      void *iter_baton,
                                      apr_pool_t *pool);
@@ -138,10 +140,11 @@ svn_error_t * svn_auth_register_provider(svn_auth_baton_t *auth_baton,
                                          apr_pool_t *pool);
 
 /* Ask AUTH_BATON to set *CREDENTIALS to a set of credentials defined
-   by CRED_KIND.  If no credentials are available, set *CREDENTIALS to
-   NULL.  Otherwise, return an iteration state in *STATE, so that the
-   caller can call svn_auth_next_credentials() (in case the first
-   set of credentials fails to authenticate.)
+   by CRED_KIND.  If no credentials are available, return error(s)
+   explaining why (in which case *CREDENTIALS are undefined.)
+   Otherwise, return an iteration state in *STATE, so that the caller
+   can call svn_auth_next_credentials(), in case the first set of
+   credentials fails to authenticate.
 
    Use POOL to allocate *STATE, and for temporary allocation.  Note
    that there is no guarantee about where *CREDENTIALS will be
@@ -157,7 +160,8 @@ svn_error_t * svn_auth_first_credentials(void **credentials,
 
 /* Use STATE to fetch a different set of *CREDENTIALS, as a follow-up
    to svn_auth_first_credentials().  If no more credentials are
-   available, set *CREDENTIALS to NULL.
+   available, return error(s) explaining why (in which case
+   *CREDENTIALS are undefined.)
 
    Use POOL for temporary allocation.  Note that there is no guarantee
    about where *CREDENTIALS will be allocated: it might be in POOL, or

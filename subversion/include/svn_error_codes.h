@@ -134,6 +134,8 @@ extern "C" {
                                            + (17 * SVN_ERR_CATEGORY_SIZE))
 #define SVN_ERR_RA_SVN_CATEGORY_START   (APR_OS_START_USERERR \
                                            + (18 * SVN_ERR_CATEGORY_SIZE))
+#define SVN_ERR_AUTH_CATEGORY_START     (APR_OS_START_USERERR \
+                                           + (19 * SVN_ERR_CATEGORY_SIZE))
 
 #endif /* DOXYGEN_SHOULD_SKIP_THIS */
 
@@ -583,6 +585,23 @@ SVN_ERROR_START
   SVN_ERRDEF (SVN_ERR_RA_SVN_BAD_VERSION,
               SVN_ERR_RA_SVN_CATEGORY_START + 6,
               "Client/server version mismatch")
+
+  /* libsvn_auth errors */
+
+       /* this error can be used when an auth provider doesn't have
+          the creds, but no other "real" error occurred. */
+  SVN_ERRDEF (SVN_ERR_AUTH_CREDS_UNAVAILABLE,
+              SVN_ERR_AUTH_CATEGORY_START + 1,
+              "Credential data unavailable")
+
+  SVN_ERRDEF (SVN_ERR_AUTH_NO_PROVIDER,
+              SVN_ERR_AUTH_CATEGORY_START + 1,
+              "No authentication provider available")
+
+  SVN_ERRDEF (SVN_ERR_AUTH_PROVIDERS_EXHAUSTED,
+              SVN_ERR_AUTH_CATEGORY_START + 2,
+              "All authentication providers exhausted")
+
 
   /* svndiff errors */
 
