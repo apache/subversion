@@ -351,13 +351,12 @@ main ()
   ap_hash_set (proplist, key->data, key->len,
                svn_string_create ("US $6.50", pool));
 
+  /* Test overwriting: same key both times, but different values. */
   key = svn_string_create ("twice-used property name", pool);
   ap_hash_set (proplist, key->data, key->len,
-               svn_string_create ("This is the first value.", pool));
-
-  key = svn_string_create ("twice-used property name", pool);
+               svn_string_create ("This is the FIRST value.", pool));
   ap_hash_set (proplist, key->data, key->len,
-               svn_string_create ("This is the second value.", pool));
+               svn_string_create ("This is the SECOND value.", pool));
 
   /* Dump it. */
   svn_wc_proplist_write
