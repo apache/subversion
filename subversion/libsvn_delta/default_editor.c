@@ -108,6 +108,19 @@ apply_textdelta (void *file_baton,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+apply_text (void *file_baton, 
+            const char *base_checksum,
+            const char *result_checksum,
+            svn_stream_t *base,
+            svn_stream_t *target,
+            svn_delta_editor_t *editor, /* ### temporary, for issue #510 */
+            apr_pool_t *pool)
+{
+  /* ### todo#510: see doc string for what's about to happen here. */
+  return SVN_NO_ERROR;
+}
+
 
 static const svn_delta_editor_t default_editor =
 {
@@ -121,6 +134,7 @@ static const svn_delta_editor_t default_editor =
   add_item,
   open_item,
   apply_textdelta,
+  apply_text,
   change_prop,
   single_baton_func,
   single_baton_func,
