@@ -54,8 +54,8 @@ print_version_info (apr_pool_t *pool)
   /* Get a descriptive list of them. */
   SVN_ERR (svn_ra_print_ra_libraries (&descriptions, ra_baton, pool));
 
-  SVN_ERR (svn_utf_cstring_from_utf8_stringbuf (descriptions,
-                                                &descriptions_native, pool));
+  SVN_ERR (svn_utf_cstring_from_utf8_stringbuf (&descriptions_native,
+                                                descriptions, pool));
 
   printf ("%s\n", descriptions_native);
 

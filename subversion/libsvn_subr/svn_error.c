@@ -376,7 +376,7 @@ svn_handle_warning (void *data, const char *fmt, ...)
   msg_utf8 = svn_stringbuf_create (apr_pvsprintf (pool, fmt, ap), pool);
   va_end (ap);
 
-  err = svn_utf_stringbuf_from_utf8 (msg_utf8, &msg, pool);
+  err = svn_utf_stringbuf_from_utf8 (&msg, msg_utf8, pool);
 
   if (err)
     svn_handle_error (err, stderr, FALSE);

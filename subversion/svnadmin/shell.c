@@ -144,7 +144,7 @@ cd (char *path,
       svn_stringbuf_t *new_path;
       const char *path_utf8;
 
-      SVN_ERR (svn_utf_cstring_to_utf8 (path, &path_utf8, NULL, pool));
+      SVN_ERR (svn_utf_cstring_to_utf8 (&path_utf8, path, NULL, pool));
 
       SVN_ERR (compute_new_path (&new_path, shcxt->cwd, path_utf8,
                                  shcxt, shcxt->pool));
@@ -256,7 +256,7 @@ print_dirent (svn_stringbuf_t *abs_path /* UTF-8! */,
   else
     has_props = FALSE;
 
-  SVN_ERR (svn_utf_cstring_from_utf8 (entry->name, &name_native, pool ));
+  SVN_ERR (svn_utf_cstring_from_utf8 (&name_native, entry->name, pool ));
 
   /* Now PRINT all this information. */
   printf ("  <%8s>  [%6ld]  %1d  %10ld",
@@ -289,7 +289,7 @@ ls (shcxt_t *shcxt,
       svn_stringbuf_t *new_path;
       const char *path_utf8;
 
-      SVN_ERR (svn_utf_cstring_to_utf8 (path, &path_utf8, NULL, pool));
+      SVN_ERR (svn_utf_cstring_to_utf8 (&path_utf8, path, NULL, pool));
 
       SVN_ERR (compute_new_path (&new_path, shcxt->cwd, path_utf8,
                                  shcxt, pool));
@@ -343,7 +343,7 @@ display_prompt (shcxt_t *shcxt)
   apr_pool_t *subpool = svn_pool_create (shcxt->pool);
   const char *cwd_native;
 
-  SVN_ERR (svn_utf_cstring_from_utf8 (shcxt->cwd->data, &cwd_native, subpool));
+  SVN_ERR (svn_utf_cstring_from_utf8 (&cwd_native, shcxt->cwd->data, subpool));
 
   printf ("<%" SVN_REVNUM_T_FMT ": %s>$ ",
           shcxt->current_rev, cwd_native);

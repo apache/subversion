@@ -927,7 +927,7 @@ svn_path_get_absolute(const char **pabsolute,
   const char *path_native;
 
   SVN_ERR (svn_utf_cstring_from_utf8
-           (svn_path_canonicalize_nts (relative, pool), &path_native, pool));
+           (&path_native, svn_path_canonicalize_nts (relative, pool), pool));
 
   apr_err = apr_filepath_merge(&buffer, NULL,
                                path_native,
@@ -940,7 +940,7 @@ svn_path_get_absolute(const char **pabsolute,
                              "Couldn't determine absolute path of %s.", 
                              relative);
 
-  return svn_utf_cstring_to_utf8 (buffer, pabsolute, NULL, pool);
+  return svn_utf_cstring_to_utf8 (pabsolute, buffer, NULL, pool);
 }
 
 

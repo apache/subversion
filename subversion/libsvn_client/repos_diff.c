@@ -246,7 +246,7 @@ temp_file_cleanup_register (const char *path,
                             apr_pool_t *pool)
 {
   struct temp_file_cleanup_s *s = apr_palloc (pool, sizeof (*s));
-  SVN_ERR (svn_utf_cstring_from_utf8 (path, &(s->path), pool));
+  SVN_ERR (svn_utf_cstring_from_utf8 (&(s->path), path, pool));
   s->pool = pool;
   apr_pool_cleanup_register (s->pool, s, temp_file_plain_cleanup_handler,
                              temp_file_child_cleanup_handler);

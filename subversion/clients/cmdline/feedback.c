@@ -64,7 +64,7 @@ notify (void *baton,
   const char *path_native;
   svn_error_t *err;
 
-  err = svn_utf_cstring_from_utf8 (path, &path_native, subpool);
+  err = svn_utf_cstring_from_utf8 (&path_native, path, subpool);
   if (err)
     {
       printf ("WARNING: error decoding UTF-8 for ?\n");

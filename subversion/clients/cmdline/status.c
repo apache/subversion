@@ -251,7 +251,7 @@ svn_cl__print_status_list (apr_hash_t *statushash,
       if ((skip_unrecognized) && (! status->entry))
         continue;
 
-      err = svn_utf_cstring_from_utf8 (item->key, &path, pool);
+      err = svn_utf_cstring_from_utf8 (&path, item->key, pool);
       if (err)
         svn_handle_error (err, stderr, FALSE);
 

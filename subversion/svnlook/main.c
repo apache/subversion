@@ -208,7 +208,7 @@ print_dirs_changed_tree (svn_repos_node_t *node,
   if (print_me)
     {
       const char *path_native;
-      SVN_ERR (svn_utf_cstring_from_utf8 (path->data, &path_native, pool));
+      SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path->data, pool));
       printf ("%s/\n", path->data);
     }
 
@@ -269,7 +269,7 @@ print_changed_tree (svn_repos_node_t *node,
   if (print_me)
     {
       const char *path_native;
-      SVN_ERR (svn_utf_cstring_from_utf8 (path->data, &path_native, pool));
+      SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path->data, pool));
       printf ("%s  %s%s\n",
               status,
               path_native,
@@ -435,7 +435,7 @@ print_diff_tree (svn_fs_root_t *root,
       else
         base_path = apr_pstrdup (pool, tmp_node->copyfrom_path);
 
-      SVN_ERR (svn_utf_cstring_from_utf8 (base_path, &base_path_native, pool));
+      SVN_ERR (svn_utf_cstring_from_utf8 (&base_path_native, base_path, pool));
 
       printf ("Copied: %s (from rev %" SVN_REVNUM_T_FMT ", %s)\n",
               tmp_node->name, tmp_node->copyfrom_rev, base_path_native);
@@ -519,7 +519,7 @@ print_diff_tree (svn_fs_root_t *root,
       
       if (! is_copy)
         {
-          SVN_ERR (svn_utf_cstring_from_utf8 (path, &path_native, pool));
+          SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, pool));
           printf ("%s: %s\n", 
                   ((tmp_node->action == 'A') ? "Added" : 
                    ((tmp_node->action == 'D') ? "Deleted" :
@@ -633,7 +633,7 @@ print_ids_tree (svn_repos_node_t *node,
     unparsed_id = svn_fs_unparse_id (id, pool);
   
   /* Print the node. */
-  SVN_ERR (svn_utf_cstring_from_utf8 (tmp_node->name, &name_native, pool));
+  SVN_ERR (svn_utf_cstring_from_utf8 (&name_native, tmp_node->name, pool));
   printf ("%s%s <%s>\n", 
           name_native, 
           tmp_node->kind == svn_node_dir ? "/" : "",
@@ -686,7 +686,7 @@ print_tree (svn_repos_node_t *node,
 
   /* Print the node. */
   tmp_node = node;
-  SVN_ERR (svn_utf_cstring_from_utf8 (tmp_node->name, &name_native, pool));
+  SVN_ERR (svn_utf_cstring_from_utf8 (&name_native, tmp_node->name, pool));
   printf ("%s%s\n", 
           name_native, 
           tmp_node->kind == svn_node_dir ? "/" : "");
@@ -729,7 +729,8 @@ do_log (svnlook_ctxt_t *c, svn_boolean_t print_size, apr_pool_t *pool)
           printf ("%" APR_SIZE_T_FMT "\n", prop_value->len);
         }
 
-      SVN_ERR (svn_utf_cstring_from_utf8 (prop_value->data, &log_native, pool));
+      SVN_ERR (svn_utf_cstring_from_utf8 (&log_native, prop_value->data,
+                                          pool));
       printf ("%s", log_native);
     }
   else if (print_size)
@@ -779,7 +780,7 @@ do_author (svnlook_ctxt_t *c, apr_pool_t *pool)
 
   if (prop_value && prop_value->data) {
     const char *author_native;
-    SVN_ERR (svn_utf_cstring_from_utf8 (prop_value->data, &author_native,
+    SVN_ERR (svn_utf_cstring_from_utf8 (&author_native, prop_value->data,
                                         pool));
     printf ("%s", author_native);
   }
@@ -1080,9 +1081,9 @@ main (int argc, const char * const *argv)
   pool = svn_pool_create (NULL);
 
   /* Convert repository path and txn name (if present) to UTF-8 */
-  INT_ERR (svn_utf_cstring_to_utf8 (repos_path, &repos_path_utf8, NULL, pool));
+  INT_ERR (svn_utf_cstring_to_utf8 (&repos_path_utf8, repos_path, NULL, pool));
   if(txn_name)
-    INT_ERR (svn_utf_cstring_to_utf8 (txn_name, &c.txn_name, NULL, pool));    
+    INT_ERR (svn_utf_cstring_to_utf8 (&c.txn_name, txn_name, NULL, pool));    
 
   /* Open the repository with the given path. */
   INT_ERR (svn_repos_open (&(c.repos), repos_path_utf8, pool));

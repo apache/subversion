@@ -62,8 +62,8 @@ svn_cl__proplist (apr_getopt_t *os,
           svn_client_proplist_item_t *item 
             = ((svn_client_proplist_item_t **)props->elts)[j];
           const char *node_name_native;
-          SVN_ERR (svn_utf_cstring_from_utf8_stringbuf (item->node_name,
-                                                        &node_name_native,
+          SVN_ERR (svn_utf_cstring_from_utf8_stringbuf (&node_name_native,
+                                                        item->node_name,
                                                         pool));
           printf("Properties on '%s':\n", node_name_native);
           if (opt_state->verbose)
