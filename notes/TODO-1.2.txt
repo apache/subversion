@@ -13,12 +13,6 @@ CODING TASKS:
    - finish Dan Berlin's streamy-blame stuff;  make it work with libsvn_diff.
      (sander, philip, dberlin?)
 
-   - 'svn st -u' should show remote locks on files not yet in the
-     working copy.  (lundblad)
-
-   - subversion/libsvn_wc/status.c:982
-      /* ### lundblad TODO: Make sure lock info is added. */ (lundblad)
-
    - build system:
         - any changes maxb wants to make?
         - verify mod_dav_svn build on win32 with httpd-trunk patch.
