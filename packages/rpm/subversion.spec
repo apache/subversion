@@ -1,7 +1,7 @@
 %define neon_version 0.17.2
 Summary: A Concurrent Versioning system similar to but better than CVS.
 Name: subversion
-Version: 0.6.0
+Version: @VERSION@
 Release: @RELEASE@
 Copyright: BSD
 Group: Utilities/System

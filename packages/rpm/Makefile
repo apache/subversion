@@ -7,13 +7,17 @@
 ##########################################################################
 
 SPECFILE := subversion.spec
+VERSION_FILE := ../../subversion/include/svn_version.h
 
 RPMDIR := rpms
 
 SVN_TOP_DIR := $(shell pwd)/../..
 
 NAME := $(shell grep '^Name:' < $(SPECFILE) | sed -e 's/^Name: //')
-VERSION := $(shell grep '^Version: ' < $(SPECFILE) | sed 's/^Version: //')
+SVN_VERSION_MAJOR := $(shell grep 'define SVN_VER_MAJOR' < $(VERSION_FILE) | (read one two three; echo $$three) )
+SVN_VERSION_MINOR := $(shell grep 'define SVN_VER_MINOR' < $(VERSION_FILE) | (read one two three; echo $$three) )
+SVN_VERSION_MICRO := $(shell grep 'define SVN_VER_MICRO' < $(VERSION_FILE) | (read one two three; echo $$three) )
+VERSION := $(SVN_VERSION_MAJOR).$(SVN_VERSION_MINOR).$(SVN_VERSION_MICRO)
 RELEASE := $(shell svn st -u -v $(SPECFILE) | (read one two three; echo $$two))
 
 SOURCE_RPM_DIR := $(HOME)/$(RPMDIR)/sources/$(NAME)-$(VERSION)-$(RELEASE)
@@ -54,7 +58,9 @@ build_srpm_files : $(HOME)/.rpmmacros $(HOME)/$(RPMDIR) subversion.spec
 	rm -rf $(SOURCE_RPM_DIR)
 	mkdir -p $(SOURCE_RPM_DIR)
 	cp * $(SOURCE_RPM_DIR)
-	sed -e 's/@RELEASE@/$(RELEASE)/' < $(SPECFILE) > $(SOURCE_RPM_DIR)/$(SPECFILE)
+	sed -e 's/@RELEASE@/$(RELEASE)/' \
+		-e 's/@VERSION@/$(VERSION)/' \
+		< $(SPECFILE) > $(SOURCE_RPM_DIR)/$(SPECFILE)
 	cd $(SOURCE_RPM_DIR); cp -r $(SVN_TOP_DIR) $(NAME)-$(VERSION); \
 	   tar cfz $(NAME)-$(VERSION)-$(RELEASE).tar.gz $(NAME)-$(VERSION) --exclude .svn; \
 	   rm -rf $(NAME)-$(VERSION)
