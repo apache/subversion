@@ -300,6 +300,26 @@ svn_opt_parse_all_args (apr_array_header_t **args_p,
                         apr_getopt_t *os,
                         apr_pool_t *pool);
 
+/**
+ * @since New in 1.1.
+ *
+ * Parse a working-copy or url in @a path, looking for an "@" sign, e.g.
+ *
+ *       foo/bar/baz@13
+ *       http://blah/bloo@27
+ *       blarg/snarf@HEAD
+ *
+ * If an "@" is found, return the two halves in @a *truepath and @a
+ * *rev, allocating from @a pool.
+ *
+ * If no "@" is found, set @a *truepath to @a path and @a *rev to kind
+ * 'unspecified'.
+ */
+svn_error_t *
+svn_opt_parse_path (svn_opt_revision_t *rev,
+                    const char **truepath,
+                    const char *path,
+                    apr_pool_t *pool);
 
 /**
  * Print either generic help, or command-specific help for @a pgm_name.
