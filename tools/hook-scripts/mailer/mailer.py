@@ -34,11 +34,13 @@ SEPARATOR = '=' * 78
 
 def main(pool, cmd, config_fname, repos_dir, rev, author, propname):
   repos = Repository(repos_dir, rev, pool)
-  cfg = Config(config_fname, repos)
 
   if cmd == 'commit':
+    author = repos.author or 'no_author'
+    cfg = Config(config_fname, repos, { 'author' : author })
     messenger = Commit(pool, cfg, repos)
   elif cmd == 'propchange':
+    cfg = Config(config_fname, repos, { 'author' : author })
     messenger = PropChange(pool, cfg, repos, author, propname)
   else:
     raise UnknownSubcommand(cmd)
@@ -52,15 +54,9 @@ class MailedOutput:
     self.repos = repos
     self.prefix_param = prefix_param
 
-  def start(self, group, params, override_author = None):
+  def start(self, group, params):
     self.to_addr = self.cfg.get('to_addr', group, params)
-    author = self.cfg.get('from_addr', group, params)
-    if not author:
-      if override_author:
-        author = override_author
-      else:
-        author = self.repos.author or 'no_author'
-    self.from_addr = author
+    self.from_addr = self.cfg.get('from_addr', group, params) or 'no_author'
     self.reply_to = self.cfg.get('reply_to', group, params)
 
   def mail_headers(self, group, params):
@@ -346,7 +342,7 @@ class PropChange(Messenger):
 
   def generate(self):
     for (group, param_tuple), params in self.groups.items():
-      self.output.start(group, params, override_author = author)
+      self.output.start(group, params)
       self.output.write('Author: %s\nRevision: %s\nProperty Name: %s\n\n'
                         % (self.author, self.repos.rev, self.propname))
       propvalue = self.repos.get_rev_prop(self.propname)
@@ -581,7 +577,7 @@ class Config:
   # set of groups.
   _predefined = ('general', 'defaults')
 
-  def __init__(self, fname, repos):
+  def __init__(self, fname, repos, global_params):
     cp = ConfigParser.ConfigParser()
     cp.read(fname)
 
@@ -605,9 +601,7 @@ class Config:
     self._diff_cmd = string.split(self.general.diff)
 
     # these params are always available, although they may be overridden
-    self._global_params = {
-      'author' : repos.author,
-      }
+    self._global_params = global_params.copy()
 
     self._prep_groups(repos)
 
