@@ -68,6 +68,7 @@ print_dirents (apr_hash_t *dirents,
                                           utf8_entryname, pool));      
       if (verbose)
         {
+          apr_time_t now = apr_time_now();
           apr_time_exp_t exp_time;
           apr_status_t apr_err;
           apr_size_t size;
@@ -78,10 +79,20 @@ print_dirents (apr_hash_t *dirents,
                                                 dirent->last_author, pool));
 
           /* svn_time_to_human_cstring gives us something *way* to long
-             to use for this, so we have to roll our own. */
+             to use for this, so we have to roll our own.  We include
+             the year if the entry's time is not within half a year. */
           apr_time_exp_lt (&exp_time, dirent->time);
-          apr_err = apr_strftime (timestr, &size, sizeof (timestr),
-                                  "%b %d %H:%M", &exp_time);
+          if (apr_time_sec(now - dirent->time) < (365 * 86400 / 2)
+              && apr_time_sec(dirent->time - now) < (365 * 86400 / 2))
+            {
+              apr_err = apr_strftime (timestr, &size, sizeof (timestr),
+                                      "%b %d %H:%M", &exp_time);
+            }
+          else
+            {
+              apr_err = apr_strftime (timestr, &size, sizeof (timestr),
+                                      "%b %d  %Y", &exp_time);
+            }
 
           /* if that failed, just zero out the string and print nothing */
           if (apr_err)
