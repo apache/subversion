@@ -19,14 +19,14 @@ Candidate changes:
     Better log region max size in default DB_CONFIG.
     Justification: Trivial change, helps some sites avoid problems.
     Votes:
-      +1: kfogel, jerenkrantz
+      +1: kfogel, jerenkrantz, ghudson
 
   * r12075
     Add pre-0.14 dumpfile compatability.
     Justification: Some very old clients were recently spotted in
     the wild.  And: Dumpfile compatibility is always good.
     Votes:
-      +1: dionisos
+      +1: dionisos, ghudson
 
   * r11050
     Add install dependencies for libsvn_fs and libsvn_fs_base.
@@ -56,7 +56,7 @@ Candidate changes:
     Justification:
       Protects against API violations, which lead to assertion failures.
     Votes:
-      +1: lundblad, epg
+      +1: lundblad, epg, ghudson
 
   * r12100, r12111, r12114
     Fix output of notifications when merging a deletion of a directory.
