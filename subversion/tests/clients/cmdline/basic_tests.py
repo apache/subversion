@@ -522,99 +522,6 @@ def basic_revert():
 #----------------------------------------------------------------------
 
 
-def basic_copy_and_move_files():
-  "basic copy and move commands (files)"
-
-  sbox = sandbox(basic_copy_and_move_files)
-  wc_dir = os.path.join (svntest.main.general_wc_dir, sbox)
-  
-  if svntest.actions.make_repo_and_wc(sbox):
-    return 1
-
-  mu_path = os.path.join(wc_dir, 'A', 'mu')
-  iota_path = os.path.join(wc_dir, 'iota')
-  rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
-  D_path = os.path.join(wc_dir, 'A', 'D')
-  C_path = os.path.join(wc_dir, 'A', 'C')
-  alpha_path = os.path.join(wc_dir, 'A', 'B', 'E', 'alpha')
-  H_path = os.path.join(wc_dir, 'A', 'D', 'H')
-  F_path = os.path.join(wc_dir, 'A', 'B', 'F')
-
-  new_mu_path = os.path.join(H_path, 'mu')
-  new_iota_path = os.path.join(F_path, 'iota')
-  rho_copy_path = os.path.join(D_path, 'rho')
-  alpha2_path = os.path.join(C_path, 'alpha2')
-
-  # Make local mods to mu and rho
-  svntest.main.file_append (mu_path, 'appended mu text')
-  svntest.main.file_append (rho_path, 'new appended text for rho')
-
-  # Copy rho to D -- local mods
-  svntest.main.run_svn(None, 'cp', rho_path, D_path)
-
-  # Copy alpha to C -- no local mods, and rename it to 'alpha2' also
-  svntest.main.run_svn(None, 'cp', alpha_path, alpha2_path)
-
-  # Move mu to H -- local mods
-  svntest.main.run_svn(None, 'mv', mu_path, H_path)
-
-  # Move iota to F -- no local mods
-  svntest.main.run_svn(None, 'mv', iota_path, F_path)
-
-  # Created expected output tree for 'svn ci':
-  # We should see four adds, two deletes, and one change in total.
-  output_list = [ [rho_path, None, {}, {'verb' : 'Sending' }],
-                  [rho_copy_path, None, {}, {'verb' : 'Adding' }],
-                  [alpha2_path, None, {}, {'verb' : 'Adding' }],
-                  [new_mu_path, None, {}, {'verb' : 'Adding' }],
-                  [new_iota_path, None, {}, {'verb' : 'Adding' }],
-                  [mu_path, None, {}, {'verb' : 'Deleting' }],
-                  [iota_path, None, {}, {'verb' : 'Deleting' }], ]
-  expected_output_tree = svntest.tree.build_generic_tree(output_list)
-
-  # Create expected status tree; all local revisions should be at 1,
-  # but several files should be at revision 2.  Also, two files should
-  # be missing.  
-  status_list = svntest.actions.get_virginal_status_list(wc_dir, '2')
-  for item in status_list:
-    item[3]['wc_rev'] = '1'
-    if (item[0] == rho_path) or (item[0] == mu_path):
-      item[3]['wc_rev'] = '2'
-  # New items in the status tree:
-  status_list.append([rho_copy_path, None, {},
-                      {'status' : '_ ',
-                       'locked' : ' ',
-                       'wc_rev' : '2',
-                       'repos_rev' : '2'}])
-  status_list.append([alpha2_path, None, {},
-                      {'status' : '_ ',
-                       'locked' : ' ',
-                       'wc_rev' : '2',
-                       'repos_rev' : '2'}])
-  status_list.append([new_mu_path, None, {},
-                      {'status' : '_ ',
-                       'locked' : ' ',
-                       'wc_rev' : '2',
-                       'repos_rev' : '2'}])
-  status_list.append([new_iota_path, None, {},
-                      {'status' : '_ ',
-                       'locked' : ' ',
-                       'wc_rev' : '2',
-                       'repos_rev' : '2'}])
-  # Items that are gone:
-  status_list.pop(path_index(status_list, mu_path))
-  status_list.pop(path_index(status_list, iota_path))
-      
-  expected_status_tree = svntest.tree.build_generic_tree(status_list)
-
-  return svntest.actions.run_and_verify_commit (wc_dir,
-                                                expected_output_tree,
-                                                expected_status_tree,
-                                                None,
-                                                None, None,
-                                                None, None,
-                                                wc_dir)
-
 ########################################################################
 # Run the tests
 
@@ -629,7 +536,6 @@ test_list = [ None,
               basic_conflict,
               basic_cleanup,
               basic_revert,
-              basic_copy_and_move_files,
              ]
 
 if __name__ == '__main__':
