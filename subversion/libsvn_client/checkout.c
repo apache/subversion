@@ -70,7 +70,8 @@ svn_client_checkout (svn_string_t *path,
 {
   /* kff todo */
 
-  printf ("hello, world\n");
+  printf ("libsvn_client: checkout %s (xml_src == %s)\n",
+          path->data, xml_src->data);
 
   return SVN_NO_ERROR;
 }

@@ -70,6 +70,8 @@ svn_client_commit (svn_string_t *path,
                    apr_pool_t *pool)
 {
   /* kff todo */
+  printf ("libsvn_client: commit %s (xml_dst == %s)\n",
+          path->data, xml_dst->data);
 
   return SVN_NO_ERROR;
 }

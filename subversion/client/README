@@ -5,10 +5,9 @@ make in a working copy are file mods and file adds.
 So:
 
    svn checkout -d TARGETDIR --xml-file FILE.XML
-
    svn update --xml-file FILE.XML
-
-   svn commit --xml-file FILE.XML --version 38 [FILE1 [FILE2...]]
+   svn add FILE
+   svn commit --xml-file FILE.XML --version 38
 
 (The --version flag is necessary for commits because we're not
 actually talking to the repository yet.  So the user has to know what
