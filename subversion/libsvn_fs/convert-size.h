@@ -61,8 +61,8 @@
    locale-dependent, whereas we're trying to parse data in a
    local-independent format.  */
 
-apr_size_t svn_fs__getsize (char *data, apr_size_t len, char **endptr,
-			    apr_size_t max);
+apr_size_t svn_fs__getsize (const char *data, apr_size_t len,
+                            const char **endptr, apr_size_t max);
 
 
 /* Store the ASCII decimal representation of VALUE at DATA.  Return

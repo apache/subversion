@@ -60,7 +60,7 @@
 
 
 int
-svn_fs_id_length (svn_fs_id_t *id)
+svn_fs_id_length (const svn_fs_id_t *id)
 {
   int len;
 
@@ -74,7 +74,7 @@ svn_fs_id_length (svn_fs_id_t *id)
 /* Comparing node ID's.  */
 
 int
-svn_fs_id_eq (svn_fs_id_t *a, svn_fs_id_t *b)
+svn_fs_id_eq (const svn_fs_id_t *a, const svn_fs_id_t *b)
 {
   int i;
 
@@ -87,7 +87,7 @@ svn_fs_id_eq (svn_fs_id_t *a, svn_fs_id_t *b)
 
 
 int
-svn_fs_id_is_ancestor (svn_fs_id_t *a, svn_fs_id_t *b)
+svn_fs_id_is_ancestor (const svn_fs_id_t *a, const svn_fs_id_t *b)
 {
   int i = 0;
 
@@ -136,7 +136,7 @@ svn_fs_id_is_ancestor (svn_fs_id_t *a, svn_fs_id_t *b)
    is the distance from a node revision to some branch of the node
    revision.  */
 static int
-distance_from_prefix (svn_fs_id_t *a, int prefix)
+distance_from_prefix (const svn_fs_id_t *a, int prefix)
 {
   int i;
   int d = 0;
@@ -149,7 +149,7 @@ distance_from_prefix (svn_fs_id_t *a, int prefix)
 
 
 int
-svn_fs_id_distance (svn_fs_id_t *a, svn_fs_id_t *b)
+svn_fs_id_distance (const svn_fs_id_t *a, const svn_fs_id_t *b)
 {
   int i;
 
@@ -177,8 +177,8 @@ svn_fs_id_distance (svn_fs_id_t *a, svn_fs_id_t *b)
 
 
 int
-svn_fs__is_parent (svn_fs_id_t *parent,
-		   svn_fs_id_t *child)
+svn_fs__is_parent (const svn_fs_id_t *parent,
+		   const svn_fs_id_t *child)
 {
   int i;
 
@@ -213,7 +213,7 @@ svn_fs__is_parent (svn_fs_id_t *parent,
 /* Parsing and unparsing node ID's.  */
 
 svn_fs_id_t *
-svn_fs_parse_id (char *data,
+svn_fs_parse_id (const char *data,
                  apr_size_t data_len,
                  apr_pool_t *pool)
 {
@@ -253,11 +253,11 @@ svn_fs_parse_id (char *data,
 
   {
     int i = 0;
-    char *end = data + data_len;
+    const char *end = data + data_len;
 
     for (;;)
       {
-	char *next;
+        const char *next;
 	id[i++] = svn_fs__getsize (data, end - data, &next, 100000000);
 	if (next == end)
 	  break;
@@ -281,7 +281,7 @@ svn_fs_parse_id (char *data,
 /* Set UNPARSED to the unparsed form of the node id ID.
    Allocate the buffer for the unparsed form in POOL.  */
 svn_string_t *
-svn_fs_unparse_id (svn_fs_id_t *id,
+svn_fs_unparse_id (const svn_fs_id_t *id,
 		   apr_pool_t *pool)
 {
   svn_string_t *unparsed = svn_string_ncreate (0, 0, pool);
@@ -309,10 +309,10 @@ svn_fs_unparse_id (svn_fs_id_t *id,
 /* Copying ID's.  */
 
 svn_fs_id_t *
-svn_fs_copy_id (svn_fs_id_t *id, apr_pool_t *pool)
+svn_fs_copy_id (const svn_fs_id_t *id, apr_pool_t *pool)
 {
   apr_size_t id_size = (svn_fs_id_length (id) + 1) * sizeof (id[0]);
-  svn_fs_id_t *copy = apr_pcalloc (pool, id_size);
+  svn_fs_id_t *copy = apr_palloc (pool, id_size);
   memcpy (copy, id, id_size);
   
   return copy;

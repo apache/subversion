@@ -94,18 +94,18 @@ static const enum char_type skel_char_type[256] = {
 };
 
 
-static skel_t *parse (char *data, apr_size_t len,
+static skel_t *parse (const char *data, apr_size_t len,
 		      apr_pool_t *pool);
-static skel_t *list (char *data, apr_size_t len,
+static skel_t *list (const char *data, apr_size_t len,
 		     apr_pool_t *pool);
-static skel_t *implicit_atom (char *data, apr_size_t len,
+static skel_t *implicit_atom (const char *data, apr_size_t len,
 			      apr_pool_t *pool);
-static skel_t *explicit_atom (char *data, apr_size_t len,
+static skel_t *explicit_atom (const char *data, apr_size_t len,
 			      apr_pool_t *pool);
 
 
 skel_t *
-svn_fs__parse_skel (char *data,
+svn_fs__parse_skel (const char *data,
 		    apr_size_t len,
 		    apr_pool_t *pool)
 {
@@ -115,7 +115,7 @@ svn_fs__parse_skel (char *data,
 
 /* Parse any kind of skel object --- atom, or list.  */
 static skel_t *
-parse (char *data,
+parse (const char *data,
        apr_size_t len,
        apr_pool_t *pool)
 {
@@ -143,12 +143,12 @@ parse (char *data,
 
 
 static skel_t *
-list (char *data,
+list (const char *data,
       apr_size_t len,
       apr_pool_t *pool)
 {
-  char *end = data + len;
-  char *list_start;
+  const char *end = data + len;
+  const char *list_start;
 
   /* Verify that the list starts with an opening paren.  At the
      moment, all callers have checked this already, but it's more
@@ -220,12 +220,12 @@ list (char *data,
 /* Parse an atom with implicit length --- one that starts with a name
    character, terminated by whitespace or end-of-data.  */
 static skel_t *
-implicit_atom (char *data,
+implicit_atom (const char *data,
 	       apr_size_t len,
 	       apr_pool_t *pool)
 {
-  char *start = data;
-  char *end = data + len;
+  const char *start = data;
+  const char *end = data + len;
   skel_t *s;
 
   /* Verify that the atom starts with a name character.  At the
@@ -256,12 +256,12 @@ implicit_atom (char *data,
 /* Parse an atom with explicit length --- one that starts with a byte
    length, as a decimal ASCII number.  */
 static skel_t *
-explicit_atom (char *data,
+explicit_atom (const char *data,
 	       apr_size_t len,
 	       apr_pool_t *pool)
 {
-  char *end = data + len;
-  char *next;
+  const char *end = data + len;
+  const char *next;
   apr_size_t size;
   skel_t *s;
 
@@ -463,7 +463,7 @@ unparse (skel_t *skel, svn_string_t *str, int depth, apr_pool_t *pool)
 
 
 skel_t *
-svn_fs__make_atom (char *str, apr_pool_t *pool)
+svn_fs__make_atom (const char *str, apr_pool_t *pool)
 {
   skel_t *skel = NEW (pool, skel_t);
   skel->is_atom = 1;
@@ -545,11 +545,12 @@ svn_fs__copy_skel (skel_t *skel, apr_pool_t *pool)
   if (skel->is_atom)
     {
       apr_size_t len = skel->len;
+      char *s = NEWARRAY (pool, char, len);
 
+      memcpy (s, skel->data, len);
       copy->is_atom = 1;
-      copy->data = NEWARRAY (pool, char, len);
+      copy->data = s;
       copy->len = len;
-      memcpy (copy->data, skel->data, len);
       copy->children = copy->next = 0;
     }
   else

@@ -263,25 +263,25 @@ typedef svn_revnum_t svn_fs_id_t;
 
 
 /* Return the number of components in ID, not including the final -1.  */
-int svn_fs_id_length (svn_fs_id_t *id);
+int svn_fs_id_length (const svn_fs_id_t *id);
 
 
 /* Return non-zero iff the node or node revision ID's A and B are equal.  */
-int svn_fs_id_eq (svn_fs_id_t *a, svn_fs_id_t *b);
+int svn_fs_id_eq (const svn_fs_id_t *a, const svn_fs_id_t *b);
 
 
 /* Return non-zero iff node revision A is an ancestor of node revision B.  
    If A == B, then we consider A to be an ancestor of B.  */
-int svn_fs_id_is_ancestor (svn_fs_id_t *a, svn_fs_id_t *b);
+int svn_fs_id_is_ancestor (const svn_fs_id_t *a, const svn_fs_id_t *b);
 
 
 /* Return the distance between node revisions A and B.  Return -1 if
    they are completely unrelated.  */
-int svn_fs_id_distance (svn_fs_id_t *a, svn_fs_id_t *b);
+int svn_fs_id_distance (const svn_fs_id_t *a, const svn_fs_id_t *b);
 
 
 /* Return a copy of ID, allocated from POOL.  */
-svn_fs_id_t *svn_fs_copy_id (svn_fs_id_t *id, apr_pool_t *pool);
+svn_fs_id_t *svn_fs_copy_id (const svn_fs_id_t *id, apr_pool_t *pool);
 
 
 /* Parse the LEN bytes at DATA as a node ID.  Return zero if the bytes
@@ -290,12 +290,13 @@ svn_fs_id_t *svn_fs_copy_id (svn_fs_id_t *id, apr_pool_t *pool);
    Allocate the parsed ID in POOL.  As a special case for the Berkeley
    DB comparison function, if POOL is zero, malloc the ID.  It's
    generally better to use a pool if you can.  */
-svn_fs_id_t *svn_fs_parse_id (char *data, apr_size_t len, apr_pool_t *pool);
+svn_fs_id_t *svn_fs_parse_id (const char *data, apr_size_t len,
+                              apr_pool_t *pool);
 
 
 /* Return a Subversion string containing the unparsed form of the node
    id ID.  Allocate the buffer for the unparsed form in POOL.  */
-svn_string_t *svn_fs_unparse_id (svn_fs_id_t *id, apr_pool_t *pool);
+svn_string_t *svn_fs_unparse_id (const svn_fs_id_t *id, apr_pool_t *pool);
 
 
 /* Nodes.  */
