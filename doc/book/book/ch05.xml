@@ -2072,7 +2072,7 @@ $
         changes&mdash;each of which should be treated as a new
         revision&mdash;using this file format.  In fact, the
         <command>cvs2svn.py</command> utility (see <xref
-        linkend="svn-ap-b"/>) uses the dump format to represent the
+        linkend="svn-ap-e-sect-1"/>) uses the dump format to represent the
         contents of a CVS repository so that those contents can be
         moved in a Subversion repository.</para>
 
