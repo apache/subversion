@@ -30,6 +30,7 @@
 #include "svn_client.h"
 #include "client.h"
 #include "svn_path.h"
+#include "svn_pools.h"
 
 #include "svn_private_config.h"
 
@@ -645,7 +646,10 @@ push_props_on_list (apr_array_header_t *list,
  * REVNUM, obtained using RA_LIB and SESSION.  The item->node_name
  * will be "TARGET_PREFIX/TARGET_RELATIVE", and the value will be a
  * hash mapping 'const char *' property names onto 'svn_string_t *'
- * property values.  Allocate the new item and its contents in POOL.
+ * property values.  
+ *
+ * Allocate the new item and its contents in POOL.
+ * Do all looping, recursion, and temporary work in SCRATCHPOOL.
  *
  * KIND is the kind of the node at "TARGET_PREFIX/TARGET_RELATIVE".
  *
@@ -660,22 +664,23 @@ remote_proplist (apr_array_header_t *proplist,
                  svn_ra_plugin_t *ra_lib,
                  void *session,
                  svn_boolean_t recurse,
-                 apr_pool_t *pool)
+                 apr_pool_t *pool,
+                 apr_pool_t *scratchpool)
 {
   apr_hash_t *dirents;
-  apr_hash_t *prop_hash;
+  apr_hash_t *prop_hash, *final_hash;
   apr_hash_index_t *hi;
-  
+ 
   if (kind == svn_node_dir)
     {
       SVN_ERR (ra_lib->get_dir (session, target_relative, revnum,
                                 (recurse ? &dirents : NULL),
-                                NULL, &prop_hash, pool));
+                                NULL, &prop_hash, scratchpool));
     }
   else if (kind == svn_node_file)
     {
       SVN_ERR (ra_lib->get_file (session, target_relative, revnum,
-                                 NULL, NULL, &prop_hash, pool));
+                                 NULL, NULL, &prop_hash, scratchpool));
     }
   else
     {
@@ -685,30 +690,42 @@ remote_proplist (apr_array_header_t *proplist,
          svn_path_join (target_prefix, target_relative, pool));
     }
   
-  /* Filter out non-regular properties, since the RA layer
-     returns all kinds. */
-  for (hi = apr_hash_first (pool, prop_hash);
+  /* Filter out non-regular properties, since the RA layer returns all
+     kinds.  Copy regular properties keys/vals from the prop_hash
+     allocated in SCRATCHPOOL to the "final" hash allocated in POOL. */
+  final_hash = apr_hash_make (pool);
+  for (hi = apr_hash_first (scratchpool, prop_hash);
        hi;
        hi = apr_hash_next (hi))
     {
       const void *key;
       apr_ssize_t klen;
-      svn_prop_kind_t prop_kind;
-      
-      apr_hash_this (hi, &key, &klen, NULL);
+      void *val;
+      svn_prop_kind_t prop_kind;      
+      const char *name;
+      svn_string_t *value;
+
+      apr_hash_this (hi, &key, &klen, &val);
       prop_kind = svn_property_kind (NULL, (const char *) key);
       
-      if (prop_kind != svn_prop_regular_kind)
-        apr_hash_set (prop_hash, key, klen, NULL);
+      if (prop_kind == svn_prop_regular_kind)
+        {
+          name = apr_pstrdup (pool, (const char *) key);
+          value = svn_string_dup ((svn_string_t *) val, pool);
+          apr_hash_set (final_hash, name, klen, value);
+        }
     }
   
-  push_props_on_list (proplist, prop_hash,
-                      svn_path_join (target_prefix, target_relative, pool),
+  push_props_on_list (proplist, final_hash,
+                      svn_path_join (target_prefix, target_relative,
+                                     scratchpool),
                       pool);
   
   if (recurse && (kind == svn_node_dir) && (apr_hash_count (dirents) > 0))
     {
-      for (hi = apr_hash_first (pool, dirents);
+      apr_pool_t *subpool = svn_pool_create (scratchpool);
+      
+      for (hi = apr_hash_first (scratchpool, dirents);
            hi;
            hi = apr_hash_next (hi))
         {
@@ -718,12 +735,14 @@ remote_proplist (apr_array_header_t *proplist,
           svn_dirent_t *this_ent;
           const char *new_target_relative;
 
+          svn_pool_clear (subpool);
+
           apr_hash_this (hi, &key, NULL, &val);
           this_name = key;
           this_ent = val;
 
           new_target_relative = svn_path_join (target_relative,
-                                               this_name, pool);
+                                               this_name, subpool);
 
           SVN_ERR (remote_proplist (proplist,
                                     target_prefix,
@@ -733,8 +752,11 @@ remote_proplist (apr_array_header_t *proplist,
                                     ra_lib,
                                     session,
                                     recurse,
-                                    pool));
+                                    pool,
+                                    subpool));
         }
+
+      svn_pool_destroy (subpool);
     }
 
   return SVN_NO_ERROR;
@@ -844,7 +866,7 @@ svn_client_proplist (apr_array_header_t **props,
 
       SVN_ERR (remote_proplist (*props, url, "",
                                 kind, revnum, ra_lib, session,
-                                recurse, pool));
+                                recurse, pool, svn_pool_create (pool)));
     }
   else  /* working copy path */
     {
