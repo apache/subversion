@@ -84,7 +84,7 @@ section for approved changes.)
       Notes:  see huge list discussion about this change:
               http://www.contactor.se/~dast/svn/archive-2004-01/0481.shtml
       Votes:
-       +1: sussman
+       +1: sussman, epg
 
     * r8394
       Add capability to build Subversion Perl bindings RPM.
@@ -220,6 +220,16 @@ Bindings changes that don't affect the build system:
      on 32-bit platforms.
      Votes:
       +1: breser (r8348, r8378), clkao (r8348, r8378, r8380)
+
+     * r8397
+     Fix declaration after statement bug.
+     Votes:
+      +1: epg
+
+     * r8398
+     Use LIBS rather than OTHERLDFLAGS in Makefile.PL.
+     Votes:
+      +1: epg
 
 -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*-
 
