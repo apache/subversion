@@ -411,7 +411,7 @@ struct txn_prop_args {
   svn_stringbuf_t **value_p;
   svn_fs_t *fs;
   const char *id;
-  svn_stringbuf_t *propname;
+  const svn_string_t *propname;
 };
 
 
@@ -438,7 +438,7 @@ txn_body_txn_prop (void *baton,
 svn_error_t *
 svn_fs_txn_prop (svn_stringbuf_t **value_p,
                  svn_fs_txn_t *txn,
-                 svn_stringbuf_t *propname,
+                 const svn_string_t *propname,
                  apr_pool_t *pool)
 {
   struct txn_prop_args args;
@@ -507,8 +507,8 @@ svn_fs_txn_proplist (apr_hash_t **table_p,
 struct change_txn_prop_args {
   svn_fs_t *fs;
   const char *id;
-  svn_stringbuf_t *name;
-  svn_stringbuf_t *value;
+  const svn_string_t *name;
+  const svn_string_t *value;
 };
 
 
@@ -536,8 +536,8 @@ txn_body_change_txn_prop (void *baton, trail_t *trail)
 
 svn_error_t *
 svn_fs_change_txn_prop (svn_fs_txn_t *txn,
-                        svn_stringbuf_t *name,
-                        svn_stringbuf_t *value,
+                        const svn_string_t *name,
+                        const svn_string_t *value,
                         apr_pool_t *pool)
 {
   struct change_txn_prop_args args;

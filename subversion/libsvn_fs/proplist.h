@@ -26,7 +26,7 @@
    found in PROPLIST, set *VALUE_P to NULL.  */
 svn_error_t *svn_fs__get_prop (svn_stringbuf_t **value_p,
                                skel_t *proplist,
-                               svn_stringbuf_t *name,
+                               const svn_string_t *name,
                                apr_pool_t *pool);
 
 /* Create and return an APR hash *PROP_HASH from the properties and
@@ -40,8 +40,8 @@ svn_error_t *svn_fs__make_prop_hash (apr_hash_t **prop_hash,
    If VALUE is NULL, remove the property from the list altogether.  Do
    all necessary allocations in POOL.  */
 svn_error_t *svn_fs__set_prop (skel_t *proplist,
-                               svn_stringbuf_t *name,
-                               svn_stringbuf_t *value,
+                               const svn_string_t *name,
+                               const svn_string_t *value,
                                apr_pool_t *pool);
 
 

@@ -33,7 +33,7 @@ struct edit_baton
   /* Supplied when the editor is created: */
 
   /* Commit message for this commit. */
-  svn_stringbuf_t *log_msg;
+  svn_string_t log_msg;
 
   /* Hook to run when when the commit is done. */
   svn_repos_commit_hook_t *hook;
@@ -440,10 +440,12 @@ change_file_prop (void *file_baton,
 {
   struct file_baton *fb = file_baton;
   struct edit_baton *eb = fb->parent->edit_baton;
+  svn_string_t propname = { name->data, name->len };
+  svn_string_t propvalue = { value->data, value->len };
 
   /* This routine is a mindless wrapper. */
   SVN_ERR (svn_fs_change_node_prop (eb->txn_root, fb->path->data,
-                                    name, value, fb->subpool));
+                                    &propname, &propvalue, fb->subpool));
 
   return SVN_NO_ERROR;
 }
@@ -456,10 +458,12 @@ change_dir_prop (void *dir_baton,
 {
   struct dir_baton *db = dir_baton;
   struct edit_baton *eb = db->edit_baton;
+  svn_string_t propname = { name->data, name->len };
+  svn_string_t propvalue = { value->data, value->len };
 
   /* This routine is a mindless wrapper. */
   SVN_ERR (svn_fs_change_node_prop (eb->txn_root, db->path->data,
-                                    name, value, db->subpool));
+                                    &propname, &propvalue, db->subpool));
 
   return SVN_NO_ERROR;
 }
@@ -472,6 +476,8 @@ close_edit (void *edit_baton)
   svn_revnum_t new_revision = SVN_INVALID_REVNUM;
   svn_error_t *err;
   const char *conflict;
+  svn_string_t propname = { SVN_PROP_REVISION_LOG,
+                            sizeof(SVN_PROP_REVISION_LOG) - 1};
 
   /* Here, we pass the log message to the filesystem by adding it as a
      property on the transaction.  Later, when we commit the
@@ -479,10 +485,8 @@ close_edit (void *edit_baton)
      created revision.   This solves the problem of making sure that
      the commit and the setting of the initial log message happens as
      a single atomic "thing." */
-  SVN_ERR (svn_fs_change_txn_prop (eb->txn,
-                                   svn_string_create (SVN_PROP_REVISION_LOG,
-                                                      eb->pool),
-                                   eb->log_msg, eb->pool));
+  SVN_ERR (svn_fs_change_txn_prop (eb->txn, &propname,
+                                   &eb->log_msg, eb->pool));
 
   err = svn_fs_commit_txn (&conflict, &new_revision, eb->txn);
 
@@ -547,7 +551,8 @@ svn_repos_get_editor (svn_delta_edit_fns_t **editor,
 
   /* Set up the edit baton. */
   eb->pool = subpool;
-  eb->log_msg = svn_string_dup (log_msg, subpool);
+  eb->log_msg.data = apr_pmemdup (subpool, log_msg->data, log_msg->len + 1);
+  eb->log_msg.len = log_msg->len;
   eb->hook = hook;
   eb->hook_baton = hook_baton;
   eb->base_path = svn_string_dup (base_path, subpool);

@@ -477,7 +477,7 @@ svn_error_t *svn_fs_list_transactions (char ***names_p,
    to zero.  Allocate the result in POOL.  */
 svn_error_t *svn_fs_txn_prop (svn_stringbuf_t **value_p,
                               svn_fs_txn_t *txn,
-                              svn_stringbuf_t *propname,
+                              const svn_string_t *propname,
                               apr_pool_t *pool);
 
 
@@ -496,8 +496,8 @@ svn_error_t *svn_fs_txn_proplist (apr_hash_t **table_p,
    removed altogether.  Do any necessary temporary allocation in
    POOL. */
 svn_error_t *svn_fs_change_txn_prop (svn_fs_txn_t *txn,
-                                     svn_stringbuf_t *name,
-                                     svn_stringbuf_t *value,
+                                     const svn_string_t *name,
+                                     const svn_string_t *value,
                                      apr_pool_t *pool);
 
 
@@ -625,7 +625,7 @@ svn_error_t *svn_fs_node_id (svn_fs_id_t **id_p,
 svn_error_t *svn_fs_node_prop (svn_stringbuf_t **value_p,
                                svn_fs_root_t *root,
                                const char *path,
-                               svn_stringbuf_t *propname,
+                               const svn_string_t *propname,
                                apr_pool_t *pool);
    
 
@@ -648,8 +648,8 @@ svn_error_t *svn_fs_node_proplist (apr_hash_t **table_p,
    Do any necessary temporary allocation in POOL.  */
 svn_error_t *svn_fs_change_node_prop (svn_fs_root_t *root,
                                       const char *path,
-                                      svn_stringbuf_t *name,
-                                      svn_stringbuf_t *value,
+                                      const svn_string_t *name,
+                                      const svn_string_t *value,
                                       apr_pool_t *pool);
 
 
@@ -879,7 +879,7 @@ svn_error_t *svn_fs_youngest_rev (svn_revnum_t *youngest_p,
 svn_error_t *svn_fs_revision_prop (svn_stringbuf_t **value_p,
                                    svn_fs_t *fs,
                                    svn_revnum_t rev,
-                                   svn_stringbuf_t *propname,
+                                   const svn_string_t *propname,
                                    apr_pool_t *pool);
 
 
@@ -908,8 +908,8 @@ svn_error_t *svn_fs_revision_proplist (apr_hash_t **table_p,
    Do any necessary temporary allocation in POOL.  */
 svn_error_t *svn_fs_change_rev_prop (svn_fs_t *fs,
                                      svn_revnum_t rev,
-                                     svn_stringbuf_t *name,
-                                     svn_stringbuf_t *value,
+                                     const svn_string_t *name,
+                                     const svn_string_t *value,
                                      apr_pool_t *pool);
 
 

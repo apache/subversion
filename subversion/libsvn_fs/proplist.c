@@ -21,7 +21,7 @@
 svn_error_t *
 svn_fs__get_prop (svn_stringbuf_t **value_p,
                   skel_t *proplist,
-                  svn_stringbuf_t *name,
+                  const svn_string_t *name,
                   apr_pool_t *pool)
 {
   skel_t *prop;
@@ -86,8 +86,8 @@ svn_fs__make_prop_hash (apr_hash_t **prop_hash,
 
 svn_error_t *
 svn_fs__set_prop (skel_t *proplist,
-                  svn_stringbuf_t *name,
-                  svn_stringbuf_t *value,
+                  const svn_string_t *name,
+                  const svn_string_t *value,
                   apr_pool_t *pool)
 {
   skel_t *prop;
@@ -144,7 +144,7 @@ svn_fs__set_prop (skel_t *proplist,
             }
           else
             {
-              this_value->data = value->data;
+              this_value->data = (char *)value->data;
               this_value->len = value->len;
             }
 
@@ -163,11 +163,11 @@ svn_fs__set_prop (skel_t *proplist,
       /* The property we were seeking to change is not currently in
          the property list, so well add its name and desired value to
          the beginning of the property list. */
-      svn_fs__prepend (svn_fs__mem_atom (value->data,
+      svn_fs__prepend (svn_fs__mem_atom ((char *)value->data,
                                          value->len,
                                          pool),
                        proplist);
-      svn_fs__prepend (svn_fs__mem_atom (name->data,
+      svn_fs__prepend (svn_fs__mem_atom ((char *)name->data,
                                          name->len,
                                          pool),
                        proplist);
