@@ -170,17 +170,18 @@ typedef struct
     full paths to the files, and sets @a cert_type for the type of
     certificate file to load */
 #define SVN_AUTH_CRED_CLIENT_SSL "svn:ssl:client-cert"
+typedef enum
+  {
+    svn_auth_ssl_unknown_cert_type,
+    svn_auth_ssl_pem_cert_type,
+    svn_auth_ssl_pkcs12_cert_type
+    
+  } svn_auth_ssl_cert_type_t;
 typedef struct
 {
   const char *cert_file;
   const char *key_file;
-  enum svn_auth_ssl_cert_type_t
-    {
-      svn_auth_ssl_unknown_cert_type,
-      svn_auth_ssl_pem_cert_type,
-      svn_auth_ssl_pkcs12_cert_type
-
-    } cert_type;
+  svn_auth_ssl_cert_type_t cert_type;
 
 } svn_auth_cred_client_ssl_t;
 
@@ -284,14 +285,15 @@ const void * svn_auth_get_parameter(svn_auth_baton_t *auth_baton,
 
 /** Available for ssl client cert providers, provides a @c ne_ssl_dname*  */
 #define SVN_AUTH_PARAM_SSL_SERVER_DNAME SVN_AUTH_PARAM_PREFIX "ssl:dname"
-/** Available for ssl server cert providers, provides a @c ne_ssl_certificate* */
-#define SVN_AUTH_PARAM_SSL_SERVER_CERTIFICATE SVN_AUTH_PARAM_PREFIX "ssl:server-cert"
+/** Available for ssl server cert providers, provides a full 
+    @c ne_ssl_certificate* */
+#define SVN_AUTH_PARAM_SSL_SERVER_CERTIFICATE SVN_AUTH_PARAM_PREFIX \
+  "ssl:server-cert"
 
-/** The following are provided for ssl server cert providers. These
-    provide the detected failures, as well as the failures masked by
-    any previous providers in the chain */
-#define SVN_AUTH_PARAM_SSL_SERVER_FAILURES_IN SVN_AUTH_PARAM_PREFIX "ssl:failures"
-#define SVN_AUTH_PARAM_SSL_SERVER_FAILURES_MASKED SVN_AUTH_PARAM_PREFIX "ssl:masked-failures"
+/** The following property is for ssl server cert providers. This
+    provides the detected failures by the certificate validator */
+#define SVN_AUTH_PARAM_SSL_SERVER_FAILURES_IN SVN_AUTH_PARAM_PREFIX \
+  "ssl:failures"
 
 /** Some providers need access to the @c svn_config_t configuration
     for individual servers in order to properly operate */

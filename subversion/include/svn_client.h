@@ -167,6 +167,9 @@ svn_client_get_username_prompt_provider (const svn_auth_provider_t **provider,
  *
  *     - the name of the server-specific settings group if available
  *        (@c SVN_AUTH_PARAM_SERVER_GROUP)
+ *
+ *     - the failure bitmask reported by the ssl certificate validator
+ *        (@c SVN_AUTH_PARAM_SSL_SERVER_FAILURES_IN)
  */
 void 
 svn_client_get_ssl_server_file_provider (const svn_auth_provider_t **provider,
@@ -212,6 +215,55 @@ void
 svn_client_get_ssl_pw_file_provider (const svn_auth_provider_t **provider,
                                      void **provider_baton,
                                      apr_pool_t *pool);
+
+/** Set @a *provider and @ *provider_baton to an authentication
+ *  provider for type @c svn_auth_cred_server_ssl_t. This provider retrieves
+ *  its credentials by using the @a prompt_func and @a prompt_baton. The
+ *  returned credential is used to override SSL security on an error.
+ *  
+ *  This provider requires certain run-time parameters be present in
+ *  the auth_baton:
+ *
+ *     - the failure bitmask reported by the ssl certificate validator
+ *        (@c SVN_AUTH_PARAM_SSL_SERVER_FAILURES_IN)
+ */
+void
+svn_client_get_ssl_server_prompt_provider(const svn_auth_provider_t **provider,
+                                          void **provider_baton,
+                                          svn_client_prompt_t prompt_func,
+                                          void **prompt_baton,
+                                          apr_pool_t *pool);
+
+/** Set @a *provider and @ *provider_baton to an authentication
+ *  provider for type @c svn_auth_cred_client_ssl_t. This provider retrieves
+ *  its credentials by using the @a prompt_func and @a prompt_baton. The
+ *  returned credential is used to load the appropriate client certificate for
+ *  authentication when requested by a server. 
+ *  
+ *  There are no run-time parameters required for this provider.
+ */
+void
+svn_client_get_ssl_client_prompt_provider(const svn_auth_provider_t **provider,
+                                          void **provider_baton,
+                                          svn_client_prompt_t prompt_func,
+                                          void **prompt_baton,
+                                          apr_pool_t *pool);
+
+/** Set @a *provider and @ *provider_baton to an authentication
+ *  provider for type @c svn_auth_cred_client_ssl_pass_t. This provider
+ *  retrieves its credentials by using the @a prompt_func and @a prompt_baton.
+ *  The returned credential is used when a loaded client certificate is
+ *  protected by a passphrase.
+ *
+ *  There are no run-time parameters required for this provider.
+ */
+void
+svn_client_get_ssl_pw_prompt_provider(const svn_auth_provider_t **provider,
+                                      void **provider_baton,
+                                      svn_client_prompt_t prompt_func,
+                                      void **prompt_baton,
+                                      apr_pool_t *pool);
+
 
 /** This is a structure which stores a filename and a hash of property
  * names and values.

@@ -968,6 +968,12 @@ main (int argc, const char * const *argv)
       = apr_pcalloc (pool, sizeof(*ssl_client_cred_file_provider));
     svn_auth_provider_object_t *ssl_client_pw_file_provider
       = apr_pcalloc (pool, sizeof(*ssl_client_pw_file_provider));
+    svn_auth_provider_object_t *ssl_server_prompt_provider
+      = apr_pcalloc (pool, sizeof(*ssl_server_prompt_provider));
+    svn_auth_provider_object_t *ssl_client_prompt_provider
+      = apr_pcalloc (pool, sizeof(*ssl_client_prompt_provider));
+    svn_auth_provider_object_t *ssl_client_pw_prompt_provider
+      = apr_pcalloc (pool, sizeof(*ssl_client_pw_prompt_provider));
 #endif
 
     svn_wc_get_simple_provider (&(simple_wc_provider->vtable),
@@ -1002,7 +1008,33 @@ main (int argc, const char * const *argv)
        pool);
     *(svn_auth_provider_object_t **)apr_array_push (providers)
       = ssl_client_pw_file_provider;
-    
+
+    svn_client_get_ssl_server_prompt_provider
+      (&ssl_server_prompt_provider->vtable,
+       &ssl_server_prompt_provider->provider_baton,
+       svn_cl__prompt_user,
+       NULL,
+       pool);
+    *(svn_auth_provider_object_t **)apr_array_push (providers)
+      = ssl_server_prompt_provider;
+
+    svn_client_get_ssl_client_prompt_provider
+      (&ssl_client_prompt_provider->vtable,
+       &ssl_client_prompt_provider->provider_baton,
+       svn_cl__prompt_user,
+       NULL,
+       pool);
+    *(svn_auth_provider_object_t **)apr_array_push (providers)
+      = ssl_client_prompt_provider;
+
+    svn_client_get_ssl_pw_prompt_provider
+      (&ssl_client_pw_prompt_provider->vtable,
+       &ssl_client_pw_prompt_provider->provider_baton,
+       svn_cl__prompt_user,
+       NULL,
+       pool);
+    *(svn_auth_provider_object_t **)apr_array_push (providers)
+      = ssl_client_pw_prompt_provider;
 #endif
     if (opt_state.non_interactive == FALSE)
       {

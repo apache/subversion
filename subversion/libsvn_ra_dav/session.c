@@ -35,7 +35,6 @@
 #include "svn_config.h"
 #include "svn_version.h"
 #include "svn_path.h"
-#include "svn_ra_dav.h"
 #include "ra_dav.h"
 
 
@@ -102,8 +101,6 @@ server_ssl_callback(void *userdata,
   svn_auth_set_parameter(ras->callbacks->auth_baton,
                          SVN_AUTH_PARAM_SSL_SERVER_FAILURES_IN,
                          (void*)failures);
-  svn_auth_set_parameter(ras->callbacks->auth_baton,
-                         SVN_AUTH_PARAM_SSL_SERVER_FAILURES_MASKED, (void*)0);
 
   apr_pool_create(&pool, ras->pool);
   error = svn_auth_first_credentials((void**)&credentials, &state,
@@ -152,13 +149,16 @@ client_ssl_callback(void *userdata, ne_session *sess,
                                      SVN_AUTH_CRED_CLIENT_SSL,
                                      ras->callbacks->auth_baton,
                                      pool);
-  if(credentials->cert_type == svn_auth_ssl_pem_cert_type)
+  if(credentials)
     {
-      ne_ssl_load_pem(sess, credentials->cert_file, credentials->key_file);
-    }
-  else
-    {
-      ne_ssl_load_pkcs12(sess, credentials->cert_file);
+      if(credentials->cert_type == svn_auth_ssl_pem_cert_type)
+        {
+          ne_ssl_load_pem(sess, credentials->cert_file, credentials->key_file);
+        }
+      else
+        {
+          ne_ssl_load_pkcs12(sess, credentials->cert_file);
+        }
     }
   apr_pool_destroy(pool);
 }

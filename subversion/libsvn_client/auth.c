@@ -466,33 +466,42 @@ client_ssl_cert_file_first_credentials(void **credentials,
   const char *server_group = apr_hash_get(parameters,
                                           SVN_AUTH_PARAM_SERVER_GROUP,
                                           APR_HASH_KEY_STRING);
-  svn_auth_cred_client_ssl_t *cred =
-    apr_palloc(pool, sizeof(svn_auth_cred_client_ssl_t));
-  
-  const char* cert_type;
+  const char *cert_file, *key_file, *cert_type;
 
-  cred->cert_file = svn_config_get_server_setting(cfg, server_group,
-                                                  "ssl-client-cert-file",
-                                                  NULL);
-  cred->key_file = svn_config_get_server_setting(cfg, server_group,
-                                                 "ssl-client-key-file", NULL);
-  cert_type = svn_config_get_server_setting(cfg, server_group,
-                                            "ssl-client-cert-type", "pem");
-  if ((strcmp(cert_type, "pem") == 0) ||
-      (strcmp(cert_type, "PEM") == 0))
+  cert_file = svn_config_get_server_setting(cfg, server_group,
+                                            "ssl-client-cert-file",
+                                            NULL);
+
+  if (cert_file != NULL)
     {
-      cred->cert_type = svn_auth_ssl_pem_cert_type;
-    }
-  else if ((strcmp(cert_type, "pkcs12") == 0) ||
-           (strcmp(cert_type, "PKCS12") == 0))
-    {
-      cred->cert_type = svn_auth_ssl_pkcs12_cert_type;
+      key_file = svn_config_get_server_setting(cfg, server_group,
+                                               "ssl-client-key-file", NULL);
+      cert_type = svn_config_get_server_setting(cfg, server_group,
+                                                "ssl-client-cert-type", "pem");
+      svn_auth_cred_client_ssl_t *cred =
+        apr_palloc(pool, sizeof(svn_auth_cred_client_ssl_t));
+      cred->cert_file = cert_file;
+      cred->key_file = key_file;
+      if ((strcmp(cert_type, "pem") == 0) ||
+          (strcmp(cert_type, "PEM") == 0))
+        {
+          cred->cert_type = svn_auth_ssl_pem_cert_type;
+        }
+      else if ((strcmp(cert_type, "pkcs12") == 0) ||
+               (strcmp(cert_type, "PKCS12") == 0))
+        {
+          cred->cert_type = svn_auth_ssl_pkcs12_cert_type;
+        }
+      else
+        {
+          cred->cert_type = svn_auth_ssl_unknown_cert_type;
+        }
+      *credentials = cred;
     }
   else
-  {
-    cred->cert_type = svn_auth_ssl_unknown_cert_type;
-  }
-  *credentials = cred;
+    {
+      *credentials = NULL;
+    }
   return NULL;
 }
 
@@ -518,7 +527,7 @@ client_ssl_pw_file_first_credentials(void **credentials,
     {
       svn_auth_cred_client_ssl_pass_t *cred =
         apr_palloc(pool, sizeof(svn_auth_cred_client_ssl_pass_t));
-      
+      cred->password = password;
       /* does nothing so far */
       *credentials = cred;
     }
@@ -573,4 +582,238 @@ svn_client_get_ssl_pw_file_provider (const svn_auth_provider_t **provider,
                                      apr_pool_t *pool)
 {
   *provider = &client_ssl_pw_file_provider;
+}
+
+
+
+typedef struct
+{
+  /* a callback function/baton that prompts the user */
+  svn_client_prompt_t prompt_func;
+  void *prompt_baton;
+
+} cred_ssl_provider_baton;
+
+static svn_error_t *
+client_ssl_pw_prompt_first_cred(void **credentials,
+                                void **iter_baton,
+                                void *provider_baton,
+                                apr_hash_t *parameters,
+                                apr_pool_t *pool)
+{
+  cred_ssl_provider_baton *pb = provider_baton;
+  const char *info;
+  SVN_ERR(pb->prompt_func(&info, "client certificate passphrase: ", TRUE,
+                          pb->prompt_baton, pool));
+  if (info && info[0])
+    {
+      svn_auth_cred_client_ssl_pass_t *cred = apr_palloc(pool, sizeof(*cred));
+      cred->password = info;
+      *credentials = cred;
+    }
+  else
+    {
+      *credentials = NULL;
+    }
+  return NULL;
+}
+
+static svn_error_t *
+client_ssl_prompt_first_cred(void **credentials,
+                             void **iter_baton,
+                             void *provider_baton,
+                             apr_hash_t *parameters,
+                             apr_pool_t *pool)
+{
+  cred_ssl_provider_baton *pb = provider_baton;
+  const char *cert_file = NULL, *key_file = NULL;
+  svn_auth_ssl_cert_type_t cert_type;
+  SVN_ERR (pb->prompt_func (&cert_file, "client certificate filename: ", FALSE,
+                            pb->prompt_baton, pool));
+  
+  if ((cert_file == NULL) || (cert_file[0] == 0))
+    {
+      return NULL;
+    }
+
+  size_t cert_file_len = strlen(cert_file);
+  const char *extension = cert_file + cert_file_len - 4;
+  if ((strcmp(extension, ".p12") == 0) || 
+      (strcmp(extension, ".P12") == 0))
+    {
+      cert_type = svn_auth_ssl_pkcs12_cert_type;
+    }
+  else if ((strcmp(extension, ".pem") == 0) || 
+           (strcmp(extension, ".PEM") == 0))
+    {
+      cert_type = svn_auth_ssl_pem_cert_type;
+    }
+  else
+    {
+      const char *type;
+      SVN_ERR(pb->prompt_func(&type, "cert type ('pem' or 'pkcs12': ",
+                              FALSE, pb->prompt_baton, pool));
+      if ((strcmp(type, "pkcs12") == 0) ||
+          (strcmp(type, "PKCS12") == 0))
+        {
+          cert_type = svn_auth_ssl_pkcs12_cert_type;
+        }
+      else if ((strcmp(type, "pem") == 0) || 
+               (strcmp(type, "PEM") == 0))
+        {
+          cert_type = svn_auth_ssl_pem_cert_type;
+        }
+      else
+        {
+          return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
+                                   "unknown ssl certificate type '%s'", type);
+        }
+    }
+  
+  if (cert_type == svn_auth_ssl_pem_cert_type)
+    {
+      SVN_ERR(pb->prompt_func(&key_file, "optional key file: ",
+                              FALSE, pb->prompt_baton, pool));
+    }
+  if (key_file && key_file[0] == 0)
+    {
+      key_file = 0;
+    }
+  svn_auth_cred_client_ssl_t *cred = apr_palloc(pool, sizeof(*cred));
+  cred->cert_file = cert_file;
+  cred->key_file = key_file;
+  cred->cert_type = cert_type;
+  *credentials = cred;
+  return NULL;
+}
+
+static svn_error_t *
+server_ssl_prompt_first_cred(void **credentials,
+                             void **iter_baton,
+                             void *provider_baton,
+                             apr_hash_t *parameters,
+                             apr_pool_t *pool)
+{
+  cred_ssl_provider_baton *pb = provider_baton;
+  svn_boolean_t previous_output = FALSE;
+  int failure;
+  const char *choice;
+  int failures_in =
+    (int) apr_hash_get(parameters,
+                       SVN_AUTH_PARAM_SSL_SERVER_FAILURES_IN,
+                       APR_HASH_KEY_STRING);
+
+  svn_stringbuf_t *buf = svn_stringbuf_create
+    ("Error validating server certficate: ", pool);
+
+  failure = failures_in & SVN_AUTH_SSL_UNKNOWNCA;
+  if (failure)
+    {
+      svn_stringbuf_appendcstr(buf, "Unknown certificate issuer");
+      previous_output = TRUE;
+    }
+
+  failure = failures_in & SVN_AUTH_SSL_CNMISMATCH;
+  if (failure)
+    {
+      if (previous_output)
+        {
+          svn_stringbuf_appendcstr(buf, ", ");
+        }
+      svn_stringbuf_appendcstr(buf, "Hostname mismatch");
+      previous_output = TRUE;
+    } 
+  failure = failures_in & (SVN_AUTH_SSL_EXPIRED | SVN_AUTH_SSL_NOTYETVALID);
+  if (failure)
+    {
+      if (previous_output)
+        {
+          svn_stringbuf_appendcstr(buf, ", ");
+        }
+      svn_stringbuf_appendcstr(buf, "Certificate expired or not yet valid");
+      previous_output = TRUE;
+    }
+
+  svn_stringbuf_appendcstr(buf, ". Accept? (y/N): ");
+  SVN_ERR(pb->prompt_func(&choice, buf->data, FALSE,
+                          pb->prompt_baton, pool));
+
+  svn_auth_cred_server_ssl_t *cred = apr_palloc(pool, sizeof(*cred));
+  if (choice && (choice[0] == 'y' || choice[0] == 'Y'))
+    {
+      cred->failures_allow = failures_in;
+    }
+  else
+    {
+      cred->failures_allow = 0;
+    }
+  *credentials = cred;
+  return NULL;
+}
+
+static const svn_auth_provider_t server_ssl_prompt_provider = 
+  {
+    SVN_AUTH_CRED_SERVER_SSL,
+    server_ssl_prompt_first_cred,
+    NULL,
+    NULL  
+  };
+
+static const svn_auth_provider_t client_ssl_prompt_provider = 
+  {
+    SVN_AUTH_CRED_CLIENT_SSL,
+    client_ssl_prompt_first_cred,
+    NULL,
+    NULL
+    
+  };
+
+static const svn_auth_provider_t client_ssl_pass_prompt_provider =
+  {
+    SVN_AUTH_CRED_CLIENT_PASS_SSL,
+    client_ssl_pw_prompt_first_cred,
+    NULL,
+    NULL
+    
+  };
+
+void
+svn_client_get_ssl_server_prompt_provider(const svn_auth_provider_t **provider,
+                                          void **provider_baton,
+                                          svn_client_prompt_t prompt_func,
+                                          void **prompt_baton,
+                                          apr_pool_t *pool)
+{
+  cred_ssl_provider_baton *pb = apr_palloc(pool, sizeof(*pb));
+  pb->prompt_func = prompt_func;
+  pb->prompt_baton = prompt_baton;
+  *provider = &server_ssl_prompt_provider;
+  *provider_baton = pb;
+}
+
+void
+svn_client_get_ssl_client_prompt_provider(const svn_auth_provider_t **provider,
+                                          void **provider_baton,
+                                          svn_client_prompt_t prompt_func,
+                                          void **prompt_baton,
+                                          apr_pool_t *pool)
+{
+  cred_ssl_provider_baton *pb = apr_palloc(pool, sizeof(*pb));
+  pb->prompt_func = prompt_func;
+  pb->prompt_baton = prompt_baton;
+  *provider = &client_ssl_prompt_provider;
+  *provider_baton = pb;
+}
+void
+svn_client_get_ssl_pw_prompt_provider(const svn_auth_provider_t **provider,
+                                      void **provider_baton,
+                                      svn_client_prompt_t prompt_func,
+                                      void **prompt_baton,
+                                      apr_pool_t *pool)
+{
+  cred_ssl_provider_baton *pb = apr_palloc(pool, sizeof(*pb));
+  pb->prompt_func = prompt_func;
+  pb->prompt_baton = prompt_baton;
+  *provider = &client_ssl_pass_prompt_provider;
+  *provider_baton = pb;
 }
