@@ -1175,7 +1175,7 @@ void svn_wc__eol_value_from_string (const char **value,
 
 /* Helper for svn_wc__get_keywords().
    
-   If KEYWORD is a valid keyword, look up its value for PATH, fill in
+   If KEYWORD is a valid keyword, look up its value in ENTRY, fill in
    the appropriate field in KEYWORDS with that value (allocated in
    POOL), and set *IS_VALID_P to TRUE.  If the value is not available,
    use "" instead.
@@ -1187,14 +1187,9 @@ static svn_error_t *
 expand_keyword (svn_wc_keywords_t *keywords,
                 svn_boolean_t *is_valid_p,
                 const char *keyword,
-                const char *path,
+                svn_wc_entry_t *entry,
                 apr_pool_t *pool)
 {
-  svn_wc_entry_t *entry;
-  svn_stringbuf_t *value = NULL;
-
-  SVN_ERR (svn_wc_entry (&entry, svn_stringbuf_create (path, pool), pool));
-  
   *is_valid_p = TRUE;
 
   /* Using strcasecmp() to accept downcased short versions of
@@ -1223,7 +1218,7 @@ expand_keyword (svn_wc_keywords_t *keywords,
     {
       if (entry && (entry->cmt_date))
         keywords->date = svn_wc__friendly_date 
-          (svn_time_to_nts (entry->text_time, pool), pool);
+          (svn_time_to_nts (entry->cmt_date, pool), pool);
       else
         keywords->date = svn_string_create ("", pool);
     }
@@ -1231,20 +1226,17 @@ expand_keyword (svn_wc_keywords_t *keywords,
            || (! strcasecmp (keyword, SVN_KEYWORD_AUTHOR_SHORT)))
     {
       if (entry && (entry->cmt_author))
-        keywords->author = svn_string_create_from_buf (value, pool);
+        keywords->author = svn_string_create_from_buf (entry->cmt_author, pool);
       else
         keywords->author = svn_string_create ("", pool);
     }
   else if ((! strcmp (keyword, SVN_KEYWORD_URL_LONG))
            || (! strcasecmp (keyword, SVN_KEYWORD_URL_SHORT)))
     {
-      if (entry)
-        value = entry->url;
-      
-      if (! value)
-        keywords->url = svn_string_create ("", pool);
+      if (entry && (entry->url))
+        keywords->url = svn_string_create_from_buf (entry->url, pool);
       else
-        keywords->url = svn_string_create_from_buf (value, pool);
+        keywords->url = svn_string_create ("", pool);
     }
   else
     *is_valid_p = FALSE;
@@ -1264,6 +1256,7 @@ svn_wc__get_keywords (svn_wc_keywords_t **keywords,
   svn_stringbuf_t *found_word;
   svn_wc_keywords_t tmp_keywords;
   svn_boolean_t got_one = FALSE;
+  svn_wc_entry_t *entry = NULL;
 
   /* Start by assuming no keywords. */
   *keywords = NULL;
@@ -1290,40 +1283,47 @@ svn_wc__get_keywords (svn_wc_keywords_t **keywords,
   if (list == NULL)
     return SVN_NO_ERROR;
 
-  do {
-    /* Find the start of a word by skipping past whitespace. */
-    while ((list[offset] != '\0') && (apr_isspace (list[offset])))
-      offset++;
+  do 
+    {
+      /* Find the start of a word by skipping past whitespace. */
+      while ((list[offset] != '\0') && (apr_isspace (list[offset])))
+        offset++;
     
-    /* Hit either a non-whitespace or NULL char. */
+      /* Hit either a non-whitespace or NULL char. */
 
-    if (list[offset] != '\0') /* found non-whitespace char */
-      {
-        svn_boolean_t is_valid;
-        int word_start, word_end;
+      if (list[offset] != '\0') /* found non-whitespace char */
+        {
+          svn_boolean_t is_valid;
+          int word_start, word_end;
+          
+          word_start = offset;
+          
+          /* Find the end of the word by skipping non-whitespace chars */
+          while ((list[offset] != '\0') && (! apr_isspace (list[offset])))
+            offset++;
+          
+          /* Hit either a whitespace or NULL char.  Either way, it's the
+             end of the word. */
+          word_end = offset;
+          
+          /* Make a temporary copy of the word */
+          found_word = svn_stringbuf_ncreate (list + word_start,
+                                              (word_end - word_start),
+                                              pool);
+          
+          /* If we haven't already read the entry in, do so now. */
+          if (! entry)
+            SVN_ERR (svn_wc_entry (&entry, 
+                                   svn_stringbuf_create (path, pool), pool));
 
-        word_start = offset;
-        
-        /* Find the end of the word by skipping non-whitespace chars */
-        while ((list[offset] != '\0') && (! apr_isspace (list[offset])))
-          offset++;
-        
-        /* Hit either a whitespace or NULL char.  Either way, it's the
-           end of the word. */
-        word_end = offset;
-        
-        /* Make a temporary copy of the word */
-        found_word = svn_stringbuf_ncreate (list + word_start,
-                                            (word_end - word_start),
-                                            pool);
-        
-        SVN_ERR (expand_keyword (&tmp_keywords, &is_valid,
-                                 found_word->data, path, pool));
-        if (is_valid)
-          got_one = TRUE;
-      }
-
-  } while (list[offset] != '\0');
+          /* Now, try to expand the keyword. */
+          SVN_ERR (expand_keyword (&tmp_keywords, &is_valid,
+                                   found_word->data, entry, pool));
+          if (is_valid)
+            got_one = TRUE;
+        }
+      
+    } while (list[offset] != '\0');
 
   if (got_one)
     {
