@@ -12,4 +12,4 @@ cmptag.check_tags("cvsrepos", "test1",
                       ( "icewm-1-2-BRANCH", "/branches/icewm-1-2-BRANCH" ),
                       # branch tag
                       ( "icewm-1_2_2", "/tags/icewm-1_2_2" ),
-                  ]);
+                  ])

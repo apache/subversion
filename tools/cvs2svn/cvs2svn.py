@@ -64,7 +64,7 @@ class CollectData(rcsparse.Sink):
     self.branch_names[revision] = name
 
   def get_branch_name(self, revision):
-    brev = revision[:revision.rindex(".")];
+    brev = revision[:revision.rindex(".")]
     if not self.branch_names.has_key(brev):
       return None
     return self.branch_names[brev]
@@ -75,10 +75,10 @@ class CollectData(rcsparse.Sink):
     self.branchlist[revision].append(branch_name)
 
   def add_cvs_branch(self, revision, branch_name):
-    last_dot = revision.rfind(".");
-    branch_rev = revision[:last_dot];
-    last2_dot = branch_rev.rfind(".");
-    branch_rev = branch_rev[:last2_dot] + revision[last_dot:];
+    last_dot = revision.rfind(".")
+    branch_rev = revision[:last_dot]
+    last2_dot = branch_rev.rfind(".")
+    branch_rev = branch_rev[:last2_dot] + revision[last_dot:]
     self.set_branch_name(branch_rev, branch_name)
     self.add_branch_point(branch_rev[:last2_dot], branch_name)
 
@@ -102,7 +102,7 @@ class CollectData(rcsparse.Sink):
       self.set_branch_name(revision, name)
     else:
       if not self.taglist.has_key(revision):
-        self.taglist[revision] = [];
+        self.taglist[revision] = []
       self.taglist[revision].append(name)
 
   def define_revision(self, revision, timestamp, author, state,
@@ -182,7 +182,8 @@ class CollectData(rcsparse.Sink):
     branch_name = self.get_branch_name(revision)
 
     write_revs_line(self.revs, timestamp, digest, op, revision, self.fname,
-                    branch_name, self.get_tags(revision), self.get_branches(revision))
+                    branch_name, self.get_tags(revision),
+                    self.get_branches(revision))
 
 def branch_path(ctx, branch_name = None):
   if branch_name:
@@ -446,7 +447,7 @@ class Commit:
       if created_file:
         delta.svn_txdelta_send_string(pipe.read(), handler, baton, f_pool)
         if f_st[0] & stat.S_IXUSR:
-          fs.change_node_prop(root, repos_path, "svn:executable", "", f_pool);
+          fs.change_node_prop(root, repos_path, "svn:executable", "", f_pool)
       else:
         # open an SVN stream onto the pipe
         stream2 = util.svn_stream_from_aprfile(pipe, f_pool)
@@ -457,7 +458,8 @@ class Commit:
         # revision from co, or else the delta won't be correct because
         # the contents in the repo won't have changed yet.
         if repos_path == lastcommit[0]:
-          infile2 = os.popen("co -q -p%s \'%s\'" % (lastcommit[1], f), "r", 102400)
+          infile2 = os.popen("co -q -p%s \'%s\'"
+                             % (lastcommit[1], f), "r", 102400)
           stream1 = util.svn_stream_from_aprfile(infile2, f_pool)
         else:
           stream1 = fs.file_contents(root, repos_path, f_pool)
@@ -502,7 +504,8 @@ class Commit:
 
       for to_branch in branches:
         to_branch_path = branch_path(ctx, to_branch) + rel_name
-        print "file", f, "created on branch", to_branch, "rev", r, "path", to_branch_path
+        print "file", f, "created on branch", to_branch, \
+              "rev", r, "path", to_branch_path
 
       # wipe the pool, in case the delete loads it up
       util.svn_pool_clear(f_pool)
@@ -537,7 +540,7 @@ class Commit:
       for c_from, c_to, c_type in do_copies:
         print "copying", c_from, "to", c_to
 
-        t_root = fs.revision_root(t_fs, rev, f_pool);
+        t_root = fs.revision_root(t_fs, rev, f_pool)
         make_path(fs, root, c_to, f_pool)
         fs.copy(t_root, c_from, root, c_to, f_pool)
 
@@ -615,14 +618,14 @@ def write_revs_line(output, timestamp, digest, op, revision, fname,
   output.write('%08lx %s %s %s ' % (timestamp, digest, op, revision))
   if not branch_name:
     branch_name = "*"
-  output.write('%s ' % branch_name);
-  output.write('%d ' % (len(tags)));
+  output.write('%s ' % branch_name)
+  output.write('%d ' % (len(tags)))
   for tag in tags:
-    output.write('%s ' % (tag));
-  output.write('%d ' % (len(branches)));
+    output.write('%s ' % (tag))
+  output.write('%d ' % (len(branches)))
   for branch in branches:
-    output.write('%s ' % (branch));
-  output.write('%s\n' % fname);
+    output.write('%s ' % (branch))
+  output.write('%s\n' % fname)
 
 def pass1(ctx):
   cd = CollectData(ctx.cvsroot, DATAFILE)
@@ -797,7 +800,8 @@ def main():
 
   try:
     opts, args = getopt.getopt(sys.argv[1:], 'p:s:vn',
-                               [ "create", "trunk=", "branches=", "tags=", "encoding=" ])
+                               [ "create", "trunk=",
+                                 "branches=", "tags=", "encoding=" ])
   except getopt.GetoptError:
     usage(ctx)
   if len(args) != 1:
