@@ -25,4 +25,11 @@ Candidate changes:
     URIs never should end in a / when returned from svn_path_canonicalize().
     Justification: http://svn/ would result in an assertion failure. Very ugly.
     Votes:
-      +1: breser
+      +1: breser, jpieper
+
+  * r10324
+    Fix a simple bug when avoiding setting time stamps on special
+    files.  This can cause svn to abort when checking out/updating a
+    symlink pointing to a non-existant path.
+    Votes:
+      +1: jpieper
