@@ -159,6 +159,9 @@ struct dav_resource_private {
 
   /* for PRIVATE resources: the private resource type */
   enum dav_svn_private_restype restype;
+
+  /* ### hack to deal with the Content-Type header on a PUT */
+  int is_svndiff;
 };
 
 
