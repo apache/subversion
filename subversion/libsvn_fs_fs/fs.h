@@ -133,12 +133,6 @@ typedef struct
   /* Is this representation a transaction? */
   const char *txn_id;
 
-  /* Is this a data rep for a directory node? */
-  svn_boolean_t is_directory_contents;
-
-  /* Is this a data rep? */
-  svn_boolean_t is_data_rep;
-  
 } representation_t;
 
 

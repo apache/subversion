@@ -750,7 +750,6 @@ svn_fs_fs__dag_remove_node (svn_fs_t *fs,
                             apr_pool_t *pool)
 {
   dag_node_t *node;
-  node_revision_t *noderev;
 
   /* Fetch the node. */
   SVN_ERR (svn_fs_fs__dag_get_node (&node, fs, id, pool));
@@ -760,20 +759,7 @@ svn_fs_fs__dag_remove_node (svn_fs_t *fs,
     return svn_error_createf (SVN_ERR_FS_NOT_MUTABLE, NULL,
                               "Attempted removal of immutable node");
 
-  /* Get a fresh node-revision. */
-  SVN_ERR (svn_fs_fs__get_node_revision (&noderev, fs, id, pool));
-
-  /* Delete any mutable property representation. */
-  if (noderev->prop_rep)
-    SVN_ERR (svn_fs_fs__delete_rep_if_mutable (fs, id, noderev->prop_rep,
-                                               txn_id, pool));
-
-  /* Delete any mutable data representation. */
-  if (noderev->data_rep)
-    SVN_ERR (svn_fs_fs__delete_rep_if_mutable (fs, id, noderev->data_rep,
-                                               txn_id, pool));
-
-  /* Delete the node revision itself. */
+  /* Delete the node revision. */
   SVN_ERR (svn_fs_fs__delete_node_revision (fs, id, pool));
 
   return SVN_NO_ERROR;
