@@ -100,4 +100,10 @@ int svn_path_compare_paths (const svn_string_t *path1,
                             enum svn_path_style style);
 
 
+/* Return the longest common path shared by both PATH1 and PATH2.  If
+   there's no common ancestor, return NULL.  */
+svn_string_t *svn_path_get_longest_ancestor (const svn_string_t *path1,
+                                             const svn_string_t *path2,
+                                             apr_pool_t *pool);
+
 #endif /* SVN_PATHS_H */
