@@ -273,7 +273,8 @@ svn_wc__save_prop_file (const char *propfile_path,
   apr_file_t *prop_tmp;
 
   SVN_ERR_W (svn_io_file_open (&prop_tmp, propfile_path,
-                               (APR_WRITE | APR_CREATE | APR_TRUNCATE),
+                               (APR_WRITE | APR_CREATE | APR_TRUNCATE
+                                | APR_BUFFERED),
                                APR_OS_DEFAULT, pool),
              "save_prop_file: can't open propfile");
 
@@ -930,7 +931,7 @@ svn_wc__wcprop_set (const char *name,
   /* Open the propfile for writing. */
   SVN_ERR (svn_wc__open_props (&fp, 
                                path, /* open in PATH */
-                               (APR_WRITE | APR_CREATE),
+                               (APR_WRITE | APR_CREATE | APR_BUFFERED),
                                0, /* not base props */
                                1, /* we DO want wcprops */
                                pool));
@@ -1184,7 +1185,7 @@ svn_wc_prop_set (const char *name,
   /* Open the propfile for writing. */
   SVN_ERR (svn_wc__open_props (&fp, 
                                path, /* open in PATH */
-                               (APR_WRITE | APR_CREATE),
+                               (APR_WRITE | APR_CREATE | APR_BUFFERED),
                                0, /* not base props */
                                0, /* not wcprops */
                                pool));
