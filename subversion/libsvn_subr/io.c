@@ -1000,38 +1000,50 @@ svn_io_run_diff3 (const char *dir,
                   const char *mine,
                   const char *older,
                   const char *yours,
+                  const char *mine_label,
+                  const char *older_label,
+                  const char *yours_label,
                   apr_file_t *merged,
                   int *exitcode,
                   apr_pool_t *pool)
 {
-  const char **args;
-  int nargs = 7;
+  const char *args[13];
 
-  apr_pool_t *subpool = svn_pool_create (pool);
-  args = apr_palloc(subpool, nargs * sizeof(char *));
+  /* Labels fall back to defaults if not specified. */
+  if (mine_label == NULL)
+    mine_label = mine;
+  if (older_label == NULL)
+    older_label = older;
+  if (yours_label == NULL)
+    yours_label = yours;
 
+  /* Set up diff3 command line. */
   args[0] = SVN_CLIENT_DIFF3;
   args[1] = "-E";
   args[2] = "-m";
-  args[3] = mine;
-  args[4] = older;
-  args[5] = yours;
-  args[6] = NULL;
+  args[3] = "-L";
+  args[4] = mine_label;
+  args[5] = "-L";
+  args[6] = older_label;
+  args[7] = "-L";
+  args[8] = yours_label;
+  args[9] = mine;
+  args[10] = older;
+  args[11] = yours;
+  args[12] = NULL;
 
   SVN_ERR (svn_io_run_cmd (dir, SVN_CLIENT_DIFF3, args, 
                            exitcode, NULL, 
                            FALSE, /* clean environment */
                            NULL, merged, NULL,
-                           subpool));
+                           pool));
 
   /* According to the diff3 docs, a '0' means the merge was clean, and
      '1' means conflict markers were found.  Anything else is real
      error. */
   if ((*exitcode != 0) || (*exitcode != 1))
-    return svn_error_createf (SVN_ERR_EXTERNAL_PROGRAM, 0, NULL, subpool, 
-                              "Error calling %s.", SVN_CLIENT_DIFF3);
-
-  svn_pool_destroy (subpool);
+    return svn_error_createf (SVN_ERR_EXTERNAL_PROGRAM, 0, NULL, pool, 
+                              "Error running %s.", SVN_CLIENT_DIFF3);
 
   return SVN_NO_ERROR;
 }

@@ -357,21 +357,33 @@ svn_error_t *svn_io_run_diff (const char *dir,
                               apr_pool_t *pool);
 
 
-/*  Invoke SVN_CLIENT_DIFF3 like this:
+/*  Invoke SVN_CLIENT_DIFF3 in DIR like this:
 
             diff3 -Em MINE OLDER YOURS > MERGED
 
-   (Read documentation on diff3 for details about how this behaves.)
+   (See the diff3 documentation for details.)
 
-   The `diff3` command will execute in DIR, and return the exit status
-   in *EXITCODE.  The merged result (stdout) will be written to MERGED.
+   MINE, OLDER, and YOURS are paths, relative to DIR, to three files
+   that already exist.  MERGED is an open file handle, and is left
+   open after the merge result is written to it.
 
-   The caller must insure that MINE, OLDER, and YOURS are files that
-   already exist, and they are supplied as *relative* paths below DIR. */
+   MINE_LABEL, OLDER_LABEL, YOURS_LABEL are label parameters for
+   diff3's -L option.  Any of them may be NULL, in which case the
+   corresponding MINE, OLDER, or YOURS parameter is used instead.
+
+   Set *EXITCODE to diff3's exit status.  If *EXITCODE is anything
+   other than 0 or 1, then return SVN_ERR_EXTERNAL_PROGRAM.  (Note the
+   following from the diff3 info pages: "An exit status of 0 means
+   `diff3' was successful, 1 means some conflicts were found, and 2
+   means trouble.")
+*/
 svn_error_t *svn_io_run_diff3 (const char *dir,
                                const char *mine,
                                const char *older,
                                const char *yours,
+                               const char *mine_label,
+                               const char *older_label,
+                               const char *yours_label,
                                apr_file_t *merged,
                                int *exitcode,
                                apr_pool_t *pool);
