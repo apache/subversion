@@ -510,8 +510,19 @@ class CircularDependencies(Exception):
   pass
 
 
+def _usage_exit():
+  "print usage, exit the script"
+  print "usage:  gen-make.py [-s] conf-file\n"
+  sys.exit(0)
+
 if __name__ == '__main__':
+  argc = len(sys.argv)
+  
+  if argc == 1:
+    _usage_exit()
   if sys.argv[1] == '-s':
+    if argc == 2:
+      _usage_exit()
     skip = 1
     fname = sys.argv[2]
   else:
