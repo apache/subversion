@@ -19,7 +19,7 @@ BOOK_VERSION_SOURCE =  $(BOOK_DIR)/version.xml
 BOOK_ALL_SOURCE = $(BOOK_DIR)/*.xml
 BOOK_IMAGES = $(BOOK_DIR)/images/*.png
 BOOK_INSTALL_DIR = $(INSTALL_DIR)/book
-BOOK_ASPELL_FILES = book foreword
+BOOK_ASPELL_FILES = book foreword ch00
 
 MDOCS_DIR = ${BOOK_TOP}/misc-docs
 MDOCS_HTML_TARGET = $(MDOCS_DIR)/misc-docs.html

@@ -7,7 +7,7 @@
     
     <blockquote>
       <para><quote>Si C le da suficiente cuerda para ahorcarse, piense
-        en Subversion como una especie de almacen de cuerdas.</quote>
+        en Subversion como una especie de almacén de cuerdas.</quote>
         &mdash;Brian W. Fitzpatrick</para>
     </blockquote>
 
@@ -15,7 +15,7 @@
       Concurrent Versions System (CVS<footnote><para>N.T.:
       Sistema concurrente de versiones. Debido a que el comando
       principal de este software se llama <quote>cvs</quote>, se
-      usa la abreviación tanto para referise al comando como al
+      usa la abreviación tanto para referirse al comando como al
       sistema completo y por ello no se traduce.</para></footnote>)
       ha sido durante mucho tiempo la herramienta seleccionada
       para el control de versiones. Y con razón. CVS es software
@@ -23,7 +23,7 @@
       sin restricciones y soporte para trabajar en red&mdash;lo que
       permite a docenas de programadores dispersos geográficamente
       compartir su trabajo&mdash;se adapta muy bien a la naturaleza
-      colaborativa del mundo de código fuente abierto. CVS y su
+      colaborada del mundo de código fuente abierto. CVS y su
       modelo de desarrollo semi caótico se han convertido en la
       piedra angular de la cultura del código fuente abierto.
     </para>
@@ -32,7 +32,7 @@
       viejo.<!-- TODO start to show its age: esto es un gerundio
       anglosajón tipo phrasal verb (creo). Me da en la nariz que
       no se puede traducir de forma literal. Buscar expresión
-      equivalente en español. --> Subversion es un systema de
+      equivalente en español. --> Subversion es un sistema de
       control de versiones relativamente nuevo diseñado para ser
       el sucesor de CVS. Los diseñadores se marcaron el objetivo
       de ganarse el corazón de los usuarios de CVS de dos modos:
@@ -76,7 +76,7 @@
 
     <para>Dicho esto, el programa <command>svn</command> también funciona
       en plataformas que no son Unix como Microsoft Windows. A excepción
-      de algunos detalles, como el uso de contrabarras
+      de algunos detalles, como el uso de contra barras
       (<literal>\</literal>) <!-- TODO contrabarras/barras y estrellas -->
       en lugar de barras de dividir (<literal>/</literal>) como
       separadores en la ruta de los ficheros, los datos de entrada y de
@@ -85,7 +85,7 @@
       Windows quizás obtengan mejores resultados ejecutando los ejemplos
       bajo el entorno de emulación Unix Cygwin.</para>
 
-    <para>La mayoría de los lectores son problemente programadores o
+    <para>La mayoría de los lectores son probablemente programadores o
       administradores de sistemas que necesitan seguir la pista a los
       cambios realizados sobre código fuente. Este es el uso más común
       de Subversion, y por lo tanto el escenario que subyace en todos
@@ -137,7 +137,7 @@
         <term>Nuevos usuarios</term>
         <listitem>
           <para>Su administrador probablemente ya ha configurado el
-            servidor de Subversion, asi que necesita aprender a usar
+            servidor de Subversion, así que necesita aprender a usar
             el cliente. Si nunca ha usado un sistema de control de
             versiones (como CVS), entonces los capítulos 2 y 3 son
             una introducción vital. Si ya tiene experiencia con CVS,
@@ -256,7 +256,7 @@
   <sect1 id="svn-ch-0-sect-4">
     <title>Organización de este libro</title>
 
-    <para>Aquí tiene un listado de los capitulos siguientes y sus
+    <para>Aquí tiene un listado de los siguientes capítulos y sus
       contenidos:</para>
 
       <variablelist>
@@ -265,7 +265,7 @@
           <term>Capítulo 1, <emphasis>Introducción</emphasis></term>
           <listitem>
             <para>Cubre la historia de Subversion, sus características,
-              arquitecture, componentes y métodos de instalación.
+              arquitectura, componentes y métodos de instalación.
               También incluye una guía rápida para comenzar.</para>
               <!-- TODO: quickstart-guide, anotar glosario-->
           </listitem>
@@ -306,7 +306,7 @@
           <term>Capítulo 5, <emphasis>Administración de
             repositorios</emphasis></term>
           <listitem>
-            <para>Describe los elementos básicos de un respositorio
+            <para>Describe los elementos básicos de un repositorio
               Subversion, cómo crear, configurar y mantener un repositorio,
               y las herramientas que puede usar para hacer todo esto.</para>
           </listitem>
@@ -329,7 +329,7 @@
             <para>Explora los ficheros de configuración del cliente de
               Subversion, las propiedades de ficheros y directorios, cómo
               <literal>ignorar</literal> ficheros en su copia local,
-              cómo incluir árbolex externos en su copia local, y
+              cómo incluir árboles externos en su copia local, y
               finalmente, cómo manejar ramas de desarrollo.
               <!-- TODO vendor branches? vendor? Qué vendor? --></para>
           </listitem>
@@ -343,7 +343,7 @@
               archivos Subversion, y las áreas administrativas de una
               copia local desde el punto de vista de un programador.
               Muestra cómo usar las APIs públicas para escribir un
-              programa que usa Subversion, y sobre todo, cómo contribuír
+              programa que usa Subversion, y sobre todo, cómo contribuir
               al desarrollo de Subversion.</para>
           </listitem>
         </varlistentry>
@@ -368,7 +368,7 @@
               que adquirió tras años de uso de CVS. Incluye descripciones
               de los números de revisión de Subversion, versionado de
               directorios, operaciones offline, <command>update</command>
-              vs. <command>status</command>, ramas, etiquetas, metadatos,
+              vs. <command>status</command>, ramas, etiquetas, meta datos,
               resolución de conflictos y autenticación.</para>
           </listitem>
         </varlistentry>
@@ -382,7 +382,7 @@
         </varlistentry>
 
         <varlistentry>
-          <term>Apéndice C, <emphasis>WebDAV y el autoversionado</emphasis></term>
+          <term>Apéndice C, <emphasis>WebDAV y el auto versionado</emphasis></term>
           <listitem>
             <para>Describe los detalles de WebDAV y DeltaV, y cómo
               configurar su repositorio Subversion para que pueda ser
@@ -455,8 +455,8 @@
       visión y apoyo económico a tal peligroso y ambicioso nuevo
       proyecto de código fuente abierto; Jim Blandy por el nombre
       original Subversion y diseño; te queremos, Jim; Karl Fogel
-      por ser tan buen amigo y excelente lider de la comunidad,
-      en ese órden.<footnote><para>Oh, y gracias Karl, por tener
+      por ser tan buen amigo y excelente líder de la comunidad,
+      en ese orden.<footnote><para>Oh, y gracias Karl, por tener
       demasiado trabajo como para haber escrito este libro.</para>
       </footnote></para>
 
@@ -492,7 +492,7 @@
       <title>De parte de Ben Collins-Sussman</title>
 
       <para>Gracias a mi mujer Frances, quien, tras muchos meses llegó
-        a oir, <quote>Pero cariño, todavía estoy trabajando en el
+        a oír, <quote>Pero cariño, todavía estoy trabajando en el
         libro</quote>, en lugar del habitual, <quote>Pero cariño, todavía
         estoy escribiendo emails.</quote> ¡No tengo ni idea de dónde saca
         toda su paciencia! Ella es mi contrapeso ideal.</para>
@@ -502,7 +502,7 @@
       
       <para>Gracias a mi familia adquirida por su sincero apoyo, a pesar
         de no tener interés real en el tema. (Ya sabe, aquellos que cuando
-        dicen, <quote>Ooh, ¿estás escribiendo un libro?</quote>, y les
+        dicen, <quote>Oh, ¿estás escribiendo un libro?</quote>, y les
         respondes que es sobre ordenadores, desvían su mirada.)</para>
 
       <para>Gracias a todos mis amigos íntimos, quienes enriquecen mi
@@ -548,7 +548,7 @@
         enteras de este libro&mdash;siempre das lo mejor, y lo haces con
         increíble elegancia. Gavin, cuando seas suficientemente mayor para
         leer, espero que estés tan orgulloso de tu papá como él lo está
-        de tí. A mamá y papá (y el resto de la familia), gracias por
+        de ti. A mamá y papá (y el resto de la familia), gracias por
         vuestro constante apoyo y entusiasmo.</para>
         <!-- TODO traducciones de dady, dad, mum, etc. Revisar estilo -->
 
