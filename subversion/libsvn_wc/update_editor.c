@@ -1536,7 +1536,7 @@ svn_wc_install_file (svn_wc_notify_state_t *content_state,
 
   /* Has the user made local mods to the working file?  */
   SVN_ERR (svn_wc_text_modified_p (&is_locally_modified,
-                                   file_path, adm_access, pool));
+                                   file_path, 0, adm_access, pool));
 
   if (new_text_path)   /* is there a new text-base to install? */
     {

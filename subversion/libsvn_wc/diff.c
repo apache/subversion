@@ -389,7 +389,7 @@ file_diff (struct dir_baton *dir_baton,
     default:
       SVN_ERR (svn_wc_adm_retrieve (&adm_access, dir_baton->edit_baton->anchor,
                                     dir_baton->path, pool));
-      SVN_ERR (svn_wc_text_modified_p (&modified, path, adm_access, pool));
+      SVN_ERR (svn_wc_text_modified_p (&modified, path, 0, adm_access, pool));
       if (modified)
         {
           const char *translated;

@@ -312,6 +312,7 @@ svn_wc__versioned_file_modcheck (svn_boolean_t *modified_p,
 svn_error_t *
 svn_wc_text_modified_p (svn_boolean_t *modified_p,
                         const char *filename,
+                        svn_boolean_t force_comparison,
                         svn_wc_adm_access_t *adm_access,
                         apr_pool_t *pool)
 {
@@ -328,17 +329,21 @@ svn_wc_text_modified_p (svn_boolean_t *modified_p,
       goto cleanup;
     }
 
-  /* See if the local file's timestamp is the same as the one recorded
-     in the administrative directory.  This could, theoretically, be
-     wrong in certain rare cases, but with the addition of a forced
-     delay after commits (see revision 419 and issue #542) it's highly
-     unlikely to be a problem. */
-  SVN_ERR (svn_wc__timestamps_equal_p (&equal_timestamps, filename, adm_access,
-                                       svn_wc__text_time, subpool));
-  if (equal_timestamps)
+  if (! force_comparison)
     {
-      *modified_p = FALSE;
-      goto cleanup;
+      /* See if the local file's timestamp is the same as the one
+         recorded in the administrative directory.  This could,
+         theoretically, be wrong in certain rare cases, but with the
+         addition of a forced delay after commits (see revision 419
+         and issue #542) it's highly unlikely to be a problem. */
+      SVN_ERR (svn_wc__timestamps_equal_p (&equal_timestamps,
+                                           filename, adm_access,
+                                           svn_wc__text_time, subpool));
+      if (equal_timestamps)
+        {
+          *modified_p = FALSE;
+          goto cleanup;
+        }
     }
       
   /* If there's no text-base file, we have to assume the working file

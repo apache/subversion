@@ -1171,8 +1171,8 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
   if (entry->kind == svn_node_file)
     {
       SVN_ERR (svn_io_check_path (fullpath, &kind, pool));
-      SVN_ERR (svn_wc_text_modified_p (&modified_p, fullpath, adm_access, 
-                                       pool));
+      SVN_ERR (svn_wc_text_modified_p (&modified_p, fullpath, 0, 
+                                       adm_access, pool));
       if ((modified_p) || (kind == svn_node_none))
         {
           /* If there are textual mods (or if the working file is
@@ -1547,7 +1547,7 @@ svn_wc_remove_from_revision_control (svn_wc_adm_access_t *adm_access,
 
       if (destroy_wf)
         /* Check for local mods. before removing entry */
-        SVN_ERR (svn_wc_text_modified_p (&text_modified_p, full_path,
+        SVN_ERR (svn_wc_text_modified_p (&text_modified_p, full_path, 0,
                                          adm_access, subpool));
 
       /* Remove NAME from PATH's entries file: */

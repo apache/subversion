@@ -460,12 +460,15 @@ svn_error_t *svn_wc_has_binary_prop (svn_boolean_t *has_binary_prop,
  * @a filename is a path to the file, not just a basename. @a adm_access
  * must be an access baton for @a filename.
  *
+ * If @a force_comparison is @c TRUE, this function will not allow
+ * early return mechanisms that avoid actual content comparison.
+ *
  * If @a filename does not exist, consider it unmodified.  If it exists
  * but is not under revision control (not even scheduled for
- * addition), return the error @c SVN_ERR_ENTRY_NOT_FOUND.
- */
+ * addition), return the error @c SVN_ERR_ENTRY_NOT_FOUND.  */
 svn_error_t *svn_wc_text_modified_p (svn_boolean_t *modified_p,
                                      const char *filename,
+                                     svn_boolean_t force_comparison,
                                      svn_wc_adm_access_t *adm_access,
                                      apr_pool_t *pool);
 

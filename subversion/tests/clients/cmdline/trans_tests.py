@@ -394,7 +394,70 @@ This is the file 'rho'.>>>>>>> .r1
                                                None, None,
                                                0, '-r', '1', wc_dir)
 
+
+#----------------------------------------------------------------------
+
+# Regression test for issue #1085, whereby setting the eol-style to a
+# fixed platform-incorrect value on a file whose line endings are
+# platform-correct causes repository insanity (the eol-style prop
+# claims one line ending style, the file is in another).  This test
+# assumes that this can be testing by verifying that a) new file
+# contents are transmitted to the server during commit, and b) that
+# after the commit, the file and its text-base have been changed to
+# have the new line-ending style.
+
+def eol_change_is_text_mod(sbox):
+  "commit eol-style change which should force a text transmission"
   
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
+
+  # add a new file to the working copy.
+  foo_path = os.path.join(wc_dir, 'foo')
+  f = open(foo_path, "w")
+  if svntest.main.windows:
+    f.write("1\r\n2\r\n3\r\n4\r\n5\r\n6\r\n7\r\n8\r\n9\r\n")
+  else:
+    f.write("1\n2\n3\n4\n5\n6\n7\n8\n9\n")
+  f.close()
+
+  # commit the file
+  svntest.main.run_svn(None, 'add', foo_path)
+  svntest.main.run_svn(None, 'ci', '-m', 'log msg', foo_path)
+  
+  if svntest.main.windows:
+    svntest.main.run_svn(None, 'propset', 'svn:eol-style', 'LF', foo_path)
+  else:
+    svntest.main.run_svn(None, 'propset', 'svn:eol-style', 'CRLF', foo_path)
+
+  # check 1: did new contents get transmitted?
+  output, errput = svntest.main.run_svn(None, 'ci', '-m', 'log msg', foo_path)
+  if errput:
+    return 1
+  if output != ["Sending        " + foo_path + "\n",
+                "Transmitting file data .\n",
+                "Committed revision 3.\n"]:
+    return 1
+
+  # check 2: do the files have the right contents now?
+  f = open(foo_path, "r")
+  contents = f.read()
+  f.close()
+  if svntest.main.windows:
+    if contents != "1\n2\n3\n4\n5\n6\n7\n8\n9\n":
+      return 1
+  else:
+    if contents != "1\r\n2\r\n3\r\n4\r\n5\r\n6\r\n7\r\n8\r\n9\r\n":
+      return 1
+  f = open(os.path.join(wc_dir, '.svn', 'text-base', 'foo.svn-base'))
+  base_contents = f.read()
+  f.close()
+  if contents != base_contents:
+    return 1
+  
+  return 0
 
 ########################################################################
 # Run the tests
@@ -407,6 +470,7 @@ test_list = [ None,
               XFail(checkout_translated),
               XFail(disable_translation),
               update_modified_with_translation,
+              eol_change_is_text_mod,
              ]
 
 if __name__ == '__main__':
