@@ -38,13 +38,16 @@ Candidate changes:
       +1: breser
       +0: dionisos
 
-  * r9439
-    Update many references to neon 0.24.5.
-    Justification: 0.24.4 has a security issue.  See
-    http://cve.mitre.org/cgi-bin/cvename.cgi?name=CAN-2004-0179
-    Votes:
+  * r9439, 9808
+    Update many references to neon 0.24.6.
+    Justification: 0.24.6 has a security issue.  See
+    http://cve.mitre.org/cgi-bin/cvename.cgi?name=CAN-2004-0398
+    Notes: Make tweaks to spec files to have 1.0.4 in the changelogs when
+    merging.
+    Votes (9439 only):
       +1: blair, dlr
-      -1: breser (0.24.6, I'll put something new up in a bit.)
+    Votes: (9439, 9808):
+      +1: breser
 
   * r9551
     Fix RPM build for Fedora and WBEL3/RHEL3.
