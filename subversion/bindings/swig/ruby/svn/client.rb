@@ -43,6 +43,7 @@ module Svn
       def initialize(pool)
         @pool = pool
         @providers = []
+        update_auth_baton
       end
       undef _initialize
 
