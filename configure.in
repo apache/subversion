@@ -160,8 +160,8 @@ AC_PROG_CC
 dnl Look for a C pre-processor
 AC_PROG_CPP
 
-dnl Look for an extended grep
-AC_PROG_EGREP
+dnl Look for an extended grep, this macro appeared in autoconf-2.53b
+ifdef([AC_PROG_EGREP],[AC_PROG_EGREP],[])
 
 dnl See if 'ln -s' works
 AC_PROG_LN_S
