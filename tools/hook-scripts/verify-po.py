@@ -7,6 +7,38 @@ import string
 import sys
 from svn import core, fs, delta, repos
 
+# Set to 1 to use msgfmt to check the syntax of the po file
+USE_MSGFMT = 0
+
+if USE_MSGFMT:
+  import popen2
+  class MsgFmtChecker:
+    def __init__(self):
+      self.pipe = popen2.Popen3("msgfmt -c -o /dev/null -")
+      self.pipe.fromchild.close()
+      self.io_error = 0
+
+    def write(self, data):
+      if self.io_error:
+        return
+      try:
+        self.pipe.tochild.write(data)
+      except IOError:
+        self.io_error = 1
+
+    def close(self):
+      try:
+        self.pipe.tochild.close()
+      except IOError:
+        self.io_error = 1
+      return self.pipe.wait() == 0 and not self.io_error
+else:
+  class MsgFmtChecker:
+    def write(self, data):
+      pass
+    def close(self):
+      return 1
+
 
 class ChangeReceiver(delta.Editor):
   def __init__(self, txn_root, base_root, pool):
@@ -32,20 +64,25 @@ class ChangeReceiver(delta.Editor):
       # This is not a .po file, or it hasn't changed
       return
 
-    # Read the file contents through a validating UTF-8 decoder
-    subpool = core.svn_pool_create(self.pool)
     try:
-      stream = core.Stream(fs.file_contents(self.txn_root, path, subpool))
-      reader = codecs.getreader('UTF-8')(stream, 'strict')
-      while 1:
-        data = reader.read(core.SVN_STREAM_CHUNK_SIZE)
-        if not data:
-          break
-    except:
+      # Read the file contents through a validating UTF-8 decoder
+      subpool = core.svn_pool_create(self.pool)
+      checker = MsgFmtChecker()
+      try:
+        stream = core.Stream(fs.file_contents(self.txn_root, path, subpool))
+        reader = codecs.getreader('UTF-8')(stream, 'strict')
+        writer = codecs.getwriter('UTF-8')(checker, 'strict')
+        while 1:
+          data = reader.read(core.SVN_STREAM_CHUNK_SIZE)
+          if not data:
+            break
+          writer.write(data)
+        if not checker.close():
+          sys.exit("PO format check failed for '" + path + "'")
+      except UnicodeDecodeError:
+        sys.exit("PO file is not in UTF-8: '" + path + "'")
+    finally:
       core.svn_pool_destroy(subpool)
-      sys.stderr.write("PO file is not in UTF-8: '" + path + "'\n")
-      sys.exit(1)
-    core.svn_pool_destroy(subpool)
 
 
 def check_po(pool, repos_path, txn):
