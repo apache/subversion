@@ -190,7 +190,7 @@ $ svnadmin create path/to/repos
             
     <screen>
 $ ls repos
-conf/  dav/  db/  format  hooks/  locks/  README
+dav/  db/  format  hooks/  locks/  README
 </screen>
       
     <para>With the exception of the <filename>README</filename> file,
@@ -201,13 +201,6 @@ conf/  dav/  db/  format  hooks/  locks/  README
       the items you see in your new repository directory:</para>
 
     <variablelist>
-      <varlistentry>
-        <term>conf</term>
-        <listitem>
-          <para>Currently unused, repository configuration files will
-            go in this directory someday.</para>
-        </listitem>
-      </varlistentry>
      <varlistentry>
         <term>dav</term>
         <listitem>
