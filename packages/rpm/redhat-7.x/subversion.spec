@@ -17,6 +17,7 @@ Source0: subversion-%{version}-%{release}.tar.gz
 Source1: subversion.conf
 Source2: rcsparse.py
 Patch0: install.patch
+Patch1: svnversion.patch
 Vendor: Summersoft
 Packager: David Summers <david@summersoft.fay.ar.us>
 Requires: apache-libapr >= %{apache_version}
@@ -24,10 +25,10 @@ Requires: db4 >= 4.0.14
 Requires: expat
 Requires: neon >= %{neon_version}
 #Requires: /sbin/install-info
-BuildPreReq: apache >= %{apache_version}
+#BuildPreReq: apache >= %{apache_version}
 BuildPreReq: apache-devel >= %{apache_version}
 BuildPreReq: apache-libapr-devel >= %{apache_version}
-BuildPreReq: autoconf253 >= 2.53
+BuildPreReq: autoconf >= 2.53
 BuildPreReq: db4-devel >= 4.0.14
 BuildPreReq: expat-devel
 BuildPreReq: gdbm-devel
@@ -209,6 +210,10 @@ sh autogen.sh
 # Fix up mod_dav_svn installation.
 %patch0 -p1
 
+# RPM builds don't build in a working copy, so we can't run svnversion during
+# the build.
+%patch1 -p1
+
 # Brand release number into the displayed version number.
 RELEASE_NAME="r%{release}"
 export RELEASE_NAME
@@ -218,7 +223,6 @@ sed -e \
   < "$vsn_file" > "${vsn_file}.tmp"
 mv "${vsn_file}.tmp" "$vsn_file"
 
-%build
 LDFLAGS="-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_client/.libs \
 	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_delta/.libs \
 	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_fs/.libs \
@@ -242,6 +246,7 @@ LDFLAGS="${LDFLAGS}" ./configure \
 	--with-apr=%{apache_dir}/bin/apr-config \
 	--with-apr-util=%{apache_dir}/bin/apu-config
 
+%build
 # Make svnadmin static.
 make subversion/svnadmin/svnadmin
 

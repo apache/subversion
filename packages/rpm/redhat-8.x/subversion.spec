@@ -17,6 +17,7 @@ Source0: subversion-%{version}-%{release}.tar.gz
 Source1: subversion.conf
 Source2: rcsparse.py
 Patch0: install.patch
+Patch1: svnversion.patch
 Vendor: Summersoft
 Packager: David Summers <david@summersoft.fay.ar.us>
 Requires: httpd-apr >= %{apache_version}
@@ -24,7 +25,6 @@ Requires: db4 >= 4.0.14
 Requires: expat
 Requires: neon >= %{neon_version}
 #Requires: /sbin/install-info
-BuildPreReq: httpd >= %{apache_version}
 BuildPreReq: httpd-devel >= %{apache_version}
 BuildPreReq: httpd-apr-devel >= %{apache_version}
 BuildPreReq: autoconf253 >= 2.53
@@ -61,7 +61,6 @@ package.
 Group: Utilities/System
 Summary: Development package for Subversion developers.
 Requires: subversion = %{version}-%{release}
-Requires: httpd >= %{apache_version}
 %description devel
 The subversion-devel package includes the static libraries and include files
 for developers interacting with the subversion package.
@@ -203,6 +202,10 @@ sh autogen.sh
 # Fix up mod_dav_svn installation.
 %patch0 -p1
 
+# RPM builds don't build in a working copy, so we can't run svnversion during
+# the build.
+%patch1 -p1
+
 # Brand release number into the displayed version number.
 RELEASE_NAME="r%{release}"
 export RELEASE_NAME
@@ -212,7 +215,6 @@ sed -e \
   < "$vsn_file" > "${vsn_file}.tmp"
 mv "${vsn_file}.tmp" "$vsn_file"
 
-%build
 LDFLAGS="-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_client/.libs \
 	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_delta/.libs \
 	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_fs/.libs \
@@ -236,6 +238,7 @@ LDFLAGS="${LDFLAGS}" ./configure \
 	--with-apr=%{apache_dir}/bin/apr-config \
 	--with-apr-util=%{apache_dir}/bin/apu-config
 
+%build
 # Make svnadmin static.
 make subversion/svnadmin/svnadmin
 
@@ -243,6 +246,18 @@ make subversion/svnadmin/svnadmin
 cp subversion/svnadmin/svnadmin svnadmin.static
 
 # Configure shared.
+
+LDFLAGS="-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_client/.libs \
+	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_delta/.libs \
+	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_fs/.libs \
+	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_repos/.libs \
+	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_ra/.libs \
+	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_ra_dav/.libs \
+	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_ra_local/.libs \
+	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_ra_svn/.libs \
+	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_subr/.libs \
+	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_wc/.libs"
+
 LDFLAGS="${LDFLAGS}" ./configure \
 	--prefix=/usr \
 	--with-swig \
