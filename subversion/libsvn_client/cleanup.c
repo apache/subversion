@@ -22,6 +22,7 @@
 
 /*** Includes. ***/
 
+#include "svn_time.h"
 #include "svn_wc.h"
 #include "svn_client.h"
 #include "svn_config.h"
