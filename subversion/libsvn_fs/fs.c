@@ -427,14 +427,21 @@ svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
       "set_lg_bsize     262144\n"
       "set_lg_max      1048576\n";
 
-    static const char dbconfig_txn_nosync[] =
+    /* We always output this header.  Then, depending on a run-time
+       argument, we output either the active or inactive form of the
+       value line. */
+    static const char dbconfig_txn_nosync_header[] =
       "#\n"
       "# Disable fsync of log files on transaction commit. Read the\n"
       "# documentation about DB_TXN_NOSYNC at:\n"
       "#\n"
       "#   http://www.sleepycat.com/docs/api_c/env_set_flags.html\n"
-      "#\n"
+      "#\n";
+    const char *dbconfig_txn_nosync_val_inactive =
+      "# set_flags DB_TXN_NOSYNC\n";
+    const char *dbconfig_txn_nosync_val_active =
       "set_flags DB_TXN_NOSYNC\n";
+
 
     SVN_ERR (svn_io_file_open (&dbconfig_file, dbconfig_file_name,
                                APR_WRITE | APR_CREATE, APR_OS_DEFAULT,
@@ -446,21 +453,41 @@ svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
       return svn_error_createf (apr_err, 0,
                                 "writing to '%s'", dbconfig_file_name);
 
-    if (fs->config)
-      {
-        void *value = apr_hash_get (fs->config,
-                                    SVN_FS_CONFIG_BDB_TXN_NOSYNC,
-                                    APR_HASH_KEY_STRING);
-        if (value != NULL)
-          {
-            apr_err = apr_file_write_full (dbconfig_file, dbconfig_txn_nosync,
-                                           sizeof (dbconfig_txn_nosync) - 1,
-                                           NULL);
-            if (apr_err != APR_SUCCESS)
-              return svn_error_createf (apr_err, 0,
-                                        "writing to '%s'", dbconfig_file_name);
-          }
-      }
+    /* The DB_CONFIG flag, in either active or inactive form. */
+    {
+      void *value = NULL;
+      const char *choice;
+      
+      if (fs->config)
+        {
+          value = apr_hash_get (fs->config,
+                                SVN_FS_CONFIG_BDB_TXN_NOSYNC,
+                                APR_HASH_KEY_STRING);
+        }
+      
+      apr_err = apr_file_write_full (dbconfig_file,
+                                     dbconfig_txn_nosync_header,
+                                     sizeof (dbconfig_txn_nosync_header) - 1,
+                                     NULL);
+      if (apr_err != APR_SUCCESS)
+        {
+          return svn_error_createf (apr_err, 0, "writing to '%s'",
+                                    dbconfig_file_name);
+        }
+      
+      if (value != NULL)
+        choice = dbconfig_txn_nosync_val_active;
+      else
+        choice = dbconfig_txn_nosync_val_inactive;
+      
+      apr_err = apr_file_write_full (dbconfig_file,
+                                     choice, strlen (choice), NULL); 
+      if (apr_err != APR_SUCCESS)
+        {
+          return svn_error_createf (apr_err, 0, "writing to '%s'",
+                                    dbconfig_file_name);
+        }
+    }
 
     apr_err = apr_file_close (dbconfig_file);
     if (apr_err != APR_SUCCESS)
