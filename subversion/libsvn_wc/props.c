@@ -836,7 +836,6 @@ svn_wc_prop_list (apr_hash_t **props,
                   svn_wc_adm_access_t *adm_access,
                   apr_pool_t *pool)
 {
-  svn_node_kind_t pkind;
   const char *prop_path;
 
   *props = apr_hash_make (pool);
