@@ -132,32 +132,7 @@ svn_twiddle_edit_content_flags (svn_delta_stackframe_t *d,
 }
 
 
-
-
-
-/* Recursively walk down delta D.  (PARENT is used for recursion purposes.)
-
-   Return the bottommost object in BOTTOM_OBJ and BOTTOM_KIND.
-      (Needed later for appending objects to the delta.)
-
-   The penultimate object is returned in PENULT_OBJ and PENULT_KIND. 
-      (Needed later for removing objects from the delta.)
-*/
-
-void
-svn_walk_delta (svn_delta_t *delta,
-                fish see-prototype-for-callback,
-                void *user_data)
-{
-  /* kff todo: finish this, then implement svn_find_delta_bottom()
-     with it. */
-}
-
-
-/* Heh, by creating our "stackframe" structure, this routine has been
-   reduced to a trivial nothingness, like a lisp routine or something.
-   :) */
-
+/* Return the last frame of a delta stack. */
 svn_delta_stackframe_t *
 svn_find_delta_bottom (svn_delta_stackframe_t *frame)
 {
@@ -166,8 +141,6 @@ svn_find_delta_bottom (svn_delta_stackframe_t *frame)
   else
     return svn_find_delta_bottom (frame);
 }
-
-
 
 
 
