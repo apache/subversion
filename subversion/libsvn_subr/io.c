@@ -69,12 +69,12 @@ svn_io_check_path (const svn_string_t *path,
 
   apr_err = apr_stat (&finfo, path->data, pool);
 
-  if (apr_err && (apr_err != APR_ENOENT))
+  if (apr_err && !APR_STATUS_IS_ENOENT(apr_err))
     return svn_error_createf (apr_err, 0, NULL, pool,
                               "svn_io_check_path: "
                               "problem checking path %s",
                               path->data);
-  else if (apr_err == APR_ENOENT)
+  else if (APR_STATUS_IS_ENOENT(apr_err))
     *kind = svn_node_none;
   else if (finfo.filetype == APR_NOFILE)
     *kind = svn_node_unknown;
@@ -152,7 +152,7 @@ svn_io_open_unique_file (apr_file_t **f,
                           (APR_WRITE | APR_CREATE | APR_EXCL),
                           APR_OS_DEFAULT, pool);
 
-      if (apr_err == APR_EEXIST)
+      if (APR_STATUS_IS_EEXIST(apr_err))
         continue;
       else if (apr_err)
         {
@@ -200,7 +200,7 @@ svn_io_file_reader (void *filehandle,
                             (apr_size_t) *len,
                             (apr_size_t *) len);
       
-      if (stat && (stat != APR_EOF)) 
+      if (stat && !APR_STATUS_IS_EOF(stat))
         return
           svn_error_create (stat, 0, NULL, pool,
                             "adm_crawler.c (posix_file_reader): "
@@ -222,7 +222,7 @@ svn_io_file_writer (void *filehandle,
   
   stat = apr_full_write (dst, buffer, (apr_size_t) *len, (apr_size_t *) len);
   
-  if (stat && (stat != APR_EOF))
+  if (stat && !APR_STATUS_IS_EOF(stat))
     return
       svn_error_create (stat, 0, NULL, pool,
                         "error writing xml delta");
@@ -288,13 +288,14 @@ apr_transfer_file_contents (const char *src,
     }
   
   /* Copy bytes till the cows come home. */
-  while (read_err != APR_EOF)
+  read_err = 0;
+  while (!APR_STATUS_IS_EOF(read_err))
     {
       apr_ssize_t bytes_this_time = sizeof (buf);
 
       /* Read 'em. */
       read_err = apr_read (s, buf, &bytes_this_time);
-      if (read_err && (read_err != APR_EOF))
+      if (read_err && !APR_STATUS_IS_EOF(read_err))
         {
           apr_close (s);  /* toss */
           apr_close (d);  /* toss */
@@ -310,7 +311,7 @@ apr_transfer_file_contents (const char *src,
           return write_err;
         }
 
-      if (read_err && (read_err == APR_EOF))
+      if (read_err && APR_STATUS_IS_EOF(read_err))
         {
           apr_err = apr_close (s);
           if (apr_err)

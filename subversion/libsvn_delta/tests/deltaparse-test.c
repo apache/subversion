@@ -38,7 +38,7 @@ my_read_func (void *baton, char *buffer, apr_size_t *len, apr_pool_t *pool)
      Therfore, if apr_full_read() does this, the caller will call this
      routine one more time, and *len should then be set to 0 for sure. */
 
-  if (stat && (stat != APR_EOF)) 
+  if (stat && !APR_STATUS_IS_EOF(stat)) 
     return
       svn_error_create (stat, 0, NULL, pool,
                         "my_read_func: error reading xmlfile");

@@ -64,7 +64,7 @@ svn_wc__lock (svn_string_t *path, int wait, apr_pool_t *pool)
   do {
     err = svn_wc__make_adm_thing (path, SVN_WC__ADM_LOCK,
                                   svn_node_file, 0, pool);
-    if (err && (err->apr_err == APR_EEXIST))
+    if (err && APR_STATUS_IS_EEXIST(err->apr_err))
       {
         svn_error_free (err);
         /* kff todo: hey, apr_sleep() is broken. */

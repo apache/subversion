@@ -52,9 +52,11 @@
 
 
 
+#include <assert.h>
 #include <apr_pools.h>
 #include <apr_file_io.h>
 #include <apr_time.h>
+#include "svn_io.h"
 #include "svn_types.h"
 #include "svn_string.h"
 #include "svn_error.h"
@@ -65,26 +67,28 @@
 svn_error_t *
 svn_wc__ensure_directory (svn_string_t *path, apr_pool_t *pool)
 {
+  enum svn_node_kind kind;
   svn_string_t *npath = svn_string_dup (path, pool);
-  apr_status_t apr_err = 0;
-  apr_dir_t *this_attempt_dir = NULL;
+  svn_error_t *err = svn_io_check_path (npath, &kind, pool);
 
-  apr_err = apr_opendir (&this_attempt_dir, npath->data, pool);
+  if (err)
+    return err;
 
-  if (apr_err && (apr_err != APR_ENOENT))
+  if (kind != svn_node_none && kind != svn_node_dir)
     {
       /* If got an error other than dir non-existence, then we can't
          ensure this directory's existence, so just return the error.
          Might happen if there's a file in the way, for example. */
-      return svn_error_create (apr_err, 0, NULL, pool, npath->data);
+      return svn_error_create (APR_ENOTDIR, 0, NULL, pool, npath->data);
     }
-  else if (apr_err == APR_ENOENT)  /* (yes, redundant conditional) */
+  else if (kind == svn_node_none)
     {
       /* The dir doesn't exist, and it's our job to change that. */
 
-      apr_err = apr_make_dir (npath->data, APR_OS_DEFAULT, pool);
+      apr_status_t apr_err =
+        apr_make_dir (npath->data, APR_OS_DEFAULT, pool);
 
-      if (apr_err && (apr_err != APR_ENOENT))
+      if (apr_err && !APR_STATUS_IS_ENOENT(apr_err))
         {
           /* Tried to create the dir, and encountered some problem
              other than non-existence of intermediate dirs.  We can't
@@ -92,7 +96,8 @@ svn_wc__ensure_directory (svn_string_t *path, apr_pool_t *pool)
              the error. */ 
           return svn_error_create (apr_err, 0, NULL, pool, npath->data);
         }
-      else if (apr_err == APR_ENOENT) /* (redundant conditional and comment) */
+      else if (APR_STATUS_IS_ENOENT(apr_err))
+        /* (redundant conditional and comment) */
         {
           /* Okay, so the problem is a missing intermediate
              directory.  We don't know which one, so we recursively
@@ -108,7 +113,7 @@ svn_wc__ensure_directory (svn_string_t *path, apr_pool_t *pool)
             }
           else  /* We have a valid path, so recursively ensure it. */
             {
-              svn_error_t *err = svn_wc__ensure_directory (shorter, pool);
+              err = svn_wc__ensure_directory (shorter, pool);
           
               if (err)
                 return (err);
@@ -116,14 +121,14 @@ svn_wc__ensure_directory (svn_string_t *path, apr_pool_t *pool)
                 return svn_wc__ensure_directory (npath, pool);
             }
         }
+
+      if (apr_err)
+        return svn_error_create (apr_err, 0, NULL, pool, npath->data);
     }
-  else  /* No problem, the dir already existed, so just close it and leave. */
-    apr_err = apr_closedir (this_attempt_dir);
-  
-  if (apr_err)
-    return svn_error_create (apr_err, 0, NULL, pool, npath->data);
-  else
-    return SVN_NO_ERROR;
+  else  /* No problem, the dir already existed, so just leave. */
+    assert (kind == svn_node_dir);
+
+  return SVN_NO_ERROR;
 }
 
 

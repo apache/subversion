@@ -184,7 +184,7 @@ main (int argc, char **argv)
         }
     }
   apr_destroy_pool (pool);
-  if (status != APR_EOF)
+  if (!APR_STATUS_IS_EOF(status))
     {
       fprintf (stderr, "Usage: %s [-s seed]\n", argv[0]);
       return 1;

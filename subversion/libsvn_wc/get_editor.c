@@ -318,7 +318,7 @@ read_from_file (void *baton, char *buffer, apr_size_t *len, apr_pool_t *pool)
       return SVN_NO_ERROR;
     }
   status = apr_full_read (fp, buffer, *len, len);
-  if (status && (status != APR_EOF))
+  if (status && !APR_STATUS_IS_EOF(status))
     return svn_error_create (status, 0, NULL, pool, "Can't read base file");
   return SVN_NO_ERROR;
 }
@@ -842,7 +842,7 @@ apply_textdelta (void *file_baton,
       */
 
       err = svn_wc__open_text_base (&hb->source, fb->path, APR_READ, subpool);
-      if (err && (err->apr_err != APR_ENOENT))
+      if (err && !APR_STATUS_IS_ENOENT(err->apr_err))
         {
           if (hb->source)
             svn_wc__close_text_base (hb->source, fb->path, 0, subpool);
@@ -1122,6 +1122,17 @@ close_file (void *file_baton)
                              tmp_txtb,
                              SVN_WC__LOG_ATTR_DEST,
                              txtb,
+                             NULL);
+
+      /* kff todo: Overwrite local mods again, briefly. */
+      svn_xml_make_open_tag (&entry_accum,
+                             fb->pool,
+                             svn_xml_self_closing,
+                             SVN_WC__LOG_CP,
+                             SVN_WC__LOG_ATTR_NAME,
+                             txtb,
+                             SVN_WC__LOG_ATTR_DEST,
+                             fb->name,
                              NULL);
       
       if (wfile_status == svn_node_none)

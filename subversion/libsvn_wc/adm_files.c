@@ -605,8 +605,7 @@ check_adm_exists (int *exists,
                   apr_pool_t *pool)
 {
   svn_error_t *err = NULL;
-  apr_status_t apr_err;
-  apr_dir_t *ignore_me = NULL;
+  enum svn_node_kind kind;
   int dir_exists = 0;
   apr_file_t *f = NULL;
   int components_added;
@@ -614,27 +613,26 @@ check_adm_exists (int *exists,
   /** Step 1: check that the directory exists. **/
 
   components_added = extend_with_adm_name (path, 0, pool, NULL);
-  apr_err = apr_opendir (&ignore_me, path->data, pool);
 
-  if (apr_err && (apr_err != APR_ENOENT))
+  err = svn_io_check_path (path, &kind, pool);
+  if (!err)
     {
-      /* If got an error other than dir non-existence, then
-         something's weird and we should return a genuine error. */
-      err = svn_error_create (apr_err, 0, NULL, pool, path->data);
+      if (kind != svn_node_none && kind != svn_node_dir)
+        {
+          /* If got an error other than dir non-existence, then
+             something's weird and we should return a genuine error. */
+          err = svn_error_create (APR_ENOTDIR, 0, NULL, pool, path->data);
+        }
+      else if (kind == svn_node_none)
+        {
+          dir_exists = 0;
+        }
+      else                      /* must be a dir. */
+        {
+          assert (kind == svn_node_dir);
+          dir_exists = 1;
+        }
     }
-  else if (apr_err)   /* APR_ENOENT */
-    {
-      dir_exists = 0;
-      apr_err = 0;
-    }
-  else                /* dir opened, so it must exist */
-    {
-      dir_exists = 1;
-      apr_err = apr_closedir (ignore_me);
-    }
-
-  if (apr_err)
-    err = svn_error_create (apr_err, 0, NULL, pool, path->data);
 
   /* Restore path to its original state. */
   chop_admin_name (path, components_added);
@@ -652,7 +650,7 @@ check_adm_exists (int *exists,
       Try step 2: checking that SVN_WC__ADM_README exists. **/
 
   err = svn_wc__open_adm_file (&f, path, SVN_WC__ADM_README, APR_READ, pool);
-  if (err && (err->apr_err != APR_EEXIST))
+  if (err && !APR_STATUS_IS_EEXIST(err->apr_err))
     return err;
   else if (err)
     *exists = 0;

@@ -446,16 +446,17 @@ read_entries (apr_hash_t *entries, svn_string_t *path, apr_pool_t *pool)
   /* Parse. */
   do {
     apr_err = apr_full_read (infile, buf, BUFSIZ, &bytes_read);
-    if (apr_err && (apr_err != APR_EOF))
+    if (apr_err && !APR_STATUS_IS_EOF(apr_err))
       return svn_error_create 
         (apr_err, 0, NULL, pool, "read_entries: apr_full_read choked");
     
-    err = svn_xml_parse (svn_parser, buf, bytes_read, (apr_err == APR_EOF));
+    err = svn_xml_parse (svn_parser, buf, bytes_read,
+                         APR_STATUS_IS_EOF(apr_err));
     if (err)
       return svn_error_quick_wrap 
         (err,
          "read_entries: xml parser failed.");
-  } while (apr_err != APR_EOF);
+  } while (!APR_STATUS_IS_EOF(apr_err));
 
   /* Close the entries file. */
   err = svn_wc__close_adm_file (infile, path, SVN_WC__ADM_ENTRIES, 0, pool);
