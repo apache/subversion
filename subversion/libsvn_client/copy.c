@@ -362,32 +362,6 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
 
 
 static svn_error_t *
-unlock_dirs (apr_hash_t *locked_dirs,
-             apr_pool_t *pool)
-{
-  apr_hash_index_t *hi;
-
-  /* Split if there's nothing to be done. */
-  if (! locked_dirs)
-    return SVN_NO_ERROR;
-
-  /* Clean up any locks. */
-  for (hi = apr_hash_first (pool, locked_dirs); hi; hi = apr_hash_next (hi))
-    {
-      const void *key;
-      void *val;
-      svn_wc_adm_access_t *adm_access;
-
-      apr_hash_this (hi, &key, NULL, &val);
-      adm_access = val;
-      SVN_ERR (svn_wc_adm_close (adm_access));
-    }
-
-  return SVN_NO_ERROR;
-}  
-
-
-static svn_error_t *
 remove_tmpfiles (apr_hash_t *tempfiles,
                  apr_pool_t *pool)
 {
@@ -489,7 +463,8 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
   svn_revnum_t committed_rev = SVN_INVALID_REVNUM;
   const char *committed_date = NULL;
   const char *committed_author = NULL;
-  apr_hash_t *committables, *locked_dirs, *tempfiles = NULL;
+  apr_hash_t *committables, *tempfiles = NULL;
+  svn_wc_adm_access_t *adm_access;
   apr_array_header_t *commit_items;
   svn_error_t *cmt_err = NULL, *unlock_err = NULL, *cleanup_err = NULL;
   svn_boolean_t commit_in_progress = FALSE;
@@ -503,6 +478,9 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
   svn_path_split_nts (src_path, &parent, &base_name, pool);
   if (svn_path_is_empty_nts (parent))
     parent = ".";
+
+  /* ### Do we need locks for a wc->repos copy? */
+  SVN_ERR (svn_wc_adm_open (&adm_access, NULL, parent, TRUE, TRUE, pool));
 
   /* Split the DST_URL into an anchor and target. */
   svn_path_split_nts (dst_url, &anchor, &target, pool);
@@ -551,7 +529,6 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
 
   /* Crawl the working copy for commit items. */
   if ((cmt_err = svn_client__get_copy_committables (&committables, 
-                                                    &locked_dirs,
                                                     base_url,
                                                     base_path,
                                                     pool)))
@@ -608,9 +585,8 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
   if (session)
     ra_lib->close (session);
 
-  /* Unlock any remaining locked dirs. */
-  if (locked_dirs)
-    unlock_err = unlock_dirs (locked_dirs, pool);
+  /* ### Under what conditions should we remove the locks? */
+  unlock_err = svn_wc_adm_close (adm_access);
 
   /* Remove any outstanding temporary text-base files. */
   if (tempfiles)

@@ -329,7 +329,6 @@ svn_client__get_diff_editor (const char *target,
    found in TARGETS will not be crawled for modifications.  */
 svn_error_t *
 svn_client__harvest_committables (apr_hash_t **committables,
-                                  apr_hash_t **locked_dirs,
                                   const char *parent_dir,
                                   apr_array_header_t *targets,
                                   svn_boolean_t nonrecursive,
@@ -344,7 +343,6 @@ svn_client__harvest_committables (apr_hash_t **committables,
    to a new repository URL (NEW_URL). */
 svn_error_t *
 svn_client__get_copy_committables (apr_hash_t **committables,
-                                   apr_hash_t **locked_dirs,
                                    const char *new_url,
                                    const char *target,
                                    apr_pool_t *pool);

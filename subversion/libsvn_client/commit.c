@@ -605,32 +605,6 @@ svn_client_import (svn_client_commit_info_t **commit_info,
 
 
 static svn_error_t *
-unlock_dirs (apr_hash_t *locked_dirs,
-             apr_pool_t *pool)
-{
-  apr_hash_index_t *hi;
-
-  /* Split if there's nothing to be done. */
-  if (! locked_dirs)
-    return SVN_NO_ERROR;
-
-  /* Clean up any locks. */
-  for (hi = apr_hash_first (pool, locked_dirs); hi; hi = apr_hash_next (hi))
-    {
-      const void *key;
-      void *val;
-      svn_wc_adm_access_t *adm_access;
-
-      apr_hash_this (hi, &key, NULL, &val);
-      adm_access = val;
-      SVN_ERR (svn_wc_adm_close (adm_access));
-    }
-
-  return SVN_NO_ERROR;
-}  
-
-
-static svn_error_t *
 remove_tmpfiles (apr_hash_t *tempfiles,
                  apr_pool_t *pool)
 {
@@ -747,7 +721,8 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
   const char *base_dir;
   const char *base_url;
   apr_array_header_t *rel_targets;
-  apr_hash_t *committables, *locked_dirs, *tempfiles = NULL;
+  apr_hash_t *committables, *tempfiles = NULL;
+  svn_wc_adm_access_t *base_dir_access;
   apr_array_header_t *commit_items;
   apr_status_t apr_err = 0;
   apr_file_t *xml_hnd = NULL;
@@ -755,12 +730,28 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
   svn_error_t *bump_err = NULL, *cleanup_err = NULL;
   svn_boolean_t use_xml = (xml_dst && xml_dst[0]) ? TRUE : FALSE;
   svn_boolean_t commit_in_progress = FALSE;
+  svn_wc_entry_t *base_entry;
   const char *display_dir = ".";
   int notify_path_offset;
   int i;
 
   /* Condense the target list. */
   SVN_ERR (svn_path_condense_targets (&base_dir, &rel_targets, targets, pool));
+
+  /* Eeek!  To get an access baton we need a directory name.  If the user
+     explicitly commits a deleted file that has been physically removed
+     from the working copy (as is normal for deleted files), then base_dir
+     will be the file name not a directory name.  To identify this case we
+     need to get the entry for base_dir before we get the access baton.  I
+     wonder where this logic should live? */
+  SVN_ERR (svn_wc_entry (&base_entry, base_dir, TRUE, pool));
+  if (base_entry->kind == svn_node_dir)
+    SVN_ERR (svn_wc_adm_open (&base_dir_access, NULL, base_dir, TRUE, TRUE,
+                              pool));
+  else
+    SVN_ERR (svn_wc_adm_open (&base_dir_access, NULL,
+                              svn_path_remove_component_nts (base_dir, pool),
+                              TRUE, TRUE, pool));
 
   /* If we calculated only a base_dir and no relative targets, this
      must mean that we are being asked to commit a single directory.
@@ -790,7 +781,6 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
 
   /* Crawl the working copy for commit items. */
   if ((cmt_err = svn_client__harvest_committables (&committables, 
-                                                   &locked_dirs,
                                                    base_dir,
                                                    rel_targets, 
                                                    nonrecursive,
@@ -917,13 +907,9 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
             adm_access_path = item->path;
           else
             svn_path_split_nts (item->path, &adm_access_path, NULL, pool);
-          adm_access = apr_hash_get (locked_dirs, adm_access_path,
-                                     APR_HASH_KEY_STRING);
-          if (! adm_access)
-            /* This should *never* happen */
-            return svn_error_createf(SVN_ERR_GENERAL, 0, NULL, pool,
-                                     "BUG: no lock for %s",
-                                     item->path);
+          if ((bump_err = svn_wc_adm_retrieve (&adm_access, base_dir_access,
+                                               adm_access_path, pool)))
+            goto cleanup;
           
           if ((item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD) 
               && (item->kind == svn_node_dir)
@@ -947,10 +933,6 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
       if (! bump_err)
         svn_pool_destroy (subpool);
     }
-
-  /* Unlock the locked directories. */
-  if (! ((unlock_err = unlock_dirs (locked_dirs, pool))))
-    locked_dirs = NULL;
 
   /* If we were committing into XML, close the xml file. */      
   if (use_xml)
@@ -980,9 +962,8 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
   if (commit_in_progress)
     editor->abort_edit (edit_baton); /* ignore return value */
 
-  /* Unlock any remaining locked dirs. */
-  if (locked_dirs)
-    unlock_err = unlock_dirs (locked_dirs, pool);
+  /* ### Under what conditions should we remove the locks? */
+  unlock_err = svn_wc_adm_close (base_dir_access);
 
   /* Remove any outstanding temporary text-base files. */
   cleanup_err = remove_tmpfiles (tempfiles, pool);

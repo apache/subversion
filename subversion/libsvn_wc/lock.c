@@ -93,14 +93,12 @@ svn_wc__adm_access_pool_cleanup_child (void *p)
 
 static svn_wc_adm_access_t *
 svn_wc__adm_access_alloc (enum svn_wc__adm_access_type type,
-                          svn_wc_adm_access_t *parent,
                           const char *path,
                           apr_pool_t *pool)
 {
   svn_wc_adm_access_t *lock = apr_palloc (pool, sizeof (*lock));
   lock->type = type;
-  lock->parent = parent;
-  lock->children = NULL;
+  lock->set = NULL;
   lock->lock_exists = FALSE;
   /* ### Some places lock with a path that is not canonical, we need
      ### cannonical paths for reliable parent-child determination */
@@ -120,8 +118,7 @@ svn_wc__adm_steal_write_lock (svn_wc_adm_access_t **adm_access,
 {
   svn_error_t *err;
   svn_wc_adm_access_t *lock
-    = svn_wc__adm_access_alloc (svn_wc__adm_access_write_lock, NULL, path,
-                                pool);
+    = svn_wc__adm_access_alloc (svn_wc__adm_access_write_lock, path, pool);
 
   err = svn_wc__lock (lock, 0, pool);
   if (err)
@@ -137,33 +134,9 @@ svn_wc__adm_steal_write_lock (svn_wc_adm_access_t **adm_access,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *
-svn_wc__adm_access_child (svn_wc_adm_access_t **adm_access,
-                          svn_wc_adm_access_t *parent_access,
-                          const char *path,
-                          apr_pool_t *pool)
-{
-
-  /* PATH must be a child. We only need the result, not the allocated
-     name. */
-  const char *name = svn_path_is_child (parent_access->path, path, pool);
-  if (!name)
-    return svn_error_createf (SVN_ERR_WC_INVALID_LOCK, 0, NULL, pool,
-                              "lock path is not a child (%s)",
-                              path);
-
-  if (parent_access->children)
-    *adm_access = apr_hash_get (parent_access->children, path,
-                                APR_HASH_KEY_STRING);
-  else
-    *adm_access = NULL;
-
-  return SVN_NO_ERROR;
-}
-
 svn_error_t *
 svn_wc_adm_open (svn_wc_adm_access_t **adm_access,
-                 svn_wc_adm_access_t *parent_access,
+                 svn_wc_adm_access_t *associated,
                  const char *path,
                  svn_boolean_t write_lock,
                  svn_boolean_t tree_lock,
@@ -171,12 +144,14 @@ svn_wc_adm_open (svn_wc_adm_access_t **adm_access,
 {
   svn_wc_adm_access_t *lock;
 
-  if (parent_access)
+  if (associated && associated->set)
     {
-      SVN_ERR (svn_wc__adm_access_child (&lock, parent_access, path,
-                                         pool));
+      lock = apr_hash_get (associated->set, path, APR_HASH_KEY_STRING);
       if (lock)
-        /* Already locked */
+        /* Already locked.  The reason we don't return the existing baton
+           here is that the user is supposed to know whether a directory is
+           locked: if it's not locked call svn_wc_adm_open, if it is locked
+           call svn_wc_adm_retrieve.  */
         return svn_error_createf (SVN_ERR_WC_LOCKED, 0, NULL, pool,
                                   "directory already locked (%s)",
                                   path);
@@ -185,8 +160,8 @@ svn_wc_adm_open (svn_wc_adm_access_t **adm_access,
   /* Need to create a new lock */
   if (write_lock)
     {
-      lock = svn_wc__adm_access_alloc (svn_wc__adm_access_write_lock,
-                                       parent_access, path, pool);
+      lock = svn_wc__adm_access_alloc (svn_wc__adm_access_write_lock, path,
+                                       pool);
       SVN_ERR (svn_wc__lock (lock, 0, pool));
       lock->lock_exists = TRUE;
     }
@@ -201,36 +176,36 @@ svn_wc_adm_open (svn_wc_adm_access_t **adm_access,
                                   "lock path is not a directory (%s)",
                                   path);
 
-      lock = svn_wc__adm_access_alloc (svn_wc__adm_access_unlocked,
-                                       parent_access, path, pool);
+      lock = svn_wc__adm_access_alloc (svn_wc__adm_access_unlocked, path, pool);
     }
 
-  lock->parent = parent_access;
-  if (lock->parent)
+  if (associated)
     {
-      if (! lock->parent->children)
-        lock->parent->children = apr_hash_make (lock->parent->pool);
+      if (! associated->set)
+        {
+          associated->set = apr_hash_make (associated->pool);
+          apr_hash_set (associated->set, associated->path, APR_HASH_KEY_STRING,
+                        associated);
+        }
 
-#if 0
-      /* ### Need to think about this. Creating an empty APR hash allocates
-         ### several hundred bytes. Since the hash key is the complete
-         ### path, children for different parents cannot clash. Can we save
-         ### memory by reusing the parent's hash? */
-      lock->children = lock->parent->children;
-#endif
-
-      apr_hash_set (lock->parent->children, lock->path, APR_HASH_KEY_STRING,
-                    lock);
+      lock->set = associated->set;
+      apr_hash_set (lock->set, lock->path, APR_HASH_KEY_STRING, lock);
     }
 
   if (tree_lock)
     {
-      /* ### Could use this code to initialise the cache, in which case the
-         ### subpool should be removed. */
+      /* ### Use this code to initialise the cache? */
       apr_hash_t *entries;
       apr_hash_index_t *hi;
       apr_pool_t *subpool = svn_pool_create (pool);
+
       SVN_ERR (svn_wc_entries_read (&entries, path, FALSE, subpool));
+
+      /* Use a temporary hash until all children have been opened. */
+      if (associated)
+        lock->set = apr_hash_make (subpool);
+
+      /* Open the tree */
       for (hi = apr_hash_first (subpool, entries); hi; hi = apr_hash_next (hi))
         {
           void *val;
@@ -246,15 +221,38 @@ svn_wc_adm_open (svn_wc_adm_access_t **adm_access,
             continue;
           entry_path = svn_path_join (lock->path, entry->name, subpool);
 
-          /* Use the main lock's pool here, it needs to persist */
+          /* Don't use the subpool pool here, the lock needs to persist */
           svn_err = svn_wc_adm_open (&entry_access, lock, entry_path,
                                      write_lock, tree_lock, lock->pool);
           if (svn_err)
             {
-              /* Give up any locks we have acquired. */
+              /* This closes all the children in temporary hash as well */
               svn_wc_adm_close (lock);
+              svn_pool_destroy (subpool);
               return svn_err;
             }
+        }
+
+      /* Switch from temporary hash to permanent hash */
+      if (associated)
+        {
+          for (hi = apr_hash_first (subpool, lock->set);
+               hi;
+               hi = apr_hash_next (hi))
+            {
+              const void *key;
+              void *val;
+              const char *entry_path;
+              svn_wc_adm_access_t *entry_access;
+
+              apr_hash_this (hi, &key, NULL, &val);
+              entry_path = key;
+              entry_access = val;
+              apr_hash_set (associated->set, entry_path, APR_HASH_KEY_STRING,
+                            entry_access);
+              entry_access->set = associated->set;
+            }
+          lock->set = associated->set;
         }
       svn_pool_destroy (subpool);
     }
@@ -265,11 +263,16 @@ svn_wc_adm_open (svn_wc_adm_access_t **adm_access,
 
 svn_error_t *
 svn_wc_adm_retrieve (svn_wc_adm_access_t **adm_access,
-                     svn_wc_adm_access_t *parent_access,
+                     svn_wc_adm_access_t *associated,
                      const char *path,
                      apr_pool_t *pool)
 {
-  SVN_ERR (svn_wc__adm_access_child (adm_access, parent_access, path, pool));
+  if (associated->set)
+    *adm_access = apr_hash_get (associated->set, path, APR_HASH_KEY_STRING);
+  else if (! strcmp (associated->path, path))
+    *adm_access = associated;
+  else
+    *adm_access = NULL;
   if (! *adm_access)
     return svn_error_createf (SVN_ERR_WC_NOT_LOCKED, 0, NULL, pool,
                               "directory not locked (%s)",
@@ -287,17 +290,39 @@ svn_wc__do_adm_close (svn_wc_adm_access_t *adm_access,
                          svn_wc__adm_access_pool_cleanup);
 
   /* Close children */
-  if (adm_access->children)
+  if (adm_access->set)
     {
-      for (hi = apr_hash_first (adm_access->pool, adm_access->children);
+      /* The documentation says that modifying a hash while iterating over
+         it is allowed but unpredictable!  So, first loop to identify and
+         copy children, second loop to close them. */
+      int i;
+      apr_array_header_t *children = apr_array_make (adm_access->pool, 1,
+                                                     sizeof (adm_access));
+
+      for (hi = apr_hash_first (adm_access->pool, adm_access->set);
            hi;
            hi = apr_hash_next (hi))
         {
           void *val;
-          svn_wc_adm_access_t *child_access;
+          svn_wc_adm_access_t *associated;
+          const char *name;
           apr_hash_this (hi, NULL, NULL, &val);
-          child_access = val;
-          SVN_ERR (svn_wc__do_adm_close (child_access, preserve_lock));
+          associated = val;
+          name = svn_path_is_child (adm_access->path, associated->path,
+                                    adm_access->pool);
+          if (name)
+            {
+              *(svn_wc_adm_access_t**)apr_array_push (children) = associated;
+              /* Deleting current element is allowed and predictable */
+              apr_hash_set (adm_access->set, associated->path,
+                            APR_HASH_KEY_STRING, NULL);
+            }
+        }
+      for (i = 0; i < children->nelts; ++i)
+        {
+          svn_wc_adm_access_t *child = APR_ARRAY_IDX(children, i,
+                                                     svn_wc_adm_access_t*);
+          SVN_ERR (svn_wc__do_adm_close (child, preserve_lock));
         }
     }
 
@@ -313,10 +338,9 @@ svn_wc__do_adm_close (svn_wc_adm_access_t *adm_access,
       adm_access->type = svn_wc__adm_access_closed;
     }
 
-  /* Detach from parent */
-  if (adm_access->parent)
-    apr_hash_set (adm_access->parent->children, adm_access->path,
-                  APR_HASH_KEY_STRING, NULL);
+  /* Detach from set */
+  if (adm_access->set)
+    apr_hash_set (adm_access->set, adm_access->path, APR_HASH_KEY_STRING, NULL);
 
   return SVN_NO_ERROR;
 }

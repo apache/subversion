@@ -188,12 +188,9 @@ struct svn_wc_adm_access_t
    apr_hash_t *entries;
 #endif
 
-   /* PARENT access baton, may be NULL. */
-   svn_wc_adm_access_t *parent;
-
-   /* CHILDREN is a hash of svn_wc_adm_access_t* keyed on char*
-      representing the path to sub-directories that are also locked. */
-   apr_hash_t *children;
+   /* SET is a hash of svn_wc_adm_access_t* keyed on char* representing the
+      path to other directories that are also locked. */
+   apr_hash_t *set;
 
    /* POOL is used to allocate cached items, they need to persist for the
       lifetime of this access baton */
