@@ -63,8 +63,8 @@
     and why?</a></li>
 <li><a href="#adm-dir">I don't like the ".svn" directory name, and
     prefer "SVN" or something else.  How do I change it?</a></li>
-<li><a href="#case-change">I checked in a file but had the wrong case in the filename.
-    How do I change it?</a></li>
+<li><a href="#case-change">I checked in a file but had the wrong case 
+    in the filename.  How do I change it?</a></li>
 <p>
 <strong>Troubleshooting:</strong>
 </p>
@@ -977,22 +977,42 @@ then recompile your client.
 
 <![CDATA[=========================================================]]>
 
-<h3><a name="case-change">I checked in a file but had the wrong case in the filename.
-    How do I change it?</h3>
+<h3><a name="case-change">I checked in a file but had the wrong case
+    in the filename.  How do I change it?</h3>
 
 <p>If you're adding files on an operating system with a case-insensitive
-filesystem (such as Windows), you might find you accidentally add a file
-with the wrong case. You can correct this by copying the file somewhere
-temporary, deleting the file from Subversion, then adding the copy with
-the correct case, or by performing a move operation with Subversion URLs.
-Using URLs is recommended, because it will preserve history for the file,
-and will take effect immediately.</p>
+filesystem, such as Windows, you might find you accidentally add a file
+with the wrong case in the filename.  You can correct this by copying
+the file somewhere temporary, deleting the file from Subversion, then
+adding the copy with the correct case, or by performing a move
+operation with Subversion URLs.  Using URLs is recommended, because it
+will preserve history for the file, and will take effect immediately.</p>
 
-<p>For example, to rename <tt>file.java</tt> to <tt>File.java</tt>, do:
-<pre>
-svn mv svn://svnserver/path/to/file.java svn://svnserver/path/to/File.java
-</pre>
+<p>Both fixes will leave Windows working copies with problems,
+because Windows can still get confused when trying to add the file with
+the new case.  One way of fixing the problem is to delete your working
+copy and check out again.  If this is not possible, you must perform a
+two step update.</p>
+
+<p>
+For each file with the wrong the case, do:
+<pre>svn mv svn://svnserver/path/to/file.java svn://svnserver/path/to/File.java</pre>
 </p>
+
+<p>
+Then for each working copy, change to the relevant directory and do:
+<pre>
+svn update *
+svn update
+</pre>
+The first update will remove <tt>file.java</tt> from your working copy, 
+the second update will add <tt>File.java</tt>, leaving you with a
+correct working copy.
+</p>
+
+<p>As you can see, adding a file with the wrong case is tricky to fix on
+an operating system that has a case insensitive filesystem.  Do try to
+get it right when you add the file the first time!</p>
 
 <![CDATA[=========================================================]]>
 
