@@ -163,5 +163,5 @@ here are its responsibilities:
    
       (Note that doing full-out authz on whole trees fundamentally
       contradicts Subversion's O(1) copy philosophy; in practice,
-      however, specific authz implementaitons are able get the same
+      however, specific authz implementations are able to get the same
       effect while being less expensive than O(N).)
