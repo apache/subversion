@@ -82,6 +82,11 @@ svn_error_t *svn_ra_svn__drive_editorp(svn_ra_svn_conn_t *conn,
                                        void *edit_baton,
                                        svn_boolean_t *aborted);
 
+/* CRAM-MD5 client implementation. */
+svn_error_t *svn_ra_svn__cram_client(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
+                                     const char *user, const char *password,
+                                     const char **message);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

@@ -247,7 +247,7 @@ static svn_error_t *do_auth(ra_svn_session_baton_t *sess,
                             const char *realm, apr_pool_t *pool)
 {
   svn_ra_svn_conn_t *conn = sess->conn;
-  const char *realmstring;
+  const char *realmstring, *user, *password, *msg;
   svn_auth_iterstate_t *iterstate;
   void *creds;
   svn_error_t *err;
@@ -276,6 +276,30 @@ static svn_error_t *do_auth(ra_svn_session_baton_t *sess,
       SVN_ERR(auth_response(conn, pool, "ANONYMOUS",
                             sess->user ? sess->user : "", compat));
       return read_success(conn, pool);
+    }
+  else if (find_mech(mechlist, "CRAM-MD5"))
+    {
+      SVN_ERR(svn_auth_first_credentials(&creds, &iterstate,
+                                         SVN_AUTH_CRED_SIMPLE, realmstring,
+                                         sess->auth_baton, pool));
+      if (!creds)
+        return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
+                                "Can't get password");
+      while (creds)
+        {
+          user = ((svn_auth_cred_simple_t *) creds)->username;
+          password = ((svn_auth_cred_simple_t *) creds)->password;
+          SVN_ERR(auth_response(conn, pool, "CRAM-MD5", NULL, compat));
+          SVN_ERR(svn_ra_svn__cram_client(conn, pool, user, password, &msg));
+          if (!msg)
+            break;
+          SVN_ERR(svn_auth_next_credentials(&creds, iterstate, pool));
+        }
+      if (!creds)
+        return svn_error_createf(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
+                                 "Authentication error from server: %s", msg);
+      SVN_ERR(svn_auth_save_credentials(iterstate, pool));
+      return SVN_NO_ERROR;
     }
   else
     return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,

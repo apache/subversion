@@ -28,6 +28,7 @@
 #include <apr.h>
 #include <apr_pools.h>
 #include <apr_network_io.h>
+#include <svn_config.h>
 
 #include "svn_delta.h"
 
@@ -307,6 +308,18 @@ svn_error_t *svn_ra_svn_drive_editor(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                      const svn_delta_editor_t *editor,
                                      void *edit_baton,
                                      svn_boolean_t *aborted);
+
+/** This function is only intended for use by svnserve.
+ *
+ * Perform CRAM-MD5 password authentication.  On success, return
+ * SVN_NO_ERROR with *user set to the username and *success set to
+ * TRUE.  On an error which can be reported to the client, report the
+ * error and return SVN_NO_ERROR with *success set to FALSE.  On
+ * communications failure, return an error.
+ */
+svn_error_t *svn_ra_svn_cram_server(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
+                                    svn_config_t *pwdb, const char **user,
+                                    svn_boolean_t *success);
 
 #ifdef __cplusplus
 }
