@@ -109,6 +109,11 @@ Already have three +1 votes:
      Votes:
       +1: clkao, rooneg, kfogel
 
+   * r8238
+     Update Perl bindings test suite for API change introduced in r8216
+     disallowing NULL in dir_delta target.
+     Votes:
+      +1: clkao, rooneg, epg
 
 Don't yet have three +1 votes:
 
@@ -168,10 +173,3 @@ Don't yet have three +1 votes:
      Votes:
       +1: clkao, epg
       +0: jerenkrantz
-
-
-   * r8238
-     Update Perl bindings test suite for API change introduced in r8216
-     disallowing NULL in dir_delta target.
-     Votes:
-      +1: clkao, rooneg
