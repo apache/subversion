@@ -189,7 +189,7 @@ svn_error: #21085 :
 
           <screen>
 d: 
-svn import file:///some/path/to/repos/on/d/drive e:\file\to\be\imported
+svn import e:\file\to\be\imported file:///some/path/to/repos/on/d/drive
           </screen>
         </sect3>
 
@@ -202,7 +202,7 @@ svn import file:///some/path/to/repos/on/d/drive e:\file\to\be\imported
           <screen>
 $ mkdir test
 $ touch test/testfile
-$ svn import file:///var/svn/test test test -m "Initial import"
+$ svn import test file:///var/svn/test -m "Initial import"
 Adding         test/testfile
 Transmitting file data .
 Committed revision 1.
@@ -211,7 +211,7 @@ Committed revision 1.
           <para>But not from a remote host:</para>
 
           <screen>
-$ svn import http://svn.red-bean.com/test testfile -m "import"
+$ svn import testfile http://svn.red-bean.com/test -m "import"
 harry's password: xxxxxxx
 
 svn_error: #21110 : 
