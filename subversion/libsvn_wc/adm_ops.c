@@ -1334,25 +1334,13 @@ svn_wc_remove_from_revision_control (const char *path,
       
   if (is_file)
     {
+      svn_boolean_t text_modified_p;
       full_path = svn_path_join (full_path, name, pool);
 
       if (destroy_wf)
-        {
-          /* Check for local mods. */
-          svn_boolean_t text_modified_p;
-          SVN_ERR (svn_wc_text_modified_p (&text_modified_p, full_path,
-                                           subpool));
-          if (text_modified_p)  /* don't kill local mods */
-            {
-              return svn_error_create (SVN_ERR_WC_LEFT_LOCAL_MOD,
-                                       0, NULL, subpool, "");
-            }
-          else
-            {
-              /* The working file is still present; remove it. */
-              SVN_ERR (remove_file_if_present (full_path, subpool));
-            }
-        }
+        /* Check for local mods. before removing entry */
+        SVN_ERR (svn_wc_text_modified_p (&text_modified_p, full_path,
+                                         subpool));
 
       /* Remove NAME from PATH's entries file: */
       SVN_ERR (svn_wc_entries_read (&entries, path, FALSE, pool));
@@ -1380,6 +1368,17 @@ svn_wc_remove_from_revision_control (const char *path,
         SVN_ERR (svn_wc__wcprop_path (&svn_thang, full_path, 0, subpool));
         SVN_ERR (remove_file_if_present (svn_thang, subpool));
       }
+
+      if (destroy_wf && text_modified_p)  /* don't kill local mods */
+        {
+          return svn_error_create (SVN_ERR_WC_LEFT_LOCAL_MOD,
+                                   0, NULL, subpool, "");
+        }
+      else
+        {
+          /* The working file is still present; remove it. */
+          SVN_ERR (remove_file_if_present (full_path, subpool));
+        }
 
     }  /* done with file case */
 
