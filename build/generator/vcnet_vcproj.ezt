@@ -85,6 +85,7 @@
 				Name="[configs.name]|Win32">
 				<Tool
 					Name="VCResourceCompilerTool"
+					AdditionalIncludeDirectories="[for includes][includes][if-index includes last][else];[end][end]"
 					PreprocessorDefinitions="SVN_FILE_NAME=[target.output_name];SVN_FILE_DESCRIPTION=[target.desc];[is configs.name "Debug"]_DEBUG[else]NDEBUG[end]"/>
 			</FileConfiguration>[end]
 		</File>[end]
