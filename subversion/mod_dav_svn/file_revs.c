@@ -25,6 +25,7 @@
 #include "svn_pools.h"
 #include "svn_base64.h"
 #include "svn_props.h"
+#include "svn_dav.h"
 
 #include "dav_svn.h"
 
@@ -220,10 +221,12 @@ dav_svn__file_revs_report(const dav_resource *resource,
      in this namespace, so is this necessary at all? */
   if (ns == -1)
     {
-      return dav_new_error(resource->pool, HTTP_BAD_REQUEST, 0,
-                           "The request does not contain the 'svn:' "
-                           "namespace, so it is not going to have certain "
-                           "required elements.");
+      return dav_new_error_tag(resource->pool, HTTP_BAD_REQUEST, 0,
+                               "The request does not contain the 'svn:' "
+                               "namespace, so it is not going to have certain "
+                               "required elements.",
+                               SVN_DAV_ERROR_NAMESPACE,
+                               SVN_DAV_ERROR_TAG);
     }
 
   /* Get request information. */
@@ -244,8 +247,17 @@ dav_svn__file_revs_report(const dav_resource *resource,
           path = apr_pstrdup(resource->pool, resource->info->repos_path);
 
           if (child->first_cdata.first)
-            path = svn_path_join(path, child->first_cdata.first->text,
+            {
+              if (! svn_path_is_canonical(child->first_cdata.first->text))
+                return dav_new_error_tag(resource->pool, HTTP_BAD_REQUEST, 0,
+                  "The request's 'path' element is not canonicalized; "
+                  "there is a problem with the client.",
+                  SVN_DAV_ERROR_NAMESPACE,
+                  SVN_DAV_ERROR_TAG);
+              path = svn_path_join(path, 
+                                   child->first_cdata.first->text,
                                    resource->pool);
+            }
         }
       /* else unknown element; skip it */
     }
