@@ -319,7 +319,7 @@ svn_delta_get_cancellation_editor (svn_cancel_func_t cancel_func,
       svn_delta_editor_t *tree_editor = svn_delta_default_editor (pool);
       struct edit_baton *eb = apr_palloc (pool, sizeof (*eb));
 
-      tree_editor->set_target_revision = set_target_revision,
+      tree_editor->set_target_revision = set_target_revision;
       tree_editor->open_root = open_root;
       tree_editor->delete_entry = delete_entry;
       tree_editor->add_directory = add_directory;
