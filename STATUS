@@ -14,7 +14,7 @@ Candidate changes:
     Justification:
       Shallow silly bug.
     Votes:
-      +1: bliss, lundblad
+      +1: bliss, lundblad, ghudson
 
   * r11143, r11145
     Fix broken RPM build caused by changes to book Makefile right before
@@ -24,7 +24,7 @@ Candidate changes:
     Notes:
       These changes are already committed on the 1.0.x branch.
     Votes:
-      +1: david
+      +1: david, ghudson
       +0: bliss
 
   * r11211, r11232, r11285
@@ -44,4 +44,4 @@ Candidate changes:
       ...or use the patch attached to this email:
          http://www.contactor.se/~dast/svn/archive-2004-10/0365.shtml
     Votes:
-      +1: bliss, lundblad
+      +1: bliss, lundblad, ghudson
