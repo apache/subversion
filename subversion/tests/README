@@ -72,8 +72,14 @@ SVN_TEST_NULL.  The first SVN_TEST_NULL is there to leave room for
 Buddha.  The standard `main' function searches for the final
 SVN_TEST_NULL to determine the size of the array.
 
-FIXME: Describe the SVN_TEST_XFAIL macro, and its difference from
-SVN_TEST_PASS.
+Instead of SVN_TEST_PASS, you can use SVN_TEST_XFAIL to declare that a
+test is expected to fail. The status of such tests is then no longer
+marked as PASS or FAIL, but rather as XFAIL (eXpected FAILure) or
+XPASS (uneXpected PASS).
+
+The purpose of XFAIL tests is to confirm that a known bug still
+exists. When you see such a test uneXpectedly PASS, you've probably
+fixed the bug it tests for, even if that wasn't your intention. :-)
 
 Each test function conforms to the svn_test_driver_t prototype:
 
