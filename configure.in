@@ -65,6 +65,7 @@ sinclude(build/ac-macros/find_apu.m4)
 sinclude(build/ac-macros/aprutil.m4)
 sinclude(build/ac-macros/java.m4)
 sinclude(build/ac-macros/swig.m4)
+sinclude(build/ac-macros/ssl.m4)
 
 
 dnl Grab the libtool macros
@@ -283,6 +284,12 @@ esac
 # Look for libdb4.so first:
 SVN_LIB_BERKELEY_DB($SVN_FS_WANT_DB_MAJOR, $SVN_FS_WANT_DB_MINOR,
                     $SVN_FS_WANT_DB_PATCH, [db4 db])
+
+# Check for SSL
+SVN_LIB_SSL()
+if test "$svn_lib_ssl" = "yes"; then
+  AC_DEFINE(SVN_HAVE_SSL, 1, [Define if OpenSSL is available.])
+fi
 
 dnl I18n -------------------
 
