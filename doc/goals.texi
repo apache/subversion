@@ -101,9 +101,9 @@ unrelated reasons: keyword expansion, and line-end conversion.
 @item
 @dfn{Line-end conversion} is when CVS gives plaintext files in the
 working copy the appropriate line-ending conventions for that platform.
-For example, a Unix working copy would use LF, but a Windows working
-copy would use CRLF.  (Like CVS, the repository always stores text files
-in Unix LF format).
+For example, Unix working copies use LF, but Windows working copies use
+CRLF.  (Like CVS, the repository always stores text files in Unix LF
+format).
 @end itemize
 @*
 Both keyword substitution and line-end conversion are sensible only for
