@@ -100,6 +100,16 @@
 }
 
 /* -----------------------------------------------------------------------
+   handle svn_wc_notify_func_t/baton pairs
+*/
+
+%typemap(python,in) (svn_wc_notify_func_t notify_func, void *notify_baton) {
+
+  $1 = svn_swig_py_notify_func;
+  $2 = $input; /* our function is the baton. */
+}
+
+/* -----------------------------------------------------------------------
    handle the "statushash" OUTPUT param for svn_client_status()
 */
 %typemap(ignore) apr_hash_t **statushash = apr_hash_t **OUTPUT;
