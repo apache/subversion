@@ -130,7 +130,7 @@ class SVNLook:
 
     # compute the delta, printing as we go
     repos.svn_repos_dir_delta(base_root, '', None, root, '',
-                              e_ptr, e_baton, 0, 1, 0, 1, 0, self.pool)
+                              e_ptr, e_baton, 0, 1, 0, 0, self.pool)
 
 
 class Editor(delta.Editor):
