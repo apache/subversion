@@ -196,7 +196,7 @@ notify (void *baton,
                 else if (nb->is_checkout)
                   printf ("Checkout complete.\n");
                 else
-                  printf ("Update complete\n");
+                  printf ("Update complete.\n");
               }
           }
       }
