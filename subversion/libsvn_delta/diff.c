@@ -1048,6 +1048,39 @@ svn_diff3(svn_diff_t **diff,
   return APR_SUCCESS;
 }
 
+
+svn_boolean_t
+svn_diff_contains_conflicts(svn_diff_t *diff)
+{
+  while (diff != NULL)
+    {
+      if (diff->type == svn_diff_type_conflict)
+        {
+          return TRUE;
+        }
+
+      diff = diff->next;
+    }
+
+  return FALSE;
+}
+
+svn_boolean_t
+svn_diff_contains_diffs(svn_diff_t *diff)
+{
+  while (diff != NULL)
+    {
+      if (diff->type != svn_diff_type_common)
+        {
+          return TRUE;
+        }
+
+      diff = diff->next;
+    }
+
+  return FALSE;
+}
+
 void
 svn_diff_output(svn_diff_t *diff,
                 void *output_baton,
