@@ -48,11 +48,11 @@ svn_path_internal_style (const char *path, apr_pool_t *pool)
 {
   if ('/' != SVN_PATH_LOCAL_SEPARATOR)
     {
-      char *p;
+      char *p = apr_pstrdup (pool, path);
+      path = p;
 
       /* Convert all local-style separators to the canonical ones. */
-      path = apr_pstrdup (pool, path);
-      for (p = path; *p != '\0'; ++p)
+      for (; *p != '\0'; ++p)
         if (*p == SVN_PATH_LOCAL_SEPARATOR)
           *p = '/';
     }
@@ -70,11 +70,11 @@ svn_path_local_style (const char *path, apr_pool_t *pool)
 
   if ('/' != SVN_PATH_LOCAL_SEPARATOR)
     {
-      char *p;
+      char *p = apr_pstrdup (pool, path);
+      path = p;
 
       /* Convert all canonical separators to the local-style ones. */
-      path = apr_pstrdup (pool, path);
-      for (p = path; *p != '\0'; ++p)
+      for (; *p != '\0'; ++p)
         if (*p == '/')
           *p = SVN_PATH_LOCAL_SEPARATOR;
     }
