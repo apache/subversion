@@ -179,13 +179,12 @@ svn_cl__args_to_target_array (apr_getopt_t *os,
 apr_array_header_t*
 svn_cl__stringlist_to_array(svn_stringbuf_t *buffer, apr_pool_t *pool)
 {
-  apr_array_header_t *array = NULL;
+  apr_array_header_t *array = apr_array_make(pool, DEFAULT_ARRAY_SIZE,
+											 sizeof(svn_stringbuf_t *));
   if (buffer != NULL)
     {
       int start = 0, end = 0;
       svn_stringbuf_t *item;
-      array = apr_array_make(pool, DEFAULT_ARRAY_SIZE,
-                             sizeof(svn_stringbuf_t *));
       while (end < buffer->len)
         {
           while (isspace(buffer->data[start]))
