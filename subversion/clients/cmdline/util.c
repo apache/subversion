@@ -65,6 +65,7 @@ svn_cl__print_commit_info (svn_client_commit_info_t *commit_info)
 svn_error_t *
 svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
                          const char **tmpfile_left /* UTF-8! */,
+                         const char *editor_cmd,
                          const char *base_dir /* UTF-8! */,
                          const char *contents /* UTF-8! */,
                          const char *prefix,
@@ -115,6 +116,11 @@ svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
   if (! editor)
     editor = SVN_CLIENT_EDITOR;
 #endif
+
+  /* Override further with the editor specified on the command line
+     via --editor-cmd, if any. */
+  if (editor_cmd)
+    editor = editor_cmd;
 
   /* Abort if there is no editor specified */
   if (! editor)
@@ -271,6 +277,7 @@ svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
 
 struct log_msg_baton
 {
+  const char *editor_cmd;  /* editor specified via --editor-cmd, else NULL */
   const char *message;  /* the message. */
   const char *message_encoding; /* the locale/encoding of the message. */
   const char *base_dir; /* the base directory for an external edit. UTF-8! */
@@ -292,6 +299,8 @@ svn_cl__make_log_msg_baton (svn_cl__opt_state_t *opt_state,
     baton->message = opt_state->filedata->data;
   else
     baton->message = opt_state->message;
+
+  baton->editor_cmd = opt_state->editor_cmd;
   baton->message_encoding = opt_state->encoding;
   baton->base_dir = base_dir ? base_dir : "";
   baton->tmpfile_left = NULL;
@@ -462,8 +471,9 @@ svn_cl__get_log_message (const char **log_msg,
 
       /* Use the external edit to get a log message. */
       err = svn_cl__edit_externally (&msg2, &lmb->tmpfile_left,
-                                     lmb->base_dir, tmp_message->data, 
-                                     "svn-commit", lmb->config, pool);
+                                     lmb->editor_cmd, lmb->base_dir,
+                                     tmp_message->data, "svn-commit",
+                                     lmb->config, pool);
 
       /* Clean up the log message into UTF8/LF before giving it to
          libsvn_client. */

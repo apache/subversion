@@ -61,7 +61,8 @@ typedef enum {
   svn_cl__dry_run_opt,
   svn_cl__revprop_opt,
   svn_cl__diff_cmd_opt,
-  svn_cl__merge_cmd_opt
+  svn_cl__merge_cmd_opt,
+  svn_cl__editor_cmd_opt
 } svn_cl__longopt_t;
 
 
@@ -107,6 +108,7 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t revprop;         /* operate on a revision property */
   const char *diff_cmd;          /* the external diff command to use */
   const char *merge_cmd;         /* the external merge command to use */
+  const char *editor_cmd;        /* external editor command. */
 } svn_cl__opt_state_t;
 
 
@@ -206,7 +208,11 @@ svn_error_t *svn_cl__revprop_no_rev_error (apr_pool_t *pool);
 /* Search for a text editor command in standard environment variables,
    and invoke it to edit CONTENTS (using a temporary file created in
    directory BASE_DIR).  Return the new contents in *EDITED_CONTENTS,
-   or set *EDITED_CONTENTS to NULL if no edit was performed.  
+   or set *EDITED_CONTENTS to NULL if no edit was performed.
+
+   If EDITOR_CMD is not NULL, it is the name of the external editor
+   command to use, overriding anything else that might determine the
+   editor.
 
    If TMPFILE_LEFT is NULL, the temporary file will be destroyed.
    Else, the file will be left on disk, and its path returned in
@@ -222,6 +228,7 @@ svn_error_t *svn_cl__revprop_no_rev_error (apr_pool_t *pool);
 svn_error_t *
 svn_cl__edit_externally (const char **edited_contents,
                          const char **tmpfile_left,
+                         const char *editor_cmd,
                          const char *base_dir,
                          const char *contents,
                          const char *prefix,

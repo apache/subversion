@@ -103,6 +103,8 @@ const apr_getopt_option_t svn_cl__options[] =
                       "Use ARG as diff command"},
     {"diff3-cmd",     svn_cl__merge_cmd_opt, 1,
                       "Use ARG as merge command"},
+    {"editor-cmd",    svn_cl__editor_cmd_opt, 1,
+                      "Use ARG as external editor"},
 
     /* ### Perhaps the option should be named "--rev-prop" instead?
            Generally, we do include the hyphen; the only reason not to
@@ -166,7 +168,8 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "usage: commit [PATH [PATH ... ]]\n\n"
     "  Be sure to use one of -m or -F to send a log message.\n",
     {'m', 'F', 'q', 'N', svn_cl__targets_opt,
-     svn_cl__force_opt, SVN_CL__AUTH_OPTIONS, svn_cl__encoding_opt} },
+     svn_cl__force_opt, SVN_CL__AUTH_OPTIONS,
+     svn_cl__editor_cmd_opt, svn_cl__encoding_opt} },
   
   { "copy", svn_cl__copy, {"cp"},
     "Duplicate something in working copy or repos, remembering history.\n"
@@ -176,7 +179,8 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "    WC  -> URL:  immediately commit a copy of WC to URL\n"
     "    URL -> WC:   check out URL into WC, schedule for addition\n"
     "    URL -> URL:  complete server-side copy;  used to branch & tag\n",
-    {'m', 'F', 'r', 'q', SVN_CL__AUTH_OPTIONS, svn_cl__encoding_opt} },
+    {'m', 'F', 'r', 'q', SVN_CL__AUTH_OPTIONS, 
+     svn_cl__editor_cmd_opt, svn_cl__encoding_opt} },
   
   { "delete", svn_cl__delete, {"del", "remove", "rm"},
     "Remove files and directories from version control.\n"
@@ -190,7 +194,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "  If run on an URL, the item is deleted from the repository via an\n"
     "  immediate commit.\n",
     {svn_cl__force_opt, 'm', 'F', 'q', svn_cl__targets_opt,
-     SVN_CL__AUTH_OPTIONS, svn_cl__encoding_opt} },
+     SVN_CL__AUTH_OPTIONS, svn_cl__editor_cmd_opt, svn_cl__encoding_opt} },
   
   { "diff", svn_cl__diff, {"di"},
     "display the differences between two paths.\n"
@@ -238,7 +242,8 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "  If no third arg, copy top-level contents of PATH into URL\n"
     "  directly.  Otherwise, create NEW_ENTRY underneath URL and\n"
     "  begin copy there.\n",
-    {'m', 'F', 'q', 'N', SVN_CL__AUTH_OPTIONS, svn_cl__encoding_opt} },
+    {'m', 'F', 'q', 'N', SVN_CL__AUTH_OPTIONS,
+     svn_cl__editor_cmd_opt, svn_cl__encoding_opt} },
  
   { "info", svn_cl__info, {0},
     "Display info about a resource.\n"
@@ -296,7 +301,8 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "  for addition in the working copy.  If TARGET is an URL the directory\n"
     "  is created in the repository via an immediate commit.  In both cases\n"
     "  all the intermediate directories must already exist.\n",
-    {'m', 'F', 'q', SVN_CL__AUTH_OPTIONS, svn_cl__encoding_opt} },
+    {'m', 'F', 'q', SVN_CL__AUTH_OPTIONS, svn_cl__editor_cmd_opt,
+     svn_cl__encoding_opt} },
 
   { "move", svn_cl__move, {"mv", "rename", "ren"},
     "Move/rename something in working copy or repository.\n"
@@ -306,7 +312,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "    WC  -> WC:   move and schedule for addition (with history)\n"
     "    URL -> URL:  complete server-side rename.\n",    
     {'m', 'F', 'r', 'q', svn_cl__force_opt, SVN_CL__AUTH_OPTIONS,
-     svn_cl__encoding_opt} },
+     svn_cl__editor_cmd_opt, svn_cl__encoding_opt} },
   
   { "propdel", svn_cl__propdel, {"pdel"},
     "Remove PROPNAME from files, dirs, or revisions.\n"
@@ -322,7 +328,8 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "       2. propedit PROPNAME --revprop -r REV [URL]\n\n"
     "  1. Edits versioned props in working copy.\n"
     "  2. Edits unversioned remote prop on repos revision.\n\n",
-    {'r', svn_cl__revprop_opt, SVN_CL__AUTH_OPTIONS, svn_cl__encoding_opt} },
+    {'r', svn_cl__revprop_opt, SVN_CL__AUTH_OPTIONS,
+     svn_cl__encoding_opt, svn_cl__editor_cmd_opt} },
   
   { "propget", svn_cl__propget, {"pget", "pg"},
     "Print value of PROPNAME on files, dirs, or revisions.\n"
@@ -764,6 +771,9 @@ main (int argc, const char * const *argv)
 	break;
       case svn_cl__merge_cmd_opt:
         opt_state.merge_cmd = apr_pstrdup (pool, opt_arg);
+	break;
+      case svn_cl__editor_cmd_opt:
+        opt_state.editor_cmd = apr_pstrdup (pool, opt_arg);
 	break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away
