@@ -9,15 +9,6 @@ Status of 1.1.1:
 
 Candidate changes:
 
-  * r11394
-    Fix javahl bindings not using the default config directory if nothing
-    else is specified.
-    Justification:
-      User complaint.  Simple fix in javahl binding only.
-    Votes:
-      +1: pmayweg
-      +0: breser
-
   * r11483 (Issue #2091)
     Unitialized variable on Win98.
     Justification:

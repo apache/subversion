@@ -1351,8 +1351,11 @@ svn_client_ctx_t * SVNClient::getContext(const char *message)
     ctx->cancel_func = checkCancel;
     m_cancelOperation = false;
     ctx->cancel_baton = this;
+    const char *configDir = m_configDir.c_str();
+    if(m_configDir.length() == 0)
+        configDir = NULL;
     if (( err = 
-            svn_config_get_config (&(ctx->config), m_configDir.c_str(), pool)))
+            svn_config_get_config (&(ctx->config), configDir, pool)))
     {
         JNIUtil::handleSVNError(err);
         return NULL;
