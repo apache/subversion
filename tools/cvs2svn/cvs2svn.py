@@ -65,20 +65,22 @@ NODES_DB = 'cvs2svn-nodes.db'
 
 # Record the default RCS branches, if any, for CVS filepaths.
 #
-# The keys are CVS filepaths, the values are vendor branch revisions,
-# such as '1.1.1.1', or '1.1.1.2', or '1.1.1.96'.  The vendor branch
-# revision represents the highest vendor branch revision thought to
-# have ever been head of the default branch.
+# The keys are CVS filepaths, relative to the top of the repository
+# and with the ",v" stripped off, so they match the cvs paths used in
+# Commit.commit().  The values are vendor branch revisions, such as
+# '1.1.1.1', or '1.1.1.2', or '1.1.1.96'.  The vendor branch revision
+# represents the highest vendor branch revision thought to have ever
+# been head of the default branch.
 #
 # The reason we record a specific vendor revision, rather than a
-# default branch number, is that there are two cases to handle.
+# default branch number, is that there are two cases to handle:
 #
-# One is simple: the RCS file lists a default branch explicitly in its
-# header, such as '1.1.1'.  In this case, we know that every revision
-# on the vendor branch is to be treated as head of trunk at that point
-# in time.
+# One case is simple.  The RCS file lists a default branch explicitly
+# in its header, such as '1.1.1'.  In this case, we know that every
+# revision on the vendor branch is to be treated as head of trunk at
+# that point in time.
 #
-# But there's also a degenerate case: the RCS file does not currently
+# But there's also a degenerate case.  The RCS file does not currently
 # have a default branch, yet we can deduce that for some period in the
 # past it probably *did* have one.  For example, the file has vendor
 # revisions 1.1.1.1 -> 1.1.1.96, all of which are dated before 1.2,
@@ -267,16 +269,23 @@ class CollectData(rcsparse.Sink):
       if revision.find(self.default_branch) == 0:
         # This revision is on the default branch, so record that it is
         # the new highest vendor head revision.
-        self.default_branches_db[self.fname] = revision
+        rel_name = relative_name(self.cvsroot, self.fname)[:-2]
+        self.default_branches_db[rel_name] = revision
     else:
       # No default branch, so make an educated guess.
       if revision == '1.2':
+        # This is probably the time when the file stopped having a
+        # default branch, so make a note of it.
         self.first_non_vendor_revision_date = timestamp
       else:
         m = vendor_revision.match(revision)
         if m and ((not self.first_non_vendor_revision_date)
                   or (timestamp < self.first_non_vendor_revision_date)):
-            self.default_branches_db[self.fname] = revision
+          # We're looking at a vendor revision, and it wasn't
+          # committed after this file lost its default branch, so bump
+          # the maximum trunk vendor revision in the permanent record.
+          rel_name = relative_name(self.cvsroot, self.fname)[:-2]
+          self.default_branches_db[rel_name] = revision
 
     # Check for unlabeled branches, record them.  We tried to collect
     # all branch names when we parsed the symbolic name header
@@ -346,6 +355,19 @@ class CollectData(rcsparse.Sink):
     if self.default_branch:
       default_branch_name = self.branch_names[self.default_branch]
       ### todo: issue #1510, working here
+
+    # "...Give back one kadam to honor the Hebrew God whose Ark this is."
+    #       -- Imam to Indy and Sallah, in 'Raiders of the Lost Ark'
+    #
+    # If revision 1.1 appears to have been created via 'cvs add'
+    # instead of 'cvs import', then this file probably never had a
+    # default branch, so retroactively remove its record in the
+    # default branches db.  The test is that the log message CVS uses
+    # for 1.1 in imports is "Initial revision\n" with no period.
+    if revision == '1.1' and log != 'Initial revision\n':
+      rel_name = relative_name(self.cvsroot, self.fname)[:-2]
+      if self.default_branches_db.has_key(rel_name):
+        del self.default_branches_db[rel_name]
 
     if text:
       deltatext_code = DELTATEXT_NONEMPTY
@@ -1930,6 +1952,24 @@ class SymbolicNameTracker:
         self.fill_tag(dumper, ctx, name, [1])
 
 
+def is_trunk_vendor_revision(default_branches_db, cvs_path, cvs_rev):
+  """Return 1 if CVS_REV of CVS_PATH is a trunk (i.e., head) vendor
+  revision according to DEFAULT_BRANCHES_DB, else return None."""
+  if default_branches_db.has_key(cvs_path):
+    val = default_branches_db[cvs_path]
+    val_last_dot = val.rindex(".")
+    received_last_dot = cvs_rev.rindex(".")
+    default_branch = val[:val_last_dot]
+    received_branch = cvs_rev[:received_last_dot]
+    default_rev_component = val[val_last_dot + 1:]
+    received_rev_component = cvs_rev[received_last_dot + 1:]
+    if (default_branch == received_branch
+        and received_rev_component <= default_rev_component):
+      return 1
+  # else
+  return None
+
+
 class Commit:
   def __init__(self):
     self.files = { }
@@ -2083,6 +2123,10 @@ class Commit:
                                                tags,
                                                branches,
                                                ctx.cvs_revnums)
+        if is_trunk_vendor_revision(ctx.default_branches_db,
+                                    cvs_path, cvs_rev):
+          # todo-1510: working here
+          pass
         sym_tracker.close_tags(svn_path, svn_rev, closed_tags)
         sym_tracker.close_branches(svn_path, svn_rev, closed_branches)
 
@@ -2121,6 +2165,10 @@ class Commit:
       ### (assuming nothing else happened in this revision).
       path_deleted, closed_tags, closed_branches = \
                     dumper.delete_path(svn_path, tags, branches, ctx.prune)
+      if is_trunk_vendor_revision(ctx.default_branches_db, cvs_path, cvs_rev):
+        # todo-1510: working here
+        pass
+
       sym_tracker.close_tags(svn_path, svn_rev, closed_tags)
       sym_tracker.close_branches(svn_path, svn_rev, closed_branches)
 
