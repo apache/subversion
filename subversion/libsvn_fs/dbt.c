@@ -63,7 +63,7 @@ svn_fs__clear_dbt (DBT *dbt)
 
 
 DBT *
-svn_fs__set_dbt (DBT *dbt, char *data, u_int32_t size)
+svn_fs__set_dbt (DBT *dbt, void *data, u_int32_t size)
 {
   svn_fs__clear_dbt (dbt);
 

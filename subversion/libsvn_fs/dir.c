@@ -242,7 +242,7 @@ build_entries (skel_t *entries_skel,
 	name_skel = entry->children;
 	id_skel = entry->children->next;
 
-	id = svn_fs__parse_id (id_skel->data, id_skel->len, pool);
+	id = svn_fs__parse_id (id_skel->data, id_skel->len, 0, pool);
 	if (! id)
 	  return 0;
 
@@ -403,14 +403,6 @@ svn_fs_open_node (svn_fs_node_t **child,
 		  svn_fs_dir_t *parent_dir,
 		  svn_string_t *name)
 {
-  /* It should be pretty easy to cache this thoroughly: Create a cache
-     mapping a node version id X plus a filename component N onto a
-     new node version id Y, meaning that X is a directory in which the
-     name N is bound to ID Y.  If everything were in the cache, this
-     function could run with no I/O except for the final node.  Since
-     node versions never change, we wouldn't have to worry about
-     invalidating the cache.  */
-
   svn_fs_t *fs = parent_dir->node.fs;
   svn_fs_dir_t *dir;
   svn_fs_node_t *node;

@@ -46,6 +46,9 @@
  * individuals on behalf of Collab.Net.
  */
 
+#include <string.h>
+#include <stdlib.h>
+
 #include "svn_fs.h"
 #include "id.h"
 #include "fs.h"
@@ -185,6 +188,7 @@ svn_fs_id_distance (svn_fs_id_t *a, svn_fs_id_t *b)
 svn_fs_id_t *
 svn_fs__parse_id (char *data,
 		  apr_size_t data_len,
+		  int flags,
 		  apr_pool_t *pool)
 {
   svn_fs_id_t *id;
@@ -206,6 +210,15 @@ svn_fs__parse_id (char *data,
 	    return 0;
 	  last_start = i + 1;
 	  id_len++;
+
+	  /* If we're parsing a `nodes' key, check for '.head'.  */
+	  if (flags & svn_fs__key_id
+	      && i + 5 == data_len
+	      && ! memcmp (data + i, ".head", 5))
+	    {
+	      i += 5;
+	      break;
+	    }
 	}
       else if ('0' <= data[i] && data[i] <= '9')
 	;
@@ -218,7 +231,10 @@ svn_fs__parse_id (char *data,
   }
 
   /* Allocate the ID array.  */
-  id = NEWARRAY (pool, svn_fs_id_t, id_len + 1);
+  if (pool)
+    id = NEWARRAY (pool, svn_fs_id_t, id_len + 1);
+  else
+    id = (svn_fs_id_t *) malloc (sizeof (*id) * (id_len + 1));
 
   for (;;)
     {
@@ -238,7 +254,17 @@ svn_fs__parse_id (char *data,
 	    break;
 	  if (*next != '.')
 	    return 0;
-	  next++;
+
+	  data = next + 1;
+
+	  /* If we're parsing a `nodes' key, check for ".head".  */
+	  if (flags & svn_fs__key_id
+	      && end - data == 4
+	      && ! memcmp (data, "head", 4))
+	    {
+	      id[i++] = -2;
+	      break;
+	    }
 	}
 
       id[i] = -1;

@@ -60,6 +60,8 @@
 #include "svn_fs.h"
 #include "fs.h"
 #include "err.h"
+#include "version.h"
+#include "node.h"
 
 
 /* Checking for return values, and reporting errors.  */
@@ -115,7 +117,11 @@ cleanup_fs_db (svn_fs_t *fs, DB **db_ptr, const char *name)
 static svn_error_t *
 cleanup_fs (svn_fs_t *fs)
 {
-  /* First, close the databases.  */
+  /* Checkpoint any changes.  */
+  SVN_ERR (DB_ERR (fs, "checkpointing environment",
+		   txn_checkpoint (fs->env, 0, 0, 0)));
+
+  /* Close the databases.  */
   SVN_ERR (cleanup_fs_db (fs, &fs->versions, "versions"));
   SVN_ERR (cleanup_fs_db (fs, &fs->nodes, "nodes"));
 
@@ -252,33 +258,6 @@ allocate_env (svn_fs_t *fs)
 /* Creating a new Berkeley DB-based filesystem.  */
 
 
-/* Allocate a DB object, and create a table for it to refer to, for a
-   Subversion file system.
-   - FS is the filesystem we're creating the table for.
-   - *DB_PTR is where we should put the new database pointer.
-   - NAME is the name the table should have.
-   - TYPE is the access method to use for the table (btree, hash, etc.)
-   Return an svn_error_t if anything goes wrong.  */
-
-static svn_error_t *
-create_table (svn_fs_t *fs, DB **db_ptr, const char *name, DBTYPE type)
-{
-  char *obj_msg = alloca (strlen (name) + 50);
-  char *table_msg = alloca (strlen (name) + 50);
-
-  sprintf (obj_msg, "allocating `%s' table object", name);
-  SVN_ERR (DB_ERR (fs, obj_msg, db_create (db_ptr, fs->env, 0)));
-
-  sprintf (table_msg, "creating `%s' table", name);
-  SVN_ERR (DB_ERR (fs, table_msg,
-		   (*db_ptr)->open (*db_ptr, name, 0, type,
-				    DB_CREATE | DB_EXCL,
-				    0666)));
-
-  return 0;
-}
-
-
 svn_error_t *
 svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
 {
@@ -301,10 +280,9 @@ svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
   if (svn_err) goto error;
 
   /* Create the databases in the environment.  */
-  svn_err = create_table (fs, &fs->versions, "versions", DB_BTREE);
+  svn_err = svn_fs__create_versions (fs);
   if (svn_err) goto error;
-  /* ... don't forget to set the comparison function for the nodes table ... */
-  svn_err = create_table (fs, &fs->nodes, "nodes", DB_BTREE);
+  svn_err = svn_fs__create_nodes (fs);
   if (svn_err) goto error;
 
   return 0;
@@ -316,31 +294,6 @@ error:
 
 
 /* Gaining access to an existing filesystem.  */
-
-/* Allocate a DB object, and use it to open a table in a Subversion
-   file system.
-   - FS is the filesystem whose table we're opening.
-   - *DB_PTR is where we should put the new database pointer.
-   - NAME is the name of the table.
-   - TYPE is the access method to use for the table (btree, hash, etc.)
-   Return an svn_error_t if anything goes wrong.  */
-
-static svn_error_t *
-open_table (svn_fs_t *fs, DB **db_ptr, const char *name, DBTYPE type)
-{
-  char *obj_msg = alloca (strlen (name) + 50);
-  char *table_msg = alloca (strlen (name) + 50);
-
-  sprintf (obj_msg, "allocating `%s' table object", name);
-  SVN_ERR (DB_ERR (fs, obj_msg, db_create (db_ptr, fs->env, 0)));
-
-  sprintf (table_msg, "opening `%s' table", name);
-  SVN_ERR (DB_ERR (fs, table_msg,
-		   (*db_ptr)->open (*db_ptr, name, 0, type,
-				    DB_EXCL, 0666)));
-
-  return 0;
-}
 
 
 svn_error_t *
@@ -364,9 +317,9 @@ svn_fs_open_berkeley (svn_fs_t *fs, const char *path)
   if (svn_err) goto error;
 
   /* Open the various databases.  */
-  svn_err = open_table (fs, &fs->versions, "versions", DB_BTREE);
+  svn_err = svn_fs__open_versions (fs);
   if (svn_err) goto error;
-  svn_err = open_table (fs, &fs->nodes, "nodes", DB_BTREE);
+  svn_err = svn_fs__open_nodes (fs);
   if (svn_err) goto error;
 
   return 0;

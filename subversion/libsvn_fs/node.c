@@ -46,6 +46,8 @@
  * individuals on behalf of Collab.Net.
  */
 
+#include <string.h>
+
 #include "apr.h"
 #include "apr_pools.h"
 #include "apr_hash.h"
@@ -103,7 +105,7 @@ corrupt_dangling_id (svn_fs_t *fs, svn_fs_id_t *id)
 }
 
 
-/* Reading node representations from the database.  */
+/* Reading node REPRESENTATION skels from the database.  */
 
 
 /* Set *SKEL to point to the REPRESENTATION skel for the node ID in FS.
@@ -142,6 +144,38 @@ get_representation_skel (skel_t **skel, svn_fs_t *fs, svn_fs_id_t *id,
 
 
 
+/* Writing node REPRESENTATION skels to the database.  */ 
+
+
+/* Set the representation skel for node ID in filesystem FS to
+   REPRESENTATION_SKEL, as part of the Berkeley DB transaction TXN.
+   TXN may be zero, in which case the change is done outside of any
+   transaction.  Do any necessary temporary allocation in POOL.  */
+static svn_error_t *
+put_representation_skel (svn_fs_t *fs, DB_TXN *txn,
+			 svn_fs_id_t *id, skel_t *representation_skel,
+			 apr_pool_t *pool)
+{
+  svn_string_t *unparsed_id;
+  svn_string_t *unparsed_rep;
+  DBT key, value;
+
+  SVN_ERR (svn_fs__check_fs (fs));
+
+  unparsed_id = svn_fs__unparse_id (id, pool);
+  svn_fs__set_dbt (&key, unparsed_id->data, unparsed_id->len);
+
+  unparsed_rep = svn_fs__unparse_skel (representation_skel, pool);
+  svn_fs__set_dbt (&value, unparsed_rep->data, unparsed_rep->len);
+
+  SVN_ERR (DB_ERR (fs, "storing node representation",
+		   fs->nodes->put (fs->nodes, txn, &key, &value, 0)));
+
+  return 0;
+}
+			 
+
+
 /* Recovering the full text of NODE-VERSION skels from the database.  */
 
 
@@ -162,7 +196,10 @@ get_node_version_skel (skel_t **skel, svn_fs_t *fs, svn_fs_id_t *id,
      so I can't store deltas in the database.
 
      So for now, every node is stored using the "fulltext"
-     representation.  I'm off the hook!!  */
+     representation.  I'm off the hook!!
+
+     In the future, it would be nice to have a cache of fulltexts, to
+     help us compute nearby versions quickly.  */
   SVN_ERR (get_representation_skel (&rep, fs, id, pool));
   if (svn_fs__list_length (rep) != 2
       || ! svn_fs__is_atom (rep->children, "fulltext"))
@@ -281,7 +318,7 @@ close_node (svn_fs_node_t *node)
 
 
 
-/* Building node structures.  */
+/* Read a node object from the database, given its ID.  */
 
 svn_error_t *
 svn_fs__open_node_by_id (svn_fs_node_t **node_p,
@@ -321,7 +358,7 @@ svn_fs__open_node_by_id (svn_fs_node_t **node_p,
 
 
 
-/* Common initialization for all new nodes.  */
+/* Common initialization for all new node objects.  */
 
 svn_fs_node_t *
 svn_fs__init_node (apr_size_t size,
@@ -339,6 +376,163 @@ svn_fs__init_node (apr_size_t size,
   node->kind = kind;
 
   return node;
+}
+
+
+
+/* Creating and opening a filesystem's `nodes' table.  */
+
+
+/* Compare the keys A and B in bytewise order.  */
+static int
+compare_bytewise (const DBT *a, const DBT *b)
+{
+  int common_len = (a->size > b->size ? b->size : a->size);
+  int cmp = memcmp (a->data, b->data, common_len);
+  if (cmp)
+    return cmp;
+  else
+    return a->size - b->size;
+}
+
+
+/* Compare two node ID's, according to the rules in `structure'.  */
+static int
+compare_ids (svn_fs_id_t *a, svn_fs_id_t *b)
+{
+  int i = 0;
+
+  while (a[i] == b[i])
+    {
+      if (a[i] == -1)
+	return 0;
+      i++;
+    }
+
+  /* Different nodes, or different branches, are ordered by their
+     node / branch numbers.  */
+  if ((i & 1) == 0)
+    return a[i] - b[i];
+
+  /* An id that ends after a node/branch number isn't well-formed.  */
+  if (a[i] == -1)
+    return -1;
+  if (b[i] == -1)
+    return 1;
+
+  /* Different versions of the same node are ordered by version
+     number, with "head" coming after all versions.  */
+  if (a[i + 1] == -1 && b[i + 1] == -1)
+    {
+      if (a[i] == -2)
+	return 1;
+      if (b[i] == -2)
+	return -1;
+      return a[i] - b[i];
+    }
+
+  /* A branch off of any version of a node comes after all versions
+     of that node.  */
+  if (a[i + 1] == -1)
+    return -1;
+  if (b[i + 1] == -1)
+    return 1;
+
+  /* Branches are ordered by increasing version number.  */
+  return a[i] - b[i];
+}
+
+
+/* The key comparison function for the `nodes' table.
+
+   Strictly speaking, this function only needs to handle strings that
+   we actually use as keys in the table.  However, if we happen to
+   insert garbage keys, and this comparison function doesn't do
+   something consistent with them (i.e., something transitive and
+   reflexive), we can actually corrupt the btree structure.  Which
+   seems unfriendly.
+
+   So this function tries to act as a proper comparison for any two
+   arbitrary byte strings.  Two well-formed node versions ID's compare
+   according to the rules described in the `structure' file; any
+   malformed key comes before any well-formed key; and two malformed
+   keys come in byte-by-byte order.  */
+static int
+compare_nodes_keys (const DBT *ak, const DBT *bk)
+{
+  svn_fs_id_t *a = svn_fs__parse_id (ak->data, ak->size, svn_fs__key_id, 0);
+  svn_fs_id_t *b = svn_fs__parse_id (bk->data, bk->size, svn_fs__key_id, 0);
+
+  /* Is either a or b malformed?  */
+  if (! a && ! b)
+    return compare_bytewise (ak, bk);
+  else if (! a)
+    {
+      free (b);
+      return -1;
+    }
+  else if (! b)
+    {
+      free (a);
+      return 1;
+    }
+
+  /* Okay, we've got two well-formed keys.  Compare them according to
+     the ordering described in `structure'.  */
+  {
+    int cmp = compare_ids (a, b);
+    free (a);
+    free (b);
+    return cmp;
+  }
+}
+
+
+/* Open / create FS's `nodes' table.  FS->env must already be open;
+   this function initializes FS->nodes.  If CREATE is non-zero, assume
+   we are creating the filesystem afresh; otherwise, assume we are
+   simply opening an existing database.  */
+static svn_error_t *
+make_nodes (svn_fs_t *fs, int create)
+{
+  DB *nodes;
+
+  SVN_ERR (DB_ERR (fs, "allocating `nodes' table object",
+		   db_create (&nodes, fs->env, 0)));
+  SVN_ERR (DB_ERR (fs, "setting `nodes' comparison function",
+		   nodes->set_bt_compare (nodes, compare_nodes_keys)));
+  SVN_ERR (DB_ERR (fs, "creating `nodes' table",
+		   nodes->open (nodes, "nodes", 0, DB_BTREE,
+				create ? (DB_CREATE | DB_EXCL) : 0,
+				0666)));
+
+  if (create)
+    {
+      /* Create node 0.0, the initial root directory.  */
+      static char node_0_0[] = "(fulltext (directory () ()))";
+      skel_t *rep_skel = svn_fs__parse_skel (node_0_0,
+					     sizeof (node_0_0) - 1,
+					     fs->pool);
+      static svn_fs_id_t id_0_0[] = { 0, 0, -1 };
+      
+      SVN_ERR (put_representation_skel (fs, 0, id_0_0, rep_skel, fs->pool));
+    }
+
+  fs->nodes = nodes;
+  return 0;
+}
+
+svn_error_t *
+svn_fs__create_nodes (svn_fs_t *fs)
+{
+  return make_nodes (fs, 1);
+}
+
+
+svn_error_t *
+svn_fs__open_nodes (svn_fs_t *fs)
+{
+  return make_nodes (fs, 0);
 }
 
 
