@@ -35,8 +35,9 @@ Ben and Karl more later:
 
 Greg:
    - mod_dav_svn:
-      - repository hooks. defer mkcol/copy/move/delete.
-        !! walking the FS !!  ... needed for checkout
+      - finish repository hooks (waiting on FS a bit)
+	defer mkcol/copy/move/delete.
+	walker API now clean: implement ours. (needed for checkout)
 
       - liveprop hooks:
 	core: getcontentlength, creationdate, getetag,
@@ -49,12 +50,11 @@ Greg:
    - mod_dav: no apparent changes until vsn comes in
       - need: MKACTIVITY, MERGE
       - need CHECKOUT, but most of it is there; just verify
-      - clean up walker concept
 
    - libsvn_ra_dav:
       - update editor
       - commit editor
 
-   - APR: move apr_copy_file() from SVN
+   - APR: move apr_copy_file() from SVN. and apr_append_file, etc.
 
    - security checks (e.g. system() usage in wc/get_editor)
