@@ -5,7 +5,7 @@
 # Ensure some permissions for executables used by this script
 for execfile in gen-make.py \
                 dist.sh \
-                buildcheck.sh \
+                build/buildcheck.sh \
 		build/PrintPath \
                 ac-helpers/get-neon-ver.sh \
                 ac-helpers/gnu-diff.sh \
