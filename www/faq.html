@@ -101,6 +101,10 @@ committed.  How can I make 'svn commit' ignore the file?</a></li>
 <li><a href="#ssh-auth-cache">When I access a repository using
 svn+ssh, my password is not cached in ~/.subversion/auth/.  How do
 I avoid having to type it so often?</a></li>
+<li><a href="#ssh-svnserve-location">My
+<tt>svnserve</tt> binary is in a directory that isn't on my
+users' default <tt>PATH</tt>s, they use svn+ssh, and I can't figure
+out how to modify their <tt>PATH</tt> so that they can run <tt>svnserve</tt>.</a></li>
 <li><a href="#auto-props">How can I set certain properties on
 everything in the repository?  Also, how can I make sure that every
 new file coming into the repository has these properties?</a></li>
@@ -1476,6 +1480,44 @@ if you're <i>really</i> impatient, try one of these:</p>
            >http://kimmo.suominen.com/docs/ssh/</a>
 </pre>
 
+<![CDATA[=========================================================]]>
+
+<h3><a name="ssh-svnserve-location" title="#ssh-svnserve-location">My
+<tt>svnserve</tt> binary is in a directory that isn't on my
+users' default <tt>PATH</tt>s, they use svn+ssh, and I can't figure
+out how to modify their <tt>PATH</tt> so that they can run <tt>svnserve</tt>.</a></h3>
+
+      <p>Note: this all assumes you're using OpenSSH.  There are other
+      SSH implementations out there, and presumably they will allow
+      you to do something similar, but we don't yet know the details.</p>
+      
+      <p>You've tried fiddling with their various login files, like
+        <tt>.bash_profile</tt>, and nothing works!  That's because SSH
+        ignores those files when the subversion client invokes it.
+        But you can tell SSH itself to modify the environment.  Here's
+        how to do it:</p>
+
+      <p>For each user who needs svn+ssh access, generate a new SSH
+        public-key pair which they will use <em>only</em> for
+        subversion -- not for logging in normally.  Have them add this
+        key to their <tt>~/.ssh/authorized_keys</tt> file.  But they
+        must insert a bit of magic at the beginning of the line before
+        the word <tt>ssh-rsa</tt> or <tt>ssh-dss</tt>, like this:</p>
+
+      <table>
+        <tr><th>before</th></tr>
+        <tr><td><pre>
+ssh-dss AAAAB3Nblahblahblahblah
+      </pre></td></tr>
+        <tr><th>after</th></tr>
+        <tr><td><pre>
+command="/opt/subversion/bin/svnserve" ssh-dss AAAAB3Nblahblahblahblah
+      </pre></td></tr>
+</table>
+
+      <p>Now whenever they use that new key for anything, ssh on the
+      remote machine will invoke svnserve, even if they try to run
+      some other command.</p>
 
 <![CDATA[=========================================================]]>
 
