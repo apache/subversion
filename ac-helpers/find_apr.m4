@@ -50,10 +50,10 @@ AC_DEFUN(APR_FIND_APR, [
     if test -x "$withval/bin/apr-config"; then
       apr_found="yes"
       apr_config="$withval/bin/apr-config"
-    elif test -f "$withval/libapr.la"; then
+    elif test -x "$withval/apr-config"; then
       apr_found="yes"
       apr_config="$withval/apr-config"
-    elif test -x "$withval" -a "`$withval --help > /dev/null`"; then
+    elif test -x "$withval" && $withval --help > /dev/null 2>&1 ; then
       apr_found="yes"
       apr_config="$withval"
     fi
