@@ -50,16 +50,8 @@ Candidate changes:
     directories that have been committed yet.
     Justification:
       It's an irritating bug with a simple fix.
-    Notes: I *think* the code is right, but have some questions about
-      the comments in that change.  Since clarification of the
-      comments would clarify the general logic behind the change, I'm
-      -0 until I learn more :-).  See just-started dev thread.  -kfogel
-
-      Updated this entry to include fixes for the above concern
-      (r11415). -jszakmeister
     Votes:
-      +1: jszakmeister
-      -0: kfogel (before the addition of r11415)
+      +1: jszakmeister, kfogel
 
   * r11364, r11410 (Issue 2076)
     fsfs does not check if the revision is valid for proplist/propedit/etc
