@@ -25,9 +25,14 @@
 #include "svn_delta.h"
 #include "svn_pools.h"
 #include "svn_error.h"
+#include "../../libsvn_delta/delta.h"
+#include "delta-window-test.h"
+
 
 #define DEFAULT_ITERATIONS 30
 #define DEFAULT_MAXLEN (100 * 1024)
+#define DEFAULT_DUMP_FILES 0
+#define DEFAULT_PRINT_WINDOWS 0
 #define SEEDS 50
 #define MAXSEQ 100
 
@@ -38,6 +43,9 @@ extern const char **test_argv;
 
 static void init_params (unsigned long *seed,
                          int *maxlen, int *iterations,
+                         int *dump_files, int *print_windows,
+                         const char **random_bytes,
+                         unsigned long *bytes_range,
                          apr_pool_t *pool)
 {
   apr_getopt_t *opt;
@@ -48,10 +56,14 @@ static void init_params (unsigned long *seed,
   *seed = (unsigned long) apr_time_now();
   *maxlen = DEFAULT_MAXLEN;
   *iterations = DEFAULT_ITERATIONS;
+  *dump_files = DEFAULT_DUMP_FILES;
+  *print_windows = DEFAULT_PRINT_WINDOWS;
+  *random_bytes = NULL;
+  *bytes_range = 256;
 
   apr_getopt_init (&opt, pool, test_argc, test_argv);
   while (APR_SUCCESS
-         == (status = apr_getopt (opt, "s:l:n:", &optch, &opt_arg)))
+         == (status = apr_getopt (opt, "s:l:n:r:FW", &optch, &opt_arg)))
     {
       switch (optch)
         {
@@ -64,10 +76,19 @@ static void init_params (unsigned long *seed,
         case 'n':
           *iterations = atoi (opt_arg);
           break;
+        case 'r':
+          *random_bytes = opt_arg + 1;
+          *bytes_range = strlen (*random_bytes);
+          break;
+        case 'F':
+          *dump_files = !*dump_files;
+          break;
+        case 'W':
+          *print_windows = !*print_windows;
+          break;
         }
     }
 }
-
 
 
 static unsigned long
@@ -84,7 +105,10 @@ myrand (unsigned long *seed)
    of this function with the same seedbase.  */
 static FILE *
 generate_random_file (int maxlen, unsigned long subseed_base,
-                      unsigned long *seed)
+                      unsigned long *seed,
+                      const char *random_bytes,
+                      unsigned long bytes_range,
+                      int dump_files)
 {
   int len, seqlen;
   FILE *fp;
@@ -103,24 +127,49 @@ generate_random_file (int maxlen, unsigned long subseed_base,
       len -= seqlen;
       r = subseed_base + myrand (seed) % SEEDS;
       while (seqlen-- > 0)
-        { 
-          putc (r % 256, fp);
+        {
+          const int ch = (random_bytes
+                          ? random_bytes[r % bytes_range]
+                          : r % bytes_range);
+          putc (ch, fp);
           r = r * 1103515245 + 12345;
         }
     }
   rewind (fp);
+
+  if (dump_files)
+    {
+      int ch;
+      fputs ("--------\n", stdout);
+      while (EOF != (ch = getc (fp)))
+        putc (ch, stdout);
+      putc ('\n', stdout);
+      rewind (fp);
+    }
+
   return fp;
 }
 
 /* Compare two open files. The file positions may change. */
 static svn_error_t *
-compare_files (FILE *f1, FILE *f2, apr_pool_t *pool)
+compare_files (FILE *f1, FILE *f2, int dump_files, apr_pool_t *pool)
 {
   int c1, c2;
   apr_off_t pos = 0;
 
   rewind (f1);
   rewind (f2);
+
+  if (dump_files)
+    {
+      int ch;
+      fputs ("--------\n", stdout);
+      while (EOF != (ch = getc (f2)))
+        putc (ch, stdout);
+      putc ('\n', stdout);
+      rewind (f2);
+    }
+
   for (;;)
     {
       c1 = getc (f1);
@@ -145,8 +194,10 @@ copy_tempfile (FILE *fp)
 
   newfp = tmpfile ();
   assert (newfp != NULL);
+  rewind(fp);
   while ((c = getc (fp)) != EOF)
     putc (c, newfp);
+  rewind(fp);
   rewind (newfp);
   return newfp;
 }
@@ -160,12 +211,14 @@ random_test (const char **msg,
 {
   static char msg_buff[256];
 
-  unsigned long seed;
-  int i, maxlen, iterations;
+  unsigned long seed, bytes_range;
+  int i, maxlen, iterations, dump_files, print_windows;
+  const char *random_bytes;
 
   /* Initialize parameters and print out the seed in case we dump core
      or something. */
-  init_params(&seed, &maxlen, &iterations, pool);
+  init_params(&seed, &maxlen, &iterations, &dump_files, &print_windows,
+              &random_bytes, &bytes_range, pool);
   sprintf(msg_buff, "random delta test, seed = %lu", seed);
   *msg = msg_buff;
 
@@ -178,8 +231,12 @@ random_test (const char **msg,
     {
       /* Generate source and target for the delta and its application.  */
       unsigned long subseed_base = myrand (&seed);
-      FILE *source = generate_random_file (maxlen, subseed_base, &seed);
-      FILE *target = generate_random_file (maxlen, subseed_base, &seed);
+      FILE *source = generate_random_file (maxlen, subseed_base, &seed,
+                                           random_bytes, bytes_range,
+                                           dump_files);
+      FILE *target = generate_random_file (maxlen, subseed_base, &seed,
+                                           random_bytes, bytes_range,
+                                           dump_files);
       FILE *source_copy = copy_tempfile (source);
       FILE *target_regen = tmpfile ();
 
@@ -193,7 +250,6 @@ random_test (const char **msg,
          to a copy of the source file to see if we get the same target
          back.  */
       apr_pool_t *delta_pool = svn_pool_create (pool);
-      rewind (source);
 
       /* Make stage 4: apply the text delta.  */
       svn_txdelta_apply (svn_stream_from_stdio (source_copy, delta_pool),
@@ -220,7 +276,7 @@ random_test (const char **msg,
 
       svn_pool_destroy (delta_pool);
 
-      SVN_ERR (compare_files (target, target_regen, pool));
+      SVN_ERR (compare_files (target, target_regen, dump_files, pool));
 
       fclose(source);
       fclose(target);
@@ -233,182 +289,131 @@ random_test (const char **msg,
 
 
 
-#include "../../libsvn_delta/compose_delta.c"
-
-
-static range_index_node_t *prev_node, *prev_prev_node;
-static apr_off_t
-walk_range_index (range_index_node_t *node, const char **msg)
-{
-  apr_off_t ret;
-
-  if (node == NULL)
-    return 0;
-
-  ret = walk_range_index (node->left, msg);
-  if (ret > 0)
-    return ret;
-
-  if (prev_node != NULL
-      && node->target_offset > 0
-      && (prev_node->offset >= node->offset
-          || (prev_node->limit >= node->limit)))
-    {
-      ret = node->target_offset;
-      node->target_offset = -node->target_offset;
-      *msg = "Oops, the previous node ate me.";
-      return ret;
-    }
-  if (prev_prev_node != NULL
-      && prev_node->target_offset > 0
-      && prev_prev_node->limit > node->offset)
-    {
-      ret = prev_node->target_offset;
-      prev_node->target_offset = -prev_node->target_offset;
-      *msg = "Arrgh, my neighbours are conspiring against me.";
-      return ret;
-    }
-  prev_prev_node = prev_node;
-  prev_node = node;
-
-  return walk_range_index (node->right, msg);
-}
-
-
-static void
-print_node_data (range_index_node_t *node, const char *msg, apr_off_t ndx)
-{
-  if (-node->target_offset == ndx)
-    {
-      printf ("   * Node: [%3"APR_OFF_T_FMT
-              ",%3"APR_OFF_T_FMT
-              ") = %-5"APR_OFF_T_FMT"%s\n",
-              node->offset, node->limit, -node->target_offset, msg);
-    }
-  else
-    {
-      printf ("     Node: [%3"APR_OFF_T_FMT
-              ",%3"APR_OFF_T_FMT
-              ") = %"APR_OFF_T_FMT"\n",
-              node->offset, node->limit,
-              (node->target_offset < 0
-               ? -node->target_offset : node->target_offset));
-    }
-}
-
-static void
-print_range_index_r (range_index_node_t *node, const char *msg, apr_off_t ndx)
-{
-  if (node == NULL)
-    return;
-
-  print_range_index_r (node->left, msg, ndx);
-  print_node_data (node, msg, ndx);
-  print_range_index_r (node->right, msg, ndx);
-}
-
-static void
-print_range_index_i (range_index_node_t *node, const char *msg, apr_off_t ndx)
-{
-  if (node == NULL)
-    return;
-
-  while (node->prev)
-    node = node->prev;
-
-  do
-    {
-      print_node_data (node, msg, ndx);
-      node = node->next;
-    }
-  while (node);
-}
-
-static void
-print_range_index (range_index_node_t *node, const char *msg, apr_off_t ndx)
-{
-  printf ("  (recursive)\n");
-  print_range_index_r (node, msg, ndx);
-  printf ("  (iterative)\n");
-  print_range_index_i (node, msg, ndx);
-}
-
-
-static void
-check_copy_count (int src_cp, int tgt_cp)
-{
-  printf ("Source copies: %d  Target copies: %d\n", src_cp, tgt_cp);
-  if (src_cp > tgt_cp)
-    printf ("WARN: More source than target copies; inefficient combiner?\n");
-}
-
-
 static svn_error_t *
-random_range_index_test (const char **msg,
-                         svn_boolean_t msg_only,
-                         apr_pool_t *pool)
+random_combine_test (const char **msg,
+                     svn_boolean_t msg_only,
+                     apr_pool_t *pool)
 {
   static char msg_buff[256];
 
-  unsigned long seed;
-  int i, maxlen, iterations;
-  range_index_t *ndx;
-  int tgt_cp = 0, src_cp = 0;
+  unsigned long seed, bytes_range;
+  int i, maxlen, iterations, dump_files, print_windows;
+  const char *random_bytes;
 
   /* Initialize parameters and print out the seed in case we dump core
      or something. */
-  init_params(&seed, &maxlen, &iterations, pool);
-  sprintf(msg_buff, "random range index test, seed = %lu", seed);
+  init_params(&seed, &maxlen, &iterations, &dump_files, &print_windows,
+              &random_bytes, &bytes_range, pool);
+  sprintf(msg_buff, "random combine delta test, seed = %lu", seed);
   *msg = msg_buff;
 
-  /* ### This test is expected to fail randomly at the moment, so don't
-     enable it by default. --xbc */
-  if (msg_only /*REMOVE*/|| 1)
+  if (msg_only)
     return SVN_NO_ERROR;
   else
     printf("SEED: %s\n", msg_buff);
 
-  ndx = create_range_index (pool);
-  for (i = 1; i <= iterations; ++i)
+  for (i = 0; i < iterations; i++)
     {
-      apr_off_t offset = myrand (&seed) % 47;
-      apr_off_t limit = offset + myrand (&seed) % 16 + 1;
-      range_list_node_t *list, *r;
-      apr_off_t ret;
-      const char *msg2;
+      /* Generate source and target for the delta and its application.  */
+      unsigned long subseed_base = myrand (&seed);
+      FILE *source = generate_random_file (maxlen, subseed_base, &seed,
+                                           random_bytes, bytes_range,
+                                           dump_files);
+      FILE *middle = generate_random_file (maxlen, subseed_base, &seed,
+                                           random_bytes, bytes_range,
+                                           dump_files);
+      FILE *target = generate_random_file (maxlen, subseed_base, &seed,
+                                           random_bytes, bytes_range,
+                                           dump_files);
+      FILE *source_copy = copy_tempfile (source);
+      FILE *middle_copy = copy_tempfile (middle);
+      FILE *target_regen = tmpfile ();
 
-      printf ("%3d: Inserting [%3"APR_OFF_T_FMT",%3"APR_OFF_T_FMT") ...",
-              i, offset, limit);
-      splay_range_index (offset, ndx);
-      list = build_range_list (offset, limit, ndx);
-      insert_range (offset, limit, i, ndx);
-      prev_prev_node = prev_node = NULL;
-      ret = walk_range_index (ndx->tree, &msg2);
-      if (ret == 0)
-        {
-          for (r = list; r; r = r->next)
-            printf (" %s[%3"APR_OFF_T_FMT",%3"APR_OFF_T_FMT")",
-                    (r->kind == range_from_source ?
-                     (++src_cp, "S") : (++tgt_cp, "T")),
-                    r->offset, r->limit);
-          free_range_list (list, ndx);
-          printf (" OK\n");
-        }
-      else
-        {
-          printf (" Ooops!\n");
-          print_range_index (ndx->tree, msg2, ret);
-          check_copy_count(src_cp, tgt_cp);
-          return svn_error_create (SVN_ERR_TEST_FAILED, 0, NULL, pool,
-                                   "insert_range");
-        }
+      svn_txdelta_stream_t *txdelta_stream_A;
+      svn_txdelta_stream_t *txdelta_stream_B;
+      svn_txdelta_window_handler_t handler;
+      svn_stream_t *stream;
+      void *handler_baton;
+
+      /* Set up a four-stage pipeline: create two deltas, combine them
+         and convert the result to svndiff format, parse that back
+         into delta format, and apply it to a copy of the source file
+         to see if we get the same target back.  */
+      apr_pool_t *delta_pool = svn_pool_create (pool);
+
+      /* Make stage 4: apply the text delta.  */
+      svn_txdelta_apply (svn_stream_from_stdio (source_copy, delta_pool),
+                         svn_stream_from_stdio (target_regen, delta_pool),
+                         delta_pool, &handler, &handler_baton);
+
+      /* Make stage 3: reparse the text delta.  */
+      stream = svn_txdelta_parse_svndiff (handler, handler_baton, TRUE,
+                                          delta_pool);
+
+      /* Make stage 2: encode the text delta in svndiff format.  */
+      svn_txdelta_to_svndiff (stream, delta_pool, &handler, &handler_baton);
+
+      /* Make stage 1: create the text deltas.  */
+
+      svn_txdelta (&txdelta_stream_A,
+                   svn_stream_from_stdio (source, delta_pool),
+                   svn_stream_from_stdio (middle, delta_pool),
+                   delta_pool);
+
+      svn_txdelta (&txdelta_stream_B,
+                   svn_stream_from_stdio (middle_copy, delta_pool),
+                   svn_stream_from_stdio (target, delta_pool),
+                   delta_pool);
+
+      {
+        svn_txdelta_window_t *window_A;
+        svn_txdelta_window_t *window_B;
+        svn_txdelta_window_t *composite;
+        apr_pool_t *wpool = svn_pool_create (delta_pool);
+        apr_off_t sview_offset = 0;
+
+        do
+          {
+            SVN_ERR (svn_txdelta_next_window (&window_A, txdelta_stream_A,
+                                              wpool));
+            if (print_windows)
+              delta_window_print (window_A, "A ", stdout);
+            SVN_ERR (svn_txdelta_next_window (&window_B, txdelta_stream_B,
+                                              wpool));
+            if (print_windows)
+              delta_window_print (window_B, "B ", stdout);
+            composite = svn_txdelta__compose_windows (window_A, window_B,
+                                                      &sview_offset, wpool);
+            if (print_windows)
+              delta_window_print (composite, "AB", stdout);
+
+            SVN_ERR (handler (composite, handler_baton));
+            svn_pool_clear (wpool);
+          }
+        while (composite != NULL);
+        svn_pool_destroy (wpool);
+      }
+
+      svn_pool_destroy (delta_pool);
+
+      SVN_ERR (compare_files (target, target_regen, dump_files, pool));
+
+      fclose(source);
+      fclose(middle);
+      fclose(target);
+      fclose(source_copy);
+      fclose(middle_copy);
+      fclose(target_regen);
     }
 
-  printf ("Final tree state:\n");
-  print_range_index (ndx->tree, "", iterations + 1);
-  check_copy_count(src_cp, tgt_cp);
   return SVN_NO_ERROR;
 }
+
+
+/* Change to 1 to enable the unit test for the delta combiner's range index: */
+#if 0
+#include "range-index-test.h"
+#endif
 
 
 
@@ -419,7 +424,11 @@ svn_error_t * (*test_funcs[]) (const char **msg,
                                apr_pool_t *pool) = {
   0,
   random_test,
+  /*random_combine_test, FIXME: Disabled, because it sometimes fails.
+    Hey, but the failures are predictable and understood now! :-) */
+#ifdef SVN_RANGE_INDEX_TEST_H
   random_range_index_test,
+#endif
   0
 };
 
