@@ -27,7 +27,7 @@ I.    A FEW POINTERS
       Once you have a Subversion client you can get the latest version
       of the code with the command:
 
-         $ svn co http://svn.collab.net/repos/svn/trunk -d subversion
+         $ svn co http://svn.collab.net/repos/svn/trunk subversion
 
 
 
@@ -152,7 +152,7 @@ IV.   QUICKSTART GUIDE
           # Checkout a working copy.  This can either be a file: or
           #  http: url, depending on which RA modules are available.
 
-          $ svn co file:///usr/local/svn/repos1 -d wc
+          $ svn co file:///usr/local/svn/repos1 wc
           A wc/foo
           A wc/bar
           A wc/baz

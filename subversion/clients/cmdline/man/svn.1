@@ -45,9 +45,6 @@ Local; run only in current working directory.
 \fB--recursive\fP
 Operate recursively (default).
 .TP
-\fB-d\fP or \fB--destination\fP \fBDEST\dP
-Target directory to operate on.
-.TP
 \fB--force\fP
 Force. Don't ask any questions, I know what I'm doing.
 .TP
@@ -121,10 +118,10 @@ the source for \fIrepository\fP (the repository must be identified with a valid
 URL string). You can work with this copy without interfering with others'
 work.  At least one subdirectory level is always created.
 
--d/--destination can be used to specify target dir, if the filepart of the URL
+The second argument specifies the target dir, if the basename of the URL
 is not what you want.
 
-\fBexample:\fP svn checkout http://site.com/repo/svn -d targetdir
+\fBexample:\fP svn checkout http://site.com/repo/svn targetdir
 .TP
 \fBcleanup\fP \fItarget\fP\|.\|.\|.
 Recursively clean up the working copy, removing locks, resuming
@@ -227,7 +224,7 @@ Print info about a versioned resource.
 Show log messages (and affected entities) for commits in which any of the
 entities in question changed.  If none were specified, then recursive
 inclusion is the default.  The set of messages can be further restricted
-by a date or revision range specification (using -d or -r). A URL can also
+by a date or revision range specification (using -D or -r). A URL can also
 be specific to retrieve logs from a remote repository. If the URL is
 passed alone, then only that entry will be searched. If paths are also
 supplied with the URL, then only those paths are searched, based at the

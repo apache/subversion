@@ -340,7 +340,7 @@ II.   INSTALLATION
       the tree.  Use it to check out a real Subversion working copy:
 
           $ subversion-rXXXX/subversion/clients/cmdline/svn checkout \
-            http://svn.collab.net/repos/svn/trunk -d svn
+            http://svn.collab.net/repos/svn/trunk svn
 
           A  svn/dist.sh
           A  svn/buildcheck.sh
@@ -373,7 +373,7 @@ II.   INSTALLATION
       After installing, you can then use the svn command to check out the
       latest source code:
 
-          $ /usr/bin/svn checkout http://svn.collab.net/repos/svn/trunk -d svn
+          $ /usr/bin/svn checkout http://svn.collab.net/repos/svn/trunk svn
           A  svn/dist.sh
           A  svn/buildcheck.sh
           A  svn/HACKING
@@ -460,7 +460,7 @@ II.   INSTALLATION
       It is possible to configure and build Subversion on Unix in a
       directory other than the working copy. For example
 
-          $ svn co http://svn.collab.net/repos/svn/trunk -d svn
+          $ svn co http://svn.collab.net/repos/svn/trunk svn
           $ cd svn
           $ # get neon/db/apr as required
           $ chmod +x autogen.sh
@@ -515,7 +515,7 @@ II.   INSTALLATION
       Start menu's "Run..." menu option), change to the directory you
       installed the executables into, and run:
 
-          C:\test>svn co http://svn.collab.net/repos/svn/trunk -d svn
+          C:\test>svn co http://svn.collab.net/repos/svn/trunk svn
 
       This will get the latest Subversion sources and put them into the
       "svn" subdirectory.
@@ -818,7 +818,7 @@ III.  BUILDING A SUBVERSION SERVER
 
       Try doing a network checkout from the repository:
 
-          $ svn co http://localhost/svn/repos -d wc
+          $ svn co http://localhost/svn/repos wc
 
       The most common reason this might fail is permission problems
       reading the repository db files.  If the checkout fails, chmod
