@@ -525,14 +525,56 @@ unlock_dirs (apr_hash_t *locked_dirs,
 static svn_error_t *
 reconcile_errors (svn_error_t *commit_err,
                   svn_error_t *unlock_err,
-                  svn_error_t *bump_err)
+                  svn_error_t *bump_err,
+                  apr_pool_t *pool)
 {
-  /* ### todo: do real error management here. */
-  SVN_ERR (commit_err);
-  SVN_ERR (unlock_err);
-  SVN_ERR (bump_err);
+  svn_error_t *err;
 
-  return SVN_NO_ERROR;
+  /* Early release (for good behavior). */
+  if (! (commit_err || unlock_err || bump_err))
+    return SVN_NO_ERROR;
+
+  /* If there was a commit error, start off our error chain with
+     that. */
+  if (commit_err)
+    {
+      commit_err = svn_error_quick_wrap (commit_err, "Commit failed:");
+      err = commit_err;
+    }
+
+  /* Else, create a new "general" error that will head off the errors
+     that follow. */
+  else
+    err = svn_error_create (SVN_ERR_GENERAL, 0, NULL, pool,
+                            "Commit succeeded, but other errors follow:");
+
+  /* If there was an unlock error... */
+  if (unlock_err)
+    {
+      /* Wrap the error with some headers. */
+      unlock_err = svn_error_quick_wrap 
+        (unlock_err, "-------------------------------------------------");
+      unlock_err = svn_error_quick_wrap 
+        (unlock_err, "Error unlocking locked dirs:");
+
+      /* Append this error to the chain. */
+      svn_error_compose (err, unlock_err);
+    }
+
+  /* If there was a bumping error... */
+  if (bump_err)
+    {
+      /* Wrap the error with some headers. */
+      bump_err = svn_error_quick_wrap 
+        (bump_err, "-------------------------------------------------");
+      bump_err = svn_error_quick_wrap 
+        (bump_err, "Error bumping revisions post-commit:");
+
+      /* Append this error to the chain. */
+      svn_error_compose (err, bump_err);
+    }
+
+  return err;
 }
 
 
@@ -544,7 +586,8 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
                    void *after_edit_baton, 
                    svn_client_auth_baton_t *auth_baton,
                    const apr_array_header_t *targets,
-                   svn_stringbuf_t *log_msg,
+                   svn_client_get_commit_log_t log_msg_func,
+                   void *log_msg_baton,
                    svn_stringbuf_t *xml_dst,
                    svn_revnum_t revision,
                    apr_pool_t *pool)
@@ -552,6 +595,7 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
   const svn_delta_editor_t *editor;
   void *edit_baton;
   void *ra_baton, *session;
+  svn_stringbuf_t *log_msg;
   svn_revnum_t committed_rev = SVN_INVALID_REVNUM;
   const char *committed_date = NULL;
   const char *committed_author = NULL;
@@ -613,11 +657,18 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
                                        APR_HASH_KEY_STRING))))
     goto cleanup;
 
+  /* Go get a log message.  If an error occurs, or no log message is
+     specified, abort the operation. */
+  if (((*log_msg_func)(&log_msg, commit_items, log_msg_baton, pool))
+      || (! log_msg))
+    goto cleanup;
+
   /* Sort and condense our COMMIT_ITEMS. */
   if ((cmt_err = svn_client__condense_commit_items (&base_url, 
                                                     commit_items, 
                                                     pool)))
     goto cleanup;
+
 
   /* If we're committing to XML ... */
   if (use_xml)
@@ -659,12 +710,6 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
       if (use_xml)
         committed_rev = revision;
 
-      /* Fill in the commit_info structure (use REVISION for the
-         committed rev in the XML case). */
-      *commit_info = svn_client__make_commit_info (committed_rev, 
-                                                   committed_author, 
-                                                   committed_date, pool);
-
       for (i = 0; i < commit_items->nelts; i++)
         {
           svn_client_commit_item_t *item
@@ -705,7 +750,13 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
  cleanup:
   if (locked_dirs)
     unlock_err = unlock_dirs (locked_dirs, pool);
-  return reconcile_errors (cmt_err, unlock_err, bump_err);
+
+  /* Fill in the commit_info structure */
+  *commit_info = svn_client__make_commit_info (committed_rev, 
+                                               committed_author, 
+                                               committed_date, pool);
+
+  return reconcile_errors (cmt_err, unlock_err, bump_err, pool);
 }
 
 

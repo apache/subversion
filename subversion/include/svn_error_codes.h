@@ -70,6 +70,11 @@ extern "C" {
    apr_errno.h).  */
 SVN_ERROR_START
 
+  SVN_ERRDEF (SVN_ERR_GENERAL, 
+              "A general problem occured") /* This should ONLY be used
+                                              to add information to existing
+                                              error chains!! */
+
   SVN_ERRDEF (SVN_ERR_PLUGIN_LOAD_FAILURE,
               "Failure loading plugin")
 

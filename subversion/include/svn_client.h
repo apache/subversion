@@ -156,6 +156,47 @@ typedef struct svn_client_commit_info_t
 } svn_client_commit_info_t;
 
 
+/* State flags for use with the svn_client_commit_item_t structure
+   (see the note about the namespace for that structure, which also
+   applies to these flags). */
+#define SVN_CLIENT_COMMIT_ITEM_ADD         0x01
+#define SVN_CLIENT_COMMIT_ITEM_DELETE      0x02
+#define SVN_CLIENT_COMMIT_ITEM_TEXT_MODS   0x04
+#define SVN_CLIENT_COMMIT_ITEM_PROP_MODS   0x08
+#define SVN_CLIENT_COMMIT_ITEM_IS_COPY     0x10
+
+
+/* The commit candidate structure. */
+typedef struct svn_client_commit_item_t
+{
+  svn_stringbuf_t *path;      /* absolute working-copy path of item */
+  svn_stringbuf_t *url;       /* commit url for this item */
+  svn_wc_entry_t *entry;      /* entry for this item */
+  apr_byte_t state_flags;     /* state flags */
+
+} svn_client_commit_item_t;
+
+
+/* Callback type used by commit-y operations to get a commit log message
+   from the caller.
+   
+   COMMIT_ITEMS is an array of svn_client_commit_item_t structures,
+   which may be fully or only partially filled-in, depending on the
+   type of commit operation.  The callback handler should populate
+   *LOG_MSG with the log message of the commit, or NULL if it wishes
+   to abort the commit process.
+
+   BATON is provided along with the callback for use by the handler.
+
+   All allocations should be performed in POOL.  */
+typedef svn_error_t *
+(*svn_client_get_commit_log_t) (svn_stringbuf_t **log_msg,
+                                apr_array_header_t *commit_items,
+                                void *baton,
+                                apr_pool_t *pool);
+
+
+
 /* Names of files that contain authentication information.
 
    These filenames are decided by libsvn_client, since this library
@@ -422,6 +463,10 @@ svn_error_t *svn_client_import (svn_client_commit_info_t **commit_info,
    AFTER_EDIT_BATON are pre- and post-commit hook editors.  They are
    optional; pass four NULLs here if you don't need them.
 
+   LOG_MSG_FUNC/LOG_MSG_BATON are a callback/baton combo that this
+   function can use to query for a commit log message when one is
+   needed.
+
    If XML_DST is NULL, then the commit will write to a repository, and
    the REVISION argument is ignored.
 
@@ -448,9 +493,10 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
                    void *after_edit_baton,
                    svn_client_auth_baton_t *auth_baton,
                    const apr_array_header_t *targets,
-                   svn_stringbuf_t *log_msg,
+                   svn_client_get_commit_log_t log_msg_func,
+                   void *log_msg_baton,
                    svn_stringbuf_t *xml_dst,
-                   svn_revnum_t revision,  /* this param is temporary */
+                   svn_revnum_t revision,
                    apr_pool_t *pool);
 
 
