@@ -2525,6 +2525,112 @@ merging_commit (const char **msg)
 }
 
 
+static svn_error_t *
+copy_test (const char **msg)
+{
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root, *revision_root;
+  svn_revnum_t after_rev;
+  const char *conflict;
+
+  *msg = "testing svn_fs_copy on file and directory";
+
+  /* Prepare a filesystem. */
+  SVN_ERR (create_fs_and_repos (&fs, "test-repo-copy-test"));
+
+  /* In first txn, create and commit the greek tree. */
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+  SVN_ERR (greek_tree_under_root (txn_root));
+  SVN_ERR (test_commit_txn (&conflict, &after_rev, txn, TRUE));
+  SVN_ERR (svn_fs_close_txn (txn));
+
+  /* In second txn, copy the file A/D/G/pi into the subtree A/D/H as
+     pi2.  Change that files contents to state its new name. */
+  SVN_ERR (svn_fs_revision_root (&revision_root, fs, after_rev, pool)); 
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, after_rev, pool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+  SVN_ERR (svn_fs_copy (revision_root, "A/D/G/pi", 
+                        txn_root, "A/D/H/pi2",
+                        pool));
+  SVN_ERR (set_file_contents (txn_root, "A/D/H/pi2", 
+                              "This is the file 'pi2'.\n"));
+  SVN_ERR (test_commit_txn (&conflict, &after_rev, txn, TRUE));
+  SVN_ERR (svn_fs_close_txn (txn));
+
+  /* Then, as if that wasn't fun enough, copy the whole subtree A/D/H
+     into the root directory as H2! */
+  SVN_ERR (svn_fs_revision_root (&revision_root, fs, after_rev, pool)); 
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, after_rev, pool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+  SVN_ERR (svn_fs_copy (revision_root, "A/D/H", 
+                        txn_root, "H2",
+                        pool));
+  SVN_ERR (test_commit_txn (&conflict, &after_rev, txn, TRUE));
+  SVN_ERR (svn_fs_close_txn (txn));
+
+  /* Let's live dangerously.  What happens if we copy a path into one
+     of its own children.  Looping filesystem?  Cyclic ancestry?
+     Another West Virginia family tree with no branches?  We certainly
+     hope that's not the case. */
+  SVN_ERR (svn_fs_revision_root (&revision_root, fs, after_rev, pool)); 
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, after_rev, pool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+  SVN_ERR (svn_fs_copy (revision_root, "A/B", 
+                        txn_root, "A/B/E/B",
+                        pool));
+  SVN_ERR (test_commit_txn (&conflict, &after_rev, txn, TRUE));
+  SVN_ERR (svn_fs_close_txn (txn));
+
+  /* After all these changes, let's see if the filesystem looks as we
+     would expect it to. */
+  {
+    tree_test_entry_t expected_entries[] = {
+      /* path, is_dir, contents */
+      { "iota",        0, "This is the file 'iota'.\n" },
+      { "H2",          1, "" },
+      { "H2/chi",      0, "This is the file 'chi'.\n" },
+      { "H2/pi2",      0, "This is the file 'pi2'.\n" },
+      { "H2/psi",      0, "This is the file 'psi'.\n" },
+      { "H2/omega",    0, "This is the file 'omega'.\n" },
+      { "A",           1, "" },
+      { "A/mu",        0, "This is the file 'mu'.\n" },
+      { "A/B",         1, "" },
+      { "A/B/lambda",  0, "This is the file 'lambda'.\n" },
+      { "A/B/E",       1, "" },
+      { "A/B/E/alpha", 0, "This is the file 'alpha'.\n" },
+      { "A/B/E/beta",  0, "This is the file 'beta'.\n" },
+      { "A/B/E/B",         1, "" },
+      { "A/B/E/B/lambda",  0, "This is the file 'lambda'.\n" },
+      { "A/B/E/B/E",       1, "" },
+      { "A/B/E/B/E/alpha", 0, "This is the file 'alpha'.\n" },
+      { "A/B/E/B/E/beta",  0, "This is the file 'beta'.\n" },
+      { "A/B/E/B/F",       1, "" },
+      { "A/B/F",       1, "" },
+      { "A/C",         1, "" },
+      { "A/D",         1, "" },
+      { "A/D/gamma",   0, "This is the file 'gamma'.\n" },
+      { "A/D/G",       1, "" },
+      { "A/D/G/pi",    0, "This is the file 'pi'.\n" },
+      { "A/D/G/rho",   0, "This is the file 'rho'.\n" },
+      { "A/D/G/tau",   0, "This is the file 'tau'.\n" },
+      { "A/D/H",       1, "" },
+      { "A/D/H/chi",   0, "This is the file 'chi'.\n" },
+      { "A/D/H/pi2",   0, "This is the file 'pi2'.\n" },
+      { "A/D/H/psi",   0, "This is the file 'psi'.\n" },
+      { "A/D/H/omega", 0, "This is the file 'omega'.\n" }
+    };
+    SVN_ERR (svn_fs_revision_root (&revision_root, fs, after_rev, pool)); 
+    SVN_ERR (validate_tree (revision_root, expected_entries, 32));
+  }
+  /* Close the filesystem. */
+  SVN_ERR (svn_fs_close_fs (fs));
+
+  return SVN_NO_ERROR;
+}
+
+
 
 
 /* The test table.  */
@@ -2550,6 +2656,7 @@ svn_error_t * (*test_funcs[]) (const char **msg) = {
   merge_trees,
   /* fetch_youngest_rev, */
   basic_commit,
+  copy_test,
   merging_commit,
   0
 };

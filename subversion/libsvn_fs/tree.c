@@ -1838,6 +1838,75 @@ svn_fs_rename (svn_fs_root_t *root,
 }
 
 
+struct copy_args
+{
+  svn_fs_root_t *from_root;
+  const char *from_path;
+  svn_fs_root_t *to_root;
+  const char *to_path;
+};
+
+
+static svn_error_t *
+txn_body_copy (void *baton,
+               trail_t *trail)
+{
+  struct copy_args *args = baton;
+  svn_fs_root_t *from_root = args->from_root;
+  const char *from_path = args->from_path;
+  svn_fs_root_t *to_root = args->to_root;
+  const char *to_path = args->to_path;
+  parent_path_t *from_parent_path;
+  parent_path_t *to_parent_path;
+
+  if (! svn_fs_is_revision_root (from_root))
+    return svn_error_create (SVN_ERR_FS_GENERAL, 0, 
+                             NULL, trail->pool,
+                             "copy from mutable tree not currently supported");
+
+  /* Make sure that the from_path exists in the from_root */
+  SVN_ERR (open_path (&from_parent_path, from_root, from_path, 
+                      0, trail));
+
+  /* Make sure that the to_path does NOT exist in the to_root */
+  SVN_ERR (open_path (&to_parent_path, to_root, to_path, 
+                      open_path_last_optional, trail));
+  if (to_parent_path->node)
+    return already_exists (to_root, to_path);
+
+  if (svn_fs_is_revision_root (from_root))
+    {
+      /* Copying a file or directory from a revision root.  This is a
+         trivial referencing operation. */
+
+      /* Make sure that this node and all parents are mutable.  */
+      SVN_ERR (make_path_mutable (to_root, to_parent_path->parent, 
+                                  to_path, trail));
+
+      /* Copying a file or directory from a revision root.  This is a
+         trivial referencing operation. */
+      SVN_ERR (svn_fs__dag_link (to_parent_path->parent->node,
+                                 from_parent_path->node,
+                                 to_parent_path->entry,
+                                 trail));
+    }
+  else
+    {
+      /* Copying from transaction roots not currently available.
+         cmpilato todo someday: make this not so. :-)  Note that when
+         copying from mutable trees, you have to make sure that you
+         aren't creating a cyclic graph filesystem, and a simple
+         referencing operation won't cut it.   Currently, we should
+         not be able to reach this clause.  This is okay, however,
+         since the interface reports that this only works from
+         immutable trees, but JimB has stated that this requirement
+         need not be necessary in the future. */
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
 svn_error_t *
 svn_fs_copy (svn_fs_root_t *from_root,
              const char *from_path,
@@ -1845,7 +1914,13 @@ svn_fs_copy (svn_fs_root_t *from_root,
              const char *to_path,
              apr_pool_t *pool)
 {
-  abort ();
+  struct copy_args args;
+
+  args.from_root = from_root;
+  args.from_path = from_path;
+  args.to_root   = to_root;
+  args.to_path   = to_path;
+  return svn_fs__retry_txn (to_root->fs, txn_body_copy, &args, pool);
 }
 
 
