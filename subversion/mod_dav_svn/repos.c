@@ -1370,9 +1370,12 @@ static dav_error * dav_svn_get_resource(request_rec *r,
   /* Look for locktokens in the "If:" request header. */
   err = dav_get_locktoken_list(r, &ltl);
   
-  /* ### dav_get_locktoken_list claims to return a NULL list when no
+  /* dav_get_locktoken_list claims to return a NULL list when no
      locktokens are present.  But it actually throws this error
-     instead!  So we're deliberately trapping/ignoring it.  */
+     instead!  So we're deliberately trapping/ignoring it. 
+
+     This is a workaround for a bug in mod_dav.  Remove this when the
+     bug is fixed in mod_dav.  See Subversion Issue #2248 */
   if (err && (err->error_id != DAV_ERR_IF_ABSENT))
     return err;
 
