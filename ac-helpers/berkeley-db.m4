@@ -23,6 +23,7 @@ dnl   from the cache.
 
 AC_DEFUN(SVN_LIB_BERKELEY_DB,
 [
+  db_version=$1.$2.$3
   dnl  Process the `with-berkeley-db' switch.  We set `status' to one
   dnl  of the following values:
   dnl    `required' --- the user specified that they did want to use
@@ -55,7 +56,7 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB,
 	   the \`=PATH' part completely, the configure script will search
 	   for Berkeley DB in a number of standard places.
 
-	   The Subversion server requires Berkeley DB 3.2.9 or newer.  If
+	   The Subversion server requires Berkeley DB $db_version or newer.  If
 	   you specify \`--without-berkeley-db', the server will not be
 	   built.  Otherwise, the configure script builds the server if and
 	   only if it can find a new enough version installed, or if a copy
@@ -109,8 +110,8 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB,
       # /usr/local/include/db.h.  So if you check for /usr/local first, you'll
       # get the old header file from /usr/include, and the new library from
       # /usr/local/lib --- disaster.  Check for that bogosity first.
-      places="std /usr/local/include/db3:/usr/local/lib /usr/local /usr/local/BerkeleyDB.3.2 
-	      /usr/include/db3:/usr/lib"
+      places="std /usr/local/include/db3:/usr/local/lib /usr/local
+              /usr/local/BerkeleyDB.$1.$2 /usr/include/db3:/usr/lib"
     fi
     # Now `places' is guaranteed to be a list of place specs we should
     # search, no matter what flags the user passed.
