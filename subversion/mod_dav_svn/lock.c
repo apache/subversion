@@ -405,13 +405,14 @@ static dav_error *
 dav_svn_remove_locknull_state(dav_lockdb *lockdb,
                               const dav_resource *resource)
 {
-  /* ### perhaps our resource->info context should keep track if a
-     resource is in 'locknull' state', and not merely non-existent?
-     According to RFC 2518, 'locknull' resources are supposed to be
-     listed as children of their parent collections (e.g. a PROPFIND
-     on the parent).  */
 
-  return 0;  /* temporary: just to suppress compile warnings */
+  /* mod_dav_svn supports RFC2518bis which does not actually require
+     the server to create lock-null resources.  Instead, we create
+     zero byte files when a lock comes in on a non-existent path.
+     mod_dav_svn never creates any lock-null resources, so this
+     function is never called by mod_dav. */
+
+  return 0;  /* Just to suppress compiler warnings. */
 }
 
 
