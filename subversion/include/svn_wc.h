@@ -832,19 +832,6 @@ svn_error_t *svn_wc_process_committed (const char *path,
 
 
 
-/* Update working copy PATH with NEW_REVISION after a commit has succeeded.
- * TARGETS is a hash of files/dirs that actually got committed --
- * these are the only ones who we can write log items for, and whose
- * revision numbers will get set.  todo: eventually this hash will be
- * of the sort used by svn_wc__compose_paths(), as with all entries
- * recursers.
- */
-svn_error_t *svn_wc_close_commit (void *baton,
-                                  svn_revnum_t new_revision,
-                                  apr_hash_t *targets,
-                                  apr_pool_t *pool);
-
-
 /* This is a function of type svn_ra_get_wc_prop_func_t.  Return
    *VALUE for wc property NAME on PATH.
 

@@ -17,12 +17,30 @@
  */
 
 %module _wc
+%include typemaps.i
 
 %import apr.i
 %import svn_types.i
 %import svn_string.i
 %import svn_delta.i
 
+/* -----------------------------------------------------------------------
+   ### these functions require a pool, which we don't have immediately
+   ### handy. just eliminate these funcs for now.
+*/
+%ignore svn_wc_set_auth_file;
+
+/* ### ignore this structure because the accessors will need a pool */
+%ignore svn_wc_keywords_t;
+
+/* -----------------------------------------------------------------------
+   these types (as 'type **') will always be an OUT param
+*/
+%apply SWIGTYPE **OUTPARAM {
+    svn_wc_entry_t **
+};
+
+/* ----------------------------------------------------------------------- */
 
 %include svn_wc.h
 %{
