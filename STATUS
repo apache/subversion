@@ -157,3 +157,13 @@ Approved changes (further review is welcome, but not required):
       It just looks ugly and sloppy.
     Votes:
       +1: breser
+
+  * r12102
+    Fix a slight ABI/API incompatability between 1.0.x and 1.1.x
+    Justification:
+      If we treat the Apache modules as just another client then e broke our
+      compatability rules.  This fixes it and makes the Debian folks happy
+      who have an open bug on the issue.  See:
+      http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=275545
+    Votes:
+      +1: breser
