@@ -435,6 +435,7 @@ struct parse_baton
   svn_fs_t *fs;
 
   svn_boolean_t use_history;
+  svn_stream_t *outstream;
 };
 
 struct revision_baton
@@ -563,8 +564,10 @@ new_revision_record (void **revision_baton,
       SVN_ERR (svn_fs_begin_txn (&(rb->txn), pb->fs, head_rev, pool));
       SVN_ERR (svn_fs_txn_root (&(rb->txn_root), rb->txn, pool));
       
-      printf ("<<< Started new txn, based on original revision %"
-              SVN_REVNUM_T_FMT "\n", rb->rev);
+      if (pb->outstream)
+        svn_stream_printf (pb->outstream, pool,
+                           "<<< Started new txn, based on original revision %"
+                           SVN_REVNUM_T_FMT "\n", rb->rev);
     }
 
   /* If we're parsing revision 0, only the revision are (possibly)
@@ -611,7 +614,11 @@ maybe_add_with_history (struct node_baton *nb,
       SVN_ERR (svn_fs_copy (copy_root, nb->copyfrom_path,
                             rb->txn_root, nb->path, pool));
 
-      printf ("COPIED...");
+      if (pb->outstream)
+        {
+          apr_size_t len = 9;
+          svn_stream_write (pb->outstream, "COPIED...", &len);
+        }
     }
 
   return SVN_NO_ERROR;
@@ -626,31 +633,40 @@ new_node_record (void **node_baton,
                  apr_pool_t *pool)
 {
   struct revision_baton *rb = revision_baton;
+  struct parse_baton *pb = rb->pb;
   struct node_baton *nb = make_node_baton (headers, rb, pool);
 
   switch (nb->action)
     {
     case svn_node_action_change:
       {
-        printf ("     * editing path : %s ...", nb->path);
+        if (pb->outstream)
+          svn_stream_printf (pb->outstream, pool,
+                             "     * editing path : %s ...", nb->path);
         break;
       }
     case svn_node_action_delete:
       {
-        printf ("     * deleting path : %s ...", nb->path);
+        if (pb->outstream)
+          svn_stream_printf (pb->outstream, pool,
+                             "     * deleting path : %s ...", nb->path);
         SVN_ERR (svn_fs_delete_tree (rb->txn_root, nb->path, pool));
         break;
       }
     case svn_node_action_add:
       {
-        printf ("     * adding path : %s ...", nb->path);
+        if (pb->outstream)
+          svn_stream_printf (pb->outstream, pool,
+                             "     * adding path : %s ...", nb->path);
 
         SVN_ERR (maybe_add_with_history (nb, rb, pool));
         break;
       }
     case svn_node_action_replace:
       {
-        printf ("     * replacing path : %s ...", nb->path);
+        if (pb->outstream)
+          svn_stream_printf (pb->outstream, pool,
+                             "     * replacing path : %s ...", nb->path);
 
         SVN_ERR (svn_fs_delete_tree (rb->txn_root, nb->path, pool));
 
@@ -733,7 +749,15 @@ static svn_error_t *
 close_node (void *baton)
 {
   struct node_baton *nb = baton;
-  printf (" done.\n", nb->path);
+  struct revision_baton *rb = nb->rb;
+  struct parse_baton *pb = rb->pb;
+
+  if (pb->outstream)
+    {
+      apr_size_t len = 7;
+      svn_stream_write (pb->outstream, " done.\n", &len);
+    }
+  
   return SVN_NO_ERROR;
 }
 
@@ -766,21 +790,28 @@ close_revision (void *baton)
                                      SVN_PROP_REVISION_DATE, rb->datestamp,
                                      rb->pool));
 
-  printf ("\n------- Committed new rev %" SVN_REVNUM_T_FMT
-          " (loaded from original rev %" SVN_REVNUM_T_FMT ") >>>\n\n",
-          new_rev, rb->rev);
+  if (pb->outstream)
+    svn_stream_printf (pb->outstream, rb->pool,
+                       "\n------- Committed new rev %" SVN_REVNUM_T_FMT
+                       " (loaded from original rev %" SVN_REVNUM_T_FMT
+                       ") >>>\n\n", new_rev, rb->rev);
 
   return SVN_NO_ERROR;
 }
 
 
+/*----------------------------------------------------------------------*/
+
+/** The public routines **/
 
-static svn_error_t *
-get_parser (const svn_repos_parser_fns_t **parser_callbacks,
-            void **parse_baton,
-            svn_repos_t *repos,
-            svn_boolean_t use_history,
-            apr_pool_t *pool)
+
+svn_error_t *
+svn_repos_get_fs_build_parser (const svn_repos_parser_fns_t **parser_callbacks,
+                               void **parse_baton,
+                               svn_repos_t *repos,
+                               svn_boolean_t use_history,
+                               svn_stream_t *outstream,
+                               apr_pool_t *pool)
 {
   svn_repos_parser_fns_t *parser = apr_pcalloc (pool, sizeof(*parser));
   struct parse_baton *pb = apr_pcalloc (pool, sizeof(*pb));
@@ -796,6 +827,7 @@ get_parser (const svn_repos_parser_fns_t **parser_callbacks,
   pb->repos = repos;
   pb->fs = svn_repos_fs (repos);
   pb->use_history = use_history;
+  pb->outstream = outstream;
 
   *parser_callbacks = parser;
   *parse_baton = pb;
@@ -803,14 +835,11 @@ get_parser (const svn_repos_parser_fns_t **parser_callbacks,
 }
 
 
-/*----------------------------------------------------------------------*/
-
-/** The main loader routine. **/
-
 
 svn_error_t *
 svn_repos_load_fs (svn_repos_t *repos,
-                   svn_stream_t *stream,
+                   svn_stream_t *dumpstream,
+                   svn_stream_t *feedback_stream,
                    apr_pool_t *pool)
 {
   const svn_repos_parser_fns_t *parser;
@@ -818,9 +847,13 @@ svn_repos_load_fs (svn_repos_t *repos,
   
   /* This is really simple. */  
 
-  SVN_ERR (get_parser (&parser, &parse_baton, repos, TRUE, pool));
+  SVN_ERR (svn_repos_get_fs_build_parser (&parser, &parse_baton,
+                                          repos,
+                                          TRUE, /* look for copyfrom revs */
+                                          feedback_stream,
+                                          pool));
 
-  SVN_ERR (svn_repos_parse_dumpstream (stream, parser, parse_baton, pool));
+  SVN_ERR (svn_repos_parse_dumpstream (dumpstream, parser, parse_baton, pool));
 
   return SVN_NO_ERROR;
 }

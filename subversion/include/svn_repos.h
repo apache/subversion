@@ -541,15 +541,18 @@ svn_error_t *svn_repos_dump_fs (svn_repos_t *repos,
                                 apr_pool_t *pool);
 
 
-/* Read and parse dumpfile-formatted STREAM, reconstructing filesystem
-   revisions in already-open REPOS.  Use POOL for all allocation.
+/* Read and parse dumpfile-formatted DUMPSTREAM, reconstructing
+   filesystem revisions in already-open REPOS.  Use POOL for all
+   allocation.  If non-NULL, the parser will send feedback to
+   FEEDBACK_STREAM.
 
-   ### ? Describe policy/interface for adding revisions to a non-empty
-       repository.  Also, interface for adding revisions to a -subdir-
-       of existing repository?
+   ### Describe a policy/interface for adding revisions to a non-empty
+       repository.  Also, someday create an interface for adding
+       revisions to a -subdir- of existing repository?
  */
 svn_error_t *svn_repos_load_fs (svn_repos_t *repos,
-                                svn_stream_t *stream,
+                                svn_stream_t *dumpstream,
+                                svn_stream_t *feedback_stream,
                                 apr_pool_t *pool);
 
 
@@ -633,6 +636,22 @@ svn_repos_parse_dumpstream (svn_stream_t *stream,
                             apr_pool_t *pool);
 
 
+/* Set *PARSER and *PARSE_BATON to a vtable parser which commits new
+   revisions to the fs in REPOS.  Use POOL to operate on the fs.
+
+   If USE_HISTORY is set, then the parser will require relative
+   'copyfrom' history to exist in the repository when it encounters
+   nodes that are added-with-history.
+
+   Print all parsing feedback to OUTSTREAM (if non-NULL).
+*/
+svn_error_t *
+svn_repos_get_fs_build_parser (const svn_repos_parser_fns_t **parser,
+                               void **parse_baton,
+                               svn_repos_t *repos,
+                               svn_boolean_t use_history,
+                               svn_stream_t *outstream,
+                               apr_pool_t *pool);
 
 
 #endif /* SVN_REPOS_H */

@@ -486,7 +486,7 @@ main (int argc, const char * const *argv)
 
     case svnadmin_cmd_load:
       {
-        svn_stream_t *stdin_stream;
+        svn_stream_t *stdin_stream, *stdout_stream;
 
         INT_ERR (svn_repos_open (&repos, path, pool));
         fs = svn_repos_fs (repos);
@@ -494,7 +494,10 @@ main (int argc, const char * const *argv)
         /* Read the stream from STDIN.  Users can redirect a file. */
         stdin_stream = svn_stream_from_stdio (stdin, pool);
         
-        INT_ERR (svn_repos_load_fs (repos, stdin_stream, pool));
+        /* Have the parser dump feedback to STDOUT. */
+        stdout_stream = svn_stream_from_stdio (stdout, pool);
+        
+        INT_ERR (svn_repos_load_fs (repos, stdin_stream, stdout_stream, pool));
       }
       break;
 
