@@ -990,6 +990,33 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="include\apu_want.h.in">
+			</File>
+			<File
+				RelativePath="include\apu_want.hnw">
+			</File>
+			<File
+				RelativePath="include\apu_want.hw">
+				<FileConfiguration
+					Name="Release|Win32">
+					<Tool
+						Name="VCCustomBuildTool"
+						Description="Creating apu_want.h from apu_want.hw"
+						CommandLine="type .\include\apu_want.hw &gt; .\include\apu_want.h
+"
+						Outputs=".\include\apu_want.h"/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|Win32">
+					<Tool
+						Name="VCCustomBuildTool"
+						Description="Creating apu_want.h from apu_want.hw"
+						CommandLine="type .\include\apu_want.hw &gt; .\include\apu_want.h
+"
+						Outputs=".\include\apu_want.h"/>
+				</FileConfiguration>
+			</File>
+			<File
 				RelativePath="uri\gen_uri_delims.exe">
 				<FileConfiguration
 					Name="Release|Win32">
