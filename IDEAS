@@ -60,3 +60,29 @@ Some ideas for the future.
   
       Email: cavanaug@soco.agilent.com    Phone:  707-577-4780
                                                   707-577-3948 (Fax)
+
+** Possible implementation information
+
+From: Dave Glowacki <dglo@ssec.wisc.edu>
+
+<snip>
+
+There's 'getline', which doesn't have all of readline's features,
+but which does basic editing.  ncftp and tin can be built with
+getline instead of readline, so it does a decent enough job.
+
+You can find it at ftp://ftp.sco.com/skunkware/src/lib/getline-39-src.tar.gz
+
+getline.c says:
+
+/*
+ * Copyright (C) 1991, 1992, 1993 by Chris Thewalt (thewalt@ce.berkeley.edu)
+ *
+ * Permission to use, copy, modify, and distribute this software 
+ * for any purpose and without fee is hereby granted, provided
+ * that the above copyright notices appear in all copies and that both the
+ * copyright notice and this permission notice appear in supporting
+ * documentation.  This software is provided "as is" without express or
+ * implied warranty.
+ *
+<names snipped>
