@@ -151,14 +151,6 @@ class CollectData(rcsparse.Sink):
       return None
     return self.branch_names.get(revision[:revision.rindex(".")])
 
-  def add_branch_point(self, revision, branch_name):
-    """Record that BRANCH_NAME sprouts from REVISION.
-    REVISION is a non-branch revision number with an even number of
-    components, for example '1.7' (never '1.7.2' nor '1.7.0.2')."""
-    if not self.branchlist.has_key(revision):
-      self.branchlist[revision] = []
-    self.branchlist[revision].append(branch_name)
-
   def add_cvs_branch(self, revision, branch_name):
     """Record the root revision and branch revision for BRANCH_NAME,
     based on REVISION.  REVISION is a CVS branch number having an even
