@@ -240,7 +240,8 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
     "    - If WCPATH is omitted, a value of '.' is assumed.\n"
     "    - If PATH1 and PATH2 are identical, an alternate syntax is allowed:\n"
     "            svn merge -rN:M PATH [WCPATH]\n",
-    {'r', 'D', 'n', svn_cl__auth_username_opt, svn_cl__auth_password_opt} },
+    {'r', 'D', 'n', svn_cl__force_opt,
+     svn_cl__auth_username_opt, svn_cl__auth_password_opt} },
   
   { "mkdir", svn_cl__mkdir, {0},
     "Create a new directory under revision control.\n"

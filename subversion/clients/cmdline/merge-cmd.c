@@ -47,6 +47,7 @@ svn_cl__merge (apr_getopt_t *os,
   svn_stringbuf_t *parent_dir, *entry;
   svn_stringbuf_t *sourcepath1, *sourcepath2, *targetpath;
   svn_boolean_t using_alternate_syntax = FALSE;
+  svn_error_t *err;
 
   auth_baton = svn_cl__make_auth_baton (opt_state, pool);
 
@@ -121,15 +122,18 @@ svn_cl__merge (apr_getopt_t *os,
   SVN_ERR (svn_cl__get_trace_update_editor (&trace_editor, &trace_edit_baton,
                                             parent_dir, FALSE, TRUE, pool));
 
-  SVN_ERR (svn_client_merge (trace_editor, trace_edit_baton,
-                             auth_baton,
-                             sourcepath1,
-                             &(opt_state->start_revision),
-                             sourcepath2,
-                             &(opt_state->end_revision),
-                             targetpath,
-                             opt_state->nonrecursive ? FALSE : TRUE,
-                             pool)); 
+  err = svn_client_merge (trace_editor, trace_edit_baton,
+                          auth_baton,
+                          sourcepath1,
+                          &(opt_state->start_revision),
+                          sourcepath2,
+                          &(opt_state->end_revision),
+                          targetpath,
+                          opt_state->nonrecursive ? FALSE : TRUE,
+                          opt_state->force,
+                          pool); 
+  if (err)
+     return svn_cl__may_need_force (err);
 
   return SVN_NO_ERROR;
 }
