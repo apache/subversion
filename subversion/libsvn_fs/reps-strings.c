@@ -322,10 +322,10 @@ rep_read_range (svn_fs_t *fs,
 /*** Retrieving data. ***/
 
 svn_error_t *
-svn_fs__rep_size (apr_size_t *size,
-                  svn_fs_t *fs,
-                  const char *rep_key,
-                  trail_t *trail)
+svn_fs__rep_contents_size (apr_size_t *size,
+                           svn_fs_t *fs,
+                           const char *rep_key,
+                           trail_t *trail)
 {
   skel_t *rep;
   const char *str_key;
@@ -548,11 +548,11 @@ rep_write_contents (void *baton, const char *buf, apr_size_t *len)
 /** Public read and write stream constructors. **/
 
 svn_stream_t *
-svn_fs__rep_read_stream (svn_fs_t *fs,
-                         const char *rep_key,
-                         apr_size_t offset,
-                         trail_t *trail,
-                         apr_pool_t *pool)
+svn_fs__rep_contents_read_stream (svn_fs_t *fs,
+                                  const char *rep_key,
+                                  apr_size_t offset,
+                                  trail_t *trail,
+                                  apr_pool_t *pool)
 {
   struct rep_read_baton *rb
     = rep_read_get_baton (fs, rep_key, offset, trail, pool);
@@ -565,10 +565,10 @@ svn_fs__rep_read_stream (svn_fs_t *fs,
 
                                        
 svn_stream_t *
-svn_fs__rep_write_stream (svn_fs_t *fs,
-                          const char *rep_key,
-                          trail_t *trail,
-                          apr_pool_t *pool)
+svn_fs__rep_contents_write_stream (svn_fs_t *fs,
+                                   const char *rep_key,
+                                   trail_t *trail,
+                                   apr_pool_t *pool)
 {
   struct rep_write_baton *wb
     = rep_write_get_baton (fs, rep_key, trail, pool);
@@ -581,9 +581,9 @@ svn_fs__rep_write_stream (svn_fs_t *fs,
 
 
 svn_error_t *
-svn_fs__rep_clear (svn_fs_t *fs,
-                   const char *rep_key,
-                   trail_t *trail)
+svn_fs__rep_contents_clear (svn_fs_t *fs,
+                            const char *rep_key,
+                            trail_t *trail)
 {
   skel_t *rep;
   const char *str_key;
@@ -594,7 +594,7 @@ svn_fs__rep_clear (svn_fs_t *fs,
   if (! svn_fs__rep_is_mutable (rep))
     return svn_error_createf
       (SVN_ERR_FS_REP_NOT_MUTABLE, 0, NULL, trail->pool,
-       "svn_fs__rep_clear: rep \"%s\" is not mutable", rep_key);
+       "svn_fs__rep_contents_clear: rep \"%s\" is not mutable", rep_key);
 
   str_key = svn_fs__string_key_from_rep (rep, trail->pool);
 

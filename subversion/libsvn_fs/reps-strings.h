@@ -28,15 +28,6 @@
 const char *svn_fs__string_key_from_rep (skel_t *rep, apr_pool_t *pool);
 
 
-/* Set STR->data to the contents of rep REP_KEY in FS, and STR->len to
-   the contents' length, as part of TRAIL.  The data is allocated in
-   TRAIL->pool.  */
-svn_error_t *svn_fs__rep_contents (svn_string_t *str,
-                                   svn_fs_t *fs,
-                                   const char *rep_key,
-                                   trail_t *trail);
-
-
 /* Return non-zero if representation skel REP is mutable.  */
 int svn_fs__rep_is_mutable (skel_t *rep);
 
@@ -88,10 +79,19 @@ svn_error_t *svn_fs__delete_rep_if_mutable (svn_fs_t *fs,
 /* Set *SIZE to the size of rep REP_KEY's contents in FS, as part of
    TRAIL.  Note: this is the fulltext size, no matter how the contents
    are represented in storage.  */
-svn_error_t *svn_fs__rep_size (apr_size_t *size,
-                               svn_fs_t *fs,
-                               const char *rep_key,
-                               trail_t *trail);
+svn_error_t *svn_fs__rep_contents_size (apr_size_t *size,
+                                        svn_fs_t *fs,
+                                        const char *rep_key,
+                                        trail_t *trail);
+
+
+/* Set STR->data to the contents of rep REP_KEY in FS, and STR->len to
+   the contents' length, as part of TRAIL.  The data is allocated in
+   TRAIL->pool.  */
+svn_error_t *svn_fs__rep_contents (svn_string_t *str,
+                                   svn_fs_t *fs,
+                                   const char *rep_key,
+                                   trail_t *trail);
 
 
 /* Return a stream to read the contents of the representation
@@ -101,18 +101,18 @@ svn_error_t *svn_fs__rep_size (apr_size_t *size,
    If TRAIL is non-null, the stream's reads are part of TRAIL;
    otherwise, each read happens in an internal, one-off trail. 
    POOL may be TRAIL->pool.  */
-svn_stream_t *svn_fs__rep_read_stream (svn_fs_t *fs,
-                                       const char *rep_key,
-                                       apr_size_t offset,
-                                       trail_t *trail,
-                                       apr_pool_t *pool);
+svn_stream_t *svn_fs__rep_contents_read_stream (svn_fs_t *fs,
+                                                const char *rep_key,
+                                                apr_size_t offset,
+                                                trail_t *trail,
+                                                apr_pool_t *pool);
 
                                        
 /* Return a stream to write the contents of the representation
    identified by REP_KEY.  Allocate the stream in POOL.
 
-   If the rep already has contents, the stream will append to them.
-   Use svn_fs__rep_clear() if you want to clear the contents first.
+   If the rep already has contents, the stream will append.  You can
+   use svn_fs__rep_contents_clear() to clear the contents first.
 
    If TRAIL is non-null, the stream's writes are part of TRAIL;
    otherwise, each write happens in an internal, one-off trail.
@@ -120,18 +120,18 @@ svn_stream_t *svn_fs__rep_read_stream (svn_fs_t *fs,
 
    If the representation is not mutable, writes will return the error
    SVN_ERR_FS_REP_NOT_MUTABLE.  */
-svn_stream_t *svn_fs__rep_write_stream (svn_fs_t *fs,
-                                        const char *rep_key,
-                                        trail_t *trail,
-                                        apr_pool_t *pool);
+svn_stream_t *svn_fs__rep_contents_write_stream (svn_fs_t *fs,
+                                                 const char *rep_key,
+                                                 trail_t *trail,
+                                                 apr_pool_t *pool);
 
 
 /* Clear the contents of representation REP_KEY, so that it represents
    the empty string, as part of TRAIL.  If the representation is not
    mutable, return the error SVN_ERR_FS_REP_NOT_MUTABLE.  */
-svn_error_t *svn_fs__rep_clear (svn_fs_t *fs,
-                                const char *rep_key,
-                                trail_t *trail);
+svn_error_t *svn_fs__rep_contents_clear (svn_fs_t *fs,
+                                         const char *rep_key,
+                                         trail_t *trail);
 
 
 /* stabilize_rep */

@@ -536,8 +536,8 @@ set_entry (dag_node_t *parent,
       
       empty_list = svn_fs__make_empty_list (trail->pool);
       empty = svn_fs__unparse_skel (empty_list, trail->pool);
-      wstream = svn_fs__rep_write_stream (fs, mutable_rep_key,
-                                          trail, trail->pool);
+      wstream = svn_fs__rep_contents_write_stream (fs, mutable_rep_key,
+                                                   trail, trail->pool);
       len = empty->len;
       svn_stream_write (wstream, empty->data, &len);
     }
@@ -579,9 +579,9 @@ set_entry (dag_node_t *parent,
       svn_stream_t *wstream;
       apr_size_t len;
 
-      SVN_ERR (svn_fs__rep_clear (fs, mutable_rep_key, trail));
-      wstream = svn_fs__rep_write_stream (fs, mutable_rep_key,
-                                          trail, trail->pool);
+      SVN_ERR (svn_fs__rep_contents_clear (fs, mutable_rep_key, trail));
+      wstream = svn_fs__rep_contents_write_stream (fs, mutable_rep_key,
+                                                   trail, trail->pool);
       len = unparsed_entries->len;
       svn_stream_write (wstream, unparsed_entries->data, &len);
     }
@@ -874,9 +874,9 @@ svn_fs__dag_set_proplist (dag_node_t *node,
     svn_stringbuf_t *unparsed_props;
 
     unparsed_props = svn_fs__unparse_skel (proplist, trail->pool);
-    wstream = svn_fs__rep_write_stream (node->fs, mutable_rep_key,
-                                        trail, trail->pool);
-    SVN_ERR (svn_fs__rep_clear (node->fs, mutable_rep_key, trail));
+    wstream = svn_fs__rep_contents_write_stream (node->fs, mutable_rep_key,
+                                                 trail, trail->pool);
+    SVN_ERR (svn_fs__rep_contents_clear (node->fs, mutable_rep_key, trail));
     len = unparsed_props->len;
     SVN_ERR (svn_stream_write (wstream, unparsed_props->data, &len));
              
@@ -1191,8 +1191,9 @@ delete_entry (dag_node_t *parent,
 
     unparsed_entries = svn_fs__unparse_skel (entries, trail->pool);
 
-    SVN_ERR (svn_fs__rep_clear (fs, mutable_rep_key, trail));
-    ws = svn_fs__rep_write_stream (fs, mutable_rep_key, trail, trail->pool);
+    SVN_ERR (svn_fs__rep_contents_clear (fs, mutable_rep_key, trail));
+    ws = svn_fs__rep_contents_write_stream (fs, mutable_rep_key,
+                                            trail, trail->pool);
     len = unparsed_entries->len;
     SVN_ERR (svn_stream_write (ws, unparsed_entries->data, &len));
   }
@@ -1406,7 +1407,8 @@ svn_fs__dag_get_contents (svn_stream_t **contents,
      reads.  This means the stream will do each read in a one-off,
      temporary trail.  */
 
-  *contents = svn_fs__rep_read_stream (file->fs, rep_key, 0, NULL, pool);
+  *contents = svn_fs__rep_contents_read_stream (file->fs, rep_key,
+                                                0, NULL, pool);
 
   /* Note that we're not registering any `close' func, because there's
      nothing to cleanup outside of our trail.  When the trail is
@@ -1442,7 +1444,7 @@ svn_fs__dag_file_length (apr_size_t *length,
                                         (SVN_FS__NR_DATA_KEY (node_rev))->data,
                                         (SVN_FS__NR_DATA_KEY (node_rev))->len);
 
-    SVN_ERR (svn_fs__rep_size (length, file->fs, rep_key, trail));
+    SVN_ERR (svn_fs__rep_contents_size (length, file->fs, rep_key, trail));
   }
 
   return SVN_NO_ERROR;
@@ -1505,8 +1507,9 @@ svn_fs__dag_set_contents (dag_node_t *file,
     svn_stream_t *ws;
     apr_size_t len;
 
-    ws = svn_fs__rep_write_stream (fs, mutable_rep_key, trail, trail->pool);
-    SVN_ERR (svn_fs__rep_clear (fs, mutable_rep_key, trail));
+    ws = svn_fs__rep_contents_write_stream (fs, mutable_rep_key,
+                                            trail, trail->pool);
+    SVN_ERR (svn_fs__rep_contents_clear (fs, mutable_rep_key, trail));
     len = contents->len;
     SVN_ERR (svn_stream_write (ws, contents->data, &len));
   }
