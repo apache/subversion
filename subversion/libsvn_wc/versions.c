@@ -50,13 +50,17 @@
 
 
 #include "wc.h"
+#include "svn_xml.h"
+
 
 /*------------------------------------------------------------------*/
 
-/** The administrative `versions' file tracks the version numbers of
+/** Overview **/
+
+/* The administrative `versions' file tracks the version numbers of
 files within a particular subdirectory.  Subdirectories are *not*
 tracked, because the first "entry" in this file represents `.' -- and
-therefore each subdir keeps track of itself.
+therefore each subdir keeps track of itself in its own versions-file.
 
 Taken from libsvn_wc/README, the XML file format looks like:
 
@@ -68,12 +72,64 @@ Taken from libsvn_wc/README, the XML file format looks like:
   </wc-versions>
 
 Note that if there exists a file in text-base that is not mentioned in
-the `versions' file, it is assumed to have the same version as the
-parent directory.  (In the case above, version 5.)  The `versions'
-file only records *exceptions* to this rule.  
+the versions-file, it is assumed to have the same version as the
+parent directory.  (In the case above, version 5.)  The versionsfile
+only records *exceptions* to this rule.
 
--------------------------------------------------------------- **/
+/*--------------------------------------------------------------- */
+
+/** xml callbacks **/
 
+
+/* Called whenever we find an <open> tag of some kind */
+static void
+xml_handle_start (void *userData, const char *name, const char **atts)
+{
+  /* There are only two kinds of tags to examine */
+
+  if (! strcmp (name, "wc-versions"))
+    {
+    }
+
+  else if (! strcmp (name, "entry"))
+    {
+    }
+
+  else
+    {
+      /* just ignore unrecognized tags */
+    }
+
+}
+
+
+/* Called whenever we find a <close> tag of some kind */
+static void 
+xml_handle_end (void *userData, const char *name)
+{
+  /* There are only two kinds of tags to examine */
+
+  if (! strcmp (name, "wc-versions"))
+    {
+    }
+
+  else if (! strcmp (name, "entry"))
+    {
+    }
+
+  else
+    {
+      /* just ignore unrecognized tags */
+    }
+
+
+}
+
+
+
+/*----------------------------------------------------------------------*/
+
+/** Public Interfaces **/
 
 
 /* For a given ENTRYNAME in PATH, set its version to VERSION in the
@@ -89,6 +145,16 @@ svn_error_t *svn_wc__set_versions_entry (svn_string_t *path,
                                          svn_vernum_t version,
                                          ...)
 {
+  va_list argptr;
+
+  apr_file_t *infile = NULL;
+  apr_file_t *outfile = NULL;
+
+  /* Create a custom XML parser */
+
+
+
+
   return SVN_NO_ERROR;
 }
 

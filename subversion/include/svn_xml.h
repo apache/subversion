@@ -52,6 +52,7 @@
 #define SVN_XML_H
 
 #include "xmlparse.h"
+#include "svn_error.h"
 
 
 /* Used as an argument to svn_xml_write_tag() */
