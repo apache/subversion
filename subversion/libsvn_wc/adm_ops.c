@@ -681,10 +681,10 @@ svn_wc_add (svn_stringbuf_t *path,
   if (copyfrom_url)
     {
       apr_hash_set (atts, 
-                    SVN_WC_ENTRY_ATTR_COPYFROM_URL, APR_HASH_KEY_STRING,
+                    SVN_WC__ENTRY_ATTR_COPYFROM_URL, APR_HASH_KEY_STRING,
                     copyfrom_url);
       apr_hash_set (atts, 
-                    SVN_WC_ENTRY_ATTR_COPYFROM_REV, APR_HASH_KEY_STRING,
+                    SVN_WC__ENTRY_ATTR_COPYFROM_REV, APR_HASH_KEY_STRING,
                     svn_stringbuf_createf (pool, "%ld", copyfrom_rev));
     }
 
@@ -986,7 +986,7 @@ revert_admin_things (svn_stringbuf_t *parent_dir,
     
       /* Handle the three possible text conflict files. */
       if ((old_file = apr_hash_get (entry->attributes, 
-                                    SVN_WC_ENTRY_ATTR_CONFLICT_OLD,
+                                    SVN_WC__ENTRY_ATTR_CONFLICT_OLD,
                                     APR_HASH_KEY_STRING)))
         {
           rmfile = svn_stringbuf_dup (parent_dir, pool);
@@ -996,7 +996,7 @@ revert_admin_things (svn_stringbuf_t *parent_dir,
         }
     
       if ((new_file = apr_hash_get (entry->attributes, 
-                                    SVN_WC_ENTRY_ATTR_CONFLICT_NEW,
+                                    SVN_WC__ENTRY_ATTR_CONFLICT_NEW,
                                     APR_HASH_KEY_STRING)))
         {
           rmfile = svn_stringbuf_dup (parent_dir, pool);
@@ -1006,7 +1006,7 @@ revert_admin_things (svn_stringbuf_t *parent_dir,
         }
     
       if ((wrk_file = apr_hash_get (entry->attributes, 
-                                    SVN_WC_ENTRY_ATTR_CONFLICT_WRK,
+                                    SVN_WC__ENTRY_ATTR_CONFLICT_WRK,
                                     APR_HASH_KEY_STRING)))
         {
           rmfile = svn_stringbuf_dup (parent_dir, pool);
@@ -1017,7 +1017,7 @@ revert_admin_things (svn_stringbuf_t *parent_dir,
     
       /* Remove the prej-file if the entry lists one (and it exists) */
       if ((prej_file = apr_hash_get (entry->attributes, 
-                                     SVN_WC_ENTRY_ATTR_PREJFILE,
+                                     SVN_WC__ENTRY_ATTR_PREJFILE,
                                      APR_HASH_KEY_STRING)))
         {
           rmfile = svn_stringbuf_dup (parent_dir, pool);
@@ -1143,10 +1143,10 @@ svn_wc_revert (svn_stringbuf_t *path,
           if (modify_flags & SVN_WC__ENTRY_MODIFY_ATTRIBUTES)
             {
               /* ### Should we remove these files from disk, too? */
-              remove1 = SVN_WC_ENTRY_ATTR_CONFLICT_OLD;
-              remove2 = SVN_WC_ENTRY_ATTR_CONFLICT_NEW;
-              remove3 = SVN_WC_ENTRY_ATTR_CONFLICT_WRK;
-              remove4 = SVN_WC_ENTRY_ATTR_PREJFILE;
+              remove1 = SVN_WC__ENTRY_ATTR_CONFLICT_OLD;
+              remove2 = SVN_WC__ENTRY_ATTR_CONFLICT_NEW;
+              remove3 = SVN_WC__ENTRY_ATTR_CONFLICT_WRK;
+              remove4 = SVN_WC__ENTRY_ATTR_PREJFILE;
             }
 
           SVN_ERR (svn_wc__entry_modify
@@ -1179,7 +1179,7 @@ svn_wc_revert (svn_stringbuf_t *path,
           if (modify_flags & SVN_WC__ENTRY_MODIFY_ATTRIBUTES)
             {
               /* ### Should we remove this file from disk, too? */
-              remove1 = SVN_WC_ENTRY_ATTR_PREJFILE;
+              remove1 = SVN_WC__ENTRY_ATTR_PREJFILE;
             }
 
           /* Reset the schedule to normal in the directory itself. */

@@ -200,11 +200,11 @@ svn_wc_merge (const char *parent,
       svn_path_split (left_copy, &parentt, &left_base, pool);
       svn_path_split (right_copy, &parentt, &right_base, pool);
       svn_path_split (target_copy, &parentt, &target_base, pool);
-      apr_hash_set (atthash, SVN_WC_ENTRY_ATTR_CONFLICT_OLD,
+      apr_hash_set (atthash, SVN_WC__ENTRY_ATTR_CONFLICT_OLD,
                     APR_HASH_KEY_STRING, left_base);
-      apr_hash_set (atthash, SVN_WC_ENTRY_ATTR_CONFLICT_NEW,
+      apr_hash_set (atthash, SVN_WC__ENTRY_ATTR_CONFLICT_NEW,
                     APR_HASH_KEY_STRING, right_base);
-      apr_hash_set (atthash, SVN_WC_ENTRY_ATTR_CONFLICT_WRK,
+      apr_hash_set (atthash, SVN_WC__ENTRY_ATTR_CONFLICT_WRK,
                     APR_HASH_KEY_STRING, target_base);
 
       /* Mark merge_target's entry as "Conflicted", and start tracking

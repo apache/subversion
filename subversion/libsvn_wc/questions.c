@@ -645,7 +645,7 @@ svn_wc_conflicted_p (svn_boolean_t *text_conflicted_p,
          file, since these attributes would never be set on a directory
          anyway.  */
       old_file = apr_hash_get (entry->attributes,
-                               SVN_WC_ENTRY_ATTR_CONFLICT_OLD,
+                               SVN_WC__ENTRY_ATTR_CONFLICT_OLD,
                                APR_HASH_KEY_STRING);
       if (old_file)
         {
@@ -658,7 +658,7 @@ svn_wc_conflicted_p (svn_boolean_t *text_conflicted_p,
       else
         {
           new_file = apr_hash_get (entry->attributes,
-                                   SVN_WC_ENTRY_ATTR_CONFLICT_NEW,
+                                   SVN_WC__ENTRY_ATTR_CONFLICT_NEW,
                                    APR_HASH_KEY_STRING);
           if (new_file)
             {
@@ -671,7 +671,7 @@ svn_wc_conflicted_p (svn_boolean_t *text_conflicted_p,
           else
             {
               wrk_file = apr_hash_get (entry->attributes,
-                                       SVN_WC_ENTRY_ATTR_CONFLICT_WRK,
+                                       SVN_WC__ENTRY_ATTR_CONFLICT_WRK,
                                        APR_HASH_KEY_STRING);
               if (wrk_file)
                 {
@@ -686,7 +686,7 @@ svn_wc_conflicted_p (svn_boolean_t *text_conflicted_p,
 
       /* What about prop conflicts? */
       prej_file = apr_hash_get (entry->attributes,
-                                SVN_WC_ENTRY_ATTR_PREJFILE,
+                                SVN_WC__ENTRY_ATTR_PREJFILE,
                                 APR_HASH_KEY_STRING);
       if (prej_file)
         {
