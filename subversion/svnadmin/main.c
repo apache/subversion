@@ -185,6 +185,9 @@ main (int argc, const char * const *argv)
         {
           svn_fs_txn_t *txn;
           svn_fs_root_t *this_root;
+          svn_stringbuf_t *datestamp;
+          svn_string_t date_prop = {SVN_PROP_REVISION_DATE,
+                                    strlen(SVN_PROP_REVISION_DATE)};
           apr_pool_t *this_pool = svn_pool_create (pool);
 
           err = svn_fs_open_txn (&txn, fs, txn_name, this_pool);
@@ -193,8 +196,12 @@ main (int argc, const char * const *argv)
           err = svn_fs_txn_root (&this_root, txn, this_pool);
           if (err) goto error;
 
+          err = svn_fs_txn_prop (&datestamp, txn, &date_prop, this_pool);
+          if (err) goto error;
+
           printf ("Txn %s:\n", txn_name);
-          printf ("===============\n");
+          printf ("Created: %s\n", datestamp->data);
+          printf ("==========================================\n");
           print_tree (this_root, "", 1, this_pool);
           printf ("\n");
 
@@ -232,13 +239,21 @@ main (int argc, const char * const *argv)
       for (this = lower; this <= upper; this++)
         {
           svn_fs_root_t *this_root;
+          svn_stringbuf_t *datestamp;
           apr_pool_t *this_pool = svn_pool_create (pool);
-
+          svn_string_t date_prop = {SVN_PROP_REVISION_DATE,
+                                    strlen(SVN_PROP_REVISION_DATE)};
+           
           err = svn_fs_revision_root (&this_root, fs, this, this_pool);
           if (err) goto error;
 
-          printf ("Revision %ld:\n", (long int) this);
-          printf ("===============\n");
+          err = svn_fs_revision_prop (&datestamp, fs, this,
+                                      &date_prop, this_pool);
+          if (err) goto error;
+
+          printf ("Revision %ld\n", (long int) this);
+          printf ("Created: %s\n", datestamp->data);
+          printf ("==========================================\n");
           print_tree (this_root, "", 1, this_pool);
           printf ("\n");
 
