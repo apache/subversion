@@ -759,16 +759,16 @@ svn_client_export3 (svn_revnum_t *result_rev,
       svn_revnum_t revnum;
       void *session;
       svn_ra_plugin_t *ra_lib;
-      void *edit_baton;
       svn_node_kind_t kind;
-      const svn_delta_editor_t *export_editor;
-      const svn_ra_reporter_t *reporter;
-      void *report_baton;
       struct edit_baton *eb = apr_pcalloc (pool, sizeof (*eb));
-      svn_delta_editor_t *editor = svn_delta_default_editor (pool);
-      svn_boolean_t use_sleep = FALSE;
 
+      /* Get the RA connection. */
+      SVN_ERR (svn_client__ra_lib_from_path (&ra_lib, &session, &revnum,
+                                             &url, from, peg_revision,
+                                             revision, ctx, pool));
+      
       eb->root_path = to;
+      eb->root_url = url;
       eb->force = force;
       eb->target_revision = &edit_revision;
       eb->notify_func = ctx->notify_func;
@@ -776,61 +776,115 @@ svn_client_export3 (svn_revnum_t *result_rev,
       eb->externals = apr_hash_make (pool);
       eb->native_eol = native_eol; 
 
-      editor->set_target_revision = set_target_revision;
-      editor->open_root = open_root;
-      editor->add_directory = add_directory;
-      editor->add_file = add_file;
-      editor->apply_textdelta = apply_textdelta;
-      editor->close_file = close_file;
-      editor->change_file_prop = change_file_prop;
-      editor->change_dir_prop = change_dir_prop;
+      SVN_ERR (ra_lib->check_path (session, "", revnum, &kind, pool));
+
+      if (kind == svn_node_file)
+        {
+          svn_stream_t *tmp_stream;
+          apr_hash_t *props;
+          apr_hash_index_t *hi;
+          struct file_baton *fb = apr_pcalloc (pool, sizeof(*fb));
+
+          /* Since you cannot actually root an editor at a file, we 
+           * manually drive a few functions of our editor. */
+
+          /* This is the equivalent of a parentless add_file(). */
+          fb->edit_baton = eb;
+          fb->path = eb->root_path;
+          fb->url = eb->root_url;
+          fb->pool = pool;
+          
+          /* Copied from apply_textdelta(). */
+          SVN_ERR (svn_io_open_unique_file (&fb->tmp_file, &(fb->tmppath),
+                                            fb->path, ".tmp", FALSE, fb->pool));
+
+          /* Step outside the editor-likeness for a moment, to actually talk
+           * to the repository. */
+          SVN_ERR(ra_lib->get_file (session, "", revnum,
+                                    svn_stream_from_aprfile (fb->tmp_file,
+                                                             pool),
+                                    NULL, &props, pool));
+
+          /* Push the props into change_file_prop(), to update the file_baton
+           * with infomation. */
+          for (hi = apr_hash_first (pool, props); hi; hi = apr_hash_next (hi))
+            {
+              const char *propname;
+              svn_string_t *propval;
+              const void *key;
+              void *val;
+
+              apr_hash_this (hi, &key, NULL, &val);
+
+              propname = key;
+              propval = val;
+
+              SVN_ERR (change_file_prop (fb, propname, propval, pool));
+            }
+          
+          /* And now just use close_file() to do all the keyword and EOL
+           * work, and put the file into place. */
+          SVN_ERR (close_file (fb, NULL, pool));
+        }
+      else if (kind == svn_node_dir)
+        {
+          void *edit_baton;
+          const svn_delta_editor_t *export_editor;
+          const svn_ra_reporter_t *reporter;
+          void *report_baton;
+          svn_delta_editor_t *editor = svn_delta_default_editor (pool);
+          svn_boolean_t use_sleep = FALSE;
+
+          editor->set_target_revision = set_target_revision;
+          editor->open_root = open_root;
+          editor->add_directory = add_directory;
+          editor->add_file = add_file;
+          editor->apply_textdelta = apply_textdelta;
+          editor->close_file = close_file;
+          editor->change_file_prop = change_file_prop;
+          editor->change_dir_prop = change_dir_prop;
+          
+          SVN_ERR (svn_delta_get_cancellation_editor (ctx->cancel_func,
+                                                      ctx->cancel_baton,
+                                                      editor,
+                                                      eb,
+                                                      &export_editor,
+                                                      &edit_baton,
+                                                      pool));
       
-      SVN_ERR (svn_delta_get_cancellation_editor (ctx->cancel_func,
-                                                  ctx->cancel_baton,
-                                                  editor,
-                                                  eb,
-                                                  &export_editor,
-                                                  &edit_baton,
-                                                  pool));
-  
-      /* Get the RA connection. */
-      SVN_ERR (svn_client__ra_lib_from_path (&ra_lib, &session, &revnum,
-                                             &url, from, peg_revision,
-                                             revision, ctx, pool));
       
-      eb->root_url = url;
-      
-      /* Manufacture a basic 'report' to the update reporter. */
-      SVN_ERR (ra_lib->do_update (session,
-                                  &reporter, &report_baton,
-                                  revnum,
-                                  "", /* no sub-target */
-                                  TRUE, /* recurse */
-                                  export_editor, edit_baton, pool));
+          /* Manufacture a basic 'report' to the update reporter. */
+          SVN_ERR (ra_lib->do_update (session,
+                                      &reporter, &report_baton,
+                                      revnum,
+                                      "", /* no sub-target */
+                                      TRUE, /* recurse */
+                                      export_editor, edit_baton, pool));
 
-      SVN_ERR (reporter->set_path (report_baton, "", revnum,
-                                   TRUE, /* "help, my dir is empty!" */
-                                   pool));
+          SVN_ERR (reporter->set_path (report_baton, "", revnum,
+                                       TRUE, /* "help, my dir is empty!" */
+                                       pool));
 
-      SVN_ERR (reporter->finish_report (report_baton, pool));               
+          SVN_ERR (reporter->finish_report (report_baton, pool));               
 
-      /* Special case: Due to our sly export/checkout method of
-       * updating an empty directory, no target will have been created
-       * if the exported item is itself an empty directory
-       * (export_editor->open_root never gets called, because there
-       * are no "changes" to make to the empty dir we reported to the
-       * repository).
-       *
-       * So we just create the empty dir manually; but we do it via
-       * open_root_internal(), in order to get proper notification.
-       */
-      SVN_ERR (svn_io_check_path (to, &kind, pool));
-      if (kind == svn_node_none)
-        SVN_ERR (open_root_internal
-                 (to, force, ctx->notify_func, ctx->notify_baton, pool));
+          /* Special case: Due to our sly export/checkout method of
+           * updating an empty directory, no target will have been created
+           * if the exported item is itself an empty directory
+           * (export_editor->open_root never gets called, because there
+           * are no "changes" to make to the empty dir we reported to the
+           * repository).
+           *
+           * So we just create the empty dir manually; but we do it via
+           * open_root_internal(), in order to get proper notification.
+           */
+          SVN_ERR (svn_io_check_path (to, &kind, pool));
+          if (kind == svn_node_none)
+            SVN_ERR (open_root_internal
+                     (to, force, ctx->notify_func, ctx->notify_baton, pool));
 
-      SVN_ERR (svn_client__fetch_externals (eb->externals, TRUE, 
-                                            &use_sleep, ctx, pool));
+          SVN_ERR (svn_client__fetch_externals (eb->externals, TRUE, 
+                                                &use_sleep, ctx, pool));
+        }
     }
   else
     {
