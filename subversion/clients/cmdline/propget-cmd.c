@@ -22,6 +22,7 @@
 
 /*** Includes. ***/
 
+#include "svn_cmdline.h"
 #include "svn_pools.h"
 #include "svn_wc.h"
 #include "svn_client.h"
@@ -124,7 +125,7 @@ svn_cl__propget (apr_getopt_t *os,
           
           if (svn_prop_needs_translation (pname_utf8))
             SVN_ERR (svn_subst_detranslate_string (&printable_val, propval,
-                                                   pool));
+                                                   TRUE, pool));
           
           SVN_ERR (stream_write (out, printable_val->data, 
                                  printable_val->len));
@@ -161,7 +162,7 @@ svn_cl__propget (apr_getopt_t *os,
               void *val;
               const char *filename; 
               svn_string_t *propval;
-              const char *filename_native;
+              const char *filename_stdout;
               
               apr_hash_this (hi, &key, NULL, &val);
               filename = key;
@@ -171,14 +172,14 @@ svn_cl__propget (apr_getopt_t *os,
                  UTF8, so convert to the native format. */
               if (svn_prop_needs_translation (pname_utf8))
                 SVN_ERR (svn_subst_detranslate_string (&propval, propval,
-                                                       subpool));
+                                                       TRUE, subpool));
               
               if (print_filenames) 
                 {
-                  SVN_ERR (svn_utf_cstring_from_utf8 (&filename_native,
-                                                      filename, subpool));
-                  SVN_ERR (stream_write (out, filename_native,
-                                         strlen (filename_native)));
+                  SVN_ERR (svn_cmdline_cstring_from_utf8 (&filename_stdout,
+                                                          filename, subpool));
+                  SVN_ERR (stream_write (out, filename_stdout,
+                                         strlen (filename_stdout)));
                   SVN_ERR (stream_write (out, " - ", 3));
                 } 
               SVN_ERR (stream_write (out, propval->data, propval->len));

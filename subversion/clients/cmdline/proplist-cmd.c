@@ -22,6 +22,7 @@
 
 /*** Includes. ***/
 
+#include "svn_cmdline.h"
 #include "svn_wc.h"
 #include "svn_pools.h"
 #include "svn_client.h"
@@ -29,7 +30,6 @@
 #include "svn_path.h"
 #include "svn_delta.h"
 #include "svn_error.h"
-#include "svn_utf.h"
 #include "cl.h"
 
 
@@ -124,11 +124,10 @@ svn_cl__proplist (apr_getopt_t *os,
             {
               svn_client_proplist_item_t *item 
                 = ((svn_client_proplist_item_t **)props->elts)[j];
-              const char *node_name_native;
-              SVN_ERR (svn_utf_cstring_from_utf8_stringbuf (&node_name_native,
-                                                            item->node_name,
-                                                            subpool));
-              printf("Properties on '%s':\n", node_name_native);
+              const char *node_name_stdout;
+              SVN_ERR (svn_cmdline_cstring_from_utf8
+                       (&node_name_stdout, item->node_name->data, subpool));
+              printf("Properties on '%s':\n", node_name_stdout);
               SVN_ERR (svn_cl__print_prop_hash
                        (item->prop_hash, (! opt_state->verbose), subpool));
             }

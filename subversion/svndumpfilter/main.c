@@ -19,6 +19,7 @@
 
 #include <apr_file_io.h>
 
+#include "svn_cmdline.h"
 #include "svn_error.h"
 #include "svn_opt.h"
 #include "svn_utf.h"

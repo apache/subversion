@@ -24,6 +24,7 @@
 
 #include <apr_lib.h>
 
+#include "svn_cmdline.h"
 #include "svn_wc.h"
 #include "svn_client.h"
 #include "svn_string.h"
@@ -51,7 +52,7 @@ prompt (const char **result,
   apr_status_t status;
   apr_file_t *fp;
   char c;
-  const char *prompt_native;
+  const char *prompt_stdout;
 
   svn_stringbuf_t *strbuf = svn_stringbuf_create ("", pool);
 
@@ -59,12 +60,12 @@ prompt (const char **result,
   if (status)
     return svn_error_create (status, NULL, "couldn't open stdin");
 
-  SVN_ERR (svn_utf_cstring_from_utf8 (&prompt_native, prompt_msg, pool));
+  SVN_ERR (svn_cmdline_cstring_from_utf8 (&prompt_stdout, prompt_msg, pool));
 
   if (! hide)
     {
       svn_boolean_t saw_first_half_of_eol = FALSE;
-      fprintf (stderr, "%s", prompt_native);
+      fprintf (stderr, "%s", prompt_stdout);
       fflush (stderr);
 
       while (1)
@@ -103,12 +104,12 @@ prompt (const char **result,
       size_t bufsize = 300;
       svn_stringbuf_ensure (strbuf, bufsize);
 
-      status = apr_password_get (prompt_native, strbuf->data, &bufsize);
+      status = apr_password_get (prompt_stdout, strbuf->data, &bufsize);
       if (status)
         return svn_error_create (status, NULL, "error from apr_password_get");
     }
 
-  SVN_ERR (svn_utf_cstring_to_utf8 (result, strbuf->data, pool));
+  SVN_ERR (svn_cmdline_cstring_to_utf8 (result, strbuf->data, pool));
 
   return SVN_NO_ERROR;
 }

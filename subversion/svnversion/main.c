@@ -14,6 +14,7 @@
  * ====================================================================
  */
 
+#include "svn_cmdline.h"
 #include "svn_pools.h"
 #include "svn_client.h"
 #include "svn_utf.h"

@@ -22,6 +22,7 @@
 
 /*** Includes. ***/
 
+#include "svn_cmdline.h"
 #include "svn_wc.h"
 #include "svn_pools.h"
 #include "svn_client.h"
@@ -184,13 +185,16 @@ svn_cl__propset (apr_getopt_t *os,
 
           if (! opt_state->quiet) 
             {
-              const char *target_native;
-              SVN_ERR (svn_utf_cstring_from_utf8 (&target_native,
-                                                  target, subpool));
+              const char *pname_stdout;
+              const char *target_stdout;
+              SVN_ERR (svn_cmdline_cstring_from_utf8 (&pname_stdout,
+                                                      pname_utf8, subpool));
+              SVN_ERR (svn_cmdline_cstring_from_utf8 (&target_stdout,
+                                                      target, subpool));
               printf ("property '%s' set%s on '%s'\n",
-                      pname, 
+                      pname_stdout,
                       opt_state->recursive ? " (recursively)" : "",
-                      target_native);
+                      target_stdout);
             }
           SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
         }

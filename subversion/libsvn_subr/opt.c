@@ -25,6 +25,7 @@
 #include <apr_general.h>
 #include <apr_lib.h>
 
+#include "svn_cmdline.h"
 #include "svn_version.h"
 #include "svn_types.h"
 #include "svn_wc.h"
@@ -685,15 +686,15 @@ print_version_info (const char *pgm_name,
 
   if (footer)
     {
-      const char *footer_native;
+      const char *footer_stdout;
 
       /* ### Back when this code lived in help-cmd.c, prior to rev
        * 3250 or so, this was the only part of the version output that
        * did utf8-to-native conversion.  So I've kept that conversion,
        * but shouldn't the rest of the code do something similar?
        */
-      SVN_ERR (svn_utf_cstring_from_utf8 (&footer_native, footer, pool));
-      printf ("%s\n", footer_native);
+      SVN_ERR (svn_cmdline_cstring_from_utf8 (&footer_stdout, footer, pool));
+      printf ("%s\n", footer_stdout);
     }
 
   return SVN_NO_ERROR;
