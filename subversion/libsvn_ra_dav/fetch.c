@@ -1788,7 +1788,14 @@ start_element(void *userdata, int parent_state, const char *nspace,
       svn_stringbuf_set(rb->namestr, name);
 
       parent_dir = &TOP_DIR(rb);
-      subpool = parent_dir->pool;
+
+      /* Pool use is a little non-standard here.  When lots of items in the
+         same directory get deleted each one will trigger a call to
+         editor->delete_entry, but we don't have a pool that readily fits
+         the usual iteration pattern and so memory use could grow without
+         bound (see issue 1635).  To avoid such growth we use a temporary,
+         short-lived, pool. */
+      subpool = svn_pool_create (parent_dir->pool);
 
       pathbuf = svn_stringbuf_dup(parent_dir->pathbuf, subpool);
       svn_path_add_component(pathbuf, rb->namestr->data);
@@ -1797,6 +1804,7 @@ start_element(void *userdata, int parent_state, const char *nspace,
                                           SVN_INVALID_REVNUM,
                                           TOP_DIR(rb).baton,
                                           subpool) );
+      svn_pool_destroy (subpool);
       break;
 
     default:
