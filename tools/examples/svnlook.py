@@ -38,11 +38,7 @@ class SVNLook:
         rev = fs.youngest_rev(self.fs_ptr, pool)
     self.rev = rev
 
-    try:
-      getattr(self, 'cmd_' + cmd)()
-    finally:
-      if self.txn_ptr:
-        fs.close_txn(self.txn_ptr)
+    getattr(self, 'cmd_' + cmd)()
 
   def cmd_default(self):
     self.cmd_info()

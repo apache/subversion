@@ -1013,7 +1013,7 @@ merge_dir_deleted (svn_wc_adm_access_t *adm_access,
   svn_node_kind_t kind;
   svn_wc_adm_access_t *parent_access;
   const char *parent_path;
-      svn_error_t *err;
+  svn_error_t *err;
 
   /* Easy out:  if we have no adm_access for the parent directory,
      then this portion of the tree-delta "patch" must be inapplicable.
