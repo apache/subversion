@@ -91,10 +91,6 @@ SOURCE=.\checkout.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\commit_editor.c
-# End Source File
-# Begin Source File
-
 SOURCE=.\ra_plugin.c
 # End Source File
 # Begin Source File
