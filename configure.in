@@ -131,7 +131,9 @@ SVN_LIB_APR($APR_VER_REGEX, $APR_VER_REGEX_TOO)
 SVN_LIB_APRUTIL($APU_VER_REGEX, $APU_VER_REGEX_TOO)
 
 if test -d "$abs_srcdir/db" ; then
-    AC_MSG_ERROR([Berkeley DB in the source tree is not supported anymore])
+    AC_MSG_ERROR([Configuring against an in-tree copy of Berkeley DB is no
+                  longer supported. Berkeley DB must be separately installed,
+                  and perhaps specified by adding --with-berkeley-db=PATH])
 fi
 
 dnl What version of Expat are we using? -----------------
