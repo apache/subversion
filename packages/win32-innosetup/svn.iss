@@ -1,8 +1,9 @@
 [Setup]
 ;# Version parameters #########################################################
-#define svn_version "0.18.1"
-#define svn_release "5118"
 #define svn_cpr "Copyright ©2000-2003 CollabNet"
+
+; Version and release info:
+#include "svn_version.iss"
 
 ;# paths_inno_src.iss ##########################################################
 ; This file contains all the paths needed by inno for finding the sources to
