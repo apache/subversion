@@ -1194,6 +1194,64 @@ make_translation_open_tag (svn_stringbuf_t **entry_accum,
 }
 
 
+static void
+make_patch_open_tag (svn_stringbuf_t **entry_accum,
+                     const svn_stringbuf_t *path,
+                     const svn_stringbuf_t *reject_file,
+                     const svn_stringbuf_t *patch_file,
+                     apr_pool_t *pool)
+{
+  svn_stringbuf_t *dir, *bname;
+  svn_stringbuf_t *backup_prefix = svn_stringbuf_create ("-B", pool);
+
+  svn_path_split (path, &dir, &bname, svn_path_local_style, pool);
+  if (dir)
+    {
+      /* Append '.#' to the dir, then append that whole thing to the
+         BACKUP_PREFIX. */
+      svn_path_add_component_nts (dir, ".#", svn_path_local_style);
+      svn_stringbuf_appendstr (backup_prefix, dir);
+    }
+  else
+    {
+      /* There is no directory after the split (meaning our target is
+         just a basename), so just pass the prefix. */
+      svn_stringbuf_appendcstr (backup_prefix, ".#");
+    }
+
+  /* kff todo: these options will have to be portablized too.  Even if
+     we know we're doing a plaintext patch, not all patch programs
+     support these args. */
+  svn_xml_make_open_tag (entry_accum, 
+                         pool,
+                         svn_xml_self_closing,
+                         SVN_WC__LOG_RUN_CMD,
+                         SVN_WC__LOG_ATTR_NAME,
+                         svn_stringbuf_create (SVN_CLIENT_PATCH, pool),
+                         /* reject file */
+                         SVN_WC__LOG_ATTR_ARG_1,
+                         svn_stringbuf_create ("-r", pool),
+                         SVN_WC__LOG_ATTR_ARG_2,
+                         reject_file,
+                         /* backup prefix */
+                         SVN_WC__LOG_ATTR_ARG_3, 
+                         backup_prefix, 
+                         /* force */
+                         SVN_WC__LOG_ATTR_ARG_4,
+                         svn_stringbuf_create ("-f", pool), 
+                         /* target file */
+                         SVN_WC__LOG_ATTR_ARG_5,
+                         svn_stringbuf_create ("--", pool),
+                         SVN_WC__LOG_ATTR_ARG_6,
+                         path,
+                         /* patch file */
+                         SVN_WC__LOG_ATTR_INFILE,
+                         patch_file,
+                         NULL);
+  return;
+}
+
+
 /* Another helper for close_file, which is now the size of a small
    planet.  Look through array of 'svn:entry' PROPS.  If any property
    matches a keyword (and is already set in KEYWORDS) then make
@@ -1538,8 +1596,6 @@ close_file (void *file_baton)
             {
               enum svn_node_kind wfile_kind = svn_node_unknown;
               svn_stringbuf_t *received_diff_filename;
-              svn_stringbuf_t *patch_cmd
-                = svn_stringbuf_create (SVN_CLIENT_PATCH, fb->pool);
               apr_file_t *reject_file = NULL;
               svn_stringbuf_t *reject_filename = NULL;
               
@@ -1701,31 +1757,11 @@ close_file (void *file_baton)
                          not doing keyword translation, then just
                          apply the LF patchfile directly to the
                          working file.  No big deal. */
-
-                      /* kff todo: these options will have to be
-                         portablized too.  Even if we know we're doing a
-                         plaintext patch, not all patch programs support
-                         these args. */
-                      svn_xml_make_open_tag
-                        (&entry_accum, fb->pool, svn_xml_self_closing,
-                         SVN_WC__LOG_RUN_CMD,
-                         SVN_WC__LOG_ATTR_NAME,
-                         patch_cmd,
-                         SVN_WC__LOG_ATTR_ARG_1,
-                         svn_stringbuf_create ("-r", fb->pool),
-                         SVN_WC__LOG_ATTR_ARG_2,
-                         reject_filename,
-                         SVN_WC__LOG_ATTR_ARG_3,
-                         svn_stringbuf_create ("-B.#", fb->pool),
-                         SVN_WC__LOG_ATTR_ARG_4,
-                         svn_stringbuf_create ("-f", fb->pool),
-                         SVN_WC__LOG_ATTR_ARG_5,
-                         svn_stringbuf_create ("--", fb->pool),
-                         SVN_WC__LOG_ATTR_ARG_6,
-                         fb->name,
-                         SVN_WC__LOG_ATTR_INFILE,
-                         received_diff_filename,
-                         NULL);
+                      make_patch_open_tag (&entry_accum,
+                                           fb->name,
+                                           reject_filename,
+                                           received_diff_filename,
+                                           fb->pool);
                     }
                   else  /* keyword expansion or EOL translation is
                            active */
@@ -1762,25 +1798,11 @@ close_file (void *file_baton)
                                                  FALSE); /* expand */
 
                       /* Now patch the tmp-working file. */
-                      svn_xml_make_open_tag
-                        (&entry_accum, fb->pool, svn_xml_self_closing,
-                         SVN_WC__LOG_RUN_CMD,
-                         SVN_WC__LOG_ATTR_NAME,
-                         patch_cmd,
-                         SVN_WC__LOG_ATTR_ARG_1,
-                         svn_stringbuf_create ("-r", fb->pool),
-                         SVN_WC__LOG_ATTR_ARG_2,
-                         reject_filename,
-                         SVN_WC__LOG_ATTR_ARG_3,
-                         svn_stringbuf_create ("-B.#", fb->pool),
-                         SVN_WC__LOG_ATTR_ARG_4,
-                         svn_stringbuf_create ("-f", fb->pool),
-                         SVN_WC__LOG_ATTR_ARG_5,
-                         svn_stringbuf_create ("--", fb->pool),
-                         SVN_WC__LOG_ATTR_ARG_6,
-                         tmp_working,
-                         SVN_WC__LOG_ATTR_INFILE,
-                         received_diff_filename, NULL);
+                      make_patch_open_tag (&entry_accum,
+                                           tmp_working,
+                                           reject_filename,
+                                           received_diff_filename,
+                                           fb->pool);
 
                       /* We already know that the latest eol-style
                          must be either 'native' or 'fixed', and is
