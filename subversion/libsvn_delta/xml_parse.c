@@ -1218,56 +1218,25 @@ xml_handle_data (void *userData, const char *data, int len)
 }
 
 
-
-/* Return an expat parser object which uses our svn_xml_* routines
-   above as callbacks.  */
-
-static XML_Parser
-make_xml_parser (svn_xml__digger_t *diggy)
-{
-  /* Create the parser */
-  XML_Parser parser = XML_ParserCreate (NULL);
-
-  /* All callbacks should receive the digger structure. */
-  XML_SetUserData (parser, diggy);
-
-  /* Register subversion-specific callbacks with the parser */
-  XML_SetElementHandler (parser,
-                         xml_handle_start,
-                         xml_handle_end); 
-  XML_SetCharacterDataHandler (parser, xml_handle_data);
-
-  return parser;
-}
-
-
 /*------------------------------------------------------------------*/
-/* The _one_ public interface in this file.  (see svn_delta.h)
+/* Public interfaces (see svn_delta.h)  */
 
-  svn_delta_parse() reads an XML stream from a specified source using
-  expat, validating the XML as it goes.  Whenever an interesting event
-  happens, it calls a caller-specified callback routine from an
-  svn_walk_t structure.
 
-*/
 
-svn_error_t *
-svn_xml_parse (svn_delta_read_fn_t *source_fn,
-               void *source_baton,
-               const svn_delta_walk_t *walker,
-               void *walk_baton,
-               void *dir_baton,
-               apr_pool_t *pool)
+/* Return an expat parser object which knows to make calls into WALKER
+   using WALK_BATON and DIR_BATON */
+svn_xml_parser_t *
+svn_make_xml_parser (const svn_delta_walk_t *walker,
+                     void *walk_baton,
+                     void *dir_baton,
+                     apr_pool_t *pool)
 {
-  char buf[BUFSIZ];
-  apr_off_t len;
-  int done;
-  svn_error_t *err = NULL;
+  svn_xml_parser_t *xmlparser;
   XML_Parser expat_parser;
+  svn_xml__digger_t *digger;
 
-  /* Create a digger structure */
-  svn_xml__digger_t *digger
-    = apr_pcalloc (pool, sizeof (svn_xml__digger_t));
+  /* Create a new digger structure and fill it out*/
+  digger = apr_pcalloc (pool, sizeof (svn_xml__digger_t));
 
   digger->pool             = pool;
   digger->stack            = NULL;
@@ -1277,61 +1246,118 @@ svn_xml_parse (svn_delta_read_fn_t *source_fn,
   digger->validation_error = SVN_NO_ERROR;
   digger->vcdiff_parser    = NULL;
 
-  /* Create a custom expat parser (uses our own svn callbacks and
-     hands them the digger on each XML event) */
-  expat_parser = make_xml_parser (digger);
+  /* Create an expat parser */
+  expat_parser = XML_ParserCreate (NULL);
+
+  /* All expat callbacks should receive the digger structure. */
+  XML_SetUserData (expat_parser, digger);
+
+  /* Register our local callbacks with the expat parser */
+  XML_SetElementHandler (expat_parser,
+                         xml_handle_start,
+                         xml_handle_end); 
+  XML_SetCharacterDataHandler (expat_parser, xml_handle_data);
 
   /* Store the parser in the digger too, so that our expat callbacks
      can magically set themselves to NULL in the case of an error. */
-
   digger->expat_parser = expat_parser;
 
+  /* Create a new subversion xml parser and put everything inside it. */
+  xmlparser = apr_pcalloc (pool, sizeof (svn_xml_parser_t));
+  
+  xmlparser->expat_parser = expat_parser;
+  xmlparser->digger       = digger;
 
-  /* Our main parse-loop */
+  return xmlparser;
+}
 
-  do {
-    /* Read BUFSIZ bytes into buf using the supplied read function. */
-    len = BUFSIZ;
-    err = (*(source_fn)) (source_baton, buf, &len, digger->pool);
-    if (err)
-      {
-        err = svn_quick_wrap_error (err,
-                                    "svn_delta_parse: can't read data source");
-        goto error;
-      }
 
-    /* How many bytes were actually read into buf?  According to the
-       definition of an svn_delta_read_fn_t, we should keep reading
-       until the reader function says that 0 bytes were read. */
-    done = (len == 0);
-    
-    /* Parse the chunk of stream. */
-    if (! XML_Parse (expat_parser, buf, len, done))
+
+/* Parse LEN bytes of xml data in BUFFER at SVN_XML_PARSER.  As xml is
+   parsed, WALKER callbacks will be executed with WALK_BATON and
+   DIR_BATON.  If this is the final parser "push", ISFINAL must be set
+   to true.  */
+svn_error_t *
+svn_xml_parsebytes (char *buffer, apr_off_t len, int isFinal, 
+                    svn_xml_parser_t *svn_xml_parser)
+{
+  svn_error_t *err;
+  XML_Parser expat_parser = svn_xml_parser->expat_parser;
+  apr_pool_t *pool = svn_xml_parser->digger->pool;
+
+  /* Parse the chunk of stream. */
+  if (! XML_Parse (expat_parser, buffer, len, isFinal))
     {
-      /* Uh oh, expat *itself* choked somehow.  Return its message. */
+      /* Uh oh, expat *itself* choked somehow! */
       err = svn_create_error
         (SVN_ERR_MALFORMED_XML, 0,
          apr_psprintf (pool, "%s at line %d",
                        XML_ErrorString (XML_GetErrorCode (expat_parser)),
                        XML_GetCurrentLineNumber (expat_parser)),
          NULL, pool);
-      goto error;
-    }
 
-    /* After parsing our chunk, check to see if anybody called
-       signal_expat_bailout() */
-    if (digger->validation_error)
-      {
-        err = digger->validation_error;
-        goto error;
-      }
+      /* Kill the expat parser and return its error */
+      XML_ParserFree (expat_parser);      
+      return err;
+    }
+  
+  /* After parsing our chunk, check to see if any walker callback did
+     a signal_expat_bailout() */
+  if (svn_xml_parser->digger->validation_error)
+      return svn_xml_parser->digger->validation_error;
+
+  return SVN_NO_ERROR;
+}
+
+
+
+/* Reads an XML stream from SOURCE_FN using expat internally,
+  validating the XML as it goes (according to Subversion's own
+  tree-delta DTD).  Whenever an interesting event happens, it calls a
+  caller-specified callback routine from WALKER.  
+
+  Once called, it retains control and "pulls" data from SOURCE_FN
+  until either the stream runs out or it encounters an error. */
+svn_error_t *
+svn_xml_auto_parse (svn_delta_read_fn_t *source_fn,
+                    void *source_baton,
+                    const svn_delta_walk_t *walker,
+                    void *walk_baton,
+                    void *dir_baton,
+                    apr_pool_t *pool)
+{
+  char buf[BUFSIZ];
+  apr_off_t len;
+  int done;
+  svn_error_t *err = SVN_NO_ERROR;
+
+  /* Create a Subversion XML parser */
+  svn_xml_parser_t *xmlparser = svn_make_xml_parser (walker,
+                                                     walk_baton,
+                                                     dir_baton,
+                                                     pool);
+
+  /* Repeatedly pull data from SOURCE_FN and feed it to the parser,
+     until there's no more data (or we get an error). */
+  
+  do {
+    /* Read BUFSIZ bytes into buf using the supplied read function. */
+    len = BUFSIZ;
+    err = (*(source_fn)) (source_baton, buf, &len, pool);
+    if (err)
+      return svn_quick_wrap_error (err, "svn_delta_parse: can't read source");
+
+    /* How many bytes were actually read into buf?  According to the
+       definition of an svn_delta_read_fn_t, we should keep reading
+       until the reader function says that 0 bytes were read. */
+    done = (len == 0);
+
+    /* Push these bytes at the parser */
+    err = svn_xml_parsebytes (buf, len, done, xmlparser);
+    if (err)
+      return err;
 
   } while (! done);
-
-
- error:
-  /* Done parsing entire SRC_BATON stream, so clean up and return. */
-  XML_ParserFree (expat_parser);
 
   return err;
 }
