@@ -1835,7 +1835,7 @@ $ svn commit -m 'merging libcomplex-1.1 into the main branch'
         </listitem>
         <listitem>
           <para>It takes care of complicated series of operations between
-            which Subversion requires a intermediate commit&mdash;such
+            which Subversion requires an intermediate commit&mdash;such
             as before renaming a file or directory twice.</para>
         </listitem>
         <listitem>
