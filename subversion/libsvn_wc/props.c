@@ -1072,6 +1072,17 @@ svn_wc_prop_set (const char *name,
         }
     }
 
+  /* Addendum: if the svn:executable property was set, then chmod +x.
+     If the svn:executable property was deleted (NULL value passed
+     in), then chmod -x. */
+  if (! strcmp (name, SVN_PROP_EXECUTABLE))
+    {
+      if (value == NULL)
+        SVN_ERR (svn_io_set_file_executable (path, FALSE, TRUE, pool));
+      else
+        SVN_ERR (svn_io_set_file_executable (path, TRUE, TRUE, pool));
+    }
+
   return SVN_NO_ERROR;
 }
 
