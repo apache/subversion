@@ -50,7 +50,8 @@ send_file_contents (svn_fs_root_t *root,
     {
       SVN_ERR (svn_txdelta_next_window (&window, delta_stream));
       SVN_ERR ((*handler) (window, handler_baton));
-
+      if (window)
+        svn_txdelta_free_window (window);
     } while (window);
 
   return SVN_NO_ERROR;

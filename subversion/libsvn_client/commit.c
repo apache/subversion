@@ -74,7 +74,8 @@ send_file_contents (svn_string_t *path,
     {
       SVN_ERR (svn_txdelta_next_window (&window, delta_stream));
       SVN_ERR ((*handler) (window, handler_baton));
-
+      if (window)
+        svn_txdelta_free_window (window);
     } while (window);
 
   /* Close the file. */
