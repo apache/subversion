@@ -78,7 +78,9 @@ svn_error_t *svn_ra_dav__convert_error(ne_session *sess,
       break;
     }
 
-  return svn_error_createf (errcode, NULL, "%s: %s", context, msg);
+  return svn_error_createf (errcode, NULL, "%s: %s (%s://%s)", 
+                            context, msg, ne_get_scheme(sess), 
+                            ne_get_server_hostport(sess));                            
   
 }
 
