@@ -50,7 +50,7 @@ svn_client_cat (svn_stream_t *out,
   svn_string_t *keywords;
   apr_hash_t *props;
   const char *initial_url, *url;
-  svn_opt_revision_t *good_rev;
+  const svn_opt_revision_t *good_rev;
   apr_pool_t *ra_subpool;
 
   /* Open an RA session to the incoming URL. */
@@ -78,7 +78,8 @@ svn_client_cat (svn_stream_t *out,
       /* For a working copy path, don't blindly use its initial_url
          from the entries file.  Run the history function to get the
          object's (possibly different) url in REVISION. */
-      svn_opt_revision_t base_rev, dead_end_rev, start_rev, *ignored_rev;
+      svn_opt_revision_t base_rev, dead_end_rev, start_rev;
+      svn_opt_revision_t *ignored_rev, *new_rev;
       const char *ignored_url;
 
       dead_end_rev.kind = svn_opt_revision_unspecified;
@@ -89,7 +90,7 @@ svn_client_cat (svn_stream_t *out,
       else
         start_rev = *revision;
 
-      SVN_ERR (svn_client__repos_locations (&url, &good_rev,
+      SVN_ERR (svn_client__repos_locations (&url, &new_rev,
                                             &ignored_url, &ignored_rev,
                                             /* peg coords are path@BASE: */
                                             path_or_url, &base_rev,
@@ -97,6 +98,7 @@ svn_client_cat (svn_stream_t *out,
                                             &start_rev, &dead_end_rev,
                                             ra_lib, session,
                                             ctx, pool));
+      good_rev = new_rev;
 
       /* If 'url' turns out to be different than 'initial_url', then we
          need to open a new RA session to it. */
