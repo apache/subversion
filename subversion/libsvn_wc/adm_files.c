@@ -572,7 +572,6 @@ close_adm_file (apr_file_t *fp,
                 apr_pool_t *pool,
                 ...)
 {
-  svn_string_t *tmp_path;
   apr_status_t apr_err = 0;
   int components_added;
   va_list ap;
@@ -589,7 +588,7 @@ close_adm_file (apr_file_t *fp,
   chop_admin_name (path, components_added);
 
   if (apr_err)
-    return svn_error_create (apr_err, 0, NULL, pool, tmp_path->data);
+    return svn_error_create (apr_err, 0, NULL, pool, path->data);
 
   /* If we were writing, then it was to a tmp file, which will have to
      be renamed after closing. */
