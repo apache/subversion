@@ -967,6 +967,9 @@ static svn_error_t * apply_log_message(commit_ctx_t *cc,
   SVN_ERR( svn_ra_dav__get_one_prop(&vcc, cc->ras->sess, cc->ras->root.path, 
                                     NULL, &svn_ra_dav__vcc_prop, pool) );
 
+  /* ### we should use DAV:apply-to-version on the CHECKOUT so we can skip
+     ### retrieval of the baseline */
+
   /* Get the Baseline from the DAV:checked-in value */
   SVN_ERR( svn_ra_dav__get_one_prop(&baseline_url, cc->ras->sess, vcc->data, 
                                     NULL, &svn_ra_dav__checked_in_prop, pool));
