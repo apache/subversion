@@ -72,12 +72,13 @@
 #define SVN_ERR_MALFORMED_LINE                   (APR_OS_START_USEERR + 3)
 
 
-typedef struct svn_error_t
+typedef struct svn_error
 {
-  ap_status_t err;             /* native OS errno */
-  const char *message;         /* details from producer of error */
-  struct svn_error_t *child;   /* ptr to next error below this one */
-  ap_pool_t *pool;             /* place to generate message strings from */
+  ap_status_t apr_err;       /* APR error value, possibly SVN_ custom err */
+  int src_err;               /* native error code (e.g. errno, h_errno...) */
+  const char *message;       /* details from producer of error */
+  struct svn_error *child;   /* ptr to the error we "wrap" */
+  ap_pool_t *pool;           /* place to generate message strings from */
 
 } svn_error_t;
 
@@ -113,7 +114,8 @@ typedef struct svn_error_t
 
  */
 
-svn_error_t *svn_create_error (ap_status_t err,
+svn_error_t *svn_create_error (ap_status_t apr_err,
+                               int src_err,
                                const char *message,
                                svn_error_t *child,
                                ap_pool_t *pool);

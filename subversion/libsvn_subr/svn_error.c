@@ -81,7 +81,8 @@
  */
 
 svn_error_t *
-svn_create_error (ap_status_t err,
+svn_create_error (ap_status_t apr_err,
+                  int src_err,
                   const char *message,
                   svn_error_t *child,
                   ap_pool_t *pool)
@@ -90,7 +91,8 @@ svn_create_error (ap_status_t err,
   svn_error_t *new_error = (svn_error_t *) ap_palloc (pool,
                                                       sizeof(svn_error_t));
 
-  new_error->err = err;
+  new_error->apr_err = apr_err;
+  new_error->src_err = src_err;
   new_error->message = message;
   new_error->child = child;
   new_error->pool = pool;  
@@ -107,7 +109,7 @@ svn_create_error (ap_status_t err,
 svn_error_t *
 svn_quick_wrap_error (svn_error_t *child, const char *new_msg)
 {
-  return (svn_create_error (child->err, new_msg,
+  return (svn_create_error (child->apr_err, child->src_err, new_msg,
                             child, child->pool));
 }
                 
@@ -130,11 +132,13 @@ svn_handle_error (svn_error_t *err, FILE *stream)
   /* Pretty-print the error */
   /* Note: we can also log errors here someday. */
   
-  fprintf (stream, "\nsvn_error: errno %d, apr_errno %d: %s\n", 
-           err->err, 
-           ap_canonical_error (err->err),
-           ap_strerror (err->err, buf, sizeof(buf)));
-  fprintf (stream, "      %s\n", err->message);
+  fprintf (stream, "\nsvn_error: apr_err %d, src_err %d: %s", 
+           err->apr_err,
+           err->src_err);
+  fprintf (stream, "  canonical err %d : %s\n",
+           ap_canonical_error (err->apr_err),
+           ap_strerror (err->apr_err, buf, sizeof(buf)));
+  fprintf (stream, "  %s\n", err->message);
   fflush (stream);
 
   if (err->child == NULL)  /* bottom of exception stack */
