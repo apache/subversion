@@ -20,7 +20,7 @@ User-visible changes:
  * now requre apache 2.0.47 (and apr 0.9.4)
  * fix 2 commit leaks
  * fix mod_dav_svn path-escaping bug
- * 
+
 Developer-visible changes:
 
  * Win32 build system
