@@ -28,9 +28,6 @@ sinclude(ac-helpers/libtool.m4)
 dnl Generate config.nice early (before the args are munged)
 SVN_CONFIG_NICE(config.nice)
 
-dnl Required to init all of the `automake' macros, and to run typical macros
-#AM_INIT_AUTOMAKE(subversion, "M2 (pre-alpha)", no-define)
-
 dnl AC_CONFIG_HEADER causes `autoheader' to produce svn_private_config.h.in for us.
 dnl   (We can add custom defines by creating ./acconfig.h if we wish.)
 AC_CONFIG_HEADER(svn_private_config.h)
@@ -189,6 +186,10 @@ if test "$enable_debugging" = "yes"; then
 fi
 
 
+dnl Define the version number
+AC_DEFINE(SVN_VERSION, "M2",
+        [Define to be the version of Subversion])
+
 dnl Find a default diff program
 AC_PATH_PROG(SVN_CLIENT_DIFF, diff, diff)
 AC_DEFINE_UNQUOTED(SVN_CLIENT_DIFF, "$SVN_CLIENT_DIFF", 
@@ -223,8 +224,6 @@ AC_SUBST(SVN_RA_LIB_LINK)
 
 
 dnl Pass some config data ----------------------------
-
-AC_DEFINE_UNQUOTED(SVN_VERSION, "$VERSION", [Version number of Subversion])
 
 AC_SUBST(abs_builddir)
 AC_SUBST(abs_srcdir)
