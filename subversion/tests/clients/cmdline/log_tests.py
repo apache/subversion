@@ -401,6 +401,7 @@ def log_with_empty_repos(sbox):
   if os.path.exists(sbox.repo_dir):
     shutil.rmtree(sbox.repo_dir)
   svntest.main.create_repos(sbox.repo_dir)
+  svntest.main.set_repos_paths(sbox.repo_dir)
 
   stdout_lines, stderr_lines = svntest.main.run_svn\
                                (None, 'log',
