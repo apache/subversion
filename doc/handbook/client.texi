@@ -67,12 +67,12 @@ delete or change anything in the administrative area!  Subversion
 depends on it to manage your working copy.
 
 You can run @command{svn help checkout} for command line options to
-checkout, although one option is very common and worth mentioning: the
-@samp{--destination} (@samp{-d}) switch.  This places your working
+checkout, although one option is very common and worth mentioning: you
+can specify a directory after your repository url.  This places your working
 copy into a new directory that you name.  For example:
 
 @example
-$ svn co http://svn.collab.net/repos/svn/trunk -d subv
+$ svn co http://svn.collab.net/repos/svn/trunk subv
 A  subv/subversion.dsw
 A  subv/svn_check.dsp
 A  subv/COMMITTERS

@@ -606,7 +606,7 @@ Check /usr/local/apache2/logs/error_log to make sure it started up
 okay.  Try doing a network checkout from the repository:
 
 @example
-$ svn co http://localhost/repos -d wc
+$ svn co http://localhost/repos wc
 @end example
 
 The most common reason this might fail is permission problems reading
