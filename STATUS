@@ -32,13 +32,6 @@ Candidate changes:
       -0 breser (I'm still not sure this belongs in 1.1.0, but I don't see
                  anything technically wrong with it).
 
-  * r10422
-    Python bindings build fix. Make the compile flags more like distutils uses,
-    avoiding large amounts of compiler warnings.
-    Votes:
-      +1: maxb, ghudson, kfogel
-      +0: breser
-
   * r10410, r10450
     Python bindings build fix. Explicitly link libpython to the python
     bindings.  r10410 is a trivial usage message update, included to
