@@ -89,10 +89,6 @@ LIB32=link.exe -lib
 
 SOURCE=.\auth.c
 # End Source File
-# Begin Source File
-
-SOURCE=.\simple_prompt_provider.c
-# End Source File
 # End Group
 # Begin Group "Header Files"
 
