@@ -97,15 +97,21 @@ find_matching_string (char *str, const char strings[][4])
    then) to use apr_implode_gmt.  So now that function is using GMT,
    but its inverse above, svn_time_to_string, is using localtime.
 
-   I'm not sure what the right thing to do is; see issue #404.
+   I'm not sure what the right thing to do is; see issue #404.  See
+   also the thread entitled "apr_implode_time and time zones" in the
+   APR dev mailing list archives:
 
-   Note, however, that repositories want to record commit dates in
-   GMT.  Maybe we should just make Subversion's string representation
-   for times always use GMT -- that's good for repositories, and for
-   working copies it doesn't really matter since humans don't have to
-   read the timestamps in SVN/entries files much (and when they do,
-   they can easily do the conversion).
-*/
+      http://apr.apache.org/mail/dev/200106.gz
+
+   That discussion between Branko and David Reid is directly
+   relevant.
+
+   Note that Subversion repositories probably want to record commit
+   dates in GMT.  Maybe we should just make Subversion's string
+   representation for times always use GMT -- that's good for
+   repositories, and for working copies it doesn't really matter since
+   humans don't have to read the timestamps in SVN/entries files much
+   (and when they do, they can easily do the conversion).  */
 
 
 apr_time_t
