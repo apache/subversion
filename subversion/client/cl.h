@@ -61,11 +61,11 @@
 
 
 /* Print PATH's status line using STATUS. */
-void svn_cl__print_status_list (svn_string_t *path, svn_wc_status_t *status);
+void svn_cl__print_status (svn_string_t *path, svn_wc_status_t *status);
 
 /* Print a hash that maps names to status-structs to stdout for human
    consumption. */
-void svn_cl__print_status (apr_hash_t *statushash, apr_pool_t *pool);
+void svn_cl__print_status_list (apr_hash_t *statushash, apr_pool_t *pool);
 
 
 
