@@ -235,7 +235,7 @@ svn_wc__gnudiff_patcher (void *user_data,
   /* kff todo: "Patch?  We don't need no stinkin' patch."  Just
      overwrite local mods for now, like the barbarians we are. */
 
-  err = svn_wc__copy_file (src, target, pool);
+  err = svn_io_copy_file (src, target, pool);
   if (err)
     return err;
   

@@ -98,7 +98,7 @@ run_cmd_under_directory (svn_string_t *path,
                                   name, dest);
     }
   else
-    return svn_wc__copy_file (full_from_path, full_dest_path, pool);
+    return svn_io_copy_file (full_from_path, full_dest_path, pool);
 
   return SVN_NO_ERROR;
 }
@@ -134,7 +134,7 @@ cp_or_mv_under_directory (svn_string_t *path,
                                   name, dest);
     }
   else
-    return svn_wc__copy_file (full_from_path, full_dest_path, pool);
+    return svn_io_copy_file (full_from_path, full_dest_path, pool);
 
   return SVN_NO_ERROR;
 }

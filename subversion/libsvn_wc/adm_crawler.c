@@ -348,7 +348,7 @@ do_apply_textdelta (svn_string_t *filename,
 
   /* Copy the local file to the administrative temp area. */
   local_tmp_path = svn_wc__text_base_path (filename, TRUE, pool);
-  svn_wc__copy_file (filename, local_tmp_path, pool);
+  svn_io_copy_file (filename, local_tmp_path, pool);
 
   /* Open a filehandle for tmp local file, and one for text-base if
      applicable. */
