@@ -302,7 +302,7 @@ svn_fs__get_rep (skel_t **skel_p,
     return svn_fs__err_corrupt_representation (fs, id);
 
   *skel_p = skel;
-  return 0;
+  return SVN_NO_ERROR;
 }
 
 
@@ -325,7 +325,7 @@ svn_fs__put_rep (svn_fs_t *fs,
                                     svn_fs__skel_to_dbt (&value, skel, pool),
                                     0)));
 
-  return 0;
+  return SVN_NO_ERROR;
 }
 
 
@@ -392,7 +392,7 @@ svn_fs__new_node_id (svn_fs_id_t **id_p,
   id[2] = -1;
 
   *id_p = id;
-  return 0;
+  return SVN_NO_ERROR;
 }
 
 
@@ -482,7 +482,7 @@ svn_fs__new_successor_id (svn_fs_id_t **successor_p,
     {
       /* NEW_ID isn't currently in use, so return that.  */
       *successor_p = new_id;
-      return 0;
+      return SVN_NO_ERROR;
     }
   else
     SVN_ERR (DB_WRAP (fs, "checking for next node revision", db_err));
@@ -534,7 +534,7 @@ svn_fs__new_successor_id (svn_fs_id_t **successor_p,
         new_id[id_len + 2] = -1;
 
         *successor_p = new_id;
-        return 0;
+        return SVN_NO_ERROR;
       }
 
     /* If the last key before NEW_ID is a branch off of ID, then
@@ -549,7 +549,7 @@ svn_fs__new_successor_id (svn_fs_id_t **successor_p,
         new_id[id_len + 2] = -1;
 
         *successor_p = new_id;
-        return 0;
+        return SVN_NO_ERROR;
       }
 
     /* Otherwise, something strange is going on.  */

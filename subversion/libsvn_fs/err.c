@@ -52,7 +52,7 @@ svn_error_t *
 svn_fs__wrap_db (svn_fs_t *fs, const char *operation, int db_err)
 {
   if (! db_err)
-    return 0;
+    return SVN_NO_ERROR;
   else
     return svn_fs__dberrf (fs->pool, db_err,
                            "Berkeley DB error while %s for "
@@ -65,7 +65,7 @@ svn_error_t *
 svn_fs__check_fs (svn_fs_t *fs)
 {
   if (fs->env)
-    return 0;
+    return SVN_NO_ERROR;
   else
     return svn_error_create (SVN_ERR_FS_NOT_OPEN, 0, 0, fs->pool,
                              "filesystem object has not been opened yet");

@@ -43,7 +43,7 @@ begin_trail (trail_t **trail_p,
                     txn_begin (fs->env, 0, &trail->db_txn, 0)));
 
   *trail_p = trail;
-  return 0;
+  return SVN_NO_ERROR;
 }
 
 
@@ -62,7 +62,7 @@ abort_trail (trail_t *trail,
  
   apr_pool_destroy (trail->pool);
 
-  return 0;
+  return SVN_NO_ERROR;
 }
 
 
@@ -91,7 +91,7 @@ svn_fs__retry_txn (svn_fs_t *fs,
           SVN_ERR (DB_WRAP (fs,
                             "committing Berkeley DB transaction",
                             txn_commit (trail->db_txn, 0)));
-          return 0;
+          return SVN_NO_ERROR;
         }
 
       /* Is this a real error, or do we just need to retry?  */

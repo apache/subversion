@@ -102,7 +102,7 @@ put_txn (svn_fs_t *fs,
                     fs->transactions->put (fs->transactions, trail->db_txn,
                                            &key, &value, 0)));
 
-  return 0;
+  return SVN_NO_ERROR;
 }
 
 
@@ -154,7 +154,7 @@ allocate_txn_id (char **id_p,
   }
 
   *id_p = next_id_str;
-  return 0;
+  return SVN_NO_ERROR;
 }
 
 
@@ -170,7 +170,7 @@ svn_fs__create_txn (char **txn_id_p,
   SVN_ERR (put_txn (fs, svn_txn, root_id, root_id, trail));
 
   *txn_id_p = svn_txn; 
-  return 0;
+  return SVN_NO_ERROR;
 }
 
 
@@ -217,7 +217,7 @@ svn_fs__get_txn (svn_fs_id_t **root_id_p,
 
     *root_id_p = root_id;
     *base_root_id_p = base_root_id;
-    return 0;
+    return SVN_NO_ERROR;
   }
 }
 
@@ -234,7 +234,7 @@ svn_fs__set_txn_root (svn_fs_t *fs,
   if (! svn_fs_id_eq (old_root_id, root_id))
     SVN_ERR (put_txn (fs, svn_txn, root_id, base_root_id, trail));
 
-  return 0;
+  return SVN_NO_ERROR;
 }
 
 
