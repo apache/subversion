@@ -345,13 +345,14 @@ log_message_receiver_xml (void *baton,
            hi = apr_hash_next (hi))
         {
           void *val;
-          char *actionstr;
+          char action[2];
           svn_log_changed_path_t *log_item;
           
           apr_hash_this(hi, (void *) &path, NULL, &val);
           log_item = val;
 
-          actionstr = apr_psprintf (pool, "%c", log_item->action);
+          action[0] = log_item->action;
+          action[1] = '\0';
           if (log_item->copyfrom_path
               && SVN_IS_VALID_REVNUM (log_item->copyfrom_rev))
             {
@@ -361,7 +362,7 @@ log_message_receiver_xml (void *baton,
               revstr = apr_psprintf (pool, "%" SVN_REVNUM_T_FMT, 
                                      log_item->copyfrom_rev);
               svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata, "path",
-                                     "action", actionstr, 
+                                     "action", action,
                                      "copyfrom-path", escpath->data,
                                      "copyfrom-rev", revstr, NULL);
             }
@@ -369,7 +370,7 @@ log_message_receiver_xml (void *baton,
             {
               /* <path action="X"> */
               svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata, "path",
-                                     "action", actionstr, NULL);
+                                     "action", action, NULL);
             }
           /* xxx</path> */
           svn_xml_escape_nts (&sb, path, pool);
