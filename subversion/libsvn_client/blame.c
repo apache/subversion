@@ -213,7 +213,7 @@ blame_insert_range (struct file_rev_baton *db, apr_off_t start,
       insert->next = point->next;
       point->next = insert;
     }
-  else if (!point->next || point->next->start > start + length)
+  else
     {
       struct blame *middle;
       middle = blame_create (db, db->rev, start);
@@ -221,12 +221,6 @@ blame_insert_range (struct file_rev_baton *db, apr_off_t start,
       middle->next = insert;
       insert->next = point->next;
       point->next = middle;
-    }
-  else
-    {
-      insert = blame_create (db, db->rev, start);
-      insert->next = point->next;
-      point->next = insert;
     }
   blame_adjust (insert->next, length);
 
