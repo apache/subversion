@@ -357,9 +357,12 @@ def basic_merge():
   expected_status_tree = svntest.tree.build_generic_tree(status_list)
   
   # Initial commit.
-  if svntest.actions.run_and_verify_commit (wc_dir, expected_output_tree,
-                            expected_status_tree, None,
-                            None, None, None, None, wc_dir):
+  if svntest.actions.run_and_verify_commit (wc_dir,
+                                            expected_output_tree,
+                                            expected_status_tree,
+                                            None,
+                                            None, None, None, None,
+                                            wc_dir):
     return 1
   
   # Make a backup copy of the working copy
@@ -386,23 +389,13 @@ def basic_merge():
   expected_status_tree = svntest.tree.build_generic_tree(status_list)
 
   # Commit.
-  if svntest.actions.run_and_verify_commit (wc_dir, expected_output_tree,
+  if svntest.actions.run_and_verify_commit (wc_dir,
+                                            expected_output_tree,
                                             expected_status_tree,
-                                            "conflict",
+                                            None,
                                             None, None, None, None,
                                             wc_dir):
     return 1
-
-  # See issue #416.  We return here because the rest of this test has
-  # never, we believe, been working.  But we're not sure.  All we know
-  # is that adding the "conflict" string to run_and_verify_commit()
-  # above caused this test to start failing.  Since using that error
-  # string works just fine in commit_unversioned_thing() in
-  # commit_tests.py, it's an open question whether the problem is here
-  # or in the recent changes to run_and_verify_commit().  Hey: should
-  # there even *be* a conflict above?  This needs some serious
-  # investigation.  Sigh.
-  return 0
 
   # Make local mods to wc_backup by recreating mu and rho
   mu_path_backup = os.path.join(wc_backup, 'A', 'mu')
