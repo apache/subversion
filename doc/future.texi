@@ -5,8 +5,8 @@ Here are some thoughts on features to include in later releases of
 Subversion.
 
 @menu
-* High Priority Items
-* Blue Sky Items
+* High Priority Items::         
+* Blue Sky Items::              
 @end menu
 
 @c -----------------------------------------------------------------------

@@ -63,12 +63,11 @@ Some of these advantages are clear and require no further discussion.
 Others are not so obvious, and are explained in greater detail below.
 
 @menu
-* Rename/removal/resurrection support::
-* Text vs binary issues::
-* I18N/Multilingual support::
-* Branching and tagging::
-* Merging::
-* Miscellaneous new behaviors::
+* Rename/removal/resurrection support::  
+* Text vs binary issues::       
+* I18N/Multilingual support::   
+* Branching and tagging::       
+* Miscellaneous new behaviors::  
 @end menu
 
 @c -----------------------------------------------------------------------
@@ -172,10 +171,10 @@ development, one at least wants users to be aware of the change).
 @section Miscellaneous new behaviors
 
 @menu
-* Log messages
-* Client side diff plug-ins
-* Better merging
-* Conflict resolution
+* Log messages::                
+* Client side diff plug-ins::   
+* Better merging::              
+* Conflicts resolution::        
 @end menu
 
 @c -----------------------------------------------------------------------

@@ -10,13 +10,13 @@ www: all
 	cp -f ./svn-design.pdf ../../www
 
 txt: 
-	makeinfo --no-headers --no-validate svn-design.texi > svn-design.txt
+	makeinfo --no-headers svn-design.texi > svn-design.txt
 
 info: 
-	makeinfo --no-validate svn-design.texi
+	makeinfo svn-design.texi
 
 html: 
-	makeinfo --no-headers --no-validate --html svn-design.texi \
+	makeinfo --no-headers --html svn-design.texi \
                  > svn-design.html
 
 html-web: html

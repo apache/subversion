@@ -82,7 +82,8 @@ See @xref{License} for details.
 @end titlepage
 @c -----------------------------------------------------------------
 
-@node Top, Goals, (dir), (dir)
+@node Top
+@top
 
 @ifinfo
 This manual describes the design of the Subversion version control

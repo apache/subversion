@@ -14,8 +14,8 @@ There are two main libraries: the @dfn{Subversion Filesystem} library,
 and the @dfn{Subversion Server} library.
 
 @menu
-* Filesystem::                The Subversion Filesystem.
-* Server Library::            The Subversion Server interface.
+* Filesystem::                  The Subversion Filesystem.
+* Server Library::              The Subversion Server interface.
 @end menu
 
 
@@ -24,7 +24,16 @@ and the @dfn{Subversion Server} library.
 @node Filesystem
 @section Filesystem
 
-@subsection Overview
+@menu
+* Filesystem Overview::         
+* API::                         
+* Repository Structure::        
+* Locking::                     
+* Implementation::              
+@end menu
+
+@node Filesystem Overview
+@subsection Filesystem Overview
 
 @itemize @bullet
 @item
@@ -51,6 +60,7 @@ changes.  In addition to recording changes to file and directory
 contents, the Subversion Filesystem records changes to file meta-data
 (see discussion of @dfn{properties} in @ref{Model}).
 
+@node API
 @subsection API
 
 This is almost the same API that the client calls, but now prefixed with
@@ -92,8 +102,16 @@ out-of-date base versions, that is, the situation where the node in the
 repository has changed since the base version mentioned in the skelta.
 
 @c ------------------------------------
+@node Repository Structure
 @subsection Repository Structure
 
+@menu
+* Schema::                      
+* Bubble-Up Method::            
+* Diffy Storage::               
+@end menu
+
+@node Schema
 @subsubsection Schema
 
 To begin, please be sure that you're already casually familiar with
@@ -193,6 +211,7 @@ root directory.
 @c  </jimb>
 
 
+@node Bubble-Up Method
 @subsubsection Bubble-Up Method
 
 This section provides a conversational explanation of how the repository
@@ -643,6 +662,7 @@ our repository tree increments to version 8, then T becomes a branch.
 Specifically, it's a branch of directory A which ``broke off'' from the
 main line at version 8.
 
+@node Diffy Storage
 @subsubsection Diffy Storage
 
 You may have been thinking, ``Gee, this bubble up method seems nice, but
@@ -657,6 +677,7 @@ as a succession of reverse diffs (the word "diff" is used loosely here
 expresses changes to directories).
 
 @c -----------------
+@node Locking
 @subsection Locking
 
 The Subversion Filesystem uses a locking mechanism to handle concurrency
@@ -664,6 +685,13 @@ issues.  In the Subversion locking scheme, readers never wait for
 writers, and writers only wait for other writers whose changes conflict
 with theirs.
 
+@menu
+* Reading::                     
+* The Lock Manager::            
+* Write Locking::               
+@end menu
+
+@node Reading
 @subsubsection Reading
 
 Reading is easy; if a server process wants to execute a @code{read()}
@@ -676,6 +704,7 @@ another; and because writers don't link to the version history until
 they're finished writing everything, there's no way for a reader to
 accidentally stumble upon an unfinished tree.
 
+@node The Lock Manager
 @subsubsection The Lock Manager
 
 Each Subversion filesystem has a process called a @dfn{lock manager}.
@@ -723,6 +752,7 @@ the filesystem.
 After the @code{write()} is completed, the skelta is removed from the
 lock manager's concurrency pool, and the server closes its connection.
 
+@node Write Locking
 @subsubsection Write Locking
 
 Although it is safe for multiple commits to write their new leaf nodes
@@ -738,6 +768,7 @@ the first, non-locking stage (writing data to new leaf nodes) is usually
 the more time-consuming part of a commit anyway.
 
 @c -----------------------
+@node Implementation
 @subsection Implementation
 
 For the initial release of Subversion,
@@ -763,7 +794,15 @@ For the initial release of Subversion,
 @section Server Library
 
 
-@subsection Overview
+@menu
+* Server Library Overview::     
+* Multiplexing::                
+* Policy Enforcement::          
+* Plug-Ins::                    
+@end menu
+
+@node Server Library Overview
+@subsection Server Library Overview
 
 @itemize @bullet
 @item
@@ -785,6 +824,7 @@ For the initial release of Subversion,
 @end itemize
 
 
+@node Multiplexing
 @subsection Multiplexing
 
 The Subversion Server Library (@dfn{svn_svr}), in its simplest sense,
@@ -824,6 +864,7 @@ makes repeated calls to @code{fs_cmp()}, while @code{svr_get_update()}
 makes repeated calls to @code{fs_get_delta()}, composing the returned
 deltas into a single final delta.
 
+@node Policy Enforcement
 @subsection Policy Enforcement
 
 When starting up, svn_svr will read a configuration file @file{svn.conf}
@@ -839,6 +880,7 @@ and any filesystem calls to that repository are then intercepted and
 (kindly) rejected by svn_svr.
 
 
+@node Plug-Ins
 @subsection Plug-Ins
 
 It's important that svn_svr be extensible;  by allowing users to write
