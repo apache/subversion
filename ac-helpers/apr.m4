@@ -30,7 +30,7 @@ AC_DEFUN(SVN_LIB_APR,
 
   SVN_EXTRA_INCLUDES="$SVN_EXTRA_INCLUDES `$apr_config --includes`"
 
-  SVN_APR_LIBS="`$apr_config --apr-libtool`"
+  SVN_APR_LIBS="`$apr_config --link-libtool`"
   AC_SUBST(SVN_APR_LIBS)
 ])
 
