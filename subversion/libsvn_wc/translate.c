@@ -182,10 +182,7 @@ svn_wc__get_keywords (svn_subst_keywords_t **keywords,
                       apr_pool_t *pool)
 {
   const char *list;
-  int offset = 0;
-  svn_stringbuf_t *found_word;
   svn_subst_keywords_t tmp_keywords = { 0 };
-  svn_boolean_t got_one = FALSE;
   const svn_wc_entry_t *entry = NULL;
 
   /* Start by assuming no keywords. */
