@@ -63,8 +63,17 @@ MDK_RELEASE := 1
 # Default is 0
 # WIN32_RELEASE := 1
 
+# swig rpm name - change this to suit your needs
+# Mandrake calls this swig, tigris calls this swig-runtime
+# SWIG_RPM := swig-runtime
+
+# swig-devel rpm name - change this to suit your needs
+# Mandrake calls this swig, tigris calls this swig
+# SWIG_BUILD_RPM := swig
+
 # libneon0 rpm name - change this to suit your needs
-# Currently libneon's rpms seem to be called neon
+# Currently libneon's rpms seem to be called neon on tigris
+# but are called libneon0 on Mandrake
 # NEON_RPM := neon
 
 # Default editor
@@ -83,6 +92,7 @@ APACHE_CONF := /etc/httpd/conf.d
 
 # Minimal versions
 # NEON_MIN   := 0.23.0
+# SWIG_MIN   := 1.3.16
 # APACHE_MIN := 2.0.43
 # DB4_MIN    := 4.0.14
 
@@ -146,6 +156,9 @@ NO_ACTIVATION   := $(if $(NO_ACTIVATION),$(NO_ACTIVATION),1)
 NO_APACHE2      := $(if $(NO_APACHE2),$(NO_APACHE2),0)
 REQUIRE_APACHE2 := $(if $(REQUIRE_APACHE2),$(REQUIRE_APACHE2),1)
 NEON_RPM        := $(if $(NEON),$(NEON),libneon0)
+SWIG_RPM        := $(if $(SWIG_RPM),$(SWIG_RPM),swig)
+SWIG_BUILD_RPM  := $(if $(SWIG_BUILD_RPM),$(SWIG_BUILD_RPM),swig)
+SWIG_MIN        := $(if $(SWIG_MIN),$(SWIG_MIN),$(if $(GE_30),1.3.16,1.3.16))
 NEON_MIN        := $(if $(NEON_MIN),$(NEON_MIN),$(if $(GE_30),0.24.0,0.23.0))
 APACHE_MIN      := $(if $(APACHE_MIN),$(APACHE_MIN),$(if $(GE_30),2.0.47,2.0.43))
 DB4_MIN         := $(if $(DB4_MIN),$(DB4_MIN),$(if $(GE_30),4.1.25,4.0.14))
@@ -269,10 +282,6 @@ DB4_VER  := $(if $(DB4),$(shell rpm -q -f /$(DB4) | cut -f2 -d- ),4.0.14)
 DB4_RPM  := $(if $(DB4),$(shell rpm -q -f /$(DB4) | cut -f1 -d-),libdb4.0)
 endif
 
-# Get the actual version on hand
-NEON_RPM := $(if $(NEON),$(NEON),neon)
-NEON_VER := $(NEON_MIN)
-
 # Where the user will build
 BUILDROOT := /tmp/$(USER)-$(BASENAME)-root
 
@@ -284,8 +293,7 @@ APACHE_DIR := $(shell echo $(APACHE_DIR) | sed 's/\//\\\//g')
 APACHE_CONF := $(shell echo $(APACHE_CONF) | sed 's/\//\\\//g')
 EDITOR      := $(if $(EDITOR),\%define editor --with-editor=$(shell which $(EDITOR) | sed 's/\//\\\//g'),)
 
-SOURCES := python_swig_setup.py.patch \
-	   46_mod_dav_svn.conf 
+SOURCES := 46_mod_dav_svn.conf 
 
 # Replace periods with dashes
 TARBALL := $(SOURCE_RPM_DIR)/$(BASENAME).tar.bz2
@@ -350,7 +358,10 @@ build_sources: $(TARBALL) $(RPMBITS)
 		-e 's/@APACHE_CONF@/$(APACHE_CONF)/' \
 		-e 's/@APACHE_VER@/$(APACHE_MIN)/' \
 		-e 's/@NEON_RPM@/$(NEON_RPM)/' \
-		-e 's/@NEON_VER@/$(NEON_VER)/' \
+		-e 's/@NEON_VER@/$(NEON_MIN)/' \
+		-e 's/@SWIG_VER@/$(SWIG_MIN)/' \
+		-e 's/@SWIG_RPM@/$(SWIG_RPM)/' \
+		-e 's/@SWIG_BUILD_RPM@/$(SWIG_BUILD_RPM)/' \
 		-e 's/@SILENT@/$(SILENT)/' \
 		-e 's/@EDITOR@/$(EDITOR)/' \
 		-e 's/@RELEASE_MODE@/$(RELEASE_MODE)/' \
