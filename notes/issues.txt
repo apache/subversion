@@ -86,3 +86,21 @@ Here's a summary of my understanding of the status quo.
       agreement that we *don't* need to ensure that the public and
       private revisions stay in sync.
 
+
+* FS Copy Model
+
+  * Description:  When a "copy" is made in the repository, the plan
+		  has been to simply link the source's node into the
+		  target directory. However, this does not keep enough
+		  information about the change and the history for the
+		  "new" node.
+
+		  [ specifically: we cannot tell if a given node is a
+		    copy of something else, and where it may have come
+		    from. ]
+
+    Message-Id:   <20010102204643.L17220@lyra.org>
+		  ... and the resulting, short, thread.
+
+    Status:	  STILL DISCUSSING
+		  (pending comments from JimB)
