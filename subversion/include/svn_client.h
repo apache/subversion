@@ -402,7 +402,7 @@ typedef struct svn_client_ctx_t
   void *log_msg_baton;
 
   /** a hash mapping of <tt>const char *</tt> configuration file names to
-   * @c svn_config_t *'s, for example, the '~/.subversion/config' file's 
+   * @c svn_config_t *'s. For example, the '~/.subversion/config' file's
    * contents should have the key "config".  May be left unset (or set to
    * NULL) to use the built-in default settings and not use any configuration.
    */
@@ -878,7 +878,7 @@ svn_client_status (svn_revnum_t *result_rev,
  * given log message more than once).
  *
  * @a targets contains either a URL followed by zero or more relative
- * paths, or a list of working copy paths (as <tt> const char *</tt>'s
+ * paths, or a list of working copy paths, as <tt>const char *</tt>,
  * for which log messages are desired.  The repository info is
  * determined by taking the common prefix of the target entries' URLs.
  * @a receiver is invoked only on messages whose revisions involved a

@@ -884,7 +884,7 @@ typedef struct svn_wc_diff_callbacks2_t
 /**
  * @deprecated Provided for backward compatibility with the 1.1 API.
  *
- * Similar to @c svn_wc_callbakcs2_t, but with file additions/content
+ * Similar to @c svn_wc_diff_callbacks2_t, but with file additions/content
  * changes and property changes split into different functions.
  */
 typedef struct svn_wc_diff_callbacks_t
@@ -2193,7 +2193,7 @@ svn_error_t *svn_wc_get_update_editor2 (svn_revnum_t *target_revision,
 
 /** @deprecated Provided for backwards compatibility with the 1.1 API.
  *
- * Similar to @c svn_wc_get_update_editor, but takes an svn_wc_notify_func_t
+ * Similar to @c svn_wc_get_update_editor2, but takes an svn_wc_notify_func_t
  * instead.
  */
 svn_error_t *svn_wc_get_update_editor (svn_revnum_t *target_revision,
@@ -2268,7 +2268,7 @@ svn_error_t *svn_wc_get_switch_editor2 (svn_revnum_t *target_revision,
 
 /** @deprecated Provided for backwards compatibility with the 1.2 API.
  *
- * Similar to @c svn_wc_get_switch_editor, but takes an @c svn_wc_notify_func_t
+ * Similar to @c svn_wc_get_switch_editor2, but takes an @c svn_wc_notify_func_t
  * instead.
  */
 svn_error_t *svn_wc_get_switch_editor (svn_revnum_t *target_revision,
