@@ -36,13 +36,10 @@ Candidate changes:
     Fix #1905. URI-encode path in copyfrom URL in merge.
     Justification:
       Nasty bug with simple fix.
-    Notes: Looks sensible but doesn't have a regression test.  I'm too
-      lazy to test manually, how can I be sure it works?  -philip
     Votes:
-      +1: jaa
+      +1: jaa, philip
     Votes without r11696:
       +1: lundblad
-      +0: philip
 
   * r11439, r11669
     Fix slow "svn st" where the targets are files by not locking the whole
