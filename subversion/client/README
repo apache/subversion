@@ -3,44 +3,27 @@ Emacs, please be in -*-text-*- mode.  Danke!
 What the client looks like right now:
 =====================================
 
-The client for milestone 1 is somewhat limited: it can checkout and
-update from XML files, and commit to XML files.  The changes it can
-make in a working copy are file mods and file adds.  Local mods are
-not preserved in updates.
+The client for milestone 2 has the basic SVN features
+implemented. It can checkout, update (local only), checkin, and import
+from local and remote (over DAV) repositories. There is however, still
+plenty of more work to do. 
 
 So:
 
    svn checkout URL://repository/path/baz/bat   \
-                -d DESTINATION --xml-file FILE.XML --revision N
-   svn add FILE
-   svn delete [--force] FILE
-   svn commit --xml-file FILE.XML --revision N
-   svn update --xml-file FILE.XML --revision N
-
-You may be wondering why --revision is on the command line.  Don't
-worry, it won't be in a real-life client.  The issue right now is
-that the client and server aren't actually talking to one another, so
-information that they would have exchanged has to be passed manually,
-by a human (excuse me, I mean by a developer).
+                -d DESTINATION
+   svn add [FILE|DIRECTORY]
+   svn delete [--force] FILE # This doesn't work. -Fitz 2001-04-03
+   svn commit
+   svn update
 
 If you check out into DESTINATION, that directory must not exist, or
 be empty if it does exist.
 
-Also, because update is taking input only from an XML file, it doesn't
-yet know enough to be able to update the revision numbers of
-directories in which nothing changed, even though a real update might
-do so.  The issue is that sometimes the user may restrict the update
-to a few files, and sometimes do it across the whole tree.  In the
-latter kind of update, one can safely set revision numbers everywhere
-afterwards; but in the former, only the revision numbers of the updated
-entities may be set.  Since the client doesn't yet distinguish between
-selective and non-selective updates, it just sets the revision numbers
-of entities that received updates, and their ancestors.  Obviously,
-things will be more sophisticated when we have selective updates.
-
-If you want to see the milestone 1 client in action, run "make check"
-in this directory.  That runs the tests/svn-test.sh script, which you
-ca examine for details of piping to and from xml files.
+If you want to see the milestone 2 client in action, run "make check"
+in this directory.  That runs the tests/svn-test.sh script, which
+tests the basic functionality of the client (but which is also
+woefully out of date as we have not yet decided on a test suite). 
 
 
 
@@ -88,18 +71,21 @@ conversion.  These two filters are completely independent of one another.
 * Keyword substitution (on/OFF) per filesystem object. Children of
   directories inherit this property.
 
-STOPPED HERE -Fitz $Date: 2001-04-03 01:20:55 $
-
 * End-of-line conversion (on/OFF) per filesystem object. Children of
   directories inherit this property.
 
-* Check for conflict markers in working copy files prior to checkin
-  (ON/off) per filesystem object. Children of directories inherit this
-  property. TODO SURVEY
+* subversion will never muck up your file with conflict markers. When
+  you update a file that contains conflicts, subversion will first
+  apply all changes that are non-conflicting, then the conflicting
+  changes (just the failed hunks in patch format) will be written into
+  a reject file. You will not be able to check in the file in question
+  until you have removed the reject file (It is tracked in the entries
+  file). For example, if your file is named foo.c, the reject file
+  will be named foo.c.8734XNIS2989.rej.
 
 * .svnfiletypespecifics file. SVN will implement basic .cvswrapper
   functionality (only that related to file types determined by regular
-  expressions. This may happen in .svnfiletypespecifics or in
+  expressions). This may happen in .svnfiletypespecifics or in
   .svnrc. TODO SURVEY
 
 
@@ -120,7 +106,7 @@ Options
 
   -D --date DATESPEC             Like "cvs cmd -D DATESPEC"
 
-  -r --revision VER              Like "cvs -r"  Separate Multiple #-s by `,'
+  -r --revision REV              Like "cvs -r"  Separate Multiple #-s by `,'
 
   -v --version                   subversion version is printed.
 
