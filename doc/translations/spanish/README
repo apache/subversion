@@ -1,0 +1,18 @@
+This directory contains the translation of the English book to
+Spanish. The coordinator of the project currently is Grzegorz Adam
+Hankiewicz. You can contact him at gradha@titanium.sabren.com.
+
+If you want to make a comment about the Spanish book in the main
+Subversion mailing lists, please write [BOOK SPANISH] in your
+subject, or your message will not be read. Alternatively you can
+contact l10n-es@subversion.tigris.org, where all translators are
+subscribed.
+
+The build instructions and everything else are in Spanish. TODO
+lists pending tasks to be done by the project administrator. TRABAJO
+lists the files which are being worked on and the status of the
+translation.  glosario_traduccion contains a rough glossary of
+translated terms the project has standarised on. publicacion_oficial
+contains contact information with Spanish editors. LEAME is the
+main file with information about the build, translation rules,
+information about the project, etc.
