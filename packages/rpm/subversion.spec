@@ -167,6 +167,9 @@ make install \
 	infodir=$RPM_BUILD_ROOT/usr/share/info \
 	libexecdir=$RPM_BUILD_ROOT/%{apache_dir}/lib
 
+# Install svn-config
+cp svn-config $RPM_BUILD_ROOT/usr/bin
+
 %post
 # Only add to INFO directory if this is the only instance installed.
 if [ "$1"x = "1"x ]; then
@@ -291,6 +294,7 @@ fi
 /usr/lib/libsvn*.a
 /usr/lib/libsvn*.la
 /usr/include/subversion-1
+/usr/bin/svn-config
 
 %files server
 %defattr(-,root,root)
