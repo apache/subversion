@@ -1577,15 +1577,35 @@ static dav_error * dav_svn_open_stream(const dav_resource *resource,
 
 static dav_error * dav_svn_close_stream(dav_stream *stream, int commit)
 {
+  svn_error_t *serr;
+
   if (stream->rstream != NULL)
-    svn_stream_close(stream->rstream);
+    {
+      serr = svn_stream_close(stream->rstream);
+      if (serr)
+        return dav_svn_convert_err
+          (serr, HTTP_INTERNAL_SERVER_ERROR,
+           "dav_svn_close_stream: error closing read stream");
+    }
 
   /* if we have a write-stream, then closing it also takes care of the
      handler (so make sure not to send a NULL to it, too) */
   if (stream->wstream != NULL)
-    svn_stream_close(stream->wstream);
+    {
+      serr = svn_stream_close(stream->wstream);
+      if (serr)
+        return dav_svn_convert_err
+          (serr, HTTP_INTERNAL_SERVER_ERROR,
+           "dav_svn_close_stream: error closing write stream");
+    }
   else if (stream->delta_handler != NULL)
-    (*stream->delta_handler)(NULL, stream->delta_baton);
+    {
+      serr = (*stream->delta_handler)(NULL, stream->delta_baton);
+      if (serr)
+        return dav_svn_convert_err
+          (serr, HTTP_INTERNAL_SERVER_ERROR,
+           "dav_svn_close_stream: error sending final (null) delta window");
+    }
 
   return NULL;
 }

@@ -559,9 +559,11 @@ svn_txdelta_send_string (const svn_string_t *string,
 svn_error_t *svn_txdelta_send_stream (svn_stream_t *stream,
                                       svn_txdelta_window_handler_t handler,
                                       void *handler_baton,
+                                      unsigned char *digest,
                                       apr_pool_t *pool)
 {
   svn_txdelta_stream_t *txstream;
+  svn_error_t *err;
 
   /* ### this is a hack. we should simply read from the stream, construct
      ### some windows, and pass those to the handler. there isn't any reason
@@ -572,7 +574,17 @@ svn_error_t *svn_txdelta_send_stream (svn_stream_t *stream,
   /* Create a delta stream which converts an *empty* bytestream into the
      target bytestream. */
   svn_txdelta (&txstream, svn_stream_empty (pool), stream, pool);
-  return svn_txdelta_send_txstream (txstream, handler, handler_baton, pool);
+  err = svn_txdelta_send_txstream (txstream, handler, handler_baton, pool);
+
+  if (digest && (! err))
+    {
+      const unsigned char *result_md5;
+      result_md5 = svn_txdelta_md5_digest (txstream);
+      /* Since err is null, result_md5 "cannot" be null. */
+      memcpy (digest, result_md5, MD5_DIGESTSIZE);
+    }
+
+  return err;
 }
 
 svn_error_t *svn_txdelta_send_txstream (svn_txdelta_stream_t *txstream,

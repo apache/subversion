@@ -26,6 +26,7 @@
 #include <assert.h>
 #include <apr_strings.h>
 #include <apr_hash.h>
+#include <apr_md5.h>
 #include "svn_wc.h"
 #include "svn_ra.h"
 #include "svn_delta.h"
@@ -36,17 +37,22 @@
 #include "svn_path.h"
 #include "svn_test.h"
 #include "svn_io.h"
+#include "svn_md5.h"
 #include "svn_time.h"
 
 #include "client.h"
 
 
 /* Apply PATH's contents (as a delta against the empty string) to
-   FILE_BATON in EDITOR.  Use POOL for any temporary allocation.  */
+   FILE_BATON in EDITOR.  Use POOL for any temporary allocation.
+
+   Fill DIGEST with the md5 checksum of the sent file; DIGEST must be
+   at least MD5_DIGESTSIZE bytes long. */
 static svn_error_t *
 send_file_contents (const char *path,
                     void *file_baton,
                     const svn_delta_editor_t *editor,
+                    unsigned char *digest,
                     apr_pool_t *pool)
 {
   svn_stream_t *contents;
@@ -66,7 +72,8 @@ send_file_contents (const char *path,
                                     &handler, &handler_baton));
 
   /* Send the file's contents to the delta-window handler. */
-  SVN_ERR (svn_txdelta_send_stream (contents, handler, handler_baton, pool));
+  SVN_ERR (svn_txdelta_send_stream (contents, handler, handler_baton,
+                                    digest, pool));
 
   /* Close the file. */
   apr_err = apr_file_close (f);
@@ -100,6 +107,8 @@ import_file (const svn_delta_editor_t *editor,
   void *file_baton;
   const char *mimetype;
   svn_boolean_t executable;
+  unsigned char digest[MD5_DIGESTSIZE];
+  const char *text_checksum;
 
   /* Add the file, using the pool from the FILES hash. */
   SVN_ERR (editor->add_file (edit_path, dir_baton, NULL, SVN_INVALID_REVNUM, 
@@ -131,10 +140,11 @@ import_file (const svn_delta_editor_t *editor,
                          SVN_INVALID_REVNUM);
 
   /* Now, transmit the file contents. */
-  SVN_ERR (send_file_contents (path, file_baton, editor, pool));
+  SVN_ERR (send_file_contents (path, file_baton, editor, digest, pool));
 
-  /* Finally, close the file.  ### issue#1100: Pass text_checksum here. */
-  SVN_ERR (editor->close_file (file_baton, NULL, pool));
+  /* Finally, close the file. */
+  text_checksum = svn_md5_digest_to_cstring (digest, pool);
+  SVN_ERR (editor->close_file (file_baton, text_checksum, pool));
 
   return SVN_NO_ERROR;
 }

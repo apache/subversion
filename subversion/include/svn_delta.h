@@ -250,11 +250,16 @@ svn_error_t *svn_txdelta_send_string (const svn_string_t *string,
  * This is effectively a 'copy' operation, resulting in delta windows that 
  * make the target equivalent to the stream.
  *
+ * If @a digest is non-null, populate it with the md5 checksum for the
+ * fulltext that was deltified (@a digest must be at least
+ * @c MD5_DIGESTSIZE bytes long).
+ *
  * All temporary allocation is performed in @a pool.
  */
 svn_error_t *svn_txdelta_send_stream (svn_stream_t *stream,
                                       svn_txdelta_window_handler_t handler,
                                       void *handler_baton,
+                                      unsigned char *digest,
                                       apr_pool_t *pool);
 
 /** Send @a txstream to the window-handler @a handler/@a baton.
