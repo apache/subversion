@@ -531,11 +531,43 @@ collabnet = svn.collab.net
                 ignored items, see <xref linkend="svn-ch-7-sect-2.3.3"
                 />.</para>
             </listitem>
+
+            <term><literal>enable-auto-props</literal></term>
+            <listitem>
+              <para>This instructs Subversion to automatically set
+              properties on newly added or imported files.  The
+              default value is <literal>no</literal>, so set this to
+              <literal>yes</literal> to enable Auto-props.</para>
+            </listitem>
+
           </varlistentry>
 	  <!-- ###TODO add description of other options shown in example
 	   registry file, e.g., log-encoding, etc. -->
         </variablelist>
+
+
+        <para>The <literal>auto-props</literal> section controls the
+          Subversion client's ability to automatically set properties
+          on files when they are added or imported.  It contains any
+          number of key-value pairs in the format <literal>REGEX =
+          PROPNAME=PROPVALUE</literal> where <literal>REGEX</literal>
+          is a regular expression that matches a set of filenames and
+          the rest of the line is the property and its value.
+          Multiple matches on a file will result in multiple propsets
+          for that file; however, there is no guarantee that
+          auto-props will be applied in the order in which they are
+          listed in the config file, so you can't have one rule
+          <quote>override</quote> another.  You can find several
+          examples of auto-props usage in the
+          <filename>config</filename> file.  Lastly, don't forget to
+          set <literal>enable-auto-props</literal> to
+          <literal>yes</literal> if you want to enable auto-props.
+        </para>
+
+
+
       </sect3>
+>
     </sect2>
   </sect1>
 

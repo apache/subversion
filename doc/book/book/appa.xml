@@ -328,6 +328,21 @@ X    Resource is external to this working copy (comes from another
       biggest mental hurdle a CVS user will need to climb.  Read all
       about it in <xref linkend="svn-ch-4"/></para>
 
+
+    <warning>
+      <para>Since Subversion treats branches and tags as ordinary
+      directories, always remember to check out the
+      <literal>trunk</literal>
+      (<literal>http://svn.example.com/repos/calc/trunk/</literal>) of
+      your project, and not the project itself
+      (<literal>http://svn.example.com/repos/calc/</literal>).  If you
+      make the mistake of checking out the project itself, you'll wind
+      up with a working copy that contains a copy of your project for
+      every branch and tag you have.<footnote><para>That is, providing
+      you don't run out of disk space before your checkout
+      finishes.</para> </footnote></para>
+    </warning>
+
   </sect1>
 
 
@@ -439,6 +454,33 @@ X    Resource is external to this working copy (comes from another
 
     <para>Subversion defines modules as a list of directories within a
       directory property:  see <xref linkend="svn-ch-7-sect-3"/>.</para>
+
+  </sect1>
+
+  <!-- ================================================================= -->
+  <!-- ======================== SECTION 10 ============================= -->
+  <!-- ================================================================= -->
+  <sect1 id="svn-app-a-sect-10">
+
+    <title>Authentication</title>
+
+    <para>With CVS's pserver, you are required to <quote>login</quote>
+    to the server before any read or write operation&mdash;you even
+    have to login for anonymous operations.  With a Subversion
+    repository using Apache HTTPD as the server, you don't provide any
+    authentication credentials at the outset&mdash;if an operation
+    that you perform requires authentication, the server will
+    challenge you for your credentials (whether those credentials are
+    username and password, a client certificate, or even both).  So if
+    your repository is world-readable, you will not be required to
+    authenticate at all for read operations.</para>
+
+    <para>As with CVS, Subversion still caches your credentials on
+    disk (in your <filename>~/.subversion/auth/</filename> directory)
+    unless you tell it not to by using the
+    <option>--no-auth-cache</option> switch.</para>
+
+
 
   </sect1>
 
