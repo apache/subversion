@@ -46,6 +46,8 @@
  * individuals on behalf of Collab.Net.
  */
 
+#include <string.h>
+
 #include "apr_strings.h"
 
 #include "svn_fs.h"
