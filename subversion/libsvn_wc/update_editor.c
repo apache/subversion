@@ -280,6 +280,82 @@ make_dir_baton (const char *path,
 
 
 
+/* Helper for maybe_bump_dir_info():
+
+   In a single atomic action, (1) remove any 'deleted' entries from a
+   directory, (2) remove any 'missing' dir entries, and (3) remove the
+   directory's 'incomplete' flag. */
+static svn_error_t *
+complete_directory (struct edit_baton *eb,
+                    struct bump_dir_info *bdi,
+                    apr_pool_t *pool)
+{
+  svn_wc_adm_access_t *adm_access;
+  apr_hash_t *entries;
+  svn_wc_entry_t *entry;
+  apr_hash_index_t *hi;
+  apr_pool_t *subpool = svn_pool_create (pool);;
+
+  /* All operations are on the in-memory entries hash. */
+  SVN_ERR (svn_wc_adm_retrieve (&adm_access, eb->adm_access, bdi->path, pool));
+  SVN_ERR (svn_wc_entries_read (&entries, adm_access, TRUE, pool));
+
+  /* Mark THIS_DIR complete. */
+  entry = apr_hash_get (entries, SVN_WC_ENTRY_THIS_DIR, APR_HASH_KEY_STRING);
+  if (! entry)
+    return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, NULL,
+                              "No '.' entry in: '%s'", bdi->path);
+  entry->incomplete = FALSE;
+
+  /* Remove any deleted or missing entries. */
+  for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
+    {
+      const void *key;
+      void *val;
+      const char *name;
+      svn_wc_entry_t *current_entry;
+
+      apr_hash_this (hi, &key, NULL, &val);
+      name = key;
+      current_entry = val;
+      
+      if (current_entry->deleted)
+        {
+          if (eb->target_deleted)
+            /* if the target of the update is 'deleted', we leave it
+               be.  see r6748, issue #919. */
+            continue;
+          else
+            svn_wc__entry_remove (entries, name);
+        }
+      else if (current_entry->kind == svn_node_dir)
+        {
+          const char *child_path = svn_path_join (bdi->path, name, subpool);
+          
+          if (svn_wc__adm_missing (adm_access, child_path))
+            {
+              svn_wc__entry_remove (entries, name);
+              if (eb->notify_func)
+                (* eb->notify_func) (eb->notify_baton, child_path, 
+                                     svn_wc_notify_delete,
+                                     current_entry->kind, NULL, 
+                                     svn_wc_notify_state_unknown,
+                                     svn_wc_notify_state_unknown,
+                                     SVN_INVALID_REVNUM);
+            }
+        }
+
+      svn_pool_clear (subpool);
+    }
+  
+  /* An atomic write of the whole entries file. */
+  SVN_ERR (svn_wc__entries_write (entries, adm_access, pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+
 /* Decrement the bump_dir_info's reference count. If it hits zero,
    then this directory is "done". This means it is safe to remove the
    'incomplete' flag attached to the THIS_DIR entry.
@@ -296,20 +372,12 @@ maybe_bump_dir_info (struct edit_baton *eb,
      or a directory is not yet "done".  */
   for ( ; bdi != NULL; bdi = bdi->parent)
     {
-      svn_wc_entry_t tmp_entry;
-      svn_wc_adm_access_t *adm_access;
-
       if (--bdi->ref_count > 0)
         return SVN_NO_ERROR;    /* directory isn't done yet */
 
-      /* The refcount is zero, thus we remove the 'incomplete' flag.  */
-      SVN_ERR (svn_wc_adm_retrieve (&adm_access, eb->adm_access, bdi->path,
-                                    pool));
-      tmp_entry.incomplete = FALSE;      
-      SVN_ERR (svn_wc__entry_modify (adm_access, NULL /* this_dir */,
-                                     &tmp_entry,
-                                     SVN_WC__ENTRY_MODIFY_INCOMPLETE,
-                                     TRUE /* immediate write */,  pool));
+      /* The refcount is zero, so we remove any 'dead' entries from
+         the directory and mark it 'complete'.  */
+      SVN_ERR (complete_directory (eb, bdi, pool));
     }
   /* we exited the for loop because there are no more parents */
 
