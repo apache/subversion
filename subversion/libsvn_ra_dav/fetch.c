@@ -1528,7 +1528,7 @@ svn_error_t *svn_ra_dav__change_rev_prop (void *session_baton,
   svn_ra_dav_resource_t *baseline;
   apr_hash_t *prop_changes = NULL;
   apr_array_header_t *prop_deletes = NULL;
-  ne_propname wanted_props[] =
+  static const ne_propname wanted_props[] =
     {
       { "DAV:", "auto-version" },
       { NULL }
@@ -1570,8 +1570,8 @@ svn_error_t *svn_ra_dav__change_rev_prop (void *session_baton,
     }
   else
     {
-      prop_deletes = apr_array_make(pool, 1, sizeof(value));
-      (*((const svn_string_t **) apr_array_push (prop_deletes))) = value;
+      prop_deletes = apr_array_make(pool, 1, sizeof(const char *));
+      (*((const char **) apr_array_push(prop_deletes))) = name;
     }
 
   return svn_ra_dav__do_proppatch(ras, baseline->url, prop_changes,
