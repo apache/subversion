@@ -524,23 +524,25 @@ get_dir_status (const svn_wc_entry_t *parent_entry,
   const char *fullpath, *path = svn_wc_adm_access_path (adm_access);
   apr_hash_t *dirents;
   apr_array_header_t *patterns = NULL;
+  apr_pool_t *iterpool, *subpool = svn_pool_create (pool);
 
   /* See if someone wants to cancel this operation. */
   if (cancel_func)
     SVN_ERR (cancel_func (cancel_baton));
 
   /* Load entries file for the directory into the requested pool. */
-  SVN_ERR (svn_wc_entries_read (&entries, adm_access, FALSE, pool));
+  SVN_ERR (svn_wc_entries_read (&entries, adm_access, FALSE, subpool));
 
   /* Read PATH's dirents. */
-  SVN_ERR (svn_io_get_dirents (&dirents, path, pool));
+  SVN_ERR (svn_io_get_dirents (&dirents, path, subpool));
 
   /* Unless specified, add default ignore regular expressions and try
      to add any svn:ignore properties from the parent directory. */
   if (ignores)
     {
-      patterns = apr_array_make (pool, 1, sizeof (const char *));
-      SVN_ERR (collect_ignore_patterns (patterns, ignores, adm_access, pool));
+      patterns = apr_array_make (subpool, 1, sizeof (const char *));
+      SVN_ERR (collect_ignore_patterns (patterns, ignores, 
+                                        adm_access, subpool));
     }
 
   /* Early out -- our caller only cares about a single ENTRY in this
@@ -552,11 +554,11 @@ get_dir_status (const svn_wc_entry_t *parent_entry,
           && (! apr_hash_get (entries, entry, APR_HASH_KEY_STRING)))
         {
           svn_node_kind_t kind;
-          fullpath = svn_path_join (path, entry, pool);
-          SVN_ERR (svn_io_check_path (path, &kind, pool));
+          fullpath = svn_path_join (path, entry, subpool);
+          SVN_ERR (svn_io_check_path (path, &kind, subpool));
           SVN_ERR (send_unversioned_item (entry, kind, adm_access, 
                                           patterns, no_ignore, 
-                                          status_func, status_baton, pool));
+                                          status_func, status_baton, subpool));
         }
       /* Otherwise, send its versioned status. */
       else
@@ -567,7 +569,7 @@ get_dir_status (const svn_wc_entry_t *parent_entry,
                                      ignores, descend, get_all, no_ignore, 
                                      status_func, status_baton, 
                                      cancel_func, cancel_baton, 
-                                     traversal_info, pool));
+                                     traversal_info, subpool));
         }
 
       /* Regardless, we're done here.  Let's go home. */
@@ -577,8 +579,11 @@ get_dir_status (const svn_wc_entry_t *parent_entry,
   /** If we get here, ENTRY is NULL and we are handling all the
       directory entries. */
 
+  /* Make our iteration pool. */
+  iterpool = svn_pool_create (subpool);
+
   /* Add empty status structures for each of the unversioned things. */
-  for (hi = apr_hash_first (pool, dirents); hi; hi = apr_hash_next (hi))
+  for (hi = apr_hash_first (subpool, dirents); hi; hi = apr_hash_next (hi))
     {
       const void *key;
       apr_ssize_t klen;
@@ -593,16 +598,19 @@ get_dir_status (const svn_wc_entry_t *parent_entry,
           || (strcmp (key, SVN_WC_ADM_DIR_NAME) == 0))
         continue;
 
+      /* Clear the iteration subpool. */
+      svn_pool_clear (iterpool);
+
       /* Make an unversioned status item for KEY, and put it into our
          return hash. */
       path_kind = val;
       SVN_ERR (send_unversioned_item (key, *path_kind, adm_access, 
                                       patterns, no_ignore, 
-                                      status_func, status_baton, pool));
+                                      status_func, status_baton, iterpool));
     }
 
   /* Get this directory's entry. */
-  SVN_ERR (svn_wc_entry (&dir_entry, path, adm_access, FALSE, pool));
+  SVN_ERR (svn_wc_entry (&dir_entry, path, adm_access, FALSE, subpool));
 
   /* If "this dir" has "svn:externals" property set on it, store its name
      in traversal_info. */
@@ -610,7 +618,7 @@ get_dir_status (const svn_wc_entry_t *parent_entry,
     {
       const svn_string_t *val;
       SVN_ERR (svn_wc_prop_get (&val, SVN_PROP_EXTERNALS, path, adm_access,
-                                pool));
+                                subpool));
       if (val)
         {
           apr_pool_t *dup_pool = traversal_info->pool;
@@ -628,7 +636,7 @@ get_dir_status (const svn_wc_entry_t *parent_entry,
     SVN_ERR (send_status_structure (path, adm_access, dir_entry, 
                                     parent_entry, svn_node_dir,
                                     get_all, FALSE, status_func, 
-                                    status_baton, pool));
+                                    status_baton, subpool));
 
   /* Loop over entries hash */
   for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
@@ -645,12 +653,18 @@ get_dir_status (const svn_wc_entry_t *parent_entry,
       if (strcmp (key, SVN_WC_ENTRY_THIS_DIR) == 0)
         continue;
 
+      /* Clear the iteration subpool. */
+      svn_pool_clear (iterpool);
+
       /* Handle this directory entry (possibly recursing). */
       SVN_ERR (handle_dir_entry (adm_access, key, dir_entry, val, ignores, 
                                  descend, get_all, no_ignore, 
                                  status_func, status_baton, cancel_func, 
-                                 cancel_baton, traversal_info, pool));
+                                 cancel_baton, traversal_info, iterpool));
     }
+  
+  /* Destroy our subpools. */
+  svn_pool_destroy (subpool);
 
   return SVN_NO_ERROR;
 }

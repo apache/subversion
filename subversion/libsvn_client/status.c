@@ -43,25 +43,36 @@
 
 struct status_baton
 {
-  apr_hash_t *hash;
-  svn_wc_status_func_t status_func;
-  void *status_baton;
+  apr_hash_t *hash;                        /* ### temporary */
+  svn_boolean_t deleted_in_repos;          /* target is deleted in repos */
+  svn_wc_status_func_t real_status_func;   /* real status function */
+  void *real_status_baton;                 /* real status baton */
 };
 
-/* A faux status callback function for stashing STATUS item in a hash
-   keyed on PATH, and then passes the STATUS on through to a real
-   STATUS_FUNC.  This is merely for the purposes of verifying that we
-   don't call the STATUS_FUNC for the same path more than once.  */
+/* A status callback function which wraps the *real* status
+   function/baton.   This sucker takes care of any status tweaks we
+   need to make (such as noting that the target of the status is
+   missing from HEAD in the repository).  */
 static void
-hash_stash (void *baton,
-            const char *path,
-            svn_wc_status_t *status)
+tweak_status (void *baton,
+              const char *path,
+              svn_wc_status_t *status)
 {
   struct status_baton *sb = baton;
+
+  /* ### temporary sanity checking code */
   assert (! apr_hash_get (sb->hash, path, APR_HASH_KEY_STRING));
   apr_hash_set (sb->hash, apr_pstrdup (apr_hash_pool_get (sb->hash), path), 
                 APR_HASH_KEY_STRING, (void *)1);
-  sb->status_func (sb->status_baton, path, status);
+
+  /* If we know that the target was deleted in HEAD of the repository,
+     we need to note that fact in all the status structures that come
+     through here. */
+  if (sb->deleted_in_repos)
+    status->repos_text_status = svn_wc_status_deleted;
+
+  /* Call the real status function/baton. */
+  sb->real_status_func (sb->real_status_baton, path, status);
 }
 
 
@@ -90,9 +101,10 @@ svn_client_status (svn_revnum_t *youngest,
   const svn_wc_entry_t *entry;
   struct status_baton sb;
 
-  sb.status_func = status_func;
-  sb.status_baton = status_baton;
+  sb.real_status_func = status_func;
+  sb.real_status_baton = status_baton;
   sb.hash = apr_hash_make (pool);
+  sb.deleted_in_repos = FALSE;
 
   /* Need to lock the tree as even a non-recursive status requires the
      immediate directories to be locked. */
@@ -116,9 +128,11 @@ svn_client_status (svn_revnum_t *youngest,
   SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, anchor, 
                                   FALSE, TRUE, pool));
 
+  /* Get the status edit, and use our wrapping status function/baton
+     as the callback pair. */
   SVN_ERR (svn_wc_get_status_editor (&editor, &edit_baton, youngest,
-                                     adm_access, target, ctx->config, descend, 
-                                     get_all, no_ignore, hash_stash, &sb,
+                                     adm_access, target, ctx->config, descend,
+                                     get_all, no_ignore, tweak_status, &sb,
                                      ctx->cancel_func, ctx->cancel_baton,
                                      traversal_info, pool));
 
@@ -170,24 +184,12 @@ svn_client_status (svn_revnum_t *youngest,
                                    SVN_INVALID_REVNUM, pool));
       if (kind == svn_node_none)
         {
-          SVN_ERR (editor->close_edit (edit_baton, pool));
+          /* Note that our status target has been deleted from HEAD of
+             the repository. */
+          sb.deleted_in_repos = TRUE;
 
-#ifdef STREAMY_STATUS_IN_PROGRESS
-          /* This code SHOULD be marking the whole tree under ANCHOR as
-             deleted, but that would cause it to be inconsistent with a
-             bug that currently runs freely in the working copy status
-             editor (see issue #1469).  So, for now, we'll just mark the
-             path that corresponds to the ANCHOR as deleted. */
-          status_item = apr_hash_get (hash, anchor, APR_HASH_KEY_STRING);
-          if (! status_item)
-            {
-              SVN_ERR (svn_wc_status (&status_item, anchor, adm_access, pool));
-              apr_hash_set (hash, 
-                            apr_pstrdup (apr_hash_pool_get (hash), anchor), 
-                            APR_HASH_KEY_STRING, status_item);
-            }
-          status_item->repos_text_status = svn_wc_status_deleted;
-#endif
+          /* And now close the edit. */
+          SVN_ERR (editor->close_edit (edit_baton, pool));
         }
       else
         {
