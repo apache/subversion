@@ -1640,9 +1640,14 @@ See `svn-status-marked-files' for what counts as selected."
 ;; Update the *svn-status* buffer, when a file is saved
 ;; --------------------------------------------------------------------------------
 
+(defvar svn-status-file-modified-after-save-flag ?m
+  "The flag, that is shown, in the *svn-status* buffer, after
+a file is changed and saved in emacs.
+Recommended values are ?m or ?M.")
 (defun svn-status-after-save-hook ()
   "Set a modified indication, when a file is saved from a svn working copy."
-  (let* ((svn-dir (expand-file-name (car-safe svn-status-directory-history)))
+  (let* ((svn-dir (car-safe svn-status-directory-history))
+         (svn-dir (when svn-dir (expand-file-name svn-dir)))
          (file-dir (file-name-directory (buffer-file-name)))
          (svn-dir-len (length (or svn-dir "")))
          (file-dir-len (length file-dir))
@@ -1659,7 +1664,8 @@ See `svn-status-marked-files' for what counts as selected."
           ;;(message (format "i-fname=%S" i-fname))
           (when (and (string= file-name i-fname)
                      (not (eq (svn-status-line-info->filemark (car st-info)) ??)))
-            (svn-status-line-info->set-filemark (car st-info) ?m)
+            (svn-status-line-info->set-filemark (car st-info)
+                                                svn-status-file-modified-after-save-flag)
             (save-excursion
               (set-buffer "*svn-status*")
               (svn-status-goto-file-name i-fname)
