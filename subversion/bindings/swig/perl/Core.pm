@@ -108,6 +108,11 @@ svn_stream_t in subversion functions. Returned svn_stream_t are also
 translated into perl io handles, so you could access them with regular
 print, read, etc.
 
+Note that some functions takes a stream to read or write, while it
+does not close it but still hold the reference to the handle. In this case
+the handle won't be destroyed properly. You should always use correct
+default pool before calling such functions.
+
 =cut
 
 use Symbol ();
@@ -262,6 +267,22 @@ sub DESTROY {
     $self->close;
 }
 
+package _p_apr_pool_t;
+
+my %WRAPPED;
+
+sub default {
+    my ($pool) = @_;
+    my $pobj = SVN::Pool->_wrap ($$pool);
+    $WRAPPED{$pool} = $pobj;
+    $pobj->default;
+}
+
+sub DESTROY {
+    my ($pool) = @_;
+    delete $WRAPPED{$pool};
+}
+
 package SVN::Pool;
 use SVN::Base qw/Core svn_pool_/;
 
@@ -279,6 +300,9 @@ of the subversion functions), the pool is optionally. the default pool
 is used if it is omitted. If default pool is not set, a new root pool
 will be created and set as default automatically when the first
 function requiring a default pool is called.
+
+For callback functions providing pool to your subroutine, you could
+also use $pool->default to make it the default pool in the scope.
 
 =head3 Methods
 
@@ -356,13 +380,33 @@ END {
     $globaldestroy = 1;
 }
 
+my %WRAPPOOL;
+
+# Create a cloned _p_apr_pool_t pointing to the same apr_pool_t
+# but on different address. this allows pools that are from C
+# to have proper lifetime.
+sub _wrap {
+    my ($class, $rawpool) = @_;
+    my $pool = \$rawpool;
+    bless $pool, '_p_apr_pool_t';
+    my $npool = \$pool;
+    bless $npool, $class;
+    $WRAPPOOL{$npool} = 1;
+    $npool;
+}
+
 sub DESTROY {
     return if $globaldestroy;
     my $self = shift;
     if ($$self eq $SVN::_Core::current_pool) {
 	$SVN::_Core::current_pool = pop @POOLSTACK;
     }
-    apr_pool_destroy ($$self);
+    if (exists $WRAPPOOL{$self}) {
+        delete $WRAPPOOL{$self};
+    }
+    else {
+        apr_pool_destroy ($$self)
+    }
 }
 
 package _p_svn_log_changed_path_t;
