@@ -12,16 +12,16 @@ Tasks:
    + Replace bite-sized tasks announcement with a Mike-style
      yellow-backgrounded thingy about self-hosting and where to get
      the tarball.  Include basic checkout instructions.
-   - Make a new News entry.
-   - Add the tarball to the Downloads section.
+   + Make a new News entry.
+   + Add the tarball to the Downloads section.
    - Put dav_setup.txt and the old CVS ChangeLog on the web site ?.
    - Eventually, get the Source navbar link fixed.
 
 * New repository
-   - import the tree
-   - enable password-protected committing.
+   + import the tree
+   + enable password-protected committing.
    - make a backup system.
-   - enable commit emails.
+   + enable commit emails.
 
 * Post M3:
   - Write up release procedure.  lucas@collab.net has volunteered to
