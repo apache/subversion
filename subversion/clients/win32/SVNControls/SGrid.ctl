@@ -92,8 +92,10 @@ Option Explicit
 '   * 1) Added HeaderHitTest (Bill Tutt)
 '   * 2) Fixed HighlightSelectedIcons so that it actually works when Icons are attached to columns that have text. (Bill Tutt)
 '   * 3) Added property pages for columns, and grid properties.
+'   * 4) Exposed the row Key from cGridCell
 '     Note: DrawFocusRectangle = True looks kind of cheesy atm if HighlightSelectedIcons is set to FALSE.
 '     Note: bFixed for Columns don't appear to be used.
+'     Note: AutoColumnWidth of just one column doesn't work for the drawing code.
 '
 ' FREE SOURCE CODE - ENJOY!
 ' ======================================================================================
@@ -2572,6 +2574,7 @@ Public Property Get Cell(ByVal lRow As Long, ByVal lCol As Long) As cGridCell
          .TextAlign = CellTextAlign(lRow, lCol)
          .Text = CellText(lRow, lCol)
          .ItemData = CellItemData(lRow, lCol)
+         .Key = m_tRows(lRow).sKey
          .Init Me, lRow, lCol
       End With
       Set Cell = ObjectFromPtr(ObjPtr(cS))
