@@ -292,6 +292,45 @@ test_uri_encode (const char **msg,
 
 
 static svn_error_t *
+test_uri_decode (const char **msg,
+                 svn_boolean_t msg_only,
+                 apr_pool_t *pool)
+{
+  int i;
+
+  const char *paths[3][2] = { 
+    { "http://c.r.a/s%\0008me", 
+         "http://c.r.a/s%"},
+    { "http://c.r.a/s%6\000me",
+         "http://c.r.a/s%6" },
+    { "http://c.r.a/s%68me",
+         "http://c.r.a/shme" },
+  };
+  
+  *msg = "test svn_path_uri_decode with invalid escape";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  for (i = 0; i < 3; i++)
+    {
+      const char *de_path;
+
+      /* URI-decode the path, and verify the results. */
+      de_path = svn_path_uri_decode (paths[i][0], pool);
+      if (strcmp (de_path, paths[i][1]))
+        {
+          return svn_error_createf
+            (SVN_ERR_TEST_FAILED, NULL,
+             "svn_path_uri_decode ('%s') returned '%s' instead of '%s'",
+             paths[i][0], de_path, paths[i][1]);
+        }
+    }
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
 test_join (const char **msg,
            svn_boolean_t msg_only,
            apr_pool_t *pool)
@@ -605,6 +644,7 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS (test_is_url),
     SVN_TEST_PASS (test_is_uri_safe),
     SVN_TEST_PASS (test_uri_encode),
+    SVN_TEST_PASS (test_uri_decode),
     SVN_TEST_PASS (test_join),
     SVN_TEST_PASS (test_basename),
     SVN_TEST_PASS (test_decompose),
