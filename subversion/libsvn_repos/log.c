@@ -124,7 +124,7 @@ svn_repos_get_logs (svn_repos_t *repos,
 {
   svn_revnum_t this_rev, head = SVN_INVALID_REVNUM;
   apr_pool_t *subpool = svn_pool_create (pool);
-  apr_hash_t *changed_paths = NULL;
+  apr_hash_t *changed_paths;
   svn_fs_t *fs = repos->fs;
   apr_array_header_t *revs = NULL;
 
@@ -207,9 +207,11 @@ svn_repos_get_logs (svn_repos_t *repos,
           SVN_ERR (svn_fs_revision_root (&newroot, fs, this_rev, subpool));
           SVN_ERR (detect_changed (changed_paths, newroot, subpool));
         }
+      else
+        changed_paths = NULL;
 
       SVN_ERR ((*receiver) (receiver_baton,
-                            (discover_changed_paths ? changed_paths : NULL),
+                            changed_paths,
                             this_rev,
                             author ? author->data : NULL,
                             date ? date->data : NULL,
