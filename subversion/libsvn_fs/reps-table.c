@@ -19,6 +19,7 @@
 #include "trail.h"
 #include "strings-table.h"
 #include "reps-table.h"
+#include "key-gen.h"
 
 
 
@@ -35,6 +36,18 @@ svn_fs__open_reps_table (DB **reps_p,
   DB_ERR (reps->open (reps, "representations", 0, DB_BTREE,
                       create ? (DB_CREATE | DB_EXCL) : 0,
                       0666));
+
+  /* Create the `next-key' table entry.  */
+  if (create)
+  {
+    DBT key, value;
+
+    DB_ERR (reps->put
+            (reps, 0,
+             svn_fs__str_to_dbt (&key, (char *) svn_fs__next_key_key),
+             svn_fs__str_to_dbt (&value, (char *) "0"),
+             0));
+  }
 
   *reps_p = reps;
   return 0;
@@ -87,11 +100,82 @@ svn_fs__write_rep (svn_fs_t *fs,
 {
   DBT query, result;
 
+  svn_stringbuf_t *s = svn_fs__unparse_skel (skel, trail->pool);
+  /* printf ("kff key sez \"%s\"\n", key); */
+  /* printf ("kff stringbuf sez \"%s\"\n", s->data); */
+
   SVN_ERR (DB_WRAP (fs, "storing representation",
                     fs->representations->put
                     (fs->representations, trail->db_txn,
                      svn_fs__str_to_dbt (&query, (char *) key),
                      svn_fs__skel_to_dbt (&result, skel, trail->pool), 0)));
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_fs__write_new_rep (char **key,
+                       svn_fs_t *fs,
+                       skel_t *skel,
+                       trail_t *trail)
+{
+  DBT query, result;
+  int db_err;
+  apr_size_t len;
+  char next_key[200];    /* This will be a problem if the number of
+                            representations in a filesystem ever
+                            exceeds 1821797716821872825139468712408937
+                            126733897152817476066745969754933395997209
+                            053270030282678007662838673314795994559163
+                            674524215744560596468010549540621501770423
+                            499988699078859474399479617124840673097380
+                            736524850563115569208508785942830080999927
+                            310762507339484047393505519345657439796788
+                            24151197232629947748581376.  Somebody warn
+                            my grandchildren. */
+  
+  /* printf ("kff a\n"); */
+  /* Get the current value associated with `next-key'.  */
+  svn_fs__str_to_dbt (&query, (char *) svn_fs__next_key_key);
+  /* printf ("kff b\n"); */
+  SVN_ERR (DB_WRAP (fs, "allocating new representation (getting next-key)",
+                    fs->representations->get (fs->representations,
+                                              trail->db_txn,
+                                              &query,
+                                              svn_fs__result_dbt (&result),
+                                              0)));
+  /* printf ("kff c\n"); */
+  svn_fs__track_dbt (&result, trail->pool);
+
+  /* Store the new rep skel. */
+  /* printf ("kff d\n"); */
+  *key = apr_pstrndup (trail->pool, result.data, result.size);
+  /* printf ("kff e\n"); */
+
+  {
+    svn_stringbuf_t *s;
+    /* printf ("kff ee\n"); */
+    s = svn_fs__unparse_skel (skel, trail->pool);
+    /* printf ("kff caller stringbuf sez \"%s\"\n", s->data); */
+    /* printf ("kff caller key sez \"%s\"\n", *key); */
+  }
+
+  SVN_ERR (svn_fs__write_rep (fs, *key, skel, trail));
+
+  /* Bump to future key. */
+  len = result.size;
+  /* printf ("kff f\n"); */
+  svn_fs__next_key (result.data, &len, next_key);
+  /* printf ("kff g\n"); */
+  db_err = fs->representations->put
+    (fs->representations, trail->db_txn,
+     svn_fs__str_to_dbt (&query, (char *) svn_fs__next_key_key),
+     svn_fs__str_to_dbt (&result, (char *) next_key),
+     0);
+  /* printf ("kff h\n"); */
+  SVN_ERR (DB_WRAP (fs, "bumping next representation key", db_err));
+  /* printf ("kff i\n"); */
 
   return SVN_NO_ERROR;
 }
