@@ -682,7 +682,7 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
  *      status structures with information about out-of-dateness (with
  *      respect to @a revision).  Also, if @a result_rev is not @c NULL,
  *      set @a *result_rev to the actual revision against which the
- *      working copy was compared (@a *result_rev is not touched unless
+ *      working copy was compared (@a *result_rev is not meaningful unless
  *      @a update is set).
  *
  * This function recurses into externals definitions ('svn:externals')
