@@ -269,7 +269,7 @@ svn_parse (ap_hash_t **uberhash, svn_string_t *filename, ap_pool_t *pool)
                 /* Instead of returning an error, just print warning */
                 svn_handle_error (svn_create_error 
                                   (SVN_ERR_MALFORMED_LINE, SVN_NON_FATAL,
-                                   msg, pool));
+                                   msg, NULL, pool));
                 break;
               }
                                         
@@ -314,7 +314,7 @@ svn_parse (ap_hash_t **uberhash, svn_string_t *filename, ap_pool_t *pool)
                 /* Instead of returning an error, just print warning */
                 svn_handle_error (svn_create_error 
                                   (SVN_ERR_MALFORMED_LINE, SVN_NON_FATAL,
-                                   msg, pool));
+                                   msg, NULL, pool));
                 break;
               }
 
