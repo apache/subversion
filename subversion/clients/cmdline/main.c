@@ -104,6 +104,12 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
     "Show the log messages for a set of revision(s) and/or file(s).\n"
     "usage: log [-r REV1([:)REV2]] [PATH1 [PATH2] ...] \n" },
 
+  { "move",       FALSE, svn_cl__move,
+    "Move or rename something working copy.\n"
+    "usage: move SRC_PATH DST_PATH.\n" },
+  { "mv",         TRUE, NULL, NULL },
+  { "ren",        TRUE, NULL, NULL },
+
   { "proplist",   FALSE, svn_cl__proplist,
     "List all properties for given files and directories.\n"
     "usage: proplist [TARGETS]\n" },
