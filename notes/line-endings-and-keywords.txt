@@ -244,4 +244,21 @@ the chance that it would undo corruption is actually greater.
 
 * Keyword substitution
 
-  nothing to see here yet
+Quick summary: there's one property, named "svn:keywords".  It's value
+is a whitespace-separated list of keywords to expand.  Since keywords
+have both long and short forms, both ways are allowed in the value of
+the svn:keywords property.  Here are all the keywords:
+
+   "LastChangedBy"       "Author"    ---> either one expands author
+   "LastChangedDate"     "Date"      ---> either one expands date
+   "LastChangedRev"      "Rev"       ---> either one expands rev
+   "HeadUrl"             "URL"       ---> either one expands url
+
+Here are some example values of the property:
+
+   "Rev LastChangedDate HeadURL"
+
+   "Author\nDate  \n  LastChangedRev       URL"
+
+Unrecognized words are ignored; absence of the property is the same as
+an empty value or a value with no valid keywords in it.
