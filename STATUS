@@ -26,6 +26,11 @@ Candidate changes:
     Votes:
       +1: lundblad
 
+  * r13939, r13940
+    Doxygen tweaks.
+    Votes:
+      +1: maxb
+
 Approved changes (further review is welcome, but not required):
 
   [None]
