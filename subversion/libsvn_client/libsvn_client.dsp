@@ -91,10 +91,6 @@ SOURCE=.\add.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\apply_edits.c
-# End Source File
-# Begin Source File
-
 SOURCE=.\auth.c
 # End Source File
 # Begin Source File
@@ -128,6 +124,10 @@ SOURCE=.\delete.c
 # Begin Source File
 
 SOURCE=.\diff.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\export.c
 # End Source File
 # Begin Source File
 
