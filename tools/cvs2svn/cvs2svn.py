@@ -15,6 +15,7 @@ import getopt
 import stat
 import math
 import md5
+import shutil
 
 from svn import fs, util, delta, repos
 
@@ -192,6 +193,8 @@ class CollectData(rcsparse.Sink):
                     self.get_branches(revision))
 
 def branch_path(ctx, branch_name = None):
+  ### FIXME: Our recommended layout has changed, and this function
+  ### will have to change with it.
   if branch_name:
      return ctx.branches_base + '/' + branch_name + '/'
   else:
@@ -272,44 +275,16 @@ class NodeError(Exception):
   pass
 
 class Node:
-  # A tree of paths known to exist in HEAD at a given moment.
-  # When a path is added to the dumpfile, it is added here too; when
-  # a path is deleted from the dumpfile, it is deleted here too.
-  # This is how we know when to make intermediate dirs.
-  # 
-  ### FIXME: Of course, an in-memory tree is no good; ultimately, this
-  ### needs to live in a dbm file or something.  That's effectively
-  ### how it worked when we used the fs bindings, since the repository
-  ### itself was being used as the on-disk record of what paths
-  ### existed at any given moment.
-  ###
-  ### Hmmm...
-  ###
-  ### It occurs to me that our dump format technically doesn't
-  ### need to distinguish between added and changed paths.
-  ### Instead of the "add" and "change" node-actions, it could
-  ### have "tweak", which would mean "add" if the path is not
-  ### already present (including intermediate dirs?), and "change" if
-  ### it is.  Since we always dump fulltexts, we don't actually use
-  ### the previous node revision's data anyway.
-  ###
-  ### If the dump format worked like that, then we could avoid
-  ### checking to see whether a path already exists.  We'd just
-  ### use the "tweak" action, and let the loader figure it out.
-  ###
-  ### And this feature could be added backwards-compatibly...
   def __init__(self):
     self.children = { }
 
 
 def ensure_directories(path, root, dumpfile):
   """Output to DUMPFILE any intermediate directories in PATH that are
-  not already present under node ROOT, adding them to ROOT's tree as
-  we go.  Return the last parent directory, that is, the parent
-  of PATH's basename.  Leading slash(es) on PATH are optional."""
+  not already present under directory ROOT, adding them to ROOT's tree as
+  we go.  PATH may not have a leading slash."""
   path_so_far = None
-  components = filter(None, string.split(path, '/'))
-  this_node = root
+  components = string.split(path, '/')
 
   for component in components[:-1]:
 
@@ -318,8 +293,8 @@ def ensure_directories(path, root, dumpfile):
     else:
       path_so_far = component
 
-    if component not in this_node.children:
-      this_node.children[component] = Node()
+    if not os.path.exists(os.path.join(root, path_so_far)):
+      os.mkdir(os.path.join(root, path_so_far))
       dumpfile.write("Node-path: %s\n" % path_so_far)
       dumpfile.write("Node-kind: dir\n")
       dumpfile.write("Node-action: add\n")
@@ -329,10 +304,6 @@ def ensure_directories(path, root, dumpfile):
       dumpfile.write("PROPS-END\n")
       dumpfile.write("\n")
       dumpfile.write("\n")
-    this_node = this_node.children[component]
-
-  return this_node
-
 
 class Dump:
   def __init__(self, dumpfile_path, revision):
@@ -340,12 +311,25 @@ class Dump:
     self.dumpfile_path = dumpfile_path
     self.revision = revision
     self.dumpfile = open(dumpfile_path, 'wb')
+    self.tmpdir = os.tempnam('.', 'cvs2svn-tmp-')
+    self.svn_head_root = os.path.join(self.tmpdir, 'svnroot')
 
-    # Keep track of what paths exist in the repository.
-    self.root = Node()
+    # Make the dumper's temp directory for this run.
+    #
+    # Under the tmp directory is a directory tree ('svnroot/') that
+    # represents the current HEAD tree of the Subversion repository at
+    # all times.  When a path is added to the dumpfile, it is added
+    # there too; when a path is deleted from the dumpfile, it is
+    # deleted there too.  We inspect this tree to determine when we
+    # need to output intermediate dirs before outputting a leaf node.
+    os.mkdir(self.tmpdir)
+    os.mkdir(self.svn_head_root)
 
     # Initialize the dumpfile with the standard headers:
-    ### (The source cvs repository doesn't have a UUID, hmm, what to do?)
+    #
+    # The CVS repository doesn't have a UUID, and the Subversion
+    # repository will be created with one anyway.  So when we load
+    # the dumpfile, we'll tell svnadmin to ignore the UUID below. 
     self.dumpfile.write('SVN-fs-dump-format-version: 2\n')
     self.dumpfile.write('\n')
     self.dumpfile.write('UUID: ????????-????-????-????-????????????\n')
@@ -428,14 +412,21 @@ class Dump:
     basename = os.path.basename(rcs_file[:-2])
     pipe = os.popen('co -q -p%s \'%s\'' % (cvs_rev, rcs_file), 'r', 102400)
 
-    parent_node = ensure_directories(svn_path, self.root, self.dumpfile)
+    ensure_directories(svn_path, self.svn_head_root, self.dumpfile)
 
-    # Anything ending in ".1" is a new file.
+    # You might think we could just test
     #
-    # ### We could also use the parent_node to determine this.
-    # ### Maybe we should, too, because ".1" is not perfectly
-    # ### reliable, because of 'cvs commit -r'...
-    if cvs_rev[-2:] == '.1':
+    #   if cvs_rev[-2:] == '.1':
+    #
+    # to determine if this path exists in head yet.  But that wouldn't
+    # be perfectly reliable, both because of 'cvs commit -r', and also
+    # the possibility of file resurrection.
+    head_mirror = os.path.join(self.svn_head_root, svn_path)
+    if not os.path.exists(head_mirror):
+      # Mirror it in the head tree skeleton.  Use mkdir() even though
+      # it's a file in Subversion, because we don't care about the
+      # type -- the mirror is only for existence questions.
+      os.mkdir(head_mirror)
       action = 'add'
     else:
       action = 'change'
@@ -483,7 +474,6 @@ class Dump:
 
     # This record is done.
     self.dumpfile.write('\n')
-    parent_node.children[basename] = Node()
 
     # Some old code, left around for reference (I don't think we need
     # to worry about this particular problem anymore, since dumpfiles
@@ -504,6 +494,8 @@ class Dump:
 
   def close(self):
     self.dumpfile.close()
+    ### os.removedirs() didn't work.  (What is it for, anyway?)
+    shutil.rmtree(self.tmpdir)
 
 
 class Commit:
@@ -569,13 +561,11 @@ class Commit:
 
     if ctx.dry_run:
       for f, r, br, tags, branches in self.changes:
-        # compute a repository path. ensure we have a leading "/" and drop
-        # the ,v from the file name
+        # compute a repository path, dropping the ,v from the file name
         svn_path = branch_path(ctx, br) + relative_name(ctx.cvsroot, f[:-2])
         print '    changing %s : %s' % (r, svn_path)
       for f, r, br, tags, branches in self.deletes:
-        # compute a repository path. ensure we have a leading "/" and drop
-        # the ,v from the file name
+        # compute a repository path, dropping the ,v from the file name
         svn_path = branch_path(ctx, br) + relative_name(ctx.cvsroot, f[:-2])
         print '    deleting %s : %s' % (r, svn_path)
       print '    (skipped; dry run enabled)'
@@ -596,8 +586,7 @@ class Commit:
     f_pool = util.svn_pool_create(c_pool)
 
     for rcs_file, cvs_rev, br, tags, branches in self.changes:
-      # compute a repository path. ensure we have a leading "/" and drop
-      # the ,v from the file name
+      # compute a repository path, dropping the ,v from the file name
       cvs_path = relative_name(ctx.cvsroot, rcs_file[:-2])
       svn_path = branch_path(ctx, br) + cvs_path
 
@@ -1002,9 +991,9 @@ def main():
   ctx.verbose = 0
   ctx.dry_run = 0
   ctx.create_repos = 0
-  ctx.trunk_base = "/trunk"
-  ctx.tags_base = "/tags"
-  ctx.branches_base = "/branches"
+  ctx.trunk_base = "trunk"
+  ctx.tags_base = "tags"
+  ctx.branches_base = "branches"
   ctx.encoding = "ascii"
 
   try:
