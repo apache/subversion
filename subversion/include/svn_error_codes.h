@@ -750,6 +750,10 @@ SVN_ERROR_START
               SVN_ERR_MISC_CATEGORY_START + 15,
               "The operation was interrupted")
 
+  SVN_ERRDEF (SVN_ERR_INVALID_DIFF_OPTION,
+              SVN_ERR_MISC_CATEGORY_START + 16,
+              "The specified diff option is not supported")
+
   /* command-line client errors */
 
   SVN_ERRDEF (SVN_ERR_CL_ARG_PARSING_ERROR,
