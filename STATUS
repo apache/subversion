@@ -1,14 +1,22 @@
 This file tracks the status of changes proposed for inclusion in 1.0.
 Each candidate consists of a short identifying block (e.g., a revision
-number, maybe an issue number), a brief description of the change, and
-an at-most-one-line justification of why it should be in 1.0, followed
-by the votes.  For example:
+number, maybe an issue number), a brief description of the change, an
+at-most-one-line justification of why it should be in 1.0, perhaps
+some notes/concerns, and finally the votes.  The notes and concerns
+are meant to be brief summaries to help a reader get oriented; please
+don't use the STATUS file for actual discussion, use the dev@ list or
+irc instead.
+
+Here's an example, probably as complex as an entry would ever get:
 
    * r98765 (issue #56789)
-     Use an opaque type for svn_ra_get_ansible(), instead of void *.
-     Justification: API stability
-     Notes:
-      See http://... regarding veto.
+     Make commit editor take a closure object for future mindreading.
+     Justification: API stability, as prep for future enhancement.
+     Notes: There was consensus on the desirability of this feature in
+       the near future; see thread at http://... (Message-Id:
+       blahblahblah).
+     Concerns: Vetoed by jerenkrantz due to privacy concerns with the
+       implementation; see thread at http://... (Message-Id: blahblahblah)
      Votes:
        +1: ghudson, bliss
        -1: jerenkrantz
@@ -16,9 +24,10 @@ by the votes.  For example:
 A change needs three +1 votes from full committers (or partial committers
 with access to the involved paths), and no vetoes, to go into the release.
 
-If you cast a veto (i.e. -1), then please include a link to a mailing
-list thread explaining your veto.  You can go back and add the link
-later if the thread isn't available at the time you commit the veto.
+If you cast a veto (i.e. -1), please state the reason in the concerns
+field, and include a url / message-id for the list discussion if any.
+You can go back and add the link later if the thread isn't available
+at the time you commit the veto.
 
 Voting +1 on a change doesn't just mean you approve of it in principle.
 It means you have thoroughly reviewed the change, and find it correct
@@ -26,6 +35,14 @@ and as nondisruptive as possible.  When it is committed to the release
 branch, the log message will include the names of all who voted for
 it, as well as the original author and the person making the commit.
 All of these people are considered equally answerable for bugs.
+
+If you've reviewed a patch, and like it but have some reservations,
+you can write "+1 (concept)" and then ask questions on the list about
+your concerns.  You can write "+0" if you like the general idea but
+haven't reviewed the patch carefully.  Neither of these votes counts
+toward the total, but they can be useful for tracking down people who
+are following the change and might be willing to spend more time on
+it.
 
 Thursday, Jan. 8th, 2004 is the deadline for candidate changes to be
 voted on.  The sooner a change is listed, the more time people have to
