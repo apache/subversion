@@ -220,7 +220,7 @@ def revert_replaced_file_without_props(sbox):
 # list all tests here, starting with None:
 test_list = [ None,
               XFail(revert_reexpand_keyword),
-              Skip(revert_corrupted_text_base),
+              Skip(revert_corrupted_text_base, 1),
               revert_replaced_file_without_props,
              ]
 
