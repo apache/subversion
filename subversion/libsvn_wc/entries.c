@@ -1364,8 +1364,7 @@ fold_scheduling (apr_hash_t *entries,
           return SVN_NO_ERROR;
 
         default:
-          return svn_error_createf (SVN_ERR_WC_SCHEDULE_CONFLICT, NULL,
-                                    "Illegal scheduling operation requested.");
+          return svn_error_create (SVN_ERR_WC_SCHEDULE_CONFLICT, NULL, NULL);
         }
     }
 
