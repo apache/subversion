@@ -43,7 +43,7 @@ extern "C" {
 /* Minor version number.
    Modify when new functionality is added or new interfaces are
    defined, but all changes are backward compatible. */
-#define SVN_VER_MINOR      12
+#define SVN_VER_MINOR      13
 
 /* Patch number.
    Modify for every released patch. */

@@ -1,4 +1,4 @@
-Version Pre-Alpha (released ? June 2002, revision ?)
+Version 0.13.0 [Pre-Alpha] (released 10 June 2002, revision 2140)
 
  User-visible changes:
  * repositories have a new database schema;  existing ones must be upgraded!
@@ -9,6 +9,7 @@ Version Pre-Alpha (released ? June 2002, revision ?)
  * complete rewrite of filesystem schema!
     - skels are abstracted away, opening the door to SQL backends
     - node-ids now have copy IDs
+ * huge progress on module system [only checkouts work at the moment]
  * massive conversion of stringbufs to char* in our public APIs
  * vsn-rsc-urls are now based on created-rev/path instead of fs_id_t's.
  * reinstate 'deleted' flag on entries, to ensure accurate update reports
@@ -24,7 +25,7 @@ Version Pre-Alpha (released ? June 2002, revision ?)
  * many memleaks fixed, thanks to valgrind!
  * upgrade to newest neon, allow deflated communication with apache
  * many bugfixes to merge, switch, checkout, rm; tackling of issues 704,
-   705, 698, 711, 713, and others
+   705, 698, 711, 713, 721, 718 and many others
 
 Version 0.12.0 (released 3 May 2002, revision 1868)
 
