@@ -14,9 +14,15 @@ Packager: David Summers <david@summersoft.fay.ar.us>
 Requires: db3 >= 3.3.11
 BuildPreReq: autoconf >= 2.52, db3-devel >= 3.3.11 libtool >= 1.4.2
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}
+Prefix: /usr
 %description
 Subversion does the same thing CVS does (Concurrent Versioning System) but has
 major enhancements compared to CVS.
+
+*** Note: This is a relocatable package; it can be installed anywhere you like
+with the "rpm -Uvh --prefix /your/favorite/path" command. This is useful
+if you don't have root access on your machine but would like to use this
+package.
 
 %changelog
 * Thu Sep 27 2001 David Summers <david@summersoft.fay.ar.us>

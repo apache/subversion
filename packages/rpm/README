@@ -1,0 +1,10 @@
+                              RPM GENERATION
+
+
+This directory contains the scripts necessary (but probably not yet sufficient)
+to build the subverion *.i386.rpm and src.rpm files as a non-root user in the
+user's home directory.
+
+The ultimate goal is to just type "make" and it will build the latest (or
+any) version of the subversion distribution.
+
