@@ -120,7 +120,8 @@ Theory and documentation
       that shows in detail how to effectively use Subversion.  The
       text of the book is free, and is actively being revised.
       On-line versions are available at http://svnbook.red-bean.com.
-      The XML source is in 'doc/book/book'.
+      The XML source and translations to other languages are maintained
+      in their own repository at http://svn.red-bean.com/svnbook.
 
 
    4. SYSTEM NOTES
@@ -460,13 +461,19 @@ In addition to the GNU standards, Subversion uses these conventions:
 
          ;;; Begin Subversion development section
          (defun my-find-file-hook ()
-           (let ((svntree-path (expand-file-name "~/projects/subversion/)))
-             (if (string-match (concat svntree-path "doc/book")
-                               buffer-file-name)
-                 (load (concat svntree-path "doc/book/tools/svnbook"))
-               (if (string-match svntree-path buffer-file-name)
-                   (load (concat svntree-path "tools/dev/svn-dev"))))))
-  
+           (let ((svn-tree-path (expand-file-name "~/projects/subversion"))
+                 (book-tree-path (expand-file-name "~/projects/svnbook")))
+             (cond
+              ((string-match svn-tree-path buffer-file-name)
+               (load (concat svn-tree-path "/tools/dev/svn-dev")))
+              ((string-match book-tree-path buffer-file-name)
+               ;; Handle load exception for svnbook.el, because it tries to
+               ;; load psgml, and not everyone has that available.
+               (condition-case nil
+                   (load (concat book-tree-path "/src/tools/svnbook"))
+                 (error
+                  (message "(Ignored problem loading svnbook.el.)")))))))
+
          (add-hook 'find-file-hooks 'my-find-file-hook)
          ;;; End Subversion development section
 

@@ -30,7 +30,7 @@ InternalCompressLevel=max
 SolidCompression=true
 AppCopyright={#= svn_cpr}
 UninstallDisplayIcon={app}\bin\svn.exe
-UninstallDisplayName=Subversion {#= svn_version}{#= svn_pretxtrevision}{#= svn_revision} (Uninstall)
+UninstallDisplayName=Subversion {#= svn_version}{#= svn_pretxtrevision}{#= svn_revision}
 AlwaysShowDirOnReadyPage=true
 AlwaysShowGroupOnReadyPage=true
 InfoAfterFile=Post.rtf
@@ -58,7 +58,7 @@ Name: apachehandler; Description: Install and configure Subversion modules (the 
 Source: in\subversion\Readme.dist; DestDir: {app}; DestName: Readme.txt
 Source: W32notes.txt; DestDir: {app}
 Source: {#= path_setup_in}\subversion\svn-proxy-template.reg; DestDir: {app}; Flags: ignoreversion
-Source: {#= path_svn_win32}\README.txt; DestDir: {app}; DestName: Buildnotes.txt
+Source: {#= path_svn}\README.txt; DestDir: {app}; DestName: Buildnotes.txt
 Source: {#= path_svnclient}\svn.exe; DestDir: {app}\bin; Flags: ignoreversion
 Source: {#= path_svnadmin}\svnadmin.exe; DestDir: {app}\bin; Flags: ignoreversion
 Source: {#= path_svnlook}\svnlook.exe; DestDir: {app}\bin; Flags: ignoreversion
@@ -71,7 +71,7 @@ Source: {#= path_iconv}\*.so; DestDir: {app}\iconv; Flags: ignoreversion
 Source: {#= path_locale}\*.*; DestDir: {app}\share\locale; Flags: ignoreversion recursesubdirs
 #endif
 Source: {#= path_setup_in}\berkeley\BerkeleyLicense.txt; DestDir: {app}
-Source: {#= path_setup_in}\doc\svn-doc.chm; DestDir: {app}\doc
+Source: {#= path_setup_in}\doc\svn-book.chm; DestDir: {app}\doc
 
 ; APR DLLs
 Source: {#= path_libapr_dll}\libapr.dll; DestDir: {app}\bin; Flags: ignoreversion
@@ -93,8 +93,8 @@ Source: missing_msvcp60dll.html; DestDir: {app}\doc; Check: VCRuntimeNotFound
 Source: missing_shfolderdll.html; DestDir: {app}\doc; Check: ShFolderDllNotFound
 
 ; httpd modules
-Source: {#= path_davsvn}\mod_dav_svn.so; DestDir: {app}\httpd; Flags: ignoreversion
-Source: {#= path_authzsvn}\mod_authz_svn.so; DestDir: {app}\httpd; Flags: ignoreversion
+Source: {#= path_davsvn}\mod_dav_svn.so; DestDir: {app}\bin; Flags: ignoreversion
+Source: {#= path_authzsvn}\mod_authz_svn.so; DestDir: {app}\bin; Flags: ignoreversion
 
 ;Helpers ---------------------------------------------------------------------
 Source: {#= path_svnpath}\svnpath.exe; DestDir: {app}\helpers; Flags: ignoreversion
@@ -134,9 +134,9 @@ Name: {group}\Subversion on the Web; Filename: {app}\svn.url
 Name: {group}\Uninstall Subversion; Filename: {app}\UninsHs.exe
 Name: {group}\Licenses\Subversion; Filename: {app}\SubversionLicense.txt
 Name: {group}\Licenses\Berkeley DB Licence; Filename: {app}\BerkeleyLicense.txt
-Name: {group}\Subversion Documentation; Filename: {app}\doc\svn-doc.chm; IconFilename: {app}\bin\svn.exe; Comment: The standard Subversion documentation; IconIndex: 0
-Name: {userdesktop}\Subversion Documentation; Filename: {app}\doc\svn-doc.chm; IconFilename: {app}\svn.exe; Comment: The standard Subversion documentation; IconIndex: 0; Tasks: desktopicon
-Name: {userappdata}\Microsoft\Internet Explorer\Quick Launch\Subversion Documentation; Filename: {app}\doc\svn-doc.chm; Comment: The standard Subversion Documentation; IconFilename: {app}\svn.exe; IconIndex: 0; MinVersion: 4.01.1998,5.00.2195; Tasks: quicklaunchicon
+Name: {group}\Subversion Documentation; Filename: {app}\doc\svn-book.chm; IconFilename: {app}\bin\svn.exe; Comment: The standard Subversion documentation; IconIndex: 0
+Name: {userdesktop}\Subversion Documentation; Filename: {app}\doc\svn-book.chm; IconFilename: {app}\svn.exe; Comment: The standard Subversion documentation; IconIndex: 0; Tasks: desktopicon
+Name: {userappdata}\Microsoft\Internet Explorer\Quick Launch\Subversion Documentation; Filename: {app}\doc\svn-book.chm; Comment: The standard Subversion Documentation; IconFilename: {app}\svn.exe; IconIndex: 0; MinVersion: 4.01.1998,5.00.2195; Tasks: quicklaunchicon
 Name: {group}\Read Me; Filename: {app}\Readme.txt
 Name: {group}\Download and install msvcp60.dll; Filename: {app}\doc\missing_msvcp60dll.html; Check: VCRuntimeNotFound
 Name: {group}\Download and install shfolder.dll; Filename: {app}\doc\missing_shfolderdll.html; Check: ShFolderDllNotFound
@@ -181,3 +181,4 @@ Name: en; MessagesFile: compiler:Default.isl
 
 [Code]
 #include "is_main.pas"
+

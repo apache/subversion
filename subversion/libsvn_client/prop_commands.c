@@ -587,6 +587,9 @@ svn_client_propget2 (apr_hash_t **props,
   else  /* working copy path */
     {
       svn_boolean_t pristine;
+      struct propget_walk_baton wb;
+      static const svn_wc_entry_callbacks_t walk_callbacks
+        = { propget_walk_cb };
 
       SVN_ERR (svn_wc_adm_probe_open3 (&adm_access, NULL, target,
                                        FALSE, recurse ? -1 : 0,
@@ -612,18 +615,14 @@ svn_client_propget2 (apr_hash_t **props,
           pristine = FALSE;
         }
 
+      wb.base_access = adm_access;
+      wb.props = *props;
+      wb.propname = propname;
+      wb.pristine = pristine;
+
       /* Fetch, recursively or not. */
       if (recurse && (node->kind == svn_node_dir))
         {
-          static const svn_wc_entry_callbacks_t walk_callbacks
-            = { propget_walk_cb };
-          struct propget_walk_baton wb;
-
-          wb.base_access = adm_access;
-          wb.props = *props;
-          wb.propname = propname;
-          wb.pristine = pristine;
-
           SVN_ERR (svn_wc_walk_entries2 (target, adm_access,
                                          &walk_callbacks, &wb, FALSE,
                                          ctx->cancel_func, ctx->cancel_baton,
@@ -631,12 +630,9 @@ svn_client_propget2 (apr_hash_t **props,
         }
       else
         {
-          const svn_string_t *propval;
-          
-          SVN_ERR (pristine_or_working_propval (&propval, propname, target,
-                                                adm_access, pristine, pool));
-
-          apr_hash_set (*props, target, APR_HASH_KEY_STRING, propval);
+          const svn_wc_entry_t *entry;
+          SVN_ERR (svn_wc_entry (&entry, target, adm_access, FALSE, pool));
+          SVN_ERR (walk_callbacks.found_entry (target, entry, &wb, pool));
         }
       
       SVN_ERR (svn_wc_adm_close (adm_access));

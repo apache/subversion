@@ -99,9 +99,34 @@ static svn_error_t *make_connection(const char *hostname, unsigned short port,
 {
   apr_sockaddr_t *sa;
   apr_status_t status;
+  int family = APR_INET;
+  int ipv6_supported = APR_HAVE_IPV6;
+  
+  /* Make sure we have IPV6 support first before giving apr_sockaddr_info_get
+     APR_UNSPEC, because it may give us back an IPV6 address even if we can't
+     create IPV6 sockets.  */  
+
+#if APR_HAVE_IPV6
+  if (ipv6_supported)
+    {
+#ifdef MAX_SECS_TO_LINGER
+      status = apr_socket_create(sock, APR_INET6, SOCK_STREAM, pool);
+#else
+      status = apr_socket_create(sock, APR_INET6, SOCK_STREAM,
+                                 APR_PROTO_TCP, pool);
+#endif
+      if (status != 0)
+        ipv6_supported = 0;
+      else 
+        {
+          apr_socket_close(*sock);
+          family = APR_UNSPEC;
+        }
+    }
+#endif
 
   /* Resolve the hostname. */
-  status = apr_sockaddr_info_get(&sa, hostname, APR_UNSPEC, port, 0, pool);
+  status = apr_sockaddr_info_get(&sa, hostname, family, port, 0, pool);
   if (status)
     return svn_error_createf(status, NULL, _("Unknown hostname '%s'"),
                              hostname);
@@ -1181,9 +1206,16 @@ static svn_error_t *ra_svn_stat(svn_ra_session_t *session,
   svn_boolean_t has_props;
   apr_uint64_t size;
   svn_dirent_t *the_dirent;
+  svn_error_t *err;
 
   SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "stat", "c(?r)", path, rev));
-  SVN_ERR(handle_auth_request(sess_baton, pool));
+  err = handle_auth_request(sess_baton, pool);
+
+  if (err && err->apr_err == SVN_ERR_RA_SVN_UNKNOWN_CMD)
+    return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, err,
+                             _("stat not implemented"));
+  SVN_ERR(err);
+
   SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "(?l)", &list));
 
   if (! list)

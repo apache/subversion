@@ -31,6 +31,8 @@
 #include "bdb-err.h"
 #include "txn-table.h"
 
+#include "svn_private_config.h"
+
 
 static svn_boolean_t
 is_committed (transaction_t *txn)
@@ -89,7 +91,7 @@ svn_fs_bdb__put_txn (svn_fs_t *fs,
   svn_fs_base__str_to_dbt (&key, txn_name);
   svn_fs_base__skel_to_dbt (&value, txn_skel, pool);
   svn_fs_base__trail_debug (trail, "transactions", "put");
-  SVN_ERR (BDB_WRAP (fs, "storing transaction record",
+  SVN_ERR (BDB_WRAP (fs, _("storing transaction record"),
                      bfd->transactions->put (bfd->transactions, trail->db_txn,
                                              &key, &value, 0)));
 

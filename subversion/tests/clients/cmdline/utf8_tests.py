@@ -99,6 +99,12 @@ try:
     locale.setlocale(locale.LC_ALL, '.1252')
   else:
     locale.setlocale(locale.LC_ALL, 'en_US.ISO8859-1')
+
+    if os.putenv:
+      # propagate to the svn* executables, so they do the correct translation
+      # the line below works for Linux systems if they have the particular
+      # locale installed
+      os.environ['LC_ALL'] = "en_US.ISO8859-1"
 except:
   pass
 
@@ -108,9 +114,16 @@ localeenc = locale.getlocale()[1]
 if localeenc:
   localeregex = re.compile('^ISO-?8859-1$', re.I)
   localematch = localeregex.search(localeenc)
+  try:
+    svntest.actions.run_and_verify_svn("",svntest.SVNAnyOutput, None,"help")
+  except:
+    # We won't be able to run the client; this might be because the
+    # system does not support the iso-8859-1 locale. Anyhow, it makes
+    # no sense to run the test.
+    localematch = None
 else:
   localematch = None
-  
+
 # list all tests here, starting with None:
 test_list = [ None,
               Skip(basic_utf8_conversion, localematch is None)
