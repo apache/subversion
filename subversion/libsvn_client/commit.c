@@ -852,10 +852,6 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
     {
       svn_client_commit_item_t *item = NULL;
 
-
-      /* Make a note that we have a commit-in-progress. */
-      commit_in_progress = TRUE;
-
       /* ### Temporary: If we have any non-added directories with
          property mods, make sure those directories are up-to-date.
          Someday this should just be protected against by the server.  */
@@ -881,6 +877,9 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
                                         TRUE, pool)))
             goto cleanup;
 
+          /* Make a note that we have a commit-in-progress. */
+          commit_in_progress = TRUE;
+
           /* If the item's revision isn't the same as the HEAD
              revision, bail out now. */
           if (item->revision != head)
@@ -903,6 +902,9 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
                                         &committed_date, &committed_author, 
                                         TRUE, pool)))
             goto cleanup;
+
+          /* Make a note that we have a commit-in-progress. */
+          commit_in_progress = TRUE;
         }
     }
 
