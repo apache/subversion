@@ -5,9 +5,9 @@
 %define apache_dir /usr
 # If you don't have 360+ MB of free disk space or don't want to run checks then
 # set make_*_check to 0.
-%define make_ra_local_check 0
-%define make_ra_svn_check 0
-%define make_ra_dav_check 0
+%define make_ra_local_check 1
+%define make_ra_svn_check 1
+%define make_ra_dav_check 1
 Summary: A Concurrent Versioning system similar to but better than CVS.
 Name: subversion
 Version: @VERSION@
@@ -101,6 +101,10 @@ Summary: Tools for Subversion
 Tools for Subversion.
 
 %changelog
+* Sun Jan 09 2005 David Summers <david@summersoft.fay.ar.us> r13417
+- Supplementary: Take out documentation patch altogether.
+- Turn testing back on, it was accidentally turned off.
+
 * Sun Jan 09 2005 David Summers <david@summersoft.fay.ar.us> r13132
 - Bye bye book;  it is now no longer a part of the Subversion repository but
   is at the http://svn.red-bean.com/svnbook/ URL.
@@ -348,9 +352,6 @@ sh autogen.sh
 
 # Fix up mod_dav_svn installation.
 patch -p1 < packages/rpm/redhat-8+/install.patch
-
-# Fix documentation version generation.
-patch -p1 < packages/rpm/redhat-8+/doc.patch
 
 # Figure out version and release number for command and documentation display.
 case "%{release}" in

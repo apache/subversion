@@ -53,6 +53,7 @@
 ;; ^     - svn-status-examine-parent
 ;; ~     - svn-status-get-specific-revision
 ;; E     - svn-status-ediff-with-revision
+;; X X   - svn-status-resolve-conflicts
 ;; s     - svn-status-show-process-buffer
 ;; e     - svn-status-toggle-edit-cmd-flag
 ;; ?     - svn-status-toggle-hide-unknown
@@ -408,7 +409,7 @@ If ARG then pass the -u argument to `svn status'."
   (interactive (list (read-directory-name "SVN status directory: "
                                           nil default-directory nil)
                      current-prefix-arg))
-  (setq arg (svn-status-possibly-negate-meaning-of-arg arg))
+  (setq arg (svn-status-possibly-negate-meaning-of-arg arg 'svn-status))
   (unless (file-directory-p dir)
     (error "%s is not a directory" dir))
   (if (not (file-exists-p (concat dir "/.svn/")))
@@ -853,7 +854,6 @@ A and B must be line-info's."
   (define-key svn-status-mode-map (kbd "C-=") 'svn-status-show-svn-diff-for-marked-files)
   (define-key svn-status-mode-map (kbd "~") 'svn-status-get-specific-revision)
   (define-key svn-status-mode-map (kbd "E") 'svn-status-ediff-with-revision)
-  (define-key svn-status-mode-map (kbd "X") 'svn-status-resolve-conflicts)
 
   (define-key svn-status-mode-map (kbd "C-n") 'svn-status-next-line)
   (define-key svn-status-mode-map (kbd "C-p") 'svn-status-previous-line)
@@ -892,6 +892,7 @@ A and B must be line-info's."
 (when (not svn-status-mode-extension-map)
   (setq svn-status-mode-extension-map (make-sparse-keymap))
   (define-key svn-status-mode-extension-map (kbd "v") 'svn-status-resolved)
+  (define-key svn-status-mode-extension-map (kbd "X") 'svn-status-resolve-conflicts)
   (define-key svn-status-mode-map (kbd "X") svn-status-mode-extension-map))
 (when (not svn-status-mode-options-map)
   (setq svn-status-mode-options-map (make-sparse-keymap))
@@ -1575,9 +1576,11 @@ non-interactive use."
   (when (svn-status-get-line-information)
     (goto-char (+ (point-at-bol) svn-status-default-column))))
 
-(defun svn-status-possibly-negate-meaning-of-arg (arg)
+(defun svn-status-possibly-negate-meaning-of-arg (arg &optional command)
   "Negate arg, if this-command is a member of svn-status-possibly-negate-meaning-of-arg."
-  (if (member this-command svn-status-negate-meaning-of-arg-commands)
+  (unless command
+    (setq command this-command))
+  (if (member command svn-status-negate-meaning-of-arg-commands)
       (not arg)
     arg))
 

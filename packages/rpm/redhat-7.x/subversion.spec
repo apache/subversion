@@ -105,6 +105,9 @@ Summary: Tools for Subversion
 Tools for Subversion.
 
 %changelog
+* Tue Mar 15 2005 David Summers <david@summersoft.fay.ar.us> r13417
+- Supplementary: Take out documentation patch altogether.
+
 * Sun Jan 09 2005 David Summers <david@summersoft.fay.ar.us> r13202
 - Bye bye book;  it is now no longer a part of the Subversion repository but
   is at the http://svn.red-bean.com/svnbook/ URL.
@@ -352,9 +355,6 @@ sh autogen.sh
 
 # Fix up mod_dav_svn installation.
 patch -p1 < packages/rpm/redhat-7.x/install.patch
-
-# Fix documentation version generation.
-patch -p1 < packages/rpm/redhat-7.x/doc.patch
 
 # Figure out version and release number for command and documentation display.
 case "%{release}" in
