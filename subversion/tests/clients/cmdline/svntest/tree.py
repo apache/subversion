@@ -20,7 +20,7 @@ import re
 import string
 import os.path
 
-import main
+import main  # the general svntest routines in this module.
 
 
 
@@ -30,16 +30,18 @@ import main
 # is a list of the nodes making up that directory's children.
 #
 # NAME is simply the name of the file or directory.  CONTENTS is a
-# string that contains the file's contents (if a file), and PROPS is a
-# dictionary of other metadata attached to the node.
+# string that contains the file's contents (if a file), PROPS are
+# properties attached to files or dirs, and ATTS is a dictionary of
+# other metadata attached to the node.
 
 class SVNTreeNode:
 
-  def __init__(self, name, children=None, contents=None, props={}):
+  def __init__(self, name, children=None, contents=None, props={}, atts={}):
     self.name = name
     self.children = children
     self.contents = contents
     self.props = props
+    self.atts = atts
 
 # TODO: Check to make sure contents and children are mutually exclusive
 
@@ -60,6 +62,7 @@ class SVNTreeNode:
         # this is the 'end' of the chain, so copy any content here.
         a.contents = newchild.contents
         a.props = newchild.props
+        a.atts = newchild.atts
       else:
         # try to add dangling children to your matching node
         for i in newchild.children:
@@ -70,6 +73,7 @@ class SVNTreeNode:
     print " * Node name: ", self.name
     print "    Contents:  ", self.contents
     print "    Properties:", self.props
+    print "    Attributes:", self.atts
     if self.children:
       print "    Children:  ", len(self.children)
     else:
@@ -139,13 +143,15 @@ def compare_file_nodes(a, b):
     return 1
   if a.props != b.props:
     return 1
+  if a.atts != b.atts:
+    return 1
 
 
 # Internal utility used by most build_tree_from_foo() routines.
 #
 # (Take the output and .add_child() it to a root node.)
 
-def create_from_path(path, contents=None, props={}):
+def create_from_path(path, contents=None, props={}, atts={}):
   """Create and return a linked list of treenodes, given a PATH
   representing a single entry into that tree.  CONTENTS and PROPS are
   optional arguments that will be deposited in the tail node."""
@@ -166,6 +172,7 @@ def create_from_path(path, contents=None, props={}):
     if node.children is None:
       node.contents = contents
       node.props = props
+      node.atts = atts
       break
     node = node.children[0]
 
@@ -375,11 +382,11 @@ def dump_tree(n,indent=""):
 
 # Create a list of lists, of the form:
 #
-#  [ [path, contents, props], ... ]
+#  [ [path, contents, props, atts], ... ]
 #
 #  and run it through this parser.  PATH is a string, a path to the
-#  object.  CONTENTS is either a string or None, and PROPS is a
-#  populated dictionary or {}.  Each CONTENTS and PROPS will be
+#  object.  CONTENTS is either a string or None, and PROPS and ATTS are
+#  populated dictionaries or {}.  Each CONTENTS/PROPS/ATTS will be
 #  attached to the basename-node of the associated PATH.
 
 def build_generic_tree(nodelist):
@@ -388,7 +395,7 @@ def build_generic_tree(nodelist):
   root = SVNTreeNode(root_node_name)
   
   for list in nodelist:
-    new_branch = create_from_path(list[0], list[1], list[2])
+    new_branch = create_from_path(list[0], list[1], list[2], list[3])
     root.add_child(new_branch)
 
   return root
@@ -400,7 +407,7 @@ def build_generic_tree(nodelist):
 
 # Parse co/up output into a tree.
 #
-#   Tree nodes will contain no contents, and only one 'status' prop.
+#   Tree nodes will contain no contents, and only one 'status' att.
 
 def build_tree_from_checkout(lines):
   "Return a tree derived by parsing the output LINES from 'co' or 'up'."
@@ -411,7 +418,7 @@ def build_tree_from_checkout(lines):
   for line in lines:
     match = rm.search(line)
     if match and match.groups():
-      new_branch = create_from_path(match.group(2), None,
+      new_branch = create_from_path(match.group(2), None, {},
                                     {'status' : match.group(1)})
       root.add_child(new_branch)
 
@@ -420,7 +427,7 @@ def build_tree_from_checkout(lines):
 
 # Parse ci/im output into a tree.
 #
-#   Tree nodes will contain no contents, and only one 'verb' prop.
+#   Tree nodes will contain no contents, and only one 'verb' att.
 
 def build_tree_from_commit(lines):
   "Return a tree derived by parsing the output LINES from 'ci' or 'im'."
@@ -431,7 +438,7 @@ def build_tree_from_commit(lines):
   for line in lines:
     match = rm.search(line)
     if match and match.groups():
-      new_branch = create_from_path(match.group(2), None,
+      new_branch = create_from_path(match.group(2), None, {},
                                     {'verb' : match.group(1)})
       root.add_child(new_branch)
 
@@ -440,7 +447,7 @@ def build_tree_from_commit(lines):
 
 # Parse status output into a tree.
 #
-#   Tree nodes will contain no contents, and these props:
+#   Tree nodes will contain no contents, and these atts:
 #
 #          'status', 'wc_rev', 'repos_rev'
 
@@ -453,7 +460,7 @@ def build_tree_from_status(lines):
   for line in lines:
     match = rm.search(line)
     if match and match.groups():
-      new_branch = create_from_path(match.group(4), None,
+      new_branch = create_from_path(match.group(4), None, {},
                                     {'status' : match.group(1),
                                      'wc_rev' : match.group(2),
                                      'repos_rev' : match.group(3)})

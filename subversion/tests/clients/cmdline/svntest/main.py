@@ -64,26 +64,26 @@ svnadmin_binary = '../../../svnadmin/svnadmin'
 # Keep this global list IMMUTABLE by defining it as a tuple.  This
 # should prevent users from accidentally forgetting to copy it.
 
-greek_tree = ( ('iota', "This is the file 'iota'.", {}),
-               ('A', None, {}),
-               ('A/mu', "This is the file 'mu'.", {}),
-               ('A/B', None, {}),
-               ('A/B/lambda', "This is the file 'lambda'.", {}),
-               ('A/B/E', None, {}),
-               ('A/B/E/alpha', "This is the file 'alpha'.", {}),
-               ('A/B/E/beta', "This is the file 'beta'.", {}),
-               ('A/B/F', None, {}),
-               ('A/C', None, {}),
-               ('A/D', None, {}),
-               ('A/D/gamma', "This is the file 'gamma'.", {}),
-               ('A/D/G', None, {}),
-               ('A/D/G/pi', "This is the file 'pi'.", {}),
-               ('A/D/G/rho', "This is the file 'rho'.", {}),
-               ('A/D/G/tau', "This is the file 'tau'.", {}),
-               ('A/D/H', None, {}),
-               ('A/D/H/chi', "This is the file 'chi'.", {}),
-               ('A/D/H/psi', "This is the file 'psi'.", {}),
-               ('A/D/H/omega', "This is the file 'omega'.", {}) )
+greek_tree = ( ('iota', "This is the file 'iota'.", {}, {}),
+               ('A', None, {}, {}),
+               ('A/mu', "This is the file 'mu'.", {}, {}),
+               ('A/B', None, {}, {}),
+               ('A/B/lambda', "This is the file 'lambda'.", {}, {}),
+               ('A/B/E', None, {}, {}),
+               ('A/B/E/alpha', "This is the file 'alpha'.", {}, {}),
+               ('A/B/E/beta', "This is the file 'beta'.", {}, {}),
+               ('A/B/F', None, {}, {}),
+               ('A/C', None, {}, {}),
+               ('A/D', None, {}, {}),
+               ('A/D/gamma', "This is the file 'gamma'.", {}, {}),
+               ('A/D/G', None, {}, {}),
+               ('A/D/G/pi', "This is the file 'pi'.", {}, {}),
+               ('A/D/G/rho', "This is the file 'rho'.", {}, {}),
+               ('A/D/G/tau', "This is the file 'tau'.", {}, {}),
+               ('A/D/H', None, {}, {}),
+               ('A/D/H/chi', "This is the file 'chi'.", {}, {}),
+               ('A/D/H/psi', "This is the file 'psi'.", {}, {}),
+               ('A/D/H/omega', "This is the file 'omega'.", {}, {}) )
 
 
 ######################################################################
