@@ -143,9 +143,14 @@ harvest_committables (apr_hash_t *committables,
       /* ... then try to read its own entries file so we have a full
          entry for it (we were going to have to do this eventually to
          recurse anyway, so... ) */
+      svn_error_t *err;
       svn_wc_entry_t *e = NULL;
-      if (svn_wc_entries_read (&entries, path, FALSE, subpool))
-        entries = NULL;
+      err = svn_wc_entries_read (&entries, path, FALSE, subpool);
+      if (err)
+        {
+          svn_error_clear_all (err);
+          entries = NULL;
+        }
 
       if ((entries) 
           && ((e = apr_hash_get (entries, SVN_WC_ENTRY_THIS_DIR, 

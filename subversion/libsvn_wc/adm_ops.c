@@ -722,6 +722,7 @@ svn_wc_add (const char *path,
   enum svn_node_kind kind;
   apr_uint32_t modify_flags = 0;
   const char *mimetype = NULL;
+  svn_error_t *err;
   
   /* Make sure something's there. */
   SVN_ERR (svn_io_check_path (path, &kind, pool));
@@ -735,8 +736,12 @@ svn_wc_add (const char *path,
      Note that this is one of the few functions that is allowed to see
     'deleted' entries;  it's totally fine to have an entry that is
      scheduled for addition and still previously 'deleted'.  */
-  if (svn_wc_entry (&orig_entry, path, TRUE, pool))
-    orig_entry = NULL;
+  err = svn_wc_entry (&orig_entry, path, TRUE, pool);
+  if (err)
+    {
+      svn_error_clear_all (err);
+      orig_entry = NULL;
+    }
 
   /* You can only add something that is not in revision control, or
      that is slated for deletion from revision control, or has been
