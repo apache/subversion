@@ -1,4 +1,4 @@
-Version 0.35.0 (branching 12 December 2003, from revision r????)
+Version 0.35.0 (branching 12 December 2003, from revision 7994)
 http://svn.collab.net/repos/svn/branches/0.35.0
 
                               NOTICES:
@@ -15,13 +15,16 @@ http://svn.collab.net/repos/svn/branches/0.35.0
  User-visible changes:
  * BDB log files are automatically pruned, with BDB 4.2.50 and higher (#1615)
  * deltification is automatic again (issue #1601)
- * 
- * 
+ * fix: svn diff -rX:Y wcpath' may lie (issue #1616)
+ * fix: URI-decoding problem on 'svn import' (issue #1622)
+ * automatic log file removal on repositorys (issue #1615)
+ *
+
 
  Developer-visible changes:
- * 
- * 
- * 
+ * misc. improvements on Perl and Java bindings
+ * improved diff handling (r7985)
+ *
 
 
  Merged revisions after release branching:
