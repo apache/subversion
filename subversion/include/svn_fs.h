@@ -109,6 +109,30 @@ svn_error_t *svn_fs_create_berkeley (svn_fs_t *fs, const char *env);
 svn_error_t *svn_fs_open_berkeley (svn_fs_t *fs, const char *env);
 
 
+/* Register an error handling function for Berkeley DB error messages.
+   If a Berkeley DB error occurs, the filesystem will call HANDLER
+   with two strings: an error message prefix, which will be zero, and
+   an error message.  HANDLER should print it out, log it somewhere,
+   etc.
+
+   Since Berkeley DB's error messages are sometimes much more
+   informative than the error codes the functions return, it's worth
+   calling this function and providing some kind of error message
+   handler.
+
+   This function calls `DBENV->set_errcall', with HANDLER as the
+   `db_errcall_fcn' argument.  */
+svn_error_t *svn_fs_set_berkeley_errcall (svn_fs_t *fs, 
+                                          void (*handler) (const char *errpfx,
+                                                           char *msg));
+
+
+/* Delete the Berkeley DB-based filesystem PATH.  This deletes the
+   database files, log files, shared memory segments, etc.  PATH should
+   refer to a file or directory created by `svn_fs_create_berkeley'.  */
+svn_error_t *svn_fs_delete_berkeley (const char *PATH, apr_pool_t *pool);
+
+
 /* Perform any necessary non-catastrophic recovery on a Berkeley
    DB-based Subversion filesystem, stored in the environment ENV.  Do
    any necessary allocation within POOL.

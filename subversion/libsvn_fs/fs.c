@@ -208,6 +208,18 @@ svn_fs_set_warning_func (svn_fs_t *fs,
 
 
 svn_error_t *
+svn_fs_set_berkeley_errcall (svn_fs_t *fs, 
+                             void (*db_errcall_fcn) (const char *errpfx,
+                                                     char *msg))
+{
+  SVN_ERR (svn_fs__check_fs (fs));
+  fs->env->set_errcall(fs->env, db_errcall_fcn);
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
 svn_fs_close_fs (svn_fs_t *fs)
 {
   svn_error_t *svn_err = 0;
@@ -301,7 +313,7 @@ error:
 }
 
 
-/* Gaining access to an existing filesystem.  */
+/* Gaining access to an existing Berkeley DB-based filesystem.  */
 
 
 svn_error_t *
@@ -347,6 +359,10 @@ svn_fs_open_berkeley (svn_fs_t *fs, const char *path)
 }
 
 
+
+/* Running recovery on a Berkeley DB-based filesystem.  */
+
+
 svn_error_t *
 svn_fs_berkeley_recover (const char *path,
                          apr_pool_t *pool)
@@ -379,6 +395,73 @@ svn_fs_berkeley_recover (const char *path,
   db_err = env->close (env, 0);
   if (db_err)
     return svn_fs__dberr (pool, db_err);
+
+  return SVN_NO_ERROR;
+}
+
+
+
+/* Deleting a Berkeley DB-based filesystem.  */
+
+
+/* Return zero if STATUS is APR_SUCCESS.  Otherwise, return a
+   Subversion error wrapping STATUS.  */
+static svn_error_t *
+check_apr (apr_status_t status, apr_pool_t *pool)
+{
+  if (status == APR_SUCCESS)
+    return SVN_NO_ERROR;
+  else
+    return svn_error_create (status, 0, 0, pool, "");
+}
+
+
+svn_error_t *
+svn_fs_delete_berkeley (const char *path,
+                        apr_pool_t *pool)
+{
+  int db_err;
+  DB_ENV *env;
+
+  /* First, use the Berkeley DB library function to remove any shared
+     memory segments.  */
+  db_err = db_env_create (&env, 0);
+  if (db_err)
+    return svn_fs__dberr (pool, db_err);
+  db_err = env->remove (env, path, DB_FORCE);
+  if (db_err)
+    return svn_fs__dberr (pool, db_err);
+  
+  /* Now, delete all the files in the directory.  */
+  {
+    apr_dir_t *dir;
+
+    SVN_ERR (check_apr (apr_dir_open (&dir, path, pool), pool));
+    for (;;)
+      {
+        apr_status_t status;
+        apr_finfo_t finfo;
+
+        status = apr_dir_read (&finfo, APR_FINFO_NAME, dir);
+        if (status == APR_ENOENT)
+          break;
+        SVN_ERR (check_apr (status, pool));
+
+        /* Delete every file, except the `.' and `..' links.  */
+        if (strcmp (finfo.name, ".")
+            && strcmp (finfo.name, ".."))
+          {
+            /* Of course, APR has already done this concatenation for us,
+               and thrown away the result.  */
+            char *fullname = apr_pstrcat (pool, path, "/", finfo.name, 0);
+            SVN_ERR (check_apr (apr_file_remove (fullname, pool), pool));
+          }
+      }
+    SVN_ERR (check_apr (apr_dir_close (dir), pool));
+  }
+
+  /* Now, delete the directory itself.  */
+  SVN_ERR (check_apr (apr_dir_remove (path, pool), pool));
 
   return SVN_NO_ERROR;
 }
