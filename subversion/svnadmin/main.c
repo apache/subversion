@@ -842,7 +842,7 @@ deltify_or_undeltify (svn_boolean_t is_deltify,
   SVN_ERR (svn_utf_cstring_to_utf8 (&path_utf8, path, NULL, pool));
 
   /* open the filesystem */
-  SVN_ERR (svn_repos_open (&repos, path, pool));      
+  SVN_ERR (svn_repos_open (&repos, opt_state->repository_path, pool));      
   fs = svn_repos_fs (repos);
 
   /* open the revision root */
