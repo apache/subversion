@@ -68,7 +68,9 @@
 
 
 
-struct e_baton
+/*** batons ***/
+
+struct edit_baton
 {
   svn_string_t *dest_dir;
   svn_string_t *repository;
@@ -77,49 +79,130 @@ struct e_baton
 };
 
 
-
-/*** Helpers for the editor callbacks. ***/
-
-/* Prepend EB->dest_dir to *PATH, iff PATH is an empty path or null. 
-   Return non-zero iff prepended something. */
-static void
-maybe_prepend_dest (svn_string_t **path, struct e_baton *eb)
+struct dir_baton
 {
-  /* kff todo: this whole thing is questionable, hrmm. */
+  /* The path to this directory. */
+  svn_string_t *path;
 
-  /* This is a bit funky.  We need to prepend eb->dest_dir to every
-     path the delta will touch, but due to the way parent/child batons
-     are passed, we only need to do it once at the top of the delta,
-     as it will will get passed along automatically underneath that.
-     So we should only do this if parent_baton hasn't been set yet. */
-      
-  /* kff todo: or, write svn_string_prepend_str(), obviating the need
-     to pass by reference. */
+  /* The number of other changes associated with this directory in the
+     delta (typically, the number of files being changed here, plus
+     this dir itself).  BATON->ref_count starts at 1, is incremented
+     for each entity being changed, and decremented for each
+     completion of one entity's changes.  When the ref_count is 0, the
+     directory may be safely set to the target version, and this baton
+     freed. */
+  int ref_count;
 
-  if (eb->dest_dir && (svn_path_isempty (*path, SVN_PATH_LOCAL_STYLE)))
-    {
-      svn_string_t *new = svn_string_dup (eb->dest_dir, eb->pool);
-      svn_path_add_component (new, *path, SVN_PATH_LOCAL_STYLE, eb->pool);
-      *path = new;
-    }
+  /* The global edit baton. */
+  /* kff todo: suspect we may never use this, remove it if so. */
+  struct edit_baton *edit_baton;
+
+  /* The pool in which this baton itself is allocated. */
+  apr_pool_t *pool;
+};
+
+
+/* Create a new dir_baton for subdir NAME in PARENT_PATH with
+ * EDIT_BATON, using a new subpool of POOL.
+ * The new baton's ref_count is 1.
+ */
+static struct dir_baton *
+make_dir_baton (svn_string_t *parent_path,
+                svn_string_t *name,
+                struct edit_baton *edit_baton,
+                apr_pool_t *pool)
+{
+  apr_pool_t *subpool = apr_make_sub_pool (pool, NULL);
+  struct dir_baton *d = apr_pcalloc (subpool, sizeof (*d));
+
+  svn_string_t *path = svn_string_dup (parent_path, subpool);
+
+  /* The initial baton usually takes no name. */
+  if (name)
+    svn_string_appendstr (path, name, subpool);
+
+  d->path       = path;
+  d->edit_baton = edit_baton;
+  d->ref_count  = 1;
+  d->pool       = subpool;
+
+  return d;
 }
 
+
+static svn_error_t *
+free_dir_baton (struct dir_baton *dir_baton)
+{
+  /* Do whatever cleanup is needed on PATH with EDIT_BATON. */
+
+  /* kff todo fooo working here */
+
+  /* After we destroy DIR_BATON->pool, DIR_BATON itself is lost. */
+  apr_destroy_pool (dir_baton->pool);
+}
+
+
+/* Decrement DIR_BATON's ref count, and if the count hits 0, do the
+ * appropriate cleanups.
+ *
+ * Note: There is no corresponding function for incrementing the
+ * ref_count.  As far as we know, nothing special depends on that, so
+ * it's just done inline.
+ */
+static svn_error_t *
+decrement_ref_count (struct dir_baton *d)
+{
+  d->ref_count--;
+
+  if (d->ref_count == 0)
+    return free_dir_baton (d);
+
+  return SVN_NO_ERROR;
+}
+
+
+struct file_baton
+{
+  struct dir_baton *dir_baton;  /* parent dir's baton */
+  svn_string_t *path;           /* full (abs or relative) path to the file */
+};
+
+
+/* NAME is just one component, not a path. */
+static struct file_baton *
+make_file_baton (struct dir_baton *parent_dir_baton, svn_string_t *name)
+{
+  struct file_baton *f = apr_pcalloc (parent_dir_baton->pool, sizeof (*f));
+  svn_string_t *path = svn_string_dup (parent_dir_baton->path,
+                                       parent_dir_baton->pool);
+
+  svn_string_appendstr (path, name, parent_dir_baton->pool);
+
+  f->dir_baton  = parent_dir_baton;
+  f->path       = path;
+
+  return f;
+}
+
+
+
+/*** Helpers for the editor callbacks. ***/
 
 static svn_error_t *
 window_handler (svn_txdelta_window_t *window, void *baton)
 {
   int i;
-  svn_string_t *fname = (svn_string_t *) baton;
+  struct file_baton *fb = (struct file_baton *) baton;
   apr_file_t *dest = NULL;
   apr_status_t apr_err;
 
   /* kff todo: get more sophisticated when we can handle more ops. */
-  apr_err = apr_open (&dest, fname->data,
+  apr_err = apr_open (&dest, fb->path->data,
                       (APR_WRITE | APR_APPEND | APR_CREATE),
                       APR_OS_DEFAULT,
                       window->pool);
   if (apr_err)
-    return svn_create_error (apr_err, 0, fname->data, NULL, window->pool);
+    return svn_create_error (apr_err, 0, fb->path->data, NULL, window->pool);
   
   /* else */
 
@@ -155,7 +238,7 @@ window_handler (svn_txdelta_window_t *window, void *baton)
 
   apr_err = apr_close (dest);
   if (apr_err)
-    return svn_create_error (apr_err, 0, fname->data, NULL, window->pool);
+    return svn_create_error (apr_err, 0, fb->path->data, NULL, window->pool);
 
   /* else */
 
@@ -169,10 +252,10 @@ window_handler (svn_txdelta_window_t *window, void *baton)
 static svn_error_t *
 delete (svn_string_t *name, void *edit_baton, void *parent_baton)
 {
-  struct e_baton *eb = (struct e_baton *) edit_baton;
-  svn_string_t *path_so_far = (svn_string_t *) parent_baton;
+  struct edit_baton *eb = (struct edit_baton *) edit_baton;
+  struct dir_baton *parent_dir_baton = (struct dir_baton *) parent_baton;
 
-  maybe_prepend_dest (&path_so_far, eb);
+  /* kff todo */
 
   return SVN_NO_ERROR;
 }
@@ -187,42 +270,37 @@ add_directory (svn_string_t *name,
                void **child_baton)
 {
   svn_error_t *err;
-  struct e_baton *eb = (struct e_baton *) edit_baton;
-  svn_string_t *path_so_far = (svn_string_t *) parent_baton;
-  svn_string_t *npath;
+  struct edit_baton *eb = (struct edit_baton *) edit_baton;
+  struct dir_baton *parent_dir_baton = (struct dir_baton *) parent_baton;
 
-  maybe_prepend_dest (&path_so_far, eb);
-  err = svn_wc__ensure_prepare_wc (path_so_far, eb->repository, eb->pool);
+  struct dir_baton *this_dir_baton
+    = make_dir_baton (parent_dir_baton->path,
+                      name,
+                      eb,
+                      apr_make_sub_pool (parent_dir_baton->pool, NULL));
+
+  err = svn_wc__ensure_wc (parent_dir_baton->path, eb->repository, eb->pool);
   if (err)
     return err;
 
-  /* Lock the parent. */
-  /* kff todo: locking the parent may be unnecessary in the near
-     future, see comments in finish_directory(). */
-  err = svn_wc__lock (path_so_far, 0, eb->pool);
-  if (err)
-    return err;
-
-  /* Make the full path to the child. */
-  npath = svn_string_dup (path_so_far, eb->pool);
-  svn_path_add_component (npath, name, SVN_PATH_LOCAL_STYLE, eb->pool);
+  /* kff todo urgent: at some point in here we need to let the parent
+     know this new subdirectory exists! */
 
   /* kff todo: how about a sanity check that it's not a dir of the
      same name from a different repository or something? 
      Well, that will be later on down the line... */
 
-  /* Make the new directory exist. */
-  err = svn_wc__ensure_directory (npath, eb->pool);
+  /* Make sure the directory exists. */
+  err = svn_wc__ensure_directory (this_dir_baton->path, eb->pool);
   if (err)
     return err;
 
-  /* Make it be a working copy. */
-  err = svn_wc__ensure_prepare_wc (npath, eb->repository, eb->pool);
+  /* Make sure it's a working copy. */
+  err = svn_wc__ensure_wc (this_dir_baton->path, eb->repository, eb->pool);
   if (err)
     return err;
 
-  printf ("%s/    (ancestor == %s, %d)\n",
-          npath->data, ancestor_path->data, (int) ancestor_version);
+  printf ("%s\n", this_dir_baton->path->data);
 
 #if 0
   /* kff todo: fooo working here.
@@ -239,7 +317,7 @@ add_directory (svn_string_t *name,
 
   /* else */
 
-  *child_baton = npath;
+  *child_baton = this_dir_baton;
   return SVN_NO_ERROR;
 }
 
@@ -252,12 +330,10 @@ replace_directory (svn_string_t *name,
                    svn_vernum_t ancestor_version,
                    void **child_baton)
 {
-  struct e_baton *eb = (struct e_baton *) edit_baton;
-  svn_string_t *path_so_far = (svn_string_t *) parent_baton;
+  struct edit_baton *eb = (struct edit_baton *) edit_baton;
+  struct dir_baton *parent_dir_baton = (struct dir_baton *) parent_baton;
 
   /* kff todo */
-
-  maybe_prepend_dest (&path_so_far, eb);
 
   return SVN_NO_ERROR;
 }
@@ -269,6 +345,9 @@ change_dir_prop (void *edit_baton,
                  svn_string_t *name,
                  svn_string_t *value)
 {
+  struct edit_baton *eb = (struct edit_baton *) edit_baton;
+  struct dir_baton *this_dir_baton = (struct dir_baton *) dir_baton;
+
   /* kff todo */
   return SVN_NO_ERROR;
 }
@@ -281,28 +360,22 @@ change_dirent_prop (void *edit_baton,
                     svn_string_t *name,
                     svn_string_t *value)
 {
+  struct edit_baton *eb = (struct edit_baton *) edit_baton;
+  struct dir_baton *this_dir_baton = (struct dir_baton *) dir_baton;
+
   /* kff todo */
   return SVN_NO_ERROR;
 }
 
 
 static svn_error_t *
-finish_directory (void *edit_baton, void *child_baton)
+finish_directory (void *edit_baton, void *dir_baton)
 {
-  svn_error_t *err;
-  struct e_baton *eb = (struct e_baton *) edit_baton;
-  svn_string_t *path = (svn_string_t *) child_baton;
+  svn_error_t *err = NULL;
+  struct edit_baton *eb = (struct edit_baton *) edit_baton;
+  struct dir_baton *this_dir_baton = (struct dir_baton *) dir_baton;
 
-  /* kff todo: what we really want here is the parent's dir baton.
-     We don't store it currently.  That will change.
-     In the meantime, cheat and get it from the child_baton the old
-     fashioned way... */
-  svn_string_t *parent = svn_string_dup (path, eb->pool);
-  svn_path_remove_component (parent, SVN_PATH_LOCAL_STYLE);
-
-  err = svn_wc__unlock (path, eb->pool);
-  if (err)
-    return err;
+  err = decrement_ref_count (dir_baton);
 
   /* kff todo: now that the child is finished, we should make an entry
      in the parent's base-tree (although frankly I'm beginning to
@@ -311,10 +384,7 @@ finish_directory (void *edit_baton, void *child_baton)
      deduce their existence.  We can still tell when an update of the
      parent is complete, by refcounting.) */
 
-
-  /* kff todo: anything else? */
-
-  return SVN_NO_ERROR;
+  return err;
 }
 
 
@@ -326,21 +396,32 @@ add_file (svn_string_t *name,
           svn_vernum_t ancestor_version,
           void **file_baton)
 {
-  struct e_baton *eb = (struct e_baton *) edit_baton;
-  svn_string_t *path_so_far = (svn_string_t *) parent_baton;
-  svn_string_t *npath;
+  struct edit_baton *eb = (struct edit_baton *) edit_baton;
+  struct dir_baton *parent_dir_baton = (struct dir_baton *) parent_baton;
+  struct file_baton *fb;
   svn_error_t *err;
 
-  maybe_prepend_dest (&path_so_far, eb);
-  err = svn_wc__ensure_prepare_wc (path_so_far, eb->repository, eb->pool);
+  /* kff todo fooo: this should go away once we can guarantee a call
+     either to {add,replace}_directory() or start_edit() before the
+     first add_file(). */
+  {
+    /* fooo: nothing can happen until the first dir_baton is taken
+       care of, fix callers to make this happen */
+  }
+
+  /* Make sure we've got a working copy to put the file in. */
+  err = svn_wc__check_wc (parent_dir_baton->path, parent_dir_baton->pool);
   if (err)
     return err;
 
-  npath = svn_string_dup (path_so_far, eb->pool);
-  svn_path_add_component (npath, name, SVN_PATH_LOCAL_STYLE, eb->pool);
-  printf ("%s\n   ", npath->data);
+  /* Okay, looks like we're good to go. */
 
-  *file_baton = npath;
+  /* kff todo urgent: check all calls you know what I mean. */
+  fb = make_file_baton (parent_dir_baton, name);
+  parent_dir_baton->ref_count++;
+  *file_baton = fb;
+
+  printf ("%s\n   ", fb->path);
 
   return SVN_NO_ERROR;
 }
@@ -354,16 +435,26 @@ replace_file (svn_string_t *name,
               svn_vernum_t ancestor_version,
               void **file_baton)
 {
-  svn_string_t *path_so_far = (svn_string_t *) parent_baton;
-  struct e_baton *eb = (struct e_baton *) edit_baton;
+  struct edit_baton *eb = (struct edit_baton *) edit_baton;
+  struct dir_baton *parent_dir_baton = (struct dir_baton *) parent_baton;
+  svn_error_t *err = NULL;
 
-  maybe_prepend_dest (&path_so_far, eb);
+  /* Replacing is mostly like adding... */
+  err = add_file (name,
+                  eb,
+                  parent_dir_baton,
+                  ancestor_path,
+                  ancestor_version, 
+                  file_baton);
 
-  /* kff todo: don't forget to set *file_baton! */
+  /* ... except that you must check that the file existed already, and
+     was under version control */
 
-  printf ("replace file \"%s\" (%s, %ld)\n",
-          name->data, ancestor_path->data, ancestor_version);
-  return SVN_NO_ERROR;
+  /* kff todo urgent: HERE, do what above says */
+
+  printf ("replace file \"%s\"\n", *file_baton);
+
+  return err;
 }
 
 
@@ -374,10 +465,12 @@ apply_textdelta (void *edit_baton,
                  svn_txdelta_window_handler_t **handler,
                  void **handler_baton)
 {
+  struct edit_baton *eb = (struct edit_baton *) edit_baton;
+  struct dir_baton *parent_dir_baton = (struct dir_baton *) parent_baton;
+
   /* kff todo: dance the tmp file dance, eventually. */
-  svn_string_t *fname = (svn_string_t *) file_baton;
   
-  *handler_baton = fname;
+  *handler_baton = file_baton;
   *handler = window_handler;
   
   return SVN_NO_ERROR;
@@ -391,29 +484,30 @@ change_file_prop (void *edit_baton,
                   svn_string_t *name,
                   svn_string_t *value)
 {
+  struct edit_baton *eb = (struct edit_baton *) edit_baton;
+  struct dir_baton *parent_dir_baton = (struct dir_baton *) parent_baton;
+  struct file_baton *fb = (struct file_baton *) file_baton;
+
   /* kff todo */
+
   return SVN_NO_ERROR;
 }
 
 
 static svn_error_t *
-finish_file (void *edit_baton, void *child_baton)
+finish_file (void *edit_baton, void *file_baton)
 {
-  struct e_baton *eb = (struct e_baton *) edit_baton;
-  svn_string_t *file = (svn_string_t *) child_baton;
+  struct edit_baton *eb = (struct edit_baton *) edit_baton;
+  struct file_baton *fb = (struct file_baton *) file_baton;
   svn_error_t *err;
 
-  /* kff todo: decrement refcount! */
+  err = svn_wc__lock (fb->dir_baton->path, 0, fb->dir_baton->pool);
+  if (err)
+    return err;
 
-  /* kff todo: what we really want here is the dir baton.
-     Perhaps it should be added to the interface.  Or in the case of
-     refcounting, maybe we'll just get it from the file_baton.
-     In the meantime, cheat and get it from the file_baton the old
-     fashioned way... */
-  svn_string_t *dir = svn_string_dup (file, eb->pool);
-  svn_path_remove_component (dir, SVN_PATH_LOCAL_STYLE);
+  /* kff todo urgent: NOW, write the log and then do what it promises. */
 
-  err = svn_wc__unlock (dir, eb->pool);
+  err = svn_wc__unlock (fb->dir_baton->path, fb->dir_baton->pool);
   if (err)
     return err;
 
@@ -425,33 +519,15 @@ finish_file (void *edit_baton, void *child_baton)
 static svn_error_t *
 finish_edit (void *edit_baton, void *dir_baton)
 {
-  struct e_baton *eb = (struct e_baton *) edit_baton;
-  svn_string_t *path = (svn_string_t *) dir_baton;
+  struct edit_baton *eb = (struct edit_baton *) edit_baton;
+  struct dir_baton *this_dir_baton = (struct dir_baton *) dir_baton;
   svn_error_t *err;
   int stack_empty;
 
-  /* Unwind the update. */
-  err = svn_wc__pop_unwind (path,
-                            SVN_WC__UNWIND_UPDATE,
-                            0,
-                            &stack_empty,
-                            eb->pool);
-  if (err)
-    return err;
-  if (! stack_empty)
-    return svn_create_error (SVN_ERR_WC_UNWIND_NOT_EMPTY,
-                             0,
-                             path->data,
-                             NULL,
-                             eb->pool);
-
-  /* And remove the lock, so others can work here. */
-  err = svn_wc__unlock (path, eb->pool);
-  if (err)
-    return err;
-
   /* The edit is over, free its pool. */
   apr_destroy_pool (eb->pool);
+
+  /* kff todo:  Wow.  Is there _anything_ else that needs to be done? */
 
   printf ("\n");
   return SVN_NO_ERROR;
@@ -486,42 +562,24 @@ svn_wc_get_update_editor (svn_string_t *dest,
                           apr_pool_t *pool)
 {
   svn_error_t *err;
-  struct e_baton *e_baton;
+  struct edit_baton *eb;
   apr_pool_t *subpool;
 
   subpool = apr_make_sub_pool (pool, NULL);
-
-  /* ### this bit with creating the destination should be deferred */
-
-  if (dest)
-    {
-      int is_working_copy = 0;
-
-      err = svn_wc__ensure_directory (dest, subpool);
-      if (err)
-        return err;
-
-      /* kff todo: actually, we can't always err out if dest turns out
-         to be a working copy; instead, we just need to note it
-         somewhere and be careful.  Right now, though, punt. */
-      svn_wc__working_copy_p (&is_working_copy, dest, subpool);
-      if (is_working_copy)
-        return svn_create_error (SVN_ERR_OBSTRUCTED_UPDATE,
-                                 0, dest->data, NULL, subpool);
-    }
 
   /* Else nothing in the way, so continue. */
 
   *editor = &tree_editor;
 
-  e_baton = apr_pcalloc (subpool, sizeof (*e_baton));
-  e_baton->dest_dir   = dest;   /* Remember, DEST might be null. */
-  e_baton->repository = repos;
-  e_baton->pool       = subpool;
-  e_baton->version    = version;
-  *edit_baton = e_baton;
+  eb = apr_pcalloc (subpool, sizeof (*edit_baton));
+  eb->dest_dir   = dest;   /* Remember, DEST might be null. */
+  eb->repository = repos;
+  eb->pool       = subpool;
+  eb->version    = version;
 
-  *dir_baton = svn_string_create ("", subpool);
+  *edit_baton = eb;
+
+  *dir_baton = make_dir_baton (dest, NULL, eb, subpool);
 
   return NULL;
 }

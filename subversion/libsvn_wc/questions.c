@@ -63,7 +63,7 @@
 
 
 svn_error_t *
-svn_wc__working_copy_p (int *answer, svn_string_t *path, apr_pool_t *pool)
+svn_wc__check_wc (svn_string_t *path, apr_pool_t *pool)
 {
   /* Nothing fancy, just check for an administrative subdir and a
      `README' file. */ 
@@ -72,17 +72,12 @@ svn_wc__working_copy_p (int *answer, svn_string_t *path, apr_pool_t *pool)
 
   err = svn_wc__open_adm_file (&f, path, SVN_WC__ADM_README,
                                APR_READ, pool);
-  if (err)
-    {
-      /* It really doesn't matter what kind of error it is; for our
-         purposes, this is not a working copy. */
-      *answer = 0;
-      return err;
-    }
+
+  /* It really doesn't matter what kind of error it is; for our
+     purposes, this is not a working copy. */
+  return err;
 
   /* Else. */
-
-  *answer = 1;
   err = svn_wc__close_adm_file (f, path, SVN_WC__ADM_README, 0, pool);
   return err;
 }
@@ -220,11 +215,11 @@ svn_wc__file_modified_p (svn_boolean_t *modified_p,
     {
       char *msg =
         apr_psprintf
-        ("svn_wc__file_modified_p:  failed to open text-base copy of `%s'",
-         (char *) filename->data);
+        (pool,
+         "svn_wc__file_modified_p:  failed to open text-base copy of `%s'",
+         filename->data);  /* kff: whoa, why the warning here? */
       return svn_quick_wrap_error (err, msg);
     }
-
                      
   /* Get stat info on both files */
   status = apr_getfileinfo (&current_stat, current_file);

@@ -59,12 +59,9 @@
 
 /*** Asking questions about a working copy. ***/
 
-/* Set *ANSWER to non-zero iff PATH appears to be a working copy. 
-   The return error would usually be ignored, but you can examine it
-   to find out exactly why *ANSWER is what it is, if you want. */
-svn_error_t *svn_wc__working_copy_p (int *answer,
-                                     svn_string_t *path,
-                                     apr_pool_t *pool);
+/* Return an error unless PATH is a valid working copy.
+   kff todo: make it compare repository too. */
+svn_error_t *svn_wc__check_wc (svn_string_t *path, apr_pool_t *pool);
 
 
 
@@ -122,22 +119,31 @@ svn_string_t *svn_wc__adm_subdir (apr_pool_t *pool);
 svn_error_t *svn_wc__make_adm_thing (svn_string_t *path,
                                      const char *thing,
                                      int type,
+                                     svn_boolean_t tmp,
                                      apr_pool_t *pool);
 
 
-/* Open `PATH/<adminstrative_subdir>/FNAME'.  *HANDLE must be NULL, as
- * with apr_open().
+
+/*** Opening all kinds of adm files ***/
+
+/* Yo, read this if you open and close files in the adm area:
  *
- * Always use svn_wc__close_adm_file() to close files opened with this
- * function.  Here's why:
+ * When you open a file for writing with svn_wc__open_foo(), the file
+ * is actually opened in the corresponding location in the tmp/
+ * directory (and if you're appending as well, then the tmp file
+ * starts out as a copy of the original file). 
  *
- * If the flags include APR_WRITE, then a temporary file is opened
- * instead (and if the flags also include APR_APPEND, then the
- * temporary file starts out as a copy of the original file).  When
- * you svn_wc__close_adm_thing() the file, make sure you pass the
- * WRITE argument, and the tmp file will be atomically renamed to the
- * original file.
+ * Somehow, this tmp file must eventually get renamed to its real
+ * destination in the adm area.  You can do it either by passing the
+ * SYNC flag to svn_wc__close_foo(), or by calling
+ * svn_wc__sync_foo() (though of course you should still have
+ * called svn_wc__close_foo() first, just without the SYNC flag).
+ *
+ * In other words, the adm area is only capable of modifying files
+ * atomically, but you get some control over when the rename happens.
  */
+
+/* Open `PATH/<adminstrative_subdir>/FNAME'. */
 svn_error_t *svn_wc__open_adm_file (apr_file_t **handle,
                                     svn_string_t *path,
                                     const char *fname,
@@ -145,21 +151,11 @@ svn_error_t *svn_wc__open_adm_file (apr_file_t **handle,
                                     apr_pool_t *pool);
 
 
-/* Close `PATH/<adminstrative_subdir>/FNAME'.
- *
- * If WRITE is non-zero, then this must be the matching close() for an
- * open_adm_file() whose flags included APR_WRITE, in which case
- * closing also causes the tmp file to be renamed atomically to the
- * real file.  If the file was opened for writing, then you *must*
- * pass WRITE when you close it.
- *
- * In other words, the adm code can only write files adm atomically,
- * it knows no other way.
- */
+/* Close `PATH/<adminstrative_subdir>/FNAME'. */
 svn_error_t *svn_wc__close_adm_file (apr_file_t *fp,
                                      svn_string_t *path,
                                      const char *fname,
-                                     int write,
+                                     int sync,
                                      apr_pool_t *pool);
 
 /* Remove `PATH/<adminstrative_subdir>/THING'. 
@@ -167,6 +163,25 @@ svn_error_t *svn_wc__close_adm_file (apr_file_t *fp,
 svn_error_t *svn_wc__remove_adm_thing (svn_string_t *path,
                                        const char *thing,
                                        apr_pool_t *pool);
+
+/* Open the text-base for FILE.
+ * FILE can be any kind of path ending with a filename.
+ * Behaves like svn_wc__open_adm_file(), which see.
+ */
+svn_error_t *svn_wc__open_text_base (apr_file_t **handle,
+                                     svn_string_t *file,
+                                     apr_int32_t flags,
+                                     apr_pool_t *pool);
+
+/* Close the text-base for FILE.
+ * FP was obtained from svn_wc__open_text_base().
+ * Behaves like svn_wc__close_adm_file(), which see.
+ */
+svn_error_t *svn_wc__close_text_base (apr_file_t *fp,
+                                      svn_string_t *file,
+                                      int write,
+                                      apr_pool_t *pool);
+
 
 
 /* Ensure that PATH is a locked working copy directory.
@@ -179,23 +194,21 @@ svn_error_t *svn_wc__remove_adm_thing (svn_string_t *path,
  *
  * VERSION is the version for this directory.  kff todo: ancestor_path?
  */
-svn_error_t *svn_wc__ensure_prepare_wc (svn_string_t *path,
-                                        svn_string_t *repository,
-                                        apr_pool_t *pool);
+svn_error_t *svn_wc__ensure_wc (svn_string_t *path,
+                                svn_string_t *repository,
+                                apr_pool_t *pool);
 
 
 /* Ensure that an administrative area exists for PATH, so that PATH is
  * a working copy subdir.
  *
- * Sets *EXISTS_ALREADY to non-zero iff PATH was already a working
- * copy (i.e., it had an adm area).
+ * Use REPOSITORY for the wc's repository.
  *
  * Does not ensure existence of PATH itself; if PATH does not exist,
  * an error will result. 
  */
 svn_error_t *svn_wc__ensure_adm (svn_string_t *path,
                                  svn_string_t *repository,
-                                 int *exists_already,
                                  apr_pool_t *pool);
 
 
