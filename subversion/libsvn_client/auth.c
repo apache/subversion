@@ -716,7 +716,7 @@ server_ssl_prompt_first_cred (void **credentials,
                         APR_HASH_KEY_STRING);
 
   svn_stringbuf_t *buf = svn_stringbuf_create
-    ("Error validating server certficate: ", pool);
+    ("Error validating server certificate: ", pool);
 
   failure = failures_in & SVN_AUTH_SSL_UNKNOWNCA;
   if (failure)
