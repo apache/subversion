@@ -236,14 +236,11 @@ class WinGeneratorBase(gen_base.GeneratorBase):
   def get_install_targets(self):
     "Generate the list of targets"
     # Generate a fake depaprutil project
-    self.targets['depsubr'] = gen_base.TargetUtility('depsubr', None,
-                                                     'build/win32',
-                                                     None, None, self.cfg,
-                                                     None)
-    self.targets['depdelta'] = gen_base.TargetUtility('depdelta', None,
-                                                      'build/win32',
-                                                      None, None, self.cfg,
-                                                      None)
+    options = {'path': 'build/win32'}
+    self.targets['depsubr'] = gen_base.TargetUtility('depsubr', options,
+                                                     self.cfg, None)
+    self.targets['depdelta'] = gen_base.TargetUtility('depdelta', options,
+                                                      self.cfg, None)
 
     install_targets = self.targets.values() \
                       + self.graph.get_all_sources(gen_base.DT_INSTALL)
