@@ -731,7 +731,7 @@ revert_admin_things (svn_boolean_t *reverted,
 {
   svn_stringbuf_t *full_path, *thing, *pristine_thing;
   svn_error_t *err;
-  svn_boolean_t text_modified_p, prop_modified_p;
+  svn_boolean_t text_modified_p = FALSE, prop_modified_p = FALSE;
   apr_time_t tstamp, pstamp;
 
   *reverted = FALSE;
@@ -814,7 +814,7 @@ svn_wc_revert (svn_stringbuf_t *path,
   enum svn_node_kind kind;
   svn_stringbuf_t *p_dir = NULL, *basename = NULL;
   svn_wc_entry_t *entry;
-  svn_boolean_t wc_root, reverted;
+  svn_boolean_t wc_root, reverted = FALSE;
   svn_pool_feedback_t *fbtable = svn_pool_get_feedback_vtable (pool);
 
   /* Safeguard 1:  is this a versioned resource? */
@@ -852,25 +852,27 @@ svn_wc_revert (svn_stringbuf_t *path,
         p_dir = svn_stringbuf_create (".", pool);
     }
 
-  /*** Reverting added items. ***/
+  /* Additions. */
   if (entry->schedule == svn_wc_schedule_add)
     {
-      /* Remove the item from revision control, and get outta here
-         (recursion is not an option here). */
+      /* Remove the item from revision control. */
       if (entry->kind == svn_node_dir)
-        return svn_wc_remove_from_revision_control 
-          (path, 
-           svn_stringbuf_create (SVN_WC_ENTRY_THIS_DIR, pool),
-           FALSE, pool);
+        SVN_ERR (svn_wc_remove_from_revision_control 
+                 (path, 
+                  svn_stringbuf_create (SVN_WC_ENTRY_THIS_DIR, pool),
+                  FALSE, pool));
       else
-        return svn_wc_remove_from_revision_control (p_dir, basename, 
-                                                    FALSE, pool);
+        SVN_ERR (svn_wc_remove_from_revision_control (p_dir, basename, 
+                                                      FALSE, pool));
+
+      /* Recursivity is taken care of by svn_wc_remove_from_revision_control,
+         and we've definitely reverted PATH at this point. */
+      recursive = FALSE;
+      reverted = TRUE;
     }
 
-  /*** Reverting other modifications. ***/
-
   /* Regular prop and text edit. */
-  if (entry->schedule == svn_wc_schedule_normal)
+  else if (entry->schedule == svn_wc_schedule_normal)
     {
       /* Revert the prop and text mods (if any). */
       if (entry->kind == svn_node_dir)
