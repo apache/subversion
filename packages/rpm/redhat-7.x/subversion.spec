@@ -36,8 +36,8 @@ BuildPreReq: neon-devel >= %{neon_version}
 BuildPreReq: openssl-devel
 BuildPreReq: python2
 BuildPreReq: python2-devel
-BuildPreReq: swig >= 1.3.16
-BuildPreReq: swig-runtime >= 1.3.16
+BuildPreReq: swig >= 1.3.19
+BuildPreReq: swig-runtime >= 1.3.19
 BuildPreReq: zlib-devel
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}
 Prefix: /usr
@@ -80,7 +80,7 @@ the Apache directories and configuration.
 %package python
 Group: Utilities/System
 Summary: Allows Python scripts to directly use Subversion repositories.
-Requires: swig-runtime >= 1.3.16
+Requires: swig-runtime >= 1.3.19
 Requires: python2
 Obsoletes: subversion-cvs2svn
 %description python
@@ -93,6 +93,9 @@ Summary: Tools for Subversion
 Tools for Subversion.
 
 %changelog
+* Sat Jan 17 2004 David Summers <david@summersoft.fay.ar.us> 0.36.0-8362
+- Now requires swig-1.3.19.
+
 * Sat Dec 27 2003 David Summers <david@summersoft.fay.ar.us> 0.35.1-8104
 - Patch by Ben Reser <ben@reser.org> to get documentation to build again.
 - Updated to apache 2.0.48 (apr/apr-util 0.9.5).
