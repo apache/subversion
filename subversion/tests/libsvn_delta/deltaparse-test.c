@@ -127,6 +127,21 @@ test_add_directory (svn_string_t *name,
 }
 
 
+
+
+svn_error_t *
+test_replace_root (svn_string_t *base_path,
+                   svn_vernum_t base_version,
+                   void *edit_baton,
+                   void **root_baton)
+{
+  *root_baton = (svn_string_t *) svn_string_dup (base_path, globalpool);
+
+  return SVN_NO_ERROR;
+}
+
+
+
 svn_error_t *
 test_replace_directory (svn_string_t *name,
                         void *edit_baton, void *parent_baton,
@@ -399,13 +414,14 @@ int main(int argc, char *argv[])
   /* Fill out a editor structure, with our own routines inside it. */
   my_editor.delete             = test_delete;
 
+  my_editor.replace_root       = test_replace_root;
   my_editor.add_directory      = test_add_directory;
   my_editor.replace_directory  = test_replace_directory;
-  my_editor.close_directory   = test_close_directory;
+  my_editor.close_directory    = test_close_directory;
 
   my_editor.add_file           = test_add_file;
   my_editor.replace_file       = test_replace_file;
-  my_editor.close_file        = test_close_file;
+  my_editor.close_file         = test_close_file;
 
   my_editor.apply_textdelta    = test_apply_textdelta;
 
@@ -413,10 +429,10 @@ int main(int argc, char *argv[])
   my_editor.change_dir_prop    = test_change_dir_prop;
   my_editor.change_dirent_prop = test_change_dirent_prop;
 
-  my_editor.close_edit        = NULL;
+  my_editor.close_edit         = NULL;
 
   /* Set context variables for evaluating a tree-delta */
-  base_version = 1;
+  base_version = 37;
   base_path = svn_string_create ("/root", globalpool);
 
   /* Fire up the XML parser */
@@ -425,7 +441,6 @@ int main(int argc, char *argv[])
                             base_path,
                             base_version,
                             &my_edit_baton,
-                            my_parent_baton,            
                             globalpool);
 
   apr_close (source_baton);
@@ -440,3 +455,18 @@ int main(int argc, char *argv[])
   apr_destroy_pool (globalpool);
   exit (0);
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
