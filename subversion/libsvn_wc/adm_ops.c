@@ -38,29 +38,7 @@
 
 #include "wc.h"
 #include "log.h"
-
-
-
-/*** adm area guarantees ***/
-
-/* Make sure that PATH (a directory) contains a complete adm area,
- * based on URL at REVISION.
- *
- * Creates the adm area if none, in which case PATH starts out at
- * revision 0.
- *
- * Note: The adm area's lock-state is not changed by this function,
- * and if the adm area is created, it is left in an unlocked state.
- */
-svn_error_t *
-svn_wc__ensure_wc (svn_stringbuf_t *path,
-                   svn_stringbuf_t *url,
-                   svn_revnum_t revision,
-                   apr_pool_t *pool)
-{
-  return svn_wc__ensure_adm (path, url, revision, pool);
-}
-
+#include "adm_files.h"
 
 
 /*** Finishing updates and commits. ***/

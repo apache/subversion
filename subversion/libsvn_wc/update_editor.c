@@ -44,6 +44,7 @@
 
 #include "wc.h"
 #include "log.h"
+#include "adm_files.h"
 
 
 
@@ -487,7 +488,7 @@ prep_directory (svn_stringbuf_t *path,
 
   /* Make sure it's the right working copy, either by creating it so,
      or by checking that it is so already. */
-  return svn_wc__ensure_wc (path, ancestor_url, ancestor_revision, pool);
+  return svn_wc__ensure_adm (path, ancestor_url, ancestor_revision, pool);
 }
 
 

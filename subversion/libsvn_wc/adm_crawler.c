@@ -25,7 +25,8 @@
 #include "apr_file_io.h"
 #include "apr_hash.h"
 
-#include "wc.h"
+#include <assert.h>
+
 #include "svn_types.h"
 #include "svn_pools.h"
 #include "svn_wc.h"
@@ -33,7 +34,8 @@
 #include "svn_sorts.h"
 #include "svn_delta.h"
 
-#include <assert.h>
+#include "wc.h"
+#include "adm_files.h"
 
 /* The values stored in `affected_targets' hashes are of this type.
  *

@@ -20,8 +20,9 @@
 
 #include <apr_pools.h>
 #include <apr_time.h>
-#include "wc.h"
 
+#include "wc.h"
+#include "adm_files.h"
 
 
 

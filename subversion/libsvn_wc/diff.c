@@ -45,9 +45,11 @@
  */
 
 #include <apr_hash.h>
-#include "wc.h"
 #include "svn_pools.h"
 #include <assert.h>
+
+#include "wc.h"
+#include "adm_files.h"
 
 /* Overall crawler editor baton.
  */
