@@ -2,7 +2,7 @@
 
      Inversion: A Version Control System You Actually Want To Use
      ------------------------------------------------------------
-              ($Revision: 1.32 $ of this document.)
+              ($Revision: 1.33 $ of this document.)
 
 * Introduction
 
@@ -34,23 +34,6 @@ Generally, Inversion's conceptual interface to a particular feature
 will be as similar to CVS's as possible, except when there's a
 compelling reason to do otherwise.
 
-** Version numbers are project-wide and atomic.
-
-Unlike CVS, each Inversion commit results in a single new version
-number, which applies to the project as a whole (i.e., it applies to
-every object in the project, whether changed or not).  There are no
-longer separate per-file version numbers, at least not user-visible
-ones.
-
-Commits are atomic -- either the entire commit succeeded, or the
-entire commit failed.  No one can ever retrieve a project tree in an
-inconsistent state.
-
-Lock-time is kept to a minimum.  A commit may block on another commit,
-but only briefly, and only when absolutely necessary -- that is, when
-the same files would be affected.  Readers neither cause nor wait for
-locks.
-
 ** Directories, renames, and file meta-data are versioned.
 
 Naturally!
@@ -66,9 +49,80 @@ defaulting to the most reasonable interpretation in context.  We
 haven't decided what "reasonable" means yet, but we're working on
 that.
 
-** Binary files are handled just like anything else.
+** Version numbers are project-wide and atomic.
 
-That's right, no more "-kb" flag. :-)
+Unlike CVS, each Inversion commit results in a single new version
+number, which applies to the project as a whole (i.e., it applies to
+every object in the project, whether changed or not).  There are no
+longer separate per-file version numbers, at least not user-visible
+ones.
+
+   Note: Well, it may be useful to give users access to individual
+   files' or directories' "commit count" (same as the per-file
+   "revision number" in CVS).
+
+Commits are atomic -- either the entire commit succeeded, or the
+entire commit failed.  No one can ever retrieve a project tree in an
+inconsistent state.
+
+** Text vs Binary issues are handled better than in CVS
+
+... depending on your definition of "better", of course!
+
+Historically, binary files have been problematic in CVS for two
+unrelated reasons: keyword expansion, and line-end conversion.
+
+Keyword expansion is, for example, when CVS expands "$ Revision$" into
+"$ Revision 1.1$", and each successive commit updates that to the next
+revision number.  There are a number of keywords in CVS: "$ Author$",
+"$ Date$", and so on.
+
+  (Note: the examples above contain an extra space to prevent keyword
+   expansion from happening to them!) 
+
+Line-end conversion is when CVS gives plaintext files in the working
+copy the appropriate line-ending conventions (LF, CRLF, or CR) for
+that platform.  To do this requires knowing that the file is
+plaintext, of course -- doing line-end conversion on an image file or
+other binary would only mess it up.
+
+Both transformations are possible only with plain text files.  CVS
+only recognizes two file types: plain text, and binary.  For its
+initial release, at least, Inversion recognizes the same two types
+(later, maybe it will be able to do keyword substitution inside
+word-processor formats, etc).  
+
+The question is, how does Inversion determine whether a file is plain
+text or not?
+
+Experience with CVS suggests that assuming text unless told otherwise
+is a losing strategy -- people frequently forget to mark images and
+other opaque formats as binary, and then have to spend time figuring
+out why CVS mangled their data.
+
+So, Inversion assumes files are binary, unless they have a standard
+text extension (.c, .h, .pl, .html, .txt, and so on), or if a user
+explicitly marks the file as being texty.  In addition to a
+pre-defined list of text extensions, each project can have a custom
+extension list as well.  Also, of course, a user can choose to mark a
+file as binary no matter what its extension.
+
+Text files undergo line-end conversion by default.  Users can turn
+conversion on or off per project, or per file pattern, or per file.
+
+Text files do *not* undergo keyword substitution by default.  Users
+can turn substituiton on or off per project, or per file pattern, or
+per file.
+
+(The reason keyword substitution is off by default is that I've seen
+it cause problems in files where variable names or string constants
+happened to contain keywords.  But these problems are somewhat rare,
+of course, and usually easily remedied, so I'm not entirely convinced
+that defaulting to `on' would be all that bad either... thoughts?)
+
+*** Binary files, merging strategies, and content knowledge
+
+ XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 Whether Inversion is able to merge changes into a file gracefully, or
 show diffs, depends on whether diffing and/or merging tools are
@@ -799,25 +853,30 @@ name that points back to the original project.  All copies are
 automatically tags; and once you start committing on a copy, it
 becomes a branch as well.
 
-The big principle to keep in mind with branches is that they *never*
-affect the original project -- the original data structure remains
-untouched, it does not even know there's a branch attached to it.  As
-you'll see below, this forces us to do a little more node duplication
-than some other schemes might, but it wins overall because it allows
-users to tag and branch projects to which they don't have write
-access.  (Try *that* with CVS!)
+Branches *never* affect the original project -- the original data
+structure remains untouched, it does not even know there's a branch
+attached to it.  As will become clear below, this forces us to do a
+little more node duplication than some other schemes would, but it
+wins overall because it allows users to tag and branch projects to
+which they don't have write access.  (Try *that* with CVS!)
 
-Let's make a copy of myproj, called `herproj', based at version 5
-(that happens to be the most recent version, but of course a branch
-might sprout off any version in myproj's history):
-
-            ______________________________________________________
-  herproj  |___5_______6________7________8________9_________10____...etc...
-
-[In progress fooo]
+Let's make a copy of myproj, called `xproj', based on myproj:5 (as it
+happens, 5 is the highest version in myproj, but that's not a
+requirement -- a branch might sprout off any version in myproj's
+history):
 
             ______________________________________________________
   myproj   |___1_______2________3________4________5_________6_____...etc...
+                                                 /
+                                                /
+              _________________________________/
+             /
+            /
+           /______________________________________________________
+  xproj    |___6_______7________8________9________10________11____...etc...
+
+
+ XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 
 
@@ -825,6 +884,10 @@ might sprout off any version in myproj's history):
   thing to note is how once you start committing on a copy,
   line-of-ancestry copying is forced.] 
 
+
+*** Merging branches
+
+whoax
 
 ** How meta-data is stored
 
@@ -853,7 +916,14 @@ store anything in inv_props, only Inversion handles that.
       BOOL diffy;                    /* Holds full text or diff? */
       plist *inv_props;              /* Properties managed by Inversion. */
       plist *usr_props;              /* Properties ignored by Inversion. */
-      lock *lock;                    /* See notes about locking above. */
+
+      /* See notes about locking above.  This may be stored as
+         "out-of-band" data outside the node. */
+      lock *lock;
+
+      /* I'm conjecturing that dir_entries will be stored as chains;
+         it may turn out to be more sensible to store them as text,
+         just like regular contents. */
       union contents {
         struct dir_entry **dir_entries;
         char *data;
