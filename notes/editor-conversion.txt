@@ -16,8 +16,8 @@ DONE    libsvn_wc/diff.c
         libsvn_wc/repos_diff.c
 DONE    libsvn_wc/status_editor.c
 DONE    libsvn_wc/update_editor.c
-        mod_dav_svn/merge.c
-        mod_dav_svn/update.c
+DONE    mod_dav_svn/merge.c
+DONE    mod_dav_svn/update.c
 DONE    tests/libsvn_repos/dir-delta-editor.c
 DONE    tests/libsvn_test_editor.c
 
@@ -27,15 +27,11 @@ Conversion of old DRIVERS to the new editor interface
         libsvn_ra_dav/fetch.c           [svn update]
         libsvn_ra_dav/fetch.c           [svn checkout]
 DONE    libsvn_delta/compose_editors.c
-        tests/libsvn_delta/xml-output-test.c
-        bindings/ruby/delta_editor.c
 DONE    libsvn_client/delete.c          [being re-written as new commit system]
 DONE    libsvn_client/add.c             [being re-written as new commit system]
 DONE    libsvn_client/commit.c          [svn import]
 DONE    libsvn_client/copy.c            [being re-written as new commit system]
-        libsvn_ra_local/update_editor.c
-        libsvn_ra_local/checkout.c
+DONE    libsvn_ra_local/checkout.c
 DONE    libsvn_wc/adm_crawler.c         [being re-written as new commit system]
 DONE    libsvn_wc/adm_crawler.c         [being re-written as new commit system]
-PATCH   libsvn_repos/delta.c            [svn_repos_dir_delta(), finished as
-                                         as patch attached to issue #737]
+DONE    libsvn_repos/delta.c            [svn_repos_dir_delta()]
