@@ -143,5 +143,6 @@ Filename: {app}\helpers\svnpath.exe; Parameters: "add ""{app}"""
 Filename: {app}\helpers\svnpath.exe; Parameters: "remove ""{app}"""
 
 [Code]
-#include "svn_isx.pas"
+#include "isx_globals.pas"
+#include "isx_main.pas"
 
