@@ -157,111 +157,29 @@ Working Copy:
 
 Filesystem:
 
-  (Branko and Karl have made this list here to keep straight the order in
-  which they're doing stuff in the fs.)
+  Anyone, WRT filesystem:
 
-  We've got svn_fs_begin_txn(), svn_fs_close_txn(), svn_fs_open_txn(),
-  svn_fs_txn_name(), svn_fs_list_transactions(). Next, let's do:
+     We need a function that will remove the *first*, not the last,
+     component from a path. We need this to support full-path lookups
+     in the new FS interface, specifically, for open_path.
 
-    1.  svn_fs_abort_txn()
+     Suggest something like this:
 
-  These don't do anything useful by themselves, of course, but they're
-  prerequisites for:
+       int svn_path_first_component (const char **name,
+                                     char **path,
+                                     enum svn_path_style style);
 
-    2. Begin, open a txn
-    3. Make a change to some node in that txn
-    4. Get txn's name
-    5. close the txn
-    6. re-open the same txn, by name
-    7. check that our change is still there!
-
-  I'm not sure yet what specific functions are required to implement
-  steps 2-7; we'll first establish the concrete list of functions,
-  then implement them.
-
-  (O.K., I'll take a guess, at the DAG layer:
-
-      -4. svn_fs__dag_clone_root
-      -3. svn_fs__dag_make_file
-      -2. svn_fs__dag_txn_node
-      -1. svn_fs__dag_close
-       0. svn_fs__dag_delete  (that's for svn_fs_abort_txn)
-
-   Hmm ... Oh, yes:
-
-      -5. Decide what exactly a dag_node_t is.
-
-   and of course whatever's missing below.  -xbc)
-
-  Once that's working, we can do the Big One: svn_fs_commit_txn(). :-)
-
-  -Karl
-
-
-Anyone, WRT filesystem:
-
-  We need a function that will remove the *first*, not the last,
-  component from a path. We need this to support full-path lookups in
-  the new FS interface, specifically, for open_path.
-
-  Suggest something like this:
-
-    int svn_path_first_component (const char **name,
-                                  char **path,
-                                  enum svn_path_style style);
-
-  This would point *NAME to the first component in *PATH, and modify
-  *PATH to split the first component off. Return 0 if *NAME is empty,
-  otherwise 1. See the pseudocode in open_path in tree.c to see how
-  this would be used.
+     This would point *NAME to the first component in *PATH, and
+     modify *PATH to split the first component off. Return 0 if *NAME
+     is empty, otherwise 1. See the pseudocode in open_path in tree.c
+     to see how this would be used.
   
-
 Changes to svn_delta_edit_fns_t:
 
    These are the summary emails Ben sent to the dev list (lightly
    edited), concerning changes proposed and accepted at the meetings
    in Chicago on January 14-16.  A few of these are still being
    discussed on the list; see the "STATUS" lines for more.
-
-   =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-   Change #2:  Modify prototypes of replace_*() and add_*()
-   STATUS: discussing on list
-   The Way It Works Now:
-      These editor functions now take arguments "ancestor_path" and
-      "ancestor_revision".
-   
-   Proposed Change:
-      Replace these two arguments with "base_revision" and
-      "target_revision" instead within replace_*(), and nothing but a
-      "target_revision" in add_*().
-   
-   Rationale:
-      We agreed in a previous discussion (on the dev list) that the
-      "ancestor_path" argument is meaningless in these routines;  this
-      path can be inferred via the sequence of parent dir_batons.
-   
-      This leaves only a single "revision" argument left.  The problem is
-      that the meaning of this argument is unclear.
-   
-      Why we need a "target" revision:
-          When updating the WC, the RA layer needs to specify the new
-          version of the object being created.  There's currently no way
-          to do this.  Both replace_*() and add_*() routines need this
-          ability. 
-   
-      Why we also need a "base" revision for replace_*():
-          When updating the WC, the RA layer needs to specify *which*
-          object it is trying to replace.  This is a problem also
-          discussed on the dev list;  it's possible that the revision of
-          a working copy object might change in the *middle* of a larger
-          update, creating the risk of the RA layer applying an incorrect
-          patch.  There are many ways to solve this via WC locking or
-          bookkeeping, but the simplest answer is to have the RA layer
-          declare what it's trying to replace and allow the update-editor
-          to bail if there's a descrepancy.
-   
-          In the commit use-case, the WC declares the "base" revision on
-          which it is sending local changes.
 
    =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
    Change #3:  New "WC" properties.
@@ -305,7 +223,7 @@ Changes to svn_delta_edit_fns_t:
    
    =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
    Change #4:  Revise the commit cleanup process.  (in svn_ra.h)
-   STATUS: Will be done by Ben, Mike, or self, unless someone volunteers.
+   STATUS: Half done, will be completed by Ben
    The Way It Works Now:
       The client calls get_commit_editor() in the RA layer, drives the
       commit editor, and finishes the edit.  Assuming the commit is
@@ -339,42 +257,6 @@ Changes to svn_delta_edit_fns_t:
       list of all committed targets and doing the cleanup manually;  it's
       far easier to let RA do the work.  In the end, WC won't have to do
       anything but cleanup lockfiles.  Much simpler.
-   
-   =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-   Change #5:  The "report" editor doesn't exist.
-   STATUS: Will be done by Ben, Mike, or self, unless someone volunteers.
-   The Way It Works Now:
-      To perform an update: 
-           - the client fetches a "report" editor from RA
-           - the client drives the report editor, describing the state
-             (revision numbers) of all objects in the working copy.
-           - RA then drives the "update" editor with custom changes.
-   
-   Proposed Change:
-      To perform an update:
-           - client describes working copy state using a new vtable with
-             just two simplified functions: replace_dir() and
-             replace_file() 
-           - RA then drives the "update" editor with custom changes.
-   
-   Rationale:
-       It occurred to us that it's inappropriate to use an editor to
-       report all the revision numbers in a working copy.  To do so would
-       completely distort the semantics of the editor: it has *nothing*
-       to do with describing a tree delta!
-    
-       One might argue that you *could* report working copy state as a
-       tree-delta.  In this scenario, you grab the revision of the WC's
-       root (say, version N), and then send a tree-delta that describes
-       how to change a tree at revision N into a multi-versioned tree
-       that looks like the working copy's hodgepodge of revisions.  Every
-       single object in the WC that isn't at N must be reported; pretty
-       inefficient.  Every call to replace_*() would have a base_revision
-       of N, and some different target revision.
-   
-       Needless to say, even in this scenario, no text-deltas are being
-       sent, and things are inefficient.  As Jimb says, "let's just write
-       an interface that really does what we want."  :)
    
    =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
    Change #6:  Move textdeltas to the "other side" of the editor.
@@ -418,6 +300,26 @@ Changes to svn_delta_edit_fns_t:
       (Greg and Jim, did I get this explanation totally wrong?  My notes
       here aren't perfectly clear.  Please elaborate if you need to.)
    
+   Problem:
+      Editor composition becomes more difficult if we use streams.  A
+      window is a discrete chunk of data that can be used by several
+      consumers, but streams are different: if consumer A reads some
+      data off a stream, then when consumer B reads, she'll get
+      different results.  You'd have to design your streams in a funky
+      way to make this not be a problem.
+
+      In some circumstances, this isn't an issue.  After all, usually
+      a set of composed editors is a bunch of lightweight editors,
+      that don't do much, surrounding a core editor that does the real
+      work.  For example, an editor that prints out filenames wrapped
+      with an editor that actually updates those files.  In such
+      cases, the lightweight editor simply never reads data off the
+      stream, so the core editor is not deprived of anything.
+
+      But other editors (say, a commit guard?) might want to actually
+      examine file data.  That could have bad consequences if we
+      switch from windows to streams.
+
    =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
    Change #7:  New filesystem "copy" nodes (and renaming add_*() args)
    STATUS: Will be done by Brane, now that he's dug what this is all about.
