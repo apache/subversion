@@ -23,10 +23,8 @@
 #define SVN_TIME_H
 
 #include <apr_pools.h>
-#include <apr_tables.h>
 #include <apr_time.h>
 
-#include "svn_string.h"
 #include "svn_error.h"
 
 #ifdef __cplusplus
@@ -40,7 +38,9 @@ extern "C" {
  */
 const char *svn_time_to_cstring (apr_time_t when, apr_pool_t *pool);
 
-/** Convert @a timestr to an @c apr_time_t @a when, allocated in @a pool. */
+/** Convert @a data to an @c apr_time_t @a when.
+ * Use @a pool for temporary memory allocation.
+ */
 svn_error_t *svn_time_from_cstring (apr_time_t *when, const char *data,
                                     apr_pool_t *pool);
 
