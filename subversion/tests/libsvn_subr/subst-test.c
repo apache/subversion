@@ -50,7 +50,9 @@ const char *lines[] =
     "Line 17: Valid $URL$, started unexpanded.",
     "Line 18: fairly boring subst test data... blah blah.",
     "Line 19: Invalid expanded keyword spanning two lines: $Author: ",
-    "jrandom$ Line 20: remainder of invalid keyword spanning two lines.",
+    /* The idea here is that, were it not broken across two lines,
+       "$Author: Line 20: jrandom$" would be a valid if odd, keyword. */ 
+    "Line 20: jrandom$ remainder of invalid keyword spanning two lines.",
     "Line 21: fairly boring subst test data... blah blah.",
     "Line 22: an unknown keyword $LastChangedSocks$.",
     "Line 23: fairly boring subst test data... blah blah.",
@@ -158,6 +160,60 @@ static svn_error_t *
 verify_unexpanded_file (const char *fname,
                         const char *eol_str,
                         apr_pool_t *pool)
+{
+  svn_stringbuf_t *contents;
+  int idx = 0;
+  int i;
+
+  SVN_ERR (svn_string_from_file (&contents, fname, pool));
+
+  for (i = 0; i < (sizeof (lines) / sizeof (*lines)); i++)
+    {
+      if (contents->len < idx)
+        return svn_error_createf
+          (SVN_ERR_MALFORMED_FILE, 0, NULL, pool, 
+           "%s has short contents: \"%s\"", fname, contents->data);
+
+      if (strncmp (contents->data + idx, lines[i], strlen (lines[i])) != 0)
+        return svn_error_createf
+          (SVN_ERR_MALFORMED_FILE, 0, NULL, pool, 
+           "%s has wrong contents: \"%s\"", fname, contents->data + idx);
+
+      /* else */
+
+      idx += strlen (lines[i]);
+
+      if (strncmp (contents->data + idx, eol_str, strlen (eol_str)) != 0)
+        return svn_error_createf
+          (SVN_ERR_IO_CORRUPT_EOL, 0, NULL, pool, 
+           "%s has wrong eol: \"%s\"", fname, contents->data + idx);
+
+      idx += strlen (eol_str);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+/* Verify that file FNAME contains the test data `lines' (with
+ * keywords expanded according to REV, AUTHOR, DATE, and URL), and
+ * uses EOL_STR as its eol marker consistently.  If the test data
+ * itself appears to be wrong, return SVN_ERR_MALFORMED_FILE, or if
+ * the eol marker is wrong return SVN_ERR_CORRUPT_EOL.  Otherwise,
+ * return SVN_NO_ERROR.  Use pool for any temporary allocation.
+ *
+ * Note that, as with svn_io_copy_and_translate(), if any of REV,
+ * AUTHOR, DATE, and/or URL is null, then that keyword is not
+ * expanded.
+ */
+static svn_error_t *
+verify_expanded_file (const char *fname,
+                      const char *eol_str,
+                      svn_revnum_t rev,
+                      const char *date,
+                      const char *author,
+                      const char *url,
+                      apr_pool_t *pool)
 {
   svn_stringbuf_t *contents;
   int idx = 0;
