@@ -4,6 +4,10 @@
 
 # First check that we're using at least automake 1.4, lest
 #  we get infinite loops from the command `SUBDIRS = . tests'
+#
+# Note: this dependency on Perl is fine: only SVN developers use autogen.sh
+#       and we can state that dev people need Perl on their machine
+#
 automake --version | perl -ne 'if (/\(GNU automake\) ([0-9].[0-9])/) {print;  if ($1 < 1.4) {exit 1;}}'
 
 if [ $? -ne 0 ]; then
@@ -64,6 +68,11 @@ rm -f config.cache
 
 echo ""
 echo "You can run ./configure now."
+echo ""
+echo "Running autogen.sh implies you are a maintiner. You may be interested"
+echo "in using the --with-maintainer-mode option:"
+echo ""
+echo "   ./configure --with-maintainer-mode"
 echo ""
 echo "Or if you're using GDB, you might prefer static linking:"
 echo ""
