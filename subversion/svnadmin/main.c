@@ -312,25 +312,25 @@ subcommand_dump (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   svn_repos_t *repos;
   svn_fs_t *fs;
   svn_stream_t *stdout_stream, *stderr_stream = NULL;
-  svn_revnum_t
-    lower = SVN_INVALID_REVNUM,
-    upper = SVN_INVALID_REVNUM;
+  svn_revnum_t lower = SVN_INVALID_REVNUM, upper = SVN_INVALID_REVNUM;
+  svn_revnum_t youngest;
 
   SVN_ERR (svn_repos_open (&repos, opt_state->repository_path, pool));
   fs = svn_repos_fs (repos);
+  SVN_ERR (svn_fs_youngest_rev (&youngest, fs, pool));
 
   /* ### We only handle revision numbers right now, not dates. */
   if (opt_state->start_revision.kind == svn_opt_revision_number)
     lower = opt_state->start_revision.value.number;
   else if (opt_state->start_revision.kind == svn_opt_revision_head)
-    svn_fs_youngest_rev (&lower, fs, pool);
+    lower = youngest;
   else
     lower = SVN_INVALID_REVNUM;
 
   if (opt_state->end_revision.kind == svn_opt_revision_number)
     upper = opt_state->end_revision.value.number;
   else if (opt_state->end_revision.kind == svn_opt_revision_head)
-    svn_fs_youngest_rev (&upper, fs, pool);
+    upper = youngest;
   else
     upper = SVN_INVALID_REVNUM;
 
@@ -338,15 +338,22 @@ subcommand_dump (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   if (lower == SVN_INVALID_REVNUM)
     {
       lower = 0;
-      svn_fs_youngest_rev (&upper, fs, pool);
+      upper = youngest;
     }
   else if (upper == SVN_INVALID_REVNUM)
-    upper = lower;
+    {
+      upper = lower;
+    }
         
   if (lower > upper)
-    return svn_error_createf
+    return svn_error_create
       (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
        "first revision cannot be higher than second");
+  if ((lower > youngest) || (upper > youngest))
+    return svn_error_createf
+      (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+       "revisions must not be greater than the youngest revision (%" 
+       SVN_REVNUM_T_FMT ")", youngest);
 
   /* Run the dump to STDOUT.  Let the user redirect output into
      a file if they want.  :-)  */
