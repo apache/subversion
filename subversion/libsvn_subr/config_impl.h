@@ -93,7 +93,7 @@ svn_error_t *svn_config__parse_registry (svn_config_t *cfg,
                                SVN_REGISTRY_HKCU       \
                                SVN_REGISTRY_PATH       \
                                SVN_REGISTRY_CONFIG_PROXY_KEY
-#  define SVN_REGISTRY_CONFIG_PROXY_KEY "Config"
+#  define SVN_REGISTRY_CONFIG_CONFIG_KEY "Config"
 #  define SVN_REGISTRY_USR_CONFIG_CONFIG_PATH \
                                SVN_REGISTRY_PREFIX     \
                                SVN_REGISTRY_HKCU       \
