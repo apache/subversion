@@ -308,7 +308,7 @@ class Commit:
 
     # format the date properly
     a_t = util.apr_time_ansi_put(self.t_max)[1]
-    date = util.svn_time_to_nts(a_t, pool)
+    date = util.svn_time_to_cstring(a_t, pool)
 
     return author, log, date
 
