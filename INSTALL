@@ -158,7 +158,7 @@ I.    BUILD REQUIREMENTS
       newer. The autogen.sh script knows about that.
 
 
-      4.  Neon library 0.24.5 (http://www.webdav.org/neon/)
+      4.  Neon library 0.24.6 (http://www.webdav.org/neon/)
 
       The Neon library allows a Subversion client to interact with remote
       repositories over the Internet via a WebDAV based protocol.  If you 
@@ -169,10 +169,10 @@ I.    BUILD REQUIREMENTS
       want Subversion to build it. The source code is included with the
       latest Subversion tarball, and it can also be obtained from:
 
-          http://www.webdav.org/neon/neon-0.24.5.tar.gz
+          http://www.webdav.org/neon/neon-0.24.6.tar.gz
 
       Unpack the archive using tar/gunzip and rename the resulting
-      directory from "./neon-0.24.5/" to "./neon/".
+      directory from "./neon-0.24.6/" to "./neon/".
 
       Without source code, a previously compiled library can be picked up
       from the standard locations. If you want to specify a nonstandard
@@ -396,7 +396,7 @@ II.   INSTALLATION
           db*.i386.rpm     (Version 4.0.14 or greater; version 4.2.52 is
                             preferred however)
           expat            (Comes with RedHat)
-          neon             (Version 0.24.5)
+          neon             (Version 0.24.6)
 
       After downloading, install it (as root user):
 
@@ -591,8 +591,8 @@ II.   INSTALLATION
       * Python 2.2 or higher, downloaded from http://www.python.org/ which is
         used to generate the project files.
       * Perl 5.8 or higher from http://www.activestate.com/
-      * Neon 0.24.5 or higher, downloaded from
-        http://www.webdav.org/neon/neon-0.24.5.tar.gz which is required
+      * Neon 0.24.6 or higher, downloaded from
+        http://www.webdav.org/neon/neon-0.24.6.tar.gz which is required
         for building the client components.
       * Berkeley DB is required for support for local server components,
         version 4.2.52 is available from
