@@ -60,7 +60,7 @@ while (<SOURCE>)
   }
 
   $_ = &escape_html ($_);
-
+  $_ = &expand_urls ($_);
   $_ = &interpret_asterisks_in_context ($_);
 
   if ($num_stars == 1)
@@ -151,6 +151,22 @@ sub escape_html ()
   $str =~ s/&/&amp;/g;
   $str =~ s/>/&gt;/g;
   $str =~ s/</&lt;/g;
+  return $str;
+}
+
+sub expand_urls ()
+{
+  my $str = shift;
+
+  while (1) {
+    if ($str =~ s/([^>"])((http|https|ftp|nntp):\/\/[a-zA-Z0-9-_\/\.\~]+)/$1<a href="$2">$2<\/a>/) {
+      ;
+    }
+    else {
+      last;
+    }
+  }
+
   return $str;
 }
 
