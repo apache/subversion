@@ -29,7 +29,7 @@ extern "C" {
 svn_error_t *svn_fs_fs__revision_root (svn_fs_root_t **root_p, svn_fs_t *fs,
                                        svn_revnum_t rev, apr_pool_t *pool);
 
-/* Does nothing, but included for Subversion 1.0.x compatability. */
+/* Does nothing, but included for Subversion 1.0.x compatibility. */
 svn_error_t *svn_fs_fs__deltify (svn_fs_t *fs, svn_revnum_t rev,
                                  apr_pool_t *pool);
 

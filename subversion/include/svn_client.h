@@ -348,7 +348,7 @@ typedef svn_error_t *
 
 /** A client context structure, which holds client specific callbacks, 
  * batons, serves as a cache for configuration options, and other various 
- * and sundry things.  In order to avoid backwards compatability problems 
+ * and sundry things.  In order to avoid backwards compatibility problems 
  * clients should use @c svn_client_create_context() to allocate and 
  * intialize this structure instead of doing so themselves.
  */
@@ -404,7 +404,7 @@ typedef struct svn_client_ctx_t
  * Set @a *ctx to a client context object, allocated in @a pool, that
  * represents a particular instance of an svn client.
  *
- * In order to avoid backwards compatability problems, clients must 
+ * In order to avoid backwards compatibility problems, clients must 
  * use this function to intialize and allocate the 
  * @c svn_client_ctx_t structure rather than doing so themselves, as 
  * the size of this structure may change in the future. 
