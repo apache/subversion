@@ -46,7 +46,6 @@
  */
 svn_error_t *
 svn_wc__ensure_wc (svn_string_t *path,
-                   svn_string_t *repository,
                    svn_string_t *ancestor_path,
                    svn_revnum_t ancestor_revision,
                    apr_pool_t *pool)
@@ -54,7 +53,6 @@ svn_wc__ensure_wc (svn_string_t *path,
   svn_error_t *err;
 
   err = svn_wc__ensure_adm (path,
-                            repository,
                             ancestor_path,
                             ancestor_revision,
                             pool);

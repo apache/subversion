@@ -781,7 +781,6 @@ init_adm_file (svn_string_t *path,
    The adm area starts out locked; remember to unlock it when done. */
 static svn_error_t *
 init_adm (svn_string_t *path,
-          svn_string_t *repository,
           svn_string_t *ancestor_path,
           apr_pool_t *pool)
 {
@@ -865,12 +864,6 @@ init_adm (svn_string_t *path,
     return err;
 
 
-  /* SVN_WC__ADM_REPOSITORY */
-  err = init_adm_file (path, SVN_WC__ADM_REPOSITORY, repository, pool);
-  if (err)
-    return err;
-
-
   /* SVN_WC__ADM_ENTRIES */
   err = svn_wc__entries_init (path, ancestor_path, pool);
   if (err)
@@ -912,15 +905,13 @@ init_adm (svn_string_t *path,
 }
 
 
-/* Make sure that PATH (a directory) contains a complete adm area,
- * based at REPOSITORY.
+/* Make sure that PATH (a directory) contains a complete adm area.
  *
  * Creates the adm area if none, in which case PATH starts out at
  * revision 0.
  */
 svn_error_t *
 svn_wc__ensure_adm (svn_string_t *path,
-                    svn_string_t *repository,
                     svn_string_t *ancestor_path,
                     svn_revnum_t ancestor_revision,
                     apr_pool_t *pool)
@@ -939,7 +930,7 @@ svn_wc__ensure_adm (svn_string_t *path,
 
   if (! exists_already)
     {
-      err = init_adm (path, repository, ancestor_path, pool);
+      err = init_adm (path, ancestor_path, pool);
       if (err)
         return err;
     }

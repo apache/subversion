@@ -38,7 +38,6 @@ apply_delta (const svn_delta_edit_fns_t *before_editor,
              void *after_edit_baton,
              svn_stream_t *delta,
              svn_string_t *dest,
-             svn_string_t *repos,            /* ignored if update */
              svn_string_t *ancestor_path,    /* ignored if update */
              svn_revnum_t ancestor_revision,  /* ignored if update */
              apr_pool_t *pool,
@@ -64,7 +63,6 @@ apply_delta (const svn_delta_edit_fns_t *before_editor,
   else /* checkout */
     {
       err = svn_wc_get_checkout_editor (dest,
-                                        repos,
                                         ancestor_path,
                                         ancestor_revision,
                                         &editor,
@@ -101,17 +99,14 @@ do_edits (const svn_delta_edit_fns_t *before_editor,
           void *after_edit_baton,
           svn_string_t *path,
           svn_string_t *xml_src,
-          svn_string_t *ancestor_path,    /* ignored if update */
-          svn_revnum_t ancestor_revision,  /* ignored if update */
+          svn_string_t *URL,      /* ignored if update */
+          svn_revnum_t revision,  /* ignored if update */
           apr_pool_t *pool,
           svn_boolean_t is_update)
 {
   svn_error_t *err;
   apr_status_t apr_err;
   apr_file_t *in = NULL;
-
-  /* kff todo: obviously, this will work differently. :-) */
-  const char *repos = ":ssh:jrandom@subversion.tigris.org/repos";
 
   assert (path != NULL);
   assert (xml_src != NULL);
@@ -132,9 +127,8 @@ do_edits (const svn_delta_edit_fns_t *before_editor,
                      after_edit_baton,
                      svn_stream_from_aprfile (in, pool),
                      path,
-                     svn_string_create (repos, pool),
-                     ancestor_path,
-                     ancestor_revision,
+                     URL,
+                     revision,
                      pool,
                      is_update);
   if (err)
@@ -159,13 +153,13 @@ svn_client__checkout_internal (const svn_delta_edit_fns_t *before_editor,
                                void *after_edit_baton,
                                svn_string_t *path,
                                svn_string_t *xml_src,
-                               svn_string_t *ancestor_path,
-                               svn_revnum_t ancestor_revision,
+                               svn_string_t *URL,
+                               svn_revnum_t revision,
                                apr_pool_t *pool)
 {
   return do_edits (before_editor, before_edit_baton,
                    after_editor, after_edit_baton,
-                   path, xml_src, ancestor_path, ancestor_revision, 
+                   path, xml_src, URL, revision, 
                    pool, FALSE);
 }
 

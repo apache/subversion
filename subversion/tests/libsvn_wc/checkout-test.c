@@ -44,7 +44,6 @@ apply_delta (svn_stream_t *delta,
 
   /* Get the editor and friends... */
   err = svn_wc_get_checkout_editor (dest,
-                                    repos,
                                     /* Assume we're checking out root. */
                                     svn_string_create ("", pool),
                                     revision,

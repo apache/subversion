@@ -50,7 +50,6 @@ struct edit_baton
   /* These used only in checkouts. */
   svn_boolean_t is_checkout;
   svn_string_t *ancestor_path;
-  svn_string_t *repository;
 
   apr_pool_t *pool;
 };
@@ -334,7 +333,6 @@ window_handler (svn_txdelta_window_t *window, void *baton)
  */
 static svn_error_t *
 prep_directory (svn_string_t *path,
-                svn_string_t *repository,
                 svn_string_t *ancestor_path,
                 svn_revnum_t ancestor_revision,
                 svn_boolean_t force,
@@ -356,7 +354,6 @@ prep_directory (svn_string_t *path,
   /* Make sure it's the right working copy, either by creating it so,
      or by checking that it is so already. */
   err = svn_wc__ensure_wc (path,
-                           repository,
                            ancestor_path,
                            ancestor_revision,
                            pool);
@@ -400,7 +397,6 @@ replace_root (void *edit_baton,
       ancestor_revision = eb->target_revision;
       
       err = prep_directory (d->path,
-                            eb->repository,
                             ancestor_path,
                             ancestor_revision,
                             1, /* force */
@@ -504,7 +500,6 @@ add_directory (svn_string_t *name,
 
 
   err = prep_directory (this_dir_baton->path,
-                        this_dir_baton->edit_baton->repository,
                         copyfrom_path,
                         copyfrom_revision,
                         1, /* force */
@@ -1342,7 +1337,6 @@ static svn_error_t *
 make_editor (svn_string_t *dest,
              svn_revnum_t target_revision,
              svn_boolean_t is_checkout,
-             svn_string_t *repos,
              svn_string_t *ancestor_path,
              const svn_delta_edit_fns_t **editor,
              void **edit_baton,
@@ -1353,10 +1347,7 @@ make_editor (svn_string_t *dest,
   svn_delta_edit_fns_t *tree_editor = svn_delta_default_editor (pool);
 
   if (is_checkout)
-    {
-      assert (ancestor_path != NULL);
-      assert (repos != NULL);
-    }
+    assert (ancestor_path != NULL);
 
   /* Construct an edit baton. */
   eb = apr_palloc (subpool, sizeof (*eb));
@@ -1364,7 +1355,6 @@ make_editor (svn_string_t *dest,
   eb->dest_dir        = dest;
   eb->is_checkout     = is_checkout;
   eb->ancestor_path   = ancestor_path;
-  eb->repository      = repos;
   eb->target_revision = target_revision;
 
   /* Construct an editor. */
@@ -1398,14 +1388,13 @@ svn_wc_get_update_editor (svn_string_t *dest,
 {
   return
     make_editor (dest, target_revision,
-                 FALSE, NULL, NULL,
+                 FALSE, NULL,
                  editor, edit_baton, pool);
 }
 
 
 svn_error_t *
 svn_wc_get_checkout_editor (svn_string_t *dest,
-                            svn_string_t *repos,
                             svn_string_t *ancestor_path,
                             svn_revnum_t target_revision,
                             const svn_delta_edit_fns_t **editor,
@@ -1413,7 +1402,7 @@ svn_wc_get_checkout_editor (svn_string_t *dest,
                             apr_pool_t *pool)
 {
   return make_editor (dest, target_revision,
-                      TRUE, repos, ancestor_path,
+                      TRUE, ancestor_path,
                       editor, edit_baton, pool);
 }
 

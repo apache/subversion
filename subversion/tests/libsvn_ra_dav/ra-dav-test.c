@@ -33,7 +33,6 @@ main (int argc, char **argv)
   const char *dir;
   const svn_delta_edit_fns_t *editor;
   void *edit_baton;
-  svn_string_t *repos;
   svn_string_t *anc_path;
   svn_string_t *root_path;
   svn_revnum_t revision;
@@ -60,17 +59,14 @@ main (int argc, char **argv)
   if (err)
     goto error;
 
-  /* ### hmm... */
-  repos = url;
-
   /* ### what the heck does "ancestor path" mean for a checkout? */
-  anc_path = svn_string_create("", pool);
+  anc_path = url;
 
   /* ### how can we know this before we start fetching crap? */
   revision = 1;
 
   err = svn_wc_get_checkout_editor(svn_string_create(dir, pool),
-                                   repos, anc_path, revision,
+                                   anc_path, revision,
                                    &editor, &edit_baton, pool);
   if (err)
     goto error;
