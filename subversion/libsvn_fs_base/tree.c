@@ -2690,7 +2690,7 @@ svn_fs_base__commit_txn (const char **conflict_p,
         {
           /* Set the return value -- our brand spankin' new revision! */
           *new_rev = commit_args.new_rev;
-          return SVN_NO_ERROR;
+          break;
         }
     }
 
