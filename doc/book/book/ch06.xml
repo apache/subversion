@@ -233,8 +233,8 @@ REGEDIT4
     <sect2 id="svn-ch-6-sect-1.3">
       <title>The Configuration Options</title>
       
-        <para>In this section, we will discuss the currently supported
-          run-time configuration options.  If you </para>
+      <para>In this section, we will discuss the currently supported
+        run-time configuration options.</para>
 
       <sect3 id="svn-ch-6-sect-1.3.1">
         <title>Servers</title>
