@@ -8,7 +8,8 @@ Usage: python win-tests.py [option]
 """
 
 
-tests = ['subversion/tests/libsvn_subr/hashdump-test.exe',
+tests = ['subversion/tests/libsvn_subr/config-test.exe',
+         'subversion/tests/libsvn_subr/hashdump-test.exe',
          'subversion/tests/libsvn_subr/stringtest.exe',
          'subversion/tests/libsvn_subr/path-test.exe',
          'subversion/tests/libsvn_subr/stream-test.exe',
