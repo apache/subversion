@@ -13,7 +13,7 @@ checkout_test_LDADD = ../libsvn_wc.la                          \
                       ../../libsvn_subr/libsvn_subr.la         \
                       ../../libsvn_string/libsvn_string.la     \
                       ../../../apr/libapr.a                    \
-                      ../../../expat-lite/libexpat.a
+                      ../../../expat-lite/libexpat.la
 
 
 ## Automatic test scripts to run for `make check`

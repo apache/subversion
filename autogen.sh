@@ -16,16 +16,20 @@ fi
 automake --add-missing --verbose
 
 # Produce aclocal.m4, so autoconf gets the automake macros it needs
+echo "Creating aclocal.m4..."
 aclocal
 
 # Produce ./configure
+echo "Creating configure..."
 autoconf
 
 # Produce config.h.in
+echo "Creating config.h.in..."
 autoheader
 
 # Meta-configure apr/ subdir
 if [ -d apr ]; then
+  echo "Creating config files for APR..."
   (cd apr; ./buildconf)  # this is apr's equivalent of autogen.sh
 else
   echo ""
@@ -41,6 +45,23 @@ else
   echo ""
   exit 1
 fi
+
+# Handle the neon/ subdir
+#if [ ! -d neon]; then
+if test ""; then
+  echo ""
+  echo "You don't have a neon/ subdirectory here.  Please get the latest"
+  echo "Neon distribution from:"
+  echo "    http://www.webdav.org/neon/"
+  echo ""
+  echo "Unpack the archive using tar/gunzip and rename the resulting"
+  echo "directory from ./neon-X.Y.Z/ to ./neon/"
+  echo ""
+  exit 1
+fi
+
+# toss our old config.cache. it may be invalid now.
+rm -f config.cache
 
 echo ""
 echo "You can run ./configure now."
