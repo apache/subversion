@@ -554,6 +554,68 @@ def update_change_modified_external(sbox):
   return 0
 
 
+def update_receive_change_under_external(sbox):
+  "Update to receive a change under an external module."
+
+  if externals_test_setup(sbox):
+    return 1
+
+  wc_dir         = sbox.wc_dir
+  other_wc_dir   = wc_dir + ".other"
+  repo_dir       = sbox.repo_dir
+  repo_url       = os.path.join(svntest.main.test_area_url, repo_dir)
+  other_repo_url = repo_url + ".other"
+
+  # Checkout two working copies.
+  out_lines, err_lines = svntest.main.run_svn \
+                         (None, 'checkout', repo_url, wc_dir)
+  if err_lines: return 1
+
+  out_lines, err_lines = svntest.main.run_svn \
+                         (None, 'checkout', other_repo_url, other_wc_dir)
+  if err_lines: return 1
+
+  # Commit some modifications from the other_wc.
+  other_gamma_path = os.path.join(other_wc_dir, 'A', 'D', 'gamma')
+  svntest.main.file_append(other_gamma_path, "\nNew text in other gamma.")
+
+  expected_output = svntest.wc.State(other_wc_dir, {
+    'A/D/gamma' : Item(verb='Sending'),
+    })
+  expected_status = svntest.actions.get_virginal_state(other_wc_dir, 5)
+  expected_status.tweak(repos_rev=6)
+  expected_status.tweak('A/D/gamma', wc_rev=6)
+  if svntest.actions.run_and_verify_commit(other_wc_dir,
+                                           expected_output,
+                                           expected_status,
+                                           None, None, None, None, None,
+                                           other_wc_dir):
+    print "commit from other working copy failed"
+    return 1
+
+  # Now update the regular wc to see if we get the change.  Note that
+  # none of the module *properties* in this wc have been changed; only
+  # the source repository of the modules has received a change, and
+  # we're verifying that an update here pulls that change.
+
+  # The output's going to be all screwy because of the module
+  # notifications, so don't bother parsing it, just run update
+  # directly.
+  out_lines, err_lines = svntest.main.run_svn (None, 'up', wc_dir)
+  if err_lines: return 1
+
+  external_gamma_path = os.path.join(wc_dir, 'A', 'D', 'exdir_A', 'D', 'gamma')
+  fp = open(external_gamma_path, 'r')
+  lines = fp.readlines()
+  if not ((len(lines) == 2)
+          and (lines[0] == "This is the file 'gamma'.\n")
+          and (lines[1] == "New text in other gamma.")):
+    print "Unexpected contents for externally modified ", external_gamma_path
+    return 1
+  fp.close()
+
+  return 0
+
 ########################################################################
 # Run the tests
 
@@ -565,6 +627,7 @@ test_list = [ None,
               update_lose_external,
               update_change_pristine_external,
               update_change_modified_external,
+              update_receive_change_under_external,
              ]
 
 if __name__ == '__main__':
