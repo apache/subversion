@@ -97,6 +97,10 @@ SOURCE=.\hooks.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\lock.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\reporter.c
 # End Source File
 # Begin Source File
