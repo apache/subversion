@@ -40,7 +40,7 @@ _svn()
 	# note: continued lines must end '|' continuing lines must start '|'
 	optsParam="-r|--revision|--username|--password|--targets|\
 	           |-x|--extensions|-m|--message|-F|--file|--encoding|
-	           |--diff-cmd|--diff3-cmd|--editor-cmd"
+	           |--diff-cmd|--diff3-cmd|--editor-cmd|--old|--new"
 
 	# if not typing an option, or if the previous option required a
 	# parameter, then fallback on ordinary filename expansion
@@ -84,7 +84,7 @@ _svn()
 		;;
 	diff|di)
 		cmdOpts="$rOpts -x --extensions --diff-cmd --no-diff-deleted \
-		         $nOpts $pOpts"
+		         $nOpts $pOpts --old --new --ignore-ancestry"
 		;;
 	export)
 		cmdOpts="$rOpts $qOpts $pOpts"
@@ -105,7 +105,7 @@ _svn()
 		;;
 	merge)
 		cmdOpts="$rOpts $nOpts $qOpts --force --dry-run --diff3-cmd \
-		         $pOpts"
+		         $pOpts --ignore-ancestry"
 		;;
 	mkdir)
 		cmdOpts="$mOpts $qOpts --editor-cmd $pOpts"
@@ -120,10 +120,11 @@ _svn()
 		cmdOpts="$rOpts --revprop --encoding --editor-cmd $pOpts"
 		;;
 	propget|pget|pg)
-		cmdOpts="-R --recursive $rOpts --revprop $pOpts"
+		cmdOpts="-R --recursive $rOpts --revprop --strict $pOpts"
 		;;
 	proplist|plist|pl)
-		cmdOpts="-v --verbose -R --recursive $rOpts --revprop $pOpts"
+		cmdOpts="-v --verbose -R --recursive $rOpts --revprop $qOpts \
+		         $pOpts"
 		;;
 	propset|pset|ps)
 		cmdOpts="-F --file $qOpts --targets -R --recursive --revprop \
