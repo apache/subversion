@@ -559,9 +559,11 @@ send_to_repos (const svn_delta_edit_fns_t *before_editor,
     {
       SVN_ERR (ra_lib->close (session));
 
-      /* Possibly store any authentication info from the RA session. */
-      if (auth_obj->storage_callback)
-        SVN_ERR (auth_obj->storage_callback (auth_obj->storage_baton));
+      /* Possibly store any authentication info from the RA
+         session. */
+      if (! is_import)
+        if (auth_obj->storage_callback)
+          SVN_ERR (auth_obj->storage_callback (auth_obj->storage_baton));
     }
 
   return SVN_NO_ERROR;
