@@ -37,7 +37,11 @@
             <tree-delta>
               <new name="gamma">
                 <file ancestor="/A/D/gamma">
-                  <prop-delta><delete name="banana"/></prop-delta>      
+                  <prop-delta>
+                      <set name="banana">yellow</set>
+                      <delete name="lemon"/>
+                      <set name="crabgrass">epistimological</set>
+                  </prop-delta>      
                   <text-delta>This is the file 'gamma'.</text-delta>
                 </file>
               </new>
@@ -60,6 +64,9 @@
                       </file>
                     </new>
                   </tree-delta>
+                  <prop-delta>
+                    <set name="somedirprop_on_G">foobar</set>
+                  </prop-delta>
                 </dir>
               </new>
               <new name="H">
