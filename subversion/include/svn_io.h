@@ -213,7 +213,7 @@ svn_error_t *svn_stream_write (svn_stream_t *stream, const char *data,
 
 svn_error_t *svn_stream_close (svn_stream_t *stream);
 
-/* Read the contents of FILENAME into *RESULT. */
+/* Sets *RESULT to a string containing the contents of FILENAME. */
 svn_error_t *svn_string_from_file (svn_string_t **result, 
                                    const char *filename, 
                                    apr_pool_t *pool);
