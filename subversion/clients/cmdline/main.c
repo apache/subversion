@@ -225,7 +225,7 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
     "Display info about a resource.\n"
     "usage: svn info [PATH1 [PATH2] ...]\n\n"
     "    Print information about PATHs.\n",
-    {svn_cl__targets_opt} },
+    {svn_cl__targets_opt, svn_cl__recursive_opt} },
  
   { "log", svn_cl__log, {0},
     "Show the log messages for a set of revision(s) and/or file(s).\n"

@@ -325,7 +325,7 @@ typedef struct svn_wc_entry_t
 
 
 /* Set *ENTRY to an entry for PATH, allocated in POOL.  If
- * SHOW_DELETED is set, return the entry even if it in 'deleted'
+ * SHOW_DELETED is set, return the entry even if it's in 'deleted'
  * state.  If PATH is not under revision control, or if entry is
  * 'deleted', not scheduled for re-addition, and SHOW_DELETED is
  * false, then set *ENTRY to NULL.
@@ -382,6 +382,49 @@ svn_error_t *svn_wc_get_ancestry (char **url,
                                   svn_revnum_t *rev,
                                   const char *path,
                                   apr_pool_t *pool);
+
+
+/* A callback vtable invoked by the generic entry-walker function. */
+typedef struct svn_wc_entry_callbacks_t
+{
+  /* An ENTRY was found at PATH.  
+     [Note: the pool which contains the entry will likely be freed
+     when return controls to the walker.] */
+  svn_error_t *(*found_entry) (const char *path,
+                               svn_wc_entry_t *entry,
+                               void *walk_baton);
+
+  /* ### add more callbacks as new callers need them. */
+
+} svn_wc_entry_callbacks_t;
+
+
+/* A generic entry-walker.
+
+   Do a recursive depth-first entry-walk beginning on PATH, which can
+   be a file or dir.  Call callbacks in WALK_CALLBACKS, passing
+   WALK_BATON to each.  Use POOL for looping, recursion, and to
+   allocate all entries returned.
+
+   Like our other entries interfaces, entries that are in a 'deleted'
+   state (and not scheduled for re-addition) are not discovered,
+   unless SHOW_DELETED is set.
+
+   When a new directory is entered, SVN_WC_ENTRY_THIS_DIR will always
+   be returned first.
+
+   [Note:  callers should be aware that each directory will be
+   returned *twice*:  first as an entry within its parent, and
+   subsequently as the '.' entry within itself.  The two calls can be
+   distinguished by looking for SVN_WC_ENTRY_THIS_DIR in the 'name'
+   field of the entry.]   */
+svn_error_t *svn_wc_walk_entries (const char *path,
+                                  const svn_wc_entry_callbacks_t 
+                                                     *walk_callbacks,
+                                  void *walk_baton,
+                                  svn_boolean_t show_deleted,
+                                  apr_pool_t *pool);
+
 
 
 /*** Status. ***/
