@@ -1,3 +1,21 @@
+#
+# Makefile.in:  template Makefile for Subversion
+#
+# ====================================================================
+# Copyright (c) 2000-2003 CollabNet.  All rights reserved.
+#
+# This software is licensed as described in the file COPYING, which
+# you should have received as part of this distribution.  The terms
+# are also available at http://subversion.tigris.org/license-1.html.
+# If newer versions of this license are posted there, you may use a
+# newer version instead, at your option.
+#
+# This software consists of voluntary contributions made by many
+# individuals.  For exact contribution history, see the revision
+# history and logs, available at http://subversion.tigris.org/.
+# ====================================================================
+#
+
 top_builddir = .
 top_srcdir = @top_srcdir@
 abs_builddir = @abs_builddir@
@@ -13,8 +31,11 @@ BOOK_DIR = ${BOOK_TOP}/book
 MDOCS_DIR = ${BOOK_TOP}/misc-docs
 DOC_DIRS = $(DESIGN_DIR) $(BOOK_DIR) $(MDOCS_DIR) 
 
+### not sure these two are needed
 SWIG_SRC_DIR = $(abs_srcdir)/subversion/bindings/swig
 SWIG_BUILD_DIR = $(abs_builddir)/subversion/bindings/swig
+
+### these should go away; gen-make should place this into BUILD_DIRS
 SWIG_DIRS = subversion/bindings/swig            \
             subversion/bindings/swig/python     \
             subversion/bindings/swig/python/svn \
@@ -45,10 +66,11 @@ mandir = @mandir@
 srcdir = @srcdir@
 infodir = @infodir@
 
+# where to install libsvn_swig_*
 swig_py_libdir= @libdir@
 swig_java_libdir= @libdir@
 
-### this isn't right
+### these possibly need further discussion
 swig_pydir = @libdir@/svn-python/svn
 swig_javadir = @libdir@/svn-java
 
@@ -99,16 +121,19 @@ LDFLAGS = @LDFLAGS@ $(EXTRA_LDFLAGS)
 COMPILE = $(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES)
 LT_COMPILE = $(LIBTOOL) $(LTFLAGS) --mode=compile $(COMPILE)
 
+# special compilation for files destined for mod_dav_svn
 COMPILE_APACHE_MOD = $(LIBTOOL) $(LTFLAGS) --mode=compile $(CC) $(CPPFLAGS) $(CFLAGS) $(APACHE_INCLUDES) $(INCLUDES) -o $@ -c $<
 
-# Compilation of SWIG helper libraries
+# special compilation for files destined for libsvn_swig_* (e.g. swigutil_*.c)
 COMPILE_SWIG_PY = $(LIBTOOL) $(LTFLAGS) --mode=compile $(CC) $(CPPFLAGS) -DSWIGPYTHON $(CFLAGS) $(SWIG_PY_INCLUDES) $(INCLUDES) -o $@ -c $<
 COMPILE_SWIG_JAVA = $(LIBTOOL) $(LTFLAGS) --mode=compile $(CC) $(CPPFLAGS) $(CFLAGS) $(SWIG_JAVA_INCLUDES) $(INCLUDES) -o $@ -c $<
 
 LINK = $(LIBTOOL) $(LTFLAGS) --mode=link $(CC) $(LT_LDFLAGS) $(CFLAGS) $(LDFLAGS) -rpath $(libdir)
+
+# special link rule for mod_dav_svn
 LINK_APACHE_MOD = $(LIBTOOL) $(LTFLAGS) --mode=link $(CC) $(LT_LDFLAGS) $(CFLAGS) $(LDFLAGS) -rpath $(APACHE_LIBEXECDIR) -avoid-version -module
 
-# SWIG'ing of C source code
+# these commands run SWIG to generate wrapper source files (*.c)
 RUN_SWIG_PY = $(SWIG) -c -python -noproxy $(SWIG_INCLUDES) $(SWIG_PY_INCLUDES) -o $@ $<
 RUN_SWIG_JAVA = $(SWIG) -c -java -noproxy -module 'Subversion' -package 'org.tigris.subversion.swig' $(SWIG_INCLUDES) -o $@ $<
 
@@ -116,6 +141,7 @@ RUN_SWIG_JAVA = $(SWIG) -c -java -noproxy -module 'Subversion' -package 'org.tig
 COMPILE_PY_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=compile $(SWIG_PY_COMPILE) $(SWIG_INCLUDES) $(SWIG_PY_INCLUDES) -prefer-pic -c -o $@ $<
 COMPILE_JAVA_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=compile $(SWIG_JAVA_COMPILE) -DSWIGJAVA $(SWIG_INCLUDES) $(SWIG_JAVA_INCLUDES) -prefer-pic -c -o $@ $<
 
+# these commands link the wrapper objects into an extension library/module
 LINK_PY_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=link $(SWIG_PY_LINK) $(SWIG_LDFLAGS) -rpath $(swig_pydir) -avoid-version -module
 LINK_JAVA_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=link $(SWIG_JAVA_LINK) $(SWIG_LDFLAGS) -rpath $(swig_javadir) -avoid-version -module
 
