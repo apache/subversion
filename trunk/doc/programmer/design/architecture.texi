@@ -1,0 +1,133 @@
+@node Architecture
+@chapter Architecture
+
+
+Subversion is conceptually divided into a number of separable layers.
+
+Assuming that the programmatic interface of each layer is well-defined,
+it is easy to customize the different parts of the system.  Contributors
+can write new client apps, new network protocols, new server processes,
+new server features, and new storage back-ends.
+
+The following diagram illustrates the "layered" architecture, and where
+each particular interface lies.
+
+@example
+@group
+                    +--------------------+
+                    | commandline or GUI |
+                    |    client app      |
+         +----------+--------------------+----------+ <=== Client interface
+         |              Client Library              |
+         |                                          |
+         |        +----+                            |
+         |        |    |                            |
+ +-------+--------+    +--------------+--+----------+ <=== Network interface
+ | Working Copy   |    |    Remote    |  | Local    |
+ | Management lib |    | Repos Access |  | Repos    |
+ +----------------+    +--------------+  | Access   |
+                       |     neon     |  |          |
+                       +--------------+  |          |
+                          ^              |          |
+                         /               |          |
+                   DAV  /                |          |
+                       /                 |          |
+                      v                  |          |
+              +---------+                |          |
+              |         |                |          |
+              | Apache  |                |          |
+              |         |                |          |
+              +---------+                |          |
+              | mod_DAV |                |          |
+            +-------------+              |          |
+            | mod_DAV_SVN |              |          |
+ +----------+-------------+--------------+----------+ <=== Filesystem interface
+ |                                                  |
+ |               Subversion Filesystem              |
+ |                                                  |
+ +--------------------------------------------------+
+
+@end group
+@end example
+
+
+
+@menu
+* Client Layer::              Client-side overview.
+* Network Layer::             Network overview.
+* Filesystem Layer::          Server-side overview.
+@end menu
+
+@c ------------------------------------------------------------------
+@node Client Layer
+@section Client Layer
+
+The Subversion client, which may be either command-line or GUI, draws on
+three libraries.
+
+The first library provides an API for managing the client's working copy
+of a project.  This includes operations like renaming or removal of
+files, patching files, extracting local diffs, and routines for
+maintaining administrative files in the @file{.svn/} directory.
+
+The second library provides an API for exchanging information with a
+Subversion repository.  This includes the ability to read files, write
+new revisions of files, and ask the repository to compare a working copy
+against its latest revision.  Note that there are two implementations of
+this interface:  one designed to talk to a repository over a network,
+and one designed to work with a repository on local disk.  
+
+The third library provides general client functions such as
+@code{update()} and @code{commit()}, which may involve one or both of
+the other two client libraries.
+
+For details, @xref{Client}.
+
+@c ------------------------------------------------------------------
+@node Network Layer
+@section Network Layer
+
+The network layer's job is to move the repository API requests over a
+wire.
+
+On the client side, a network library translates these requests into a
+set of WebDAV DeltaV requests.  The information is sent over TCP/IP to
+an Apache server.  Apache is used for the following reasons:
+
+@itemize @bullet
+@item
+it is time-tested and extremely stable;
+@item
+it has built-in load-balancing;
+@item
+it has built-in proxy and firewall support;
+@item
+it has authentication and encryption features;
+@item
+it allows client-side caching;
+@item
+it has an extensible module system
+@end itemize
+
+Our suspicion is that any attempt to write a dedicated "Subversion
+server" (with a "Subversion protocol") would inevitably end up evolving
+towards Apache's already-existing feature set.  (However, Subversion's
+layered architecture certainly doesn't @emph{prevent} anyone from
+writing a totally new network access implementation.)
+
+An appropriate Apache module will translate the DAV requests into API
+calls against a particular repository.
+
+For details, @xref{Protocol}.
+
+@c ------------------------------------------------------------------
+@node Filesystem Layer
+@section Filesystem Layer
+
+When the requests reach a particular repository, they are interpreted by
+the @dfn{Subversion Filesystem library}.  The Subversion Filesystem is a
+custom Unix-like filesystem, with a twist: writes are revisioned and
+atomic, and no data is ever deleted!  This filesystem is currently
+implemented on top of a normal filesystem, using Berkeley DBM files.
+
+For a more detailed explanation: @xref{Server}.

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- try a property patch against our co1 file -->
+<delta-pkg>
+  <tree-delta>
+    <open name="iota">
+      <file>
+        <prop-delta>
+          <set name="ocean">atlantic</set>
+          <set name="bat">ball</set>
+          <set name="color">blue</set>
+        </prop-delta>
+      </file>
+    </open>
+  </tree-delta>
+</delta-pkg>

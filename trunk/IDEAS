@@ -1,0 +1,503 @@
+   Oh Most High and Puissant Emacs, please be in -*- outline -*- mode!
+
+Some ideas for the future.
+(Please use outline-mode format for this file.)
+
+* todo: move the ideas in doc/future.texi to here
+
+  Because plaintext/outline is less of a barrier to adding new ideas
+  than texinfo format; this should be a pretty informal file.
+
+* Write platform neutral parsing of diff output to fill in enough 
+  data structures in order to drive UI dependant rendering of a visual
+  diff very similar to xxdiff. 
+
+* shell-like interactive mode for client (like ftp)
+
+  From: John P Cavanaugh <cavanaug@soco.agilent.com>
+  Subject: A feature request for command line client
+  To: dev@subversion.tigris.org
+  Date: Tue, 17 Oct 2000 09:46:58 -0700
+  
+  I know people are beginning to work on the command line client, so I
+  hope Im not too late with this request.
+  
+  Basically I would like svn to behave like ftp (actually more like lftp
+  or ncftp).
+  
+  What this means is that if you type just "svn<return>" you get dropped
+  into an interactive svn shell where you can type a litany of commands.
+  Preferably this happens without relogging into the server etc.
+  
+  Example:
+  
+  cavanaug@lajolla ~ 1%  svn
+  
+  svn> status foo.c
+  
+    output of command
+  
+  svn> commit bar.h
+  
+    output of command
+  
+  svn> cd subdir
+  svn> status README
+  
+    output of command
+  
+  svn> quit
+  
+  cavanaug@lajolla ~ 2%  svn
+  
+  Personally I think this is a really convenient way to operate
+  interactively on a directory without having to continually re-run the
+  svn client.
+  
+  Plus this is method is a godsend if you want to write scripts that
+  automate svn. (ie. Perhaps like the cvs2svn or xxx2svn)
+  
+  
+      John Cavanaugh                          Agilent Technologies
+      R&D Program Manager                     1400 Fountaingrove Pkwy
+      CAD Data Store                          Santa Rosa, CA 95403-1799
+  
+      Email: cavanaug@soco.agilent.com    Phone:  707-577-4780
+                                                  707-577-3948 (Fax)
+
+** Command-line editing libraries with more liberal licenses
+
+   From: Dave Glowacki <dglo@ssec.wisc.edu>
+   
+   <snip>
+   
+   There's 'getline', which doesn't have all of readline's features,
+   but which does basic editing.  ncftp and tin can be built with
+   getline instead of readline, so it does a decent enough job.
+   
+   You can find it at ftp://ftp.sco.com/skunkware/src/lib/getline-39-src.tar.gz
+   
+   getline.c says:
+   
+   /*
+    * Copyright (C) 1991, 1992, 1993 by Chris Thewalt (thewalt@ce.berkeley.edu)
+    *
+    * Permission to use, copy, modify, and distribute this software 
+    * for any purpose and without fee is hereby granted, provided
+    * that the above copyright notices appear in all copies and that both the
+    * copyright notice and this permission notice appear in supporting
+    * documentation.  This software is provided "as is" without express or
+    * implied warranty.
+    *
+   <names snipped>
+
+
+** Useful for integration with Emacs, etc.
+
+   When integrating Subversion support into Emacs vc-mode, using the
+   interactive mode wold avoid having to start a new process for each
+   operation. This wold be useful even without readline or getline.
+
+   -- Brane Cibej <brane@xbc.nu>
+
+* possible cvs-compatibility wrapper for svn
+
+  Daniel Stenberg <daniel@haxx.se> wrote:
+  
+  ... no matter how the command line interface for SVN ends up like, it
+  would still be cool to offer a 'stealth-mode' SVN client that would
+  look and feel exactly (well, as similar as it can) like a cvs
+  client...
+  
+  
+  "Jonathan S. Shapiro" <shap@eros-os.org> replied: 
+  
+  Wouldn't Perl be good for this?
+  Why crud up the new system with compatibility code?
+  
+  
+  Dave Glowacki <dglo@ssec.wisc.edu> further opined:
+  
+  I agree, and I also support Jonathan Shapiro's idea that a
+  cvs-compatibility wrapper could be written in Perl and would simply
+  map the CVS options to the Subversion options (and maybe echo the
+  proper 'svn' options back so that it'd serve as a learning tool as
+  well.)
+  
+  That way, Subversion can have its own options (-r instead of -R)
+  and not have to worry about the CVS cruft like '-d' meaning one
+  thing as a global option and another thing as a command option.
+
+* svndiff encoders/decoders
+
+  A shell script or elisp to encode/decode/view base64-svndiff data?
+  For example: "make-svndiff.pl SRCFILE TARGETFILE > blah.svndiff"
+               "read-svndiff.pl SRCFILE blah.svndiff > TARGETFILE"
+               "M-x svn-decode-region" (displays the data and opcodes)
+               etc
+  Not crucial, just development and debugging help.
+
+
+* split libsvn_WC into two components
+
+  split into: one for managing the metadata (the stuff in ./SVN/), and one
+  for the rest of the WC functionality (crawling and updating). This would
+  provide a way to use multiple metadata storage and management options,
+  possibly optimized for the platform at hand.
+
+  Alternate storage options: separate file streams (NTFS streams, MacOS
+  resource forks), a single database of data (rather than per-dir), or
+  server-based storage (via DeltaV)
+
+  Benefit of a single database: apps/systems that nuke a directory and 
+  rewrite it will no longer "unhook" the working copy from SVN (since
+  the data is stored elsewhere). Fred Sanchez has pointed out this
+  could be important for MacOS Bundles (the OS nukes and rebuilds
+  subdirs, taking the CVS/ or SVN/ subdir with it)
+
+  Benefit of a "true" database: there is a lot of effort expended in
+  the current libsvn_wc to transact the changes, record logs of
+  changes, and to perform them in an atomic manner. A transacted
+  database on the client side could potentially simplify much of that
+  work (and the corresponding I/O to track it).
+
+
+* Server side project policy enforcement
+
+  From: Branko Cibej <brane@xbc.nu>
+  Date: Mon, 23 Oct 2000 18:37:49 +0200
+  
+  I'd be quite happy if we could "promise" that someday it'll be possible
+  to write a script on the SVN server side to, e.g., reject an export
+  if an explicit tag wasn't supplied; or reject a commit if there were
+  merge conflicts; etc., etc. Then all of this boils down to putting
+  examples into contrib/ (once we have it).
+
+* svn sync
+
+  Imagine an intelligent update that knows to add new files and remove
+  files that you've removed, and all recursively (without having to svn
+  add, svn rm, ad nauseam).
+
+  So, for example, you've got:
+  
+  $ ls -1
+    foo.c
+    bar.c
+  
+  $ touch qux
+  $ touch qux/fizzle
+  $ touch qux/smootch
+  
+  $svn up
+    ? qux
+    M foo.c
+  
+  $ rm bar.c
+  
+  *
+  
+  $ svn sync
+    A qux
+    A qux/fizzle
+    A qux/smootch
+    M foo.c
+    R bar.c
+    
+  $ svn ci -m "Boy have I been busy."
+    ...
+  
+  * Note, that if you were to do an update at this point, bar.c would be
+    pulled from the repository
+
+    -Fitz
+
+
+* Reserved and unreserved checkouts
+
+  From Karl Fogel <kfogel@collab.net>
+
+  Brian Behlendorf <brian@collab.net> writes:
+  > I would also ask that reserved checkouts not be made impossible to
+  > do, for the same reasons.
+
+   Oh, not to worry -- nothing in the current design makes them
+  impossible to implement later.  It's a matter of the repository
+  keeping records about who has checked out what, that's all.
+
+  To prove that it's not a problem, here's an implementation:
+
+     1. Client A requests a reserved checkout of tree T
+
+     2. Server sets a non-historical property on T noting that client
+        has reserved it and sends T to client.
+
+     3. Client B tries to commit to T, the commit fails because the
+        repository notices the property.
+
+     4. Client A releases the reservation.  Server removes the
+        non-historical property.
+
+     5. Client B commits and succeeds.
+
+  With a flexible server-side hook interface, such as Subversion will
+  have, you don't even need much (any?) extra code in Subversion itself
+  to support this.
+
+
+  From Branko Cibej <brane@xbc.nu>
+
+  Jim Blandy wrote:
+  > I think the most interesting issues here are in the human interface
+  > side of things.  I designed `cvs watch' and `cvs edit', and they suck
+  > rocks.  Nobody can remember how you're supposed to do things.  Perhaps
+  > someone on the list could describe a reserved checkout interface they
+  > enjoyed using...
+
+  [snip]
+  As for user interface thingies ... Off the top of my head I'd propose
+  something like this, given the following commands: get, update, commit
+  checkout, checkin:
+
+    get:
+        create working copy, making files writable or not depending
+        on each file's reserved-checkout policy;
+
+    update:
+        update the WC, with same behaviour WRT file flags;
+
+    commit:
+        commit changes in the usual way, /without/ changing
+        file flags or lock status;
+
+    checkout:
+        update, and for files with unreserved checkout policy,
+        lock it and make it writable; With appropriate permissions,
+        can override the file's checkout policy (with a flag) until
+        the next checkin;
+
+    checkin:
+        commit, and if it was locked, unlock it and set the file
+        flag according to the file's checkout policy (meaning that
+        it might become readonly, or it might not).
+
+  Note that when I say "file", I should in fact say "object version".
+  You might want to allow unreserved checkouts on files, for instance,
+  but require reserved checkouts for directories when adding new
+  objects.
+
+
+Notice that we get paired commands: `update' vs. `checkout', `commit'
+vs. `checkin'. This means that `checkout' and `checkin' should behave
+like `update' and `commit', respectively, on files with unreserved
+checkout policy. Maybe we don't even need pairs of commands, just a
+flag for `update' to change the checkout policy for the current update?
+
+Maybe `status' should show locks on files? Perhaps another command
+would be better for that, so as not to slow down `status'. Should
+show a) locks on working-copy branch; b) locks on all branches.
+
+Users with appropriate privileges would be allowed to break locks.
+
+  -- Brane Cibej <brane@xbc.nu>
+
+
+* Handling conflicts in the client and working copy
+
+  From Branko Cibej <brane@xbc.nu>
+
+  Ben Collins-Sussman wrote:
+  > 
+  > > Branko =?iso-8859-2?Q?=C8ibej?= <brane@xbc.nu> writes:
+  > > 
+  > > I thought it should be possible for status to report that a file is
+  > > currently in conflict? After an update, of course. Oh, that would be
+  > > nice! Let's not have any ">>>>>>"'s in working copy files, let's not
+  > > have to update to see conflicts ...
+  > 
+  > 
+  > Sounds like some bells and whistles -- a good idea, but of course this
+  > goes beyond what CVS does, which is all we're trying to do at this
+  > moment.
+  > 
+  > Right now, the `status' command just grabs a version number
+  > from the repository.  Perhaps we can eventually pass an extra flag
+  > which makes it fetch the *entire* repos file and attempt to merge it
+  > in a scratch area.
+  > 
+  > Of course, this starts to blur the line between `status' and `update'.
+
+  Notice what I said above: "After an update, of course."
+
+  I see it working like this: when update detects a conflict, it stores
+  the current repository version of the file somewhere in the admin
+  directory, probably near the stored original version. Status would
+  just look if that locally stored version exists, and subsequent
+  updates would pull in a new version, or remove it if the conflict goes
+  away. Extra bonus: you can do a three-way merge locally.
+
+  >   Suppose the status command tells you that your locally modified file
+  > is currently in conflict.  What then?  What are you going to do about
+  > it?  Do you expect to see the conflict in a scratch area?  Are you
+  > going to update that one file to see the conflict?  I'm not sure I
+  > understand what itch is being scratched.
+
+  a) You don't have to do an update to check if you currently have any
+  conflics; b) you can still compile in the local copy without tripping
+  over those wakas; c) works well for binary files that can have special
+  merge tools; d) etcetera ad nauseam.
+
+
+Here's how `update', `status' and `commit' could cooperate:
+
+    update:
+        If there is a conflict, put the text of the current repository
+        version into SVN/conflicts. Could also store a diff against
+        the pristine copy in SVN/text-base, instead.
+
+        If a conflict is resolved by a later update, remove the entry
+        in SVN/conflicts.
+
+    status:
+        Report `C' instead of `M' if the entry in SVN/conflicts
+        exists. This operation is completely local.
+
+    commit:
+        Refuse commit if there is a conflict. Should not do only a
+        local check, as the user may have resolved the conflict in
+        the meantime. If successful, remove the entry in
+        SVN/conflicts.
+
+        Could have a --force flag to force the commit anyway; could
+        allow or forbid --force based on user privileges or repository
+        policy.
+
+
+Declaring a "pure" merge (see list archives, can't find that thread
+right now) could remove the entry in SVN/conflicts, too.
+
+* convert functionality (JimB's idea)
+
+  provide a svn command to add versioning metadata (SVN directories
+  and whatnot) to a local directory tree that is (presumably) the
+  equivalent of a working copy without the SVN directories.
+  
+  svn convert local-dir repository
+  
+  Did I get that right? -Fitz
+
+* repository commands
+  
+  the ability to do repository operations from the client via the 'svn
+  repo' subcommand. 
+
+* use a format string to construct ``svn status'' output
+
+  Because `svn status' seems like a very convenient vehicle for
+  supplying arbitrary information that a script may wish to extract.
+  What if `svn status' had a standard, default display that was
+  configured with a format string.  That format string could be
+  over-ridden with an option (``--format=....'') and we made an
+  option alias or two for formats that were likely to be commonly
+  used?  Here is an approximation that would likely be abbreviated:
+  
+     --format="%{obj-name}:  %{ver=TAG} vs. %{local-ver} is %{mod-state}\n"
+  
+  So, if TAG were associated with the 1234 version of object mumble,
+  but the local copy were version 1222 but unchanged, you get:
+  
+    mumble:  1234 vs. 1222 is unchanged
+  - Bruce
+
+* Interoperate with CVS servers
+
+Create libsvn_ra_cvs (client mode only, maybe just :pserver: and :ext:,
+and possibly :fork: for accessing local repositories).
+
+This will let a Subversion client pull modules directly out of CVS
+repositories. Could be very interesting in combination with
+configuration nodes in the SVN filesystem.
+
+Rationale: Don't expect all the world to switch to SVN after 1.0. And
+we'll still want to pull APR into the SVN working copy, so this would
+be a direct benefit to the project (once /we/ switch).
+
+Question; Would it be better to pull the code out of the CVS sources,
+or write it to the CVSclient spec?
+
+  Brane Cibej <brane@xbc.nu>
+
+* Random access to delta-encoded files
+
+Several features collude to produce a challenge:
+- HTTP provides the ability to fetch substrings of files.
+- Subversion provides a uniform interface for reading both old and new
+  versions of nodes.
+- Subversion wants to use deltas to store multiple versions of a file
+  in a compact way.
+
+So, suppose an HTTP request comes in for bytes 1,000,000,000 through
+1,000,004,000 of a two-gigabyte file, which happens to be stored in
+the repository as the result of applying ten deltas to another
+two-gigabyte file which is stored in fulltext.  It would be nice if it
+were possible to extract the requested bytes without reconstructing
+the full text of the file.
+
+In other words, we'd like random access to the result of applying a
+text delta to some source string.
+
+I was thinking of extending the svndelta format with a hierarchical
+index, a B+tree of delta windows: after every tenth window, store a
+little table of pointers to the windows.  After every tenth little
+table, store a little table of pointers to little tables of pointers
+to windows.  After every tenth... you see what I mean.  Then you can
+start at the end of the file and find any window in logarithmic time.
+That procedure always emits balanced trees.  Use 100 instead of ten,
+and your tree has 1/100th the number of nodes as your file has
+windows, and is very shallow.
+
+* Removing obsolete versions to archive
+
+A project repository can grow huge over several years. Would be nice
+to have a way to move obsolete data to archive or offline
+storage. Some possibilities:
+
+  - Move just the file text offline (e.g., support "offline" file
+    nodes in addition to full-text and delta storage), but keep
+    history and filesystem metadata intact. We can do this with the
+    current filesystem design.
+
+  - Remove whole branches or parts of branches (this could mean whole
+    nodes) from the filesystem. The current filesystem design does not
+    support this; right now we could do that by copying part of the
+    repository (via xml export?) to a new database and removing the
+    old one, but that would change node numbers and filesystem
+    revision numbers, which we probably don't want.
+
+  Brane Cibej <brane@xbc.nu>
+
+* Revise the editor interface to use paths rather than components?
+
+Either revise the interface itself to pass around complete paths [from 
+the root], or possibly have a "wrapping editor" that assembles paths
+and calls a secondary editor interface which uses the path-style
+API. The wrapping editor would have something like:
+
+    struct dir_baton {
+      svn_string_t *path;
+      void *user_dir_baton;
+      struct edit_baton *edit_baton;
+    }
+
+    change_dir_prop(void *baton, ...)
+    {
+      struct dir_baton *my_baton = baton;
+      delta_fns_t editor = my_baton->edit_baton->editor;
+
+      (*editor->change_dir_prop)(my_baton->user_dir_baton, ...);
+    }
+
+This idea is premised on the number of editors that compose the
+components into larger paths before working on them. Depending on
+whether that is "typical", switching the interface might be
+interesting.

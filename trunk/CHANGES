@@ -1,0 +1,130 @@
+Version 0.10
+
+ User-visible changes:
+ * fewer out-of-memory errors:  (see "memory consumption" below)
+ * clearer user errors:  
+       - detailed marshalling of server errors to client
+       - better errors from ra_dav
+       - better commandline-client-specific error messages
+ * 'svn log' now works on single paths correctly
+ * show locked directories in 'svn status'
+ * 'svnadmin lstxns' improvements, and new --long switch
+ * commits show "Replacing" instead of "Deleting/Adding" (#571)
+ * commits show progress on postfix txdeltas.
+
+ Developer-visible changes:
+ * reduced memory consumption
+      - new Editor interface that manages pools automatically
+      - conversion of most existing editors to new system
+      - have libsvn_fs write data to DB streamily
+      - reduce DB logfile growth via 'duplicate keys'
+      - stop using one pool for post-commit processing
+      - stop using one pool for sending all textdeltas
+      - many, many other pool-usage improvements in libsvn_wc, ra_dav, etc.
+ * start of work on 'svn merge": issue 504, and diff3 integration
+ * start of work on disjoint-url detection:  issue 575
+ * start removing stringbuf path library funcs; use new const char * funcs
+ * better python 2.X detection in test suite
+ * svnlook uses single tempdir
+ * build system evolution
+     - upgrade to neon 0.19.[2-3]
+     - lots of work on FreeBSD port
+ * many small bugfixes: 
+      - propedit, file merges, revert, dir_delta, keywords
+      - memory leaks in 'svn add', 'svn import/commit', and svnlook
+      - date-parsing and readonly bugs
+
+
+Version 0.9 (released 15 Feb 2002, revision 1302)
+
+ User-visible changes:
+ * 'svn switch', for switching part of a working copy to a branch
+ * 'svn status -v' now shows created-rev and last-author info
+ * 'svn help <subcommand>' now shows proper switches
+ * if no log message passed to commit, $EDITOR pops up
+ * greatly improved/re-organized README, INSTALL, and HACKING docs
+ * big progress on cvs2svn repository converter
+ * faster retrieval of old revisions: turn off fs directory deltification
+ * fixed broken behaviors in 'svn diff' and 'svn log'
+
+ Developer-visible changes:
+ * new fs code for detecting differences and relatedness
+ * new cancellation editor, for event-driven users of libsvn_client
+ * make .svn/ area readonly
+ * continued development of ruby, java, and python (swig) bindings
+ * new config-file parser
+ * code reorganization and cleanup
+     - huge conversion of svn_stringbuf_t --> char *
+     - standardized on commit_info return structure
+     - no more 'path styles' in path library
+     - rewrite bootstrapping code for python test framework
+     - rewrite commandline app's help-system and alias-system
+     - feedback table replaced with notfication callback
+     - rewrite sorting of hashes
+     - svnadmin internal rewrite
+     - faster post-update processing
+     - using SVN_ERR macros where they weren't
+     - new svn_client_revision_t mechanism
+     - txdelta windows are readonly now
+     - pool debugging code moved to APR
+     - various pool-usage fixes
+ * build system evolution
+     - apr-util now required
+     - upgrade to neon 0.18.5
+     - much apr m4 macro churn
+     - win32 updates, no longer needs precompiled neon
+     - 'make check' when builddir != srcdir
+ * fixes for many issues, including #624, 627, 580, 598, 591,
+   607. 609, 590, 565
+
+
+[Versions 0.8 and older are only brief summaries]
+
+Version 0.8  (released 15 Jan 2002. revision 909)
+
+  * newline conversion and keyword substitution (#524)
+  * rewrite ra_local commit system to commit against HEAD (#463)
+  * mod_dav_svn sends svndiffs now (#518)
+  * code migration from libsvn_fs to libsvn_repos (#428)
+
+
+Version 0.7  (released 03 Dec 2001, revision 587)
+
+  * 'svn cp/mv' completed:  
+       - can copy from wc/repos to wc/repos.
+       - This how we create branches/tags.
+  * 'svn mkdir' [WC_PATH|REPOS_URL]
+  * 'svn delete' [REPOS_URL]
+
+
+Version 0.6  (released 12 Nov 2001, revision 444)
+
+  * 'svn log'
+  * 'svn cp/mv' from wc to wc
+
+
+Milestones M4/M5  (released 19 Oct 2001, revision 271)
+
+  * network layer bugfixes
+  * filesystem deltification
+
+
+Milestone M3  (released 30 Aug 2001, revision 1)
+
+  * self-hosting begins, all history left behind in CVS repository.
+
+
+Milestone M2  (released 15 May 2001)
+
+  * filesystem library (libsvn_fs)
+  * network layer (libsvn_ra_dav and mod_dav_svn)
+
+
+Milestone M1  (released 20 Oct 2001)
+
+  * working-copy library (libsvn_wc), using XML files.
+
+
+Birth  (05 June 2000)
+
+  * CVS repository created.

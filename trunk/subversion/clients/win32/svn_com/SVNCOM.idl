@@ -1,0 +1,110 @@
+/*
+ * ====================================================================
+ * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ *
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
+ *
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
+ * ====================================================================
+ */
+
+// SVNCOM.idl : IDL source for COM.dll
+//
+
+// This file will be processed by the MIDL tool to
+// produce the type library (SVNCOM.tlb) and marshalling code.
+
+import "oaidl.idl";
+import "ocidl.idl";
+
+
+[
+	uuid(6B447839-2F08-4F24-A0E7-904793339628),
+	version(1.0),
+	helpstring("SVNCOM 1.0 Type Library")
+]
+library SVNCOMLib
+{
+	importlib("stdole32.tlb");
+	importlib("stdole2.tlb");
+
+	[
+		uuid(198C7150-97C5-4800-96A3-58F74BBB3E9F),
+		helpstring("_ISVNEvents Interface")
+	]
+	dispinterface _ISVNEvents
+	{
+		properties:
+		methods:
+		[id(1), helpstring("method RefreshFiles")] void RefreshFiles([in] BSTR bstrDir);
+	};
+
+	typedef enum EWCStatus
+	{
+		eWCStatus_NotInWC = 0,
+	    eWCStatus_None = 1,  
+	    eWCStatus_Added,
+	    eWCStatus_Deleted,
+	    eWCStatus_Modified,
+	    eWCStatus_Merged,
+	    eWCStatus_Conflicted
+	} EWCStatus;
+
+	[
+		object,
+		uuid(8E143EDF-1B06-41AF-8729-0BD6F64B8686),
+		dual,
+		helpstring("ISVNStatus Interface"),
+		pointer_default(unique)
+	]
+	interface ISVNStatus : IDispatch
+	{
+		[propget, id(1), helpstring("property text_status")] 
+		HRESULT text_status([out, retval] EWCStatus *pVal);
+		[propget, id(2), helpstring("property prop_status")] 
+		HRESULT prop_status([out, retval] EWCStatus *pVal);
+		[propget, id(3), helpstring("property name")] HRESULT name([out, retval] BSTR *pVal);
+		[propget, id(4), helpstring("property is_directory")] HRESULT is_directory([out, retval] VARIANT_BOOL *pVal);
+	};
+
+	[
+		object,
+		uuid(7488F6DA-6C0D-4D53-A40A-C2CA20C2C818),
+		dual,
+		helpstring("ISVN Interface"),
+		pointer_default(unique)
+	]
+	interface ISVNWorkingCopy : IDispatch
+	{
+		[id(1), helpstring("method check_wc")] 
+		HRESULT check_wc([in] BSTR bstrDir, [out, retval] VARIANT_BOOL *pfIsValid);
+		[id(2), helpstring("method watch_dir")] 
+		HRESULT watch_dir([in] BSTR bstrDir);
+		[id(3), helpstring("method wc_statuses")] 
+		HRESULT wc_statuses([in] BSTR bstrPath, [in] VARIANT_BOOL getAll, [out] SAFEARRAY(ISVNStatus) *ppsa);
+	};
+
+	[
+		uuid(18482440-81E5-4F02-89FA-98D7EEA5B12B),
+		helpstring("SVN Class")
+	]
+	coclass SVNWorkingCopy
+	{
+		[default] interface ISVNWorkingCopy;
+		[default, source] dispinterface _ISVNEvents;
+	};
+	[
+		uuid(2E4E412C-4B64-4F36-9B4C-A1C8C67658F9),
+		helpstring("SVNStatus Class")
+	]
+	coclass SVNStatus
+	{
+		[default] interface ISVNStatus;
+	};
+};

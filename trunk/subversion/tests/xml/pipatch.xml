@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<delta-pkg>
+<tree-delta>
+<open
+   name="A">
+<dir
+   base-rev="1">
+<tree-delta>
+<open
+   name="D">
+<dir
+   base-rev="1">
+<tree-delta>
+<open
+   name="G">
+<dir
+   base-rev="1">
+<tree-delta>
+<open
+   name="pi">
+<file
+   base-rev="1">
+<text-delta-ref
+   id="1"/>
+</file>
+</open>
+</tree-delta>
+</dir>
+</open>
+</tree-delta>
+</dir>
+</open>
+</tree-delta>
+</dir>
+</open>
+</tree-delta>
+<text-delta
+   id="1">U1ZOAAAWLgMYFgCYY29uZmxpY3RpbmcgdGV4dCBmb3IgcGkK
+</text-delta>
+</delta-pkg>

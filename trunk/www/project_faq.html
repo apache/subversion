@@ -1,0 +1,188 @@
+<h1>Subversion FAQ</h1>
+
+
+<h2>Why does this project exist?</h2>
+
+<p>To take over the CVS user base.  Specifically, we're writing a new
+revision control system that is very similar to CVS, but fixes many
+things that are broken.  See our front page.</p>
+
+
+<h2>Is Subversion proprietary?  I heard that it belongs to CollabNet.</h2>
+
+<p>No, Subversion is open source / free software.  CollabNet pays the
+salaries of several full-time developers, and holds the copyright on
+the code, but that copyright is <a
+href="http://subversion.tigris.org/project_license.html">an
+Apache/BSD-style license</a>
+which is fully compliant with the <a
+href="http://www.debian.org/social_contract#guidelines">Debian Free
+Software Guidelines</a>.  In other words, you are free to download,
+modify, and redistribute Subversion as you please; no permission from
+CollabNet or anyone else is required.</p>
+
+
+
+<h2>Is Subversion stable enough for me to use for my own projects?</h2>
+
+<p>Yes and No.</p>
+
+<p>We say "Yes" because we do believe that Subversion is
+stable and have confidence in our code, so we've been self-hosting
+since September of 2001--eating our own caviar so to speak.</p>
+
+<p>We say "No" because if something goes wrong with our svn
+repository, we've got a horde of active developers who will stay up
+sleepless nights hunting down the problem and rescuing our data. As
+altruistic as this horde might be, they don't have time to rescue the
+data for thousands of people who are storing their data in a pre-alpha
+product.</p>
+
+<p>We say "No" because there's a good chance that the filesystem might
+change before we go 1.0, and we don't plan on writing and testing and
+shipping conversion utilities.</p>
+
+<p>So, as long as you're willing to take those risks, then go right ahead
+and use Subversion.</p>
+
+
+
+<h2>Will Subversion run on my operating system?</h2>
+
+<p>Subversion is written in ANSI C and uses the <a
+href="http://apr.apache.org">Apache Portable Runtime</a> library as a
+portability layer.  This means that Subversion will compile anywhere
+Apache httpd does.  (Right now, this list includes all flavors of
+Unix, Win32, BeOS, OS/2, MacOS X.)</p>
+
+
+<h2>What's all this about a new filesystem?  Is it like ext2?</h2>
+
+<p>No.  The "Subversion Filesystem" is not a kernel-level filesystem that
+one would install in an operating system.  Instead, it refers to the
+design of Subversion's repository.  The repository is built on a
+database (currently <a href="http://www.sleepycat.com">Berkeley
+DB</a>) and exports a C API that <i>simulates</i> a filesystem -- a
+versioned filesystem.  Thus writing a program to access the repository
+is like writing against other filesystem APIs.  The main difference is
+that this particular filesystem doesn't lose data when written to; old
+versions of files and directories are saved.</p>
+
+
+<h2>I heard that Subversion is an Apache extension?</h2>
+
+<p>No.  Subversion is a set of libraries.  It comes with a command-line
+client that uses them.  The Subversion <i>server</i> is Apache + <a
+href="http://www.webdav.org/mod_dav">mod_dav</a> + mod_dav_svn, and
+the last module uses the Subversion libraries to speak to a
+repository.  For more information about how Subversion uses WebDAV as
+its network protocol, see our <a
+href="http://subversion.tigris.org/servlets/ProjectDocumentList">docs.</a></p>
+
+
+<h2>Does this mean I have to set up Apache to use Subversion?</h2>
+
+<p>If you want to <b>host</b> a networked repository: yes.</p>
+<p>If you just want to <b>access</b> a repository with your client: no.</p>
+
+<p>For more details about setting up a network accessible Subversion
+server, please see <a
+href="http://subversion.tigris.org/server_setup.html">Server Setup</a>.</p>
+
+
+<h2>Why don't you do X, just like SCM system Y?</h2>
+
+<p>We aren't attempting to break new ground in SCM systems, nor are we
+attempting to imitate all the best features of every SCM system out
+there.  We're trying to replace CVS.  See the first question.</p>
+
+
+<h2>When's the next release?</h2>
+
+<p>See our <a
+href="http://subversion.tigris.org/project_status.html">status
+page</a>.</p>
+
+<h2>I just built the distribution binary, and when I try to check out
+Subversion, I get an error about an "Unrecognized URL scheme."  What's up
+with that?</h2>
+
+<p>Subversion uses a plugin system to allow access to repositories.  Currently
+there are two of these plugins: ra_local allows access to a local
+repository, and ra_dav which allows access to a repository via WebDAV
+When you attempt to perform an operation in subversion, the program tries
+to dynamically load a plugin based on the URL scheme.  A `file://' URL
+will try to load ra_local, and an `http://' URL will try to load
+ra_dav.</p>
+
+<p>The error you are seeing means that the dynamic linker/loader can't find
+the plugins to load.  This normally happens when you build subversion with
+shared libraries, then attempt to run it without first running 'make
+install'.  Another possible cause is that you ran make install, but the
+libraries were installed in a location that the dynamic linker/loader
+doesn't recognize.  Under Linux, you can allow the linker/loader to find the
+libraries by adding the library directory to /etc/ld.so.conf and running
+ldconfig.  If you don't wish to do this, or you don't have root access, you
+can also specify the library directory in the LD_LIBRARY_PATH environment
+variable.</p>
+
+<h2>How do I create a repository?  How do I import data into it?</h2>
+
+<p>See the latest <a
+href="http://svn.collab.net/repos/svn/trunk/README">README</a>
+document;  specifically, look at section IV, the "Quickstart Guide".</p>
+
+<h2>I'm getting strange errors in my httpd error log, and Subversion
+operations aren't working.</h2>
+
+<p>
+Sometimes you need to run Berkeley DB's recovery procedure.  Shut
+down apache, cd into the relevant repository's `<tt>db</tt>'
+subdirectory, and run
+"<tt>/usr/local/BerkeleyDB.<i>X</i>.<i>Y</i>/bin/db_recover&nbsp;-ve</tt>".
+<br>
+(Substitute the appropriate major and minor revision numbers of 
+Berkeley DB for "<i>X</i>" and "<i>Y</i>", of course.)
+</p>
+<p>
+Of course, we'd prefer that the repository never require human
+maintenance.  However, until we get all the bugs worked out, the above
+will sometimes be necessary.
+</p>
+
+<h2>When I run `<tt>configure</tt>', I get errors about
+<tt>subs-1.sed&nbsp;line&nbsp;38:&nbsp;Unterminated&nbsp;`s'&nbsp;command</tt>.
+What's wrong?</h2>
+
+<p>
+You probably have old copies of
+<tt>/usr/local/bin/apr-config</tt> and
+<tt>/usr/local/bin/apu-config</tt> on your system.  Remove them, make
+sure the <tt>apr/</tt> and <tt>apr-util/</tt> that you're
+building with are completely up-to-date, and try again.
+</p>
+
+<h2>I'm running Subversion under windows and I can create a repository fine,
+but I get errors trying to import or check out from it.  What's wrong?</h2>
+
+<p>If the error looks something like:
+<pre>
+svn_error: #21085 : <URL is not a versioned resource>
+  svn_ra_local__split_URL: Unable to find valid repository
+</pre>
+Then the problem is that Subversion doesn't yet handle file URLs that have a
+drive specification.  Try changing to that drive then doing an import without
+the drive spec.  For example:
+<pre>
+d:
+svn import file:///some/path/to/repos/on/d/drive e:\file\to\be\imported
+</pre>
+
+<h2>I have other problems or questions about Subversion.  Where can I get
+more information?</h2>
+
+<p>Please send your questions or concerns to the Subversion Development <a
+href="mailto:dev@subversion.tigris.org">mailing list</a>.  Alternatively,
+several Subversion users and developers can usually be contacted via IRC on
+channel #svn on <a
+href="http://www.openprojects.net">irc.openprojects.net</a>.</p>

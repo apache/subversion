@@ -1,0 +1,197 @@
+                      (-*- text -*-)
+
+               Subversion Commandline Client:  Test Suite
+               ==========================================
+
+The cmdline client test suite doesn't use the C-level testing
+framework, but is structured similarly.  Instead of testing library
+APIs, it drives the client just like a user would, examining the
+output and the on-disk results (i.e., the working copy) carefully as
+it goes.  In other words, this is "black box" testing of the
+command-line client.  It has no access to code internals; it never
+looks inside the .svn/ directory; it only performs actions that a
+human user would do.
+
+Python is the chosen scripting language.  Python 2.0 or later is
+required.
+
+
+  [ For more general information on Subversion's testing system,
+    please read the README in subversion/tests/. ]
+
+
+How to Run the Scripts
+======================
+
+>>> Running a test script
+
+   *  Just run the script, and all of its tests will execute:
+
+              ./basic_tests.py
+
+   *  To see a list of tests within a script:
+
+              ./basic_tests.py list
+
+   *  To run a specific test within a script, specify its number:
+
+              ./basic_tests.py 7
+
+
+>>> To make a script run over ra_dav instead of ra_local: 
+
+   * Because repositories are still created on-the-fly (which httpd
+     must read), the client and server must still running on the
+     SAME machine.
+
+   * Use global switch to python test scripts:  '--url'
+
+               ./basic_tests.py --url http://localhost
+               ./basic_tests.py 3 --url http://newton.collab.net
+
+     ASSUMPTIONS MADE BY THIS MODE:
+
+       - an svn-aware httpd is running locally on port 80.
+
+       - httpd.conf has a DAV Location '/repositories/current-repo'
+         that maps to the 'repositories/current-repo' symlink right
+         below these tests.
+
+       - httpd.conf has a DAV Location '/local_tmp/repos' that maps to
+         the master 'local_tmp/repos' right below these tests.
+
+
+
+Directory Contents
+==================
+
+
+* basic_tests.py:        tests: general client subcommands.
+
+* commit_tests.py:       tests: fancy commit cases and scenarios, as
+                                well as regression tests. 
+
+* update_tests.py:       tests: fancy update cases and scenarions, as 
+                                well as regression tests.
+
+* prop_tests.py:         tests: operations on properties.
+
+* schedule_tests.py:     tests: test scheduling of operations (add,
+                                delete, replace)
+
+* svnadmin_tests.py:     tests: 'svnadmin' tool functions
+
+* log_tests.py:          tests: 'svn log' subcommand. 
+
+* svntest/               subversion test framework, as a python package.
+
+    * main.py:               global vars, utility routines.
+                             exports run_tests(), the main test routine.
+
+    * svn_tree.py:           infrastructure for SVNTreeNode class.
+
+                             * tree constructors, tree comparison routines.
+
+                             * routines to parse subcommand output into
+                               specific kinds of trees.
+
+                             * routines to parse a working copy and
+                               entries files into specific kinds of trees.
+
+    * actions.py:            main API for driving subversion client and
+                             using trees to verify results.
+
+    * entry.py:              parse an `entries' file (### not used yet)
+
+
+
+What the Python Tests are Doing
+===============================
+
+I.  Theory
+
+  A. Types of Verification
+
+   The point of this test system is that it's *automated*: that is,
+   each test can algorithmically verify the results and indicate "PASS"
+   or "FAIL".
+
+   We've identified two broad classes of verification:
+
+   1.  Verifying svn subcommand output.
+
+      Most important subcommands (co, up, ci, im, st) print results to
+      stdout as a list of paths.  Even though the paths may be printed
+      out in an unpredicable order, we still want to make sure this
+      list is exactly the *set* of lines we expect to get.
+
+   2.  Verifying the working copy itself.
+
+      Every time a subcommand could potentially change something on
+      disk, we need to inspect the working copy.  Specifically, this
+      means we need to make sure the working copy has exactly the
+      tree-structure we expect, and each file has exactly the contents
+      and properties we expect.
+
+
+II.  Practice:  Trees
+
+  Sam TH <sam@uchicago.edu> proposed and began work on a solution
+  whereby all important, inspectable information is parsed into a
+  general, in-memory tree representation.  By comparing actual
+  vs. expected tree structures, we get automated verification.
+
+  A.  Tree node structure
+
+      Each "tree node" in a tree has these fields:
+
+      - name :  the name of the node
+      - children:  list of child nodes (if the node is a dir)
+      - contents:  textual contents (if the node is a file)
+      - properties:  a hash to hold subversion props
+      - atts:        a hash of meta-information about tree nodes themselves
+
+
+  B.  Parsing subcommand output into a tree
+
+      Special parsers examine lines printed by subcommands, and
+      convert them into a tree of tree-nodes.  The 'contents' and
+      'properties' fields are empty; but epending on the subcommand,
+      specific attributes in the 'atts' field are set in tree-nodes:
+
+       - svn co/up:        a 'status' attribute is set to a two-character
+                           value from the set (A, D, G, U, C, _, ' ')
+
+       - svn status:       a 'status' attribute (as above), plus 'wc_rev'
+                           and 'repos_rev' attributies to hold the wc
+                           and repos revision numbers.
+
+       - svn ci/im:        a 'verb' attribute is set to one of
+                           (Adding, Sending, Deleting)
+
+
+  C.  Parsing a working copy into a tree
+
+     We also have a routines that walks a regular working copy and
+     returns a tree representing disk contents and props.  In this
+     case the 'atts' hash in each node is empty, but the 'contents'
+     and 'props' fields are filled in.
+
+
+
+How to Write New Tests
+======================
+
+If you'd like to write a new python test, first decide which file it
+might fit into; test scripts each contain collections of tests grouped
+by rough categories.  (Is it testing a new subcommand?  New
+enhancement?  Tricky use-case?  Regression test?)
+
+Next, read the long documentation comment at the top of
+svntest/tree.py.  It will explain the general API that most tests use.
+
+Finally, try copying-and-pasting a simple test and then edit from
+there.  Don't forget to add your test to the 'test_list' variable at
+the bottom of the file.
+
+

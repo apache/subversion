@@ -1,0 +1,42 @@
+Changes to `entries' management:
+(for post-M2)
+
+1.  Directories will now have flags stored in *2* places:  in THIS_DIR
+    and in its parent's subdir entry.
+
+    As a rule, a subdir entry will never contain any info other than
+    the subdir's name and its flags.
+
+    ==> We must change all code that adds/removes flags to manage dir
+    flags in both locations.  (Mainly the merge_sync routines.)
+
+2.  When retrieving a hash full of entries, the hash will represent
+    *exactly* whatever information is available in the entries file.
+    We will *not* traverse up or down directories in search of extra
+    information.
+
+    In particular, the only "inferences" of information allowed are
+    listed here:
+
+       * a file entry is assumed to inherit it's revision and URL from
+         THIS_DIR, if none is specified.
+
+       * all file and subdir entries implicitly inherit a 'delete'
+         flag from THIS_DIR, if one is present.
+
+    ==> Change resolve_to_defaults to stop traversing up and down, and
+    only do the specific inferences above.
+
+    ==> Change *ALL* callers of svn_wc_entries_read, and make sure
+    they understand that they're getting a hash with missing
+    information;  teach them to fetch the info they need.  This is a
+    *big* change.
+
+3.  The command 'svn rm dir' causes all subdirs of DIR to be
+    automatically marked for deletion.  (And by inference rules, all
+    files anywhere in the subtree as well.)
+
+4.  The command 'svn add dir' only marks the one dir for addition.
+    In the future, maybe we can add a -R recursive flag to the add
+    command, or maybe people can just use 'svn import'.
+

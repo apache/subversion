@@ -1,0 +1,43 @@
+These four screenshots show ClearCase's version tree GUI in
+action. The version tree shows the versions of a repository element,
+along with annotations such as merge arrows, labels, and branch names.
+
+
+ClearCase-lsvtree-1.gif:
+
+    This is a simple view of a relatively new file. Looking at the
+    merge arrows, you can see it was created on the dev_ng branch,
+    then merged onto dev_lj and dev_anno_lj. The "0" versions are only
+    placeholders on empty branches.
+
+    The annotations describe the different elements of the interface
+    and some of the toolbar controls. All of those are also accesible
+    from the keyboard, context menu and toolbar menu.
+
+
+ClearCase-lsvtree-2.gif:
+
+    Same file, but showing only versions contributing to the version
+    in the current view (working copy in SVN terms). Notice the
+    tooltip on the selected version. It can also show the version's
+    change log, which just happens to be empty in this case.
+
+    (Interesting note: ClearCase can be configured to ask for a change
+    log at check-out time, not just check-in. This is extremely useful
+    because it acts as a reminder for the developer, and other people
+    can see what you're doing.)
+
+
+ClearCase-lsvtree-3.gif:
+
+    Same as 1, but with "Show all versions" turned off. Only "interesting"
+    versions, those that are either contributors, merge sources or
+    merge targets are shown.
+
+
+ClearCase-lsvtree-4.gif:
+
+    This is a real-life example. this file has gone throuth four major
+    revisions of a product, spanning 2.5 years of development on two
+    locations. At first sight the tree looks confusiing, but it's very
+    easy to navigate and operate on once you get used to it.

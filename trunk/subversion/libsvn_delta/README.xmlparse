@@ -1,0 +1,53 @@
+
+How to parse Subversion XML streams
+===================================
+
+Presumably, you have an xml stream which represents a tree-delta.  You
+want to apply this tree-delta to a "source tree" and thereby create a
+"target" tree.
+
+Here's how to use the API provided in xml_parse.c.
+
+
+  1.  Fetch an `editor' structure using some sort of get_editor()
+      routine.  You will also receive an `edit_baton' this way.  (Both
+      libsvn_wc and libsvn_ra provide their own versions of these
+      routines, depending on whether you want to edit a working copy
+      or a repository filesystem.)
+
+  2.  Create a customized xml parser by calling svn_make_xml_parser().
+      You will need to specify important parameters, such as:
+
+        - the editor and edit_baton the parser should use
+
+        - the "base" path and version of the source tree (for deriving
+          default ancestry when none is specified in the xml stream)
+          
+  3.  Now push chunks of the xml stream to the parser by calling
+      svn_xml_parsebytes().  As the parser traverses the xml, it will
+      make appropriate calls into the editor.
+
+  4.  When you're *finished*: 
+
+        - call svn_xml_parsebytes() with a TRUE value in the `isFinal'
+          field.  This allows both expat and svn to clean up.  (It's
+          okay to specify a length of 0 on the final call.)
+
+        - free the parser object with svn_free_xml_parser().
+
+
+  --- ALTERNATIVELY ---
+
+Step 1 is mandatory, but all the other steps can be automated by
+calling
+
+   svn_xml_auto_parse()
+
+This routine requires a pointer to a POSIX-like `read' routine.  It
+will *pull* the xml from the read-routine and parse it, until the
+stream runs dry.
+
+This method is convenient if you don't mind relinquishing control of
+your xml stream.
+
+

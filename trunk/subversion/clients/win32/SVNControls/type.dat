@@ -1,0 +1,19 @@
+TypeID	Type
+1	Desktop
+2	Mouse
+3	GDI
+4	Shell
+6	Keyboard
+7	Common Controls
+8	Interprocess Comms
+9	API
+10	Graphics
+11	Clipboard
+12	Subclassing
+13	Enumerations
+14	Sprites
+15	Windows Controls
+17	Windows
+18	Combo Box
+19	List Box
+20	Text Box

@@ -1,0 +1,285 @@
+top_builddir = .
+top_srcdir = @top_srcdir@
+abs_builddir = @abs_builddir@
+abs_srcdir = @abs_srcdir@
+VPATH = @top_srcdir@
+
+SVN_RA_LIB_DEPS = @SVN_RA_LIB_DEPS@
+SVN_RA_LIB_LINK = @SVN_RA_LIB_LINK@
+
+DOC_DIRS = doc/programmer/design doc/user/manual doc/user/svn_for_cvs_users
+
+EXTERNAL_PROJECT_DIRS = @SVN_SUBDIRS@
+
+NEON_LIBS = @NEON_LIBS@
+SVN_APR_LIBS = @SVN_APR_LIBS@
+SVN_APRUTIL_LIBS = @SVN_APRUTIL_LIBS@
+SVN_DB_LIBS = @SVN_DB_LIBS@
+
+LIBS = @LIBS@
+
+prefix = @prefix@
+exec_prefix = @exec_prefix@
+libdir = @libdir@
+base_libdir = @libdir@
+fs_libdir= @libdir@
+bindir = @bindir@
+fs_bindir=@bindir@
+includedir = @includedir@
+mandir = @mandir@
+srcdir = @srcdir@
+infodir = @infodir@
+
+swig_py_libdir= @libdir@
+
+### should search for these...
+MAKEINFO = @MAKEINFO@
+TEXI2DVI = texi2dvi
+DVIPS = dvips
+DVIPDF = dvipdf
+
+### See `dist' rule.
+DIST_SANDBOX = .dist_sandbox
+DISTNAME = subversion
+VERSION = `grep SVN_VERSION configure.in | cut -f 2 -d ' ' | sed -e 's/"//g' | sed -e 's/,//g'`
+
+
+CC = @CC@
+
+SHELL = @SHELL@
+LIBTOOL = $(SHELL) $(abs_builddir)/libtool
+LTFLAGS = --silent
+LT_LDFLAGS =
+
+INCLUDES = @SVN_EXTRA_INCLUDES@ @SVN_NEON_INCLUDES@ \
+		@SVN_EXPAT_INCLUDES@ @SVN_DB_INCLUDES@
+
+APACHE_INCLUDES = @APACHE_INCLUDES@
+APACHE_TARGET = @APACHE_TARGET@
+
+SWIG_PY_INCLUDES = @SWIG_PY_INCLUDES@
+
+MKDIR = @MKDIR@
+
+# the EXTRA_ exist so that extra flags can be passed at 'make' time
+CFLAGS = @CFLAGS@ $(EXTRA_CFLAGS)
+CPPFLAGS = @CPPFLAGS@ $(EXTRA_CPPFLAGS)
+LDFLAGS = @LDFLAGS@ $(EXTRA_LDFLAGS)
+
+COMPILE = $(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES)
+LT_COMPILE = $(LIBTOOL) $(LTFLAGS) --mode=compile $(COMPILE)
+
+COMPILE_APACHE_MOD = $(LIBTOOL) $(LTFLAGS) --mode=compile $(CC) $(CPPFLAGS) $(CFLAGS) $(APACHE_INCLUDES) $(INCLUDES) -o $@ -c $<
+
+# special SWIG compilation
+COMPILE_SWIG_PY = $(LIBTOOL) $(LTFLAGS) --mode=compile $(CC) $(CPPFLAGS) -DSWIGPYTHON $(CFLAGS) $(SWIG_PY_INCLUDES) $(INCLUDES) -o $@ -c $<
+
+LINK = $(LIBTOOL) $(LTFLAGS) --mode=link $(LT_LDFLAGS) $(COMPILE) $(LDFLAGS) -rpath $(libdir)
+
+INSTALL = @INSTALL@
+INSTALL_LIB = $(LIBTOOL) --mode=install $(INSTALL)
+INSTALL_BASE_LIB = $(INSTALL_LIB)
+INSTALL_FS_LIB = $(INSTALL_LIB)
+INSTALL_BIN = $(LIBTOOL) --mode=install $(INSTALL)
+INSTALL_FS_BIN = $(INSTALL_BIN)
+INSTALL_INCLUDE = $(INSTALL) -m 644
+INSTALL_MOD_SHARED = @APXS@ -i -a
+INSTALL_MOD_STATIC = $(INSTALL) -m 644
+INSTALL_DATA = $(INSTALL) -m 644
+
+INSTALL_SWIG_PY_LIB = $(INSTALL_LIB)
+
+PYTHON = @PYTHON@
+
+ECHO_C = @ECHO_C@
+ECHO_N = @ECHO_N@
+
+all: external-all local-all
+clean: external-clean local-clean
+distclean: external-distclean local-distclean
+extraclean: external-extraclean local-extraclean
+install: external-install local-install
+
+@INCLUDE_OUTPUTS@
+
+local-all: @BUILD_RULES@ @SWIG_BUILD_RULES@
+
+local-clean: doc-clean
+	@list='$(BUILD_DIRS)'; for i in $$list; do \
+	    echo "Cleaning $$i ..." ; \
+	    (cd $$i && rm -f *.o *.lo *.la *.la-a && rm -rf .libs) ; \
+	done
+	rm -f $(CLEAN_FILES)
+
+local-distclean: local-clean
+	rm -f Makefile config.cache config.log config.status libtool \
+		svn_private_config.h
+
+local-extraclean: local-distclean
+	rm -f build-outputs.mk svn_private_config.h.in configure \
+		ac-helpers/config.guess ac-helpers/config.sub \
+		ac-helpers/libtool.m4 ac-helpers/ltconfig \
+		ac-helpers/ltmain.sh
+
+local-install: @INSTALL_RULES@ @SWIG_INSTALL_RULES@
+
+check: $(TEST_DEPS) @FS_TEST_DEPS@
+	@logfile=`pwd`/tests.log ; \
+	echo > $$logfile ; \
+	failed=no ; \
+	$(PYTHON) $(top_srcdir)/build/pycheck.py ; \
+	list='$(TEST_PROGRAMS) @FS_TEST_PROGRAMS@'; for prog in $$list; do \
+	    progbase=`echo $$prog | sed 's?.*/??'` ; \
+	    progdir=`echo $$prog | sed 's?/[^/]*$$??'` ; \
+	    echo $(ECHO_N) "Running all tests in $$progbase...$(ECHO_C)" ; \
+	    echo "START: $$progbase" >> $$logfile ; \
+	    if echo $$progbase | grep \\.py$$ > /dev/null; then  \
+		runprog="$(PYTHON) $(abs_srcdir)/$$prog" ; \
+	    elif echo $$progbase | grep \\.sh$$ > /dev/null; then  \
+		runprog="$(SHELL) $(abs_srcdir)/$$prog $(abs_builddir)/$$progdir $(abs_srcdir)/$$progdir" ; \
+	    elif test -x $$prog ; then \
+		runprog="./$$progbase" ; \
+	    else  \
+		echo "Don't know what to do about $$progbase" ; \
+		exit 1 ; \
+	    fi ; \
+	    if ( cd $$progdir && $$runprog ) >> $$logfile ; then \
+		echo "success" ; \
+	    else \
+		echo "FAILURE" ; \
+		failed=yes; \
+	    fi; \
+	    echo "END: $$progbase" >> $$logfile ; \
+	    echo >> $$logfile ; \
+	done ; \
+	if test "$$failed" = "yes"; then \
+	    echo "at least one test FAILED, checking tests.log." ; \
+	    grep FAIL $$logfile || true ; \
+	fi
+
+mkdir-init:
+	@list='$(BUILD_DIRS) $(DOC_DIRS)'; for i in $$list doc; do \
+	    echo "mkdir $$i" ; \
+	    $(MKDIR) $$i ; \
+	done
+
+# recursive targets to handle external projects (e.g. APR, Neon)
+external-all external-clean external-distclean external-install:
+	@target=`echo $@ | sed s/external-//`; \
+	list='$(EXTERNAL_PROJECT_DIRS)'; \
+	for i in $$list; do \
+	    echo "------ making $$target in $$i"; \
+	    (cd $$i && $(MAKE) $$target) || exit 1; \
+	    echo "------ completed $$target in $$i"; \
+	done;
+
+### temporary hack. Neon does not have an "extraclean" and neither does db
+### If we don't have extraclean -- do the next best thing.
+external-extraclean:
+	@list='$(EXTERNAL_PROJECT_DIRS)'; \
+	for i in $$list; do \
+	    if test "$$i" = "neon" || test "$$i" = "db/dist"; then \
+		echo "------ making distclean(no extraclean) in $$i"; \
+		(cd $$i && $(MAKE) distclean) || exit 1; \
+		echo "------ completed distclean(no extraclean) in $$i"; \
+	    else \
+		echo "------ making extraclean in $$i"; \
+		(cd $$i && $(MAKE) extraclean) || exit 1; \
+		echo "------ completed extraclean in $$i"; \
+	    fi; \
+	done;
+
+## Use Karl's script to create a Changelog from CVS.
+
+.PHONY: ChangeLog
+
+log changelog ChangeLog:
+	cvs2cl.pl --fsf -b -t -r -S -U ./AUTHORS      \
+            subversion doc www expat-lite notes tools ac-helpers \
+            `find . -type f -maxdepth 1`
+
+doc: doc-info doc-txt doc-html
+
+doc-info: doc/programmer/design/svn-design.info doc/user/manual/svn-manual.info doc/user/svn_for_cvs_users/svn_for_cvs_users.info
+doc-dvi: doc/programmer/design/svn-design.dvi doc/user/manual/svn-manual.dvi doc/user/svn_for_cvs_users/svn_for_cvs_users.dvi
+doc-txt: doc/programmer/design/svn-design.txt doc/user/manual/svn-manual.txt doc/user/svn_for_cvs_users/svn_for_cvs_users.txt
+doc-html: doc/programmer/design/svn-design.html doc/user/manual/svn-manual.html doc/user/svn_for_cvs_users/svn_for_cvs_users.html
+doc-ps: doc/programmer/design/svn-design.ps doc/user/manual/svn-manual.ps doc/user/svn_for_cvs_users/svn_for_cvs_users.ps
+doc-pdf: doc/programmer/design/svn-design.pdf doc/user/manual/svn-manual.pdf doc/user/svn_for_cvs_users/svn_for_cvs_users.pdf
+
+doc-clean:
+	for d in $(DOC_DIRS);                               \
+        do                                                  \
+            (cd $$d;                                        \
+             rm -f *.info *.info-1 *.info-2 *.info-3        \
+                   *.aux *.cp *.fn *.ky *.log *.pg *.toc    \
+                   *.tp *.vr                                \
+                   *.dvi *.txt *.html *.ps *.pdf);          \
+        done
+
+### Build a tarball.
+dist: 
+	./dist.sh
+
+
+#
+# Implicit rules for creating outputs from input files
+#
+.SUFFIXES:
+.SUFFIXES: .c .lo .o .la-a .la .texi .info .dvi .txt .html .ps .pdf
+
+.c.o:
+	$(COMPILE) -o $@ -c $<
+
+.c.lo:
+	$(LT_COMPILE) -o $@ -c $<
+
+.la.la-a:
+	sed "/library_names/s/'.*'/''/" $< > $@
+
+
+.texi.info:
+	$(MAKEINFO) -I `dirname $<` -o $@ $< 
+
+.texi.dvi:
+	wd=`pwd` ; cd `dirname $@` ; $(TEXI2DVI) -I `dirname $$wd/$<` $$wd/$<
+
+.texi.txt:
+	$(MAKEINFO) -I `dirname $<` --no-headers -o $@ $<
+
+.texi.html:
+	$(MAKEINFO) -I `dirname $<` --no-headers --html -o $@ $<
+
+.dvi.ps:
+	$(DVIPS) $< -o $@
+
+.dvi.pdf:
+	$(DVIPDF) $< $@
+
+install-docs: install-man @INSTALL_INFO@
+
+manroot = $(mandir)/man
+install-man:
+	@list='$(MANPAGES)'; \
+	for i in $$list; do \
+	  if test -f $(srcdir)/$$i; then file=$(srcdir)/$$i; \
+	  else file=$$i; fi; \
+	  ext=`echo $$i | sed -e 's/^.*\\.//'`; \
+	  $(MKDIR) $(DESTDIR)$(manroot)$$ext; \
+	  inst=`echo $$i | sed -e 's/\\.[0-9a-z]*$$//'`; \
+	  inst=`echo $$inst | sed -e 's/^.*\///'`; \
+	  inst=`echo $$inst`.$$ext; \
+	  echo "$(INSTALL_DATA) $$file $(DESTDIR)$(manroot)$$ext/$$inst"; \
+	  $(INSTALL_DATA) $$file $(DESTDIR)$(manroot)$$ext/$$inst; \
+	done
+
+install-info: doc-info
+	$(MKDIR) $(DESTDIR)$(infodir)
+	@list='$(INFOPAGES)'; \
+	for i in $$list; do \
+	  if test -f $(srcdir)/$$i; then file=$(srcdir)/$$i; \
+	  else file=$$i; fi; \
+	  inst=`echo $$file | sed -e 's/^.*\///'`; \
+	  echo "$(INSTALL_DATA) $$file $(DESTDIR)$(infodir)/$$inst"; \
+	  $(INSTALL_DATA) $$file $(DESTDIR)$(infodir)/$$inst; \
+	done

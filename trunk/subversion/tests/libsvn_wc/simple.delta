@@ -1,0 +1,29 @@
+<delta-pkg ver="37" ancestor="/glorb">
+
+<tree-delta>
+  <add name="dir1">
+     <dir>
+        <tree-delta>
+          <add name="file1">
+             <file>
+               <text-delta>W3bOAAAAEQERmSB1d43nIGbrdGWzIGRjfGEi</text-delta>
+             </file>
+          </add>
+          <add name="file2">
+             <file>
+               <text-delta>W3bOAAAAEQERmSB1d43nIGbrdGW0IGRjfGEi</text-delta>
+
+             </file>
+          </add>
+        </tree-delta>
+      </dir>
+   </add>
+   <add name="file3">
+       <file>
+            <text-delta>W3bOAAAAEQERmSB1d43nIGbrdGW1IGRjfGEi</text-delta>
+       </file>
+   </add>
+</tree-delta>
+
+
+</delta-pkg>

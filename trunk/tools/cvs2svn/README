@@ -1,0 +1,61 @@
+This is a program to convert a CVS repository to Subversion.
+Bob Miller <kbob@jogger-egg.com> is working on it.
+
+-----
+
+Current status (October 1, 2000):
+	
+	cvs2svn.pl can read the whole CVS repository and generate a
+	sorted list of commits, using almost the same heuristic as
+	Karl's cvs2cl.pl.  See Commit::accepts_rev for the heuristic.
+
+	The commits right now are simply of the form:
+
+		commit
+			path/to/file1 1.23
+			path/to/file2 1.34
+
+	The big task that remains is to produce an XML vdelta that
+	subversion proper (not sure which part) can parse and process.
+
+	There's a bug in the Rcs package which mixes up log messages
+	and diffs.  This means (A) it's not coalescing commits right,
+	and (B) it's wasting a lot of memory storing a large fraction
+	of the repository's diffs.
+
+	Yes, performance is a problem.  See timings below.
+
+	Packaging is not done:
+		cvs2svn.pl is too big.
+		Rcs.pm is in CPAN, is not in this distribution.
+		CheckedClass.pm is duplicated in cvs2svn.pl,
+		because I was too lazy to set up @INC.
+		Makefile should invoke tests.
+		No documentation.
+
+	cvs2svn.pl needs about 1,000 more comments than it has.
+
+-----
+
+Some timing info:
+
+	Test system is Pentium II 450 MHz, 440BX chipset, 192 Mb RAM,
+	Linux 2.2.16, single 7200 RPM IDE disk, Ultra-ATA/33.
+
+gnats-cvs (small):
+	55 directories, 647 files, 3165 file revisions
+	6 unique authors, 10 unique tags, 314 unique log messages
+	55 directories, 647 files, 3165 revisions
+	used 4440 Kbytes
+	13.250u 1.950s 0:18.10 83.9%    0+0k 0+0io 3264pf+0w
+
+
+gcc-cvs (medium):
+	310 directories, 9825 files, 96686 revisions
+	used 172936 kB
+	2825.160u 92.610s 51:06.30 95.1%        0+0k 0+0io 155728pf+21120w
+
+NetBSD-cvs (large):
+	5724 directories, 65225 files, 760990 revisions
+	used over 500 Mb.
+	Did not finish running overnight.

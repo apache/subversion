@@ -1,0 +1,23 @@
+This file exists to attempt to track the resources and ideas that are
+present in the Subversion community on the topic of GUIs for Subversion.
+
+The following is a list of folks that are currently believed to have
+interest in helping to implement a Subversion GUI.  If you'd like to
+be added (or removed) from this list, and you have CVS access to the
+Subversion project, feel free to make the edit.  If you don't have CVS
+access, just pop a mail off to dev@subversion.tigris.org and request
+the change be made.
+
+   Greg Montgomery <Greg.Montgomery@Synchrologic.com>
+   Alexander Mueller <alex@littleblue.de>
+   C. Michael Pilato <cmpilato@collab.net>
+   Jon Trowbridge <trow@gnu.org>
+   Bill Tutt <billtut@microsoft.com>
+
+Here are some links that have been recommended in the course of the
+GUI discussions:
+
+   Cervisia - http://cervisia.sourceforge.net/
+   CVL - http://www.sente.ch/software/cvl/
+   Netbeans - http://www.netbeans.org/
+   TortoiseCVS - http://www.wincvs.org/TortoiseCVS/

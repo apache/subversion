@@ -1,0 +1,730 @@
+@node Deltas
+@chapter Deltas
+
+Subversion uses three kinds of deltas:
+
+@itemize @bullet
+@item
+A @b{@dfn{tree delta}} describes the difference between two arbitrary
+directory trees, the way a traditional patch describes the difference
+between two files.  For example, the delta between directories A and B
+could be applied to A, to produce B.
+
+Tree deltas can also carry ancestry information, indicating how the
+files in one tree are related to files in the other tree.  And deltas
+can describe changes to file meta-information, like permission bits,
+creation dates, and so on.  The repository and working copy use deltas
+to communicate changes.
+
+@item
+A @b{@dfn{text delta}} describes changes to a string of bytes, such as the
+contents of a file.  It is analogous to traditional patch format, except
+that it works equally well on binary and text files, and is not
+invertible (because context and deleted data are not recorded).
+
+@item
+A @b{@dfn{property delta}} describes changes to a list of named
+properties (@pxref{Properties}).
+@end itemize
+
+The term @dfn{delta} without qualification generally means a tree delta,
+unless some other meaning is clear from context.
+
+In the examples below, deltas will be described in XML, which happens to
+be Subversion's import/export format.  However, note that deltas are an
+abstract data structure, of which the XML format is merely one
+representation.  Later, we will describe other representations: for
+example, there is a serialized representation (useful for streaming
+protocols, among other things), and a db-style representation, used for
+repository storage.  The various representations of a given delta are
+(in theory, anyway) perfectly isomorphic to one another, since they
+describe the same underlying structure.
+
+@menu
+* Text Deltas::                 
+* Property Deltas::             
+* Tree Deltas::                 
+* Postfix Text Deltas::                     
+* Serializing Deltas via the "Editor" Interface::
+@end menu
+
+
+@c -----------------------------------------------------------------------
+@node Text Deltas
+@section Text Deltas
+
+A text delta describes the difference between two strings of bytes, the
+@dfn{source} string and the @dfn{target} string.  Given a source string
+and a target string, we can compute a text delta; given a source string
+and a delta, we can reconstruct the target string.  However, note that
+deltas are not invertible: you cannot always reconstruct the source
+string given the target string and delta.
+
+The standard Unix ``diff'' format is one possible representation for
+text deltas; however, diffs are not ideal for internal use by a revision
+control system, for several reasons:
+@itemize @bullet
+@item
+Diffs are line-oriented, which makes them human-readable, but sometimes
+makes them perform poorly on binary files.
+@item
+Diffs represent a series of replacements, exchanging selected ranges of
+the old text with new text; again, this is easy for humans to read, but
+it is more expensive to compute and less compact than some alternatives.
+@end itemize
+
+Instead, Subversion uses the VDelta binary-diffing algorithm, as
+described in @cite{Hunt, J. J., Vo, K.-P., and Tichy, W. F.  An
+empirical study of delta algorithms.  Lecture Notes in Computer Science
+1167 (July 1996), 49-66.}  Currently, the output of this algorithm is
+stored in a custom data format called @dfn{svndiff}, invented by Greg
+Hudson <@email{ghudson@@mit.edu}>, a Subversion developer.
+
+The concrete form of a text delta is a well-formed XML element, having
+the following form:
+@example
+<text-delta>@var{data}</text-delta>
+@end example
+Here, @var{data} is the raw svndiff data, encoded in the MIME Base64
+format.
+
+@c -----------------------------------------------------------------------
+@node Property Deltas
+@section Property Deltas
+
+A property delta describes changes to a property list, of the sort
+associated with files, directories, and directory entries, and revision
+numbers (@pxref{Properties}).  A property delta can record creating,
+deleting, and changing the text of any number of properties.
+
+A property delta is an unordered set of name/change pairs.  No two
+pairs within a given property delta have the same name.  A pair's name
+indicates the property affected, and the change indicates what happens
+to its value.  There are two kinds of changes:
+@table @code
+@item set @var{value}
+Change the value of the named property to the byte string @var{value}.
+If there is no property with the given name, one is added to the
+property list.
+@item delete
+Remove the named property from the property list.
+@end table
+
+At the moment, the @code{set} command can either create or change a
+property value.  However, this simplification means that the server
+cannot distinguish between a client which believes it is creating a
+value afresh, and a client which believes it is changing the value of an
+existing property.  It may simplify conflict detection to divide
+@code{set} into two separate @code{add} and @code{change} operations.
+
+In the future, we may add a @code{text-delta} change, which specifies a
+change to an existing property's value as a text delta.  This would give
+us a compact way to describe small changes to large property values.
+
+The concrete form of a property delta is a well-formed XML element,
+having the following form:
+@example
+<property-delta>@var{change}@dots{}</property-delta>
+@end example
+Each @var{change} in a property delta has one of the following forms:
+@example
+<set name='@var{name}'>@var{value}</set>
+<delete name='@var{name}'/>
+@end example
+The @var{name} attribute of a @code{set} or @code{delete} element gives
+the name of the property to change.  The @var{value} of a @code{set}
+element gives the new value of the property.
+
+If either the property name or the property value contains the
+characters @samp{&}, @samp{<}, or @samp{'}, they should be replaced with
+the sequences @samp{&#38}, @samp{&#60}, or @samp{&#39}, respectively.
+
+
+@c -----------------------------------------------------------------------
+@node Tree Deltas
+@section Tree Deltas
+
+A tree delta describes changes between two directory trees, the
+@dfn{source tree} and the @dfn{target tree}.  Tree deltas can describe
+copies, renames, and deletions of files and directories, changes to file
+contents, and changes to property lists.  A tree delta can also carry
+information about how the files in the target tree are derived from the
+files in the source tree, if this information is available.
+
+The format for tree deltas described here is easy to compute from a
+Subversion working directory, and easy to apply to a Subversion
+repository.  Furthermore, the size of a tree delta in this format is
+independent of the commands used to produce the target tree --- it
+depends only on the degree of difference between the source and target
+trees.
+
+A tree delta is interpreted in the context of three parameters:
+@itemize @bullet
+@item
+@var{source-root}, the name of the directory to which this complete
+tree delta applies,
+@item
+@var{revision}, indicating a particular revision of @dots{}
+@item
+@var{source-dir}, which is a directory in the source tree that we are
+currently modifying to yield @dots{}
+@item
+@dots{} @dfn{target-dir} --- the directory we're constructing.
+@end itemize
+When we start interpreting a tree delta, @var{source-root},
+@var{source-dir}, and @var{target-dir} are all equal.  As we walk the
+tree delta, @var{target-dir} walks the tree we are constructing, and
+@var{source-dir} walks the corresponding portion of the source tree,
+which we use as the original.  @var{Source-root} remains constant as we
+walk the delta; we may use it to choose new source trees.
+
+A tree delta is a list of changes of the form
+@example
+<tree-delta>@var{change}@dots{}</tree-delta>
+@end example
+which describe how to edit the contents of @var{source-dir} to yield
+@var{target-dir}.  There are three kinds of changes:
+@table @code
+
+@item <delete name='@var{name}'/>
+@var{Source-dir} has an entry named @var{name}, which is not present in
+@var{target-dir}.
+
+@item <add name='@var{name}'>@var{content}</add>
+@var{target-dir} has an entry named @var{name}, which is not present in
+@var{source-dir}; @var{content} describes the file or directory to which
+the new directory entry refers.
+
+@item <replace name='@var{name}'>@var{content}</replace>
+Both @var{source-dir} and @var{target-dir} have an entry named
+@var{name}, which has changed; @var{content} describes the new file or
+directory.
+
+@end table
+Any entries in @var{source-dir} whose names aren't mentioned are assumed
+to appear unchanged in @var{target-dir}.  Thus, an empty
+@code{tree-delta} element indicates that @var{target-dir} is identical
+to @var{source-dir}.
+
+In the change descriptions above, each @var{content} takes one of the
+following forms:
+@table @code
+
+@item <file @var{ancestor}>@var{prop-delta} @var{text-delta}</file>
+The given @var{target-dir} entry refers to a file, @var{f}.
+@var{Ancestor} indicates which file in the source tree @var{f} is
+derived from, if any.
+
+@var{Prop-delta} is a property delta describing how @var{f}'s properties
+differ from that ancestor; it may be omitted, indicating that the
+properties are unchanged.
+
+@var{Text-delta} is a text delta describing how to construct @var{f}
+from that ancestor; it may also be omitted, indicating that @var{f}'s
+text is identical to its ancestor's.
+
+
+@item <file @var{ancestor}/>
+An abbreviation for @code{<file @var{ancestor}></file>} --- a file
+element with no property or text delta, thus describing a file identical
+to its ancestor.
+
+
+@item <directory @var{ancestor}>@var{prop-delta} @var{tree-delta}</directory>
+The given @var{target-dir} entry refers to a subdirectory, @var{sub}.
+@var{Ancestor} indicates which directory in the source tree @var{sub} is
+derived from, if any.
+
+@var{Prop-delta} is a property delta describing how @var{sub}'s
+properties differ from that ancestor; it may be omitted, indicating that
+the properties are unchanged.
+
+@var{Tree-delta} describes how to construct @var{sub} from that
+ancestor; it may be omitted, indicating that the directory is identical
+to its ancestor.  @var{Tree-delta} should be interpreted with a new
+@var{target-dir} of @file{@var{target-dir}/@var{name}}.
+
+Since @var{tree-delta} is itself a complete tree delta structure, tree
+deltas are themselves trees, whose structure is a subgraph of the target
+tree.
+
+
+@item <directory @var{ancestor}/>
+An abbreviation for @code{<directory @var{ancestor}></directory>} --- a
+directory element with no property or tree delta, thus describing a
+directory identical to its ancestor.
+
+@end table
+
+The @var{content} of a @code{add} or @code{replace} tag may also contain
+a property delta, describing changes to the properties of that
+@emph{directory entry}.
+
+In the @code{file} and @code{directory} elements described above, each
+@var{ancestor} has one of the following forms:
+@table @code
+
+@item ancestor='@var{path}'
+The ancestor of the new or changed file or directory is
+@file{@var{source-root}/@var{path}}, in @var{revision}.  When this
+appears as an attribute of a @code{file} element, the element's text
+delta should be applied to @file{@var{source-root}/@var{path}}.  When
+this appears as an attribute of a @code{directory} element,
+@file{@var{source-root}/@var{path}} should be the new @var{source-dir}
+for interpreting that element's tree delta.
+
+@item new='true'
+This indicates that the file or directory has no ancestor in the source
+tree.  When followed by a @var{text-delta}, that delta should be applied
+to the empty file to yield the new text; when followed by a
+@var{tree-delta}, that delta should be evaluated as if @var{source-dir}
+were an imaginary empty directory.
+
+@item @var{nothing}
+If neither an @code{ancestor} nor a @code{new} attribute is given, this
+is an abbreviation for @code{ancestor='@var{source-dir}/@var{name}'},
+with the same revision number.  This makes the common case --- files or
+directories modified in place --- more compact.
+
+@end table
+
+If the @var{ancestor} spec is not @code{new='true'}, it may also contain
+the text @code{revision='@var{rev}'}, indicating a new value for
+@var{revision}, in which we should find the ancestor.
+
+If a filename or path appearing as a @var{name} or @var{path} in the
+description above contains the characters @samp{&}, @samp{<}, or
+@samp{'}, they should be replaced with the sequences @samp{&#38;},
+@samp{&#60;}, or @samp{&#39;}, respectively.
+
+Suppose we have the following source tree:
+@example
+/dir1/file1
+      file2
+      dir2/file3
+           file4
+      dir3/file5
+           file6
+@end example
+  
+If we edit the contents of @file{/dir1/file1}, we can describe the
+effect on the tree with the following tree delta, to be applied to the
+root:
+@example
+<tree-delta>
+  <replace name='dir1'>
+    <directory>
+      <tree-delta>
+        <replace name='file1'>
+          <file>@var{text-delta}</file>
+        </replace>
+      </tree-delta>
+    </directory>
+  </replace>
+</tree-delta>
+@end example
+The outer @code{tree-delta} element describes the changes made to the root
+directory.  Within the root directory, there are changes in @file{dir1},
+described by the nested @code{tree-delta}.  Within @file{/dir1}, there are
+changes in @file{file1}, described by the @var{text-delta}.
+
+If we had edited both @file{/dir1/file1} and @file{/dir1/file2}, then
+there would simply be two @code{replace} elements in the inner
+@code{tree-delta}.
+
+As another example, starting from the same source tree, suppose we
+rename @file{/dir1/file1} to @file{/dir1/file8}:
+@example
+<tree-delta>
+  <replace name='dir1'>
+    <directory>
+      <tree-delta>
+        <delete name='file1'/>
+        <add name='file8'>
+          <file ancestor='/dir1/file1'/>
+        </add>
+      </tree-delta>
+    </directory>
+  </replace>
+</tree-delta>
+@end example
+As above, the inner @code{tdelta} describes how @file{/dir1} has
+changed: the entry for @file{/dir1/file1} has disappeared, but there is
+a new entry, @file{/dir1/file8}, which is derived from and textually
+identical to @file{/dir1/file1} in the source directory.  This is just
+an indirect way of describing the rename.
+
+Why is it necessary to be so indirect?  Consider the delta representing
+the result of:
+@enumerate
+@item
+renaming @file{/dir1/file1} to @file{/dir1/tmp},
+@item
+renaming @file{/dir1/file2} to @file{/dir1/file1}, and
+@item
+renaming @file{/dir1/tmp} to @file{/dir1/file2}
+@end enumerate
+(in other words, exchanging @file{file1} and @file{file2}):
+@example
+<tree-delta>
+  <replace name='dir1'>
+    <directory>
+      <tree-delta>
+        <replace name='file1'>
+          <file ancestor='/dir1/file2'/>
+        </replace>
+        <replace name='file2'>
+          <file ancestor='/dir1/file1'/>
+        </replace>
+      </tree-delta>
+    </directory>
+  </replace>
+</tree-delta>
+@end example
+The indirectness allows the tree delta to capture an arbitrary
+rearrangement without resorting to temporary filenames.
+
+Another example, starting from the same source tree:
+@enumerate
+@item
+rename @file{/dir1/dir2} to @file{/dir1/dir4},
+@item
+rename @file{/dir1/dir3} to @file{/dir1/dir2}, and
+@item
+move @file{file3} from @var{/dir1/dir4} to @var{/dir1/dir2}.
+@end enumerate
+Note that @file{file3}'s path has remained the same, even though the
+directories around it have changed.  Here is the tree delta:
+@example
+<tree-delta>
+  <replace name='dir1'>
+    <directory>
+      <tree-delta>
+        <replace name='dir2'>
+          <directory ancestor='/dir1/dir3'>
+            <tree-delta>
+              <add name='file3'>
+                <file ancestor='/dir1/dir2/file3'/>
+              </add>
+            </tree-delta>
+          </directory>
+        </replace>
+        <delete name='dir3'/>
+        <add name='dir4'>
+          <directory ancestor='/dir1/dir2'>
+            <tree-delta>
+              <delete name='file3'/>
+            </tree-delta>
+          </directory>
+        </add>
+      </tree-delta>
+    </directory>
+  </replace>
+</tree-delta>
+@end example
+In other words:
+@itemize @bullet
+@item
+@file{/dir1} has changed;
+@item
+the new directory @file{/dir1/dir2} is derived from the old
+@file{/dir1/dir3}, and contains a new entry @file{file3}, derived from
+the old @file{/dir1/dir2/file3};
+@item
+there is no longer any @file{/dir1/dir3}; and
+@item
+the new directory @file{/dir1/dir4} is derived from the old
+@file{/dir1/dir2}, except that its entry for @file{file3} is now gone.
+@end itemize
+
+Some more possible maneuvers, left as exercises for the reader:
+@itemize @bullet
+@item
+Delete @file{dir2}, and then create a file named @file{dir2}.
+@item
+Rename @file{/dir1/dir2} to @file{/dir1/dir4}; move @file{file2} into
+@file{/dir1/dir4}; and move @file{file3} into @var{/dir1/dir3}.
+@item
+Move @file{dir2} into @file{dir3}, and move @file{dir3} into @file{/}.
+@end itemize
+
+@c ----------------------------------------------------------------------
+@node Postfix Text Deltas
+@section Postfix Text Deltas
+
+It is sometimes useful to represent a set of changes to a tree without
+providing text deltas in the middle of the stream.  Text deltas are
+often large and expensive to compute, and tree deltas can be useful
+without them.  For example, one can detect whether two changes might
+conflict --- whether they change the same file, for example --- without
+knowing exactly how the conflicting files changed.
+
+For this reason, our XML representation of a tree delta allows the text
+deltas to come @emph{after} the </tree-delta> closure.  This allows the
+client to receive early notice of conflicts:  during a @code{svn commit}
+command, the client sends a tree-delta to the server, which can check
+for skeletal conflicts and reject the commit, before the client takes the
+time to transmit the (possibly large) textual changes.  This potentially
+saves quite a bit of network traffic.
+
+In terms of XML, postfix text deltas are split into two parts.  The
+first part appears "in-line" and contains a reference ID.  The second
+part appears after the tree delta is complete.  Here's an example:
+
+@example
+ <tree-delta>
+   <replace name="foo.c">
+      <file>
+        <text-delta-ref id="123">
+      </file>
+   </replace>
+   <add name="bar.c">
+      <file>
+        <text-delta-ref id="456">
+      </file>
+    </add>
+ </tree-delta>
+ <text-delta id="123">@emph{data}</text-delta>
+ <text-delta id="456">@emph{data}</text-delta>
+@end example
+
+
+@c ----------------------------------------------------------------------
+@node Serializing Deltas via the "Editor" Interface
+@section Serializing Deltas via the "Editor" Interface
+
+The static XML forms above are useful as an import/export format, and as
+a visualization aid, but we also need a way to express a delta as a
+@emph{series of operations}, to implement directory tree diffing and
+patching.  Subversion defines a standard set of such operations in the
+vtable @code{svn_delta_edit_fns_t}, a set of function prototypes which
+anyone may implement (see @file{svn_delta.h}).
+
+Each function in an instance of @code{svn_delta_edit_fns_t}
+(colloquially known as an @dfn{editor}) implements some distinct subtask
+of editing a directory tree.  In fact, if you compare the editor
+function prototypes to the XML elements described previously, you'll
+notice a fairly strict correspondence: there's one function for
+replacing a directory, another function for replacing a file, one for
+adding a directory, another for adding a file, a function for deleting,
+and so on.
+
+Although the editor interface was designed around the general idea of
+making changes to a directory tree, a specific implementation's behavior
+depends on its role.  For example, the versioning filesystem library
+offers an editor that creates new revisions, while the working copy
+library offers an editor that updates working copies.  And the network
+layer offers an editor that turns editing calls into wire protocol,
+which is then converted back into editing calls on the other side!  All
+of these different tasks can share a single interface, because they are
+all fundamentally about the same thing: expressing and applying
+differences between directory trees.
+
+Like the XML forms, a series of editor calls must follow certain nesting
+conventions; these conventions are implicit in the interface, in that
+some of the functions take arguments that can only be obtained from
+previous calls to other editor functions.
+
+Editors can best be understood by watching one work on a real directory
+tree.  For example:
+
+@c kff todo: fooo working here.
+
+Suppose that the user has made a number of local changes to her working
+copy and wants to commit them to the repository.  Let's represent her
+changes with the same tree-delta from a previous example.  Notice that
+she has also made textual modifications to @file{file3}; hence the
+in-line @code{<text-delta>}:
+
+@example
+<tree-delta>
+  <open name='dir1'>
+    <directory>
+      <tree-delta>
+        <open name='dir2'>
+          <directory ancestor='/dir1/dir3'>
+            <tree-delta>
+              <add name='file3'>
+                <file ancestor='/dir1/dir2/file3'>
+                  <text-delta>@emph{data}</text-delta>
+                </file>
+              </add>
+            </tree-delta>
+          </directory>
+        </open>
+        <delete name='dir3'/>
+        <add name='dir4'>
+          <directory ancestor='/dir1/dir2'>
+            <tree-delta>
+              <delete name='file3'/>
+            </tree-delta>
+          </directory>
+        </add>
+      </tree-delta>
+    </directory>
+  </open>
+</tree-delta>
+@end example
+
+So how does the client send this information to the server?
+
+In a nutshell: the tree-delta is @emph{streamed} over the network, as a
+series of individual commands given in depth-first order.
+
+Let's be more specific.  The server presents the client with an object
+of type @code{struct svn_delta_edit_fns_t}, colloquially known as an
+@dfn{editor}.  An editor is really just table of functions; each
+function makes a change to a filesystem.  Agent A (who has a private
+filesystem) presents an editor to agent B.  Agent B then calls the
+editor's functions to change A's filesystem.  B is said to be
+@dfn{driving} the editor.
+
+As Karl Fogel likes to describe the process, if one thinks of the
+tree-delta as a lion, the editor is a "hoop" that the lion jumps through
+-- each portion of the lion being decomposed through time.
+
+B cannot call the functions in any willy-nilly order; there are some
+logical restrictions.  In particular, as B drives the editor, it
+receives opaque data structures which represent directories and files.
+It must use and pass these structures, known as @dfn{batons}, to make
+further function calls.
+
+As an example, let's watch how the client would transmit the above
+tree-delta to the repository.  (The description below is slightly
+simplified.  For exact interface details, see
+@file{subversion/include/svn_delta.h}.)
+
+@enumerate
+
+@item 
+The repository hands an "editor" to the client.
+
+@item
+The client begins by calling
+
+    @code{root_baton = editor->open_root();}
+
+The client now has an opaque object, @dfn{root_baton}, which represents
+the root of the repository's filesystem.
+
+@item
+@code{dir1_baton = editor->open_dir("dir1", root_baton);}
+
+Notice that @emph{root_baton} gives the client free license to make any
+changes it wants in the repository's root directory -- until, of course,
+it calls @code{editor->close_dir(root_baton)}.
+
+The first change made was a replacement of @file{dir1}.  In return, the
+client now has a new opaque data structure that can be used to change
+@file{dir1}.
+
+@item
+@code{dir2_baton = editor->open_dir("dir2", "/dir1/dir3", dir1_baton);}
+
+The @emph{dir1_baton} is now used to replace @file{dir2} with a
+directory whose ancestor is @file{/dir1/dir3}.
+
+@item
+@code{file_baton = editor->add_file("file3", "/dir1/dir2/file3", dir2_baton);}
+
+Edits are now made to @file{dir2} (using @emph{dir2_baton}).  In
+particular, a new file is added to this directory whose ancestor is
+@file{/dir1/dir2/file3}. 
+
+@item
+Now the text-delta associated with @emph{file_baton} needs to be
+transmitted:
+
+  @code{window_handler = editor->apply_textdelta(file_baton);}
+
+Text-deltas themselves, for network efficiency, are streamed in
+"chunks".  So instead of receiving a baton object, we now have a routine
+that is able to receive any number of small "windows" of text-delta
+data.
+
+We won't go into the details of the @code{svn_txdelta_*} functions right
+here;  but suffice it to say that these routines are used for sending
+svndiff data to the @emph{window_handler} routine.
+
+@item
+@code{editor->close_file(file_baton);}
+
+The client is done sending the file's text-delta, so it releases the
+file baton.
+
+@item
+@code{editor->close_dir(dir2_baton));}
+
+The client is done making changes to @file{dir2}, so it releases its
+baton as well.
+
+@item
+The client isn't yet finished with @file{dir1}, however; it makes two
+more edits:
+
+  @code{editor->delete_item("dir3", dir1_baton);} @*
+  @code{dir4_baton = editor->add_dir("dir4", "/dir1/dir2", dir1_baton);}
+
+@emph{(The function's name is @code{delete_item} rather than
+@code{delete} to avoid gratuitous incompatibility with C++, where
+@code{delete} is a reserved keyword.)}
+
+@item
+Within the directory @file{dir4} (whose ancestry is @file{/dir1/dir2}),
+the client removes a file:
+
+  @code{editor->delete_item("file3", dir4_baton);}
+
+@item
+The client is now finished with both @file{dir4}, as well as its parent
+@file{dir1}:
+
+  @code{editor->close_dir(dir4_baton);} @*
+  @code{editor->close_dir(dir1_baton);}
+
+@item
+The entire tree-delta is complete.  The repository knows this when the
+root directory is closed:
+
+  @code{editor->close_dir(root_baton);}
+
+@end enumerate
+
+
+Of course, at any point above, the repository may reject an edit.  If
+this is the case, the client aborts the transmission and the repository
+hasn't changed a bit.  (Thank goodness for transactions!)
+
+Note, however, that this "editor interface" works in the other direction
+as well.  When the repository wishes to update a client's working copy,
+it is the @emph{client's} reponsibility to give a custom editor-object
+to the server, and the @emph{server} is the editor-driver.
+
+Here are the main advantages of this interface:
+
+@itemize @bullet
+
+@item
+@emph{Consistency}.  Tree-deltas move across the network, in both
+directions, using the same interface.
+
+@item
+@emph{Flexibility}.  Custom editor-implementations can be written to do
+anything one might want;  the editor-driver has no idea what is
+happening on the other side of the interface.  For example, an editor
+might
+
+@itemize @bullet
+@item
+Output XML that matches the tree-delta DTD above;
+@item
+Output human-readable descriptions of the edits taking place;
+@item
+Modify a filesystem
+@end itemize
+
+@end itemize
+
+Whatever the case, it's easy to "swap" editors around, and make client
+and server do new and interesting things.
+

@@ -1,0 +1,242 @@
+@node Client
+@chapter Client
+
+The Subversion client is built on three libraries.  One operates
+strictly on the working copy and does not talk to the repository.
+Another talks to the repository but never changes the working copy.  The
+third library uses the first two to provide operations such as
+@code{commit} and @code{update} -- operations which need to both talk to
+the repository and change the working copy.
+
+The initial client is a Unix-style command-line tool (like standard
+CVS), but it should be easy to write a GUI client as well, based on the
+same libraries.  The libraries capture the core Subversion
+functionality, segregating it from user interface concerns.
+
+This chapter describes the libraries, and the physical layout of working
+copies.
+
+@menu
+* Working copies and the working copy library::  
+* The repository access library::  
+* The client operation library::  
+@end menu
+
+
+@c -----------------------------------------------------------------------
+@node Working copies and the working copy library
+@section Working copies and the working copy library
+
+Working copies are client-side directory trees containing both versioned
+data and Subversion administrative files.  The functions in the working
+copy management library are the only functions in Subversion which
+operate on these trees.
+
+@menu
+* The layout of working copies::  
+* The working copy management library::  
+@end menu
+
+@c -----------------------------------------------------------------------
+@node The layout of working copies
+@subsection The layout of working copies
+
+This section gives an overview of how working copies are arranged
+physically, but is not a full specification of working copy layout.
+
+As with CVS, Subversion working copies are simply directory trees with
+special administrative subdirectories, in this case named ".svn" instead
+of "CVS":
+
+@example
+@group
+                             myproj
+                             / | \
+               _____________/  |  \______________
+              /                |                 \
+           .svn               src                doc
+        ___/ | \___           /|\             ___/ \___
+       |     |     |         / | \           |         |
+      base  ...   ...       /  |  \     myproj.texi  .svn
+                           /   |   \              ___/ | \___
+                      ____/    |    \____        |     |     |
+                     |         |         |      base  ...   ...
+                   .svn      foo.c     bar.c     |
+                ___/ | \___                      |
+               |     |     |                     |
+             base   ...   ...               myproj.texi
+          ___/ \___
+         |         |
+       foo.c     bar.c
+
+@end group
+@end example
+
+Each @file{dir/.svn/} directory records the files in @file{dir}, their
+revision numbers and property lists, pristine revisions of all the files
+(for client-side delta generation), the repository from which @file{dir}
+came, and any local changes (such as uncommitted adds, deletes, and
+renames) that affect @file{dir}.
+
+Although it would often be possible to deduce certain information
+(such as the original repository) by examining parent directories, this is
+avoided in favor of making each directory be as much a self-contained
+unit as possible.
+
+For example, immediately after a checkout the administrative information
+for the entire working tree @emph{could} be stored in one top-level
+file.  But subdirectories instead keep track of their own revision
+information.  This would be necessary anyway once the user starts
+committing new revisions for particular files, and it also makes it
+easier for the user to prune a big, complete tree into a small subtree
+and still have a valid working copy.
+
+The .svn subdir contains:
+
+@itemize @bullet
+
+@item
+A @file{format} file, which indicates which version of the working copy
+adm format this is (so future clients can be backwards compatible
+easily).
+
+@item
+A @file{repository} file, stating where the directory came from (syntax
+TBD).
+
+@item
+A @file{text-base} directory, containing the pristine repository
+revisions of the files in the corresponding working directory
+
+@item
+An @file{entries} file, which holds revision numbers and other
+information for this directory and its files, and records the presence
+of subdirs.
+
+It may help to think of this file as the functional equivalent of the
+CVS/Entries file.
+
+@item 
+A @file{props} directory, containing property names and values for each
+file in the working directory.
+
+@item 
+A @file{prop-base} directory, containing pristine property names and
+values for each file in the working directory.
+
+@item
+A @file{dir-props} file, recording properties for this directory.
+
+@item
+A @file{dir-prop-base} file, recording pristine properties for this
+directory.
+
+@item
+A @file{lock} file, whose presence implies that some client is currently
+operating on the adminstrative area.
+
+@item
+A @file{tmp} directory, for holding scratch-work and helping make
+working copy operations more crash-proof.
+
+@item
+A @file{log} file.  If present, indicates a list of actions that need to
+be taken to complete a working-copy-operation that is still "in
+progress".
+
+@end itemize
+
+You can read much more about these files in the file
+@file{subversion/libsvn_wc/README}.
+
+
+@c -----------------------------------------------------------------------
+@node The working copy management library
+@subsection The working copy management library
+
+@itemize @bullet
+@item
+  @b{Requires:}
+  @itemize @minus
+  @item
+a working copy
+  @end itemize
+@item
+  @b{Provides:}
+  @itemize @minus
+  @item
+ability to manipulate the working copy's versioned data
+  @item
+ability to manipulate the working copy's administrative files
+  @end itemize
+@end itemize
+
+This library performs "offline" operations on the working copy, and
+lives in @file{subversion/libsvn_wc/}.
+
+The API for @var{libsvn_wc} is always evolving;  please read the header
+file for a detailed description:  @file{subversion/include/svn_wc.h}.
+
+
+
+@c -----------------------------------------------------------------------
+@node The repository access library
+@section The repository access library
+
+@itemize @bullet
+@item
+  @b{Requires:}
+  @itemize @minus
+  @item
+network access to a Subversion server
+  @end itemize
+@item
+  @b{Provides:}
+  @itemize @minus
+  @item
+the ability to interact with a repository
+  @end itemize
+@end itemize
+
+This library performs operations involving communication with the
+repository.
+
+The interface defined in @file{subversion/include/svn_ra.h} provides a
+uniform interface to both local and remote repository access.
+
+Specifically, @var{libsvn_ra_dav} will provide this interface and speak
+to repositories using DAV requests.  At some future point, another
+library @var{libsvn_ra_local} will provide the same interface -- but
+will link directly to the filesystem library for accessing local disk
+repositories.
+
+
+@c -----------------------------------------------------------------------
+@node The client operation library
+@section The client operation library
+
+@itemize @bullet
+@item
+  @b{Requires:}
+  @itemize @minus
+  @item
+the working copy management library
+  @item
+a repository access library
+  @end itemize
+@item
+  @b{Provides:}
+  @itemize @minus
+  @item
+all client-side Subversion commands
+  @end itemize
+@end itemize
+
+These functions correspond to user-level client commands.  In theory,
+any client interface (command-line, GUI, emacs, Python, etc.) should be
+able to link to @var{libsvn_client} and have the ability to act as a
+full-featured Subversion client.
+
+Again, the detailed API can be found in
+@file{subversion/include/svn_client.h}. 
+

@@ -1,0 +1,195 @@
+
+               Subversion, a version control system.
+               =====================================
+
+$LastChangedDate$
+
+Contents:
+
+     I. A FEW POINTERS
+    II. DOCUMENTATION
+   III. PARTICIPATING IN THE SUBVERSION COMMUNITY
+    IV. QUICKSTART GUIDE
+       A.  REPOSITORIES
+         1.  Repository Access
+         2.  Creating a Repository
+         3.  Creating a Subversion Server
+       B.  EXAMPLE WALKTHROUGH
+
+
+
+I.    A FEW POINTERS
+
+      This code is still under development.  For an overview, visit
+
+         http://subversion.tigris.org/
+
+      Once you have a Subversion client you can get the latest version
+      of the code with the command:
+
+         $ svn co http://svn.collab.net/repos/svn/trunk -d subversion
+
+
+
+II.   DOCUMENTATION
+
+      If you like what you see, then run "make ps" inside the doc/ directory
+      and read any PostScript files that result.
+
+      See COPYING for copyright information.
+      See HACKING for development information.
+      See INSTALL for installation information.
+
+
+
+III.  PARTICIPATING IN THE SUBVERSION COMMUNITY
+
+      First, read the HACKING file!  It describes Subversion coding and
+      log message standards, as well as how to join discussion lists.
+
+      Talk on IRC with developers:  irc.openprojects.net, channel #svn.
+
+      Read the FAQ:  http://subversion.tigris.org/project_faq.html
+
+
+
+IV.   QUICKSTART GUIDE
+
+  A.  REPOSITORIES
+
+      1.  REPOSITORY ACCESS
+
+      The Subversion client has an abstract interface for accessing a
+      repository.  Two "Repository Access" (RA) implementations
+      currently exist as libraries:
+
+      libsvn_ra_dav:   accesses a networked repository using WebDAV.
+      libsvn_ra_local: accesses a local repository using Berkeley DB.
+
+      You can see which methods are available to your 'svn' client
+      like so:
+
+          $ svn --version
+          Subversion Client, version 0.8.0
+          compiled Jan 26 2002, 16:43:58
+
+          Copyright (C) 2000-2002 CollabNet.
+          Subversion is open source software, see http://subversion.tigris.org/
+
+          The following repository access (RA) modules are available:
+
+           * ra_dav : Module for accessing a repository via WebDAV (DeltaV) protocol.
+             - handles 'http' schema
+           * ra_local : Module for accessing a repository on local disk.
+             - handles 'file' schema
+
+      If you don't see ra_local, it probably means that Berkeley DB
+      wasn't found when compiling your client binary.  If you don't
+      see ra_dav, then something is very wrong;  most likely your
+      dynamic loader/linker can't find libsvn_ra_dav.so (see section
+      I.B above.)
+
+
+      2.  CREATING A REPOSITORY
+
+      A Subversion repository is an ordinary directory that mainly
+      contains Berkeley DB .db files.  You can only create a
+      repository if you have Berkeley DB available on your system and
+      it was found during the compile.  If this is true, you should
+      have a utility called 'svnadmin' installed.  'svnadmin' does
+      many things, but its most important feature is creating an empty
+      repository:
+
+          $ svnadmin create /usr/local/svn/repos1
+
+      After the repository is created, you can initially import data
+      into it, using libsvn_ra_local (invoked by using a 'file' URL):
+
+          $ svn import file:///usr/local/svn/repos1 some/local/dir/
+
+      The above example imports the contents of some/local/dir/ right
+      into the root of the repository.  If you want to put these
+      contents into a newly-created repository subdirectory, use
+      *three* args to import.  (Try 'svn help import' for details).
+
+      Also, watch out for 'ownership' pitfalls.  Notice who has the
+      rights to modify the .db files in the repository.  Repository
+      commit access is ultimately determined by whomever has the
+      rights to modify the .db files.
+
+
+      Note: The repository should NOT be on a remote filesystem like
+      NFS or AFS.  For details see:
+
+          http://www.sleepycat.com/docs/ref/env/remote.html
+
+
+      3.  CREATING A SUBVERSION SERVER
+
+      Subversion uses Apache 2.0 as its network server.  Apache's
+      mod_dav speaks to a special mod_dav_svn module, which uses
+      Berkeley DB to talk to a repository.
+
+      Apache's own authentication system allows remote users to access
+      the repository with Subversion clients.  However: make sure that
+      Apache has the right to edit the .db files itself, or you'll get
+      all sorts of Apache errors.  Often people create a special 'svn'
+      user who owns the repository, and folks put a line into
+      httpd.conf that tells Apache to run as that special user.
+
+      Compiling Apache and mod_dav_svn is a separate project; please
+      see section II at the end of the INSTALL document for a HOWTO.
+
+
+  B.  EXAMPLE WALKTHOUGH
+
+      Here are some simple examples of how one might use the svn
+      client.  In general, things are designed to be similar to CVS.
+      But many things are different.  *PLEASE* read the 'SVN for CVS
+      Users' document (in docs/, or on the website) to understand the
+      broader concepts of what's going on!
+
+          # Checkout a working copy.  This can either be a file: or
+          #  http: url, depending on which RA modules are available.
+
+          $ svn co file:///usr/local/svn/repos1 -d wc
+          A wc/foo
+          A wc/bar
+          A wc/baz
+          A wc/baz/gloo
+          A wc/baz/bloo
+
+          $ cp -R wc wc2                 # back up this working copy
+
+          $ cd wc
+          $ echo "new text" >> bar       # change bar's text
+          $ svn propset color green foo  # add a metadata property to foo
+          $ svn rm baz                   # schedule baz directory for deletion
+          $ touch newfile
+          $ svn add newfile              # schedule newfile for addition
+
+          $ svn status                   # See what's locally modified
+          M   ./bar
+          _M  ./foo
+          A   ./newfile
+          D   ./baz
+          D   ./baz/gloo
+          D   ./baz/bloo
+
+          $ svn commit -m "Made many changes"  # Commit the changes
+          Sending    bar
+          Sending    foo
+          Adding     newfile
+          Deleting   baz
+          Commit succeeded.
+
+          $ cd ../wc2                # change to the back-up working copy
+
+          $ svn update               # get changes from repository
+          U   ./bar
+          _U  ./foo
+          A   ./newfile
+          D   ./baz
+
+
+

@@ -1,0 +1,227 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head><title>Project Status</title></head>
+<body bgcolor="#F0F0F0" text="#000033">
+<center>
+<img src="/subversion.jpg" alt="Subversion">
+<h2>Status</h2>
+</center>
+
+<!-- ******************************************************************** -->
+
+<h3>Development Roadmap</h3>
+
+    <blockquote>
+      <font color="green"><b>Met</b></font>:
+    </blockquote>
+<ul>
+<li><b>Milestone 1</b> (20 Oct 2000): Basic working copy manipulation;
+     client can checkout/update/commit using XML files.
+</li>
+<li><b>Milestone 2</b> (15 May 2001): Rudimentary working filesystem;
+     client can checkout/update/commit using WebDAV layer.
+</li>
+<li> <b>Milestone 3</b> (30 August 2001): Subversion is now
+self-hosting; see the <a href="/project_source.html">Project
+Source</a> page for details. 
+</li>
+<li> <b>Milestones 4 and 5</b> (19 Oct 2001): These milestones
+lwere reached together, and fix various bugs related to properties,
+networking, and filesystem deltification.
+</li>
+<li> <b>Subversion 0.6 (Milestone 6)</b> (12 Nov 2001): Complete
+"<tt>svn&nbsp;log</tt>", and have "<tt>svn&nbsp;mv</tt>",
+"<tt>svn&nbsp;cp</tt>" working at least on files, with directory
+support optional (for this milestone, that is, not in the long term).
+</li>
+<li> <b>Subversion 0.7</b> (3 Dec 2001): Branching and tagging.
+</li>
+<li> <b>Subversion 0.8</b> (14 Jan 2002): Commit system rewrite (<a
+   href="http://subversion.tigris.org/issues/show_bug.cgi?id=463">issue
+   #463</a>); diffs over the network in both directions (<a
+   href="http://subversion.tigris.org/issues/show_bug.cgi?id=518">issue
+   #518</a>); newline conversion and keyword substitution (<a
+   href="http://subversion.tigris.org/issues/show_bug.cgi?id=524">issue
+   #524</a>); and code migration from libsvn_fs to libsvn_repos (<a
+   href="http://subversion.tigris.org/issues/show_bug.cgi?id=428">issue
+   #428</a>).
+</li>
+<li> <b>Subversion 0.9</b> (18 Feb 2002):
+   "svn&nbsp;switch" (<a
+   href="http://subversion.tigris.org/issues/show_bug.cgi?id=575">
+   issue #575</a>); resolution of some repository db stability
+   issues (<a
+   href="http://subversion.tigris.org/issues/show_bug.cgi?id=608">issue
+   #608</a>); and many small features and bugfixes since 0.8, all
+   praise to the Conquering Developer Hordes.  See the
+   <a href="http://svn.collab.net/repos/svn/trunk/CHANGES">CHANGES</a>
+   file for details.
+</li>
+    </ul>
+
+    <blockquote>
+      <font color="green"><b>Upcoming</b></font>:
+    </blockquote>
+
+    <ul>
+      <li>
+	<b>Subversion 0.10</b> (Friday, 8 Mar 2002): usability,
+        reliability, and performance: 
+	<br>
+	Delta-editor interface changes to promote better memory usage;
+        "streamy" writes into the FS (<a
+        href="http://subversion.tigris.org/issues/show_bug.cgi?id=412">
+        issue #412</a>); better pool management overall;
+	clearer error messages; configuration improvements.
+      </li>
+      <li>
+	<b>Subversion 0.11</b> (Monday, 25 Mar 2002): 
+	<br>
+        Commits to handle disjoint working copies; use 3-way merge in
+        updates; access to repository via http proxy
+      </li>
+      <li>
+	<b>Subversion 0.12</b> (TBD April): 
+	<br>
+        Updates to handle disjoint working copies; use text-base
+        checksums in working copies; <tt>svn&nbsp;merge</tt>; version
+        the execute bit (or equivalent metadata) on files
+      </li>
+      <li>
+	<b>Alpha</b> (TBD, late April): Most commonly used features
+	completed.
+      </li>
+      <li>
+	<b>Beta</b> (TBD, late May timeframe): Release candidate,
+	heavy testing.  Possible inclusion of newer, less popular
+	features.
+      </li>
+      <li>
+	<b>1.0 Release</b> (TBD): Release.
+      </li>
+    </ul>
+
+<p>
+
+    <p>
+      Recently, milestones are being set as short timelines (around
+      three weeks), with a few key features. We will be doing plenty
+      of bug fixing and other work during the development towards a
+      milestone, but "meeting a milestone" requires the specified
+      features to have been implemented.
+    </p>
+
+<!-- ******************************************************************** -->
+
+<h3>Progress</h3>
+
+<blockquote>
+
+(note: these meters measure nothing but fuzzy gut feelings. :-) )
+
+  <p>
+  
+<table cellspacing=0 cellpadding=2 border=0>
+    
+  <tr valign="top">
+    <td align="left">Versioning Filesystem</td>
+    <td>
+        <table cellspacing="0" cellpadding="0" border=0><tr>
+          <td width=380 bgcolor="0000FF" align=right>
+          <font color=FFFFFF>95%</font></td>
+          <td width=20 bgcolor="FF0000">&nbsp;</td>
+        </tr></table>
+    </td>
+  </tr>
+  
+  <tr valign="top">
+    <td align="left">Networking Layer</td>
+    <td>
+        <table cellspacing="0" cellpadding="0" border=0><tr>
+          <td width=380 bgcolor="0000FF" align=right>
+          <font color=FFFFFF>95%</font></td>
+          <td width=20 bgcolor="FF0000">&nbsp;</td>
+        </tr></table>
+    </td>
+  </tr>
+
+  <tr valign="top">
+    <td align="left">Client Libraries</td>
+    <td>
+        <table cellspacing="0" cellpadding="0" border=0><tr>
+          <td width=360 bgcolor="0000FF" align=right>
+          <font color=FFFFFF>90%</font></td>
+          <td width=40 bgcolor="FF0000">&nbsp;</td>
+        </tr></table>
+    </td>
+  </tr>
+
+  <tr valign="top">
+    <td align="left">CVS Migration Tools</td>
+    <td>
+        <table cellspacing="0" cellpadding="0" border=0><tr>
+          <td width=140 bgcolor="0000FF" align=right>
+          <font color=FFFFFF>35%</font></td>
+          <td width=260 bgcolor="FF0000">&nbsp;</td>
+        </tr></table>
+    </td>
+  </tr>
+
+  <tr valign="top">
+    <td align="left">Documentation</td>
+    <td>
+        <table cellspacing="0" cellpadding="0" border=0><tr>
+          <td width=100 bgcolor="0000FF" align=right>
+          <font color=FFFFFF>25%</font></td>
+          <td width=300 bgcolor="FF0000">&nbsp;</td>
+        </tr></table>
+    </td>
+  </tr>
+
+  <tr valign="top">
+    <td align="left">Tests</td>
+    <td>
+        <table cellspacing="0" cellpadding="0" border=0><tr>
+          <td width=320 bgcolor="0000FF" align=right>
+          <font color=FFFFFF>80%</font></td>
+          <td width=80 bgcolor="FF0000">&nbsp;</td>
+        </tr></table>
+    </td>
+  </tr>
+
+
+</table>
+
+</blockquote>
+
+<!-- ******************************************************************** -->
+
+<h3>Recent Activities</h3>
+
+Much bug swatting and patch review, plus work toward the latest
+milestone.  Committers are trying to place a higher priority on patch
+review & response, as the project has reached the stage where
+increasing parallelization of development will bring faster progress.
+
+<p>
+
+<!-- ******************************************************************** -->
+
+<h3>The Big Picture</h3>
+
+<blockquote>
+
+(taken from the <a
+href="http://subversion.tigris.org/servlets/ProjectDocumentList">design
+document</a>)
+
+<p>
+<img src="subversion-diagram.png" alt="Design Diagram">
+<p>
+
+<br>
+<br>
+
+</blockquote>
+
+</html>

@@ -1,0 +1,67 @@
+OK, here's how to use exceptions in Subversion (latest draft).
+
+
+1.  Exceptions are stored in svn_error_t structures:
+
+typedef struct svn_error
+{
+  ap_status_t apr_err;       /* APR error value, possibly SVN_ custom err */
+  int src_err;               /* native error code (e.g. errno, h_errno...) */
+  const char *message;       /* details from producer of error */
+  struct svn_error *child;   /* ptr to the error we "wrap" */
+  ap_pool_t *pool;           /* place to generate message strings from */
+
+} svn_error_t;
+
+
+
+2.  If you are the *original* creator of an error, you would do
+    something like this:
+
+        return (svn_create_error ((ap_status_t) err,
+                                  NULL,
+                                  "User not permitted to write file."
+                                  NULL,
+                                  my_pool));
+
+
+    NOTICE the NULL field... indicating that this error has no child,
+    i.e. it is the bottom-most error.  Don't forget to do this!
+
+
+3.  If you *receive* an error, you have three choices:
+
+    a) Handle the error yourself.  Use either your own code, or just
+    call the primitive svn_handle_error(err).  (This routine unwinds
+    the stack and prints out messages.)
+
+    b) Throw the error upwards, unmodified:
+
+        error = some_routine (foo);
+        if (error)
+          return (error);
+        
+    c) Throw the error upwards, wrapping it in a new error structure
+       by including it as the "child" argument:
+
+        error = some_routine (foo);
+        if (error)
+          {
+           svn_error_t *wrapper = svn_create_error (my_errno,
+                                                    NULL,
+                                                    "Authorization failed.",
+                                                    error,
+                                                    error->pool);
+           return wrapper;
+          }
+
+
+        Of course, there's a convenience routine which creates a
+        wrapper error with the same fields as the child, except for your
+        custom message:
+
+        error = some_routine (foo);
+        if (error)
+          {
+           return (svn_quick_wrap_error (error, "Authorization failed.");
+          }

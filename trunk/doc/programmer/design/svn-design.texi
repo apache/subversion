@@ -1,0 +1,123 @@
+\input texinfo  @c -*-texinfo-*-
+
+@comment Subversion Design
+@comment Copyright (C) 1999, 2000 CollabNet
+
+@c  ================================================================
+@c  Copyright (c) 2000 CollabNet.  All rights reserved.
+@c  
+@c  Redistribution and use in source and binary forms, with or without
+@c  modification, are permitted provided that the following conditions are
+@c  met:
+@c  
+@c  1. Redistributions of source code must retain the above copyright
+@c  notice, this list of conditions and the following disclaimer.
+@c  
+@c  2. Redistributions in binary form must reproduce the above copyright
+@c  notice, this list of conditions and the following disclaimer in the
+@c  documentation and/or other materials provided with the distribution.
+@c  
+@c  3. The end-user documentation included with the redistribution, if
+@c  any, must include the following acknowlegement: "This product includes
+@c  software developed by CollabNet (http://www.Collab.Net/)."
+@c  Alternately, this acknowlegement may appear in the software itself, if
+@c  and wherever such third-party acknowlegements normally appear.
+@c  
+@c  4. The hosted project names must not be used to endorse or promote
+@c  products derived from this software without prior written
+@c  permission. For written permission, please contact info@collab.net.
+@c  
+@c  5. Products derived from this software may not use the "Tigris" name
+@c  nor may "Tigris" appear in their names without prior written
+@c  permission of CollabNet.
+@c  
+@c  THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESSED OR IMPLIED
+@c  WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+@c  MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+@c  IN NO EVENT SHALL COLLABNET OR ITS CONTRIBUTORS BE LIABLE FOR ANY
+@c  DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+@c  DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+@c  GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+@c  INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+@c  IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+@c  OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+@c  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+@c 
+@c  ====================================================================
+@c  
+@c  This software consists of voluntary contributions made by many
+@c  individuals on behalf of CollabNet.
+
+
+@c %**start of header
+@setfilename svn-design.info
+@settitle Subversion Design
+@setchapternewpage odd
+@c %**end of header
+
+@paragraphindent 0
+
+@c @finalout
+
+@c Browser defaults lose.  Let's go for black text on white background.
+@ifhtml
+@html
+<body bgcolor="#FFFFFF" fgcolor="#000000">
+@end html
+@end ifhtml
+
+@c -----------------------------------------------------------------
+@titlepage
+@title @titlefont{Subversion}
+@subtitle{A New Version Control System}
+@author Jim Blandy <@email{jimb@@redhat.com}>
+@author Karl Fogel <@email{kfogel@@collab.net}>
+@author Ben Collins-Sussman <@email{sussman@@collab.net}>
+
+@page
+@vskip 0pt plus 1filll
+Copyright @copyright{} 2000 Collab.Net, Inc. @*
+See @xref{License} for details. @*
+First version: June 2000.  @*
+Last updated:  $Date: 2001/06/04 22:00:52 $
+
+@end titlepage
+@c -----------------------------------------------------------------
+
+@summarycontents
+@contents
+
+@node Top
+@top
+
+@ifinfo
+This manual describes the design of the Subversion version control
+system.
+
+@end ifinfo
+
+@menu
+* Goals::                        The goals of the Subversion project.
+* Model::                        The versioning model used by Subversion.
+* Architecture::                 How Subversion's components work together.
+* Deltas::                       How to describe changes.
+* Client::                       How the client works.
+* Protocol::                     How the client and server communicate.
+* Server::                       How the server works.
+* Future::                       Future plans.
+* License::                      Copyright.
+@end menu
+
+@include goals.texi
+@include model.texi
+@include architecture.texi
+@include deltas.texi
+@include client.texi
+@include protocol.texi
+@include server.texi
+@include future.texi
+@include license.texi
+
+@c @include indices.texi
+
+@bye

@@ -1,0 +1,402 @@
+I am starting this file on 9/22/2000, before a single token of code
+for cvs2svn has been written.  In the future, I may change parts of
+it from future tense to present or past.  -- K<bob>
+
+			     ===========
+			     ASSUMPTIONS
+			     ===========
+
+I will state some assumptions up front that don't really seem worthy
+of elaborate justification right now.
+
+cvs2svn will be a Unix command line tool.  No GUI.  No HTTP interface.
+No bonoboification.  Not an emacs macro.
+
+cvs2svn's only purpose in life is to convert a CVS repository to an
+subversion repository.
+
+cvs2svn will only be able to do a big-bang, whole repository
+conversion.  It will not be able to sync or merge an existing CVS
+repository with an existing SVN repository.  After all, solving that
+problem is just as hard as writing SVN. (-: *MAYBE* it'll be desirable
+to subset the CVS repository based on dates or directories or vendor
+branches or something, but that will not be a future development.
+
+				=====
+				PLANS
+				=====
+
+In this section, I ask some design questions, discuss pros and cons,
+and present my conclusion.
+
+------------------------------------------------------------------------
+
+Question:
+
+	Should cvs2svn read the CVS repository directly or should it
+	use the cvs client to access it?
+
+Thoughts:
+
+	If we read the repository directly, we couple ourselves
+	tightly to past, present, and future versions of CVS.  That is
+	bad.
+
+	There may be ambiguity in `cvs log' output, which wouldn't be
+	there in the RCS files.
+
+	Using cvs allows conversion of remote repositories with no
+	extra effort.
+
+Conclusion:
+
+	All CVS repository operations will be done through the cvs
+	command, if possible.
+
+------------------------------------------------------------------------
+
+Question:
+
+	In what language(s) should cvs2svn be written?
+
+Thoughts:
+
+	Ref. Alternate Hard and Soft Layers.
+	http://c2.com/cgi/wiki/wiki?AlternateHardAndSoftLayers
+
+	The rest of the subversion project is written in C.
+
+	Karl has written a Perl script called cvs2cl.pl which
+	parses `cvs log' output and pattern-matches similar
+	file-granularity log messages into single commits.  I'd
+	like to reuse as much of that code as possible.
+	Rewriting that in C would be tedious.
+
+	Other soft languages, e.g., Python, sh, scheme, Visual
+	Basic ( :-) ), exist, but (a) I'm fluent in Perl, (b)
+	Perl has a huge installed base (but so does sh), (c)
+	Karl's script is in Perl.
+
+	Is it okay to make perl a prerequisite?  The svn client
+	doesn't require Perl.
+
+	To write the subversion repository, we should call libsvn_fs
+	through the svn_delta_edit_fns_t switch.  That requires C.
+
+Conclusion:
+
+	main in Perl.  cvs log parsing and commit aggregating in Perl.
+	Subversion access in C through the svn_delta_edit_fns_t switch.
+
+	OR...  write the whole thing in Perl, and call both the cvs
+	client and the svn client through fork/exec or popen.
+
+------------------------------------------------------------------------
+
+Question:
+
+	Assuming there's a Perl component and a C component,
+	how do they communicate?
+
+Thoughts:
+
+	We could use XS or swig to call C from Perl.  At some point, a
+	Perl zealot may want to add that so he can write a perl
+	subversion client.  I am not that Perl zealot.
+	
+	Pipes are nice.  I don't know yet whether the C part needs
+	bidirectional communication with the perl driver.  If it does,
+	we could let the driver take over both stdin and stdout of the
+	C part.
+
+	I have written code that uses popen (unidirectionally) on
+	Windows NT, so pipes are not completely nonportable to Satan's
+	OS.
+
+Conclusion:
+
+	The Perl part forks and execs the C part, and talks to it
+	through a pipe.  The C part may talk back through another
+	pipe.
+
+	TBD whether the C part is exec'd once or once per commit or ...
+
+------------------------------------------------------------------------
+
+Question:
+
+	Assuming there's a Perl component, which version of Perl is
+	required?
+	
+Thoughts:
+
+	I'll test it with one of the 5.003 series perls, as well as
+	the current 5.6.x version.
+
+	I'll refrain from using anything from CPAN that hasn't
+	been in the core Perl distribution (and stable) for quite
+	a while.
+
+	I don't eat Perl for breakfast, so I may make mistakes here...
+	I do know that some of the machines I use don't support \A and
+	\z in regexps yet.
+
+Conclusion:
+
+	Use as old a Perl as possible.  Test with back revs.
+
+	Don't use non-core packages (or, if I do, I'll include them
+	inline.)
+
+------------------------------------------------------------------------
+
+Question: What are the command line arguments?
+
+Thoughts:
+
+	For now, I want a minimal set.  Later, we can add bells and
+	whistles and one of those little stripey things that bounces
+	up and down and changes colors while it rotates.
+
+Conclusion:
+
+	Use: cvs2svn [ -d cvs-repository-spec ] new-subversion-root-dir
+
+	Use $CVSROOT if it's there (and `-d ...' isn't).
+
+	Require new-subversion-root-dir to be nonexistent (but its parent
+	must exist).
+
+				======
+				ISSUES
+				======
+
+In this section, I ask some design questions and discuss pros and
+cons.  I don't present a solution, because I don't see a best solution
+yet.
+
+------------------------------------------------------------------------
+
+Question:
+
+	What kind(s) and format(s) of user documentation do we want?
+	Where is it in the tree?
+
+Thoughts:
+
+	What's the rest of the project going to use?  (Am I the first
+	to ask this question?)
+
+	A good man page (whether troff or another format) should
+	suffice -- I don't see us needing separate user manual.
+
+------------------------------------------------------------------------
+
+Question:
+
+	What errors will cvs report, and how will it report them?
+
+Thoughts:
+
+	Standard error is my friend.
+
+	The nature of the errors will become obvious as the code
+	is written.
+
+------------------------------------------------------------------------
+
+Question:
+
+	Should cvs2svn write the Subversion repository directly or
+	should it use the svn client to access it?
+
+Thoughts:
+
+	It seems like it would be easy to use cvs and svn.
+	The whole program would be (in pseudocode):
+
+		commits = read_cvs_logs_and_figure_out_what_to_do();
+		for commits {
+			cvs checkout ...
+			svn commit ...
+		}
+
+	The svn client isn't written yet.  That's a problem.
+
+	The svn client looks in the filesystem at the working copy.
+	If cvs2svn calls libsvn_fs directly, we don't need a working
+	copy, and we can skip the filesystem I/O.  (How much does this
+	matter?)
+
+	How would we override date stamps and user names (and what
+	else?) on svn commits?
+
+	I wonder how far Karl and Ben (or anybody else) has thought
+	through what the svn client's command line is.
+
+------------------------------------------------------------------------
+
+Question:
+
+	How hard is it to determine the shape of the repository
+	from the `cvs log' output?
+
+Thoughts:
+
+	If it isn't obvious yet, I am not a CVS power user.  I'm
+	trying to build a toy repository right now so I can play with
+	it and get a better feeling.
+
+	Since CVS doesn't support renaming files directly, I expect to
+	need some ad-hocu-ery to recognize renames.
+
+	What happens if the log message contains:
+		my text here
+		----------------------------
+		revision 1.2
+		date: 2000/01/10 00:00:00;  author: fred;  state: Exp;  lines: +2 -9
+		my other text here
+	In other words, a log message contains what looks like a
+	log message header.
+
+------------------------------------------------------------------------
+
+Question:
+
+	How do we handle the Attic?
+
+Question:
+
+	How does subversion represent branches and branch names?
+
+Question:
+
+	How does subversion represent symbolic tags?
+
+Question:
+
+	What do we do with the files in CVSROOT?
+
+------------------------------------------------------------------------
+
+An email from John Gardiner Myers <jgmyers@speakeasy.net> about some
+considerations for the tool.
+
+------
+From: John Gardiner Myers <jgmyers@speakeasy.net>                     
+Subject: Thoughts on CVS to SVN conversion
+To: gstein@lyra.org                                  
+Date: Sun, 15 Apr 2001 17:47:10 -0700
+
+Some things you may want to consider for a CVS to SVN conversion utility:
+
+If converting a CVS repository to SVN takes days, it would be good for     
+the conversion utility to keep its progress state on disk.  If the
+conversion fails halfway through due to a network outage or power
+failure, that would allow the conversion to be resumed where it left off
+instead of having to start over from an empty SVN repository.
+
+It is a short step from there to allowing periodic updates of a
+read-only SVN repository from a read/write CVS repository.  This allows
+the more relaxed conversion procedure:
+
+1) Create SVN repository writable only by the conversion tool.
+2) Update SVN repository from CVS repository.
+3) Announce the time of CVS to SVN cutover.
+4) Repeat step (2) as needed.
+5) Disable commits to CVS repository, making it read-only.
+6) Repeat step (2).
+7) Enable commits to SVN repository.
+8) Wait for developers to move their workspaces to SVN.
+9) Decomission the CVS repository.
+
+You may forward this message or parts of it as you seem fit.
+------
+
+------------------------------------------------------------------------
+
+Further design thoughts from Greg Stein <gstein@lyra.org>
+
+* timestamp the beginning of the process. ignore any commits that
+  occur after that timestamp; otherwise, you could miss portions of a
+  commit (e.g. scan A; commit occurs to A and B; scan B; create SVN
+  revision for items in B; we missed A)
+
+* the above timestamp can also be used for John's "grab any updates
+  that were missed in the previous pass."
+
+* for each file processed, watch out for simultaneous commits. this
+  may cause a problem during the reading/scanning/parsing of the file,
+  or the parse succeeds but the results are garbaged. this could be
+  fixed with a CVS lock, but I'd prefer read-only access.
+
+  algorithm: get the mtime before opening the file. if an error occurs
+  during reading, and the mtime has changed, then restart the file. if
+  the read is successful, but the mtime changed, then restart the
+  file.
+
+* dump file metadata to a separate log file(s). in particular, we want 
+  the following items for each commit:
+  - MD5 hash of the commit message
+  - author
+  - timestamp
+
+  The above three items are used to coalesce the commit. Remember to
+  use a fudge factor for the timestamp. (the fudge cannot be fixed
+  because a commit could occur over an arbitrary length of time, based
+  on size of commit and the network connection used for the commit;
+  figure out an algorithm here)
+
+  All other metadata needs to be preserved, but that can probably
+  happen when we re-read the file to generate the SVN revisions.
+
+  We would sort the log file generated above (GNU sort can handle
+  arbitrarily large files). Then scan the file progressively,
+  generating the commit groups.
+
+* use a separate log to track unique branches and non-branched forks
+  of revision history (Q: is it possible to create, say, 1.4.1.3
+  without a "real" branch?). this log can then be used to create a
+  /branches/ directory in the SVN repository.
+
+  Note: we want to determine some way to coalesce branches across
+  files. It can't be based on name, though, since the same branch name
+  could be used in multiple places, yet they are semantically
+  different branches. Given files R, S, and T with branch B, we can
+  tie those files' branch B into a "semantic group" whenever we see
+  commit groups on a branch touching multiple files. Files that are
+  have a (named) branch but no commits on it are simply ignored. For
+  each "semantic group" of a branch, we'd create a branch based on
+  their common ancestor, then make the changes on the children as
+  necessary. For single-file commits to a branch, we could use
+  heuristics (pathname analysis) to add these to a group (and log what
+  we did), or we could put them in a "reject" kind of file for a human
+  to tell us what to do (the human would edit a config file of some
+  kind to instruct the converter).
+
+* if we have access to the CVSROOT/history, then we could process tags
+  properly. otherwise, we can only use heuristics or configuration
+  info to group up tags (branches can use commits; there are no
+  commits associated with tags)
+
+* ideally, we store every bit of data from the ,v files to enable a
+  complete restoration of the CVS repository. this could be done by
+  storing properties with CVS revision numbers and stuff (i.e. all
+  metadata not already embodied by SVN would go into properties)
+
+* how do we track the "states"? I presume "dead" is simply deleting
+  the entry from SVN. what are the other legal states, and do we need
+  to do anything with them?
+
+* where do we put the "description"? how about locks, access list,
+  keyword flags, etc.
+
+* note that using something like the SourceForge repository will be an
+  ideal test case. people *move* their repositories there, which means
+  that all kinds of stuff can be found in those repositories, from
+  wherever people used to run them, and under whatever development
+  policies may have been used.
+
+  For example: I found one of the projects with a "permissions 644;"
+  line in the "gnuplot" repository. Most RCS releases issue warnings
+  about that (although they properly handle/skip the lines).

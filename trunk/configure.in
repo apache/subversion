@@ -1,0 +1,408 @@
+dnl Process this file with autoconf to produce a configure script.
+
+dnl Autoconfiscation for Subversion
+
+dnl General Setup -----------------------
+
+dnl Ensure that subversion is configured with autoconf 2.50 or newer
+dnl Don't even think about removing this check!
+AC_PREREQ(2.50)
+
+dnl First line is *required*;  sanity-checks that the our src dir exists.
+AC_INIT(subversion/include/svn_types.h)
+AC_CONFIG_AUX_DIR(ac-helpers)
+
+abs_srcdir="`cd $srcdir && pwd`"
+abs_builddir="`pwd`"
+
+dnl ### should we ever bother with the system install?
+dnl use abs_srcdir. sometimes during installation, libtool will relink the
+dnl library. when it does this, it does a "cd", so a relative use of
+dnl install-sh will not work.
+INSTALL="$abs_srcdir/ac-helpers/install-sh -c"
+AC_SUBST(INSTALL)
+
+MKDIR="$INSTALL -d"
+AC_SUBST(MKDIR)
+
+dnl Grab our own macros
+sinclude(ac-helpers/berkeley-db.m4)
+sinclude(ac-helpers/svn-apache.m4)
+sinclude(ac-helpers/svn-macros.m4)
+sinclude(ac-helpers/neon.m4)
+sinclude(ac-helpers/find_apr.m4)
+sinclude(ac-helpers/apr.m4)
+sinclude(ac-helpers/find_apu.m4)
+sinclude(ac-helpers/aprutil.m4)
+
+dnl Grab the libtool macros
+sinclude(ac-helpers/libtool.m4)
+
+dnl Generate config.nice early (before the args are munged)
+SVN_CONFIG_NICE(config.nice)
+
+dnl AC_CONFIG_HEADER causes `autoheader' to produce svn_private_config.h.in for us.
+dnl   (We can add custom defines by creating ./acconfig.h if we wish.)
+AC_CONFIG_HEADER(svn_private_config.h)
+
+dnl Todo: we're English-only now, but GNU Gettext eventually?
+dnl Set of available languages.
+dnl ALL_LINGUAS="de fr es ko nl no pl pt sl sv"
+dnl                 I volunteer for this ^^ translation :-)  -xbc
+
+dnl Sub-package configuration ---------------------
+
+dnl Possibly reconfigure packages in subdirectories
+AC_ARG_ENABLE(subdir-config,
+  [  --disable-subdir-config  do not reconfigure packages in subdirectories ],
+  [
+      if test "$enableval" = "yes" ; then
+        do_subdir_config="yes"
+      fi
+  ], 
+  [
+      do_subdir_config=yes
+  ])
+
+dnl the extra bits to include into our build process
+SVN_EXTRA_INCLUDES='-I$(top_srcdir)/subversion/include -I$(top_builddir)'
+SVN_EXTRA_LIBS=
+
+SVN_SUBDIRS=
+
+AC_SUBST(SVN_EXTRA_INCLUDES)
+AC_SUBST(SVN_EXTRA_LIBS)
+AC_SUBST(SVN_SUBDIRS)
+
+dnl Configure APR, and local Berkeley DB if any --------------------------
+
+
+SVN_LIB_APR
+SVN_LIB_APRUTIL
+
+if test -d $abs_srcdir/db ; then
+    # Note: We have to configure and build a db subdirectory even if
+    # some other berkeley db is configured via --with-berkeley-db
+    ### why do we "have to" ?? -gjs
+    SVN_SUBDIR_CONFIG(db/dist)
+    SVN_SUBDIRS="$SVN_SUBDIRS db/dist"
+fi
+
+dnl Set include dir and module library lists for Makefiles -----------------
+
+dnl Expat
+SVN_EXPAT_INCLUDES='-I$(top_srcdir)/expat-lite'
+AC_SUBST(SVN_EXPAT_INCLUDES)
+
+dnl Check for programs ---------------------
+
+dnl Look for a C compiler
+AC_PROG_CC
+
+dnl See if 'ln -s' works
+AC_PROG_LN_S
+
+dnl Check for libtool -- we'll definitely need it for all our shared libs!
+echo "configuring libtool now"
+AC_PROG_LIBTOOL
+
+NEON_WANTED_REGEX="`sed -n '/NEON_WANTED_REGEX=/s/.*=//p' $srcdir/build/buildcheck.sh`"
+NEON_LATEST_WORKING_VER="`sed -n '/NEON_LATEST_WORKING_VER=/s/.*=//p' $srcdir/build/buildcheck.sh`"
+eval "`grep '^ *NEON_URL=' $srcdir/build/buildcheck.sh`"
+SVN_LIB_NEON($NEON_WANTED_REGEX, $NEON_LATEST_WORKING_VER, $NEON_URL)
+
+dnl find Apache
+SVN_FIND_APACHE
+
+dnl Check for libraries --------------------
+
+dnl AC_CHECK_LIB() calls go here, if we ever need any
+
+# Build the filesystem library (and repository administration tool)
+# only if we have an appropriate version of Berkeley DB.
+SVN_FS_WANT_DB_MAJOR=4
+SVN_FS_WANT_DB_MINOR=0
+SVN_FS_WANT_DB_PATCH=14
+SVN_LIB_BERKELEY_DB($SVN_FS_WANT_DB_MAJOR, $SVN_FS_WANT_DB_MINOR,
+                    $SVN_FS_WANT_DB_PATCH)
+
+# Only add *_APACHE_RULE if we also have db, since mod_dav_svn depends on it.
+INSTALL_RULES="install-base-lib install-lib install-bin install-include install-docs"
+BUILD_RULES="base-lib lib bin test"
+if test "$svn_lib_berkeley_db" = "yes"; then
+  BUILD_RULES="base-lib fs-lib lib bin fs-bin $BUILD_APACHE_RULE test fs-test"
+  INSTALL_RULES="install-base-lib install-fs-lib install-lib install-bin install-fs-bin $INSTALL_APACHE_RULE install-include install-docs"
+  FS_TEST_DEPS="\$(FS_TEST_DEPS)"
+  FS_TEST_PROGRAMS="\$(FS_TEST_PROGRAMS)"
+fi
+AC_SUBST(BUILD_RULES)
+AC_SUBST(INSTALL_RULES)
+AC_SUBST(FS_TEST_DEPS)
+AC_SUBST(FS_TEST_PROGRAMS)
+AC_SUBST(SVN_DB_INCLUDES)
+AC_SUBST(SVN_DB_LIBS)
+
+AC_DEFINE_UNQUOTED(SVN_FS_WANT_DB_MAJOR, $SVN_FS_WANT_DB_MAJOR,
+                   [The desired major version for the Berkeley DB])
+AC_DEFINE_UNQUOTED(SVN_FS_WANT_DB_MINOR, $SVN_FS_WANT_DB_MINOR,
+                   [The desired minor version for the Berkeley DB])
+AC_DEFINE_UNQUOTED(SVN_FS_WANT_DB_PATCH, $SVN_FS_WANT_DB_PATCH,
+                   [The desired patch version for the Berkeley DB])
+
+dnl Check for header files ----------------
+
+dnl Standard C headers
+AC_HEADER_STDC
+
+dnl Check for typedefs, structures, and compiler characteristics ----------
+
+dnl if compiler doesn't understand `const', then define it empty
+AC_C_CONST
+
+dnl if non-existent, define size_t to be `unsigned'
+AC_TYPE_SIZE_T
+
+
+dnl Check for library functions ----------
+
+dnl libsvn_string uses memcmp()
+AC_FUNC_MEMCMP
+
+dnl svn_error's default warning handler uses vfprintf()
+AC_FUNC_VPRINTF
+
+
+dnl Process some configuration options ----------
+
+AC_ARG_ENABLE(debug,
+[  --enable-debug            Turn on debugging and compile time warnings],
+[
+    if test "$enableval" = "yes" ; then
+      enable_debugging="yes"
+    else
+      enable_debugging="no"
+    fi
+])
+
+AC_ARG_ENABLE(maintainer-mode,
+[  --enable-maintainer-mode  Turn on debugging and very strict compile-time
+                          warnings],
+[
+    if test "$enableval" = "yes" ; then
+      if test "$enable_debugging" = "no" ; then
+        AC_MSG_ERROR(Can't have --disable-debug and --enable-maintainer-mode)
+      fi
+      enable_debugging=yes
+      if test "$GCC" = "yes"; then
+        dnl SVN_DEBUG enables specific features for developer builds
+        dnl AP_DEBUG enables specific (Apache) features for developer builds
+        CFLAGS="$CFLAGS -Wpointer-arith -Wwrite-strings -Wshadow -DSVN_DEBUG -DAP_DEBUG";
+      fi
+    fi
+])
+
+if test "$enable_debugging" = "yes" ; then
+  dnl At the moment, we don't want optimization, because we're
+  dnl debugging.
+  dnl ### actually, debugging should be fine with the default -O2
+  changequote(,)
+  CFLAGS="`echo $CFLAGS' ' | sed -e 's/-O[^ ]* //g'`"
+  changequote([,])
+else
+  if test "$enable_debugging" = "no" ; then
+    changequote(,)
+    CFLAGS="`echo $CFLAGS' ' | sed -e 's/-g[0-9] //g' | sed -e 's/-g//g'`"
+    changequote([,])
+  fi
+fi
+
+
+dnl Find a version of GNU patch
+AC_MSG_CHECKING([for GNU patch])
+SVN_CLIENT_PATCH="`${abs_srcdir}/ac-helpers/gnu-patch.sh`"
+if test "$SVN_CLIENT_PATCH" = "";  then
+  AC_MSG_ERROR([not found
+
+Cannot find a GNU patch program in your PATH.
+Please make sure you have GNU patch (version 2.5 or later) installed.  
+You can get it from ftp://ftp.gnu.org/pub/gnu/patch.
+])
+fi
+AC_MSG_RESULT([$SVN_CLIENT_PATCH])
+AC_DEFINE_UNQUOTED(SVN_CLIENT_PATCH, "$SVN_CLIENT_PATCH", 
+	[Define to be the full path to your GNU patch program])
+
+dnl Find a (non-broken) version of GNU diff
+AC_MSG_CHECKING([for non-broken GNU diff])
+SVN_CLIENT_DIFF="`${abs_srcdir}/ac-helpers/gnu-diff.sh $SVN_CLIENT_PATCH`"
+if test "$SVN_CLIENT_DIFF" = "";  then
+  AC_MSG_ERROR([not found
+
+Cannot find an unbroken GNU diff program in your PATH.
+Please make sure you have GNU diff (version 2.7 or later) installed.  
+You can get it from ftp://ftp.gnu.org/pub/gnu/diffutils.
+
+(Note that FreeBSD uses a *hacked* version of GNU diff that is unable
+to handle certain types of text files.  If you are using FreeBSD, please 
+install the textproc/diffutils package to get the appropriate version of 
+diff.)
+])
+fi
+AC_MSG_RESULT([$SVN_CLIENT_DIFF])
+AC_DEFINE_UNQUOTED(SVN_CLIENT_DIFF, "$SVN_CLIENT_DIFF", 
+	[Define to be the full path to your GNU diff program])
+
+dnl Find GNU diff3
+AC_PATH_PROG(SVN_CLIENT_DIFF3, diff3, none)
+if test "$SVN_CLIENT_DIFF3" = "none"; then
+   AC_MSG_ERROR([not found
+
+Cannot find a GNU diff3 program in your PATH.
+Please make sure you have GNU diff3 (version 2.7 or later) installed.  
+You can get it from ftp://ftp.gnu.org/pub/gnu/diffutils.
+])
+fi
+AC_DEFINE_UNQUOTED(SVN_CLIENT_DIFF3, "$SVN_CLIENT_DIFF3", 
+	[Define to be the full path to your GNU diff3 program])
+
+dnl Since this is used only on Unix-y systems, define the path separator as '/'
+AC_DEFINE_UNQUOTED(SVN_PATH_LOCAL_SEPARATOR, '/',
+        [Defined to be the path separator used on your local filesystem])
+AC_DEFINE_UNQUOTED(SVN_PATH_STRIP_TRAILING_SLASHDOT, 0,
+        [Non-zero if the trailing /. in paths should be stripped])
+
+dnl Find a python 2.X binary, test cases will not run with Python 1.X
+AC_PATH_PROG(PYTHON2, python2, none)
+if test "$PYTHON2" = "none"; then
+	AC_PATH_PROG(PYTHON, python, none)
+else
+	PYTHON=$PYTHON2
+fi
+if test "$PYTHON" != "none"; then
+  echo "checking for Python 2.0 or newer"
+  ${PYTHON} ${abs_srcdir}/build/pycheck.py
+fi
+
+dnl try to find "swig" to build the SWIG bindings
+AC_PATH_PROG(SWIG, swig, none)
+if test "$SWIG" != "none"; then
+  if test "$PYTHON" != "none"; then
+    SWIG_BUILD_RULES="$SWIG_BUILD_RULES swig-py-lib"
+    SWIG_INSTALL_RULES="$SWIG_INSTALL_RULES install-swig-py-lib"
+
+    AC_CACHE_CHECK([for Python includes], [ac_cv_python_includes],[
+	ac_cv_python_includes="`$PYTHON ${abs_srcdir}/ac-helpers/get-py-info.py --includes`"
+    ])
+    SWIG_PY_INCLUDES="-I$ac_cv_python_includes"
+  fi
+fi
+AC_SUBST(SWIG_BUILD_RULES)
+AC_SUBST(SWIG_INSTALL_RULES)
+AC_SUBST(SWIG_PY_INCLUDES)
+
+dnl try to find the "makeinfo" program
+AC_PATH_PROG(MAKEINFO, makeinfo, [echo cannot run makeinfo])
+if test "MAKEINFO" = "echo cannot run makeinfo"; then
+        dnl we won't install/make any info pages then
+	INSTALL_INFO=""
+else
+	INSTALL_INFO='install-info'
+fi
+AC_SUBST(INSTALL_INFO)
+
+dnl decide whether we want to link against the RA libraries
+AC_ARG_ENABLE(dso,
+[  --enable-dso              Turn on DSO loading of RA libraries],
+[
+    if test "$enableval" = "yes"; then
+      enable_dso=yes
+      if test "$enable_shared" = "no"; then
+        AC_MSG_ERROR([--enable-dso conflicts with --disable-shared])
+      fi
+    fi
+])
+
+if test "$enable_shared" = "no" -o "$enable_dso" != "yes"; then
+  AC_DEFINE(SVN_LIBSVN_CLIENT_LINKS_RA_DAV, 1,
+        [Defined if libsvn_client should link against libsvn_ra_dav])
+  SVN_RA_LIB_DEPS="subversion/libsvn_ra_dav/libsvn_ra_dav.la"
+  SVN_RA_LIB_LINK="\$(abs_builddir)/subversion/libsvn_ra_dav/libsvn_ra_dav.la \
+    \$(NEON_LIBS)"
+
+  if test "$svn_lib_berkeley_db" = "yes"; then
+    AC_DEFINE(SVN_LIBSVN_CLIENT_LINKS_RA_LOCAL, 1,
+        [Defined if libsvn_client should link against libsvn_ra_local])
+    SVN_RA_LIB_DEPS="$SVN_RA_LIB_DEPS \
+	subversion/libsvn_ra_local/libsvn_ra_local.la \
+	subversion/libsvn_repos/libsvn_repos.la \
+	subversion/libsvn_fs/libsvn_fs.la"
+    SVN_RA_LIB_LINK="$SVN_RA_LIB_LINK \
+	\$(abs_builddir)/subversion/libsvn_ra_local/libsvn_ra_local.la \
+	\$(abs_builddir)/subversion/libsvn_repos/libsvn_repos.la \
+	\$(abs_builddir)/subversion/libsvn_fs/libsvn_fs.la \$(SVN_DB_LIBS)"
+  fi
+
+fi
+AC_SUBST(SVN_RA_LIB_DEPS)
+AC_SUBST(SVN_RA_LIB_LINK)
+
+
+dnl Pass some config data ----------------------------
+
+AC_SUBST(abs_builddir)
+AC_SUBST(abs_srcdir)
+
+dnl
+dnl BSD/OS (BSDi) needs to use a different include syntax in the Makefiles
+dnl
+case "$host" in
+*bsdi*)
+    # Check whether they've installed GNU make
+    if make --version > /dev/null 2>&1; then 
+	INCLUDE_OUTPUTS="include \$(top_srcdir)/build-outputs.mk"
+    else
+	# BSDi make
+	INCLUDE_OUTPUTS=".include \"\$(top_srcdir)/build-outputs.mk\""
+    fi
+    ;;
+*)
+    INCLUDE_OUTPUTS="include \$(top_srcdir)/build-outputs.mk"
+    ;;
+esac
+AC_SUBST(INCLUDE_OUTPUTS)
+
+dnl Final step:  create the Makefile ----------------------------
+
+AC_OUTPUT([Makefile])
+
+
+dnl Create all of the build directories
+
+if test "$abs_srcdir" != "$abs_builddir"; then
+    make mkdir-init
+fi
+
+
+dnl  Print warning messages about what we did and didn't configure at the 
+dnl  end, where people will actually see them.
+case "$svn_lib_berkeley_db" in
+  "no" )
+    db_version="$SVN_FS_WANT_DB_MAJOR.$SVN_FS_WANT_DB_MINOR.$SVN_FS_WANT_DB_PATCH"
+    AC_MSG_WARN([we have configured for a client-only build
+
+
+The Subversion filesystem library, part of the server, requires
+Berkeley DB version $db_version or newer, which you don't seem to have
+installed.  We have created makefiles which will build the Subversion
+client code only, and skip the server.  You can find latest version of
+Berkeley DB at http://www.sleepycat.com/.  You can find the latest
+version of Berkeley DB here: http://www.sleepycat.com/download.html
+
+As an option, you may build Berkeley DB directly within the Subversion
+source tree. Download and extract the Berkeley distribution, then
+rename db-$db_version/ to db/ in the top level of the Subversion
+source tree.
+])
+;;
+esac
+

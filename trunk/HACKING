@@ -1,0 +1,818 @@
+								-*-text-*-
+
+If you are contributing code to the Subversion project, please read
+this first.
+
+                     ============================
+                     HACKER'S GUIDE TO SUBVERSION
+                     ============================
+
+$LastChangedDate$
+
+TABLE OF CONTENTS
+
+   * Participating in the community
+   * Theory and documentation
+   * What to read
+   * Directory layout
+   * Coding style
+   * Document everything
+   * Using page breaks
+   * Other conventions
+   * APR status codes
+   * Automated tests
+   * Writing test cases before code
+   * Debugging the server
+   * Writing log entries
+   * Patch submission guidelines
+   * Commit access
+   * The Configuration/Build System Under Unix
+   * How to create a distribution tarball
+
+
+
+Participating in the community
+==============================
+
+Although Subversion is originally sponsored and hosted by Collabnet
+(http://www.collab.net), it's a true open-source project under a
+BSD-style license.  A number of developers work for Collabnet, some
+work for other large companies (such as RedHat), and many others are
+simply excellent volunteers who are interested in building a better
+version control system.
+
+The community exists mainly through mailing lists and a Subversion
+repository:
+
+Go to http://subversion.tigris.org and
+
+   *  Join the "dev", "svn", and "announce" mailing lists.
+      The dev list, dev@subversion.tigris.org, is where almost all
+      discussion takes place.  All questions should go there, though
+      you might want to check the list archives first.  The "svn"
+      list receives automated commit emails.
+
+   *  Print out and digest the Spec.  (The postscript might look
+      better than the PDF.)  The Spec will give you a theoretical
+      overview of Subversion's design.
+
+If you'd like to contribute code, then look at:
+
+   *  The bugs/issues database
+      http://subversion.tigris.org/servlets/ProjectIssues
+
+   *  The bite-sized tasks page
+      http://subversion.tigris.org/project_tasks.html
+
+To submit code, simply send your patches to dev@subversion.tigris.org.
+No, wait, first read the rest of this file, _then_ start sending
+patches to dev@subversion.tigris.org. :-)
+
+
+
+Theory and documentation
+========================
+
+   1. DESIGN
+      A design spec was written in June 2000, and is a bit out of
+      date.  But it still gives a good theoretical introduction to the
+      inner workings of the repository, and to Subversion's various
+      layers.  Look in doc/programmer/design/, or look at one of the
+      versions posted on the Subversion website.
+
+
+   2. WEBDAV
+      Greg Stein has written an introduction Subversion's network
+      protocol, which is an extended dialect of HTTP.  The document is
+      'www/webdav-usage.html', and is also posted on the website.
+
+
+   3. USER MANUAL
+      We've started documenting some of the behavior of the client;
+      it's only a small beginning, but it may help.  Look at
+      doc/user/manual/ for this project.
+
+
+   4. SYSTEM NOTES
+      A lot of the design ideas for particular aspects of the system
+      have been documented in individual files in the notes directory.
+
+
+
+What to read
+============
+
+Before you can contribute code, you'll need to familiarize yourself
+with the existing codebase and interfaces.
+
+Check out a copy of Subversion (anonymously, if you don't yet have an
+account with commit-access) -- so you can look at the codebase.
+
+Within subversion/include/ are a bunch of header files with huge doc
+comments.  If you read through these, you'll have a pretty good
+understanding of the implementation details.  Here's a suggested
+perusal order:
+
+   *  the basic building blocks:  svn_string.h, svn_error.h, svn_types.h
+
+   *  useful utilities:  svn_io.h, svn_path.h, svn_hash.h, svn_xml.h
+
+   *  the critical interface:  svn_delta.h
+
+   *  client-side interfaces:  svn_ra.h, svn_wc.h, svn_client.h
+
+   *  the repository and versioned filesystem:  svn_repos.h svn_fs.h
+
+
+Subversion tries to stay portable by using only ANSI/ISO C and by
+using the Apache Portable Runtime (APR) library.  APR is the
+portability layer used by the Apache httpd server, and more
+information can be found at http://apr.apache.org.
+
+Because Subversion depends so heavily on APR, it may be hard to
+understand Subversion without first glancing over certain header files
+in APR (look in apr/include/):
+
+   *  memory pools:  apr_pools.h
+
+   *  filesystem access:  apr_file_io.h
+
+   *  hashes and arrays:  apr_hash.h, apr_tables.h
+
+
+
+Directory layout
+================
+
+A rough guide to the source tree:
+
+   doc/
+      User and Developer documentation.
+   www/
+      Subversion web pages (live content at http://subversion.tigris.org/).
+   tools/
+      Stuff that works with Subversion, but that Subversion doesn't depend on.
+   packages/
+      Stuff to help packaging systems, like rpm and dpkg.
+   subversion/
+      Source code to subversion itself (as opposed to external libraries).
+   subversion/include/
+      Public header files for users of subversion libraries.
+   subversion/libsvn_fs/
+      The versioning "filesystem" API.
+   subversion/libsvn_repos/
+      Repository functionality built around the `libsvn_fs' core.
+   subversion/libsvn_delta/
+      Common code for tree deltas, text deltas, and property deltas.
+   subversion/libsvn_wc/
+      Common code for working copies.
+   subversion/libsvn_ra/
+      Common code for repository access.
+   subversion/libsvn_client/
+      Common code for client operations.
+   subversion/clients/cmdline/
+      The command line client.
+   subversion/tests/
+      Automated test suite.
+   expat-lite/
+      Expat library from James Clark. There is a private copy in the
+      Subversion repository because we have some local changes to
+      it. See expat-lite/CHANGES.svn and expat-lite/CHANGES for
+      information on those changes.
+   apr/
+      Apache Portable Runtime library.
+      *Note*: This is not in the same repository as Subversion.  Read
+      INSTALL for instructions on how to get it if you don't
+      already have it.
+   neon/
+      Neon library from Joe Orton.
+      *Note*: This is not in the same repository as Subversion.  Read
+      INSTALL for instructions on how to get it if you don't
+      already have it.
+
+
+
+Coding Style
+============
+
+To understand how things work, read doc/svn-design.{texi,info,ps,pdf},
+and read the header files, which tend to have thoroughly-commented
+data structures.
+
+We're using ANSI C, and following the GNU coding standards.  Emacs
+users can just load svn-dev.el to get the right indentation behavior
+(most source files here will load it automatically, if
+`enable-local-eval' is set appropriately).
+
+Read http://www.gnu.org/prep/standards.html for a full description of
+the GNU coding standards; but here is a short example demonstrating
+the most important formatting guidelines:
+
+   char *                                     /* func type on own line */
+   argblarg (char *arg1, int arg2)            /* func name on own line */
+   {                                          /* first brace on own line */
+     if ((some_very_long_condition && arg2)   /* indent 2 cols */
+         || remaining_condition)              /* new line before operator */
+       {                                      /* brace on own line, indent 2 */
+         arg1 = some_func (arg1, arg2);       /* space before opening paren */
+       }                                      /* close brace on own line */
+     else
+       {
+         do                                   /* format do-while like this */
+           {
+             arg1 = another_func (arg1);
+           }
+           while (*arg1);
+       }
+   }
+
+In general, be generous with parentheses even when you're sure about
+the operator precedence, and be willing to add spaces and newlines to
+avoid "code crunch".  Don't worry too much about vertical density;
+it's more important to make code readable than to fit that extra line
+on the screen.
+
+The controversial GNU convention of putting a space between a function
+name and its opening paren is optional in Subversion.  If you're
+editing an area of code that already seems to have a consistent
+preference about this, then just stick with that; otherwise, pick
+whichever way you like.
+
+
+
+Document everything
+===================
+
+Every function, whether public or internal, must start out with a
+documentation comment that describes what the function does.  The
+documentation should mention every parameter received by the function,
+every possible return value, and (if not obvious) the conditions under
+which the function could return an error.  Put the parameter names in
+upper case in the doc string, even when they are not upper case in the
+actual declaration, so that they stand out to human readers.
+
+For public or semi-public API functions, the doc string should go
+above the function in the .h file where it is declared; otherwise, it
+goes above the function definition in the .c file.
+
+For structure types, document each individual member of the structure
+as well as the structure itself.
+
+Read over the Subversion code to get an overview of how this
+documentation looks in practice; in particular, use the .h files in
+subversion/include/ as examples.
+
+
+
+Using Page Breaks
+=================
+
+We're using page breaks (the Ctrl-L character, ASCII 12) for section
+boundaries in both code and plaintext prose files.  This file is a
+good example of how it's done: each section starts with a page break,
+and the immediately after the page break comes the title of the
+section.
+
+This helps out people who use the Emacs page commands, such as
+`pages-directory' and `narrow-to-page'.  Such people are not as scarce
+as you might think, and if you'd like to become one of them, then type
+C-x C-p C-h in Emacs sometime.
+
+
+
+Other Conventions:
+==================
+
+In addition to the GNU standards, Subversion uses these conventions:
+
+   *  Use only spaces for indenting code, never tabs.  Tab display
+      width is not standardized enough, and anyway it's easier to
+      manually adjust indentation that uses spaces.
+
+   *  Stay within 80 columns, the width of a minimal standard display
+      window.
+
+   *  Signify internal variables by two underscores after the prefix.
+      That is, when a symbol must (for technical reasons) reside in the
+      global namespace despite not being part of a published interface,
+      then use two underscores following the module prefix.  For
+      example:
+
+         svn_fs_get_rev_prop ()       /* Part of published API. */
+         svn_fs__parse_props ()       /* For internal use only. */
+
+   *  Put this comment at the bottom of new source files to make Emacs
+      automatically load svn-dev.el:
+
+         /*
+          * local variables:
+          * eval: (load-file "../svn-dev.el")
+          * end:
+          */
+
+      (This assumes the C file is located in a subdirectory of
+      subversion/subversion/, which most are.)
+
+   *  We have a tradition of not marking files with the names of
+      individual authors (i.e., we don't put lines like "Author: foo"
+      or "@author foo" in a special position at the top of a source
+      file).  This is to discourage territoriality -- even when a file
+      has only one author, we want to make sure others feel free to
+      make changes.  People might be unnecessarily hesitant if someone
+      appears to have staked ownership on the file.
+
+   *  There are many other unspoken conventions maintained througout
+      the code, that are only noticed when someone unintentionally
+      fails to follow them.  Just try to have a sensitive eye for the
+      way things are done, and when in doubt, ask.
+
+
+
+APR Status Codes:
+=================
+
+Always check for APR status codes (except APR_SUCCESS) with the
+APR_STATUS_IS_...() macros, not by direct comparison. This is
+required for portability to non-Unix platforms.
+
+
+
+Automated Tests:
+================
+
+For a description of how to use and add tests to Subversion's
+automated test framework, please read subversion/tests/README.
+
+
+
+Writing test cases before code:
+===============================
+
+From: Karl Fogel <kfogel@collab.net>
+Subject: writing test cases
+To: dev@subversion.tigris.org
+Date: Mon, 5 Mar 2001 15:58:46 -0600
+
+Many of us implementing the filesystem interface have now gotten into
+the habit of writing the test cases (see fs-test.c) *before* writing
+the actual code.  It's really helping us out a lot -- for one thing,
+it forces one to define the task precisely in advance, and also it
+speedily reveals the bugs in one's first try (and second, and
+third...).
+
+I'd like to recommend this practice to everyone.  If you're
+implementing an interface, or adding an entirely new feature, or even
+just fixing a bug, a test for it is a good idea.  And if you're going
+to write the test anyway, you might as well write it first. :-)
+
+Yoshiki Hayashi's been sending test cases with all his patches lately,
+which is what inspired me to write this mail to encourage everyone to
+do the same.  Having those test cases makes patches easier to examine,
+because they show the patch's purpose very clearly.  It's like having
+a second log message, one whose accuracy is verified at run-time.
+
+That said, I don't think we want a rigid policy about this, at least
+not yet.  If you encounter a bug somewhere in the code, but you only
+have time to write a patch with no test case, that's okay -- having
+the patch is still useful; someone else can write the test case.
+
+As Subversion gets more complex, though, the automated test suite gets
+more crucial, so let's all get in the habit of using it early.
+
+-K
+
+
+
+Debugging the server
+====================
+
+'mod_dav_svn.so' contains the main Subversion server logic; it runs as
+a module within mod_dav, which runs as a module within httpd.  Since
+httpd is probably using dynamic shared modules, you normally won't be
+able to set breakpoints in advance when you start Apache in a debugger
+such as GDB.  Instead, you'll need to start up, then interrupt httpd,
+set your breakpoint, and continue:
+
+   % gdb httpd
+   (gdb) run -X
+   ^C
+   (gdb) break some_func_in_mod_dav_svn
+   (gdb) continue
+
+The -X switch is equivalent to -DONE_PROCESS and -DNO_DETACH, which
+ensure that httpd runs as a single thread and remains attached to the
+tty, respectively.  As soon as it starts, it sits and waits for
+requests; that's when you hit control-C and set your breakpoint.
+
+You'll probably want to watch Apache's run-time logs
+
+   /usr/local/apache2/logs/error_log
+   /usr/local/apache2/logs/access_log
+
+to help determine what might be going wrong and where to set
+breakpoints.
+
+
+
+Writing Log Entries
+===================
+
+Certain guidelines should be adhered to when writing log messages:
+
+Make a log entry for every change.  The value of the log becomes much
+less if developers cannot rely on its completeness.  Even if you've
+only changed comments, write an entry that says, "Doc fix."  The only
+changes you needn't log are small changes that have no effect on the
+source, like formatting tweaks.
+
+Log entries should be full sentences, not sentence fragments.
+Fragments are more often ambiguous, and it takes only a few more
+seconds to write out what you mean.  Fragments like `New file' or `New
+function' are acceptable, because they are standard idioms, and all
+further details should appear in the source code.
+
+The log entry should name every affected function, variable, macro,
+makefile target, grammar rule, etc, including the names of symbols
+that are being removed in this commit.  This helps people do automated
+searches through the logs later.  Don't hide names in wildcards,
+because the globbed portion may be what someone searches for later.
+For example, this is bad:
+
+   * twirl.c (twirling_baton_*): removed these obsolete structures.
+   (handle_parser_warning): pass data directly to callees, instead of
+   storing in twirling_baton_*.
+
+   * twirl.h: Fix indentation.
+
+Later on, when someone is trying to figure out what happened to
+`twirling_baton_fast', they may not find it if they just search for
+"_fast".  A better entry would be:
+
+   * twirl.c (twirling_baton_fast, twirling_baton_slow): removed these
+   obsolete structures.
+   (handle_parser_warning): pass data directly to callees, instead of
+   storing in twirling_baton_*.
+
+   * twirl.h: Fix indentation.
+
+The wildcard is okay in the description for `handle_parser_warning',
+but only because the two structures were mentioned by full name
+elsewhere in the log entry.
+
+Note how each file is its own group, with the symbols listed in
+parentheses, followed by a colon, followed by text describing the
+change.  Please adhere to this format -- not only does consistency
+greatly aid readability, it also allows software to colorize log
+entries automatically.
+
+If your change is related to a specific issue in the issue tracker,
+then include a string like "issue #N" in the log message.  For
+example, if a patch resolves issue 1729, then the log message might
+be:
+
+   Fix issue #1729:
+
+   * get_editor.c (frobnicate_file): Check that file exists first.
+
+For large changes or change groups, group the log entry into
+paragraphs separated by blank lines.  Each paragraph should be a set
+of changes that accomplishes a single goal, and each group should
+start with a sentence or two summarizing the change.  Truly
+independent changes should be made in separate commits, of course.
+
+One should never need the log entries to understand the current code.
+If you find yourself writing a significant explanation in the log, you
+should consider carefully whether your text doesn't actually belong in
+a comment, alongside the code it explains.  Here's an example of doing
+it right:
+
+   (consume_count): If `count' is unreasonable, return 0 and don't
+   advance input pointer.
+
+And then, in `consume_count' in `cplus-dem.c':
+
+   while (isdigit ((unsigned char)**type))
+     {
+       count *= 10;
+       count += **type - '0';
+       /* A sanity check.  Otherwise a symbol like
+         `_Utf390_1__1_9223372036854775807__9223372036854775'
+         can cause this function to return a negative value.
+         In this case we just consume until the end of the string.  */
+      if (count > strlen (*type))
+        {
+          *type = save;
+          return 0;
+        }
+
+This is why a new function, for example, needs only a log entry saying
+"New Function" --- all the details should be in the source.
+
+There are some common-sense exceptions to the need to name everything
+that was changed:
+
+   *  If you have made a change which requires trivial changes
+      throughout the rest of the program (e.g., renaming a variable),
+      you needn't name all the functions affected.
+
+   *  If you have rewritten a file completely, the reader understands
+      that everything in it has changed, so your log entry may simply
+      give the file name, and say "Rewritten".
+
+In general, there is a tension between making entries easy to find by
+searching for identifiers, and wasting time or producing unreadable
+entries by being exhaustive.  Use your best judgement --- and be
+considerate of your fellow developers.  (Also, run "svn log" to see
+how others have been writing their log entries.)
+
+
+
+Patch submission guidelines
+===========================
+
+Mail patches to `dev@subversion.tigris.org', with a subject line
+that contains the word "PATCH" in all uppercase, for example
+
+   Subject: [PATCH] fix for rev printing bug in svn status
+
+A patch submission should contain one logical change; please don't mix
+N unrelated changes in one submission -- send N separate emails
+instead.
+
+The patch should be in unified diff format, inserted directly into the
+body of your mail message (i.e., not MIME-attached, uuencoded, or
+otherwise opaqified).  Be sure to start off with a log message, as
+described in "Writing log entries" above.
+
+If the patch implements a new feature, make sure to describe the
+feature completely in your mail; if the patch fixes a bug, describe
+the bug in detail and give a reproduction recipe.  An exception to
+these guidelines is when the patch addresses a specific issue in the
+issues database -- in that case, just make sure to refer to the issue
+number in your log message, as described in "Writing log entries".
+
+It is normal for patches to undergo several rounds of feedback and
+change before being applied.  Don't be discouraged if your patch is
+not accepted immediately -- it doesn't mean you goofed, it just means
+that there are a *lot* of eyes looking at every code submission, and
+it's a rare patch that doesn't have at least a little room for
+improvement.  After reading people's responses to your patch, make the
+appropriate changes and resubmit, wait for the next round of feedback,
+and lather, rinse, repeat, until some committer applies it.
+
+If you don't get a response for a while, and don't see the patch
+applied, it may just mean that people are really busy.  Go ahead and
+repost, and don't hesitate to point out that you're still waiting for
+a response.  One way to think of it is that patch management is highly
+parallizable, and we need you to shoulder your share of the management
+as well as the coding.  Every patch needs someone to shepherd it
+through the process, and the person best qualified to do that is the
+original submitter.
+
+
+
+Commit access
+=============
+
+After someone has successfully contributed a few non-trivial patches,
+some committer, usually whoever has reviewed and applied the most
+patches from that contributor, proposes them for commit access.  This
+proposal is sent only to the other full committers -- the ensuing
+discussion is private, so that everyone can feel comfortable speaking
+their minds.  Assuming there are no objections, the contributor is
+granted commit access.  The decision is made by consensus; there are
+no formal rules governing the procedure, though generally if someone
+strongly objects the access is not offered, or is offered on a
+provisional basis.
+
+The criteria for commit access are that the person's patches adhere to
+the guidelines in this file, adhere to all the usual unquantifiable
+rules of coding (code should readable, robust, maintainable, etc), and
+that the person respects the "Hippocratic Principle": first, do no
+harm.  In other words, what is significant is not the size or quantity
+of patches submitted, but the degree of care shown in avoiding bugs
+and minimizing unnecessary impact on the rest of the code.  Many
+committers are people who have not made major code contributions, but
+rather lots of small, clean fixes, each of which was an unambiguous
+improvement to the code.
+
+See the COMMITTERS file for a complete list of committers.
+
+
+
+The Configuration/Build System Under Unix
+=========================================
+
+Greg Stein wrote a custom build system for Subversion, which had been
+using `automake' and recursive Makefiles.  Now it uses a single,
+top-level Makefile, generated from Makefile.in (which is kept under
+revision control).  `Makefile.in' in turn includes `build-outputs.mk',
+which is automatically generated from `build.conf' by the
+`gen-make.py' script.  Thus, the latter two are under revision
+control, but `build-outputs.mk' is not.
+
+Here is Greg's original mail describing the system, followed by some
+advice about hacking it:
+
+   From: Greg Stein <gstein@lyra.org>
+   Subject:  new build system (was: Re: CVS update: MODIFIED: ac-helpers ...)
+   To: dev@subversion.tigris.org
+   Date: Thu, 24 May 2001 07:20:55 -0700
+   Message-ID: <20010524072055.F5402@lyra.org>
+
+   On Thu, May 24, 2001 at 01:40:17PM -0000, gstein@tigris.org wrote:
+   >   User: gstein
+   >   Date: 01/05/24 06:40:17
+   >
+   >   Modified:    ac-helpers .cvsignore svn-apache.m4
+   >   Added:       .        Makefile.in
+   >   Log:
+   >   Switch over to the new non-recursive build system.
+   >...
+
+   Okay... this is it. We're now on the build system.
+
+       "It works on my machine."
+
+   I suspect there may be some tweaks to make on differents OSs. I'd be
+   interested to hear if Ben can really build with normal BSD make. It
+   should be possible.
+
+   The code supports building, installation, checking, and
+   dependencies. It does *NOT* yet deal with the doc/ subdirectory. That
+   is next; I figured this could be rolled out and get the kinks worked
+   out while I do the doc/ stuff.  Oh, it doesn't build Neon or APR yet
+   either. I also saw a problem where libsvn_fs wasn't getting built
+   before linking one of the test proggies (see below).
+
+   Basic operation: same as before.
+
+   $ ./autogen.sh
+   $ ./configure OPTIONS
+   $ make
+   $ make check
+   $ make install
+
+   There are some "make check" scripts that need to be fixed up. That'll
+   happen RSN. Some of them create their own log, rather than spewing to
+   stdout (where the top-level make will place the output into
+   [TOP]/tests.log).
+
+   The old Makefile.am files are still around, but I'll be tossing those
+   along with a bunch of tweaks to all the .cvsignore files. There are a
+   few other cleanups, too. But that can happen as a step two.
+
+   [ $ cvs rm -f `find . -name Makefile.rm`
+
+     See the mistake in that line? I didn't when I typed it. The find
+     returned nothing, so cvs rm -f proceeded to delete my entire
+     tree. And the -f made sure to delete all my source files, too. Good
+     fugging thing that I had my mods in some Emacs buffers, or I'd be
+     bitching.
+
+     I am *so* glad that Ben coded SVN to *not* delete locally modified
+     files *and* that we have an "undel" command. I had to go and tweak a
+     bazillion Entries files to undo the delete...
+   ]
+
+   The top-level make has a number of shortcuts in it (well, actually in
+   build-outputs.mk):
+
+   $ make subversion/libsvn_fs/libsvn_fs.la
+
+   or
+
+   $ make libsvn_fs
+
+   The two are the same. So... when your test proggie fails to link
+   because libsvn_fs isn't around, just run "make libsvn_fs" to build it
+   immediately, then go back to the regular "make".
+
+   Note that the system still conditionally builds the FS stuff based
+   on whether DB (See 'Building on Unix' below) is available, and
+   mod_dav_svn if Apache is available.
+
+   Handy hint: if you don't like dependencies, then you can do:
+
+   $ ./autogen.sh -s
+
+   That will skip the dependency generation that goes into
+   build-outputs.mk. It makes the script run quite a bit faster (48 secs
+   vs 2 secs on my poor little Pentium 120).
+
+   Note that if you change build.conf, you can simply run:
+
+   $ ./gen-make.py build.conf
+
+   to regen build-outputs.mk. You don't have to go back through the whole
+   autogen.sh / configure process.
+
+   You should also note that autogen.sh and configure run much faster now
+   that we don't have the automake crap. Oh, and our makefiles never
+   re-run configure on you out of the blue (gawd, I hated when automake
+   did that to me).
+
+   Obviously, there are going to be some tweaky things going on. I also
+   think that the "shadow" builds or whatever they're called (different
+   source and build dirs) are totally broken. Something tweaky will have
+   to happen there.  But, thankfully, we only have one Makefile to deal
+   with.
+
+   Note that I arrange things so that we have one generated file
+   (build-outputs.mk), and one autoconf-generated file (Makefile from
+   .in).  I also tried to shove as much logic/rules into
+   Makefile.in. Keeping build-outputs.mk devoid of rules (thus, implying
+   gen-make.py devoid of rules in its output generation) manes that
+   tweaking rules in Makefile.in is much more approachable to people.
+
+   I think that is about it. Send problems to the dev@ list and/or feel
+   free to dig in and fix them yourself. My next steps are mostly
+   cleanup. After that, I'm going to toss out our use of libtool and rely
+   on APR's libtool setup (no need for us to replicate what APR already
+   did).
+
+   Cheers,
+   -g
+
+   --
+   Greg Stein, http://www.lyra.org/
+
+
+And here is some advice for those changing or testing the
+configuration/build system:
+
+   From: Karl Fogel <kfogel@collab.net>
+   To: dev@subversion.tigris.org
+   Subject: when changing build/config stuff, always do this first
+   Date: Wed 28 Nov 2001
+
+   Yo everyone: if you change part of the configuration/build system,
+   please make sure to clean out any old installed Subversion libs
+   *before* you try building with your changes.  If you don't do this,
+   your changes may appear to work fine, when in fact they would fail if
+   run on a truly pristine system.
+
+   This script demonstrates what I mean by "clean out".  This is
+   `/usr/local/cleanup.sh' on my system.  It cleans out the Subversion
+   libs (and the installed httpd-2.0 libs, since I'm often reinstalling
+   that too):
+
+      #!/bin/sh
+
+      # Take care of libs
+      cd /usr/local/lib
+      rm -f APRVARS
+      rm -f libapr*
+      rm -f libexpat*
+      rm -f libneon*
+      rm -f libsvn*
+
+      # Take care of headers
+      cd /usr/local/include
+      rm -f apr*
+      rm -f svn*
+      rm -f neon/*
+
+      # Take care of headers
+      cd /usr/local/apache2/lib
+      rm -f *
+
+   When someone reports a configuration bug and you're trying to
+   reproduce it, run this first. :-)
+
+   The voice of experience,
+   -Karl
+
+
+
+How to create a distribution tarball
+====================================
+
+Pretty simple -- do this under Unix:
+
+   1. Get a completely up-to-date working copy with no local mods.
+      Make sure that APR is also up-to-date and pristine.  Build
+      Subversion and run the test suite, just to be safe.
+
+   2. Run "make dist".  This invokes `dist.sh', which checks out
+      Subversion and APR from their master repositories, then runs the
+      pre-configuration steps, so that the user will be able to run
+      `configure' right after unpacking.  Watch dist.sh's output to
+      make sure everything goes smoothly.
+
+   3. When it's done, you'll have `subversion-rBLAH.tar.gz' in the top
+      level of your working copy (BLAH is a revision number).  That's
+      your distribution.  Unpack it on a clean machine, make sure it
+      works, and upload it to
+
+         http://subversion.tigris.org/servlets/ProjectDownloadList
+
+      If you're making a new distribution in a hurry because the
+      previous one is known to have problems, it's fine to upload
+      first and then test, because the chances of the dist behaving
+      differently from your working copy are very small -- it should
+      be exactly the same code.
+
+These guidelines may get stricter when we have a real user base; for
+now, a distribution is just a bootstrap mechanism to obtain a working
+copy.

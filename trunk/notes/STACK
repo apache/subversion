@@ -1,0 +1,398 @@
+								-*-text-*-
+
+This file merely lists immediate, short-term (next few days) stuff on
+people's stacks.  It may make reference to phone conversations and
+private emails, so a given item might not make much sense unless one
+is familiar with its out-of-band context.  We keep this file under
+version control mainly for convenience -- feel free to add your own
+short-term tasks to it, if that's helpful.
+
+(See http://subversion.tigris.org/project_tasks.html if you're looking
+for a task to take on.)
+
+------------------------------------------------------------------------
+
+General Problems (someone grab these):
+
+   - updates (right now) don't bump the revision of every entry as
+     they should;  instead we're only bumping the changed entries.
+
+   - unable to update specific targets right now;  we need to
+     distinguish between specific targets and general full recursive
+     updates.
+
+   - don't use stdio's BUFSIZ (portability?). define an SVN specific
+     constant and use it throughout.
+
+   - refactor client/main.c's cmdline handling and place it into
+     libsvn_subr. use the new functions within svnadmin/main.c.
+
+   - svn_string.c::svn_string_createf(): follow the comments about
+     refactoring to prevent double memory usage
+
+   - update authentication mechanisms so that multiple systems can be
+     defined, and the client will choose the "best" one (given whatever
+     consideration it chooses).
+
+Ben todo:
+
+   - finish svn_fs_is_different, make status command use it.
+
+
+Karl:
+
+   - Propagate changes down into libsvn_client.  Currently, the client
+     usually takes a `targets' list and iterates over it, invoking
+     some libsvn_client routine each time.  There are cases where the
+     libsvn_client routine should get the target list directly and do
+     the iteration internally, or even pass the list on down into
+     libsvn_wc.
+   - create .alt files instead of .rej for those that `patch' can't
+     handle.
+   - with Ben, review locking protocol in wc adm directories for sanity.
+   - check apr_open calls, do they assume failure implies null handle?
+   - fix working copy identification/allergy code
+   - make sure type-changing replacements work right
+
+Ben and Karl (longer term):
+
+   - revision numbers in URLs?  Why are we depending on the implied
+     `HEAD'??  Ben points out that this solves the "Where does the
+     repos begin problem" too. :-)
+
+   - xml dtd, for both xml deltas and wc formats
+
+Greg:
+
+   - mod_dav_svn:
+      - implement copy/move in the repos
+
+      - liveprop hooks: rest of liveprops
+	- what is missing?
+	- what is needed for SVN vs DAV/DeltaV interop?
+
+      - vsn hooks: any others for DAV/DeltaV interop?
+
+      - version resource URL prep should look up the node
+
+      - change the dav_svn_ prefix to ??? (svn_mod_dav_svn too long;
+	svn_mds? svn_dav? leave it?
+
+   - mod_dav:
+     - switch property handling to buckets/brigades
+     - switch dav_stream to buckets/brigades
+     - complete the propdb API conversion (step 1; step 2 is the brigade
+       thing above)
+
+   M3 ITEMS:
+   - VERSION stuff. VPATH builds.
+   - cvs2svn
+   - Python bindings
+     - just enough for cvs2svn
+     - the rest
+   - DB_RUN_RECOVERY handling
+   - pool review
+
+   WHENEVER:
+   - APR: move apr_copy_file() from SVN. and apr_append_file, etc.
+   - security checks (e.g. system() usage in wc/get_editor)
+
+
+Joe:
+   - implementing authentication callbacks for ra_dav/client layers
+     [ still needed? maybe this could be client certs? ]
+
+
+Working Copy:
+
+  TBDesigned:
+    The WC will need to have some knowledge of "the repository"
+    associated with any given resource. Given a working copy, the
+    client cannot know whether a two URLs are within the same
+    repository or not, so it doesn't know whether one or multiple
+    commit sequences are required to commit the whole working copy.
+
+    The RA layer (in conjunction with the server) will need to somehow
+    tell the WC about the repository associated with a given directory
+    (or long term, each file?). At commit time, the WC sorts out how
+    many repositories are involved, and performs a commit per
+    repository.
+
+    [ We never really had a story for discriminating multiple
+      repositories within a given WC. Stopping to think about it, it
+      was just a hand-wave. Given the flexibility in URLs and virtual
+      hosting on the server and whatnot, static analysis of a URL will
+      never be sufficient, but the server can always state
+      definitively the repository for any given resource. ]
+
+
+Filesystem:
+
+  Anyone, WRT filesystem:
+
+     We need a function that will remove the *first*, not the last,
+     component from a path. We need this to support full-path lookups
+     in the new FS interface, specifically, for open_path.
+
+     Suggest something like this:
+
+       int svn_path_first_component (const char **name,
+                                     char **path,
+                                     enum svn_path_style style);
+
+     This would point *NAME to the first component in *PATH, and
+     modify *PATH to split the first component off. Return 0 if *NAME
+     is empty, otherwise 1. See the pseudocode in open_path in tree.c
+     to see how this would be used.
+  
+Changes to svn_delta_edit_fns_t:
+
+   These are the summary emails Ben sent to the dev list (lightly
+   edited), concerning changes proposed and accepted at the meetings
+   in Chicago on January 14-16.  A few of these are still being
+   discussed on the list; see the "STATUS" lines for more.
+
+   =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+   Change #6:  Move textdeltas to the "other side" of the editor.
+   STATUS: Being discussed on list; holding off on making this change.
+   The Way It Works Now:
+      The driver of an editor takes a source and target stream, puts them
+      together via svn_txdelta() to produce a stream of "windows".  The
+      driver then pushes these windows at the editor's window-handler.
+   
+   Proposed Change:
+      Move this process to the other side of the interface, into the
+      editor implementation, giving the editor the power to deal with the
+      source and target streams directly.
+   
+      Specifically:
+                - remove the editor's apply_txdelta() routine
+                - create two new routines:
+                   apply_delta (filebaton, [src_stream], target_stream)
+                   set_file_contents (filebaton, [src_stream], delta,
+                                      enum delta_type)
+   
+                   apply_delta() sends svndiff deltas.
+                   set_file_contents() can send plain text or other
+                   types. 
+   
+                It becomes the obligation of the editor implementation to
+                implement at least one of these two routines;  if one
+                routine is NULL, the driver must use the other.
+   
+   Rationale:
+      It's too restrictive to force every editor implementation to accept
+      and deal with small svndiff windows.  For example: Greg Stein wants
+      to send plain text while debugging his commit-editor and network
+      layer.  It's best to allow the RA layer to make it's own choice
+      about how to break up the two streams most efficiently.
+   
+      The reason [src_stream] is optional is that it may be NULL;  this
+      presumably means that the editor already has access to the src
+      stream.
+   
+      (Greg and Jim, did I get this explanation totally wrong?  My notes
+      here aren't perfectly clear.  Please elaborate if you need to.)
+   
+   Problem:
+      Editor composition becomes more difficult if we use streams.  A
+      window is a discrete chunk of data that can be used by several
+      consumers, but streams are different: if consumer A reads some
+      data off a stream, then when consumer B reads, she'll get
+      different results.  You'd have to design your streams in a funky
+      way to make this not be a problem.
+
+      In some circumstances, this isn't an issue.  After all, usually
+      a set of composed editors is a bunch of lightweight editors,
+      that don't do much, surrounding a core editor that does the real
+      work.  For example, an editor that prints out filenames wrapped
+      with an editor that actually updates those files.  In such
+      cases, the lightweight editor simply never reads data off the
+      stream, so the core editor is not deprived of anything.
+
+      But other editors (say, a commit guard?) might want to actually
+      examine file data.  That could have bad consequences if we
+      switch from windows to streams.
+
+   =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+   Change #7:  New filesystem "copy" nodes (and renaming add_*() args)
+   STATUS: Will be done by Brane, now that he's dug what this is all about.
+   The Way It Works Now:
+      When we copy (or move) a node in the filesystem, we're currently
+      losing information about where it came from.  Our "lazy cloning"
+      model goes a long way, but in the end we get just a bunch of
+      duplicated pointers to the same node revision numbers.
+   
+      E.g.: if a node A points to the same node revision that two others
+      (B and C) point to, there's no way to know whether A was copied
+      from B or C.
+   
+   Proposed Changes:
+      1.  In the filesystem model, create a 3rd node type called a "copy"
+          node.  (This is in addition to our "file" and "dir" nodes.)
+   
+          A copy node contains a pointer to a revision and a path.
+   
+          When we create node B as a "copy" of node A, we create a new
+          copy node.  This copy node allows us to discover the proper
+          node-revision, but it also tracks the history of the copy.
+   
+      2.  Remember that a copy command is really just an "add with
+          history", and a move command is really just a "delete, followed
+          by an add with history".  Thus it's the *add* command, which,
+          when given an ancestor path and revision, creates a copy node.
+          (If there's no history given, then the add command creates a
+          regular node.)
+   
+          For clarity sake, the history arguments to the editor's add()
+          function should reflect this copying.  Instead of
+          "ancestor_path" and "ancestor_revision", we'd like to call the
+          arguments "copyfrom_url" and "copyfrom_revision".
+      
+   Rationale:
+      I think it's all been explained above.  Other folks, feel free to
+      add to this explanation.
+
+Anyone:
+
+   These three mails between Greg Stein and Ben explain the issue:
+
+   ----------------------------------------------------------------------
+   From: Greg Stein <gstein@lyra.org>
+   Subject: Re: CVS update: subversion/subversion/libsvn_ra_local \
+            Makefile.am ra_local.h ra_plugin.c split_url.c
+   To: dev@subversion.tigris.org
+   Date: Fri, 9 Feb 2001 17:27:06 -0800
+   
+   On Sat, Feb 10, 2001 at 12:59:19AM -0000, sussman@tigris.org wrote:
+   >...
+   >   @@ -283,7 +296,10 @@
+   >                       apr_pool_t *pool,
+   >                       const svn_ra_plugin_t **plugin)
+   >    {
+   >   -  *plugin = ra_local_plugin;
+   >   +  svn_ra_plugin_t *p = apr_pcalloc (pool, sizeof (*p));
+   >   +  memcpy (p, &ra_local_plugin, sizeof (ra_local_plugin));
+   >   +
+   >   +  *plugin = p;
+   
+   Overkill. Use:
+   
+       *plugin = &ra_local_plugin;
+   
+   >      /* are we ever going to care about abi_version? */
+   
+   Yes.
+   
+   >... [ split_url ]
+   
+   This function would be a *lot* simpler, if you:
+   
+   1) make a dup of the URL
+   2) strip the leading file:// portion (leaving "/abs/path/foo/bar")
+   3) loop:
+      a) try to open FS with the path. succeed: break
+      b) chop the last component off
+   4) fs_path is what remains, repos_path is &URL[strlen(fs_path) + 7]
+      (the +7 is to account for "file://" at the start of the URL)
+   
+   The whole algorithm only requires one string dup to hold the shrinking path.
+   stripping the leading "file://" is simply advancing string->data (we should
+   have a utility function for this, because string->blocksize must shrink).
+   The chopping just drops in '\0' into the dup'd path. The return is done by
+   duplicating the input URL, or altering the input ->data and ->blocksize
+   field values.
+   
+   And warning: I'm not sure whether a file URL is in "local" or "URL" style
+   separators. Strictly speaking, our "URL style" is really "http scheme URL
+   style". If the file URL uses "/" no matter what, then we would (strictly)
+   need to convert the dup'd path (the fs_path) to local style before beginning
+   the loop/test.
+   
+   Cheers,
+   -g
+   ----------------------------------------------------------------------
+   From: Ben Collins-Sussman <sussman@newton.ch.collab.net>
+   Subject: Re: CVS update: subversion/subversion/libsvn_ra_local \
+            Makefile.am ra_local.h ra_plugin.c split_url.c
+   To: Greg Stein <gstein@lyra.org>
+   Cc: dev@subversion.tigris.org
+   Date: 09 Feb 2001 20:06:42 -0600
+   
+   Greg Stein <gstein@lyra.org> writes:
+   
+   > Overkill. Use:
+   > 
+   >     *plugin = &ra_local_plugin;
+   > 
+   
+   Heh, sure.  :)
+   > 
+   > >... [ split_url ]
+   > 
+   > This function would be a *lot* simpler, if you:
+   > 
+   > 1) make a dup of the URL
+   > 2) strip the leading file:// portion (leaving "/abs/path/foo/bar")
+   > 3) loop:
+   >    a) try to open FS with the path. succeed: break
+   >    b) chop the last component off
+   > 4) fs_path is what remains, repos_path is &URL[strlen(fs_path) + 7]
+   >    (the +7 is to account for "file://" at the start of the URL)
+   
+   Oh, this is the *easy* way, which I purposely avoided.
+   
+   I wanted to be "correct" by searching from the other direction,
+   thereby always finding the repository with the shortest path, not the
+   longest.
+   
+   Yes, I know, we agreed that we will never allow nested repositories.
+   I guess I was being paranoid and trying to emulate Apache's search
+   methods.  :)
+   
+   Do you think it's worth re-writing?
+
+   ----------------------------------------------------------------------
+   From: Greg Stein <gstein@lyra.org>
+   Subject: Re: CVS update: subversion/subversion/libsvn_ra_local \
+            Makefile.am ra_local.h ra_plugin.c split_url.c
+   To: dev@subversion.tigris.org
+   Date: Fri, 9 Feb 2001 19:19:57 -0800
+   
+   On Fri, Feb 09, 2001 at 08:06:42PM -0600, Ben Collins-Sussman wrote:
+   > Greg Stein <gstein@lyra.org> writes:
+   >...
+   > > >... [ split_url ]
+   > > 
+   > > This function would be a *lot* simpler, if you:
+   > > 
+   > > 1) make a dup of the URL
+   > > 2) strip the leading file:// portion (leaving "/abs/path/foo/bar")
+   > > 3) loop:
+   > >    a) try to open FS with the path. succeed: break
+   > >    b) chop the last component off
+   > > 4) fs_path is what remains, repos_path is &URL[strlen(fs_path) + 7]
+   > >    (the +7 is to account for "file://" at the start of the URL)
+   > 
+   > Oh, this is the *easy* way, which I purposely avoided.
+   > 
+   > I wanted to be "correct" by searching from the other direction,
+   > thereby always finding the repository with the shortest path, not the
+   > longest.
+   
+   Ah. Right. Sorry...
+   
+   But still a simple change. Search from the left for '/'; replace with '\0';
+   test for an FS; if not found, then put the '/' back and look for the next
+   '/' (repeat).
+   
+   >...
+   > Do you think it's worth re-writing?
+   
+   Yes, given how much simpler it could be, I think it would be a STACK item
+   that anybody could pick up. It works now, but for long-term maintenance, it
+   would be nice to have a simplifed version.
+   
+   Cheers,
+   -g
+   ----------------------------------------------------------------------

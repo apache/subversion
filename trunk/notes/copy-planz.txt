@@ -1,0 +1,161 @@
+SUBVERSION'S COPY AND MOVE FUNCTIONALITY
+
+Please direct all comments and suggestions to 
+C. Michael Pilato <cmpilato@collab.net>.
+
+--
+
+We have four use cases for 'svn cp' now.
+
+    A. svn cp wc_path1 wc_path2
+
+       This duplicates a path in the working copy, and schedules it
+       for addition with history.  (This is partially implemented in
+       0.6 already.)  
+
+    B. svn cp URL [-r rev]  wc_path
+
+       This "checks out" URL (in REV) into the working copy at
+       wc_path, integrates it, and schedules it for addition with
+       history.
+
+    C. svn cp wc_path URL
+
+       This immediately commits wc_path to URL on the server;  the
+       commit will be an addition with history.  The commit will not
+       change the working copy at all.
+
+       Possible use case: A user is working on a bug in some new
+       code.  He'd sure like some help, so he copies his
+       work-in-progress tree of source to some URL so that others can
+       check out that URL and help him debug.
+
+    D. svn cp URL1 [-r rev] URL2
+
+       This causes a server-side copy to happen immediately;  no
+       working copy is required.
+
+
+[Note: we're using the phrase "tag" to mean "branch or tag"; they're
+the same thing, and for now we're assuming that per-installation
+administrative policy and/or ACLs will bother to differentiate.  The
+svn filesystem certainly doesn't.]
+
+So how do I create a tag?  Assume that the repository has a layout
+like this:
+
+   /project1/trunk/
+   /project1/tags/
+
+In the simplest case, if I want to tag the HEAD of trunk, I don't even
+need a working copy.  I use case (D) above:
+
+   svn cp http://foo.com/repos/project1/trunk \
+          http://foo.com/repos/project1/tags/milestone-6
+
+Voila, no working copy needed.  A "cheap" (constant-time) directory
+copy is made on the server.
+
+In a more complex case, suppose the state of my tree (mixed revisions
+and all) is exactly what I want the tag to look like.  In that case, I
+use case (C):
+
+   cd top/of/my/wc
+   svn cp . http://foo.com/repos/project1/tags/milestone-6
+
+I should mention that as a rule, cases (A) and (C) always notice mixed
+revisions when committing.
+
+--
+
+Second, we have a new command:  'svn switch URL [-r rev]'
+
+This command performs an update on your working copy, making it
+reflect a new URL.  This is how you "move" your working copy to a
+branch or tag. 
+
+Really, 'svn up' is just a special case of 'svn switch', where the URL
+is assumed to be the one you already have.
+
+There's nothing magical about this command -- it will be fairly easy
+to write, we hope;  instead of calling svn_repos_dir_delta() on two
+identical paths, the paths will be different now.  The good news is
+that _dir_delta doesn't care one bit.  It examines node-rev-ids
+anyway, and notices relationships between them.  If, when updating
+your working copy from a trunk to a branch, it discovers that 80% of
+your files are already correct, then it won't send them.  (However, if
+you ask to switch your working copy to a completely unrelated URL,
+then dir_delta probably *will* do something as extreme as removing and
+re-checking out a new working copy.)  
+
+Also -- if the user has local mods that conflict with the switch, one
+may very well get an 'obstructed update' error.  An update is an
+update, after all.  Let the user beware; if she wants to switch her WC
+to a branch cleanly, she should make sure her WC is clean to begin
+with.  :-)
+
+------------------------------------------------------------------------
+
+Here is how I plan to handle the four basic cases for `svn copy/move',
+as determined by the type of paths supplied as the SRC and DST
+arguments to the copy command (see the use cases above).
+
+* Case A - SRC is working copy path, DST is working copy path:
+
+   I don't care actually care about this case.  Ben Collins-Sussman
+   (and svn_wc_copy) is handling this. :-)
+
+* Case B - SRC is repository URL, DST is working copy path:
+
+   Treat this is a special checkout of SRC (at the optionally supplied
+   revision, even), except that once the checkout is complete, you
+   have DST scheduled for commit as a copy.
+
+   Moves are disallowed in this case.
+
+* Case C - SRC is working copy path, DST is repository URL:
+
+   To accomplish this operation, we drive the commit crawler/editor in
+   pretty much the same way we would if performing an import, except
+   we are using an existing working copy to determine the items being
+   imported instead of disk dirents.  All items in SRC tree are added,
+   either implicitly (as a side effect of their parents having been
+   added) or explicitly (at the top of the SRC tree, or because they
+   have a different revision from that of their parent).  Also, local
+   modifications to items in SRC are transmitted as part of the commit
+   as well.
+
+   Moves are disallowed in this case.
+
+* Case D - SRC is repository URL, DST is repository URL:
+
+   This is a freaky special commit drive, where we operate purely on
+   our ability to split paths up into components, and then "crawl"
+   those trees based purely on the layout of those path components.
+
+   Actually, for copies this is pretty much a four-line commit:
+
+      e->replace_root (dst)
+        e->add_(file/dir) (dst_basename, copyfrom=src)
+        e->close_(file/dir)
+      e->close_dir
+      e->close_edit
+
+   The part that requires all the path component attention is if this
+   is a move, because we have make sure to anchor the edit at the
+   longest common ancestor of SRC and DST so we can delete SRC as part
+   of the same transaction as our addition of DST.
+
+      e->replace_root (longest_common_path (src, dst))
+        [a bunch of e->replace_dirs to get to dst's parent]
+          e->add_(file/dir) (dst_basename, copyfrom=src)
+          e->close_(file/dir)
+        [a bunch of e->close_dirs back up the stack]
+        [a bunch of e->replace_dirs to get to src's parent]
+          e->delete_entry (src_basename)
+        [a bunch of e->close_dirs back up the stack]
+      e->close_dir
+      e->close_edit
+
+
+

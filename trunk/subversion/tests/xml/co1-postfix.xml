@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="utf-8"?>
+<delta-pkg>
+  <tree-delta>
+    <add name="iota">
+      <file>
+        <text-delta-ref id="iota"/>
+      </file>
+    </add>
+    <add name="A">
+      <dir>
+        <tree-delta>
+          <add name="mu">
+            <file>
+              <text-delta-ref id="mu"/>
+            </file>
+          </add>
+          <add name="B">
+            <dir>
+              <tree-delta>
+                <add name="lambda">
+                  <file>
+                    <text-delta-ref id="lambda"/>
+                  </file>
+                </add>
+                <add name="E">
+                  <dir>
+                    <tree-delta>
+                      <add name="alpha">
+                        <file>
+                          <text-delta-ref id="alpha"/>
+                        </file>
+                      </add>
+                      <add name="beta">
+                        <file>
+                          <text-delta-ref id="beta"/>
+                        </file>
+                      </add>
+                    </tree-delta>
+                  </dir>
+                </add>
+                <add name="F">
+                  <dir>
+                  </dir>
+                </add>
+              </tree-delta>
+            </dir>
+          </add>
+          <add name="C">
+            <dir>
+            </dir>
+          </add>
+          <add name="D">
+            <dir>
+              <tree-delta>
+                <add name="gamma">
+                  <file>
+                    <text-delta-ref id="gamma"/>
+                  </file>
+                </add>
+                <add name="G">
+                  <dir>
+                    <tree-delta>
+                      <add name="pi">
+                        <file>
+                          <text-delta-ref id="pi"/>
+                        </file>
+                      </add>
+                      <add name="rho">
+                        <file>
+                          <text-delta-ref id="rho"/>
+                        </file>
+                      </add>
+                      <add name="tau">
+                        <file>
+                          <text-delta-ref id="tau"/>
+                        </file>
+                      </add>
+                    </tree-delta>
+                  </dir>
+                </add>
+                <add name="H">
+                  <dir>
+                    <tree-delta>
+                      <add name="chi">
+                        <file>
+                          <text-delta-ref id="chi"/>
+                        </file>
+                      </add>
+                      <add name="psi">
+                        <file>
+                          <text-delta-ref id="psi"/>
+                        </file>
+                      </add>
+                      <add name="omega">
+                        <file>
+                          <text-delta-ref id="omega"/>
+                        </file>
+                      </add>
+                    </tree-delta>
+                  </dir>
+                </add>
+              </tree-delta>
+            </dir>
+          </add>
+        </tree-delta>
+      </dir>
+    </add>
+  </tree-delta>
+<text-delta id="iota">U1ZOAAAAGAEYmFRoaXMgaXMgdGhlIGZpbGUgJ2lvdGEnLg==</text-delta>
+<text-delta id="mu">U1ZOAAAAFgEWllRoaXMgaXMgdGhlIGZpbGUgJ211Jy4=</text-delta>
+<text-delta id="lambda">U1ZOAAAAGgEamlRoaXMgaXMgdGhlIGZpbGUgJ2xhbWJkYScu</text-delta>
+<text-delta id="alpha">U1ZOAAAAGQEZmVRoaXMgaXMgdGhlIGZpbGUgJ2FscGhhJy4=</text-delta>
+<text-delta id="beta">U1ZOAAAAGAEYmFRoaXMgaXMgdGhlIGZpbGUgJ2JldGEnLg==</text-delta>
+<text-delta id="gamma">U1ZOAAAAGQEZmVRoaXMgaXMgdGhlIGZpbGUgJ2dhbW1hJy4=</text-delta>
+<text-delta id="pi">U1ZOAAAAFgEWllRoaXMgaXMgdGhlIGZpbGUgJ3BpJy4=</text-delta>
+<text-delta id="rho">U1ZOAAAAFwEXl1RoaXMgaXMgdGhlIGZpbGUgJ3Jobycu</text-delta>
+<text-delta id="tau">U1ZOAAAAFwEXl1RoaXMgaXMgdGhlIGZpbGUgJ3RhdScu</text-delta>
+<text-delta id="chi">U1ZOAAAAFwEXl1RoaXMgaXMgdGhlIGZpbGUgJ2NoaScu</text-delta>
+<text-delta id="psi">U1ZOAAAAFwEXl1RoaXMgaXMgdGhlIGZpbGUgJ3BzaScu</text-delta>
+<text-delta id="omega">U1ZOAAAAGQEZmVRoaXMgaXMgdGhlIGZpbGUgJ29tZWdhJy4=</text-delta>
+</delta-pkg>

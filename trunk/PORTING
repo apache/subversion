@@ -1,0 +1,217 @@
+# The purpose of this document is to provide information for people who:
+# 
+#   - want to know if Subversion works on a particular platform
+#   - are interested in porting Subversion to a particular platform
+# 
+# Entries should look something like this:
+#
+#    arch-company-os:
+#       Client:     Build OK, Check OK.
+#       Filesystem: Failed due to something something    
+#       Last Check: 17 Feb 2001, revision 1729
+#       Tester:     J. Random Hacker <jrandom@example.com>
+#       Notes: 
+#       -- Still cannot build with --wapcapplet-enabled
+#       -- The dependency on the wanglethorpe is really making things
+#          unreasonably hard here. I'm going to try to link against the
+#          frobnicator to see if I can't get the filesystem to
+#          build. -J. Random
+#
+# To discover your canonical host triplet, run ac-helpers/config.guess
+# after autogen.sh.  If you can't discover a canonical host triplet,
+# or for some reason it's not applicable, you can just say something
+# like "RedHat Linux 7.2 (intel) 2.4.9-13 kernel".
+
+
+BSDi 4.0:  # Need host string
+     Client:     Build OK, Check OK
+     Filesystem: ?
+     Last Check: 21 Feb 2001, revision ???
+     Tester:     Joe Orton <joe@manyfish.co.uk>
+     Notes:      using GNU make, haven't tried native make
+
+hppa1.1-hp-hpux10.20:
+     Client:     Build OK, Check OK.
+     Filesystem: ?
+     Last Check: 17 Jan 2001, revision ???
+     Tester:     Branko Cibej <brane@xbc.nu>
+
+i386 OpenBSD 3.0-current:
+     Client:     Build OK, Check OK
+     Filesystem: ?
+     Last Check: 15 February 2002, revision 1302
+     Tester:     Alex Holst <a@area51.dk>
+     Notes:
+     -- "The client builds and passes make checks on i386 OpenBSD
+         3.0-current, with a few hacks to the ac-helper files as gnu
+         patch and gnu diff is not currently available as ports."
+
+i386-unknown-freebsd4.5:
+     Client:     Build OK, Check OK
+     Filesystem: Build OK, Check OK
+     Last Check: 15 Feb 2002, revision 1302
+     Tester:     Ben Collins-Sussman <sussman@collab.net>
+
+i386-unknown-freebsd4.4:
+     Client:     Build OK, Check OK
+     Filesystem: Build OK, Check OK
+     Last Check: 7 November 2001, revision ???
+     Tester:     Ben Collins-Sussman <sussman@collab.net>
+     Notes:
+     -- See the freebsd4.5 entry; conjecture that the rev 1302
+        distribution works on 4.4 as well. 
+
+i386-unknown-freebsd4.3:
+     Client:     Build OK, Check OK
+     Filesystem: Build OK, Check OK
+     Last Check: 7 June 2001, revision ???
+     Tester:     Ben Collins-Sussman <sussman@collab.net>
+     Notes:
+     -- See the freebsd4.5 entry; conjecture that the rev 1302
+        distribution works on 4.3 as well. 
+
+i386-unknown-freebsd4.2:
+     Client:     Build OK, Check OK
+     Filesystem: Build OK, Check OK
+     Last Check: 22 May 2001, revision ???
+     Tester:     Ben Collins-Sussman <sussman@collab.net>
+     Notes:
+     -- See the freebsd4.5 entry; conjecture that the rev 1302
+        distribution works on 4.2 as well. 
+
+i686-pc-cygwin (cygwin 1.3.6 on Win2K):
+     Client:     Build OK, Check OK
+     Filesystem: Build OK, Check OK (? has been true before, still true?)
+     Last Check: 15 February 2002, revision 1302
+     Tester:     Ben Collins-Sussman <sussman@collab.net>
+     Notes:      
+     -- "Of course, I had to manually install the latest autoconf and
+         libtool, but that was no big deal."
+
+i686-pc-linux-gnu:
+     Client:     Build OK, Check OK.
+     Filesystem: ?
+     Last Check: 17 Jan 2001, revision ???
+     Tester:     Branko Cibej <brane@xbc.nu>
+
+i688-pc-win32:
+     Client:     Build OK, Check OK.
+     Filesystem: ?
+     Last Check: 17 Jan 2001, revision ???
+     Tester:     Branko Cibej <brane@xbc.nu>
+
+RedHat Linux 7.2 (intel) 2.4.9-13 kernel:
+     Client:     Build OK
+     Filesystem: ?
+     Last Check: 15 Feb 2002, revision 1302
+     Tester:     Wayne Stidolph <wayne.stidolph@lutris.com>
+     Notes:
+     -- Wayne says "bootstraps fine", which I'm guessing means he was
+        able to check out a working copy with it.
+
+SunOS 5.8 Generic_108528-08 sun4u sparc SUNW:
+     Client:     Build OK, able to check out a working copy
+     Filesystem: ?
+     Last Check: 15 Feb 2002, revision 1302
+     Testers:    Richard Li <richardl@MIT.EDU>,
+                 Gautam Guliani <gautamg@grassroots-tech.com>
+     Notes:      compiled with gcc 2.95.3
+
+Irix 6.5 IP 27:
+     Client:     Build OK
+     Filesystem: ?
+     Last Check: 15 Feb 2002, revision 1302
+     Tester:     Blair Zajac <blair@orcaware.com>
+     Notes:      compiled with gcc 3.0.3
+
+Mac OS X 10.1.2:
+     Client:     Build OK
+     Filesystem: ?
+     Last Check: 15 Feb 2002, revision 1302
+     Testers:    Garrett Rooney <rooneg@electricjellyfish.net>,
+                 Max Horn <max@quendi.de>
+     Notes:      
+     -- Garrett says: "you have to give it --disable-shared or it
+        errors out while building neon".  Benjamin Reed followed up, see
+        http://subversion.tigris.org/servlets/ReadMsg?msgId=59618&listName=dev
+        offering a Neon fix; then Joe Orton followed up saying that
+        latest libtool may take care of this for us, see
+        http://subversion.tigris.org/servlets/ReadMsg?msgId=59622&listName=dev
+     -- These comments from Brian Fitzpatrick <fitz@apple.com> regarding
+        some older builds may also still apply:
+          + haven't tried to build apr with dso enabled.
+          + haven't gotten around to building the svn server either.
+          + needs autoconf 2.52 (get from GNU)
+          + needs libtool 1.4.2 (get from Darwin CVS repository)
+
+NetBSD (### version?):
+     Client:     Build OK, Check ? (awaiting more info)
+     Filesystem: ?
+     Last Check: 15 Feb 2002, revision 1302
+     Tester:     Perry E. Metzger <perry@wasabisystems.com>
+     Notes:
+     -- Perry says: NetBSD seems to fine. You need to install gnu
+        patch to make it work, of course.  (A number of us are now
+        talking seriously about fixing up the NetBSD patch to support
+        the gnu patch features needed by subversion.)
+
+
+rs6000-ibm-aix4.3.2.0:
+     Client:     Build OK, Check OK.
+     Filesystem: ?
+     Last Check: 17 Jan 2001, revision ???
+     Tester:     Branko Cibej <brane@xbc.nu>
+
+sparc-sun-solaris2.6:
+     Client:     Build OK, Check OK.
+     Filesystem: Build OK, Check OK.
+     Last Check: 9 May 2001, revision ???
+     Tester:     Branko Cibej <brane@xbc.nu>
+
+Solaris 8:
+     Client:     Build OK
+     Filesystem: ?
+     Last Check: 15 February 2002, revision 1302
+     Tester:     Sam.Cooper@scisys.co.uk
+     Notes:
+     -- gcc 2.95.2
+     -- checked out a working copy successfully, don't know if it
+        passed "make check" or not, though
+
+Solaris 2.6:
+     Client:     Build OK
+     Filesystem: ?
+     Last Check: 15 February 2002, revision 1302
+     Tester:     Sam.Cooper@scisys.co.uk
+     Notes:
+     -- gcc 2.95.2
+     -- failed to check out a working copy, but think this may be due
+        to running "svn checkout URL -d ../path".  Perhaps the ".." in
+        the target stimulated a universal Subversion bug, i.e., has
+        nothing to do with it being Solaris 2.6.  Have asked Sam
+        Cooper to try it without ".." and let us know what happens.
+        If it is what we think it is, then will file as a separate
+        Subversion issue.
+
+alphaev6-dec-osf5.0:
+     Client:     Build OK, Check ??
+     Filesystem: ???
+     Last Check: 15 Feb 2002, revision 1282 + fix from 1287
+     Tester:     Joe Orton <joe@manyfish.co.uk>
+     Notes:
+     -- configured using --disable-shared
+     -- no python on this machine: no tests run.
+
+unixware7: # Need host string
+     Client:     Build OK, Check OK
+     Filesystem: ?
+     Last Check: 21 Feb 2001, revision ???
+     Tester:     Joe Orton <joe@manyfish.co.uk>
+     Notes:
+     -- had to disable threads in APR
+
+Windows:  # Need separate WinNT vs WinXP vs Win2000, etc?
+     Client:     ?
+     Filesystem: ?
+     Last Check: ?
+     Tester:     ?  Branko?  CMike?

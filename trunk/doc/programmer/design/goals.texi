@@ -1,0 +1,239 @@
+@node Goals
+@chapter Goals
+
+The goal of the Subversion project is to write a version control system
+that takes over CVS's current and future user base @footnote{If you're
+not familiar with CVS or its shortcomings, then skip to
+@ref{Model}}. The first release has all the major features of CVS, plus
+certain new features that CVS users often wish they had.  In general,
+Subversion works like CVS, except where there's a compelling reason to
+be different.
+
+So what does Subversion have that CVS doesn't?
+
+@itemize @bullet
+@item
+It versions directories, file-metadata, renames, copies and
+removals/resurrections.  In other words, Subversion records the changes
+users make to directory trees, not just changes to file contents.
+
+@item
+Tagging and branching are constant-time and constant-space.
+
+@item
+It is natively client-server, hence much more maintainable than CVS.
+(In CVS, the client-server protocol was added as an afterthought.
+This means that most new features have to be implemented twice, or at
+least more than once: code for the local case, and code for the
+client-server case.)
+
+@item
+The repository is organized efficiently and comprehensibly.  (Without
+going into too much detail, let's just say that CVS's repository
+structure is showing its age.)
+
+@item
+Commits are atomic.  Each commit results in a single revision number,
+which refers to the state of the entire tree.  Files no longer have
+their own revision numbers.
+
+@item
+The locking scheme is only as strict as absolutely necessary.
+Reads are never locked, and writes lock only the files being
+written, for only as long as needed.
+
+@item
+It has internationalization support.
+
+@item
+It handles binary files gracefully (experience has shown that CVS's
+binary file handling is prone to user error).
+
+@item
+It has a fully-realized internal concept of users and access
+permissions.
+
+@item
+It takes advantage of the Net's experience with CVS by choosing better
+default behaviors for certain situations.
+
+@end itemize
+
+Some of these advantages are clear and require no further discussion.
+Others are not so obvious, and are explained in greater detail below.
+
+@menu
+* Rename/removal/resurrection support::  
+* Text vs binary issues::       
+* I18N/Multilingual support::   
+* Branching and tagging::       
+* Miscellaneous new behaviors::  
+@end menu
+
+@c -----------------------------------------------------------------------
+@node Rename/removal/resurrection support
+@section Rename/removal/resurrection support
+
+Full rename support means you can trace through ancestry by name
+@emph{or} by entity.  For example, if you say "Give me revision 12 of
+foo.c", do you mean revision 12 of the file whose name is @emph{now}
+foo.c (but perhaps it was named bar.c back at revision 12), or the file
+whose name was foo.c in revision 12 (perhaps that file no longer exists,
+or has a different name now)?  In Subversion, both interpretations are
+available to the user.
+
+@c -----------------------------------------------------------------------
+@node Text vs binary issues
+@section Text vs binary issues
+
+Historically, binary files have been problematic in CVS for two
+unrelated reasons: keyword expansion, and line-end conversion.
+@*
+@itemize @bullet
+@item
+@dfn{Keyword expansion} is when CVS expands "$Revision: 1.1 $" into "$Revision
+1.1$", for example.  There are a number of keywords in CVS: "$Author: sussman $",
+"$Date: 2001/06/04 22:00:52 $", and so on.
+@*
+@item
+@dfn{Line-end conversion} is when CVS gives plaintext files the
+appropriate line-ending conventions for the working copy's platform.
+For example, Unix working copies use LF, but Windows working copies use
+CRLF.  (Like CVS, the Subversion repository stores text files in Unix LF
+format).
+@end itemize
+@*
+Both keyword substitution and line-end conversion are sensible only for
+plain text files.  CVS only recognizes two file types anyway: plaintext
+and binary.  And CVS assumes files are plain text unless you tell it
+otherwise.
+
+Subversion recognizes the same two types.  The question is, how does it
+determine a file's type?  Experience with CVS suggests that assuming
+text unless told otherwise is a losing strategy -- people frequently
+forget to mark images and other opaque formats as binary, then later
+they wonder why CVS mangled their data.  So Subversion assumes a file is
+binary, unless it matches a standard text pattern (.c, .h, .pl, .html,
+.txt, README, and so on).  When necessary, the user can explicitly set
+the type for a file or file pattern.
+
+Text files undergo line-end conversion by default.  Users can turn
+line-end conversion on or off per file pattern, or per file.  Text files
+do @emph{not} undergo keyword substitution by default, on the theory
+that if someone wants substitution and isn't getting it, they'll look in
+the manual; but if they are getting it and didn't want it, they might
+just be confused and not know what to do.  Users can turn substitution
+on or off per project, or per file pattern, or per file.
+
+Both of these changes are done on the client side; the repository does
+not even know about them.
+
+Changes to file type are versioned -- the type is associated with a
+particular revision of the file, and new revisions inherit from previous
+revisions except when told otherwise.
+
+@c -----------------------------------------------------------------------
+@node I18N/Multilingual support
+@section I18N/Multilingual support
+
+Subversion is internationalized -- commands, user messages, and errors
+can be customized to the appropriate human language at build-time (or
+run time, if that's not much harder).
+
+File names and contents may be multilingual; Subversion does not assume
+an ASCII-only universe.  For purposes of keyword expansion and line-end
+conversion, Subversion also understands the UTF-* encodings (but not
+necessarily all of them by the first release).
+
+@c -----------------------------------------------------------------------
+@node Branching and tagging
+@section Branching and tagging
+
+Subversion supports branching and tagging with one efficient operation:
+`clone'.  To clone a tree is to copy it, to create another tree exactly
+like it (except that the new tree knows its ancestry relationship to the
+old one).
+
+At the moment of creation, a clone requires only a small, constant
+amount of space in the repository -- most of its storage is shared with
+the original tree.  If you never commit anything on the clone, then it's
+just like a CVS tag.  If you start committing on it, then it's a branch.
+Voila!  This also implies CVS's "vendor branching" feature, since
+Subversion has real rename and directory support.
+
+Note that from the user's point of view, there are still separate branch
+and tag commands, with the latter initializing the clone as read-only
+(i.e., if a static snapshot is going to become an active line of
+development, one at least wants users to be aware of the change).
+
+@c -----------------------------------------------------------------------
+@node Miscellaneous new behaviors
+@section Miscellaneous new behaviors
+
+@menu
+* Log messages::                
+* Client side diff plug-ins::   
+* Better merging::              
+* Conflicts resolution::        
+@end menu
+
+@c -----------------------------------------------------------------------
+@node Log messages
+@subsection Log messages
+
+Subversion has a flexible log message policy (a small matter, but one
+dear to our hearts).
+
+Log messages should be a matter of project policy, not version control
+software policy.  If a user commits with no log message, then Subversion
+defaults to an empty message.  (CVS tries to require log messages, but
+fails: we've all seen empty log messages in CVS, where the user
+committed with deliberately empty quotes.  Let's stop the madness now.)
+
+@c -----------------------------------------------------------------------
+@node Client side diff plug-ins
+@subsection Client side diff plug-ins
+
+Subversion supports client-side plug-in diff programs.
+
+There is no need for Subversion to have every possible diff mechanism
+built in.  It can invoke a user-specified client-side diff program on
+the two revisions of the file(s) locally.
+
+@c -----------------------------------------------------------------------
+@node Better merging
+@subsection Better merging
+
+Subversion remembers what has already been merged in and what hasn't,
+thereby avoiding the problem, familiar to CVS users, of spurious
+conflicts on repeated merges.
+
+For details, @xref{Merging and Ancestry}.
+
+@c -----------------------------------------------------------------------
+@node Conflicts resolution
+@subsection Conflicts resolution
+
+For text files, Subversion resolves conflicts similarly to CVS, by
+folding repository changes into the working files with conflict markers.
+But, for @emph{both} text and binary files, Subversion also always puts
+the pristine repository revision in one temporary file, and the pristine
+working copy revision in another temporary file.
+
+Thus, in a text conflict, the user has three files readily at hand,
+
+@enumerate
+@item the original working copy file
+@item the repository revision from which the update was taken
+@item the combined file, with conflict markers
+@end enumerate
+
+and in a binary file conflict, the user at least has 1 and 2.
+
+When the conflict has been resolved and the working copy is committed,
+Subversion can automatically remove the temporary pristine files.
+
+A more general solution would allow plug-in merge resolution tools on
+the client side; but this is not scheduled for the first release
+(@pxref{Future}).  Note that users can use their own merge tools anyway,
+since all the original files are available.

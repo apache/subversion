@@ -1,0 +1,39 @@
+This is the Subversion project's vendor branch of the Expat library.
+It was imported with
+
+     cvs -d :pserver:gstein@cvs.tigris.org:/cvs import -ko -I !  \
+         -m "apache-2.0_20000711/src/lib/expat-lite/"            \
+         subversion/expat-lite apache CVS_2_0_20000711
+
+Follow this recipe to upgrade the vendor branch:
+
+   1. Get the latest Apache source tree, as described by
+      http://dev.apache.org/anoncvs.txt: 
+
+          cvs -d :pserver:anoncvs@www.apache.org:/home/cvspublic login
+            (password "anoncvs")
+          cvs -d :pserver:anoncvs@www.apache.org:/home/cvspublic \
+               co -d expat-lite apache-2.0/src/lib/expat-lit
+
+   2. Get rid of its CVS subdirectories and .cvsignore files (you
+      don't want to import those):
+
+          cd expat-lite
+          rm -r .cvsignore CVS
+
+   5. (Re)import the expat-lite subdir, again on the vendor branch,
+      replacing the letters with the appropriate numbers:
+
+          cvs -d :pserver:gstein@cvs.tigris.org:/cvs import -ko -I !  \
+              -m "upgrade to apache-N.M cvs YYYYMMDD expat-lite"      \
+              subversion/expat-lite apache CVS_N_M_YYYYMMDD
+
+
+If you get any conflicts, then do
+
+   cvs checkout -j PREVIOUS_RELEASE_TAG -j NEW_RELEASE_TAG \
+         subversion/expat-lite
+
+resolve the conflict, and commit.  You shouldn't get conflicts unless
+we've made local changes to the Subversion branch of expat-lite, which
+we probably won't have to do.

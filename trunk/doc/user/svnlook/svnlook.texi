@@ -1,0 +1,58 @@
+/* This ain't really TeXinfo.  Please do not attempt to compile this. */
+
+Svnlook is used to examine a txn or revision tree in the various ways a
+hook program might want.  The `svnlook' program produces output that is
+both human- and machine-readable, so hook scripts can easily parse it.
+   
+   svnlook repos [txn|rev] ID  [subcommand ...]
+   
+With no subcommand, the default output contains:
+   
+   - log message
+   - author
+   - date (in revision case)
+   - The tree, in summary form similar to `svnadmin's output.
+   
+Subcommands are:
+   
+   - log:           log message to stdout.
+   - author:        author to stdout
+   - date:          date to stdout (only for revs, not txns)
+   - dirs-changed:  directories in which things were changed
+   - changed:       full change summary: all dirs & files changed
+   - diff:          GNU diffs of changed files, prop diffs too
+
+Default output format:
+
+   AUTHOR - The author, followed by newline.
+   DATE - Timestamp in ISO8601 format ("YYYY-MM-DD hh:mm GMT") in the 
+          revision case, or the empty string in the transaction case.  
+          In either case, this will be followed by a newline.
+   LOGSIZE - Length in bytes of log message, followed by newline.
+   LOG - Log message, followed by newline.
+   TREE - Format is consistent with that used by svnadmin.  Once
+          stabilized, we will document that format here.
+
+Subcommand output formats:
+
+   "log":
+   "author":
+   "date":
+
+      These are trivial.  All are followed by a newline.
+
+   "dirs-changed":
+
+      Newline-separated list of directories in which a file or a
+      directory property was modified.
+
+   "changed":
+
+      Print a summary of the change in the same format used by `svn
+      update'.
+
+   "diff":
+
+      TBD.  Show added and modified files in GNU diff format, property
+      modifications and removed files/dirs in some other (yet
+      undetermined) fashion.      

@@ -1,0 +1,55 @@
+                              RPM GENERATION
+
+
+This directory contains the scripts necessary and sufficient
+to build the subversion*.i386.rpm and subversion*.src.rpm files as a
+non-root user in the user's home (rpms) directory.
+
+This build requires certain other packages to be installed.
+
+1.  Requirements
+
+    *** Note: apache now also contains apr and apr-util packages.
+
+    A. To run:
+
+       db >= 4.0.14
+       expat (comes with RedHat)
+       neon = 0.19.[2-3]
+       apache >= 2.0.34 (includes apr/apr-util) (for subversion-server)
+
+    B. To compile:
+
+       autoconf >= 2.52
+       apache >= 2.0.34
+       apache-devel >= 2.0.34
+       expat-devel
+       libtool >= 1.4.2
+       neon = 0.19.[2-3]
+       python >= 1.5.2 (2.0 or greater to run check programs)
+
+    The non-standard packages apache-2.0.34, db, and neon, can be found at:
+
+    http://summersoft.fay.ar.us/pub/linux/RPMS/i386
+    http://summersoft.fay.ar.us/pub/linux/RPMS/ppc
+    http://summersoft.fay.ar.us/pub/linux/RPMS/src
+
+2.  Building a source and binary RPM
+
+    To build the latest release directly from the subversion repository:
+
+    cd ../..; svn update; cd packages/rpm; make
+
+    To make a particular release:
+
+    cd ../..; svn update -r <ReleaseNumber>; cd packages/rpm; make
+
+
+If you have any questions or problems, please direct them to the
+dev@subversion.tigris.org mailing list.  I'm on that list and will help out
+if I can.
+
+If you can try compiling RPMS on other platforms, please send email to
+david@summersoft.fay.ar.us and I'll help out if I can.  It would be nice to
+see RPMS for Solaris Intel and SPARC, SUSE, Caldera, Mandrake, and other
+platforms that I don't currently have access to.

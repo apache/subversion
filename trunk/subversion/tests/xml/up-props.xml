@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<delta-pkg>
+
+  <tree-delta>
+
+    <open name="iota">
+      <file>
+        <prop-delta>
+          <set name="bat">razorfish</set>
+        </prop-delta>
+      </file>
+    </open>
+
+    <open name="A">
+      <dir>
+        <prop-delta>
+          <set name="ninja">hamster</set>
+          <set name="wings">airplane</set>
+        </prop-delta>
+      </dir>
+    </open>
+
+  </tree-delta>
+
+</delta-pkg>

@@ -1,0 +1,819 @@
+@node Server
+@chapter Server
+
+The term ``server'' is ambiguous, because it has at least two different
+meanings: it can refer to a powerful computer which offers services to
+users on a network, or it can refer to a CPU process designed to receive
+network requests.
+
+In Subversion, however, the @dfn{server} is just a set of libraries that
+implements @dfn{repositories} and makes them available to other
+programs.  No networking is required.
+
+There are two main libraries: the @dfn{Subversion Filesystem} library,
+and the @dfn{Subversion Server} library.
+
+@menu
+* Filesystem::                  The Subversion Filesystem.
+* Server Library::              The Subversion Server interface.
+@end menu
+
+
+@c ----------------------------------------------------------------
+
+@node Filesystem
+@section Filesystem
+
+@menu
+* Filesystem Overview::         
+* API::                         
+* Repository Structure::        
+* Implementation::              
+@end menu
+
+@node Filesystem Overview
+@subsection Filesystem Overview
+
+@itemize @bullet
+@item
+  @b{Requires:}
+  @itemize @minus
+  @item
+some writable disk space
+  @item
+(for now) Berkeley DB library
+  @end itemize
+@item
+  @b{Provides:}
+  @itemize @minus
+  @item
+a repository for storing files
+  @item
+concurrent client transactions
+  @item
+enforcement of user & group permissions
+  @end itemize
+@end itemize
+
+This library implements a hierarchical filesystem which supports atomic
+changes to directory trees, and records a complete history of the
+changes.  In addition to recording changes to file and directory
+contents, the Subversion Filesystem records changes to file meta-data
+(see discussion of @dfn{properties} in @ref{Model}).
+
+@node API
+@subsection API
+
+There are two main files that describe the Subversion filesystem.
+
+First, read the section below (@xref{Repository Structure}.) for a
+general overview of how the fileystem works.
+
+Once you've done this, read Jim Blandy's own structural overview, which
+explains how nodes and revisions are organized (among other things) in
+the filesystem implementation: @file{subversion/libsvn_fs/structure}.
+
+Finally, read the well-documented API in
+@file{subversion/include/svn_fs.h}.
+
+
+@c ------------------------------------
+@node Repository Structure
+@subsection Repository Structure
+
+@menu
+* Schema::                      
+* Bubble-Up Method::            
+* Diffy Storage::               
+@end menu
+
+@node Schema
+@subsubsection Schema
+
+To begin, please be sure that you're already casually familiar with
+Subversion's ideas of files, directories, and revision histories.  If
+not, @xref{Model}.  We can now offer precise, technical descriptions of
+the terms introduced there.
+
+@c This is taken from jimb's very first Subversion spec!
+
+@quotation
+
+A @dfn{text string} is a string of Unicode characters which is
+canonically decomposed and ordered, according to the rules described in
+the Unicode standard.
+
+A @dfn{string of bytes} is what you'd expect.
+
+A @dfn{property list} is an unordered list of properties.  A
+@dfn{property} is a pair @code{(@var{name}, @var{value})}, where
+@var{name} is a text string, and @var{value} is a string of bytes.
+No two properties in a property list have the same name.
+
+A @dfn{file} is a property list and a string of bytes.
+
+A @dfn{node} is either a file or a directory.  (We define a directory
+below.)  Nodes are distinguished unions --- you can always tell whether
+a node is a file or a directory.
+
+A @dfn{node table} is an array mapping some set of positive integers,
+called @dfn{node numbers}, onto @dfn{nodes}.  If a node table maps some
+number @var{i} to some node @var{n}, then @var{i} is a @dfn{valid node
+number} in that table, and @dfn{node @var{i}} is @var{n}.  Otherwise,
+@var{i} is an @dfn{invalid node number} in that table.
+
+A @dfn{directory entry} is a triple @code{(@var{name}, @var{props},
+@var{node})}, where @var{name} is a text string, @var{props} is a
+property list, and @var{node} is a node number.
+
+A @dfn{directory} is an unordered list of directory entries, and a
+property list.
+
+A @dfn{revision} is a node number and a property list.
+
+A @dfn{history} is an array of revisions, indexed by a contiguous range
+of non-negative integers containing 0.
+
+A @dfn{repository} consists of node table and a history.
+
+@end quotation
+
+@c Some definitions: we say that a node @var{n} is a @dfn{direct child}
+@c of a directory @var{d} iff @var{d} contains a directory entry whose
+@c node number is @var{n}. A node @var{n} is a @dfn{child} of a
+@c directory @var{d} iff @var{n} is a direct child of @var{d}, or if
+@c there exists some directory @var{e} which is a direct child of
+@c @var{d}, and @var{n} is a child of @var{e}. Given this definition of
+@c ``direct child'' and ``child,'' the obvious definitions of ``direct
+@c parent'' and ``parent'' hold.
+
+@c In these restrictions, let @var{r} be any repository.  When we refer,
+@c implicitly or explicitly, to a node table without further clarification,
+@c we mean @var{r}'s node table.  Thus, if we refer to ``a valid node
+@c number'' without specifying the node table in which it is valid, we mean
+@c ``a valid node number in @var{r}'s node table''.  Similarly for
+@c @var{r}'s history.
+
+Now that we've explained the form of the data, we make some restrictions
+on that form.
+
+@b{Every revision has a root directory.}  Every revision's node number is
+a valid node number, and the node it refers to is always a directory.
+We call this the revision's @dfn{root directory}.
+
+@b{Revision 0 always contains an empty root directory.}  This baseline
+makes it easy to check out whole projects from the repository.
+
+@b{Directories contain only valid links.}
+Every directory entry's @var{node} is a valid node number.
+
+@b{Directory entries can be identified by name.}
+For any directory @var{d}, every directory entry in @var{d} has a
+distinct name.
+
+@b{There are no cycles of directories.}  No node is its own child.
+
+@b{Directories can have more than one parent.}  The Unix file system
+does not allow more than one hard link to a directory, but Subversion
+does allow the analogous situation.  Thus, the directories in a
+Subversion repository form a directed acyclic graph (@dfn{DAG}), not a
+tree.  However, it would be distracting and unhelpful to replace the
+familiar term ``directory tree'' with the unfamiliar term ``directory
+DAG'', so we still call it a ``directory tree'' here.
+
+@b{There are no dead nodes.}  Every node is a child of some revision's
+root directory.
+
+@c  </jimb>
+
+
+@node Bubble-Up Method
+@subsubsection Bubble-Up Method
+
+This section provides a conversational explanation of how the repository
+actually stores and revisions file trees.  It's not critical knowledge
+for a programmer using the Subversion Filesystem API, but most people
+probably still want to know what's going on ``under the hood'' of the
+repository.
+
+Suppose we have a new project, at revision 1, looking like this (using
+CVS syntax):
+
+@example
+   prompt$ svn checkout myproj
+   U myproj/
+   U myproj/B
+   U myproj/A
+   U myproj/A/fish
+   U myproj/A/fish/tuna
+   prompt$
+@end example
+
+Only the file @file{tuna} is a regular file, everything else in myproj is
+a directory.
+
+Let's see what this looks like as an abstract data structure in the
+repository, and how that structure works in various operations (such
+as update, commit, and branch).
+
+In the diagrams that follow, lines represent parent-to-child connections
+in a directory hierarchy.  Boxes are "nodes".  A node is either a file
+or a directory -- a letter in the upper left indicates which kind.  A
+file node has a byte-string for its content, whereas directory nodes
+have a list of dir_entries, each pointing to another node.
+
+Parent-child links go both ways (i.e., a child knows who all its parents
+are), but a node's name is stored only in its parent, because a node
+with multiple parents may have different names in different parents.
+
+At the top of the repository is an array of revision numbers,
+stretching off to infinity.  Since the project is at revision 1, only
+index 1 points to anything; it points to the root node of revision 1 of
+the project:
+
+@example
+@group
+                    ( myproj's revision array )
+       ______________________________________________________
+      |___1_______2________3________4________5_________6_____...
+          |
+          |
+       ___|_____
+      |D        |
+      |         |
+      |   A     |      /* Two dir_entries, `A' and `B'. */
+      |    \    |
+      |   B \   |
+      |__/___\__|
+        /     \
+       |       \
+       |        \
+    ___|___   ___\____
+   |D      | |D       |
+   |       | |        |
+   |       | | fish   |   /* One dir_entry, `fish'. */
+   |_______| |___\____|
+                  \
+                   \
+                 ___\____
+                |D       |
+                |        |
+                | tuna   |  /* One dir_entry, `tuna'. */
+                |___\____|
+                     \
+                      \
+                    ___\____
+                   |F       |
+                   |        |
+                   |        |   /* (Contents of tuna not shown.) */
+                   |________|
+
+@end group
+@end example
+
+What happens when we modify @file{tuna} and commit?  First, we make a
+new @file{tuna} node, containing the latest text.  The new node is not
+connected to anything yet, it's just hanging out there in space:
+
+@example
+@group
+                         ________
+                        |F       |
+                        |        |
+                        |        |
+                        |________|
+@end group
+@end example
+
+Next, we create a @emph{new} revision of its parent directory:
+
+@example
+@group
+                 ________
+                |D       |
+                |        |
+                | tuna   |
+                |___\____|
+                     \
+                      \
+                    ___\____
+                   |F       |
+                   |        |
+                   |        |
+                   |________|
+@end group
+@end example
+
+We continue up the line, creating a new revision of the next parent
+directory:
+
+@example
+@group
+              ________
+             |D       |
+             |        |
+             | fish   |
+             |___\____|
+                  \
+                   \
+                 ___\____
+                |D       |
+                |        |
+                | tuna   |
+                |___\____|
+                     \
+                      \
+                    ___\____
+                   |F       |
+                   |        |
+                   |        |
+                   |________|
+@end group
+@end example
+
+Now it gets more tricky: we need to create a new revision of the root
+directory.  This new root directory needs an entry to point to the
+``new'' directory A, but directory B hasn't changed at all.  Therefore,
+our new root directory also has an entry that still points to the
+@emph{old} directory B node!
+
+@example
+@group
+       ______________________________________________________
+      |___1_______2________3________4________5_________6_____...
+          |
+          |
+       ___|_____             ________
+      |D        |           |D       |
+      |         |           |        |
+      |   A     |           |   A    |
+      |    \    |           |    \   |
+      |   B \   |           |   B \  |
+      |__/___\__|           |__/___\_|
+        /     \               /     \
+       |    ___\_____________/       \
+       |   /    \                     \
+    ___|__/   ___\____              ___\____
+   |D      | |D       |            |D       |
+   |       | |        |            |        |
+   |       | | fish   |            | fish   |
+   |_______| |___\____|            |___\____|
+                  \                     \
+                   \                     \
+                 ___\____              ___\____
+                |D       |            |D       |
+                |        |            |        |
+                | tuna   |            | tuna   |
+                |___\____|            |___\____|
+                     \                     \
+                      \                     \
+                    ___\____              ___\____
+                   |F       |            |F       |
+                   |        |            |        |
+                   |        |            |        |
+                   |________|            |________|
+
+@end group
+@end example
+
+Finally, after all our new nodes are written, we finish the ``bubble
+up'' process by linking this new tree to the next available revision in
+the history array.  In this case, the new tree becomes revision 2 in the
+repository.
+
+@example
+@group
+       ______________________________________________________
+      |___1_______2________3________4________5_________6_____...
+          |        \
+          |         \__________
+       ___|_____             __\_____
+      |D        |           |D       |
+      |         |           |        |
+      |   A     |           |   A    |
+      |    \    |           |    \   |
+      |   B \   |           |   B \  |
+      |__/___\__|           |__/___\_|
+        /     \               /     \
+       |    ___\_____________/       \
+       |   /    \                     \
+    ___|__/   ___\____              ___\____
+   |D      | |D       |            |D       |
+   |       | |        |            |        |
+   |       | | fish   |            | fish   |
+   |_______| |___\____|            |___\____|
+                  \                     \
+                   \                     \
+                 ___\____              ___\____
+                |D       |            |D       |
+                |        |            |        |
+                | tuna   |            | tuna   |
+                |___\____|            |___\____|
+                     \                     \
+                      \                     \
+                    ___\____              ___\____
+                   |F       |            |F       |
+                   |        |            |        |
+                   |        |            |        |
+                   |________|            |________|
+
+@end group
+@end example
+
+Generalizing on this example, you can now see that each ``revision'' in
+the repository history represents a root node of a unique tree (and an
+atomic commit to the whole filesystem.)  There are many trees in the
+repository, and many of them share nodes.
+
+Many nice behaviors come from this model:
+
+@enumerate
+@item
+@b{Easy reads.}  If a filesystem reader wants to locate revision
+@var{X} of file @file{foo.c}, it need only traverse the repository's
+history, locate revision @var{X}'s root node, then walk down the tree to
+@file{foo.c}.
+@item
+@b{Writers don't interfere with readers.}  Writers can continue to
+create new nodes, bubbling their way up to the top, and concurrent
+readers cannot see the work in progress.  The new tree only becomes
+visible to readers after the writer makes its final ``link'' to the
+repository's history.
+@item
+@b{File structure is versioned.}  Unlike CVS, the very structure of
+each tree is being saved from revision to revision.  File and directory
+renames, additions, and deletions are part of the repository's history.
+@end enumerate
+
+Let's demonstrate the last point by renaming the @file{tuna} to
+@file{book}.
+
+We start by creating a new parent ``fish'' directory, except that this
+parent directory has a different dir_entry, one which points the
+@emph{same} old file node, but has a different name:
+
+@example
+@group
+       ______________________________________________________
+      |___1_______2________3________4________5_________6_____...
+          |        \
+          |         \__________
+       ___|_____             __\_____
+      |D        |           |D       |
+      |         |           |        |
+      |   A     |           |   A    |
+      |    \    |           |    \   |
+      |   B \   |           |   B \  |
+      |__/___\__|           |__/___\_|
+        /     \               /     \
+       |    ___\_____________/       \
+       |   /    \                     \
+    ___|__/   ___\____              ___\____
+   |D      | |D       |            |D       |
+   |       | |        |            |        |
+   |       | | fish   |            | fish   |
+   |_______| |___\____|            |___\____|
+                  \                     \
+                   \                     \
+                 ___\____              ___\____      ________
+                |D       |            |D       |    |D       |
+                |        |            |        |    |        |
+                | tuna   |            | tuna   |    | book   |
+                |___\____|            |___\____|    |_/______|
+                     \                     \         /
+                      \                     \       /
+                    ___\____              ___\____ /
+                   |F       |            |F       |
+                   |        |            |        |
+                   |        |            |        |
+                   |________|            |________|
+@end group
+@end example
+
+From here, we finish with the bubble-up process.  We make new parent
+directories up to the top, culminating in a new root directory with two
+dir_entries (one points to the old ``B'' directory node we've had all
+along, the other to the new revision of ``A''), and finally link the new
+tree to the history as revision 3:
+
+@example
+@group
+       ______________________________________________________
+      |___1_______2________3________4________5_________6_____...
+          |        \        \_________________
+          |         \__________               \
+       ___|_____             __\_____        __\_____
+      |D        |           |D       |      |D       |
+      |         |           |        |      |        |
+      |   A     |           |   A    |      |   A    |
+      |    \    |           |    \   |      |    \   |
+      |   B \   |           |   B \  |      |   B \  |
+      |__/___\__|           |__/___\_|      |__/___\_|
+        /  ___________________/_____\_________/     \
+       |  / ___\_____________/       \               \
+       | / /    \                     \               \
+    ___|/_/   ___\____              ___\____      _____\__
+   |D      | |D       |            |D       |    |D       |
+   |       | |        |            |        |    |        |
+   |       | | fish   |            | fish   |    | fish   |
+   |_______| |___\____|            |___\____|    |___\____|
+                  \                     \             \
+                   \                     \             \
+                 ___\____              ___\____      ___\____
+                |D       |            |D       |    |D       |
+                |        |            |        |    |        |
+                | tuna   |            | tuna   |    | book   |
+                |___\____|            |___\____|    |_/______|
+                     \                     \         /
+                      \                     \       /
+                    ___\____              ___\____ /
+                   |F       |            |F       |
+                   |        |            |        |
+                   |        |            |        |
+                   |________|            |________|
+
+@end group
+@end example
+
+For our last example, we'll demonstrate the way ``tags'' and
+``branches'' are implemented in the repository.
+
+In a nutshell, they're one and the same thing.  Because nodes are so
+easily shared, we simply create a @emph{new} directory entry that points
+to an existing directory node.  It's an extremely cheap way of copying a
+tree; we call this new entry a @dfn{clone}.
+
+Let's go back to our original tree, assuming that we're at revision 6 to
+begin with:
+
+@example
+@group
+       ______________________________________________________
+    ...___6_______7________8________9________10_________11_____...
+          |
+          |
+       ___|_____
+      |D        |
+      |         |
+      |   A     |
+      |    \    |
+      |   B \   |
+      |__/___\__|
+        /     \
+       |       \
+       |        \
+    ___|___   ___\____
+   |D      | |D       |
+   |       | |        |
+   |       | | fish   |
+   |_______| |___\____|
+                  \
+                   \
+                 ___\____
+                |D       |
+                |        |
+                | tuna   |
+                |___\____|
+                     \
+                      \
+                    ___\____
+                   |F       |
+                   |        |
+                   |        |
+                   |________|
+
+@end group
+@end example
+
+Let's ``tag'' directory A.  To make the clone, we create a new dir_entry
+@b{T} in our root, pointing to A's node:
+
+@example
+@group
+       ______________________________________________________
+      |___6_______7________8________9________10_________11_____...
+          |        \
+          |         \
+       ___|_____   __\______
+      |D        | |D        |
+      |         | |         |
+      |   A     | |    A    |
+      |    \    | |    |    |
+      |   B \   | |  B |  T |
+      |__/___\__| |_/__|__|_|
+        /     \    /   |  |
+       |    ___\__/   /  /
+       |   /    \    /  /
+    ___|__/   ___\__/_ /
+   |D      | |D       |
+   |       | |        |
+   |       | | fish   |
+   |_______| |___\____|
+                  \
+                   \
+                 ___\____
+                |D       |
+                |        |
+                | tuna   |
+                |___\____|
+                     \
+                      \
+                    ___\____
+                   |F       |
+                   |        |
+                   |        |
+                   |________|
+
+@end group
+@end example
+
+Now we're all set.  In the future, the contents of directories A and B
+may change quite a lot.  However, assuming we never make any changes to
+directory T, it will @emph{always} point to a particular pristine revision
+of directory A.  (We can use permissions to prevent anyone from writing
+to directory T.)  Thus, T is a tag.
+
+However, if we @emph{do} decide to allow commits in directory T, and now
+our repository tree increments to revision 8, then T becomes a branch.
+Specifically, it's a branch of directory A which ``broke off'' from the
+main line at revision 8.
+
+@node Diffy Storage
+@subsubsection Diffy Storage
+
+You may have been thinking, ``Gee, this bubble up method seems nice, but
+it sure wastes a lot of space.  Every commit to the repository creates
+an entire line of new directory nodes!''
+
+Like many other revision control systems, Subversion stores changes as
+differences.  It doesn't make complete copies of nodes; instead, it
+stores the @emph{latest} revision as a full text, and previous revisions
+as a succession of reverse diffs (the word "diff" is used loosely here
+-- for files, it means vdeltas, for directories, it means a format that
+expresses changes to directories).
+
+
+@c -----------------------
+@node Implementation
+@subsection Implementation
+
+For the initial release of Subversion,
+
+@itemize @bullet
+@item
+The filesystem will be implemented as a library on Unix.
+@item
+The filesystem's data will probably be stored in a collection of .db
+files, using the Berkeley Database library.@footnote{In the future, of
+course, contributors are free modify the Subversion filesystem to
+operate with more powerful SQL database.}  (For more information, see
+@uref{http://www.sleepycat.com, Sleepycat Software}.)
+@end itemize
+
+
+@c ----------------------------------------------------------------
+
+@node Server Library
+@section Server Library
+
+@menu
+* Security::
+@end menu
+
+@c Jimb, Karl:  Maybe we should turn this into a discussion about how
+@c the filesystem will use non-historical properties for internal ACLs,
+@c and how people can add "external" ACL systems via historical
+@c properties...?
+
+
+
+This library no longer exists in the current Subversion design; all
+functionality that it would have provided will come from Apache and
+mod_DAV_SVN.
+
+Only a small part of the spec has been left behind -- mainly to provide
+ideas for the future.
+
+
+@node Security
+@subsection Security
+
+Subversion has two levels of security, both abstracted.
+
+@menu
+* Username Authentication::     
+* Authorization::               
+@end menu
+
+@node Username Authentication
+@subsubsection Username Authentication
+
+First of all, the Subversion filesystem does @emph{not} authenticate
+users -- it never asks a client user to prove his/her identity.
+Instead, authentication is solely the responsibility of the network
+layer.  Every Subversion user @emph{must} have an account in an external
+database that is understood by some network layer.  (@xref{Network
+Layer}.)
+
+For example, for a vanilla Apache network layer, each client user could
+authenticate against a standard Apache access control file.  More
+complex network layers could authenticate against @file{/etc/passwd} or
+a SQL database.
+
+Once the network layer has authenticated the user, it passes three
+arguments to the Subversion server:
+
+@itemize @bullet
+@item
+@b{auth_username} -- the authenticated username
+@item
+@b{auth_method} -- the method in which this user was authenticated
+@item
+@b{auth_domain} -- the domain the user is coming from
+@end itemize
+
+This information is then used to ``authorize'' a client's actions.
+
+
+@node Authorization
+@subsubsection Authorization
+
+By @dfn{authorization}, we mean answering the question:
+
+@quotation
+
+``Is user X allowed to perform action Y on data Z?''
+
+@end quotation
+
+The Subversion filesystem provides a single interface for answering this
+question.
+
+@table @code
+@item str_t svn_authorize (auth_user, auth_method, auth_domain, action, path);
+@end table
+
+@*
+
+This interface is implemented by a server-side plug-in library which is
+free to define any sort of security scheme it wishes.  The return value
+of this function is either NULL (meaning that authorization was denied),
+or @var{username}, where @var{username} is the specific username to use
+when performing the action against the Subversion filesystem.
+
+The first release of Subversion will ship with a plug-in that manages
+this information in a file called `svn_security'; each repository has
+its own copy this file.  It's worth mentioning how this file works.
+
+The `svn_security' file does three things:
+
+@enumerate
+
+@item
+@b{Map authorized usernames to filesystem usernames.}  For example,
+suppose Jim Blandy is able to contact the Subversion server in many
+different ways, using different network layers.  It's important that the
+@emph{same} username be used when talking to the filesystem.  We call
+this username the @dfn{Subversion username} or @dfn{canonical} username.
+Here's an example of this mapping:
+
+@example
+jimb : Jim Blandy :   jim/unix/localhost,  \
+                      jimb/smtp/jimb@@red-bean.com, \
+                      jimb/kerberos/redhat.com, \
+                      jblandy/DAV/red-bean.com 
+@end example
+
+@item
+@b{Define Roles.}  A @dfn{role} is a set of performable actions.  Here
+are some examples of roles:
+
+@example
+visitor : checkout update
+hacker : checkout update commit
+core-programmer : checkout update commit add rm mv
+nitpicker : checkout update annotate
+admin : checkout update commit add rm mv import
+god : all
+offlimits: none
+@end example
+
+@item
+@b{Map roles to users.}  For each canonical username, specify specific
+roles this person has for particular filesystem paths:
+
+@example
+joe : visitor /trunk/gnome : nitpicker /trunk/foo
+kfogel : admin /trunk/subversion : offlimits /trunk/subversion/foo.c
+zeke : hacker /trunk/comp-tools : visitor /trunk/comp-tools/gdb
+@end example
+
+@end enumerate
+
+
+Remember, this is only one example of a back-end implementation of
+@code{svn_authorize ()}.  Programmers are free to write new server-side
+plug-ins that implement different security schemas (for example,
+authorizing against a SQL database.)
+
+

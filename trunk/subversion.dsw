@@ -1,0 +1,788 @@
+Microsoft Developer Studio Workspace File, Format Version 6.00
+# WARNING: DO NOT EDIT OR DELETE THIS WORKSPACE FILE!
+
+###############################################################################
+
+Project: "__build__"=.\subversion.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name __config__
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name apr
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libexpat
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_fs
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_tests_main
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name svn
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name svnadmin
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name svnlook
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name svn_com
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "__check__"=.\svn_check.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name __build__
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name tests_libsvn_delta_deltaparse
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name tests_libsvn_delta_random
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name tests_libsvn_delta_svndiff
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name tests_libsvn_delta_vdelta
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name tests_libsvn_delta_xml_output
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name tests_libsvn_fs_skel
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name tests_libsvn_fs_key
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name tests_libsvn_fs_strings_reps
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name tests_libsvn_fs_fs
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name tests_libsvn_repos_repos
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name tests_libsvn_subr_hashdump
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name tests_libsvn_subr_path
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name tests_libsvn_subr_string
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name tests_libsvn_subr_target
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name tests_libsvn_wc_checkout
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name tests_libsvn_wc_commit
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name tests_libsvn_wc_translate
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "__config__"=.\svn_config.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "apr"=.\apr\apr.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "neon"=.\build\win32\neon.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name libexpat
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "libexpat"=".\expat-lite\libexpat.dsp" - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "libsvn_client"=.\subversion\libsvn_client\libsvn_client.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name __config__
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "libsvn_delta"=.\subversion\libsvn_delta\libsvn_delta.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name __config__
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "libsvn_fs"=.\subversion\libsvn_fs\libsvn_fs.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name __config__
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "libsvn_ra"=.\subversion\libsvn_ra\libsvn_ra.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name __config__
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "libsvn_ra_dav"=.\subversion\libsvn_ra_dav\libsvn_ra_dav.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name __config__
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name neon
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "libsvn_ra_local"=.\subversion\libsvn_ra_local\libsvn_ra_local.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name __config__
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "libsvn_repos"=.\SUBVERSION\LIBSVN_REPOS\libsvn_repos.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name __config__
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "libsvn_subr"=.\subversion\libsvn_subr\libsvn_subr.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name __config__
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "libsvn_tests_main"=.\subversion\tests\libsvn_test_main.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name __config__
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "libsvn_wc"=.\subversion\libsvn_wc\libsvn_wc.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name __config__
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "svn"=.\subversion\clients\cmdline\subversion_client.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name __config__
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name apr
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libexpat
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_client
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_delta
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_subr
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_wc
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_fs
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_repos
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_ra
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_ra_local
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_ra_dav
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "svn_com"=.\subversion\clients\win32\svn_com\svn_com.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name apr
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_client
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_wc
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_subr
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libexpat
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "svnadmin"=.\subversion\svnadmin\svnadmin.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name __config__
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name apr
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libexpat
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_client
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_delta
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_subr
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_wc
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_fs
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_repos
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_ra
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_ra_local
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_ra_dav
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "svnlook"=.\subversion\svnlook\svnlook.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "tests_libsvn_delta_deltaparse"=.\subversion\tests\libsvn_delta\deltaparse_test.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name __config__
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "tests_libsvn_delta_random"=.\subversion\tests\libsvn_delta\random_test.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name __config__
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "tests_libsvn_delta_svndiff"=.\subversion\tests\libsvn_delta\svndiff_test.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name __config__
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "tests_libsvn_delta_vdelta"=.\subversion\tests\libsvn_delta\vdelta_test.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name __config__
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "tests_libsvn_delta_xml_output"=.\subversion\tests\libsvn_delta\xml_output_test.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name __config__
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "tests_libsvn_fs_fs"=.\subversion\tests\libsvn_fs\fs_test.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name __config__
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_fs
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_repos
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_delta
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "tests_libsvn_fs_key"=.\subversion\tests\libsvn_fs\key_test.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name __config__
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_fs
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_repos
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_delta
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "tests_libsvn_fs_skel"=.\subversion\tests\libsvn_fs\skel_test.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name __config__
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "tests_libsvn_fs_strings_reps"=.\subversion\tests\libsvn_fs\strings_reps_test.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name __config__
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_fs
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_repos
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_delta
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "tests_libsvn_repos_repos"=.\subversion\tests\libsvn_repos\repos_test.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name __config__
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name apr
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_fs
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_repos
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_tests_main
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "tests_libsvn_subr_hashdump"=.\subversion\tests\libsvn_subr\hashdump_test.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name __config__
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "tests_libsvn_subr_path"=.\subversion\tests\libsvn_subr\path_test.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name __config__
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_subr
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name apr
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_tests_main
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "tests_libsvn_subr_string"=.\subversion\tests\libsvn_subr\string_test.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name __config__
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_subr
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name apr
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "tests_libsvn_subr_target"=.\subversion\tests\libsvn_subr\target_test.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name __config__
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_subr
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name apr
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "tests_libsvn_wc_checkout"=.\subversion\tests\libsvn_wc\checkout_test.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name __config__
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "tests_libsvn_wc_commit"=.\subversion\tests\libsvn_wc\commit_test.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name __config__
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "tests_libsvn_wc_translate"=.\subversion\tests\libsvn_wc\translate_test.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name __config__
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_wc
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_subr
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name apr
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_tests_main
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Global:
+
+Package=<5>
+{{{
+}}}
+
+Package=<3>
+{{{
+}}}
+
+###############################################################################
+

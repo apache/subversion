@@ -1,0 +1,205 @@
+@node Adds
+@chapter Adds
+
+This section describes how the Subversion client deals with the addition
+of files and directories. 
+
+@menu
+* Adding items::              How to add items to your working copy.
+* Committing additions::      How to add items to the repository.
+* Additions from updates::    When 'update' tries to add things.
+* Replacements::              When you add a previously deleted item.
+@end menu
+
+
+@c ------------------------------------------------------------------
+@node Adding items
+@section Adding items
+
+Adding items consists of two phases:
+
+@enumerate
+@item
+Make your working copy aware of a new object it contains, effectively
+"scheduling" this new object to be added to the repository.
+@item
+Commit the object to the repository.
+@end enumerate
+
+This section describes the first phase.
+
+@table @b
+@item To add a file:  @samp{svn add foo.c}
+
+The file @file{foo.c} is now tracked by your working copy.  The
+@samp{svn status} command will show the file with status code
+@code{A} and at local revision 0 (because it is not yet part of any
+repository revision.)
+
+@item To add a directory: @samp{svn add dirname}
+
+The directory @file{dirname} will be added, but not recursively.  If you
+want to add everything within @file{dirname}, then you can pass the
+@samp{--recursive} flag to @samp{svn add}.  Everything added will
+have status code @code{A} and be at revision 0.
+
+(Note that unlike CVS, adding a directory does @emph{not} effect an
+immediate change in the repository!)
+
+@item To undo additions before committing: @samp{svn revert [items]}
+
+Because added items have not yet been committed to the repository, it's
+easy to make your working copy "forget" that you wanted to add something.
+This command will de-schedule items for addition.  The @samp{svn status}
+command will no longer show them at all.
+
+@end table
+
+
+There are two important exceptions which will @emph{prevent} something
+from being scheduled for addition.
+
+First, you can't schedule an item to be added if it doesn't exist.  The
+@samp{svn add foo} command will check that @file{foo} is an actual
+file or directory before succeeding.
+
+Second, you can't schedule an item to be added if any of its parent
+directories are scheduled for deletion.  This is a sanity check
+performed by @samp{svn add};  it makes no sense to add an item within
+a directory that will be destroyed at commit-time. 
+
+
+@c ------------------------------------------------------------------
+@node Committing additions
+@section Committing additions
+
+If your working copy contains items scheduled for addition and you
+@samp{svn commit} them, they will be copied into the repository and
+become a permanent part of your tree's history.
+
+As usual, your commit will be rejected if any server-side conflicts
+result from your own working copy being out-of-date.
+
+One final rule: you cannot commit an added item if any of its parents
+are scheduled for addition but are not included in the same commit.
+This is because it would be meaningless to commit a new item to the
+repository without a parent to hold that item.  Therefore, to commit
+added items that are nested, you must commit from the @emph{top} of the
+nesting.
+
+For example, recall our old working copy:
+
+@example
+write/Makefile
+      document.c
+      search.c
+      .svn/
+@end example
+
+Say we add a new directory @file{fonts} to the working copy:
+
+@example
+$ mkdir fonts
+$ svn add fonts
+$ svn st
+_   1       (     1)  .
+_   1       (     1)  ./Makefile
+_   1       (     1)  ./document.c
+_   1       (     1)  ./search.c
+A   0       (     1)  ./fonts
+@end example
+
+And say we add two new files within @file{fonts}:
+
+@example
+$ cp /some/path/font1.ttf fonts/
+$ cp /some/path/font2.ttf fonts/
+$ svn add fonts/font1.ttf fonts/font2.ttf
+$ svn st
+_   1       (     1)  .
+_   1       (     1)  ./Makefile
+_   1       (     1)  ./document.c
+_   1       (     1)  ./search.c
+A   0       (     1)  ./fonts
+A   0       (     1)  ./fonts/font1.ttf
+A   0       (     1)  ./fonts/font2.ttf
+@end example
+
+So what happens if we try to commit only @file{font1.ttf}?  The command
+@samp{svn commit fonts/font1.ttf} will fail, because it attempts to
+copy a file to the @file{fonts} directory on the repository -- and no
+such directory exists there!
+
+Thus the correct solution is to commit the parent directory.  This will
+add @file{fonts} to the repository first, and then add its new contents:
+
+@example
+$ svn commit fonts
+Adding   ./fonts
+Adding   ./fonts/font1.ttf
+Adding   ./fonts/font2.ttf
+Commit succeeded.
+@end example
+
+
+
+@c ------------------------------------------------------------------
+@node Additions from updates
+@section Additions from updates
+
+During an update, new files and directories may be added to your working
+copy.  This is no surprise.
+
+The only problems that may occur are those times when the items being
+added have the same names as non-versioned items already present in your
+working copy.  As a rule, Subversion never loses nor hides data in your
+working copy -- versioned or not.  Thus for the update to succeed,
+you'll have to move your unversioned items out of the way.
+
+
+@c ------------------------------------------------------------------
+@node Replacements
+@section Replacements
+
+
+@dfn{Replacement} is when you add a new item that has the same name as
+an item already scheduled for deletion.   Instead of showing both "D"
+and "A" flags simultaneously, an "R" flag is shown.
+
+For example:
+
+@example
+$ svn st
+_   1       (     1)  .
+_   1       (     1)  ./foo.c
+
+$ svn rm foo.c
+$ svn st
+_   1       (     1)  .
+D   1       (     1)  ./foo.c
+
+$ rm foo.c
+$ echo "a whole new foo" > foo.c
+$ svn add foo.c
+$ svn st
+_   1       (     1)  .
+R   1       (     1)  ./foo.c
+@end example
+
+At this point, the replaced item acts like any other kind of addition.
+You can undo the replacement by running @samp{svn remove foo.c} -- and
+the file's status code will revert back to @code{D}.  If the replaced
+item is a directory, you can schedule items within it for addition as
+well.
+
+When a replaced item is committed, the client will first delete the
+original @file{foo.c} from the repository, and then add the "new"
+@file{foo.c}.
+
+Replacements are useful:  the object being replaced can even change
+type.  For example, a file @file{foo} can be deleted and replaced with a
+directory of the same name, or vice versa.
+
+
+
+

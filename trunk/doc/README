@@ -1,0 +1,112 @@
+                      Documentation for Subversion
+                      ============================
+
+Subversion's preferred documentation system is texinfo.  The online
+documentation for texinfo is at
+
+  http://www.gnu.org/manual/texinfo-4.0/html_chapter/texinfo_toc.html
+
+To build particular things, you'll need one or more of:
+
+  * the `makeinfo' from ftp://ftp.gnu.org/pub/gnu/texinfo/texinfo-4.0.tar.gz
+  * the `dvipdf' script from Ghostscript (pipes dvi | ps | Ghostscript)
+
+
+A rough guide:
+
+  programmer/
+                             Documents for Subversion programmers
+  programmer/design/
+                             The Design of Subversion
+  programmer/WritingChangeLogs.txt
+                             A longer version of the info in HACKING
+  user/
+                             Documents for Subversion users
+  user/manual
+                             A manual for users.
+
+
+In general, as we define theoretical client behaviors, please try to
+drop your scratch notes into the user manual.  This document will be a
+"central" place for what will someday end up as a kind of functional
+spec.
+
+
+
+
+-------------- NOTES on Texinfo usage -----------------------------
+
+-------------
+JimB fixed up a lot of our Texinfo problems, here's what he says:
+-------------
+
+Anyway, once I can commit things, here's the scoop:
+
+- Info builds cleanly, so I've removed the --no-verify flag from the
+  makeinfo command.  Any complains can be taken as real problems.
+- The dvi builds without complains about undefined cross references.
+
+
+As far as I can tell, our tools should work for us exactly as we'd
+hope:
+
+- There is no need to list next, prev, and up links in our @node
+  lines.  (Certainly a critical requirement.)
+
+- The Emacs commands can rebuild all our menus automatically and
+  accurately.
+
+- makeinfo will only complain about real problems.
+
+
+The only real problem is that makeinfo's error messages are pretty
+unhelpful.  It often misidentifies the error, so it's not at all
+obvious how to fix a file it doesn't like.  But here are the rules we
+have to follow; I found problems in each of these areas.
+
+- @node and sectioning commands (@chapter, @section, ...) should
+  always come in pairs --- the @node command on one line, and the
+  sectioning command on the very next line.  This goes for the ``top''
+  @node as well, which should be followed by a @top command.
+
+- @node names must be globally unique.  This is an unfortunate
+  property of info, but it's inherent in the format.  Ben had a lot of
+  ``Overview'' nodes.
+
+- @menu commands should be properly formatted.  They should look like
+  this:
+
+    @menu
+    * Filesystem::
+    * Server Library::
+    @end menu
+
+  Not this:
+
+    @menu
+    * Filesystem
+    * Server Library
+    @end menu
+
+  If we always use C-c C-u C-a, this should just work.
+
+- @menu commands should always list the correct nodes.
+
+When these rules are broken, the error messages from makeinfo are
+pretty unhelpful --- bordering on utterly random.  They complain that
+nodes are undefined when they're perfectly clearly correct.
+
+We should always use C-c C-u C-a (`texinfo-all-menus-update') to
+reconstruct a file's menus, instead of editing the menus by hand.
+That will eliminate the bottom two problems.
+
+You can also give a prefix to C-c C-s, which tells it to list the
+@node commands alongside their sectioning commands.  This is helpful
+for finding mismatches.
+
+============================================================================
+JimB also says:
+============================================================================
+
+For defining functions, you should definitely use @deffun or
+@deftypefun, not @itemize nor @table.

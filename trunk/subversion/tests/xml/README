@@ -1,0 +1,4 @@
+Shareable test data for xml-driven code.
+
+Many of these files, such as co1-*.xml, use the standard greek tree
+for testing.  See ../greek-tree.txt.

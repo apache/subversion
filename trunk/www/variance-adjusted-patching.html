@@ -1,0 +1,748 @@
+<html>
+<body text="#000000" bgcolor="#FFFFFF">
+
+<p>
+<hr>  <!-- ====================================================== -->
+<p>
+<h4>Appendix: Variance-Adjusted Patching for Divergent Texts.</h4> 
+<a name="patching">
+
+<p>
+
+Revision control systems that use traditional context diff / unidiff
+format for branch merging tend to fail spuriously in high variance
+situations.  A "high variance" situation is one where the branch text
+differs from the source text by more than roughly 5-10%, counting
+lines changed, deleted, and added against the source.  This appendix
+describes a technique called "variance-adjusted patching", by which
+such applications can be made to succeed, when a common ancestor of
+the source and destination texts is available.
+
+<p>
+
+The problem with straight patch application is that it depends on the
+affected text hunks and their context not having changed significantly
+since source.  They may "float", that is, text may have been inserted
+or deleted around them, thus changing their locations in the target
+file.  But they themselves may not have changed, except for whitespace
+adjustments or other trivial (i.e., automatically ignorable)
+modifications.  If they have changed, the patch application will fail.
+
+<p>
+
+Variance adjustment is the process of transforming a patch to account
+for differences that have arisen in the target text since the patch
+was generated, so that the new patch will be applicable to the new
+target text and yet still have the "same" effect as the old patch.  It
+is, in essense, patching a patch.  For example, suppose a branch B
+diverges from a trunk T, and in an engineer wants to merge the change
+from revision T:18 to T:19 into B:10, creating B:11.  If B:10 is too
+dissimilar to T:18, the merge may fail due to textual conflicts, even
+though there is no logical conflict.  Variance adjustment is about
+changing the diff T:18-T:19 so that it applies cleanly to B:10.  
+
+<p>
+
+This is possible because for any given line that a patch hunk expects
+to see in the target text (e.g., in a context diff, these would be the
+context lines, plus the "before" version of affected lines), the
+revision control system can know that line's history in both source
+and target, if there is a common ancestor to examine.  The process is
+very similar to the calculations done by "<tt>cvs&nbsp;annotate</tt>".
+Informally speaking, one of the following is true for each such line,
+ignoring floating due to out-of-bounds insertion and deletion:
+
+<p>
+
+   <ol type="a">
+      <li><b>The line exists unchanged in both source and target</b>
+      <br>
+      If the line is still present in target and source, that means it
+      has not been removed from either since the common ancestor, or
+      if it was removed, it has been restored.  Nothing need be done
+      to the diff.
+      </li>
+   <p>
+      <li><b>The line has been changed in source but not in target</b>
+      <br>
+      In the diff hunk, the line should be changed to reflect the
+      target's version of the line, so that the diff will be
+      applicable to the target.
+      <p>
+      <i>When we say that the line "has been changed", it just means
+      that a different line appears where this line once appeared.
+      Whether this is because the line has been edited, or because a
+      new line has been inserted in target, does not matter.  (Another
+      way to say it is that it need not matter whether the old version
+      of the line still appears somewhere nearby in target.)  The
+      important thing is that new text appears where the hunk is
+      expecting old text, and that we have a way to change the hunk to
+      expect the new text instead.</i>
+      </li>
+   <p>
+      <li><b>The line has been changed in target but not in source</b>
+      <br>
+      Same as above: in the diff hunk, the line should be changed to
+      reflect the target's version of the line, so that the diff will
+      be applicable to the target.  If this seems counterintuitive,
+      drink the Kool-Aid and read again.
+      </li>
+   <p>
+      <li><b>The line does not exist in target</b>
+      <br>
+      This could be for one of two reasons:
+      <br>
+           <ol>
+           <li>the line is new in source, having been added after
+               target branched, or</li>
+           <li>the line was removed from target after the branch
+               happened</li>
+           </ol>
+      <br>
+      Either way, the line needs to be changed to the "corresponding"
+      line in the target text -- that is, the line that, in target,
+      now occupies the place of the obsolete expected line.  The
+      revision control system has enough information to determine 
+      which of the two cases above applies, and can use that to
+      decide which of the lines currently in target is the best
+      candidate to substitute for the missing line.
+      </li>
+   <p>
+   </ol>
+
+<p>
+
+Note that the case of the line not existing in source is impossible:
+if it doesn't exist in the current source, it certainly can't appear
+in the expected-text portions of the diff.
+
+<p>
+
+Although the patch program can adjust for floating at application
+time, the revision control system can also adjust the line numbers in
+hunks to compensate for any insertions or deletions that have
+happened, in either source or target, outside the areas covered by the
+hunks.  This can result in a patch that applies perfectly, without any
+offset adjustment, to the target as it is known to the revision
+control system.  Of course, uncommitted local edits to the target
+cannot be compensated for in the diff -- we must still rely on the
+patch program's own offset adjustment and fuzz factor to handle those.
+
+<p>
+
+The above rules are an informal explanation of how variance adjustment
+works.  Below, the algorithm is described somewhat more formally, to
+show how the revision control system would do variance adjustment in
+any situation.  Note that the algorithm is actually <i>too</i>
+powerful -- if taken to its logical limits, it can generate patches
+that apply cleanly even when the user would almost certainly prefer a
+conflict.  Thus it's necessary to offer an adjustment selectivity
+level; a good default selectivity would probably allow compensation
+for context variance, but not for variance in expected target lines.
+Anyway, the complete, unselective algorithm is described below, as it
+should be obvious where to attach the selectivity knobs if desired.
+
+<p>
+<!-- ---------- -->
+<strong>The Variance Adjustment Algorithm.</strong>
+
+<p>
+
+Some terminology:
+
+<p>
+
+   <dl>
+      <dt><i>insertion</i></dt><br>
+      <dd>A new line, one that has been added in either source or
+      target since the common ancestor.</dd>
+      <p>
+      <dt><i>deletion</i></dt><br>
+      <dd>A line that has been deleted from either source or target
+      since the common ancestor.</dd>
+      <p>
+      <dt><i>edit</i></dt><br>
+      <dd>A line that has been changed in either source or target
+      since the common ancestor.</dd>
+      <p>
+      <dt><i>out-range</i></dt><br>
+      <dd>An event that happened to either source or target since the
+      common ancestor, but to a line that is not covered in any of 
+      the diff hunks in the patch undergoing variance adjustment.  For
+      example, an <i>out-range insertion</i> means a line was added in
+      some region not directly touched by any of the hunks in the
+      patch; an <i>out-range deletion</i> means a line was deleted
+      from some region not in any hunk.</dd>
+      <p>
+      <dt><i>in-range</i></dt><br>
+      <dd>An event that happened to either source or target since the
+      common ancestor, to a line covered in one of the diff hunks in
+      the patch undergoing variance adjustment.  For example, an
+      <i>in-range insertion</i> means a line was added in a region
+      affected by one of the hunks; an <i>in-range deletion</i> means
+      a line that was deleted from some region affected by a hunk.</dd>
+      <p>
+      <dt><i>context</i></dt><br>
+      <dd>A line included in a hunk for context only -- such lines are
+      not affected by the patch.</dd> 
+      <p>
+      <dt><i>destination line, affected line</i></dt><br>
+      <dd>(Used interchangeably).  A line that is actually affected by
+      a patch.  For lines being edited or deleted, the line is already
+      present in the target text; for lines being added, the line will
+      only be present after the patch is applied.  In all cases it is
+      present in a hunk in the patch.</dd>
+      <p>
+   </dl>
+
+<p>
+
+Description of the scenario:
+
+<p>
+
+Although there is no requirement that there be a "trunk"/"branch"
+relationship between the two lines, we will use that terminology below
+to make the description easier to understand.  In reality, there are
+simply two lines of development with a common ancestory.
+
+<p>
+
+Assume that branch B is rooted in trunk T at T:8; thus,
+T:8&nbsp;==&nbsp;B:1.  The youngest trunk revision is T:20, and the
+youngest branch revision is B:15.  A user with working copy on branch
+B wants to merge in the change T:19-T:20.  For brevity, we will call
+this change P, for "patch".  (We may speak, without loss of
+generality, as if only one file is being patched, as the same
+algorithm holds for every file involved in the merge.)
+
+<p>
+
+There are two problems that prevent the direct application of the
+unadjusted P to B:15.  P, being based on source text T:19,
+
+   <ol>
+   <li>contains certain changes not present in B:15, namely, changes T:9
+   through T:19.
+   </li> 
+   <p>
+   <li>does not contain certain changes present in B:15, namely,
+   changes B:2 through B:15.</li>
+   <p>
+   </ol>
+
+<p>
+
+To adjust P, we first walk over the diff T:8-T:19, adjusting hunks as
+we go.  Each line in T:8-T:19 falls into one of the following
+categories:
+
+   <ol>
+   <li><i>Out-range added line</i>: decrement the line numbers in
+       every hunk in P that comes after the addition.  This undoes the
+       effect of the add, since the add never happened in B.</li>
+   <p>
+   <li><i>Out-range deleted line</i>: increment the line numbers in
+       every hunk in P that comes after the deletion.  This undoes the
+       effect of the deletion, since the deletion never happened in
+       B.</li> 
+   <p>
+   <li><i>Out-range edited line</i>: do nothing.  Out-range edits
+       are irrelevant to P.</li> 
+   <p>
+   <li><i>Added line in context range in P</i>: remove the
+       corresponding line from the context, optionally replacing it
+       with new context <i>based on that region in B:15</i>, and
+       adjust line numbers and mappings appropriately.</li>
+   <p>
+   <li><i>Added line in affected text range in P</i>: this is a
+       dependency problem -- part of the change T:18-T:19 depends on
+       changes introduced to T after B branched.  There are several
+       possible behaviors, depending on what the user wants.  One is
+       to generate an informative error, stating that T:18-T:19
+       depends on some other change (T:N-T:M, where N>=8, M<=18, and
+       M-N&nbsp;==&nbsp;1); the exact revisions can be discovered
+       automatically using the same process as "cvs annotate", though
+       it may take some time to do so.  Another option is to include
+       the change in P, as an insertion of the "after" version of the
+       text, and adjust line numbers and mappings accordingly.  (And
+       if all this isn't sounding a lot like a directory merge
+       algorithm, try drinking more of the Kool-Aid.)  A third option
+       is to include it as an insertion, but with metadata (such as
+       CVS-style conflict markers) indicating that the line attempting
+       to be patched does not exist in B.</li>
+   <p>
+   <li><i>Deleted line that is in-range in P</i>: request another
+       universe -- this situation can't happen in ours.</li>
+   <p>
+   <li><i>In-range edited line</i>: reverse that edit in the "before"
+       version of the corresponding line in the appropriate hunk in
+       P, to obtain the version of the line that will be found in
+       B when P is applied.</li> 
+   <p>
+   </ol>
+
+<p>
+
+Now walk over the diff B:1-B:15, further adjusting P:
+
+<p>
+
+   <ol>
+   <li><i>Out-range added line</i>: increment the line numbers in
+       every hunk in P that comes after the addition.</li>
+   <p>
+   <li><i>Out-range deleted line</i>: decrement the line numbers in
+       every hunk in P that comes after the deletion.</li>
+   <p>
+   <li><i>Out-range edited line</i>: do nothing.  Out-range edits
+       are irrelevant to P.</li> 
+   <p>
+   <li><i>Added line in context range in P</i>: add that line to both
+       sides of the context in the appropriate hunk, adjust line
+       numbers in that hunk and all following hunks.</li>
+   <p>
+   <li><i>Added line in affected text range in P</i>: add that line to
+       the context in P and adjust numbers appropriately.</li>
+   <p>
+   <li><i>Deleted line in-range in P</i>: dependency problem; see
+       "<i>Added line in affected text range in P</i>" in the first
+       pass above.</li>
+   <p>
+   <li><i>In-range edited line</i>: apply that edit to the "before"
+       version of the corresponding line in the appropriate hunk in
+       P.</li> 
+   <p>
+   </ol>
+
+<p>
+
+Now P is ready to apply to B:15, and even has enough context to apply
+over local edits.
+
+<p>
+
+Some of the steps in both loops can be compressed.  For example, when
+the number of added and deleted lines in a hunk is balanced, line
+number adjustment in later hunks is unnecessary; and balance can be
+quickly detected by inspecting only the line numbers of the hunk in
+question.
+
+<p>
+
+The algorithm handles inherent conflicts flexibly without losing
+information.  An "inherent" conflict is one where changes in T:8-T:19
+overlap with changes in B:1-B:15.  They can be either papered over by
+adjusting context and "before" lines as enthusiastically as possible;
+reported as errors, with dependency information included; or both
+sides of the overlap can be handed to the user, surrounded by
+CVS-style conflict markers.  Or if conflict markers are not the
+desired interface, the patch can hold the conflict in some other
+metadata markup (using the patch format comment space), and other
+tools can report on and help resolve it.
+
+<p>
+
+Let's take a brief look at what adjustment does to some patches.
+Here's a simple case, arising from an attempt to port an individual
+change from trunk to branch.  On trunk T, revision 1 looks like this:
+
+<p>
+
+<ul>
+<example>
+<pre>
+int main (int argc, char **argv)
+{
+  /* line minus-five of context */
+  /* line minus-four of context */
+  /* line minus-three of context */
+  /* line minus-two of context */
+  /* line minus-one of context */
+  printf ("Hello, world!\n");
+  /* line plus-one of context */
+  /* line plus-two of context */
+  /* line plus-three of context */
+  /* line plus-four of context */
+  /* line plus-five of context */
+}
+</pre>
+</example>
+</ul>
+
+<p>
+
+A branch B also exists, rooted in the trunk at revision T:1.  On
+branch B, we commit a change to the context (we replace the words with
+numbers), so that B:2 looks like this:
+
+<p>
+
+<ul>
+<example>
+<pre>
+int main (int argc, char **argv)
+{
+  /* line -5 of context */
+  /* line -4 of context */
+  /* line -3 of context */
+  /* line -2 of context */
+  /* line -1 of context */
+  printf ("Hello, world!\n");
+  /* line +1 of context */
+  /* line +2 of context */
+  /* line +3 of context */
+  /* line +4 of context */
+  /* line +5 of context */
+}
+</pre>
+</example>
+</ul>
+
+<p>
+
+Meanwhile on the trunk, we change only the middle line, so that T:2 is
+committed as:
+
+<p>
+
+<ul>
+<example>
+<pre>
+int main (int argc, char **argv)
+{
+  /* line minus-five of context */
+  /* line minus-four of context */
+  /* line minus-three of context */
+  /* line minus-two of context */
+  /* line minus-one of context */
+  printf ("Good-bye, cruel world!\n");
+  /* line plus-one of context */
+  /* line plus-two of context */
+  /* line plus-three of context */
+  /* line plus-four of context */
+  /* line plus-five of context */
+}
+</pre>
+</example>
+</ul>
+
+<p>
+
+Using a traditional context-based approach, an attempt to patch B:2
+with the difference T:1-&gt;T:2 will fail, with a reject file if
+vanilla `<tt>patch</tt>' was used, or with conflict markers if
+`<tt>rcsmerge</tt>' was used:
+
+<p>
+
+<ul>
+<example>
+<pre>
+$ cvs up -j 1.1 -j 1.2 foo.c
+### Purists will note that -j HEAD would have been sufficient; however, ###
+### two -j's more clearly reflects the intent of the example.           ###
+RCS file: /usr/local/cvs/vap0/foo.c,v
+retrieving revision 1.1
+retrieving revision 1.2
+Merging differences between 1.1 and 1.2 into foo.c
+rcsmerge: warning: conflicts during merge
+$ cat foo.c
+int main (int argc, char **argv)
+{
+&lt;&lt;&lt;&lt;&lt;&lt;&lt; foo.c
+  /* line -5 of context */
+  /* line -4 of context */
+  /* line -3 of context */
+  /* line -2 of context */
+  /* line -1 of context */
+  printf ("Hello, world!\n");
+  /* line +1 of context */
+  /* line +2 of context */
+  /* line +3 of context */
+  /* line +4 of context */
+  /* line +5 of context */
+=======
+  /* line minus-five of context */
+  /* line minus-four of context */
+  /* line minus-three of context */
+  /* line minus-two of context */
+  /* line minus-one of context */
+  printf ("Good-bye, cruel world!\n");
+  /* line plus-one of context */
+  /* line plus-two of context */
+  /* line plus-three of context */
+  /* line plus-four of context */
+  /* line plus-five of context */
+&gt;&gt;&gt;&gt;&gt;&gt;&gt; 1.2
+}
+</pre>
+</example>
+</ul>
+
+<p>
+
+Because the context has changed, the change to the middle line cannot
+be found.  If we adjust the patch T:1-&gt;T:2, it would look like
+this:
+
+<p>
+
+<ul>
+<example>
+<pre>
+*** foo.c	2001/05/18 08:15:28	1.1
+--- foo.c	2001/05/18 08:20:59	1.2
+***************
+*** 5,11 ****
+    /* line -3 of context */
+    /* line -2 of context */
+    /* line -1 of context */
+!   printf ("Hello, world!\n");
+    /* line +1 of context */
+    /* line +2 of context */
+    /* line +3 of context */
+--- 5,11 ----
+    /* line -3 of context */
+    /* line -2 of context */
+    /* line -1 of context */
+!   printf ("Goodbye, cruel world!\n");
+    /* line +1 of context */
+    /* line +2 of context */
+    /* line +3 of context */
+</pre>
+</example>
+</ul>
+
+<p>
+
+and would now apply perfectly to B:2, even though this diff never
+existed between any two committed revisions.
+
+<p>
+
+Let's try a slightly more complex case, starting with the same T:1 and
+B:1:
+
+<p>
+
+<ul>
+<example>
+<pre>
+int main (int argc, char **argv)
+{
+  /* line minus-five of context */
+  /* line minus-four of context */
+  /* line minus-three of context */
+  /* line minus-two of context */
+  /* line minus-one of context */
+  printf ("Hello, world!\n");
+  /* line plus-one of context */
+  /* line plus-two of context */
+  /* line plus-three of context */
+  /* line plus-four of context */
+  /* line plus-five of context */
+}
+</pre>
+</example>
+</ul>
+
+<p>
+
+T:2 has some inserted lines near the top:
+
+<p>
+
+<ul>
+<example>
+<pre>
+#include &lt;stdio.h&gt;
+
+int main (int argc, char **argv)
+{
+  /* line minus-five of context */
+  /* line minus-four of context */
+  /* line minus-three of context */
+  /* line minus-two of context */
+  /* line minus-one of context */
+  printf ("Hello, world!\n");
+  /* line plus-one of context */
+  /* line plus-two of context */
+  /* line plus-three of context */
+  /* line plus-four of context */
+  /* line plus-five of context */
+}
+</pre>
+</example>
+</ul>
+
+<p>
+
+And then another change was committed on the trunk, editing the middle
+line, so that T:3 looks like this:
+
+<p>
+
+<ul>
+<example>
+<pre>
+#include &lt;stdio.h&gt;
+
+int main (int argc, char **argv)
+{
+  /* line minus-five of context */
+  /* line minus-four of context */
+  /* line minus-three of context */
+  /* line minus-two of context */
+  /* line minus-one of context */
+  printf ("Good-bye, cruel world!\n");
+  /* line plus-one of context */
+  /* line plus-two of context */
+  /* line plus-three of context */
+  /* line plus-four of context */
+  /* line plus-five of context */
+}
+</pre>
+</example>
+</ul>
+
+<p>
+
+Meanwhile, one complex change has been committed on the branch, so B:2
+looks like this:
+
+<p>
+
+<ul>
+<example>
+<pre>
+int main (int argc, char **argv)
+{
+  /* line minus-five of context */
+  /* line minus-four of context */
+  /* line minus-three of context */
+  /* line -1 of context */
+  printf ("Hello, world!\n");
+  /* newly inserted line of context */
+  /* line plus-one of context */
+  /* line plus-two of context */
+  /* line plus-three of context */
+  /* line plus-four of context */
+  /* line plus-five of context */
+}
+</pre>
+</example>
+</ul>
+
+<p>
+
+Line minus-two of context was removed, line minus-one was changed to
+"-1", and a new line of context was inserted farther down.  Now the
+branch developer wants to merge in the change T:2-T:3.  Unadjusted,
+the patch looks like this:
+
+<p>
+
+<ul>
+<example>
+<pre>
+Index: foo.c
+===================================================================
+RCS file: /usr/local/cvs/vap1/foo.c,v
+retrieving revision 1.2
+retrieving revision 1.3
+diff -c -r1.2 -r1.3
+*** foo.c	2001/05/22 21:17:14	1.2
+--- foo.c	2001/05/22 21:19:42	1.3
+***************
+*** 7,13 ****
+    /* line minus-three of context */
+    /* line minus-two of context */
+    /* line minus-one of context */
+!   printf ("Hello, world!\n");
+    /* line plus-one of context */
+    /* line plus-two of context */
+    /* line plus-three of context */
+--- 7,13 ----
+    /* line minus-three of context */
+    /* line minus-two of context */
+    /* line minus-one of context */
+!   printf ("Good-bye, cruel world!\n");
+    /* line plus-one of context */
+    /* line plus-two of context */
+    /* line plus-three of context */
+</pre>
+</example>
+</ul>
+
+<p>
+
+Following the adjustment algorithm, it looks like this:
+
+<p>
+
+<ul>
+<example>
+<pre>
+Index: foo.c
+===================================================================
+RCS file: /usr/local/cvs/vap1/foo.c,v
+retrieving revision 1.2
+retrieving revision 1.3
+diff -c -r1.2 -r1.3
+*** foo.c	2001/05/22 21:17:14	1.2
+--- foo.c	2001/05/22 21:19:42	1.3
+***************
+*** 5,11 ****
+    /* line minus-four of context */
+    /* line minus-three of context */
+    /* line -1 of context */
+!   printf ("Hello, world!\n");
+    /* newly inserted line of context */
+    /* line plus-one of context */
+    /* line plus-two of context */
+--- 5,11 ----
+    /* line minus-four of context */
+    /* line minus-three of context */
+    /* line -1 of context */
+!   printf ("Good-bye, cruel world!\n");
+    /* newly inserted line of context */
+    /* line plus-one of context */
+    /* line plus-two of context */
+</pre>
+</example>
+</ul>
+
+<p>
+
+Note how the line numbers have been adjusted to compensate for the
+absence of change T:1-T:2 (since the patch we're applying only
+concerns T:2-T:3), and the context has been changed to include the
+difference B:1-B:2.
+
+<p>
+
+Again, this patch never existed between any two revisions, but it
+applies cleanly to B:2.
+
+<p>
+
+The cost of the adjustment algorithm is proportional to the size of
+the diff from branch point to trunk head plus the diff from branch
+point to branch head, plus the size (for time, number of hunks) in the
+diff being adjusted.  This is comparable to the cost of using
+reverse-delta storage in the first place.  Also, the user consuming
+the final patch does not need access to all the intermediate changes
+-- she only needs permissions on the endpoints of the diff, the common
+ancestor of the two lines, and the revision to which the patch is
+being applied.  Intermediate revisions need not be accessible by the
+user.
+
+<p>
+
+Through variance-adjusted patching, any repository that stores
+successive revisions can apply patches even between highly divergent
+branches, as long as there is a common ancestor.
+
+</body>
+</html>

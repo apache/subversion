@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- XML DTD for Subversion's delta packages. -->
+<!ELEMENT delta-pkg (tree-delta, text-delta*)>
+<!ATTLIST delta-pkg
+  base-rev CDATA
+  target-rev CDATA
+>
+
+<!-- Delta types. -->
+<!ELEMENT prop-delta (set | delete)+>
+<!ELEMENT text-delta (#PCDATA)>
+<!ATTLIST text-delta
+  id CDATA #IMPLIED
+>
+<!ELEMENT text-delta-ref EMPTY>
+<!ATTLIST text-delta-ref
+  id CDATA #REQUIRED
+>
+<!ELEMENT tree-delta (add | delete | open)+>
+
+<!-- Delta instructions. -->
+<!ELEMENT add (dir | file)>
+<!ATTLIST add
+  name CDATA #REQUIRED
+>
+<!ELEMENT delete EMPTY>
+<!ATTLIST delete
+  name CDATA #REQUIRED
+  base-rev CDATA #IMPLIED
+>
+<!ELEMENT open (dir | file)>
+<!ATTLIST open
+  name CDATA #REQUIRED
+>
+<!ELEMENT set (#PCDATA)>
+<!ATTLIST set
+  name CDATA #REQUIRED
+>
+
+<!-- Delta targets. -->
+<!ELEMENT dir ((prop-delta, tree-delta?) | (tree-delta, prop-delta?))?>
+<!ATTLIST dir
+  base-rev CDATA #IMPLIED
+  copyfrom-path CDATA #IMPLIED
+  copyfrom-rev CDATA #IMPLIED
+>
+<!ELEMENT file ((prop-delta, (text-delta | text-delta-ref)?) |
+                ((text-delta | text-delta-ref), prop-delta?))?>
+<!ATTLIST file
+  base-rev CDATA #IMPLIED
+  copyfrom-path CDATA #IMPLIED
+  copyfrom-rev CDATA #IMPLIED
+>

@@ -1,0 +1,469 @@
+     Oh Most High and Fragrant Emacs, please be in -*- text -*- mode!
+
+This is the library described in the section "The working copy
+management library" of svn-design.texi.  It performs local operations
+in the working copy, tweaking administrative files and versioned data.
+It does not communicate directly with a repository; instead, other
+libraries that do talk to the repository call into this library to
+make queries and changes in the working copy.
+
+
+The Problem We're Solving.
+==========================
+
+The working copy is arranged as a directory tree, which, at checkout,
+mirrors a tree rooted at some node in the repository.  Over time, the
+working copy accumulates uncommitted changes, some of which may affect
+its tree layout.  By commit time, the working copy's layout could be
+arbitrarily different from the repository tree on which it was based.
+
+Furthermore, updates/commits do not always involve the entire tree, so
+it is possible for the working copy to go a very long time without
+being a perfect mirror of some tree in the repository.
+
+
+One Way We're Not Solving It.
+=============================
+
+Updates and commits are about merging two trees that share a common
+ancestor, but have diverged since that ancestor.  In real life, one of
+the trees comes from the working copy, the other from the repository.
+But when thinking about how to merge two such trees, we can ignore the
+question of which is the working copy and which is the repository,
+because the principles involved are symmetrical.
+
+Why do we say symmetrical?
+
+It's tempting to think of a change as being either "from" the working
+copy or "in" the repository.  But the true source of a change is some
+committer -- each change represents some developer's intention toward
+a file or a tree, and a conflict is what happens when two intentions
+are incompatible (or their compatibility cannot be automatically
+determined).
+
+It doesn't matter in what order the intentions were discovered --
+which has already made it into the repository versus which exists only
+in someone's working copy.  Incompatibility is incompatibility,
+independent of timing.
+
+In fact, a working copy can be viewed as a "branch" off the
+repository, and the changes committed in the repository *since* then
+represent another, divergent branch.  Thus, every update or commit is
+a general branch-merge problem:
+
+   - An update is an attempt to merge the repository's branch into the
+     working copy's branch, and the attempt may fail wholly or
+     partially depending on the number of conflicts.
+
+   - A commit is an attempt to merge the working copy's branch into
+     the repository.  The exact same algorithm is used as with
+     updates, the only difference being that a commit must succeed
+     completely or not at all.  That last condition is merely a
+     useability decision: the repository tree is shared by many
+     people, so folding both sides of a conflict into it to aid
+     resolution would actually make it less useable, not more.  On the
+     other hand, representing both sides of a conflict in a working
+     copy is often helpful to the person who owns that copy.
+
+So below we consider the general problem of how to merge two trees
+that have a common ancestor.  The concrete tree layout discussed will
+be that of the working copy, because this library needs to know
+exactly how to massage a working copy from one state to another.
+
+
+Structure of the Working Copy
+=============================
+
+Working copy meta-information is stored in SVN/ subdirectories,
+analogous to CVS/ sudirs:
+
+  .svn/README                   /* No, it's not this file.  Details below. */
+       format                   /* Contains wc adm format version. */
+       repository               /* Where this stuff came from. */
+       entries                  /* Various adm info for each directory entry */
+       dir-props                /* Working properties for this directory */
+       dir-prop-base            /* Pristine properties for this directory */
+       lock                     /* Optional, tells others this dir is busy */
+       log                      /* Ops log (for rollback/crash-recovery) */
+       text-base/               /* Pristine repos revisions of the files... */
+            foo.c
+            bar.c
+            baz.c
+       props/                   /* Working properties for files in this dir */
+            foo.c                  /* Stores foo.c's working properties
+            bar.c
+            baz.c
+       prop-base/               /* Pristine properties for files in this dir */
+            foo.c                  /* Stores foo.c's pristine properties */
+            bar.c
+            baz.c
+       wcprops/                 /* special 'wc' props for files in this dir*/
+            foo.c
+            bar.c
+            baz.c
+       dir-wcprops              /* 'wc' props for this directory. */
+       auth/                    /* Area to store authentication info */
+       tmp/                     /* Local tmp area */
+            ./                     /* Adm files are written directly here. */
+            text-base/             /* tmp area for base files */
+            prop-base/             /* tmp area for base props */
+            props/                 /* tmp area for props */
+
+`README'
+
+   If someone doesn't know what a Subversion working copy is, this
+   will tell them how to find out more about Subversion.
+
+   Also, the presence of this file means that the entire process of
+   creating the adm area was completed, because this is always the
+   last file created.  Of course, that's no guarantee that someone
+   didn't muck things up afterwards, but it's good enough for
+   existence-checking.
+
+`format'
+
+   Says what version of the working copy adm format this is (so future
+   clients can be backwards compatible easily).
+
+`repository'
+
+   Where this dir came from (syntax TBD).
+
+`entries':
+
+   This file holds revision numbers and other information for this
+   directory and its files, and records the presence of subdirs (but
+   does not record much other information about them, as the subdirs
+   do that themselves).
+
+   The entries file contains an XML expression like this:
+
+      <wc-entries xmlns="http://subversion.tigris.org/xmlns/blah">
+        <entry ancestor="/path/to/here/in/repos" revision="5"/>
+            <!-- no name in above entry means it refers to the dir itself -->
+        <entry name="foo.c" revision="5" text-time="..." prop-time="..."/>
+        <entry name="bar.c" revision="5" text-time="blah..." checksum="blah"/>
+        <entry name="baz.c" revision="6" text-time="..." prop-time="..."/>
+        <entry name="X" new="true" revision="0"/>
+        <entry name="Y" new="true" ancestor="ancestor/path/Y" revision="3"/>
+        <entry name="qux" kind="dir" />
+      </wc-entries>
+
+   Where:
+
+      1. `kind' defaults to "file".
+
+      2. `revision' defaults to the directory's revision (in the
+         directory's own entry, the revision may not be omitted).
+
+      3. `text-time' is *required* whenever the `revision' attribute
+         is changed.  They are inseparable concepts; the textual
+         timestamp represents the last time the working file was known
+         to be exactly equal to the revision it claims to be.
+         `prop-time' is a separate timestamp for the file's
+         properties, with the same relative meaning.
+
+         In the ideal world, when a file is updated to be perfectly in
+         sync with some repository revision, both the `text-time' and
+         `prop-time' timestamps would be identical.  In the real
+         world, however, they're going to be only very close.
+         Remember that the *only* reason we track timestamps in the
+         entries file is to make it easier to detect local
+         modifications.  Thus a "locally modified" check must examine
+         both timestamps if they both exist.
+
+      4. `ancestor' defaults to the directory's ancestor, prepended
+         (according to the repository's path conventions) to the entry
+         name in question.  This directory's ancestor may not be
+         omitted, but conversely, subdirectories may not record
+         ancestry information in their parent's entries file.
+
+
+
+   When a file or dir is added, that is recorded here too, in the
+   following manner:
+
+      1. Added files are recorded with the "new='true'" flag; if they
+         are truly new, their initial revision is 0, otherwise their
+         ancestory is recorded (see files X and Y in the example).
+
+      2. Added dirs get the "new='true'" flag too, but they record
+         their own ancestry.
+
+   Child directories of the current directory are recorded here, but
+   their ancestry information is omitted.  The idea is to make the
+   child's existence known to the current directory; all other
+   information about the child directory is stored in its own .svn/
+   subdir.
+
+`dir-props'
+
+   Properties for this directory.  These are the "working" properties
+   that may be changed by the user.
+
+   For now, this file is in svn hashdump format, because it's
+   convenient and its performance is good enough for now.  May move to
+   Berkeley DB if properties ever get that demanding.  XML is another
+   possibility -- it's less efficient, disk-wise, but on the other
+   hand its easy to parse it streamily, unlike hashdump format, which
+   generally results in a complete data structure in memory before you
+   can do anything at all.
+
+`dir-prop-base'
+
+  Same as `dir-props', except this is the pristine copy;  analagous to
+  the "text-base" revisions of files.  The last up-to-date copy of the
+  directory's properties live here. 
+
+`lock'
+
+   Present iff some client is using this .svn/ subdir for anything.
+   kff todo: I think we don't need read vs write types, nor
+   race-condition protection, due to the way locking is called.  We'll
+   see, though.
+
+`log'
+
+   This file (XML format) holds a log of actions that are about to be
+   done, or are in the process of being done.  Each action is of the
+   sort that, given a log entry for it, one can tell unambiguously
+   whether or not the action was successfully done.  Thus, in
+   recovering from a crash or an interrupt, the wc library reads over
+   the log file, ignoring those actions that have already been done,
+   and doing the ones that have not.  When all the actions in log have
+   been done, the log file is removed.
+
+   Soon there will be a general explanation/algorithm for using the
+   log file; for now, this example gives the flavor:
+
+   To do a fresh checkout of `iota' in directory `.'
+
+      1. add_file() produces the new ./.svn/tmp/.svn/entries, which
+         probably is the same as the original `entries' file since
+         `iota' is likely to be the same revision as its parent
+         directory.  (But not necessarily...)
+
+      2. apply_textdelta() hands window_handler() to its caller.
+
+      3. window_handler() is invoked N times, constructing
+         ./SVN/tmp/iota
+
+      4. finish_file() is called.  First, it creates `log' atomically,
+         with the following items,
+
+            <mv src="SVN/tmp/iota" dst="SVN/text-base/iota">
+            <mv src="SVN/tmp/SVN/entries" dst="SVN/entries">
+            <merge src="SVN/text-base/iota" dst="iota">
+
+         Then it does the operations in the log file one by one.
+         When it's done, it removes the log.
+
+   To recover from a crash:
+
+      1. Look for a log file.  
+
+           A. If none, just "rm -r tmp/*".
+
+           B. Else, run over the log file from top to bottom,
+              attempting to do each action.  If an action turns out to
+              have already been done, that's fine, just ignore it.
+              When done, remove the log file.
+
+   Probably the same routine will be used by finish_file() and in
+   crash recovery.
+
+   Note that foo/.svn/log always uses paths relative to foo/, for
+   example, this:
+   
+       <!-- THIS IS GOOD -->
+       <mv name=".svn/tmp/prop-base/name"
+           dest=".svn/prop-base/name">
+           
+   rather than this:
+
+       <!-- THIS WOULD BE BAD -->
+       <mv name="/home/joe/project/.svn/tmp/prop-base/name"
+           dest="/home/joe/project/.svn/prop-base/name">
+
+   or this:
+
+       <!-- THIS WOULD ALSO BE BAD -->
+       <mv name="tmp/prop-base/name"
+           dest="prop-base/name">
+
+   The problem with the second way is that is violates the
+   separability of .svn subdirectories -- a subdir should be operable
+   independent of its location in the local filesystem.  
+
+   The problem with the third way is that it can't conveniently refer
+   to the user's actual working files, only to files inside .svn/.
+
+`tmp'
+
+   A shallow mirror of the working directory (i.e., the parent of the
+   .svn/ subdirectory), giving us reproducible tmp names.
+
+   When the working copy library needs a tmp file for something in the
+   .svn dir, it uses tmp/thing, for example .svn/tmp/entries, or
+   .svn/tmp/text-base/foo.c.  When it needs a *very* temporary file for
+   something in .svn (such as when local changes during an update), use
+   tmp/.svn/blah$PID.tmp.  Since no .svn/ file ever has a .blah
+   extension, if something ends in .*, then it must be a tmp file.
+
+   See discussion of the `log' file for more details.
+
+`text-base/'
+
+   Each file in text-base/ is a pristine repository revision of that
+   file, corresponding to the revision indicated in `entries'.  These
+   files are used for sending diffs back to the server, etc.
+
+`prop-base/'
+
+   Pristine repos properties for those files, in hashdump format.
+   todo: may also store dirent props here, lots of good formats for
+   mixing those two, would pick one when we implement the dirent
+   props.  Or may store them some other way; think this will be best
+   answered after having the rest of the library working.
+
+`props/'
+
+   The non-pristine (working copy) of each file's properties.  These
+   are where local modifications to properties live.
+
+   Notice that right now, Subversion's ability to handle metadata
+   (properties) is a bit limited:
+
+   1. Properties are not "streamy" the same way a file's text is.
+      Properties are held entirely in memory.
+
+   2. Property *lists* are also held entirely in memory.  Property
+      lists move back and forth between hashtables and our disk-based
+      `hashdump' format.  Anytime a user wishes to read or write an
+      individual property, the *entire* property list is loaded from
+      disk into memory, and written back out again.  Not exactly a
+      paradigm of efficiency!
+
+   In other words, for Subversion 1.0, properties will work
+   sufficiently, but shouldn't be abused.  They'll work fine for
+   storing information like ACLs, permissions, ownership, and notes;
+   but users shouldn't be trying to store 30 meg PNG files.  :)
+
+'wcprops/' and 'dir-wcprops'
+
+   Some properties are never seen or set by the user, and are never
+   stored in the repository filesystem.  They are created by the
+   networking layer (DAV right now) and need to be secretly saved and
+   retrieved, much like a web browser stores "cookies".  Special wc
+   library routines allow the networking layer to get and set these
+   properties.  
+
+   Note that because these properties aren't being versioned, we don't
+   bother to keep pristine forms of them in a 'base' area.  Nor do we
+   paranoid-ly move them through .svn/tmp/ when changing them.  These
+   sorts of behaviors are meant for preserving sacred user data,
+   especially local modifications.  wcprops, on the other hand, are
+   just internal tracking data used by the system, like the 'entries'
+   file.
+
+'auth/'
+
+   This is an area where libsvn_client can store authentication data
+   for future reference.  Without it, you might be prompted for your
+   RA password after every subversion command.  :-)
+
+   The contents of this directory aren't regulated by libsvn_wc; it's
+   up to the various authentication drivers in libsvn_client to make
+   sure they share the namespace politely.  
+
+------------------------
+todo: some loose ends
+
+   1. filename escaping in .svn/entries
+   2. 
+
+
+
+How the client applies an update delta.
+---------------------------------------
+
+Updating is more than just bringing changes down from the repository;
+it's also folding those changes into the working copy.  Getting the
+right changes is the easy part -- folding them in is hard.
+
+Before we examine how Subversion handles this, let's look at what CVS
+does:
+
+   1. Unmodified portions of the working copy are simply brought
+      up-to-date.  The server sends a forward diff, the client applies
+      it.
+
+   2. Locally modified portions are "merged", where possible.  That
+      is, the changes from the repository are incorporated into the
+      local changes in an intelligent way (if the diff application
+      succeeds, then no conflict, else go to 3...)
+
+   3. Where merging is not possible, a conflict is flagged, and *both*
+      sides of the conflict are folded into the local file in such a
+      way that it's easy for the developer to figure out what
+      happened.  (And the old locally-modified file is saved under a
+      temp name, just in case.)
+
+It would be nice for Subversion to do things this way too;
+unfortunately, that's not possible in every case.
+
+CVS has a wonderfully simplifying limitation: it doesn't version
+directories, so never has tree-structure conflicts.  Given that only
+textual conflicts are possible, there is usually a natural way to
+express both sides of a conflict -- just include the opposing texts
+inside the file, delimited with conflict markers.  (Or for binary
+files, make both revisions available under temporary names.)
+
+While Subversion can behave the same way for textual conflicts, the
+situation is more complex for trees.  There is sometimes no way for a
+working copy to reflect both sides of a tree conflict without being
+more confusing than helpful.  How does one put "conflict markers" into
+a directory, especially when what was a directory might now be a file,
+or vice-versa?
+
+Therefore, while Subversion does everything it can to fold conflicts
+intelligently (doing at least as well as CVS does), in extreme cases
+it is acceptable for the Subversion client to punt, saying in effect
+"Your working copy is too out of whack; please move it aside, check
+out a fresh one, redo your changes in the fresh copy, and commit from
+that."  (This response may also apply to subtrees of the working copy,
+of course).
+
+Usually it offers more detail than that, too.  In addition to the
+overall out-of-whackness message, it can say "Directory foo was
+renamed to bar, conflicting with your new file bar; file blah was
+deleted, conflicting with your local change to file blah, ..." and so
+on.  The important thing is that these are informational only -- they
+tell the user what's wrong, but they don't try to fix it
+automatically.
+
+All this is purely a matter of *client-side* intelligence.  Nothing in
+the repository logic or protocol affects the client's ability to fold
+conflicts.  So as we get smarter, and/or as there is demand for more
+informative conflicting updates, the client's behavior can improve and
+punting can become a rare event.  We should start out with a _simple_
+conflict-folding algorithm initially, though.
+
+
+Text and Property Components
+----------------------------
+
+A Subversion working copy keeps track of *two* forks per file, much
+like the way MacOS files have "data" forks and "resource" forks.  Each
+file under revision control has its "text" and "properties" tracked
+with different timestamps and different conflict (reject) files.  In
+this vein, each file's status-line has two columns which describe the
+file's state.
+
+Examples:
+
+  --  glub.c      --> glub.c is completely up-to-date.
+  U-  foo.c       --> foo.c's textual component was updated.
+  -M  bar.c       --> bar.c's properties have been locally modified
+  UC  baz.c       --> baz.c has had both components patched, but a
+                      local property change is creating a conflict.

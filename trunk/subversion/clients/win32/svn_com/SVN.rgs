@@ -1,0 +1,26 @@
+HKCR
+{
+	SVN.1 = s 'SVN Class'
+	{
+		CLSID = s '{18482440-81E5-4F02-89FA-98D7EEA5B12B}'
+	}
+	SVN = s 'SVN Class'
+	{
+		CLSID = s '{18482440-81E5-4F02-89FA-98D7EEA5B12B}'
+		CurVer = s 'SVN.WorkingCopy.1'
+	}
+	NoRemove CLSID
+	{
+		ForceRemove {18482440-81E5-4F02-89FA-98D7EEA5B12B} = s 'SVN Class'
+		{
+			ProgID = s 'SVN.WorkingCopy.1'
+			VersionIndependentProgID = s 'SVN.WorkingCopy'
+			ForceRemove 'Programmable'
+			InprocServer32 = s '%MODULE%'
+			{
+				val ThreadingModel = s 'Both'
+			}
+			'TypeLib' = s '{6B447839-2F08-4F24-A0E7-904793339628}'
+		}
+	}
+}

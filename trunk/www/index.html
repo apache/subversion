@@ -1,0 +1,169 @@
+<TABLE BORDER="0" CELLPADDING="2" WIDTH="98%" BGCOLOR="white">
+<TR>
+<TD WIDTH="100%" BGCOLOR="yellow">
+<font color="red">
+NOTE: Subversion is now self-hosting -- to obtain a working copy, you
+must use Subversion itself, not CVS.  Please see the <a
+href="/project_source.html">Project Source</a> page for instructions on
+getting a pre-packaged bootstrap distribution, and read the
+<a
+href="http://subversion.tigris.org/inconveniences.html">inconveniences
+page</a> to learn about some temporary annoyances and their
+workarounds.  Ask questions on the <a
+href="/servlets/ProjectMailingListList">dev mailing list</a>, or on
+IRC at <b><tt>irc.openprojects.net</tt></b>, channel
+<b><tt>#svn</tt></b>.
+</font>
+</TD>
+</TR>
+
+<TR>
+<TD WIDTH="100%" BGCOLOR="#F0F0F0" ALIGN="CENTER">
+<img src="/subversion.jpg" alt="Subversion"/>
+</TD>
+</TR>
+
+<TR>
+<TD WIDTH="100%" BGCOLOR="#CCCC99"><STRONG><font color="000033"
+FACE="Arial, Helvetica, sans-serif">
+Version Control Rethought
+</font></STRONG></TD>
+</TR>
+
+<TR>
+<TD WIDTH="100%" HEIGHT="100" BGCOLOR="#f0f0f0">
+
+<p>
+The goal of the Subversion project is to build a version control
+system that is a compelling replacement for CVS in the open source
+community.  The software is released under an <a
+href="/license-1.html">Apache/BSD-style</a> open source license.
+See the <a href="/project_status.html">status page</a> for current
+progress.  Our goals are:
+</p>
+
+<ul>  <!-- list of features -->
+
+<li><strong>All current CVS features.</strong>
+    <p>CVS is good, as far as it goes, so we want to keep
+    feature-compatibility: versioning, folding of non-conflicting
+    changes, detection of conflicting changes, branching, merging,
+    historical diffs, log messages, line-by-line history (<tt>cvs
+    annotate</tt>), etc.</p>
+
+    <p>Generally, Subversion's conceptual interface to a particular
+    feature will be as similar to CVS's as possible, except where
+    there's a compelling reason to do otherwise.</p>
+</li>
+
+<li><strong>Directories, renames, and file meta-data are versioned.</strong>
+    <p>Lack of these features is the most common complaint against CVS --
+    basically, CVS only versions file contents.  Subversion will handle
+    directory changes, file renames, and permission and other
+    meta-data changes as well.</p>
+</li>
+
+<li><strong>Symbolic links, etc, are supported</strong>
+    <p>Subversion will handle symbolic links ("shortcuts"), multiple hard
+    links, and other special file types as long as their semantics are
+    compatible with version control.</p>
+</li>
+
+<li><strong>Commits are truly atomic.</strong>
+    <p>No part of a commit takes effect until the entire commit has
+    succeeded.  Revision numbers are per-commit, not per-file.</p>
+</li>
+
+<li><strong>Branching and tagging are cheap (constant time) operations</strong>
+    <p>There is no reason for these operations to be expensive, so they
+    aren't.</p>
+
+    <p>Branches and tags will both be implemented in terms of an
+    underlying "clone" operation.  A clone is just an alias,
+    optionally within the project's namespace, pointing at a specific
+    revision of an existing project.  An clone takes up a small,
+    constant amount of space.  All clones are tags; if you start
+    committing on one, then it's a branch as well.</p>
+
+    <p>(This does away with CVS's "branch-point tagging", by removing the
+    artificial distinction that made branch-point tags necessary in
+    the first place.)</p>
+</li>
+
+<li><strong>Repeated merges are handled gracefully</strong>
+    <p>Subversion will have a way of remembering what has been merged, so
+    that repeated merges from the same source do not require careful
+    human calculation to avoid spurious conflicts (anyone who's done
+    repeated CVS merges knows what we're talking about).</p>
+
+    <p>(There are some theoretical problems with remembering merge
+    sources -- knowing where the merged data came from implies some
+    sort of universal repository registry.  However, our first goal is
+    to make sure that multiple merges from branches made <i>in the
+    same repository as the original project</i> compound gracefully.
+    Remembering merges from remote sources is more difficult, due to
+    the difficulty of distinguishing remote sources, but there are
+    good "90%" solutions that will work in practice).</p>
+</li>
+
+<li><strong>Support for plug-in client side diff programs</strong>
+    <p>Subversion knows how to show diffs for text files, and also gives
+    the user the option to plug in external diff programs for any kind
+    of file.  The external program need merely conform to some simple
+    invocation interface (i.e., "<tt>diffprog file1 file2
+    [file3...]</tt>", where the various files might be different
+    revisions of the same file).</p>
+</li>
+
+<li><strong>Natively client/server</strong>
+    <p> Subversion is designed to be client/server from the beginning;
+    thus avoiding some of the maintenance problems which have plagued
+    CVS.</p>
+</li>
+
+<li><strong>Client/server protocol sends diffs in both directions</strong>
+    <p>The network protocol uses bandwidth efficiently by transmitting
+    diffs in both directions whenever possible (CVS sends diffs from
+    server to client, but not client to server).  The protocol will
+    support compression too, of course.</p>
+</li>
+
+<li><strong>Costs are proportional to change size, not project size</strong>
+    <p>In general, the time required for an Subversion operation is
+    proportional to the size of the <i>changes</i> resulting from that
+    operation, not to the absolute size of the project in which the
+    changes are taking place.  This is a property of the Subversion
+    repository model.</p>
+</li>
+
+<li><strong>Internationalization</strong>
+    <p>Subversion will have I18N support -- commands, user messages, and
+    errors can be customized to the appropriate human language at
+    build-time.  Also, there will be I18N support for the <i>names</i>
+    as well as the contents of versioned entities.
+
+    <p><font color="blue"><strong>NOTE: Internationalization is planned,
+    but may not be present in the first release.</strong></font></p>
+</li>
+
+<li><strong>Progressive multi-lingual support</strong>
+    <p>In order to support keyword expansion and platform-dependent
+    line-ending conversion, CVS makes a distinction between text and
+    binary files, and treats the text files specially.</p>
+
+    <p>Subversion will make the same distinction, but with a more generous
+    notion of what constitutes a text file: not only ASCII, but UTF-*
+    encodings of Unicode too.  Not all such encodings will be handled
+    as text in the first release of Subversion, but the support will
+    become more complete over time.  UTF-8 is the first priority.</p>
+
+    <p><font color="blue"><strong>NOTE:Multi-Lingual support is planned,
+    but may not be present in the first release.</strong></font></p>
+</li>
+
+</ul>  <!-- end list of features -->
+
+<br>
+</table>
+
+<P>

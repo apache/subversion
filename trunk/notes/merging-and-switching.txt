@@ -1,0 +1,334 @@
+
+                SUBVERSION "MERGE" and "SWITCH" FEATURES
+                         Slated for 0.9 (M9)
+
+                     1st draft writ by Karl & Ben,
+                 after much discussion with CMike & Greg.
+
+
+This is primarily a description of the semantics of merge and switch,
+that is, Subversion's user-visible behavior in these operations.  It
+also discusses some implementation issues.
+
+Definitions:
+
+   * Merging is like "cvs update -j -j".  I.e., take the difference
+     between two trees in the repository, and apply it diffily to the
+     working copy.
+
+   * Switching means to switch the working copy from one line of
+     development over to another, like "cvs update -r <TAG|BRANCH>".
+     Of course, Subversion doesn't really have the concept of lines
+     of development, it just has copies.  But if a working directory
+     is based on repository tree T, and you "switch" it to be based on
+     repository tree S, where T and S are similar (related) in some
+     way, that's effectively the same as what CVS does.
+
+
+The General Theory of Updating, Merging, and Switching
+======================================================
+
+Updating, merging, and switching are all very similar operations; each
+command is a request to have the server modify the working copy in
+some way.  Each of these subcommands begins with the client describing
+the "state" of the working copy to the server, and ends with the
+server comparing trees and sending back tree-delta(s) to the client.
+
+Here's the easiest way to understand the three operations: assume that
+X:PATH1 and Y:PATH2 are paths within two repository revisions X and Y,
+which are possibly the same revision.  The server compares the X:PATH1
+and Y:PATH2 and sends the difference to the client.
+
+  * In an update, PATH1 == PATH2 always, and after the tree-delta is
+    applied, the working copy metadata is changed (specifically,
+    revisions are bumped.)
+
+  * In a merge, PATH1 does not necessarily equal PATH2, and we don't
+    touch metadata (except maybe for "genetic" merging properties
+    someday).  In other words, the applied changes end up looking like
+    local modifications.
+
+    [Actually, in a merge PATH1 usually does equal PATH2 -- in fact,
+    that's how it always is in CVS, in a sense.  So I think
+    supporting the PATH1 != PATH2 case in merge should not be a high
+    priority.  -kff]
+
+  * In a switch, PATH1 does not necessarily equal PATH2, and we *do*
+    rewrite the working copy metadata (specifically, revisions are
+    bumped and URLs are changed).
+
+When doing a merge or switch, the user needs to specify at least one
+of the two paths.  There's a risk that the requested path may be
+completely unrelated to the path represented by the working copy --
+and thus might result in seemingly random diffs and conflicts
+everywhere (or in the worst case, a complete deletion and re-checkout
+of the working copy!)  Our plan is to add a heuristic to Subversion
+that asks the question "are these two paths related in some way?"  If
+the test fails, the command aborts and the user receives a friendly
+message:  "PATH1 and PATH2 have no common ancestry.  Are you *sure*
+you want to apply this delta?  If so, re-run the command with the
+--force option."
+
+
+Merging
+=======
+
+Merge is a special case of update, or rather, update is a special case
+of merge.  Simplifying things a bit: when we update, we take the
+differences between path P at revision X versus P at revision Y, and
+apply that difference to the working copy.  Note that since P:X
+reflects the working copy text bases exactly, the server can send
+contextless diffs to bring the working copy to P:Y.  (The
+simplification here is that P:X is really a transaction reflecting the
+working copy's revision mixture, and not necessarily corresponding
+precisely to any single revision tree).
+
+When we merge, we take the differences between path P at revision X
+(X:P) versus path Q at revision Y (Y:Q), and apply them to the working
+copy.
+
+Thus, what distinguishes a merge from an update is that P != Q (is
+there a symbol for "need not equal"?  Maybe "P ?= Q"...)  For that
+matter, X ?= Y.  
+
+X:P and Y:Q are two distinct trees, but in practice, they share a
+common ancestor, so using the difference between them is not a
+ridiculous idea.  But note that svn_repos_dir_delta() is perfectly
+content to express the difference between any two trees, related or
+not.
+
+It is possible, indeed likely, that neither P:X nor Q:Y are an exact
+reflection of the working copy bases, therefore context diffs are used
+to facilitate merging.  
+
+*** Implementation details ***
+
+Heh, two completely different possibilities here:
+
+1. Only the Subversion client generates context diffs and applies them
+   (right now by running 'diff' and 'patch' externally.)  Therefore,
+   the objective is to create *two* sets of fulltext files in some
+   client-side temporary area.  The first fulltext set represents X:P,
+   and the second fulltext set represents Y:Q.  The client then
+   compares the two sets, generates context diffs, and applies the
+   context diffs to the working copy's working files.
+
+   The naive approach would be to just directly ask the server for
+   both sets of fulltexts.  (We still consider this an option!)
+
+   A more complex approach (which we'll attempt) is a network
+   optimization -- it's a way of creating both sets of fulltexts on
+   the client using minimal network traffic:
+
+     * The client builds a transaction on the server that is a
+       "reflection" of the working-copy, mixed revisions and all.
+
+     * The server sends a tree-delta between the reflection and X:P;
+       the client then applies these binary diffs to copies of the
+       working-copy's text-bases in order to reconstruct the fulltexts
+       of X:P.
+
+     * The server sends a tree-delta between X:P and Y:Q; the client
+       then applies these binary diffs to copies of the X:P fulltexts
+       in order to reconstruct the fulltexts of Y:Q.
+
+  And that's it!  We have both sets of fulltexts.  The client
+  generates context diffs between them and patches the working copy.
+
+  As mentioned earlier, this process doesn't touch any working-copy
+  metadata in .svn/.  Only the working files are patched, so the
+  differences appear as local modifications.  At that point, the user
+  manually resolves any conflicts.
+
+
+2. What is the difference between these two commands?
+
+        svn merge -rX:Y <URL>
+        svn diff  -rX:Y <URL> | patch
+
+   :-) ?  If we have an extended patch format, supporting copies,
+   renames, deletes, and properties (like we've been planning), then
+   there isn't formally even any need for a "merge" command -- it's a
+   trivial wrapper around "svn diff" and patch.
+
+   In other words, much of the work described in Plan 1 above has
+   already been done by Philip Martin in his diff editors.  Maybe we
+   should just take advantage of that?  There's still the issue of
+   recording metadata about the merge, but presumably that would come
+   from the extended patch format.
+
+   Random thoughts from Karl:
+
+   I do wonder if it's always desirable to merge properties anyway.
+   Most of the properties we have are subversion-specific, and when I
+   think of the kinds of merges I've done in the past, I can't think
+   of a case where having the property changes merge would be
+   desirable.  Ooooh, but when we use the properties to record what
+   has been previously merged, then having them travel *with* the
+   changes is useful.  For example:
+
+       $ svn merge -r18:20 http://svn.collab.net/repos/branches/rel_1
+       $ svn ci
+           ===> produces .../trunk/whatever/blah, revision 100
+
+       Then the next week:
+
+       $ svn switch http://svn.collab.net/repos/branches/rel_2
+       $ svn merge -r97:153 http://svn.collab.net/repos/trunk/whatever/blah
+
+   In a situation like that, you want the rel_1 branch merge into
+   trunk to travel with the trunk changes you're now merging into
+   rel_2.
+
+
+Switching
+=========
+
+Switching is a more general case of update: instead of comparing the
+working-copy "reflection" to an identical path in some revision, the
+server compares the reflection to some *arbitrary* path in some
+revision.  The user specifies the new path.
+
+The result of the operation is to effectively morph the working copy
+into representing a different location in the tree.  In theory, there
+should be no way to tell the difference between a fresh checkout of
+PATH2 and a working copy that was "switched" to PATH2. 
+
+*** Implementation details  ***
+
+As in update operations, the client begins by building a reflection of
+working-copy state on the server.  The client then specifies a new
+path/revision pair as the target of the tree-delta.
+
+After the client finishes applying the delta, it needs to do a little
+more work than update:  besides bumping all working revisions to some
+uniform value, it needs to rewrite all of the metadata URL ancestry as
+well.
+
+-----------------------------------------------------------------------
+               
+
+Interactions:  A Brave New World
+================================
+
+With the `svn switch' feature, we now have the potential to have
+working copies with "disjoint" subdirs, that is, subdirs whose
+repository url is not simply the subdir's parent's url plus the
+subdir's entry name in the parent.  For example:
+
+   $ svn checkout http://svn.collab.net/repos/trunk -d svn
+   A     ...
+   A     svn/subversion/libsvn_wc
+   A     svn/subversion/libsvn_fs
+   A     svn/subversion/libsvn_repos
+   A     svn/subversion/libsvn_delta
+   A     ...
+   $ cd svn/subversion/libsvn_fs
+   $ svn switch http://svn.collab.net/repos/branches/blue/subversion/libsvn_fs
+   [...]
+   $ 
+
+While svn/subversion/.svn/entries still has an entry for "libsvn_fs",
+if you go into libsvn_fs and look at its own directory url, it is not
+simply a child of the `subversion' directory url, but rather a
+completely different url.  We call this directory "disjoint".
+
+Commits, updates, merges, and further switch commands all need to deal
+sanely with this scenario.
+
+We can assume that even disjoint urls are still all within the same
+repository, because the parent of a disjoint child still has an entry
+for that child, and all working copy walks are guided by entries.  In
+cases where there are wc subdirs from completely different
+repositories, there is unlikely to be such entry linkage.  [NOTE: We
+will still be adding some extra information to the wc to make it
+possible to check for the rare circumstance where the parent has an
+entry for a subdir which (for whatever reason) is the result of a
+checkout from a different repository.  More on that later.]
+
+
+Changes To The Commit Process:
+==============================
+
+Currently, the commit editor driver crawls the working copy, and sends
+local modifications through the editor as it finds them.  But we now
+have to deal with disjoint urls in the working copy.  Because editors
+must be driven depth-first, we cannot send changes against these
+disjoint urls as they are found -- instead, we must begin the edit
+based on a common parent of all the urls involved in the commit.  So
+we must do a preliminary scan of the working copy, discovering all
+local mods, collecting the urls for the mods, and then calculating the
+common path prefix on which to base the edit.
+
+[NOTE: this increases the memory usage of commits by a small amount.
+We formerly interleaved the discovering and sending of local mods, but
+now discovery will happen first and produce a list of changed paths,
+and then sending the changes will happen entirely after that.  The
+benefit is that we preserve commit atomicity even when branches are
+present in the working copy... which is very important!]
+
+
+Changes To The Update Process:
+==============================
+
+Currently, update builds a reflection of the working copy's state on
+the server (the reflection is a Subversion transaction).  Then the
+server sends back a tree delta between the reflection and the desired
+revision tree (usually the head revision, but whatever).  The tree
+delta is expressed by driving an svn_delta_edit_fns_t editor on the
+client side.
+
+If there are disjoint subdirs in the working copy, the reflection
+must, uh, reflect this.  That's pretty easy: that subtree of the
+transaction will simply point to the appropriate revision subtree
+(implementation note: we'll need to add a new function to
+svn_ra_reporter_t, allowing us to link arbitrary path/rev pairs into
+the transaction.)
+
+But getting the reflection right isn't enough.  The revision tree
+we're comparing the reflection with doesn't have the special disjoint
+subtree, so a lot of spurious differences would be sent to the client,
+which the client would then have to ignore, presumably making a
+separate connection later to update the disjoint subdir.  This way
+lies madness... or at least inefficiency.
+
+So instead, we'll create a *second*seaoe transaction, representing the
+target of the update.  In the plain update case, this transaction is
+an exact copy of the revision (and perhaps we'll optimize out the txn
+and just use the revision tree after all).  But in the disjoint subdir
+case, this second txn will also reflect the disjointedness.  In other
+words, when a disjoint directory D is discovered, it will be linked
+into both txn trees -- in the reflection txn, D will be at whatever
+revision(s) it is in the working copy, and in the target txn, it will
+be at the target revision of the update.  This way, the delta between
+the reflection and target txns will apply cleanly to the working copy
+(i.e., svn_repos_dir_delta() will just Do The Right Thing when invoked
+on the two txns).  Voila.
+
+
+Changes to Switch and Merge Process:
+====================================
+
+The switch process still needs to build a working-copy reflection that
+contains possible "disjointed" subtrees.  However, the second
+target-transaction isn't needed at all.  The server can send a delta
+between the reflection and a "pure" path in some revision (presumably
+the path that we're switching to.)  
+
+If the disjointed subtree and the target path both happen to be part
+of the same branch, then svn_repos_dir_delta() won't notice any
+differences at all.  Otherwise, the user should expect to have the
+disjointed section of the working copy be "converted" to a new URL,
+just like the rest of the working copy.
+
+In the case of merges, we continue to build a reflection that contains
+disjointed subtrees.  Again, no need for a second transaction.
+Remember that the reflection is only being built as a shortcut to
+cheaply construct fulltexts of X:P in the client.  The structure of
+the reflection is irrelevant; *any* reflection can be used as a basis
+for sending a tree-delta that constructs X:P, no matter what
+disjointed sections it has.  (Although some reflections may be more
+useful than others!  In the worst case, if the reflection is
+completely unrelated to X:P, then svn_repos_dir_delta() regresses into
+sending fulltexts anyway.)
+

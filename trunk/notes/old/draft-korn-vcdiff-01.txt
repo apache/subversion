@@ -1,0 +1,1587 @@
+[ This paper makes reference to the "Sfio" library.  See
+  http://www.research.att.com/sw/tools/sfio/ for more.  -kff]
+
+
+Network Services Research Lab                  David Korn  and  Kiem-Phong Vo
+                                                                    AT&T Labs
+                                               Submission:     March 09, 2000
+                                               Expiration: September 09, 2000
+
+
+        The VCDIFF Generic Differencing and Compression Data Format
+                       <draft-korn-vcdiff-01.txt>
+
+
+Status of this Memo
+
+    This document is an Internet-Draft and is in full conformance
+    with all provisions of Section 10 of RFC2026.
+
+    Internet-Drafts are working documents of the Internet Engineering
+    Task Force (IETF), its areas, and its working groups.  Note that
+    other groups may also distribute working documents as
+    Internet-Drafts.
+
+    Internet-Drafts are draft documents valid for a maximum of six
+    months and may be updated, replaced, or obsoleted by other
+    documents at any time.  It is inappropriate to use Internet-
+    Drafts as reference material or to cite them other than as
+    "work in progress."
+
+    The list of current Internet-Drafts can be accessed at
+    http://www.ietf.org/ietf/1id-abstracts.txt
+
+    The list of Internet-Draft Shadow Directories can be accessed at
+    http://www.ietf.org/shadow.html.
+
+
+Abstract
+
+    This memo describes a general and efficient data format suitable
+    for encoding compressed and/or differencing data so that they can
+    be easily transported among computers.
+
+Table of Contents:
+
+    1.  Executive Summary ............................................  1
+    2.  Algorithm Conventions ........................................  3
+    3.  Delta Instructions ...........................................  3
+    4.  Vcdiff Encoding Format .......................................  4
+    5.  Instruction Code Tables ...................................... 13
+    6.  Compression and Differencing Algorithms ...................... 18
+    7.  Summary ...................................................... 23
+        ACKNOWLEDGEMENTS ............................................. 23
+        REFERENCES ................................................... 23
+        AUTHOR'S ADDRESS ............................................. 24
+
+
+
+1.  Executive Summary
+
+    Compression and differencing techniques can greatly improve storage
+    and transmission of files and file versions.  Since files are often
+    transported across machines with distinct architectures and performance
+    characteristics, such data should be encoded in a form that is portable
+    and can be decoded with little or no knowledge of the encoders.
+    This document describes Vcdiff, a new compact portable encoding format
+    that is independent of encoding algorithms and also efficient to decode.
+
+    Data differencing is the process of computing a compact and invertible
+
+RFC 1   VCDIFF Generic Differencing and Compression Data Format   March 2000
+
+
+    encoding of a "target file" given a "source file".  Data compression
+    is similar but without the use of source data.  The UNIX utilities diff,
+    compress, and gzip are well-known examples of data differencing and
+    compression tools.  For data differencing, the computed encoding is
+    called a "delta file", and, for data compression, it is called
+    a "compressed file".  Delta and compressed files are good for storage
+    and transmission because they are often smaller than the originals.
+
+    Data differencing and data compression are traditionally treated
+    as distinct types of data processing.  However, compression can be
+    thought of as a special case of differencing in which the source
+    data is empty. This blending of differencing and compression was first
+    introduced in the Vdelta technique [1] by Korn and Vo.  The basic idea
+    is to unify the string parsing scheme used in the Lempel-Ziv'77 style
+    compressors [2], and the block-move technique of Tichy [3].  Loosely
+    speaking, this works as follows:
+
+        a. Concatenate source and target data.
+        b. Parse the data from left to right just like LZ'77 but
+	   make sure that a parsed segment starts target data.
+        c. Start to output when reaching target data.
+
+    Parsing is based on string matching algorithms such as suffix trees [4]
+    or hashing with different time and space performance characteristics.
+    Vdelta uses a new string matching algorithm that performs competitive
+    to other techniques [5].  However, even with a memory-efficient and fast
+    string matching algorithm, the computing resource requirements can be
+    prohibitive for processing large files. The standard way to deal with
+    this is to partition input files into "windows" to be processed
+    separately. Here, except for some unpublished work by Vo, little has
+    been done on designing effective windowing schemes.  Current techniques,
+    including Vdelta, simply use windows of the same size with corresponding
+    addresses across source and target files.
+
+    String matching and windowing algorithms have large influence on the
+    compression rate of delta and compressed files. However, it is desirable
+    to have a portable encoding format that is independent of such algorithms.
+    This enables construction of client-server applications in which a server
+    may serve clients with unknown computing characteristics.  Unfortunately,
+    all current differencing and compressing tools, including Vdelta, fall
+    short in this resspect. Their storage formats are closely intertwined
+    with the implemented algorithms.
+
+    The encoding format Vcdiff proposed here addresses the above issues.
+    Vcdiff achieves the below characteristics:
+
+	Output compactness:
+            The basic encoding format compactly represents compressed or delta
+	    files. In specific cases, applications can further extend it with
+	    "secondary encoders" (e.g., a Huffman or arithmetic encoder) to
+	    achieve more compression.
+	Data portability:
+	    The basic encoding format is free from byte order and word size
+	    issues for integer representations.
+    	Algorithm genericity:
+	    The decoding algorithm for the basic encoding format is independent
+	    from string matching and windowing algorithms.
+    	Decoding efficiency:
+	    The decoding algorithm for the basic encoding format runs in time
+	    proportional to the size of the target file and uses space
+
+                                   -2-
+
+RFC 1   VCDIFF Generic Differencing and Compression Data Format   March 2000
+
+
+	    proportional to the maximal window size.
+
+    The Vcdiff data format and the algorithms for decoding data shall be
+    described next.  Since Vcdiff treats compression as a special case of
+    differencing, we shall use the term "delta file" to indicate the
+    compressed output for both cases.
+
+
+2. Algorithm Conventions
+
+    Algorithms to encode and decode the Vcdiff data format will be presented
+    in the ANSI-C language. To ease the presentation, we shall generally omit
+    error checking. The below conventions will be observed:
+    
+	a. Tokens with all upper cases letters will be C macros.
+	b. Variables with capitalized names are global.
+        c. Code fragments will be presented with line numbers to be used
+	   in the subsequent COMMENTS sections.
+
+    Data will be encoded in byte units.  For portability, control data
+    generated by Vcdiff shall be limited to the lower eight bits of a byte
+    even on machines with larger bytes. The bits in a byte are named from
+    right to left so that the first bit has the lowest value, 1<<0 or 1,
+    and the eighth bit has value 1<<7 or 128.
+
+    To facilitate the algorithms, we shall assume a few types and functions
+    for I/O on streams.  To be definite, we shall use interfaces similar to
+    that provided in the Sfio library. Below are descriptions of some of
+    these types and functions. Others can be found in reference [6].
+
+	uchar_t:
+	    This is the type "unsigned char".
+
+	int_t:
+	    This is the largest integer type on the platform in use.
+
+	Sfio_t:
+	    This is the type of a stream.
+
+	Sfio_t* sfstropen(uchar_t* buf, int n):
+	    This is not an Sfio function but it can be easily implemented
+	    on top of the Sfio primitive sfnew(). sfstropen() creates a stream
+	    from a given buffer with a given size. We shall assume that such
+	    a stream is both readable and writable. As with Sfio, a write stream
+	    will extend the buffer as necessary to accomodate output data.
+
+
+3.  Delta Instructions
+
+    A target file is partitioned into non-overlapping sections or windows
+    to be processed separately. A target window T of length n may be
+    compared against some source data segment S of length m.  Such a source
+    data segment may come from some earlier part of the target file or
+    it may come from the source file, if there is one. It is assumed that
+    there is sufficient memory so that both T and S can be processed
+    in main memory.
+
+    For string processing, we treat S and T as substrings of a superstring U
+    formed by concatenating T and S like this:
+
+
+                                   -3-
+
+RFC 1   VCDIFF Generic Differencing and Compression Data Format   March 2000
+
+
+        s[0]s[1]...s[m-1]t[0]t[1]...t[n-1]
+
+    The index of a byte in S or T is referred to by its location in U.
+    For example, T[i] is referred to as U[m+i].
+
+    The instructions to encode and direct the reconstruction of a target
+    window are called delta instructions.  There are three types:
+
+	ADD:
+            This instruction has two arguments, a size s and a sequence of
+	    s bytes to be copied to reconstruct the target window.
+	COPY:
+            This instruction has two arguments, a size s and an address p
+	    in the string U. The arguments specify the substring of U that
+	    must be copied. We shall assert that such a substring must be
+	    entirely contained in either S or T.
+	RUN:
+            This instruction has two arguments, a size s and a byte c that
+	    will be repeated s times.
+
+
+    Below are example source and target strings and the delta instructions
+    that encode the target string in terms of the source string.
+
+        a b c d e f g h i j k l m n o p
+        a b c d w x y z e f g h e f g h e f g h e f g h z z z z
+
+        COPY  4, 0
+        ADD   4, w x y z
+        COPY  4, 4
+        COPY 12, 24
+	RUN   4, z
+
+    Note that the third COPY instruction copies data from T itself since
+    address 24 is position 8 in T.  In addition, parts of the data to be
+    copied by this instruction will be reconstructed during its execution.
+    This allows efficient encoding of periodic sequences, i.e., sequences
+    with regularly repeated subsequences. The RUN instruction is a compact
+    way to encode a sequence repeating the same byte even though such
+    a sequence can be thought of as a periodic sequence with period 1.
+
+
+4.  Vcdiff Encoding Format
+
+    A large target file is partitioned into non-overlapping sections called
+    "target windows". In practice, window sizes should be chosen so that
+    each window can be completely processed in memory during both encoding
+    and decoding.  A target window may be compared against some source data
+    segment or none. In the compression case, such a source segment would
+    be from some earlier part of the target file while, for differencing,
+    it may also be from the source file.
+
+
+
+
+4.1 Delta File Layout
+
+    A Vcdiff delta file is organized into sections as follows:
+
+                4-byte header
+
+                                   -4-
+
+RFC 1   VCDIFF Generic Differencing and Compression Data Format   March 2000
+
+
+                Section 1
+                Section 2
+		...
+
+    	Header:
+	    The header of a delta file consists of 4 bytes to identify it as
+	    a Vcdiff delta file. The first three bytes are: 0xd6, 0xc3, 0xc4,
+	    i.e., the ASCII letters 'V', 'C' and 'D' or-ed with the eighth bit.
+	    The fourth byte indicates a version number which is currently 0.
+
+    	Sections:
+	    Following the 4-byte header are a number of sections. Each section
+	    encodes either an instruction code table (Section 5) or a window.
+	    Each section starts with an indicator byte. If the 8th bit of this
+	    byte is on, the section encodes an instruction table; otherwise,
+	    it encodes a window. The remaining bits of this byte are used to
+	    encode other information as necessary.
+
+
+4.1.1 The Format of a Window
+
+    Each window is organized as below. Note that items bracketed are present
+    only when certain corresponding bits in the indicator byte are on.
+
+		Indicator byte
+		Length of target window
+		Length of instruction dataset
+		Length of raw dataset
+		[Index of code table]
+		[Secondary instruction compressor]
+		[Length of compressed instruction dataset]
+		[Secondary data compressor]
+		[Length of compressed raw dataset]
+		[Source segment size]
+		[Source segment position]
+		Instruction dataset
+		Raw dataset
+
+    	Indicator byte:
+	    The bits of the indicator byte for a window are as follows:
+
+		0  T  I  D  WT  WS  X  X
+
+	    0:	This is the 0-bit indicating that this section is a window
+		of data to be decoded.
+
+	    T:	This bit, if on, indicates that a non-default instruction
+		code table should be used for decoding. In this case, the
+		item [Index of code table] is a single byte indicating the
+		index of this code table.
+
+	    I:	This bit, if on, indicates that the instruction dataset
+		has been compressed with a secondary compressor. In this
+		case, the item [Secondary instruction compressor] is a single
+		byte indicating the secondary compressor while the item
+		[Length of compressed instruction dataset] has the length
+		of the compressed instruction dataset encoded as a
+		variable-sized integer.
+
+	    D:	This bit is similar to the I-bit but it is for the raw
+
+                                   -5-
+
+RFC 1   VCDIFF Generic Differencing and Compression Data Format   March 2000
+
+
+		dataset.
+
+	    WT:	This bit, if on, indicates that a source data segment was
+		used to compare the target window with. Further, this source
+		segment is from an earlier part of the target file. In this
+		case, the size and position of the source segment are given
+		in [Source segment size] and [Source segment position].
+		Both of these items are encoded as variable-sized integers.
+
+	    WS: This bit is similar to WT but, if on, indicates that the
+		source data segment is from the source file.
+
+	    X:	These bits are currently unused.
+
+    	Length of target window:
+	    This is a variable-sized integer indicating the size of the
+	    target window.
+
+	Lengths of instruction and raw datasets:
+	    The delta instructions ADD and RUN have associated raw data
+	    (unmatched bytes for ADD and the repeating byte for RUN).
+	    The Vcdiff encoding format maintains two separate datasets,
+	    one for the raw data and one for the instructions. The lengths
+	    of the "instruction dataset" and the "raw dataset" are stored
+	    respectively as two variable-sized integers.
+
+    	Instruction dataset:
+	    This is the set of bytes that define the delta instructions.
+	    If I was 1, the dataset has been encoded by the indicated
+	    secondary encoder.
+
+        Raw dataset:
+	    This is the set of raw data accompanying the ADD and RUN
+	    instructions.  If D was 1, the dataset has been encoded
+	    by the indicated secondary encoder.
+
+
+
+4.1.2 Processing a Delta File
+
+    Below is the basic algorithm to process a delta file:
+
+     1. sfgetc(Delta);
+     2. sfgetc(Delta);
+     3. sfgetc(Delta);
+     4. sfgetc(Delta);
+
+     6. for(;;)
+     7. {   if((indi = sfgetc(Delta)) < 0)
+     8.          break;
+     9.     if((indi & (1<<7)) != 0)
+    10.          code_define();
+    11.     else
+    12.     {    n_tar = sfgetu(Delta);
+    13.          tar = malloc(n_tar);
+    14.          win_inflate(indi, tar, n_tar, NULL, 0);
+    15.          sfwrite(Target, tar, n_tar);
+    16.          free(tar);
+    17.     }
+    18. }
+
+                                   -6-
+
+RFC 1   VCDIFF Generic Differencing and Compression Data Format   March 2000
+
+
+
+COMMENTS.
+
+   1-4: These lines read the 4-byte header.
+   7-8: These lines read the indicator byte and terminate if reached end-of-file.
+  9-10: These lines define a new code table.
+ 12-16: These lines decode the target window and output it to the target file.
+
+
+    Next is the function to recompute a target window:
+
+     1. win_inflate(int indi, uchar_t* tar, int n_tar, uchar_t* src, int n_src)
+     2. {   int      n_inst, n_data;
+     3.     uchar_t  *inst, *data;
+     4.     int      s_inst, s_data;
+     5.     int      p_src, i_code, f_inst, f_data;
+     6.     Sfio_t   *sf, *instf, *dataf;
+
+     7.     n_inst = sfgetu(Delta);
+     8.     n_data = sfgetu(Delta);
+
+     9.     if(indi & (1<<6))
+    10.          i_code = sfgetc(Delta);
+
+    11.     if(indi & (1<<5))
+    12.     {    f_inst = sfgetc(Delta);
+    13.          s_inst = sfgetu(Delta);
+    14.     }
+
+    15.     if(indi & (1<<4))
+    16.     {    f_data = sfgetc(Delta);
+    17.          s_data = sfgetu(Delta);
+    18.     }
+
+    19.     if(indi & ((1<<3)|(1<<2)) )
+    20.     {    n_src = sfgetu(Delta);
+    21.          p_src = sfgetu(Delta);
+    22.     }
+
+    23.     inst = malloc(n_inst);
+    24.     if(indi & (1<<5))
+    25.     {    sfread(Delta, inst, s_inst);
+    26.          decompress(inst, n_inst, s_inst, f_inst);
+    27.     }
+    28.     else sfread(Delta, inst, n_inst);
+    29.     instf = sfstropen(inst, n_inst);
+
+    30.     data = malloc(n_data);
+    31.     if(indi & (1<<4))
+    32.     {    sfread(Delta, data, s_data);
+    33.          decompress(data, n_data, s_data, f_data);
+    34.     }
+    35.     else sfread(Delta, data, n_data);
+    36.     dataf = sfstropen(data, n_data);
+
+    37.     if(indi & ((1<<3)|(1<<2)) )
+    38.     {    src = malloc(n_src);
+    39.          sf = (indi & (1<<3)) ? Target : Source;
+    40.          sfseek(sf, p_src, SEEK_SET);
+    41.          sfread(sf, src, n_src);
+
+                                   -7-
+
+RFC 1   VCDIFF Generic Differencing and Compression Data Format   March 2000
+
+
+    42.     }
+
+    43.     win_decode(tar, n_tar, src, n_src, i_code, instf, dataf);
+    44.     sfclose(instf); sfclose(dataf); free(inst); free(data);
+    45. }
+
+COMMENTS.
+
+   7-8: These lines read the sizes of the instruction and raw datasets.
+  9-10: These lines read the index of the instruction code table if needed.
+ 11-14: These lines read the secondary instruction compressor indicator and
+	the size of the compressed instruction dataset.
+ 15-18: These lines read the secondary data compressor indicator and the
+	size of the compressed raw dataset.
+ 19-22: These lines read the size and position of the source data segment.
+	Note that win_inflate() may also be called to decode an instruction
+	code table (Section 5). In that case, "src" will be given and
+	the WT and WS bits should be zero.
+ 23-36: These lines read the instruction and raw datasets.  If these were
+	compressed, decompress() is called to reconstruct them. The function
+	decompress() uses the method index f_inst or f_data to decide on
+	the proper operations. Note that these datasets are then made into
+	streams via the sfstropen() calls to ease data accessing later.
+ 37-42: These lines construct the source data segment if any.
+    43: This line calls win_decode() (Section 4.4) to decode the delta
+	instructions.
+    44: This line frees resources allocated for processing.
+
+
+4.2 Integer Encoding Formats
+
+    Vcdiff compactly encodes integer values using the same formats introduced
+    in the Sfio library [6]. The code presented below is not quite correct with
+    respect to type handling as in Sfio but they show the ideas.
+
+
+4.2.1 Encoding Integers Using a Variable-Sized Format
+
+    The variable-sized encoding of integers follows the same algorithm
+    used in the Sfio library. This treats an integer as a number in
+    base 128 so that each digit can be coded in one byte. The eighth bit
+    of such a byte is the continuation bit. It is 1 if there are more
+    digits to come or 0 if it is the last digit.
+
+                        +---------------------+
+                        | 11100000 | 00111001 |
+                        +---------------------+
+			  byte 0       byte 1 
+
+				Table 1
+
+    Table 1 shows the variable sized encoding of 12345.  The bytes in
+    the encoding are presented in binary to make clear the use of
+    the continuation bit. Omitting the continuation bit, the encoding
+    of 12345 uses two bytes with values 96 and 57.
+
+    Below are the algorithms:
+
+     1. int sfputu(Sfio_t* f, int_t v)
+     2. {   uchar_t c[2*sizeof(int_t)], *s;
+
+                                   -8-
+
+RFC 1   VCDIFF Generic Differencing and Compression Data Format   March 2000
+
+
+
+     3.     s = &c[sizeof(c)-1];
+     4.     *s = v & 127;
+     5.     while((v >>= 7) != 0)
+     6.          *--s = (v & 127) | (1<<7);
+
+     7.     sfwrite(f, s, (&c[sizeof(c)]) - s);
+     8.     return  &c[sizeof(c)]-s;
+     9. }
+
+    10. int_t sfgetu(Sfio_t* f)
+    11. {   int_t b, v;
+
+    12.     for(v = 0;; )
+    13.     {    b = sfgetc(f);
+    14.          v = (v << 7) | (b & 127);
+    15.          if(!(b & 128) )
+    16.               return v;
+    17.     }
+    18. }
+
+COMMENTS.
+
+     1: This line declares the formal arguments to sfputu(), a stream f
+	to store the encoding and the value v to be encoded.
+     2: This line declares an array large enough to store the encoding.
+   4-6: These lines extract digits in base 128 and store them in
+	the array. Note that the right-most digit is extracted first and
+	does not carry a continuation bit.
+   7-8: These lines write the encoding out to the given stream f and
+	return the length of that encoding.
+ 10-18: These lines define the decoding algorithm.
+
+
+4.2.2 Encoding Integers with a Given Range
+
+    The address of a COPY instruction is an unsigned integer with a known
+    range, i.e., it cannot be larger than the current position.  Such a
+    value can be encoded more compactly than as done in the Sfio scheme.
+    For example, if a value is in the range 0-255, it can be encoded with
+    a single byte. On the other hand, if the same value happens to be larger
+    than 127, it would require two bytes to encode in the variable-sized
+    scheme. Below are the algorithms to encode integers with known ranges:
+
+
+     1. int sfputm(Sfio_t* f, int_t v, int_t max)
+     2. {   uchar_t c[sizeof(int_t)], *s;
+     3.     s = &c[sizeof(c)-1];
+     4.     *s = v & 255;
+     5.     while((max >>= 8) != 0)
+     6.     {   v >>= 8;
+     7.         *--s = v & 255;
+     8.     }
+     9.     sfwrite(f, s, (&c[sizeof(c)]) - s);
+    10.     return (&c[sizeof(c)]) - s;
+    11. }
+
+    12. int_t sfgetm(Sfio_t* f, int_t max)
+    13. {   int_t v;
+    14.     for(v = 0;;)
+
+                                   -9-
+
+RFC 1   VCDIFF Generic Differencing and Compression Data Format   March 2000
+
+
+    15.     {   v = (v << 8) | sfgetc(f);
+    16.         if((max >>= 8) == 0)
+    17.             return v;
+    18.     }
+    19. }
+
+
+4.3 Delta Instruction Coding Format
+
+    Delta instructions are encoded as control bytes with associated data.
+    Each control byte is an index into an instruction code table of 256
+    entries. Each code entry is of the type Vcdcode_t as defined below:
+
+     1. typedef struct _vcdinst_s
+     2. {   unsigned char type;  /* instruction type         */
+     3.     unsigned char size;  /* >0 if size is coded here */
+     4.     unsigned char mode;  /* address mode for COPYs   */
+     5. } Vcdinst_t;
+
+     6. typedef struct _vcdcode_s
+     7. {   Vcdinst_t     inst1; /* first instruction        */
+     8.     Vcdinst_t     inst2; /* second instruction       */
+     9. } Vcdcode_t;
+
+    Thus, each control byte identifies up to two instructions.  Below are
+    the different instruction types:
+
+     1. #define VCD_NOOP  0      /* not an instruction       */
+     2. #define VCD_ADD   1      /* an ADD instruction       */
+     3. #define VCD_RUN   2      /* a  RUN instruction       */
+     4. #define VCD_COPY  3      /* a COPY instruction       */
+
+
+    Each instruction has a size n of the data involved.  If the field
+    Vcdinst_t.size is non-zero, it is the value for n.  Otherwise,
+    n is encoded next in the instruction dataset as a variable-sized
+    integer.  If the instruction is a COPY, the copy address will follow
+    next in the instruction dataset. Its encoding depends on some
+    addressing scheme to be discussed next.
+
+    A COPY address can be encoded in different ways. The field
+    Vcdinst_t.mode has values in the range [0-7] and defines the below
+    address encoding modes:
+
+     1. #define VCD_SELF  0      /* coded as itself          */
+     2. #define VCD_HERE  1      /* from current position    */
+     3. #define VCD_SAME  2      /* index into "same" cache  */
+     4. #define VCD_NEAR  3      /* index into "near" cache  */
+
+    VCD_SAME and VCD_NEAR indicate two address caching methods designed
+    to take advantage of the heuristic that successive copying addresses
+    tend to be the same or fairly close to one another.  Note that as
+    discussed below, there are 4 VCD_NEAR addresses corresponding to
+    Vcdinst_t.mode values in the range [VCD_NEAR,VCD_NEAR+3].
+
+    Let A be the COPY address and H the current location in the target
+    data. Below are the encodings:
+
+    VCD_SELF: A is the next integer in the instruction dataset that is
+	encoded in the range [0-H]. 
+
+                                   -10-
+
+RFC 1   VCDIFF Generic Differencing and Compression Data Format   March 2000
+
+
+ 
+    VCD_HERE: Let B be the next byte in the instruction dataset.
+	Then A is H-B. That is, the distance from A to H, H-A, must have
+	been in the range [0-255].
+
+    VCD_SAME: The "same" cache keeps 256 addresses. Let B be the next byte
+	in the instruction dataset. Then A is same[B].
+
+    VCD_NEAR: The "near" cache keeps 4 addresses.  Let B be the next byte
+	in the instruction dataset and t be Vcdinst_t.mode-VCD_NEAR.
+	Then, A is near[t]+B-127.
+	
+
+    Below are the algorithms to maintain address caches.
+
+     1. typedef struct _cache_s
+     2. {   int   n;
+     3.     int   near[4];
+     4.     int   same[256];
+     5. } Cache_t;
+
+     6. cache_init(Cache_t* ka)
+     7. {    int i;
+     8.      for(i = 0; i < 4; ++i)
+     9.          ka->near[i] = 0;
+    10.      ka->n = 0;
+    11.      for(i = 0; i < 256; ++i)
+    12.          ka->same[i] = 0;
+    13. }
+
+
+
+    14. cache_update(Cache_t* ka, int_t addr)
+    15. {    ka->near[ka->n] = addr;
+    16.      if((ka->n += 1) >= 4)
+    17.          ka->n = 0;
+    18.      ka->same[addr&255] = addr;
+    19. }
+
+COMMENTS.
+
+   1-5: These lines define the caches. As discussed, the "near" cache
+	has 4 addresses and the "same" cache has 256 addresses.
+  6-13: These lines initialize addresses in the caches to zero.
+ 14-19: These lines update the caches with a given address.  Note that
+	the "near" cache is updated in a round-robin manner and the lower
+	eight bits of an address is its index in the "same" cache.
+
+
+    Below is the function to encode a COPY address:
+
+     1. int addr_encode(Cache_t* ka, int addr, int here, int* best)
+     2. {   int  i, d, mode = -1;
+
+     3.     if((d = (here-addr)) < 256)
+     4.     {    *best = d;
+     5.          mode = VCD_HERE;
+     6.     }
+     7.     else if(ka->same[d = addr&255] == addr)
+     8.     {    *best = d;
+
+                                   -11-
+
+RFC 1   VCDIFF Generic Differencing and Compression Data Format   March 2000
+
+
+     9.          mode = VCD_SAME;
+    10.     }
+    11.     else
+    12.     {    for(i = 0; i < 4; ++i)
+    13.          {    if((d = addr - ka->k_near[i]) >= -127 && d <= 128) 
+    14.               {    *best = d + 127;
+    15.                    mode = VCD_NEAR+i;
+    16.               }
+    17.          }
+    18.     }
+    19.     if(mode < 0)
+    20.     {    *best = addr;
+    21.          mode = VCD_SELF;
+    22.     }
+
+    23.     cache_update(ka,addr);
+    24.     return mode;
+    25. }
+
+COMMENTS.
+
+     1: This lines declare the formal arguments. "addr" is the address to be
+	encoded. "here" is the current location in the target data.  "best" is
+	used to return the value to be used to encode "addr".
+   3-6: If "addr" is within the range [0-255] away from the current location
+	"here", then the addressing mode is VCD_HERE and the address is encoded
+	as a single byte showing this distance.
+  7-10: Using the lower eight bits of "addr" to index the "same" cache, if the
+	address in the cache exactly matches "addr", then VCD_SAME is used
+	and "addr" is encoded as this index.
+
+ 12-18: Check each address in the "near" cache to see if "addr" is within
+	[-127,128] away from such an address.  If there is one, the addressing
+	mode is VCD_NEAR plus the index of the address and "addr" is encoded
+	as the distance plus 127 (so the encoded value is in the range [0-255]).
+ 19-22: If none of the above addressing modes applies, then VCD_SELF is used
+	and "addr" is encoded as a value in the range [0-here].
+    23: This line updates the address caches.
+
+
+    Below is the function to decode a COPY address:
+
+     1. int addr_decode(Cache_t* ka, int here, int type, Sfio_t* instf)
+     2. {   int  addr;
+
+     3.     if(type == VCD_SELF)
+     4.          addr = sfgetm(instf, here);
+     5.     else if(type == VCD_HERE)
+     6.          addr = here - sfgetc(instf);
+     7.     else if(type == VCD_SAME)
+     8.          addr = ka->same[sfgetc(instf)];
+     9.     else addr = ka->near[type] + sfgetc(instf) - 127;
+
+    10.     cache_update(ka, addr);
+    11.     return addr;
+    12. }
+
+
+4.4 Decoding A Target Window
+
+
+                                   -12-
+
+RFC 1   VCDIFF Generic Differencing and Compression Data Format   March 2000
+
+
+    The algorithm to decode a target window is as follows:
+
+     1. win_decode(uchar_t* tar, int n_tar, uchar_t* src, int n_src,
+		   int i_code, Sfio_t* instf, Sfio_t* dataf)
+     2. {    int_t     here, size, addr, i;
+     3.      Cache_t   ka;
+     4.      Vcdinst_t *inst;
+     5.      Vcdcode_t *code, *table = Code[i_code];
+
+     6.      cache_init(&ka);
+     7.      for(here = 0; here < n_tar; )
+     8.      {    code = &table[sfgetc(instf)];
+     9.           for(i = 1; i <= 2; ++i)
+    10.           {    inst = i == 1 ? &code->inst1 : &code->inst2;
+    11.                if(inst->type == VCD_NOOP)
+    12.                     continue;
+    13.                if((size = inst->size) == 0)
+    14.                     size = sfgetu(instf);
+    15.                if(inst->type == VCD_ADD)
+    16.                {    for(; size > 0; --size)
+    17.                          tar[here++] = sfgetc(dataf);
+    18.                }
+    19.                else if(inst->type == VCD_RUN)
+    20.                {    int  c = sfgetc(dataf);
+    21.                     for(; size > 0; --size)
+    22.                          tar[here++] = c;
+    23.                }
+    24.                else if(inst->type == VCD_COPY)
+    25.                {    uchar_t* from;
+    26.                     addr = addr_decode(&ka,here,inst->mode,instf);
+    27.                     from = addr < nsrc ? src+addr : tar+addr-nsrc;
+    28.                     for(; size > 0; --size)
+    29.                          tar[here++] = *from++;
+    30.                }
+    31.           }
+    32.      }
+    33. }
+
+COMMENTS.
+
+     5: "table" is initialized to be the instruction code table to be used.
+	We assume that "Code" is a global variable pointing to the list of 256
+	possible code tables.
+     6: This line initializes the address caches.
+     8: This line reads a control byte from the instruction dataset and gets
+	the corresponding code table to decode instructions.
+  9-32: These lines process the given pair of delta instructions. Note that
+	the data for VCD_ADD and VCD_RUN are read from the raw dataset.
+
+
+5.  Instruction Code Tables
+
+    The delta instructions are encoded based on some instruction code table.
+    The Vcdiff format allows applications to tailor such code tables to the
+    particular data characteristics to enhance output compactness. Up to 256
+    instruction tables with indices in the range [0,255] are allowed.
+    However, the first 8 indices [0,7] are reserved by Vcdiff.
+
+
+5.1 The Encoding of a Code Table in a Delta File
+
+                                   -13-
+
+RFC 1   VCDIFF Generic Differencing and Compression Data Format   March 2000
+
+
+
+    It is desirable to compactly encode a code table in a delta file.
+    To accomplish this, we first represent a table to be output as a string.
+    Since each table entry encodes two instructions and each is 3 bytes,
+    the total string size is 6*256 or 1536 bytes.  Such a string can then
+    be compared against some other code table string (e.g., that of table 0)
+    using the window encoding algorithm win_deflate() to reduce the output
+    data. Thus, the format for a code table in a delta file looks like this:
+
+		Code table to compare with
+		Encoded data
+
+    	Code table to compare with:
+	    This is a single byte indicating the code table used to compare
+	    the current table with.
+
+    	Encoded data:
+	    The data uses the same format as that of a window (Section 4.1.1)
+	    where the target data is the code string of the table being encoded
+	    and the source data segment is the code string of the code table
+	    with the above index.
+
+
+    Two functions tab2str() and str2tab() are used for converting between
+    a code table and its code string.  Below is the description of tab2str().
+    str2tab() is just as straightforward so its description will be omitted.
+    Note that bytes of the same type are grouped together to induce more
+    matching when code strings are compared.
+
+     1. tab2str(Vcdcode_t* tab, uchar_t data[6*256])
+     2. {    int  i, n;
+     3.      n = 0;
+     4.      for(i = 0; i < 256; ++i)
+     5.           data[n++] = tab[i].inst1.type;
+     6.      for(i = 0; i < 256; ++i)
+     7.           data[n++] = tab[i].inst2.type;
+     8.      for(i = 0; i < 256; ++i)
+     9.           data[n++] = tab[i].inst1.size;
+    10.      for(i = 0; i < 256; ++i)
+    11.           data[n++] = tab[i].inst2.size;
+    12.      for(i = 0; i < 256; ++i)
+    13.           data[n++] = tab[i].inst1.mode;
+    14.      for(i = 0; i < 256; ++i)
+    15.           data[n++] = tab[i].inst2.mode;
+    16. }
+
+    
+    Below is the function code_define() to retrieve an encoded instruction
+    code table from the delta file.
+
+     1. code_define()
+     2. {   uchar_t src[6*256], tar[6*256];
+     3.     int     index;
+
+     4.     index = sfgetc(Delta);
+     5.     tab2str(Code[sfgetc(Delta)], src);
+     8.     win_inflate(0, tar, 1536, src, 1536);
+     9.     Code[index] = str2tab(data);
+    10. }
+
+
+                                   -14-
+
+RFC 1   VCDIFF Generic Differencing and Compression Data Format   March 2000
+
+
+COMMENTS.
+
+   4:	This line reads the index to install the new code table.
+   5:	This line constructs the source string to be compared with.
+   8-9: These lines construct the new table and install it.
+
+
+5.2 Reserved Instruction Code Tables
+
+    A COPY instruction with small data size may use more encoding space than
+    the data itself. Thus, it is good to restrict COPY instructions to some
+    minimum sizes. In turn, a code table can take advantage of such
+    a restriction to enhance compactness. Vcdiff provides two reserved
+    instruction code tables with indices 0 and 1 for minimium COPY sizes of
+    4 and 3 respectively. As noted, the starting code table has index 0
+    so it is optimized for minimum COPY size of 4. Note also that even when
+    a table optimized for a particular minimum COPY size, this does not mean
+    that a COPY instruction with a smaller size cannot be encoded. It simply
+    means that the size of such an instruction must be coded separately.
+    
+
+           TYPE    SIZE      MODE    TYPE    SIZE     MODE    INDEX
+        -------------------------------------------------------------
+        a.  RUN     0                NOOP                       0
+        b.  ADD     0                NOOP                       1
+        c.  ADD   [1,14]             NOOP                     [2,15]
+        d. COPY     0       [0,6]    NOOP                    [16,22]
+        e. COPY   [M,M+10]  [0,6]    NOOP                    [23,99]
+        f. COPY     0       [0,6]     ADD   [1,4]           [100,127]
+        g. COPY   [M,M+3]   [0,6]     ADD   [1,4]           [128,239]
+        h. COPY   [M,M+3]    SELF    COPY   [M,M+3]   SELF  [240,255]
+        -------------------------------------------------------------
+
+                            	Table 2
+
+
+    For a given minimum COPY size M, Table 2 shows how the 256 code values
+    are partitioned into different categories of indices:
+
+    	a. Index 0 defines a RUN instruction whose size is always coded
+	   separately as an unsigned integer. This is signified by having
+	   the "size" field being 0.
+    	b. Index 1 defines an ADD instruction with size coded separately.
+    	c. Indices 2-15 define 14 ADD instructions with sizes in
+	   the range [1,14].
+    	d. Indices 16-22 define 7 COPY instructions for the 7 different
+	   address encoding modes discusses in Section 4.3. The sizes of
+	   these instructions are coded separately.
+    	e. Indices 23-99 define 77 COPY instructions using all 7 addressing
+	   modes and having sizes in the range [M,M+10].
+    	f. Indices 100-127 defines 28 pairs of COPY and ADD instructions.
+	   The COPY sizes are coded separately while the ADD sizes are
+	   in the range [1,4].
+    	g. Indices 128-239 define 112 pairs of COPY and ADD instructions
+	   whose sizes are in the ranges [M,M+3] and [1,4] respectively.
+    	h. Finally, indices 240-255 defines 16 pairs of COPY and COPY
+	   instructions with sizes in the range [M,M+3] and both using
+	   the same VCD_SELF addressing mode.
+
+    Next we present the algorithms to construct an instruction code table.
+
+                                   -15-
+
+RFC 1   VCDIFF Generic Differencing and Compression Data Format   March 2000
+
+
+    Where appropriate, the algorithms also construct the inverted tables
+    usable for data encoding. Any part of a table not explicitly set will
+    be assumed to be initialized to be either zero or the null pointer as
+    the case warranted.
+
+
+
+     1. mk_codetab(Vcdcode_t tab[256], int add[16], int copy[15][7],
+                    int copyadd[8][7][5], int copycopy[8][8], int M)
+     2. {
+     3.     tab[0].inst1.type = VCD_RUN;
+     4.     tab[0].inst1.size = 0;
+     5.     tab[0].inst2.type = VCD_NOOP;
+
+     6.     mk_add(tab, add);
+     7.     mk_copy(tab, copy, M);
+     8.     mk_copyadd(tab, copyadd, M);
+     9.     mk_copycopy(tab, copycopy, M);
+    10. }
+
+COMMENTS.
+
+     1: This line declares the arguments for mk_codetab().  The inverted
+	tables add[], copy[][], copyadd[][][], and copycopy[][] are designed
+	to be indexed by sizes and address modes. The argument M is the minimum
+	COPY size used for the table.
+   3-5: These lines construct the RUN instruction.
+   6-9: These lines call various subroutines to construct different parts of
+	the instruction table.
+
+
+    Below is the algorithm to construct the single ADD instructions:
+
+     1. mk_add(Vcdcode_t tab[256], int add[16])
+     2. {   int s, n;
+
+     3.     tab[1].inst1.type = VCD_ADD;
+     4.     tab[1].inst1.size = 0;
+     5.     tab[1].inst2.type = VCD_NOOP;
+     6.     add[0] = 1;
+
+     7.     for(n = 2, s = 1; s <= 14; ++s, ++n)
+     8.     {   tab[n].inst1.type = VCD_ADD;
+     9.         tab[n].inst1.size = s;
+    10.         tab[n].inst2.type = VCD_NOOP;
+    11.         add[s] = n;
+    12.     }
+    13. }
+
+COMMENTS.
+
+   3-6: These lines construct the ADD instruction whose size is to be coded
+	separately.  Location 0 in the inverted table add[] points to this code.
+  7-12: These lines construct the ADD instructions with size in
+	the range [1-14] as discussed earlier.
+
+
+    Below is the function to construct the single COPY instructions:
+
+     1. mk_copy(Vcdcode_t tab[256], int copy[15][7], int M)
+
+                                   -16-
+
+RFC 1   VCDIFF Generic Differencing and Compression Data Format   March 2000
+
+
+     2. {   int s, m, n;
+
+     3.     for(n = 16, m = 0; m < 7; ++m, ++n)
+     4.     {   tab[n].inst1.type = VCD_COPY;
+     5.         tab[n].inst1.size = 0;
+     6.         tab[n].inst1.mode = m;
+     7.         tab[n].inst2.type = VCD_NOOP;
+     8.         copy[0][m] = n;
+     9.     }
+
+    10.     for(s = M; s <= M+10; ++s)
+    11.     {   for(m = 0; m < 7; ++m, ++n)
+    12.         {   tab[n].inst1.type = VCD_COPY;
+    13.             tab[n].inst1.size = s;
+    14.             tab[n].inst1.mode = m;
+    15.             tab[n].inst2.type = VCD_NOOP;
+    16.             copy[s][m] = n;
+    17.         }
+    18.     }
+    20. }
+
+COMMENTS.
+
+   3-9: These lines construct the 7 COPY instructions with whose data sizes
+	are coded separately.
+ 10-18: These lines construct the 77 COPY instructions whose data sizes
+	are in the range [M,M+10].
+
+
+    The below function constructs the COPY/ADD instruction pairs:
+
+     1. mk_copyadd(Vcdcode_t tab[256], int copyadd[8][7][5], int M)
+     2. {   int s, m, a, n;
+     3.     for(n = 100, m = 0; m < 7; ++m)
+     4.     {   for(a = 1; a <= 4; ++a, ++n)
+     5.         {   tab[n].inst1.type = VCD_COPY;
+     6.             tab[n].inst1.size = 0;
+     7.             tab[n].inst1.mode = m;
+     8.             tab[n].inst2.type = VCD_ADD;
+     9.             tab[n].inst2.size = a;
+    10.             copyadd[0][m][a] = n;
+    11.         }
+    12.     }
+    13.     for(s = M; s <= M+3; ++s)
+    14.     {   for(m = 0; m < 7; ++m)
+    15.         {   for(a = 1; a <= 4; ++a, ++n)
+    16.             {   tab[n].inst1.type = VCD_COPY;
+    17.                 tab[n].inst1.size = s;
+    18.                 tab[n].inst1.mode = m;
+    19.                 tab[n].inst2.type = VCD_ADD;
+    20.                 tab[n].inst2.size = a;
+    21.                 copyadd[s][m][a] = n;
+    22.             }
+    23.         }
+    24.     }
+    25. }
+
+
+    Finally, the algorithm to construct the 16 COPY/COPY pairs:
+
+
+                                   -17-
+
+RFC 1   VCDIFF Generic Differencing and Compression Data Format   March 2000
+
+
+     1. mk_copycopy(Vcdcode_t tab[256], int copycopy[8][8], int M)
+     2. {   int s, c, n;
+     3.     for(n = 240, s = M; s <= M+3; ++s)
+     4.     {   for(c = M; c <= M+3; ++c, ++n)
+     5.         {   tab[n].inst1.type = VCD_COPY;
+     6.             tab[n].inst1.size = s;
+     7.             tab[n].inst1.mode = VCD_SELF;
+     8.             tab[n].inst2.type = VCD_COPY;
+     9.             tab[n].inst2.size = c;
+    10.             tab[n].inst2.mode = VCD_SELF;
+    11.             copycopy[s][c] = n;
+    12.         }
+    13.     }
+    14. }
+
+
+6.  Compression and Differencing Algorithms
+
+    Sections 4 and 5 describe how to reconstruct a target file from data in
+    a delta file. In this section, we discuss briefly general architectures
+    for compressors and differencers. A few abstract functions are assumed:
+
+    int win_target(uchar_t** tar);
+
+        This function may be called many times to get sequential windows of
+	data from the target file to be compressed. It returns the length of
+	the window while the window itself is returned in "*tar".
+
+    int win_match(uchar_t* tar, int n_tar, int p_tar,
+		  uchar_t** src, int* n_src, int_t* p_src);
+
+	This function computes a source data segment, if any, to be compared
+	with a target window. It returns 0, 1 or 2 for no source segment,
+	source segment from the source file, or source segment from
+	the target file. The arguments "src", "n_src" and "p_src" are used
+	to return the source data segment, its size, and its position in
+	either the source file or target file.
+
+    int str_match(uchar_t* tar, int n_tar, int p_tar,
+		  uchar_t* src, int n_src, int* match);
+
+	This function computes a string in either the source data segment or
+	the target window that matches with a prefix of the target data being
+	processed. Such a matched string can be encoded as a COPY instruction.
+	The argument "p_tar" indicates the current position in the target
+	window to be processed. The function returns the length of the match
+	and, if that is positive, "*match" is set to the match position.
+
+    int run_check(uchar_t* tar, int n_tar, int p_tar);
+
+	This function checks to see if there is a run of the same bytes 
+	starting at the current location in the target string.
+
+
+
+    The performance of an encoder depends on what algorithms are used to
+    implement the above functions. However, as shown earlier, decoding
+    performance is completely independent of such choices.
+
+    Below is the algorithm for encoding a target file.  We shall assume
+
+                                   -18-
+
+RFC 1   VCDIFF Generic Differencing and Compression Data Format   March 2000
+
+
+    that there is no secondary encoding for the resulting instruction and
+    raw datasets.
+
+     1. sfputc(Delta,0xd6);
+     2. sfputc(Delta,0xc3);
+     3. sfputc(Delta,0xc4);
+     4. sfputc(Delta,0);
+
+     5. for(p_tar = 0; ; p_tar += n_tar)
+     6. {   if((n_tar = win_target(&tar)) <= 0)
+     7.         break;
+     9.     win_deflate(tar, n_tar);
+    10. }
+
+COMMENTS.
+
+   1-4: These lines output the 4-byte header for a delta file.
+     6: This line calls win_target() to get a target window. If the target file
+	has been completely processed, the return value is non-positive and 
+	the loop terminates.
+     8: This line computes a source data segment to be compared with the given
+	target window.
+     9: This line calls win_deflate() to compute the delta instructions and
+	output the data to the delta file.
+
+
+    Below is the function win_deflate():
+
+     1. win_deflate(uchar_t* tar, int n_tar)
+     2. {
+     3.     int     type, indi, n_src;
+     4.     int_t   p_src;
+     5.     uchar_t *src;
+     6.     Sfio_t  *instf, *dataf;
+
+     7.     type = win_match(tar, n_tar, &src, &n_src, &p_src);
+     8.     instf = sfstropen(NULL,0);
+     9.     dataf = sfstropen(NULL,0);
+    10.     win_encode(tar, n_tar, src, n_src, instf, dataf);
+
+    11.     indi = type == 0 ? (1<<2) : type == 1 ? (1<<3) : 0;
+    12.     sfputc(Delta, indi);
+
+    13.     sfputu(Delta, n_tar);
+    14.     sfputu(Delta, sfsize(instf));
+    15.     sfputu(Delta, sfsize(dataf));
+
+    16.     sfmove(instf,Delta,-1,-1);
+    17.     sfmove(dataf,Delta,-1,-1);
+
+    18.     sfclose(instf); sfclose(dataf);
+    18. }
+
+
+COMMENTS.
+
+     7: This line calls win_match() to obtain a source data segment.
+   8-9: These lines create two streams to output instructions and raw data.
+    10: This line calls win_encode() to compute the delta instructions.
+ 11-12: These lines output the indicator byte.
+
+                                   -19-
+
+RFC 1   VCDIFF Generic Differencing and Compression Data Format   March 2000
+
+
+ 13-15: These lines output the sizes of the target window and instruction
+	and raw datasets.
+ 16-17: These lines use the Sfio function sfmove() to output the instruction
+	and raw datasets to the delta file.
+
+
+    Below is the function to compute encoding of a target window:
+
+     1. int win_encode(uchar_t* tar, int n_tar, uchar_t* src, int n_src,
+                       Sfio_t* instf, Sfio_t* dataf)
+     2. {   int      add, here, addr, s, size;
+     3.     Cache_t  ka;
+
+     4.     cache_init(&ka);
+
+     5.     for(here = 0, size = 0, add = -1; here < n_tar; )
+     6.     {   if( (s = run_check(tar, n_tar, here)) > 0)
+     7.              addr = -1;
+     8.         else s = str_match(tar,n_tar,here,src,n_src,&addr);
+     9.         if(s > 0)
+    10.         {    if(add >= 0)
+    11.                   size += add_encode(here-add,tar+here-add,instf,dataf);
+    12.              if(addr < 0)
+    13.                   size += run_encode(s,tar[here],instf,dataf);
+    14.              else size += copy_encode(&ka,s,addr,here,instf);
+
+    15.              add = -1;
+    16.              here += s;
+    17.         }
+    18.         else
+    19.         {    if(add < 0)
+    20.                   add = here;
+    21.              here += 1;
+    22.         }
+    23.     }
+    24.     if(add >= 0)
+    25.          size += add_encode(here-add,tar+here-add,instf,dataf);
+    26.     else size += copy_encode(0,0,0,0);
+
+    27.     return size;
+    28. }
+
+COMMENTS.
+
+     4: This line initializes the address caches.
+   6-8: These lines check to see if there is a RUN or a COPY instruction.
+	The function run_check() is straightforward to implement so its
+	description will be omitted.
+  9-17: These lines output the appropriate delta instruction.
+ 19-22: These lines are executed if there is no RUN or COPY instruction.
+	The "add" variable is set to collect the data for an ADD instruction.
+ 24-25: These lines output the last unmatched part of the target window
+	in an ADD instruction.
+    26: This line outputs the last saved COPY instruction, if any. See the
+	function copy_encode() below.
+    27: This line returns the number of bytes used for encoding the data.
+
+
+    To finish up the encoding algorithm, we need to describe the functions
+    add_encode(), run_encode() and copy_encode(). We shall assume that
+
+                                   -20-
+
+RFC 1   VCDIFF Generic Differencing and Compression Data Format   March 2000
+
+
+    the default code instruction table 0 is used. The below code declares
+    the tables and define a few convenience macro functions.
+
+     1. Vcdcode_t  Tab[256];
+     2. Vcdcode_t* Add[16];
+     3. Vcdcode_t* Copy[15][7];
+     4. Vcdcode_t* Copyadd[8][7][5];
+     5. Vcdcode_t* Copycopy[8][8];
+
+     6. #define    INDEXADD(a)     ((a >= 1 && a <= 14) ? a : 0)
+     7. #define    INDEXCOPY(c)    ((c >= 4 && c <= 14) ? c : 0)
+     8. #define    INDEXCOPYADD(c) ((c >= 4 && c <=  7) ? c : 0)
+     9. #define    ISTINYADD(a)    ((a >= 1 && a <= 4) ? 1 : 0)
+    10. #define    ISTINYCOPY(c)   ((c >= 4 && c <= 7) ? 1 : 0)
+
+COMMENTS.
+
+   6-8: These lines define functions to compute the index into the tables
+        Add, Copy, and Copyadd for any given ADD or COPY size.
+  9-10: These lines define functions to test if a given size is small.
+	These are used to determine if certain pair of instructions could
+	be coded using a single byte code.
+
+
+    Below is the function to encode a COPY instruction.
+
+     1. int Size, Addr, Here, Mode;
+ 
+     2. int copy_encode(Cache_t* ka,int size,int addr,int here,Sfio_t* instf)
+     3. {   int code, mode = 0, best = 0, ndel = 0;
+
+     4.     if(size > 0)
+     5.         mode = addr_encode(ka, addr, here, &best);
+
+     6.     if(Size > 0)
+     7.     {   if(Mode == mode && mode == VCD_SELF &&
+     8.            ISTINYCOPY(Size) && ISTINYCOPY(size) )
+     9.         {    code = Copycopy[Size][size];
+    10.              ndel += sfputc(instf, code);
+    11.              ndel += sfputm(instf, Addr, Here);
+    12.              ndel += sfputm(instf, addr, here);
+    13.              Size = -1;
+    14.              return ndel;
+    15.         }
+    16.         code = Copy[INDEXCOPY(Size)][Mode];
+    17.         ndel += sfputc(instf, code);
+    18.         if(Tab[code].inst1.size == 0)
+    19.              ndel += sfputu(instf, Size);
+    20.         if(Mode == VDC_SELF)
+    21.              ndel += sfputm(instf, Addr, Here);
+    22.         else ndel += sfputc(instf, Addr);
+    23.     }
+
+    24.     Size = size;
+    25.     Addr = best;
+    26.     Mode = mode;
+    27.     Here = here;
+
+    28.     return ndel;
+    29. }
+
+                                   -21-
+
+RFC 1   VCDIFF Generic Differencing and Compression Data Format   March 2000
+
+
+
+COMMENTS.
+
+     1: This line defines variables to save a COPY instruction so that it may
+        be coded jointly with another instruction later.
+   4-5: These lines compute the mode and value to encode the given COPY
+        address if there is one (i.e., "size" is positive).
+  6-23: These lines process a previously saved COPY instruction.
+  7-15: These lines output a code that encode both COPY instructions.
+	Note that this is done only when the data sizes are small and both
+	instructions are using the VCD_SELF addressing mode (Table 2).
+ 16-22: These lines output the previously saved COPY instruction singly.
+ 24-27: These lines save the current COPY instruction if it has not
+        been merged to a previous COPY instruction as discussed.
+
+
+    Below is the function to output an ADD instruction:
+
+     1. int add_encode(int size, uchar_t* data, Sfio_t* instf, Sfio_t* dataf)
+     2. {   int code, ndel = 0;
+
+     3.     if(Size > 0)
+     4.     {   if(ISTINYADD(size))
+     5.         {    code = Copyadd[INDEXCOPYADD(Size)][Mode][size];
+     6.              ndel += sfputc(instf, code);
+     7.              if(Tab[code].inst1.size == 0)
+     8.                   ndel += sfputu(instf, Size);
+     9.              if(Mode == VCD_SELF)
+    10.                   ndel += sfputm(instf, Addr, Here);
+    11.              else ndel += sfputc(instf, Addr);
+    12.              for(; size > 0; --size, ++data)
+    13.                   ndel += sfputc(dataf, *data);
+    14.              return ndel;
+    15.         }
+    16.         else ndel += copy_encode(0,0,0,0);
+    17.     }
+
+    18.     code = Add[INDEXADD(size)];
+    19.     ndel += sfputc(instf, code);
+    20.     if(Tab[code].inst1.size == 0)
+    21.         ndel += sfputu(instf, size);
+    22.     ndel += size;
+    23.     for(; size > 0; --size, ++data)
+    24.         sfputc(dataf, *data);
+
+    25.     return ndel;
+    26. }
+
+
+COMMENTS.
+
+  3-17: These lines consider the case when there is a previously saved COPY
+	instruction. Then, if the ADD size is small, a single code is output
+	for both COPY and ADD instructions.  Otherwise, the COPY instruction
+	is output by itself.
+ 18-24: These lines output an ADD instruction by itself.
+
+
+    Below is the function to output a RUN instruction:
+
+
+                                   -22-
+
+RFC 1   VCDIFF Generic Differencing and Compression Data Format   March 2000
+
+
+     1. int run_encode(int size, int byte, Sfio_t* instf, Sfio_t* dataf)
+     2. {   int ndel = 0;
+     3.     if(Size > 0)
+     4.         ndel += copy_encode(0,0,0,0);
+     5.     ndel += sfputc(instf,0);
+     6.     ndel += sfputu(instf,size);
+     7.     ndel += sfputc(dataf,byte);
+     8.     return ndel;
+     9. }
+
+COMMENTS.
+
+   3-4: These lines output a previously saved COPY instruction, if any.
+   5-7: These lines output the RUN instruction.
+
+
+7.  Summary
+
+    We have described a general and portable encoding format for compression
+    and differencing. The format is compact. For compression only, using
+    the same LZ-77 string parsing strategy and without any secondary encoders,
+    the typical compression rate is better than Unix compress and close to gzip.
+    For differencing, the same data format is better than all known methods.
+    Ignoring application-specific secondary encoder issues, the decoding
+    algorithms run in linear time and require working space proportional
+    to window sizes.
+
+
+ACKNOWLEDGEMENTS
+
+    Thanks are due to Balachander Krishnamurthy, Jeff Mogul and Arthur Van Hoff
+    who provided much encouragement to publicize Vcdiff.
+
+
+REFERENCES
+
+    [1] D.G. Korn and K.P. Vo, Vdelta: Differencing and Compression,
+        Practical Reusable Unix Software, Editor B. Krishnamurthy,
+        John Wiley & Sons, Inc., 1995.
+
+    [2] J. Ziv and A. Lempel, A Universal Algorithm for Sequential Data
+        Compression, IEEE Transactions on Information Theory,
+        23(3):337-343, May 1977.
+
+    [3] W. Tichy, The String-to-String Correction Problem with Block Moves,
+        ACM Transactions on Computer Systems, 2(4):309-321, November 1984.
+
+    [4] E.M. McCreight, A Space-Economical Suffix Tree Construction
+        Algorithm, Journal of the ACM, 23:262-272, 1976.
+
+    [5] J.J. Hunt, K.P. Vo, W. Tichy, An Empirical Study of Delta
+        Algorithms, IEEE Software Configuration and Maintenance Workshop,
+        1996.
+
+    [6] G.S. Fowler, D.G. Korn, K.P. Vo, Sfio: A buffered I/O Library,
+        Accepted for publication in Software Practice & Experience, 1999.
+
+
+
+AUTHOR'S ADDRESS
+
+                                   -23-
+
+RFC 1   VCDIFF Generic Differencing and Compression Data Format   March 2000
+
+
+
+    Kiem-Phong Vo (main contact)
+    AT&T Labs, Room D223
+    180 Park Avenue
+    Florham Park, NJ 07932
+
+    Phone: 973-360-8630
+    Email: kpv@research.att.com
+
+
+    David G. Korn
+    AT&T Labs, Room D237
+    180 Park Avenue
+    Florham Park, NJ 07932
+
+    Phone: 973-360-8602
+    Email: dgk@research.att.com
+
+
+EXPIRATION DATE
+
+    September 09, 2000
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                   -24-

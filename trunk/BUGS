@@ -1,0 +1,92 @@
+                                                       -*- text -*-
+
+                        REPORTING BUGS
+                        ==============
+
+This document tells how and where to report bugs.  It is not a list of
+all outstanding bugs -- we use an online issue tracker for that, see
+
+   http://subversion.tigris.org/servlets/ProjectIssues
+   http://subversion.tigris.org/project_tasks.html
+
+(the latter links to a fairly user-friendly list of all open bugs).
+
+If you're about to report a bug, please take a look at the guidelines
+in the section "How To Report A Bug" below.
+
+Where To Report A Bug:
+======================
+
+   * If the bug is in Subversion itself, send mail to
+     dev@subversion.tigris.org.  Once it's confirmed as a bug,
+     someone, possibly you, can enter it into the issue tracker at
+     http://subversion.tigris.org/servlets/ProjectIssues
+
+   * If the bug is in the APR library, please report it to both of
+     these mailing lists: dev@apr.apache.org, dev@subversion.tigris.org
+
+   * If the bug is in the Neon HTTP library, please report it to:
+     neon@webdav.org, dev@subversion.tigris.org
+
+   * If the bug is in Apache httpd 2.0, please report it to both of
+     these mailing lists: dev@httpd.apache.org, dev@subversion.tigris.org
+     The Apache httpd developer mailing list is high-traffic, so your
+     bug report post has the possibility to be overlooked.  You may also 
+     file a bug report at:
+     http://httpd.apache.org/bug_report.html
+
+   * If the bug is in your rug, please give it a hug and keep it snug.
+
+How To Report A Bug:
+====================
+
+First, make sure it's a bug.  If Subversion does not behave the way
+you expect, look in the documentation and mailing list archives for
+evidence that it should behave the way you expect.  Of course, if it's
+a common-sense thing, like Subversion just destroyed your data and
+caused smoke to pour out of your monitor, then you can trust your
+judgement.  But if you're not sure, go ahead and ask on the mailing
+list, currently dev@subversion.tigris.org.
+
+Once you've established that it's a bug, the most important thing you
+can do is come up with a simple description and reproduction recipe.
+For example, if the bug, as you initially found it, involves five
+files over ten commits, try to make it happen with just one file and
+one commit.  The simpler the reproduction recipe, the more likely a
+developer is to successfully reproduce the bug and fix it.
+
+When you write up the reproduction recipe, don't just write a prose
+description of what you did to make the bug happen.  Instead, give a
+literal transcript of the exact series of commands you ran, and their
+output.  If there are files involved, give the contents of the files.
+The very best thing is to package your reproduction recipe as a
+script, that helps us a lot.
+
+  [Quick sanity check: you *are* running the most recent version of
+  Subversion, right? :-) Possibly the bug has already been fixed; you
+  should test your reproduction recipe against the most recent
+  Subversion development tree.  Also, make sure your APR tree is
+  up-to-date.]
+
+In addition to the reproduction recipe, we'll also need a complete
+description of the environment in which you reproduced the bug.
+That means:
+
+   - Your operating system
+   - The release and/or revision of Subversion
+   - The compiler and configuration options you built Subversion with
+   - Any private modifications you made to your Subversion
+   - The version of Berkeley DB you're running Subversion with
+   - Anything else that could possibly be relevant.  Err on the side
+     of too much information, rather than too little.
+
+Once you have all this, you're ready to write the report.  Start out
+with a clear description of what the bug is.  That is, say how you
+expected Subversion to behave, and contrast that with how it actually
+behaved.  While the bug may seem obvious to you, it may not be so
+obvious to someone else, so it's best to avoid a guessing game.
+
+Follow that with the environment description, and the reproduction
+recipe.  If you also want to include speculation as to the cause, and
+even a patch to fix the bug, that's great!  See the HACKING file for
+more information about writing patches.
