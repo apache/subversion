@@ -45,7 +45,7 @@ RSC=rc.exe
 # ADD CPP /nologo /MD /W3 /GX /O2 /I "..\include" /I "..\..\apr\include" /I "..\..\apr-util\include" /I "..\..\apr-util\xml\expat\lib" /I "..\..\db4-win32\include" /I "..\.." /D "NDEBUG" /D "APR_DECLARE_STATIC" /D "APU_DECLARE_STATIC" /D "WIN32" /D "_WINDOWS_CONSOLE" /FD /c
 # SUBTRACT CPP /YX
 # ADD BASE RSC /l 0x424 /d "NDEBUG"
-# ADD RSC /l 0x424 /d "NDEBUG" /d SVN_FILE_NAME="svnadmin.exe" /d SVN_FILE_DESCRIPTION="Subversion Repository Administrator"
+# ADD RSC /l 0x424 /d "NDEBUG" /d "SVN_FILE_NAME=svnadmin.exe" /d "SVN_FILE_DESCRIPTION=Subversion Repository Administrator"
 BSC32=bscmake.exe
 # ADD BASE BSC32 /nologo
 # ADD BSC32 /nologo
@@ -71,7 +71,7 @@ LINK32=link.exe
 # ADD CPP /nologo /MDd /W3 /GX /ZI /Od /I "..\include" /I "..\..\apr\include" /I "..\..\apr-util\include" /I "..\..\apr-util\xml\expat\lib" /I "..\..\db4-win32\include" /I "..\.." /D "SVN_DEBUG" /D "_DEBUG" /D "APR_DECLARE_STATIC" /D "APU_DECLARE_STATIC" /D "WIN32" /D "_WINDOWS_CONSOLE" /FD /GZ /c
 # SUBTRACT CPP /YX
 # ADD BASE RSC /l 0x424 /d "_DEBUG"
-# ADD RSC /l 0x424 /d "_DEBUG" /d SVN_FILE_NAME="svnadmin.exe" /d SVN_FILE_DESCRIPTION="Subversion Repository Administrator"
+# ADD RSC /l 0x424 /d "_DEBUG" /d "SVN_FILE_NAME=svnadmin.exe" /d "SVN_FILE_DESCRIPTION=Subversion Repository Administrator"
 BSC32=bscmake.exe
 # ADD BASE BSC32 /nologo
 # ADD BSC32 /nologo
