@@ -31,6 +31,45 @@
 #define SEEDS 50
 #define MAXSEQ 100
 
+
+/* Initialize parameters for the random tests. */
+extern int test_argc;
+extern char **test_argv;
+
+static void init_params (unsigned long *seed,
+                         int *maxlen, int *iterations,
+                         apr_pool_t *pool)
+{
+  apr_getopt_t *opt;
+  char optch;
+  const char *opt_arg;
+  apr_status_t status;
+
+  *seed = (unsigned long) apr_time_now();
+  *maxlen = DEFAULT_MAXLEN;
+  *iterations = DEFAULT_ITERATIONS;
+
+  apr_getopt_init (&opt, pool, test_argc, test_argv);
+  while (APR_SUCCESS
+         == (status = apr_getopt (opt, "s:l:n:", &optch, &opt_arg)))
+    {
+      switch (optch)
+        {
+        case 's':
+          *seed = atol (opt_arg);
+          break;
+        case 'l':
+          *maxlen = atoi (opt_arg);
+          break;
+        case 'n':
+          *iterations = atoi (opt_arg);
+          break;
+        }
+    }
+}
+
+
+
 static unsigned long
 myrand (unsigned long *seed)
 {
@@ -64,13 +103,37 @@ generate_random_file (int maxlen, unsigned long subseed_base,
       len -= seqlen;
       r = subseed_base + myrand (seed) % SEEDS;
       while (seqlen-- > 0)
-        { 
+        {
           putc (r % 256, fp);
           r = r * 1103515245 + 12345;
         }
     }
   rewind (fp);
   return fp;
+}
+
+/* Compare two open files. The file positions may change. */
+static svn_error_t *
+compare_files (FILE *f1, FILE *f2, apr_pool_t *pool)
+{
+  int c1, c2;
+  apr_off_t pos = 0;
+
+  rewind (f1);
+  rewind (f2);
+  for (;;)
+    {
+      c1 = getc (f1);
+      c2 = getc (f2);
+      ++pos;
+      if (c1 == EOF && c2 == EOF)
+        break;
+      if (c1 != c2)
+        return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL, pool,
+                                  "mismatch at position %"APR_OFF_T_FMT,
+                                  pos);
+    }
+  return SVN_NO_ERROR;
 }
 
 
@@ -89,141 +152,107 @@ copy_tempfile (FILE *fp)
 }
 
 
-int
-main (int argc, const char * const *argv)
+
+svn_error_t *
+random_test (const char **msg,
+             svn_boolean_t msg_only,
+             apr_pool_t *pool)
 {
-  FILE *source, *source_copy, *target, *target_regen;
-  apr_getopt_t *opt;
-  apr_pool_t *pool;
-  apr_status_t status;
-  char optch;
-  const char *opt_arg, *progname;
-  unsigned long seed, seed_save, subseed_base;
-  int seed_set = 0, maxlen = DEFAULT_MAXLEN, iterations = DEFAULT_ITERATIONS;
-  int c1, c2, i;
-  svn_txdelta_stream_t *txdelta_stream;
-  svn_txdelta_window_t *window;
-  svn_txdelta_window_handler_t handler;
-  void *handler_baton;
-  svn_stream_t *stream;
-  svn_error_t *err = SVN_NO_ERROR;
+  static char msg_buff[256];
 
-  progname = strrchr (argv[0], '/');
-  progname = (progname == NULL) ? argv[0] : progname + 1;
+  unsigned long seed;
+  int i, maxlen, iterations;
 
-  apr_initialize();
+  /* Initialize parameters and print out the seed in case we dump core
+     or something. */
+  init_params(&seed, &maxlen, &iterations, pool);
+  sprintf(msg_buff, "random delta test, seed = %lu", seed);
+  *msg = msg_buff;
 
-  /* Read options.  */
-  pool = svn_pool_create (NULL);
-  apr_getopt_init (&opt, pool, argc, argv);
-  while ((status = apr_getopt (opt, "s:l:n:", &optch, &opt_arg))
-         == APR_SUCCESS)
-    {
-      switch (optch)
-        {
-        case 's':
-          seed = atoi (opt_arg);
-          seed_set = 1;
-          break;
-        case 'l':
-          maxlen = atoi (opt_arg);
-          break;
-        case 'n':
-          iterations = atoi (opt_arg);
-          break;
-        }
-    }
-  svn_pool_destroy (pool);
-  if (!APR_STATUS_IS_EOF(status))
-    {
-      fprintf (stderr, "Usage: %s [-s seed]\n", argv[0]);
-      return 1;
-    }
-
-  /* Pick a seed if one wasn't given, and save it.  Print it out in
-   * case we dump core or something.  */
-  if (!seed_set)
-    seed = (unsigned int) apr_time_now ();
-  seed_save = seed;
-  printf("%s using seed %lu\n", progname, seed_save);
+  if (msg_only)
+    return SVN_NO_ERROR;
+  else
+    printf("SEED: %s\n", msg_buff);
 
   for (i = 0; i < iterations; i++)
     {
       /* Generate source and target for the delta and its application.  */
-      subseed_base = myrand (&seed);
-      source = generate_random_file (maxlen, subseed_base, &seed);
-      target = generate_random_file (maxlen, subseed_base, &seed);
-      source_copy = copy_tempfile (source);
-      rewind (source);
-      target_regen = tmpfile ();
+      unsigned long subseed_base = myrand (&seed);
+      FILE *source = generate_random_file (maxlen, subseed_base, &seed);
+      FILE *target = generate_random_file (maxlen, subseed_base, &seed);
+      FILE *source_copy = copy_tempfile (source);
+      FILE *target_regen = tmpfile ();
+
+      svn_txdelta_stream_t *txdelta_stream;
+      svn_txdelta_window_t *window;
+      svn_txdelta_window_handler_t handler;
+      svn_stream_t *stream;
+      void *handler_baton;
 
       /* Set up a four-stage pipeline: create a delta, convert it to
          svndiff format, parse it back into delta format, and apply it
          to a copy of the source file to see if we get the same target
          back.  */
-      pool = svn_pool_create (NULL);
+      apr_pool_t *delta_pool = svn_pool_create (pool);
+      rewind (source);
 
       /* Make stage 4: apply the text delta.  */
-      svn_txdelta_apply (svn_stream_from_stdio (source_copy, pool),
-                         svn_stream_from_stdio (target_regen, pool),
-                         pool, &handler, &handler_baton);
+      svn_txdelta_apply (svn_stream_from_stdio (source_copy, delta_pool),
+                         svn_stream_from_stdio (target_regen, delta_pool),
+                         delta_pool, &handler, &handler_baton);
 
       /* Make stage 3: reparse the text delta.  */
-      stream = svn_txdelta_parse_svndiff (handler, handler_baton, TRUE, pool);
+      stream = svn_txdelta_parse_svndiff (handler, handler_baton, TRUE,
+                                          delta_pool);
 
       /* Make stage 2: encode the text delta in svndiff format.  */
-      svn_txdelta_to_svndiff (stream, pool, &handler, &handler_baton);
+      svn_txdelta_to_svndiff (stream, delta_pool, &handler, &handler_baton);
 
       /* Make stage 1: create the text delta.  */
-      svn_txdelta (&txdelta_stream, svn_stream_from_stdio (source, pool),
-                   svn_stream_from_stdio (target, pool), pool);
+      svn_txdelta (&txdelta_stream,
+                   svn_stream_from_stdio (source, delta_pool),
+                   svn_stream_from_stdio (target, delta_pool),
+                   delta_pool);
 
-      while (err == SVN_NO_ERROR)
+      for (;;)
         {
-          err = svn_txdelta_next_window (&window, txdelta_stream);
-          if (err == SVN_NO_ERROR)
-            err = handler (window, handler_baton);
+          SVN_ERR (svn_txdelta_next_window (&window, txdelta_stream));
+          SVN_ERR (handler (window, handler_baton));
           if (window == NULL)
             break;
           svn_txdelta_free_window (window);
         }
-      if (err != SVN_NO_ERROR)
-        {
-          printf ("FAIL: %s 1: random delta test error, seed %lu\n",
-                  progname, seed_save);
-          exit (1);
-        }
-      svn_txdelta_free (txdelta_stream);
-      svn_pool_destroy (pool);
 
-      /* Compare the two files.  */
-      rewind (target);
-      rewind (target_regen);
-      while (1)
-        {
-          c1 = getc (target);
-          c2 = getc (target_regen);
-          if (c1 == EOF && c2 == EOF)
-            break;
-          if (c1 != c2)
-            {
-              printf ("FAIL: %s 1: random delta test mismatch, seed %lu\n",
-                      progname, seed_save);
-              exit (1);
-            }
-        }
+      svn_txdelta_free (txdelta_stream);
+      svn_pool_destroy (delta_pool);
+
+      SVN_ERR (compare_files (target, target_regen, pool));
+
       fclose(source);
       fclose(target);
       fclose(source_copy);
       fclose(target_regen);
     }
-  printf ("PASS: %s 1: random delta testing, seed %lu\n", progname, seed_save);
-  exit (0);
+
+  return SVN_NO_ERROR;
 }
 
 
+
 
-/* 
+/* The test table.  */
+
+svn_error_t * (*test_funcs[]) (const char **msg,
+                               svn_boolean_t msg_only,
+                               apr_pool_t *pool) = {
+  0,
+  random_test,
+  0
+};
+
+
+
+/*
  * local variables:
  * eval: (load-file "../../svn-dev.el")
  * end:
