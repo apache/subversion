@@ -146,6 +146,17 @@ svn_fs__err_corrupt_nodes_key (svn_fs_t *fs)
 
 
 svn_error_t *
+svn_fs__err_corrupt_next_txn_id (svn_fs_t *fs)
+{
+  return
+    svn_error_createf
+    (SVN_ERR_FS_CORRUPT, 0, 0, fs->pool,
+     "corrupt value for `next-id' key in `transactions' table"
+     " of filesystem `%s'", fs->env_path);
+}
+
+
+svn_error_t *
 svn_fs__err_not_mutable (svn_fs_t *fs, const svn_fs_id_t *id)
 {
   svn_string_t *unparsed_id = svn_fs_unparse_id (id, fs->pool);
