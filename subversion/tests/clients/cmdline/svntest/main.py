@@ -378,7 +378,7 @@ class Sandbox:
     self.name = '%s-%d' % (module, idx)
     self.wc_dir = os.path.join(general_wc_dir, self.name)
     self.repo_dir = os.path.join(general_repo_dir, self.name)
-    self.test_paths = (self.wc_dir, self.repo_dir)
+    self.test_paths = [self.wc_dir, self.repo_dir]
 
   def build(self):
     if actions.make_repo_and_wc(self):
