@@ -4,7 +4,7 @@
 
 all: html
 
-html: inversion.html
+html: inversion.html inversion.txt
 
 inversion.html: inversion.txt
 	./outline2html.pl inversion.txt

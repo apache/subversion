@@ -2,7 +2,7 @@
 
      Inversion: A Version Control System You Actually Want To Use
      ------------------------------------------------------------
-              ($Revision: 1.39 $ of this document.)
+              ($Revision: 1.40 $ of this document.)
 
 * Introduction
 
@@ -151,27 +151,27 @@ build-time-configured language.
 CVS makes an unnecessary distinction between branches and tags, and
 then goes on to implement them in an inefficient way.
 
-Inversion supports them both with one efficient operation: `copy'.  To
-copy a project is to create another project exactly like it, except
+Inversion supports them both with one efficient operation: `clone'.
+To clone a project is to create another project exactly like it, except
 that the new project "knows" that the old project is its ancestor.
 Version numbers in the new project start at the ancestor's version
 number.
 
-Clearly, at the moment of creation, a copy requires only a tiny amount
-of constant space -- the copy is like an "alias" for the old project.
-And if you never commit anything on the copy, then it's just like a
+Clearly, at the moment of creation, a clone requires only a tiny amount
+of constant space -- the clone is like an "alias" for the old project.
+And if you never commit anything on the clone, then it's just like a
 CVS tag.
 
-If you start committing on the copy, then it's a branch.  Voila!
+If you start committing on the clone, then it's a branch.  Voila!
 
-By default, inversion uses per-project namespaces for copies, to avoid
+By default, inversion uses per-project namespaces for clones, to avoid
 cross-project name conflicts.
 
 This should also get us CVS "vendor branching" (since we'll have real
 rename and directory support).
 
 [Thanks to Jim Blandy <jimb@red-bean.com> for pointing out that
-`copy' is a clean way to get both tagging and branching.]
+`clone' is a clean way to get both tagging and branching.]
 
 ** Repeated merges are handled gracefully.
 
@@ -857,12 +857,12 @@ Exactly how you think they do.
 You commit a new version of the parent node, which simply doesn't have
 an entry for the removed child.
 
-** How copies (tags and branches) work
+** How clones (tags and branches) work
 
-Branches and tags are both implemented in terms of "copies".  Copying
+Branches and tags are both implemented in terms of "clones".  Cloning
 a project is constant-time and constant-space -- you just make a new
-name that points back to the original project.  All copies are
-automatically tags; and once you start committing on a copy, it
+name that points back to the original project.  All clones are
+automatically tags; and once you start committing on a clone, it
 becomes a branch as well.
 
 Branches *never* affect the original project -- the original data
@@ -872,7 +872,7 @@ little more node duplication than some other schemes would, but it
 wins overall because it allows users to tag and branch projects to
 which they don't have write access.  (Try *that* with CVS!)
 
-Let's make a copy of myproj, called `xproj', based on myproj:5 (as it
+Let's make a clone of myproj, called `xproj', based on myproj:5 (as it
 happens, 5 is the highest version in myproj, but that's not a
 requirement -- a branch might sprout off any version in myproj's
 history):
@@ -984,54 +984,48 @@ that we can use in all sorts of circumstances, like
 labels for the diffy chromosome chunks in partial merging... but more
 about that when we get to it. :-) )
 
-*** "Shallow" and "deep" copies (insurance against loss of trunk)
+*** "Shallow" and "deep" clones (insurance against loss of trunk)
 
-The cheapest kind of copy is constant-time and -space.  Call it a
-"surface" copy, because it includes by reference wherever possible.
+The cheapest kind of clone is constant-time and -space.  Call it a
+"surface" clone, because it includes by reference wherever possible.
 
 For tags and branches being stored in the same repository as the
 original project, surface is the way to go.
 
-But if you're making the copy on another server, then you have to make
-a political judgement involving the importance of your copy, of the
-historical data antecedant to your copy, and of the original
+But if you're making the clone on another server, then you have to make
+a political judgement involving the importance of your clone, of the
+historical data antecedant to your clone, and of the original
 repository's stability.  What if you think that source repository
 might disappear on you?  Then you want something more than just a
-surface copy.  
+surface clone.  
 
-Inversion offers two choices: "shallow" and "deep" copies.  Shallow
-copies locally duplicate all the data for the version in which this
-copy is rooted, but they don't duplicate anything older than that.
-Deep copies duplicate the *entire* project -- the whole node
-structure.  (A deep copy still remembers its ancestry, however).
+Inversion offers two choices: "shallow" and "deep" clones.  Shallow
+clones locally duplicate all the data for the version in which this
+clone is rooted, but they don't duplicate anything older than that.
+Deep clones duplicate the *entire* project -- the whole node
+structure.  (A deep clone still remembers its ancestry, however).
 
-Here's are the three possible kinds of copies, for reference:
+Here's are the three possible kinds of clones, for reference:
 
-   1. Surface copies
+   1. Surface clones
         Refers to original project wherever possible.
 
-   2. Shallow copies
+   2. Shallow clones
         Duplicates the node structure of the source version that roots
-        this copy.  Older versions are included by reference, however.
+        this clone.  Older versions are included by reference, however.
         Ancestry is remembered.
 
-   3. Deep copies
+   3. Deep clones
         Duplicates the entire node structure of the source root
         version, including back-links.  Ancestry is remembered.
 
 fooo:
-[This is why copies start at the version number they're rooted
+[This is why clones start at the version number they're rooted
 at... (todo: explain this)]
 
 fooo:
 Explain why remembering ancestry is important even for shallow and
-deep copies.
-
-fooo:
-Consider calling them something other than "copies".  It's getting
-confusing, because that word is used for so many other things
-already.  "Echoes"?  "Dups"?  "Mirrors"?  no, find some better word,
-take it from greek or something...
+deep clones.
 
 *** Merging branches
 
