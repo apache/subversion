@@ -1232,7 +1232,11 @@ svn_io_run_diff3 (const char *dir,
                   int *exitcode,
                   apr_pool_t *pool)
 {
+#ifdef SVN_DIFF3_HAS_DIFF_PROGRAM_ARG
+  const char *args[14];
+#else 
   const char *args[13];
+#endif
 
   /* Labels fall back to sensible defaults if not specified. */
   if (mine_label == NULL)
@@ -1256,10 +1260,18 @@ svn_io_run_diff3 (const char *dir,
                                    case with "-E". */
   args[7] = "-L";
   args[8] = yours_label;
+#ifdef SVN_DIFF3_HAS_DIFF_PROGRAM_ARG
+  args[9] = "--diff-program=" SVN_CLIENT_DIFF;
+  args[10] = mine;
+  args[11] = older;
+  args[12] = yours;
+  args[13] = NULL;
+#else
   args[9] = mine;
   args[10] = older;
   args[11] = yours;
   args[12] = NULL;
+#endif
 
   /* Run diff3, output the merged text into the scratch file. */
   SVN_ERR (svn_io_run_cmd (dir, SVN_CLIENT_DIFF3, args, 
