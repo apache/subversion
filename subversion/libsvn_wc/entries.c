@@ -259,8 +259,10 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
 
   /* Is this entry copied? */
   {
-    svn_stringbuf_t *copiedstr
-      = apr_hash_get (atts, SVN_WC__ENTRY_ATTR_COPIED, APR_HASH_KEY_STRING);
+    svn_stringbuf_t *copiedstr, *revstr;
+      
+    copiedstr = apr_hash_get (atts, SVN_WC__ENTRY_ATTR_COPIED, 
+                              APR_HASH_KEY_STRING);
         
     entry->copied = FALSE;
     if (copiedstr)
@@ -280,6 +282,15 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
 
         *modify_flags |= SVN_WC__ENTRY_MODIFY_COPIED;
       }
+
+    entry->copyfrom_url = apr_hash_get (atts, SVN_WC__ENTRY_ATTR_COPYFROM_URL,
+                                        APR_HASH_KEY_STRING);
+
+    revstr = apr_hash_get (atts, SVN_WC__ENTRY_ATTR_COPYFROM_REV, 
+                           APR_HASH_KEY_STRING);
+    if (revstr)
+      entry->copyfrom_rev = SVN_STR_TO_REV (revstr->data);
+    
   }
 
 
