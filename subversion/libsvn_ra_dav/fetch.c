@@ -2674,10 +2674,9 @@ svn_error_t * svn_ra_dav__do_diff(void *session_baton,
                                   svn_boolean_t recurse,
                                   const char *versus_url,
                                   const svn_delta_editor_t *wc_diff,
-                                  void *wc_diff_baton)
+                                  void *wc_diff_baton,
+                                  apr_pool_t *pool)
 {
-  svn_ra_session_t *ras = session_baton;
-
   return make_reporter (session_baton,
                         reporter,
                         report_baton,
@@ -2689,5 +2688,5 @@ svn_error_t * svn_ra_dav__do_diff(void *session_baton,
                         wc_diff,
                         wc_diff_baton,
                         TRUE, /* fetch_content */
-                        ras->pool);
+                        pool);
 }

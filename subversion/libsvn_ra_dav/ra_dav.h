@@ -178,7 +178,8 @@ svn_error_t * svn_ra_dav__do_diff(
   svn_boolean_t recurse,
   const char *versus_url,
   const svn_delta_editor_t *wc_diff,
-  void *wc_diff_baton);
+  void *wc_diff_baton,
+  apr_pool_t *pool);
 
 svn_error_t * svn_ra_dav__get_log(
   void *session_baton,
