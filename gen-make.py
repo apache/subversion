@@ -14,6 +14,8 @@ _defaults = {
   'sources' : '*.c',
   'link-flags' : '',
   'libs' : '',
+  'custom' : '',
+  'install' : '',
   }
 def main(fname, oname=None):
   parser = ConfigParser.ConfigParser(_defaults)
@@ -30,18 +32,24 @@ def main(fname, oname=None):
   deps = { }
   build_targets = { }
   build_dirs = { }
+  install = { }
 
   targets = _filter_targets(parser.sections())
   for target in targets:
     path = parser.get(target, 'path')
+    install_type = parser.get(target, 'install')
 
     bldtype = parser.get(target, 'type')
     if bldtype == 'exe':
       tpath = os.path.join(path, target)
       objext = '.o'
+      if not install_type:
+        install_type = 'bin'
     elif bldtype == 'lib':
       tpath = os.path.join(path, target + '.la')
       objext = '.lo'
+      if not install_type:
+        install_type = 'lib'
     else:
       print 'ERROR: unknown build type:', bldtype
       errors = 1
@@ -50,6 +58,11 @@ def main(fname, oname=None):
     build_targets[target] = tpath
     build_dirs[path] = None
 
+    if install.has_key(install_type):
+      install[install_type].append(tpath)
+    else:
+      install[install_type] = [ tpath ]
+
     pats = string.split(parser.get(target, 'sources'))
     sources = [ ]
     for pat in pats:
@@ -57,6 +70,7 @@ def main(fname, oname=None):
       if not files:
         print 'ERROR:', pat, 'not found.'
         errors = 1
+        continue
       sources.extend(files)
 
     objects = [ ]
@@ -88,11 +102,26 @@ def main(fname, oname=None):
         # something we don't know, so just include it directly
         libs.append(lib)
 
+    objvarname = string.replace(target, '-', '_') + '_OBJECTS'
     ldflags = parser.get(target, 'link-flags')
     objstr = string.join(objects)
     libstr = string.join(libs)
-    ofile.write('%s: %s\n\t$(LINK) %s %s %s $(LIBS)\n\n'
-                % (tpath, objstr, ldflags, objstr, libstr))
+    ofile.write('%s = %s\n'
+                '%s: $(%s)\n'
+                '\t$(LINK) %s $(%s) %s $(LIBS)\n\n'
+                % (objvarname, objstr,
+                   tpath, objvarname,
+                   ldflags, objvarname, libstr))
+
+    custom = parser.get(target, 'custom')
+    if custom == 'apache-mod':
+      # special build, needing Apache includes
+      ofile.write('# build these special -- use APACHE_INCLUDES\n')
+      for src in sources:
+        if src[-2:] == '.c':
+          ofile.write('%s%s: %s\n\t$(COMPILE_APACHE_MOD)\n'
+                      % (src[:-2], objext, src))
+      ofile.write('\n')
 
     group = parser.get(target, 'group')
     if groups.has_key(group):
@@ -107,18 +136,53 @@ def main(fname, oname=None):
     ofile.write('%s: %s\n\n' % (group, string.join(group_deps)))
 
   ofile.write('CLEAN_DIRS = %s\n' % string.join(build_dirs.keys()))
-  ofile.write('CLEAN_FILES = %s\n\n' % string.join(build_targets.values()))
+
+  cfiles = filter(_filter_clean_files, build_targets.values())
+  ofile.write('CLEAN_FILES = %s\n\n' % string.join(cfiles))
+
+  for area, files in install.items():
+    if area != 'test':
+      ofile.write('install-%s: %s\n'
+                  '\t$(mkinstalldirs) $(%sdir)\n'
+                  % (area, string.join(files), area))
+      for file in files:
+        ofile.write('\t$(INSTALL_%s) %s $(%sdir)/%s\n'
+                    % (string.upper(area), file, area, os.path.basename(file)))
+      ofile.write('\n')
+
+  includes = [ ]
+  pats = string.split(parser.get('includes', 'paths'))
+  for pat in pats:
+    files = glob.glob(pat)
+    if not files:
+      print 'ERROR:', pat, 'not found.'
+      errors = 1
+      continue
+    includes.extend(files)
+
+  ofile.write('install-include: %s\n'
+              '\t$(mkinstalldirs) $(includedir)\n'
+              % (string.join(includes),))
+  for file in includes:
+    ofile.write('\t$(INSTALL_INCLUDE) %s $(includedir)/%s\n'
+                % (file, os.path.basename(file)))
+  ofile.write('\n')
 
   if errors:
     sys.exit(1)
 
-_predef_sections = ['external', ]
+_predef_sections = ['external', 'includes']
 def _filter_targets(t):
   t = t[:]
   for s in _predef_sections:
     if s in t:
       t.remove(s)
   return t
+
+def _filter_clean_files(fname):
+  "Filter files which have a suffix handled by the standard 'clean' rule."
+  # for now, we only look for .la which keeps this code simple.
+  return fname[-3:] != '.la'
 
 def _sort_deps(targets, deps):
   "Sort targets based on dependencies specified in deps."
