@@ -1,8 +1,9 @@
 ## Makefile.in is generated from this by automake.
 
-noinst_PROGRAMS = hashdump-test stringtest
+noinst_PROGRAMS = hashdump-test stringtest target-test
 hashdump_test_SOURCES = hashdump-test.c
 stringtest_SOURCES = stringtest.c
+target_test_SOURCES = target-test.c
 
 ## Flags needed when compiling:
 INCLUDES = @SVN_INCLUDES@ @SVN_APR_INCLUDES@
@@ -20,13 +21,18 @@ stringtest_LDADD = @SVN_TESTS_MAIN_LIBS@ \
                    @SVN_LIBSVN_SUBR_LIBS@ \
                    @SVN_APR_LIBS@ @SVN_EXPAT_LIBS@
 
+target_test_LDADD = @SVN_LIBSVN_SUBR_LIBS@ @SVN_APR_LIBS@ @SVN_EXPAT_LIBS@
+
 ## Make libtool be quiet
 LIBTOOL = @LIBTOOL@ --silent
 
 ## Automatic tests run by `make check` -----------------------------
 
 ## A list of test-programs to run.  (Each program contains sub-tests.)
-SVN_TESTS = stringtest hashdump-test 
+SVN_TESTS = stringtest hashdump-test $(srcdir)/target-test.sh
+
+## Give the shell script along with the distribution
+EXTRA_DIST = target-test.sh
 
 ## We're overriding automake's own `check' rule, because it's extremely
 ## inflexible;  we want better control over automated-test output. 

@@ -22,7 +22,9 @@ extern "C" {
 
 
 #include <apr_pools.h>
+#include <apr_tables.h>
 #include "svn_string.h"
+#include "svn_error.h"
 
 
 /*** Notes:
@@ -120,6 +122,38 @@ int svn_path_compare_paths (const svn_string_t *path1,
 svn_string_t *svn_path_get_longest_ancestor (const svn_string_t *path1,
                                              const svn_string_t *path2,
                                              apr_pool_t *pool);
+
+/* Convert RELATIVE path to an absolute path and return the results in
+   *PABSOLUTE. */
+svn_error_t *
+svn_path_get_absolute(svn_string_t **pabsolute,
+                      const svn_string_t *relative,
+                      apr_pool_t *pool);
+
+/* Return the path part of PATH in *PDIRECTORY, and the file part in *PFILE.
+   If PATH is a directory, it will be returned through PDIRECTORY, and *PFILE
+   will be the empty string (not NULL). */
+svn_error_t *
+svn_path_split_if_file(svn_string_t *path,
+                       svn_string_t **pdirectory, 
+                       svn_string_t **pfile,
+                       apr_pool_t *pool);
+
+/* Find the common part of all the paths in TARGETS.  The elements in 
+   TARGETS must be existing files or directories, in local path style.
+   PBASEDIR will be set to the absolute path that is common to all of the
+   items.  Additionally, if PCONDENSED_TARGETS is non-null, it will be 
+   set to a list of targets relative to *PBASEDIR, with no overlapping
+   targets. If there are no items in TARGETS, *PBASENAME and (if applicable)
+   *PCONDENSED_TARGETS will be NULL.  If an item in TARGETS is equal to
+   *PBASENAME, it will be returned as an empty string.
+
+    NOTE: There is no guarantee that *PBASENAME is within a working copy. */
+svn_error_t *
+svn_path_condense_targets(svn_string_t **pbasedir,
+                          apr_array_header_t **pcondensed_targets,
+                          const apr_array_header_t *targets,
+                          apr_pool_t *pool);
 
 #endif /* SVN_PATHS_H */
 
