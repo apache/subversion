@@ -287,6 +287,11 @@ typedef enum svn_errno_t {
 
 
 
+/* Lookup APR_ERR in svn_error_strings[] above and write
+   human-readable description into BUF.  Return BUF */
+char *svn_strerror (apr_status_t apr_err, char *buf, apr_size_t bufsize);
+
+
 
 /*** SVN error creation and destruction. ***/
 
