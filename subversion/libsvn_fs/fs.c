@@ -163,33 +163,6 @@ cleanup_fs (svn_fs_t *fs)
   SVN_ERR (cleanup_fs_db (fs, &fs->strings, "strings"));
   SVN_ERR (cleanup_fs_db (fs, &fs->uuids, "uuids"));
 
-  /* Checkpoint any changes.  */
-  {
-    int db_err = env->txn_checkpoint (env, 0, 0, 0);
-
-#if SVN_BDB_HAS_DB_INCOMPLETE
-    while (db_err == DB_INCOMPLETE)
-      {
-        apr_sleep (apr_time_from_sec(1));
-        db_err = env->txn_checkpoint (env, 0, 0, 0);
-      }
-#endif /* SVN_BDB_HAS_DB_INCOMPLETE */
-
-    /* If the environment was not (properly) opened, then txn_checkpoint
-       will typically return EINVAL. Ignore this case.
-
-       Note: we're passing awfully simple values to txn_checkpoint. Any
-             possible EINVAL result is caused entirely by issues internal
-             to the DB. We should be safe to ignore EINVAL even if
-             something other than open-failure causes the result code.
-             (especially because we're just trying to close it down)
-    */
-    if (db_err != 0 && db_err != EINVAL)
-      {
-        SVN_ERR (BDB_WRAP (fs, "checkpointing environment", db_err));
-      }
-  }
-      
   /* Finally, close the environment.  */
   fs->env = 0;
   SVN_ERR (BDB_WRAP (fs, "closing environment",
