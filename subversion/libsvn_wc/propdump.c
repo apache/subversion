@@ -272,8 +272,6 @@ svn_wc_proplist_write (svn_proplist_t *proplist,
       /* Output the name's length, then the name itself. */
       guaranteed_ap_write (destfile, "N ", 2);
       num_len = size_t_into_string (buf, ((svn_string_t *) key)->len);
-      printf ("N buf: %s\nlen is %d\n", buf, ((svn_string_t *) key)->len);
-      printf ("N num_len is %d\n", num_len);
       guaranteed_ap_write (destfile, buf, num_len);
       guaranteed_ap_write (destfile, "\n", 1);
       guaranteed_ap_write (destfile, 
@@ -284,8 +282,6 @@ svn_wc_proplist_write (svn_proplist_t *proplist,
       /* Output the value's length, then the value itself. */
       guaranteed_ap_write (destfile, "V ", 2);
       num_len = size_t_into_string (buf, ((svn_string_t *) val)->len);
-      printf ("V buf: %s\nlen is %d\n", buf, ((svn_string_t *) val)->len);
-      printf ("V num_len is %d\n", num_len);
       guaranteed_ap_write (destfile, buf, num_len);
       guaranteed_ap_write (destfile, "\n", 1);
       guaranteed_ap_write (destfile,
