@@ -96,6 +96,8 @@ const apr_getopt_option_t svn_cl__options[] =
                       "do no interactive prompting"},
     {"dry-run",       svn_cl__dry_run_opt, 0,
                       "try operation but make no changes"},
+    {"no-diff-deleted", svn_cl__no_diff_deleted, 0,
+                       "do not print differences for deleted files"},
 
     /* ### Perhaps the option should be named "--rev-prop" instead?
            Generally, we do include the hyphen; the only reason not to
@@ -206,7 +208,8 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "     a value of HEAD is assumed.\n",
     {'r', 'x', 'N',
      svn_cl__auth_username_opt, svn_cl__auth_password_opt,
-     svn_cl__no_auth_cache_opt, svn_cl__non_interactive_opt} },
+     svn_cl__no_auth_cache_opt, svn_cl__non_interactive_opt,
+     svn_cl__no_diff_deleted} },
 
   { "export", svn_cl__export, {0},
     "export stuff.\n"
@@ -738,6 +741,9 @@ main (int argc, const char * const *argv)
         break;
       case svn_cl__non_interactive_opt:
         opt_state.non_interactive = TRUE;
+        break;
+      case svn_cl__no_diff_deleted:
+        opt_state.no_diff_deleted = TRUE;
         break;
       case 'x':
         err = svn_utf_cstring_to_utf8 (&opt_state.extensions, opt_arg,
