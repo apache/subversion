@@ -81,3 +81,9 @@ def get_entries(path):
   entryparser.parser.ParseFile(fp)
   fp.close()
   return entryparser.entry_dict
+
+
+### End of file.
+# local variables:
+# eval: (load-file "../../../svn-dev.el")
+# end:

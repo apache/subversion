@@ -105,3 +105,7 @@ def client_test(test_list):
 
 
 
+### End of file.
+# local variables:
+# eval: (load-file "../../../svn-dev.el")
+# end:
