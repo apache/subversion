@@ -1193,10 +1193,10 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
         {
           if ((working_props_kind == svn_node_file)
               && (err = svn_wc__prep_file_for_replacement (thing, FALSE, pool)))
-            return revert_error (err, fullpath, "restoring props", pool);
+            return revert_error (err, fullpath, _("restoring props"), pool);
 
           if ((err = svn_io_copy_file (base_thing, thing, FALSE, pool)))
-            return revert_error (err, fullpath, "restoring props", pool);
+            return revert_error (err, fullpath, _("restoring props"), pool);
 
           SVN_ERR (svn_io_file_affected_time (&tstamp, thing, pool));
           entry->prop_time = tstamp;
@@ -1204,7 +1204,7 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
       else if (working_props_kind == svn_node_file)
         {
           if ((err = svn_io_remove_file (thing, pool)))
-            return revert_error (err, fullpath, "removing props", pool);
+            return revert_error (err, fullpath, _("removing props"), pool);
         }
 
       /* Modify our entry structure. */
@@ -1228,7 +1228,7 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
       if (kind == svn_node_file)
         {
           if ((err = svn_io_copy_file (base_thing, thing, FALSE, pool)))
-            return revert_error (err, fullpath, "restoring props", pool);
+            return revert_error (err, fullpath, _("restoring props"), pool);
       
           SVN_ERR (svn_io_file_affected_time (&tstamp, thing, pool));
           entry->prop_time = tstamp;
@@ -1268,7 +1268,7 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
                                                    keywords,
                                                    TRUE, /* expand keywords */
                                                    pool)))
-            return revert_error (err, fullpath, "restoring text", pool);
+            return revert_error (err, fullpath, _("restoring text"), pool);
 
           /* If necessary, tweak the new working file's executable bit. */
           SVN_ERR (svn_wc__maybe_set_executable (NULL, fullpath, adm_access,
