@@ -110,15 +110,28 @@ svn_cl__propdel (apr_getopt_t *os,
       for (i = 0; i < targets->nelts; i++)
         {
           const char *target = ((const char **) (targets->elts))[i];
+          svn_error_t *err;
 
           svn_pool_clear (subpool);
           SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
           /* Pass 0 for 'force' because it doesn't matter here, and
              opt_state->force doesn't apply to this command anyway. */
-          SVN_ERR (svn_client_propset2 (pname_utf8, NULL, target,
-                                        opt_state->recursive,
-                                        FALSE, subpool));
-          if (! opt_state->quiet) 
+          err = svn_client_propset2 (pname_utf8, NULL, target,
+                                     opt_state->recursive,
+                                     FALSE, subpool);
+          if (err)
+            {
+              if (err->apr_err == SVN_ERR_UNVERSIONED_RESOURCE)
+                {
+                  svn_handle_warning (stderr, err);
+                  svn_error_clear (err);
+                }
+              else
+                {
+                  return err;
+                }
+            }
+          else if (! opt_state->quiet) 
             {
               SVN_ERR (svn_cmdline_printf
                        (subpool, opt_state->recursive
