@@ -278,12 +278,11 @@ typedef struct svn_client_commit_info_t
 } svn_client_commit_info_t;
 
 
-/** State flags for use with the @c svn_client_commit_item_t structure
+/** @{
+ * State flags for use with the @c svn_client_commit_item_t structure
  *
  * (see the note about the namespace for that structure, which also
  * applies to these flags).
- * @defgroup svn_client_commit_item_flags state flags
- * @{
  */
 #define SVN_CLIENT_COMMIT_ITEM_ADD         0x01
 #define SVN_CLIENT_COMMIT_ITEM_DELETE      0x02
@@ -417,26 +416,22 @@ typedef struct svn_client_ctx_t
   void *cancel_baton;
 
   /** @since New in 1.2.
-    
-      notification function, defaulting to a function that forwards
-      to @c notify_func. */
+   * notification function, defaulting to a function that forwards
+   * to @c notify_func. */
   svn_wc_notify_func2_t notify_func2;
 
   /** @since New in 1.2.
-
-      notification baton for @c notify_func2. */
+   * notification baton for @c notify_func2. */
   void *notify_baton2;
 } svn_client_ctx_t;
 
 
-/** Names of files that contain authentication information.
+/** @{
+ * Names of files that contain authentication information.
  *
  * These filenames are decided by libsvn_client, since this library
  * implements all the auth-protocols;  libsvn_wc does nothing but
  * blindly store and retrieve these files from protected areas.
- *
- * @defgroup svn_client_auth_files authentication files
- * @{
  */
 #define SVN_CLIENT_AUTH_USERNAME            "username"
 #define SVN_CLIENT_AUTH_PASSWORD            "password"
