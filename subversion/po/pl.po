@@ -34,8 +34,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2004-09-03 17:32+0200\n"
-"PO-Revision-Date: 2004-09-03 23:40+0200\n"
+"POT-Creation-Date: 2004-09-06 22:04+0200\n"
+"PO-Revision-Date: 2004-09-06 23:09+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Polish <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -241,7 +241,7 @@ msgstr "Wersja bazowa pliku w chwili wystąpienia konfliktu: %s\n"
 #: clients/cmdline/info-cmd.c:174
 #, c-format
 msgid "Conflict Previous Working File: %s\n"
-msgstr "Wesja robocza pliku w chwili wystąpienia konfliktu: %s\n"
+msgstr "Wersja robocza pliku w chwili wystąpienia konfliktu: %s\n"
 
 #: clients/cmdline/info-cmd.c:178
 #, c-format
@@ -255,7 +255,6 @@ msgid "Conflict Properties File: %s\n"
 msgstr "Plik z opisem konfliktu atrybutów: %s\n"
 
 #: clients/cmdline/info-cmd.c:252
-#, fuzzy
 msgid "'svn info' only works on working copy paths, not URLs"
 msgstr ""
 "'svn info' działa tylko na ścieżkach kopii roboczej, \n"
@@ -3339,7 +3338,6 @@ msgid "Missing required node revision ID"
 msgstr "Brak wymaganego ID wersji obiektu"
 
 #: libsvn_fs_fs/fs_fs.c:1745
-#, fuzzy
 msgid "Invalid change ordering: new node revision ID without delete"
 msgstr ""
 "Niewłaściwy porządek zmian: ID nowego węzła wersji nie jest\n"
@@ -3892,7 +3890,6 @@ msgid "Non-string as part of text delta"
 msgstr "Teksty różnic muszą być typu STRING"
 
 #: libsvn_ra_svn/editorp.c:129
-#, fuzzy
 msgid "Successful edit status returned too soon"
 msgstr "Błąd synchronizacji, pomyślny status zwrócony za wcześnie"
 
@@ -5141,11 +5138,12 @@ msgstr ""
 "Dostępne polecenia:\n"
 
 #: svnadmin/main.c:653
-#, fuzzy
 msgid ""
 "Repository lock acquired.\n"
 "Please wait; recovering the repository may take some time...\n"
-msgstr "Proszę czekać; odtwarzanie repozytorium może trwać długo...\n"
+msgstr ""
+"Uzyskano blokadę repozytorium.\n"
+"Proszę czekać; odtwarzanie repozytorium może trwać długo...\n"
 
 #: svnadmin/main.c:688
 #, fuzzy
@@ -5228,12 +5226,10 @@ msgid "Revision %ld skipped.\n"
 msgstr "Pominięto wersję %ld.\n"
 
 #: svndumpfilter/main.c:707
-#, fuzzy
 msgid "Do not display filtering statistics."
 msgstr "Nie wyświetlaj statystyki filtrowania"
 
 #: svndumpfilter/main.c:709
-#, fuzzy
 msgid "Remove revisions emptied by filtering."
 msgstr "Usuń puste wersje wyczyszczone podczas filtrowania"
 
@@ -5735,14 +5731,29 @@ msgstr "wyeksportowano\n"
 msgid "'%s' not versioned, and not exported\n"
 msgstr "%s' nie podlegające zarządzaniu wersjami i nie eksportowane\n"
 
-#~ msgid "Can't create directory '%s'"
-#~ msgstr "Nie można stworzyć katalogu '%s'"
+#~ msgid "file"
+#~ msgstr "plik"
 
-#~ msgid "Unknown revision kind"
-#~ msgstr "Nieznany rodzaj wersji"
+#~ msgid "directory"
+#~ msgstr "katalog"
 
-#~ msgid "'%s' is a URL, but revision kind requires a working copy"
-#~ msgstr "'%s' jest URLem, tymczasem rodzaj wersji wymaga kopii roboczej"
+#~ msgid "restoring text"
+#~ msgstr "odtwarzanie treści"
+
+#~ msgid "removing props"
+#~ msgstr "usuwanie atrybutów"
+
+#~ msgid "restoring props"
+#~ msgstr "odtwarzanie atrybutów"
+
+#~ msgid "Error '%s' for '%s'"
+#~ msgstr "Błąd '%s' dla '%s'"
+
+#~ msgid "Impossibly long relative URL"
+#~ msgstr "Względny URL jest zbyt długi"
+
+#~ msgid "WARNING: error decoding UTF-8 for ?\n"
+#~ msgstr "OSTRZEŻENIE: błąd odczytu UTF-8 dla ?\n"
 
 #~ msgid ""
 #~ "Display the differences between two paths.\n"
@@ -5798,26 +5809,11 @@ msgstr "%s' nie podlegające zarządzaniu wersjami i nie eksportowane\n"
 #~ "  wprowadzone w kopii roboczej w stosunku do wersji pobranej z\n"
 #~ "  repozytorium (zmiany do zatwierdzenia).\n"
 
-#~ msgid "WARNING: error decoding UTF-8 for ?\n"
-#~ msgstr "OSTRZEŻENIE: błąd odczytu UTF-8 dla ?\n"
+#~ msgid "'%s' is a URL, but revision kind requires a working copy"
+#~ msgstr "'%s' jest URLem, tymczasem rodzaj wersji wymaga kopii roboczej"
 
-#~ msgid "Impossibly long relative URL"
-#~ msgstr "Względny URL jest zbyt długi"
+#~ msgid "Unknown revision kind"
+#~ msgstr "Nieznany rodzaj wersji"
 
-#~ msgid "Error '%s' for '%s'"
-#~ msgstr "Błąd '%s' dla '%s'"
-
-#~ msgid "restoring props"
-#~ msgstr "odtwarzanie atrybutów"
-
-#~ msgid "removing props"
-#~ msgstr "usuwanie atrybutów"
-
-#~ msgid "restoring text"
-#~ msgstr "odtwarzanie treści"
-
-#~ msgid "directory"
-#~ msgstr "katalog"
-
-#~ msgid "file"
-#~ msgstr "plik"
+#~ msgid "Can't create directory '%s'"
+#~ msgstr "Nie można stworzyć katalogu '%s'"
