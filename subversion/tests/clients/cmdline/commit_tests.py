@@ -244,7 +244,7 @@ def commit_unversioned_thing():
   # Create an unversioned file in the wc.
   svntest.main.file_append(os.path.join(wc_dir, 'blorg'), "nothing to see")
 
-  # Commit a non-existent file.
+  # Commit a non-existent file and *expect* failure:
   return svntest.actions.run_and_verify_commit (wc_dir,
                                                 None,
                                                 None,
@@ -546,6 +546,61 @@ def hudson_part_1_variation_2():
                                                 wc_dir)
 
 
+#----------------------------------------------------------------------
+
+# Testing part 2 of the "Greg Hudson" problem.
+#
+# In this test, we make sure that we're UNABLE to commit a propchange
+# on an out-of-date directory.
+
+def hudson_part_2():
+  "hudson prob 2.0:  prop commit on old dir fails."
+
+  # Bootstrap:  make independent repo and working copy.
+  sbox = sandbox(hudson_part_2)
+  wc_dir = os.path.join (svntest.main.general_wc_dir, sbox)
+
+  if svntest.actions.make_repo_and_wc(sbox): return 1
+
+  # Remove gamma from the working copy.
+  gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma') 
+  svntest.main.run_svn('rm', gamma_path)
+
+  # Create expected commit output.
+  output_list = [ [gamma_path, None, {}, {'verb' : 'Deleting' }] ]
+  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+  
+  # After committing, status should show no sign of gamma.
+  status_list = svntest.actions.get_virginal_status_list(wc_dir, '2')
+  for item in status_list:
+    item[3]['wc_rev'] = '1'
+  status_list.pop(path_index(status_list, gamma_path))
+  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+  
+  # Commit the deletion of gamma and verify.
+  if svntest.actions.run_and_verify_commit (wc_dir,
+                                            expected_output_tree,
+                                            expected_status_tree,
+                                            None, None, None, None, None,
+                                            wc_dir):
+    return 1
+
+  # Now gamma should be marked as `deleted' under the hood, at
+  # revision 2.  Meanwhile, A/D is still lagging at revision 1.
+
+  # Make a propchange on A/D
+  svntest.main.run_svn('ps', 'foo', 'bar', os.path.join(wc_dir, 'A', 'D'))
+
+  # Commit and *expect* a repository Merge failure:
+  return svntest.actions.run_and_verify_commit (wc_dir,
+                                                None,
+                                                None,
+                                                "Merge conflict",
+                                                None, None,
+                                                None, None,
+                                                wc_dir)
+
+
 ########################################################################
 # Run the tests
 
@@ -557,7 +612,8 @@ test_list = [ None,
               nested_dir_replacements,
               hudson_part_1,
               hudson_part_1_variation_1,
-              hudson_part_1_variation_2
+              hudson_part_1_variation_2,
+              hudson_part_2
              ]
 
 if __name__ == '__main__':
