@@ -232,6 +232,7 @@ test_uri_encode (const char **msg,
   return SVN_NO_ERROR;
 }
 
+
 static svn_error_t *
 test_join (const char **msg,
            svn_boolean_t msg_only,
@@ -326,6 +327,62 @@ test_join (const char **msg,
   return SVN_NO_ERROR;
 }
 
+
+static svn_error_t *
+test_basename (const char **msg,
+               svn_boolean_t msg_only,
+               apr_pool_t *pool)
+{
+  int i;
+  char *result;
+
+  static const char * const paths[][2] = {
+    { "abc", "abc" },
+    { "/abc", "abc" },
+    { "/abc/", "abc" },
+    { "/abc//", "abc" },
+    { "//abc", "abc" },
+    { "//abc/", "abc" },
+    { "//abc//", "abc" },
+    { "/x/abc", "abc" },
+    { "/x/abc/", "abc" },
+    { "/xx/abc", "abc" },
+    { "/xx//abc", "abc" },
+    { "/xx//abc", "abc" },
+    { "a", "a" },
+    { "/a", "a" },
+    { "/a/", "a" },
+    { "/b/a", "a" },
+    { "/b/a/", "a" },
+    { "/b/a///", "a" },
+    { "/b//a", "a" },
+    { "/", "/" },
+    { "//", "/" },
+    { "///", "/" },
+    { "", "" },
+  };
+
+  *msg = "test svn_path_basename";
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  for (i = sizeof(paths) / sizeof(paths[0]); i--; )
+    {
+      const char *path = paths[i][0];
+      const char *expect = paths[i][1];
+
+      result = svn_path_basename(path, pool);
+      if (strcmp(result, expect))
+        return svn_error_createf(SVN_ERR_TEST_FAILED, 0, NULL, pool,
+                                 "svn_path_basename(\"%s\") returned "
+                                 "\"%s\". expected \"%s\"",
+                                 path, result, expect);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
 
 /* The test table.  */
 
@@ -338,6 +395,7 @@ svn_error_t * (*test_funcs[]) (const char **msg,
   test_is_url,
   test_uri_encode,
   test_join,
+  test_basename,
   0
 };
 

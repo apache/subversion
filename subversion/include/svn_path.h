@@ -84,6 +84,20 @@ char *svn_path_join (const char *base,
 char *svn_path_join_many (apr_pool_t *pool, const char *base, ...);
 
 
+/* Get the basename of the specified PATH. The basename is defined as
+   the last component of the path (ignoring any trailing slashes). If
+   the PATH is root ("/"), then that is returned. Otherwise, the
+   returned value will have no slashes in it.
+
+   Example: svn_path_basename("/foo/bar") -> "bar"
+
+   The returned basename will be allocated in POOL.
+
+   Note: if an empty string is passed, then an empty string will be returned.
+*/
+char *svn_path_basename (const char *path, apr_pool_t *pool);
+
+
 /* Add a COMPONENT (a null-terminated C-string) to PATH.  COMPONENT is
    allowed to contain directory separators.
 
