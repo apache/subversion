@@ -36,6 +36,8 @@ would be stored in our dump format.
     Each tree is called a "revision" and has unversioned properties attached.
 
   - A revision has a tree of "nodes" hanging off of it.
+    Actually, the nodes in the filesystem form a DAG.  A revision
+    always points to an initial node that represents the 'root' of some tree.
  
   - The majority of a tree's nodes are hard-links (references) to
     nodes that were created in earlier trees.
@@ -50,45 +52,150 @@ would be stored in our dump format.
     The history values can be non-existent (meaning the node is
     completely new), or can have a value of {revision, path}.
 
+-----------------------------------------------------------------
 
-Implementation (Questions)
-==============
+# PROPOSAL NUMBER 1
 
-  * file format
-   
-    Although it's tempting to use XML (easy to output, easy to write a
-    parser), gstein pointed out that it may create more problems in
-    the long run.  Storing binary data (and escaping) in XML can be
-    painful; scanning for the escape characters can really slow down
-    an import; just imagine trying to store an XML file!  Even though
-    XML may be more convenient at the outset, we'll probably end up
-    burning lots of time trying to work around these other issues
-    later on.
+# Okay, here's my first draft of a binary format for a filesystem
+# dump.  As mentioned before, it contains nothing but the abstract
+# structure of the filesystem -- independent of any node-id schema or
+# database back-end.  All of the data in this file can be acquired by
+# public function calls into svn_fs.h.  Similarly, one hopes that the
+# parser of this file can *rebuild* the fs using only public svn_fs.h
+# routines.
 
-    For this reason, we're thinking some kind of simple binary format.
+# As gstein suggested, we're using rfc822-style headers to label
+# logical chunks of data.
 
-  * should we bother to implement 'diffy' storage of texts in our
-    format?  My instinct is "no".  Dumping and restoring a filesystem
-    is a rare operation, so we don't need to be so paranoid about disk
-    space usage.  It would be extra work to implement diffy-storage,
-    and imports would probably be safer (and faster) if we had nothing
-    but fulltexts in our dump.
+# The thing that makes this format -Large- is the fact that we're
+# storing bubble-up information.  Every bubbled-up directory is in
+# here, complete with node-ids.
 
-  * Reading through our 'libsvn_fs/structure' document, it seems that
-    the only data we're not saving in the dump is a node's "Created
-    Revision" (CR).  It's not clear to me that this is a timeless
-    concept.  It certainly has no relevance in the new, impending fs
-    schema.  It seems more like an optimization for our current
-    node-id schema.  Do others agree?
+# Here is what a node looks like:
 
-    Let me be clear here: the CR is still a useful concept.  For
-    example, I like very much that this value is cached in my working
-    copy and shows up in 'svn status -v'.  I will always want to know
-    "in what revision did foo.c last change?"  When we switch to the
-    new schema, we'll still want to keep this concept around -- it
-    will simply have a different implementation under the hood.
+# Each node has a unique ID, an opaque svn_fs_id_t.  By using
+# svn_fs_unparse_id, we can get a unique string_t blob to write out.
+# Later on, when something parses this file, the blob is opaque and
+# meaningless, but still acts as a unique identifier when rebuilding
+# a filesystem.
+Node-id-length:  13
+[node-id follows]
 
-    But still, I don't think it needs to be saved in a dump format.
-    When we re-import a filesystem, the information can be *derived*
-    by whatever schema exists under the hood -- possibly on-the-fly,
-    as we're importing.  Am I making sense?
+# Where this node was created, and its kind.
+Revision: 1422
+Path:  foo/bar/baz/bop
+Node-kind: file | dir
+
+# This node was deleted in this revision, OR,
+# This node was added in this revision -- possibly with copy history, OR
+# This node was changed in this revision.
+#
+#   note1:  if added and Path already exists, infer a replacement.
+#   note2:  'changed' field is *only* so we detect pure bubble-up nodes;
+#           bubbled-up nodes won't have it at all.
+Action:  deleted | added | changed
+
+# Was this node copied from another revision and path?
+Copied-from: [revision, path]
+
+# For property lists, I'm reusing the same hashtable-on-disk format
+# that we currently use to write propfiles.  It's a simple way of
+# mapping const char * -> svn_string_t *.  It's human readable
+# (assuming your values aren't binary data), and most importantly, we
+# already have a parser for this format!
+Node-properties:
+K 12
+svn:keywords
+V 15
+LastChangedDate
+K 14
+svn:executable
+V 2
+on
+END
+
+# If the node is a file, then we store its fulltext like so:
+Text-checksum: [md5 checksum on fulltext]
+Content-length:  N
+[N bytes of data follow]
+
+# If the node is a directory, then we give a list of dirents.  I
+# realized that this is just another hashtable like our props, mapping
+# (const char *) names to (svn_string_t *) node-ids.  So it makes
+# sense to use the same hash-on-disk format here as well.
+Directory-entries:
+K 6
+README
+V 8
+[some node id]
+K 10
+autogen.sh
+V 9
+[some node id]
+END
+
+
+# Here's what a revision looks like, pretty simple.
+Revision-number:  1422
+Revision-root-node:  ID
+Revision-properties: 
+...
+...
+...
+END
+
+----------------------------------------------------------------
+
+# PROPOSAL NUMBER 2
+
+# This format is much, much smaller in terms of disk space.  It
+# doesn't mention node-ids at *all*, because it leaves out *all*
+# bubble-up nodes.  Really, it's essentially what an editor would
+# output during a commit: only changed nodes.  Directories don't list
+# entries at all.
+
+# The tradeoff here is that it's more work to reconstruct a particular
+# revision from the middle of a dumpfile.  For example, if I have a
+# dumpfile for revisions 1 to 500, and somebody wants to reconstruct
+# (load) revision 300 into a repository, the *only* way to do this is
+# by replaying commits 1-299 into some temporary repository.
+
+# Where this node was created, and its kind.
+Revision: 1422
+Path:  foo/bar/baz/bop
+Node-kind: file | dir
+
+# No need for 'changed' verb:  that was only for distinguishing
+# between bubble-up dirs and dirs with changed props.
+Action:  deleted | added
+
+# Was this node copied from another revision and path?
+Copied-from: [revision, path]
+
+# Property list.
+Node-properties:
+K 12
+svn:keywords
+V 15
+LastChangedDate
+K 14
+svn:executable
+V 2
+on
+END
+
+# If the node is a file, then we store its fulltext like so:
+Text-checksum: [md5 checksum on fulltext]
+Content-length:  N
+[N bytes of data follow]
+
+# If the node is a directory, then we add nothing.  No need for dirents.
+
+
+# Here's what a revision looks like.  No root-node-id needed.
+Revision-number:  1422
+Revision-properties: 
+...
+...
+...
+END
