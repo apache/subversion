@@ -52,10 +52,10 @@ each particular interface lies.
 
 
 @menu
-* Semantics::
-* Client Layer::                   
-* Network Layer::  
-* Server Layer::
+* Semantics::                 Common ideas passed through the layers.
+* Client Layer::              Client-side overview. 
+* Network Layer::             Network overview.
+* Server Layer::              Server-side overview.
 @end menu
 
 @c ------------------------------------------------------------------
