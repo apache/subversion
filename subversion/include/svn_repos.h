@@ -38,7 +38,12 @@ extern "C" {
  * from the commit, and the BATON that was provided with the hook
  * originally.
  *
- * See svn_repos_get_editor for an example user.
+ * See also svn_repos_get_editor.
+ *
+ * NOTE: this "hook" is not related to the standard repository hooks
+ * run before and after commits, which are configured in the
+ * repository's conf/ subdirectory.  When most users say "hook",
+ * they're talking about those, not about this function type.
  */
 typedef svn_error_t *svn_repos_commit_hook_t (svn_revnum_t new_revision,
                                               void *baton);
@@ -55,7 +60,13 @@ typedef svn_error_t *svn_repos_commit_hook_t (svn_revnum_t new_revision,
  * invoke HOOK with the new revision number and HOOK_BATON as
  * arguments.  If HOOK returns an error, that error will be returned
  * from close_edit, otherwise close_edit will return successfully
- * (unless it encountered an error before invoking HOOK).  */
+ * (unless it encountered an error before invoking HOOK).  
+ *
+ * NOTE: this HOOK is not related to the standard repository hooks
+ * run before and after commits, which are configured in the
+ * repository's conf/ subdirectory.  When most users say "hook",
+ * they're referring to those, not to this HOOK argument.
+ */
 svn_error_t *svn_repos_get_editor (svn_delta_edit_fns_t **editor,
                                    void **edit_baton,
                                    svn_fs_t *fs,
