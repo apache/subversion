@@ -559,11 +559,12 @@ $ svn checkout svn://host.example.com/project1
       <para>At the time of writing, the server only knows how to send
         a CRAM-MD5 <footnote><para>See RFC 2195.</para></footnote>
         authentication challenge.  In essence, the server sends a bit
-        of data to the client.  The client uses its password to
-        encrypt the data with the MD5 hash algorithm, and sends it
-        back.  The server performs the same computation with the
-        stored password to verify that the result is identical.  At no
-        point does the actual password travel over the network.</para>
+        of data to the client.  The client uses the MD5 hash algorithm
+        to create a fingerprint of the data and password combined,
+        then sends the fingerprint as a response.  The server performs
+        the same computation with the stored password to verify that
+        the result is identical.  <emphasis>At no point does the
+        actual password travel over the network.</emphasis></para>
 
       <para>It's also possible, of course, for the client to be
         externally authenticated via a tunnel agent, such as
