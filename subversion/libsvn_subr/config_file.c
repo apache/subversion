@@ -858,7 +858,8 @@ svn_config_ensure (const char *config_dir, apr_pool_t *pool)
         APR_EOL_STR
         "###   ssl-trust-default-ca       Trust the system 'default' CAs" 
         APR_EOL_STR
-        "###   ssl-client-cert-file       PKCS#12 format client certificate file"
+        "###   ssl-client-cert-file       PKCS#12 format client "
+        "certificate file"
         APR_EOL_STR
         "###   ssl-client-cert-password   Client Key password, if needed."
         APR_EOL_STR

@@ -167,7 +167,8 @@ svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
   /* Make sure the whole CONTENTS were written, else return an error. */
   if (apr_err)
     {
-      err = svn_error_wrap_apr (apr_err, _("Can't write to '%s'"), tmpfile_name);
+      err = svn_error_wrap_apr (apr_err, _("Can't write to '%s'"), 
+                                tmpfile_name);
       goto cleanup;
     }
 
@@ -348,7 +349,8 @@ svn_cl__cleanup_log_msg (void *log_msg_baton,
      svn_error_create (commit_err->apr_err,
                        svn_error_createf (commit_err->apr_err, NULL,
                                           "   '%s'", lmb->tmpfile_left),
-                       _("Your commit message was left in a temporary file:")));
+                       _("Your commit message was left in "
+                         "a temporary file:")));
   return commit_err;
 }
 

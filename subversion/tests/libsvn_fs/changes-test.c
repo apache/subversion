@@ -131,7 +131,8 @@ static svn_error_t *
 txn_body_changes_fetch_raw (void *baton, trail_t *trail)
 {
   struct changes_args *b = baton;
-  return svn_fs__bdb_changes_fetch_raw (&(b->raw_changes), b->fs, b->key, trail);
+  return svn_fs__bdb_changes_fetch_raw (&(b->raw_changes), b->fs, b->key, 
+                                        trail);
 }
 
 

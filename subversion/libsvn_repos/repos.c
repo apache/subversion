@@ -759,7 +759,8 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
       "PROPNAME=\"$4\""
       APR_EOL_STR
       APR_EOL_STR
-      "propchange-email.pl \"$REPOS\" \"$REV\" \"$USER\" \"$PROPNAME\" watchers@example.org"
+      "propchange-email.pl \"$REPOS\" \"$REV\" \"$USER\" \"$PROPNAME\" "
+      "watchers@example.org"
       APR_EOL_STR;
 
     SVN_ERR_W (svn_io_file_create (this_path, contents, pool),
@@ -1231,12 +1232,13 @@ static svn_error_t *hotcopy_structure (void *baton,
       /* Check if we are inside db directory and if so skip it */
       if (svn_path_compare_paths(
             svn_path_get_longest_ancestor (SVN_REPOS__DB_DIR, sub_path, pool), 
-                                           SVN_REPOS__DB_DIR) == 0)
+            SVN_REPOS__DB_DIR) == 0)
         return SVN_NO_ERROR;
 
       if (svn_path_compare_paths(
-            svn_path_get_longest_ancestor (SVN_REPOS__LOCK_DIR, sub_path, pool),
-                                           SVN_REPOS__LOCK_DIR) == 0)
+            svn_path_get_longest_ancestor (SVN_REPOS__LOCK_DIR, 
+                                           sub_path, pool),
+            SVN_REPOS__LOCK_DIR) == 0)
         return SVN_NO_ERROR;
     }
 

@@ -832,8 +832,8 @@ rep_read_get_baton (struct rep_read_baton **rb_p,
   b->is_delta = FALSE;
 
   /* Open the revision file. */
-  SVN_ERR (open_and_seek_revision (&b->rep_file, fs, rep->revision, rep->offset,
-                                   pool));
+  SVN_ERR (open_and_seek_revision (&b->rep_file, fs, rep->revision, 
+                                   rep->offset, pool));
 
   /* Read in the REP line. */
   SVN_ERR (read_rep_line (&rep_args, b->rep_file, pool));
@@ -858,7 +858,8 @@ rep_read_get_baton (struct rep_read_baton **rb_p,
 
       /* Create a writable stream that will call our handler when svndiff
          data is written to it. */
-      b->wstream = svn_txdelta_parse_svndiff (handler, handler_baton, FALSE, pool);
+      b->wstream = svn_txdelta_parse_svndiff (handler, handler_baton, 
+                                              FALSE, pool);
 
       b->is_delta = TRUE;
     }
@@ -1076,7 +1077,8 @@ svn_fs__fs_get_proplist (apr_hash_t **proplist_p,
 
   proplist = apr_hash_make (pool);
 
-  SVN_ERR (get_representation_at_offset (&stream, fs, noderev->prop_rep, pool));
+  SVN_ERR (get_representation_at_offset (&stream, fs, 
+                                         noderev->prop_rep, pool));
   
   SVN_ERR (hash_read (proplist, stream, pool));
 

@@ -36,11 +36,13 @@ private:
 public:
     static const svn_opt_revision_kind START;
     static const svn_opt_revision_kind HEAD;
-	Revision(jobject jthis, bool headIfUnspecified = false, bool oneIfUnspecified = false);
-    Revision (const svn_opt_revision_kind kind = svn_opt_revision_unspecified);
-	~Revision();
+    Revision(jobject jthis, bool headIfUnspecified = false,
+             bool oneIfUnspecified = false);
+    Revision(const svn_opt_revision_kind kind = svn_opt_revision_unspecified);
+    ~Revision();
     const svn_opt_revision_t *revision () const;
 
 };
 
-#endif // !defined(AFX_REVISION_H__BEAA0788_C9D9_4A67_B94E_761ABC68ACFE__INCLUDED_)
+#endif
+// !defined(AFX_REVISION_H__BEAA0788_C9D9_4A67_B94E_761ABC68ACFE__INCLUDED_)
