@@ -32,7 +32,7 @@
 # ifdef SVN_VER_NAME
 #  define SVN_FILEFLAGS VS_FF_DEBUG|VS_FF_PRERELEASE
 # else
-#  define FILEFLAGS VS_FF_DEBUG
+#  define SVN_FILEFLAGS VS_FF_DEBUG
 # endif
 #endif /* _DEBUG */
 
