@@ -31,44 +31,60 @@ AC_DEFUN(SVN_FIND_JDK,
 [
   where=$1
 
+  JDK=none
+  JAVA_BIN=none
+  JAVAC=none
+  JAVAH=none
+  JAR=none
+  JNI_INCLUDES=none
+
+  JDK_SUITABLE=no
   AC_MSG_CHECKING([for JDK])
   if test $where = check; then
-    if test -d "$JAVA_HOME/include"; then
+    dnl Prefer /Library/Java/Home first to try to be nice on Darwin.
+    dnl We'll correct later if we get caught in the tangled web of JAVA_HOME.
+    if test -x "$JAVA_HOME/bin/java"; then
       JDK="$JAVA_HOME"
-      JDK_SUITABLE=yes
-    else
-      JDK=none
-      JDK_SUITABLE=no
+    elif test -x "/Library/Java/Home/bin/java"; then
+      JDK="/Library/Java/Home"
+    elif test -x "/usr/bin/java"; then
+      JDK="/usr"
+    elif test -x "/usr/local/bin/java"; then
+      JDK="/usr/local"
     fi
   else
     JDK=$where
-    if test -d "$JDK/include"; then
-      JDK_SUITABLE=yes
-    else
-      AC_MSG_WARN([no JNI header files found.])
-    fi
-  fi
-  AC_MSG_RESULT([$JDK_SUITABLE])
-
-  JAVA_BIN='$(JDK)/bin'
-  if test -f "$JDK/include/jni.h"; then
-    JNI_INCLUDES="$JDK/include"
   fi
 
   dnl Correct for Darwin's odd JVM layout.  Ideally, we should use realpath,
   dnl but Darwin doesn't have that utility.  /usr/bin/java is a symlink into
   dnl /System/Library/Frameworks/JavaVM.framework/Versions/CurrentJDK/Commands
-  os_arch=`uname`
-  if test "$JDK_SUITABLE" = "yes" -a "$JDK" = "/usr" -a "$os_arch" = "Darwin" -a -d "/System/Library/Frameworks/JavaVM.framework/Versions/CurrentJDK"; then
-      JDK="/System/Library/Frameworks/JavaVM.framework/Versions/CurrentJDK"
-      JAVA_BIN='$(JDK)/Commands'
-      JNI_INCLUDES="$JDK/Headers"
+  dnl See http://developer.apple.com/qa/qa2001/qa1170.html
+  os_arch="`uname`"
+  if test "$os_arch" = "Darwin" -a "$JDK" = "/usr" -a -d "/Library/Java/Home"; then
+      JDK="/Library/Java/Home"
   fi
+  if test -f "$JDK/include/jni.h"; then
+    dnl This *must* be fully expanded, or we'll have problems later in find.
+    JNI_INCLUDES="$JDK/include"
+    JDK_SUITABLE=yes
+  else
+    AC_MSG_WARN([no JNI header files found.])
+    if test "$os_arch" = "Darwin"; then
+      AC_MSG_WARN([You may need to install the latest Java Development package from http://connect.apple.com/.  Apple no longer includes the JNI header files by default on Java updates.])
+    fi
+    JDK_SUITABLE=no
+  fi
+  AC_MSG_RESULT([$JDK_SUITABLE])
 
-  JAVAC="$JAVA_BIN/javac"
-  # TODO: Test for Jikes, which should be preferred (for speed) if available
-  JAVAH="$JAVA_BIN/javah"
-  JAR="$JAVA_BIN/jar"
+  if test "$JDK_SUITABLE" = "yes"; then
+    JAVA_BIN='$(JDK)/bin'
+
+    dnl TODO: Test for Jikes, which should be preferred (for speed) if available
+    JAVAC="$JAVA_BIN/javac"
+    JAVAH="$JAVA_BIN/javah"
+    JAR="$JAVA_BIN/jar"
+  fi
 
   dnl We use JDK in both the swig.m4 macros and the Makefile
   AC_SUBST(JDK)
