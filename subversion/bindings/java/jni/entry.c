@@ -26,6 +26,9 @@
 #include "global.h"
 #include "hashtable.h"
 #include "entry.h"
+#include "schedule.h"
+#include "revision.h"
+#include "nodekind.h"
 
 /*** Defines ***/
 #define SVN_JNI_ENTRY__CLASS "org/tigris/subversion/lib/Entry"
@@ -33,16 +36,25 @@
 #define SVN_JNI_ENTRY__SET_URL "setUrl"
 #define SVN_JNI_ENTRY__SET_URL_SIG "(Ljava/lang/String;)V"
 #define SVN_JNI_ENTRY__SET_REVISION "setRevision"
-#define SVN_JNI_ENTRY__SET_NODEKIND "setNodekind"
+#define SVN_JNI_ENTRY__SET_REVISION_SIG \
+"(Lorg/tigris/subversion/lib/Revision;)V"
+#define SVN_JNI_ENTRY__SET_KIND "setKind"
+#define SVN_JNI_ENTRY__SET_KIND_SIG \
+"(Lorg/tigris/subversion/lib/Nodekind;)V"
 #define SVN_JNI_ENTRY__SET_SCHEDULE "setSchedule"
+#define SVN_JNI_ENTRY__SET_SCHEDULE_SIG \
+"(Lorg/tigris/subversion/lib/Schedule;)V"
 #define SVN_JNI_ENTRY__SET_CONFLICTED "setConflicted"
 #define SVN_JNI_ENTRY__SET_COPIED "setCopied"
 #define SVN_JNI_ENTRY__SET_TEXTTIME "setTexttime"
-#define SVN_JNI_ENTRY__SET_TEXTTIME_SIG "(Ljava/util/Date;)V"
+#define SVN_JNI_ENTRY__SET_TEXTTIME_SIG \
+"(Ljava/util/Date;)V"
 #define SVN_JNI_ENTRY__SET_PROPTIME "setProptime"
-#define SVN_JNI_ENTRY__SET_PROPTIME_SIG "(Ljava/util/Date;)V"
+#define SVN_JNI_ENTRY__SET_PROPTIME_SIG \
+"(Ljava/util/Date;)V"
 #define SVN_JNI_ENTRY__SET_ATTRIBUTES "setAttributes"
-#define SVN_JNI_ENTRY__SET_ATTRIBUTES_SIG "(Ljava/util/Hashtable;)V"
+#define SVN_JNI_ENTRY__SET_ATTRIBUTES_SIG \
+"(Ljava/util/Hashtable;)V"
 
 /*
  * Do you want to debug code in this file?
@@ -139,14 +151,15 @@ entry__create_from_svn_wc_entry_t(JNIEnv *env, jboolean *hasException,
    * needed references:
    * -result
    * -url
+   * -schedule
    * -text_time
    * -prop_time
    * -attributes
    * -result
-   * = 6
+   * = 7
    */
     
-  if( (*env)->PushLocalFrame(env, 6) < 0 )
+  if( (*env)->PushLocalFrame(env, 7) < 0 )
     {
       _hasException = JNI_TRUE;
     }
@@ -167,8 +180,14 @@ entry__create_from_svn_wc_entry_t(JNIEnv *env, jboolean *hasException,
       // member: revision
       if( !_hasException )
         {
-          entry__set_revision(env, &_hasException,
-                              result, entry->revision);
+          jobject revision = revision__create(env, &_hasException,
+                                              entry->revision);
+
+          if( !_hasException )
+            {
+              entry__set_revision(env, &_hasException,
+                                  result, revision);
+            }
         }
       
       // member: url
@@ -188,15 +207,31 @@ entry__create_from_svn_wc_entry_t(JNIEnv *env, jboolean *hasException,
       // member: kind
       if( !_hasException )
         {
-          entry__set_nodekind(env, &_hasException,
-                              result, entry->kind);
+          jobject kind = 
+            nodekind__create_from_svn_node_kind(env, 
+                                                &_hasException,
+                                                entry->kind);
+
+          if( !_hasException )
+            {
+              entry__set_kind(env, &_hasException,
+                              result, kind);
+            }
         }
 
       // member: schedule
       if( !_hasException )
         {
-          entry__set_schedule(env, &_hasException,
-                              result, entry->schedule);
+          jobject schedule = 
+            schedule__create_from_svn_wc_schedule_t(env,
+                                                    &_hasException,
+                                                    entry->schedule);
+
+          if( !_hasException )
+            {
+              entry__set_schedule(env, &_hasException,
+                                  result, schedule);
+            }
         }
 
 
@@ -295,50 +330,59 @@ entry__set_url(JNIEnv *env, jboolean *hasException,
 
 void
 entry__set_revision(JNIEnv *env, jboolean *hasException,
-                    jobject jentry, jlong jrevision)
+                    jobject jentry, jobject jrevision)
 {
 #ifdef SVN_JNI__DEBUG_ENTRY
-  fprintf(stderr, ">>>entry__set_revision(...)\n");
+  fprintf(stderr, ">>>entry__set_revision(");
+  SVN_JNI__DEBUG_PTR(jentry);
+  SVN_JNI__DEBUG_PTR(jrevision);
+  fprintf(stderr, ")\n");
 #endif
-  j__set_long(env, hasException, 
-              SVN_JNI_ENTRY__CLASS, SVN_JNI_ENTRY__SET_REVISION,
-              jentry, jrevision);
+  j__set_object(env, hasException,
+                SVN_JNI_ENTRY__CLASS,
+                SVN_JNI_ENTRY__SET_REVISION,
+                SVN_JNI_ENTRY__SET_REVISION_SIG,
+                jentry, jrevision);
 #ifdef SVN_JNI__DEBUG_ENTRY
   fprintf(stderr, "\n<<<entry__set_revision\n");
 #endif
 }
 
 void
-entry__set_nodekind(JNIEnv *env, jboolean *hasException,
-                    jobject jentry, jint jnodekind)
+entry__set_kind(JNIEnv *env, jboolean *hasException,
+                    jobject jentry, jobject jkind)
 {
 #ifdef SVN_JNI__DEBUG_ENTRY
-  fprintf(stderr, ">>>entry__set_nodekind(");
+  fprintf(stderr, ">>>entry__set_kind(");
   SVN_JNI__DEBUG_PTR(jentry);
-  SVN_JNI__DEBUG_DEC(jnodekind);
+  SVN_JNI__DEBUG_PTR(jkind);
   fprintf(stderr, ")\n");
 #endif
-  j__set_int(env, hasException, 
-             SVN_JNI_ENTRY__CLASS, SVN_JNI_ENTRY__SET_NODEKIND,
-             jentry, jnodekind);
+  j__set_object(env, hasException,
+                SVN_JNI_ENTRY__CLASS,
+                SVN_JNI_ENTRY__SET_KIND,
+                SVN_JNI_ENTRY__SET_KIND_SIG,
+                jentry, jkind);
 #ifdef SVN_JNI__DEBUG_ENTRY
-  fprintf(stderr, "\n<<<entry__set_nodekind\n");
+  fprintf(stderr, "\n<<<entry__set_kind\n");
 #endif
 }
 
 void
 entry__set_schedule(JNIEnv *env, jboolean *hasException,
-                    jobject jentry, jint jschedule)
+                    jobject jentry, jobject jschedule)
 {
 #ifdef SVN_JNI__DEBUG_ENTRY
   fprintf(stderr, ">>>entry__set_schedule(");
   SVN_JNI__DEBUG_PTR(jentry);
-  SVN_JNI__DEBUG_DEC(jschedule);
+  SVN_JNI__DEBUG_PTR(jschedule);
   fprintf(stderr, ")\n");
 #endif
-  j__set_int(env, hasException,
-             SVN_JNI_ENTRY__CLASS, SVN_JNI_ENTRY__SET_SCHEDULE,
-             jentry, jschedule);
+  j__set_object(env, hasException,
+                SVN_JNI_ENTRY__CLASS,
+                SVN_JNI_ENTRY__SET_SCHEDULE,
+                SVN_JNI_ENTRY__SET_SCHEDULE_SIG,
+                jentry, jschedule);
 #ifdef SVN_JNI__DEBUG_ENTRY
   fprintf(stderr, "\n<<<entry__set_schedule\n");
 #endif

@@ -38,15 +38,15 @@ entry__set_url(JNIEnv *env, jboolean *hasException,
 
 void
 entry__set_revision(JNIEnv *env, jboolean *hasException,
-                    jobject jentry, jlong jrevision);
+                    jobject jentry, jobject jrevision);
 
 void
-entry__set_nodekind(JNIEnv *env, jboolean *hasException,
-                    jobject jentry, jint jnodekind);
+entry__set_kind(JNIEnv *env, jboolean *hasException,
+                    jobject jentry, jobject jnodekind);
 
 void
 entry__set_schedule(JNIEnv *env, jboolean *hasException,
-                    jobject jentry, jint jschedule);
+                    jobject jentry, jobject jschedule);
 
 void 
 entry__set_conflicted(JNIEnv *env, jboolean *hasException,

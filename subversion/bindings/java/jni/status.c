@@ -24,24 +24,31 @@
 #include "global.h"
 #include "entry.h"
 #include "status.h"
+#include "statuskind.h"
 
 /*** Defines ***/
 #define SVN_JNI_STATUS__CLASS "org/tigris/subversion/lib/Status"
 #define SVN_JNI_STATUS__SIG "()V"
 #define SVN_JNI_STATUS__SET_ENTRY "setEntry"
-#define SVN_JNI_STATUS__SET_ENTRY_SIG "(Lorg/tigris/subversion/lib/Entry;)V"
+#define SVN_JNI_STATUS__SET_ENTRY_SIG \
+"(Lorg/tigris/subversion/lib/Entry;)V"
 #define SVN_JNI_STATUS__SET_TEXT_STATUS "setTextStatus"
-#define SVN_JNI_STATUS__SET_TEXT_STATUS_SIG "(I)V"
+#define SVN_JNI_STATUS__SET_TEXT_STATUS_SIG \
+"(Lorg/tigris/subversion/lib/StatusKind;)V"
 #define SVN_JNI_STATUS__SET_PROP_STATUS "setPropStatus"
-#define SVN_JNI_STATUS__SET_PROP_STATUS_SIG "(I)V"
+#define SVN_JNI_STATUS__SET_PROP_STATUS_SIG \
+"(Lorg/tigris/subversion/lib/StatusKind;)V"
 #define SVN_JNI_STATUS__SET_COPIED "setCopied"
 #define SVN_JNI_STATUS__SET_COPIED_SIG "(Z)V"
 #define SVN_JNI_STATUS__SET_LOCKED "setLocked"
 #define SVN_JNI_STATUS__SET_LOCKED_SIG "(Z)V"
 #define SVN_JNI_STATUS__SET_REPOS_TEXT_STATUS "setReposTextStatus"
-#define SVN_JNI_STATUS__SET_REPOS_TEXT_STATUS_SIG "(I)V"
+#define SVN_JNI_STATUS__SET_REPOS_TEXT_STATUS_SIG \
+"(Lorg/tigris/subversion/lib/StatusKind;)V"
 #define SVN_JNI_STATUS__SET_REPOS_PROP_STATUS "setReposPropStatus"
-#define SVN_JNI_STATUS__SET_REPOS_PROP_STATUS_SIG "(I)V"
+#define SVN_JNI_STATUS__SET_REPOS_PROP_STATUS_SIG \
+"(Lorg/tigris/subversion/lib/StatusKind;)V"
+
 
 /*
  * Do you want to debug code in this file?
@@ -163,15 +170,31 @@ status__create_from_svn_wc_status_t(JNIEnv *env,
       // member: text_status
       if( !_hasException )
         {
-          status__set_text_status(env, &_hasException,
-                                  result, status->text_status);
+          jobject text_status =
+            statuskind__create_from_svn_wc_status_kind(env, 
+                                                       &_hasException, 
+                                                       status->text_status);
+           
+          if( !_hasException )
+            {
+              status__set_text_status(env, &_hasException,
+                                      result, text_status);
+            }
         }
 
       // member: prop_status
       if( !_hasException )
         {
-          status__set_prop_status(env, &_hasException,
-                                  result, status->prop_status);
+          jobject prop_status = 
+            statuskind__create_from_svn_wc_status_kind(env, 
+                                                       &_hasException, 
+                                                       status->prop_status);
+
+          if( !_hasException )
+            {
+              status__set_prop_status(env, &_hasException,
+                                      result, prop_status);
+            }
         }
 
       // member: locked
@@ -191,17 +214,33 @@ status__create_from_svn_wc_status_t(JNIEnv *env,
       // member: repos_text_status
       if( !_hasException )
         {
-          status__set_repos_text_status(env, &_hasException,
-                                        result, 
-                                        status->repos_text_status);
+          jobject repos_text_status =
+            statuskind__create_from_svn_wc_status_kind(env,
+                                                       &_hasException,
+                                                       status->repos_text_status);
+
+          if( !_hasException )
+            {
+              status__set_repos_text_status(env, &_hasException,
+                                            result, 
+                                            repos_text_status);
+            }
         }
 
       // member: repos_prop_status
       if( !_hasException )
         {
-          status__set_repos_prop_status(env, &_hasException,
-                                        result,
-                                        status->repos_prop_status);
+          jobject repos_prop_status =
+            statuskind__create_from_svn_wc_status_kind(env,
+                                                       &_hasException,
+                                                       status->repos_prop_status);
+
+          if( !_hasException )
+            {
+              status__set_repos_prop_status(env, &_hasException,
+                                            result,
+                                            repos_prop_status);
+            }
         }
 
       (*env)->PopLocalFrame(env, result);
@@ -243,18 +282,19 @@ status__set_entry(JNIEnv *env, jboolean *hasException,
 
 void
 status__set_text_status(JNIEnv *env, jboolean *hasException,
-                        jobject jstatus, jint jtext_status)
+                        jobject jstatus, jobject jtext_status)
 {
 #ifdef SVN_JNI__DEBUG_STATUS
   fprintf(stderr, ">>>status__set_text_status(");
   SVN_JNI__DEBUG_PTR(jstatus);
-  SVN_JNI__DEBUG_DEC(jtext_status);
+  SVN_JNI__DEBUG_PTR(jtext_status);
   fprintf(stderr, ")\n");
 #endif
-  j__set_int(env, hasException,
-             SVN_JNI_STATUS__CLASS,
-             SVN_JNI_STATUS__SET_TEXT_STATUS,
-             jstatus, jtext_status);
+  j__set_object(env, hasException, 
+                SVN_JNI_STATUS__CLASS,
+                SVN_JNI_STATUS__SET_TEXT_STATUS,
+                SVN_JNI_STATUS__SET_TEXT_STATUS_SIG,
+                jstatus, jtext_status);
 #ifdef SVN_JNI__DEBUG_STATUS
   fprintf(stderr, "\n<<<status__set_text_status\n");
 #endif
@@ -262,18 +302,19 @@ status__set_text_status(JNIEnv *env, jboolean *hasException,
 
 void 
 status__set_prop_status(JNIEnv *env, jboolean *hasException,
-                        jobject jstatus, jint jprop_status)
+                        jobject jstatus, jobject jprop_status)
 {
 #ifdef SVN_JNI__DEBUG_STATUS
   fprintf(stderr, ">>>status__set_prop_status(");
   SVN_JNI__DEBUG_PTR(jstatus);
-  SVN_JNI__DEBUG_DEC(jprop_status);
+  SVN_JNI__DEBUG_PTR(jprop_status);
   fprintf(stderr, ")\n");
 #endif
-  j__set_int(env, hasException,
-             SVN_JNI_STATUS__CLASS,
-             SVN_JNI_STATUS__SET_PROP_STATUS,
-             jstatus, jprop_status);
+  j__set_object(env, hasException, 
+                SVN_JNI_STATUS__CLASS,
+                SVN_JNI_STATUS__SET_PROP_STATUS,
+                SVN_JNI_STATUS__SET_PROP_STATUS_SIG,
+                jstatus, jprop_status);
 #ifdef SVN_JNI__DEBUG_STATUS
   fprintf(stderr, "\n<<<status__set_prop_status\n");
 #endif
@@ -320,18 +361,19 @@ status__set_locked(JNIEnv *env, jboolean *hasException,
 void 
 status__set_repos_text_status(JNIEnv *env, jboolean *hasException,
                               jobject jstatus, 
-                              jint jrepos_text_status)
+                              jobject jrepos_text_status)
 {
 #ifdef SVN_JNI__DEBUG_STATUS
   fprintf(stderr, ">>>status__set_repos_text_status(");
   SVN_JNI__DEBUG_PTR(jstatus);
-  SVN_JNI__DEBUG_DEC(jrepos_text_status);
+  SVN_JNI__DEBUG_PTR(jrepos_text_status);
   fprintf(stderr, ")\n");
 #endif
-  j__set_int(env, hasException,
-             SVN_JNI_STATUS__CLASS,
-             SVN_JNI_STATUS__SET_REPOS_TEXT_STATUS,
-             jstatus, jrepos_text_status);
+  j__set_object(env, hasException, 
+                SVN_JNI_STATUS__CLASS,
+                SVN_JNI_STATUS__SET_REPOS_TEXT_STATUS,
+                SVN_JNI_STATUS__SET_REPOS_TEXT_STATUS_SIG,
+                jstatus, jrepos_text_status);
 #ifdef SVN_JNI__DEBUG_STATUS
   fprintf(stderr, "\n<<<status__set_repos_text_status\n");
 #endif
@@ -340,18 +382,19 @@ status__set_repos_text_status(JNIEnv *env, jboolean *hasException,
 void
 status__set_repos_prop_status(JNIEnv *env, jboolean *hasException,
                               jobject jstatus,
-                              jint jrepos_prop_status)
+                              jobject jrepos_prop_status)
 {
 #ifdef SVN_JNI__DEBUG_STATUS
   fprintf(stderr, ">>>status__set_repos_prop_status(");
   SVN_JNI__DEBUG_PTR(jstatus);
-  SVN_JNI__DEBUG_DEC(jrepos_prop_status);
+  SVN_JNI__DEBUG_PTR(jrepos_prop_status);
   fprintf(stderr, ")\n");
 #endif
-  j__set_int(env, hasException,
-             SVN_JNI_STATUS__CLASS,
-             SVN_JNI_STATUS__SET_REPOS_PROP_STATUS,
-             jstatus, jrepos_prop_status);
+  j__set_object(env, hasException, 
+                SVN_JNI_STATUS__CLASS,
+                SVN_JNI_STATUS__SET_REPOS_PROP_STATUS,
+                SVN_JNI_STATUS__SET_REPOS_PROP_STATUS_SIG,
+                jstatus, jrepos_prop_status);
 #ifdef SVN_JNI__DEBUG_STATUS
   fprintf(stderr, "\n<<<status__set_repos_prop_status\n");
 #endif
