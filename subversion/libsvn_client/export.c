@@ -39,17 +39,18 @@ static svn_error_t *
 remove_admin_dirs (const char *dir, apr_pool_t *pool)
 {
   apr_pool_t *subpool = svn_pool_create (pool);
-  apr_hash_t *dirents = apr_hash_make (subpool);
-  const enum svn_node_kind *type;
+  apr_hash_t *dirents;
   apr_hash_index_t *hi;
-  const char *item;
-  const void *key;
-  void *val;
 
-  SVN_ERR (svn_io_get_dirents (&dirents, dir, subpool));
+  SVN_ERR (svn_io_get_dirents (&dirents, dir, pool));
 
-  for (hi = apr_hash_first (subpool, dirents); hi; hi = apr_hash_next (hi))
+  for (hi = apr_hash_first (pool, dirents); hi; hi = apr_hash_next (hi))
     {
+      const enum svn_node_kind *type;
+      const char *item;
+      const void *key;
+      void *val;
+
       apr_hash_this (hi, &key, NULL, &val);
 
       item = key;
@@ -57,10 +58,9 @@ remove_admin_dirs (const char *dir, apr_pool_t *pool)
 
       if (*type == svn_node_dir)
         {
-          char *dir_path = svn_path_join (dir, key, subpool);
+          const char *dir_path = svn_path_join (dir, key, subpool);
 
-          if (strlen (item) == sizeof (SVN_WC_ADM_DIR_NAME) - 1
-              && strcmp (item, SVN_WC_ADM_DIR_NAME) == 0)
+          if (strcmp (item, SVN_WC_ADM_DIR_NAME) == 0)
             {
               SVN_ERR (svn_io_remove_dir (dir_path, subpool));
             }
@@ -69,7 +69,11 @@ remove_admin_dirs (const char *dir, apr_pool_t *pool)
               SVN_ERR (remove_admin_dirs (dir_path, subpool));
             } 
         }
+
+      svn_pool_clear (subpool);
     }
+
+  svn_pool_destroy (subpool);
 
   return SVN_NO_ERROR;
 }
@@ -80,15 +84,9 @@ copy_versioned_files (const char *from,
                       apr_pool_t *pool)
 {
   apr_pool_t *subpool = svn_pool_create (pool);
-  apr_hash_t *dirents = apr_hash_make (subpool);
-  const enum svn_node_kind *type;
+  apr_hash_t *dirents;
   svn_wc_entry_t *entry;
-  apr_hash_index_t *hi;
-  apr_status_t apr_err;
   svn_error_t *err;
-  const char *item;
-  const void *key;
-  void *val;
 
   err = svn_wc_entry (&entry, from, FALSE, subpool);
 
@@ -98,6 +96,8 @@ copy_versioned_files (const char *from,
   /* we don't want to copy some random non-versioned directory. */
   if (entry)
     {
+      apr_hash_index_t *hi;
+      apr_status_t apr_err;
       apr_finfo_t finfo;
 
       apr_err = apr_stat (&finfo, from, APR_FINFO_PROT, subpool);
@@ -110,10 +110,15 @@ copy_versioned_files (const char *from,
         return svn_error_createf
           (apr_err, 0, NULL, subpool, "error creating dir `%s'", to);
 
-      SVN_ERR (svn_io_get_dirents (&dirents, from, subpool));
+      SVN_ERR (svn_io_get_dirents (&dirents, from, pool));
 
-      for (hi = apr_hash_first (subpool, dirents); hi; hi = apr_hash_next (hi))
+      for (hi = apr_hash_first (pool, dirents); hi; hi = apr_hash_next (hi))
         {
+          const enum svn_node_kind *type;
+          const char *item;
+          const void *key;
+          void *val;
+
           apr_hash_this (hi, &key, NULL, &val);
 
           item = key;
@@ -121,25 +126,22 @@ copy_versioned_files (const char *from,
 
           if (*type == svn_node_dir)
             {
-              if (strncmp (item, SVN_WC_ADM_DIR_NAME,
-                           sizeof (SVN_WC_ADM_DIR_NAME) - 1) == 0)
+              if (strcmp (item, SVN_WC_ADM_DIR_NAME) == 0)
                 {
                   ; /* skip this, it's an administrative directory. */
                 }
               else
                 {
-                  char *new_from = svn_path_join (from, key, subpool);
-                  char *new_to = svn_path_join (to, key, subpool);
+                  const char *new_from = svn_path_join (from, key, subpool);
+                  const char *new_to = svn_path_join (to, key, subpool);
 
                   SVN_ERR (copy_versioned_files (new_from, new_to, subpool));
                 }
             }
           else if (*type == svn_node_file)
             {
-              char *copy_from = svn_path_join (from, item, subpool);
-              char *copy_to = svn_path_join (to, item, subpool);
-
-              entry = NULL;
+              const char *copy_from = svn_path_join (from, item, subpool);
+              const char *copy_to = svn_path_join (to, item, subpool);
 
               err = svn_wc_entry (&entry, copy_from, FALSE, subpool);
 
@@ -153,6 +155,8 @@ copy_versioned_files (const char *from,
                                              subpool));
                 }
             }
+
+          svn_pool_clear (subpool);
         }
     }
 
