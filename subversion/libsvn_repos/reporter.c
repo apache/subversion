@@ -135,7 +135,8 @@ svn_repos_delete_path (void *report_baton,
   
 
   /* Remove the file or directory (recursively) from the txn. */
-  SVN_ERR (svn_fs_delete_tree (rbaton->txn_root, delete_path, rbaton->pool));
+  SVN_ERR (svn_fs_delete_tree (rbaton->txn_root, delete_path->data, 
+                               rbaton->pool));
 
   return SVN_NO_ERROR;
 }
