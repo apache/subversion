@@ -20,9 +20,9 @@ def main(fname, verfname=None, oname=None, skip_depends=0):
   if verfname is None:
     verfname = os.path.join('subversion', 'include', 'svn_version.h')
   generator = gen_make.MakefileGenerator(fname, verfname, oname)
-  generator.write()
   if not skip_depends:
-    generator.write_depends()
+    generator.compute_hdr_deps()
+  generator.write()
 
 
 def _usage_exit():

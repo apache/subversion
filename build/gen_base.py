@@ -70,6 +70,7 @@ class GeneratorBase:
                                self.parser.get(target, 'path'),
                                install,
                                type,
+                               self.parser.get(target, 'custom'), ### bogus
                                vsn,
                                self._extension_map)
 
@@ -105,6 +106,13 @@ class GeneratorBase:
           if string.find(pattern, os.sep) != -1:
             self.target_dirs[os.path.join(target_ob.path,
                                           os.path.dirname(pattern))] = None
+
+    # compute intra-library dependencies
+    for name in self.targets.keys():
+      if type != 'script' and type != 'swig':
+        for libname in string.split(self.parser.get(name, 'libs')):
+          if self.targets.has_key(libname):
+            self.graph.add(DT_LINK, name, self.targets[libname])
 
     # collect various files
     self.includes = _collect_paths(self.parser.get('options', 'includes'))
@@ -195,8 +203,15 @@ class DependencyGraph:
     else:
       self.deps[type][target] = [ source ]
 
-  def get_sources(self, type, target):
-    return self.deps[type].get(target, [ ])
+  def get_sources(self, type, target, cls=None):
+    sources = self.deps[type].get(target, [ ])
+    if not cls:
+      return sources
+    filtered = [ ]
+    for src in sources:
+      if isinstance(src, cls):
+        filtered.append(src)
+    return filtered
 
   def get_targets(self, type):
     targets = self.deps[type].keys()
@@ -222,13 +237,37 @@ for _dt in dep_types:
   # e.g. DT_INSTALL = 'DT_INSTALL'
   globals()[_dt] = _dt
 
+class DependencyNode:
+  def __init__(self, fname):
+    self.fname = fname
+
+  def __str__(self):
+    return self.fname
+
+  def __cmp__(self, ob):
+    return cmp(self.fname, ob)
+
+  def __hash__(self):
+    return hash(self.fname)
+
+class ObjectFile(DependencyNode):
+  pass
+class ApacheObject(ObjectFile):
+  pass
+class SWIGObject(ObjectFile):
+  def __init__(self, fname, lang):
+    ObjectFile.__init__(self, fname)
+    self.lang = lang
+
 
 class _Target:
-  def __init__(self, name, path, install, type, vsn, extmap):
+  def __init__(self, name, path, install, type, custom, vsn, extmap):
     self.name = name
-    self.deps = [ ]	# dependencies (list of other Target objects)
     self.path = path
     self.type = type
+
+    ### we should move this into .type
+    self.custom = custom
 
     if not install:
       try:
@@ -270,7 +309,10 @@ class _Target:
         objname = src[:-2] + self.objext
 
         # object depends upon source
-        graph.add(DT_OBJECT, objname, src)
+        if self.custom == 'apache-mod':
+          graph.add(DT_OBJECT, ApacheObject(objname), src)
+        else:
+          graph.add(DT_OBJECT, objname, src)
 
         # target (a linked item) depends upon object
         graph.add(DT_LINK, self.name, objname)
@@ -450,15 +492,17 @@ def _scan_for_includes(fname, limit):
         hdrs[h] = None
   return hdrs
 
-def _sorted_files(targets):
+def _sorted_files(graph, area):
   "Given a list of targets, sort them based on their dependencies."
 
   # we're going to just go with a naive algorithm here. these lists are
   # going to be so short, that we can use O(n^2) or whatever this is.
 
+  inst_targets = graph.get_sources(DT_INSTALL, area)
+
   # first we need our own copy of the target list since we're going to
   # munge it.
-  targets = targets[:]
+  targets = inst_targets[:]
 
   # the output list of the targets' files
   files = [ ]
@@ -467,7 +511,7 @@ def _sorted_files(targets):
   while targets:
     # find a target that has no dependencies in our current targets list.
     for t in targets:
-      for d in t.deps:
+      for d in graph.get_sources(DT_LINK, t.name, _Target):
         if d in targets:
           break
       else:

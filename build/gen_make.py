@@ -48,17 +48,22 @@ class MakefileGenerator(gen_base.GeneratorBase):
 
       path = target_ob.path
 
-      # get the sources for the link unit
-      objects = self.graph.get_sources(gen_base.DT_LINK, target)
+      # get the source items (.o and .la) for the link unit
+      objects = [ ]
+      deps = [ ]
+      for source in self.graph.get_sources(gen_base.DT_LINK, target):
+        if isinstance(source, gen_base._Target):
+          # append the output of the target to our stated dependencies
+          deps.append(source.output)
+        else:
+          # assume an object file
+          objects.append(source)
 
       retreat = gen_base._retreat_dots(path)
       libs = [ ]
-      deps = [ ]
       for lib in string.split(self.parser.get(target, 'libs')):
-        if lib in self.target_names:
+        if self.targets.has_key(lib):
           tlib = self.targets[lib]
-          target_ob.deps.append(tlib)
-          deps.append(tlib.output)
 
           # link in the library with a relative link to the output file
           libs.append(os.path.join(retreat, tlib.output))
@@ -127,7 +132,7 @@ class MakefileGenerator(gen_base.GeneratorBase):
 
     for area, inst_targets in self.graph.get_deps(gen_base.DT_INSTALL):
       # get the output files for these targets, sorted in dependency order
-      files = gen_base._sorted_files(inst_targets)
+      files = gen_base._sorted_files(self.graph, area)
 
       if area == 'apache-mod':
         self.ofile.write('install-mods-shared: %s\n' % (string.join(files),))
@@ -144,9 +149,10 @@ class MakefileGenerator(gen_base.GeneratorBase):
           if ext == '.la':
             la_tweaked[file + '-a'] = None
 
-        for t in inst_targets:
-          for dep in t.deps:
-            bt = dep.output
+        for apmod in inst_targets:
+          for source in self.graph.get_sources(gen_base.DT_LINK, apmod.name,
+                                               gen_base._Target):
+            bt = source.output
             if bt[-3:] == '.la':
               la_tweaked[bt + '-a'] = None
         la_tweaked = la_tweaked.keys()
@@ -191,11 +197,6 @@ class MakefileGenerator(gen_base.GeneratorBase):
                               os.path.join('$(%sdir)' % area_var, fname)))
         self.ofile.write('\n')
 
-      # generate .dsp files for each target
-      #for t in inst_targets:
-      #  t.write_dsp()
-      #  pass
-
     includedir = os.path.join('$(includedir)', 'subversion-%s' % self.version)
     self.ofile.write('install-include: %s\n'
                      '\t$(MKDIR) $(DESTDIR)%s\n'
@@ -225,10 +226,12 @@ class MakefileGenerator(gen_base.GeneratorBase):
     self.ofile.write('MANPAGES = %s\n\n' % string.join(self.manpages))
     self.ofile.write('INFOPAGES = %s\n\n' % string.join(self.infopages))
 
-  def write_depends(self):
-    self.compute_hdr_deps()
     for objname, sources in self.graph.get_deps(gen_base.DT_OBJECT):
-      self.ofile.write('%s: %s\n' % (objname, string.join(sources)))
+      deps = string.join(sources)
+      if 0 and isinstance(objname, gen_base.ApacheObject):
+        self.ofile.write('%s: %s\n\t$(COMPILE_APACHE_MOD)\n' % (objname, deps))
+      else:
+        self.ofile.write('%s: %s\n' % (objname, deps))
 
   def write_ra_modules(self):
     for target in self.target_names:
@@ -242,9 +245,10 @@ class MakefileGenerator(gen_base.GeneratorBase):
       retreat = gen_base._retreat_dots(mod.path)
       deps = [ mod.output ]
       link = [ os.path.join(retreat, mod.output) ]
-      for dep in mod.deps:
-        deps.append(dep.output)
-        link.append(os.path.join(retreat, dep.output))
+      for source in self.graph.get_sources(gen_base.DT_LINK, mod.name,
+                                           gen_base._Target):
+        deps.append(source.output)
+        link.append(os.path.join(retreat, source.output))
       self.ofile.write('%s_DEPS = %s\n'
                        '%s_LINK = %s\n\n' % (name, string.join(deps, ' '),
                                              name, string.join(link, ' ')))
