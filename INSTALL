@@ -929,13 +929,15 @@ III.  BUILDING A SUBVERSION SERVER
          $ svn checkout svn://localhost/usr/local/svn/repository
 
       This network layer passes 'make check', but is still relatively
-      new and untested.  Also, assume for now that the daemon will
-      permit anonymous checkouts and checkins of any repository
-      accessible by the uid you run it under, even if you pass it a
-      "-r" option to set the logical root of repositories.
+      new and untested.  You can use the "-r" option to svnserve to
+      set a logical root for repositories, and the "-R" option to
+      restrict connections to read-only access.  ("Read-only" is a
+      logical term here; svnserve still needs write access to the
+      database in this mode.)
 
-      You can also run ra_svn over ssh or any similar tool.  To do
-      this, create a server group for the repository server in
+      For now, svnserve in daemon mode only support anonymous access.
+      But you can also tunnel ra_svn over ssh or any similar tool.  To
+      do this, create a server group for the repository server in
       ~/.subversion/servers, and set the variable "svn-tunnel-agent"
       to "ssh".  An example:
 

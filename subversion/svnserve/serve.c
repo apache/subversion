@@ -48,6 +48,7 @@ typedef struct {
   const char *repos_url;   /* Decoded URL to base of repository */
   const char *fs_path;     /* Decoded base path inside repository */
   const char *user;
+  svn_boolean_t read_only; /* Disallow commit and change-rev-prop */
   svn_fs_t *fs;            /* For convenience; same as svn_repos_fs(repos) */
 } server_baton_t;
 
@@ -66,6 +67,21 @@ typedef struct {
   const char *fs_path;
   svn_ra_svn_conn_t *conn;
 } log_baton_t;
+
+/* Verify that URL is inside REPOS_URL and get its fs path. */
+static svn_error_t *get_fs_path(const char *repos_url, const char *url,
+                                const char **fs_path, apr_pool_t *pool)
+{
+  apr_size_t len;
+
+  len = strlen(repos_url);
+  if (strncmp(url, repos_url, len) != 0)
+    return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
+                             "'%s'\nis not the same repository as\n'%s'",
+                             url, repos_url);
+  *fs_path = url + len;
+  return SVN_NO_ERROR;
+}
 
 /* --- REPORTER COMMAND SET --- */
 
@@ -98,25 +114,13 @@ static svn_error_t *link_path(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                               apr_array_header_t *params, void *baton)
 {
   report_driver_baton_t *b = baton;
-  const char *path, *url;
+  const char *path, *url, *fs_path;
   svn_revnum_t rev;
-  int len;
-  svn_error_t *err;
 
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "ccr", &path, &url, &rev));
   url = svn_path_uri_decode(url, pool);
-  len = strlen(b->repos_url);
-  if (strncmp(url, b->repos_url, len) != 0)
-    {
-      err = svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
-                              "'%s'\n"
-                              "is not the same repository as\n"
-                              "'%s'", url, b->repos_url);
-      /* Wrap error so that it gets reported back to the client. */
-      return svn_error_create(SVN_ERR_RA_SVN_CMD_ERR, err, NULL);
-    }
-  SVN_CMD_ERR(svn_repos_link_path(b->report_baton, path, url + len, rev,
-                                  pool));
+  SVN_CMD_ERR(get_fs_path(b->repos_url, url, &fs_path, pool));
+  SVN_CMD_ERR(svn_repos_link_path(b->report_baton, path, fs_path, rev, pool));
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
   return SVN_NO_ERROR;
 }
@@ -237,6 +241,15 @@ static svn_error_t *get_props(apr_hash_t **props, svn_fs_root_t *root,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *must_not_be_read_only(server_baton_t *b)
+{
+  if (b->read_only)
+    return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
+                            "Connection is read-only, cannot modify "
+                            "repository.");
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *get_latest_rev(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                    apr_array_header_t *params, void *baton)
 {
@@ -272,6 +285,7 @@ static svn_error_t *change_rev_prop(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   svn_string_t *value;
 
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "rcs", &rev, &name, &value));
+  SVN_CMD_ERR(must_not_be_read_only(b));
   SVN_CMD_ERR(svn_repos_fs_change_rev_prop(b->repos, rev, b->user, name, value,
                                            pool));
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
@@ -334,6 +348,7 @@ static svn_error_t *commit(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   svn_revnum_t new_rev;
 
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c", &log_msg));
+  SVN_CMD_ERR(must_not_be_read_only(b));
   ccb.new_rev = &new_rev;
   ccb.date = &date;
   ccb.author = &author;
@@ -587,8 +602,6 @@ static svn_error_t *switch_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   svn_boolean_t recurse;
   const svn_delta_editor_t *editor;
   void *edit_baton, *report_baton;
-  int len;
-  svn_error_t *err;
 
   /* Parse the arguments. */
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "(?r)cbc", &rev, &target,
@@ -597,20 +610,7 @@ static svn_error_t *switch_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
     target = NULL;  /* ### Compatibility hack, shouldn't be needed */
   if (!SVN_IS_VALID_REVNUM(rev))
     SVN_CMD_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
-
-  /* Verify that switch_url is in the same repository and get its fs path. */
-  switch_url = svn_path_uri_decode(switch_url, pool);
-  len = strlen(b->repos_url);
-  if (strncmp(switch_url, b->repos_url, len) != 0)
-    {
-      err = svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
-                              "'%s'\n"
-                              "is not the same repository as\n"
-                              "'%s'", switch_url, b->repos_url);
-      /* Wrap error so that it gets reported back to the client. */
-      return svn_error_create(SVN_ERR_RA_SVN_CMD_ERR, err, NULL);
-    }
-  switch_path = switch_url + len;
+  SVN_CMD_ERR(get_fs_path(b->repos_url, switch_url, &switch_path, pool));
 
   /* Make an svn_repos report baton.  Tell it to drive the network editor
    * when the report is complete. */
@@ -668,9 +668,6 @@ static svn_error_t *diff(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   const svn_delta_editor_t *editor;
   void *edit_baton, *report_baton;
 
-  int len;
-  svn_error_t *err;
-
   /* Parse the arguments. */
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "(?r)cbc", &rev, &target,
                                  &recurse, &versus_url));
@@ -678,20 +675,7 @@ static svn_error_t *diff(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
     target = NULL;  /* ### Compatibility hack, shouldn't be needed */
   if (!SVN_IS_VALID_REVNUM(rev))
     SVN_CMD_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
-
-  /* Verify that versus_url is in the same repository and get its fs path. */
-  versus_url = svn_path_uri_decode(versus_url, pool);
-  len = strlen(b->repos_url);
-  if (strncmp(versus_url, b->repos_url, len) != 0)
-    {
-      err = svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
-                              "'%s'\n"
-                              "is not the same repository as\n"
-                              "'%s'", versus_url, b->repos_url);
-      /* Wrap error so that it gets reported back to the client. */
-      return svn_error_create(SVN_ERR_RA_SVN_CMD_ERR, err, NULL);
-    }
-  versus_path = versus_url + len;
+  SVN_CMD_ERR(get_fs_path(b->repos_url, versus_url, &versus_path, pool));
 
   /* Make an svn_repos report baton.  Tell it to drive the network editor
    * when the report is complete. */
@@ -905,7 +889,8 @@ static svn_error_t *find_repos(const char *url, const char *root,
 }
 
 svn_error_t *serve(svn_ra_svn_conn_t *conn, const char *root,
-                   svn_boolean_t tunnel, apr_pool_t *pool)
+                   svn_boolean_t tunnel, svn_boolean_t read_only,
+                   apr_pool_t *pool)
 {
   svn_error_t *err, *io_err;
   apr_uint64_t ver;
@@ -996,6 +981,7 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, const char *root,
   b.fs_path = fs_path;
   b.user = user;
   b.fs = svn_repos_fs(repos);
+  b.read_only = read_only;
 
   return svn_ra_svn_handle_commands(conn, pool, main_commands, &b, FALSE);
 }
