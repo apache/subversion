@@ -767,7 +767,7 @@ msgstr ""
 "Visa information om en fil eller katalog.\n"
 "användning: info [PATH...]\n"
 "\n"
-"  Skriv ut information om varje angiven sövkgä PATH (\".\" om ingen anges).\n"
+"  Skriv ut information om varje angiven sökväg PATH (\".\" om ingen anges).\n"
 
 #: clients/cmdline/main.c:352
 #, fuzzy
