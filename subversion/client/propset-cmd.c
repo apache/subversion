@@ -39,16 +39,23 @@ svn_cl__propset (apr_getopt_t *os,
   svn_error_t *err;
   apr_array_header_t *targets;
   int i;
+  int num_args_wanted = 2;
 
-  /* PROPNAME and PROPVAL expected as first 2 arguments */
+  if (opt_state->filedata) {
+    propval = opt_state->filedata;
+    num_args_wanted = 1;
+  }
+  /* PROPNAME and PROPVAL expected as first 2 arguments if filedata
+     was NULL */
   err = svn_cl__parse_num_args (os, opt_state,
-                                "propset", 2, pool);
+                                "propset", num_args_wanted, pool);
 
   if (err)
     return err;
 
   propname  = ((svn_string_t **) (opt_state->args->elts))[0];
-  propval = ((svn_string_t **) (opt_state->args->elts))[1];
+  if (num_args_wanted == 2)
+    propval = ((svn_string_t **) (opt_state->args->elts))[1];
 
   if (! strcmp (propval->data, ""))
     {
