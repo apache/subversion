@@ -516,10 +516,6 @@ do_parse (svn_wc__entry_baton_t *baton)
         (apr_err, 0, NULL, baton->pool,
          "svn_wc__entry_set: apr_full_read choked");
     
-    /* kff todo fooo: apparently, this isn't working.  Attributes in
-       baton->attributes aren't getting set, that's why iota and other
-       files don't ever get their timestamp set.  Fix this.  Why isn't
-       handle_start() being called at the right time? */
     err = svn_xml_parse (svn_parser, buf, bytes_read, (apr_err == APR_EOF));
     if (err)
       return svn_error_quick_wrap 
