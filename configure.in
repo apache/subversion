@@ -32,6 +32,7 @@ sinclude(ac-helpers/svn-macros.m4)
 sinclude(ac-helpers/neon.m4)
 sinclude(ac-helpers/find_apr.m4)
 sinclude(ac-helpers/apr.m4)
+sinclude(ac-helpers/find_apu.m4)
 sinclude(ac-helpers/aprutil.m4)
 
 dnl Grab the libtool macros
