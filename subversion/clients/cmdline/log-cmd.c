@@ -207,8 +207,8 @@ log_message_receiver (void *baton,
   if (lb->cancel_func)
     SVN_ERR (lb->cancel_func (lb->cancel_baton));
 
-  if (rev == 0)
-    return svn_cmdline_printf (pool, _("No commit for revision 0.\n"));
+  if (rev == 0 && msg == NULL)
+    return SVN_NO_ERROR;
 
   /* ### See http://subversion.tigris.org/issues/show_bug.cgi?id=807
      for more on the fallback fuzzy conversions below. */
@@ -343,7 +343,7 @@ log_message_receiver_xml (void *baton,
   if (lb->cancel_func)
     SVN_ERR (lb->cancel_func (lb->cancel_baton));
 
-  if (rev == 0)
+  if (rev == 0 && msg == NULL)
     return SVN_NO_ERROR;
 
   revstr = apr_psprintf (pool, "%ld", rev);
@@ -479,8 +479,8 @@ svn_cl__log (apr_getopt_t *os,
     }
   else if (opt_state->start_revision.kind == svn_opt_revision_unspecified)
     {
-      /* If the first target is a URL, then we default to HEAD:1.
-         Otherwise, the default is BASE:1 since WC@HEAD may not exist. */
+      /* If the first target is a URL, then we default to HEAD:0.
+         Otherwise, the default is BASE:0 since WC@HEAD may not exist. */
       if (svn_path_is_url (target))
         opt_state->start_revision.kind = svn_opt_revision_head;
       else
@@ -489,7 +489,7 @@ svn_cl__log (apr_getopt_t *os,
       if (opt_state->end_revision.kind == svn_opt_revision_unspecified)
         {
           opt_state->end_revision.kind = svn_opt_revision_number;
-          opt_state->end_revision.value.number = 1;  /* oldest commit */
+          opt_state->end_revision.value.number = 0;
         }
     }
 
