@@ -65,7 +65,7 @@ svn_cl__proplist( int argc, char** argv, apr_pool_t* pool )
                  &xml_file, &target, &revision, &ancestor_path, &force,
                  pool);
 
-  err = svn_wc_prop_find (&prop_hash, target, pool);
+  err = svn_wc_prop_list (&prop_hash, target, pool);
   if (! err) 
     svn_cl__print_prop_hash (prop_hash, pool);
 

@@ -268,6 +268,10 @@ handle_start_tag (void *userData, const char *tagname, const char **atts)
         svn_string_t *delstr
           = apr_hash_get (entry->attributes,
                           SVN_WC_ENTRY_ATTR_DELETE, APR_HASH_KEY_STRING);
+        svn_string_t *conflictstr
+          = apr_hash_get (entry->attributes,
+                          SVN_WC_ENTRY_ATTR_CONFLICT, APR_HASH_KEY_STRING);
+        
 
         /* Technically, the value has to be "true".  But we only have
            these attributes at all when they have values of "true", so
@@ -276,6 +280,8 @@ handle_start_tag (void *userData, const char *tagname, const char **atts)
           entry->flags |= SVN_WC_ENTRY_ADD;
         if (delstr)
           entry->flags |= SVN_WC_ENTRY_DELETE;
+        if (conflictstr)
+          entry->flags |= SVN_WC_ENTRY_CONFLICT;
       }
     }
 }
