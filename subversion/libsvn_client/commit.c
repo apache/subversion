@@ -111,7 +111,7 @@ send_file_contents (const char *path,
          along the way. */
       if ((err = svn_subst_translate_stream (contents, tmp_stream, 
                                              eol_style_val ? "\n" : NULL,
-                                             eol_style_val ? TRUE : FALSE,
+                                             FALSE,
                                              keywords_val ? &keywords : NULL,
                                              FALSE)))
         goto cleanup;
