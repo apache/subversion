@@ -19,19 +19,24 @@
 #include "svn_fs.h"
 #include "dag.h"
 
+
 
-/*** The editor functions. ***/
+/*** Editor batons. ***/
+
 struct edit_baton
 {
   apr_pool_t *pool;
 
-  /* Subversion file system */
+  /* Subversion file system. */
   svn_fs_t *fs;
 
-  /* Transaction associated with this edit */
+  /* Transaction associated with this edit. */
   svn_fs_txn_t *txn;
 
-  /* Existing revision number upon which this edit is based */
+  /* Cache the txn name. */
+  char *txn_name;
+
+  /* Existing revision number upon which this edit is based. */
   svn_revnum_t base_rev;
 
   /* Commit message for this commit. */
@@ -70,33 +75,79 @@ struct file_baton
 };
 
 
+
+/*** Editor helpers. ***/
+static svn_error_t *
+clone_root (void *dir_baton, trail_t *trail)
+{
+  struct dir_baton *dirb = dir_baton;
+  svn_error_t *err;
+
+  err = svn_fs__dag_clone_root (&(dirb->node),
+                                dirb->edit_baton->fs,
+                                dirb->edit_baton->txn_name,
+                                trail);
+  if (err)
+    return err;
+
+  return SVN_NO_ERROR;
+}
+
+
+
+/*** Editor functions. ***/
+
 static svn_error_t *
 begin_edit (void *edit_baton, void **root_baton)
 {
   /* kff todo: figure out breaking into subpools soon */
-
   struct edit_baton *eb = edit_baton;
   struct dir_baton *dirb = apr_pcalloc (eb->pool, sizeof (*dirb));
   svn_error_t *err;
-  trail_t *trail = apr_pcalloc (eb->pool, sizeof (*trail));
 
+  /* Begin a transaction. */
+  err = svn_fs_begin_txn (&(eb->txn), eb->fs, eb->base_rev, eb->pool);
+  if (err)
+    return err;
+
+  /* Cache the transaction's name. */
+  err = svn_fs_txn_name (&(eb->txn_name), eb->txn, eb->pool);
+  if (err)
+    return err;
+  
+  /* What don't we do?
+   * 
+   * What we don't do is start a single Berkeley DB transaction here,
+   * keep it open throughout the entire edit, and then call
+   * txn_commit() inside close_edit().  That would result in writers
+   * interfering with writers unnecessarily.
+   * 
+   * Instead, we take small steps.  When we clone the root node, it
+   * actually gets a new node -- a mutable one -- in the nodes table.
+   * If we clone the next dir down, it gets a new node then too.  When
+   * it's time to commit, we'll walk those nodes (it doesn't matter in
+   * what order), looking for irreconcilable conflicts but otherwise
+   * merging changes from immutable dir nodes into our mutable ones.
+   *
+   * When our private tree is all in order, we lock a revision and
+   * walk again, making sure the final merge states are sane.  Then we
+   * mark them all as immutable and hook in the new root.
+   */
+
+  /* Set up the root directory baton, the last step of which is to get
+     a new root directory for this txn, cloned from the root dir of
+     the txn's base revision. */
   dirb->edit_baton = edit_baton;
   dirb->parent = NULL;
   dirb->name = svn_string_create ("", eb->pool);
   dirb->base_rev = eb->base_rev;
+  err = svn_fs__retry_txn (eb->fs, clone_root, dirb, eb->pool);
+  if (err)
+    return err;
 
-  /* Any trail setup necessary?  I think that all happens in
-     svn_fs__dag_revision_root() and/or dag_clone_root().. */
-
-  /* Begin a transaction. */
-  err = svn_fs_begin_txn (&(eb->txn), eb->fs, eb->base_rev, eb->pool);
-  if (err) return err;
-  
-  /* Get the root directory of the revision, immutable for now, but
-     that may change, watch this space, sign our guestbook... */
-  err = svn_fs__dag_revision_root (&(dirb->node), eb->fs,
-                                   dirb->base_rev, trail);
-  if (err) return err;
+  /* kff todo: If there's an error anywhere below, this transaction
+     will have to be cleaned up, including removing its nodes from the
+     nodes table. */
 
   *root_baton = dirb;
   return SVN_NO_ERROR;
