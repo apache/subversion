@@ -422,7 +422,7 @@ class PropChange(Messenger):
         tempfile2 = NamedTemporaryFile()
         tempfile2.write(self.repos.get_rev_prop(self.propname))
         tempfile2.flush()
-        self.output.run(self.cfg.get_diff_cmd({
+        self.output.run(self.cfg.get_diff_cmd(group, {
           'label_from' : 'old property value',
           'label_to' : 'new property value',
           'from' : tempfile1.name,
@@ -610,7 +610,7 @@ def generate_diff(output, cfg, repos, date, change, group, params, pool):
 
   src_fname, dst_fname = diff.get_files()
 
-  output.run(cfg.get_diff_cmd({
+  output.run(cfg.get_diff_cmd(group, {
     'label_from' : label1,
     'label_to' : label2,
     'from' : src_fname,
@@ -673,8 +673,9 @@ class Config:
         value = cp.get(section, option, raw=1)
         setattr(section_ob, option, value)
 
-    ### do some better splitting to enable quoting of spaces
-    self._diff_cmd = string.split(self.general.diff)
+    # be compatible with old format config files
+    if hasattr(self.general, 'diff') and not hasattr(self.defaults, 'diff'):
+      self.defaults.diff = self.general.diff
 
     # these params are always available, although they may be overridden
     self._global_params = global_params.copy()
@@ -684,12 +685,6 @@ class Config:
 
     # process all the group sections.
     self._prep_groups(repos)
-
-  def get_diff_cmd(self, args):
-    cmd = [ ]
-    for part in self._diff_cmd:
-      cmd.append(part % args)
-    return cmd
 
   def is_set(self, option):
     """Return None if the option is not set; otherwise, its value is returned.
@@ -706,15 +701,34 @@ class Config:
   def get(self, option, group, params):
     "Get a config value with appropriate substitutions and value mapping."
 
-    # get the right value mapper, or "identity" if no mapper is present
-    mapper = getattr(self.maps, option, lambda value: value)
-
-    # find the right value, parameterize it, and apply any mapper
+    # find the right value
+    value = None
     if group:
       sub = getattr(self, group)
-      if hasattr(sub, option):
-        return mapper(getattr(sub, option) % params)
-    return mapper(getattr(self.defaults, option, '') % params)
+      value = getattr(sub, option, None)
+    if value is None:
+      value = getattr(self.defaults, option, '')
+    
+    # parameterize it
+    if params is not None:
+      value = value % params
+
+    # apply any mapper
+    mapper = getattr(self.maps, option, None)
+    if mapper is not None:
+      value = mapper(value)
+
+    return value
+
+  def get_diff_cmd(self, group, args):
+    "Get a diff command as a list of argv elements."
+    ### do some better splitting to enable quoting of spaces
+    diff_cmd = string.split(self.get('diff', group, None))
+
+    cmd = [ ]
+    for part in diff_cmd:
+      cmd.append(part % args)
+    return cmd
 
   def _prep_maps(self):
     "Rewrite the [maps] options into callables that look up values."
