@@ -3,7 +3,7 @@
 <center>
 <img src="subversion.jpg">
 <h2>Weekly Status</h2>
-Last updated:  2 March 2001
+Last updated:  10 March 2001
 </center>
 
 <!-- ------------------------------------------------------------- -->
@@ -36,9 +36,9 @@ Last updated:  2 March 2001
     <td align="left">Versioning Filesystem</td>
     <td>
         <table cellspacing="0" cellpadding="0" border=0><tr>
-          <td width=240 bgcolor="0000FF" align=right>
-          <font color=FFFFFF>60%</font></td>
-          <td width=160 bgcolor="FF0000">&nbsp;</td>
+          <td width=280 bgcolor="0000FF" align=right>
+          <font color=FFFFFF>70%</font></td>
+          <td width=120 bgcolor="FF0000">&nbsp;</td>
         </tr></table>
     </td>
   </tr>
@@ -58,9 +58,9 @@ Last updated:  2 March 2001
     <td align="left">Client Libraries</td>
     <td>
         <table cellspacing="0" cellpadding="0" border=0><tr>
-          <td width=200 bgcolor="0000FF" align=right>
-          <font color=FFFFFF>50%</font></td>
-          <td width=200 bgcolor="FF0000">&nbsp;</td>
+          <td width=220 bgcolor="0000FF" align=right>
+          <font color=FFFFFF>55%</font></td>
+          <td width=180 bgcolor="FF0000">&nbsp;</td>
         </tr></table>
     </td>
   </tr>
@@ -95,11 +95,19 @@ Last updated:  2 March 2001
 
 <h3>Last Week's Activities</h3>
 
-This has been a breakthrough week for the project.  The versioned
-filesystem has gone from vapor to reality!  A few weeks' worth of code
-finally came together, and we're now able to read and write files and
-directories in the repository.  All the data is being stored in
-Berkeley DB, and we have real transactions when we write.
+This week, we continued to flesh out repository filesystem
+functionality.  We also started revamping client-side code in
+preparation to directly link with the filesystem.  If all goes well,
+then in the upcoming week should see "first contact" between the two
+halves; instead of XML, the client will be sending commits into a
+<i>real</i> repository!
+
+<p>
+
+After that, the plan is to get updates working, which is a a bit more
+complicated than commits.  Once the client and repository are
+interacting correctly, we'll making our final "push" toward Milestone
+2:  inserting Greg Stein's DAV layer into the system.
 
 
 <!----------------------------------------------------------------->
@@ -107,10 +115,9 @@ Berkeley DB, and we have real transactions when we write.
 <h3>What People Are Currently Working On</h3>
 
 <ul>
-<li><b>Filesystem</b>:  kfogel, cmpilato, sussman, jimb </li>
+<li><b>Filesystem</b>:  kfogel, jimb </li>
 <li><b>DAV layer</b>:  gstein </li>
-<li><b>Client libs</b>:  fitz, (kfogel, sussman, cmpilato,
-    but in holding pattern) </li>
+<li><b>Client libs</b>:  fitz, sussman, cmpilato </li>
 <li><b>Migration tools</b>:  -- </li>
 <li><b>Docs</b>: everyone, but on hold during fs work </li>
 </ul>
