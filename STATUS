@@ -109,9 +109,14 @@ Candidate changes:
     Notes:  a one-line logic fix, plus new regression test.
       +1: sussman
 
-  * r8618, r8617
-    Fix segfault and improper cursor shutdown in mod_dav_svn.
-    Justification: severe lossage occurs if these bugs are encountered.
+  * r8618
+    Fix segfault in mod_dav_svn.
+    Justification: it's a seg fault, and the fix is simple.
+      +1: cmpilato
+
+  * r8617
+    Fix improper cursor shutdown in libsvn_fs leading to wedgitude.
+    Justification: severe lossage occurs if this bug is encountered.
       +1: cmpilato
 
   * r8616
