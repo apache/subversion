@@ -725,9 +725,11 @@ SVN_ERROR_START
               SVN_ERR_CLIENT_CATEGORY_START + 4,
               "Operation does not apply to binary file")
 
+       /*### SVN_PROP_EXTERNALS needed to be replaced with "svn:externals"
+         in order to get gettext translatable strings */
   SVN_ERRDEF (SVN_ERR_CLIENT_INVALID_EXTERNALS_DESCRIPTION,
               SVN_ERR_CLIENT_CATEGORY_START + 5,
-              "Format of an " SVN_PROP_EXTERNALS " property was invalid")
+              "Format of an svn:externals property was invalid")
 
   SVN_ERRDEF (SVN_ERR_CLIENT_MODIFIED,
               SVN_ERR_CLIENT_CATEGORY_START + 6,
@@ -747,8 +749,8 @@ SVN_ERROR_START
 
   SVN_ERRDEF (SVN_ERR_CLIENT_REVISION_AUTHOR_CONTAINS_NEWLINE,
               SVN_ERR_CLIENT_CATEGORY_START + 10,
-              SVN_PROP_REVISION_AUTHOR " contains a newline")
-                   
+              "Author name cannot contain a newline")
+
   SVN_ERRDEF (SVN_ERR_CLIENT_PROPERTY_NAME,
               SVN_ERR_CLIENT_CATEGORY_START + 11,
               "Bad property name")
