@@ -876,12 +876,6 @@ static const svn_ra__vtable_t dav_vtable = {
   svn_ra_dav__get_file_revs
 };
 
-/* Check the versions of our library dependencies. */
-static svn_error_t *
-ver_check(void)
-{
-}  
-
 svn_error_t *
 svn_ra_dav__init (const svn_version_t *loader_version,
                   const svn_ra__vtable_t **vtable)
