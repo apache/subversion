@@ -51,7 +51,6 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include <unistd.h>
 #include <string.h>
 
 #include "apr_general.h"
@@ -129,7 +128,7 @@ cleanup_fs (svn_fs_t *fs)
   db_err = txn_checkpoint (fs->env, 0, 0, 0);
   while (db_err == DB_INCOMPLETE)
     {
-      sleep (1);
+      apr_sleep (1000000L);
       db_err = txn_checkpoint (fs->env, 0, 0, 0);
     }
   SVN_ERR (DB_WRAP (fs, "checkpointing environment", db_err));
