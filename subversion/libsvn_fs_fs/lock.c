@@ -52,12 +52,12 @@
 
 static svn_error_t *
 merge_paths (char **result,
-             char *p1,
-             char *p2,
+             const char *p1,
+             const char *p2,
              apr_pool_t *pool)
 {
   apr_status_t status;
-  char *p2_rel = p2;
+  const char *p2_rel = p2;
   if (*p2 == '/')
     p2_rel = p2 + 1;
 
