@@ -226,6 +226,27 @@ Java_NativeWrapper_statusSetReposPropStatus
   status__set_repos_prop_status(env, NULL, status, repos_prop_status);
 }
 
+JNIEXPORT jobject JNICALL 
+Java_NativeWrapper_nodekindCreate
+(JNIEnv *env, jclass clazz, jint kind)
+{
+  return nodekind__create(env, NULL, kind);
+}
+  
+JNIEXPORT jobject JNICALL 
+Java_NativeWrapper_revisionCreate
+(JNIEnv *env, jclass clazz, jlong rev)
+{
+  return revision__create(env, NULL, rev);
+}
+
+JNIEXPORT jobject JNICALL 
+Java_NativeWrapper_statuskindCreate
+(JNIEnv *env, jclass clazz, jint kind)
+{
+  return statuskind__create(env, NULL, kind);
+}
+
 /* 
  * local variables:
  * eval: (load-file "../../../../svn-dev.el")
