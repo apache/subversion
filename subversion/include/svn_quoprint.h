@@ -16,15 +16,14 @@
  */
 
 
-
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
-
 #ifndef SVN_QUOPRINT_H
 #define SVN_QUOPRINT_H
 
 #include "svn_io.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
 /* Return a writable generic stream which will encode binary data in
    quoted-printable format and write the encoded data to OUTPUT.  Be
@@ -44,11 +43,11 @@ svn_stringbuf_t *svn_quoprint_encode_string (svn_stringbuf_t *str, apr_pool_t *p
 svn_stringbuf_t *svn_quoprint_decode_string (svn_stringbuf_t *str, apr_pool_t *pool);
 
 
-#endif /* SVN_QUOPRINT_H */
-
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
+
+#endif /* SVN_QUOPRINT_H */
 
 
 /* --------------------------------------------------------------

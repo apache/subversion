@@ -15,12 +15,6 @@
  * ====================================================================
  */
 
-/* ==================================================================== */
-
-
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
 
 #ifndef SVN_FS_H
 #define SVN_FS_H
@@ -33,6 +27,10 @@ extern "C" {
 #include "svn_delta.h"
 #include "svn_io.h"
 
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
 
 /* Opening and creating filesystems.  */
@@ -1102,11 +1100,11 @@ svn_fs_get_file_delta_stream (svn_txdelta_stream_t **stream_p,
 
 /* [[Yes, do tell.]] */
 
-#endif /* SVN_FS_H */
-
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
+
+#endif /* SVN_FS_H */
 
 
 /* ----------------------------------------------------------------

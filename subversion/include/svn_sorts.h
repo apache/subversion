@@ -17,12 +17,6 @@
  */
 
 
-
-
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
-
 #ifndef SVN_SORTS_H
 #define SVN_SORTS_H
 
@@ -31,6 +25,10 @@ extern "C" {
 #include <apr_hash.h>
 #include <apr_file_io.h>
 
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
 
 

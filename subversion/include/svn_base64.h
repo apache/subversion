@@ -15,16 +15,14 @@
  * ====================================================================
  */
 
-
-
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
-
 #ifndef SVN_BASE64_H
 #define SVN_BASE64_H
 
 #include "svn_io.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
 /* Return a writable generic stream which will encode binary data in
    base64 format and write the encoded data to OUTPUT.  Be sure to
@@ -44,11 +42,11 @@ svn_stringbuf_t *svn_base64_encode_string (svn_stringbuf_t *str, apr_pool_t *poo
 svn_stringbuf_t *svn_base64_decode_string (svn_stringbuf_t *str, apr_pool_t *pool);
 
 
-#endif /* SVN_BASE64_H */
-
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
+
+#endif /* SVN_BASE64_H */
 
 
 /* --------------------------------------------------------------
