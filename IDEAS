@@ -407,7 +407,8 @@ right now) could remove the entry in SVN/conflicts, too.
 
 * Interoperate with CVS servers
 
-Create libsvn_ra_cvs (client mode only, maybe just :pserver: and :ext:).
+Create libsvn_ra_cvs (client mode only, maybe just :pserver: and :ext:,
+ans possibly :fork: for accessing local repositories).
 
 This will let a Subversion client pull modules directly out of CVS
 repositories. Could be very interesting in combination with
