@@ -73,15 +73,10 @@
 /* No one outside this file should ever need to know this.  In fact,
    no one outside adm_subdir() should ever need to know this. */
 #define SVN_WC__ADM_DIR_DEFAULT   "SVN"
-static svn_string_t *
-adm_subdir (apr_pool_t *pool)
+static const char *
+adm_subdir (void)
 {
-  static svn_string_t *adm_dir_str = NULL;
-
-  if (! adm_dir_str)
-    adm_dir_str = svn_string_create (SVN_WC__ADM_DIR_DEFAULT, pool);
-
-  return adm_dir_str;
+  return SVN_WC__ADM_DIR_DEFAULT;
 }
 
 
@@ -101,12 +96,12 @@ adm_subdir (apr_pool_t *pool)
  */
 static int
 extend_with_admin_name (svn_string_t *path,
-                        char *adm_file,
+                        const char *adm_file,
                         apr_pool_t *pool)
 {
   int components_added = 0;
 
-  svn_path_add_component (path, adm_subdir (pool), SVN_PATH_LOCAL_STYLE, pool);
+  svn_path_add_component_nts (path, adm_subdir (), SVN_PATH_LOCAL_STYLE, pool);
   components_added++;
 
   if (adm_file && (adm_file[0] != '\0'))
@@ -134,7 +129,7 @@ chop_admin_thing (svn_string_t *path, int num_components)
 /* Helper func for the svn_wc__init_FILE() functions. */
 svn_error_t *
 svn_wc__make_adm_thing (svn_string_t *path,
-                        char *thing,
+                        const char *thing,
                         int type,
                         apr_pool_t *pool)
 {
@@ -301,7 +296,7 @@ copy_file (svn_string_t *src, svn_string_t *dst, apr_pool_t *pool)
 svn_error_t *
 svn_wc__open_adm_file (apr_file_t **handle,
                        svn_string_t *path,
-                       char *fname,
+                       const char *fname,
                        apr_int32_t flags,
                        apr_pool_t *pool)
 {
@@ -347,7 +342,7 @@ svn_wc__open_adm_file (apr_file_t **handle,
 svn_error_t *
 svn_wc__close_adm_file (apr_file_t *fp,
                         svn_string_t *path,
-                        char *fname,
+                        const char *fname,
                         int write,
                         apr_pool_t *pool)
 {
@@ -398,7 +393,7 @@ svn_wc__close_adm_file (apr_file_t *fp,
 /* Remove path/SVN/thing. */
 svn_error_t *
 svn_wc__remove_adm_thing (svn_string_t *path,
-                          char *thing,
+                          const char *thing,
                           apr_pool_t *pool)
 {
   svn_error_t *err = NULL;
@@ -512,7 +507,7 @@ make_empty_adm (svn_string_t *path, apr_pool_t *pool)
    we're done anyway. */
 static svn_error_t *
 init_adm_file (svn_string_t *path,
-               char *thing,
+               const char *thing,
                svn_string_t *contents,
                apr_pool_t *pool)
 {
