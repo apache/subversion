@@ -46,7 +46,7 @@ struct dav_locktoken
  */
 static void
 svn_lock_to_dav_lock(dav_lock **dlock,
-                     svn_lock_t *slock,
+                     const svn_lock_t *slock,
                      svn_boolean_t exists_p,
                      apr_pool_t *pool)
 {
@@ -85,7 +85,7 @@ svn_lock_to_dav_lock(dav_lock **dlock,
 /* Helper func:  convert a dav_lock to an svn_lock_t, allocated in pool. */
 static void
 dav_lock_to_svn_lock(svn_lock_t **slock,
-                     dav_lock *dlock,
+                     const dav_lock *dlock,
                      const char *path,
                      apr_pool_t *pool)
 {
@@ -264,11 +264,29 @@ dav_svn_create_lock(dav_lockdb *lockdb,
                     const dav_resource *resource,
                     dav_lock **lock)
 {
-  /* ### just allocate a dav_lock structure (and uuid) here, nothing
-     more.  mod_dav will fill in the 'owner' and 'timeout' fields for
-     us later on, then ultimately call dav_svn_append_locks() with the
-     fully fleshed-out structure. */
+  apr_uuid_t uuid;
+  dav_locktoken *token = apr_pcalloc(resource->pool, sizeof(*token));
+  dav_lock *dlock = apr_pcalloc(resource->pool, sizeof(*dlock));
+  char *uuid_str = apr_pcalloc (resource->pool, APR_UUID_FORMATTED_LENGTH + 1);
+  
+  dlock->rectype = DAV_LOCKREC_DIRECT;
+  dlock->is_locknull = resource->exists;
+  dlock->scope = DAV_LOCKSCOPE_EXCLUSIVE;
+  dlock->type = DAV_LOCKTYPE_WRITE;
+  dlock->depth = 0;
 
+  /* Generate a UUID. */
+  /* ### perhaps this should be a func in libsvn_fs.so, shared by
+     mod_dav_svn and both fs back-ends??  */
+  apr_uuid_get (&uuid);
+  apr_uuid_format (uuid_str, &uuid);
+  token->uuid_str = uuid_str;
+  dlock->locktoken = token;
+
+  /* allowing mod_dav to fill in dlock->timeout, owner, auth_user. */
+  /* dlock->info and dlock->next are NULL by default. */
+
+  *lock = dlock;
   return 0;  
 }
 
@@ -427,16 +445,26 @@ dav_svn_append_locks(dav_lockdb *lockdb,
                      int make_indirect,
                      const dav_lock *lock)
 {
-  /* ### if lock->next, return ERROR, we don't allow multiple locks. */
+  svn_lock_t *slock;
+  svn_error_t *serr;
 
-  /* ### convert the dav_lock into an svn_lock_t */
+  if (lock->next)
+    return dav_new_error(resource->pool, HTTP_BAD_REQUEST,
+                         DAV_ERR_LOCK_SAVE_LOCK,
+                         "Tried to attach multiple locks to a resource.");
 
-  /* ### call svn_repos_fs_attach_lock() to do the actual locking. */
+  /* Convert the dav_lock into an svn_lock_t. */
+  dav_lock_to_svn_lock(&slock, lock, resource->info->repos_path,
+                       resource->pool);
 
-  /*  serr = svn_repos_fs_attach_lock(slock,
-                                      resource->info->repos->repos,
-                                      resource->info->repos_path,
-                                      resource->pool);  */
+  /* Now use the svn_lock_t to actually peform the lock. */
+  serr = svn_repos_fs_attach_lock(slock,
+                                  resource->info->repos->repos,
+                                  resource->pool);
+  if (serr)
+    return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                               "Failed to create new lock.",
+                               resource->pool);
 
   return 0;
 }
@@ -453,13 +481,22 @@ dav_svn_remove_lock(dav_lockdb *lockdb,
                     const dav_resource *resource,
                     const dav_locktoken *locktoken)
 {
+  svn_error_t *serr;
 
-  /* ### call svn_repos_fs_unlock() on resource, using incoming
-         locktoken. */
-
-
-
-  return 0;  /* temporary: just to suppress compile warnings */
+  if (locktoken == NULL)
+    return dav_new_error(resource->pool, HTTP_BAD_REQUEST,
+                         DAV_ERR_IF_ABSENT,
+                         "Cannot unlock a resource without a token.");
+  
+  serr = svn_repos_fs_unlock(resource->info->repos->repos,
+                             locktoken->uuid_str,
+                             0, /* don't forcibly break the lock */
+                             resource->pool);
+  if (serr)
+    return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                               "Failed to remove a lock.",
+                               resource->pool);
+  return 0;
 }
 
 
@@ -481,11 +518,7 @@ dav_svn_refresh_locks(dav_lockdb *lockdb,
                       time_t new_time,
                       dav_lock **locks)
 {
-  /* ### call svn_repos_fs_lock() using the incoming locktokens, with
-     an expiration of 'new_time'.   return a single new lock.  WORRY: 
-     does it matter that the returned lock will have a *new* token??
-     libsvn_fs never truly 'refreshes' a lock:  it just destroys and
-     creates a new one.  */
+  /* ### call svn_repos_fs_attach_lock() using incoming locktoken. */
 
   return 0;  /* temporary: just to suppress compile warnings */
 }
