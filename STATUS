@@ -66,6 +66,12 @@ Candidate changes:
     Votes:
       +1: jszakmeister
 
+  * r11527
+    Fix blame calculation algorithm.
+    Justification:
+      Correctness issue.
+    Votes:
+      +1: mbk
 
 Status of 1.1.2:
 ================
