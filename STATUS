@@ -15,6 +15,7 @@ Candidate changes:
     Justification: javahl binding only fix to prevent a crash
     Votes:
       +1: pmayweg
+      +0: breser
 
   * r9883, r9905
     Fix for crash in javahl binding. If the first parameter of SVNClient.list
@@ -23,6 +24,7 @@ Candidate changes:
     Justification: javahl binding only fix to prevent a crash
     Votes:
       +1: pmayweg
+      +0: breser
 
   * r8027
     Passing a Revision.DateSpec in javahl failed with 
@@ -31,6 +33,7 @@ Candidate changes:
     Justification: small change in javahl binding only
     Votes:
       +1: pmayweg
+      +0: breser
 
   * r9338, r9340
     Add various missing library dependencies to build.conf, for various
@@ -61,7 +64,7 @@ Candidate changes:
                     of whether largefile support is compiled into APR.
     Notes:  many users have hit this problem (issue #1819).
     Votes:
-      +1: sussman, ghudson
+      +1: sussman, ghudson, breser
 
   * r10616, r10638, r10642
     Work around directory creation bug in APR shipped with httpd 2.0.50.
@@ -71,13 +74,14 @@ Candidate changes:
       unsightly sticky bits around people's working copies and
       repositories.
     Votes:
+      +1: breser
 
   * r10819, r10855
     Avoid repository corruption if executed with closed std{in,out,err}
     Justification:
       Simple fix for a nasty problem that has bitten at least one user.
     Votes:
-       +1: bliss
+       +1: bliss, breser
 
   * Issue #1862
     Fix the 'file not found' update error.
@@ -89,7 +93,7 @@ Candidate changes:
     
     Justification: Lots and lots of TSVN users are hit by this.
     Votes:
-      +1: bliss, sussman, cmpilato
+      +1: bliss, sussman, cmpilato, breser
 
   * r10112, r10113, r10215, r10440, r10441, r10458, r10711, r10775
     Backport Perl bindings fixes from the 1.1.x branch
@@ -102,7 +106,7 @@ Candidate changes:
         http://wagner.elixus.org/~clkao/svnperl-1.0.x.diff
         http://wagner.elixus.org/~clkao/svnperl-1.0.x_1.diff
     Votes:
-       +1: clkao
+       +1: clkao, breser
 
   * r10841
     Fix crash bug in "svn st -u" on out-of-sync working copies
