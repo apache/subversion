@@ -962,8 +962,10 @@ check_repos_path (const char *path,
   if (kind != svn_node_file)
     return FALSE;
 
-  err = svn_io_check_path (svn_path_join (path, SVN_REPOS__DB_DIR, pool),
-                           &kind, pool);
+  /* Check the db/ subdir, but allow it to be a symlink (Subversion
+     works just fine if it's a symlink). */
+  err = svn_io_check_resolved_path
+    (svn_path_join (path, SVN_REPOS__DB_DIR, pool), &kind, pool);
   if (err)
     {
       svn_error_clear (err);
