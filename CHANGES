@@ -1,8 +1,19 @@
-Version x.xx.x (unreleased)
+Version 0.11.0 (unreleased)
 
  User-visible changes:
- * Added SVNReposName directive to mod_dav_svn
- * Insist on a diff that supports "-u"
+ * completion of 'svn merge' (issue 504)
+ * added SVNReposName directive to mod_dav_svn
+ * insist on a diff binary that supports "-u"
+ * fix and unify pop-up $EDITOR behaviors (issues 638, 633, 615)
+
+ Developer-visible changes:
+ * finish rewrite of commit system to handle disjoint urls (issue 575)
+ * finish proxy support via config files (esp. on win32) (issue 579)
+ * fix svn_ra_dav__get_baseline_info and related bugs (issue 581)
+ * reorganization of libsvn_wc header files & API
+ * new getopt_tests.py to test commandline option processing
+ * 'make check' now more portable -- tests invoked via python, not sh
+ * miscellaneous bugfixes in imports, svndiff, db linkage.
 
 Version 0.10.2 (released 25 Mar 2002, revision 1587)
 
