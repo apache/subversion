@@ -1,3 +1,13 @@
+Version 0.33.1 (released 17 November 2003, revision r7782)
+http://svn.collab.net/repos/svn/tags/0.33.1
+
+    NOTICE: This is a bugfix release.  The bug is fixed if *either*
+            the client or server uses the new code.
+
+User-visible changes:
+* major performance fix for updates
+
+
 Version 0.33.0 (released 13 November 2003, revision r7737)
 http://svn.collab.net/repos/svn/tags/0.33.0
 
