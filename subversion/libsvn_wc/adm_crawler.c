@@ -188,7 +188,7 @@ posix_file_reader (void *filehandle,
    DELETE_P. */
 static svn_error_t *
 set_entry_flags (svn_string_t *filename,
-                 int current_entry_type,
+                 enum svn_node_kind current_entry_type,
                  apr_hash_t *current_entry_hash,
                  apr_pool_t *pool,
                  svn_boolean_t *new_p,
@@ -213,7 +213,10 @@ set_entry_flags (svn_string_t *filename,
 
   /* Call external routine to decide if this file has been locally
      modified.   The routine is called svn_wc__file_modified_p().  */
-  svn_wc__file_modified_p (modified_p, filename, pool);
+  if (current_entry_type == svn_file_kind)
+    svn_wc__file_modified_p (modified_p, filename, pool);
+  else
+    *modified_p = FALSE;
 
   return SVN_NO_ERROR;
 }
@@ -566,6 +569,12 @@ entry_callback (void *loop_baton,
 
   /* Find out if this entry has been added, deleted, or modified. */
   svn_string_t *full_path_to_entry = svn_string_dup (path, pool);
+
+  /* We don't want to call add_component on a NULL entry name. */
+  svn_string_t *emptyname = svn_string_create ("", crawlbaton->pool);
+  if (current_entry_name == NULL)
+    current_entry_name = emptyname;
+
   svn_path_add_component (full_path_to_entry, current_entry_name,
                           svn_path_local_style, pool);
   err = set_entry_flags (full_path_to_entry,
@@ -711,7 +720,8 @@ entry_callback (void *loop_baton,
   /* Okay, we're not adding or deleting anything, nor is this a
      modified file.  However, if the this entry is a directory, we
      must recurse! */
-  else if (current_entry_type == svn_dir_kind)
+  else if ((current_entry_type == svn_dir_kind) 
+           && (! svn_string_isempty (current_entry_name)))
     {
       /* Recurse, using a NULL dir_baton.  Why NULL?  Because that
          will later force a call to do_dir_replaces() and get the
@@ -778,13 +788,16 @@ svn_wc_crawl_local_mods (svn_string_t *root_directory,
 
   /* If the bottom of the stack contains a non-NULL dir baton, that
      means the editor was actually used at some point, and we're
-     looking at the remaining "root" baton.  Therefore, we must call
-     the editor's `close_edit()'. */
+     looking at the remaining "root" baton.  Close it. */
   if (crawlbaton->stack->baton)
     {
-      err = edit_fns->close_edit (edit_baton);
+      err = edit_fns->close_directory (crawlbaton->stack->baton);
       if (err) return err;
     }
+
+  /* Finally, finish all the edits. */
+  err = edit_fns->close_edit (edit_baton);
+  if (err) return err;
 
   return SVN_NO_ERROR;
 }
