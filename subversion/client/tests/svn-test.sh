@@ -64,7 +64,7 @@ echo "Updating ${TEST_DIR_2} from changes in ${TEST_DIR_1}."
  cd ..)
 
 ### Modify some more files.
-echo "Modifying ${TEST_DIR_1}/A/D/G/pi."
+echo "Modifying ${TEST_DIR_2}/A/D/G/pi."
 echo "in t2, adding a third line to A/D/G/pi" >> ${TEST_DIR_2}/A/D/G/pi
 echo "in t2, adding a fourth line to A/D/G/pi" >> ${TEST_DIR_2}/A/D/G/pi
 echo "in t2, adding a fifth line to A/D/G/pi" >> ${TEST_DIR_2}/A/D/G/pi
@@ -74,7 +74,7 @@ echo "in t2, adding a eighth line to A/D/G/pi" >> ${TEST_DIR_2}/A/D/G/pi
 echo "in t2, adding a ninth line to A/D/G/pi" >> ${TEST_DIR_2}/A/D/G/pi
 echo "in t2, adding a tenth line to A/D/G/pi" >> ${TEST_DIR_2}/A/D/G/pi
 
-echo "Modifying ${TEST_DIR_1}/A/mu."
+echo "Modifying ${TEST_DIR_2}/A/mu."
 echo "in t2, adding a third line to A/mu" >> ${TEST_DIR_2}/A/mu
 echo "in t2, adding a fourth line to A/mu" >> ${TEST_DIR_2}/A/mu
 echo "in t2, adding a fifth line to A/mu" >> ${TEST_DIR_2}/A/mu
@@ -92,13 +92,24 @@ echo "Committing changes, this time in ${TEST_DIR_2}."
 
 
 ### Update.
-# echo "Updating ${TEST_DIR_1} from changes in ${TEST_DIR_2}."
-# (cd ${TEST_DIR_1};                                           \
-#  ../${SVN_PROG} update --xml-file ../${COMMIT_RESULTFILE_2}  \
-#                 --revision 3;                                 \
-#  cd ..)
+echo "Updating ${TEST_DIR_1} from changes in ${TEST_DIR_2}."
+(cd ${TEST_DIR_1};                                           \
+ ../${SVN_PROG} update --xml-file ../${COMMIT_RESULTFILE_2}  \
+                --revision 3;                                 \
+ cd ..)
 
 
 ### Diff the two trees.  The only differences should be in timestamps
-### and some of the version numbers (see README), so ignore those.
-# diff -r t1 t2 | grep -v timestamp | grep -v version
+### and some of the revision numbers (see README), so ignore those.
+### Also, the names of the .diff and .rej files will be different.
+echo "Comparing ${TEST_DIR_1} and ${TEST_DIR_2}."
+if [ "0" = "`diff .cvsignore .cvsignore -I % -x % 2>&1 >/dev/null; echo $?`" ]
+then
+  ### We've got a GNU-ish diff that understands -I and -x
+  diff -r ${TEST_DIR_1} ${TEST_DIR_2} \
+       -I timestamp -I revision -x '*.diff' -x '*.rej'
+else
+  ### We-ve got a stupid diff and must dig for results
+  diff -r ${TEST_DIR_1} ${TEST_DIR_2} |\
+       egrep -v '(timestamp|revision|\.diff$|\.rej$)'
+fi
