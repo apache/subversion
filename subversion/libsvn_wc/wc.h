@@ -166,7 +166,10 @@ svn_error_t *svn_wc__ensure_adm (svn_string_t *path,
                                  svn_vernum_t version,
                                  apr_pool_t *pool);
 
-
+
+/* Stuff that knows about the working copy XML formats. */
+svn_string_t *svn_wc__versions_init_contents (svn_vernum_t version,
+                                              apr_pool_t *pool);
 
 
 

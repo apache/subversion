@@ -8,8 +8,9 @@
 lib_LTLIBRARIES = libsvn_wc.la
 
 ## Sources needed to build each library (names canonicalized)
-libsvn_wc_la_SOURCES = make_walker.c adm_files.c adm_ops.c lock.c \
-                       util.c questions.c
+libsvn_wc_la_SOURCES = make_walker.c                     \
+                       adm_files.c adm_ops.c adm_parse.c \
+                       lock.c util.c questions.c 
 
 ## Build flags ---------
 

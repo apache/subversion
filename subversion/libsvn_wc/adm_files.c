@@ -381,21 +381,8 @@ init_adm (svn_string_t *path,
   const char *readme_contents =
     "This is a Subversion working copy administrative directory.\n"
     "Visit http://www.subversion.tigris.org/ for more information.\n";
-  const char *versions_contents_part_1 =
-    "<wc-versions xmlns=\"http://subversion.tigris.org/xmlns/\">\n"
-    "   <entry version=\"";
-  const char *versions_contents_part_2 =
-    "\"/>\n"
-    "</wc-versions>";
-
-  /* Is this lame or what? */
-  char buf[1000];
-  svn_string_t *versions_contents;
-  versions_contents = svn_string_create (versions_contents_part_1, pool);
-  sprintf (buf, "%ld", (long int) version);
-  svn_string_appendbytes (versions_contents, buf, strlen (buf), pool);
-  svn_string_appendbytes (versions_contents, versions_contents_part_2,
-                          strlen (versions_contents_part_2), pool);
+  svn_string_t *versions_contents
+    = svn_wc__versions_init_contents (version, pool);
 
   /* First, make an empty administrative area. */
   err = make_empty_adm (path, pool);
