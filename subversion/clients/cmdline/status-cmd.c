@@ -34,6 +34,22 @@
 
 /*** Code. ***/
 
+/* A faux status callback function for stashing STATUS item in a hash
+   keyed on PATH, and then passes the STATUS on through to a real
+   STATUS_FUNC.  This is merely for the purposes of verifying that we
+   don't call the STATUS_FUNC for the same path more than once.  */
+static void
+hash_stash (void *baton,
+            const char *path,
+            svn_wc_status_t *status)
+{
+  apr_hash_t *hash = baton;
+  apr_pool_t *pool = apr_hash_pool_get (hash);
+  apr_hash_set (hash, apr_pstrdup (pool, path), APR_HASH_KEY_STRING, 
+                svn_wc_dup_status (status, pool));
+}
+
+
 /* This implements the `svn_opt_subcommand_t' interface. */
 svn_error_t *
 svn_cl__status (apr_getopt_t *os,
@@ -42,7 +58,6 @@ svn_cl__status (apr_getopt_t *os,
 {
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
-  apr_hash_t *statushash;
   apr_array_header_t *targets;
   apr_pool_t * subpool;
   int i;
@@ -66,6 +81,7 @@ svn_cl__status (apr_getopt_t *os,
   for (i = 0; i < targets->nelts; i++)
     {
       const char *target = ((const char **) (targets->elts))[i];
+      apr_hash_t *hash = apr_hash_make (pool);
 
       /* Retrieve a hash of status structures with the information
          requested by the user.
@@ -73,7 +89,8 @@ svn_cl__status (apr_getopt_t *os,
          svn_client_status directly understands the three commandline
          switches (-n, -u, -[vV]) : */
 
-      SVN_ERR (svn_client_status (&statushash, &youngest, target,
+      SVN_ERR (svn_client_status (&youngest, target,
+                                  hash_stash, hash,
                                   opt_state->nonrecursive ? FALSE : TRUE,
                                   opt_state->verbose,
                                   opt_state->update,
@@ -83,7 +100,7 @@ svn_cl__status (apr_getopt_t *os,
       /* Now print the structures to the screen.
          The flag we pass indicates whether to use the 'detailed'
          output format or not. */
-      svn_cl__print_status_list (statushash,
+      svn_cl__print_status_list (hash,
                                  youngest,
                                  (opt_state->verbose || opt_state->update),
                                  opt_state->verbose,

@@ -986,6 +986,13 @@ typedef struct svn_wc_status_t
 } svn_wc_status_t;
 
 
+/** Return a deep copy of the @a orig_stat status structure, allocated
+ * in @a pool.
+ */
+svn_wc_status_t *svn_wc_dup_status (svn_wc_status_t *orig_stat,
+                                    apr_pool_t *pool);
+
+
 /** Fill @a *status for @a path, allocating in @a pool, with the exception 
  * of the @c repos_rev field, which is normally filled in by the caller.
  * @a adm_access must be an access baton for @a path.
@@ -1018,15 +1025,16 @@ svn_error_t *svn_wc_status (svn_wc_status_t **status,
 
 
 
-/** A callback for reporting svn_wc_status_t * items. */
 
+/** A callback for reporting an @c svn_wc_status_t * item @a status
+    for @a path.  @a baton is provided to the */
 typedef void (*svn_wc_status_func_t) (void *baton,
                                       const char *path,
                                       svn_wc_status_t *status);
 
 
-/** Under @a path, fill @a statushash mapping paths to @c svn_wc_status_t
- * structures.  All fields in each struct will be filled in except for
+/** Under @a path, generated @c svn_wc_status_t structures, and
+ * passing them .  All fields in each struct will be filled in except for
  * @c repos_rev, which would presumably be filled in by the caller.
  * @a adm_access is an access baton which holds a write-lock for @a path.
  *
@@ -1034,6 +1042,33 @@ typedef void (*svn_wc_status_func_t) (void *baton,
  * have used @c svn_wc_status().  However, it is no error if @a path is not
  * a directory; its status will simply be stored in @a statushash like
  * any other.
+ *
+ */
+svn_error_t *svn_wc_statuses (apr_hash_t *statushash,
+                              const char *path,
+                              svn_wc_adm_access_t *adm_access,
+                              svn_boolean_t descend,
+                              svn_boolean_t get_all,
+                              svn_boolean_t no_ignore,
+                              svn_wc_notify_func_t notify_func,
+                              void *notify_baton,
+                              svn_cancel_func_t cancel_func,
+                              void *cancel_baton,
+                              apr_hash_t *config,
+                              svn_wc_traversal_info_t *traversal_info,
+                              apr_pool_t *pool);
+
+
+/** Set @a *editor and @a *edit_baton to an editor that generates @c
+ * svn_wc_status_t structures and sends them through @a status_func /
+ * @a status_baton reflect the state of @a path in the working copy
+ * and, if @a update is @c TRUE, in the repository.  (Also, if @a
+ * update is set, set @a *youngest to the youngest revision in the
+ * repository, and set the @c repos_rev field each @c svn_wc_status_t
+ * structure to the same value.)  @a adm_access must be an access
+ * baton for @a path.
+ *
+ * @a config is a hash mapping @c SVN_CONFIG_CATEGORY's to @c svn_config_t's.
  *
  * Assuming @a path is a directory, then:
  * 
@@ -1052,49 +1087,23 @@ typedef void (*svn_wc_status_func_t) (void *baton,
  * state in it.  (Caller should obtain @a traversal_info from
  * @c svn_wc_init_traversal_info.)
  *
- * @a config is a hash mapping @c SVN_CONFIG_CATEGORY's to @c svn_config_t's.
- */
-svn_error_t *svn_wc_statuses (apr_hash_t *statushash,
-                              const char *path,
-                              svn_wc_adm_access_t *adm_access,
-                              svn_boolean_t descend,
-                              svn_boolean_t get_all,
-                              svn_boolean_t no_ignore,
-                              svn_wc_notify_func_t notify_func,
-                              void *notify_baton,
-                              svn_cancel_func_t cancel_func,
-                              void *cancel_baton,
-                              apr_hash_t *config,
-                              svn_wc_traversal_info_t *traversal_info,
-                              apr_pool_t *pool);
-
-
-/** Set  @a *editor and @a *edit_baton to an editor that tweaks or adds
- * @c svn_wc_status_t structures to @a statushash to reflect repository
- * modifications that would be received on update, and that sets
- * @a *youngest to the youngest revision in the repository (the editor
- * also sets the @c repos_rev field in each @c svn_wc_status_t structure
- * to the same value).  @a adm_access must be an access baton for @a path.
- *
- * If @a descend is zero, then only immediate children of @a path will be
- * done, otherwise @a adm_access should be part of an access baton set
- * for the @a path hierarchy.
- *
- * If @a cancel_func is non-null, call it with @a cancel_baton periodically 
- * during the editor's drive to see if the drive should continue.
- *
  * Allocate the editor itself in @a pool, but the editor does temporary
  * allocations in a subpool of @a pool.
  */
 svn_error_t *svn_wc_get_status_editor (const svn_delta_editor_t **editor,
                                        void **edit_baton,
+                                       svn_revnum_t *youngest,
                                        const char *path,
                                        svn_wc_adm_access_t *adm_access,
+                                       apr_hash_t *config,
                                        svn_boolean_t descend,
-                                       apr_hash_t *statushash,
-                                       svn_revnum_t *youngest,
+                                       svn_boolean_t get_all,
+                                       svn_boolean_t no_ignore,
+                                       svn_wc_status_func_t status_func,
+                                       void *status_baton,
                                        svn_cancel_func_t cancel_func,
                                        void *cancel_baton,
+                                       svn_wc_traversal_info_t *traversal_info,
                                        apr_pool_t *pool);
 
 /** @} */

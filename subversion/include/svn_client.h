@@ -646,13 +646,9 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
                    apr_pool_t *pool);
 
 
-/** Given @a path to a working copy directory (or single file), allocate
- * and return a hash @a statushash which maps (<tt>char *</tt>) paths to
- * (@c svn_wc_status_t *) structures.
- *
- * This is a purely local operation; only information found in the
- * administrative `entries' files is used to initially build the
- * structures.
+/** Given @a path to a working copy directory (or single file), call
+ * @a status_func/status_baton with a set of @c svn_wc_status_t *
+ * structures which describe the status of @a path and its children.
  *
  *    - If @a descend is non-zero, recurse fully, else do only immediate
  *      children.  This (inversely) corresponds to the "-n"
@@ -664,25 +660,17 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
  *      (--verbose) flag in the commandline client app.
  *
  *    - If @a update is set, then the repository will be contacted, so
- *      that the structures in @a statushash are augmented with
- *      information about out-of-dateness, and @a *youngest is set to the
- *      youngest repository revision (@a *youngest is not touched unless
- *      @a update is set).  This directly corresponds to the "-u"
+ *      that the structures are augmented with information about
+ *      out-of-dateness, and @a *youngest is set to the youngest
+ *      repository revision (@a *youngest is not touched unless @a
+ *      update is set).  This directly corresponds to the "-u"
  *      (--show-updates) flag in the commandline client app.
- *
- * If @a ctx->notify_func is non-null, then call @a ctx->notify_func with 
- * @a ctx->notify_baton as the status progresses.  Specifically, every time 
- * a status structure is added (or tweaked) in the hash, this routine will 
- * pass the pathname with action @c svn_wc_notify_status.  (Note: callers
- * should *not* attempt to look up the pathname in the hash for the
- * purposes of parsing the status structure; a status structure is
- * created in multiple passes, and is not guaranteed to be completely
- * correct until @c svn_client_status completely finishes.)
  */
 svn_error_t *
-svn_client_status (apr_hash_t **statushash,
-                   svn_revnum_t *youngest,  /* only touched if `update' set */
+svn_client_status (svn_revnum_t *youngest,  /* only touched if `update' set */
                    const char *path,
+                   svn_wc_status_func_t status_func,
+                   void *status_baton,
                    svn_boolean_t descend,
                    svn_boolean_t get_all,
                    svn_boolean_t update,

@@ -20,6 +20,56 @@
 #include "svn_path.h"
 #include <apr_tables.h>
 
+
+struct status_baton
+{
+  svn_revnum_t min_rev;   /* lowest revision found. */
+  svn_revnum_t max_rev;   /* highest revision found. */
+  svn_boolean_t switched; /* is anything switched? */
+  svn_boolean_t modified; /* is anything modified? */
+  const char *wc_path;    /* path whose URL we're looking for. */
+  const char *wc_url;     /* URL for the path whose URL we're looking for. */
+  apr_pool_t *pool;       /* pool in which to store alloc-needy things. */
+};
+
+
+/* An svn_wc_status_func_t callback function for anaylyzing status
+   structures. */
+static void
+analyze_status (void *baton,
+                const char *path,
+                svn_wc_status_t *status)
+{
+  struct status_baton *sb = baton;
+
+  if (! status->entry)
+    return;
+
+  /* Added files have a revision of no interest */
+  if (status->text_status != svn_wc_status_added)
+    {
+      if (sb->min_rev == SVN_INVALID_REVNUM 
+          || status->entry->revision < sb->min_rev)
+        sb->min_rev = status->entry->revision;
+
+      if (sb->max_rev == SVN_INVALID_REVNUM
+          || status->entry->revision > sb->max_rev)
+        sb->max_rev = status->entry->revision;
+    }
+
+  sb->switched |= status->switched;
+  sb->modified |= (status->text_status != svn_wc_status_normal);
+  sb->modified |= (status->prop_status != svn_wc_status_normal
+                   && status->prop_status != svn_wc_status_none);
+  
+  if (sb->wc_path 
+      && (! sb->wc_url) 
+      && (strcmp (path, sb->wc_path) == 0)
+      && (status->entry))
+    sb->wc_url = apr_pstrdup (sb->pool, status->entry->url);
+}
+
+
 /* The svnversion program uses svn_client_status to produce a compact
  * "version number" for the Subversion working copy.  The program takes one
  * or two arguments, the first is the path to the working copy, the second
@@ -53,14 +103,10 @@ main(int argc, char *argv[])
 {
   const char *wc_path;
   apr_pool_t *pool;
-  apr_hash_t *status_hash;
-  apr_hash_index_t *hi;
   svn_revnum_t youngest;
-  svn_boolean_t switched = FALSE, modified = FALSE;
-  svn_revnum_t min_revnum = SVN_INVALID_REVNUM, max_revnum = SVN_INVALID_REVNUM;
-  const svn_wc_status_t *status;
   int wc_format;
   svn_client_ctx_t ctx = { 0 };
+  struct status_baton sb;
 
   if (argc != 2 && argc != 3)
     {
@@ -98,63 +144,42 @@ main(int argc, char *argv[])
         }
     }
 
-  SVN_INT_ERR (svn_client_status (&status_hash, &youngest, wc_path, TRUE, TRUE,
-                                  FALSE, FALSE, &ctx, pool));
-  for (hi = apr_hash_first (pool, status_hash); hi; hi = apr_hash_next (hi))
+  sb.switched = FALSE;
+  sb.modified = FALSE;
+  sb.min_rev = SVN_INVALID_REVNUM;
+  sb.max_rev = SVN_INVALID_REVNUM;
+  sb.wc_path = wc_path;
+  sb.wc_url = NULL;
+  sb.pool = pool;
+  SVN_INT_ERR (svn_client_status (&youngest, wc_path, analyze_status, &sb,
+                                  TRUE, TRUE, FALSE, FALSE, &ctx, pool));
+
+  if ((! sb.switched ) && (argc == 3))
     {
-      void *val;
-
-      apr_hash_this (hi, NULL, NULL, &val);
-      status = val;
-
-      if (!status->entry)
-        continue;
-
-      /* Added files have a revision of no interest */
-      if (status->text_status != svn_wc_status_added)
-        {
-          if (min_revnum == SVN_INVALID_REVNUM
-              || status->entry->revision < min_revnum)
-            min_revnum = status->entry->revision;
-
-          if (max_revnum == SVN_INVALID_REVNUM
-              || status->entry->revision > max_revnum)
-            max_revnum = status->entry->revision;
-        }
-
-      switched |= status->switched;
-      modified |= (status->text_status != svn_wc_status_normal);
-      modified |= (status->prop_status != svn_wc_status_normal
-                   && status->prop_status != svn_wc_status_none);
-    }
-
-  /* If the trailing part of the URL of the working copy directory does not
-     match the given trailing URL then the whole working copy is
-     switched. */
-  if (! switched && argc == 3)
-    {
+      /* If the trailing part of the URL of the working copy directory
+         does not match the given trailing URL then the whole working
+         copy is switched. */
       const char *trail_url;
       SVN_INT_ERR (svn_utf_cstring_to_utf8 (&trail_url, argv[2], NULL, pool));
-
-      status = apr_hash_get (status_hash, wc_path, APR_HASH_KEY_STRING);
-      if (! status)
-        switched = TRUE;
-      else if (status->entry)
+      if (! sb.wc_url)
+        {
+          sb.switched = TRUE;
+        }
+      else
         {
           apr_size_t len1 = strlen (trail_url);
-          apr_size_t len2 = strlen (status->entry->url);
-          if (len1 > len2
-              || strcmp (status->entry->url + len2 - len1, trail_url))
-            switched = TRUE;
+          apr_size_t len2 = strlen (sb.wc_url);
+          if ((len1 > len2) || strcmp (sb.wc_url + len2 - len1, trail_url))
+            sb.switched = TRUE;
         }
     }
 
-  printf ("%" SVN_REVNUM_T_FMT, min_revnum);
-  if (min_revnum != max_revnum)
-    printf (":%" SVN_REVNUM_T_FMT, max_revnum);
-  if (modified)
+  printf ("%" SVN_REVNUM_T_FMT, sb.min_rev);
+  if (sb.min_rev != sb.max_rev)
+    printf (":%" SVN_REVNUM_T_FMT, sb.max_rev);
+  if (sb.modified)
     fputs ("M", stdout);
-  if (switched)
+  if (sb.switched)
     fputs ("S", stdout);
   fputs ("\n", stdout);
 
