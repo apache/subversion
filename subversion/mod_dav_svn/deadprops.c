@@ -156,9 +156,10 @@ static dav_error *save_value(dav_db *db, const dav_prop_name *name,
          not a working resource!  But this is how we currently
          (hackily) allow the svn client to change unversioned rev
          props.  See issue #916. */
-      serr = svn_fs_change_rev_prop(db->resource->info->repos->fs,
-                                    db->resource->info->root.rev,
-                                    propname, value, db->resource->pool);
+      serr = svn_repos_fs_change_rev_prop(db->resource->info->repos->repos,
+                                          db->resource->info->root.rev,
+                                          db->resource->info->repos->username,
+                                          propname, value, db->resource->pool);
   else
     serr = svn_fs_change_node_prop(db->resource->info->root.root,
                                    get_repos_path(db->resource->info),
@@ -352,9 +353,10 @@ static dav_error *dav_svn_db_remove(dav_db *db, const dav_prop_name *name)
          not a working resource!  But this is how we currently
          (hackily) allow the svn client to change unversioned rev
          props.  See issue #916. */
-      serr = svn_fs_change_rev_prop(db->resource->info->repos->fs,
-                                    db->resource->info->root.rev,
-                                    propname, NULL, db->resource->pool);
+      serr = svn_repos_fs_change_rev_prop(db->resource->info->repos->repos,
+                                          db->resource->info->root.rev,
+                                          db->resource->info->repos->username,
+                                          propname, NULL, db->resource->pool);
   else
     serr = svn_fs_change_node_prop(db->resource->info->root.root,
                                    get_repos_path(db->resource->info),

@@ -209,7 +209,7 @@ run_pre_revprop_change_hook (svn_repos_t *repos,
   if ((! svn_io_check_path (hook, &kind, pool)) 
       && (kind == svn_node_file))
     {
-      const char *args[5];
+      const char *args[6];
 
       /* ### somehow pass VALUE as stdin to hook?! */
 
@@ -255,7 +255,7 @@ run_post_revprop_change_hook (svn_repos_t *repos,
   if ((! svn_io_check_path (hook, &kind, pool)) 
       && (kind == svn_node_file))
     {
-      const char *args[5];
+      const char *args[6];
 
       args[0] = hook;
       args[1] = svn_repos_path (repos, pool);
