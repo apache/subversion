@@ -208,7 +208,7 @@ svn_wc_process_committed (const char *path,
 
   /* (First, try to write a logfile directly in PATH.) */
   log_parent = path;
-  base_name = apr_pstrdup (pool, SVN_WC_ENTRY_THIS_DIR);
+  base_name = SVN_WC_ENTRY_THIS_DIR;
   err = svn_wc__open_adm_file (&log_fp, log_parent, SVN_WC__ADM_LOG,
                                (APR_WRITE | APR_APPEND | APR_CREATE),
                                pool);

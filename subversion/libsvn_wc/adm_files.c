@@ -325,9 +325,8 @@ svn_wc__text_base_path (const char *path,
   svn_path_split_nts (path, &newpath, &base_name, pool);
   return extend_with_adm_name (newpath,
                                SVN_WC__BASE_EXT,
-                               0,
+                               tmp,
                                pool,
-                               tmp ? SVN_WC__ADM_TMP : "",
                                SVN_WC__ADM_TEXT_BASE,
                                base_name,
                                NULL);
@@ -367,9 +366,8 @@ prop_path_internal (const char **prop_path,
       *prop_path = extend_with_adm_name
         (path,
          NULL,
-         0,
+         tmp,
          pool,
-         tmp ? SVN_WC__ADM_TMP : "",
          base ? SVN_WC__ADM_DIR_PROP_BASE : SVN_WC__ADM_DIR_PROPS,
          NULL);
     }
@@ -391,9 +389,8 @@ prop_path_internal (const char **prop_path,
       *prop_path = extend_with_adm_name
         (*prop_path,
          base ? SVN_WC__BASE_EXT : NULL,
-         0,
+         tmp,
          pool,
-         tmp ? SVN_WC__ADM_TMP : "",
          base ? SVN_WC__ADM_PROP_BASE : SVN_WC__ADM_PROPS,
          entry_name,
          NULL);
@@ -436,9 +433,8 @@ svn_wc__wcprop_path (const char **wcprop_path,
     {
       *wcprop_path = extend_with_adm_name (path,
                                            NULL,
-                                           0,
+                                           tmp,
                                            pool,
-                                           tmp ? SVN_WC__ADM_TMP : "",
                                            SVN_WC__ADM_DIR_WCPROPS,
                                            NULL);
     }
@@ -456,9 +452,8 @@ svn_wc__wcprop_path (const char **wcprop_path,
 
       *wcprop_path = extend_with_adm_name (*wcprop_path,
                                            NULL,
-                                           0,
+                                           tmp,
                                            pool,
-                                           tmp ? SVN_WC__ADM_TMP : "",
                                            SVN_WC__ADM_WCPROPS,
                                            entry_name,
                                            NULL);
