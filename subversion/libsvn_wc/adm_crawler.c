@@ -364,7 +364,7 @@ do_apply_textdelta (svn_string_t *filename,
                          local_tmp_path->data);
 
   textbasefile = NULL; /* paranoia! */
-  if (! (tb->entry->flags & SVN_WC_ENTRY_ADD))
+  if (! (tb->entry->state & SVN_WC_ENTRY_ADDED))
     {
       err = svn_wc__open_text_base (&textbasefile, filename, APR_READ, pool);
       if (err)
@@ -533,7 +533,7 @@ bail_if_unresolved_conflict (svn_string_t *full_path,
 {
   svn_error_t *err;
 
-  if (entry->flags & SVN_WC_ENTRY_CONFLICT)
+  if (entry->state & SVN_WC_ENTRY_CONFLICTED)
     {
       /* We must decide if either component is "conflicted", based
          on whether reject files are mentioned and/or continue to
@@ -683,7 +683,7 @@ process_subdirectory (svn_string_t *path, void *dir_baton,
       if (err) return err;
 
       /* Is the entry marked for deletion? */
-      if ((current_entry->flags) & SVN_WC_ENTRY_DELETE)
+      if (current_entry->state & SVN_WC_ENTRY_DELETED)
         {
           /* Do what's necesary to get a baton for current directory */
           if (! dir_baton)
@@ -714,7 +714,7 @@ process_subdirectory (svn_string_t *path, void *dir_baton,
         }
 
       /* Is this entry marked for addition only? */
-      else if ((current_entry->flags) & SVN_WC_ENTRY_ADD)
+      else if (current_entry->state & SVN_WC_ENTRY_ADDED)
         {
           /* Create an affected-target object */
           svn_string_t *longpath;

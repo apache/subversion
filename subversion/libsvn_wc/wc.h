@@ -459,15 +459,15 @@ svn_error_t *svn_wc__entries_write (apr_hash_t *entries,
  * If KIND is svn_node_none, then the entry's kind will not be
  * changed, else it will be set to KIND.
  * 
- * The set bits in FLAGS will be OR'd into the entry's flags, unless:
+ * The set bits in STATE will be OR'd into the entry's state, unless:
  *
- *    - If FLAGS has the SVN_WC_ENTRY_CLEAR_ALL bit set, then all of
- *      the entry's flags will be cleared,
+ *    - If STATE has the SVN_WC_ENTRY_CLEAR_ALL bit set, then all of
+ *      the entry's state will be cleared,
  *
- *    - Else if the SVN_WC_ENTRY_CLEAR_NAMED bit is set in FLAGS, then
- *      each other set bit in FLAGS will result in a clear bit in the
- *      entry's flags, and unset bits in flags will result in no
- *      change to the corresponding bit in entry's flags. 
+ *    - Else if the SVN_WC_ENTRY_CLEAR_NAMED bit is set in STATE, then
+ *      each other set bit in STATE will result in a clear bit in the
+ *      entry's STATE, and unset bits in STATE will result in no
+ *      change to the corresponding bit in entry's state. 
  * 
  * If TIMESTAMP is 0, the entry's timestamp will not be changed, else
  * it will be set to TIMESTAMP.
@@ -487,7 +487,7 @@ svn_error_t *svn_wc__entry_merge_sync (svn_string_t *path,
                                        svn_string_t *name,
                                        svn_revnum_t revision,
                                        enum svn_node_kind kind,
-                                       int flags,
+                                       int state,
                                        apr_time_t text_time,
                                        apr_time_t prop_time,
                                        apr_pool_t *pool,
