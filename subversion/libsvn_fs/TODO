@@ -30,6 +30,8 @@ characters.
 
 Uglinesses
 
+Fix up comments in svn_fs.h for transactions.
+
 Add `public name' member to filesystem structure, to use to identify
 the filesystem in error messages.  When driven by DAV, this could be a
 URL.
