@@ -74,6 +74,6 @@
 /*
  * local variables:
  * mode: C
- * eval: (load-file "../svn-dev.el")
+ * eval: (load-file "tools/dev/svn-dev.el")
  * end:
  */
