@@ -8,32 +8,44 @@ comments and minor annotations about who is actually doing them.  For
 more verbose descriptions of these issues, look in alpha-checklist,
 though.
 
-* Greg Stein is maybe still putting the finishing touches on M2.  He
-  has commits/imports/updates working over DAV, except for bugfixes,
-  is that right Greg?
+* Greg Stein is putting the finishing touches on M2.  He has
+  checkouts, commits, and updates working over DAV. Only "import" is
+  left.
 
 * Client test suite improvements (Ben, Sam TH, and others are doing,
   have got the new Python test suite up, just a matter of writing lots
   of tests).
 
-* 'svn cp' and friends: cp, mv, branch, tag. (Mike Pilato to start).
-
 * new 'libsvn_repos':  utils built on *top* of libsvn_fs
 
    * cross-process read/write lock function for DB_RUN_RECOVERY. (Greg)
-   * hook system -- to fire off shell scripts.  (who?)
-   * new location of fs commit-editor (Ben)
-   * new location of delta_dirs and wrapper (Mike)
-   * new location of shared 'reporter' code for both RA layers (Ben)
+   * hook system -- to fire off shell scripts.  (Karl defines, Greg imps)
+
+* Many filesystem improvements
+
+   * strings table                    /* part of implementing above */
+
+* cvs2svn (Thom and Greg)
+
+* general pool usage code-review (Greg and Fitz)
+
+* change #6:  invert text-delta interface (Greg)
+
+* simple Apache-only authentication & authorization (Greg)
+
+
+POST-M3 ITEMS
+=============
 
 * Many filesystem improvements
 
    * deltified storage                /* necessary */
-   * strings table                    /* part of implementing above */
    * real file streaming              /* may be done with above */
    * dir_delta use 'copyfrom' args    /* Mike, is this done? */
    * keep node-rev-id strings short   /* Karl will do, solution is known */
    * copy properties                  /* yeaaaah */
+
+* 'svn cp' and friends: cp, mv, branch, tag. (Mike Pilato to start).
 
 * misc subcommands:  svn cleanup, log, export, diff, rdiff, blame, merge,
                      revert, rollback, unadd, undel.  (Chicago office)
@@ -41,26 +53,17 @@ though.
 * autodetection of text/binary file types, and defaults for keyword
   substitution and newline translation. (Karl)
 
-* change #6:  invert text-delta interface (Greg)
-
-* simple Apache-only authentication & authorization (Greg)
-
 * internalized diff/patch library:  (Ben will investigate)
 
 * user documentation (Karl will research/look for volunteers)
 
-* cvs2svn (Thom and Greg)
-
 * UTF-8 preparations (Jim)
-
-* general pool usage code-review (Greg and Fitz)
 
 * wc improvement: deal with removing files when dir is *not*
   up-to-date.  (Karl.  Part of a general fix to entries handling, that
   doesn't, afaik, require any new research.)
 
 * change ra_local commit-style (Ben & Greg discuss)
-
 
 
 POST-1.0
