@@ -48,8 +48,7 @@ Candidate changes:
      restart the 1.1 soak anyway.  But don't merge until we've come to
      a decision on whether to restart the 1.1 soak.
     Votes:
-      +1: ghudson (r10353 only)
-      +1: lundblad
+      +1: lundblad, ghudson
 
   * r10400, r10401
     Perl bindings build fixes.
@@ -58,13 +57,13 @@ Candidate changes:
     r10401: Transfer some libsvn_swig_perl dependencies incorrectly listed as
       nonlibs to libs.
     Votes:
-      +1: maxb
+      +1: maxb, ghudson
 
   * r10422
     Python bindings build fix. Make the compile flags more like distutils uses,
     avoiding large amounts of compiler warnings.
     Votes:
-      +1: maxb
+      +1: maxb, ghudson
 
   * r10410, r10450
     Python bindings build fix. Explicitly link libpython to the python bindings.
