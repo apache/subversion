@@ -425,7 +425,7 @@
           the repository isn't affected at all.  At worst, some
           transaction data is left behind.</para>
 
-        <para>The only real argument against an FSFS is its relative
+        <para>The only real argument against FSFS is its relative
           immaturity compared to Berkeley DB.  It hasn't been used or
           stress-tested nearly as much, and so a lot of these
           assertions about speed and scalability are just that:
