@@ -382,6 +382,10 @@ typedef struct svn_ra_plugin_t
    * @a callbacks/@a callback_baton is a table of callbacks provided by the
    * client; see @c svn_ra_callbacks_t above.
    *
+   * @a config is a hash mapping <tt>const char *</tt> keys to 
+   * @c svn_config_t * values.  For example, the @c svn_config_t for the 
+   * "~/.subversion/config" file is under the key "config".
+   *
    * All RA requests require a @a session_baton; they will continue to
    * use @a pool for memory allocation.
    */
@@ -389,6 +393,7 @@ typedef struct svn_ra_plugin_t
                         const char *repos_URL,
                         const svn_ra_callbacks_t *callbacks,
                         void *callback_baton,
+                        apr_hash_t *config,
                         apr_pool_t *pool);
 
   /** Close a repository session. 

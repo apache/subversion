@@ -450,6 +450,7 @@ static svn_error_t * fetch_dirents(svn_ra_session_t *ras,
 }
 
 static svn_error_t *custom_get_request(ne_session *sess,
+                                       apr_hash_t *config,
                                        const char *url,
                                        const char *relpath,
                                        ne_block_reader reader,
@@ -464,12 +465,11 @@ static svn_error_t *custom_get_request(ne_session *sess,
   ne_request *req;
   ne_decompress *decompress;
   svn_error_t *err;
-  svn_config_t *cfg;
   int code;
   int decompress_rv;
   int decompress_on;
 
-  SVN_ERR( svn_config_read_config(&cfg, pool) );
+  svn_config_t *cfg = apr_hash_get (config, "config", APR_HASH_KEY_STRING);
 
   svn_config_get(cfg, &do_compression, "miscellany", "compression", "yes");
   decompress_on = (strcasecmp(do_compression, "yes") == 0);
@@ -653,6 +653,7 @@ static void fetch_file_reader(void *userdata, const char *buf, size_t len)
 }
 
 static svn_error_t *simple_fetch_file(ne_session *sess,
+                                      apr_hash_t *config,
                                       const char *url,
                                       const char *relpath,
                                       svn_boolean_t text_deltas,
@@ -687,7 +688,7 @@ static svn_error_t *simple_fetch_file(ne_session *sess,
 
   frc.pool = pool;
 
-  SVN_ERR( custom_get_request(sess, url, relpath,
+  SVN_ERR( custom_get_request(sess, config, url, relpath,
                               fetch_file_reader, &frc,
                               get_wc_prop, cb_baton, pool) );
 
@@ -698,6 +699,7 @@ static svn_error_t *simple_fetch_file(ne_session *sess,
 }
 
 static svn_error_t *fetch_file(ne_session *sess,
+                               apr_hash_t *config,
                                const svn_ra_dav_resource_t *rsrc,
                                void *dir_baton,
                                const svn_delta_editor_t *editor,
@@ -720,7 +722,7 @@ static svn_error_t *fetch_file(ne_session *sess,
   /* fetch_file() is only used for checkout, so we just pass NULL for the
      simple_fetch_file() params related to fetching version URLs (for
      fetching deltas) */
-  err = simple_fetch_file(sess, bc_url, NULL, TRUE, file_baton, 
+  err = simple_fetch_file(sess, config, bc_url, NULL, TRUE, file_baton, 
                           NULL, checksum,
                           editor, NULL, NULL, pool);
   if (err)
@@ -1014,7 +1016,7 @@ svn_error_t *svn_ra_dav__get_file(void *session_baton,
         apr_md5_init(&(fwc.md5_context));
 
       /* Fetch the file, shoving it at the provided stream. */
-      SVN_ERR( custom_get_request(ras->sess, final_url, path,
+      SVN_ERR( custom_get_request(ras->sess, ras->config, final_url, path,
                                   get_file_reader, &fwc,
                                   ras->callbacks->get_wc_prop,
                                   ras->callback_baton, ras->pool) );
@@ -1358,8 +1360,8 @@ svn_error_t * svn_ra_dav__do_checkout(void *session_baton,
           svn_path_add_component(edit_path, comp);
 
           /* ### should we close the dir batons first? */
-          SVN_ERR_W( fetch_file(ras->sess, rsrc, this_baton, editor,
-                                edit_path->data, subpool),
+          SVN_ERR_W( fetch_file(ras->sess, ras->config, rsrc, this_baton,
+                                editor, edit_path->data, subpool),
                      "could not checkout a file");
           svn_stringbuf_chop(edit_path, edit_path->len - edit_len);
 
@@ -1988,7 +1990,8 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
       base_checksum = get_attr(atts, "base-checksum");
       result_checksum = get_attr(atts, "result-checksum");
       /* assert: rb->href->len > 0 */
-      CHKERR( simple_fetch_file(rb->ras->sess2, rb->href->data,
+      CHKERR( simple_fetch_file(rb->ras->sess2, rb->ras->config,
+                                rb->href->data,
                                 TOP_DIR(rb).pathbuf->data,
                                 rb->fetch_content,
                                 rb->file_baton,
@@ -2115,7 +2118,8 @@ static int end_element(void *userdata,
          retrieve the href before fetching. */
 
       /* fetch file */
-      CHKERR( simple_fetch_file(rb->ras->sess2, rb->href->data,
+      CHKERR( simple_fetch_file(rb->ras->sess2, rb->ras->config,
+                                rb->href->data,
                                 TOP_DIR(rb).pathbuf->data,
                                 rb->fetch_content,
                                 rb->file_baton,

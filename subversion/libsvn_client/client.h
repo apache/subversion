@@ -123,6 +123,10 @@ typedef struct
      during working copy commits. */
   apr_array_header_t *commit_items;
 
+  /* A hash of svn_config_t's, keyed off file name (i.e. the contents of 
+     ~/.subversion/config end up keyed off of 'config'). */
+  apr_hash_t *config;
+
   /* The pool to use for session-related items. */
   apr_pool_t *pool;
 
@@ -225,7 +229,8 @@ svn_client_commit_info_t *svn_client__make_commit_info (svn_revnum_t revision,
 
 /* Verify that the path can be deleted without losing stuff, i.e. ensure
    that there are no modified or unversioned resources under PATH.  This is
-   similar to checking the output of the status command. */
+   similar to checking the output of the status command.  CTX is the client's 
+   context. */
 svn_error_t * svn_client__can_delete (const char *path,
                                       svn_wc_adm_access_t *adm_access,
                                       apr_pool_t *pool);

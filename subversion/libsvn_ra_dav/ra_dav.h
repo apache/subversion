@@ -35,6 +35,7 @@
 #include "svn_delta.h"
 #include "svn_ra.h"
 #include "svn_dav.h"
+#include "svn_config.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -54,6 +55,8 @@ typedef struct {
   void *callback_baton;
 
   svn_auth_iterstate_t *auth_iterstate; /* state of authentication retries */
+
+  apr_hash_t *config;
 
 } svn_ra_session_t;
 

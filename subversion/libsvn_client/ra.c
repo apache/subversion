@@ -256,6 +256,7 @@ svn_client__open_ra_session (void **session_baton,
   cb->do_store = do_store;
   cb->pool = pool;
   cb->commit_items = commit_items;
+  cb->config = ctx->config;
 
   /* If we have a base_dir, then we need to let the wc-auth-provider
      know about it.  It needs it as a runtime parameter. */
@@ -284,7 +285,8 @@ svn_client__open_ra_session (void **session_baton,
        be enough?  */
   }
 
-  SVN_ERR (ra_lib->open (session_baton, base_url, cbtable, cb, pool));
+  SVN_ERR (ra_lib->open (session_baton, base_url, cbtable, cb, ctx->config,
+                         pool));
 
   return SVN_NO_ERROR;
 }

@@ -200,6 +200,7 @@ svn_ra_local__open (void **session_baton,
                     const char *repos_URL,
                     const svn_ra_callbacks_t *callbacks,
                     void *callback_baton,
+                    apr_hash_t *config,
                     apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *session;
