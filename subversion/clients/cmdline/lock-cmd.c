@@ -135,8 +135,7 @@ svn_cl__lock (apr_getopt_t *os,
                                             "   '%s'", tmp_file),
                          _("Your lock comment was left in "
                            "a temporary file:")));
-
-  if (tmp_file)
+  else if (tmp_file)
     SVN_ERR (svn_io_remove_file (tmp_file, pool));
 
   return err;
