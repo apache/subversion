@@ -29,6 +29,12 @@ TEXI2DVI = texi2dvi
 DVIPS = dvips
 DVIPDF = dvipdf
 
+### See `dist' rule.
+DIST_SANDBOX = .dist_sandbox
+DISTNAME = subversion
+VERSION = `grep SVN_VERSION svn_private_config.h | cut -f 3 -d ' ' | sed -e 's/"//g'`
+
+
 CC = @CC@
 
 LIBTOOL = $(SHELL) $(abs_builddir)/libtool
@@ -170,6 +176,40 @@ doc-txt: doc/programmer/design/svn-design.txt
 doc-html: doc/programmer/design/svn-design.html
 doc-ps: doc/programmer/design/svn-design.ps
 doc-pdf: doc/programmer/design/svn-design.pdf
+
+## Build a tarball.
+#
+# Notes:
+# 
+# After Subversion is checked into itself, it will be a lot easier to
+# define this rule in terms of what should be included in the dist,
+# instead of what shouldn't.
+# 
+# Although `make distclean' should clean up apr and neon, in reality
+# neon/src/ still has .o files afterwards.  So we clean them up by
+# hand below.  Better to patch Neon, of course; but the fix wasn't
+# obvious to me -- something to do with @NEONOBJS@ in
+# neon/src/Makefile.in?
+dist: ChangeLog
+	@rm -rf ${DIST_SANDBOX}
+	@mkdir ${DIST_SANDBOX}
+	@mkdir ${DIST_SANDBOX}/subversion
+	@cp -v -d -r * ${DIST_SANDBOX}/subversion
+	@rm -rf `find ${DIST_SANDBOX}/subversion -name CVS -print`
+	@rm -rf `find ${DIST_SANDBOX}/subversion -name .cvsignore -print`
+	@(cd ${DIST_SANDBOX}/subversion;                                  \
+         make distclean;                                                 \
+         ./autogen.sh;                                                   \
+         rm -f neon/src/*.o;                                             \
+         cd ..;                                                          \
+         cp ../svn_private_config.h .;                                   \
+         echo "Rolling ${DISTNAME}-${VERSION}.tar.gz ...";               \
+         tar zcvpf ${DISTNAME}-${VERSION}.tar.gz subversion;             \
+        )
+	@cp ${DIST_SANDBOX}/*.tar.gz .
+	@rm -rf ${DIST_SANDBOX}
+	@echo "Done; see `ls -1 subversion-*.tar.gz`."
+
 
 #
 # Implicit rules for creating outputs from input files
