@@ -787,7 +787,7 @@ svn_wc__entry_remove (apr_hash_t *entries,
 
                    In other words, the user deleted the old foo, added
                    a new foo, then changed her mind and removed the
-                   old foo again.  The result is that the old foo
+                   new foo again.  The result is that the old foo
                    should *still* be marked for deletion.)
 
       Phew!
