@@ -232,9 +232,10 @@ svn_error_t *svn_error_quick_wrap (svn_error_t *child, const char *new_msg);
 void svn_error_free (svn_error_t *error);
 
 
-/* Very dumb "default" error handler that anyone can use if they wish. */
-
-void svn_handle_error (svn_error_t *error, FILE *stream);
+/* Very basic default error handler. */
+void svn_handle_error (svn_error_t *error,
+                       FILE *stream,
+                       svn_boolean_t fatal);
 
 /* Very dumb "default" warning handler -- used by all policies, unless
    svn_svr_warning_callback() is used to set the warning handler

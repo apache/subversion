@@ -8,8 +8,9 @@ SUBDIRS = tests-common               \
           libsvn_subr                \
           libsvn_delta               \
           libsvn_wc                  \
-          libsvn_client              \
           libsvn_ra_dav              \
+          libsvn_client              \
+          client                     \
           @LIBSVN_FS@                \
           @APACHE_MODULES@
 

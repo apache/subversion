@@ -1,5 +1,5 @@
 /*
- * svn_client.h :  public interface for the Subversion Client Library
+ * svn_client.h :  public interface for libsvn_client
  *
  * ================================================================
  * Copyright (c) 2000 CollabNet.  All rights reserved.

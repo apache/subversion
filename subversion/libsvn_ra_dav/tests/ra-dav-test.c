@@ -86,7 +86,7 @@ main (int argc, char **argv)
   err = svn_ra_open(&ras, url, pool);
   if (err)
     {
-      svn_handle_error (err, stdout);
+      svn_handle_error (err, stdout, 0);
       return 1;
     }
 
@@ -96,7 +96,7 @@ main (int argc, char **argv)
                                    &editor, &edit_baton, pool);
   if (err)
     {
-      svn_handle_error (err, stdout);
+      svn_handle_error (err, stdout, 0);
       return 1;
     }
 

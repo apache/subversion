@@ -237,7 +237,7 @@ svn_error_free (svn_error_t *err)
 /* Very dumb "default" error handler: Just prints out error stack
    (recursively), and quits if the fatal flag is set.  */
 void
-svn_handle_error (svn_error_t *err, FILE *stream)
+svn_handle_error (svn_error_t *err, FILE *stream, svn_boolean_t fatal)
 {
   char buf[100];
 
@@ -260,15 +260,11 @@ svn_handle_error (svn_error_t *err, FILE *stream)
   fprintf (stream, "  %s\n", err->message);
   fflush (stream);
 
-  if (err->child == NULL)  /* bottom of exception stack */
-    {
-      return;
-    }
-  else 
-    {
-      /* Recurse */
-      svn_handle_error (err->child, stream);
-    }
+  if (err->child)
+    svn_handle_error (err->child, stream, 0);
+
+  if (fatal)
+    default_abort (1);
 }
 
 

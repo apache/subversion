@@ -70,6 +70,8 @@ svn_client_checkout (svn_string_t *path,
 {
   /* kff todo */
 
+  printf ("hello, world\n");
+
   return SVN_NO_ERROR;
 }
 
