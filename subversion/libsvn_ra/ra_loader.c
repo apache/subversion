@@ -187,18 +187,38 @@ has_scheme_of (const struct ra_lib_defn *defn, const char *url)
 
   for (schemes = defn->schemes; *schemes != NULL; ++schemes)
     {
-      len = strlen (*schemes);
+      const char *scheme = *schemes;
+      len = strlen (scheme);
       /* Case-insensitive comparison, per RFC 2396 section 3.1.  Allow
          URL to contain a trailing "+foo" section in the scheme, since
          that's how we specify tunnel schemes in ra_svn. */
-      if (strncasecmp (*schemes, url, len) == 0 &&
+      if (strncasecmp (scheme, url, len) == 0 &&
           (url[len] == ':' || url[len] == '+'))
-        return *schemes;
+        return scheme;
     }
 
   return NULL;
 }
 
+/* Return an error if RA_VERSION doesn't match the version of this library.
+   Use SCHEME in the error message to describe the library that was loaded. */
+static svn_error_t *
+check_ra_version (const svn_version_t *ra_version, const char *scheme)
+{
+  const svn_version_t *my_version = svn_ra_version ();
+  if (!svn_ver_equal (my_version, ra_version))
+    return svn_error_createf (SVN_ERR_VERSION_MISMATCH, NULL,
+                              _("Mismatched RA version for '%s':"
+                                " found %d.%d.%d%s,"
+                                " expected %d.%d.%d%s"),
+                              scheme,
+                              my_version->major, my_version->minor,
+                              my_version->patch, my_version->tag,
+                              ra_version->major, ra_version->minor,
+                              ra_version->patch, ra_version->tag);
+
+  return SVN_NO_ERROR;
+}
 
 /* -------------------------------------------------------------- */
 
@@ -221,8 +241,6 @@ svn_error_t *svn_ra_open (svn_ra_session_t **session_p,
 
       if ((scheme = has_scheme_of (defn, repos_URL)))
         {
-          const svn_version_t *my_version = svn_ra_version();
-          const svn_version_t *ra_version;
           svn_ra__init_func_t initfunc = defn->initfunc;
 
           if (! initfunc)
@@ -232,20 +250,9 @@ svn_error_t *svn_ra_open (svn_ra_session_t **session_p,
             /* Library not found. */
             break;
 
-          SVN_ERR (initfunc (my_version, &vtable));
+          SVN_ERR (initfunc (svn_ra_version (), &vtable));
 
-          ra_version = vtable->get_version();
-          if (!svn_ver_equal (my_version, ra_version))
-            return svn_error_createf (SVN_ERR_VERSION_MISMATCH, NULL,
-                                      _("Mismatched RA version"
-                                        " for '%s':"
-                                        " found %d.%d.%d%s,"
-                                        " expected %d.%d.%d%s"),
-                                      scheme,
-                                      my_version->major, my_version->minor,
-                                      my_version->patch, my_version->tag,
-                                      ra_version->major, ra_version->minor,
-                                      ra_version->patch, ra_version->tag);
+          SVN_ERR (check_ra_version (vtable->get_version (), scheme));
         }
     }
     
@@ -477,9 +484,8 @@ svn_error_t *svn_ra_get_file_revs (svn_ra_session_t *session,
 
 
 svn_error_t *
-svn_ra_print_ra_libraries (svn_stringbuf_t **descriptions,
-                           void *ra_baton,
-                           apr_pool_t *pool)
+svn_ra_print_ra_libraries2 (svn_stringbuf_t **descriptions,
+                            apr_pool_t *pool)
 {
   const struct ra_lib_defn *defn;
   const char * const *schemes;
@@ -523,6 +529,15 @@ svn_ra_print_ra_libraries (svn_stringbuf_t **descriptions,
 }
 
 
+svn_error_t *
+svn_ra_print_ra_libraries (svn_stringbuf_t **descriptions,
+                           void *ra_baton,
+                           apr_pool_t *pool)
+{
+  return svn_ra_print_ra_libraries2 (descriptions, pool);
+}
+
+
 /* Return the library version number. */
 const svn_version_t *
 svn_ra_version (void)
@@ -556,8 +571,6 @@ svn_ra_get_ra_library (svn_ra_plugin_t **library,
       const char *scheme;
       if ((scheme = has_scheme_of (defn, url)))
         {
-          const svn_version_t *my_version = svn_ra_version();
-          const svn_version_t *ra_version;
           svn_ra_init_func_t compat_initfunc = defn->compat_initfunc;
 
           if (! compat_initfunc)
@@ -579,18 +592,8 @@ svn_ra_get_ra_library (svn_ra_plugin_t **library,
           if (! *library)
             break;
 
-          ra_version = (*library)->get_version();
-          if (!svn_ver_equal (my_version, ra_version))
-            return svn_error_createf (SVN_ERR_VERSION_MISMATCH, NULL,
-                                      _("Mismatched RA plugin version"
-                                        " for '%s':"
-                                        " found %d.%d.%d%s,"
-                                        " expected %d.%d.%d%s"),
-                                      scheme,
-                                      my_version->major, my_version->minor,
-                                      my_version->patch, my_version->tag,
-                                      ra_version->major, ra_version->minor,
-                                      ra_version->patch, ra_version->tag);
+          SVN_ERR (check_ra_version ((*library)->get_version (), scheme));
+
           return SVN_NO_ERROR;
         }
     }
