@@ -126,10 +126,10 @@ typedef struct svn_delta_op_t {
 typedef struct svn_delta_window_t {
 
   /* The number of instructions in this window.  */
-  int num_insns;
+  int num_ops;
   
   /* The instructions for this window.  */
-  svn_delta_op_t *insns;
+  svn_delta_op_t *ops;
 
   /* New data, for use by any `svn_delta_new' instructions.  */
   svn_string_t *new;
