@@ -647,9 +647,10 @@ II.   INSTALLATION
 
       If you are installing under Win9x or NT4 (and do not have Internet
       Explorer 5 or later) and svn.exe doesn't run, try installing
-      shfolder.dll from here:
+      shfolder.dll from here (wrapped url):
 
-          http://download.microsoft.com/download/platformsdk/Redist/5.50.4027.300/W9XNT4/EN-US/shfinst.EXE
+          http://download.microsoft.com/download/platformsdk/Redist/
+          5.50.4027.300/W9XNT4/EN-US/shfinst.EXE
 
    E.3 Preparation
 
@@ -724,7 +725,7 @@ II.   INSTALLATION
 
     Start in the SVN directory you created.
 
-    Set up the environment.
+    Set up the environment (commands should be one line even if wrapped here).
 
     C:>set VER=trunk
     C:>set DIR=trunk
@@ -736,7 +737,8 @@ II.   INSTALLATION
     C:>set GETTEXTINC=C:\SVN\gettext\include
     C:>set GETTEXTLIB=C:\SVN\gettext\lib
     C:>set GETTEXTBIN=C:\SVN\gettext\bin
-    C:>PATH=%PATH%;%DRIVE%:\SVN\src-%DIR%\db4-win32;%DRIVE%:\SVN\nasm;%PYTHONDIR%;%GETTEXTBIN%
+    C:>PATH=%PATH%;%DRIVE%:\SVN\src-%DIR%\db4-win32;%DRIVE%:\SVN\nasm;
+            %PYTHONDIR%;%GETTEXTBIN%
     C:>set INCLUDE=%SDKINC%;%INCLUDE%;%GETTEXTINC%
     C:>set LIB=%SDKLIB%;%LIB%;%GETTEXTLIB%
 
@@ -752,7 +754,8 @@ II.   INSTALLATION
 
     Apache 2
 
-    C:>perl httpd-2.0.49\srclib\apr-util\build\w32locatedb.pl dll src-%DIR%\db4-win32\include src-%DIR%\db4-win32\lib
+    C:>perl httpd-2.0.49\srclib\apr-util\build\w32locatedb.pl dll
+       src-%DIR%\db4-win32\include src-%DIR%\db4-win32\lib
     C:>msdev httpd-2.0.49\apache.dsw /MAKE "BuildBin - Win32 Release"
 
     Subversion
@@ -782,7 +785,9 @@ II.   INSTALLATION
       * Apache must not be running or the copy of the modules will fail.
 
     C:>cd src-%DIR%
-    C:>python gen-make.py -t dsp --with-httpd=..\httpd-2.0.49 --with-berkeley-db=db4-win32 --with-openssl=..\openssl-0.9.7d --with-zlib=..\zlib --enable-nls
+    C:>python gen-make.py -t dsp --with-httpd=..\httpd-2.0.49
+       --with-berkeley-db=db4-win32 --with-openssl=..\openssl-0.9.7d
+       --with-zlib=..\zlib --enable-nls
     C:>msdev subversion_msvc.dsw /USEENV /MAKE "__ALL_TESTS__ - Win32 Release"
     C:>cd ..
 
@@ -804,16 +809,24 @@ II.   INSTALLATION
     C:>copy openssl-0.9.7d\out32dll\libeay32.dll svn-win32-%VER%\bin
     C:>copy openssl-0.9.7d\out32dll\ssleay32.dll svn-win32-%VER%\bin
     C:>copy httpd-2.0.49\srclib\apr\Release\libapr.dll svn-win32-%VER%\bin
-    C:>copy httpd-2.0.49\srclib\apr-iconv\Release\libapriconv.dll svn-win32-%VER%\bin
-    C:>copy httpd-2.0.49\srclib\apr-util\Release\libaprutil.dll svn-win32-%VER%\bin
+    C:>copy httpd-2.0.49\srclib\apr-iconv\Release\libapriconv.dll
+       svn-win32-%VER%\bin
+    C:>copy httpd-2.0.49\srclib\apr-util\Release\libaprutil.dll
+       svn-win32-%VER%\bin
     C:>copy gettext\bin\intl.dll svn-win32-%VER%\bin
     C:>copy gettext\bin\iconv.dll svn-win32-%VER%\bin
-    C:>copy src-%DIR%\Release\subversion\clients\cmdline\svn.exe svn-win32-%VER%\bin
-    C:>copy src-%DIR%\Release\subversion\svnadmin\svnadmin.exe svn-win32-%VER%\bin
-    C:>copy src-%DIR%\Release\subversion\svndumpfilter\svndumpfilter.exe svn-win32-%VER%\bin
-    C:>copy src-%DIR%\Release\subversion\svnlook\svnlook.exe svn-win32-%VER%\bin
-    C:>copy src-%DIR%\Release\subversion\svnserve\svnserve.exe svn-win32-%VER%\bin
-    C:>copy src-%DIR%\Release\subversion\svnversion\svnversion.exe svn-win32-%VER%\bin
+    C:>copy src-%DIR%\Release\subversion\clients\cmdline\svn.exe
+       svn-win32-%VER%\bin
+    C:>copy src-%DIR%\Release\subversion\svnadmin\svnadmin.exe
+       svn-win32-%VER%\bin
+    C:>copy src-%DIR%\Release\subversion\svndumpfilter\svndumpfilter.exe
+       svn-win32-%VER%\bin
+    C:>copy src-%DIR%\Release\subversion\svnlook\svnlook.exe
+       svn-win32-%VER%\bin
+    C:>copy src-%DIR%\Release\subversion\svnserve\svnserve.exe
+       svn-win32-%VER%\bin
+    C:>copy src-%DIR%\Release\subversion\svnversion\svnversion.exe
+       svn-win32-%VER%\bin
 
    E.6 Testing the Binaries
 
@@ -827,11 +840,13 @@ II.   INSTALLATION
     Copy the dso files into the Apache modules directory.
 
     C:>copy Release\subversion\mod_dav_svn\mod_dav_svn.so "%APACHEDIR%"\modules
-    C:>copy Release\subversion\mod_authz_svn\mod_authz_svn.so "%APACHEDIR%"\modules
+    C:>copy Release\subversion\mod_authz_svn\mod_authz_svn.so
+       "%APACHEDIR%"\modules
     C:>copy svn-win32-%VER%\bin\intl.dll "%APACHEDIR%\bin"
     C:>copy svn-win32-%VER%\bin\iconv.dll "%APACHEDIR%\bin"
     C:>copy svn-win32-%VER%\bin\libdb42.dll "%APACHEDIR%\bin"
-    C:>copy httpd-2.0.49\srclib\apr-iconv\Release\iconv\*.so svn-win32-%VER%\iconv
+    C:>copy httpd-2.0.49\srclib\apr-iconv\Release\iconv\*.so
+       svn-win32-%VER%\iconv
     C:>cd ..
 
     Put the svn-win32-trunk\bin directory at the start of your path so
@@ -847,16 +862,19 @@ II.   INSTALLATION
       LoadModule authz_svn_module   modules/mod_authz_svn.so
 
     And further down the file add location directives to point to the
-    test repositories. Change the paths to the SVN directory you created:
+    test repositories. Change the paths to the SVN directory you created
+    (paths should be on one line even if wrapped here):
 
       <Location /repositories>
        DAV svn
-       SVNParentPath C:/SVN/src-trunk/Release/subversion/tests/clients/cmdline/repositories
+       SVNParentPath C:/SVN/src-trunk/Release/subversion/tests/clients/cmdline/
+                     repositories
       </Location>
 
       <Location /local_tmp/repos>
        DAV svn
-       SVNPath c:/SVN/src-trunk/Release/subversion/tests/clients/cmdline/local_tmp/repos
+       SVNPath c:/SVN/src-trunk/Release/subversion/tests/clients/cmdline/
+               local_tmp/repos
       </Location>
 
     Then restart Apache and run the tests:
