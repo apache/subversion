@@ -38,6 +38,7 @@ Blanket commit access:
        jpieper   Josh Pieper <jpieper@andrew.cmu.edu>
   jszakmeister   John Szakmeister <john@szakmeister.net>
       dionisos   Erik Huelsmann <e.huelsmann@gmx.net>
+        breser   Ben Reser <ben@reser.org>
 
 Commit access for specific areas:
 
@@ -72,7 +73,6 @@ Commit access for specific areas:
       lonestar   Martin MAURER <martin.maurer@email.de>      (svnshow)
           maxb   Max Bowsher <maxb@ukf.net>                  (cvs2svn)
        shlomif   Shlomi Fish <shlomif@vipe.technion.ac.il>   (svn-push)
-        breser   Ben Reser <ben@reser.org>                   (perl bindings)
 
 Committers who have asked to be listed as dormant:
 
