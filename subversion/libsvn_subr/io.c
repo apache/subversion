@@ -359,28 +359,47 @@ svn_io_append_file (svn_stringbuf_t *src, svn_stringbuf_t *dst, apr_pool_t *pool
 }
 
 
+static svn_error_t *
+translate_err (apr_status_t err, 
+               const char *verb, 
+               const char *path,
+               apr_pool_t *pool)
+{
+  return svn_error_createf (err, 0, NULL, pool,
+                            "svn_io_convert_eol: error %s `%s'", verb, path);
+}
+
+
 svn_error_t *
-svn_io_convert_eol (const char *src,
-                    const char *dst,
-                    const char *eol_str,
-                    svn_boolean_t repair,
-                    apr_pool_t *pool)
+svn_io_copy_and_translate (const char *src,
+                           const char *dst,
+                           const char *eol_str,
+                           svn_boolean_t repair,
+                           const char *author,
+                           const char *revision,
+                           const char *date,
+                           apr_pool_t *pool)
 {
   apr_file_t *s = NULL, *d = NULL;  /* init to null important for APR */
   apr_status_t apr_err;
   svn_error_t *err = SVN_NO_ERROR;
   apr_status_t read_err, write_err;
-  char buf[BUFSIZ];
-  /* char src_format[3] = { 0 }; */
+  char c;
+
+  /*
+  char newline_buf[3] = { 0 };
+  int  newline_off = 0;
+  char keyword_buf[SVN_IO_MAX_KEYWORD_LEN] = { 0 };
+  int  keyword_off = 0;
+  char src_format[3] = { 0 };
+  */
 
   abort(); /* don't use this function yet, it's not finished! */
 
   /* Open source file. */
   apr_err = apr_file_open (&s, src, APR_READ, APR_OS_DEFAULT, pool);
   if (apr_err)
-    return svn_error_createf
-      (apr_err, 0, NULL, pool, 
-       "svn_io_convert_eol: error opening `%s'", src);
+    return translate_err (apr_err, "opening", src, pool);
   
   /* Open dest file. */
   apr_err = apr_file_open (&d, dst, APR_WRITE | APR_CREATE, 
@@ -388,39 +407,72 @@ svn_io_convert_eol (const char *src,
   if (apr_err)
     {
       apr_file_close (s); /* toss */
-      return svn_error_createf
-        (apr_err, 0, NULL, pool, 
-         "svn_io_convert_eol: error opening `%s'", dst);
+      return translate_err (apr_err, "opening", dst, pool);
     }
 
   /*** Any errors after this point require us to close the two files and
        remove DST. */
   
-  /* Copy bytes till the cows come home. */
-  read_err = 0;
-  while (!APR_STATUS_IS_EOF(read_err))
+  /* Copy bytes till the cows come home (or until one of them breaks a
+     leg, at which point you should trot out to the range with your
+     trusty sidearm, put her down, and consider steak dinners for the
+     next two weeks). */
+  while (err == SVN_NO_ERROR)
     {
-      apr_size_t bytes_read = sizeof (buf);
+      /* Read a byte from SRC */
+      read_err = apr_file_getc (&c, s);
 
-      /* Read a chunk of data. */
-      read_err = apr_file_read (s, buf, &bytes_read);
-      if (read_err && !APR_STATUS_IS_EOF(read_err))
+      /* Check for read errors.  The docstring for apr_file_read
+         states that we cannot *both* read bytes AND get an error
+         while doing so (include APR_EOF).  Since apr_file_getc is simply a
+         wrapper around apr_file_read, we know that if we get any
+         error at all, we haven't read any bytes.  This gives us the
+         ability to handle the error here without worrying about
+         losing the last character of the file simply because we
+         recieved an APR_EOF read error.  */
+      if (read_err)
         {
-          err = svn_error_createf
-            (read_err, 0, NULL, pool, 
-             "svn_io_convert_eol: error reading `%s'", src);
-          goto cleanup;
+          if (!APR_STATUS_IS_EOF(read_err))
+            {
+              /* This was some error other than EOF! */
+              err = translate_err (read_err, "reading", src, pool);
+              goto cleanup;
+            }
+          else
+            {
+              /* We've reached the end of the file.  Close up shop.  */
+              apr_err = apr_file_close (s);
+              if (apr_err)
+                {
+                  s = NULL;
+                  err = translate_err (apr_err, "closing", src, pool);
+                  goto cleanup;
+                }
+              apr_err = apr_file_close (d);
+              if (apr_err)
+                {
+                  d = NULL;
+                  err = translate_err (apr_err, "closing", dst, pool);
+                  goto cleanup;
+                }
+            }
         }
 
-      /* Write the bytes to DST, converting newlines as we go. */
+      /* Handle the byte.  Is it a part of a known newline string?
+         Part of a keyword?  */
+      switch (c)
+        {
+        case '\n':
+        case '\r':
+
+        case '$':
+          /* If we are currently in the middle of tracking a possible
+             keyword expansion, then this is its terminator.  Else,
+             this is the beginning of a new possible keyword. */
+        default:
+        }
+
       /* ### TODO:  Here's the real meat.  Things to keep in mind:
-
-         - EOL strings can be multi-character.  This means we run the
-           risk of an EOL string spanning chunks read from SRC
-
-         - Perhaps we need a function to simply figure out what SRC's
-           current EOL string is, heuristically, since it might have
-           been tainted by an unaware tool?  
 
          - It's not enough to only replace instances of SRC's EOL
            string with the EOL string requested.  We need to scan for
@@ -433,39 +485,12 @@ svn_io_convert_eol (const char *src,
            this function until you've written good tests for it! >:-(
       */
 
-      /* Write 'em. */
-      write_err = apr_file_write_full (d, buf, bytes_read, NULL);
+      /* Write out our (possibly tweaked) data. */
+      write_err = apr_file_putc (c, d);
       if (write_err)
         {
-          err = svn_error_createf
-            (write_err, 0, NULL, pool, 
-             "svn_io_convert_eol: error writing `%s'", dst);
+          err = translate_err (write_err, "writing", dst, pool);
           goto cleanup;
-        }
-
-      /* If we hit the end of the file, we need to close both files,
-         hopefully without error. */
-      if (read_err && APR_STATUS_IS_EOF(read_err))
-        {
-          apr_err = apr_file_close (s);
-          if (apr_err)
-            {
-              s = NULL;
-              err = svn_error_createf
-                (apr_err, 0, NULL, pool, 
-                 "svn_io_convert_eol: error closing `%s'", src);
-              goto cleanup;
-            }
-          
-          apr_err = apr_file_close (d);
-          if (apr_err)
-            {
-              d = NULL;
-              err = svn_error_createf
-                (apr_err, 0, NULL, pool, 
-                 "svn_io_convert_eol: error closing `%s'", dst);
-              goto cleanup;
-            }
         }
     }
   return SVN_NO_ERROR;
