@@ -41,6 +41,9 @@ To be fixed by cmpilato:
   - ch07:  'global-ignores' affects 'svn import', but book only
     mentions the effect on 'status' and 'add'
 
+  - ch05: paragraph that explains (1) deltification, and (2) why bdb
+    doesn't shrink when you think it would.
+
   - appendix A:  explain that we don't support $Log$, and why.
 
 --------------------------------------------------------------

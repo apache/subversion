@@ -419,9 +419,19 @@ svn           3690/tcp   # Subversion
 svn           3690/udp   # Subversion
 </screen>
 
-      <para>...and when a client connection comes into your server on
-        port 3690, <command>inetd</command> will spawn an
-        <command>svnserve</command> process to service it.</para>
+      <para>And if your system is using a classic Unix-like
+        <command>inetd</command> daemon, you can add this line to
+        <filename>/etc/inetd.conf</filename>:</para>
+
+<screen>
+svn stream tcp nowait svnowner /usr/local/bin/svnserve svnserve -i
+</screen>
+
+      <para>Make sure <quote>svnowner</quote> is a user which has
+        appopriate permissions to access your repositories.  Now, when
+        a client connection comes into your server on port 3690,
+        <command>inetd</command> will spawn an
+        <command>svnserve</command> process to service it.  </para>
 
       <para>A second option is to run <command>svnserve</command> as a
         standalone <quote>daemon</quote> process.  Use the
@@ -1928,6 +1938,17 @@ umask 002
 /usr/local/subversion/bin/svn "$@"
 
 </screen>
+
+    <para>Another common problem is often encountered on Unix-like
+      systems.  As a repository is used, BerkeleyDB occasionally
+      creates new logfiles to journal its actions.  Even if the
+      repository is wholly owned by the <command>svn</command> group,
+      these newly created files won't necessarily be owned by that
+      same group, which then creates more permissions problems for
+      your users.  A good workaround is to set the group SUID bit on
+      the repository's <filename>db</filename> directory.  This causes
+      all newly-created logfiles to have the same group owner as the
+      parent directory.</para>
 
     <para>Once you've jumped through these hoops, your repository
       should be accessible by all the necessary processes.  It may
