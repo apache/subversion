@@ -354,6 +354,7 @@ static svn_error_t * checkout_resource(commit_ctx_t *cc, resource_t *res)
   const char *locn = NULL;
   struct uri parse;
   svn_stringbuf_t *url_str;
+  svn_error_t *err;
 
   if (res->wr_url != NULL)
     {
@@ -394,10 +395,19 @@ static svn_error_t * checkout_resource(commit_ctx_t *cc, resource_t *res)
                                  ne_duplicate_header, (void *)&locn);
 
   /* run the request and get the resulting status code (and svn_error_t) */
-  SVN_ERR( svn_ra_dav__request_dispatch(&code, req, cc->ras->sess,
-                                        "CHECKOUT", url_str->data, 
-                                        cc->ras->pool) );
-  
+  err = svn_ra_dav__request_dispatch(&code, req, cc->ras->sess,
+                                     "CHECKOUT", url_str->data, 
+                                     cc->ras->pool);
+  if (err)
+    {
+      if (err->apr_err == SVN_ERR_FS_CONFLICT)
+        return svn_error_createf(err->apr_err, err->src_err, err, NULL,
+                                 "Your file '%s' is probably out-of-date.",
+                                 res->local_path);
+      else
+        return err;
+    }
+
   if (locn == NULL)
     {
       return svn_error_create(SVN_ERR_RA_REQUEST_FAILED, 0, NULL,

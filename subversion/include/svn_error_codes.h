@@ -85,6 +85,9 @@ SVN_ERROR_START
   SVN_ERRDEF (SVN_ERR_INCOMPLETE_DATA,
               "Incomplete data")
 
+  SVN_ERRDEF (SVN_ERR_INCORRECT_PARAMS,
+              "Incorrect parameters given")
+
   SVN_ERRDEF (SVN_ERR_MALFORMED_XML,
               "XML data was not well-formed")
 
@@ -94,6 +97,12 @@ SVN_ERROR_START
   SVN_ERRDEF (SVN_ERR_UNFRUITFUL_DESCENT,
               "WC descent came up empty")
 
+  SVN_ERRDEF (SVN_ERR_BAD_CONTAINING_POOL,
+              "Bad parent pool passed to svn_make_pool()")
+
+  SVN_ERRDEF (SVN_ERR_TEST_FAILED,
+              "Test failed")
+       
   SVN_ERRDEF (SVN_ERR_BAD_FILENAME,
               "Bogus filename")
 
@@ -363,8 +372,7 @@ SVN_ERROR_START
 
   /* END svndiff errors */
 
-  SVN_ERRDEF (SVN_ERR_BAD_CONTAINING_POOL,
-              "Bad parent pool passed to svn_make_pool()")
+  /* BEGIN mod_dav_svn errors */
 
   SVN_ERRDEF (SVN_ERR_APMOD_MISSING_PATH_TO_FS,
               "Apache has no path to an SVN filesystem")
@@ -372,8 +380,13 @@ SVN_ERROR_START
   SVN_ERRDEF (SVN_ERR_APMOD_MALFORMED_URI,
               "Apache got a malformed URI")
 
-  SVN_ERRDEF (SVN_ERR_TEST_FAILED,
-              "Test failed")
+  SVN_ERRDEF (SVN_ERR_APMOD_ACTIVITY_NOT_FOUND,
+              "Activity not found")
+
+  SVN_ERRDEF (SVN_ERR_APMOD_BAD_BASELINE,
+              "Baseline incorrect")
+
+ /* END mod_dav_svn errors*/
 
   /* BEGIN libsvn_client errors */
 
