@@ -29,7 +29,7 @@ _svn()
 		# if we're completing for 'svn help' or 'svn h', then just 
 		# complete on any valid svn command
 		case ${COMP_WORDS[1]} in
-		help|h)
+		help|h|\?)
 			COMPREPLY=( $( compgen -W "$cmds" -- $cur ) )
 			return 0
 			;;
@@ -41,7 +41,7 @@ _svn()
 	# options that require a parameter
 	# note: continued lines must end '|' continuing lines must start '|'
 	optsParam="-r|--revision|-D|--date|--username|--password|--targets|\
-	           |-d|--destination|-x|--extensions|-m|--message|-F|--file"
+	           |-x|--extensions|-m|--message|-F|--file|--message-encoding"
 
 	# if not typing an option, or if the previous option required a
 	# parameter, then fallback on ordinary filename expansion
@@ -51,7 +51,7 @@ _svn()
 	fi
 
 	pOpts="--username --password"
-	mOpts="-m --message -F --file"
+	mOpts="-m --message -F --file --message-encoding"
 	rOpts="-r --revision -D --date"
 	qOpts="-q --quiet"
 	nOpts="-n --nonrecursive"
@@ -63,7 +63,7 @@ _svn()
 		cmdOpts="--targets --recursive"
 		;;
 	checkout|co)
-		cmdOpts="-d --destination $rOpts $pOpts $qOpts"
+		cmdOpts="$nOpts $rOpts $pOpts $qOpts"
 		;;
 	cleanup)
 		;;
@@ -142,8 +142,6 @@ _svn()
 
 		# take out alternatives
 		case $opt in
-		-d)             cmdOpts=${cmdOpts/ --destination / } ;;
-		--destination)  cmdOpts=${cmdOpts/ -d / } ;;
 		-v)             cmdOpts=${cmdOpts/ --verbose / } ;;
 		--verbose)      cmdOpts=${cmdOpts/ -v / } ;;
 		-n)             cmdOpts=${cmdOpts/ --nonrecursive / } ;;
