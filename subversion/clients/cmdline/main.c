@@ -207,8 +207,13 @@ main (int argc, const char * const *argv)
         opt_state.revision = (svn_revnum_t) atoi (opt_arg);
         break;
       case 'D':
+        /* svn_parse_date() originates in getdate.y; while I'd love to
+           change it to const char *, that turns out to be a little
+           more complex than just adding the qualifier.  So for now,
+           I'm casting to get rid of the compilation warning, and have
+           filed issue #408 so we don't forget about this.  -kff  */
         apr_ansi_time_to_apr_time (&opt_state.date,
-                                   svn_parse_date (opt_arg, NULL));
+                                   svn_parse_date ((char *) opt_arg, NULL));
         break;
       case 'v':
         opt_state.version = TRUE;
