@@ -637,10 +637,13 @@ static svn_error_t * commit_add_dir(svn_stringbuf_t *name,
          empty collection */
       SVN_ERR( simple_request(parent->cc->ras, "MKCOL", child->rsrc->wr_url,
                               &code) );
-      if (code != 201)
+
+      if (code != 201) /* "created" */
         {
           /* ### need to be more sophisticated with reporting the failure */
-          /* ### need error */
+          return 
+            svn_error_createf(SVN_ERR_RA_REQUEST_FAILED, 0, NULL, pool,
+                              "MKCOL request failed for '%s'", name->data);
         }
     }
   else
@@ -677,7 +680,12 @@ static svn_error_t * commit_add_dir(svn_stringbuf_t *name,
                        src_url->data,       /* source URI */
                        child->rsrc->wr_url); /* dest URI */
 
-      /* ### check error code?!? */
+      if (status != 201) /* "created" */
+        {
+          return 
+            svn_error_createf(SVN_ERR_RA_REQUEST_FAILED, 0, NULL, pool,
+                              "COPY request failed for '%s'", name->data);
+        }
     }
 
   *child_baton = child;
@@ -809,7 +817,12 @@ static svn_error_t * commit_add_file(svn_stringbuf_t *name,
                        src_url->data,       /* source URI */
                        file->rsrc->wr_url); /* dest URI */
 
-      /* ### check error code?!? */
+      if (status != 201) /* "created" */
+        {
+          return 
+            svn_error_createf(SVN_ERR_RA_REQUEST_FAILED, 0, NULL, pool,
+                              "COPY request failed for '%s'", name->data);
+        }
     }
 
   /* return the file_baton */
