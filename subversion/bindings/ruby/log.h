@@ -23,7 +23,6 @@ extern "C" {
 typedef struct svn_ruby_log_receiver_baton_t
 {
   VALUE proc;
-  apr_pool_t *pool;
 } svn_ruby_log_receiver_baton_t;
 
 svn_error_t *
@@ -32,7 +31,8 @@ svn_ruby_log_receiver (void *baton,
                        svn_revnum_t revision,
                        const char *author,
                        const char *date,
-                       const char *message);
+                       const char *message,
+                       apr_pool_t *pool);
 
 void
 svn_ruby_get_log_args (int argc,
@@ -42,6 +42,7 @@ svn_ruby_get_log_args (int argc,
                        VALUE *start,
                        VALUE *end,
                        VALUE *discover_changed_paths,
+                       VALUE *strict_node_history,
                        svn_ruby_log_receiver_baton_t *baton,
                        apr_pool_t *pool);
 
