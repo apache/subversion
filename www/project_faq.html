@@ -75,6 +75,8 @@
 <li><a href="#wedged-wc">Every time I try to run a svn
     command, it says my working copy is locked.  Is my working copy
     corrupt?</a></li>
+<li><a href="#wc-out-of-date">I'm trying to commit, but Subversion says my
+    my working copy is out of date?</a></li>
 <li><a href="#unrecognized-url-error">I just built the distribution
     binary, and when I try to check out Subversion, I get an error
     about an "Unrecognized URL scheme."  What's up with that?</a></li>
@@ -1150,6 +1152,32 @@ run:</p>
 
 <pre>
 svn cleanup working-copy
+</pre>
+
+<![CDATA[-----------------------------------------------------------]]>
+
+<h3><a name="wc-out-of-date">I'm trying to commit, but Subversion says my
+my working copy is out of date?</a></h3>
+
+<p>
+When you commit, Subversion bumps the revision numbers of all nodes the commit
+touches.  This means that in a single folder, the files and folders might
+be at different revisions, depending on when you last committed them.</p>
+<p>
+For certain operations (deletes and property modifications), if the repository
+has a more recent version of the node, the commit will be rejected, to prevent
+data loss.</p>
+<p>
+See
+<a href="http://svnbook.red-bean.com/svnbook/ch02s03.html#svn-ch-2-sect-3.4">
+The Limitations of Mixed Revisions</a> in the
+<a href="http://svnbook.red-bean.com/">Version Control with Subversion</a>
+for details.</p>
+<p>
+To prevent this error, simply update your working copy using:</p>
+
+<pre>
+svn update working-copy
 </pre>
 
 <![CDATA[-----------------------------------------------------------]]>
