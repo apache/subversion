@@ -473,11 +473,11 @@ test_list = [ None,
               revert_nested_adds,
               revert_delete_files,
               revert_delete_dirs,
-              (commit_add_files, svntest.main.XFAIL),
-              (commit_add_directories, svntest.main.XFAIL),
-              (commit_nested_adds, svntest.main.XFAIL),
-              (commit_delete_files, svntest.main.XFAIL),
-              (commit_delete_dirs, svntest.main.XFAIL),
+              svntest.main.XFAIL(commit_add_files),
+              svntest.main.XFAIL(commit_add_directories),
+              svntest.main.XFAIL(commit_nested_adds),
+              svntest.main.XFAIL(commit_delete_files),
+              svntest.main.XFAIL(commit_delete_dirs),
              ]
 
 if __name__ == '__main__':

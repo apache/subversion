@@ -1390,6 +1390,49 @@ def commit_current_dir(sbox):
   if svntest.actions.run_and_verify_status(wc_dir, expected_status):
     return 1
 
+#----------------------------------------------------------------------
+
+# Check that the pending txn gets removed from the repository after
+# a failed commit.
+
+def failed_commit(sbox):
+  "commit with conflicts and check txn in repo"
+
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
+
+  # Make the other working copy
+  other_wc_dir = wc_dir + '.other'
+  svntest.actions.duplicate_dir(wc_dir, other_wc_dir)
+
+  # Make different changes in the two working copies
+  iota_path = os.path.join (wc_dir, "iota")
+  svntest.main.file_append (iota_path, "More stuff in iota")
+
+  other_iota_path = os.path.join (other_wc_dir, "iota")
+  svntest.main.file_append (other_iota_path, "More different stuff in iota")
+
+  # Commit both working copies. The second commit should fail.
+  output, errput = svntest.main.run_svn(None, 'commit', '-m', 'log', wc_dir)
+  if errput:
+    return 1
+
+  output, errput = svntest.main.run_svn(1, 'commit', '-m', 'log', other_wc_dir)
+  if not errput:
+    return 1
+
+  # Now list the txns in the repo. The list should be empty.
+  output, errput = svntest.main.run_svnadmin('lstxns', sbox.repo_dir)
+  if svntest.actions.compare_and_display_lines(
+    "Error running 'svnadmin lstxns'.",
+    'STDERR', [], errput):
+    return 1
+  return svntest.actions.compare_and_display_lines(
+    "Output of 'svnadmin lstxns' is unexpected.",
+    'STDOUT', [], output)
+
 ########################################################################
 # Run the tests
 
@@ -1398,7 +1441,7 @@ def commit_current_dir(sbox):
 test_list = [ None,
               commit_one_file,
               commit_one_new_file,
-              (commit_one_new_binary_file, svntest.main.XFAIL),
+              svntest.main.XFAIL(commit_one_new_binary_file),
               commit_multiple_targets,
               commit_multiple_targets_2,
               commit_inclusive_dir,
@@ -1409,7 +1452,7 @@ test_list = [ None,
               hudson_part_1_variation_1,
               hudson_part_1_variation_2,
               hudson_part_2,
-              (hook_test, svntest.main.XFAIL),
+              svntest.main.XFAIL(hook_test),
               merge_mixed_revisions,
               commit_uri_unsafe,
               commit_deleted_edited,
@@ -1419,6 +1462,7 @@ test_list = [ None,
               commit_from_long_dir,
               commit_with_lock,
               commit_current_dir,
+              svntest.main.XFAIL(failed_commit),
              ]
 
 if __name__ == '__main__':

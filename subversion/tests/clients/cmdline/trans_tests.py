@@ -401,9 +401,9 @@ This is the file 'rho'.>>>>>>> .r1
 # list all tests here, starting with None:
 test_list = [ None,
               keywords_from_birth,
-              (enable_translation, svntest.main.XFAIL),
-              (checkout_translated, svntest.main.XFAIL),
-              (disable_translation, svntest.main.XFAIL),
+              svntest.main.XFAIL(enable_translation),
+              svntest.main.XFAIL(checkout_translated),
+              svntest.main.XFAIL(disable_translation),
               update_modified_with_translation,
              ]
 

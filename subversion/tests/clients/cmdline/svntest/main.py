@@ -303,8 +303,9 @@ class Sandbox:
 # Ideally, each test should also have a short, one-line docstring (so
 # it can be displayed by the 'list' command.)
 
-# Use this symbol in the test list to mark XFAIL tests
-XFAIL = 1
+# Use this function in the test list to mark XFAIL tests
+def XFAIL(fn):
+  return fn, 1
 
 # Interpret an entry in TEST_LIST
 def _func_and_fail_mode(elem):
