@@ -634,7 +634,7 @@ Node revisions:
                  HEADER ::= (KIND PROPLIST FLAG ...) ;
                    KIND ::= "file" | "dir" | "copy" ;
                    FLAG ::= ("mutable" PARENT-ID) ;
-              PARENT-ID ::= node.revision-id ;
+              PARENT-ID ::=  | node.revision-id ;
         SOURCE-REVISION ::= number ;
 
 
