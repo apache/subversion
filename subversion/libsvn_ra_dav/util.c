@@ -407,7 +407,7 @@ static int end_err_element(void *userdata, const svn_ra_dav__xml_elm_t *elm,
             if (*cdata == '\n')
               ++cdata;
             len = strlen(cdata);
-            if (cdata[len-1] == '\n')
+            if (len > 0 && cdata[len-1] == '\n')
               --len;
 
             (*err)->message = apr_pstrmemdup((*err)->pool, cdata, len);
