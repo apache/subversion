@@ -407,13 +407,13 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     """
 
     for obj in self.graph.get_sources(gen_base.DT_LINK, target.name, gen_base.Target):
-      if isinstance(obj, gen_base.TargetExternal) and obj.msvc_project and no_externals:
+      if isinstance(obj, gen_base.TargetLinked) and obj.external_project and no_externals:
         continue
 
       if deps is not None:
         deps[obj] = None
 
-      if isinstance(obj, gen_base.TargetExternal) and not obj.msvc_project:
+      if isinstance(obj, gen_base.TargetLinked) and not obj.path and not obj.external_project:
         self.get_win_depends_impl(obj, deps, child_deps, no_externals, no_child_externals)
       elif child_deps is not None:
         self.get_win_depends_impl(obj, child_deps, child_deps, no_child_externals, no_child_externals)
@@ -526,10 +526,10 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     nondeplibs = ['setargv.obj']
     depends = [target] + self.get_win_depends(target, 1)
     for dep in depends:
-      if isinstance(dep, gen_base.TargetExternal):
+      if isinstance(dep, gen_base.TargetLinked):
         nondeplibs.extend(map(lambda x: x + '.lib', dep.msvc_libs))
 
-        if dep.make_lib == '$(SVN_DB_LIBS)':
+        if dep.external_lib == '$(SVN_DB_LIBS)':
           nondeplibs.append(dblib)
 
     return nondeplibs

@@ -48,9 +48,9 @@ class Generator(gen_base.GeneratorBase):
       libs = [ ]
 
       for source in sources:
-        if isinstance(source, gen_base.Target):
-          if hasattr(source, 'make_lib'):
-            libs.append(source.make_lib)
+        if isinstance(source, gen_base.TargetLinked):
+          if source.external_lib:
+            libs.append(source.external_lib)
           else:
             # append the output of the target to our stated dependencies
             deps.append(source.filename)
@@ -94,8 +94,8 @@ class Generator(gen_base.GeneratorBase):
       # .la files are handled by the standard 'clean' rule; clean all the
       # other targets
       if not isinstance(target, gen_base.TargetScript) \
-         and not isinstance(target, gen_base.TargetExternal) \
          and not isinstance(target, gen_base.TargetProject) \
+         and not target.external_lib \
          and target.filename[-3:] != '.la':
         cfiles.append(target.filename)
     cfiles.sort()
@@ -260,8 +260,9 @@ class Generator(gen_base.GeneratorBase):
         retreat = gen_base._retreat_dots(target.path)
         deps = [ target.filename ]
         link = [ os.path.join(retreat, target.filename) ]
-        for source in self.graph.get_sources(gen_base.DT_LINK, target.name,
-                                             gen_base.TargetLib):
+        for source in self.graph.get_sources(gen_base.DT_LINK, target.name):
+          if not isinstance(source, gen_base.TargetLib) or source.external_lib:
+            continue
           deps.append(source.filename)
           link.append(os.path.join(retreat, source.filename))
 
