@@ -69,8 +69,8 @@ list to whet your appetite:
 @b{Directory versioning} The Subversion repository doesn't use RCS
 files like CVS; instead, it implements a 'virtual' versioned
 filesystem that tracks tree-structures over time.  Files @emph{and}
-directories are versioned.  At last, there are real client-side `mv'
-and `cp' commands.
+directories are versioned.  At last, there are real client-side 
+`move' and `copy' commands.
 
 @item 
 @b{Atomic commits} A commit either goes into the repository
@@ -192,7 +192,7 @@ X, and possibly Netware.)
 
 However, Subversion depends on more than just APR -- the Subversion
 "server" is Apache httpd itself.  Apache httpd is a time-tested,
-extensible open-source server process that ready for serious use.  It
+extensible open-source server process that is ready for serious use.  It
 can sustain a high network load, runs on many platforms, and can operate
 through firewalls.  It can use a number of different authentication
 protocols and do network pipelining and caching.  By using Apache as a
