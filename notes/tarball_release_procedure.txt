@@ -4,7 +4,7 @@ Subversion Tarball Release Procedure
 
 1. Update CHANGES to contain all the latest changes.  Commit.
 
-2. Update working copy to head, make check.
+2. Update working copy to head.
 
 3. Bump product version number in svn_version.h and CHANGES.  Commit.
 

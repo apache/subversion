@@ -47,7 +47,7 @@ extern "C" {
 
 /* Patch number.
    Modify for every released patch. */
-#define SVN_VER_MICRO      2
+#define SVN_VER_MICRO      3
 
 /* Library version number.
    Modify whenever there's an incompatible change in the library ABI. */
