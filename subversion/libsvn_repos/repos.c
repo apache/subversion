@@ -944,7 +944,7 @@ svn_repos_create (svn_repos_t **repos_p,
   repos->fs = svn_fs_new (fs_config, pool);
 
   /* Create a Berkeley DB environment for the filesystem. */
-  SVN_ERR (svn_fs_create_berkeley (repos->fs, repos->db_path));
+  SVN_ERR (svn_fs_create (repos->fs, repos->db_path, pool));
 
   *repos_p = repos;
   return SVN_NO_ERROR;
@@ -1056,7 +1056,7 @@ get_repos (svn_repos_t **repos_p,
 
   /* Open up the Berkeley filesystem only after obtaining the lock. */
   if (open_fs)
-    SVN_ERR (svn_fs_open_berkeley (repos->fs, repos->db_path));
+    SVN_ERR (svn_fs_open (repos->fs, repos->db_path, pool));
 
   *repos_p = repos;
   return SVN_NO_ERROR;
@@ -1107,7 +1107,7 @@ svn_repos_delete (const char *path,
   const char *db_path = svn_path_join (path, SVN_REPOS__DB_DIR, pool);
 
   /* Delete the Berkeley environment... */
-  SVN_ERR (svn_fs_delete_berkeley (db_path, pool));
+  SVN_ERR (svn_fs_delete_fs (db_path, pool));
 
   /* ...then blow away everything else.  */
   SVN_ERR (svn_io_remove_dir (path, pool));
@@ -1336,8 +1336,8 @@ svn_repos_hotcopy (const char *src_path,
                       pool));
 
 
-  SVN_ERR (svn_fs_hotcopy_berkeley (src_repos->db_path, dst_repos->db_path,
-                                    clean_logs, pool));
+  SVN_ERR (svn_fs_hotcopy (src_repos->db_path, dst_repos->db_path,
+                           clean_logs, pool));
 
   return SVN_NO_ERROR;
 }
