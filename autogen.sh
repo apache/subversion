@@ -103,7 +103,7 @@ fi
 # Do it after the aclocal command -- automake sets up the header to depend
 # on aclocal.m4
 echo "Creating svn_private_config.h.in..."
-autoheader
+${AUTOHEADER:-autoheader}
 
 # If there's a config.cache file, we may need to delete it.  
 # If we have an existing configure script, save a copy for comparison.
@@ -113,7 +113,7 @@ fi
 
 # Produce ./configure
 echo "Creating configure..."
-autoconf
+${AUTOCONF:-autoconf}
 
 # If we have a config.cache file, toss it if the configure script has
 # changed, or if we just built it for the first time.
@@ -128,7 +128,7 @@ if [ -f config.cache ]; then
 fi
 
 # Remove autoconf 2.5x's cache directory
-rm -rf autom4te.cache
+rm -rf autom4te*.cache
 
 # Run apr/buildconf if it exists.
 if test -x "apr/buildconf" ; then
