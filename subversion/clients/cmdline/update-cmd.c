@@ -71,11 +71,10 @@ svn_cl__update (apr_getopt_t *os,
       svn_error_t *err;
 
       svn_pool_clear (subpool);
-      err = svn_client_update (target,
+      err = svn_client_update (NULL, target,
                                &(opt_state->start_revision),
                                opt_state->nonrecursive ? FALSE : TRUE,
-                               ctx,
-                               subpool);
+                               ctx, subpool);
       if (err)
         {
           if (err->apr_err == SVN_ERR_ENTRY_NOT_FOUND)

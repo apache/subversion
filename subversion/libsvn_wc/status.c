@@ -59,10 +59,10 @@ struct edit_baton
   /* Ignore the svn:ignores. */
   svn_boolean_t no_ignore;
 
-  /* The youngest revision in the repository.  This is a reference
-     because this editor returns youngest rev to the driver directly,
-     as well as in each statushash entry. */
-  svn_revnum_t *youngest_revision;
+  /* The comparison revision in the repository.  This is a reference
+     because this editor returns this rev to the driver directly, as
+     well as in each statushash entry. */
+  svn_revnum_t *target_revision;
 
   /* Subversion configuration hash. */
   apr_hash_t *config;
@@ -1154,7 +1154,7 @@ set_target_revision (void *edit_baton,
                      apr_pool_t *pool)
 {
   struct edit_baton *eb = edit_baton;
-  *(eb->youngest_revision) = target_revision;
+  *(eb->target_revision) = target_revision;
   return SVN_NO_ERROR;
 }
 
@@ -1557,7 +1557,7 @@ close_edit (void *edit_baton,
 svn_error_t *
 svn_wc_get_status_editor (const svn_delta_editor_t **editor,
                           void **edit_baton,
-                          svn_revnum_t *youngest,
+                          svn_revnum_t *edit_revision,
                           svn_wc_adm_access_t *anchor,
                           const char *target,
                           apr_hash_t *config,
@@ -1577,7 +1577,7 @@ svn_wc_get_status_editor (const svn_delta_editor_t **editor,
   /* Construct an edit baton. */
   eb = apr_palloc (pool, sizeof (*eb));
   eb->descend           = descend;
-  eb->youngest_revision = youngest;
+  eb->target_revision   = edit_revision;
   eb->adm_access        = anchor;
   eb->config            = config;
   eb->get_all           = get_all;

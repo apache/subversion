@@ -216,25 +216,6 @@ svn_error_t * svn_client__can_delete (const char *path,
 
 /* ---------------------------------------------------------------- */
 
-/*** Export ***/
-
-/* Set *EDITOR and *EDIT_BATON to an editor (allocated in POOL) that
-   simply dumps data to disk, with no working copy administrative dirs
-   or bookkeeping.  Create the directory ROOT_PATH, and dump the
-   entire tree within.  ROOT_URL must be the the url being exported,
-   so that the 'url' keyword can be expanded.  Use CTX (if non-NULL)
-   for sending feedback. */
-svn_error_t * svn_client__get_export_editor (const svn_delta_editor_t **editor,
-                                             void **edit_baton,
-                                             const char *root_path,
-                                             const char *root_url,
-                                             svn_boolean_t force,
-                                             svn_client_ctx_t *ctx,
-                                             apr_pool_t *pool);
-
-
-/* ---------------------------------------------------------------- */
-
 /*** Add/delete ***/
 
 /* Read automatic properties matching PATH from CTX->config.
@@ -268,27 +249,31 @@ svn_error_t * svn_client__wc_delete (const char *path,
 
 /*** Checkout and update ***/
 
-/* Update a working copy PATH to REVISION.  If TIMESTAMP_SLEEP is NULL this
-   function will sleep before returning to ensure timestamp integrity.  If
-   TIMESTAMP_SLEEP is not NULL then the function will not sleep but will
-   set *TIMESTAMP_SLEEP to TRUE if a sleep is required, and will not change
-   *TIMESTAMP_SLEEP if no sleep is required. */
+/* Update a working copy PATH to REVISION, and (if not NULL) set
+   RESULT_REV to the update revision.  If TIMESTAMP_SLEEP is NULL this
+   function will sleep before returning to ensure timestamp integrity.
+   If TIMESTAMP_SLEEP is not NULL then the function will not sleep but
+   will set *TIMESTAMP_SLEEP to TRUE if a sleep is required, and will
+   not change *TIMESTAMP_SLEEP if no sleep is required. */
 svn_error_t *
-svn_client__update_internal (const char *path,
+svn_client__update_internal (svn_revnum_t *result_rev,
+                             const char *path,
                              const svn_opt_revision_t *revision,
                              svn_boolean_t recurse,
                              svn_boolean_t *timestamp_sleep,
                              svn_client_ctx_t *ctx,
                              apr_pool_t *pool);
 
-/* Checkout into PATH a working copy of URL at REVISION.  If
-   TIMESTAMP_SLEEP is NULL this function will sleep before returning to
-   ensure timestamp integrity.  If TIMESTAMP_SLEEP is not NULL then the
-   function will not sleep but will set *TIMESTAMP_SLEEP to TRUE if a sleep
-   is required, and will not change *TIMESTAMP_SLEEP if no sleep is
-   required. */
+/* Checkout into PATH a working copy of URL at REVISION, and (if not
+   NULL) set RESULT_REV to the checked out revision.  If
+   TIMESTAMP_SLEEP is NULL this function will sleep before returning
+   to ensure timestamp integrity.  If TIMESTAMP_SLEEP is not NULL then
+   the function will not sleep but will set *TIMESTAMP_SLEEP to TRUE
+   if a sleep is required, and will not change *TIMESTAMP_SLEEP if no
+   sleep is required. */
 svn_error_t *
-svn_client__checkout_internal (const char *URL,
+svn_client__checkout_internal (svn_revnum_t *result_rev,
+                               const char *URL,
                                const char *path,
                                const svn_opt_revision_t *revision,
                                svn_boolean_t recurse,

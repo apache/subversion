@@ -68,7 +68,6 @@ svn_cl__status (apr_getopt_t *os,
   apr_array_header_t *targets;
   apr_pool_t * subpool;
   int i;
-  svn_revnum_t youngest = SVN_INVALID_REVNUM;
   svn_opt_revision_t rev;
   struct status_baton sb;
 
@@ -101,8 +100,7 @@ svn_cl__status (apr_getopt_t *os,
       sb.show_last_committed = opt_state->verbose;
       sb.skip_unrecognized = opt_state->quiet;
       sb.pool = subpool;
-      SVN_ERR (svn_client_status (&youngest, target, &rev,
-                                  print_status, &sb,
+      SVN_ERR (svn_client_status (NULL, target, &rev, print_status, &sb,
                                   opt_state->nonrecursive ? FALSE : TRUE,
                                   opt_state->verbose,
                                   opt_state->update,

@@ -200,86 +200,6 @@ open_root_internal (const char *path,
 }
 
 
-svn_error_t *
-svn_client_export (const char *from,
-                   const char *to,
-                   svn_opt_revision_t *revision,
-                   svn_boolean_t force, 
-                   svn_client_ctx_t *ctx,
-                   apr_pool_t *pool)
-{
-  if (svn_path_is_url (from))
-    {
-      const char *URL;
-      svn_revnum_t revnum;
-      void *ra_baton, *session;
-      svn_ra_plugin_t *ra_lib;
-      void *edit_baton;
-      const svn_delta_editor_t *export_editor;
-      const svn_ra_reporter_t *reporter;
-      void *report_baton;
-
-      URL = svn_path_canonicalize (from, pool);
-      
-      SVN_ERR (svn_client__get_export_editor (&export_editor, &edit_baton,
-                                              to, URL, force, ctx, pool));
-      
-      SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
-      SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL, pool));
-
-      SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, NULL,
-                                            NULL, NULL, FALSE, TRUE,
-                                            ctx, pool));
-
-      /* Unfortunately, it's not kosher to pass an invalid revnum into
-         set_path(), so we actually need to convert it to HEAD. */
-      if (revision->kind == svn_opt_revision_unspecified)
-        revision->kind = svn_opt_revision_head;
-      SVN_ERR (svn_client__get_revision_number
-               (&revnum, ra_lib, session, revision, to, pool));
-
-      /* Manufacture a basic 'report' to the update reporter. */
-      SVN_ERR (ra_lib->do_update (session,
-                                  &reporter, &report_baton,
-                                  revnum,
-                                  NULL, /* no sub-target */
-                                  TRUE, /* recurse */
-                                  export_editor, edit_baton, pool));
-
-      SVN_ERR (reporter->set_path (report_baton, "", revnum,
-                                   TRUE, /* "help, my dir is empty!" */
-                                   pool));
-
-      SVN_ERR (reporter->finish_report (report_baton));               
-
-      /* Special case: Due to our sly export/checkout method of
-       * updating an empty directory, no target will have been created
-       * if the exported item is itself an empty directory
-       * (export_editor->open_root never gets called, because there
-       * are no "changes" to make to the empty dir we reported to the
-       * repository).
-       *
-       * So we just create the empty dir manually; but we do it via
-       * open_root_internal(), in order to get proper notification.
-       */
-      {
-        svn_node_kind_t kind;
-        SVN_ERR (svn_io_check_path (to, &kind, pool));
-        if (kind == svn_node_none)
-          SVN_ERR (open_root_internal
-                   (to, force, ctx->notify_func, ctx->notify_baton, pool));
-      }
-    }
-  else
-    {
-      /* just copy the contents of the working copy into the target path. */
-      SVN_ERR (copy_versioned_files (from, to, force, ctx, pool));
-    }
-
-  return SVN_NO_ERROR;
-}
-
-
 /* ---------------------------------------------------------------------- */
 
 /*** A dedicated 'export' editor, which does no .svn/ accounting.  ***/
@@ -290,6 +210,7 @@ struct edit_baton
   const char *root_path;
   const char *root_url;
   svn_boolean_t force;
+  svn_revnum_t *target_revision;
 
   svn_wc_notify_func_t notify_func;
   void *notify_baton;
@@ -334,6 +255,20 @@ struct handler_baton
   apr_pool_t *pool;
   const char *tmppath;
 };
+
+
+static svn_error_t *
+set_target_revision (void *edit_baton, 
+                     svn_revnum_t target_revision,
+                     apr_pool_t *pool)
+{
+  struct edit_baton *eb = edit_baton;
+
+  /* Stashing a target_revision in the baton */
+  *(eb->target_revision) = target_revision;
+  return SVN_NO_ERROR;
+}
+
 
 
 /* Just ensure that the main export directory exists. */
@@ -575,39 +510,122 @@ close_file (void *file_baton,
 }
 
 
+
+/*** Public Interfaces ***/
 
 svn_error_t *
-svn_client__get_export_editor (const svn_delta_editor_t **editor,
-                               void **edit_baton,
-                               const char *root_path,
-                               const char *root_url,
-                               svn_boolean_t force, 
-                               svn_client_ctx_t *ctx,
-                               apr_pool_t *pool)
+svn_client_export (svn_revnum_t *result_rev,
+                   const char *from,
+                   const char *to,
+                   svn_opt_revision_t *revision,
+                   svn_boolean_t force, 
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool)
 {
-  struct edit_baton *eb = apr_pcalloc (pool, sizeof (*eb));
-  svn_delta_editor_t *export_editor = svn_delta_default_editor (pool);
+  svn_revnum_t edit_revision = SVN_INVALID_REVNUM;
 
-  eb->root_path = apr_pstrdup (pool, root_path);
-  eb->root_url = apr_pstrdup (pool, root_url);
-  eb->force = force;
-  eb->notify_func = ctx->notify_func;
-  eb->notify_baton = ctx->notify_baton;
+  if (svn_path_is_url (from))
+    {
+      const char *URL;
+      svn_revnum_t revnum;
+      void *ra_baton, *session;
+      svn_ra_plugin_t *ra_lib;
+      void *edit_baton;
+      svn_node_kind_t kind;
+      const svn_delta_editor_t *export_editor;
+      const svn_ra_reporter_t *reporter;
+      void *report_baton;
+      struct edit_baton *eb = apr_pcalloc (pool, sizeof (*eb));
+      svn_delta_editor_t *editor = svn_delta_default_editor (pool);
 
-  export_editor->open_root = open_root;
-  export_editor->add_directory = add_directory;
-  export_editor->add_file = add_file;
-  export_editor->apply_textdelta = apply_textdelta;
-  export_editor->close_file = close_file;
-  export_editor->change_file_prop = change_file_prop;
+      URL = svn_path_canonicalize (from, pool);
+      
+      eb->root_path = to;
+      eb->root_url = URL;
+      eb->force = force;
+      eb->target_revision = &edit_revision;
+      eb->notify_func = ctx->notify_func;
+      eb->notify_baton = ctx->notify_baton;
 
-  SVN_ERR (svn_delta_get_cancellation_editor (ctx->cancel_func,
-                                              ctx->cancel_baton,
-                                              export_editor,
-                                              eb,
-                                              editor,
-                                              edit_baton,
-                                              pool));
+      editor->set_target_revision = set_target_revision;
+      editor->open_root = open_root;
+      editor->add_directory = add_directory;
+      editor->add_file = add_file;
+      editor->apply_textdelta = apply_textdelta;
+      editor->close_file = close_file;
+      editor->change_file_prop = change_file_prop;
+      
+      SVN_ERR (svn_delta_get_cancellation_editor (ctx->cancel_func,
+                                                  ctx->cancel_baton,
+                                                  editor,
+                                                  eb,
+                                                  &export_editor,
+                                                  &edit_baton,
+                                                  pool));
   
+      SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
+      SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL, pool));
+
+      SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, NULL,
+                                            NULL, NULL, FALSE, TRUE,
+                                            ctx, pool));
+
+      /* Unfortunately, it's not kosher to pass an invalid revnum into
+         set_path(), so we actually need to convert it to HEAD. */
+      if (revision->kind == svn_opt_revision_unspecified)
+        revision->kind = svn_opt_revision_head;
+      SVN_ERR (svn_client__get_revision_number
+               (&revnum, ra_lib, session, revision, to, pool));
+
+      /* Manufacture a basic 'report' to the update reporter. */
+      SVN_ERR (ra_lib->do_update (session,
+                                  &reporter, &report_baton,
+                                  revnum,
+                                  NULL, /* no sub-target */
+                                  TRUE, /* recurse */
+                                  export_editor, edit_baton, pool));
+
+      SVN_ERR (reporter->set_path (report_baton, "", revnum,
+                                   TRUE, /* "help, my dir is empty!" */
+                                   pool));
+
+      SVN_ERR (reporter->finish_report (report_baton));               
+
+      /* Special case: Due to our sly export/checkout method of
+       * updating an empty directory, no target will have been created
+       * if the exported item is itself an empty directory
+       * (export_editor->open_root never gets called, because there
+       * are no "changes" to make to the empty dir we reported to the
+       * repository).
+       *
+       * So we just create the empty dir manually; but we do it via
+       * open_root_internal(), in order to get proper notification.
+       */
+      SVN_ERR (svn_io_check_path (to, &kind, pool));
+      if (kind == svn_node_none)
+        SVN_ERR (open_root_internal
+                 (to, force, ctx->notify_func, ctx->notify_baton, pool));
+    }
+  else
+    {
+      /* just copy the contents of the working copy into the target path. */
+      SVN_ERR (copy_versioned_files (from, to, force, ctx, pool));
+    }
+
+  if (ctx->notify_func)
+    (*ctx->notify_func) (ctx->notify_baton,
+                         to,
+                         svn_wc_notify_update_completed,
+                         svn_node_unknown,
+                         NULL,
+                         svn_wc_notify_state_unknown,
+                         svn_wc_notify_state_unknown,
+                         edit_revision);
+
+  if (result_rev)
+    *result_rev = edit_revision;
+
   return SVN_NO_ERROR;
 }
+
+

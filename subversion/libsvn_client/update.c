@@ -39,7 +39,8 @@
 /*** Code. ***/
 
 svn_error_t *
-svn_client__update_internal (const char *path,
+svn_client__update_internal (svn_revnum_t *result_rev,
+                             const char *path,
                              const svn_opt_revision_t *revision,
                              svn_boolean_t recurse,
                              svn_boolean_t *timestamp_sleep,
@@ -187,16 +188,21 @@ svn_client__update_internal (const char *path,
                          svn_wc_notify_state_inapplicable,
                          revnum);
 
+  /* If the caller wants the result revision, give it to them. */
+  if (result_rev)
+    *result_rev = revnum;
+  
   return SVN_NO_ERROR;
 }
 
 svn_error_t *
-svn_client_update (const char *path,
+svn_client_update (svn_revnum_t *result_rev,
+                   const char *path,
                    const svn_opt_revision_t *revision,
                    svn_boolean_t recurse,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
-  return svn_client__update_internal (path, revision, recurse, 
+  return svn_client__update_internal (result_rev, path, revision, recurse, 
                                       NULL, ctx, pool);
 }

@@ -158,7 +158,6 @@ main(int argc, const char *argv[])
   const char *wc_path;
   apr_allocator_t *allocator;
   apr_pool_t *pool;
-  svn_revnum_t youngest;
   int wc_format;
   svn_client_ctx_t ctx = { 0 };
   struct status_baton sb;
@@ -264,7 +263,7 @@ main(int argc, const char *argv[])
   ctx.cancel_func = cancel;
   ctx.cancel_baton = &sb;
 
-  err = svn_client_status (&youngest, wc_path, &rev, analyze_status, 
+  err = svn_client_status (NULL, wc_path, &rev, analyze_status, 
                            &sb, TRUE, TRUE, FALSE, FALSE, &ctx, pool);
   if (err && (err->apr_err == SVN_ERR_CANCELLED))
     svn_error_clear (err);
