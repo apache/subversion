@@ -212,10 +212,7 @@ def extra_blockcontent(sbox):
 
 #----------------------------------------------------------------------
 def inconsistent_headers(sbox):
-  "ensure failure to load dumpstream with C-L < P-C-L + T-C-L"
-
-  ###FIXME: this test should fail in light of the inconsistent data
-  # fed into the dump parser (but succeeds)
+  "fail to load when C-L < P-C-L + T-C-L"
 
   test_create(sbox)
 
@@ -320,8 +317,8 @@ def hotcopy_dot(sbox):
 # list all tests here, starting with None:
 test_list = [ None,
               extra_headers,
-              XFail(extra_blockcontent),
-              inconsistent_headers,
+              extra_blockcontent,
+              XFail(inconsistent_headers),
               dump_copied_dir,
               dump_move_dir_modify_child,
               dump_quiet,
