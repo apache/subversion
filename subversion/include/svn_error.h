@@ -109,6 +109,9 @@ typedef enum svn_errno_t {
   /* Unable to get ancestry for an entry, which should never happen. */
   SVN_ERR_WC_ENTRY_MISSING_ANCESTRY,
 
+  /* Working copy is not up-to-date w.r.t. the repository. */
+  SVN_ERR_WC_NOT_UP_TO_DATE,
+
   /* A general filesystem error.  */
   SVN_ERR_FS_GENERAL,
 
