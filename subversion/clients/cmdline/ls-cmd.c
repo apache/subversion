@@ -98,7 +98,7 @@ print_dirents (apr_hash_t *dirents,
                     dirent->created_rev,
                     dirent->last_author ? dirent->last_author : " ? ",
                     (dirent->kind == svn_node_file) ? sizestr : "",
-                    timestr,
+                    utf8_timestr,
                     utf8_entryname,
                     (dirent->kind == svn_node_dir) ? "/" : ""));
         }
