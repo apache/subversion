@@ -43,7 +43,12 @@ svn_cl__status (svn_cl__opt_state_t *opt_state,
       {
         svn_string_t *target = ((svn_string_t **) (targets->elts))[i];
 
-        err = svn_client_status (&statushash, target, pool);
+        /* kff todo: eventually, the hard-coded 1 as the DESCEND
+           parameter below should be replaced with a pass-thru DESCEND
+           received from caller, which in turn would set it according
+           to a command-line argument telling svn whether to recurse
+           fully or just do immediate children. */
+        err = svn_client_status (&statushash, target, 1, pool);
         if (err)
           return err;
 

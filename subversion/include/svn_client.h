@@ -92,6 +92,7 @@ svn_client_commit (const svn_delta_edit_fns_t *before_editor,
 svn_error_t *
 svn_client_status (apr_hash_t **statushash,
                    svn_string_t *path,
+                   svn_boolean_t descend,
                    apr_pool_t *pool);
 
 

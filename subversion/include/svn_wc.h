@@ -154,6 +154,29 @@ svn_error_t *svn_wc_conflicted_p (svn_boolean_t *text_conflicted_p,
 
 /*** Status. ***/
 
+/* We have two functions for getting working copy status: one function
+ * for getting the status of exactly one thing, and another for
+ * getting the statuses of (potentially) multiple things.
+ * 
+ * Here's the reasoning behind this: Ben pointed out that WebDAV has a
+ * useful "levels" concept.  So if we're taking status of a directory,
+ * then
+ * 
+ *    Level 0 means the thing itself, just the named directory
+ *    Level 1 means the thing and its immediate children (dir + its entries)
+ *    Level 2 means the thing and all its descendants (full recursion)
+ * 
+ * We could have one unified function, taking a `level' parameter.
+ * Unfortunately, because this function would have to handle multiple
+ * return values as well as a single return value, getting the status
+ * of just one entity would become cumbersome: you'd have to roll
+ * through a hash to find the lone returned status.
+ * 
+ * So we have svn_wc_status() for level 0, and svn_wc_statuses() for
+ * levels 1 and 2, since those levels both involve multiple return
+ * values.
+ */
+
 enum svn_wc_status_kind
 {
     svn_wc_status_none = 1,  /* Among other things, indicates not under vc. */
@@ -188,13 +211,30 @@ svn_error_t *svn_wc_status (svn_wc_status_t **status,
                             svn_string_t *path,
                             apr_pool_t *pool);
 
-/* Under PATH, fill STATUSHASH to map paths to svn_wc_status_t
-   structures.  For each struct, all fields will be filled in except
-   for repos_rev; this would presumably be filled in by the caller. */
+
+/* Under PATH, fill STATUSHASH mapping paths to svn_wc_status_t
+ * structures.  All fields in each struct will be filled in except for
+ * repos_rev, which would presumably be filled in by the caller.
+ *
+ * PATH is usually be a directory, since for a regular file, you would
+ * have used svn_wc_status().  However, it is no error if PATH is not
+ * a directory; its status will simply be stored in STATUSHASH like
+ * any other.
+ *
+ * Assuming PATH is a directory, then:
+ * 
+ * If DESCEND is zero, statushash will contain paths for PATH and
+ * its non-directory entries (subdirectories should be subjects of
+ * separate status calls).  
+ *
+ * If DESCEND is non-zero, statushash will contain statuses for PATH
+ * and everything below it, including subdirectories.  In other
+ * words, a full recursion.
+ */
 svn_error_t *svn_wc_statuses (apr_hash_t *statushash,
                               svn_string_t *path,
+                              svn_boolean_t descend,
                               apr_pool_t *pool);
-
 
 
 /* Where you see an argument like
