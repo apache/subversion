@@ -100,27 +100,11 @@ svn_client_log (svn_client_auth_baton_t *auth_baton,
         }
       else
         {
-          /* Currently, this doesn't work as expected. We need to know if
-           * the single URL passed is pointing to a directory or a file.
-           * For example, passing:
-           *
-           *         http://repo.com/repo/project/Makefile
-           *
-           * is fairly simple to handle. You Simply Split the last
-           * component off (Makefile) and push it into condensed_targets,
-           * and then make the URL the base dir (minus Makefile). Problem
-           * is, this wont work for:
-           *
-           *         http://repo.com/repo
-           *
-           * where stripping off a component will break the call. We need
-           * a way to find out from the server if this URL points to a
-           * directory or a file. If it points to a directory, we have
-           * can pass it straight through. A file can be split as
-           * explained above.  */
-          return svn_error_create
-            (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL, pool,
-             "currently you must provide paths with a URL");
+          /* If we have a single URL, then the session will be rooted at
+             it, so just send an empty stringbuf for the paths we are
+             interested in. */
+          (*((svn_stringbuf_t **)apr_array_push (condensed_targets))) = 
+              svn_stringbuf_create ("", pool);
         }
     }
   else
