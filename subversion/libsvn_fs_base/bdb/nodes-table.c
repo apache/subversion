@@ -34,6 +34,8 @@
 #include "nodes-table.h"
 
 
+#include "svn_private_config.h"
+
 
 /* Opening/creating the `nodes' table.  */
 

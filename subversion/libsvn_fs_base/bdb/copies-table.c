@@ -30,6 +30,8 @@
 #include "copies-table.h"
 #include "rev-table.h"
 
+#include "svn_private_config.h"
+
 
 int
 svn_fs_bdb__open_copies_table (DB **copies_p,
