@@ -751,7 +751,7 @@ void svn_wc__strip_entry_prefix (svn_stringbuf_t *name);
    Property nonexistence is equivalent to 'none'. */
 enum svn_wc__eol_style
 {
-  svn_wc__eol_style_unknown, /* An unrecognized fooo */
+  svn_wc__eol_style_unknown, /* An unrecognized style */
   svn_wc__eol_style_none,    /* EOL translation is "off" or ignored value */
   svn_wc__eol_style_native,  /* Translation is set to client's native style */
   svn_wc__eol_style_fixed    /* Translation is set to one of LF, CR, CRLF */
