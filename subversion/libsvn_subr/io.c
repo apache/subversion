@@ -232,7 +232,7 @@ svn_io_open_unique_file (apr_file_t **f,
               apr_status_t apr_err_2 = apr_stat (&finfo, unique_name_apr,
                                                  APR_FINFO_TYPE, pool);
 
-              if (APR_STATUS_IS_SUCCESS (apr_err_2)
+              if (!apr_err_2
                   && (finfo.filetype == APR_DIR))
                 continue;
 
@@ -317,7 +317,7 @@ svn_io_create_unique_link (const char **unique_name_p,
               apr_status_t apr_err_2 = apr_stat (&finfo, unique_name_apr,
                                                  APR_FINFO_TYPE, pool);
 
-              if (APR_STATUS_IS_SUCCESS (apr_err_2)
+              if (!apr_err_2
                   && (finfo.filetype == APR_DIR))
                 continue;
 
@@ -2449,7 +2449,7 @@ svn_io_dir_empty (svn_boolean_t *is_empty_p,
 
   status = apr_dir_is_empty (path_apr, pool);
 
-  if (APR_STATUS_IS_SUCCESS (status))
+  if (!status)
     *is_empty_p = TRUE;
   else if (APR_STATUS_IS_ENOTEMPTY (status))
     *is_empty_p = FALSE;

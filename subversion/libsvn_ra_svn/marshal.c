@@ -120,7 +120,7 @@ svn_boolean_t svn_ra_svn__input_waiting(svn_ra_svn_conn_t *conn,
     }
   pfd.p = pool;
   pfd.reqevents = APR_POLLIN;
-  return (APR_STATUS_IS_SUCCESS(apr_poll(&pfd, 1, &n, 0)) && n);
+  return ((apr_poll(&pfd, 1, &n, 0) == APR_SUCCESS) && n);
 }
 
 /* --- WRITE BUFFER MANAGEMENT --- */
