@@ -123,6 +123,26 @@ abort_on_pool_failure (int retcode)
   abort ();
 }
 
+apr_status_t
+svn_error_init_pool (apr_pool_t *top_pool)
+{
+  apr_pool_t *error_pool;
+  apr_status_t apr_err;
+
+  /* Create a subpool to hold all error allocations. We use a subpool rather
+     than the parent itself, so that we can clear the error pool. */
+  error_pool = apr_make_sub_pool (top_pool, abort_on_pool_failure);
+
+  /* Set the error pool on itself. */
+  apr_err = apr_set_userdata (error_pool, SVN_ERROR_POOL, apr_null_cleanup,
+                              error_pool);
+  if (apr_err != APR_SUCCESS)
+    return apr_err;
+
+  /* Set the error pool on the top-most pool */
+  return apr_set_userdata (error_pool, SVN_ERROR_POOL, apr_null_cleanup,
+                           top_pool);
+}
 
 apr_pool_t *
 svn_pool_create (apr_pool_t *parent_pool)
@@ -133,16 +153,21 @@ svn_pool_create (apr_pool_t *parent_pool)
 
   ret_pool = apr_make_sub_pool (parent_pool, abort_on_pool_failure);
 
-  if (parent_pool)
+  /* If there is no parent, then initialize ret_pool as the "top". */
+  if (parent_pool == NULL)
     {
-      apr_get_userdata ((void **) &error_pool, SVN_ERROR_POOL, parent_pool);
-      if (! error_pool)
-        (*abort_on_pool_failure) (SVN_ERR_BAD_CONTAINING_POOL);
+      parent_pool = ret_pool;
+      apr_err = svn_error_init_pool (parent_pool);
+      if (apr_err)
+        (*abort_on_pool_failure) (apr_err);
     }
-  else
-    error_pool = apr_make_sub_pool (ret_pool, abort_on_pool_failure);
 
-  /* Set the error pool on its parent. */
+  /* Fetch the error pool from the parent (possibly the new one). */
+  apr_get_userdata ((void **) &error_pool, SVN_ERROR_POOL, parent_pool);
+  if (error_pool == NULL)
+    (*abort_on_pool_failure) (SVN_ERR_BAD_CONTAINING_POOL);
+
+  /* Set the error pool on the newly-created pool. */
   apr_err = apr_set_userdata (error_pool,
                               SVN_ERROR_POOL,
                               apr_null_cleanup,
@@ -150,17 +175,8 @@ svn_pool_create (apr_pool_t *parent_pool)
   if (apr_err)
     (*abort_on_pool_failure) (apr_err);
 
-  /* Set the error pool on itself. */
-  apr_err = apr_set_userdata (error_pool,
-                              SVN_ERROR_POOL,
-                              apr_null_cleanup,
-                              error_pool);
-  if (apr_err)
-    (*abort_on_pool_failure) (apr_err);
-
   return ret_pool;
 }
-
 
 
 /*** Creating and destroying errors. ***/
