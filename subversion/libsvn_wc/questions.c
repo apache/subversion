@@ -162,13 +162,13 @@ timestamps_equal_p (svn_boolean_t *equal_p,
 
 
 
-/* Given FILENAME1 and FILENAME2, are their filesizes DEFINITELY
-   different?  Return answer in DIFFERENT_P. */
+/* Set *DIFFERENT_P to non-zero if FILENAME1 and FILENAME2 have
+   different sizes, else set to zero. */
 static svn_error_t *
-filesizes_definitely_different_p (svn_boolean_t *different_p,
-                                  svn_string_t *filename1,
-                                  svn_string_t *filename2,
-                                  apr_pool_t *pool)
+filesizes_different_p (svn_boolean_t *different_p,
+                       svn_string_t *filename1,
+                       svn_string_t *filename2,
+                       apr_pool_t *pool)
 {
   apr_finfo_t finfo1;
   apr_finfo_t finfo2;
@@ -205,80 +205,99 @@ filesizes_definitely_different_p (svn_boolean_t *different_p,
 }
 
 
-/* Do a byte-for-byte comparison of the local version and text-base
-   version of FILENAME.  These two files are assumed to be the *same*
-   size already (i.e. have already passed the filesizes_equal_p()
-   test). */
+/* Do a byte-for-byte comparison of FILE1 and FILE2. */
 static svn_error_t *
 contents_identical_p (svn_boolean_t *identical_p,
-                      svn_string_t *filename,
+                      svn_string_t *file1,
+                      svn_string_t *file2,
                       apr_pool_t *pool)
 {
-  svn_error_t *err;
   apr_status_t status;
   apr_size_t bytes_read1, bytes_read2;
   char buf1[BUFSIZ], buf2[BUFSIZ];
-  apr_file_t *local_file = NULL;
-  apr_file_t *textbase_file = NULL;
+  apr_file_t *file1_h = NULL;
+  apr_file_t *file2_h = NULL;
 
-  /* Get filehandles for both the original and text-base versions of
-     FILENAME */
-  status = apr_open (&local_file, filename->data,
-                     APR_READ, APR_OS_DEFAULT, pool);
+  status = apr_open (&file1_h, file1->data, APR_READ, APR_OS_DEFAULT, pool);
   if (status)
     return svn_error_createf
       (status, 0, NULL, pool,
-       "contents_identical_p: apr_open failed on `%s'", filename->data);
+       "contents_identical_p: apr_open failed on `%s'", file1->data);
 
-  err = svn_wc__open_text_base (&textbase_file, filename, APR_READ, pool);
-  if (err)
-    {
-      char *msg =
-        apr_psprintf
-        (pool,
-         "contents_identical_p: failed to open text-base copy of `%s'",
-         filename->data);
-      return svn_error_quick_wrap (err, msg);
-    }
-
- 
-  /* Strategy: repeatedly read BUFSIZ bytes from each file and
-     memcmp() the bytestrings.  */
+  status = apr_open (&file2_h, file2->data, APR_READ, APR_OS_DEFAULT, pool);
+  if (status)
+    return svn_error_createf
+      (status, 0, NULL, pool,
+       "contents_identical_p: apr_open failed on `%s'", file2->data);
 
   *identical_p = TRUE;  /* assume TRUE, until disproved below */
-
   while (status != APR_EOF)
     {
-      status = apr_full_read (local_file, buf1, BUFSIZ, &bytes_read1);
+      status = apr_full_read (file1_h, buf1, BUFSIZ, &bytes_read1);
       if (status && (status != APR_EOF))
-        return svn_error_create
-          (status, 0, NULL, pool, "apr_full_read() failed.");
+        return svn_error_createf
+          (status, 0, NULL, pool,
+           "contents_identical_p: apr_full_read() failed on %s.", file1->data);
 
-      status = apr_full_read (textbase_file, buf2, BUFSIZ, &bytes_read2);
+      status = apr_full_read (file2_h, buf2, BUFSIZ, &bytes_read2);
       if (status && (status != APR_EOF))
-        return svn_error_create
-          (status, 0, NULL, pool, "apr_full_read() failed.");
+        return svn_error_createf
+          (status, 0, NULL, pool,
+           "contents_identical_p: apr_full_read() failed on %s.", file2->data);
       
-      if (memcmp (buf1, buf2, bytes_read1)) 
+      if ((bytes_read1 != bytes_read2)
+          || (memcmp (buf1, buf2, bytes_read1)))
         {
           *identical_p = FALSE;
           break;
         }
     }
 
-  /* Close filehandles. */
-  err = svn_wc__close_text_base (textbase_file, filename, 0, pool);
-  if (err)
-    return err;
-
-  status = apr_close (local_file);
+  status = apr_close (file1_h);
   if (status)
-    return svn_error_create (status, 0, NULL, pool,
-                             "contents_identical_p: apr_close failed.");
+    return svn_error_createf (status, 0, NULL, pool,
+                             "contents_identical_p: apr_close failed on %s.",
+                              file1->data);
+
+  status = apr_close (file2_h);
+  if (status)
+    return svn_error_createf (status, 0, NULL, pool,
+                             "contents_identical_p: apr_close failed on %s.",
+                             file2->data);
 
   return SVN_NO_ERROR;
 }
 
+
+
+svn_error_t *
+svn_wc__files_contents_same_p (svn_boolean_t *same,
+                               svn_string_t *file1,
+                               svn_string_t *file2,
+                               apr_pool_t *pool)
+{
+  svn_error_t *err;
+  svn_boolean_t q;
+
+  err = filesizes_different_p (&q, file1, file2, pool);
+  if (err)
+    return err;
+
+  if (q)
+    {
+      *same = 0;
+      return SVN_NO_ERROR;
+    }
+  
+  err = contents_identical_p (&q, file1, file2, pool);
+  if (err)
+    return err;
+
+  if (q)
+    *same = 1;
+
+  return SVN_NO_ERROR;
+}
 
 
 /* The public interface: has FILENAME been edited since the last
@@ -322,9 +341,9 @@ svn_wc__file_modified_p (svn_boolean_t *modified_p,
       
       /* Check if the the local and textbase file have *definitely*
          different filesizes. */
-      err = filesizes_definitely_different_p (&different_filesizes,
-                                              filename, textbase_filename,
-                                              pool);
+      err = filesizes_different_p (&different_filesizes,
+                                   filename, textbase_filename,
+                                   pool);
       if (err) return err;
       
       if (different_filesizes) 
@@ -353,7 +372,10 @@ svn_wc__file_modified_p (svn_boolean_t *modified_p,
          evidence to make a correct decision.  So we just give up and
          get the answer the hard way -- a brute force, byte-for-byte
          comparison. */
-      err = contents_identical_p (&identical_p, filename, pool);
+      err = contents_identical_p (&identical_p,
+                                  filename,
+                                  textbase_filename,
+                                  pool);
       if (err)
         return err;
       

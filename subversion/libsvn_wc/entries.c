@@ -389,10 +389,12 @@ sync_entry (svn_wc__entry_t *entry, apr_pool_t *pool)
                  svn_string_create ("true", pool) : NULL));
   
   /* Timestamp. */
-  apr_hash_set (entry->attributes,
-                SVN_WC__ENTRIES_ATTR_TIMESTAMP, APR_HASH_KEY_STRING,
-                entry->timestamp ? 
-                svn_wc__time_to_string (entry->timestamp, pool) : NULL);
+  if (entry->timestamp)
+    {
+      apr_hash_set (entry->attributes,
+                    SVN_WC__ENTRIES_ATTR_TIMESTAMP, APR_HASH_KEY_STRING,
+                    svn_wc__time_to_string (entry->timestamp, pool));
+    }
 }
 
 

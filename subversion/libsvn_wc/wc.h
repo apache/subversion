@@ -83,6 +83,14 @@ svn_error_t *svn_wc__file_affected_time (apr_time_t *apr_time,
                                          apr_pool_t *pool);
 
 
+/* Set *SAME to non-zero if file1 and file2 have the same contents,
+   else set it to zero. */
+svn_error_t *svn_wc__files_contents_same_p (svn_boolean_t *same,
+                                            svn_string_t *file1,
+                                            svn_string_t *file2,
+                                            apr_pool_t *pool);
+
+
 /* Set *MODIFIED_P to non-zero if FILENAME has been locally modified,
    else set to zero. */
 svn_error_t *svn_wc__file_modified_p (svn_boolean_t *modified_p,
