@@ -309,7 +309,6 @@ add_file (svn_stringbuf_t *name,
 static svn_error_t *
 window_handler (svn_txdelta_window_t *window, void *baton)
 {
-  struct window_handler_baton *whb = baton;
   return SVN_NO_ERROR;
 }
 
@@ -408,6 +407,6 @@ svn_repos_node_from_baton (void *edit_baton)
 
 /* 
  * local variables:
- * eval: (load-file "../../svn-dev.el")
+ * eval: (load-file "../svn-dev.el")
  * end:
  */
