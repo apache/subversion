@@ -104,6 +104,7 @@ else:
 svn_binary = os.path.abspath('../../../clients/cmdline/svn' + _exe)
 svnadmin_binary = os.path.abspath('../../../svnadmin/svnadmin' + _exe)
 svnlook_binary = os.path.abspath('../../../svnlook/svnlook' + _exe)
+svnversion_binary = os.path.abspath('../../../svnversion/svnversion' + _exe)
 
 # Username and password used by the working copies
 wc_author = 'jrandom'
@@ -232,6 +233,9 @@ def run_svnlook(*varargs):
   "Run svnadmin with VARARGS, returns stdout, stderr as list of lines."
   return _run_command(svnlook_binary, 1, *varargs)
 
+def run_svnversion(*varargs):
+  "Run svnversion with VARARGS, returns stdout, stderr as list of lines."
+  return _run_command(svnversion_binary, 1, *varargs)
 
 # Chmod recursively on a whole subtree
 def chmod_tree(path, mode, mask):
