@@ -1004,7 +1004,7 @@ $
           property is set, then the Subversion Apache module will use
           its value to populate the <literal>Content-type:</literal>
           HTTP header when responding to GET request.  This gives a
-          crucial clue to about how to display a file when perusing
+          crucial clue about how to display a file when perusing
           your repository with a web browser.</para>
 
       </sect3>
