@@ -18,14 +18,16 @@ Some Known Issues:
   installation setup too).
   This means that some issues will come up (and solved) from time to time:
 
-  * Problems with Apache and mod_dav_svn.so:
+  * Problems with Apache and mod_dav_svn.so and mod_authz_svn.so:
+
     Some peaople are getting into trouble when starting to use
-    Apache with mod_dav_svn.so. Here are some possible solutions (you may need
-    to try one or more of them):
+    Apache with mod_dav_svn.so and mod_authz_svn.so. Here are some possible
+    solutions (you may need to try one or more of them):
     -Make sure that the Subversion Path are included in the systems %PATH%
      environment.
     -Make sure that your entrys in httpd.conf are correct and remember that
-     mod_dav_svn.so should be loaded after the other mod_dav*.so modules.
+     mod_dav_svn.so and mod_authz_svn.so should be loaded after the other
+     mod_dav*.so modules.
     -Copy the libdb40.dll in the Subversion folder to your Apache\bin or
      Apache\modules folder.
     -Uninstall the Apache service manualy by typing:
@@ -35,9 +37,11 @@ Some Known Issues:
 
   * If your svn.exe won't run then you can try to download shfolder.dll from
     here:
+
       http://download.microsoft.com/download/platformsdk/Redist/5.50.4027.300/W9XNT4/EN-US/shfinst.EXE
 
   * Checklist for Win9x and Millenium users:
+
     -Make sure that the subversion path are icluded in your system  %PATH%
      environment variable in Autoexec.bat.
     -This line must be in your Autoexec.bat file (adjust the path so it fits
