@@ -250,7 +250,7 @@ svn_repos__hooks_pre_revprop_change (svn_repos_t *repos,
                                      svn_revnum_t rev,
                                      const char *author,
                                      const char *name,
-                                     const svn_string_t *value,
+                                     const svn_string_t *new_value,
                                      apr_pool_t *pool)
 {
   const char *hook = svn_repos_pre_revprop_change_hook (repos, pool);
@@ -261,7 +261,11 @@ svn_repos__hooks_pre_revprop_change (svn_repos_t *repos,
       apr_file_t *stdin_handle;
 
       /* Pass the new value as stdin to hook */
-      SVN_ERR (create_temp_file (&stdin_handle, value, pool));
+      if (new_value)
+        SVN_ERR (create_temp_file (&stdin_handle, new_value, pool));
+      else
+        SVN_ERR (create_temp_file (&stdin_handle, svn_string_create ("", pool),
+                                   pool));
 
       args[0] = hook;
       args[1] = svn_repos_path (repos, pool);
@@ -305,8 +309,14 @@ svn_repos__hooks_post_revprop_change (svn_repos_t *repos,
   if ((hook = check_hook_cmd (hook, pool)))
     {
       const char *args[6];
+      apr_file_t *stdin_handle;
 
-      /* ### somehow pass the old value as stdin to hook? */
+      /* Pass the new value as stdin to hook */
+      if (old_value)
+        SVN_ERR (create_temp_file (&stdin_handle, old_value, pool));
+      else
+        SVN_ERR (create_temp_file (&stdin_handle, svn_string_create ("", pool),
+                                   pool));
 
       args[0] = hook;
       args[1] = svn_repos_path (repos, pool);
@@ -316,7 +326,9 @@ svn_repos__hooks_post_revprop_change (svn_repos_t *repos,
       args[5] = NULL;
 
       SVN_ERR (run_hook_cmd ("post-revprop-change", hook, args, FALSE,
-                             NULL, pool));
+                             stdin_handle, pool));
+      
+      SVN_ERR (svn_io_file_close (stdin_handle, pool));
     }
 
   return SVN_NO_ERROR;
