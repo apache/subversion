@@ -57,29 +57,28 @@ Commit access for specific areas:
   Packages:
 
          david   David Summers <david@summersoft.fay.ar.us>  (RPMs)
-      ballbach   Michael Ballbach <ballbach@rten.net>        (packages)
 
   Miscellaneous:
 
       kbohling   Kirby C. Bohling <kbohling@birddog.com>     (tools/dev)
            nsd   Nick Duffek <nick@duffek.com>               (doc)
-        xsteve   Stefan Reichör <stefan@xsteve.at>           (psvn)
+        xsteve   Stefan Reichör <stefan@xsteve.at>           (psvn.el)
       josander   Jostein Andersen <jostein@josander.net>     (various)
       niemeyer   Gustavo Niemeyer <niemeyer@conectiva.com>   (svnperms.py)
         zbrown   Zack Brown <zbrown@tumblerings.org>         (doc)
         mprice   Michael Price <mprice@atl.lmco.com>         (releases)
            pll   Paul lussier <p.lussier@comcast.net>        (releases)
-     gthompson   Glenn A. Thompson <gthompson@cdr.net>       (fs/db branch)
-           kon   Kalle Olavi Niemitalo <kon@iki.fi>          (Emacs Lisp)
+     gthompson   Glenn A. Thompson <gthompson@cdr.net>       (pluggable-db br.)
+           kon   Kalle Olavi Niemitalo <kon@iki.fi>          (psvn.el)
     jrepenning   Jack Repenning <jrepenning@collab.net>      (tools/dev)
       lonestar   Martin Maurer <martin.maurer@email.de>      (svnshow)
        shlomif   Shlomi Fish <shlomif@vipe.technion.ac.il>   (svn-push)
        mthelen   Michael W Thelen <mike@pietdepsi.com>       (doc)
-  jeremybettis   Jeremy Bettis <jeremy@deadbeef.com>         (hook script)
-      martinto   Martin Tomes <lists@tomes.org>              (hook script)
+  jeremybettis   Jeremy Bettis <jeremy@deadbeef.com>         (chk-case-insens)
+      martinto   Martin Tomes <lists@tomes.org>              (chk-case-insens)
         danpat   Daniel Patterson <danpat@danpat.net>        (svn-graph.pl)
    archiecobbs   Archie Cobbs <archie@awarix.com>            (svnmerge)
-       sigfred   Sigfred Håversen <bsdlist@mumak.com>        (svnserve-ssl branch)
+       sigfred   Sigfred Håversen <bsdlist@mumak.com>        (svnserve-ssl br.)
 
   Translation:
 
@@ -113,6 +112,7 @@ Commit access for specific areas:
         mmacek   Marko Maček <Marko.Macek@gmx.net>           (cvs2svn branch)
           mass   David Waite <mass@akuma.org>                (certs branch)
       sergeyli   Sergey A. Lipnevich <sergey@optimaltec.com> (neon-0.24 port)
+      ballbach   Michael Ballbach <ballbach@rten.net>        (Old Mandrake RPM)
 
 Committers who have asked to be listed as dormant:
 
