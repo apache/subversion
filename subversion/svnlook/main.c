@@ -50,13 +50,16 @@
 typedef enum svnlook_cmd_t
 {
   svnlook_cmd_default = 0,
-  svnlook_cmd_log,
+
   svnlook_cmd_author,
-  svnlook_cmd_date,
-  svnlook_cmd_dirs_changed,
   svnlook_cmd_changed,
+  svnlook_cmd_date,
   svnlook_cmd_diff,
+  svnlook_cmd_dirs_changed,
   svnlook_cmd_ids,
+  svnlook_cmd_info,
+  svnlook_cmd_log,
+  svnlook_cmd_tree,
   
 } svnlook_cmd_t;
 
@@ -854,15 +857,24 @@ do_tree (svnlook_ctxt_t *c, svn_boolean_t show_ids, apr_pool_t *pool)
 }
 
 
+/* Print author, date, log-size, and log associated with the given
+   revision or transaction. */
+static svn_error_t *
+do_info (svnlook_ctxt_t *c, apr_pool_t *pool)
+{
+  SVN_ERR (do_author (c, pool));
+  SVN_ERR (do_date (c, pool));
+  SVN_ERR (do_log (c, TRUE, pool));
+  return SVN_NO_ERROR;
+}
+
 
 /* Print author, date, log-size, log, and the tree associated with the
    given revision or transaction. */
 static svn_error_t *
 do_default (svnlook_ctxt_t *c, apr_pool_t *pool)
 {
-  SVN_ERR (do_author (c, pool));
-  SVN_ERR (do_date (c, pool));
-  SVN_ERR (do_log (c, TRUE, pool));
+  SVN_ERR (do_info (c,pool));
   SVN_ERR (do_tree (c, FALSE, pool));
   return SVN_NO_ERROR;
 }
@@ -872,7 +884,7 @@ do_default (svnlook_ctxt_t *c, apr_pool_t *pool)
 
 /*** Argument parsing and usage. ***/
 static void
-usage (const char *progname, int exit_code)
+do_usage (const char *progname, int exit_code)
 {
   fprintf
     (exit_code ? stderr : stdout,
@@ -883,18 +895,20 @@ usage (const char *progname, int exit_code)
      "REV is a revision number > 0.\n"
      "TXN is a transaction name.\n"
      "\n"
-     "If no command is given, the default output lines (author, date,\n"
-     "logsize, log, then the directory tree) will be printed.\n"
+     "If no command is given, the default output (which is the same as\n"
+     "running the subcommands `info' then `tree') will be printed.\n"
      "\n"
      "COMMAND can be one of: \n"
      "\n"
-     "   ids:           print the tree, with nodes ids, to stdout.\n"
-     "   log:           print log message to stdout.\n"
-     "   author:        print author to stdout\n"
-     "   date:          date to stdout (only for revs, not txns)\n"
-     "   dirs-changed:  directories in which things were changed\n"
-     "   changed:       full change summary: all dirs & files changed\n"
-     "   diff:          GNU diffs of changed files, prop diffs too\n"
+     "   author:        print author.\n"
+     "   changed:       print full change summary: all dirs & files changed.\n"
+     "   date:          print the timestamp (revisions only).\n"
+     "   diff:          print GNU-style diffs of changed files and props.\n"
+     "   dirs-changed:  print changed directories.\n"
+     "   ids:           print the tree, with nodes ids.\n"
+     "   info:          print the author, data, log_size, and log message.\n"
+     "   log:           print log message.\n"
+     "   tree:          print the tree.\n"
      "\n",
      progname,
      progname,
@@ -925,7 +939,7 @@ main (int argc, const char * const *argv)
   /* We require at least 1 arguments. */
   if (argc < 2)
     {
-      usage (argv[0], 1);
+      do_usage (argv[0], 1);
       return EXIT_FAILURE;
     }
 
@@ -949,7 +963,7 @@ main (int argc, const char * const *argv)
           c.rev_id = atoi (argv[3]);
           if (c.rev_id < 1)
             {
-              usage (argv[0], 1);
+              do_usage (argv[0], 1);
               return EXIT_FAILURE;
             }
         }
@@ -968,23 +982,27 @@ main (int argc, const char * const *argv)
   /* If there is a subcommand, parse it. */
   if (argc > cmd_offset)
     {
-      if (! strcmp (argv[cmd_offset], "log"))
-        command = svnlook_cmd_log;
-      else if (! strcmp (argv[cmd_offset], "author"))
+      if (! strcmp (argv[cmd_offset], "author"))
         command = svnlook_cmd_author;
-      else if (! strcmp (argv[cmd_offset], "date"))
-        command = svnlook_cmd_date;
-      else if (! strcmp (argv[cmd_offset], "dirs-changed"))
-        command = svnlook_cmd_dirs_changed;
       else if (! strcmp (argv[cmd_offset], "changed"))
         command = svnlook_cmd_changed;
+      else if (! strcmp (argv[cmd_offset], "date"))
+        command = svnlook_cmd_date;
       else if (! strcmp (argv[cmd_offset], "diff"))
         command = svnlook_cmd_diff;
+      else if (! strcmp (argv[cmd_offset], "dirs-changed"))
+        command = svnlook_cmd_dirs_changed;
       else if (! strcmp (argv[cmd_offset], "ids"))
         command = svnlook_cmd_ids;
+      else if (! strcmp (argv[cmd_offset], "info"))
+        command = svnlook_cmd_info;
+      else if (! strcmp (argv[cmd_offset], "log"))
+        command = svnlook_cmd_log;
+      else if (! strcmp (argv[cmd_offset], "tree"))
+        command = svnlook_cmd_tree;
       else
         {
-          usage (argv[0], 2);
+          do_usage (argv[0], 2);
           return EXIT_FAILURE;
         }
     }
@@ -1015,32 +1033,40 @@ main (int argc, const char * const *argv)
      to know.  Get to work.  */
   switch (command)
     {
-    case svnlook_cmd_log:
-      INT_ERR (do_log (&c, FALSE, pool));
-      break;
-
     case svnlook_cmd_author:
       INT_ERR (do_author (&c, pool));
-      break;
-
-    case svnlook_cmd_date:
-      INT_ERR (do_date (&c, pool));
-      break;
-
-    case svnlook_cmd_dirs_changed:
-      INT_ERR (do_dirs_changed (&c, pool));
       break;
 
     case svnlook_cmd_changed:
       INT_ERR (do_changed (&c, pool));
       break;
 
+    case svnlook_cmd_date:
+      INT_ERR (do_date (&c, pool));
+      break;
+
     case svnlook_cmd_diff:
       INT_ERR (do_diff (&c, pool));
       break;
 
+    case svnlook_cmd_dirs_changed:
+      INT_ERR (do_dirs_changed (&c, pool));
+      break;
+
     case svnlook_cmd_ids:
       INT_ERR (do_tree (&c, TRUE, pool));
+      break;
+
+    case svnlook_cmd_info:
+      INT_ERR (do_info (&c, pool));
+      break;
+
+    case svnlook_cmd_log:
+      INT_ERR (do_log (&c, FALSE, pool));
+      break;
+
+    case svnlook_cmd_tree:
+      INT_ERR (do_tree (&c, FALSE, pool));
       break;
 
     case svnlook_cmd_default:

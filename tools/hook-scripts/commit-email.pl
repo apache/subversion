@@ -11,70 +11,76 @@ use strict;
 my $repos = shift @ARGV;
 my $rev = shift @ARGV;
 my @users = @ARGV;
+my @svnlooklines = ();
 
 # open a pipe to 'mail'
 my $userlist = join (' ', @users); 
 open (MAILER, "| mail -s 'Commit' $userlist") 
     or die ("Error opening a pipe to your stupid mailer");
 
-# open a pipe from svnlook
-open (INPUT, "svnlook $repos rev $rev |") 
-    or die ("Error running svnlook");
-my @svnlooklines = <INPUT>;
-close (INPUT);
-
-# parse the author, date, and log message
-chomp @svnlooklines;
-my $author = shift @svnlooklines;
-my $date = shift @svnlooklines;
-
-# open a pipe from svnlook
-open (INPUT, "svnlook $repos rev $rev log |") 
-    or die ("Error running svnlook");
+# get the auther, date, and log from svnlook
+open (INPUT, "svnlook $repos rev $rev info |") 
+    or die ("Error running svnlook (info)");
 @svnlooklines = <INPUT>;
 close (INPUT);
+my $author = shift @svnlooklines;
+my $date = shift @svnlooklines;
+shift @svnlooklines;
+my @log = @svnlooklines;
+chomp $author;
+chomp $date;
 
-my @log = @svnlooklines; # something else, obviously.
-
-# open a pipe from svnlook
+# figure out what's changed (using svnlook)
 open (INPUT, "svnlook $repos rev $rev changed |") 
-    or die ("Error running svnlook");
+    or die ("Error running svnlook (changed)");
 @svnlooklines = <INPUT>;
 close (INPUT);
 
 # parse the changed nodes
-my %path_mods = ();
+my @adds = ();
+my @dels = ();
+my @mods = ();
 foreach my $line (@svnlooklines)
 {
-  chomp $line;
+    my ($code, $path) = split ('   ', $line);
 
-  my ($code, $path) = split ('   ', $line);
-
-  if (defined ($path_mods{$code}) && ($path_mods{$code} ne '')) {
-    $path_mods{$code} = $path_mods{$code} . ' ' . $path;
-  }
-  else {
-    $path_mods{$code} = $path;
-  }
+    if ($code eq 'A') {
+        push (@adds, "   $path");
+    }
+    elsif ($code eq 'D') {
+        push (@dels, "   $path");
+    }
+    else {
+        push (@mods, "   $path");
+    }
 }
 
-# open a pipe from svnlook
+# get the diff from svnlook
 open (INPUT, "svnlook $repos rev $rev diff |") 
-    or die ("Error running svnlook");
-@svnlooklines = <INPUT>;
+    or die ("Error running svnlook (diff)");
+my @difflines = <INPUT>;
 close (INPUT);
 
 print MAILER "Author: $author\nDate: $date\n\n";
-if (defined ($path_mods{'A'}) && ($path_mods{'A'} ne '')) {
-  print MAILER "Added: ", $path_mods{ 'A' }, "\n" ;
+if (scalar @adds)
+{
+    @adds = sort @adds;
+    print MAILER "Added:\n";
+    print MAILER @adds;
 }
-if (defined ($path_mods{'D'}) && ($path_mods{'D'} ne '')) {
-  print MAILER "Removed: ", $path_mods{ 'D' }, "\n";
+if (scalar @dels)
+{
+    @dels = sort @dels;
+    print MAILER "Removed:\n";
+    print MAILER @dels;
 }
-if (defined ($path_mods{'U'}) && ($path_mods{'U'} ne '')) {
-  print MAILER "Modified: ", $path_mods{ 'U' }, "\n" ;
+if (scalar @mods)
+{
+    @mods = sort @mods;
+    print MAILER "Modified:\n";
+    print MAILER @mods;
 }
 print MAILER "Log:\n", @log, "\n";
-print MAILER @svnlooklines;
+print MAILER @difflines;
 
 close (MAILER);
