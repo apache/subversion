@@ -42,6 +42,7 @@
 #include "svn_string.h"
 #include "svn_delta.h"
 #include "svn_error.h"
+#include "svn_opt.h"
 #include "svn_ra.h"    /* for svn_ra_reporter_t type */
 
 #ifdef __cplusplus
@@ -245,6 +246,50 @@ void svn_wc_edited_externals (apr_hash_t **externals_old,
                               svn_wc_traversal_info_t *traversal_info);
 
 
+/** One external item.  This usually represents one line from an
+ * svn:externals description but with the path and URL
+ * canonicalized.
+ */
+typedef struct svn_wc_external_item_t
+{
+  /** The name of the subdirectory into which this external should be
+      checked out.  This is relative to the parent directory that
+      holds this external item.  (Note that these structs are often
+      stored in hash tables with the target dirs as keys, so this
+      field will often be redundant.) */
+  const char *target_dir;
+
+  /** Where to check out from. */
+  const char *url;
+
+  /** What revision to check out.  The only valid kinds for this are
+      svn_opt_revision_number, svn_opt_revision_date, and
+      svn_opt_revision_head. */
+  svn_opt_revision_t revision;
+
+} svn_wc_external_item_t;
+
+
+/** Set @a *externals_p to a hash table whose keys are subdirectory
+ * names and values are @a svn_wc_external_item_t * objects,
+ * based on @a desc.
+ *
+ * The format of @a desc is the same as for values of the directory
+ * property @c SVN_PROP_EXTERNALS, which see.
+ *
+ * Allocate the table, keys, and values in @a pool.
+ *
+ * If the format of @a desc is invalid, don't touch @a *externals_p and
+ * return @c SVN_ERR_CLIENT_INVALID_EXTERNALS_DESCRIPTION.
+ *
+ * Use @a parent_directory only in constructing error strings.
+ */
+svn_error_t *svn_wc_parse_externals_description (apr_hash_t **externals_p,
+                                                 const char *parent_directory,
+                                                 const char *desc,
+                                                 apr_pool_t *pool);
+
+
 
 /* Notification/callback handling. */
 
@@ -264,22 +309,38 @@ void svn_wc_edited_externals (apr_hash_t **externals_old,
  * Note that the callback is a 'void' return -- this is a simple
  * reporting mechanism, rather than an opportunity for the caller to
  * alter the operation of the WC library.
+ *
+ * Note also that some of the actions are used across several
+ * different Subversion commands.  For example, the update actions are
+ * also used for checkouts, switches, and merges.
  */
 
 /** The type of action occurring. */
 typedef enum svn_wc_notify_action_t
 {
+  /** Adding a path to revision control. */
   svn_wc_notify_add = 0,
-  svn_wc_notify_copy,
-  svn_wc_notify_delete,
-  svn_wc_notify_restore,
-  svn_wc_notify_revert,
-  svn_wc_notify_failed_revert,
-  svn_wc_notify_resolved,
-  svn_wc_notify_status,
-  svn_wc_notify_skip,
 
-  /* The update actions are also used for checkouts, switches, and merges. */
+  /** Copying a versioned path. */
+  svn_wc_notify_copy,
+  
+  /** Deleting a versioned path. */
+  svn_wc_notify_delete,
+
+  /** Restoring a missing path from the pristine text-base. */
+  svn_wc_notify_restore,
+  
+  /** Reverting a modified path. */
+  svn_wc_notify_revert,
+
+  /** A revert operation has failed. */
+  svn_wc_notify_failed_revert,
+
+  /** Resolving a conflict. */
+  svn_wc_notify_resolved,
+
+  /** Skipping a path. */
+  svn_wc_notify_skip,
 
   /** Got a delete in an update. */
   svn_wc_notify_update_delete,
@@ -290,19 +351,33 @@ typedef enum svn_wc_notify_action_t
   /** Got any other action in an update. */
   svn_wc_notify_update_update,
 
-  /** The last notification in an update */
+  /** The last notification in an update (including updates of externals). */
   svn_wc_notify_update_completed,
 
-  /** About to update an external module, use for checkouts and switches too,
-   * end with @c svn_wc_update_completed.
-   */
+  /** Updating an external module. */
   svn_wc_notify_update_external,
 
+  /** The last notification in a status (including status on externals). */
+  svn_wc_notify_status_completed,
+
+  /** Running status on an external module. */
+  svn_wc_notify_status_external,
+
+  /** Committing a modification. */
   svn_wc_notify_commit_modified,
+  
+  /** Committing an addition. */
   svn_wc_notify_commit_added,
+
+  /** Committing a deletion. */
   svn_wc_notify_commit_deleted,
+
+  /** Committing a replacement. */
   svn_wc_notify_commit_replaced,
+
+  /** Transmitting post-fix text-delta data for a file. */
   svn_wc_notify_commit_postfix_txdelta
+
 } svn_wc_notify_action_t;
 
 
@@ -999,6 +1074,13 @@ typedef struct svn_wc_status_t
 } svn_wc_status_t;
 
 
+/** Return a deep copy of the @a orig_stat status structure, allocated
+ * in @a pool.
+ */
+svn_wc_status_t *svn_wc_dup_status (svn_wc_status_t *orig_stat,
+                                    apr_pool_t *pool);
+
+
 /** Fill @a *status for @a path, allocating in @a pool, with the exception 
  * of the @c repos_rev field, which is normally filled in by the caller.
  * @a adm_access must be an access baton for @a path.
@@ -1030,25 +1112,48 @@ svn_error_t *svn_wc_status (svn_wc_status_t **status,
                             apr_pool_t *pool);
 
 
-/** Under @a path, fill @a statushash mapping paths to @c svn_wc_status_t
- * structures.  All fields in each struct will be filled in except for
- * @c repos_rev, which would presumably be filled in by the caller.
- * @a adm_access is an access baton which holds a write-lock for @a path.
- *
- * @a path will usually be a directory, since for a regular file, you would
- * have used @c svn_wc_status().  However, it is no error if @a path is not
- * a directory; its status will simply be stored in @a statushash like
- * any other.
- *
- * Assuming @a path is a directory, then:
+
+
+/** A callback for reporting an @c svn_wc_status_t * item @a status
+    for @a path.  @a baton is provided to the */
+typedef void (*svn_wc_status_func_t) (void *baton,
+                                      const char *path,
+                                      svn_wc_status_t *status);
+
+
+/** Set @a *editor and @a *edit_baton to an editor that generates @c
+ * svn_wc_status_t structures and sends them through @a status_func /
+ * @a status_baton.  @a anchor is an access baton, with a tree lock,
+ * for the local path to the working copy which will be used as the
+ * root of our editor.  If @a target is not @c NULL, it represents an
+ * entry in the @a anchor path which is the subject of the editor
+ * drive (otherwise, the @a anchor is the subject).
  * 
- * If @a get_all is false, then only locally-modified entries will be
- * returned.  If true, then all entries will be returned.
+ * Callers drive this editor to describe working copy out-of-dateness
+ * with respect to the repository.  If this information is not
+ * available or not desired, callers should simply call the
+ * close_edit() function of the @a editor vtable.
  *
- * If @a descend is false, @a statushash will contain statuses for @a path 
- * and its entries.  Else if @a descend is true, @a statushash will contain
- * statuses for @a path and everything below it, including
- * subdirectories.  In other words, a full recursion.
+ * If the editor driver calls @a editor's set_target_revision() vtable
+ * function, then when the edit drive is completed, @a *edit_revision
+ * will contain the revision delivered via that interface, and any
+ * status items reported during the drive will have their @c repos_rev
+ * field set to this same revision.
+ *
+ * @a config is a hash mapping @c SVN_CONFIG_CATEGORY's to @c
+ * svn_config_t's.
+ *
+ * Assuming the target is a directory, then:
+ * 
+ *   - If @a get_all is false, then only locally-modified entries will be
+ *     returned.  If true, then all entries will be returned.
+ *
+ *   - If @a descend is false, status structures will be returned only
+ *     for the target and its immediate children.  Otherwise, this
+ *     operation is fully recursive.
+ *
+ * If @a no_ignore is set, statuses that would typically be ignored
+ * will instead be reported.
  *
  * If @a cancel_func is non-null, call it with @a cancel_baton while building 
  * the @a statushash to determine if the client has cancelled the operation.
@@ -1057,49 +1162,23 @@ svn_error_t *svn_wc_status (svn_wc_status_t **status,
  * state in it.  (Caller should obtain @a traversal_info from
  * @c svn_wc_init_traversal_info.)
  *
- * @a config is a hash mapping @c SVN_CONFIG_CATEGORY's to @c svn_config_t's.
- */
-svn_error_t *svn_wc_statuses (apr_hash_t *statushash,
-                              const char *path,
-                              svn_wc_adm_access_t *adm_access,
-                              svn_boolean_t descend,
-                              svn_boolean_t get_all,
-                              svn_boolean_t no_ignore,
-                              svn_wc_notify_func_t notify_func,
-                              void *notify_baton,
-                              svn_cancel_func_t cancel_func,
-                              void *cancel_baton,
-                              apr_hash_t *config,
-                              svn_wc_traversal_info_t *traversal_info,
-                              apr_pool_t *pool);
-
-
-/** Set  @a *editor and @a *edit_baton to an editor that tweaks or adds
- * @c svn_wc_status_t structures to @a statushash to reflect repository
- * modifications that would be received on update, and that sets
- * @a *youngest to the youngest revision in the repository (the editor
- * also sets the @c repos_rev field in each @c svn_wc_status_t structure
- * to the same value).  @a adm_access must be an access baton for @a path.
- *
- * If @a descend is zero, then only immediate children of @a path will be
- * done, otherwise @a adm_access should be part of an access baton set
- * for the @a path hierarchy.
- *
- * If @a cancel_func is non-null, call it with @a cancel_baton periodically 
- * during the editor's drive to see if the drive should continue.
- *
  * Allocate the editor itself in @a pool, but the editor does temporary
  * allocations in a subpool of @a pool.
  */
 svn_error_t *svn_wc_get_status_editor (const svn_delta_editor_t **editor,
                                        void **edit_baton,
-                                       const char *path,
-                                       svn_wc_adm_access_t *adm_access,
+                                       svn_revnum_t *edit_revision,
+                                       svn_wc_adm_access_t *anchor,
+                                       const char *target,
+                                       apr_hash_t *config,
                                        svn_boolean_t descend,
-                                       apr_hash_t *statushash,
-                                       svn_revnum_t *youngest,
+                                       svn_boolean_t get_all,
+                                       svn_boolean_t no_ignore,
+                                       svn_wc_status_func_t status_func,
+                                       void *status_baton,
                                        svn_cancel_func_t cancel_func,
                                        void *cancel_baton,
+                                       svn_wc_traversal_info_t *traversal_info,
                                        apr_pool_t *pool);
 
 /** @} */

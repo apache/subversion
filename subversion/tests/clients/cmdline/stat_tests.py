@@ -344,9 +344,9 @@ def status_for_unignored_file(sbox):
 
     # status on the directory with --no-ignore
     svntest.actions.run_and_verify_svn(None,
-                                       [' M     .\n',
-                                        'I      newdir\n',
-                                        'I      newfile\n'],
+                                       ['I      newdir\n',
+                                        'I      newfile\n',
+                                        ' M     .\n'],
                                        [],
                                        'status', '--no-ignore', '.')
 

@@ -749,7 +749,8 @@ static svn_error_t *ra_svn_switch(void *sess,
 static svn_error_t *ra_svn_status(void *sess,
                                   const svn_ra_reporter_t **reporter,
                                   void **report_baton,
-                                  const char *target, svn_boolean_t recurse,
+                                  const char *target, svn_revnum_t rev,
+                                  svn_boolean_t recurse,
                                   const svn_delta_editor_t *status_editor,
                                   void *status_baton, apr_pool_t *pool)
 {
@@ -759,7 +760,8 @@ static svn_error_t *ra_svn_status(void *sess,
     target = "";
 
   /* Tell the server we want to start a status operation. */
-  SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "status", "cb", target, recurse));
+  SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "status", "cb(?r)", 
+                               target, recurse, rev));
 
   /* Fetch a reporter for the caller to drive.  The reporter will drive
    * status_editor upon finish_report(). */
