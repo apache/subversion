@@ -38,6 +38,10 @@ extern "C" {
  * should of course represent the path style appropriate for the
  * supplied PATH.
  *
+ * EDITOR_NAME is a name for the editor, a string that will be
+ * prepended to the editor output as shown below.  EDITOR_NAME may
+ * be the empty string, but it may not be null.
+ *
  * VERBOSE is a flag for specifying whether or not your want all the
  * nitty gritty details displayed.  When VERBOSE is FALSE, each editor
  * function will print only a one-line summary. 
@@ -54,62 +58,62 @@ extern "C" {
  * With an indentation of 3, and with verbose = TRUE
  *
 
-[EDITOR] set_target_revision (23)
-[EDITOR] replace_root (wc)
+[EDITOR_NAME] set_target_revision (23)
+[EDITOR_NAME] replace_root (wc)
    base_revision: 1
-   [EDITOR] replace_directory (A)
+   [EDITOR_NAME] replace_directory (A)
       parent: wc
       base_revision: 1
-      [EDITOR] replace_directory (B)
+      [EDITOR_NAME] replace_directory (B)
          parent: wc/A
          base_revision: 1
-      [EDITOR] change_dir_prop (wc/A/B)
+      [EDITOR_NAME] change_dir_prop (wc/A/B)
          name: foo
          value: bar
-      [EDITOR] close_directory (wc/A/B)
-   [EDITOR] delete_entry (mu)
-   [EDITOR] close_directory (wc/A)
-   [EDITOR] add_file (zeta)
+      [EDITOR_NAME] close_directory (wc/A/B)
+   [EDITOR_NAME] delete_entry (mu)
+   [EDITOR_NAME] close_directory (wc/A)
+   [EDITOR_NAME] add_file (zeta)
       parent: wc
       copyfrom_path: 
       copyfrom_revision: 0
-   [EDITOR] replace_file (iota)
+   [EDITOR_NAME] replace_file (iota)
       parent: wc
       base_revision: 1
-   [EDITOR] apply_textdelta (iota)
-      [EDITOR] window_handler (3 ops)
+   [EDITOR_NAME] apply_textdelta (iota)
+      [EDITOR_NAME] window_handler (3 ops)
          (1) new text: length 4
          (2) target text: offset 24, length 6
          (3) unknown window type
-      [EDITOR] window_handler (EOT)
-   [EDITOR] close_directory (iota)
-   [EDITOR] apply_textdelta (zeta)
-      [EDITOR] window_handler (1 ops)
+      [EDITOR_NAME] window_handler (EOT)
+   [EDITOR_NAME] close_directory (iota)
+   [EDITOR_NAME] apply_textdelta (zeta)
+      [EDITOR_NAME] window_handler (1 ops)
          (1) new text: length 4
-      [EDITOR] window_handler (EOT)
-   [EDITOR] close_directory (zeta)
-[EDITOR] close_edit
+      [EDITOR_NAME] window_handler (EOT)
+   [EDITOR_NAME] close_directory (zeta)
+[EDITOR_NAME] close_edit
 */
 
 /* 
  * With an indentation of 3, and with verbose = FALSE
  *
 
-[EDITOR] set_target_revision (23)
-[EDITOR] replace_root (wc)
-   [EDITOR] replace_directory (A)
-      [EDITOR] replace_directory (B)
-      [EDITOR] change_dir_prop (wc/A/B)
-      [EDITOR] close_directory (wc/A/B)
-   [EDITOR] delete_entry (mu)
-   [EDITOR] close_directory (wc/A)
-   [EDITOR] add_file (zeta)
-   [EDITOR] replace_file (iota)
-   [EDITOR] apply_textdelta (iota)
-   [EDITOR] close_directory (iota)
-   [EDITOR] apply_textdelta (zeta)
-   [EDITOR] close_directory (zeta)
-[EDITOR] close_edit
+[EDITOR_NAME] set_target_revision (23)
+[EDITOR_NAME] replace_root (wc)
+   [EDITOR_NAME] replace_directory (A)
+      [EDITOR_NAME] replace_directory (B)
+      [EDITOR_NAME] change_dir_prop (wc/A/B)
+      [EDITOR_NAME] close_directory (wc/A/B)
+   [EDITOR_NAME] delete_entry (mu)
+   [EDITOR_NAME] close_directory (wc/A)
+   [EDITOR_NAME] add_file (zeta)
+   [EDITOR_NAME] replace_file (iota)
+   [EDITOR_NAME] apply_textdelta (iota)
+   [EDITOR_NAME] close_directory (iota)
+   [EDITOR_NAME] apply_textdelta (zeta)
+   [EDITOR_NAME] close_directory (zeta)
+[EDITOR_NAME] close_edit
 */
 
 
