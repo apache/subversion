@@ -1473,10 +1473,13 @@ close_file (void *file_baton)
                    NOTICE: we're passing an explicit value to parse
                    here, because the 'latest' value isn't yet in the
                    props. */
-                SVN_ERR (svn_wc__get_keywords (&keywords,
-                                               fb->path->data, 
-                                               fb->new_keywords_value->data,
-                                               fb->pool));
+                if (fb->new_keywords_value)
+                  SVN_ERR (svn_wc__get_keywords (&keywords,
+                                                 fb->path->data, 
+                                                 fb->new_keywords_value->data,
+                                                 fb->pool));
+                else
+                  keywords = NULL;
 
                 /* We're not writing out the latest value of the
                    property, because text_modified_p should still be
@@ -1715,8 +1718,10 @@ close_file (void *file_baton)
                          SVN_WC__LOG_ATTR_ARG_3,
                          svn_stringbuf_create ("-B.#", fb->pool),
                          SVN_WC__LOG_ATTR_ARG_4,
-                         svn_stringbuf_create ("--", fb->pool),
+                         svn_stringbuf_create ("-f", fb->pool),
                          SVN_WC__LOG_ATTR_ARG_5,
+                         svn_stringbuf_create ("--", fb->pool),
+                         SVN_WC__LOG_ATTR_ARG_6,
                          fb->name,
                          SVN_WC__LOG_ATTR_INFILE,
                          received_diff_filename,
@@ -1769,8 +1774,10 @@ close_file (void *file_baton)
                          SVN_WC__LOG_ATTR_ARG_3,
                          svn_stringbuf_create ("-B.#", fb->pool),
                          SVN_WC__LOG_ATTR_ARG_4,
-                         svn_stringbuf_create ("--", fb->pool),
+                         svn_stringbuf_create ("-f", fb->pool),
                          SVN_WC__LOG_ATTR_ARG_5,
+                         svn_stringbuf_create ("--", fb->pool),
+                         SVN_WC__LOG_ATTR_ARG_6,
                          tmp_working,
                          SVN_WC__LOG_ATTR_INFILE,
                          received_diff_filename, NULL);
