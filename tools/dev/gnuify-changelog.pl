@@ -51,7 +51,7 @@ while (<>) {
 
     @parts = split (/ /, $_);
 
-    print "$parts[5] $hackers{$parts[3]}\n";
+    print "$parts[4] $hackers{$parts[2]}\n"
   } else {
     print "\t$_";
   }
