@@ -1291,6 +1291,54 @@ static svn_error_t *ra_svn_get_file_revs(void *session_baton, const char *path,
 }
 
 
+
+static svn_error_t *ra_svn_lock(void *session_baton,
+                                svn_lock_t **lock,
+                                const char *path,
+                                svn_boolean_t force,
+                                const char *current_token,
+                                apr_pool_t *pool)
+{
+  return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, 0,
+                           "Function not yet implemented.");
+}
+
+
+
+static svn_error_t *ra_svn_unlock(void *session_baton,
+                                  const char *token,
+                                  svn_boolean_t force,
+                                  apr_pool_t *pool)
+{
+  return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, 0,
+                           "Function not yet implemented.");
+}
+
+
+
+static svn_error_t *ra_svn_get_lock(void *session_baton,
+                                    svn_lock_t **lock,
+                                    const char *path,
+                                    apr_pool_t *pool)
+{
+  return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, 0,
+                           "Function not yet implemented.");
+}
+
+
+static svn_error_t *ra_svn_get_locks(void *session_baton,
+                                     apr_hash_t **locks,
+                                     const char *path,
+                                     apr_pool_t *pool)
+{
+  return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, 0,
+                           "Function not yet implemented.");
+}
+
+
+
+
+
 static const svn_ra_plugin_t ra_svn_plugin = {
   "ra_svn",
   N_("Module for accessing a repository using the svn network protocol."),
@@ -1314,7 +1362,11 @@ static const svn_ra_plugin_t ra_svn_plugin = {
   ra_svn_get_locations,
   ra_svn_get_file_revs,
   svn_ra_svn_version,
-  ra_svn_log2
+  ra_svn_log2,
+  ra_svn_lock,
+  ra_svn_unlock,
+  ra_svn_get_lock,
+  ra_svn_get_locks
 };
 
 svn_error_t *svn_ra_svn_init(int abi_version, apr_pool_t *pool,

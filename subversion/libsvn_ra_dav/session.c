@@ -825,6 +825,56 @@ static svn_error_t *svn_ra_dav__do_get_uuid(void *session_baton,
 }
 
 
+
+static svn_error_t *
+svn_ra_dav__lock(void *session_baton,
+                 svn_lock_t **lock,
+                 const char *path,
+                 svn_boolean_t force,
+                 const char *current_token,
+                 apr_pool_t *pool)
+{
+  return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, 0,
+                           "Function not yet implemented.");
+}
+
+
+
+static svn_error_t *
+svn_ra_dav__unlock(void *session_baton,
+                   const char *token,
+                   svn_boolean_t force,
+                   apr_pool_t *pool)
+{
+  return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, 0,
+                           "Function not yet implemented.");
+}
+
+
+
+static svn_error_t *
+svn_ra_dav__get_lock(void *session_baton,
+                     svn_lock_t **lock,
+                     const char *path,
+                     apr_pool_t *pool)
+{
+  return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, 0,
+                           "Function not yet implemented.");
+}
+
+
+static svn_error_t *
+svn_ra_dav__get_locks(void *session_baton,
+                      apr_hash_t **locks,
+                      const char *path,
+                      apr_pool_t *pool)
+{
+  return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, 0,
+                           "Function not yet implemented.");
+}
+
+
+
 static const svn_version_t *
 ra_dav_version (void)
 {
@@ -854,7 +904,11 @@ static const svn_ra_plugin_t dav_plugin = {
   svn_ra_dav__get_locations,
   svn_ra_dav__get_file_revs,
   ra_dav_version,
-  svn_ra_dav__get_log2
+  svn_ra_dav__get_log2,
+  svn_ra_dav__lock,
+  svn_ra_dav__unlock,
+  svn_ra_dav__get_lock,
+  svn_ra_dav__get_locks
 };
 
 

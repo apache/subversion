@@ -832,6 +832,85 @@ typedef struct svn_ra_plugin_t
                             svn_log_message_receiver_t receiver,
                             void *receiver_baton,
                             apr_pool_t *pool);
+
+  /**
+   * @since New in 1.2.
+   *
+   * Lock @a path and set @a *lock to a lock representing the new
+   * lock, allocated in @a pool.
+   *
+   * Note that locking is never anonymous, so any server implementing
+   * this function will have to "pull" a username from the client, if
+   * it hasn't done so already.
+   *
+   * If path is already locked by the same user, and @a current_token
+   * points to the same lock, then "refresh" the lock and return a new
+   * lock in @a *lock.
+   *
+   * If path is already locked by a different user, then return error.
+   * If @a force is true, then "steal" the existing lock anyway, even
+   * if the RA username does not match the current lock's owner.
+   * Delete any lock on @a path, and unconditionally create a new
+   * lock.
+   *
+   * If @a path is non-existent, that's fine.  The path is reserved, and
+   * a lock is still returned.  
+   */
+  svn_error_t *(*lock) (void *session_baton,
+                        svn_lock_t **lock,
+                        const char *path,
+                        svn_boolean_t force,
+                        const char *current_token,
+                        apr_pool_t *pool);
+
+  /**
+   * @since New in 1.2.
+   *
+   * Remove lock on the path represented by @a token.
+   *
+   * Note that unlocking is never anonymous, so any server
+   * implementing this function will have to "pull" a username from
+   * the client, if it hasn't done so already.
+   *
+   * If @a token points to a lock, but the RA username doesn't match
+   * the lock's owner, return error.  If @force is true, however,
+   * don't return error; allow the lock to be "broken" by the
+   * RA user.
+   *
+   * Use @a pool for temporary allocations.
+   */
+  svn_error_t *(*unlock) (void *session_baton,
+                          const char *token,
+                          svn_boolean_t force,
+                          apr_pool_t *pool);
+  
+  /**
+   * @since New in 1.2.
+   *  
+   * If @a path is locked, set @a *lock to an svn_lock_t which
+   * represents the lock, allocated in @a pool.  If @a path is not
+   * locked, set @a *lock to NULL.
+   */
+  svn_error_t *(*get_lock) (void *session_baton,
+                            svn_lock_t **lock,
+                            const char *path,
+                            apr_pool_t *pool);
+
+  /**
+   * @since New in 1.2.
+   *
+   * Set @a *locks to a hashtable which represents all locks on or
+   * below @a path.
+   *
+   * The hashtable maps (const char *) absolute fs paths to (const
+   * svn_lock_t *) structures.  The hashtable -- and all keys and
+   * values -- are allocated in @a pool.
+   */
+  svn_error_t *(*get_locks) (void *session_baton,
+                             apr_hash_t **locks,
+                             const char *path,
+                             apr_pool_t *pool);
+  
 } svn_ra_plugin_t;
 
 

@@ -186,8 +186,16 @@ get_username (svn_ra_local__session_baton_t *session,
       username_creds = creds;
       if (username_creds && username_creds->username)
         {
+          svn_fs_access_t *access_ctx;
+
           session->username = apr_pstrdup (pool, username_creds->username);
           svn_error_clear (svn_auth_save_credentials (iterstate, pool));
+
+          /* If we have a real username, attach it to the filesystem
+             so that it can be used to validate locks. */
+          SVN_ERR (svn_fs_create_access (&access_ctx, session->username,
+                                         session->pool));
+          SVN_ERR (svn_fs_set_access (session->fs, access_ctx));
         }
       else
         session->username = "";
@@ -943,6 +951,82 @@ svn_ra_local__get_locations (void *session_baton,
 }
 
 
+
+static svn_error_t *
+svn_ra_local__lock (void *session_baton,
+                    svn_lock_t **lock,
+                    const char *path,
+                    svn_boolean_t force,
+                    const char *current_token,
+                    apr_pool_t *pool)
+{
+  svn_ra_local__session_baton_t *sess = session_baton;
+
+  /* A username is absolutely required to lock a path. */
+  SVN_ERR (get_username (sess, pool));
+
+  /* This wrapper will call pre- and post-lock hooks. */
+  SVN_ERR (svn_repos_fs_lock (lock, sess->repos, path, force,
+                              0 /* no timeout */, current_token, pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+
+static svn_error_t *
+svn_ra_local__unlock (void *session_baton,
+                      const char *token,
+                      svn_boolean_t force,
+                      apr_pool_t *pool)
+{
+  svn_ra_local__session_baton_t *sess = session_baton;
+
+  /* A username is absolutely required to unlock a path. */
+  SVN_ERR (get_username (sess, pool));
+
+  /* This warrper will call pre- and post-unlock hooks. */
+  SVN_ERR (svn_repos_fs_unlock (sess->repos, token, force, pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+
+static svn_error_t *
+svn_ra_local__get_lock (void *session_baton,
+                        svn_lock_t **lock,
+                        const char *path,
+                        apr_pool_t *pool)
+{
+  svn_ra_local__session_baton_t *sess = session_baton;
+
+  SVN_ERR (svn_fs_get_lock_from_path (lock, sess->fs, path, pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+
+static svn_error_t *
+svn_ra_local__get_locks (void *session_baton,
+                         apr_hash_t **locks,
+                         const char *path,
+                         apr_pool_t *pool)
+{
+  svn_ra_local__session_baton_t *sess = session_baton;
+
+  /* Kinda silly to call the repos wrapper, since we have no authz
+     func to give it.  But heck, why not. */
+  SVN_ERR (svn_repos_fs_get_locks (locks, sess->repos, path,
+                                   NULL, NULL, pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+
+
 /*----------------------------------------------------------------*/
 
 static const svn_version_t *
@@ -977,7 +1061,11 @@ static const svn_ra_plugin_t ra_local_plugin =
   svn_ra_local__get_locations,
   svn_ra_local__get_file_revs,
   ra_local_version,
-  svn_ra_local__get_log2
+  svn_ra_local__get_log2,
+  svn_ra_local__lock,
+  svn_ra_local__unlock,
+  svn_ra_local__get_lock,
+  svn_ra_local__get_locks
 };
 
 

@@ -520,6 +520,42 @@ change_dir_prop (void *dir_baton,
 }
 
 
+
+static svn_error_t *
+push_lock_token (void *edit_baton,
+                 const char *token,
+                 apr_pool_t *pool)
+{
+  struct edit_baton *eb = edit_baton;
+  svn_fs_access_t *access_ctx;
+
+  /* The user of this editor *should* have already received an
+     authenticated username as part of the commit, and thus should
+     have already registered an access_ctx with the filesystem. */
+  SVN_ERR (svn_fs_get_access (&access_ctx, eb->fs));
+
+  if (! access_ctx)
+    {
+      if (eb->user)
+        {
+          /* Hm, might as well assume that eb->user is the authenticated
+             person doing the commit. */
+          SVN_ERR (svn_fs_create_access (&access_ctx, eb->user, eb->pool));
+          SVN_ERR (svn_fs_set_access (eb->fs, access_ctx));
+        }
+      else
+        return svn_error_create 
+          (SVN_ERR_FS_NO_USER, NULL,
+           "Cannot accept lock token;  no username supplied to repository.");
+    }
+
+  SVN_ERR (svn_fs_access_add_lock_token (access_ctx, token));
+
+  return SVN_NO_ERROR;
+}
+
+
+
 static svn_error_t *
 close_edit (void *edit_baton,
             apr_pool_t *pool)
@@ -634,6 +670,7 @@ svn_repos_get_commit_editor (const svn_delta_editor_t **editor,
   e->change_file_prop  = change_file_prop;
   e->close_edit        = close_edit;
   e->abort_edit        = abort_edit;
+  e->push_lock_token   = push_lock_token;
 
   /* Set up the edit baton. */
   eb->pool = subpool;
