@@ -172,6 +172,7 @@ void JNIUtil::handleSVNError(svn_error *err)
 	}
 	if(isJavaExceptionThrown())
 	{
+		svn_error_clear(err);
 		return;
 	}
 
@@ -180,23 +181,28 @@ void JNIUtil::handleSVNError(svn_error *err)
 	jstring jmessage = makeJString(buffer.c_str());
 	if(isJavaExceptionThrown())
 	{
+		svn_error_clear(err);
 		return;
 	}
 	if(isJavaExceptionThrown())
 	{
+		svn_error_clear(err);
 		return;
 	}
 	jstring jfile = makeJString(err->file);
 	if(isJavaExceptionThrown())
 	{
+		svn_error_clear(err);
 		return;
 	}
 	jmethodID mid = env->GetMethodID(clazz, "<init>", "(Ljava/lang/String;Ljava/lang/String;I)V");
 	if(isJavaExceptionThrown())
 	{
+		svn_error_clear(err);
 		return;
 	}
 	jobject error = env->NewObject(clazz, mid, jmessage, jfile, static_cast<jint>(err->apr_err));
+	svn_error_clear(err);
 	if(isJavaExceptionThrown())
 	{
 		return;
