@@ -20,7 +20,7 @@ Candidate changes:
       docs to review the MultiByteToWideChar() call.  -kfogel
     Votes:
       +1: jszakmeister, dionisos
-      +0: kfogel
+      +0: kfogel, lundblad
 
   * r11215, r11264
     SVN has needed a good packaging script for Win32 since forever.
@@ -37,9 +37,7 @@ Candidate changes:
     Justification:
       Nasty bug with simple fix.
     Votes:
-      +1: jaa, philip
-    Votes without r11696:
-      +1: lundblad
+      +1: jaa, philip, lundblad
 
   * r11439, r11669
     Fix slow "svn st" where the targets are files by not locking the whole
@@ -103,14 +101,14 @@ Candidate changes:
       Without this, 'svn diff --diff-cmd' and 'svn merge --diff3-cmd' are
       broken on the Windows platform.
     Votes:
-      +1: jszakmeister
+      +1: jszakmeister, lundblad
 
   * r11701
     Fix pool usage in svn_io_remove_dir.
     Justification:
       Saves at least 100 MB on large fsfs commits.
     Votes:
-      +1: epg
+      +1: epg, lundblad
 
   * r11706
     Fix pool usage in finalizng a transaction into a revision in the
@@ -118,7 +116,7 @@ Candidate changes:
     Justification:
       Saves 35 MB on large fsfs commits.
     Votes:
-      +1: epg
+      +1: epg, lundblad
 
   * r11451, r11630
     Fix pool usage and stalled object reference counts in Perl bindings.
