@@ -234,7 +234,7 @@ svn_stringbuf_t *
 svn_fs_unparse_id (const svn_fs_id_t *id,
                    apr_pool_t *pool)
 {
-  svn_stringbuf_t *unparsed = svn_string_ncreate (0, 0, pool);
+  svn_stringbuf_t *unparsed = svn_stringbuf_ncreate (0, 0, pool);
   int i;
 
   for (i = 0; id[i] != -1; i++)
@@ -248,7 +248,7 @@ svn_fs_unparse_id (const svn_fs_id_t *id,
       if (id[i + 1] != -1)
         buf[len++] = '.';
 
-      svn_string_appendbytes (unparsed, buf, len);
+      svn_stringbuf_appendbytes (unparsed, buf, len);
     }
 
   return unparsed;

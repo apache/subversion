@@ -134,7 +134,7 @@ assemble_status (svn_wc_status_t *status,
           
           if (entry->kind == svn_node_file)
             {
-              parent_dir = svn_string_dup (path, pool);
+              parent_dir = svn_stringbuf_dup (path, pool);
               svn_path_remove_component (parent_dir, svn_path_local_style);
             }
           else if (entry->kind == svn_node_dir)
@@ -273,7 +273,7 @@ svn_wc_statuses (apr_hash_t *statushash,
           void *val;
           const char *basename;
           apr_size_t keylen;
-          svn_stringbuf_t *fullpath = svn_string_dup (path, pool);
+          svn_stringbuf_t *fullpath = svn_stringbuf_dup (path, pool);
 
           /* Get the next dirent */
           apr_hash_this (hi, &key, &keylen, &val);

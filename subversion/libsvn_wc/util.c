@@ -33,7 +33,7 @@ svn_error_t *
 svn_wc__ensure_directory (svn_stringbuf_t *path, apr_pool_t *pool)
 {
   enum svn_node_kind kind;
-  svn_stringbuf_t *npath = svn_string_dup (path, pool);
+  svn_stringbuf_t *npath = svn_stringbuf_dup (path, pool);
   svn_error_t *err = svn_io_check_path (npath, &kind, pool);
 
   if (err)
@@ -67,10 +67,10 @@ svn_wc__ensure_directory (svn_stringbuf_t *path, apr_pool_t *pool)
           /* Okay, so the problem is a missing intermediate
              directory.  We don't know which one, so we recursively
              back up one level and try again. */
-          svn_stringbuf_t *shorter = svn_string_dup (npath, pool);
+          svn_stringbuf_t *shorter = svn_stringbuf_dup (npath, pool);
           svn_path_remove_component (shorter, svn_path_local_style);
 
-          if (svn_string_isempty (shorter))
+          if (svn_stringbuf_isempty (shorter))
             {
               /* A weird and probably rare situation. */
               return svn_error_create (0, 0, NULL, pool,

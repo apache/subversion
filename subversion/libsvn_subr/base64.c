@@ -76,12 +76,12 @@ encode_bytes (svn_stringbuf_t *str, const char *data, apr_size_t len,
       memcpy (inbuf + *inbuflen, p, 3 - *inbuflen);
       p += (3 - *inbuflen);
       encode_group (inbuf, group);
-      svn_string_appendbytes (str, group, 4);
+      svn_stringbuf_appendbytes (str, group, 4);
       *inbuflen = 0;
       *linelen += 4;
       if (*linelen == BASE64_LINELEN)
         {
-          svn_string_appendcstr (str, "\n");
+          svn_stringbuf_appendcstr (str, "\n");
           *linelen = 0;
         }
     }
@@ -107,11 +107,11 @@ encode_partial_group (svn_stringbuf_t *str, const char *extra, int len,
       memset (ingroup + len, 0, 3 - len);
       encode_group (ingroup, outgroup);
       memset (outgroup + (len + 1), '=', 4 - (len + 1));
-      svn_string_appendbytes (str, outgroup, 4);
+      svn_stringbuf_appendbytes (str, outgroup, 4);
       linelen += 4;
     }
   if (linelen > 0)
-    svn_string_appendcstr (str, "\n");
+    svn_stringbuf_appendcstr (str, "\n");
 }
 
 
@@ -121,7 +121,7 @@ encode_data (void *baton, const char *data, apr_size_t *len)
 {
   struct encode_baton *eb = baton;
   apr_pool_t *subpool = svn_pool_create (eb->pool);
-  svn_stringbuf_t *encoded = svn_string_create ("", subpool);
+  svn_stringbuf_t *encoded = svn_stringbuf_create ("", subpool);
   apr_size_t enclen;
   svn_error_t *err = SVN_NO_ERROR;
 
@@ -140,7 +140,7 @@ static svn_error_t *
 finish_encoding_data (void *baton)
 {
   struct encode_baton *eb = baton;
-  svn_stringbuf_t *encoded = svn_string_create ("", eb->pool);
+  svn_stringbuf_t *encoded = svn_stringbuf_create ("", eb->pool);
   apr_size_t enclen;
   svn_error_t *err = SVN_NO_ERROR;
 
@@ -179,7 +179,7 @@ svn_base64_encode (svn_stream_t *output, apr_pool_t *pool)
 svn_stringbuf_t *
 svn_base64_encode_string (svn_stringbuf_t *str, apr_pool_t *pool)
 {
-  svn_stringbuf_t *encoded = svn_string_create ("", pool);
+  svn_stringbuf_t *encoded = svn_stringbuf_create ("", pool);
   char ingroup[3];
   int ingrouplen = 0, linelen = 0;
 
@@ -236,7 +236,7 @@ decode_bytes (svn_stringbuf_t *str, const char *data, apr_size_t len,
 	    {
 	      memset (inbuf + *inbuflen, 0, 4 - *inbuflen);
 	      decode_group (inbuf, group);
-	      svn_string_appendbytes (str, group, *inbuflen - 1);
+	      svn_stringbuf_appendbytes (str, group, *inbuflen - 1);
 	    }
 	  *done = TRUE;
 	}
@@ -248,7 +248,7 @@ decode_bytes (svn_stringbuf_t *str, const char *data, apr_size_t len,
 	  if (*inbuflen == 4)
 	    {
 	      decode_group (inbuf, group);
-	      svn_string_appendbytes (str, group, 3);
+	      svn_stringbuf_appendbytes (str, group, 3);
 	      *inbuflen = 0;
 	    }
 	}
@@ -268,7 +268,7 @@ decode_data (void *baton, const char *data, apr_size_t *len)
 
   /* Decode this block of data.  */
   subpool = svn_pool_create (db->pool);
-  decoded = svn_string_create ("", subpool);
+  decoded = svn_stringbuf_create ("", subpool);
   decode_bytes (decoded, data, *len, db->buf, &db->buflen, &db->done);
 
   /* Write the output, clean up, go home.  */
@@ -315,7 +315,7 @@ svn_base64_decode (svn_stream_t *output, apr_pool_t *pool)
 svn_stringbuf_t *
 svn_base64_decode_string (svn_stringbuf_t *str, apr_pool_t *pool)
 {
-  svn_stringbuf_t *decoded = svn_string_create ("", pool);
+  svn_stringbuf_t *decoded = svn_stringbuf_create ("", pool);
   unsigned char ingroup[4];
   int ingrouplen = 0;
   svn_boolean_t done = FALSE;

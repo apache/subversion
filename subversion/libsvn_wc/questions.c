@@ -126,7 +126,7 @@ timestamps_equal_p (svn_boolean_t *equal_p,
   if (kind == svn_node_dir)
     {
       dirpath = path;
-      entryname = svn_string_create (SVN_WC_ENTRY_THIS_DIR, pool);
+      entryname = svn_stringbuf_create (SVN_WC_ENTRY_THIS_DIR, pool);
     }
   else
     svn_path_split (path, &dirpath, &entryname, svn_path_local_style, pool);
@@ -584,7 +584,7 @@ svn_wc_conflicted_p (svn_boolean_t *text_conflicted_p,
 
           if (rej_file)
             {
-              rej_path = svn_string_dup (dir_path, pool);
+              rej_path = svn_stringbuf_dup (dir_path, pool);
               svn_path_add_component (rej_path, rej_file,
                                       svn_path_local_style);
 
@@ -604,7 +604,7 @@ svn_wc_conflicted_p (svn_boolean_t *text_conflicted_p,
 
           if (prej_file)
             {
-              prej_path = svn_string_dup (dir_path, pool);
+              prej_path = svn_stringbuf_dup (dir_path, pool);
               svn_path_add_component (prej_path, prej_file,
                                       svn_path_local_style);
 

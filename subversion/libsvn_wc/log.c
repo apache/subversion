@@ -164,8 +164,8 @@ file_xfer_under_path (svn_stringbuf_t *path,
   apr_status_t status;
   svn_stringbuf_t *full_from_path, *full_dest_path;
 
-  full_from_path = svn_string_dup (path, pool);
-  full_dest_path = svn_string_dup (path, pool);
+  full_from_path = svn_stringbuf_dup (path, pool);
+  full_dest_path = svn_stringbuf_dup (path, pool);
 
   svn_path_add_component_nts (full_from_path, name, svn_path_local_style);
   svn_path_add_component_nts (full_dest_path, dest, svn_path_local_style);
@@ -201,7 +201,7 @@ replace_text_base (svn_stringbuf_t *path,
   svn_error_t *err;
   enum svn_node_kind kind;
 
-  filepath = svn_string_dup (path, pool);
+  filepath = svn_stringbuf_dup (path, pool);
   svn_path_add_component_nts (filepath, name, svn_path_local_style);
 
   tmp_text_base = svn_wc__text_base_path (filepath, 1, pool);
@@ -272,7 +272,7 @@ log_do_run_cmd (struct log_runner *loggy,
   if (infile_name)
     {
       svn_stringbuf_t *infile_path
-        = svn_string_dup (loggy->path, loggy->pool);
+        = svn_stringbuf_dup (loggy->path, loggy->pool);
       svn_path_add_component_nts (infile_path, infile_name,
                                   svn_path_local_style);
       
@@ -286,7 +286,7 @@ log_do_run_cmd (struct log_runner *loggy,
   if (outfile_name)
     {
       svn_stringbuf_t *outfile_path
-        = svn_string_dup (loggy->path, loggy->pool);
+        = svn_stringbuf_dup (loggy->path, loggy->pool);
       svn_path_add_component_nts (outfile_path, outfile_name,
                                   svn_path_local_style);
       
@@ -303,7 +303,7 @@ log_do_run_cmd (struct log_runner *loggy,
   if (errfile_name)
     {
       svn_stringbuf_t *errfile_path
-        = svn_string_dup (loggy->path, loggy->pool);
+        = svn_stringbuf_dup (loggy->path, loggy->pool);
       svn_path_add_component_nts (errfile_path, errfile_name,
                                   svn_path_local_style);
       
@@ -363,7 +363,7 @@ log_do_rm (struct log_runner *loggy, const char *name)
   apr_status_t apr_err;
   svn_stringbuf_t *full_path;
 
-  full_path = svn_string_dup (loggy->path, loggy->pool);
+  full_path = svn_stringbuf_dup (loggy->path, loggy->pool);
   svn_path_add_component_nts (full_path, name, svn_path_local_style);
 
   apr_err = apr_file_remove (full_path->data, loggy->pool);
@@ -396,7 +396,7 @@ log_do_detect_conflict (struct log_runner *loggy,
                          loggy->path->data);
 
 
-  full_path = svn_string_dup (loggy->path, loggy->pool);
+  full_path = svn_stringbuf_dup (loggy->path, loggy->pool);
   svn_path_add_component_nts (full_path, rejfile, svn_path_local_style);
 
   apr_err = apr_stat (&finfo, full_path->data, APR_FINFO_MIN, loggy->pool);
@@ -424,7 +424,7 @@ log_do_detect_conflict (struct log_runner *loggy,
 
       err = svn_wc__entry_modify
         (loggy->path,
-         svn_string_create (name, loggy->pool),
+         svn_stringbuf_create (name, loggy->pool),
          (SVN_WC__ENTRY_MODIFY_CONFLICTED | SVN_WC__ENTRY_MODIFY_ATTRIBUTES),
          SVN_INVALID_REVNUM,
          svn_node_none,
@@ -451,8 +451,8 @@ log_do_modify_entry (struct log_runner *loggy,
 {
   svn_error_t *err;
   apr_hash_t *ah = svn_xml_make_att_hash (atts, loggy->pool);
-  svn_stringbuf_t *sname = svn_string_create (name, loggy->pool);
-  svn_stringbuf_t *tfile = svn_string_dup (loggy->path, loggy->pool);
+  svn_stringbuf_t *sname = svn_stringbuf_create (name, loggy->pool);
+  svn_stringbuf_t *tfile = svn_stringbuf_dup (loggy->path, loggy->pool);
   svn_wc_entry_t *entry;
   apr_uint16_t modify_flags;
   svn_stringbuf_t *valuestr;
@@ -552,9 +552,9 @@ log_do_delete_entry (struct log_runner *loggy, const char *name)
 {
   svn_wc_entry_t *entry;
   svn_error_t *err = NULL;
-  svn_stringbuf_t *sname = svn_string_create (name, loggy->pool);
-  svn_stringbuf_t *full_path = svn_string_dup (loggy->path, loggy->pool);
-  svn_stringbuf_t *this_dir = svn_string_create (SVN_WC_ENTRY_THIS_DIR,
+  svn_stringbuf_t *sname = svn_stringbuf_create (name, loggy->pool);
+  svn_stringbuf_t *full_path = svn_stringbuf_dup (loggy->path, loggy->pool);
+  svn_stringbuf_t *this_dir = svn_stringbuf_create (SVN_WC_ENTRY_THIS_DIR,
                                               loggy->pool);
 
   /* Figure out if 'name' is a dir or a file */
@@ -610,7 +610,7 @@ conflict_if_rejfile (svn_stringbuf_t *parent_dir,
   svn_stringbuf_t *rejfile_full_path;
   enum svn_node_kind kind;
 
-  rejfile_full_path = svn_string_dup (parent_dir, pool);
+  rejfile_full_path = svn_stringbuf_dup (parent_dir, pool);
   svn_path_add_component_nts (rejfile_full_path, rejfile,
                               svn_path_local_style);
   
@@ -650,7 +650,7 @@ conflict_if_rejfile (svn_stringbuf_t *parent_dir,
 
           SVN_ERR (svn_wc__entry_modify
                    (parent_dir,
-                    svn_string_create (entry, pool),
+                    svn_stringbuf_create (entry, pool),
                     SVN_WC__ENTRY_MODIFY_CONFLICTED,
                     SVN_INVALID_REVNUM,
                     svn_node_none,
@@ -670,11 +670,11 @@ conflict_if_rejfile (svn_stringbuf_t *parent_dir,
 
           apr_hash_set (att_overlay,
                         rejfile_type, APR_HASH_KEY_STRING,
-                        svn_string_create (rejfile, pool));
+                        svn_stringbuf_create (rejfile, pool));
 
           SVN_ERR (svn_wc__entry_modify
                    (parent_dir,
-                    svn_string_create (entry, pool),
+                    svn_stringbuf_create (entry, pool),
                     SVN_WC__ENTRY_MODIFY_CONFLICTED,
                     SVN_INVALID_REVNUM,
                     svn_node_none,
@@ -748,7 +748,7 @@ log_do_committed (struct log_runner *loggy,
       enum svn_node_kind kind;
       svn_wc_entry_t *entry;
       svn_stringbuf_t *prop_path, *tmp_prop_path, *prop_base_path;
-      svn_stringbuf_t *sname = svn_string_create (name, loggy->pool);
+      svn_stringbuf_t *sname = svn_stringbuf_create (name, loggy->pool);
       svn_boolean_t is_this_dir;
 
       /* `name' is either a file's basename, or SVN_WC_ENTRY_THIS_DIR. */
@@ -759,7 +759,7 @@ log_do_committed (struct log_runner *loggy,
       {
         svn_stringbuf_t *full_path;
 
-        full_path = svn_string_dup (loggy->path, loggy->pool);
+        full_path = svn_stringbuf_dup (loggy->path, loggy->pool);
         if (! is_this_dir)
           svn_path_add_component (full_path, sname, svn_path_local_style);
         SVN_ERR (svn_wc_entry (&entry, full_path, loggy->pool));
@@ -791,7 +791,7 @@ log_do_committed (struct log_runner *loggy,
               /* If we get here, `name' is a file's basename.
                  `basename' is an svn_stringbuf_t version of it.  Check
                  for textual changes. */
-              working_file = svn_string_dup (loggy->path, loggy->pool);
+              working_file = svn_stringbuf_dup (loggy->path, loggy->pool);
               svn_path_add_component (working_file,
                                       sname,
                                       svn_path_local_style);
@@ -1122,7 +1122,7 @@ svn_wc__run_log (svn_stringbuf_t *path, apr_pool_t *pool)
       /* Blow away the entire administrative dir, and all those below
          it too.  Don't remove any working files, though. */
       svn_stringbuf_t *this_dir = 
-        svn_string_create (SVN_WC_ENTRY_THIS_DIR, pool);
+        svn_stringbuf_create (SVN_WC_ENTRY_THIS_DIR, pool);
       SVN_ERR (svn_wc_remove_from_revision_control (path, this_dir,
                                                     FALSE, pool));
     }
@@ -1171,10 +1171,10 @@ svn_wc__cleanup (svn_stringbuf_t *path,
         {
           if (! care_about_this_dir)
             {
-              svn_stringbuf_t *target = svn_string_dup (path, pool);
+              svn_stringbuf_t *target = svn_stringbuf_dup (path, pool);
               svn_path_add_component 
                 (target,
-                 svn_string_ncreate ((char *) key, keylen, pool),
+                 svn_stringbuf_ncreate ((char *) key, keylen, pool),
                  svn_path_local_style);
               
               if (apr_hash_get (targets, target->data, target->len))
@@ -1187,9 +1187,9 @@ svn_wc__cleanup (svn_stringbuf_t *path,
       if ((entry->kind == svn_node_dir) && (! is_this_dir))
         {
           /* Recurse */
-          svn_stringbuf_t *subdir = svn_string_dup (path, pool);
+          svn_stringbuf_t *subdir = svn_stringbuf_dup (path, pool);
           svn_path_add_component (subdir,
-                                  svn_string_create ((char *) key, pool),
+                                  svn_stringbuf_create ((char *) key, pool),
                                   svn_path_local_style);
 
           err = svn_wc__cleanup (subdir, targets, bail_on_lock, pool);

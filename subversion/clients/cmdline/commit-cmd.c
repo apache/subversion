@@ -57,7 +57,7 @@ svn_cl__commit (apr_getopt_t *os,
 
   /* Get the current working directory as an absolute path. */
   SVN_ERR (svn_path_get_absolute (&cur_dir,
-                                  svn_string_create (".", pool),
+                                  svn_stringbuf_create (".", pool),
                                   pool));
 
   /* Condense the targets (like commit does)... */

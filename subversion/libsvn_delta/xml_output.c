@@ -152,7 +152,7 @@ make_file_baton (struct edit_baton *eb, enum elemtype addreplace)
 static svn_stringbuf_t *
 get_to_elem (struct edit_baton *eb, enum elemtype elem, apr_pool_t *pool)
 {
-  svn_stringbuf_t *str = svn_string_create ("", pool);
+  svn_stringbuf_t *str = svn_stringbuf_create ("", pool);
   struct file_baton *fb;
 
   /* Unwind.  Start from the leaves and go back as far as necessary.  */
@@ -176,7 +176,7 @@ get_to_elem (struct edit_baton *eb, enum elemtype elem, apr_pool_t *pool)
              callers are using temporary pools anyway.  */
           fb->txdelta_id = eb->txdelta_id_counter++;
           sprintf (buf, "%d", fb->txdelta_id);
-          idstr = svn_string_create (buf, pool);
+          idstr = svn_stringbuf_create (buf, pool);
           svn_xml_make_open_tag (&str, pool, svn_xml_self_closing,
                                  SVN_DELTA__XML_TAG_TEXT_DELTA_REF,
                                  SVN_DELTA__XML_ATTR_ID, idstr, NULL);
@@ -254,7 +254,7 @@ output_addreplace (struct edit_baton *eb, enum elemtype addreplace,
   }
   if (SVN_IS_VALID_REVNUM(base_revision))
   {
-    svn_stringbuf_t *buf = svn_string_createf (pool, "%lu", 
+    svn_stringbuf_t *buf = svn_stringbuf_createf (pool, "%lu", 
                                            (unsigned long) base_revision);
     if (addreplace == elem_add)
       {
@@ -340,7 +340,7 @@ replace_root (void *edit_baton, svn_revnum_t base_revision, void **dir_baton)
   {
     svn_stringbuf_t *br_buf;
 
-    br_buf = svn_string_createf (pool, "%lu", 
+    br_buf = svn_stringbuf_createf (pool, "%lu", 
                                  (unsigned long) base_revision);
     apr_hash_set (att, SVN_DELTA__XML_ATTR_BASE_REV, 
                   strlen(SVN_DELTA__XML_ATTR_BASE_REV), br_buf);
@@ -349,7 +349,7 @@ replace_root (void *edit_baton, svn_revnum_t base_revision, void **dir_baton)
   {
     svn_stringbuf_t *tr_buf;
 
-    tr_buf = svn_string_createf (pool, "%lu", 
+    tr_buf = svn_stringbuf_createf (pool, "%lu", 
                                  (unsigned long) eb->target_revision);
     apr_hash_set (att, SVN_DELTA__XML_ATTR_TARGET_REV, 
                   strlen(SVN_DELTA__XML_ATTR_TARGET_REV), tr_buf);
@@ -556,12 +556,12 @@ apply_textdelta (void *file_baton,
       sprintf(buf, "%d", fb->txdelta_id);
       apr_hash_set (att, SVN_DELTA__XML_ATTR_ID, 
                     strlen(SVN_DELTA__XML_ATTR_ID), 
-                    svn_string_create (buf, pool));
+                    svn_stringbuf_create (buf, pool));
     }
 #ifdef QUOPRINT_SVNDIFFS
   apr_hash_set (att, SVN_DELTA__XML_ATTR_ENCODING, 
                 strlen(SVN_DELTA__XML_ATTR_ENCODING),
-                svn_string_create ("quoted-printable", pool));
+                svn_stringbuf_create ("quoted-printable", pool));
 #endif
   svn_xml_make_open_tag_hash (&str, pool, svn_xml_protect_pcdata,
                               SVN_DELTA__XML_TAG_TEXT_DELTA, att);

@@ -57,7 +57,7 @@ svn_ra_local__split_URL (svn_stringbuf_t **repos_path,
        ("svn_ra_local__split_URL: URL contains unsupported hostname"));
 
   /* Duplicate the URL, starting at the top of the path */
-  url = svn_string_create ((const char *)path, subpool);
+  url = svn_stringbuf_create ((const char *)path, subpool);
 
   /* Loop, trying to open a FS at URL.  If this fails, remove the last
      component from the URL, then try again. */
@@ -96,8 +96,8 @@ svn_ra_local__split_URL (svn_stringbuf_t **repos_path,
   /* What remains of URL after being hacked at in the previous step is
      REPOS_PATH.  FS_PATH is what we've hacked off in the process.  We
      need to make sure these are allocated in the -original- pool. */
-  *repos_path = svn_string_dup (url, pool);
-  *fs_path = svn_string_create (path + url->len, pool);
+  *repos_path = svn_stringbuf_dup (url, pool);
+  *fs_path = svn_stringbuf_create (path + url->len, pool);
 
   /* Destroy our temporary memory pool. */
   svn_pool_destroy (subpool);

@@ -153,7 +153,7 @@ maybe_derive_ancestry (svn_xml__stackframe_t *frame,
                */
 
               frame->ancestor_path
-                = svn_string_dup (p->ancestor_path, pool);
+                = svn_stringbuf_dup (p->ancestor_path, pool);
               svn_path_add_component (frame->ancestor_path, this_name,
                                       svn_path_repos_style);
             }
@@ -248,7 +248,7 @@ check_dirent_namespace (svn_xml__digger_t *digger,
       (SVN_ERR_MALFORMED_XML, 0, NULL, digger->pool,
        "check_dirent_namespace: parent frame has no namespace hash.");
 
-  if ((frame->name == NULL) || (svn_string_isempty (frame->name)))
+  if ((frame->name == NULL) || (svn_stringbuf_isempty (frame->name)))
     return
       svn_error_create
       (SVN_ERR_MALFORMED_XML, 0,
@@ -449,7 +449,7 @@ do_directory_callback (svn_xml__digger_t *digger,
      attributes of the current <dir> tag. */
   ancestor = svn_xml_get_attr_value (SVN_DELTA__XML_ATTR_BASE_PATH, atts);
   if (ancestor)
-    youngest_frame->ancestor_path = svn_string_create (ancestor, digger->pool);
+    youngest_frame->ancestor_path = svn_stringbuf_create (ancestor, digger->pool);
   ver = svn_xml_get_attr_value (SVN_DELTA__XML_ATTR_BASE_REV, atts);
   if (ver)
     youngest_frame->ancestor_revision = atoi (ver);
@@ -535,7 +535,7 @@ do_file_callback (svn_xml__digger_t *digger,
      attributes of the current <dir> tag. */
   ancestor = svn_xml_get_attr_value (SVN_DELTA__XML_ATTR_BASE_PATH, atts);
   if (ancestor)
-    youngest_frame->ancestor_path = svn_string_create (ancestor, digger->pool);
+    youngest_frame->ancestor_path = svn_stringbuf_create (ancestor, digger->pool);
   ver = svn_xml_get_attr_value (SVN_DELTA__XML_ATTR_BASE_REV, atts);
   if (ver)
     youngest_frame->ancestor_revision = atoi (ver);
@@ -753,8 +753,8 @@ do_begin_propdelta (svn_xml__digger_t *digger)
     apr_pcalloc (digger->pool,
                  sizeof (*(digger->current_propdelta)));
 
-  digger->current_propdelta->name  = svn_string_create ("", digger->pool);
-  digger->current_propdelta->value = svn_string_create ("", digger->pool);
+  digger->current_propdelta->name  = svn_stringbuf_create ("", digger->pool);
+  digger->current_propdelta->value = svn_stringbuf_create ("", digger->pool);
 
   /* Now figure out our context.  Is this a propdelta on a file, dir,
      or dirent? */
@@ -773,7 +773,7 @@ do_begin_propdelta (svn_xml__digger_t *digger)
         /* Get the name of the file, too. */
         if (youngest_frame->previous->previous)
           digger->current_propdelta->entity_name = 
-            svn_string_dup (youngest_frame->previous->previous->name,
+            svn_stringbuf_dup (youngest_frame->previous->previous->name,
                             digger->pool);
         break;
       }
@@ -783,7 +783,7 @@ do_begin_propdelta (svn_xml__digger_t *digger)
         /* Get the name of the dir, too. */
         if (youngest_frame->previous->previous)
           digger->current_propdelta->entity_name = 
-            svn_string_dup (youngest_frame->previous->previous->name,
+            svn_stringbuf_dup (youngest_frame->previous->previous->name,
                             digger->pool);
         break;
       }
@@ -808,7 +808,7 @@ do_begin_setprop (svn_xml__digger_t *digger,
 {
   if (digger->current_propdelta)
     digger->current_propdelta->name =
-      svn_string_dup (youngest_frame->name, digger->pool);
+      svn_stringbuf_dup (youngest_frame->name, digger->pool);
   
   return SVN_NO_ERROR;
 }
@@ -837,7 +837,7 @@ do_delete_prop (svn_xml__digger_t *digger,
   
   /* Finish filling out current propdelta. */
   digger->current_propdelta->name =
-    svn_string_dup (dir_name, digger->pool);
+    svn_stringbuf_dup (dir_name, digger->pool);
 
 
   return SVN_NO_ERROR;
@@ -857,7 +857,7 @@ do_prop_delta_callback (svn_xml__digger_t *digger)
   if (! digger->current_propdelta)
     return SVN_NO_ERROR;
 
-  if (svn_string_isempty(digger->current_propdelta->value))
+  if (svn_stringbuf_isempty(digger->current_propdelta->value))
     value_string = NULL;
   else
     value_string = digger->current_propdelta->value;
@@ -894,8 +894,8 @@ do_prop_delta_callback (svn_xml__digger_t *digger)
   /* Now that the change has been sent, clear its NAME and VALUE
      fields -- but not the KIND field, because more changes may be
      coming inside this <prop-delta> ! */
-  svn_string_setempty(digger->current_propdelta->name);
-  svn_string_setempty(digger->current_propdelta->value);
+  svn_stringbuf_setempty(digger->current_propdelta->name);
+  svn_stringbuf_setempty(digger->current_propdelta->value);
 
   return SVN_NO_ERROR;
 }
@@ -945,7 +945,7 @@ xml_handle_start (void *userData, const char *name, const char **atts)
   /* Set "name" field in frame, if there's any such attribute in ATTS */
   value = svn_xml_get_attr_value (SVN_DELTA__XML_ATTR_NAME, atts);
   if (value)
-    new_frame->name = svn_string_create (value, my_digger->pool);
+    new_frame->name = svn_stringbuf_create (value, my_digger->pool);
 
   /* If this is an add tag, it might contain copyfrom_path and
      copyfrom_revision attributes.  Otherwise, it might just have the
@@ -957,7 +957,7 @@ xml_handle_start (void *userData, const char *name, const char **atts)
          ATTS */
       value = svn_xml_get_attr_value (SVN_DELTA__XML_ATTR_COPYFROM_PATH, atts);
       if (value)
-        new_frame->ancestor_path = svn_string_create (value, my_digger->pool);
+        new_frame->ancestor_path = svn_stringbuf_create (value, my_digger->pool);
 
       /* Set copyfrom revision in frame, if there's any such attribute
          in ATTS */
@@ -971,7 +971,7 @@ xml_handle_start (void *userData, const char *name, const char **atts)
          ATTS */
       value = svn_xml_get_attr_value (SVN_DELTA__XML_ATTR_BASE_PATH, atts);
       if (value)
-        new_frame->ancestor_path = svn_string_create (value, my_digger->pool);
+        new_frame->ancestor_path = svn_stringbuf_create (value, my_digger->pool);
 
       /* Set ancestor revision in frame, if there's any such attribute
          in ATTS */
@@ -983,12 +983,12 @@ xml_handle_start (void *userData, const char *name, const char **atts)
   /* Set "id" in frame, if there's any such attribute in ATTS */
   value = svn_xml_get_attr_value (SVN_DELTA__XML_ATTR_ID, atts);
   if (value)
-    new_frame->ref_id = svn_string_create (value, my_digger->pool);
+    new_frame->ref_id = svn_stringbuf_create (value, my_digger->pool);
 
   /* Set "encoding" in frame, if there's any such attribute in ATTS */
   value = svn_xml_get_attr_value (SVN_DELTA__XML_ATTR_ENCODING, atts);
   if (value)
-    new_frame->encoding = svn_string_create (value, my_digger->pool);
+    new_frame->encoding = svn_stringbuf_create (value, my_digger->pool);
 
   /* If this frame is a <delta-pkg>, it's the top-most frame, which
      holds the "base" ancestry info */
@@ -1365,7 +1365,7 @@ xml_handle_data (void *userData, const char *data, int len)
       */
 
       if (digger->current_propdelta)
-        svn_string_appendbytes (digger->current_propdelta->value,
+        svn_stringbuf_appendbytes (digger->current_propdelta->value,
                                 data, length);
     }
 

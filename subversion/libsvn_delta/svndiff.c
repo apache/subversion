@@ -90,7 +90,7 @@ append_encoded_int (svn_stringbuf_t *header, apr_off_t val, apr_pool_t *pool)
   char buf[128], *p;
 
   p = encode_int (buf, val);
-  svn_string_appendbytes (header, buf, p - buf);
+  svn_stringbuf_appendbytes (header, buf, p - buf);
 }
 
 
@@ -99,8 +99,8 @@ window_handler (svn_txdelta_window_t *window, void *baton)
 {
   struct encoder_baton *eb = baton;
   apr_pool_t *pool = svn_pool_create (eb->pool);
-  svn_stringbuf_t *instructions = svn_string_create ("", pool);
-  svn_stringbuf_t *header = svn_string_create ("", pool);
+  svn_stringbuf_t *instructions = svn_stringbuf_create ("", pool);
+  svn_stringbuf_t *header = svn_stringbuf_create ("", pool);
   char ibuf[128], *ip;
   svn_txdelta_op_t *op;
   svn_error_t *err;
@@ -154,7 +154,7 @@ window_handler (svn_txdelta_window_t *window, void *baton)
         ip = encode_int (ip + 1, op->length);
       if (op->action_code != svn_txdelta_new)
         ip = encode_int (ip, op->offset);
-      svn_string_appendbytes (instructions, ibuf, ip - ibuf);
+      svn_stringbuf_appendbytes (instructions, ibuf, ip - ibuf);
     }
 
   /* Encode the header.  */
@@ -373,7 +373,7 @@ write_handler (void *baton,
     }
 
   /* Concatenate the old with the new.  */
-  svn_string_appendbytes (db->buffer, buffer, *len);
+  svn_stringbuf_appendbytes (db->buffer, buffer, *len);
 
   /* Read the header, if we have enough bytes for that.  */
   p = (const unsigned char *) db->buffer->data;
@@ -448,7 +448,7 @@ write_handler (void *baton,
         }
     }
   window->new_data
-    = svn_string_ncreate ((const char *) p, newlen, db->subpool);
+    = svn_stringbuf_ncreate ((const char *) p, newlen, db->subpool);
   window->pool = db->subpool;
 
   /* Send it off.  */
@@ -459,7 +459,7 @@ write_handler (void *baton,
   db->subpool = svn_pool_create (db->pool);
   p += newlen;
   remaining = db->buffer->data + db->buffer->len - (const char *) p;
-  db->buffer = svn_string_ncreate ((const char *) p, remaining, db->subpool);
+  db->buffer = svn_stringbuf_ncreate ((const char *) p, remaining, db->subpool);
 
   /* Remember the offset and length of the source view for next time.  */
   db->last_sview_offset = sview_offset;
@@ -503,7 +503,7 @@ svn_txdelta_parse_svndiff (svn_txdelta_window_handler_t handler,
   db->consumer_baton = handler_baton;
   db->pool = subpool;
   db->subpool = svn_pool_create (subpool);
-  db->buffer = svn_string_create ("", db->subpool);
+  db->buffer = svn_stringbuf_create ("", db->subpool);
   db->last_sview_offset = 0;
   db->last_sview_len = 0;
   db->header_bytes = 0;

@@ -50,7 +50,7 @@ apply_delta (const svn_delta_edit_fns_t *before_editor,
   /* If not given an ancestor path, we will (for the time being)
      simply create an empty one. */
   if (! ancestor_path)
-    ancestor_path = svn_string_create ("", pool);
+    ancestor_path = svn_stringbuf_create ("", pool);
       
   if (is_update)
     {

@@ -64,7 +64,7 @@ svn_wc__entries_init (svn_stringbuf_t *path,
                          svn_xml_normal,
                          SVN_WC__ENTRIES_TOPLEVEL,
                          "xmlns",
-                         svn_string_create (SVN_XML_NAMESPACE, pool),
+                         svn_stringbuf_create (SVN_XML_NAMESPACE, pool),
                          NULL);
 
   /* Add an entry for the dir itself -- name is absent, only the
@@ -75,9 +75,9 @@ svn_wc__entries_init (svn_stringbuf_t *path,
      svn_xml_self_closing,
      SVN_WC__ENTRIES_ENTRY,
      SVN_WC_ENTRY_ATTR_KIND,
-     svn_string_create (SVN_WC__ENTRIES_ATTR_DIR_STR, pool), 
+     svn_stringbuf_create (SVN_WC__ENTRIES_ATTR_DIR_STR, pool), 
      SVN_WC_ENTRY_ATTR_REVISION,
-     svn_string_create (initial_revstr, pool),
+     svn_stringbuf_create (initial_revstr, pool),
      SVN_WC_ENTRY_ATTR_ANCESTOR,
      ancestor_path,
      NULL);
@@ -386,7 +386,7 @@ take_from_entry (svn_wc_entry_t *src, svn_wc_entry_t *dst, apr_pool_t *pool)
       svn_stringbuf_t *name = apr_hash_get (dst->attributes,
                                          SVN_WC_ENTRY_ATTR_NAME,
                                          APR_HASH_KEY_STRING);
-      dst->ancestor = svn_string_dup (src->ancestor, pool);
+      dst->ancestor = svn_stringbuf_dup (src->ancestor, pool);
       svn_path_add_component (dst->ancestor, name,
                               svn_path_repos_style);
     }
@@ -438,7 +438,7 @@ resolve_to_defaults (svn_stringbuf_t *path,
 
       apr_hash_this (hi, &key, &keylen, &val);
       this_entry = val;
-      entryname = svn_string_ncreate (key, keylen, pool);
+      entryname = svn_stringbuf_ncreate (key, keylen, pool);
 
       if (this_entry == default_entry) 
         /* THIS_DIR already has all the information it can possibly
@@ -476,7 +476,7 @@ normalize_entry (svn_wc_entry_t *entry, apr_pool_t *pool)
   if (SVN_IS_VALID_REVNUM (entry->revision))
     apr_hash_set (entry->attributes,
                   SVN_WC_ENTRY_ATTR_REVISION, APR_HASH_KEY_STRING,
-                  svn_string_createf (pool, "%ld", entry->revision));
+                  svn_stringbuf_createf (pool, "%ld", entry->revision));
   
   /* Ancestor */
   if ((entry->ancestor) && (entry->ancestor->len))
@@ -488,7 +488,7 @@ normalize_entry (svn_wc_entry_t *entry, apr_pool_t *pool)
   switch (entry->kind)
     {
     case svn_node_dir:
-      valuestr = svn_string_create (SVN_WC__ENTRIES_ATTR_DIR_STR, pool);
+      valuestr = svn_stringbuf_create (SVN_WC__ENTRIES_ATTR_DIR_STR, pool);
       break;
 
     case svn_node_none:
@@ -498,7 +498,7 @@ normalize_entry (svn_wc_entry_t *entry, apr_pool_t *pool)
     case svn_node_file:
     case svn_node_unknown:
     default:
-      valuestr = svn_string_create (SVN_WC__ENTRIES_ATTR_FILE_STR, pool);
+      valuestr = svn_stringbuf_create (SVN_WC__ENTRIES_ATTR_FILE_STR, pool);
       break;
     }
 
@@ -510,15 +510,15 @@ normalize_entry (svn_wc_entry_t *entry, apr_pool_t *pool)
   switch (entry->schedule)
     {
     case svn_wc_schedule_add:
-      valuestr = svn_string_create (SVN_WC_ENTRY_VALUE_ADD, pool);
+      valuestr = svn_stringbuf_create (SVN_WC_ENTRY_VALUE_ADD, pool);
       break;
 
     case svn_wc_schedule_delete:
-      valuestr = svn_string_create (SVN_WC_ENTRY_VALUE_DELETE, pool);
+      valuestr = svn_stringbuf_create (SVN_WC_ENTRY_VALUE_DELETE, pool);
       break;
 
     case svn_wc_schedule_replace:
-      valuestr = svn_string_create (SVN_WC_ENTRY_VALUE_REPLACE, pool);
+      valuestr = svn_stringbuf_create (SVN_WC_ENTRY_VALUE_REPLACE, pool);
       break;
 
     case svn_wc_schedule_normal:
@@ -535,11 +535,11 @@ normalize_entry (svn_wc_entry_t *entry, apr_pool_t *pool)
   switch (entry->existence)
     {
     case svn_wc_existence_added:
-      valuestr = svn_string_create (SVN_WC_ENTRY_VALUE_ADDED, pool);
+      valuestr = svn_stringbuf_create (SVN_WC_ENTRY_VALUE_ADDED, pool);
       break;
 
     case svn_wc_existence_deleted:
-      valuestr = svn_string_create (SVN_WC_ENTRY_VALUE_DELETED, pool);
+      valuestr = svn_stringbuf_create (SVN_WC_ENTRY_VALUE_DELETED, pool);
       break;
 
     case svn_wc_existence_normal:
@@ -553,7 +553,7 @@ normalize_entry (svn_wc_entry_t *entry, apr_pool_t *pool)
                 valuestr);
 
   /* Conflicted */
-  valuestr = entry->conflicted ? svn_string_create ("true", pool) : NULL;
+  valuestr = entry->conflicted ? svn_stringbuf_create ("true", pool) : NULL;
 
   apr_hash_set (entry->attributes,
                 SVN_WC_ENTRY_ATTR_CONFLICTED, APR_HASH_KEY_STRING,
@@ -703,7 +703,7 @@ svn_wc_entry (svn_wc_entry_t **entry,
       svn_path_split (path, &dir, &basename, svn_path_local_style, pool);
 
       if (svn_path_is_empty (dir, svn_path_local_style))
-        svn_string_set (dir, ".");
+        svn_stringbuf_set (dir, ".");
 
       err = svn_wc_check_wc (dir, &is_wc, pool);
       if (err)
@@ -908,10 +908,10 @@ write_entry (svn_stringbuf_t **output,
              don't write out the ancestor. */
           if (this_entry->ancestor)
             {
-              this_path = svn_string_dup (this_dir->ancestor, pool);
+              this_path = svn_stringbuf_dup (this_dir->ancestor, pool);
               svn_path_add_component_nts (this_path, this_entry_name,
                                           svn_path_repos_style);
-              if (svn_string_compare (this_path, this_entry->ancestor))
+              if (svn_stringbuf_compare (this_path, this_entry->ancestor))
                 apr_hash_set (this_entry->attributes, 
                               SVN_WC_ENTRY_ATTR_ANCESTOR,
                               APR_HASH_KEY_STRING,
@@ -953,7 +953,7 @@ svn_wc__entries_write (apr_hash_t *entries,
   svn_xml_make_open_tag (&bigstr, pool, svn_xml_normal,
                          SVN_WC__ENTRIES_TOPLEVEL,
                          "xmlns",
-                         svn_string_create (SVN_XML_NAMESPACE, pool),
+                         svn_stringbuf_create (SVN_XML_NAMESPACE, pool),
                          NULL);
 
   /* Get a copy of the "this dir" entry for comparison purposes. */
@@ -1410,7 +1410,7 @@ svn_wc__entry_modify (svn_stringbuf_t *path,
   if (err) return err;
   
   if (name == NULL)
-    name = svn_string_create (SVN_WC_ENTRY_THIS_DIR, pool);
+    name = svn_stringbuf_create (SVN_WC_ENTRY_THIS_DIR, pool);
  
   if (modify_flags & SVN_WC__ENTRY_MODIFY_SCHEDULE)
     {
@@ -1449,7 +1449,7 @@ svn_wc__entry_dup (svn_wc_entry_t *entry, apr_pool_t *pool)
 
   dupentry->revision   = entry->revision;
   if (entry->ancestor)
-    dupentry->ancestor = svn_string_dup (entry->ancestor, pool);
+    dupentry->ancestor = svn_stringbuf_dup (entry->ancestor, pool);
   dupentry->kind       = entry->kind;
   dupentry->schedule   = entry->schedule;
   dupentry->existence  = entry->existence;
@@ -1478,8 +1478,8 @@ svn_wc__entry_dup (svn_wc_entry_t *entry, apr_pool_t *pool)
       val = (svn_stringbuf_t *) v;
 
       /* Allocate two *new* svn_stringbuf_t's from them, out of POOL. */
-      new_keystring = svn_string_ncreate (key, klen, pool);
-      new_valstring = svn_string_dup (val, pool);
+      new_keystring = svn_stringbuf_ncreate (key, klen, pool);
+      new_valstring = svn_stringbuf_dup (val, pool);
 
       /* Store in *new* hashtable */
       apr_hash_set (dupentry->attributes,
@@ -1613,9 +1613,9 @@ svn_wc__compose_paths (apr_hash_t *paths, apr_pool_t *pool)
          shorter parent path is already in the hash.  If it is, remove
          the original path from the hash. */
       {
-        svn_stringbuf_t *shrinking = svn_string_dup (path, pool);
+        svn_stringbuf_t *shrinking = svn_stringbuf_dup (path, pool);
         for (svn_path_remove_component (shrinking, svn_path_local_style);
-             (! svn_string_isempty (shrinking));
+             (! svn_stringbuf_isempty (shrinking));
              svn_path_remove_component (shrinking, svn_path_local_style))
           {
             if (apr_hash_get (paths, shrinking->data, shrinking->len))

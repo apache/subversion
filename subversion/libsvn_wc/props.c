@@ -85,16 +85,16 @@ svn_wc__get_local_propchanges (apr_array_header_t **local_propchanges,
         {
           /* Add a delete event to the array */
           svn_prop_t *p = apr_pcalloc (pool, sizeof(*p));
-          p->name = svn_string_ncreate ((char *) key, klen, pool);
+          p->name = svn_stringbuf_ncreate ((char *) key, klen, pool);
           p->value = NULL;
           
           *((svn_prop_t **)apr_array_push (ary)) = p;
         }
-      else if (! svn_string_compare (propval1, propval2))
+      else if (! svn_stringbuf_compare (propval1, propval2))
         {
           /* Add a set (modification) event to the array */
           svn_prop_t *p = apr_pcalloc (pool, sizeof(*p));
-          p->name = svn_string_ncreate ((char *) key, klen, pool);
+          p->name = svn_stringbuf_ncreate ((char *) key, klen, pool);
           p->value = propval2;
           
           *((svn_prop_t **)apr_array_push (ary)) = p;
@@ -121,7 +121,7 @@ svn_wc__get_local_propchanges (apr_array_header_t **local_propchanges,
         {
           /* Add a set (creation) event to the array */
           svn_prop_t *p = apr_pcalloc (pool, sizeof(*p));
-          p->name = svn_string_ncreate ((char *) key, klen, pool);
+          p->name = svn_stringbuf_ncreate ((char *) key, klen, pool);
           p->value = propval2;
           
           *((svn_prop_t **)apr_array_push (ary)) = p;
@@ -168,7 +168,7 @@ svn_wc__conflicting_propchanges_p (svn_stringbuf_t **description,
      (After all, if they affect different property names, how can they
      possibly conflict?)  But still, let's make this routine
      `complete' by checking anyway. */
-  if (! svn_string_compare (local->name, update->name))
+  if (! svn_stringbuf_compare (local->name, update->name))
     return FALSE;  /* no conflict */
 
   /* If one change wants to delete a property and the other wants to
@@ -177,7 +177,7 @@ svn_wc__conflicting_propchanges_p (svn_stringbuf_t **description,
   if ((local->value != NULL) && (update->value == NULL))
     {
       *description =
-        svn_string_createf
+        svn_stringbuf_createf
         (pool, "prop `%s': user set value to '%s', but update deletes it.\n",
          local->name->data, local->value->data);
       return TRUE;  /* conflict */
@@ -185,7 +185,7 @@ svn_wc__conflicting_propchanges_p (svn_stringbuf_t **description,
   if ((local->value == NULL) && (update->value != NULL))
     {
       *description =
-        svn_string_createf
+        svn_stringbuf_createf
         (pool, "prop `%s': user deleted, but update sets it to '%s'.\n",
          local->name->data, update->value->data);
       return TRUE;  /* conflict */
@@ -198,10 +198,10 @@ svn_wc__conflicting_propchanges_p (svn_stringbuf_t **description,
 
   /* If both changes set the property, it's a conflict iff the values
      are different */
-  else if (! svn_string_compare (local->value, update->value))
+  else if (! svn_stringbuf_compare (local->value, update->value))
     {
       *description =
-        svn_string_createf
+        svn_stringbuf_createf
         (pool, "prop `%s': user set to '%s', but update set to '%s'.\n",
          local->name->data, local->value->data, update->value->data);
       return TRUE;  /* conflict */
@@ -411,15 +411,15 @@ svn_wc__do_property_merge (svn_stringbuf_t *path,
   if (name == NULL)
     {
       /* We must be merging props on the directory PATH  */
-      entryname = svn_string_create (SVN_WC_ENTRY_THIS_DIR, pool);
+      entryname = svn_stringbuf_create (SVN_WC_ENTRY_THIS_DIR, pool);
       full_path = path;
       is_dir = TRUE;
     }
   else
     {
       /* We must be merging props on the file PATH/NAME */
-      entryname = svn_string_dup (name, pool);
-      full_path = svn_string_dup (path, pool);
+      entryname = svn_stringbuf_dup (name, pool);
+      full_path = svn_stringbuf_dup (path, pool);
       svn_path_add_component (full_path, name, svn_path_local_style);
       is_dir = FALSE;
     }
@@ -475,7 +475,7 @@ svn_wc__do_property_merge (svn_stringbuf_t *path,
           local_change =
             (((svn_prop_t **)(local_propchanges)->elts)[j]);
           
-          if (svn_string_compare (local_change->name, update_change->name))
+          if (svn_stringbuf_compare (local_change->name, update_change->name))
             {
               found_match = 1;
               break;
@@ -521,7 +521,7 @@ svn_wc__do_property_merge (svn_stringbuf_t *path,
                   {
                     /* Dealing with directory "path" */
                     reject_tmp_path = 
-                      svn_wc__adm_path (svn_string_create ("", pool),
+                      svn_wc__adm_path (svn_stringbuf_create ("", pool),
                                         TRUE, /* use tmp */
                                         pool,
                                         tmpname->data,
@@ -531,7 +531,7 @@ svn_wc__do_property_merge (svn_stringbuf_t *path,
                   {
                     /* Dealing with file "path/name" */
                     reject_tmp_path = 
-                      svn_wc__adm_path (svn_string_create ("", pool),
+                      svn_wc__adm_path (svn_stringbuf_create ("", pool),
                                         TRUE, 
                                         pool,
                                         SVN_WC__ADM_PROPS,
@@ -584,23 +584,23 @@ svn_wc__do_property_merge (svn_stringbuf_t *path,
      that each SVN subdir remains separable when executing run_log().  */
   if (is_dir)
     {
-      tmp_prop_base = svn_wc__adm_path (svn_string_create ("", pool),
+      tmp_prop_base = svn_wc__adm_path (svn_stringbuf_create ("", pool),
                                         1, /* tmp */
                                         pool,
                                         SVN_WC__ADM_DIR_PROP_BASE,
                                         NULL);
-      real_prop_base = svn_wc__adm_path (svn_string_create ("", pool),
+      real_prop_base = svn_wc__adm_path (svn_stringbuf_create ("", pool),
                                          0, /* no tmp */
                                          pool,
                                          SVN_WC__ADM_DIR_PROP_BASE,
                                          NULL);
       
-      tmp_props = svn_wc__adm_path (svn_string_create ("", pool),
+      tmp_props = svn_wc__adm_path (svn_stringbuf_create ("", pool),
                                     1, /* tmp */
                                     pool,
                                     SVN_WC__ADM_DIR_PROPS,
                                     NULL);
-      real_props = svn_wc__adm_path (svn_string_create ("", pool),
+      real_props = svn_wc__adm_path (svn_stringbuf_create ("", pool),
                                      0, /* no tmp */
                                      pool,
                                      SVN_WC__ADM_DIR_PROPS,
@@ -608,26 +608,26 @@ svn_wc__do_property_merge (svn_stringbuf_t *path,
     }
   else 
     {
-      tmp_prop_base = svn_wc__adm_path (svn_string_create ("", pool),
+      tmp_prop_base = svn_wc__adm_path (svn_stringbuf_create ("", pool),
                                         1, /* tmp */
                                         pool,
                                         SVN_WC__ADM_PROP_BASE,
                                         name->data,
                                         NULL);
-      real_prop_base = svn_wc__adm_path (svn_string_create ("", pool),
+      real_prop_base = svn_wc__adm_path (svn_stringbuf_create ("", pool),
                                          0, /* no tmp */
                                          pool,
                                          SVN_WC__ADM_PROP_BASE,
                                          name->data,
                                          NULL);
       
-      tmp_props = svn_wc__adm_path (svn_string_create ("", pool),
+      tmp_props = svn_wc__adm_path (svn_stringbuf_create ("", pool),
                                     1, /* tmp */
                                     pool,
                                     SVN_WC__ADM_PROPS,
                                     name->data,
                                     NULL);
-      real_props = svn_wc__adm_path (svn_string_create ("", pool),
+      real_props = svn_wc__adm_path (svn_stringbuf_create ("", pool),
                                      0, /* no tmp */
                                      pool,
                                      SVN_WC__ADM_PROPS,
@@ -686,11 +686,11 @@ svn_wc__do_property_merge (svn_stringbuf_t *path,
           /* Reserve a new .prej file *above* the SVN/ directory by
              opening and closing it. */
           svn_stringbuf_t *reserved_path;
-          svn_stringbuf_t *full_reject_path = svn_string_dup (path, pool);
+          svn_stringbuf_t *full_reject_path = svn_stringbuf_dup (path, pool);
 
           if (is_dir)
             svn_path_add_component (full_reject_path,
-                                    svn_string_create
+                                    svn_stringbuf_create
                                     (SVN_WC__THIS_DIR_PREJ,
                                      pool),
                                     svn_path_local_style);
@@ -753,7 +753,7 @@ svn_wc__do_property_merge (svn_stringbuf_t *path,
                              SVN_WC__LOG_ATTR_NAME,
                              entryname,
                              SVN_WC_ENTRY_ATTR_CONFLICTED,
-                             svn_string_create ("true", pool),
+                             svn_stringbuf_create ("true", pool),
                              SVN_WC_ENTRY_ATTR_PREJFILE,
                              reject_path,
                              NULL);      

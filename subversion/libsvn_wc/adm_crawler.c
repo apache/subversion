@@ -82,7 +82,7 @@ push_stack (struct stack_object **stack,
   struct stack_object *new_top = apr_pcalloc (pool, sizeof (*new_top));
 
   /* Store path and baton in a new stack object */
-  new_top->path = svn_string_dup (path, pool);
+  new_top->path = svn_stringbuf_dup (path, pool);
   new_top->baton = baton;
   new_top->this_dir = entry;
   new_top->next = NULL;
@@ -135,7 +135,7 @@ remove_all_locks (apr_hash_t *locks, apr_pool_t *pool)
       svn_stringbuf_t *unlock_path;
       
       apr_hash_this (hi, &key, &klen, &val);
-      unlock_path = svn_string_create ((char *)key, pool);
+      unlock_path = svn_stringbuf_create ((char *)key, pool);
       
       err = svn_wc__unlock (unlock_path, pool);
       if (err) 
@@ -278,7 +278,7 @@ do_dir_replaces (void **newest_baton,
   *newest_baton = stackptr->baton;
 
   /* Lock this youngest directory */
-  err = do_lock (svn_string_dup (stackptr->path, top_pool), locks, top_pool);
+  err = do_lock (svn_stringbuf_dup (stackptr->path, top_pool), locks, top_pool);
   if (err) return err;
   
   return SVN_NO_ERROR;
@@ -433,7 +433,7 @@ do_postfix_text_deltas (apr_hash_t *affected_targets,
 
       if (tb->text_modified_p)
         {
-          entrypath = svn_string_create ((char *) key, pool);
+          entrypath = svn_stringbuf_create ((char *) key, pool);
           
           err = do_apply_textdelta (entrypath, editor, tb, pool);
           if (err) return err;
@@ -544,7 +544,7 @@ bail_if_unresolved_conflict (svn_stringbuf_t *full_path,
       
       if (entry->kind == svn_node_file)
         {
-          parent_dir = svn_string_dup (full_path, pool);
+          parent_dir = svn_stringbuf_dup (full_path, pool);
           svn_path_remove_component (parent_dir, svn_path_local_style);
         }
       else if (entry->kind == svn_node_dir)
@@ -601,7 +601,7 @@ verify_tree_deletion (svn_stringbuf_t *dir,
   apr_pool_t *subpool = svn_pool_create (pool);
   apr_hash_t *entries;
   apr_hash_index_t *hi;
-  svn_stringbuf_t *fullpath = svn_string_dup (dir, pool);
+  svn_stringbuf_t *fullpath = svn_stringbuf_dup (dir, pool);
 
   if ((schedule != svn_wc_schedule_delete) 
       && (schedule != svn_wc_schedule_replace))
@@ -662,7 +662,7 @@ verify_tree_deletion (svn_stringbuf_t *dir,
         SVN_ERR (verify_tree_deletion (fullpath, entry->schedule, subpool));
 
       /* Reset FULLPATH to just hold this dir's name. */
-      svn_string_set (fullpath, dir->data);
+      svn_stringbuf_set (fullpath, dir->data);
 
       /* Clear our per-iteration pool. */
       svn_pool_clear (subpool);
@@ -785,7 +785,7 @@ report_local_mods (svn_stringbuf_t *path,
       if (! strcmp (keystring, SVN_WC_ENTRY_THIS_DIR))
         current_entry_name = NULL;
       else
-        current_entry_name = svn_string_create (keystring, subpool);
+        current_entry_name = svn_stringbuf_create (keystring, subpool);
       current_entry = (svn_wc_entry_t *) val;
 
       /* This entry gets deleted if all of the following hold true:
@@ -816,12 +816,12 @@ report_local_mods (svn_stringbuf_t *path,
         {
           if (! current_entry_name)
             continue;                   /* skip THIS_DIR */
-          if (! svn_string_compare (filename, current_entry_name))
+          if (! svn_stringbuf_compare (filename, current_entry_name))
             continue;                   /* skip differing entryname */
         }
 
       /* Construct a full path to the current entry */
-      full_path_to_entry = svn_string_dup (path, subpool);
+      full_path_to_entry = svn_stringbuf_dup (path, subpool);
       if (current_entry_name != NULL)
         svn_path_add_component (full_path_to_entry, current_entry_name,
                                 svn_path_local_style);
@@ -873,7 +873,7 @@ report_local_mods (svn_stringbuf_t *path,
             struct target_baton *tb = apr_pcalloc (top_pool, sizeof (*tb));
             
             tb->entry = svn_wc__entry_dup (current_entry, top_pool);
-            longpath = svn_string_dup (full_path_to_entry, top_pool);
+            longpath = svn_stringbuf_dup (full_path_to_entry, top_pool);
             apr_hash_set (affected_targets, longpath->data, longpath->len, tb);
           }
         }  /* END DELETION CHECK */
@@ -968,7 +968,7 @@ report_local_mods (svn_stringbuf_t *path,
       
           /* Store the (added) affected-target for safe keeping
              (possibly to be used later for postfix text-deltas) */
-          longpath = svn_string_dup (full_path_to_entry, top_pool);
+          longpath = svn_stringbuf_dup (full_path_to_entry, top_pool);
           apr_hash_set (affected_targets, longpath->data, longpath->len, tb);
 
         } /* END ADDITION CHECK */
@@ -1010,7 +1010,7 @@ report_local_mods (svn_stringbuf_t *path,
           
               /* Build the full path to this entry, also from the
                  top-pool. */
-              longpath = svn_string_dup (full_path_to_entry, top_pool);
+              longpath = svn_stringbuf_dup (full_path_to_entry, top_pool);
           
               /* Do what's necesary to get a baton for current directory */
               if (! dir_baton)
@@ -1139,7 +1139,7 @@ report_revisions (svn_stringbuf_t *wc_path,
   apr_pool_t *subpool = svn_pool_create (pool);
 
   /* Construct the actual 'fullpath' = wc_path + dir_path */
-  svn_stringbuf_t *full_path = svn_string_dup (wc_path, subpool);
+  svn_stringbuf_t *full_path = svn_stringbuf_dup (wc_path, subpool);
   svn_path_add_component (full_path, dir_path, svn_path_local_style);
 
   /* Get both the SVN Entries and the actual on-disk entries. */
@@ -1167,8 +1167,8 @@ report_revisions (svn_stringbuf_t *wc_path,
           {
             apr_status_t status;
 
-            current_entry_name = svn_string_create (keystring, subpool);
-            printable_path = svn_string_dup (full_path, subpool);
+            current_entry_name = svn_stringbuf_create (keystring, subpool);
+            printable_path = svn_stringbuf_dup (full_path, subpool);
             svn_path_add_component (printable_path, current_entry_name,
                                     svn_path_local_style);
             
@@ -1205,10 +1205,10 @@ report_revisions (svn_stringbuf_t *wc_path,
       if (! strcmp (keystring, SVN_WC_ENTRY_THIS_DIR))
         continue;
       else
-        current_entry_name = svn_string_create (keystring, subpool);
+        current_entry_name = svn_stringbuf_create (keystring, subpool);
 
       /* Compute the complete path of the entry, relative to dir_path. */
-      full_entry_path = svn_string_dup (dir_path, subpool);
+      full_entry_path = svn_stringbuf_dup (dir_path, subpool);
       if (current_entry_name)
         svn_path_add_component (full_entry_path, current_entry_name,
                                 svn_path_local_style);
@@ -1256,7 +1256,7 @@ report_revisions (svn_stringbuf_t *wc_path,
               {
                 svn_wc_entry_t *subdir_entry;
                 svn_stringbuf_t *megalong_path = 
-                  svn_string_dup (wc_path, subpool);
+                  svn_stringbuf_dup (wc_path, subpool);
                 svn_path_add_component (megalong_path, full_entry_path,
                                         svn_path_local_style);
                 SVN_ERR (svn_wc_entry (&subdir_entry, megalong_path, subpool));
@@ -1389,7 +1389,7 @@ svn_wc_crawl_local_mods (svn_stringbuf_t *parent_dir,
              Unfortunately, report_local_mods expects "real" paths
              (i.e. either absolute, or relative to CWD.)  So we prepend
              parent_dir to all the targets here. */
-          target = svn_string_dup (parent_dir, pool);
+          target = svn_stringbuf_dup (parent_dir, pool);
           svn_path_add_component (target, relative_target,
                                   svn_path_local_style);
           
@@ -1433,7 +1433,7 @@ svn_wc_crawl_local_mods (svn_stringbuf_t *parent_dir,
                   
                   svn_stringbuf_t *component = 
                     (((svn_stringbuf_t **) components->elts)[j]);
-                  new_path = svn_string_dup (stack->path, pool);
+                  new_path = svn_stringbuf_dup (stack->path, pool);
                   svn_path_add_component (new_path, component,
                                           svn_path_local_style);
                   
@@ -1572,7 +1572,7 @@ svn_wc_crawl_revisions (svn_stringbuf_t *path,
      top-level directory being updated is at BASE_REV.  Its PATH
      argument is ignored. */
   SVN_ERR (reporter->set_path (report_baton,
-                               svn_string_create ("", pool),
+                               svn_stringbuf_create ("", pool),
                                base_rev));
 
   if (entry->kind == svn_node_dir)
@@ -1580,7 +1580,7 @@ svn_wc_crawl_revisions (svn_stringbuf_t *path,
       /* Recursively crawl ROOT_DIRECTORY and report differing
          revisions. */
       err = report_revisions (path,
-                              svn_string_create ("", pool),
+                              svn_stringbuf_create ("", pool),
                               base_rev,
                               reporter, report_baton, fbtable, pool);
       if (err)
@@ -1603,7 +1603,7 @@ svn_wc_crawl_revisions (svn_stringbuf_t *path,
          directory), and that target is a file, we need to pass an
          empty string to set_path. */
       err = reporter->set_path (report_baton, 
-                                svn_string_create ("", pool),
+                                svn_stringbuf_create ("", pool),
                                 base_rev);
       if (err)
         {

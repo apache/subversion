@@ -105,7 +105,7 @@ static void send_vsn_url(item_baton_t *baton)
     }
 
   stable_id = svn_fs_unparse_id(id, baton->pool);
-  svn_string_appendcstr(stable_id, baton->path);
+  svn_stringbuf_appendcstr(stable_id, baton->path);
 
   href = dav_svn_build_uri(baton->uc->resource->info->repos,
 			   DAV_SVN_BUILD_URI_VERSION,
@@ -404,7 +404,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
     {
     }
 
-  fs_base = svn_string_create(resource->info->repos_path, resource->pool);
+  fs_base = svn_stringbuf_create(resource->info->repos_path, resource->pool);
   serr = svn_repos_begin_report(&rbaton, revnum,
 				resource->info->repos->fs, fs_base,
 				editor, &uc, resource->pool);
@@ -416,7 +416,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
     }
 
   /* ### move this into svn_string.h */
-#define MAKE_BUFFER(p) svn_string_ncreate("", 0, (p))
+#define MAKE_BUFFER(p) svn_stringbuf_ncreate("", 0, (p))
   pathstr = MAKE_BUFFER(resource->pool);
 
   /* scan the XML doc for state information */
@@ -431,7 +431,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
 
 	path = dav_xml_get_cdata(child, resource->pool, 1 /* strip_white */);
 
-	svn_string_set(pathstr, path);
+	svn_stringbuf_set(pathstr, path);
 	serr = svn_repos_set_path(rbaton, pathstr, rev);
 	if (serr != NULL)
 	  {

@@ -760,7 +760,7 @@ static dav_resource *dav_svn_create_private_resource(
       break;
   /* assert: defn->name != NULL */
 
-  path = svn_string_createf(base->pool, "/%s/%s",
+  path = svn_stringbuf_createf(base->pool, "/%s/%s",
                             base->info->repos->special_uri, defn->name);
 
   comb = apr_pcalloc(base->pool, sizeof(*comb));
@@ -878,7 +878,7 @@ static dav_error * dav_svn_get_resource(request_rec *r,
      lifetime to store here. */
   /* ### that comment no longer applies. we're creating a string with its
      ### own lifetime now. so WHY are we using a string? hmm... */
-  comb->priv.uri_path = svn_string_create(relative, r->pool);
+  comb->priv.uri_path = svn_stringbuf_create(relative, r->pool);
 
   /* initialize this until we put something real here */
   comb->priv.root.rev = SVN_INVALID_REVNUM;
@@ -1027,7 +1027,7 @@ static int dav_svn_is_same_resource(const dav_resource *res1,
 
   /* ### what if the same resource were reached via two URIs? */
 
-  return svn_string_compare(res1->info->uri_path, res2->info->uri_path);
+  return svn_stringbuf_compare(res1->info->uri_path, res2->info->uri_path);
 }
 
 static int dav_svn_is_parent_resource(const dav_resource *res1,
@@ -1449,9 +1449,9 @@ static dav_error * dav_svn_do_walk(dav_svn_walker_context *ctx, int depth)
   /* append "/" to the paths, in preparation for appending child names.
      don't add "/" if the paths are simply "/" */
   if (ctx->info.uri_path->data[ctx->info.uri_path->len - 1] != '/')
-    svn_string_appendcstr(ctx->info.uri_path, "/");
+    svn_stringbuf_appendcstr(ctx->info.uri_path, "/");
   if (ctx->repos_path->data[ctx->repos_path->len - 1] != '/')
-    svn_string_appendcstr(ctx->repos_path, "/");
+    svn_stringbuf_appendcstr(ctx->repos_path, "/");
 
   /* NOTE: the URI should already have a trailing "/" */
 
@@ -1496,9 +1496,9 @@ static dav_error * dav_svn_do_walk(dav_svn_walker_context *ctx, int depth)
         }
 
       /* append this child to our buffers */
-      svn_string_appendbytes(ctx->info.uri_path, key, klen);
-      svn_string_appendbytes(ctx->uri, key, klen);
-      svn_string_appendbytes(ctx->repos_path, key, klen);
+      svn_stringbuf_appendbytes(ctx->info.uri_path, key, klen);
+      svn_stringbuf_appendbytes(ctx->uri, key, klen);
+      svn_stringbuf_appendbytes(ctx->repos_path, key, klen);
 
       /* reset the pointers since the above may have changed them */
       ctx->res.uri = ctx->uri->data;
@@ -1523,7 +1523,7 @@ static dav_error * dav_svn_do_walk(dav_svn_walker_context *ctx, int depth)
           ctx->res.collection = TRUE;
 
           /* append a slash to the URI (the path doesn't need it yet) */
-          svn_string_appendcstr(ctx->uri, "/");
+          svn_stringbuf_appendcstr(ctx->uri, "/");
           ctx->res.uri = ctx->uri->data;
 
           /* recurse on this collection */
@@ -1567,21 +1567,21 @@ static dav_error * dav_svn_walk(const dav_walk_params *params, int depth,
 
   /* Don't monkey with the path from params->root. Create a new one.
      This path will then be extended/shortened as necessary. */
-  ctx.info.uri_path = svn_string_dup(ctx.info.uri_path, params->pool);
+  ctx.info.uri_path = svn_stringbuf_dup(ctx.info.uri_path, params->pool);
 
   /* prep the URI buffer */
-  ctx.uri = svn_string_create(params->root->uri, params->pool);
+  ctx.uri = svn_stringbuf_create(params->root->uri, params->pool);
 
   /* same for repos_path */
   if (ctx.info.repos_path == NULL)
     ctx.repos_path = NULL;
   else
-    ctx.repos_path = svn_string_create(ctx.info.repos_path, params->pool);
+    ctx.repos_path = svn_stringbuf_create(ctx.info.repos_path, params->pool);
 
   /* if we have a collection, then ensure the URI has a trailing "/" */
   /* ### get_resource always kills the trailing slash... */
   if (ctx.res.collection && ctx.uri->data[ctx.uri->len - 1] != '/') {
-    svn_string_appendcstr(ctx.uri, "/");
+    svn_stringbuf_appendcstr(ctx.uri, "/");
   }
 
   /* the current resource's URI is stored in the (telescoping) ctx.uri */
@@ -1610,11 +1610,11 @@ dav_resource *dav_svn_create_working_resource(const dav_resource *base,
   svn_stringbuf_t *path;
 
   if (base->baselined)
-    path = svn_string_createf(base->pool, "/%s/wbl/%s/%ld",
+    path = svn_stringbuf_createf(base->pool, "/%s/wbl/%s/%ld",
                               base->info->repos->special_uri,
                               activity_id, base->info->root.rev);
   else
-    path = svn_string_createf(base->pool, "/%s/wrk/%s%s",
+    path = svn_stringbuf_createf(base->pool, "/%s/wrk/%s%s",
                               base->info->repos->special_uri,
                               activity_id, base->info->repos_path);
   

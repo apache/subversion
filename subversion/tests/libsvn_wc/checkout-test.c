@@ -46,7 +46,7 @@ apply_delta (svn_stream_t *delta,
   /* Get the editor and friends... */
   err = svn_wc_get_checkout_editor (dest,
                                     /* Assume we're checking out root. */
-                                    svn_string_create ("", pool),
+                                    svn_stringbuf_create ("", pool),
                                     revision,
                                     &editor,
                                     &edit_baton,
@@ -58,7 +58,7 @@ apply_delta (svn_stream_t *delta,
   return svn_delta_xml_auto_parse (delta,
                                    editor,
                                    edit_baton,
-                                   svn_string_create ("", pool),
+                                   svn_stringbuf_create ("", pool),
                                    revision,
                                    pool);
 }
@@ -98,12 +98,12 @@ main (int argc, char **argv)
     }
 
   if (argc == 3)
-    target = svn_string_create (argv[2], pool);
+    target = svn_stringbuf_create (argv[2], pool);
 
   err = apply_delta
     (svn_stream_from_aprfile (src, pool),
      target,
-     svn_string_create (":ssh:jrandom@svn.tigris.org/repos", pool),
+     svn_stringbuf_create (":ssh:jrandom@svn.tigris.org/repos", pool),
      1,  /* kff todo: revision must be passed in, right? */
      pool);
   

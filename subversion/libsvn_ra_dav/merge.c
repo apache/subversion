@@ -479,7 +479,7 @@ static int end_element(void *userdata, const struct hip_xml_elm *elm,
       break;
 
     case ELEM_version_name:
-      svn_string_set(mc->vsn_name, cdata);
+      svn_stringbuf_set(mc->vsn_name, cdata);
       break;
 
     default:
@@ -520,7 +520,7 @@ svn_error_t * svn_ra_dav__merge_activity(
   mc.vsn_url = MAKE_BUFFER(pool);
 
   /* ### damn it */
-  mc.vsn_url_name = svn_string_create(SVN_RA_DAV__LP_VSN_URL, pool);
+  mc.vsn_url_name = svn_stringbuf_create(SVN_RA_DAV__LP_VSN_URL, pool);
 
   body = apr_psprintf(pool,
                       "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
@@ -545,7 +545,7 @@ svn_error_t * svn_ra_dav__merge_activity(
   path_str = MAKE_BUFFER(pool);
   for (i = 0; i < deleted_entries->nelts; ++i)
     {
-      svn_string_set(path_str,
+      svn_stringbuf_set(path_str,
                      APR_ARRAY_IDX(deleted_entries, i, const char *));
       SVN_ERR( (*close_commit)(close_baton, path_str, mc.rev) );
     }

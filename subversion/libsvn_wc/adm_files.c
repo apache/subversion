@@ -48,7 +48,7 @@ adm_subdir (void)
 svn_stringbuf_t *
 svn_wc__adm_subdir (apr_pool_t *pool)
 {
-  return svn_string_create (adm_subdir (), pool);
+  return svn_stringbuf_create (adm_subdir (), pool);
 }
 
 
@@ -133,7 +133,7 @@ svn_wc__adm_path (svn_stringbuf_t *path,
                   apr_pool_t *pool, 
                   ...)
 {
-  svn_stringbuf_t *newpath = svn_string_dup (path, pool);
+  svn_stringbuf_t *newpath = svn_stringbuf_dup (path, pool);
   va_list ap;
 
   va_start (ap, pool);
@@ -151,7 +151,7 @@ svn_wc__adm_path_exists (svn_stringbuf_t *path,
                          ...)
 {
   enum svn_node_kind kind;
-  svn_stringbuf_t *newpath = svn_string_dup (path, pool);
+  svn_stringbuf_t *newpath = svn_stringbuf_dup (path, pool);
   va_list ap;
 
   va_start (ap, pool);
@@ -297,7 +297,7 @@ sync_adm_file (svn_stringbuf_t *path,
   /* Some code duplication with close_adm_file() seems unavoidable,
      given how C va_lists work. */
 
-  svn_stringbuf_t *tmp_path = svn_string_dup (path, pool);
+  svn_stringbuf_t *tmp_path = svn_stringbuf_dup (path, pool);
   apr_status_t apr_err;
   int components_added;
   va_list ap;
@@ -402,7 +402,7 @@ prop_path_internal (svn_stringbuf_t **prop_path,
 
   if (is_wc)  /* It's not only a dir, it's a working copy dir */
     {
-      *prop_path = svn_string_dup (path, pool);
+      *prop_path = svn_stringbuf_dup (path, pool);
       extend_with_adm_name 
         (*prop_path,
          0,
@@ -416,7 +416,7 @@ prop_path_internal (svn_stringbuf_t **prop_path,
       svn_path_split (path, prop_path, &entry_name,
                       svn_path_local_style, pool);
       if (svn_path_is_empty (*prop_path, svn_path_local_style))
-        svn_string_set (*prop_path, ".");
+        svn_stringbuf_set (*prop_path, ".");
 
       err = svn_wc_check_wc (*prop_path, &is_wc, pool);
       if (err)
@@ -471,7 +471,7 @@ svn_wc__wcprop_path (svn_stringbuf_t **wcprop_path,
 
   if (is_wc)  /* It's not only a dir, it's a working copy dir */
     {
-      *wcprop_path = svn_string_dup (path, pool);
+      *wcprop_path = svn_stringbuf_dup (path, pool);
       extend_with_adm_name 
         (*wcprop_path,
          0,
@@ -561,8 +561,8 @@ open_adm_file (apr_file_t **handle,
         {
           svn_stringbuf_t *opath, *tmp_path;  /* just keep it all local */
 
-          opath    = svn_string_dup (path, pool);
-          tmp_path = svn_string_dup (path, pool);
+          opath    = svn_stringbuf_dup (path, pool);
+          tmp_path = svn_stringbuf_dup (path, pool);
 
           va_start (ap, pool);
           v_extend_with_adm_name (opath, 0, pool, ap);
@@ -647,7 +647,7 @@ close_adm_file (apr_file_t *fp,
       /* Some code duplication with sync_adm_file() seems unavoidable,
          given how C va_lists work. */
 
-      svn_stringbuf_t *tmp_path = svn_string_dup (path, pool);
+      svn_stringbuf_t *tmp_path = svn_stringbuf_dup (path, pool);
       
       /* Extend real name. */
       va_start (ap, pool);
@@ -1151,7 +1151,7 @@ init_adm (svn_stringbuf_t *path,
 
   /* SVN_WC__ADM_FORMAT */
   err = init_adm_file (path, SVN_WC__ADM_FORMAT,
-                       svn_string_create (format_contents, pool), pool);
+                       svn_stringbuf_create (format_contents, pool), pool);
   if (err)
     return err;
 
@@ -1186,7 +1186,7 @@ init_adm (svn_stringbuf_t *path,
   /* THIS FILE MUST BE CREATED LAST: 
      After this exists, the dir is considered complete. */
   err = init_adm_file (path, SVN_WC__ADM_README,
-                       svn_string_create (readme_contents, pool),
+                       svn_stringbuf_create (readme_contents, pool),
                        pool);
   if (err)
     return err;
@@ -1249,7 +1249,7 @@ svn_wc__adm_destroy (svn_stringbuf_t *path, apr_pool_t *pool)
      (which should also remove the lock file we created above) */
   {
     apr_status_t apr_err;
-    svn_stringbuf_t *adm_path = svn_string_dup (path, pool);
+    svn_stringbuf_t *adm_path = svn_stringbuf_dup (path, pool);
 
     svn_path_add_component (adm_path, svn_wc__adm_subdir (pool), 
                             svn_path_local_style);

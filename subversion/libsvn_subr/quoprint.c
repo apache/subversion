@@ -83,7 +83,7 @@ encode_bytes (svn_stringbuf_t *str, const char *data, apr_size_t len,
       /* Encode this character.  */
       if (ENCODE_AS_LITERAL(*p))
 	{
-	  svn_string_appendbytes (str, p, 1);
+	  svn_stringbuf_appendbytes (str, p, 1);
 	  (*linelen)++;
 	}
       else
@@ -91,14 +91,14 @@ encode_bytes (svn_stringbuf_t *str, const char *data, apr_size_t len,
 	  buf[0] = '=';
 	  buf[1] = hextab[(*p >> 4) & 0xf];
 	  buf[2] = hextab[*p & 0xf];
-	  svn_string_appendbytes (str, buf, 3);
+	  svn_stringbuf_appendbytes (str, buf, 3);
 	  *linelen += 3;
 	}
 
       /* Make sure our output lines don't exceed QUOPRINT_LINELEN.  */
       if (*linelen + 3 > QUOPRINT_LINELEN)
 	{
-	  svn_string_appendcstr (str, "=\n");
+	  svn_stringbuf_appendcstr (str, "=\n");
 	  *linelen = 0;
 	}
     }
@@ -111,7 +111,7 @@ encode_data (void *baton, const char *data, apr_size_t *len)
 {
   struct encode_baton *eb = baton;
   apr_pool_t *subpool = svn_pool_create (eb->pool);
-  svn_stringbuf_t *encoded = svn_string_create ("", subpool);
+  svn_stringbuf_t *encoded = svn_stringbuf_create ("", subpool);
   apr_size_t enclen;
   svn_error_t *err = SVN_NO_ERROR;
 
@@ -168,12 +168,12 @@ svn_quoprint_encode (svn_stream_t *output, apr_pool_t *pool)
 svn_stringbuf_t *
 svn_quoprint_encode_string (svn_stringbuf_t *str, apr_pool_t *pool)
 {
-  svn_stringbuf_t *encoded = svn_string_create ("", pool);
+  svn_stringbuf_t *encoded = svn_stringbuf_create ("", pool);
   int linelen = 0;
 
   encode_bytes (encoded, str->data, str->len, &linelen);
   if (linelen > 0)
-    svn_string_appendcstr (encoded, "=\n");
+    svn_stringbuf_appendcstr (encoded, "=\n");
   return encoded;
 }
 
@@ -209,7 +209,7 @@ decode_bytes (svn_stringbuf_t *str, const char *data, apr_size_t len,
 	{
 	  /* Literal character; append it if it's valid as such.  */
 	  if (VALID_LITERAL(*inbuf))
-	    svn_string_appendbytes (str, inbuf, 1);
+	    svn_stringbuf_appendbytes (str, inbuf, 1);
 	  *inbuflen = 0;
 	}
       else if (*inbuf == '=' && *inbuflen == 2 && inbuf[1] == '\n')
@@ -225,7 +225,7 @@ decode_bytes (svn_stringbuf_t *str, const char *data, apr_size_t len,
 	  if (find1 != NULL && find2 != NULL)
 	    {
 	      c = ((find1 - hextab) << 4) | (find2 - hextab);
-	      svn_string_appendbytes (str, &c, 1);
+	      svn_stringbuf_appendbytes (str, &c, 1);
 	    }
 	  *inbuflen = 0;
 	}
@@ -245,7 +245,7 @@ decode_data (void *baton, const char *data, apr_size_t *len)
 
   /* Decode this block of data.  */
   subpool = svn_pool_create (db->pool);
-  decoded = svn_string_create ("", subpool);
+  decoded = svn_stringbuf_create ("", subpool);
   decode_bytes (decoded, data, *len, db->buf, &db->buflen);
 
   /* Write the output, clean up, go home.  */
@@ -291,7 +291,7 @@ svn_quoprint_decode (svn_stream_t *output, apr_pool_t *pool)
 svn_stringbuf_t *
 svn_quoprint_decode_string (svn_stringbuf_t *str, apr_pool_t *pool)
 {
-  svn_stringbuf_t *decoded = svn_string_create ("", pool);
+  svn_stringbuf_t *decoded = svn_stringbuf_create ("", pool);
   unsigned char ingroup[4];
   int ingrouplen = 0;
 

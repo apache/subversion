@@ -32,7 +32,7 @@ void svn_ra_dav__copy_href(svn_stringbuf_t *dst, const char *src)
      server-relative path (i.e. this uri_parse is effectively a no-op).
   */
   (void) uri_parse(src, &parsed_url, NULL);
-  svn_string_set(dst, parsed_url.path);
+  svn_stringbuf_set(dst, parsed_url.path);
   uri_free(&parsed_url);
 }
 

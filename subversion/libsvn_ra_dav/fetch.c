@@ -168,7 +168,7 @@ static const struct hip_xml_elm report_elements[] =
 
 static svn_stringbuf_t *my_basename(const char *url, apr_pool_t *pool)
 {
-  svn_stringbuf_t *s = svn_string_create(url, pool);
+  svn_stringbuf_t *s = svn_stringbuf_create(url, pool);
 
   svn_path_canonicalize(s, svn_path_url_style);
 
@@ -191,7 +191,7 @@ static svn_error_t *simple_store_vsn_url(const char *vsn_url,
   svn_error_t *err;
 
   /* store the version URL as a property */
-  svn_string_set(vuh->value, vsn_url);
+  svn_stringbuf_set(vuh->value, vsn_url);
   err = (*setter)(baton, vuh->name, vuh->value);
   if (err)
     return svn_error_quick_wrap(err,
@@ -542,10 +542,10 @@ svn_error_t * svn_ra_dav__do_checkout(void *session_baton,
   PUSH_SUBDIR(subdirs, subdir);
 
   /* ### damn. gotta build a string. */
-  act_url_name = svn_string_create(SVN_RA_DAV__LP_ACTIVITY_URL, ras->pool);
+  act_url_name = svn_stringbuf_create(SVN_RA_DAV__LP_ACTIVITY_URL, ras->pool);
 
   /* prep the helper */
-  vuh.name = svn_string_create(SVN_RA_DAV__LP_VSN_URL, ras->pool);
+  vuh.name = svn_stringbuf_create(SVN_RA_DAV__LP_VSN_URL, ras->pool);
   vuh.value = MAKE_BUFFER(ras->pool);
 
   do
@@ -833,7 +833,7 @@ static int start_element(void *userdata, const struct hip_xml_elm *elm,
         {
           name = get_attr(atts, "name");
           /* ### verify we got it. punt on error. */
-          svn_string_set(rb->namestr, name);
+          svn_stringbuf_set(rb->namestr, name);
 
           err = (*rb->editor->replace_directory)(rb->namestr,
                                                  TOP_DIR(rb).baton, base,
@@ -849,13 +849,13 @@ static int start_element(void *userdata, const struct hip_xml_elm *elm,
     case ELEM_add_directory:
       name = get_attr(atts, "name");
       /* ### verify we got it. punt on error. */
-      svn_string_set(rb->namestr, name);
+      svn_stringbuf_set(rb->namestr, name);
 
       att = get_attr(atts, "copyfrom-path");
       if (att != NULL)
         {
           cpath = rb->cpathstr;
-          svn_string_set(cpath, att);
+          svn_stringbuf_set(cpath, att);
 
           att = get_attr(atts, "copyfrom-rev");
           /* ### verify we got it. punt on error. */
@@ -878,7 +878,7 @@ static int start_element(void *userdata, const struct hip_xml_elm *elm,
 
       name = get_attr(atts, "name");
       /* ### verify we got it. punt on error. */
-      svn_string_set(rb->namestr, name);
+      svn_stringbuf_set(rb->namestr, name);
 
       CHKERR( (*rb->editor->replace_file)(rb->namestr, TOP_DIR(rb).baton, base,
                                           &rb->file_baton) );
@@ -887,13 +887,13 @@ static int start_element(void *userdata, const struct hip_xml_elm *elm,
     case ELEM_add_file:
       name = get_attr(atts, "name");
       /* ### verify we got it. punt on error. */
-      svn_string_set(rb->namestr, name);
+      svn_stringbuf_set(rb->namestr, name);
 
       att = get_attr(atts, "copyfrom-path");
       if (att != NULL)
         {
           cpath = rb->cpathstr;
-          svn_string_set(cpath, att);
+          svn_stringbuf_set(cpath, att);
 
           att = get_attr(atts, "copyfrom-rev");
           /* ### verify we got it. punt on error. */
@@ -924,7 +924,7 @@ static int start_element(void *userdata, const struct hip_xml_elm *elm,
     case ELEM_delete_entry:
       name = get_attr(atts, "name");
       /* ### verify we got it. punt on error. */
-      svn_string_set(rb->namestr, name);
+      svn_stringbuf_set(rb->namestr, name);
 
       CHKERR( (*rb->editor->delete_entry)(rb->namestr, TOP_DIR(rb).baton) );
       break;
@@ -1078,7 +1078,7 @@ static svn_error_t * reporter_finish_report(void *report_baton)
   rb->cpathstr = MAKE_BUFFER(rb->ras->pool);
   rb->href = MAKE_BUFFER(rb->ras->pool);
 
-  rb->vuh.name = svn_string_create(SVN_RA_DAV__LP_VSN_URL, rb->ras->pool);
+  rb->vuh.name = svn_stringbuf_create(SVN_RA_DAV__LP_VSN_URL, rb->ras->pool);
   rb->vuh.value = MAKE_BUFFER(rb->ras->pool);
 
   fp = fopen(rb->fname->data, "rb");
@@ -1142,7 +1142,7 @@ svn_error_t * svn_ra_dav__do_update(void *session_baton,
      work.
   */
   /* ### fucking svn_stringbuf_t */
-  path = svn_string_create(".svn_update", ras->pool);
+  path = svn_stringbuf_create(".svn_update", ras->pool);
   SVN_ERR( svn_io_open_unique_file(&rb->tmpfile, &rb->fname, path,
                                    ".ra_dav", ras->pool) );
 

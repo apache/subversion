@@ -47,7 +47,7 @@ array_push_svn_string (apr_array_header_t *array,
                        apr_pool_t *pool)
 {
   (*((svn_stringbuf_t **) apr_array_push (array)))
-    = svn_string_create (str, pool);
+    = svn_stringbuf_create (str, pool);
 }
 
 /* Return the entry in svn_cl__cmd_table whose name matches CMD_NAME,
@@ -146,7 +146,7 @@ svn_cl__args_to_target_array (apr_getopt_t *os,
 
   for (; os->ind < os->argc; os->ind++)
     {
-      svn_stringbuf_t *target = svn_string_create (os->argv[os->ind], pool);
+      svn_stringbuf_t *target = svn_stringbuf_create (os->argv[os->ind], pool);
       svn_stringbuf_t *basename = svn_path_last_component (target,
                                                         svn_path_local_style,
                                                         pool);

@@ -95,7 +95,7 @@ svn_repos_set_path (void *report_baton,
          reported) + path (stuff relative to the target...this is the
          empty string in the file case since the target is the file
          itself, not a directory containing the file). */
-      from_path = svn_string_dup (rbaton->base_path, rbaton->pool);
+      from_path = svn_stringbuf_dup (rbaton->base_path, rbaton->pool);
       svn_path_add_component (from_path, rbaton->target, 
                               svn_path_repos_style);
       svn_path_add_component (from_path, path, svn_path_repos_style);
@@ -128,7 +128,7 @@ svn_repos_delete_path (void *report_baton,
      reported) + path (stuff relative to the target...this is the
      empty string in the file case since the target is the file
      itself, not a directory containing the file). */
-  delete_path = svn_string_dup (rbaton->base_path, rbaton->pool);
+  delete_path = svn_stringbuf_dup (rbaton->base_path, rbaton->pool);
   svn_path_add_component (delete_path, rbaton->target, 
                           svn_path_repos_style);
   svn_path_add_component (delete_path, path, svn_path_repos_style);
@@ -211,7 +211,7 @@ svn_repos_begin_report (void **report_baton,
 
   /* If the target is "this dir", clear it out. */
   if (svn_path_is_thisdir (rbaton->target, svn_path_repos_style))
-    svn_string_setempty (rbaton->target);
+    svn_stringbuf_setempty (rbaton->target);
 
   rbaton->pool = pool;
   

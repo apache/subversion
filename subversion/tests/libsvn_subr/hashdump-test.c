@@ -62,24 +62,24 @@ test1 (const char **msg, apr_pool_t *pool)
   /* Build a hash in memory, and fill it with test data. */
   proplist = apr_hash_make (pool);
 
-  key = svn_string_create ("color", pool);
+  key = svn_stringbuf_create ("color", pool);
   apr_hash_set (proplist, key->data, key->len,
-               svn_string_create ("red", pool));
+               svn_stringbuf_create ("red", pool));
   
-  key = svn_string_create ("wine review", pool);
+  key = svn_stringbuf_create ("wine review", pool);
   apr_hash_set (proplist, key->data, key->len,
-               svn_string_create (review, pool));
+               svn_stringbuf_create (review, pool));
   
-  key = svn_string_create ("price", pool);
+  key = svn_stringbuf_create ("price", pool);
   apr_hash_set (proplist, key->data, key->len,
-               svn_string_create ("US $6.50", pool));
+               svn_stringbuf_create ("US $6.50", pool));
 
   /* Test overwriting: same key both times, but different values. */
-  key = svn_string_create ("twice-used property name", pool);
+  key = svn_stringbuf_create ("twice-used property name", pool);
   apr_hash_set (proplist, key->data, key->len,
-               svn_string_create ("This is the FIRST value.", pool));
+               svn_stringbuf_create ("This is the FIRST value.", pool));
   apr_hash_set (proplist, key->data, key->len,
-               svn_string_create ("This is the SECOND value.", pool));
+               svn_stringbuf_create ("This is the SECOND value.", pool));
 
   /* Dump the hash to a file. */
   apr_file_open (&f, "hashdump.out",
@@ -160,7 +160,7 @@ test3 (const char **msg, apr_pool_t *pool)
         found_discrepancy = 1;
 
       /* Do the two strings contain identical data? */
-      else if (! svn_string_compare (orig_str, new_str))
+      else if (! svn_stringbuf_compare (orig_str, new_str))
         found_discrepancy = 1;
     }
 

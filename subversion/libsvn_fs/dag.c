@@ -136,7 +136,7 @@ set_mutable_flag (skel_t *content, svn_fs_id_t *parent_id, apr_pool_t *pool)
       svn_stringbuf_t *parent_id_string
         = (parent_id
            ? svn_fs_unparse_id (parent_id, pool)
-           : svn_string_create ("", pool));
+           : svn_stringbuf_create ("", pool));
       
       svn_fs__prepend (svn_fs__mem_atom (parent_id_string->data,
                                          parent_id_string->len,

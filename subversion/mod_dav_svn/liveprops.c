@@ -205,7 +205,7 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
             }
 
           stable_id = svn_fs_unparse_id(id, p);
-          svn_string_appendcstr(stable_id, resource->info->repos_path);
+          svn_stringbuf_appendcstr(stable_id, resource->info->repos_path);
 
           value = dav_svn_build_uri(resource->info->repos,
                                     DAV_SVN_BUILD_URI_VERSION,

@@ -40,7 +40,7 @@ int main(int argc, char **argv)
   targets = apr_array_make(pool, argc - 1, sizeof(svn_stringbuf_t*));
   for (i = 1; i < argc; i++)
     {
-      svn_stringbuf_t * target = svn_string_create(argv[i], pool);
+      svn_stringbuf_t * target = svn_stringbuf_create(argv[i], pool);
       (*((svn_stringbuf_t **)apr_array_push(targets))) = target;
     }
 
@@ -69,7 +69,7 @@ int main(int argc, char **argv)
   if (err != SVN_NO_ERROR)
     svn_handle_error(err, stderr, 1);
 
-  if (!svn_string_compare(common_path, common_path2))
+  if (!svn_stringbuf_compare(common_path, common_path2))
     {
       printf("Common path without getting targets does not match common path "
              "with targets\n");

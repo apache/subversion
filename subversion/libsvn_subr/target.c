@@ -37,7 +37,7 @@ svn_path_get_absolute(svn_stringbuf_t **pabsolute,
 #ifdef WIN32
   if (_fullpath(buffer, relative->data, APR_PATH_MAX) != NULL)
     {
-      *pabsolute = svn_string_create(buffer, pool);
+      *pabsolute = svn_stringbuf_create(buffer, pool);
     }
   else 
     {
@@ -50,7 +50,7 @@ svn_path_get_absolute(svn_stringbuf_t **pabsolute,
 #else
   if (realpath(relative->data, buffer) != NULL)
     {
-      *pabsolute = svn_string_create(buffer, pool);
+      *pabsolute = svn_stringbuf_create(buffer, pool);
     }
   else 
     {
@@ -102,7 +102,7 @@ svn_path_split_if_file(svn_stringbuf_t *path,
       if (finfo.filetype == APR_DIR)
         {
           *pdirectory = path;
-          *pfile = svn_string_create("", pool);
+          *pfile = svn_stringbuf_create("", pool);
         }
       else if (finfo.filetype == APR_REG)
         {
@@ -202,12 +202,12 @@ svn_path_condense_targets (svn_stringbuf_t **pbasedir,
                   if (! ancestor)
                     continue;
 
-                  if (svn_string_compare (ancestor, abs_targets_i))
+                  if (svn_stringbuf_compare (ancestor, abs_targets_i))
                     {
                       removed[j] = TRUE;
                       num_condensed--;
                     }
-                  else if (svn_string_compare (ancestor, abs_targets_j))
+                  else if (svn_stringbuf_compare (ancestor, abs_targets_j))
                     {
                       removed[i] = TRUE;
                       num_condensed--;
@@ -221,7 +221,7 @@ svn_path_condense_targets (svn_stringbuf_t **pbasedir,
             {
               svn_stringbuf_t *abs_targets_i = ((svn_stringbuf_t **)
                                              abs_targets->elts)[i];
-              if ((svn_string_compare (abs_targets_i, *pbasedir))
+              if ((svn_stringbuf_compare (abs_targets_i, *pbasedir))
                   && !removed[i])
                 {
                   removed[i] = TRUE;
@@ -245,7 +245,7 @@ svn_path_condense_targets (svn_stringbuf_t **pbasedir,
               rel_item += (*pbasedir)->len + 1;
 
               (*((svn_stringbuf_t**)apr_array_push (*pcondensed_targets)))
-                = svn_string_create (rel_item, pool);
+                = svn_stringbuf_create (rel_item, pool);
             }
         }
       
@@ -321,7 +321,7 @@ svn_path_remove_redundancies (apr_array_header_t **pcondensed_targets,
           svn_stringbuf_t *keeper = ((svn_stringbuf_t **)abs_targets->elts)[j];
           
           /* Quit here if we find this path already in the keepers. */
-          if (svn_string_compare (keeper, abs_path))
+          if (svn_stringbuf_compare (keeper, abs_path))
             {
               keep_me = FALSE;
               break;

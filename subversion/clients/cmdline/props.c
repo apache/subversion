@@ -46,7 +46,7 @@ svn_cl__print_prop_hash (apr_hash_t *prop_hash,
 
       /* Get next property */
       apr_hash_this (hi, &key, &klen, &val);
-      propkey = svn_string_ncreate (key, klen, pool);
+      propkey = svn_stringbuf_ncreate (key, klen, pool);
       propval = (svn_stringbuf_t *) val;
 
       printf ("%s : %s\n", propkey->data, propval->data);
