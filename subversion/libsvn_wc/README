@@ -87,7 +87,7 @@ analogous to CVS/ sudirs:
        properties               /* Properties for this directory */
        delta-here               /* Uncommitted changes logged here */
        lock                     /* Optional, tells others this dir is busy */
-       unwind                   /* Actions to unwind here (for rollback) */
+       log                      /* Ops log (for rollback/crash-recovery) */
        tmp                      /* Local tmp space is preferable to /tmp */
        text-base/               /* Pristine repos versions of the files... */
             foo.c
@@ -231,25 +231,19 @@ analogous to CVS/ sudirs:
    race-condition protection, due to the way locking is called.  We'll
    see, though.
 
-`unwind'
+`log'
 
-   This file (XML format) holds a "stack" of adm actions that are
-   about to be done.  After each action is done, its entry on the
-   stack is removed.
-
-   In the event of a crash, the recovery routines simply read over the
-   file and do the actions; the original code makes sure the file gets
-   set up in a way such that this interpretation leads to the right
-   result.  (Since the crash could have occurred between the doing of
-   the action and the removal of its entry from the stack, it is not
-   an error for the first item on the recovery stack to be undoable
-   due to a missing file or whatever -- in that case, it is presumed
-   to have been completed and just removed.  This means, however, that
-   one can *never* add an entry to the stack until all files on whose
-   existence it depends have been successfully created).
+   This file (XML format) holds a log of actions that are about to be
+   done, or are in the process of being done.  Each action is of the
+   sort that, given a log entry for it, one can tell unambiguously
+   whether or not the action was successfully done.  Thus, in
+   recovering from a crash or an interrupt, the wc library reads over
+   the log file, ignoring those actions that have already been done,
+   and doing the ones that have not.  When all the actions in log have
+   been done, the log file is removed.
 
    Soon there will be a general explanation/algorithm for using the
-   unwind stack; for now, this example gives the flavor:
+   log file; for now, this example gives the flavor:
 
    To do a fresh checkout of `iota' in directory `.'
 
@@ -261,48 +255,31 @@ analogous to CVS/ sudirs:
       2. apply_textdelta() hands window_handler() to its caller.
 
       3. window_handler() is invoked N times, constructing
-         ./SVN/tmp/text-base/iota
+         ./SVN/tmp/iota
 
-      4. finish_file() is called.  First, it atomically pushes these
-         items onto the ./SVN/tmp/unwind stack:
+      4. finish_file() is called.  First, it creates `log' atomically,
+         with the following items,
 
             <mv src="SVN/tmp/iota" dst="SVN/text-base/iota">
             <mv src="SVN/tmp/SVN/versions" dst="SVN/versions">
             <merge src="SVN/text-base/iota" dst="iota">
 
-         Then it does the operations in the `unwind' file (probably
-         by simply reading the unwind file with the same routine
-         that would be used in a recovery!), removing each entry
-         immediately on finishing that task (i.e., before moving on to
-         the next entry).  Yes, it does this in a tmpy way. :-)
-
-         When all done, remove the `unwind' file.
-
-         (kff todo: seems better to use "SVN/tmp/iota" in the first
-         unwind line than "SVN/tmp/SVN/text-base/iota", but...
-         thoughts?)
+         Then it does the operations in the log file one by one.
+         When it's done, it removes the log.
 
    To recover from a crash:
 
-      1. Look for an `unwind' file.  
+      1. Look for a log file.  
 
            A. If none, just "rm -r tmp/*".
 
-           B. Else if `unwind' is present, loop over it doing each
-              operation.  It is permissible for the `src' file of the
-              first entry to not exist, since that means a crash
-              occurred between doing the operation and writing out the
-              tmp file.  Just toss that entry, then.
+           B. Else, run over the log file from top to bottom,
+              attempting to do each action.  If an action turns out to
+              have already been done, that's fine, just ignore it.
+              When done, remove the log file.
 
-              When done, remove the `unwind' file.
-
-   The recovery algorithm above is pretty general, actually.  The
-   algorithm for creating the unwind file is also going to be pretty
-   simple; each code path as it goes keeps a growing stack of the
-   unwind operations, and then at the end it dumps that stack to the
-   unwind file, and then runs the common execute_unwind_file()
-   routine.  Viola!  (Er, pardon my French.)
-
+   Probably the same routine will be used by finish_file() and in
+   crash recovery.
 
 `tmp'
 
@@ -316,7 +293,7 @@ analogous to CVS/ sudirs:
    it), use tmp/SVN/thing.$PID -- notice that no SVN/ file ever has a
    .blah extension.  If it ends in .*, then it must be a tmp file.
 
-   See discussion of the `unwind' file for more details.
+   See discussion of the `log' file for more details.
 
 `text-base/'
 
