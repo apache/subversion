@@ -153,7 +153,7 @@ def test_print_property_diffs(sbox):
   if errput: raise svntest.Failure
 
   # commit the change
-  output, errput = svntest.main.run_svn(None, 'ci', '-m', '""', iota_path)
+  output, errput = svntest.main.run_svn(None, 'ci', '-m', 'log msg', iota_path)
   if errput: raise svntest.Failure
 
   # Grab the diff
