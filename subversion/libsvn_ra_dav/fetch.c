@@ -487,7 +487,6 @@ svn_ra_checkout (svn_ra_session_t *ras,
           /* We're not in the root, add a directory */
           name = my_basename(url, ras->pool);
           
-          printf ("add_dir for [%s]\n", name->data);
           err = (*editor->add_directory) (name, parent_baton,
                                           ancestor_path, ancestor_version,
                                           &this_baton);
