@@ -37,14 +37,17 @@ my $fbaton = $editor->add_file ('trunk/filea', $dirbaton,
 
 my $ret = $editor->apply_textdelta ($fbaton, undef, $pool);
 
-SVN::_Delta::svn_txdelta_send_string("FILEA CONTENT", 
+#SVN::_Delta::svn_txdelta_send_stream(#\*STDIN,
+#				     IO::File->new("/tmp/r1", 'r'),#\
+#				     @$ret, undef, $pool);
 
+SVN::_Delta::svn_txdelta_send_string("FILEA CONTENT",
 				     @$ret, $pool);
 
 $editor->close_edit($pool);
 
 cmp_ok($fs->youngest_rev, '==', 1);
-
+{
 $editor = new SVN::Delta::Editor
     SVN::Repos::get_commit_editor($repos, "file://$repospath",
 				  '/', 'root', 'FOO', \&committed);
@@ -56,9 +59,10 @@ my $subdirbaton = $editor->add_directory ('tags/foo', $dirbaton,
 					  "file://$repospath/trunk", 1, $pool);
 
 $editor->close_edit($pool);
-
+}
 cmp_ok($fs->youngest_rev, '==', 2);
 
+{
 $editor = new SVN::Delta::Editor
     SVN::Repos::get_commit_editor($repos, "file://$repospath",
 				  '/', 'root', 'FOO', \&committed);
@@ -67,11 +71,13 @@ my $rootbaton = $editor->open_root(2, $pool);
 $editor->delete_entry('tags', 2, $rootbaton, $pool);
 
 $editor->close_edit($pool);
+}
 
 cmp_ok($fs->youngest_rev, '==', 3);
 
 END {
 diag "cleanup";
+print `svn cat file://$repospath/trunk/filea`;
 print `svn log -v file://$repospath`;
 `rm -rf $repospath`;
 }

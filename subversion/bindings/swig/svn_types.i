@@ -271,6 +271,19 @@
 %apply SWIGTYPE **OUTPARAM { svn_stream_t ** };
 
 /* -----------------------------------------------------------------------
+   svn_stream interpolability with io handle
+*/
+
+%typemap(perl5, in) svn_stream_t * {
+    svn_swig_pl_make_stream (&$1, $input);
+}
+
+%typemap(perl5, argout) svn_stream_t ** {
+    $result = svn_swig_pl_from_stream (*$1);
+    argvi++;
+}
+
+/* -----------------------------------------------------------------------
   useful convertors for svn_opt_revision_t
 */
 %typemap(perl5, in) svn_opt_revision_t * (svn_opt_revision_t rev) {
