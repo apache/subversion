@@ -1,6 +1,7 @@
 #!/usr/bin/perl
 use ExtUtils::MakeMaker;
 use Config;
+use Cwd 'abs_path';
 
 my $perl_path = $Config{perlpath};
 if ($^O ne 'VMS') {
@@ -44,7 +45,8 @@ my %config = (
                      `$perl_path -MExtUtils::Embed -e ccopts`,
                      ' -I.. -I../../../include -g'),
     OBJECT => q/$(O_FILES)/,
-    LIBS => [join(' ', $apr_ldflags, (map {"-L$_"} @ldpaths),
+    LIBS => [join(' ', $apr_ldflags,
+                  (map {$_ = abs_path($_); "-L$_"} @ldpaths),
                   @ldmodules, '-lsvn_swig_perl-1',
                   `swig -perl -ldflags`)],
 );
