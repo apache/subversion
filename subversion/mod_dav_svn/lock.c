@@ -129,17 +129,18 @@ static const char *
 dav_svn_get_supportedlock(const dav_resource *resource)
 {
   /* This is imitating what mod_dav_fs is doing.  Note that unlike
-     mod_dav_fs, however, we don't support "shared" locks.  */
-
-  /* ### it seems awfully weird that a provider knows that
-     mod_dav is going to use 'D=DAV' for xml namespaces, no? */
+     mod_dav_fs, however, we don't support "shared" locks, only
+     "exclusive" ones.  Nor do we support locks on collections. */
   static const char supported[] = DEBUG_CR
     "<D:lockentry>" DEBUG_CR
     "<D:lockscope><D:exclusive/></D:lockscope>" DEBUG_CR
     "<D:locktype><D:write/></D:locktype>" DEBUG_CR
     "</D:lockentry>" DEBUG_CR;
-    
-  return supported;
+
+  if (resource->collection)
+    return NULL;
+  else
+    return supported;
 }
 
 
