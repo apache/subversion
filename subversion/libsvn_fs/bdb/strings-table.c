@@ -317,10 +317,15 @@ get_key_and_bump (svn_fs_t *fs, const char **key, trail_t *trail)
   db_err = cursor->c_put (cursor, &query,
                           svn_fs__str_to_dbt (&result, (char *) next_key),
                           DB_CURRENT);
+  if (db_err)
+    {
+      cursor->c_close (cursor); /* ignore the error, the original is
+                                   more important. */
+      return DB_WRAP (fs, "bumping next string key", db_err);
+    }
 
-  cursor->c_close (cursor);
-
-  return DB_WRAP (fs, "bumping next string key", db_err);
+  return DB_WRAP (fs, "closing string-reading cursor",
+                  cursor->c_close (cursor));
 }
 
 svn_error_t *
@@ -511,9 +516,8 @@ svn_fs__string_copy (svn_fs_t *fs,
         }
     }
 
-  cursor->c_close (cursor);
-
-  return SVN_NO_ERROR;
+  return DB_WRAP (fs, "closing string-reading cursor", 
+                  cursor->c_close (cursor));
 }
 
 
