@@ -160,6 +160,17 @@ svn_fs_fs__err_corrupt_copy (svn_fs_t *fs, const char *copy_id)
 
 
 svn_error_t *
+svn_fs_fs__err_lock_expired (svn_fs_t *fs, const char *token)
+{
+  return
+    svn_error_createf
+    (SVN_ERR_FS_LOCK_EXPIRED, 0,
+     _("Lock has expired:  lock-token '%s' in filesystem '%s'"),
+     token, fs->path);
+}
+
+
+svn_error_t *
 svn_fs_fs__err_not_mutable (svn_fs_t *fs, svn_revnum_t rev, const char *path)
 {
   return
@@ -214,6 +225,28 @@ svn_fs_fs__err_no_such_copy (svn_fs_t *fs, const char *copy_id)
 
 
 svn_error_t *
+svn_fs_fs__err_no_such_lock (svn_fs_t *fs, const char *path)
+{
+  return
+    svn_error_createf
+    (SVN_ERR_FS_NO_SUCH_LOCK, 0,
+     _("No lock on path '%s' in filesystem '%s'"),
+     path, fs->path);
+}
+
+
+svn_error_t *
+svn_fs_fs__err_no_user (svn_fs_t *fs)
+{
+  return
+    svn_error_createf
+    (SVN_ERR_FS_NO_USER, 0,
+     _("No username is currently associated with filesystem '%s'"),
+     fs->path);
+}
+
+
+svn_error_t *
 svn_fs_fs__err_not_directory (svn_fs_t *fs, const char *path)
 {
   return
@@ -221,4 +254,26 @@ svn_fs_fs__err_not_directory (svn_fs_t *fs, const char *path)
     (SVN_ERR_FS_NOT_DIRECTORY, 0,
      _("'%s' is not a directory in filesystem '%s'"),
      path, fs->path);
+}
+
+
+svn_error_t *
+svn_fs_fs__err_not_file (svn_fs_t *fs, const char *path)
+{
+  return
+    svn_error_createf
+    (SVN_ERR_FS_NOT_FILE, 0,
+     _("'%s' is not a file in filesystem '%s'"),
+     path, fs->path);
+}
+
+
+svn_error_t *
+svn_fs_fs__err_path_locked (svn_fs_t *fs, svn_lock_t *lock)
+{
+  return
+    svn_error_createf
+    (SVN_ERR_FS_PATH_LOCKED, 0,
+     _("Path '%s' is locked by user '%s' in filesystem '%s'"),
+     lock->path, lock->owner, fs->path);
 }
