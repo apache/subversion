@@ -206,7 +206,7 @@ static svn_error_t *svn_ra_close (void *session_baton)
 static const svn_ra_plugin_t dav_plugin = {
   "ra_dav",
   "Module for accessing a repository via WebDAV (DeltaV) protocol.",
-  (apr_uint64_t) (SVN_RA_AUTH_USERNAME | SVN_RA_AUTH_SIMPLE_PASSWORD),
+  (apr_uint64_t) (SVN_RA_AUTH_SIMPLE_PASSWORD),
   svn_ra_get_authenticator,
   svn_ra_close,
   svn_ra_dav__get_latest_revnum,
