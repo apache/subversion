@@ -48,6 +48,14 @@ II. New Client Behaviors
          right to change the file's text and properties, to delete the
          file, and to move the file.
 
+         The restriction on moving or deleting a locked file is a
+         restriction on changing its full path name in any way,
+         including by moving or renaming or deleting any of its
+         parent directories.
+
+         (A locked file can still be read and copied, and any copy of it
+         will not automatically be locked.)
+
    B. Client requirements for locking
 
       1. Enforcement system
