@@ -517,10 +517,23 @@ set_entry (dag_node_t *parent,
 
   SVN_ERR (svn_fs__get_mutable_rep (&mutable_rep_key, rep_key, fs, trail));
 
+  /* If the parent node already pointed at a mutable representation,
+     we don't need to do anything.  But if it didn't, either because
+     the parent didn't refer to any rep yet or because it referred to
+     an immutable one, we must make the parent refer to the mutable
+     rep we just created. */ 
+  if (strcmp (rep_key, mutable_rep_key) != 0)
+    {
+      skel_t *new_node_rev = svn_fs__copy_skel (parent_node_rev, trail->pool);
+      (SVN_FS__NR_DATA_KEY (new_node_rev))->data = mutable_rep_key;
+      (SVN_FS__NR_DATA_KEY (new_node_rev))->len = strlen (mutable_rep_key);
+      SVN_ERR (set_node_revision (parent, new_node_rev, trail));
+    }
+
+  /* If the new representation inherited nothing, fill it with a skel
+     representing an empty entries list. */ 
   if (rep_key[0] == '\0')
     {
-      /* The new representation inherited nothing, so fill it with a
-         skel representing an empty entries list. */
       svn_stream_t *wstream;
       skel_t *empty_list;
       svn_stringbuf_t *empty;
@@ -534,27 +547,12 @@ set_entry (dag_node_t *parent,
       svn_stream_write (wstream, empty->data, &len);
     }
   
-  /* If the parent node already pointed at a mutable representation,
-     we don't need to do anything.  But if it didn't, either because
-     the parent didn't refer to any rep yet or because it referred to
-     an immutable one, we must make the parent refer to the mutable
-     rep we just created. */ 
-
-  if (strcmp (rep_key, mutable_rep_key) != 0)
-    {
-      skel_t *new_node_rev = svn_fs__copy_skel (parent_node_rev, trail->pool);
-      (SVN_FS__NR_DATA_KEY (new_node_rev))->data = mutable_rep_key;
-      (SVN_FS__NR_DATA_KEY (new_node_rev))->len = strlen (mutable_rep_key);
-      SVN_ERR (set_node_revision (parent, new_node_rev, trail));
-    }
-
   /* Change the entries list. */
   {
     skel_t *rep, *entries;
     skel_t *entry;
     svn_string_t str;
     svn_stringbuf_t *unparsed_entries;
-    const char *string_key;
     svn_stringbuf_t *id_str = svn_fs_unparse_id (id, trail->pool);
 
     SVN_ERR (svn_fs__read_rep (&rep, fs, mutable_rep_key, trail));
@@ -581,15 +579,18 @@ set_entry (dag_node_t *parent,
       }
 
     unparsed_entries = svn_fs__unparse_skel (entries, trail->pool);
-    string_key = svn_fs__string_key_from_rep (rep, trail->pool);
 
-    /* Blow away the old entries list, then write the new one. */
-    if (string_key && (string_key[0] != '\0'))
-      SVN_ERR (svn_fs__string_clear (fs, string_key, trail));
-    SVN_ERR (svn_fs__string_append (fs, &string_key,
-                                    unparsed_entries->len,
-                                    unparsed_entries->data,
-                                    trail));
+    /* Replace the old entries list with the new one. */
+    {
+      svn_stream_t *wstream;
+      apr_size_t len;
+
+      SVN_ERR (svn_fs__rep_clear (fs, mutable_rep_key, trail));
+      wstream = svn_fs__rep_write_stream (fs, mutable_rep_key,
+                                          trail, trail->pool);
+      len = unparsed_entries->len;
+      svn_stream_write (wstream, unparsed_entries->data, &len);
+    }
   }
 
   return SVN_NO_ERROR;
@@ -1508,6 +1509,7 @@ svn_fs__dag_set_contents (dag_node_t *file,
        the same may be true for all calls to svn_fs__string_*() in
        this file... */
 
+    /* fooo; */
     SVN_ERR (svn_fs__read_rep (&mutable_rep, file->fs, new_rep_key, trail));
     new_string_key = svn_fs__string_key_from_rep (mutable_rep, trail->pool);
     SVN_ERR (svn_fs__string_clear (file->fs, new_string_key, trail));

@@ -651,14 +651,17 @@ fs.c            Creating and destroying filesystem objects.
 
 err.c           Error handling.
 
-nodes-table.c, txn-table.c, rev-table.c
+nodes-table.c, txn-table.c, rev-table.c, reps-table.c, strings-table.c
 
                 Create and open particular database tables.
                 Responsible for intra-record consistency.
 
 node-rev.c      Creating, reading, and writing node revisions.
-                This will handle delta-based node revision storage,
-                Responsible for consistency of 
+                Responsible for deciding what gets deltified when.
+
+reps-strings.c
+                Retrieval and storage of represented strings.
+                This will handle delta-based storage,
 
 dag.c           Operations on the DAG filesystem.  "DAG" because the
                 interface exposes the filesystem's sharing structure.

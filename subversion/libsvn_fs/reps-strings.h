@@ -23,9 +23,8 @@
 
 
 /* Return the string key pointed to by REP, allocated in POOL.
-   ### todo:
-   The behavior of this function on non-fulltext representations is
-   undefined at present.  */
+   If REP is a fulltext rep, just return the string; if delta, return
+   the string key for the svndiff data, not the base.  */
 const char *svn_fs__string_key_from_rep (skel_t *rep, apr_pool_t *pool);
 
 
@@ -103,6 +102,9 @@ svn_stream_t *svn_fs__rep_read_stream (svn_fs_t *fs,
 /* Return a stream to write the contents of the representation
    identified by REP_KEY.  Allocate the stream in POOL.
 
+   If the rep already has contents, the stream will append to them.
+   Use svn_fs__rep_clear() if you want to clear the contents first.
+
    If TRAIL is non-null, the stream's writes are part of TRAIL;
    otherwise, each write happens in an internal, one-off trail.
    POOL may be TRAIL->pool.
@@ -113,6 +115,14 @@ svn_stream_t *svn_fs__rep_write_stream (svn_fs_t *fs,
                                         const char *rep_key,
                                         trail_t *trail,
                                         apr_pool_t *pool);
+
+
+/* Clear the contents of representation REP_KEY, so that it represents
+   the empty string, as part of TRAIL.  If the representation is not
+   mutable, return the error SVN_ERR_FS_REP_NOT_MUTABLE.  */
+svn_error_t *svn_fs__rep_clear (svn_fs_t *fs,
+                                const char *rep_key,
+                                trail_t *trail);
 
 
 /* stabilize_rep */
