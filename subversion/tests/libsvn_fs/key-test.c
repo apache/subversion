@@ -58,6 +58,11 @@ next_key (const char **msg, apr_pool_t *pool)
   const char expected_8[] = "aa0";
   char next_8[5];
 
+  const char this_9[] = "z";
+  const char expected_9[] = "10";
+  char next_9[4];
+
+
   *msg = "testing sequential alphanumeric key generation";
 
   len = strlen (this_1);
@@ -154,6 +159,18 @@ next_key (const char **msg, apr_pool_t *pool)
       return svn_error_createf (SVN_ERR_FS_GENERAL, 0, NULL, pool,
                                 "failed to increment key \"%s\" correctly",
                                 this_8);
+    }
+
+  len = strlen (this_9);
+  olen = len;
+  svn_fs__next_key (this_9, &len, next_9);
+  if (! (((len == olen) || (len == (olen + 1)))
+         && (strlen (next_9) == len)
+         && (strcmp (next_9, expected_9) == 0)))
+    {
+      return svn_error_createf (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+                                "failed to increment key \"%s\" correctly",
+                                this_9);
     }
 
   return SVN_NO_ERROR;
