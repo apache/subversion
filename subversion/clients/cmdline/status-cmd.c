@@ -62,7 +62,8 @@ svn_cl__status (apr_getopt_t *os,
       if (err)
         return err;
 
-      svn_cl__print_status_list (statushash, pool);
+      /* Pass the '-M' flag state to this routine. */
+      svn_cl__print_status_list (statushash, opt_state->modified, pool);
     }
 
   return SVN_NO_ERROR;

@@ -183,6 +183,7 @@ main (int argc, const char * const *argv)
     {"date",          'D', 1},
     {"version",       'v', 0},
     {"filedata",      'F', 1},
+    {"modified",      'M', 0},
     {"xml-file",      svn_cl__xml_file_opt, 1},
     {"locale",        svn_cl__locale_opt, 1},
     /* Here begin authentication args, add more as needed: */
@@ -270,6 +271,9 @@ main (int argc, const char * const *argv)
         err = svn_string_from_file (&(opt_state.filedata), opt_arg, pool);
         if (err)
           svn_handle_error (err, stdout, TRUE);
+        break;
+      case 'M':
+        opt_state.modified = TRUE;
         break;
       case svn_cl__force_opt:
         opt_state.force = TRUE;

@@ -134,7 +134,9 @@ svn_cl__print_status (svn_stringbuf_t *path, svn_wc_status_t *status)
 
 
 void
-svn_cl__print_status_list (apr_hash_t *statushash, apr_pool_t *pool)
+svn_cl__print_status_list (apr_hash_t *statushash, 
+                           svn_boolean_t print_modified_only,
+                           apr_pool_t *pool)
 {
   int i;
   apr_array_header_t *statusarray;
@@ -155,7 +157,14 @@ svn_cl__print_status_list (apr_hash_t *statushash, apr_pool_t *pool)
       path = (const char *) item->key;
       status = (svn_wc_status_t *) item->data;
 
-      svn_cl__print_status (svn_stringbuf_create (path, pool), status);
+      if (print_modified_only)
+        {
+          if ((status->text_status == svn_wc_status_modified)
+              || (status->prop_status == svn_wc_status_modified))
+            svn_cl__print_status (svn_stringbuf_create (path, pool), status);
+        }
+      else
+        svn_cl__print_status (svn_stringbuf_create (path, pool), status);
     }
 }
 
