@@ -302,13 +302,12 @@ II. New Client Behaviors
                server;  in a similar manner, this command shows any
                locks that exist on the server:
 
-                  $ svn status
+                  $ svn status -u
                   M        foo.c
                   M      # bar.c
                   A     *  baz.c 
                         *  file1
                          # file2
-
 
             3.  'svn info', describes the attributes of a lock-token,
                 if attached to a working object.  If invoked on a URL,
