@@ -537,7 +537,7 @@ def display_trees(message, label, expected, actual):
     tree.dump_tree(expected)
   if actual is not None:
     print 'ACTUAL', label + ':'
-    tree.dump_tree(expected)
+    tree.dump_tree(actual)
 
 
 def display_lines(message, label, expected, actual):
