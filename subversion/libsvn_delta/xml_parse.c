@@ -488,10 +488,10 @@ do_directory_callback (svn_xml__digger_t *digger,
                              
   /* Search through ATTS, looking for any "ancestor" or "ver"
      attributes of the current <dir> tag. */
-  ancestor = svn_get_xml_attr_value ("ancestor", atts);
+  ancestor = svn_xml_get_attr_value ("ancestor", atts);
   if (ancestor)
     youngest_frame->ancestor_path = svn_string_create (ancestor, digger->pool);
-  ver = svn_get_xml_attr_value ("ver", atts);
+  ver = svn_xml_get_attr_value ("ver", atts);
   if (ver)
     youngest_frame->ancestor_version = atoi (ver);
 
@@ -586,10 +586,10 @@ do_file_callback (svn_xml__digger_t *digger,
                              
   /* Search through ATTS, looking for any "ancestor" or "ver"
      attributes of the current <dir> tag. */
-  ancestor = svn_get_xml_attr_value ("ancestor", atts);
+  ancestor = svn_xml_get_attr_value ("ancestor", atts);
   if (ancestor)
     youngest_frame->ancestor_path = svn_string_create (ancestor, digger->pool);
-  ver = svn_get_xml_attr_value ("ver", atts);
+  ver = svn_xml_get_attr_value ("ver", atts);
   if (ver)
     youngest_frame->ancestor_version = atoi (ver);
 
@@ -932,17 +932,17 @@ xml_handle_start (void *userData, const char *name, const char **atts)
     }
 
   /* Set "name" field in frame, if there's any such attribute in ATTS */
-  value = svn_get_xml_attr_value ("name", atts);
+  value = svn_xml_get_attr_value ("name", atts);
   if (value)
     new_frame->name = svn_string_create (value, my_digger->pool);
   
   /* Set ancestor path in frame, if there's any such attribute in ATTS */
-  value = svn_get_xml_attr_value ("ancestor", atts);
+  value = svn_xml_get_attr_value ("ancestor", atts);
   if (value)
     new_frame->ancestor_path = svn_string_create (value, my_digger->pool);
   
   /* Set ancestor version in frame, if there's any such attribute in ATTS */
-  value = svn_get_xml_attr_value ("ver", atts);
+  value = svn_xml_get_attr_value ("ver", atts);
   if (value)
     new_frame->ancestor_version = atoi (value);
 

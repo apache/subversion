@@ -57,7 +57,7 @@
 
 /* See svn_xml.h for details. */
 const char *
-svn_get_xml_attr_value (const char *name, const char **atts)
+svn_xml_get_attr_value (const char *name, const char **atts)
 {
   while (atts && (*atts))
     {

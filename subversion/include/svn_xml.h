@@ -60,7 +60,7 @@
  * odd-numbers hold values.  If all is right, it should end on an
  * even-numbered index pointing to NULL.
  */
-const char *svn_get_xml_attr_value (const char *name, const char **atts);
+const char *svn_xml_get_attr_value (const char *name, const char **atts);
 
 
 #endif /* SVN_XML_H */
