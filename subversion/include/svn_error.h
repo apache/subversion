@@ -112,7 +112,8 @@ svn_error_t *svn_error_createf (apr_status_t apr_err,
  * (If UTF-8 translation of the APR error message fails, the ": " and
  * APR error are not appended to the error message.)
  */
-svn_error_t *svn_error_wrap_apr (apr_status_t status, const char *fmt, ...);
+svn_error_t *svn_error_wrap_apr (apr_status_t status, const char *fmt, ...)
+       __attribute__((format(printf, 2, 3)));
 
 /** Wrapper macro to collect file and line information */
 #define svn_error_wrap_apr \

@@ -51,7 +51,8 @@ svn_error_t *svn_fs_bdb__dberr (bdb_errcall_baton_t *ec_baton, int db_err);
    There is no separator between the two messages; if you want one,
    you should include it in FMT.  */
 svn_error_t *svn_fs_bdb__dberrf (bdb_errcall_baton_t *ec_baton, int db_err,
-                                 const char *fmt, ...);
+                                 const char *fmt, ...)
+       __attribute__((format(printf, 3, 4)));
 
 
 /* Check the return status from the Berkeley DB operation.  If the

@@ -493,8 +493,8 @@ int dav_svn_find_ns(apr_array_header_t *namespaces, const char *uri);
 /* Output XML data to OUTPUT using BB.  Use FMT as format string for the.
    output. */
 svn_error_t * dav_svn__send_xml(apr_bucket_brigade *bb, ap_filter_t *output,
-                                const char *fmt, ...);
-
+                                const char *fmt, ...)
+       __attribute__((format(printf, 3, 4)));
 
 
 enum dav_svn_time_format {
