@@ -40,6 +40,9 @@ extern "C" {
 #endif /* __cplusplus */
 
 
+/* convert an svn_error_t into a SubversionException and clear error */
+jthrowable svn_swig_java_convert_error(JNIEnv *jenv, svn_error_t *error);
+
 /* helper function to convert an apr_hash_t* (char* -> svnstring_t*) to
    a Java Map */
 jobject svn_swig_java_prophash_to_dict(JNIEnv *jenv, apr_hash_t *hash);

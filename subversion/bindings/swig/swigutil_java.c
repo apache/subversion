@@ -40,14 +40,50 @@
 #   define JCALL2(func, jenv, ar1, ar2) jenv->func(ar1, ar2)
 #   define JCALL3(func, jenv, ar1, ar2, ar3) jenv->func(ar1, ar2, ar3)
 #   define JCALL4(func, jenv, ar1, ar2, ar3, ar4) jenv->func(ar1, ar2, ar3, ar4)
+#   define JCALL7(func, jenv, ar1, ar2, ar3, ar4, ar5, ar6, ar7) jenv->func(ar1, ar2, ar3, ar4, ar5, ar6, ar7)
 #else
 #   define JCALL0(func, jenv) (*jenv)->func(jenv)
 #   define JCALL1(func, jenv, ar1) (*jenv)->func(jenv, ar1)
 #   define JCALL2(func, jenv, ar1, ar2) (*jenv)->func(jenv, ar1, ar2)
 #   define JCALL3(func, jenv, ar1, ar2, ar3) (*jenv)->func(jenv, ar1, ar2, ar3)
 #   define JCALL4(func, jenv, ar1, ar2, ar3, ar4) (*jenv)->func(jenv, ar1, ar2, ar3, ar4)
+#   define JCALL7(func, jenv, ar1, ar2, ar3, ar4, ar5, ar6, ar7) (*jenv)->func(jenv, ar1, ar2, ar3, ar4, ar5, ar6, ar7)
 #endif
 #endif
+
+/* Convert an svn_error_t into a SubversionException */
+static jthrowable convert_error(JNIEnv *jenv, svn_error_t *error)
+{
+  jthrowable cause;
+  jthrowable exc;
+  jstring msg;
+  jstring file;
+
+  /* Is it wise to use recursion in an error handler? */
+  cause = (error->child) ? convert_error(jenv, error->child) : NULL;
+
+  /* ### need more error checking */
+  msg = JCALL1(NewStringUTF, jenv, error->message);
+  file = error->file ? JCALL1(NewStringUTF, jenv, error->file) : NULL;
+
+  exc = JCALL7(NewObject, jenv, 
+               svn_swig_java_cls_subversionexception, 
+               svn_swig_java_mid_subversionexception_init, 
+               msg, cause, 
+               (jlong) error->apr_err, file, (jlong) error->line);
+  return exc;
+}
+
+/* Convert an svn_error_t into a SubversionException 
+   After conversion, the error will be cleared */
+jthrowable svn_swig_java_convert_error(JNIEnv *jenv, svn_error_t *error)
+{
+  jthrowable exc;
+
+  exc = convert_error(jenv, error);
+  svn_error_clear(error);
+  return exc;
+}
 
 /* this baton is used for the editor, directory, and file batons. */
 typedef struct {

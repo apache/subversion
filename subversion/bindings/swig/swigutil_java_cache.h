@@ -99,10 +99,12 @@ SVN_SWIG_JAVA_CACHE_CLASS_DEF(jenv,svn_swig_java_cls_inputstream,"java/io/InputS
 SVN_SWIG_JAVA_CACHE_CLASS_DEF(jenv,svn_swig_java_cls_list,"java/util/ArrayList")
 SVN_SWIG_JAVA_CACHE_CLASS_DEF(jenv,svn_swig_java_cls_list,"java/util/List")
 SVN_SWIG_JAVA_CACHE_CLASS_DEF(jenv,svn_swig_java_cls_list,"java/util/Map")
+SVN_SWIG_JAVA_CACHE_CLASS_DEF(jenv,svn_swig_java_cls_subversionexception,"org/tigris/subversion/SubversionException")
 
 SVN_SWIG_JAVA_CACHE_METHOD_DEF(jenv,svn_swig_java_mid_long_longvalue,svn_swig_java_cls_long,"longValue","()J")
 SVN_SWIG_JAVA_CACHE_METHOD_DEF(jenv,svn_swig_java_mid_outputstream_write,svn_swig_java_cls_outputstream,"write","([B)V")
 SVN_SWIG_JAVA_CACHE_METHOD_DEF(jenv,svn_swig_java_mid_inputstream_read,svn_swig_java_cls_inputstream,"read","([B)I")
+SVN_SWIG_JAVA_CACHE_METHOD_DEF(jenv,svn_swig_java_mid_subversionexception_init,svn_swig_java_cls_subversionexception,"<init>","(Ljava/lang/String;Ljava/lang/Throwable;JLjava/lang/String;J)V")
 
 SVN_SWIG_JAVA_CACHE_END
 
