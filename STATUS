@@ -38,12 +38,6 @@ Candidate changes:
     Votes:
       +1: pmayweg
 
-  * r9816
-    Fix a bug which prevents svnlook from creating its temporary directory
-    inside a symlinked TMPDIR.
-    Votes:
-      +1: cmpilato, breser, sussman
-
   * r8027
     Passing a Revision.DateSpec in javahl failed with 
     java.lang.NoSuchFieldError because java.util.Date.getTime() was 
