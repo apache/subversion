@@ -285,7 +285,7 @@ extern svn_vcdiff_parser_t *svn_make_vcdiff_parser
    hasn't passed to HANDLER yet.  */
 extern svn_error_t *svn_vcdiff_parse (svn_vcdiff_parser_t *parser,
                                       const char *buffer,
-                                      apr_off_t *len);
+                                      apr_off_t len);
 
 
 /* -----------------------------------------------------------------------

@@ -762,6 +762,9 @@ do_delete_prop (svn_delta__digger_t *digger,
 {
   svn_string_t *dir_name = NULL;
         
+  if (! digger->current_propdelta)
+    return SVN_NO_ERROR;
+
   /* Retrieve the "name" field from the current <delete> tag */
   dir_name = youngest_frame->name;
   if (dir_name == NULL)
@@ -787,7 +790,7 @@ do_delete_prop (svn_delta__digger_t *digger,
 static svn_error_t *
 do_prop_delta_callback (svn_delta__digger_t *digger)
 {
-  svn_error_t *err;
+  svn_error_t *err = SVN_NO_ERROR;
 
   if (! digger->current_propdelta)
     return SVN_NO_ERROR;
@@ -796,27 +799,30 @@ do_prop_delta_callback (svn_delta__digger_t *digger)
     {
     case svn_propdelta_file:
       {
-        err = (*(digger->walker->change_file_prop)) 
-          (digger->walk_baton, digger->dir_baton, digger->file_baton,
-           digger->current_propdelta->name,
-           digger->current_propdelta->value);
+        if (digger->walker->change_file_prop)
+          err = (*(digger->walker->change_file_prop)) 
+            (digger->walk_baton, digger->dir_baton, digger->file_baton,
+             digger->current_propdelta->name,
+             digger->current_propdelta->value);
         break;
       }
     case svn_propdelta_dir:
       {
-        err = (*(digger->walker->change_dir_prop)) 
-          (digger->walk_baton, digger->dir_baton,
-           digger->current_propdelta->name,
-           digger->current_propdelta->value);
+        if (digger->walker->change_dir_prop)
+          err = (*(digger->walker->change_dir_prop)) 
+            (digger->walk_baton, digger->dir_baton,
+             digger->current_propdelta->name,
+             digger->current_propdelta->value);
         break;
       }
     case svn_propdelta_dirent:
       {
-        err = (*(digger->walker->change_dirent_prop)) 
-          (digger->walk_baton, digger->dir_baton,
-           NULL,
-           digger->current_propdelta->name,
-           digger->current_propdelta->value);
+        if (digger->walker->change_dirent_prop)
+          err = (*(digger->walker->change_dirent_prop)) 
+            (digger->walk_baton, digger->dir_baton,
+             NULL,
+             digger->current_propdelta->name,
+             digger->current_propdelta->value);
         break;
       }
     default:
@@ -1035,6 +1041,21 @@ xml_handle_end (void *userData, const char *name)
   if (strcmp (name, "file") == 0)
     {
       err = do_finish_file (my_digger);
+      if (err)
+        signal_expat_bailout (err, my_digger);
+      return;
+    }
+
+  /* EVENT: when we get a </text-delta>, let the vcdiff parser know! */
+  if (strcmp (name, "text-delta") == 0)
+    {
+      if (! my_digger->vcdiff_parser)
+        return;
+
+      /* (length = 0) implies that we're done parsing vcdiff stream.
+         Let the parser flush it's buffer, clean up, whatever it wants
+         to do. */
+      err = svn_vcdiff_parse (my_digger->vcdiff_parser, NULL, 0);
       if (err)
         signal_expat_bailout (err, my_digger);
       return;
