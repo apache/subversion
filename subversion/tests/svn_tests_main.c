@@ -126,24 +126,28 @@ do_test_num (const char *progname,
 
 static int verbose_mode = 0;
 static int cleanup_mode = 0;
+static int skip_cleanup = 0;
 static apr_pool_t *cleanup_pool = 0;
 
 static apr_status_t
 cleanup_rmtree (void *data)
 {
-  apr_pool_t *pool = svn_pool_create (NULL);
-  const char *path = data;
-
-  /* Ignore errors here. */
-  svn_error_t *err = svn_io_remove_dir (path, pool);
-  if (verbose_mode)
+  if (!skip_cleanup)
     {
-      if (err)
-        printf ("FAILED CLEANUP: %s\n", path);
-      else
-        printf ("CLEANUP: %s\n", path);
+      apr_pool_t *pool = svn_pool_create (NULL);
+      const char *path = data;
+
+      /* Ignore errors here. */
+      svn_error_t *err = svn_io_remove_dir (path, pool);
+      if (verbose_mode)
+        {
+          if (err)
+            printf ("FAILED CLEANUP: %s\n", path);
+          else
+            printf ("CLEANUP: %s\n", path);
+        }
+      svn_pool_destroy (pool);
     }
-  svn_pool_destroy (pool);
   return APR_SUCCESS;
 }
 
@@ -233,8 +237,12 @@ main (int argc, char *argv[])
                  "------  -----  ----------------\n");
           for (i = 1; i <= array_size; i++)
             {
+              skip_cleanup = 0;
               if (do_test_num (prog_name, i, TRUE, test_pool))
-                got_error = 1;
+                {
+                  got_error = 1;
+                  skip_cleanup = 1;
+                }
 
               /* Clear the per-function pool */
               svn_pool_clear (test_pool);
@@ -249,8 +257,12 @@ main (int argc, char *argv[])
                 {
                   ran_a_test = 1;
                   test_num = atoi (argv[i]);
+                  skip_cleanup = 0;
                   if (do_test_num (prog_name, test_num, FALSE, test_pool))
-                    got_error = 1;
+                    {
+                      got_error = 1;
+                      skip_cleanup = 1;
+                    }
 
                   /* Clear the per-function pool */
                   svn_pool_clear (test_pool);
@@ -270,8 +282,12 @@ main (int argc, char *argv[])
       /* just run all tests */
       for (i = 1; i <= array_size; i++)
         {
+          skip_cleanup = 0;
           if (do_test_num (prog_name, i, FALSE, test_pool))
-            got_error = 1;
+            {
+              got_error = 1;
+              skip_cleanup = 1;
+            }
 
           /* Clear the per-function pool */
           svn_pool_clear (test_pool);
