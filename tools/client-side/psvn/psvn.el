@@ -177,12 +177,14 @@
 ;; stolen from PCL-CVS
 (defun svn-add-face (str face &optional keymap)
   (when svn-highlight
+    ;; Do not use `list*'; cl.el might not have been loaded.  We could
+    ;; put (require 'cl) at the top but let's try to manage without.
     (add-text-properties 0 (length str)
-		 (list* 'face face
-			(when keymap
-			  (list 'mouse-face 'highlight
-				'local-map keymap)))
-		 str))
+                         `(face ,face
+                           ,@(when keymap
+                               `(mouse-face highlight
+                                 local-map ,keymap)))
+                         str))
   str)
 
 ; compatibility
