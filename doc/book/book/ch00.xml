@@ -384,9 +384,9 @@
 
     <para>This book started out as bits of documentation written by
       Subversion project developers, which were then coalesced into a
-      single work and rewritten.  As such, it has always had the same
-      free, open-source license as Subversion itself.  In fact, the
-      book was written in the public eye, as a part of Subversion.
+      single work and rewritten.  As such, it has always been under a
+      free license.  (See <xref linkend="svn-copyright"/>.)  In fact,
+      the book was written in the public eye, as a part of Subversion.
       This means two things:</para>
 
     <itemizedlist>

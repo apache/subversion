@@ -19,7 +19,7 @@
 <!ENTITY appc     SYSTEM "appc.xml">
 <!ENTITY appd     SYSTEM "appd.xml">
 <!ENTITY gloss    SYSTEM "glossary.xml">
-<!ENTITY copy     SYSTEM "copyright.xml">
+<!ENTITY license  SYSTEM "copyright.xml">
 <!ENTITY colo     SYSTEM "colo.xml">
 ]>
 
@@ -70,6 +70,13 @@
       <holder>C. Michael Pilato</holder>
     </copyright>
 
+      <legalnotice>This work is licensed under the Creative Commons
+        Attribution-ShareAlike License. To view a copy of this
+        license, visit http://creativecommons.org/licenses/by-sa/1.0/
+        or send a letter to Creative Commons, 559 Nathan Abbott Way,
+        Stanford, California 94305, USA.  A summary of the license is
+        given below, followed by the full legal text.</legalnotice>
+
   </bookinfo>
 
   <!-- External entity refs -->
@@ -89,8 +96,7 @@
   &appb;
   &appc;
   &appd;
-<!--  &copy; This gives validation errors -->
-  &gloss;
+  &license;
   &colo;
 
   </book>
