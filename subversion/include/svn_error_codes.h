@@ -530,6 +530,10 @@ SVN_ERROR_START
   SVN_ERRDEF (SVN_ERR_RA_LOCAL_REPOS_NOT_FOUND,
               SVN_ERR_RA_LOCAL_CATEGORY_START + 0,
               "Couldn't find a repository.")
+       
+  SVN_ERRDEF (SVN_ERR_RA_LOCAL_REPOS_OPEN_FAILED,
+              SVN_ERR_RA_LOCAL_CATEGORY_START + 1,
+              "Couldn't open a repository.")
 
   /* svndiff errors */
 

@@ -108,7 +108,16 @@ svn_ra_local__split_URL (svn_repos_t **repos,
 
       /* Hey, cool, we were successful.  Stop looping. */
       if (err == SVN_NO_ERROR)
-        break;
+        break;   
+
+      /* If we get an error -other- than the path or 'format' file not
+         existing, then throw the error immediately.  For example, we
+         want permissions errors to be seen right away. */
+      if ((! APR_STATUS_IS_ENOENT(err->apr_err))
+          && (err->apr_err != SVN_ERR_REPOS_UNSUPPORTED_VERSION))
+        return svn_error_createf 
+          (SVN_ERR_RA_LOCAL_REPOS_OPEN_FAILED, 0, err,
+           "Unable to open repository %s", URL);
 
       /* It would be strange indeed if "/" were a repository, but hey,
          people do strange things sometimes.  Anyway, if "/" failed
