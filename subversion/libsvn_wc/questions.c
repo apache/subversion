@@ -86,9 +86,9 @@ svn_wc__check_wc (svn_string_t *path, apr_pool_t *pool)
 
 
 
-/*** svn_wc__file_modified_p ***/
+/*** svn_wc_file_modified_p ***/
 
-/* svn_wc__file_modified_p answers the question:
+/* svn_wc_file_modified_p answers the question:
 
    "Are the contents of F different than the contents of SVN/text-base/F?"
 
@@ -306,15 +306,10 @@ svn_wc__files_contents_same_p (svn_boolean_t *same,
 }
 
 
-/* The public interface: has FILENAME been edited since the last
-   update/commit?  Return answer in MODIFIED_P.   
-
-   FILENAME is assumed to be a complete path, ending in the file's
-   name.  */
 svn_error_t *
-svn_wc__file_modified_p (svn_boolean_t *modified_p,
-                         svn_string_t *filename,
-                         apr_pool_t *pool)
+svn_wc_file_modified_p (svn_boolean_t *modified_p,
+                        svn_string_t *filename,
+                        apr_pool_t *pool)
 {
   svn_boolean_t identical_p;
   svn_error_t *err;

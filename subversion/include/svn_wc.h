@@ -74,6 +74,18 @@
 
 
 
+/*** Detecting modification. ***/
+
+/* Set *MODIFIED_P to non-zero if FILENAME is modified w.r.t. its base
+   revision, else set MODIFIED_P to zero.
+   FILENAME is a path to the file, not just a basename. */
+svn_error_t *svn_wc_file_modified_p (svn_boolean_t *modified_p,
+                                     svn_string_t *filename,
+                                     apr_pool_t *pool);
+
+
+
+
 /*** Entries and status. ***/
 
 /* A working copy entry -- that is, revision control information about

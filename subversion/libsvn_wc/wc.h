@@ -107,13 +107,6 @@ svn_error_t *svn_wc__files_contents_same_p (svn_boolean_t *same,
 
 
 
-
-/* Set *MODIFIED_P to non-zero if FILENAME has been locally modified,
-   else set to zero. */
-svn_error_t *svn_wc__file_modified_p (svn_boolean_t *modified_p,
-                                      svn_string_t *filename,
-                                      apr_pool_t *pool);
-
 
 /*** Locking. ***/
 
