@@ -70,6 +70,9 @@ typedef struct svn_string_t svn_string_t;
     value.len = PyString_GET_SIZE($source);
     $target = &value;
 }
+%typemap(default) const svn_string_t * {
+    $target = NULL;
+}
 
 //%typemap(python,out) svn_string_t * {
 //    $target = PyBuffer_FromMemory($source->data, $source->len);
@@ -113,46 +116,9 @@ typedef struct svn_string_t svn_string_t;
 
 %typemap(python,in) const apr_array_header_t *STRINGLIST {
 %#error need pool argument from somewhere
-    $target = strings_to_array($source, NULL);
+    $target = svn_swig_strings_to_array($source, NULL);
     if ($target == NULL)
         return NULL;
 }
 
 /* ----------------------------------------------------------------------- */
-
-#ifdef SWIGPYTHON
-%header %{
-
-/* helper function to convert a Python sequence of strings into an
-   apr_array_header_t* of svn_stringbuf_t* objects. */
-static const apr_array_header_t *strings_to_array(PyObject *source,
-                                                  apr_pool_t *pool)
-{
-    int targlen;
-    apr_array_header_t *temp;
-
-    if (!PySequence_Check(source)) {
-        PyErr_SetString(PyExc_TypeError, "not a sequence");
-        return NULL;
-    }
-    targlen = PySequence_Length(source);
-    temp = apr_array_make(pool, targlen, sizeof(svn_stringbuf_t *));
-    while (targlen--) {
-        PyObject *o = PySequence_GetItem(source, targlen);
-        if (o == NULL)
-            return NULL;
-        if (!PyString_Check(o)) {
-            Py_DECREF(o);
-            PyErr_SetString(PyExc_TypeError, "not a sequence");
-            return NULL;
-        }
-        APR_ARRAY_IDX(temp, targlen, svn_stringbuf_t *) =
-            svn_stringbuf_ncreate(PyString_AS_STRING(o),
-                                  PyString_GET_SIZE(o),
-                                  pool);
-        Py_DECREF(o);
-    }
-    return temp;
-}
-%}
-#endif /* SWIGPYTHON */

@@ -34,15 +34,16 @@
 	    $target = t_output_helper($target, SWIG_NewPointerObj(*$source, \
                            SWIGTYPE_p_##type)); }
 #define OUT_PARAM_S(type, stype) \
-	%typemap(ignore) type ** (type *temp) { $target = &temp; } \
+	%typemap(ignore) type ** (type *temp) { $target = (stype **)&temp; } \
 	%typemap(python,argout) type ** { \
 	    $target = t_output_helper($target, SWIG_NewPointerObj(*$source, \
                            SWIGTYPE_p_##stype)); }
 
 /* -----------------------------------------------------------------------
-   Define a macro for forcing a type to appear in a wrapper file.
+   Define macro for forcing a type to appear in a wrapper file.
 */
 #define MAKE_TYPE(type) void _ignore_##type(struct type *arg)
+#define MAKE_PLAIN_TYPE(type) void _ignore_##type(type arg)
 
 /* ----------------------------------------------------------------------- */
 

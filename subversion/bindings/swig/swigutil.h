@@ -24,6 +24,7 @@
 #include <apr_pools.h>
 #include <apr_strings.h>
 #include <apr_hash.h>
+#include <apr_tables.h>
 
 #include "svn_types.h"
 #include "svn_string.h"
@@ -40,10 +41,30 @@ extern "C" {
 
 
 /* This macro can be placed into a wrapper file for ensuring that a
-   type will be registered with SWIG. */
+   pointer type will be registered with SWIG. */
 #define MAKE_TYPE_IMPL(type) \
 	struct type; \
 	static void _ignore_##type(struct type *arg) { }
+
+/* This macro can be placed into a wrapper file for ensuring that a
+   pointer type will be registered with SWIG. This doesn't declare the
+   type for the cases where something already includes the type (but it
+   just didn't get seen by SWIG). */
+#define MAKE_TYPE_IMPL_NO_DECL(type) \
+	static void _ignore_##type(struct type *arg) { }
+
+/* This macro can be placed into a wrapper file for ensuring that a
+   type will be registered with SWIG. */
+#define MAKE_PLAIN_TYPE_IMPL(type) \
+	struct foo *type; \
+	static void _ignore_##type(type arg) { }
+
+/* This macro can be placed into a wrapper file for ensuring that a
+   type will be registered with SWIG. This doesn't declare the type
+   for the cases where something already includes the type (but it
+   just didn't get seen by SWIG). */
+#define MAKE_PLAIN_TYPE_IMPL_NO_DECL(type) \
+	static void _ignore_##type(type arg) { }
 
 
 /* This file is being included outside of a wrapper file. We need to stub
@@ -76,6 +97,10 @@ PyObject *svn_swig_convert_hash(apr_hash_t *hash, swig_type_info *type);
    objects */
 PyObject *svn_swig_c_strings_to_list(char **strings);
 
+/* helper function to convert a Python sequence of strings into an
+   apr_array_header_t* of svn_stringbuf_t* objects. */
+const apr_array_header_t *svn_swig_strings_to_array(PyObject *source,
+                                                    apr_pool_t *pool);
 
 #endif /* SWIGPYTHON */
 
