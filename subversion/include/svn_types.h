@@ -58,10 +58,11 @@ typedef struct svn_item_t {
 
 typedef long int svn_revnum_t;
 
-/* This is never a valid revision number.  (Actually, anything less
-   than 0 is never a valid revision number.) */
-#define SVN_INVALID_REVNUM (-1)
-
+/* Valid revision numbers begin at 1 */
+#define IS_VALID_REVNUM (n) (n >= 0)
+#define SVN_INVALID_REVNUM (-1) /* The 'official' invalid revision num */
+#define SVN_IGNORED_REVNUM (-2) /* Not really invalid...just
+                                   unimportant */
 
 /* YABT:  Yet Another Boolean Type */
 typedef int svn_boolean_t;
