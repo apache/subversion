@@ -2883,13 +2883,15 @@ fs_paths_changed (apr_hash_t **changed_paths_p,
                   svn_fs_root_t *root,
                   apr_pool_t *pool)
 {
-  apr_hash_t *changed_paths;
   fs_root_data_t *frd = root->fsap_data;
 
-  SVN_ERR (svn_fs_fs__paths_changed (&changed_paths, root->fs, root->rev,
-                                     frd->copyfrom_cache, pool));
+  if (root->is_txn_root)
+    return svn_fs_fs__txn_changes_fetch (changed_paths_p, root->fs, root->txn,
+                                         NULL, pool);
+  else
+    return svn_fs_fs__paths_changed (changed_paths_p, root->fs, root->rev,
+                                     frd->copyfrom_cache, pool);
   
-  *changed_paths_p = changed_paths;
   return SVN_NO_ERROR;
 }
 
