@@ -234,9 +234,32 @@ typedef svn_error_t *(svn_txdelta_window_handler_t)
                      (svn_txdelta_window_t *window, void *baton);
 
 
-/* ### temporary: allows us to compile */
-typedef struct svn_vcdiff_parser_t svn_vcdiff_parser_t;
-typedef struct svn_text_delta_window_handler_t svn_text_delta_window_handler_t;
+
+/*----------------------------------------------------------------
+    vcdiff parsing, "push" interface
+*/
+
+/* A vcdiff parser object.  */
+typedef struct svn_vcdiff_parser_t
+{
+  /* Once the vcdiff parser has enough data buffered to create a
+     "window", it passes this window to the caller's consumer routine.  */
+  svn_txdelta_window_handler_t *consumer_func;
+  void *consumer_baton;
+
+  /* Pool to create subpools from; each developing window will be a
+     subpool */
+  apr_pool_t *pool;
+
+  /* The current subpool which contains our current window-buffer */
+  apr_pool_t *subpool;
+
+  /* The actual vcdiff data buffer, living within subpool. */
+  svn_string_t *buffer;
+
+} svn_vcdiff_parser_t;
+
+
 
 /* Return a vcdiff parser object, PARSER, in caller-pushes form.  If
    we're receiving a vcdiff-format byte stream, one block of bytes at
@@ -247,7 +270,8 @@ typedef struct svn_text_delta_window_handler_t svn_text_delta_window_handler_t;
    HANDLER_BATON.  */
 extern svn_vcdiff_parser_t *svn_make_vcdiff_parser
                             (svn_txdelta_window_handler_t *handler,
-                             void *handler_baton);
+                             void *handler_baton,
+                             apr_pool_t *pool);
 
 
 /* Parse the LEN bytes at BUFFER as the next block of data in the
@@ -261,10 +285,12 @@ extern svn_vcdiff_parser_t *svn_make_vcdiff_parser
    hasn't passed to HANDLER yet.  */
 extern svn_error_t *svn_vcdiff_parse (svn_vcdiff_parser_t *parser,
                                       const char *buffer,
-                                      apr_off_t len);
+                                      apr_off_t *len);
 
 
-/* Traversing tree deltas.  */
+/* -----------------------------------------------------------------------
+           Traversing tree deltas.  
+*/
 
 
 /* In Subversion, we've got various producers and consumers of tree
@@ -498,7 +524,7 @@ typedef struct svn_delta_walk_t
   svn_error_t *(*apply_textdelta) (void *walk_baton,
                                    void *parent_baton,
                                    void *file_baton, 
-                                   svn_text_delta_window_handler_t **handler,
+                                   svn_txdelta_window_handler_t **handler,
                                    void **handler_baton);
 
   /* Change the value of a file's property.

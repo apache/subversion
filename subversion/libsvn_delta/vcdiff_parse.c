@@ -88,15 +88,15 @@
    svn_delta_window_t, we pass it to HANDLER, along with
    HANDLER_BATON.  POOL will be used to by PARSER to buffer the
    incoming vcdiff data and create windows to send off.  */
-svn_delta__vcdiff_parser_t *
-svn_delta__make_vcdiff_parser (svn_text_delta_window_handler_t *handler,
-                               void *handler_baton,
-                               apr_pool_t *pool)
+svn_vcdiff_parser_t *
+svn_make_vcdiff_parser (svn_txdelta_window_handler_t *handler,
+                        void *handler_baton,
+                        apr_pool_t *pool)
 {
   /* Allocate a vcdiff_parser and fill out its fields */
-  svn_delta__vcdiff_parser_t *new_vcdiff_parser = 
-    (svn_delta__vcdiff_parser_t *)
-    apr_palloc (pool, sizeof(svn_delta__vcdiff_parser_t));
+  svn_vcdiff_parser_t *new_vcdiff_parser = 
+    (svn_vcdiff_parser_t *)
+    apr_palloc (pool, sizeof(svn_vcdiff_parser_t));
 
   new_vcdiff_parser->consumer_func = handler;
   new_vcdiff_parser->consumer_baton = handler_baton;
@@ -120,21 +120,22 @@ svn_delta__make_vcdiff_parser (svn_text_delta_window_handler_t *handler,
    Create a new window from PARSER->SUBPOOL, and send it off to the
    caller's consumer routine, then create a new SUBPOOL in PARSER so
    that it can continue buffering data.  */
-static svn_error_t *
-svn_vcdiff_send_window (svn_delta__vcdiff_parser_t *parser, apr_size_t len)
+svn_error_t *
+svn_vcdiff_send_window (svn_vcdiff_parser_t *parser, apr_size_t len)
 {
   svn_error_t *err;
 
-  svn_delta_window_t *window =
-    (svn_delta_window_t *) apr_palloc (parser->subpool, 
-                                       sizeof(svn_delta_window_t));
+  svn_txdelta_window_t *window =
+    (svn_txdelta_window_t *) apr_palloc (parser->subpool, 
+                                       sizeof(svn_txdelta_window_t));
   
-  svn_delta_op_t *new_op = 
-    (svn_delta_op_t *) apr_palloc (parser->subpool, sizeof(svn_delta_op_t));
+  svn_txdelta_op_t *new_op = 
+    (svn_txdelta_op_t *) 
+    apr_palloc (parser->subpool, sizeof(svn_txdelta_op_t));
   
   /* Right now, we have only one kind of vcdiff operation:
      "create new text" :) */
-  new_op->action_code = svn_delta_new;  /* append new text */
+  new_op->action_code = svn_txdelta_new;  /* append new text */
   new_op->offset = 0;
   new_op->length = len;
   
@@ -180,9 +181,9 @@ svn_vcdiff_send_window (svn_delta__vcdiff_parser_t *parser, apr_size_t len)
    sophisticated algorithm than that.  :) */
 
 svn_error_t *
-svn_delta__vcdiff_parse (svn_delta__vcdiff_parser_t *parser,
-                         const char *buffer,
-                         apr_off_t *len)
+svn_vcdiff_parse (svn_vcdiff_parser_t *parser,
+                  const char *buffer,
+                  apr_off_t *len)
 {
   svn_error_t *err;
 
@@ -224,25 +225,6 @@ svn_delta__vcdiff_parse (svn_delta__vcdiff_parser_t *parser,
 
 
 
-
-
-/* Temporary: the real vcdiff implementation probably won't need this,
-   because presumably by the time the XML parser discovers a
-   </text-delta>, svn_delta__vcdiff_parse() will have just finished sending
-   off a final window.  But for our current "stupid" definition of
-   window, we made need to send off any remaining bytes still in the
-   parser's buffer. */
-
-svn_error_t *
-svn_delta__vcdiff_flush_buffer (svn_delta__vcdiff_parser_t *parser)
-{
-  svn_error_t *err = svn_vcdiff_send_window (parser, 
-                                             parser->buffer->len);
-  if (err)
-    return err;
-
-  return SVN_NO_ERROR;
-}
 
 
 
