@@ -527,6 +527,31 @@ def diff_repo_subset():
   return 0
 
 
+# test 8
+def diff_non_version_controlled_file():
+  "non version controlled files"
+
+  sbox = sandbox(diff_non_version_controlled_file)
+  wc_dir = os.path.join(svntest.main.general_wc_dir, sbox)
+  if svntest.actions.make_repo_and_wc(sbox): return 1
+
+  svntest.main.file_append(os.path.join(wc_dir, 'A', 'D', 'foo'), "a new file")
+
+  diff_output, err_output = svntest.main.run_svn(1, 'diff', 
+                                                 os.path.join(wc_dir, 
+                                                              'A', 'D', 'foo'))
+
+  if count_diff_output(diff_output) != 0: return 1
+
+  # At one point this would crash, so we would only get a 'Segmentation Fault' 
+  # error message.  The appropriate response is a few lines of errors.  I wish 
+  # there was a way to figure out if svn crashed, but all run_svn gives us is 
+  # the output, so here we are...
+  if len(err_output) <= 1: return 1
+
+  return 0
+  
+
 ########################################################################
 # Run the tests
 
@@ -540,6 +565,7 @@ test_list = [ None,
               diff_multiple_reverse,
               diff_non_recursive,
               diff_repo_subset,
+              diff_non_version_controlled_file,
              ]
 
 if __name__ == '__main__':
