@@ -142,10 +142,10 @@ typedef struct {
 #define DEBUG_CR ""
 #endif
 
-static const char report_head[] = ("<S:update-report xmlns:S=\""
+static const char report_head[] = "<S:update-report xmlns:S=\""
                                    SVN_XML_NAMESPACE
-                                   "\">" DEBUG_CR);
-static const char report_tail[] = ("</S:update-report>" DEBUG_CR);
+                                   "\">" DEBUG_CR;
+static const char report_tail[] = "</S:update-report>" DEBUG_CR;
 
 static const struct ne_xml_elm report_elements[] =
 {
