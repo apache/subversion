@@ -201,7 +201,7 @@ svn_ra_local__get_commit_track_editor (svn_delta_edit_fns_t **editor,
         change_file_prop
         change_dir_prop
      
-     I'm pretty sure delete_entry is a no-op too, so it is
+     I'm pretty sure delete_entry is a no-op too, so it is also
      unimplemented.  It's true the delete is part of the commit, but
      that entity's record is expunged afterwards, so there's no point
      bumping its revision number.  So, delete_entry is left in the
