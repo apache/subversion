@@ -17,6 +17,9 @@
 
 import junit.framework.*;
 
+/**
+ * JUnits tests for the Java subversion binding helper functions
+ */
 public class AllTests {
 
     public static void main( String [] args )
@@ -32,18 +35,9 @@ public class AllTests {
 	    //add tests here
 	    //example:
 	    //suite.addTest( new StatusTest() );
-	    suite.addTestSuite(  VectorTests.class );
+	    suite.addTestSuite( DateTests.class );
+	    suite.addTestSuite( VectorTests.class );
 
 	    return suite;
 	}
 }
-
-/* 
- * local variables:
- * eval: (load-file "../../../../../../../svn-dev.el")
- * end: 
- */
-
-
-
-
