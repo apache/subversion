@@ -47,7 +47,7 @@ Candidate changes:
     Notes:
       r11490 is just cleanups.  But makes it merge cleanly.
     Votes:
-      +1: breser
+      +1: breser, lundblad
       +1: jszakmeister (without r11545 and r11547)
 
   * r11483 (Issue #2091)
