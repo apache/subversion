@@ -963,7 +963,7 @@ rep_write (svn_fs_t *fs,
   SVN_ERR (svn_fs__bdb_read_rep (&rep, fs, rep_key, trail));
 
   if (! rep_is_mutable (rep, txn_id))
-    svn_error_createf
+    return svn_error_createf
       (SVN_ERR_FS_REP_NOT_MUTABLE, NULL,
        "Rep '%s' is not mutable", rep_key);
 
