@@ -238,12 +238,12 @@ accidentally discover that your clients and servers no longer
 
 <p>Subversion is written in ANSI C and uses APR, the <a
 href="http://apr.apache.org">Apache Portable Runtime</a> library, as a
-portability layer.  Although the Subversion client will compile
-anywhere APR does, the Subversion server depends on <a
-href="http://www.sleepycat.com">Berkeley DB</a>.  In theory Berkeley
-DB is portable to most of those platforms as well (except Win95/Win98,
-where it's known not to work due to shared-memory segment
-problems).</p>
+portability layer.  The Subversion client will run anywhere APR runs,
+which is most places.  The Subversion server (i.e., the repository
+side) is the same, except that it will not work on Win9x platforms
+(Win95/Win98/WinME), because it depends on <a
+href="http://www.sleepycat.com">Berkeley DB</a>, which has
+shared-memory segment problems on Win9x.</p>
 
 <![CDATA[-----------------------------------------------------------]]>
 
