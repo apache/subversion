@@ -249,7 +249,6 @@ static svn_error_t *do_auth(ra_svn_session_baton_t *sess,
   const char *realmstring, *user, *password, *msg;
   svn_auth_iterstate_t *iterstate;
   void *creds;
-  svn_error_t *err;
   svn_boolean_t compat = (realm == NULL);
 
   realmstring = realm ? apr_psprintf(pool, "%s %s", sess->realm_prefix, realm)
@@ -263,17 +262,7 @@ static svn_error_t *do_auth(ra_svn_session_baton_t *sess,
     }
   else if (find_mech(mechlist, "ANONYMOUS"))
     {
-      if (!sess->user)
-        {
-          err = svn_auth_first_credentials(&creds, &iterstate,
-                                           SVN_AUTH_CRED_USERNAME, realmstring,
-                                           sess->auth_baton, pool);
-          if (!err && creds)
-            sess->user = ((svn_auth_cred_username_t *) creds)->username;
-          svn_error_clear(err);
-        }
-      SVN_ERR(auth_response(conn, pool, "ANONYMOUS",
-                            sess->user ? sess->user : "", compat));
+      SVN_ERR(auth_response(conn, pool, "ANONYMOUS", "", compat));
       return read_success(conn, pool);
     }
   else if (find_mech(mechlist, "CRAM-MD5"))
