@@ -313,6 +313,48 @@ PyObject *svn_swig_py_prophash_to_dict(apr_hash_t *hash)
   return convert_hash(hash, convert_svn_string_t, NULL);
 }
 
+
+PyObject *svn_swig_py_locationhash_to_dict(apr_hash_t *hash)
+{
+    /* Need special code for this because of the darned svn_revnum_t
+       keys. */
+    apr_hash_index_t *hi;
+    PyObject *dict = PyDict_New();
+
+    if (dict == NULL)
+        return NULL;
+
+    for (hi = apr_hash_first(NULL, hash); hi; hi = apr_hash_next(hi)) 
+      {
+        const void *k;
+        void *v;
+        PyObject *key, *value;
+
+        apr_hash_this(hi, &k, NULL, &v);
+        key = PyLong_FromLong(*(svn_revnum_t *)k);
+        if (key == NULL)
+          {
+            Py_DECREF(dict);
+            return NULL;
+          }
+        value = PyString_FromString((char *)v);
+        if (value == NULL) {
+            Py_DECREF(key);
+            Py_DECREF(dict);
+            return NULL;
+        }
+        if (PyDict_SetItem(dict, key, value) == -1) 
+          {
+            Py_DECREF(value);
+            Py_DECREF(dict);
+            return NULL;
+          }
+        Py_DECREF(value);
+        Py_DECREF(key);
+      }
+    return dict;
+}
+
 PyObject *svn_swig_py_convert_hash(apr_hash_t *hash, swig_type_info *type)
 {
   return convert_hash(hash, convert_to_swigtype, type);
@@ -368,6 +410,45 @@ const apr_array_header_t *svn_swig_py_strings_to_array(PyObject *source,
     }
     return temp;
 }
+
+
+const apr_array_header_t *svn_swig_py_revnums_to_array(PyObject *source,
+                                                       apr_pool_t *pool)
+{
+    int targlen;
+    apr_array_header_t *temp;
+
+    if (!PySequence_Check(source)) {
+        PyErr_SetString(PyExc_TypeError, "not a sequence");
+        return NULL;
+    }
+    targlen = PySequence_Length(source);
+    temp = apr_array_make(pool, targlen, sizeof(svn_revnum_t));
+    /* APR_ARRAY_IDX doesn't actually increment the array item count
+       (like, say, apr_array_push would). */
+    temp->nelts = targlen;
+    while (targlen--) {
+        PyObject *o = PySequence_GetItem(source, targlen);
+        if (o == NULL)
+            return NULL;
+        if (PyLong_Check(o)) {
+            APR_ARRAY_IDX(temp, targlen, svn_revnum_t) = 
+              (svn_revnum_t)PyLong_AsLong(o);
+        }
+        else if (PyInt_Check(o)) {
+            APR_ARRAY_IDX(temp, targlen, svn_revnum_t) = 
+              (svn_revnum_t)PyInt_AsLong(o);
+        }
+        else {
+            Py_DECREF(o);
+            PyErr_SetString(PyExc_TypeError, "not an integer type");
+            return NULL;
+        }
+        Py_DECREF(o);
+    }
+    return temp;
+}
+
 
 
 /*** apr_array_header_t conversions.  To create a new type of

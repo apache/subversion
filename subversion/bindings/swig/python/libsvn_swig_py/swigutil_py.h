@@ -85,6 +85,10 @@ void svn_swig_py_svn_exception(svn_error_t *err);
    a Python dict */
 PyObject *svn_swig_py_prophash_to_dict(apr_hash_t *hash);
 
+/* helper function to convert an apr_hash_t* (svn_revnum_t* -> const
+   char *) to a Python dict */
+PyObject *svn_swig_py_locationhash_to_dict(apr_hash_t *hash);
+
 /* convert a hash of 'const char *' -> TYPE into a Python dict */
 PyObject *svn_swig_py_convert_hash(apr_hash_t *hash, swig_type_info *type);
 
@@ -106,6 +110,10 @@ PyObject *svn_swig_py_revarray_to_list(const apr_array_header_t *revs);
    appropriate for incoming arguments which are defined to last the
    duration of the function's execution.  */
 const apr_array_header_t *svn_swig_py_strings_to_array(PyObject *source,
+                                                       apr_pool_t *pool);
+
+/* like svn_swig_py_strings_to_array(), but for array's of 'svn_revnum_t's. */
+const apr_array_header_t *svn_swig_py_revnums_to_array(PyObject *source,
                                                        apr_pool_t *pool);
 
 /* make an editor that "thunks" from C callbacks up to Python */
