@@ -1009,7 +1009,7 @@ Committed revision 352.
         your team.  Remember that whatever you choose, it's not a
         permanent commitment.  You can reorganize your repository at any
         time.  Because branches and tags are ordinary directories, the
-        <command>svn mv</command> command can move or rename them
+        <command>svn move</command> command can move or rename them
         however you wish.  Switching from one layout to another is just
         a matter of issuing a series of server-side moves; if you don't
         like the way things are organized in the repository, just juggle
@@ -1030,7 +1030,7 @@ Committed revision 352.
         anymore:</para>
 
 <screen>
-$ svn remove http://svn.example.com/repos/branches/calc/my-calc-branch \
+$ svn delete http://svn.example.com/repos/branches/calc/my-calc-branch \
              -m "Removing obsolete branch of calc project."
 
 Committed revision 375.

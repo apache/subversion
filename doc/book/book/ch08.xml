@@ -428,7 +428,7 @@ $ svn log -r 1729:{2/17/02}
             <title>Description</title>
             
             <para>Outputs the contents of the specified files or URLs.
-              For listing the contents of directories, see svn ls.</para>
+              For listing the contents of directories, see svn list.</para>
           </refsect1>
 
           <refsect1>
