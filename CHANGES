@@ -40,7 +40,7 @@ Version 0.28.0 (released 24 August 2003, rev 6856, branches/release-0.28)
  * fixed Handle \r correctly when prompting on Windows. (r6792,#1307)
  * 'svn merge' now 'skip's when it hits unversioned obstructions (r6810,#1425)
  * fixed repos->wc of file w/ svn:keywords set caused segfault (r6818,#1473)
- * fixed 'svn diff -r PREV:HEAD" failed if tmp/ exists in cwd (r6838,#1487)
+ * fixed 'svn diff -r PREV:HEAD' failed if tmp/ exists in cwd (r6838,#1487)
 
  Developer-visible changes:
  * database schema changed (see warning above!) (r6752,#1003,#1248,#1438)
