@@ -60,7 +60,6 @@ See the 1.1 release notes for a more verbose overview of the changes since
  * fixed: disallow non-recursive directory commit (issue #1797)
  * fixed: allow propget of props with colon in name (issue #1807)
  * fixed: 'svnadmin load' computation of copyfrom-rev (issue #1795)
- * fixed: mod_auth_svn COPY security hole:  authorize whole tree (issue #1949)
  * general improvement and normalization of error messages
  * many improvements to contributed tools:  mailer.py, psvn.el, etc.
 
@@ -100,13 +99,14 @@ See the 1.1 release notes for a more verbose overview of the changes since
 
 
 Version 1.0.6
-(15 July 2004, from /branches/1.0.x)
+(19 July 2004, from /branches/1.0.x)
 http://svn.collab.net/repos/svn/tags/1.0.6
 
  User-visible-changes:
  * fixed: crash in status command, caused by race (r10144)
  * fixed: crashes when deleting a revision-prop (r10148, r10185, r10192)
  * fixed: mod_authz_svn allows COPY method on repos with space in name (#1837)
+ * fixed: mod_authz_svn COPY security hole:  authorize whole tree (issue #1949)
  
  Developer-visible changes:
  * neon 0.24.7 now required (fixes wire compression bugs) (r10159, 10176)
