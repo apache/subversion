@@ -210,6 +210,32 @@ static PyObject *make_ob_server_cert_info(void *ptr)
 } 
 /***/
 
+/* Conversion from Python single objects (not hashes/lists/etc.) to
+   Subversion types. */
+static const char *make_string_from_ob(PyObject *ob, apr_pool_t *pool)
+{
+  if (ob == Py_None)
+    return NULL;
+  if (! PyString_Check(ob)) {
+    PyErr_SetString(PyExc_TypeError, "not a string");
+    return NULL;
+  }
+  return apr_pstrdup(pool, PyString_AS_STRING(ob));
+}
+static svn_string_t *make_svn_string_from_ob(PyObject *ob, apr_pool_t *pool)
+{
+  if (ob == Py_None)
+    return NULL;
+  if (! PyString_Check(ob)) {
+    PyErr_SetString(PyExc_TypeError, "not a string");
+    return NULL;
+  }
+  return svn_string_create(PyString_AS_STRING(ob), pool);
+}
+
+
+/***/
+
 static PyObject *convert_hash(apr_hash_t *hash,
                               PyObject * (*converter_func)(void *value,
                                                            void *ctx),
@@ -394,6 +420,86 @@ PyObject *svn_swig_py_c_strings_to_list(char **strings)
     Py_DECREF(list);
     return NULL;
 }
+
+apr_hash_t *svn_swig_py_stringhash_from_dict(PyObject *dict,
+                                             apr_pool_t *pool)
+{
+  apr_hash_t *hash;
+  PyObject *keys;
+  int i, num_keys;
+  
+  if (dict == Py_None)
+    return NULL;
+
+  if (!PyDict_Check(dict)) {
+    PyErr_SetString(PyExc_TypeError, "not a dictionary");
+    return NULL;
+  }
+
+  hash = apr_hash_make(pool);  
+  keys = PyDict_Keys(dict);
+  num_keys = PyList_Size(keys);
+  for (i = 0; i < num_keys; i++)
+    {
+      PyObject *key = PyList_GetItem(keys, i);
+      PyObject *value = PyDict_GetItem(dict, key);
+      const char *propname = make_string_from_ob(key, pool);
+      const char *propval = make_string_from_ob(value, pool);
+      Py_DECREF(key);
+      Py_DECREF(value);
+      if (! (propname && propval))
+        {
+          PyErr_SetString(PyExc_TypeError, 
+                          "dictionary keys/values aren't strings");
+          Py_DECREF(keys);
+          return NULL;
+        }
+      apr_hash_set(hash, propname, APR_HASH_KEY_STRING, propval);
+    }
+  Py_DECREF(keys);
+  return hash;
+}
+
+
+apr_hash_t *svn_swig_py_prophash_from_dict(PyObject *dict,
+                                           apr_pool_t *pool)
+{
+  apr_hash_t *hash;
+  PyObject *keys;
+  int i, num_keys;
+
+  if (dict == Py_None)
+    return NULL;
+
+  if (!PyDict_Check(dict)) {
+    PyErr_SetString(PyExc_TypeError, "not a dictionary");
+    return NULL;
+  }
+
+  hash = apr_hash_make(pool);  
+  keys = PyDict_Keys(dict);
+  num_keys = PyList_Size(keys);
+  for (i = 0; i < num_keys; i++)
+    {
+      PyObject *key = PyList_GetItem(keys, i);
+      PyObject *value = PyDict_GetItem(dict, key);
+      const char *propname = make_string_from_ob(key, pool);
+      svn_string_t *propval = make_svn_string_from_ob(value, pool);
+      Py_DECREF(key);
+      Py_DECREF(value);
+      if (! (propname && propval))
+        {
+          PyErr_SetString(PyExc_TypeError, 
+                          "dictionary keys/values aren't strings");
+          Py_DECREF(keys);
+          return NULL;
+        }
+      apr_hash_set(hash, propname, APR_HASH_KEY_STRING, propval);
+    }
+  Py_DECREF(keys);
+  return hash;
+}
+
 
 const apr_array_header_t *svn_swig_py_strings_to_array(PyObject *source,
                                                        apr_pool_t *pool)

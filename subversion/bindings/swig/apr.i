@@ -117,6 +117,47 @@ typedef apr_int32_t time_t;
 }
 
 /* -----------------------------------------------------------------------
+   create an INPUT argument defn for an apr_hash_t * which is storing
+   property values
+*/
+%typemap(ruby, in) apr_hash_t *PROPHASH
+{
+  $1 = svn_swig_rb_hash_to_apr_hash_svn_string($input, _global_pool);
+}
+
+%typemap(python, in) apr_hash_t *PROPHASH
+{
+  $1 = svn_swig_py_prophash_from_dict($input, _global_pool);
+}
+
+/* -----------------------------------------------------------------------
+   create an OUTPUT argument defn for an apr_array_header_t ** which is
+   storing svn_prop_t * property values
+*/
+%typemap(python, in, numinputs=0) 
+     apr_array_header_t **OUTPUT_OF_PROP (apr_array_header_t *temp)
+{
+  $1 = &temp;
+}
+%typemap(python, argout, fragment="output_helper")
+     apr_array_header_t **OUTPUT_OF_PROP
+{
+  $result = $1; /* ### WRONG! */
+}
+
+%typemap(ruby, in, numinputs=0)
+     apr_array_header_t **OUTPUT_OF_PROP (apr_array_header_t *temp)
+{
+  $1 = &temp;
+}
+%typemap(ruby, argout, fragment="output_helper")
+     apr_array_header_t **OUTPUT_OF_PROP
+{
+  $result = output_helper($result, svn_swig_rb_apr_array_to_array_prop(*$1));
+}
+
+
+/* -----------------------------------------------------------------------
    apr_array_header_t ** <const char *>
 */
 

@@ -497,11 +497,6 @@ PyObject *svn_swig_py_exception_type(void);
   $result = output_helper($result, svn_swig_rb_apr_array_to_array_prop(*$1));
 }
 
-%typemap(ruby, in) apr_hash_t *PROPHASH
-{
-  $1 = svn_swig_rb_hash_to_apr_hash_svn_string($input, _global_pool);
-}
-
 %apply apr_hash_t *PROPHASH {
   apr_hash_t *target_props,
   apr_hash_t *source_props
@@ -510,17 +505,6 @@ PyObject *svn_swig_py_exception_type(void);
 %typemap(ruby, in) apr_array_header_t *proplist
 {
   $1 = svn_swig_rb_array_to_apr_array_prop($input, _global_pool);
-}
-
-%typemap(ruby, in, numinputs=0)
-     apr_array_header_t **OUTPUT_OF_PROP (apr_array_header_t *temp)
-{
-  $1 = &temp;
-}
-%typemap(ruby, argout, fragment="output_helper")
-     apr_array_header_t **OUTPUT_OF_PROP
-{
-  $result = output_helper($result, svn_swig_rb_apr_array_to_array_prop(*$1));
 }
 
 %apply apr_array_header_t **OUTPUT_OF_PROP {

@@ -115,6 +115,18 @@ PyObject *svn_swig_py_array_to_list(const apr_array_header_t *strings);
 PyObject *svn_swig_py_revarray_to_list(const apr_array_header_t *revs);
 */
 
+/* helper function to convert a Python dictionary mapping strings to
+   strings into an apr_hash_t mapping const char *'s to const char *'s,
+   allocated in POOL. */
+apr_hash_t *svn_swig_py_stringhash_from_dict(PyObject *dict,
+                                             apr_pool_t *pool);
+
+/* helper function to convert a Python dictionary mapping strings to
+   strings into an apr_hash_t mapping const char *'s to svn_string_t's,
+   allocated in POOL. */
+apr_hash_t *svn_swig_py_prophash_from_dict(PyObject *dict,
+                                           apr_pool_t *pool);
+
 /* helper function to convert a Python sequence of strings into an
    'apr_array_header_t *' of 'const char *' objects.  Note that the
    objects must remain alive -- the values are not copied. This is
