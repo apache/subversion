@@ -415,7 +415,7 @@ cl_import (int argc, VALUE *argv, VALUE self)
 
   err = svn_client_import (before_editor, before_edit_baton,
                            after_editor, after_edit_baton,
-                           auth_baton, path, URL, new_entry, "",
+                           auth_baton, path, URL, new_entry,
                            log_msg, xml_dst, revision, pool);
   if (err)
     {
