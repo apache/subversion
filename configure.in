@@ -162,8 +162,8 @@ fi
 
 
 dnl kff todo fooo
-dnl AC_DEFINE(SVN_CLIENT_DIFF, "@SVN_CLIENT_DIFF@", [Full path to local diff program.])
 dnl AC_PATH_PROG(SVN_CLIENT_DIFF, diff, diff)
+dnl AC_DEFINE(SVN_CLIENT_DIFF, "how to get SVN_CLIENT_DIFF here?", [Full path to local diff program.])
 
 
 dnl Pass some config data ----------------------------
