@@ -1,4 +1,4 @@
-%define apache_version 2.0.40-0.7
+%define apache_version 2.0.40-0.8
 %define neon_version 0.21.3
 %define apache_dir /usr/local/apache2
 Summary: A Concurrent Versioning system similar to but better than CVS.
@@ -214,12 +214,12 @@ if [ "`grep -i dav_svn_module $CONF`"x = "x" ]; then
    perl -e '
    while ( <> )
       {
-      $FirstLoadFound = 1 if ( ! $FirstLoadFound &&
-           ( /^LoadModule/ ) );
-      $InsertPointFound = 1,
-         print "LoadModule dav_svn_module modules/mod_dav_svn.so\n"
-         if ( $FirstLoadFound && ! $InsertPointFound &&
-              ! ( /^LoadModule/ ) );
+      if ( /LoadModule dav_fs_module/ )
+         {
+         print;
+         print "LoadModule dav_svn_module modules/mod_dav_svn.so\n";
+         next;
+         }
       print;
       }
    ' < $CONF > $CONF.new && mv $CONF $CONF.bak && mv $CONF.new $CONF
