@@ -10,12 +10,7 @@ Contents:
     II. DOCUMENTATION
    III. PARTICIPATING IN THE SUBVERSION COMMUNITY
     IV. QUICKSTART GUIDE
-       A.  REPOSITORIES
-         1.  Repository Access
-         2.  Creating a Repository
-         3.  Creating a Subversion Server
-       B.  EXAMPLE WALKTHROUGH
-
+     V. CONVERTING FROM CVS
 
 
 I.    A FEW POINTERS
@@ -58,9 +53,9 @@ III.  PARTICIPATING IN THE SUBVERSION COMMUNITY
 
 IV.   QUICKSTART GUIDE
 
-  A.  REPOSITORIES
-
-      1.  Repository Access
+      Please note that this section is just a quick example for people
+      who want to see Subversion run immediately.  It's not an excuse
+      to ignore the book!
 
       The Subversion client has an abstract interface for accessing a
       repository.  Three "Repository Access" (RA) implementations
@@ -70,149 +65,90 @@ IV.   QUICKSTART GUIDE
       libsvn_ra_local: accesses a local repository using Berkeley DB.
       libsvn_ra_svn:   accesses a remote repository using a custom protocol.
 
-      You can see which methods are available to your 'svn' client
-      like so:
-
-          $ svn --version
-          svn, version X.YY.Z (rXXXX)
-             compiled Jul 10 2004, 11:49:32
-
-          Copyright (C) 2000-2004 CollabNet.
-          Subversion is open source software, see http://subversion.tigris.org/
-
-          The following repository access (RA) modules are available:
-
-          * ra_dav : Module for accessing a repository via WebDAV (DeltaV) protocol.
-            - handles 'http' schema
-            - handles 'https' schema
-          * ra_local : Module for accessing a repository on local disk.
-            - handles 'file' schema
-          * ra_svn : Module for accessing a repository using the svn network protocol.
-            - handles 'svn' schema
+      You can see which methods are available to your 'svn' client by
+      running 'svn --version'.  The following example assumes that
+      ra_local is available to your client.  (If you don't see
+      ra_local, it probably means that Berkeley DB wasn't found when
+      compiling your client binary.)
 
 
-      If you don't see ra_local, it probably means that Berkeley DB
-      wasn't found when compiling your client binary.  If you don't
-      see ra_dav, then something is very wrong;  most likely your
-      dynamic loader/linker can't find libsvn_ra_dav.so (see section
-      I.B above.)
+     1.  svnadmin create /path/to/repos    
+  
+          - this creates a new directory, 'repos'.  Make sure that
+            /path/to/repos/ is on local disk, NOT a network share.
+ 
+          - make SURE you have complete recursive read/write access to
+            the newly created 'repos' directory.
 
+          - understand that the repository is mainly a collection of
+            BerkeleyDB files;  you won't actually see your versioned
+            data if you peek in there.
 
-      2.  Creating a Repository
+     2.  svn import /tmp/project file:///path/to/repos -m "Initial import"
 
-      A Subversion repository is an ordinary directory that mainly
-      contains Berkeley DB .db files.  You can only create a
-      repository if you have Berkeley DB available on your system and
-      it was found during the compile.  If this is true, you should
-      have a utility called 'svnadmin' installed.  'svnadmin' does
-      many things, but its most important feature is creating an empty
-      repository:
+          - /tmp/project is a tree of data you've pre-arranged.
+            If you can, use this layout, as it will help you later on:
 
-        $ svnadmin create /usr/local/svn/repos1
+               /tmp/project/branches/
+               /tmp/project/tags/
+               /tmp/project/trunk/
+                               foo.c
+                               bar.c
+                               baz.c
+                               etc.
 
-      === WARNING!   WARNING!   WARNING!  ============================
-      |
-      | Note: The repository should *NOT* live on a remote or
-      | networked filesystem like NFS or AFS!  For details see:
-      |
-      |    http://subversion.tigris.org/project_faq.html#nfs
-      |
-      === WARNING!   WARNING!   WARNING!  ============================
+     3. svn checkout file:///path/to/repos/trunk project
 
-      After the repository is created, you can initially import data
-      into it, using libsvn_ra_local (invoked by using a 'file' URL):
+          - this creates a 'project' directory which is a working copy of
+            the /trunk directory in the repository.
 
-        $ svn import -m "log msg" some/local/dir/ file:///usr/local/svn/repos1 
+     4. Try using the repository:
 
-      The above example imports the contents of some/local/dir/ right
-      into the root of the repository.  If you want to put these
-      contents into a newly-created repository subdirectory, use
-      *three* args to import.  (Try 'svn help import' for details).
+          - edit a file in your working copy.
+          - run 'svn diff' to see the changes.
+          - run 'svn commit' to commit the changes.
+          - run 'svn up' to bring your working copy up-to-date.
 
-      Also, watch out for 'ownership' pitfalls.  Notice who has the
-      rights to modify the .db files in the repository.  Repository
-      commit access is ultimately determined by whomever has the
-      rights to modify the .db files.
+        Be sure to read chapters 2 and 3, they're a critical
+        introduction to the svn commandline client.
 
+     5. Get a real server process running (either apache or svnserve)
+        so that your repository can be made available over a network.
+        Read chapters 5 and 6 to learn about how to administer a
+        repository and how to set up a server process.
 
-      3.  Creating a Subversion Server
+      *** NEWBIES BEWARE:
 
-      Subversion uses either 'svnserve' or Apache 2.0 as its network
-      server.   Detailed instructions on how to set up either (or
-      both) server(s) is documented in chapter 6 of the Subversion
-      book at http://svnbook.red-bean.com.
+      The absolute most common stumbling block for newbies is problems
+      with permissions and ownership on the repository.  Any process
+      that opens the repository must have complete read/write access
+      to it.  This goes for any tool ('svnadmin', 'svnlook') or any
+      server process (apache, svnserve), or your own svn client, if
+      it's accessing via file:///.
 
-      Apache's mod_dav speaks to a special mod_dav_svn module, which
-      uses Berkeley DB to talk to a repository.  'svnserve' is a
-      lighter-weight process similar to cvs pserver, which also
-      accesses the repository.
-
-      Each server has an authentication system which allows remote
-      users to access the repository with Subversion clients.
-      However: make sure that Apache or svnserve has the right to edit
-      the .db files itself, or you'll get all sorts of errors.  Often
-      people create a special 'svn' user who owns the repository, and
-      then make sure svnserve or httpd is running at that user.
-
-      Compiling Apache and mod_dav_svn is a separate project; please
-      see section II at the end of the INSTALL document for a HOWTO.
-      And if your 'configure' script detected a proper version of
-      BerkeleyDB, then 'make' will automatically build the svnserve
-      binary.
-
-
-  B.  EXAMPLE WALKTHROUGH
-
-      Here are some simple examples of how one might use the svn
-      client.  In general, things are designed to be similar to CVS.
-      But many things are different.  *PLEASE* read the Subversion
-      book (in doc/book/, or online at http://svnbook.red-bean.com/)
-      -- in particular the 'SVN for CVS Users' appendix -- to
-      understand the broader concepts of what's going on!
-
-          # Checkout a working copy.  This can either be a file: or
-          #  http: url, depending on which RA modules are available.
-
-          $ svn co file:///usr/local/svn/repos1 wc
-          A wc/foo
-          A wc/bar
-          A wc/baz
-          A wc/baz/gloo
-          A wc/baz/bloo
-          Checked out revision 16.
-
-          $ cp -R wc wc2                 # back up this working copy
-
-          $ cd wc
-          $ echo "new text" >> bar       # change bar's text
-          $ svn propset color green foo  # add a metadata property to foo
-          $ svn rm baz                   # schedule baz directory for deletion
-          $ touch newfile
-          $ svn add newfile              # schedule newfile for addition
-
-          $ svn status                   # See what's locally modified
-          M   bar
-           M  foo
-          A   newfile
-          D   baz
-          D   baz/gloo
-          D   baz/bloo
-
-          $ svn commit -m "Made many changes"  # Commit the changes
-          Sending    bar
-          Sending    foo
-          Adding     newfile
-          Deleting   baz
-          Transmitting file data....
-          Committed revision 17.
-
-          $ cd ../wc2                # change to the back-up working copy
-
-          $ svn update               # get changes from repository
-          U   bar
-           U  foo
-          A   newfile
-          D   baz
+      Look at the last section in chapter 6 to understand how to tweak
+      repository ownership and permissions for multiple users and
+      processes.
 
 
 
+V.   CONVERTING FROM CVS
+
+     If you're a CVS user trying to move your CVS history over to
+     Subversion, then be sure to visit the 'cvs2svn' project:
+
+          http://cvs2svn.subversion.org
+
+     You can get the latest version of the cvs2svn converter by doing
+     an svn checkout:
+
+          svn checkout http://svn.collab.net/repos/cvs2svn/trunk cvs2svn
+
+     Please note that the cvs2svn project is a *separate* project from
+     Subversion.  If you have problems with cvs2svn or are confused,
+     please email cvs2svn project's mailing lists, not the Subversion
+     lists.
+
+     Finally, be sure to see Appendix A in the Subversion book.  It
+     contains a very quick overview of the major differences between
+     CVS and Subversion.
