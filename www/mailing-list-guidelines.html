@@ -1,0 +1,255 @@
+<h1>Guidelines for Posting to the Subversion Mailing Lists</h1>
+
+<p>This document is based on years of experience with the Subversion
+mailing lists, and specifically addresses the problems seen most
+frequently on those lists.  It should <i>not</i> be taken as a
+complete guide to mailing list etiquette&nbsp;&mdash;&nbsp;you can <a
+href="http://www.google.com/search?hl=en&ie=UTF-8&q=%22mailing+list+etiquette%22&btnG=Google+Search"
+>find one of those on the Net</a> pretty easily if you want one.</p>
+
+<p>If you follow these conventions when posting to the
+users@subversion.tigris.org or dev@subversion.tigris.org mailing
+lists, your post is much more likely to be read and answered.</p>
+
+<![CDATA[-----------------------------------------------------------]]>
+
+<h2>Where to post:</h2>
+
+<ul>
+
+<a name="where"></a> <li> <p>Post to <a
+href="mailto:users@subversion.tigris.org"
+>users@subversion.tigris.org</a> if you have a question about
+Subversion, or if you think you've found a bug (developers read the
+users list too, so they'll see your bug report).  If you want to
+discuss Subversion development, or post a <a href="#patches">code
+contribution</a>, then mail <a
+href="mailto:dev@subversion.tigris.org">dev@subversion.tigris.org</a>.</p>
+
+<p>When in doubt, mail users@, not dev@.</li>
+
+</ul>
+
+<![CDATA[-----------------------------------------------------------]]>
+
+<h2>Formatting:</h2>
+<a name="formatting"></a>
+
+<ul>
+
+<a name="line-length"></a>
+<li>
+<p>Try not to use lines longer than 72 columns.  This only applies to
+the prose part of your message, of course.  If you're <a
+href="#patches">including a patch</a> or other specially formatted
+text, those lines should be left at their original lengths.  Watch
+out: some mailers do a kind of automatic line-wrapping, whereby when
+you're writing your mail the display shows line breaks that aren't
+actually there.  There's usually a setting you can tweak to make it
+stop doing that.<p>
+</li>
+
+<a name="capitalization"></a>
+<li>
+<p>Capitalize the first letter of each sentence, and use paragraphs.
+If you're showing screen output or some other sort of example, offset
+it so it's clearly separate from the prose.  If you don't do these
+things, your mail will be <i>much</i> less readable than it could be,
+and many people will not bother to read it at all.</p>
+</li>
+
+</li>
+
+</ul>
+
+<![CDATA[-----------------------------------------------------------]]>
+
+<h2>Replying:</h2>
+<a name="replying"></a>
+
+<ul>
+
+<a name="reply-to"></a>
+<li>
+
+<p>Make sure to use your mailreader's "Follow-up" or "Reply-to-all" or
+"Group reply" feature when responding to a list post.  Otherwise, your
+mail will only go to the author of the original post, not to the whole
+list.  Unless there's a reason to reply privately, it's always better
+to respond to the list, so everyone can watch and learn.  (Also, many
+people who frequently get private responses to their posts have
+indicated that they would prefer those responses to go to the list
+instead.)</p>
+
+<p>Note that the Subversion mailing lists do not modify the
+<tt>Reply-to</tt> header to redirect responses to the list.  They
+leave <tt>Reply-to</tt> set to whatever the original sender had, for
+the reasons listed in <a
+href="http://www.unicom.com/pw/reply-to-harmful.html"
+>http://www.unicom.com/pw/reply-to-harmful.html</a>, in particular the
+"Principle of Least Damage" and "Can't Find My Way Back Home"
+sections.  From time to time, someone posts asking why we don't set
+the <tt>Reply-to</tt> header.  Sometimes that person will mention <a
+href="http://www.metasystema.org/essays/reply-to-useful.mhtml"
+>http://www.metasystema.org/essays/reply-to-useful.mhtml</a>, which
+gives arguments in favor of modifying the <tt>Reply-to</tt> field.
+The list administrators are aware of both documents, and see that both
+sides of the argument have merits, but in the end have chosen not to
+modify the <tt>Reply-to</tt> headers.  Please don't resurrect the
+topic.</p>
+</li>
+
+<a name="fresh-post"></a>
+<li>
+
+<p>Don't start a new thread (subject) by replying to an existing
+post.  Instead, start a fresh mail, and write out the list address by
+hand.  If you reply to an existing post, your mailreader may include
+metadata that marks your post as a followup in that thread.  Changing
+the <tt>Subject</tt> header is not enough to prevent this!  Many
+mailreaders will still preserve enough metadata to put your post in
+the wrong thread.  If this happens, not only will some people not see
+your post (because they're ignoring that thread), but people who are
+reading the thread will waste their time with your off-topic post.
+The safest way to avoid this is to never use "reply" to start a new
+topic.<p></li>
+
+<a name="rethreading"></a>
+<li>
+
+<p>If you do need to change the <tt>Subject</tt> header while
+preserving the thread (perhaps because the thread has wandered into
+some other topic), do it by making a post under the new subject with
+the old subject in parenthesis, like this:
+
+<pre>
+   Blue asparagus
+     |
+     |_ Re: Blue asparagus
+         |
+         |_ Yellow elephants (was: Re: Blue asparagus)    <i>&lt;-- ### switch ###</i>
+            |
+            |_ Re: Yellow elephants
+</pre>
+</p>
+
+</li>
+
+<a name="top-posting"></a>
+<li>
+
+<p>Please don't reflexively chide people for top-posting.
+"Top-posting" is the practice of putting the response text above the
+quoted text, instead of interleaved with it or below it.  Usually, the
+quoted text provides essential context for understanding the response,
+and so top-posting is a hindrance.  Sometimes, people top-post when it
+would have been better to inter-post or bottom-post, and others chide
+them for this.  If you must chide, do it gently, and certainly don't
+bother to make an extra post just to point out a minor problem like
+this.  There are even situations where top-posting is
+preferable&nbsp;&mdash;&nbsp;for example, when the response is short
+and general, and applies to the entirety of a long passage of quoted
+text.  So top-posting is always a judgement call, and in any case it's
+not a major inconvenience even when done inappropriately.</p>
+
+<p>If you came here looking for advice on how to quote, instead of
+advice on how to not flame people for their bad quoting habits, see <a
+href="http://www.netmeister.org/news/learn2quote.html"
+>http://www.netmeister.org/news/learn2quote.html</a> (Deutsch:
+<a href="http://learn.to/quote">http://learn.to/quote</a>).
+
+</li>
+
+</ul>
+
+<![CDATA[-----------------------------------------------------------]]>
+
+<h2>Sending patches:</h2>
+<a name="patches"></a>
+
+<ul>
+
+<li>
+<p>If you're posting a patch, start the subject line with
+<tt>[PATCH]</tt>.  This helps our patch manager spot patches right
+away.  If the patch addresses a particular issue, include the issue
+number as well: "<tt>[PATCH]&nbsp;issue&nbsp;#1729: ...</tt>".
+Developers who are interested in that particular issue will know to
+read the mail.</p>
+
+<p>It is unfortunately common for some mailreaders to munge patch text
+that is included inline in the message body, for example by inserting
+line breaks in the middle of long lines.  If you think your mailreader
+might do this, then send the patch as an attachment instead of putting
+it directly in the message body.  But if your mailreader doesn't
+munge message bodies, then put the patch inline, because it's a bit
+easier for people to see that way.</p>
+</li>
+
+</ul>
+
+
+<![CDATA[-----------------------------------------------------------]]>
+
+<h2>Languages and encodings:</h2>
+<a name="encodings"></a>
+
+<ul>
+
+<li>
+
+<p>Please use ASCII or ISO-8859 text if possible.  Don't post HTML
+mails, RichText mails, or other formats that might be opaque to
+text-only mailreaders.  Regarding language: we don't have an
+English-only policy, but you will probably get the best results by
+posting in English&nbsp;&mdash;&nbsp;it is the language shared by the
+greatest number of list participants.</p> <!-- Not bothering to
+describe the exact headers we expect, but if we wanted to, it would be
+something like:
+   
+          Content-Type: text/plain; charset=iso-8859-1
+          Content-Type: text/plain; charset=iso-8859-15
+   
+        and
+   
+          Content-Transfer-Encoding: 8bit
+          Content-Transfer-Encoding: quoted-printable
+   -->
+</li>
+
+</ul>
+
+
+<![CDATA[-----------------------------------------------------------]]>
+
+<h2>Look before you post:</h2>
+
+<ul>
+
+<a name="archives"></a>
+<li>
+
+<p>Look in the FAQ, and maybe poke around in the mailing list
+archives, before asking a question.  The Subversion FAQ is here: <a
+href="http://subversion.tigris.org/project_faq.html"
+>http://subversion.tigris.org/project_faq.html</a>.  The mailing lists
+archives are here: <a
+href="http://subversion.tigris.org/servlets/SearchList?listName=users"
+>http://subversion.tigris.org/servlets/SearchList?listName=users</a>
+(for <tt>users@</tt>), and <a
+href="http://subversion.tigris.org/servlets/SearchList?listName=dev"
+>http://subversion.tigris.org/servlets/SearchList?listName=dev</a>
+(for <tt>dev@</tt>).</p>
+
+<p>A mirror of the mailing list archives, with a somewhat different
+interface, is at <a href="http://www.contactor.se/~dast/svnusers"
+>http://www.contactor.se/~dast/svnusers</a> (for <tt>users@</tt>), and
+<a href="http://www.contactor.se/~dast/svn"
+>http://www.contactor.se/~dast/svn</a> (for <tt>dev@</tt>).</p>
+
+</li>
+
+</ul>
+
+<![CDATA[-----------------------------------------------------------]]>
+
