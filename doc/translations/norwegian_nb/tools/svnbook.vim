@@ -27,6 +27,6 @@ noremap <f5> :!~/bin/dings_it<cr>zo/@ENGLISH }}}<cr>j0f>a
 " next ENGLISH marker and go into linewise visual mode again.
 noremap <f6> gq/@ENGLISH }}}<cr>jV
 
-runtime syntax/xml.vim
+runtime! syntax/xml.vim
 
 " vim: set fdm=manual tw=72 ts=2 sw=2 sts=2 et fenc=utf8 :
