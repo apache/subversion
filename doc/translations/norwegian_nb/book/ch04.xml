@@ -1,19 +1,39 @@
 <chapter id="svn-ch-4">
+<!-- @ENGLISH {{{
 <title>Branching and Merging</title>
+@ENGLISH }}} -->
+<title>Forgreninger og fletting</title>
 
   <simplesect>
 
+    <!-- @ENGLISH {{{
     <para>Branching, tagging, and merging are concepts common to
       almost all version control systems.  If you're not familiar with
       these ideas, we provide a good introduction in this chapter.  If
       you are familiar, then hopefully you'll find it interesting to
       see how Subversion implements these ideas.</para>
+    @ENGLISH }}} -->
+    <para>Forgreninger (<quote>branching</quote>), merking 
+      (<quote>tagging</quote>) og fletting (<quote>merging</quote>) er 
+      konsepter felles for nesten alle versjonskontrollsystemer.
+      Hvis du ikke er vant med disse id&#233;ene, gir vi en god introduksjon 
+      i dette kapittelet.
+      Hvis du kjenner til dem, finner du det forh&#229;pentligvis interessant 
+      &#229; se hvordan Subversion har implementert disse id&#233;ene.</para>
 
+    <!-- @ENGLISH {{{
     <para>Branching is a fundamental part of version control.  If
       you're going to allow Subversion to manage your data, then this
       is a feature you'll eventually come to depend on.  This chapter
       assumes that you're already familiar with Subversion's basic
       concepts (<xref linkend="svn-ch-2"/>).</para>
+    @ENGLISH }}} -->
+    <para>Forgreninger er en fundamental del av versjonskontroll.
+      Hvis du skal tillate Subversion &#229; behandle dine data, er dette en 
+      funksjon som du etterhvert kommer til &#229; <!-- &#164; -->basere deg p&#229;.
+      Dette kapittelet g&#229;r ut i fra at du allerede er kjent med 
+      Subversions grunnleggende konsepter (<xref 
+      linkend="svn-ch-2"/>).</para>
 
   </simplesect>
 
@@ -21,26 +41,54 @@
   <!-- ======================== SECTION 1 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-ch-4-sect-1">
+    <!-- @ENGLISH {{{
     <title>What's a Branch?</title> 
+    @ENGLISH }}} -->
+    <title>Hva er en forgrening?</title> 
 
+    <!-- @ENGLISH {{{
     <para>Suppose it's your job to maintain a document for a division
       in your company, a handbook of some sort.  One day a different
       division asks you for the same handbook, but with a few parts
       'tweaked' for them, since they do things slightly
       differently.</para>
+    @ENGLISH }}} -->
+    <para>Tenk deg at det er din jobb &#229; vedlikeholde et dokument for en 
+      avdeling i firmaet ditt, en h&#229;ndbok av et eller annet slag.
+      En dag sp&#248;r en annen avdeling deg etter den samme h&#229;ndboken, men 
+      med noen deler <quote>spesialtilpasset</quote> for dem, siden de 
+      gj&#248;r ting litt forskjellig.</para>
 
+    <!-- @ENGLISH {{{
     <para>What do you do in this situation?  You do the obvious thing:
       you make a second copy of your document, and begin maintaining
       the two copies separately.  As each department asks you to make
       small changes, you incorporate them into one copy or the
       other.</para>
+    @ENGLISH }}} -->
+    <para>Hva gj&#248;r du i denne situasjonen?
+      Du gj&#248;r den opplagte tingen:
+      Du lager en annen kopi av dokumentet og begynner &#229; vedlikeholde de 
+      to kopiene separat.
+      Etterhvert som hver avdeling ber deg om &#229; gj&#248;re sm&#229; forandringer, 
+      legger du dem inn i den ene kopien eller den andre.</para>
 
+    <!-- @ENGLISH {{{
     <para>You often want to make the same change to both copies.  For
       example, if you discover a typo in the first copy, it's very
       likely that the same typo exists in the second copy.  The two
       documents are almost the same, after all; they only differ in
       small, specific ways.</para>
+    @ENGLISH }}} -->
+    <para>Du vil ofte &#248;nske &#229; gj&#248;re den samme forandringen i begge 
+      kopiene.
+      Hvis du for eksempel finner en skrivefeil i den f&#248;rste kopien, er 
+      det veldig sannsynlig at den samme trykkfeilen eksisterer i den 
+      andre kopien.
+      De to dokumentene er nesten like n&#229;r alt kommer til alt; 
+      forskjellene er sm&#229; og spesifikke.</para>
 
+    <!-- @ENGLISH {{{
     <para>This is the basic concept of a
       <firstterm>branch</firstterm>&mdash;namely, a line of
       development that exists independently of another line, yet still
@@ -48,12 +96,25 @@
       branch always begins life as a copy of something, and moves on
       from there, generating its own history (see <xref
       linkend="svn-ch-4-dia-1"/>).</para>
+    @ENGLISH }}} -->
+    <para>Dette er det grunnleggende konseptet for en 
+      <firstterm>forgrening</firstterm> &#8212; <!-- &#164; namely -->en 
+      utviklingslinje som eksisterer uavhengig av en annen linje, men 
+      som likevel deler en felles historie hvis du ser langt nok tilbake 
+      i tid.
+      En forgrening begynner bestandig livet som en kopi av noe, og g&#229;r 
+      videre derfra ved &#229; lage sin egen historie (se <xref 
+      linkend="svn-ch-4-dia-1"/>).</para>
 
       <figure id="svn-ch-4-dia-1">
+        <!-- @ENGLISH {{{
         <title>Branches of development</title>
+        @ENGLISH }}} -->
+        <title>Forgreninger av utviklingen</title>
         <graphic fileref="images/ch04dia1.png"/>
       </figure>
 
+    <!-- @ENGLISH {{{
     <para>Subversion has commands to help you maintain parallel
       branches of your files and directories.  It allows you to create
       branches by copying your data, and remembers that the copies are
@@ -62,6 +123,17 @@
       your working copy reflect different branches, so that you can
       <quote>mix and match</quote> different lines of development in
       your daily work.</para>
+    @ENGLISH }}} -->
+    <para>Subversion har kommandoer for &#229; hjelpe deg &#229; vedlikeholde 
+      parallelle forgreninger av filene og katalogene dine.
+      Den lar deg opprette forgreninger ved &#229; kopiere data, og husker at 
+      kopiene er relatert til hverandre.
+      Den hjelper deg ogs&#229; med &#229; duplisere forandringer fra en gren til 
+      en annen.
+      Til sist, den kan la porsjoner av arbeidskopien reflektere 
+      forskjellige forgreninger, s&#229; du kan <quote>blande og 
+      tilpasse</quote> forskjellige utviklingslinjer i ditt daglige 
+      arbeid.</para>
 
   </sect1>
   
@@ -69,13 +141,24 @@
   <!-- ======================== SECTION 2 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-ch-4-sect-2">
+    <!-- @ENGLISH {{{
     <title>Using Branches</title> 
+    @ENGLISH }}} -->
+    <title>Bruke forgreninger</title> 
 
+    <!-- @ENGLISH {{{
     <para>At this point, you should understand how each commit creates
       an entire new filesystem tree (called a <quote>revision</quote>)
       in the repository.  If not, go back and read about revisions in
       <xref linkend="svn-ch-2-sect-3.2"/>.</para>
+    @ENGLISH }}} -->
+    <para>P&#229; dette punktet skal du ha f&#229;tt forst&#229;elsen av hvordan hver 
+      innlegging oppretter et helt nytt filsystemtre (kalt en 
+      <quote>revisjon</quote>) i depotet.
+      Hvis ikke, g&#229; tilbake og les om revisjoner i <xref 
+      linkend="svn-ch-2-sect-3.2"/>.</para>
 
+    <!-- @ENGLISH {{{
     <para>For this chapter, we'll go back to the same example from
       Chapter 2.  Remember that you and your collaborator, Sally, are
       sharing a repository that contains two projects,
@@ -84,12 +167,26 @@
       project directory now contains subdirectories named
       <filename>trunk</filename> and <filename>branches</filename>.
       The reason for this will soon become clear.</para>
+    @ENGLISH }}} -->
+    <para>For dette kapittelet skal vi g&#229; tilbake til det samme 
+      eksempelet fra kapittel 2.
+      Husk at du og din kollega Sally deler et depot som inneholder to 
+      prosjekter, <filename>paint</filename> og 
+      <filename>calc</filename>.
+      Merk imidlertid at i <xref linkend="svn-ch-4-dia-2"/> inneholder 
+      hver prosjektkatalog underkataloger kalt 
+      <filename>trunk</filename> og <filename>branches</filename>.
+      &#197;rsaken til dette vil snart v&#230;re klar.</para>
     
       <figure id="svn-ch-4-dia-2">
+        <!-- @ENGLISH {{{
         <title>Starting repository layout</title>
+        @ENGLISH }}} -->
+        <title>Depotets utseende til &#229; begynne med</title>
         <graphic fileref="images/ch04dia2.png"/>
       </figure>
 
+    <!-- @ENGLISH {{{
     <para>As before, assume that Sally and you both have working
       copies of the <quote>calc</quote> project.  Specifically, you
       each have a working copy of <filename>/calc/trunk</filename>.
@@ -98,7 +195,17 @@
       decided that <filename>/calc/trunk</filename> is where the
       <quote>main line</quote> of development is going to take
       place.</para>
+    @ENGLISH }}} -->
+    <para>Som tidligere, tenk deg at du og Sally begge har arbeidskopier 
+      av <quote>calc</quote>-prosjektet.
+      Mer spesifikt, dere har begge en arbeidskopi av 
+      <filename>/calc/trunk</filename>.
+      Alle filene for prosjektet er i denne underkatalogen istedenfor i 
+      selve <filename>/calc</filename>, fordi teamet ditt har bestemt at 
+      <filename>/calc/trunk</filename> er der <quote>hovedlinjen</quote> 
+      av utviklingen skal foreg&#229;.</para>
 
+    <!-- @ENGLISH {{{
     <para>Let's say that you've been given the task of performing a
       radical reorganization of the project.  It will take a long time
       to write, and will affect all the files in the project.  The
@@ -108,7 +215,19 @@
       <filename>/calc/trunk</filename>) is always usable.  If you
       start committing your changes bit-by-bit, you'll surely break
       things for Sally.</para>
+    @ENGLISH }}} -->
+    <para>La oss si at du har f&#229;tt oppgaven &#229; utf&#248;re en radikal 
+      reorganisering av prosjektet.
+      Det vil ta lang tid &#229; skrive, og vil p&#229;virke alle filene i 
+      prosjektet.
+      Problemet her er at du vil ikke forstyrre Sally, som er i full 
+      gang med &#229; fikse sm&#229;feil her og der.
+      Hun er avhengig av at den seneste versjonen av prosjektet (i 
+      <filename>/calc/trunk</filename>) alltid fungerer.
+      Hvis du starter med &#229; legge inn forandringene dine bit for bit, 
+      vil du ganske sikkert &#248;delegge ting for Sally.</para>
 
+    <!-- @ENGLISH {{{
     <para>One strategy is to crawl into a hole: you and Sally can stop
       sharing information for a week or two.  That is, start gutting
       and reorganizing all the files in your working copy, but don't
@@ -132,17 +251,57 @@
       that are difficult to incorporate into your working
       copy&mdash;especially if you run <command>svn update</command>
       after weeks of isolation.</para>
+    @ENGLISH }}} -->
+    <para>En strategi er &#229; krabbe inn i et hull; du og Sally kan stoppe 
+      med &#229; dele informasjon for en uke eller to.
+      Det vil si, starte med &#229; <!-- &#164; gutting --> omorganisere alle 
+      filene i arbeidskopien din, men ikke legge inn eller oppdatere f&#248;r 
+      du er helt ferdig med oppgaven.
+      Men det er en del problemer med denne metoden.
+      For det f&#248;rste er det ikke s&#230;rlig trygt.
+      Folk flest liker &#229; lagre arbeidet sitt til depotet med jevne 
+      mellomrom i tilfelle noe stygt skulle skje med arbeidskopien.
+      For det andre er det ikke spesielt fleksibelt.
+      Hvis du gj&#248;r arbeidet ditt p&#229; forskjellige PC-er (kanskje du har 
+      en arbeidskopi av <filename>/calc/trunk</filename> p&#229; to 
+      forskjellige maskiner) m&#229; du kopiere forandringene manuelt fram og 
+      tilbake, eller gj&#248;re hele jobben p&#229; en enkelt maskin.
+      P&#229; samme m&#229;te er det vanskelig &#229; dele forandringene <!-- &#164; 
+      changes-in-progress -->dine med andre.
+      En vanlig god praksis innen programutvikling er &#229; la dine kolleger 
+      f&#229; se over arbeidet ditt mens du holder p&#229;.
+      Hvis ingen ser innleggingene dine, g&#229;r du glipp av potensiell 
+      respons.
+      Til slutt, n&#229;r du er ferdig med alle forandringene dine, kan du 
+      oppleve at det er veldig vanskelig &#229; flette sammen det endelige 
+      resultatet ditt med resten av koden til firmaet.
+      Sally (eller andre) kan ha gjort mange forandringer i depotet som 
+      er vanskelig &#229; legge inn i arbeidskopien din &#8212; spesielt hvis du 
+      kj&#248;rer <command>svn update</command> etter flere uker med 
+      isolasjon.</para>
 
+    <!-- @ENGLISH {{{
     <para>The better solution is to create your own branch, or line of
       development, in the repository.  This allows you to save your
       half-broken work frequently without interfering with others, yet
       you can still selectively share information with your
       collaborators.  You'll see exactly how this works later
       on.</para>
+    @ENGLISH }}} -->
+    <para>En bedre l&#248;sning er &#229; opprette din egen forgrening, eller 
+      utviklingslinje, i depotet.
+      Dette lar deg lagre det halvfungerende resultatet ditt med jevne 
+      mellomrom uten &#229; blande det med arbeidet til andre, og samtidig 
+      kan du velge ut informasjon som du vil dele med dine kolleger.
+      Du vil etter hvert f&#229; se n&#248;yaktig hvordan dette fungerer.</para>
 
   <sect2 id="svn-ch-4-sect-2.1">
+    <!-- @ENGLISH {{{
     <title>Creating a Branch</title> 
+    @ENGLISH }}} -->
+    <title>Opprette en forgrening</title>
       
+      <!-- @ENGLISH {{{
       <para>Creating a branch is very simple&mdash;you make a copy of
         the project in the repository using the <command>svn
         copy</command> command.  Subversion is not only able to copy
@@ -158,11 +317,34 @@
         <filename>/calc/branches/my-calc-branch</filename>, which
         begins its life as a copy of
         <filename>/calc/trunk</filename>.</para>
+      @ENGLISH }}} -->
+      <para>Det &#229; opprette en ny gren er veldig enkelt &#8212; du lager en 
+        kopi av prosjektet i depotet ved &#229; bruke kommandoen <command>svn 
+        copy</command>.
+        Subversion er ikke bare i stand til &#229; kopiere enkle filer, men 
+        ogs&#229; hele kataloger.
+        I dette tilfellet vil du lage en kopi av 
+        <filename>/calc/trunk</filename>-katalogen.
+        Hvor skal den nye kopien v&#230;re?
+        Hvor du vil &#8212; det er et sp&#248;rsm&#229;l om prosjektrutiner.
+        La oss si at teamet ditt har som regel &#229; opprette forgreninger i 
+        <filename>/calc/branches</filename>-omr&#229;det i depotet, og du vil 
+        kalle grenen din <literal>my-calc-branch</literal>.
+        Det du vil er &#229; lage en ny katalog, 
+        <filename>/calc/branches/my-calc-branch</filename>, som begynner 
+        livet som en kopi av <filename>/calc/trunk</filename>.</para>
 
+      <!-- @ENGLISH {{{
       <para>There are two different ways to make a copy.  We'll
         demonstrate the messy way first, just to make the concept
         clear.  To begin, check out a working copy of the project's
         root directory, <filename>/calc</filename>:</para>
+      @ENGLISH }}} -->
+      <para>Det er to forskjellige m&#229;ter &#229; lage en kopi p&#229;.
+        Vi vil demonstrere den rotete m&#229;ten f&#248;rst, bare for &#229; klargj&#248;re 
+        konseptet.
+        Til &#229; begynne med, hent ut en arbeidskopi av prosjektets 
+        rotkatalog, <filename>/calc</filename>:</para>
 
 <screen>
 $ svn checkout http://svn.example.com/repos/calc bigwc
@@ -174,9 +356,13 @@ A  bigwc/branches/
 Checked out revision 340.
 </screen>
 
+      <!-- @ENGLISH {{{
       <para>Making a copy is now simply a matter of passing two
         working-copy paths to the <command>svn copy</command>
         command:</para>
+      @ENGLISH }}} -->
+      <para>For &#229; lage en kopi er det n&#229; bare &#229; angi to arbeidskopistier 
+        til kommandoen <command>svn copy</command>:</para>
 
 <screen>
 $ cd bigwc
@@ -185,6 +371,7 @@ $ svn status
 A  +   branches/my-calc-branch
 </screen>
 
+      <!-- @ENGLISH {{{
       <para>In this case, the <command>svn copy</command> command
         recursively copies the <filename>trunk</filename> working
         directory to a new working directory,
@@ -199,16 +386,36 @@ A  +   branches/my-calc-branch
         repository by copying <filename>/calc/trunk</filename>, rather
         than resending all of the working copy data over the
         network:</para>
+      @ENGLISH }}} -->
+      <para>I dette tilfellet kopierer <command>svn copy</command> 
+        katalogen <filename>trunk</filename> rekursivt til en ny 
+        arbeidskatalog, <filename>branches/my-calc-branch</filename>.
+        Som du kan se av kommandoen <command>svn status</command> er den 
+        nye katalogen n&#229; klargjort for &#229; legges til i depotet.
+        Men legg ogs&#229; merke til <quote>+</quote>-tegnet ved siden av 
+        bokstaven A.
+        Dette indikerer at den klargjorte tilleggingen er en 
+        <emphasis>kopi</emphasis> av noe, og ikke noe nytt.
+        N&#229;r du legger inn forandringene dine, vil Subversion lage 
+        <filename>/calc/branches/my-calc-branch</filename> i depotet ved 
+        &#229; kopiere <filename>/calc/trunk</filename> istedenfor &#229; sende 
+        hele arbeidskopien over nettverket en gang til:</para>
 
+<!-- &#164; -->
 <screen>
 $ svn commit -m "Creating a private branch of /calc/trunk."
 Adding         branches/my-calc-branch
 Committed revision 341.
 </screen>
 
+      <!-- @ENGLISH {{{
       <para>And now the easier method of creating a branch, which we
         should have told you about in the first place: <command>svn
         copy</command> is able to operate directly on two URLs.</para>
+      @ENGLISH }}} -->
+      <para>Og n&#229; den lettere m&#229;ten &#229; lage en gren, som vi skulle 
+        fortalt deg om til &#229; begynne med: <command>svn copy</command> 
+        kan operere direkte mot to URLer.</para>
 
 <screen>
 $ svn copy http://svn.example.com/repos/calc/trunk \
@@ -218,6 +425,7 @@ $ svn copy http://svn.example.com/repos/calc/trunk \
 Committed revision 341.
 </screen>
 
+      <!-- @ENGLISH {{{
       <para>There's really no difference between these two methods.
         Both procedures create a new directory in revision 341, and
         the new directory is a copy of
@@ -234,15 +442,40 @@ Committed revision 341.
         check out a large mirror of the repository.  In fact, this
         technique doesn't even require you to have a working copy at
         all.</para>
+      @ENGLISH }}} -->
+      <para>Det er faktisk ingen forskjell p&#229; disse to metodene.
+        Begge prosedyrene lager en ny katalog i revisjon 341, og den nye 
+        katalogen er en kopi av <filename>/calc/trunk</filename>.
+        Dette er vist i <xref linkend="svn-ch-4-dia-3"/>.
+        Legg merke til den andre metoden utf&#248;rer en  
+        <emphasis>&#248;yeblikkelig</emphasis> innlegging.
+        <footnote>
+          <para>Subversion st&#248;tter ikke kopiering mellom forskjellige 
+            depot.
+            N&#229;r du bruker URLer med <command>svn copy</command> eller 
+            <command>svn move</command> kan du bare kopiere elementer 
+            innenfor det samme depotet.</para>
+        </footnote>
+        Det er en lettere prosedyre, fordi det ikke kreves at du m&#229; 
+        hente ut et stort speil av depotet.
+        Faktisk trenger du med denne teknikken ikke en arbeidskopi i det 
+        hele tatt.</para>
       
       <figure id="svn-ch-4-dia-3">
+        <!-- @ENGLISH {{{
         <title>Repository with new copy</title>
+        @ENGLISH }}} -->
+        <title>Depot med ny kopi</title>
         <graphic fileref="images/ch04dia3.png"/>
       </figure>
       
       <sidebar>
+        <!-- @ENGLISH {{{
         <title>Cheap Copies</title>
+        @ENGLISH }}} -->
+        <title>Billige kopier</title>
                 
+        <!-- @ENGLISH {{{
         <para>Subversion's repository has a special design.  When you
           copy a directory, you don't need to worry about the
           repository growing huge&mdash;Subversion doesn't actually
@@ -255,7 +488,22 @@ Committed revision 341.
           changes&mdash;the rest of the files continue to exist as
           links to the original files in the original
           directory.</para>
+        @ENGLISH }}} -->
+        <para>Subversions depot har en spesiell design.
+          N&#229;r du kopierer en katalog, trenger du ikke &#229; bekymre deg for 
+          at depotet skal vokse seg stort &#8212; Subversion dupliserer 
+          egentlig ingen data.
+          Istedenfor lager den en ny katalogpost som peker til et 
+          <emphasis>eksisterende</emphasis> tre.
+          Hvis du er en Unixbruker, er dette det samme konseptet som en 
+          hard lenke.
+          <!-- &#164; -->Denne kopien kalles <quote>lat</quote>.
+          Det vil si at hvis du legger inn en forandring til en fil i 
+          den kopierte katalogen, forandrer bare denne filen seg &#8212; 
+          resten av filene fortsetter &#229; eksistere som lenker til de 
+          originale filene i den originale katalogen.</para>
       
+        <!-- @ENGLISH {{{
         <para>This is why you'll often hear Subversion users talk
           about <quote>cheap copies</quote>.  It doesn't matter how
           large the directory is&mdash;it takes a very tiny, constant
@@ -266,12 +514,32 @@ Committed revision 341.
           more about this, visit Subversion's website and read about
           the <quote>bubble up</quote> method in Subversion's design
           documents.)</para>
+        @ENGLISH }}} -->
+        <para>Det er derfor du ofte vil h&#248;re Subversionbrukere snakke om 
+          <quote>billige kopier</quote>.
+          Det har ingenting &#229; si hvor stor en katalog er &#8212; det tar en 
+          veldig liten, konstant mengde tid &#229; lage en kopi av den.
+          Faktisk er denne egenskapen basisen for hvordan innlegginger 
+          skjer i Subversion; hver revisjon er en <quote>billig 
+          kopi</quote> av den forrige revisjonen, med noen f&#229; elementer 
+          som forandrer seg p&#229; <quote>en lat m&#229;te</quote> i den.
+          (For &#229; lese mer om dette, bes&#248;k Subversions hjemmeside og les 
+          om <quote>bubble up</quote>-metoden i Subversions 
+          designdokumenter.)</para>
 
+        <!-- @ENGLISH {{{
         <para>Of course, these internal mechanics of copying and
           sharing data are hidden from the user, who simply sees
           copies of trees.  The main point here is that copies are
           cheap, both in time and space.  Make branches as often as
           you want.</para>
+        @ENGLISH }}} -->
+        <para>Selvf&#248;lgelig, denne interne mekanikken med kopiering og 
+          deling av data er skjult for brukeren, som rett og slett bare 
+          ser kopier av tr&#230;r.
+          Hovedpoenget her er at kopier er billige, b&#229;de n&#229;r det gjelder 
+          tid og plass.
+          Lag forgreninger s&#229; ofte som du vil.</para>
       </sidebar>
 
     </sect2>
@@ -1713,6 +1981,7 @@ Committed revision 377.
 local variables: 
 sgml-parent-document: ("book.xml" "chapter")
 end:
+vim: set ft=svnbook :
 -->
 
 
