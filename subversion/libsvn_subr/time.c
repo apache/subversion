@@ -152,24 +152,24 @@ svn_time_from_cstring (apr_time_t *when, const char *data, apr_pool_t *pool)
   apr_time_exp_t exploded_time;
   apr_status_t apr_err;
   char wday[4], month[4];
-  const char *c = data;
+  char *c;
 
   /* Open-code parsing of the new timestamp format, as this
      is a hot path for reading the entries file.  This format looks
      like:  "2001-08-31T04:24:14.966996Z"  */
-  exploded_time.tm_year = strtol (c, (char**)&c, 10);
+  exploded_time.tm_year = strtol (data, &c, 10);
   if (*c++ != '-') goto fail;
-  exploded_time.tm_mon = strtol (c, (char**)&c, 10);
+  exploded_time.tm_mon = strtol (c, &c, 10);
   if (*c++ != '-') goto fail;
-  exploded_time.tm_mday = strtol (c, (char**)&c, 10);
+  exploded_time.tm_mday = strtol (c, &c, 10);
   if (*c++ != 'T') goto fail;
-  exploded_time.tm_hour = strtol (c, (char**)&c, 10);
+  exploded_time.tm_hour = strtol (c, &c, 10);
   if (*c++ != ':') goto fail;
-  exploded_time.tm_min = strtol (c, (char**)&c, 10);
+  exploded_time.tm_min = strtol (c, &c, 10);
   if (*c++ != ':') goto fail;
-  exploded_time.tm_sec = strtol (c, (char**)&c, 10);
+  exploded_time.tm_sec = strtol (c, &c, 10);
   if (*c++ != '.') goto fail;
-  exploded_time.tm_usec = strtol (c, (char**)&c, 10);
+  exploded_time.tm_usec = strtol (c, &c, 10);
   if (*c++ != 'Z') goto fail;
 
   exploded_time.tm_year  -= 1900;
