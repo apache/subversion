@@ -18,56 +18,26 @@
 
 
 
-#include <string.h>
-
-#include "svn_private_config.h"
+#define APR_WANT_STRFUNC
+#define APR_WANT_MEMFUNC
+#include <apr_want.h>
 
 #include <apr_lib.h>
-#include <apr_hash.h>
-#include <apr_file_io.h>
-#include "svn_types.h"
-#include "svn_pools.h"
-#include "svn_string.h"
 #include "svn_error.h"
-#include "svn_config.h"
-
-
-#ifdef SVN_WIN32
-/* Sorry about the #ifdefs, but some things can't be helped. */
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-#endif /* SVN_WIN32 */
-
+#include "config_impl.h"
 
 
-/* The configuration data. This is a superhash of sections and options. */
-struct svn_config_t
-{
-  /* Table of cfg_section_t's. */
-  apr_hash_t *sections;
-
-  /* Pool for hash tables, table entries and unexpanded values */
-  apr_pool_t *pool;
-
-  /* Pool for expanded values -- this is separate, so that we can
-     clear it when modifying the config data. */
-  apr_pool_t *x_pool;
-
-  /* Indicates that some values in the configuration have been expanded. */
-  svn_boolean_t x_values;
-
-
-  /* Temporary string used for lookups. */
-  svn_stringbuf_t *tmp_key;
-};
 
 
 /* Section table entries. */
 typedef struct cfg_section_t cfg_section_t;
 struct cfg_section_t
 {
-  /* The section name -- hash key. */
+  /* The section name. */
   const char *name;
+
+  /* The section name, converted into a hash key. */
+  const char *hash_key;
 
   /* Table of cfg_option_t's. */
   apr_hash_t *options;
@@ -78,8 +48,11 @@ struct cfg_section_t
 typedef struct cfg_option_t cfg_option_t;
 struct cfg_option_t
 {
-  /* The option name -- hash key. */
+  /* The option name. */
   const char *name;
+
+  /* The option name, converted into a hash key. */
+  const char *hash_key;
 
   /* The unexpanded option value. */
   svn_stringbuf_t *value;
@@ -92,62 +65,6 @@ struct cfg_option_t
      and value should be used directly. */
   svn_boolean_t expanded;
 };
-
-
-
-static svn_error_t *parse_file (svn_config_t *cfg,
-                                const char *file,
-                                svn_boolean_t must_exist);
-
-#ifdef SVN_WIN32
-static svn_error_t *parse_registry (svn_config_t *cfg,
-                                    const char *file,
-                                    svn_boolean_t must_exist);
-#endif /* SVN_WIN32 */
-
-
-
-/* Remove variable expansions from CFG.  Walk through the options tree,
-   killing all expanded values, then clear the expanded value pool. */
-static void
-remove_expansions (svn_config_t *cfg)
-{
-  apr_hash_index_t *sec_ndx;
-
-  if (!cfg->x_values)
-    return;
-
-  for (sec_ndx = apr_hash_first (cfg->x_pool, cfg->sections);
-       sec_ndx != NULL;
-       sec_ndx = apr_hash_next (sec_ndx))
-    {
-      void *sec_ptr;
-      cfg_section_t *sec;
-      apr_hash_index_t *opt_ndx;
-
-      apr_hash_this (sec_ndx, NULL, NULL, &sec_ptr);
-      sec = sec_ptr;
-
-      for (opt_ndx = apr_hash_first (cfg->x_pool, sec->options);
-           opt_ndx != NULL;
-           opt_ndx = apr_hash_next (opt_ndx))
-        {
-          void *opt_ptr;
-          cfg_option_t *opt;
-
-          apr_hash_this (opt_ndx, NULL, NULL, &opt_ptr);
-          opt = opt_ptr;
-
-          if (opt->expanded)
-            {
-              opt->x_value = NULL;
-              opt->expanded = FALSE;
-            }
-        }
-    }
-
-  apr_pool_clear (cfg->x_pool);
-}
 
 
 
@@ -166,11 +83,12 @@ svn_config_read (svn_config_t **cfgp, const char *file,
   cfg->tmp_key = svn_stringbuf_create ("", cfg_pool);
 
 #ifdef SVN_WIN32
-  if (0 == strncmp (file, "REGISTRY:", 9))
-    err = parse_registry (cfg, file, must_exist);
+  if (0 == strncmp (file, SVN_REGISTRY_PREFIX, SVN_REGISTRY_PREFIX_LEN))
+    err = svn_config__parse_registry (cfg, file + SVN_REGISTRY_PREFIX_LEN,
+                                      must_exist);
   else
 #endif /* SVN_WIN32 */
-    err = parse_file (cfg, file, must_exist);
+    err = svn_config__parse_file (cfg, file, must_exist);
 
   if (err != SVN_NO_ERROR)
     svn_config_destroy (cfg);
@@ -181,46 +99,121 @@ svn_config_read (svn_config_t **cfgp, const char *file,
 }
 
 
+void
+svn_config_destroy (svn_config_t *cfg)
+{
+  apr_pool_destroy (cfg->pool);
+}
+
+
+
+/* Iterate through CFG, passing BATON to CALLBACK for every (SECTION, OPTION)
+   pair.  Stop if CALLBACK returns TRUE.  Allocate from POOL. */
+static void
+for_each_option (svn_config_t *cfg, void *baton, apr_pool_t *pool,
+                 svn_boolean_t callback (void *same_baton,
+                                         cfg_section_t *section,
+                                         cfg_option_t *option))
+{
+  apr_hash_index_t *sec_ndx;
+  for (sec_ndx = apr_hash_first (pool, cfg->sections);
+       sec_ndx != NULL;
+       sec_ndx = apr_hash_next (sec_ndx))
+    {
+      void *sec_ptr;
+      cfg_section_t *sec;
+      apr_hash_index_t *opt_ndx;
+
+      apr_hash_this (sec_ndx, NULL, NULL, &sec_ptr);
+      sec = sec_ptr;
+
+      for (opt_ndx = apr_hash_first (pool, sec->options);
+           opt_ndx != NULL;
+           opt_ndx = apr_hash_next (opt_ndx))
+        {
+          void *opt_ptr;
+          cfg_option_t *opt;
+
+          apr_hash_this (opt_ndx, NULL, NULL, &opt_ptr);
+          opt = opt_ptr;
+
+          if (callback (baton, sec, opt))
+            return;
+        }
+    }
+}
+
+
+
+static svn_boolean_t
+merge_callback (void *baton, cfg_section_t *section, cfg_option_t *option)
+{
+  svn_config_set (baton, section->name, option->name, option->value->data);
+  return FALSE;
+}
+
 svn_error_t *
 svn_config_merge (svn_config_t *cfg, const char *file,
                   svn_boolean_t must_exist)
 {
-  svn_error_t *err;
+  /* The original config hash shouldn't change if there's an error
+     while reading the confguration, so read into a temporary table. */
+  svn_config_t *merge_cfg;
+  SVN_ERR (svn_config_read (&merge_cfg, file, must_exist, cfg->pool));
 
-  remove_expansions (cfg);
-
-#ifdef SVN_WIN32
-  if (0 == strncmp (file, "REGISTRY:", 9))
-    err = parse_registry (cfg, file, must_exist);
-  else
-#endif /* SVN_WIN32 */
-    err = parse_file (cfg, file, must_exist);
-
-  return err;
+  /* Now copy the new options into the original table. */
+  for_each_option (merge_cfg, cfg, merge_cfg->pool, merge_callback);
+  svn_config_destroy (merge_cfg);
+  return SVN_NO_ERROR;
 }
 
 
-void
-svn_config_destroy (svn_config_t *cfg)
+
+/* Remove variable expansions from CFG.  Walk through the options tree,
+   killing all expanded values, then clear the expanded value pool. */
+static svn_boolean_t
+rmex_callback (void *baton, cfg_section_t *section, cfg_option_t *option)
 {
-  apr_pool_destroy(cfg->pool);
+  /* Only clear the `expanded' flag if the value actually contains
+     variable expansions. */
+  if (option->expanded && option->x_value != NULL)
+    {
+      option->x_value = NULL;
+      option->expanded = FALSE;
+    }
+
+  (void)(baton);                /* Unused parameter. */
+  (void)(section);              /* Unused parameter. */
+  return FALSE;
+}
+
+static void
+remove_expansions (svn_config_t *cfg)
+{
+  if (!cfg->x_values)
+    return;
+
+  for_each_option (cfg, NULL, cfg->x_pool, rmex_callback);
+  apr_pool_clear (cfg->x_pool);
+  cfg->x_values = FALSE;
 }
 
 
 
 /* Canonicalize a string for hashing.  Modifies KEY in place. */
-static char *
+static APR_INLINE char *
 make_hash_key (char *key)
 {
   register char *p;
   for (p = key; *p != 0; ++p)
-    *p = apr_toupper (*p);
+    *p = apr_tolower (*p);
   return key;
 }
 
 
 /* Return a pointer to an option in CFG, or NULL if it doesn't exist.
-   if SECTIONP is non-null, return a pointer to the option's section. */
+   if SECTIONP is non-null, return a pointer to the option's section.
+   OPTION may be NULL. */
 static cfg_option_t *
 find_option (svn_config_t *cfg, const char *section, const char *option,
              cfg_section_t **sectionp)
@@ -236,7 +229,7 @@ find_option (svn_config_t *cfg, const char *section, const char *option,
   if (sectionp != NULL)
     *sectionp = sec_ptr;
 
-  if (sec_ptr != NULL)
+  if (sec_ptr != NULL && option != NULL)
     {
       cfg_section_t *sec = sec_ptr;
 
@@ -252,29 +245,37 @@ find_option (svn_config_t *cfg, const char *section, const char *option,
 }
 
 
+/* Set VALUEP according to the OPT's value. */
+static void
+make_string_from_option (svn_string_t *valuep,
+                         svn_config_t *cfg, cfg_option_t *opt)
+{
+  /* TODO: Expand the option's value */
+  (void)(cfg);
+
+  if (opt->x_value)
+    {
+      valuep->data = opt->x_value->data;
+      valuep->len = opt->x_value->len;
+    }
+  else
+    {
+      valuep->data = opt->value->data;
+      valuep->len = opt->value->len;
+    }
+}
+
+
 
 void
 svn_config_get (svn_config_t *cfg, svn_string_t *valuep,
                 const char *section, const char *option,
                 const char *default_value)
 {
-  cfg_section_t *sec;
-  cfg_option_t *opt;
-
-  opt = find_option (cfg, section, option, &sec);
+  cfg_option_t *opt = find_option (cfg, section, option, NULL);
   if (opt != NULL)
     {
-      /* TODO: Expand the option's value */
-      if (opt->x_value)
-        {
-          valuep->data = opt->x_value->data;
-          valuep->len = opt->x_value->len;
-        }
-      else
-        {
-          valuep->data = opt->value->data;
-          valuep->len = opt->value->len;
-        }
+      make_string_from_option (valuep, cfg, opt);
     }
   else
     {
@@ -301,12 +302,14 @@ svn_config_set (svn_config_t *cfg,
     {
       /* Replace the option's value. */
       svn_stringbuf_set (opt->value, value);
+      opt->expanded = FALSE;
       return;
     }
 
   /* Create a new option */
   opt = apr_palloc (cfg->pool, sizeof (*opt));
-  opt->name = make_hash_key (apr_pstrdup (cfg->pool, option));
+  opt->name = apr_pstrdup (cfg->pool, option);
+  opt->hash_key = make_hash_key (apr_pstrdup (cfg->pool, option));
 
   opt->value = svn_stringbuf_create (value, cfg->pool);
   opt->x_value = NULL;
@@ -316,52 +319,53 @@ svn_config_set (svn_config_t *cfg,
     {
       /* Even the section doesn't exist. Create it. */
       sec = apr_palloc (cfg->pool, sizeof (*sec));
-      sec->name = make_hash_key (apr_pstrdup (cfg->pool, section));
-      sec->options = apr_hash_make(cfg->pool);
-      apr_hash_set (cfg->sections, sec->name, APR_HASH_KEY_STRING, sec);
+      sec->name = apr_pstrdup (cfg->pool, section);
+      sec->hash_key = make_hash_key (apr_pstrdup (cfg->pool, section));
+      sec->options = apr_hash_make (cfg->pool);
+      apr_hash_set (cfg->sections, sec->hash_key, APR_HASH_KEY_STRING, sec);
     }
 
-  apr_hash_set (sec->options, opt->name, APR_HASH_KEY_STRING, opt);
+  apr_hash_set (sec->options, opt->hash_key, APR_HASH_KEY_STRING, opt);
 }
 
 
 
-void
+int
 svn_config_enumerate (svn_config_t *cfg, const char *section,
-                      svn_boolean_t (*callback) (const svn_string_t*))
+                      svn_config_enumerator_t callback, void *baton)
 {
-  (void)(cfg);
-  (void)(section);
-  (void)(callback);
+  cfg_section_t *sec;
+  apr_hash_index_t *opt_ndx;
+  int count;
+
+  find_option (cfg, section, NULL, &sec);
+  if (sec == NULL)
+    return 0;
+
+  count = 0;
+  for (opt_ndx = apr_hash_first (cfg->x_pool, sec->options);
+       opt_ndx != NULL;
+       opt_ndx = apr_hash_next (opt_ndx))
+    {
+      void *opt_ptr;
+      cfg_option_t *opt;
+      svn_string_t temp_value;
+
+      apr_hash_this (opt_ndx, NULL, NULL, &opt_ptr);
+      opt = opt_ptr;
+
+      ++count;
+      make_string_from_option (&temp_value, cfg, opt);
+      if (!callback (opt->name, &temp_value, baton))
+        break;
+    }
+
+  return count;
 }
 
 
 
-static svn_error_t *
-parse_file (svn_config_t *cfg, const char *file, svn_boolean_t must_exist)
-{
-  (void)(cfg);
-  (void)(file);
-  (void)(must_exist);
-  return SVN_NO_ERROR;
-}
-
-
-
-#ifdef SVN_WIN32
-static svn_error_t *
-parse_registry (svn_config_t *cfg, const char *file, svn_boolean_t must_exist)
-{
-  (void)(cfg);
-  (void)(file);
-  (void)(must_exist);
-  return SVN_NO_ERROR;
-}
-#endif /* SVN_WIN32 */
-
-
-
-/* 
+/*
  * local variables:
  * eval: (load-file "../svn-dev.el")
  * end:

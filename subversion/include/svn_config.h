@@ -1,4 +1,4 @@
-/*  svn_config.h:  Functions for accessing SVN configuration files.
+/* svn_config.h:  Functions for accessing SVN configuration files.
  *
  * ====================================================================
  * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
@@ -29,7 +29,9 @@ extern "C" {
 #include <svn_types.h>
 #include <svn_string.h>
 
-/* Subversion configuration files
+/*
+   Subversion configuration files
+   ==============================
 
    The syntax of Subversion's configuration files is the same as
    that recognised by Python's ConfigParser module:
@@ -51,10 +53,11 @@ extern "C" {
 
         Whitespace around the separator (:, =) is optional.
 
-      - Section and option names are case-insensitive.
+      - Section and option names are case-insensitive, but case is
+        preserved.
 
       - An option's value may be broken into several lines. The value
-        continuation lines must start with at lease one whitespace.
+        continuation lines must start with at least one whitespace.
         trailing whitespace in the previous line, the newline character
         and the leading whitespace in the continuation line is compressed
         into a single space character.
@@ -79,6 +82,7 @@ extern "C" {
 
 
    Configuration data in the Windows registry
+   ==========================================
 
    On Windows, configuration data may be stored in the registry. The
    functions svn_config_read and svn_config_merge will read from the
@@ -98,17 +102,19 @@ extern "C" {
    values, as well as the keys' default values, will be ignored.
 
 
+   File locations
+   ==============
+
    Typically, Subversion will use two config files: One for site-wide
    configuration,
 
      /etc/svn.conf    or
-     REGISTRY:HKLM/Software/Tigris.org/Subversion/Config
+     REGISTRY:HKLM\Software\Tigris.org\Subversion\Config
 
    and one for per-user configuration:
 
      ~/.svnrc         or
-     REGISTRY:HKCU/Software/Tigris.org/Subversion/Config
- */
+     REGISTRY:HKCU\Software\Tigris.org\Subversion\Config */
 
 
 /* Opaque structure describing a set of configuration options. */
@@ -121,7 +127,6 @@ typedef struct svn_config_t svn_config_t;
 
    If FILE does not exist, then if MUST_EXIST, return an error,
    otherwise return an empty svn_config_t. */
-   
 svn_error_t *svn_config_read (svn_config_t **cfgp,
                               const char *file,
                               svn_boolean_t must_exist,
@@ -155,11 +160,19 @@ void svn_config_set (svn_config_t *cfg,
                      const char *value);
 
 
-/* Enumerate the options in SECTION, calling CALLBACK for each one.
-   Continue the enumeration if CALLBACK returns TRUE. */
-void svn_config_enumerate (svn_config_t *cfg,
-                           const char *section,
-                           svn_boolean_t (*callback) (const svn_string_t*));
+/* Enumerate the options in SECTION, passing BATON and the current
+   option's name and value to CALLBACK.  Continue the enumeration if
+   CALLBACK returns TRUE. Return the number of times CALLBACK was
+   called.
+
+   CALLBACK's NAME and VALUE parameters are only valid for the
+   duration of the call. */
+
+typedef svn_boolean_t (*svn_config_enumerator_t)
+       (const char *name, const svn_string_t *value, void *baton);
+
+int svn_config_enumerate (svn_config_t *cfg, const char *section,
+                          svn_config_enumerator_t callback, void *baton);
 
 #endif /* SVN_CONFIG_H */
 

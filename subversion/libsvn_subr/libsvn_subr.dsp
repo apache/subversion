@@ -91,6 +91,18 @@ SOURCE=.\svn_base64.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\config.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\config_file.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\config_win.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\getdate.c
 # End Source File
 # Begin Source File
@@ -132,6 +144,14 @@ SOURCE=.\time.c
 # Begin Source File
 
 SOURCE=.\xml.c
+# End Source File
+# End Group
+# Begin Group "Header Files"
+
+# PROP Default_Filter "h;hpp;hxx;hm;inl"
+# Begin Source File
+
+SOURCE=.\config_impl.h
 # End Source File
 # End Group
 # End Target
