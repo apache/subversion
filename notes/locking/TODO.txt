@@ -19,10 +19,7 @@ MUST HAVE
 
 * write C tests which exercise the ability to lock non-existent paths,
   especially ones that locks non-existent paths which would be
-  children of, or parents of, other locked non-existent paths.
-
-* fsfs backend schema (not logic, mind you) must support the notion of
-  a directory lock, in prep for future support (cmpilato)
+  children of, or parents of, other locked non-existent paths. (cmpilato)
   
 
 NICE TO HAVE
