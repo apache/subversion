@@ -44,52 +44,24 @@ typedef enum svnadmin_cmd_t
 
 /* Helper to open stdio streams */
 
-enum {
-  svnadmin_stdout,
-  svnadmin_stdin,
-  svnadmin_stderr
-};
+/* NOTE: we used to call svn_stream_from_stdio(), which wraps a stream
+   around a standard stdio.h FILE pointer.  The problem is that these
+   pointers operate through C Run Time (CRT) on Win32, which does all
+   sorts of translation on them: LF's become CRLF's, and ctrl-Z's
+   embedded in Word documents are interpreted as premature EOF's.
 
-
-/* NOTE: this is a temporary fix.  
-
-   This function *should* simply be calling svn_stream_from_stdio(),
-   which wraps a stream a standard stdio.h FILE pointer.  The problem
-   is that these pointers operate through Common Run Time (CRT) on
-   Win32, which does all sorts of translation on them: LF's become
-   CRLF's, and ctrl-Z's embedded in Word documents are interpreted as
-   premature EOF's.  The Right Solution is to have APR open files in
-   'binary' mode, but it doesn't honor that flag yet.
-
-   The short-term solution below calls apr_file_open_std*, which
-   bypass the CRT and directly wrap the OS's file-handles, which don't
-   know or care about translation.  Thus dump/load works correctly on
-   Win32.
+   So instead, we use apr_file_open_std*, which bypass the CRT and
+   directly wrap the OS's file-handles, which don't know or care about
+   translation.  Thus dump/load works correctly on Win32.
  */
 static svn_error_t *
 create_stdio_stream (svn_stream_t **stream,
-                     int io_kind,
+                     apr_status_t open_fn (apr_file_t **, apr_pool_t *),
                      apr_pool_t *pool)
 {
   apr_file_t *stdio_file;
-  apr_status_t apr_err;
 
-  switch (io_kind)
-    {
-    case svnadmin_stdout:
-      apr_err = apr_file_open_stdout (&stdio_file, pool);
-      break;
-    case svnadmin_stdin:
-      apr_err = apr_file_open_stdin (&stdio_file, pool);
-      break;
-    case svnadmin_stderr:
-      apr_err = apr_file_open_stderr (&stdio_file, pool);
-      break;
-    default:
-      return svn_error_create (SVN_ERR_INCORRECT_PARAMS, 0, NULL, pool,
-                               "bad io_kind given");
-    }
-  
+  apr_status_t apr_err = open_fn (&stdio_file, pool);  
   if (apr_err)
     return svn_error_create (apr_err, 0, NULL, pool,
                              "error opening stdio file");
@@ -565,8 +537,10 @@ main (int argc, const char * const *argv)
         
         /* Run the dump to STDOUT.  Let the user redirect output into
            a file if they want.  :-)  Progress feedback goes to stderr. */
-        INT_ERR (create_stdio_stream (&stdout_stream, svnadmin_stdout, pool));
-        INT_ERR (create_stdio_stream (&stderr_stream, svnadmin_stderr, pool));
+        INT_ERR (create_stdio_stream (&stdout_stream,
+                                      apr_file_open_stdout, pool));
+        INT_ERR (create_stdio_stream (&stderr_stream,
+                                      apr_file_open_stderr, pool));
 
         INT_ERR (svn_repos_dump_fs (repos, stdout_stream, stderr_stream,
                                     lower, upper, pool));
@@ -580,10 +554,12 @@ main (int argc, const char * const *argv)
         INT_ERR (svn_repos_open (&repos, path, pool));
 
         /* Read the stream from STDIN.  Users can redirect a file. */
-        INT_ERR (create_stdio_stream (&stdin_stream, svnadmin_stdin, pool));
+        INT_ERR (create_stdio_stream (&stdin_stream,
+                                      apr_file_open_stdin, pool));
 
         /* Have the parser dump feedback to STDOUT. */
-        INT_ERR (create_stdio_stream (&stdout_stream, svnadmin_stdout, pool));
+        INT_ERR (create_stdio_stream (&stdout_stream,
+                                      apr_file_open_stdout, pool));
 
         INT_ERR (svn_repos_load_fs (repos, stdin_stream, stdout_stream, pool));
       }
