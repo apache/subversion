@@ -244,10 +244,10 @@ int main(int argc, const char *const *argv)
 
   apr_listen(sock, 7);
 
+#if APR_HAS_FORK
   if (!listen_once && handling_mode != connection_mode_single)
     apr_proc_detach(APR_PROC_DETACH_DAEMONIZE);
 
-#if APR_HAS_FORK
   apr_signal(SIGCHLD, sigchld_handler);
 #endif
 
