@@ -302,7 +302,7 @@ close_edit (void *edit_baton)
     {
       char *path;
       void *val;
-      apr_size_t ignored_len;
+      apr_ssize_t ignored_len;
       svn_stringbuf_t path_str;
       enum svn_recurse_kind r;
 

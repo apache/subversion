@@ -448,7 +448,7 @@ svn_xml_make_open_tag_hash (svn_stringbuf_t **str,
     {
       const void *key;
       void *val;
-      size_t keylen;
+      apr_ssize_t keylen;
 
       apr_hash_this (hi, &key, &keylen, &val);
       assert (val != NULL);

@@ -74,7 +74,7 @@ svn_wc__get_local_propchanges (apr_array_header_t **local_propchanges,
   for (hi = apr_hash_first (pool, baseprops); hi; hi = apr_hash_next (hi))
     {
       const void *key;
-      apr_size_t klen;
+      apr_ssize_t klen;
       void *val;
       svn_stringbuf_t *propval1, *propval2;
 
@@ -110,7 +110,7 @@ svn_wc__get_local_propchanges (apr_array_header_t **local_propchanges,
   for (hi = apr_hash_first (pool, localprops); hi; hi = apr_hash_next (hi))
     {
       const void *key;
-      apr_size_t klen;
+      apr_ssize_t klen;
       void *val;
       svn_stringbuf_t *propval1, *propval2;
 

@@ -313,7 +313,7 @@ svn_wc_statuses (apr_hash_t *statushash,
           const void *key;
           void *val;
           const char *basename;
-          apr_size_t keylen;
+          apr_ssize_t keylen;
           svn_stringbuf_t *fullpath = svn_stringbuf_dup (path, pool);
 
           /* Get the next dirent */

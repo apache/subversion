@@ -165,7 +165,7 @@ test3 (const char **msg,
        this = apr_hash_next (this))
     {
       const void *key;
-      size_t keylen;
+      apr_ssize_t keylen;
       void *val;
       svn_stringbuf_t *orig_str, *new_str;
       

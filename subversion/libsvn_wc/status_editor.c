@@ -650,7 +650,7 @@ close_edit (void *edit_baton)
     {
       const void *key;
       void *val;
-      apr_size_t klen;
+      apr_ssize_t klen;
       svn_wc_status_t *status;
       
       apr_hash_this (hi, &key, &klen, &val);

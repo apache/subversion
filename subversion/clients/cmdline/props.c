@@ -43,7 +43,7 @@ svn_cl__print_prop_hash (apr_hash_t *prop_hash,
   for (hi = apr_hash_first (pool, prop_hash); hi; hi = apr_hash_next (hi))
     {
       const void *key;
-      apr_size_t klen;
+      apr_ssize_t klen;
       void *val;
       
       svn_stringbuf_t *propkey, *propval;

@@ -57,7 +57,7 @@ svn_client_propset (svn_stringbuf_t *propname,
         {
           const void *key;
           const char *keystring;
-          apr_size_t klen;
+          apr_ssize_t klen;
           void * val;
           svn_stringbuf_t *current_entry_name;
           svn_stringbuf_t *full_entry_path = svn_stringbuf_dup (target, pool);
@@ -117,7 +117,7 @@ recursive_propget (apr_hash_t *props,
     {
       const void *key;
       const char *keystring;
-      apr_size_t klen;
+      apr_ssize_t klen;
       void * val;
       svn_stringbuf_t *current_entry_name;
       svn_stringbuf_t *full_entry_path = svn_stringbuf_dup (target, pool);
@@ -230,7 +230,7 @@ recursive_proplist (apr_array_header_t *props,
     {
       const void *key;
       const char *keystring;
-      apr_size_t klen;
+      apr_ssize_t klen;
       void * val;
       svn_stringbuf_t *current_entry_name;
       svn_stringbuf_t *full_entry_path = svn_stringbuf_dup (target, pool);

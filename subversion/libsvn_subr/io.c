@@ -414,7 +414,7 @@ svn_error_t *svn_io_copy_dir_recursively (svn_stringbuf_t *src,
   for (hi = apr_hash_first (subpool, dirents); hi; hi = apr_hash_next (hi))
     {
       const void *key;
-      apr_size_t klen;
+      apr_ssize_t klen;
       void *val;
       const char *entryname;
       enum svn_node_kind *entrykind;
