@@ -856,8 +856,16 @@ merge_file_deleted (svn_wc_adm_access_t *adm_access,
       svn_path_split (mine, &parent_path, NULL, merge_b->pool);
       SVN_ERR (svn_wc_adm_retrieve (&parent_access, adm_access, parent_path,
                                     merge_b->pool));
-      err = svn_client__wc_delete (mine, parent_access, merge_b->force,
-                                   merge_b->dry_run, merge_b->ctx, subpool);
+      {
+        /* This is a bit ugly: we don't want svn_client__wc_delete to
+           notify because repos_diff.c:delete_item will do it for us. */
+        svn_wc_notify_func_t notify_func = merge_b->ctx->notify_func;
+        merge_b->ctx->notify_func = NULL;
+
+        err = svn_client__wc_delete (mine, parent_access, merge_b->force,
+                                     merge_b->dry_run, merge_b->ctx, subpool);
+        merge_b->ctx->notify_func = notify_func;
+      }
       if (err && state)
         {
           *state = svn_wc_notify_state_obstructed;

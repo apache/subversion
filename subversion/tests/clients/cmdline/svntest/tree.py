@@ -635,6 +635,23 @@ def build_tree_from_status(lines):
   return root
 
 
+# Parse merge "skipped" output
+
+def build_tree_from_skipped(lines):
+
+  root = SVNTreeNode(root_node_name)
+  ### Will get confused by spaces in the filename
+  rm = re.compile ('^Skipped.* ([^ ]+)\n')
+
+  for line in lines:
+    match = rm.search(line)
+    if match and match.groups():
+      new_branch = create_from_path(match.group(1))
+      root.add_child(new_branch)
+
+  return root
+
+
 ####################################################################
 # Build trees by looking at the working copy
 
