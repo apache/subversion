@@ -35,6 +35,28 @@
 extern "C" {
 #endif /* __cplusplus */
 
+
+
+/* ### NOTE: Some functions mention that when the rest of Marcus
+   Comsted's patch is applied, they will handle charset conversion
+   too, and to see issue #494 for details.  Other functions do not say
+   this. 
+
+   In fact, all svn_io_foo() functions will handle charset conversion.
+   The ones that explicitly warn of this impending feature are those
+   contributed by Marcus Comstedt as part of the aforementioned patch.
+   Those functions have been added to Subversion, but with their
+   charset handling code excised.  That way we could the framework
+   change into the trunk right away, and deal with the charset
+   conversion code separately.
+
+   So when we apply the rest of the patch, all functions here will
+   state explicitly how they do charset conversion.  For some
+   functions, that will mean changing the "### NOTE:" to reflect that
+   the feature is now present; for others, it will mean adding
+   completely new material about charset conversion to their
+   documentation.  */
+
 
 /* If PATH exists, set *KIND to the appropriate kind, else set it to
  * svn_node_unknown. 
@@ -466,6 +488,70 @@ svn_error_t *svn_io_detect_mimetype (const char **mimetype,
                                      const char *file,
                                      apr_pool_t *pool);
                                       
+
+/* Wrapper for apr_file_open(), which see.
+   ### NOTE: when the rest of Marcus Comsted's patch is applied, this
+   will handle charset conversion too, see issue #494 for details.  */ 
+svn_error_t *
+svn_io_file_open (apr_file_t **new_file, const char *fname,
+                  apr_int32_t flag, apr_fileperms_t perm,
+                  apr_pool_t *pool);
+
+
+/* Wrapper for apr_stat(), which see.
+   ### NOTE: when the rest of Marcus Comsted's patch is applied, this
+   will handle charset conversion too, see issue #494 for details.  */ 
+svn_error_t *
+svn_io_stat (apr_finfo_t *finfo, const char *fname,
+             apr_int32_t wanted, apr_pool_t *pool);
+
+
+/* Wrapper for apr_file_rename(), which see.
+   ### NOTE: when the rest of Marcus Comsted's patch is applied, this
+   will handle charset conversion too, see issue #494 for details.  */ 
+svn_error_t *
+svn_io_file_rename (const char *from_path, const char *to_path,
+                    apr_pool_t *pool);
+
+
+/* Wrapper for apr_dir_make(), which see.
+   ### NOTE: when the rest of Marcus Comsted's patch is applied, this
+   will handle charset conversion too, see issue #494 for details.  */ 
+svn_error_t *
+svn_io_dir_make (const char *path, apr_fileperms_t perm, apr_pool_t *pool);
+
+
+/* Wrapper for apr_dir_open(), which see.
+   ### NOTE: when the rest of Marcus Comsted's patch is applied, this
+   will handle charset conversion too, see issue #494 for details.  */ 
+svn_error_t *
+svn_io_dir_open (apr_dir_t **new_dir, const char *dirname, apr_pool_t *pool);
+
+
+/* Wrapper for apr_dir_remove(), which see.  Given this name to avoid
+   confusion with svn_io_remove_dir, which is recursive.
+   ### NOTE: when the rest of Marcus Comsted's patch is applied, this
+   will handle charset conversion too, see issue #494 for details.  */ 
+svn_error_t *
+svn_io_dir_remove_nonrecursive (const char *dirname, apr_pool_t *pool);
+
+
+/* Wrapper for apr_dir_read, which see.  Use POOL only for error
+   allocation.
+   ### NOTE: when the rest of Marcus Comsted's patch is applied, this
+   will handle charset conversion too, see issue #494 for details.  */ 
+svn_error_t *
+svn_io_dir_read (apr_finfo_t *finfo,
+                 apr_int32_t wanted,
+                 apr_dir_t *thedir,
+                 apr_pool_t *pool);
+
+
+/* Wrapper for apr_file_printf(), which see.
+   ### NOTE: when the rest of Marcus Comsted's patch is applied, this
+   will handle charset conversion too, see issue #494 for details.  */ 
+svn_error_t *
+svn_io_file_printf (apr_file_t *fptr, const char *format, ...);
 
 
 #ifdef __cplusplus

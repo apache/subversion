@@ -393,9 +393,8 @@ svn_wc_crawl_revisions (const char *path,
   if (entry->schedule != svn_wc_schedule_delete)
     {
       apr_finfo_t info;
-      apr_status_t apr_err;
-      apr_err = apr_stat (&info, path, APR_FINFO_MIN, pool);
-      if (APR_STATUS_IS_ENOENT(apr_err))
+      err = svn_io_stat (&info, path, APR_FINFO_MIN, pool);
+      if (err && APR_STATUS_IS_ENOENT(err->apr_err))
         missing = TRUE;
     }
 
@@ -573,13 +572,9 @@ svn_wc_transmit_text_deltas (const char *path,
     }
 
   /* Open a filehandle for tmp text-base. */
-  if ((status = apr_file_open (&localfile, tmp_base, 
-                               APR_READ, APR_OS_DEFAULT, pool)))
-    {
-      return svn_error_createf (status, 0, NULL, pool,
-                                "do_apply_textdelta: error opening '%s'",
-                                tmp_base);
-    }
+  SVN_ERR_W (svn_io_file_open (&localfile, tmp_base,
+                               APR_READ, APR_OS_DEFAULT, pool),
+             "do_apply_textdelta: error opening local file");
 
   /* Create a text-delta stream object that pulls data out of the two
      files. */

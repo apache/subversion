@@ -505,7 +505,7 @@ print_diff_tree (svn_fs_root_t *root,
       apr_file_t *outhandle;
       apr_status_t apr_err;
       const char *label;
-      char *abs_path;
+      const char *abs_path;
       int exitcode;
 
       if (! is_copy)

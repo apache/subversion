@@ -138,13 +138,11 @@ create_locks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
     const char *lockfile_path;
 
     lockfile_path = svn_repos_db_lockfile (repos, pool);
-    apr_err = apr_file_open (&f, lockfile_path,
-                             (APR_WRITE | APR_CREATE | APR_EXCL),
-                             APR_OS_DEFAULT,
-                             pool);
-    if (apr_err)
-      return svn_error_createf (apr_err, 0, NULL, pool, 
-                                "creating lock file `%s'", lockfile_path);
+    SVN_ERR_W (svn_io_file_open (&f, lockfile_path,
+                                 (APR_WRITE | APR_CREATE | APR_EXCL),
+                                 APR_OS_DEFAULT,
+                                 pool),
+               "creating lock file");
     
     contents = 
       "DB lock file, representing locks on the versioned filesystem.\n"
@@ -195,13 +193,11 @@ create_hooks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
                               svn_repos_start_commit_hook (repos, pool),
                               SVN_REPOS__HOOK_DESC_EXT);
     
-    apr_err = apr_file_open (&f, this_path,
-                             (APR_WRITE | APR_CREATE | APR_EXCL),
-                             APR_OS_DEFAULT,
-                             pool);
-    if (apr_err)
-      return svn_error_createf (apr_err, 0, NULL, pool, 
-                                "creating hook file `%s'", this_path);
+    SVN_ERR_W (svn_io_file_open (&f, this_path,
+                                 (APR_WRITE | APR_CREATE | APR_EXCL),
+                                 APR_OS_DEFAULT,
+                                 pool),
+               "creating hook file");
     
     contents = 
       "#!/bin/sh\n"
@@ -266,13 +262,11 @@ create_hooks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
                               svn_repos_pre_commit_hook (repos, pool),
                               SVN_REPOS__HOOK_DESC_EXT);
 
-    apr_err = apr_file_open (&f, this_path,
-                             (APR_WRITE | APR_CREATE | APR_EXCL),
-                             APR_OS_DEFAULT,
-                             pool);
-    if (apr_err)
-      return svn_error_createf (apr_err, 0, NULL, pool, 
-                                "creating hook file `%s'", this_path);
+    SVN_ERR_W (svn_io_file_open (&f, this_path,
+                                 (APR_WRITE | APR_CREATE | APR_EXCL),
+                                 APR_OS_DEFAULT,
+                                 pool),
+               "creating hook file");
 
     contents =
       "#!/bin/sh\n"
@@ -340,13 +334,11 @@ create_hooks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
                               svn_repos_post_commit_hook (repos, pool),
                               SVN_REPOS__HOOK_DESC_EXT);
 
-    apr_err = apr_file_open (&f, this_path,
-                             (APR_WRITE | APR_CREATE | APR_EXCL),
-                             APR_OS_DEFAULT,
-                             pool);
-    if (apr_err)
-      return svn_error_createf (apr_err, 0, NULL, pool, 
-                                "creating hook file `%s'", this_path);
+    SVN_ERR_W (svn_io_file_open (&f, this_path,
+                                 (APR_WRITE | APR_CREATE | APR_EXCL),
+                                 APR_OS_DEFAULT,
+                                 pool),
+               "creating hook file");
     
     contents =
       "#!/bin/sh\n"
@@ -412,13 +404,11 @@ create_hooks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
                               svn_repos_read_sentinel_hook (repos, pool),
                               SVN_REPOS__HOOK_DESC_EXT);
 
-    apr_err = apr_file_open (&f, this_path,
-                             (APR_WRITE | APR_CREATE | APR_EXCL),
-                             APR_OS_DEFAULT,
-                             pool);
-    if (apr_err)
-      return svn_error_createf (apr_err, 0, NULL, pool, 
-                                "creating hook file `%s'", this_path);
+    SVN_ERR_W (svn_io_file_open (&f, this_path,
+                                 (APR_WRITE | APR_CREATE | APR_EXCL),
+                                 APR_OS_DEFAULT,
+                                 pool),
+               "creating hook file");
     
     contents =
       "READ-SENTINEL\n"
@@ -444,13 +434,11 @@ create_hooks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
                               svn_repos_write_sentinel_hook (repos, pool),
                               SVN_REPOS__HOOK_DESC_EXT);
 
-    apr_err = apr_file_open (&f, this_path,
-                             (APR_WRITE | APR_CREATE | APR_EXCL),
-                             APR_OS_DEFAULT,
-                             pool);
-    if (apr_err)
-      return svn_error_createf (apr_err, 0, NULL, pool, 
-                                "creating hook file `%s'", this_path);
+    SVN_ERR_W (svn_io_file_open (&f, this_path,
+                                 (APR_WRITE | APR_CREATE | APR_EXCL),
+                                 APR_OS_DEFAULT,
+                                 pool),
+               "creating hook file");
     
     contents =
       "WRITE-SENTINEL\n"
@@ -609,12 +597,9 @@ svn_repos_create (svn_repos_t **repos_p, const char *path, apr_pool_t *pool)
       "\n"
       "Visit http://subversion.tigris.org/ for more information.\n";
 
-    apr_err = apr_file_open (&readme_file, readme_file_name,
-                             APR_WRITE | APR_CREATE, APR_OS_DEFAULT,
-                             pool);
-    if (apr_err)
-      return svn_error_createf (apr_err, 0, 0, pool,
-                                "opening `%s' for writing", readme_file_name);
+    SVN_ERR (svn_io_file_open (&readme_file, readme_file_name,
+                               APR_WRITE | APR_CREATE, APR_OS_DEFAULT,
+                               pool));
 
     apr_err = apr_file_write_full (readme_file, readme_contents,
                                    strlen (readme_contents), NULL);
@@ -661,12 +646,9 @@ svn_repos_open (svn_repos_t **repos_p,
 
     /* Get a filehandle for the repository's db lockfile. */
     lockfile_path = svn_repos_db_lockfile (repos, pool);
-    apr_err = apr_file_open (&lockfile_handle, lockfile_path,
-                             APR_READ, APR_OS_DEFAULT, pool);
-    if (apr_err)
-      return svn_error_createf
-        (apr_err, 0, NULL, pool,
-         "svn_repos_open: error opening db lockfile `%s'", lockfile_path);
+    SVN_ERR_W (svn_io_file_open (&lockfile_handle, lockfile_path,
+                                 APR_READ, APR_OS_DEFAULT, pool),
+               "svn_repos_open: error opening db lockfile");
     
     /* Get shared lock on the filehandle. */
     apr_err = apr_file_lock (lockfile_handle, APR_FLOCK_SHARED);

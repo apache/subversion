@@ -239,12 +239,9 @@ svn_wc__load_prop_file (const char *propfile_path,
       apr_status_t status;
       apr_file_t *propfile = NULL;
 
-      status = apr_file_open (&propfile, propfile_path,
-                         APR_READ, APR_OS_DEFAULT, pool);
-      if (status)
-        return svn_error_createf (status, 0, NULL, pool,
-                                  "load_prop_file: can't open `%s'",
-                                  propfile_path);
+      SVN_ERR_W (svn_io_file_open (&propfile, propfile_path,
+                                   APR_READ, APR_OS_DEFAULT, pool),
+                 "load_prop_file: can't open propfile");
 
       status = svn_hash_read (hash, svn_pack_bytestring,
                               propfile, pool);
@@ -275,13 +272,10 @@ svn_wc__save_prop_file (const char *propfile_path,
   apr_status_t apr_err;
   apr_file_t *prop_tmp;
 
-  apr_err = apr_file_open (&prop_tmp, propfile_path,
-                      (APR_WRITE | APR_CREATE | APR_TRUNCATE),
-                      APR_OS_DEFAULT, pool);
-  if (apr_err)
-    return svn_error_createf (apr_err, 0, NULL, pool,
-                              "save_prop_file: can't open `%s'",
-                              propfile_path);
+  SVN_ERR_W (svn_io_file_open (&prop_tmp, propfile_path,
+                               (APR_WRITE | APR_CREATE | APR_TRUNCATE),
+                               APR_OS_DEFAULT, pool),
+             "save_prop_file: can't open propfile");
 
   apr_err = svn_hash_write (hash, svn_unpack_bytestring,
                             prop_tmp, pool);
@@ -1185,13 +1179,8 @@ empty_props_p (svn_boolean_t *empty_p,
   else 
     {
       apr_finfo_t finfo;
-      apr_status_t status;
 
-      status = apr_stat (&finfo, path_to_prop_file, APR_FINFO_MIN, pool);
-      if (status)
-        return svn_error_createf (status, 0, NULL, pool,
-                                  "couldn't stat '%s'...",
-                                  path_to_prop_file);
+      SVN_ERR (svn_io_stat (&finfo, path_to_prop_file, APR_FINFO_MIN, pool));
 
       /* If we remove props from a propfile, eventually the file will
          contain nothing but "END\n" */

@@ -81,7 +81,7 @@ svn_wc__remove_wcprops (const char *path, apr_pool_t *pool)
       if (current_entry->kind == svn_node_file)
         {
           SVN_ERR (svn_wc__wcprop_path (&wcprop_path, child_path, 0, subpool));
-          (void) apr_file_remove (wcprop_path, subpool);
+          (void) svn_io_remove_file (wcprop_path, subpool);
           /* ignoring any error value from the removal; most likely,
              apr_file_remove will complain about trying to a remove a
              file that's not there.  But this more efficient than

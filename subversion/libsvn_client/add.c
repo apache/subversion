@@ -29,6 +29,7 @@
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_path.h"
+#include "svn_io.h"
 #include "client.h"
 
 
@@ -43,7 +44,7 @@ add_dir_recursive (const char *dirname,
 {
   apr_dir_t *dir;
   apr_finfo_t this_entry;
-  apr_status_t apr_err;
+  svn_error_t *err;
   apr_pool_t *subpool;
   apr_int32_t flags = APR_FINFO_TYPE | APR_FINFO_NAME;
 
@@ -57,10 +58,10 @@ add_dir_recursive (const char *dirname,
 
   /* Read the directory entries one by one and add those things to
      revision control. */
-  apr_err = apr_dir_open (&dir, dirname, pool);
-  for (apr_err = apr_dir_read (&this_entry, flags, dir);
-       apr_err == APR_SUCCESS;
-       apr_err = apr_dir_read (&this_entry, flags, dir))
+  SVN_ERR (svn_io_dir_open (&dir, dirname, pool));
+  for (err = svn_io_dir_read (&this_entry, flags, dir, pool);
+       err == SVN_NO_ERROR;
+       err = svn_io_dir_read (&this_entry, flags, dir, pool))
     {
       const char *fullpath;
 
@@ -90,23 +91,24 @@ add_dir_recursive (const char *dirname,
       svn_pool_clear (subpool);
     }
 
-  /* Destroy the per-iteration pool. */
-  svn_pool_destroy (subpool);
-
   /* Check that the loop exited cleanly. */
-  if (! (APR_STATUS_IS_ENOENT (apr_err)))
+  if (! (APR_STATUS_IS_ENOENT (err->apr_err)))
     {
       return svn_error_createf
-        (apr_err, 0, NULL, subpool, "error during recursive add of `%s'",
-         dirname);
+        (err->apr_err, err->src_err, err, subpool,
+         "error during recursive add of `%s'", dirname);
     }
   else  /* Yes, it exited cleanly, so close the dir. */
     {
-      apr_err = apr_dir_close (dir);
+      apr_status_t apr_err = apr_dir_close (dir);
       if (apr_err)
         return svn_error_createf
           (apr_err, 0, NULL, subpool, "error closing dir `%s'", dirname);
     }
+
+  /* Destroy the per-iteration pool. */
+  svn_pool_destroy (subpool);
+
   return SVN_NO_ERROR;
 }
 
@@ -145,8 +147,6 @@ svn_client_mkdir (svn_client_commit_info_t **commit_info,
                   void *notify_baton,
                   apr_pool_t *pool)
 {
-  apr_status_t apr_err;
-
   /* If this is a URL, we want to drive a commit editor to create this
      directory. */
   if (svn_path_is_url (path))
@@ -229,9 +229,7 @@ svn_client_mkdir (svn_client_commit_info_t **commit_info,
     }
 
   /* This is a regular "mkdir" + "svn add" */
-  apr_err = apr_dir_make (path, APR_OS_DEFAULT, pool);
-  if (apr_err)
-    return svn_error_create (apr_err, 0, NULL, pool, path);
+  SVN_ERR (svn_io_dir_make (path, APR_OS_DEFAULT, pool));
   
   return svn_wc_add (path, NULL, SVN_INVALID_REVNUM,
                      notify_func, notify_baton, pool);

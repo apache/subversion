@@ -551,27 +551,17 @@ apply_textdelta (void *file_baton,
                  void **handler_baton)
 {
   struct file_baton *b = file_baton;
-  apr_status_t status;
 
-  /* Open the file to be used as the base for second revision */
-  status = apr_file_open (&(b->file_start_revision),
-                          b->path_start_revision,
-                          APR_READ, APR_OS_DEFAULT, b->pool);
-  if (status)
-    return svn_error_createf (status, 0, NULL, b->pool,
-                              "failed to open file '%s'",
-                              b->path_start_revision);
+  SVN_ERR (svn_io_file_open (&(b->file_start_revision),
+                             b->path_start_revision,
+                             APR_READ, APR_OS_DEFAULT, b->pool));
 
   /* Open the file that will become the second revision after applying the
      text delta, it starts empty */
   SVN_ERR (create_empty_file (&(b->path_end_revision), b->pool));
   SVN_ERR (temp_file_cleanup_register (b->path_end_revision, b->pool));
-  status = apr_file_open (&(b->file_end_revision), b->path_end_revision,
-                          APR_WRITE, APR_OS_DEFAULT, b->pool);
-  if (status)
-    return svn_error_createf (status, 0, NULL, b->pool,
-                              "failed to open file '%s'",
-                              b->path_end_revision);
+  SVN_ERR (svn_io_file_open (&(b->file_end_revision), b->path_end_revision,
+                             APR_WRITE, APR_OS_DEFAULT, b->pool));
 
   svn_txdelta_apply (svn_stream_from_aprfile (b->file_start_revision, b->pool),
                      svn_stream_from_aprfile (b->file_end_revision, b->pool),

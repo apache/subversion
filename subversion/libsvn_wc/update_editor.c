@@ -1284,13 +1284,9 @@ svn_wc_install_file (svn_wc_notify_state_t *content_state,
          pointing to parent_dir/.svn/tmp/text-base/basename.  */
       if (strcmp (final_location, new_text_path))
         {
-          apr_err = apr_file_rename (new_text_path, final_location,
-                                     pool);
-          if (apr_err)
-            return svn_error_createf (apr_err, 0, NULL, pool,
-                                      "svn_wc_install_file: "
-                                      "can't move %s to %s",
-                                      new_text_path, final_location);
+          SVN_ERR_W (svn_io_file_rename (new_text_path, final_location,
+                                         pool),
+                     "svn_wc_install_file: move failed");
 
           new_text_path = final_location;
         }

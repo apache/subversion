@@ -31,6 +31,7 @@
 #include "svn_path.h"
 #include "svn_time.h"
 #include "svn_wc.h"
+#include "svn_io.h"
 
 #include "wc.h"
 #include "adm_files.h"
@@ -215,22 +216,16 @@ contents_identical_p (svn_boolean_t *identical_p,
   apr_file_t *file1_h = NULL;
   apr_file_t *file2_h = NULL;
 
-  status = apr_file_open (&file1_h, file1, 
-                          APR_READ, APR_OS_DEFAULT, pool);
-  if (status)
-    return svn_error_createf
-      (status, 0, NULL, pool,
-       "contents_identical_p: apr_file_open failed on `%s'", file1);
+  SVN_ERR_W (svn_io_file_open (&file1_h, file1, APR_READ, APR_OS_DEFAULT,
+                               pool),
+             "contents_identical_p: apr_file_open failed on file 1");
 
-  status = apr_file_open (&file2_h, file2, APR_READ, 
-                          APR_OS_DEFAULT, pool);
-  if (status)
-    return svn_error_createf
-      (status, 0, NULL, pool,
-       "contents_identical_p: apr_file_open failed on `%s'", file2);
+  SVN_ERR_W (svn_io_file_open (&file2_h, file2, APR_READ, APR_OS_DEFAULT,
+                               pool),
+             "contents_identical_p: apr_file_open failed on file 2");
 
   *identical_p = TRUE;  /* assume TRUE, until disproved below */
-  while (!APR_STATUS_IS_EOF(status))
+  for (status = 0; ! APR_STATUS_IS_EOF(status); )
     {
       status = apr_file_read_full (file1_h, buf1, sizeof(buf1), &bytes_read1);
       if (status && !APR_STATUS_IS_EOF(status))

@@ -444,20 +444,20 @@ svn_wc_copy_and_translate (const char *src,
     return svn_io_copy_file (src, dst, FALSE, pool);
 
   /* Open source file. */
-  apr_err = apr_file_open (&s, src, APR_READ | APR_BUFFERED,
-                           APR_OS_DEFAULT, pool);
-  if (apr_err)
-    return translate_err (apr_err, "opening", src, pool);
+  err = svn_io_file_open (&s, src, APR_READ | APR_BUFFERED,
+                          APR_OS_DEFAULT, pool);
+  if (err)
+    return svn_error_quick_wrap (err, "opening source file");
   
   /* Open dest file. */
-  apr_err
-    = apr_file_open (&d, dst,
-                     APR_WRITE | APR_CREATE | APR_TRUNCATE | APR_BUFFERED,
-                     APR_OS_DEFAULT, pool);
-  if (apr_err)
+  err
+    = svn_io_file_open (&d, dst,
+                        APR_WRITE | APR_CREATE | APR_TRUNCATE | APR_BUFFERED,
+                        APR_OS_DEFAULT, pool);
+  if (err)
     {
       apr_file_close (s); /* toss */
-      return translate_err (apr_err, "opening", dst, pool);
+      return svn_error_quick_wrap (err, "opening dest file");
     }
 
   /*** Any errors after this point require us to close the two files and
@@ -696,7 +696,7 @@ svn_wc_copy_and_translate (const char *src,
     apr_file_close (s); /* toss error */
   if (d)
     apr_file_close (d); /* toss error */
-  apr_file_remove (dst, pool); /* toss error */
+  svn_io_remove_file (dst, pool); /* toss error */
   return err;
 #endif /* ! SVN_TRANSLATE */
 }

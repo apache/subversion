@@ -254,26 +254,14 @@ svn_wc_merge (const char *left,
 
       /* Don't forget to clean up tmp_target, result_target, tmp_left,
          tmp_right.  There are a lot of scratch files lying around. */
-      apr_err = apr_file_remove (tmp_target, pool);
-      if (apr_err)
-        return svn_error_createf
-          (apr_err, 0, NULL, pool,
-           "svn_wc_merge: unable to delete tmp file `%s'", tmp_target);
-      apr_err = apr_file_remove (result_target, pool);
-      if (apr_err)
-        return svn_error_createf
-          (apr_err, 0, NULL, pool,
-           "svn_wc_merge: unable to delete tmp file `%s'", result_target);
-      apr_err = apr_file_remove (tmp_left, pool);
-      if (apr_err)
-        return svn_error_createf
-          (apr_err, 0, NULL, pool,
-           "svn_wc_merge: unable to delete tmp file `%s'", tmp_left);
-      apr_err = apr_file_remove (tmp_right, pool);
-      if (apr_err)
-        return svn_error_createf
-          (apr_err, 0, NULL, pool,
-           "svn_wc_merge: unable to delete tmp file `%s'", tmp_right);
+      SVN_ERR_W (svn_io_remove_file (tmp_target, pool),
+                 "svn_wc_merge: unable to delete tmp file");
+      SVN_ERR_W (svn_io_remove_file (result_target, pool),
+                 "svn_wc_merge: unable to delete tmp file");
+      SVN_ERR_W (svn_io_remove_file (tmp_left, pool),
+                 "svn_wc_merge: unable to delete tmp file");
+      SVN_ERR_W (svn_io_remove_file (tmp_right, pool),
+                 "svn_wc_merge: unable to delete tmp file");
 
     } /* end of merging for text files */
 

@@ -490,7 +490,8 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
   apr_array_header_t *commit_items;
   svn_error_t *cmt_err = NULL, *unlock_err = NULL, *cleanup_err = NULL;
   svn_boolean_t commit_in_progress = FALSE;
-  char *base_path, *base_url;
+  const char *base_path;
+  char *base_url;
 
   /* Check the SRC_PATH. */
   SVN_ERR (svn_io_check_path (src_path, &src_kind, pool));
@@ -759,12 +760,10 @@ repos_to_wc_copy (const char *src_url,
       apr_hash_index_t *hi;
       
       /* Open DST_PATH for writing. */
-      status = apr_file_open (&fp, dst_path, (APR_CREATE | APR_WRITE),
-                              APR_OS_DEFAULT, pool);
-      if (status)
-        return svn_error_createf (status, 0, NULL, pool,
-                                  "failed to open file '%s' for writing.",
-                                  dst_path);
+      SVN_ERR_W (svn_io_file_open (&fp, dst_path,
+                                   (APR_CREATE | APR_WRITE),
+                                   APR_OS_DEFAULT, pool),
+                 "failed to open file for writing.");
 
       /* Create a generic stream that operates on this file.  */
       fstream = svn_stream_from_aprfile (fp, pool);

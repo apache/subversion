@@ -180,14 +180,12 @@ svn_wc__make_adm_thing (const char *path,
 
   if (type == svn_node_file)
     {
-      apr_err = apr_file_open (&f, path,
-                          (APR_WRITE | APR_CREATE | APR_EXCL),
-                          perms,
-                          pool);
+      err = svn_io_file_open (&f, path,
+                              (APR_WRITE | APR_CREATE | APR_EXCL),
+                              perms,
+                              pool);
 
-      if (apr_err)
-        err = svn_error_create (apr_err, 0, NULL, pool, path);
-      else
+      if (!err)
         {
           /* Creation succeeded, so close immediately. */
           apr_err = apr_file_close (f);
@@ -197,9 +195,7 @@ svn_wc__make_adm_thing (const char *path,
     }
   else if (type == svn_node_dir)
     {
-      apr_err = apr_dir_make (path, perms, pool);
-      if (apr_err)
-        err = svn_error_create (apr_err, 0, NULL, pool, path);
+      err = svn_io_dir_make (path, perms, pool);
     }
   else   /* unknown type argument, wrongness */
     {
@@ -231,21 +227,16 @@ maybe_copy_file (const char *src, const char *dst, apr_pool_t *pool)
     {
       /* SRC doesn't exist, create DST empty. */
       apr_file_t *f = NULL;
-      apr_err = apr_file_open (&f,
-                          dst,
-                          (APR_WRITE | APR_CREATE),
-                          APR_OS_DEFAULT,
-                          pool);
+      SVN_ERR (svn_io_file_open (&f,
+                                 dst,
+                                 (APR_WRITE | APR_CREATE),
+                                 APR_OS_DEFAULT,
+                                 pool));
+      apr_err = apr_file_close (f);
       if (apr_err)
         return svn_error_create (apr_err, 0, NULL, pool, dst);
       else
-        {
-          apr_err = apr_file_close (f);
-          if (apr_err)
-            return svn_error_create (apr_err, 0, NULL, pool, dst);
-          else
-            return SVN_NO_ERROR;
-        }
+        return SVN_NO_ERROR;
     }
   else /* SRC exists, so copy it to DST. */
     {    
@@ -271,7 +262,6 @@ sync_adm_file (const char *path,
      given how C va_lists work. */
 
   const char *tmp_path;
-  apr_status_t apr_err;
   va_list ap;
   
   /* Extend tmp name. */
@@ -288,15 +278,10 @@ sync_adm_file (const char *path,
   SVN_ERR (svn_io_set_file_read_write (path, TRUE, pool));
  
   /* Rename. */
-  apr_err = apr_file_rename (tmp_path, path, pool);
-  if (! apr_err)
-    SVN_ERR (svn_io_set_file_read_only (path, FALSE, pool));
+  SVN_ERR (svn_io_file_rename (tmp_path, path, pool));
+  SVN_ERR (svn_io_set_file_read_only (path, FALSE, pool));
 
-  if (apr_err)
-    return svn_error_createf (apr_err, 0, NULL, pool,
-                              "error renaming %s to %s", tmp_path, path);
-  else
-    return SVN_NO_ERROR;
+  return SVN_NO_ERROR;
 }
 
 
@@ -507,7 +492,6 @@ open_adm_file (apr_file_t **handle,
                ...)
 {
   svn_error_t *err = NULL;
-  apr_status_t apr_err = 0;
   va_list ap;
 
   /* If we're writing, always do it to a tmp file. */
@@ -544,15 +528,14 @@ open_adm_file (apr_file_t **handle,
       va_end (ap);
     }
 
-  apr_err = apr_file_open (handle, path, flags, APR_OS_DEFAULT, pool);
-  if (apr_err)
+  err = svn_io_file_open (handle, path, flags, APR_OS_DEFAULT, pool);
+  if (err)
     {
       /* Oddly enough, APR will set *HANDLE even if the open failed.
          You'll get a filehandle whose descriptor is -1.  There must
          be a reason this is useful... Anyway, we don't want the
          handle. */
       *handle = NULL;
-      err = svn_error_create (apr_err, 0, NULL, pool, path);
     }
 
   return err;
@@ -601,15 +584,10 @@ close_adm_file (apr_file_t *fp,
       SVN_ERR (svn_io_set_file_read_write (path, TRUE, pool));
       
       /* Rename. */
-      apr_err = apr_file_rename (tmp_path, path, pool);
-      if (! apr_err)
-        SVN_ERR (svn_io_set_file_read_only (path, FALSE, pool));
+      SVN_ERR (svn_io_file_rename (tmp_path, path, pool));
+      SVN_ERR (svn_io_set_file_read_only (path, FALSE, pool));
       
-      if (apr_err)
-        return svn_error_createf (apr_err, 0, NULL, pool,
-                                  "error renaming %s to %s", tmp_path, path);
-      else
-        return SVN_NO_ERROR;
+      return SVN_NO_ERROR;
     }
 
   return SVN_NO_ERROR;
@@ -641,8 +619,6 @@ svn_wc__close_adm_file (apr_file_t *fp,
 svn_error_t *
 svn_wc__remove_adm_file (const char *path, apr_pool_t *pool, ...)
 {
-  svn_error_t *err = NULL;
-  apr_status_t apr_err = 0;
   va_list ap;
 
   va_start (ap, pool);
@@ -651,12 +627,9 @@ svn_wc__remove_adm_file (const char *path, apr_pool_t *pool, ...)
       
   /* Remove read-only flag on path. */
   SVN_ERR(svn_io_set_file_read_write (path, FALSE, pool));
+  SVN_ERR(svn_io_remove_file (path, pool));
 
-  apr_err = apr_file_remove (path, pool);
-  if (apr_err)
-    err = svn_error_create (apr_err, 0, NULL, pool, path);
-
-  return err;
+  return SVN_NO_ERROR;
 }
 
 
@@ -1033,16 +1006,11 @@ check_adm_exists (svn_boolean_t *exists,
 static svn_error_t *
 make_empty_adm (const char *path, apr_pool_t *pool)
 {
-  svn_error_t *err = NULL;
-  apr_status_t apr_err;
-
   path = extend_with_adm_name (path, NULL, 0, pool, NULL);
 
-  apr_err = apr_dir_make (path, APR_OS_DEFAULT, pool);
-  if (apr_err)
-    err = svn_error_create (apr_err, 0, NULL, pool, path);
+  SVN_ERR (svn_io_dir_make (path, APR_OS_DEFAULT, pool));
 
-  return err;
+  return SVN_NO_ERROR;
 }
 
 

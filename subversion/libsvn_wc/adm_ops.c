@@ -35,6 +35,7 @@
 #include "svn_hash.h"
 #include "svn_path.h"
 #include "svn_wc.h"
+#include "svn_io.h"
 
 #include "wc.h"
 #include "log.h"
@@ -1354,7 +1355,6 @@ svn_wc_remove_from_revision_control (const char *path,
                                      svn_boolean_t destroy_wf,
                                      apr_pool_t *pool)
 {
-  apr_status_t apr_err;
   svn_error_t *err;
   svn_boolean_t is_file;
   svn_boolean_t left_something = FALSE;
@@ -1513,8 +1513,8 @@ svn_wc_remove_from_revision_control (const char *path,
              *non*-recursive dir_remove should work.  If it doesn't,
              no big deal.  Just assume there are unversioned items in
              there and set "left_something" */
-          apr_err = apr_dir_remove (path, subpool);
-          if (apr_err)
+          err = svn_io_dir_remove_nonrecursive (path, subpool);
+          if (err)
             left_something = TRUE;
         }
     }  /* end of directory case */
