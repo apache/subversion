@@ -270,7 +270,7 @@ svn_config__sys_config_path (const char **path_p,
 #ifdef SVN_WIN32
  {
    HRESULT res;
-   char folder[MAX_PATH] = { };
+   char folder[MAX_PATH] = { 0 };
    
    res = SHGetFolderPath (NULL, CSIDL_COMMON_APPDATA, NULL, SHGFP_TYPE_CURRENT,
                           (LPTSTR) folder);
@@ -306,7 +306,7 @@ svn_config__user_config_path (const char **path_p,
 #ifdef SVN_WIN32
   {
     HRESULT res;
-    char sp_folder[MAX_PATH] = { };
+    char sp_folder[MAX_PATH] = { 0 };
     
     /* Or we could do:
        SHGetSpecialFolderPath (NULL, (LPTSTR) sp_folder, CSIDL_APPDATA, TRUE);
