@@ -697,12 +697,10 @@ case "$svn_lib_berkeley_db" in
     AC_MSG_WARN([we have configured without BDB filesystem support
 
 
-The Subversion default filesystem back-end library requires Berkeley
-DB version $db_version or newer, which you don't seem to have
+You don't seem to have Berkeley DB version $db_version or newer
 installed and linked to APR-UTIL.  We have created Makefiles which
-will build without the default filesystem library; you will have to
-use "svnadmin create --fs-type=fsfs PATH" to create a repository using
-the alternative FSFS back-end.  You can find the latest version of
+will build without the Berkeley DB back-end; your repositories will
+use FSFS as the default back-end. You can find the latest version of 
 Berkeley DB here:
   http://www.sleepycat.com/download/index.shtml
 ])
