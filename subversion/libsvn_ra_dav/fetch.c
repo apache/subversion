@@ -2026,6 +2026,16 @@ static int end_element(void *userdata,
                                              TOP_DIR(rb).pool) );
       svn_pool_destroy(TOP_DIR(rb).pool);
       apr_array_pop(rb->dirs);
+
+      /* If we just popped the last directory from the stack, we can
+         close the edit. */
+      if (rb->dirs->nelts == 0)
+        {
+          /* we got the whole HTTP response thing done. now wrap up the update
+             process with a close_edit call. */
+          CHKERR( (*rb->editor->close_edit)(rb->edit_baton, rb->ras->pool) );
+          rb->edit_baton = NULL;
+        }
       break;
 
     case ELEM_add_file:
@@ -2289,6 +2299,16 @@ static svn_error_t * reporter_finish_report(void *report_baton)
                                    start_element, end_element, rb,
                                    rb->ras->pool);
 
+  /* We got the whole HTTP response thing done.  *Whew*.  Our edit
+     baton should have been closed by now, so return a failure if it
+     hasn't been. */
+  if (rb->edit_baton)
+    {
+      return svn_error_createf 
+        (SVN_ERR_RA_DAV_REQUEST_FAILED, 0, NULL,
+         "REPORT response handling failed to complete the editor drive");
+    }
+
   /* we're done with the file */
   (void) apr_file_close(rb->tmpfile);
 
@@ -2296,10 +2316,6 @@ static svn_error_t * reporter_finish_report(void *report_baton)
     return err;
   if (rb->err != NULL)
     return rb->err;
-
-  /* we got the whole HTTP response thing done. now wrap up the update
-     process with a close_edit call. */
-  SVN_ERR( (*rb->editor->close_edit)(rb->edit_baton, rb->ras->pool) );
 
   /* store auth info if we can. */
   SVN_ERR( svn_ra_dav__maybe_store_auth_info (rb->ras) );
