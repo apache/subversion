@@ -236,7 +236,7 @@ svn_error_t *svn_txdelta_apply (svn_read_fn_t *source_fn,
 
 /*** Producing and consuming VCDIFF-format text deltas.  ***/
 
-/* Prepare to produce VCDIFF-format diff from text delta windows.
+/* Prepare to produce a VCDIFF-format diff from text delta windows.
    WRITE_FN and WRITE_BATON specify how the VCDIFF output should be
    written.  Allocation takes place in a sub-pool of POOL.  On return,
    *HANDLER is set to a window handler function and *HANDLER_BATON is
