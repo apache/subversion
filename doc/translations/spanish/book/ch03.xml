@@ -1671,7 +1671,7 @@ $ svn resolved sandwich.txt
         <title>Punting: Usando <command>svn revert</command></title>
           <!--TODO:Punting... rechazando? excluyendo?-->
 
-        <para>Si obtiene un conflicto, y sobre la examinación decide
+        <para>Si obtiene un conflicto, y al examinarlo decide
           que quiere rechazar sus cambios y empezar su edición de nuevo,
           simplemente invierta sus cambios:</para>
 
