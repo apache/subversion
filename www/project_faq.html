@@ -64,6 +64,8 @@
     prefer "SVN" or something else.  How do I change it?</a></li>
 <li><a href="#case-change">I checked in a file but had the wrong case 
     in the filename.  How do I change it?</a></li>
+<li><a href="#merge-using-tags">I can't use tags to merge changes from a 
+    branch into the trunk like I used to with CVS, can I?</a></li>
 <p>
 <strong>Troubleshooting:</strong>
 </p>
@@ -1037,6 +1039,47 @@ correct working copy.
 <p>As you can see, adding a file with the wrong case is tricky to fix on
 an operating system that has a case insensitive filesystem.  Do try to
 get it right when you add the file the first time!</p>
+
+<![CDATA[=========================================================]]>
+
+<h3><a name="merge-using-tags">I can't use tags to merge changes from a 
+    branch into the trunk like I used to with CVS, can I?</a></h3>
+
+<p>As shown below it is possible to merge from a branch to the trunk
+without remembering one revision number. Or vice versa (not shown in the
+example).</p>
+
+<p>The example below presumes an existing repository in <tt>/home/repos<tt> 
+in which you want to start a brach named <tt>bar</tt> containing a file
+named <tt>foo</tt> you are going to edit.</p>
+
+<p>For the purpose of tracing branch merges, this repository has set up
+<tt>tags/branch_traces/</tt> to keep tags.</p>
+
+<pre># setup branch and tags
+$ svn copy file:///home/repos/trunk \
+           file:///home/repos/branches/bar_branch \
+           -m "start of bar branch"
+$ svn copy file:///home/repos/branches/bar_branch \
+           file:///home/repos/tags/branch_traces/bar_last_merge \
+           -m "start"
+
+# checkout branch working copy
+$ svn checkout file:///home/repos/branches/bar_branch wc
+$ cd wc
+
+# edit foo.txt file and commit
+$ echo "some text" &gt;&gt;foo.txt
+$ svn commit -m "edited foo"
+
+# switch to trunk and merge changes from branch
+$ svn switch file:///home/repos/trunk
+$ svn merge file:///home/repos/tags/branch_traces/bar_last_merge \
+            file:///home/repos/branches/bar_branch
+
+# and check the file content of 'foo.txt'
+
+</pre>
 
 <![CDATA[=========================================================]]>
 
