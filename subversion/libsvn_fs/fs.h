@@ -238,8 +238,7 @@ typedef enum
   svn_fs__change_add = 1,
   svn_fs__change_delete,
   svn_fs__change_replace,
-  svn_fs__change_text_mod,
-  svn_fs__change_prop_mod
+  svn_fs__change_modify
   
 } svn_fs__change_kind_t;
 
@@ -255,6 +254,10 @@ typedef struct
 
   /* The kind of change. */
   svn_fs__change_kind_t kind;
+
+  /* Text or property mods? */
+  int text_mod;
+  int prop_mod;
 
 } svn_fs__change_t;
 

@@ -640,19 +640,24 @@ get_dag (dag_node_t **dag_node_p,
 /* Add a change to the changes table in FS, keyed on transaction id
    TXN_ID, and indicated that a change of kind CHANGE_KIND occured on
    PATH (whose node revision id is--or was, in the case of a
-   deletion--NODEREV_ID).  Do all this as part of TRAIL.  */
+   deletion--NODEREV_ID), and optionally that TEXT_MODs or PROP_MODs
+   occured.  Do all this as part of TRAIL.  */
 static svn_error_t *
 add_change (svn_fs_t *fs,
             const char *txn_id,
             const char *path,
             const svn_fs_id_t *noderev_id,
             svn_fs__change_kind_t change_kind,
+            int text_mod,
+            int prop_mod,
             trail_t *trail)
 {
   svn_fs__change_t change;
   change.path = path;
   change.noderev_id = noderev_id;
   change.kind = change_kind;
+  change.text_mod = text_mod;
+  change.prop_mod = prop_mod;
   return svn_fs__changes_add (fs, txn_id, &change, trail);
 }
 
@@ -1022,7 +1027,7 @@ txn_body_change_node_prop (void *baton,
   /* Make a record of this modification in the changes table. */
   SVN_ERR (add_change (svn_fs_root_fs (args->root), txn_id, 
                        args->path, svn_fs__dag_get_id (parent_path->node),
-                       svn_fs__change_prop_mod, trail));
+                       svn_fs__change_modify, 0, 1, trail));
   
   return SVN_NO_ERROR;
 }
@@ -2315,7 +2320,7 @@ txn_body_make_dir (void *baton,
   /* Make a record of this modification in the changes table. */
   SVN_ERR (add_change (svn_fs_root_fs (root), txn_id, 
                        path, svn_fs__dag_get_id (sub_dir),
-                       svn_fs__change_add, trail));
+                       svn_fs__change_add, 0, 0, trail));
 
   return SVN_NO_ERROR;
 }
@@ -2387,7 +2392,7 @@ txn_body_delete (void *baton,
   /* Make a record of this modification in the changes table. */
   SVN_ERR (add_change (svn_fs_root_fs (root), txn_id, 
                        path, svn_fs__dag_get_id (parent_path->node),
-                       svn_fs__change_delete, trail));
+                       svn_fs__change_delete, 0, 0, trail));
   
   return SVN_NO_ERROR;
 }
@@ -2497,7 +2502,7 @@ txn_body_copy (void *baton,
       SVN_ERR (get_dag (&new_node, to_root, to_path, trail));
       SVN_ERR (add_change (svn_fs_root_fs (to_root), txn_id, 
                            to_path, svn_fs__dag_get_id (new_node),
-                           kind, trail));
+                           kind, 0, 0, trail));
     }
   else
     {
@@ -2654,7 +2659,7 @@ txn_body_make_file (void *baton,
   /* Make a record of this modification in the changes table. */
   SVN_ERR (add_change (svn_fs_root_fs (root), txn_id, 
                        path, svn_fs__dag_get_id (child),
-                       svn_fs__change_add, trail));
+                       svn_fs__change_add, 0, 0, trail));
 
   return SVN_NO_ERROR;
 }
@@ -2931,7 +2936,7 @@ txn_body_apply_textdelta (void *baton, trail_t *trail)
   /* Make a record of this modification in the changes table. */
   SVN_ERR (add_change (svn_fs_root_fs (tb->root), txn_id, 
                        tb->path, svn_fs__dag_get_id (tb->node),
-                       svn_fs__change_text_mod, trail));
+                       svn_fs__change_modify, 1, 0, trail));
 
   return SVN_NO_ERROR;
 }
@@ -3046,7 +3051,7 @@ txn_body_apply_text (void *baton, trail_t *trail)
   /* Make a record of this modification in the changes table. */
   SVN_ERR (add_change (svn_fs_root_fs (tb->root), txn_id, 
                        tb->path, svn_fs__dag_get_id (tb->node),
-                       svn_fs__change_text_mod, trail));
+                       svn_fs__change_modify, 1, 0, trail));
 
   return SVN_NO_ERROR;
 }

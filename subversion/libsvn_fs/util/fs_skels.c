@@ -256,11 +256,13 @@ is_valid_copy_skel (skel_t *skel)
 static int
 is_valid_change_skel (skel_t *skel, svn_fs__change_kind_t *kind)
 {
-  if ((svn_fs__list_length (skel) == 4)
+  if ((svn_fs__list_length (skel) == 6)
       && svn_fs__matches_atom (skel->children, "change")
       && skel->children->next->is_atom
       && skel->children->next->next->is_atom
-      && skel->children->next->next->next->is_atom)
+      && skel->children->next->next->next->is_atom
+      && skel->children->next->next->next->next->is_atom
+      && skel->children->next->next->next->next->next->is_atom)
     {
       skel_t *kind_skel = skel->children->next->next->next;
 
@@ -283,16 +285,10 @@ is_valid_change_skel (skel_t *skel, svn_fs__change_kind_t *kind)
             *kind = svn_fs__change_replace;
           return 1;
         }
-      if (svn_fs__matches_atom (kind_skel, "text-mod"))
+      if (svn_fs__matches_atom (kind_skel, "modify"))
         {
           if (kind)
-            *kind = svn_fs__change_text_mod;
-          return 1;
-        }
-      if (svn_fs__matches_atom (kind_skel, "prop-mod"))
-        {
-          if (kind)
-            *kind = svn_fs__change_prop_mod;
+            *kind = svn_fs__change_modify;
           return 1;
         }
     }
@@ -678,6 +674,14 @@ svn_fs__parse_change_skel (svn_fs__change_t **change_p,
 
   /* KIND */
   change->kind = kind;
+
+  /* TEXT-MOD */
+  if (skel->children->next->next->next->next->len)
+    change->text_mod = 1;
+
+  /* PROP-MOD */
+  if (skel->children->next->next->next->next->next->len)
+    change->prop_mod = 1;
 
   /* Return the structure. */
   *change_p = change;
@@ -1101,6 +1105,18 @@ svn_fs__unparse_change_skel (skel_t **skel_p,
   /* Create the skel. */
   skel = svn_fs__make_empty_list (pool);
 
+  /* PROP-MOD */
+  if (change->prop_mod)
+    svn_fs__prepend (svn_fs__str_atom ("1", pool), skel);
+  else
+    svn_fs__prepend (svn_fs__mem_atom (NULL, 0, pool), skel);
+
+  /* TEXT-MOD */
+  if (change->text_mod)
+    svn_fs__prepend (svn_fs__str_atom ("1", pool), skel);
+  else
+    svn_fs__prepend (svn_fs__mem_atom (NULL, 0, pool), skel);
+
   /* KIND */
   switch (change->kind)
     {
@@ -1115,11 +1131,8 @@ svn_fs__unparse_change_skel (skel_t **skel_p,
     case svn_fs__change_replace:
       svn_fs__prepend (svn_fs__str_atom ("replace", pool), skel);
       break;
-    case svn_fs__change_text_mod:
-      svn_fs__prepend (svn_fs__str_atom ("text-mod", pool), skel);
-      break;
-    case svn_fs__change_prop_mod:
-      svn_fs__prepend (svn_fs__str_atom ("prop-mod", pool), skel);
+    case svn_fs__change_modify:
+      svn_fs__prepend (svn_fs__str_atom ("modify", pool), skel);
       break;
     }
 

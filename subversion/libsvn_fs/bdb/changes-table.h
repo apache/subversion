@@ -54,14 +54,22 @@ svn_error_t *svn_fs__changes_delete (svn_fs_t *fs,
                                      const char *key,
                                      trail_t *trail);
 
+/* Return a hash *CHANGES_P, keyed on const char * paths, and
+   containing svn_fs__change_t * values representing summarized changed
+   records associated with KEY in FS, as part of TRAIL.  Allocate the
+   array and its items in TRAIL->pool.  */
+svn_error_t *svn_fs__changes_fetch (apr_hash_t **changes_p,
+                                    svn_fs_t *fs,
+                                    const char *key,
+                                    trail_t *trail);
 
 /* Return an array *CHANGES_P of svn_fs__change_t * items representing
    all the change records associated with KEY in FS, as part of TRAIL.
    Allocate the array and its items in TRAIL->pool.  */
-svn_error_t *svn_fs__changes_fetch (apr_array_header_t **changes_p,
-                                    svn_fs_t *fs,
-                                    const char *key,
-                                    trail_t *trail);
+svn_error_t *svn_fs__changes_fetch_raw (apr_array_header_t **changes_p,
+                                        svn_fs_t *fs,
+                                        const char *key,
+                                        trail_t *trail);
 
 
 #ifdef __cplusplus

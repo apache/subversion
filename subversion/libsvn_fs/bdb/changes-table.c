@@ -18,7 +18,10 @@
 #include <db.h>
 #include "svn_fs.h"
 #include "svn_pools.h"
+#include "apr_hash.h"
+#include "apr_tables.h"
 #include "../fs.h"
+#include "../id.h"
 #include "../err.h"
 #include "../trail.h"
 #include "../util/fs_skels.h"
@@ -110,11 +113,186 @@ svn_fs__changes_delete (svn_fs_t *fs,
 }
 
 
+static svn_fs__change_t *
+dup_change (svn_fs__change_t *change, 
+            apr_pool_t *pool)
+{
+  svn_fs__change_t *new_change = apr_pmemdup (pool, change, sizeof (*change));
+  new_change->path = apr_pstrdup (pool, change->path);
+  new_change->noderev_id = svn_fs__id_copy (change->noderev_id, pool);
+  return new_change;
+}
+
+
+static svn_error_t *
+merge_change (apr_hash_t *changes,
+              svn_fs__change_t *change)
+{
+  apr_pool_t *pool = apr_hash_pool_get (changes);
+  svn_fs__change_t *old_change, *new_change;
+
+  if ((old_change = apr_hash_get (changes, change->path, APR_HASH_KEY_STRING)))
+    {
+      /* This path already exists in the hash, so we have to merge
+         this change into the already existing one. */
+
+      /* Sanity check:  we should be talking about the same node
+         revision ID as our last change except where the last change
+         was a deletion. */
+      if ((! svn_fs__id_eq (old_change->noderev_id, change->noderev_id))
+          && (old_change->kind != svn_fs__change_delete))
+        return svn_error_create 
+          (SVN_ERR_FS_CORRUPT, 0, NULL, pool,
+           "Invalid change ordering: new node revision ID without delete");
+
+      /* Sanity check:  an add or replacement must be the first thing
+         to follow a deletion. */
+      if ((old_change->kind == svn_fs__change_delete)
+          && (! ((change->kind == svn_fs__change_add) 
+                 || (change->kind == svn_fs__change_replace))))
+        return svn_error_create 
+          (SVN_ERR_FS_CORRUPT, 0, NULL, pool,
+           "Invalid change ordering: non-add change on deleted path");
+
+      /* Now, merge that change in. */
+      switch (change->kind)
+        {
+        case svn_fs__change_delete:
+          /* A deletion overrules all previous changes. */
+          old_change->kind = svn_fs__change_delete;
+          old_change->text_mod = change->text_mod;
+          old_change->prop_mod = change->prop_mod;
+          break;
+
+        case svn_fs__change_add:
+        case svn_fs__change_replace:
+          old_change->kind = svn_fs__change_replace;
+          old_change->noderev_id = svn_fs__id_copy (change->noderev_id, pool);
+          old_change->text_mod = change->text_mod;
+          old_change->prop_mod = change->prop_mod;
+          break;
+
+        case svn_fs__change_modify:
+          if (change->text_mod)
+            old_change->text_mod = 1;
+          if (change->prop_mod)
+            old_change->prop_mod = 1;
+          break;
+
+        default:
+          /* Huh?  Ignore this change. */
+          return SVN_NO_ERROR;
+        }
+
+      /* Point our new_change to our (possibly modified) old_change. */
+      new_change = old_change;
+    }
+  else
+    {
+      /* This change is new to the hash, so dup it into the hash's
+         pool before adding it to the hash. */
+      new_change = dup_change (change, pool);
+    }
+
+  /* Add (or update) this path (we use NEW_CHANGE->path, because it is
+     guaranteed to be alloced in the hash pool) in the hash. */
+  apr_hash_set (changes, new_change->path, APR_HASH_KEY_STRING, new_change);
+
+  return SVN_NO_ERROR;
+}
+
+
 svn_error_t *
-svn_fs__changes_fetch (apr_array_header_t **changes_p,
+svn_fs__changes_fetch (apr_hash_t **changes_p,
                        svn_fs_t *fs,
                        const char *key,
                        trail_t *trail)
+{
+  DBC *cursor;
+  DBT query, result;
+  int db_err = 0, db_c_err = 0;
+  svn_error_t *err = SVN_NO_ERROR;
+  apr_hash_t *changes = apr_hash_make (trail->pool);
+  apr_pool_t *subpool = svn_pool_create (trail->pool);
+
+  /* Get a cursor on the first record matching KEY, and then loop over
+     the records, adding them to the return array. */
+  SVN_ERR (DB_WRAP (fs, "creating cursor for reading changes",
+                    fs->strings->cursor (fs->changes, trail->db_txn,
+                                         &cursor, 0)));
+
+  /* Advance the cursor to the key that we're looking for. */
+  svn_fs__str_to_dbt (&query, (char *) key);
+  svn_fs__result_dbt (&result);
+  db_err = cursor->c_get (cursor, &query, &result, DB_SET);
+  if (! db_err)
+    svn_fs__track_dbt (&result, trail->pool);
+
+  while (! db_err)
+    {
+      svn_fs__change_t *change;
+      skel_t *result_skel;
+      
+      /* RESULT now contains a change record associated with KEY.  We
+         need to parse that skel into an svn_fs__change_t structure ...  */
+      result_skel = svn_fs__parse_skel (result.data, result.size, subpool);
+      if (! result_skel)
+        {
+          err = svn_error_createf (SVN_ERR_FS_CORRUPT, 0, NULL, trail->pool,
+                                   "error reading changes for key `%s'", key);
+          goto cleanup;
+        }
+      err = svn_fs__parse_change_skel (&change, result_skel, subpool);
+      if (err)
+        goto cleanup;
+      
+      /* ... and merge it with our return hash.  */
+      SVN_ERR (merge_change (changes, change));
+
+      /* Advance the cursor to the next record with this same KEY, and
+         fetch that record. */
+      svn_fs__result_dbt (&result);
+      db_err = cursor->c_get (cursor, &query, &result, DB_NEXT_DUP);
+      if (! db_err)
+        svn_fs__track_dbt (&result, trail->pool);
+      
+      /* Clear the per-iteration subpool. */
+      svn_pool_clear (subpool);
+    }
+
+  /* Destroy the per-iteration subpool. */
+  svn_pool_destroy (subpool);
+
+  /* If there are no (more) change records for this KEY, we're
+     finished.  Just return the (possibly empty) array.  Any other
+     error, however, needs to get handled appropriately.  */
+  if (db_err && (db_err != DB_NOTFOUND))
+    err = DB_WRAP (fs, "fetching changes", db_err);
+
+ cleanup:
+  /* Close the cursor. */
+  db_c_err = cursor->c_close (cursor);
+
+  /* If we had an error prior to closing the cursor, return the error. */
+  if (err)
+    return err;
+  
+  /* If our only error thus far was when we closed the cursor, return
+     that error. */
+  if (db_c_err)
+    SVN_ERR (DB_WRAP (fs, "closing changes cursor", db_c_err));
+
+  /* Finally, set our return variable and get outta here. */
+  *changes_p = changes;
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_fs__changes_fetch_raw (apr_array_header_t **changes_p,
+                           svn_fs_t *fs,
+                           const char *key,
+                           trail_t *trail)
 {
   DBC *cursor;
   DBT query, result;
@@ -188,9 +366,6 @@ svn_fs__changes_fetch (apr_array_header_t **changes_p,
   *changes_p = changes;
   return SVN_NO_ERROR;
 }
-
-
-
 
 
 /* 
