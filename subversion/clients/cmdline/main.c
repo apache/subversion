@@ -333,10 +333,15 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
     "        will fail, and a recursive attempt will set the property only\n"
     "        on the file children of the directory.\n"
     "      svn:eol-style  - One of 'native', 'LF', 'CR', 'CRLF'. \n"
-    "      svn:mime-type   - The mimetype of the file.  Used to determine\n"
+    "      svn:mime-type  - The mimetype of the file.  Used to determine\n"
     "        whether to merge the file, and how to serve it from Apache.\n"
     "        A mimetype beginning with 'text/' (or an absent mimetype) is\n"
-    "        treated as text.  Anything else is treated as binary.\n",
+    "        treated as text.  Anything else is treated as binary.\n"
+    "      svn:externals  - A newline separated list of module specifiers,\n"
+    "        each of which consists of a relative directory path, optional\n"
+    "        revision flags, and an URL.  For example\n"
+    "           foo            http://example.com/repos/zig\n"
+    "           foo/bar -r1234 http://example.com/repos/zag\n",
     {'F', 'q', svn_cl__targets_opt, 'R'} },
   
   { "revert", svn_cl__revert, {0},
