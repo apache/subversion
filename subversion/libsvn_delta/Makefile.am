@@ -8,7 +8,7 @@
 lib_LTLIBRARIES = libsvn_delta.la
 
 ## Sources needed to build each library (names canonicalized)
-libsvn_delta_la_SOURCES = delta_parse.c
+libsvn_delta_la_SOURCES = delta_parse.c vcdiff_parse.c
 
 ## Build flags ---------
 

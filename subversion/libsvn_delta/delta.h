@@ -60,7 +60,8 @@
    the other argument.  PARSER keeps track of where we are in the
    stream; each time we've received enough data for a complete
    svn_delta_window_t, we pass it to HANDLER, along with
-   HANDLER_BATON.  */
+   HANDLER_BATON.  POOL is used to create individual sub-pools to hold
+   each window of vcdiff data.*/
 extern svn_vcdiff_parser_t *svn_make_vcdiff_parser (svn_delta_handler_t
                                                     * handler,
                                                     void *handler_baton,
@@ -72,6 +73,10 @@ extern svn_vcdiff_parser_t *svn_make_vcdiff_parser (svn_delta_handler_t
 extern svn_error_t *svn_vcdiff_parse (svn_vcdiff_parser_t *parser,
                                       const char *buffer,
                                       apr_off_t *len);
+
+
+svn_error_t *svn_vcdiff_flush_buffer (svn_vcdiff_parser_t *parser);
+
 
 /* These are the in-memory tree-delta stackframes; they are used to
  * keep track of a delta's state while the XML stream is being parsed.
