@@ -45,6 +45,8 @@ svn_cl__export (apr_getopt_t *os,
   const char *from, *to;
   apr_array_header_t *targets;
   svn_error_t *err;
+  svn_opt_revision_t peg_revision;
+  const char *truefrom;
 
   SVN_ERR (svn_opt_args_to_target_array (&targets, os, 
                                          opt_state->targets,
@@ -59,10 +61,13 @@ svn_cl__export (apr_getopt_t *os,
   /* The first target is the `from' path. */
   from = ((const char **) (targets->elts))[0];
 
+  /* Get the peg revision if present. */
+  SVN_ERR (svn_opt_parse_path (&peg_revision, &truefrom, from, pool));
+
   /* If only one target was given, split off the basename to use as
      the `to' path.  Else, a `to' path was supplied. */
   if (targets->nelts == 1) 
-    to = svn_path_uri_decode (svn_path_basename (from, pool), pool);
+    to = svn_path_uri_decode (svn_path_basename (truefrom, pool), pool);
   else
     to = ((const char **) (targets->elts))[1];
 
@@ -71,7 +76,8 @@ svn_cl__export (apr_getopt_t *os,
                           FALSE, pool);
 
   /* Do the export. */
-  err = svn_client_export2 (NULL, from, to, &(opt_state->start_revision),
+  err = svn_client_export3 (NULL, truefrom, to, &peg_revision,
+                            &(opt_state->start_revision),
                             opt_state->force, opt_state->native_eol, ctx,
                             pool);
   if (err && err->apr_err == SVN_ERR_WC_OBSTRUCTED_UPDATE && !opt_state->force)
