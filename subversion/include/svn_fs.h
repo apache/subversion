@@ -714,29 +714,27 @@ svn_node_kind_t svn_fs_check_path (svn_fs_root_t *root,
  * which @a paths under @a root were modified.
  *
  * Allocate and return an array @a *revs of @c svn_revnum_t revisions in
- * which @a paths under @a root were modified.  Use @a pool for all 
+ * which @a path under @a root was modified.  Use @a pool for all 
  * allocations.  The array of @a *revs are sorted in descending order.
- * All duplicates will also be removed.  @a paths is an array of 
- * <tt>const char *<tt> entries.
+ * All duplicates will also be removed.
  * 
  * If @a cross_copy_history is not set, this function will halt the
- * search for revisions in which a given path was changed when it
- * detects that the path was copied.
+ * search for revisions in which @a path was changed when it detects
+ * that the path was copied.
  *
  * NOTE: This function uses node-id ancestry alone to determine
  * modifiedness, and therefore does NOT claim that in any of the
  * returned revisions file contents changed, properties changed,
  * directory entries lists changed, etc.  
  *
- * ALSO NOTE: The revisions returned for a given path will be older
- * than or the same age as the revision of that path in @a root.  That
- * is, if @a root is a revision root based on revision X, and a path was
+ * ALSO NOTE: The revisions returned for @a path will be older than or
+ * the same age as the revision of that path in @a root.  That is, if
+ * @a root is a revision root based on revision X, and @a path was
  * modified in some revision(s) younger than X, those revisions
- * younger than X will not be included for that path.
- */
+ * younger than X will not be included for @a path.  */
 svn_error_t *svn_fs_revisions_changed (apr_array_header_t **revs,
                                        svn_fs_root_t *root,
-                                       const apr_array_header_t *paths,
+                                       const char *path,
                                        int cross_copy_history,
                                        apr_pool_t *pool);
 

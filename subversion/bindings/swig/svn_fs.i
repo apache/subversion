@@ -89,9 +89,6 @@ apr_array_header_t **names_p {
 apr_array_header_t **revs {
     $result = t_output_helper($result, svn_swig_py_revarray_to_list(*$1));
 }
-%apply const apr_array_header_t *STRINGLIST { 
-    const apr_array_header_t *paths 
-};
 
 /* -----------------------------------------------------------------------
    all uses of "apr_hash_t **" are returning property hashes

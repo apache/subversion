@@ -26,6 +26,7 @@
 #include "svn_repos.h"
 #include "svn_string.h"
 #include "svn_time.h"
+#include "svn_sorts.h"
 #include "repos.h"
 
 
@@ -158,9 +159,69 @@ svn_repos_get_logs (svn_repos_t *repos,
       SVN_ERR (svn_fs_revision_root
                (&rev_root, fs, (start > end) ? start : end, pool));
 
-      /* And the search is on... */
-      SVN_ERR (svn_fs_revisions_changed (&revs, rev_root, paths, 
-                                         strict_node_history ? 0 : 1, pool));
+      /* If there is only one path, we'll just get its sorted changed
+         revisions.  Else, we'll be combining all our findings into a
+         hash (to remove duplicates) and then generating a sorted
+         array from that hash. */
+      if (paths->nelts == 1)
+        {
+          /* Get the changed revisions for this path. */
+          SVN_ERR (svn_fs_revisions_changed (&revs, rev_root, 
+                                             APR_ARRAY_IDX (paths, 0, 
+                                                            const char *),
+                                             strict_node_history ? 0 : 1, 
+                                             pool));
+        }
+      else
+        {
+          int i;
+          apr_hash_t *all_revs = apr_hash_make (pool);
+          apr_hash_index_t *hi;
+
+          /* And the search is on... */
+          for (i = 0; i < paths->nelts; i++)
+            {
+              const char *this_path = APR_ARRAY_IDX (paths, i, const char *);
+              apr_array_header_t *changed_revs;
+              int j;
+
+              /* Get the changed revisions for this path, and add them to
+                 the hash (this will eliminate duplicates). */
+              SVN_ERR (svn_fs_revisions_changed (&changed_revs,
+                                                 rev_root, 
+                                                 this_path, 
+                                                 strict_node_history ? 0 : 1, 
+                                                 pool));
+              for (j = 0; j < changed_revs->nelts; j++)
+                {
+                  svn_revnum_t chrev = 
+                    APR_ARRAY_IDX (changed_revs, j, svn_revnum_t);
+                  apr_hash_set (all_revs, (void *)chrev, sizeof (chrev), 
+                                (void *)1);
+                }
+            }
+
+          /* Now that we have a hash of all the revisions in which any of
+             our paths changed, we can convert that back into a sorted
+             array. */
+          revs = apr_array_make (pool, apr_hash_count (all_revs), 
+                                 sizeof (svn_revnum_t));
+          for (hi = apr_hash_first (pool, all_revs); 
+               hi; 
+               hi = apr_hash_next (hi))
+            {
+              const void *key;
+              svn_revnum_t revision;
+              
+              apr_hash_this (hi, &key, NULL, NULL);
+              revision = *((const svn_revnum_t *)key);
+              (*((svn_revnum_t *) apr_array_push (revs))) = revision;
+            }
+
+          /* Now sort the array */
+          qsort ((revs)->elts, (revs)->nelts, (revs)->elt_size, 
+                 svn_sort_compare_revisions);
+        }
 
       /* If no revisions were found for these entries, we have nothing
          to show. Just return now before we break a sweat.  */

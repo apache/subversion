@@ -3718,15 +3718,14 @@ txn_body_revisions_changed (void *baton, trail_t *trail)
 svn_error_t *
 svn_fs_revisions_changed (apr_array_header_t **revs,
                           svn_fs_root_t *root,
-                          const apr_array_header_t *paths,
+                          const char *path,
                           int cross_copy_history,
                           apr_pool_t *pool)
 {
   struct revisions_changed_args args;
   svn_fs_t *fs = svn_fs_root_fs (root);
-  int i;
-  apr_hash_t *all_revs = apr_hash_make (pool);
   apr_pool_t *subpool = svn_pool_create (pool);
+  apr_hash_t *all_revs = apr_hash_make (subpool);
   apr_hash_index_t *hi;
 
   /* Populate the common baton members. */
@@ -3734,22 +3733,13 @@ svn_fs_revisions_changed (apr_array_header_t **revs,
   args.fs = fs;
   args.cross_copy_history = cross_copy_history;
   args.root = root;
+  args.path = svn_fs__canonicalize_abspath (path, subpool);
 
-  /* Get the node revision id for each PATH under ROOT, and find out
-     in which revisions that node revision id was changed.  */
-  for (i = 0; i < paths->nelts; i++)
-    {
-      args.path = APR_ARRAY_IDX (paths, i, const char *);
-      args.path = svn_fs__canonicalize_abspath (args.path, subpool);
-      SVN_ERR (svn_fs_node_id (&(args.id), args.root, args.path, subpool));
-      SVN_ERR (svn_fs__retry_txn (fs, txn_body_revisions_changed,
-                                  &args, subpool));
-      svn_pool_clear (subpool);
-    }
+  /* Do the real work. */
+  SVN_ERR (svn_fs_node_id (&(args.id), args.root, args.path, subpool));
+  SVN_ERR (svn_fs__retry_txn (fs, txn_body_revisions_changed,
+                              &args, subpool));
 
-  /* Destroy all memory used, except the revisions hash. */
-  svn_pool_destroy (subpool);
-  
   /* Now build the return array from the keys in the hash table.  The
      items in the array share storage with the hash keys, but that's
      alright because the hash keys are alloced in POOL.  */
@@ -3764,6 +3754,9 @@ svn_fs_revisions_changed (apr_array_header_t **revs,
       revision = *((const svn_revnum_t *)key);
       (*((svn_revnum_t *) apr_array_push (*revs))) = revision;
     }
+
+  /* Destroy all memory used, except array and the revisions in it. */
+  svn_pool_destroy (subpool);
 
   /* Now sort the array */
   qsort ((*revs)->elts, (*revs)->nelts, (*revs)->elt_size, 

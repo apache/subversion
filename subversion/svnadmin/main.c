@@ -377,7 +377,7 @@ subcommand_lscr (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   svn_fs_t *fs;
   svn_fs_root_t *rev_root;
   svn_revnum_t youngest_rev;
-  apr_array_header_t *revs, *args, *paths;
+  apr_array_header_t *revs, *args;
   const char *path_utf8;
   int i;
 
@@ -387,18 +387,16 @@ subcommand_lscr (apr_getopt_t *os, void *baton, apr_pool_t *pool)
     return svn_error_createf (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                               "exactly one path argument required");
 
-  paths = apr_array_make (pool, 1, sizeof (const char *));
   SVN_ERR (svn_utf_cstring_to_utf8 (&path_utf8,
                                     APR_ARRAY_IDX (args, 0, const char *),
                                     NULL, pool));
-  *(const char **)apr_array_push(paths) =
-    svn_path_internal_style (path_utf8, pool);
+  path_utf8 = svn_path_internal_style (path_utf8, pool);
   
   SVN_ERR (svn_repos_open (&repos, opt_state->repository_path, pool));
   fs = svn_repos_fs (repos);
   svn_fs_youngest_rev (&youngest_rev, fs, pool);
   SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, pool));
-  SVN_ERR (svn_fs_revisions_changed (&revs, rev_root, paths,
+  SVN_ERR (svn_fs_revisions_changed (&revs, rev_root, path_utf8,
                                      opt_state->follow_copies, pool));
   for (i = 0; i < revs->nelts; i++)
     {
