@@ -483,6 +483,46 @@ The `transactions' table is a btree, with no particular sort order.
 
 
 
+Changes
+
+As modifications are made (files and dirs added or removed, text and
+properties changed, etc.) on Subversion transaction trees, the
+filesystem tracks the basic change made in the Berkeley DB `changes'
+table.  
+
+The `changes' table is a btree with Berkeley's "duplicate keys"
+functionality (and with no particular sort order), and maps the
+one-to-many relationship of a transaction ID to a "change" item.
+Change items are skels of the form:
+
+   ("change" PATH ID CHANGE-KIND TEXT-MOD PROP-MOD)
+
+where:
+
+   * PATH is the path that was operated on to enact this change.
+
+   * ID is the node revision ID of the node chaned.
+
+   * CHANGE-KIND is one of the following:
+
+     - "add"     : PATH/ID was added to the filesystem.
+     - "delete"  : PATH/ID was removed from the filesystem.
+     - "replace" : PATH/ID was removed, then re-added to the filesystem.
+     - "modify"  : PATH/ID was otherwise modified.
+
+   * TEXT-MOD is a bit specifying whether or not the properties of
+     this node where modified.
+
+   * PROP-MOD is a bit specifying whether or not the properties of
+     this node where modified.
+
+In order to fully describe the changes made to any given path as part
+of a single transaction, one must read all the change items associated
+with the transaction's ID, and "collapse" multiple entries that refer
+to that path. 
+
+
+
 Copies
 
 Each time a filesystem copy operation is performed, Subversion records
@@ -659,6 +699,7 @@ Berkeley DB tables
                 "nodes" : btree(ID -> NODE-REVISION)
             "revisions" : recno(REVISION)
          "transactions" : btree(TXN -> TRANSACTION, "next-id" -> TXN)
+              "changes" : btree(TXN -> CHANGE)
                "copies" : btree(CPY -> COPY, "next-id" -> CPY)
               "strings" : btree(STR -> STRING, "next-id" -> STR)
       "representations" : btree(REP -> REPRESENTATION, "next-id" -> REP)
@@ -694,6 +735,14 @@ Transactions:
                 BASE-ID ::= NODE-REV-ID ;
                  COPIES ::= (CPY ...) ;
                     REV ::= number ;
+
+
+Changes:
+
+                 CHANGE ::= ("change" PATH ID CHANGE-KIND TEXT-MOD PROP-MOD) ;
+            CHANGE-KIND ::= "add" | "delete" | "replace" | "modify" ;
+               TEXT-MOD ::= atom ;
+               PROP-MOD ::= atom ;
 
 
 Copies:
