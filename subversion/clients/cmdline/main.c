@@ -346,11 +346,12 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
      SVN_CL__LOG_MSG_OPTIONS, SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
  
   { "info", svn_cl__info, {0},
-    N_("Display information about a file or directory.\n"
+    N_("Display information about a local or remote item.\n"
        "usage: info [PATH...]\n"
        "\n"
-       "  Print information about each PATH (default: '.').\n"),
-    {svn_cl__targets_opt, 'R', svn_cl__config_dir_opt} },
+       "  Print information about each PATH (default: '.')\n"
+       "  PATH may be either a working-copy path or URL.\n"),
+    {'r', 'R', svn_cl__targets_opt, svn_cl__config_dir_opt} },
  
   { "list", svn_cl__ls, {"ls"},
     N_("List directory entries in the repository.\n"
