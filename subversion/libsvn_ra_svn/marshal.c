@@ -64,7 +64,7 @@ svn_ra_svn_conn_t *svn_ra_svn_create_conn(apr_socket_t *sock,
 static const char *writebuf_push(svn_ra_svn_conn_t *conn, const char *data,
                                  const char *end)
 {
-  apr_size_t buflen, copylen;
+  apr_ssize_t buflen, copylen;
 
   buflen = sizeof(conn->write_buf) - conn->write_pos;
   copylen = (buflen < end - data) ? buflen : end - data;
@@ -116,7 +116,7 @@ static svn_error_t *writebuf_write(svn_ra_svn_conn_t *conn,
       SVN_ERR(writebuf_flush(conn));
     }
 
-  if (end - data > sizeof(conn->write_buf))
+  if (end - data > (apr_ssize_t)sizeof(conn->write_buf))
     SVN_ERR(writebuf_output(conn, data, end - data));
   else
     writebuf_push(conn, data, end);
@@ -141,7 +141,7 @@ static svn_error_t *writebuf_printf(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
  * we reach END. */
 static char *readbuf_drain(svn_ra_svn_conn_t *conn, char *data, char *end)
 {
-  apr_size_t buflen, copylen;
+  apr_ssize_t buflen, copylen;
 
   buflen = conn->read_end - conn->read_ptr;
   copylen = (buflen < end - data) ? buflen : end - data;
@@ -211,7 +211,7 @@ static svn_error_t *readbuf_read(svn_ra_svn_conn_t *conn,
   data = readbuf_drain(conn, data, end);
 
   /* Read large chunks directly into buffer. */
-  while (end - data > sizeof(conn->read_buf))
+  while (end - data > (apr_ssize_t)sizeof(conn->read_buf))
     {
       writebuf_flush(conn);
       count = end - data;

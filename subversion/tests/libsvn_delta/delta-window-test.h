@@ -62,7 +62,7 @@ delta_window_print (const svn_txdelta_window_t *window,
                     const char *tag, FILE *stream)
 {
   const apr_off_t len = delta_window_size_estimate (window);
-  apr_off_t op_offset = 0, tmp;
+  apr_off_t op_offset = 0;
   int i;
 
   if (!window)
@@ -77,6 +77,7 @@ delta_window_print (const svn_txdelta_window_t *window,
     {
       apr_size_t const offset = window->ops[i].offset;
       apr_size_t const length = window->ops[i].length;
+      apr_size_t tmp;
       switch (window->ops[i].action_code)
         {
         case svn_txdelta_source:
