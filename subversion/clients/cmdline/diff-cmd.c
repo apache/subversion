@@ -41,12 +41,19 @@ svn_cl__diff (apr_getopt_t *os,
 {
   svn_error_t *err;
   apr_array_header_t *targets;
+  svn_boolean_t recurse = TRUE;
   int i;
 
   targets = svn_cl__args_to_target_array (os, pool);
 
   /* Add "." if user passed 0 arguments */
   svn_cl__push_implicit_dot_target(targets, pool);
+
+  /* Check whether the user specified no recursion. */
+  if (opt_state->nonrecursive)
+    {
+      recurse = FALSE;
+    }
 
   for (i = 0; i < targets->nelts; i++)
     {
@@ -61,7 +68,7 @@ svn_cl__diff (apr_getopt_t *os,
           err = svn_cl__print_file_diff (target, pool);
           break;
         case svn_node_dir:
-          err = svn_cl__print_dir_diff (target, pool);
+          err = svn_cl__print_dir_diff (target, recurse, pool);
           break;
         case svn_node_unknown:
           err = svn_error_createf (0, 0, NULL, pool,

@@ -41,6 +41,7 @@
 
 svn_error_t *
 svn_cl__print_dir_diff (svn_stringbuf_t *path,
+                        svn_boolean_t recurse,
                         apr_pool_t *pool)
 {
   apr_hash_t *entries;
@@ -79,7 +80,10 @@ svn_cl__print_dir_diff (svn_stringbuf_t *path,
           err = svn_cl__print_file_diff (path, pool);
           break;
         case svn_node_dir:
-          err = svn_cl__print_dir_diff (path, pool);
+          if (recurse)
+            {
+              err = svn_cl__print_dir_diff (path, recurse, pool);
+            }
           break;
         default:
           break;
@@ -129,7 +133,7 @@ svn_cl__print_file_diff (svn_stringbuf_t *path,
   /* Execute local diff command on these two paths, print to stdout. */
 
   args[0] = SVN_CLIENT_DIFF;  /* the autoconfiscated system diff program */
-  args[1] = "-c";
+  args[1] = "-u";
   args[2] = pristine_copy_path->data;
   args[3] = path->data;
   args[4] = NULL;
