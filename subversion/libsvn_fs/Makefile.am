@@ -19,6 +19,8 @@ libsvn_fs_la_SOURCES =				\
                         node-rev.h              \
 			nodes-table.c		\
 			nodes-table.h		\
+                        proplist.c              \
+                        proplist.h              \
 			rev-table.c		\
 			rev-table.h		\
 			skel.c			\

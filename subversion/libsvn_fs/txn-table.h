@@ -42,6 +42,18 @@ svn_error_t *svn_fs__delete_txn (svn_fs_t *fs,
                                  trail_t *trail);
 
  
+/* Retrieve the transaction skel *TXN_SKEL for the Subversion transaction
+   SVN_TXN from the `transactions' table of FS, as part of TRAIL.
+
+   If there is no such transaction, SVN_ERR_FS_NO_SUCH_TRANSACTION is
+   the error returned.
+
+   Allocate *TXN_SKEL in TRAIL->pool.  */
+svn_error_t *svn_fs__get_txn (skel_t **txn_skel,
+                              svn_fs_t *fs,
+                              const char *svn_txn,
+                              trail_t *trail);
+
 /* Retrieve information about the Subversion transaction SVN_TXN from
    the `transactions' table of FS, as part of TRAIL.
    Set *ROOT_ID_P to the ID of the transaction's root directory.
@@ -52,11 +64,11 @@ svn_error_t *svn_fs__delete_txn (svn_fs_t *fs,
    the error returned.
 
    Allocate *ROOT_ID_P and *BASE_ROOT_ID_P in TRAIL->pool.  */
-svn_error_t *svn_fs__get_txn (svn_fs_id_t **root_id_p,
-                              svn_fs_id_t **base_root_id_p,
-                              svn_fs_t *fs,
-                              const char *svn_txn,
-                              trail_t *trail);
+svn_error_t *svn_fs__get_txn_ids (svn_fs_id_t **root_id_p,
+                                  svn_fs_id_t **base_root_id_p,
+                                  svn_fs_t *fs,
+                                  const char *svn_txn,
+                                  trail_t *trail);
 
 
 /* Set the root directory of the Subversion transaction SVN_TXN in FS

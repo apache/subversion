@@ -616,7 +616,7 @@ Filesystem revisions:
 
 Transactions:
 
-            TRANSACTION ::= ("transaction" ROOT-ID BASE-ROOT-ID) ;
+            TRANSACTION ::= ("transaction" ROOT-ID BASE-ROOT-ID PROPLIST) ;
                 ROOT-ID ::= node.revision-id ;
            BASE-ROOT-ID ::= node.revision-id ;
 

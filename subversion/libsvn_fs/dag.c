@@ -908,7 +908,7 @@ svn_fs__dag_txn_root (dag_node_t **node_p,
 {
   svn_fs_id_t *root_id, *ignored;
   
-  SVN_ERR (svn_fs__get_txn (&root_id, &ignored, fs, txn, trail));
+  SVN_ERR (svn_fs__get_txn_ids (&root_id, &ignored, fs, txn, trail));
   SVN_ERR (svn_fs__dag_get_node (node_p, fs, root_id, trail));
 
   return SVN_NO_ERROR;
@@ -923,7 +923,7 @@ svn_fs__dag_txn_base_root (dag_node_t **node_p,
 {
   svn_fs_id_t *base_root_id, *ignored;
   
-  SVN_ERR (svn_fs__get_txn (&ignored, &base_root_id, fs, txn, trail));
+  SVN_ERR (svn_fs__get_txn_ids (&ignored, &base_root_id, fs, txn, trail));
   SVN_ERR (svn_fs__dag_get_node (node_p, fs, base_root_id, trail));
 
   return SVN_NO_ERROR;
@@ -1022,7 +1022,7 @@ svn_fs__dag_clone_root (dag_node_t **root_p,
   
   /* Get the node ID's of the root directories of the transaction and
      its base revision.  */
-  SVN_ERR (svn_fs__get_txn (&root_id, &base_root_id, fs, svn_txn, trail));
+  SVN_ERR (svn_fs__get_txn_ids (&root_id, &base_root_id, fs, svn_txn, trail));
 
   /* Oh, give me a clone...
      (If they're the same, we haven't cloned the transaction's root
