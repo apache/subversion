@@ -150,7 +150,7 @@ window_handler (svn_txdelta_window_t *window, void *baton)
   append_encoded_int (header, window->sview_len, pool);
   append_encoded_int (header, window->tview_len, pool);
   append_encoded_int (header, instructions->len, pool);
-  append_encoded_int (header, window->new->len, pool);
+  append_encoded_int (header, window->new_data->len, pool);
 
   /* Write out the window.  */
   len = header->len;
@@ -160,10 +160,10 @@ window_handler (svn_txdelta_window_t *window, void *baton)
       len = instructions->len;
       err = eb->write_fn (eb->write_baton, instructions->data, &len, pool);
     }
-  if (err == SVN_NO_ERROR && window->new->len > 0)
+  if (err == SVN_NO_ERROR && window->new_data->len > 0)
     {
-      len = window->new->len;
-      err = eb->write_fn (eb->write_baton, window->new->data, &len, pool);
+      len = window->new_data->len;
+      err = eb->write_fn (eb->write_baton, window->new_data->data, &len, pool);
     }
 
   apr_destroy_pool (pool);
@@ -449,7 +449,8 @@ write_handler (void *baton,
           npos += op->length;
         }
     }
-  window->new = svn_string_ncreate ((const char *) p, newlen, db->subpool);
+  window->new_data
+    = svn_string_ncreate ((const char *) p, newlen, db->subpool);
   window->pool = db->subpool;
 
   /* Send it off.  */

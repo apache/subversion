@@ -67,7 +67,7 @@ print_delta_window (int quiet, svn_txdelta_window_t *window, FILE *stream)
           fprintf (stream, "\n  (INSERT %ld \"", (long) length);
           for (tmp = offset; tmp < offset + length; ++tmp)
             {
-              int const dat = window->new->data[tmp];
+              int const dat = window->new_data->data[tmp];
               if (apr_iscntrl (dat) || !apr_isascii(dat))
                 fprintf (stream, "\\%3.3o", dat & 0xff);
               else if (dat == '\\')

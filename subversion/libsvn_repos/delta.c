@@ -442,7 +442,7 @@ static svn_error_t *
 delete (struct context *c, void *dir_baton,
 	svn_string_t *name)
 {
-  return c->editor->delete (name, dir_baton);
+  return c->editor->delete_item (name, dir_baton);
 }
 
 

@@ -242,7 +242,7 @@ commit_replace_root (void *edit_baton, void **root_baton)
 }
 
 static svn_error_t *
-commit_delete (svn_string_t *name, void *parent_baton)
+commit_delete_item (svn_string_t *name, void *parent_baton)
 {
   dir_baton_t *parent = parent_baton;
   const char *workcol;
@@ -504,7 +504,7 @@ commit_close_edit (void *edit_baton)
 */
 static const svn_delta_edit_fns_t commit_editor = {
   commit_replace_root,
-  commit_delete,
+  commit_delete_item,
   commit_add_dir,
   commit_rep_dir,
   commit_change_dir_prop,

@@ -705,7 +705,7 @@ report_local_mods (svn_string_t *path,
             }
           
           /* Delete the entry */
-          err = editor->delete (current_entry_name, dir_baton);
+          err = editor->delete_item (current_entry_name, dir_baton);
           if (err) return err;
 
           /* Remember that it was affected. */

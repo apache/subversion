@@ -79,7 +79,7 @@ svn_txdelta__make_window (apr_pool_t *pool)
   window->num_ops = 0;
   window->ops_size = 0;
   window->ops = NULL;
-  window->new = svn_string_create ("", subpool);
+  window->new_data = svn_string_create ("", subpool);
   window->pool = subpool;
   return window;
 }
@@ -127,9 +127,9 @@ svn_txdelta__insert_op (svn_txdelta_window_t *window,
       break;
     case svn_txdelta_new:
       op->action_code = opcode;
-      op->offset = window->new->len;
+      op->offset = window->new_data->len;
       op->length = length;
-      svn_string_appendbytes (window->new, new_data, length);
+      svn_string_appendbytes (window->new_data, new_data, length);
       break;
     default:
       assert (!"unknown delta op.");
@@ -322,8 +322,10 @@ apply_instructions (svn_txdelta_window_t *window, const char *sbuf, char *tbuf)
 
         case svn_txdelta_new:
           /* Copy from window new area.  */
-          assert (op->offset + op->length <= window->new->len);
-          memcpy (tbuf + tpos, window->new->data + op->offset, op->length);
+          assert (op->offset + op->length <= window->new_data->len);
+          memcpy (tbuf + tpos,
+                  window->new_data->data + op->offset,
+                  op->length);
           tpos += op->length;
           break;
 

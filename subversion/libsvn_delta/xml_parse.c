@@ -496,7 +496,7 @@ do_delete_dirent (svn_xml__digger_t *digger,
   svn_error_t *err;
 
   /* Only proceed if the editor callback exists. */
-  if (! (digger->editor->delete))
+  if (! (digger->editor->delete_item))
     return SVN_NO_ERROR;
   
   /* Retrieve the "name" field from the current <delete> tag */
@@ -509,7 +509,7 @@ do_delete_dirent (svn_xml__digger_t *digger,
        "do_delete_dirent: <delete> tag has no 'name' field.");
 
   /* Call our editor's callback */
-  err = digger->editor->delete (dirent_name, youngest_frame->baton);
+  err = digger->editor->delete_item (dirent_name, youngest_frame->baton);
   if (err)
     return err;
 

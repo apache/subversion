@@ -411,7 +411,7 @@ fetch_file_reader(void *userdata, const char *buf, size_t len)
   window.num_ops = 1;
   window.ops_size = 1;          /* ### why is this here? */
   window.ops = &op;
-  window.new = &data;
+  window.new_data = &data;
   window.pool = fc->pool;
 
   err = (*fc->handler)(&window, fc->handler_baton);
@@ -639,7 +639,7 @@ svn_error_t * svn_ra_dav__checkout (void *session_baton,
 */
 
 static svn_error_t *
-update_delete (svn_string_t *name,
+update_delete_item (svn_string_t *name,
                void *parent_baton)
 {
   return SVN_NO_ERROR;
@@ -729,7 +729,7 @@ update_close_file (void *file_baton)
 */
 static const svn_delta_edit_fns_t update_editor = {
   NULL,  /* update_replace_root */
-  update_delete,
+  update_delete_item,
   update_add_dir,
   update_rep_dir,
   update_change_dir_prop,

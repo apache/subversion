@@ -69,7 +69,7 @@ int main(int argc, char **argv)
   window.ops[0].action_code = svn_txdelta_new;
   window.ops[0].offset = 0;
   window.ops[0].length = 10;
-  window.new = svn_string_create ("test delta", pool);
+  window.new_data = svn_string_create ("test delta", pool);
 
   svn_delta_get_xml_editor (write_to_file, stdout, &editor, &edit_baton, pool);
   editor->replace_root (edit_baton, &root_baton);

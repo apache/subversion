@@ -313,7 +313,7 @@ replace_root (void *edit_baton,
 
 
 static svn_error_t *
-delete (svn_string_t *name, void *parent_baton)
+delete_item (svn_string_t *name, void *parent_baton)
 {
   struct dir_baton *db = (struct dir_baton *) parent_baton;
   struct edit_baton *eb = db->edit_baton;
@@ -569,7 +569,7 @@ close_edit (void *edit_baton)
 static const svn_delta_edit_fns_t tree_editor =
 {
   replace_root,
-  delete,
+  delete_item,
   add_directory,
   replace_directory,
   change_dir_prop,
