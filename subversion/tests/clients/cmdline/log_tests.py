@@ -69,7 +69,7 @@ wc_path = None      # Where is the working copy
 
 # What separates log msgs from one another in raw log output.
 msg_separator = '------------------------------------' \
-                + '------------------------------------'
+                + '------------------------------------\n'
 
 
 ######################################################################
@@ -78,7 +78,7 @@ msg_separator = '------------------------------------' \
 
 def guarantee_repos_and_wc():
   "Make a repository and working copy, commit max_revision revisions."
-  global wc_path
+  global wc_path, max_revision
 
   if (wc_path != None): return
 
@@ -159,11 +159,22 @@ def guarantee_repos_and_wc():
   svntest.main.run_svn (None, 'ci', '-m', "Log message for revision 9")
   svntest.main.run_svn (None, 'up')
 
+  max_revision = 9
+
   ### todo: Here, Ben is going to insert some code to check status.
   ### Thanks Ben!  We love Ben!  Yay Ben!  <thud>
 
   # Restore.
   os.chdir (was_cwd)
+
+
+import exceptions
+
+
+# For errors seen while parsing log data.
+class SVNLogParseError(exceptions.Exception):
+  def __init__ (self, args=None):
+    self.args = args
 
 
 def parse_log_output(log_lines):
@@ -213,21 +224,54 @@ def parse_log_output(log_lines):
 
   # Regular expression to match the header line of a log message, with
   # these groups: (revision number), (author), (date), (num lines).
-  header_re = re.compile ('^rev ([0-9])+:  ' \
-                          + '([^|])* \| ([^|])* \| ([0-9]+) line')
-  
-  for line in log_lines:
-    match = header_re.search(line)
-    if match and match.groups():
-      ### todo: working here
-      print "header: ", line
+  header_re = re.compile ('^rev ([0-9]+):  ' \
+                          + '([^|]*) \| ([^|]*) \| ([0-9]+) lines?')
 
-  return ()
+  # The log chain to return.
+  chain = []
+
+  this_item = None
+  while 1:
+    try:
+      this_line = log_lines.pop (0)
+    except IndexError:
+      return chain
+
+    match = header_re.search (this_line)
+    if match and match.groups ():
+      this_item = {}
+      this_item['revision'] = match.group(1)
+      this_item['author']   = match.group(2)
+      this_item['date']     = match.group(3)
+      lines = string.atoi ((match.group (4)))
+
+      # Eat the expected blank line.
+      log_lines.pop (0)
+
+      ### todo: we don't parse changed-paths yet, since Subversion
+      ### doesn't output them.  When it does, they'll appear here,
+      ### right after the header line, and then there'll be a blank
+      ### line between them and the msg.
+
+      # Accumulate the log message
+      msg = ''
+      for line in log_lines[0:lines]:
+        msg += line
+      del log_lines[0:lines]
+    elif this_line == msg_separator:
+      if this_item:
+        this_item['msg'] = msg
+        chain.append (this_item)
+    else:  # if didn't see separator now, then something's wrong
+      raise SVNLogParseError, "trailing garbage after log message"
+
+  return chain
 
 
-def check_log_chain (start, end):
-  """Verify that a log chain looks as expected (see documentation for
-  parse_log_output() for more about log chains.)
+def check_log_chain (chain, start, end):
+  """Verify that log chain CHAIN contains the right log messages for
+  revisions START to END (see documentation for parse_log_output() for
+  more about log chains.)
 
   Return 0 if the log chain's messages run from revision START to END
   with no gaps, and that each log message is one line of the form
@@ -237,7 +281,37 @@ def check_log_chain (start, end):
   where N is the revision number of that commit.  Also verify that
   author and date are present and look sane, but don't check them too
   carefully.
+
+  Return 1 if anything looks wrong.
   """
+
+  if start > end:
+    step = -1
+  else:
+    step = 1
+  
+  for expect_rev in range (start, end + step, step):
+    log_item = chain.pop (0)
+    saw_rev = string.atoi (log_item['revision'])
+    date = log_item['date']
+    author = log_item['author']
+    msg = log_item['msg']
+    # The most important check is that the revision is right:
+    if expect_rev != saw_rev: return 1
+    # Check that author and date look at least vaguely right:
+    author_re = re.compile ('[a-zA-Z]+')
+    date_re = re.compile ('[0-9]+')
+    if (not author_re.search (author)): return 1
+    if (not date_re.search (date)): return 1
+    # Check that the log message looks right:
+    msg_re = re.compile ('Log message for revision ' + `saw_rev`)
+    if (not msg_re.search (msg)): return 1
+
+  ### todo: need some multi-line log messages mixed in with the
+  ### one-liners.  Easy enough, just make the prime revisions use REV
+  ### lines, and the rest use 1 line, or something, so it's
+  ### predictable based on REV.
+
   return 0
 
 
@@ -249,20 +323,26 @@ def check_log_chain (start, end):
 #----------------------------------------------------------------------
 def plain_log():
   "Test svn log invoked with no arguments from the top of the wc."
-  guarantee_repos_and_wc();                         ### <-- in progress
+  guarantee_repos_and_wc()
+
+  result = 0
 
   was_cwd = os.getcwd()
-  os.chdir(wc_path);
+  os.chdir(wc_path)
 
-  output, errput = svntest.main.run_svn (None, 'log');
+  output, errput = svntest.main.run_svn (None, 'log')
 
-  if errput: return 1
+  if errput:
+    os.chdir (was_cwd)
+    return 1
 
-  log_chain = parse_log_output(output);             ### <-- implement this
-  if check_log_chain(max_revision,1): return 1;     ### <-- implement this
+  log_chain = parse_log_output (output)
+  if check_log_chain (log_chain, max_revision, 1):
+    os.chdir (was_cwd)
+    return 1
 
-  os.chdir(was_cwd);
-
+  os.chdir (was_cwd)
+  return 0
 
 ########################################################################
 # Run the tests
@@ -291,3 +371,4 @@ if __name__ == '__main__':
 # local variables:
 # eval: (load-file "../../../svn-dev.el")
 # end:
+
