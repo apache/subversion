@@ -1377,6 +1377,9 @@ typedef struct svn_wc_status_t
   /** The entry's property status in the repository. */
   enum svn_wc_status_kind repos_prop_status;
 
+  /** @since New in 1.2.
+   * The entry's lock in the repository, if any. */
+  svn_lock_t *repos_lock;
 } svn_wc_status_t;
 
 
@@ -1489,6 +1492,24 @@ svn_error_t *svn_wc_get_status_editor (const svn_delta_editor_t **editor,
                                        void *cancel_baton,
                                        svn_wc_traversal_info_t *traversal_info,
                                        apr_pool_t *pool);
+
+/** @since New in 1.2.
+ *
+ * Associate @a locks, a hash table mapping <tt>const char*</tt>
+ * absolute repository paths to <tt>svn_lock_t</tt objects with an
+ * @a edit_baton returned by an earlier call to @c svn_wc_get_status_editor.
+ * @a repos_root is the URL of the repository root.  Perform all allocations
+ * in @a pool.
+ *
+ * @note @a locks will not be copied, so it must be valid throughout the
+ * edit.  @a pool must also not be destroyed or cleared before the edit is
+ * finished.
+ */
+svn_error_t *
+svn_wc_status_set_repos_locks (void *edit_baton,
+                               apr_hash_t *locks,
+                               const char *repos_root,
+                               apr_pool_t *pool);
 
 /** @} */
 
