@@ -56,6 +56,7 @@ int main(int argc, const char *const *argv)
   apr_file_t *in_file, *out_file;
   apr_sockaddr_t *sa;
   apr_pool_t *pool;
+  apr_pool_t *connection_pool;
   svn_error_t *err;
   apr_getopt_t *os;
   char opt, errbuf[256];
@@ -139,13 +140,17 @@ int main(int argc, const char *const *argv)
   apr_signal(SIGCHLD, sigchld_handler);
 #endif
 
+  connection_pool = svn_pool_create(pool);
   while (1)
     {
-      status = apr_accept(&usock, sock, pool);
+      /* Clear the pool for each iteration. */
+      apr_pool_clear(connection_pool);
+
+      status = apr_accept(&usock, sock, connection_pool);
 #if APR_HAS_FORK
       /* Collect any zombie child processes. */
       while (apr_proc_wait_all_procs(&proc, NULL, NULL, APR_NOWAIT,
-                                     pool) == APR_CHILD_DONE)
+                                     connection_pool) == APR_CHILD_DONE)
         ;
 #endif
       if (APR_STATUS_IS_EINTR(status))
@@ -157,11 +162,11 @@ int main(int argc, const char *const *argv)
           exit(1);
         }
 
-      conn = svn_ra_svn_create_conn(usock, NULL, NULL, pool);
+      conn = svn_ra_svn_create_conn(usock, NULL, NULL, connection_pool);
 
       if (listen_once)
         {
-          err = serve(conn, root, FALSE, pool);
+          err = serve(conn, root, FALSE, connection_pool);
 
           if (listen_once && err
               && err->apr_err != SVN_ERR_RA_SVN_CONNECTION_CLOSED)
@@ -178,10 +183,10 @@ int main(int argc, const char *const *argv)
        * structure a forking daemon process under Windows.  (Threads?
        * Our library code isn't perfectly thread-safe at the
        * moment.) -ghudson */
-      status = apr_proc_fork(&proc, pool);
+      status = apr_proc_fork(&proc, connection_pool);
       if (status == APR_INCHILD)
         {
-          svn_error_clear(serve(conn, root, FALSE, pool));
+          svn_error_clear(serve(conn, root, FALSE, connection_pool));
           apr_socket_close(usock);
           exit(0);
         }
@@ -196,7 +201,7 @@ int main(int argc, const char *const *argv)
         }
 #else
       /* Serve one connection at a time. */
-      svn_error_clear(serve(conn, root, FALSE, pool));
+      svn_error_clear(serve(conn, root, FALSE, connection_pool));
 #endif
     }
 
