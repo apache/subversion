@@ -1010,8 +1010,7 @@ svn_stream_t *svn_stream_from_stdio (FILE *fp, apr_pool_t *pool)
 /* Miscellaneous stream functions. */
 struct string_stream_baton
 {
-  const char *data;
-  apr_size_t len;
+  svn_stringbuf_t *str;
   apr_size_t amt_read;
 };
 
@@ -1019,30 +1018,51 @@ static svn_error_t *
 read_handler_string (void *baton, char *buffer, apr_size_t *len)
 {
   struct string_stream_baton *btn = baton;
-  apr_size_t left_to_read = btn->len - btn->amt_read;
+  apr_size_t left_to_read;
+  
+  if (! btn->str)
+    {
+      *len = 0;
+      return SVN_NO_ERROR;
+    }
+     
+  left_to_read = btn->str->len - btn->amt_read;
   *len = (*len > left_to_read) ? left_to_read : *len;
-  memcpy (buffer, btn->data + btn->amt_read, *len);
+  memcpy (buffer, btn->str->data + btn->amt_read, *len);
   btn->amt_read += *len;
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+write_handler_string (void *baton, const char *data, apr_size_t *len)
+{
+  struct string_stream_baton *btn = baton;
+  if (! btn->str)
+    {
+      *len = 0;
+      return svn_error_create (SVN_ERR_INCORRECT_PARAMS, 0, NULL,
+                               "No receiving string available");
+    }
+  svn_stringbuf_appendbytes (btn->str, data, *len);
+  return SVN_NO_ERROR;
+}
+
 svn_stream_t *
-svn_stream_from_string (const char *data, 
-                        apr_size_t len,
-                        apr_pool_t *pool)
+svn_stream_from_stringbuf (svn_stringbuf_t *str,
+                           apr_pool_t *pool)
 {
   svn_stream_t *stream;
   struct string_stream_baton *baton;
 
-  if (! (data && len))
+  if (! str)
     return svn_stream_empty (pool);
 
   baton = apr_palloc (pool, sizeof (*baton));
-  baton->data = data;
-  baton->len = len;
+  baton->str = str;
   baton->amt_read = 0;
   stream = svn_stream_create (baton, pool);
   svn_stream_set_read (stream, read_handler_string);
+  svn_stream_set_write (stream, write_handler_string);
   return stream;
 }
 

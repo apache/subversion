@@ -334,11 +334,13 @@ svn_stream_t *svn_stream_from_aprfile (apr_file_t *file, apr_pool_t *pool);
 
 svn_stream_t *svn_stream_from_stdio (FILE *fp, apr_pool_t *pool);
 
-/* Return a generic readable stream from a hunk of DATA and its
-   length, LEN.  Allocate the stream in POOL.  */
-svn_stream_t *svn_stream_from_string (const char *data, 
-                                      apr_size_t len,
-                                      apr_pool_t *pool);
+/* Return a generic stream connected to STR.  Allocate the stream in
+   POOL.  When used as readable stream, STR should contain the data
+   you wish to read.  When used a writable stream, STR should be
+   non-NULL, initialized by the stringbuf creation function of your
+   choice, and writes to this stream will append data to STR.  */
+svn_stream_t *svn_stream_from_stringbuf (svn_stringbuf_t *str,
+                                         apr_pool_t *pool);
 
 /* Functions for operating on generic streams.  */
 
