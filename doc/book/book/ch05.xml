@@ -436,68 +436,67 @@ pre-commit.tmpl           start-commit.tmpl
     <title>Repository Maintenance</title>
 
     <!-- ***************************************************************** -->
-      <sect2 id="svn-ch-5-sect-2.1">
-        <title>Understanding Transactions and Revisions</title>
+    <sect2 id="svn-ch-5-sect-2.1">
+      <title>Understanding Transactions and Revisions</title>
         
-        <para>A Subversion repository is essentially a sequence of
-          directory trees, each tree a snapshot of how the files and
-          directories versioned in your repository looked at various
-          points in time.  These snapshots are created as a result of
-          client operations, and are called revisions.</para>
+      <para>A Subversion repository is essentially a sequence of
+        directory trees, each tree a snapshot of how the files and
+        directories versioned in your repository looked at various
+        points in time.  These snapshots are created as a result of
+        client operations, and are called revisions.</para>
 
-        <para>Every revision begins life as a transaction tree.  When
-          doing a commit, a client builds a Subversion transaction
-          that mirrors their local changes (plus any additional
-          changes that might have been made to the repository since
-          the beginning of the client's commit process), and then
-          instructs the repository to store that tree as the next
-          snapshot in the sequence.  If the commit succeeds, the
-          transaction is effectively promoted into a new revision
-          tree, and is assigned a new revision number.  If the commit
-          fails for some reason, the transaction is destroyed and the
-          client is informed of the failure.</para>
+      <para>Every revision begins life as a transaction tree.  When
+        doing a commit, a client builds a Subversion transaction that
+        mirrors their local changes (plus any additional changes that
+        might have been made to the repository since the beginning of
+        the client's commit process), and then instructs the
+        repository to store that tree as the next snapshot in the
+        sequence.  If the commit succeeds, the transaction is
+        effectively promoted into a new revision tree, and is assigned
+        a new revision number.  If the commit fails for some reason,
+        the transaction is destroyed and the client is informed of the
+        failure.</para>
             
-        <para>At the moment, updates work in a similar way.  The
-          client builds a temporary transaction tree that mimics the
-          state of the working copy.  The repository then compares
-          that transaction tree with the revision tree at the request
-          revision (usually the most recent, or
-          <quote>youngest</quote> tree), and sends back information
-          that informs the client about what changes are needed to
-          transform their working copy into a replica of that revision
-          tree.  After the update completes, the temporary transaction
-          is deleted.</para>
-            
-        <para>The use of transaction trees is the only way to make
-          permanent changes to repository's versioned filesystem.
-          However, it's important to understand that the lifetime of a
-          transaction is completely flexible.  In the case of updates,
-          transactions are temporary trees that are immediately
-          destroyed.  In the case of commits, transactions are
-          transformed into permanent revisions (or aborted if the
-          commit fails).  In the case of an error or bug, it's
-          possible that a transaction can be accidentally left lying
-          around in the repository (not really affecting anything, but
-          still taking up space).</para>
+      <para>At the moment, updates work in a similar way.  The client
+        builds a temporary transaction tree that mimics the state of
+        the working copy.  The repository then compares that
+        transaction tree with the revision tree at the request
+        revision (usually the most recent, or <quote>youngest</quote>
+        tree), and sends back information that informs the client
+        about what changes are needed to transform their working copy
+        into a replica of that revision tree.  After the update
+        completes, the temporary transaction is deleted.</para>
+          
+      <para>The use of transaction trees is the only way to make
+        permanent changes to repository's versioned filesystem.
+        However, it's important to understand that the lifetime of a
+        transaction is completely flexible.  In the case of updates,
+        transactions are temporary trees that are immediately
+        destroyed.  In the case of commits, transactions are
+        transformed into permanent revisions (or aborted if the commit
+        fails).  In the case of an error or bug, it's possible that a
+        transaction can be accidentally left lying around in the
+        repository (not really affecting anything, but still taking up
+        space).</para>
 
-        <para>In theory, someday whole workflow applications might
-          revolve around more fine-grained control of transaction
-          lifetime.  It is feasible to imagine a system whereby each
-          transaction slated to become a revision is left in statis
-          well after the client finishes describing its changes to
-          repository.  This would enable each new commit to be
-          reviewed by someone else, perhaps a manager or engineering
-          QA team, who can choose to promote the transaction into a
-          revision, or abort it.</para>
+     <para>In theory, someday whole workflow applications might
+        revolve around more fine-grained control of transaction
+        lifetime.  It is feasible to imagine a system whereby each
+        transaction slated to become a revision is left in statis well
+        after the client finishes describing its changes to
+        repository.  This would enable each new commit to be reviewed
+        by someone else, perhaps a manager or engineering QA team, who
+        can choose to promote the transaction into a revision, or
+        abort it.</para>
             
-        <para>You might at this point be wondering what all of this
-          has to do with repository administration.  The answer is
-          simple: if you're administering a Subversion repository,
-          you're going to have to examine revisions and transactions.
-          It's part of monitoring the health of, and tracking changes
-          to, your repository.</para>
+      <para>You might at this point be wondering what all of this has
+        to do with repository administration.  The answer is simple:
+        if you're administering a Subversion repository, you're going
+        to have to examine revisions and transactions.  It's part of
+        monitoring the health of, and tracking changes to, your
+        repository.</para>
             
-      </sect2>
+    </sect2>
 
     <!-- ***************************************************************** -->
     <sect2 id="svn-ch-5-sect-2.2">
@@ -976,133 +975,134 @@ $
         <!-- ### todo: talk only about Berkeley's tools here.  Move
              the svnadmin stuff out to another section.  -->
             
-      <para>Currently, the Subversion repository has only one database
-        back-end: Berkeley DB.  All of your filesystem's structure and
-        data live in a set of tables within the
-        <filename>db</filename> subdirectory of your repository.  This
-        subdirectory is a regular Berkeley DB environment directory,
-        and can therefore be used in conjunction with any of
-        Berkeley's database tools (you can see the documentation for
-        these tools at SleepyCat's website, <systemitem
-        class="url">http://www.sleepycat.com/</systemitem>).  For
-        day-to-day Subversion use, these tools should be unnecessary,
-        however, they do provide some important functionality that is
-        currently not provided by Subversion itself.</para>
-
-      <para>Remember that Berkeley DB has genuine transactions.
-        Every attempt to change the DB is first logged.  If anything
-        ever goes wrong, the DB can back itself up to a previous
-        <literal>checkpoint</literal> and replay transactions to get
-        the data back into a sane state.</para>
-            
-      <para>In our experience, we have seen situations where a bug in
-        Subversion (which causes a crash) can sometimes have a
-        side-effect of leaving the DB environment in a
-        <quote>locked</quote> state.  When the repository is in this
-        state, any attempts to read or write to the repository stall
-        indefinitely as Subversion awaits the release of a lock that
-        cannot be released.  Fortunately, Berkeley DB has genuine
-        support for transactions, and Subversion takes advantage of
-        that.  This means that every change to the database is first
-        logged, and then exacted, so that if anyone goes wrong, the
-        database can revert back to a previous
-        <quote>checkpoint</quote> and replay the transactions to get
-        back into a sane state.</para>
-          
-      <para>To <quote>unwedge</quote> the repository:</para>
- 
-      <orderedlist>
-        <listitem>
-          <para>Make sure that there are no processes accessing (or
-            attempting to access) the repository.  For networked
-            repositories, this means shutting down the Apache HTTP
-            Server, too.</para>
-        </listitem>
-        <listitem> 
-          <para>Become the user who owns and manages the repository.</para>
-        </listitem>
-        <listitem>
-          <para>Run the command <command>svnadmin recover
-            /path/to/repos</command>.  You should see output like
-            this:</para>
+        <para>Currently, the Subversion repository has only one
+          database back-end: Berkeley DB.  All of your filesystem's
+          structure and data live in a set of tables within the
+          <filename>db</filename> subdirectory of your repository.
+          This subdirectory is a regular Berkeley DB environment
+          directory, and can therefore be used in conjunction with any
+          of Berkeley's database tools (you can see the documentation
+          for these tools at SleepyCat's website, <systemitem
+          class="url">http://www.sleepycat.com/</systemitem>).  For
+          day-to-day Subversion use, these tools should be
+          unnecessary, however, they do provide some important
+          functionality that is currently not provided by Subversion
+          itself.</para>
+  
+        <para>Remember that Berkeley DB has genuine transactions.
+          Every attempt to change the DB is first logged.  If anything
+          ever goes wrong, the DB can back itself up to a previous
+          <literal>checkpoint</literal> and replay transactions to get
+          the data back into a sane state.</para>
               
-          <screen>
+        <para>In our experience, we have seen situations where a bug
+          in Subversion (which causes a crash) can sometimes have a
+          side-effect of leaving the DB environment in a
+          <quote>locked</quote> state.  When the repository is in this
+          state, any attempts to read or write to the repository stall
+          indefinitely as Subversion awaits the release of a lock that
+          cannot be released.  Fortunately, Berkeley DB has genuine
+          support for transactions, and Subversion takes advantage of
+          that.  This means that every change to the database is first
+          logged, and then exacted, so that if anyone goes wrong, the
+          database can revert back to a previous
+          <quote>checkpoint</quote> and replay the transactions to get
+          back into a sane state.</para>
+            
+        <para>To <quote>unwedge</quote> the repository:</para>
+   
+        <orderedlist>
+          <listitem>
+            <para>Make sure that there are no processes accessing (or
+              attempting to access) the repository.  For networked
+              repositories, this means shutting down the Apache HTTP
+              Server, too.</para>
+          </listitem>
+          <listitem> 
+            <para>Become the user who owns and manages the repository.</para>
+          </listitem>
+          <listitem>
+            <para>Run the command <command>svnadmin recover
+              /path/to/repos</command>.  You should see output like
+              this:</para>
+                
+            <screen>
 Acquiring exclusive lock on repository db, and running recovery procedures.
 Please stand by...
 Recovery completed.
 The latest repos revision is 19.
 </screen>
-        </listitem>
-        <listitem>
-          <para>Restart the Subversion server.</para>
-        </listitem>
-      </orderedlist>
+          </listitem>
+          <listitem>
+            <para>Restart the Subversion server.</para>
+          </listitem>
+        </orderedlist>
+              
+        <para>Make sure you run this command as the user that owns and
+          manages the database&mdash;typically your Apache
+          process&mdash;and <emphasis>not</emphasis> as root.  Running
+          <command>db_recover</command> as root leaves files owned by
+          root in the <filename>db</filename> directory, which the
+          non-root user that manages the database cannot open.  If you
+          do this, you'll get <quote>permission denied</quote> error
+          messages when you try to access the repository.</para><!--
+          ###TODO Make this a warning block? -Fitz -->
+        
+        <para>Second, a repository administrator may need to manage
+          the growth of logfiles.  At any given time, the DB
+          environment is using at least one logfile to log
+          transactions; when the <quote>current</quote> logfile grows
+          to 10 megabytes, a new logfile is started, and the old one
+          continues to exist.</para>
             
-      <para>Make sure you run this command as the user that owns and
-        manages the database&mdash;typically your Apache
-        process&mdash;and <emphasis>not</emphasis> as root.  Running
-        <command>db_recover</command> as root leaves files owned by
-        root in the <filename>db</filename> directory, which the
-        non-root user that manages the database cannot open.  If you
-        do this, you'll get <quote>permission denied</quote> error
-        messages when you try to access the repository.</para><!--
-        ###TODO Make this a warning block? -Fitz -->
-      
-      <para>Second, a repository administrator may need to manage
-        the growth of logfiles.  At any given time, the DB
-        environment is using at least one logfile to log
-        transactions; when the <quote>current</quote> logfile grows
-        to 10 megabytes, a new logfile is started, and the old one
-        continues to exist.</para>
-          
-      <para>Thus, after a while, you may see a whole group of 1MB
-        logfiles lying around the environment.  At this point, you
-        can make a choice: if you leave every single logfile behind,
-        it's guaranteed that <command>db_recover</command> will
-        always be able to replay every single DB transaction, all
-        the way back to the first commit.  (This is the
-        <quote>safe</quote>, or perhaps paranoid, route.)  On the
-        other hand, you can ask Berkeley DB to tell you which
-        logfiles are no longer being actively written to:</para>
-          
-      <screen>
+        <para>Thus, after a while, you may see a whole group of 1MB
+          logfiles lying around the environment.  At this point, you
+          can make a choice: if you leave every single logfile behind,
+          it's guaranteed that <command>db_recover</command> will
+          always be able to replay every single DB transaction, all
+          the way back to the first commit.  (This is the
+          <quote>safe</quote>, or perhaps paranoid, route.)  On the
+          other hand, you can ask Berkeley DB to tell you which
+          logfiles are no longer being actively written to:</para>
+            
+        <screen>
 $ db_archive -a -h repos/db
 log.0000000023
 log.0000000024
 log.0000000029
 </screen>
             
-      <para>Subversion's own repository uses a
-        <literal>post-commit</literal> hook script, which, after
-        performing a <quote>hot-backup</quote> of the repository,
-        removes these excess logfiles.  (In the Subversion source
-        tree, see
-        <filename>tools/backup/hot-backup.py</filename>).</para>
-          
-      <para>This script also illustrates the safe way to perform a
-        backup of the repository while it's still up and running:
-        recursively copy the entire repository directory, then
-        re-copy the logfiles listed by <command>db_archive
-        -l</command>.</para>
-          
-      <para>To start using a repository backup that you've restored,
-        be sure to run <command>db_recover -v</command> command in
-        the <filename>db</filename> area first.  This guarantees
-        that any unfinished log transactions are fully played before
-        the repository goes live again.  (The
-        <command>hot-backup.py</command> script does that for you
-        during backup, so you can skip this step if you decide to
-        use it.)</para>
-          
-      <para>Finally, note that Berkeley DB has a whole locking
-        subsystem; in extremely intensive svn operations, we have seen
-        situations where the DB environment runs out of locks.  The
-        maximum number of locks can be adjusted by changing the values
-        in the <filename>repos/db/DB_CONFIG</filename> file.  Don't
-        change the default values unless you know what you're doing;
-        be sure to read <systemitem
-        class="url">http://www.sleepycat.com/docs/ref/lock/max.html</systemitem>
-        first.</para>
+        <para>Subversion's own repository uses a
+          <literal>post-commit</literal> hook script, which, after
+          performing a <quote>hot-backup</quote> of the repository,
+          removes these excess logfiles.  (In the Subversion source
+          tree, see
+          <filename>tools/backup/hot-backup.py</filename>).</para>
+            
+        <para>This script also illustrates the safe way to perform a
+          backup of the repository while it's still up and running:
+          recursively copy the entire repository directory, then
+          re-copy the logfiles listed by <command>db_archive
+          -l</command>.</para>
+            
+        <para>To start using a repository backup that you've restored,
+          be sure to run <command>db_recover -v</command> command in
+          the <filename>db</filename> area first.  This guarantees
+          that any unfinished log transactions are fully played before
+          the repository goes live again.  (The
+          <command>hot-backup.py</command> script does that for you
+          during backup, so you can skip this step if you decide to
+          use it.)</para>
+            
+        <para>Finally, note that Berkeley DB has a whole locking
+          subsystem; in extremely intensive svn operations, we have
+          seen situations where the DB environment runs out of locks.
+          The maximum number of locks can be adjusted by changing the
+          values in the <filename>repos/db/DB_CONFIG</filename> file.
+          Don't change the default values unless you know what you're
+          doing; be sure to read <systemitem
+          class="url">http://www.sleepycat.com/docs/ref/lock/max.html</systemitem>
+          first.</para>
 
       </sect3>       
     </sect2>
