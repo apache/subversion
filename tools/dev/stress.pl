@@ -269,6 +269,7 @@ usage: stress.pl [-c] [-i num] [-n num] [-s secs] [-x num] [-D num] [-F num]
 where
   -c cause repository creation
   -d don't make the status calls
+  -h show this help information
   -i the ID (valid IDs are 0 to 9, default is 0 if -c given, 1 otherwise)
   -n the number of sets of changes to commit
   -p add svn:eol-style and svn:keywords properties to the files
@@ -295,17 +296,24 @@ where
     $cmd_opts{'W'} = 0;            # create with --bdb-txn-nosync
     $cmd_opts{'c'} = 0;            # create repository
     $cmd_opts{'d'} = 0;            # disable status
+    $cmd_opts{'h'} = 0;            # help
     $cmd_opts{'i'} = 0;            # ID
     $cmd_opts{'n'} = 200;          # sets of changes
     $cmd_opts{'p'} = 0;            # add file properties
     $cmd_opts{'s'} = -1;           # sleep interval
     $cmd_opts{'x'} = 4;            # files to modify
 
-    getopts( 'cdi:n:ps:x:D:F:N:P:R:U:W', \%cmd_opts ) or die $usage;
+    getopts( 'cdhi:n:ps:x:D:F:N:P:R:U:W', \%cmd_opts ) or die $usage;
+
+    # print help info (and exit nicely) if requested
+    if ( $cmd_opts{'h'} )
+      {
+        print( $usage );
+        exit 0;
+      }
 
     # default ID if not set
     $cmd_opts{'i'} = 1 - $cmd_opts{'c'} if not $cmd_opts{'i'};
-
     die $usage if $cmd_opts{'i'} !~ /^[0-9]$/;
 
     return %cmd_opts;
