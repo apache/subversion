@@ -124,6 +124,7 @@ svn_client_switch (svn_client_auth_baton_t *auth_baton,
       void *switch_edit_baton;
       const svn_delta_edit_fns_t *wrapped_old_editor;
       void *wrapped_old_edit_baton;
+      svn_wc_traversal_info_t *traversal_info;
 
       /* Open an RA session to 'source' URL */
       SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, path,
@@ -139,7 +140,7 @@ svn_client_switch (svn_client_auth_baton_t *auth_baton,
                                          revnum, switch_url, recurse,
                                          notify_func, notify_baton,
                                          &switch_editor, &switch_edit_baton,
-                                         NULL, pool));
+                                         &traversal_info, pool));
 
       /* ### todo:  This is a TEMPORARY wrapper around our editor so we
          can use it with an old driver. */
@@ -163,6 +164,15 @@ svn_client_switch (svn_client_auth_baton_t *auth_baton,
                                     TRUE, recurse,
                                     notify_func, notify_baton,
                                     pool);
+
+      /* We handle externals after the switch is complete, so that
+         handling external items (and any errors therefrom) doesn't
+         delay the primary operation.  */
+      SVN_ERR (svn_client__handle_externals_changes
+               (traversal_info,
+                notify_func, notify_baton,
+                auth_baton,
+                pool));
     }
   
   else if (entry->kind == svn_node_file)

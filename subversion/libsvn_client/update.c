@@ -179,18 +179,14 @@ svn_client_update (svn_client_auth_baton_t *auth_baton,
       apr_file_close (in);
     }
 
-#if 0 /* Waiting for resolution of issue #662 before activating this. */
-
-  /* We handle externals after the initial checkout is complete, so
-     that fetching external items (and any errors therefrom) doesn't
-     delay the primary checkout.  */
+  /* We handle externals after the update is complete, so that
+     handling external items (and any errors therefrom) doesn't delay
+     the primary operation.  */
   SVN_ERR (svn_client__handle_externals_changes
            (traversal_info,
             notify_func, notify_baton,
             auth_baton,
             pool));
-
-#endif /* 0 */
 
   return SVN_NO_ERROR;
 }
