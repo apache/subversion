@@ -46,31 +46,32 @@ changes, "direct" and "indirect":
           |_____________________|_____________________|
 
 In other words, a change that directly affects an entity's textual
-contents or its existence is a "direct" change.  A change that affects
-the existence of an entity's immediate child is an "indirect" change
-to that entity (although it's a direct change to the child, of
-course).  Only directories can have indirect changes, therefore.
+contents, its name, or its existence is a "direct" change.  A change
+that affects the name or existence of an entity's immediate child is
+an "indirect" change to that entity (although it's a direct change to
+the child, of course).  Only directories can have indirect changes,
+therefore.
 
 Comparing Changes.
 ==================
 
-In both commits and updates, the client and server compare changes in
-the working copy against changes in the repository.  For commits, the
-comparison is part of the pre-commit up-to-date check; for updates,
-the comparison determines what changes will be sent from server to
-client.
+In both commits and updates, the client and server must compare
+changes in the working copy against changes in the repository.  For
+commits, the comparison is part of the pre-commit up-to-date check;
+for updates, the comparison determines what changes will be sent from
+server to client.
 
-Since commits do not change the working copy, pre-commit checks do not
-do intelligent conflict checking and merging.  They are only concerned
-with whether the working copy's entities are up-to-date -- that is,
-whether there have been divergent changes on the same entities in both
-the working copy and the repository.  If so, then the working copy is
-out-of-date.
+Since commits do not change the working copy, pre-commit checks need
+not do intelligent conflict checking and merging.  They are only
+concerned with whether entities in question are "up-to-date" -- that
+is, whether there have been divergent changes to the same entities in
+both the working copy and the repository.  If there have, then the
+working copy is out-of-date.
 
 Updates, on the other hand, can affect the working copy.  Updates
 merge changes into the working copy where possible (not only textual
-changes, but tree-structure changes), and signal a conflict wherever
-merging is not possible.
+changes, but even tree-structure changes), and signal a conflict
+wherever merging is not possible.
 
 Below, we describe
 
@@ -91,21 +92,105 @@ How the working copy describes its state to the server.
 The problem of describing the working copy's state to the server is
 the same whether for pre-commit check or for update.  Both involve
 some subset of the working copy (the subset could be everything in the
-working copy, or it could be a selection of files and directories).
+working copy, or it could be some selection of files and directories).
 The client sends this subset to the server as a "snapshot", and the
 server uses the snapshot to figure out how to respond to the client.
 
-For the moment, let's tree the snapshot as a kind of black box (in
+For the moment, let's treat the snapshot as a kind of black box (in
 practice, it's probably a skelta, but that's not a requirement).  The
-black box contains a number of entries, each one containing
+black box contains one entry per entity, each entry consisting of:
 
-   Original Name
+   Original Name      (a full path, of course)
    Original Version   (i.e., "base" version)
    Action             (content change, add, remove, rename...)
    New Name           (if any)
-   Later Version      (only if other than repository latest)
+   New Version        (only if other than repository latest)
+
+(Of course, the snapshot must first of all be consistent with itself
+-- if it claims that two files have been renamed to the same name, or
+something equally ridiculous, then the server simply rejects it out of
+hand.)
+
+fooo working here
+
+These two tables show directories because only directories can have
+indirect changes.  BUT, if it happens that the entity's type is
+changing -- it's a dir on one side, but a regular file on the other --
+that's always a conflict.  This needs to be expressed formally...
 
 
+  [changes    |         d i r e c t     c h a n g e s
+   on direc-  |
+   tories]    |    self add         self remove        self rename
+  ------------|----------------------------------------------------
+  i           |
+  n     child |  [impossible]        CONFLICT          commit: CONFLICT
+  d      add  |                                        update: MERGEABLE
+  i           |
+  r           |
+  e           |
+  c     child |
+  t    remove |  [impossible]        CONFLICT          commit: CONFLICT
+              |                                        update: MERGEABLE
+              |
+  c           |
+  h           |
+  a     child |
+  n    rename |  [impossible]        CONFLICT          commit: CONFLICT
+  g           |                                        update: MERGEABLE
+  e           |
+  s           |
+
+
+
+
+  [changes    |         i n d i r e c t     c h a n g e s
+   on direc-  |
+   tories]    |    child add        child remove      child rename
+  ------------|----------------------------------------------------
+  i           |
+  n     child |    conflict         conflict          conflict
+  d      add  |    on name          on name           on name
+  i           |
+  r           |
+  e           |                  commit: conflict
+  c     child |    conflict              on name.     conflict
+  t    remove |    on name       update: mergeable!   on name
+              |
+  c           |
+  h           |
+  a     child |    conflict         conflict          conflict
+  n    rename |    on name          on name           on name
+  g           |
+  e           |
+  s           |
+
+
+
+The corresponding table for direct changes against direct changes is
+not shown, because direct changes *always* conflict.
+
+
+
+
+
+How the server uses the snapshot to perform a pre-commit check.
+===============================================================
+
+
+
+How the client completes the commit.
+====================================
+
+
+
+How the server uses the snapshot to generate an update delta.
+=============================================================
+
+
+
+How the client applies an update delta.
+=======================================
 
 
 
