@@ -2976,7 +2976,10 @@ find_youngest_copyroot (svn_revnum_t *rev_p,
   SVN_ERR (svn_fs_fs__dag_get_copyroot (&rev_mine, &path_mine,
                                         parent_path->node, pool));
 
-  if (rev_mine > rev_parent)
+  /* If a parent and child were copied to in the same revision, prefer
+     the child copy target, since it is the copy relevant to the
+     history of the child. */
+  if (rev_mine >= rev_parent)
     {
       *rev_p = rev_mine;
       *path_p = path_mine;
