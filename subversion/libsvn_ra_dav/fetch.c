@@ -297,9 +297,17 @@ static svn_error_t *get_delta_base(const char **delta_base,
              "  (Expected revision %" SVN_REVNUM_T_FMT ", "
              "got revision %" SVN_REVNUM_T_FMT ".)\n"
              "\n"
-  "This usually indicates a corrupt working copy, perhaps one in which a\n"
+  "This may indicate a corrupt working copy, perhaps one in which a\n"
   "Subversion operation was interrupted at an inauspicious time.  You should\n"
-  "probably check out a new working copy.",
+  "probably check out a new working copy.\n"
+  "\n"
+  "It is also possible that no corruption has occurred, but Subversion\n"
+  "mistakenly thinks something is wrong.  This is a known bug, and will be\n"
+  "fixed soon.  See\n"
+  "\n"
+  "   http://subversion.tigris.org/issues/show_bug.cgi?id=806"
+  "\n"
+  "for details.\n",
              relpath,
              entry_committed_rev,
              vsn_url_rev);
