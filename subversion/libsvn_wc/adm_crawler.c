@@ -965,6 +965,7 @@ report_local_mods (svn_string_t *path,
 
 svn_error_t *
 svn_wc_crawl_local_mods (apr_hash_t **targets,
+                         apr_hash_t **locks,
                          svn_string_t *root_directory,
                          const svn_delta_edit_fns_t *edit_fns,
                          void *edit_baton,
@@ -974,7 +975,7 @@ svn_wc_crawl_local_mods (apr_hash_t **targets,
 
   struct stack_object *stack = NULL;
   apr_hash_t *affected_targets = apr_hash_make (pool);
-  apr_hash_t *locks = apr_hash_make (pool);
+  apr_hash_t *locked_dirs = apr_hash_make (pool);
 
   /* Start the crawler! 
 
@@ -982,7 +983,7 @@ svn_wc_crawl_local_mods (apr_hash_t **targets,
      object onto the stack with PATH="root_directory" and BATON=NULL.  */
   err = report_local_mods (root_directory, NULL,
                            edit_fns, edit_baton,
-                           &stack, affected_targets, locks,
+                           &stack, affected_targets, locked_dirs,
                            pool);
   if (err) return err;
 
@@ -1004,6 +1005,7 @@ svn_wc_crawl_local_mods (apr_hash_t **targets,
     }
 
   *targets = affected_targets;
+  *locks = locked_dirs;
 
   return SVN_NO_ERROR;
 }
