@@ -68,8 +68,7 @@
     Windows domain controller using SSPI Authentication?</a></li>
 <li><a href="#adm-dir">I don't like the ".svn" directory name, and
     prefer "SVN" or something else.  How do I change it?</a></li>
-<li><a href="#case-change">I checked in a file but had the wrong case 
-    in the filename.  How do I change it?</a></li>
+<li><a href="#case-change">How do I change the case of a filename?</a></li>
 <li><a href="#merge-using-tags">I can't use tags to merge changes from a 
     branch into the trunk like I used to with CVS, can I?</a></li>
 <li><a href="#version-value-in-source">Why doesn't the $Revision$
@@ -1110,36 +1109,54 @@ then recompile your client.
 
 <![CDATA[=========================================================]]>
 
-<h3><a name="case-change">I checked in a file but had the wrong case
-    in the filename.  How do I change it?</a></h3>
+<h3><a name="case-change">How do I change the case of a filename?</a></h3>
 
-<p>If you're adding files on an operating system with a case-insensitive
-filesystem, such as Windows, you might find you accidentally add a file
-with the wrong case in the filename.  You can correct this by copying
-the file somewhere temporary, deleting the file from Subversion, then
-adding the copy with the correct case, or by performing a move
-operation with Subversion URLs.  Using URLs is recommended, because it
-will preserve history for the file, and will take effect immediately.</p>
+<p>This problem comes up in two situations.  If you're adding files on
+an operating system with a case-insensitive filesystem, such as
+Windows, you might find you accidentally add a file with the wrong
+case in the filename.  Alternatively, you may just decide to change
+the case of an existing file in the repository.</p>
 
-<p>Both fixes will leave Windows working copies with problems,
-because Windows can still get confused when trying to add the file with
-the new case.  One way of fixing the problem is to delete your working
-copy and check out again.  If this is not possible, you must perform a
-two step update.</p>
+<p>If you're working in a case-sensitive file system, this is no
+problem at all.  Just move the file to the new name, e.g.,
 
-<p>For each file with the wrong the case, do:</p>
-<pre>svn mv svn://svnserver/path/to/file.java svn://svnserver/path/to/File.java</pre>
-
-<p>Then for each working copy, change to the relevant directory and do:</p>
 <pre>
-svn update *
+svn&nbsp;mv&nbsp;file.java&nbsp;File.java
+</pre>
+
+<p>But this won't work in a case-insensitive operating system like
+Windows.  In Windows you can accomplish this by copying the file
+somewhere temporary, deleting the file from Subversion, then adding
+the copy with the correct case.  Or a better way is to perform a move
+operation with Subversion URLs.  Using URLs is recommended, because it
+will preserve history for the file, and will take effect
+immediately.</p>
+
+<p>Both ways will leave Windows working copies with problems, however,
+because Windows can still get confused when trying to update the
+conflicting filenames.  (You'll get a message like <tt>svn: Failed to
+add file 'File.java': object of the same name already
+exists</tt>). One way of fixing the problem is to delete your working
+copy and check out again.  If you do not want to do this, you must
+perform a two step update.</p>
+
+<p>For each file with the wrong case, the following command will change
+the case:</p>
+
+<pre>
+svn mv svn://svnserver/path/to/file.java svn://svnserver/path/to/File.java
+</pre>
+
+<p>To update the working copy, change to the relevant directory and do:</p>
+
+<pre>
+svn update file.java
 svn update
 </pre>
-<p>
-The first update will remove <tt>file.java</tt> from your working copy, 
-the second update will add <tt>File.java</tt>, leaving you with a
-correct working copy.
-</p>
+
+<p>The first update will remove <tt>file.java</tt> from your working
+copy, the second update will add <tt>File.java</tt>, leaving you with
+a correct working copy.</p>
 
 <p>As you can see, adding a file with the wrong case is tricky to fix on
 an operating system that has a case insensitive filesystem.  Do try to
