@@ -1037,10 +1037,10 @@ A                0         ?     ?        ./stuff/things/bloo.h
         
         <screen>
 $ svn diff
-Index: ./bar.c
+Index: bar.c
 ===================================================================
---- ./bar.c
-+++ ./bar.c	Mon Jul 15 17:58:18 2002
+--- bar.c	(revision 3)
++++ bar.c	(working copy)
 @@ -1,7 +1,12 @@
 +#include &lt;sys/types.h&gt;
 +#include &lt;sys/stat.h&gt;
@@ -1054,24 +1054,24 @@ Index: ./bar.c
  return 0;
  }
 
-Index: ./README
+Index: README
 ===================================================================
---- ./README
-+++ ./README	Mon Jul 15 17:58:18 2002
+--- README	(revision 3)
++++ README	(working copy)
 @@ -193,3 +193,4 @@ 
 +Note to self:  pick up laundry.
 
-Index: ./stuff/fish.c
+Index: stuff/fish.c
 ===================================================================
---- ./stuff/fish.c
-+++ ./stuff/fish.c  Mon Jul 15 17:58:18 2002
+--- stuff/fish.c	(revision 1)
++++ stuff/fish.c	(working copy)
 -Welcome to the file known as 'fish'.
 -Information on fish will be here soon.
 
-Index: ./stuff/things/bloo.h
+Index: stuff/things/bloo.h
 ===================================================================
---- ./stuff/things/bloo.h
-+++ ./stuff/things/bloo.h  Mon Jul 15 17:58:18 2002
+--- stuff/things/bloo.h	(revision 8)
++++ stuff/things/bloo.h	(working copy)
 +Here is a new file to describe
 +things about bloo.
         </screen>
