@@ -582,7 +582,7 @@ bail_if_unresolved_conflict (svn_stringbuf_t *full_path,
          on whether reject files are mentioned and/or continue to
          exist.  Luckily, we have a function to do this.  :) */
       svn_boolean_t text_conflict_p, prop_conflict_p;
-      svn_stringbuf_t *parent_dir;
+      svn_stringbuf_t *parent_dir = NULL;
       
       if (entry->kind == svn_node_dir)
         parent_dir = full_path;
@@ -745,8 +745,8 @@ crawl_dir (svn_stringbuf_t *path,
    All reporting is made using calls to EDITOR (using its associated
    EDIT_BATON and a computed DIR_BATON).
 
-   If ADDS_ONLY is not FALSE, this function will only pay attention to
-   files and directories schedule for addition.
+   If ADDS_ONLY is set, this function will only pay attention to files
+   and directories scheduled for addition.
 
    Perform all temporary allocation in STACK->pool, and any allocation
    that must outlive the reporting process in TOP_POOL. 
@@ -772,6 +772,9 @@ report_single_mod (const char *name,
   svn_stringbuf_t *entry_name;
   void *new_dir_baton = NULL;
   svn_boolean_t do_add = FALSE, do_delete = FALSE;
+  svn_stringbuf_t *copyfrom_url = NULL, *copyfrom_rev_str = NULL;
+  svn_revnum_t copyfrom_rev = SVN_INVALID_REVNUM;
+
       
   if (! strcmp (name, SVN_WC_ENTRY_THIS_DIR))
     return SVN_NO_ERROR;
@@ -862,11 +865,11 @@ report_single_mod (const char *name,
   /* ADDITION CHECK */
   if (do_add)
     {
-      /* Create an affected-target object */
       svn_stringbuf_t *longpath;
       struct target_baton *tb;
       svn_boolean_t prop_modified_p;        
 
+      /* Create an affected-target object */
       tb = apr_pcalloc (top_pool, sizeof (*tb));
       tb->entry = svn_wc__entry_dup (entry, top_pool);          
       
@@ -876,10 +879,22 @@ report_single_mod (const char *name,
                                   *stack, editor, edit_baton,
                                   locks, top_pool));
       
+      /* Find out if the entry has "copyfrom" args (i.e. is a copy) */
+      copyfrom_url = 
+        (svn_stringbuf_t *) apr_hash_get (entry->attributes,
+                                          SVN_WC_ENTRY_ATTR_COPYFROM_URL,
+                                          APR_HASH_KEY_STRING);      
+      copyfrom_rev_str = 
+        (svn_stringbuf_t *) apr_hash_get (entry->attributes,
+                                          SVN_WC_ENTRY_ATTR_COPYFROM_REV,
+                                          APR_HASH_KEY_STRING);
+      if (copyfrom_rev_str)
+        copyfrom_rev = atoi(copyfrom_rev_str->data);
+      
+
       /* Adding a new directory: */
       if (entry->kind == svn_node_dir)
         {             
-          svn_stringbuf_t *copyfrom_URL = NULL;
           svn_wc_entry_t *subdir_entry;
           
           /* A directory's interesting information is stored in
@@ -887,54 +902,57 @@ report_single_mod (const char *name,
              data for this directory. */
           SVN_ERR (svn_wc_entry (&subdir_entry, full_path, (*stack)->pool));
           
-          /* If the directory is completely new, the wc records
-             its pre-committed revision as "0", even though it may
-             have a "default" URL listed.  But the delta.h
-             docstring for add_directory() says that the copyfrom
-             args must be either both valid or both invalid. */
-          if (subdir_entry->revision > 0)
-            copyfrom_URL = subdir_entry->ancestor;
-          
-          /* Add the new directory, getting a new dir baton.  */
-          SVN_ERR (editor->add_directory (entry_name,
-                                          *dir_baton,
-                                          copyfrom_URL,
-                                          subdir_entry->revision,
-                                          &new_dir_baton));
+          if (! copyfrom_url)
+            {              
+              /* Add the new directory, getting a new dir baton.  */
+              SVN_ERR (editor->add_directory (entry_name,
+                                              *dir_baton,
+                                              NULL, SVN_INVALID_REVNUM,
+                                              &new_dir_baton));
+            }
+          else
+            {
+              /* Add the new directory WITH HISTORY */
+              SVN_ERR (editor->add_directory (entry_name,
+                                              *dir_baton,
+                                              NULL, SVN_INVALID_REVNUM,
+                                              &new_dir_baton));
+            }
         }
       
       /* Adding a new file: */
       else if (entry->kind == svn_node_file)
         {
-          /* Add a new file, getting a file baton */
-          SVN_ERR (editor->add_file (entry_name,
-                                     *dir_baton,
-                                     entry->ancestor,
-                                     entry->revision,
-                                     &(tb->editor_baton)));
-          
-          /* This might be a *newly* added file, in which case the
-             revision is 0 or invalid; assume that the contents need
-             to be sent. */
-          if ((entry->revision == 0) 
-              || (! SVN_IS_VALID_REVNUM (entry->revision)))
+          if (! copyfrom_url)
             {
+              /* Add a new file, getting a file baton */
+              SVN_ERR (editor->add_file (entry_name,
+                                         *dir_baton,
+                                         NULL, SVN_INVALID_REVNUM,
+                                         &(tb->editor_baton)));
+
+              /* If there are no copyfrom args, this must be a totally
+                 "new" file.  Assume that text needs to be sent. */
               tb->text_modified_p = TRUE;
             }
-          else
+          else  
             {
-              /* This file might be added with history; in this case,
+              /* Add a new file WITH HISTORY, getting a file baton */
+              SVN_ERR (editor->add_file (entry_name,
+                                         *dir_baton,
+                                         copyfrom_url, copyfrom_rev,
+                                         &(tb->editor_baton)));
+
+              /* This file is added with history; in this case,
                  we only *might* need to send contents.  Do a real
                  local-mod check on it. */
               SVN_ERR (svn_wc_text_modified_p (&(tb->text_modified_p),
                                                full_path, (*stack)->pool));
             }
 
-          /* Check for local property changes to send */
+          /* History or not, decide if there are props to send. */
           SVN_ERR (svn_wc_props_modified_p (&prop_modified_p, full_path, 
                                             (*stack)->pool));
-
-          /* Send propchanges to the editor. */
           if (prop_modified_p)
             SVN_ERR (do_prop_deltas (full_path, entry, editor, 
                                      tb->editor_baton, (*stack)->pool));
@@ -1028,6 +1046,7 @@ report_single_mod (const char *name,
          (unless the entry is a newly added directory.)  Why NULL?
          Because that will later force a call to do_dir_replaces() and
          get the _correct_ dir baton for the child directory. */
+
       SVN_ERR (crawl_dir (full_path, 
                           new_dir_baton, 
                           editor, 
@@ -1035,7 +1054,7 @@ report_single_mod (const char *name,
                           revnum_fn,
                           rev_baton,
                           youngest_rev,
-                          adds_only,
+                          copyfrom_url ? FALSE : adds_only,
                           stack,
                           affected_targets, 
                           locks, 

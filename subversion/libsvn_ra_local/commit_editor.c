@@ -27,6 +27,7 @@
 #include "svn_delta.h"
 #include "svn_fs.h"
 #include "svn_repos.h"
+#include "ra_local.h"
 
 
 
@@ -46,7 +47,7 @@ struct edit_baton
   svn_string_t log_msg;
 
   /* Hook to run when when the commit is done. */
-  svn_repos_commit_hook_t *hook;
+  svn_ra_local__commit_hook_t *hook;
   void *hook_baton;
 
   /* The already-open svn filesystem to commit to. */
@@ -543,15 +544,15 @@ abort_edit (void *edit_baton)
 /*** Public interface. ***/
 
 svn_error_t *
-svn_repos_get_editor (svn_delta_edit_fns_t **editor,
-                      void **edit_baton,
-                      svn_fs_t *fs,
-                      svn_stringbuf_t *base_path,
-                      const char *user,
-                      svn_stringbuf_t *log_msg,
-                      svn_repos_commit_hook_t *hook,
-                      void *hook_baton,
-                      apr_pool_t *pool)
+svn_ra_local__get_editor (svn_delta_edit_fns_t **editor,
+                          void **edit_baton,
+                          svn_fs_t *fs,
+                          svn_stringbuf_t *base_path,
+                          const char *user,
+                          svn_stringbuf_t *log_msg,
+                          svn_ra_local__commit_hook_t *hook,
+                          void *hook_baton,
+                          apr_pool_t *pool)
 {
   svn_delta_edit_fns_t *e = svn_delta_default_editor (pool);
   apr_pool_t *subpool = svn_pool_create (pool);
