@@ -1705,7 +1705,7 @@ subcommand_lock (apr_getopt_t *os, void *baton, apr_pool_t *pool)
     path = opt_state->arg1;
   else
     return svn_error_create (SVN_ERR_CL_INSUFFICIENT_ARGS, NULL,
-                             _("Missing path argument."));
+                             _("Missing path argument"));
 
   SVN_ERR (get_ctxt_baton (&c, opt_state, pool));
 
@@ -1720,16 +1720,16 @@ subcommand_lock (apr_getopt_t *os, void *baton, apr_pool_t *pool)
       if (lock->expiration_date)
         exp_date = svn_time_to_human_cstring (lock->expiration_date, pool);
       else
-        exp_date = "never";
+        exp_date = _("never");
 
       SVN_ERR (svn_cmdline_printf (pool,
-                                   "UUID Token: %s\n", lock->token));
+                                   _("UUID Token: %s\n"), lock->token));
       SVN_ERR (svn_cmdline_printf (pool,
-                                   "Owner: %s\n", lock->owner));
+                                   _("Owner: %s\n"), lock->owner));
       SVN_ERR (svn_cmdline_printf (pool,
-                                   "Created: %s\n", cr_date));
+                                   _("Created: %s\n"), cr_date));
       SVN_ERR (svn_cmdline_printf (pool,
-                                   "Expires: %s\n\n", exp_date));            
+                                   _("Expires: %s\n\n"), exp_date));            
     }
 
   return SVN_NO_ERROR;

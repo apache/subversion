@@ -970,9 +970,9 @@ subcommand_lock (apr_getopt_t *os, void *baton, apr_pool_t *pool)
                         NULL,   /* we don't have a token to refresh. */
                         pool));
   
-  SVN_ERR (svn_cmdline_printf (pool, "Created lock on '%s', owned by %s.\n",
+  SVN_ERR (svn_cmdline_printf (pool, _("Created lock on '%s', owned by %s.\n"),
                                lock->path, lock->owner));
-  SVN_ERR (svn_cmdline_printf (pool, "Lock token is '%s'.\n",
+  SVN_ERR (svn_cmdline_printf (pool, _("Lock token is '%s'.\n"),
                                lock->token));
   
   return SVN_NO_ERROR;
@@ -1013,18 +1013,20 @@ subcommand_lslocks (apr_getopt_t *os, void *baton, apr_pool_t *pool)
       if (lock->expiration_date)
         exp_date = svn_time_to_human_cstring (lock->expiration_date, pool);
       else
-        exp_date = "never";
+        exp_date = _("never");
 
       SVN_ERR (svn_cmdline_printf (pool,
                                    "%s\n", path));
+      /* xgettext: The colons in the following four messages should be aligned
+       */
       SVN_ERR (svn_cmdline_printf (pool,
-                                   "     UUID Token: %s\n", lock->token));
+                                   _("     UUID Token: %s\n"), lock->token));
       SVN_ERR (svn_cmdline_printf (pool,
-                                   "          Owner: %s\n", lock->owner));
+                                   _("          Owner: %s\n"), lock->owner));
       SVN_ERR (svn_cmdline_printf (pool,
-                                   "        Created: %s\n", cr_date));
+                                   _("        Created: %s\n"), cr_date));
       SVN_ERR (svn_cmdline_printf (pool,
-                                   "        Expires: %s\n\n", exp_date));      
+                                   _("        Expires: %s\n\n"), exp_date));
     }
   
   return SVN_NO_ERROR;
@@ -1093,7 +1095,7 @@ subcommand_rmlocks (apr_getopt_t *os, void *baton, apr_pool_t *pool)
         goto move_on;
       
       SVN_ERR (svn_cmdline_printf (subpool,
-                                   "Removed lock on '%s'.\n", lock->path));
+                                   _("Removed lock on '%s'.\n"), lock->path));
       
     move_on:      
       if (err)

@@ -1290,7 +1290,7 @@ static dav_error * dav_svn_get_resource(request_rec *r,
       serr = svn_fs_create_access (&access_ctx, r->user, r->pool);
       if (serr)
         {
-          const char *new_msg = "Could not create fs access context.";
+          const char *new_msg = "Could not create fs access context";
           svn_error_t *sanitized_error = svn_error_create(serr->apr_err,
                                                           NULL, new_msg);
           ap_log_rerror(APLOG_MARK, APLOG_ERR, APR_EGENERAL, r,
@@ -1305,7 +1305,7 @@ static dav_error * dav_svn_get_resource(request_rec *r,
       serr = svn_fs_set_access (repos->fs, access_ctx);
       if (serr)
         {
-          const char *new_msg = "Could not attach access context to fs.";
+          const char *new_msg = "Could not attach access context to fs";
           svn_error_t *sanitized_error = svn_error_create(serr->apr_err,
                                                           NULL, new_msg);
           ap_log_rerror(APLOG_MARK, APLOG_ERR, APR_EGENERAL, r,
