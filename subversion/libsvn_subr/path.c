@@ -642,7 +642,6 @@ svn_path_decompose (const char *path,
       if ((path[i] == '/') || (path[i] == '\0'))
         {
           if (SVN_PATH_IS_PLATFORM_EMPTY (path + oldi, i - oldi))
-            /* ### Should canonicalization strip "//" and "/./" substrings? */
             *((const char **) apr_array_push (components)) = SVN_EMPTY_PATH;
           else
             *((const char **) apr_array_push (components))
@@ -1063,7 +1062,7 @@ svn_path_get_absolute(const char **pabsolute,
       if (apr_err)
         return svn_error_createf(SVN_ERR_BAD_FILENAME, NULL,
                                  "Couldn't determine absolute path of '%s'", 
-                                 relative);
+                                 svn_path_local_style (relative, pool));
     }
 
   SVN_ERR (svn_path_cstring_to_utf8 (pabsolute, buffer, pool));
@@ -1102,7 +1101,7 @@ svn_path_split_if_file(const char *path,
     {
       return svn_error_createf(SVN_ERR_BAD_FILENAME, NULL,
                                "'%s' is neither a file nor a directory name",
-                               path);
+                               svn_path_local_style(path, pool));
     }
 
   return SVN_NO_ERROR;

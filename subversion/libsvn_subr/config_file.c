@@ -20,6 +20,7 @@
 
 #include <apr_lib.h>
 #include <apr_md5.h>
+#include <apr_env.h>
 #include "config_impl.h"
 #include "svn_io.h"
 #include "svn_types.h"
@@ -88,7 +89,6 @@ skip_to_eoln (FILE *fd)
 static svn_error_t *
 parse_value (int *pch, parse_context_t *ctx)
 {
-  svn_error_t *err = SVN_NO_ERROR;
   svn_boolean_t end_of_val = FALSE;
   int ch;
 
@@ -169,7 +169,7 @@ parse_value (int *pch, parse_context_t *ctx)
     }
 
   *pch = ch;
-  return err;
+  return SVN_NO_ERROR;
 }
 
 
@@ -194,7 +194,9 @@ parse_option (int *pch, parse_context_t *ctx)
       ch = EOF;
       err = svn_error_createf (SVN_ERR_MALFORMED_FILE, NULL,
                                "%s:%d: Option must end with ':' or '='",
-                               ctx->file, ctx->line);
+                               svn_path_local_style (ctx->file,
+                                                     ctx->cfg->pool),
+                               ctx->line);
     }
   else
     {
@@ -236,7 +238,9 @@ parse_section_name (int *pch, parse_context_t *ctx)
       ch = EOF;
       err = svn_error_createf (SVN_ERR_MALFORMED_FILE, NULL,
                                "%s:%d: Section header must end with ']'",
-                               ctx->file, ctx->line);
+                               svn_path_local_style (ctx->file,
+                                                     ctx->cfg->pool),
+                               ctx->line);
     }
   else
     {
@@ -310,13 +314,13 @@ svn_config__user_config_path (const char *config_dir,
 
 #else  /* ! WIN32 */
   {
+    apr_status_t apr_err;
     char *homedir;
     const char *homedir_utf8;
 
-    homedir = getenv ("HOME");
-    if (! homedir)
+    apr_err = apr_env_get (&homedir, "HOME", pool);
+    if ( apr_err || ! homedir )
       {
-        apr_status_t apr_err;
         apr_uid_t uid;
         apr_gid_t gid;
         char *username;
@@ -385,10 +389,12 @@ svn_config__parse_file (svn_config_t *cfg, const char *file,
     {
       if (errno != ENOENT)
         return svn_error_createf (SVN_ERR_BAD_FILENAME, NULL,
-                                  "Can't open config file '%s'", file);
+                                  "Can't open config file '%s'",
+                                  svn_path_local_style (file, pool));
       else if (must_exist && errno == ENOENT)
         return svn_error_createf (SVN_ERR_BAD_FILENAME, NULL,
-                                  "Can't find config file '%s'", file);
+                                  "Can't find config file '%s'",
+                                  svn_path_local_style (file, pool));
       else
         return SVN_NO_ERROR;
     }
@@ -416,7 +422,8 @@ svn_config__parse_file (svn_config_t *cfg, const char *file,
               err = svn_error_createf (SVN_ERR_MALFORMED_FILE, NULL,
                                        "%s:%d: Section header"
                                        " must start in the first column",
-                                       file, ctx.line);
+                                       svn_path_local_style (file, pool),
+                                       ctx.line);
             }
           break;
 
@@ -432,7 +439,8 @@ svn_config__parse_file (svn_config_t *cfg, const char *file,
               err = svn_error_createf (SVN_ERR_MALFORMED_FILE, NULL,
                                        "%s:%d: Comment"
                                        " must start in the first column",
-                                       file, ctx.line);
+                                       svn_path_local_style (file, pool),
+                                       ctx.line);
             }
           break;
 
@@ -449,14 +457,16 @@ svn_config__parse_file (svn_config_t *cfg, const char *file,
               ch = EOF;
               err = svn_error_createf (SVN_ERR_MALFORMED_FILE, NULL,
                                        "%s:%d: Section header expected",
-                                       file, ctx.line);
+                                       svn_path_local_style (file, pool),
+                                       ctx.line);
             }
           else if (count != 0)
             {
               ch = EOF;
               err = svn_error_createf (SVN_ERR_MALFORMED_FILE, NULL,
                                        "%s:%d: Option expected",
-                                       file, ctx.line);
+                                       svn_path_local_style (file, pool),
+                                       ctx.line);
             }
           else
             err = parse_option (&ch, &ctx);
@@ -469,7 +479,8 @@ svn_config__parse_file (svn_config_t *cfg, const char *file,
     {
       err = svn_error_createf (-1, /* FIXME: Wrong error code. */
                                NULL,
-                               "%s:%d: Read error", file, ctx.line);
+                               "%s:%d: Read error",
+                               svn_path_local_style (file, pool), ctx.line);
     }
 
   svn_pool_destroy (ctx.pool);

@@ -48,6 +48,13 @@ rewrite_urls(apr_array_header_t *targets,
           
   from = ((const char **) (targets->elts))[0];
   to = ((const char **) (targets->elts))[1];
+
+  /* "--relocate http https" and "--relocate http://foo svn://bar" are OK,
+     but things like "--relocate http://foo svn" are not */
+  if (svn_path_is_url (from) != svn_path_is_url (to))
+    return svn_error_createf 
+      (SVN_ERR_INCORRECT_PARAMS, NULL, 
+       "'%s' to '%s' is not a valid relocation", from, to);
  
   subpool = svn_pool_create (pool);
 

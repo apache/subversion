@@ -54,7 +54,7 @@ dav_svn_get_supportedlock(const dav_resource *resource)
     "<D:lockentry>" DEBUG_CR
     "<D:lockscope><D:exclusive/></D:lockscope>" DEBUG_CR
     "<D:locktype><D:write/></D:locktype>" DEBUG_CR
-    "</D:lockentry>" DEBUG_CR
+    "</D:lockentry>" DEBUG_CR;
     
   return supported;
 }
@@ -69,7 +69,7 @@ dav_svn_parse_locktoken(apr_pool_t *pool,
                         const char *char_token,
                         dav_locktoken **locktoken_p)
 {
-  dav_locktoken *token;
+  dav_locktoken *token = apr_pcalloc(pool, sizeof(*token));
   
   /* Imitating mod_dav_fs again.  Hilariously, it also defines a
      locktoken just to be an apr uuid string!  */
@@ -80,7 +80,7 @@ dav_svn_parse_locktoken(apr_pool_t *pool,
                          "Client supplied lock token in unknown format.");
 
   char_token += 16;
-  token = apr_pstrdup(pool, char_token);
+  token->uuid_str = apr_pstrdup(pool, char_token);
   
   *locktoken_p = token;
   return 0;

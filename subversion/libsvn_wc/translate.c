@@ -122,7 +122,7 @@ svn_wc_translated_file (const char **xlated_p,
           return svn_error_createf
             (SVN_ERR_IO_UNKNOWN_EOL, NULL,
              _("'%s' has unknown value for svn:eol-style property"),
-             vfile);
+             svn_path_local_style (vfile, pool));
         }
 
       *xlated_p = tmp_vfile;

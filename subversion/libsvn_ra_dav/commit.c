@@ -502,7 +502,7 @@ static svn_error_t * checkout_resource(commit_ctx_t *cc,
         return svn_error_createf
           (err->apr_err, err,
            "Your file or directory '%s' is probably out-of-date",
-           rsrc->local_path);
+           svn_path_local_style(rsrc->local_path, pool));
       return err;
     }
 

@@ -35,7 +35,7 @@
 #include "svn_string.h"
 
 
-module AP_MODULE_DECLARE_DATA authz_svn_module;
+extern module AP_MODULE_DECLARE_DATA authz_svn_module;
 
 enum {
     AUTHZ_SVN_NONE = 0,

@@ -2979,10 +2979,6 @@ txn_body_copy (void *baton,
   parent_path_t *to_parent_path;
   const char *txn_id = to_root->txn;
 
-  if (from_root->is_txn_root)
-    return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                             "Copy from mutable tree not currently supported");
-
   /* Get the NODE for FROM_PATH in FROM_ROOT.*/
   SVN_ERR (get_dag (&from_node, from_root, from_path, trail));
 
@@ -3064,6 +3060,35 @@ txn_body_copy (void *baton,
 }
 
 
+
+static svn_error_t *
+copy_helper (svn_fs_root_t *from_root,
+             const char *from_path,
+             svn_fs_root_t *to_root,
+             const char *to_path,
+             svn_boolean_t preserve_history,
+             apr_pool_t *pool)
+{
+  struct copy_args args;
+
+  assert (from_root->fs == to_root->fs);
+
+  if (! to_root->is_txn_root)
+    return not_txn (to_root);
+
+  if (from_root->is_txn_root)
+    return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                             "Copy from mutable tree not currently supported");
+
+  args.from_root         = from_root;
+  args.from_path         = from_path;
+  args.to_root           = to_root;
+  args.to_path           = to_path;
+  args.preserve_history  = preserve_history;
+
+  return svn_fs_base__retry_txn (to_root->fs, txn_body_copy, &args, pool);
+}
+
 static svn_error_t *
 base_copy (svn_fs_root_t *from_root,
            const char *from_path,
@@ -3071,18 +3096,7 @@ base_copy (svn_fs_root_t *from_root,
            const char *to_path,
            apr_pool_t *pool)
 {
-  struct copy_args args;
-
-  if (! to_root->is_txn_root)
-    return not_txn (to_root);
-
-  args.from_root         = from_root;
-  args.from_path         = from_path;
-  args.to_root           = to_root;
-  args.to_path           = to_path;
-  args.preserve_history  = TRUE;
-
-  return svn_fs_base__retry_txn (to_root->fs, txn_body_copy, &args, pool);
+  return copy_helper (from_root, from_path, to_root, to_path, TRUE, pool);
 }
 
 
@@ -3092,18 +3106,7 @@ base_revision_link (svn_fs_root_t *from_root,
                     const char *path,
                     apr_pool_t *pool)
 {
-  struct copy_args args;
-
-  if (! to_root->is_txn_root)
-    return not_txn (to_root);
-
-  args.from_root         = from_root;
-  args.from_path         = path;
-  args.to_root           = to_root;
-  args.to_path           = path;
-  args.preserve_history  = FALSE;
-
-  return svn_fs_base__retry_txn (to_root->fs, txn_body_copy, &args, pool);
+  return copy_helper (from_root, path, to_root, path, FALSE, pool);
 }
 
 

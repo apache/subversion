@@ -68,7 +68,7 @@
   <!-- ======================== SECCIÓN 3 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-ch-3-sect-3">
-    <title>Revisiones: Números, Palabras clave, y Fechas, ¡Oh mi!</title>
+    <title>Revisiones: números, palabras clave, y fechas, ¡Oh mi!</title>
        <!--Revisions: Numbers, Keywords, and Dates, Oh My!-->
 
     <para>Antes de continuar <!--TODO:Before we go on-->, debería saber
@@ -227,7 +227,7 @@ $ svn update --revision PREV foo.c
     </sect2>
     
     <sect2 id="svn-ch-3-sect-3.3">
-      <title>Fechas de Revisión</title>
+      <title>Fechas de revisión</title>
       
       <para>Dondequiera que usted especifique un número de revisión o
         palabra clave de revisión, usted también puede especificar una
@@ -357,7 +357,7 @@ Checked out revision 2499.
 </screen>
     
     <sidebar>
-      <title>Esquema del Repositorio</title>
+      <title>Esquema del repositorio</title>
          <!--TODO: Repository Layout-->
 
       <para>Si se está preguntando qué es todo lo de alrededor de
@@ -463,7 +463,7 @@ Checked out revision 2499.
   <!-- ======================== SECCIÓN 5 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-ch-3-sect-5">
-    <title>Ciclo Basico de Trabajo</title><!--TODO:Basic Work Cycle-->
+    <title>Ciclo básico de trabajo</title><!--TODO:Basic Work Cycle-->
 
     <para>Subversion tiene numerosas características, opciones, campanas
       y silbidos<!--TODO:bells and whistles-->, pero en una base cotidiana
@@ -650,7 +650,7 @@ Updated to revision 2.
     </sect2>
 
     <sect2 id="svn-ch-3-sect-4.2">
-      <title>Hacer Cambios en Su Copia de Trabajo Local</title>
+      <title>Hacer cambios en su copia de trabajo local</title>
       
       <para>Ahora puede conseguir trabajar y hacer cambios en su copia
         de trabajo local. Generalmente es más conveniente decidir un
@@ -778,7 +778,7 @@ Updated to revision 2.
       </variablelist>
 
       <sidebar>
-        <title>Cambiando el Repositorio Sin una Copia de Trabajo</title>
+        <title>Cambiando el repositorio sin una copia de trabajo</title>
 
         <!-- ### pll - Fri 07 Feb 2003 12:55:07                            -->
         <!-- I find this sidebar rather confusing here, since you really   -->
@@ -819,7 +819,7 @@ Updated to revision 2.
     </sect2>
 
     <sect2 id="svn-ch-3-sect-4.3">
-      <title>Examine Sus Cambios</title>
+      <title>Examine sus cambios</title>
       
       <para>Una vez que haya terminado de hacer cambios, necesita enviarlos
         al repositorio, pero antes de hacerlo, generalmente es buena
@@ -862,7 +862,7 @@ Updated to revision 2.
           más que cualquier otro comando de Subversion.</para>
         
         <sidebar>
-          <title>Usuarios de CVS: ¡Lleve a cabo Esa Actualización!</title>
+          <title>Usuarios de CVS: ¡Lleve a cabo esa actualización!</title>
             <!--TODO:CVS Users: Hold That Update!... según google
             "¡Lleve a cabo Esa Actualización!"-->
           <para>Probablemente esté acostumbrado a usar<!--TODO:You're
@@ -1334,7 +1334,7 @@ $ svn status README
       </sect3>
 
       <sidebar>
-          <title>¡Mira Mamá! ¡Sin red!</title>
+          <title>¡Mira mamá! ¡Sin red!</title>
           <!--TODO:Look Ma! No Network!... supongo que lo habré traducido
           bien, pero por si acaso-->
 
@@ -1351,7 +1351,7 @@ $ svn status README
           versiones prístinas de cada fichero versionado dentro del
           área administrativa <filename>.svn</filename>. Esto permite
           a Subversion reportar&mdash;y revertir&mdash;modificaciones
-          locales a ésos ficheros emphasis>sin acceso de
+          locales a ésos ficheros <emphasis>sin acceso de
           red</emphasis>. Este almacén (llamado el
           <quote>texto-base</quote>) también permite a Subversion
           mandar las modificaciones locales del usuario durante un
@@ -1371,7 +1371,7 @@ $ svn status README
     </sect2>
 
     <sect2 id="svn-ch-3-sect-4.4">
-      <title>Resolver Conflictos (Fusionando los Cambios de Otros)</title>
+      <title>Resolver conflictos (fusionando los cambios de otros)</title>
            
       <para>Ya hemos visto cómo <command>svn status -u</command> puede
         predecir conflictos. Suponga que ejecuta <command>svn
@@ -1489,9 +1489,9 @@ sandwich.txt.r2
 </screen>
       <!-- ###TODO What happens if the revnum is gt 99999?-->
       
-      <para>At this point, Subversion will <emphasis>not</emphasis>
-        allow you to commit the file <filename>sandwich.txt</filename>
-        until the three temporary files are removed.</para>
+      <para>En este punto, Subversion <emphasis>no</emphasis> le
+        permitirá enviar el fichero <filename>sandwich.txt</filename>
+        hasta que los tres ficheros temporales sean borrados.</para>
 
       <screen>
 $ svn commit --message "Add a few more things"
@@ -1499,39 +1499,43 @@ svn: Commit failed (details follow):
 svn: Aborting commit: '/home/sally/svn-work/sandwich.txt' remains in conflict
 </screen>
 
-      <para>If you get a conflict, you need to do one of three
-        things:</para>
+      <para>Si obtiene un conflicto, necesita hacer una de tres
+        cosas:</para>
 
         <itemizedlist>
 
           <listitem>
-            <para>Merge the conflicted text <quote>by hand</quote> (by
-              examining and editing the conflict markers within the
-              file).
+            <para>Fusionar el texto en conflicto <quote>a mano</quote>
+              (examinando y editando las marcas de conflicto dentro
+              del fichero).
             </para>
           </listitem>
 
           <listitem>
-            <para>Copy one of the temporary files on top of your
-        working file.
+            <para>Copiar uno de los ficheros temporales sobre su fichero
+              de trabajo<!--TODO:copy...on top of your working copy-->.
             </para>
           </listitem>
 
           <listitem>
-            <para>Run <command>svn revert &lt;filename&gt;</command>
-              to throw away all of your local changes.</para>
+            <para>Ejecutar <command>svn revert &lt;filename&gt;</command>
+              para eliminar<!--TODO:throw away--> todos sus cambios
+              locales.</para>
           </listitem>
 
         </itemizedlist>
 
-      <para>Once you've resolved the conflict, you need to let
-        Subversion know by running <command>svn resolved</command>.
-        This removes the three temporary files and Subversion no
-        longer considers the file to be in a state of
-        conflict.<footnote><para>You can always remove the temporary
-        files yourself, but would you really want to do that when
-        Subversion can do it for you?  We didn't think so.</para>
-        </footnote></para>
+      <para>Una vez que usted haya resuelto el conflico, necesita dejar que
+        Subversion lo sepa<!--TODO:you need to let Subversion know-->
+        ejecutando <command>svn resolved</command>. Esto borrará los
+        tres ficheros temporales y Subversion no considerará por más<!--TODO:
+        no longer considers--> tiempo que el fichero está en estado de
+        conflicto.<footnote><para>Siempre puede borrar los ficheros
+        temporales usted mismo, pero ¿realmente querría hacer eso cuando
+        Subversion puede hacerlo para usted?<!--TODO:can do it for you?...
+        quizá quede mejor poner "hacerlo por usted"?--> No lo creemos.
+        </para></footnote>
+      </para>
 
       <screen>
 $ svn resolved sandwich.txt
@@ -1539,19 +1543,21 @@ Resolved conflicted state of 'sandwich.txt'
 </screen>
 
       <sect3 id="svn-ch-3-sect-4.4.1">
-        <title>Merging Conflicts by Hand</title>
+        <title>Fusionando conflictos a mano</title>
 
-        <para>Merging conflicts by hand can be quite intimidating the
-          first time you attempt it, but with a little practice, it
-          can become as easy as falling off a bike.</para>
+        <para>Fusionar conflictos a mano puede ser absolutamente
+          intimidatorio la primera vez que lo haga<!--TODO:you attempt
+          it-->, pero con un poco de practica, puede llegar a ser tan
+          fácil como caerse de una bici<!--TODO:it can become as easy as
+          falling off a bike.....ein???-->.</para>
 
-        <para>Here's an example.  Due to a miscommunication, you and
-          Sally, your collaborator, both edit the file
-          <filename>sandwich.txt</filename> at the same time.  Sally
-          commits her changes, and when you go to update your working
-          copy, you get a conflict and we're going to have to edit
-          <filename>sandwich.txt</filename> to resolve the conflicts.
-          First, let's take a look at the file:</para>
+        <para>Aquí tiene un ejemplo. Debido a una falta de comunicación,
+          usted y Sally, su colaboradora, editan el fichero
+          <filename>sandwich.txt</filename> en el mismo momento. Sally
+          envía sus cambios, y cuando usted va a actualizar su copia
+          de trabajo, obtiene un conflicto y vamos a tener que editar
+          <filename>sandwich.txt</filename> para resolver los conflictos.
+          Primero, hechemos una hojeada al fichero:</para>
 
         <screen>
 $ cat sandwich.txt
@@ -1572,13 +1578,12 @@ Creole Mustard
 Bottom piece of bread
 </screen>
 
-        <para>The strings of less-than signs, equal signs, and
-          greater-than signs are conflict markers, and are not part of
-          the actual data in conflict.  You generally want to ensure
-          that those are removed from the file before your next
-          commit.  The text between the first two sets of markers is
-          composed of the changes you made in the conflicting
-          area:</para>
+        <para>Las líneas de signos menor-que, y signos mayor-que son
+          marcas de conflictos, y no son parte de los datos en conflicto
+          actuales. Generalmente usted querrá asegurarse que estén
+          borrados del fichero antes de su proximo envío. El texto entre
+          las dos primeras marcas están compuestas por los cambios que
+          usted hizo en el área conflictiva:</para>
 
         <screen>
 &lt;&lt;&lt;&lt;&lt;&lt;&lt; .mine
@@ -1588,8 +1593,8 @@ Prosciutto
 =======
 </screen>
 
-        <para>The text between the second and third sets of conflict
-        markers is the text from Sally's commit:</para>
+        <para>El texto entre el segundo y tercer set de marcas de conflicto
+          es el texto del envio de Sally:</para>
 
         <screen>
 =======
@@ -1598,16 +1603,18 @@ Grilled Chicken
 &gt;&gt;&gt;&gt;&gt;&gt;&gt; .r2
 </screen>
 
-        <para>Usually you won't want to just delete the conflict
-          markers and Sally's changes&mdash;she's going to be awfully
-          surprised when the sandwich arrives and it's not what she
-          wanted.  So this is where you pick up the phone or walk
-          across the office and explain to Sally that you can't get
-          sauerkraut from an Italian deli.<footnote><para>And if you
-          ask them for it, they may very well ride you out of town on
-          a rail.</para></footnote> Once you've agreed on the changes
-          you will check in, edit your file and remove the conflict
-          markers.</para>
+        <para>Generalmente usted no deseará borrar las marcas de conflicto
+          y los cambios de Sally&mdash;ella se sorprenderá terriblemente
+          cuando llegue el sandwich y no sea lo que ella quería. Aquí es
+          donde usted coge el telefono o anda a través de la oficina y le
+          explica a Sally que no puede tomar sauerkraut de un deli
+          Italiano.<!--TODO:that you can't get sauerkraut from an Italian
+          deli...vaya metafora--><footnote><para>Y si les pregunta por
+          esto, pueden echarle de la ciudad en un carril<!--TODO: they may
+          very well ride you out of town on a rail...ein?
+          -->.</para></footnote>Una vez usted esté de acuerdo con los
+          cambios deberá comprobarlos, editar su fichero y borrar las
+          marcas de conflicto</para>
 
         <screen>
 Top piece of bread
@@ -1622,30 +1629,31 @@ Creole Mustard
 Bottom piece of bread
 </screen>
 
-        <para>Now run <command>svn resolved</command>, and you're
-          ready to commit your changes:</para>
+        <para>Ahora ejecute <command>svn resolved</command>, y está listo
+          para enviar sus cambios:</para>
 
         <screen>
 $ svn resolved sandwich.txt
 $ svn commit -m "Go ahead and use my sandwich, discarding Sally's edits."
 </screen>
 
-        <para>Remember, if you ever get confused while editing the
-          conflicted file, you can always consult the three files that
-          Subversion creates for you in your working
-          copy&mdash;including your file as it was before you updated.
-          You can even use a third-party interactive merging tool to
-          examine those three files.</para>
+        <para>Recuerde, si algúna vez está confuso mientras edita el
+          fichero conflictivo, siempre puede consultar los tres ficheros
+          que Subversion crea para usted en su copia de
+          trabajo&mdash;incluyendo su fichero como estaba antes de que
+          usted actualizara. Incluso puede usar una herramienta interactiva
+          de fusión de una third-party<!--TODO:cómo traducir third-party?-->
+          para examinar esos tres fichero.</para>
 
       </sect3>
 
       <sect3 id="svn-ch-3-sect-4.4.2">
-        <title>Copying a File Onto Your Working File</title>
+        <title>Copiando un fichero en su fichero de trabajo</title>
 
-        <para>If you get a conflict and decide that you want to throw
-          out your changes, you can merely copy one of the temporary
-          files created by Subversion over the file in your working
-          copy:</para>
+        <para>Si obtiene un conflicto y decide que quiere rechazar sus
+          cambios, simplemente usted puede copiar uno de los ficheros
+          temporales creados por Subversion sobre el fichero en su copia
+          de trabajo:</para>
 
         <screen>
 $ svn update
@@ -1660,11 +1668,12 @@ $ svn resolved sandwich.txt
       </sect3>
 
       <sect3 id="svn-ch-3-sect-4.4.3">
-        <title>Punting: Using <command>svn revert</command></title>
+        <title>Punting: Usando <command>svn revert</command></title>
+          <!--TODO:Punting... rechazando? excluyendo?-->
 
-        <para>If you get a conflict, and upon examination decide that
-        you want to throw out your changes and start your edits again,
-        just revert your changes:</para>
+        <para>Si obtiene un conflicto, y sobre la examinación decide
+          que quiere rechazar sus cambios y empezar su edición de nuevo,
+          simplemente invierta sus cambios:</para>
 
         <screen>
 $ svn revert sandwich.txt
@@ -1673,38 +1682,40 @@ $ ls sandwich.*
 sandwich.txt
 </screen>
 
-        <para>Note that when you revert a conflicted file, you don't
-        have to run <command>svn resolved</command>.</para>
+        <para>Observe que cuando usted invierte un fichero conflictivo,
+          no tiene que ejecutar <command>svn resolved</command>.</para>
 
       </sect3>
 
-      <para>Now you're ready to check in your changes.  Note that
-        <command>svn resolved</command>, unlike most of the other
-        commands we've dealt with in this chapter, requires an
-        argument.  In any case, you want to be careful and only run
-        <command>svn resolved</command> when you're certain that you've
-        fixed the conflict in your file&mdash;once the temporary files
-        are removed, Subversion will let you commit the file even if
-        it still contains conflict markers.</para>
+      <para>Ahora usted está listo para enviar sus cambios. Observe que
+        <command>svn resolved</command>, al contrario de la mayoría de
+        los otros comandos<!--TODO: unlike most of the other
+        commands we've dealt with in this chapter--> que nos hemos ocupado
+        en este capitulo, requiere un argumento. En cualquier caso, debe
+        tener cuidado y solo ejecutar <command>svn resolved</command>
+        cuando esté seguro que ha arreglado el conflicto en su
+        fichero&mdash;una vez los ficheros temporales son borrados,
+        Subversion le dejará enviar el fichero incluso si todavía tiene
+        marcas de conflicto.</para>
       
     </sect2>
     
     <sect2 id="svn-ch-3-sect-4.5">
-      <title>Commit Your Changes</title>
+      <title>Enviar sus cambios</title>
       
-      <para>Finally!  Your edits are finished, you've merged all
-        changes from the server, and you're ready to commit your
-        changes to the repository.</para>
+      <para>¡Finalmente! Su edición está terminada, ha fusionado todos
+        los cambios del servidor, y está listo para enviar sus cambios
+        al repositorio.</para>
       
-      <para>The <command>svn commit</command> command sends all of
-           your changes to the repository.  When you commit a change,
-           you need to supply a <firstterm>log message</firstterm>,
-           describing your change.  Your log message will be attached
-           to the new revision you create.  If your log message is
-           brief, you may wish to supply it on the command line using
-           the <option>--message</option> (or
-           <option>-m</option>) option:</para>
-           
+      <para>El comando <command>svn commit</command> envía todos sus
+           cambios al repositorio. Cuando usted envía un cambio, necesita
+           proveer un <firstterm>mensaje de registro</firstterm>,
+           describiendo su cambio. Su mensaje de registro será adjuntado
+           a la nueva revisión que ha creado. Si su mensjae de registro
+           es breve, puede querer proveerlo en la línea de comando usando
+           la opción <option>--message</option> (o
+           <option>-m</option>):</para>
+
       <screen>
 $ svn commit --message "Corrected number of cheese slices."
 Sending        sandwich.txt
@@ -1712,10 +1723,10 @@ Transmitting file data .
 Committed revision 3.
 </screen>
            
-      <para>However, if you've been composing your log message as you
-        work, you may want to tell Subversion to get the message from
-        a file by passing the filename with the
-        <option>--file</option> switch:</para>
+      <para>Sin embargo, si ha estado componiendo su mensaje de registro
+        mientras trabaja, puede querer decirle a Subversion que coja el
+        mensaje de un fichero pasando el nombre de fichero con la
+        opción <option>--file</option> :</para>
 
       <screen>
 $ svn commit --file logmsg 
@@ -1724,20 +1735,19 @@ Transmitting file data .
 Committed revision 4.
 </screen>
 
-      <para>If you fail to specify either the
-        <option>--message</option> or <option>--file</option> switch,
-        then Subversion will automatically launch your favorite editor
-        (as defined in the environment variable
-        <literal>$EDITOR</literal>) for composing a log
-        message.</para>
+      <para>Si usted falla en especificar cualquiera de las opciones
+        <option>--message</option> o <option>--file</option>,
+        entonces Subversion lanzará automaticamente su editor favorito
+        (según lo definido en la variable de entorno
+        <literal>$EDITOR</literal>) para redactar un mensaje de
+        registro.</para>
         
         
       <tip>
-        <para>If you're in your editor writing a commit message and
-          decide that you want to cancel your commit, you can just
-          quit your editor without saving changes.  If you've already
-          saved your commit message, simply delete the text and save
-          again.</para>
+        <para>Si está en su editor escribiendo un mensaje de registro y
+          decide que quiere cancelar su envio, usted puede quitar su
+          editor sin guardar los cambios. Si ya ha guardado su mensaje
+          de registro, simplemente borre el texto y salve otra vez.</para>
 
         <screen>
 $ svn commit

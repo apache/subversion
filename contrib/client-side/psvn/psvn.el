@@ -429,6 +429,14 @@ for  example: '(\"revert\" \"file1\"\)"
               (svn-status-update-mode-line)))))
     (error "You can only run one svn process at once!")))
 
+(defun svn-process-sentinel-fixup-path-seperators()
+  (when (eq system-type 'windows-nt)
+      ;; convert path separator to UNIX style
+      (save-excursion
+        (goto-char (point-min))
+        (while (search-forward "\\" nil t)
+          (replace-match "/")))))
+    
 (defun svn-process-sentinel (process event)
   ;;(princ (format "Process: %s had the event `%s'" process event)))
   ;;(save-excursion
@@ -439,12 +447,7 @@ for  example: '(\"revert\" \"file1\"\)"
     (cond ((string= event "finished\n")
            (cond ((eq svn-process-cmd 'status)
                   ;;(message "svn status finished")
-                  (if (eq system-type 'windows-nt)
-                      ;; convert path separator to UNIX style
-                      (save-excursion
-                        (goto-char (point-min))
-                        (while (search-forward "\\" nil t)
-                          (replace-match "/"))))
+                  (svn-process-sentinel-fixup-path-seperators)
                   (svn-parse-status-result)
                   (set-buffer act-buf)
                   (svn-status-update-buffer)
@@ -480,11 +483,9 @@ for  example: '(\"revert\" \"file1\"\)"
                   (message "svn blame finished"))
                  ((eq svn-process-cmd 'commit)
                   (svn-status-remove-temp-file-maybe)
-                  ;;(svn-status-show-process-buffer-internal t)
                   (when (member 'commit svn-status-unmark-files-after-list)
                     (svn-status-unset-all-usermarks))
-                  ;;(svn-status-update)
-                  ;;(svn-status-update), svn-status-show-process-buffer-internal should be no longer necessary!
+                  (svn-process-sentinel-fixup-path-seperators)
                   (svn-status-update-with-command-list (svn-status-parse-commit-output))
                   (message "svn commit finished"))
                  ((eq svn-process-cmd 'update)
@@ -578,7 +579,7 @@ The results are used to build the `svn-status-info' variable."
           ;; the above message appears for the main listing plus once for each svn:externals entry
           (unless svn-status-head-revision
             (setq svn-status-head-revision (match-string 1))))
-         ((looking-at "Performing status on external item at '\(.*\)'")
+         ((looking-at "Performing status on external item at '\\(.*\\)'")
           ;; The *next* line has info about the directory named in svn:externals
           ;; [ie the directory in (match-string 1)]
           ;; we should parse it, and merge the info with what we have already know
@@ -996,9 +997,10 @@ EVENT could be \"mouse clicked\" or similar."
     nil))
 (defun svn-status-line-info->lastchangerev (line-info)
   "Return the last revision in which LINE-INFO was modified."
-  (if (>= (nth 5 line-info) 0)
-      (nth 5 line-info)
-    nil))
+  (let ((l (nth 5 line-info)))
+    (if (and l (>= l 0))
+        l
+      nil)))
 (defun svn-status-line-info->author (line-info) (nth 6 line-info))
 (defun svn-status-line-info->modified-external (line-info) (nth 7 line-info))
 (defun svn-status-line-info->locked (line-info)
@@ -1156,11 +1158,12 @@ The result will be nil or \"S\"."
 (defun svn-status-annotate-status-buffer-entry (action line-info)
   (let ((tag-string))
     (svn-status-goto-file-name (svn-status-line-info->filename line-info))
+    (when (and (member action '(committed added))
+               svn-status-commit-rev-number)
+      (svn-status-line-info->set-localrev line-info svn-status-commit-rev-number)
+      (svn-status-line-info->set-lastchangerev line-info svn-status-commit-rev-number))
     (cond ((equal action 'committed)
-           (when svn-status-commit-rev-number
-             (svn-status-line-info->set-localrev line-info svn-status-commit-rev-number))
-             (svn-status-line-info->set-lastchangerev line-info svn-status-commit-rev-number)
-             (setq tag-string " <committed>"))
+           (setq tag-string " <committed>"))
           ((equal action 'added)
            (setq tag-string " <added>"))
           ((equal action 'deleted)
@@ -1293,6 +1296,7 @@ Symbolic links to directories count as directories (see `file-directory-p')."
             "\n")))
 
 (defun svn-status-update-buffer ()
+  "Update the *svn-status* buffer, using `svn-status-info'."
   (interactive)
   ;(message (format "buffer-name: %s" (buffer-name)))
   (unless (string= (buffer-name) "*svn-status*")
@@ -2008,7 +2012,8 @@ Recommended values are ?m or ?M.")
          (svn-dir-len (length (or svn-dir "")))
          (file-dir-len (length file-dir))
          (file-name))
-    (when (and svn-dir
+    (when (and (get-buffer "*svn-status*")
+               svn-dir
                (>= file-dir-len svn-dir-len)
                (string= (substring file-dir 0 svn-dir-len) svn-dir))
       (setq file-name (substring (buffer-file-name) svn-dir-len))

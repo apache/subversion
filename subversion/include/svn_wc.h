@@ -2209,6 +2209,9 @@ svn_error_t *svn_wc_merge (const char *left,
  * .prej file), and the entry is marked "conflicted".  Base properties
  * are changed unconditionally, if @a base_merge is @c TRUE, they never result
  * in a conflict.
+ *
+ * If @a path is not under version control, return the error
+ * SVN_ERR_UNVERSIONED_RESOURCE and don't touch anyone's properties.
  */
 svn_error_t *
 svn_wc_merge_prop_diffs (svn_wc_notify_state_t *state,
@@ -2231,7 +2234,10 @@ svn_error_t *svn_wc_get_pristine_copy_path (const char *path,
                                             apr_pool_t *pool);
 
 
-/** Recurse from @a path, cleaning up unfinished log business.  Perform
+/**
+ * @since New in 1.2.
+ *
+ * Recurse from @a path, cleaning up unfinished log business.  Perform
  * necessary allocations in @a pool.  Any working copy locks under @a path 
  * will be taken over and then cleared by this function.  If @a diff3_cmd
  * is non-null, then use it as the diff3 command for any merging; otherwise,
@@ -2243,6 +2249,19 @@ svn_error_t *svn_wc_get_pristine_copy_path (const char *path,
  * If @a cancel_func is non-null, invoke it with @a cancel_baton at
  * various points during the operation.  If it returns an error
  * (typically @c SVN_ERR_CANCELLED), return that error immediately.
+ */
+svn_error_t *
+svn_wc_cleanup2 (const char *path,
+                 const char *diff3_cmd,
+                 svn_cancel_func_t cancel_func,
+                 void *cancel_baton,
+                 apr_pool_t *pool);
+
+/**
+ * @deprecated Provided for backward compatibility with the 1.1 API.
+ *
+ * Similar to svn_wc_cleanup2(). @a optional_adm_access is an historic
+ * relic and not used, it may be NULL.
  */
 svn_error_t *
 svn_wc_cleanup (const char *path,
@@ -2301,6 +2320,9 @@ svn_wc_relocate (const char *path,
  * For each item reverted, @a notify_func will be called with @a notify_baton
  * and the path of the reverted item. @a notify_func may be @c NULL if this
  * notification is not needed.
+ *
+ * If @a path is not under version control, return the error
+ * SVN_ERR_UNVERSIONED_RESOURCE.
  */
 svn_error_t *
 svn_wc_revert (const char *path, 

@@ -210,7 +210,8 @@ harvest_committables (apr_hash_t *committables,
      entry was written. */
   if ((entry->kind != svn_node_file) && (entry->kind != svn_node_dir))
     return svn_error_createf
-      (SVN_ERR_NODE_UNKNOWN_KIND, NULL, _("Unknown entry kind for '%s'"), path);
+      (SVN_ERR_NODE_UNKNOWN_KIND, NULL, _("Unknown entry kind for '%s'"),
+       svn_path_local_style (path, pool));
 
   SVN_ERR (svn_io_check_special_path (path, &kind, &is_special, pool));
 
@@ -220,7 +221,8 @@ harvest_committables (apr_hash_t *committables,
     {
       return svn_error_createf
         (SVN_ERR_NODE_UNKNOWN_KIND, NULL,
-         _("Unknown entry kind for '%s'"), path);
+         _("Unknown entry kind for '%s'"),
+         svn_path_local_style (path, pool));
     }
 
   /* Verify that the node's type has not changed before attempting to
@@ -234,7 +236,8 @@ harvest_committables (apr_hash_t *committables,
     {
       return svn_error_createf
         (SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
-         _("Entry '%s' has unexpectedly changed special status"), path);
+         _("Entry '%s' has unexpectedly changed special status"),
+         svn_path_local_style (path, pool));
     }
 
   /* Get a fully populated entry for PATH if we can, and check for
@@ -285,7 +288,7 @@ harvest_committables (apr_hash_t *committables,
   if (tc || pc)
     return svn_error_createf (SVN_ERR_WC_FOUND_CONFLICT, NULL,
                               _("Aborting commit: '%s' remains in conflict"),
-                              path);
+                              svn_path_local_style (path, pool));
 
   /* If we have our own URL, and we're NOT in COPY_MODE, it wins over
      the telescoping one(s).  In COPY_MODE, URL will always be the
@@ -340,7 +343,8 @@ harvest_committables (apr_hash_t *committables,
       else if (! copy_mode)
         return svn_error_createf 
           (SVN_ERR_WC_CORRUPT, NULL,
-           _("Did not expect '%s' to be a working copy root"), path);
+           _("Did not expect '%s' to be a working copy root"),
+           svn_path_local_style (path, pool));
 
       /* If the ENTRY's revision differs from that of its parent, we
          have to explicitly commit ENTRY as a copy. */
@@ -357,7 +361,8 @@ harvest_committables (apr_hash_t *committables,
           else /* ### See issue #830 */
             return svn_error_createf 
               (SVN_ERR_BAD_URL, NULL,
-               _("Commit item '%s' has copy flag but no copyfrom URL\n"), path);
+               _("Commit item '%s' has copy flag but no copyfrom URL\n"),
+               svn_path_local_style (path, pool));
         }
     }
 
@@ -607,7 +612,8 @@ svn_client__harvest_committables (apr_hash_t **committables,
            _("'%s' is not under version control"), target);
       if (! entry->url)
         return svn_error_createf (SVN_ERR_WC_CORRUPT, NULL, 
-                                  _("Entry for '%s' has no URL"), target);
+                                  _("Entry for '%s' has no URL"),
+                                  svn_path_local_style (target, pool));
 
       /* We have to be especially careful around entries scheduled for
          addition or replacement. */
@@ -639,7 +645,7 @@ svn_client__harvest_committables (apr_hash_t **committables,
             return svn_error_createf 
               (SVN_ERR_WC_CORRUPT, NULL, 
                _("'%s' is scheduled for addition within unversioned parent"),
-               target);
+               svn_path_local_style (target, pool));
           if ((p_entry->schedule == svn_wc_schedule_add)
               || (p_entry->schedule == svn_wc_schedule_replace))
             {
@@ -661,7 +667,7 @@ svn_client__harvest_committables (apr_hash_t **committables,
            _("Entry for '%s' is marked as 'copied' but is not itself scheduled"
              "\nfor addition.  Perhaps you're committing a target that is\n"
              "inside an unversioned (or not-yet-versioned) directory?"),
-           target);
+           svn_path_local_style (target, pool));
 
       /* Handle our TARGET. */
       SVN_ERR (svn_wc_adm_retrieve (&dir_access, parent_dir,
@@ -701,7 +707,10 @@ svn_client__harvest_committables (apr_hash_t **committables,
                _("'%s' is not under version control "
                  "and is not part of the commit, "
                  "yet its child '%s' is part of the commit"),
-               dangling_parent, dangling_child);
+               /* Probably one or both of these is an entry, but
+                  safest to local_stylize just in case. */
+               svn_path_local_style (dangling_parent, pool),
+               svn_path_local_style (dangling_child, pool));
           }
       }
   }
@@ -730,7 +739,7 @@ svn_client__get_copy_committables (apr_hash_t **committables,
   if (! entry)
     return svn_error_createf
       (SVN_ERR_ENTRY_NOT_FOUND, NULL, _("'%s' is not under version control"),
-       target);
+       svn_path_local_style (target, pool));
       
   /* Handle our TARGET. */
   SVN_ERR (harvest_committables (*committables, target, adm_access,
@@ -779,7 +788,8 @@ svn_client__condense_commit_items (const char **base_url,
         return svn_error_createf 
           (SVN_ERR_CLIENT_DUPLICATE_COMMIT_URL, NULL,
            _("Cannot commit both '%s' and '%s' as they refer to the same URL"),
-           item->path, last_item->path);
+           svn_path_local_style (item->path, pool),
+           svn_path_local_style (last_item->path, pool));
 
       /* In the first iteration, our BASE_URL is just our only
          encountered commit URL to date.  After that, we find the
@@ -922,11 +932,13 @@ do_item_commit (void **dir_baton,
       if (! copyfrom_url)
         return svn_error_createf 
           (SVN_ERR_BAD_URL, NULL,
-           _("Commit item '%s' has copy flag but no copyfrom URL"), path);
+           _("Commit item '%s' has copy flag but no copyfrom URL"),
+           svn_path_local_style (path, pool));
       if (! SVN_IS_VALID_REVNUM (item->revision))
         return svn_error_createf 
           (SVN_ERR_CLIENT_BAD_REVISION, NULL,
-           _("Commit item '%s' has copy flag but an invalid revision"), path);
+           _("Commit item '%s' has copy flag but an invalid revision"),
+           svn_path_local_style (path, pool));
     }
 
   /* If a feedback table was supplied by the application layer,

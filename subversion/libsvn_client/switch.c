@@ -28,6 +28,7 @@
 #include "svn_client.h"
 #include "svn_error.h"
 #include "svn_time.h"
+#include "svn_path.h"
 #include "svn_config.h"
 #include "client.h"
 
@@ -100,10 +101,12 @@ svn_client_switch (svn_revnum_t *result_rev,
   SVN_ERR (svn_wc_entry (&entry, anchor, adm_access, FALSE, pool));
   if (! entry)
     return svn_error_createf (SVN_ERR_UNVERSIONED_RESOURCE, NULL, 
-                              _("'%s' is not under version control"), anchor);
+                              _("'%s' is not under version control"),
+                              svn_path_local_style (anchor, pool));
   if (! entry->url)
     return svn_error_createf (SVN_ERR_ENTRY_MISSING_URL, NULL,
-                              _("Directory '%s' has no URL"), anchor);
+                              _("Directory '%s' has no URL"),
+                              svn_path_local_style (anchor, pool));
 
   URL = apr_pstrdup (pool, entry->url);
 

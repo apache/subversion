@@ -355,7 +355,7 @@ do_open (svn_wc_adm_access_t **adm_access,
            call svn_wc_adm_retrieve.  */
         return svn_error_createf (SVN_ERR_WC_LOCKED, NULL,
                                   _("Working copy '%s' locked"),
-                                  path);
+                                  svn_path_local_style (path, pool));
     }
 
   if (! under_construction)
@@ -641,7 +641,7 @@ svn_wc_adm_retrieve (svn_wc_adm_access_t **adm_access,
   if (! *adm_access)
     return svn_error_createf (SVN_ERR_WC_NOT_LOCKED, NULL,
                               _("Working copy '%s' not locked"),
-                              path);
+                              svn_path_local_style (path, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1028,13 +1028,16 @@ svn_wc__adm_write_check (svn_wc_adm_access_t *adm_access)
           if (! locked)
             return svn_error_createf (SVN_ERR_WC_NOT_LOCKED, NULL, 
                                       _("Write-lock stolen in '%s'"),
-                                      adm_access->path); 
+                                      svn_path_local_style (adm_access->path,
+                                                            adm_access->pool));
         }
     }
   else
     {
       return svn_error_createf (SVN_ERR_WC_NOT_LOCKED, NULL, 
-                                _("No write-lock in '%s'"), adm_access->path);
+                                _("No write-lock in '%s'"),
+                                svn_path_local_style (adm_access->path,
+                                                      adm_access->pool));
     }
 
   return SVN_NO_ERROR;
@@ -1055,7 +1058,7 @@ svn_wc_locked (svn_boolean_t *locked, const char *path, apr_pool_t *pool)
   else
     return svn_error_createf (SVN_ERR_WC_LOCKED, NULL,
                               _("Lock file '%s' is not a regular file"),
-                              lockfile);
+                              svn_path_local_style (lockfile, pool));
     
   return SVN_NO_ERROR;
 }

@@ -62,7 +62,7 @@ Go to http://subversion.tigris.org/ and
 
    *  Print out and digest the Subversion design specification.
       This document can be found in the "Documents & files" area of the
-      website in the Documentation/Design folder.  A PDF and an HTML
+      website in the Documentation->Design folder.  A PDF and an HTML
       version are available on the web.  The design spec will give you
       a theoretical overview of Subversion's design.
 
@@ -112,7 +112,7 @@ Theory and documentation
       Greg Stein has written an introduction to Subversion's network
       protocol, which is an extended dialect of HTTP.  The document is
       'www/webdav-usage.html', and is also posted on the website in
-      the "File sharing" section.
+      the "Documents & files" section in "Documentation->Design".
 
 
    3. USER MANUAL
@@ -1134,7 +1134,7 @@ whether consensus has been reached, and if so, of what kind.  It does
 access.  Expertise in using one's mail reading software is optional,
 but recommended :-).
 
-The current patch manager is Michael Thelen <thelenm@cs.utah.edu>.
+The current patch manager is Michael Thelen <mike@pietdepsi.com>.
 
 
 Filing bugs / issues
@@ -1484,7 +1484,7 @@ compatibility questions:
 
  2. Working copy and repository formats are backward- and
     forward-compatible for all patch releases in the same minor
-    series.  They are backward-compatible for all minor releases in
+    series.  They are forward-compatible for all minor releases in
     the same major series; however, a minor release is allowed to make
     a working copy or repository that doesn't work with previous minor
     releases, where "make" could mean "upgrade" as well as "create".

@@ -935,66 +935,71 @@ $ svn status
   <!-- ======================== SECTION 4 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-ch-4-sect-4">
-    <title>Common Use-Cases for Merging</title>
+    <title>Casos habituales de fusionado</title>
 
-    <para>There are many different uses for <command>svn
-        merge</command>, and this section describes the most common
-        ones you're likely to run into.</para>
+      <para>Hay muchos usos diferentes para <command>svn
+        merge</command>, y esta sección describe los más comunes
+        que posiblemente usará alguna vez.</para>
 
     <sect2 id="svn-ch-4-sect-4.1">
-      <title>Merging a Whole Branch to Another</title>
+      <title>Fusionando una rama completa con otra</title>
 
-      <para>To complete our running example, we'll move forward in
-        time.  Suppose several days have passed, and many changes have
-        happened on both the trunk and your private branch.  Suppose
-        that you've finished working on your private branch; the
-        feature or bugfix is finally complete, and now you want to
-        merge all of your branch changes back into the trunk for
-        others to enjoy.  </para>
+      <para>Para completar el ejemplo que hemos ido mostrando,
+        nos moveremos hacia adelante en el tiempo. Suponga que han
+        pasado varios días, y se han realizado muchos cambios tanto
+        en el tronco como en su rama privada. Suponga que ya ha
+        terminado de trabajar en su rama privada; la característica
+        o corrección está finalmente completada, y ahora quiere
+        fusionar todos los cambios de su rama en el tronco para
+        que otros puedan disfrutarlos. </para>
 
-      <para>So how do we use <command>svn merge</command> in this
-        scenario?  Remember that this command compares two trees, and
-        applies the differences to a working copy.  So to receive the
-        changes, you need to have a working copy of the trunk.  We'll
-        assume that either you still have your original one lying
-        around (fully updated), or that you recently checked out a
-        fresh working copy of <filename>/calc/trunk</filename>.</para>
+      <para>¿Cómo usamos <command>svn merge</command> en esta
+        situación? Recuerde que este comando compara dos árboles,
+        y aplica las diferencias en una copia local. Así que para
+        recivir los cambios, necesita tener una copia local del
+        tronco. Asumiremos que todavía tiene una copia original
+        del tronco por alguna parte (completamente actualizada),
+        o que recientemente ha obtenido una copia local fresca de
+        <filename>/calc/trunk</filename>.</para>
 
-      <para>But which two trees should be compared?  At first glance,
-        the answer may seem obvious: just compare the latest trunk
-        tree with your latest branch tree.  But beware&mdash;this
-        assumption is <emphasis>wrong</emphasis>, and has burned many
-        a new user!  Since <command>svn merge</command> operates like
-        <command>svn diff</command>, comparing the latest trunk and 
-        branch trees will <emphasis>not</emphasis> merely describe
-        the set of changes you made to your branch.  Such a comparison
-        shows too many changes: it would not only show the addition of
-        your branch changes, but also the <emphasis>removal</emphasis>
-        of trunk changes that never happened on your branch.</para>
+      <para>¿Pero qué dos árboles deberían ser comparados? A primera
+        vista, la respuesta puede parecer obvia: simplemente
+        compare el último árbol del tronco con el último
+        árbol de su rama. ¡Pero cuidado&mdash;esta asunción
+        es <emphasis>incorrecta</emphasis>, y ha confundido
+        <!-- TODO burned != confundido --> a muchos usuarios
+        nuevos! Dado que <command>svn merge</command> funciona
+        como <command>svn diff</command>, comparar el tronco y
+        su rama <emphasis>no</emphasis> describirá meramente el
+        conjunto de cambios realizados en su rama. Tal comparación
+        muestra demasiados cambios: no solo mostraría la adición
+        de los cambios en su rama, sino también <emphasis>el
+        borrado</emphasis> de cambios en el tronco que nunca
+        ocurrieron en su rama.</para>.
 
-      <para>To express only the changes that happened on your branch,
-        you need to compare the initial state of your branch to its
-        final state.  Using <command>svn log</command> on your branch,
-        you can see that your branch was created in revision 341.  And
-        the final state of your branch is simply a matter of using the
-        <literal>HEAD</literal> revision.  That means you want to
-        compare revisions 341 and <literal>HEAD</literal> of your
-        branch directory, and apply those differences to a working
-        copy of the trunk.</para>
+      <para>Para expresar únicamente los cambios que ocurrieron en
+        su rama, necesita comparar el estado inicial de su rama
+        con su estado final.  Usando <command>svn log</command>
+        en su rama, puede ver que ésta fue creada en la revisión
+        341. Y el estado final puede obtenerlo con la revisión
+        <literal>HEAD</literal>. Esto significa que quiere comparar
+        las revisiones 341 y <literal>HEAD</literal> del directorio
+        de su rama, y aplicar esas diferencias a una copia local
+        del tronco.</para>
 
       <tip>
-        <para>A nice way of finding the revision in which a branch was
-        created (the "base" of the branch) is to use the
-        <option>--stop-on-copy</option> option to <command>svn
-        log</command>.  The log subcommand will normally show every
-        change ever made to the branch, including tracing back through
-        the copy which created the branch.  So normally, you'll see
-        history from the trunk as well.  The
-        <option>--stop-on-copy</option> will halt log output as soon
-        as <command>svn log</command> detects that its target was
-        copied or renamed.</para>
+        <para>Un buen método para encontrar la revisión en
+        la cual fue creada una rama (la "base" de la misma)
+        es usar la opción <option>--stop-on-copy</option> con
+        <command>svn log</command>. El subcomando log normalmente
+        muestra todo cambio realizado en la rama, incluyendo
+        los de la copia a partir de la cual fue creada. Así que
+        normalmente verá también la historia del tronco. La opción
+        <option>--stop-on-copy</option> detendrá la salida del
+        comando en cuanto <command>svn log</command> detecte que
+        la rama fue copiada o renombrada.</para>
 
-        <para>So in our continuing example,</para>
+        <para>Así que en nuestro ejemplo contínuo:</para>
 
 <screen>
 $ svn log --verbose --stop-on-copy \
@@ -1008,13 +1013,15 @@ Changed paths:
 $
 </screen>
         
-        <para>As expected, the final revision printed by this command
-        is the revision in which <filename>my-calc-branch</filename>
-        was created by copying.</para>
+        <para>Como esperábamos, el número final de revisión
+        mostrado por este comando es la revisión en la cual
+        <filename>my-calc-branch</filename> fue creado a raíz de
+        una operación de copiado.</para>
       </tip>
 
 
-      <para>Here's the final merging procedure, then:</para>
+      <para>De nuevo, aquí está el procedimiento final de
+        fusionado:</para>
 
 <screen>
 $ cd calc/trunk
@@ -1041,25 +1048,25 @@ Transmitting file data ...
 Committed revision 406.
 </screen>
 
-      <para>Again, notice that the commit log message very
-        specifically mentions the range of changes that was merged
-        into the trunk.  Always remember to do this, because it's
-        critical information you'll need later on.</para>
+      <para>De nuevo, fíjese que el mensaje de cambios menciona de
+        forma expecífica el rango de cambios que fue fusionado en el
+        tronco. Recuerde siempre hacer esto, porque es información
+        crítica que necesitará más adelante.</para>
 
-      <para>For example, suppose you decide to keep working on your
-        branch for another week, in order to complete an enhancement
-        to your original feature or bugfix.  The repository's
-        <literal>HEAD</literal> revision is now 480, and you're ready
-        to do another merge from your private branch to the trunk.
-        But as discussed in <xref linkend="svn-ch-4-sect-3.2"/>, you
-        don't want to merge the changes you've already merged before;
-        you only want to merge everything <quote>new</quote> on your
-        branch since the last time you merged.  The trick is to figure
-        out what's new.</para>
+      <para>Por ejemplo, suponga que decide continuar trabajando en
+        su rama otra semana, para completar una mejora a una de
+        las características originales o corregir un fallo. La
+        revisión <literal>HEAD</literal> del repositorio es ahora
+        480, y está listo para realizar otra fusión desde su
+        rama privada al tronco.  Pero como se discutió en <xref
+        linkend="svn-ch-4-sect-3.2"/>, no quiere fusionar los
+        cambios que ya fueron fusionados; sólo quiere fusionar todo
+        lo <quote>nuevo</quote> en su rama desde la última vez que
+        fue fusionada. El truco es descubrir qué es lo nuevo.</para>
 
-      <para>The first step is to run <command>svn log</command> on the
-        trunk, and look for a log message about the last time you
-        merged from the branch:</para>
+      <para>El primer paso es ejecutar <command>svn log</command>
+        en el tronco, y buscar un mensaje de cambios sobre la última
+        vez que realizó una fusión desde su rama:</para>
 
       <screen>
 $ cd calc/trunk
@@ -1073,10 +1080,11 @@ Merged my-calc-branch changes r341:405 into the trunk.
 &hellip;
 </screen>
       
-      <para>Aha!  Since all branch-changes that happened between
-        revisions 341 and 405 were previously merged to the trunk as
-        revision 406, you now know that you want to merge only the
-        branch changes after that&mdash;by comparing revisions 406 and
+      <para>¡Ahá! Dado que todos los cambios que ocurrieron en la
+        rama entre las revisiones 341 y 405 fueron fusionados
+        con el tronco como la revisión 406, ahora sabe que sólo
+        quiere fusionar los cambios de la rama posteriores
+        a esto&mdash;comparando las revisiones 406 y
         <literal>HEAD</literal>.</para>
 
 <screen>
@@ -1099,28 +1107,29 @@ Transmitting file data ...
 Committed revision 481.
 </screen>
 
-      <para>Now the trunk contains the complete second wave of changes
-        made to the branch.  At this point, you can either delete your
-        branch (we'll discuss this later on), or continue working on
-        your branch and repeat this procedure for subsequent
-        merges.</para>
+      <para>Ahora el tronco contiene la segunda oleada completa
+        de cambios realizados en la rama. En este punto, puede
+        o bien borrar su rama (discutiremos esto más adelante), o
+        continuar trabajando en su rama y repetir este procedimiento
+        en siguientes operaciones de fusionado.</para>
 
     </sect2>
 
     <sect2 id="svn-ch-4-sect-4.2">
-      <title>Undoing Changes</title>
+      <title>Deshaciendo cambios</title>
 
-      <para>Another common use for <command>svn merge</command> is to
-        roll back a change that has already been committed.  Suppose
-        you're working away happily on a working copy of
-        <filename>/calc/trunk</filename>, and you discover that the
-        change made way back in revision 303, which changed
-        <filename>integer.c</filename>, is completely wrong.  It never
-        should have been committed.  You can use <command>svn
-        merge</command> to <quote>undo</quote> the change in your
-        working copy, and then commit the local modification to the
-        repository.  All you need to do is to specify a
-        <emphasis>reverse</emphasis> difference:</para>
+      <para>Otro uso común de <command>svn merge</command>
+        es deshacer un cambio que acaba de ser enviado al
+        repositorio. Suponga que está trabajando felizmente en
+        su copia local de <filename>/calc/trunk</filename>,
+        y descubre que el cambio realizado hace tiempo en la
+        revisión 303, que modificó <filename>integer.c</filename>,
+        está completamente mal.  Nunca debería haber llegado al
+        repositorio. Puede usar <command>svn merge</command>
+        para <quote>deshacer</quote> el cambio en su copia
+        local, y entonces enviar las modificaciones locales al
+        repositorio. Todo lo que necesita hacer es especificar la
+        diferencia <emphasis>al revés</emphasis>:</para>
 
 
 <screen>
@@ -1141,24 +1150,25 @@ Transmitting file data .
 Committed revision 350.
 </screen>
 
-      <para>One way to think about a repository revision is as a
-        specific group of changes (some version control systems call
-        these <firstterm>changesets</firstterm>).  By using the
-        <option>-r</option> switch, you can ask <command>svn
-        merge</command> to apply a changeset, or whole range of
-        changesets, to your working copy.  In our case of undoing a
-        change, we're asking <command>svn merge</command> to apply
-        changeset #303 to our working copy
-        <emphasis>backwards</emphasis>.</para>
+      <para>Una forma de pensar sobre las revisiones del repositorio
+        es como un grupo de cambios (algunos sistemas de control de
+        versiones los llaman <firstterm>changesets</firstterm>). Al
+        usar el parámetro <option>-r</option>, puede pedirle a
+        <command>svn merge</command> que aplique el changeset,
+        o el rango completo de changesets sobre su copia local de
+        trabajo. En nuestro caso para deshacer un cambio usamos
+        <command>svn merge</command> para aplicar el changeset #303
+        a nuestra copia local <emphasis>al revés</emphasis>.</para>
     
-      <para>Keep in mind that rolling back a change like this is just
-        like any other <command>svn merge</command> operation, so you
-        should use <command>svn status</command> and <command>svn
-        diff</command> to confirm that your work is in the state you
-        want it to be in, and then use <command>svn commit</command>
-        to send the final version to the repository.  After
-        committing, this particular changeset is no longer reflected
-        in the <literal>HEAD</literal> revision.</para>
+      <para>Tenga presente que reshacer un cambio de esta manera es
+        como realizar cualquier otra operación <command>svn
+        merge</command>, así que debería usar <command>svn
+        status</command> y <command>svn diff</command> para
+        confirmar que su trabajo está en el estado que usted
+        desea, y entonces usar <command>svn commit</command> para
+        enviar la versión final al repositorio. Tras el envío,
+        este changeset particular ya no se verá reflejado en la
+        revisión <literal>HEAD</literal>.</para>
 
       <para>Again, you may be thinking: well, that really didn't undo
         the commit, did it?  The change still exists in revision 303.

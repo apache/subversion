@@ -176,11 +176,19 @@ import_file (const svn_delta_editor_t *editor,
   svn_node_kind_t kind;
   svn_boolean_t is_special;
 
+  SVN_ERR (svn_io_check_special_path (path, &kind, &is_special, pool));
+
+  if (kind == svn_node_unknown)
+    {
+      return svn_error_createf
+        (SVN_ERR_NODE_UNKNOWN_KIND, NULL,
+         _("Unknown or unversionable type for '%s'"),
+           svn_path_local_style (path, pool));
+    }
+
   /* Add the file, using the pool from the FILES hash. */
   SVN_ERR (editor->add_file (edit_path, dir_baton, NULL, SVN_INVALID_REVNUM, 
                              pool, &file_baton));
-
-  SVN_ERR (svn_io_check_special_path (path, &kind, &is_special, pool));
 
   if (! is_special)
     {
@@ -484,7 +492,8 @@ import (const char *path,
   else if (kind == svn_node_none)
     {
       return svn_error_createf (SVN_ERR_NODE_UNKNOWN_KIND, NULL, 
-                                _("'%s' does not exist"), path);  
+                                _("'%s' does not exist"),
+                                svn_path_local_style (path, pool));  
     }
 
   /* Close up shop; it's time to go home. */
@@ -686,7 +695,8 @@ svn_client_import (svn_client_commit_info_t **commit_info,
     return svn_error_createf
       (SVN_ERR_CL_ADM_DIR_RESERVED, NULL,
        _("'%s' is a reserved name and cannot be imported"),
-       SVN_WC_ADM_DIR_NAME);
+       /* ### Is svn_path_local_style() really necessary for this? */
+       svn_path_local_style (SVN_WC_ADM_DIR_NAME, pool));
 
 
   /* If an error occurred during the commit, abort the edit and return

@@ -21,7 +21,7 @@ import shutil, string, sys, re, os
 
 # Our testing module
 import svntest
-from svntest import wc
+from svntest import wc, SVNAnyOutput
 
 # (abbreviation)
 Item = wc.StateItem
@@ -735,14 +735,14 @@ def simple_property_merges(sbox):
   
   svntest.actions.run_and_verify_svn(None, None, [], 'switch', A2_url, wc_dir)
   
-  A_url = svntest.main.current_repo_url + '/A/B/E/alpha'
+  alpha_url = svntest.main.current_repo_url + '/A/B/E/alpha'
   alpha_path = os.path.join(wc_dir, 'B', 'E', 'alpha')
 
   # Cannot use run_and_verify_merge with a file target
   svntest.actions.run_and_verify_svn(None,
                                      [' U ' + alpha_path + '\n'], [],
                                      'merge',
-                                     '-r', '3:4', A_url, alpha_path)
+                                     '-r', '3:4', alpha_url, alpha_path)
   
   output, err = svntest.actions.run_and_verify_svn(None, None, [],
                                                    'pl', alpha_path)
@@ -2073,6 +2073,127 @@ def merge_funny_chars_on_path(sbox):
                                         None, None, None, None, None,
                                         wc_dir)
 
+#-----------------------------------------------------------------------
+# Regression test for issue #2064
+
+def merge_keyword_expansions(sbox):
+  "merge changes to keyword expansion property"
+
+  sbox.build()
+
+  wcpath = sbox.wc_dir
+  tpath = os.path.join(wcpath, "t")
+  bpath = os.path.join(wcpath, "b")
+  t_fpath = os.path.join(tpath, 'f')
+  b_fpath = os.path.join(bpath, 'f')
+
+  os.mkdir(tpath)
+  svntest.main.run_svn(None, "add", tpath)
+  # Commit r2.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     "ci", "-m", "r2", wcpath)
+
+  # Copy t to b.
+  svntest.main.run_svn(None, "cp", tpath, bpath)
+  # Commit r3
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     "ci", "-m", "r3", wcpath)
+
+  # Add a file to t.
+  svntest.main.file_append(t_fpath, "$Revision$")
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'add', t_fpath)
+  # Ask for keyword expansion in the file.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset', 'svn:keywords', 'Revision',
+                                     t_fpath)
+  # Commit r4
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', '-m', 'r4', wcpath)
+
+  # Update the wc before the merge.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'update', wcpath)
+
+  expected_status = svntest.actions.get_virginal_state(wcpath, 4)
+  expected_status.add({
+    't'    : Item(status='  ', wc_rev=4, repos_rev=4),
+    't/f'  : Item(status='  ', wc_rev=4, repos_rev=4),
+    'b'    : Item(status='  ', wc_rev=4, repos_rev=4),
+  })
+  svntest.actions.run_and_verify_status(wcpath, expected_status)
+
+  # Do the merge.
+  expected_output = wc.State(bpath, {
+    'f'  : Item(status='A '),
+    })
+  expected_disk = wc.State('', {
+    'f'      : Item("$Revision: 4 $"),
+    })
+  expected_status = wc.State(bpath, {
+    ''       : Item(status='  ', wc_rev=4, repos_rev=4),
+    'f'      : Item(status='A ', wc_rev='-', copied='+', repos_rev=4),
+    })
+  expected_skip = wc.State(bpath, { })
+  svntest.actions.run_and_verify_merge(bpath, '2', 'HEAD',
+                                       svntest.main.current_repo_url + '/t',
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip)
+
+#----------------------------------------------------------------------
+def merge_prop_change_to_deleted_target(sbox):
+  "merge prop change into deleted target"
+  # For issue #2132.
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Add a property to alpha.
+  alpha_path = os.path.join(wc_dir, 'A', 'B', 'E', 'alpha')
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset', 'foo', 'foo_val',
+                                     alpha_path)
+
+  # Commit the property add as r2.
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/E/alpha' : Item(verb='Sending'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak(repos_rev=2)
+  expected_status.tweak('A/B/E/alpha', wc_rev=2, status='  ')
+  svntest.actions.run_and_verify_commit (wc_dir,
+                                         expected_output, expected_status,
+                                         None, None, None, None, None,
+                                         wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+
+  # Remove alpha entirely.
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm', alpha_path)
+  expected_output = wc.State(wc_dir, {
+    'A/B/E/alpha'  : Item(verb='Deleting'),
+    })
+  expected_status.tweak(repos_rev=3)
+  expected_status.tweak(wc_rev=2)
+  expected_status.remove('A/B/E/alpha')
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        alpha_path)
+
+  # Try merging the original propset, which applies to a target that
+  # no longer exists.  The bug would only reproduce when run from
+  # inside the wc, so we cd in there.
+  saved_cwd = os.getcwd()
+  try:
+    os.chdir(wc_dir)
+    svntest.actions.run_and_verify_svn("Merge errored unexpectedly",
+                                       SVNAnyOutput, None,
+                                       'merge', '-r1:2', '.')
+  finally:
+    os.chdir(saved_cwd)
+
 
 ########################################################################
 # Run the tests
@@ -2097,6 +2218,8 @@ test_list = [ None,
               dry_run_adds_file_with_prop,
               merge_binary_with_common_ancestry,
               merge_funny_chars_on_path,
+              merge_keyword_expansions,
+              merge_prop_change_to_deleted_target,
               # property_merges_galore,  # Would be nice to have this.
               # tree_merges_galore,      # Would be nice to have this.
               # various_merges_galore,   # Would be nice to have this.

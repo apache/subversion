@@ -327,7 +327,9 @@ signal_error (struct log_runner *loggy, svn_error_t *err)
   svn_xml_signal_bailout
     (svn_error_createf (pick_error_code (loggy), err,
                         _("In directory '%s'"),
-                        svn_wc_adm_access_path (loggy->adm_access)),
+                        svn_path_local_style (svn_wc_adm_access_path
+                                              (loggy->adm_access),
+                                              loggy->pool)),
      loggy->parser);
 }
 
@@ -351,12 +353,16 @@ log_do_merge (struct log_runner *loggy,
   if (! left)
     return svn_error_createf (pick_error_code (loggy), NULL,
                               _("Missing 'left' attribute in '%s'"),
-                              svn_wc_adm_access_path (loggy->adm_access));
+                              svn_path_local_style
+                              (svn_wc_adm_access_path (loggy->adm_access),
+                               loggy->pool));
   right = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_ARG_2, atts);
   if (! right)
     return svn_error_createf (pick_error_code (loggy), NULL,
                               _("Missing 'right' attribute in '%s'"),
-                              svn_wc_adm_access_path (loggy->adm_access));
+                              svn_path_local_style
+                              (svn_wc_adm_access_path (loggy->adm_access),
+                               loggy->pool));
 
   /* Grab all three labels too.  If non-existent, we'll end up passing
      NULLs to svn_wc_merge, which is fine -- it will use default
@@ -397,7 +403,9 @@ log_do_file_xfer (struct log_runner *loggy,
   if (! dest)
     return svn_error_createf (pick_error_code (loggy), NULL,
                               _("Missing 'dest' attribute in '%s'"),
-                              svn_wc_adm_access_path (loggy->adm_access));
+                              svn_path_local_style
+                              (svn_wc_adm_access_path (loggy->adm_access),
+                               loggy->pool));
 
   err = file_xfer_under_path (loggy->adm_access, name, dest, action,
                               loggy->pool);
@@ -441,7 +449,9 @@ log_do_file_timestamp (struct log_runner *loggy,
   if (! timestamp_string)
     return svn_error_createf (pick_error_code (loggy), NULL,
                               _("Missing 'timestamp' attribute in '%s'"),
-                              svn_wc_adm_access_path (loggy->adm_access));
+                              svn_path_local_style
+                              (svn_wc_adm_access_path (loggy->adm_access),
+                               loggy->pool));
 
   /* Do not set the timestamp on special files. */
   SVN_ERR (svn_io_check_special_path (full_path, &kind, &is_special,
@@ -514,13 +524,15 @@ log_do_modify_entry (struct log_runner *loggy,
       if (err)
         return svn_error_createf
           (pick_error_code (loggy), err,
-           _("Error checking path '%s'"), tfile);
+           _("Error checking path '%s'"), svn_path_local_style (tfile,
+                                                                loggy->pool));
           
       err = svn_io_file_affected_time (&text_time, tfile, loggy->pool);
       if (err)
         return svn_error_createf
           (pick_error_code (loggy), err,
-           _("Error getting 'affected time' on '%s'"), tfile);
+           _("Error getting 'affected time' on '%s'"),
+           svn_path_local_style (tfile, loggy->pool));
 
       entry->text_time = text_time;
     }
@@ -545,13 +557,15 @@ log_do_modify_entry (struct log_runner *loggy,
       if (err)
         return svn_error_createf
           (pick_error_code (loggy), err,
-           _("Error checking path '%s'"), pfile);
+           _("Error checking path '%s'"),
+           svn_path_local_style (pfile, loggy->pool));
       
       err = svn_io_file_affected_time (&prop_time, pfile, loggy->pool);
       if (err)
         return svn_error_createf
           (pick_error_code (loggy), NULL,
-           _("Error getting 'affected time' on '%s'"), pfile);
+           _("Error getting 'affected time' on '%s'"),
+           svn_path_local_style (pfile, loggy->pool));
 
       entry->prop_time = prop_time;
     }
@@ -884,7 +898,8 @@ log_do_committed (struct log_runner *loggy,
                                                       tmpf, pool)))
             return svn_error_createf (pick_error_code (loggy), err,
                                       _("Error comparing '%s' and '%s'"),
-                                      wf, tmpf);
+                                      svn_path_local_style (wf, pool),
+                                      svn_path_local_style (tmpf, pool));
 
           /* If they are the same, use the working file's timestamp,
              else use the tmpf file's timestamp. */
@@ -894,7 +909,8 @@ log_do_committed (struct log_runner *loggy,
           if ((err = svn_io_file_affected_time (&text_time, chosen, pool)))
             return svn_error_createf
               (pick_error_code (loggy), err,
-               _("Error getting 'affected time' for '%s'"), chosen);
+               _("Error getting 'affected time' for '%s'"),
+               svn_path_local_style (chosen, pool));
         }
     }
               
@@ -942,7 +958,8 @@ log_do_committed (struct log_runner *loggy,
               loggy->adm_access, TRUE, pool));
     if ((err = svn_io_check_path (tmpf, &kind, pool)))
       return svn_error_createf (pick_error_code (loggy), err,
-                                _("Error checking existence of '%s'"), name);
+                                _("Error checking existence of '%s'"),
+                                svn_path_local_style (tmpf, pool));
     if (kind == svn_node_file)
       {
         svn_boolean_t same;
@@ -953,7 +970,8 @@ log_do_committed (struct log_runner *loggy,
         if ((err = svn_io_files_contents_same_p (&same, wf, tmpf, pool)))
           return svn_error_createf (pick_error_code (loggy), err,
                                     _("Error comparing '%s' and '%s'"),
-                                    wf, tmpf);
+                                    svn_path_local_style (wf, pool),
+                                    svn_path_local_style (tmpf, pool));
 
         /* If they are the same, use the working file's timestamp,
            else use the tmp_base file's timestamp. */
@@ -963,7 +981,7 @@ log_do_committed (struct log_runner *loggy,
         if ((err = svn_io_file_affected_time (&prop_time, chosen, pool)))
           return svn_error_createf (pick_error_code (loggy), err,
                                     _("Error getting 'affected time' of '%s'"),
-                                    chosen);
+                                    svn_path_local_style (chosen, pool));
 
         /* Examine propchanges here before installing the new
            propbase.  If the executable prop was -deleted-, then set a
@@ -1028,7 +1046,7 @@ log_do_committed (struct log_runner *loggy,
         if ((err = svn_io_file_affected_time (&text_time, full_path, pool)))
           return svn_error_createf (pick_error_code (loggy), err,
                                     _("Error getting 'affected time' of '%s'"),
-                                    full_path);
+                                    svn_path_local_style (full_path, pool));
     }
     
   /* Files have been moved, and timestamps have been found.  It is now
@@ -1176,7 +1194,9 @@ start_handler (void *userData, const char *eltname, const char **atts)
          (pick_error_code (loggy), NULL,
           _("Log entry missing 'name' attribute (entry '%s' "
             "for directory '%s')"),
-          eltname, svn_wc_adm_access_path (loggy->adm_access)));
+          eltname,
+          svn_path_local_style (svn_wc_adm_access_path (loggy->adm_access),
+                                loggy->pool)));
       return;
     }
   
@@ -1229,7 +1249,9 @@ start_handler (void *userData, const char *eltname, const char **atts)
         (loggy, svn_error_createf
          (pick_error_code (loggy), NULL,
           _("Unrecognized logfile element '%s' in '%s'"),
-          eltname, svn_wc_adm_access_path (loggy->adm_access)));
+          eltname,
+          svn_path_local_style (svn_wc_adm_access_path (loggy->adm_access),
+                                loggy->pool)));
       return;
     }
 
@@ -1238,7 +1260,9 @@ start_handler (void *userData, const char *eltname, const char **atts)
       (loggy, svn_error_createf
        (pick_error_code (loggy), err,
         _("Error processing command '%s' in '%s'"),
-        eltname, svn_wc_adm_access_path (loggy->adm_access)));
+        eltname,
+        svn_path_local_style (svn_wc_adm_access_path (loggy->adm_access),
+                              loggy->pool)));
   
   return;
 }
@@ -1253,17 +1277,21 @@ handle_killme (svn_wc_adm_access_t *adm_access,
 {
   const svn_wc_entry_t *thisdir_entry, *parent_entry;
   svn_wc_entry_t tmp_entry;
+  svn_error_t *err;
   SVN_ERR (svn_wc_entry (&thisdir_entry,
                          svn_wc_adm_access_path (adm_access), adm_access,
                          FALSE, pool));
 
   /* Blow away the entire directory, and all those below it too. */
-  SVN_ERR (svn_wc_remove_from_revision_control (adm_access,
-                                                SVN_WC_ENTRY_THIS_DIR,
-                                                TRUE, /* destroy */
-                                                FALSE, /* no instant err */
-                                                cancel_func, cancel_baton,
-                                                pool));
+  err = svn_wc_remove_from_revision_control (adm_access,
+                                             SVN_WC_ENTRY_THIS_DIR,
+                                             TRUE, /* destroy */
+                                             FALSE, /* no instant err */
+                                             cancel_func, cancel_baton,
+                                             pool);
+  if (err && err->apr_err != SVN_ERR_WC_LEFT_LOCAL_MOD)
+    return err;
+  svn_error_clear (err);
 
   /* If revnum of this dir is greater than parent's revnum, then
      recreate 'deleted' entry in parent. */
@@ -1365,7 +1393,8 @@ svn_wc__run_log (svn_wc_adm_access_t *adm_access,
           return svn_error_createf
             (err->apr_err, err,
              _("Error reading administrative log file in '%s'"),
-             svn_wc_adm_access_path (adm_access));
+             svn_path_local_style (svn_wc_adm_access_path (adm_access),
+                                   iterpool));
         
         err2 = svn_xml_parse (parser, buf, buf_len, 0);
         if (err2)
@@ -1427,12 +1456,23 @@ svn_wc_cleanup (const char *path,
                 void *cancel_baton,
                 apr_pool_t *pool)
 {
+  return svn_wc_cleanup2 (path, diff3_cmd, cancel_func, cancel_baton, pool);
+}
+
+svn_error_t *
+svn_wc_cleanup2 (const char *path,
+                 const char *diff3_cmd,
+                 svn_cancel_func_t cancel_func,
+                 void *cancel_baton,
+                 apr_pool_t *pool)
+{
   apr_hash_t *entries = NULL;
   apr_hash_index_t *hi;
   svn_node_kind_t kind;
   svn_wc_adm_access_t *adm_access;
   svn_boolean_t cleanup;
   int wc_format_version;
+  apr_pool_t *subpool;
 
   /* Check cancellation; note that this catches recursive calls too. */
   if (cancel_func)
@@ -1444,35 +1484,51 @@ svn_wc_cleanup (const char *path,
   if (wc_format_version == 0)
     return svn_error_createf
       (SVN_ERR_WC_NOT_DIRECTORY, NULL,
-       _("'%s' is not a working copy directory"), path);
+       _("'%s' is not a working copy directory"),
+       svn_path_local_style (path, pool));
 
   /* Lock this working copy directory, or steal an existing lock */
-  SVN_ERR (svn_wc__adm_steal_write_lock (&adm_access, optional_adm_access, 
-                                         path, pool));
+  SVN_ERR (svn_wc__adm_steal_write_lock (&adm_access, NULL, path, pool));
 
-  /* Recurse on versioned subdirs first, oddly enough. */
+  /* Recurse on versioned elements first, oddly enough. */
   SVN_ERR (svn_wc_entries_read (&entries, adm_access, FALSE, pool));
-
+  subpool = svn_pool_create (pool);
   for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
     {
       const void *key;
       void *val;
       const svn_wc_entry_t *entry;
+      const char *entry_path;
 
+      svn_pool_clear (subpool);
       apr_hash_this (hi, &key, NULL, &val);
       entry = val;
+      entry_path = svn_path_join (path, key, subpool);
 
-      if ((entry->kind == svn_node_dir)
-          && (strcmp (key, SVN_WC_ENTRY_THIS_DIR) != 0))
+      if (entry->kind == svn_node_dir
+          && strcmp (key, SVN_WC_ENTRY_THIS_DIR) != 0)
         {
-          /* Recurse */
-          const char *subdir = svn_path_join (path, key, pool);
-          SVN_ERR (svn_io_check_path (subdir, &kind, pool));
+          /* Sub-directories */
+          SVN_ERR (svn_io_check_path (entry_path, &kind, subpool));
           if (kind == svn_node_dir)
-            SVN_ERR (svn_wc_cleanup (subdir, adm_access, diff3_cmd,
-                                     cancel_func, cancel_baton, pool));
+            SVN_ERR (svn_wc_cleanup2 (entry_path, diff3_cmd,
+                                      cancel_func, cancel_baton, subpool));
+        }
+      else
+        {
+          /* "." and things that are not directories, check for mods to
+             trigger the timestamp repair mechanism.  Since this rewrites
+             the entries file for each timestamp fixed it has the potential
+             to be slow, perhaps we need something more sophisticated? */
+          svn_boolean_t modified;
+          SVN_ERR (svn_wc_props_modified_p (&modified, entry_path,
+                                            adm_access, subpool));
+          if (entry->kind == svn_node_file)
+            SVN_ERR (svn_wc_text_modified_p (&modified, entry_path, FALSE,
+                                             adm_access, subpool));
         }
     }
+  svn_pool_destroy (subpool);
 
   if (svn_wc__adm_path_exists (svn_wc_adm_access_path (adm_access), 0, pool,
                                SVN_WC__ADM_KILLME, NULL))
@@ -1496,8 +1552,7 @@ svn_wc_cleanup (const char *path,
   if (svn_wc__adm_path_exists (path, 0, pool, NULL))
     SVN_ERR (svn_wc__adm_cleanup_tmp_area (adm_access, pool));
 
-  if (! optional_adm_access)
-    SVN_ERR (svn_wc_adm_close (adm_access));
+  SVN_ERR (svn_wc_adm_close (adm_access));
 
   return SVN_NO_ERROR;
 }

@@ -39,6 +39,7 @@
 struct status_baton
 {
   svn_error_t *err; /* the error generated for an undeletable path. */
+  apr_pool_t *pool; /* for temporary allocations */
 };
 
 
@@ -59,10 +60,12 @@ find_undeletables (void *baton,
   if (status->text_status == svn_wc_status_obstructed)
     sb->err = svn_error_createf (SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
                                  _("'%s' is in the way of the resource "
-                                   "actually under version control"), path);
+                                   "actually under version control"),
+                                 svn_path_local_style (path, sb->pool));
   else if (! status->entry)
     sb->err = svn_error_createf (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                                 _("'%s' is not under version control"), path);
+                                 _("'%s' is not under version control"),
+                                 svn_path_local_style (path, sb->pool));
   
   else if ((status->text_status != svn_wc_status_normal
             && status->text_status != svn_wc_status_deleted
@@ -71,7 +74,8 @@ find_undeletables (void *baton,
            (status->prop_status != svn_wc_status_none
             && status->prop_status != svn_wc_status_normal))
     sb->err = svn_error_createf (SVN_ERR_CLIENT_MODIFIED, NULL,
-                             _("'%s' has local modifications"), path);
+                             _("'%s' has local modifications"),
+                                 svn_path_local_style (path, sb->pool));
 }
 
 
@@ -84,6 +88,7 @@ svn_client__can_delete (const char *path,
   svn_opt_revision_t revision;
   revision.kind = svn_opt_revision_unspecified;
   sb.err = SVN_NO_ERROR;
+  sb.pool = pool;
   SVN_ERR (svn_client_status (NULL, path, &revision, find_undeletables, &sb,
                               TRUE, FALSE, FALSE, FALSE, ctx, pool));
   return sb.err;
@@ -176,7 +181,8 @@ delete_urls (svn_client_commit_info_t **commit_info,
                                    &kind, pool));
       if (kind == svn_node_none)
         return svn_error_createf (SVN_ERR_FS_NOT_FOUND, NULL,
-                                  "URL '%s' does not exist", path);
+                                  "URL '%s' does not exist",
+                                  svn_path_local_style (path, pool));
     }
 
   /* Fetch RA commit editor */

@@ -305,10 +305,10 @@ static svn_error_t *set_special_wc_prop (const char *key,
 }
 
 
-static void add_props(apr_hash_t *props,
-                      prop_setter_t setter,
-                      void *baton,
-                      apr_pool_t *pool)
+static svn_error_t *add_props(apr_hash_t *props,
+                              prop_setter_t setter,
+                              void *baton,
+                              apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
 
@@ -329,7 +329,7 @@ static void add_props(apr_hash_t *props,
           /* for props in the 'custom' namespace, we strip the
              namespace and just use whatever name the user gave the
              property. */
-          (*setter)(baton, key + NSLEN, val, pool);
+          SVN_ERR( (*setter)(baton, key + NSLEN, val, pool) );
           continue;
         }
 #undef NSLEN
@@ -340,9 +340,9 @@ static void add_props(apr_hash_t *props,
           /* This property is an 'svn:' prop, recognized by client, or
              server, or both.  Convert the URI namespace into normal
              'svn:' prefix again before pushing it at the wc. */
-          (*setter)(baton, 
-                    apr_pstrcat(pool, SVN_PROP_PREFIX, key + NSLEN, NULL), 
-                    val, pool);
+          SVN_ERR( (*setter)(baton, apr_pstrcat(pool, SVN_PROP_PREFIX,
+                                                key + NSLEN, NULL), 
+                             val, pool) );
         }
 #undef NSLEN
 
@@ -354,9 +354,10 @@ static void add_props(apr_hash_t *props,
              The following routine converts a handful of DAV: props
              into 'svn:wc:' or 'svn:entry:' props that libsvn_wc
              wants. */
-          set_special_wc_prop (key, val, setter, baton, pool);
+          SVN_ERR( set_special_wc_prop (key, val, setter, baton, pool) );
         }
     }
+  return SVN_NO_ERROR;
 }
                       
 
@@ -1578,7 +1579,7 @@ start_element(void *userdata, int parent_state, const char *nspace,
     case ELEM_resource:
       att = svn_xml_get_attr_value("path", atts);
       /* ### verify we got it. punt on error. */
-      rb->current_wcprop_path = svn_path_join(rb->target, att, rb->ras->pool);
+      rb->current_wcprop_path = apr_pstrdup(rb->ras->pool, att);
       break;
 
     case ELEM_open_directory:
@@ -1817,11 +1818,12 @@ start_element(void *userdata, int parent_state, const char *nspace,
 
       /* Removing a prop.  */
       if (rb->file_baton == NULL)
-        rb->editor->change_dir_prop(TOP_DIR(rb).baton, rb->namestr->data, 
-                                    NULL, TOP_DIR(rb).pool);
+        CHKERR( rb->editor->change_dir_prop(TOP_DIR(rb).baton,
+                                            rb->namestr->data, 
+                                            NULL, TOP_DIR(rb).pool) );
       else
-        rb->editor->change_file_prop(rb->file_baton, rb->namestr->data, 
-                                     NULL, rb->file_pool);
+        CHKERR( rb->editor->change_file_prop(rb->file_baton, rb->namestr->data, 
+                                             NULL, rb->file_pool) );
       break;
       
     case ELEM_fetch_props:
@@ -1834,11 +1836,13 @@ start_element(void *userdata, int parent_state, const char *nspace,
           svn_stringbuf_set(rb->namestr, SVN_PROP_PREFIX "BOGOSITY");
 
           if (rb->file_baton == NULL)
-            rb->editor->change_dir_prop(TOP_DIR(rb).baton, rb->namestr->data, 
-                                        NULL, TOP_DIR(rb).pool);
+            CHKERR( rb->editor->change_dir_prop(TOP_DIR(rb).baton,
+                                                rb->namestr->data, 
+                                                NULL, TOP_DIR(rb).pool) );
           else
-            rb->editor->change_file_prop(rb->file_baton, rb->namestr->data, 
-                                         NULL, rb->file_pool);
+            CHKERR( rb->editor->change_file_prop(rb->file_baton,
+                                                 rb->namestr->data, 
+                                                 NULL, rb->file_pool) );
         }
       else
         {
@@ -1948,10 +1952,10 @@ add_node_props (report_baton_t *rb, apr_pool_t *pool)
           props = rsrc->propset;
         }
 
-      add_props(props, 
-                rb->editor->change_file_prop, 
-                rb->file_baton,
-                pool);
+      SVN_ERR(add_props(props, 
+                        rb->editor->change_file_prop, 
+                        rb->file_baton,
+                        pool));
     }
   else
     {
@@ -1975,10 +1979,10 @@ add_node_props (report_baton_t *rb, apr_pool_t *pool)
           props = rsrc->propset;
         }
 
-      add_props(props, 
-                rb->editor->change_dir_prop, 
-                TOP_DIR(rb).baton, 
-                pool);
+      SVN_ERR(add_props(props, 
+                        rb->editor->change_dir_prop, 
+                        TOP_DIR(rb).baton, 
+                        pool));
     }
     
   return SVN_NO_ERROR;
@@ -2012,7 +2016,7 @@ static int cdata_handler(void *userdata, int state,
             CHKERR( svn_error_createf
                     (SVN_ERR_STREAM_UNEXPECTED_EOF, NULL,
                      _("Error writing to '%s': unexpected EOF"),
-                     rb->namestr->data) );
+                     svn_path_local_style(rb->namestr->data, rb->ras->pool)) );
           }
       }
       break;
@@ -2156,13 +2160,15 @@ static int end_element(void *userdata, int state,
         /* Set the prop. */
         if (rb->file_baton)
           {
-            rb->editor->change_file_prop(rb->file_baton, rb->namestr->data, 
-                                         decoded_value_p, pool);
+            CHKERR( rb->editor->change_file_prop(rb->file_baton,
+                                                 rb->namestr->data, 
+                                                 decoded_value_p, pool) );
           }
         else
           {
-            rb->editor->change_dir_prop(TOP_DIR(rb).baton, rb->namestr->data, 
-                                        decoded_value_p, pool);
+            CHKERR( rb->editor->change_dir_prop(TOP_DIR(rb).baton,
+                                                rb->namestr->data, 
+                                                decoded_value_p, pool) );
           }
       }
 
@@ -2488,7 +2494,7 @@ make_reporter (void *session_baton,
      style" update-report syntax.  if the tmpfile is used in an "old
      style' update-report request, older servers will just ignore this
      unknown xml element. */
-  s = apr_psprintf(pool, "<S:src-path>%s</S:src-path>", ras->url);
+  s = apr_psprintf(pool, "<S:src-path>%s</S:src-path>" DEBUG_CR, ras->url);
   SVN_ERR( svn_io_file_write_full(rb->tmpfile, s, strlen(s), NULL, pool) );
 
   /* an invalid revnum means "latest". we can just omit the target-revision
@@ -2496,8 +2502,8 @@ make_reporter (void *session_baton,
   if (SVN_IS_VALID_REVNUM(revision))
     {
       s = apr_psprintf(pool, 
-                       "<S:target-revision>%ld"
-                       "</S:target-revision>", revision);
+                       "<S:target-revision>%ld</S:target-revision>" DEBUG_CR, 
+                       revision);
       SVN_ERR( svn_io_file_write_full(rb->tmpfile, s, strlen(s), NULL, pool) );
     }
 
@@ -2508,7 +2514,7 @@ make_reporter (void *session_baton,
       svn_xml_escape_cdata_cstring(&escaped_target, target, pool);
 
       s = apr_psprintf(pool,
-                       "<S:update-target>%s</S:update-target>",
+                       "<S:update-target>%s</S:update-target>" DEBUG_CR,
                        escaped_target->data);
       SVN_ERR( svn_io_file_write_full(rb->tmpfile, s, strlen(s), NULL, pool) );
     }
@@ -2523,7 +2529,7 @@ make_reporter (void *session_baton,
       svn_stringbuf_t *dst_path_str = NULL;
       svn_xml_escape_cdata_cstring (&dst_path_str, dst_path, pool);
 
-      s = apr_psprintf(pool, "<S:dst-path>%s</S:dst-path>",
+      s = apr_psprintf(pool, "<S:dst-path>%s</S:dst-path>" DEBUG_CR,
                        dst_path_str->data);
       SVN_ERR( svn_io_file_write_full(rb->tmpfile, s, strlen(s), NULL, pool) );
     }
@@ -2531,7 +2537,7 @@ make_reporter (void *session_baton,
   /* mod_dav_svn will assume recursive, unless it finds this element. */
   if (!recurse)
     {
-      const char * data = "<S:recursive>no</S:recursive>";
+      const char *data = "<S:recursive>no</S:recursive>" DEBUG_CR;
       SVN_ERR( svn_io_file_write_full(rb->tmpfile, data, strlen(data),
                                       NULL, pool) );
     }
@@ -2539,14 +2545,14 @@ make_reporter (void *session_baton,
   /* mod_dav_svn will use ancestry in diffs unless it finds this element. */
   if (ignore_ancestry)
     {
-      const char * data = "<S:ignore-ancestry>yes</S:ignore-ancestry>";
+      const char *data = "<S:ignore-ancestry>yes</S:ignore-ancestry>" DEBUG_CR;
       SVN_ERR( svn_io_file_write_full(rb->tmpfile, data, strlen(data),
                                       NULL, pool) );
     }
   /* If we want a resource walk to occur, note that now. */
   if (resource_walk)
     {
-      const char * data = "<S:resource-walk>yes</S:resource-walk>";
+      const char *data = "<S:resource-walk>yes</S:resource-walk>" DEBUG_CR;
       SVN_ERR( svn_io_file_write_full(rb->tmpfile, data, strlen(data),
                                       NULL, pool) );
     }
