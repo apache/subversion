@@ -91,7 +91,7 @@ add_component_internal (svn_string_t *path,
     svn_string_appendbytes (path, &dirsep, sizeof (dirsep));
 
   svn_string_appendbytes (path, component, len);
-  canonicalize (path, style);
+  svn_path_canonicalize (path, style);
 }
 
 
@@ -123,7 +123,7 @@ svn_path_remove_component (svn_string_t *path, enum svn_path_style style)
 {
   /* kff todo: `style' ignored presently. */
 
-  canonicalize (path, style);
+  svn_path_canonicalize (path, style);
 
   if (! svn_string_chop_back_to_char (path, SVN_PATH_REPOS_SEPARATOR))
     svn_string_setempty (path);
@@ -146,7 +146,7 @@ svn_path_last_component (svn_string_t *path,
      fixed without involving too much allocation, by skipping
      backwards past separators & building the returned component more
      carefully. */
-  canonicalize (path, style);
+  svn_path_canonicalize (path, style);
 
   i = svn_string_find_char_backward (path, SVN_PATH_REPOS_SEPARATOR);
 
