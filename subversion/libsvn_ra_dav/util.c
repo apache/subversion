@@ -257,7 +257,7 @@ svn_error_t *svn_ra_dav__parsed_request(svn_ra_session_t *ras,
                               ne_xml_parse_v, success_parser);
     
   /* Register the "error" accepter and body-reader with the request --
-     the one to use when HTTP statsu is *not* 2XX */   
+     the one to use when HTTP status is *not* 2XX */   
   ne_add_response_body_reader(req, ra_dav_error_accepter,
                               ne_xml_parse_v, error_parser);
 
@@ -268,35 +268,10 @@ svn_error_t *svn_ra_dav__parsed_request(svn_ra_session_t *ras,
 
   if (rv != NE_OK)
     {
-      svn_error_t *err2;
-
-      /* ### need to be more sophisticated with reporting the failure */
-      err2 = svn_error_createf (SVN_ERR_RA_REQUEST_FAILED, 0, NULL, pool,
-                                "neon: %s", ne_get_error (ras->sess));
-                               
-      switch (rv)
-        {
-        case NE_CONNECT:
-          /* ### need an SVN_ERR here */
-          err = svn_error_createf(APR_EGENERAL, 0, err2, pool,
-                                  "Could not connect to server "
-                                  "(%s, port %d).",
-                                  ras->root.host, ras->root.port);
-          goto error;
-
-        case NE_AUTH:
-          err = svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, 0, err2, pool,
-                                 "Authentication failed on server.");
-          goto error;
-
-        default:
-          err = svn_error_createf(SVN_ERR_RA_REQUEST_FAILED, 0, err2, pool,
-                                  "The %s request failed (%s)",
-                                  method, url);
-          goto error;
-        }
+      msg = apr_psprintf(pool, "%s of %s", method, url);
+      err = svn_ra_dav__convert_error(ras->sess, msg, rv, pool);
+      goto error;
     }
-
 
   if (pc->err != NULL)
     {
@@ -342,7 +317,7 @@ svn_error_t *svn_ra_dav__parsed_request(svn_ra_session_t *ras,
 
 
 svn_error_t *
-svn_ra_dav__maybe_store_auth_info (svn_ra_session_t *ras)
+svn_ra_dav__maybe_store_auth_info(svn_ra_session_t *ras)
 {
   void *a, *auth_baton;
   svn_ra_simple_password_authenticator_t *authenticator;
@@ -360,6 +335,63 @@ svn_ra_dav__maybe_store_auth_info (svn_ra_session_t *ras)
   
   return SVN_NO_ERROR;
 }
+
+
+svn_error_t *
+svn_ra_dav__request_dispatch(int *code,
+                             ne_request *request,
+                             ne_session *session,
+                             const char *method,
+                             const char *url,
+                             apr_pool_t *pool)
+{
+  ne_xml_parser *error_parser;
+  int rv;
+  const ne_status *statstruct;
+  const char *code_desc;
+  parser_cxt_t *pc = apr_pcalloc (pool, sizeof(*pc));
+
+  pc->pool = pool;
+
+  /* attach a standard <D:error> body parser to the request */
+  error_parser = ne_xml_create();
+  ne_xml_push_handler(error_parser, error_elements, validate_error_elements,
+                      start_err_element, end_err_element, pc);
+  ne_add_response_body_reader(request, ra_dav_error_accepter,
+                              ne_xml_parse_v, error_parser);
+
+  /* run the request, see what comes back. */
+  rv = ne_request_dispatch(request);
+
+  statstruct = ne_get_status(request);
+  *code = statstruct->code;
+  code_desc = apr_pstrdup(pool, statstruct->reason_phrase);
+
+  ne_request_destroy(request);
+  ne_xml_destroy(error_parser);
+
+  /* first, check to see if neon itself got an error */
+  if (rv != NE_OK)
+    {
+      const char *msg = apr_psprintf(pool, "%s of %s", method, url);
+      return svn_ra_dav__convert_error(session, msg, rv, pool);
+    }
+
+  /* next, check to see if a <D:error> was discovered */
+  if (pc->err != NULL)
+    return pc->err;
+  
+  if ((*code < 200) || (*code >= 300))
+    /* Bad http status, but error-parser didn't build an svn_error_t
+       for some reason.  Return a generic error instead.*/
+    return svn_error_createf(APR_EGENERAL, 0, NULL, pool,
+                             "%s of %s returned status code %d (%s)",
+                             method, url, *code, code_desc);
+
+  return SVN_NO_ERROR;
+}
+
+
 
 
 
