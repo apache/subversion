@@ -204,7 +204,11 @@ repos_to_repos_copy (svn_stringbuf_t *src_url,
 
   /* Fetch RA commit editor. */
   SVN_ERR (ra_lib->get_commit_editor
-           (sess, &editor, &edit_baton, message, NULL, NULL, NULL, NULL));
+           (sess, &editor, &edit_baton,
+            NULL,  /* change this if ever want to return new_rev */
+            NULL,  /* change this if ever want to return commit date */
+            NULL,  /* change this if ever want to return commit author */
+            message, NULL, NULL, NULL, NULL));
 
   /* Drive that editor, baby! */
   SVN_ERR (editor->open_root (edit_baton, youngest, &root_baton));
@@ -351,7 +355,11 @@ wc_to_repos_copy (svn_stringbuf_t *src_path,
 
   /* Fetch RA commit editor. */
   SVN_ERR (ra_lib->get_commit_editor
-           (sess, &editor, &edit_baton, message, NULL, NULL, NULL, NULL));
+           (sess, &editor, &edit_baton,
+            NULL,  /* change this if ever want to return new_rev */
+            NULL,  /* change this if ever want to return commit date */
+            NULL,  /* change this if ever want to return commit author */
+            message, NULL, NULL, NULL, NULL));
 
   /* Co-mingle the before- and after-editors with the commit
      editor. */

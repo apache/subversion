@@ -53,16 +53,26 @@ typedef svn_error_t *(*svn_ra_set_wc_prop_func_t) (void *close_baton,
                                                    svn_stringbuf_t *value);
 
 
-/* A function type for "cleaning up" after a commit.  The client layer
-   supplies this routine to an RA layer.  RA calls this routine on
-   each PATH that was committed, allowing the client to bump revision
-   numbers, possibly recursively. */
+/* Function type for post-commit processing.  PATH is the path that
+   was committed, relative to the start of the commit edit (see
+   get_commit_editor in svn_ra_plugin_t).  NEW_REV is the revision
+   number resulting from the commit, REV_DATE is the server-side date
+   of the commit, REV_AUTHOR is the svn (i.e., server-authenticated)
+   name of the committer.
+
+   If RECURSE is set and PATH is a directory, then do post-commit
+   processing on all versioned objects at or under PATH.  This is
+   usually done for newly added trees.
+
+   Typically, the client layer supplies this routine to an RA layer,
+   which calls this routine on each PATH that was committed, allowing
+   the client to bump revision numbers, possibly recursively.  */
 typedef svn_error_t *(*svn_ra_close_commit_func_t) (void *close_baton,
                                                     svn_stringbuf_t *path,
                                                     svn_boolean_t recurse,
                                                     svn_revnum_t new_rev,
-                                                    svn_string_t *rev_date,
-                                                    svn_string_t *rev_author);
+                                                    const char *rev_date,
+                                                    const char *rev_author);
 
 /* A function type for retrieving the youngest revision from a repos.   */
 typedef svn_error_t *(*svn_ra_get_latest_revnum_func_t) 
@@ -257,31 +267,40 @@ typedef struct svn_ra_plugin_t
                                       svn_revnum_t *revision,
                                       apr_time_t tm);
 
-  /* Begin a commit against `rev:path' using LOG_MSG as the log
-     message.  `rev' is the argument that will be passed to
-     open_root(), and `path' is built into the SESSION_BATON's URL.
-     
-     RA returns an *EDITOR and *EDIT_BATON capable of transmitting a
-     commit to the repository, which is then driven by the client.
+  /* Set *EDITOR and *EDIT_BATON to an editor for committing changes
+     to the repository, using LOG_MSG as the log message.  The
+     revisions being committed against are passed to the editor
+     functions, starting with the rev argument to open_root.  The path
+     root of the commit is in the SESSION_BATON's url.
 
-     The client may supply three functions to the RA layer, each of
-     which requires the CLOSE_BATON:
+     These three functions all share CLOSE_BATON:
 
-       * The GET_FUNC will be used by the RA layer to fetch any WC
-         properties during the commit.
+       * GET_FUNC is used by the RA layer to fetch any WC properties
+         during the commit.
 
-       * The SET_FUNC will be used by the RA layer to set any WC
-         properties, after the commit completes.
+       * SET_FUNC is used by the RA layer to set any WC properties,
+         after the commit completes. 
 
-       * The CLOSE_FUNC will be used by the RA layer to bump the
-         revisions of each committed item, after the commit completes.
+       * CLOSE_FUNC is used by the RA layer to bump the revisions of
+         each committed item, after the commit completes.  It may be
+         called multiple times.
 
      Any of these functions may be null.
-          
+
+     After the editor's close_edit function returns successfully,
+     *NEW_REV, *COMMITTED_DATE, and *COMMITTED_AUTHOR hold the new
+     revision, the repository-side date, and repository-side author
+     (i.e., the one recorded as the author of the commit in the
+     repository), respectively, with the latter two allocated in the
+     session.  Any of NEW_REV, COMMITTED_DATE, or COMMITTED_AUTHOR may
+     be null, in which case not touched.
   */
   svn_error_t *(*get_commit_editor) (void *session_baton,
                                      const svn_delta_edit_fns_t **editor,
                                      void **edit_baton,
+                                     svn_revnum_t *new_rev,
+                                     const char **committed_date,
+                                     const char **committed_author,
                                      svn_stringbuf_t *log_msg,
                                      svn_ra_get_wc_prop_func_t get_func,
                                      svn_ra_set_wc_prop_func_t set_func,

@@ -65,7 +65,7 @@ struct edit_baton
   /* These are defined only if the caller wants close_edit() to bump
      revisions */
   svn_revnum_t new_rev;
-  svn_bump_func_t bump_func;
+  svn_delta_bump_func_t bump_func;
 
   void *bump_baton;
 };
@@ -332,7 +332,7 @@ svn_delta_get_commit_track_editor (svn_delta_edit_fns_t **editor,
                                    apr_pool_t *pool,
                                    apr_hash_t *committed_targets,
                                    svn_revnum_t new_rev,
-                                   svn_bump_func_t bump_func,
+                                   svn_delta_bump_func_t bump_func,
                                    void *bump_baton)
 {
   struct edit_baton *eb = apr_pcalloc (pool, sizeof (*eb));

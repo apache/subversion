@@ -336,7 +336,13 @@ import (svn_stringbuf_t *path,
 }
 
 
-/* Import a tree or commit changes from a working copy.
+/* Import a tree or commit changes from a working copy.  
+ *
+ * Set *COMMITTED_REVISION, *COMMITTED_DATE, and *COMMITTED_AUTHOR to
+ * the number, server-side date, and author of the new revision,
+ * respectively.  Any of these may be NULL, in which case not touched.
+ * If not NULL, but some or all of the information is unavailable, set
+ * to SVN_INVALID_REVNUM, NULL, and/or NULL respectively.
  *
  * BEFORE_EDITOR, BEFORE_EDIT_BATON and AFTER_EDITOR, AFTER_EDIT_BATON
  * are optional pre- and post-commit editors, wrapped around the
@@ -387,7 +393,10 @@ import (svn_stringbuf_t *path,
  *   don't need it right now.
  */
 static svn_error_t *
-send_to_repos (const svn_delta_edit_fns_t *before_editor,
+send_to_repos (svn_revnum_t *committed_rev,
+               const char **committed_date,
+               const char **committed_author,
+               const svn_delta_edit_fns_t *before_editor,
                void *before_edit_baton,
                const svn_delta_edit_fns_t *after_editor,
                void *after_edit_baton,                   
@@ -420,8 +429,11 @@ send_to_repos (const svn_delta_edit_fns_t *before_editor,
   struct svn_wc_close_commit_baton ccb;
   apr_hash_t *committed_targets;
   
-  ccb.prefix_path	= base_dir;
+  /* Note: if you ever make ccb.pool a subpool of pool, then change
+     the assignments to committed_date and committed_author near the
+     end of this function, as they'll need to allocate new storage. */
   ccb.pool		= pool;
+  ccb.prefix_path	= base_dir;
   committed_targets	= apr_hash_make (pool);
 
   if (url) 
@@ -517,6 +529,9 @@ send_to_repos (const svn_delta_edit_fns_t *before_editor,
       SVN_ERR (ra_lib->get_commit_editor
                (session,
                 &editor, &edit_baton,
+                committed_rev,
+                committed_date,
+                committed_author,
                 log_msg,
                 /* wc prop fetching routine */
                 is_import ? NULL : svn_wc_get_wc_prop,
@@ -607,6 +622,14 @@ send_to_repos (const svn_delta_edit_fns_t *before_editor,
     /* We were committing to RA, so close the session. */
     SVN_ERR (ra_lib->close (session));
 
+  /* Strictly speaking, no copying is necessary, as the session's pool
+     is the same as pool right now.  But I'd rather not rely on that
+     always being true.  */
+  if (committed_date)
+    *committed_date = apr_pstrdup (pool, *committed_date);
+  if (committed_author)
+    *committed_author = apr_pstrdup (pool, *committed_author);
+
   return SVN_NO_ERROR;
 }
 
@@ -616,7 +639,10 @@ send_to_repos (const svn_delta_edit_fns_t *before_editor,
 /*** Public Interfaces. ***/
 
 svn_error_t *
-svn_client_import (const svn_delta_edit_fns_t *before_editor,
+svn_client_import (svn_revnum_t *committed_rev,
+                   const char **committed_date,
+                   const char **committed_author,
+                   const svn_delta_edit_fns_t *before_editor,
                    void *before_edit_baton,
                    const svn_delta_edit_fns_t *after_editor,
                    void *after_edit_baton,
@@ -629,7 +655,10 @@ svn_client_import (const svn_delta_edit_fns_t *before_editor,
                    svn_revnum_t revision,
                    apr_pool_t *pool)
 {
-  SVN_ERR (send_to_repos (before_editor, before_edit_baton,
+  SVN_ERR (send_to_repos (committed_rev,
+                          committed_date,
+                          committed_author,
+                          before_editor, before_edit_baton,
                           after_editor, after_edit_baton,                   
                           path, NULL,
                           url, new_entry,
@@ -643,7 +672,10 @@ svn_client_import (const svn_delta_edit_fns_t *before_editor,
 
 
 svn_error_t *
-svn_client_commit (const svn_delta_edit_fns_t *before_editor,
+svn_client_commit (svn_revnum_t *committed_rev,
+                   const char **committed_date,
+                   const char **committed_author,
+                   const svn_delta_edit_fns_t *before_editor,
                    void *before_edit_baton,
                    const svn_delta_edit_fns_t *after_editor,
                    void *after_edit_baton, 
@@ -693,7 +725,10 @@ svn_client_commit (const svn_delta_edit_fns_t *before_editor,
         }
     }
 
-  err = send_to_repos (before_editor, before_edit_baton,
+  err = send_to_repos (committed_rev,
+                       committed_date,
+                       committed_author,
+                       before_editor, before_edit_baton,
                        after_editor, after_edit_baton,                   
                        base_dir,
                        condensed_targets,

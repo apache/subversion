@@ -96,6 +96,15 @@ typedef struct
   /* Log message for the commit. */
   svn_stringbuf_t *log_msg;
 
+  /* The new revision created by this commit. */
+  svn_revnum_t *new_rev;
+
+  /* The date (according to the repository) of this commit. */
+  const char **committed_date;
+
+  /* The author (also according to the repository) of this commit. */
+  const char **committed_author;
+
 } commit_ctx_t;
 
 typedef struct
@@ -1046,7 +1055,10 @@ static svn_error_t * commit_close_edit(void *edit_baton)
   commit_ctx_t *cc = edit_baton;
 
   /* ### different pool? */
-  SVN_ERR( svn_ra_dav__merge_activity(cc->ras,
+  SVN_ERR( svn_ra_dav__merge_activity(cc->new_rev,
+                                      cc->committed_date,
+                                      cc->committed_author,
+                                      cc->ras,
                                       cc->ras->root.path,
                                       cc->activity_url,
                                       cc->valid_targets,
@@ -1116,6 +1128,9 @@ svn_error_t * svn_ra_dav__get_commit_editor(
   void *session_baton,
   const svn_delta_edit_fns_t **editor,
   void **edit_baton,
+  svn_revnum_t *new_rev,
+  const char **committed_date,
+  const char **committed_author,
   svn_stringbuf_t *log_msg,
   svn_ra_get_wc_prop_func_t get_func,
   svn_ra_set_wc_prop_func_t set_func,
@@ -1146,6 +1161,9 @@ svn_error_t * svn_ra_dav__get_commit_editor(
   cc->close_func = close_func;
   cc->close_baton = close_baton;
   cc->log_msg = log_msg;
+  cc->new_rev = new_rev;
+  cc->committed_date = committed_date;
+  cc->committed_author = committed_author;
 
   cc->deleted = apr_array_make(ras->pool, 10, sizeof(const char *));
 

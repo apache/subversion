@@ -546,6 +546,9 @@ static int end_element(void *userdata, const struct ne_xml_elm *elm,
 }
 
 svn_error_t * svn_ra_dav__merge_activity(
+    svn_revnum_t *new_rev,
+    const char **committed_date,
+    const char **committed_author,
     svn_ra_session_t *ras,
     const char *repos_url,
     const char *activity_url,
@@ -610,6 +613,15 @@ svn_error_t * svn_ra_dav__merge_activity(
         SVN_ERR( (*close_commit)(close_baton, path_str, FALSE,
                                  mc.rev, NULL, NULL) );
     }
+
+  /* Report the revision back, but not date and author, since we don't
+     have them. */
+  if (new_rev)
+    *new_rev = mc.rev;
+  if (committed_date)
+    *committed_date = NULL;
+  if (committed_author)
+    *committed_author = NULL;
 
   return NULL;
 }

@@ -150,8 +150,8 @@ static svn_error_t *
 process_committed (svn_stringbuf_t *path,
                    svn_boolean_t recurse,
                    svn_revnum_t new_revnum,
-                   svn_string_t *rev_date,
-                   svn_string_t *rev_author,
+                   const char *rev_date,
+                   const char *rev_author,
                    apr_pool_t *pool)
 {
   svn_error_t *err;
@@ -232,9 +232,9 @@ process_committed (svn_stringbuf_t *path,
                            SVN_ENTRY_ATTR_COMMITTED_REV,
                            svn_stringbuf_create (revstr, pool),
                            SVN_ENTRY_ATTR_COMMITTED_DATE,
-                           svn_stringbuf_create_from_string (rev_date, pool),
+                           svn_stringbuf_create (rev_date, pool),
                            SVN_ENTRY_ATTR_LAST_AUTHOR,
-                           svn_stringbuf_create_from_string (rev_author, pool),
+                           svn_stringbuf_create (rev_author, pool),
                            NULL);
 
 
@@ -321,8 +321,8 @@ svn_wc_process_committed (void *baton,
                           svn_stringbuf_t *target,
                           svn_boolean_t recurse,
                           svn_revnum_t new_revnum,
-                          svn_string_t *rev_date,
-                          svn_string_t *rev_author)
+                          const char *rev_date,
+                          const char *rev_author)
 {
   struct svn_wc_close_commit_baton *bumper =
     (struct svn_wc_close_commit_baton *) baton;
