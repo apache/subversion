@@ -224,7 +224,7 @@ write_directory_rep(struct parse_baton *pb, struct entry *entry,
   void *val;
   svn_stream_t *out = pb->rev_stream;
   struct entry *child;
-  const char *name, *id;
+  const char *name, *rep;
   apr_off_t offset;
 
   /* Record the rev file offset of the directory data. */
@@ -240,10 +240,12 @@ write_directory_rep(struct parse_baton *pb, struct entry *entry,
       apr_hash_this(hi, &key, NULL, &val);
       name = key;
       child = val;
-      id = node_rev_id(child, pool);
+      rep = apr_psprintf(pool, "%s %s",
+                         (child->children == NULL) ? "file" : "dir",
+                         node_rev_id(child, pool));
       SVN_ERR(svn_stream_printf(out, pool, "K %" APR_SIZE_T_FMT "\n%s\n"
                                 "V %" APR_SIZE_T_FMT "\n%s\n",
-                                strlen(name), name, strlen(id), id));
+                                strlen(name), name, strlen(rep), rep));
     }
 
   /* Record the length of the directory data. */
@@ -321,6 +323,7 @@ write_node_rev(struct parse_baton *pb, struct entry *entry, apr_pool_t *pool)
   else
     SVN_ERR(svn_stream_printf(out, pool, "copyroot: %s\n",
                               node_rev_id(entry->copyroot, pool)));
+  SVN_ERR(svn_stream_printf(out, pool, "\n"));
 
   return SVN_NO_ERROR;
 }
@@ -559,11 +562,22 @@ svn_error_t *close_revision(void *baton)
 {
   struct parse_baton *pb = baton;
   apr_pool_t *pool = svn_pool_create(pb->pool);
+  struct entry *root = get_root(pb, pb->current_rev);
+  apr_off_t offset;
 
-  SVN_ERR(write_entry(pb, get_root(pb, pb->current_rev), pool));
-  SVN_ERR(svn_io_file_close(pb->rev_file, pool));
+  SVN_ERR(write_entry(pb, root, pool));
+
+  /* Get the rev file offset of the changed-path data. */
+  offset = 0;
+  SVN_ERR(svn_io_file_seek(pb->rev_file, APR_CUR, &offset, pool));
+
   /* XXX changed-path data goes here */
-  /* XXX offsets to root node and changed-path data go here */
+
+  /* Write out the offsets for the root node and changed-path data. */
+  SVN_ERR(svn_stream_printf(pb->rev_stream, pool,
+                            "\n%" APR_OFF_T_FMT " %" APR_OFF_T_FMT "\n",
+                            root->node_off, offset));
+  SVN_ERR(svn_io_file_close(pb->rev_file, pool));
   svn_pool_destroy(pool);
   return SVN_NO_ERROR;
 }
