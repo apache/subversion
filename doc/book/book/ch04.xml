@@ -7,20 +7,78 @@
 
   <simplesect>
 
-    <para>Branches and tags are general concepts common to almost all
-      version control systems.  If you're not familiar with these
-      ideas, you can find a good introductory explanation in Karl
-      Fogel's free CVS book: <systemitem
-      class="url">http://cvsbook.red-bean.com/cvsbook.html#Branching_Basics</systemitem></para><!--
-      ###TODO we should write this part, not point to Karl's book. :)
-      -Fitz -->
+    <para>Branching, tagging, and merging are concepts common to
+      almost all version control systems.  If you're not familiar with
+      these ideas, we provide a good introduction in this chapter.  If
+      you are familiar, then hopefully you'll find it interesting to
+      see how Subversion implements these ideas.</para>
+
+    <para>Either way, maintaining branches is a fundamental part of
+      version control.  If you're going to allow Subversion to manage
+      your data, then this is a feature you'll eventually come to
+      depend on.</para>
+
+  </simplesect>
+
+  <!-- ================================================================= -->
+  <!-- ======================== SECTION 1 ============================== -->
+  <!-- ================================================================= -->
+  <sect1 id="svn-ch-4-sect-1">
+    <title>What's a branch?</title> 
+
+    <para>A good way to explain the idea of a "branch" is with an
+    example.</para>
+
+    <para>Suppose it's your job to maintain a document for a division
+      in your company, a handbook of some sort.  One day a different
+      division asks you for the same handbook, but with a few parts
+      'tweaked' for their specific department, since they do things
+      slightly differently.</para>
+
+    <para>What do you do in this situation?  You do the obvious thing:
+      you make a second copy of your document, and begin maintaining
+      the two copies separately.  As each department asks you to make
+      specific changes, you incorporate them into one copy or the
+      other.</para>
+
+    <para>Of course, often you want to make the same change to *both*
+      copies.  For example, if you discover a typo in the first copy,
+      it's very likely that the same typo exists in the second copy.
+      The two documents are almost the same, after all; they only
+      differ in small, specific ways.</para>
+
+    <para>This is the basic concept of a "branch" -- namely, a line of
+      development that exists independently of another line, yet still
+      shares a common history if you look far enough back in time.  A
+      branch always begins life as a copy of something, and moves on
+      from there, generating its own history.</para>
+
+      <figure id="svn-ch4-dia1">
+        <title>Branches of development</title>
+        <graphic fileref="images/ch04dia1.png"/>
+      </figure>
+
+    <para>Subversion has commands to help you maintain parallel
+      branches of your files and directories.  It allows you to create
+      branches by copying your data, and remembers that the copies are
+      related to one another.  It also helps you duplicate changes
+      from one branch to another.  Finally, it can make portions of
+      your working copy reflect different branches, so that you can
+      "mix and match" different lines of development in your daily
+      work.</para>
+
+  </sect1>
+  
+  <!-- ================================================================= -->
+  <!-- ======================== SECTION 2 ============================== -->
+  <!-- ================================================================= -->
+  <sect1 id="svn-ch-4-sect-2">
+    <title>Branching with svn cp</title> 
 
     <para>At this point, you should understand how each commit creates
-      an entire new filesystem tree in the repository.  (If not, read
-      revisions, <xref linkend="svn-ch-2"/><!-- ###TODO Make this xref
-      (Transactions and Revision Numbers) more specific -Fitz -->,
-      <xref linkend="svn-ch-2"/><!-- ###TODO Make this xref (Revision
-      numbers are different now) more specific -Fitz -->.)</para>
+      an entire new filesystem tree (called a "revision") in the
+      repository.  If not, go back and read about revisions in  <xref
+      linkend="svn-ch-2-sect-3.2"/></para>
 
     <para>As you may have suspected, the filesystem doesn't grow 652
       new inodes each time a new revision is created.  Instead, each
@@ -32,14 +90,6 @@
       copies</quote> of things.  These cheap copies are nothing more
       than directory entries that point to existing nodes.  And this
       is the basis of tags and branches.</para>
-
-  </simplesect>
-  
-  <!-- ================================================================= -->
-  <!-- ======================== SECTION 1 ============================== -->
-  <!-- ================================================================= -->
-  <sect1 id="svn-ch-4-sect-1">
-    <title>Branching with svn cp</title> 
     
     <para>Suppose we have a repository whose head tree is revision 82.
       In this repository is a subdirectory <filename>mooIRC</filename>
@@ -132,9 +182,9 @@
   </sect1>
 
   <!-- ================================================================= -->
-  <!-- ======================== SECTION 2 ============================== -->
+  <!-- ======================== SECTION 3 ============================== -->
   <!-- ================================================================= -->
-  <sect1 id="svn-ch-4-sect-2">
+  <sect1 id="svn-ch-4-sect-3">
     <title>Switching to a Branch with svn switch</title>
 
     <para>The <command>svn switch</command> command allows you to
@@ -179,9 +229,9 @@
   </sect1>
 
   <!-- ================================================================= -->
-  <!-- ======================== SECTION 3 ============================== -->
+  <!-- ======================== SECTION 4 ============================== -->
   <!-- ================================================================= -->
-  <sect1 id="svn-ch-4-sect-3">
+  <sect1 id="svn-ch-4-sect-4">
     <title>Moving changes with svn merge</title>
 
     <para>Suppose a team of programmers working on the
@@ -222,9 +272,9 @@
   </sect1>
 
   <!-- ================================================================= -->
-  <!-- ======================== SECTION 4 ============================== -->
+  <!-- ======================== SECTION 5 ============================== -->
   <!-- ================================================================= -->
-  <sect1 id="svn-ch-4-sect-4">
+  <sect1 id="svn-ch-4-sect-5">
     <title>Rolling back a change with svn merge</title>
 
     <para>Another common use for <command>svn merge</command> is for
@@ -292,9 +342,9 @@
 
 
   <!-- ================================================================= -->
-  <!-- ======================== SECTION 5 ============================== -->
+  <!-- ======================== SECTION 6 ============================== -->
   <!-- ================================================================= -->
-  <sect1 id="svn-ch-4-sect-5">
+  <sect1 id="svn-ch-4-sect-6">
     <title>Removing a Branch or Tag with svn rm</title>
 
     <para>The <command>svn rm</command> command can operate on URLs.
