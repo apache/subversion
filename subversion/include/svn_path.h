@@ -356,6 +356,24 @@ const char *svn_path_is_child (const char *path1,
                                const char *path2,
                                apr_pool_t *pool);
 
+/** 
+ * @since New in 1.2.
+ *
+ * Check whether @a path is a valid Subversion path.
+ *
+ * A valid Subversion pathname is a UTF-8 string without control
+ * characters.  "Valid" means Subversion can store the pathname in
+ * a repository.  There may be other, OS-specific, limitations on
+ * what paths can be represented in a working copy.
+ *
+ * ASSUMPTION: @a path is a valid UTF-8 string.  This function does
+ * not check UTF-8 validity.
+ *
+ * Return @c SVN_NO_ERROR if valid and @c SVN_ERR_FS_PATH_SYNTAX if
+ * invalid.
+ */
+svn_error_t *svn_path_check_valid (const char *path, apr_pool_t *pool);
+
 
 /** URI/URL stuff
  *

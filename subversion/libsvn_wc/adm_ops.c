@@ -879,6 +879,8 @@ svn_wc_add (const char *path,
   svn_node_kind_t kind;
   apr_uint32_t modify_flags = 0;
   svn_wc_adm_access_t *adm_access;
+
+  SVN_ERR (svn_path_check_valid (path, pool));
   
   /* Make sure something's there. */
   SVN_ERR (svn_io_check_path (path, &kind, pool));

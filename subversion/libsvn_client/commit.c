@@ -176,6 +176,8 @@ import_file (const svn_delta_editor_t *editor,
   svn_node_kind_t kind;
   svn_boolean_t is_special;
 
+  SVN_ERR (svn_path_check_valid (path, pool));
+
   SVN_ERR (svn_io_check_special_path (path, &kind, &is_special, pool));
 
   if (kind == svn_node_unknown)
@@ -275,6 +277,8 @@ import_dir (const svn_delta_editor_t *editor,
   apr_hash_t *dirents;
   apr_hash_index_t *hi;
   apr_array_header_t *ignores;
+
+  SVN_ERR (svn_path_check_valid (path, pool));
 
   SVN_ERR (svn_wc_get_default_ignores (&ignores, ctx->config, pool));
 

@@ -1069,17 +1069,14 @@ def commit_uri_unsafe(sbox):
   if svntest.main.windows or sys.platform == 'cygwin':
     angle_name = '_angle_'
     nasty_name = '#![]{}()__%'
-    tab_name   = 'tab-path'
   else:
     angle_name = '<angle>'
     nasty_name = '#![]{}()<>%'
-    tab_name   = "tab\tpath"
   
   # Make some convenient paths.
   hash_dir = os.path.join(wc_dir, '#hash#')
   nasty_dir = os.path.join(wc_dir, nasty_name)
   space_path = os.path.join(wc_dir, 'A', 'D', 'space path')
-  tab_path = os.path.join(wc_dir, 'A', 'D', 'G', tab_name)
   bang_path = os.path.join(wc_dir, 'A', 'D', 'H', 'bang!')
   bracket_path = os.path.join(wc_dir, 'A', 'D', 'H', 'bra[ket')
   brace_path = os.path.join(wc_dir, 'A', 'D', 'H', 'bra{e')
@@ -1091,7 +1088,6 @@ def commit_uri_unsafe(sbox):
   os.mkdir(hash_dir)
   os.mkdir(nasty_dir)
   svntest.main.file_append(space_path, "This path has a space in it.")
-  svntest.main.file_append(tab_path, "This path has a tab in it.")
   svntest.main.file_append(bang_path, "This path has a bang in it.")
   svntest.main.file_append(bracket_path, "This path has a bracket in it.")
   svntest.main.file_append(brace_path, "This path has a brace in it.")
@@ -1103,7 +1099,6 @@ def commit_uri_unsafe(sbox):
   add_list = [hash_dir,
               nasty_dir, # not xml-safe
               space_path,
-              tab_path,
               bang_path,
               bracket_path,
               brace_path,
@@ -1119,7 +1114,6 @@ def commit_uri_unsafe(sbox):
     '#hash#' : Item(verb='Adding'),
     nasty_name : Item(verb='Adding'),
     'A/D/space path' : Item(verb='Adding'),
-    'A/D/G/' + tab_name : Item(verb='Adding'),
     'A/D/H/bang!' : Item(verb='Adding'),
     'A/D/H/bra[ket' : Item(verb='Adding'),
     'A/D/H/bra{e' : Item(verb='Adding'),
@@ -1871,6 +1865,36 @@ def mods_in_schedule_delete(sbox):
   fp.close()
 
 
+#----------------------------------------------------------------------
+
+def tab_test(sbox):
+  "tabs in paths"
+  # For issue #1954.
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  tab_file = os.path.join(wc_dir, 'A', "tab\tfile")
+  tab_dir  = os.path.join(wc_dir, 'A', "tab\tdir")
+
+  svntest.main.file_append(tab_file, "This file has a tab in it.")
+  os.mkdir(tab_dir)
+
+  def match_bad_tab_path(path, errlines):
+    match_re = ".*: Invalid control character '0x09' in path '" + path + "'.*"
+    for line in errlines:
+      if re.match (match_re, line):
+        break
+    else:
+      raise svntest.Failure ("Failed to find match_re in " + str(errlines))
+    
+  outlines, errlines = svntest.main.run_svn(1, 'add', tab_file)
+  match_bad_tab_path(tab_file, errlines)
+
+  outlines, errlines = svntest.main.run_svn(1, 'add', tab_dir)
+  match_bad_tab_path(tab_dir, errlines)
+
+
 ########################################################################
 # Run the tests
 
@@ -1908,6 +1932,7 @@ test_list = [ None,
               commit_with_bad_log_message,
               from_wc_top_with_bad_editor,
               mods_in_schedule_delete,
+              tab_test,
              ]
 
 if __name__ == '__main__':
