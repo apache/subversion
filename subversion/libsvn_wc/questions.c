@@ -163,12 +163,14 @@ timestamps_equal_p (svn_boolean_t *equal_p,
 
 
 /* Set *DIFFERENT_P to non-zero if FILENAME1 and FILENAME2 have
-   different sizes, else set to zero. */
+   different sizes, else set to zero.  If the size of one or both of
+   the files cannot be determined, then the sizes are not "definitely"
+   different, so *DIFFERENT_P will be set to 0. */
 static svn_error_t *
-filesizes_different_p (svn_boolean_t *different_p,
-                       svn_string_t *filename1,
-                       svn_string_t *filename2,
-                       apr_pool_t *pool)
+filesizes_definitely_different_p (svn_boolean_t *different_p,
+                                  svn_string_t *filename1,
+                                  svn_string_t *filename2,
+                                  apr_pool_t *pool)
 {
   apr_finfo_t finfo1;
   apr_finfo_t finfo2;
@@ -279,7 +281,7 @@ svn_wc__files_contents_same_p (svn_boolean_t *same,
   svn_error_t *err;
   svn_boolean_t q;
 
-  err = filesizes_different_p (&q, file1, file2, pool);
+  err = filesizes_definitely_different_p (&q, file1, file2, pool);
   if (err)
     return err;
 
@@ -341,9 +343,9 @@ svn_wc__file_modified_p (svn_boolean_t *modified_p,
       
       /* Check if the the local and textbase file have *definitely*
          different filesizes. */
-      err = filesizes_different_p (&different_filesizes,
-                                   filename, textbase_filename,
-                                   pool);
+      err = filesizes_definitely_different_p (&different_filesizes,
+                                              filename, textbase_filename,
+                                              pool);
       if (err) return err;
       
       if (different_filesizes) 
