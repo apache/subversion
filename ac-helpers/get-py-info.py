@@ -21,7 +21,12 @@ if len(sys.argv) != 2:
   usage()
 
 if sys.argv[1] == '--includes':
-  print sysconfig.get_python_inc()
+  inc = sysconfig.get_python_inc()
+  plat = sysconfig.get_python_inc(plat_specific=1)
+  if inc == plat:
+    print "-I" + inc
+  else:
+    print "-I%s -I%s" % (inc, plat)
   sys.exit(0)
 
 usage()

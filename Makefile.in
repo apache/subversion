@@ -70,6 +70,9 @@ APACHE_TARGET = @APACHE_TARGET@
 APACHE_LIBEXECDIR = $(DESTDIR)@APACHE_LIBEXECDIR@
 
 SWIG = @SWIG@
+SWIG_INCLUDES = -I$(SWIG_SRC_DIR) \
+                -I$(abs_srcdir)/subversion/include \
+                $(SVN_APR_INCLUDES)
 SWIG_PY_INCLUDES = @SWIG_PY_INCLUDES@
 SWIG_PY_SETUP_LDFLAGS = @SWIG_PY_SETUP_LDFLAGS@
 SWIG_JAVA_INCLUDES = @SWIG_JAVA_INCLUDES@
@@ -95,6 +98,14 @@ COMPILE_SWIG_JAVA = $(LIBTOOL) $(LTFLAGS) --mode=compile $(CC) $(CPPFLAGS) -DSWI
 
 LINK = $(LIBTOOL) $(LTFLAGS) --mode=link $(CC) $(LT_LDFLAGS) $(CFLAGS) $(LDFLAGS) -rpath $(libdir)
 LINK_APACHE_MOD = $(LIBTOOL) $(LTFLAGS) --mode=link $(CC) $(LT_LDFLAGS) $(CFLAGS) $(LDFLAGS) -rpath $(APACHE_LIBEXECDIR)
+
+RUN_SWIG_PY = $(SWIG) -c -python -noproxy $(SWIG_INCLUDES) $(SWIG_PY_INCLUDES) -o $@ $<
+RUN_SWIG_JAVA = $(SWIG) -c -java -noproxy -module 'Subversion' -package 'org.tigris.subversion.swig' $(SWIG_INCLUDES) -o $@ $<
+
+COMPILE_PY_WRAPPER = ??? $(SWIG_INCLUDES) -c -o $@ $<
+COMPILE_JAVA_WRAPPER = \
+  echo "ERROR: compilation of Java wrappers not yet supported" ; exit 1
+
 
 INSTALL = @INSTALL@
 INSTALL_LIB = $(LIBTOOL) --mode=install $(INSTALL)
