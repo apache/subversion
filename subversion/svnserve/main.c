@@ -51,14 +51,6 @@ static void sigchld_handler(int signo)
   /* Nothing to do; we just need to interrupt the accept(). */
 }
 
-#define INT_ERR(expr)                                       \
-  do {                                                      \
-    svn_error_t *svnserve_err__temp = (expr);               \
-    if (svnserve_err__temp) {                               \
-      svn_handle_error (svnserve_err__temp, stderr, FALSE); \
-      return EXIT_FAILURE; }                                \
-  } while (0)
-
 int main(int argc, const char *const *argv)
 {
   svn_boolean_t listen_once = FALSE, daemon_mode = FALSE, tunnel_mode = FALSE;
@@ -104,8 +96,8 @@ int main(int argc, const char *const *argv)
           break;
 
         case 'r':
-          INT_ERR(svn_utf_cstring_to_utf8(&root, arg, NULL, pool));
-          INT_ERR(svn_path_get_absolute(&root, root, pool));
+          SVN_INT_ERR(svn_utf_cstring_to_utf8(&root, arg, NULL, pool));
+          SVN_INT_ERR(svn_path_get_absolute(&root, root, pool));
           break;
         }
     }
