@@ -1,6 +1,6 @@
-Version 1.0.2  [in progress]
-(???, from /branches/1.0.x)
-http://svn.collab.net/repos/svn/tags/???
+Version 1.0.2
+(15 April 2004, from /branches/1.0.x)
+http://svn.collab.net/repos/svn/tags/1.0.2
 
  User-visible changes:
  * fixed: segfault when remotely deleting svn:author property.
