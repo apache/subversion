@@ -134,9 +134,18 @@ int svn_config_enumerate (svn_config_t *cfg, const char *section,
 
 /*** Setting up an initial configuration area. ***/
 
-/* Ensure that the user's ~/.subversion/ area exists, and create no-op
+/* Try to ensure that the user's ~/.subversion/ area exists, and create no-op
    template files for any absent config files.  Use POOL for any
-   temporary allocation.  */
+   temporary allocation.  
+
+   Don't error if something exists but is the wrong kind (for example,
+   ~/.subversion exists but is a file, or ~/.subversion/proxies exists
+   but is a directory).
+
+   Also don't error if try to create something and fail -- it's okay
+   for the config area or its contents not to be created.  But if
+   succeed in creating a config template file, return error if unable
+   to initialize its contents.  */
 svn_error_t *svn_config_ensure (apr_pool_t *pool);
 
 

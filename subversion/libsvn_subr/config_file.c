@@ -426,13 +426,7 @@ svn_config_ensure (apr_pool_t *pool)
   const char *path;
   enum svn_node_kind kind;
   apr_status_t apr_err;
-
-  /* ### We don't error if something exists but is the wrong kind
-   * (for example, ~/.subversion exists but is a file, or
-   * ~/.subversion/proxies exists but is a directory).  Not sure what
-   * a caller would do with such an error.  If we can think of
-   * something, we should make SVN_ERR_CONFIG_OBSTRUCTED etc, though.
-   */
+  svn_error_t *err;
 
   /* Ensure that the config directory exists.  */
   SVN_ERR (svn_config__user_config_path (&path, NULL, pool));
@@ -441,14 +435,24 @@ svn_config_ensure (apr_pool_t *pool)
     {
       apr_err = apr_dir_make (path, APR_OS_DEFAULT, pool);
       if (! APR_STATUS_IS_SUCCESS (apr_err))
-        return svn_error_createf
-          (apr_err, 0, 0, pool, "creating config directory `%s'", path);
+        return SVN_NO_ERROR;
     }
+  else if (kind != svn_node_dir)
+    return SVN_NO_ERROR;
+
+  /* Else, there's a configuration directory. */
+
+  /* If we get errors trying to do things below, just stop and return
+     success.  There's no _need_ to init a config directory if
+     something's preventing it. */
 
   /* Ensure that the `README' file exists. */
   SVN_ERR (svn_config__user_config_path
            (&path, SVN_CONFIG__USR_README_FILE, pool));
-  SVN_ERR (svn_io_check_path (path, &kind, pool));
+  err = svn_io_check_path (path, &kind, pool);
+  if (err)
+    return SVN_NO_ERROR;
+
   if (kind == svn_node_none)
     {
       apr_file_t *f;
@@ -565,25 +569,27 @@ svn_config_ensure (apr_pool_t *pool)
                                APR_OS_DEFAULT,
                                pool);
 
-      if (apr_err)
-        return svn_error_createf
-          (apr_err, 0, NULL, pool, "creating config file `%s'", path);
-      
-      apr_err = apr_file_write_full (f, contents, strlen (contents), NULL);
-      if (apr_err)
-        return svn_error_createf (apr_err, 0, NULL, pool, 
-                                  "writing config file `%s'", path);
-      
-      apr_err = apr_file_close (f);
-      if (apr_err)
-        return svn_error_createf (apr_err, 0, NULL, pool, 
-                                  "closing config file `%s'", path);
+      if (APR_STATUS_IS_SUCCESS (apr_err))
+        {
+          apr_err = apr_file_write_full (f, contents, strlen (contents), NULL);
+          if (apr_err)
+            return svn_error_createf (apr_err, 0, NULL, pool, 
+                                      "writing config file `%s'", path);
+          
+          apr_err = apr_file_close (f);
+          if (apr_err)
+            return svn_error_createf (apr_err, 0, NULL, pool, 
+                                      "closing config file `%s'", path);
+        }
     }
 
   /* Ensure that the `proxies' file exists. */
   SVN_ERR (svn_config__user_config_path
            (&path, SVN_CONFIG__USR_PROXY_FILE, pool));
-  SVN_ERR (svn_io_check_path (path, &kind, pool));
+  err = svn_io_check_path (path, &kind, pool);
+  if (err)
+    return SVN_NO_ERROR;
+  
   if (kind == svn_node_none)
     {
       apr_file_t *f;
@@ -635,19 +641,18 @@ svn_config_ensure (apr_pool_t *pool)
                                APR_OS_DEFAULT,
                                pool);
 
-      if (apr_err)
-        return svn_error_createf
-          (apr_err, 0, NULL, pool, "creating config file `%s'", path);
-      
-      apr_err = apr_file_write_full (f, contents, strlen (contents), NULL);
-      if (apr_err)
-        return svn_error_createf (apr_err, 0, NULL, pool, 
-                                  "writing config file `%s'", path);
-      
-      apr_err = apr_file_close (f);
-      if (apr_err)
-        return svn_error_createf (apr_err, 0, NULL, pool, 
-                                  "closing config file `%s'", path);
+      if (APR_STATUS_IS_SUCCESS (apr_err))
+        {
+          apr_err = apr_file_write_full (f, contents, strlen (contents), NULL);
+          if (apr_err)
+            return svn_error_createf (apr_err, 0, NULL, pool, 
+                                      "writing config file `%s'", path);
+          
+          apr_err = apr_file_close (f);
+          if (apr_err)
+            return svn_error_createf (apr_err, 0, NULL, pool, 
+                                      "closing config file `%s'", path);
+        }
     }
 
   return SVN_NO_ERROR;
