@@ -120,22 +120,6 @@ Candidate changes:
     Votes:
       +1: epg, ghudson
 
-  * r13358
-    Fix a case where merge breaks the wc.
-    Justification:
-      We shouldn't be breaking the wc with merges.
-    Branch:
-      1.1.x-r13358 (1.1.x@13358 1.1.x-r13358@HEAD)
-    Votes:
-      +1: breser, philip
-
-  * r11980
-    If a schedule deleted directory has a local mod made to it commit fails.
-    Justification:
-      Leaves the wc in a broken state after a commit.
-    Votes:
-      +1: breser, philip
-
   * r13487
     Fix Python bindings bug that manifested only with SWIG 1.3.24
     and threaded APR. Anything using a log_receiver callback would fail.
@@ -216,3 +200,20 @@ Approved changes (further review is welcome, but not required):
       1.1.x-new-swig r13071:HEAD
     Votes:
       +1: maxb, clkao, philip
+      
+  * r13358
+    Fix a case where merge breaks the wc.
+    Justification:
+      We shouldn't be breaking the wc with merges.
+    Branch:
+      1.1.x-r13358 (1.1.x@13358 1.1.x-r13358@HEAD)
+    Votes:
+      +1: breser, philip, maxb
+
+  * r11980
+    If a schedule deleted directory has a local mod made to it commit fails.
+    Justification:
+      Leaves the wc in a broken state after a commit.
+    Votes:
+      +1: breser, philip, maxb
+
