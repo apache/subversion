@@ -110,12 +110,13 @@ open_berkeley_filesystem (const char **msg)
 
 
 static int
-begin_then_close_transaction (const char **msg)
+trivial_transaction (const char **msg)
 {
   svn_fs_t *fs;
   svn_fs_txn_t *txn;
+  svn_error_t *err;
 
-  *msg = "begin a transaction, then immediately close it";
+  *msg = "begin a txn, check its name, then immediately close it";
 
   /* Open the FS. */
   fs = svn_fs_new (pool);
@@ -128,6 +129,18 @@ begin_then_close_transaction (const char **msg)
   /* Begin a transaction. */
   if (SVN_NO_ERROR != svn_fs_begin_txn (&txn, fs, 0, pool))
     return fail();
+
+  /* Test that it got id "0", since it's the first txn. */
+  {
+    char *txn_name;
+
+    err = svn_fs_txn_name (&txn_name, txn, pool);
+    if (err)
+      return fail();
+
+    if (strcmp (txn_name, "0") != 0)
+      return fail();
+  }
 
   /* Close it. */
   if (SVN_NO_ERROR != svn_fs_close_txn (txn))
@@ -148,7 +161,7 @@ int (*test_funcs[]) (const char **msg) = {
   0,
   create_berkeley_filesystem,
   open_berkeley_filesystem,
-  begin_then_close_transaction,
+  trivial_transaction,
   0
 };
 
