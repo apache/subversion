@@ -768,6 +768,64 @@ svn_delta_get_cancellation_editor (svn_cancel_func_t cancel_func,
 /** @} */
 
 
+/** Path-based editor drives.
+ * 
+ * @defgroup svn_delta_path_delta_drivers path-based delta drivers
+ * @{
+ */
+
+/** Callback function type for svn_delta_path_driver().
+ *
+ * The handler of this callback is given the callback baton @a
+ * callback_baton, @a path, and the @a parent_baton which represents
+ * path's parent directory as created by the editor passed to
+ * svn_delta_path_driver().
+ *
+ * If @a path represents a directory, the handler must return a @a
+ * *dir_baton for @a path, generated from the same editor (so that the
+ * driver can later close that directory).
+ *
+ * If, however, @a path represents a file, the handler should NOT
+ * return any file batons.  It can close any opened or added files
+ * immediately, or delay that close until the end of the edit when
+ * svn_delta_path_driver() returns.
+ *
+ * Finally, if @a parent_baton is @c NULL, then the root of the edit
+ * is also one of the paths passed to svn_delta_path_driver().  The
+ * handler of this callback must call the editor's open_root()
+ * function and return the top-level root dir baton in @a *dir_baton. 
+ */
+typedef svn_error_t *
+(*svn_delta_path_driver_cb_func_t) (void **dir_baton,
+                                    void *parent_baton,
+                                    void *callback_baton,
+                                    const char *path,
+                                    apr_pool_t *pool);
+  
+
+/** Drive @a editor (with its @a edit_baton) in such a way that
+ * each path in @a paths is traversed in a depth-first fashion.  As
+ * each path is hit as part of the editor drive, use @a
+ * callback_func and @a callback_baton to allow the caller to handle
+ * the portion of the editor drive related to that path.  
+ *
+ * Use @a revision as the revision number passed to intermediate
+ * directory openings.  
+ *
+ * Use @a pool for all necessary allocations. 
+ */
+svn_error_t *
+svn_delta_path_driver (const svn_delta_editor_t *editor,
+                       void *edit_baton,
+                       svn_revnum_t revision,
+                       apr_array_header_t *paths,
+                       svn_delta_path_driver_cb_func_t callback_func,
+                       void *callback_baton,
+                       apr_pool_t *pool);
+
+/** @} */
+
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
