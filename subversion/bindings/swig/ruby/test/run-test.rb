@@ -3,6 +3,7 @@
 require "test/unit"
 require "fileutils"
 
+ENV["PATH"] = File.join(Dir.pwd, "..", "..", "..", "svnserve") + ":" + ENV["PATH"]
 ext_dir = File.join(Dir.pwd, ".ext")
 ext_svn_dir = File.join(ext_dir, "svn")
 FileUtils.mkdir_p(ext_svn_dir)

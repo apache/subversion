@@ -588,7 +588,7 @@ install-swig-pl: swig-pl install-swig-pl-lib
 clean-swig-pl: $(SWIG_PL_DIR)/native/Makefile
 	cd $(SWIG_PL_DIR)/native; $(MAKE) clean
 
-check-swig-rb: swig-rb
+check-swig-rb: swig-rb svnserve
 	cd $(SWIG_RB_DIR); $(RUBY) test/run-test.rb
 
 clean-swig-rb:
