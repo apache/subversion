@@ -1883,8 +1883,30 @@ svn_io_dir_walk (const char *dirname,
   apr_dir_t *handle;
   apr_pool_t *subpool;
   const char *dirname_apr;
+  apr_finfo_t finfo;
 
   wanted |= APR_FINFO_TYPE | APR_FINFO_NAME;
+
+  /* The documentation for apr_dir_read states that "." and ".." will be
+     returned as the first two files, which ties in nicely with the
+     ordering guarantees given by svn_io_dir_walk (and svn_repos_hotcopy
+     relies on those guarantees).  Unfortunately apr_dir_read doesn't
+     work that way in practice, in particular ext3 on Linux-2.6 doesn't
+     follow the rules.  For details see
+     http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=56666 for
+
+     If APR ever does implement "dot-first" then it would be possible to
+     remove the svn_io_stat and walk_func calls and use the walk_func
+     inside the loop.
+
+     Note: apr_stat doesn't handle FINFO_NAME but svn_io_dir_walk is
+     documented to provide it, so we have to do a bit extra. */
+  SVN_ERR (svn_io_stat (&finfo, dirname, wanted & ~APR_FINFO_NAME, pool));
+  SVN_ERR (svn_path_cstring_from_utf8 (&finfo.name,
+                                       svn_path_basename (dirname, pool),
+                                       pool));
+  finfo.valid |= APR_FINFO_NAME;
+  SVN_ERR ((*walk_func) (walk_baton, dirname, &finfo, pool));
 
   SVN_ERR (svn_path_cstring_from_utf8 (&dirname_apr, dirname, pool));
 
@@ -1897,7 +1919,6 @@ svn_io_dir_walk (const char *dirname,
 
   for ( ; ; svn_pool_clear (subpool))
     {
-      apr_finfo_t finfo;
       const char *name_utf8;
       const char *full_path;
 
@@ -1912,27 +1933,11 @@ svn_io_dir_walk (const char *dirname,
 
       if (finfo.filetype == APR_DIR)
         {
-          if (finfo.name[0] == '.')
-            {
-              if (finfo.name[1] == '\0')
-                {
-                  /* current directory. pass the full directory name to
-                     the callback */
-
-                  SVN_ERR ((*walk_func) (walk_baton,
-                                         dirname,
-                                         &finfo,
-                                         subpool));
-
-                  /* done with this entry; move to next */
-                  continue;
-                }
-              else if (finfo.name[1] == '.' && finfo.name[2] == '\0')
-                {
-                  /* skip the parent directory; move to next */
-                  continue;
-                }
-            }
+          if (finfo.name[0] == '.'
+              && (finfo.name[1] == '\0'
+                  || (finfo.name[1] == '.' && finfo.name[2] == '\0')))
+            /* skip "." and ".." */
+            continue;
 
           /* some other directory. recurse. it will be passed to the
              callback inside the recursion. */
