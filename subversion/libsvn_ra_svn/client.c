@@ -484,10 +484,10 @@ static svn_error_t *ra_svn_commit(void *sess,
                                   svn_revnum_t *new_rev,
                                   const char **committed_date,
                                   const char **committed_author,
-                                  const char *log_msg)
+                                  const char *log_msg,
+                                  apr_pool_t *pool)
 {
   svn_ra_svn_conn_t *conn = sess;
-  apr_pool_t *pool = conn->pool;
   ra_svn_commit_callback_baton_t *ccb;
 
   /* Tell the server we're starting the commit. */

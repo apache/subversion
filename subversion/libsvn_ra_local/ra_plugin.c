@@ -362,14 +362,14 @@ svn_ra_local__get_commit_editor (void *session_baton,
                                  svn_revnum_t *new_rev,
                                  const char **committed_date,
                                  const char **committed_author,
-                                 const char *log_msg)
+                                 const char *log_msg,
+                                 apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *sess = session_baton;
-  struct commit_cleanup_baton *cb
-    = apr_pcalloc (sess->pool, sizeof (*cb));
+  struct commit_cleanup_baton *cb = apr_pcalloc (pool, sizeof (*cb));
 
   /* Construct a commit cleanup baton */
-  cb->pool = sess->pool;
+  cb->pool = pool;
   cb->fs = sess->fs;
   cb->new_rev = new_rev;
   cb->committed_date = committed_date;
@@ -379,7 +379,7 @@ svn_ra_local__get_commit_editor (void *session_baton,
   SVN_ERR (svn_repos_get_commit_editor (editor, edit_baton, sess->repos,
                                         sess->repos_url, sess->fs_path,
                                         sess->username, log_msg,
-                                        cleanup_commit, cb, sess->pool));
+                                        cleanup_commit, cb, pool));
 
   return SVN_NO_ERROR;
 }

@@ -224,7 +224,7 @@ svn_client_mkdir (svn_client_commit_info_t **commit_info,
                                           &committed_rev,
                                           &committed_date,
                                           &committed_author,
-                                          message));
+                                          message, pool));
 
       /* Drive the editor to create the TARGET. */
       SVN_ERR (editor->open_root (edit_baton, SVN_INVALID_REVNUM, pool,

@@ -340,7 +340,7 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
                                       &committed_rev,
                                       &committed_date,
                                       &committed_author,
-                                      message));
+                                      message, pool));
 
   /* ### Avoiding iteration pools in the loops below until we know
      they're necessary.  If there are performance problems with this
@@ -638,7 +638,7 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
   /* Fetch RA commit editor. */
   if ((cmt_err = ra_lib->get_commit_editor (session, &editor, &edit_baton, 
                                             &committed_rev, &committed_date, 
-                                            &committed_author, message)))
+                                            &committed_author, message, pool)))
     goto cleanup;
 
   /* Make a note that we have a commit-in-progress. */

@@ -103,7 +103,8 @@ svn_error_t * svn_ra_dav__get_commit_editor(
   svn_revnum_t *new_rev,
   const char **committed_date,
   const char **committed_author,
-  const char *log_msg);
+  const char *log_msg,
+  apr_pool_t *pool);
 
 svn_error_t * svn_ra_dav__get_file(
   void *session_baton,

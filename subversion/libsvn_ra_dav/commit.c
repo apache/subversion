@@ -1269,17 +1269,18 @@ svn_error_t * svn_ra_dav__get_commit_editor(
   svn_revnum_t *new_rev,
   const char **committed_date,
   const char **committed_author,
-  const char *log_msg)
+  const char *log_msg,
+  apr_pool_t *pool)
 {
   svn_ra_session_t *ras = session_baton;
   svn_delta_editor_t *commit_editor;
   commit_ctx_t *cc;
 
   /* Build the main commit editor's baton. */
-  cc = apr_pcalloc(ras->pool, sizeof(*cc));
+  cc = apr_pcalloc(pool, sizeof(*cc));
   cc->ras = ras;
-  cc->resources = apr_hash_make(ras->pool);
-  cc->valid_targets = apr_hash_make(ras->pool);
+  cc->resources = apr_hash_make(pool);
+  cc->valid_targets = apr_hash_make(pool);
   cc->get_func = ras->callbacks->get_wc_prop;
   cc->push_func = ras->callbacks->push_wc_prop;
   cc->cb_baton = ras->callback_baton;
@@ -1316,7 +1317,7 @@ svn_error_t * svn_ra_dav__get_commit_editor(
   ** uses these callbacks to describe all the changes in the working copy
   ** that must be committed to the server.
   */
-  commit_editor = svn_delta_default_editor(ras->pool);
+  commit_editor = svn_delta_default_editor(pool);
   commit_editor->open_root = commit_open_root;
   commit_editor->delete_entry = commit_delete_entry;
   commit_editor->add_directory = commit_add_dir;
