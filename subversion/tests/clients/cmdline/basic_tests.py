@@ -1481,6 +1481,48 @@ def basic_auth_cache(sbox):
                                         os.path.join(wc_dir, 'A', 'D', 'G'))
   if errput: return 1
 
+
+#----------------------------------------------------------------------
+def basic_add_ignores(sbox):
+  'ignored files in the added directory should not be added'
+
+  # The bug was that
+  #
+  #   $ svn add dir
+  #
+  # where dir contains some items that match the ignore list and some
+  # do not would add all items, ignored or not.
+  #
+  # This bug was fixed in revision XXX, by testing each item with the
+  # new svn_config_is_ignored function.
+
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
+
+  dir_path = os.path.join(wc_dir, 'dir')
+  foo_c_path = os.path.join(dir_path, 'foo.c')
+  foo_o_path = os.path.join(dir_path, 'foo.o')
+
+  os.mkdir(dir_path, 0755)
+  open(foo_c_path, 'w')
+  open(foo_o_path, 'w')
+
+  (output, errput) = svntest.main.run_svn (None, 'add', dir_path)
+
+  if not output:
+    return 1
+
+  for line in output:
+    # If we see foo.o in the add output, fail the test.
+    if re.match(r'^A\s+.*foo.o$', line):
+      return 1
+
+  # Else never matched the unwanted output, so the test passed.
+  return 0
+
+
 #----------------------------------------------------------------------
 
 ########################################################################
@@ -1507,6 +1549,7 @@ test_list = [ None,
               Skip(basic_import_executable, (os.name != 'posix')),
               nonexistent_repository,
               basic_auth_cache,
+              basic_add_ignores,
               ### todo: more tests needed:
               ### test "svn rm http://some_url"
               ### not sure this file is the right place, though.

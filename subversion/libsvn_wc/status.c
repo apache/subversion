@@ -36,11 +36,9 @@
 #include "props.h"
 
 
-/* Get the run-time configured list of ignore patterns, and store them
-   in *PATTERNS.  Allocate *PATTERNS and its contents in POOL.  */
-static svn_error_t *
-get_default_ignores (apr_array_header_t **patterns,
-                     apr_pool_t *pool)
+svn_error_t *
+svn_wc_get_default_ignores (apr_array_header_t **patterns,
+                            apr_pool_t *pool)
 {
   struct svn_config_t *cfg;
   const char *val;
@@ -57,6 +55,22 @@ get_default_ignores (apr_array_header_t **patterns,
   return SVN_NO_ERROR;
 }
 
+svn_boolean_t
+svn_wc_is_ignored (const char *path,
+                   apr_array_header_t *ignores)
+{
+  int i;
+
+  for (i = 0; ignores && (i < ignores->nelts); i++)
+    {
+      const char *pat = (((const char **) (ignores)->elts))[i];
+
+      if (APR_SUCCESS == apr_fnmatch (pat, path, FNM_PERIOD))
+        return TRUE;
+    }
+
+  return FALSE;
+}
 
 /* Helper routine: add to *PATTERNS patterns from the value of
    the SVN_PROP_IGNORE property set on DIRPATH.  If there is no such
@@ -433,7 +447,6 @@ add_unversioned_items (const char *path,
       apr_ssize_t klen;
       void *val;
       const char *keystring;
-      int i;
       int ignore_me;
       const char *printable_path;
       svn_node_kind_t *path_kind;
@@ -450,22 +463,8 @@ add_unversioned_items (const char *path,
       if (! strcmp (keystring, SVN_WC_ADM_DIR_NAME))
         continue;
 
-      ignore_me = 0;
+      ignore_me = svn_wc_is_ignored (keystring, patterns);
 
-      /* See if any of the ignore patterns we have matches our
-         keystring. */
-      for (i = 0; patterns && (i < patterns->nelts); i++)
-        {
-          const char *pat = (((const char **) (patterns)->elts))[i];
-                
-          /* Try to match current_entry_name to pat. */
-          if (APR_SUCCESS == apr_fnmatch (pat, keystring, FNM_PERIOD))
-            {
-              ignore_me = 1;
-              break;
-            }
-        }
-      
       /* If we aren't ignoring it, add a status structure for this
          dirent. */
       if (no_ignore || ! ignore_me)
@@ -554,7 +553,7 @@ get_dir_status (apr_hash_t *statushash,
   SVN_ERR (svn_wc_entries_read (&entries, adm_access, FALSE, pool));
 
   /* Read the default ignores from the config files. */
-  SVN_ERR (get_default_ignores (&ignores, pool));
+  SVN_ERR (svn_wc_get_default_ignores (&ignores, pool));
 
   /* Add the unversioned items to the status output. */
   SVN_ERR (add_unversioned_items (path, adm_access, entries, statushash,
