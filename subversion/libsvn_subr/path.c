@@ -1116,7 +1116,6 @@ svn_path_canonicalize (const char *path, apr_pool_t *pool)
   const char *src;
   apr_size_t seglen;
   apr_size_t canon_segments = 0;
-  svn_boolean_t absolute_path = FALSE;
   svn_boolean_t uri;
 
   dst = canon = apr_pcalloc (pool, strlen (path) + 1);
@@ -1126,12 +1125,8 @@ svn_path_canonicalize (const char *path, apr_pool_t *pool)
   if (src)
     {
       uri = TRUE;
-      memcpy (canon, path, src - path);
+      memcpy (dst, path, src - path);
       dst += (src - path);
-
-      /* Skip over the hostname. */
-      while (*src && *src != '/')
-        *(dst++) = *(src++);
     }
   else
     {
@@ -1144,7 +1139,15 @@ svn_path_canonicalize (const char *path, apr_pool_t *pool)
   if (*src == '/')
     {
       *(dst++) = *(src++);
-      absolute_path = TRUE;
+
+#ifdef WIN32
+      /* On Windows permit two leading separator characters which means an
+       * UNC path.  However, a double slash in a URI after the scheme is never
+       * valid. */
+      if (!uri && *src == '/')
+        *(dst++) = *(src++);
+#endif /* WIN32 */
+      
     }
 
   while (*src)
@@ -1181,6 +1184,13 @@ svn_path_canonicalize (const char *path, apr_pool_t *pool)
     dst--;
   
   *dst = '\0';
+
+#ifdef WIN32
+  /* Skip leading double slashes when there are less than 2
+   * canon segments. UNC paths *MUST* have two segments. */
+  if (canon_segments < 2 && canon[0] == '/' && canon[1] == '/')
+    return canon + 1;
+#endif /* WIN32 */
 
   return canon;
 }
