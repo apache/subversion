@@ -40,6 +40,7 @@ Candidate changes:
     Update status documentation to add missing flags and alphabetize.
     Justification: Documentation correctness.
     Votes:
+      +1: bliss
 
 Status of 1.0.1:
 ================
@@ -66,14 +67,14 @@ Candidate changes:
     Justification: users have been bitten by this a few times already.
     Notes:  just some internal changes to svnlook's main.c.
     Votes:
-      +1: sussman, dlr
+      +1: sussman, dlr, bliss
 
   * r8302, 8304
     Fix issue #1694:  can't checkout repos with space in path.
     Justification: users (especially on win32) have reported this.
     Notes:  whoops, we forgot to uri-encode the root_path.  duh.
     Votes:
-      +1: sussman, dlr
+      +1: sussman, dlr, bliss
 
   * r8431
     Bugfix to commits: allow deletions below schedule-add-with-history dirs.
