@@ -57,14 +57,9 @@ rm -rf `find ${DIST_SANDBOX}/${DISTNAME} -name .cvsignore -print`
 ### inside the tarball, just to make people's lives easier.
 cp -r apr ${DIST_SANDBOX}/${DISTNAME}
 (cd ${DIST_SANDBOX}/${DISTNAME}/apr; make distclean)
-# Turn APR into an anonymous working copy.  We don't want to require
-# the dist builder to have `cvschroot' installed, so we do this by
-# hand.
-(cd ${DIST_SANDBOX}/${DISTNAME}/apr
-    for name in `find . -name CVS -type d -print`
-    do
-       echo ":pserver:anoncvs@cvs.apache.org:/home/cvspublic" > ${name}/Root
-    done)
+# Defang the APR working copy.
+rm -rf `find ${DIST_SANDBOX}/${DISTNAME}/apr -name CVS -type d -print`
+rm -rf `find ${DIST_SANDBOX}/${DISTNAME}/apr -name .cvsignore -print`
 # Clean most of neon.
 cp -r neon ${DIST_SANDBOX}/${DISTNAME}
 (cd ${DIST_SANDBOX}/${DISTNAME}/neon; make distclean)
