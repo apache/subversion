@@ -684,23 +684,24 @@ U   my-calc-branch/integer.c
         (fully updated), or that you checked out a new working copy of
         <filename>/trunk/calc</filename>.</para>
 
-      <para>But what about the two trees to compare?  At first glance,
+      <para>But which two trees should be compared?  At first glance,
         the answer may seem obvious: just compare the latest trunk
         tree with your latest branch tree.  But beware &mdash; this
         assumption is <emphasis>wrong</emphasis>, and has burned many
-        a new user!  If you think about it, comparing the latest trunk
-        and branch trees will <emphasis>not</emphasis> merely describe
+        a new user!  Since <command>svn merge</command> operates like
+        <command>svn diff</command>, comparing the latest trunk and 
+        branch trees will <emphasis>not</emphasis> merely describe
         the set of changes you made to your branch.  Such a comparison
         shows too many changes: it would not only show the addition of
         your branch changes, but also the <emphasis>removal</emphasis>
         of trunk changes that never happened on your branch.</para>
 
       <para>To express only changes that happened on your branch, you
-        need to compare two trees:  the initial state of your branch,
-        and the final state of your branch.  Using <command>svn
-        log</command> on your branch, you can see that your branch was
-        created in revision 341.  And the final state of your branch
-        is simply a matter of using the HEAD revision.</para>
+        need to compare the initial state of your branch to its final
+        state.  Using <command>svn log</command> on your branch, 
+        you can see that your branch was created in revision 341.
+        And the final state of your branch is simply a matter of 
+        using the HEAD revision.</para>
 
       <para>Here's the final merging procedure, then:</para>
 
