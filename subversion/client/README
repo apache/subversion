@@ -35,7 +35,7 @@ that the CVS way is not successful and shouldn't be imitated.
 
 The CVS custom of switching on a subcommand seems to work out pretty
 well, so we'll do the same thing.  But many people have mentioned that
-having separate global versus command-local namespaces for options, is
+having separate global versus command-local option namespaces is
 confusing.  So Subversion has one option namespace, and all options
 come after the command.
 
