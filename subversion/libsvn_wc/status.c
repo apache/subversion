@@ -306,7 +306,11 @@ assemble_status (svn_wc_status_t **status,
       SVN_ERR (svn_wc__get_special (&wc_special, path, adm_access, pool));
 
       /* If the entry is a file, check for textual modifications */
-      if ((entry->kind == svn_node_file) && (wc_special == node_special))
+      if ((entry->kind == svn_node_file)
+#ifdef HAVE_SYMLINK          
+          && (wc_special == node_special)
+#endif /* HAVE_SYMLINK */          
+          )
         SVN_ERR (svn_wc_text_modified_p (&text_modified_p, path, FALSE,
                                          adm_access, pool));
 
@@ -386,8 +390,11 @@ assemble_status (svn_wc_status_t **status,
         }
       else if (path_kind != entry->kind)
         final_text_status = svn_wc_status_obstructed;
-      else if ((wc_special && (! node_special))
-               || ((! wc_special) && (node_special)))
+      else if (((! wc_special) && (node_special))
+#ifdef HAVE_SYMLINK      
+               || (wc_special && (! node_special))
+#endif /* HAVE_SYMLINK */
+               )
         final_text_status = svn_wc_status_obstructed;
 
       if (path_kind == svn_node_dir && entry->kind == svn_node_dir)
