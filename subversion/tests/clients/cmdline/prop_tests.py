@@ -982,6 +982,80 @@ def recursive_base_wc_ops(sbox):
   output, errput = svntest.main.run_svn(None, 'propget', '-R', 'p', wc_dir)
   verify_output([ 'new-add', 'new-keep' ], output, errput)
 
+#----------------------------------------------------------------------
+
+def url_props_ops(sbox):
+  "property operations on an URL"
+
+  # Bootstrap
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  prop1 = 'prop1'
+  propval1 = 'propval1'
+  prop2 = 'prop2'
+  propval2 = 'propval2'
+
+  iota_path = os.path.join(sbox.wc_dir, 'iota')
+  iota_url = svntest.main.current_repo_url + '/iota'
+  A_path = os.path.join(sbox.wc_dir, 'A')
+  A_url = svntest.main.current_repo_url + '/A'
+
+  # Add a couple of properties
+  svntest.main.run_svn(None, 'propset', prop1, propval1, iota_path)
+  svntest.main.run_svn(None, 'propset', prop1, propval1, A_path)
+
+  # Commit
+  svntest.main.run_svn(None, 'ci', '-m', 'logmsg', sbox.wc_dir)
+
+  # Add a few more properties
+  svntest.main.run_svn(None, 'propset', prop2, propval2, iota_path)
+  svntest.main.run_svn(None, 'propset', prop2, propval2, A_path)
+
+  # Commit again
+  svntest.main.run_svn(None, 'ci', '-m', 'logmsg', sbox.wc_dir)
+
+  # Ensure that each line of output contains the corresponding string of
+  # expected_out, and that errput is empty.
+  def verify_output(expected_out, output, errput):
+    if errput != []:
+      print 'Error: stderr:'
+      print errput
+      raise svntest.Failure
+    output.sort()
+    ln = 0
+    for line in output:
+      if ((line.find(expected_out[ln]) == -1) or
+          (line != '' and expected_out[ln] == '')):
+        print 'Error: expected keywords: ', expected_out
+        print '       actual full output:', output
+        raise svntest.Failure
+      ln = ln + 1
+
+  # Test propget
+  svntest.actions.run_and_verify_svn(None, [ propval1 + '\n' ], [],
+                                     'propget', prop1, iota_url)
+  svntest.actions.run_and_verify_svn(None, [ propval1 + '\n' ], [],
+                                     'propget', prop1, A_url)
+
+  # Test normal proplist
+  output, errput = svntest.main.run_svn(None, 'proplist', iota_url)
+  verify_output([ prop1, prop2, 'Properties on ' ],
+                output, errput)
+
+  output, errput = svntest.main.run_svn(None, 'proplist', A_url)
+  verify_output([ prop1, prop2, 'Properties on ' ],
+                output, errput)
+
+  # Test verbose proplist
+  output, errput = svntest.main.run_svn(None, 'proplist', '-v', iota_url)
+  verify_output([ prop1 + ' : ' + propval1, prop2 + ' : ' + propval2,
+                  'Properties on ' ], output, errput)
+
+  output, errput = svntest.main.run_svn(None, 'proplist', '-v', A_url)
+  verify_output([ prop1 + ' : ' + propval1, prop2 + ' : ' + propval2,
+                  'Properties on ' ], output, errput)
+
   
 ########################################################################
 # Run the tests
@@ -1005,6 +1079,7 @@ test_list = [ None,
               prop_value_conversions,
               binary_props,
               recursive_base_wc_ops,
+              url_props_ops,
              ]
 
 if __name__ == '__main__':
