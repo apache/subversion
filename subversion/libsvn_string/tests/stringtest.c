@@ -102,7 +102,7 @@ main ()
 
 
   /* Return a C string from a bytestring */
-  msg = svn_string_2cstring (b, pglobal);
+  msg = svn_string_dup2cstring (b, pglobal);
   printf ("The C string returned is: %s\n", msg);
 
   /* Compare the C string to the original bytestring */

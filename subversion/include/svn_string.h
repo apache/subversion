@@ -113,7 +113,7 @@ svn_boolean_t svn_string_compare_2cstring (const svn_string_t *str,
 
 /* return a traditional C string from a bytestring */
 
-char * svn_string_2cstring (const svn_string_t *str, apr_pool_t *pool);
+char * svn_string_dup2cstring (const svn_string_t *str, apr_pool_t *pool);
 
 /* convenience routines */
 

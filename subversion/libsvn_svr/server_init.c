@@ -78,8 +78,8 @@ svn_svr_load_plugin (svn_svr_policies_t *policy,
   apr_status_t result;
   svn_error_t *error;
 
-  char *my_path   = svn_string_2cstring (path, policy->pool);
-  char *my_sym    = svn_string_2cstring (init_routine, policy->pool);
+  char *my_path   = svn_string_dup2cstring (path, policy->pool);
+  char *my_sym    = svn_string_dup2cstring (init_routine, policy->pool);
 
   /* Load the plugin */
   result = apr_dso_load (&library, my_path, policy->pool);
@@ -296,7 +296,7 @@ svn_svr_load_policy (svn_svr_policies_t *policy,
             policy->warning 
               (policy->data, 
                "svn_parse():  ignoring unknown section: `%s'",
-               svn_string_2cstring, ((svn_string_t *) key, pool));
+               svn_string_dup2cstring, ((svn_string_t *) key, pool));
           }
       }    /* for (hash_index...)  */
        
