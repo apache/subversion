@@ -304,6 +304,9 @@ svn_error_t *svn_wc__ensure_adm (svn_string_t *path,
 /* Delete the entry SVN_WC__LOG_ATTR_NAME. */
 #define SVN_WC__LOG_DELETE_ENTRY        "delete-entry"
 
+/* Move a file from one place to another */
+#define SVN_WC__LOG_MV                  "mv"
+
 
 /* A commit completed successfully, so:  
  *   if SVN/tmp/text-base/SVN_WC__LOG_ATTR_NAME exists, then
@@ -316,6 +319,7 @@ svn_error_t *svn_wc__ensure_adm (svn_string_t *path,
 
 /** Log attributes. **/
 #define SVN_WC__LOG_ATTR_NAME           "name"
+#define SVN_WC__LOG_ATTR_DEST           "dest"
 #define SVN_WC__LOG_ATTR_VERSION        "version"
 #define SVN_WC__LOG_ATTR_SAVED_MODS     "saved-mods"
 

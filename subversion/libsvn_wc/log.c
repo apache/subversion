@@ -103,6 +103,34 @@ merge_text (svn_string_t *path,
 }
 
 
+/* Move a file NAME to DEST, assuming that PATH is the common parent
+   of both locations.  */
+static svn_error_t *
+move_file (svn_string_t *path,
+           const char *name,
+           const char *dest,
+           apr_pool_t *pool)
+{
+  apr_status_t status;
+  svn_string_t *full_from_path, *full_dest_path;
+
+  full_from_path = svn_string_dup (path, pool);
+  full_dest_path = svn_string_dup (path, pool);
+
+  svn_path_add_component_nts (full_from_path, name, svn_path_local_style);
+  svn_path_add_component_nts (full_dest_path, dest, svn_path_local_style);
+
+  status = apr_rename_file (full_from_path->data, full_dest_path->data, pool);
+  if (status)
+    return svn_error_createf (status, 0, NULL, pool,
+                              "move_file:  can't move %s to %s",
+                              name, dest);
+
+  return SVN_NO_ERROR;
+}
+
+
+
 static svn_error_t *
 replace_text_base (svn_string_t *path,
                    const char *name,
@@ -226,7 +254,7 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
   svn_error_t *err = NULL;
 
   /* Most elements have a name attribute, so try to grab one now. */
-  const char *name = svn_xml_get_attr_value ("name", atts);
+  const char *name = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_NAME, atts);
 
   if (strcmp (eltname, SVN_WC__LOG_MERGE_TEXT) == 0)
     {
@@ -256,6 +284,30 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
                                      loggy->path->data));
       else
         err = replace_text_base (loggy->path, name, loggy->pool);
+    }
+  else if (strcmp (eltname, SVN_WC__LOG_MV) == 0)
+    {
+      /* Grab a "dest" attribute as well. */
+      const char *dest = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_DEST, atts);
+
+      if (! name)
+        return signal_error
+          (loggy, svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG,
+                                     0,
+                                     NULL,
+                                     loggy->pool,
+                                     "missing name attr in %s",
+                                     loggy->path->data));
+      else if (! dest)
+        return signal_error
+          (loggy, svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG,
+                                     0,
+                                     NULL,
+                                     loggy->pool,
+                                     "missing dest attr in %s",
+                                     loggy->path->data));
+      else
+        err = move_file (loggy->path, name, dest, loggy->pool);
     }
   else if (strcmp (eltname, SVN_WC__LOG_DELETE_ENTRY) == 0)
     {
