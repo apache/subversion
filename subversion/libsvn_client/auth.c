@@ -26,6 +26,7 @@
 #include <apr_pools.h>
 #include "svn_client.h"
 #include "svn_ra.h"
+#include "svn_wc.h"
 #include "svn_error.h"
 #include "svn_io.h"
 
@@ -35,6 +36,21 @@
 /*-----------------------------------------------------------------------*/
 
 /* Callback routines that RA libraries use to pull or store auth info. */
+
+
+
+static svn_error_t *
+open_tmp_file (apr_file_t **fp,
+               void *callback_baton)
+{
+  svn_client_auth_baton_t *cb = 
+    (svn_client_auth_baton_t *) callback_baton;
+  
+  SVN_ERR (svn_wc_create_tmp_file (fp, cb->path, cb->pool));
+
+  return SVN_NO_ERROR;
+}
+  
 
 
 static svn_error_t *
@@ -250,6 +266,7 @@ get_authenticator (void **authenticator,
     case SVN_RA_AUTH_USERNAME:
       {
         svn_ra_username_authenticator_t *ua = apr_pcalloc (pool, sizeof(*ua));
+
         ua->get_username = get_username;
         if (cb->do_store)
           ua->store_username = store_username;
@@ -264,6 +281,7 @@ get_authenticator (void **authenticator,
       {
         svn_ra_simple_password_authenticator_t *ua 
           = apr_pcalloc (pool, sizeof(*ua));
+
         ua->get_user_and_pass = get_user_and_pass;
         if (cb->do_store)
           ua->store_user_and_pass = store_user_and_pass;
@@ -298,8 +316,7 @@ svn_client__get_ra_callbacks (svn_ra_callbacks_t **callbacks,
   svn_ra_callbacks_t *cbtable = 
     (svn_ra_callbacks_t *) apr_pcalloc (pool, sizeof(*cbtable));
   
-  cbtable->open_tmp_file = NULL;   /* ### implement in libsvn_wc ! */
-  cbtable->close_tmp_file = NULL; /* ### implement in libsvn_wc ! */
+  cbtable->open_tmp_file = open_tmp_file;
   cbtable->get_authenticator = get_authenticator;
 
   /* Just copy the PATH and DO_STORE into the baton, so callbacks can

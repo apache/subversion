@@ -1214,6 +1214,7 @@ close_file (void *file_baton)
                                                     &received_diff_filename,
                                                     tmp_loc,
                                                     SVN_WC__DIFF_EXT,
+                                                    FALSE,
                                                     fb->pool));
                   
                   /* Create the process attributes. */
@@ -1288,6 +1289,7 @@ close_file (void *file_baton)
                                                     &reject_filename,
                                                     fb->path,
                                                     SVN_WC__TEXT_REJ_EXT,
+                                                    FALSE,
                                                     fb->pool));
                   apr_err = apr_file_close (reject_file);
                   if (apr_err)
@@ -1381,6 +1383,7 @@ close_file (void *file_baton)
                                                 &renamed_path,
                                                 fb->path,
                                                 ".orig",
+                                                FALSE,
                                                 fb->pool));
               apr_err = apr_file_close (renamed_fp);
               if (apr_err)

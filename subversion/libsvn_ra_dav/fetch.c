@@ -24,6 +24,7 @@
 #include <apr_pools.h>
 #include <apr_tables.h>
 #include <apr_strings.h>
+#include <apr_portable.h>
 
 #include <ne_basic.h>
 #include <ne_utils.h>
@@ -1066,7 +1067,6 @@ static svn_error_t * reporter_set_path(void *report_baton,
   if (status)
     {
       (void) apr_file_close(rb->tmpfile);
-      (void) apr_file_remove(rb->fname->data, rb->ras->pool);
       return svn_error_create(status, 0, NULL, rb->ras->pool,
                               "Could not write an entry to the temporary "
                               "report file.");
@@ -1091,7 +1091,6 @@ static svn_error_t * reporter_delete_path(void *report_baton,
   if (status)
     {
       (void) apr_file_close(rb->tmpfile);
-      (void) apr_file_remove(rb->fname->data, rb->ras->pool);
       return svn_error_create(status, 0, NULL, rb->ras->pool,
                               "Could not write a missing entry to the "
                               "temporary report file.");
@@ -1106,7 +1105,6 @@ static svn_error_t * reporter_abort_report(void *report_baton)
   report_baton_t *rb = report_baton;
 
   (void) apr_file_close(rb->tmpfile);
-  (void) apr_file_remove(rb->fname->data, rb->ras->pool);
 
   return SVN_NO_ERROR;
 }
@@ -1116,15 +1114,15 @@ static svn_error_t * reporter_finish_report(void *report_baton)
 {
   report_baton_t *rb = report_baton;
   apr_status_t status;
-  FILE *fp;
+  apr_os_file_t fdesc;
   svn_error_t *err;
+  apr_off_t offset = 0;
 
   status = apr_file_write_full(rb->tmpfile,
                                report_tail, sizeof(report_tail) - 1, NULL);
-  (void) apr_file_close(rb->tmpfile);
   if (status)
     {
-      (void) apr_file_remove(rb->fname->data, rb->ras->pool);
+      (void) apr_file_close(rb->tmpfile);
       return svn_error_create(status, 0, NULL, rb->ras->pool,
                               "Could not write the trailer for the temporary "
                               "report file.");
@@ -1139,17 +1137,31 @@ static svn_error_t * reporter_finish_report(void *report_baton)
   rb->vuh.name = svn_stringbuf_create(SVN_RA_DAV__LP_VSN_URL, rb->ras->pool);
   rb->vuh.value = MAKE_BUFFER(rb->ras->pool);
 
-  fp = fopen(rb->fname->data, "rb");
+  /* Rewind the tmpfile. */
+  status = apr_file_seek(rb->tmpfile, APR_SET, &offset);
+  if (status)
+    {
+      (void) apr_file_close(rb->tmpfile);
+      return svn_error_create(status, 0, NULL, rb->ras->pool,
+                              "Couldn't rewind tmpfile.");
+    }
+  /* Convert the (apr_file_t *)tmpfile into a file descriptor for neon. */
+  status = apr_os_file_get(&fdesc, rb->tmpfile);
+  if (status)
+    {
+      (void) apr_file_close(rb->tmpfile);
+      return svn_error_create(status, 0, NULL, rb->ras->pool,
+                              "Couldn't get file-descriptor of tmpfile.");
+    }
 
   err = svn_ra_dav__parsed_request(rb->ras, "REPORT", rb->ras->root.path,
-                                   NULL, fileno(fp),
+                                   NULL, fdesc,
                                    report_elements, validate_element,
                                    start_element, end_element, rb,
                                    rb->ras->pool);
 
   /* we're done with the file */
-  (void) fclose(fp);
-  (void) apr_file_remove(rb->fname->data, rb->ras->pool);
+  (void) apr_file_close(rb->tmpfile);
 
   if (err != NULL)
     return err;
@@ -1181,7 +1193,6 @@ svn_error_t * svn_ra_dav__do_update(void *session_baton,
                                     void *wc_update_baton)
 {
   svn_ra_session_t *ras = session_baton;
-  svn_stringbuf_t *path;
   report_baton_t *rb;
   apr_status_t status;
   const char *s;
@@ -1204,12 +1215,11 @@ svn_error_t * svn_ra_dav__do_update(void *session_baton,
      thread can block on the pipe, waiting for the other to complete its
      work.
   */
-  /* ### fucking svn_stringbuf_t */
-  path = svn_stringbuf_create(".svn_update", ras->pool);
-  SVN_ERR( svn_io_open_unique_file(&rb->tmpfile, &rb->fname, path,
-                                   ".ra_dav", ras->pool) );
 
-  /* ### register a cleanup on our (sub)pool which removes the file. this
+  /* Use the client callback to create a tmpfile. */
+  SVN_ERR(ras->callbacks->open_tmp_file (&rb->tmpfile, ras->callback_baton));
+
+  /* ### register a cleanup on our (sub)pool which closes the file. this
      ### will ensure that the file always gets tossed, even if we exit
      ### with an error. */
 
@@ -1243,7 +1253,6 @@ svn_error_t * svn_ra_dav__do_update(void *session_baton,
 
  error:
   (void) apr_file_close(rb->tmpfile);
-  (void) apr_file_remove(rb->fname->data, ras->pool);
   return svn_error_create(status, 0, NULL, ras->pool, msg);
 }
 

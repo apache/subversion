@@ -21,6 +21,7 @@
 #include <apr_pools.h>
 #include <apr_hash.h>
 #include <apr_uuid.h>
+#include <apr_portable.h>
 
 #define APR_WANT_STDIO
 #define APR_WANT_STRFUNC
@@ -765,12 +766,11 @@ static svn_error_t * commit_stream_close(void *baton)
   commit_ctx_t *cc = pb->file->cc;
   resource_t *rsrc = pb->file->rsrc;
   ne_request *req;
-  FILE *fp;
+  apr_os_file_t fdesc;
   int rv;
   int code;
-
-  /* close the temp file; we'll reopen as a FILE* for Neon */
-  (void) apr_file_close(pb->tmpfile);
+  apr_status_t status;
+  apr_off_t offset = 0;
 
   /* create/prep the request */
   req = ne_request_create(cc->ras->sess, "PUT", rsrc->wr_url);
@@ -785,15 +785,31 @@ static svn_error_t * commit_stream_close(void *baton)
   /* ### use a symbolic name somewhere for this MIME type? */
   ne_add_request_header(req, "Content-Type", "application/vnd.svn-svndiff");
 
-  fp = fopen(pb->fname->data, "rb");
-  ne_set_request_body_fd(req, fileno(fp));
+  /* Rewind the tmpfile. */
+  status = apr_file_seek(pb->tmpfile, APR_SET, &offset);
+  if (status)
+    {
+      (void) apr_file_close(pb->tmpfile);
+      return svn_error_create(status, 0, NULL, pb->pool,
+                              "Couldn't rewind tmpfile.");
+    }
+  /* Convert the (apr_file_t *)tmpfile into a file descriptor for neon. */
+  status = apr_os_file_get(&fdesc, pb->tmpfile);
+  if (status)
+    {
+      (void) apr_file_close(pb->tmpfile);
+      return svn_error_create(status, 0, NULL, pb->pool,
+                              "Couldn't get file-descriptor of tmpfile.");
+    }
+
+  /* Give the filedescriptor to neon. */
+  ne_set_request_body_fd(req, fdesc);
 
   /* run the request and get the resulting status code. */
   rv = ne_request_dispatch(req);
 
-  /* we're done with the file */
-  (void) fclose(fp);
-  (void) apr_file_remove(pb->fname->data, pb->pool);
+  /* we're done with the file.  this should delete it. */
+  (void) apr_file_close(pb->tmpfile);
 
   /* fetch the status, then clean up the request */
   code = ne_get_status(req)->code;
@@ -833,7 +849,6 @@ static svn_error_t * commit_apply_txdelta(void *file_baton,
   resource_baton_t *file = file_baton;
   apr_pool_t *subpool;
   put_baton_t *baton;
-  svn_stringbuf_t *path;
   svn_stream_t *stream;
 
   /* construct a writable stream that gathers its contents into a buffer */
@@ -846,12 +861,13 @@ static svn_error_t * commit_apply_txdelta(void *file_baton,
   /* ### oh, hell. Neon's request body support is either text (a C string),
      ### or a FILE*. since we are getting binary data, we must use a FILE*
      ### for now. isn't that special? */
-  /* ### fucking svn_stringbuf_t */
-  path = svn_stringbuf_create(".svn_commit", subpool);
-  SVN_ERR( svn_io_open_unique_file(&baton->tmpfile, &baton->fname, path,
-                                   ".ra_dav", subpool) );
 
-  /* ### register a cleanup on our subpool which removes the file. this
+  /* Use the client callback to create a tmpfile. */
+  SVN_ERR(file->cc->ras->callbacks->open_tmp_file 
+          (&baton->tmpfile, 
+           file->cc->ras->callback_baton));
+
+  /* ### register a cleanup on our subpool which closes the file. this
      ### will ensure that the file always gets tossed, even if we exit
      ### with an error. */
 
