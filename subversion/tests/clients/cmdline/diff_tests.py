@@ -1152,7 +1152,7 @@ test_list = [ None,
               diff_nonextant_urls,
               diff_head_of_moved_file,
               diff_base_to_repos,
-              # diff_deleted_in_head,
+              diff_deleted_in_head,
               ]
 
 if __name__ == '__main__':

@@ -616,6 +616,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
   svn_revnum_t revnum = SVN_INVALID_REVNUM;
   int ns;
   svn_error_t *serr;
+  const char *src_path = NULL;
   const char *dst_path = NULL;
   const dav_svn_repos *repos = resource->info->repos;
   const char *target = NULL;
@@ -623,11 +624,12 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
   svn_boolean_t resource_walk = FALSE;
   svn_boolean_t ignore_ancestry = FALSE;
 
-  if (resource->type != DAV_RESOURCE_TYPE_REGULAR)
+  if ((resource->type != DAV_RESOURCE_TYPE_REGULAR)
+      && (resource->info->restype != DAV_SVN_RESTYPE_VCC))
     {
       return dav_new_error(resource->pool, HTTP_CONFLICT, 0,
                            "This report can only be run against a "
-                           "version-controlled resource.");
+                           "VCC or VCR (regular resource).");
     }
 
   ns = dav_svn_find_ns(doc->namespaces, SVN_XML_NAMESPACE);
@@ -657,6 +659,29 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
           /* ### assume no white space, no child elems, etc */
           revnum = SVN_STR_TO_REV(child->first_cdata.first->text);
         }
+
+      if (child->ns == ns && strcmp(child->name, "src-path") == 0)
+        {
+          /* ### assume no white space, no child elems, etc */
+          dav_svn_uri_info this_info;
+
+          if (! child->first_cdata.first)
+            return dav_new_error(resource->pool, HTTP_BAD_REQUEST, 0,
+              "The request's `src-path' element contains empty cdata; "
+              "there is a problem with the client.");
+
+          /* split up the 1st public URL. */
+          serr = dav_svn_simple_parse_uri(&this_info, resource,
+                                          child->first_cdata.first->text,
+                                          resource->pool);
+          if (serr != NULL)
+            {
+              return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                         "Could not parse src-path URL.");
+            }
+          src_path = apr_pstrdup(resource->pool, this_info.repos_path);
+        }
+
       if (child->ns == ns && strcmp(child->name, "dst-path") == 0)
         {
           /* ### assume no white space, no child elems, etc */
@@ -751,9 +776,14 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
   editor->change_file_prop = upd_change_xxx_prop;
   editor->close_file = upd_close_file;
 
+  /* If the client never sent a <src-path> element, it's sending an
+     "old style" report -- so use the resource's path instead. */
+  if (! src_path)
+    src_path = resource->info->repos_path;
+
   uc.resource = resource;
   uc.output = output;  
-  uc.anchor = resource->info->repos_path;
+  uc.anchor = src_path;
   if (dst_path) /* we're doing a 'switch' */
     {      
       if (target) /* if the src is split into anchor/target, so must
@@ -783,7 +813,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
      the case of a switch, they should be different. */
   if ((serr = svn_repos_begin_report(&rbaton, revnum, repos->username, 
                                      repos->repos, 
-                                     resource->info->repos_path, target,
+                                     src_path, target,
                                      dst_path,
                                      FALSE, /* don't send text-deltas */
                                      recurse,
@@ -852,8 +882,8 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
             if (linkpath && (! dst_path))
               {
                 const char *this_path
-                  = svn_path_join_many(resource->pool,
-                                       resource->info->repos_path,
+                  = svn_path_join_many(resource->pool, 
+                                       src_path,
                                        target ? target : path,
                                        target ? path : NULL,
                                        NULL);
