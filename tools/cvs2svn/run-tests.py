@@ -375,6 +375,14 @@ def space_fname():
 def ctrl_char_in_log():
   "handle a control char in a log message (issue #1106)"
   repos, wc, logs = ensure_conversion('ctrl-char-in-log')
+  if not ((logs[1].changed_paths.get('/trunk') == 'A')
+          and (logs[1].changed_paths.get('/trunk/ctrl-char-in-log') == 'A')
+          and (len(logs[1].changed_paths) == 2)):
+    print "Revision 1 of 'ctrl-char-in-log,v' was not converted successfully."
+    raise svntest.Failure
+  if logs[1].msg.find('\x04') < 0:
+    print "Log message of 'ctrl-char-in-log,v' (rev 1) is wrong."
+    raise svntest.Failure
 
 
 def overdead():
@@ -707,7 +715,7 @@ def split_branch():
   
 
 def resync_misgroups():
-  "resyncing should not put commit groups in the wrong order"
+  "resyncing should not misorder commit groups"
   # See test-data/resync-misgroups-cvsrepos/README.
   #
   # The conversion will fail if the bug is present, and
