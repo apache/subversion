@@ -63,7 +63,7 @@ xlate_cleanup (void *arg)
 {
   /* We set the cache variables to NULL so that translation works in other
      cleanup functions, even if it isn't cached then. */
-#ifdef APR_HAS_THREADS
+#if APR_HAS_THREADS
   apr_thread_mutex_destroy (xlate_handle_mutex);
   xlate_handle_mutex = NULL;
 #endif
@@ -181,7 +181,7 @@ get_xlate_handle_node (xlate_handle_node_t **ret,
 
   if (APR_STATUS_IS_EINVAL (apr_err) || APR_STATUS_IS_ENOTIMPL (apr_err))
     {
-      *ret = NULL;
+      (*ret)->handle = NULL;
       return SVN_NO_ERROR;
     }
   if (apr_err != APR_SUCCESS)
@@ -206,7 +206,7 @@ put_xlate_handle_node (xlate_handle_node_t *node,
   assert (node->next == NULL);
   if (!userdata_key)
     return;
-#ifdef APR_HAS_THREADS
+#if APR_HAS_THREADS
   if (xlate_handle_mutex)
     {
       if (apr_thread_mutex_lock (xlate_handle_mutex) != APR_SUCCESS)
@@ -431,7 +431,7 @@ svn_utf_stringbuf_to_utf8 (svn_stringbuf_t **dest,
 
   SVN_ERR (get_ntou_xlate_handle_node (&node, pool));
 
-  if (node)
+  if (node->handle)
     {
       err = convert_to_stringbuf (node->handle, src->data, src->len, dest,
                                   pool);
@@ -459,7 +459,7 @@ svn_utf_string_to_utf8 (const svn_string_t **dest,
 
   SVN_ERR (get_ntou_xlate_handle_node (&node, pool));
 
-  if (node)
+  if (node->handle)
     {
       err = convert_to_stringbuf (node->handle, src->data, src->len, 
                                   &destbuf, pool);
@@ -553,7 +553,7 @@ svn_utf_stringbuf_from_utf8 (svn_stringbuf_t **dest,
 
   SVN_ERR (get_uton_xlate_handle_node (&node, pool));
 
-  if (node)
+  if (node->handle)
     {
       SVN_ERR (check_utf8 (src->data, src->len, pool));
       err = convert_to_stringbuf (node->handle, src->data, src->len, dest, pool);
@@ -580,7 +580,7 @@ svn_utf_string_from_utf8 (const svn_string_t **dest,
 
   SVN_ERR (get_uton_xlate_handle_node (&node, pool));
 
-  if (node)
+  if (node->handle)
     {
       SVN_ERR (check_utf8 (src->data, src->len, pool));
       err = convert_to_stringbuf (node->handle, src->data, src->len,
@@ -736,7 +736,7 @@ svn_utf_cstring_from_utf8_string (const char **dest,
 
   SVN_ERR (get_uton_xlate_handle_node (&node, pool));
 
-  if (node)
+  if (node->handle)
     {
       SVN_ERR (check_utf8 (src->data, src->len, pool));
       err = convert_to_stringbuf (node->handle, src->data, src->len,
