@@ -434,7 +434,7 @@ main (int argc, const char * const *argv)
                                0, NULL, pool,
                                "Syntax error in revision argument \"%s\"",
                                opt_arg),
-                              stdout, 0);
+                              stdout, FALSE);
             svn_pool_destroy (pool);
             return EXIT_FAILURE;
           }
@@ -447,7 +447,7 @@ main (int argc, const char * const *argv)
                               (SVN_ERR_CL_ARG_PARSING_ERROR,
                                0, NULL, pool,
                                "Unable to parse \"%s\"", opt_arg),
-                              stdout, 0);
+                              stdout, FALSE);
             svn_pool_destroy (pool);
             return EXIT_FAILURE;
           }
@@ -474,7 +474,11 @@ main (int argc, const char * const *argv)
       case 'F':
         err = svn_string_from_file (&(opt_state.filedata), opt_arg, pool);
         if (err)
-          svn_handle_error (err, stdout, TRUE);
+          {
+            svn_handle_error (err, stdout, FALSE);
+            svn_pool_destroy (pool);
+            return EXIT_FAILURE;
+          }
         break;
       case 'M':
         opt_state.modified = TRUE;
