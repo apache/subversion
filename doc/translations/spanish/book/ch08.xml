@@ -1,28 +1,30 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
 <!-- originated from English revision 10817 -->
 <chapter id="svn-ch-8">
-  <title>Developer Information</title>
+  <title>Información para desarrolladores</title>
   
   <simplesect id="svn-ch-8-sect-0">
-    <para>Subversion is an open-source software project developed
-      under an Apache-style software license.  The project is
-      financially backed by CollabNet, Inc., a California-based
-      software development company.  The community that has formed
-      around the development of Subversion always welcomes new members
-      who can donate their time and attention to the project.
-      Volunteers are encouraged to assist in any way they can, whether
-      that means finding and diagnosing bugs, refining existing source
-      code, or fleshing out whole new features.</para>
+    <para>Subversion es un proyecto de software open-source
+      desarrollado bajo una licencia de software estilo Apache. El
+      proyecto está respaldado económicamente por CollabNet, Inc.,
+      una compañía de desarrollo de software con sede en California.
+      La comunidad que se ha formado alrededor del desarrollo
+      de Subversion siempre da la bienvenida a nuevos miembros
+      que pueden conar su tiempo y atención al proyecto. A los
+      voluntarios se les anima a ayudar de cualquier modo, ya sea
+      encontrando y diagnosticando fallos, refinando el código fuente
+      existente, o implementando por nuevas características.</para>
     
-    <para>This chapter is for those who wish to assist in the
-      continued evolution of Subversion by actually getting their
-      hands dirty with the source code.  We will cover some of the
-      software's more intimate details, the kind of technical
-      nitty-gritty that those developing Subversion itself&mdash;or
-      writing entirely new tools based on the Subversion
-      libraries&mdash;should be aware of.  If you don't foresee
-      yourself participating with the software at such a level, feel
-      free to skip this chapter with confidence that your experience
-      as a Subversion user will not be affected.</para>
+    <para>Este capítulo es para aquellos que desean asistir en
+      la evolución continua de Subversion ensuciándose las manos
+      con el código fuente.  Cubriremos algunos detalles íntimos
+      del software, ese tipo de conocimiento técnico específico
+      necesario por aquellos que desarrollan Subversion&mdash;o
+      herramientas completamente nuevas basadas en las librerías
+      de Subversion.  Si no prevee participar con el software a
+      tal nivel, siéntase libre de ignorar este capítulo con la
+      certeza de que su experiencia como usuario de Subversion no
+      se verá afectada.</para>
 
   </simplesect>
 
