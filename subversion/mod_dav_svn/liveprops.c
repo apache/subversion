@@ -29,13 +29,13 @@
 static const char * const dav_svn_namespace_uris[] =
 {
     "DAV:",
-    /* ### SVN-specific namespace... */
+    /* ### SVN-specific namespace... ?? */
 
     NULL	/* sentinel */
 };
 enum {
     DAV_SVN_URI_DAV		/* the DAV: namespace URI */
-    /* ### SVN-specific */
+    /* ### SVN-specific ?? */
 };
 
 #define SVN_RO_DAV_PROP(name) { DAV_SVN_URI_DAV, #name, DAV_PROPID_##name, 0 }
@@ -71,12 +71,11 @@ static const dav_liveprop_group dav_svn_liveprop_group =
 
 
 static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
-                                           int propid, int insvalue,
+                                           int propid, dav_prop_insert what,
                                            ap_text_header *phdr)
 {
   const char *value;
   const char *s;
-  dav_prop_insert which;
   apr_pool_t *p = resource->info->pool;
   const dav_liveprop_spec *info;
   int global_ns;
@@ -90,24 +89,24 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
   ** hook function.
   */
   if (!resource->exists)
-    return DAV_PROP_INSERT_NOTDEF;
+    return DAV_PROP_INSERT_NOTSUPP;
 
   switch (propid)
     {
     case DAV_PROPID_creationdate:
       /* ### need a creation date */
-      return DAV_PROP_INSERT_NOTDEF;
+      return DAV_PROP_INSERT_NOTSUPP;
       break;
 
     case DAV_PROPID_getcontentlanguage:
       /* ### need something here */
-      return DAV_PROP_INSERT_NOTDEF;
+      return DAV_PROP_INSERT_NOTSUPP;
       break;
 
     case DAV_PROPID_getcontentlength:
       /* our property, but not defined on collection resources */
       if (resource->collection)
-        return DAV_PROP_INSERT_NOTDEF;
+        return DAV_PROP_INSERT_NOTSUPP;
 
       /* ### call svn_fs_file_length() */
       value = "0";
@@ -116,7 +115,7 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
     case DAV_PROPID_getcontenttype:
       /* ### need something here */
       /* ### maybe application/octet-stream and text/plain? */
-      return DAV_PROP_INSERT_NOTDEF;
+      return DAV_PROP_INSERT_NOTSUPP;
       break;
 
     case DAV_PROPID_getetag:
@@ -125,12 +124,12 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
 
     case DAV_PROPID_getlastmodified:
       /* ### need a modified date */
-      return DAV_PROP_INSERT_NOTDEF;
+      return DAV_PROP_INSERT_NOTSUPP;
       break;
 
     case DAV_PROPID_target:
       /* ### need the target... */
-      return DAV_PROP_INSERT_NOTDEF;
+      return DAV_PROP_INSERT_NOTSUPP;
       break;
 
     default:
@@ -145,19 +144,24 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
 
     /* assert: info != NULL && info->name != NULL */
 
-  if (insvalue) {
+  if (what == DAV_PROP_INSERT_VALUE) {
     s = apr_psprintf(p, "<lp%d:%s>%s</lp%d:%s>" DEBUG_CR,
                      global_ns, info->name, value, global_ns, info->name);
-    which = DAV_PROP_INSERT_VALUE;
+  }
+  else if (what == DAV_PROP_INSERT_NAME) {
+    s = apr_psprintf(p, "<lp%d:%s/>" DEBUG_CR, global_ns, info->name);
   }
   else {
-    s = apr_psprintf(p, "<lp%d:%s/>" DEBUG_CR, global_ns, info->name);
-    which = DAV_PROP_INSERT_NAME;
+    /* assert: what == DAV_PROP_INSERT_SUPPORTED */
+    s = apr_psprintf(p,
+                     "<D:supported-live-property D:name=\"%s\" "
+                     "D:namespace=\"%s\"/>" DEBUG_CR,
+                     info->name, dav_svn_namespace_uris[info->ns]);
   }
   ap_text_append(p, phdr, s);
 
-  /* we inserted a name or value (this prop is done) */
-  return which;
+  /* we inserted whatever was asked for */
+  return what;
 }
 
 static int dav_svn_is_writable(const dav_resource *resource, int propid)
@@ -178,7 +182,7 @@ static dav_error * dav_svn_patch_validate(const dav_resource *resource,
   return NULL;
 }
 
-static dav_error * dav_svn_patch_exec(dav_resource *resource,
+static dav_error * dav_svn_patch_exec(const dav_resource *resource,
                                       const ap_xml_elem *elem,
                                       int operation, void *context,
                                       dav_liveprop_rollback **rollback_ctx)
@@ -188,7 +192,7 @@ static dav_error * dav_svn_patch_exec(dav_resource *resource,
   return NULL;
 }
 
-static void dav_svn_patch_commit(dav_resource *resource,
+static void dav_svn_patch_commit(const dav_resource *resource,
                                  int operation, void *context,
                                  dav_liveprop_rollback *rollback_ctx)
 {
@@ -196,7 +200,7 @@ static void dav_svn_patch_commit(dav_resource *resource,
      modifiable (writable) live properties. */
 }
 
-static dav_error * dav_svn_patch_rollback(dav_resource *resource,
+static dav_error * dav_svn_patch_rollback(const dav_resource *resource,
                                           int operation, void *context,
                                           dav_liveprop_rollback *rollback_ctx)
 {
@@ -237,7 +241,7 @@ int dav_svn_find_liveprop(const dav_resource *resource,
 }
 
 void dav_svn_insert_all_liveprops(request_rec *r, const dav_resource *resource,
-                                  int insvalue, ap_text_header *phdr)
+                                  dav_prop_insert what, ap_text_header *phdr)
 {
     /* don't insert any liveprops if this isn't "our" resource */
     if (resource->hooks != &dav_svn_hooks_repos)
@@ -254,13 +258,13 @@ void dav_svn_insert_all_liveprops(request_rec *r, const dav_resource *resource,
     }
 
     (void) dav_svn_insert_prop(resource, DAV_PROPID_creationdate,
-                               insvalue, phdr);
+                               what, phdr);
     (void) dav_svn_insert_prop(resource, DAV_PROPID_getcontentlength,
-                               insvalue, phdr);
+                               what, phdr);
     (void) dav_svn_insert_prop(resource, DAV_PROPID_getlastmodified,
-                               insvalue, phdr);
+                               what, phdr);
     (void) dav_svn_insert_prop(resource, DAV_PROPID_getetag,
-                               insvalue, phdr);
+                               what, phdr);
 
     /* ### we know the others aren't defined as liveprops */
 }
