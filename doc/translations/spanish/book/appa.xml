@@ -66,38 +66,42 @@
   <!-- ======================== SECTION 2 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-ap-a-sect-2">
-    <title>Directory Versions</title>
+    <title>Versiones de directorios</title>
     
-    <para>Subversion tracks tree structures, not just file contents.
-      It's one of the biggest reasons Subversion was written to
-      replace CVS.</para>
+    <para>Subversion sigue estructura de árbol<!--TODO:Subversion tracks
+      tree structures-->, no solo el contenido de ficheros. Es una de las
+      razones más grandes por las que Subversion fue escrito para
+      reemplazar CVS.</para>
 
-    <para>Here's what this means to you, as a former CVS user:</para>
+    <para>Esto es lo que significa para usted, como anterior usuario
+      de CVS:</para>
 
     <itemizedlist>
       <listitem>
-        <para>The <command>svn add</command> and <command>svn
-          delete</command> commands work on directories now, just as
-          they work on files.  So do <command>svn copy</command> and
-          <command>svn move</command>.  However, these commands do
-          <emphasis>not</emphasis> cause any kind of immediate change
-          in the repository.  Instead, the working items are simply
-          <quote>scheduled</quote> for addition or deletion.  No
-          repository changes happen until you run <command>svn
-          commit</command>.</para>
+        <para>Los comandos <command>svn add</command> y <command>svn
+          delete</command> trabajan ahora sobre directorios, tal como
+          trabajan sobre ficheros. Así que haga <command>svn copy</command>
+          y <command>svn move</command>. Sin embargo, estos comandos
+          <emphasis>no</emphasis> causan ningún tipo de cambio
+          inmediato en el repositorio. En su lugar, los objetos de la
+          copia de trabajo simplemente se planifican para la adición
+          o la eliminación. No sucede ningún cambio en el repositorio
+          hasta que ejecute <command>svn commit</command>.</para>
       </listitem>
       <listitem>
-        <para>Directories aren't dumb containers anymore; they have
-          revision numbers like files.  (Or more properly, it's
-          correct to talk about <quote>directory
-          <filename>foo/</filename> in revision 5</quote>.)</para>
+        <para>Los directorios no serán contenedores estupidos nunca más;
+          tienen número de revisión como los ficheros. (O más
+          correctamente, es correcto hablar sobre <quote>directorio
+          <filename>foo/</filename> en la revisión 5</quote>.)</para>
       </listitem>
     </itemizedlist>
 
-    <para>Let's talk more about that last point.  Directory versioning
-      is a hard problem; because we want to allow mixed-revision
-      working copies, there are some limitations on how far we can
-      abuse this model.</para>
+    <para>Vamos<!--TODO:Let's talk... o es mejor decir "hablaremos"?-->
+      a hablar más sobre este último punto. El versionado de directorios
+      es un duro problema; porque queremos permitir <!--TODO:
+      mixed-revision working copies-->copias de trabajo con revisiones
+      mezcladas, hay algunas limitaciones en cómo podemos<!--TODO:
+      on how far we can abuse-->abusar de este modelo.</para>
 
     <para>From a theoretical point of view, we define <quote>revision
       5 of directory <filename>foo</filename></quote> to mean a
