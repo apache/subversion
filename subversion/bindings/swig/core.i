@@ -67,7 +67,6 @@
 */
 %ignore svn_io_check_path;
 %ignore svn_io_check_resolved_path;
-%ignore svn_io_open_unique_file;
 %ignore svn_io_temp_dir;
 %ignore svn_io_copy_file;
 %ignore svn_io_copy_dir_recursively;
