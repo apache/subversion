@@ -1088,8 +1088,7 @@ def another_hudson_problem(sbox):
   svntest.main.safe_rmtree(G_path)
 
   # Update missing directory to receive the delete, this should mark G
-  # as 'deleted' and should not alter gamma's entry.  G doesn't get
-  # marked deleted which is why this test is an XFail
+  # as 'deleted' and should not alter gamma's entry.
 
   # Sigh, I can't get run_and_verify_update to work (but not because
   # of issue 919 as far as I can tell)
