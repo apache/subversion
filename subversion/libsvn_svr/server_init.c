@@ -176,11 +176,11 @@ svn__svr_load_all_plugins (ap_hash_t *plugins, svn_svr_policies_t *policy)
         }
     }
 
-  /* If no plugins failed, this will be NULL, which still means
-     "success".  If one or more plugins failed to load, this will
-     contain a nesty list of each plugin's error structure. */
-  return latesterr;
 
+  if (latesterr)
+    return latesterr;
+  else
+    return SVN_SUCCESS;
 }
 
 
@@ -198,7 +198,7 @@ svn__svr_load_all_plugins (ap_hash_t *plugins, svn_svr_policies_t *policy)
 */
 
 svn_error_t *
-svn_svr_init (svn_svr_policies_t **policy,
+svn_svr_init (svn_svr_policies_t **policy, 
               ap_pool_t *pool)
 {
   ap_status_t result;
@@ -345,7 +345,7 @@ svn_svr_register_plugin (svn_svr_policies_t *policy,
 
   /* Hm... how would this routine fail? :)  */
 
-  return SVN_SUCCESS;  /* success */
+  return SVN_SUCCESS;
 }
 
 
