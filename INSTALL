@@ -152,7 +152,7 @@ II.  QUICKSTART GUIDE
       currently exist as libraries:
 
         libsvn_ra_dav:   accesses a networked repository using WebDAV.
-        libsvn_ra_dav:   accesses a local repository using Berkeley DB.
+        libsvn_ra_local: accesses a local repository using Berkeley DB.
 
       You can see which methods are available to your 'svn' client
       like so:
@@ -194,7 +194,7 @@ II.  QUICKSTART GUIDE
       After the repository is created, you can initially import data
       into it, using libsvn_ra_local (invoked by using a 'file' URL):
 
-          % svn import file///usr/local/svn/repos1 some/local/dir/
+          % svn import file:///usr/local/svn/repos1 some/local/dir/
 
       The above example imports the contents of some/local/dir/ right
       into the root of the repository.  If you want to put these
