@@ -47,7 +47,6 @@ Commit access for specific areas:
          fmatias   Féliciano Matias <feliciano.matias@free.fr> (French docs)
         dimentiy   Dmitriy O. Popkov <dimentiy@dimentiy.info>  (Russian docs)
           xsteve   Stefan Reichör <reichoer@web.de>            (psvn)
-      jrepenning   Jack Repenning <jrepenning@collab.net>      (tools/dev)
         josander   Jostein Andersen <jostein@josander.net>     (innosetup)
         ballbach   Michael Ballbach <ballbach@rten.net>        (packages)
         niemeyer   Gustavo Niemeyer <niemeyer@conectiva.com>   (svnperms.py)
@@ -65,3 +64,4 @@ Commit access for specific areas:
              djh   D.J. Heap <dj@shadyvale.net>                (Win32 build)
             rey4   Russell Yanofsky <rey4@columbia.edu>        (bindings)
            clkao   Chia-liang Kao <clkao@clkao.org>            (perl bindings)
+      jrepenning   Jack Repenning <jrepenning@collab.net>      (tools/dev)
