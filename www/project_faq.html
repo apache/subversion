@@ -33,6 +33,8 @@
 <li><a href="#repository">How do I create a repository?  How do I
     import data into it?</a></li> 
 <li><a href="#proxy">What if I'm behind a proxy?</a></li>
+<li><a href="#paranoid">My admins don't want me to have a HTTP server for
+    Subversion.  What can I do if I still want remote usage?</a></li> 
 <p>
 <strong>Troubleshooting:</strong>
 </p>
@@ -302,6 +304,73 @@ as on port 80.  Try:</p>
 </pre>
 
 <p>and maybe the proxy will let you through.</p>
+
+<![CDATA[=========================================================]]>
+
+<h3><a name="paranoid"/>My admins don't want me to have a HTTP server for
+    Subversion.  What can I do if I still want remote usage?</h3>
+
+<p>If you previously used CVS, you may have used SSH to login to the
+CVS server.  The preferred solution would be to use ra_dav combined
+with an Apache HTTP server configured with mod_ssl and appropriate
+authentication support.  This should provide enough security for most
+users.  However, we realize that there are places that do not allow
+adding servers of any kind with external connectivity.</p>
+
+<p>There has been work on a ra_pipe implementation that would work
+similarly to the CVS_RSH mechanism, but it is not currently complete.
+If you wish to contribute to its development, you are more than
+welcome to do so!</p>
+
+<p>However, another solution that can be used instead is to leverage
+SSH port forwarding to connect to the protected server via ra_dav.
+You would connect via SSH to a machine behind your firewall that can
+access your Subversion server.  Note that this SSH server does
+<b>not</b> have to be the same as where Subversion is installed.  It
+can be, but it doesn't have to be.</p>
+
+<p>Then, you create a local port forward that connects to the HTTP
+server that houses your Subversion repository.  You would then
+'connect' to the Subversion repository via this local port.  Then,
+the request will be sent 'tunneled' via SSH server to your Subversion
+server.</p>
+
+<p>An example: a Subversion ra_dav setup is behind your company firewall
+at 10.1.1.50 (call it svn-server.example.com).  Your company allows SSH
+access via publicly accessible ssh-server.example.com. Internally, you
+can access the Subversion repository via
+http://svn-server.example.com/repos/ours.</p>
+
+<p><i>Example</i>: client connecting to ssh-server with port-forwarding
+and checking out via the port forward</p>
+
+<pre>
+% ssh -L 8888:svn-server.example.com:80 me@ssh-server.example.com
+% svn checkout http://localhost:8888/repos/ours
+</pre>
+
+<p>Note that your svn-server.example.com could also have its httpd
+instance running on an unpriviliged port by a non-trusted user.  This
+will allow your Subversion server not to require root access.</p>
+
+<!-- Can you use svn switch to switch your WC between your internal and
+     external Subversion server?  I think so.  -->
+
+<p>Joe Orton notes</p>
+<pre>
+The server is sensitive to the hostname used in the Destination header
+in MOVE and COPY requests, so you have to be a little careful here - a
+"ServerAlias localhost" may be required to get this working properly.
+</pre>
+
+<p>Some links on SSH port forwarding</p>
+<ul>
+<li><a href="http://www.onlamp.com/pub/a/onlamp/excerpt/ssh_11/index3.html"
+>http://www.onlamp.com/pub/a/onlamp/excerpt/ssh_11/index3.html</a></li>
+<li><a href="http://csociety.ecn.purdue.edu/~sigos/projects/ssh/forwarding/"
+>http://csociety.ecn.purdue.edu/~sigos/projects/ssh/forwarding/</a></li>
+<li><a href="http://www.zip.com.au/~roca/ttssh.html">TTSSH: A Win32 SSH client capable of port forwarding</a></li>
+</ul>
 
 <![CDATA[=========================================================]]>
 
