@@ -64,46 +64,46 @@
 
 
 /*** Command dispatch. ***/
-static svn_cl__cmd_opts_t add_opts = {
+static const svn_cl__cmd_opts_t add_opts = {
   svn_cl__add_command,
   "Add a new file or directory to version control." };
 
-static svn_cl__cmd_opts_t checkout_opts = {
+static const svn_cl__cmd_opts_t checkout_opts = {
   svn_cl__checkout_command,
   "Check out a working directory from a repository." };
 
-static svn_cl__cmd_opts_t commit_opts = {
+static const svn_cl__cmd_opts_t commit_opts = {
   svn_cl__commit_command,
   "Commit changes from your working copy to the repository." };
 
-static svn_cl__cmd_opts_t delete_opts = {
+static const svn_cl__cmd_opts_t delete_opts = {
   svn_cl__delete_command,
   "Remove a file or directory from version control." };
 
-static svn_cl__cmd_opts_t proplist_opts = {
+static const svn_cl__cmd_opts_t proplist_opts = {
   svn_cl__proplist_command,
   "List all properties for given files and directories." };
 
-static svn_cl__cmd_opts_t propget_opts = {
+static const svn_cl__cmd_opts_t propget_opts = {
   svn_cl__propget_command,
   "Get the value of a file or directory property." };
 
-static svn_cl__cmd_opts_t propset_opts = {
+static const svn_cl__cmd_opts_t propset_opts = {
   svn_cl__propset_command,
   "Set the value of a file or directory property." };
 
-static svn_cl__cmd_opts_t status_opts = {
+static const svn_cl__cmd_opts_t status_opts = {
   svn_cl__status_command,
   "Print the status of working copy files and directories." };
 
-static svn_cl__cmd_opts_t update_opts = {
+static const svn_cl__cmd_opts_t update_opts = {
   svn_cl__update_command,
   "Bring changes from the repository into the working copy." };
 
 
 /* Map names to command routine, option descriptor and
    its "base" command.  */
-static svn_cl__cmd_desc_t cmd_table[] = {
+static const svn_cl__cmd_desc_t cmd_table[] = {
   { "add",        FALSE,  svn_cl__add,      &add_opts },
   { "ad",         TRUE,   svn_cl__add,      &add_opts },
   { "new",        TRUE,   svn_cl__add,      &add_opts },
