@@ -4,6 +4,20 @@ See "Stabilizing and maintaining releases" in trunk/HACKING for
 details on how release lines and voting work, what kinds of bugs can
 delay a release, etc.
 
+Status of 1.0.2:
+================
+
+Candidate changes:
+
+  * r9212, r9231
+    Added VC7 support and defines for including debug symbol files.
+    Justification: The setup in 1.0.x branch is useless if VC7 is used
+    Notes:  The 1.0.1 zip file content was build with VC7 and the Windows
+            installer for 1.0.1 had to be set up manually.
+    Votes:
+      +1: josander
+      +0: breser
+
 Status of 1.0.3:
 ================
 
@@ -39,14 +53,6 @@ Candidate changes:
     Votes:
       +1: dlr
       +1: breser
-
-  * r9212, r9231
-    Added VC7 support and defines for including debug symbol files.
-    Justification: The setup in 1.0.x branch is useless if VC7 is used
-    Notes:  The 1.0.1 zip file content was build with VC7 and the Windows
-            installer for 1.0.1 had to be set up manually.
-    Votes:
-      +1: josander
 
   * r9315
     Change the formating codes used in svn_swig_pl_callback_thunk.
