@@ -801,6 +801,18 @@ joessh = $JOESSH /opt/alternate/ssh -p 29934
         variable&mdash;$JOESSH would be executed instead of
         <filename>/opt/alternate/ssh -p 29934</filename>.</para>
 
+      <para>A final note: when using <literal>svn+ssh://</literal>
+        URLs to access a repository, remember that it's the
+        <command>ssh</command> program prompting you for
+        authentication, and <emphasis>not</emphasis> the
+        <command>svn</command> program.  That means there's no
+        automatic password caching going on (see <xref
+        linkend="svn-ch-6-sect-2.2"/>).  If you want to prevent
+        <command>ssh</command> from repeatedly asking for your
+        password, you'll need to use a separate memory-caching tool
+        like <command>ssh-agent</command> on a Unix-like system, or
+        <command>pageant</command> on Windows.</para>
+
     </sect2>
 
   </sect1>
@@ -1677,6 +1689,14 @@ harry =
           entire <filename>bug-142</filename> tree, but has absolutely no
           access at all to the <filename>secret</filename>
           subdirectory within it.</para>
+
+        <para>The thing to remember is that the most specific path
+          always matches first.  The <command>mod_authz_svn</command>
+          module tries to match the path itself, and then the parent
+          of the path, then the parent of that, and so on.  The net
+          effect is that mentioning a specific path in the accessfile
+          will always override any permissions inherited from parent
+          directories.</para>
 
         <para>By default, nobody has any access to the repository at
           all.  That means that if you're starting with an empty file,

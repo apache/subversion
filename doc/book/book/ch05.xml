@@ -418,7 +418,9 @@ pre-commit.tmpl
               arguments to this program: the path to the repository,
               and username which is attempting the commit.  If the
               program returns a non-zero exit value, the commit is
-              stopped before the transaction is even created.</para>
+              stopped before the transaction is even created.  If the
+              hook program writes data to stderr, it will be
+              marshalled back to the client.</para>
           </listitem>
         </varlistentry>
             
@@ -435,19 +437,22 @@ pre-commit.tmpl
               arguments to this program: the path to the repository,
               and the name of the transaction being committed.  If the
               program returns a non-zero exit value, the commit is
-              aborted and the transaction is removed.</para>
+              aborted and the transaction is removed.  If the hook
+              program writes data to stderr, it will be marshalled
+              back to the client.</para>
 
             <para>The Subversion distribution includes some access
               control scripts (located in the
               <filename>tools/hook-scripts</filename> directory of the
               Subversion source tree) that can be called from
               <command>pre-commit</command> to implement fine-grained
-              access control.  At this time, this is the only method
-              by which administrators can implement finer-grained access
-              control beyond what Apache's <filename>httpd.conf</filename>
-              offers.  In a future version of Subversion, we plan to
-              implement access control lists (ACLs) directly in the
-              filesystem.</para>
+              write-access control.  Another option is to use the
+              <command>mod_authz_svn</command> Apache httpd module,
+              which provides both read and write access control on
+              individual directories (see <xref
+              linkend="svn-ch-6-sect-4.4.2"/>).  In a future version
+              of Subversion, we plan to implement access control lists
+              (ACLs) directly in the filesystem.</para>
           </listitem>
         </varlistentry>
 
@@ -1934,13 +1939,22 @@ The latest repos revision is 19.
             their respective, just-created repositories.</para>
         </listitem>
         <listitem>
-          <para>Finally, be sure to copy any customizations from your
-            old repositories to the new ones, including
+          <para>Be sure to copy any customizations from your old
+            repositories to the new ones, including
             <filename>DB_CONFIG</filename> files and hook scripts.
             You'll want to pay attention to the release notes for the
             new release of Subversion to see if any changes since your
             last upgrade affect those hooks or configuration
             options.</para>
+        </listitem>
+        <listitem>
+          <para>If the migration process made your repository
+           accessible at a different URL (e.g. moved to a different
+           computer, or is being accessed via a different schema),
+           then you'll probably want to tell your users to run
+           <command>svn switch --relocate</command> on their existing
+           working copies.  See <xref
+           linkend="svn-ch-9-sect-1.2-re-switch"/>.</para>
         </listitem>
       </orderedlist>
 
