@@ -35,6 +35,14 @@ svn_cmdline_init (const char *progname, FILE *error_stream)
 #ifdef SVN_WIN32
   /* Force the Windows console to use the same multibyte character set
      that the app uses internally. */
+
+  /* FIXME: Win9x/Me don't support the SetConsoleCP funcitons. As a
+     temporary measure, we skip setting the console code page on those
+     systems. */
+  OSVERSIONINFO os_version;
+  os_version.dwOSVersionInfoSize = sizeof(os_version);
+  if (!GetVersionEx(&os_version)
+      || os_version.dwPlatformId == VER_PLATFORM_WIN32_WINDOWS)
   {
     UINT codepage = GetACP();
     if (!SetConsoleCP(codepage))
