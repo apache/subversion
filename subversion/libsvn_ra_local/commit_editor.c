@@ -325,6 +325,7 @@ add_file (const char *path,
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
   const char *full_path = svn_path_join (eb->base_path->data, path, pool);
+  apr_pool_t *subpool = svn_pool_create (pb->pool);
 
   /* Sanity check. */  
   if (copy_path && (! SVN_IS_VALID_REVNUM (copy_revision)))
@@ -338,7 +339,6 @@ add_file (const char *path,
       const svn_string_t *fs_path;
       svn_fs_root_t *copy_root;
       svn_node_kind_t kind;
-      apr_pool_t *subpool = svn_pool_create (pb->pool);
 
       /* Check PATH in our transaction.  It had better not exist, or
          our transaction is out of date. */
@@ -364,9 +364,6 @@ add_file (const char *path,
                                      copy_revision, subpool));
       SVN_ERR (svn_fs_copy (copy_root, fs_path->data, 
                             eb->txn_root, full_path, subpool));
-
-      /* Cleanup our temporary subpool. */
-      svn_pool_destroy (subpool);
     }
   else
     {
@@ -374,8 +371,11 @@ add_file (const char *path,
          don't perform an existence check here like the copy-from case
          does -- that's because svn_fs_make_file() already errors out
          if the file already exists.  */
-      SVN_ERR (svn_fs_make_file (eb->txn_root, full_path, pool));
+      SVN_ERR (svn_fs_make_file (eb->txn_root, full_path, subpool));
     }
+
+  /* Cleanup our temporary subpool. */
+  svn_pool_destroy (subpool);
 
   /* Build a new file baton */
   new_fb = apr_pcalloc (pool, sizeof (*new_fb));
