@@ -1662,7 +1662,7 @@ def merge_into_missing(sbox):
   expected_status = wc.State(F_path, {
     ''      : Item(status='  ', wc_rev=1),
     'foo'   : Item(status='! ', wc_rev=2),
-    ### Why no 'Q'?
+    'Q'     : Item(status='! ', wc_rev='?'),
     })
   expected_skip = wc.State(F_path, {
     'Q'   : Item(),
@@ -1701,7 +1701,7 @@ def merge_into_missing(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'A/B/F/foo' : Item(status='! ', wc_rev=2),
-    ### Why no 'A/B/F/Q'?
+    'A/B/F/Q' : Item(status='! ', wc_rev='?'),
     })
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 

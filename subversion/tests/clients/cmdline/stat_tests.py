@@ -813,7 +813,7 @@ def missing_dir_in_anchor(sbox):
 
   # At one point this caused a "foo not locked" error
   svntest.main.safe_rmtree(foo_path)
-  expected_status.remove('foo')
+  expected_status.tweak('foo', status='! ', wc_rev='?')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 
