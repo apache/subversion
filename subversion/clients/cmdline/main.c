@@ -407,13 +407,6 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     {'F', 'q', 'r', svn_cl__targets_opt, 'R', svn_cl__revprop_opt,
      SVN_CL__AUTH_OPTIONS, svn_cl__encoding_opt} },
   
-  { "revert", svn_cl__revert, {0},
-    "Restore pristine working copy file (undo all local edits)\n"
-    "usage: revert PATH [PATH [PATH ... ]]\n\n"
-    "  Note:  this routine does not require network access, and \n"
-    "  resolves any conflicted states.\n",
-    {svn_cl__targets_opt, 'R', 'q'} },
-
   { "resolve", svn_cl__resolve, {0},
     "Remove 'conflicted' state on working copy files or directories.\n"
     "usage: resolve PATH [PATH [PATH ... ]]\n\n"
@@ -422,6 +415,13 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "  to be committed again.\n",
     {svn_cl__targets_opt, 'R', 'q'} },
  
+  { "revert", svn_cl__revert, {0},
+    "Restore pristine working copy file (undo all local edits)\n"
+    "usage: revert PATH [PATH [PATH ... ]]\n\n"
+    "  Note:  this routine does not require network access, and \n"
+    "  resolves any conflicted states.\n",
+    {svn_cl__targets_opt, 'R', 'q'} },
+
   { "status", svn_cl__status, {"stat", "st"},
     "Print the status of working copy files and directories.\n"
     "usage: status [PATH [PATH ... ]]\n\n"
