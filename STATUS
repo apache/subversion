@@ -80,13 +80,6 @@ Candidate changes:
     Votes:
       +1: josander
 
-  * r11701
-    Fix pool usage in svn_io_remove_dir.
-    Justification:
-      Saves at least 100 MB on large fsfs commits.
-    Votes:
-      +1: epg, lundblad, dionisos
-
   * r11706
     Fix pool usage in finalizng a transaction into a revision in the
     fsfs back-end.
