@@ -225,8 +225,10 @@ struct file_baton
   const char *revision;
   const char *url;
   const char *author;
-
   apr_time_t date;
+
+  /* Pool associated with this baton. */
+  apr_pool_t *pool;
 };
 
 
@@ -318,6 +320,7 @@ add_file (const char *path,
   fb->edit_baton = eb;
   fb->path = full_path;
   fb->url = full_url;
+  fb->pool = pool;
 
   *baton = fb;
   return SVN_NO_ERROR;
@@ -354,7 +357,7 @@ apply_textdelta (void *file_baton,
   struct handler_baton *hb = apr_palloc (pool, sizeof (*hb));
 
   SVN_ERR (svn_io_open_unique_file (&fb->tmp_file, &(fb->tmppath),
-                                    fb->path, ".tmp", FALSE, pool));
+                                    fb->path, ".tmp", FALSE, fb->pool));
 
   hb->pool = pool;
   hb->tmppath = fb->tmppath;
@@ -413,15 +416,16 @@ close_file (void *file_baton,
             apr_pool_t *pool)
 {
   struct file_baton *fb = file_baton;
+  apr_status_t apr_err;
 
-  apr_status_t apr_err = apr_file_close (fb->tmp_file);
+  /* Was a txdelta even sent? */
+  if (! fb->tmppath)
+    return SVN_NO_ERROR;
+
+  apr_err = apr_file_close (fb->tmp_file);
   if (apr_err)
     return svn_error_createf (apr_err, NULL, "error closing file `%s'",
                               fb->tmppath);
-
-  if (! fb->tmppath)
-    /* No txdelta was ever sent. */
-    return SVN_NO_ERROR;
 
   if (text_checksum)
     {
