@@ -20,7 +20,7 @@
  */
 
 #include "Revision.h"
-#include "org_tigris_subversion_javahl_RevisionKind.h"
+#include "../include/org_tigris_subversion_javahl_RevisionKind.h"
 #include "JNIUtil.h"
 //////////////////////////////////////////////////////////////////////
 // Construction/Destruction

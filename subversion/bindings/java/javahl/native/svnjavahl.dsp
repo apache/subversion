@@ -409,8 +409,8 @@ SOURCE=..\src\org\tigris\subversion\javahl\BlameCallback.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\BlameCallback.java
 
-"..\cls\org\tigris\subversion\javahl\BlameCallback.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/BlameCallback.java
+"..\classes\org\tigris\subversion\javahl\BlameCallback.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/BlameCallback.java
 
 # End Custom Build
 
@@ -419,8 +419,8 @@ InputPath=..\src\org\tigris\subversion\javahl\BlameCallback.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\BlameCallback.java
 
-"..\cls\org\tigris\subversion\javahl\BlameCallback.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/BlameCallback.java
+"..\classes\org\tigris\subversion\javahl\BlameCallback.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/BlameCallback.java
 
 # End Custom Build
 
@@ -429,8 +429,8 @@ InputPath=..\src\org\tigris\subversion\javahl\BlameCallback.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\BlameCallback.java
 
-"..\cls\org\tigris\subversion\javahl\BlameCallback.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/BlameCallback.java
+"..\classes\org\tigris\subversion\javahl\BlameCallback.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/BlameCallback.java
 
 # End Custom Build
 
@@ -439,8 +439,8 @@ InputPath=..\src\org\tigris\subversion\javahl\BlameCallback.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\BlameCallback.java
 
-"..\cls\org\tigris\subversion\javahl\BlameCallback.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/BlameCallback.java
+"..\classes\org\tigris\subversion\javahl\BlameCallback.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/BlameCallback.java
 
 # End Custom Build
 
@@ -449,8 +449,8 @@ InputPath=..\src\org\tigris\subversion\javahl\BlameCallback.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\BlameCallback.java
 
-"..\cls\org\tigris\subversion\javahl\BlameCallback.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/BlameCallback.java
+"..\classes\org\tigris\subversion\javahl\BlameCallback.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/BlameCallback.java
 
 # End Custom Build
 
@@ -459,8 +459,8 @@ InputPath=..\src\org\tigris\subversion\javahl\BlameCallback.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\BlameCallback.java
 
-"..\cls\org\tigris\subversion\javahl\BlameCallback.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/BlameCallback.java
+"..\classes\org\tigris\subversion\javahl\BlameCallback.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/BlameCallback.java
 
 # End Custom Build
 
@@ -476,8 +476,8 @@ SOURCE=..\src\org\tigris\subversion\javahl\ClientException.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\ClientException.java
 
-"..\cls\org\tigris\subversion\javahl\ClientException.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/ClientException.java
+"..\classes\org\tigris\subversion\javahl\ClientException.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/ClientException.java
 
 # End Custom Build
 
@@ -486,8 +486,8 @@ InputPath=..\src\org\tigris\subversion\javahl\ClientException.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\ClientException.java
 
-"..\cls\org\tigris\subversion\javahl\ClientException.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/ClientException.java
+"..\classes\org\tigris\subversion\javahl\ClientException.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/ClientException.java
 
 # End Custom Build
 
@@ -496,8 +496,8 @@ InputPath=..\src\org\tigris\subversion\javahl\ClientException.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\ClientException.java
 
-"..\cls\org\tigris\subversion\javahl\ClientException.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/ClientException.java
+"..\classes\org\tigris\subversion\javahl\ClientException.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/ClientException.java
 
 # End Custom Build
 
@@ -506,8 +506,8 @@ InputPath=..\src\org\tigris\subversion\javahl\ClientException.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\ClientException.java
 
-"..\cls\org\tigris\subversion\javahl\ClientException.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/ClientException.java
+"..\classes\org\tigris\subversion\javahl\ClientException.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/ClientException.java
 
 # End Custom Build
 
@@ -516,8 +516,8 @@ InputPath=..\src\org\tigris\subversion\javahl\ClientException.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\ClientException.java
 
-"..\cls\org\tigris\subversion\javahl\ClientException.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/ClientException.java
+"..\classes\org\tigris\subversion\javahl\ClientException.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/ClientException.java
 
 # End Custom Build
 
@@ -526,8 +526,8 @@ InputPath=..\src\org\tigris\subversion\javahl\ClientException.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\ClientException.java
 
-"..\cls\org\tigris\subversion\javahl\ClientException.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/ClientException.java
+"..\classes\org\tigris\subversion\javahl\ClientException.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/ClientException.java
 
 # End Custom Build
 
@@ -543,8 +543,8 @@ SOURCE=..\src\org\tigris\subversion\javahl\DirEntry.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\DirEntry.java
 
-"..\cls\org\tigris\subversion\javahl\DirEntry.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/DirEntry.java
+"..\classes\org\tigris\subversion\javahl\DirEntry.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/DirEntry.java
 
 # End Custom Build
 
@@ -553,8 +553,8 @@ InputPath=..\src\org\tigris\subversion\javahl\DirEntry.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\DirEntry.java
 
-"..\cls\org\tigris\subversion\javahl\DirEntry.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/DirEntry.java
+"..\classes\org\tigris\subversion\javahl\DirEntry.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/DirEntry.java
 
 # End Custom Build
 
@@ -563,8 +563,8 @@ InputPath=..\src\org\tigris\subversion\javahl\DirEntry.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\DirEntry.java
 
-"..\cls\org\tigris\subversion\javahl\DirEntry.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/DirEntry.java
+"..\classes\org\tigris\subversion\javahl\DirEntry.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/DirEntry.java
 
 # End Custom Build
 
@@ -573,8 +573,8 @@ InputPath=..\src\org\tigris\subversion\javahl\DirEntry.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\DirEntry.java
 
-"..\cls\org\tigris\subversion\javahl\DirEntry.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/DirEntry.java
+"..\classes\org\tigris\subversion\javahl\DirEntry.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/DirEntry.java
 
 # End Custom Build
 
@@ -583,8 +583,8 @@ InputPath=..\src\org\tigris\subversion\javahl\DirEntry.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\DirEntry.java
 
-"..\cls\org\tigris\subversion\javahl\DirEntry.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/DirEntry.java
+"..\classes\org\tigris\subversion\javahl\DirEntry.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/DirEntry.java
 
 # End Custom Build
 
@@ -593,8 +593,8 @@ InputPath=..\src\org\tigris\subversion\javahl\DirEntry.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\DirEntry.java
 
-"..\cls\org\tigris\subversion\javahl\DirEntry.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/DirEntry.java
+"..\classes\org\tigris\subversion\javahl\DirEntry.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/DirEntry.java
 
 # End Custom Build
 
@@ -610,8 +610,8 @@ SOURCE=..\src\org\tigris\subversion\javahl\InputInterface.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\InputInterface.java
 
-"..\cls\org\tigris\subversion\javahl\InputInterface.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/InputInterface.java
+"..\classes\org\tigris\subversion\javahl\InputInterface.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/InputInterface.java
 
 # End Custom Build
 
@@ -620,8 +620,8 @@ InputPath=..\src\org\tigris\subversion\javahl\InputInterface.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\InputInterface.java
 
-"..\cls\org\tigris\subversion\javahl\InputInterface.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/InputInterface.java
+"..\classes\org\tigris\subversion\javahl\InputInterface.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/InputInterface.java
 
 # End Custom Build
 
@@ -630,8 +630,8 @@ InputPath=..\src\org\tigris\subversion\javahl\InputInterface.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\InputInterface.java
 
-"..\cls\org\tigris\subversion\javahl\InputInterface.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/InputInterface.java
+"..\classes\org\tigris\subversion\javahl\InputInterface.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/InputInterface.java
 
 # End Custom Build
 
@@ -640,8 +640,8 @@ InputPath=..\src\org\tigris\subversion\javahl\InputInterface.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\InputInterface.java
 
-"..\cls\org\tigris\subversion\javahl\InputInterface.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/InputInterface.java
+"..\classes\org\tigris\subversion\javahl\InputInterface.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/InputInterface.java
 
 # End Custom Build
 
@@ -650,8 +650,8 @@ InputPath=..\src\org\tigris\subversion\javahl\InputInterface.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\InputInterface.java
 
-"..\cls\org\tigris\subversion\javahl\InputInterface.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/InputInterface.java
+"..\classes\org\tigris\subversion\javahl\InputInterface.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/InputInterface.java
 
 # End Custom Build
 
@@ -660,8 +660,8 @@ InputPath=..\src\org\tigris\subversion\javahl\InputInterface.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\InputInterface.java
 
-"..\cls\org\tigris\subversion\javahl\InputInterface.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/InputInterface.java
+"..\classes\org\tigris\subversion\javahl\InputInterface.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/InputInterface.java
 
 # End Custom Build
 
@@ -677,8 +677,8 @@ SOURCE=..\src\org\tigris\subversion\javahl\JNIError.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\JNIError.java
 
-"..\cls\org\tigris\subversion\javahl\JNIError.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/JNIError.java
+"..\classes\org\tigris\subversion\javahl\JNIError.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/JNIError.java
 
 # End Custom Build
 
@@ -687,8 +687,8 @@ InputPath=..\src\org\tigris\subversion\javahl\JNIError.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\JNIError.java
 
-"..\cls\org\tigris\subversion\javahl\JNIError.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/JNIError.java
+"..\classes\org\tigris\subversion\javahl\JNIError.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/JNIError.java
 
 # End Custom Build
 
@@ -697,8 +697,8 @@ InputPath=..\src\org\tigris\subversion\javahl\JNIError.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\JNIError.java
 
-"..\cls\org\tigris\subversion\javahl\JNIError.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/JNIError.java
+"..\classes\org\tigris\subversion\javahl\JNIError.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/JNIError.java
 
 # End Custom Build
 
@@ -707,8 +707,8 @@ InputPath=..\src\org\tigris\subversion\javahl\JNIError.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\JNIError.java
 
-"..\cls\org\tigris\subversion\javahl\JNIError.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/JNIError.java
+"..\classes\org\tigris\subversion\javahl\JNIError.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/JNIError.java
 
 # End Custom Build
 
@@ -717,8 +717,8 @@ InputPath=..\src\org\tigris\subversion\javahl\JNIError.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\JNIError.java
 
-"..\cls\org\tigris\subversion\javahl\JNIError.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/JNIError.java
+"..\classes\org\tigris\subversion\javahl\JNIError.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/JNIError.java
 
 # End Custom Build
 
@@ -727,8 +727,8 @@ InputPath=..\src\org\tigris\subversion\javahl\JNIError.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\JNIError.java
 
-"..\cls\org\tigris\subversion\javahl\JNIError.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/JNIError.java
+"..\classes\org\tigris\subversion\javahl\JNIError.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/JNIError.java
 
 # End Custom Build
 
@@ -744,8 +744,8 @@ SOURCE=..\src\org\tigris\subversion\javahl\LogMessage.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\LogMessage.java
 
-"..\cls\org\tigris\subversion\javahl\LogMessage.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/LogMessage.java
+"..\classes\org\tigris\subversion\javahl\LogMessage.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/LogMessage.java
 
 # End Custom Build
 
@@ -754,8 +754,8 @@ InputPath=..\src\org\tigris\subversion\javahl\LogMessage.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\LogMessage.java
 
-"..\cls\org\tigris\subversion\javahl\LogMessage.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/LogMessage.java
+"..\classes\org\tigris\subversion\javahl\LogMessage.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/LogMessage.java
 
 # End Custom Build
 
@@ -764,8 +764,8 @@ InputPath=..\src\org\tigris\subversion\javahl\LogMessage.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\LogMessage.java
 
-"..\cls\org\tigris\subversion\javahl\LogMessage.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/LogMessage.java
+"..\classes\org\tigris\subversion\javahl\LogMessage.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/LogMessage.java
 
 # End Custom Build
 
@@ -774,8 +774,8 @@ InputPath=..\src\org\tigris\subversion\javahl\LogMessage.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\LogMessage.java
 
-"..\cls\org\tigris\subversion\javahl\LogMessage.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/LogMessage.java
+"..\classes\org\tigris\subversion\javahl\LogMessage.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/LogMessage.java
 
 # End Custom Build
 
@@ -784,8 +784,8 @@ InputPath=..\src\org\tigris\subversion\javahl\LogMessage.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\LogMessage.java
 
-"..\cls\org\tigris\subversion\javahl\LogMessage.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/LogMessage.java
+"..\classes\org\tigris\subversion\javahl\LogMessage.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/LogMessage.java
 
 # End Custom Build
 
@@ -794,8 +794,8 @@ InputPath=..\src\org\tigris\subversion\javahl\LogMessage.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\LogMessage.java
 
-"..\cls\org\tigris\subversion\javahl\LogMessage.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/LogMessage.java
+"..\classes\org\tigris\subversion\javahl\LogMessage.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/LogMessage.java
 
 # End Custom Build
 
@@ -811,8 +811,8 @@ SOURCE=..\src\org\tigris\subversion\javahl\NodeKind.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\NodeKind.java
 
-"..\cls\org\tigris\subversion\javahl\NodeKind.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/NodeKind.java
+"..\classes\org\tigris\subversion\javahl\NodeKind.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/NodeKind.java
 
 # End Custom Build
 
@@ -821,8 +821,8 @@ InputPath=..\src\org\tigris\subversion\javahl\NodeKind.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\NodeKind.java
 
-"..\cls\org\tigris\subversion\javahl\NodeKind.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/NodeKind.java
+"..\classes\org\tigris\subversion\javahl\NodeKind.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/NodeKind.java
 
 # End Custom Build
 
@@ -831,8 +831,8 @@ InputPath=..\src\org\tigris\subversion\javahl\NodeKind.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\NodeKind.java
 
-"..\cls\org\tigris\subversion\javahl\NodeKind.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/NodeKind.java
+"..\classes\org\tigris\subversion\javahl\NodeKind.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/NodeKind.java
 
 # End Custom Build
 
@@ -841,8 +841,8 @@ InputPath=..\src\org\tigris\subversion\javahl\NodeKind.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\NodeKind.java
 
-"..\cls\org\tigris\subversion\javahl\NodeKind.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/NodeKind.java
+"..\classes\org\tigris\subversion\javahl\NodeKind.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/NodeKind.java
 
 # End Custom Build
 
@@ -851,8 +851,8 @@ InputPath=..\src\org\tigris\subversion\javahl\NodeKind.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\NodeKind.java
 
-"..\cls\org\tigris\subversion\javahl\NodeKind.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/NodeKind.java
+"..\classes\org\tigris\subversion\javahl\NodeKind.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/NodeKind.java
 
 # End Custom Build
 
@@ -861,8 +861,8 @@ InputPath=..\src\org\tigris\subversion\javahl\NodeKind.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\NodeKind.java
 
-"..\cls\org\tigris\subversion\javahl\NodeKind.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/NodeKind.java
+"..\classes\org\tigris\subversion\javahl\NodeKind.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/NodeKind.java
 
 # End Custom Build
 
@@ -878,8 +878,8 @@ SOURCE=..\src\org\tigris\subversion\javahl\Notify.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\Notify.java
 
-"..\cls\org\tigris\subversion\javahl\Notify.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/Notify.java
+"..\classes\org\tigris\subversion\javahl\Notify.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/Notify.java
 
 # End Custom Build
 
@@ -888,8 +888,8 @@ InputPath=..\src\org\tigris\subversion\javahl\Notify.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\Notify.java
 
-"..\cls\org\tigris\subversion\javahl\Notify.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/Notify.java
+"..\classes\org\tigris\subversion\javahl\Notify.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/Notify.java
 
 # End Custom Build
 
@@ -898,8 +898,8 @@ InputPath=..\src\org\tigris\subversion\javahl\Notify.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\Notify.java
 
-"..\cls\org\tigris\subversion\javahl\Notify.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/Notify.java
+"..\classes\org\tigris\subversion\javahl\Notify.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/Notify.java
 
 # End Custom Build
 
@@ -908,8 +908,8 @@ InputPath=..\src\org\tigris\subversion\javahl\Notify.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\Notify.java
 
-"..\cls\org\tigris\subversion\javahl\Notify.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/Notify.java
+"..\classes\org\tigris\subversion\javahl\Notify.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/Notify.java
 
 # End Custom Build
 
@@ -918,8 +918,8 @@ InputPath=..\src\org\tigris\subversion\javahl\Notify.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\Notify.java
 
-"..\cls\org\tigris\subversion\javahl\Notify.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/Notify.java
+"..\classes\org\tigris\subversion\javahl\Notify.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/Notify.java
 
 # End Custom Build
 
@@ -928,8 +928,8 @@ InputPath=..\src\org\tigris\subversion\javahl\Notify.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\Notify.java
 
-"..\cls\org\tigris\subversion\javahl\Notify.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/Notify.java
+"..\classes\org\tigris\subversion\javahl\Notify.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/Notify.java
 
 # End Custom Build
 
@@ -945,8 +945,8 @@ SOURCE=..\src\org\tigris\subversion\javahl\NotifyAction.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\NotifyAction.java
 
-"..\cls\org\tigris\subversion\javahl\NotifyAction.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/NotifyAction.java
+"..\classes\org\tigris\subversion\javahl\NotifyAction.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/NotifyAction.java
 
 # End Custom Build
 
@@ -955,8 +955,8 @@ InputPath=..\src\org\tigris\subversion\javahl\NotifyAction.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\NotifyAction.java
 
-"..\cls\org\tigris\subversion\javahl\NotifyAction.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/NotifyAction.java
+"..\classes\org\tigris\subversion\javahl\NotifyAction.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/NotifyAction.java
 
 # End Custom Build
 
@@ -965,8 +965,8 @@ InputPath=..\src\org\tigris\subversion\javahl\NotifyAction.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\NotifyAction.java
 
-"..\cls\org\tigris\subversion\javahl\NotifyAction.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/NotifyAction.java
+"..\classes\org\tigris\subversion\javahl\NotifyAction.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/NotifyAction.java
 
 # End Custom Build
 
@@ -975,8 +975,8 @@ InputPath=..\src\org\tigris\subversion\javahl\NotifyAction.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\NotifyAction.java
 
-"..\cls\org\tigris\subversion\javahl\NotifyAction.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/NotifyAction.java
+"..\classes\org\tigris\subversion\javahl\NotifyAction.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/NotifyAction.java
 
 # End Custom Build
 
@@ -985,8 +985,8 @@ InputPath=..\src\org\tigris\subversion\javahl\NotifyAction.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\NotifyAction.java
 
-"..\cls\org\tigris\subversion\javahl\NotifyAction.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/NotifyAction.java
+"..\classes\org\tigris\subversion\javahl\NotifyAction.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/NotifyAction.java
 
 # End Custom Build
 
@@ -995,8 +995,8 @@ InputPath=..\src\org\tigris\subversion\javahl\NotifyAction.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\NotifyAction.java
 
-"..\cls\org\tigris\subversion\javahl\NotifyAction.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/NotifyAction.java
+"..\classes\org\tigris\subversion\javahl\NotifyAction.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/NotifyAction.java
 
 # End Custom Build
 
@@ -1012,8 +1012,8 @@ SOURCE=..\src\org\tigris\subversion\javahl\NotifyStatus.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\NotifyStatus.java
 
-"..\cls\org\tigris\subversion\javahl\NotifyStatus.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/NotifyStatus.java
+"..\classes\org\tigris\subversion\javahl\NotifyStatus.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/NotifyStatus.java
 
 # End Custom Build
 
@@ -1022,8 +1022,8 @@ InputPath=..\src\org\tigris\subversion\javahl\NotifyStatus.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\NotifyStatus.java
 
-"..\cls\org\tigris\subversion\javahl\NotifyStatus.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/NotifyStatus.java
+"..\classes\org\tigris\subversion\javahl\NotifyStatus.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/NotifyStatus.java
 
 # End Custom Build
 
@@ -1032,8 +1032,8 @@ InputPath=..\src\org\tigris\subversion\javahl\NotifyStatus.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\NotifyStatus.java
 
-"..\cls\org\tigris\subversion\javahl\NotifyStatus.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/NotifyStatus.java
+"..\classes\org\tigris\subversion\javahl\NotifyStatus.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/NotifyStatus.java
 
 # End Custom Build
 
@@ -1042,8 +1042,8 @@ InputPath=..\src\org\tigris\subversion\javahl\NotifyStatus.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\NotifyStatus.java
 
-"..\cls\org\tigris\subversion\javahl\NotifyStatus.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/NotifyStatus.java
+"..\classes\org\tigris\subversion\javahl\NotifyStatus.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/NotifyStatus.java
 
 # End Custom Build
 
@@ -1052,8 +1052,8 @@ InputPath=..\src\org\tigris\subversion\javahl\NotifyStatus.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\NotifyStatus.java
 
-"..\cls\org\tigris\subversion\javahl\NotifyStatus.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/NotifyStatus.java
+"..\classes\org\tigris\subversion\javahl\NotifyStatus.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/NotifyStatus.java
 
 # End Custom Build
 
@@ -1062,8 +1062,8 @@ InputPath=..\src\org\tigris\subversion\javahl\NotifyStatus.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\NotifyStatus.java
 
-"..\cls\org\tigris\subversion\javahl\NotifyStatus.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/NotifyStatus.java
+"..\classes\org\tigris\subversion\javahl\NotifyStatus.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/NotifyStatus.java
 
 # End Custom Build
 
@@ -1079,8 +1079,8 @@ SOURCE=..\src\org\tigris\subversion\javahl\OutputInterface.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\OutputInterface.java
 
-"..\cls\org\tigris\subversion\javahl\OutputInterface.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/OutputInterface.java
+"..\classes\org\tigris\subversion\javahl\OutputInterface.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/OutputInterface.java
 
 # End Custom Build
 
@@ -1089,8 +1089,8 @@ InputPath=..\src\org\tigris\subversion\javahl\OutputInterface.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\OutputInterface.java
 
-"..\cls\org\tigris\subversion\javahl\OutputInterface.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/OutputInterface.java
+"..\classes\org\tigris\subversion\javahl\OutputInterface.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/OutputInterface.java
 
 # End Custom Build
 
@@ -1099,8 +1099,8 @@ InputPath=..\src\org\tigris\subversion\javahl\OutputInterface.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\OutputInterface.java
 
-"..\cls\org\tigris\subversion\javahl\OutputInterface.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/OutputInterface.java
+"..\classes\org\tigris\subversion\javahl\OutputInterface.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/OutputInterface.java
 
 # End Custom Build
 
@@ -1109,8 +1109,8 @@ InputPath=..\src\org\tigris\subversion\javahl\OutputInterface.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\OutputInterface.java
 
-"..\cls\org\tigris\subversion\javahl\OutputInterface.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/OutputInterface.java
+"..\classes\org\tigris\subversion\javahl\OutputInterface.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/OutputInterface.java
 
 # End Custom Build
 
@@ -1119,8 +1119,8 @@ InputPath=..\src\org\tigris\subversion\javahl\OutputInterface.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\OutputInterface.java
 
-"..\cls\org\tigris\subversion\javahl\OutputInterface.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/OutputInterface.java
+"..\classes\org\tigris\subversion\javahl\OutputInterface.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/OutputInterface.java
 
 # End Custom Build
 
@@ -1129,8 +1129,8 @@ InputPath=..\src\org\tigris\subversion\javahl\OutputInterface.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\OutputInterface.java
 
-"..\cls\org\tigris\subversion\javahl\OutputInterface.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/OutputInterface.java
+"..\classes\org\tigris\subversion\javahl\OutputInterface.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/OutputInterface.java
 
 # End Custom Build
 
@@ -1146,8 +1146,8 @@ SOURCE=..\src\org\tigris\subversion\javahl\PromptUserPassword.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\PromptUserPassword.java
 
-"..\cls\org\tigris\subversion\javahl\PromptUserPassword.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/PromptUserPassword.java
+"..\classes\org\tigris\subversion\javahl\PromptUserPassword.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/PromptUserPassword.java
 
 # End Custom Build
 
@@ -1156,8 +1156,8 @@ InputPath=..\src\org\tigris\subversion\javahl\PromptUserPassword.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\PromptUserPassword.java
 
-"..\cls\org\tigris\subversion\javahl\PromptUserPassword.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/PromptUserPassword.java
+"..\classes\org\tigris\subversion\javahl\PromptUserPassword.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/PromptUserPassword.java
 
 # End Custom Build
 
@@ -1166,8 +1166,8 @@ InputPath=..\src\org\tigris\subversion\javahl\PromptUserPassword.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\PromptUserPassword.java
 
-"..\cls\org\tigris\subversion\javahl\PromptUserPassword.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/PromptUserPassword.java
+"..\classes\org\tigris\subversion\javahl\PromptUserPassword.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/PromptUserPassword.java
 
 # End Custom Build
 
@@ -1176,8 +1176,8 @@ InputPath=..\src\org\tigris\subversion\javahl\PromptUserPassword.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\PromptUserPassword.java
 
-"..\cls\org\tigris\subversion\javahl\PromptUserPassword.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/PromptUserPassword.java
+"..\classes\org\tigris\subversion\javahl\PromptUserPassword.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/PromptUserPassword.java
 
 # End Custom Build
 
@@ -1186,8 +1186,8 @@ InputPath=..\src\org\tigris\subversion\javahl\PromptUserPassword.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\PromptUserPassword.java
 
-"..\cls\org\tigris\subversion\javahl\PromptUserPassword.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/PromptUserPassword.java
+"..\classes\org\tigris\subversion\javahl\PromptUserPassword.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/PromptUserPassword.java
 
 # End Custom Build
 
@@ -1196,8 +1196,8 @@ InputPath=..\src\org\tigris\subversion\javahl\PromptUserPassword.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\PromptUserPassword.java
 
-"..\cls\org\tigris\subversion\javahl\PromptUserPassword.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/PromptUserPassword.java
+"..\classes\org\tigris\subversion\javahl\PromptUserPassword.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/PromptUserPassword.java
 
 # End Custom Build
 
@@ -1213,8 +1213,8 @@ SOURCE=..\src\org\tigris\subversion\javahl\PromptUserPassword2.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\PromptUserPassword2.java
 
-"..\cls\org\tigris\subversion\javahl\PromptUserPassword2.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/PromptUserPassword2.java
+"..\classes\org\tigris\subversion\javahl\PromptUserPassword2.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/PromptUserPassword2.java
 
 # End Custom Build
 
@@ -1223,8 +1223,8 @@ InputPath=..\src\org\tigris\subversion\javahl\PromptUserPassword2.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\PromptUserPassword2.java
 
-"..\cls\org\tigris\subversion\javahl\PromptUserPassword2.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/PromptUserPassword2.java
+"..\classes\org\tigris\subversion\javahl\PromptUserPassword2.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/PromptUserPassword2.java
 
 # End Custom Build
 
@@ -1233,8 +1233,8 @@ InputPath=..\src\org\tigris\subversion\javahl\PromptUserPassword2.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\PromptUserPassword2.java
 
-"..\cls\org\tigris\subversion\javahl\PromptUserPassword2.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/PromptUserPassword2.java
+"..\classes\org\tigris\subversion\javahl\PromptUserPassword2.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/PromptUserPassword2.java
 
 # End Custom Build
 
@@ -1243,8 +1243,8 @@ InputPath=..\src\org\tigris\subversion\javahl\PromptUserPassword2.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\PromptUserPassword2.java
 
-"..\cls\org\tigris\subversion\javahl\PromptUserPassword2.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/PromptUserPassword2.java
+"..\classes\org\tigris\subversion\javahl\PromptUserPassword2.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/PromptUserPassword2.java
 
 # End Custom Build
 
@@ -1253,8 +1253,8 @@ InputPath=..\src\org\tigris\subversion\javahl\PromptUserPassword2.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\PromptUserPassword2.java
 
-"..\cls\org\tigris\subversion\javahl\PromptUserPassword2.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/PromptUserPassword2.java
+"..\classes\org\tigris\subversion\javahl\PromptUserPassword2.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/PromptUserPassword2.java
 
 # End Custom Build
 
@@ -1263,8 +1263,8 @@ InputPath=..\src\org\tigris\subversion\javahl\PromptUserPassword2.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\PromptUserPassword2.java
 
-"..\cls\org\tigris\subversion\javahl\PromptUserPassword2.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/PromptUserPassword2.java
+"..\classes\org\tigris\subversion\javahl\PromptUserPassword2.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/PromptUserPassword2.java
 
 # End Custom Build
 
@@ -1280,8 +1280,8 @@ SOURCE=..\src\org\tigris\subversion\javahl\PromptUserPassword3.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\PromptUserPassword3.java
 
-"..\cls\org\tigris\subversion\javahl\PromptUserPassword3.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/PromptUserPassword3.java
+"..\classes\org\tigris\subversion\javahl\PromptUserPassword3.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/PromptUserPassword3.java
 
 # End Custom Build
 
@@ -1290,8 +1290,8 @@ InputPath=..\src\org\tigris\subversion\javahl\PromptUserPassword3.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\PromptUserPassword3.java
 
-"..\cls\org\tigris\subversion\javahl\PromptUserPassword3.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/PromptUserPassword3.java
+"..\classes\org\tigris\subversion\javahl\PromptUserPassword3.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/PromptUserPassword3.java
 
 # End Custom Build
 
@@ -1300,8 +1300,8 @@ InputPath=..\src\org\tigris\subversion\javahl\PromptUserPassword3.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\PromptUserPassword3.java
 
-"..\cls\org\tigris\subversion\javahl\PromptUserPassword3.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/PromptUserPassword3.java
+"..\classes\org\tigris\subversion\javahl\PromptUserPassword3.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/PromptUserPassword3.java
 
 # End Custom Build
 
@@ -1310,8 +1310,8 @@ InputPath=..\src\org\tigris\subversion\javahl\PromptUserPassword3.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\PromptUserPassword3.java
 
-"..\cls\org\tigris\subversion\javahl\PromptUserPassword3.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/PromptUserPassword3.java
+"..\classes\org\tigris\subversion\javahl\PromptUserPassword3.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/PromptUserPassword3.java
 
 # End Custom Build
 
@@ -1320,8 +1320,8 @@ InputPath=..\src\org\tigris\subversion\javahl\PromptUserPassword3.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\PromptUserPassword3.java
 
-"..\cls\org\tigris\subversion\javahl\PromptUserPassword3.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/PromptUserPassword3.java
+"..\classes\org\tigris\subversion\javahl\PromptUserPassword3.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/PromptUserPassword3.java
 
 # End Custom Build
 
@@ -1330,8 +1330,8 @@ InputPath=..\src\org\tigris\subversion\javahl\PromptUserPassword3.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\PromptUserPassword3.java
 
-"..\cls\org\tigris\subversion\javahl\PromptUserPassword3.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/PromptUserPassword3.java
+"..\classes\org\tigris\subversion\javahl\PromptUserPassword3.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/PromptUserPassword3.java
 
 # End Custom Build
 
@@ -1347,8 +1347,8 @@ SOURCE=..\src\org\tigris\subversion\javahl\PropertyData.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\PropertyData.java
 
-"..\cls\org\tigris\subversion\javahl\PropertyData.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/PropertyData.java
+"..\classes\org\tigris\subversion\javahl\PropertyData.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/PropertyData.java
 
 # End Custom Build
 
@@ -1357,8 +1357,8 @@ InputPath=..\src\org\tigris\subversion\javahl\PropertyData.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\PropertyData.java
 
-"..\cls\org\tigris\subversion\javahl\PropertyData.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/PropertyData.java
+"..\classes\org\tigris\subversion\javahl\PropertyData.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/PropertyData.java
 
 # End Custom Build
 
@@ -1367,8 +1367,8 @@ InputPath=..\src\org\tigris\subversion\javahl\PropertyData.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\PropertyData.java
 
-"..\cls\org\tigris\subversion\javahl\PropertyData.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/PropertyData.java
+"..\classes\org\tigris\subversion\javahl\PropertyData.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/PropertyData.java
 
 # End Custom Build
 
@@ -1377,8 +1377,8 @@ InputPath=..\src\org\tigris\subversion\javahl\PropertyData.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\PropertyData.java
 
-"..\cls\org\tigris\subversion\javahl\PropertyData.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/PropertyData.java
+"..\classes\org\tigris\subversion\javahl\PropertyData.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/PropertyData.java
 
 # End Custom Build
 
@@ -1387,8 +1387,8 @@ InputPath=..\src\org\tigris\subversion\javahl\PropertyData.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\PropertyData.java
 
-"..\cls\org\tigris\subversion\javahl\PropertyData.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/PropertyData.java
+"..\classes\org\tigris\subversion\javahl\PropertyData.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/PropertyData.java
 
 # End Custom Build
 
@@ -1397,8 +1397,8 @@ InputPath=..\src\org\tigris\subversion\javahl\PropertyData.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\PropertyData.java
 
-"..\cls\org\tigris\subversion\javahl\PropertyData.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/PropertyData.java
+"..\classes\org\tigris\subversion\javahl\PropertyData.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/PropertyData.java
 
 # End Custom Build
 
@@ -1414,8 +1414,8 @@ SOURCE=..\src\org\tigris\subversion\javahl\Revision.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\Revision.java
 
-"..\cls\org\tigris\subversion\javahl\Revision.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/Revision.java
+"..\classes\org\tigris\subversion\javahl\Revision.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/Revision.java
 
 # End Custom Build
 
@@ -1424,8 +1424,8 @@ InputPath=..\src\org\tigris\subversion\javahl\Revision.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\Revision.java
 
-"..\cls\org\tigris\subversion\javahl\Revision.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/Revision.java
+"..\classes\org\tigris\subversion\javahl\Revision.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/Revision.java
 
 # End Custom Build
 
@@ -1434,8 +1434,8 @@ InputPath=..\src\org\tigris\subversion\javahl\Revision.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\Revision.java
 
-"..\cls\org\tigris\subversion\javahl\Revision.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/Revision.java
+"..\classes\org\tigris\subversion\javahl\Revision.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/Revision.java
 
 # End Custom Build
 
@@ -1444,8 +1444,8 @@ InputPath=..\src\org\tigris\subversion\javahl\Revision.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\Revision.java
 
-"..\cls\org\tigris\subversion\javahl\Revision.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/Revision.java
+"..\classes\org\tigris\subversion\javahl\Revision.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/Revision.java
 
 # End Custom Build
 
@@ -1454,8 +1454,8 @@ InputPath=..\src\org\tigris\subversion\javahl\Revision.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\Revision.java
 
-"..\cls\org\tigris\subversion\javahl\Revision.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/Revision.java
+"..\classes\org\tigris\subversion\javahl\Revision.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/Revision.java
 
 # End Custom Build
 
@@ -1464,8 +1464,8 @@ InputPath=..\src\org\tigris\subversion\javahl\Revision.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\Revision.java
 
-"..\cls\org\tigris\subversion\javahl\Revision.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/Revision.java
+"..\classes\org\tigris\subversion\javahl\Revision.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/Revision.java
 
 # End Custom Build
 
@@ -1481,8 +1481,8 @@ SOURCE=..\src\org\tigris\subversion\javahl\RevisionKind.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\RevisionKind.java
 
-"..\cls\org\tigris\subversion\javahl\RevisionKind.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/RevisionKind.java
+"..\classes\org\tigris\subversion\javahl\RevisionKind.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/RevisionKind.java
 
 # End Custom Build
 
@@ -1491,8 +1491,8 @@ InputPath=..\src\org\tigris\subversion\javahl\RevisionKind.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\RevisionKind.java
 
-"..\cls\org\tigris\subversion\javahl\RevisionKind.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/RevisionKind.java
+"..\classes\org\tigris\subversion\javahl\RevisionKind.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/RevisionKind.java
 
 # End Custom Build
 
@@ -1501,8 +1501,8 @@ InputPath=..\src\org\tigris\subversion\javahl\RevisionKind.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\RevisionKind.java
 
-"..\cls\org\tigris\subversion\javahl\RevisionKind.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/RevisionKind.java
+"..\classes\org\tigris\subversion\javahl\RevisionKind.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/RevisionKind.java
 
 # End Custom Build
 
@@ -1511,8 +1511,8 @@ InputPath=..\src\org\tigris\subversion\javahl\RevisionKind.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\RevisionKind.java
 
-"..\cls\org\tigris\subversion\javahl\RevisionKind.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/RevisionKind.java
+"..\classes\org\tigris\subversion\javahl\RevisionKind.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/RevisionKind.java
 
 # End Custom Build
 
@@ -1521,8 +1521,8 @@ InputPath=..\src\org\tigris\subversion\javahl\RevisionKind.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\RevisionKind.java
 
-"..\cls\org\tigris\subversion\javahl\RevisionKind.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/RevisionKind.java
+"..\classes\org\tigris\subversion\javahl\RevisionKind.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/RevisionKind.java
 
 # End Custom Build
 
@@ -1531,8 +1531,8 @@ InputPath=..\src\org\tigris\subversion\javahl\RevisionKind.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\RevisionKind.java
 
-"..\cls\org\tigris\subversion\javahl\RevisionKind.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/RevisionKind.java
+"..\classes\org\tigris\subversion\javahl\RevisionKind.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/RevisionKind.java
 
 # End Custom Build
 
@@ -1548,8 +1548,8 @@ SOURCE=..\src\org\tigris\subversion\javahl\Status.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\Status.java
 
-"..\cls\org\tigris\subversion\javahl\Status.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/Status.java
+"..\classes\org\tigris\subversion\javahl\Status.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/Status.java
 
 # End Custom Build
 
@@ -1558,8 +1558,8 @@ InputPath=..\src\org\tigris\subversion\javahl\Status.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\Status.java
 
-"..\cls\org\tigris\subversion\javahl\Status.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/Status.java
+"..\classes\org\tigris\subversion\javahl\Status.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/Status.java
 
 # End Custom Build
 
@@ -1568,8 +1568,8 @@ InputPath=..\src\org\tigris\subversion\javahl\Status.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\Status.java
 
-"..\cls\org\tigris\subversion\javahl\Status.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/Status.java
+"..\classes\org\tigris\subversion\javahl\Status.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/Status.java
 
 # End Custom Build
 
@@ -1578,8 +1578,8 @@ InputPath=..\src\org\tigris\subversion\javahl\Status.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\Status.java
 
-"..\cls\org\tigris\subversion\javahl\Status.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/Status.java
+"..\classes\org\tigris\subversion\javahl\Status.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/Status.java
 
 # End Custom Build
 
@@ -1588,8 +1588,8 @@ InputPath=..\src\org\tigris\subversion\javahl\Status.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\Status.java
 
-"..\cls\org\tigris\subversion\javahl\Status.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/Status.java
+"..\classes\org\tigris\subversion\javahl\Status.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/Status.java
 
 # End Custom Build
 
@@ -1598,8 +1598,8 @@ InputPath=..\src\org\tigris\subversion\javahl\Status.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\Status.java
 
-"..\cls\org\tigris\subversion\javahl\Status.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/Status.java
+"..\classes\org\tigris\subversion\javahl\Status.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/Status.java
 
 # End Custom Build
 
@@ -1615,8 +1615,8 @@ SOURCE=..\src\org\tigris\subversion\javahl\StatusKind.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\StatusKind.java
 
-"..\cls\org\tigris\subversion\javahl\StatusKind.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/StatusKind.java
+"..\classes\org\tigris\subversion\javahl\StatusKind.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/StatusKind.java
 
 # End Custom Build
 
@@ -1625,8 +1625,8 @@ InputPath=..\src\org\tigris\subversion\javahl\StatusKind.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\StatusKind.java
 
-"..\cls\org\tigris\subversion\javahl\StatusKind.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/StatusKind.java
+"..\classes\org\tigris\subversion\javahl\StatusKind.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/StatusKind.java
 
 # End Custom Build
 
@@ -1635,8 +1635,8 @@ InputPath=..\src\org\tigris\subversion\javahl\StatusKind.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\StatusKind.java
 
-"..\cls\org\tigris\subversion\javahl\StatusKind.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/StatusKind.java
+"..\classes\org\tigris\subversion\javahl\StatusKind.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/StatusKind.java
 
 # End Custom Build
 
@@ -1645,8 +1645,8 @@ InputPath=..\src\org\tigris\subversion\javahl\StatusKind.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\StatusKind.java
 
-"..\cls\org\tigris\subversion\javahl\StatusKind.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/StatusKind.java
+"..\classes\org\tigris\subversion\javahl\StatusKind.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/StatusKind.java
 
 # End Custom Build
 
@@ -1655,8 +1655,8 @@ InputPath=..\src\org\tigris\subversion\javahl\StatusKind.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\StatusKind.java
 
-"..\cls\org\tigris\subversion\javahl\StatusKind.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/StatusKind.java
+"..\classes\org\tigris\subversion\javahl\StatusKind.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/StatusKind.java
 
 # End Custom Build
 
@@ -1665,8 +1665,8 @@ InputPath=..\src\org\tigris\subversion\javahl\StatusKind.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\StatusKind.java
 
-"..\cls\org\tigris\subversion\javahl\StatusKind.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/StatusKind.java
+"..\classes\org\tigris\subversion\javahl\StatusKind.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/StatusKind.java
 
 # End Custom Build
 
@@ -1682,8 +1682,8 @@ SOURCE=..\src\org\tigris\subversion\javahl\SVNAdmin.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\SVNAdmin.java
 
-"..\cls\org\tigris\subversion\javahl\SVNAdmin.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/SVNAdmin.java
+"..\classes\org\tigris\subversion\javahl\SVNAdmin.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/SVNAdmin.java
 
 # End Custom Build
 
@@ -1692,8 +1692,8 @@ InputPath=..\src\org\tigris\subversion\javahl\SVNAdmin.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\SVNAdmin.java
 
-"..\cls\org\tigris\subversion\javahl\SVNAdmin.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/SVNAdmin.java
+"..\classes\org\tigris\subversion\javahl\SVNAdmin.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/SVNAdmin.java
 
 # End Custom Build
 
@@ -1702,8 +1702,8 @@ InputPath=..\src\org\tigris\subversion\javahl\SVNAdmin.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\SVNAdmin.java
 
-"..\cls\org\tigris\subversion\javahl\SVNAdmin.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/SVNAdmin.java
+"..\classes\org\tigris\subversion\javahl\SVNAdmin.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/SVNAdmin.java
 
 # End Custom Build
 
@@ -1712,8 +1712,8 @@ InputPath=..\src\org\tigris\subversion\javahl\SVNAdmin.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\SVNAdmin.java
 
-"..\cls\org\tigris\subversion\javahl\SVNAdmin.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/SVNAdmin.java
+"..\classes\org\tigris\subversion\javahl\SVNAdmin.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/SVNAdmin.java
 
 # End Custom Build
 
@@ -1722,8 +1722,8 @@ InputPath=..\src\org\tigris\subversion\javahl\SVNAdmin.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\SVNAdmin.java
 
-"..\cls\org\tigris\subversion\javahl\SVNAdmin.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/SVNAdmin.java
+"..\classes\org\tigris\subversion\javahl\SVNAdmin.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/SVNAdmin.java
 
 # End Custom Build
 
@@ -1732,8 +1732,8 @@ InputPath=..\src\org\tigris\subversion\javahl\SVNAdmin.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\SVNAdmin.java
 
-"..\cls\org\tigris\subversion\javahl\SVNAdmin.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/SVNAdmin.java
+"..\classes\org\tigris\subversion\javahl\SVNAdmin.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/SVNAdmin.java
 
 # End Custom Build
 
@@ -1749,8 +1749,8 @@ SOURCE=..\src\org\tigris\subversion\javahl\SVNClient.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\SVNClient.java
 
-"..\cls\org\tigris\subversion\javahl\SVNClient.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/SVNClient.java
+"..\classes\org\tigris\subversion\javahl\SVNClient.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/SVNClient.java
 
 # End Custom Build
 
@@ -1759,8 +1759,8 @@ InputPath=..\src\org\tigris\subversion\javahl\SVNClient.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\SVNClient.java
 
-"..\cls\org\tigris\subversion\javahl\SVNClient.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/SVNClient.java
+"..\classes\org\tigris\subversion\javahl\SVNClient.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/SVNClient.java
 
 # End Custom Build
 
@@ -1769,8 +1769,8 @@ InputPath=..\src\org\tigris\subversion\javahl\SVNClient.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\SVNClient.java
 
-"..\cls\org\tigris\subversion\javahl\SVNClient.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/SVNClient.java
+"..\classes\org\tigris\subversion\javahl\SVNClient.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/SVNClient.java
 
 # End Custom Build
 
@@ -1779,8 +1779,8 @@ InputPath=..\src\org\tigris\subversion\javahl\SVNClient.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\SVNClient.java
 
-"..\cls\org\tigris\subversion\javahl\SVNClient.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/SVNClient.java
+"..\classes\org\tigris\subversion\javahl\SVNClient.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/SVNClient.java
 
 # End Custom Build
 
@@ -1789,8 +1789,8 @@ InputPath=..\src\org\tigris\subversion\javahl\SVNClient.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\SVNClient.java
 
-"..\cls\org\tigris\subversion\javahl\SVNClient.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/SVNClient.java
+"..\classes\org\tigris\subversion\javahl\SVNClient.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/SVNClient.java
 
 # End Custom Build
 
@@ -1799,8 +1799,8 @@ InputPath=..\src\org\tigris\subversion\javahl\SVNClient.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\SVNClient.java
 
-"..\cls\org\tigris\subversion\javahl\SVNClient.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/SVNClient.java
+"..\classes\org\tigris\subversion\javahl\SVNClient.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/SVNClient.java
 
 # End Custom Build
 
@@ -1816,8 +1816,8 @@ SOURCE=..\src\org\tigris\subversion\javahl\SVNClientLogLevel.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\SVNClientLogLevel.java
 
-"..\cls\org\tigris\subversion\javahl\SVNClientLogLevel.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/SVNClientLogLevel.java
+"..\classes\org\tigris\subversion\javahl\SVNClientLogLevel.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/SVNClientLogLevel.java
 
 # End Custom Build
 
@@ -1826,8 +1826,8 @@ InputPath=..\src\org\tigris\subversion\javahl\SVNClientLogLevel.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\SVNClientLogLevel.java
 
-"..\cls\org\tigris\subversion\javahl\SVNClientLogLevel.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/SVNClientLogLevel.java
+"..\classes\org\tigris\subversion\javahl\SVNClientLogLevel.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/SVNClientLogLevel.java
 
 # End Custom Build
 
@@ -1836,8 +1836,8 @@ InputPath=..\src\org\tigris\subversion\javahl\SVNClientLogLevel.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\SVNClientLogLevel.java
 
-"..\cls\org\tigris\subversion\javahl\SVNClientLogLevel.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/SVNClientLogLevel.java
+"..\classes\org\tigris\subversion\javahl\SVNClientLogLevel.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/SVNClientLogLevel.java
 
 # End Custom Build
 
@@ -1846,8 +1846,8 @@ InputPath=..\src\org\tigris\subversion\javahl\SVNClientLogLevel.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\SVNClientLogLevel.java
 
-"..\cls\org\tigris\subversion\javahl\SVNClientLogLevel.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/SVNClientLogLevel.java
+"..\classes\org\tigris\subversion\javahl\SVNClientLogLevel.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/SVNClientLogLevel.java
 
 # End Custom Build
 
@@ -1856,8 +1856,8 @@ InputPath=..\src\org\tigris\subversion\javahl\SVNClientLogLevel.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\SVNClientLogLevel.java
 
-"..\cls\org\tigris\subversion\javahl\SVNClientLogLevel.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/SVNClientLogLevel.java
+"..\classes\org\tigris\subversion\javahl\SVNClientLogLevel.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/SVNClientLogLevel.java
 
 # End Custom Build
 
@@ -1866,8 +1866,8 @@ InputPath=..\src\org\tigris\subversion\javahl\SVNClientLogLevel.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\SVNClientLogLevel.java
 
-"..\cls\org\tigris\subversion\javahl\SVNClientLogLevel.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/SVNClientLogLevel.java
+"..\classes\org\tigris\subversion\javahl\SVNClientLogLevel.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/SVNClientLogLevel.java
 
 # End Custom Build
 
@@ -1883,8 +1883,8 @@ SOURCE=..\src\org\tigris\subversion\javahl\SVNClientSynchronized.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\SVNClientSynchronized.java
 
-"..\cls\org\tigris\subversion\javahl\SVNClientSynchronized.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/SVNClientSynchronized.java
+"..\classes\org\tigris\subversion\javahl\SVNClientSynchronized.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/SVNClientSynchronized.java
 
 # End Custom Build
 
@@ -1893,8 +1893,8 @@ InputPath=..\src\org\tigris\subversion\javahl\SVNClientSynchronized.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\SVNClientSynchronized.java
 
-"..\cls\org\tigris\subversion\javahl\SVNClientSynchronized.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/SVNClientSynchronized.java
+"..\classes\org\tigris\subversion\javahl\SVNClientSynchronized.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/SVNClientSynchronized.java
 
 # End Custom Build
 
@@ -1903,8 +1903,8 @@ InputPath=..\src\org\tigris\subversion\javahl\SVNClientSynchronized.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\SVNClientSynchronized.java
 
-"..\cls\org\tigris\subversion\javahl\SVNClientSynchronized.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/SVNClientSynchronized.java
+"..\classes\org\tigris\subversion\javahl\SVNClientSynchronized.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/SVNClientSynchronized.java
 
 # End Custom Build
 
@@ -1913,8 +1913,8 @@ InputPath=..\src\org\tigris\subversion\javahl\SVNClientSynchronized.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\SVNClientSynchronized.java
 
-"..\cls\org\tigris\subversion\javahl\SVNClientSynchronized.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/SVNClientSynchronized.java
+"..\classes\org\tigris\subversion\javahl\SVNClientSynchronized.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/SVNClientSynchronized.java
 
 # End Custom Build
 
@@ -1923,8 +1923,8 @@ InputPath=..\src\org\tigris\subversion\javahl\SVNClientSynchronized.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\SVNClientSynchronized.java
 
-"..\cls\org\tigris\subversion\javahl\SVNClientSynchronized.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/SVNClientSynchronized.java
+"..\classes\org\tigris\subversion\javahl\SVNClientSynchronized.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/SVNClientSynchronized.java
 
 # End Custom Build
 
@@ -1933,8 +1933,8 @@ InputPath=..\src\org\tigris\subversion\javahl\SVNClientSynchronized.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\SVNClientSynchronized.java
 
-"..\cls\org\tigris\subversion\javahl\SVNClientSynchronized.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/SVNClientSynchronized.java
+"..\classes\org\tigris\subversion\javahl\SVNClientSynchronized.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/SVNClientSynchronized.java
 
 # End Custom Build
 
@@ -1950,8 +1950,8 @@ SOURCE=..\src\org\tigris\subversion\javahl\SVNInputStream.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\SVNInputStream.java
 
-"..\cls\org\tigris\subversion\javahl\SVNInputStream.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/SVNInputStream.java
+"..\classes\org\tigris\subversion\javahl\SVNInputStream.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/SVNInputStream.java
 
 # End Custom Build
 
@@ -1960,8 +1960,8 @@ InputPath=..\src\org\tigris\subversion\javahl\SVNInputStream.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\SVNInputStream.java
 
-"..\cls\org\tigris\subversion\javahl\SVNInputStream.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/SVNInputStream.java
+"..\classes\org\tigris\subversion\javahl\SVNInputStream.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/SVNInputStream.java
 
 # End Custom Build
 
@@ -1970,8 +1970,8 @@ InputPath=..\src\org\tigris\subversion\javahl\SVNInputStream.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\SVNInputStream.java
 
-"..\cls\org\tigris\subversion\javahl\SVNInputStream.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/SVNInputStream.java
+"..\classes\org\tigris\subversion\javahl\SVNInputStream.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/SVNInputStream.java
 
 # End Custom Build
 
@@ -1980,8 +1980,8 @@ InputPath=..\src\org\tigris\subversion\javahl\SVNInputStream.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\SVNInputStream.java
 
-"..\cls\org\tigris\subversion\javahl\SVNInputStream.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/SVNInputStream.java
+"..\classes\org\tigris\subversion\javahl\SVNInputStream.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/SVNInputStream.java
 
 # End Custom Build
 
@@ -1990,8 +1990,8 @@ InputPath=..\src\org\tigris\subversion\javahl\SVNInputStream.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\SVNInputStream.java
 
-"..\cls\org\tigris\subversion\javahl\SVNInputStream.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/SVNInputStream.java
+"..\classes\org\tigris\subversion\javahl\SVNInputStream.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/SVNInputStream.java
 
 # End Custom Build
 
@@ -2000,8 +2000,8 @@ InputPath=..\src\org\tigris\subversion\javahl\SVNInputStream.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\SVNInputStream.java
 
-"..\cls\org\tigris\subversion\javahl\SVNInputStream.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/SVNInputStream.java
+"..\classes\org\tigris\subversion\javahl\SVNInputStream.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/SVNInputStream.java
 
 # End Custom Build
 
@@ -2017,8 +2017,8 @@ SOURCE=..\src\org\tigris\subversion\javahl\SVNOutputStream.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\SVNOutputStream.java
 
-"..\cls\org\tigris\subversion\javahl\SVNOutputStream.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/SVNOutputStream.java
+"..\classes\org\tigris\subversion\javahl\SVNOutputStream.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/SVNOutputStream.java
 
 # End Custom Build
 
@@ -2027,8 +2027,8 @@ InputPath=..\src\org\tigris\subversion\javahl\SVNOutputStream.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\SVNOutputStream.java
 
-"..\cls\org\tigris\subversion\javahl\SVNOutputStream.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/SVNOutputStream.java
+"..\classes\org\tigris\subversion\javahl\SVNOutputStream.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/SVNOutputStream.java
 
 # End Custom Build
 
@@ -2037,8 +2037,8 @@ InputPath=..\src\org\tigris\subversion\javahl\SVNOutputStream.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\SVNOutputStream.java
 
-"..\cls\org\tigris\subversion\javahl\SVNOutputStream.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/SVNOutputStream.java
+"..\classes\org\tigris\subversion\javahl\SVNOutputStream.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/SVNOutputStream.java
 
 # End Custom Build
 
@@ -2047,8 +2047,8 @@ InputPath=..\src\org\tigris\subversion\javahl\SVNOutputStream.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\SVNOutputStream.java
 
-"..\cls\org\tigris\subversion\javahl\SVNOutputStream.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/SVNOutputStream.java
+"..\classes\org\tigris\subversion\javahl\SVNOutputStream.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/SVNOutputStream.java
 
 # End Custom Build
 
@@ -2057,8 +2057,8 @@ InputPath=..\src\org\tigris\subversion\javahl\SVNOutputStream.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\SVNOutputStream.java
 
-"..\cls\org\tigris\subversion\javahl\SVNOutputStream.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/SVNOutputStream.java
+"..\classes\org\tigris\subversion\javahl\SVNOutputStream.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/SVNOutputStream.java
 
 # End Custom Build
 
@@ -2067,8 +2067,8 @@ InputPath=..\src\org\tigris\subversion\javahl\SVNOutputStream.java
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\SVNOutputStream.java
 
-"..\cls\org\tigris\subversion\javahl\SVNOutputStream.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/SVNOutputStream.java
+"..\classes\org\tigris\subversion\javahl\SVNOutputStream.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../classes -sourcepath ../src -g ../src/org/tigris/subversion/javahl/SVNOutputStream.java
 
 # End Custom Build
 
@@ -2081,65 +2081,65 @@ InputPath=..\src\org\tigris\subversion\javahl\SVNOutputStream.java
 # PROP Default_Filter "*.java"
 # Begin Source File
 
-SOURCE=..\cls\org\tigris\subversion\javahl\NodeKind.class
+SOURCE=..\classes\org\tigris\subversion\javahl\NodeKind.class
 
 !IF  "$(CFG)" == "svnjavahl - Win32 Release"
 
 # Begin Custom Build
-InputPath=..\cls\org\tigris\subversion\javahl\NodeKind.class
+InputPath=..\classes\org\tigris\subversion\javahl\NodeKind.class
 
-"org_tigris_subversion_javahl_NodeKind.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javah -force -classpath ../cls org.tigris.subversion.javahl.NodeKind
+"..\include\org_tigris_subversion_javahl_NodeKind.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -d ../include -classpath ../classes org.tigris.subversion.javahl.NodeKind
 
 # End Custom Build
 
 !ELSEIF  "$(CFG)" == "svnjavahl - Win32 Debug"
 
 # Begin Custom Build
-InputPath=..\cls\org\tigris\subversion\javahl\NodeKind.class
+InputPath=..\classes\org\tigris\subversion\javahl\NodeKind.class
 
-"org_tigris_subversion_javahl_NodeKind.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javah -force -classpath ../cls org.tigris.subversion.javahl.NodeKind
+"..\include\org_tigris_subversion_javahl_NodeKind.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -d ../include -classpath ../classes org.tigris.subversion.javahl.NodeKind
 
 # End Custom Build
 
 !ELSEIF  "$(CFG)" == "svnjavahl - Win32 Release DB40"
 
 # Begin Custom Build
-InputPath=..\cls\org\tigris\subversion\javahl\NodeKind.class
+InputPath=..\classes\org\tigris\subversion\javahl\NodeKind.class
 
-"org_tigris_subversion_javahl_NodeKind.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javah -force -classpath ../cls org.tigris.subversion.javahl.NodeKind
+"..\include\org_tigris_subversion_javahl_NodeKind.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -d ../include -classpath ../classes org.tigris.subversion.javahl.NodeKind
 
 # End Custom Build
 
 !ELSEIF  "$(CFG)" == "svnjavahl - Win32 Debug DB40"
 
 # Begin Custom Build
-InputPath=..\cls\org\tigris\subversion\javahl\NodeKind.class
+InputPath=..\classes\org\tigris\subversion\javahl\NodeKind.class
 
-"org_tigris_subversion_javahl_NodeKind.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javah -force -classpath ../cls org.tigris.subversion.javahl.NodeKind
+"..\include\org_tigris_subversion_javahl_NodeKind.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -d ../include -classpath ../classes org.tigris.subversion.javahl.NodeKind
 
 # End Custom Build
 
 !ELSEIF  "$(CFG)" == "svnjavahl - Win32 Debug DB42"
 
 # Begin Custom Build
-InputPath=..\cls\org\tigris\subversion\javahl\NodeKind.class
+InputPath=..\classes\org\tigris\subversion\javahl\NodeKind.class
 
-"org_tigris_subversion_javahl_NodeKind.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javah -force -classpath ../cls org.tigris.subversion.javahl.NodeKind
+"..\include\org_tigris_subversion_javahl_NodeKind.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -d ../include -classpath ../classes org.tigris.subversion.javahl.NodeKind
 
 # End Custom Build
 
 !ELSEIF  "$(CFG)" == "svnjavahl - Win32 Release DB42"
 
 # Begin Custom Build
-InputPath=..\cls\org\tigris\subversion\javahl\NodeKind.class
+InputPath=..\classes\org\tigris\subversion\javahl\NodeKind.class
 
-"org_tigris_subversion_javahl_NodeKind.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javah -force -classpath ../cls org.tigris.subversion.javahl.NodeKind
+"..\include\org_tigris_subversion_javahl_NodeKind.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -d ../include -classpath ../classes org.tigris.subversion.javahl.NodeKind
 
 # End Custom Build
 
@@ -2148,65 +2148,65 @@ InputPath=..\cls\org\tigris\subversion\javahl\NodeKind.class
 # End Source File
 # Begin Source File
 
-SOURCE="..\cls\org\tigris\subversion\javahl\NotifyAction.class"
+SOURCE="..\classes\org\tigris\subversion\javahl\NotifyAction.class"
 
 !IF  "$(CFG)" == "svnjavahl - Win32 Release"
 
 # Begin Custom Build
-InputPath="..\cls\org\tigris\subversion\javahl\NotifyAction.class"
+InputPath="..\classes\org\tigris\subversion\javahl\NotifyAction.class"
 
-"org_tigris_subversion_javahl_NotifyAction.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javah -force -classpath ../cls org.tigris.subversion.javahl.NotifyAction
+"..\include\org_tigris_subversion_javahl_NotifyAction.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -d ../include -classpath ../classes org.tigris.subversion.javahl.NotifyAction
 
 # End Custom Build
 
 !ELSEIF  "$(CFG)" == "svnjavahl - Win32 Debug"
 
 # Begin Custom Build
-InputPath="..\cls\org\tigris\subversion\javahl\NotifyAction.class"
+InputPath="..\classes\org\tigris\subversion\javahl\NotifyAction.class"
 
-"org_tigris_subversion_javahl_NotifyAction.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javah -force -classpath ../cls org.tigris.subversion.javahl.NotifyAction
+"..\include\org_tigris_subversion_javahl_NotifyAction.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -d ../include -classpath ../classes org.tigris.subversion.javahl.NotifyAction
 
 # End Custom Build
 
 !ELSEIF  "$(CFG)" == "svnjavahl - Win32 Release DB40"
 
 # Begin Custom Build
-InputPath="..\cls\org\tigris\subversion\javahl\NotifyAction.class"
+InputPath="..\classes\org\tigris\subversion\javahl\NotifyAction.class"
 
-"org_tigris_subversion_javahl_NotifyAction.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javah -force -classpath ../cls org.tigris.subversion.javahl.NotifyAction
+"..\include\org_tigris_subversion_javahl_NotifyAction.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -d ../include -classpath ../classes org.tigris.subversion.javahl.NotifyAction
 
 # End Custom Build
 
 !ELSEIF  "$(CFG)" == "svnjavahl - Win32 Debug DB40"
 
 # Begin Custom Build
-InputPath="..\cls\org\tigris\subversion\javahl\NotifyAction.class"
+InputPath="..\classes\org\tigris\subversion\javahl\NotifyAction.class"
 
-"org_tigris_subversion_javahl_NotifyAction.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javah -force -classpath ../cls org.tigris.subversion.javahl.NotifyAction
+"..\include\org_tigris_subversion_javahl_NotifyAction.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -d ../include -classpath ../classes org.tigris.subversion.javahl.NotifyAction
 
 # End Custom Build
 
 !ELSEIF  "$(CFG)" == "svnjavahl - Win32 Debug DB42"
 
 # Begin Custom Build
-InputPath="..\cls\org\tigris\subversion\javahl\NotifyAction.class"
+InputPath="..\classes\org\tigris\subversion\javahl\NotifyAction.class"
 
-"org_tigris_subversion_javahl_NotifyAction.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javah -force -classpath ../cls org.tigris.subversion.javahl.NotifyAction
+"..\include\org_tigris_subversion_javahl_NotifyAction.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -d ../include -classpath ../classes org.tigris.subversion.javahl.NotifyAction
 
 # End Custom Build
 
 !ELSEIF  "$(CFG)" == "svnjavahl - Win32 Release DB42"
 
 # Begin Custom Build
-InputPath="..\cls\org\tigris\subversion\javahl\NotifyAction.class"
+InputPath="..\classes\org\tigris\subversion\javahl\NotifyAction.class"
 
-"org_tigris_subversion_javahl_NotifyAction.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javah -force -classpath ../cls org.tigris.subversion.javahl.NotifyAction
+"..\include\org_tigris_subversion_javahl_NotifyAction.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -d ../include -classpath ../classes org.tigris.subversion.javahl.NotifyAction
 
 # End Custom Build
 
@@ -2215,65 +2215,65 @@ InputPath="..\cls\org\tigris\subversion\javahl\NotifyAction.class"
 # End Source File
 # Begin Source File
 
-SOURCE="..\cls\org\tigris\subversion\javahl\NotifyStatus.class"
+SOURCE="..\classes\org\tigris\subversion\javahl\NotifyStatus.class"
 
 !IF  "$(CFG)" == "svnjavahl - Win32 Release"
 
 # Begin Custom Build
-InputPath="..\cls\org\tigris\subversion\javahl\NotifyStatus.class"
+InputPath="..\classes\org\tigris\subversion\javahl\NotifyStatus.class"
 
-"org_tigris_subversion_javahl_NotifyStatus.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javah -force -classpath ../cls org.tigris.subversion.javahl.NotifyStatus
+"..\include\org_tigris_subversion_javahl_NotifyStatus.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -d ../include -classpath ../classes org.tigris.subversion.javahl.NotifyStatus
 
 # End Custom Build
 
 !ELSEIF  "$(CFG)" == "svnjavahl - Win32 Debug"
 
 # Begin Custom Build
-InputPath="..\cls\org\tigris\subversion\javahl\NotifyStatus.class"
+InputPath="..\classes\org\tigris\subversion\javahl\NotifyStatus.class"
 
-"org_tigris_subversion_javahl_NotifyStatus.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javah -force -classpath ../cls org.tigris.subversion.javahl.NotifyStatus
+"..\include\org_tigris_subversion_javahl_NotifyStatus.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -d ../include -classpath ../classes org.tigris.subversion.javahl.NotifyStatus
 
 # End Custom Build
 
 !ELSEIF  "$(CFG)" == "svnjavahl - Win32 Release DB40"
 
 # Begin Custom Build
-InputPath="..\cls\org\tigris\subversion\javahl\NotifyStatus.class"
+InputPath="..\classes\org\tigris\subversion\javahl\NotifyStatus.class"
 
-"org_tigris_subversion_javahl_NotifyStatus.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javah -force -classpath ../cls org.tigris.subversion.javahl.NotifyStatus
+"..\include\org_tigris_subversion_javahl_NotifyStatus.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -d ../include -classpath ../classes org.tigris.subversion.javahl.NotifyStatus
 
 # End Custom Build
 
 !ELSEIF  "$(CFG)" == "svnjavahl - Win32 Debug DB40"
 
 # Begin Custom Build
-InputPath="..\cls\org\tigris\subversion\javahl\NotifyStatus.class"
+InputPath="..\classes\org\tigris\subversion\javahl\NotifyStatus.class"
 
-"org_tigris_subversion_javahl_NotifyStatus.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javah -force -classpath ../cls org.tigris.subversion.javahl.NotifyStatus
+"..\include\org_tigris_subversion_javahl_NotifyStatus.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -d ../include -classpath ../classes org.tigris.subversion.javahl.NotifyStatus
 
 # End Custom Build
 
 !ELSEIF  "$(CFG)" == "svnjavahl - Win32 Debug DB42"
 
 # Begin Custom Build
-InputPath="..\cls\org\tigris\subversion\javahl\NotifyStatus.class"
+InputPath="..\classes\org\tigris\subversion\javahl\NotifyStatus.class"
 
-"org_tigris_subversion_javahl_NotifyStatus.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javah -force -classpath ../cls org.tigris.subversion.javahl.NotifyStatus
+"..\include\org_tigris_subversion_javahl_NotifyStatus.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -d ../include -classpath ../classes org.tigris.subversion.javahl.NotifyStatus
 
 # End Custom Build
 
 !ELSEIF  "$(CFG)" == "svnjavahl - Win32 Release DB42"
 
 # Begin Custom Build
-InputPath="..\cls\org\tigris\subversion\javahl\NotifyStatus.class"
+InputPath="..\classes\org\tigris\subversion\javahl\NotifyStatus.class"
 
-"org_tigris_subversion_javahl_NotifyStatus.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javah -force -classpath ../cls org.tigris.subversion.javahl.NotifyStatus
+"..\include\org_tigris_subversion_javahl_NotifyStatus.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -d ../include -classpath ../classes org.tigris.subversion.javahl.NotifyStatus
 
 # End Custom Build
 
@@ -2282,65 +2282,65 @@ InputPath="..\cls\org\tigris\subversion\javahl\NotifyStatus.class"
 # End Source File
 # Begin Source File
 
-SOURCE=..\cls\org\tigris\subversion\javahl\PromptUserPassword2.class
+SOURCE=..\classes\org\tigris\subversion\javahl\PromptUserPassword2.class
 
 !IF  "$(CFG)" == "svnjavahl - Win32 Release"
 
 # Begin Custom Build
-InputPath=..\cls\org\tigris\subversion\javahl\PromptUserPassword2.class
+InputPath=..\classes\org\tigris\subversion\javahl\PromptUserPassword2.class
 
-"org_tigris_subversion_javahl_PromptUserPassword2.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javah -force -classpath ../cls org.tigris.subversion.javahl.PromptUserPassword2
+"..\include\org_tigris_subversion_javahl_PromptUserPassword2.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -d ../include -classpath ../classes org.tigris.subversion.javahl.PromptUserPassword2
 
 # End Custom Build
 
 !ELSEIF  "$(CFG)" == "svnjavahl - Win32 Debug"
 
 # Begin Custom Build
-InputPath=..\cls\org\tigris\subversion\javahl\PromptUserPassword2.class
+InputPath=..\classes\org\tigris\subversion\javahl\PromptUserPassword2.class
 
-"org_tigris_subversion_javahl_PromptUserPassword2.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javah -force -classpath ../cls org.tigris.subversion.javahl.PromptUserPassword2
+"..\include\org_tigris_subversion_javahl_PromptUserPassword2.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -d ../include -classpath ../classes org.tigris.subversion.javahl.PromptUserPassword2
 
 # End Custom Build
 
 !ELSEIF  "$(CFG)" == "svnjavahl - Win32 Release DB40"
 
 # Begin Custom Build
-InputPath=..\cls\org\tigris\subversion\javahl\PromptUserPassword2.class
+InputPath=..\classes\org\tigris\subversion\javahl\PromptUserPassword2.class
 
-"org_tigris_subversion_javahl_PromptUserPassword2.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javah -force -classpath ../cls org.tigris.subversion.javahl.PromptUserPassword2
+"..\include\org_tigris_subversion_javahl_PromptUserPassword2.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -d ../include -classpath ../classes org.tigris.subversion.javahl.PromptUserPassword2
 
 # End Custom Build
 
 !ELSEIF  "$(CFG)" == "svnjavahl - Win32 Debug DB40"
 
 # Begin Custom Build
-InputPath=..\cls\org\tigris\subversion\javahl\PromptUserPassword2.class
+InputPath=..\classes\org\tigris\subversion\javahl\PromptUserPassword2.class
 
-"org_tigris_subversion_javahl_PromptUserPassword2.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javah -force -classpath ../cls org.tigris.subversion.javahl.PromptUserPassword2
+"..\include\org_tigris_subversion_javahl_PromptUserPassword2.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -d ../include -classpath ../classes org.tigris.subversion.javahl.PromptUserPassword2
 
 # End Custom Build
 
 !ELSEIF  "$(CFG)" == "svnjavahl - Win32 Debug DB42"
 
 # Begin Custom Build
-InputPath=..\cls\org\tigris\subversion\javahl\PromptUserPassword2.class
+InputPath=..\classes\org\tigris\subversion\javahl\PromptUserPassword2.class
 
-"org_tigris_subversion_javahl_PromptUserPassword2.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javah -force -classpath ../cls org.tigris.subversion.javahl.PromptUserPassword2
+"..\include\org_tigris_subversion_javahl_PromptUserPassword2.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -d ../include -classpath ../classes org.tigris.subversion.javahl.PromptUserPassword2
 
 # End Custom Build
 
 !ELSEIF  "$(CFG)" == "svnjavahl - Win32 Release DB42"
 
 # Begin Custom Build
-InputPath=..\cls\org\tigris\subversion\javahl\PromptUserPassword2.class
+InputPath=..\classes\org\tigris\subversion\javahl\PromptUserPassword2.class
 
-"org_tigris_subversion_javahl_PromptUserPassword2.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javah -force -classpath ../cls org.tigris.subversion.javahl.PromptUserPassword2
+"..\include\org_tigris_subversion_javahl_PromptUserPassword2.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -d ../include -classpath ../classes org.tigris.subversion.javahl.PromptUserPassword2
 
 # End Custom Build
 
@@ -2349,65 +2349,65 @@ InputPath=..\cls\org\tigris\subversion\javahl\PromptUserPassword2.class
 # End Source File
 # Begin Source File
 
-SOURCE=..\cls\org\tigris\subversion\javahl\Revision.class
+SOURCE=..\classes\org\tigris\subversion\javahl\Revision.class
 
 !IF  "$(CFG)" == "svnjavahl - Win32 Release"
 
 # Begin Custom Build
-InputPath=..\cls\org\tigris\subversion\javahl\Revision.class
+InputPath=..\classes\org\tigris\subversion\javahl\Revision.class
 
-"org_tigris_subversion_javahl_Revision.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javah -force -classpath ../cls org.tigris.subversion.javahl.Revision
+"..\include\org_tigris_subversion_javahl_Revision.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -d ../include -classpath ../classes org.tigris.subversion.javahl.Revision
 
 # End Custom Build
 
 !ELSEIF  "$(CFG)" == "svnjavahl - Win32 Debug"
 
 # Begin Custom Build
-InputPath=..\cls\org\tigris\subversion\javahl\Revision.class
+InputPath=..\classes\org\tigris\subversion\javahl\Revision.class
 
-"org_tigris_subversion_javahl_Revision.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javah -force -classpath ../cls org.tigris.subversion.javahl.Revision
+"..\include\org_tigris_subversion_javahl_Revision.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -d ../include -classpath ../classes org.tigris.subversion.javahl.Revision
 
 # End Custom Build
 
 !ELSEIF  "$(CFG)" == "svnjavahl - Win32 Release DB40"
 
 # Begin Custom Build
-InputPath=..\cls\org\tigris\subversion\javahl\Revision.class
+InputPath=..\classes\org\tigris\subversion\javahl\Revision.class
 
-"org_tigris_subversion_javahl_Revision.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javah -force -classpath ../cls org.tigris.subversion.javahl.Revision
+"..\include\org_tigris_subversion_javahl_Revision.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -d ../include -classpath ../classes org.tigris.subversion.javahl.Revision
 
 # End Custom Build
 
 !ELSEIF  "$(CFG)" == "svnjavahl - Win32 Debug DB40"
 
 # Begin Custom Build
-InputPath=..\cls\org\tigris\subversion\javahl\Revision.class
+InputPath=..\classes\org\tigris\subversion\javahl\Revision.class
 
-"org_tigris_subversion_javahl_Revision.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javah -force -classpath ../cls org.tigris.subversion.javahl.Revision
+"..\include\org_tigris_subversion_javahl_Revision.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -d ../include -classpath ../classes org.tigris.subversion.javahl.Revision
 
 # End Custom Build
 
 !ELSEIF  "$(CFG)" == "svnjavahl - Win32 Debug DB42"
 
 # Begin Custom Build
-InputPath=..\cls\org\tigris\subversion\javahl\Revision.class
+InputPath=..\classes\org\tigris\subversion\javahl\Revision.class
 
-"org_tigris_subversion_javahl_Revision.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javah -force -classpath ../cls org.tigris.subversion.javahl.Revision
+"..\include\org_tigris_subversion_javahl_Revision.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -d ../include -classpath ../classes org.tigris.subversion.javahl.Revision
 
 # End Custom Build
 
 !ELSEIF  "$(CFG)" == "svnjavahl - Win32 Release DB42"
 
 # Begin Custom Build
-InputPath=..\cls\org\tigris\subversion\javahl\Revision.class
+InputPath=..\classes\org\tigris\subversion\javahl\Revision.class
 
-"org_tigris_subversion_javahl_Revision.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javah -force -classpath ../cls org.tigris.subversion.javahl.Revision
+"..\include\org_tigris_subversion_javahl_Revision.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -d ../include -classpath ../classes org.tigris.subversion.javahl.Revision
 
 # End Custom Build
 
@@ -2416,65 +2416,65 @@ InputPath=..\cls\org\tigris\subversion\javahl\Revision.class
 # End Source File
 # Begin Source File
 
-SOURCE="..\cls\org\tigris\subversion\javahl\RevisionKind.class"
+SOURCE="..\classes\org\tigris\subversion\javahl\RevisionKind.class"
 
 !IF  "$(CFG)" == "svnjavahl - Win32 Release"
 
 # Begin Custom Build
-InputPath="..\cls\org\tigris\subversion\javahl\RevisionKind.class"
+InputPath="..\classes\org\tigris\subversion\javahl\RevisionKind.class"
 
-"org_tigris_subversion_javahl_RevisionKind.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javah -force -classpath ../cls org.tigris.subversion.javahl.RevisionKind
+"..\include\org_tigris_subversion_javahl_RevisionKind.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -d ../include -classpath ../classes org.tigris.subversion.javahl.RevisionKind
 
 # End Custom Build
 
 !ELSEIF  "$(CFG)" == "svnjavahl - Win32 Debug"
 
 # Begin Custom Build
-InputPath="..\cls\org\tigris\subversion\javahl\RevisionKind.class"
+InputPath="..\classes\org\tigris\subversion\javahl\RevisionKind.class"
 
-"org_tigris_subversion_javahl_RevisionKind.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javah -force -classpath ../cls org.tigris.subversion.javahl.RevisionKind
+"..\include\org_tigris_subversion_javahl_RevisionKind.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -d ../include -classpath ../classes org.tigris.subversion.javahl.RevisionKind
 
 # End Custom Build
 
 !ELSEIF  "$(CFG)" == "svnjavahl - Win32 Release DB40"
 
 # Begin Custom Build
-InputPath="..\cls\org\tigris\subversion\javahl\RevisionKind.class"
+InputPath="..\classes\org\tigris\subversion\javahl\RevisionKind.class"
 
-"org_tigris_subversion_javahl_RevisionKind.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javah -force -classpath ../cls org.tigris.subversion.javahl.RevisionKind
+"..\include\org_tigris_subversion_javahl_RevisionKind.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -d ../include -classpath ../classes org.tigris.subversion.javahl.RevisionKind
 
 # End Custom Build
 
 !ELSEIF  "$(CFG)" == "svnjavahl - Win32 Debug DB40"
 
 # Begin Custom Build
-InputPath="..\cls\org\tigris\subversion\javahl\RevisionKind.class"
+InputPath="..\classes\org\tigris\subversion\javahl\RevisionKind.class"
 
-"org_tigris_subversion_javahl_RevisionKind.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javah -force -classpath ../cls org.tigris.subversion.javahl.RevisionKind
+"..\include\org_tigris_subversion_javahl_RevisionKind.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -d ../include -classpath ../classes org.tigris.subversion.javahl.RevisionKind
 
 # End Custom Build
 
 !ELSEIF  "$(CFG)" == "svnjavahl - Win32 Debug DB42"
 
 # Begin Custom Build
-InputPath="..\cls\org\tigris\subversion\javahl\RevisionKind.class"
+InputPath="..\classes\org\tigris\subversion\javahl\RevisionKind.class"
 
-"org_tigris_subversion_javahl_RevisionKind.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javah -force -classpath ../cls org.tigris.subversion.javahl.RevisionKind
+"..\include\org_tigris_subversion_javahl_RevisionKind.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -d ../include -classpath ../classes org.tigris.subversion.javahl.RevisionKind
 
 # End Custom Build
 
 !ELSEIF  "$(CFG)" == "svnjavahl - Win32 Release DB42"
 
 # Begin Custom Build
-InputPath="..\cls\org\tigris\subversion\javahl\RevisionKind.class"
+InputPath="..\classes\org\tigris\subversion\javahl\RevisionKind.class"
 
-"org_tigris_subversion_javahl_RevisionKind.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javah -force -classpath ../cls org.tigris.subversion.javahl.RevisionKind
+"..\include\org_tigris_subversion_javahl_RevisionKind.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -d ../include -classpath ../classes org.tigris.subversion.javahl.RevisionKind
 
 # End Custom Build
 
@@ -2483,65 +2483,65 @@ InputPath="..\cls\org\tigris\subversion\javahl\RevisionKind.class"
 # End Source File
 # Begin Source File
 
-SOURCE="..\cls\org\tigris\subversion\javahl\StatusKind.class"
+SOURCE="..\classes\org\tigris\subversion\javahl\StatusKind.class"
 
 !IF  "$(CFG)" == "svnjavahl - Win32 Release"
 
 # Begin Custom Build
-InputPath="..\cls\org\tigris\subversion\javahl\StatusKind.class"
+InputPath="..\classes\org\tigris\subversion\javahl\StatusKind.class"
 
-"org_tigris_subversion_javahl_Status_Kind.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javah -force -classpath ../cls org.tigris.subversion.javahl.StatusKind
+"..\include\org_tigris_subversion_javahl_Status_Kind.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -d ../include -classpath ../classes org.tigris.subversion.javahl.StatusKind
 
 # End Custom Build
 
 !ELSEIF  "$(CFG)" == "svnjavahl - Win32 Debug"
 
 # Begin Custom Build
-InputPath="..\cls\org\tigris\subversion\javahl\StatusKind.class"
+InputPath="..\classes\org\tigris\subversion\javahl\StatusKind.class"
 
-"org_tigris_subversion_javahl_Status_Kind.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javah -force -classpath ../cls org.tigris.subversion.javahl.StatusKind
+"..\include\org_tigris_subversion_javahl_Status_Kind.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -d ../include -classpath ../classes org.tigris.subversion.javahl.StatusKind
 
 # End Custom Build
 
 !ELSEIF  "$(CFG)" == "svnjavahl - Win32 Release DB40"
 
 # Begin Custom Build
-InputPath="..\cls\org\tigris\subversion\javahl\StatusKind.class"
+InputPath="..\classes\org\tigris\subversion\javahl\StatusKind.class"
 
-"org_tigris_subversion_javahl_Status_Kind.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javah -force -classpath ../cls org.tigris.subversion.javahl.StatusKind
+"..\include\org_tigris_subversion_javahl_Status_Kind.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -d ../include -classpath ../classes org.tigris.subversion.javahl.StatusKind
 
 # End Custom Build
 
 !ELSEIF  "$(CFG)" == "svnjavahl - Win32 Debug DB40"
 
 # Begin Custom Build
-InputPath="..\cls\org\tigris\subversion\javahl\StatusKind.class"
+InputPath="..\classes\org\tigris\subversion\javahl\StatusKind.class"
 
-"org_tigris_subversion_javahl_Status_Kind.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javah -force -classpath ../cls org.tigris.subversion.javahl.StatusKind
+"..\include\org_tigris_subversion_javahl_Status_Kind.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -d ../include -classpath ../classes org.tigris.subversion.javahl.StatusKind
 
 # End Custom Build
 
 !ELSEIF  "$(CFG)" == "svnjavahl - Win32 Debug DB42"
 
 # Begin Custom Build
-InputPath="..\cls\org\tigris\subversion\javahl\StatusKind.class"
+InputPath="..\classes\org\tigris\subversion\javahl\StatusKind.class"
 
-"org_tigris_subversion_javahl_Status_Kind.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javah -force -classpath ../cls org.tigris.subversion.javahl.StatusKind
+"..\include\org_tigris_subversion_javahl_Status_Kind.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -d ../include -classpath ../classes org.tigris.subversion.javahl.StatusKind
 
 # End Custom Build
 
 !ELSEIF  "$(CFG)" == "svnjavahl - Win32 Release DB42"
 
 # Begin Custom Build
-InputPath="..\cls\org\tigris\subversion\javahl\StatusKind.class"
+InputPath="..\classes\org\tigris\subversion\javahl\StatusKind.class"
 
-"org_tigris_subversion_javahl_Status_Kind.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javah -force -classpath ../cls org.tigris.subversion.javahl.StatusKind
+"..\include\org_tigris_subversion_javahl_Status_Kind.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -d ../include -classpath ../classes org.tigris.subversion.javahl.StatusKind
 
 # End Custom Build
 
@@ -2550,65 +2550,65 @@ InputPath="..\cls\org\tigris\subversion\javahl\StatusKind.class"
 # End Source File
 # Begin Source File
 
-SOURCE=..\cls\org\tigris\subversion\javahl\SVNAdmin.class
+SOURCE=..\classes\org\tigris\subversion\javahl\SVNAdmin.class
 
 !IF  "$(CFG)" == "svnjavahl - Win32 Release"
 
 # Begin Custom Build
-InputPath=..\cls\org\tigris\subversion\javahl\SVNAdmin.class
+InputPath=..\classes\org\tigris\subversion\javahl\SVNAdmin.class
 
-"org_tigris_subversion_javahl_SVNAdmin.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javah -force -classpath ../cls org.tigris.subversion.javahl.SVNAdmin
+"..\include\org_tigris_subversion_javahl_SVNAdmin.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -d ../include -classpath ../classes org.tigris.subversion.javahl.SVNAdmin
 
 # End Custom Build
 
 !ELSEIF  "$(CFG)" == "svnjavahl - Win32 Debug"
 
 # Begin Custom Build
-InputPath=..\cls\org\tigris\subversion\javahl\SVNAdmin.class
+InputPath=..\classes\org\tigris\subversion\javahl\SVNAdmin.class
 
-"org_tigris_subversion_javahl_SVNAdmin.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javah -force -classpath ../cls org.tigris.subversion.javahl.SVNAdmin
+"..\include\org_tigris_subversion_javahl_SVNAdmin.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -d ../include -classpath ../classes org.tigris.subversion.javahl.SVNAdmin
 
 # End Custom Build
 
 !ELSEIF  "$(CFG)" == "svnjavahl - Win32 Release DB40"
 
 # Begin Custom Build
-InputPath=..\cls\org\tigris\subversion\javahl\SVNAdmin.class
+InputPath=..\classes\org\tigris\subversion\javahl\SVNAdmin.class
 
-"org_tigris_subversion_javahl_SVNAdmin.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javah -force -classpath ../cls org.tigris.subversion.javahl.SVNAdmin
+"..\include\org_tigris_subversion_javahl_SVNAdmin.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -d ../include -classpath ../classes org.tigris.subversion.javahl.SVNAdmin
 
 # End Custom Build
 
 !ELSEIF  "$(CFG)" == "svnjavahl - Win32 Debug DB40"
 
 # Begin Custom Build
-InputPath=..\cls\org\tigris\subversion\javahl\SVNAdmin.class
+InputPath=..\classes\org\tigris\subversion\javahl\SVNAdmin.class
 
-"org_tigris_subversion_javahl_SVNAdmin.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javah -force -classpath ../cls org.tigris.subversion.javahl.SVNAdmin
+"..\include\org_tigris_subversion_javahl_SVNAdmin.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -d ../include -classpath ../classes org.tigris.subversion.javahl.SVNAdmin
 
 # End Custom Build
 
 !ELSEIF  "$(CFG)" == "svnjavahl - Win32 Debug DB42"
 
 # Begin Custom Build
-InputPath=..\cls\org\tigris\subversion\javahl\SVNAdmin.class
+InputPath=..\classes\org\tigris\subversion\javahl\SVNAdmin.class
 
-"org_tigris_subversion_javahl_SVNAdmin.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javah -force -classpath ../cls org.tigris.subversion.javahl.SVNAdmin
+"..\include\org_tigris_subversion_javahl_SVNAdmin.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -d ../include -classpath ../classes org.tigris.subversion.javahl.SVNAdmin
 
 # End Custom Build
 
 !ELSEIF  "$(CFG)" == "svnjavahl - Win32 Release DB42"
 
 # Begin Custom Build
-InputPath=..\cls\org\tigris\subversion\javahl\SVNAdmin.class
+InputPath=..\classes\org\tigris\subversion\javahl\SVNAdmin.class
 
-"org_tigris_subversion_javahl_SVNAdmin.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javah -force -classpath ../cls org.tigris.subversion.javahl.SVNAdmin
+"..\include\org_tigris_subversion_javahl_SVNAdmin.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -d ../include -classpath ../classes org.tigris.subversion.javahl.SVNAdmin
 
 # End Custom Build
 
@@ -2617,65 +2617,65 @@ InputPath=..\cls\org\tigris\subversion\javahl\SVNAdmin.class
 # End Source File
 # Begin Source File
 
-SOURCE=..\cls\org\tigris\subversion\javahl\SVNClient.class
+SOURCE=..\classes\org\tigris\subversion\javahl\SVNClient.class
 
 !IF  "$(CFG)" == "svnjavahl - Win32 Release"
 
 # Begin Custom Build
-InputPath=..\cls\org\tigris\subversion\javahl\SVNClient.class
+InputPath=..\classes\org\tigris\subversion\javahl\SVNClient.class
 
-"org_tigris_subversion_javahl_SVNClient.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javah -force -classpath ../cls org.tigris.subversion.javahl.SVNClient
+"..\include\org_tigris_subversion_javahl_SVNClient.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -d ../include -classpath ../classes org.tigris.subversion.javahl.SVNClient
 
 # End Custom Build
 
 !ELSEIF  "$(CFG)" == "svnjavahl - Win32 Debug"
 
 # Begin Custom Build
-InputPath=..\cls\org\tigris\subversion\javahl\SVNClient.class
+InputPath=..\classes\org\tigris\subversion\javahl\SVNClient.class
 
-"org_tigris_subversion_javahl_SVNClient.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javah -force -classpath ../cls org.tigris.subversion.javahl.SVNClient
+"..\include\org_tigris_subversion_javahl_SVNClient.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -d ../include -classpath ../classes org.tigris.subversion.javahl.SVNClient
 
 # End Custom Build
 
 !ELSEIF  "$(CFG)" == "svnjavahl - Win32 Release DB40"
 
 # Begin Custom Build
-InputPath=..\cls\org\tigris\subversion\javahl\SVNClient.class
+InputPath=..\classes\org\tigris\subversion\javahl\SVNClient.class
 
-"org_tigris_subversion_javahl_SVNClient.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javah -force -classpath ../cls org.tigris.subversion.javahl.SVNClient
+"..\include\org_tigris_subversion_javahl_SVNClient.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -d ../include -classpath ../classes org.tigris.subversion.javahl.SVNClient
 
 # End Custom Build
 
 !ELSEIF  "$(CFG)" == "svnjavahl - Win32 Debug DB40"
 
 # Begin Custom Build
-InputPath=..\cls\org\tigris\subversion\javahl\SVNClient.class
+InputPath=..\classes\org\tigris\subversion\javahl\SVNClient.class
 
-"org_tigris_subversion_javahl_SVNClient.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javah -force -classpath ../cls org.tigris.subversion.javahl.SVNClient
+"..\include\org_tigris_subversion_javahl_SVNClient.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -d ../include -classpath ../classes org.tigris.subversion.javahl.SVNClient
 
 # End Custom Build
 
 !ELSEIF  "$(CFG)" == "svnjavahl - Win32 Debug DB42"
 
 # Begin Custom Build
-InputPath=..\cls\org\tigris\subversion\javahl\SVNClient.class
+InputPath=..\classes\org\tigris\subversion\javahl\SVNClient.class
 
-"org_tigris_subversion_javahl_SVNClient.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javah -force -classpath ../cls org.tigris.subversion.javahl.SVNClient
+"..\include\org_tigris_subversion_javahl_SVNClient.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -d ../include -classpath ../classes org.tigris.subversion.javahl.SVNClient
 
 # End Custom Build
 
 !ELSEIF  "$(CFG)" == "svnjavahl - Win32 Release DB42"
 
 # Begin Custom Build
-InputPath=..\cls\org\tigris\subversion\javahl\SVNClient.class
+InputPath=..\classes\org\tigris\subversion\javahl\SVNClient.class
 
-"org_tigris_subversion_javahl_SVNClient.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javah -force -classpath ../cls org.tigris.subversion.javahl.SVNClient
+"..\include\org_tigris_subversion_javahl_SVNClient.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -d ../include -classpath ../classes org.tigris.subversion.javahl.SVNClient
 
 # End Custom Build
 
@@ -2684,65 +2684,65 @@ InputPath=..\cls\org\tigris\subversion\javahl\SVNClient.class
 # End Source File
 # Begin Source File
 
-SOURCE="..\cls\org\tigris\subversion\javahl\SVNClientLogLevel.class"
+SOURCE="..\classes\org\tigris\subversion\javahl\SVNClientLogLevel.class"
 
 !IF  "$(CFG)" == "svnjavahl - Win32 Release"
 
 # Begin Custom Build
-InputPath="..\cls\org\tigris\subversion\javahl\SVNClientLogLevel.class"
+InputPath="..\classes\org\tigris\subversion\javahl\SVNClientLogLevel.class"
 
-"org_tigris_subversion_javahl_SVNClientLogLevel.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javah -force -classpath ../cls org.tigris.subversion.javahl.SVNClientLogLevel
+"..\include\org_tigris_subversion_javahl_SVNClientLogLevel.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -d ../include -classpath ../classes org.tigris.subversion.javahl.SVNClientLogLevel
 
 # End Custom Build
 
 !ELSEIF  "$(CFG)" == "svnjavahl - Win32 Debug"
 
 # Begin Custom Build
-InputPath="..\cls\org\tigris\subversion\javahl\SVNClientLogLevel.class"
+InputPath="..\classes\org\tigris\subversion\javahl\SVNClientLogLevel.class"
 
-"org_tigris_subversion_javahl_SVNClientLogLevel.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javah -force -classpath ../cls org.tigris.subversion.javahl.SVNClientLogLevel
+"..\include\org_tigris_subversion_javahl_SVNClientLogLevel.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -d ../include -classpath ../classes org.tigris.subversion.javahl.SVNClientLogLevel
 
 # End Custom Build
 
 !ELSEIF  "$(CFG)" == "svnjavahl - Win32 Release DB40"
 
 # Begin Custom Build
-InputPath="..\cls\org\tigris\subversion\javahl\SVNClientLogLevel.class"
+InputPath="..\classes\org\tigris\subversion\javahl\SVNClientLogLevel.class"
 
-"org_tigris_subversion_javahl_SVNClientLogLevel.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javah -force -classpath ../cls org.tigris.subversion.javahl.SVNClientLogLevel
+"..\include\org_tigris_subversion_javahl_SVNClientLogLevel.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -d ../include -classpath ../classes org.tigris.subversion.javahl.SVNClientLogLevel
 
 # End Custom Build
 
 !ELSEIF  "$(CFG)" == "svnjavahl - Win32 Debug DB40"
 
 # Begin Custom Build
-InputPath="..\cls\org\tigris\subversion\javahl\SVNClientLogLevel.class"
+InputPath="..\classes\org\tigris\subversion\javahl\SVNClientLogLevel.class"
 
-"org_tigris_subversion_javahl_SVNClientLogLevel.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javah -force -classpath ../cls org.tigris.subversion.javahl.SVNClientLogLevel
+"..\include\org_tigris_subversion_javahl_SVNClientLogLevel.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -d ../include -classpath ../classes org.tigris.subversion.javahl.SVNClientLogLevel
 
 # End Custom Build
 
 !ELSEIF  "$(CFG)" == "svnjavahl - Win32 Debug DB42"
 
 # Begin Custom Build
-InputPath="..\cls\org\tigris\subversion\javahl\SVNClientLogLevel.class"
+InputPath="..\classes\org\tigris\subversion\javahl\SVNClientLogLevel.class"
 
-"org_tigris_subversion_javahl_SVNClientLogLevel.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javah -force -classpath ../cls org.tigris.subversion.javahl.SVNClientLogLevel
+"..\include\org_tigris_subversion_javahl_SVNClientLogLevel.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -d ../include -classpath ../classes org.tigris.subversion.javahl.SVNClientLogLevel
 
 # End Custom Build
 
 !ELSEIF  "$(CFG)" == "svnjavahl - Win32 Release DB42"
 
 # Begin Custom Build
-InputPath="..\cls\org\tigris\subversion\javahl\SVNClientLogLevel.class"
+InputPath="..\classes\org\tigris\subversion\javahl\SVNClientLogLevel.class"
 
-"org_tigris_subversion_javahl_SVNClientLogLevel.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	javah -force -classpath ../cls org.tigris.subversion.javahl.SVNClientLogLevel
+"..\include\org_tigris_subversion_javahl_SVNClientLogLevel.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -d ../include -classpath ../classes org.tigris.subversion.javahl.SVNClientLogLevel
 
 # End Custom Build
 
