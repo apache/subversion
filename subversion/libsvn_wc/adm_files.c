@@ -562,8 +562,6 @@ svn_wc__remove_adm_file (const char *path, apr_pool_t *pool, ...)
   path = v_extend_with_adm_name (path, NULL, 0, pool, ap);
   va_end (ap);
       
-  /* Remove read-only flag on path. */
-  SVN_ERR(svn_io_set_file_read_write (path, FALSE, pool));
   SVN_ERR(svn_io_remove_file (path, pool));
 
   return SVN_NO_ERROR;
