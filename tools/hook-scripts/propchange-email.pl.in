@@ -86,6 +86,7 @@ my $repos;
 my $rev;
 my $author;
 my $propname;
+my $diff_file;
 
 # Use the reference to the first project to populate.
 my $current_project = $project_settings_list[0];
@@ -94,6 +95,7 @@ my $current_project = $project_settings_list[0];
 # project.  If a key exists but has a false value (''), then the
 # command line option is allowed but requires special handling.
 my %opt_to_hash_key = ('--from' => 'from_address',
+                       '-d'     => '',
                        '-h'     => 'hostname',
                        '-l'     => 'log_file',
                        '-m'     => '',
@@ -124,13 +126,24 @@ while (@ARGV)
         else
           {
             # Here handle -m.
-            unless ($arg eq '-m')
+            if ($arg eq '-m')
               {
-                die "$0: internal error: should only handle -m here.\n";
+                $current_project                = &new_project;
+                $current_project->{match_regex} = $value;
+                push(@project_settings_list, $current_project);
               }
-            $current_project                = &new_project;
-            $current_project->{match_regex} = $value;
-            push(@project_settings_list, $current_project);
+            elsif ($arg eq '-d')
+              {
+                if ($diff_file)
+                  {
+                    die "$0: command line option `$arg' can only be used once.\n";
+                  }
+                $diff_file = $value;
+              }
+            else
+              {
+                die "$0: internal error: should not be handling `$arg' here.\n";
+              }
           }
       }
     elsif ($arg =~ /^-/)
@@ -210,12 +223,23 @@ unless (-d _)
 }
 
 ######################################################################
-# Harvest data using svn.
+# Harvest data.
 
-# Get the new property value svn.
-my $repos_url = 'file://' . &abs_path($repos);
-my @svnlines = &read_from_process($svn, 'propget', '--revprop', '-r', $rev, 
-                                  $propname, $repos_url);
+my @svnlines;
+# Get the diff file if it was provided, otherwise the property value.
+if ($diff_file)
+  {
+    open(DIFF_FILE, $diff_file) or die "$0: cannot read `$diff_file': $!\n";
+    @svnlines = <DIFF_FILE>;
+    close DIFF_FILE;
+  }
+else
+  {
+    # Get the property value using svn.
+    my $repos_url = 'file://' . &abs_path($repos);
+    @svnlines = &read_from_process($svn, 'propget', '--revprop', '-r', $rev, 
+                                      $propname, $repos_url);
+  }
 
 # Figure out what directories have changed using svnlook.  This is
 # merely so we can determine what project might care about receiving
@@ -232,7 +256,10 @@ push(@body, "Author: $author\n");
 push(@body, "Revision: $rev\n");
 push(@body, "Property Name: $propname\n");
 push(@body, "\n");
-push(@body, "New Property Value:\n");
+unless ($diff_file)
+  {
+    push(@body, "New Property Value:\n");
+  }
 push(@body, map { /[\r\n]+$/ ? $_ : "$_\n" } @svnlines);
 push(@body, "\n");
 
@@ -351,7 +378,7 @@ exit 0;
 sub usage
 {
   warn "@_\n" if @_;
-  die "usage: $0 REPOS REVNUM USER PROPNAME [[-m regex] [options] [email_addr ...]] ...\n",
+  die "usage: $0 REPOS REVNUM USER PROPNAME [-d diff_file] [[-m regex] [options] [email_addr ...]] ...\n",
       "options are\n",
       "  --from email_address  Email address for 'From:' (overrides -h)\n",
       "  -h hostname           Hostname to append to author for 'From:'\n",
@@ -359,6 +386,9 @@ sub usage
       "  -m regex              Regular expression to match committed path\n",
       "  -r email_address      Email address for 'Reply-To:'\n",
       "  -s subject_prefix     Subject line prefix\n",
+      "\n",
+      "The message will contain a copy of the diff_file if it is provided,\n",
+      "otherwise a copy of the (assumed to be new) property value.\n",
       "\n",
       "This script supports a single repository with multiple projects,\n",
       "where each project receives email only for changes to properties\n",
