@@ -75,3 +75,11 @@ Candidate changes:
     Votes:
       +1: breser, lundblad
 
+  * r10731
+    Fix svn_path_dirname() so it returns canonical paths when passed a path
+      with the last segment separated by multiple slashes.
+    Justification:
+      API contract violation.
+    Votes:
+      +1: breser
+     
