@@ -32,30 +32,11 @@
 /*** Helpers ***/
 
 static svn_error_t *
-generic_read (void *baton, char *buffer, apr_size_t *len, apr_pool_t *pool)
-{
-  apr_file_t *src = (apr_file_t *) baton;
-  apr_status_t stat;
-  
-  stat = apr_full_read (src, buffer, (apr_size_t) *len, (apr_size_t *) len);
-  
-  if (stat && !APR_STATUS_IS_EOF(stat))
-    return
-      svn_error_create (stat, 0, NULL, pool,
-                        "error reading incoming delta stream");
-  
-  else 
-    return 0;  
-}
-
-
-static svn_error_t *
 apply_delta (const svn_delta_edit_fns_t *before_editor,
              void *before_edit_baton,
              const svn_delta_edit_fns_t *after_editor,
              void *after_edit_baton,
-             void *delta_src,
-             svn_read_fn_t *read_fn,
+             svn_stream_t *delta,
              svn_string_t *dest,
              svn_string_t *repos,            /* ignored if update */
              svn_string_t *ancestor_path,    /* ignored if update */
@@ -103,8 +84,7 @@ apply_delta (const svn_delta_edit_fns_t *before_editor,
                          after_edit_baton,
                          pool);
 
-  return svn_delta_xml_auto_parse (read_fn,
-                                   delta_src,
+  return svn_delta_xml_auto_parse (delta,
                                    editor,
                                    edit_baton,
                                    ancestor_path,
@@ -150,8 +130,7 @@ do_edits (const svn_delta_edit_fns_t *before_editor,
                      before_edit_baton,
                      after_editor,
                      after_edit_baton,
-                     in,
-                     generic_read,
+                     svn_stream_from_aprfile (in, pool),
                      path,
                      svn_string_create (repos, pool),
                      ancestor_path,
