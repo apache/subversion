@@ -52,11 +52,10 @@ typedef struct svn_string_t svn_string_t;
         PyErr_SetString(PyExc_TypeError, "not a string");
         return NULL;
     }
-%#error need pool argument from somewhere
     $1 = svn_stringbuf_ncreate(PyString_AS_STRING($input),
                                PyString_GET_SIZE($input),
                                /* ### gah... what pool to use? */
-                               pool);
+                               _global_pool);
 }
 
 %typemap(python,out) svn_stringbuf_t * {
@@ -92,8 +91,7 @@ typedef struct svn_string_t svn_string_t;
 /* when storing an svn_string_t* into a structure, we must allocate the
    svn_string_t structure on the heap. */
 %typemap(python,memberin) const svn_string_t * {
-%#error need pool argument from somewhere
-    $1 = svn_string_dup($input, pool);
+    $1 = svn_string_dup($input, _global_pool);
 }
 
 %typemap(python,out) svn_string_t * {
@@ -113,7 +111,7 @@ typedef struct svn_string_t svn_string_t;
 */
 
 /* ### note that SWIG drops the const in the arg decl, so we must cast */
-%typemap(ignore) const char **OUTPUT (const char *temp) {
+%typemap(python) const char **OUTPUT (const char *temp) {
     $1 = (char **)&temp;
 }
 %typemap(python,argout,fragment="t_output_helper") const char **OUTPUT {
@@ -135,8 +133,7 @@ typedef struct svn_string_t svn_string_t;
  */
 
 %typemap(python,in) const apr_array_header_t *STRINGLIST {
-%#error need pool argument from somewhere
-    $1 = svn_swig_py_strings_to_array($input, NULL);
+    $1 = svn_swig_py_strings_to_array($input, _global_pool);
     if ($1 == NULL)
         return NULL;
 }
