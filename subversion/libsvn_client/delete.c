@@ -119,6 +119,7 @@ path_driver_cb_func (void **dir_baton,
                      apr_pool_t *pool)
 {
   const svn_delta_editor_t *editor = callback_baton;
+  *dir_baton = NULL;
   return editor->delete_entry (path, SVN_INVALID_REVNUM, parent_baton, pool);
 }
 
