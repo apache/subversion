@@ -1000,7 +1000,7 @@ subcommand_lslocks (apr_getopt_t *os, void *baton, apr_pool_t *pool)
     {
       const void *key;
       void *val;
-      const char *path, *cr_date, *exp_date;
+      const char *path, *cr_date, *exp_date = "";
       svn_lock_t *lock;
       int comment_lines;
       
@@ -1012,8 +1012,6 @@ subcommand_lslocks (apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
       if (lock->expiration_date)
         exp_date = svn_time_to_human_cstring (lock->expiration_date, pool);
-      else
-        exp_date = _("never");
 
       comment_lines = svn_cstring_count_newlines (lock->comment) + 1;
 
@@ -1022,9 +1020,9 @@ subcommand_lslocks (apr_getopt_t *os, void *baton, apr_pool_t *pool)
       SVN_ERR (svn_cmdline_printf (pool, _("Owner: %s\n"), lock->owner));
       SVN_ERR (svn_cmdline_printf (pool, _("Created: %s\n"), cr_date));
       SVN_ERR (svn_cmdline_printf (pool, _("Expires: %s\n"), exp_date));
-      SVN_ERR (svn_cmdline_printf (pool, _("Comment (%i line%s):\n%s\n\n"),
+      SVN_ERR (svn_cmdline_printf (pool, _("Comment (%i %s):\n%s\n\n"),
                                    comment_lines, 
-                                   (comment_lines > 1) ? "s" : "",
+                                   (comment_lines > 1) ? "lines" : "line",
                                    lock->comment ? lock->comment : ""));
     }
   

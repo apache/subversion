@@ -1752,31 +1752,24 @@ subcommand_lock (apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   if (lock)
     {
-      const char *cr_date, *exp_date;
+      const char *cr_date, *exp_date = "";
       int comment_lines;
 
       cr_date = svn_time_to_human_cstring (lock->creation_date, pool);
 
       if (lock->expiration_date)
         exp_date = svn_time_to_human_cstring (lock->expiration_date, pool);
-      else
-        exp_date = _("never");
-
-      SVN_ERR (svn_cmdline_printf (pool,
-                                   _("UUID Token: %s\n"), lock->token));
-      SVN_ERR (svn_cmdline_printf (pool,
-                                   _("Owner: %s\n"), lock->owner));
-      SVN_ERR (svn_cmdline_printf (pool,
-                                   _("Created: %s\n"), cr_date));
-      SVN_ERR (svn_cmdline_printf (pool,
-                                   _("Expires: %s\n"), exp_date));
 
       comment_lines = svn_cstring_count_newlines (lock->comment) + 1;
-      SVN_ERR (svn_cmdline_printf (pool,
-                                   _("Comment: (%i %s)\n%s\n"),
+
+      SVN_ERR (svn_cmdline_printf (pool, _("UUID Token: %s\n"), lock->token));
+      SVN_ERR (svn_cmdline_printf (pool, _("Owner: %s\n"), lock->owner));
+      SVN_ERR (svn_cmdline_printf (pool, _("Created: %s\n"), cr_date));
+      SVN_ERR (svn_cmdline_printf (pool, _("Expires: %s\n"), exp_date));
+      SVN_ERR (svn_cmdline_printf (pool, _("Comment (%i %s):\n%s\n"),
                                    comment_lines, 
                                    (comment_lines > 1) ? "lines" : "line",
-                                   lock->comment ? lock->comment : "none"));
+                                   lock->comment ? lock->comment : ""));
     }
 
   return SVN_NO_ERROR;

@@ -202,11 +202,10 @@ print_info (const char *target,
           /* NOTE: The stdio will handle newline translation. */
           comment_lines = svn_cstring_count_newlines (info->lock->comment) + 1;
           SVN_ERR (svn_cmdline_printf (pool,
-                                       _("Lock Comment: (%i %s)\n%s"),
+                                       _("Lock Comment (%i %s):\n%s\n"),
                                        comment_lines, 
                                        (comment_lines > 1) ? "lines" : "line",
-                                       info->lock->comment ? 
-                                       info->lock->comment : "none"));
+                                       info->lock->comment));
         }
     }
 

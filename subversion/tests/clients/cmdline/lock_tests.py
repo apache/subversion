@@ -276,13 +276,12 @@ def examine_lock(sbox):
   output, err = svntest.actions.run_and_verify_svn(None, None, [],
                                                    'info', file_path)
 
-  lock_info = output[-5:-1]
-
-  if ((len(lock_info) != 4)
-      or lock_info[0].find('Lock Token: opaquelocktoken:')
-      or (not lock_info[1] == 'Lock Owner: ' + svntest.main.wc_author + '\n')
-      or lock_info[2].find('Lock Created:')
-      or (not lock_info[3] == 'Lock Comment: ' + comment + '\n')):
+  lock_info = output[-6:-1]
+  if ((len(lock_info) != 5)
+      or (lock_info[0][0:28] != 'Lock Token: opaquelocktoken:')
+      or (lock_info[1] != 'Lock Owner: ' + svntest.main.wc_author + '\n')
+      or (lock_info[2][0:13] != 'Lock Created:')
+      or (lock_info[4] != comment + '\n')):
     raise svntest.Failure
 
 
