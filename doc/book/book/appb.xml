@@ -83,7 +83,7 @@
     <screen>
 $ svnadmin create /new/svn/repos
 $ cvs2svn.py -s /new/svn/repos /cvs/repos
-[...]
+&hellip;
     </screen>
 
     <para>The conversion take anywhere from several minutes to dozens

@@ -715,7 +715,7 @@ M   Makefile
 [examine the diffs, compile, test, etc.]
 
 $ svn commit -m "Merged all my-calc-branch changes into the trunk."
-...
+&hellip;
 </screen>
 
 
@@ -1107,7 +1107,7 @@ Committed revision 352.
 /tags/calc
 </screen>
 
-    <para>...or by project:</para>
+    <para>&hellip;or by project:</para>
 
 <screen>
 /paint/trunk

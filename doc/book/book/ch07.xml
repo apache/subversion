@@ -790,7 +790,7 @@ The following repository access (RA) modules are available:
           translate into <emphasis>its</emphasis> representation
           format.  With each layer of wrapping, the integrity of the
           original data is potentially tainted more and more, much
-          like the result of making a copy of a copy (of a copy ...)
+          like the result of making a copy of a copy (of a copy &hellip;)
           of a favorite audio or video cassette.</para>
 
       </sidebar>
