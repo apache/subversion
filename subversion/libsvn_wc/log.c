@@ -52,14 +52,14 @@ enum svn_wc__xfer_action {
  * ARGS[0] is the name of the program, though it need not be the same
  * as CMD.
  */
-static svn_error_t *
-run_cmd_in_directory (svn_string_t *path,
-                      const char *cmd,
-                      const char *const *args,
-                      apr_file_t *infile,
-                      apr_file_t *outfile,
-                      apr_file_t *errfile,
-                      apr_pool_t *pool)
+svn_error_t *
+svn_wc_run_cmd_in_directory (svn_string_t *path,
+                             const char *cmd,
+                             const char *const *args,
+                             apr_file_t *infile,
+                             apr_file_t *outfile,
+                             apr_file_t *errfile,
+                             apr_pool_t *pool)
 {
   apr_status_t apr_err;
   apr_proc_t cmd_proc;
@@ -392,13 +392,13 @@ log_do_run_cmd (struct log_runner *loggy,
                                   "error opening %s", errfile_path->data);
     }
   
-  err = run_cmd_in_directory (loggy->path,
-                              name,
-                              args,
-                              infile,
-                              outfile,
-                              errfile,
-                              loggy->pool);
+  err = svn_wc_run_cmd_in_directory (loggy->path,
+                                     name,
+                                     args,
+                                     infile,
+                                     outfile,
+                                     errfile,
+                                     loggy->pool);
   if (err)
      return svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, loggy->pool,
                                "error running %s in %s",
