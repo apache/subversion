@@ -661,25 +661,24 @@ close_adm_file (apr_file_t *fp,
 
 svn_error_t *
 svn_wc__open_adm_file (apr_file_t **handle,
-                       const svn_string_t *path,
+                       svn_string_t *path,
                        const char *fname,
                        apr_int32_t flags,
                        apr_pool_t *pool)
 {
   *handle = NULL;  /* satisfy APR's bizarre requirement */
-  return open_adm_file (handle, (svn_string_t *) path, flags, pool,
-                        fname, NULL);
+  return open_adm_file (handle, path, flags, pool, fname, NULL);
 }
 
 
 svn_error_t *
 svn_wc__close_adm_file (apr_file_t *fp,
-                        const svn_string_t *path,
+                        svn_string_t *path,
                         const char *fname,
                         int sync,
                         apr_pool_t *pool)
 {
-  return close_adm_file (fp, (svn_string_t *) path, sync, pool, fname, NULL);
+  return close_adm_file (fp, path, sync, pool, fname, NULL);
 }
 
 

@@ -345,102 +345,23 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
 {
   struct log_runner *loggy = userData;
   svn_error_t *err = NULL;
-  const char *args[9];
 
   /* Most elements have a name attribute, so try to grab one now. */
   const char *name = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_NAME, atts);
 
   if (strcmp (eltname, SVN_WC__LOG_RUN_CMD) == 0)
     {
-      apr_status_t apr_err;
-      const char *infile_name, *outfile_name, *errfile_name;
-      apr_file_t *infile = NULL, *outfile = NULL, *errfile = NULL;
-
-      if (! name)
+      int ret;
+      ret = system (name);
+      if (ret & 255)
         {
           signal_error
             (loggy, svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG,
                                        0,
                                        NULL,
                                        loggy->pool,
-                                       "missing name attr in %s",
-                                       loggy->path->data));
-          return;
-        }
-
-      args[0] = name;
-      /* Grab the arguments.
-         You want ugly?  I'll give you ugly... */
-      args[1] = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_ARG_1, atts);
-      args[2] = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_ARG_2, atts);
-      args[3] = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_ARG_3, atts);
-      args[4] = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_ARG_4, atts);
-      args[5] = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_ARG_5, atts);
-      args[6] = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_ARG_6, atts);
-      args[7] = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_ARG_7, atts);
-      args[8] = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_ARG_8, atts);
-      args[9] = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_ARG_9, atts);
-
-      /* Grab the input and output, if any. */
-      infile_name = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_INFILE, atts);;
-      outfile_name = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_OUTFILE, atts);;
-      errfile_name = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_ERRFILE, atts);;
-
-      if (infile_name)
-        {
-          svn_string_t *infile_path
-            = svn_string_dup (loggy->path, loggy->pool);
-          svn_path_add_component_nts (infile_path, infile_name,
-                                        svn_path_local_style);
-
-          apr_err = apr_open (&infile, infile_path->data, APR_READ,
-                              APR_OS_DEFAULT, loggy->pool);
-        }
-
-      if (outfile_name)
-        {
-          svn_string_t *outfile_path
-            = svn_string_dup (loggy->path, loggy->pool);
-          svn_path_add_component_nts (outfile_path, outfile_name,
-                                        svn_path_local_style);
-
-          /* kff todo: always creates and overwrites, currently.
-             Could append if file exists... ?  Consider. */
-          apr_err = apr_open (&outfile, outfile_path->data, 
-                              (APR_WRITE | APR_CREATE),
-                              APR_OS_DEFAULT, loggy->pool);
-        }
-
-      if (errfile_name)
-        {
-          svn_string_t *errfile_path
-            = svn_string_dup (loggy->path, loggy->pool);
-          svn_path_add_component_nts (errfile_path, errfile_name,
-                                        svn_path_local_style);
-
-          /* kff todo: always creates and overwrites, currently.
-             Could append if file exists... ?  Consider. */
-          apr_err = apr_open (&errfile, errfile_path->data, 
-                              (APR_WRITE | APR_CREATE),
-                              APR_OS_DEFAULT, loggy->pool);
-        }
-
-      err = run_cmd_in_directory (loggy->path,
-                                  name,
-                                  (char *const *) args,
-                                  infile,
-                                  outfile,
-                                  errfile,
-                                  loggy->pool);
-      if (err)
-        {
-          signal_error
-            (loggy, svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG,
-                                       0,
-                                       NULL,
-                                       loggy->pool,
-                                       "error running %s in %s",
-                                       name, loggy->path->data));
+                                       "error (%d) running command \"%s\"",
+                                       ret, name));
           return;
         }
     }
