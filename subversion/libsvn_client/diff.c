@@ -2292,9 +2292,10 @@ svn_client_merge (const char *source1,
 
   /* Set up the diff3 command, so various callers don't have to. */
   {
-    svn_config_t *cfg = apr_hash_get (ctx->config,
-                                      SVN_CONFIG_CATEGORY_CONFIG,
-                                      APR_HASH_KEY_STRING);
+    svn_config_t *cfg =
+      ctx->config ? apr_hash_get (ctx->config, SVN_CONFIG_CATEGORY_CONFIG,
+                                  APR_HASH_KEY_STRING) : NULL;
+
     svn_config_get (cfg, &(merge_cmd_baton.diff3_cmd),
                     SVN_CONFIG_SECTION_HELPERS,
                     SVN_CONFIG_OPTION_DIFF3_CMD, NULL);
@@ -2396,9 +2397,10 @@ svn_client_merge_peg (const char *source,
 
   /* Set up the diff3 command, so various callers don't have to. */
   {
-    svn_config_t *cfg = apr_hash_get (ctx->config,
-                                      SVN_CONFIG_CATEGORY_CONFIG,
-                                      APR_HASH_KEY_STRING);
+    svn_config_t *cfg =
+      ctx->config ? apr_hash_get (ctx->config, SVN_CONFIG_CATEGORY_CONFIG,
+                                  APR_HASH_KEY_STRING) : NULL;
+
     svn_config_get (cfg, &(merge_cmd_baton.diff3_cmd),
                     SVN_CONFIG_SECTION_HELPERS,
                     SVN_CONFIG_OPTION_DIFF3_CMD, NULL);
