@@ -33,6 +33,7 @@
 #include "svn_error.h"
 #include "svn_path.h"
 #include "svn_config.h"
+#include "../libsvn_subr/config_impl.h"
 #include "svn_string.h"
 
 
@@ -40,8 +41,9 @@ module AP_MODULE_DECLARE_DATA authz_svn_module;
 
 enum {
     AUTHZ_SVN_NONE = 0,
-    AUTHZ_SVN_READ,
-    AUTHZ_SVN_WRITE
+    AUTHZ_SVN_READ = 1,
+    AUTHZ_SVN_WRITE = 2,
+    AUTHZ_SVN_RECURSIVE = 4
 };
 
 typedef struct {
@@ -51,14 +53,19 @@ typedef struct {
     const char *access_file;
 } authz_svn_config_rec;
 
-struct parse_authz_line_baton {
+struct parse_authz_baton {
     apr_pool_t *pool;
     svn_config_t *config;
     const char *user;
     int allow;
     int deny;
-};
 
+    int required_access;
+    const char *repos_path;
+    const char *qualified_repos_path;
+
+    int access;
+};
 
 /*
  * Configuration
@@ -122,7 +129,7 @@ static int group_contains_user(svn_config_t *cfg,
 static svn_boolean_t parse_authz_line(const char *name, const char *value,
                                       void *baton)
 {
-    struct parse_authz_line_baton *b = baton;
+    struct parse_authz_baton *b = baton;
 
     if (strcmp(name, "*")) {
         if (!b->user) {
@@ -159,6 +166,9 @@ static svn_boolean_t parse_authz_line(const char *name, const char *value,
     return TRUE;
 }
 
+/*
+ * Return TRUE when ACCESS has been determined.
+ */
 static int parse_authz_lines(svn_config_t *cfg,
                              const char *repos_name, const char *repos_path,
                              const char *user,
@@ -166,7 +176,7 @@ static int parse_authz_lines(svn_config_t *cfg,
                              apr_pool_t *pool)
 {
     const char *qualified_repos_path;
-    struct parse_authz_line_baton baton = { 0 };
+    struct parse_authz_baton baton = { 0 };
 
     baton.pool = pool;
     baton.config = cfg;
@@ -178,7 +188,7 @@ static int parse_authz_lines(svn_config_t *cfg,
     svn_config_enumerate(cfg, qualified_repos_path,
                          parse_authz_line, &baton);
     *access = !(baton.deny & required_access)
-              || (baton.allow & required_access) != 0;
+              || (baton.allow & required_access);
 
     if ((baton.deny & required_access)
         || (baton.allow & required_access))
@@ -187,18 +197,69 @@ static int parse_authz_lines(svn_config_t *cfg,
     svn_config_enumerate(cfg, repos_path,
                          parse_authz_line, &baton);
     *access = !(baton.deny & required_access)
-              || (baton.allow & required_access) != 0;
+              || (baton.allow & required_access);
 
     return (baton.deny & required_access)
            || (baton.allow & required_access);
 }
 
-static int check_access(svn_config_t *cfg,
-                        const char *repos_name, const char *repos_path,
-                        const char *user, int required_access,
-                        apr_pool_t *pool)
+static svn_boolean_t parse_authz_section(const char *section_name,
+                                         void *baton)
+{
+  struct parse_authz_baton *b = baton;
+  int conclusive;
+
+  if (strncmp(section_name, b->qualified_repos_path,
+              strlen(b->qualified_repos_path))
+      && strncmp(section_name, b->repos_path,
+                 strlen(b->repos_path))) {
+      /* No match, move on to the next section. */
+      return TRUE;
+  }
+
+  b->allow = b->deny = 0;
+  svn_config_enumerate(b->config, section_name,
+                       parse_authz_line, b);
+
+  conclusive = (b->deny & b->required_access)
+               || (b->allow & b->required_access);
+
+  b->access = !(b->deny & b->required_access)
+              || (b->allow & b->required_access)
+              || !conclusive;
+  
+  /* If access isn't denied, move on to check the next section. */
+  return b->access;
+}
+
+static int parse_authz_sections(svn_config_t *cfg,
+                                const char *repos_name, const char *repos_path,
+                                const char *user,
+                                int required_access,
+                                apr_pool_t *pool)
+{
+    struct parse_authz_baton baton = { 0 };
+
+    baton.pool = pool;
+    baton.config = cfg;
+    baton.user = user;
+    baton.required_access = required_access;
+    baton.repos_path = repos_path;
+    baton.qualified_repos_path = apr_pstrcat(pool, repos_name, ":",
+                                             repos_path, NULL);
+    
+    baton.access = 1; /* Allow by default */
+    svn_config__enumerate_sections(cfg, parse_authz_section, &baton);
+
+    return baton.access;
+}
+
+static int check_access(svn_config_t *cfg, const char *repos_name,
+                        const char *repos_path, const char *user,
+                        int required_access, apr_pool_t *pool)
 {
     const char *base_name;
+    const char *original_repos_path = repos_path;
     int access;
 
     if (!repos_path) {
@@ -209,13 +270,10 @@ static int check_access(svn_config_t *cfg,
         return 1;
     }
 
-    if (parse_authz_lines(cfg, repos_name, repos_path,
-                          user, required_access, &access,
-                          pool))
-        return access;
-
     base_name = repos_path;
-    do {
+    while (!parse_authz_lines(cfg, repos_name, repos_path,
+                              user, required_access, &access,
+                              pool)) {
         if (base_name[0] == '/' && base_name[1] == '\0') {
             /* By default, deny access */
             return 0;
@@ -223,9 +281,14 @@ static int check_access(svn_config_t *cfg,
 
         svn_path_split(repos_path, &repos_path, &base_name, pool);
     }
-    while (!parse_authz_lines(cfg, repos_name, repos_path,
-                              user, required_access, &access,
-                              pool));
+
+    if (access && (required_access & AUTHZ_SVN_RECURSIVE) != 0) {
+        /* Check access on entries below the current repos path */
+        access = parse_authz_sections(cfg,
+                                      repos_name, original_repos_path,
+                                      user, required_access,
+                                      pool);
+    }
 
     return access;
 }
@@ -252,35 +315,41 @@ static int req_check_access(request_rec *r,
     const char *repos_path;
     const char *dest_repos_path = NULL;
     dav_error *dav_err;
-    int authz_svn_type;
+    int authz_svn_type = 0;
     svn_config_t *access_conf = NULL;
     svn_error_t *svn_err;
 
     switch (r->method_number) {
+    /* All methods requiring read access to all subtrees of r->uri */
+    case M_COPY:
+        authz_svn_type |= AUTHZ_SVN_RECURSIVE;
+
     /* All methods requiring read access to r->uri */
     case M_OPTIONS:
     case M_GET:
-    case M_COPY:
     case M_PROPFIND:
     case M_REPORT:
-        authz_svn_type = AUTHZ_SVN_READ;
+        authz_svn_type |= AUTHZ_SVN_READ;
         break;
 
-    /* All methods requiring write access to r->uri */
+    /* All methods requiring write access to all subtrees of r->uri */
     case M_MOVE:
-    case M_MKCOL:
     case M_DELETE:
+        authz_svn_type |= AUTHZ_SVN_RECURSIVE;
+
+    /* All methods requiring write access to r->uri */
+    case M_MKCOL:
     case M_PUT:
     case M_PROPPATCH:
     case M_CHECKOUT:
     case M_MERGE:
     case M_MKACTIVITY:
-        authz_svn_type = AUTHZ_SVN_WRITE;
+        authz_svn_type |= AUTHZ_SVN_WRITE;
         break;
 
     default:
         /* Require most strict access for unknown methods */
-        authz_svn_type = AUTHZ_SVN_WRITE;
+        authz_svn_type |= AUTHZ_SVN_WRITE|AUTHZ_SVN_RECURSIVE;
         break;
     }
 
@@ -325,7 +394,7 @@ static int req_check_access(request_rec *r,
         apr_uri_parse(r->pool, dest_uri, &parsed_dest_uri);
 
         dest_uri = parsed_dest_uri.path;
-        ap_unescape_url(dest_uri);
+        ap_unescape_url((char *)dest_uri);
         if (strncmp(dest_uri, conf->base_path, strlen(conf->base_path))) {
             /* If it is not the same location, then we don't allow it.
              * XXX: Instead we could compare repository uuids, but that
@@ -372,8 +441,13 @@ static int req_check_access(request_rec *r,
         return DECLINED;
     }
 
-    /* XXX: DELETE, MOVE, MKCOL and PUT, if the path doesn't exist yet, also
-     * XXX: require write access to the parent dir of repos_path.
+    /* XXX: MKCOL, MOVE, DELETE
+     * XXX: Require write access to the parent dir of repos_path.
+     */
+
+    /* XXX: PUT
+     * XXX: If the path doesn't exist, require write access to the
+     * XXX: parent dir of repos_path.
      */
 
     /* Only MOVE and COPY have a second uri we have to check access to. */
@@ -385,7 +459,7 @@ static int req_check_access(request_rec *r,
     /* Check access on the first repos_path */
     if (!check_access(access_conf,
                       dest_repos_name, dest_repos_path,
-                      r->user, AUTHZ_SVN_WRITE,
+                      r->user, AUTHZ_SVN_WRITE|AUTHZ_SVN_RECURSIVE,
                       r->pool)) {
         return DECLINED;
     }

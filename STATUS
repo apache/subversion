@@ -55,14 +55,6 @@ Candidate changes:
     Votes:
       +1: breser, sussman
 
-  * r10183, r10184, r10216
-    mod_authz_svn security hole:  check access on *whole tree* when authorizing
-                                  COPY or DELETE requests.
-    Justification: hole allows users to copy trees that aren't 100% readable,
-                   thereby circumventing read-restriction on subtrees.
-    Votes:
-      +1: striker, sussman, breser (everyone has signed off on the patch)
-
   * r10072
     Have 'svnadmin hotcopy' pass APR_LARGEFILE flag to apr_file_open().
     Justification:  allows this command to copy largefiles, regardless

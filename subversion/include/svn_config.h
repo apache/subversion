@@ -207,7 +207,7 @@ typedef svn_boolean_t (*svn_config_enumerator_t)
  *     of an enumeration early, with no error, than an invocation of
  *     @a callback is likely to need to return an error? ###
  *
- * @a callback's @a name and @a name parameters are only valid for the
+ * @a callback's @a name and @a value parameters are only valid for the
  * duration of the call.
  */
 int svn_config_enumerate (svn_config_t *cfg, const char *section,
