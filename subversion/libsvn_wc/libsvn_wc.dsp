@@ -123,6 +123,10 @@ SOURCE=.\log.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\merge.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\props.c
 # End Source File
 # Begin Source File
