@@ -117,14 +117,6 @@ SOURCE=.\text_delta.c
 
 SOURCE=.\vdelta.c
 # End Source File
-# Begin Source File
-
-SOURCE=.\xml_output.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\xml_parse.c
-# End Source File
 # End Group
 # Begin Group "Header Files"
 
