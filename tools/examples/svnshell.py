@@ -237,6 +237,14 @@ def usage(exit):
 def main():
   if len(sys.argv) < 2:
     usage(1)
+
+  try:
+    import termios
+    attrs = termios.tcgetattr(sys.stdin)
+    termios.tcsetattr(sys.stdin, termios.TCSANOW, attrs)
+  except:
+    pass
+  
   util.run_app(SVNShell, sys.argv[1])
 
 if __name__ == '__main__':
