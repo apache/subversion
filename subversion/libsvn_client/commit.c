@@ -175,10 +175,10 @@ import_dir (apr_hash_t *files,
 
   SVN_ERR (svn_io_dir_open (&dir, path, pool));
 
-  for (err = svn_io_dir_read (&finfo, flags, dir, subpool);
+  for (err = svn_io_dir_read (&finfo, flags, dir, pool);
        err == SVN_NO_ERROR;
        svn_pool_clear (subpool),
-         err = svn_io_dir_read (&finfo, flags, dir, subpool))
+         err = svn_io_dir_read (&finfo, flags, dir, pool))
     {
       const char *this_path, *this_edit_path;
 

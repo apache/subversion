@@ -28,7 +28,6 @@
 #include "svn_error.h"
 #include "svn_path.h"
 #include "svn_io.h"
-#include "svn_utf.h"
 #include "apr_file_info.h"
 
 
@@ -46,24 +45,19 @@ svn_path_get_absolute(const char **pabsolute,
      without const vs non-const issues. */
 
   char * buffer;
-  apr_status_t apr_err;
-  const char *path_native;
-
-  SVN_ERR (svn_utf_cstring_from_utf8
-           (svn_path_canonicalize_nts (relative, pool), &path_native, pool));
-
-  apr_err = apr_filepath_merge(&buffer, NULL,
-                               path_native,
-                               (APR_FILEPATH_NOTRELATIVE
-                                | APR_FILEPATH_TRUENAME),
-                               pool);
-
+  int apr_err = apr_filepath_merge(&buffer, NULL,
+                                   svn_path_canonicalize_nts (relative, pool),
+                                   APR_FILEPATH_NOTRELATIVE
+                                   | APR_FILEPATH_TRUENAME,
+                                   pool);
   if (apr_err)
     return svn_error_createf(SVN_ERR_BAD_FILENAME, apr_err, NULL, pool,
                              "Couldn't determine absolute path of %s.", 
                              relative);
 
-  return svn_utf_cstring_to_utf8 (buffer, pabsolute, pool);
+  *pabsolute = buffer;
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -82,10 +76,9 @@ svn_path_split_if_file(const char *path,
 
   if (err != SVN_NO_ERROR)
     {
-      return svn_error_createf(SVN_ERR_BAD_FILENAME, 0, err, pool,
-                               "Couldn't determine if %s was "
-                               "a file or directory.",
-                               path);
+      return svn_error_createf(SVN_ERR_BAD_FILENAME, 0, err,
+                               pool, "Couldn't determine if %s was a file or "
+                               "directory.", path);
     }
   else
     {
@@ -105,10 +98,8 @@ svn_path_split_if_file(const char *path,
                                   path);
         }
     }
-
   return SVN_NO_ERROR;
 }
-
 
 svn_error_t *
 svn_path_condense_targets (const char **pbasedir,
