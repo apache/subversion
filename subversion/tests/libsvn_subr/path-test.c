@@ -376,12 +376,12 @@ test_uri_from_iri (const char **msg,
      but here we are hard-coding UTF-8.  But we all read UTF-8 codes like
      poetry, don't we. */
   static const char p1[] = {
-    0x66, 0x69, 0x6C, 0x65, 0x3A, 0x2F, 0x2F, 0x2F,
-    0x72, 0xC3, 0xA4, 0x6B, 0x73, 0x6D, 0xC3, 0xB6, 0x72,
-    0x67, 0xC3, 0xA5, 0x73, 0 };
+    '\x66', '\x69', '\x6C', '\x65', '\x3A', '\x2F', '\x2F', '\x2F',
+    '\x72', '\xC3', '\xA4', '\x6B', '\x73', '\x6D', '\xC3', '\xB6', '\x72',
+    '\x67', '\xC3', '\xA5', '\x73', '\0' };
   static const char p2[] = {
-    0x66, 0x69, 0x6C, 0x65, 0x3A, 0x2F, 0x2F, 0x2F,
-    0x61, 0x62, 0x25, 0x32, 0x30, 0x63, 0x64, 0 };
+    '\x66', '\x69', '\x6C', '\x65', '\x3A', '\x2F', '\x2F', '\x2F',
+    '\x61', '\x62', '\x25', '\x32', '\x30', '\x63', '\x64', '\0' };
   static const char *paths[2][2] = {
     { p1,
       "file:///r%C3%A4ksm%C3%B6rg%C3%A5s" },
