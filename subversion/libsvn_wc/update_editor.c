@@ -514,7 +514,7 @@ open_root (void *edit_baton,
   struct edit_baton *eb = edit_baton;
   struct dir_baton *d;
 
-  *dir_baton = d = make_dir_baton (NULL, eb, NULL, FALSE, pool);
+  *dir_baton = d = make_dir_baton (NULL, eb, NULL, eb->is_checkout, pool);
   if (eb->is_checkout)
     SVN_ERR (prep_directory (d->path, eb->ancestor_url, eb->target_revision,
                              TRUE, pool));
