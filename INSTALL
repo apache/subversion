@@ -658,6 +658,16 @@ II.   INSTALLATION
       Finally, you will need to copy the Apache apr libraries into the
       root of the Subversion source tree.
 
+      [NOTE: Subversion can use the gettext tools and library for localization
+          support.  Use the "--enable-nls" option to the gen-make.py script.
+          You will need a working gettext development installation with it's
+          'bin' directory in your system's PATH and it's 'include' and 'lib'
+          directories in your system's INCLUDE and LIB paths.  The runtime
+          packages from http://mirrors.kernel.org/gnu
+          (gettext-runtime-0.12.1.bin.woe32.zip,
+          gettext-tools-0.12.1.bin.woe32.zip, and libiconv-1.9.1.bin.woe32.zip)
+          have been tested and are known to work.]
+
       Walkthrough:
 
           Unzip the Apache source, copy the w32locatedb.pl script to the
