@@ -1,5 +1,5 @@
---- subversion-0.9.0/build.conf.orig	Fri Feb 15 01:48:59 2002
-+++ subversion-0.9.0/build.conf	Fri Feb 15 01:56:33 2002
+--- subversion-0.9.0/build.conf.orig	Fri Feb 15 11:05:26 2002
++++ subversion-0.9.0/build.conf	Fri Feb 15 11:08:19 2002
 @@ -63,7 +63,7 @@
  type = exe
  path = subversion/clients/cmdline
@@ -156,8 +156,8 @@
  path = subversion/tests/libsvn_delta
  sources = delta-combine-test.c
  install = test
--libs = libsvn_test libsvn_delta libsvn_subr $(SVN_APR_LIBS) libexpat
-+libs = libsvn_test libsvn_delta libsvn_subr $(SVN_APR_LIBS) -lexpat
+-libs = libsvn_delta libsvn_subr $(SVN_APR_LIBS) libexpat
++libs = libsvn_delta libsvn_subr $(SVN_APR_LIBS) -lexpat
  # disabled for now -- the delta combiner isn't written, and we
  # don't really have any idea if the interface would be compatible 
  # with this test, anyway.
