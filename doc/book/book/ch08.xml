@@ -4272,22 +4272,22 @@ trunk/vendors/deli/
 
           <screen>
 $ svnlook history -r 20 /usr/local/svn/repos /tags/1.0 --show-ids
-REVISION   PATH &lt;ID&
+REVISION   PATH 
 --------   ----
-      19   /tags/1.0 <1.2.12>
-      17   /branches/1.0-rc2 <1.1.10>
-      16   /branches/1.0-rc2 <1.1.x>
-      14   /trunk <1.0.q>
-      13   /trunk <1.0.o>
-      11   /trunk <1.0.k>
-       9   /trunk <1.0.g>
-       8   /trunk <1.0.e>
-       7   /trunk <1.0.b>
-       6   /trunk <1.0.9>
-       5   /trunk <1.0.7>
-       4   /trunk <1.0.6>
-       2   /trunk <1.0.3>
-       1   /trunk <1.0.2>
+      19   /tags/1.0 &lt;1.2.12&gt;
+      17   /branches/1.0-rc2 &lt;1.1.10&gt;
+      16   /branches/1.0-rc2 &lt;1.1.x&gt;
+      14   /trunk &lt;1.0.q&gt;
+      13   /trunk &lt;1.0.o&gt;
+      11   /trunk &lt;1.0.k&gt;
+       9   /trunk &lt;1.0.g&gt;
+       8   /trunk &lt;1.0.e&gt;
+       7   /trunk &lt;1.0.b&gt;
+       6   /trunk &lt;1.0.9&gt;
+       5   /trunk &lt;1.0.7&gt;
+       4   /trunk &lt;1.0.6&gt;
+       2   /trunk &lt;1.0.3&gt;
+       1   /trunk &lt;1.0.2&gt;
           </screen>
           
         </refsect1>
