@@ -100,8 +100,9 @@ svn_client_switch (const svn_delta_edit_fns_t *before_editor,
        "svn_client_update: entry '%s' has no URL", anchor->data);
   URL = svn_stringbuf_dup (entry->url, pool);
 
-  /* Fetch the switch editor.  If REVISION is invalid, that's okay;
-     the RA driver will call editor->set_target_revision() later on. */
+  /* Fetch the switch (update) editor.  If REVISION is invalid, that's
+     okay; the RA driver will call editor->set_target_revision() later
+     on. */
   SVN_ERR (svn_wc_get_switch_editor (anchor,
                                      target,
                                      revision,
@@ -139,6 +140,7 @@ svn_client_switch (const svn_delta_edit_fns_t *before_editor,
                               target,
                               recurse,
                               switch_url,
+                              target ? TRUE : FALSE,
                               switch_editor, switch_edit_baton));
 
   /* Drive the reporter structure, describing the revisions within
