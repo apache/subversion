@@ -417,19 +417,11 @@ class TargetLinked(Target):
       graph.add(DT_LINK, self.name, ofile)
 
   def _get_sources(self, src_patterns):
-    if not src_patterns:
-      try:
-        src_patterns = self.default_sources
-      except AttributeError:
-        raise GenError('Class "%s" has no default sources'
-                       % self.__class__.__name__)
-    sources = _collect_paths(src_patterns, self.path)
+    sources = _collect_paths(src_patterns or '*.c', self.path)
     sources.sort()
     return sources
 
 class TargetExe(TargetLinked):
-  default_sources = '*.c'
-
   def __init__(self, name, options, cfg, extmap):
     TargetLinked.__init__(self, name, options, cfg, extmap)
 
@@ -437,8 +429,6 @@ class TargetExe(TargetLinked):
     self.output = os.path.join(self.path, name + extmap['exe', 'target'])
 
 class TargetScript(Target):
-  # no default_sources
-
   def add_dependencies(self, src_patterns, graph):
     # we don't need to "compile" the sources, so there are no dependencies
     # to add here, except to get the script installed in the proper area.
@@ -447,8 +437,6 @@ class TargetScript(Target):
     graph.add(DT_INSTALL, self.install, self)
 
 class TargetLib(TargetLinked):
-  default_sources = '*.c'
-
   def __init__(self, name, options, cfg, extmap):
     TargetLinked.__init__(self, name, options, cfg, extmap)
 
@@ -468,11 +456,9 @@ class TargetLib(TargetLinked):
     self.output = os.path.join(self.path, tfile)
 
 class TargetDoc(Target):
-  default_sources = '*.texi'
+  pass
 
 class TargetSWIG(Target):
-  # no default_sources
-
   def __init__(self, name, options, cfg, extmap):
     Target.__init__(self, name, options, cfg, extmap)
     self._objext = extmap['lib', 'object']
