@@ -849,14 +849,7 @@ svn_wc_revert (svn_stringbuf_t *path,
   svn_wc_entry_t *entry;
   apr_time_t timestamp;
 
-  /* Safeguard 1:  can we handle this node type? */
-  SVN_ERR (svn_io_check_path (path, &kind, pool));
-  if (kind != svn_node_file)
-    return svn_error_createf 
-      (SVN_ERR_WC_IS_NOT_FILE, 0, NULL, pool,
-       "Cannot revert '%s' -- unsupported node type", path->data);
-
-  /* Safeguard 2:  is this a versioned resource? */
+  /* Safeguard 1:  is this a versioned resource? */
   SVN_ERR (svn_wc_entry (&entry, path, pool));
   if (! entry)
     return svn_error_createf 
@@ -867,6 +860,13 @@ svn_wc_revert (svn_stringbuf_t *path,
       (SVN_ERR_WC_IS_NOT_FILE, 0, NULL, pool,
        "Cannot revert '%s' -- unsupported entry node kind", path->data);
 
+  /* Safeguard 2:  can we handle this node type? */
+  SVN_ERR (svn_io_check_path (path, &kind, pool));
+  if (kind != svn_node_file && kind != svn_node_none)
+    return svn_error_createf 
+      (SVN_ERR_WC_IS_NOT_FILE, 0, NULL, pool,
+       "Cannot revert '%s' -- unsupported node type", path->data);
+
   /* Get the path to the pristine copy of this file.  */
   pristine_path = svn_wc__text_base_path (path, FALSE, pool);
   if (! pristine_path)
@@ -875,13 +875,16 @@ svn_wc_revert (svn_stringbuf_t *path,
        "svn_wc_revert:  Cannot find pristine copy for '%s'", 
        path->data);
 
-  /* Remove the working copy file... */
-  apr_err = apr_file_remove (path->data, pool);
-  if (apr_err)
-    return svn_error_createf 
-      (apr_err, 0, NULL, pool,
-       "svn_wc_revert:  Error removing working copy file '%s'", 
-       path->data);
+  if (kind != svn_node_none)
+    {
+      /* Remove the working copy file... */
+      apr_err = apr_file_remove (path->data, pool);
+      if (apr_err)
+        return svn_error_createf 
+          (apr_err, 0, NULL, pool,
+           "svn_wc_revert:  Error removing working copy file '%s'", 
+           path->data);
+    }
 
   /* ...then copy the pristine version into the "live" working copy. */
   err = svn_io_copy_file (pristine_path, path, pool);
