@@ -21,15 +21,34 @@
 
 
 
-/* kff todo: hey, it looks like APR may handle some parts of path
-   portability for us, and we just get to use `/' everywhere.  Check
-   up on this. */
-#define SVN_PATH__REPOS_SEPARATOR '/'
+static char
+get_separator_from_style (enum svn_path_style style)
+{
+  switch (style)
+    {
+    case svn_path_local_style:
+      /* local style - path separators used by local filesystem */
+      return (SVN_PATH_LOCAL_SEPARATOR);
 
+    case svn_path_url_style:
+      /* url style - path separators used in urls */
+      return (SVN_PATH_URL_SEPARATOR);
+
+    default:
+    case svn_path_repos_style:
+      /* repos style - separators used in repository paths */
+      return (SVN_PATH_REPOS_SEPARATOR);
+    }
+  /* default case = repos style (we should never hit this...) */
+  return (SVN_PATH_REPOS_SEPARATOR);
+}
+ 
+
+
 void
 svn_path_canonicalize (svn_string_t *path, enum svn_path_style style)
 {
-  /* kff todo: `style' ignored presently. */
+  char dirsep = get_separator_from_style (style);
 
   /* At some point this could eliminiate redundant components.
      For now, it just makes sure there is no trailing slash. */
@@ -38,7 +57,7 @@ svn_path_canonicalize (svn_string_t *path, enum svn_path_style style)
      libsvn_string. */
 
   while ((path->len > 0)
-         && (path->data[(path->len - 1)] == SVN_PATH__REPOS_SEPARATOR))
+         && (path->data[(path->len - 1)] == dirsep))
     {
       path->data[(path->len - 1)] = '\0';
       path->len--;
@@ -52,9 +71,7 @@ add_component_internal (svn_string_t *path,
                         size_t len,
                         enum svn_path_style style)
 {
-  /* kff todo: `style' ignored presently. */
-
-  char dirsep = SVN_PATH__REPOS_SEPARATOR;
+  char dirsep = get_separator_from_style (style);
 
   if (! svn_string_isempty (path))
     svn_string_appendbytes (path, &dirsep, sizeof (dirsep));
@@ -85,11 +102,11 @@ svn_path_add_component (svn_string_t *path,
 void
 svn_path_remove_component (svn_string_t *path, enum svn_path_style style)
 {
-  /* kff todo: `style' ignored presently. */
+  char dirsep = get_separator_from_style (style);
 
   svn_path_canonicalize (path, style);
 
-  if (! svn_string_chop_back_to_char (path, SVN_PATH__REPOS_SEPARATOR))
+  if (! svn_string_chop_back_to_char (path, dirsep))
     svn_string_setempty (path);
 }
 
@@ -99,10 +116,10 @@ svn_path_last_component (const svn_string_t *path,
                          enum svn_path_style style,
                          apr_pool_t *pool)
 {
-  /* kff todo: `style' ignored presently. */
+  char dirsep = get_separator_from_style (style);
 
   apr_size_t i
-    = svn_string_find_char_backward (path, SVN_PATH__REPOS_SEPARATOR);
+    = svn_string_find_char_backward (path, dirsep);
 
   if (i < path->len)
     {
@@ -146,11 +163,11 @@ svn_path_split (const svn_string_t *path,
 int
 svn_path_is_empty (const svn_string_t *path, enum svn_path_style style)
 {
-  /* kff todo: `style' ignored presently. */
+  char dirsep = get_separator_from_style (style);
 
   char buf[3];
   buf[0] = '.';
-  buf[0] = SVN_PATH__REPOS_SEPARATOR;
+  buf[0] = dirsep;
   buf[0] = '\0';
 
   return ((path == NULL)
@@ -166,6 +183,7 @@ svn_path_compare_paths (const svn_string_t *path1,
 {
   size_t min_len = ((path1->len) < (path2->len)) ? path1->len : path2->len;
   size_t i;
+  char dirsep = get_separator_from_style (style);
   
   /* Skip past common prefix. */
   for (i = 0; (i < min_len) && (path1->data[i] == path2->data[i]); i++)
@@ -173,9 +191,9 @@ svn_path_compare_paths (const svn_string_t *path1,
 
   if ((path1->len == path2->len) && (i >= min_len))
     return 0;     /* the paths are the same */
-  else if (path1->data[i] == SVN_PATH__REPOS_SEPARATOR)
+  else if (path1->data[i] == dirsep)
     return 1;     /* path1 child of path2, parent always comes before child */
-  else if (path2->data[i] == SVN_PATH__REPOS_SEPARATOR)
+  else if (path2->data[i] == dirsep)
     return -1;    /* path2 child of path1, parent always comes before child */
   else
     return strncmp (path1->data + i, path2->data + i, (min_len - i));
