@@ -314,7 +314,7 @@ const char *svn_fs_get_node_txn (svn_fs_node_t *node,
 
 /* If NODE was reached via the root of a revision, return the number
    of that revision.  Otherwise, return -1.  */
-svn_revnum_t *svn_fs_get_node_rev (svn_fs_node_t *node);
+svn_revnum_t svn_fs_get_node_rev (svn_fs_node_t *node);
 
 
 /* Set *VALUE_P to the value of the property of NODE named PROPNAME.
