@@ -1118,6 +1118,34 @@ dav_svn_split_uri(request_rec *r,
 }
 
 
+
+/* Context for cleanup handler. */
+struct cleanup_fs_access_baton
+{
+  svn_fs_t *fs;
+  apr_pool_t *pool;
+};
+
+/* Pool cleanup handler.  Make sure fs's access ctx points to NULL
+   when request pool is destroyed. */
+static apr_status_t cleanup_fs_access(void *data)
+{
+  svn_error_t *serr;
+  struct cleanup_fs_access_baton *baton = data;
+  
+  serr = svn_fs_set_access (baton->fs, NULL);
+  if (serr)
+    {
+      ap_log_perror(APLOG_MARK, APLOG_ERR, serr->apr_err, baton->pool,
+                    "cleanup_fs_access: error clearing fs access context.");
+      svn_error_clear(serr);
+    }
+
+  return APR_SUCCESS;
+}
+
+
+
 static dav_error * dav_svn_get_resource(request_rec *r,
                                         const char *root_path,
                                         const char *label,
@@ -1140,6 +1168,7 @@ static dav_error * dav_svn_get_resource(request_rec *r,
   dav_error *err;
   int had_slash;
   dav_locktoken_list *ltl;
+  struct cleanup_fs_access_baton *cleanup_baton;
 
   repo_name = dav_svn_get_repo_name(r);
   xslt_uri = dav_svn_get_xslt_uri(r);
@@ -1288,6 +1317,17 @@ static dav_error * dav_svn_get_resource(request_rec *r,
     {
       svn_fs_access_t *access_ctx;
 
+      /* The fs is cached in connection->pool, but the fs access
+         context lives in r->pool.  Because the username or token
+         could change on each request, we need to make sure that the
+         fs points to a NULL access context after the request is gone. */
+      cleanup_baton = apr_pcalloc(r->pool, sizeof(*cleanup_baton));
+      cleanup_baton->pool = r->pool;
+      cleanup_baton->fs = repos->fs;      
+      apr_pool_cleanup_register(r->pool, cleanup_baton, cleanup_fs_access,
+                                apr_pool_cleanup_null);      
+      
+      /* Create an access context based on the authenticated username. */
       serr = svn_fs_create_access (&access_ctx, r->user, r->pool);
       if (serr)
         {
@@ -1303,6 +1343,7 @@ static dav_error * dav_svn_get_resource(request_rec *r,
                                       r->pool);
         }
 
+      /* Attach the access context to the fs. */
       serr = svn_fs_set_access (repos->fs, access_ctx);
       if (serr)
         {
@@ -1316,7 +1357,7 @@ static dav_error * dav_svn_get_resource(request_rec *r,
                                       HTTP_INTERNAL_SERVER_ERROR,
                                       apr_psprintf(r->pool, new_msg),
                                       r->pool);
-        }      
+        }
     }
 
   /* if a locktoken header is present, push the token into the FS */
