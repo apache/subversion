@@ -1086,35 +1086,32 @@ C      stuff/loot/lump.c   # this file has conflicts from an update
           el objeto es parte de un subárbol programado para la
           adición-con-historial, <emphasis>y</emphasis> este tiene
           modificaciones locales. Cuando envie los cambios<!--TODO:commit-->
-          ,
+          , primero el padre será añadido-con-historial (copiado),
+          lo que significa que este fichero existirá automaticamente
+          en la copia. Entonces las modificaciones locales serán
+          subidas en la copia<!--TODO:will be uploaded into the
+          copy-->.</para>
 
+        <para>La quinta columna solo mostrará un espacio en blanco o
+          una <computeroutput>S</computeroutput>. Esto significa que
+          el fichero o directorio ha sido movido<!--TODO:switched-->
+          de la ruta<!--TODO:path--> del resto de la copia de trabajo
+          (usando <command>svn switch</command>) a una rama.</para>
 
- When you
-          commit, first the parent will be added-with-history (copied),
-          which means this file will automatically exist in the copy.
-          Then the local modifications will be uploaded into the
-          copy.</para>
-
-        <para>The fifth column will only show whitespace or an
-          <computeroutput>S</computeroutput>.  This signifies that the
-          file or directory has been switched from the path of the
-          rest of the working copy (using <command>svn
-          switch</command>) to a branch.</para>
-        
-        <para>If you pass a specific path to <command>svn
-          status</command>, it gives you information about that item
-          alone:</para>
+        <para>Si usted pasa una ruta específica a <command>svn
+          status</command>, este le dará información acerca de ese
+          objeto solamente:</para>
         
         <screen>
 $ svn status stuff/fish.c
 D      stuff/fish.c
 </screen>
         
-        <para><command>svn status</command> also has a
-          <option>--verbose</option> (<option>-v</option>) switch,
-          which will show you the status of <emphasis>every</emphasis>
-          item in your working copy, even if it has not been
-          changed:</para>
+        <para><command>svn status</command> también tiene una opción
+          <option>--verbose</option> (<option>-v</option>), el cuál
+          le mostrará el estado de <emphasis>todos</emphasis> los
+          objetos en su copia de trabajo, incluso si este no ha
+          sido cambiado:</para>
            
         <screen>
 $ svn status --verbose
@@ -1129,11 +1126,12 @@ A                0         ?     ?        stuff/things/bloo.h
                 44        36    harry     stuff/things/gloo.c
 </screen>
            
-        <para>This is the <quote>long form</quote> output of
-          <command>svn status</command>.  The first column remains
-          the same, but the second column shows the working-revision of
-          the item.  The third and fourth columns show the revision in
-          which the item last changed, and who changed it.</para>
+        <para>Esta es la <quote>forma larga</quote> de salida de
+          <command>svn status</command>. La primera columna permanece
+          igual<!--TODO:remains the same-->, pero la segunda columna
+          muestra la revisión de trabajo del fichero. La tercera
+          y cuarta columna muestra la revisión en la cuál el objeto
+          cambió por última vez, y quién lo cambió.</para>
 
         <para>None of the above invocations to <command>svn
           status</command> contact the repository, they work only
