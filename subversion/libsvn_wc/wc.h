@@ -49,8 +49,12 @@
 
 
 
-/* kff todo: I think this doesn't block, just returns yes or no. */
-svn_error_t *svn_wc__lock (svn_string_t *path, apr_pool_t *pool);
+/* Lock the working copy administrative area.
+   Wait for WAIT seconds if encounter another lock, trying again every
+   second, then return 0 if success or an SVN_ERR_ENCOUNTERED_LOCK
+   error if failed to obtain the lock. */
+svn_error_t *svn_wc__lock (svn_string_t *path, int wait, apr_pool_t *pool);
+svn_error_t *svn_wc__unlock (svn_string_t *path, apr_pool_t *pool);
 
 /* Return temporary working name based on PATH.
    For a given PATH, the working name is the same every time. */
