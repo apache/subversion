@@ -138,3 +138,13 @@ Candidate changes:
       r10487 really doesn't need a vote, but I included it for completness.
     Votes:
       +1: breser
+
+  * r10462,r10491
+    Add 2 new features to the javahl binding. svn info and svn log -v for
+    the java client.
+    Justification:
+      The subclipse (subclipse.tigris.org) people need these patches.
+    Notes:
+      The feature are implemented, so existing clients do not break.
+    Votes:
+      +1: pmayweg
