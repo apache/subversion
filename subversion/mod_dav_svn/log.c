@@ -79,16 +79,25 @@ static svn_error_t * log_receiver(void *baton,
 
   if (lrb->first_call)
     {
-      send_xml(lrb, "<S:log-report>" DEBUG_CR);
+      send_xml(lrb,
+               "<S:log-report xmlns:S=\"" SVN_XML_NAMESPACE "\" "
+               "xmlns:D=\"DAV:\">" DEBUG_CR);
       lrb->first_call = 0;
     }
-  
-  send_xml(lrb, "blah blah xml here rev %lu: %s   %s\n\n",
-           rev, author, date, strlen (msg));
-  send_xml(lrb, "blah blah more xml %s\n", msg);
+
+  send_xml(lrb,
+           "<S:log-item>" DEBUG_CR
+           "<D:version-name>%lu</D:version-name>" DEBUG_CR
+           "<D:creator-displayname>%s</D:creator-displayname>" DEBUG_CR
+           /* ### this should be DAV:creation-date, but we need to format
+              ### that date a bit differently */
+           "<S:date>%s</S:date>" DEBUG_CR
+           "<D:comment>%s</D:comment>" DEBUG_CR
+           "</S:log-item>" DEBUG_CR,
+           rev, author, date, msg);
 
   if (last_call)
-    send_xml (lrb, "</S:log-report>" DEBUG_CR);
+    send_xml(lrb, "</S:log-report>" DEBUG_CR);
 
   return SVN_NO_ERROR;
 }
@@ -108,12 +117,13 @@ dav_error * dav_svn__log_report(const dav_resource *resource,
   int ns;
 
   /* These get determined from the request document. */
-  svn_revnum_t
-    start = SVN_INVALID_REVNUM,   /* defaults to HEAD */
-    end = SVN_INVALID_REVNUM;     /* defaults to HEAD */
+  svn_revnum_t start = SVN_INVALID_REVNUM;   /* defaults to HEAD */
+  svn_revnum_t end = SVN_INVALID_REVNUM;     /* defaults to HEAD */
   svn_boolean_t discover_changed_paths = 0;  /* off by default */
+
+  /* ### why are these paths stringbuf? they aren't going to be changed... */
   apr_array_header_t *paths
-    = apr_array_make(resource->pool, 0, sizeof (svn_stringbuf_t *));
+    = apr_array_make(resource->pool, 0, sizeof(svn_stringbuf_t *));
 
   /* Sanity check. */
   ns = dav_svn_find_ns(doc->namespaces, SVN_XML_NAMESPACE);
@@ -129,7 +139,11 @@ dav_error * dav_svn__log_report(const dav_resource *resource,
      syntax implied below... */
   for (child = doc->root->first_child; child != NULL; child = child->next)
     {
-      if (child->ns == ns && strcmp(child->name, "start-revision") == 0)
+      /* if this element isn't one of ours, then skip it */
+      if (child->ns != ns)
+        continue;
+
+      if (strcmp(child->name, "start-revision") == 0)
         {
           /* ### assume no white space, no child elems, etc */
           start = atol(child->first_cdata.first->text);
@@ -155,6 +169,7 @@ dav_error * dav_svn__log_report(const dav_resource *resource,
                                          resource->pool);
           (*((svn_stringbuf_t **)(apr_array_push (paths)))) = target;
         }
+      /* else unknown element; skip it */
     }
 
   lrb.first_call = 1;
