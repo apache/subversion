@@ -428,6 +428,20 @@ do_check_path (svn_node_kind_t *kind,
 }
 
 
+
+/* Getting just one file. */
+
+static svn_error_t *
+get_file (void *session_baton,
+          svn_stringbuf_t *url,
+          svn_revnum_t revision,
+          svn_stream_t *stream)
+{
+  abort ();
+  return SVN_NO_ERROR;
+}
+
+
 /*----------------------------------------------------------------*/
 
 /** The ra_plugin **/
@@ -441,6 +455,7 @@ static const svn_ra_plugin_t ra_local_plugin =
   get_latest_revnum,
   get_dated_revision,
   get_commit_editor,
+  get_file,
   do_checkout,
   do_update,
   do_status,

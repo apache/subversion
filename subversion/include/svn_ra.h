@@ -286,6 +286,14 @@ typedef struct svn_ra_plugin_t
                                      svn_ra_close_commit_func_t close_func,
                                      void *close_baton);
 
+  /* Feed the contents of URL at REVISION into STREAM as part of
+     session SESSION_BATON. */
+  svn_error_t *(*get_file) (void *session_baton,
+                            svn_stringbuf_t *url,
+                            svn_revnum_t revision,
+                            svn_stream_t *stream);
+
+
   /* Check out revision REVISION of the url specified in
      SESSION_BATON, using EDITOR and EDIT_BATON to create the working
      copy.  If RECURSE is non-zero, create the full working tree, else

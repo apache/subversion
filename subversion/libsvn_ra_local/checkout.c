@@ -244,8 +244,6 @@ svn_ra_local__checkout (svn_fs_t *fs,
 }
 
 
-
-
 /* ----------------------------------------------------------------
  * local variables:
  * eval: (load-file "../svn-dev.el")

@@ -508,6 +508,17 @@ static svn_error_t * begin_checkout(svn_ra_session_t *ras,
   return NULL;
 }
 
+
+svn_error_t *svn_ra_dav__get_file(void *session_baton,
+                                  svn_stringbuf_t *url,
+                                  svn_revnum_t revision,
+                                  svn_stream_t *stream)
+{
+  abort ();
+  return SVN_NO_ERROR;
+}
+
+
 svn_error_t * svn_ra_dav__do_checkout(void *session_baton,
                                       svn_revnum_t revision,
                                       svn_boolean_t recurse,

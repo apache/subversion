@@ -80,6 +80,12 @@ svn_error_t * svn_ra_dav__get_commit_editor(
   svn_ra_close_commit_func_t close_func,
   void *close_baton);
 
+svn_error_t * svn_ra_dav__get_file(
+  void *session_baton,
+  svn_stringbuf_t *url,
+  svn_revnum_t revision,
+  svn_stream_t *stream);
+
 svn_error_t * svn_ra_dav__abort_commit(
  void *session_baton,
  void *edit_baton);
