@@ -44,12 +44,13 @@ Candidate changes:
     http://cve.mitre.org/cgi-bin/cvename.cgi?name=CAN-2004-0179
     Votes:
       +1: blair, dlr
+      -1: breser (0.24.6, I'll put something new up in a bit.)
 
   * r9551
     Fix RPM build for Fedora and WBEL3/RHEL3.
     Justification: This fixes the RPM build to work without patching.
     Votes:
-      +1: david
+      +1: david, breser
 
   * r9589
     Fix nasty pool usage problems in 'svnlook diff/changed/dirs-changed'.
@@ -79,9 +80,10 @@ Candidate changes:
     is referenced. Without it a crash can happen.
     Votes:
       +1: pmayweg
+      +0: breser
 
   * r9732
     Wrap svn_txdelta_parse_svndiff properly for Perl.
     Justification: Perl bindings completeness.
     Votes:
-      +1: clkao
+      +1: clkao, breser
