@@ -1154,7 +1154,7 @@
             Disse depotene er ikke s&#229;rbare for <!-- &#164; 
             --><quote>wedging</quote>, men er heller ikke s&#229; 
             gjennomtestet som Berkeley DB-depot.
-            Se <xref inkend="svn-ch-5-sect-1.2.A"/>.</para>
+            Se <xref linkend="svn-ch-5-sect-1.2.A"/>.</para>
         </listitem>
       </varlistentry>
 
@@ -1174,8 +1174,8 @@
           <para>Unixbrukere kan n&#229; opprette symbolske lenker og plassere 
             dem under versjonskontroll med <command>svn 
             add</command>-kommandoen.
-            Se <xref inkend="svn-ch-9-sect-1.2-re-add"/> og <xref 
-            inkend="svn-ch-7-sect-2.3.7"/>.</para>
+            Se <xref linkend="svn-ch-9-sect-1.2-re-add"/> og <xref 
+            linkend="svn-ch-7-sect-2.3.7"/>.</para>
         </listitem>
       </varlistentry>
 

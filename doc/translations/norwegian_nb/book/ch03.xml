@@ -551,7 +551,7 @@ $ svn log --revision {2002-11-20}:4040
         altogether.  This will wreak havoc on the internal
         date-to-revision conversion that Subversion performs.</para>
       @ENGLISH }}} -->
-      <para>Brukerne b&#248;r v&#230;re klar over en spissfindighet som kan bli 
+      <para>Brukere b&#248;r v&#230;re klar over en spissfindighet som kan bli 
         litt av en snublestein ved bruk av datoer i Subversion.
         Siden tidspunktet p&#229; en revisjon er lagret som en egenskap for 
         revisjonen &#8212; en uversjonert, modifiserbar egenskap &#8212; kan 
@@ -588,7 +588,7 @@ $ svn log --revision {2002-11-20}:4040
       av prosjektet ditt.
       Ved &#229; hente ut en revisjon fra et depot lages det en kopi av den 
       lokalt p&#229; maskinen.
-      Denne kopien inne holder <literal>HEAD</literal> (siste revisjon) 
+      Denne kopien inneholder <literal>HEAD</literal> (siste revisjon) 
       av Subversiondepotet som du spesifiserer p&#229; kommandolinja:</para>
 
     <!-- @ENGLISH {{{
@@ -624,10 +624,11 @@ Checked out revision 2499.
         more about in <xref linkend="svn-ch-4"/>.</para>
       @ENGLISH }}} -->
       <title>Oppbygning av depotet</title>
-      <para>Hvis du lurer p&#229; hva det g&#229;r i med <literal>trunk</literal> 
-        i URLen ovenfor, s&#229; er den en del av m&#229;ten vi anbefaler du 
-        legger ut Subversiondepotet, noe som vi vil snakke en god del 
-        mer om i <xref linkend="svn-ch-4"/>.</para>
+      <para>Hvis du lurer p&#229; <!-- &#164; -->hva det g&#229;r i med 
+        <literal>trunk</literal> i URLen ovenfor, s&#229; er den en del av 
+        m&#229;ten vi anbefaler du legger ut Subversiondepotet, noe som vi 
+        vil snakke en god del mer om i <xref 
+        linkend="svn-ch-4"/>.</para>
 
     </sidebar>
 
@@ -697,7 +698,7 @@ Checked out revision 2499.
         @ENGLISH }}} -->
         <para>Selv om arbeidskopien er <quote>som enhver annen samling 
           av filer og kataloger p&#229; systemet</quote>, m&#229; du la Subversion 
-          f&#229; vite om du skal til &#229; rearrangere noe i arbeidskopien.
+          f&#229; vite om du er p&#229; vei til &#229; rearrangere noe i arbeidskopien.
           Hvis du vil kopiere eller flytte et element i en arbeidskopi, 
           skal du bruke <command>svn copy</command> eller <command>svn 
           move</command> istedenfor kopierings- og flyttekommandoene i 
@@ -930,7 +931,7 @@ Updated to revision 2.
       @ENGLISH }}} -->
       <para>I dette tilfellet har noen andre lagt inn forandringer til 
         b&#229;de <filename>foo.c</filename> og <filename>bar.c</filename> 
-        siden forrige gang du oppdatere, og Subversion har oppdatert 
+        siden forrige gang du oppdaterte, og Subversion har oppdatert 
         arbeidskopien din til &#229; inneholde disse forandringene.</para>
       
       <!-- @ENGLISH {{{
@@ -944,7 +945,7 @@ Updated to revision 2.
         litt til.
         N&#229;r tjeneren sender forandringer til arbeidskopien, blir en 
         bokstavkode vist ved siden av hvert element for &#229; la deg vite 
-        hva Subversion gjorde med det for &#229; f&#229; oppdatert:</para>
+        hva Subversion gjorde for &#229; oppdatere arbeidskopien:</para>
 
       <variablelist>
 
@@ -957,7 +958,7 @@ Updated to revision 2.
               from the server).</para>
             @ENGLISH }}} -->
             <para>Filen <filename>foo</filename> ble oppdatert 
-              (<computeroutput>U</computeroutput>pdated), mottok 
+              (<computeroutput>U</computeroutput>pdated) og mottok 
               forandringer fra tjeneren.</para>
           </listitem>
         </varlistentry>
@@ -972,7 +973,7 @@ Updated to revision 2.
             @ENGLISH }}} -->
             <para>Filen eller katalogen <filename>foo</filename> ble 
               lagt til (<computeroutput>A</computeroutput>dded) 
-              arbeidskopien din.</para>
+              i arbeidskopien din.</para>
           </listitem>
         </varlistentry>
 
@@ -2411,7 +2412,7 @@ Updated to revision 46.
                     <literal>BASE</literal>-revisjonen f&#248;r du oppdaterte 
                     arbeidskopien.
                     Det vil si den filen som du hentet ut f&#248;r du gjorde 
-                    dine senste redigeringer.</para>
+                    dine seneste redigeringer.</para>
               </listitem>
             </varlistentry>
 
