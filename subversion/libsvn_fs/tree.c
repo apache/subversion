@@ -3904,6 +3904,9 @@ static svn_error_t *
 txn_body_paths_changed (void *baton,
                         trail_t *trail)
 {
+  /* WARNING: This is called *without* the protection of a Berkeley DB
+     transaction.  If you modify this function, keep that in mind. */
+
   struct paths_changed_args *args = baton;
   const char *txn_id;
   svn_fs_t *fs = svn_fs_root_fs (args->root);
@@ -3927,8 +3930,8 @@ svn_fs_paths_changed (apr_hash_t **changed_paths_p,
   struct paths_changed_args args;
   args.root = root;
   args.changes = NULL;
-  SVN_ERR (svn_fs__retry_txn (svn_fs_root_fs (root), txn_body_paths_changed,
-                              &args, pool));
+  SVN_ERR (svn_fs__retry (svn_fs_root_fs (root), txn_body_paths_changed,
+                          &args, pool));
   *changed_paths_p = args.changes;
   return SVN_NO_ERROR;
 }
