@@ -204,6 +204,7 @@ add_directory (const char *path,
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
   const char *full_path = svn_path_join (eb->base_path->data, path, pool);
+  apr_pool_t *subpool = svn_pool_create (pool);
 
   /* Sanity check. */  
   if (copy_path && (! SVN_IS_VALID_REVNUM (copy_revision)))
@@ -217,7 +218,6 @@ add_directory (const char *path,
       const svn_string_t *fs_path;
       svn_fs_root_t *copy_root;
       svn_node_kind_t kind;
-      apr_pool_t *subpool = svn_pool_create (pool);
 
       /* Check PATH in our transaction.  Make sure it does not exist,
          else return an out-of-dateness error. */
@@ -243,9 +243,6 @@ add_directory (const char *path,
                                      copy_revision, subpool));
       SVN_ERR (svn_fs_copy (copy_root, fs_path->data,
                             eb->txn_root, full_path, subpool));
-      
-      /* Cleanup our temporary subpool. */
-      svn_pool_destroy (subpool);
     }
   else
     {
@@ -254,6 +251,9 @@ add_directory (const char *path,
          svn_fs_make_dir will error out if PATH already exists.  */      
       SVN_ERR (svn_fs_make_dir (eb->txn_root, full_path, pool));
     }
+
+  /* Cleanup our temporary subpool. */
+  svn_pool_destroy (subpool);
 
   /* Build a new dir baton for this directory. */
   new_dirb = apr_pcalloc (pool, sizeof (*new_dirb));
