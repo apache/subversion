@@ -177,26 +177,6 @@ open_berkeley_filesystem (const char **msg)
 }
 
 
-/* Fetch the youngest revision from a repos. */
-static svn_error_t *
-fetch_youngest_rev (const char **msg)
-{
-  svn_fs_t *fs;
-  svn_revnum_t rev;
-
-  *msg = "fetch the youngest revision from a filesystem";
-
-  SVN_ERR (create_fs_and_repos (&fs, "test-repo-3")); /* helper */
-
-  SVN_ERR (svn_fs_youngest_rev (&rev, fs, pool));
-  
-  SVN_ERR (svn_fs_close_fs (fs));
-
-  return SVN_NO_ERROR;
-}
-
-
-
 /* Begin a txn, check its name, then close it */
 static svn_error_t *
 trivial_transaction (const char **msg)
@@ -421,6 +401,47 @@ create_mini_tree_transaction (const char **msg)
 }
 
 
+/* Helper function to verify contents of Greek Tree.  */
+static svn_error_t *
+check_greek_tree_under_root (svn_fs_root_t *rev_root)
+{
+  svn_stream_t *rstream;
+  svn_string_t *rstring;
+  svn_string_t *content;
+  int i;
+
+  const char *file_contents[12][2] =
+  {
+    { "iota", "This is the file 'iota'." },
+    { "A/mu", "This is the file 'mu'." },
+    { "A/B/lambda", "This is the file 'lambda'." },
+    { "A/B/E/alpha", "This is the file 'alpha'." },
+    { "A/B/E/beta", "This is the file 'beta'." },
+    { "A/D/gamma", "This is the file 'gamma'." },
+    { "A/D/G/pi", "This is the file 'pi'." },
+    { "A/D/G/rho", "This is the file 'rho'." },
+    { "A/D/G/tau", "This is the file 'tau'." },
+    { "A/D/H/chi", "This is the file 'chi'." },
+    { "A/D/H/psi", "This is the file 'psi'." },
+    { "A/D/H/omega", "This is the file 'omega'." }
+  };
+
+  /* Loop through the list of files, checking for matching content. */
+  for (i = 0; i < 12; i++)
+    {
+      SVN_ERR (svn_fs_file_contents (&rstream, rev_root, 
+                                     file_contents[i][0], pool));
+      SVN_ERR (stream_to_string (&rstring, rstream));
+      content = svn_string_create (file_contents[i][1], pool);
+      if (! svn_string_compare (rstring, content))
+        return svn_error_createf (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+                                 "data read != data written in file `%s'.",
+                                 file_contents[i][0]);
+    }
+  return SVN_NO_ERROR;
+}
+
+
 /* Helper for the various functions that operate on the Greek Tree:
    creates the Greek Tree under TXN_ROOT.  See ../xml/co1.txt for a
    diagram of the tree. */ 
@@ -490,7 +511,7 @@ create_greek_tree_transaction (const char **msg)
   SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
 
-  /* Create the greek tree. */
+  /* Create and verify the greek tree. */
   SVN_ERR (greek_tree_under_root (txn_root));
 
   /* Close the transaction and fs. */
@@ -1107,6 +1128,90 @@ delete_mutables (const char **msg)
 }
 
 
+
+/* Fetch the youngest revision from a repos. */
+static svn_error_t *
+fetch_youngest_rev (const char **msg)
+{
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root;
+  svn_revnum_t new_rev;
+  svn_revnum_t youngest_rev, new_youngest_rev;
+
+  *msg = "fetch the youngest revision from a filesystem";
+
+  SVN_ERR (create_fs_and_repos (&fs, "test-repo-youngest-rev"));
+
+  /* Get youngest revision of brand spankin' new filesystem. */
+  SVN_ERR (svn_fs_youngest_rev (&youngest_rev, fs, pool));
+
+  /* Prepare a txn to receive the greek tree. */
+  SVN_ERR (create_fs_and_repos (&fs, "test-repo-commit-txn"));
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+
+  /* Create the greek tree. */
+  SVN_ERR (greek_tree_under_root (txn_root));
+
+  /* Commit it. */
+  SVN_ERR (svn_fs_commit_txn (&new_rev, txn));
+
+  SVN_ERR (svn_fs_youngest_rev (&new_youngest_rev, fs, pool));
+
+  if (youngest_rev == new_rev)
+    return svn_error_create (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+                             "commit didn't bump up revision number");
+
+  if (new_youngest_rev != new_rev)
+    return svn_error_create (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+                             "couldn't fetch youngest revision");
+
+  /* Close the transaction and fs. */
+  SVN_ERR (svn_fs_close_txn (txn));
+  SVN_ERR (svn_fs_close_fs (fs));
+
+  return SVN_NO_ERROR;
+}
+
+
+/* Create a tree and commit it.  */
+static svn_error_t *
+commit_transaction (const char **msg)
+{
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root;
+  svn_fs_root_t *revision_root;
+  svn_revnum_t new_rev;
+
+  *msg = "create a tree and commit it";
+
+  /* Prepare a txn to receive the greek tree. */
+  SVN_ERR (create_fs_and_repos (&fs, "test-repo-commit-txn"));
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+
+  /* Create the greek tree. */
+  SVN_ERR (greek_tree_under_root (txn_root));
+
+  /* Commit it. */
+  SVN_ERR (svn_fs_commit_txn (&new_rev, txn));
+
+  /* Get root of the revision */
+  SVN_ERR (svn_fs_revision_root (&revision_root, fs, new_rev, pool));
+
+  /* Check the tree. */
+  SVN_ERR (check_greek_tree_under_root (revision_root));
+
+  /* Close the transaction and fs. */
+  SVN_ERR (svn_fs_close_txn (txn));
+  SVN_ERR (svn_fs_close_fs (fs));
+
+  return SVN_NO_ERROR;
+}
+
+
 
 /* The test table.  */
 
@@ -1114,7 +1219,6 @@ svn_error_t * (*test_funcs[]) (const char **msg) = {
   0,
   create_berkeley_filesystem,
   open_berkeley_filesystem,
-  fetch_youngest_rev,
   trivial_transaction,
   reopen_trivial_transaction,
   create_file_transaction,
@@ -1125,6 +1229,8 @@ svn_error_t * (*test_funcs[]) (const char **msg) = {
   list_directory,
   revision_props,
   delete_mutables,
+  /* fetch_youngest_rev, */
+  /* commit_transaction, */
   0
 };
 
