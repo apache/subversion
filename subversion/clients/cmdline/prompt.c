@@ -48,9 +48,16 @@ svn_cl__make_auth_baton (svn_cl__opt_state_t *opt_state,
   auth_obj->pool = pool;
 
   if (opt_state->auth_username)
-    auth_obj->username = opt_state->auth_username->data;
+    {
+      auth_obj->username = opt_state->auth_username->data;
+      auth_obj->overwrite = TRUE;
+    }
   if (opt_state->auth_password)
-    auth_obj->password = opt_state->auth_password->data;
+    {
+      auth_obj->password = opt_state->auth_password->data;
+      auth_obj->overwrite = TRUE;
+    }
+
   /* Add more authentication args here as necessary... */
 
   return auth_obj;

@@ -69,18 +69,16 @@ static int request_auth(void *userdata, const char *realm,
                                     /* possibly force a user-prompt: */
                                     ras->number_of_tries ? TRUE : FALSE,
                                     ras->pool);
-  ras->username = uname;
-  ras->password = pword;
 
   /* send a malloc'd copy of the username to neon */
-  l = strlen(ras->username) + 1;
+  l = strlen(uname) + 1;
   *username = malloc(l);
-  memcpy(*username, ras->username, l);
+  memcpy(*username, uname, l);
   
   /* send a malloc'd copy of the password to neon */
-  l = strlen(ras->password) + 1;
+  l = strlen(pword) + 1;
   *password = malloc(l);
-  memcpy(*password, ras->password, l);
+  memcpy(*password, pword, l);
 
   /* remember that we made another attempt to get auth info */
   ras->number_of_tries++;
