@@ -109,10 +109,18 @@ To be fixed by sussman:
         where the item was deleted?  how to use 'merge' to get it
         back;  how to use 'copy' to get it back.)
 
-      - move use-case to new section:  undoing a committed change.
+      - move use-case to new section:  undoing a committed change, or
+        a range of changes.
 
       - move use-case to new section:  merging one branch to another.
        
+
+  - ch04:  clarify that merged revisions must be tracked in *log
+    messages*, i.e. that it's the user's responsibility to document
+    merges there.  'svn log -v' will only show changed files, and when
+    exactly branches were created.  It won't show which changesets
+    were merged.
+
   - in httpd.conf setup, remind people not to put the svn <Location>
     within an existing DocumentRoot, else the 301 error.
 
