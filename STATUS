@@ -33,7 +33,7 @@ Candidate changes:
   * r9861
     fixes reentrancy problem for javahl binding. The pool for a call could be
     destroyed before the end of the call. This could crash the jvm
-    Justifcation: javahl binding only fix to prevent a crash
+    Justification: javahl binding only fix to prevent a crash
     Votes:
       +1: pmayweg
 
@@ -41,9 +41,15 @@ Candidate changes:
     Fix for crash in javahl binding. If the first parameter of SVNClient.list
     is null, the jvm will crash. r9905 is the result of a scan of the binding
     code searching for this problem in all possible places.
-    Justifcation: javahl binding only fix to prevent a crash
+    Justification: javahl binding only fix to prevent a crash
     Votes:
       +1: pmayweg
+
+  * r9816
+    Fix a bug which prevents svnlook from creating its temporary directory
+    inside a symlinked TMPDIR.
+    Votes:
+      +1: cmpilato
 
   * r8027
     Passing a Revision.DateSpec in javahl failed with 
