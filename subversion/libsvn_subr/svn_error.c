@@ -316,7 +316,10 @@ svn_handle_error (svn_error_t *err, FILE *stream, svn_boolean_t fatal)
              err->src_err,
              apr_strerror (err->apr_err, buf, sizeof(buf)));
 
-  fprintf (stream, "  %s\n", err->message);
+  if (err->message)
+    fprintf (stream, "  %s", err->message);
+
+  fputc ('\n', stream);
   fflush (stream);
 
   if (err->child)
