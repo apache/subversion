@@ -33,3 +33,13 @@ Candidate changes:
     Votes:
       +1: ghudson, maxb
 
+  * r10645
+    Add new abbreviation 'Revision' for 'LastChangedRevision'.
+    Justification:
+      Tiny patch. Drastically eases conversion from CVS for repositories
+      using $Revision$ and wanting to continue to use it for subversion - 
+      a simple propset, rather than text changes to every affected file.
+      Patch has been filed in the issue for more than a year!
+    Votes:
+      +1: maxb
+
