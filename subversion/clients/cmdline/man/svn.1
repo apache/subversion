@@ -36,7 +36,7 @@ Specify repository revision to operate on. Separate multiple revisons with `:'.
 \fB--version\fP
 Print client version info.
 .TP
-\fB-N\fB, \fB--nonrecursive\fP
+\fB-N\fB, \fB--non-recursive\fP
 Local; run only in current working directory.
 .TP
 \fB-R\fP, \fB--recursive\fP
@@ -51,7 +51,7 @@ Specify log message.
 \fB-F\fP, \fB--file ARG\fP
 Read data from file ARG.
 .TP
-\fB--message-encoding ARG\fP
+\fB--encoding ARG\fP
 Take log message in charset encoding ARG.
 .TP
 \fB--show-updates\fP
@@ -119,14 +119,14 @@ sub-directory being the basename of the URL.
 Recursively clean up the working copy, removing locks, resuming
 unfinished operations, etc.
 .TP
-\fBcommit\fP \fIfile\fP \fR[\fI--force\fR] [\fI--username name\fR] [\fI--password pass\fR] [\fI--no-auth-cache\fR] [\fI--message-encoding\fR] [\fI-mFqN\fR]
+\fBcommit\fP \fIfile\fP \fR[\fI--force\fR] [\fI--username name\fR] [\fI--password pass\fR] [\fI--no-auth-cache\fR] [\fI--encoding\fR] [\fI-mFqN\fR]
 (Alias: ci)
 Use this command when you wish to ``post'' your changes to other
 developers, by incorporating them into the source repository.
 
 \fBexample:\fP svn commit foo.c bar.h baz/ bat/*.m
 .TP
-\fBcopy\fP \fIsource destination\fP \fR[\fI--username name\fR] [\fI--password pass\fR] [\fI--no-auth-cache\fR] [\fI--message-encoding\fR] [\fI-mFrq\fR]
+\fBcopy\fP \fIsource destination\fP \fR[\fI--username name\fR] [\fI--password pass\fR] [\fI--no-auth-cache\fR] [\fI--encoding\fR] [\fI-mFrq\fR]
 (Alias: cp) Where \fBsource\fP and
 \fBdestination\fP can be directories or files, local ones in a repository or
 remote ones specified as URLs. `copy' is used where you want to make a copy of
@@ -155,7 +155,7 @@ have no revision history beyond the initial import that you just did.
   $ svn cp http://rep.com/repo/path/bar.c foo.c
   $ svn ci -m "copied that remote bar.c here"
 .TP
-\fBdelete\fP \fIfile|dir\fP \fR[\fI--force\fR] [\fI--targets file\fR] [\fI--username name\fR] [\fI--password pass\fR] [\fI--no-auth-cache\fR] [\fI--message-encoding\fR] [\fI-mFq\fR]\fI
+\fBdelete\fP \fIfile|dir\fP \fR[\fI--force\fR] [\fI--targets file\fR] [\fI--username name\fR] [\fI--password pass\fR] [\fI--no-auth-cache\fR] [\fI--encoding\fR] [\fI-mFq\fR]\fI
 (Alias: del, remove, rm) Mark the given files/directories for deletion upon
 commit. When you commit, the entries will be removed from the head revision in
 the repository, and deleted from your working copy.
@@ -174,7 +174,7 @@ between the two specified repository revisions. If this option is not
 given the comparison is between the working copy and its current
 repository revision.
 
--N/--nonrecursive with a directory target will prevent recursive
+-N/--non-recursive with a directory target will prevent recursive
 descent into subdirectories.
 
 \fBexample:\fP svn diff README
@@ -212,7 +212,7 @@ Without a given command argument, this prints generic help. If a specific
 command is entered, a short description on how to use that command is
 presented.
 .TP
-\fBimport\fP \fIRepository-URL\fP [\fIPath\fP] [\fINew-Repository-Entry\fP] [\fI--username name\fP] [\fI--password pass\fP] [\fI--no-auth-cache\fP] [\fI--message-encoding\fP] [\fI-FmqN\fP]
+\fBimport\fP \fIRepository-URL\fP [\fIPath\fP] [\fINew-Repository-Entry\fP] [\fI--username name\fP] [\fI--password pass\fP] [\fI--no-auth-cache\fP] [\fI--encoding\fP] [\fI-FmqN\fP]
 Import a file or tree into the repository.
 .TP
 \fBinfo\fP \fItarget1\fP [\fItarget2\fP ...] [\fI--targets file\fP] [\fI-R\fP]
@@ -274,11 +274,11 @@ svn merge -r 4:5 http://ex.com/repos/proj
 .SP
 
 .TP
-\fBmkdir\fP [\fIdirectory...\fP] [\fI--username name\fP] [\fI--password pass\fP] [\fI--no-auth-cache\fP] [\fI--message-encoding\fP] [\fI-mFq\fP]
+\fBmkdir\fP [\fIdirectory...\fP] [\fI--username name\fP] [\fI--password pass\fP] [\fI--no-auth-cache\fP] [\fI--encoding\fP] [\fI-mFq\fP]
 Create the directory(ies), if they do not already exist. The directories can
 be specified as a local directory name, or as a URL.
 .TP
-\fBmove\fP [\fISOURCE\fP] [\fIDEST\fP] [\fI--username name\fP] [\fI--password pass\fP] [\fI--no-auth-cache\fP]  [\fI--force\fP] [\fI--message-encoding\fP] [\fI-mFrq\fP]
+\fBmove\fP [\fISOURCE\fP] [\fIDEST\fP] [\fI--username name\fP] [\fI--password pass\fP] [\fI--no-auth-cache\fP]  [\fI--force\fP] [\fI--encoding\fP] [\fI-mFrq\fP]
 (alias: mv, rename, ren)
 Rename SOURCE to DEST, or move SOURCE(s) to DIRECTORY. Both source and dest
 can be specified either as a local file name, or as a URL in a possibly remote

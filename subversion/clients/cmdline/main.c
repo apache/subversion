@@ -63,7 +63,7 @@ const apr_getopt_option_t svn_cl__options[] =
     {"message",       'm', 1, "specify commit message \"ARG\""},
     {"quiet",         'q', 0, "print as little as possible"},
     {"recursive",     'R', 0, "descend recursively"},
-    {"nonrecursive",  'N', 0, "operate on single directory only"},
+    {"non-recursive", 'N', 0, "operate on single directory only"},
     {"revision",      'r', 1,
                   "revision X or X:Y range.  X or Y can be one of:\n"
      "                             {DATE}      date instead of revision number\n"

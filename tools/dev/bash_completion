@@ -49,10 +49,10 @@ _svn()
 	fi
 
 	pOpts="--username --password --no-auth-cache --non-interactive"
-	mOpts="-m --message -F --file --message-encoding"
+	mOpts="-m --message -F --file --encoding"
 	rOpts="-r --revision"
 	qOpts="-q --quiet"
-	nOpts="-N --nonrecursive"
+	nOpts="-N --non-recursive"
 
 	# possible options for the command
 	cmdOpts=
@@ -64,7 +64,7 @@ _svn()
 		cmdOpts="--targets -R --recursive $qOpts"
 		;;
 	cat)
-		cmdOpts="$rOpts"
+		cmdOpts="$rOpts --username --password"
 		;;
 	checkout|co)
 		cmdOpts="$rOpts $qOpts $nOpts $pOpts"
@@ -112,7 +112,7 @@ _svn()
 		cmdOpts="$qOpts -R --recursive $rOpts --revprop"
 		;;
 	propedit|pedit|pe)
-		cmdOpts="$rOpts --revprop"
+		cmdOpts="$rOpts --revprop --encoding"
 		;;
 	propget|pget|pg)
 		cmdOpts="-R --recursive $rOpts --revprop"
@@ -121,7 +121,8 @@ _svn()
 		cmdOpts="-v --verbose -R --recursive $rOpts --revprop"
 		;;
 	propset|pset|ps)
-		cmdOpts="-F --file $qOpts --targets -R --recursive --revprop"
+		cmdOpts="-F --file $qOpts --targets -R --recursive --revprop \
+                         --encoding"
 		;;
 	revert)
 		cmdOpts="--targets -R --recursive $qOpts"
@@ -151,22 +152,20 @@ _svn()
 
 		# take out alternatives
 		case $opt in
-		-v)             cmdOpts=${cmdOpts/ --verbose / } ;;
-		--verbose)      cmdOpts=${cmdOpts/ -v / } ;;
-		-N)             cmdOpts=${cmdOpts/ --nonrecursive / } ;;
-		--nonrecursive) cmdOpts=${cmdOpts/ -N / } ;;
-		-R)             cmdOpts=${cmdOpts/ --recursive / } ;;
-		--recursive)    cmdOpts=${cmdOpts/ -R / } ;;
-		-x)             cmdOpts=${cmdOpts/ --extensions / } ;;
-		--extensions)   cmdOpts=${cmdOpts/ -x / } ;;
-		-q)             cmdOpts=${cmdOpts/ --quiet / } ;;
-		--quiet)        cmdOpts=${cmdOpts/ -q / } ;;
+		-v)              cmdOpts=${cmdOpts/ --verbose / } ;;
+		--verbose)       cmdOpts=${cmdOpts/ -v / } ;;
+		-N)              cmdOpts=${cmdOpts/ --non-recursive / } ;;
+		--non-recursive) cmdOpts=${cmdOpts/ -N / } ;;
+		-R)              cmdOpts=${cmdOpts/ --recursive / } ;;
+		--recursive)     cmdOpts=${cmdOpts/ -R / } ;;
+		-x)              cmdOpts=${cmdOpts/ --extensions / } ;;
+		--extensions)    cmdOpts=${cmdOpts/ -x / } ;;
+		-q)              cmdOpts=${cmdOpts/ --quiet / } ;;
+		--quiet)         cmdOpts=${cmdOpts/ -q / } ;;
 
-		-r|--revision|-D|--date)
+		-r|--revision)
 			cmdOpts=${cmdOpts/ --revision / }
 			cmdOpts=${cmdOpts/ -r / }
-			cmdOpts=${cmdOpts/ --date / }
-			cmdOpts=${cmdOpts/ -D / }
 			;;
 
 		-m|--message|-F|--file)
