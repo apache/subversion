@@ -49,9 +49,8 @@
 
 
 
-/* kff todo: these don't block, they just return yes or no, prolly. */
-svn_error_t *svn_wc__read_lock (svn_string_t *path, apr_pool_t *pool);
-svn_error_t *svn_wc__write_lock (svn_string_t *path, apr_pool_t *pool);
+/* kff todo: I think this doesn't block, just returns yes or no. */
+svn_error_t *svn_wc__lock (svn_string_t *path, apr_pool_t *pool);
 
 /* Return temporary working name based on PATH.
    For a given PATH, the working name is the same every time. */
@@ -63,6 +62,38 @@ svn_error_t *svn_wc__set_up_new_dir (svn_string_t *path,
                                      svn_vernum_t ancestor_vernum,
                                      apr_pool_t *pool);
 
+
+
+/* kff todo: this little path manipulation library may want to live
+   somewhere more public eventually. */
+void svn_wc__path_add_component (svn_string_t *path, 
+                                 svn_string_t *component,
+                                 apr_pool_t *pool);
+void svn_wc__path_remove_component (svn_string_t *path);
+
+
+
+/* kff todo: these #defines have to be protected as though they're in
+   the global namespace, right?  Because they'd silently override any
+   other #define with the same name. */
+
+/* Default name for working copy administrative subdirectories, but
+   never use this raw, use svn_wc__adm_subdir() instead, since that
+   will incorporate user preferences. */
+#define SVN_WC__ADM_DIR_DEFAULT   "SVN"
+
+/* The files within the administrative subdir. */
+#define SVN_WC__ADM_VERSIONS      "versions"
+#define SVN_WC__ADM_PROPERTIES    "properties"
+#define SVN_WC__ADM_TREE_EDITS    "tree-edits"
+#define SVN_WC__ADM_PROP_EDITS    "prop-edits"
+#define SVN_WC__ADM_LOCK          "lock"
+#define SVN_WC__ADM_TMP           "tmp"
+#define SVN_WC__ADM_TEXT_BASE     "text-base"
+#define SVN_WC__ADM_PROP_BASE     "prop-base"
+
+/* Return a string containing the admin subdir name. */
+svn_string_t *svn_wc__adm_subdir (apr_pool_t *pool);
 
 
 
