@@ -260,7 +260,7 @@ foreach my $project (@project_settings_list)
     my $subject_prefix  = $project->{subject_prefix};
     my $subject;
 
-    $subject = "propchange - rev $rev $propname";
+    $subject = "propchange - r$rev $propname";
     if ($subject_prefix =~ /\w/)
       {
         $subject = "$subject_prefix $subject";
