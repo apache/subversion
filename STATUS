@@ -111,6 +111,8 @@ Candidate changes:
     Votes:
       +1: sussman
 
-
-
-
+  * r8564
+    Adjust contrib/client-side/search-svnlog.pl for new 'svn log' output.
+    Justification: script is broken without this obvious fix
+    Votes:
+      +1: kfogel
