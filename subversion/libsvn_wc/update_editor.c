@@ -1334,12 +1334,6 @@ latest_keyword_data (const apr_array_header_t *props,
         {
           keywords->author = prop->value;
         }
-
-      if (keywords->url
-          && (! strcmp (propname->data, SVN_WC_ENTRY_ATTR_URL)))
-        {
-          keywords->url = prop->value;
-        }
     }
 }
 
@@ -1584,7 +1578,7 @@ svn_wc_install_file (const char *file_path,
           for (i = 0; i < regular_props->nelts; i++)
             {
               const svn_prop_t *prop;
-              prop = &APR_ARRAY_IDX(entry_props, i, svn_prop_t);
+              prop = &APR_ARRAY_IDX(regular_props, i, svn_prop_t);
               if (strcmp (prop->name, SVN_PROP_EOL_STYLE) == 0)
                 fresh_eol_style = 
                   svn_stringbuf_create_from_string (prop->value, pool);
@@ -1642,7 +1636,7 @@ svn_wc_install_file (const char *file_path,
           for (i = 0; i < regular_props->nelts; i++)
             {
               const svn_prop_t *prop;
-              prop = &APR_ARRAY_IDX(entry_props, i, svn_prop_t);
+              prop = &APR_ARRAY_IDX(regular_props, i, svn_prop_t);
               if (strcmp (prop->name, SVN_PROP_KEYWORDS) == 0)
                 fresh_keywords_value = 
                   svn_stringbuf_create_from_string (prop->value, pool);
@@ -1688,9 +1682,32 @@ svn_wc_install_file (const char *file_path,
            of keywords to expand.  But the latest *values* of the
            keywords aren't yet in the entries file.  This routine
            might overwrite any values in KEYWORDS by examining fresh
-           data cached in fb->entrypropchanges. */
+           data cached in the newly received entry_props. */
         latest_keyword_data (entry_props, keywords, pool);
 
+        /* The latest URL value won't be in the entry_props.  At this
+           point, it's in the file baton itself. */        
+        if (keywords && keywords->url)
+          {
+            if (new_URL)        /* odd switched URL passed in? */
+              keywords->url = svn_string_create (new_URL, pool);
+            else 
+              {
+                /* This file's entry may not exist on disk yet, but we
+                   know that it's going to have a standard 'derived'
+                   url based on its parent's url... once we eventually
+                   run the log.  So we have to figure it out manually. */
+                svn_wc_entry_t *parent_entry;
+                svn_stringbuf_t *url;
+                SVN_ERR (svn_wc_entry (&parent_entry, parent_dir, pool));
+                if (parent_entry)
+                  {
+                    url = parent_entry->url;
+                    svn_path_add_component (url, basename);
+                    keywords->url = svn_string_create_from_buf (url, pool);
+                  }
+              }
+          }
       }
 
       
