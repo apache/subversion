@@ -13,7 +13,7 @@ Candidate changes:
     Stop unrelated errors being logged in the Apache error log.
     Justification: Clarity; trivial fix.
     Votes:
-      +1: dionisos
+      +1: dionisos, kfogel
 
 
   * r8867, r8868, r8902
@@ -72,11 +72,16 @@ Candidate changes:
     Justification:  fixes malformed XML errors from large
                     ra_dav checkouts/updates/etc.  
     Votes:
-      +1: sussman, david, lundblad
+      +1: sussman, david, lundblad, kfogel
 
   * r10148
     Fixes crash when deleting a revprop.
     Justification:  it's a crash.  we shouldn't ever crash.
+    Comments: Do we want r10154 as well, then?  I'm not sure it's
+      absolutely necessary, but it tidied up some bits of r10148.
+      Also, r10148 does a lot more than just fix the crash.  It might
+      be better to use a patch that *just* fixes the crash, and leave
+      all the other goodies for 1.1.
     Votes:
       +1: sussman, lundblad
 
@@ -93,7 +98,7 @@ Candidate changes:
     Justification: Don't ever crash.  Requested by the TSVN folks
                    because the crash kills the whole Windows desktop.
     Votes:
-      +1: bliss
+      +1: bliss, kfogel
 
   * r10186
     Allow COPY method on repositories with space in their name. (#1837)
@@ -108,5 +113,4 @@ Candidate changes:
     Notes: Makes earlier servers close the connection immediately, still
            better than a crashing client.
     Votes:
-      +1: lundblad
-
+      +1: lundblad, kfogel
