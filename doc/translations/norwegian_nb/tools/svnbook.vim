@@ -19,8 +19,8 @@ set nowrap
 " F5: Mark a paragraph in linewise visual mode and press F5 to comment 
 " out the English text and copy all the elements and go into insert mode 
 " after the first element. Expects the dings_it Perl script to be placed 
-" as ~/svnbook_nb/bin/dings_it .
-noremap <f5> :!~/svnbook_nb/bin/dings_it<cr>zo/@ENGLISH }}}<cr>j0f>a
+" as ~/bin/dings_it .
+noremap <f5> :!~/bin/dings_it<cr>zo/@ENGLISH }}}<cr>j0f>a
 
 " F6: Mark a paragraph of the translated text in linevise visual mode 
 " and press F6 to let Vim reformat the paragraph, then search to the 
