@@ -232,7 +232,9 @@ reopen_trivial_transaction (const char **msg,
 
   /* Begin a new transaction that is based on revision 0.  */
   SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, subpool));
-  SVN_ERR (svn_fs_txn_name (&txn_name, txn, subpool));
+
+  /* Don't use the subpool, txn_name must persist beyond the current txn */
+  SVN_ERR (svn_fs_txn_name (&txn_name, txn, pool));
 
   /* Close the transaction. */
   svn_pool_clear (subpool);
