@@ -496,6 +496,10 @@ log_receiver (void *baton,
   if (lrb->ctx->cancel_func)
     SVN_ERR (lrb->ctx->cancel_func (lrb->ctx->cancel_baton));
 
+  /* No paths were changed in this revision.  Nothing to do. */
+  if (!changed_paths)
+    return SVN_NO_ERROR;
+  
   /* If we've already determined all of our paths, then frankly, why
      are we here?  Oh well, just do nothing. */
   if (*lrb->start_path_p && lrb->peg_path && *lrb->end_path_p)
