@@ -141,6 +141,7 @@ svn_error_t *
 svn_client_export (const char *from,
                    const char *to,
                    svn_opt_revision_t *revision,
+                   svn_boolean_t force, 
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
@@ -158,7 +159,7 @@ svn_client_export (const char *from,
       URL = svn_path_canonicalize (from, pool);
       
       SVN_ERR (svn_client__get_export_editor (&export_editor, &edit_baton,
-                                              to, URL, ctx, pool));
+                                              to, URL, force, ctx, pool));
       
       SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
       SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL, pool));
@@ -207,6 +208,7 @@ struct edit_baton
 {
   const char *root_path;
   const char *root_url;
+  svn_boolean_t force;
 
   svn_wc_notify_func_t notify_func;
   void *notify_baton;
@@ -264,11 +266,14 @@ open_root (void *edit_baton,
   svn_node_kind_t kind;
   
   SVN_ERR (svn_io_check_path (eb->root_path, &kind, pool));
-  if (kind != svn_node_none)
-    return svn_error_create (SVN_ERR_WC_OBSTRUCTED_UPDATE,
-                             NULL, eb->root_path);
-
-  SVN_ERR (svn_io_dir_make (eb->root_path, APR_OS_DEFAULT, pool));
+  if ( kind == svn_node_none )
+      SVN_ERR (svn_io_dir_make (eb->root_path, APR_OS_DEFAULT, pool));
+  else if (kind == svn_node_file)
+      return svn_error_create (SVN_ERR_WC_NOT_DIRECTORY,
+                               NULL, eb->root_path);
+  else if ( (! (kind == svn_node_dir && eb->force)) || kind != svn_node_dir)
+      return svn_error_create (SVN_ERR_WC_OBSTRUCTED_UPDATE,
+                               NULL, eb->root_path);
 
   if (eb->notify_func)
     (*eb->notify_func) (eb->notify_baton,
@@ -297,8 +302,17 @@ add_directory (const char *path,
   struct edit_baton *eb = parent_baton;
   const char *full_path = svn_path_join (eb->root_path,
                                          path, pool);
+  svn_node_kind_t kind;
 
-  SVN_ERR (svn_io_dir_make (full_path, APR_OS_DEFAULT, pool));
+  SVN_ERR (svn_io_check_path (full_path, &kind, pool));
+  if ( kind == svn_node_none )
+      SVN_ERR (svn_io_dir_make (full_path, APR_OS_DEFAULT, pool));
+  else if (kind == svn_node_file)
+      return svn_error_create (SVN_ERR_WC_NOT_DIRECTORY,
+                               NULL, full_path);
+  else if (! (kind == svn_node_dir && eb->force))
+      return svn_error_create (SVN_ERR_WC_OBSTRUCTED_UPDATE,
+                               NULL, full_path);
 
   if (eb->notify_func)
     (*eb->notify_func) (eb->notify_baton,
@@ -508,6 +522,7 @@ svn_client__get_export_editor (const svn_delta_editor_t **editor,
                                void **edit_baton,
                                const char *root_path,
                                const char *root_url,
+                               svn_boolean_t force, 
                                svn_client_ctx_t *ctx,
                                apr_pool_t *pool)
 {
@@ -516,6 +531,7 @@ svn_client__get_export_editor (const svn_delta_editor_t **editor,
 
   eb->root_path = apr_pstrdup (pool, root_path);
   eb->root_url = apr_pstrdup (pool, root_url);
+  eb->force = force;
   eb->notify_func = ctx->notify_func;
   eb->notify_baton = ctx->notify_baton;
 
