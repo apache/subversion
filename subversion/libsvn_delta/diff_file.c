@@ -32,7 +32,6 @@ typedef struct svn_diff__file_token_t
   apr_off_t length;
 
   unsigned char md5[MD5_DIGESTSIZE];
-
 } svn_diff__file_token_t;
 
 
@@ -50,7 +49,6 @@ typedef struct svn_diff__file_baton_t
   svn_boolean_t reuse_token;
 
   apr_pool_t *pool;
-
 } svn_diff__file_baton_t;
 
 
@@ -173,9 +171,11 @@ svn_diff__file_datasource_get_token(void *baton,
 
           if (eol != NULL)
             {
-              token->length += (apr_size_t)(eol - curp);
-              length -= token->length;
-              apr_md5_update(&md5_ctx, curp, token->length);
+              apr_size_t len = (apr_size_t)(eol - curp);
+              
+              token->length += len;
+              length -= len;
+              apr_md5_update(&md5_ctx, curp, len);
 
               file_baton->curp[idx] = eol;
               file_baton->length[idx] = length;
