@@ -6,7 +6,9 @@ Version 0.16.1 (released 6 Jan 2003, revision ?)
  * reorganization of the ~/.subversion/ run-time config files.
  * more entry caching: approx. 3x speedup on checkouts & updates.
  * option rename: --non-recursive instead of --nonrecursive
+ * option rename: --no-diff-deleted instead of --no-diff-on-delete
  * new 'svn log --quiet'
+ * new 'svn diff --no-diff-deleted'
  * fix keyword expansion behaviors ($keyword:$ / $keyword$ / $keyword: $)
  * handle win32 non-ascii config-file paths (#968, #1048, part of #872)
 
