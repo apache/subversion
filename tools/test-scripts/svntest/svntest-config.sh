@@ -66,6 +66,7 @@ BIN="/bin"
 USRBIN="/usr/bin"
 LOCALBIN="/usr/local/bin"
 OPTBIN="/opt/bin"
+PERLBIN="/usr/bin"
 
 # Statically linked svn binary (used for repository updates)
 SVN="$TEST_ROOT/static/bin/svn"
@@ -79,9 +80,35 @@ GUESS="/usr/share/libtool/config.guess"
 # Path to sendmail
 SENDMAIL="/usr/sbin/sendmail"
 
+# A program used to base64 encode standard input.  Two choices are
+# 1) The encode-base64 script that comes with the Perl MIME::Base64
+#    module on CPAN at
+#    ftp://ftp.funet.fi/pub/CPAN/modules/by-module/MIME/
+#
+#    To install, get the latest MIME-Base64-X.YY.tar.gz and run
+#    perl Makefile.PL
+#    make
+#    make test
+#    make install UNINST=1
+#
+#    Uncomment here if you use this base64 encoder:
+#
+#    BASE64="$PERLBIN/encode-base64"
+#    BASE64_E="$BASE64"
+#
+# 2) A pre-compiled Windows base64.exe binary for Windows users.  C
+#    source code for other OSes.  Available at
+#    http://www.fourmilab.ch/webtools/base64/
+#
+#    No instructions needed.  If you can compile and test Subversion,
+#    then you can compile this :)
+#
+#    Uncomment here if you use this base64 encoder:
+#
+#    BASE64="$USRBIN/base64"
+#    BASE64_E="$BASE64 -e - -"
+
 # Other stuff
-BASE64="$USRBIN/base64"
-BASE64_E="$BASE64 -e - -"
 CAT="$BIN/cat"
 CP="$BIN/cp"
 CP_F="$CP -f"
