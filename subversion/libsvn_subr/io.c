@@ -104,12 +104,14 @@ svn_io_tmp_file (apr_file_t **f,
   int i;
   apr_size_t iterating_portion_idx;
 
-  /* Would be nice to use process ID for the random portion, but
-     that's not portable.  APR uuids are great, but they're kind of
-     long, and I'm not sure how random any given substring of one is.
-     So we just use the pointer as an unsigned short int (of course,
-     the same charge leveled at uuids might apply to the pointer as
-     well, but heck, we already have the pointer for free). */
+  /* The random portion doesn't have to be very random; it's just to
+     avoid a series of collisions where someone has filename NAME and
+     also NAME.00001.tmp, NAME.00002.tmp, etc, under version control
+     already, which might conceivably happen.  The random portion is a
+     last-ditch safeguard against that case.  It's okay, and even
+     preferable, for tmp files to collide with each other, though, so
+     that the iterating portion changes instead.  Taking the pointer
+     as an unsigned short int has more or less this effect. */
   int random_portion_width;
   char *random_portion = apr_psprintf (pool, "%hu%n",
                                        tmp_name,
