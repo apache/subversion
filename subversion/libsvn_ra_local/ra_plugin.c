@@ -259,6 +259,7 @@ get_commit_editor (void *session_baton,
 static svn_error_t *
 do_checkout (void *session_baton,
              svn_revnum_t revision,
+             svn_boolean_t recurse,
              const svn_delta_edit_fns_t *editor,
              void *edit_baton)
 {
@@ -273,6 +274,7 @@ do_checkout (void *session_baton,
 
   SVN_ERR (svn_ra_local__checkout (sbaton->fs,
                                    revnum_to_fetch,
+                                   recurse,
                                    sbaton->repository_URL,
                                    sbaton->fs_path,
                                    editor, edit_baton, sbaton->pool));
