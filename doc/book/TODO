@@ -1,49 +1,159 @@
 This is a -*- text -*- file.
 
-Here is a list of all the things that the Subversion Book DOESN'T yet cover.
 
 --------------------------------------------------------------
 
-Stuff that needs more discussion:
-
-  - 'svn diff/merge --ignore-ancestry'.  Demonstrate how this switch
-    can be used as an alternate strategy for vendor branching (instead
-    of using svn_load_dirs.pl): just import each new vendor release
-    unrelatedly, and apply the diffs to your vendor-branch working
-    copy.  (note: I at least briefly mention --ignore-ancestry and
-    --notice-ancestry in ch09 -Fitz)
+Put in best-practices doc:
 
   - (perhaps) suggest the use of environment variables to represent
     long repository URLs.  useful for lots of branching/tagging commands.
+    Maybe this can go into our existing best-practices doc?
 
-  - some folks want a glossary.  that's good, since we have a
-    glossary.xml anyway.  :-)  probably something we do at the last minute.
-    (I think O'Reilly does this)
 
 --------------------------------------------------------------
 To be fixed by someone:
 
-  - explain that while 'svn import' creates intermediate directories
-    for you, 'svn mkdir', 'svn move', and 'svn copy' will not.
+ - people are screaming for a 1-page 'quickstart' to exist somewhere.
+   not everyone has patience to read the entire book, get a top-down
+   understanding of everything, and then start experimenting.  Ben
+   tried to satisfy the bottom-up learners by writing the 1-page
+   Quickstart in our README file.  But Karl and Ben and others think
+   it should be put in the book *somewhere*:  in Appendix A?  Maybe at
+   the very end of chapter 1?  Thoughts?
+
+ - we seem to inconstisently assume repositories live either in
+   /usr/local/svn/ or /usr/local/repositories/ throughout the book.
+   We ought to consistify.
 
 --------------------------------------------------------------
 
 To be fixed by cmpilato:
 
+ch00:
+
+  - typo:  "we have made attempt to be thorough in our coverage" (!)
+
+
+ch05: 
+
+  - in 'importing initial data' section, reiterate exactly what it
+    means to run 'cd /some/path; svn import . URL' versus 'svn import
+    /some/path URL': namely, nothing.  but several users have expected
+    /some/path to be created in the latter example.
+
+  - from Tatiana: "we need some text between the two headings on page
+    79: Repository Maintenance and an Administrator's Toolkit"
+
+
+ch07:
+
+  - don't promise to refund money, even if it's a joke.  :-)
+
+  - the section which introduces properties needs to describe the
+    autoprops feature briefly, and xref the section which documents
+    the exact options in the run-time 'config' file.
+
+  - folks have been confused by the vendor branches stuff.  everyone
+    asks how to "replace the current version with the new libcomplex
+    1.1 source code"?  that needs to be shown or explained.
+
+  - in this example:
+
+    svn copy http://svn.example.com/repos/vendor/libcomplex/1.0  \
+             http://svn.example.com/repos/calc/libcomplex        \
+             -m 'bringing libcomplex-1.0 into the main branch'
+
+    ...make it clear that '/calc' exists, but '/calc/libcomplex'
+    doesn't yet exist.  some people think that the command is going to
+    create /calc/libcomplex/1.0/, rather than create
+    /calc/libcomplex/.
+
+  - svn:externals explanation:  demonstrate how to actually set this
+    property, using 'propedit' or 'propset -F'.
+
+  - svn:externals explanation:  people don't know what we mean by
+    "primary" vs. "auxiliary" working copy.  please define better.
+
+
 --------------------------------------------------------------
 
 To be fixed by fitz:
 
+ch03:
+
+  - bizarre grammar: "Let's say that, due to a miscommunication
+        between you and your collaborator, Sally, both edit the file
+        _sandwich.txt_ at the same time."
+
+
   - Be clear that PREV, BASE, and COMMITTED only refer to local paths,
     not to URLs.
-  - Document svnadmin --deltify in Ch09.
+
+  - import section at the end:
+
+   - you use the word 'above' which is verboten, right?
+  
+   - explain that while 'svn import' creates intermediate directories
+     for you, 'svn mkdir', 'svn move', and 'svn copy' will not. 
+
+   - generally, need more examples so users understand when new
+     directories will be created, and when they won't.  users are
+     constantly confused by this.
+  
+   - create a 'tip' sidebar (?) in the 'svn import' section which
+     explains how to do an "in place" import; we have a FAQ on this
+     already.  people keep asking about it.
+
+
+ch09:
+
+  - svnserve isn't mentioned at *all*.  this is really inconsistent;
+    it's used at least as much as 'svnlook' or other binaries we
+    ship.  it's not a 2nd-class citizen;  it needs to be documented in
+    the reference chapter like everything else.  (run 'man svnserve'
+    and/or read chapter 6 to understand how it works)
+
+  - Document svnadmin --deltify.  (yes, it's vestigial, but people
+    keep asking it what it is.  be sure to explain what
+    "deltification" is, and/or point to an existing description.)
+
+
 
 --------------------------------------------------------------
 
 To be fixed by sussman:
 
-* document 'svn log -v --stop-on-copy branchURL' as the easiest way to
-  discover when a branch was created.  This is a major FAQ.
+ch01:
 
+  - add short quickstart section from README??
 
+ch02:
 
+  - "After completing a commit to the repository, the freshly
+     committed files and directories are _AT A_ more recent working
+     revision than the rest of the working copy.
+
+ch04:
+
+   - explain what it means for 'diff' and 'merge' to ignore or pay
+     attention to ancestry.
+
+   - document 'svn log -v --stop-on-copy branchURL' as the easiest way to
+     discover when a branch was created.  This is a major FAQ.
+
+   - repeated merges:  we shouldn't do repeat merge of 406:HEAD, but
+     rather 405:some-specific-HEAD number.  we need to know the head
+     number so we can write a good log message.
+
+   - from tatiana: seems to be an extra space in code on page
+     63. "Transmitting file data [extra space]."
+
+ch06:
+
+   - in Body text, Sally and Harry are in lowercase.  Correct these
+     throughout where they appear in the paragraphs?
+
+appA:
+
+   - be fair when we criticize 'cvs up';  many users run 'cvs up -n'
+     to preview local mods rather than just 'cvs up'.
