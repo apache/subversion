@@ -1107,11 +1107,11 @@ Transmitting file data ...
 Committed revision 481.
 </screen>
 
-      <para>Now the trunk contains the complete second wave of changes
-        made to the branch.  At this point, you can either delete your
-        branch (we'll discuss this later on), or continue working on
-        your branch and repeat this procedure for subsequent
-        merges.</para>
+      <para>Ahora el tronco contiene la segunda oleada completa
+        de cambios realizados en la rama. En este punto, puede
+        o bien borrar su rama (discutiremos esto más adelante), o
+        continuar trabajando en su rama y repetir este procedimiento
+        en siguientes operaciones de fusionado.</para>
 
     </sect2>
 
