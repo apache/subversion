@@ -494,7 +494,12 @@ do_merge (const svn_delta_editor_t *after_editor,
   if (! ((path1_is_url = svn_path_is_url (&path_str1))))
     {
       SVN_ERR (svn_wc_entry (&entry1, path1, pool));
-      URL1 = svn_stringbuf_create (entry1->url->data, pool);
+      if (entry1)
+        URL1 = svn_stringbuf_create (entry1->url->data, pool);
+      else
+        return svn_error_createf 
+          (SVN_ERR_CLIENT_VERSIONED_PATH_REQUIRED, 0, NULL, pool,
+           "do_merge: %s is not a versioned entity", path1->data);
     }
 
   URL2 = path2;
@@ -503,7 +508,12 @@ do_merge (const svn_delta_editor_t *after_editor,
   if (! ((path2_is_url = svn_path_is_url (&path_str2))))
     {
       SVN_ERR (svn_wc_entry (&entry2, path2, pool));
-      URL2 = svn_stringbuf_create (entry2->url->data, pool);
+      if (entry2)
+        URL2 = svn_stringbuf_create (entry2->url->data, pool);
+      else
+        return svn_error_createf
+          (SVN_ERR_CLIENT_VERSIONED_PATH_REQUIRED, 0, NULL, pool,
+           "do_merge: %s is not a versioned entity", path2->data);
     }
 
   /* Establish first RA session to URL1. */
