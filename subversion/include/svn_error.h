@@ -159,7 +159,7 @@ typedef enum svn_errno_t {
   /* The name given is not a single path component.  */
   SVN_ERR_FS_NOT_SINGLE_PATH_COMPONENT,
 
-  /* The caller attempted to change a node which is not mutable.  */
+  /* The caller attempted to change or delete a node which is not mutable.  */
   SVN_ERR_FS_NOT_MUTABLE,
 
   /* You tried to create a new file in a filesystem revision, but the

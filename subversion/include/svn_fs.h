@@ -432,6 +432,9 @@ svn_fs_t *svn_fs_txn_fs (svn_fs_txn_t *txn);
 /* Open the transaction named NAME in the filesystem FS.  Set *TXN to
    the transaction.
 
+   If there is no such transaction, SVN_ERR_FS_NO_SUCH_TRANSACTION is
+   the error returned.
+
    Allocate the new transaction in POOL; when POOL is freed, the new
    transaction will be closed (neither committed nor aborted).  You
    can also close the transaction explicitly, using

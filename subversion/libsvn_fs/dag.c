@@ -237,9 +237,9 @@ set_node_revision (dag_node_t *node,
 
 svn_error_t *
 svn_fs__dag_get_node (dag_node_t **node,
-                         svn_fs_t *fs,
-                         svn_fs_id_t *id,
-                         trail_t *trail)
+                      svn_fs_t *fs,
+                      svn_fs_id_t *id,
+                      trail_t *trail)
 {
   dag_node_t *new_node;
   skel_t *contents;

@@ -74,9 +74,9 @@ svn_error_t *svn_fs__new_node_id (svn_fs_id_t **id_p,
    other hand, we'll need a way to delete even immutable nodes someday
    -- for example, someone accidentally commits NDA-protected data to
    a public repository and wants to remove it.  Thoughts?  */
-svn_error_t *svn_fs__delete_node_revision (svn_fs_t *fs,
-                                           const svn_fs_id_t *id,
-                                           trail_t *trail);
+svn_error_t *svn_fs__delete_nodes_entry (svn_fs_t *fs,
+                                         const svn_fs_id_t *id,
+                                         trail_t *trail);
 
 
 /* Set *SUCCESSOR_P to the ID of an immediate successor to node

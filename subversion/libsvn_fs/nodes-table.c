@@ -578,9 +578,9 @@ svn_fs__new_successor_id (svn_fs_id_t **successor_p,
 
 /* Removing node revisions.  */
 svn_error_t *
-svn_fs__delete_node_revision (svn_fs_t *fs,
-                              const svn_fs_id_t *id,
-                              trail_t *trail)
+svn_fs__delete_nodes_entry (svn_fs_t *fs,
+                            const svn_fs_id_t *id,
+                            trail_t *trail)
 {
   DBT key;
   
