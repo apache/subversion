@@ -1267,6 +1267,48 @@ def commit_from_long_dir(sbox):
     return 1
   os.chdir(was_dir)
   
+def commit_with_lock(sbox):
+  "try to commit when directory is locked"
+
+  if sbox.build():
+    return 1
+
+  # modify gamma and lock its directory
+  wc_dir = sbox.wc_dir
+  gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
+  gamma_lock_path = os.path.join(wc_dir, 'A', 'D', '.svn', 'lock')
+  svntest.main.file_append(gamma_path, "modified gamma")
+  svntest.main.file_append(gamma_lock_path, "")
+
+  # this commit should fail
+  if svntest.actions.run_and_verify_commit(wc_dir,
+                                           None,
+                                           None,
+                                           'already-locked',
+                                           None, None,
+                                           None, None,
+                                           wc_dir):
+    return 1
+                                           
+  # unlock directory
+  os.remove(gamma_lock_path)
+
+  # this commit should succeed
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/gamma' : Item(verb='Sending'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak(repos_rev=2) # post-commit status
+  expected_status.tweak('A/D/gamma', wc_rev=2)
+  if svntest.actions.run_and_verify_commit(wc_dir,
+                                           expected_output,
+                                           expected_status,
+                                           None,
+                                           None, None,
+                                           None, None,
+                                           wc_dir):
+    return 1
+
 
 ########################################################################
 # Run the tests
@@ -1295,6 +1337,7 @@ test_list = [ None,
               commit_rmd_and_deleted_file,
               commit_add_file_twice,
               commit_from_long_dir,
+              commit_with_lock,
              ]
 
 if __name__ == '__main__':
