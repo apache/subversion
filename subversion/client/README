@@ -164,6 +164,7 @@ Miscellaneous Notes and addenda
 ===============================
 
 
+
 ----------------------------------------------------------------------
 Some very old ideas from Jim's notes.  Maybe you can figure it out.
 
@@ -277,3 +278,242 @@ svn log
 svn fix-log
 
 ----------------------------------------------------------------------
+
+
+
+For reference, I have included below the current command line options
+(global and command local) for CVS.  -Fitz
+--------------------8-<-------cut-here---------8-<-----------------------
+
+CVS global options (specified before the command name) are:
+    -H           Displays usage information for command.
+    -Q           Cause CVS to be really quiet.
+    -q           Cause CVS to be somewhat quiet.
+    -r           Make checked-out files read-only.
+    -w           Make checked-out files read-write (default).
+    -l           Turn history logging off.
+    -n           Do not execute anything that will change the disk.
+    -t           Show trace of program execution -- try with -n.
+    -v           CVS version and copyright.
+    -T tmpdir    Use 'tmpdir' for temporary files.
+    -e editor    Use 'editor' for editing log information.
+    -d CVS_root  Overrides $CVSROOT as the root of the CVS tree.
+    -f           Do not use the ~/.cvsrc file.
+    -z #         Use compression level '#' for net traffic.
+    -a           Authenticate all net traffic.
+    -s VAR=VAL   Set CVS user variable.
+(Specify the --help option for a list of other help options)
+
+
+
+====================== add
+Usage: cvs add [-k rcs-kflag] [-m message] files...
+	-k	Use "rcs-kflag" to add the file with the specified kflag.
+	-m	Use "message" for the creation log.
+====================== admin
+Usage: cvs admin rcs-options files...
+====================== annotate
+Usage: cvs annotate [-lRf] [-r rev|-D date] [files...]
+	-l	Local directory only, no recursion.
+	-R	Process directories recursively.
+	-f	Use head revision if tag/date not found.
+	-r rev	Annotate file as of specified revision/tag.
+	-D date	Annotate file as of specified date.
+(Specify the --help global option for a list of other help options)
+====================== checkout
+Usage:
+  cvs checkout [-ANPRcflnps] [-r rev | -D date] [-d dir]
+    [-j rev1] [-j rev2] [-k kopt] modules...
+	-A	Reset any sticky tags/date/kopts.
+	-N	Don't shorten module paths if -d specified.
+	-P	Prune empty directories.
+	-R	Process directories recursively.
+	-c	"cat" the module database.
+	-f	Force a head revision match if tag/date not found.
+	-l	Local directory only, not recursive
+	-n	Do not run module program (if any).
+	-p	Check out files to standard output (avoids stickiness).
+	-s	Like -c, but include module status.
+	-r rev	Check out revision or tag. (implies -P) (is sticky)
+	-D date	Check out revisions as of date. (implies -P) (is sticky)
+	-d dir	Check out into dir instead of module name.
+	-k kopt	Use RCS kopt -k option on checkout.
+	-j rev	Merge in changes made between current revision and rev.
+====================== commit
+Usage: cvs commit [-nRlf] [-m msg | -F logfile] [-r rev] files...
+	-n	Do not run the module program (if any).
+	-R	Process directories recursively.
+	-l	Local directory only (not recursive).
+	-f	Force the file to be committed; disables recursion.
+	-F file	Read the log message from file.
+	-m msg	Log message.
+	-r rev	Commit to this branch or trunk revision.
+====================== diff
+Usage: cvs diff [-lNR] [rcsdiff-options]
+    [[-r rev1 | -D date1] [-r rev2 | -D date2]] [files...] 
+	-l	Local directory only, not recursive
+	-R	Process directories recursively.
+	-D d1	Diff revision for date against working file.
+	-D d2	Diff rev1/date1 against date2.
+	-N	include diffs for added and removed files.
+	-r rev1	Diff revision for rev1 against working file.
+	-r rev2	Diff rev1/date1 against rev2.
+	--ifdef=arg	Output diffs in ifdef format.
+(consult the documentation for your diff program for rcsdiff-options.
+The most popular is -c for context diffs but there are many more).
+====================== edit
+Usage: cvs edit [-lR] [files...]
+-l: Local directory only, not recursive
+-R: Process directories recursively
+-a: Specify what actions for temporary watch, one of
+    edit,unedit,commit,all,none
+====================== editors
+Usage: cvs editors [-lR] [files...]
+	-l	Process this directory only (not recursive).
+	-R	Process directories recursively.
+====================== export
+Usage: cvs export [-NRfln] [-r rev | -D date] [-d dir] [-k kopt] module...
+	-N	Don't shorten module paths if -d specified.
+	-f	Force a head revision match if tag/date not found.
+	-l	Local directory only, not recursive
+	-R	Process directories recursively (default).
+	-n	Do not run module program (if any).
+	-r rev	Export revision or tag.
+	-D date	Export revisions as of date.
+	-d dir	Export into dir instead of module name.
+	-k kopt	Use RCS kopt -k option on checkout.
+====================== history
+Usage: cvs history [-report] [-flags] [-options args] [files...]
+
+   Reports:
+        -T              Produce report on all TAGs
+        -c              Committed (Modified) files
+        -o              Checked out modules
+        -m <module>     Look for specified module (repeatable)
+        -x [TOEFWUCGMAR] Extract by record type
+        -e              Everything (same as -x, but all record types)
+   Flags:
+        -a              All users (Default is self)
+        -l              Last modified (committed or modified report)
+        -w              Working directory must match
+   Options:
+        -D <date>       Since date (Many formats)
+        -b <str>        Back to record with str in module/file/repos field
+        -f <file>       Specified file (same as command line) (repeatable)
+        -n <modulename> In module (repeatable)
+        -p <repos>      In repository (repeatable)
+        -r <rev/tag>    Since rev or tag (looks inside RCS files!)
+        -t <tag>        Since tag record placed in history file (by anyone).
+        -u <user>       For user name (repeatable)
+        -z <tz>         Output for time zone <tz> (e.g. -z -0700)
+====================== import
+Usage: cvs import [-d] [-k subst] [-I ign] [-m msg] [-b branch]
+    [-W spec] repository vendor-tag release-tags...
+	-d	Use the file's modification time as the time of import.
+	-k sub	Set default RCS keyword substitution mode.
+	-I ign	More files to ignore (! to reset).
+	-b bra	Vendor branch id.
+	-m msg	Log message.
+	-W spec	Wrappers specification line.
+====================== init
+Usage: cvs init
+====================== log
+Usage: cvs log [-lRhtNb] [-r[revisions]] [-d dates] [-s states]
+    [-w[logins]] [files...]
+	-l	Local directory only, no recursion.
+	-R	Only print name of RCS file.
+	-h	Only print header.
+	-t	Only print header and descriptive text.
+	-N	Do not list tags.
+	-b	Only list revisions on the default branch.
+	-r[revisions]	Specify revision(s)s to list.
+	-d dates	Specify dates (D1<D2 for range, D for latest before).
+	-s states	Only list revisions with specified states.
+	-w[logins]	Only list revisions checked in by specified logins.
+====================== login
+Usage: cvs login
+====================== logout
+Usage: cvs logout
+====================== rdiff
+Usage: cvs rdiff [-flR] [-c|-u] [-s|-t] [-V %d]
+    -r rev|-D date [-r rev2 | -D date2] modules...
+	-f	Force a head revision match if tag/date not found.
+	-l	Local directory only, not recursive
+	-R	Process directories recursively.
+	-c	Context diffs (default)
+	-u	Unidiff format.
+	-s	Short patch - one liner per file.
+	-t	Top two diffs - last change made to the file.
+	-D date	Date.
+	-r rev	Revision - symbolic or numeric.
+	-V vers	Use RCS Version "vers" for keyword expansion.
+====================== release
+Usage: cvs release [-d] directories...
+	-d	Delete the given directory.
+====================== remove
+Usage: cvs remove [-flR] [files...]
+	-f	Delete the file before removing it.
+	-l	Process this directory only (not recursive).
+	-R	Process directories recursively.
+====================== rtag
+Usage: cvs rtag [-aflRnF] [-b] [-d] [-r rev|-D date] tag modules...
+	-a	Clear tag from removed files that would not otherwise be tagged.
+	-f	Force a head revision match if tag/date not found.
+	-l	Local directory only, not recursive
+	-R	Process directories recursively.
+	-n	No execution of 'tag program'
+	-d	Delete the given Tag.
+	-b	Make the tag a "branch" tag, allowing concurrent development.
+	-r rev	Existing revision/tag.
+	-D	Existing date.
+	-F	Move tag if it already exists
+====================== status
+Usage: cvs status [-vlR] [files...]
+	-v	Verbose format; includes tag information for the file
+	-l	Process this directory only (not recursive).
+	-R	Process directories recursively.
+====================== tag
+Usage: cvs tag [-lRF] [-b] [-d] [-c] [-r rev|-D date] tag [files...]
+	-l	Local directory only, not recursive.
+	-R	Process directories recursively.
+	-d	Delete the given tag.
+	-r rev	Existing revision/tag.
+	-D	Existing date.
+	-f	Force a head revision if specified tag not found.
+	-b	Make the tag a "branch" tag, allowing concurrent development.
+	-F	Move tag if it already exists.
+	-c	Check that working files are unmodified.
+====================== unedit
+Usage: cvs unedit [-lR] [files...]
+-l: Local directory only, not recursive
+-R: Process directories recursively
+====================== update
+Usage: cvs update [-APdflRp] [-k kopt] [-r rev|-D date] [-j rev]
+    [-I ign] [-W spec] [files...]
+	-A	Reset any sticky tags/date/kopts.
+	-P	Prune empty directories.
+	-C	Overwrite locally modified files with clean repository copies.
+	-d	Build directories, like checkout does.
+	-f	Force a head revision match if tag/date not found.
+	-l	Local directory only, no recursion.
+	-R	Process directories recursively.
+	-p	Send updates to standard output (avoids stickiness).
+	-k kopt	Use RCS kopt -k option on checkout.
+	-r rev	Update using specified revision/tag (is sticky).
+	-D date	Set date to update from (is sticky).
+	-j rev	Merge in changes made between current revision and rev.
+	-I ign	More files to ignore (! to reset).
+	-W spec	Wrappers specification line.
+====================== watch
+Usage: cvs watch [on|off|add|remove] [-lR] [-a action] [files...]
+on/off: turn on/off read-only checkouts of files
+add/remove: add or remove notification on actions
+-l (on/off/add/remove): Local directory only, not recursive
+-R (on/off/add/remove): Process directories recursively
+-a (add/remove): Specify what actions, one of
+    edit,unedit,commit,all,none
+====================== watchers
+Usage: cvs watchers [-lR] [files...]
+	-l	Process this directory only (not recursive).
+	-R	Process directories recursively.
+--------------------8-<-------cut-here---------8-<-----------------------
