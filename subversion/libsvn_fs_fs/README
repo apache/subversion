@@ -93,7 +93,7 @@ Workplan
      (Status: Done.)
 
   4. Develop a format for the directory part of mutable transactions.
-     (Status: Started.)
+     (Status: Done.)
 
   5. Produce some test case transactions, either using an extension of
      the tool from (2) or by hand.
