@@ -113,7 +113,7 @@ static svn_error_t *send_response(mr_baton *baton, svn_boolean_t is_dir)
 
   href = dav_svn_build_uri(mrc->repos, DAV_SVN_BUILD_URI_PUBLIC,
                            SVN_IGNORED_REVNUM, baton->path,
-                           1 /* add_href */, baton->pool);
+                           0 /* add_href */, baton->pool);
 
   rt = is_dir
     ? "<D:resourcetype><D:collection/></D:resourcetype>" DEBUG_CR
@@ -126,21 +126,28 @@ static svn_error_t *send_response(mr_baton *baton, svn_boolean_t is_dir)
 
   vsn_url = dav_svn_build_uri(mrc->repos, DAV_SVN_BUILD_URI_VERSION,
                               SVN_INVALID_REVNUM, stable_id->data,
-                              1 /* add_href */, baton->pool);
+                              0 /* add_href */, baton->pool);
 
   status = ap_fputstrs(mrc->output, mrc->bb,
                        "<D:response>" DEBUG_CR
                        "<D:href>", href, "</D:href>" DEBUG_CR
                        "<D:propstat><D:prop>" DEBUG_CR,
                        rt,
-                       "<D:checked-in>", vsn_url, "</D:checked-in>" DEBUG_CR
+                       "<D:checked-in><D:href>",
+                       vsn_url,
+                       "</D:href></D:checked-in>" DEBUG_CR
                        "<D:status>200 OK</D:status>" DEBUG_CR
                        "</D:prop></D:propstat>" DEBUG_CR
                        "</D:response>" DEBUG_CR,
                        NULL);
+
+  /* ### this is bogus. ap_fputstrs() returns # chars, not a status...
+     ### however, it *should*, so let's leave this here for now. */
+#if 0
   if (status != APR_SUCCESS)
     return svn_error_create(status, 0, NULL, baton->pool,
                             "could not write response to output");
+#endif
   return APR_SUCCESS;
 }
 
@@ -155,10 +162,14 @@ static svn_error_t *mr_replace_root(void *edit_baton,
                                     void **root_baton)
 {
   merge_response_ctx *mrc = edit_baton;
-  mr_baton *b = apr_pcalloc(mrc->pool, sizeof(*b));
+  apr_pool_t *pool = svn_pool_create(mrc->pool);
+  mr_baton *b = apr_pcalloc(pool, sizeof(*b));
+
+  /* note that we create a subpool; the root_baton is passed to the
+     close_directory callback, where we will destroy the pool. */
 
   b->mrc = mrc;
-  b->pool = mrc->pool;
+  b->pool = pool;
   b->path = "/";
 
   mrc->root_baton = b;
@@ -414,7 +425,7 @@ dav_error * dav_svn__merge_response(ap_filter_t *output,
 
   /* send whatever is left in the brigade */
   (void) ap_pass_brigade(output, bb);
-  
+
   return NULL;
 }
 

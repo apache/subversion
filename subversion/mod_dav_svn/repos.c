@@ -750,6 +750,10 @@ static dav_error * dav_svn_get_resource(request_rec *r,
   svn_error_t *serr;
   dav_error *err;
 
+  /* this is usually the first entry into mod_dav_svn, so let's initialize
+     the error pool, as a subpool of the request pool. */
+  (void) svn_error_init_pool(r->pool);
+
   if ((fs_path = dav_svn_get_fs_path(r)) == NULL)
     {
       /* ### are SVN_ERR_APMOD codes within the right numeric space? */

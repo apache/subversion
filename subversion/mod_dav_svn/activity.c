@@ -28,7 +28,8 @@
 #define ACTIVITY_DB     "activities"
 
 
-const char *dav_svn_get_txn(dav_svn_repos *repos, const char *activity_id)
+const char *dav_svn_get_txn(const dav_svn_repos *repos,
+                            const char *activity_id)
 {
   apr_dbm_t *dbm;
   apr_status_t status;
@@ -65,7 +66,7 @@ const char *dav_svn_get_txn(dav_svn_repos *repos, const char *activity_id)
   return txn_name;
 }
 
-dav_error *dav_svn_store_activity(dav_svn_repos *repos,
+dav_error *dav_svn_store_activity(const dav_svn_repos *repos,
                                   const char *activity_id,
                                   const char *txn_name)
 {
@@ -99,7 +100,7 @@ dav_error *dav_svn_store_activity(dav_svn_repos *repos,
   return NULL;
 }
 
-dav_error *dav_svn_create_activity(dav_svn_repos *repos,
+dav_error *dav_svn_create_activity(const dav_svn_repos *repos,
                                    const char **ptxn_name,
                                    apr_pool_t *pool)
 {
