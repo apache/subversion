@@ -22,11 +22,6 @@
 #include "svn_ra.h"
 #include "svn_wc.h"
 
-/* declare explicitly when we call directly (rather than via DSO load) */
-svn_error_t *svn_ra_dav_init(int abi_version,
-                             apr_pool_t *pconf,
-                             const svn_ra_plugin_t **plugin);
-
 
 int
 main (int argc, char **argv)
@@ -38,6 +33,7 @@ main (int argc, char **argv)
   const svn_delta_edit_fns_t *editor;
   void *edit_baton;
   svn_revnum_t new_revision;
+  const char *url_type;
   const svn_ra_plugin_t *plugin;
   apr_hash_t *targets;
   svn_string_t *root_dir;
@@ -54,7 +50,7 @@ main (int argc, char **argv)
   /* ### this is temporary. the URL should come from the WC library. */
   url = svn_string_create(argv[1], pool);
 
-  err = svn_ra_dav_init(0, pool, &plugin);
+  err = svn_ra_dav_init(0, pool, &url_type, &plugin);
   if (err)
     goto error;
 

@@ -183,15 +183,16 @@ typedef struct svn_ra_plugin_t
    configuration / one-time data.  */
 typedef svn_error_t *svn_ra_init_func_t (int abi_version,
                                          apr_pool_t *pool,
+                                         const char **url_type,
                                          const svn_ra_plugin_t **plugin);
 
 
 
 
-/** Public **/
-svn_error_t *svn_ra_local_init (int abi_version,
-                                apr_pool_t *pool,
-                                const svn_ra_plugin_t **plugin);
+/** Public RA implementations: ADD MORE HERE as necessary. **/
+
+svn_ra_init_func_t svn_ra_dav_init;
+svn_ra_init_func_t svn_ra_local_init;
 
 
 

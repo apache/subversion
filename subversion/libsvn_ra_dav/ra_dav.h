@@ -37,9 +37,9 @@ typedef struct {
 /* Declare the initialization function here to prevent a GCC warning, but
    nobody really uses this prototype right now. */
 /* ### hmm. when we statically link these, this prototype may be handy */
-svn_error_t *svn_ra_dav_init(int abi_version,
-                             apr_pool_t *pconf,
-                             const svn_ra_plugin_t **plugin);
+/*svn_error_t *svn_ra_dav_init(int abi_version,
+  apr_pool_t *pconf,
+  const svn_ra_plugin_t **plugin); */
 
 
 /** plugin function prototypes */

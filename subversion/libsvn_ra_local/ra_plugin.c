@@ -161,7 +161,7 @@ get_latest_revnum (void *session_baton,
   svn_ra_local__session_baton_t *baton = 
     (svn_ra_local__session_baton_t *) session_baton;
 
-  /* Temporary: err = svn_fs_youngest_rev (latest_revnum, baton->fs); */
+  /*  err = svn_fs_youngest_rev (latest_revnum, baton->fs); */
   if (err) return err;
 
   return SVN_NO_ERROR;
@@ -300,8 +300,10 @@ static const svn_ra_plugin_t ra_local_plugin =
 svn_error_t *
 svn_ra_local_init (int abi_version,
                    apr_pool_t *pool,
+                   const char **url_type,
                    const svn_ra_plugin_t **plugin)
 {
+  *url_type = "file";
   *plugin = &ra_local_plugin;
 
   /* are we ever going to care about abi_version? */
