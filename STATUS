@@ -32,7 +32,7 @@ Candidate changes:
     Finish Issue #1756 -- import doesn't handle svn:eol-style or svn:keywords
     Justification:  Allows malformed data into the repository.
     Votes:
-      +1: philip
+      +1: philip, sussman
       +0: julianfoad
     Old votes (for r8839,r8932,r8950):
       +0: julianfoad
