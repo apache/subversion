@@ -590,7 +590,7 @@ get_common_path (const apr_array_header_t *paths,
 
 
 
-/* The recursive working-copy crawler.
+/* A recursive working-copy "crawler", used for commits.
 
    Enter PATH and report any local changes to EDITOR.  
 
@@ -607,14 +607,14 @@ get_common_path (const apr_array_header_t *paths,
    directory batons returned by the editor.  */
 
 static svn_error_t *
-process_subdirectory (svn_string_t *path,
-                      void *dir_baton,
-                      const svn_delta_edit_fns_t *editor,
-                      void *edit_baton,
-                      struct stack_object **stack,
-                      apr_hash_t *affected_targets,
-                      apr_hash_t *locks,
-                      apr_pool_t *top_pool)
+report_local_mods (svn_string_t *path,
+                   void *dir_baton,
+                   const svn_delta_edit_fns_t *editor,
+                   void *edit_baton,
+                   struct stack_object **stack,
+                   apr_hash_t *affected_targets,
+                   apr_hash_t *locks,
+                   apr_pool_t *top_pool)
 {
   svn_error_t *err;
   apr_hash_t *entries;            /* _all_ of the entries in in
@@ -912,7 +912,7 @@ process_subdirectory (svn_string_t *path,
              NULL?  Because that will later force a call to
              do_dir_replaces() and get the _correct_ dir baton for the
              child directory. */
-          err = process_subdirectory (full_path_to_entry, new_dir_baton,
+          err = report_local_mods (full_path_to_entry, new_dir_baton,
                                       editor, edit_baton,
                                       stack, affected_targets, locks,
                                       top_pool);
@@ -958,7 +958,7 @@ process_subdirectory (svn_string_t *path,
 
 
 /*------------------------------------------------------------------*/
-/*** Public Interface:  svn_wc_crawl_local_mods() ***/
+/*** Public Interfaces ***/
 
 svn_error_t *
 svn_wc_crawl_local_mods (apr_hash_t **targets,
@@ -977,10 +977,10 @@ svn_wc_crawl_local_mods (apr_hash_t **targets,
 
      Note that the first thing the crawler will do is push a new stack
      object onto the stack with PATH="root_directory" and BATON=NULL.  */
-  err = process_subdirectory (root_directory, NULL,
-                              edit_fns, edit_baton,
-                              &stack, affected_targets, locks,
-                              pool);
+  err = report_local_mods (root_directory, NULL,
+                           edit_fns, edit_baton,
+                           &stack, affected_targets, locks,
+                           pool);
   if (err) return err;
 
   /* The crawler has returned, so affected_targets potentially has some
@@ -1005,6 +1005,61 @@ svn_wc_crawl_local_mods (apr_hash_t **targets,
   return SVN_NO_ERROR;
 }
 
+
+
+
+
+svn_error_t *
+svn_wc_crawl_revisions (svn_string_t *root_directory,
+                        const svn_delta_edit_fns_t *edit_fns,
+                        void *edit_baton,
+                        apr_pool_t *pool)
+{
+  svn_error_t *err;
+  svn_wc_entry_t *root_entry;
+  svn_revnum_t master_revnum = SVN_INVALID_REVNUM;
+  struct stack_object *stack = NULL;
+
+  /* The first thing we do is get the master_revnum from the
+     working copy's ROOT_DIRECTORY.  This is the revnum that all
+     entries will be compared to. */
+  err = svn_wc_entry (&root_entry, root_directory, pool);
+  if (err)
+    return 
+      svn_error_quick_wrap 
+      (err, "svn_wc_crawl_revisions: couldn't find wc's master revnum");
+                            
+  master_revnum = root_entry->revision;
+
+  /* Next, call replace_root() and push as first item on stack...? */
+
+
+  /* Start the mini-crawler. 
+     err = report_revisions (root_directory, NULL,
+     edit_fns, edit_baton,
+     &stack, master_revnum,
+     pool); */
+  if (err) return err;
+
+
+  /* Close the edit, causing the update_editor to be driven. */
+  err = edit_fns->close_edit (edit_baton);
+  if (err) return err; /* pay attention to this return value!! */
+
+  return SVN_NO_ERROR;
+
+}
+
+
+
+
+
+
+
+
+
+
+
 
 /* 
 
@@ -1028,7 +1083,7 @@ svn_wc_crawl_local_mods (apr_hash_t **targets,
    and `B'.  (Obviously, there's no intersection between these two
    sub-trees.) 
 
-   We can't simply call process_subdirectory (A), followed by
+   We can't simply call report_local_mods (A), followed by
    process_subdirecotry (B).  Why?  Because do_dir_replaces() crawls
    up the tree trying to create dir_batons, and when it reaches `A' or
    `B', it calls replace_root().  We can't call replace_root() more
