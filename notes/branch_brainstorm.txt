@@ -1,5 +1,7 @@
 
          ***  Branches and Tags -- Brainstorm ***
+                          or
+                 M7:  The Final Frontier
 
 
 First, let's define what it means to create branches/tags in a
@@ -15,40 +17,38 @@ just wants to make a "cheap" copy of something (svn_fs_link).
 
 * Use case: the user has a file or dir that she wants to duplicate.
 
-   Right now, all she can do is 'cp foo bar; svn add bar'.  This
-   works, except that the repository has no idea that bar is related
-   to foo.
-
    Instead, the user would type 'svn cp foo bar', and bar would
    automatically be scheduled for addition (and have other ancestry
-   info recorded).  The commit would supply "copyfrom" args to the
-   editor, which would then run 'svn_fs_copy'.  The new node-rev-id
-   for bar would then contain special copy-info in its skel.
+   info recorded).
+
+      * do a system copy of foo to bar, including props and text-base
+      * schedule 'foo' for deletion in its original parent
+      * schedule 'bar' for addition -- with ancestry -- in a new parent
+
+   The commit would supply "copyfrom" args to the editor, which would
+   then run 'svn_fs_copy'.  The new node-rev-id for bar would then
+   contain special copy-info in its skel.
+
+   This works as of M6, for files at least.
 
 
 [svn_fs_rename]
 
 * Use case:  the user wants to rename/move a file or dir.
 
-   Right now, all she can do is 'cp foo bar;  svn rm foo;  svn add bar'.
-   Again, no history is recorded in the repository.  
-
-   Really, unlike 'svn cp', we don't want create any new node-rev-id
-   at all; we just want to relink the node-rev-id into some (possibly
-   new) parent dir under a (possibly new) name.
-
-   So pretend the user runs 'svn mv foo bar'.  The working copy should
-   probably do a number of things:
-
-      * do a system move of foo to bar
-      * schedule 'foo' for deletion in its original parent
-      * schedule 'bar' for addition -- with ancestry -- in a new parent
+   In M6, this is 'svn mv src dst' is just a wrapper (literally!)
+   around 'svn cp src dst; svn rm src'.
 
    Here's the problem:  why on earth wouldn't the commit-process just
    run 'svn_fs_copy' when it sees the editor's "copyfrom" args on bar?
    We want 'svn_fs_rename' to run instead, which means that the editor
    somehow needs to realize that the deletion and addition are
-   connected.  Hmmmm.  Must think on this.   ### ???
+   connected. 
+
+   Cmpilato sez:  svn_fs_rename exists only to "fill out" the
+   filesystem API.  But we never expect an svn client to call it;  our
+   editor model has already defined that a 'move' is an 'add with
+   history and a delete."  So we're fine.
 
 
 [svn_fs_link]
@@ -61,8 +61,8 @@ just wants to make a "cheap" copy of something (svn_fs_link).
    someone to make tags/branches without a working copy.
 
    (Eventually, I suppose, we could loosen the restriction and allow
-   people to refer to paths in their working copy.  These paths would
-   probably just be converted to repository URLs anyway.)
+   people to refer to paths in their working copy.  As with 'svn log',
+   the wc paths are just converted to repository URLs anyway.)
 
    So a user might type 
 
@@ -70,7 +70,7 @@ just wants to make a "cheap" copy of something (svn_fs_link).
               http://svn.collab.net/repos/svn/branches/one
 
    And this command would cause a simple 'svn_fs_link' in the
-   repository.  (### mechanism for this? )
+   repository.  (### RA mechanism for this? )
 
    To remove the tag, a user could check out the repository's root and
    just delete the tags/m5 directory and commit.  Or maybe a different
@@ -94,7 +94,7 @@ just wants to make a "cheap" copy of something (svn_fs_link).
    usually is.)
 
    dir_delta notices a relationship between the two paths, and
-   therefore doesn't do anything stupid like delete/re-checkout your
+   therefore won't do anything stupid like delete and re-checkout your
    whole working copy.  Instead, it sends patches as needed, based on
    relationships between node-rev-ids.  (At least, according to
    cmpilato, dir_deltas already *should* behave this way.)
@@ -107,7 +107,8 @@ just wants to make a "cheap" copy of something (svn_fs_link).
    THE REAL WORK:  instead of running log_do_committed during the update,
    the editor should be running a *new* log command that tweaks the
    'ancestry' URLs in the entries files.  The entries files need to
-   point to the new branch URL.
+   point to the new branch URL.  [Ben sez:  this same URL-tweaking
+   functionality is needed when running 'svn cp dir1 dir2'.]
 
 
 [MERGING]
@@ -129,7 +130,7 @@ just wants to make a "cheap" copy of something (svn_fs_link).
        revision."
 
      * Now the changes start coming down to the working copy.
-       Unfortunately, the working copy can't just use it's vanilla
+       Unfortunately, the working copy can't just use its vanilla
        update editor to apply them.  Why not?  Because dir_deltas
        thinks that the working copy is different than it really is --
        it thinks the working copy looks like the very origin of
