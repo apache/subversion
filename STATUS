@@ -95,4 +95,5 @@ Candidate changes:
     Fix off-by-one error in working copy code.
     Justification: Can't check out to root path.
     Votes:
-      +1: breser
+      +1: breser, sussman, cmpilato
+
