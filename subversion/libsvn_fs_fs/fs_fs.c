@@ -3423,11 +3423,12 @@ static svn_error_t *
 move_into_place (const char *old_filename, const char *new_filename,
                  const char *perms_reference, apr_pool_t *pool)
 {
-  apr_status_t status;
-  apr_finfo_t finfo;
   svn_error_t *err;
 
 #ifndef WIN32
+  apr_status_t status;
+  apr_finfo_t finfo;
+  
   /* Match the perms on the old file to the perms reference file. */
   status = apr_stat (&finfo, perms_reference, APR_FINFO_PROT, pool);
   if (! APR_STATUS_IS_SUCCESS (status))
