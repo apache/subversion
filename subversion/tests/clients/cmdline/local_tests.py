@@ -68,8 +68,7 @@ def guarantee_greek_repository(path):
                              [[x[0], x[1]] for x in svn_test_main.greek_tree])
 
     # figger out the "file:" url needed to run import
-    url = "file:///" + os.path.abspath(pristine_dir)
-
+    url = "file://" + os.path.abspath(pristine_dir)
     # import the greek tree.
     output = svn_test_main.run_svn("import", url, greek_dump_dir)
 
@@ -105,11 +104,15 @@ def guarantee_greek_repository(path):
 # be created by feeding carefully constructed lists to
 # svn_tree.build_generic_tree().
 
-def run_and_verify_checkout(URL, wc_dir_name, output_tree, disk_tree):
+def run_and_verify_checkout(URL, wc_dir_name, output_tree, disk_tree,
+                            singleton_handler_a=None,
+                            singleton_handler_b=None):
   """Checkout the the URL into a new directory WC_DIR_NAME.
 
   The subcommand output will be verified against OUTPUT_TREE,
   and the working copy itself will be verified against DISK_TREE.
+  SINGLETON_HANDLER_A and SINGLETON_HANDLER_B will be passed to
+  svn_tree.compare_trees - see that function's doc string for more details.
   Return 0 if successful."""
 
   # Remove dir if it's already there.
@@ -127,14 +130,18 @@ def run_and_verify_checkout(URL, wc_dir_name, output_tree, disk_tree):
   mytree = svn_tree.build_tree_from_wc (wc_dir_name)
 
   # Verify expected disk against actual disk.
-  if svn_tree.compare_trees (mytree, disk_tree):
+  if svn_tree.compare_trees (mytree, disk_tree,
+                             singleton_handler_a, singleton_handler_b):
     return 1
 
   return 0
 
 
 def run_and_verify_update(wc_dir_name,
-                          output_tree, disk_tree, status_tree, *args):
+                          output_tree, disk_tree, status_tree,
+                          singleton_handler_a=None,
+                          singleton_handler_b=None,
+                          *args):
   """Update WC_DIR_NAME into a new directory WC_DIR_NAME.  *ARGS are
   any extra optional args to the update subcommand.
 
@@ -142,7 +149,9 @@ def run_and_verify_update(wc_dir_name,
   working copy itself will be verified against DISK_TREE.  If optional
   STATUS_OUTPUT_TREE is given, then 'svn status' output will be
   compared.  (This is a good way to check that revision numbers were
-  bumped.)  Return 0 if successful."""
+  bumped.)  SINGLETON_HANDLER_A and SINGLETON_HANDLER_B will be passed to
+  svn_tree.compare_trees - see that function's doc string for more details.
+  Return 0 if successful."""
 
   # Update and make a tree of the output.
   output = svn_test_main.run_svn ('up', wc_dir_name, *args)
@@ -156,7 +165,8 @@ def run_and_verify_update(wc_dir_name,
   mytree = svn_tree.build_tree_from_wc (wc_dir_name)
 
   # Verify expected disk against actual disk.
-  if svn_tree.compare_trees (mytree, disk_tree):
+  if svn_tree.compare_trees (mytree, disk_tree,
+                             singleton_handler_a, singleton_handler_b):
     return 1
 
   # Verify via 'status' command too, if possible.
@@ -167,14 +177,19 @@ def run_and_verify_update(wc_dir_name,
   return 0
 
 
-def run_and_verify_commit(wc_dir_name, output_tree, status_output_tree, *args):
+def run_and_verify_commit(wc_dir_name, output_tree, status_output_tree,
+                          singleton_handler_a=None,
+                          singleton_handler_b=None,
+                          *args):
   """Commit and verify results within working copy WC_DIR_NAME,
   sending ARGS to the commit subcommand.
   
   The subcommand output will be verified against OUTPUT_TREE.  If
   optional STATUS_OUTPUT_TREE is given, then 'svn status' output will
   be compared.  (This is a good way to check that revision numbers
-  were bumped.)  Return 0 if successful."""
+  were bumped.)  SINGLETON_HANDLER_A and SINGLETON_HANDLER_B will be passed to
+  svn_tree.compare_trees - see that function's doc string for more details.
+  Return 0 if successful."""
 
   # Commit.
   output = svn_test_main.run_svn ('ci', *args)
@@ -202,16 +217,22 @@ def run_and_verify_commit(wc_dir_name, output_tree, status_output_tree, *args):
   return 0
 
 
-def run_and_verify_status(wc_dir_name, output_tree):
+def run_and_verify_status(wc_dir_name, output_tree,
+                          singleton_handler_a=None,
+                          singleton_handler_b=None):
   """Run 'status' on WC_DIR_NAME and compare it with the
-  expected OUTPUT_TREE.  Return 0 on success."""
+  expected OUTPUT_TREE.  SINGLETON_HANDLER_A and SINGLETON_HANDLER_B will
+  be passed to svn_tree.compare_trees - see that function's doc string for
+  more details.
+  Return 0 on success."""
 
   output = svn_test_main.run_svn ('status', wc_dir_name)
 
   mytree = svn_tree.build_tree_from_status (output)
 
   # Verify actual output against expected output.
-  if svn_tree.compare_trees (mytree, output_tree):
+  if svn_tree.compare_trees (mytree, output_tree,
+                             singleton_handler_a, singleton_handler_b):
     return 1
 
   return 0
@@ -359,6 +380,8 @@ def commit_from_wc_top():
   return run_and_verify_commit (wc_dir,
                                 expected_output_tree,
                                 expected_status_tree,
+                                None,
+                                None,
                                 wc_dir)
   
 #----------------------------------------------------------------------
@@ -395,6 +418,8 @@ def commit_one_file():
   return run_and_verify_commit (wc_dir,
                                 expected_output_tree,
                                 expected_status_tree,
+                                None,
+                                None,
                                 rho_path)
   
 #----------------------------------------------------------------------
@@ -452,6 +477,8 @@ def commit_multiple_targets():
   return run_and_verify_commit (wc_dir,
                                 expected_output_tree,
                                 expected_status_tree,
+                                None,
+                                None,
                                 psi_path, AB_path, pi_path)
   
 #----------------------------------------------------------------------
@@ -511,6 +538,8 @@ def commit_multiple_targets_2():
   return run_and_verify_commit (wc_dir,
                                 expected_output_tree,
                                 expected_status_tree,
+                                None,
+                                None,
                                 psi_path, AB_path, omega_path, pi_path)
   
 #----------------------------------------------------------------------
@@ -548,7 +577,7 @@ def update_from_wc_top():
 
   # Commit.
   if run_and_verify_commit (wc_dir, expected_output_tree,
-                            expected_status_tree, wc_dir):
+                            expected_status_tree, None, None, wc_dir):
     return 1
 
   # Create expected output tree for an update of the wc_backup.
@@ -609,7 +638,7 @@ def merge_from_wc_top():
   
   # Initial commit.
   if run_and_verify_commit (wc_dir, expected_output_tree,
-                            expected_status_tree, wc_dir):
+                            expected_status_tree, None, None, wc_dir):
     return 1
   # Make a backup copy of the working copy
   wc_backup = os.path.join (general_wc_dir, 'merge_from_wc_top_backup')
@@ -636,13 +665,14 @@ def merge_from_wc_top():
 
   # Commit.
   if run_and_verify_commit (wc_dir, expected_output_tree,
-                            expected_status_tree, wc_dir):
+                            expected_status_tree, None, None, wc_dir):
     return 1
 
   # Make local mods to wc_backup by recreating mu and rho
   mu_path_backup = os.path.join(wc_backup, 'A', 'mu')
   rho_path_backup = os.path.join(wc_backup, 'A', 'D', 'G', 'rho')
-  fp_mu = open(mu_path_backup, 'w+') # open in 'truncate to zero then write" mode
+  fp_mu = open(mu_path_backup, 'w+')
+  # open in 'truncate to zero then write" mode
   backup_mu_text='This is the new line 1 in the backup copy of mu'
   for x in range(2,11):
     backup_mu_text = backup_mu_text + '\nThis is line ' + `x` + ' in mu'
@@ -690,9 +720,121 @@ def merge_from_wc_top():
                                expected_status_tree)
 
 
+#----------------------------------------------------------------------
+
+# Ok, so extra_files is a global dictionary...but we have to have a list of
+# expected extra files that the backup copy will have after a conflict that
+# both conflict_from_wc_top() and verify_rej_file() can see.
+
+extra_files = { 'mu.rej':'mu reject file',
+                'rho.rej':'rho reject file'}
+
+def verify_rej_file(node):
+  "Handles a reject file from a conflict."
+  # four files are expected - mu~, mu reject file, rho~ and rho reject file
+  length_of_name = len(node.name)
+  if ((node.name[0:3] == "mu.") and
+      (node.name[(length_of_name - 4):length_of_name] == ".rej")):
+    del extra_files['mu.rej']
+  elif ((node.name[0:4] == "rho.") and
+      (node.name[(length_of_name - 4):length_of_name] == ".rej")):
+    del extra_files['rho.rej']
+  elif (node.name == "mu~"):
+    # Some versions of PATCH produce these twiddle files, but not all.
+    # Thus, these two cases for mu~ and rho~ have been added to make the
+    # test more robust.
+    return 0
+  elif (node.name == "rho~"):
+    return 0
+  else:
+    print node.name,"is an unknown file."
+    raise svn_tree.SVNTreeUnequal
 
 
+def conflict_from_wc_top():
+  "make a conflict in working copy"
 
+  wc_dir = os.path.join (general_wc_dir, 'conflict_from_wc_top')
+  
+  if make_repo_and_wc('conflict_from_wc_top'):
+    return 1
+
+  # Make a backup copy of the working copy
+  wc_backup = os.path.join (general_wc_dir, 'conflict_from_wc_top_backup')
+  duplicate_dir(wc_dir, wc_backup)
+
+  # Make a couple of local mods to files which will be committed
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
+  svn_test_main.file_append (mu_path, '\nOriginal appended text for mu')
+  svn_test_main.file_append (rho_path, '\nOriginal appended text for rho')
+
+  # Make a couple of local mods to files which will be conflicted
+  mu_path_backup = os.path.join(wc_backup, 'A', 'mu')
+  rho_path_backup = os.path.join(wc_backup, 'A', 'D', 'G', 'rho')
+  svn_test_main.file_append (mu_path_backup,
+                             '\nConflicting appended text for mu')
+  svn_test_main.file_append (rho_path_backup,
+                             '\nConflicting appended text for rho')
+
+  # Created expected output tree for 'svn ci'
+  output_list = [ [mu_path, None, {'verb' : 'Changing' }],
+                  [rho_path, None, {'verb' : 'Changing' }] ]
+  expected_output_tree = svn_tree.build_generic_tree(output_list)
+
+  # Create expected status tree; all local revisions should be at 1,
+  # but mu and rho should be at revision 2.
+  status_list = get_virginal_status_list(wc_dir, '2')
+  for item in status_list:
+    if (item[0] != mu_path) and (item[0] != rho_path):
+      item[2]['wc_rev'] = '1'
+  expected_status_tree = svn_tree.build_generic_tree(status_list)
+
+  # Commit.
+  if run_and_verify_commit (wc_dir, expected_output_tree,
+                            expected_status_tree, None, None, wc_dir):
+    return 1
+
+  # Create expected output tree for an update of the wc_backup.
+  output_list = [[os.path.join(wc_backup, 'A', 'mu'),
+                  None, {'status' : 'C '}],
+                 [os.path.join(wc_backup, 'A', 'D', 'G', 'rho'),
+                   None, {'status' : 'C '}]]
+  expected_output_tree = svn_tree.build_generic_tree(output_list)
+  
+  # Create expected disk tree for the update.
+  my_greek_tree = svn_test_main.copy_greek_tree()
+  my_greek_tree[2][1] = my_greek_tree[2][1] + '\nConflicting appended text for mu'
+  my_greek_tree[14][1] = my_greek_tree[14][1] + '\nConflicting appended text for rho'
+  expected_disk_tree = svn_tree.build_generic_tree(my_greek_tree)
+
+  # Create expected status tree for the update.
+  status_list = get_virginal_status_list(wc_backup, '2')
+  for item in status_list:
+    if (item[0] == mu_path_backup) or (item[0] == rho_path_backup):
+      item[2]['status'] = 'C '
+  expected_status_tree = svn_tree.build_generic_tree(status_list)
+  
+  # Do the update and check the results in three ways.
+  if run_and_verify_update(wc_backup,
+                           expected_output_tree,
+                           expected_disk_tree,
+                           expected_status_tree,
+                           verify_rej_file,
+                           None):
+    return 1
+  # verify that the extra_files list is now empty.
+  if len(extra_files) != 0:
+    # Because we want to be a well-behaved test, we silently return
+    # non-zero if the test fails.  However, these two print statements
+    # would probably reveal the cause for the failure, if they were
+    # uncommented:
+    #
+    # print "Not all extra reject files have been accounted for:"
+    # print extra_files
+    return 1
+
+  return 0
 
 ########################################################################
 ## List all tests here, starting with None:
@@ -704,7 +846,8 @@ test_list = [ None,
               commit_multiple_targets,
               commit_multiple_targets_2,
               update_from_wc_top,
-              merge_from_wc_top
+              merge_from_wc_top,
+              conflict_from_wc_top,
              ]
 
 if __name__ == '__main__':  
@@ -720,6 +863,12 @@ if __name__ == '__main__':
 # local variables:
 # eval: (load-file "../../../svn-dev.el")
 # end:
+
+
+
+
+
+
 
 
 
