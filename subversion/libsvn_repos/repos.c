@@ -736,20 +736,52 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
       "USER=\"$3\""
       APR_EOL_STR
       APR_EOL_STR
-      "# If a lock already exists, don't allow it to be stolen."
+      "# If a lock exists and is owned by a different person, don't allow it"
+      APR_EOL_STR
+      "# to be broken."
+      APR_EOL_STR
       APR_EOL_STR
       "# (Maybe this script could send email to the to the lock owner?)"
       APR_EOL_STR
+      "SVNLOOK=/usr/local/bin/svnlook"
       APR_EOL_STR
-      "SVNLOOK=" SVN_BINDIR "/svnlook"
+      "GREP=/bin/grep"
       APR_EOL_STR
-      "$SVNLOOK lock \"$REPOS\" \"$PATH\" | \\"
+      "SED=/bin/sed"
       APR_EOL_STR
-      "   grep \"Owner\" > /dev/null && exit 1"
       APR_EOL_STR
-      "# Allow the lock to happen:"
+      "LOCK_OWNER=`$SVNLOOK lock \"$REPOS\" \"$PATH\" | \\"
       APR_EOL_STR
-      "exit 0"
+      "            $GREP '^Owner:' | $SED 's/Owner: //'`"
+      APR_EOL_STR
+      APR_EOL_STR
+      "# If we get no result from svnlook, there's no lock, allow the lock to"
+      APR_EOL_STR
+      "# happen:"
+      APR_EOL_STR
+      "if [ \"$LOCK_OWNER\" == \"\" ]; then"
+      APR_EOL_STR
+      "  exit 0"
+      APR_EOL_STR
+      "fi"
+      APR_EOL_STR
+      APR_EOL_STR
+      "# If the person locking matches the lock's owner, allow the lock to"
+      APR_EOL_STR
+      "# happen:"
+      APR_EOL_STR
+      "if [ \"$LOCK_OWNER\" == \"$USER\" ]; then"
+      APR_EOL_STR
+      "  exit 0"
+      APR_EOL_STR
+      "fi"
+      APR_EOL_STR
+      APR_EOL_STR
+      "# Otherwise, we've got an owner mismatch, so return failure:"
+      APR_EOL_STR
+      "echo \"Error: $PATH already locked by ${LOCK_OWNER}.\" 1>&2"
+      APR_EOL_STR
+      "exit 1"
       APR_EOL_STR;
     
     SVN_ERR_W (svn_io_file_create (this_path, contents, pool),
@@ -851,27 +883,36 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
       APR_EOL_STR
       "SVNLOOK=" SVN_BINDIR "/svnlook"
       APR_EOL_STR
-      "OWNER_VALUE=`svnlook lock \"$REPOS\" \"$PATH\" | \\"
+      "GREP=/bin/grep"
       APR_EOL_STR
-      "             /bin/grep \"^Owner: \" | /bin/sed 's/Owner: //'`"
+      "SED=/bin/sed"
+      APR_EOL_STR
+      APR_EOL_STR
+      "LOCK_OWNER=`$SVNLOOK lock \"$REPOS\" \"$PATH\" | \\"
+      APR_EOL_STR
+      "            $GREP '^Owner: ' | $SED 's/Owner: //'`"
+      APR_EOL_STR
       APR_EOL_STR
       "# If we get no result from svnlook, there's no lock, return success:"
       APR_EOL_STR
-      "if [ \"$OWNER_VALUE\" == \"\" ]; then"
+      "if [ \"$LOCK_OWNER\" == \"\" ]; then"
       APR_EOL_STR
-      "exit 0"
+      "  exit 0"
       APR_EOL_STR
       "fi"
       APR_EOL_STR
       "# If the person unlocking matches the lock's owner, return success:"
       APR_EOL_STR
-      "if [ \"$OWNER_VALUE\" == \"USER\" ]; then"
+      "if [ \"$LOCK_OWNER\" == \"$USER\" ]; then"
       APR_EOL_STR
-      "exit 0"
+      "  exit 0"
       APR_EOL_STR
       "fi"
       APR_EOL_STR
+      APR_EOL_STR
       "# Otherwise, we've got an owner mismatch, so return failure:"
+      APR_EOL_STR
+      "echo \"Error: $PATH locked by ${LOCK_OWNER}.\" 1>&2"
       APR_EOL_STR
       "exit 1"
       APR_EOL_STR;
