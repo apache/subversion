@@ -113,6 +113,12 @@ typedef struct svn_svr_policies_t
 svn_svr_policies_t svn_svr_init (svn_string_t *config_file);
 
 
+/* Routine which each plugin's init() routine uses to register itself
+   in the server's policy structure.  */
+
+void svn_svr_register_plugin (svn_svr_policies_t *policy,
+                              svn_svr_plugin_t *new_plugin);
+
 
 /******************************************
 

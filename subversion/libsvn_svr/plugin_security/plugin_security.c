@@ -100,16 +100,24 @@ svn_internal_authorization (svn_string_t *repos,
 }
 
 
-/* Now create a plugin structure; the server will automatically look
-   for a plugin structure named after the plugin library.  */
+/* The routine called by the server, which causes the plugin to
+   register itself */
 
+void
+plugin_security_init (svn_svr_policies_t *policy)
+{
+  /* create a plugin structure describing what we do */
 
-svn_svr_plugin_t plugin_security = 
-{ 
-  svn_internal_authorization,         /* authorization hook */
-  NULL                                /* conflict resolution hook */
-};
+  svn_svr_plugin_t plugin_security = 
+  { 
+    svn_internal_authorization,         /* authorization hook */
+    NULL                                /* conflict resolution hook */
+  };
 
+  /* and register it in the server's policy lists */
+
+  svn_svr_register_plugin (policy, &plugin_security);
+}
 
 
 
