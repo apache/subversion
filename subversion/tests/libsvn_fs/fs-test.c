@@ -318,7 +318,7 @@ write_and_read_file (const char **msg)
 #endif /* 0 */
 
 
-/* Create a file! */
+/* Create a file, a directory, and a file in that directory! */
 static svn_error_t *
 create_mini_tree_transaction (const char **msg)
 {
@@ -353,6 +353,54 @@ create_mini_tree_transaction (const char **msg)
 }
 
 
+/* Create a file, a directory, and a file in that directory! */
+static svn_error_t *
+create_greek_tree_transaction (const char **msg)
+{
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root;
+
+  *msg = "make The Official Subversion Test Tree";
+
+  SVN_ERR (create_fs_and_repos (&fs, "test-repo-10")); /* helper */
+
+  /* Begin a new transaction that is based on revision 0.  */
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
+
+  /* Get the txn root */
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+  
+  /* Create a friggin' tree, already! */
+  SVN_ERR (svn_fs_make_file (txn_root, "iota", pool));
+  SVN_ERR (svn_fs_make_dir  (txn_root, "A", pool));
+  SVN_ERR (svn_fs_make_file (txn_root, "A/mu", pool));
+  SVN_ERR (svn_fs_make_dir  (txn_root, "A/B", pool));
+  SVN_ERR (svn_fs_make_file (txn_root, "A/B/lambda", pool));
+  SVN_ERR (svn_fs_make_dir  (txn_root, "A/B/E", pool));
+  SVN_ERR (svn_fs_make_file (txn_root, "A/B/E/alpha", pool));
+  SVN_ERR (svn_fs_make_file (txn_root, "A/B/E/beta", pool));
+  SVN_ERR (svn_fs_make_dir  (txn_root, "A/B/E/F", pool));
+  SVN_ERR (svn_fs_make_dir  (txn_root, "A/B/C", pool));
+  SVN_ERR (svn_fs_make_dir  (txn_root, "A/B/D", pool));
+  SVN_ERR (svn_fs_make_file (txn_root, "A/B/D/gamma", pool));
+  SVN_ERR (svn_fs_make_dir  (txn_root, "A/B/D/G", pool));
+  SVN_ERR (svn_fs_make_file (txn_root, "A/B/D/G/pi", pool));
+  SVN_ERR (svn_fs_make_file (txn_root, "A/B/D/G/rho", pool));
+  SVN_ERR (svn_fs_make_file (txn_root, "A/B/D/G/tau", pool));
+  SVN_ERR (svn_fs_make_dir  (txn_root, "A/B/D/H", pool));
+  SVN_ERR (svn_fs_make_file (txn_root, "A/B/D/H/chi", pool));
+  SVN_ERR (svn_fs_make_file (txn_root, "A/B/D/H/psi", pool));
+  SVN_ERR (svn_fs_make_file (txn_root, "A/B/D/H/omega", pool));
+
+  /* Close the transaction and fs. */
+  SVN_ERR (svn_fs_close_txn (txn));
+  SVN_ERR (svn_fs_close_fs (fs));
+
+  return SVN_NO_ERROR;
+}
+
+
 
 
 /* The test table.  */
@@ -366,6 +414,7 @@ svn_error_t * (*test_funcs[]) (const char **msg) = {
   reopen_trivial_transaction,
   create_file_transaction,
   create_mini_tree_transaction,
+  create_greek_tree_transaction,
   verify_txn_list,
   0
 };
