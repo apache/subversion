@@ -20,6 +20,7 @@
 
 #include "svn_wc.h"
 #include "svn_diff.h"
+#include "svn_config.h"
 #include "wc.h"
 #include "entries.h"
 #include "translate.h"
@@ -49,10 +50,8 @@ svn_wc_merge (const char *left,
   const char *eol;
   apr_status_t apr_err;
   const svn_wc_entry_t *entry;
-  svn_diff_t *diff;
-  const char *target_marker;
-  const char *left_marker;
-  const char *right_marker;
+  const char *merge_cmd = NULL;
+  svn_boolean_t contains_conflicts;
 
   svn_path_split (merge_target, &mt_pt, &mt_bn, pool);
 
@@ -126,32 +125,67 @@ svn_wc_merge (const char *left,
       SVN_ERR (svn_io_copy_file (left, tmp_left, TRUE, pool));
       SVN_ERR (svn_io_copy_file (right, tmp_right, TRUE, pool));
 
-      /* Do the Deed, using all four scratch files. */
-      SVN_ERR (svn_diff3_file (&diff, tmp_left, tmp_target, tmp_right, pool));
+      /* Find out if we need to run an external merge */
+      if (config)
+        {
+          svn_config_t *cfg = apr_hash_get (config,
+                                            SVN_CONFIG_CATEGORY_CONFIG,
+                                            APR_HASH_KEY_STRING);
+          svn_config_get (cfg, &merge_cmd, SVN_CONFIG_SECTION_HELPERS,
+	                  SVN_CONFIG_OPTION_DIFF3_CMD, NULL);
+        }
 
-      /* Labels fall back to sensible defaults if not specified. */
-      if (target_label)
-        target_marker = apr_psprintf(pool, "<<<<<<< %s", target_label);
+      if (merge_cmd)
+        {
+          int exit_code;
+
+          SVN_ERR (svn_io_run_diff3 (".",
+                                     tmp_target, tmp_left, tmp_right,
+                                     target_label, left_label, right_label,
+                                     result_f, &exit_code, config,
+                                     pool));
+          
+          contains_conflicts = exit_code == 1;
+        }
       else
-        target_marker = "<<<<<<< .working";
+        {
+          svn_diff_t *diff;
+          const char *target_marker;
+          const char *left_marker;
+          const char *right_marker;
 
-      if (left_label)
-        left_marker = apr_psprintf(pool, "||||||| %s", left_label);
-      else
-        left_marker = "||||||| .old";
+          SVN_ERR (svn_diff3_file (&diff,
+                                   tmp_left, tmp_target, tmp_right,
+                                   pool));
 
-      if (right_label)
-        right_marker = apr_psprintf(pool, ">>>>>>> %s", right_label);
-      else
-        right_marker = ">>>>>>> .new";
+          /* Labels fall back to sensible defaults if not specified. */
+          if (target_label)
+            target_marker = apr_psprintf (pool, "<<<<<<< %s", target_label);
+          else
+            target_marker = "<<<<<<< .working";
 
-      SVN_ERR (svn_diff3_file_output (result_f, diff,
-                                      tmp_left, tmp_target, tmp_right,
-                                      left_marker, target_marker, right_marker,
-                                      "=======", /* seperator */
-                                      FALSE, /* display original in conflict */
-                                      FALSE, /* try to resolve conflicts */
-                                      pool));
+          if (left_label)
+            left_marker = apr_psprintf (pool, "||||||| %s", left_label);
+          else
+            left_marker = "||||||| .old";
+
+          if (right_label)
+            right_marker = apr_psprintf (pool, ">>>>>>> %s", right_label);
+          else
+            right_marker = ">>>>>>> .new";
+
+          SVN_ERR (svn_diff3_file_output (result_f, diff,
+                                          tmp_left, tmp_target, tmp_right,
+                                          left_marker,
+                                          target_marker,
+                                          right_marker,
+                                          "=======", /* seperator */
+                                          FALSE, /* display original */
+                                          FALSE, /* resolve conflicts */
+                                          pool));
+
+          contains_conflicts = svn_diff_contains_conflicts (diff);
+        }
 
       /* Close the output file */
       apr_err = apr_file_close (result_f);
@@ -160,7 +194,7 @@ svn_wc_merge (const char *left,
           (apr_err, NULL,
            "svn_wc_merge: unable to close tmp file `%s'", result_target);
 
-      if (svn_diff_contains_conflicts (diff) && ! dry_run)  /* got a conflict */
+      if (contains_conflicts && ! dry_run)  /* got a conflict */
         {
           /* Preserve the three pre-merge files, and modify the
              entry (mark as conflicted, track the preserved files). */ 
@@ -274,7 +308,7 @@ svn_wc_merge (const char *left,
           *merge_outcome = svn_wc_merge_conflict;
 
         }
-      else if (svn_diff_contains_conflicts (diff) && dry_run)
+      else if (contains_conflicts && dry_run)
         {
           *merge_outcome = svn_wc_merge_conflict;
         } /* end of conflict handling */
