@@ -110,18 +110,20 @@ typedef struct svn_client_ctx_t svn_client_ctx_t;
 /** create a new, empty @c svn_client_ctx_t, allocated in @a pool. */
 svn_client_ctx_t *svn_client_ctx_create (apr_pool_t *pool);
 
-/** Set the cached authentication baton in @a ctx to @a auth_baton */
+/** Set the cached authentication batons in @a ctx to @a
+    old_auth_baton and @a auth_baton. */
 void
 svn_client_ctx_set_auth_baton (svn_client_ctx_t *ctx,
-                               svn_client_auth_baton_t *auth_baton);
+                               svn_client_auth_baton_t *old_auth_baton,
+                               svn_auth_baton_t *auth_baton);
 
 /** Set @a *auth_baton to the cached authentication baton in @a ctx, or if 
  * there is none set @a *auth_baton to @c NULL and return 
  * @c SVN_ERR_CLIENT_CTX_NOT_FOUND.
  */
 svn_error_t *
-svn_client_ctx_get_auth_baton (svn_client_ctx_t *ctx,
-                               svn_client_auth_baton_t **auth_baton);
+svn_client_ctx_get_old_auth_baton (svn_client_ctx_t *ctx,
+                                   svn_client_auth_baton_t **auth_baton);
 
 /** This is a structure which stores a filename and a hash of property
  * names and values.

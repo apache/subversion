@@ -59,7 +59,8 @@ svn_cl__cat (apr_getopt_t *os,
 
   /* Build an authentication baton to give to libsvn_client. */
   svn_client_ctx_set_auth_baton (ctx,
-                                 svn_cl__make_auth_baton (opt_state, pool));
+                                 svn_cl__make_auth_baton (opt_state, pool),
+                                 svn_cl__create_auth_baton (opt_state, pool));
 
   status = apr_file_open_stdout (&std_out, pool);
   if (!APR_STATUS_IS_SUCCESS (status))

@@ -123,7 +123,8 @@ svn_cl__ls (apr_getopt_t *os,
   apr_pool_t *subpool = svn_pool_create (pool); 
 
   svn_client_ctx_set_auth_baton (ctx,
-                                 svn_cl__make_auth_baton (opt_state, pool));
+                                 svn_cl__make_auth_baton (opt_state, pool),
+                                 svn_cl__create_auth_baton (opt_state, pool));
 
   SVN_ERR (svn_opt_args_to_target_array (&targets, os, 
                                          opt_state->targets,

@@ -29,7 +29,8 @@
 /*** Code. ***/
 
 struct svn_client_ctx_t {
-  svn_client_auth_baton_t *auth_baton;
+  svn_client_auth_baton_t *old_auth_baton;
+  svn_auth_baton_t *auth_baton;
 };
 
 svn_client_ctx_t *
@@ -40,16 +41,18 @@ svn_client_ctx_create (apr_pool_t *pool)
 
 void
 svn_client_ctx_set_auth_baton (svn_client_ctx_t *ctx,
-                               svn_client_auth_baton_t *auth_baton)
+                               svn_client_auth_baton_t *old_auth_baton,
+                               svn_auth_baton_t *auth_baton)
 {
+  ctx->old_auth_baton = old_auth_baton;
   ctx->auth_baton = auth_baton;
 }
 
 svn_error_t *
-svn_client_ctx_get_auth_baton (svn_client_ctx_t *ctx,
-                               svn_client_auth_baton_t **auth_baton)
+svn_client_ctx_get_old_auth_baton (svn_client_ctx_t *ctx,
+                                   svn_client_auth_baton_t **auth_baton)
 {
-  *auth_baton = ctx->auth_baton;
+  *auth_baton = ctx->old_auth_baton;
 
   if (! *auth_baton)
     return svn_error_create (SVN_ERR_CLIENT_CTX_NOT_FOUND, NULL,

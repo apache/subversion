@@ -29,6 +29,7 @@
 #include "svn_string.h"
 #include "svn_path.h"
 #include "svn_delta.h"
+#include "svn_auth.h"
 #include "svn_error.h"
 #include "svn_utf.h"
 #include "cl.h"
@@ -70,6 +71,22 @@ svn_cl__make_auth_baton (svn_cl__opt_state_t *opt_state,
 
   return auth_obj;
 }
+
+
+/* Build a new-style auth baton from commandline args. */
+svn_auth_baton_t *
+svn_cl__create_auth_baton (svn_cl__opt_state_t *opt_state,
+                           apr_pool_t *pool)
+{
+  svn_auth_baton_t *ab;
+
+  svn_auth_open (&ab, pool);
+
+  /* ### register providers here!!!  */
+
+  return ab;
+}
+
 
 
 

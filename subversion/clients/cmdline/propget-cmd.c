@@ -61,7 +61,8 @@ svn_cl__propget (apr_getopt_t *os,
                                          FALSE, pool));
 
   svn_client_ctx_set_auth_baton (ctx,
-                                 svn_cl__make_auth_baton (opt_state, pool));
+                                 svn_cl__make_auth_baton (opt_state, pool),
+                                 svn_cl__create_auth_baton (opt_state, pool));
 
   /* Add "." if user passed 0 file arguments */
   svn_opt_push_implicit_dot_target (targets, pool);
