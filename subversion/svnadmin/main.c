@@ -51,7 +51,9 @@ print_tree (svn_fs_root_t *root,
       const char *this_full_path;
       int is_dir;
       int i;
- 
+      svn_fs_id_t *id;
+      svn_stringbuf_t *id_str;
+
       apr_hash_this (hi, &key, &keylen, &val);
       this_entry = val;
 
@@ -63,17 +65,21 @@ print_tree (svn_fs_root_t *root,
 
       printf ("%s", this_entry->name);
       
+      SVN_ERR (svn_fs_node_id (&id, root, this_full_path, pool));
+      id_str = svn_fs_unparse_id (id, pool);
+
       SVN_ERR (svn_fs_is_dir (&is_dir, root, this_full_path, pool));
       if (is_dir)
         {
-          printf ("/\n");  /* trailing slash for dirs */
+
+          printf ("/ <%s>\n", id_str->data);  /* trailing slash for dirs */
           print_tree (root, this_full_path, indentation + 1, pool);
         }
       else   /* assume it's a file */
         {
           apr_off_t len;
           SVN_ERR (svn_fs_file_length (&len, root, this_full_path, pool));
-          printf ("[%ld]\n", (long int) len);
+          printf (" <%s> [%ld]\n", id_str->data, (long int) len);
         }
     }
 
