@@ -262,6 +262,7 @@ svn_wc_adm_open (svn_wc_adm_access_t **adm_access,
                  apr_pool_t *pool)
 {
   svn_wc_adm_access_t *lock;
+  svn_node_kind_t kind;
 
   if (associated)
     {
@@ -289,16 +290,14 @@ svn_wc_adm_open (svn_wc_adm_access_t **adm_access,
     {
       /* Since no physical lock gets created we must check PATH is not a
          file. */
-      svn_node_kind_t node_kind;
-      SVN_ERR (svn_io_check_path (path, &node_kind, pool));
-      if (node_kind != svn_node_dir)
+      SVN_ERR (svn_io_check_path (path, &kind, pool));
+      if (kind != svn_node_dir)
         return svn_error_createf (SVN_ERR_WC_INVALID_LOCK, NULL,
                                   "lock path is not a directory: '%s'",
                                   path);
 
       lock = adm_access_alloc (svn_wc__adm_access_unlocked, path, pool);
     }
-
 
   if (tree_lock)
     {
@@ -322,7 +321,6 @@ svn_wc_adm_open (svn_wc_adm_access_t **adm_access,
           svn_wc_adm_access_t *entry_access;
           const char *entry_path;
           svn_error_t *svn_err;
-          svn_node_kind_t kind;
 
           apr_hash_this (hi, NULL, NULL, &val);
           entry = val;
@@ -337,6 +335,13 @@ svn_wc_adm_open (svn_wc_adm_access_t **adm_access,
           SVN_ERR (svn_io_check_path (entry_path, &kind, pool));
           if (kind != svn_node_dir)
             continue;
+
+          /* ### it would be nice to refactor this. calling self will
+             ### do a bunch of work, yet we already know the answer and/or
+             ### we can skip a number of tests/checks. in particular,
+             ### we just verified that entry_path is a directory. we should
+             ### not test it *again* when we recurse.
+          */
 
           /* Don't use the subpool pool here, the lock needs to persist */
           svn_err = svn_wc_adm_open (&entry_access, lock, entry_path,
