@@ -674,7 +674,8 @@ enum
     svndumpfilter__drop_empty_revs = SVN_OPT_FIRST_LONGOPT_ID,
     svndumpfilter__renumber_revs,
     svndumpfilter__preserve_revprops,
-    svndumpfilter__quiet
+    svndumpfilter__quiet,
+    svndumpfilter__version
   };
 
 /* Option codes and descriptions.
@@ -692,6 +693,8 @@ static const apr_getopt_option_t options_table[] =
     {NULL,            '?', 0,
      "show help on a subcommand"},
 
+    {"version",            svndumpfilter__version, 0,
+     "show version information" },
     {"quiet",              svndumpfilter__quiet, 0,
      "Do not display filtering statistics." },
     {"drop-empty-revs",    svndumpfilter__drop_empty_revs, 0,
@@ -724,7 +727,7 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
     {"help", subcommand_help, {"?", "h"},
      "Describe the usage of this program or its subcommands.\n"
      "usage: svndumpfilter help [SUBCOMMAND...]\n",
-     {0} },
+     {svndumpfilter__version} },
 
     { NULL, NULL, {0}, NULL, {0} }
   };
@@ -736,6 +739,7 @@ struct svndumpfilter_opt_state
   svn_opt_revision_t start_revision;     /* -r X[:Y] is         */
   svn_opt_revision_t end_revision;       /* not implemented.    */
   svn_boolean_t quiet;                   /* --quiet             */
+  svn_boolean_t version;                 /* --version           */
   svn_boolean_t drop_empty_revs;         /* --drop-empty-revs   */
   svn_boolean_t help;                    /* --help or -?        */
   svn_boolean_t renumber_revs;           /* --renumber-revs     */
@@ -782,6 +786,7 @@ parse_baton_initialize (struct parse_baton_t **pb,
 static svn_error_t *
 subcommand_help (apr_getopt_t *os, void *baton, apr_pool_t *pool)
 {
+  struct svndumpfilter_opt_state *opt_state = baton;
   const char *header =
     "general usage: svndumpfilter SUBCOMMAND [ARGS & OPTIONS ...]\n"
     "Type \"svndumpfilter help <subcommand>\" for help on a "
@@ -789,7 +794,9 @@ subcommand_help (apr_getopt_t *os, void *baton, apr_pool_t *pool)
     "\n"
     "Available subcommands:\n";
 
-  SVN_ERR (svn_opt_print_help (os, "svndumpfilter", FALSE, FALSE, NULL,
+  SVN_ERR (svn_opt_print_help (os, "svndumpfilter",
+                               opt_state ? opt_state->version : FALSE,
+                               FALSE, NULL,
                                header, cmd_table, options_table, NULL,
                                pool));
 
@@ -960,6 +967,9 @@ main (int argc, const char * const *argv)
         case '?':
           opt_state.help = TRUE;
           break;
+        case svndumpfilter__version:
+          opt_state.version = TRUE;
+          opt_state.help = TRUE;
         case svndumpfilter__quiet:
           opt_state.quiet = TRUE;
           break;

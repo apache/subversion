@@ -19,8 +19,10 @@
 #include "svn_client.h"
 #include "svn_utf.h"
 #include "svn_path.h"
+#include "svn_opt.h"
 #include <apr_tables.h>
 
+#define SVNVERSION_OPT_VERSION SVN_OPT_FIRST_LONGOPT_ID
 
 struct status_baton
 {
@@ -107,9 +109,14 @@ cancel (void *baton)
     return SVN_NO_ERROR;
 }
 
+static svn_error_t * version(apr_getopt_t *os, apr_pool_t *pool)
+{
+  return svn_opt_print_help(os, "svnversion", TRUE, FALSE, NULL, NULL,
+                            NULL, NULL, NULL, pool);
+}
 
 static void
-usage(const apr_getopt_option_t *options)
+usage(const apr_getopt_option_t *options, apr_pool_t *pool)
 {
   fprintf(stderr, 
           "usage: svnversion [options] wc_path [trail_url]\n\n"
@@ -135,11 +142,12 @@ usage(const apr_getopt_option_t *options)
           "  If invoked on a directory that is not a working copy, an\n"
           "  exported directory say, the program will output \"exported\".\n"
           "\n"
-          "options:\n");
+          "Valid options:\n");
   while (options->description)
     {
-      fprintf(stderr, "  -%c  %s\n",
-              options->optch, options->description);
+      const char *optstr;
+      svn_opt_format_option(&optstr, options, TRUE, pool);
+      fprintf(stderr, "  %s\n", optstr);
       ++options;
     }
 }
@@ -169,6 +177,7 @@ main(int argc, const char *argv[])
     {
       {"no-newline", 'n', 0, "do not output the trailing newline"},
       {"committed",  'c', 0, "last changed rather than current revisions"},
+      {"version", SVNVERSION_OPT_VERSION, 0, "show version information"},
       {0,             0,  0,  0}
     };
 
@@ -208,7 +217,7 @@ main(int argc, const char *argv[])
         break;
       if (status != APR_SUCCESS)
         {
-          usage(options);
+          usage(options, pool);
           return EXIT_FAILURE;
         }
       switch (opt)
@@ -219,15 +228,19 @@ main(int argc, const char *argv[])
         case 'c':
           sb.committed = TRUE;
           break;
+        case SVNVERSION_OPT_VERSION:
+          SVN_INT_ERR(version(os, pool));
+          exit(0);
+          break;
         default:
-          usage(options);
+          usage(options, pool);
           return EXIT_FAILURE;
         }
     }
 
   if (os->ind >= argc || os->ind < argc - 2)
     {
-      usage(options);
+      usage(options, pool);
       return EXIT_FAILURE;
     }
 
