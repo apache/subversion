@@ -363,7 +363,7 @@ typedef struct svn_delta_edit_fns_t
      3. When a producer calls `replace_directory' or `add_directory',
         it must specify the most recently opened of the currently open
         directory batons.  Put another way, the producer cannot have
-        to sibling directory batons open at the same time.
+        two sibling directory batons open at the same time.
 
      4. A producer must call `change_dir_prop' on a directory either
         before opening any of the directory's subdirs or after closing
