@@ -299,7 +299,7 @@ svn_wc_get_username_provider (const svn_auth_provider_t **provider,
   provider_baton_t *pb = apr_pcalloc (pool, sizeof (*pb));
   svn_auth_provider_t *prov = apr_palloc (pool, sizeof (*prov));
 
-  prov->cred_kind = SVN_AUTH_CRED_SIMPLE;
+  prov->cred_kind = SVN_AUTH_CRED_USERNAME;
   prov->first_credentials = username_first_creds;
   prov->next_credentials = NULL; /* no retry. */
   prov->save_credentials = username_save_creds;
