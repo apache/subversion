@@ -427,7 +427,7 @@ svn_client__harvest_committables (apr_hash_t **committables,
       
       if (! entry->url)
         {
-          svn_stringbuf_t *parent, *basename;
+          svn_stringbuf_t *parent, *base_name;
           svn_wc_entry_t *p_entry;
           svn_boolean_t wc_root;
 
@@ -451,7 +451,7 @@ svn_client__harvest_committables (apr_hash_t **committables,
           /* See if the parent is under version control (corruption if it
              isn't) and possibly scheduled for addition (illegal target if
              it is). */
-          svn_path_split (target, &parent, &basename, pool);
+          svn_path_split (target, &parent, &base_name, pool);
           if (svn_path_is_empty (parent))
             parent = svn_stringbuf_create (".", pool);
           SVN_ERR (svn_wc_entry (&p_entry, parent, FALSE, pool));
@@ -470,7 +470,7 @@ svn_client__harvest_committables (apr_hash_t **committables,
           
           /* Manufacture a URL for this TARGET. */
           url = svn_stringbuf_dup (p_entry->url, pool);
-          svn_path_add_component (url, basename);
+          svn_path_add_component (url, base_name);
         }
       else
         url = entry->url;

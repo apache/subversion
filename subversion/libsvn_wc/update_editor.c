@@ -531,7 +531,7 @@ delete_entry (const char *path,
   struct dir_baton *pb = parent_baton;
   apr_status_t apr_err;
   apr_file_t *log_fp = NULL;
-  const char *basename;
+  const char *base_name;
   svn_stringbuf_t *log_item = svn_stringbuf_create ("", pool);
 
   SVN_ERR (svn_wc_lock (pb->path, 0, pool));
@@ -546,14 +546,14 @@ delete_entry (const char *path,
      That's all fine and well, but our log-system requires that all
      log commands talk *only* about paths relative (and below)
      pb->path, i.e. where the log is being executed.  */
-  basename = svn_path_basename (path, pool);
+  base_name = svn_path_basename (path, pool);
 
   svn_xml_make_open_tag (&log_item,
                          pool,
                          svn_xml_self_closing,
                          SVN_WC__LOG_DELETE_ENTRY,
                          SVN_WC__LOG_ATTR_NAME,
-                         svn_stringbuf_create (basename, pool),
+                         svn_stringbuf_create (base_name, pool),
                          NULL);
 
   apr_err = apr_file_write_full (log_fp, log_item->data, log_item->len, NULL);
@@ -1110,7 +1110,7 @@ svn_wc_install_file (const char *file_path,
   apr_file_t *log_fp = NULL;
   apr_status_t apr_err;
   char *revision_str = NULL;
-  svn_stringbuf_t *file_path_str, *parent_dir, *basename;
+  svn_stringbuf_t *file_path_str, *parent_dir, *base_name;
   svn_stringbuf_t *log_accum, *txtb, *tmp_txtb;
   svn_boolean_t is_locally_modified;
   svn_boolean_t magic_props_changed = FALSE, magic_props_caused_tweak = FALSE;
@@ -1120,7 +1120,7 @@ svn_wc_install_file (const char *file_path,
 
   /* Start by splitting FILE_PATH. */
   file_path_str = svn_stringbuf_create (file_path, pool);
-  svn_path_split (file_path_str, &parent_dir, &basename, pool);
+  svn_path_split (file_path_str, &parent_dir, &base_name, pool);
 
   /* Lock the parent directory while we change things.  If for some
      reason the parent isn't under version control, this function will
@@ -1260,7 +1260,7 @@ svn_wc_install_file (const char *file_path,
       /* This will merge the old and new props into a new prop db, and
          write <cp> commands to the logfile to install the merged
          props.  */
-      SVN_ERR (svn_wc__merge_prop_diffs (parent_dir->data, basename->data,
+      SVN_ERR (svn_wc__merge_prop_diffs (parent_dir->data, base_name->data,
                                          propchanges, pool,
                                          &log_accum, &prop_conflicts));
     }
@@ -1318,7 +1318,7 @@ svn_wc_install_file (const char *file_path,
                                  svn_xml_self_closing,
                                  SVN_WC__LOG_MODIFY_ENTRY,
                                  SVN_WC__LOG_ATTR_NAME,
-                                 basename,
+                                 base_name,
                                  entry_field,
                                  propval,
                                  NULL);         
@@ -1346,8 +1346,8 @@ svn_wc_install_file (const char *file_path,
 
   if (new_text_path)   /* is there a new text-base to install? */
     {
-      txtb     = svn_wc__text_base_path (basename, 0, pool);
-      tmp_txtb = svn_wc__text_base_path (basename, 1, pool);
+      txtb     = svn_wc__text_base_path (base_name, 0, pool);
+      tmp_txtb = svn_wc__text_base_path (base_name, 1, pool);
 
       if (! is_locally_modified)
         {
@@ -1363,7 +1363,7 @@ svn_wc_install_file (const char *file_path,
                                  SVN_WC__LOG_ATTR_NAME,
                                  tmp_txtb,
                                  SVN_WC__LOG_ATTR_DEST,
-                                 basename,
+                                 base_name,
                                  NULL);
         }
   
@@ -1382,7 +1382,7 @@ svn_wc_install_file (const char *file_path,
                                      SVN_WC__LOG_ATTR_NAME,
                                      tmp_txtb,
                                      SVN_WC__LOG_ATTR_DEST,
-                                     basename,
+                                     base_name,
                                      NULL);
             }
           else  /* working file exists, and has local mods.*/
@@ -1408,7 +1408,7 @@ svn_wc_install_file (const char *file_path,
               
               /* Merge the changes from the old-textbase (TXTB) to
                  new-textbase (TMP_TXTB) into the file we're
-                 updating (BASENAME).  Either the merge will
+                 updating (BASE_NAME).  Either the merge will
                  happen smoothly, or a conflict will result.
                  Luckily, this routine will take care of all eol
                  and keyword translation, and diff3 will insert
@@ -1418,7 +1418,7 @@ svn_wc_install_file (const char *file_path,
                                      pool,
                                      svn_xml_self_closing,
                                      SVN_WC__LOG_MERGE,
-                                     SVN_WC__LOG_ATTR_NAME, basename,
+                                     SVN_WC__LOG_ATTR_NAME, base_name,
                                      SVN_WC__LOG_ATTR_ARG_1, txtb,
                                      SVN_WC__LOG_ATTR_ARG_2, tmp_txtb,
                                      SVN_WC__LOG_ATTR_ARG_3, oldrev_strbuf,
@@ -1441,14 +1441,14 @@ svn_wc_install_file (const char *file_path,
   if ((! new_text_path) && magic_props_changed)
     {
       svn_stringbuf_t *tmptext = 
-        svn_wc__text_base_path (basename, 1, pool);
+        svn_wc__text_base_path (base_name, 1, pool);
 
       /* A log command which copies and DEtranslates the working file
          to a tmp-text-base. */
       svn_xml_make_open_tag (&log_accum, pool,
                              svn_xml_self_closing,
                              SVN_WC__LOG_CP_AND_DETRANSLATE,
-                             SVN_WC__LOG_ATTR_NAME, basename,
+                             SVN_WC__LOG_ATTR_NAME, base_name,
                              SVN_WC__LOG_ATTR_DEST, tmptext,
                              NULL);
 
@@ -1458,7 +1458,7 @@ svn_wc_install_file (const char *file_path,
                              svn_xml_self_closing,
                              SVN_WC__LOG_CP_AND_TRANSLATE,
                              SVN_WC__LOG_ATTR_NAME, tmptext,
-                             SVN_WC__LOG_ATTR_DEST, basename,
+                             SVN_WC__LOG_ATTR_DEST, base_name,
                              NULL);
     }
 
@@ -1469,7 +1469,7 @@ svn_wc_install_file (const char *file_path,
                          svn_xml_self_closing,
                          SVN_WC__LOG_MODIFY_ENTRY,
                          SVN_WC__LOG_ATTR_NAME,
-                         basename,
+                         base_name,
                          SVN_WC__ENTRY_ATTR_KIND,
                          svn_stringbuf_create (SVN_WC__ENTRIES_ATTR_FILE_STR, 
                                                pool),
@@ -1491,7 +1491,7 @@ svn_wc_install_file (const char *file_path,
                                svn_xml_self_closing,
                                SVN_WC__LOG_MODIFY_ENTRY,
                                SVN_WC__LOG_ATTR_NAME,
-                               basename,
+                               base_name,
                                SVN_WC__ENTRY_ATTR_TEXT_TIME,
                                /* use wfile time */
                                svn_stringbuf_create (SVN_WC_TIMESTAMP_WC,
@@ -1516,7 +1516,7 @@ svn_wc_install_file (const char *file_path,
                                svn_xml_self_closing,
                                SVN_WC__LOG_MODIFY_ENTRY,
                                SVN_WC__LOG_ATTR_NAME,
-                               basename,
+                               base_name,
                                SVN_WC__ENTRY_ATTR_PROP_TIME,
                                /* use wfile time */
                                svn_stringbuf_create (SVN_WC_TIMESTAMP_WC,
@@ -1533,7 +1533,7 @@ svn_wc_install_file (const char *file_path,
                              svn_xml_self_closing,
                              SVN_WC__LOG_MODIFY_ENTRY,
                              SVN_WC__LOG_ATTR_NAME,
-                             basename,
+                             base_name,
                              SVN_WC__ENTRY_ATTR_URL,
                              svn_stringbuf_create (new_URL, pool),
                              NULL);
@@ -1570,7 +1570,7 @@ svn_wc_install_file (const char *file_path,
                                svn_xml_self_closing,
                                SVN_WC__LOG_MODIFY_ENTRY,
                                SVN_WC__LOG_ATTR_NAME,
-                               basename,
+                               base_name,
                                SVN_WC__ENTRY_ATTR_CHECKSUM,
                                checksum,
                                NULL);
@@ -1906,7 +1906,7 @@ svn_wc_is_wc_root (svn_boolean_t *wc_root,
                    svn_stringbuf_t *path,
                    apr_pool_t *pool)
 {
-  svn_stringbuf_t *parent, *basename, *expected_url;
+  svn_stringbuf_t *parent, *base_name, *expected_url;
   svn_wc_entry_t *p_entry, *entry;
   svn_error_t *err;
 
@@ -1927,7 +1927,7 @@ svn_wc_is_wc_root (svn_boolean_t *wc_root,
     return SVN_NO_ERROR;
 
   /* If we cannot get an entry for PATH's parent, PATH is a WC root. */
-  svn_path_split (path, &parent, &basename, pool);
+  svn_path_split (path, &parent, &base_name, pool);
   if (svn_path_is_empty (parent))
     svn_stringbuf_set (parent, ".");
   err = svn_wc_entry (&p_entry, parent, FALSE, pool);
@@ -1950,7 +1950,7 @@ svn_wc_is_wc_root (svn_boolean_t *wc_root,
   /* If PATH's parent in the WC is not its parent in the repository,
      PATH is a WC root. */
   expected_url = svn_stringbuf_dup (p_entry->url, pool);
-  svn_path_add_component (expected_url, basename);
+  svn_path_add_component (expected_url, base_name);
   if (entry->url && (! svn_stringbuf_compare (expected_url, entry->url)))
     return SVN_NO_ERROR;
 

@@ -762,14 +762,14 @@ do_single_file_merge (const svn_delta_editor_t *after_editor,
   if (after_editor)
     {
       void *root_baton, *file_baton, *handler_baton;
-      svn_stringbuf_t *parent, *basename;
+      svn_stringbuf_t *parent, *base_name;
       svn_txdelta_window_handler_t handler;
-      svn_path_split (target_wcpath, &parent, &basename, pool);
+      svn_path_split (target_wcpath, &parent, &base_name, pool);
 
       SVN_ERR (after_editor->open_root (after_edit_baton,
                                         SVN_INVALID_REVNUM, pool,
                                         &root_baton));
-      SVN_ERR (after_editor->open_file (basename->data, root_baton,
+      SVN_ERR (after_editor->open_file (base_name->data, root_baton,
                                         SVN_INVALID_REVNUM, pool,
                                         &file_baton));
       SVN_ERR (after_editor->apply_textdelta (file_baton, 

@@ -652,8 +652,8 @@ svn_wc_entry (svn_wc_entry_t **entry,
          Either way, if PATH is a versioned entity, it is versioned as
          a file.  So look split and look in parent for entry info. */
 
-      svn_stringbuf_t *dir, *basename;
-      svn_path_split (path, &dir, &basename, pool);
+      svn_stringbuf_t *dir, *base_name;
+      svn_path_split (path, &dir, &base_name, pool);
 
       if (svn_path_is_empty (dir))
         svn_stringbuf_set (dir, ".");
@@ -669,7 +669,7 @@ svn_wc_entry (svn_wc_entry_t **entry,
          ### specified pool. */
       SVN_ERR (svn_wc_entries_read (&entries, dir, show_deleted, pool));
       
-      *entry = apr_hash_get (entries, basename->data, basename->len);
+      *entry = apr_hash_get (entries, base_name->data, base_name->len);
     }
 
   return SVN_NO_ERROR;
