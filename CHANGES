@@ -1,17 +1,17 @@
-
-Verison 0.11.0 (released ?, revision ?)
+Version 0.10.2 (released 25 Mar 2002, revision 1587)
 
  User-visible changes:
  * new ~/.subversion configuration directory
  * proxy support via ~/.subversion/proxies file
           
  Developer-visible changes:
- * beginnings of new commit process
+ * rewrite of client-side commit process partially done
  * beginnings of 'svn merge'
  * mod_dav_svn now generates "streamy" report responses
  * stringbuf cleanups and bugfixes
+ * interface to svn_wc_entry_t cleaned up
  * tweaks to build system and freebsd port
- * miscellaneous bugfixes in path escaping, pool usage, hp-ux compilation,
+ * miscellaneous bugfixes in path escaping, pool usage, hp-ux compilation
 
 Version 0.10.1 (released 17 Mar 2002, revision 1537)
 
