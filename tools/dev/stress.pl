@@ -223,9 +223,7 @@ sub populate
 	for $ndir ( 1..$dir_width )
 	  {
 	    my $dirname = "$dir/bar$ndir";
-	    mkdir "$dirname", 0755 or die "mkdir $dirname: $!\n";
-
-	    my $svn_cmd = "svn add $dirname";
+	    my $svn_cmd = "svn mkdir $dirname";
 	    system( $svn_cmd ) and die "$svn_cmd: failed: $?\n";
 
 	    populate( "$dirname", $dir_width, $file_width, $depth );
@@ -308,12 +306,14 @@ my $wc_dir = check_out $cmd_opts{'U'};
 
 if ( $cmd_opts{'c'} )
   {
-    populate $wc_dir, $cmd_opts{'D'}, $cmd_opts{'F'}, $cmd_opts{'N'};
+    my $svn_cmd = "svn mkdir $wc_dir/trunk";
+    system( $svn_cmd ) and die "$svn_cmd: failed: $?\n";
+    populate "$wc_dir/trunk", $cmd_opts{'D'}, $cmd_opts{'F'}, $cmd_opts{'N'};
     status_update_commit $wc_dir, 0 and die "populate checkin failed\n";
   }
 
 my @wc_files = GetListOfFiles $wc_dir;
-die "not enough files in repository\n" if $#wc_files < $cmd_opts{'x'};
+die "not enough files in repository\n" if $#wc_files + 1 < $cmd_opts{'x'};
 
 my $wait_for_key = $cmd_opts{'s'} < 0;
 
