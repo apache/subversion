@@ -363,8 +363,10 @@ V.   BUILDING A SUBVERSION SERVER
       
       1.  OBTAINING AND INSTALLING APACHE 2.0
       
-      Checkout the "httpd-2.0" cvs module from apache.org.  Put it whereever
-      you wish;  it's an independent project.
+      Checkout the "httpd-2.0" cvs module from apache.org.  If you have
+      questions about the Apache 2.0 build, please consult the HTTPD
+      install documentation: http://httpd.apache.org/docs-2.0/install.html 
+      Place this module wherever you wish; it's an independent project.  
 
           $ cvs -d :pserver:anoncvs@cvs.apache.org:/home/cvspublic login
           (password 'anoncvs')
@@ -383,7 +385,8 @@ V.   BUILDING A SUBVERSION SERVER
           $ ./configure --enable-dav --enable-so --prefix=/usr/local/apache2
 
       The first arg says to build mod_dav.
-      The second arg says to enable (and build everything) as shared libs.
+      The second arg says to enable shared module support which is needed
+      for a typical compile of mod_dav_svn (see below).
       The third arg is where you will ultimately install apache.
 
       Note: if you build Subversion with --enable-maintainer-mode,
