@@ -50,6 +50,7 @@ typedef struct {
   const char *xslt_uri;         /* XSL transform URI */
   const char *fs_parent_path;   /* path to parent of SVN FS'es  */
   svn_boolean_t autoversioning; /* whether autoversioning is active */
+  svn_boolean_t do_path_authz;  /* whether GET subrequests are active */
 } dav_svn_dir_conf;
 
 #define INHERIT_VALUE(parent, child, field) \
@@ -88,8 +89,12 @@ static void *dav_svn_merge_server_config(apr_pool_t *p,
 static void *dav_svn_create_dir_config(apr_pool_t *p, char *dir)
 {
     /* NOTE: dir==NULL creates the default per-dir config */
+    dav_svn_dir_conf *conf = apr_pcalloc(p, sizeof(*conf));
 
-    return apr_pcalloc(p, sizeof(dav_svn_dir_conf));
+    /* Be secure by default. */
+    conf->do_path_authz = TRUE;
+
+    return conf;
 }
 
 static void *dav_svn_merge_dir_config(apr_pool_t *p,
@@ -106,6 +111,7 @@ static void *dav_svn_merge_dir_config(apr_pool_t *p,
     newconf->xslt_uri = INHERIT_VALUE(parent, child, xslt_uri);
     newconf->fs_parent_path = INHERIT_VALUE(parent, child, fs_parent_path);
     newconf->autoversioning = INHERIT_VALUE(parent, child, autoversioning);
+    newconf->do_path_authz = INHERIT_VALUE(parent, child, do_path_authz);
 
     return newconf;
 }
@@ -142,6 +148,20 @@ static const char *dav_svn_autoversioning_cmd(cmd_parms *cmd, void *config,
 
   return NULL;
 }
+
+static const char *dav_svn_pathauthz_cmd(cmd_parms *cmd, void *config,
+                                         int arg)
+{
+  dav_svn_dir_conf *conf = config;
+
+  if (arg)
+    conf->do_path_authz = TRUE;
+  else
+    conf->do_path_authz = FALSE;
+
+  return NULL;
+}
+
 
 static const char *dav_svn_path_cmd(cmd_parms *cmd, void *config,
                                     const char *arg1)
@@ -256,6 +276,15 @@ svn_boolean_t dav_svn_get_autoversioning_flag(request_rec *r)
     return conf->autoversioning;
 }
 
+svn_boolean_t dav_svn_get_pathauthz_flag(request_rec *r)
+{
+    dav_svn_dir_conf *conf;
+
+    conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
+    return conf->do_path_authz;
+}
+
+
 
 /** Module framework stuff **/
 
@@ -288,6 +317,11 @@ static const command_rec dav_svn_cmds[] =
   /* per directory/location */
   AP_INIT_FLAG("SVNAutoversioning", dav_svn_autoversioning_cmd, NULL,
                ACCESS_CONF|RSRC_CONF, "turn on deltaV autoversioning."),
+
+  /* per directory/location */
+  AP_INIT_FLAG("SVNPathAuthz", dav_svn_pathauthz_cmd, NULL,
+               ACCESS_CONF|RSRC_CONF,
+               "control path-based authz by enabling/disabling subrequests"),
 
   { NULL }
 };
