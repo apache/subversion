@@ -38,7 +38,7 @@ def expect_extra_files(node, extra_files):
     if mo:
       extra_files.pop(extra_files.index(pattern))
       return
-  print "Found unexpected disk object:", node.name
+  print "Found unexpected object:", node.name
   raise svntest.main.SVNTreeUnequal
 
 ######################################################################
