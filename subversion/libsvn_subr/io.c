@@ -1190,7 +1190,7 @@ svn_io_run_diff (const char *dir,
    */
   if (*pexitcode != 0 && *pexitcode != 1)
     return svn_error_createf (SVN_ERR_EXTERNAL_PROGRAM, NULL, 
-                              "%s returned %d", diff_utf8, *pexitcode);
+                              "'%s' returned %d", diff_utf8, *pexitcode);
 
   svn_pool_destroy (subpool);
 
@@ -1282,8 +1282,8 @@ svn_io_run_diff3 (const char *dir,
   if ((*exitcode != 0) && (*exitcode != 1))
     return svn_error_createf (SVN_ERR_EXTERNAL_PROGRAM, NULL, 
                               "svn_io_run_diff3: "
-                              "Error running %s:  exitcode was %d, args were:"
-                              "\nin directory %s, basenames:\n%s\n%s\n%s",
+                              "Error running '%s':  exitcode was %d, args were:"
+                              "\nin directory '%s', basenames:\n%s\n%s\n%s",
                               diff3_utf8, *exitcode,
                               dir, mine, older, yours);
 

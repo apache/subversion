@@ -1043,7 +1043,7 @@ validate_prop_against_node_kind (const char *name,
   while (*node_kind_prohibit)
     if (strcmp (name, *node_kind_prohibit++) == 0)
       return svn_error_createf (SVN_ERR_ILLEGAL_TARGET, NULL,
-                                "Cannot set %s on a %s (%s)",
+                                "Cannot set '%s' on a %s (%s)",
                                 name, node_kind_text, path);
 
   return SVN_NO_ERROR;

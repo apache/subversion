@@ -60,7 +60,7 @@ run_hook_cmd (const char *name,
   apr_err = apr_file_pipe_create(&read_errhandle, &write_errhandle, pool);
   if (apr_err)
     return svn_error_createf
-      (apr_err, NULL, "can't create pipe for %s hook", cmd);
+      (apr_err, NULL, "can't create pipe for '%s' hook", cmd);
 
   err = svn_io_run_cmd (".", cmd, args, &exitcode, &exitwhy, FALSE,
                         NULL, NULL, write_errhandle, pool);
@@ -77,7 +77,7 @@ run_hook_cmd (const char *name,
   if (err)
     {
       err = svn_error_createf
-        (SVN_ERR_REPOS_HOOK_FAILURE, err, "failed to run %s hook", cmd);
+        (SVN_ERR_REPOS_HOOK_FAILURE, err, "failed to run '%s' hook", cmd);
     }
 
   if (!err && check_exitcode)
@@ -92,7 +92,7 @@ run_hook_cmd (const char *name,
 
           err = svn_error_createf
               (SVN_ERR_REPOS_HOOK_FAILURE, err,
-               "%s hook failed with error output:\n%s",
+               "'%s' hook failed with error output:\n%s",
                name, error->data);
         }
     }

@@ -1448,7 +1448,7 @@ svn_fs__dag_open (dag_node_t **child_p,
   if (! node_id)
     return svn_error_createf 
       (SVN_ERR_FS_NOT_FOUND, NULL,
-       "Attempted to open non-existant child node \"%s\"", name);
+       "Attempted to open non-existant child node `%s'", name);
   
   /* Make sure that NAME is a single path component. */
   if (! svn_path_is_single_path_component (name))

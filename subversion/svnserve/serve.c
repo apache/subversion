@@ -852,7 +852,7 @@ static svn_error_t *find_repos(const char *url, const char *root,
   /* Verify the scheme part. */
   if (strncmp(url, "svn://", 6) != 0)
     return svn_error_createf(SVN_ERR_BAD_URL, NULL,
-                             "Non-svn URL passed to svn server: %s", url);
+                             "Non-svn URL passed to svn server: '%s'", url);
 
   /* Skip past the authority part. */
   client_path = strchr(url + 6, '/');

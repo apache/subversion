@@ -994,7 +994,7 @@ close_directory (void *dir_baton,
         {
           apr_file_close (log_fp);
           return svn_error_createf (apr_err, NULL,
-                                    "error writing %s's log file",
+                                    "error writing log file for '%s'",
                                     db->path);
         }
 
