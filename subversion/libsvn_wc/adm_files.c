@@ -168,7 +168,6 @@ svn_wc__make_adm_thing (svn_wc_adm_access_t *adm_access,
 {
   svn_error_t *err = SVN_NO_ERROR;
   apr_file_t *f = NULL;
-  apr_status_t apr_err = 0;
   const char *path;
 
   SVN_ERR (svn_wc__adm_write_check (adm_access));
@@ -184,9 +183,7 @@ svn_wc__make_adm_thing (svn_wc_adm_access_t *adm_access,
                                  pool));
 
       /* Creation succeeded, so close immediately. */
-      apr_err = apr_file_close (f);
-      if (apr_err)
-        err = svn_error_create (apr_err, NULL, path);
+      SVN_ERR (svn_io_file_close (f, pool));
     }
   else if (type == svn_node_dir)
     {
@@ -211,7 +208,6 @@ static svn_error_t *
 maybe_copy_file (const char *src, const char *dst, apr_pool_t *pool)
 {
   svn_node_kind_t kind;
-  apr_status_t apr_err;
 
   /* First test if SRC exists. */
   SVN_ERR (svn_io_check_path (src, &kind, pool));
@@ -224,11 +220,7 @@ maybe_copy_file (const char *src, const char *dst, apr_pool_t *pool)
                                  (APR_WRITE | APR_CREATE),
                                  APR_OS_DEFAULT,
                                  pool));
-      apr_err = apr_file_close (f);
-      if (apr_err)
-        return svn_error_create (apr_err, NULL, dst);
-      else
-        return SVN_NO_ERROR;
+      SVN_ERR (svn_io_file_close (f, pool));
     }
   else /* SRC exists, so copy it to DST. */
     {    
@@ -505,7 +497,6 @@ close_adm_file (apr_file_t *fp,
                 apr_pool_t *pool,
                 ...)
 {
-  apr_status_t apr_err = 0;
   const char *tmp_path;
   va_list ap;
 
@@ -514,10 +505,7 @@ close_adm_file (apr_file_t *fp,
   tmp_path = v_extend_with_adm_name (path, extension, sync, pool, ap);
   va_end (ap);
 
-  apr_err = apr_file_close (fp);
-
-  if (apr_err)
-    return svn_error_create (apr_err, NULL, tmp_path);
+  SVN_ERR (svn_io_file_close (fp, pool));
 
   /* If we're syncing a tmp file, it needs to be renamed after closing. */
   if (sync)

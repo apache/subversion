@@ -593,7 +593,6 @@ svn_wc_transmit_text_deltas (const char *path,
                              apr_pool_t *pool)
 {
   const char *tmpf, *tmp_base;
-  apr_status_t status;
   svn_txdelta_window_handler_t handler;
   void *wh_baton;
   svn_txdelta_stream_t *txdelta_stream;
@@ -713,9 +712,7 @@ svn_wc_transmit_text_deltas (const char *path,
                                       wh_baton, pool));
     
   /* Close the two files */
-  if ((status = apr_file_close (localfile)))
-    return svn_error_create (status, NULL,
-                             "error closing local file");
+  SVN_ERR (svn_io_file_close (localfile, pool));
   
   if (basefile)
     SVN_ERR (svn_wc__close_text_base (basefile, path, 0, pool));

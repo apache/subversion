@@ -209,7 +209,6 @@ install_committed_file (svn_boolean_t *overwrote_working,
   const char *tmp_text_base;
   svn_node_kind_t kind;
   svn_subst_keywords_t *keywords;
-  apr_status_t apr_err;
   apr_file_t *ignored;
   svn_boolean_t same, did_set;
   const char *tmp_wfile, *pdir, *bname;
@@ -247,11 +246,7 @@ install_committed_file (svn_boolean_t *overwrote_working,
   SVN_ERR (svn_io_open_unique_file (&ignored, &tmp_wfile,
                                     tmp_wfile, SVN_WC__TMP_EXT,
                                     FALSE, pool));
-  apr_err = apr_file_close (ignored);
-  if (apr_err)
-    return svn_error_createf
-      (apr_err, NULL,
-       "install_committed_file: error closing '%s'", tmp_wfile);
+  SVN_ERR (svn_io_file_close (ignored, pool));
 
   /* Is there a tmp_text_base that needs to be installed?  */
   tmp_text_base = svn_wc__text_base_path (filepath, 1, pool);
