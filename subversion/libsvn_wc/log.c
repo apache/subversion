@@ -1418,23 +1418,7 @@ svn_wc_cleanup (const char *path,
       SVN_ERR (svn_io_check_path (log_path, &kind, pool));
       if (kind == svn_node_file)
         {
-          svn_error_t *err = svn_wc__run_log (adm_access, diff3_cmd, pool);
-
-          /* If a log run fails on the first element, it is safe for
-             cleanup to just remove the entire log file and clean up
-             the associated tmp areas, because the log is an entire
-             atomic unit that can either be all not run or all run.
-             
-             But if it fails somewhere after the first element, then
-             we can't even proceed with the cleanup. */
-          if (err && (err->apr_err == SVN_ERR_WC_BAD_ADM_LOG_START))
-            {
-              svn_error_clear (err);
-              err = NULL;  /* not used again, but paranoia pays */
-              SVN_ERR (svn_io_remove_file (log_path, pool));
-            }
-          else if (err)
-            return err;
+          SVN_ERR (svn_wc__run_log (adm_access, diff3_cmd, pool));
         }
       else
         {
