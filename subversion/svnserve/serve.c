@@ -1162,8 +1162,15 @@ repos_path_valid(const char *path)
         ++path;
 
       /* Check for '..'. */
+#if WIN32
+      /* On Windows, don't allow sequences of more than one character
+         consisting of just dots and spaces. */
+      if (path - s >= 2 && strspn(s, ". ") == path - s)
+        return FALSE;
+#else  /* ! WIN32 */
       if (path - s == 2 && s[0] == '.' && s[1] == '.')
         return FALSE;
+#endif
 
       /* Skip all separators. */
       while (*path && (*path == '/' || *path == SVN_PATH_LOCAL_SEPARATOR))
