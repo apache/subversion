@@ -25,6 +25,7 @@
 #include "rev-table.h"
 #include "reps-table.h"
 #include "strings-table.h"
+#include "reps-strings.h"
 #include "skel.h"
 #include "trail.h"
 #include "validate.h"
@@ -1382,45 +1383,71 @@ svn_fs__dag_link (dag_node_t *parent,
 }
 
 
-/* svn_fs__dag_get_contents():
-
-   Right now, we *always* hold an entire node-revision skel in
-   memory.  Someday this routine will evolve to incrementally read
-   large file contents from disk. 
-*/
-
 /* Local typedef for __dag_get_contents */
 typedef struct file_content_baton_t
 {
-  /* Yum, the entre contents of the file in RAM.  This is all
-     allocated in trail->pool (the trail passed to __dag_get_contents). */
-  skel_t *text;
+  /* The FS from which we're reading. */
+  svn_fs_t *fs;
+
+  /* The representation skel for the file's contents.  This is cached
+     for efficiency -- we don't fetch the rep via its key every time
+     we read.  So if the underlying rep changes, we're just going to
+     blunder along ignorantly.  This is permissible, though; see the
+     doc string for svn_fs_file_contents(). */
+  skel_t *rep;
   
   /* How many bytes have been read already. */
   apr_size_t offset;
 
+  /* Used for temporary allocations.  This is really for
+     txn_body_read_file_contents(), but to get it into
+     read_file_contents(), we have to package it here. */
+  apr_pool_t *pool;
+
 } file_content_baton_t;
+
+
+struct read_file_contents_args
+{
+  file_content_baton_t *fb;   /* The data source.             */
+  char *buf;                  /* Where to put what we read.   */
+  apr_size_t *len;            /* How much to read / was read. */
+};
+
+
+static svn_error_t *
+txn_body_read_file_contents (void *baton, trail_t *trail)
+{
+  struct read_file_contents_args *args = baton;
+
+  SVN_ERR (svn_fs__rep_read_range (args->fb->fs,
+                                   args->fb->rep,
+                                   args->buf,
+                                   args->fb->offset,
+                                   args->len,
+                                   trail));
+  args->fb->offset += *(args->len);
+
+  return SVN_NO_ERROR;
+}
 
 
 /* Helper func of type svn_read_func_t, used to read the CONTENTS
    stream in __dag_get_contents below. */
 static svn_error_t *
-read_file_contents (void *baton, char *buffer, apr_size_t *len)
+read_file_contents (void *baton, char *buf, apr_size_t *len)
 {
-  file_content_baton_t *fbaton = (file_content_baton_t *) baton;
+  file_content_baton_t *fb = baton;
+  struct read_file_contents_args args;
 
-  /* To be perfectly clear... :) */
-  apr_size_t want_len = *len;
-  apr_size_t len_remaining = (fbaton->text->len) - (fbaton->offset);
-  apr_size_t min_len = want_len <= len_remaining ? want_len : len_remaining;
+  args.fb = fb;
+  args.buf = buf;
+  args.len = len;
 
-  /* Sanity check */
-  if (! fbaton->text->is_atom)
-    abort();
-
-  memcpy (buffer, (fbaton->text->data + fbaton->offset), min_len);
-  fbaton->offset += min_len;
-  *len = min_len;
+  SVN_ERR (svn_fs__retry_txn (fb->fs,
+                              txn_body_read_file_contents,
+                              &args,
+                              fb->pool));
   
   return SVN_NO_ERROR;
 }
@@ -1442,17 +1469,25 @@ svn_fs__dag_get_contents (svn_stream_t **contents,
        "Attempted to get textual contents of a *non*-file node.");
   
   /* Build a read baton in trail->pool. */
-  baton = apr_pcalloc (trail->pool, sizeof(*baton));
+  baton = apr_pcalloc (trail->pool, sizeof (*baton));
+  baton->pool = trail->pool;
+  baton->fs = file->fs;
   baton->offset = 0;
 
   /* Go get a fresh node-revision for FILE. */
   SVN_ERR (get_node_revision (&node_rev, file, trail));
 
-  /* This node-rev *might* be allocated in node's pool, or it *might*
-     be allocated in trail's pool, depending on mutability.  However,
-     because this routine promises to allocate the stream in trail's
-     pool, the only *safe* thing to do is dup the skel there. */
-  baton->text = svn_fs__copy_skel (node_rev->children->next, trail->pool);
+  /* Get the rep skel. */
+  {
+    const char *rep_key;
+    skel_t *rep_skel;
+    
+    rep_key = apr_pstrndup (trail->pool,
+                            node_rev->children->next->next->data,
+                            node_rev->children->next->next->len);
+    SVN_ERR (svn_fs__read_rep (&rep_skel, file->fs, rep_key, trail));
+    baton->rep = rep_skel;
+  }
 
   /* Create a stream object in trail->pool, and make it use our read
      func and baton. */
@@ -1465,7 +1500,6 @@ svn_fs__dag_get_contents (svn_stream_t **contents,
 
   return SVN_NO_ERROR;
 }
-
 
 
 svn_error_t *

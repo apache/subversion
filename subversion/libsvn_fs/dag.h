@@ -347,7 +347,8 @@ svn_error_t *svn_fs__dag_make_dir (dag_node_t **child_p,
 
 /* Set *CONTENTS to a readable generic stream which yields the
    contents of FILE, as part of TRAIL.  Allocate the stream in
-   TRAIL->pool.  */
+   TRAIL->pool.  
+   If FILE is not a file, return SVN_ERR_FS_NOT_FILE.  */
 svn_error_t *svn_fs__dag_get_contents (svn_stream_t **contents,
                                        dag_node_t *file,
                                        trail_t *trail);

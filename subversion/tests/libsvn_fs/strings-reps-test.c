@@ -28,7 +28,7 @@
 /* Helper functions and batons for reps-table testing. */
 struct rep_args
 {
-  char *key;
+  const char *key;
   svn_fs_t *fs;
   skel_t *skel;
 };
@@ -308,7 +308,7 @@ verify_expected_record (svn_fs_t *fs,
   while (1)
     {
       size = 100;
-      SVN_ERR (svn_fs__string_read (fs, key, offset, &size, buf, trail));
+      SVN_ERR (svn_fs__string_read (fs, key, buf, offset, &size, trail));
       svn_stringbuf_appendbytes (text, buf, size);
       if (size < 100)
         break;
@@ -387,15 +387,12 @@ txn_body_string_append_fail (void *baton, trail_t *trail)
                            "la dee dah, la dee day...");
 }
 
-/* DISABLED in mainline branch! */
-#if 0
 static svn_error_t *
 txn_body_string_copy (void *baton, trail_t *trail)
 {
   struct string_args *b = (struct string_args *) baton;
   return svn_fs__string_copy (b->fs, &(b->key), b->key, trail);
 }
-#endif
 
 
 static const char *bigstring1 = "\
@@ -600,8 +597,6 @@ abort_string (const char **msg, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
-/* DISABLED in mainline branch! */
-#if 0
 static svn_error_t *
 copy_string (const char **msg, apr_pool_t *pool)
 {
@@ -647,7 +642,6 @@ copy_string (const char **msg, apr_pool_t *pool)
 
   return SVN_NO_ERROR;
 }
-#endif
 
 
 
@@ -662,7 +656,7 @@ svn_error_t * (*test_funcs[]) (const char **msg,
   delete_rep,
   test_strings,
   abort_string,
-  /*  copy_string, */ /* DISABLED in mainline branch! */
+  copy_string,
   0
 };
 

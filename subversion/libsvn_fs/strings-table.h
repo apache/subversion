@@ -53,9 +53,9 @@ int svn_fs__open_strings_table (DB **strings_p,
  */
 svn_error_t *svn_fs__string_read (svn_fs_t *fs,
                                   const char *key,
+                                  char *buf,
                                   apr_off_t offset,
                                   apr_size_t *len,
-                                  char *buf,
                                   trail_t *trail);
 
 

@@ -59,9 +59,9 @@ svn_fs__open_strings_table (DB **strings_p,
 svn_error_t *
 svn_fs__string_read (svn_fs_t *fs,
                      const char *key,
+                     char *buf,
                      apr_off_t offset,
                      apr_size_t *len,
-                     char *buf,
                      trail_t *trail)
 {
   int db_err;
@@ -287,7 +287,7 @@ svn_fs__string_copy (svn_fs_t *fs,
       size = sizeof (buf);
 
       /* Read SIZE bytes from the record, starting at OFFSET. */
-      SVN_ERR (svn_fs__string_read (fs, key, offset, &size, buf, trail));
+      SVN_ERR (svn_fs__string_read (fs, key, buf, offset, &size, trail));
 
       /* Now, write SIZE bytes into the new record. */
       SVN_ERR (svn_fs__string_append (fs, new_key, size, buf, trail));
