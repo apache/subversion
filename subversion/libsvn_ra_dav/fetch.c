@@ -851,7 +851,7 @@ svn_error_t *svn_ra_dav__get_dir(void *session_baton,
   apr_hash_index_t *hi;
   apr_hash_t *resources;
   const char *final_url;
-  int final_url_n_components;
+  apr_size_t final_url_n_components;
   svn_ra_session_t *ras = (svn_ra_session_t *) session_baton;
   const char *url = svn_path_url_add_component (ras->url, path, pool);
 
