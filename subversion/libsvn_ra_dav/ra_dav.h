@@ -39,7 +39,8 @@
 typedef struct {
   apr_pool_t *pool;
 
-  struct uri root;              /* repository root */
+  const char *url;              /* original, unparsed url for this session */
+  struct uri root;              /* parsed version of above */
 
   ne_session *sess;           /* HTTP session to server */
   ne_session *sess2;
@@ -121,7 +122,7 @@ svn_error_t * svn_ra_dav__get_log(
 svn_error_t *svn_ra_dav__do_check_path(
   svn_node_kind_t *kind,
   void *session_baton,
-  svn_stringbuf_t *path,
+  const char *path,
   svn_revnum_t revision);
 
 /*
@@ -203,7 +204,7 @@ svn_error_t * svn_ra_dav__get_one_prop(const svn_string_t **propval,
 /* Get various Baseline-related information for a given "public" URL.
 
    Given a Neon session SESS and a URL, return whether the URL is a
-   directory in IS_DIR. IS_DIR may be NULL if this flag is unneeded.
+   directory in *IS_DIR.  IS_DIR may be NULL if this flag is unneeded.
 
    REVISION may be SVN_INVALID_REVNUM to indicate that the operation
    should work against the latest (HEAD) revision, or whether it should
