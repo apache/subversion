@@ -54,16 +54,29 @@ To be fixed by sussman:
 
 ch04:
 
+   - need a giant warning-box about how our lack of 'true renames' can
+     be really irritating when doing merges.  The classic case is when
+     branchA moves things around, and branch B just changes file text.
+     When you merge branchA into branchB, you deleting the newer file
+     versions and adding-with-history the older file versions.
+     Definitely a big 'gotcha' to watch out for.
+
    - 'mixed tag' section.  explain how 'svn cp URL' works, that it's
      not just a literal 'cp -R' to the repository.  mixed-rev
      directories can create a repos tree different than you expect.
      the mixed-tag example assumes you start with a WC all at one
      revision, then only back/fore-date *files*, not dirs.
 
+   - document merge conflicts:  fulltexts are named {.working, .left,
+     .right}, which is confusingly just-slightly-different from the
+     fulltext files produced by 'svn up' conflicts:  {.mine, .rX, .rY}.
+
 
 ch06:  
 
-
+   - in server comparison table, add a footnote to svnserve
+     authorization cell: note that per-directory *write* access can
+     still be done by a hook script (but not read access).
 
 
 -----------------------------------------------
@@ -82,7 +95,14 @@ List of 1.1 features/changes (that still need to be documented)
   * New 'SVNPathAuthz Off' directive, to disable path-based authz in
     apache (and increase speed.)
 
+
 List of 1.2 features/changes (that still need to be documented)
 ============================
 
   * svn log --limit
+  * Fixed length keywords
+    The format of fixed length keyword and its data is
+    - Unexpanded keyword:         "$keyword::       $"
+    - Expanded keyword:           "$keyword:: value $"
+    - Expanded kw with filling:   "$keyword:: value   $"
+    - Truncated keyword:          "$keyword:: longval#$"
