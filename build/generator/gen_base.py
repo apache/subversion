@@ -95,7 +95,8 @@ class GeneratorBase:
     """Return a list of section objects from a string of section names."""
     sections = [ ]
     for section_name in string.split(section_list):
-      sections.append(self.sections[section_name])
+      if section_name not in self.skip_sections:
+        sections.append(self.sections[section_name])
     return sections
 
   def compute_hdr_deps(self):
