@@ -46,6 +46,7 @@ typedef struct {
   svn_fs_root_t *rev_root;
 
   const char *anchor;
+  const char *target;
 
   /* if doing a regular update, then dst_path == anchor.  if this is a
      'switch' operation, then this field is the fs path that is being
@@ -75,9 +76,10 @@ typedef struct {
 
 } update_ctx_t;
 
-typedef struct {
+typedef struct item_baton_t {
   apr_pool_t *pool;
   update_ctx_t *uc;
+  struct item_baton_t *parent; /* the parent of this item. */
   const char *name;    /* the single-component name of this item */
   const char *path;    /* a telescoping extension of uc->anchor */
   const char *path2;   /* a telescoping extension of uc->dst_path */
@@ -281,6 +283,7 @@ static item_baton_t *make_child_baton(item_baton_t *parent,
   baton->pool = pool;
   baton->uc = parent->uc;
   baton->name = svn_path_basename(path, pool);
+  baton->parent = parent;
 
   /* Telescope the path based on uc->anchor.  */
   baton->path = svn_path_join(parent->path, baton->name, pool);
@@ -288,9 +291,15 @@ static item_baton_t *make_child_baton(item_baton_t *parent,
   /* Telescope the path based on uc->dst_path in the exact same way. */
   baton->path2 = svn_path_join(parent->path2, baton->name, pool);
 
-  /* Telescope the third path:  it's relative, not absolute, to dst_path. */
-  baton->path3 = svn_path_join(parent->path3, baton->name, pool);
-
+  /* Telescope the third path:  it's relative, not absolute, to
+     dst_path.  Now, we gotta be careful here, because if this
+     operation had a target, and we're it, then we have to use the
+     basename of our source reflection instead of our own.  */
+  if ((*baton->uc->target) && (! parent->parent))
+    baton->path3 = svn_path_join(parent->path3, baton->uc->target, pool);
+  else
+    baton->path3 = svn_path_join(parent->path3, baton->name, pool);
+  
   return baton;
 }
 
@@ -685,7 +694,10 @@ static svn_error_t * upd_open_root(void *edit_baton,
                                  DEBUG_CR, base_revision) );
     }
 
-  SVN_ERR( send_vsn_url(b, pool) );
+  /* Only transmit the root directory's Version Resource URL if
+     there's no target. */
+  if (! *uc->target)
+    SVN_ERR( send_vsn_url(b, pool) );
 
   if (uc->resource_walk)
     SVN_ERR( dav_svn__send_xml(uc->bb, uc->output,
@@ -1194,6 +1206,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
   uc.resource = resource;
   uc.output = output;  
   uc.anchor = src_path;
+  uc.target = target;
   uc.bb = apr_brigade_create(resource->pool, output->c->bucket_alloc);
   uc.pathmap = NULL;
   if (dst_path) /* we're doing a 'switch' */
@@ -1356,86 +1369,80 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
      to abort this report later. */
   rbaton = NULL;
 
-  /* The potential "resource walk" part of the update-report. */
-  if (dst_path && resource_walk)  /* this was a 'switch' operation */
+  /* ### Temporarily disable resource_walks for single-file switch
+     operations.  It isn't strictly necessary. */
+  if (dst_path && resource_walk)
     {
       /* Sanity check: if we switched a file, we can't do a resource
          walk.  dir_delta would choke if we pass a filepath as the
          'target'.  Also, there's no need to do the walk, since the
          new vsn-rsc-url was already in the earlier part of the report. */
       svn_node_kind_t dst_kind;
+      if ((serr = svn_fs_check_path(&dst_kind, uc.rev_root, dst_path,
+                                    resource->pool)))
+        {
+          derr = dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                     "Failed checking destination path kind.",
+                                     resource->pool);
+          goto cleanup;
+        }
+      if (dst_kind != svn_node_dir)
+        resource_walk = FALSE;
+    }
 
-      serr = svn_fs_check_path(&dst_kind, uc.rev_root, dst_path,
-                               resource->pool);
+  /* The potential "resource walk" part of the update-report. */
+  if (dst_path && resource_walk)  /* this was a 'switch' operation */
+    {
+      /* send a second embedded <S:resource-walk> tree that contains
+         the new vsn-rsc-urls for the switched dir.  this walk
+         contains essentially nothing but <add> tags. */
+      svn_fs_root_t *zero_root;
+      serr = svn_fs_revision_root(&zero_root, repos->fs, 0,
+                                  resource->pool);
       if (serr)
         {
           derr = dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                     "Failed to find the kind of a path",
+                                     "Failed to find the revision root",
                                      resource->pool);
           goto cleanup;
         }
 
-      if (dst_kind == svn_node_dir)
+      serr = dav_svn__send_xml(uc.bb, uc.output, "<S:resource-walk>" DEBUG_CR);
+      if (serr)
         {
-          /* send a second embedded <S:resource-walk> tree that contains
-             the new vsn-rsc-urls for the switched dir.  this walk
-             contains essentially nothing but <add> tags. */
-          svn_fs_root_t *zero_root;
-          serr = svn_fs_revision_root(&zero_root, repos->fs, 0,
-                                      resource->pool);
-          if (serr)
-            {
-              derr = dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                         "Failed to find the revision root",
-                                         resource->pool);
-              goto cleanup;
-            }
-
-          serr = dav_svn__send_xml(uc.bb, uc.output,
-                                   "<S:resource-walk>" DEBUG_CR);
-          if (serr)
-            {
-              derr = dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                         "Unable to begin resource walk",
-                                         resource->pool);
-              goto cleanup;
-            }
-
-          uc.resource_walk = TRUE;
-
-          /* Compare subtree DST_PATH within a pristine revision to
-             revision 0.  This should result in nothing but 'add' calls
-             to the editor. */
-          serr = svn_repos_dir_delta(/* source is revision 0: */
-                                     zero_root, "", "",
-                                     /* target is 'switch' location: */
-                                     uc.rev_root, dst_path,
-                                     /* re-use the editor */
-                                     editor, &uc,
-                                     dav_svn_authz_read,
-                                     &arb,
-                                     FALSE, /* no text deltas */
-                                     recurse,
-                                     TRUE, /* send entryprops */
-                                     FALSE, /* don't ignore ancestry */
+          derr = dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                     "Unable to begin resource walk",
                                      resource->pool);
-          if (serr)
-            {
-              derr = dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                         "Resource walk failed.",
-                                         resource->pool);
-              goto cleanup;
-            }
+          goto cleanup;
+        }
+
+      uc.resource_walk = TRUE;
+
+      /* Compare subtree DST_PATH within a pristine revision to
+         revision 0.  This should result in nothing but 'add' calls
+         to the editor. */
+      serr = svn_repos_dir_delta(zero_root, "", target,
+                                 uc.rev_root, dst_path,
+                                 /* re-use the editor */
+                                 editor, &uc, dav_svn_authz_read,
+                                 &arb, FALSE /* text-deltas */, recurse, 
+                                 TRUE /* entryprops */, 
+                                 FALSE /* ignore-ancestry */, resource->pool);
+      if (serr)
+        {
+          derr = dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                     "Resource walk failed.", resource->pool);
+          goto cleanup;
+        }
           
-          serr = dav_svn__send_xml(uc.bb, uc.output,
-                                   "</S:resource-walk>" DEBUG_CR);
-          if (serr)
-            {
-              derr = dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                         "Unable to complete resource walk.",
-                                         resource->pool);
-              goto cleanup;
-            }
+      serr = dav_svn__send_xml(uc.bb, uc.output, 
+                               "</S:resource-walk>" DEBUG_CR);
+      if (serr)
+        {
+          derr = dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                     "Unable to complete resource walk.",
+                                     resource->pool);
+          goto cleanup;
         }
     }
 
