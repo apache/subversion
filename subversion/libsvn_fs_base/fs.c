@@ -40,6 +40,7 @@
 #include "uuid.h"
 #include "tree.h"
 #include "id.h"
+#include "lock.h"
 #include "svn_private_config.h"
 
 #include "bdb/bdb-err.h"
@@ -519,7 +520,11 @@ static fs_vtable_t fs_vtable = {
   svn_fs_base__open_txn,
   svn_fs_base__purge_txn,
   svn_fs_base__list_transactions,
-  svn_fs_base__deltify
+  svn_fs_base__deltify,
+  svn_fs_base__lock,
+  svn_fs_base__unlock,
+  svn_fs_base__get_lock,
+  svn_fs_base__get_locks
 };
 
 static svn_error_t *

@@ -135,6 +135,16 @@ typedef struct fs_vtable_t
   svn_error_t *(*list_transactions) (apr_array_header_t **names_p,
                                      svn_fs_t *fs, apr_pool_t *pool);
   svn_error_t *(*deltify) (svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool);
+  svn_error_t *(*lock) (svn_lock_token_t **token, svn_fs_t *fs,
+                        const char *path, svn_boolean_t force,
+                        long int timeout, svn_lock_token_t *current_token,
+                        apr_pool_t *pool);
+  svn_error_t *(*unlock) (svn_fs_t *fs, svn_lock_token_t *token,
+                          svn_boolean_t force, apr_pool_t *pool);
+  svn_error_t *(*get_lock) (svn_lock_token_t **token, svn_fs_t *fs,
+                            const char *path, apr_pool_t *pool);
+  svn_error_t *(*get_locks) (apr_hash_t **locks, svn_fs_t *fs,
+                             const char *path, apr_pool_t *pool);
 } fs_vtable_t;
 
 

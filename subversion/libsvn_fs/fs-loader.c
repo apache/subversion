@@ -780,6 +780,37 @@ svn_fs_set_uuid (svn_fs_t *fs, const char *uuid, apr_pool_t *pool)
   return fs->vtable->set_uuid (fs, uuid, pool);
 }
 
+svn_error_t *
+svn_fs_lock (svn_lock_token_t **token, svn_fs_t *fs, const char *path,
+             svn_boolean_t force, long int timeout,
+             svn_lock_token_t *current_token, apr_pool_t *pool)
+{
+  return fs->vtable->lock (token, fs, path, force, timeout,
+                           current_token, pool);  
+}
+
+svn_error_t *
+svn_fs_unlock (svn_fs_t *fs, svn_lock_token_t *token, svn_boolean_t force,
+               apr_pool_t *pool)
+{
+  return fs->vtable->unlock (fs, token, force, pool);
+}
+
+svn_error_t *
+svn_fs_get_lock (svn_lock_token_t **token, svn_fs_t *fs, const char *path,
+                 apr_pool_t *pool)
+{
+  return fs->vtable->get_lock (token, fs, path, pool);
+}
+
+svn_error_t *
+svn_fs_get_locks (apr_hash_t **locks, svn_fs_t *fs, const char *path,
+                  apr_pool_t *pool)
+{
+  return fs->vtable->get_locks (locks, fs, path, pool);
+}
+
+
 
 /* --- History functions --- */
 

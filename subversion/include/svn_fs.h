@@ -1431,9 +1431,10 @@ svn_error_t *svn_fs_set_uuid (svn_fs_t *fs,
 /** Lock @a path in @a fs, and set @a *token to a lock-token
  * representing the new lock, allocated in @a pool.
  *
- * @a fs must have a user associated with it, else return @c
- * SVN_ERR_FS_NO_USER.  Set the 'owner' field in @a *token to the
- * username of the current @a fs user.
+ * @a fs must have a username associated with it (see @c
+ * svn_fs_access_t), else return @c SVN_ERR_FS_NO_USER.  Set the
+ * 'owner' field in @a *token to the username of the current @a fs
+ * access context.
  *
  * If path is already locked by a different user, then return @c
  * SVN_ERR_FS_PATH_LOCKED.  If path is already locked by the same
@@ -1441,13 +1442,13 @@ svn_error_t *svn_fs_set_uuid (svn_fs_t *fs,
  * lock and return a new token in @a *token.
  *
  * If @a force is true, then "steal" any existing lock, even if the FS
- * user does not match the current lock owner.  Delete any lock on @a
- * path, and unconditionally create a new lock.
+ * access context username does not match the current lock owner.
+ * Delete any lock on @a path, and unconditionally create a new lock.
  *
  * If @a timeout is zero, then create a non-expiring lock.  Else, the
  * lock will expire in @a timeout seconds after creation.
  *
- * If @a path is non-existent, that's fine.  The name is reserved, and
+ * If @a path is non-existent, that's fine.  The path is reserved, and
  * a lock-token is returned.
  *
  * ### Note:  at this time, only files can be locked.
@@ -1468,10 +1469,10 @@ svn_error_t *svn_fs_lock (svn_lock_token_t **token,
  * If the path is locked, but @a token doesn't match the lock, return
  * @c SVN_ERR_FS_BAD_LOCK_TOKEN.
  *
- * If @a token matches the lock, but the @a fs user's username doesn't
- * match @a token's owner, return @c SVN_ERR_FS_LOCK_OWNER_MISMATCH.
- * Do not return this error if @a force is true; allow the unlock to
- * succeed.
+ * If @a token matches the lock, but the username of @a fs's access
+ * context doesn't match @a token's owner, return @c
+ * SVN_ERR_FS_LOCK_OWNER_MISMATCH.  Do not return this error if @a
+ * force is true; allow the unlock to succeed.
  *
  * Use @a pool for temporary allocations.
  */

@@ -36,6 +36,7 @@
 #include "fs_fs.h"
 #include "revs-txns.h"
 #include "tree.h"
+#include "lock.h"
 #include "svn_private_config.h"
 
 #include "../libsvn_fs/fs-loader.h"
@@ -80,7 +81,11 @@ static fs_vtable_t fs_vtable = {
   svn_fs_fs__open_txn,
   svn_fs_fs__purge_txn,
   svn_fs_fs__list_transactions,
-  svn_fs_fs__deltify
+  svn_fs_fs__deltify,
+  svn_fs_fs__lock,
+  svn_fs_fs__unlock,
+  svn_fs_fs__get_lock,
+  svn_fs_fs__get_locks
 };
 
 
