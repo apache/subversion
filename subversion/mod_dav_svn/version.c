@@ -125,13 +125,20 @@ static dav_error *dav_svn_remove_label(const dav_resource *resource,
 
 static int dav_svn_can_be_activity(const dav_resource *resource)
 {
-  return 0;
+  return resource->type == DAV_RESOURCE_TYPE_ACTIVITY && !resource->exists;
 }
 
 static dav_error *dav_svn_make_activity(dav_resource *resource)
 {
-  return dav_new_error(resource->pool, HTTP_NOT_IMPLEMENTED, 0,
-                       "Creating activities is not yet implemented.");
+  dav_resource_private *info = resource->info;
+  const char *txn_name;
+
+  /* ### need to check some preconditions? */
+
+  /* ### just hack one together for now... */
+  txn_name = apr_psprintf(resource->pool, "txn.%s", info->object_name);
+
+  return dav_svn_store_activity(info->repos, info->object_name, txn_name);
 }
 
 
