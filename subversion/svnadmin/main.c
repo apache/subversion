@@ -83,7 +83,7 @@ print_tree (svn_fs_root_t *root,
 
 
 /*** Argument parsing and usage. ***/
-void
+static void
 usage (const char *progname, int exit_code)
 {
   fprintf
