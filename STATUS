@@ -35,7 +35,7 @@ Candidate changes:
     Justification:
       Regression and annoying for people using non-ASCII chars in log messages.
     Votes:
-      +1: lundblad, brane
+      +1: lundblad, brane, bliss
       +1 (concept): nori
 
   * r11202, r11243
@@ -43,7 +43,7 @@ Candidate changes:
     Justification:
       Simple fix.
     Votes:
-      +1: lundblad, brane
+      +1: lundblad, brane, bliss
 
   * r11190
     Make it possible to set SVNPathAuthz to Off.
@@ -69,11 +69,11 @@ Candidate changes:
       +1: bliss, lundblad
 
   * r11250, r11258
-    Fix #2060, make ls work when path contians non-ASCII chars over ra_dav.
+    Fix #2060, make ls work when path contains non-ASCII chars over ra_dav.
     Justification:
       BFI, ls-R didn't work at all in this case, affects many GUI clients.
     Votes:
-      +1: lundblad, brane
+      +1: lundblad, brane, bliss
 
   * r11233, r11260
     Fix eol-style conversion for propedit.
@@ -83,7 +83,7 @@ Candidate changes:
     Note:
       This also fixes --encoding with propedit.
     Votes:
-      +1: lundblad, brane
+      +1: lundblad, brane, bliss
 
   * r11262, r11274
     Fix issue #2012.  Allow URI-encoded drive letter and separator (: or |).
@@ -113,4 +113,4 @@ Candidate changes:
       Makes it impossible to use, i.e. ISO-8859-1 non-svn: props over DAV.
       Simple fix.
     Votes:
-      +1: lundblad
+      +1: lundblad, bliss
