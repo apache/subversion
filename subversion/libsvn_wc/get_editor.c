@@ -451,12 +451,9 @@ delete (svn_string_t *name, void *parent_baton)
                                    name,
                                    SVN_INVALID_VERNUM,
                                    svn_invalid_kind,
-                                   0,
+                                   SVN_WC__ENTRY_DELETE,
                                    0,
                                    parent_dir_baton->pool,
-                                   SVN_WC__ENTRIES_ATTR_DELETE,
-                                   svn_string_create ("true",
-                                                      parent_dir_baton->pool),
                                    NULL);
 }
 

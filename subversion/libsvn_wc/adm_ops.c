@@ -149,11 +149,9 @@ svn_wc_delete_file (svn_string_t *file, apr_pool_t *pool)
                                   basename,
                                   SVN_INVALID_VERNUM,
                                   svn_file_kind,
-                                  0,
+                                  SVN_WC__ENTRY_DELETE,
                                   0,
                                   pool,
-                                  SVN_WC__ENTRIES_ATTR_DELETE,
-                                  svn_string_create ("true", pool),
                                   NULL);
   if (err)
     return err;
@@ -174,11 +172,9 @@ svn_wc_add_file (svn_string_t *file, apr_pool_t *pool)
                                   basename,
                                   0,
                                   svn_file_kind,
-                                  0,
+                                  SVN_WC__ENTRY_ADD,
                                   0,
                                   pool,
-                                  SVN_WC__ENTRIES_ATTR_ADD,
-                                  svn_string_create ("true", pool),
                                   NULL);
   if (err)
     return err;
