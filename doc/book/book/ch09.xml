@@ -3234,6 +3234,13 @@ $ svn status
             </varlistentry>
 
             <varlistentry>
+              <term>'R'</term>
+              <listitem>
+                <para>Item has been replaced in your working copy.</para>
+              </listitem>
+            </varlistentry>
+
+            <varlistentry>
               <term>'C'</term>
               <listitem>
                 <para>Item is in conflict with updates received from
