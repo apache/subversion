@@ -3,13 +3,13 @@
 
 @c Ben is hacking on this.
 
-The @dfn{Subversion server} isn't a simple, monolithic daemon process
+The @dfn{Subversion server} isn't a typical monolithic daemon process
 like sshd or ftpd; rather, it's a set of well-defined interface layers
 that is meant to be flexible and open to future innovations.
 
-However, please remember that after all is said and done, it's
-@emph{Apache} that is the actual Subversion server process; all of the
-lower layers are simply shared libraries running in Apache's address
+However, for the initial release of Subversion, please remember that
+it's @emph{Apache} that is the actual Subversion server process; all of
+the lower layers are simply shared libraries running in Apache's address
 space!
 
 In a nutshell:
@@ -18,14 +18,14 @@ In a nutshell:
 @item
     Apache receives a Subversion-specific HTTP method request.
 @item
-    An appropriate Apache module handles the request, and makes calls
-    into the "main" Subversion library.
+    An custom Apache module handles the request, and makes calls into
+the "main" Subversion library.
 @item
-    The "main" library interacts with an abstract, versioned filesystem
-    and returns a response.
+    The "main" library interacts with a filesystem of a particular
+repository and then returns a response.
 @item
     The Apache module converts this response back into an HTTP response
-    to be sent to the client.
+to be sent to the client.
 @end enumerate
 
 
@@ -89,9 +89,7 @@ system that supports transactions.  The Subversion Filesystem
 (@xref{Filesystem}.)  is the only library that depends on this
 interface.
 
-@c OK, guys, this is tricky to specify.  This requires a good knowledge
-@c of Berkeley DBM's API, SQL, and database API's in general!  What's
-@c written here is a simplification of a typical DBM API:
+@c What's written below is just a simplification of a typical DBM API:
 
 @table @code
 @item svn_db_init ()
@@ -128,13 +126,17 @@ implement this same API on top of a more powerful SQL system.
 @section Filesystem
 
 The @dfn{Subversion Filesystem} (abbreviated: @dfn{svn_fs}) gives us an
-abstract way of thinking about the way files are stored and versioned,
-independent of the actual means of storage.
-
-Like any typical UNIX-like filesystem, files are stored in a tree.
-However, while CVS uses the actual UNIX filesystem to store items, the
+abstract way of thinking about the way files are stored and versioned in
+a repository -- independent of the actual means of storage.  Like any
+typical UNIX-like filesystem, files are stored in a tree.  However,
+while CVS uses the actual UNIX filesystem to hold a repository, the
 svn_fs implements files and directories as database objects
 (@xref{Database}.)
+
+The primary user of the svn_fs interface will be the "Main" Subversion
+library, explained later on in this document.  However, other server
+plug-in modules (such as a scripting language) can also benefit from
+access to the filesystem.
 
 To begin, please be sure that you're already casually familiar with
 Subversion's ideas of files, directories, and version histories.  If
@@ -146,6 +148,7 @@ For completeness, we can now offer a precise, technical description of
 these terms.  Here is the schema used by svn_fs:
 
 @c This is taken from jimb's very first Subversion spec!
+@c Is there some standardized notation for describing schemas like this?
 @c <jimb> -----------------------------
 
 @quotation
@@ -190,14 +193,14 @@ A @dfn{repository} consists of node table and a history.
 @c  </jimb> ----------------------
 
 
-@subsection Basic Reading
+@subsection Basic Read Operations
 
 Here are functions to retrieve information from the filesystem, designed
 to be fast and convenient for any process using svn_fs.
 
 @table @code
 @item latest ()
- returns the latest global version of the repository
+ returns the latest global version of the repository tree
 @item read (version, path)
  if path is a file, return full text (which includes property stream);@*
  if path is a directory, return list of directory entries.
@@ -212,15 +215,16 @@ to be fast and convenient for any process using svn_fs.
 @end table
 
 
-@subsection Deltas
+@subsection Delta Generation
 
-A @dfn{delta} object is a specific data structure in Subversion which
+A @dfn{delta} object is a specific data structure in Subversion that
 efficiently describes the difference between two file trees.  Deltas are
 absolutely critical in the communication between Subversion clients and
-servers.  For a full explanation, @xref{Protocol}. 
+servers.  (For a full explanation, @xref{Protocol}.)
 
 A single basic routine is provided which asks the server to build and
-return a delta from the Subversion filesystem:
+return a delta, based on the comparison of two subtrees within the
+repository's filesystem:
 
 @table @code
 @item request_delta (versionX, pathA, versionY, pathB)
@@ -230,8 +234,8 @@ return a delta from the Subversion filesystem:
 
 @subsection Basic Writing
 
-Anytime a process needs to modify the filesystem, it must do three
-things:
+If a server needs to modify the repository's filesystem in any way (even
+if just modifying properties), it must do three things:
 
 @enumerate
 @item
@@ -244,23 +248,21 @@ things:
   If permission is granted, apply the delta.
 @end enumerate
 
-Please remember that because we're dealing with the "Big Bytestring"
-model of files, that this process includes any sort of change to a
-file's text @emph{or} properties!
+Here the the routines to do this.
 
 @table @code
 @item submit (delta)
- ask filesystem's lock manager for approval of delta; returns token (or
-failure)
+  ask filesystem's lock manager for approval of delta; returns either a
+  transaction token or failure
 @item write (delta, token)
- actually write the delta into the filesystem
+  actually write the delta into the filesystem
 @item abandon (token)
- tell lock manager that the delta will @emph{not} be written (despite
- previous approval)
+  tell lock manager that the delta will @emph{not} be written (despite
+  previous approval)
 @end table
 
-For a fuller description of Subversion's write-locking mechanism,
-@xref{Locking}.
+A more detailed description of Subversion's write-locking mechanism is
+explained in the next section.
 
 
 @c ----------------------------------------------------------------
@@ -286,13 +288,13 @@ The locking system was designed to have these features:
 
 Reading is easy; if a server process wants to execute a @code{read()}
 call into the filesystem, it goes right through.  The design of the
-versioning filesystem (@xref{Model}.) allows a reader to simply skip
-down the version history, locate the correct "root" node, and then
-follow the particular tree downwards to the file or directory it wishes
-to read.  Any number of readers can follow this algorithm without
-interfering with another; and because writers don't link to the version
-history until they're finished writing everything, there's no way for a
-reader to accidentally stumble upon an unfinished tree.
+versioning filesystem allows a reader to simply skip down the version
+history, locate the correct "root" node, and then follow the particular
+tree downwards to the file or directory it wishes to read.  Any number
+of readers can follow this algorithm without interfering with another;
+and because writers don't link to the version history until they're
+finished writing everything, there's no way for a reader to accidentally
+stumble upon an unfinished tree.
 
 @subsection Write Locks
 
