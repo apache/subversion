@@ -56,13 +56,8 @@
 #ifndef __SVN_TYPES_H__
 #define __SVN_TYPES_H__
 
-/* a string of bytes.  "bytes is bytes" */
-typedef struct svn_string_t
-{
-  char *data;                /* pointer to the bytestring */
-  size_t len;                /* length of bytestring */
-  size_t blocksize;          /* total size of buffer allocated */
-} svn_string_t;
+#include <svn_string.h>   /* defines svn_string_t */
+
 
 
 /* a property is a pair of strings */
