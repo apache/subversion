@@ -279,6 +279,22 @@ svn_error_t *svn_categorize_props (const apr_array_header_t *proplist,
 
 /*** Shared function types ***/
 
+/* The function type called by the diff editor when it has determined the
+ * two files that are to be diffed.
+ *
+ * PATH1 and PATH2 are the two files to be compared, these files
+ * exist. Since the PATH1 file may be temporary, it is possible that it is
+ * not in the "correct" location in the working copy, if this is the case
+ * then LABEL will be non-null and will contain the "correct" location.
+ *
+ * BATON is passed through by the diff editor.
+ */
+typedef svn_error_t *(*svn_diff_cmd_t)(const char *path1,
+                                       const char *path2,
+                                       const char *label,
+                                       void *baton);
+
+
 /* The callback invoked by log message loopers, such as
  * svn_ra_plugin_t.get_log() and svn_repos_get_logs().
  *

@@ -43,7 +43,7 @@ struct edit_baton {
 
   /* The callback and calback argument that implement the file comparison
      function */
-  svn_wc_diff_cmd_t diff_cmd;
+  svn_diff_cmd_t diff_cmd;
   void *diff_cmd_baton;
 
   /* Flags whether to diff recursively or not. If set the diff is
@@ -321,9 +321,11 @@ get_empty_file (struct edit_baton *b,
 static svn_error_t *
 run_diff_cmd (struct file_baton *b)
 {
-  svn_wc_diff_cmd_t diff_cmd = b->edit_baton->diff_cmd;
+  svn_diff_cmd_t diff_cmd = b->edit_baton->diff_cmd;
 
-  SVN_ERR (diff_cmd (b->path_start_revision, b->path_end_revision, b->path,
+  SVN_ERR (diff_cmd (b->path_start_revision->data,
+                     b->path_end_revision->data,
+                     b->path->data,
                      b->edit_baton->diff_cmd_baton));
 
   return SVN_NO_ERROR;
@@ -602,7 +604,7 @@ close_edit (void *edit_baton)
  */
 svn_error_t *
 svn_client__get_diff_editor (svn_stringbuf_t *target,
-                             svn_wc_diff_cmd_t diff_cmd,
+                             svn_diff_cmd_t diff_cmd,
                              void *diff_cmd_baton,
                              svn_boolean_t recurse,
                              svn_ra_plugin_t *ra_lib,
