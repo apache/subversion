@@ -16,11 +16,12 @@ _svn()
 	COMPREPLY=()
 	cur=${COMP_WORDS[COMP_CWORD]}
 
-	cmds='add blame cat checkout co cleanup commit ci copy cp delete del \
-	      remove rm diff di export import info ? h help list ls log merge \
-	      mkdir move mv rename ren propdel pdel propedit pedit pe propget \
-	      pget pg proplist plist pl propset pset ps revert resolved \
-	      status stat st switch sw update up --version'
+	cmds='add blame annotate ann cat checkout co cleanup commit ci \
+              copy cp delete del remove rm diff di export import info  \
+              ? h help list ls log merge mkdir move mv rename ren      \
+              propdel pdel propedit pedit pe propget pget pg           \
+              proplist plist pl propset pset ps revert resolved        \
+              status stat st switch sw update up --version'
 
 	if [[ $COMP_CWORD -eq 1 ]] ; then
 		COMPREPLY=( $( compgen -W "$cmds" -- $cur ) )
