@@ -6,6 +6,10 @@
 #
 # For usage, see the usage subroutine or run the script with no
 # command line arguments.
+#
+# $LastChangedDate$
+# $LastChangedBy$
+# $LastChangedRevision$
 #    
 # ====================================================================
 # Copyright (c) 2000-2002 CollabNet.  All rights reserved.
@@ -132,7 +136,23 @@ while (@ARGV)
 
 # If the revision number is undefined, then there were not enough
 # command line arguments.
-&usage("$0: too few arguments") unless defined $rev;
+&usage("$0: too few arguments.") unless defined $rev;
+
+# Check the validity of the command line arguments.  Check that the
+# revision is an integer greater than 0 and that the repository
+# directory exists.
+unless ($rev =~ /^\d+/ and $rev > 0)
+  {
+    &usage("$0: revision number `$rev' must be an integer > 0.");
+  }
+unless (-e $repos)
+  {
+    &usage("$0: repos directory `$repos' does not exist.");
+  }
+unless (-d _)
+  {
+    &usage("$0: repos directory `$repos' is not a directory.");
+  }
 
 # Check that all of the regular expressions can be compiled and
 # compile them.
