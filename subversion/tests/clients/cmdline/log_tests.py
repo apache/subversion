@@ -17,22 +17,11 @@
 ######################################################################
 
 # General modules
-import shutil, string, sys, re, os, traceback, exceptions
+import string, sys, re, os
 
+# Our testing module
+import svntest
 
-# The `svntest' module
-try:
-  import svntest
-except SyntaxError:
-  sys.stderr.write('[SKIPPED] ')
-  print "<<< Please make sure you have Python 2 or better! >>>"
-  traceback.print_exc(None,sys.stdout)
-  raise SystemExit
-
-
-# (abbreviation)
-path_index = svntest.actions.path_index
-  
 
 ######################################################################
 #
@@ -182,7 +171,7 @@ def guarantee_repos_and_wc(sbox):
 
 
 # For errors seen while parsing log data.
-class SVNLogParseError(exceptions.Exception):
+class SVNLogParseError(Exception):
   def __init__ (self, args=None):
     self.args = args
 
@@ -428,6 +417,6 @@ if __name__ == '__main__':
 
 ### End of file.
 # local variables:
-# eval: (load-file "../../../svn-dev.el")
+# eval: (load-file "../../../../tools/dev/svn-dev.el")
 # end:
 

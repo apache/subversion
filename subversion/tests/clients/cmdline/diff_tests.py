@@ -17,15 +17,10 @@
 ######################################################################
 
 # General modules
-import shutil, string, sys, re, os.path, traceback
+import string, sys, re, os.path
 
-try:
-  import svntest
-except SyntaxError:
-  sys.stderr.write('[SKIPPED] ')
-  print "<<< Please make sure you have Python 2 or better! >>>"
-  traceback.print_exc(None,sys.stdout)
-  raise SystemExit
+# Our testing module
+import svntest
 
 
 ######################################################################
@@ -674,7 +669,7 @@ if __name__ == '__main__':
 
 ### End of file.
 # local variables:
-# eval: (load-file "../../../svn-dev.el")
+# eval: (load-file "../../../../tools/dev/svn-dev.el")
 # end:
 
   

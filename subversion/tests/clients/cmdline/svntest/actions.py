@@ -430,9 +430,5 @@ def lock_admin_dir(wc_dir):
 
 ### End of file.
 # local variables:
-# eval: (load-file "../../../svn-dev.el")
+# eval: (load-file "../../../../tools/dev/svn-dev.el")
 # end:
-
-
-
-
