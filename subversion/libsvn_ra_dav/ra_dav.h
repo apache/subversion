@@ -132,6 +132,9 @@ typedef struct {
 
 } svn_ra_dav_resource_t;
 
+/* ### WARNING: which_props can only identify properties which props.c
+   ### knows about. see the elem_definitions[] array. */
+
 /* fetch a bunch of properties from the server. */
 svn_error_t * svn_ra_dav__get_props(apr_hash_t **results,
                                     svn_ra_session_t *ras,
@@ -148,6 +151,20 @@ svn_error_t * svn_ra_dav__get_props_resource(svn_ra_dav_resource_t **rsrc,
                                              const char *label,
                                              const ne_propname *which_props,
                                              apr_pool_t *pool);
+
+/* fetch a single property from a single resource */
+svn_error_t * svn_ra_dav__get_one_prop(const svn_string_t **propval,
+                                       svn_ra_session_t *ras,
+                                       const char *url,
+                                       const char *label,
+                                       const ne_propname *propname,
+                                       apr_pool_t *pool);
+
+extern const ne_propname svn_ra_dav__vcc_prop;
+extern const ne_propname svn_ra_dav__checked_in_prop;
+
+
+
 
 /* send an OPTIONS request to fetch the activity-collection-set */
 svn_error_t * svn_ra_dav__get_activity_url(svn_stringbuf_t **activity_url,
