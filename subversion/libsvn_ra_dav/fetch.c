@@ -2488,7 +2488,7 @@ make_reporter (void *session_baton,
      style" update-report syntax.  if the tmpfile is used in an "old
      style' update-report request, older servers will just ignore this
      unknown xml element. */
-  s = apr_psprintf(pool, "<S:src-path>%s</S:src-path>", ras->url);
+  s = apr_psprintf(pool, "<S:src-path>%s</S:src-path>" DEBUG_CR, ras->url);
   SVN_ERR( svn_io_file_write_full(rb->tmpfile, s, strlen(s), NULL, pool) );
 
   /* an invalid revnum means "latest". we can just omit the target-revision
@@ -2496,8 +2496,8 @@ make_reporter (void *session_baton,
   if (SVN_IS_VALID_REVNUM(revision))
     {
       s = apr_psprintf(pool, 
-                       "<S:target-revision>%ld"
-                       "</S:target-revision>", revision);
+                       "<S:target-revision>%ld</S:target-revision>" DEBUG_CR, 
+                       revision);
       SVN_ERR( svn_io_file_write_full(rb->tmpfile, s, strlen(s), NULL, pool) );
     }
 
@@ -2508,7 +2508,7 @@ make_reporter (void *session_baton,
       svn_xml_escape_cdata_cstring(&escaped_target, target, pool);
 
       s = apr_psprintf(pool,
-                       "<S:update-target>%s</S:update-target>",
+                       "<S:update-target>%s</S:update-target>" DEBUG_CR,
                        escaped_target->data);
       SVN_ERR( svn_io_file_write_full(rb->tmpfile, s, strlen(s), NULL, pool) );
     }
@@ -2523,7 +2523,7 @@ make_reporter (void *session_baton,
       svn_stringbuf_t *dst_path_str = NULL;
       svn_xml_escape_cdata_cstring (&dst_path_str, dst_path, pool);
 
-      s = apr_psprintf(pool, "<S:dst-path>%s</S:dst-path>",
+      s = apr_psprintf(pool, "<S:dst-path>%s</S:dst-path>" DEBUG_CR,
                        dst_path_str->data);
       SVN_ERR( svn_io_file_write_full(rb->tmpfile, s, strlen(s), NULL, pool) );
     }
@@ -2531,7 +2531,7 @@ make_reporter (void *session_baton,
   /* mod_dav_svn will assume recursive, unless it finds this element. */
   if (!recurse)
     {
-      const char * data = "<S:recursive>no</S:recursive>";
+      const char *data = "<S:recursive>no</S:recursive>" DEBUG_CR;
       SVN_ERR( svn_io_file_write_full(rb->tmpfile, data, strlen(data),
                                       NULL, pool) );
     }
@@ -2539,14 +2539,14 @@ make_reporter (void *session_baton,
   /* mod_dav_svn will use ancestry in diffs unless it finds this element. */
   if (ignore_ancestry)
     {
-      const char * data = "<S:ignore-ancestry>yes</S:ignore-ancestry>";
+      const char *data = "<S:ignore-ancestry>yes</S:ignore-ancestry>" DEBUG_CR;
       SVN_ERR( svn_io_file_write_full(rb->tmpfile, data, strlen(data),
                                       NULL, pool) );
     }
   /* If we want a resource walk to occur, note that now. */
   if (resource_walk)
     {
-      const char * data = "<S:resource-walk>yes</S:resource-walk>";
+      const char *data = "<S:resource-walk>yes</S:resource-walk>" DEBUG_CR;
       SVN_ERR( svn_io_file_write_full(rb->tmpfile, data, strlen(data),
                                       NULL, pool) );
     }
