@@ -383,7 +383,8 @@ branches, or new nodes altogether.  The transaction's tree has its own
 version of the root directory; this is the root of a tree of the
 changed nodes, with pointers into the existing, committed tree for
 unchanged files and directory trees.  If the transaction succeeds, the
-transaction's root directory becomes the root of the new version.
+transaction's root directory becomes the root of the new version,
+after any necessary merges.
 
 Nodes which are part of an uncommitted transaction may only be pointed
 to by other nodes in the same transaction; there are no pointers into
@@ -393,7 +394,26 @@ a transaction's tree from without.  This assures that:
 - if the transaction fails, all its nodes can be deleted from the
   `nodes' table, without creating any dangling references.
 
-For each active transaction, we store a transaction header skel of the form:
+How do transactions relate to the `bubble up' rule?
+
+The Subversion filesystem's `bubble up' rule says that 1) any change
+to a node creates a new node version, and 2) directory entries refer
+to specific node versions.  The immediate consequence of this rule is
+that, if a transaction changes any node, and thus creates a new
+version of that node, it must create new versions of all its parent
+nodes as well.
+
+However, it's important to note that the `bubbling up' need happen
+only once per *complete transaction*, not once per change within the
+transaction.  Once we have created single new version of a directory
+for a given transaction, we can make as many changes as we like within
+that directory.  In other words, once the transaction contains the new
+node versions required by the `bubble up' rule, further changes to the
+same nodes needn't create any new versions --- they can proceed much
+like writes to an ordinary filesystem.
+
+For each active transaction, we store a transaction header skel of the
+form:
 
    ("transaction" ROOT)
 
