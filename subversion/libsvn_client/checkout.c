@@ -91,11 +91,7 @@ process_externals (svn_stringbuf_t *path, apr_pool_t *pool)
   SVN_ERR (svn_wc_prop_get (&externals, SVN_PROP_EXTERNALS, path->data, pool));
 
   if (externals)
-    {
-      /* handle_externals_description() needs non-const input */
-      svn_stringbuf_t *dup = svn_stringbuf_create (externals->data, pool);
-      SVN_ERR (handle_externals_description (dup->data, path->data, pool));
-    }
+    SVN_ERR (handle_externals_description (externals->data, path->data, pool));
 
   /* Recurse. */
   {
