@@ -313,7 +313,7 @@ fetch_dirents (svn_ra_session_t *ras,
   dav_propfind_set_resource_handlers(fc->dph, start_resource, end_resource);
   hip = dav_propfind_get_parser(fc->dph);
 
-  hip_xml_add_handler(hip, fetch_elems,
+  hip_xml_push_handler(hip, fetch_elems,
                       validate_element, start_element, end_element, fc);
 
   if (fc->activity_href == NULL)

@@ -93,7 +93,6 @@ static svn_error_t * simple_request(svn_ra_session_t *ras, const char *method,
 {
   http_req *req;
   int rv;
-  http_status hstat;
 
   /* create/prep the request */
   req = http_request_create(ras->sess, "MKACTIVITY", url);
@@ -106,7 +105,7 @@ static svn_error_t * simple_request(svn_ra_session_t *ras, const char *method,
     }
 
   /* run the request and get the resulting status code. */
-  rv = http_request_dispatch(req, &hstat);
+  rv = http_request_dispatch(req);
   if (rv != HTTP_OK)
     {
       /* ### need to be more sophisticated with reporting the failure */
@@ -116,7 +115,7 @@ static svn_error_t * simple_request(svn_ra_session_t *ras, const char *method,
                                rv, method, url);
     }
 
-  *code = hstat.code;
+  *code = http_get_status(&req)->code;
 
   http_request_destroy(req);
 
