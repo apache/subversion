@@ -155,7 +155,8 @@ static dav_error *save_value(dav_db *db, const dav_prop_name *name,
                                          propname, value, db->resource->pool);
   if (serr != NULL)
     return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                               "could not change a property");
+                               serr->message ? 
+                                serr->message : "could not change a property");
 
   /* a change to the props was made; make sure our cached copy is gone */
   db->props = NULL;
