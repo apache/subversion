@@ -27,6 +27,9 @@
 #include "svn_pools.h"
 #include "svn_string.h"
 
+/* libsvn_test.la requires this symbol */ 
+svn_error_t *(*test_funcs[])(const char **msg, apr_pool_t *p) = { 0, 0 };
+
 /* The test here is simple.  Given a string of N files:
 
    foreach file (files - 1)
