@@ -4,33 +4,52 @@
 lib_LTLIBRARIES = libsvn_fs.la
 libsvn_fs_la_SOURCES =				\
 			clones-table.c		\
+                        clones-table.h          \
 			convert-size.c		\
+                        convert-size.h          \
 			dag.c			\
+                        dag.h                   \
 			dbt.c			\
+                        dbt.h                   \
 			err.c			\
+                        err.h                   \
 			fs.c			\
+                        fs.h                    \
 			id.c			\
+                        id.h                    \
+                        node-rev.h              \
+                        node.h                  \
 			nodes-table.c		\
+			nodes-table.h		\
 			rev-table.c		\
+			rev-table.h		\
 			skel.c			\
+			skel.h			\
 			trail.c			\
+			trail.h			\
 			tree.c			\
+			tree.h			\
 			txn.c			\
+			txn.h			\
 			txn-table.c		\
-			validate.c
+			txn-table.h		\
+			validate.c              \
+			validate.h
 
 # Set aside for the moment:
 #		       delta.c			\
 #		       dir.c			\
 #		       file.c			\
+#                      file.h                   \
 #		       node.c			\
 #		       rep.c			\
-#		       revision.c
+#		       revision.c               \
+#                      revision.h
 
 libsvn_fs_la_LIBADD = -ldb
 
 
-INCLUDES = -I../include -I../../apr/include -I../../expat-lite
+INCLUDES = @SVN_INCLUDES@ @SVN_APR_INCLUDES@ @SVN_EXPAT_INCLUDES@
 
 ## Build *this* directory first, *then* the test subdirectory!
 SUBDIRS = . tests

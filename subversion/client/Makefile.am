@@ -5,20 +5,15 @@ svn_SOURCES = main.c status.c props.c                  \
               add-cmd.c commit-cmd.c checkout-cmd.c    \
               proplist-cmd.c delete-cmd.c status-cmd.c \
               update-cmd.c propget-cmd.c propset-cmd.c \
-              trace-update.c trace-commit.c
+              trace-update.c trace-commit.c cl.h
 
 ## Flags needed when compiling:
-INCLUDES = -I. -I../include -I../../apr/include -I../../expat-lite
+INCLUDES = @SVN_INCLUDES@ @SVN_APR_INCLUDES@ @SVN_EXPAT_INCLUDES@
 
 ## Libraries this binary depends upon:
-svn_LDADD = ../libsvn_client/libsvn_client.la     \
-            ../libsvn_wc/libsvn_wc.la             \
-            ../libsvn_delta/libsvn_delta.la       \
-	    ../libsvn_subr/libsvn_subr.la         \
-            ../tests-common/libsvn_test_editor.la \
-            @SVN_APR_LIBS@                        \
-            ../../expat-lite/libexpat.la
-
+svn_LDADD = @SVN_LIBSVN_CLIENT_LIBS@ @SVN_LIBSVN_WC_LIBS@ \
+            @SVN_LIBSVN_DELTA_LIBS@ @SVN_LIBSVN_SUBR_LIBS@ \
+            @SVN_TESTS_COMMON_EDITOR_LIBS@ @SVN_APR_LIBS@ @SVN_EXPAT_LIBS@
 
 ## Make libtool be quiet
 LIBTOOL = @LIBTOOL@ --silent

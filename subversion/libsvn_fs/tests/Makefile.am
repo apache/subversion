@@ -1,12 +1,8 @@
 noinst_PROGRAMS = skel-test fs-test
 
-COMMON_LIBS = 						\
-		../libsvn_fs.la				\
-		../../tests-common/libsvn_tests_main.la	\
-		../../libsvn_subr/libsvn_subr.la	\
-                @SVN_APR_LIBS@                          \
-		../../../expat-lite/libexpat.la		\
-		-ldb
+COMMON_LIBS = @SVN_LIBSVN_FS_LIBS@ @SVN_TESTS_COMMON_MAIN_LIBS@ @SVN_TESTS_COMMON_EDITOR_LIBS@ \
+              @SVN_LIBSVN_SUBR_LIBS@ @SVN_APR_LIBS@ @SVN_EXPAT_LIBS@ -ldb
+              ## Shouldn't -ldb be added automatically by the autoconf script?
 
 # Tests for the `skeleton' library.
 skel_test_SOURCES = skel-test.c
@@ -16,10 +12,13 @@ skel_test_LDADD = ${COMMON_LIBS}
 fs_test_SOURCES = fs-test.c
 fs_test_LDADD = ${COMMON_LIBS}
 
-INCLUDES = -I .. -I ../../include -I ../../../apr/include
+INCLUDES = @SVN_LIBSVN_FS_INCLUDES@ @SVN_INCLUDES@ @SVN_APR_INCLUDES@
 
 ## Make libtool be quiet
 LIBTOOL = @LIBTOOL@ --silent
 
 check:
-	sh ./run-fs-tests.sh
+	sh @srcdir@/run-fs-tests.sh
+
+## Need to include the test script in the distribution
+EXTRA_DIST = run-fs-tests.sh

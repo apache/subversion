@@ -3,9 +3,9 @@
 
 lib_LTLIBRARIES = libsvn_ra_dav.la
 
-libsvn_ra_dav_la_SOURCES = session.c fetch.c commit.c
+libsvn_ra_dav_la_SOURCES = session.c fetch.c commit.c ra_dav.h
 
-INCLUDES = -I../include -I../../apr/include -I../../neon/src
+INCLUDES = @SVN_INCLUDES@ @SVN_APR_INCLUDES@ @SVN_NEON_INCLUDES@
 
 SUBDIRS = . tests
 

@@ -8,22 +8,16 @@
 lib_LTLIBRARIES = libsvn_wc.la
 
 ## Sources needed to build each library (names canonicalized)
-libsvn_wc_la_SOURCES = get_editor.c                      \
-                       adm_files.c adm_ops.c             \
-                       lock.c util.c questions.c         \
-                       log.c local_changes.c             \
-                       entries.c status.c                \
-                       adm_crawler.c props.c
+libsvn_wc_la_SOURCES = adm_crawler.c adm_files.c adm_ops.c entries.c \
+                       get_editor.c local_changes.c lock.c log.c props.c \
+                       questions.c status.c util.c wc.h
 
 ## Build flags ---------
 
-## These should be variables, no?  (from autoconf?)
-INCLUDES = -I../include -I../../apr/include -I../../expat-lite -I../../
-
+INCLUDES = @SVN_INCLUDES@ @SVN_APR_INCLUDES@ @SVN_EXPAT_INCLUDES@
 
 ## Build *this* directory first, *then* the test subdirectory!
 SUBDIRS = . tests
-
 
 ## Make libtool be quiet
 LIBTOOL = @LIBTOOL@ --silent

@@ -1,6 +1,7 @@
 #!/bin/sh
 
 SVN_PROG=../svn
+XML_DIR=$1
 TEST_DIR_1=t1
 TEST_DIR_2=t2
 COMMIT_RESULTFILE_NAME=commit
@@ -26,7 +27,7 @@ echo
 echo "Checking out ${TEST_DIR_1}."
 ${SVN_PROG} checkout                                      \
       --target-dir ${TEST_DIR_1}                          \
-      --xml-file ../../tests-common/xml/co1-inline.xml    \
+      --xml-file $XML_DIR/co1-inline.xml    \
       --revision 1                                        \
       --ancestor-path ${ANCESTOR_PATH}
 

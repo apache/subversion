@@ -2,7 +2,7 @@
 
 # Make sure checkout-test binary exists
 
-TEST_DELTA=../../tests-common/xml/co1-inline.xml
+TEST_DELTA=$srcdir/../../tests-common/xml/co1-inline.xml
 
 if [ ! -x ./checkout-test ]; then
     echo "Error:  can't find checkout-test executable"
