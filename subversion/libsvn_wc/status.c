@@ -48,7 +48,8 @@ svn_wc_get_default_ignores (apr_array_header_t **patterns,
 
   /* Check the Subversion run-time configuration for global ignores.
      If no configuration value exists, we fall back to our defaults. */
-  svn_config_get (cfg, &val, "miscellany", "global-ignores",
+  svn_config_get (cfg, &val, SVN_CONFIG_SECTION_MISCELLANY, 
+                  SVN_CONFIG_OPTION_GLOBAL_IGNORES,
                   "*.o *.lo *.la #*# .*.rej *.rej .*~ *~ .#*");
   *patterns = apr_array_make (pool, 16, sizeof (const char *));
 

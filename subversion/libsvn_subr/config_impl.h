@@ -87,21 +87,11 @@ svn_error_t *svn_config__parse_registry (svn_config_t *cfg,
 #  define SVN_REGISTRY_SYS_CONFIG_PATH \
                                SVN_REGISTRY_PREFIX     \
                                SVN_REGISTRY_HKLM       \
-                               SVN_REGISTRY_PATH       \
+                               SVN_REGISTRY_PATH
 #  define SVN_REGISTRY_USR_CONFIG_PATH \
                                SVN_REGISTRY_PREFIX     \
                                SVN_REGISTRY_HKCU       \
-                               SVN_REGISTRY_PATH       \
-#  define SVN_REGISTRY_SYS_CONFIG_CONFIG_PATH \
-                               SVN_REGISTRY_PREFIX     \
-                               SVN_REGISTRY_HKLM       \
-                               SVN_REGISTRY_PATH       \
-                               SVN_CONFIG_CATEGORY_CONFIG
-#  define SVN_REGISTRY_USR_CONFIG_CONFIG_PATH \
-                               SVN_REGISTRY_PREFIX     \
-                               SVN_REGISTRY_HKCU       \
-                               SVN_REGISTRY_PATH       \
-                               SVN_CONFIG_CATEGORY_CONFIG
+                               SVN_REGISTRY_PATH
 #endif /* SVN_WIN32 */
 
 /* System-wide and configuration subdirectory names.

@@ -1127,7 +1127,8 @@ svn_io_run_diff (const char *dir,
                                              SVN_CONFIG_CATEGORY_CONFIG,
                                              APR_HASH_KEY_STRING) : NULL;
   
-  svn_config_get (cfg, &diff_cmd, "helpers", "diff-cmd", SVN_CLIENT_DIFF);
+  svn_config_get (cfg, &diff_cmd, SVN_CONFIG_SECTION_HELPERS, 
+                  SVN_CONFIG_OPTION_DIFF_CMD, SVN_CLIENT_DIFF);
   SVN_ERR (svn_path_cstring_to_utf8 (&diff_utf8, diff_cmd, pool));
 
   if (pexitcode == NULL)
@@ -1219,7 +1220,8 @@ svn_io_run_diff3 (const char *dir,
                                              SVN_CONFIG_CATEGORY_CONFIG,
                                              APR_HASH_KEY_STRING) : NULL;
 
-  svn_config_get (cfg, &diff3_cmd, "helpers", "diff3-cmd", SVN_CLIENT_DIFF3);
+  svn_config_get (cfg, &diff3_cmd, SVN_CONFIG_SECTION_HELPERS, 
+                  SVN_CONFIG_OPTION_DIFF3_CMD, SVN_CLIENT_DIFF3);
   SVN_ERR (svn_path_cstring_to_utf8 (&diff3_utf8, diff3_cmd, pool));
 
   /* Labels fall back to sensible defaults if not specified. */
@@ -1247,13 +1249,14 @@ svn_io_run_diff3 (const char *dir,
 #ifdef SVN_DIFF3_HAS_DIFF_PROGRAM_ARG
   {
     const char *has_arg;
-    svn_config_get (cfg, &has_arg, "helpers", "diff3-has-program-arg", "yes");
+    svn_config_get (cfg, &has_arg, SVN_CONFIG_SECTION_HELPERS, 
+                    SVN_CONFIG_OPTION_DIFF3_HAS_PROGRAM_ARG, "yes");
     if (0 == strcasecmp(has_arg, "yes")
         || 0 == strcasecmp(has_arg, "true"))
       {
         const char *diff_cmd, *diff_utf8;
-        svn_config_get (cfg, &diff_cmd,
-                        "helpers", "diff-cmd", SVN_CLIENT_DIFF);
+        svn_config_get (cfg, &diff_cmd, SVN_CONFIG_SECTION_HELPERS,
+                        SVN_CONFIG_OPTION_DIFF_CMD, SVN_CLIENT_DIFF);
         SVN_ERR (svn_path_cstring_to_utf8 (&diff_utf8, diff_cmd, pool));
         args[i++] = apr_pstrcat(pool, "--diff-program=", diff_utf8, NULL);
         ++nargs;

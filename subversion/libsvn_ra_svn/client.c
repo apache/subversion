@@ -251,9 +251,11 @@ static svn_error_t *find_tunnel_agent(const char *hostname, const char **agent,
                                              APR_HASH_KEY_STRING) : NULL;
   const char *server_group;
 
-  server_group = svn_config_find_group(cfg, hostname, "groups", pool);
+  server_group = svn_config_find_group(cfg, hostname, 
+                                       SVN_CONFIG_SECTION_GROUPS, pool);
   if (server_group)
-    svn_config_get(cfg, agent, server_group, "svn-tunnel-agent", NULL);
+    svn_config_get(cfg, agent, server_group, 
+                   SVN_CONFIG_OPTION_SVN_TUNNEL_AGENT, NULL);
   else
     *agent = NULL;
 
