@@ -501,7 +501,8 @@ where:
 
    * PATH is the path that was operated on to enact this change.
 
-   * ID is the node revision ID of the node chaned.
+   * ID is the node revision ID of the node changed (may be a zero
+     atom, but only in the "reset" kind case).
 
    * CHANGE-KIND is one of the following:
 
@@ -509,6 +510,7 @@ where:
      - "delete"  : PATH/ID was removed from the filesystem.
      - "replace" : PATH/ID was removed, then re-added to the filesystem.
      - "modify"  : PATH/ID was otherwise modified.
+     - "reset"   : Ignore any previous changes for PATH/ID in this txn.
 
    * TEXT-MOD is a bit specifying whether or not the properties of
      this node where modified.

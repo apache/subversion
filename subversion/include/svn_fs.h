@@ -557,7 +557,8 @@ typedef enum
   svn_fs_path_change_modify = 0,
   svn_fs_path_change_add,
   svn_fs_path_change_delete,
-  svn_fs_path_change_replace
+  svn_fs_path_change_replace,
+  svn_fs_path_change_reset
 
 } svn_fs_path_change_kind_t;
 

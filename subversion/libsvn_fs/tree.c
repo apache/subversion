@@ -35,6 +35,7 @@
 #include <assert.h>
 #include "svn_pools.h"
 #include "svn_error.h"
+#include "svn_path.h"
 #include "svn_fs.h"
 #include "svn_hash.h"
 #include "svn_sorts.h"
@@ -1224,14 +1225,6 @@ txn_body_get_root (void *baton, trail_t *trail)
 }
 
 
-/* String slap-together-er for path extension purposes. */
-static char *
-path_append (const char *dir, const char *entry, apr_pool_t *pool)
-{
-  return apr_psprintf (pool, "%s/%s", dir, entry);
-}
-
-
 /* Set *IS_ANCESTOR to non-zero iff ID1 is an ancestor of ID2 in FS,
    as part of TRAIL. */
 static svn_error_t *
@@ -1688,17 +1681,17 @@ merge (svn_stringbuf_t *conflict_p,
                     {
                       /* Not all of these entries is a directory. Conflict. */
                       svn_stringbuf_set (conflict_p, 
-                                         path_append (target_path,
-                                                      a_entry->name,
-                                                      trail->pool));
+                                         svn_path_join (target_path,
+                                                        a_entry->name,
+                                                        trail->pool));
                       return svn_error_createf
                         (SVN_ERR_FS_CONFLICT, 0, NULL, trail->pool,
                          "conflict at \"%s\"", conflict_p->data);
                     }
 
                   /* ... just recurse. */
-                  new_tpath = path_append (target_path, t_entry->name,
-                                           trail->pool);
+                  new_tpath = svn_path_join (target_path, t_entry->name,
+                                             trail->pool);
                   SVN_ERR (merge (conflict_p, new_tpath,
                                   t_ent_node, s_ent_node, a_ent_node,
                                   txn_id, trail));
@@ -1724,9 +1717,9 @@ merge (svn_stringbuf_t *conflict_p,
              conflicts with E's having been removed from target. */
           if (! svn_fs__id_eq (a_entry->id, s_entry->id))
             {
-              svn_stringbuf_set (conflict_p, path_append (target_path,
-                                                          a_entry->name,
-                                                          trail->pool));
+              svn_stringbuf_set (conflict_p, svn_path_join (target_path,
+                                                            a_entry->name,
+                                                            trail->pool));
               return svn_error_createf
                 (SVN_ERR_FS_CONFLICT, 0, NULL, trail->pool,
                  "conflict at \"%s\"", conflict_p->data);
@@ -1771,9 +1764,9 @@ merge (svn_stringbuf_t *conflict_p,
                  the ancestor that we conflict here.
 
                  ### TODO: see issue #418 about this inelegance. */
-              svn_stringbuf_set (conflict_p, path_append (target_path,
-                                                          t_entry->name,
-                                                          trail->pool));
+              svn_stringbuf_set (conflict_p, svn_path_join (target_path,
+                                                            t_entry->name,
+                                                            trail->pool));
               return svn_error_createf
                 (SVN_ERR_FS_CONFLICT, 0, NULL, trail->pool,
                  "conflict at \"%s\"", conflict_p->data);
@@ -1782,8 +1775,14 @@ merge (svn_stringbuf_t *conflict_p,
       /* E exists in neither target nor source */
       else
         {
-          /* It's a double delete, so do nothing.
+          /* It's a double delete, so do nothing except effectively
+             erase all the changes associated with E so that this
+             transaction isn't given credit for the deletion of E.
              ### kff todo: what about the rename case? */
+          SVN_ERR (add_change 
+                   (fs, txn_id, 
+                    svn_path_join (target_path, a_entry->name, trail->pool), 
+                    NULL, svn_fs_path_change_reset, 0, 0, trail));
         }
           
       /* We've taken care of any possible implications E could have.
@@ -1835,9 +1834,9 @@ merge (svn_stringbuf_t *conflict_p,
       /* E exists in target but is different from E in source */
       else if (! s_ancestorof_t)
         {
-          svn_stringbuf_set (conflict_p, path_append (target_path,
-                                                      t_entry->name,
-                                                      trail->pool));
+          svn_stringbuf_set (conflict_p, svn_path_join (target_path,
+                                                        t_entry->name,
+                                                        trail->pool));
           return svn_error_createf
             (SVN_ERR_FS_CONFLICT, 0, NULL, trail->pool,
              "conflict at \"%s\"", conflict_p->data);

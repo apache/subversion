@@ -31,7 +31,7 @@
 /* Helper functions/variables.  */
 static const char *standard_txns[6]
   = { "0", "1", "2", "3", "4", "5" };
-static const char *standard_changes[16][6] 
+static const char *standard_changes[19][6] 
      /* KEY   PATH   NODEREVID  KIND     TEXT PROP */
   = { { "0",  "/foo",  "1.0.0",  "add",     0,  0  },
       { "0",  "/foo",  "1.0.0",  "modify",  0, "1" },
@@ -46,9 +46,12 @@ static const char *standard_changes[16][6]
       { "3",  "/baz",  "3.0.3",  "modify", "1", 0  },
       { "4",  "/fob",  "4.0.4",  "add",     0,  0  },
       { "4",  "/fob",  "4.0.4",  "modify", "1", 0  },
-      { "5",  "/baz",  "3.0.3",  "delete",  0,  0, },
+      { "5",  "/baz",  "3.0.3",  "delete",  0,  0  },
       { "5",  "/baz",  "5.0.5",  "add",     0, "1" },
-      { "5",  "/baz",  "5.0.5",  "modify", "1", 0  } };
+      { "5",  "/baz",  "5.0.5",  "modify", "1", 0  },
+      { "6",  "/fob",  "4.0.6",  "modify", "1", 0  },
+      { "6",  "/fob",  "4.0.6",  "reset",   0,  0  },
+      { "6",  "/fob",  "4.0.6",  "modify",  0, "1" } };
 
 
 static svn_fs_path_change_kind_t string_to_kind (const char *str)
@@ -61,6 +64,8 @@ static svn_fs_path_change_kind_t string_to_kind (const char *str)
     return svn_fs_path_change_replace;
   if (strcmp (str, "modify") == 0)
     return svn_fs_path_change_modify;
+  if (strcmp (str, "reset") == 0)
+    return svn_fs_path_change_reset;
   return 0;
 }
 
@@ -405,6 +410,15 @@ get_ideal_changes (const char *txn_id,
       change->text_mod = 1;
       change->prop_mod = 1;
       apr_hash_set (ideal, "/baz", APR_HASH_KEY_STRING, change);
+    }
+  if (strcmp (txn_id, "6") == 0)
+    {
+      change = apr_palloc (pool, sizeof (*change));
+      change->node_rev_id = svn_fs_parse_id ("4.0.6", 5, pool);
+      change->change_kind = svn_fs_path_change_modify;
+      change->text_mod = 0;
+      change->prop_mod = 1;
+      apr_hash_set (ideal, "/fob", APR_HASH_KEY_STRING, change);
     }
   return ideal;
 }

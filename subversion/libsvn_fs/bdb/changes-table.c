@@ -131,8 +131,8 @@ make_change (svn_fs__change_t *change,
    svn_fs_path_change_t CHANGES, collapsing multiple changes into a
    single summarical (is that real word?) change per path. */
 static svn_error_t *
-merge_change (apr_hash_t *changes,
-              svn_fs__change_t *change)
+fold_change (apr_hash_t *changes,
+             svn_fs__change_t *change)
 {
   apr_pool_t *pool = apr_hash_pool_get (changes);
   svn_fs_path_change_t *old_change, *new_change;
@@ -147,20 +147,29 @@ merge_change (apr_hash_t *changes,
          dup the allocation for the path itself. */
       path = change->path;
 
+      /* Sanity check:  only allow NULL node revision ID in the
+         `reset' case. */
+      if ((! change->noderev_id) && (change->kind != svn_fs_path_change_reset))
+        return svn_error_create 
+          (SVN_ERR_FS_CORRUPT, 0, NULL, pool,
+           "Invalid change: missing required node revision ID");
+        
       /* Sanity check:  we should be talking about the same node
          revision ID as our last change except where the last change
          was a deletion. */
-      if ((! svn_fs__id_eq (old_change->node_rev_id, change->noderev_id))
+      if (change->noderev_id
+          && (! svn_fs__id_eq (old_change->node_rev_id, change->noderev_id))
           && (old_change->change_kind != svn_fs_path_change_delete))
         return svn_error_create 
           (SVN_ERR_FS_CORRUPT, 0, NULL, pool,
            "Invalid change ordering: new node revision ID without delete");
 
-      /* Sanity check:  an add or replacement must be the first thing
-         to follow a deletion. */
+      /* Sanity check: an add, replacement, or reset must be the first
+         thing to follow a deletion. */
       if ((old_change->change_kind == svn_fs_path_change_delete)
-          && (! ((change->kind == svn_fs_path_change_add) 
-                 || (change->kind == svn_fs_path_change_replace))))
+          && (! ((change->kind == svn_fs_path_change_replace) 
+                 || (change->kind == svn_fs_path_change_reset)
+                 || (change->kind == svn_fs_path_change_add))))
         return svn_error_create 
           (SVN_ERR_FS_CORRUPT, 0, NULL, pool,
            "Invalid change ordering: non-add change on deleted path");
@@ -168,15 +177,34 @@ merge_change (apr_hash_t *changes,
       /* Now, merge that change in. */
       switch (change->kind)
         {
+        case svn_fs_path_change_reset:
+          /* A reset here will simply remove the path change from the
+             hash. */
+          old_change = NULL;
+          break;
+
         case svn_fs_path_change_delete:
-          /* A deletion overrules all previous changes. */
-          old_change->change_kind = svn_fs_path_change_delete;
-          old_change->text_mod = change->text_mod;
-          old_change->prop_mod = change->prop_mod;
+          if ((old_change->change_kind == svn_fs_path_change_replace)
+              || (old_change->change_kind == svn_fs_path_change_add))
+            {
+              /* If the path was introduced in this transaction via an
+                 add or replace, and we are deleting it, just remove
+                 the path altogether.  */
+              old_change = NULL;
+            }
+          else
+            {
+              /* A deletion overrules all previous changes. */
+              old_change->change_kind = svn_fs_path_change_delete;
+              old_change->text_mod = change->text_mod;
+              old_change->prop_mod = change->prop_mod;
+            }
           break;
 
         case svn_fs_path_change_add:
         case svn_fs_path_change_replace:
+          /* An add at this point must be following a previous delete,
+             so treat it just like a replace. */
           old_change->change_kind = svn_fs_path_change_replace;
           old_change->node_rev_id = svn_fs__id_copy (change->noderev_id, pool);
           old_change->text_mod = change->text_mod;
@@ -256,7 +284,7 @@ svn_fs__changes_fetch (apr_hash_t **changes_p,
         goto cleanup;
       
       /* ... and merge it with our return hash.  */
-      SVN_ERR (merge_change (changes, change));
+      SVN_ERR (fold_change (changes, change));
 
       /* Advance the cursor to the next record with this same KEY, and
          fetch that record. */

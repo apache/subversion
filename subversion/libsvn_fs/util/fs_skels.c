@@ -267,6 +267,12 @@ is_valid_change_skel (skel_t *skel, svn_fs_path_change_kind_t *kind)
       skel_t *kind_skel = skel->children->next->next->next;
 
       /* check the kind (and return it) */
+      if (svn_fs__matches_atom (kind_skel, "reset"))
+        {
+          if (kind)
+            *kind = svn_fs_path_change_reset;
+          return 1;
+        }
       if (svn_fs__matches_atom (kind_skel, "add"))
         {
           if (kind)
@@ -669,8 +675,10 @@ svn_fs__parse_change_skel (svn_fs__change_t **change_p,
                                  skel->children->next->len);
 
   /* NODE-REV-ID */
-  change->noderev_id = svn_fs_parse_id (skel->children->next->next->data,
-                                        skel->children->next->next->len, pool);
+  if (skel->children->next->next->len)
+    change->noderev_id = svn_fs_parse_id (skel->children->next->next->data,
+                                          skel->children->next->next->len, 
+                                          pool);
 
   /* KIND */
   change->kind = kind;
@@ -1120,6 +1128,9 @@ svn_fs__unparse_change_skel (skel_t **skel_p,
   /* KIND */
   switch (change->kind)
     {
+    case svn_fs_path_change_reset:
+      svn_fs__prepend (svn_fs__str_atom ("reset", pool), skel);
+      break;
     case svn_fs_path_change_add:
       svn_fs__prepend (svn_fs__str_atom ("add", pool), skel);
       break;
@@ -1136,8 +1147,16 @@ svn_fs__unparse_change_skel (skel_t **skel_p,
     }
 
   /* NODE-REV-ID */
-  tmp_str = svn_fs_unparse_id (change->noderev_id, pool);
-  svn_fs__prepend (svn_fs__mem_atom (tmp_str->data, tmp_str->len, pool), skel);
+  if (change->noderev_id)
+    {
+      tmp_str = svn_fs_unparse_id (change->noderev_id, pool);
+      svn_fs__prepend (svn_fs__mem_atom (tmp_str->data, tmp_str->len, pool), 
+                       skel);
+    }
+  else
+    {
+      svn_fs__prepend (svn_fs__mem_atom (NULL, 0, pool), skel);
+    }
 
   /* PATH */
   svn_fs__prepend (svn_fs__str_atom (change->path, pool), skel);

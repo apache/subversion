@@ -64,6 +64,10 @@ detect_changed (apr_hash_t *changed,
 
       switch (change->change_kind)
         {
+        case svn_fs_path_change_reset:
+          action = '\0';
+          break;
+
         case svn_fs_path_change_add:
           action = 'A';
           break;
