@@ -96,11 +96,12 @@ def basic_checkout(sbox):
   url = svntest.main.current_repo_url
   stdout_lines, stderr_lines = svntest.main.run_svn (1, 'checkout', url,
                                                      '-d', wc_dir)
-  if len (stderr_lines) == 0:
-    print "repeat checkout succeeded when should have failed"
+  if len (stderr_lines) != 0:
+    print "repeat checkout failed"
     return 1
 
-  # lambda is restored
+  # lambda is restored, modifications remain, deletes remain scheduled
+  # for deletion although files are restored to the filesystem
   for item in status_list:
     if item[0] == lambda_path:
       item[3]['status'] = '_ '
