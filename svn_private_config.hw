@@ -44,7 +44,7 @@
 
 /* FIXME: */
 #define SVN_CLIENT_DIFF "c:\\progra~1\\cygnus\\cygwin\\bin\\diff.exe"
-#define SVN_CLIENT_DIFF3 "c:\\progra~1\\cygnus\\cygwin\\bin\\diff.exe3"
+#define SVN_CLIENT_DIFF3 "c:\\progra~1\\cygnus\\cygwin\\bin\\diff3.exe"
 
 /* Diff program */
 #ifndef SVN_CLIENT_DIFF
