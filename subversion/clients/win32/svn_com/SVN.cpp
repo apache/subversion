@@ -294,7 +294,7 @@ CSVNWorkingCopy::wc_statuses(BSTR bstrPath, VARIANT_BOOL getAll, SAFEARRAY **pps
 	hash = apr_hash_make(g_pool);
 	error = svn_wc_statuses(hash, W2A(bstrPath),
                                 FALSE, // FIXME: descend or not, rassilon?
-                                FALSE, get_all, g_pool);
+                                get_all, FALSE, FALSE, g_pool);
 	if (error) {
 		hr = convert_err_to_hresult(error);
 		goto Cleanup;
