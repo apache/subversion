@@ -147,6 +147,7 @@ svn_delta_path_driver (const svn_delta_editor_t *editor,
   void *parent_db = NULL, *db = NULL;
   const char *path;
   apr_pool_t *subpool = svn_pool_create (pool);
+  apr_pool_t *iterpool = svn_pool_create (pool);
   dir_stack_t *item = apr_pcalloc (subpool, sizeof (*item));
 
   /* Do nothing if there are no paths. */
@@ -182,7 +183,10 @@ svn_delta_path_driver (const svn_delta_editor_t *editor,
       const char *pdir, *bname;
       const char *common = "";
       size_t common_len;
-      
+
+      /* Clear the iteration pool. */
+      svn_pool_clear (iterpool);
+
       /* Get the next path. */
       path = APR_ARRAY_IDX (paths, i, const char *);
 
@@ -190,7 +194,7 @@ svn_delta_path_driver (const svn_delta_editor_t *editor,
            current one.  For the first iteration, this is just the
            empty string. ***/
       if (i > 0)
-        common = svn_path_get_longest_ancestor (last_path, path, pool);
+        common = svn_path_get_longest_ancestor (last_path, path, iterpool);
       common_len = strlen (common);
 
       /*** Step B - Close any directories between the last path and
@@ -210,10 +214,10 @@ svn_delta_path_driver (const svn_delta_editor_t *editor,
 
       /*** Step C - Open any directories between the common ancestor
            and the parent of the current path. ***/
-      svn_path_split (path, &pdir, &bname, pool);
+      svn_path_split (path, &pdir, &bname, iterpool);
       if (strlen (pdir) > common_len)
         {
-          char *rel = apr_pstrdup (pool, pdir);
+          char *rel = (char *)pdir;
           char *piece = rel + common_len + 1;
 
           while (1)
@@ -263,11 +267,16 @@ svn_delta_path_driver (const svn_delta_editor_t *editor,
            caller opened or added PATH as a directory, that becomes
            our LAST_PATH.  Otherwise, we use PATH's parent
            directory. ***/
+
+      /* NOTE:  The variable LAST_PATH needs to outlive the loop. */
       if (db)
-        last_path = path;
+        last_path = path; /* lives in a pool outside our control. */
       else
-        last_path = pdir;
+        last_path = apr_pstrdup (pool, pdir); /* duping into POOL. */
     }
+
+  /* Destroy the iteration subpool. */
+  svn_pool_destroy (iterpool);
 
   /* Close down any remaining open directory batons. */
   while (db_stack->nelts)

@@ -1646,7 +1646,6 @@ svn_wc_remove_from_revision_control (svn_wc_adm_access_t *adm_access,
   svn_error_t *err;
   svn_boolean_t is_file;
   svn_boolean_t left_something = FALSE;
-  apr_pool_t *subpool = svn_pool_create (pool);
   apr_hash_t *entries = NULL;
   const char *full_path = apr_pstrdup (pool,
                                        svn_wc_adm_access_path (adm_access));
@@ -1663,10 +1662,10 @@ svn_wc_remove_from_revision_control (svn_wc_adm_access_t *adm_access,
       svn_boolean_t text_modified_p;
       full_path = svn_path_join (full_path, name, pool);
 
+      /* Check for local mods. before removing entry */
       if (destroy_wf)
-        /* Check for local mods. before removing entry */
-        SVN_ERR (svn_wc_text_modified_p (&text_modified_p, full_path, FALSE,
-                                         adm_access, subpool));
+        SVN_ERR (svn_wc_text_modified_p (&text_modified_p, full_path, 
+                                         FALSE, adm_access, pool));
 
       /* Remove NAME from PATH's entries file: */
       SVN_ERR (svn_wc_entries_read (&entries, adm_access, TRUE, pool));
@@ -1679,27 +1678,27 @@ svn_wc_remove_from_revision_control (svn_wc_adm_access_t *adm_access,
         const char *svn_thang;
 
         /* Text base. */
-        svn_thang = svn_wc__text_base_path (full_path, 0, subpool);
-        SVN_ERR (svn_io_set_file_read_write (svn_thang, TRUE, subpool));
-        SVN_ERR (remove_file_if_present (svn_thang, subpool));
+        svn_thang = svn_wc__text_base_path (full_path, 0, pool);
+        SVN_ERR (svn_io_set_file_read_write (svn_thang, TRUE, pool));
+        SVN_ERR (remove_file_if_present (svn_thang, pool));
 
         /* Working prop file. */
         SVN_ERR (svn_wc__prop_path (&svn_thang, full_path, adm_access, FALSE,
-                                    subpool));
-        SVN_ERR (svn_io_set_file_read_write (svn_thang, TRUE, subpool));
-        SVN_ERR (remove_file_if_present (svn_thang, subpool));
+                                    pool));
+        SVN_ERR (svn_io_set_file_read_write (svn_thang, TRUE, pool));
+        SVN_ERR (remove_file_if_present (svn_thang, pool));
 
         /* Prop base file. */
         SVN_ERR (svn_wc__prop_base_path (&svn_thang, full_path, adm_access,
-                                         FALSE, subpool));
-        SVN_ERR (svn_io_set_file_read_write (svn_thang, TRUE, subpool));
-        SVN_ERR (remove_file_if_present (svn_thang, subpool));
+                                         FALSE, pool));
+        SVN_ERR (svn_io_set_file_read_write (svn_thang, TRUE, pool));
+        SVN_ERR (remove_file_if_present (svn_thang, pool));
 
         /* wc-prop file. */
         SVN_ERR (svn_wc__wcprop_path (&svn_thang, full_path, adm_access, FALSE,
-                                      subpool));
-        SVN_ERR (svn_io_set_file_read_write (svn_thang, TRUE, subpool));
-        SVN_ERR (remove_file_if_present (svn_thang, subpool));
+                                      pool));
+        SVN_ERR (svn_io_set_file_read_write (svn_thang, TRUE, pool));
+        SVN_ERR (remove_file_if_present (svn_thang, pool));
       }
 
       /* If we were asked to destory the working file, do so unless
@@ -1709,14 +1708,16 @@ svn_wc_remove_from_revision_control (svn_wc_adm_access_t *adm_access,
           if (text_modified_p)  /* Don't kill local mods. */
             return svn_error_create (SVN_ERR_WC_LEFT_LOCAL_MOD, NULL, "");
           else  /* The working file is still present; remove it. */
-            SVN_ERR (remove_file_if_present (full_path, subpool));
+            SVN_ERR (remove_file_if_present (full_path, pool));
         }
 
     }  /* done with file case */
 
   else /* looking at THIS_DIR */
     {
+      apr_pool_t *subpool = svn_pool_create (pool);
       apr_hash_index_t *hi;
+
       /* ### sanity check:  check 2 places for DELETED flag? */
 
       /* Remove self from parent's entries file, but only if parent is
@@ -1746,11 +1747,9 @@ svn_wc_remove_from_revision_control (svn_wc_adm_access_t *adm_access,
       }
       
       /* Recurse on each file and dir entry. */
-      SVN_ERR (svn_wc_entries_read (&entries, adm_access, FALSE, subpool));
+      SVN_ERR (svn_wc_entries_read (&entries, adm_access, FALSE, pool));
       
-      for (hi = apr_hash_first (subpool, entries); 
-           hi;
-           hi = apr_hash_next (hi))
+      for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
         {
           const void *key;
           void *val;
@@ -1796,15 +1795,11 @@ svn_wc_remove_from_revision_control (svn_wc_adm_access_t *adm_access,
               else 
                 {
                   SVN_ERR (svn_wc_adm_retrieve (&entry_access, adm_access,
-                                                entrypath, pool));
+                                                entrypath, subpool));
 
-                  err = 
-                    svn_wc_remove_from_revision_control (entry_access,
-                                                         SVN_WC_ENTRY_THIS_DIR,
-                                                         destroy_wf,
-                                                         cancel_func,
-                                                         cancel_baton,
-                                                         subpool);
+                  err = svn_wc_remove_from_revision_control 
+                    (entry_access, SVN_WC_ENTRY_THIS_DIR, destroy_wf,
+                     cancel_func, cancel_baton, subpool);
 
                   if (err && (err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD))
                     {
@@ -1815,6 +1810,7 @@ svn_wc_remove_from_revision_control (svn_wc_adm_access_t *adm_access,
                     return err;
                 }
             }
+          svn_pool_clear (subpool);
         }
 
       /* At this point, every directory below this one has been
@@ -1843,13 +1839,13 @@ svn_wc_remove_from_revision_control (svn_wc_adm_access_t *adm_access,
               svn_error_clear (err);
             }
         }
-    }  /* end of directory case */
 
-  svn_pool_destroy (subpool);
+      svn_pool_destroy (subpool);
+
+    }  /* end of directory case */
 
   if (left_something)
     return svn_error_create (SVN_ERR_WC_LEFT_LOCAL_MOD, NULL, "");
-
   else
     return SVN_NO_ERROR;
 }

@@ -312,7 +312,6 @@ log_do_merge (struct log_runner *loggy,
   const char *left, *right;
   const char *left_label, *right_label, *target_label;
   enum svn_wc_merge_outcome_t merge_outcome;
-  apr_pool_t *subpool = svn_pool_create (loggy->pool);
   apr_hash_t *config;
 
   /* NAME is the basename of our merge_target.  Pull out LEFT and RIGHT. */
@@ -336,11 +335,11 @@ log_do_merge (struct log_runner *loggy,
 
   /* Convert the 3 basenames into full paths. */
   left = svn_path_join (svn_wc_adm_access_path (loggy->adm_access), left,
-                        subpool);
+                        loggy->pool);
   right = svn_path_join (svn_wc_adm_access_path (loggy->adm_access), right,
-                         subpool);
+                         loggy->pool);
   name = svn_path_join (svn_wc_adm_access_path (loggy->adm_access), name,
-                        subpool);
+                        loggy->pool);
 
   /* Read the configuration. */
   SVN_ERR (svn_config_get_config (&config, loggy->pool));
@@ -348,9 +347,9 @@ log_do_merge (struct log_runner *loggy,
   /* Now do the merge with our full paths. */
   SVN_ERR (svn_wc_merge (left, right, name, loggy->adm_access,
                          left_label, right_label, target_label,
-                         FALSE, &merge_outcome, loggy->diff3_cmd, subpool));
+                         FALSE, &merge_outcome, loggy->diff3_cmd, 
+                         loggy->pool));
 
-  svn_pool_destroy (subpool);
   return SVN_NO_ERROR;
 }
 
@@ -1080,6 +1079,9 @@ start_handler (void *userData, const char *eltname, const char **atts)
   /* All elements use the `name' attribute, so grab it now. */
   const char *name = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_NAME, atts);
 
+  /* Clear the per-log-item pool. */
+  svn_pool_clear (loggy->pool);
+
   if (strcmp (eltname, "wc-log") == 0)   /* ignore expat pacifier */
     return;
   else if (! name)
@@ -1175,7 +1177,7 @@ svn_wc__run_log (svn_wc_adm_access_t *adm_access,
 
   parser = svn_xml_make_parser (loggy, start_handler, NULL, NULL, pool);
   loggy->adm_access = adm_access;
-  loggy->pool = pool;
+  loggy->pool = svn_pool_create (pool);
   loggy->parser = parser;
   loggy->entries_modified = FALSE;
   loggy->diff3_cmd = diff3_cmd;
@@ -1226,7 +1228,7 @@ svn_wc__run_log (svn_wc_adm_access_t *adm_access,
     {
       apr_hash_t *entries;
       SVN_ERR (svn_wc_entries_read (&entries, loggy->adm_access, TRUE, pool));
-      SVN_ERR(svn_wc__entries_write (entries, loggy->adm_access, pool));
+      SVN_ERR (svn_wc__entries_write (entries, loggy->adm_access, pool));
     }
 
   /* Check for a 'killme' file in the administrative area. */
