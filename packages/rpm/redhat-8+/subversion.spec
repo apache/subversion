@@ -1,4 +1,4 @@
-%define apache_version 2.0.46-0.2
+%define apache_version 2.0.47-0.1
 %define apr_version 0.9.4
 %define neon_version 0.23.9
 %define apache_dir /usr
@@ -97,6 +97,9 @@ Summary: Tools for Subversion
 Tools for Subversion.
 
 %changelog
+* Thu Jul 10 2003 David Summers <david@summersoft.fay.ar.us> 0.25.0-6434
+- Apache 2.0.47 now recommended because of security issues.
+
 * Sat Jun 28 2003 David Summers <david@summersoft.fay.ar.us> 0.24.2-6365
 - RedHat decided to break out apr and apr-util separately from apache
   (httpd package).
