@@ -176,9 +176,6 @@ typedef struct
   /* size of the fulltext data represented by this delta window. */
   apr_size_t size;
 
-  /* MD5 checksum of the data */
-  unsigned char checksum[MD5_DIGESTSIZE];
-
   /* represenatation-key to use when needed source data for
      undeltification. */
   const char *rep_key;

@@ -1490,7 +1490,6 @@ svn_fs__rep_deltify (svn_fs_t *fs,
         chunk->version = new_target_baton.version;
         chunk->string_key = ww->key;
         chunk->size = ww->text_len;
-        memcpy (&(chunk->checksum), digest, MD5_DIGESTSIZE);
         chunk->rep_key = source;
 
         /* Add this chunk to the array. */

@@ -285,24 +285,21 @@ representation.  Here are the two forms currently recognized:
        Each OFFSET indicates the point in the fulltext that this
        element reconstructs, and WINDOW says how to reconstruct it:
 
-       WINDOW ::= (DIFF SIZE CHECKSUM REP-KEY [REP-OFFSET]) ;
+       WINDOW ::= (DIFF SIZE () REP-KEY [REP-OFFSET]) ;
        DIFF   ::= ("svndiff" VERSION STRING-KEY)
 
        Notice that a WINDOW holds only metadata.  REP-KEY says what
        the window should be applied against, or none if this is a
        self-compressed delta; SIZE says how much data this window
-       reconstructs; CHECKSUM is a checksum on just the portion of
-       fulltext reconstructed by this window; VERSION says what
-       version of the svndiff format is being used (currently only
-       version 0 is supported); and STRING-KEY says which string
-       contains the actual svndiff data (there is no diff data held
-       directly in the representations table, of course).
+       reconstructs; VERSION says what version of the svndiff format
+       is being used (currently only version 0 is supported); and
+       STRING-KEY says which string contains the actual svndiff data
+       (there is no diff data held directly in the representations
+       table, of course).
 
-       CHECKSUM is always present, but for compatibility with older
-       versions of Subversion, if all its bytes are 0 it is treated as
-       if correct.  (For historical reasons, the compatibility mode
-       for the rep header checksum is absence, while for the delta
-       window checksum, it is zeroed data.  Go figure.)
+       The empty list after SIZE in a WINDOW is a fossil from an
+       abandoned plan to store per-window checksums; it should be
+       ignored, and will probably go in the next schema change.
 
        Note also that REP-KEY might refer to a representation that
        itself requires undeltification.  We use a delta combiner to
@@ -329,7 +326,7 @@ Let's work through an example node revision:
 
 The entry for key "2345" in `representations' is:
 
-   (("delta" TXN CHECKSUM) (0 (("svndiff" 0 "1729") 65 CHECKSUM "2343")))
+   (("delta" TXN CHECKSUM) (0 (("svndiff" 0 "1729") 65 () "2343")))
 
 and the entry for key "2343" in `representations' is:
 
@@ -807,7 +804,7 @@ Representations:
          REPRESENTATION ::= FULLTEXT | DELTA ;
                FULLTEXT ::= (HEADER STRING-KEY) ;
                   DELTA ::= (HEADER (OFFSET WINDOW) ...) ;
-                 WINDOW ::= (DIFF SIZE CHECKSUM REP-KEY [REP-OFFSET]) ;
+                 WINDOW ::= (DIFF SIZE () REP-KEY [REP-OFFSET]) ;
                    DIFF ::= ("svndiff" VERSION STRING-KEY) ;
                 VERSION ::= number ;
                 REP-KEY ::= atom ;
