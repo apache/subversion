@@ -342,12 +342,12 @@ svn_fs__dag_walk_predecessors (dag_node_t *node,
 
 /* Trail body for svn_fs__dag_init_fs. */
 static svn_error_t *
-txn_body_dag_init_fs (void *fs_baton, trail_t *trail)
+txn_body_dag_init_fs (void *baton, trail_t *trail)
 {
   svn_fs__node_revision_t noderev;
   svn_fs__revision_t revision;
   svn_revnum_t rev = SVN_INVALID_REVNUM;
-  svn_fs_t *fs = fs_baton;
+  svn_fs_t *fs = trail->fs;
   svn_string_t date;
   const char *txn_id;
   const char *copy_id;
@@ -372,7 +372,8 @@ txn_body_dag_init_fs (void *fs_baton, trail_t *trail)
     return svn_error_createf 
       (SVN_ERR_FS_CORRUPT, 0,
        "initial copy id not '0' in filesystem '%s'", fs->path);
-  SVN_ERR (svn_fs__bdb_create_copy (copy_id, fs, NULL, NULL, root_id, trail));
+  SVN_ERR (svn_fs__bdb_create_copy (fs, copy_id, NULL, NULL, root_id, 
+                                    svn_fs__copy_kind_real, trail));
 
   /* Link it into filesystem revision 0. */
   revision.txn_id = txn_id;
@@ -395,7 +396,7 @@ txn_body_dag_init_fs (void *fs_baton, trail_t *trail)
 svn_error_t *
 svn_fs__dag_init_fs (svn_fs_t *fs)
 {
-  return svn_fs__retry_txn (fs, txn_body_dag_init_fs, fs, fs->pool);
+  return svn_fs__retry_txn (fs, txn_body_dag_init_fs, NULL, fs->pool);
 }
 
 
@@ -1039,14 +1040,56 @@ svn_fs__dag_delete (dag_node_t *parent,
 
 
 svn_error_t *
+svn_fs__dag_remove_node (svn_fs_t *fs,
+                         const svn_fs_id_t *id,
+                         const char *txn_id,
+                         trail_t *trail)
+{
+  dag_node_t *node;
+  svn_fs__node_revision_t *noderev;
+
+  /* Fetch the node. */
+  SVN_ERR (svn_fs__dag_get_node (&node, fs, id, trail));
+
+  /* If immutable, do nothing and return immediately. */
+  if (! svn_fs__dag_check_mutable (node, txn_id))
+    return svn_error_createf (SVN_ERR_FS_NOT_MUTABLE, NULL, 
+                              "Attempted removal of immutable node");
+
+  /* Get a fresh node-revision. */
+  SVN_ERR (svn_fs__bdb_get_node_revision (&noderev, fs, id, trail));
+
+  /* Delete any mutable property representation. */
+  if (noderev->prop_key)
+    SVN_ERR (svn_fs__delete_rep_if_mutable (fs, noderev->prop_key,
+                                            txn_id, trail));
+  
+  /* Delete any mutable data representation. */
+  if (noderev->data_key)
+    SVN_ERR (svn_fs__delete_rep_if_mutable (fs, noderev->data_key, 
+                                            txn_id, trail));
+
+  /* Delete any mutable edit representation (files only). */
+  if (noderev->edit_key)
+    SVN_ERR (svn_fs__delete_rep_if_mutable (fs, noderev->edit_key, 
+                                            txn_id, trail));
+
+  /* Delete the node revision itself. */
+  SVN_ERR (svn_fs__delete_node_revision (fs, id, trail));
+  
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
 svn_fs__dag_delete_if_mutable (svn_fs_t *fs,
                                const svn_fs_id_t *id,
                                const char *txn_id,
                                trail_t *trail)
 {
   dag_node_t *node;
-  svn_fs__node_revision_t *noderev;
 
+  /* Get the node. */
   SVN_ERR (svn_fs__dag_get_node (&node, fs, id, trail));
 
   /* If immutable, do nothing and return immediately. */
@@ -1081,27 +1124,7 @@ svn_fs__dag_delete_if_mutable (svn_fs_t *fs,
 
   /* ... then delete the node itself, after deleting any mutable
      representations and strings it points to. */
-
-  /* Get a fresh node-revision. */
-  SVN_ERR (svn_fs__bdb_get_node_revision (&noderev, fs, id, trail));
-
-  /* Delete any mutable property representation. */
-  if (noderev->prop_key)
-    SVN_ERR (svn_fs__delete_rep_if_mutable (fs, noderev->prop_key,
-                                            txn_id, trail));
-  
-  /* Delete any mutable data representation. */
-  if (noderev->data_key)
-    SVN_ERR (svn_fs__delete_rep_if_mutable (fs, noderev->data_key, 
-                                            txn_id, trail));
-
-  /* Delete any mutable edit representation (files only). */
-  if (noderev->edit_key)
-    SVN_ERR (svn_fs__delete_rep_if_mutable (fs, noderev->edit_key, 
-                                            txn_id, trail));
-
-  /* Delete the node revision itself. */
-  SVN_ERR (svn_fs__delete_node_revision (fs, id, trail));
+  SVN_ERR (svn_fs__dag_remove_node (fs, id, txn_id, trail));
   
   return SVN_NO_ERROR;
 }
@@ -1426,9 +1449,9 @@ svn_fs__dag_copy (dag_node_t *to_node,
          about the copy to the `copies' table, using the COPY_ID we
          reserved above.  */
       SVN_ERR (svn_fs__bdb_create_copy 
-               (copy_id, fs, 
+               (fs, copy_id, 
                 svn_fs__canonicalize_abspath (from_path, trail->pool), 
-                from_txn_id, id, trail));
+                from_txn_id, id, svn_fs__copy_kind_real, trail));
 
       /* Finally, add the COPY_ID to the transaction's list of copies
          so that, if this transaction is aborted, the `copies' table
@@ -1443,49 +1466,6 @@ svn_fs__dag_copy (dag_node_t *to_node,
   /* Set the entry in to_node to the new id. */
   SVN_ERR (svn_fs__dag_set_entry (to_node, entry, id, txn_id, trail));
 
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_fs__dag_copied_from (svn_revnum_t *rev_p,
-                         const char **path_p,
-                         dag_node_t *node,
-                         trail_t *trail)
-{
-  svn_fs__node_revision_t *noderev;
-  const svn_fs_id_t *id = svn_fs__dag_get_id (node), *pred_id;
-  
-  /* Initialize the return values to mean "not a copy". */
-  *rev_p = SVN_INVALID_REVNUM;
-  *path_p = NULL;
-  
-  SVN_ERR (get_node_revision (&noderev, node, trail));
-  if ((pred_id = noderev->predecessor_id))
-    {
-      const char *id_copy_id = svn_fs__id_copy_id (id);
-      const char *pred_copy_id = svn_fs__id_copy_id (pred_id);
-      
-      /* If NODE's copy id differs from that of its predecessor... */
-      if (strcmp (id_copy_id, pred_copy_id))
-        {
-          /* ... then NODE was either the target of a copy operation,
-             a copied subtree item.  We examine the actual copy record
-             to determine which is the case.  */
-          svn_fs__copy_t *copy;
-          SVN_ERR (svn_fs__bdb_get_copy (&copy, svn_fs__dag_get_fs (node),
-                                         id_copy_id, trail));
-          if (svn_fs__id_eq (copy->dst_noderev_id, id))
-            {
-
-              *path_p = copy->src_path;
-              SVN_ERR (svn_fs__txn_get_revision (rev_p, 
-                                                 svn_fs__dag_get_fs (node),
-                                                 copy->src_txn_id, trail));
-            }
-        }
-    }
-  
   return SVN_NO_ERROR;
 }
 
@@ -1538,16 +1518,10 @@ svn_fs__dag_commit_txn (svn_revnum_t *new_rev,
                         const char *txn_id,
                         trail_t *trail)
 {
-  dag_node_t *root;
   svn_fs__revision_t revision;
-  svn_fs__transaction_t *transaction;
   svn_string_t date;
 
-  SVN_ERR (svn_fs__dag_txn_root (&root, fs, txn_id, trail));
-
-  /* Add new revision entry to `revisions' table, copying the
-     transaction's property list.  */
-  SVN_ERR (svn_fs__bdb_get_txn (&transaction, fs, txn_id, trail));
+  /* Add new revision entry to `revisions' table. */
   revision.txn_id = txn_id;
   if (new_rev)
     *new_rev = SVN_INVALID_REVNUM;

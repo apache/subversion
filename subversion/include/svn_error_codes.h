@@ -479,6 +479,14 @@ SVN_ERROR_START
               SVN_ERR_FS_CATEGORY_START + 30,
               "Berkeley DB deadlock error")
 
+  SVN_ERRDEF (SVN_ERR_FS_TRANSACTION_DEAD,
+              SVN_ERR_FS_CATEGORY_START + 31,
+              "Transaction is dead")
+
+  SVN_ERRDEF (SVN_ERR_FS_TRANSACTION_NOT_DEAD,
+              SVN_ERR_FS_CATEGORY_START + 32,
+              "Transaction is not dead")
+
   /* repos errors */
 
   SVN_ERRDEF (SVN_ERR_REPOS_LOCKED,

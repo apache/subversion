@@ -392,7 +392,6 @@ svn_fs_txn_root (svn_fs_root_t **root_p,
 struct revision_root_args
 {
   svn_fs_root_t **root_p;
-  svn_fs_t *fs;
   svn_revnum_t rev;
 };
 
@@ -405,8 +404,8 @@ txn_body_revision_root (void *baton,
   dag_node_t *root_dir;
   svn_fs_root_t *root;
 
-  SVN_ERR (svn_fs__dag_revision_root (&root_dir, args->fs, args->rev, trail));
-  root = make_revision_root (args->fs, args->rev, root_dir, trail->pool);
+  SVN_ERR (svn_fs__dag_revision_root (&root_dir, trail->fs, args->rev, trail));
+  root = make_revision_root (trail->fs, args->rev, root_dir, trail->pool);
 
   *args->root_p = root;
   return SVN_NO_ERROR;
@@ -425,8 +424,7 @@ svn_fs_revision_root (svn_fs_root_t **root_p,
   SVN_ERR (svn_fs__check_fs (fs));
 
   args.root_p = &root;
-  args.fs     = fs;
-  args.rev    = rev;
+  args.rev = rev;
   SVN_ERR (svn_fs__retry_txn (fs, txn_body_revision_root, &args, pool));
 
   *root_p = root;
@@ -622,8 +620,11 @@ typedef struct parent_path_t
   /* The parent of NODE, or zero if NODE is the root directory.  */
   struct parent_path_t *parent;
 
-  /* The copy ID inheritence style and (optional) source path. */
+  /* The copy ID inheritence style. */
   copy_id_inherit_t copy_inherit;
+
+  /* If copy ID inheritence style is copy_id_inherit_new, this is the
+     path which should be implicitly copied; otherwise, this is NULL. */
   const char *copy_src_path;
 
 } parent_path_t;
@@ -1022,9 +1023,10 @@ make_path_mutable (svn_fs_root_t *root,
       if (inherit == copy_id_inherit_new)
         {
           const svn_fs_id_t *new_node_id = svn_fs__dag_get_id (clone);
-          SVN_ERR (svn_fs__bdb_create_copy (copy_id, fs, copy_src_path, 
+          SVN_ERR (svn_fs__bdb_create_copy (fs, copy_id, copy_src_path, 
                                             svn_fs__id_txn_id (node_id),
-                                            new_node_id, trail));
+                                            new_node_id, 
+                                            svn_fs__copy_kind_soft, trail));
           SVN_ERR (svn_fs__add_txn_copy (fs, txn_id, copy_id, trail));
         }
     }
@@ -1230,7 +1232,6 @@ svn_fs_node_created_path (const char **created_path,
 
 
 struct node_kind_args {
-  svn_fs_t *fs;
   const svn_fs_id_t *id;
   svn_node_kind_t kind; /* OUT parameter */
 };
@@ -1242,7 +1243,7 @@ txn_body_node_kind (void *baton, trail_t *trail)
   struct node_kind_args *args = baton;
   dag_node_t *node;
 
-  SVN_ERR (svn_fs__dag_get_node (&node, args->fs, args->id, trail));
+  SVN_ERR (svn_fs__dag_get_node (&node, trail->fs, args->id, trail));
   args->kind = svn_fs__dag_node_kind (node);
   
   return SVN_NO_ERROR;
@@ -1263,7 +1264,6 @@ node_kind (svn_node_kind_t *kind_p,
     
   /* Use the node id to get the real kind. */
   args.id = node_id;
-  args.fs = svn_fs_root_fs (root);
   SVN_ERR (svn_fs__retry_txn (root->fs, txn_body_node_kind, &args, pool));
 
   *kind_p = args.kind;
@@ -1543,8 +1543,6 @@ struct deltify_committed_args
 
 struct txn_deltify_args
 {
-  svn_fs_t *fs;
-
   /* The target is what we're deltifying. */
   const svn_fs_id_t *tgt_id;
 
@@ -1567,8 +1565,8 @@ txn_body_txn_deltify (void *baton, trail_t *trail)
   struct txn_deltify_args *args = baton;
   dag_node_t *tgt_node, *base_node;
 
-  SVN_ERR (svn_fs__dag_get_node (&tgt_node, args->fs, args->tgt_id, trail));
-  SVN_ERR (svn_fs__dag_get_node (&base_node, args->fs, args->base_id, trail));
+  SVN_ERR (svn_fs__dag_get_node (&tgt_node, trail->fs, args->tgt_id, trail));
+  SVN_ERR (svn_fs__dag_get_node (&base_node, trail->fs, args->base_id, trail));
   SVN_ERR (svn_fs__dag_deltify (tgt_node, base_node, args->is_dir, trail));
 
   return SVN_NO_ERROR;
@@ -1577,7 +1575,6 @@ txn_body_txn_deltify (void *baton, trail_t *trail)
 
 struct txn_pred_count_args
 {
-  svn_fs_t *fs;
   const svn_fs_id_t *id;
   int pred_count;
 };
@@ -1589,27 +1586,18 @@ txn_body_pred_count (void *baton, trail_t *trail)
   svn_fs__node_revision_t *noderev;
   struct txn_pred_count_args *args = baton;
 
-  SVN_ERR (svn_fs__bdb_get_node_revision
-           (&noderev, args->fs, args->id, trail));
-
+  SVN_ERR (svn_fs__bdb_get_node_revision (&noderev, trail->fs, 
+                                          args->id, trail));
   args->pred_count = noderev->predecessor_count;
-
   return SVN_NO_ERROR;
 }
 
 
 struct txn_pred_id_args
 {
-  svn_fs_t *fs;
-
-  /* The node id of for we want the predecessor. */
-  const svn_fs_id_t *id;
-
-  /* The returned predecessor id. */
-  const svn_fs_id_t *pred_id;
-
-  /* The pool in which to allocate pred_id. */
-  apr_pool_t *pool;
+  const svn_fs_id_t *id;      /* The node id of for we want the predecessor. */
+  const svn_fs_id_t *pred_id; /* The returned predecessor id. */
+  apr_pool_t *pool;           /* The pool in which to allocate pred_id. */
 };
 
 
@@ -1619,7 +1607,7 @@ txn_body_pred_id (void *baton, trail_t *trail)
   svn_fs__node_revision_t *nr;
   struct txn_pred_id_args *args = baton;
 
-  SVN_ERR (svn_fs__bdb_get_node_revision (&nr, args->fs, args->id, trail));
+  SVN_ERR (svn_fs__bdb_get_node_revision (&nr, trail->fs, args->id, trail));
   if (nr->predecessor_id)
     args->pred_id = svn_fs__id_copy (nr->predecessor_id, args->pool);
   else
@@ -1713,7 +1701,6 @@ deltify_mutable (svn_fs_t *fs,
     const svn_fs_id_t *pred_id;
     struct txn_pred_count_args tpc_args;
     
-    tpc_args.fs = fs;
     tpc_args.id = id;
     SVN_ERR (svn_fs__retry_txn (fs, txn_body_pred_count, &tpc_args, pool));
     pred_count = tpc_args.pred_count;
@@ -1756,7 +1743,6 @@ deltify_mutable (svn_fs_t *fs,
           {
             struct txn_pred_id_args tpi_args;
 
-            tpi_args.fs = fs;
             tpi_args.id = pred_id;
             tpi_args.pool = pool;
             SVN_ERR (svn_fs__retry_txn (fs, txn_body_pred_id, 
@@ -1771,7 +1757,6 @@ deltify_mutable (svn_fs_t *fs,
           }
 
         /* Finally, do the deltification. */
-        td_args.fs = fs;
         td_args.tgt_id = pred_id;
         td_args.base_id = id;
         td_args.is_dir = is_dir;
@@ -2788,7 +2773,6 @@ svn_fs_merge (const char **conflict_p,
 struct rev_get_txn_id_args
 {
   const char **txn_id;
-  svn_fs_t *fs;
   svn_revnum_t revision;
 };
 
@@ -2797,7 +2781,7 @@ static svn_error_t *
 txn_body_rev_get_txn_id (void *baton, trail_t *trail)
 {
   struct rev_get_txn_id_args *args = baton;
-  return svn_fs__rev_get_txn_id (args->txn_id, args->fs, 
+  return svn_fs__rev_get_txn_id (args->txn_id, trail->fs, 
                                  args->revision, trail);
 }
 
@@ -2814,7 +2798,6 @@ svn_fs_deltify_revision (svn_fs_t *fs,
   SVN_ERR (svn_fs_revision_root (&root, fs, revision, pool));
 
   args.txn_id = &txn_id;
-  args.fs = fs;
   args.revision = revision;
   SVN_ERR (svn_fs__retry_txn (fs, txn_body_rev_get_txn_id, &args, pool));
 
@@ -2884,7 +2867,6 @@ svn_fs_dir_entries (apr_hash_t **table_p,
           apr_hash_this (hi, NULL, NULL, &val);
           entry = val;
           nk_args.id = entry->id;
-          nk_args.fs = fs;
           SVN_ERR (svn_fs__retry_txn (fs, txn_body_node_kind, &nk_args, pool));
           entry->kind = nk_args.kind;
         }
@@ -3173,11 +3155,42 @@ static svn_error_t *
 txn_body_copied_from (void *baton, trail_t *trail)
 {
   struct copied_from_args *args = baton;
+  const svn_fs_id_t *node_id, *pred_id;
   dag_node_t *node;
+  svn_fs_t *fs = svn_fs_root_fs (args->root);
 
+  /* Clear the return variables. */
+  args->result_path = NULL;
+  args->result_rev = SVN_INVALID_REVNUM;
+
+  /* Fetch the NODE in question. */
   SVN_ERR (get_dag (&node, args->root, args->path, trail));
-  SVN_ERR (svn_fs__dag_copied_from (&(args->result_rev), &(args->result_path),
-                                    node, trail));
+  node_id = svn_fs__dag_get_id (node);
+
+  /* Check the node's predecessor-ID.  If it doesn't have one, it
+     isn't a copy. */
+  SVN_ERR (svn_fs__dag_get_predecessor_id (&pred_id, node, trail));
+  if (! pred_id)
+    return SVN_NO_ERROR;
+
+  /* If NODE's copy-ID is the same as that of its predecessor... */
+  if (svn_fs__key_compare (svn_fs__id_copy_id (node_id), 
+                           svn_fs__id_copy_id (pred_id)) != 0)
+    {
+      /* ... then NODE was either the target of a copy operation,
+         a copied subtree item.  We examine the actual copy record
+         to determine which is the case.  */
+      svn_fs__copy_t *copy;
+      SVN_ERR (svn_fs__bdb_get_copy (&copy, fs, 
+                                     svn_fs__id_copy_id (node_id), trail));
+      if ((copy->kind == svn_fs__copy_kind_real)
+          && svn_fs__id_eq (copy->dst_noderev_id, node_id))
+        {
+          args->result_path = copy->src_path;
+          SVN_ERR (svn_fs__txn_get_revision (&(args->result_rev), fs,
+                                             copy->src_txn_id, trail));
+        }
+    }
   return SVN_NO_ERROR;
 }
 
@@ -3985,28 +3998,54 @@ svn_error_t *svn_fs_node_history (svn_fs_history_t **history_p,
   /* Okay, all seems well.  Build our history object and return it. */
   *history_p = assemble_history (svn_fs_root_fs (root),
                                  svn_fs__canonicalize_abspath (path, pool),
-                                 root->rev, 0, NULL, SVN_INVALID_REVNUM, pool);
+                                 root->rev, FALSE, NULL, 
+                                 SVN_INVALID_REVNUM, pool);
   return SVN_NO_ERROR;
 }
 
 
 /* Examine the PARENT_PATH structure chain to determine how copy IDs
    would be doled out in the event that PARENT_PATH was made mutable.
-   Return the ID of the copy that last affected PARENT_PATH.
-
-   NOTE:  All items in the PARENT_PATH chain are assumed to be immutable! 
+   Return the ID of the copy that last affected PARENT_PATH (and the
+   COPY itself, if we've already fetched it).
 */
-static const char *
-examine_copy_inheritance (parent_path_t *parent_path)
+static svn_error_t *
+examine_copy_inheritance (const char **copy_id,
+                          svn_fs__copy_t **copy,
+                          svn_fs_t *fs,
+                          parent_path_t *parent_path,
+                          trail_t *trail)
 {
+  /* The default response -- our current copy ID, and no fetched COPY. */
+  *copy_id = svn_fs__id_copy_id (svn_fs__dag_get_id (parent_path->node));
+  *copy = NULL;
+
   /* If we have no parent (we are looking at the root node), or if
      this node is supposed to inherit from itself, return that fact. */
-  if ((! parent_path->parent) 
-      || (parent_path->copy_inherit == copy_id_inherit_self))
-    return svn_fs__id_copy_id (svn_fs__dag_get_id (parent_path->node));
+  if (! parent_path->parent) 
+    return SVN_NO_ERROR;
+
+  /* We could be a branch destination (which would answer our question
+     altogether)!  But then, again, we might just have been modified
+     in this revision, so all bets are off. */
+  if (parent_path->copy_inherit == copy_id_inherit_self)
+    {
+      /* A copy ID of "0" means we've never been branched.  Therefore,
+         therefore there are no copies relevant to our history. */
+      if (((*copy_id)[0] == '0') && ((*copy_id)[1] == '\0'))
+        return SVN_NO_ERROR;
+
+      /* Get the COPY record.  If it was a real copy (not an implicit
+         one), we have our answer.  Otherwise, we fall through to the
+         recursive case. */
+      SVN_ERR (svn_fs__bdb_get_copy (copy, fs, *copy_id, trail));
+      if ((*copy)->kind != svn_fs__copy_kind_soft)
+        return SVN_NO_ERROR;
+    }
 
   /* Otherwise, our answer is dependent upon our parent. */
-  return examine_copy_inheritance (parent_path->parent);
+  return examine_copy_inheritance (copy_id, copy, fs, 
+                                   parent_path->parent, trail);
 }
 
 
@@ -4037,6 +4076,8 @@ txn_body_history_prev (void *baton, trail_t *trail)
   struct revision_root_args rr_args;
   svn_boolean_t reported = history->is_interesting;
   const char *txn_id;
+  svn_fs__copy_t *copy = NULL;
+  svn_boolean_t retry = FALSE;
 
   /* Initialize our return value. */
   *prev_history = NULL;
@@ -4056,7 +4097,6 @@ txn_body_history_prev (void *baton, trail_t *trail)
   
   /* Construct a ROOT for the current revision. */
   rr_args.root_p = &root;
-  rr_args.fs = fs;
   rr_args.rev = revision;
   SVN_ERR (txn_body_revision_root (&rr_args, trail));
 
@@ -4084,7 +4124,7 @@ txn_body_history_prev (void *baton, trail_t *trail)
              need now to do so) ... */
           *prev_history = assemble_history (fs, 
                                             apr_pstrdup (retpool, commit_path),
-                                            commit_rev, 1, NULL, 
+                                            commit_rev, TRUE, NULL, 
                                             SVN_INVALID_REVNUM, retpool);
           return SVN_NO_ERROR;
         }
@@ -4114,7 +4154,8 @@ txn_body_history_prev (void *baton, trail_t *trail)
   /* Calculate a possibly relevant copy ID if we don't have one
      already. */
   if (! end_copy_id)
-    end_copy_id = examine_copy_inheritance (parent_path);
+    SVN_ERR (examine_copy_inheritance (&end_copy_id, &copy, fs, 
+                                       parent_path, trail));
 
   /* Initialize some state variables. */
   src_path = NULL;
@@ -4129,13 +4170,13 @@ txn_body_history_prev (void *baton, trail_t *trail)
      then we need to report a copy.  */
   if (svn_fs__key_compare (svn_fs__id_copy_id (node_id), end_copy_id) != 0)
     {
-      svn_fs__copy_t *copy;
       const char *remainder;
       dag_node_t *dst_node;
       const char *copy_dst;
 
-      /* Get the current COPY record. */
-      SVN_ERR (svn_fs__bdb_get_copy (&copy, fs, end_copy_id, trail));
+      /* Get the COPY record if we haven't already fetched it. */
+      if (! copy)
+        SVN_ERR (svn_fs__bdb_get_copy (&copy, fs, end_copy_id, trail));
 
       /* Figure out the destination path of the copy operation. */
       SVN_ERR (svn_fs__dag_get_node (&dst_node, fs, 
@@ -4167,39 +4208,32 @@ txn_body_history_prev (void *baton, trail_t *trail)
                     svn_fs__id_txn_id (copy->dst_noderev_id), trail));
           src_path = svn_path_join (copy->src_path, remainder, 
                                     trail->pool);
-        }
-      else
-        {
-          /* Something bad has happened.  We expected to find a
-             relevant copy at END_COPY_ID, and we didn't.  Either this
-             repository is goofed up, or cmpilato is.  */
-          abort();
+          if (copy->kind == svn_fs__copy_kind_soft)
+            retry = TRUE;
         }
     }
 
-  if (src_path && SVN_IS_VALID_REVNUM (src_rev))
+  /* If we calculated a copy source path and revision, and the
+     copy source revision doesn't pre-date a revision in which we
+     *know* our node was modified, we'll make a 'copy-style' history
+     object. */
+  if (src_path && SVN_IS_VALID_REVNUM (src_rev) && (src_rev >= commit_rev))
     {
-      *prev_history = assemble_history (fs, apr_pstrdup (retpool, path), 
-                                        dst_rev, 1, src_path, src_rev, 
-                                        retpool);
       /* It's possible for us to find a copy location that is the same
          as the history point we've just reported.  If that happens,
          we simply need to take another trip through this history
          search. */
       if ((dst_rev == revision) && reported)
-        {
-          struct history_prev_args prev_args;
-          prev_args.prev_history_p = prev_history;
-          prev_args.history = *prev_history;
-          prev_args.cross_copies = args->cross_copies;
-          prev_args.pool = args->pool;
-          SVN_ERR (txn_body_history_prev (&prev_args, trail));
-        }
+        retry = TRUE;
+
+      *prev_history = assemble_history (fs, apr_pstrdup (retpool, path), 
+                                        dst_rev, retry ? FALSE : TRUE, 
+                                        src_path, src_rev, retpool);
     }
   else
     {
       *prev_history = assemble_history (fs, apr_pstrdup (retpool, commit_path),
-                                        commit_rev, 1, NULL, 
+                                        commit_rev, TRUE, NULL, 
                                         SVN_INVALID_REVNUM, retpool);
     }
 
@@ -4230,13 +4264,21 @@ svn_error_t *svn_fs_history_prev (svn_fs_history_t **prev_history_p,
     }
   else
     {
-      /* Get a trail, and get to work. */
       struct history_prev_args args;
-      args.prev_history_p = &prev_history;
-      args.history = history;
-      args.cross_copies = cross_copies;
-      args.pool = pool;
-      SVN_ERR (svn_fs__retry_txn (fs, txn_body_history_prev, &args, pool));
+      prev_history = history;
+
+      while (1)
+        {
+          /* Get a trail, and get to work. */
+          
+          args.prev_history_p = &prev_history;
+          args.history = prev_history;
+          args.cross_copies = cross_copies;
+          args.pool = pool;
+          SVN_ERR (svn_fs__retry_txn (fs, txn_body_history_prev, &args, pool));
+          if ((! prev_history) || (prev_history->is_interesting))
+            break;
+        }
     }
 
   *prev_history_p = prev_history;
