@@ -214,6 +214,8 @@ In either case the mark gets the face
 
 (defvar svn-status-module-name nil "A nice short name for the actual project.")
 
+(defvar svn-status-load-state-before-svn-status t "Load the ++psvn.state file, before running svn-status")
+
 ;;; hooks
 (defvar svn-log-edit-mode-hook nil "Hook run when entering `svn-log-edit-mode'.")
 (defvar svn-log-edit-done-hook nil "Hook run after commiting files via svn.")
@@ -423,6 +425,9 @@ If ARG then pass the -u argument to `svn status'."
                      "Run dired instead? "))
         (dired dir))
     (setq dir (file-name-as-directory dir))
+    (when svn-status-load-state-before-svn-status
+      (unless (string= dir (car svn-status-directory-history))
+        (svn-status-load-state t)))
     (setq svn-status-directory-history (delete dir svn-status-directory-history))
     (add-to-list 'svn-status-directory-history dir)
     (if (string= (buffer-name) "*svn-status*")
@@ -2917,7 +2922,7 @@ When called with a prefix argument, ask the user for the revision."
     (save-buffer)
     (kill-buffer buf)))
 
-(defun svn-status-load-state ()
+(defun svn-status-load-state (&optional no-error)
   (interactive)
   (let ((file (concat (svn-status-base-dir) "++psvn.state")))
     (if (file-readable-p file)
@@ -2932,9 +2937,9 @@ When called with a prefix argument, ask the user for the revision."
                 (nth 1 (assoc "elide-list" svn-status-options)))
           (setq svn-status-module-name
                 (nth 1 (assoc "module-name" svn-status-options)))
-          (when svn-status-elided-list (svn-status-apply-elide-list)))
-      (error "%s is not readable." file))
-    (message "Loaded %s" file)))
+          (when (and (interactive-p) svn-status-elided-list (svn-status-apply-elide-list)))
+          (message "psvn.el: loaded %s" file))
+      (unless no-error (error "psvn.el: %s is not readable." file)))))
 
 (defun svn-status-toggle-sort-status-buffer ()
   "If you turn off sorting, you can speed up M-x svn-status.
