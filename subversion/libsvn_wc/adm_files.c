@@ -504,6 +504,7 @@ static svn_error_t *
 open_adm_file (apr_file_t **handle,
                const char *path,
                const char *extension,
+               apr_fileperms_t protection,
                apr_int32_t flags,
                apr_pool_t *pool,
                ...)
@@ -545,7 +546,7 @@ open_adm_file (apr_file_t **handle,
       va_end (ap);
     }
 
-  err = svn_io_file_open (handle, path, flags, APR_OS_DEFAULT, pool);
+  err = svn_io_file_open (handle, path, flags, protection, pool);
   if (err)
     {
       /* Oddly enough, APR will set *HANDLE even if the open failed.
@@ -618,7 +619,7 @@ svn_wc__open_adm_file (apr_file_t **handle,
                        apr_int32_t flags,
                        apr_pool_t *pool)
 {
-  return open_adm_file (handle, path, NULL, flags, pool, fname, NULL);
+  return open_adm_file (handle, path, NULL, APR_OS_DEFAULT, flags, pool, fname, NULL);
 }
 
 
@@ -666,8 +667,8 @@ svn_wc__open_empty_file (apr_file_t **handle,
                          apr_pool_t *pool)
 {
   const char *parent_path = svn_path_remove_component_nts (path, pool);
-  return open_adm_file (handle, parent_path, NULL, APR_READ, pool,
-                        SVN_WC__ADM_EMPTY_FILE, NULL);
+  return open_adm_file (handle, parent_path, NULL, APR_OS_DEFAULT, APR_READ,
+                        pool, SVN_WC__ADM_EMPTY_FILE, NULL);
 }
 
 
@@ -690,8 +691,8 @@ svn_wc__open_text_base (apr_file_t **handle,
 {
   const char *parent_path, *base_name;
   svn_path_split_nts (path, &parent_path, &base_name, pool);
-  return open_adm_file (handle, parent_path, SVN_WC__BASE_EXT, flags, pool,
-                        SVN_WC__ADM_TEXT_BASE, base_name, NULL);
+  return open_adm_file (handle, parent_path, SVN_WC__BASE_EXT, APR_OS_DEFAULT,
+                        flags, pool, SVN_WC__ADM_TEXT_BASE, base_name, NULL);
 }
 
 
@@ -715,7 +716,7 @@ svn_wc__open_auth_file (apr_file_t **handle,
                         apr_int32_t flags,
                         apr_pool_t *pool)
 {
-  return open_adm_file (handle, path, NULL, flags, pool,
+  return open_adm_file (handle, path, NULL, APR_UREAD, flags, pool,
                         SVN_WC__ADM_AUTH_DIR, auth_filename, NULL);
 }
 
@@ -780,38 +781,38 @@ svn_wc__open_props (apr_file_t **handle,
   else if (base)
     {
       if (kind == svn_node_dir)
-        return open_adm_file (handle, parent_dir, NULL, flags, pool,
-                              SVN_WC__ADM_DIR_PROP_BASE, NULL);
+        return open_adm_file (handle, parent_dir, NULL, APR_OS_DEFAULT, flags,
+                              pool, SVN_WC__ADM_DIR_PROP_BASE, NULL);
       else
-        return open_adm_file (handle, parent_dir, SVN_WC__BASE_EXT, flags,
-                              pool, SVN_WC__ADM_PROP_BASE, base_name,
-                              NULL);
+        return open_adm_file (handle, parent_dir, SVN_WC__BASE_EXT,
+                              APR_OS_DEFAULT, flags, pool,
+                              SVN_WC__ADM_PROP_BASE, base_name, NULL);
     }
   else if (wcprops)
     {
       if (kind == svn_node_dir)
-        return open_adm_file (handle, parent_dir, NULL, flags, pool,
-                              SVN_WC__ADM_DIR_WCPROPS, NULL);
+        return open_adm_file (handle, parent_dir, NULL, APR_OS_DEFAULT, flags,
+                              pool, SVN_WC__ADM_DIR_WCPROPS, NULL);
       else
         {
           return open_adm_file
             (handle, parent_dir,
              ((wc_format_version <= SVN_WC__OLD_PROPNAMES_VERSION) ?
-              NULL : SVN_WC__WORK_EXT),
+              NULL : SVN_WC__WORK_EXT), APR_OS_DEFAULT,
              flags, pool, SVN_WC__ADM_WCPROPS, base_name, NULL);
         }
     }
   else /* plain old property file */
     {
       if (kind == svn_node_dir)
-        return open_adm_file (handle, parent_dir, NULL, flags, pool,
-                              SVN_WC__ADM_DIR_PROPS, NULL);
+        return open_adm_file (handle, parent_dir, NULL, APR_OS_DEFAULT, flags,
+                              pool, SVN_WC__ADM_DIR_PROPS, NULL);
       else
         {
           return open_adm_file
             (handle, parent_dir,
              ((wc_format_version <= SVN_WC__OLD_PROPNAMES_VERSION) ?
-              NULL : SVN_WC__WORK_EXT),
+              NULL : SVN_WC__WORK_EXT), APR_OS_DEFAULT,
              flags, pool, SVN_WC__ADM_PROPS, base_name, NULL);
         }
     }
