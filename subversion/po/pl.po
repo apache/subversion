@@ -34,8 +34,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2004-09-13 12:44+0200\n"
-"PO-Revision-Date: 2004-09-14 08:20+0200\n"
+"POT-Creation-Date: 2004-09-14 08:26+0200\n"
+"PO-Revision-Date: 2004-09-14 10:48+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Polish <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -2517,7 +2517,7 @@ msgstr "Nie ma takiego atrybutu"
 
 #: include/svn_error_codes.h:849
 msgid "No auth file path available"
-msgstr "Brak ścieżki do pliku uwierzytelniajacego"
+msgstr "Brak ścieżki do pliku uwierzytelniającego"
 
 #: include/svn_error_codes.h:854
 msgid "Incompatible library version"
@@ -2562,7 +2562,7 @@ msgstr "Opis zmian zawiera jakiś błąd"
 #: libsvn_client/add.c:348
 #, c-format
 msgid "Error during recursive add of '%s'"
-msgstr "Bład podczas rekursywnego dodawania '%s'"
+msgstr "Błąd podczas rekursywnego dodawania '%s'"
 
 #: libsvn_client/add.c:358
 #, c-format
@@ -2645,7 +2645,7 @@ msgstr "Ścieżka '%s' już istnieje"
 #: libsvn_client/commit.c:688
 #, c-format
 msgid "'%s' is a reserved name and cannot be imported"
-msgstr "'%s' to nazwa zastrzeżona i nie może zostać zaimportowany"
+msgstr "'%s' to nazwa zastrzeżona i nie może zostać zaimportowana"
 
 #: libsvn_client/commit.c:766 libsvn_client/copy.c:541
 msgid "Commit failed (details follow):"
@@ -3007,11 +3007,11 @@ msgstr "Element '%s' nie ma URL"
 msgid "No commits in repository."
 msgstr "Brak zapisów w repozytorium"
 
-#: libsvn_client/ls.c:48 libsvn_client/ls.c:122
+#: libsvn_client/ls.c:49 libsvn_client/ls.c:126
 msgid "No get_dir() available for URL schema"
 msgstr "Schemat URL nie obsługuje get_dir()"
 
-#: libsvn_client/ls.c:129 libsvn_client/ls.c:136
+#: libsvn_client/ls.c:133 libsvn_client/ls.c:140
 #, c-format
 msgid "URL '%s' non-existent in that revision"
 msgstr "URL '%s' nie istnieje w tej wersji"
@@ -5449,4 +5449,3 @@ msgstr "wyeksportowano\n"
 #, c-format
 msgid "'%s' not versioned, and not exported\n"
 msgstr "%s' nie podlegające zarządzaniu wersjami i nie eksportowane\n"
-
