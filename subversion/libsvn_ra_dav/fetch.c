@@ -928,9 +928,6 @@ svn_error_t *svn_ra_dav__get_file(void *session_baton,
   svn_ra_session_t *ras = (svn_ra_session_t *) session_baton;
   const char *url = svn_path_url_add_component (ras->url, path, ras->pool);
 
-  if ((! stream) && (! props))
-    return SVN_NO_ERROR;
-
   /* If the revision is invalid (head), then we're done.  Just fetch
      the public URL, because that will always get HEAD. */
   if ((! SVN_IS_VALID_REVNUM(revision)) && (fetched_rev == NULL))

@@ -645,9 +645,6 @@ svn_ra_local__get_file (void *session_baton,
   svn_ra_local__session_baton_t *sbaton = session_baton;
   const char *abs_path = sbaton->fs_path;
 
-  if ((! stream) && (! props))
-    return SVN_NO_ERROR;
-
   /* ### Not sure if this counts as a workaround or not.  The
      session baton uses the empty string to mean root, and not
      sure that should change.  However, it would be better to use
