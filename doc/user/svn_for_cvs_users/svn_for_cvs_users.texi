@@ -92,13 +92,13 @@ allows you to do many things off-line:
 
 @itemize @bullet
 @item 'svn status'
-   shows you local modifications (see below)
+shows you local modifications (see below)
 @item 'svn diff'
-   shows you the details of your modifications
+shows you the details of your modifications
 @item 'svn ci'
-   sends differences to the repository (CVS only sends fulltexts!)
+sends differences to the repository (CVS only sends fulltexts!)
 @item 'svn revert'
-   removes your modifications
+removes your modifications
 @end itemize
 
 This last subcommand is new; it will not only remove local mods, but
@@ -242,15 +242,15 @@ Here's what this means to you:
 
 @itemize @bullet
 @item
-     the 'svn add' and 'svn rm' commands work on directories now, just
-     as they work on files.  However, these commands do *not* cause
-     any kind of immediate change in the repository.  Instead, the
-     working directory is recursively "scheduled" for addition or
-     deletion.  No repository changes happen until you commit.
+the 'svn add' and 'svn rm' commands work on directories now, just
+as they work on files.  However, these commands do *not* cause
+any kind of immediate change in the repository.  Instead, the
+working directory is recursively "scheduled" for addition or
+deletion.  No repository changes happen until you commit.
 @item
-     Directories aren't dumb containers anymore;  they have revision
-     numbers like files.  (Or more properly, it's correct to talk
-     about "directory foo/ in revision 5".)
+Directories aren't dumb containers anymore;  they have revision
+numbers like files.  (Or more properly, it's correct to talk
+about "directory foo/ in revision 5".)
 @end itemize
 
 Let's talk more about that last point.  Directory versioning is a Hard

@@ -661,13 +661,13 @@ For the initial release of Subversion,
 
 @itemize @bullet
 @item
-  The filesystem will be implemented as a library on Unix.
+The filesystem will be implemented as a library on Unix.
 @item
-  The filesystem's data will probably be stored in a collection of .db
-  files, using the Berkeley Database library.@footnote{In the future, of
-  course, contributors are free modify the Subversion filesystem to
-  operate with more powerful SQL database.}  (For more information, see
-  @uref{http://www.sleepycat.com, Sleepycat Software}.)
+The filesystem's data will probably be stored in a collection of .db
+files, using the Berkeley Database library.@footnote{In the future, of
+course, contributors are free modify the Subversion filesystem to
+operate with more powerful SQL database.}  (For more information, see
+@uref{http://www.sleepycat.com, Sleepycat Software}.)
 @end itemize
 
 
