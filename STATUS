@@ -15,19 +15,14 @@ and mention the thread below.
 
 Candidate changes:
 
-   * r8066, r8376, r8515 and r8516
-     Update this branch to use the current Windows installer setup.
-	 Justification: The current Windows binaries and files will not
-	 install correctly without this revisions
-	 Notes: This revisions was the ones that the 0.37.0 version of the
-	 Windows installer used. The 0.37.0 is also the only one so far
-	 without any bugreports or complains.
-	 Votes:
-	   +1: josander
-	   +0:
-	   -0:
-	   -1:
-	 
+  * r8066, r8376, r8515 and r8516
+    Update this branch to use the current Windows installer setup.
+    Justification: Current Windows install broken without these revisions
+    Notes: Thse revisions were what the 0.37.0 version of the Windows
+           installer used.  The 0.37.0 version is also the only one so
+           far without any bugreports or complains. 
+    Votes:
+      +1: josander
 
 
 Status of 1.0.1:
