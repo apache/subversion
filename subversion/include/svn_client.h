@@ -1117,8 +1117,13 @@ svn_client_ls (apr_hash_t **dirents,
 
 /** Output the contents of a file in a repository to a stream.
  *
- * Output the content of file identified by @a url and @a revision to
- * the stream @a out.
+ * Output the content of file identified by @a path_or_url and @a
+ * revision to the stream @a out.
+ *
+ * If @a path_or_url is not a local path, then if @a revision is of
+ * kind @c svn_opt_revision_previous (or some other kind that requires
+ * a local path), an error will be returned, because the desired
+ * revision cannot be determined.
  *
  * Use the authentication baton cached in @a ctx to authenticate against the 
  * repository.
@@ -1129,10 +1134,26 @@ svn_client_ls (apr_hash_t **dirents,
  */
 svn_error_t *
 svn_client_cat (svn_stream_t* out,
-                const char *url,
+                const char *path_or_url,
                 const svn_opt_revision_t *revision,
                 svn_client_ctx_t *ctx,
                 apr_pool_t *pool);
+
+
+
+/*** Converting paths to URLs. ***/
+
+/* Set @a *url to the url for @a path_or_url.
+
+   If @a path_or_url is already a url, set @a *url to @a path_or_url.
+
+   If @a path_or_url is a versioned item, set @a *url to @a
+   path_or_url's entry url.  If @a path_or_url is a unversioned (has
+   no entry), set @a *url to null. */
+svn_error_t *
+svn_client_url_from_path (const char **url,
+                          const char *path_or_url,
+                          apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

@@ -65,14 +65,8 @@ svn_cl__cat (apr_getopt_t *os,
     {
       const char *target = ((const char **) (targets->elts))[i];
       svn_stream_t *out = svn_stream_from_aprfile (std_out, pool);
-      const char *URL;
 
-      SVN_ERR (svn_cl__get_url_from_target (&URL, target, pool));
-      if (! URL)
-        return svn_error_createf (SVN_ERR_ENTRY_MISSING_URL, NULL,
-                                  "'%s' has no URL", target);
-
-      SVN_ERR (svn_client_cat (out, URL, &(opt_state->start_revision),
+      SVN_ERR (svn_client_cat (out, target, &(opt_state->start_revision),
                                ctx, pool));
     }
 

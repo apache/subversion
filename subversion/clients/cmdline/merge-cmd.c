@@ -92,7 +92,7 @@ svn_cl__merge (apr_getopt_t *os,
 
       /* the first path becomes both of the 'sources' */
       source = ((const char **)(targets->elts))[0];
-      SVN_ERR (svn_cl__get_url_from_target(&url, source, pool));
+      SVN_ERR (svn_client_url_from_path(&url, source, pool));
       if (! url)
         return svn_error_createf (SVN_ERR_ENTRY_MISSING_URL, NULL,
                                   "'%s' has no URL", source);
