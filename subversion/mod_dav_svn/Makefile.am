@@ -8,7 +8,7 @@
 noinst_LTLIBRARIES = libmod_dav_svn.la
 
 libmod_dav_svn_la_SOURCES = mod_dav_svn.c deadprops.c liveprops.c repos.c \
-				version.c
+				version.c util.c
 
 INCLUDES = -I../include $(APACHE_INCLUDES)
 

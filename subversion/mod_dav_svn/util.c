@@ -1,5 +1,5 @@
 /*
- * dav_svn.h: types, functions, macros for the DAV/SVN Apache module
+ * util.c: some handy utilities functions
  *
  * ================================================================
  * Copyright (c) 2000 CollabNet.  All rights reserved.
@@ -50,71 +50,23 @@
  * sourceXchange project sponsored by SapphireCreek.
  */
 
-
-#ifndef DAV_SVN_H
-#define DAV_SVN_H
-
-#include <httpd.h>
-#include <util_xml.h>
-#include <apr_tables.h>
 #include <mod_dav.h>
 
 #include "svn_error.h"
+#include "dav_svn.h"
 
 
-void dav_svn_gather_propsets(apr_array_header_t *uris);
-int dav_svn_find_liveprop(request_rec *r, const char *ns_uri, const char *name,
-                          const dav_hooks_liveprop **hooks);
-void dav_svn_insert_all_liveprops(request_rec *r, const dav_resource *resource,
-                                  int insvalue, ap_text_header *phdr);
-void dav_svn_register_uris(apr_pool_t *p);
-
-/* our hooks structures; these are gathered into a dav_provider */
-extern const dav_hooks_repository dav_svn_hooks_repos;
-extern const dav_hooks_propdb dav_svn_hooks_propdb;
-extern const dav_hooks_liveprop dav_svn_hooks_liveprop;
-extern const dav_hooks_vsn dav_svn_hooks_vsn;
-
-/* for the repository referred to by this request, where is the SVN FS? */
-const char *dav_svn_get_fs_path(request_rec *r);
-
-/* SPECIAL URI
-
-   SVN needs to create many types of "pseudo resources" -- resources
-   that don't correspond to the users' files/directories in the
-   repository. Specifically, these are:
-
-   - working resources
-   - activities
-   - version resources
-   - version history resources
-
-   Each of these will be placed under a portion of the URL namespace
-   that defines the SVN repository. For example, let's say the user
-   has configured an SVN repository at http://host/svn/repos. The
-   special resources could be configured to live at .../$svn/ under
-   that repository. Thus, an activity might be located at
-   http://host/svn/repos/$svn/act/1234.
-
-   The special URI is configurable on a per-server basis and defaults
-   to "$svn".
-
-   NOTE: the special URI is RELATIVE to the "root" of the
-   repository. The root is generally available only to
-   dav_svn_get_resource(). This is okay, however, because we can cache
-   the root_dir when the resource structure is built.
-*/
-
-/* Return the special URI to be used for this resource. */
-const char *dav_svn_get_special_uri(request_rec *r);
-
-
-/* convert an svn_error_t into a dav_error, possibly pushing a message. use
-   the provided HTTP status for the DAV errors */
 dav_error * dav_svn_convert_err(const svn_error_t *serr, int status,
-                                const char *message);
+                                const char *message)
+{
+    dav_error *derr;
 
-#endif /* DAV_SVN_H */
+    derr = dav_new_error(serr->pool, status, serr->apr_err, serr->message);
+    if (message != NULL)
+        derr = dav_push_error(serr->pool, status, serr->apr_err,
+                              message, derr);
+    return derr;
+}
 
 
 /* 

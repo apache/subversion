@@ -70,9 +70,18 @@
 
 /* per-server configuration */
 typedef struct {
-    const char *special_uri;
+  const char *special_uri;
 
 } dav_svn_server_conf;
+
+/* per-dir configuration */
+typedef struct {
+  const char *fs_path;          /* path to the SVN FS */
+
+} dav_svn_dir_conf;
+
+#define INHERIT_VALUE(parent, child, field) \
+		((child)->field ? (child)->field : (parent)->field)
 
 /* Note: the "dav_svn" prefix is mandatory */
 extern module MODULE_VAR_EXPORT dav_svn_module;
@@ -98,10 +107,40 @@ static void *dav_svn_merge_server_config(apr_pool_t *p,
 
     newconf = apr_pcalloc(p, sizeof(*newconf));
 
-    newconf->special_uri =
-        child->special_uri ? child->special_uri : parent->special_uri;
+    newconf->special_uri = INHERIT_VALUE(parent, child, special_uri);
 
     return newconf;
+}
+
+static void *dav_svn_create_dir_config(apr_pool_t *p, char *dir)
+{
+    /* NOTE: dir==NULL creates the default per-dir config */
+
+    return apr_pcalloc(p, sizeof(dav_svn_dir_conf));
+}
+
+static void *dav_svn_merge_dir_config(apr_pool_t *p,
+                                      void *base, void *overrides)
+{
+    dav_svn_dir_conf *parent = base;
+    dav_svn_dir_conf *child = overrides;
+    dav_svn_dir_conf *newconf;
+
+    newconf = apr_pcalloc(p, sizeof(*newconf));
+
+    newconf->fs_path = INHERIT_VALUE(parent, child, fs_path);
+
+    return newconf;
+}
+
+static const char *dav_svn_path_cmd(cmd_parms *cmd, void *config,
+                                    const char *arg1)
+{
+    dav_svn_dir_conf *conf = config;
+
+    conf->fs_path = apr_pstrdup(cmd->pool, arg1);
+
+    return NULL;
 }
 
 static const char *dav_svn_special_uri_cmd(cmd_parms *cmd, void *config,
@@ -135,6 +174,17 @@ static const char *dav_svn_special_uri_cmd(cmd_parms *cmd, void *config,
     return NULL;
 }
 
+
+/** Accessor functions for the module's configuration state **/
+
+const char *dav_svn_get_fs_path(request_rec *r)
+{
+    dav_svn_dir_conf *conf;
+
+    conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
+    return conf->fs_path;
+}
+
 const char *dav_svn_get_special_uri(request_rec *r)
 {
     dav_svn_server_conf *conf;
@@ -144,14 +194,22 @@ const char *dav_svn_get_special_uri(request_rec *r)
     return conf->special_uri ? conf->special_uri : SVN_DEFAULT_SPECIAL_URI;
 }
 
+
+/** Module framework stuff **/
 
 static const command_rec dav_svn_cmds[] =
 {
-    /* per server */
-    AP_INIT_TAKE1("SVNSpecialURI", dav_svn_special_uri_cmd, NULL, RSRC_CONF,
-                  "specify the URI component for special Subversion "
-                  "resources"),
-    { NULL }
+  /* per directory/location */
+  AP_INIT_TAKE1("SVNPath", dav_svn_path_cmd, NULL, ACCESS_CONF,
+                "specifies the location in the filesystem for a Subversion "
+                "repository's files."),
+
+  /* per server */
+  AP_INIT_TAKE1("SVNSpecialURI", dav_svn_special_uri_cmd, NULL, RSRC_CONF,
+                "specify the URI component for special Subversion "
+                "resources"),
+
+  { NULL }
 };
 
 static const dav_provider dav_svn_provider =
@@ -182,8 +240,8 @@ static void register_hooks(void)
 module MODULE_VAR_EXPORT dav_svn_module =
 {
     STANDARD20_MODULE_STUFF,
-    NULL,			/* dir config creater */
-    NULL,			/* dir merger --- default is to override */
+    dav_svn_create_dir_config,	/* dir config creater */
+    dav_svn_merge_dir_config,	/* dir merger --- default is to override */
     dav_svn_create_server_config,	/* server config */
     dav_svn_merge_server_config,	/* merge server config */
     dav_svn_cmds,		/* command table */
