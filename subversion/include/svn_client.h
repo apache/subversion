@@ -725,7 +725,7 @@ svn_client_status (svn_revnum_t *result_rev,
  * given log message more than once).
  *
  * @a targets contains either a URL followed by zero or more relative
- * paths, or a list working copy paths (as <tt> const char *</tt>'s
+ * paths, or a list of working copy paths (as <tt> const char *</tt>'s
  * for which log messages are desired.  The repository info is
  * determined by taking the common prefix of the target entries' URLs.
  * @a receiver is invoked only on messages whose revisions involved a
