@@ -430,8 +430,8 @@ In addition to the GNU standards, Subversion uses these conventions:
       width is not standardized enough, and anyway it's easier to
       manually adjust indentation that uses spaces.
 
-   *  Stay within 80 columns, the width of a minimal standard display
-      window.
+   *  Restrict lines to 79 columns, so that code will display well in a
+      minimal standard display window.
 
    *  Signify internal variables by two underscores after the prefix.
       That is, when a symbol must (for technical reasons) reside in the
