@@ -52,9 +52,10 @@ svn_cl__switch (apr_getopt_t *os,
      switch to ("switch_url"). */
   SVN_ERR (svn_cl__args_to_target_array (&targets, os, opt_state, 
                                          FALSE, pool));
-  if (targets->nelts == 0)
+  if ((targets->nelts < 0) || (targets->nelts > 2))
     return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, 0, pool, "");
 
+  /* Get the required SWITCH_URL and the optional TARGET arguments. */
   if (targets->nelts == 1)
     {
       switch_url = ((const char **) (targets->elts))[0];
@@ -62,8 +63,8 @@ svn_cl__switch (apr_getopt_t *os,
     }
   else
     {
-      target = ((const char **) (targets->elts))[0];
       switch_url = ((const char **) (targets->elts))[1];
+      target = ((const char **) (targets->elts))[0];
     }
 
   /* Validate the switch_url */
@@ -71,6 +72,9 @@ svn_cl__switch (apr_getopt_t *os,
     return svn_error_createf 
       (SVN_ERR_BAD_URL, 0, NULL, pool, 
        "`%s' does not appear to be a URL", switch_url);
+
+  /* Canonicalize the URL. */
+  switch_url = svn_path_canonicalize_nts (switch_url, pool);
 
   /* Validate the target */
   SVN_ERR (svn_wc_entry (&entry, target, FALSE, pool));

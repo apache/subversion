@@ -25,7 +25,7 @@ Valid options:
   --xml                    : output in xml
 
 switch (sw): Update working copy to mirror a new URL
-usage: switch [TARGET] REPOS_URL
+usage: switch REPOS_URL [TARGET]
 
    Note:  this is the way to move a working copy to a new branch.
 

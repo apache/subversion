@@ -147,7 +147,7 @@ def run_and_verify_checkout(URL, wc_dir_name, output_tree, disk_tree,
   output, errput = main.run_svn (None, 'co',
                                  '--username', main.wc_author,
                                  '--password', main.wc_passwd,
-                                 URL, '-d', wc_dir_name)
+                                 URL, wc_dir_name)
   mytree = tree.build_tree_from_checkout (output)
 
   # Verify actual output against expected output.
