@@ -154,8 +154,8 @@ typedef enum svn_errno_t {
      file already exists. */
   SVN_ERR_FS_ALREADY_EXISTS,
 
-  /* You tried to remove the root directory of a filesystem
-     revision. */
+  /* You tried to remove the root directory of a filesystem revision,
+     or create another node named /.  */
   SVN_ERR_FS_ROOT_DIR,
 
   /* The transaction could not be committed, because of a conflict with
