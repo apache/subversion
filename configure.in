@@ -277,7 +277,7 @@ fi
 if test "$svn_lib_neon" = "yes"; then
   BUILD_RULES="$BUILD_RULES dav-lib"
   INSTALL_STATIC_RULES="$INSTALL_STATIC_RULES install-dav-lib"
-  INSTALL_RULES="$INSTALL_RULES install-dav-lib"
+  INSTALL_RULES="`echo $INSTALL_RULES | sed 's/install-lib/install-dav-lib install-lib/'`"
 fi
 
 AC_SUBST(BUILD_RULES)
