@@ -140,6 +140,9 @@ APXS = @APXS@
 
 PYTHON = @PYTHON@
 
+JDK = @JDK@
+JAVAC = @JAVAC@
+
 ECHO_C = @ECHO_C@
 ECHO_N = @ECHO_N@
 
@@ -359,7 +362,7 @@ install-swig-py-ext: swig-assert-available
 swig-py-ext-clean:
 	rm -rf $(SWIG_BUILD_DIR)/python/build
 
-swig-java-ext: swig-assert-available mkdir-init
+swig-java-ext: swig-assert-available mkdir-init java
 	cd $(SWIG_SRC_DIR)/java/org/tigris/subversion/swig; \
         for source in $(SWIG_SRC_DIR)/*.i; do \
             target="`echo -n $$source | sed 's!^.*/\(.*\)\.i$$!\1.c!'`"; \
@@ -372,6 +375,10 @@ swig-java-ext: swig-assert-available mkdir-init
 
 swig-java-ext-clean:
 	rm -rf $(SWIG_SRC_DIR)/java
+
+java:
+	@$(MAKE) -C $(abs_srcdir)/subversion/bindings/java "JAVAC=$(JAVAC)"
+
 
 ### Build a tarball.
 dist: 
