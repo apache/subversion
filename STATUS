@@ -53,7 +53,7 @@ Candidate changes:
     copy when the switch was interrupted.
     Justification: simple fix; very annoying when WC gets messed up.
     Votes:
-       +1: julianfoad, philip
+       +1: julianfoad, philip, cmpilato
 
   * r8962
     Followup to r8842 ('svn st -v' shows unwanted status of externals).
@@ -61,7 +61,7 @@ Candidate changes:
     The consequence of this bug is that 'svn st' might not descend into
     externals in particular cases.
     Votes:
-      +1: cmpilato
+      +1: cmpilato, kfogel, sussman
 
   * r8966
     Use cpio to generate tarballs.
@@ -76,7 +76,7 @@ Candidate changes:
     Justification: Don't waste space in the tarball by having duplictate
     images. 
     Votes:
-      +1: kfogel
+      +1: kfogel, cmpilato, sussman
 
   * Issue #1775
     Allow reverting a replaced file with no properties.
@@ -86,6 +86,7 @@ Candidate changes:
     Notes: Attachment 312 is a backported version of this fix.  Which was
     applied to trunk in r8981. 
     Votes:
+      +1: sussman, cmpilato, kfogel
 
   * r8985
     Added fedora-1 and wbel-3 RPM package directories.
