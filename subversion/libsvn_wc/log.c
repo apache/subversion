@@ -886,7 +886,6 @@ log_do_committed (struct log_runner *loggy,
              sname,
              (SVN_WC__ENTRY_MODIFY_REVISION 
               | SVN_WC__ENTRY_MODIFY_SCHEDULE 
-              | SVN_WC__ENTRY_MODIFY_EXISTENCE
               | SVN_WC__ENTRY_MODIFY_CONFLICTED
               | SVN_WC__ENTRY_MODIFY_COPIED
               | SVN_WC__ENTRY_MODIFY_TEXT_TIME
@@ -895,8 +894,8 @@ log_do_committed (struct log_runner *loggy,
              atoi (revstr),
              svn_node_none,
              svn_wc_schedule_normal,
-             FALSE,
-             FALSE,
+             FALSE, /* conflicted */
+             FALSE, /* copied */
              text_time,
              prop_time,
              NULL, NULL,
@@ -939,14 +938,13 @@ log_do_committed (struct log_runner *loggy,
                     (pdir,
                      basename,
                      (SVN_WC__ENTRY_MODIFY_SCHEDULE 
-                      | SVN_WC__ENTRY_MODIFY_EXISTENCE
                       | SVN_WC__ENTRY_MODIFY_COPIED
                       | SVN_WC__ENTRY_MODIFY_FORCE),
                      SVN_INVALID_REVNUM,
                      svn_node_dir,
                      svn_wc_schedule_normal,
-                     FALSE,
-                     FALSE,
+                     FALSE, /* conflicted */
+                     FALSE, /* copied */
                      0,
                      0,
                      NULL, NULL,

@@ -541,7 +541,7 @@ svn_error_t *svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
 #define SVN_WC__ENTRY_MODIFY_REVISION      0x0001
 #define SVN_WC__ENTRY_MODIFY_KIND          0x0002
 #define SVN_WC__ENTRY_MODIFY_SCHEDULE      0x0004
-#define SVN_WC__ENTRY_MODIFY_EXISTENCE     0x0008
+/* unused                                  0x0008 */
 #define SVN_WC__ENTRY_MODIFY_CONFLICTED    0x0010
 #define SVN_WC__ENTRY_MODIFY_COPIED        0x0020
 #define SVN_WC__ENTRY_MODIFY_TEXT_TIME     0x0040
@@ -578,8 +578,6 @@ svn_error_t *svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
    - SCHEDULE is the scheduled action pending on this entry.  When the
      _MODIFY_FORCE flag is set, valid values are
      svn_wc_schedule_normal, _add, _delete, and _replace.
-
-   - EXISTENCE is the current state of existence of this entry.
 
    - CONFLICTED reflects whether or not this entry stands in a state
      of conflict with the repository.
