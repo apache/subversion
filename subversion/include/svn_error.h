@@ -214,6 +214,10 @@ typedef enum svn_errno_t {
   /* the specified URI refers to our namespace, but was malformed */
   SVN_ERR_APMOD_MALFORMED_URI,
 
+  /* A test in the test suite failed.  The test suite uses this
+     error internally.  */
+  SVN_ERR_TEST_FAILED,
+
 
   /* simple placeholder to mark the highest SVN error. subtle benny: we don't
      have to worry about trailing commas (on errors above) as we add them */

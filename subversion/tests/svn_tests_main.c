@@ -35,7 +35,7 @@ extern apr_pool_t *pool;
    begin and end with NULL: */
 
 /* An array of function pointers (all of our sub-tests) */
-extern int (*test_funcs[])(const char **msg);
+extern svn_error_t *(*test_funcs[])(const char **msg);
 
 /* ================================================================= */
 
@@ -60,37 +60,31 @@ get_array_size (void)
 static int
 do_test_num (const char *progname, int test_num)
 {
-  int retval;
+  svn_error_t *err;
   int array_size = get_array_size();
   const char *msg = 0;  /* the message this individual test prints out */
 
   /* Check our array bounds! */
   if ((test_num > array_size) || (test_num <= 0))
     {
-      char *err_msg = (char *) apr_psprintf (pool, "%s %2d: NO SUCH TEST",
-                                             progname, test_num);
-      printf ("FAIL: ");
-      printf ("%s\n", err_msg);
-
+      printf ("FAIL: %s: THERE IS NO TEST NUMBER %2d", progname, test_num);
       return 1;  /* BAIL, this test number doesn't exist. */
     }
 
   /* Do test */
-  retval = test_funcs[test_num](&msg);
+  err = test_funcs[test_num](&msg);
 
-  /* Did the test set the message?  */
-  if (! msg)
-    msg = "(test did not provide name)";
+  /* If we got an error, print it out.  */
+  if (err)
+    svn_handle_error (err, stdout, 0);
 
-  if (! retval)
-    printf ("PASS: ");
-  else
-    printf ("FAIL: ");
+  printf ("%s: %s %2d: %s\n", 
+          err ? "FAIL" : "PASS",
+          progname,
+          test_num, 
+          msg ? msg : "(test did not provide name)");
 
-  /* Pretty print results */
-  printf ("%s %2d: %s\n", progname, test_num, msg);
-
-  return retval;
+  return err != SVN_NO_ERROR;
 }
 
 

@@ -67,7 +67,7 @@ Instead, your code should define an externally visible array
 
     /* The test table.  */
 
-    int (*test_funcs[]) (const char **msg) = {
+    svn_error_t *(*test_funcs[]) (const char **msg) = {
       0,
       test_a,
       test_b,
@@ -83,11 +83,12 @@ the array.
 
 Each test function has the following type:
 
-	int f (const char **NAME);
+	svn_error_t *f (const char **NAME);
 
 When called, a test function should set *NAME to its name, and perform
-a test.  If the test passes, the function should return zero;
-otherwise, it should return one.
+a test.  If the test passes, the function should return SVN_NO_ERROR;
+otherwise, it should return an error object, built using the functions
+in svn_error.h.
 
 Once you've got a .c file with a bunch of tests and a `test_funcs'
 array, you should link it against the `libsvn_tests_main.la' libtool
