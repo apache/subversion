@@ -183,13 +183,19 @@ svn_cl__print_prop_names (apr_hash_t *prop_hash, apr_pool_t *pool);
 /* Search for a text editor command in standard environment variables,
    and invoke it to edit CONTENTS (using a temporary file created in
    directory BASE_DIR).  Return the new contents in *EDITED_CONTENTS,
-   or set *EDITED_CONTENTS to NULL if no edit was performed.  Use POOL
-   for all allocations.  Use PREFIX as the prefix for the temporary
-   file used by the editor.
+   or set *EDITED_CONTENTS to NULL if no edit was performed.  
+
+   If TMPFILE_LEFT is NULL, the temporary file will be destroyed.
+   Else, the file will be left on disk, and its path returned in
+   *TMPFILE_LEFT.
+
+   Use POOL for all allocations.  Use PREFIX as the prefix for the
+   temporary file used by the editor.
 
    If return error, *EDITED_CONTENTS is not touched. */
 svn_error_t *
 svn_cl__edit_externally (const char **edited_contents,
+                         const char **tmpfile_left,
                          const char *base_dir,
                          const char *contents,
                          const char *prefix,
@@ -266,6 +272,18 @@ svn_error_t *svn_cl__get_log_message (const char **log_msg,
                                       apr_array_header_t *commit_items,
                                       void *baton,
                                       apr_pool_t *pool);
+
+/* Handle the cleanup of a log message, using the data in the
+   LOG_MSG_BATON, in the face of COMMIT_ERR.  This may mean removing a
+   temporary file left by an external editor, or it may be a complete
+   no-op.  COMMIT_ERR may be NULL to indicate to indicate that the
+   function should act as though no commit error occurred.
+
+   All error returns from this function are guaranteed to at least
+   include COMMIT_ERR, and perhaps additional errors attached to the
+   end of COMMIT_ERR's chain.  */
+svn_error_t *svn_cl__cleanup_log_msg (void *log_msg_baton,
+                                      svn_error_t *commit_err);
 
 /* Add a message about --force if appropriate */
 svn_error_t *svn_cl__may_need_force (svn_error_t *err);

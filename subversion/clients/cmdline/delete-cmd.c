@@ -86,16 +86,21 @@ svn_cl__delete (apr_getopt_t *os,
     {
       svn_error_t *err;
       const char *target = ((const char **) (targets->elts))[i];
+      void *log_msg_baton = svn_cl__make_log_msg_baton (opt_state, NULL, 
+                                                        subpool);
 
       commit_info = NULL;
       err = svn_client_delete
         (&commit_info, target, NULL, opt_state->force, 
          auth_baton, 
          &svn_cl__get_log_message,
-         svn_cl__make_log_msg_baton (opt_state, NULL, subpool),
+         log_msg_baton,
          notify_func, notify_baton, subpool);
+
       if (err)
-        return svn_cl__may_need_force (err);
+        err = svn_cl__may_need_force (err);
+      SVN_ERR (svn_cl__cleanup_log_msg (log_msg_baton, err));
+
       if (commit_info && ! opt_state->quiet)
         svn_cl__print_commit_info (commit_info);
       
