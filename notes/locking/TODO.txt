@@ -22,9 +22,9 @@ MUST HAVE
 
     - research interoperability with popular dav clients (collabnet folks)
 
-* fix svn_xml_is_xml_safe.  currently, it allows invalid UTF8!  (lundblad?)
+* fix svn_xml_is_xml_safe.  currently, it allows invalid UTF8!  (lundblad)
 
-* remove auto-force behaviour for svn unlock URL.
+* remove auto-force behaviour for svn unlock URL. (lundblad)
 
 * decide if/how to handle locking of schedule-add paths.
   also decide if/how 'svn lock/unlock URL' should work on nonexistent paths.
@@ -61,8 +61,6 @@ NICE TO HAVE
   (chat with jorton about neon 0.25/svn 1.2 coordination?)
 
 * make --keep-locks into a runtime 'config' option
-
-* Fixups for r13392.  Posting by lundblad.
 
 -----------------------------------------------
 
