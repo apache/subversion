@@ -1,4 +1,4 @@
-								-*-text-*-
+                                                                -*-text-*-
 
 If you are contributing code to the Subversion project, please read
 this first.
@@ -464,7 +464,7 @@ In addition to the GNU standards, Subversion uses these conventions:
            (if (string-match (concat svntree-path "doc/book") buffer-file-name)
                (load (concat svntree-path "doc/book/tools/svnbook"))
              (if (string-match svntree-path buffer-file-name)
-	         (load (concat svntree-path "tools/dev/svn-dev")))))
+                 (load (concat svntree-path "tools/dev/svn-dev")))))
   
          (add-hook 'find-file-hooks 'my-find-file-hook)
          ;;; End Subversion development section
@@ -1474,7 +1474,7 @@ The output of 'svn --version' corresponds in the obvious way:
    version 1.3.7 (beta 3)
    version 1.3.7
 
-When you 'make install' subvesion-1.3.7-beta1, it still installs as
+When you 'make install' subversion-1.3.7-beta1, it still installs as
 though it were "1.3.7", of course.  The beta modifier is metadata on
 the release; we want each subsequent beta release to overwrite the
 previous one, and the stable release to overwrite the last beta.
