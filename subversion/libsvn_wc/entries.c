@@ -655,7 +655,7 @@ svn_wc_entry (svn_wc_entry_t **entry,
       SVN_ERR (svn_wc_check_wc (dir, &is_wc, pool));
       if (! is_wc)
         return svn_error_createf
-          (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL, pool,
+          (SVN_ERR_WC_NOT_DIRECTORY, 0, NULL, pool,
            "svn_wc_entry: %s is not a working copy directory", dir);
 
       /* ### it would be nice to avoid reading all of these. or maybe read
