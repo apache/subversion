@@ -485,6 +485,10 @@ erase_unversioned_from_wc (const char *path,
   SVN_ERR (svn_io_check_path (path, &kind, pool));
   switch (kind)
     {
+    case svn_node_none:
+      /* Nothing to do. */
+      break;
+
     default:
       /* ### TODO: what do we do here? To handle Unix symlinks we
          fallthrough to svn_node_file... gulp! */
@@ -518,6 +522,12 @@ erase_from_wc (const char *path,
                svn_node_kind_t kind,
                apr_pool_t *pool)
 {
+  /* Check that the item exists in the wc. */
+  enum svn_node_kind wc_kind;
+  SVN_ERR (svn_io_check_path (path, &wc_kind, pool));
+  if (wc_kind == svn_node_none)
+    return SVN_NO_ERROR;
+
   switch (kind)
     {
     default:
