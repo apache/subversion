@@ -898,8 +898,20 @@ add_prop_to_hash (void *baton,
                   svn_stringbuf_t *value)
 {
   apr_hash_t *ht = (apr_hash_t *) baton;
-  
-  apr_hash_set(ht, name->data, name->len, value);
+
+  if (value)
+    {
+      /* Create this string structure in the same pool as its original
+         stringbuf value. */
+      svn_string_t *string = apr_palloc(value->pool, sizeof(*string));
+      string->data = value->data;
+      string->len = value->len;
+      apr_hash_set(ht, name->data, name->len, string);
+    }
+  else
+    {
+      apr_hash_set(ht, name->data, name->len, NULL);
+    }
 
   return SVN_NO_ERROR;
 }
