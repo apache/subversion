@@ -24,6 +24,9 @@ MUST HAVE
 * subversion/libsvn_wc/status.c:982
     /* ### lundblad TODO: Make sure lock info is added. */ (lundblad)
 
+* Fix segfault in mod_dav_svn when attempting to lock multiple files
+  at once (fitz).
+
 NICE TO HAVE
 ------------
 
