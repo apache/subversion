@@ -224,6 +224,7 @@ svn_error_t * svn_client__get_export_editor (const svn_delta_editor_t **editor,
                                              void **edit_baton,
                                              const char *root_path,
                                              const char *root_url,
+                                             svn_boolean_t force,
                                              svn_client_ctx_t *ctx,
                                              apr_pool_t *pool);
 
