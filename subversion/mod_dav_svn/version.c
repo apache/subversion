@@ -109,7 +109,14 @@ static int dav_svn_versionable(const dav_resource *resource)
 
 static dav_auto_version dav_svn_auto_versionable(const dav_resource *resource)
 {
-  return 0;
+  /* The svn client attempts to proppatch a baseline when changing
+     unversioned revision props.  Thus we allow baselines to be
+     "auto-checked-out" by mod_dav.  See issue #916. */
+  if (resource->baselined && resource->type == DAV_RESOURCE_TYPE_VERSION)
+    return DAV_AUTO_VERSION_ALWAYS;
+
+  /* Default:  whatever it is, assume it's not auto-versionable */
+  return DAV_AUTO_VERSION_NEVER;
 }
 
 static dav_error *dav_svn_vsn_control(dav_resource *resource,
@@ -132,6 +139,30 @@ static dav_error *dav_svn_checkout(dav_resource *resource,
   const char *txn_name;
   svn_error_t *serr;
   dav_svn_uri_info parse;
+
+  /* Auto-Versioning Stuff */
+  if (auto_checkout)
+    {
+      /* ### Only baselines can be auto-checked-out -- grudgingly --
+         so we can allow clients to proppatch unversioned rev props.
+         See issue #916. */
+      if (! (resource->baselined
+             && resource->type == DAV_RESOURCE_TYPE_VERSION))
+        return dav_new_error_tag(resource->pool, HTTP_METHOD_NOT_ALLOWED,
+                                 SVN_ERR_UNSUPPORTED_FEATURE,
+                                 "auto-checkout only allowed on baselines "
+                                 "[at this time].",
+                                 SVN_DAV_ERROR_NAMESPACE,
+                                 SVN_DAV_ERROR_TAG);
+
+      /* ### We're violating deltaV big time here, by allowing a
+         dav_auto_checkout() on something that mod_dav assumes is a
+         VCR, not a VR.  Anyway, mod_dav thinks we're checking out the
+         resource 'in place', so that no working resource is returned.
+         (It passes NULL as **working_resource.)  */
+      
+      return NULL;
+    }
 
   if (resource->type != DAV_RESOURCE_TYPE_VERSION)
     {

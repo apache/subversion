@@ -148,8 +148,17 @@ static dav_error *save_value(dav_db *db, const dav_prop_name *name,
 
   /* Working Baseline or Working (Version) Resource */
   if (db->resource->baselined)
-    serr = svn_fs_change_txn_prop(db->resource->info->root.txn,
-                                  propname, value, db->resource->pool);
+    if (db->resource->working)
+      serr = svn_fs_change_txn_prop(db->resource->info->root.txn,
+                                    propname, value, db->resource->pool);
+    else
+      /* ### VIOLATING deltaV: you can't proppatch a baseline, it's
+         not a working resource!  But this is how we currently
+         (hackily) allow the svn client to change unversioned rev
+         props.  See issue #916. */
+      serr = svn_fs_change_rev_prop(db->resource->info->repos->fs,
+                                    db->resource->info->root.rev,
+                                    propname, value, db->resource->pool);
   else
     serr = svn_fs_change_node_prop(db->resource->info->root.root,
                                    get_repos_path(db->resource->info),
@@ -184,9 +193,14 @@ static dav_error *dav_svn_db_open(apr_pool_t *p, const dav_resource *resource,
      we have a problem! */
   if (!ro && resource->type != DAV_RESOURCE_TYPE_WORKING)
     {
-      return dav_new_error(p, HTTP_CONFLICT, 0,
-                           "Properties may only be changed on working "
-                           "resources.");
+      /* ### Exception: in violation of deltaV, we *are* allowing a
+         baseline resource to receive a proppatch, as a way of
+         changing unversioned rev props.  Remove this someday: see IZ #916. */
+      if (! (resource->baselined
+             && resource->type == DAV_RESOURCE_TYPE_VERSION))
+        return dav_new_error(p, HTTP_CONFLICT, 0,
+                             "Properties may only be changed on working "
+                             "resources.");
     }
 
   db = apr_pcalloc(p, sizeof(*db));
@@ -330,8 +344,17 @@ static dav_error *dav_svn_db_remove(dav_db *db, const dav_prop_name *name)
 
   /* Working Baseline or Working (Version) Resource */
   if (db->resource->baselined)
-    serr = svn_fs_change_txn_prop(db->resource->info->root.txn,
-                                  propname, NULL, db->resource->pool);
+    if (db->resource->working)
+      serr = svn_fs_change_txn_prop(db->resource->info->root.txn,
+                                    propname, NULL, db->resource->pool);
+    else
+      /* ### VIOLATING deltaV: you can't proppatch a baseline, it's
+         not a working resource!  But this is how we currently
+         (hackily) allow the svn client to change unversioned rev
+         props.  See issue #916. */
+      serr = svn_fs_change_rev_prop(db->resource->info->repos->fs,
+                                    db->resource->info->root.rev,
+                                    propname, NULL, db->resource->pool);
   else
     serr = svn_fs_change_node_prop(db->resource->info->root.root,
                                    get_repos_path(db->resource->info),
