@@ -105,7 +105,7 @@ create_lock (svn_wc_adm_access_t *adm_access, int wait_for, apr_pool_t *pool)
         return SVN_NO_ERROR;
     }
 
-  return svn_error_createf (SVN_ERR_WC_LOCKED, 0, NULL,
+  return svn_error_createf (SVN_ERR_WC_LOCKED, NULL,
                             "working copy locked: %s",
                             /* ### do we have a utility function that
                                converts the empty path to a
@@ -266,7 +266,7 @@ svn_wc_adm_open (svn_wc_adm_access_t **adm_access,
            here is that the user is supposed to know whether a directory is
            locked: if it's not locked call svn_wc_adm_open, if it is locked
            call svn_wc_adm_retrieve.  */
-        return svn_error_createf (SVN_ERR_WC_LOCKED, 0, NULL,
+        return svn_error_createf (SVN_ERR_WC_LOCKED, NULL,
                                   "directory already locked (%s)",
                                   path);
     }
@@ -285,7 +285,7 @@ svn_wc_adm_open (svn_wc_adm_access_t **adm_access,
       svn_node_kind_t node_kind;
       SVN_ERR (svn_io_check_path (path, &node_kind, pool));
       if (node_kind != svn_node_dir)
-        return svn_error_createf (SVN_ERR_WC_INVALID_LOCK, 0, NULL,
+        return svn_error_createf (SVN_ERR_WC_INVALID_LOCK, NULL,
                                   "lock path is not a directory (%s)",
                                   path);
 
@@ -419,7 +419,7 @@ svn_wc_adm_retrieve (svn_wc_adm_access_t **adm_access,
   else
     *adm_access = NULL;
   if (! *adm_access)
-    return svn_error_createf (SVN_ERR_WC_NOT_LOCKED, 0, NULL,
+    return svn_error_createf (SVN_ERR_WC_NOT_LOCKED, NULL,
                               "directory not locked (%s)",
                               path);
   return SVN_NO_ERROR;
@@ -540,14 +540,14 @@ svn_wc_adm_write_check (svn_wc_adm_access_t *adm_access)
           /* Check physical lock still exists and hasn't been stolen */
           SVN_ERR (svn_wc_locked (&locked, adm_access->path, adm_access->pool));
           if (! locked)
-            return svn_error_createf (SVN_ERR_WC_NOT_LOCKED, 0, NULL, 
+            return svn_error_createf (SVN_ERR_WC_NOT_LOCKED, NULL, 
                                       "write-lock stolen in: %s",
                                       adm_access->path); 
         }
     }
   else
     {
-      return svn_error_createf (SVN_ERR_WC_NOT_LOCKED, 0, NULL, 
+      return svn_error_createf (SVN_ERR_WC_NOT_LOCKED, NULL, 
                                 "no write-lock in: %s", adm_access->path); 
     }
 
@@ -567,7 +567,7 @@ svn_wc_locked (svn_boolean_t *locked, const char *path, apr_pool_t *pool)
   else if (kind == svn_node_none)
     *locked = FALSE;
   else
-    return svn_error_createf (SVN_ERR_WC_LOCKED, 0, NULL,
+    return svn_error_createf (SVN_ERR_WC_LOCKED, NULL,
                               "svn_wc_locked: "
                               "lock file is not a regular file (%s)",
                               lockfile);

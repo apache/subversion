@@ -174,7 +174,7 @@ svn_fs__youngest_rev (svn_revnum_t *youngest_p,
         /* The revision 0 should always be present, at least.  */
         return
           svn_error_createf
-          (SVN_ERR_FS_CORRUPT, 0, 0,
+          (SVN_ERR_FS_CORRUPT, 0,
            "revision 0 missing from `revisions' table, in filesystem `%s'",
            fs->path);
       

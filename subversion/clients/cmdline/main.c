@@ -591,8 +591,7 @@ main (int argc, const char * const *argv)
         if (opt_state.start_revision.kind != svn_opt_revision_unspecified)
           {
             svn_handle_error (svn_error_create
-                              (SVN_ERR_CL_ARG_PARSING_ERROR,
-                               0, NULL,
+                              (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                "Multiple revision arguments encountered; "
                                "try '-r M:N' instead of '-r M -r N'"),
                               stderr, FALSE);
@@ -608,8 +607,7 @@ main (int argc, const char * const *argv)
               svn_handle_error (err, stderr, FALSE);
             else
               svn_handle_error (svn_error_createf
-                                (SVN_ERR_CL_ARG_PARSING_ERROR,
-                                 0, NULL,
+                                (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                  "Syntax error in revision argument \"%s\"",
                                  utf8_opt_arg),
                                 stderr, FALSE);
@@ -847,8 +845,7 @@ main (int argc, const char * const *argv)
       if (log_under_version_control && (! opt_state.force))
         {
           svn_handle_error
-            (svn_error_create (SVN_ERR_CL_LOG_MESSAGE_IS_VERSIONED_FILE,
-                               0, NULL,
+            (svn_error_create (SVN_ERR_CL_LOG_MESSAGE_IS_VERSIONED_FILE, NULL,
                                "Log message file is a versioned file; "
                                "use `--force' to override."),
              stderr, FALSE);
@@ -861,8 +858,7 @@ main (int argc, const char * const *argv)
       if (log_is_pathname && !opt_state.force)
         {
           svn_handle_error
-            (svn_error_create (SVN_ERR_CL_LOG_MESSAGE_IS_PATHNAME,
-                               0, NULL,
+            (svn_error_create (SVN_ERR_CL_LOG_MESSAGE_IS_PATHNAME, NULL,
                                "The log message is a pathname "
                                "(was -F intended?); use `--force' "
                                "to override."),

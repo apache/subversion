@@ -88,12 +88,12 @@ add_update_info_to_status_hash (apr_hash_t *statushash,
   SVN_ERR (svn_wc_entry (&entry, anchor, anchor_access, FALSE, pool));
   if (! entry)
     return svn_error_createf
-      (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL,
+      (SVN_ERR_ENTRY_NOT_FOUND, NULL,
        "add_update_info_to_status_hash: %s is not under revision control",
        anchor);
   if (! entry->url)
     return svn_error_createf
-      (SVN_ERR_ENTRY_MISSING_URL, 0, NULL,
+      (SVN_ERR_ENTRY_MISSING_URL, NULL,
        "add_update_info_to_status_hash: entry '%s' has no URL", anchor);
   URL = apr_pstrdup (pool, entry->url);
 

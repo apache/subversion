@@ -363,7 +363,7 @@ svn_error_t * svn_ra_dav__get_props(apr_hash_t **results,
     }
 
   if (404 == status_code)
-    return svn_error_createf(SVN_ERR_RA_DAV_PROPS_NOT_FOUND, 0, NULL,
+    return svn_error_createf(SVN_ERR_RA_DAV_PROPS_NOT_FOUND, NULL,
                              "Failed to fetch props for '%s'", url);
 
   *results = pc.props;
@@ -412,7 +412,7 @@ svn_error_t * svn_ra_dav__get_props_resource(svn_ra_dav_resource_t **rsrc,
   if (*rsrc == NULL)
     {
       /* ### hmmm, should have been in there... */
-      return svn_error_createf(APR_EGENERAL, 0, NULL,
+      return svn_error_createf(APR_EGENERAL, NULL,
                                "failed to find label \"%s\" for url \"%s\"",
                                label, url_path);
     }
@@ -442,7 +442,7 @@ svn_error_t * svn_ra_dav__get_one_prop(const svn_string_t **propval,
   if (value == NULL)
     {
       /* ### need an SVN_ERR here */
-      return svn_error_createf(SVN_ERR_RA_DAV_PROPS_NOT_FOUND, 0, NULL,
+      return svn_error_createf(SVN_ERR_RA_DAV_PROPS_NOT_FOUND, NULL,
                                "%s was not present on the resource.", name);
     }
 
@@ -547,7 +547,7 @@ svn_error_t *svn_ra_dav__get_baseline_props(svn_string_t *bc_relative,
       {
         /* entire URL was bogus;  not a single part of it exists in
            the repository!  */
-        err = svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, 0, NULL,
+        err = svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
                                 "No part of path '%s' was found in "
                                 "repository HEAD.", parsed_url.path);
         ne_uri_free(&parsed_url);
@@ -562,7 +562,7 @@ svn_error_t *svn_ra_dav__get_baseline_props(svn_string_t *bc_relative,
       /* ### better error reporting... */
 
       /* ### need an SVN_ERR here */
-      return svn_error_create(APR_EGENERAL, 0, NULL,
+      return svn_error_create(APR_EGENERAL, NULL,
                               "The VCC property was not found on the "
                               "resource.");
     }
@@ -586,7 +586,7 @@ svn_error_t *svn_ra_dav__get_baseline_props(svn_string_t *bc_relative,
           {
             /* ### better error reporting... */        
             /* ### need an SVN_ERR here */
-            return svn_error_create(APR_EGENERAL, 0, NULL,
+            return svn_error_create(APR_EGENERAL, NULL,
                                     "The relative-path property was not "
                                     "found on the resource.");
           }
@@ -615,7 +615,7 @@ svn_error_t *svn_ra_dav__get_baseline_props(svn_string_t *bc_relative,
       {
         /* ### better error reporting... */        
         /* ### need an SVN_ERR here */
-        return svn_error_create(APR_EGENERAL, 0, NULL,
+        return svn_error_create(APR_EGENERAL, NULL,
                                 "The relative-path property was not "
                                 "found on the resource.");
       }
@@ -736,7 +736,7 @@ svn_error_t *svn_ra_dav__get_baseline_info(svn_boolean_t *is_dir,
     {
       /* ### better error reporting... */
       /* ### need an SVN_ERR here */
-      return svn_error_create(APR_EGENERAL, 0, NULL,
+      return svn_error_create(APR_EGENERAL, NULL,
                               "DAV:baseline-collection was not present "
                               "on the baseline resource.");
     }
@@ -760,7 +760,7 @@ svn_error_t *svn_ra_dav__get_baseline_info(svn_boolean_t *is_dir,
           /* ### better error reporting... */
 
           /* ### need an SVN_ERR here */
-          return svn_error_create(APR_EGENERAL, 0, NULL,
+          return svn_error_create(APR_EGENERAL, NULL,
                                   "DAV:version-name was not present on the "
                                   "baseline resource.");
         }

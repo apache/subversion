@@ -93,7 +93,7 @@ static svn_error_t *writebuf_output(svn_ra_svn_conn_t *conn,
       else
         status = apr_file_write(conn->out_file, data, &count);
       if (status)
-        return svn_error_create(status, 0, NULL, "Write failure");
+        return svn_error_create(status, NULL, "Write failure");
       data += count;
     }
 
@@ -165,9 +165,9 @@ static svn_error_t *readbuf_input(svn_ra_svn_conn_t *conn, char *data,
   else
     status = apr_file_read(conn->in_file, data, len);
   if (status && !APR_STATUS_IS_EOF(status))
-    return svn_error_create(status, 0, NULL, "Read failure");
+    return svn_error_create(status, NULL, "Read failure");
   if (*len == 0)
-    return svn_error_create(SVN_ERR_RA_SVN_CONNECTION_CLOSED, 0, NULL,
+    return svn_error_create(SVN_ERR_RA_SVN_CONNECTION_CLOSED, NULL,
                             "Connection closed unexpectedly");
   return SVN_NO_ERROR;
 }
@@ -438,7 +438,7 @@ static svn_error_t *read_item(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
     }
 
   if (!svn_iswhitespace(c))
-    return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, 0, NULL,
+    return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                             "Malformed network data");
   return SVN_NO_ERROR;
 }
@@ -543,7 +543,7 @@ static svn_error_t *vparse_tuple(apr_array_header_t *list, apr_pool_t *pool,
     }
   if (!*fmt)
     return SVN_NO_ERROR;
-  return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, 0, NULL,
+  return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                           "Malformed network data");
 }
 
@@ -569,7 +569,7 @@ svn_error_t *svn_ra_svn_read_tuple(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
   SVN_ERR(svn_ra_svn_read_item(conn, pool, &item));
   if (item->kind != SVN_RA_SVN_LIST)
-    return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, 0, NULL,
+    return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                             "Malformed network data");
   va_start(ap, fmt);
   err = vparse_tuple(item->u.list, pool, fmt, &ap);
@@ -603,25 +603,25 @@ svn_error_t *svn_ra_svn_read_cmd_response(svn_ra_svn_conn_t *conn,
     {
       /* Rebuild the error list from the end, to avoid reversing the order. */
       if (params->nelts == 0)
-        return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, 0, NULL,
+        return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 "Empty error list");
       err = NULL;
       for (i = params->nelts - 1; i >= 0; i--)
         {
           elt = &((svn_ra_svn_item_t *) params->elts)[i];
           if (elt->kind != SVN_RA_SVN_LIST)
-            return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, 0, NULL,
+            return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                     "Malformed error list");
           SVN_ERR(svn_ra_svn_parse_tuple(elt->u.list, pool, "nccn", &apr_err,
                                           &message, &file, &line));
-          err = svn_error_create(apr_err, 0, err, message);
+          err = svn_error_create(apr_err, err, message);
           err->file = apr_pstrdup(err->pool, file);
           err->line = line;
         }
       return err;
     }
 
-  return svn_error_createf(SVN_ERR_RA_SVN_MALFORMED_DATA, 0, NULL,
+  return svn_error_createf(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                            "Unknown status '%s' in command response", status);
 }
 
@@ -654,7 +654,7 @@ svn_error_t *svn_ra_svn_handle_commands(svn_ra_svn_conn_t *conn,
 	    return err;
 	}
       else
-	err = svn_error_createf(SVN_ERR_RA_SVN_UNKNOWN_CMD, 0, NULL,
+	err = svn_error_createf(SVN_ERR_RA_SVN_UNKNOWN_CMD, NULL,
 				"Unknown command %s", cmdname);
       if (err)
         {

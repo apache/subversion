@@ -67,8 +67,7 @@ svn_client__can_delete (const char *path,
 
       if (statstruct->text_status == svn_wc_status_obstructed)
         {
-          return svn_error_createf (SVN_ERR_NODE_UNEXPECTED_KIND,
-                                    0, NULL,
+          return svn_error_createf (SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
                                     "'%s' is in the way of the resource "
                                     "actually under revision control.",
                                     name);
@@ -76,8 +75,7 @@ svn_client__can_delete (const char *path,
 
       if (!statstruct->entry)
         {
-          return svn_error_createf (SVN_ERR_CLIENT_UNVERSIONED,
-                                    0, NULL,
+          return svn_error_createf (SVN_ERR_CLIENT_UNVERSIONED, NULL,
                                     "'%s' is not under revision control",
                                     name);
         }
@@ -89,8 +87,7 @@ svn_client__can_delete (const char *path,
           (statstruct->prop_status != svn_wc_status_none
            && statstruct->prop_status != svn_wc_status_normal))
         {
-          return svn_error_createf (SVN_ERR_CLIENT_MODIFIED,
-                                    0, NULL,
+          return svn_error_createf (SVN_ERR_CLIENT_MODIFIED, NULL,
                                     "'%s' has local modifications",
                                     name);
         }
@@ -167,7 +164,7 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
       SVN_ERR (ra_lib->check_path (&kind, session, target, 
                                    SVN_INVALID_REVNUM));
       if (kind == svn_node_none)
-        return svn_error_createf (SVN_ERR_FS_NOT_FOUND, 0, NULL,
+        return svn_error_createf (SVN_ERR_FS_NOT_FOUND, NULL,
                                   "URL `%s' does not exist", path);
 
       /* Fetch RA commit editor */

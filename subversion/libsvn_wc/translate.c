@@ -90,7 +90,7 @@ svn_wc_translated_file (const char **xlated_p,
       apr_err = apr_file_close (ignored);
       if (apr_err)
         return svn_error_createf
-          (0, 0, NULL,
+          (0, NULL,
            "svn_wc_translated_file: unable to close %s", tmp_vfile);
       
       if (style == svn_subst_eol_style_fixed)
@@ -126,7 +126,7 @@ svn_wc_translated_file (const char **xlated_p,
       else
         {
           return svn_error_createf
-            (SVN_ERR_IO_INCONSISTENT_EOL, 0, NULL,
+            (SVN_ERR_IO_INCONSISTENT_EOL, NULL,
              "svn_wc_translated_file: %s has unknown eol style property",
              vfile);
         }

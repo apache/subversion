@@ -60,7 +60,7 @@ check_bdb_version (apr_pool_t *pool)
       || (major == SVN_FS_WANT_DB_MAJOR && minor < SVN_FS_WANT_DB_MINOR)
       || (major == SVN_FS_WANT_DB_MAJOR && minor == SVN_FS_WANT_DB_MINOR
           && patch < SVN_FS_WANT_DB_PATCH))
-    return svn_error_createf (SVN_ERR_FS_GENERAL, 0, 0,
+    return svn_error_createf (SVN_ERR_FS_GENERAL, 0,
                               "bad database version: got %d.%d.%d,"
                               " should be at least %d.%d.%d",
                               major, minor, patch,
@@ -71,7 +71,7 @@ check_bdb_version (apr_pool_t *pool)
   /* Now, check that the version we're running against is the same as
      the one we compiled with. */
   if (major != DB_VERSION_MAJOR || minor != DB_VERSION_MINOR)
-    return svn_error_createf (SVN_ERR_FS_GENERAL, 0, 0,
+    return svn_error_createf (SVN_ERR_FS_GENERAL, 0,
                               "bad database version:"
                               " compiled with %d.%d.%d,"
                               " running against %d.%d.%d",
@@ -89,7 +89,7 @@ static svn_error_t *
 check_already_open (svn_fs_t *fs)
 {
   if (fs->env)
-    return svn_error_create (SVN_ERR_FS_ALREADY_OPEN, 0, 0,
+    return svn_error_create (SVN_ERR_FS_ALREADY_OPEN, 0,
                              "filesystem object already open");
   else
     return SVN_NO_ERROR;
@@ -418,7 +418,7 @@ svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
   /* Create the directory for the new Berkeley DB environment.  */
   apr_err = apr_dir_make (path_native, APR_OS_DEFAULT, fs->pool);
   if (apr_err != APR_SUCCESS)
-    return svn_error_createf (apr_err, 0, 0,
+    return svn_error_createf (apr_err, 0,
                               "creating Berkeley DB environment dir `%s'",
                               fs->path);
 
@@ -474,12 +474,12 @@ svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
     apr_err = apr_file_write_full (dbconfig_file, dbconfig_contents,
                                    sizeof (dbconfig_contents) - 1, NULL);
     if (apr_err != APR_SUCCESS)
-      return svn_error_createf (apr_err, 0, 0,
+      return svn_error_createf (apr_err, 0,
                                 "writing to `%s'", dbconfig_file_name);
 
     apr_err = apr_file_close (dbconfig_file);
     if (apr_err != APR_SUCCESS)
-      return svn_error_createf (apr_err, 0, 0,
+      return svn_error_createf (apr_err, 0,
                                 "closing `%s'", dbconfig_file_name);
   }
 

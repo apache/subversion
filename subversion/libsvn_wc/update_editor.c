@@ -584,7 +584,7 @@ delete_entry (const char *path,
   if (apr_err)
     {
       apr_file_close (log_fp);
-      return svn_error_createf (apr_err, 0, NULL,
+      return svn_error_createf (apr_err, NULL,
                                 "delete error writing %s's log file",
                                 pb->path);
     }
@@ -641,7 +641,7 @@ add_directory (const char *path,
   if (kind != svn_node_none
       && !(pb->edit_baton->is_checkout && kind == svn_node_dir))
     return svn_error_createf
-      (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL,
+      (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
        "failed to add directory '%s': object of the same name already exists",
        db->path);
 
@@ -654,7 +654,7 @@ add_directory (const char *path,
          Then it will recursively "normalize" all the ancestry in the
          copied tree.  Someday! */      
       return svn_error_createf
-        (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL,
+        (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
          "failed to add directory '%s': copyfrom args not yet supported",
          db->path);
     }
@@ -940,7 +940,7 @@ close_directory (void *dir_baton,
       if (apr_err)
         {
           apr_file_close (log_fp);
-          return svn_error_createf (apr_err, 0, NULL,
+          return svn_error_createf (apr_err, NULL,
                                     "close_dir: error writing %s's log file",
                                     db->path);
         }
@@ -1030,7 +1030,7 @@ add_or_open_file (const char *path,
       && kind != svn_node_none
       && !(fb->edit_baton->is_checkout && kind == svn_node_file))
     return svn_error_createf
-      (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL,
+      (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
        "failed to add file '%s': object of the same name already exists",
        fb->path);
 
@@ -1051,14 +1051,14 @@ add_or_open_file (const char *path,
 
   if (adding && entry && entry->schedule == svn_wc_schedule_add)
     return svn_error_createf
-      (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL,
+      (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
        "failed to add file '%s': \nobject of the same name is already "
        "scheduled for addition", fb->path);
     
 
   /* If replacing, make sure the .svn entry already exists. */
   if ((! adding) && (! entry))
-    return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL,
+    return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, NULL,
                               "trying to open non-versioned file "
                               "%s in directory %s",
                               fb->name, pb->path);
@@ -1069,7 +1069,7 @@ add_or_open_file (const char *path,
   SVN_ERR (svn_wc_check_wc (pb->path, &is_wc, subpool));
   if (! is_wc)
     return svn_error_createf
-      (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL,
+      (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
        "add_or_open_file: %s is not a working copy directory",
        pb->path);
 
@@ -1167,7 +1167,7 @@ apply_textdelta (void *file_baton,
             if (strcmp (checksum->data, ent->checksum) != 0)
               {
                 return svn_error_createf
-                  (SVN_ERR_WC_CORRUPT_TEXT_BASE, 0, NULL,
+                  (SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
                    "apply_textdelta: checksum mismatch for '%s':\n"
                    "   recorded checksum: %s\n"
                    "   actual checksum:   %s\n",
@@ -1739,7 +1739,7 @@ svn_wc_install_file (svn_wc_notify_state_t *content_state,
   if (apr_err)
     {
       apr_file_close (log_fp);
-      return svn_error_createf (apr_err, 0, NULL,
+      return svn_error_createf (apr_err, NULL,
                                 "svn_wc_install_file: error writing %s's log",
                                 file_path);
     }
@@ -2191,7 +2191,7 @@ check_wc_root (svn_boolean_t *wc_root,
   SVN_ERR (svn_wc_entry (&entry, path, adm_access, FALSE, pool));
   if (! entry)
     return svn_error_createf 
-      (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL,
+      (SVN_ERR_ENTRY_NOT_FOUND, NULL,
        "svn_wc_is_wc_root: %s is not a versioned resource", path);
   if (kind)
     *kind = entry->kind;
@@ -2219,7 +2219,7 @@ check_wc_root (svn_boolean_t *wc_root,
      messed up.  Bail with an error. */
   if (! p_entry->url)
     return svn_error_createf 
-      (SVN_ERR_ENTRY_MISSING_URL, 0, NULL,
+      (SVN_ERR_ENTRY_MISSING_URL, NULL,
        "svn_wc_is_wc_root: %s has no ancestry information.", 
        parent);
 

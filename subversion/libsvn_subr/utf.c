@@ -63,7 +63,7 @@ get_ntou_xlate_handle (apr_xlate_t **ret, apr_pool_t *pool)
       return SVN_NO_ERROR;
     }
   else if (apr_err != APR_SUCCESS)
-    return svn_error_create (apr_err, 0, NULL,
+    return svn_error_create (apr_err, NULL,
                              "failed to create a converter to UTF-8");
 
   /* Save it for later. */
@@ -101,7 +101,7 @@ get_uton_xlate_handle (apr_xlate_t **ret, apr_pool_t *pool)
       return SVN_NO_ERROR;
     }
   if (apr_err != APR_SUCCESS)
-    return svn_error_create (apr_err, 0, NULL,
+    return svn_error_create (apr_err, NULL,
                              "failed to create a converter from UTF-8");
 
   /* Save it for later. */
@@ -165,7 +165,7 @@ convert_to_stringbuf (apr_xlate_t *convset,
 
   /* If we exited the loop with an error, return the error. */
   if (apr_err)
-    return svn_error_create (apr_err, 0, NULL,
+    return svn_error_create (apr_err, NULL,
                              "failure during string recoding");
   
   /* Else, exited do to success.  Trim the result buffer down to the
@@ -205,7 +205,7 @@ check_non_ascii (const char *data, apr_size_t len, apr_pool_t *pool)
                 = apr_pstrndup (pool, data_start, (data - data_start));
 
               return svn_error_createf
-                (APR_EINVAL, 0, NULL,
+                (APR_EINVAL, NULL,
                  "Safe data:\n"
                  "\"%s\"\n"
                  "... was followed by non-ascii byte %d.\n"
@@ -217,7 +217,7 @@ check_non_ascii (const char *data, apr_size_t len, apr_pool_t *pool)
           else
             {
               return svn_error_createf
-                (APR_EINVAL, 0, NULL,
+                (APR_EINVAL, NULL,
                  "Non-ascii character (code %d) detected, "
                  "and unable to convert to UTF-8.\n",
                  *((const unsigned char *) data));

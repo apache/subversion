@@ -52,7 +52,7 @@ svn_cl__export (apr_getopt_t *os,
 
   /* We want exactly 1 or 2 targets for this subcommand. */
   if ((targets->nelts < 1) || (targets->nelts > 2))
-    return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, 0, "");
+    return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, "");
   
   /* The first target is the `from' path. */
   from = ((const char **) (targets->elts))[0];

@@ -46,7 +46,7 @@ fail (apr_pool_t *pool, const char *fmt, ...)
   msg = apr_pvsprintf (pool, fmt, ap);
   va_end (ap);
 
-  return svn_error_create (SVN_ERR_TEST_FAILED, 0, 0, msg);
+  return svn_error_create (SVN_ERR_TEST_FAILED, 0, msg);
 }
 
 

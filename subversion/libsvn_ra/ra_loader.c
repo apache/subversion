@@ -121,7 +121,7 @@ load_ra_module (svn_ra_init_func_t *func,
     status = apr_dso_sym (&symbol, dso, funcname);
     if (status)
       {
-        return svn_error_createf (status, 0, NULL,
+        return svn_error_createf (status, NULL,
                                   "%s does not define %s()",
                                   libname, funcname);
       }
@@ -205,7 +205,7 @@ svn_ra_get_ra_library (svn_ra_plugin_t **library,
     
   /* Couldn't find a match... */
   *library = NULL;
-  return svn_error_createf (SVN_ERR_RA_ILLEGAL_URL, 0, NULL,
+  return svn_error_createf (SVN_ERR_RA_ILLEGAL_URL, NULL,
                             "Unrecognized URL scheme: %s", URL);
 }
 

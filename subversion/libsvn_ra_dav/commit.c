@@ -146,7 +146,7 @@ static svn_error_t * simple_request(svn_ra_session_t *ras, const char *method,
   req = ne_request_create(ras->sess, method, url);
   if (req == NULL)
     {
-      return svn_error_createf(SVN_ERR_RA_DAV_CREATING_REQUEST, 0, NULL,
+      return svn_error_createf(SVN_ERR_RA_DAV_CREATING_REQUEST, NULL,
                                "Could not create a request (%s %s)",
                                method, url);
     }
@@ -217,7 +217,7 @@ static svn_error_t * get_version_url(commit_ctx_t *cc,
   if (url == NULL)
     {
       /* ### need a proper SVN_ERR here */
-      return svn_error_create(APR_EGENERAL, 0, NULL,
+      return svn_error_create(APR_EGENERAL, NULL,
                               "Could not fetch the Version Resource URL "
                               "(needed during an import or when it is "
                               "missing from the local, cached props).");
@@ -395,7 +395,7 @@ static svn_error_t * do_checkout(commit_ctx_t *cc,
   req = ne_request_create(cc->ras->sess, "CHECKOUT", vsn_url);
   if (req == NULL)
     {
-      return svn_error_createf(SVN_ERR_RA_DAV_CREATING_REQUEST, 0, NULL,
+      return svn_error_createf(SVN_ERR_RA_DAV_CREATING_REQUEST, NULL,
                                "Could not create a CHECKOUT request (%s)",
                                vsn_url);
     }
@@ -457,7 +457,7 @@ static svn_error_t * checkout_resource(commit_ctx_t *cc,
   if (err)
     {
       if (err->apr_err == SVN_ERR_FS_CONFLICT)
-        return svn_error_createf(err->apr_err, err->src_err, err,
+        return svn_error_createf(err->apr_err, err,
                                  "Your file '%s' is probably out-of-date.",
                                  res->local_path);
       return err;
@@ -466,7 +466,7 @@ static svn_error_t * checkout_resource(commit_ctx_t *cc,
   /* we got the header, right? */
   if (locn == NULL)
     {
-      return svn_error_create(SVN_ERR_RA_DAV_REQUEST_FAILED, 0, NULL,
+      return svn_error_create(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
                               "The CHECKOUT response did not contain a "
                               "Location: header.");
     }
@@ -881,7 +881,7 @@ static svn_error_t * commit_add_file(const char *path,
       if (!err)
         {
           /* If the PROPFIND succeeds the file already exists */
-          return svn_error_createf(SVN_ERR_RA_DAV_ALREADY_EXISTS, 0, NULL,
+          return svn_error_createf(SVN_ERR_RA_DAV_ALREADY_EXISTS, NULL,
                                    "file '%s' already exists", file->rsrc->url);
         }
       else if (err->apr_err == SVN_ERR_RA_DAV_REQUEST_FAILED)
@@ -995,7 +995,7 @@ static svn_error_t * commit_stream_write(void *baton,
   /* drop the data into our temp file */
   status = apr_file_write_full(pb->tmpfile, data, *len, NULL);
   if (status)
-    return svn_error_create(status, 0, NULL,
+    return svn_error_create(status, NULL,
                             "Could not write svndiff to temp file.");
 
   return SVN_NO_ERROR;
@@ -1017,7 +1017,7 @@ static svn_error_t * commit_stream_close(void *baton)
   req = ne_request_create(cc->ras->sess, "PUT", url);
   if (req == NULL)
     {
-      return svn_error_createf(SVN_ERR_RA_DAV_CREATING_REQUEST, 0, NULL,
+      return svn_error_createf(SVN_ERR_RA_DAV_CREATING_REQUEST, NULL,
                                "Could not create a PUT request (%s)",
                                url);
     }
@@ -1030,14 +1030,14 @@ static svn_error_t * commit_stream_close(void *baton)
   if (status)
     {
       (void) apr_file_close(pb->tmpfile);
-      return svn_error_create(status, 0, NULL, "Couldn't rewind tmpfile.");
+      return svn_error_create(status, NULL, "Couldn't rewind tmpfile.");
     }
   /* Convert the (apr_file_t *)tmpfile into a file descriptor for neon. */
   status = svn_io_fd_from_file(&fdesc, pb->tmpfile);
   if (status)
     {
       (void) apr_file_close(pb->tmpfile);
-      return svn_error_create(status, 0, NULL,
+      return svn_error_create(status, NULL,
                               "Couldn't get file-descriptor of tmpfile.");
     }
 

@@ -78,7 +78,7 @@ svn_error_t *svn_ra_dav__convert_error(ne_session *sess,
       break;
     }
 
-  return svn_error_createf (errcode, 0, NULL, "%s: %s", context, msg);
+  return svn_error_createf (errcode, NULL, "%s: %s", context, msg);
   
 }
 
@@ -149,7 +149,7 @@ static int start_err_element(void *userdata, const struct ne_xml_elm *elm,
         /* allocate the svn_error_t.  Hopefully the value will be
            overwritten by the <human-readable> tag, or even someday by
            a <D:failed-precondition/> tag. */
-        *err = svn_error_create(APR_EGENERAL, 0, NULL,
+        *err = svn_error_create(APR_EGENERAL, NULL,
                                 "General svn error from server");
         break;
       }
@@ -330,7 +330,7 @@ svn_error_t *svn_ra_dav__parsed_request(svn_ra_session_t *ras,
     {
       /* Bad status, but error-parser didn't build an error.  Return a
          generic error instead.*/
-      err = svn_error_createf(APR_EGENERAL, 0, NULL,
+      err = svn_error_createf(APR_EGENERAL, NULL,
                               "The %s status was %d, but expected 200.",
                               method, code);
       goto error;
@@ -340,7 +340,7 @@ svn_error_t *svn_ra_dav__parsed_request(svn_ra_session_t *ras,
   msg = ne_xml_get_error(success_parser);
   if (msg != NULL && *msg != '\0')
     {
-      err = svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, 0, NULL,
+      err = svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
                               "The %s request returned invalid XML "
                               "in the response: %s. (%s)",
                               method, msg, url);
@@ -355,7 +355,7 @@ svn_error_t *svn_ra_dav__parsed_request(svn_ra_session_t *ras,
  error:
   ne_xml_destroy(success_parser);
   ne_xml_destroy(error_parser);
-  return svn_error_createf(err->apr_err, err->src_err, err,
+  return svn_error_createf(err->apr_err, err,
                            "%s request failed on %s", method, url );
 }
 
@@ -433,7 +433,7 @@ svn_ra_dav__request_dispatch(int *code,
 
   /* Bad http status, but error-parser didn't build an svn_error_t
      for some reason.  Return a generic error instead. */
-  return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, 0, NULL,
+  return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
                            "%s of %s returned status code %d (%s)",
                            method, url, *code, code_desc);
 }

@@ -428,7 +428,7 @@ svn_opt_parse_num_args (apr_array_header_t **args_p,
       if (os->ind >= os->argc)
         {
           return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 
-                                   0, 0, "too few arguments");
+                                   0, "too few arguments");
         }
       array_push_str (args, os->argv[os->ind++], pool);
     }
@@ -447,7 +447,7 @@ svn_opt_parse_all_args (apr_array_header_t **args_p,
 
   if (os->ind > os->argc)
     {
-      return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, 0, "");
+      return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, "");
     }
   while (os->ind < os->argc)
     {
@@ -494,8 +494,7 @@ parse_path (svn_opt_revision_t *rev,
           if (svn_opt_parse_revision (&start_revision,
                                       &end_revision,
                                       native_rev, subpool))
-            return svn_error_createf (SVN_ERR_CL_ARG_PARSING_ERROR,
-                                      0, NULL,
+            return svn_error_createf (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                       "Syntax error parsing revision \"%s\"",
                                       path + i + 1);
 
@@ -596,7 +595,7 @@ svn_opt_args_to_target_array (apr_array_header_t **targets_p,
                casting it back a bit later on. */
             truenamed_target = (char *) raw_target;
           else if (apr_err)
-            return svn_error_createf (apr_err, 0, NULL,
+            return svn_error_createf (apr_err, NULL,
                                       "Error resolving case of %s.",
                                       raw_target);
 

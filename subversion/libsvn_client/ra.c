@@ -120,7 +120,7 @@ push_wc_prop (void *baton,
      match for this relative URL. */
   if (! cb->commit_items)
     return svn_error_createf
-      (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL,
+      (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
        "Attempt to set wc property '%s' on '%s' in a non-commit operation",
        name, relpath);
 

@@ -195,7 +195,7 @@ svn_wc__make_adm_thing (svn_wc_adm_access_t *adm_access,
       /* Creation succeeded, so close immediately. */
       apr_err = apr_file_close (f);
       if (apr_err)
-        err = svn_error_create (apr_err, 0, NULL, path);
+        err = svn_error_create (apr_err, NULL, path);
     }
   else if (type == svn_node_dir)
     {
@@ -207,7 +207,7 @@ svn_wc__make_adm_thing (svn_wc_adm_access_t *adm_access,
          segfault or other obvious indicator that something went
          wrong.  Even so, not sure if it's appropriate.  Thoughts? */
       err = svn_error_create 
-        (0, 0, NULL, "svn_wc__make_admin_thing: bad type indicator");
+        (0, NULL, "svn_wc__make_admin_thing: bad type indicator");
     }
 
   return err;
@@ -235,7 +235,7 @@ maybe_copy_file (const char *src, const char *dst, apr_pool_t *pool)
                                  pool));
       apr_err = apr_file_close (f);
       if (apr_err)
-        return svn_error_create (apr_err, 0, NULL, dst);
+        return svn_error_create (apr_err, NULL, dst);
       else
         return SVN_NO_ERROR;
     }
@@ -357,7 +357,7 @@ prop_path_internal (const char **prop_path,
       SVN_ERR (svn_wc_check_wc (*prop_path, &wc_format_version, pool));
       if (wc_format_version == 0)
         return svn_error_createf
-          (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL,
+          (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
            "prop_path_internal: %s is not a working copy directory",
            *prop_path);
 
@@ -429,7 +429,7 @@ svn_wc__wcprop_path (const char **wcprop_path,
       SVN_ERR (svn_wc_check_wc (*wcprop_path, &is_wc, pool));
       if (! is_wc)
         return svn_error_createf
-          (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL,
+          (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
            "wcprop_path: %s is not a working copy directory", *wcprop_path);
 
       *wcprop_path = extend_with_adm_name (*wcprop_path,
@@ -564,7 +564,7 @@ close_adm_file (apr_file_t *fp,
   apr_err = apr_file_close (fp);
 
   if (apr_err)
-    return svn_error_create (apr_err, 0, NULL, tmp_path);
+    return svn_error_create (apr_err, NULL, tmp_path);
 
   /* If we're syncing a tmp file, it needs to be renamed after closing. */
   if (sync)
@@ -731,7 +731,7 @@ svn_wc__open_props (apr_file_t **handle,
       /* Something changed, yet we can't find the local working directory
          to put the change in place. */
       /* ### we probably need to record a "missing" entry */
-      return svn_error_createf (SVN_ERR_WC_PATH_NOT_FOUND, 0, NULL,
+      return svn_error_createf (SVN_ERR_WC_PATH_NOT_FOUND, NULL,
                                 "open_props: path '%s' not found", path);
     }
 
@@ -746,13 +746,13 @@ svn_wc__open_props (apr_file_t **handle,
   SVN_ERR (svn_wc_check_wc (parent_dir, &wc_format_version, pool));
   if (wc_format_version == 0)
     return svn_error_createf
-      (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL,
+      (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
        "svn_wc__open_props: %s is not a working copy directory", parent_dir);
 
   /* Then examine the flags to know -which- kind of prop file to get. */
 
   if (base && wcprops)
-    return svn_error_create (SVN_ERR_WC_PATH_NOT_FOUND, 0, NULL,
+    return svn_error_create (SVN_ERR_WC_PATH_NOT_FOUND, NULL,
                              "open_props: no such thing as 'base' wcprops!");
 
   else if (base)
@@ -823,13 +823,13 @@ svn_wc__close_props (apr_file_t *fp,
   SVN_ERR (svn_wc_check_wc (parent_dir, &wc_format_version, pool));
   if (wc_format_version == 0)
     return svn_error_createf
-      (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL,
+      (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
        "svn_wc__close_props: %s is not a working copy directory", parent_dir);
 
   /* Then examine the flags to know -which- kind of prop file to get. */
 
   if (base && wcprops)
-    return svn_error_create (SVN_ERR_WC_PATH_NOT_FOUND, 0, NULL,
+    return svn_error_create (SVN_ERR_WC_PATH_NOT_FOUND, NULL,
                              "close_props: no such thing as 'base' wcprops!");
 
   else if (base)
@@ -892,7 +892,7 @@ svn_wc__sync_props (const char *path,
      file to get -- there are three types! */
 
   if (base && wcprops)
-    return svn_error_create (SVN_ERR_WC_PATH_NOT_FOUND, 0, NULL,
+    return svn_error_create (SVN_ERR_WC_PATH_NOT_FOUND, NULL,
                              "close_props: no such thing as 'base' wcprops!");
 
   else if (base)
@@ -960,7 +960,7 @@ check_adm_exists (svn_boolean_t *exists,
     {
       /* If got an error other than dir non-existence, then
          something's weird and we should return a genuine error. */
-      return svn_error_create (APR_ENOTDIR, 0, NULL, tmp_path);
+      return svn_error_create (APR_ENOTDIR, NULL, tmp_path);
     }
   else if (kind == svn_node_none)
     {
@@ -1013,7 +1013,7 @@ check_adm_exists (svn_boolean_t *exists,
       SVN_ERR (svn_wc_entry (&entry, path, adm_access, FALSE, pool));
       SVN_ERR (svn_wc_adm_close (adm_access));
       if (!entry)
-        return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL,
+        return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, NULL,
                                   "no entry for '%s'", path);
 
       /* The revisions must match except when adding a directory with a
@@ -1023,7 +1023,7 @@ check_adm_exists (svn_boolean_t *exists,
       if (entry->revision != revision
           && !(entry->schedule == svn_wc_schedule_delete && revision == 0))
         return
-          svn_error_createf (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL,
+          svn_error_createf (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
                              "revision %" SVN_REVNUM_T_FMT
                              " doesn't match existing revision %"
                              SVN_REVNUM_T_FMT " in '%s'",
@@ -1033,7 +1033,7 @@ check_adm_exists (svn_boolean_t *exists,
       if (strcmp (entry->url, url) != 0)
         return
           svn_error_createf
-          (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL,
+          (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
            "URL '%s' doesn't match existing URL '%s' in '%s'",
            url, entry->url, path);
     }
@@ -1075,7 +1075,7 @@ init_adm_file (const char *path,
   SVN_ERR (svn_wc__close_adm_file (f, path, thing, 1, pool));
   
   if (apr_err)
-    err = svn_error_create (apr_err, 0, NULL, path);
+    err = svn_error_create (apr_err, NULL, path);
 
   return err;
 }

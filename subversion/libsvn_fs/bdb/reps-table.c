@@ -87,7 +87,7 @@ svn_fs__read_rep (svn_fs__representation_t **rep_p,
   /* If there's no such node, return an appropriately specific error.  */
   if (db_err == DB_NOTFOUND)
     return svn_error_createf
-      (SVN_ERR_FS_NO_SUCH_REPRESENTATION, 0, 0,
+      (SVN_ERR_FS_NO_SUCH_REPRESENTATION, 0,
        "svn_fs__read_rep: no such representation `%s'", key);
 
   /* Handle any other error conditions.  */
@@ -183,7 +183,7 @@ svn_fs__delete_rep (svn_fs_t *fs, const char *key, trail_t *trail)
   /* If there's no such node, return an appropriately specific error.  */
   if (db_err == DB_NOTFOUND)
     return svn_error_createf
-      (SVN_ERR_FS_NO_SUCH_REPRESENTATION, 0, 0,
+      (SVN_ERR_FS_NO_SUCH_REPRESENTATION, 0,
        "svn_fs__delete_rep: no such representation `%s'", key);
 
   /* Handle any other error conditions.  */

@@ -42,7 +42,7 @@ svn_cl__cat (apr_getopt_t *os,
   svn_client_auth_baton_t *auth_baton;
 
   if (opt_state->end_revision.kind != svn_opt_revision_unspecified)
-    return svn_error_createf (SVN_ERR_CLIENT_REVISION_RANGE, 0, NULL,
+    return svn_error_createf (SVN_ERR_CLIENT_REVISION_RANGE, NULL,
                               "cat only accepts a single revision");
 
   SVN_ERR (svn_opt_args_to_target_array (&targets, os,
@@ -53,7 +53,7 @@ svn_cl__cat (apr_getopt_t *os,
 
   /* Cat cannot operate on an implicit '.' so a filename is required */
   if (! targets->nelts)
-    return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, 0, "");
+    return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, "");
 
   /* Build an authentication baton to give to libsvn_client. */
   auth_baton = svn_cl__make_auth_baton (opt_state, pool);
@@ -66,7 +66,7 @@ svn_cl__cat (apr_getopt_t *os,
 
       SVN_ERR (svn_cl__get_url_from_target (&URL, target, pool));
       if (! URL)
-        return svn_error_createf (SVN_ERR_ENTRY_MISSING_URL, 0, NULL,
+        return svn_error_createf (SVN_ERR_ENTRY_MISSING_URL, NULL,
                                   "'%s' has no URL", target);
 
       SVN_ERR (svn_client_cat (out, URL, &(opt_state->start_revision),
