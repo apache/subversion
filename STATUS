@@ -13,6 +13,7 @@ Candidate changes:
     Mark python and perl bindings modules "undefined-lib-symbols = yes".
     This is because they require symbols from libperl/libpython, which we
     don't explicitly link to.
+    Fixes the python bindings on OS X.
     Votes:
       +1: maxb
 
