@@ -78,10 +78,10 @@ svn_wc_get_local_propchanges (apr_array_header_t **local_propchanges,
 
       /* Get next property */
       apr_hash_this (hi, &key, &klen, &val);
-      propval1 = (svn_stringbuf_t *) val;
+      propval1 = val;
 
       /* Does property name exist in localprops? */
-      propval2 = (svn_stringbuf_t *) apr_hash_get (localprops, key, klen);
+      propval2 = apr_hash_get (localprops, key, klen);
 
       if (propval2 == NULL)
         {
@@ -110,10 +110,10 @@ svn_wc_get_local_propchanges (apr_array_header_t **local_propchanges,
 
       /* Get next property */
       apr_hash_this (hi, &key, &klen, &val);
-      propval2 = (svn_stringbuf_t *) val;
+      propval2 = val;
 
       /* Does property name exist in baseprops? */
-      propval1 = (svn_stringbuf_t *) apr_hash_get (baseprops, key, klen);
+      propval1 = apr_hash_get (baseprops, key, klen);
 
       if (propval1 == NULL)
         {

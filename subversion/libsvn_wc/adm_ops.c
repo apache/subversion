@@ -70,15 +70,14 @@ recursively_tweak_entries (const char *dirpath,
   for (hi = apr_hash_first (subpool, entries); hi; hi = apr_hash_next (hi))
     {
       const void *key;
-      apr_ssize_t keylen;
       void *val;
       const char *name;
       svn_wc_entry_t *current_entry;
       const char *child_url = NULL;
 
-      apr_hash_this (hi, &key, &keylen, &val);
-      name = (const char *) key;
-      current_entry = (svn_wc_entry_t *) val;
+      apr_hash_this (hi, &key, NULL, &val);
+      name = key;
+      current_entry = val;
 
       /* Ignore the "this dir" entry. */
       if (! strcmp (name, SVN_WC_ENTRY_THIS_DIR))
@@ -354,8 +353,8 @@ svn_wc_process_committed (const char *path,
           const char *this_path;
 
           apr_hash_this (hi, &key, NULL, &val);
-          name = (const char *) key;
-          current_entry = (svn_wc_entry_t *) val;
+          name = key;
+          current_entry = val;
           
           /* Ignore the "this dir" entry. */
           if (! strcmp (name, SVN_WC_ENTRY_THIS_DIR))
@@ -431,7 +430,7 @@ mark_tree (const char *dir,
 
       /* Get the next entry */
       apr_hash_this (hi, &key, NULL, &val);
-      entry = (svn_wc_entry_t *) val;
+      entry = val;
 
       /* Skip "this dir".  */
       if (! strcmp ((const char *)key, SVN_WC_ENTRY_THIS_DIR))
@@ -1289,7 +1288,7 @@ svn_wc_revert (const char *path,
           
           /* Get the next entry */
           apr_hash_this (hi, &key, NULL, NULL);
-          keystring = (const char *) key;
+          keystring = key;
 
           /* Skip "this dir" */
           if (! strcmp (keystring, SVN_WC_ENTRY_THIS_DIR))
@@ -1652,12 +1651,11 @@ svn_wc_set_auth_file (const char *path,
       for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
         {
           const void *key;
-          apr_ssize_t keylen;
           void *val;
 
-          apr_hash_this (hi, &key, &keylen, &val);
-          base_name = (const char *) key;          
-          entry = (svn_wc_entry_t *) val;
+          apr_hash_this (hi, &key, NULL, &val);
+          base_name = key;          
+          entry = val;
 
           if ((entry->kind == svn_node_dir)
               && (strcmp (base_name, SVN_WC_ENTRY_THIS_DIR)))

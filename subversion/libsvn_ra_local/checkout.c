@@ -169,7 +169,7 @@ walk_tree (svn_fs_root_t *root,
          from dirent->name.  No point getting both, though.  */
 
       apr_hash_this (hi, NULL, NULL, &val);
-      dirent = (svn_fs_dirent_t *) val;
+      dirent = val;
 
       /* Extend our various paths by DIRENT->name. */
       URL_path = svn_path_join (URL, dirent->name, subpool);

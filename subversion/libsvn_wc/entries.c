@@ -714,14 +714,13 @@ check_entries (apr_hash_t *entries,
     {
       const void *key;
       const char *name;
-      apr_size_t keylen;
       void *val;
       svn_wc_entry_t *this_entry;
 
       /* Get the entry */
-      apr_hash_this (hi, &key, &keylen, &val);
+      apr_hash_this (hi, &key, NULL, &val);
       this_entry = val;
-      name = (const char *)key;
+      name = key;
 
       /* We've already checked the "this dir" entry */
       if (! strcmp (name, SVN_WC_ENTRY_THIS_DIR ))
@@ -1040,12 +1039,11 @@ svn_wc__entries_write (apr_hash_t *entries,
   for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
     {
       const void *key;
-      apr_ssize_t keylen;
       void *val;
       svn_wc_entry_t *this_entry;
 
       /* Get the entry and make sure its attributes are up-to-date. */
-      apr_hash_this (hi, &key, &keylen, &val);
+      apr_hash_this (hi, &key, NULL, &val);
       this_entry = val;
 
       /* Don't rewrite the "this dir" entry! */

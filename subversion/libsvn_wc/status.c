@@ -316,7 +316,7 @@ add_unversioned_items (const char *path,
       const char *printable_path;
 
       apr_hash_this (hi, &key, &klen, &val);
-      keystring = (const char *) key;
+      keystring = key;
         
       /* If the dirent isn't in `.svn/entries'... */
       if (apr_hash_get (entries, key, klen))        
@@ -455,7 +455,7 @@ svn_wc_statuses (apr_hash_t *statushash,
 
           /* Get the next dirent */
           apr_hash_this (hi, &key, NULL, &val);
-          base_name = (const char *) key;
+          base_name = key;
           if (strcmp (base_name, SVN_WC_ENTRY_THIS_DIR) != 0)
             fullpath = svn_path_join (fullpath, base_name, pool);
 

@@ -226,14 +226,13 @@ svn_client_switch (svn_client_auth_baton_t *auth_baton,
       for (hi = apr_hash_first (pool, prophash); hi; hi = apr_hash_next (hi))
         {
           const void *key;
-          apr_ssize_t klen;
           void *val;
           svn_prop_t *prop;
           
-          apr_hash_this (hi, &key, &klen, &val);
+          apr_hash_this (hi, &key, NULL, &val);
 
           prop = apr_array_push (proparray);
-          prop->name = (const char *) key;
+          prop->name = key;
           prop->value = svn_string_create_from_buf ((svn_stringbuf_t *) val,
                                                     pool);
         }

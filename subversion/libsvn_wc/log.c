@@ -56,7 +56,7 @@ enum svn_wc__xfer_action {
   svn_wc__xfer_mv,
   svn_wc__xfer_append,
   svn_wc__xfer_cp_and_translate,
-  svn_wc__xfer_cp_and_detranslate,
+  svn_wc__xfer_cp_and_detranslate
 };
 
 

@@ -320,12 +320,11 @@ import (const char *path,
   for (hi = apr_hash_first (pool, files); hi; hi = apr_hash_next (hi))
     {
       const void *key;
-      apr_ssize_t keylen;
       void *val;
       struct imported_file *value;
       const char *full_path;
       
-      apr_hash_this (hi, &key, &keylen, &val);
+      apr_hash_this (hi, &key, NULL, &val);
       value = val;
       full_path = key;
       SVN_ERR (send_file_contents (full_path, value->file_baton, 
@@ -550,11 +549,10 @@ remove_tmpfiles (apr_hash_t *tempfiles,
   for (hi = apr_hash_first (pool, tempfiles); hi; hi = apr_hash_next (hi))
     {
       const void *key;
-      apr_ssize_t keylen;
       void *val;
       svn_node_kind_t kind;
 
-      apr_hash_this (hi, &key, &keylen, &val);
+      apr_hash_this (hi, &key, NULL, &val);
       SVN_ERR (svn_io_check_path ((const char *)key, &kind, pool));
       if (kind == svn_node_file)
         SVN_ERR (svn_io_remove_file ((const char *)key, pool));

@@ -184,7 +184,7 @@ svn_ra_get_ra_library (svn_ra_plugin_t **library,
 
       /* Get key and val. */
       apr_hash_this (this, &key, &keylen, &val);
-      keystr = (const char *) key;
+      keystr = key;
 
       /* case-sensitive scheme comparison */
       if (memcmp (keystr, URL, keylen) == 0 && URL[keylen] == ':')
@@ -238,10 +238,9 @@ svn_ra_print_ra_libraries (svn_stringbuf_t **descriptions,
     {
       const void *key;
       void *val;
-      apr_ssize_t keylen;
 
       /* Get key and val. */
-      apr_hash_this (this, &key, &keylen, &val);
+      apr_hash_this (this, &key, NULL, &val);
       list[idx].ra_lib = val;
       list[idx].schema = key;
       ++idx;

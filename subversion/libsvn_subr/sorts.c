@@ -78,16 +78,16 @@ svn_sort_compare_items_as_paths (const svn_item_t *a, const svn_item_t *b)
 int
 svn_sort_compare_strings_as_paths (const void *a, const void *b)
 {
-  const svn_stringbuf_t *str_a = *((svn_stringbuf_t **) a);
-  const svn_stringbuf_t *str_b = *((svn_stringbuf_t **) b);
+  const svn_stringbuf_t *str_a = *((const svn_stringbuf_t **) a);
+  const svn_stringbuf_t *str_b = *((const svn_stringbuf_t **) b);
   return svn_path_compare_paths (str_a, str_b);
 }
 
 int
 svn_sort_compare_revisions (const void *a, const void *b)
 {
-  svn_revnum_t a_rev = *(svn_revnum_t *)a;
-  svn_revnum_t b_rev = *(svn_revnum_t *)b;
+  svn_revnum_t a_rev = *(const svn_revnum_t *)a;
+  svn_revnum_t b_rev = *(const svn_revnum_t *)b;
 
   if (a_rev == b_rev)
     return 0;
