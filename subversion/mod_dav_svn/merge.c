@@ -134,11 +134,13 @@ static svn_error_t *send_response(mr_baton *baton, svn_boolean_t is_dir)
 
   status = ap_fputstrs(mrc->output, mrc->bb,
                        "<D:response>" DEBUG_CR
-                       "<D:href>", href, "</D:href>" DEBUG_CR
+                       "<D:href>", 
+                       apr_xml_quote_string (baton->pool, href, 1),
+                       "</D:href>" DEBUG_CR
                        "<D:propstat><D:prop>" DEBUG_CR,
                        rt,
                        "<D:checked-in><D:href>",
-                       vsn_url,
+                       apr_xml_quote_string (baton->pool, vsn_url, 1),
                        "</D:href></D:checked-in>" DEBUG_CR
                        "</D:prop>" DEBUG_CR
                        "<D:status>HTTP/1.1 200 OK</D:status>" DEBUG_CR
@@ -354,7 +356,9 @@ dav_error * dav_svn__merge_response(ap_filter_t *output,
 
                      /* generate a response for the new baseline */
                      "<D:response>" DEBUG_CR
-                     "<D:href>", vcc, "</D:href>" DEBUG_CR
+                     "<D:href>", 
+                     apr_xml_quote_string (pool, vcc, 1),
+                     "</D:href>" DEBUG_CR
                      "<D:propstat><D:prop>" DEBUG_CR
                      /* ### this is wrong. it's a VCC, not a baseline. but
                         ### we need to tell the client to look at *this*

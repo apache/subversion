@@ -1188,10 +1188,12 @@ static svn_error_t * reporter_set_path(void *report_baton,
   report_baton_t *rb = report_baton;
   apr_status_t status;
   const char *entry;
+  svn_stringbuf_t *qpath = NULL;
 
+  svn_xml_escape_string (&qpath, path, rb->ras->pool);
   entry = apr_psprintf(rb->ras->pool,
                        "<S:entry rev=\"%ld\">%s</S:entry>" DEBUG_CR,
-                       revision, path->data);
+                       revision, qpath->data);
 
   status = apr_file_write_full(rb->tmpfile, entry, strlen(entry), NULL);
   if (status)
