@@ -136,6 +136,20 @@ svn_error_t *svn_io_append_file (svn_stringbuf_t *src,
                                  apr_pool_t *pool);
 
 
+/* Copy the contents of SRC to DST, overwriting DST if it exists, and
+   replacing whatever bytestring SRC uses to denote line endings with
+   EOL_STR in the output.  
+
+   If SRC is determined to have an inconsistent line ending style,
+   then if REPAIR is FALSE, return SVN_ERR_IO_INCONSISTENT_EOL and
+   remove DST, else if REPAIR is TRUE, repair DST by converting
+   newlines of all known formats to EOL_STR.  */
+svn_error_t *svn_io_convert_eol (svn_stringbuf_t *src,
+                                 svn_strinbuf_t *dst,
+                                 const char *eol_str,
+                                 svn_boolean_t repair,
+                                 apr_pool_t *pool);
+
 /* Read a line from FILE into BUF, but not exceeding *LIMIT bytes.
  * Does not include newline, instead '\0' is put there.
  * Length (as in strlen) is returned in *LIMIT.
