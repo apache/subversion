@@ -1457,30 +1457,34 @@ if __name__ == '__main__':
       inicialmente por el área, hasta que por supuesto, no quede
       más memoria disponible en el sistema.</para>
 
-    <para>Now, if this were the end of the pool story, it would hardly
-      have merited special attention.  Fortunately, that's not the
-      case.  Pools can not only be created; they can also be cleared
-      and destroyed, using <function>apr_pool_clear()</function> and
-      <function>apr_pool_destroy()</function> respectively.  This
-      gives developers the flexibility to allocate several&mdash;or
-      several thousand&mdash;things from the pool, and then clean up
-      all of that memory with a single function call!  Further, pools
-      have hierarchy.  You can make <quote>subpools</quote> of any
-      previously created pool.  When you clear a pool, all of its
-      subpools are destroyed; if you destroy a pool, it and its
-      subpools are destroyed.</para>
+    <para>Ahora bien, si este fuese el final de la historia del
+      área de memoria, difícilmente se hubiese merecido atención
+      especial. Afortunadamente este no es el caso. Las áreas
+      no sólo pueden ser creadas; también pueden ser limpiadas y
+      destruídas, usando <function>apr_pool_clear()</function> y
+      <function>apr_pool_destroy()</function> respectivamente. Esto
+      proporciona a los desarrolladores la flexibilidad de
+      reservar varios&mdash;o varios miles&mdash;elementos del
+      área, ¡y entonces limpiar toda esa memoria con una simple
+      llamada! Además, las áreas de memoria tienen jerarquía.
+      Puede hacer <quote>sub áreas</quote> de cualquier área de
+      memoria previamente creada. Cuando limpia un área, todas sus
+      sub áreas son destruídas; si destruye un área, ésta y sus
+      sub áreas serán destruídas.</para>
 
-    <para>Before we go further, developers should be aware that they
-      probably will not find many calls to the APR pool functions we
-      just mentioned in the Subversion source code.  APR pools offer
-      some extensibility mechanisms, like the ability to have custom
-      <quote>user data</quote> attached to the pool, and mechanisms
-      for registering cleanup functions that get called when the pool
-      is destroyed.  Subversion makes use of these extensions in a
-      somewhat non-trivial way.  So, Subversion supplies (and most of
-      its code uses) the wrapper functions
-      <function>svn_pool_create()</function>,
-      <function>svn_pool_clear()</function>, and
+    <para>Antes de continuar, los desarrolladores deben tener
+      presente que probablemente no encontrarán muchas llamadas
+      a las funciones de áreas de memoria APR que acabamos de
+      mencionar en el código fuente de Subversion.  Las áreas
+      de memoria APR ofrecen algunos mecanismos de extensión,
+      como la posibilidad de tener <quote>datos de usuario</quote>
+      personalizados asociados al área de memoria, y mecanismos para
+      registrar funciones de limpieza que serán llamadas cuando el
+      área de memoria sea destruída.  Subversion hace uso de estas
+      extensiones de un modo no trivial. Por lo que Subversion
+      proporciona (y la mayoría del código usa) las funciones
+      de envoltorio <function>svn_pool_create()</function>,
+      <function>svn_pool_clear()</function>, y
       <function>svn_pool_destroy()</function>.</para>
 
     <para>While pools are helpful for basic memory management, the
