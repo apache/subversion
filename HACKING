@@ -391,6 +391,19 @@ In addition to the GNU standards, Subversion uses these conventions:
          svn_fs_get_rev_prop ()       /* Part of published API. */
          svn_fs__parse_props ()       /* For internal use only. */
 
+   *  In text strings that might be printed out (or otherwise made
+      available) to users, use only forward quotes around paths and
+      other quotable things.  For example:
+
+         $ svn revert foo
+         svn: warning: svn_wc_is_wc_root: 'foo' is not a versioned resource
+         $ 
+
+      There used to be a lot of strings that used a backtick for the
+      first quote (`foo' instead of 'foo'), but that looked bad in
+      some fonts, and also messed up some people's auto-highlighting,
+      so we settled on the convention of always using forward quotes.
+
    *  If you use Emacs, put something like this in your .emacs file,
       so you get svn-dev.el and svnbook.el when needed:
 
