@@ -366,7 +366,6 @@ svn_cl__edit_externally (svn_stringbuf_t **edited_contents,
                          apr_pool_t *pool)
 {
   const char *editor = NULL;
-  const char *command = NULL;
   apr_file_t *tmp_file;
   svn_stringbuf_t *tmpfile_name;
   apr_status_t apr_err;
@@ -421,9 +420,6 @@ svn_cl__edit_externally (svn_stringbuf_t **edited_contents,
          "Unable to write initial contents to temporary file.");
       goto cleanup;
     }
-
-  /* Create the editor command line. */
-  command = apr_psprintf (pool, "%s %s", editor, tmpfile_name->data);
 
   /* Get information about the temporary file before the user has
      been allowed to edit its contents. */
