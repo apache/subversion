@@ -115,8 +115,13 @@ svn_error_t *svn_fs__dag_revision_root (dag_node_t **node_p,
                                         trail_t *trail);
 
 
-/* Set *NODE_P to the mutable root of transaction TXN in FS, as part
-   of TRAIL.  Allocate the node in TRAIL->pool.  */
+/* Set *NODE_P to the root of transaction TXN in FS, as part
+   of TRAIL.  Allocate the node in TRAIL->pool.
+
+   Note that the root node of TXN is not necessarily mutable.  If no
+   changes have been made in the transaction, then it may share its
+   root directory with its base revision.  To get a mutable root node
+   for a transaction, call svn_fs__dag_clone_root.  */
 svn_error_t *svn_fs__dag_txn_root (dag_node_t **node_p,
                                    svn_fs_t *fs,
                                    const char *txn,
