@@ -33,11 +33,16 @@
 <p>
 <strong>How-to:</strong>
 </p>
+<li><a href="#co-svn">How do I check out the Subversion code?</a></li>
 <li><a href="#repository">How do I create a repository?  How do I
     import data into it?</a></li> 
 <li><a href="#proxy">What if I'm behind a proxy?</a></li>
 <li><a href="#paranoid">My admins don't want me to have a HTTP server for
     Subversion.  What can I do if I still want remote usage?</a></li> 
+<li><a href="#multi-proj">How do I manage several different projects
+    under Subversion?</li></a>
+<li><a href="#multi-merge">How do I merge two completely separate repositories?</li></a>
+<li><a href="#patch">How do I submit a patch for Subversion?</a></li>
 <p>
 <strong>Troubleshooting:</strong>
 </p>
@@ -59,6 +64,7 @@
     server sometimes seems to send out corrupted data.  Can this really be
     happening?</a></li>  
 <p>
+
 <strong>References:</strong>
 </p>
 <li><a href="#http-methods">What are all the HTTP methods Subversion 
@@ -268,6 +274,17 @@ href="http://www.openprojects.net">irc.openprojects.net</a>.</p>
 
 <![CDATA[-----------------------------------------------------------]]>
 
+<h3><a name="co-svn">How do I check out the Subversion code?</a></h3>
+<p>Use the subversion client:
+<pre>
+	$ svn co http://svn.collab.net/repos/svn/trunk subversion
+</pre>
+<p>
+That will check out a copy of the Subversion source tree into a
+directory named subversion on your local machine.
+
+<![CDATA[-----------------------------------------------------------]]>
+
 <h3><a name="repository">How do I create a repository?  How do I
 import data into it?</a></h3>
 
@@ -398,6 +415,130 @@ in MOVE and COPY requests, so you have to be a little careful here - a
 >http://csociety.ecn.purdue.edu/~sigos/projects/ssh/forwarding/</a></li>
 <li><a href="http://www.zip.com.au/~roca/ttssh.html">TTSSH: A Win32 SSH client capable of port forwarding</a></li>
 </ul>
+
+<![CDATA[=========================================================]]>
+
+<h3><a name="multi-proj">How do I manage several different projects under Subversion?</a></h3>
+
+<p>It depends upon the projects involved.  If the projects are
+related, and are likely to share data, then it's best to create one
+repository with several subdirectories like this:
+<pre>
+	$ svnadmin create /repo/svn
+	$ svn mkdir file:///repo/svn/projA
+	$ svn mkdir file:///repo/svn/projB
+	$ svn mkdir file:///repo/svn/projC
+</pre>
+
+If the projects are completely unrelated, and not likely to share data
+between them, then it's probably best to create separate and unrelated
+repositories.
+<pre>
+	$ mkdir /repo/svn
+	$ svnadmin create /repo/svn/projA
+	$ svnadmin create /repo/svn/projB
+	$ svnadmin create /repo/svn/projC
+</pre>
+<p>
+The difference between these two approaches is this (as explained by
+Ben Collins-Sussman <sussman@NOSPAMcollab.net>):
+
+<ul>
+  <li>
+    <pre>
+     In the first case, code can easily be copied or moved around
+     between projects, and the history is preserved.  ('svn cp/mv'
+     currently only works within a single repository.)
+    </pre>
+  </li>
+  <li>
+    <pre>
+     Because revision numbers are repository-wide, a commit to any
+     project in the first case causes a global revision bump.  So it
+     might seem a bit odd if somebody has 'projB' checked out, notices
+     that 10 revisions have happened, but projB hasn't changed at
+     all.  Not a big deal, really.  Just a little weird at first.
+     This already happens to svn, everytime people commit to
+     rapidsvn.  :-)
+    </pre>
+  </li>
+  <li>
+    <pre>
+     The second case might be easier to secure; it's easier to insulate
+     projects from each other (in terms of users and permissions)
+     using Apache's access control.  In the 2nd case, you'll need a
+     fancy hook script in the repository that distinguishes projects
+     ("is this user allowed to commit to this particular subdir?")  Of
+     course, we already have such a script, ready for you to use.
+    </pre>
+  </li>
+</ul>
+
+<![CDATA[=========================================================]]>
+  
+<h3><a name="multi-merge">How do I merge two completely separate repositories?</a></h3>
+
+<p>If you don't care about retaining all the history of one of the
+repositories, you can just create a new directory under one project's
+repository, then import the other.
+
+<p>If you care about retaining the history of both, then you can use
+'svnadmin dump' to dump one repository, and 'svnadmin load' to load it into
+the other repository.  The revision numbers will be off, but you'll
+still have the history.
+
+<p>Peter Davis <peter@NOSPAMpdavis.cx> also explains a method using svn's
+equivalent to CVS modules:
+
+<p><blockquote>
+
+	<p>As long as the merging takes place in separate directory
+	trees, you can use svn's version of CVS modules.
+
+	<p>Set the <em>svn:externals</em> property on a directory to checkout
+	directories from other repositories whenever the original
+	directory is checked out.  The repository remains separate,
+	but in the working copy it appears that they have been merged.
+	If you commit to the imported directory, it will affect the
+	external repository.
+
+	<p>The merge isn't completely clean: the import only affects
+	working copies, so you won't be able to use a URL in the first
+	repository to access modules imported from the second.  They
+	remain separate URLs.
+</blockquote>
+
+<![CDATA[=========================================================]]>
+
+<h3><a name="patch">How do I submit a patch for Subversion?</a></h3>
+
+<p>FIRST, read the <a href="http://svn.collab.net/repos/svn/trunk/HACKING">HACKING</a> document.
+
+<p>Once you've digested that, send a mail to the dev list with the
+word [PATCH] and a one-line description in the subject, and include
+the patch inline in your mail (unless your MUA munges it up
+totally). Then a committer will pick it up, apply it (making any
+formatting or content changes necessary), and check it in.
+
+<p>The basic process looks like this:
+<pre>
+<blockquote>
+	$ svn co http://svn.collab.net/repos/svn/trunk subversion
+	$ cd subversion/www
+
+		[ make changes to project_faq.html ]
+	
+	$ svn diff -u project_faq.html > /tmp/foo
+
+	$ Mail -s "[PATCH] FAQ updates" < /tmp/foo
+</blockquote>
+</pre>
+
+Of course, the email you send should contain a nice long
+explanation about what the patch does, as per the
+<a href="http://svn.collab.net/repos/svn/trunk/HACKING">HACKING</a>
+document, but you already know that, since you read and completely
+understood it <em>before</em> actually hacking the code, right? :)
 
 <![CDATA[=========================================================]]>
 
