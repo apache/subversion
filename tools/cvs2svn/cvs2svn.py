@@ -983,7 +983,8 @@ class Dumper:
     ### use it to set svn:mime-type.
 
     basename = os.path.basename(rcs_file[:-2])
-    pipe = os.popen('co -q -p%s \'%s\'' % (cvs_rev, rcs_file), 'r', 102400)
+    pipe = os.popen('co -q -p%s \'%s\''
+                    % (cvs_rev, rcs_file.replace("'", "'\\''")), 'r', 102400)
 
     # You might think we could just test
     #
