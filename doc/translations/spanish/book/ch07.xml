@@ -156,25 +156,30 @@
 
     <!-- ***************************************************************** -->
     <sect2 id="svn-ch-7-sect-1.2">
-      <title>Configuration and the Windows Registry</title>
+      <title>La configuración y el registro de Windows</title>
 
-      <para>In addition to the usual INI-based configuration area,
-        Subversion clients running on Windows platforms may also use
-        the Windows registry to hold the configuration data.  The
-        option names and their values are the same as in the INI
-        files.  The <quote>file/section</quote> hierarchy is
-        preserved as well, though addressed in a slightly different
-        fashion&mdash;in this schema, files and sections are just
-        levels in the registry key tree.</para>
+      <para>Además del área de configuración habitual basada en
+        ficheros INI, los clientes de Subversion ejecutados en
+        plataformas Windows también pueden usar el registro de
+        Windows para almacenar datos de configuración. Los nombres
+        de las opciones y sus valores son iguales que en los
+        ficheros INI. La jerarquía <quote>fichero/sección</quote>
+        también se mantiene, aunque especificada de una manera
+        ligeramente diferente&mdash;en este esquema, los ficheros y
+        las secciones son simples niveles del árbol del registro de
+        claves.</para><!-- TODO buscar en documentación en castellano
+        u opciones de menu del editor de registro de Windows cómo se
+        denomina a los nombres de las opciones: llaves o claves? -->
 
-      <para>Subversion looks for system-wide configuration values
-        under the
-        <literal>HKEY_LOCAL_MACHINE\Software\Tigris.org\Subversion</literal>
-        key.  For example, the <literal>global-ignores</literal> option,
-        which is in the <literal>miscellany</literal> section of the
-        <filename>config</filename> file, would be found at
+      <para>Subversion busca valores de configuración global de
+        sistema bajo la clave
+        <literal>HKEY_LOCAL_MACHINE\Software\Tigris.org\Subversion</literal>.
+        Por ejemplo, la opción <literal>global-ignores</literal>,
+        que pertenece a la sección <literal>miscellany</literal>
+        del fichero <filename>config</filename>, se encontraría en
         <literal>HKEY_LOCAL_MACHINE\Software\Tigris.org\Subversion\Config\Miscellany\global-ignores</literal>.
-        Per-user configuration values should be stored under
+        Los valores de configuración de cada usuario debería poder
+        encontrarlos en
         <literal>HKEY_CURRENT_USER\Software\Tigris.org\Subversion</literal>.
       </para>
 
