@@ -293,7 +293,7 @@ free_file_baton (struct file_baton *fb)
 {
   struct dir_baton *parent = fb->dir_baton;
 
-  /* kff fooo: working here.
+  /* kff todo: working here.
      If we comment out the apr_destroy_pool() below, then the Corrupt
      Parent Path bug does not manifest itself.  If we do destroy the
      file_baton's pool, then the parent dir's path gets corrupted in a

@@ -100,6 +100,23 @@ svn_wc__ensure_wc (svn_string_t *path,
 
 
 
+/*** Closing commits. ***/
+
+svn_error_t *
+svn_wc_close_commit (svn_string_t *root_dir,
+                     svn_string_t *tok,
+                     svn_vernum_t new_version,
+                     apr_pool_t *pool)
+{
+  /* kff todo: walk down from root, updating adm areas with the
+     version number of the successful commit. */ 
+
+  return SVN_NO_ERROR;
+}
+
+
+
+
 /* kff todo: not all of these really belong in wc_adm.  Some may get
    broken out into other files later.  They're just here to satisfy
    the public header file that they exist. */
