@@ -1106,7 +1106,7 @@ Index: stuff/things/bloo.h
           file:</para>
 
         <screen>
-$ svn diff > patchfile
+$ svn diff &gt; patchfile
 </screen>
 
         <para>You could, for example, email the patchfile to another
@@ -1932,7 +1932,7 @@ $
         file:</para>
 
       <screen>
-$ svn cat --revision 2 rules.txt > rules.txt.v2
+$ svn cat --revision 2 rules.txt &gt; rules.txt.v2
 $
 </screen>
 

@@ -611,7 +611,7 @@ Committed revision 360.
           For example:</para>
 
 <screen>
-$ svn diff -r 343:344 http://svn.example.com/repos/calc/trunk > patchfile
+$ svn diff -r 343:344 http://svn.example.com/repos/calc/trunk &gt; patchfile
 $ patch -p0  &lt; patchfile
 Patching file integer.c using Plan A...
 Hunk #1 succeeded at 147.
