@@ -74,24 +74,29 @@ III. Server Implementation
          child, and cannot be deleted.  This is a much more acceptable
          O(logN) search.
 
-   C.  OPTION:  how to implement locks in libsvn_fs
+   C.  How to implement locks in libsvn_fs
 
           This option implies that both BDB and FSFS would need to
           implement the 'lock tree' in their own way.  Any user of
           libsvn_fs would automatically get lock-enforcement.
 
-      1.  New fs functions for locks:
+
+      1.  Define an API for associating a user with an open
+          filesystem.  Locks cannot be created/destroyed without a
+          username.
+
+      2.  New fs functions for locks:
 
               svn_fs_lock()       --> locks a file
               svn_fs_unlock()     --> unlocks a file
-              svn_fs_get_locks()  --> returns all lock-tokens
-              svn_fs_is_locked()  --> discover if a path is locked
+              svn_fs_get_locks()  --> returns list of locked paths
+              svn_fs_get_lock()   --> discover if a path is locked
 
             These functions don't do anything special, other than
             allow one to create/release/examine locks.  BDB and FSFS
             need to implement these functions independently.
 
-      2.  Wrap two of the functions in libsvn_repos, to invoke hooks.
+      3.  Wrap two of the functions in libsvn_repos, to invoke hooks.
 
               svn_repos_fs_lock()
               svn_repos_fs_unlock()
@@ -102,17 +107,44 @@ III. Server Implementation
             circumvents hooks) would be a tool like svnadmin (see
             'svnadmin unlock' in UI document.)
 
-      3.  libsvn_fs calls that try to change a file must now check for
-          locks before doing so:
+      4.  Teach a number of fs functions to check for locks, and deal
+          with them:
 
-              svn_fs_node_prop()
-              svn_fs_apply_textdelta()
-              svn_fs_apply_text()
-              svn_fs_delete()
+          svn_fs_node_prop()
+          svn_fs_apply_textdelta()
+          svn_fs_apply_text()
+          svn_fs_make_file()
+          svn_fs_make_dir()
 
-      4.  When svn_fs_delete() tries to delete a directory, we must
-          make sure that no child (at any depth) within the directory
-          is locked.  See III.B.2 for an explanation.
+            Check to see if the incoming path is locked.  If so, use
+            the fs lock-token callback to "pull" a lock-token from
+            the caller.
+
+              1. check that the lock-token correctly matches the
+                 lock. (i.e. that the caller isn't using some defunct
+                 or malformed token).
+
+              2. check that the lock owner matches whatever
+                 authenticated username is currently attached to the fs.
+
+          svn_fs_copy()
+          svn_fs_revision_link()
+          svn_fs_delete()
+
+            Same logic as above, except that because these operations
+            can operate on entire trees,  *multiple* lock-tokens might
+            need to be pulled via callback.
+
+          svn_fs_commit_txn()
+
+            Same logic, but this is the "final" check.  This function
+            already briefly locks the revisions-table in order to do a
+            final out-of-date check on everything.  In that same vein,
+            it needs to briefly lock the locks-table, and verify every
+            single lock.  This means pulling multiple lock-tokens
+            again, even if they've already been pulled "on the fly" by
+            other fs functions.
+
 
       5.  auto-expiration of locks
 
@@ -123,59 +155,6 @@ III. Server Implementation
           get nothing back.
 
           As discussed on the list -- the svn_fs_lock() command should
-          take an optional argument for the 'expiration-date' field.
-          But this field should *never* be used by anything other than
-          mod_dav_svn responding to generic DAV clients.  We don't
-          want to expose this feature to the svn client.
-
-
-   D.  OPTION:  how to implement locks in libsvn_repos
-
-          This option implies that libsvn_repos implements a 'lock
-          tree' shareable by all RA layers.  However, to get lock
-          enforcement, any user of libsvn_fs must remember to make
-          calls into the new libsvn_repos locking API.
-
-      1.  New repos functions for locks:
-
-              svn_repos_lock()       --> locks a file
-              svn_repos_unlock()     --> unlocks a file
-              svn_repos_get_locks()  --> returns all lock-tokens
-              svn_repos_is_locked()  --> discover if a path is locked
-
-            These functions don't do anything special, other than
-            allow one to create/release/examine locks.
-
-      2.  Make sure that svn_repos_lock() and svn_repos_unlock() are
-          calling hooks.
-
-          There may be certain callers of these functions that
-          deliberately want to avoid invoking hooks, such as 'svnadmin
-          unlock'.   So these functions should take arguments that
-          allow the hooks to be skipped.
-
-      3.  Any process that calls the following libsvn_fs functions
-          must first invoke svn_repos_is_locked() to enforce locking:
-
-              svn_fs_node_prop()
-              svn_fs_apply_textdelta()
-              svn_fs_apply_text()
-              svn_fs_delete()
-
-      4.  When svn_fs_delete() is used to delete a directory, the
-          caller must first make sure that no child (at any depth)
-          within the directory is locked.  See III.B.2 for an
-          explanation.
-
-      5.  auto-expiration of locks
-
-          The common code which reads locks should be implemented in a
-          special way: whenever a lock is read, lock expiration should
-          be checked.  If a lock has expired, then the lock should be
-          removed, and the caller (doing the read operation) should
-          get nothing back.
-
-          As discussed on the list -- the svn_repos_lock() command should
           take an optional argument for the 'expiration-date' field.
           But this field should *never* be used by anything other than
           mod_dav_svn responding to generic DAV clients.  We don't
