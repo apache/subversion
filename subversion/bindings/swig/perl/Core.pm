@@ -1,6 +1,8 @@
 package SVN::Core;
 use SVN::Base qw(Core svn_);
 
+$VERSION = "$VER_MAJOR.$VER_MINOR.$VER_MICRO";
+
 BEGIN {
     SVN::_Core::apr_initialize;
 
