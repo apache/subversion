@@ -1,8 +1,5 @@
 #!/bin/sh
 
-#### TEMPORARY:
-exit 0
-
 SVN_PROG=../svn
 TEST_DIR_1=t1
 TEST_DIR_2=t2
@@ -82,7 +79,6 @@ echo "Committing changes in ${TEST_DIR_1}."
 
 check_status 6
 
-
 ### Update.
 echo "Updating ${TEST_DIR_2} from changes in ${TEST_DIR_1}."
 (cd ${TEST_DIR_2};                                                    \
@@ -91,6 +87,7 @@ echo "Updating ${TEST_DIR_2} from changes in ${TEST_DIR_1}."
  )
 
 check_status 7
+
 
 ### Modify some more files.
 echo "Modifying ${TEST_DIR_2}/A/D/G/pi."
@@ -112,6 +109,7 @@ echo "for commit rev2, seventh line in A/mu" >> ${TEST_DIR_2}/A/mu
 echo "for commit rev2, eighth line in A/mu" >> ${TEST_DIR_2}/A/mu
 echo "for commit rev2, ninth line in A/mu" >> ${TEST_DIR_2}/A/mu
 echo "for commit rev2, tenth line in A/mu" >> ${TEST_DIR_2}/A/mu
+
 
 ### Commit.
 echo "Committing changes, this time from ${TEST_DIR_2}."
