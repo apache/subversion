@@ -90,7 +90,7 @@ svn_test__create_fs (svn_fs_t **fs_p,
         SVN_ERR (svn_fs_delete_berkeley (name, pool));
       else
         return svn_error_createf (SVN_ERR_TEST_FAILED, NULL,
-                                  "there is already a file named `%s'", name);
+                                  "there is already a file named '%s'", name);
     }
 
   SVN_ERR (svn_test__fs_new (fs_p, pool));
@@ -125,7 +125,7 @@ svn_test__create_repos (svn_repos_t **repos_p,
         SVN_ERR (svn_repos_delete (name, pool));
       else
         return svn_error_createf (SVN_ERR_TEST_FAILED, NULL,
-                                  "there is already a file named `%s'", name);
+                                  "there is already a file named '%s'", name);
     }
 
   fs_config = apr_hash_make (pool);
@@ -276,7 +276,7 @@ validate_tree_entry (svn_fs_root_t *root,
   if ((!is_dir && !contents) || (is_dir && contents))
     return svn_error_createf
       (SVN_ERR_FS_GENERAL, NULL,
-       "node `%s' in tree was of unexpected node type", 
+       "node '%s' in tree was of unexpected node type", 
        path);
 
   /* Verify that the contents are as expected (files only) */
@@ -288,7 +288,7 @@ validate_tree_entry (svn_fs_root_t *root,
                                    svn_stringbuf_create (contents, pool)))
         return svn_error_createf 
           (SVN_ERR_FS_GENERAL, NULL,
-           "node `%s' in tree had unexpected contents",
+           "node '%s' in tree had unexpected contents",
            path);
     }
 
@@ -516,7 +516,7 @@ svn_test__check_greek_tree (svn_fs_root_t *root,
       content = svn_stringbuf_create (file_contents[i][1], pool);
       if (! svn_stringbuf_compare (rstring, content))
         return svn_error_createf (SVN_ERR_FS_GENERAL, NULL,
-                                 "data read != data written in file `%s'.",
+                                 "data read != data written in file '%s'.",
                                  file_contents[i][0]);
     }
   return SVN_NO_ERROR;

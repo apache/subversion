@@ -104,7 +104,7 @@ svn_fs__bdb_reserve_copy_id (const char **id_p,
   /* Get the current value associated with the `next-id' key in the
      copies table.  */
   svn_fs__trail_debug (trail, "copies", "get");
-  SVN_ERR (BDB_WRAP (fs, "allocating new copy ID (getting `next-key')",
+  SVN_ERR (BDB_WRAP (fs, "allocating new copy ID (getting 'next-key')",
                     fs->copies->get (fs->copies, trail->db_txn,
                                      &query, svn_fs__result_dbt (&result), 
                                      0)));
@@ -153,7 +153,7 @@ svn_fs__bdb_delete_copy (svn_fs_t *fs,
 
   svn_fs__str_to_dbt (&key, (char *) copy_id);
   svn_fs__trail_debug (trail, "copies", "del");
-  return BDB_WRAP (fs, "deleting entry from `copies' table",
+  return BDB_WRAP (fs, "deleting entry from 'copies' table",
                   fs->copies->del (fs->copies, trail->db_txn, &key, 0));
 }
 

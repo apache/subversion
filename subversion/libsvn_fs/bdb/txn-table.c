@@ -112,7 +112,7 @@ allocate_txn_id (const char **id_p,
 
   /* Get the current value associated with the `next-key' key in the table.  */
   svn_fs__trail_debug (trail, "transactions", "get");
-  SVN_ERR (BDB_WRAP (fs, "allocating new txn ID (getting `next-key')",
+  SVN_ERR (BDB_WRAP (fs, "allocating new txn ID (getting 'next-key')",
                     fs->transactions->get (fs->transactions, trail->db_txn,
                                            &query, 
                                            svn_fs__result_dbt (&result), 
@@ -174,7 +174,7 @@ svn_fs__bdb_delete_txn (svn_fs_t *fs,
   /* Delete the transaction from the `transactions' table. */
   svn_fs__str_to_dbt (&key, (char *) txn_name);
   svn_fs__trail_debug (trail, "transactions", "del");
-  SVN_ERR (BDB_WRAP (fs, "deleting entry from `transactions' table",
+  SVN_ERR (BDB_WRAP (fs, "deleting entry from 'transactions' table",
                     fs->transactions->del (fs->transactions,
                                            trail->db_txn, &key, 0)));
 

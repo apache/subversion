@@ -145,7 +145,7 @@ svn_wc__timestamps_equal_p (svn_boolean_t *equal_p,
   if (entry == NULL)
     return svn_error_createf
       (SVN_ERR_ENTRY_NOT_FOUND, NULL,
-       "timestamps_equal_p: `%s' not under revision control", entryname);
+       "timestamps_equal_p: '%s' not under revision control", entryname);
 
   /* Get the timestamp from the working file and the entry */
   if (timestamp_kind == svn_wc__text_time)

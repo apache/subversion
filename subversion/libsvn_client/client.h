@@ -339,14 +339,14 @@ svn_client__get_diff_editor (const char *target,
 /* WARNING: This is all new, untested, un-peer-reviewed conceptual
    stuff.
 
-   The day that `svn switch' came into existence, our old commit
+   The day that 'svn switch' came into existence, our old commit
    crawler (svn_wc_crawl_local_mods) became obsolete.  It relied far
    too heavily on the on-disk heirarchy of files and directories, and
    simply had no way to support disjoint working copy trees or nest
    working copies.  The primary reason for this is that commit
    process, in order to guarantee atomicity, is a single drive of a
    commit editor which is based not on working copy paths, but on
-   URLs.  With the completion of `svn switch', it became all too
+   URLs.  With the completion of 'svn switch', it became all too
    likely that the on-disk working copy heirarchy would no longer be
    guaranteed to map to a similar in-repository heirarchy.
 
@@ -369,9 +369,9 @@ svn_client__get_diff_editor (const char *target,
    *** END-OF-KNOWLEDGE ***
 
    The prototypes below are still in development.  In general, the
-   idea is that commit-y processes (`svn mkdir URL`, `svn delete URL`,
-   `svn commit`, `svn copy WC_PATH URL`, `svn copy URL1 URL2`, `svn
-   move URL1 URL2`, others?) generate the cached commit candidate
+   idea is that commit-y processes ('svn mkdir URL', 'svn delete URL',
+   'svn commit', 'svn copy WC_PATH URL', 'svn copy URL1 URL2', 'svn
+   move URL1 URL2', others?) generate the cached commit candidate
    information, and hand this information off to a consumer which is
    responsible for driving the RA layer's commit editor in a
    URL-depth-first fashion and reporting back the post-commit

@@ -513,7 +513,7 @@ close_file (void *file_baton,
 
   apr_err = apr_file_close (fb->tmp_file);
   if (apr_err)
-    return svn_error_createf (apr_err, NULL, "error closing file `%s'",
+    return svn_error_createf (apr_err, NULL, "error closing file '%s'",
                               fb->tmppath);
 
   if (text_checksum)

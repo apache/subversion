@@ -1170,7 +1170,7 @@ revert_error (svn_error_t *err,
               apr_pool_t *pool)
 {
   return svn_error_quick_wrap 
-    (err, apr_psprintf (pool, "revert: error %s for `%s'", verb, path));
+    (err, apr_psprintf (pool, "revert: error %s for '%s'", verb, path));
 }
 
 

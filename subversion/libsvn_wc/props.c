@@ -98,7 +98,7 @@ svn_wc__conflicting_propchanges_p (const svn_string_t **description,
     {
       *description =
         svn_string_createf
-        (pool, "prop `%s': user set value to '%s', but update deletes it.\n",
+        (pool, "prop '%s': user set value to '%s', but update deletes it.\n",
          local->name, local->value->data);
       return TRUE;  /* conflict */
     }
@@ -106,7 +106,7 @@ svn_wc__conflicting_propchanges_p (const svn_string_t **description,
     {
       *description =
         svn_string_createf
-        (pool, "prop `%s': user deleted, but update sets it to '%s'.\n",
+        (pool, "prop '%s': user deleted, but update sets it to '%s'.\n",
          local->name, update->value->data);
       return TRUE;  /* conflict */
     }
@@ -122,7 +122,7 @@ svn_wc__conflicting_propchanges_p (const svn_string_t **description,
     {
       *description =
         svn_string_createf
-        (pool, "prop `%s': user set to '%s', but update set to '%s'.\n",
+        (pool, "prop '%s': user set to '%s', but update set to '%s'.\n",
          local->name, local->value->data, update->value->data);
       return TRUE;  /* conflict */
     }
@@ -168,13 +168,13 @@ svn_wc__load_prop_file (const char *propfile_path,
       status = svn_hash_read (hash, propfile, pool);
       if (status)
         return svn_error_createf (status, NULL,
-                                  "load_prop_file:  can't parse `%s'",
+                                  "load_prop_file:  can't parse '%s'",
                                   propfile_path);
 
       status = apr_file_close (propfile);
       if (status)
         return svn_error_createf (status, NULL,
-                                  "load_prop_file: can't close `%s'",
+                                  "load_prop_file: can't close '%s'",
                                   propfile_path);
     }
 
@@ -202,13 +202,13 @@ svn_wc__save_prop_file (const char *propfile_path,
   apr_err = svn_hash_write (hash, prop_tmp, pool);
   if (apr_err)
     return svn_error_createf (apr_err, NULL,
-                              "save_prop_file: can't write prop hash to `%s'",
+                              "save_prop_file: can't write prop hash to '%s'",
                               propfile_path);
 
   apr_err = apr_file_close (prop_tmp);
   if (apr_err)
     return svn_error_createf (apr_err, NULL,
-                              "save_prop_file: can't close `%s'",
+                              "save_prop_file: can't close '%s'",
                               propfile_path);
 
   return SVN_NO_ERROR;

@@ -98,12 +98,12 @@ svn_config_read_auth_data (apr_hash_t **hash,
       status = svn_hash_read (*hash, authfile, pool);
       if (status)
         return svn_error_createf (status, NULL,
-                                  "error parsing `%s'", auth_path);
+                                  "error parsing '%s'", auth_path);
       
       status = apr_file_close (authfile);
       if (status)
         return svn_error_createf (status, NULL,
-                                  "can't close `%s'", auth_path);
+                                  "can't close '%s'", auth_path);
     }
 
   return SVN_NO_ERROR;
@@ -141,12 +141,12 @@ svn_config_write_auth_data (apr_hash_t *hash,
   status = svn_hash_write (hash, authfile, pool);
   if (status)
     return svn_error_createf (status, NULL,
-                              "error writing hash to `%s'", auth_path);
+                              "error writing hash to '%s'", auth_path);
 
   status = apr_file_close (authfile);
   if (status)
     return svn_error_createf (status, NULL,
-                              "can't close `%s'", auth_path);
+                              "can't close '%s'", auth_path);
 
   /* To be nice, remove the realmstring from the hash again, just in
      case the caller wants their hash unchanged. */

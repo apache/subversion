@@ -179,7 +179,7 @@ delete_urls (svn_client_commit_info_t **commit_info,
                                    SVN_INVALID_REVNUM, pool));
       if (kind == svn_node_none)
         return svn_error_createf (SVN_ERR_FS_NOT_FOUND, NULL,
-                                  "URL `%s' does not exist", path);
+                                  "URL '%s' does not exist", path);
     }
 
   /* Fetch RA commit editor */

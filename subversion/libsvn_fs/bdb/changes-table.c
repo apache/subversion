@@ -275,7 +275,7 @@ svn_fs__bdb_changes_fetch (apr_hash_t **changes_p,
       if (! result_skel)
         {
           err = svn_error_createf (SVN_ERR_FS_CORRUPT, NULL,
-                                   "error reading changes for key `%s'", key);
+                                   "error reading changes for key '%s'", key);
           goto cleanup;
         }
       err = svn_fs__parse_change_skel (&change, result_skel, subpool);
@@ -364,7 +364,7 @@ svn_fs__bdb_changes_fetch_raw (apr_array_header_t **changes_p,
       if (! result_skel)
         {
           err = svn_error_createf (SVN_ERR_FS_CORRUPT, NULL,
-                                   "error reading changes for key `%s'", key);
+                                   "error reading changes for key '%s'", key);
           goto cleanup;
         }
       err = svn_fs__parse_change_skel (&change, result_skel, trail->pool);

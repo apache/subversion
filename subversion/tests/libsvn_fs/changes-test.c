@@ -225,7 +225,7 @@ changes_fetch_raw (const char **msg,
                               &args, 1, pool));
       if (! args.raw_changes)
         return svn_error_createf (SVN_ERR_TEST_FAILED, NULL,
-                                  "got no changes for key `%s'", txn_id);
+                                  "got no changes for key '%s'", txn_id);
 
       for (j = 0; j < args.raw_changes->nelts; j++)
         {
@@ -239,41 +239,41 @@ changes_fetch_raw (const char **msg,
           if (strcmp (standard_changes[cur_change_index][0], txn_id))
             return svn_error_createf 
               (SVN_ERR_TEST_FAILED, NULL,
-               "missing some changes for key `%s'", txn_id);
+               "missing some changes for key '%s'", txn_id);
             
           /* Verify that the PATH matches. */
           if (strcmp (standard_changes[cur_change_index][1], change->path))
             return svn_error_createf 
               (SVN_ERR_TEST_FAILED, NULL,
-               "paths differ in change for key `%s'", txn_id);
+               "paths differ in change for key '%s'", txn_id);
 
           /* Verify that the NODE-REV-ID matches. */
           noderev_id = svn_fs_unparse_id (change->noderev_id, pool);
           if (strcmp (standard_changes[cur_change_index][2], noderev_id->data))
             return svn_error_createf 
               (SVN_ERR_TEST_FAILED, NULL,
-               "node revision ids differ in change for key `%s'", txn_id);
+               "node revision ids differ in change for key '%s'", txn_id);
 
           /* Verify that the change KIND matches. */
           kind = string_to_kind (standard_changes[cur_change_index][3]);
           if (kind != change->kind)
             return svn_error_createf 
               (SVN_ERR_TEST_FAILED, NULL,
-               "change kinds differ in change for key `%s'", txn_id);
+               "change kinds differ in change for key '%s'", txn_id);
 
           /* Verify that the change TEXT-MOD bit matches. */
           mod_bit = standard_changes[cur_change_index][4] ? 1 : 0;
           if (mod_bit != change->text_mod)
             return svn_error_createf 
               (SVN_ERR_TEST_FAILED, NULL,
-               "change text-mod bits differ in change for key `%s'", txn_id);
+               "change text-mod bits differ in change for key '%s'", txn_id);
 
           /* Verify that the change PROP-MOD bit matches. */
           mod_bit = standard_changes[cur_change_index][5] ? 1 : 0;
           if (mod_bit != change->prop_mod)
             return svn_error_createf 
               (SVN_ERR_TEST_FAILED, NULL,
-               "change prop-mod bits differ in change for key `%s'", txn_id);
+               "change prop-mod bits differ in change for key '%s'", txn_id);
 
           cur_change_index++;
         }
@@ -317,7 +317,7 @@ changes_delete (const char **msg,
       if ((! args.raw_changes) || (args.raw_changes->nelts))
         return svn_error_createf 
           (SVN_ERR_TEST_FAILED, NULL,
-           "expected empty changes array for txn `%s'", args.key);
+           "expected empty changes array for txn '%s'", args.key);
     }
 
   return SVN_NO_ERROR;
@@ -444,7 +444,7 @@ compare_changes (apr_hash_t *ideals,
       if (! change)
         return svn_error_createf 
           (SVN_ERR_TEST_FAILED, NULL,
-           "missing expected change for path `%s' in txn_id `%s'", 
+           "missing expected change for path '%s' in txn_id '%s'", 
            path, txn_id);
             
       /* Verify that the NODE-REV-ID matches. */
@@ -452,25 +452,25 @@ compare_changes (apr_hash_t *ideals,
                               ideal_change->node_rev_id))
         return svn_error_createf 
           (SVN_ERR_TEST_FAILED, NULL,
-           "node revision ids differ in change for key `%s'", txn_id);
+           "node revision ids differ in change for key '%s'", txn_id);
 
       /* Verify that the change KIND matches. */
       if (change->change_kind != ideal_change->change_kind)
         return svn_error_createf 
           (SVN_ERR_TEST_FAILED, NULL,
-           "change kinds differ in change for key `%s'", txn_id);
+           "change kinds differ in change for key '%s'", txn_id);
 
       /* Verify that the change TEXT-MOD bit matches. */
       if (change->text_mod != ideal_change->text_mod)
         return svn_error_createf 
           (SVN_ERR_TEST_FAILED, NULL,
-           "change text-mod bits differ in change for key `%s'", txn_id);
+           "change text-mod bits differ in change for key '%s'", txn_id);
 
       /* Verify that the change PROP-MOD bit matches. */
       if (change->prop_mod != ideal_change->prop_mod)
         return svn_error_createf 
           (SVN_ERR_TEST_FAILED, NULL,
-           "change prop-mod bits differ in change for key `%s'", txn_id);
+           "change prop-mod bits differ in change for key '%s'", txn_id);
     }
 
   return SVN_NO_ERROR;
@@ -527,11 +527,11 @@ changes_fetch (const char **msg,
       if (! args.changes)
         return svn_error_createf 
           (SVN_ERR_TEST_FAILED, NULL,
-           "got no changes for key `%s'", txn_id);
+           "got no changes for key '%s'", txn_id);
       if (apr_hash_count (ideals) != apr_hash_count (args.changes))
         return svn_error_createf 
           (SVN_ERR_TEST_FAILED, NULL,
-           "unexpected number of changes for key `%s'", txn_id);
+           "unexpected number of changes for key '%s'", txn_id);
       SVN_ERR (compare_changes (ideals, args.changes, txn_id, pool));
     }
 

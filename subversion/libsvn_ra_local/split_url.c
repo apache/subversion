@@ -43,7 +43,7 @@ svn_ra_local__split_URL (svn_repos_t **repos,
   if (strncmp (URL, "file://", 7) != 0)
     return svn_error_createf 
       (SVN_ERR_RA_ILLEGAL_URL, NULL, 
-       "svn_ra_local__split_URL: URL does not contain `file://' prefix\n"
+       "svn_ra_local__split_URL: URL does not contain 'file://' prefix\n"
        "   (%s)", URL);
   
   /* Then, skip what's between the "file://" prefix and the next

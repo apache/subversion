@@ -865,7 +865,7 @@ svn_io_remove_file (const char *path, apr_pool_t *pool)
 svn_error_t *
 svn_io_remove_dir (const char *path, apr_pool_t *pool)
 {
-  static const char err_msg_fmt[] = "svn_io_remove_dir: removing `%s'";
+  static const char err_msg_fmt[] = "svn_io_remove_dir: removing '%s'";
   apr_status_t status;
   apr_dir_t *this_dir;
   apr_finfo_t this_entry;
@@ -1433,7 +1433,7 @@ svn_io_file_open (apr_file_t **new_file, const char *fname,
 
   if (status)
     return svn_error_createf (status, NULL,
-                              "svn_io_file_open: can't open `%s'", fname);
+                              "svn_io_file_open: can't open '%s'", fname);
   else
     return SVN_NO_ERROR;  
 }
@@ -1618,7 +1618,7 @@ svn_io_dir_walk (const char *dirname,
   if (apr_err)
     return svn_error_createf (apr_err, NULL,
                               "svn_io_dir_walk: unable to open "
-                              "directory `%s'",
+                              "directory '%s'",
                               dirname);
 
   /* iteration subpool */
@@ -1637,7 +1637,7 @@ svn_io_dir_walk (const char *dirname,
         {
           return svn_error_createf (apr_err, NULL,
                                     "svn_io_dir_walk: error reading "
-                                    "directory entry in `%s'", dirname);
+                                    "directory entry in '%s'", dirname);
         }
 
       if (finfo.filetype == APR_DIR)
@@ -1698,7 +1698,7 @@ svn_io_dir_walk (const char *dirname,
   if (apr_err)
     return svn_error_createf (apr_err, NULL,
                               "svn_io_dir_walk: error closing "
-                              "directory `%s'",
+                              "directory '%s'",
                               dirname);
 
   return SVN_NO_ERROR;
@@ -1836,12 +1836,12 @@ svn_io_write_version_file (const char *path,
   apr_err = apr_file_write_full (format_file, format_contents,
                                  strlen (format_contents), NULL);
   if (apr_err)
-    return svn_error_createf (apr_err, 0, "writing to `%s'", path);
+    return svn_error_createf (apr_err, 0, "writing to '%s'", path);
   
   /* ...and close the file. */
   apr_err = apr_file_close (format_file);
   if (apr_err)
-    return svn_error_createf (apr_err, 0, "closing `%s'", path);
+    return svn_error_createf (apr_err, 0, "closing '%s'", path);
   
   return SVN_NO_ERROR;
 }
@@ -1863,12 +1863,12 @@ svn_io_read_version_file (int *version,
   len = sizeof(buf);
   apr_err = apr_file_read (format_file, buf, &len);
   if (apr_err)
-    return svn_error_createf (apr_err, 0, "reading `%s'", path);
+    return svn_error_createf (apr_err, 0, "reading '%s'", path);
 
   /* If there was no data in PATH, return an error. */
   if (len == 0)
     return svn_error_createf (SVN_ERR_STREAM_UNEXPECTED_EOF, NULL,
-                              "reading `%s'", path);
+                              "reading '%s'", path);
 
   /* Check that the first line contains only digits. */
   {
@@ -1893,7 +1893,7 @@ svn_io_read_version_file (int *version,
   /* And finally, close the file. */
   apr_err = apr_file_close (format_file);
   if (apr_err)
-    return svn_error_createf (apr_err, 0, "closing `%s'", path);
+    return svn_error_createf (apr_err, 0, "closing '%s'", path);
 
   return SVN_NO_ERROR;
 }

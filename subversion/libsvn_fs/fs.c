@@ -121,7 +121,7 @@ cleanup_fs_db (svn_fs_t *fs, DB **db_ptr, const char *name)
   if (*db_ptr)
     {
       DB *db = *db_ptr;
-      char *msg = apr_psprintf (fs->pool, "closing `%s' database", name);
+      char *msg = apr_psprintf (fs->pool, "closing '%s' database", name);
       int db_err;
 
       *db_ptr = 0;
@@ -379,7 +379,7 @@ svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
   apr_err = apr_dir_make (path_apr, APR_OS_DEFAULT, fs->pool);
   if (apr_err != APR_SUCCESS)
     return svn_error_createf (apr_err, 0,
-                              "creating Berkeley DB environment dir `%s'",
+                              "creating Berkeley DB environment dir '%s'",
                               fs->path);
 
   /* Write the DB_CONFIG file. */
@@ -444,7 +444,7 @@ svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
                                    sizeof (dbconfig_contents) - 1, NULL);
     if (apr_err != APR_SUCCESS)
       return svn_error_createf (apr_err, 0,
-                                "writing to `%s'", dbconfig_file_name);
+                                "writing to '%s'", dbconfig_file_name);
 
     if (fs->config)
       {
@@ -458,14 +458,14 @@ svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
                                            NULL);
             if (apr_err != APR_SUCCESS)
               return svn_error_createf (apr_err, 0,
-                                        "writing to `%s'", dbconfig_file_name);
+                                        "writing to '%s'", dbconfig_file_name);
           }
       }
 
     apr_err = apr_file_close (dbconfig_file);
     if (apr_err != APR_SUCCESS)
       return svn_error_createf (apr_err, 0,
-                                "closing `%s'", dbconfig_file_name);
+                                "closing '%s'", dbconfig_file_name);
   }
 
   svn_err = allocate_env (fs);
@@ -484,34 +484,34 @@ svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
   if (svn_err) goto error;
 
   /* Create the databases in the environment.  */
-  svn_err = BDB_WRAP (fs, "creating `nodes' table",
+  svn_err = BDB_WRAP (fs, "creating 'nodes' table",
                      svn_fs__bdb_open_nodes_table (&fs->nodes, fs->env, 1));
   if (svn_err) goto error;
-  svn_err = BDB_WRAP (fs, "creating `revisions' table",
+  svn_err = BDB_WRAP (fs, "creating 'revisions' table",
                      svn_fs__bdb_open_revisions_table (&fs->revisions,
                                                        fs->env, 1));
   if (svn_err) goto error;
-  svn_err = BDB_WRAP (fs, "creating `transactions' table",
+  svn_err = BDB_WRAP (fs, "creating 'transactions' table",
                      svn_fs__bdb_open_transactions_table (&fs->transactions,
                                                           fs->env, 1));
   if (svn_err) goto error;
-  svn_err = BDB_WRAP (fs, "creating `copies' table",
+  svn_err = BDB_WRAP (fs, "creating 'copies' table",
                      svn_fs__bdb_open_copies_table (&fs->copies,
                                                     fs->env, 1));
   if (svn_err) goto error;
-  svn_err = BDB_WRAP (fs, "creating `changes' table",
+  svn_err = BDB_WRAP (fs, "creating 'changes' table",
                      svn_fs__bdb_open_changes_table (&fs->changes,
                                                      fs->env, 1));
   if (svn_err) goto error;
-  svn_err = BDB_WRAP (fs, "creating `representations' table",
+  svn_err = BDB_WRAP (fs, "creating 'representations' table",
                      svn_fs__bdb_open_reps_table (&fs->representations,
                                                   fs->env, 1));
   if (svn_err) goto error;
-  svn_err = BDB_WRAP (fs, "creating `strings' table",
+  svn_err = BDB_WRAP (fs, "creating 'strings' table",
                      svn_fs__bdb_open_strings_table (&fs->strings,
                                                      fs->env, 1));
   if (svn_err) goto error;
-  svn_err = BDB_WRAP (fs, "creating `uuids' table",
+  svn_err = BDB_WRAP (fs, "creating 'uuids' table",
                      svn_fs__bdb_open_uuids_table (&fs->uuids,
                                                    fs->env, 1));
   if (svn_err) goto error;
@@ -559,34 +559,34 @@ svn_fs_open_berkeley (svn_fs_t *fs, const char *path)
   if (svn_err) goto error;
 
   /* Open the various databases.  */
-  svn_err = BDB_WRAP (fs, "opening `nodes' table",
+  svn_err = BDB_WRAP (fs, "opening 'nodes' table",
                      svn_fs__bdb_open_nodes_table (&fs->nodes, fs->env, 0));
   if (svn_err) goto error;
-  svn_err = BDB_WRAP (fs, "opening `revisions' table",
+  svn_err = BDB_WRAP (fs, "opening 'revisions' table",
                      svn_fs__bdb_open_revisions_table (&fs->revisions,
                                                        fs->env, 0));
   if (svn_err) goto error;
-  svn_err = BDB_WRAP (fs, "opening `transactions' table",
+  svn_err = BDB_WRAP (fs, "opening 'transactions' table",
                      svn_fs__bdb_open_transactions_table (&fs->transactions,
                                                           fs->env, 0));
   if (svn_err) goto error;
-  svn_err = BDB_WRAP (fs, "opening `copies' table",
+  svn_err = BDB_WRAP (fs, "opening 'copies' table",
                      svn_fs__bdb_open_copies_table (&fs->copies,
                                                     fs->env, 0));
   if (svn_err) goto error;
-  svn_err = BDB_WRAP (fs, "opening `changes' table",
+  svn_err = BDB_WRAP (fs, "opening 'changes' table",
                      svn_fs__bdb_open_changes_table (&fs->changes,
                                                      fs->env, 0));
   if (svn_err) goto error;
-  svn_err = BDB_WRAP (fs, "opening `representations' table",
+  svn_err = BDB_WRAP (fs, "opening 'representations' table",
                      svn_fs__bdb_open_reps_table (&fs->representations,
                                                   fs->env, 0));
   if (svn_err) goto error;
-  svn_err = BDB_WRAP (fs, "opening `strings' table",
+  svn_err = BDB_WRAP (fs, "opening 'strings' table",
                      svn_fs__bdb_open_strings_table (&fs->strings,
                                                      fs->env, 0));
   if (svn_err) goto error;
-  svn_err = BDB_WRAP (fs, "opening `uuids' table",
+  svn_err = BDB_WRAP (fs, "opening 'uuids' table",
                      svn_fs__bdb_open_uuids_table (&fs->uuids,
                                                      fs->env, 0));
   if (svn_err) goto error;

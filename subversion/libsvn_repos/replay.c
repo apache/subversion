@@ -158,7 +158,7 @@ path_driver_cb_func (void **dir_baton,
       if ((kind != svn_node_dir) && (kind != svn_node_file))
         return svn_error_createf 
           (SVN_ERR_FS_NOT_FOUND, NULL, 
-           "Filesystem path `%s' is neither a file nor a directory", path);
+           "Filesystem path '%s' is neither a file nor a directory", path);
     }
 
   /* Handle any adds/opens. */

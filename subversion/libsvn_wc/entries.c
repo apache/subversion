@@ -1078,7 +1078,7 @@ svn_wc__entries_write (apr_hash_t *entries,
   /* If there is no "this dir" entry, something is wrong. */
   if (! this_dir)
     return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, NULL,
-                              "No default entry in directory `%s'", 
+                              "No default entry in directory '%s'", 
                               svn_wc_adm_access_path (adm_access));
 
   /* Open entries file for writing.  It's important we don't use APR_EXCL

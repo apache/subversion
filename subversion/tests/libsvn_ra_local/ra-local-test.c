@@ -74,7 +74,7 @@ create_fs_and_repos (svn_fs_t **fs_p, const char *name)
         SVN_ERR (svn_fs_delete_berkeley (name, pool));
       else
         return svn_error_createf (SVN_ERR_TEST_FAILED, NULL,
-                                  "there is already a file named `%s'", name);
+                                  "there is already a file named '%s'", name);
     }
 
   SVN_ERR (svn_test__fs_new (fs_p, pool));

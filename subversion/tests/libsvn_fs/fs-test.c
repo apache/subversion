@@ -110,7 +110,7 @@ test_commit_txn (svn_revnum_t *new_rev,
         {
           return svn_error_createf
             (SVN_ERR_FS_CONFLICT, NULL,
-             "commit conflicted at `%s', but no conflict expected",
+             "commit conflicted at '%s', but no conflict expected",
              conflict ? conflict : "(missing conflict info!)");
         }
       else if (conflict == NULL)
@@ -118,7 +118,7 @@ test_commit_txn (svn_revnum_t *new_rev,
           return svn_error_createf
             (SVN_ERR_FS_CONFLICT, NULL,
              "commit conflicted as expected, "
-             "but no conflict path was returned (`%s' expected)",
+             "but no conflict path was returned ('%s' expected)",
              expected_conflict);
         }
       else if ((strcmp (expected_conflict, "") != 0)
@@ -126,7 +126,7 @@ test_commit_txn (svn_revnum_t *new_rev,
         {
           return svn_error_createf
             (SVN_ERR_FS_CONFLICT, NULL,
-             "commit conflicted at `%s', but expected conflict at `%s')",
+             "commit conflicted at '%s', but expected conflict at '%s')",
              conflict, expected_conflict);
         }
     }
@@ -141,7 +141,7 @@ test_commit_txn (svn_revnum_t *new_rev,
         {
           return svn_error_createf
             (SVN_ERR_FS_GENERAL, NULL,
-             "commit succeeded that was expected to fail at `%s'",
+             "commit succeeded that was expected to fail at '%s'",
              expected_conflict);
         }
     }
@@ -2750,13 +2750,13 @@ link_test (const char **msg,
     if (SVN_IS_VALID_REVNUM (rev))
       return svn_error_createf
         (SVN_ERR_FS_GENERAL, NULL,
-         "link_test: copy rev present when should be absent on `%s'",
+         "link_test: copy rev present when should be absent on '%s'",
          "A/D/G/pi2");
 
     if (path)
       return svn_error_createf
         (SVN_ERR_FS_GENERAL, NULL,
-         "link_test: copy path present when should be absent on `%s'",
+         "link_test: copy path present when should be absent on '%s'",
          "A/D/G/pi2");
   }
 
@@ -2770,7 +2770,7 @@ link_test (const char **msg,
     if (! svn_fs__id_eq (orig_id, link_id))
       return svn_error_createf
         (SVN_ERR_FS_GENERAL, NULL,
-         "link_test: orig id not same as link id (`%s', `%s')",
+         "link_test: orig id not same as link id ('%s', '%s')",
          "A/D/G/pi", "A/D/G/pi2");
   }
 
@@ -2794,13 +2794,13 @@ link_test (const char **msg,
     if (SVN_IS_VALID_REVNUM (rev))
       return svn_error_createf
         (SVN_ERR_FS_GENERAL, NULL,
-         "link_test: copy rev wrongly present on committed `%s'",
+         "link_test: copy rev wrongly present on committed '%s'",
          "A/D/G/pi2");
 
     if (path)
       return svn_error_createf
         (SVN_ERR_FS_GENERAL, NULL,
-         "link_test: copy path wrongly present on committed `%s'",
+         "link_test: copy path wrongly present on committed '%s'",
          "A/D/G/pi2");
   }
 
@@ -2814,7 +2814,7 @@ link_test (const char **msg,
     if (svn_fs__id_eq (orig_id, link_id))
       return svn_error_createf
         (SVN_ERR_FS_GENERAL, NULL,
-         "link_test: orig id same as newly committed link id (`%s', `%s')",
+         "link_test: orig id same as newly committed link id ('%s', '%s')",
          "A/D/G/pi", "A/D/G/pi2");
   }
 
@@ -2848,7 +2848,7 @@ link_test (const char **msg,
     if (svn_fs__id_eq (orig_id, link_id))
       return svn_error_createf
         (SVN_ERR_FS_GENERAL, NULL,
-         "link_test: orig not same as unchanged committed link (`%s', `%s')",
+         "link_test: orig not same as unchanged committed link ('%s', '%s')",
          "A/D/G/pi", "A/D/G/pi2");
   }
 
@@ -5149,14 +5149,14 @@ check_related (const char **msg,
               {
                 return svn_error_createf
                   (SVN_ERR_TEST_FAILED, NULL,
-                   "expected `%s:%d' to be related to `%s:%d'; it was not",
+                   "expected '%s:%d' to be related to '%s:%d'; it was not",
                    pr1.path, (int)pr1.rev, pr2.path, (int)pr2.rev);
               }
             else if ((! related) && related_matrix[i][j])
               {
                 return svn_error_createf
                   (SVN_ERR_TEST_FAILED, NULL,
-                   "expected `%s:%d' to not be related to `%s:%d'; it was",
+                   "expected '%s:%d' to not be related to '%s:%d'; it was",
                    pr1.path, (int)pr1.rev, pr2.path, (int)pr2.rev);
               }
 
@@ -5218,13 +5218,13 @@ canonicalize_abspath (const char **msg,
         continue;
       if ((! output) && actual)
         return svn_error_createf (SVN_ERR_TEST_FAILED, NULL,
-                                  "expected NULL path; got `%s'", actual);
+                                  "expected NULL path; got '%s'", actual);
       if (output && (! actual))
         return svn_error_createf (SVN_ERR_TEST_FAILED, NULL,
-                                  "expected `%s' path; got NULL", output);
+                                  "expected '%s' path; got NULL", output);
       if (strcmp (output, actual))
         return svn_error_createf (SVN_ERR_TEST_FAILED, NULL,
-                                  "expected `%s' path; got `%s'",
+                                  "expected '%s' path; got '%s'",
                                   output, actual);
     }
   return SVN_NO_ERROR;
@@ -5475,7 +5475,7 @@ create_within_copy (const char **msg,
         s = svn_fs_unparse_id (id, spool);
         if (strcmp (s->data, node->unparsed_id) != 0)
           return svn_error_createf (SVN_ERR_TEST_FAILED, NULL,
-                                    "`%s' id: expected `%s'; got `%s'",
+                                    "'%s' id: expected '%s'; got '%s'",
                                     node->path, node->unparsed_id, s->data);
         ++node;
       }

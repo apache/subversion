@@ -438,7 +438,7 @@ parse_invalid_atoms (const char **msg,
           skel_t *skel = parse_cstr ((char *) ia->data, pool);
           if (check_atom (skel, ia->data, ia->len))
             return fail (pool, 
-                         "failed to detect parsing error in `%s'", ia->data);
+                         "failed to detect parsing error in '%s'", ia->data);
         }
       else
         if (try_explicit_length (ia->data, ia->len, strlen (ia->data), pool)

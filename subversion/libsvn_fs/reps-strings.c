@@ -96,7 +96,7 @@ delta_string_keys (apr_array_header_t **keys,
   if (rep->kind != svn_fs__rep_kind_delta)
     return svn_error_create 
       (SVN_ERR_FS_GENERAL, NULL,
-       "delta_string_key: representation is not of type `delta'");
+       "delta_string_key: representation is not of type 'delta'");
 
   /* Set up a convenience variable. */
   chunks = rep->contents.delta.chunks;
@@ -465,7 +465,7 @@ rep_read_range (svn_fs_t *fs,
               if (first_chunk->version != chunk->version)
                 return svn_error_createf
                   (SVN_ERR_FS_CORRUPT, NULL,
-                   "diff version inconsistencies in representation `%s'",
+                   "diff version inconsistencies in representation '%s'",
                    rep_key);
 
               rep_key = chunk->rep_key;

@@ -68,7 +68,7 @@ open_tmp_file (apr_file_t **fp,
 }
 
 
-/* This implements the `svn_ra_get_wc_prop_func_t' interface. */
+/* This implements the 'svn_ra_get_wc_prop_func_t' interface. */
 static svn_error_t *
 get_wc_prop (void *baton,
              const char *relpath,
@@ -107,7 +107,7 @@ get_wc_prop (void *baton,
                           cb->base_access, pool);
 }
 
-/* This implements the `svn_ra_push_wc_prop_func_t' interface. */
+/* This implements the 'svn_ra_push_wc_prop_func_t' interface. */
 static svn_error_t *
 push_wc_prop (void *baton,
               const char *relpath,
@@ -156,7 +156,7 @@ push_wc_prop (void *baton,
 }
 
 
-/* This implements the `svn_ra_set_wc_prop_func_t' interface. */
+/* This implements the 'svn_ra_set_wc_prop_func_t' interface. */
 static svn_error_t *
 set_wc_prop (void *baton,
              const char *path,
@@ -308,7 +308,7 @@ svn_client_uuid_from_path (const char **uuid,
   if (! entry)
     return svn_error_createf (SVN_ERR_WC_PATH_NOT_FOUND, NULL,
                               "svn_client_uuid_from_path: "
-                              "can't find entry for `%s'", path);
+                              "can't find entry for '%s'", path);
 
   if (entry->uuid)
     {

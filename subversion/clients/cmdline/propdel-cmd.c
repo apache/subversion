@@ -91,7 +91,7 @@ svn_cl__propdel (apr_getopt_t *os,
                                        &rev, ctx, FALSE, pool));
       if (! opt_state->quiet) 
         {
-          printf ("property `%s' deleted from repository revision '%"
+          printf ("property '%s' deleted from repository revision '%"
                   SVN_REVNUM_T_FMT"'\n",
                   pname, rev);
         }      
@@ -120,7 +120,7 @@ svn_cl__propdel (apr_getopt_t *os,
               const char *target_native;
               SVN_ERR (svn_utf_cstring_from_utf8 (&target_native,
                                                   target, subpool));
-              printf ("property `%s' deleted%sfrom '%s'.\n", pname,
+              printf ("property '%s' deleted%sfrom '%s'.\n", pname,
                       opt_state->recursive ? " (recursively) " : " ",
                       target_native);
             }

@@ -92,7 +92,7 @@ svn_fs__bdb_new_node_id (svn_fs_id_t **id_p,
   /* Get the current value associated with the `next-key' key in the table.  */
   svn_fs__str_to_dbt (&query, (char *) svn_fs__next_key_key);
   svn_fs__trail_debug (trail, "nodes", "get");
-  SVN_ERR (BDB_WRAP (fs, "allocating new node ID (getting `next-key')",
+  SVN_ERR (BDB_WRAP (fs, "allocating new node ID (getting 'next-key')",
                     fs->nodes->get (fs->nodes, trail->db_txn,
                                     &query, 
                                     svn_fs__result_dbt (&result), 
@@ -147,7 +147,7 @@ svn_fs__bdb_new_successor_id (svn_fs_id_t **successor_p,
       svn_string_t *new_id_str = svn_fs_unparse_id (new_id, trail->pool);
       return svn_error_createf 
         (SVN_ERR_FS_ALREADY_EXISTS, err,
-         "successor id `%s' (for `%s') already exists in filesystem '%s'",  
+         "successor id '%s' (for '%s') already exists in filesystem '%s'",  
          new_id_str->data, id_str->data, fs->path);
     }
 
@@ -171,7 +171,7 @@ svn_fs__bdb_delete_nodes_entry (svn_fs_t *fs,
   DBT key;
   
   svn_fs__trail_debug (trail, "nodes", "del");
-  SVN_ERR (BDB_WRAP (fs, "deleting entry from `nodes' table",
+  SVN_ERR (BDB_WRAP (fs, "deleting entry from 'nodes' table",
                     fs->nodes->del (fs->nodes,
                                     trail->db_txn,
                                     svn_fs__id_to_dbt (&key, id, trail->pool),
