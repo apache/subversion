@@ -92,8 +92,8 @@ svn_create_error (ap_status_t err,
   char *strerror_msg;         /* A place to store result of strerror() */
 
   /* Create the new error structure */
-  *new_error = (svn_error_t *) ap_palloc (pool,
-                                          sizeof(svn_error_t));
+  new_error = (svn_error_t *) ap_palloc (pool,
+                                         sizeof(svn_error_t));
 
   /* Create space for strerror()'s result */
   char *strerror_msg = ap_palloc (pool, 100);
