@@ -10,7 +10,7 @@ SUBDIRS = libsvn_subr                \
           libsvn_client              \
           client                     \
           @LIBSVN_FS@                \
-          svnadmin                   \
+          @SVNADMIN@                 \
           @APACHE_MODULES@           \
           tests
 
