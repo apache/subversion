@@ -124,7 +124,7 @@ Irix 6.5 IP 27:
      Tester:     Blair Zajac <blair@orcaware.com>
      Notes:      compiled with gcc 3.0.3
 
-Mac OS X 10.1.5:
+powerpc-apple-darwin5.5 (Mac OS X 10.1.5):
      Client:     Build OK
      Filesystem: Build OK
      Last Check: 30 Jul 2002, revision 2793
@@ -139,9 +139,18 @@ Mac OS X 10.1.5:
         system-neutral dependancies are listed in the INSTALL file.
      -- As of 0.21.3, neon appears to build with or without --enable-shared,
         but currently the svn build process later gives a warning without it.
-     -- These comments from Brian Fitzpatrick <fitz@apple.com> regarding
-        some older builds may also still apply:
-          + haven't tried to build apr with dso enabled.
+     -- GNU libtool performance is unacceptable.
+     -- Use of Norton AntiVirus 8.0 (and higher) Auto-Protect feature seems to
+        cause intermittent lockups with SVN.
+
+powerpc-apple-darwin6.0 (Mac OS X 10.2):
+     Client:     Build OK, Check OK.
+     Filesystem: Build OK, Check OK.
+     Last Check: 11 Aug 2002, revision 2941
+     Testers:    Justin Erenkrantz <jerenkrantz@apache.org>
+     Notes:
+     -- Suitable versions of autoconf, libtool, and automake are included.
+     -- GNU libtool performance better than 10.1.
 
 NetBSD (1.5, 1.6_BETA, -CURRENT):
      Client:     Build OK, Check OK.
