@@ -115,7 +115,7 @@ svn_wc__ensure_uniform_revision (svn_stringbuf_t *dir_path,
       full_entry_path = svn_stringbuf_dup (dir_path, subpool);
       if (current_entry_name)
         svn_path_add_component (full_entry_path, current_entry_name,
-                                svn_path_url_style);
+                                svn_path_local_style);
 
       /* If the entry's existence is `deleted', remove the entry
          altogether.  (If, during the update, the repository didn't
