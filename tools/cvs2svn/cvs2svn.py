@@ -1077,6 +1077,30 @@ class SymbolicNameTracker:
 
       self.bump_rev_count(parent_key, svn_rev, self.opening_revs_key)
 
+  def close_names(self, svn_path, svn_rev, names):
+    """Record that as of SVN_REV, SVN_PATH could no longer be the
+    source from which any of symbolic names in NAMES could be copied.
+    SVN_PATH does not start with '/'."""
+    if not names: return  # early_out
+    for name in names:
+      components = [name] + string.split(svn_path, '/')
+      parent_key = self.root_key
+      for component in components:
+        self.bump_rev_count(parent_key, svn_rev, self.closing_revs_key)
+        parent = marshal.loads(self.db[parent_key])
+        if not parent.has_key(component):
+          sys.stderr.write("In path '%s', value for parent key '%s' "
+                           "does not have entry '%s'\n" \
+                           % (svn_path, parent_key, component))
+          sys.exit(1)
+        this_entry_key = parent[component]
+        this_entry_val = marshal.loads(self.db[this_entry_key])
+        # Swaparoo.
+        parent_key = this_entry_key
+        parent = this_entry_val
+
+      self.bump_rev_count(parent_key, svn_rev, self.closing_revs_key)
+
 
 class Commit:
   def __init__(self):
@@ -1197,7 +1221,7 @@ class Commit:
       closed_names = dump.add_or_change_path(cvs_path, svn_path,
                                              cvs_rev, rcs_file,
                                              tags, branches)
-      # kff todo: use closed_names to close off copy-source revisions.
+      sym_tracker.close_names(svn_path, svn_rev, closed_names)
 
     for rcs_file, cvs_rev, br, tags, branches in self.deletes:
       # compute a repository path, dropping the ,v from the file name
@@ -1228,7 +1252,7 @@ class Commit:
         path_deleted, closed_names = dump.delete_path(svn_path,
                                                       tags, branches,
                                                       ctx.prune)
-        # kff todo: use closed_names to close off copy-source revisions.
+        sym_tracker.close_names(svn_path, svn_rev, closed_names)
 
     if svn_rev != SVN_INVALID_REVNUM:
       print '    new revision:', svn_rev
