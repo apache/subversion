@@ -281,7 +281,11 @@ tienen y envían parches a la lista de correo:
   
 - Se pierde el "acceso" a un fichero listado en TRABAJO si no se
   ha colaborado ningún cambio en 14 días. Se recomienda traducir
-  un párrafo al día, y enviar los cambios acumulados semanalmente.
+  un párrafo al día. En el caso de colaborar mediante parches
+  enviados a la lista de correo, puede acumular los cambios y
+  enviar éstos semanalmente para evitar sobrecargarse con el uso
+  del correo electrónico (si bien el coordinador aceptará cualquier
+  colaboración por pequeña que sea).
 
 - No usar tabuladores "duros". Usar espacios al salvar ficheros.
 
@@ -318,6 +322,12 @@ fichero en particular:
 - Se pierde acceso de escritura al repositorio (en caso de tenerlo)
   tras 90 días sin realizar ningún cambio en el repositorio.
 
+- Como cambio al repositorio se considera cualquier modificación
+  por pequeña que sea a cualquier fichero del proyecto (incluyendo
+  meta ficheros como TRABAJO o LEAME). No hay límite de tamaño
+  (ya sea por pequeño o por grande) a la hora de enviar un cambio
+  al repositorio.
+  
 - Estar apuntado a la lista de correo de cambios realizados en el
   repositorio principal de Subversion: svn@subversion.tigris.org.
   Las instrucciones para apuntarse están en
