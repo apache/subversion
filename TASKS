@@ -8,12 +8,4 @@ to take something on.
    tools/cvs2svn/.
 
 
-2. Make the working copy library property handling code work.
-
-
-3. Hook the fs into Apache (becomes higher priority after Milestone 1
-   on October 7th).
-
-
-4. Start writing a basic command-line client, to talk over the network
-   to the Apache-connected Subversion server (see 3).
+2. Hook up fs w/ Apache, wc w/ libsvn_ra_dav.
