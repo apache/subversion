@@ -50,13 +50,9 @@ typedef struct svn_ra_local__session_baton_t
   /* The user accessing the repository. */
   const char *username;
 
-  /* The URL above, decoded and split into two components. */
+  /* The URL above, split into two components. */
   const char *repos_url;
-  const char *fs_path;
-
-  /* repos_url, but URI-encoded. Used by svn_ra_local__get_repos_root.
-     It needs to live as long as the session. */
-  const char *repos_root;
+  const char *fs_path;  /* URI-decoded. */
 
   /* A repository object. */
   svn_repos_t *repos;
@@ -82,8 +78,8 @@ typedef struct svn_ra_local__session_baton_t
     
 
 
-/* Given a `file://' URL, decode it, figure out which portion
-   specifies a repository on local disk, and return in REPOS_URL;
+/* Given a `file://' URL, figure out which portion specifies a
+   repository on local disk, and return in REPOS_URL; URI-decode and
    return the remainder (the path *within* the repository's
    filesystem) in FS_PATH.  Allocate the return values in POOL.
    Currently, we are not expecting to handle `file://hostname/'-type

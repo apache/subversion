@@ -87,11 +87,13 @@ reporter_link_path (void *reporter_baton,
 {
   reporter_baton_t *rbaton = reporter_baton;
   const char *fs_path = NULL;
+  const char *repos_url_decoded;
   int repos_url_len;
 
   url = svn_path_uri_decode(url, pool);
-  repos_url_len = strlen(rbaton->session->repos_url);
-  if (strncmp(url, rbaton->session->repos_url, repos_url_len) != 0)
+  repos_url_decoded = svn_path_uri_decode(rbaton->session->repos_url, pool);
+  repos_url_len = strlen(repos_url_decoded);
+  if (strncmp(url, repos_url_decoded, repos_url_len) != 0)
     return svn_error_createf (SVN_ERR_RA_ILLEGAL_URL, NULL,
                               _("'%s'\n"
                                 "is not the same repository as\n"
@@ -223,9 +225,6 @@ svn_ra_local__open (void **session_baton,
                                       session->pool),
              _("Unable to open an ra_local session to URL"));
 
-  /* Encode the repos_url into repos_root for get_repos_root. */
-  session->repos_root = svn_path_uri_encode (session->repos_url, pool);
-
   /* Cache the filesystem object from the repos here for
      convenience. */
   session->fs = svn_repos_fs (session->repos);
@@ -316,7 +315,7 @@ svn_ra_local__get_repos_root (void *session_baton,
   svn_ra_local__session_baton_t *baton = 
     (svn_ra_local__session_baton_t *) session_baton;
 
-  *url = baton->repos_root;
+  *url = baton->repos_url;
 
   return SVN_NO_ERROR;
 }
@@ -415,7 +414,9 @@ svn_ra_local__get_commit_editor (void *session_baton,
 
   /* Get the repos commit-editor */     
   SVN_ERR (svn_repos_get_commit_editor (editor, edit_baton, sess->repos,
-                                        sess->repos_url, sess->fs_path,
+                                        svn_path_uri_decode (sess->repos_url,
+                                                             pool),
+                                        sess->fs_path,
                                         sess->username, log_msg,
                                         deltify_etc, db, pool));
 
@@ -442,6 +443,7 @@ make_reporter (void *session_baton,
   void *rbaton;
   int repos_url_len;
   const char *other_fs_path = NULL;
+  const char *repos_url_decoded;
 
   /* Get the HEAD revision if one is not supplied. */
   if (! SVN_IS_VALID_REVNUM(revision))
@@ -452,11 +454,12 @@ make_reporter (void *session_baton,
   if (other_url)
     {
       other_url = svn_path_uri_decode (other_url, pool);
-      repos_url_len = strlen(sbaton->repos_url);
+      repos_url_decoded = svn_path_uri_decode (sbaton->repos_url, pool);
+      repos_url_len = strlen(repos_url_decoded);
       
       /* Sanity check:  the other_url better be in the same repository as
          the original session url! */
-      if (strncmp (other_url, sbaton->repos_url, repos_url_len) != 0)
+      if (strncmp (other_url, repos_url_decoded, repos_url_len) != 0)
         return svn_error_createf 
           (SVN_ERR_RA_ILLEGAL_URL, NULL,
            _("'%s'\n"
