@@ -51,6 +51,7 @@
 #include "bdb/txn-table.h"
 #include "bdb/rev-table.h"
 #include "bdb/nodes-table.h"
+#include "bdb/changes-table.h"
 
 
 /* ### I believe this constant will become internal to reps-strings.c.
@@ -223,53 +224,6 @@ not_txn (svn_fs_root_t *root)
 
 
 
-/* Getting dag nodes for roots.  */
-
-
-/* Set *NODE_P to a freshly opened dag node referring to the root
-   directory of ROOT, as part of TRAIL.  */
-static svn_error_t *
-root_node (dag_node_t **node_p,
-           svn_fs_root_t *root,
-           trail_t *trail)
-{
-  if (root->kind == revision_root)
-    {
-      /* It's a revision root, so we already have its root directory
-         opened.  */
-      *node_p = svn_fs__dag_dup (root->root_dir, trail);
-      return SVN_NO_ERROR;
-    }
-  else if (root->kind == transaction_root)
-    {
-      /* It's a transaction root.  Open a fresh copy.  */
-      return svn_fs__dag_txn_root (node_p, root->fs, root->txn, trail);
-    }
-  else
-    abort ();
-}
-
-
-/* Set *NODE_P to a mutable root directory for ROOT, cloning if
-   necessary, as part of TRAIL.  ROOT must be a transaction root.  Use
-   ERROR_PATH in error messages.  */
-static svn_error_t *
-mutable_root_node (dag_node_t **node_p,
-                   svn_fs_root_t *root,
-                   const char *error_path,
-                   trail_t *trail)
-{
-  if (root->kind == transaction_root)
-    return svn_fs__dag_clone_root (node_p, root->fs, 
-                                   svn_fs_txn_root_name (root, trail->pool),
-                                   trail);
-  else
-    /* If it's not a transaction root, we can't change its contents.  */
-    return svn_fs__err_not_mutable (root->fs, root->rev, error_path);
-}
-
-
-
 /* Simple root operations.  */
 
 void
@@ -318,6 +272,53 @@ svn_fs_revision_root_revision (svn_fs_root_t *root)
     return root->rev;
   else
     return SVN_INVALID_REVNUM;
+}
+
+
+
+/* Getting dag nodes for roots.  */
+
+
+/* Set *NODE_P to a freshly opened dag node referring to the root
+   directory of ROOT, as part of TRAIL.  */
+static svn_error_t *
+root_node (dag_node_t **node_p,
+           svn_fs_root_t *root,
+           trail_t *trail)
+{
+  if (root->kind == revision_root)
+    {
+      /* It's a revision root, so we already have its root directory
+         opened.  */
+      *node_p = svn_fs__dag_dup (root->root_dir, trail);
+      return SVN_NO_ERROR;
+    }
+  else if (root->kind == transaction_root)
+    {
+      /* It's a transaction root.  Open a fresh copy.  */
+      return svn_fs__dag_txn_root (node_p, root->fs, root->txn, trail);
+    }
+  else
+    abort ();
+}
+
+
+/* Set *NODE_P to a mutable root directory for ROOT, cloning if
+   necessary, as part of TRAIL.  ROOT must be a transaction root.  Use
+   ERROR_PATH in error messages.  */
+static svn_error_t *
+mutable_root_node (dag_node_t **node_p,
+                   svn_fs_root_t *root,
+                   const char *error_path,
+                   trail_t *trail)
+{
+  if (root->kind == transaction_root)
+    return svn_fs__dag_clone_root (node_p, root->fs, 
+                                   svn_fs_txn_root_name (root, trail->pool),
+                                   trail);
+  else
+    /* If it's not a transaction root, we can't change its contents.  */
+    return svn_fs__err_not_mutable (root->fs, root->rev, error_path);
 }
 
 
@@ -441,13 +442,7 @@ typedef enum open_path_flags_t {
    component doesn't exist, simply return a path whose bottom `node'
    member is zero.  This option is useful for callers that create new
    nodes --- we find the parent directory for them, and tell them
-   whether the entry exists already.  
-
-   If ROOT is an id root, then PATH is the unparsed form of an
-   svn_fs_id_t; set (*PARENT_PATH)->node to the node identified by
-   PATH, and (*PARENT_PATH)->parent to null.  In this case, FLAGS &
-   open_path_last_optional must be zero or an assertion failure
-   results.  */ 
+   whether the entry exists already.  */
 static svn_error_t *
 open_path (parent_path_t **parent_path_p,
            svn_fs_root_t *root,
@@ -636,6 +631,29 @@ get_dag (dag_node_t **dag_node_p,
   *dag_node_p = parent_path->node;
 
   return SVN_NO_ERROR;
+}
+
+
+
+/* Populating the `changes' table. */
+
+/* Add a change to the changes table in FS, keyed on transaction id
+   TXN_ID, and indicated that a change of kind CHANGE_KIND occured on
+   PATH (whose node revision id is--or was, in the case of a
+   deletion--NODEREV_ID).  Do all this as part of TRAIL.  */
+static svn_error_t *
+add_change (svn_fs_t *fs,
+            const char *txn_id,
+            const char *path,
+            const svn_fs_id_t *noderev_id,
+            svn_fs__change_kind_t change_kind,
+            trail_t *trail)
+{
+  svn_fs__change_t change;
+  change.path = path;
+  change.noderev_id = noderev_id;
+  change.kind = change_kind;
+  return svn_fs__changes_add (fs, txn_id, &change, trail);
 }
 
 
@@ -980,6 +998,7 @@ txn_body_change_node_prop (void *baton,
   struct change_node_prop_args *args = baton;
   parent_path_t *parent_path;
   apr_hash_t *proplist;
+  const char *txn_id = svn_fs_txn_root_name (args->root, trail->pool);
 
   SVN_ERR (open_path (&parent_path, args->root, args->path, 0, trail));
   SVN_ERR (make_path_mutable (args->root, parent_path, args->path, trail));
@@ -997,10 +1016,15 @@ txn_body_change_node_prop (void *baton,
   apr_hash_set (proplist, args->name, APR_HASH_KEY_STRING, args->value);
 
   /* Overwrite the node's proplist. */
-  return svn_fs__dag_set_proplist (parent_path->node, proplist, 
-                                   svn_fs_txn_root_name (args->root,
-                                                         trail->pool),
-                                   trail);
+  SVN_ERR (svn_fs__dag_set_proplist (parent_path->node, proplist, 
+                                     txn_id, trail));
+
+  /* Make a record of this modification in the changes table. */
+  SVN_ERR (add_change (svn_fs_root_fs (args->root), txn_id, 
+                       args->path, svn_fs__dag_get_id (parent_path->node),
+                       svn_fs__change_prop_mod, trail));
+  
+  return SVN_NO_ERROR;
 }
 
 
@@ -2270,7 +2294,8 @@ txn_body_make_dir (void *baton,
   const char *path = args->path;
   parent_path_t *parent_path;
   dag_node_t *sub_dir;
-  
+  const char *txn_id = svn_fs_txn_root_name (root, trail->pool);
+
   SVN_ERR (open_path (&parent_path, root, path, open_path_last_optional,
                       trail));
 
@@ -2284,8 +2309,13 @@ txn_body_make_dir (void *baton,
   SVN_ERR (svn_fs__dag_make_dir (&sub_dir,
                                  parent_path->parent->node, 
                                  parent_path->entry,
-                                 svn_fs_txn_root_name (root, trail->pool),
+                                 txn_id,
                                  trail));
+
+  /* Make a record of this modification in the changes table. */
+  SVN_ERR (add_change (svn_fs_root_fs (root), txn_id, 
+                       path, svn_fs__dag_get_id (sub_dir),
+                       svn_fs__change_add, trail));
 
   return SVN_NO_ERROR;
 }
@@ -2326,6 +2356,7 @@ txn_body_delete (void *baton,
   svn_fs_root_t *root = args->root;
   const char *path = args->path;
   parent_path_t *parent_path;
+  const char *txn_id = svn_fs_txn_root_name (root, trail->pool);
 
   SVN_ERR (open_path (&parent_path, root, path, 0, trail));
 
@@ -2344,18 +2375,20 @@ txn_body_delete (void *baton,
     {
       SVN_ERR (svn_fs__dag_delete_tree (parent_path->parent->node,
                                         parent_path->entry,
-                                        svn_fs_txn_root_name (root, 
-                                                              trail->pool),
-                                        trail));
+                                        txn_id, trail));
     }
   else
     {
       SVN_ERR (svn_fs__dag_delete (parent_path->parent->node,
                                    parent_path->entry,
-                                   svn_fs_txn_root_name (root, trail->pool),
-                                   trail));
+                                   txn_id, trail));
     }
-
+  
+  /* Make a record of this modification in the changes table. */
+  SVN_ERR (add_change (svn_fs_root_fs (root), txn_id, 
+                       path, svn_fs__dag_get_id (parent_path->node),
+                       svn_fs__change_delete, trail));
+  
   return SVN_NO_ERROR;
 }
 
@@ -2438,6 +2471,17 @@ txn_body_copy (void *baton,
 
   if (svn_fs_is_revision_root (from_root))
     {
+      svn_fs__change_kind_t kind;
+      const char *txn_id = svn_fs_txn_root_name (to_root, trail->pool);
+      dag_node_t *new_node;
+
+      /* If TO_PATH already existed prior to the copy, note that this
+         operation is a replacement, not an addition. */
+      if (to_parent_path->node)
+        kind = svn_fs__change_replace;
+      else
+        kind = svn_fs__change_add;
+
       /* Make sure the target node's parents are mutable.  */
       SVN_ERR (make_path_mutable (to_root, to_parent_path->parent, 
                                   to_path, trail));
@@ -2447,9 +2491,13 @@ txn_body_copy (void *baton,
                                  from_parent_path->node,
                                  args->preserve_history,
                                  svn_fs_revision_root_revision (from_root),
-                                 from_path,
-                                 svn_fs_txn_root_name (to_root, trail->pool),
-                                 trail));
+                                 from_path, txn_id, trail));
+
+      /* Make a record of this modification in the changes table. */
+      SVN_ERR (get_dag (&new_node, to_root, to_path, trail));
+      SVN_ERR (add_change (svn_fs_root_fs (to_root), txn_id, 
+                           to_path, svn_fs__dag_get_id (new_node),
+                           kind, trail));
     }
   else
     {
@@ -2585,7 +2633,8 @@ txn_body_make_file (void *baton,
   const char *path = args->path;
   parent_path_t *parent_path;
   dag_node_t *child;
-  
+  const char *txn_id = svn_fs_txn_root_name (root, trail->pool);
+
   SVN_ERR (open_path (&parent_path, root, path, open_path_last_optional,
                       trail));
 
@@ -2599,8 +2648,13 @@ txn_body_make_file (void *baton,
   SVN_ERR (svn_fs__dag_make_file (&child,
                                   parent_path->parent->node, 
                                   parent_path->entry,
-                                  svn_fs_txn_root_name (root, trail->pool),
+                                  txn_id,
                                   trail));
+
+  /* Make a record of this modification in the changes table. */
+  SVN_ERR (add_change (svn_fs_root_fs (root), txn_id, 
+                       path, svn_fs__dag_get_id (child),
+                       svn_fs__change_add, trail));
 
   return SVN_NO_ERROR;
 }
@@ -2841,6 +2895,7 @@ txn_body_apply_textdelta (void *baton, trail_t *trail)
 {
   txdelta_baton_t *tb = (txdelta_baton_t *) baton;
   parent_path_t *parent_path;
+  const char *txn_id = svn_fs_txn_root_name (tb->root, trail->pool);
 
   /* Call open_path with no flags, as we want this to return an error
      if the node for which we are searching doesn't exist. */
@@ -2857,11 +2912,8 @@ txn_body_apply_textdelta (void *baton, trail_t *trail)
                                      tb->node, tb->pool, trail));
 
   /* Make a writable "target" stream */
-  SVN_ERR (svn_fs__dag_get_edit_stream (&(tb->target_stream),
-                                        tb->node, tb->pool,
-                                        svn_fs_txn_root_name (tb->root,
-                                                              trail->pool),
-                                        trail));
+  SVN_ERR (svn_fs__dag_get_edit_stream (&(tb->target_stream), tb->node, 
+                                        tb->pool, txn_id, trail));
 
   /* Make a writable "string" stream which writes data to
      tb->target_string. */
@@ -2869,18 +2921,21 @@ txn_body_apply_textdelta (void *baton, trail_t *trail)
   tb->string_stream = svn_stream_create (tb, tb->pool);
   svn_stream_set_write (tb->string_stream, write_to_string);
 
-  /* Finally, create a custom window handler that uses our two
-     streams. */
+  /* Now, create a custom window handler that uses our two streams. */
   svn_txdelta_apply (tb->source_stream,
                      tb->string_stream,
                      tb->pool,
                      &(tb->interpreter),
                      &(tb->interpreter_baton));
 
+  /* Make a record of this modification in the changes table. */
+  SVN_ERR (add_change (svn_fs_root_fs (tb->root), txn_id, 
+                       tb->path, svn_fs__dag_get_id (tb->node),
+                       svn_fs__change_text_mod, trail));
 
   return SVN_NO_ERROR;
-
 }
+
 
 svn_error_t *
 svn_fs_apply_textdelta (svn_txdelta_window_handler_t *contents_p,
@@ -2969,6 +3024,7 @@ txn_body_apply_text (void *baton, trail_t *trail)
 {
   struct text_baton_t *tb = baton;
   parent_path_t *parent_path;
+  const char *txn_id = svn_fs_txn_root_name (tb->root, trail->pool);
 
   /* Call open_path with no flags, as we want this to return an error
      if the node for which we are searching doesn't exist. */
@@ -2979,16 +3035,18 @@ txn_body_apply_text (void *baton, trail_t *trail)
   tb->node = parent_path->node;
 
   /* Make a writable stream for replacing the file's text. */
-  SVN_ERR (svn_fs__dag_get_edit_stream (&(tb->file_stream),
-                                        tb->node, tb->pool,
-                                        svn_fs_txn_root_name (tb->root, 
-                                                              trail->pool),
-                                        trail));
+  SVN_ERR (svn_fs__dag_get_edit_stream (&(tb->file_stream), tb->node, 
+                                        tb->pool, txn_id, trail));
 
   /* Create a 'returnable' stream which writes to the file_stream. */
   tb->stream = svn_stream_create (tb, tb->pool);
   svn_stream_set_write (tb->stream, text_stream_writer);
   svn_stream_set_close (tb->stream, text_stream_closer);
+
+  /* Make a record of this modification in the changes table. */
+  SVN_ERR (add_change (svn_fs_root_fs (tb->root), txn_id, 
+                       tb->path, svn_fs__dag_get_id (tb->node),
+                       svn_fs__change_text_mod, trail));
 
   return SVN_NO_ERROR;
 }
