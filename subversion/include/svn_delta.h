@@ -379,25 +379,12 @@ typedef struct svn_delta_edit_fns_t
      caller (producer) is pushing tree delta data at the callee
      (consumer).
 
-     At the start of traversal, the consumer provides two batons:
-
-     - EDIT_BATON, a baton global to the entire delta edit.  The
-       producer should pass this value as the EDIT_BATON argument to
-       every callback.
-
-     - DIR_BATON, a baton representing the root directory.  Each
-       callback function that adds, deletes, or changes objects in
-       some directory takes a directory baton argument representing
-       the directory in which the change takes place.  Given the
-       initial root baton, the producer can use `add_directory' or
-       `replace_directory', which return batons for subdirectories,
-       as explained below.
-
      At the start of traversal, the consumer provides EDIT_BATON, a
-     baton global to the entire delta edit.  The producer should pass
-     this value as the EDIT_BATON argument to every callback.  In the
-     case of `svn_xml_parse', this would be the EDIT_BATON argument.
-     Other producers will work differently.
+     baton global to the entire delta edit.  In the case of
+     `svn_xml_parse', this would be the EDIT_BATON argument; other
+     producers will work differently.  The producer should pass this
+     value as the EDIT_BATON argument to the `replace_root' function,
+     to get a baton representing root of the tree being edited.
 
      Most of the callbacks work in the obvious way:
 
@@ -435,15 +422,6 @@ typedef struct svn_delta_edit_fns_t
         replace_directory (F, "bar") --- yielding a baton B for `foo/bar'
         add_file (B, "baz.c")
      
-     The producer needn't use the batons in any particular order.  It
-     would be fine for the producer to then call:
-        add_file (ROOT, "qux.c") --- to create `qux.c' in the root
-     and then
-        add_file (F, "quux.c") --- to create `foo/quux.c'.
-     The only restriction is that the producer must call
-     `add_directory' or `replace_directory', so as to obtain a baton
-     for each directory before making changes there.
-
      When the producer is finished making changes to a directory, it
      should call `close_directory'.  This lets the consumer do any
      necessary cleanup, and free the baton's storage.
@@ -459,7 +437,34 @@ typedef struct svn_delta_edit_fns_t
      `replace_directory' functions all take arguments ANCESTOR_PATH
      and ANCESTOR_VERSION.  If ANCESTOR_PATH is non-zero, then
      ANCESTOR_PATH and ANCESTOR_VERSION indicate the ancestor of the
-     resulting object.  */
+     resulting object.
+
+     There are two restrictions on the order in which the producer may
+     use the batons:
+
+     - The producer may call `replace_directory', `add_directory',
+       `replace_file', `add_file', or `delete' at most once on any given
+       directory entry.
+
+     - The producer may not close a directory baton until it has
+       closed all batons for its subdirectories.
+
+     What these rules add up to is that you, the producer, need to use
+     directory batons as if you were doing a single traversal of the
+     tree.  You go in only once, and you finish all your
+     subdirectories before you leave.
+
+     Note that the `close' rule does *not* apply to file batons: you
+     don't need to close a file baton before closing its parent
+     directory's baton.  You can keep as many file batons alive for as
+     long as you like, and call `apply_textdelta' or
+     `change_file_prop' on them any time you please.
+
+     These restrictions make it easier to write a consumer that
+     generates an XML-style tree delta.  An XML tree delta mentions
+     each directory once, and includes all the changes to that
+     directory within the <directory> element.  However, it does allow
+     text deltas to appear at the end.  */
 
 
   /* Set *ROOT_BATON to a baton for the top directory of the change.
@@ -467,9 +472,7 @@ typedef struct svn_delta_edit_fns_t
      the root of the filesystem.)  Like any other directory baton, the
      producer should call `close_directory' on ROOT_BATON when they're
      done.  */
-  svn_error_t *(*replace_root) (svn_string_t *ancestor_path,
-                                svn_vernum_t ancestor_version,
-                                void *edit_baton,
+  svn_error_t *(*replace_root) (void *edit_baton,
                                 void **dir_baton);
 
 
