@@ -28,7 +28,7 @@
          typemap will be applied onto a "real" type.
 */
 
-%typemap(ignore) SWIGTYPE **OUTPARAM ($*1_type temp) {
+%typemap(in,numinputs=0) SWIGTYPE **OUTPARAM ($*1_type temp) {
     $1 = ($1_ltype)&temp;
 }
 %typemap(python, argout, fragment="t_output_helper") SWIGTYPE **OUTPARAM {
