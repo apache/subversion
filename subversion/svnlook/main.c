@@ -109,6 +109,288 @@ get_root (svn_fs_root_t **root,
 
 
 
+/*** Tree Routines ***/
+
+/* Generate a generic delta tree. */
+static svn_error_t *
+generate_delta_tree (repos_node_t **tree,
+                     svn_fs_t *fs,
+                     svn_fs_root_t *root, 
+                     svn_revnum_t base_rev, 
+                     apr_pool_t *pool)
+{
+  svn_fs_root_t *base_root;
+  const svn_delta_edit_fns_t *editor;
+  void *edit_baton;
+  apr_hash_t *src_revs = apr_hash_make (pool);
+
+  /* Get the current root. */
+  apr_hash_set (src_revs, "", APR_HASH_KEY_STRING, &base_rev);
+
+  /* Get the base root. */
+  SVN_ERR (svn_fs_revision_root (&base_root, fs, base_rev, pool));
+
+  /* Request our editor. */
+  SVN_ERR (svnlook_tree_delta_editor (&editor, &edit_baton, fs,
+                                      root, base_root, pool));
+  
+  /* Drive our editor. */
+  SVN_ERR (svn_repos_dir_delta (base_root, 
+                                svn_stringbuf_create ("", pool), 
+                                NULL, src_revs, root, 
+                                svn_stringbuf_create ("", pool), 
+                                editor, edit_baton, pool));
+
+  /* Return the tree we just built. */
+  *tree = svnlook_edit_baton_tree (edit_baton);
+  return SVN_NO_ERROR;
+}
+
+
+
+/*** Tree Printing Routines ***/
+
+/* Recursively print only directory nodes that either a) have property
+   mods, or b) contains files that have changed. */
+static void
+print_dirs_changed_tree (repos_node_t *node,
+                         svn_stringbuf_t *path,
+                         apr_pool_t *pool)
+{
+  repos_node_t *tmp_node;
+  int print_me = 0;
+  svn_stringbuf_t *full_path;
+
+  if (! node)
+    return;
+
+  /* Not a directory?  We're not interested. */
+  if (node->kind != svn_node_dir)
+    return;
+
+  /* Got prop mods?  Excellent. */
+  if (node->prop_mod)
+    print_me = 1;
+
+  if (! print_me)
+    {
+      /* Fly through the list of children, checking for modified files. */
+      tmp_node = node->child;
+      if (tmp_node)
+        {
+          if ((tmp_node->kind == svn_node_file)
+              || (tmp_node->text_mod)
+              || (tmp_node->action == 'A')
+              || (tmp_node->action == 'D'))
+            {
+              print_me = 1;
+            }
+          while (tmp_node->sibling && (! print_me ))
+            {
+              tmp_node = tmp_node->sibling;
+              if ((tmp_node->kind == svn_node_file)
+                  || (tmp_node->text_mod)
+                  || (tmp_node->action == 'A')
+                  || (tmp_node->action == 'D'))
+                {
+                  print_me = 1;
+                }
+            }
+        }
+    }
+  
+  /* Print the node if it qualifies. */
+  if (print_me)
+    {
+      printf ("%s/\n", path->data);
+    }
+
+  /* Recursively handle the node's children. */
+  tmp_node = node->child;
+  if (! tmp_node)
+    return;
+
+  full_path = svn_stringbuf_dup (path, pool);
+  svn_path_add_component_nts (full_path, tmp_node->name, svn_path_repos_style);
+  print_dirs_changed_tree (tmp_node, full_path, pool);
+  while (tmp_node->sibling)
+    {
+      tmp_node = tmp_node->sibling;
+      svn_stringbuf_set (full_path, path->data);
+      svn_path_add_component_nts 
+        (full_path, tmp_node->name, svn_path_repos_style);
+      print_dirs_changed_tree (tmp_node, full_path, pool);
+    }
+
+  return;
+}
+
+
+/* Recursively print all nodes in the tree that have been modified
+   (do not include directories affected only by "bubble-up"). */
+static void
+print_changed_tree (repos_node_t *node,
+                    svn_stringbuf_t *path,
+                    apr_pool_t *pool)
+{
+  repos_node_t *tmp_node;
+  svn_stringbuf_t *full_path;
+  char status[3] = "_ ";
+  int print_me = 1;
+
+  if (! node)
+    return;
+
+  /* Print the node. */
+  tmp_node = node;
+  if (tmp_node->action == 'A')
+    status[0] = 'A';
+  else if (tmp_node->action == 'D')
+    status[0] = 'D';
+  else if (tmp_node->action == 'R')
+    {
+      if ((! tmp_node->text_mod) && (! tmp_node->prop_mod))
+        print_me = 0;
+      if (tmp_node->text_mod)
+        status[0] = 'U';
+      if (tmp_node->prop_mod)
+        status[1] = 'U';
+    }
+  else
+    print_me = 0;
+
+  /* Print this node unless told to skip it. */
+  if (print_me)
+    printf ("%s  %s%s\n",
+            status,
+            path->data,
+            tmp_node->kind == svn_node_dir ? "/" : "");
+  
+  /* Return here if the node has no children. */
+  tmp_node = tmp_node->child;
+  if (! tmp_node)
+    return;
+
+  /* Recursively handle the node's children. */
+  full_path = svn_stringbuf_dup (path, pool);
+  svn_path_add_component_nts (full_path, tmp_node->name, svn_path_repos_style);
+  print_changed_tree (tmp_node, full_path, pool);
+  while (tmp_node->sibling)
+    {
+      tmp_node = tmp_node->sibling;
+      svn_stringbuf_set (full_path, path->data);
+      svn_path_add_component_nts 
+        (full_path, tmp_node->name, svn_path_repos_style);
+      print_changed_tree (tmp_node, full_path, pool);
+    }
+
+  return;
+}
+
+
+/* Recursively print all nodes in the tree that have been modified
+   (do not include directories affected only by "bubble-up"). */
+static void
+print_diff_tree (svn_fs_root_t *root,
+                 repos_node_t *node, 
+                 svn_stringbuf_t *path,
+                 apr_pool_t *pool)
+{
+  repos_node_t *tmp_node;
+  svn_stringbuf_t *full_path;
+
+  if (! node)
+    return;
+
+  /* Print the node. */
+  tmp_node = node;
+
+
+  /* ### todo:  Need a plan for printing diffs here.  */
+
+
+  /* Return here if the node has no children. */
+  tmp_node = tmp_node->child;
+  if (! tmp_node)
+    return;
+
+  /* Recursively handle the node's children. */
+  full_path = svn_stringbuf_dup (path, pool);
+  svn_path_add_component_nts (full_path, tmp_node->name, svn_path_repos_style);
+  print_diff_tree (root, tmp_node, full_path, pool);
+  while (tmp_node->sibling)
+    {
+      tmp_node = tmp_node->sibling;
+      svn_stringbuf_set (full_path, path->data);
+      svn_path_add_component_nts 
+        (full_path, tmp_node->name, svn_path_repos_style);
+      print_diff_tree (root, tmp_node, full_path, pool);
+    }
+
+  return;
+}
+
+
+/* Recursively print all nodes in the tree.  If SHOW_IDS is non-zero,
+   print the id of each node next to its name. */
+static void
+print_tree (repos_node_t *node,
+            svn_boolean_t show_ids,
+            int indentation,
+            apr_pool_t *pool)
+{
+  repos_node_t *tmp_node;
+  int i;
+
+  if (! node)
+    return;
+
+  /* Print the indentation. */
+  for (i = 0; i < indentation; i++)
+    {
+      printf (" ");
+    }
+
+  /* Print the node. */
+  tmp_node = node;
+  if (show_ids)
+    {
+      svn_stringbuf_t *unparsed_id;
+
+      if (tmp_node->id)
+        unparsed_id = svn_fs_unparse_id (tmp_node->id, pool);
+
+      printf ("%s%s <%s>\n", 
+              tmp_node->name, 
+              tmp_node->kind == svn_node_dir ? "/" : "",
+              tmp_node->id ? unparsed_id->data : "unknown");
+    }
+  else
+    {
+      printf ("%s%s \n", 
+              tmp_node->name, 
+              tmp_node->kind == svn_node_dir ? "/" : "");
+    }
+
+  /* Return here if the node has no children. */
+  tmp_node = tmp_node->child;
+  if (! tmp_node)
+    return;
+
+  /* Recursively handle the node's children. */
+  print_tree (tmp_node, show_ids, indentation + 1, pool);
+  while (tmp_node->sibling)
+    {
+      tmp_node = tmp_node->sibling;
+      print_tree (tmp_node, show_ids, indentation + 1, pool);
+    }
+
+  return;
+}
+
+
+
+
 /*** Subcommand handlers. ***/
 
 /* Print the revision's log message to stdout, followed by a newline. */
@@ -213,245 +495,6 @@ do_author (svnlook_ctxt_t *c, apr_pool_t *pool)
 }
 
 
-
-/*** Tree Printing Routines ***/
-
-/* Recursively print only directory nodes that either a) have property
-   mods, or b) contains files that have changed. */
-static void
-print_dirs_changed_tree (repos_node_t *root, 
-                         svn_stringbuf_t *path,
-                         apr_pool_t *pool)
-{
-  repos_node_t *tmp_node;
-  int print_me = 0;
-  svn_stringbuf_t *full_path;
-
-  if (! root)
-    return;
-
-  /* Not a directory?  We're not interested. */
-  if (root->kind != svn_node_dir)
-    return;
-
-  /* Got prop mods?  Excellent. */
-  if (root->prop_mod)
-    print_me = 1;
-
-  if (! print_me)
-    {
-      /* Fly through the list of children, checking for modified files. */
-      tmp_node = root->child;
-      if (tmp_node)
-        {
-          if ((tmp_node->kind == svn_node_file)
-              || (tmp_node->text_mod)
-              || (tmp_node->action == 'A')
-              || (tmp_node->action == 'D'))
-            {
-              print_me = 1;
-            }
-          while (tmp_node->sibling && (! print_me ))
-            {
-              tmp_node = tmp_node->sibling;
-              if ((tmp_node->kind == svn_node_file)
-                  || (tmp_node->text_mod)
-                  || (tmp_node->action == 'A')
-                  || (tmp_node->action == 'D'))
-                {
-                  print_me = 1;
-                }
-            }
-        }
-    }
-  
-  /* Print the node if it qualifies. */
-  if (print_me)
-    {
-      printf ("%s/\n", path->data);
-    }
-
-  /* Recursively handle the node's children. */
-  tmp_node = root->child;
-  if (! tmp_node)
-    return;
-
-  full_path = svn_stringbuf_dup (path, pool);
-  svn_path_add_component_nts (full_path, tmp_node->name, svn_path_repos_style);
-  print_dirs_changed_tree (tmp_node, full_path, pool);
-  while (tmp_node->sibling)
-    {
-      tmp_node = tmp_node->sibling;
-      svn_stringbuf_set (full_path, path->data);
-      svn_path_add_component_nts 
-        (full_path, tmp_node->name, svn_path_repos_style);
-      print_dirs_changed_tree (tmp_node, full_path, pool);
-    }
-
-  return;
-}
-
-
-/* Recursively print all nodes in the tree that have been modified
-   (do not include directories affected only by "bubble-up"). */
-static void
-print_changed_tree (repos_node_t *root, 
-                    svn_stringbuf_t *path,
-                    apr_pool_t *pool)
-{
-  repos_node_t *tmp_node;
-  svn_stringbuf_t *full_path;
-  char status[3] = "_ ";
-  int print_me = 1;
-
-  if (! root)
-    return;
-
-  /* Print the node. */
-  tmp_node = root;
-  if (tmp_node->action == 'A')
-    status[0] = 'A';
-  else if (tmp_node->action == 'D')
-    status[0] = 'D';
-  else if (tmp_node->action == 'R')
-    {
-      if ((! tmp_node->text_mod) && (! tmp_node->prop_mod))
-        print_me = 0;
-      if (tmp_node->text_mod)
-        status[0] = 'U';
-      if (tmp_node->prop_mod)
-        status[1] = 'U';
-    }
-  else
-    print_me = 0;
-
-  /* Print this node unless told to skip it. */
-  if (print_me)
-    printf ("%s  %s%s\n",
-            status,
-            path->data,
-            tmp_node->kind == svn_node_dir ? "/" : "");
-  
-  /* Return here if the node has no children. */
-  tmp_node = tmp_node->child;
-  if (! tmp_node)
-    return;
-
-  /* Recursively handle the node's children. */
-  full_path = svn_stringbuf_dup (path, pool);
-  svn_path_add_component_nts (full_path, tmp_node->name, svn_path_repos_style);
-  print_changed_tree (tmp_node, full_path, pool);
-  while (tmp_node->sibling)
-    {
-      tmp_node = tmp_node->sibling;
-      svn_stringbuf_set (full_path, path->data);
-      svn_path_add_component_nts 
-        (full_path, tmp_node->name, svn_path_repos_style);
-      print_changed_tree (tmp_node, full_path, pool);
-    }
-
-  return;
-}
-
-
-/* Recursively print all nodes in the tree.  If SHOW_IDS is non-zero,
-   print the id of each node next to its name. */
-static void
-print_tree (repos_node_t *root, 
-            svn_boolean_t show_ids,
-            int indentation,
-            apr_pool_t *pool)
-{
-  repos_node_t *tmp_node;
-  int i;
-
-  if (! root)
-    return;
-
-  /* Print the indentation. */
-  for (i = 0; i < indentation; i++)
-    {
-      printf (" ");
-    }
-
-  /* Print the node. */
-  tmp_node = root;
-  if (show_ids)
-    {
-      svn_stringbuf_t *unparsed_id;
-
-      if (tmp_node->id)
-        unparsed_id = svn_fs_unparse_id (tmp_node->id, pool);
-
-      printf ("%s%s <%s>\n", 
-              tmp_node->name, 
-              tmp_node->kind == svn_node_dir ? "/" : "",
-              tmp_node->id ? unparsed_id->data : "unknown");
-    }
-  else
-    {
-      printf ("%s%s \n", 
-              tmp_node->name, 
-              tmp_node->kind == svn_node_dir ? "/" : "");
-    }
-
-  /* Return here if the node has no children. */
-  tmp_node = tmp_node->child;
-  if (! tmp_node)
-    return;
-
-  /* Recursively handle the node's children. */
-  print_tree (tmp_node, show_ids, indentation + 1, pool);
-  while (tmp_node->sibling)
-    {
-      tmp_node = tmp_node->sibling;
-      print_tree (tmp_node, show_ids, indentation + 1, pool);
-    }
-
-  return;
-}
-
-
-
-
-/*** Tree Routines ***/
-
-/* Generate a generic delta tree. */
-static svn_error_t *
-generate_delta_tree (repos_node_t **tree,
-                     svn_fs_t *fs,
-                     svn_fs_root_t *root, 
-                     svn_revnum_t base_rev, 
-                     apr_pool_t *pool)
-{
-  svn_fs_root_t *base_root;
-  const svn_delta_edit_fns_t *editor;
-  void *edit_baton;
-  apr_hash_t *src_revs = apr_hash_make (pool);
-
-  /* Get the current root. */
-  apr_hash_set (src_revs, "", APR_HASH_KEY_STRING, &base_rev);
-
-  /* Get the base root. */
-  SVN_ERR (svn_fs_revision_root (&base_root, fs, base_rev, pool));
-
-  /* Request our editor. */
-  SVN_ERR (svnlook_tree_delta_editor (&editor, &edit_baton, fs,
-                                      root, base_root, pool));
-  
-  /* Drive our editor. */
-  SVN_ERR (svn_repos_dir_delta (base_root, 
-                                svn_stringbuf_create ("", pool), 
-                                NULL, src_revs, root, 
-                                svn_stringbuf_create ("", pool), 
-                                editor, edit_baton, pool));
-
-  /* Return the tree we just built. */
-  *tree = svnlook_edit_baton_tree (edit_baton);
-  return SVN_NO_ERROR;
-}
-
-
 /* Print a list of all directories in which files, or directory
    properties, have been modified. */
 static svn_error_t *
@@ -514,6 +557,26 @@ do_changed (svnlook_ctxt_t *c, apr_pool_t *pool)
 static svn_error_t *
 do_diff (svnlook_ctxt_t *c, apr_pool_t *pool)
 {
+  svn_fs_root_t *root;
+  svn_revnum_t base_rev_id;
+  repos_node_t *tree;
+
+  SVN_ERR (get_root (&root, c, pool));
+  if (c->is_revision)
+    base_rev_id = c->rev_id - 1;
+  else
+    base_rev_id = svn_fs_txn_base_revision (c->txn);
+
+  if (! SVN_IS_VALID_REVNUM (base_rev_id))
+    return svn_error_createf 
+      (SVN_ERR_FS_NO_SUCH_REVISION, 0, NULL, pool,
+       "Transaction '%s' is not based on a revision.  How odd.",
+       c->txn_name);
+  
+  SVN_ERR (generate_delta_tree (&tree, c->fs, root, base_rev_id, pool)); 
+  if (tree)
+    print_diff_tree (root, tree, svn_stringbuf_create ("", pool), pool);
+
   return SVN_NO_ERROR;
 }
 
