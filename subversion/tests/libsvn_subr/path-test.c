@@ -41,7 +41,7 @@ test_path_is_child (const char **msg,
     { 0, 0, 0, 0, 0 }
   };
   
-  *msg = "test svn_path_is_child.";
+  *msg = "test svn_path_is_child";
 
   for (i = 0; i < 5; i++)
     {
@@ -71,6 +71,47 @@ test_path_is_child (const char **msg,
 }
 
 
+static svn_error_t *
+test_path_split (const char **msg,
+                 apr_pool_t *pool)
+{
+  int i;
+
+  const char *paths[5][3] = { 
+    { "/foo/bar",        "/foo",     "bar" },
+    { "/foo/bar/",       "/foo",     "bar" },
+    { "/foo/bar/ ",      "/foo/bar", " " },
+    { "/foo",            "",         "foo" },
+    { "/flu\\b/\\blarg", "/flu\\b",  "\\blarg" },
+  };
+  
+  *msg = "test svn_path_split";
+
+  for (i = 0; i < 5; i++)
+    {
+      svn_stringbuf_t *path = svn_stringbuf_create (paths[i][0], pool);
+      svn_stringbuf_t *dir, *basename;
+
+      svn_path_split (path, &dir, &basename, svn_path_repos_style, pool);
+
+      if (strcmp (dir->data, paths[i][1]))
+        {
+          return svn_error_createf
+            (SVN_ERR_TEST_FAILED, 0, NULL, pool,
+             "svn_path_split (%s) returned dirname '%s' instead of '%s'",
+             path->data, dir->data, paths[i][1]);
+        }
+      if (strcmp (basename->data, paths[i][2]))
+        {
+          return svn_error_createf
+            (SVN_ERR_TEST_FAILED, 0, NULL, pool,
+             "svn_path_split (%s) returned basename '%s' instead of '%s'",
+             path->data, basename->data, paths[i][2]);
+        }
+    }
+  return SVN_NO_ERROR;
+}
+
 
 
 /* The test table.  */
@@ -79,6 +120,7 @@ svn_error_t * (*test_funcs[]) (const char **msg,
                                apr_pool_t *pool) = {
   0,
   test_path_is_child,
+  test_path_split,
   0
 };
 

@@ -163,14 +163,14 @@ svn_path_split (const svn_stringbuf_t *path,
 
   assert (dirpath != basename);
 
-  if (dirpath)
-    {
-      n_dirpath = svn_stringbuf_dup (path, pool);
-      svn_path_remove_component (n_dirpath, style);
-    }
+  n_dirpath = svn_stringbuf_dup (path, pool);
+  svn_path_canonicalize (n_dirpath, style);
 
   if (basename)
-    n_basename = svn_path_last_component (path, style, pool);
+    n_basename = svn_path_last_component (n_dirpath, style, pool);
+
+  if (dirpath)
+    svn_path_remove_component (n_dirpath, style);
 
   if (dirpath)
     *dirpath = n_dirpath;
