@@ -101,28 +101,33 @@ Candidate changes:
     Prevent a potential ra_dav commit race-condition.
     Justification:  fixes a conflict between deltaV and svn semantics.
     Notes:  this can be a problem under high commit concurrency.
+    Votes:
       +1: sussman
 
   * r8613, r8614
     Fix 'svn merge --dry-run' bug on added-files with props. (issue #1738)
     Justification:  severeal users have noticed this --dry-run bug already.
     Notes:  a one-line logic fix, plus new regression test.
+    Votes:
       +1: sussman
       +0: dlr
 
   * r8618
     Fix segfault in mod_dav_svn.
     Justification: it's a seg fault, and the fix is simple.
+    Votes:
       +1: cmpilato, dlr
 
   * r8617
     Fix improper cursor shutdown in libsvn_fs leading to wedgitude.
     Justification: severe lossage occurs if this bug is encountered.
+    Votes:
       +1: cmpilato, dlr
 
   * r8616
     Improved warnings from svnlook and svnadmin.
     Justification: greatly increased admin-friendliness.
+    Votes:
       +1: cmpilato, dlr
 
   * r8678
