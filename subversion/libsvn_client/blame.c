@@ -25,6 +25,7 @@
 #include "svn_error.h"
 #include "svn_diff.h"
 #include "svn_pools.h"
+#include "svn_path.h"
 
 /* The metadata associated with a particular revision. */
 struct rev
@@ -32,7 +33,8 @@ struct rev
   svn_revnum_t revision; /* the revision number */
   const char *author;    /* the author of the revision */
   const char *date;      /* the date of the revision */
-  const char *path;      /* the path of the (temporary) fulltext */
+  const char *path;      /* the absolute repository path */
+  struct rev *next;      /* the next revision */
 };
 
 /* One chunk of blame */
@@ -205,13 +207,8 @@ output_diff_modified (void *baton,
 
 /* The baton used for RA->get_log */
 struct log_message_baton {
-  struct rev *last;        /* The last revision processed */
-  int rev_count;           /* The number of revs seen so far */
-  struct diff_baton db;    /* The baton used for diff operations */
-  void *session;           /* The ra session baton */
-  svn_ra_plugin_t *ra_lib; /* The ra_lib handle */
-  apr_pool_t *diffpool;    /* Pool used for diff operations: cleared
-                              between each revision! */
+  const char *path;        /* The path to be processed */
+  struct rev *eldest;      /* The eldest revision processed */
   svn_cancel_func_t cancel_func; /* cancellation callback */ 
   void *cancel_baton;            /* cancellation baton */
   apr_pool_t *pool; 
@@ -221,10 +218,9 @@ const svn_diff_output_fns_t output_fns = {
         NULL,
         output_diff_modified
 };
-
-/* Callback for log messages; creates temporary fulltexts for each
-   revision, svn_diffs them with their prevision revision, and
-   keeps a running table of blame information as the diffs progress.  */
+                     
+/* Callback for log messages: accumulates revision metadata into
+   a chronologically ordered list stored in the baton. */
 static svn_error_t *
 log_message_receiver (void *baton,
                       apr_hash_t *changed_paths,
@@ -234,14 +230,9 @@ log_message_receiver (void *baton,
                       const char *message,
                       apr_pool_t *pool)
 {
+  svn_log_changed_path_t *change;
   struct log_message_baton *lmb = baton;
-  struct rev *last = lmb->last;
-  int rev_count = lmb->rev_count++;
-  apr_status_t apr_err;
   struct rev *rev;
-  svn_diff_t *diff;
-  apr_file_t *tmp;
-  svn_stream_t *out;
 
   if (lmb->cancel_func)
     SVN_ERR (lmb->cancel_func (lmb->cancel_baton));
@@ -250,43 +241,54 @@ log_message_receiver (void *baton,
   rev->revision = revision;
   rev->author = apr_pstrdup (lmb->pool, author);
   rev->date = apr_pstrdup (lmb->pool, date);
-  lmb->last = rev;
+  rev->path = lmb->path;
+  rev->next = lmb->eldest;
+  lmb->eldest = rev;
 
-  SVN_ERR (svn_io_open_unique_file (&tmp, &rev->path, "",
-                                    rev_count & 1? ".otmp": ".etmp",
-                                    FALSE, lmb->pool));
-
-  out = svn_stream_from_aprfile (tmp, pool);
-  SVN_ERR (lmb->ra_lib->get_file (lmb->session, "", revision, out,
-                                  NULL, NULL, lmb->pool));
-
-  SVN_ERR (svn_stream_close (out));
-
-  apr_err = apr_file_close (tmp);
-  if (apr_err != APR_SUCCESS)
-    return svn_error_createf (apr_err, NULL, "error closing %s", 
-                              rev->path);
-  if (! last)
+  /* This path was either explicitly changed, or part of a directory
+     operation.  In the former case, it will have a changed_paths
+     entry of its own.  Otherwise, it gets a little messy; we need
+     to figure out which parent directory was involved. */
+  change = apr_hash_get (changed_paths, lmb->path, APR_HASH_KEY_STRING);
+  if (change != NULL)
     {
-      lmb->db.blame = blame_create (&lmb->db, rev, 0);
-      return SVN_NO_ERROR;
+      if (change->copyfrom_path)
+        lmb->path = apr_pstrdup (lmb->pool, change->copyfrom_path);
     }
+  else
+    {
+      apr_hash_index_t *hi;
+      const void *key;
+      void *val;
+      int len;
+      for (hi = apr_hash_first (pool, changed_paths); hi;
+           hi = apr_hash_next (hi))
+        {
+          const char *path;
+          apr_hash_this (hi, &key, NULL, &val);
+          path = key;
+          change = val;
+          len = strlen (path);
 
-  lmb->db.rev = rev;
-  apr_pool_clear (lmb->diffpool);
-  SVN_ERR (svn_diff_file_diff (&diff, last->path, rev->path, lmb->diffpool));
-  SVN_ERR (svn_diff_output (diff, &lmb->db, &output_fns));
+          if (strncmp (path, lmb->path, len) == 0 && lmb->path[len] == '/')
+            break;
+        }
 
-  apr_err = apr_file_remove (last->path, pool);
-  if (apr_err != APR_SUCCESS)
-    return svn_error_createf (apr_err, NULL, "error removing %s", 
-                              last->path);
+      if (! change || !change->copyfrom_path)
+        return svn_error_createf (APR_EGENERAL, NULL,
+                                  "Missing changed-path information for "
+                                  "revision %"SVN_REVNUM_T_FMT" of '%s'",
+                                  rev->revision, rev->path);
+
+      lmb->path = svn_path_join (change->copyfrom_path, lmb->path + len + 1,
+                                 lmb->pool);
+    }
 
   return SVN_NO_ERROR;
 }
 
 svn_error_t *
-svn_client_blame (const char *path_or_url,
+svn_client_blame (const char *target,
                   const svn_opt_revision_t *start,
                   const svn_opt_revision_t *end,
                   svn_boolean_t strict_node_history,
@@ -295,19 +297,23 @@ svn_client_blame (const char *path_or_url,
                   svn_client_ctx_t *ctx,
                   apr_pool_t *pool)
 {
+  const char *reposURL;
   struct log_message_baton lmb;
   apr_array_header_t *condensed_targets;
-  svn_ra_plugin_t *ra_lib;  
-  void *ra_baton, *log_session, *text_session;
+  svn_ra_plugin_t *ra_lib; 
+  void *ra_baton, *session;
   const char *url;
   const char *auth_dir;
   svn_revnum_t start_revnum, end_revnum;
   struct blame *walk;
-  apr_file_t *last_file;
-  svn_stream_t *last_stream;
-  apr_pool_t *subpool;
+  apr_file_t *file;
+  svn_stream_t *stream;
+  apr_pool_t *subpool, *diffpool;
+  struct rev *rev;
   apr_status_t apr_err;
-
+  svn_node_kind_t kind;
+  struct diff_baton db;
+  const char *last = NULL;
 
   if (start->kind == svn_opt_revision_unspecified
       || end->kind == svn_opt_revision_unspecified)
@@ -316,11 +322,12 @@ svn_client_blame (const char *path_or_url,
        "svn_client_blame: caller failed to supply revisions");
 
   subpool = svn_pool_create (pool);
+  diffpool = svn_pool_create (pool);
 
-  SVN_ERR (svn_client_url_from_path (&url, path_or_url, subpool));
+  SVN_ERR (svn_client_url_from_path (&url, target, subpool));
   if (! url)
     return svn_error_createf (SVN_ERR_ENTRY_MISSING_URL, NULL,
-                              "'%s' has no URL", path_or_url);
+                              "'%s' has no URL", target);
 
 
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, subpool));
@@ -328,63 +335,101 @@ svn_client_blame (const char *path_or_url,
 
   SVN_ERR (svn_client__dir_if_wc (&auth_dir, "", subpool));
 
-  SVN_ERR (svn_client__open_ra_session (&log_session, ra_lib, url, auth_dir,
-                                        NULL, NULL, FALSE, FALSE,
-                                        ctx, subpool));
-  SVN_ERR (svn_client__open_ra_session (&text_session, ra_lib, url, auth_dir,
+  SVN_ERR (svn_client__open_ra_session (&session, ra_lib, url, auth_dir,
                                         NULL, NULL, FALSE, FALSE,
                                         ctx, subpool));
 
-  SVN_ERR (svn_client__get_revision_number (&start_revnum, ra_lib, log_session,
-                                            start, path_or_url, subpool));
-  SVN_ERR (svn_client__get_revision_number (&end_revnum, ra_lib, log_session,
-                                            end, path_or_url, subpool));
+  SVN_ERR (svn_client__get_revision_number (&start_revnum, ra_lib, session,
+                                            start, target, subpool));
+  SVN_ERR (svn_client__get_revision_number (&end_revnum, ra_lib, session,
+                                            end, target, subpool));
+
+  if (end_revnum < start_revnum)
+    return svn_error_create
+      (SVN_ERR_CLIENT_BAD_REVISION, NULL,
+       "svn_client_blame: start revision must preceed end revision");
+
+  SVN_ERR (ra_lib->check_path (session, "", end_revnum, &kind, subpool));
+
+  if (kind == svn_node_dir)
+    return svn_error_createf (SVN_ERR_CLIENT_IS_DIRECTORY, NULL,
+                              "URL \"%s\" refers to directory", url);
 
   condensed_targets = apr_array_make (subpool, 1, sizeof (const char *));
   (*((const char **)apr_array_push (condensed_targets))) = "";
 
+  SVN_ERR (ra_lib->get_repos_root (session, &reposURL, subpool));
+
+  lmb.path = url + strlen (reposURL);
   lmb.cancel_func = ctx->cancel_func;
   lmb.cancel_baton = ctx->cancel_baton;
-  lmb.last = NULL;
-  lmb.rev_count = 0;
-  lmb.session = text_session;
-  lmb.ra_lib = ra_lib;
+  lmb.eldest = NULL;
   lmb.pool = subpool;
-  lmb.diffpool = svn_pool_create (pool);
-  lmb.db.rev = NULL;
-  lmb.db.blame = NULL;
-  lmb.db.avail = NULL;
-  lmb.db.pool = subpool;
 
-  SVN_ERR (ra_lib->get_log (log_session,
+  SVN_ERR (ra_lib->get_log (session,
                             condensed_targets,
-                            start_revnum,
                             end_revnum,
+                            start_revnum,
                             TRUE,
                             strict_node_history,
                             log_message_receiver,
                             &lmb,
                             subpool));
 
-  apr_pool_destroy (lmb.diffpool);
-
-  if (! lmb.rev_count)
+  if (! lmb.eldest)
     return SVN_NO_ERROR;
-    
-  apr_err = apr_file_open (&last_file, lmb.last->path, APR_READ,
-                           APR_OS_DEFAULT, subpool);
-  if (apr_err != APR_SUCCESS)
-    return svn_error_createf (apr_err, NULL, "error opening %s", 
-                              lmb.last->path);
 
-  last_stream = svn_stream_from_aprfile (last_file, subpool);
-  for (walk = lmb.db.blame; walk; walk = walk->next)
+  SVN_ERR (svn_client__open_ra_session (&session, ra_lib, reposURL, auth_dir,
+                                        NULL, NULL, FALSE, FALSE,
+                                        ctx, subpool));
+
+  db.avail = NULL;
+  db.pool = subpool;
+
+  for (rev = lmb.eldest; rev; rev = rev->next)
+    {
+      const char *tmp;
+      SVN_ERR (svn_io_open_unique_file (&file, &tmp, "", ".tmp",
+                                        FALSE, subpool));
+      stream = svn_stream_from_aprfile (file, pool);
+      SVN_ERR (ra_lib->get_file (session, rev->path + 1, rev->revision,
+                                 stream, NULL, NULL, subpool));
+      SVN_ERR (svn_stream_close (stream));
+      apr_err = apr_file_close (file);
+      if (apr_err != APR_SUCCESS)
+        return svn_error_createf (apr_err, NULL, "error closing %s", 
+                                  rev->path);
+      if (last)
+        {
+          svn_diff_t *diff;
+          db.rev = rev;
+          apr_pool_clear (diffpool);
+          SVN_ERR (svn_diff_file_diff (&diff, last, tmp, diffpool));
+          SVN_ERR (svn_diff_output (diff, &db, &output_fns));
+          apr_err = apr_file_remove (last, diffpool);
+          if (apr_err != APR_SUCCESS)
+            return svn_error_createf (apr_err, NULL, "error removing %s", 
+                                      last);
+        }
+      else
+        db.blame = blame_create (&db, rev, 0);
+
+      last = tmp;
+    }
+  apr_pool_destroy (diffpool);
+
+  apr_err = apr_file_open (&file, last, APR_READ, APR_OS_DEFAULT, subpool);
+  if (apr_err != APR_SUCCESS)
+    return svn_error_createf (apr_err, NULL, "error opening %s", last);
+
+  stream = svn_stream_from_aprfile (file, subpool);
+  for (walk = db.blame; walk; walk = walk->next)
     {
       int i;
       for (i = walk->start; !walk->next || i < walk->next->start; i++)
         {
           svn_stringbuf_t *sb;
-          SVN_ERR (svn_stream_readline (last_stream, &sb, subpool));
+          SVN_ERR (svn_stream_readline (stream, &sb, subpool));
           if (! sb)
             break;
           SVN_ERR (receiver (receiver_baton, i, walk->rev->revision,
@@ -393,15 +438,14 @@ svn_client_blame (const char *path_or_url,
         }
     }
 
-  SVN_ERR (svn_stream_close (last_stream));
-  apr_err = apr_file_close (last_file);
+  SVN_ERR (svn_stream_close (stream));
+  apr_err = apr_file_close (file);
   if (apr_err != APR_SUCCESS)
-    return svn_error_createf (apr_err, NULL, "error closing %s", 
-                              lmb.last->path);
-  apr_err = apr_file_remove (lmb.last->path, subpool);
+    return svn_error_createf (apr_err, NULL, "error closing %s", last);
+  apr_err = apr_file_remove (last, diffpool);
   if (apr_err != APR_SUCCESS)
-    return svn_error_createf (apr_err, NULL, "error removing %s", 
-                              lmb.last->path);
+    return svn_error_createf (apr_err, NULL, "error removing %s", last);
+
   apr_pool_destroy (subpool);
   return SVN_NO_ERROR;
 }
