@@ -102,6 +102,7 @@ analogous to CVS/ sudirs:
             bar.c
             baz.c
        dir-wcprops              /* 'wc' props for this directory. */
+       auth/                    /* Area to store authentication info */
        tmp/                     /* Local tmp area */
             ./                     /* Adm files are written directly here. */
             text-base/             /* tmp area for base files */
@@ -366,6 +367,15 @@ analogous to CVS/ sudirs:
    just internal tracking data used by the system, like the 'entries'
    file.
 
+'auth/'
+
+   This is an area where libsvn_client can store authentication data
+   for future reference.  Without it, you might be prompted for your
+   RA password after every subversion command.  :-)
+
+   The contents of this directory aren't regulated by libsvn_wc; it's
+   up to the various authentication drivers in libsvn_client to make
+   sure they share the namespace politely.  
 
 ------------------------
 todo: some loose ends
