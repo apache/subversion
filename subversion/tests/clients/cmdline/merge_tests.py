@@ -1939,6 +1939,141 @@ def merge_binary_with_common_ancestry(sbox):
   expected_status.tweak('K/theta', status='M ')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
+#----------------------------------------------------------------------
+# A test for issue 1905
+def merge_funny_chars_on_path(sbox):
+  "merge with funny characters (issue #1995)"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # In following lists: 'd' stands for directory, 'f' for file
+  # targets to be added by recursive add
+  add_by_add = [
+    ('d', 'dir_10', 'F%lename'),
+    ('d', 'dir%20', 'F lename'),
+    ('d', 'dir 30', 'Filename'),
+    ('d', 'dir 40', None),
+    ('f', 'F lename', None),
+    ]
+
+  # targets to be added by 'svn mkdir' + add
+  add_by_mkdir = [
+    ('d', 'dir_11', 'F%lename'),
+    ('d', 'dir%21', 'Filename'),
+    ('d', 'dir 31', 'F lename'),
+    ('d', 'dir 41', None),
+    ]
+
+  for target in add_by_add:
+    if target[0] == 'd':
+      target_dir = os.path.join(wc_dir, 'A', 'B', 'E', target[1])
+      os.mkdir(target_dir)
+      if target[2]:
+        target_path = os.path.join(wc_dir, 'A', 'B', 'E', '%s' % target[1], target[2])
+        svntest.main.file_append(target_path, "%s/%s" % (target[1], target[2]))
+      svntest.actions.run_and_verify_svn(None, None, [], 'add', target_dir)
+    elif target[0] == 'f':
+        target_path = os.path.join(wc_dir, 'A', 'B', 'E', '%s' % target[1])
+        svntest.main.file_append(target_path, "%s" % target[1])
+        svntest.actions.run_and_verify_svn(None, None, [], 'add', target_path)
+    else:
+      raise svntest.Failure
+
+
+  for target in add_by_mkdir:
+    if target[0] == 'd':
+      target_dir = os.path.join(wc_dir, 'A', 'B', 'E', target[1])
+      svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', target_dir)
+      if target[2]:
+        target_path = os.path.join(wc_dir, 'A', 'B', 'E', '%s' % target[1], target[2])
+        svntest.main.file_append(target_path, "%s/%s" % (target[1], target[2]))
+        svntest.actions.run_and_verify_svn(None, None, [], 'add', target_path)
+
+  expected_output_dic = {}
+  expected_status_dic = {}
+  
+  for targets in add_by_add,add_by_mkdir:
+    for target in targets:  
+      key = 'A/B/E/%s' % target[1]
+      expected_output_dic[key] = Item(verb='Adding')
+      expected_status_dic[key] = Item(status='  ', wc_rev=2, repos_rev=2)
+      
+      if target[2]:
+        key = 'A/B/E/%s/%s' % (target[1], target[2])
+        expected_output_dic[key] = Item(verb='Adding')
+        expected_status_dic[key] = Item(status='  ', wc_rev=2, repos_rev=2)
+
+
+  expected_output = wc.State(wc_dir, expected_output_dic)
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak(repos_rev=2)
+  expected_status.add(expected_status_dic)
+
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        wc_dir)
+
+  # Do a regular merge of that change into a different dir.
+  F_path = os.path.join(wc_dir, 'A', 'B', 'F')
+  E_url = svntest.main.current_repo_url + '/A/B/E'
+
+  expected_output_dic = {}
+  expected_disk_dic = {}
+
+  for targets in add_by_add,add_by_mkdir:
+    for target in targets:
+      key = '%s' % target[1]
+      expected_output_dic[key] = Item(status='A ')
+      if target[0] == 'd':
+        expected_disk_dic[key] = Item(None, {})
+      elif target[0] == 'f':
+        expected_disk_dic[key] = Item("%s" % target[1], {})
+      else:
+        raise svntest.Failure
+      if target[2]:
+        key = '%s/%s' % (target[1], target[2])
+        expected_output_dic[key] = Item(status='A ')
+        expected_disk_dic[key] = Item('%s/%s' % (target[1], target[2]), {})
+
+
+  expected_output = wc.State(F_path, expected_output_dic)
+
+  expected_disk = wc.State('', expected_disk_dic)
+  expected_skip = wc.State('', { })
+  expected_status = None  # status is optional
+
+  svntest.actions.run_and_verify_merge(F_path, '1', '2', E_url,
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None, None,
+                                       0, # please check props
+                                       1) # and do a dry-run also)
+
+  expected_output_dic = {}
+  
+  for targets in add_by_add,add_by_mkdir:
+    for target in targets:
+      key = '%s' % target[1]
+      expected_output_dic[key] = Item(verb='Adding')
+      if target[2]:
+        key = '%s/%s' % (target[1], target[2])
+        expected_output_dic[key] = Item(verb='Adding')
+      
+  expected_output = wc.State(F_path, expected_output_dic)
+
+  svntest.actions.run_and_verify_commit(F_path,
+                                        expected_output,
+                                        None,
+                                        None, None, None, None, None,
+                                        wc_dir)
+
+
 ########################################################################
 # Run the tests
 
@@ -1961,6 +2096,7 @@ test_list = [ None,
               merge_into_missing,
               dry_run_adds_file_with_prop,
               merge_binary_with_common_ancestry,
+              merge_funny_chars_on_path,
               # property_merges_galore,  # Would be nice to have this.
               # tree_merges_galore,      # Would be nice to have this.
               # various_merges_galore,   # Would be nice to have this.
