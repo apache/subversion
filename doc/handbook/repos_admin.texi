@@ -356,11 +356,13 @@ db_recover: Recovery complete at Sun Jul 14 07:15:42 2002
 db_recover: Maximum transaction id 80000000 Recovery checkpoint [40][4080333]
 @end example
 
-Make sure you run this command as the user that owns and manages the
-database and @emph{not} as root.  Running @command{db_recover} as root
-will leave root owned files in the db directory which cannot be opened
-by the non-root user that manages the database, which is typically
-your Apache process.
+You should shut down the httpd server before doing this.  You'll
+probably have to be root to shut down httpd, but make sure to run the
+actual @command{db_recover} command as the user who owns and manages
+the database and @emph{not} as root.  Running @command{db_recover} as
+root will leave root owned files in the db directory which cannot be
+opened by the non-root user that manages the database (typically, the
+user the Apache process runs as).
 
 Second, a repository administrator may need to manage the growth of
 logfiles.  At any given time, the DB environment is using at least one
