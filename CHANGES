@@ -1,25 +1,25 @@
-Version 1.0.0-beta1
-(Friday, 20th February 2004, from /branches/1.0.0-beta1)
-http://svn.collab.net/repos/svn/tags/1.0.0-beta1
-
-   # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-   #                                                               #
-   #   Note: When 1.0.0 is released, we'll just change the date    #
-   #   and remove the "-beta1"s above.  In other words, this       #
-   #   change list is essentially the 0.37.0->1.0.0 change list.   #
-   #                                                               #
-   # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+Version 1.0.0
+(branching 23 February 2004, from /branches/1.0.x)
+http://svn.collab.net/repos/svn/tags/1.0.0
 
  User-visible changes:
- * book and other documentation files brought up-to-date from trunk
- * various trunk fixes merged into tools/ and contrib/ scripts
- * tools/cvs2svn/ area brought up-to-date from trunk
- * www/ area brought up-to-date from trunk
- * improved 'svn help switch' text
- * many bindings fixes
+ * fixes to the shbang lines in tools/hook-scripts/.
+ * vast improvements to cvs2svn.py  (NOTE: now a separate project!)
+ * general documentation cleanup:
+     - clarify built-in help text for 'svn switch' and 'svn status'.
+     - fix docs within the hook templates.
+     - cleanups to README, INSTALL, HACKING, svn-ref.tex, bash_completion.
+     - bring www/ pages up-to-date for 1.0.
+     - many changes to the Book
 
  Developer-visible changes:
- * various fixes to binary packaging and installer systems
+ * updates to the win32 installer packaging code.
+ * cleanups to SWIG bindings:  
+     - disable svn_io_* functions.
+     - svn_filesize_t and apr_time_t fixes.
+     - remove debugging print statements and various warnings.
+     - make svn_repos_dir_delta() function correctly
+     - add support for repos authz callback.
 
 
 Version 0.37.0 [Beta Interim 2]
@@ -54,7 +54,7 @@ Version 0.36.0 [Beta Interim 1]
 http://svn.collab.net/repos/svn/tags/0.36.0
 
  User-visible changes:
- * add cancellation suport to svnadmin and svnlook (r8222)
+ * add cancellation support to svnadmin and svnlook (r8222)
  * runtime 'store-password' option renamed to 'store-auth-creds' (r8014)
  * 'svn blame' changes:
     - now shows correct revision info (r8035-6)
