@@ -327,6 +327,7 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
   else if (strcmp (eltname, SVN_WC__LOG_RM) == 0)
     {
       apr_status_t status;
+      svn_string_t *full_path = svn_string_dup (loggy->path, loggy->pool);
 
       if (! name)
         {
@@ -340,7 +341,10 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
           return;
         }
 
-      status = apr_remove_file (name, loggy->pool);
+      svn_path_add_component(full_path,
+                             svn_string_create (name, loggy->pool),
+                             svn_path_local_style);
+      status = apr_remove_file (full_path->data, loggy->pool);
       if (status)
         {
           err = svn_error_createf (status, 0, NULL, loggy->pool,
