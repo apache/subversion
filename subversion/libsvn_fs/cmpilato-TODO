@@ -3,31 +3,16 @@ THOTZ: (by cmpilato, on conversion to the new NodeRevId system)
               *** do not merge me into the main trunk **
 =============================================================================
 
-svn_fs__id_length
-        Used all over the place, typically by things that examine id
-        digits directly (deltify.c, id.c, nodes-table.c).   This will 
-        disappear.
-
-svn_fs__precede_id
-        Used by txn_body_revisions_changed (whose whole algorithm will
-        change) and svn_fs__check_related (whose whole algorithm will
-        change).  This will likely disappear.
-
 svn_fs__id_is_ancestor
-        Used by merge.
+        Used by merge.  
+        ### Removed.  Will re-implement with a new name and new arguments.
 
 svn_fs__id_is_parent
         Used by svn_fs_txn_path_is_id for id roots.
-
-svn_fs_id_distance
-        Used by merge for relatedness checking (where svn_fs_check_related
-        will work) and for re-IDing (which won't apply any more).
-        Used by the svn_repos_dir_delta stuffs where svn_fs_check_related 
-        will work.  This will disappear.
+        ### Removed.  Will re-implement with a new name and new arguments.
 
 svn_fs_check_related
-        Currently used nowhere but in tests.  This will replace
-        svn_fs_id_distance (and become about 3 lines long!).
+        Need to use in all places where svn_fs_id_distance is currently used.
 
 svn_fs_txn_path_is_id
         Only exists for id roots.
@@ -51,6 +36,35 @@ question, "Where is my next successor?"  Currently the question is
 answered by doing a little node revision id mathematics; that's no
 longer an option.  Input to deltification is still root/path, so what
 might a new algorithm be?
+
+This from Bill Tutt:
+
+   This is kind of funky now. A portion of the answer is very similar
+   to the problem of "What should my CopyID be for a new NodeRevision
+   I need to create now?"
+   
+   The solution to this general question (as you noticed elsewhere) is
+   to acquire it during your path walk.  i.e.: 
+   svn_fs_node_id (&(args.id), root, path, pool)
+   
+   The other funky part is taking this "successor CopyID" calculation
+   in combination with the TxnID ordering.
+   
+      get TXN_ID from node revision id.
+      Lookup REVISION with TXN_ID
+      I = 1
+      Lookup the POSSIBLE_SUCCESSOR_TXN_ID for REVISION+I
+      While REVISION+I is valid 
+            AND Not Exists NodeID.<calculated
+      CopyID>.POSSIBLE_SUCCESSOR_TXN_ID:
+         I++
+         Lookup the POSSIBLE_SUCCESSOR_TXN_ID for REVISION+I
+   
+   If you find a NodeRevision that exists, you've found your
+   successor, and you should be able to assert that the predecessor is
+   the NodeRevision you started from.
+   
+   Otherwise there is no possible successor.
 
 --
 
@@ -102,4 +116,30 @@ Algorithm looks like this:
      NODE-REV-ID = node revision's predecessor id
 
 --
+
+Would like to see if svn_fs_unparse_id should return either
+svn_string_t * or const char * instead of svn_stringbuf_t *.
+
+--
+
+Hm...consider svn_fs__walk_predecessors (fs, id, func *, baton, trail)
+which walks the predecessor list of ID, calling FUNC with BATON before
+each traversal.  FUNC can return some custom error to the walker which
+can be detected as a non-fatal sentinel (so you only walk back as far
+as you need to).  Wonder how useful this would be...?  Could be great
+for the revisions_changed question (using some flag in BATON to tell
+FUNC to detect when a copy event has been "crossed").  Sleep on this.
+
+--
+
+Need to remember to fix up svn_fs__node_revision_t to be accurate with
+respect to `structure'.  I think I can fly most of the way without
+doing this conversion, though, so I'd like to make this a separate
+change.
+
+--
+
+Hm...looks like we can't remove the stabilization walk until we find a
+better time to mark our representations as immutable, or stop using a
+mutability flag on those skels.  Major disappointment.
 
