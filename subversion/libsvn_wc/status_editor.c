@@ -401,7 +401,7 @@ open_root (void *edit_baton,
 
 
 static svn_error_t *
-delete_entry (svn_stringbuf_t *name, void *parent_baton)
+delete_entry (svn_stringbuf_t *name, svn_revnum_t revision, void *parent_baton)
 {
   struct dir_baton *db = parent_baton;
 

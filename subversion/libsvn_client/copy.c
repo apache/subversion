@@ -270,7 +270,7 @@ repos_to_repos_copy (svn_stringbuf_t *src_url,
           
       /* Delete SRC. */
       piece = (((svn_stringbuf_t **)(src_pieces)->elts)[i]);
-      SVN_ERR (editor->delete_entry (piece, batons[i]));
+      SVN_ERR (editor->delete_entry (piece, SVN_INVALID_REVNUM, batons[i]));
 
       /* Now, close up all those batons (except the root
          baton). */

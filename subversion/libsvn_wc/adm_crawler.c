@@ -1125,7 +1125,8 @@ report_single_mod (const char *name,
                                        (*stack)->pool));
 
       /* Delete the entry */
-      SVN_ERR (editor->delete_entry (entry_name, *dir_baton));
+      SVN_ERR (editor->delete_entry (entry_name, entry->revision,
+                                     *dir_baton));
     }  
   /* END DELETION CHECK */
   

@@ -57,7 +57,9 @@ struct file_baton
 
 
 static svn_error_t *
-test_delete_entry (svn_stringbuf_t *filename, void *parent_baton)
+test_delete_entry (svn_stringbuf_t *filename, 
+                   svn_revnum_t revision,
+                   void *parent_baton)
 {
   struct dir_baton *d = (struct dir_baton *) parent_baton;
   svn_stringbuf_t *full_path;

@@ -1081,7 +1081,9 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
       /* ### verify we got it. punt on error. */
       svn_stringbuf_set(rb->namestr, name);
 
-      CHKERR( (*rb->editor->delete_entry)(rb->namestr, TOP_DIR(rb).baton) );
+      CHKERR( (*rb->editor->delete_entry)(rb->namestr, 
+                                          SVN_INVALID_REVNUM,
+                                          TOP_DIR(rb).baton) );
       break;
 
     default:

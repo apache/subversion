@@ -182,6 +182,7 @@ static svn_error_t *mr_open_root(void *edit_baton,
 }
 
 static svn_error_t *mr_delete_entry(svn_stringbuf_t *name,
+                                    svn_revnum_t revision,
                                     void *parent_baton)
 {
   mr_baton *parent = parent_baton;

@@ -216,6 +216,7 @@ open_file (svn_stringbuf_t *name,
 
 static svn_error_t *
 delete_entry (svn_stringbuf_t *name,
+              svn_revnum_t revision,
               void *parent_baton)
 {
   struct dir_baton *parent_d = parent_baton;

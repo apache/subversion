@@ -39,7 +39,7 @@ open_root (void *edit_baton, svn_revnum_t base_revision, void **root_baton)
 
 
 static svn_error_t *
-delete_entry (svn_stringbuf_t *name, void *parent_baton)
+delete_entry (svn_stringbuf_t *name, svn_revnum_t revision, void *parent_baton)
 {
   return SVN_NO_ERROR;
 }

@@ -79,7 +79,7 @@ svn_client_delete (svn_stringbuf_t *path,
 
       SVN_ERR (editor->open_root (edit_baton, SVN_INVALID_REVNUM,
                                   &root_baton));
-      SVN_ERR (editor->delete_entry (target, root_baton));
+      SVN_ERR (editor->delete_entry (target, SVN_INVALID_REVNUM, root_baton));
       SVN_ERR (editor->close_edit (edit_baton));
 
       /* Free the RA session */

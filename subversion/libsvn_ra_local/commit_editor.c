@@ -174,11 +174,13 @@ open_root (void *edit_baton,
 
 static svn_error_t *
 delete_entry (svn_stringbuf_t *name,
+              svn_revnum_t revision,
               void *parent_baton)
 {
   struct dir_baton *parent = parent_baton;
   struct edit_baton *eb = parent->edit_baton;
-  svn_stringbuf_t *path_to_kill = svn_stringbuf_dup (parent->path, parent->subpool);
+  svn_stringbuf_t *path_to_kill = svn_stringbuf_dup (parent->path, 
+                                                     parent->subpool);
   svn_path_add_component (path_to_kill, name, svn_path_repos_style);
 
   /* This routine is a mindless wrapper.  We call svn_fs_delete_tree
