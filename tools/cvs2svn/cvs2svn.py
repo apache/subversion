@@ -131,6 +131,37 @@ DIGEST_END_IDX = 9 + (sha.digestsize * 2)
 symbolic_name_re = re.compile('^[a-zA-Z].*$')
 symbolic_name_transtbl = string.maketrans('/\\',',;')
 
+# A custom database used to store simple python objects. If a filename
+# is passed, the anydbm database will be used, and all object will be
+# converted to strings using the marshal module. If filename is None,
+# an in-memory hash will be used.
+class Database:
+  def __init__(self, filename=None):
+    if filename:
+      self.need_marshal = 1
+      self.db = anydbm.open(filename, 'n')
+    else:
+      self.need_marshal = 0
+      self.db = {}
+
+  def has_key(self, key):
+    return self.db.has_key(key)
+
+  def __getitem__(self, key):
+    if self.need_marshal:
+      return marshal.loads(self.db[key])
+    else:
+      return self.db[key]
+
+  def __setitem__(self, key, value):
+    if self.need_marshal:
+      self.db[key] = marshal.dumps(value)
+    else:
+      self.db[key] = value
+
+  def __delitem__(self, key):
+    del self.db[key]
+
 class CollectData(rcsparse.Sink):
   def __init__(self, cvsroot, log_fname_base, default_branches_db):
     self.cvsroot = cvsroot
@@ -567,13 +598,13 @@ class RepositoryMirror:
   def __init__(self):
     # This corresponds to the 'revisions' table in a Subversion fs.
     self.revs_db_file = SVN_REVISIONS_DB
-    self.revs_db = anydbm.open(self.revs_db_file, 'n')
+    self.revs_db = Database(self.revs_db_file)
 
     # This corresponds to the 'nodes' table in a Subversion fs.  (We
     # don't need a 'representations' or 'strings' table because we
     # only track metadata, not file contents.)
     self.nodes_db_file = NODES_DB
-    self.nodes_db = anydbm.open(self.nodes_db_file, 'n')
+    self.nodes_db = Database(self.nodes_db_file)
 
     # This tracks which symbolic names the current "head" of a given
     # filepath could be the origin node for.  When the next commit on
@@ -581,10 +612,10 @@ class RepositoryMirror:
     # originated in the previous version, and signal back to the
     # caller that the file can no longer be the origin for those names.
     #
-    # The values are marshalled tuples, (tags, branches), where each
-    # value is a list.
+    # The values are tuples, (tags, branches), where each value is a
+    # list.
     self.symroots_db_file = SYMBOLIC_NAME_ROOTS_DB
-    self.symroots_db = anydbm.open(self.symroots_db_file, 'n')
+    self.symroots_db = Database(self.symroots_db_file)
 
     # When copying a directory (say, to create part of a branch), we
     # pass change_path() a list of expected entries, so it can remove
@@ -607,8 +638,8 @@ class RepositoryMirror:
     # Init a root directory with no entries at revision 0.
     self.youngest = 0
     youngest_key = gen_key()
-    self.revs_db[str(self.youngest)] = marshal.dumps(youngest_key)
-    self.nodes_db[youngest_key] = marshal.dumps({})
+    self.revs_db[str(self.youngest)] = youngest_key
+    self.nodes_db[youngest_key] = {}
 
   def new_revision(self):
     """Stabilize the current revision, then start the next one.
@@ -620,7 +651,7 @@ class RepositoryMirror:
 
   def _stabilize_directory(self, key):
     """Close the directory whose node key is KEY."""
-    dir = marshal.loads(self.nodes_db[key])
+    dir = self.nodes_db[key]
     if dir.has_key(self.mutable_flag):
       del dir[self.mutable_flag]
       if dir.has_key(self.approved_entries):
@@ -628,11 +659,11 @@ class RepositoryMirror:
       for entry_key in dir.keys():
         if not entry_key[0] == '/':
           self._stabilize_directory(dir[entry_key])
-      self.nodes_db[key] = marshal.dumps(dir)
+      self.nodes_db[key] = dir
 
   def stabilize_youngest(self):
     """Stabilize the current revision by removing mutable flags."""
-    root_key = marshal.loads(self.revs_db[str(self.youngest)])
+    root_key = self.revs_db[str(self.youngest)]
     self._stabilize_directory(root_key)
 
   def probe_path(self, path, revision=-1, debugging=None):
@@ -647,8 +678,8 @@ class RepositoryMirror:
     if debugging:
       print "PROBING path: '%s' in %d" % (path, revision)
 
-    parent_key = marshal.loads(self.revs_db[str(revision)])
-    parent = marshal.loads(self.nodes_db[parent_key])
+    parent_key = self.revs_db[str(revision)]
+    parent = self.nodes_db[parent_key]
     previous_component = "/"
 
     i = 1
@@ -665,7 +696,7 @@ class RepositoryMirror:
         return None
 
       this_entry_key = parent[component]
-      this_entry_val = marshal.loads(self.nodes_db[this_entry_key])
+      this_entry_val = self.nodes_db[this_entry_key]
       parent_key = this_entry_key
       parent = this_entry_val
       previous_component = component
@@ -729,13 +760,13 @@ class RepositoryMirror:
 
     deletions = []
 
-    parent_key = marshal.loads(self.revs_db[str(self.youngest)])
-    parent = marshal.loads(self.nodes_db[parent_key])
+    parent_key = self.revs_db[str(self.youngest)]
+    parent = self.nodes_db[parent_key]
     if not parent.has_key(self.mutable_flag):
       parent_key = gen_key()
       parent[self.mutable_flag] = 1
-      self.nodes_db[parent_key] = marshal.dumps(parent)
-      self.revs_db[str(self.youngest)] = marshal.dumps(parent_key)
+      self.nodes_db[parent_key] = parent
+      self.revs_db[str(self.youngest)] = parent_key
 
     for component in components[:-1]:
       # parent is always mutable at the top of the loop
@@ -752,8 +783,8 @@ class RepositoryMirror:
         # else
         new_child_key = gen_key()
         parent[component] = new_child_key
-        self.nodes_db[new_child_key] = marshal.dumps(self.empty_mutable_thang)
-        self.nodes_db[parent_key] = marshal.dumps(parent)
+        self.nodes_db[new_child_key] = self.empty_mutable_thang
+        self.nodes_db[parent_key] = parent
         if intermediate_dir_func:
           intermediate_dir_func(path_so_far)
 
@@ -764,13 +795,13 @@ class RepositoryMirror:
       # data structures, we could modify self.empty_mutable_thang,
       # which must not happen.)
       this_entry_key = parent[component]
-      this_entry_val = marshal.loads(self.nodes_db[this_entry_key])
+      this_entry_val = self.nodes_db[this_entry_key]
       if not this_entry_val.has_key(self.mutable_flag):
         this_entry_val[self.mutable_flag] = 1
         this_entry_key = gen_key()
         parent[component] = this_entry_key
-        self.nodes_db[this_entry_key] = marshal.dumps(this_entry_val)
-        self.nodes_db[parent_key] = marshal.dumps(parent)
+        self.nodes_db[this_entry_key] = this_entry_val
+        self.nodes_db[parent_key] = parent
 
       parent_key = this_entry_key
       parent = this_entry_val
@@ -779,7 +810,7 @@ class RepositoryMirror:
     # top of the above loop, parent is already mutable.
     op = OP_ADD
     if self.symroots_db.has_key(path):
-      old_names = marshal.loads(self.symroots_db[path])
+      old_names = self.symroots_db[path]
     else:
       old_names = [], []
     last_component = components[-1]
@@ -791,7 +822,7 @@ class RepositoryMirror:
         return Change(OP_NOOP, old_names[0], old_names[1], deletions)
       # else
       op = OP_CHANGE
-      new_val = marshal.loads(self.nodes_db[parent[last_component]])
+      new_val = self.nodes_db[parent[last_component]]
     elif only_if_already_exists:
       return Change(OP_NOOP, [], [], deletions)
 
@@ -817,10 +848,10 @@ class RepositoryMirror:
             new_approved_entries[ent] = 1
       new_val[self.approved_entries] = new_approved_entries
     parent[last_component] = leaf_key
-    self.nodes_db[parent_key] = marshal.dumps(parent)
-    self.symroots_db[path] = marshal.dumps((tags, branches))
+    self.nodes_db[parent_key] = parent
+    self.symroots_db[path] = (tags, branches)
     new_val[self.mutable_flag] = 1
-    self.nodes_db[leaf_key] = marshal.dumps(new_val)
+    self.nodes_db[leaf_key] = new_val
 
     return Change(op, old_names[0], old_names[1], deletions, copyfrom_rev)
 
@@ -856,8 +887,8 @@ class RepositoryMirror:
     components = string.split(path, '/')
     path_so_far = None
 
-    parent_key = marshal.loads(self.revs_db[str(self.youngest)])
-    parent = marshal.loads(self.nodes_db[parent_key])
+    parent_key = self.revs_db[str(self.youngest)]
+    parent = self.nodes_db[parent_key]
 
     # As we walk down to find the dest, we remember each parent
     # directory's name and db key, in reverse order: push each new key
@@ -908,7 +939,7 @@ class RepositoryMirror:
 
       # Otherwise continue downward, dropping breadcrumbs.
       this_entry_key = parent[component]
-      this_entry_val = marshal.loads(self.nodes_db[this_entry_key])
+      this_entry_val = self.nodes_db[this_entry_key]
       parent_key = this_entry_key
       parent = this_entry_val
       parent_chain.insert(0, (component, parent_key))
@@ -919,7 +950,7 @@ class RepositoryMirror:
     if not parent.has_key(last_component):
       return None, [], []
     elif self.symroots_db.has_key(path):
-      old_names = marshal.loads(self.symroots_db[path])
+      old_names = self.symroots_db[path]
       del self.symroots_db[path]
 
     # The target is present, so remove it and bubble up, making a new
@@ -929,7 +960,7 @@ class RepositoryMirror:
     new_key = None
     for parent_item in parent_chain:
       pkey = parent_item[1]
-      pval = marshal.loads(self.nodes_db[pkey])
+      pval = self.nodes_db[pkey]
 
       # If we're pruning at all, and we're looking at a prunable thing
       # (and that thing isn't one of our top-level directories --
@@ -952,14 +983,14 @@ class RepositoryMirror:
 
       prev_entry_name = parent_item[0]
       if new_key:
-        self.nodes_db[new_key] = marshal.dumps(pval)
+        self.nodes_db[new_key] = pval
 
     if new_key is None:
       new_key = gen_key()
-      self.nodes_db[new_key] = marshal.dumps(self.empty_mutable_thang)
+      self.nodes_db[new_key] = self.empty_mutable_thang
 
     # Install the new root entry.
-    self.revs_db[str(self.youngest)] = marshal.dumps(new_key)
+    self.revs_db[str(self.youngest)] = new_key
 
     # Sanity check -- this should be a "can't happen".
     if pruned_count > len(components):
@@ -1429,9 +1460,9 @@ class SymbolicNameTracker:
 
   def __init__(self):
     self.db_file = SYMBOLIC_NAMES_DB
-    self.db = anydbm.open(self.db_file, 'n')
+    self.db = Database(self.db_file)
     self.root_key = gen_key()
-    self.db[self.root_key] = marshal.dumps({})
+    self.db[self.root_key] = {}
 
     # The keys for the opening and closing revision lists attached to
     # each directory or file.  Includes "/" so as never to conflict
@@ -1461,7 +1492,7 @@ class SymbolicNameTracker:
       print "PROBING SYMBOLIC NAME:\n", components
 
     parent_key = self.root_key
-    parent = marshal.loads(self.db[parent_key])
+    parent = self.db[parent_key]
     last_component = "/"
     i = 1
     for component in components:
@@ -1476,7 +1507,7 @@ class SymbolicNameTracker:
         sys.exit(1)
 
       this_entry_key = parent[component]
-      this_entry_val = marshal.loads(self.db[this_entry_key])
+      this_entry_val = self.db[this_entry_key]
       parent_key = this_entry_key
       parent = this_entry_val
       last_component = component
@@ -1515,7 +1546,7 @@ class SymbolicNameTracker:
 
     The list is sorted by ascending revision both before and after."""
 
-    entry_val = marshal.loads(self.db[item_key])
+    entry_val = self.db[item_key]
     
     if not entry_val.has_key(revlist_key):
       entry_val[revlist_key] = [(rev, 1)]
@@ -1535,7 +1566,7 @@ class SymbolicNameTracker:
         rev_counts.append((rev, 1))
       entry_val[revlist_key] = rev_counts
 
-    self.db[item_key] = marshal.dumps(entry_val)
+    self.db[item_key] = entry_val
 
   # The verb form of "root" is "root", but that would be misleading in
   # this case; and the opposite of "uproot" is presumably "downroot",
@@ -1556,15 +1587,15 @@ class SymbolicNameTracker:
       parent_key = self.root_key
       for component in components:
         self.bump_rev_count(parent_key, svn_rev, opening_key)
-        parent = marshal.loads(self.db[parent_key])
+        parent = self.db[parent_key]
         if not parent.has_key(component):
           new_child_key = gen_key()
           parent[component] = new_child_key
-          self.db[new_child_key] = marshal.dumps({})
-          self.db[parent_key] = marshal.dumps(parent)
+          self.db[new_child_key] = {}
+          self.db[parent_key] = parent
         # One way or another, parent now has an entry for component.
         this_entry_key = parent[component]
-        this_entry_val = marshal.loads(self.db[this_entry_key])
+        this_entry_val = self.db[this_entry_key]
         # Swaparoo.
         parent_key = this_entry_key
         parent = this_entry_val
@@ -1599,7 +1630,7 @@ class SymbolicNameTracker:
       parent_key = self.root_key
       for component in components:
         self.bump_rev_count(parent_key, svn_rev, closing_key)
-        parent = marshal.loads(self.db[parent_key])
+        parent = self.db[parent_key]
         # Check for a "can't happen".
         if not parent.has_key(component):
           sys.stderr.write("%s: in path '%s', value for parent key '%s' "
@@ -1607,7 +1638,7 @@ class SymbolicNameTracker:
                            % (error_prefix, svn_path, parent_key, component))
           sys.exit(1)
         this_entry_key = parent[component]
-        this_entry_val = marshal.loads(self.db[this_entry_key])
+        this_entry_val = self.db[this_entry_key]
         # Swaparoo.
         parent_key = this_entry_key
         parent = this_entry_val
@@ -1702,7 +1733,7 @@ class SymbolicNameTracker:
       if key[0] == '/': # Skip flags
         continue
       entry = entries.get(key)
-      val = marshal.loads(self.db[entry])
+      val = self.db[entry]
       scores = self.score_revisions(val.get(opening_key), val.get(closing_key))
       best_rev = self.best_rev(scores, rev + 1)
       if rev == best_rev:
@@ -1732,7 +1763,7 @@ class SymbolicNameTracker:
     ### there's a clearer way to do it?
 
     key = parent[entry_name]
-    val = marshal.loads(self.db[key])
+    val = self.db[key]
 
     if is_tag:
       opening_key = self.tags_opening_revs_key
@@ -1777,7 +1808,7 @@ class SymbolicNameTracker:
           del val[opening_key]
         if val.has_key(closing_key):
           del val[closing_key]
-        self.db[key] = marshal.dumps(val)
+        self.db[key] = val
 
     for ent in val.keys():
       if not ent[0] == '/':
@@ -1825,7 +1856,7 @@ class SymbolicNameTracker:
     # must be adjusted to match.
 
     parent_key = self.root_key
-    parent = marshal.loads(self.db[parent_key])
+    parent = self.db[parent_key]
 
     # If there are no origin records, then we must've messed up earlier.
     if not parent.has_key(name):
@@ -1838,7 +1869,7 @@ class SymbolicNameTracker:
       sys.exit(1)
 
     parent_key = parent[name]
-    parent = marshal.loads(self.db[parent_key])
+    parent = self.db[parent_key]
 
     # All Subversion source paths under the branch start with one of
     # three things:
@@ -1876,7 +1907,7 @@ class SymbolicNameTracker:
                         is_tag, jit_new_rev)
     if parent.has_key(ctx.branches_base):
       branch_base_key = parent[ctx.branches_base]
-      branch_base = marshal.loads(self.db[branch_base_key])
+      branch_base = self.db[branch_base_key]
       for this_source in branch_base.keys():
         # We skip special names beginning with '/' for the usual
         # reason.  We skip cases where (this_source == name) for a
@@ -1924,7 +1955,7 @@ class SymbolicNameTracker:
     determine the source and destination paths in the Subversion
     repository."""
     parent_key = self.root_key
-    parent = marshal.loads(self.db[parent_key])
+    parent = self.db[parent_key]
     # Do all branches first, then all tags.  We don't bother to check
     # here whether a given name is a branch or a tag, or is done
     # already; the fill_foo() methods will just do nothing if there's
@@ -2494,7 +2525,7 @@ def main():
   ctx.print_help = 0
   ctx.skip_cleanup = 0
   ctx.cvs_revnums = 0
-  ctx.default_branches_db = anydbm.open(DEFAULT_BRANCHES_DB, 'n')
+  ctx.default_branches_db = Database(DEFAULT_BRANCHES_DB)
 
   start_pass = 1
 
