@@ -122,7 +122,7 @@
       forth, or just do all the work on a single computer.  By that
       same token, it's difficult to share your changes-in-progress
       with anyone else.  A common software development <quote>best
-      practice</quote> to allow your peers to review your work as you
+      practice</quote> is to allow your peers to review your work as you
       go.  If nobody sees your intermediate commits, you lose
       potential feedback.  Finally, when you're finished with all your
       changes, you might find it very difficult to re-merge your final
