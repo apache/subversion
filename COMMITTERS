@@ -53,4 +53,4 @@ Commit access for specific areas:
         jespersm   Jesper Steen Møller <jesper@selskabet.org>  (bindings)
           knacke   Kai Nacke <kai.nacke@redstar.de>            (bindings)
           mprice   Michael Price <mprice@atl.lmco.com>         (releases)
-       gthompson   Glenn A. Thompson <gthompson@cdr.net>       (fs refactoring branch)
+       gthompson   Glenn A. Thompson <gthompson@cdr.net>       (fs/db branch)
