@@ -77,6 +77,12 @@ just wants to make a "cheap" copy of something (svn_fs_link).
    subcommand could make this an easier task -- one which wouldn't
    require a big working copy.
 
+   [ Nothing could be easier:
+
+       svn remove http://svn.collab.net/repos/svn/branches/one
+
+                                                               --xbc ]
+
 
 [dir_delta updates]
 
