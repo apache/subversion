@@ -101,10 +101,17 @@ def svnversion_test(sbox):
   if errput or output != [ "1:2MS\n" ]:
     return 1
 
-  # Plain (exported) directory
+  # Plain (exported) directory that is a direct subdir of a versioned dir
   Q_path = os.path.join(wc_dir, 'Q')
   os.mkdir(Q_path)
   output, errput = svntest.main.run_svnversion(Q_path, repo_url)
+  if errput or output != [ "exported\n" ]:
+    return 1
+
+  # Plain (exported) directory that is not a direct subdir of a versioned dir
+  R_path = os.path.join(Q_path, 'Q')
+  os.mkdir(R_path)
+  output, errput = svntest.main.run_svnversion(R_path, repo_url)
   if errput or output != [ "exported\n" ]:
     return 1
 

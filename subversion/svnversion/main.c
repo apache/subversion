@@ -53,13 +53,13 @@ main(int argc, char *argv[])
 {
   const char *wc_path;
   apr_pool_t *pool;
-  svn_error_t *err;
   apr_hash_t *status_hash;
   apr_hash_index_t *hi;
   svn_revnum_t youngest;
   svn_boolean_t switched = FALSE, modified = FALSE;
   svn_revnum_t min_revnum = SVN_INVALID_REVNUM, max_revnum = SVN_INVALID_REVNUM;
   const svn_wc_status_t *status;
+  int wc_format;
   svn_client_ctx_t ctx = { 0 };
 
   if (argc != 2 && argc != 3)
@@ -79,15 +79,27 @@ main(int argc, char *argv[])
 
   SVN_INT_ERR (svn_utf_cstring_to_utf8 (&wc_path, argv[1], NULL, pool));
   wc_path = svn_path_internal_style (wc_path, pool);
-  err = svn_client_status (&status_hash, &youngest, wc_path, TRUE, TRUE,
-                           FALSE, FALSE, &ctx, pool);
-  if (err)
+  SVN_INT_ERR (svn_wc_check_wc (wc_path, &wc_format, pool));
+  if (! wc_format)
     {
-      svn_handle_error (err, stderr, 0);
-      svn_pool_destroy (pool);
-      return EXIT_FAILURE;
+      svn_node_kind_t kind;
+      SVN_INT_ERR(svn_io_check_path (wc_path, &kind, pool));
+      if (kind == svn_node_dir)
+        {
+          printf ("exported\n");
+          svn_pool_destroy (pool);
+          return EXIT_SUCCESS;
+        }
+      else
+        {
+          fprintf (stderr, "'%s' not versioned, and not exported\n", wc_path);
+          svn_pool_destroy (pool);
+          return EXIT_FAILURE;
+        }
     }
 
+  SVN_INT_ERR (svn_client_status (&status_hash, &youngest, wc_path, TRUE, TRUE,
+                                  FALSE, FALSE, &ctx, pool));
   for (hi = apr_hash_first (pool, status_hash); hi; hi = apr_hash_next (hi))
     {
       void *val;
@@ -137,32 +149,6 @@ main(int argc, char *argv[])
         }
     }
 
-  if (! SVN_IS_VALID_REVNUM (min_revnum))
-    {
-      svn_node_kind_t kind;
-
-      svn_error_t *err2 = svn_io_check_path (wc_path, &kind, pool);
-      if (err2)
-        {
-          fprintf (stderr, "error examining '%s'\n", wc_path);
-          svn_pool_destroy (pool);
-          return EXIT_FAILURE;
-        }
-      else if (kind != svn_node_dir)
-        {
-          fprintf (stderr, "'%s' not versioned, and not exported\n", wc_path);
-          svn_pool_destroy (pool);
-          return EXIT_FAILURE;
-        }
-      else
-        {
-          printf ("exported\n");
-          svn_pool_destroy (pool);
-          return EXIT_SUCCESS;
-        }
-    }
-
-  /* Else it was versioned, so summarize its revision(s). */
   printf ("%" SVN_REVNUM_T_FMT, min_revnum);
   if (min_revnum != max_revnum)
     printf (":%" SVN_REVNUM_T_FMT, max_revnum);
