@@ -40,14 +40,27 @@ typedef struct svn_ruby_fs_t
 } svn_ruby_fs_t;
 
 static void
-fs_free (void *p)
+close_fs (svn_ruby_fs_t *fs)
 {
-  svn_ruby_fs_t *fs = p;
-  long count = svn_ruby_get_refcount (fs->pool);
+  long count;
+
+  if (fs->closed)
+    return;
+
+  count = svn_ruby_get_refcount (fs->pool);
   if (count == 1)
     apr_pool_destroy (fs->pool);
   else
     svn_ruby_set_refcount (fs->pool, count - 1);
+
+  fs->closed = TRUE;
+}
+
+static void
+fs_free (void *p)
+{
+  svn_ruby_fs_t *fs = p;
+  close_fs (fs);
   free (fs);
 }
 
@@ -181,7 +194,7 @@ fs_close (VALUE self)
   if (fs->closed)
     rb_raise (rb_eRuntimeError, "closed fs");
 
-  fs->closed = TRUE;
+  close_fs (fs);
 
   return Qnil;
 }
