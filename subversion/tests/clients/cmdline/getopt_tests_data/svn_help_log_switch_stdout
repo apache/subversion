@@ -24,7 +24,7 @@ Valid options:
   --password arg           : specify a password ARG
   --no-auth-cache          : do not cache authentication tokens
   --strict                 : use strict semantics
-  --incremental            : print output suitable for concatenation
+  --incremental            : give output suitable for concatenation
   --xml                    : output in xml
 
 switch (sw): Update working copy to mirror a new URL
