@@ -36,13 +36,14 @@ extern "C" {
 
 /* The top-level repository dir contains a README and various
    subdirectories.  */
-#define SVN_REPOS__README      "README.txt" /* Explanation for trespassers. */
-#define SVN_REPOS__FORMAT      "format"     /* Stores the current version
-                                               of the repository. */
-#define SVN_REPOS__DB_DIR      "db"         /* Where Berkeley lives. */
-#define SVN_REPOS__DAV_DIR     "dav"        /* DAV sandbox. */
-#define SVN_REPOS__LOCK_DIR    "locks"      /* Lock files live here. */
-#define SVN_REPOS__HOOK_DIR    "hooks"      /* Hook programs. */
+#define SVN_REPOS__README        "README.txt"    /* Explanation. */
+#define SVN_REPOS__SVNSERVE_CONF "svnserve.conf" /* svnserve configuration. */
+#define SVN_REPOS__FORMAT        "format"        /* Stores the current version
+                                                    of the repository. */
+#define SVN_REPOS__DB_DIR        "db"            /* Where Berkeley lives. */
+#define SVN_REPOS__DAV_DIR       "dav"           /* DAV sandbox. */
+#define SVN_REPOS__LOCK_DIR      "locks"         /* Lock files live here. */
+#define SVN_REPOS__HOOK_DIR      "hooks"         /* Hook programs. */
 
 /* Things for which we keep lockfiles. */
 #define SVN_REPOS__DB_LOCKFILE "db.lock" /* Our Berkeley lockfile. */

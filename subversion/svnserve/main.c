@@ -83,7 +83,7 @@ static const apr_getopt_option_t svnserve__options[] =
     {"tunnel",           't', 0, "tunnel mode"},
     {"listen-once",      'X', 0, "listen once (useful for debugging)"},
     {"root",             'r', 1, "root of directory to serve"},
-    {"read-only",        'R', 0, "serve in read-only mode"},
+    {"read-only",        'R', 0, "deprecated; use repository config file"},
 #ifdef CONNECTION_HAVE_THREAD_OPTION
     {"threads",          'T', 0, "use threads instead of fork"},
 #endif
@@ -229,6 +229,13 @@ int main(int argc, const char *const *argv)
 
         case 'R':
           read_only = TRUE;
+          fprintf(stderr, "Warning: -R is deprecated.\n");
+          fprintf(stderr, "Anonymous access is now read-only by default.\n");
+          fprintf(stderr, "To control access, use svnserve.conf in repos:\n");
+          fprintf(stderr, "  [general]\n");
+          fprintf(stderr, "  anon-access = read|write|none (default read)\n");
+          fprintf(stderr, "  auth-access = read|write|none (default write)\n");
+          fprintf(stderr, "Forcing all access to read-only for now\n");
           break;
 
         case 'T':

@@ -798,6 +798,41 @@ create_repos_structure (svn_repos_t *repos,
                "creating readme file");
   }
 
+  /* Write the top-level svnserve.conf file. */
+  {
+    const char *svnserve_conf_file_name
+      = svn_path_join (path, SVN_REPOS__SVNSERVE_CONF, pool);
+    static const char * const svnserve_conf_contents =
+      "### This file controls the configuration of the svnserve daemon, if you"
+      APR_EOL_STR
+      "### use it to allow access to this repository.  (If you only allow"
+      APR_EOL_STR
+      "### access through http: and/or file: URLs, then this file is"
+      APR_EOL_STR
+      "### irrelevant.)"
+      APR_EOL_STR
+      APR_EOL_STR
+      "### Visit http://subversion.tigris.org/ for more information."
+      APR_EOL_STR
+      APR_EOL_STR
+      "# [general]"
+      APR_EOL_STR
+      "### These options control access to the repository for unauthenticated"
+      APR_EOL_STR
+      "### and authenticated users.  Valid values are \"write\", \"read\","
+      APR_EOL_STR
+      "### and \"none\".  The sample settings below are the defaults."
+      APR_EOL_STR
+      "# anon-access = read"
+      APR_EOL_STR
+      "# auth-access = write"
+      APR_EOL_STR;
+
+    SVN_ERR_W (svn_io_file_create (svnserve_conf_file_name,
+                                   svnserve_conf_contents, pool),
+               "creating readme file");
+  }
+
   /* Write the top-level FORMAT file. */
   SVN_ERR (svn_io_write_version_file 
            (svn_path_join (path, SVN_REPOS__FORMAT, pool),
