@@ -55,6 +55,7 @@ typedef struct {
   const char *tunnel_user; /* Allow EXTERNAL to authenticate as this */
   svn_boolean_t read_only; /* Disallow write access (global flag) */
   int protocol_version;
+  apr_pool_t *pool;
 } server_baton_t;
 
 typedef struct {
@@ -138,13 +139,15 @@ static svn_error_t *send_mechs(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 /* Set the user of B to USER.  Create an svn_fs_access_t for the user and
    associate it with the batons filesystem. */
 static svn_error_t *
-set_user(server_baton_t *b, apr_pool_t *pool, const char *user)
+set_user(server_baton_t *b, const char *user)
 {
   svn_fs_access_t *fs_access;
 
-  SVN_ERR(svn_fs_create_access(&fs_access, user, pool));
+  SVN_ERR(svn_fs_create_access(&fs_access, user, b->pool));
   SVN_ERR(svn_fs_set_access(b->fs, fs_access));
-  b->user = user;
+  /* Store a poitner to the access's username, which got copied into
+     b->pool. */
+  SVN_ERR(svn_fs_access_get_username(&b->user, fs_access));
 
   return SVN_NO_ERROR;
 }
@@ -170,7 +173,7 @@ static svn_error_t *auth(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
       if (*mecharg && strcmp(mecharg, b->tunnel_user) != 0)
         return svn_ra_svn_write_tuple(conn, pool, "w(c)", "failure",
                                       "Requested username does not match");
-      SVN_ERR(set_user(b, pool, b->tunnel_user));
+      SVN_ERR(set_user(b, b->tunnel_user));
       SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w()", "success"));
       *success = TRUE;
       return SVN_NO_ERROR;
@@ -188,7 +191,7 @@ static svn_error_t *auth(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
       && b->pwdb && strcmp(mech, "CRAM-MD5") == 0)
     {
       SVN_ERR(svn_ra_svn_cram_server(conn, pool, b->pwdb, &user, success));
-      return set_user(b, pool, user);
+      return set_user(b, user);
     }
 
   return svn_ra_svn_write_tuple(conn, pool, "w(c)", "failure",
@@ -443,8 +446,9 @@ static svn_error_t *write_lock(svn_ra_svn_conn_t *conn,
   cdate = svn_time_to_cstring(lock->creation_date, pool);
   edate = lock->expiration_date
     ? svn_time_to_cstring(lock->expiration_date, pool) : NULL;
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "cccc(?c)", lock->path,
-                                 lock->token, lock->owner, cdate, edate));
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "ccc(?c)c(?c)", lock->path,
+                                 lock->token, lock->owner, lock->comment,
+                                 cdate, edate));
 
   return SVN_NO_ERROR;
 }
@@ -1189,15 +1193,17 @@ static svn_error_t *lock(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 {
   server_baton_t *b = baton;
   const char *path;
+  const char *comment;
   svn_boolean_t force;
   svn_lock_t *l;
 
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "cb", &path, &force));
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c(?c)b", &path, &comment,
+                                 &force));
+  path = svn_path_canonicalize(path, pool);
 
   SVN_ERR(must_have_write_access(conn, pool, b, TRUE));
 
-  /* ### TO-DO:  fill in the 'comment' argument below: */
-  SVN_CMD_ERR(svn_repos_fs_lock(&l, b->repos, path, "", force, 0, pool));
+  SVN_CMD_ERR(svn_repos_fs_lock(&l, b->repos, path, comment, force, 0, pool));
 
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "(w(!", "success"));
   SVN_ERR(write_lock(conn, pool, l));
@@ -1232,6 +1238,7 @@ static svn_error_t *get_lock(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   svn_lock_t *l;
 
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c", path));
+  path = svn_path_canonicalize(path, pool);
 
   SVN_ERR(trivial_auth_request(conn, pool, b));
 
@@ -1257,6 +1264,7 @@ static svn_error_t *get_locks(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   svn_lock_t *l;
 
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c", &path));
+  path = svn_path_canonicalize(path, pool);
 
   SVN_ERR(trivial_auth_request(conn, pool, b));
   
@@ -1471,6 +1479,7 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
   b.user = NULL;
   b.cfg = NULL;  /* Ugly; can drop when we remove v1 support. */
   b.pwdb = NULL; /* Likewise */
+  b.pool = pool;
 
   /* Send greeting.   When we drop support for version 1, we can
    * start sending an empty mechlist. */
