@@ -7,7 +7,7 @@ this first.
                      HACKER'S GUIDE TO SUBVERSION
                      ============================
 
-              Last updated:  $Date: 2001-07-16 14:34:55 $
+              Last updated:  $Date: 2001-08-10 16:27:53 $
 
 
 TABLE OF CONTENTS
@@ -405,6 +405,13 @@ In addition to the GNU standards, Subversion uses these conventions:
      (This assumes the C file is located in a subdirectory of
      subversion/subversion/, which most are.)
 
+   * We have a tradition of not marking files with the names of
+     individual authors (i.e., we don't put lines like "Author: foo"
+     or "@author foo" in a special position at the top of a source
+     file).  This is to discourage territoriality -- even when a file
+     has only one author, we want to make sure others feel free to
+     make changes.  People might be unnecessarily hesitant if someone
+     appears to have staked ownership on the file.
 
 
 
