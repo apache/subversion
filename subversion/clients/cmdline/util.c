@@ -287,26 +287,41 @@ struct log_msg_baton
 };
 
 
-void *
-svn_cl__make_log_msg_baton (svn_cl__opt_state_t *opt_state,
+svn_error_t *
+svn_cl__make_log_msg_baton (void **baton,
+                            svn_cl__opt_state_t *opt_state,
                             const char *base_dir /* UTF-8! */,
                             apr_hash_t *config,
                             apr_pool_t *pool)
 {
-  struct log_msg_baton *baton = apr_palloc (pool, sizeof (*baton));
+  struct log_msg_baton *lmb = apr_palloc (pool, sizeof (*lmb));
 
   if (opt_state->filedata) 
-    baton->message = opt_state->filedata->data;
+    {
+      if (strlen (opt_state->filedata->data) < opt_state->filedata->len)
+        {
+          /* The data contains a zero byte, and therefore can't be
+             represented as a C string.  Punt now; it's probably not
+             a deliberate encoding, and even if it is, we still
+             can't handle it. */
+          return svn_error_create (SVN_ERR_CL_BAD_LOG_MESSAGE, NULL,
+                                   "Log message contains a zero byte.");
+        }
+      lmb->message = opt_state->filedata->data;
+    }      
   else
-    baton->message = opt_state->message;
+    {
+      lmb->message = opt_state->message;
+    }
 
-  baton->editor_cmd = opt_state->editor_cmd;
-  baton->message_encoding = opt_state->encoding;
-  baton->base_dir = base_dir ? base_dir : "";
-  baton->tmpfile_left = NULL;
-  baton->config = config;
-  baton->pool = pool;
-  return baton;
+  lmb->editor_cmd = opt_state->editor_cmd;
+  lmb->message_encoding = opt_state->encoding;
+  lmb->base_dir = base_dir ? base_dir : "";
+  lmb->tmpfile_left = NULL;
+  lmb->config = config;
+  lmb->pool = pool;
+  *baton = lmb;
+  return SVN_NO_ERROR;
 }
 
 
