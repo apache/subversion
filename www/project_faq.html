@@ -31,6 +31,7 @@
     own revision numbers.  </a></li>
 <li><a href="#changesets">Does Subversion have changesets?</li>
 <li><a href="#release">When's the next release?</a></li>
+<li><a href="#symlinks">Does Subversion support symlinks?</a></li>
 <li><a href="#more-information">I have other questions.  Where can I
     get more information?</a></li>  
 <p>
@@ -379,6 +380,19 @@ CVS.</p>
 <p>See our status page, <a
 href="http://subversion.tigris.org/project_status.html">
 http://subversion.tigris.org/project_status.html</a>.</p>
+
+<![CDATA[-----------------------------------------------------------]]>
+
+<h3><a name="symlinks">Does Subversion support symlinks?</a></h3>
+
+<p>Subversion does not currently support symlinks, and there are no
+concrete plans to support them.  The obstacle has been that symbolic
+links are not portable across all the platforms Subversion runs on.
+Therefore, any design for symlink support has to account for how the
+symlinks will behave in a working copy checked out into an environment
+that doesn't support symlinks.  If you have a proposal, please share
+it with the developers at <a href="mailto:dev@subversion.tigris.org"
+>dev@subversion.tigris.org</a>.
 
 <![CDATA[-----------------------------------------------------------]]>
 
