@@ -55,10 +55,18 @@ Candidate changes:
     Votes:
       +1: josander
 
+  * r9138
+    Be more minimal in turning on +x bits when svn:executable is set.
+    Justification: Needed for r9254 to merge cleanly and stops us from
+                   doing a+x.
+    Votes:
+      +1: breser
+
   * r9254
     Fix for updates to svn:executable files in shared working copies.
     Justification: Hard to use svn:executable in shared working copies
                    without it.
+    Notes: r9138 should be merged first.
     Votes:
       +1: philip, dlr, breser
 
