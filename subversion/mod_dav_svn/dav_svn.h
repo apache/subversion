@@ -71,6 +71,22 @@ typedef struct {
 
 } dav_svn_repos;
 
+
+/*
+** dav_svn_private_restype: identifiers for our different private resources
+**
+** There are some resources within mod_dav_svn that are "privately defined".
+** This isn't so much to prevent other people from knowing what they are,
+** but merely that mod_dav doesn't have a standard name for them.
+*/
+enum dav_svn_private_restype {
+    DAV_SVN_RESTYPE_VER_COLLECTION,
+    DAV_SVN_RESTYPE_HIS_COLLECTION,
+    DAV_SVN_RESTYPE_WRK_COLLECTION,
+    DAV_SVN_RESTYPE_ACT_COLLECTION
+};
+
+
 /* store info about a root in a repository */
 typedef struct {
   /* If a root within the FS has been opened, the value is stored here.
@@ -108,16 +124,15 @@ struct dav_resource_private {
 
      For example: URI is http://host/repos/file -- path will be "/file".
 
-     Note that the SVN FS does not like absolute paths, so we
-     generally skip the first char when talking with the FS.
-
      NOTE: this path is from the URI and does NOT necessarily correspond
            to a path within the FS repository.
   */
   svn_string_t *uri_path;
 
-  /* The FS repository path to this resource. No leading "/". Note that
-     this is the empty string for the root. */
+  /* The FS repository path to this resource, with a leading "/". Note
+     that this is "/" the root. This value will be NULL for resources
+     that have no corresponding resource within the repository (such as
+     the PRIVATE resources). */
   const char *repos_path;
 
   /* the FS repository this resource is associated with */
@@ -128,6 +143,9 @@ struct dav_resource_private {
 
   /* for VERSION resources: the node ID */
   const svn_fs_id_t *node_id;
+
+  /* for PRIVATE resources: the private resource type */
+  enum dav_svn_private_restype restype;
 };
 
 
@@ -191,6 +209,9 @@ const char *dav_svn_get_txn(dav_svn_repos *repos, const char *activity_id);
 dav_error *dav_svn_store_activity(dav_svn_repos *repos,
                                   const char *activity_id,
                                   const char *txn_name);
+dav_error *dav_svn_create_activity(dav_svn_repos *repos,
+                                   const char **ptxn_name,
+                                   apr_pool_t *pool);
 
 /* construct a working resource */
 dav_resource *dav_svn_create_working_resource(const dav_resource *base,
