@@ -7,12 +7,12 @@ comment  @# @;
 
 
 1.1
-date     2003.01.25.13.43.57;  author mark;  state Exp;
+date     2003.01.25.13.43.57;  author jrandom;  state Exp;
 branches 1.1.1.1;
 next     ;
 
 1.1.1.1
-date     2003.01.25.13.43.57;  author mark;  state Exp;
+date     2003.01.25.13.43.57;  author jrandom;  state Exp;
 branches ;
 next     ;
 
