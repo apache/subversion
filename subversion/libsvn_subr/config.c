@@ -132,7 +132,7 @@ read_all (svn_config_t **cfgp,
 #ifdef SVN_WIN32
   if (sys_registry_path)
     {
-      svn_config_read (cfgp, sys_registry_path, FALSE, pool);
+      SVN_ERR (svn_config_read (cfgp, sys_registry_path, FALSE, pool));
       red_config = TRUE;
     }
 #endif /* SVN_WIN32 */
@@ -159,7 +159,7 @@ read_all (svn_config_t **cfgp,
         SVN_ERR (svn_config_merge (*cfgp, sys_file_path, FALSE));
       else
         {
-          svn_config_read (cfgp, sys_file_path, FALSE, pool);
+          SVN_ERR (svn_config_read (cfgp, sys_file_path, FALSE, pool));
           red_config = TRUE;
         }
     }
