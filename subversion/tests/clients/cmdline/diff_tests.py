@@ -625,8 +625,8 @@ def diff_only_property_change(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  current_dir = os.getcwd();
-  os.chdir(sbox.wc_dir);
+  current_dir = os.getcwd()
+  os.chdir(sbox.wc_dir)
   try:
     svntest.actions.run_and_verify_svn(None, None, [],
                                        'propset',

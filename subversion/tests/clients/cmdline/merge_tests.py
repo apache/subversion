@@ -970,7 +970,7 @@ def merge_with_implicit_target (sbox):
   
   # Change mu for revision 2
   mu_path = os.path.join(wc_dir, 'A', 'mu')
-  orig_mu_text = svntest.tree.get_text(mu_path);
+  orig_mu_text = svntest.tree.get_text(mu_path)
   added_mu_text = ""
   for x in range(2,11):
     added_mu_text = added_mu_text + '\nThis is line ' + `x` + ' in mu'
@@ -1036,7 +1036,7 @@ def merge_with_prev (sbox):
   
   # Change mu for revision 2
   mu_path = os.path.join(wc_dir, 'A', 'mu')
-  orig_mu_text = svntest.tree.get_text(mu_path);
+  orig_mu_text = svntest.tree.get_text(mu_path)
   added_mu_text = ""
   for x in range(2,11):
     added_mu_text = added_mu_text + '\nThis is line ' + `x` + ' in mu'
@@ -1199,7 +1199,7 @@ def merge_in_new_file_and_diff(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
   
-  trunk_url = svntest.main.current_repo_url + '/A/B/E';
+  trunk_url = svntest.main.current_repo_url + '/A/B/E'
 
   # Create a branch
   svntest.actions.run_and_verify_svn(None, None, [], 'cp', 
@@ -1210,13 +1210,13 @@ def merge_in_new_file_and_diff(sbox):
   # Update to revision 2.
   svntest.actions.run_and_verify_svn(None, None, [], 'update', wc_dir)
   
-  new_file_path = os.path.join(wc_dir, 'A', 'B', 'E', 'newfile');
+  new_file_path = os.path.join(wc_dir, 'A', 'B', 'E', 'newfile')
   fp = open(new_file_path, 'w')
   fp.write("newfile")
   fp.close()
 
   # Add the new file, and commit revision 3.
-  svntest.actions.run_and_verify_svn(None, None, [], "add", new_file_path);
+  svntest.actions.run_and_verify_svn(None, None, [], "add", new_file_path)
   svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
                                      "Changing the trunk.", wc_dir)
 
