@@ -992,8 +992,21 @@ svn_fs_node_id (const svn_fs_id_t **id_p,
   args.root = root;
   args.path = path;
 
-  SVN_ERR (svn_fs__retry (root->fs, txn_body_node_id, &args, 1, pool));
-  *id_p = id;
+  if ((root->kind == revision_root)
+      && (path[0] == '\0' || ((path[0] == '/') && (path[1] == '\0'))))
+    {
+      /* Optimize the case where we don't need any db access at all. 
+         The root directory ("" or "/") node is stored in the
+         svn_fs_root_t object, and never changes when it's a revision
+         root, so we can just reach in and grab it directly. */
+      *id_p = svn_fs__id_copy (svn_fs__dag_get_id (root->root_dir), pool);
+    }
+  else
+    {
+      SVN_ERR (svn_fs__retry (root->fs, txn_body_node_id, &args, 1, pool));
+      *id_p = id;
+    }
+
   return SVN_NO_ERROR;
 }
 
