@@ -31,7 +31,7 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB,
   dnl  Assuming `status' is not `skip', we do a runtime check against the db
   dnl  that is supplied by APR-UTIL.
   dnl
-  dnl  Since APR-UTIL uses --with-berkeley-db aswell, and we pass it
+  dnl  Since APR-UTIL uses --with-berkeley-db as well, and we pass it
   dnl  through when APR-UTIL is in the tree, we also accept a place spec
   dnl  as argument, and handle that case specifically.
   dnl

@@ -844,7 +844,7 @@ III.  BUILDING A SUBVERSION SERVER
 
          LoadModule dav_svn_module     modules/mod_dav_svn.so
 
-      NOTE: if you built mod_dav as a dynamic module aswell, make sure
+      NOTE: if you built mod_dav as a dynamic module as well, make sure
       the above line appears after the one that loads mod_dav.so.
 
       Next, add this to the *bottom* of your httpd.conf:
