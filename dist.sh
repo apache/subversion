@@ -169,11 +169,17 @@ sed -e \
 rm -f "$vsn_file.tmp"
 rm -f "$vsn_file.unq"
 
+# Do not use tar, it's probably GNU tar which produces tar files that are
+# not compliant with POSIX.1 when including filenames longer than 100 chars.
+# Platforms without a tar that understands the GNU tar extension will not
+# be able to extract the resulting tar file.  cpio can produce POSIX.1
+# tar files with "-H ustar" which we use instead.
 echo "Rolling $DISTNAME.tar.gz ..."
-(cd "$DIST_SANDBOX" && tar zcpf "$DISTNAME.tar.gz" "$DISTNAME")
-#Note: Don't use tar cpjf for bzip2, not every tar supports it
+(cd "$DIST_SANDBOX" && \
+ find "$DISTNAME" -print | cpio -H ustar -o | gzip -9c > "$DISTNAME.tar.gz")
 echo "Rolling $DISTNAME.tar.bz2 ..."
-(cd "$DIST_SANDBOX" && tar cp --bzip2 -f "$DISTNAME.tar.bz2" "$DISTNAME")
+(cd "$DIST_SANDBOX" && \
+ find "$DISTNAME" -print | cpio -H ustar -o | bzip2 -9c > "$DISTNAME.tar.bz2")
 
 echo "Copying tarballs out, removing sandbox..."
 cp "$DISTPATH.tar.gz" .
