@@ -455,6 +455,8 @@ svn_cl__log (apr_getopt_t *os,
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *targets;
   struct log_receiver_baton lb;
+  const char *target;
+  int i;
 
   SVN_ERR (svn_opt_args_to_target_array (&targets, os, 
                                          opt_state->targets,
@@ -481,7 +483,7 @@ svn_cl__log (apr_getopt_t *os,
     }
   else if (opt_state->start_revision.kind == svn_opt_revision_unspecified)
     {
-      const char *target = APR_ARRAY_IDX (targets, 0, const char *);
+      target = APR_ARRAY_IDX (targets, 0, const char *);
 
       /* If the first target is a URL, then we default to HEAD:1.
          Otherwise, the default is BASE:1 since WC@HEAD may not exist. */
@@ -495,6 +497,27 @@ svn_cl__log (apr_getopt_t *os,
           opt_state->end_revision.kind = svn_opt_revision_number;
           opt_state->end_revision.value.number = 1;  /* oldest commit */
         }
+    }
+
+  /* Verify that we pass at most one working copy path. */
+  target = APR_ARRAY_IDX (targets, 0, const char *);
+
+  if (! svn_path_is_url (target) )
+    {
+      if (targets->nelts > 1)
+        return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                                 _("When specifying working copy paths, only "
+                                   "one target may be given"));
+    } else {
+      /* Check to make sure there are no other URLs. */
+      for (i = 1; i < targets->nelts; i++) {
+        target = APR_ARRAY_IDX (targets, 1, const char *);
+
+        if (svn_path_is_url (target))
+          return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                                   _("Only relative paths can be specified "
+                                     "after a URL"));
+      }
     }
 
   lb.cancel_func = ctx->cancel_func;
