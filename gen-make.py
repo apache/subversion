@@ -20,10 +20,10 @@ sys.path.insert(1, 'build')
 
 gen_modules = {
   'make' : ('gen_make', 'Makefiles for POSIX systems'),
-  'dsp' : ('gen_msvc_dsp', 'DevStudio Project files'),
+  'dsp' : ('gen_msvc_dsp', 'MSVC 6.x project files'),
   'nmake-msvc' : ('gen_msvc_nmake', '### need description'),
   'mingw' : ('gen_mingw', 'Makefiles for mingw'),
-  'vcproj' : ('gen_vcnet_vcproj', 'VC.Net Project files'),
+  'vcproj' : ('gen_vcnet_vcproj', 'VC.Net project files'),
   'nmake-vcnet' : ('gen_vcnet_nmake', '### need description'),
   'bpr' : ('gen_bcpp_bpr', '### need description'),
   'make-bcpp' : ('gen_bcpp_make', '### need description'),
@@ -51,42 +51,37 @@ def main(fname, gentype, verfname=None, oname=None, skip_depends=0):
 
 def _usage_exit():
   "print usage, exit the script"
-  print "USAGE:  gen-make.py [-s] [conf-file] [TYPE]"
-  print
-  print "-s   skip dependency generation"
-  print
-  print "where TYPE is one of:"
+  print "USAGE:  gen-make.py [-s] [-t TYPE] [conf-file]"
+  print "  -s  skip dependency generation"
+  print "  -t  use the TYPE generator; can be one of:"
   items = gen_modules.items()
   items.sort()
   for name, (module, desc) in items:
-    print '%12s : %s' % (name, desc)
+    print '      %-12s  %s' % (name, desc)
   print
-  print "the default is 'make'"
+  print "      The default generator type is 'make'"
   sys.exit(0)
 
 if __name__ == '__main__':
-  opts, args = getopt.getopt(sys.argv[1:], 's')
-  if len(args) > 2:
+  opts, args = getopt.getopt(sys.argv[1:], 'st:')
+  if len(args) > 1:
     _usage_exit()
 
   conf = 'build.conf'
+  skip = 0
   gentype = 'make'
 
-  if len(args) == 2:
+  if args:
     conf = args[0]
-    gentype = args[1]
-  elif args:
-    if args[0] in gen_modules.keys():
-      gentype = args[0]
-    else:
-      conf = args[0]
+
+  for opt, val in opts:
+    if opt == '-s':
+      skip = 1
+    elif opt == '-t':
+      gentype = val
+
   if gentype not in gen_modules.keys():
     _usage_exit()
-
-  if ('-s', '') in opts:
-    skip = 1
-  else:
-    skip = 0
 
   main(conf, gentype, skip_depends=skip)
 
