@@ -9,9 +9,11 @@ my @ldmodules = map {"-lsvn_$_-1"} (@modules, qw/diff subr/);
 my $apr_config = $ENV{APR_CONFIG} || '/usr/local/lib/apache2/apr-config';
 $apr_config = 'apr-config' unless -e $apr_config;
 
+my $apr_shlib_path_var = `$apr_config --shlib-path-var`;
 my $apr_cflags = `$apr_config --includes`;
-my $apr_ldflags = `$apr_config --cflags --libs`;
+my $apr_ldflags = `$apr_config --cflags --link-ld --libs`;
 
+chomp $apr_shlib_path_var;
 chomp $apr_cflags;
 chomp $apr_ldflags;
 
@@ -19,7 +21,6 @@ my %config = (
     ABSTRACT => 'Perl bindings for Subversion',
     CCFLAGS  => join(' ', $apr_cflags, `perl -MExtUtils::Embed -e ccopts`,
 		     ' -I.. -I../../../include -g'),
-    LDDLFLAGS => '-shared',
     OBJECT => q/$(O_FILES)/,
     dynamic_lib => {
 	OTHERLDFLAGS => join(' ', $apr_ldflags, (map {"-L$_"} @ldpaths),
@@ -69,7 +70,7 @@ sub MY::postamble {
 	       (map {"\nsvn_$_.c : ../svn_$_.i ra_plugin.hi ra_reporter.hi delta_editor.hi\n".
 			"\tswig -c -nopm -perl -I.. -I../../../include $apr_cflags -module SVN::_".main::perlish($_)." -o svn_$_.c ../svn_$_.i\n"}
 	       @modules),
-               "\nFULLPERLRUN=LD_LIBRARY_PATH=",join(':',@ldpaths),
+               "\nFULLPERLRUN=$apr_shlib_path_var=",join(':',@ldpaths),
                " \$(FULLPERL)\n",
 	      );
 }
