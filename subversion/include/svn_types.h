@@ -118,12 +118,6 @@ typedef apr_uint64_t svn_filesize_t;
 /** In @c printf()-style functions, format file sizes using this. */
 #define SVN_FILESIZE_T_FMT APR_UINT64_T_FMT
 
-/* FIXME: This definition can goe away once apr-0.9.2 is bundled with
-   httpd-2.0.45. */
-#ifndef APR_UINT64_T_FMT
-#define APR_UINT64_T_FMT APR_INT64_T_FMT
-#endif
-
 /* FIXME: Have to fiddle with APR to define this function */
 #define apr_atoui64(X) ((apr_uint64_t) apr_atoi64(X))
 
