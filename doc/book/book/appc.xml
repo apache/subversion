@@ -495,15 +495,28 @@
       <itemizedlist>
 
         <listitem>
-          <para>If the computer is a member of an NT Domain, then it
-            seems to be unable to connect to the WebDAV share.  It
-            repeatedly asks for a name and password, even when the
+          <para>If a Windows XP computer is a member of an NT Domain,
+            then it seems to be unable to connect to the WebDAV share.
+            It repeatedly asks for a name and password, even when the
             Apache server isn't issuing an authentication challenge!
-            Some have speculated that this might happen because
-            WebFolders is specifically designed to operate against
-            Microsoft's SharePoint DAV server.  If the machine isn't
-            part of an NT Domain, then the share is mounted without a
-            problem.  This mystery is not yet solved.</para>
+            If the machine isn't part of an NT Domain, then the share
+            is mounted without a problem.</para>
+            
+          <para>This problem seems to stem from changes in the way
+            Windows XP creates WebFolder shortcuts (
+            <filename>.lnk</filename> files).  It sometimes replaces
+            the URL of the WebDAV share with a Windows
+            <quote>UNC</quote> (Universal Naming Convention) path
+            instead.  This causes Explorer to attempt a connection
+            using SMB instead of HTTP.</para>
+            
+          <para>A workaround for this problem is to create the
+            <filename>.lnk</filename> shortcut on a Windows 2000
+            computer and then copy this shortcut to the Windows XP
+            computer.  It would probably also be possible to
+            <quote>fix</quote> the shortcut using a HEX editor, if
+            one were to reverse-engineer the <filename>.lnk</filename>
+            file format.</para>
         </listitem>
 
         <listitem>
