@@ -1,5 +1,5 @@
-%define apache_version 2.0.31-0.3
-%define neon_version 0.18.2
+%define apache_version 2.0.31-0.5
+%define neon_version 0.18.5
 Summary: A Concurrent Versioning system similar to but better than CVS.
 Name: subversion
 Version: @VERSION@
@@ -12,12 +12,15 @@ Patch0: expat.patch
 Patch1: install.patch
 Vendor: Summersoft
 Packager: David Summers <david@summersoft.fay.ar.us>
+Requires: apache-apr >= %{apache_version}
+Requires: apache-apr-utils >= %{apache_version}
 Requires: db >= 4.0.14
 Requires: expat
 Requires: neon = %{neon_version}
 Requires: /sbin/install-info
-BuildPreReq: apache >= %{apache_version}
 BuildPreReq: apache-devel >= %{apache_version}
+BuildPreReq: apache-apr-devel >= %{apache_version}
+BuildPreReq: apache-apr-utils-devel >= %{apache_version}
 BuildPreReq: autoconf >= 2.52
 BuildPreReq: db-devel >= 4.0.14
 BuildPreReq: expat-devel
@@ -36,6 +39,12 @@ if you don't have root access on your machine but would like to use this
 package.
 
 %changelog
+* Sun Feb 03 2002 David Summers <david@summersoft.fay.ar.us> 0.8.0-1153
+- Updated to neon-0.18.5.
+- Broke up apache and apache-devel into apache-apr, apache-apr-devel,
+  apache-apr-utils, and apache-apr-utils-devel.
+- Updated apache to APR and APR-UTILS to 2002.02.03 version.
+
 * Sat Feb 02 2002 David Summers <david@summersoft.fay.ar.us> 0.8.0-1147
 - Now builds without the separate APR package as it is built into and
   "exported" from apache-2.0.31-0.3.
@@ -68,10 +77,11 @@ for developers interacing with the subversion package.
 %package server
 Group: Utilities/System
 Summary: Apache server module for Subversion server.
-Requires: apache-devel >= 2.0.16
+Requires: apache-apr >= %{apache_version}
+Requires: apache-apr-utils >= %{apache_version}
 Requires: perl
 Requires: subversion = %{version}-%{release}
-BuildPreReq: apache-devel >= 2.0.16
+BuildPreReq: apache-devel >= %{apache_version}
 %description server
 The subversion-server package adds the Subversion server Apache module to
 the Apache directories and configuration.
