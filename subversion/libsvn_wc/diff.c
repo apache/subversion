@@ -233,7 +233,7 @@ make_editor_baton (svn_wc_adm_access_t *anchor,
                    svn_boolean_t reverse_order,
                    apr_pool_t *pool)
 {
-  struct edit_baton *eb = apr_palloc (pool, sizeof (*eb));
+  struct edit_baton *eb = apr_pcalloc (pool, sizeof (*eb));
 
   eb->anchor = anchor;
   eb->anchor_path = svn_wc_adm_access_path (anchor);
