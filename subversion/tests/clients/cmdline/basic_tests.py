@@ -784,6 +784,7 @@ def basic_switch(sbox):
 
   # Create expected status tree
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('iota', switched='S')
   
   # Do the switch and check the results in three ways.
   if svntest.actions.run_and_verify_switch(wc_dir, iota_path, gamma_url,
@@ -836,6 +837,7 @@ def basic_switch(sbox):
     'A/D/H/rho' : Item(status='  ', wc_rev=1, repos_rev=1),
     'A/D/H/tau' : Item(status='  ', wc_rev=1, repos_rev=1),
     })
+  expected_status.tweak('iota', 'A/D/H', switched='S')
 
   # Do the switch and check the results in three ways.
   return svntest.actions.run_and_verify_switch(wc_dir, ADH_path, ADG_url,

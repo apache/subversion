@@ -103,11 +103,12 @@ print_status (const char *path,
     }
 
   if (detailed && show_last_committed)
-    printf ("%c%c%c%c   %c   %6s   %6s   %8s   %s\n",
+    printf ("%c%c%c%c%c  %c   %6s   %6s   %8s   %s\n",
             generate_status_code (status->text_status),
             generate_status_code (status->prop_status),
             status->locked ? 'L' : ' ',
             status->copied ? '+' : ' ',
+            status->switched ? 'S' : ' ',
             ood_status,
             working_rev,
             commit_rev,
@@ -115,21 +116,23 @@ print_status (const char *path,
             path);
 
   else if (detailed)
-    printf ("%c%c%c%c   %c   %6s   %s\n",
+    printf ("%c%c%c%c%c  %c   %6s   %s\n",
             generate_status_code (status->text_status),
             generate_status_code (status->prop_status),
             status->locked ? 'L' : ' ',
             status->copied ? '+' : ' ',
+            status->switched ? 'S' : ' ',
             ood_status,
             working_rev,
             path);
 
   else
-    printf ("%c%c%c%c   %s\n",
+    printf ("%c%c%c%c%c  %s\n",
             generate_status_code (status->text_status),
             generate_status_code (status->prop_status),
             status->locked ? 'L' : ' ',
             status->copied ? '+' : ' ',
+            status->switched ? 'S' : ' ',
             path);
 }
 

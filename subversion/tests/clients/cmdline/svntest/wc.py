@@ -118,6 +118,8 @@ class State:
         atts['locked'] = item.locked
       if item.copied is not None:
         atts['copied'] = item.copied
+      if item.switched is not None:
+        atts['switched'] = item.switched
       nodelist.append((os.path.normpath(os.path.join(self.wc_dir, path)),
                        item.contents,
                        item.props,
@@ -136,7 +138,7 @@ class StateItem:
 
   def __init__(self, contents=None, props=None,
                status=None, verb=None, wc_rev=None, repos_rev=None,
-               locked=None, copied=None):
+               locked=None, copied=None, switched=None):
     # provide an empty prop dict if it wasn't provided
     if props is None:
       props = { }
@@ -155,6 +157,7 @@ class StateItem:
     self.repos_rev = repos_rev
     self.locked = locked
     self.copied = copied
+    self.switched = switched
 
   def copy(self):
     "Make a deep copy of self."

@@ -109,6 +109,7 @@ def do_routine_switching(wc_dir, verify):
 
     # Create expected status tree
     expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+    expected_status.tweak('iota', switched='S')
   
     # Do the switch and check the results in three ways.
     if svntest.actions.run_and_verify_switch(wc_dir, iota_path, gamma_url,
@@ -150,6 +151,7 @@ def do_routine_switching(wc_dir, verify):
     
     # Create expected status
     expected_status = get_routine_status_state(wc_dir)
+    expected_status.tweak('iota', 'A/D/H', switched='S')
   
     # Do the switch and check the results in three ways.
     if svntest.actions.run_and_verify_switch(wc_dir, ADH_path, ADG_url,
@@ -209,6 +211,7 @@ def commit_routine_switching(wc_dir, verify):
   # Created expected status tree.
   expected_status = get_routine_status_state(wc_dir)
   expected_status.tweak(repos_rev=2)
+  expected_status.tweak('iota', 'A/D/H', switched='S')
   expected_status.tweak('iota', 'A/B/E/alpha', 'A/D/H/pi',
                         wc_rev=2, status='  ')
   expected_status.add({
@@ -335,6 +338,7 @@ def full_update(sbox):
     'A/D/H/Z' : Item(status='  ', wc_rev=2, repos_rev=2),
     'A/D/H/Z/zeta' : Item(status='  ', wc_rev=2, repos_rev=2),
     })
+  expected_status.tweak('iota', 'A/D/H', switched='S')
 
   return svntest.actions.run_and_verify_update(wc_dir,
                                                expected_output,
@@ -388,6 +392,7 @@ def full_rev_update(sbox):
   # Create expected status
   expected_status = get_routine_status_state(wc_dir)
   expected_status.tweak(repos_rev=2)
+  expected_status.tweak('iota', 'A/D/H', switched='S')
 
   return svntest.actions.run_and_verify_update(wc_dir,
                                                expected_output,
@@ -447,6 +452,7 @@ def update_switched_things(sbox):
   # Create expected status tree for the update.
   expected_status = get_routine_status_state(wc_dir)
   expected_status.tweak(repos_rev=2)
+  expected_status.tweak('iota', 'A/D/H', switched='S')
   expected_status.tweak('A/D/H', 'A/D/H/pi', 'A/D/H/rho', 'A/D/H/tau', 'iota',
                         wc_rev=2)
   expected_status.add({
@@ -518,6 +524,7 @@ def rev_update_switched_things(sbox):
   # Create expected status tree for the update.
   expected_status = get_routine_status_state(wc_dir)
   expected_status.tweak(repos_rev=2, wc_rev=2)
+  expected_status.tweak('iota', 'A/D/H', switched='S')
   expected_status.tweak('A/D/H', 'A/D/H/pi', 'A/D/H/rho', 'A/D/H/tau', 'iota',
                         wc_rev=1)
   expected_status.add({

@@ -644,11 +644,13 @@ typedef struct svn_wc_status_t
   enum svn_wc_status_kind prop_status;
 
   /* Booleans: a directory can be 'locked' if a working copy update
-     was interrupted, and a file or directory can be 'copied' if it's
+     was interrupted, a file or directory can be 'copied' if it's
      scheduled for addition-with-history (or part of a subtree that
-     is scheduled as such.) */
+     is scheduled as such.), and a file or directory can be
+     'switched' if the switch command has been used. */
   svn_boolean_t locked;
   svn_boolean_t copied;
+  svn_boolean_t switched;
 
   /* Fields that describe the status of the entry in the repository;
      in other words, these fields indicate whether text or props would
