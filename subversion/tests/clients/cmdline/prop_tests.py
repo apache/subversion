@@ -299,7 +299,7 @@ def remove_props(sbox):
   svntest.main.run_svn(None, 'propset', 'cash-sound', 'cha-ching!', iota_path)
 
   # Commit the file
-  svntest.main.run_svn(None, 'ci', '-m', '"logmsg"', iota_path)
+  svntest.main.run_svn(None, 'ci', '-m', 'logmsg', iota_path)
 
   # Now, remove the property
   svntest.main.run_svn(None, 'propdel', 'cash-sound', iota_path)
@@ -359,7 +359,7 @@ def update_conflict_props(sbox):
   svntest.main.run_svn(None, 'propset', 'foo', 'bar', A_path)
 
   # Commit the file and directory
-  svntest.main.run_svn(None, 'ci', '-m', '"logmsg"', wc_dir)
+  svntest.main.run_svn(None, 'ci', '-m', 'logmsg', wc_dir)
 
   # Update to rev 1
   svntest.main.run_svn(None, 'up', '-r', '1', wc_dir)

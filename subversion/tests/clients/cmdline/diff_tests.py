@@ -291,7 +291,7 @@ def change_diff_commit_diff(wc_dir, revision, change_fn, check_fn):
     os.chdir(was_cwd)
     return 1
 
-  svntest.main.run_svn(None, 'ci', '-m', '"log msg"')
+  svntest.main.run_svn(None, 'ci', '-m', 'log msg')
   svntest.main.run_svn(None, 'up')
   diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', revision)
   if check_fn(diff_output):
@@ -566,19 +566,19 @@ def diff_pure_repository_update_a_file(sbox):
 
   # rev 2
   update_a_file()
-  svntest.main.run_svn(None, 'ci', '-m', '"log msg"')
+  svntest.main.run_svn(None, 'ci', '-m', 'log msg')
 
   # rev 3
   add_a_file_in_a_subdir()
-  svntest.main.run_svn(None, 'ci', '-m', '"log msg"')
+  svntest.main.run_svn(None, 'ci', '-m', 'log msg')
 
   # rev 4
   add_a_file()
-  svntest.main.run_svn(None, 'ci', '-m', '"log msg"')
+  svntest.main.run_svn(None, 'ci', '-m', 'log msg')
 
   # rev 5
   update_added_file()
-  svntest.main.run_svn(None, 'ci', '-m', '"log msg"')
+  svntest.main.run_svn(None, 'ci', '-m', 'log msg')
 
   svntest.main.run_svn(None, 'up', '-r2')
   os.chdir(was_cwd)
