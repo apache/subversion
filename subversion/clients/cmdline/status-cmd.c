@@ -64,8 +64,7 @@ svn_cl__status (apr_getopt_t *os,
 
       SVN_ERR (svn_client_status (&statushash, &youngest, target, auth_baton,
                                   opt_state->nonrecursive ? 0 : 1,
-                                  (opt_state->verbose || 
-                                   opt_state->very_verbose),
+                                  opt_state->verbose,
                                   opt_state->update,
                                   pool));
 

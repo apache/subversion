@@ -55,26 +55,6 @@ array_push_svn_stringbuf (apr_array_header_t *array,
     = svn_stringbuf_create (str, pool);
 }
 
-/* Return the entry in svn_cl__cmd_table whose name matches CMD_NAME,
- * or null if none.  CMD_NAME may be an alias, in which case the alias
- * entry will be returned (so caller may need to canonicalize result).  */
-static const svn_cl__cmd_desc_t *
-get_cmd_table_entry (const char *cmd_name)
-{
-  int i = 0;
-
-  if (cmd_name == NULL)
-    return NULL;
-
-  while (svn_cl__cmd_table[i].name) {
-    if (strcmp (cmd_name, svn_cl__cmd_table[i].name) == 0)
-      return svn_cl__cmd_table + i;
-    i++;
-  }
-
-  /* Else command not found. */
-  return NULL;
-}
 
 /* Some commands take an implicit "." string argument when invoked
  * with no arguments. Those commands make use of this function to
@@ -218,20 +198,6 @@ svn_cl__stringlist_to_array(svn_stringbuf_t *buffer, apr_pool_t *pool)
   return array;
 } 
 
-
-const svn_cl__cmd_desc_t *
-svn_cl__get_canonical_command (const char *cmd)
-{
-  const svn_cl__cmd_desc_t *cmd_desc = get_cmd_table_entry (cmd);
-
-  if (cmd_desc == NULL)
-    return NULL;
-
-  while (cmd_desc->is_alias)
-    cmd_desc--;
-
-  return cmd_desc;
-}
 
 
 void

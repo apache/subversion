@@ -42,7 +42,69 @@
 #include "cl.h"
 
 
+/*** Option Processing ***/
+
+const apr_getopt_option_t svn_cl__options[] =
+  {
+    {"destination",   'd', 1, "put results in newly-created directory name"}, 
+    {"force",         svn_cl__force_opt, 0, "force operation to run"},
+    {"help",          'h', 0, "show help on a subcommand"},
+    {"message",       'm', 1, "specify commit message"},
+    {"quiet",         'q', 0, "print as little as possible"},
+    {"recursive",     svn_cl__recursive_opt, 0, "descend recursively"},
+    {"nonrecursive",  'n', 0, "operate on single directory only"},
+    {"revision",      'r', 1, "specify revision number (or X:Y range)"},
+    {"date",          'D', 1, "specify a date (instead of a revision)"},
+    {"filedata",      'F', 1, "read data from specified file"},
+    {"xml-file",      svn_cl__xml_file_opt, 1, "read/write xml to specified file"},
+    {"locale",        svn_cl__locale_opt, 1, "specify a locale to use"},
+    {"version",       svn_cl__version_opt, 0, "print client version info"},
+    {"verbose",       'v', 0, "print extra information"},
+    {"very-verbose",  'V', 0, "print maxmimum information"},
+    {"show-updates",  'u', 0, "display update information"},
+    /* Here begin authentication args, add more as needed: */
+    {"username",      svn_cl__auth_username_opt, 1, "specify a username [optional]"},
+    {"password",      svn_cl__auth_password_opt, 1, "specify a password [optional]"},    
+    {"extensions",    'x', 1, "pass options through to GNU diff process"},
+    {0,               0, 0}
+  };
+
+
+/* The maximum number of options that can be accepted by a subcommand;
+   this is simply the number of unique switches that exist in the
+   table above.  */
+#define SVN_CL__MAX_OPTS sizeof(svn_cl__options)/sizeof(svn_cl__options[0])
+
+
+
 /*** Command dispatch. ***/
+
+
+/* One element of the command dispatch table. */
+typedef struct svn_cl__cmd_desc_t
+{
+  /* The name of this command.  Might be a full name, such as
+     "commit", or a short name, such as "ci". */
+  const char *name;
+
+  /* If name is a short synonym, such as "ci", then is_alias
+     is set `TRUE'.  If it is the base command entry, then `FALSE'.
+     The alias entries will always immediately follow the base entry. */
+  svn_boolean_t is_alias;
+
+  /* The function this command invokes.  NULL if alias. */
+  svn_cl__cmd_proc_t *cmd_func;
+
+  /* A brief string describing this command, for usage messages. */
+  const char *help;
+
+  /* A list of options accepted by this command.  Each value in the
+     array is a unique enum (the 2nd field in apr_getopt_option_t) */
+  int valid_options[SVN_CL__MAX_OPTS];
+
+} svn_cl__cmd_desc_t;
+
+
 
 /* Map names to command routine, etc. 
  *
@@ -60,126 +122,350 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
 {
   { "add",        FALSE, svn_cl__add,
     "Add new files and directories to version control.\n"
-    "usage: add [TARGETS]\n" },
-  { "ad",         TRUE, NULL, NULL },
-  { "new",        TRUE, NULL, NULL },
+    "usage: add [TARGETS]\n", 
+    {'r'} },
+  { "ad",         TRUE, NULL, NULL, {0} },
+  { "new",        TRUE, NULL, NULL, {0} },
 
   { "checkout",   FALSE, svn_cl__checkout,
     "Check out a working directory from a repository.\n"
-    "usage: checkout REPOS_URL1 [REPOS_URL2 REPOS_URL3...]\n" },
-  { "co",         TRUE, NULL, NULL },
+    "usage: checkout REPOS_URL1 [REPOS_URL2 REPOS_URL3...]\n",
+    {svn_cl__auth_username_opt, svn_cl__auth_password_opt,
+     svn_cl__xml_file_opt, 'd', 'q', 'n', 'D', 'r'}  },
+  { "co",         TRUE, NULL, NULL, {0} },
 
   { "cleanup",    FALSE, svn_cl__cleanup,
     "Recursively clean up the working copy, removing locks, resuming\n"
     "unfinished operations, etc.\n"
-    "usage: cleanup [TARGETS]\n" },
-
+    "usage: cleanup [TARGETS]\n",
+    {0} },
+  
   { "commit",     FALSE, svn_cl__commit,
     "Commit changes from your working copy to the repository.\n"
-    "usage: commit [TARGETS]\n" },
-  { "ci",         TRUE, NULL, NULL },
-
+    "usage: commit [TARGETS]\n",
+    {'F', 'm', svn_cl__auth_username_opt, svn_cl__auth_password_opt,
+     svn_cl__xml_file_opt, 'q', 'r'} },
+  { "ci",         TRUE, NULL, NULL, {0} },
+  
   { "copy",       FALSE, svn_cl__copy,
     "Duplicate something in your working copy, remembering history.\n"
-    "usage: copy SRC_PATH DST_PATH.\n" },
-  { "cp",         TRUE, NULL, NULL },
-
+    "usage: copy SRC_PATH DST_PATH.\n",
+    {'F', 'm', 'r', svn_cl__auth_username_opt, svn_cl__auth_password_opt} },
+  { "cp",         TRUE, NULL, NULL, {0} },
+  
   { "delete",     FALSE, svn_cl__delete,
     "Remove files and directories from version control.\n"
     "usage: delete [TARGET]\n"
-    "       delete REPOS_URL1 [[REPOS_URL2] ... ]\n" },
-  { "del",        TRUE, NULL, NULL },
-  { "remove",     TRUE, NULL, NULL },
-  { "rm",         TRUE, NULL, NULL },
-
+    "       delete REPOS_URL1 [[REPOS_URL2] ... ]\n",
+    {'F', 'm', svn_cl__auth_username_opt, svn_cl__auth_password_opt,
+     svn_cl__force_opt} },
+  { "del",        TRUE, NULL, NULL, {0} },
+  { "remove",     TRUE, NULL, NULL, {0} },
+  { "rm",         TRUE, NULL, NULL, {0} },
+  
   { "diff",       FALSE, svn_cl__diff,
     "Display local changes in the working copy, or changes between the\n"
     "working copy and the repository if a revision is given.\n"
-    "usage: diff [-r REV] [TARGETS]\n" },
-  { "di",         TRUE, NULL, NULL },
-
+    "usage: diff [-r REV] [TARGETS]\n",
+    {svn_cl__auth_username_opt, svn_cl__auth_password_opt,
+     'x', 'r', 'd', 'n'} },
+  { "di",         TRUE, NULL, NULL, {0} },
+  
   { "help",       FALSE, svn_cl__help,
     "Display this usage message.\n"
-    "usage: help [SUBCOMMAND1 [SUBCOMMAND2] ...]\n" },
-  { "?",          TRUE, NULL, NULL },
-  { "h",          TRUE, NULL, NULL },
+    "usage: help [SUBCOMMAND1 [SUBCOMMAND2] ...]\n",
+    {svn_cl__version_opt} },
+  { "?",          TRUE, NULL, NULL, {0} },
+  { "h",          TRUE, NULL, NULL, {0} },
   /* We need to support "--help", "-?", and all that good stuff, of
      course.  But those options, since unknown, will result in the
      help message being printed out anyway, so there's no need to
      support them explicitly. */
-
+  
   { "import",     FALSE, svn_cl__import,
     "Import a file or tree into the repository.\n"
-    "usage: import REPOS_URL [PATH] [NEW_ENTRY_IN_REPOS] \n" },
-
+    "usage: import REPOS_URL [PATH] [NEW_ENTRY_IN_REPOS] \n",
+    {'F', 'm', svn_cl__auth_username_opt, svn_cl__auth_password_opt,
+     svn_cl__xml_file_opt, 'q', 'r'} },
+  
   { "log",        FALSE, svn_cl__log,
     "Show the log messages for a set of revision(s) and/or file(s).\n"
-    "usage: log [-r REV1([:)REV2]] [PATH1 [PATH2] ...] \n" },
-
+    "usage: log [-r REV1([:)REV2]] [PATH1 [PATH2] ...] \n",
+    {svn_cl__auth_username_opt, svn_cl__auth_password_opt, 'r', 'v'} },
+  
   { "mkdir",      FALSE, svn_cl__mkdir,
     "Create a new directory under revision control.\n"
-    "usage: mkdir [NEW_DIR | REPOS_URL].\n" },
+    "usage: mkdir [NEW_DIR | REPOS_URL].\n",
+    {svn_cl__auth_username_opt, svn_cl__auth_password_opt, 'm', 'F'} },
 
   { "move",       FALSE, svn_cl__move,
     "Move or rename something working copy.\n"
-    "usage: move SRC_PATH DST_PATH.\n" },
-  { "mv",         TRUE, NULL, NULL },
-  { "rename",     TRUE, NULL, NULL },
-  { "ren",        TRUE, NULL, NULL },
-
+    "usage: move SRC_PATH DST_PATH.\n",
+    {svn_cl__auth_username_opt, svn_cl__auth_password_opt, 'm', 'F', 'r'} },
+  { "mv",         TRUE, NULL, NULL, {0} },
+  { "rename",     TRUE, NULL, NULL, {0} },
+  { "ren",        TRUE, NULL, NULL, {0} },
+  
   { "propdel",    FALSE, svn_cl__propdel, 
     "Remove property PROPNAME on files and directories.\n"
-    "usage: propdel PROPNAME [TARGETS]\n"},
-  { "pdel",       TRUE, NULL, NULL },
-
+    "usage: propdel PROPNAME [TARGETS]\n",
+    {'q', svn_cl__recursive_opt} },
+  { "pdel",       TRUE, NULL, NULL, {0} },
+  
   { "propedit",    FALSE, svn_cl__propedit, 
     "Edit property PROPNAME with $EDITOR on files and directories.\n"
-    "usage: propedit PROPNAME [TARGETS]\n"},
-  { "pedit",       TRUE, NULL, NULL },
-  { "pe",          TRUE, NULL, NULL },
-
+    "usage: propedit PROPNAME [TARGETS]\n",
+    {0} },
+  { "pedit",       TRUE, NULL, NULL, {0} },
+  { "pe",          TRUE, NULL, NULL, {0} },
+  
   { "propget",    FALSE, svn_cl__propget,
     "Get the value of property PROPNAME on files and directories.\n"
-    "usage: propget PROPNAME [TARGETS]\n" },
-  { "pget",       TRUE, NULL, NULL },
-  { "pg",         TRUE, NULL, NULL },
-
+    "usage: propget PROPNAME [TARGETS]\n",
+    {svn_cl__recursive_opt} },
+  { "pget",       TRUE, NULL, NULL, {0} },
+  { "pg",         TRUE, NULL, NULL, {0} },
+  
   { "proplist",   FALSE, svn_cl__proplist,
     "List all properties for given files and directories.\n"
-    "usage: proplist [TARGETS]\n" },
-  { "plist",      TRUE, NULL, NULL },
-  { "pl",         TRUE, NULL, NULL },
-
+    "usage: proplist [TARGETS]\n",
+    {svn_cl__recursive_opt} },
+  { "plist",      TRUE, NULL, NULL, {0} },
+  { "pl",         TRUE, NULL, NULL, {0} },
+  
   { "propset",    FALSE, svn_cl__propset, 
     "Set property PROPNAME to PROPVAL on files and directories.\n"
     "usage: propset PROPNAME [PROPVAL | -F/--filedata VALFILE] "
-    "[TARGETS]\n"},
-  { "pset",       TRUE, NULL, NULL },
-  { "ps",         TRUE, NULL, NULL },
-
+    "[TARGETS]\n",
+    {'F', 'q', svn_cl__recursive_opt} },
+  { "pset",       TRUE, NULL, NULL, {0} },
+  { "ps",         TRUE, NULL, NULL, {0} },
+  
   { "revert",     FALSE, svn_cl__revert,
     "Restore pristine working copy file (undo all local edits)\n"
-    "usage: revert [TARGETS]\n" },
-
+    "usage: revert [TARGETS]\n",
+    {svn_cl__recursive_opt} },
+  
   { "status",     FALSE, svn_cl__status,
     "Print the status of working copy files and directories.\n"
-    "usage: status [TARGETS]\n" },
-  { "stat",       TRUE, NULL, NULL },
-  { "st",         TRUE, NULL, NULL },
- 
+    "usage: status [TARGETS]\n",
+    {svn_cl__auth_username_opt, svn_cl__auth_password_opt, 
+     'u', 'n', 'v', 'q'} },
+  { "stat",       TRUE, NULL, NULL, {0} },
+  { "st",         TRUE, NULL, NULL, {0} },
+  
   { "switch",     FALSE, svn_cl__switch,
     "Update existing working copy files and directories to become\n"
     "a working copy of a different repository URL.\n"
-    "usage: switch [TARGET] REPOS_URL\n" },
-  { "sw",         TRUE, NULL, NULL },
+    "usage: switch [TARGET] REPOS_URL\n",
+    {0} },  /* this will take 'r' in the future, like update does. */
+  { "sw",         TRUE, NULL, NULL, {0} },
  
   { "update",     FALSE, svn_cl__update,
     "Bring changes from the repository into the working copy.\n"
-    "usage: update [TARGETS]\n" },
-  { "up",         TRUE, NULL, NULL },
+    "usage: update [TARGETS]\n",
+    {svn_cl__auth_username_opt, svn_cl__auth_password_opt,
+     'r', 'D', 'n', svn_cl__xml_file_opt} },  
+  { "up",         TRUE, NULL, NULL, {0} },
 
-  { NULL,         FALSE, NULL, NULL }
+  { NULL,         FALSE, NULL, NULL, {0} }
 };
+
+
+
+
+/* Return the entry in svn_cl__cmd_table whose name matches CMD_NAME,
+ * or null if none.  CMD_NAME may be an alias, in which case the alias
+ * entry will be returned (so caller may need to canonicalize result).  */
+static const svn_cl__cmd_desc_t *
+get_cmd_table_entry (const char *cmd_name)
+{
+  int i = 0;
+
+  if (cmd_name == NULL)
+    return NULL;
+
+  while (svn_cl__cmd_table[i].name) {
+    if (strcmp (cmd_name, svn_cl__cmd_table[i].name) == 0)
+      return svn_cl__cmd_table + i;
+    i++;
+  }
+
+  /* Else command not found. */
+  return NULL;
+}
+
+
+static const svn_cl__cmd_desc_t *
+svn_cl__get_canonical_command (const char *cmd)
+{
+  const svn_cl__cmd_desc_t *cmd_desc = get_cmd_table_entry (cmd);
+
+  if (cmd_desc == NULL)
+    return NULL;
+
+  while (cmd_desc->is_alias)
+    cmd_desc--;
+
+  return cmd_desc;
+}
+
+
+
+/*** 'help' processing ***/
+
+/* Print an option OPT nicely into STREAM. */
+static void
+print_option (const apr_getopt_option_t *opt,
+              FILE *stream)
+{
+  fprintf (stream, "  --%s", opt->name);
+  if (opt->optch <= 255)
+    fprintf (stream, " (-%c)", opt->optch);
+  fprintf (stream, ":  ");
+
+  fprintf (stream, "%s\n", opt->description);
+}
+
+
+
+const apr_getopt_option_t *
+svn_cl__get_option_from_enum (int code,
+                              const apr_getopt_option_t *option_table)
+{
+  int i;
+  const apr_getopt_option_t *opt = NULL;
+
+  for (i = 0; i < SVN_CL__MAX_OPTS; i++)
+    {
+      if (option_table[i].optch == code)
+        {
+          opt = &(option_table[i]);
+          break;
+        }
+    }
+  
+  return opt;
+}
+
+
+
+/* Print the canonical command name for CMD, all its aliases,
+   and if HELP is set, print the help string for the command too. */
+static void
+print_command_info (const svn_cl__cmd_desc_t *cmd_desc,
+                    svn_boolean_t help, 
+                    apr_pool_t *pool,
+                    FILE *stream)
+{
+  const svn_cl__cmd_desc_t *this_cmd
+    = svn_cl__get_canonical_command (cmd_desc->name);
+  const svn_cl__cmd_desc_t *canonical_cmd = this_cmd;
+  svn_boolean_t first_time;
+
+  /* Print the canonical command name. */
+  fputs (canonical_cmd->name, stream);
+
+  /* Print the list of aliases. */
+  first_time = TRUE;
+  for (this_cmd++; (this_cmd->name && this_cmd->is_alias); this_cmd++) 
+    {
+      if (first_time) {
+        fprintf (stream, " (");
+        first_time = FALSE;
+      }
+      else
+        fprintf (stream, ", ");
+      
+      fprintf (stream, "%s", this_cmd->name);
+    }
+
+  if (! first_time)
+    fprintf (stream, ")");
+  
+  if (help)
+    {
+      int i;
+      const apr_getopt_option_t *option;
+
+      fprintf (stream, ": %s\n", canonical_cmd->help);
+      
+      /* Loop over all valid option codes attached to the subcommand */
+      for (i = 0; i < SVN_CL__MAX_OPTS; i++)
+        {          
+          if (canonical_cmd->valid_options[i])
+            {
+              /* convert each option code into an option */
+              option = 
+                svn_cl__get_option_from_enum (canonical_cmd->valid_options[i],
+                                              svn_cl__options);
+              if (option)
+                /* print the option's docstring */
+                print_option (option, stream);
+            }
+        }    
+      fprintf (stream, "\n");  
+    }
+}
+
+
+
+/* Print a generic (non-command-specific) usage message. */
+void
+svn_cl__print_generic_help (apr_pool_t *pool, FILE *stream)
+{
+  static const char usage[] =
+    "usage: svn <subcommand> [options] [args]\n"
+    "Type \"svn help <subcommand>\" for help on a specific subcommand.\n"
+    "\n"
+    "Most subcommands take file and/or directory arguments, recursing\n"
+    "on the directories.  If no arguments are supplied to such a\n"
+    "command, it will recurse on the current directory (inclusive) by\n" 
+    "default.\n"
+    "\n"
+    "Available subcommands:\n";
+
+  static const char info[] =
+    "Subversion is a tool for revision control.\n"
+    "For additional information, see http://subversion.tigris.org\n";
+
+  int i = 0;
+
+  fprintf (stream, "%s", usage);
+  while (svn_cl__cmd_table[i].name) 
+    {
+      /*  for (i = 0; i < max; i++) */
+      if (! svn_cl__cmd_table[i].is_alias)
+        {
+          fprintf (stream, "   ");
+          print_command_info (svn_cl__cmd_table + i, FALSE, pool, stream);
+          fprintf (stream, "\n");
+        }
+      i++;
+    }
+
+  fprintf (stream, "\n");
+  fprintf (stream, "%s\n", info);
+
+}
+
+
+/* Helper function that will print the usage test of a subcommand
+ * given the subcommand name as a char*. This function is also
+ * used by subcommands that need to print a usage message */
+
+void
+svn_cl__subcommand_help (const char* subcommand,
+                         apr_pool_t *pool)
+{
+  const svn_cl__cmd_desc_t *cmd =
+    svn_cl__get_canonical_command (subcommand);
+    
+  if (cmd)
+    print_command_info (cmd, TRUE, pool, stdout);
+  else
+    fprintf (stderr, "\"%s\": unknown command.\n\n", subcommand);
+}
 
 
 
@@ -372,31 +658,6 @@ main (int argc, const char * const *argv)
   const svn_cl__cmd_desc_t *subcommand = NULL;
   svn_boolean_t log_under_version_control = FALSE;
 
-  static const apr_getopt_option_t options[] =
-  {
-    {"destination",   'd', 1}, 
-    {"force",         svn_cl__force_opt, 0},
-    {"help",          'h', 0},
-    {"message",       'm', 1},
-    {"quiet",         'q', 0},
-    {"recursive",     svn_cl__recursive_opt, 0},
-    {"nonrecursive",  'n', 0},
-    {"revision",      'r', 1},
-    {"date",          'D', 1},
-    {"filedata",      'F', 1},
-    {"xml-file",      svn_cl__xml_file_opt, 1},
-    {"locale",        svn_cl__locale_opt, 1},
-    {"version",       svn_cl__version_opt, 0},
-    {"verbose",       'v', 0},
-    {"very-verbose",  'V', 0},
-    {"show-updates",  'u', 0},
-    /* Here begin authentication args, add more as needed: */
-    {"username",      svn_cl__auth_username_opt, 1},
-    {"password",      svn_cl__auth_password_opt, 1},    
-    {"extensions",    'x', 1},
-    {0,               0, 0}
-  };
-
   /* FIXME: This is a first step towards support for localization in
      `svn'.  In real life, this call would be
 
@@ -431,7 +692,7 @@ main (int argc, const char * const *argv)
   while (1)
     {
       /* Parse the next option. */
-      apr_err = apr_getopt_long (os, options, &opt_id, &opt_arg);
+      apr_err = apr_getopt_long (os, svn_cl__options, &opt_id, &opt_arg);
       if (APR_STATUS_IS_EOF (apr_err))
         break;
       else if (! APR_STATUS_IS_SUCCESS (apr_err))

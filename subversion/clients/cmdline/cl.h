@@ -49,6 +49,7 @@ typedef enum {
   svn_cl__auth_password_opt,
 } svn_cl__longopt_t;
 
+
 
 /*** Command dispatch. ***/
 
@@ -115,25 +116,7 @@ typedef svn_error_t *(svn_cl__cmd_proc_t) (apr_getopt_t *os,
                                            apr_pool_t *pool);
 
 
-/* One element of the command dispatch table. */
-typedef struct svn_cl__cmd_desc_t
-{
-  /* The name of this command.  Might be a full name, such as
-     "commit", or a short name, such as "ci". */
-  const char *name;
 
-  /* If name is a short synonym, such as "ci", then is_alias
-     is set `TRUE'.  If it is the base command entry, then `FALSE'.
-     The alias entries will always immediately follow the base entry. */
-  svn_boolean_t is_alias;
-
-  /* The function this command invokes.  NULL if alias. */
-  svn_cl__cmd_proc_t *cmd_func;
-
-  /* A brief string describing this command, for usage messages. */
-  const char *help;
-
-} svn_cl__cmd_desc_t;
 
 
 /* Declare all the command procedures */
@@ -161,16 +144,10 @@ svn_cl__cmd_proc_t
   svn_cl__update;
 
 
-/* make the command table information available to all commands */ 
-extern const svn_cl__cmd_desc_t svn_cl__cmd_table[];
+/* Print a generic (non-command-specific) usage message. */
+void
+svn_cl__print_generic_help (apr_pool_t *pool, FILE *stream);
 
-
-/* Return the canonical command table entry for CMD (which may be the
- * entry for CMD itself, or some other entry if CMD is an alias).
- * If CMD is not found, return null.
- */
-const svn_cl__cmd_desc_t *
-svn_cl__get_canonical_command (const char *cmd);
 
 /* Print out commit information found in COMMIT_INFO to the console. */
 void
@@ -178,6 +155,14 @@ svn_cl__print_commit_info (svn_client_commit_info_t *commit_info);
 
 
 /*** Miscellaneous utility commands ***/
+
+/* Look up CODE in OPTION_TABLE.   If any option in the table has this
+   enum code, return a pointer to the option.  Else return NULL. */
+const apr_getopt_option_t *
+svn_cl__get_option_from_enum (int code,
+                              const apr_getopt_option_t *option_table);
+
+
 void svn_cl__push_svn_string (apr_array_header_t *array,
                               const char *str,
                               apr_pool_t *pool);

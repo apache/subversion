@@ -31,84 +31,6 @@
 
 /*** Code. ***/
 
-/* Print the canonical command name for CMD, all its aliases,
-   and if HELP is set, print the help string for the command too. */
-static void
-print_command_info (const svn_cl__cmd_desc_t *cmd_desc,
-                    svn_boolean_t help, 
-                    apr_pool_t *pool,
-                    FILE *stream)
-{
-  const svn_cl__cmd_desc_t *this_cmd
-    = svn_cl__get_canonical_command (cmd_desc->name);
-  const svn_cl__cmd_desc_t *canonical_cmd = this_cmd;
-  svn_boolean_t first_time;
-
-  /* Print the canonical command name. */
-  fputs (canonical_cmd->name, stream);
-
-  /* Print the list of aliases. */
-  first_time = TRUE;
-  for (this_cmd++; (this_cmd->name && this_cmd->is_alias); this_cmd++) 
-    {
-      if (first_time) {
-        fprintf (stream, " (");
-        first_time = FALSE;
-      }
-      else
-        fprintf (stream, ", ");
-      
-      fprintf (stream, "%s", this_cmd->name);
-    }
-
-  if (! first_time)
-    fprintf (stream, ")");
-  
-  if (help)
-    fprintf (stream, ": %s\n", canonical_cmd->help);
-}
-
-
-/* Print a generic (non-command-specific) usage message. */
-static void
-print_generic_help (apr_pool_t *pool, FILE *stream)
-{
-  static const char usage[] =
-    "usage: svn <subcommand> [options] [args]\n"
-    "Type \"svn help <subcommand>\" for help on a specific subcommand.\n"
-    "\n"
-    "Most subcommands take file and/or directory arguments, recursing\n"
-    "on the directories.  If no arguments are supplied to such a\n"
-    "command, it will recurse on the current directory (inclusive) by\n" 
-    "default.\n"
-    "\n"
-    "Available subcommands:\n";
-
-  static const char info[] =
-    "Subversion is a tool for revision control.\n"
-    "For additional information, see http://subversion.tigris.org\n";
-
-  int i = 0;
-
-  fprintf (stream, "%s", usage);
-  while (svn_cl__cmd_table[i].name) 
-    {
-      /*  for (i = 0; i < max; i++) */
-      if (! svn_cl__cmd_table[i].is_alias)
-        {
-          fprintf (stream, "   ");
-          print_command_info (svn_cl__cmd_table + i, FALSE, pool, stream);
-          fprintf (stream, "\n");
-        }
-      i++;
-    }
-
-  fprintf (stream, "\n");
-  fprintf (stream, "%s\n", info);
-
-}
-
-
 static svn_error_t *
 print_version_info (apr_pool_t *pool)
 {
@@ -138,8 +60,9 @@ print_version_info (apr_pool_t *pool)
 
 
 /* Print either generic help, or command-specific help for each
- * command in os->args.  OPT_STATE is unused and may be null.
- * If OS is null then generic help will always be printed.
+ * command in os->args.  OPT_STATE is only examined for the
+ * '--version' switch.  If OS is null then generic help will always be
+ * printed.
  * 
  * Unlike all the other command routines, ``help'' has its own
  * option processing.
@@ -164,29 +87,13 @@ svn_cl__help (apr_getopt_t *os,
   else if (opt_state && opt_state->version)  /* just -v or --version */
     SVN_ERR (print_version_info (pool));        
   else if (os && !targets->nelts)            /* `-h', `--help', or `help' */
-    print_generic_help (pool, stdout);  
+    svn_cl__print_generic_help (pool, stdout);  
   else                                       /* unknown option or cmd */
-    print_generic_help (pool, stderr);
+    svn_cl__print_generic_help (pool, stderr);
 
   return SVN_NO_ERROR;
 }
 
-/* Helper function that will print the usage test of a subcommand
- * given the subcommand name as a char*. This function is also
- * used by subcommands that need to print a usage message */
-
-void
-svn_cl__subcommand_help (const char* subcommand,
-                         apr_pool_t *pool)
-{
-  const svn_cl__cmd_desc_t *cmd =
-    svn_cl__get_canonical_command (subcommand);
-    
-  if (cmd)
-    print_command_info (cmd, TRUE, pool, stdout);
-  else
-    fprintf (stderr, "\"%s\": unknown command.\n\n", subcommand);
-}
 
 
 /* 
