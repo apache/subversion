@@ -8,6 +8,7 @@ http://svn.collab.net/repos/svn/tags/1.1.1
     * fixed: 'svn ls' dying on non-ascii paths over DAV (issue #2060)
     * fixed: allow URI-encoded colon or pipe on win32 (issue #2012)
     * fixed: broken win32 UNC paths (issue #2011)
+    * fixed: memory bloat when committing many files over DAV (r11284, -321)
     * fixed: eol-style translation error for 'svn propget' (r11202, -243)
     * fixed: 'svn propedit' does EOL conversion properly (issue #2063)
     * fixed: 'svn log --xml' shouldn't be locale-dependent. (r11181)
@@ -29,6 +30,7 @@ http://svn.collab.net/repos/svn/tags/1.1.1
  * fixed: IRIX compile error (issue #2082)
  * fixed: error in perl bindings (r11290)
  * fixed: error leaks in mod_dav_svn (r11458)
+ * fixed: javahl should use default config directory (r11394)
 
 
 Version 1.0.9
