@@ -91,6 +91,11 @@ load_ra_module (svn_ra_init_func_t *func,
     status = apr_dso_load (&dso, libname, pool);
     if (status)
       {
+#if 0
+        char errbuf[200];
+        apr_dso_error(dso, errbuf, sizeof(errbuf));
+#endif
+
         /* Just ignore the error. Assume the library isn't present */
         return SVN_NO_ERROR;
       }
