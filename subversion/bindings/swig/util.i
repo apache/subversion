@@ -58,6 +58,7 @@
    are relatively trivial).
 */
 %ignore svn_io_check_path;
+%ignore svn_io_check_resolved_path;
 %ignore svn_io_copy_file;
 %ignore svn_io_copy_dir_recursively;
 %ignore svn_io_append_file;

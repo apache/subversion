@@ -31,7 +31,6 @@
 %typemap(python, in, numinputs=0) SWIGTYPE **OUTPARAM ($*1_type temp) {
     $1 = ($1_ltype)&temp;
 }
-
 %typemap(java, in) SWIGTYPE **OUTPARAM ($*1_type temp) {
     $1 = ($1_ltype)&temp;
 }
@@ -39,6 +38,21 @@
     $result = t_output_helper($result,
                               SWIG_NewPointerObj(*$1, $*1_descriptor, 0));
 }
+
+/* -----------------------------------------------------------------------
+   Create a typemap to handle enums.
+*/
+
+%typemap(python, in, numinputs=0) enum SWIGTYPE *OUTENUM ($*1_type temp) {
+    $1 = ($1_ltype)&temp;
+}
+%typemap(java, in) enum SWIGTYPE *OUTENUM ($*1_type temp) {
+    $1 = ($1_ltype)&temp;
+}
+%typemap(python, argout, fragment="t_output_helper") enum SWIGTYPE *OUTENUM {
+    $result = t_output_helper($result, PyInt_FromLong(*$1));
+}
+
 
 /* -----------------------------------------------------------------------
    Create a typemap for specifying string args that may be NULL.
@@ -104,15 +118,9 @@
 %apply long *OUTPUT { svn_revnum_t * };
 
 /* -----------------------------------------------------------------------
-   'svn_node_kind_t *' will always be an OUTPUT parameter
+   Define an OUTPUT typemap for 'svn_filesize_t *'.  For now, we'll
+   treat it as a 'long' even if that isn't entirely correct...  
 */
-%apply unsigned int *OUTPUT { svn_node_kind_t * };
-
-/* ----------------------------------------------------------------------- */
-
-/* Define an OUTPUT typemap for 'svn_filesize_t *'.  For now, we'll
-   treat it as a 'long' even if that isn't entirely correct...  */
-
 %typemap(python,in,numinputs=0) svn_filesize_t * (svn_filesize_t temp)
     "$1 = &temp;";
 
