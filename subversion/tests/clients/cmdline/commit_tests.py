@@ -26,6 +26,10 @@ import svntest
 def sandbox(x):
   return "commit_tests-" + `test_list.index(x)`
 
+# (abbreviation)
+path_index = svntest.actions.path_index
+  
+
 ######################################################################
 # Utilities
 #
@@ -276,9 +280,6 @@ def nested_dir_replacements():
   #    - A/D/bloo scheduled as "A" at rev 0
   #    - ALL other children of A/D scheduled as "D" at rev 1
 
-  # (abbreviation)
-  path_index = svntest.actions.path_index
-  
   sl = svntest.actions.get_virginal_status_list(wc_dir, '1')
 
   sl[path_index(sl, os.path.join(wc_dir, 'A', 'D'))][3]['status'] = "R "
@@ -341,6 +342,208 @@ def nested_dir_replacements():
                                                 None, None,
                                                 wc_dir)
 
+#----------------------------------------------------------------------
+
+# Testing part 1 of the "Greg Hudson" problem -- specifically, that
+# our use of the "existence=deleted" flag is working properly in cases
+# where the parent directory's revision lags behind a deleted child's
+# revision.
+
+def hudson_part_1():
+  "hudson prob 1.0:  delete file, commit, update"
+
+  # Bootstrap:  make independent repo and working copy.
+  sbox = sandbox(hudson_part_1)
+  wc_dir = os.path.join (svntest.main.general_wc_dir, sbox)
+
+  if svntest.actions.make_repo_and_wc(sbox): return 1
+
+  # Remove gamma from the working copy.
+  gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma') 
+  svntest.main.run_svn('rm', gamma_path)
+
+  # Create expected commit output.
+  output_list = [ [gamma_path, None, {}, {'verb' : 'Deleting' }] ]
+  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+  
+  # After committing, status should show no sign of gamma.
+  status_list = svntest.actions.get_virginal_status_list(wc_dir, '2')
+  for item in status_list:
+    item[3]['wc_rev'] = '1'
+  status_list.pop(path_index(status_list, gamma_path))
+  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+  
+  # Commit the deletion of gamma and verify.
+  if svntest.actions.run_and_verify_commit (wc_dir,
+                                            expected_output_tree,
+                                            expected_status_tree,
+                                            None, None, None, None, None,
+                                            wc_dir):
+    return 1
+
+  # Now gamma should be marked as `deleted' under the hood.  When we
+  # update, we should see NO output at all, and a perfect, virginal
+  # status list at revision 2.  (The `deleted' entry should be removed.)
+  
+  # Expected output of update:  nothing.
+  expected_output_tree = svntest.tree.build_generic_tree([])
+
+  # Expected disk tree:  everything but gamma.
+  my_greek_tree = svntest.main.copy_greek_tree()
+  my_greek_tree.pop(11)  # removing gamma
+  expected_disk_tree = svntest.tree.build_generic_tree(my_greek_tree)
+  
+  # Expected status after update:  totally clean revision 2, minus gamma.
+  status_list = svntest.actions.get_virginal_status_list(wc_dir, '2')
+  status_list.pop(path_index(status_list, gamma_path))  
+  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+
+  return svntest.actions.run_and_verify_update(wc_dir,
+                                               expected_output_tree,
+                                               expected_disk_tree,
+                                               expected_status_tree)
+
+#----------------------------------------------------------------------
+
+# Testing part 1 of the "Greg Hudson" problem -- variation on previous
+# test, removing a directory instead of a file this time.
+
+def hudson_part_1_variation_1():
+  "hudson prob 1.1:  delete dir, commit, update"
+
+  # Bootstrap:  make independent repo and working copy.
+  sbox = sandbox(hudson_part_1_variation_1)
+  wc_dir = os.path.join (svntest.main.general_wc_dir, sbox)
+
+  if svntest.actions.make_repo_and_wc(sbox): return 1
+
+  # Remove H from the working copy.
+  H_path = os.path.join(wc_dir, 'A', 'D', 'H') 
+  svntest.main.run_svn('rm', H_path)
+
+  # Create expected commit output.
+  output_list = [ [H_path, None, {}, {'verb' : 'Deleting' }] ]
+  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+  
+  # After committing, status should show no sign of H or its contents
+  status_list = svntest.actions.get_virginal_status_list(wc_dir, '2')
+  for item in status_list:
+    item[3]['wc_rev'] = '1'
+  status_list.pop(path_index(status_list, H_path))
+  status_list.pop(path_index(status_list, os.path.join(H_path, 'chi')))
+  status_list.pop(path_index(status_list, os.path.join(H_path, 'omega')))
+  status_list.pop(path_index(status_list, os.path.join(H_path, 'psi')))
+  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+  
+  # Commit the deletion of H and verify.
+  if svntest.actions.run_and_verify_commit (wc_dir,
+                                            expected_output_tree,
+                                            expected_status_tree,
+                                            None, None, None, None, None,
+                                            wc_dir):
+    return 1
+
+  # Now H should be marked as `deleted' under the hood.  When we
+  # update, we should see NO output at all, and a perfect, virginal
+  # status list at revision 2.  (The `deleted' entry should be removed.)
+  
+  # Expected output of update:  nothing.
+  expected_output_tree = svntest.tree.build_generic_tree([])
+
+  # Expected disk tree:  everything but H and its contents.
+  my_greek_tree = svntest.main.copy_greek_tree()
+  my_greek_tree.pop(16)  # removing H
+  my_greek_tree.pop(16)  # removing H/chi
+  my_greek_tree.pop(16)  # removing H/psi  
+  my_greek_tree.pop(16)  # removing H/omega
+  expected_disk_tree = svntest.tree.build_generic_tree(my_greek_tree)
+
+  # Expected status after update:  totally clean revision 2, minus H.
+  status_list = svntest.actions.get_virginal_status_list(wc_dir, '2')
+  status_list.pop(path_index(status_list, H_path))
+  status_list.pop(path_index(status_list, os.path.join(H_path, 'chi')))
+  status_list.pop(path_index(status_list, os.path.join(H_path, 'omega')))
+  status_list.pop(path_index(status_list, os.path.join(H_path, 'psi')))
+  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+
+  return svntest.actions.run_and_verify_update(wc_dir,
+                                               expected_output_tree,
+                                               expected_disk_tree,
+                                               expected_status_tree)
+
+#----------------------------------------------------------------------
+
+# Testing part 1 of the "Greg Hudson" problem -- variation 2.  In this
+# test, we make sure that a file that is BOTH `deleted' and scheduled
+# for addition can be correctly committed & merged.
+
+def hudson_part_1_variation_2():
+  "hudson prob 1.2:  delete, commit, re-add, commit"
+
+  # Bootstrap:  make independent repo and working copy.
+  sbox = sandbox(hudson_part_1_variation_2)
+  wc_dir = os.path.join (svntest.main.general_wc_dir, sbox)
+
+  if svntest.actions.make_repo_and_wc(sbox): return 1
+
+  # Remove gamma from the working copy.
+  gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma') 
+  svntest.main.run_svn('rm', gamma_path)
+
+  # Create expected commit output.
+  output_list = [ [gamma_path, None, {}, {'verb' : 'Deleting' }] ]
+  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+  
+  # After committing, status should show no sign of gamma.
+  status_list = svntest.actions.get_virginal_status_list(wc_dir, '2')
+  for item in status_list:
+    item[3]['wc_rev'] = '1'
+  status_list.pop(path_index(status_list, gamma_path))
+  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+  
+  # Commit the deletion of gamma and verify.
+  if svntest.actions.run_and_verify_commit (wc_dir,
+                                            expected_output_tree,
+                                            expected_status_tree,
+                                            None, None, None, None, None,
+                                            wc_dir):
+    return 1
+
+  # Now gamma should be marked as `deleted' under the hood.
+  # Go ahead and re-add gamma, so that is *also* scheduled for addition.
+  svntest.main.run_svn('add', gamma_path)
+
+  # For sanity, examine status: it should show a revision 2 tree with
+  # gamma scheduled for addition.
+  status_list = svntest.actions.get_virginal_status_list(wc_dir, '2')
+  for item in status_list:
+    item[3]['wc_rev'] = '1'
+    if item[0] == gamma_path:
+      item[3]['wc_rev'] = '0'
+      item[3]['status'] = 'A '
+  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+
+  if svntest.actions.run_and_verify_status (wc_dir, expected_status_tree):
+    return 1
+
+  # Create expected commit output.
+  #   We should see messages that gamma is Deleting and then Adding,
+  #   which results in our "stacked" value of `Replacing'.
+  output_list = [ [gamma_path, None, {}, {'verb' : 'Replacing' }] ]
+  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+  
+  # After committing, status should show only gamma at revision 2.
+  status_list = svntest.actions.get_virginal_status_list(wc_dir, '2')
+  for item in status_list:
+    if item[0] != gamma_path:
+      item[3]['wc_rev'] = '1'
+  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+
+  return svntest.actions.run_and_verify_commit (wc_dir,
+                                                expected_output_tree,
+                                                expected_status_tree,
+                                                None, None, None, None, None,
+                                                wc_dir)
 
 
 ########################################################################
@@ -351,7 +554,10 @@ def nested_dir_replacements():
 test_list = [ None,
               commit_one_file,
               commit_unversioned_thing,
-              nested_dir_replacements
+              nested_dir_replacements,
+              hudson_part_1,
+              hudson_part_1_variation_1,
+              hudson_part_1_variation_2
              ]
 
 if __name__ == '__main__':
