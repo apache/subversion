@@ -32,6 +32,7 @@
 /*
 ** resource_t: identify the relevant pieces of a resource on the server
 **
+** PATH is the local path (from the WC or server-repository root)
 ** URL refers to the public/viewable/original resource.
 ** VSN_URL refers to the version resource that we stored locally
 ** WR_URL refers to a working resource for this resource
@@ -41,6 +42,7 @@
 */
 typedef struct
 {
+  const char *path;
   const char *url;
   const char *vsn_url;
   const char *wr_url;
@@ -71,6 +73,41 @@ typedef struct
 } file_baton_t;
 
 
+static svn_error_t * simple_request(svn_ra_session_t *ras, const char *method,
+                                    const char *url, int *code)
+{
+  http_req *req;
+  int rv;
+  http_status hstat;
+
+  /* create/prep the request */
+  req = http_request_create(ras->sess, "MKACTIVITY", url);
+  if (req == NULL)
+    {
+      return svn_error_createf(SVN_ERR_RA_CREATING_REQUEST, 0, NULL,
+                               ras->pool,
+                               "Could not create a request (%s %s)",
+                               method, url);
+    }
+
+  /* run the request and get the resulting status code. */
+  rv = http_request_dispatch(req, &hstat);
+  if (rv != HTTP_OK)
+    {
+      /* ### need to be more sophisticated with reporting the failure */
+      return svn_error_createf(SVN_ERR_RA_REQUEST_FAILED, 0, NULL,
+                               ras->pool,
+                               "The server request failed (#%d) (%s %s)",
+                               rv, method, url);
+    }
+
+  *code = hstat.code;
+
+  http_request_destroy(req);
+
+  return NULL;
+}
+
 static svn_error_t *
 create_activity (commit_ctx_t *cc)
 {
@@ -85,9 +122,7 @@ create_activity (commit_ctx_t *cc)
   apr_uuid_t uuid;
   char uuid_buf[APR_UUID_FORMATTED_LENGTH];
   svn_string_t uuid_str = { uuid_buf, sizeof(uuid_buf), 0, NULL };
-  int rv;
-  http_req *req;
-  http_status hstat;
+  int code;
 
   /* get the URL where we should create activities */
   SVN_ERR( svn_wc_prop_get(&activity_url, propname, path, cc->ras->pool) );
@@ -100,18 +135,9 @@ create_activity (commit_ctx_t *cc)
 
   cc->activity_url = activity_url->data;
 
-  /* create/prep the MKACTIVITY request */
-  req = http_request_create(cc->ras->sess, "MKACTIVITY", cc->activity_url);
-  if (req == NULL)
-    {
-      return svn_error_create(SVN_ERR_RA_CREATING_REQUEST, 0, NULL,
-                              cc->ras->pool,
-                              "Could not create the MKACTIVITY request");
-    }
-
-  /* run the request and get the resulting status code. */
-  rv = http_request_dispatch(req, &hstat);
-  if (hstat.code != 201)
+  /* do a MKACTIVITY request and get the resulting status code. */
+  SVN_ERR( simple_request(cc->ras, "MKACTIVITY", cc->activity_url, &code) );
+  if (code != 201)
     {
       /* ### need to be more sophisticated with reporting the failure */
       return svn_error_create(SVN_ERR_RA_MKACTIVITY_FAILED, 0, NULL,
@@ -119,21 +145,34 @@ create_activity (commit_ctx_t *cc)
                               "The MKACTIVITY request failed.");
     }
 
-  http_request_destroy(req);
-
   return NULL;
 }
 
-#if 0  /* With -Wall, we keep getting a warning that this is defined
-          but not used.  It aids Emacs reflexes to have no warnings at
-          all, so #if this out until it's actually used.  -kff*/  
 static svn_error_t *
-checkout_resource (commit_ctx_t *cc, const char *src_url, const char **wr_url)
+checkout_resource (commit_ctx_t *cc, const char *path, const char **wr_url)
 {
-  /* ### examine cc->workrsrc -- we may already have a WR */
+  resource_t *res = apr_hash_get(cc->resources, path, APR_HASH_KEY_STRING);
+
+  if (res != NULL && res->wr_url != NULL)
+    {
+      *wr_url = res->wr_url;
+      return NULL;
+    }
+
+  if (res == NULL)
+    {
+      res = apr_pcalloc(cc->ras->pool, sizeof(*res));
+      res->path = apr_pstrdup(cc->ras->pool, path);
+
+      /* ### construct res->url */
+      /* ### fetch vsn_url from the local prop store */
+    }
+
+  /* ### send a CHECKOUT resource on res->vsn_url; include cc->activity_url;
+     ### place result into res->wr_url and return it */
+
   return NULL;
 }
-#endif /* 0 */
 
 static svn_error_t *
 commit_replace_root (void *edit_baton, void **root_baton)
@@ -155,6 +194,32 @@ static svn_error_t *
 commit_delete (svn_string_t *name, void *parent_baton)
 {
   dir_baton_t *parent = parent_baton;
+  const char *workcol;
+  const char *child;
+#if 0
+  int code;
+#endif
+
+  /* get the URL to the working collection */
+  SVN_ERR( checkout_resource(parent->cc, parent->res.path, &workcol) );
+
+  /* create the URL for the child resource */
+  /* ### does the workcol have a trailing slash? do some extra work */
+  /* ### what if the child is already checked out? possible? */
+  child = apr_pstrcat(parent->cc->ras->pool, workcol, "/", name->data, NULL);
+
+#if 0
+  /* delete the child resource */
+  SVN_ERR( simple_request(parent->cc->ras, "DELETE", child, &code) );
+  if (code != 200)
+    {
+      /* ### need to be more sophisticated with reporting the failure */
+      return svn_error_createf(SVN_ERR_RA_DELETE_FAILED, 0, NULL,
+                               parent->cc->ras->pool,
+                               "Could not DELETE the resource corresponding "
+                               "to %s/%s", parent->res.path, name->data);
+    }
+#endif
 
   /* ### CHECKOUT parent collection, then DELETE */
   printf("[delete] CHECKOUT: %s\n[delete] DELETE: %s/%s\n",

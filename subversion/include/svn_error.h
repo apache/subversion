@@ -164,8 +164,14 @@ typedef enum svn_errno_t {
     /* could not create an HTTP request */
     SVN_ERR_RA_CREATING_REQUEST,
 
+    /* a request to the server failed in some way */
+    SVN_ERR_RA_REQUEST_FAILED,
+
     /* error making an Activity for the commit to the server */
     SVN_ERR_RA_MKACTIVITY_FAILED,
+
+    /* could not delete a resource on the server */
+    SVN_ERR_RA_DELETE_FAILED,
 
   /* End of ra_dav errors */
 
