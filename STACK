@@ -33,12 +33,15 @@ Ben todo:
      possible, once it exists.
 
 Karl working copy todo:
+   - get rid of gratuitous option requirements in client.  Don't need
+     --name and --value, rarely need --target, for example.
+   - make an is_textfile test, so at least we can create .alt files
+     instead of .rej for those that `patch' can't handle.
    - write the log/lock recovery function.
    - with Ben, review locking protocol in wc adm directories for sanity.
    - check apr_open calls, do they assume failure implies null handle?
    - fix working copy identification/allergy code
    - make sure type-changing replacements work right
-   - turn log.c:start_handler() into a dispatcher, like Ben described
    - do the generic entry/adm-path grabber abstraction, as talked
      about with Ben, change everyone around to use it (chore, whoa).
 
