@@ -1030,13 +1030,13 @@ The following repository access (RA) modules are available:
         basados en C, combinados con un lenguaje poderoso, flexible,
         es tan atractivo.</para>
 
-      <para>Let's look at an example that uses Subversion's Python
-        SWIG bindings.  Our example will do the same thing as our last
-        example.  Note the difference in size and complexity of the
-        function this time!</para>
+      <para>Echemos un vistazo a un ejemplo que usa los envoltorios
+        SWIG de Subversion para Python. Nuestro ejemplo hará
+        exáctamente lo mismo que el último. ¡Fíjese en la diferencia
+        de tamaño y complejidad de esta versión de la función!</para>
 
       <example id="svn-ch-8-sect-2.3-ex-1">
-        <title>Using the Repository Layer with Python</title>
+        <title>Usando la capa de repositorio con Python</title>
 
         <programlisting>
 from svn import fs
@@ -1074,16 +1074,17 @@ def crawl_filesystem_dir (root, directory, pool):
 </programlisting>
       </example>
 
-      <para>An implementation in C of the previous example would
-        stretch on quite a bit longer.  The same routine in C would
-        need to pay close attention to memory usage, and need to use
-        custom datatypes for representing the hash of entries and the
-        list of paths.  Python has hashes (called
-        <quote>dictionaries</quote>) and lists as built-in datatypes,
-        and provides a wonderful selection of methods for operating on
-        those types.  And since Python uses reference counting and
-        garbage collection, users of the language don't have to bother
-        themselves with allocating and freeing memory.</para>
+      <para>Una implementación en C del ejemplo anterior se alargaría
+        bastante más. La misma rutina en C necesitaría prestar
+        especial atención al uso de la memoria, y tendría que usar
+        tipos de datos de propios para representar las tablas hash
+        y la lista de rutas. Python tiene tablas hash (llamadas
+        <quote>diccionarios</quote>) y listas como tipos de datos
+        nativos, y proporciona una maravillosa selección de métodos
+        para operar sobre esos tipos de datos. Y dado que Python
+        usa recolección de basura y recuento de referencias,
+        los usuarios del lenguaje no necesitan preocuparse con la
+        reserva y liberación de memoria.</para>
 
       <para>In the previous section of this chapter, we mentioned the
         <filename>libsvn_client</filename> interface, and how it
