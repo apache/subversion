@@ -110,109 +110,104 @@ check_existence (svn_string_t *path,
 #define SVN_DIR_SEPARATOR '/'
 
 
-/* Return a path from a delta stack. */
-static svn_string_t *
-delta_stack_to_path (svn_delta_stackframe_t *stack, apr_pool_t *pool)
+static svn_error_t *
+delete (svn_string_t *name, void *walk_baton, void *parent_baton)
 {
-  svn_delta_stackframe_t *p = stack;
-  svn_string_t *path;
-
-  /* Start out with an empty path... */
-  path = svn_string_create ("", pool);
-
-  /* ... then walk down the stack appending to it. */
-  while (p)
-    {
-      if (p->kind == svn_XML_content) /* "<dir ...>" or "<file ...>" */
-        {
-          if (! svn_string_isempty (path))
-            {
-              char dirsep = SVN_DIR_SEPARATOR;
-              svn_string_appendbytes (path, &dirsep, 1, pool);
-            }
-
-          svn_string_appendstr (path, p->previous->name, pool);
-
-          if (p->content_kind == svn_content_file)
-            break;
-        }
-
-      p = p->next;
-    }
-
-  return path;
 }
 
 
 static svn_error_t *
-update_dir_handler (svn_delta_digger_t *diggy, svn_delta_stackframe_t *frame)
+entry_pdelta (svn_string_t *name,
+              void *walk_baton, void *parent_baton,
+              svn_pdelta_t *entry_pdelta)
 {
-  svn_delta_stackframe_t *stack = diggy->stack;
-  svn_string_t *dir = delta_stack_to_path (stack, diggy->pool);
-
-  if (! dir)
-    {
-      /* kff todo: make an error */
-      printf ("Unable to get a dir.\n");
-    }
-
-  /* Else, make the directory. */
-  printf ("Got dir \"%s\".\n", dir->data);  /* kff todo */
-
-  return 0;
 }
 
 
+static svn_error_t *
+add_directory (svn_string_t *name,
+               void *walk_baton, void *parent_baton,
+               svn_string_t *base_path,
+               svn_version_t base_version,
+               svn_pdelta_t *pdelta,
+               void **child_baton)
+{
+}
 
-/* Do an update/checkout, with src delta streaming from SRC, to DST (a path).
+
+static svn_error_t *
+replace_directory (svn_string_t *name,
+                   void *walk_baton, void *parent_baton,
+                   svn_string_t *base_path,
+                   svn_version_t base_version,
+                   svn_pdelta_t *pdelta,
+                   void **child_baton)
+{
+}
+
+
+static svn_error_t *
+finish_directory (void *child_baton)
+{
+}
+
+
+static svn_error_t *
+add_file (svn_string_t *name,
+          void *walk_baton, void *parent_baton,
+          svn_string_t *base_path,
+          svn_version_t base_version,
+          svn_pdelta_t *pdelta,
+          svn_delta_handler_t **handler,
+          void **handler_baton)
+{
+}
+
+
+static svn_error_t *
+replace_file (svn_string_t *name,
+              void *walk_baton, void *parent_baton,
+              svn_string_t *base_path,
+              svn_version_t base_version,
+              svn_pdelta_t *pdelta,
+              svn_delta_handler_t *handler,
+              void *handler_baton)
+{
+}
+
+
+
+/* Apply a delta to a working copy, or to create a working copy.
  * 
- * SRC must be already opened.
- * 
- * If DST exists and is a working copy, or a subtree of a working
+ * If TARGET exists and is a working copy, or a subtree of a working
  * copy, then it is massaged into the updated state.
  *
- * If DST does not exist, a working copy is created there.
+ * If TARGET does not exist, a working copy is created there.
  *
- * If DST exists but is not a working copy, return error.
+ * If TARGET exists but is not a working copy, return error.
  *
- * (And if DST is NULL, the above rules apply with DST set to the top
- * directory mentioned in the delta.) 
- *
- * kff todo: instead of apr_file_t *SRC, use a generic streamer like
- * JimB made for the text delta interface.
+ * todo: if TARGET == NULL, above rules apply with TARGET set to
+ * the top directory mentioned in the delta?
  */
-
-/* TODO: abstractify the whole process of creating an expat parser
-object and calling XML_Parse().  The caller should be doing nothing
-but passing some stream data to a routine, and this routine is in
-charge of creating/using whatever parser object is necessary to do the
-job. */
-
 svn_error_t *
-update (apr_file_t *src, svn_string_t *dst, apr_pool_t *pool)
+svn_wc_apply_delta (svn_delta_stream_t *src, 
+                    svn_delta_read_fn_t *read_fn,
+                    svn_string_t *target,
+                    apr_pool_t *pool)
 {
   char buf[BUFSIZ];
   apr_status_t err;
+  svn_delta_walk_t walker;
   int len;
-  int done;
-  svn_delta_digger_t diggy;
-  XML_Parser parsimonious;
 
-  /* Init everything to null. */
-  memset (&diggy, '\0', sizeof (diggy));
-
-  diggy.pool = pool;
-  diggy.dir_handler = update_dir_handler;
-
-  /* Make a parser with the usual shared handlers and diggy as userData. */
-  parsimonious = svn_delta_make_xml_parser (&diggy);
-
-  /* Check existence of DST.  If present, just error out for now -- we
-     can't do real updates, only fresh checkouts. */
-  if (dst)
+  /* Check existence of TARGET.  If present, just error out for now -- we
+     can't do real updates, only fresh checkouts.  In the future, if
+     TARGET exists we'll check if it's a working copy and only error
+     out if it's not. */
+  if (target)
     {
       svn_error_t *err;
-      err = check_existence (dst, SVN_ERR_OBSTRUCTED_UPDATE, pool);
+      err = check_existence (target, SVN_ERR_OBSTRUCTED_UPDATE, pool);
 
       /* Whether or not err->apr_err == SVN_ERR_OBSTRUCTED_UPDATE, we
          want to return it to caller. */
@@ -220,31 +215,21 @@ update (apr_file_t *src, svn_string_t *dst, apr_pool_t *pool)
         return err;
     }
 
-
   /* Else nothing in the way, so continue. */
 
-  do {
-    /* Grab some stream. */
-    err = apr_full_read (src, buf, sizeof (buf), &len);
-    done = (len < sizeof (buf));
-    
-    /* Parse the chunk of stream. */
-    if (! XML_Parse (parsimonious, buf, len, done))
-    {
-      svn_error_t *err
-        = svn_create_error
-        (SVN_ERR_MALFORMED_XML, 0,
-         apr_psprintf (pool, "%s at line %d",
-                       XML_ErrorString (XML_GetErrorCode (parsimonious)),
-                       XML_GetCurrentLineNumber (parsimonious)),
-         NULL, pool);
-      XML_ParserFree (parsimonious);
-      return err;
-    }
-  } while (! done);
+  /* Set up the walker callbacks... */
+  walker.delete            = delete;
+  walker.entry_pdelta      = entry_pdelta;  /* kff todo */
+  walker.add_directory     = add_directory;
+  walker.replace_directory = replace_directory;
+  walker.finish_directory  = finish_directory;
+  walker.add_file          = add_file;
+  walker.replace_file      = replace_file;
 
-  XML_ParserFree (parsimonious);
-  return 0;
+  /* ... and walk! */
+  err = svn_delta_parse (read_fn, src, &walker, walk_baton, dir_baton, pool);
+
+  return err;
 }
 
 

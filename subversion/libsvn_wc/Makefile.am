@@ -8,7 +8,7 @@
 lib_LTLIBRARIES = libsvn_wc.la
 
 ## Sources needed to build each library (names canonicalized)
-libsvn_wc_la_SOURCES = update.c
+libsvn_wc_la_SOURCES = apply_delta.c
 
 ## Build flags ---------
 
