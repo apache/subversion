@@ -277,42 +277,11 @@ svn_error_t *svn_fs_berkeley_recover (const char *path,
 typedef svn_revnum_t svn_fs_id_t;
 
 
-/* Return the number of components in ID, not including the final -1.  */
-int svn_fs_id_length (const svn_fs_id_t *id);
-
-
-/* Return non-zero iff the node or node revision ID's A and B are equal.  */
-int svn_fs_id_eq (const svn_fs_id_t *a, const svn_fs_id_t *b);
-
-
-/* Return non-zero iff node revision A is an ancestor of node revision B.  
-   If A == B, then we consider A to be an ancestor of B.  */
-int svn_fs_id_is_ancestor (const svn_fs_id_t *a, const svn_fs_id_t *b);
-
-
-/* Return true iff PARENT is a direct parent of CHILD.  */
-int svn_fs_is_parent (const svn_fs_id_t *parent,
-                      const svn_fs_id_t *child);
-
 
 /* Return the distance between node revisions A and B.  Return -1 if
    they are completely unrelated.  */
 int svn_fs_id_distance (const svn_fs_id_t *a, const svn_fs_id_t *b);
 
-
-/* Return a copy of ID, allocated from POOL.  */
-svn_fs_id_t *svn_fs_copy_id (const svn_fs_id_t *id, apr_pool_t *pool);
-
-
-/* Return the predecessor id to ID, allocated in POOL.  If there is no
-   possible predecessor id, return NULL.
-
-   Does not check that the predecessor id is actually present in the
-   filesystem.
-
-   Does not check that ID is a valid node revision ID.  If you pass in
-   something else, the results are undefined.  */
-svn_fs_id_t *svn_fs_predecessor_id (const svn_fs_id_t *id, apr_pool_t *pool);
 
 
 /* Perform an exhaustive traversal through node-id and copy-from
@@ -630,6 +599,28 @@ const char *svn_fs_txn_root_name (svn_fs_root_t *root,
    Otherwise, return -1.  */
 svn_revnum_t svn_fs_revision_root_revision (svn_fs_root_t *root);
 
+
+/* If PATH in TXN_ROOT matches the specified ID, then set MATCHES to
+   true (1). Otherwise, set MATCHES to zero.
+
+   In essence, this function answers the question, "I want to change
+   node ID. Is that the node which is present in TXN_ROOT?" If the
+   TXN_ROOT is based on the youngest (head) revision, then this test
+   is essentially a test for out-of-dateness.
+
+   Note that a small compensation is made for asking to change a
+   directory identified by ID, but where the directory's id in the
+   TXN_ROOT is different because it was modified by the bubble-up
+   algorithm of a change below the directory. Since there were no
+   semantic changes, this function deems the bubbled-up directory
+   to match the specified ID, and returns MATCHES := 1.
+
+   All temporary allocation is performed in POOL.  */
+svn_error_t *svn_fs_txn_path_is_id (int *matches,
+                                    svn_fs_root_t *txn_root,
+                                    const char *path,
+                                    const svn_fs_id_t *id,
+                                    apr_pool_t *pool);
 
 
 /* Directory entry names and directory paths.  */

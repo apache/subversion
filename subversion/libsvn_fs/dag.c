@@ -17,11 +17,13 @@
 
 #include <string.h>
 #include <assert.h>
+
 #include "svn_pools.h"
 #include "svn_path.h"
 #include "svn_time.h"
 #include "svn_error.h"
 #include "svn_fs.h"
+
 #include "dag.h"
 #include "err.h"
 #include "fs.h"
@@ -35,6 +37,7 @@
 #include "skel.h"
 #include "trail.h"
 #include "validate.h"
+#include "id.h"
 
 
 /* Initializing a filesystem.  */
@@ -258,7 +261,7 @@ svn_fs__dag_get_node (dag_node_t **node,
   /* Construct the node. */
   new_node = apr_pcalloc (trail->pool, sizeof (*new_node));
   new_node->fs = fs;
-  new_node->id = svn_fs_copy_id (id, trail->pool); 
+  new_node->id = svn_fs__id_copy (id, trail->pool); 
   new_node->pool = trail->pool;
 
   /* Grab the contents so we can inspect the node's kind. */
@@ -1045,7 +1048,7 @@ svn_fs__dag_clone_root (dag_node_t **root_p,
   /* Oh, give me a clone...
      (If they're the same, we haven't cloned the transaction's root
      directory yet.)  */
-  if (svn_fs_id_eq (root_id, base_root_id)) 
+  if (svn_fs__id_eq (root_id, base_root_id)) 
     {
       /* Of my own flesh and bone...
          (Get the NODE-REVISION skel for the base node, and then write
@@ -1604,7 +1607,7 @@ svn_fs__dag_dup (dag_node_t *node,
 
   new_node->fs = node->fs;
   new_node->pool = trail->pool;
-  new_node->id = svn_fs_copy_id (node->id, node->pool);
+  new_node->id = svn_fs__id_copy (node->id, node->pool);
   new_node->kind = node->kind;
 
   /* Leave new_node->node_revision zero for now, so it'll get read in.

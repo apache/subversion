@@ -28,7 +28,7 @@
 
 
 int
-svn_fs_id_length (const svn_fs_id_t *id)
+svn_fs__id_length (const svn_fs_id_t *id)
 {
   int len;
 
@@ -42,7 +42,7 @@ svn_fs_id_length (const svn_fs_id_t *id)
 /* Comparing node ID's.  */
 
 int
-svn_fs_id_eq (const svn_fs_id_t *a, const svn_fs_id_t *b)
+svn_fs__id_eq (const svn_fs_id_t *a, const svn_fs_id_t *b)
 {
   int i;
 
@@ -55,7 +55,7 @@ svn_fs_id_eq (const svn_fs_id_t *a, const svn_fs_id_t *b)
 
 
 int
-svn_fs_id_is_ancestor (const svn_fs_id_t *a, const svn_fs_id_t *b)
+svn_fs__id_is_ancestor (const svn_fs_id_t *a, const svn_fs_id_t *b)
 {
   int i = 0;
 
@@ -147,8 +147,8 @@ svn_fs_id_distance (const svn_fs_id_t *a, const svn_fs_id_t *b)
 
 
 int
-svn_fs_is_parent (const svn_fs_id_t *parent,
-                  const svn_fs_id_t *child)
+svn_fs__id_is_parent (const svn_fs_id_t *parent,
+                      const svn_fs_id_t *child)
 {
   int i;
 
@@ -263,13 +263,11 @@ svn_fs_unparse_id (const svn_fs_id_t *id,
 /* Copying ID's.  */
 
 svn_fs_id_t *
-svn_fs_copy_id (const svn_fs_id_t *id, apr_pool_t *pool)
+svn_fs__id_copy (const svn_fs_id_t *id, apr_pool_t *pool)
 {
-  apr_size_t id_size = (svn_fs_id_length (id) + 1) * sizeof (id[0]);
-  svn_fs_id_t *copy = apr_palloc (pool, id_size);
-  memcpy (copy, id, id_size);
-  
-  return copy;
+  return apr_pmemdup (pool,
+                      id,
+                      (svn_fs__id_length (id) + 1) * sizeof (id[0]));
 }
 
 
@@ -279,16 +277,16 @@ svn_fs_copy_id (const svn_fs_id_t *id, apr_pool_t *pool)
 /* ### kff todo: might it be a good thing to abstract out the
    successor logic from svn_fs__new_successor_id() and put it in a
    function here, svn_fs_successor_id(), to match
-   svn_fs_predecessor_id()?  Investigate. */
+   svn_fs__id_predecessor()?  Investigate. */
 
 svn_fs_id_t *
-svn_fs_predecessor_id (const svn_fs_id_t *id, apr_pool_t *pool)
+svn_fs__id_predecessor (const svn_fs_id_t *id, apr_pool_t *pool)
 {
   svn_fs_id_t *predecessor_id;
   int len;
 
-  len = svn_fs_id_length (id);
-  predecessor_id = svn_fs_copy_id (id, pool);
+  len = svn_fs__id_length (id);
+  predecessor_id = svn_fs__id_copy (id, pool);
 
   predecessor_id[len - 1]--;
 
@@ -358,7 +356,7 @@ svn_fs_check_related (int *related,
     }
 
   /* Copy YOUNGER so we can possible tweak it later. */
-  tmp_id = svn_fs_copy_id (younger, pool);
+  tmp_id = svn_fs__id_copy (younger, pool);
 
   /* Now, we loop here from TMP_ID, through each of its predecessors,
      until no predecessors exist, trying to find some relationship to
@@ -370,7 +368,7 @@ svn_fs_check_related (int *related,
       svn_fs_root_t *root;
       svn_stringbuf_t *id_str = svn_fs_unparse_id (tmp_id, pool);
       svn_fs_id_t *copy_id;
-      int len = svn_fs_id_length (tmp_id);
+      int len = svn_fs__id_length (tmp_id);
 
       /* See if OLDER is a copy of another node. */
       svn_fs_id_root (&root, fs, pool);

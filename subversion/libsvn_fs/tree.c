@@ -647,7 +647,7 @@ txn_body_node_id (void *baton, trail_t *trail)
   dag_node_t *node;
 
   SVN_ERR (get_dag (&node, args->root, args->path, trail));
-  *args->id_p = svn_fs_copy_id (svn_fs__dag_get_id (node), trail->pool);
+  *args->id_p = svn_fs__id_copy (svn_fs__dag_get_id (node), trail->pool);
 
   return SVN_NO_ERROR;
 }
@@ -1148,7 +1148,7 @@ merge (const char **conflict_p,
   ancestor_id = svn_fs__dag_get_id (ancestor);
 
   /* It's improper to call this function with ancestor == target. */
-  if (svn_fs_id_eq (ancestor_id, target_id))
+  if (svn_fs__id_eq (ancestor_id, target_id))
     {
       svn_stringbuf_t *id_str = svn_fs_unparse_id (target_id, trail->pool);
       return svn_error_createf
@@ -1163,8 +1163,8 @@ merge (const char **conflict_p,
    * Either no change made in source, or same change as made in target.
    * Both mean nothing to merge here.
    */
-  if (svn_fs_id_eq (ancestor_id, source_id)
-      || (svn_fs_id_eq (source_id, target_id)))
+  if (svn_fs__id_eq (ancestor_id, source_id)
+      || (svn_fs__id_eq (source_id, target_id)))
     return SVN_NO_ERROR;
 
   /* Else proceed, knowing all three are distinct node revisions.
@@ -1304,14 +1304,15 @@ merge (const char **conflict_p,
           && (t_entry = apr_hash_get (t_entries, key, klen)))
         {
           /* If source entry has changed since ancestor entry... */
-          if (! svn_fs_id_eq (a_entry->id, s_entry->id))
+          if (! svn_fs__id_eq (a_entry->id, s_entry->id))
             {
               /* ... and if target entry has not changed,
                  - OR - if target descends from ancestor, and source
                  descends from target... */
-              if ( (svn_fs_id_eq (a_entry->id, t_entry->id))
-                   || ( (svn_fs_id_is_ancestor(a_entry->id, t_entry->id)) 
-                        && (svn_fs_id_is_ancestor(t_entry->id, s_entry->id))) )
+              if ( (svn_fs__id_eq (a_entry->id, t_entry->id))
+                   || ( (svn_fs__id_is_ancestor(a_entry->id, t_entry->id)) 
+                        && (svn_fs__id_is_ancestor(t_entry->id,
+                                                   s_entry->id))) )
                 {
                   /* ### kff todo: what about svn_fs__dag_link()
                      instead of svn_fs__dag_set_entry()?  The cycle
@@ -1337,7 +1338,7 @@ merge (const char **conflict_p,
                 }
               /* or if target entry is different from both and
                  unrelated to source, and all three entries are dirs... */
-              else if (! svn_fs_id_is_ancestor (s_entry->id, t_entry->id))
+              else if (! svn_fs__id_is_ancestor (s_entry->id, t_entry->id))
                 {
                   dag_node_t *s_ent_node, *t_ent_node, *a_ent_node;
                   const char *new_tpath;
@@ -1460,7 +1461,7 @@ merge (const char **conflict_p,
         {
           /* If E changed between ancestor and source, then that
              conflicts with E's having been removed from target. */
-          if (! svn_fs_id_eq (a_entry->id, s_entry->id))
+          if (! svn_fs__id_eq (a_entry->id, s_entry->id))
             {
               *conflict_p = path_append (target_path, a_entry->name,
                                          trail->pool);
@@ -1476,7 +1477,7 @@ merge (const char **conflict_p,
       else if ((t_entry = apr_hash_get (t_entries, key, klen))
                && (! apr_hash_get (s_entries, key, klen)))
         {
-          if (svn_fs_id_eq (t_entry->id, a_entry->id))
+          if (svn_fs__id_eq (t_entry->id, a_entry->id))
             {
               /* If E is same in target as ancestor, then it has not
                  changed, and the deletion in source should be
@@ -1559,7 +1560,7 @@ merge (const char **conflict_p,
                    (target, s_entry->name, s_entry->id, trail));
         }
       /* E exists in target but is different from E in source */
-      else if (! svn_fs_id_is_ancestor (s_entry->id, t_entry->id))
+      else if (! svn_fs__id_is_ancestor (s_entry->id, t_entry->id))
         {
           *conflict_p = path_append (target_path, t_entry->name, trail->pool);
           return svn_error_createf
@@ -1633,7 +1634,7 @@ txn_body_merge (void *baton, trail_t *trail)
                                           txn_name, trail));
     }
   
-  if (svn_fs_id_eq (svn_fs__dag_get_id (ancestor_node),
+  if (svn_fs__id_eq (svn_fs__dag_get_id (ancestor_node),
                     svn_fs__dag_get_id (txn_root_node)))
     {
       /* If no changes have been made in TXN since its current base,
@@ -1741,7 +1742,7 @@ txn_body_commit (void *baton, trail_t *trail)
      for the other.  We can certainly do the comparison we need, but
      it would be nice to grab the same type of information from the
      start, instead of having to transform one of them. */ 
-  if (! svn_fs_id_eq (y_rev_root_id, svn_fs__dag_get_id (txn_base_root_node)))
+  if (! svn_fs__id_eq (y_rev_root_id, svn_fs__dag_get_id (txn_base_root_node)))
     {
       svn_stringbuf_t *id_str = svn_fs_unparse_id (y_rev_root_id, trail->pool);
       return svn_error_createf
@@ -2790,7 +2791,7 @@ txn_body_revisions_changed (void *baton, trail_t *trail)
         {
           svn_revnum_t revision;
           dag_node_t *node;
-          int len = svn_fs_id_length (tmp_id);
+          int len = svn_fs__id_length (tmp_id);
 
           /* Get the dag node for this id. */
           SVN_ERR (svn_fs__dag_get_node (&node, args->fs, tmp_id, trail));
@@ -2855,7 +2856,7 @@ svn_fs_revisions_changed (apr_array_header_t **revs,
     {
       this_path = APR_ARRAY_IDX(paths, i, const char *);
       SVN_ERR (svn_fs_node_id (&tmp_id, root, this_path, subpool));
-      *((svn_fs_id_t **) apr_array_push (args.ids)) = svn_fs_copy_id(tmp_id, subpool);
+      *((svn_fs_id_t **) apr_array_push (args.ids)) = svn_fs__id_copy(tmp_id, subpool);
     }
 
   /* Call the real function under the umbrella of a trail. */
@@ -2980,6 +2981,70 @@ svn_fs_id_root (svn_fs_root_t **root_p,
   return SVN_NO_ERROR;
 }
 
+
+svn_error_t *svn_fs_txn_path_is_id (int *matches,
+                                    svn_fs_root_t *txn_root,
+                                    const char *path,
+                                    const svn_fs_id_t *id,
+                                    apr_pool_t *pool)
+{
+  svn_fs_id_t *res_id;
+
+  /* get the ID of PATH within the TXN */
+  SVN_ERR_W (svn_fs_node_id (&res_id, txn_root, path, pool),
+             "could not fetch the node ID of the path within the"
+             "transaction tree.");
+
+  /* Assume the path/id match, unless we find out otherwise. */
+  *matches = 1;
+
+  if (!svn_fs__id_eq(res_id, id))
+    {
+      svn_boolean_t okay = FALSE;
+
+      /* The provided ID does not match the ID of the node in the
+         transaction tree. However, there is a special exception case:
+
+         If the nodes are directories, and the transaction's node is
+         an immediate child of the requested node, then we're okay.
+         The issue is that we generate a child for the directory when
+         it goes from an immutable node in a revision root, into a
+         mutable node in the transaction root. We should not consider
+         this a change, and there would be no way for the client to
+         check out the transaction root's directory node anyway.
+
+         Files do not have this behavior because they are not spuriously
+         placed into the transaction root (directories are because of
+         the bubble up algorithm). The only time a file will shift is
+         when a true change is being made, and we will see that when the
+         caller makes it happen.
+      */
+      if (svn_fs__id_is_parent (id, res_id))
+        {
+          int is_dir;
+          svn_error_t *err;
+
+          err = svn_fs_is_dir (&is_dir, txn_root, path, pool);
+          if (err == NULL)
+            {
+              okay = is_dir;
+            }
+          else
+            {
+              /* ignore the error and go with the "not matching" msg */
+              /* ### this needs to get changed... */
+              /* svn_error_clear_all (err); */
+            }
+        }
+
+      if (!okay)
+        {
+          *matches = 0;
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
 
 
 /* 
