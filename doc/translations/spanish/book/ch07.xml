@@ -343,19 +343,20 @@ collabnet = svn.collab.net
           <varlistentry>
             <term><literal>http-proxy-host</literal></term>
             <listitem>
-              <para>This specifies the hostname of the proxy computer
-                through which your HTTP-based Subversion requests must
-                pass.  It defaults to an empty value, which means that
-                Subversion will not attempt to route HTTP requests
-                through a proxy computer, and will instead attempt to
-                contact the destination machine directly.</para>
+              <para>Especifica el nombre del ordenador proxy por el
+                cual deben pasar sus peticiones Subversion basadas en
+                HTTP. Por defecto es un valor vacío, lo que significa
+                que Subversion no intentará enrutar peticiones HTTP
+                por un ordenador proxy, y que en su lugar intentará
+                contactar la máquina destino directamente.</para>
             </listitem>
           </varlistentry>
           <varlistentry>
             <term><literal>http-proxy-port</literal></term>
             <listitem>
-              <para>This specifies the port number on the proxy host
-                to use.  It defaults to an empty value.</para>
+              <para>Especifica el número de puerto del ordenador
+                proxy que debe usar. Por defecto es un valor
+                vacío.</para>
             </listitem>
           </varlistentry>
           <varlistentry>
