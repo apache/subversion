@@ -522,11 +522,22 @@ doc-clean:
 .dvi.pdf:
 	$(DVIPDF) $< $@
 
-.po.spo:
-	sed '/^"Content-Type: text\/plain; charset=UTF-8\\n"$$/d' $< > $@
+# Strip the Content-Type: header from the po file if we don't have a
+# gettext that supports bind_textdomain_codeset, so it doesn't try
+# to convert our UTF-8 .po files to the locale encoding.
+@NO_GETTEXT_CODESET@.po.spo:
+@NO_GETTEXT_CODESET@	sed \
+@NO_GETTEXT_CODESET@	'/^"Content-Type: text\/plain; charset=UTF-8\\n"$$/d' \
+@NO_GETTEXT_CODESET@	$< > $@
 
-.spo.mo:
-	$(MSGFMT) -o $@ $<
+@NO_GETTEXT_CODESET@.spo.mo:
+@NO_GETTEXT_CODESET@	$(MSGFMT) -o $@ $<
+
+# For systems with bind_textdomain_codeset, just leave the Content-Type:
+# header alone.
+@GETTEXT_CODESET@.po.mo:
+@GETTEXT_CODESET@	$(MSGFMT) -o $@ $<
+
 
 install-docs: install-man @INSTALL_INFO@
 

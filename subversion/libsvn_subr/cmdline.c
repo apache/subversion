@@ -165,6 +165,9 @@ svn_cmdline_init (const char *progname, FILE *error_stream)
   }
 #else
   bindtextdomain(PACKAGE_NAME, SVN_LOCALE_DIR);
+#ifdef HAVE_BIND_TEXTDOMAIN_CODESET
+  bind_textdomain_codeset(PACKAGE_NAME, "UTF-8");
+#endif
 #endif
   textdomain(PACKAGE_NAME);
 #endif
