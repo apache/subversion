@@ -44,7 +44,7 @@ def putfile(pool, fname, rpath, uname="", commitmsg=""):
                                 handler, baton,
                                 pool)
 
-  newrev = repos.svn_repos_fs_commit_txn(repos_ptr, txn)
+  newrev = repos.svn_repos_fs_commit_txn(repos_ptr, txn, pool)
   print "revision: ", newrev
 
 def usage():
