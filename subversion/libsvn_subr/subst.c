@@ -41,6 +41,7 @@
 #include "svn_io.h"
 #include "svn_hash.h"
 #include "svn_subst.h"
+#include "svn_pools.h"
 
 void 
 svn_subst_eol_style_from_value (svn_subst_eol_style_t *style,
@@ -707,33 +708,44 @@ svn_subst_copy_and_translate (const char *src,
                               svn_boolean_t expand,
                               apr_pool_t *pool)
 {
-  const char *dst_tmp;
+  const char *dst_tmp = NULL;
   svn_stream_t *src_stream, *dst_stream;
   apr_file_t *s = NULL, *d = NULL;  /* init to null important for APR */
   svn_error_t *err;
+  apr_pool_t *subpool;
 
   /* The easy way out:  no translation needed, just copy. */
   if (! (eol_str || keywords))
     return svn_io_copy_file (src, dst, FALSE, pool);
 
+  subpool = svn_pool_create (pool);
+
   /* Open source file. */
-  SVN_ERR (svn_io_file_open (&s, src, APR_READ | APR_BUFFERED,
-                             APR_OS_DEFAULT, pool));
+  err = svn_io_file_open (&s, src, APR_READ | APR_BUFFERED,
+                          APR_OS_DEFAULT, subpool);
+  if (err)
+    goto error;
 
   /* For atomicity, we translate to a tmp file and
      then rename the tmp file over the real destination. */
 
-  SVN_ERR (svn_io_open_unique_file (&d, &dst_tmp, dst,
-                                    ".tmp", FALSE, pool));
+  err = svn_io_open_unique_file (&d, &dst_tmp, dst,
+                                 ".tmp", FALSE, subpool);
+
+  /* Move the file name to a more permanent pool. */
+  if (dst_tmp)
+    dst_tmp = apr_pstrdup(pool, dst_tmp);
+
+  if (err)
+    goto error;
 
   /* Now convert our two open files into streams. */
-  src_stream = svn_stream_from_aprfile (s, pool);
-  dst_stream = svn_stream_from_aprfile (d, pool);
+  src_stream = svn_stream_from_aprfile (s, subpool);
+  dst_stream = svn_stream_from_aprfile (d, subpool);
 
   /* Translate src stream into dst stream. */
   err = svn_subst_translate_stream (src_stream, dst_stream,
                                     eol_str, repair, keywords, expand);
-
   if (err)
     goto error;
 
@@ -746,23 +758,26 @@ svn_subst_copy_and_translate (const char *src,
   if (err)
     goto error;
 
-  err = svn_io_file_close (s, pool);
+  err = svn_io_file_close (s, subpool);
   if (err)
     goto error;
 
-  err = svn_io_file_close (d, pool);
+  err = svn_io_file_close (d, subpool);
   if (err)
-    goto error; 
+    goto error;
 
   /* Now that dst_tmp contains the translated data, do the atomic rename. */
-  err = svn_io_file_rename (dst_tmp, dst, pool);
+  err = svn_io_file_rename (dst_tmp, dst, subpool);
   if (err)
     goto error;
 
+  svn_pool_destroy (subpool);
   return SVN_NO_ERROR;
- error:
-  svn_error_clear (svn_io_remove_file (dst_tmp, pool));
 
+ error:
+  svn_pool_destroy (subpool);   /* Make sure all files are closed first. */
+  if (dst_tmp)
+    svn_error_clear (svn_io_remove_file (dst_tmp, pool));
   return err;
 }
 
