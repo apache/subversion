@@ -141,13 +141,10 @@ static svn_error_t *send_response(mr_baton *baton, svn_boolean_t is_dir)
                        "</D:response>" DEBUG_CR,
                        NULL);
 
-  /* ### this is bogus. ap_fputstrs() returns # chars, not a status...
-     ### however, it *should*, so let's leave this here for now. */
-#if 0
   if (status != APR_SUCCESS)
     return svn_error_create(status, 0, NULL, baton->pool,
                             "could not write response to output");
-#endif
+
   return APR_SUCCESS;
 }
 
