@@ -78,7 +78,6 @@ revision.  Fields in [braces] are optional, and unknown headers are
 always ignored, for backwards compatibility.
 
 Revision-number: N
-[Revision-content-md5: blob]
 Prop-content-length: P
 Content-length: L
 
@@ -91,8 +90,8 @@ Node-kind: file | dir  (1)
 Node-action: change | add | delete | replace
 [Node-copyfrom-rev: X]
 [Node-copyfrom-path: /path ]
-[Node-copy-source-md5: blob] (2)
-[Node-content-md5: blob]
+[Text-copy-source-md5: blob] (2)
+[Text-content-md5: blob]
 [Text-content-length: T]
 [Prop-content-length: P]
 Content-length: Y (3)
@@ -102,7 +101,7 @@ Content-length: Y (3)
    total length (including formatting) is Prop-content-length, and is
    included in Node-content-length.  The "PROPS-END\n" line always
    terminates the property section if there are props.  The remainder
-   of the Y bytes (expected to be equivalent to Text-content-length]
+   of the Y bytes (expected to be equivalent to Text-content-length)
    represent the contents of the node.
 
 
