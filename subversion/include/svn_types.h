@@ -93,6 +93,42 @@ typedef enum
 
 } svn_node_kind_t;
 
+/** About Special Files in Subversion
+ *
+ * Subversion denotes files that cannot be portably created or
+ * modified as special files (svn_node_special).  It stores these
+ * files in the repository as a plain text file with the svn:special
+ * property set.  The file contents contain: a platform-specific type
+ * string, a space character, then any information necessary to create
+ * the file on a supported platform.  For example, if a symbolic link
+ * were being represented, the repository file would have the
+ * following contents:
+ *
+ * "link /path/to/link/target"
+ *
+ * Where 'link' is the identifier string showing that this special
+ * file should be a symbolic link and '/path/to/link/target' is the
+ * destination of the symbolic link.
+ *
+ * Special files are stored in the text-base exactly as they are
+ * stored in the repository.  The platform specific files are created
+ * in the working copy at EOL/keyword translation time using
+ * svn_subst_copy_and_translate2.  If the current platform does not
+ * support a specific special file type, the file is copied into the
+ * working copy as it is seen in the repository.  Because of this,
+ * users of other platforms can still view and modify the special
+ * files, even if they do not have their unique properties.
+ *
+ * New types of special files can be added by:
+ *  1. Implementing a platform-dependent routine to create a uniquely
+ *     named special file and one to read the special file in
+ *     libsvn_subr/io.c.
+ *  2. Creating a new textual name similar to
+ *     SVN_SUBST__SPECIAL_LINK_STR in libsvn_subr/subst.c.
+ *  3. Handling the translation/detranslation case for the new type in
+ *     create_special_file and detranslate_special_file, using the
+ *     routines from 1.
+ */
 
 /** A revision number. */
 typedef long int svn_revnum_t;
