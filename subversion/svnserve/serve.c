@@ -59,7 +59,6 @@ typedef struct {
   const char *tunnel_user; /* Allow EXTERNAL to authenticate as this */
   svn_boolean_t read_only; /* Disallow write access (global flag) */
   int protocol_version;
-  SSL_CTX *ssl_ctx;        /* SSL context to use for SSL socket layer */
 } server_baton_t;
 
 typedef struct {
@@ -1317,12 +1316,11 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
   b.user = NULL;
   b.cfg = NULL;  /* Ugly; can drop when we remove v1 support. */
   b.pwdb = NULL; /* Likewise */
-  b.ssl_ctx = params->ssl_ctx;
 
   /* Send greeting.   When we drop support for version 1, we can
    * start sending an empty mechlist. 
    * Note : version 1 does not support SSL. */
-  if (params->ssl_layer)
+  if (params->ssl_baton)
     SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(nn(!", "success",
                                    (apr_uint64_t) 2, (apr_uint64_t) 2));
   else
@@ -1330,7 +1328,7 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
                                    (apr_uint64_t) 1, (apr_uint64_t) 2));
 
   SVN_ERR(send_mechs(conn, pool, &b, READ_ACCESS));
-  if (params->ssl_layer)
+  if (params->ssl_baton)
     SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)(ww))",
                                    SVN_RA_SVN_CAP_EDIT_PIPELINE,
                                    SVN_RA_SVN_CAP_SSL));
@@ -1383,13 +1381,13 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
                                      &caplist, &client_url));
       SVN_ERR(svn_ra_svn_set_capabilities(conn, caplist));
 
-      if (params->ssl_layer 
+      if (params->ssl_baton 
           && svn_ra_svn_has_capability(conn, SVN_RA_SVN_CAP_SSL))
         {
           /* Flush write buffer before SSL handshake. */
           svn_ra_svn_flush(conn, pool);
 
-          SVN_ERR(svn_ra_svn_ssl_init(conn, pool, b.ssl_ctx));
+          SVN_ERR(svn_ra_svn_ssl_init(conn, pool, params->ssl_baton));
           SVN_ERR(svn_ra_svn_ssl_accept(conn, pool));
         }
       err = find_repos(client_url, params->root, &b, pool);
