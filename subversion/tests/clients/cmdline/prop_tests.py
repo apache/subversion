@@ -69,8 +69,7 @@ def make_local_props(sbox):
   expected_status.tweak('A/mu', status=' M')
   expected_status.tweak('A/D/G', status=' M')
 
-  if svntest.actions.run_and_verify_status(wc_dir, expected_status):
-    raise svntest.Failure
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # Remove one property
   svntest.main.run_svn(None, 'propdel', 'yellow',
@@ -87,8 +86,7 @@ def make_local_props(sbox):
   actual_disk_tree = svntest.tree.build_tree_from_wc(wc_dir, 1)
 
   # Compare actual vs. expected disk trees.
-  if svntest.tree.compare_trees(expected_disk.old_tree(), actual_disk_tree):
-    raise svntest.Failure
+  svntest.tree.compare_trees(expected_disk.old_tree(), actual_disk_tree)
 
 #----------------------------------------------------------------------
 
@@ -118,15 +116,14 @@ def commit_props(sbox):
   expected_status.tweak('A/mu', 'A/D/H', wc_rev=2, status='  ')
 
   # Commit the one file.
-  if svntest.actions.run_and_verify_commit (wc_dir,
-                                            expected_output,
-                                            expected_status,
-                                            None,
-                                            None, None,
-                                            None, None,
-                                            wc_dir):
-    raise svntest.Failure
-    
+  svntest.actions.run_and_verify_commit (wc_dir,
+                                         expected_output,
+                                         expected_status,
+                                         None,
+                                         None, None,
+                                         None, None,
+                                         wc_dir)
+  
   
 
 #----------------------------------------------------------------------
@@ -161,11 +158,10 @@ def update_props(sbox):
   expected_status.tweak('A/mu', 'A/D/H', wc_rev=2, status='  ')
 
   # Commit the one file.
-  if svntest.actions.run_and_verify_commit (wc_dir, expected_output,
-                                            expected_status,
-                                            None, None, None, None, None,
-                                            wc_dir):
-    raise svntest.Failure
+  svntest.actions.run_and_verify_commit (wc_dir, expected_output,
+                                         expected_status,
+                                         None, None, None, None, None,
+                                         wc_dir)
 
   # Overwrite mu_path and H_path to refer to the backup copies from
   # here on out.
@@ -188,12 +184,11 @@ def update_props(sbox):
   expected_status.tweak('A/mu', 'A/D/H', status='  ')
 
   # Do the update and check the results in three ways... INCLUDING PROPS
-  if svntest.actions.run_and_verify_update(wc_backup,
-                                           expected_output,
-                                           expected_disk,
-                                           expected_status,
-                                           None, None, None, None, None, 1):
-    raise svntest.Failure
+  svntest.actions.run_and_verify_update(wc_backup,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None, None, None, 1)
 
 #----------------------------------------------------------------------
 
@@ -222,11 +217,10 @@ def downdate_props(sbox):
   expected_status.tweak('iota', wc_rev=2, status='  ')
 
   # Commit the one file.
-  if svntest.actions.run_and_verify_commit (wc_dir, expected_output,
-                                            expected_status,
-                                            None, None, None, None, None,
-                                            wc_dir):
-    raise svntest.Failure
+  svntest.actions.run_and_verify_commit (wc_dir, expected_output,
+                                         expected_status,
+                                         None, None, None, None, None,
+                                         wc_dir)
 
   # Make some mod (something to commit)
   svntest.main.file_append (mu_path, "some mod")
@@ -243,11 +237,10 @@ def downdate_props(sbox):
   expected_status.tweak('A/mu', wc_rev=3, status='  ')
 
   # Commit the one file.
-  if svntest.actions.run_and_verify_commit (wc_dir, expected_output,
-                                            expected_status,
-                                            None, None, None, None, None,
-                                            wc_dir):
-    raise svntest.Failure
+  svntest.actions.run_and_verify_commit (wc_dir, expected_output,
+                                         expected_status,
+                                         None, None, None, None, None,
+                                         wc_dir)
   
   # Create expected output tree for an update.
   expected_output = svntest.wc.State(wc_dir, {
@@ -263,13 +256,12 @@ def downdate_props(sbox):
   expected_status.tweak(repos_rev=3)
 
   # Do the update and check the results in three ways... INCLUDING PROPS
-  if svntest.actions.run_and_verify_update(wc_dir,
-                                           expected_output,
-                                           expected_disk,
-                                           expected_status,
-                                           None, None, None, None, None, 1,
-                                           '-r', '1', wc_dir):
-    raise svntest.Failure    
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None, None, None, 1,
+                                        '-r', '1', wc_dir)
 
 #----------------------------------------------------------------------
 
@@ -302,12 +294,10 @@ def remove_props(sbox):
   expected_status.tweak('iota', wc_rev=3, status='  ')
 
   # Commit the one file.
-  if svntest.actions.run_and_verify_commit (wc_dir, expected_output,
-                                            expected_status,
-                                            None, None, None, None, None,
-                                            wc_dir):
-    raise svntest.Failure
-
+  svntest.actions.run_and_verify_commit (wc_dir, expected_output,
+                                         expected_status,
+                                         None, None, None, None, None,
+                                         wc_dir)
 
 #----------------------------------------------------------------------
 
@@ -325,7 +315,7 @@ def detect_conflict_files(node, extra_files):
       return
 
   print "Found unexpected disk object:", node.name
-  raise svntest.main.SVNTreeUnequal
+  raise svntest.tree.SVNTreeUnequal
 
 def update_conflict_props(sbox):
   "update with conflicting props"
@@ -368,18 +358,17 @@ def update_conflict_props(sbox):
 
   extra_files = ['mu.*\.prej', 'dir_conflicts.*\.prej']
   # Do the update and check the results in three ways... INCLUDING PROPS
-  if svntest.actions.run_and_verify_update(wc_dir,
-                                           expected_output,
-                                           expected_disk,
-                                           expected_status,
-                                           None,
-                                           detect_conflict_files, extra_files,
-                                           None, None, 1):
-    raise svntest.Failure
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None,
+                                        detect_conflict_files, extra_files,
+                                        None, None, 1)
 
   if len(extra_files) != 0:
     print "didn't get expected conflict files"
-    raise svntest.Failure
+    raise svntest.SVNUnexpectedOutput
 
   # Resolve the conflicts
   svntest.main.run_svn(None, 'resolve', mu_path)
@@ -388,8 +377,7 @@ def update_conflict_props(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak('A/mu', 'A', status=' M')
 
-  if svntest.actions.run_and_verify_status(wc_dir, expected_status):
-    raise svntest.Failure
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 #----------------------------------------------------------------------
 
@@ -414,10 +402,8 @@ def commit_replacement_props(sbox):
   svntest.main.run_svn(None, 'propset', 'boson', 'W', lambda_path)
 
   # Commit (### someday use run_and_verify_commit for better coverage)
-  outlines, errlines = svntest.main.run_svn(None, 'ci', '-m', 'logmsg', wc_dir)
-  if errlines:
-    print "error in property commit"
-    raise svntest.Failure
+  svntest.actions.run_and_verify_svn("Error in property commit",
+                                     None, [], 'ci', '-m', 'logmsg', wc_dir)
 
   # Schedule both files for deletion
   svntest.main.run_svn(None, 'rm', iota_path, lambda_path)
@@ -434,8 +420,7 @@ def commit_replacement_props(sbox):
   expected_status.tweak('iota', wc_rev=2, status='R ')
   expected_status.tweak('A/B/lambda', wc_rev=2, status='R ')
 
-  if svntest.actions.run_and_verify_status(wc_dir, expected_status):
-    raise svntest.Failure
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # Now add a property to lambda.  Iota still doesn't have any.
   svntest.main.run_svn(None, 'propset', 'capacitor', 'flux', lambda_path)  
@@ -454,11 +439,10 @@ def commit_replacement_props(sbox):
   expected_status.tweak('iota', wc_rev=3)
   expected_status.tweak('A/B/lambda', wc_rev=3, status='  ')
 
-  if svntest.actions.run_and_verify_commit (wc_dir, expected_output,
-                                            expected_status,
-                                            None, None, None, None, None,
-                                            wc_dir):
-    raise svntest.Failure    
+  svntest.actions.run_and_verify_commit (wc_dir, expected_output,
+                                         expected_status,
+                                         None, None, None, None, None,
+                                         wc_dir)
 
 #----------------------------------------------------------------------
 
@@ -477,10 +461,8 @@ def revert_replacement_props(sbox):
   svntest.main.run_svn(None, 'propset', 'boson', 'W', lambda_path)
 
   # Commit rev 2. (### someday use run_and_verify_commit for better coverage)
-  outlines, errlines = svntest.main.run_svn(None, 'ci', '-m', 'logmsg', wc_dir)
-  if errlines:
-    print "error in property commit"
-    raise svntest.Failure
+  svntest.actions.run_and_verify_svn("Error in property commit", None, [],
+                                     'ci', '-m', 'logmsg', wc_dir)
 
   # Schedule both files for deletion
   svntest.main.run_svn(None, 'rm', iota_path, lambda_path)
@@ -497,8 +479,7 @@ def revert_replacement_props(sbox):
   expected_status.tweak('iota', wc_rev=2, status='R ')
   expected_status.tweak('A/B/lambda', wc_rev=2, status='R ')
 
-  if svntest.actions.run_and_verify_status(wc_dir, expected_status):
-    raise svntest.Failure
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # Now add a property to lambda.  Iota still doesn't have any.
   svntest.main.run_svn(None, 'propset', 'capacitor', 'flux', lambda_path)  
@@ -524,13 +505,12 @@ def revert_replacement_props(sbox):
   expected_disk.tweak('A/B/lambda', props={'boson' : 'W'})
 
   # scan disk for props too.
-  if svntest.actions.run_and_verify_update(wc_dir,
-                                           expected_output,
-                                           expected_disk,
-                                           expected_status,
-                                           None, None, None, None, None,
-                                           1):
-    raise svntest.Failure    
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        1)
 
 #----------------------------------------------------------------------
 
@@ -546,56 +526,44 @@ def inappropriate_props(sbox):
   iota_path = os.path.join(wc_dir, 'iota')
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  if svntest.actions.run_and_verify_status(wc_dir, expected_status):
-    raise svntest.Failure
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # These should produce an error
-  outlines,errlines = svntest.main.run_svn('Illegal target', 'propset',
-                                           'svn:executable', 'on',
-                                           A_path)
-  if not errlines:
-    raise svntest.Failure
-  outlines,errlines = svntest.main.run_svn('Illegal target', 'propset',
-                                           'svn:keywords', 'LastChangedDate',
-                                           A_path)
-  if not errlines:
-    raise svntest.Failure
-  outlines,errlines = svntest.main.run_svn('Illegal target', 'propset',
-                                           'svn:eol-style', 'native',
-                                           A_path)
-  if not errlines:
-    raise svntest.Failure
-  outlines,errlines = svntest.main.run_svn('Illegal target', 'propset',
-                                           'svn:mime-type', 'image/png',
-                                           A_path)
-  if not errlines:
-    raise svntest.Failure
-  outlines,errlines = svntest.main.run_svn('Illegal target', 'propset',
-                                           'svn:ignore', '*.o',
-                                           iota_path)
-  if not errlines:
-    raise svntest.Failure
-  outlines,errlines = svntest.main.run_svn('Illegal target', 'propset',
-                                           'svn:externals',
-                                           'foo http://host.com/repos',
-                                           iota_path)
-  if not errlines:
-    raise svntest.Failure
+  svntest.actions.run_and_verify_svn('Illegal target', None,
+                                     svntest.SVNAnyOutput, 'propset',
+                                     'svn:executable', 'on', A_path)
+
+  svntest.actions.run_and_verify_svn('Illegal target', None,
+                                     svntest.SVNAnyOutput, 'propset',
+                                     'svn:keywords', 'LastChangedDate',
+                                     A_path)
+
+  svntest.actions.run_and_verify_svn('Illegal target', None,
+                                     svntest.SVNAnyOutput, 'propset',
+                                     'svn:eol-style', 'native', A_path)
+
+  svntest.actions.run_and_verify_svn('Illegal target', None,
+                                     svntest.SVNAnyOutput, 'propset',
+                                     'svn:mime-type', 'image/png', A_path)
+
+  svntest.actions.run_and_verify_svn('Illegal target', None,
+                                     svntest.SVNAnyOutput, 'propset',
+                                     'svn:ignore', '*.o', iota_path)
+
+  svntest.actions.run_and_verify_svn('Illegal target', None,
+                                     svntest.SVNAnyOutput, 'propset',
+                                     'svn:externals',
+                                     'foo http://host.com/repos', iota_path)
 
   # Status unchanged
-  if svntest.actions.run_and_verify_status(wc_dir, expected_status):
-    raise svntest.Failure
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # Recursive setting of inappropriate dir prop should work on files
-  outlines,errlines = svntest.main.run_svn(None, 'propset', '-R',
-                                           'svn:executable', 'on',
-                                           E_path)
-  if errlines:
-    raise svntest.Failure
+  svntest.actions.run_and_verify_svn(None, None, [], 'propset', '-R',
+                                     'svn:executable', 'on', E_path)
 
   expected_status.tweak('A/B/E/alpha', 'A/B/E/beta', status=' M')
-  if svntest.actions.run_and_verify_status(wc_dir, expected_status):
-    raise svntest.Failure
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 # Issue #920. Don't allow setting of svn:eol-style on binary files or files 
 # with inconsistent eol stypes.
@@ -606,42 +574,38 @@ def inappropriate_props(sbox):
   
   svntest.main.run_svn(None, 'propset', 'svn:mime-type', 
                        'application/octet-stream', path)
-  
-  outlines,errlines = svntest.main.run_svn('Illegal target', 'propset',
-                                           'svn:eol-style',
-                                           'CRLF', path)
-  if not errlines:
-    raise svntest.Failure
+
+  svntest.actions.run_and_verify_svn('Illegal target', None,
+                                     svntest.SVNAnyOutput,
+                                     'propset', 'svn:eol-style',
+                                     'CRLF', path)
    
   path = os.path.join(wc_dir, 'multi-eol')
   svntest.main.file_append(path, "line1\rline2\n")
   svntest.main.run_svn(None, 'add', path)
   
-  outlines,errlines = svntest.main.run_svn('Illegal target', 'propset',
-                                           'svn:eol-style',
-                                           'LF', path)
-  if not errlines:
-    raise svntest.Failure
+  svntest.actions.run_and_verify_svn('Illegal target', None,
+                                     svntest.SVNAnyOutput,
+                                     'propset', 'svn:eol-style',
+                                     'LF', path)
     
   path = os.path.join(wc_dir, 'backwards-eol')
   svntest.main.file_append(path, "line1\n\r")
   svntest.main.run_svn(None, 'add', path)
   
-  outlines,errlines = svntest.main.run_svn('Illegal target', 'propset',
-                                           'svn:eol-style',
-                                           'native', path)
-  if not errlines:
-    raise svntest.Failure
+  svntest.actions.run_and_verify_svn('Illegal target', None,
+                                     svntest.SVNAnyOutput,
+                                     'propset', 'svn:eol-style',
+                                     'native', path)
     
   path = os.path.join(wc_dir, 'incomplete-eol')
   svntest.main.file_append(path, "line1\r\n\r")
   svntest.main.run_svn(None, 'add', path)
   
-  outlines,errlines = svntest.main.run_svn('Illegal target', 'propset',
-                                           'svn:eol-style',
-                                           'CR', path)
-  if not errlines:
-    raise svntest.Failure
+  svntest.actions.run_and_verify_svn('Illegal target', None,
+                                     svntest.SVNAnyOutput,
+                                     'propset', 'svn:eol-style',
+                                     'CR', path)
     
 
 
@@ -700,7 +664,7 @@ def copy_should_use_copied_executable_and_mime_type_values(sbox):
     print "svn pg svn:mime-type output does not match expected."
     print "Expected standard output: ", expected_stdout, "\n"
     print "Actual standard output: ", actual_stdout, "\n"
-    raise svntest.Failure
+    raise svntest.SVNUnexpectedOutput
 
   # Check the svn:executable value.
   # The value of the svn:executable property is now always forced to '*'
@@ -714,7 +678,7 @@ def copy_should_use_copied_executable_and_mime_type_values(sbox):
       print "svn pg svn:executable output does not match expected."
       print "Expected standard output: ", expected_stdout, "\n"
       print "Actual standard output: ", actual_stdout, "\n"
-      raise svntest.Failure
+      raise svntest.SVNUnexpectedOutput
 
 #----------------------------------------------------------------------
 
@@ -728,15 +692,13 @@ def revprop_change(sbox):
   svntest.main.file_append(hook, "#!/bin/sh\n\nexit 0\n")
   os.chmod(hook, 0755)
 
-  out, err = svntest.main.run_svn(None, 'propset', '--revprop', '-r', '0',
-                                  'cash-sound', 'cha-ching!', sbox.wc_dir)
-  if err:
-    raise svntest.Failure
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset', '--revprop', '-r', '0',
+                                     'cash-sound', 'cha-ching!', sbox.wc_dir)
 
-  out, err = svntest.main.run_svn(None, 'propget', '--revprop', '-r', '0',
-                                  'cash-sound', sbox.wc_dir)
-  if err:
-    raise svntest.Failure
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propget', '--revprop', '-r', '0',
+                                     'cash-sound', sbox.wc_dir)
 
 #----------------------------------------------------------------------
 

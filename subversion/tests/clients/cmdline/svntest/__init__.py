@@ -19,4 +19,10 @@ class Failure(Exception):
   'Base class for exceptions that indicate test failure'
   pass
 
+class SVNAnyOutput:
+  """This class should be used to represent that you require output
+  (whether stdout or stderr) from your test--regardless of what the
+  output might be."""
+  pass
+
 import main, tree, actions, wc
