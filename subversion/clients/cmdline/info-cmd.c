@@ -66,7 +66,7 @@ print_info (const char *target,
     SVN_ERR (svn_cmdline_printf (pool, _("URL: %s\n"), info->URL));
            
   if (info->repos_root_URL) 
-    SVN_ERR (svn_cmdline_printf (pool, _("Repository: %s\n"),
+    SVN_ERR (svn_cmdline_printf (pool, _("Repository Root: %s\n"),
                                  info->repos_root_URL));
  
   if (info->repos_UUID) 
@@ -96,80 +96,88 @@ print_info (const char *target,
       break;
     }
 
-  switch (info->schedule) 
+  if (info->has_wc_info)
     {
-    case svn_wc_schedule_normal:
-      SVN_ERR (svn_cmdline_printf (pool, _("Schedule: normal\n")));
-      break;
+      switch (info->schedule) 
+        {
+        case svn_wc_schedule_normal:
+          SVN_ERR (svn_cmdline_printf (pool, _("Schedule: normal\n")));
+          break;
           
-    case svn_wc_schedule_add:
-      SVN_ERR (svn_cmdline_printf (pool, _("Schedule: add\n")));
-      break;
+        case svn_wc_schedule_add:
+          SVN_ERR (svn_cmdline_printf (pool, _("Schedule: add\n")));
+          break;
           
-    case svn_wc_schedule_delete:
-      SVN_ERR (svn_cmdline_printf (pool, _("Schedule: delete\n")));
-      break;
+        case svn_wc_schedule_delete:
+          SVN_ERR (svn_cmdline_printf (pool, _("Schedule: delete\n")));
+          break;
           
-    case svn_wc_schedule_replace:
-      SVN_ERR (svn_cmdline_printf (pool, _("Schedule: replace\n")));
-      break;
+        case svn_wc_schedule_replace:
+          SVN_ERR (svn_cmdline_printf (pool, _("Schedule: replace\n")));
+          break;
           
-    default:
-      break;
+        default:
+          break;
+        }
+      
+      if (info->copyfrom_url) 
+        SVN_ERR (svn_cmdline_printf (pool, _("Copied From URL: %s\n"),
+                                     info->copyfrom_url));
+      
+      if (SVN_IS_VALID_REVNUM (info->copyfrom_rev))
+        SVN_ERR (svn_cmdline_printf (pool, _("Copied From Rev: %ld\n"),
+                                     info->copyfrom_rev));
     }
-
-  if (info->copyfrom_url) 
-    SVN_ERR (svn_cmdline_printf (pool, _("Copied From URL: %s\n"),
-                                 info->copyfrom_url));
- 
-  if (SVN_IS_VALID_REVNUM (info->copyfrom_rev))
-    SVN_ERR (svn_cmdline_printf (pool, _("Copied From Rev: %ld\n"),
-                                 info->copyfrom_rev));
- 
+      
   if (info->last_changed_author) 
     SVN_ERR (svn_cmdline_printf (pool, _("Last Changed Author: %s\n"),
                                  info->last_changed_author));
- 
+  
   if (SVN_IS_VALID_REVNUM (info->last_changed_rev))
     SVN_ERR (svn_cmdline_printf (pool, _("Last Changed Rev: %ld\n"),
                                  info->last_changed_rev));
-
+  
   if (info->last_changed_date)
     SVN_ERR (svn_cl__info_print_time (info->last_changed_date, 
                                       _("Last Changed Date"), pool));
+  
+  if (info->has_wc_info)
+    {
+      if (info->text_time)
+        SVN_ERR (svn_cl__info_print_time (info->text_time, 
+                                          _("Text Last Updated"), pool));
+      
+      if (info->prop_time)
+        SVN_ERR (svn_cl__info_print_time (info->prop_time, 
+                                          _("Properties Last Updated"), pool));
+      
+      if (info->checksum) 
+        SVN_ERR (svn_cmdline_printf (pool, _("Checksum: %s\n"),
+                                     info->checksum));
+      
+      if (info->conflict_old) 
+        SVN_ERR (svn_cmdline_printf (pool,
+                                     _("Conflict Previous Base File: %s\n"),
+                                     svn_path_local_style (info->conflict_old,
+                                                           pool)));
+ 
+      if (info->conflict_wrk) 
+        SVN_ERR (svn_cmdline_printf
+                 (pool, _("Conflict Previous Working File: %s\n"),
+                  svn_path_local_style (info->conflict_wrk, pool)));
+      
+      if (info->conflict_new) 
+        SVN_ERR (svn_cmdline_printf (pool,
+                                     _("Conflict Current Base File: %s\n"),
+                                     svn_path_local_style (info->conflict_new,
+                                                           pool)));
+ 
+      if (info->prejfile) 
+        SVN_ERR (svn_cmdline_printf (pool, _("Conflict Properties File: %s\n"),
+                                     svn_path_local_style (info->prejfile,
+                                                           pool)));
+    }      
 
-  if (info->text_time)
-    SVN_ERR (svn_cl__info_print_time (info->text_time, 
-                                      _("Text Last Updated"), pool));
-
-  if (info->prop_time)
-    SVN_ERR (svn_cl__info_print_time (info->prop_time, 
-                                      _("Properties Last Updated"), pool));
- 
-  if (info->checksum) 
-      SVN_ERR (svn_cmdline_printf (pool, _("Checksum: %s\n"),
-                                   info->checksum));
- 
-  if (info->conflict_old) 
-    SVN_ERR (svn_cmdline_printf (pool, _("Conflict Previous Base File: %s\n"),
-                                 svn_path_local_style (info->conflict_old,
-                                                       pool)));
- 
-  if (info->conflict_wrk) 
-    SVN_ERR (svn_cmdline_printf
-             (pool, _("Conflict Previous Working File: %s\n"),
-              svn_path_local_style (info->conflict_wrk, pool)));
- 
-  if (info->conflict_new) 
-    SVN_ERR (svn_cmdline_printf (pool, _("Conflict Current Base File: %s\n"),
-                                 svn_path_local_style (info->conflict_new,
-                                                       pool)));
- 
-  if (info->prejfile) 
-      SVN_ERR (svn_cmdline_printf (pool, _("Conflict Properties File: %s\n"),
-                                   svn_path_local_style (info->prejfile,
-                                                         pool)));
- 
   /* Print extra newline separator. */
   SVN_ERR (svn_cmdline_printf (pool, "\n"));
 
@@ -202,7 +210,7 @@ svn_cl__info (apr_getopt_t *os,
   apr_pool_t *subpool = svn_pool_create (pool);
   int i;
   svn_error_t *err;
-  svn_opt_revision_t revision, peg_revision;
+  svn_opt_revision_t peg_revision;
 
   SVN_ERR (svn_opt_args_to_target_array2 (&targets, os, 
                                           opt_state->targets, pool));
@@ -212,27 +220,22 @@ svn_cl__info (apr_getopt_t *os,
   
   for (i = 0; i < targets->nelts; i++)
     {
+      const char *truepath;
       const char *target = ((const char **) (targets->elts))[i];
       
       svn_pool_clear (subpool);
       SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
 
-      if (svn_path_is_url (target))
-        {
-          /* ### remove this very, very soon.  set the opt_revision
-             variables by parsing options.  */
-          return svn_error_create
-            (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-             _("'svn info' only works on working copy paths, not URLs"));
-        }
-      else
-        {
-          revision.kind = svn_opt_revision_unspecified;
-          peg_revision.kind = svn_opt_revision_unspecified;
-        }
+      /* Get peg revisions. */
+      SVN_ERR (svn_opt_parse_path (&peg_revision, &truepath, target, subpool));
 
-      err = svn_client_info (target,
-                             &peg_revision, &revision,
+      /* If no peg-rev was attached to a URL target, then assume HEAD. */
+      if ((svn_path_is_url (target))
+          && (peg_revision.kind == svn_opt_revision_unspecified))
+        peg_revision.kind = svn_opt_revision_head;
+
+      err = svn_client_info (truepath,
+                             &peg_revision, &(opt_state->start_revision),
                              info_receiver, NULL,
                              opt_state->recursive, ctx, subpool);
 
