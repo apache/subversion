@@ -69,3 +69,11 @@ Candidate changes:
     Justification: Never ever overwrite local modifications.
     Votes:
       +1: bliss
+
+  * r9720
+    Fix problem with javahl bindings which triggers a java.lang.NoSuchMethodError
+    exception.
+    Justification: Bindings only changes, where the wrong java interfaces
+    is referenced.
+    Votes:
+      +1: pmayweg
