@@ -7,7 +7,7 @@ this first.
                      HACKER'S GUIDE TO SUBVERSION
                      ============================
 
-              Last updated:  $Date: 2001-03-06 00:30:53 $
+              Last updated:  $Date: 2001-03-23 19:14:24 $
 
 
 TABLE OF CONTENTS
@@ -122,11 +122,12 @@ C++ 6.x; earlier versions of the compiler are not supported at this
 time.
 
 If you want to build the server components, you'll also need a copy of
-Berkeley DB, version 3.1.14 or newer. The sources are available at
-http://www.sleepycat.com, but you can download a binary distribution of
-version 3.1.17 libraries and tools from
+Berkeley DB, version 3.2.9 or newer. The sources are available at
+http://www.sleepycat.com. There is a binary distibution at 
 
     http://www.xbc.nu/svn/db3-win32.zip
+
+but I think it is version 3.1.17.:(
 
 Unpack the distribution, then set the environment variable
 SVN_DB3_WIN32 to the full path of the db-win32 directory (use the
