@@ -740,27 +740,6 @@ do_begin_propdelta (svn_delta__digger_t *digger)
 
 
 
-/* Clean up after finishing receiving a text-delta. */
-static svn_error_t *
-do_finish_textdelta (svn_delta__digger_t *digger)
-{
-  svn_error_t *err;
-
-  /* First, don't forget to flush out any remaining bytes sitting in
-     the buffer of our vcdiff parser!  TODO: When we have a real
-     vcdiff implementation, this shouldn't be necessary. */
-  err = svn_vcdiff_send_window (digger->vcdiff_parser, 
-                                digger->vcdiff_parser->buffer->len);
-  if (err)
-    return err;
-
-  return SVN_NO_ERROR;
-}
-
-
-
-
-
 /* When we get a <set>, add the "name" field to our propdelta in-progress */
 static svn_error_t *
 do_begin_setprop (svn_delta__digger_t *digger,
@@ -1061,15 +1040,6 @@ xml_handle_end (void *userData, const char *name)
       return;
     }
 
-  /* EVENT: when we get a </text-delta> */
-  if (strcmp (name, "text-delta") == 0)
-    {
-      err = do_finish_textdelta (my_digger);
-      if (err)
-        signal_expat_bailout (err, my_digger);
-    }
-
-
 
   /* EVENT: when we get a </set>, send off the prop-delta. */
   if (strcmp (name, "set") == 0)
@@ -1101,6 +1071,7 @@ xml_handle_end (void *userData, const char *name)
 static void 
 xml_handle_data (void *userData, const char *data, int len)
 {
+  apr_off_t length = (apr_off_t) len;
 
   /* Resurrect digger structure */
   svn_delta__digger_t *digger = (svn_delta__digger_t *) userData;
@@ -1132,7 +1103,7 @@ xml_handle_data (void *userData, const char *data, int len)
          parser has received enough bytes to make a "window", it
          pushes the window to the uber-caller's own window-consumer
          routine. */
-      err = svn_vcdiff_parse (digger->vcdiff_parser, data, &len);
+      err = svn_vcdiff_parse (digger->vcdiff_parser, data, length);
       if (err)
         {
           signal_expat_bailout
@@ -1156,7 +1127,7 @@ xml_handle_data (void *userData, const char *data, int len)
 
       if (digger->current_propdelta)
         svn_string_appendbytes (digger->current_propdelta->value,
-                                data, &len,
+                                data, length,
                                 digger->pool);
     }
 
