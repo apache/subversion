@@ -351,6 +351,7 @@ print_dirs_changed_tree (svn_repos_node_t *node,
   svn_repos_node_t *tmp_node;
   int print_me = 0;
   const char *full_path;
+  apr_pool_t *subpool;
 
   SVN_ERR (check_cancel (NULL));
 
@@ -400,19 +401,23 @@ print_dirs_changed_tree (svn_repos_node_t *node,
       printf ("%s/\n", path_stdout);
     }
 
-  /* Recursively handle the node's children. */
+  /* Return here if the node has no children. */
   tmp_node = node->child;
   if (! tmp_node)
     return SVN_NO_ERROR;
 
-  full_path = svn_path_join (path, tmp_node->name, pool);
-  SVN_ERR (print_dirs_changed_tree (tmp_node, full_path, pool));
+  /* Recursively handle the node's children. */
+  subpool = svn_pool_create (pool);  
+  full_path = svn_path_join (path, tmp_node->name, subpool);
+  SVN_ERR (print_dirs_changed_tree (tmp_node, full_path, subpool));
   while (tmp_node->sibling)
     {
+      svn_pool_clear (subpool);
       tmp_node = tmp_node->sibling;
-      full_path = svn_path_join (path, tmp_node->name, pool);
-      SVN_ERR (print_dirs_changed_tree (tmp_node, full_path, pool));
+      full_path = svn_path_join (path, tmp_node->name, subpool);
+      SVN_ERR (print_dirs_changed_tree (tmp_node, full_path, subpool));
     }
+  svn_pool_destroy (subpool);
 
   return SVN_NO_ERROR;
 }
@@ -428,6 +433,7 @@ print_changed_tree (svn_repos_node_t *node,
   const char *full_path;
   char status[3] = "_ ";
   int print_me = 1;
+  apr_pool_t *subpool;
 
   SVN_ERR (check_cancel (NULL));
 
@@ -468,14 +474,17 @@ print_changed_tree (svn_repos_node_t *node,
     return SVN_NO_ERROR;
 
   /* Recursively handle the node's children. */
-  full_path = svn_path_join (path, node->name, pool);
-  SVN_ERR (print_changed_tree (node, full_path, pool));
+  subpool = svn_pool_create (pool);  
+  full_path = svn_path_join (path, node->name, subpool);
+  SVN_ERR (print_changed_tree (node, full_path, subpool));
   while (node->sibling)
     {
+      svn_pool_clear (subpool);
       node = node->sibling;
-      full_path = svn_path_join (path, node->name, pool);
-      SVN_ERR (print_changed_tree (node, full_path, pool));
+      full_path = svn_path_join (path, node->name, subpool);
+      SVN_ERR (print_changed_tree (node, full_path, subpool));
     }
+  svn_pool_destroy (subpool);
 
   return SVN_NO_ERROR;
 }
@@ -786,6 +795,7 @@ print_diff_tree (svn_fs_root_t *root,
   svn_boolean_t do_diff = FALSE;
   svn_boolean_t is_copy = FALSE;
   svn_boolean_t binary = FALSE;
+  apr_pool_t *subpool;
 
   SVN_ERR (check_cancel (NULL));
 
@@ -955,35 +965,26 @@ print_diff_tree (svn_fs_root_t *root,
   if (! node)
     return SVN_NO_ERROR;
 
-  /* Handle children and siblings. */
-  {
-    apr_pool_t *subpool = svn_pool_create (pool);
-
-    /* Recurse down into children. */
-    SVN_ERR (print_diff_tree
-             (root, base_root, node,
-              svn_path_join (path, node->name, subpool),
-              svn_path_join (base_path, node->name, subpool),
-              no_diff_deleted,
-              tmpdir,
-              subpool));
-
-    /* Recurse across siblings. */
-    while (node->sibling)
-      {
-        node = node->sibling;
-       
-        SVN_ERR (print_diff_tree
-                 (root, base_root, node,
-                  svn_path_join (path, node->name, subpool),
-                  svn_path_join (base_path, node->name, subpool),
-                  no_diff_deleted,
-                  tmpdir,
-                  pool));
-      }
-    
-    apr_pool_destroy (subpool);
-  }
+  /* Recursively handle the node's children. */
+  subpool = svn_pool_create (pool);
+  SVN_ERR (print_diff_tree (root, base_root, node,
+                            svn_path_join (path, node->name, subpool),
+                            svn_path_join (base_path, node->name, subpool),
+                            no_diff_deleted,
+                            tmpdir,
+                            subpool));
+  while (node->sibling)
+    {
+      svn_pool_clear (subpool);
+      node = node->sibling;
+      SVN_ERR (print_diff_tree (root, base_root, node,
+                                svn_path_join (path, node->name, subpool),
+                                svn_path_join (base_path, node->name, subpool),
+                                no_diff_deleted,
+                                tmpdir,
+                                subpool));
+    }
+  apr_pool_destroy (subpool);
 
   return SVN_NO_ERROR;
 }

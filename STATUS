@@ -34,13 +34,6 @@ Candidate changes:
     Votes: (9439, 9808):
       +1: breser
 
-  * r9589
-    Fix nasty pool usage problems in 'svnlook diff/changed/dirs-changed'.
-    Justification: commit-email.pl uses 'svnlook diff', and 'svnlook
-    diff' on, say, and large import, can get *really* nasty memory-wise.
-    Votes:
-      +1: cmpilato, dionisos, sussman
-
   * r9667
     Fix potential attack path in pre-commit-hook template.
     Justification: Don't offer templates we don't want to use ourselves.
