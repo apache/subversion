@@ -310,8 +310,7 @@ svn_config__parse_registry (svn_config_t *cfg, const char *file,
         }
       if (err != ERROR_SUCCESS)
         {
-          svn_err =  svn_error_create (SVN_ERR_MALFORMED_FILE,
-                                       NULL,
+          svn_err =  svn_error_create (SVN_ERR_MALFORMED_FILE, NULL,
                                        "Can't enumerate registry keys");
           goto cleanup;
         }
@@ -321,8 +320,7 @@ svn_config__parse_registry (svn_config_t *cfg, const char *file,
                           &sub_hkey);
       if (err != ERROR_SUCCESS)
         {
-          svn_err =  svn_error_create (SVN_ERR_MALFORMED_FILE,
-                                       NULL,
+          svn_err =  svn_error_create (SVN_ERR_MALFORMED_FILE, NULL,
                                        "Can't open existing subkey");
           goto cleanup;
         }
