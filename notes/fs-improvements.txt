@@ -1,8 +1,9 @@
-Last updated: $Date: 2001-04-17 21:17:04 $
+Last updated: $Date: 2001-04-19 22:37:57 $
 
-Please review, folks.  I'm planning to start on implementation of
-section (a) right away, and then consider (b) and (c) more carefully
-after (a) is done.
+[Note: much of this was thought up by Jim Blandy, or developed in
+conversation with him.  Please review, folks; I'm planning to start on
+implementation of section (a) right away, and then consider (b) and
+(c) more carefully after (a) is done.]
 
 Three related things that need to happen in the filesystem before we
 get to alpha:
@@ -185,6 +186,17 @@ affect more than what's mentioned above.  Here's the new grammar, with
 changes for deltification and with copy nodes removed, since we don't
 seem to be using them now:
 
+   ! Berkeley DB tables
+   ! ------------------
+   !              "nodes" : btree(ID -> NODE-REVISION)
+   !          "revisions" : recno(REVISION)
+   !       "transactions" : btree(TXN -> TRANSACTION,
+   !                              "next-id" -> TXN)
+   !            "strings" : recno(PROPLIST | ENTRIES_LIST | string)
+   ! 
+   ! Syntactic elements
+   ! ------------------
+   ! 
    ! Table keys:
    !                   ID ::= node.revision-id ;
    !                  TXN ::= number ;
@@ -210,7 +222,6 @@ seem to be using them now:
    !                 KIND ::= "file" | "dir" ;
    !                 FLAG ::= ("mutable" PARENT-ID) ;
    !            PARENT-ID ::= "" | node.revision-id ;
-   !      SOURCE-REVISION ::= number ;
    !
    !   CONTENTS, PROPLIST ::= ("fulltext" STRING-KEY)
    !                        | ("shared" ID)
@@ -220,8 +231,17 @@ seem to be using them now:
    !
    !             CHECKSUM ::= ("md5" BYTES) ;
    !                BYTES ::= atom ;
+   ! 
+   ! Lexical elements
+   ! ----------------
+   !
+   ! File contents:
+   !
+   !               string ::= /.*/ ;
+   !
+   ! [etc...]
 
-If CONTENTS is a fulltext, the `("string" STRING-KEY)' form is used.
+If CONTENTS is a fulltext, the `("fulltext" STRING-KEY)' form is used.
 If CONTENTS does not point to the fulltext string directly, then it is
 either the same as some other node's contents, or a delta against some
 other node's contents.  These situations are expressed as "shared" and
@@ -235,12 +255,137 @@ through N.
 PROPLISTs work the same way.
 
 REPRESENTATION skels go away.  Node revisions are always stored as
-fulltext, now each one is just a header plus pointers to proplist and
-contents.
+fulltext, since they're small now -- just a header plus pointers to
+proplist and contents.
 
---- todo ---
+   [Thanks to Jim Blandy for much of the thinking below.]
 
-Okay, I think the above is accurate as far as it goes.  We still need
-to talk about how reverse deltification actually happens, though,
-including: avoiding holding a whole file in memory, and composing
-svndiff deltas to avoid the naive chain of fulltext productions.
+The naive way to recover an old text is:
+
+   retrieve_node_rev (N)
+   {
+     grab_node_revision (&N);
+
+     if (is_fulltext (N))
+       return N;
+     else if (is_shared (N))
+       return retrieve_node_rev (get_sharee (N));
+     else if (is_svndiff (N))
+       return svnpatch (get_svndiff (N), retrieve_node_rev (get_base (N)))
+   }
+
+(Loose pseudo-code, obviously, and the recursion could be a loop, but
+you get the idea.)
+
+The trouble with this is that it constructs and patches each
+intermediate revision.  That'll probably be i/o bound, and anyway much
+of the intermediate material may not end up in the final target, in
+which case reconstructing it was a waste of time.
+
+What we really want is a way to compose a bunch of svndiffs, and then
+apply that composition to the current head, to give us the older
+revision in one step (well, one application anyway).  Both the
+composition and the final application need to happen in a streamy or
+windowed fashion -- we shouldn't have to hold the entire diff in
+memory, nor the entire source, nor the target.
+
+Here's a way to do this:
+
+An svndiff is a series of instructions that are followed to
+reconstruct the target.  There are three possible instructions:
+
+   a) Insert X bytes of new text into the TARGET, and I'm giving you
+      those bytes right here.
+   b) Copy N bytes, starting from offset F in the SOURCE, into the
+      TARGET.
+   c) Copy N bytes, starting from offset F in the TARGET, into the
+      TARGET.
+
+(Note that (c) can actually run past the current end of the target, as
+long by the time you get there, the target is longer.)
+
+To compose two svndiffs...
+
+   ...and I hate to tantalize you, but I'm late and have to run now,
+      so I'll try to finish this tomorrow... crimminy... The quick
+      summary is, we build a new svndiff (the composition of all the
+      intermediates), and as it gets too large, we windowify as we go
+      and put each window temporarily in the database; this makes the
+      composition as a whole less efficient, but means that at any
+      given time we don't have to have the whole thing in memory.  The
+      arithmetic for offset-adjustment is fairly straightforward even
+      when one has to offload windows, I believe.  It's nice that the
+      source is already in the db and we get offset+length style
+      operations from Berkeley naturally anyway.  Branko or anyone,
+      feel free to continue this recipe and see if you can take it
+      somewhere before I get in tomorrow morning...  -kff
+
+
+------------------------------------------------------------------------
+   Notes from JimB about optimizing the in-repository delta generation
+   to make deltas that can be composed more quickly:
+
+I talked about this with Karl on the phone, and gave pretty bad
+explanations of my thinking; I'll try to do better today.  This will
+also provide some background for other readers.
+
+I'm told that RCS reconstructs older file revisions by walking the
+list of diffs, ignoring the actual text, and simply recording the line
+numbers and sizes of the substitutions.  Then, it can run over that
+data and do arithmetic to construct a single `composed' diff against
+the youngest revision would reconstructs the older revision.  Then,
+you apply that composed diff to get the revision you wanted.
+
+For example, if your fulltext is:
+
+rev 3:  abcdefghijklmnopqrst
+
+and your deltas are:
+
+rev 2:  replace 3--6 with "howdy"    (yielding abchowdyghijklmnopqrst)
+rev 1:  replace 6--8 with " are you" (yielding abchow are youghijklmnopqrst)
+
+then the RCS algorithm would gather this info:
+
+rev 2:  replace 3--6 with 5 chars (call them X)
+rev 1:  replace 6--8 with 8 chars (call them Y)
+
+Now, without looking at any of the text, it can compose the two deltas
+to get the following delta, yielding rev 1:
+
+        replace 3--6 with range 0--3 from X
+        replace 6--6 with range 0--8 from Y (i.e. insert Y at 6)
+
+If we then apply this `composed' delta to the original text, we get:
+
+        abchow are youghijklmnopqrst
+
+The point of all this is that you don't need to mess around with
+actual text until the very end.  Until that point, the amount of work
+depends on the amount of change, not on the amount of text involved.
+And when you do get around to actually assembling text, the amount of
+work depends on the size of the output file --- because you're only
+touching each piece of text once --- and only weakly on the amount of
+change.
+
+Our current svndiff format frustrates this somewhat by compressing the
+new text, as well as pulling in pieces of the original.  The
+compression process produces a lot of delta ops that deal with small
+pieces of text.  (Or at least, I expect it does...)  So even if the
+change is something simple --- replacing a single block of text in the
+middle of the file, say --- you end up with an svndiff with a lot of
+ops, mostly concerned with building the replacement text from pieces
+of itself.  This is great, except that having lots of small ops
+increases the amount of work the delta composition phase needs to do.
+In fact, if the ops usually deal with really small pieces of text ---
+a few dozen bytes or so --- I expect it'd be faster to just throw the
+actual text around.  Memcpy is pretty optimized on real systems; you
+could copy a lot of bytes in the time it would take to do funky
+intersections and adjustments on a list of ops talking about those
+bytes, so those ops had better refer to large blocks of bytes.
+
+I'm not sure what to do with that.  It almost seems like we want the
+text delta computation algorithm to optimize deltas for network
+transmission and deltas for storage differently.
+
+
