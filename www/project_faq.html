@@ -593,6 +593,16 @@ $ db_archive -a -h /repos/db | xargs rm
 # disk space reclaimed!
 </pre>
 
+<p>Or, if you are running a Subversion release <em>later</em> than
+0.24.2, then there's no need to locate the correct
+<code>db_archive</code> command or set of arguments.  Just use
+<code>svnadmin</code>:</p>
+
+<pre>
+$ svnadmin archive /repos | xargs rm
+# disk space reclaimed!
+</pre>
+
 
 <![CDATA[=========================================================]]>
 

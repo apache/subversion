@@ -55,6 +55,7 @@ create_stdio_stream (svn_stream_t **stream,
 /** Subcommands. **/
 
 static svn_opt_subcommand_t
+  subcommand_archive,
   subcommand_create,
   subcommand_createtxn,
   subcommand_dump,
@@ -136,6 +137,11 @@ static const apr_getopt_option_t options_table[] =
  */
 static const svn_opt_subcommand_desc_t cmd_table[] =
   {
+    {"archive", subcommand_archive, {0},
+     "usage: svnadmin archive REPOS_PATH\n\n"
+     "Ask Berkeley DB which logfiles can be safely deleted.\n\n",
+     {0} },
+
     {"create", subcommand_create, {0},
      "usage: svnadmin create REPOS_PATH\n\n"
      "Create a new, empty repository at REPOS_PATH.\n",
@@ -480,6 +486,31 @@ subcommand_recover (apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   return SVN_NO_ERROR;
 }
+
+
+/* This implements `svn_opt_subcommand_t'. */
+svn_error_t *
+subcommand_archive (apr_getopt_t *os, void *baton, apr_pool_t *pool)
+{
+  svn_repos_t *repos;
+  struct svnadmin_opt_state *opt_state = baton;
+  char **logfiles;
+  char **filename;
+
+  SVN_ERR (svn_repos_open (&repos, opt_state->repository_path, pool));
+
+  SVN_ERR (svn_fs_berkeley_archive (&logfiles,
+                                    svn_repos_db_env (repos, pool), pool));
+
+  if (logfiles == NULL)
+    return SVN_NO_ERROR;
+
+  for (filename = logfiles; *filename != NULL; ++filename)
+    printf ("%s\n", *filename);
+
+  return SVN_NO_ERROR;
+}
+
 
 
 /* This implements `svn_opt_subcommand_t'. */

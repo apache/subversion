@@ -648,6 +648,47 @@ svn_fs_berkeley_recover (const char *path,
 
 
 
+/* Running the 'archive' command on a Berkeley DB-based filesystem.  */
+
+
+svn_error_t *
+svn_fs_berkeley_archive (char ***logfiles,
+                         const char *path,
+                         apr_pool_t *pool)
+{
+  int db_err;
+  DB_ENV *env;
+  const char *path_native;
+  char **filelist;
+
+  db_err = db_env_create (&env, 0);
+  if (db_err)
+    return svn_fs__bdb_dberr (db_err);
+
+  SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, pool));
+  db_err = env->open (env, path_native, (DB_CREATE
+                                         | DB_INIT_LOCK | DB_INIT_LOG
+                                         | DB_INIT_MPOOL | DB_INIT_TXN
+                                         | DB_PRIVATE), 0666);
+  if (db_err)
+    return svn_fs__bdb_dberr (db_err);
+
+  db_err = env->log_archive (env, &filelist,
+                             DB_ARCH_ABS /* return absolute paths */);
+  if (db_err)
+    return svn_fs__bdb_dberr (db_err);
+
+  db_err = env->close (env, 0);
+  if (db_err)
+    return svn_fs__bdb_dberr (db_err);
+
+  *logfiles = filelist;
+  return SVN_NO_ERROR;
+}
+
+
+
+
 /* Deleting a Berkeley DB-based filesystem.  */
 
 

@@ -3324,6 +3324,46 @@ Updated to revision 30.
       <!-- ================================================================= -->
       <refentry>
         <refnamediv>
+          <refname>svnadmin archive</refname>
+          <refpurpose>Ask Berkeley DB which logfiles can be safely
+          deleted.</refpurpose>
+        </refnamediv>
+        <refsect1>
+          <title>Synopsis</title>
+          <programlisting>svnadmin archive REPOS_PATH</programlisting>
+        </refsect1>
+        <refsect1>
+          <title>Description</title>
+
+            <para>Berkeley DB creates logs of all changes to the
+            repository, which allow it to recover in the face of
+            catastrophe.  Over time, the logfiles accumulate, although
+            most are no longer used and can be deleted to reclaim disk
+            space. See <xref linkend="svn-ch-5-sect-3.1.4"/> for more
+            information. </para>
+          </refsect1>
+
+        <refsect1>
+          <title>Examples</title>
+          
+          <para>Remove all unused logfiles from a repository:</para>
+
+        <screen>
+$ svnadmin archive /path/to/repos
+/path/to/repos/log.0000000031
+/path/to/repos/log.0000000032
+/path/to/repos/log.0000000033
+
+$ svnadmin archive /path/to/repos | xargs rm
+## disk space reclaimed!
+        </screen>
+
+        </refsect1>
+      </refentry>
+
+      <!-- ================================================================= -->
+      <refentry>
+        <refnamediv>
           <refname>svnadmin create</refname>
           <refpurpose>Create a new, empty repository at REPOS_PATH.</refpurpose>
         </refnamediv>
@@ -3359,6 +3399,7 @@ $ svnadmin create /usr/local/svn/repos
           
         </refsect1>
       </refentry>
+
 
       <!-- ================================================================= -->
       <refentry>
