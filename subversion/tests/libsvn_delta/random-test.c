@@ -92,7 +92,7 @@ main (int argc, const char * const *argv)
   apr_pool_t *pool;
   apr_status_t status;
   char optch;
-  const char *optarg, *progname;
+  const char *opt_arg, *progname;
   unsigned long seed, seed_save, subseed_base;
   int seed_set = 0, maxlen = DEFAULT_MAXLEN, iterations = DEFAULT_ITERATIONS;
   int c1, c2, i;
@@ -111,19 +111,20 @@ main (int argc, const char * const *argv)
   /* Read options.  */
   pool = svn_pool_create (NULL);
   apr_getopt_init (&opt, pool, argc, argv);
-  while ((status = apr_getopt (opt, "s:l:n:", &optch, &optarg)) == APR_SUCCESS)
+  while ((status = apr_getopt (opt, "s:l:n:", &optch, &opt_arg))
+         == APR_SUCCESS)
     {
       switch (optch)
         {
         case 's':
-          seed = atoi (optarg);
+          seed = atoi (opt_arg);
           seed_set = 1;
           break;
         case 'l':
-          maxlen = atoi (optarg);
+          maxlen = atoi (opt_arg);
           break;
         case 'n':
-          iterations = atoi (optarg);
+          iterations = atoi (opt_arg);
           break;
         }
     }
