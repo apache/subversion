@@ -368,7 +368,13 @@ typedef struct svn_delta_walk_t
   /* We're about to start receiving a prop-delta. HANDLER and
      HANDLER_BATON specify a function to consume a series of
      propchange chunks.  If BASE_PATH is zero, the changes are
-     relative to the empty file. */
+     relative to the empty file. 
+  
+     Note: this is the "fully streamy" interface referred to earlier.
+     You probably don't want to use it right now, unless we've had a
+     problem with property sizes, in which case please remove this
+     comment. 
+  */
   svn_error_t *(*begin_propdelta) (void *walk_baton, void *parent_baton,
                                    svn_prop_change_chunk_handler_t **handler,
                                    void **handler_baton);
