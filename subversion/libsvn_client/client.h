@@ -106,19 +106,22 @@ typedef struct
       - USE_ADMIN indicates that the RA layer should create tempfiles
         in the administrative area instead of in the working copy itself.
 
+      - READ_ONLY_WC indicates that the RA layer should not attempt
+        modify the working copy directly.
+
    BASE_DIR may be NULL if the RA operation does not correspond to a
    working copy (in which case, DO_STORE and USE_ADMIN should both
    be FALSE).
 
    The calling application's authentication baton is provided in AUTH_BATON,
-   and allocations related to this session are performed in POOL.
-*/
+   and allocations related to this session are performed in POOL.  */
 svn_error_t * svn_client__open_ra_session (void **session_baton,
                                            const svn_ra_plugin_t *ra_lib,
                                            svn_stringbuf_t *repos_URL,
                                            svn_stringbuf_t *base_dir,
                                            svn_boolean_t do_store,
                                            svn_boolean_t use_admin,
+                                           svn_boolean_t read_only_wc,
                                            void *auth_baton,
                                            apr_pool_t *pool);
 

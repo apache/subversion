@@ -55,6 +55,10 @@ typedef struct svn_ra_local__session_baton_t
      convenience). */
   svn_fs_t *fs;
 
+  /* Callback stuff. */
+  const svn_ra_callbacks_t *callbacks;
+  void *callback_baton;
+
 } svn_ra_local__session_baton_t;
 
 

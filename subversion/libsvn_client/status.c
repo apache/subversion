@@ -95,7 +95,7 @@ add_update_info_to_status_hash (apr_hash_t *statushash,
 
   /* Open a repository session to the URL. */
   SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, anchor,
-                                        TRUE, TRUE, auth_baton, pool));
+                                        TRUE, TRUE, TRUE, auth_baton, pool));
 
   /* Tell RA to drive a status-editor; this will fill in the
      repos_status_* fields in each status struct. */

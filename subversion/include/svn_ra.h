@@ -38,11 +38,6 @@ extern "C" {
 /* Misc. declarations */
 
 
-/* ### it would be nice to omit the callbacks in the get_commit_editor
-   ### vtable; move them all into the callback table. that would allow
-   ### us to lose this type, and we could talk more specifically about
-   ### the parameters */
-
 /* This is a function type which allows the RA layer to fetch working
    copy (WC) properties.
 
@@ -76,7 +71,6 @@ typedef svn_error_t *(*svn_ra_set_wc_prop_func_t) (void *baton,
                                                    const svn_string_t *value,
                                                    apr_pool_t *pool);
 
-
 /* Function type for post-commit processing.  PATH is the path that
    was committed, relative to the start of the commit edit (see
    get_commit_editor in svn_ra_plugin_t).  NEW_REV is the revision
@@ -90,7 +84,8 @@ typedef svn_error_t *(*svn_ra_set_wc_prop_func_t) (void *baton,
 
    Typically, the client layer supplies this routine to an RA layer,
    which calls this routine on each PATH that was committed, allowing
-   the client to bump revision numbers, possibly recursively.  */
+   the client to bump revision numbers, possibly recursively.
+*/
 typedef svn_error_t *(*svn_ra_close_commit_func_t) (void *baton,
                                                     svn_stringbuf_t *relpath,
                                                     svn_boolean_t recurse,
@@ -233,21 +228,14 @@ typedef struct svn_ra_callbacks_t
                                      void *callback_baton,
                                      apr_pool_t *pool);
 
-  /* Retrieve a "working copy" property for an item relative to the
-     "root" of the session (defined by REPOS_URL to the open() vtable
-     function call).
-
-     The baton passed to the get_wcprop callback is the CALLBACK_BATON.
-
-     If it quite legal to set this field to NULL if the RA user cannot
-     support WC properties, or they are not defined/applicable for the
-     current session.
-
-     ### we might have a problem if the RA layer ever wants a property
-     ### that corresponds to a different revision of the file than
-     ### what is in the WC. we'll cross that bridge one day...
-  */
+  /* Fetch working copy properties. */
   svn_ra_get_wc_prop_func_t get_wc_prop;
+
+  /* Set working copy properties. */
+  svn_ra_set_wc_prop_func_t set_wc_prop;
+
+  /* Perform post-commit activity. */
+  svn_ra_close_commit_func_t close_commit;
 
 } svn_ra_callbacks_t;
 
@@ -342,11 +330,7 @@ typedef struct svn_ra_plugin_t
                                      svn_revnum_t *new_rev,
                                      const char **committed_date,
                                      const char **committed_author,
-                                     svn_stringbuf_t *log_msg,
-                                     svn_ra_get_wc_prop_func_t get_func,
-                                     svn_ra_set_wc_prop_func_t set_func,
-                                     svn_ra_close_commit_func_t close_func,
-                                     void *close_baton);
+                                     svn_stringbuf_t *log_msg);
 
   /* Push the contents of PATH at REVISION into an existing STREAM;
      PATH is interpreted relative to the url in SESSION_BATON.

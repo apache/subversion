@@ -217,7 +217,7 @@ diff_or_merge (const apr_array_header_t *options,
      cooperates with the editor and returns values when the file is in the
      wc, and null otherwise. */
   SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, NULL,
-                                        FALSE, FALSE, auth_baton, pool));
+                                        FALSE, FALSE, TRUE, auth_baton, pool));
 
   /* ### todo: later, when we take two (or N) targets and a more
      sophisticated indication of their interaction with start and end,
@@ -270,7 +270,7 @@ diff_or_merge (const apr_array_header_t *options,
          get_wc_prop to return values when the file is in the wc */
       SVN_ERR (svn_client__open_ra_session (&session2, ra_lib, URL,
                                             NULL,
-                                            FALSE, FALSE,
+                                            FALSE, FALSE, TRUE,
                                             auth_baton, pool));
 
       SVN_ERR (svn_client__get_diff_editor (target,

@@ -74,7 +74,8 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
       /* Open an RA session for the URL. Note that we don't have a local
          directory, nor a place to put temp files or store the auth data. */
       SVN_ERR (svn_client__open_ra_session (&session, ra_lib, anchor, NULL,
-                                            FALSE, FALSE, auth_baton, pool));
+                                            FALSE, FALSE, TRUE,
+                                            auth_baton, pool));
 
       /* Fetch RA commit editor */
       SVN_ERR (ra_lib->get_commit_editor
@@ -83,8 +84,7 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
                 &committed_rev,
                 &committed_date,
                 &committed_author,
-                log_msg ? log_msg : svn_stringbuf_create ("", pool),
-                NULL, NULL, NULL, NULL));
+                log_msg ? log_msg : svn_stringbuf_create ("", pool)));
 
       /* ### todo:  This is a TEMPORARY wrapper around our editor so we
          can use it with an old driver. */

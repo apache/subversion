@@ -211,6 +211,10 @@ open (void **session_baton,
      convenience. */
   session->fs = svn_repos_fs (session->repos);
 
+  /* Stuff the callbacks/baton here. */
+  session->callbacks = callbacks;
+  session->callback_baton = callback_baton;
+
   /* ### ra_local is not going to bother to store the username in the
      working copy.  This means that the username will always be
      fetched from getuid() or from a commandline arg, which is fine.
@@ -281,11 +285,7 @@ get_commit_editor (void *session_baton,
                    svn_revnum_t *new_rev,
                    const char **committed_date,
                    const char **committed_author,
-                   svn_stringbuf_t *log_msg,
-                   svn_ra_get_wc_prop_func_t get_func,
-                   svn_ra_set_wc_prop_func_t set_func,
-                   svn_ra_close_commit_func_t close_func,
-                   void *close_baton)
+                   svn_stringbuf_t *log_msg)
 {
   const svn_delta_editor_t *commit_editor;
   const svn_delta_editor_t *tracking_editor;
@@ -299,9 +299,9 @@ get_commit_editor (void *session_baton,
     = apr_pcalloc (sess_baton->pool, sizeof (*cb));
 
   cb->pool = sess_baton->pool;
-  cb->close_func = close_func;
-  cb->set_func = set_func;
-  cb->close_baton = close_baton;
+  cb->close_func = sess_baton->callbacks->close_commit;
+  cb->set_func = sess_baton->callbacks->set_wc_prop;
+  cb->close_baton = sess_baton->callback_baton;
   cb->fs = sess_baton->fs;
   cb->committed_targets = apr_hash_make (sess_baton->pool);
   cb->new_rev = new_rev;
