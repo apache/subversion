@@ -44,3 +44,96 @@ Repository Implementation:
    for admins who want to peruse and/or hand-tweak locks.
 
 
+-----------------
+
+Various opptions for client-side behavior.  Drop brainstorms here.
+Most of this discussion is based on stuff happening in IRC, which will
+be refined and brought to the dev@ list.
+
+
+Goals:
+
+   - client must allow user to lock/unlock paths.
+
+   - want to prevent the user from wasting time on an unmergeable change.
+
+
+Framework:
+
+   - the client will have 'svn lock/unlock' commands.
+
+   - a lock-token's is an object whose most important fields are a
+     UUID and username.
+
+       [Justification for lock-tokens: the svn client doesn't always
+       know who you are.  Not all repository connections are
+       authenticated (for example, typically not read operations), so
+       it's too error-prone to identify locks purely by username.
+       Instead, we identify locks by uniquely named lock-tokens.
+       Hence the UUID.]
+
+   - 'svn lock' returns a lock-token to the client, then stored in the WC.
+      If the connection is unauthenticated, then the lock creation fails.
+      In other words, we don't allow "anonymous" locks.        
+
+   - 'svn commit' notices the lock-token on a committable object, and
+     sends it when building the repository transaction.  (The server
+     requires the token, along with matching authn, to allow the path
+     to be changed.)
+
+   - 'svn unlock' also requires authentication (but not a token).  If
+     successful, the lock is removed from the path.
+
+   - need to extend 'svn status' to include locked objects in its
+     standard display of "interesting things."  (Additionally, 'svn st
+     -u' probably needs to show objects locked in the repository?)
+
+
+UI interaction models:
+
+   - The simple (cruel) solution:
+
+       If you're about to start editing a non-mergeable file, 'svn
+       lock' it first.  If you forget to do that, then you run the
+       risk of wasting time on unresolvable changes... and you deserve
+       whatever happens to you.
+
+   - From brane and jpieper, an extension of the above:
+
+       Mark certain files with a special svn: property which means
+       "this file cannot be changed except when locked."  Files with
+       this property would be read-only in the working copy most of
+       the time for most users.  'svn lock' makes the file editable,
+       which means users get habitutated to the command, and thus are
+       more likely to discover pre-existing locks before starting
+       unmergeable work.
+
+       Note that you can still 'svn lock' any file you want.  The
+       special property isn't required, it's just a way of helping
+       people remember that a file is unmergeable.
+
+
+Weird scenarios with lock-tokens/working-copies:
+
+   - Every lock has exactly one lock-token.
+
+      User locks a file, gets a lock-token.  This token now lives in
+      this single working copy.  If the user wants to "control" the
+      file from a different working copy, then she must
+
+          - 'svn unlock file'  (from anywhere;  only requires authn)
+          - re-lock the file in the 2nd working copy.
+
+      This generates a new lock, and thus a new lock-token (new UUID),
+      stored in the 2nd working copy.
+
+        * Question: is this scenario common?  might an 'svn relock' or
+          'svn movelock' command be needed to combine the two steps
+          into one, so there's no small window of time where someone
+          else might lock the file?
+
+        * Question: what about the first working copy?  It still
+          thinks it has a lock, but that lock doesn't even exist
+          anymore.  It's been destroyed.  What's the mechanism for the
+          working copy to learn this and toss its dead lock-token?
+
