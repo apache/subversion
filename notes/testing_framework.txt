@@ -1,29 +1,71 @@
 
-                The Subversion Testing Framework
+                 A Subversion Testing Framework
                 ================================
 
 
-The three tenets of automated testing, which we hold dear:
+The three goals of Subversion's automated test-suite:
 
-      1.  It must be easy to run a full set of tests.
+      1.  It must be easy to run.
 
-      2.  It must be easy and fast to discover what has failed.
+      2.  It must be easy to understand the results.
 
       3.  It must be easy to add new tests.
 
-These tenets are what guide our design decisions when it comes to
-testing.
 
 
-What automake gives us
-----------------------
+What automake gives us for free
+-------------------------------
 
-Automake allows to define a variable TESTS (in a `Makefile.am') which
-is a list of test-programs to run.  `make check' runs all these tests,
-examines the return value of each, and finally states how many passed.
+Automake defines a variable TESTS (in a `Makefile.am') which is a list
+of test-programs to run in a subdirectory.  `make check' runs all
+these tests, examines the return value of each, and finally states how
+many passed.  When run from the top of the source tree, `make check'
+works recursively and reports the results from each subdir.
 
 
 
+
+
+
+The structural requirements of an SVN "test"
+--------------------------------------------
+
+1.  Accept standardized arguments:
+
+       -h/--help (or no args)     print usage message & arg list
+       -l/--list                  print list of all tests app can do
+       N                          run test #N
+
+2.  Print standardized output after finishing a test:
+
+      (argv[0]) test (N):  (description) ............... (PASS | FAIL)
+
+
+
+Here's an imaginary session with a SVN test app.
+
+[sussman@newton:~] ./frobtest -h
+
+    frobtest:  check subversion's frobbing abilities
+
+       -h/--help              this usage message
+       -l/--list              list all frob tests
+       N                      run test #N
+
+[sussman@newton:~] ./frobtest -l
+
+    frobtest:  check subversion's frobbing abilities
+
+    1. basic frob test on fixed data
+    2. order-N frobbing on even parity data
+    3. advanced frobnification (maxdepth == 1000)
+    4. tensor-stressed frob
+
+[sussman@newton:~] ./frobtest 2
+
+ frobtest test 2: order-N frobbing on even parity data...........PASS
+
+[sussman@newton:~]
 
 
 
@@ -47,3 +89,30 @@ Subversion hits 1.0.  A majority of pre-1.0 bugs are due to the code
 being in the "initial growth" stage.  The code is changing so fast
 that any fixed bug will probably never recur, simply because features
 and dependencies will be different a week later.)
+
+
+
+Back to the 3 goals
+-------------------
+
+How well have we met the original three goals of a test-suite?
+
+
+  1.  It must be easy to run.
+
+      * `make check' at any level of the tree
+
+
+  2.  It must be easy to understand the results.
+
+      * each test prints a standardized self-description and result
+
+      * `make check' summarizes overall results of each subdir's tests
+
+      * all test program output is logged to one file
+
+
+  3.  It must be easy to add new tests.
+
+      * write an app that meets the "requirements" outlined above,
+        then add it to the TESTS variable in a Makefile.am
