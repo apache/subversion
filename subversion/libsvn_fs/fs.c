@@ -192,8 +192,8 @@ svn_fs_new (apr_pool_t *parent_pool)
   new->warning = default_warning_func;
 
   apr_pool_cleanup_register (new->pool, (void *) new,
-                        (apr_status_t (*) (void *)) cleanup_fs_apr,
-                        apr_pool_cleanup_null);
+                             (apr_status_t (*) (void *)) cleanup_fs_apr,
+                             apr_pool_cleanup_null);
 
   return new;
 }
