@@ -75,7 +75,6 @@ struct svn_auth_baton_t
 /* Abstracted iteration baton */
 struct svn_auth_iterstate_t
 {
-  const char *cred_kind;       /* the type of creds provided by the table */
   provider_set_t *table;       /* the table being searched */
   int provider_idx;            /* the current provider (row) */
   void *provider_iter_baton;   /* the provider's own iteration context */
@@ -107,7 +106,15 @@ svn_auth_register_provider (svn_auth_baton_t *auth_baton,
 {
   /* ### ignoring the order argument for now, because it would be
      complex to implement, and I can't see why it's worth it yet.
-     can't the caller just register providers in order?  */
+     can't the caller just register providers in order?
+
+     gjs says: if two subcomponents each register three providers
+     with the auth baton, then how do they interleave their providers?
+     Specifically, the WC will be registering a provider to get/set
+     auth information from the admin directory. The encapsulation
+     creates the difficulty with manual ordering. Thus, the order
+     should probably stay, but implemented right away? *shrug*
+     Note that ARRAY->elts could be passed to qsort().  */
   
   provider_t *provider;
   provider_set_t *table;
@@ -164,9 +171,7 @@ svn_auth_first_credentials (void **credentials,
       SVN_ERR (provider->vtable->first_credentials 
                (&creds, &iter_baton, provider->provider_baton, pool));
 
-      if (! creds)
-        continue;             
-      else
+      if (creds != NULL)
         break;
     }
 
@@ -176,7 +181,6 @@ svn_auth_first_credentials (void **credentials,
     {
       /* Build an abstract iteration state. */
       iterstate = apr_pcalloc (pool, sizeof(*iterstate));
-      iterstate->cred_kind = apr_pstrdup (pool, cred_kind);
       iterstate->table = table;
       iterstate->provider_idx = i;
       iterstate->provider_iter_baton = iter_baton;
@@ -209,9 +213,7 @@ svn_auth_next_credentials (void **credentials,
       SVN_ERR (provider->vtable->next_credentials 
                (&creds, state->provider_iter_baton, pool));
 
-      if (! creds)
-        continue;             
-      else
+      if (creds != NULL)
         break;
     }
 
@@ -246,9 +248,7 @@ svn_auth_save_credentials (const char *cred_kind,
       SVN_ERR (provider->vtable->save_credentials 
                (&save_succeeded, credentials, provider->provider_baton, pool));
 
-      if (! save_succeeded)
-        continue;
-      else
+      if (save_succeeded)
         break;
     }
 
