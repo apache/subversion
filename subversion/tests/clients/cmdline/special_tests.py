@@ -193,18 +193,17 @@ def import_export_symlink(sbox):
   ## repository directly, verifying that the symlink is created in
   ## both cases.
 
-  # do the working copy case first
-  export_target = sbox.add_wc_path('export')
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'export', sbox.wc_dir, export_target) 
+  for export_src, dest_dir in [(sbox.wc_dir, 'export-wc'),
+                               (sbox.repo_url, 'export-url')]:
+    export_target = sbox.add_wc_path(dest_dir)
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       'export', export_src, export_target) 
   
-  # is the link at the correct place?
-  link_path = sbox.wc_dir + ".export/dirA/dirB/new_link"
-  new_target = os.readlink(link_path)
-  if new_target != 'linktarget':
-    raise svntest.Failure
-
-
+    # is the link at the correct place?
+    link_path = os.path.join(export_target, "dirA/dirB/new_link")
+    new_target = os.readlink(link_path)
+    if new_target != 'linktarget':
+      raise svntest.Failure
 
 
 #----------------------------------------------------------------------
