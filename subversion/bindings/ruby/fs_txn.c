@@ -196,7 +196,8 @@ change_txn_prop (VALUE self, VALUE aName, VALUE aValue)
   if (aValue == Qnil)
     value = NULL;
   else
-    value = svn_string_create (StringValuePtr (aValue), pool);
+    value = svn_string_ncreate (StringValuePtr (aValue),
+                                RSTRING (aValue)->len, pool);
 
   err = svn_fs_change_txn_prop (txn->txn, StringValuePtr (aName), value, pool);
   apr_pool_destroy (pool);

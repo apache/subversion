@@ -212,7 +212,8 @@ wc_prop_set (VALUE class, VALUE aName, VALUE aValue, VALUE aPath)
 
   pool = svn_pool_create (NULL);
   name = svn_stringbuf_create (StringValuePtr (aName), pool);
-  value = svn_stringbuf_create (StringValuePtr (aValue), pool);
+  value = svn_stringbuf_ncreate (StringValuePtr (aValue),
+                                 RSTRING (aValue)->len, pool);
   path = svn_stringbuf_create (StringValuePtr (aPath), pool);
   err = svn_wc_prop_set (value, name, path, pool);
 
