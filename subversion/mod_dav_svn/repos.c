@@ -67,79 +67,6 @@
 #include "dav_svn.h"
 
 
-/* dav_svn_repos
- *
- * Record information about the repository that a resource belongs to.
- * This structure will be shared between multiple resources so that we
- * can optimized our FS access.
- *
- * Note that we do not refcount this structure. Presumably, we will need
- * it throughout the life of the request. Therefore, we can just leave it
- * for the request pool to cleanup/close.
- *
- * Also, note that it is possible that two resources may have distinct
- * dav_svn_repos structures, yet refer to the same repository. This is
- * allowed by the SVN FS interface.
- *
- * ### should we attempt to merge them when we detect this situation in
- * ### places like is_same_resource, is_parent_resource, or copy/move?
- * ### I say yes: the FS will certainly have an easier time if there is
- * ### only a single FS open; otherwise, it will have to work a bit harder
- * ### to keep the things in sync.
- */
-typedef struct {
-  apr_pool_t *pool;     /* request_rec -> pool */
-
-  /* Remember the root URL path of this repository (just a path; no
-     scheme, host, or port).
-
-     Example: the URI is "http://host/repos/file", this will be "/repos".
-  */
-  const char *root_uri;
-
-  /* This records the filesystem path to the SVN FS */
-  const char *fs_path;
-
-  /* the open repository */
-  svn_fs_t *fs;
-
-  /* NOTE: root_rev and root_dir may be 0/NULL if we don't open the root
-     of the repository (e.g. we're dealing with activity resources) */
-  /* ### these fields may make better sense elsewhere; a repository may
-     ### need two roots open for some operations(?) */
-
-  /* what revision did we open for the root? */
-  svn_revnum_t root_rev;
-
-  /* the root of the revision tree */
-  svn_fs_dir_t *root_dir;
-  
-} dav_svn_repos;
-
-/* internal structure to hold information about this resource */
-struct dav_resource_private {
-  apr_pool_t *pool;     /* request_rec -> pool */
-
-  /* Path from the SVN repository root to this resource. This value has
-     a leading slash. It will never have a trailing slash, even if the
-     resource represents a collection.
-
-     For example: URI is http://host/repos/file -- path will be "/file".
-
-     Note that the SVN FS does not like absolute paths, so we
-     generally skip the first char when talking with the FS.
-  */
-  svn_string_t *path;
-
-  /* resource-type-specific data */
-  const char *object_name;      /* ### not really defined right now */
-
-  /* for REGULAR resources: an open node for the revision */
-  svn_fs_node_t *node;
-
-  dav_svn_repos *repos;
-};
-
 struct dav_stream {
   const dav_resource *res;
   svn_fs_file_t *file;
@@ -242,7 +169,7 @@ static dav_resource * dav_svn_get_resource(request_rec *r,
   const char *relative;
   const char *special_uri;
   char ch;
-  svn_error_t *err;
+  svn_error_t *serr;
 
   if ((fs_path = dav_svn_get_fs_path(r)) == NULL)
     {
@@ -314,12 +241,12 @@ static dav_resource * dav_svn_get_resource(request_rec *r,
 
   /* open the SVN FS */
   repos->fs = svn_fs_new(r->pool);
-  err = svn_fs_open_berkeley(repos->fs, fs_path);
-  if (err != NULL)
+  serr = svn_fs_open_berkeley(repos->fs, fs_path);
+  if (serr != NULL)
     {
-      /* ### do something with err */
+      /* ### do something with serr */
       /* ### return an error rather than log it? */
-      ap_log_rerror(APLOG_MARK, APLOG_ERR | APLOG_NOERRNO, err->apr_err, r,
+      ap_log_rerror(APLOG_MARK, APLOG_ERR | APLOG_NOERRNO, serr->apr_err, r,
                     "Could not open the SVN filesystem at %s", fs_path);
       return NULL;
     }
@@ -387,12 +314,13 @@ static dav_resource * dav_svn_get_resource(request_rec *r,
       repos->root_rev = 1;
 
       /* get the root of the tree */
-      err = svn_fs_open_root(&repos->root_dir, repos->fs, repos->root_rev);
-      if (err != NULL)
+      serr = svn_fs_open_root(&repos->root_dir, repos->fs, repos->root_rev);
+      if (serr != NULL)
         {
-          /* ### do something with err */
+          /* ### do something with serr */
           /* ### return an error rather than log it? */
-          ap_log_rerror(APLOG_MARK, APLOG_ERR | APLOG_NOERRNO, err->apr_err, r,
+          ap_log_rerror(APLOG_MARK, APLOG_ERR | APLOG_NOERRNO,
+                        serr->apr_err, r,
                         "Could not open the root of the repository");
           return NULL;
         }
@@ -414,14 +342,14 @@ static dav_resource * dav_svn_get_resource(request_rec *r,
           /* open the requested resource. note that we skip the leading "/" */
           ++relpath.data;
           --relpath.len;
-          err = svn_fs_open_node(&comb->priv.node, repos->root_dir, &relpath,
-                                 r->pool);
-          if (err != NULL)
+          serr = svn_fs_open_node(&comb->priv.node, repos->root_dir, &relpath,
+                                  r->pool);
+          if (serr != NULL)
             {
-              /* ### do something with err */
+              /* ### do something with serr */
               /* ### return an error rather than log it? */
               ap_log_rerror(APLOG_MARK, APLOG_ERR | APLOG_NOERRNO,
-                            err->apr_err, r,
+                            serr->apr_err, r,
                             "Could not open the resource '%s'", relative);
               return NULL;
             }
@@ -535,7 +463,7 @@ static dav_error * dav_svn_open_stream(const dav_resource *resource,
 {
   dav_resource_private *info = resource->info;
 #if 0
-  svn_error_t *err;
+  svn_error_t *serr;
 #endif
 
   /* start building the stream structure */
@@ -549,11 +477,11 @@ static dav_error * dav_svn_open_stream(const dav_resource *resource,
 
   /* ### assuming mode == read for now */
 
-  err = svn_fs_file_contents(&(*stream)->readfn, &(*stream)->baton,
-                             (*stream)->file, info->pool);
-  if (err != NULL)
+  serr = svn_fs_file_contents(&(*stream)->readfn, &(*stream)->baton,
+                              (*stream)->file, info->pool);
+  if (serr != NULL)
     {
-      return dav_svn_convert_err(err, HTTP_INTERNAL_SERVER_ERROR,
+      return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                  "could not prepare to read the file");
     }
 #endif
@@ -575,13 +503,13 @@ static dav_error * dav_svn_close_stream(dav_stream *stream, int commit)
 static dav_error * dav_svn_read_stream(dav_stream *stream, void *buf,
                                        apr_size_t *bufsize)
 {
-  svn_error_t *err;
+  svn_error_t *serr;
 
-  err = (*stream->readfn)(stream->baton, buf, bufsize,
-                          stream->res->info->pool);
-  if (err != NULL)
+  serr = (*stream->readfn)(stream->baton, buf, bufsize,
+                           stream->res->info->pool);
+  if (serr != NULL)
     {
-      return dav_svn_convert_err(err, HTTP_INTERNAL_SERVER_ERROR,
+      return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                  "could not read the file contents");
     }
 
@@ -649,10 +577,10 @@ static dav_error * dav_svn_set_headers(request_rec *r,
   /* set up the Content-Length header */
 #if 0
   /* ### need to get FILE */
-  err = svn_fs_file_length(&length, file);
-  if (err != NULL)
+  serr = svn_fs_file_length(&length, file);
+  if (serr != NULL)
     {
-      return dav_svn_convert_err(err, HTTP_INTERNAL_SERVER_ERROR,
+      return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                  "could not fetch the resource length");
     }
   ap_set_content_length(r, length);

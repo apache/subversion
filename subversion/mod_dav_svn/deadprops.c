@@ -55,10 +55,178 @@
 #include <httpd.h>
 #include <mod_dav.h>
 
+#include <apr_hash.h>
+
 #include "dav_svn.h"
 
 
-const dav_hooks_propdb dav_svn_hooks_propdb = { 0 };
+struct dav_db {
+  const dav_resource *resource;
+  apr_pool_t *p;
+
+  /* the resource's properties that we are sequencing over */
+  apr_hash_t *props;
+  apr_hash_index_t *hi;
+};
+
+static dav_error *dav_svn_db_open(apr_pool_t *p, const dav_resource *resource,
+                                  int ro, dav_db **pdb)
+{
+  dav_db *db = apr_pcalloc(p, sizeof(*db));
+
+  db->resource = resource;
+  db->p = p;
+
+  /* ### use RO and node's mutable status to look for an error? */
+
+  *pdb = db;
+
+  return NULL;
+}
+
+static void dav_svn_db_close(dav_db *db)
+{
+  /* nothing to do */
+}
+
+static dav_error *dav_svn_db_fetch(dav_db *db, dav_datum key,
+                                   dav_datum *pvalue)
+{
+  svn_string_t propname = { key.dptr, key.dsize, 0, NULL };
+  svn_string_t *propval;
+  svn_error_t *serr;
+
+  serr = svn_fs_get_node_prop(&propval, db->resource->info->node,
+                              &propname, db->p);
+  if (serr != NULL)
+    return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                               "could not fetch a property");
+
+  pvalue->dptr = propval->data;
+  pvalue->dsize = propval->len;
+  return NULL;
+}
+
+static dav_error *dav_svn_db_store(dav_db *db, dav_datum key, dav_datum value)
+{
+  svn_string_t propname = { key.dptr, key.dsize, 0, NULL };
+  svn_string_t propval = { value.dptr, value.dsize, 0, NULL };
+  svn_error_t *serr;
+
+  /* ### hope node is open, and it is mutable */
+
+  serr = svn_fs_change_prop(db->resource->info->node, &propname, &propval);
+  if (serr != NULL)
+    return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                               "could not change a property");
+
+  /* a change to the props was made; make sure our cached copy is gone */
+  db->props = NULL;
+
+  return NULL;
+}
+
+static dav_error *dav_svn_db_remove(dav_db *db, dav_datum key)
+{
+  svn_string_t propname = { key.dptr, key.dsize, 0, NULL };
+  svn_error_t *serr;
+
+  /* ### hope node is open, and it is mutable */
+
+  serr = svn_fs_change_prop(db->resource->info->node, &propname, NULL);
+  if (serr != NULL)
+    return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                               "could not remove a property");
+
+  /* a change to the props was made; make sure our cached copy is gone */
+  db->props = NULL;
+
+  return NULL;
+}
+
+static int dav_svn_db_exists(dav_db *db, dav_datum key)
+{
+  svn_string_t propname = { key.dptr, key.dsize, 0, NULL };
+  svn_string_t *propval;
+  svn_error_t *serr;
+
+  serr = svn_fs_get_node_prop(&propval, db->resource->info->node,
+                              &propname, db->p);
+
+  /* ### try and dispose of the value? */
+
+  return serr == NULL && propval != NULL;
+}
+
+static void get_key(apr_hash_index_t *hi, dav_datum *pkey)
+{
+  if (hi == NULL)
+    {
+      pkey->dptr = NULL;
+      pkey->dsize = 0;
+    }
+  else
+    {
+      const void *name;
+      apr_size_t namelen;
+
+      apr_hash_this(hi, &name, &namelen, NULL);
+      pkey->dptr = (char *)name;        /* hope the caller doesn't change */
+      pkey->dsize = namelen;
+    }
+}
+
+static dav_error *dav_svn_db_firstkey(dav_db *db, dav_datum *pkey)
+{
+  /* if we don't have a copy of the properties, then get one */
+  if (db->props == NULL)
+    {
+      svn_error_t *serr;
+
+      serr = svn_fs_get_node_proplist(&db->props, db->resource->info->node,
+                                      db->p);
+      if (serr != NULL)
+        return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                   "could not begin sequencing through "
+                                   "properties");
+    }
+
+  /* begin the iteration over the hash */
+  db->hi = apr_hash_first(db->props);
+
+  /* fetch the first key */
+  get_key(db->hi, pkey);
+
+  return NULL;
+}
+
+static dav_error *dav_svn_db_nextkey(dav_db *db, dav_datum *pkey)
+{
+  /* skip to the next hash entry */
+  db->hi = apr_hash_next(db->hi);
+
+  /* fetch the key */
+  get_key(db->hi, pkey);
+
+  return NULL;
+}
+
+static void dav_svn_db_freedatum(dav_db *db, dav_datum data)
+{
+  /* nothing to do */
+}
+
+const dav_hooks_propdb dav_svn_hooks_propdb = {
+  dav_svn_db_open,
+  dav_svn_db_close,
+  dav_svn_db_fetch,
+  dav_svn_db_store,
+  dav_svn_db_remove,
+  dav_svn_db_exists,
+  dav_svn_db_firstkey,
+  dav_svn_db_nextkey,
+  dav_svn_db_freedatum
+};
 
 
 /* 
