@@ -110,6 +110,9 @@ typedef struct {
      for temporary construction of relative file names. */
   svn_stringbuf_t *pathbuf;
 
+  /* A subpool.  It's about memory.  Ya dig? */
+  apr_pool_t *pool;
+
 } dir_item_t;
 
 typedef struct {
@@ -127,7 +130,10 @@ typedef struct {
 #define TOP_DIR(rb) (((dir_item_t *)(rb)->dirs->elts)[(rb)->dirs->nelts - 1])
 #define PUSH_BATON(rb,b) (*(void **)apr_array_push((rb)->dirs) = (b))
 
+  /* These two items are only valid inside add- and open-file tags! */
   void *file_baton;
+  apr_pool_t *file_pool;
+
   svn_stringbuf_t *namestr;
   svn_stringbuf_t *cpathstr;
   svn_stringbuf_t *href;
@@ -1738,15 +1744,18 @@ static const char *get_attr(const char **atts, const char *which)
   return NULL;
 }
 
-static void push_dir(report_baton_t *rb, void *baton, svn_stringbuf_t *pathbuf)
+static void push_dir(report_baton_t *rb, 
+                     void *baton, 
+                     svn_stringbuf_t *pathbuf,
+                     apr_pool_t *pool)
 {
   dir_item_t *di = (dir_item_t *)apr_array_push(rb->dirs);
 
   memset(di, 0, sizeof(*di));
   di->baton = baton;
   di->pathbuf = pathbuf;
+  di->pool = pool;
 }
-
 
 /* This implements the `ne_xml_startelm_cb' prototype. */
 static int start_element(void *userdata, const struct ne_xml_elm *elm,
@@ -1761,6 +1770,7 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
   dir_item_t *parent_dir;
   void *new_dir_baton;
   svn_stringbuf_t *pathbuf;
+  apr_pool_t *subpool;
 
   switch (elm->id)
     {
@@ -1785,9 +1795,15 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
       base = SVN_STR_TO_REV(att);
       if (rb->dirs->nelts == 0)
         {
+          /* pathbuf has to live for the whole edit! */
           pathbuf = svn_stringbuf_create("", rb->ras->pool);
+
+          subpool = svn_pool_create(rb->ras->pool);
           CHKERR( (*rb->editor->open_root)(rb->edit_baton, base,
-                                           rb->ras->pool, &new_dir_baton) );
+                                           subpool, &new_dir_baton) );
+
+          /* push the new baton onto the directory baton stack */
+          push_dir(rb, new_dir_baton, pathbuf, subpool);
         }
       else
         {
@@ -1796,18 +1812,19 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
           svn_stringbuf_set(rb->namestr, name);
 
           parent_dir = &TOP_DIR(rb);
+          subpool = svn_pool_create(parent_dir->pool);
 
-          pathbuf = svn_stringbuf_dup(parent_dir->pathbuf, rb->ras->pool);
+          pathbuf = svn_stringbuf_dup(parent_dir->pathbuf, subpool);
           svn_path_add_component(pathbuf, rb->namestr);
 
           CHKERR( (*rb->editor->open_directory)(pathbuf->data,
                                                 parent_dir->baton, base,
-                                                rb->ras->pool, 
+                                                subpool, 
                                                 &new_dir_baton) );
-        }
 
-      /* push the new baton onto the directory baton stack */
-      push_dir(rb, new_dir_baton, pathbuf);
+          /* push the new baton onto the directory baton stack */
+          push_dir(rb, new_dir_baton, pathbuf, subpool);
+        }
 
       /* Property fetching is NOT implied in replacement. */
       TOP_DIR(rb).fetch_props = FALSE;
@@ -1830,17 +1847,18 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
         }
 
       parent_dir = &TOP_DIR(rb);
+      subpool = svn_pool_create(parent_dir->pool);
 
-      pathbuf = svn_stringbuf_dup(parent_dir->pathbuf, rb->ras->pool);
+      pathbuf = svn_stringbuf_dup(parent_dir->pathbuf, subpool);
       svn_path_add_component(pathbuf, rb->namestr);
 
       CHKERR( (*rb->editor->add_directory)(pathbuf->data, parent_dir->baton,
                                            cpath ? cpath->data : NULL, 
-                                           crev, rb->ras->pool,
+                                           crev, subpool,
                                            &new_dir_baton) );
 
       /* push the new baton onto the directory baton stack */
-      push_dir(rb, new_dir_baton, pathbuf);
+      push_dir(rb, new_dir_baton, pathbuf, subpool);
 
       /* Property fetching is implied in addition. */
       TOP_DIR(rb).fetch_props = TRUE;
@@ -1856,6 +1874,7 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
       svn_stringbuf_set(rb->namestr, name);
 
       parent_dir = &TOP_DIR(rb);
+      rb->file_pool = svn_pool_create(rb->ras->pool);
 
       /* Add this file's name into the directory's path buffer. It will be
          removed in end_element() */
@@ -1863,7 +1882,7 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
 
       CHKERR( (*rb->editor->open_file)(parent_dir->pathbuf->data, 
                                        parent_dir->baton, base,
-                                       rb->ras->pool,
+                                       rb->file_pool,
                                        &rb->file_baton) );
 
       /* Property fetching is NOT implied in replacement. */
@@ -1888,6 +1907,7 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
         }
 
       parent_dir = &TOP_DIR(rb);
+      rb->file_pool = svn_pool_create(rb->ras->pool);
 
       /* Add this file's name into the directory's path buffer. It will be
          removed in end_element() */
@@ -1896,7 +1916,7 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
       CHKERR( (*rb->editor->add_file)(parent_dir->pathbuf->data,
                                       parent_dir->baton,
                                       cpath ? cpath->data : NULL, 
-                                      crev, rb->ras->pool,
+                                      crev, rb->file_pool,
                                       &rb->file_baton) );
 
       /* Property fetching is implied in addition. */
@@ -1912,10 +1932,10 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
       /* Removing a prop.  */
       if (rb->file_baton == NULL)
         rb->editor->change_dir_prop(TOP_DIR(rb).baton, rb->namestr->data, 
-                                    NULL, rb->ras->pool);
+                                    NULL, TOP_DIR(rb).pool);
       else
         rb->editor->change_file_prop(rb->file_baton, rb->namestr->data, 
-                                     NULL, rb->ras->pool);
+                                     NULL, rb->file_pool);
       break;
       
     case ELEM_fetch_props:
@@ -1929,10 +1949,10 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
 
           if (rb->file_baton == NULL)
             rb->editor->change_dir_prop(TOP_DIR(rb).baton, rb->namestr->data, 
-                                        NULL, rb->ras->pool);
+                                        NULL, TOP_DIR(rb).pool);
           else
             rb->editor->change_file_prop(rb->file_baton, rb->namestr->data, 
-                                         NULL, rb->ras->pool);
+                                         NULL, rb->file_pool);
         }
       else
         {
@@ -1953,7 +1973,7 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
                                 rb->ras->callbacks->get_committed_rev,
                                 rb->ras->callbacks->get_wc_prop,
                                 rb->ras->callback_baton,
-                                rb->ras->pool) );
+                                rb->file_pool) );
       break;
 
     case ELEM_delete_entry:
@@ -1962,13 +1982,15 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
       svn_stringbuf_set(rb->namestr, name);
 
       parent_dir = &TOP_DIR(rb);
-      pathbuf = svn_stringbuf_dup(parent_dir->pathbuf, rb->ras->pool);
+      subpool = parent_dir->pool;
+
+      pathbuf = svn_stringbuf_dup(parent_dir->pathbuf, subpool);
       svn_path_add_component(pathbuf, rb->namestr);
 
       CHKERR( (*rb->editor->delete_entry)(pathbuf->data,
                                           SVN_INVALID_REVNUM,
                                           TOP_DIR(rb).baton,
-                                          rb->ras->pool) );
+                                          subpool) );
       break;
 
     default:
@@ -1980,7 +2002,7 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
 
 
 static svn_error_t *
-add_node_props (report_baton_t *rb)
+add_node_props (report_baton_t *rb, apr_pool_t *pool)
 {
   svn_ra_dav_resource_t *rsrc;
 
@@ -1994,16 +2016,16 @@ add_node_props (report_baton_t *rb)
         return SVN_NO_ERROR;
 
       /* Fetch dir props. */
-      SVN_ERR (svn_ra_dav__get_props_resource(&rsrc,
-                                              rb->ras->sess2,
-                                              rb->href->data,
-                                              NULL,
-                                              NULL,
-                                              rb->ras->pool));
+      SVN_ERR(svn_ra_dav__get_props_resource(&rsrc,
+                                             rb->ras->sess2,
+                                             rb->href->data,
+                                             NULL,
+                                             NULL,
+                                             pool));
       add_props(rsrc, 
                 rb->editor->change_file_prop, 
                 rb->file_baton,
-                rb->ras->pool);
+                pool);
     }
   else
     {
@@ -2011,16 +2033,16 @@ add_node_props (report_baton_t *rb)
         return SVN_NO_ERROR;
 
       /* Fetch dir props. */
-      SVN_ERR (svn_ra_dav__get_props_resource(&rsrc,
-                                              rb->ras->sess2,
-                                              TOP_DIR(rb).vsn_url,
-                                              NULL,
-                                              NULL,
-                                              rb->ras->pool));
+      SVN_ERR(svn_ra_dav__get_props_resource(&rsrc,
+                                             rb->ras->sess2,
+                                             TOP_DIR(rb).vsn_url,
+                                             NULL,
+                                             NULL,
+                                             pool));
       add_props(rsrc, 
                 rb->editor->change_dir_prop, 
                 TOP_DIR(rb).baton, 
-                rb->ras->pool);
+                pool);
     }
     
   return SVN_NO_ERROR;
@@ -2032,6 +2054,7 @@ static int end_element(void *userdata,
                        const char *cdata)
 {
   report_baton_t *rb = userdata;
+  const svn_delta_editor_t *editor = rb->editor;
 
   switch (elm->id)
     {
@@ -2040,16 +2063,16 @@ static int end_element(void *userdata,
       break;
 
     case ELEM_add_directory:
-
-      /*** FALLTHRU ***/
-
     case ELEM_open_directory:
       /* fetch node props as necessary. */
-      CHKERR( add_node_props (rb) );
+      CHKERR( add_node_props(rb, TOP_DIR(rb).pool));
 
-      /* close the topmost directory, and pop it from the stack */
-      CHKERR( (*rb->editor->close_directory)(TOP_DIR(rb).baton,
-                                             rb->ras->pool) );
+      /* close the topmost directory, and pop it from the stack.
+         also, destroy the subpool used exclusive by this directory
+         and its children.  */
+      CHKERR( (*rb->editor->close_directory)(TOP_DIR(rb).baton, 
+                                             TOP_DIR(rb).pool) );
+      svn_pool_destroy(TOP_DIR(rb).pool);
       apr_array_pop(rb->dirs);
       break;
 
@@ -2065,21 +2088,33 @@ static int end_element(void *userdata,
                                 rb->ras->callbacks->get_committed_rev,
                                 rb->ras->callbacks->get_wc_prop,
                                 rb->ras->callback_baton,
-                                rb->ras->pool) );
+                                rb->file_pool) );
 
-
-      /*** FALLTHRU ***/
-
-    case ELEM_open_file:
       /* fetch node props as necessary. */
-      CHKERR( add_node_props (rb) );
+      CHKERR( add_node_props(rb, rb->file_pool) );
 
       /* close the file and mark that we are no longer operating on a file */
-      CHKERR( (*rb->editor->close_file)(rb->file_baton, rb->ras->pool) );
+      CHKERR( (*rb->editor->close_file)(rb->file_baton, rb->file_pool) );
       rb->file_baton = NULL;
 
       /* Yank this file out of the directory's path buffer. */
       svn_path_remove_component(TOP_DIR(rb).pathbuf);
+      svn_pool_destroy(rb->file_pool);
+      rb->file_pool = NULL;
+      break;
+
+    case ELEM_open_file:
+      /* fetch node props as necessary. */
+      CHKERR( add_node_props(rb, rb->file_pool) );
+
+      /* close the file and mark that we are no longer operating on a file */
+      CHKERR( (*rb->editor->close_file)(rb->file_baton, rb->file_pool) );
+      rb->file_baton = NULL;
+
+      /* Yank this file out of the directory's path buffer. */
+      svn_path_remove_component(TOP_DIR(rb).pathbuf);
+      svn_pool_destroy(rb->file_pool);
+      rb->file_pool = NULL;
       break;
 
     case NE_ELM_href:
@@ -2119,25 +2154,24 @@ static int end_element(void *userdata,
                                                       rb->ras->pool) );
             }
         }
-      
       /* else we're setting a wcprop in the context of an editor drive. */
       else if (rb->file_baton == NULL)
         {
           CHKERR( simple_store_vsn_url(rb->href->data, TOP_DIR(rb).baton,
                                        rb->editor->change_dir_prop,
-                                       rb->ras->pool) );
+                                       TOP_DIR(rb).pool) );
 
           /* save away the URL in case a fetch-props arrives after all of
              the subdir processing. we will need this copy of the URL to
              fetch the properties (i.e. rb->href will be toast by then). */
-          TOP_DIR(rb).vsn_url = apr_pmemdup(rb->ras->pool,
+          TOP_DIR(rb).vsn_url = apr_pmemdup(TOP_DIR(rb).pool,
                                             rb->href->data, rb->href->len + 1);
         }
       else
         {
           CHKERR( simple_store_vsn_url(rb->href->data, rb->file_baton,
                                        rb->editor->change_file_prop,
-                                       rb->ras->pool) );
+                                       rb->file_pool) );
         }
       break;
 
@@ -2146,22 +2180,17 @@ static int end_element(void *userdata,
     case ELEM_creator_displayname:
       {
         /* The name of the xml tag is the property that we want to set. */
-        svn_stringbuf_t *tagname = 
-          svn_stringbuf_create (elm->nspace, rb->ras->pool); 
-        svn_stringbuf_appendcstr (tagname, elm->name);
+        apr_pool_t *pool = 
+          rb->file_baton ? rb->file_pool : TOP_DIR(rb).pool;
+        prop_setter_t setter =
+          rb->file_baton ? editor->change_file_prop : editor->change_dir_prop;
+        const char *name = apr_pstrcat(pool, elm->nspace, elm->name, NULL);
+        void *baton = rb->file_baton ? rb->file_baton : TOP_DIR(rb).baton;
 
-        CHKERR( set_special_wc_prop (tagname->data, 
-                                      cdata, 
-                                      rb->file_baton ? 
-                                        rb->editor->change_file_prop :
-                                        rb->editor->change_dir_prop,
-                                      rb->file_baton ?
-                                        rb->file_baton :
-                                        TOP_DIR(rb).baton,
-                                      rb->ras->pool) );      
-        break;
+        CHKERR( set_special_wc_prop(name, cdata, setter, baton, pool) );
       }
-
+      break;
+  
     default:
       break;
     }
