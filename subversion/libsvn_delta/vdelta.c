@@ -75,7 +75,7 @@ typedef struct hash_table_t {
 static hash_table_t *
 create_hash_table (apr_size_t num_slots, apr_pool_t *pool)
 {
-  int i;
+  apr_size_t i;
   hash_table_t* table = apr_palloc (pool, sizeof (*table));
 
   /* This should be a reasonable number of buckets ... */
