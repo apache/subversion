@@ -104,15 +104,6 @@ Approved changes (further review is welcome, but not required):
     Votes:
       +1: cmpilato, kfogel, epg
 
-  * r11665
-    Make FSFS commits work with insert-only perms on db/revs.
-    Justification:
-      This is a pretty straightforward order-of-operations change, is
-      how I (Greg) always intended FSFS to work, and fulfills what has
-      been a secondary goal of FSFS from the beginning.
-    Votes:
-      +1: ghudson, epg, maxb
-
   * Issue #2111
     Fix RPM build breakage.
     Justification:
