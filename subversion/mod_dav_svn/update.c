@@ -955,8 +955,10 @@ static svn_error_t * upd_close_file(void *file_baton,
 
   file->text_checksum = apr_pstrdup(file->pool, text_checksum);
 
-  /* if we added the file, then no need to tell the client to fetch it */
-  if ((! file->added) && file->text_changed)
+  /* If we are not in "send all" mode, and this file is not a new
+     addition or didn't otherwise have changed text, tell the client
+     to fetch it. */
+  if ((! file->uc->send_all) && (! file->added) && file->text_changed)
     {
       const char *elt;
       elt = apr_psprintf(pool, "<S:fetch-file%s%s%s/>" DEBUG_CR,

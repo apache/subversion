@@ -1757,17 +1757,29 @@ start_element(void *userdata, int parent_state, const char *nspace,
       base_checksum = get_attr(atts, "base-checksum");
       rb->result_checksum = NULL;
 
-      /* assert: rb->href->len > 0 */
-      CHKERR( simple_fetch_file(rb->ras->sess2, 
-                                rb->href->data,
-                                TOP_DIR(rb).pathbuf->data,
-                                rb->fetch_content,
-                                rb->file_baton,
-                                base_checksum,
-                                rb->editor,
-                                rb->ras->callbacks->get_wc_prop,
-                                rb->ras->callback_baton,
-                                rb->file_pool) );
+      /* If we aren't expecting to see the file contents inline, we
+         should ignore server requests to fetch them.  
+
+         ### This conditional was added to counteract a little bug in
+         Subversion 0.33.0's mod_dav_svn whereby both the <txdelta>
+         and <fetch-file> tags were being transmitted.  Someday, we
+         should remove the conditional again to give the server the
+         option of sending inline text-deltas for some files while
+         telling the client to fetch others. */
+      if (! rb->receiving_all)
+        {
+          /* assert: rb->href->len > 0 */
+          CHKERR( simple_fetch_file(rb->ras->sess2, 
+                                    rb->href->data,
+                                    TOP_DIR(rb).pathbuf->data,
+                                    rb->fetch_content,
+                                    rb->file_baton,
+                                    base_checksum,
+                                    rb->editor,
+                                    rb->ras->callbacks->get_wc_prop,
+                                    rb->ras->callback_baton,
+                                    rb->file_pool) );
+        }
       break;
 
     case ELEM_delete_entry:
