@@ -497,7 +497,7 @@ test_list = [ None,
               log_where_nothing_changed,
               log_to_revision_zero,
               log_with_path_args,
-#              url_missing_in_head,
+              url_missing_in_head,
              ]
 
 if __name__ == '__main__':
