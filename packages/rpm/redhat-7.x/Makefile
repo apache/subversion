@@ -6,12 +6,12 @@
 # binary RPM the user has to log in as root.                             #
 ##########################################################################
 
+SVN_TOP_DIR := $(shell pwd)/../../..
+
 SPECFILE := subversion.spec
-VERSION_FILE := ../../subversion/include/svn_version.h
+VERSION_FILE := $(SVN_TOP_DIR)/subversion/include/svn_version.h
 
 RPMDIR := rpms
-
-SVN_TOP_DIR := $(shell pwd)/../..
 
 NAME := $(shell grep '^Name:' < $(SPECFILE) | sed -e 's/^Name: //')
 SVN_VERSION_MAJOR := $(shell grep 'define SVN_VER_MAJOR' < $(VERSION_FILE) | (read one two three; echo $$three) )
