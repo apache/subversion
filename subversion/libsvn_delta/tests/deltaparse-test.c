@@ -18,6 +18,34 @@
 apr_pool_t *globalpool;
 
 
+
+
+/* For making formatting all purty. */
+void
+print_spaces (void *i)
+{
+  int count;
+  int *total = (int *) i;
+
+  for (count = 0; count < *total; count++)
+    printf(" ");
+}
+
+void
+inc_spaces (void *i)
+{
+  int *j = (int *) i;
+  *j += 4;
+}
+
+void
+dec_spaces (void *i)
+{
+  int *j = (int *) i;
+  *j -= 4;
+}
+
+
 /* A dummy routine designed to consume windows of vcdiff data, (of
    type svn_text_delta_window_handler_t).  This will be called by the
    vcdiff parser everytime it has a window ready to go. */
@@ -39,7 +67,8 @@ my_vcdiff_windoweater (svn_txdelta_window_t *window, void *baton)
               svn_string_ncreate (startaddr,
                                   (window->ops[i].length),
                                   globalpool);
-
+            
+            print_spaces (baton);
             printf ("-- got txdelta window -- : new text: [%s]\n", str->data);
           }
         case svn_txdelta_source:
@@ -61,12 +90,13 @@ my_vcdiff_windoweater (svn_txdelta_window_t *window, void *baton)
 
 
 
-
 /* A bunch of dummy callback routines.  */
 
 svn_error_t *
 test_delete (svn_string_t *filename, void *walk_baton, void *parent_baton)
 {
+  print_spaces (walk_baton);
+
   printf ("DELETE event:  delete filename '%s'\n", filename->data);
   return SVN_NO_ERROR;         
 }
@@ -79,6 +109,9 @@ test_add_directory (svn_string_t *name,
                     long int ancestor_version,
                     void **child_baton)
 {
+  inc_spaces (walk_baton);
+  print_spaces (walk_baton);
+
   printf ("ADD_DIR event:  name '%s', ancestor '%s' version %d\n",
           name->data, ancestor_path->data, ancestor_version);
 
@@ -96,6 +129,9 @@ test_replace_directory (svn_string_t *name,
                         long int ancestor_version,
                         void **child_baton)
 {
+  inc_spaces (walk_baton);
+  print_spaces (walk_baton);
+
   printf ("REPLACE_DIR event:  name '%s', ancestor '%s' version %d\n",
           name->data, ancestor_path->data, ancestor_version);
   
@@ -109,6 +145,9 @@ test_replace_directory (svn_string_t *name,
 svn_error_t *
 test_finish_directory (void *walk_baton, void *dir_baton)
 {
+  print_spaces (walk_baton);
+  dec_spaces (walk_baton);
+
   if (dir_baton)
     printf ("FINISH_DIR '%s'\n", (char *)((svn_string_t *) dir_baton)->data);
   else 
@@ -121,8 +160,11 @@ test_finish_directory (void *walk_baton, void *dir_baton)
 svn_error_t *
 test_finish_file (void *walk_baton, void *file_baton)
 {
+  print_spaces (walk_baton);
+  dec_spaces (walk_baton);
+
   if (file_baton)
-    printf ("  FINISH_FILE '%s'\n", 
+    printf ("FINISH_FILE '%s'\n", 
             (char *)((svn_string_t *) file_baton)->data);
   else
     printf ("FINISH_DIR:  no name!!\n");
@@ -137,12 +179,14 @@ test_apply_textdelta (void *walk_baton, void *parent_baton, void *file_baton,
                       svn_txdelta_window_handler_t **handler,
                       void **handler_baton)
 {
-  printf ("    TEXT-DELTA event within file '%s'.\n", 
+  print_spaces (walk_baton);
+
+  printf ("TEXT-DELTA event within file '%s'.\n", 
           (char *) ((svn_string_t *) file_baton)->data);
 
   /* Set the value of HANDLER and HANDLER_BATON here */
   *handler        = my_vcdiff_windoweater;
-  *handler_baton  = NULL;
+  *handler_baton  = walk_baton;
 
   return SVN_NO_ERROR;
 }
@@ -158,7 +202,10 @@ test_add_file (svn_string_t *name,
                long int ancestor_version,
                void **file_baton)
 {
-  printf ("  ADD_FILE event:  name '%s', ancestor '%s' version %d\n",
+  inc_spaces (walk_baton);
+  print_spaces (walk_baton);
+
+  printf ("ADD_FILE event:  name '%s', ancestor '%s' version %d\n",
           name->data, ancestor_path->data, ancestor_version);
   
   /* Put the filename in file_baton */
@@ -176,7 +223,10 @@ test_replace_file (svn_string_t *name,
                    long int ancestor_version,
                    void **file_baton)
 {
-  printf ("  REPLACE_FILE event:  name '%s', ancestor '%s' version %d\n",
+  inc_spaces (walk_baton);
+  print_spaces (walk_baton);
+
+  printf ("REPLACE_FILE event:  name '%s', ancestor '%s' version %d\n",
           name->data, ancestor_path->data, ancestor_version);
 
   /* Put the filename in file_baton */
@@ -190,7 +240,9 @@ svn_error_t *
 test_change_file_prop (void *walk_baton, void *parent_baton, void *file_baton,
                        svn_string_t *name, svn_string_t *value)
 {
-  printf ("    GOT PROPCHANGE event on file '%s': ",
+  print_spaces (walk_baton);
+
+  printf ("GOT PROPCHANGE event on file '%s': ",
           (char *) ((svn_string_t *) file_baton)->data);
 
   if (value == NULL)
@@ -208,7 +260,9 @@ svn_error_t *
 test_change_dir_prop (void *walk_baton, void *parent_baton,
                       svn_string_t *name, svn_string_t *value)
 {
-  printf ("    GOT PROPCHANGE event on dir '%s': ",
+  print_spaces (walk_baton);
+
+  printf ("GOT PROPCHANGE event on dir '%s': ",
           (char *) ((svn_string_t *) parent_baton)->data);
 
   if (value == NULL)
@@ -227,7 +281,9 @@ test_change_dirent_prop (void *walk_baton, void *parent_baton,
                          svn_string_t *entry,
                          svn_string_t *name, svn_string_t *value)
 {
-  printf ("    GOT PROPCHANGE event on dirent '%s': ", (char *) entry->data);
+  print_spaces (walk_baton);
+
+  printf ("GOT PROPCHANGE event on dirent '%s': ", (char *) entry->data);
 
   if (value == NULL)
     printf (" delete property '%s'\n", (char *) name->data);
@@ -280,13 +336,20 @@ my_read_func (void *baton, char *buffer, apr_off_t *len, apr_pool_t *pool)
 }
 
 
+
+
+
+
+
 int main(int argc, char *argv[])
 {
   svn_delta_walk_t my_walker;
   svn_error_t *err;
   apr_file_t *source_baton = NULL;
   apr_status_t status;
-  void *my_walk_baton = NULL;
+  int my_walk_baton = 0;       /* This is a global that will
+                                  represent how many spaces to
+                                  indent our printf's */
   void *my_parent_baton = NULL;
 
   /* Process args */
@@ -334,7 +397,7 @@ int main(int argc, char *argv[])
   /* Fire up the XML parser */
   err = svn_xml_parse (my_read_func, source_baton, /* read from here */
                        &my_walker,                 /* call these callbacks */
-                       my_walk_baton,
+                       &my_walk_baton,
                        my_parent_baton,            /* with these objects */
                        globalpool);
 
