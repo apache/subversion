@@ -92,15 +92,15 @@
         </listitem>
       </varlistentry>
 
-    </variablelist>
-
-          <varlistentry>
+    <varlistentry>
         <term><command>svn ci</command></term>
         <listitem>
           <para>Sends differences to the repository (CVS only
             sends fulltexts!)</para>
         </listitem>
       </varlistentry>
+
+    </variablelist>
 
     <para>Also, the cached pristine files allow the Subversion client
       to send diffs when committing, which CVS cannot do.</para>
