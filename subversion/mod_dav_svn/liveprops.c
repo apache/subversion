@@ -106,6 +106,56 @@ static const dav_liveprop_group dav_svn_liveprop_group =
     &dav_svn_hooks_liveprop
 };
 
+/* Return the revision property PROPNAME's value in PROPVAL for
+   RESOURCE in the revision COMMITTED_REV after verifying that the
+   path is readable.  If the property if inaccessible, SVN_NO_ERROR is
+   returned and *PROPVAL is NULL.
+
+   This function must only be used to retrieve properties for which it
+   is sufficient to have read access to a single changed path in the
+   revision to have access to the revprop, e.g.
+   SVN_PROP_REVISION_AUTHOR or SVN_PROP_REVISION_DATE.
+
+   The reason for this is that we only check readability of the
+   current path (which is one of the revisions' changed paths per
+   definition).  If the current path is readable, the revprop is also
+   readable.  While it's possible that the property is readable even
+   though the current path is not readable (because another path in
+   the same revision is readable), it's a silly situation worth
+   ignoring to gain the extra performance. */
+static svn_error_t *svn_svn_get_path_revprop(svn_string_t **propval,
+                                             const dav_resource *resource,
+                                             svn_revnum_t committed_rev,
+                                             const char *propname,
+                                             apr_pool_t *pool)
+{
+  dav_svn_authz_read_baton arb;
+  svn_boolean_t allowed;
+  svn_fs_root_t *root;
+
+  *propval = NULL;
+
+  arb.r = resource->info->r;
+  arb.repos = resource->info->repos;
+  SVN_ERR(svn_fs_revision_root(&root,
+                               resource->info->repos->fs,
+                               committed_rev, pool));
+  SVN_ERR(dav_svn_authz_read(&allowed,
+                             root,
+                             resource->info->repos_path,
+                             &arb, pool));
+
+  if (! allowed)
+    return SVN_NO_ERROR;
+
+  /* Get the property of the created revision. The authz is already
+     performed, so we don't need to do it here too. */
+  return svn_repos_fs_revision_prop(propval,
+                                    resource->info->repos->repos,
+                                    committed_rev,
+                                    propname,
+                                    NULL, NULL, pool);
+}
 
 static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
                                            int propid, dav_prop_insert what,
@@ -117,7 +167,6 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
   apr_pool_t *p = resource->info->pool;
   const dav_liveprop_spec *info;
   int global_ns;
-  dav_svn_authz_read_baton arb;
   svn_error_t *serr;
 
   /*
@@ -130,10 +179,6 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
   */
   if (!resource->exists)
     return DAV_PROP_INSERT_NOTSUPP;
-
-  /* Build a baton for path-based authz function (dav_svn_authz_read) */
-  arb.r = resource->info->r;
-  arb.repos = resource->info->repos;
 
   /* ### we may want to respond to DAV_PROPID_resourcetype for PRIVATE
      ### resources. need to think on "proper" interaction with mod_dav */
@@ -222,14 +267,13 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
           {
             return DAV_PROP_INSERT_NOTSUPP;
           }
-        
-        /* Get the date property of the created revision. */
-        serr = svn_repos_fs_revision_prop(&last_author,
-                                          resource->info->repos->repos,
-                                          committed_rev,
-                                          SVN_PROP_REVISION_AUTHOR,
-                                          dav_svn_authz_read, &arb, p);
-        if (serr != NULL)
+
+        serr = svn_svn_get_path_revprop(&last_author,
+                                        resource,
+                                        committed_rev,
+                                        SVN_PROP_REVISION_AUTHOR,
+                                        p);
+        if (serr)
           {
             /* ### what to do? */
             svn_error_clear(serr);
@@ -666,10 +710,6 @@ int dav_svn_get_last_modified_time (const char **datestring,
   svn_string_t *committed_date = NULL;
   svn_error_t *serr;
   apr_time_t timeval_tmp;
-  dav_svn_authz_read_baton arb;
-  
-  arb.r = resource->info->r;
-  arb.repos = resource->info->repos;
 
   if ((datestring == NULL) && (timeval == NULL))
     return 0;
@@ -698,23 +738,19 @@ int dav_svn_get_last_modified_time (const char **datestring,
       return 1;
     }
 
-  /* Get the svn:date property of the CR */
-  serr = svn_repos_fs_revision_prop(&committed_date,
-                                    resource->info->repos->repos,
-                                    committed_rev,
-                                    SVN_PROP_REVISION_DATE,
-                                    dav_svn_authz_read, &arb,
-                                    pool);
-  if (serr != NULL)
+  serr = svn_svn_get_path_revprop(&committed_date,
+                                  resource,
+                                  committed_rev,
+                                  SVN_PROP_REVISION_DATE,
+                                  pool);
+  if (serr)
     {
       svn_error_clear(serr);
       return 1;
     }
-  
+
   if (committed_date == NULL)
-    {
-      return 1;
-    }
+    return 1;
 
   /* return the ISO8601 date as an apr_time_t */
   serr = svn_time_from_cstring(&timeval_tmp, committed_date->data, pool);

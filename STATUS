@@ -38,14 +38,6 @@ Candidate changes:
     Votes:
       +1: bliss, sussman
 
-  * r11211, r11232, r11285
-    Fix performance regression for ls/RA->get_dir over ra_rav.
-    Justification:
-      Positively huge performance regression.
-    Votes:
-      +1: bliss, lundblad, sussman
-      +1: brane (only r11211 so far)
-
   * r11224 (Issue 2070)
     Exporting symlinks with use-commit times set fails.
     Justification:
