@@ -86,6 +86,11 @@ AC_DEFUN(SVN_FIND_JDK,
     JAVAH="$JAVA_BIN/javah"
     JAR="$JAVA_BIN/jar"
 
+    dnl Add javac flags.
+    if test "$enable_debugging" = "yes"; then
+      JAVAC_FLAGS="-g"
+    fi
+
     JNI_INCLUDES="-I$JNI_INCLUDEDIR"
     list="`find "$JNI_INCLUDEDIR" -type d -print`"
     for dir in $list; do
@@ -98,6 +103,7 @@ AC_DEFUN(SVN_FIND_JDK,
   AC_SUBST(JDK)
   AC_SUBST(JAVA)
   AC_SUBST(JAVAC)
+  AC_SUBST(JAVAC_FLAGS)
   AC_SUBST(JAVAH)
   AC_SUBST(JAR)
   AC_SUBST(JNI_INCLUDES)
