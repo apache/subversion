@@ -26,6 +26,7 @@ typedef enum svnadmin_cmd_t
   svnadmin_cmd_create,
   svnadmin_cmd_createtxn,
   svnadmin_cmd_deltify,
+  svnadmin_cmd_dump,
   svnadmin_cmd_lscr,
   svnadmin_cmd_lsrevs,
   svnadmin_cmd_lstxns,
@@ -125,6 +126,12 @@ usage (const char *progname, int exit_code)
      "      a directory, perform a recursive deltification of the\n"
      "      tree starting at PATH.\n"
      "\n"
+     "   dump   REPOS_PATH [LOWER_REV [UPPER_REV]]\n"
+     "      Dump the contents of filesystem to stdout in a 'dumpfile'\n"
+     "      portable format.  Dump revisions LOWER_REV through UPPER_REV.\n"
+     "      If no revisions are given, all revision trees are dumped.\n"
+     "      If just LOWER_REV is given, that one revision tree is dumped.\n"
+     "\n"
      "   lscr      REPOS_PATH PATH\n"
      "      Print, one-per-line and youngest-to-eldest, the revisions in\n"
      "      which PATH was modified.\n"
@@ -204,6 +211,8 @@ parse_command (const char *command)
     return svnadmin_cmd_undeltify;
   else if (! strcmp (command, "deltify"))
     return svnadmin_cmd_deltify;
+  else if (! strcmp (command, "dump"))
+    return svnadmin_cmd_dump;
   else if (! strcmp (command, "recover"))
     return svnadmin_cmd_recover;
 
@@ -428,6 +437,50 @@ main (int argc, const char * const *argv)
             
             svn_pool_destroy (this_pool);
           }
+      }
+      break;
+
+    case svnadmin_cmd_dump:
+      {
+        apr_file_t *outfile;
+        apr_status_t status;
+        svn_revnum_t
+          lower = SVN_INVALID_REVNUM,
+          upper = SVN_INVALID_REVNUM;
+
+        INT_ERR (svn_repos_open (&repos, path, pool));
+        fs = svn_repos_fs (repos);
+
+        /* Do the args tell us what revisions to inspect? */
+        if (argv[3])
+          {
+            lower = SVN_STR_TO_REV (argv[3]);
+            if (argv[4])
+              upper = SVN_STR_TO_REV (argv[4]);
+          }
+        
+        /* Fill in for implied args. */
+        if (lower == SVN_INVALID_REVNUM)
+          {
+            lower = 0;
+            svn_fs_youngest_rev (&upper, fs, pool);
+          }
+        else if (upper == SVN_INVALID_REVNUM)
+          upper = lower;
+        
+        /* Run the dump to STDOUT.  Let the user redirect output into
+           a file if they want.  :-)  */
+        if ((status = apr_file_open_stdout (&outfile, pool)))
+          {
+            svn_error_t *err = svn_error_create (status, 0, NULL,
+                                                 pool, "can't open stdout");
+            svn_handle_error (err, stderr, 0);
+            return EXIT_FAILURE;
+          }
+
+        INT_ERR (svn_repos_dump_fs (fs, outfile, lower, upper, pool));
+
+        fflush(stdout);                                   
       }
       break;
 
