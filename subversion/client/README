@@ -6,7 +6,7 @@ What the client looks like right now:
 The client for milestone 1 is somewhat limited: it can checkout and
 update from XML files, and commit to XML files.  The changes it can
 make in a working copy are file mods and file adds.  Local mods are
-not preserved.
+not preserved in updates.
 
 So:
 
