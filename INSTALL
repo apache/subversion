@@ -5,8 +5,6 @@
 
 $LastChangedDate$
 
-            *** Subversion is beta code right now. ***
-
 "Is Subversion stable enough for me to use for my own projects?"
 
 We think so!  Read the full FAQ answer on the website:
@@ -180,20 +178,27 @@ I.    BUILD REQUIREMENTS
       subdirectory beneath wherever "--with-neon" is pointed.
 
 
-      5.  Berkeley DB 4.2.52
+      5.  Berkeley DB 4.X
 
       Berkeley DB is needed to build a Subversion server, or to access
       a repository on local disk.  If you are only interested in
       building a Subversion client that speaks to a remote (networked)
       repository, you don't need it.
 
-      You'll need Berkeley DB 4.2.52 installed on your system.  You can
+      You should try to use the latest version of BerkeleyDB 4.X.  At
+      the time of writing, 4.2.52 is the latest version; we *strongly*
+      recommend using it over 4.1 or 4.0.  Not only is the fastest and
+      most stable version we've seen, but it also enables Subversion
+      repositories to automatically clean up database journal files to
+      save disk space.
+
+      You'll need Berkeley DB installed on your system.  You can
       get it from:
 
           http://www.sleepycat.com/download/patchlogs.shtml
 
       If you have Berkeley DB installed in a place not searched by default
-      for includes and libraries; add this flag
+      for includes and libraries, add something like this:
 
           --with-berkeley-db=/usr/local/BerkeleyDB.4.2
 
@@ -817,6 +822,11 @@ III.  BUILDING A SUBVERSION SERVER
   C.  Configuring Apache for Subversion
       ---------------------------------
 
+      The following section is an abbreviated version of the
+      information in the Subversion Book
+      (http://svnbook.red-bean.com).  Please read chapter 5 for more
+      details.
+
       The following assumes you have already created a repository.
       For documentation on how to do that, see README.
 
@@ -940,10 +950,10 @@ III.  BUILDING A SUBVERSION SERVER
   E.  Alternative:  'svnserve' and ra_svn
       -----------------------------------
 
-      As of svn 0.16, we have a new repository-access implementation,
-      libsvn_ra_svn (on the client side) and the 'svnserve' process on
-      the server.  This is a simple network layer that speaks a custom
-      protocol over plain TCP (documented in libsvn_ra_svn/protocol):
+      An alternative network layer is libsvn_ra_svn (on the client
+      side) and the 'svnserve' process on the server.  This is a
+      simple network layer that speaks a custom protocol over plain
+      TCP (documented in libsvn_ra_svn/protocol):
 
          $ svnserve -d     # becomes a background daemon
          $ svn checkout svn://localhost/usr/local/svn/repository
@@ -954,21 +964,11 @@ III.  BUILDING A SUBVERSION SERVER
       still needs write access to the database in this mode, but will
       not allow commits or revprop changes.)
 
-      (Expect the server invocation options to change incompatibly
-      before they are finalized.)
-
-      For now, svnserve in daemon mode only supports anonymous access.
-      But you can also tunnel ra_svn over ssh or any similar tool:
-
-         $ svn checkout svn+ssh://hostname/usr/local/svn/repository
-
-      In this mode of operation, there is no svnserve daemon process;
-      the svn client will ssh to the server and run "svnserve -t" to
-      do the serving.  Make sure svnserve is in your path on the
-      server.  You can override the "ssh" command with the SVN_SSH
-      environment variable, or you can define new tunnel schemes in
-      the [tunnels] section of ~/.subversion/config.  By default, only
-      the "ssh" scheme is allowed.
+      'svnserve' has built-in CRAM-MD5 authentication (so you can
+      use non-system accounts), and can also be tunneled over SSH
+      (so you can use existing system accounts).  Please read chapter
+      6 in the Subversion Book (http://svnbook.red-bean.com) for
+      details on these features.
 
 
 
@@ -998,5 +998,5 @@ IV.   PLATFORM-SPECIFIC ISSUES
 
   B.  Mac OS X
       --------
-
+      
       [TBD: Describe BDB 4.0.x problem]
