@@ -1327,7 +1327,9 @@ svn_client_merge (svn_wc_notify_func_t notify_func,
       struct merge_cmd_baton merge_cmd_baton;
       merge_cmd_baton.force = force;
       merge_cmd_baton.target = target_wcpath;
-      merge_cmd_baton.path = path2;
+      /* ### The issue 838 "use copy to add-with-history" fix should
+         ### use repository items, just like any other merge */
+      SVN_ERR (convert_to_url (&merge_cmd_baton.path, path2, pool));
       merge_cmd_baton.revision = revision2;
       merge_cmd_baton.auth_baton = auth_baton;
       merge_cmd_baton.pool = pool;
