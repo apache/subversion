@@ -7,33 +7,50 @@
 
 <h3>Development Roadmap</h3>
 
+    <p>
+      Milestones are set as short timelines (around
+      three weeks), with a few key features. We will be doing plenty
+      of bug fixing and other work during the development towards a
+      milestone, but "meeting a milestone" requires the specified
+      features to have been implemented.
+    </p>
+
     <blockquote>
       <font color="green"><b>Upcoming</b></font>:
     </blockquote>
 
     <ul>
       <li>
-        <b>Pre-Alpha</b> (TBD late May)
-        <br>
+        <b>Pre-Alpha</b> (Tuesday, 28 May 2002): Wrapping up large
+      work items in preparation for an Alpha release. This is the
+      "last call" release before Alpha. Primary issues to fix:
+        <blockquote>
           fs dump/load format
-          (<a href="http://subversion.tigris.org/issues/show_bug.cgi?id=648">
-          issue #648</a>);
+          (<a href="http://subversion.tigris.org/issues/show_bug.cgi?id=648"
+          >issue #648</a>);
           new fs nodeID schema
-          (<a href="http://subversion.tigris.org/issues/show_bug.cgi?id=654">
-          issue #654</a>);
-          vsn-rsc-urls use rev/paths
-          (<a href="http://subversion.tigris.org/issues/show_bug.cgi?id=652">
-          issue #652</a>);
-          ? module system
-          (<a href="http://subversion.tigris.org/issues/show_bug.cgi?id=517">
-          issue #517</a>);
+          (<a href="http://subversion.tigris.org/issues/show_bug.cgi?id=654"
+          >issue #654</a>);
+          vsn-rsrc-urls use rev/path
+          (<a href="http://subversion.tigris.org/issues/show_bug.cgi?id=652"
+          >issue #652</a>);
+          module system
+          (<a href="http://subversion.tigris.org/issues/show_bug.cgi?id=517"
+          >issue #517</a>);
+	  reporting deleted entries to the server
+          (<a href="http://subversion.tigris.org/issues/show_bug.cgi?id=658"
+          >issue #658</a>);
+          eliminate skel_t usage
+          (<a href="http://subversion.tigris.org/issues/show_bug.cgi?id=656"
+          >issue #656</a>)
+	  </blockquote>
       </li>
       <li>
-	<b>Alpha</b> (TBD, early May): Most commonly used features
+	<b>Alpha</b> (TBD, early June): Most commonly used features
 	completed.  Freeze an any new "major" features.
       </li>
       <li>
-	<b>Beta</b> (TBD, June timeframe): Release candidate,
+	<b>Beta</b> (TBD, July timeframe): Release candidate,
 	heavy testing.  Possible inclusion of newer, less popular
 	features.
       </li>
@@ -48,64 +65,64 @@
 
     <ul>
       <li>
-      <li>
-	<b>Subversion 0.12</b> (Monday, 6 May 2002):
+	<b>Subversion 0.12</b> (3 May 2002):
 	<br>
         Updates to handle disjoint working copies
-           (<a href="http://subversion.tigris.org/issues/show_bug.cgi?id=663">
-           issue #663</a>);
+           (<a href="http://subversion.tigris.org/issues/show_bug.cgi?id=663"
+           >issue #663</a>);
         version the execute bit on files
-           (<a href="http://subversion.tigris.org/issues/show_bug.cgi?id=522">
-           issue #522</a>);
+           (<a href="http://subversion.tigris.org/issues/show_bug.cgi?id=522"
+           >issue #522</a>);
         use text-base checksums in working copies
-           (<a href="http://subversion.tigris.org/issues/show_bug.cgi?id=549">
-           issue #549</a>);
+           (<a href="http://subversion.tigris.org/issues/show_bug.cgi?id=549"
+           >issue #549</a>);
         fix bug in keyword expansion (<a
-           href="http://subversion.tigris.org/issues/show_bug.cgi?id=646">
-           issue #646</a>);
+           href="http://subversion.tigris.org/issues/show_bug.cgi?id=646"
+           >issue #646</a>);
         various fixes/improvements to the versioning filesystem (issues
-           <a href="http://subversion.tigris.org/issues/show_bug.cgi?id=648">
-           #648</a>,
-           <a href="http://subversion.tigris.org/issues/show_bug.cgi?id=651">
-           #651</a>, and
-           <a href="http://subversion.tigris.org/issues/show_bug.cgi?id=653">
-           #653</a>, and
-           <a href="http://subversion.tigris.org/issues/show_bug.cgi?id=654">
-           #654</a>), improvements to svn diff and svn rm.
+           <a href="http://subversion.tigris.org/issues/show_bug.cgi?id=648"
+           >#648</a>,
+           <a href="http://subversion.tigris.org/issues/show_bug.cgi?id=651"
+           >#651</a>, and
+           <a href="http://subversion.tigris.org/issues/show_bug.cgi?id=653"
+           >#653</a>, and
+           <a href="http://subversion.tigris.org/issues/show_bug.cgi?id=654"
+           >#654</a>), improvements to svn diff and svn rm.
       </li>
-	<b>Subversion 0.11</b> (Monday, 15 Apr 2002): 
+      <li>
+	<b>Subversion 0.11</b> (12 Apr 2002): 
 	<br>
         Commits to handle disjoint working copies
-           (<a href="http://subversion.tigris.org/issues/show_bug.cgi?id=575">
-           issue #575</a>);
+           (<a href="http://subversion.tigris.org/issues/show_bug.cgi?id=575"
+           >issue #575</a>);
         use 3-way merge in updates;
         access to repository via http proxy
-           (<a href="http://subversion.tigris.org/issues/show_bug.cgi?id=579">
-           issue #579</a>);
+           (<a href="http://subversion.tigris.org/issues/show_bug.cgi?id=579"
+           >issue #579</a>);
         <tt>svn&nbsp;merge</tt> (<a
-           href="http://subversion.tigris.org/issues/show_bug.cgi?id=504">
-           issue #504</a>);
+           href="http://subversion.tigris.org/issues/show_bug.cgi?id=504"
+           >issue #504</a>);
         various fixes for text editor invocation (issues
-           <a href="http://subversion.tigris.org/issues/show_bug.cgi?id=638">
-           #638</a>,
-           <a href="http://subversion.tigris.org/issues/show_bug.cgi?id=633">
-           #633</a>, and
-           <a href="http://subversion.tigris.org/issues/show_bug.cgi?id=615">
-           #615</a>).
+           <a href="http://subversion.tigris.org/issues/show_bug.cgi?id=638"
+           >#638</a>,
+           <a href="http://subversion.tigris.org/issues/show_bug.cgi?id=633"
+           >#633</a>, and
+           <a href="http://subversion.tigris.org/issues/show_bug.cgi?id=615"
+           >#615</a>).
       </li>
-      <li> <b>Subversion 0.10</b> (Friday, 8 Mar 2002): usability,
+      <li> <b>Subversion 0.10</b> (8 Mar 2002): usability,
          reliability, and performance: 
          <br>
          Delta-editor interface changes to promote better memory usage;
          "streamy" writes into the FS (<a
-         href="http://subversion.tigris.org/issues/show_bug.cgi?id=412">
-         issue #412</a>); better pool management overall;
+         href="http://subversion.tigris.org/issues/show_bug.cgi?id=412"
+         >issue #412</a>); better pool management overall;
          clearer error messages; configuration improvements.
       </li>
       <li> <b>Subversion 0.9</b> (18 Feb 2002):
          "svn&nbsp;switch" (<a
-         href="http://subversion.tigris.org/issues/show_bug.cgi?id=575">
-         issue #575</a>); resolution of some repository db stability
+         href="http://subversion.tigris.org/issues/show_bug.cgi?id=575"
+         >issue #575</a>); resolution of some repository db stability
          issues (<a
          href="http://subversion.tigris.org/issues/show_bug.cgi?id=608">issue
          #608</a>); and many small features and bugfixes since 0.8, all
@@ -145,110 +162,6 @@
            client can checkout/update/commit using XML files.
       </li>
     </ul>
-
-<p>
-
-    <p>
-      Recently, milestones are being set as short timelines (around
-      three weeks), with a few key features. We will be doing plenty
-      of bug fixing and other work during the development towards a
-      milestone, but "meeting a milestone" requires the specified
-      features to have been implemented.
-    </p>
-
-<!-- ******************************************************************** -->
-
-<h3>Progress</h3>
-
-<blockquote>
-
-(note: these meters measure nothing but fuzzy gut feelings. :-) )
-
-  <p>
-  
-<table cellspacing=0 cellpadding=2 border=0>
-    
-  <tr valign="top">
-    <td align="left">Versioning Filesystem</td>
-    <td>
-        <table cellspacing="0" cellpadding="0" border=0><tr>
-          <td width=380 bgcolor="0000FF" align=right>
-          <font color=FFFFFF>95%</font></td>
-          <td width=20 bgcolor="FF0000">&nbsp;</td>
-        </tr></table>
-    </td>
-  </tr>
-  
-  <tr valign="top">
-    <td align="left">Networking Layer</td>
-    <td>
-        <table cellspacing="0" cellpadding="0" border=0><tr>
-          <td width=380 bgcolor="0000FF" align=right>
-          <font color=FFFFFF>95%</font></td>
-          <td width=20 bgcolor="FF0000">&nbsp;</td>
-        </tr></table>
-    </td>
-  </tr>
-
-  <tr valign="top">
-    <td align="left">Client Libraries</td>
-    <td>
-        <table cellspacing="0" cellpadding="0" border=0><tr>
-          <td width=360 bgcolor="0000FF" align=right>
-          <font color=FFFFFF>90%</font></td>
-          <td width=40 bgcolor="FF0000">&nbsp;</td>
-        </tr></table>
-    </td>
-  </tr>
-
-  <tr valign="top">
-    <td align="left">CVS Migration Tools</td>
-    <td>
-        <table cellspacing="0" cellpadding="0" border=0><tr>
-          <td width=140 bgcolor="0000FF" align=right>
-          <font color=FFFFFF>35%</font></td>
-          <td width=260 bgcolor="FF0000">&nbsp;</td>
-        </tr></table>
-    </td>
-  </tr>
-
-  <tr valign="top">
-    <td align="left">Documentation</td>
-    <td>
-        <table cellspacing="0" cellpadding="0" border=0><tr>
-          <td width=100 bgcolor="0000FF" align=right>
-          <font color=FFFFFF>25%</font></td>
-          <td width=300 bgcolor="FF0000">&nbsp;</td>
-        </tr></table>
-    </td>
-  </tr>
-
-  <tr valign="top">
-    <td align="left">Tests</td>
-    <td>
-        <table cellspacing="0" cellpadding="0" border=0><tr>
-          <td width=320 bgcolor="0000FF" align=right>
-          <font color=FFFFFF>80%</font></td>
-          <td width=80 bgcolor="FF0000">&nbsp;</td>
-        </tr></table>
-    </td>
-  </tr>
-
-
-</table>
-
-</blockquote>
-
-<!-- ******************************************************************** -->
-
-<h3>Recent Activities</h3>
-
-Much bug swatting and patch review, plus work toward the latest
-milestone.  Committers are trying to place a higher priority on patch
-review & response, as the project has reached the stage where
-increasing parallelization of development will bring faster progress.
-
-<p>
 
 <!-- ******************************************************************** -->
 
