@@ -481,6 +481,7 @@ svn_wc_transmit_text_deltas (svn_stringbuf_t *path,
       SVN_ERR (svn_wc_entry (&ent, path, pool));
       SVN_ERR (svn_io_file_checksum (&checksum, tb->data, pool));
       
+      /* For backwards compatibility, no checksum means assume a match. */
       if (ent->checksum && (! svn_stringbuf_compare (checksum, ent->checksum)))
         {
           /* There is an entry checksum, but it does not match the

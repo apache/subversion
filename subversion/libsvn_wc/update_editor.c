@@ -49,7 +49,6 @@
 #include "entries.h"
 #include "props.h"
 
-
 
 /*** batons ***/
 
@@ -995,6 +994,40 @@ apply_textdelta (void *file_baton,
             with the user without erroring is a whole callback system
             we haven't finished inventing yet.)
       */
+
+      /* Before applying incoming svndiff data to text base, make sure
+         text base hasn't been corrupted. */
+      {
+        svn_wc_entry_t *ent;
+        
+        SVN_ERR (svn_wc_entry (&ent, fb->path, subpool));
+
+        /* Only compare checksums this file has an entry, and the
+           entry has a checksum.  If there's no entry, it just means
+           the file is created in this update, so there won't be any
+           previously recorded checksum to compare against.  If no
+           checksum, well, for backwards compatibility we assume that
+           no checksum always matches. */
+        if (ent && ent->checksum)
+          {
+            svn_stringbuf_t *checksum;
+            svn_stringbuf_t *tb;
+
+            tb = svn_wc__text_base_path (fb->path, FALSE, subpool);
+            SVN_ERR (svn_io_file_checksum (&checksum, tb->data, subpool));
+            
+            if (! svn_stringbuf_compare (checksum, ent->checksum))
+              {
+                return svn_error_createf
+                  (SVN_ERR_WC_CORRUPT_TEXT_BASE, 0, NULL, subpool,
+                   "apply_textdelta: checksum mismatch for '%s':\n"
+                   "   recorded checksum: %s\n"
+                   "   actual checksum:   %s\n",
+                   tb->data, ent->checksum->data, checksum->data);
+                
+              }
+          }
+      }
 
       err = svn_wc__open_text_base (&hb->source, fb->path, APR_READ, subpool);
       if (err && !APR_STATUS_IS_ENOENT(err->apr_err))
