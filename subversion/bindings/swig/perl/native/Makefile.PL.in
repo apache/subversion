@@ -1,6 +1,5 @@
 #!/usr/bin/perl
 use ExtUtils::MakeMaker;
-use ExtUtils::Embed;
 use Config;
 use Cwd 'abs_path';
 
@@ -37,11 +36,10 @@ chomp $apr_shlib_path_var;
 
 my %config = (
     ABSTRACT => 'Perl bindings for Subversion',
-    CCFLAGS  => join(' ', $apr_cflags, $apu_cflags, 
-                     ccopts(),
-                     " -I$swig_srcdir/perl/libsvn_swig_perl",
-                     " -I$svnlib_srcdir/include",
-                     " -I$swig_srcdir -g"),
+    INC  => join(' ',$apr_cflags, $apu_cflags, 
+                 " -I$swig_srcdir/perl/libsvn_swig_perl",
+                 " -I$svnlib_srcdir/include",
+                 " -I$swig_srcdir -g"),
     OBJECT => q/$(O_FILES)/,
     LIBS => [join(' ', $apr_ldflags,
                   (map {$_ = abs_path($_); "-L$_"} @ldpaths),
