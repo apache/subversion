@@ -124,7 +124,7 @@ svn_txdelta__make_window (const svn_txdelta__ops_baton_t *build_baton,
 }
 
 
-/* Compute and return a delta window using the vdelta algorithm on
+/* Compute and return a delta window using the vdelta or xdelta algorithm on
    DATA, which contains SOURCE_LEN bytes of source data and TARGET_LEN
    bytes of target data.  SOURCE_OFFSET gives the offset of the source
    data, and is simply copied into the window's sview_offset field. */
@@ -137,7 +137,11 @@ compute_window (const char *data, apr_size_t source_len, apr_size_t target_len,
 
   /* Compute the delta operations. */
   build_baton.new_data = svn_stringbuf_create ("", pool);
-  svn_txdelta__vdelta (&build_baton, data, source_len, target_len, pool);
+
+  if (source_len == 0)
+    svn_txdelta__vdelta (&build_baton, data, source_len, target_len, pool);
+  else
+    svn_txdelta__xdelta (&build_baton, data, source_len, target_len, pool);
   
   /* Create and return the delta window. */
   window = svn_txdelta__make_window (&build_baton, pool);
