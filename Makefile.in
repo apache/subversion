@@ -249,7 +249,7 @@ install-man:
 	  if test -f $(srcdir)/$$i; then file=$(srcdir)/$$i; \
 	  else file=$$i; fi; \
 	  ext=`echo $$i | sed -e 's/^.*\\.//'`; \
-	  $(MKDIR) $(DESTDIR)$(manroot)$$ext
+	  $(MKDIR) $(DESTDIR)$(manroot)$$ext; \
 	  inst=`echo $$i | sed -e 's/\\.[0-9a-z]*$$//'`; \
 	  inst=`echo $$inst | sed -e 's/^.*\///'`; \
 	  inst=`echo $$inst`.$$ext; \
