@@ -103,15 +103,14 @@ check: $(TEST_DEPS)
 	    chmod a+x $$prog ; \
 	    progbase=`echo $$prog | sed 's?.*/??'` ; \
 	    progdir=`echo $$prog | sed 's?/[^/]*$$??'` ; \
-	    echo ; \
-	    echo -n "Running all sub-tests in $$progbase..." ; \
+	    echo -n "Running all tests in $$progbase..." ; \
 	    echo "START: $$progbase" >> $$logfile ; \
 	    if (cd $$progdir && ./$$progbase) >> $$logfile ; then \
 		echo "SUCCESS" ; \
 	    else \
 		failed=yes; \
 		echo "FAILED" ; \
-		echo "--- at least one sub-test FAILED, check tests.log." ; \
+		echo "--- at least one test FAILED, check tests.log." ; \
 	    fi; \
 	    echo "END: $$progbase" >> $$logfile ; \
 	    echo >> $$logfile ; \
