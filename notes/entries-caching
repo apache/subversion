@@ -134,8 +134,9 @@ directory hierarchy.  I would like to record this information in the
 access baton set, and modify the retrieve functions to include an
 svn_boolean_t* parameter that gets set TRUE when a request for a
 missing directory is made.  The advantage of doing this is that the
-application could avoid making svn_io_check_path calls when the access
-baton already has the information.
+application could avoid making svn_io_check_path and svn_wc_check_wc
+calls when the access baton already has the information.  The function
+prop_path_internal looks like a good candidate for this optimisation.
 
 
 3. Access Baton Sets
