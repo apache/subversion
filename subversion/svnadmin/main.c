@@ -432,7 +432,7 @@ subcommand_create (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   SVN_ERR (svn_repos_create (&repos, opt_state->repository_path,
                              NULL, NULL, 
                              config, fs_config, pool));
-
+  svn_fs_set_warning_func (svn_repos_fs (repos), warning_func, NULL);
   return SVN_NO_ERROR;
 }
 
