@@ -1041,7 +1041,7 @@ svn_wc_prop_set (const char *name,
       enum svn_node_kind kind;
       SVN_ERR (svn_io_check_path (path, &kind, pool));
 
-      if (kind == svn_node_dir)
+      if (kind == svn_node_dir && value != NULL)
         /* Setting the executable bit doesn't make sense for dirs. (And
            don't try and tell me Unix does it...) */
         return svn_error_create (SVN_ERR_ILLEGAL_TARGET, 0, NULL, pool,
