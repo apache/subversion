@@ -3,7 +3,8 @@ use warnings;
 
 package SVN::Core;
 use SVN::Base qw(Core svn_);
-$SVN::Base::VERSION = "$VER_MAJOR.$VER_MINOR.$VER_MICRO";
+$SVN::Core::VERSION = "$SVN::Core::VER_MAJOR.$SVN::Core::VER_MINOR." .
+                      "$SVN::Core::VER_MICRO";
 
 =head1 NAME
 
