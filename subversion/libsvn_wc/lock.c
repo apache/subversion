@@ -59,7 +59,7 @@
 svn_error_t *
 svn_wc__lock (svn_string_t *path, int wait, apr_pool_t *pool)
 {
-  svn_error_t *err = NULL;
+  svn_error_t *err;
 
   do {
     err = svn_wc__make_adm_thing (path, SVN_WC__ADM_LOCK,
