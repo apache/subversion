@@ -32,7 +32,6 @@
 
 struct dav_stream {
   const dav_resource *res;
-  svn_fs_node_t *file;
   svn_stream_t *input;
 };
 
@@ -74,7 +73,7 @@ static int dav_svn_parse_version_uri(dav_resource_combined *comb,
   if (comb->priv.node_id == NULL)
     return TRUE;
 
-  comb->priv.object_name = slash + 1;
+  comb->priv.repos_path = slash + 1;
 
   return FALSE;
 }
@@ -87,7 +86,7 @@ static int dav_svn_parse_history_uri(dav_resource_combined *comb,
   comb->res.type = DAV_RESOURCE_TYPE_HISTORY;
 
   /* ### parse path */
-  comb->priv.object_name = path;
+  comb->priv.repos_path = path;
 
   return FALSE;
 }
@@ -108,8 +107,9 @@ static int dav_svn_parse_working_uri(dav_resource_combined *comb,
   if ((slash = ap_strchr_c(path, '/')) == NULL || slash == path)
     return TRUE;
 
-  comb->priv.activity_id = apr_pstrndup(comb->res.pool, path, slash - path);
-  comb->priv.object_name = slash + 1;
+  comb->priv.root.activity_id = apr_pstrndup(comb->res.pool, path,
+                                             slash - path);
+  comb->priv.repos_path = slash + 1;
 
   return FALSE;
 }
@@ -121,7 +121,7 @@ static int dav_svn_parse_activity_uri(dav_resource_combined *comb,
 
   comb->res.type = DAV_RESOURCE_TYPE_ACTIVITY;
 
-  comb->priv.activity_id = path;
+  comb->priv.root.activity_id = path;
 
   return FALSE;
 }
@@ -135,6 +135,9 @@ static const struct special_defn
    * can be determined from the PATH may be set in COMB. However, further
    * operations are not allowed (we don't want anything besides a parse
    * error to occur).
+   *
+   * At a minimum, the parse function must set COMB->res.type and
+   * COMB->priv.repos_path.
    *
    * PATH does not contain a leading slash. Given "/root/$svn/xxx/the/path"
    * as the request URI, the PATH variable will be "the/path"
@@ -237,6 +240,10 @@ static int dav_svn_parse_uri(dav_resource_combined *comb,
       /* Anything under the root, but not under "$svn". These are all
          version-controlled resources. */
       comb->res.type = DAV_RESOURCE_TYPE_REGULAR;
+
+      /* The location of these resources corresponds directly to the URI,
+         but we skip the leading "/". */
+      comb->priv.repos_path = comb->priv.uri_path->data + 1;
     }
 
   return FALSE;
@@ -245,7 +252,9 @@ static int dav_svn_parse_uri(dav_resource_combined *comb,
 static dav_error * dav_svn_prep_regular(dav_resource_combined *comb)
 {
   apr_pool_t *pool = comb->res.pool;
+#if 0
   dav_svn_repos *repos = comb->priv.repos;
+#endif
   svn_error_t *serr;
 
   /* ### note that we won't *always* go for the head... if this resource
@@ -253,11 +262,11 @@ static dav_error * dav_svn_prep_regular(dav_resource_combined *comb)
      ### version to ask for.
   */
 #if 0
-  serr = svn_fs_youngest_rev(repos->fs, &repos->root_rev);
+  serr = svn_fs_youngest_rev(&comb->priv.root.rev, repos->fs);
 #else
   /* ### svn_fs_youngest_rev() is not in the library (yet) */
   serr = NULL;
-  repos->root_rev = 1;
+  comb->priv.root.rev = 1;
 #endif
   if (serr != NULL)
     {
@@ -268,11 +277,11 @@ static dav_error * dav_svn_prep_regular(dav_resource_combined *comb)
 
   /* get the root of the tree */
 #if 0
-  serr = svn_fs_open_rev_root(&repos->root_dir, repos->fs,
-                              repos->root_rev, pool);
+  serr = svn_fs_revision_root(&comb->priv.root.root, repos->fs,
+                              comb->priv.root.rev, pool);
 #else
   serr = svn_error_create(0, 0, NULL, pool,
-                          "svn_fs_open_rev_root is not implemented");
+                          "svn_fs_revision_root is not implemented");
 #endif
   if (serr != NULL)
     {
@@ -281,22 +290,15 @@ static dav_error * dav_svn_prep_regular(dav_resource_combined *comb)
                                  "repository");
     }
 
-  /* open the node itself */
-  /* ### what happens if we want to modify this node?
-     ### well, you can't change a REGULAR resource, so this is probably
-     ### going to be fine. a WORKING resource will have more work
-  */
-  /* ### for a REGULAR resource, uri_path == repository path */
-  if (strcmp(comb->priv.uri_path->data, "/") == 0)
+  if (*comb->priv.repos_path == '\0')
     {
-      comb->priv.node = repos->root_dir;
+      /* the root directory is always a collection */
       comb->res.collection = 1;
     }
   else
     {
-      /* open the requested resource. note that we skip the leading "/" */
-      serr = svn_fs_open_node(&comb->priv.node, repos->root_dir,
-                              comb->priv.uri_path->data + 1, pool);
+      /* ### how should we test for the existence of the path? */
+      serr = NULL;
       if (serr != NULL)
         {
           const char *msg;
@@ -306,7 +308,9 @@ static dav_error * dav_svn_prep_regular(dav_resource_combined *comb)
           return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR, msg);
         }
 
-      comb->res.collection = svn_fs_node_is_dir(comb->priv.node);
+      /* is this resource a collection? */
+      comb->res.collection = svn_fs_is_dir(comb->priv.root.root,
+                                           comb->priv.repos_path);
     }
 
   /* if we are here, then the resource exists */
@@ -331,7 +335,7 @@ static dav_error * dav_svn_prep_history(dav_resource_combined *comb)
 static dav_error * dav_svn_prep_working(dav_resource_combined *comb)
 {
   const char *txn_name = dav_svn_get_txn(comb->priv.repos,
-                                         comb->priv.activity_id);
+                                         comb->priv.root.activity_id);
 
   /* ### working baselines? */
 
@@ -339,7 +343,7 @@ static dav_error * dav_svn_prep_working(dav_resource_combined *comb)
     {
       /* ### return an error */
     }
-  comb->priv.txn_name = txn_name;
+  comb->priv.root.txn_name = txn_name;
 
   /* ### look up the object, set .exists and .collection flags */
   comb->res.exists = TRUE;
@@ -354,9 +358,9 @@ static dav_error * dav_svn_prep_working(dav_resource_combined *comb)
 static dav_error * dav_svn_prep_activity(dav_resource_combined *comb)
 {
   const char *txn_name = dav_svn_get_txn(comb->priv.repos,
-                                         comb->priv.activity_id);
+                                         comb->priv.root.activity_id);
 
-  comb->priv.txn_name = txn_name;
+  comb->priv.root.txn_name = txn_name;
   comb->res.exists = txn_name != NULL;
 
   return NULL;
@@ -471,6 +475,9 @@ static dav_error * dav_svn_get_resource(request_rec *r,
      lifetime to store here. */
   comb->priv.uri_path = svn_string_create(relative, r->pool);
 
+  /* initialize this until we put something real here */
+  comb->priv.root.rev = SVN_INVALID_REVNUM;
+
   /* create the repository structure and stash it away */
   repos = apr_pcalloc(r->pool, sizeof(*repos));
   repos->pool = r->pool;
@@ -554,6 +561,7 @@ static dav_error * dav_svn_get_parent_resource(const dav_resource *resource,
 
   /* ### fill this in */
   /* ### note: only needed for methods which modify the repository */
+
   return NULL;
 }
 
@@ -585,6 +593,8 @@ static int dav_svn_is_same_resource(const dav_resource *res1,
   if (!is_our_resource(res1, res2))
     return 0;
 
+  /* ### what if the same resource were reached via two URIs? */
+
   return svn_string_compare(res1->info->uri_path, res2->info->uri_path);
 }
 
@@ -596,6 +606,11 @@ static int dav_svn_is_parent_resource(const dav_resource *res1,
 
   if (!is_our_resource(res1, res2))
     return 0;
+
+  /* ### what if a resource were reached via two URIs? we ought to define
+     ### parent/child relations for resources independent of URIs.
+     ### i.e. define a "canonical" location for each resource, then return
+     ### the parent based on that location. */
 
   /* res2 is one of our resources, we can use its ->info ptr */
   len2 = strlen(res2->info->uri_path->data);
@@ -611,7 +626,6 @@ static dav_error * dav_svn_open_stream(const dav_resource *resource,
                                        dav_stream **stream)
 {
 #if 0
-  dav_resource_private *info = resource->info;
   svn_error_t *serr;
 #endif
 
@@ -633,13 +647,10 @@ static dav_error * dav_svn_open_stream(const dav_resource *resource,
   (*stream)->res = resource;
 
 #if 0
-  /* get an FS file object for the resource [from the node] */
-  (*stream)->file = info->node;
-  /* assert: file != NULL   (we shouldn't be here if node is a DIR) */
-
   /* ### assuming mode == read for now */
 
-  serr = svn_fs_file_contents(&(*stream)->input, (*stream)->file,
+  serr = svn_fs_file_contents(&(*stream)->input, resource->info->root.root,
+                              resource->info->repos_path,
                               resource->pool);
   if (serr != NULL)
     {
@@ -695,7 +706,8 @@ static dav_error * dav_svn_seek_stream(dav_stream *stream,
 
 const char * dav_svn_getetag(const dav_resource *resource)
 {
-  const svn_fs_id_t *id;
+  svn_error_t *serr;
+  svn_fs_id_t *id;      /* ### want const here */
   svn_string_t *idstr;
 
   if (!resource->exists)
@@ -703,7 +715,13 @@ const char * dav_svn_getetag(const dav_resource *resource)
 
   /* ### what kind of etag to return for collections, activities, etc? */
 
-  id = svn_fs_get_node_id(resource->info->node, resource->pool);
+  serr = svn_fs_node_id(&id, resource->info->root.root,
+                        resource->info->repos_path, resource->pool);
+  if (serr != NULL) {
+    /* ### what to do? */
+    return "";
+  }
+
   idstr = svn_fs_unparse_id(id, resource->pool);
   return apr_psprintf(resource->pool, "\"%s\"", idstr);
 }
@@ -738,8 +756,9 @@ static dav_error * dav_svn_set_headers(request_rec *r,
 
   /* set up the Content-Length header */
 #if 0
-  /* ### need to get FILE */
-  serr = svn_fs_file_length(&length, file, resource->pool);
+  serr = svn_fs_file_length(&length, resource->info->root.root,
+                            resource->info->repos_path,
+                            resource->pool);
   if (serr != NULL)
     {
       return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
@@ -757,7 +776,6 @@ static dav_error * dav_svn_set_headers(request_rec *r,
 static dav_error * dav_svn_create_collection(dav_resource *resource)
 {
   svn_error_t *serr;
-  svn_fs_node_t *parent;
 
   if (resource->type != DAV_RESOURCE_TYPE_WORKING)
     {
@@ -769,10 +787,10 @@ static dav_error * dav_svn_create_collection(dav_resource *resource)
   /* ### note that the parent was checked out at some point, and this
      ### is being preformed relative to the working rsrc for that parent */
 
-  /* ### fix the parent. wait for new path-based FS API */
-  parent = NULL;
+  /* ### is the root opened yet? */
 
-  if ((serr = svn_fs_make_dir(parent, resource->info->object_name,
+  if ((serr = svn_fs_make_dir(resource->info->root.root,
+                              resource->info->repos_path,
                               resource->pool)) != NULL)
     {
       /* ### need a better error */
@@ -812,7 +830,6 @@ static dav_error * dav_svn_remove_resource(dav_resource *resource,
                                            dav_response **response)
 {
   svn_error_t *serr;
-  svn_fs_node_t *parent;
 
   if (resource->type != DAV_RESOURCE_TYPE_WORKING)
     {
@@ -831,10 +848,10 @@ static dav_error * dav_svn_remove_resource(dav_resource *resource,
      this does imply we are not enforcing the "checkout the parent, then
      delete from within" semantic. */
 
-  /* ### fix this. wait for new FS APIs */
-  parent = NULL;
+  /* ### is the root opened yet? */
 
-  if ((serr = svn_fs_delete_tree(parent, resource->info->object_name,
+  if ((serr = svn_fs_delete_tree(resource->info->root.root,
+                                 resource->info->repos_path,
                                  resource->pool)) != NULL)
     {
       /* ### need a better error */
@@ -855,7 +872,6 @@ static dav_error * dav_svn_do_walk(dav_svn_walker_context *ctx, int depth)
   apr_hash_index_t *hi;
   apr_size_t path_len;
   apr_size_t uri_len;
-  svn_fs_node_t *save_node;
   apr_hash_t *children;
 
   /* The current resource is a collection (possibly here thru recursion)
@@ -882,9 +898,6 @@ static dav_error * dav_svn_do_walk(dav_svn_walker_context *ctx, int depth)
   ctx->res.exists = 1;
   ctx->res.collection = 0;
 
-  /* save away the node, so we can shove new nodes into the resource */
-  save_node = ctx->info.node;
-
   /* remember these values so we can chop back to them after each time
      we append a child name to the path/uri */
   path_len = ctx->info.uri_path->len;
@@ -892,7 +905,11 @@ static dav_error * dav_svn_do_walk(dav_svn_walker_context *ctx, int depth)
 
   /* fetch this collection's children */
   /* ### shall we worry about filling params->pool? */
-  serr = svn_fs_dir_entries(&children, save_node, params->pool);
+  /* ### assuming REGULAR resource. uri_path is repository path. not using
+     ### repos_path because the uri_path manipulation above may have changed
+     ### repos_path's intended memory location. */
+  serr = svn_fs_dir_entries(&children, ctx->info.root.root,
+                            ctx->info.uri_path->data + 1, params->pool);
   if (serr != NULL)
     return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                "could not fetch collection members");
@@ -922,16 +939,11 @@ static dav_error * dav_svn_do_walk(dav_svn_walker_context *ctx, int depth)
       /* reset the URI pointer since the above may have changed it */
       ctx->res.uri = ctx->uri->data;
 
-      /* open the child node */
-      /* ### faster to use dirent->id? (svn_fs__open_node_by_id) */
-      /* ### shall we worry about filling params->pool? */
-      serr = svn_fs_open_node(&ctx->info.node, save_node, dirent->name,
-                              params->pool);
-      if (serr != NULL)
-        return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                   "could not open resource");
+      /* reset the repos_path in case the above may have changed it */
+      /* ### assuming REGULAR resource. uri_path is repository path */
+      ctx->info.repos_path = ctx->info.uri_path->data + 1;
 
-      if ( svn_fs_node_is_file(ctx->info.node) )
+      if ( svn_fs_is_file(ctx->info.root.root, ctx->info.repos_path) )
         {
           err = (*params->func)(&ctx->wres, DAV_CALLTYPE_MEMBER);
           if (err != NULL)
@@ -958,13 +970,7 @@ static dav_error * dav_svn_do_walk(dav_svn_walker_context *ctx, int depth)
       /* chop the child off the path and uri. NOTE: no null-term. */
       ctx->info.uri_path->len = path_len;
       ctx->uri->len = uri_len;
-
-      /* done with this child's node */
-      svn_fs_close_node(ctx->info.node);
     }
-
-  /* restore the resource's node */
-  ctx->info.node = save_node;
 
   return NULL;
 }
@@ -974,6 +980,14 @@ static dav_error * dav_svn_walk(const dav_walk_params *params, int depth,
 {
   dav_svn_walker_context ctx = { 0 };
   dav_error *err;
+
+  /* ### need to allow more walking in the future */
+  if (params->root->type != DAV_RESOURCE_TYPE_REGULAR)
+    {
+      return dav_new_error(params->pool, HTTP_METHOD_NOT_ALLOWED, 0,
+                           "Walking the resource hierarchy can only be done "
+                           "on 'regular' resources [at this time].");
+    }
 
   ctx.params = params;
 
@@ -1006,7 +1020,11 @@ static dav_error * dav_svn_walk(const dav_walk_params *params, int depth,
   /* the current resource's URI is stored in the (telescoping) ctx.uri */
   ctx.res.uri = ctx.uri->data;
 
-  /* ### is the node always open? need to verify */
+  /* the current resource's repos_path is stored in ctx.info.uri_path */
+  /* ### assuming REGULAR resource. uri_path is repository path */
+  ctx.info.repos_path = ctx.info.uri_path->data + 1;
+
+  /* ### is the root already/always open? need to verify */
 
   /* always return the error, and any/all multistatus responses */
   err = dav_svn_do_walk(&ctx, depth);
@@ -1044,9 +1062,10 @@ dav_resource *dav_svn_create_working_resource(const dav_resource *base,
 
   comb->priv.uri_path = path;
   comb->priv.repos = base->info->repos;
-  comb->priv.object_name = repos_path;
-  comb->priv.activity_id = activity_id;
-  comb->priv.txn_name = txn_name;
+  comb->priv.repos_path = repos_path;
+  comb->priv.root.rev = SVN_INVALID_REVNUM;
+  comb->priv.root.activity_id = activity_id;
+  comb->priv.root.txn_name = txn_name;
 
   return &comb->res;
 }

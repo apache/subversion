@@ -58,8 +58,9 @@ static dav_error *dav_svn_db_fetch(dav_db *db, dav_datum key,
   svn_string_t *propval;
   svn_error_t *serr;
 
-  serr = svn_fs_get_node_prop(&propval, db->resource->info->node,
-                              &propname, db->p);
+  serr = svn_fs_node_prop(&propval, db->resource->info->root.root,
+                          db->resource->info->repos_path,
+                          &propname, db->p);
   if (serr != NULL)
     return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                "could not fetch a property");
@@ -77,7 +78,8 @@ static dav_error *dav_svn_db_store(dav_db *db, dav_datum key, dav_datum value)
 
   /* ### hope node is open, and it is mutable */
 
-  serr = svn_fs_change_node_prop(db->resource->info->node,
+  serr = svn_fs_change_node_prop(db->resource->info->root.root,
+                                 db->resource->info->repos_path,
                                  &propname, &propval, db->resource->pool);
   if (serr != NULL)
     return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
@@ -96,8 +98,9 @@ static dav_error *dav_svn_db_remove(dav_db *db, dav_datum key)
 
   /* ### hope node is open, and it is mutable */
 
-  serr = svn_fs_change_node_prop(db->resource->info->node, &propname, NULL,
-                                 db->resource->pool);
+  serr = svn_fs_change_node_prop(db->resource->info->root.root,
+                                 db->resource->info->repos_path,
+                                 &propname, NULL, db->resource->pool);
   if (serr != NULL)
     return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                "could not remove a property");
@@ -114,8 +117,9 @@ static int dav_svn_db_exists(dav_db *db, dav_datum key)
   svn_string_t *propval;
   svn_error_t *serr;
 
-  serr = svn_fs_get_node_prop(&propval, db->resource->info->node,
-                              &propname, db->p);
+  serr = svn_fs_node_prop(&propval, db->resource->info->root.root,
+                          db->resource->info->repos_path,
+                          &propname, db->p);
 
   /* ### try and dispose of the value? */
 
@@ -147,8 +151,8 @@ static dav_error *dav_svn_db_firstkey(dav_db *db, dav_datum *pkey)
     {
       svn_error_t *serr;
 
-      serr = svn_fs_get_node_proplist(&db->props, db->resource->info->node,
-                                      db->p);
+      serr = svn_fs_node_proplist(&db->props, db->resource->info->root.root,
+                                  db->resource->info->repos_path, db->p);
       if (serr != NULL)
         return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                    "could not begin sequencing through "

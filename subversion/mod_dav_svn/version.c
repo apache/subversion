@@ -58,7 +58,6 @@ static dav_error *dav_svn_checkout(dav_resource *resource,
 {
   const char *activity_id;
   const char *txn_name;
-  const char *repos_path;
 
   if (resource->type != DAV_RESOURCE_TYPE_VERSION)
     {
@@ -99,12 +98,10 @@ static dav_error *dav_svn_checkout(dav_resource *resource,
                            "The specified activity does not exist.");
     }
 
-  repos_path = resource->info->object_name;
-
   *working_resource = dav_svn_create_working_resource(resource,
                                                       activity_id,
                                                       txn_name,
-                                                      repos_path);
+                                                      resource->info->repos_path);
   return NULL;
 }
 
@@ -182,15 +179,15 @@ static int dav_svn_can_be_activity(const dav_resource *resource)
 
 static dav_error *dav_svn_make_activity(dav_resource *resource)
 {
-  dav_resource_private *info = resource->info;
+  const char *activity_id = resource->info->root.activity_id;
   const char *txn_name;
 
   /* ### need to check some preconditions? */
 
   /* ### just hack one together for now... */
-  txn_name = apr_psprintf(resource->pool, "txn.%s", info->object_name);
+  txn_name = apr_psprintf(resource->pool, "txn.%s", activity_id);
 
-  return dav_svn_store_activity(info->repos, info->object_name, txn_name);
+  return dav_svn_store_activity(resource->info->repos, activity_id, txn_name);
 }
 
 
