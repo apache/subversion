@@ -21,7 +21,12 @@
 #include <apr_general.h>
 #include <apr_pools.h>
 
+#ifdef _MSC_VER
+#include <direct.h>
+#define getcwd _getcwd
+#else
 #include <unistd.h> /* for getcwd() */
+#endif
 
 #include "svn_string.h"
 #include "svn_utf.h"
