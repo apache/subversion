@@ -7,13 +7,13 @@ comment	@# @;
 
 
 1.1
-date	2003.06.10.20.19.48;	author jrandom;	state Exp;
+date	94.06.18.05.46.08;	author jrandom;	state Exp;
 branches
 	1.1.1.1;
 next	;
 
 1.1.1.1
-date	2003.06.10.20.19.48;	author jrandom;	state Exp;
+date	94.06.18.05.46.08;	author jrandom;	state Exp;
 branches;
 next	;
 
@@ -27,7 +27,9 @@ log
 @Initial revision
 @
 text
-@This file is here solely to prevent its directory from being pruned.
+@This file was added in between the addition of sub/first and
+sub/second, to demonstrate that when those two are both removed, the
+pruning stops with sub/.
 @
 
 

@@ -384,6 +384,41 @@ class RepositoryMirror:
     root_key = self.revs_db[str(self.youngest)]
     self._stabilize_directory(root_key)
 
+  def probe_path(self, path, revision=-1):
+    # For debugging -- print information about the repository mirror's
+    # path down to some file, in REVISION (or youngest if -1).
+    components = string.split(path, '/')
+    if revision == -1:
+      revision = self.youngest
+    print "PROBING path: '%s' in %d" % (path, revision)
+
+    parent_dir_key = self.revs_db[str(revision)]
+    parent_dir = marshal.loads(self.nodes_db[parent_dir_key])
+    last_component = "/"
+
+    i = 1
+    for component in components:
+      for n in range(i):
+        print "  ",
+      print "'%s' key: %s, val:" % (last_component, parent_dir_key), parent_dir
+
+      if not parent_dir.has_key(component):
+        print "  PROBE ABANDONED: '%s' does not contain '%s'" \
+              % (last_component, component)
+        return
+
+      this_entry_key = parent_dir[component]
+      this_entry_val = marshal.loads(self.nodes_db[this_entry_key])
+      parent_dir_key = this_entry_key
+      parent_dir = this_entry_val
+      last_component = component
+      i = i + 1
+  
+    for n in range(i):
+      print "  ",
+    print "parent_dir_key: %s, val:" % parent_dir_key, parent_dir
+
+
   def change_path(self, path, intermediate_dir_func=None):
     """Record a change to PATH.  PATH may not have a leading slash.
     Return None if PATH already existed, or 1 if created it.
@@ -391,8 +426,6 @@ class RepositoryMirror:
     If INTERMEDIATE_DIR_FUNC is not None, then invoke it once on
     each full path to each missing intermediate directory in PATH, in
     order from shortest to longest."""
-
-    print "KFF changing: '%s'" % path
 
     components = string.split(path, '/')
     path_so_far = None
@@ -432,9 +465,9 @@ class RepositoryMirror:
       this_entry_val = marshal.loads(self.nodes_db[this_entry_key])
       if not this_entry_val.has_key(self.mutable_flag):
         this_entry_val[self.mutable_flag] = 1
-        new_child_key = gen_key()
-        parent_dir[component] = new_child_key
-        self.nodes_db[new_child_key] = marshal.dumps(this_entry_val)
+        this_entry_key = gen_key()
+        parent_dir[component] = this_entry_key
+        self.nodes_db[this_entry_key] = marshal.dumps(this_entry_val)
         self.nodes_db[parent_dir_key] = marshal.dumps(parent_dir)
 
       parent_dir_key = this_entry_key
@@ -447,9 +480,9 @@ class RepositoryMirror:
     if parent_dir.has_key(last_component):
       child = marshal.loads(self.nodes_db[parent_dir[last_component]])
       if child.has_key(self.mutable_flag):
-        sys.stderr.write("'%s' has already been changed, "             \
-                         "can't change it again in the same revision." \
-                         % path)
+        sys.stderr.write("'%s' has already been changed in revision %d;\n" \
+                         "can't change it again in the same revision."     \
+                         % (path, self.youngest))
         sys.exit(1)
       retval = None  # Path already exists, so we'll return None.
 
@@ -457,8 +490,7 @@ class RepositoryMirror:
     parent_dir[last_component] = leaf_key
     self.nodes_db[parent_dir_key] = marshal.dumps(parent_dir)
     self.nodes_db[leaf_key] = marshal.dumps(self.empty_mutable_thang)
-    print "KFF changed file '%s' (parent_dir_key %s, leaf_key %s), parent_dir"\
-          % (path, parent_dir_key, leaf_key), parent_dir
+
     return retval
 
   def delete_path(self, path, prune=None):
@@ -499,6 +531,19 @@ class RepositoryMirror:
     parent_chain = [ ]
     parent_chain.insert(0, (None, parent_dir_key))
 
+    def is_prunable(dir):
+      """Return true if DIR (a dictionary representing a directory)
+      has only one entry, false otherwise.  This is more complex than
+      just checking len(DIR) > 1, since DIR might have a mutable flag.""" 
+      num_items = len(dir)
+      if num_items > 2:
+        return None
+      if num_items == 2:
+        if dir.has_key(self.mutable_flag): return 1
+        else:                              return None
+      else:
+        return 1
+
     for component in components[:-1]:
       # parent_dir is always mutable at the top of the loop
 
@@ -518,39 +563,21 @@ class RepositoryMirror:
       parent_dir = this_entry_val
       parent_chain.insert(0, (component, parent_dir_key))
 
-    # If the target is not present, then we're done.
+    # If the target is not present in its parent, then we're done.
     last_component = components[-1]
     if not parent_dir.has_key(last_component):
       return None
 
-    def is_prunable(dir):
-      """Return true if DIR (a dictionary representing a directory)
-      has only one entry, false otherwise.  This is more complex than
-      just checking len(DIR) > 1, since DIR might have a mutable flag.""" 
-      num_items = len(dir)
-      if num_items > 2:
-        return None
-      if num_items == 2:
-        if dir.has_key(self.mutable_flag): return 1
-        else:                              return None
-      else:
-        return 1
-
-    print "KFF DELETING: %s" % path
     # The target is present, so remove it and bubble up, making a new
     # mutable path and/or pruning as necessary.
-    pruned_count = -1
+    pruned_count = 0
     prev_entry_name = last_component
     new_key = None
     for parent_item in parent_chain:
-      print "KFF prev_entry_name: %s" % prev_entry_name
-      print "KFF new_key: %s" % new_key
       parent_key = parent_item[1]
       parent_val = marshal.loads(self.nodes_db[parent_key])
-      print "KFF parent_val", parent_val
       if prune:
         if (new_key == None) and is_prunable(parent_val):
-          print "KFF is prunable:", parent_val
           pruned_count = pruned_count + 1
           pass
           # Do nothing more.  All the action takes place when we hit a
@@ -582,14 +609,25 @@ class RepositoryMirror:
     # Install the new root entry.
     self.revs_db[str(self.youngest)] = new_key
 
-    if pruned_count > -1:
+    if pruned_count > len(components):
+      sys.stdout.write("Error: deleting '%s' tried to prune %d components."
+                       % (path, pruned_count))
+      exit(1)
+
+    if pruned_count:
+      if pruned_count == len(components):
+        # We never prune away the root directory, so back up one component.
+        pruned_count = pruned_count - 1
       retpath = string.join(components[:0 - pruned_count], '/')
-      print "KFF pruned_count: '%d'" % pruned_count
-      print "KFF deletion returning '%s'" % retpath
       return retpath
     else:
-      print "KFF deletion returning full '%s'" % path
       return path
+
+  def close(self):
+    # Just stabilize the last revision.  This may or may not affect
+    # anything, but if we end up using the mirror for anything after
+    # this, it's nice to know the '/mutable/' entries are gone.
+    self.stabilize_youngest()
 
 
 class Dump:
@@ -791,6 +829,7 @@ class Dump:
     return deleted_path
 
   def close(self):
+    self.repos_mirror.close()
     self.dumpfile.close()
 
 
