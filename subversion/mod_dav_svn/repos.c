@@ -1149,15 +1149,12 @@ static dav_error * dav_svn_open_stream(const dav_resource *resource,
                                "working resources [at this time].");
         }
     }
-  else
-    {
-    }
 
 #if 1
-  if (mode == DAV_MODE_READ_SEEKABLE || mode == DAV_MODE_WRITE_SEEKABLE)
+  if (mode == DAV_MODE_WRITE_SEEKABLE)
     {
       return dav_new_error(resource->pool, HTTP_NOT_IMPLEMENTED, 0,
-                           "Resource body read/write cannot use ranges "
+                           "Resource body writes cannot use ranges "
                            "[at this time].");
     }
 #endif
@@ -1166,131 +1163,54 @@ static dav_error * dav_svn_open_stream(const dav_resource *resource,
   *stream = apr_pcalloc(resource->pool, sizeof(**stream));
   (*stream)->res = resource;
 
-  if (mode == DAV_MODE_READ)
-    {
-      /* If we have a base for a delta, then we want to compute an svndiff
-         between the provided base and the requested resource. For a simple
-         request, then we just grab the file contents. */
-#if 0
-      if (resource->info->delta_base == NULL)
-#endif
-        {
-          serr = svn_fs_file_contents(&(*stream)->rstream,
-                                      resource->info->root.root,
-                                      DAV_SVN_REPOS_PATH(resource),
-                                      resource->pool);
-          if (serr != NULL)
-            {
-              return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                         "could not prepare to read the file");
-            }
-        }
-#if 0
-      else /* delta_base != NULL */
-        {
-          dav_svn_uri_info info;
-          svn_fs_root_t *root;
-          svn_stringbuf_t *id_str;
-          int is_file;
+  /* note: when writing, we don't need to use DAV_SVN_REPOS_PATH since
+     we cannot write into an "id root". Partly because the FS may not
+     let us, but mostly that we have an id root only to deal with Version
+     Resources, and those are read only. */
 
-          /* First order of business is to parse it. */
-          serr = dav_svn_simple_parse_uri(&info, resource,
-                                          resource->info->delta_base,
-                                          resource->pool);
-          if (serr != NULL)
-            return dav_svn_convert_err(serr, HTTP_BAD_REQUEST,
-                                       "could not parse the delta base");
-          if (info.node_id == NULL)
-            return dav_new_error(resource->pool, HTTP_BAD_REQUEST, 0,
-                                 "the delta base was not a version "
-                                 "resource URL");
-
-          /* We are always accessing the base resource by ID, so open
-             an ID root. */
-          serr = svn_fs_id_root(&root, resource->info->repos->fs,
+  serr = svn_fs_apply_textdelta(&(*stream)->delta_handler,
+                                &(*stream)->delta_baton,
+                                resource->info->root.root,
+                                resource->info->repos_path,
                                 resource->pool);
-          if (serr != NULL)
-            return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                       "could not open a root for the base");
-
-          id_str = svn_fs_unparse_id(info.node_id, resource->pool);
-
-          /* verify that it is a file */
-          serr = svn_fs_is_file(&is_file, root, id_str->data, resource->pool);
-          if (serr != NULL)
-            return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                       "could not determine if the base "
-                                       "is really a file");
-          if (!is_file)
-            return dav_new_error(resource->pool, HTTP_BAD_REQUEST, 0,
-                                 "the delta base does not refer to a file");
-
-          /* Okay. Let's open up a delta stream for the client to read. */
-          serr = svn_fs_get_file_delta_stream(
-                                              /* ### not right: */
-                                              &(*stream)->rstream,
-
-                                              root, id_str->data,
-                                              resource->info->root.root,
-                                              DAV_SVN_REPOS_PATH(resource),
-                                              resource->pool);
-          if (serr != NULL)
-              return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                         "could not prepare to read a delta");
-        }
-#endif /* 0 */
-    }
-  else if (mode == DAV_MODE_WRITE_TRUNC)
+  if (serr != NULL && serr->apr_err == SVN_ERR_FS_NOT_FOUND)
     {
-      /* note: when writing, we don't need to use DAV_SVN_REPOS_PATH since
-         we cannot write into an "id root". Partly because the FS may not
-         let us, but mostly that we have an id root only to deal with Version
-         Resources, and those are read only. */
-
+      serr = svn_fs_make_file(resource->info->root.root,
+                              resource->info->repos_path,
+                              resource->pool);
+      if (serr != NULL)
+        {
+          return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                     "Could not create file within the "
+                                     "repository.");
+        }
       serr = svn_fs_apply_textdelta(&(*stream)->delta_handler,
                                     &(*stream)->delta_baton,
                                     resource->info->root.root,
                                     resource->info->repos_path,
                                     resource->pool);
-      if (serr != NULL && serr->apr_err == SVN_ERR_FS_NOT_FOUND)
-        {
-          serr = svn_fs_make_file(resource->info->root.root,
-                                  resource->info->repos_path,
-                                  resource->pool);
-          if (serr != NULL)
-            {
-              return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                         "Could not create file within the "
-                                         "repository.");
-            }
-          serr = svn_fs_apply_textdelta(&(*stream)->delta_handler,
-                                        &(*stream)->delta_baton,
-                                        resource->info->root.root,
-                                        resource->info->repos_path,
-                                        resource->pool);
-        }
-      if (serr != NULL)
-        {
-          return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                     "Could not prepare to write the file");
-        }
+    }
+  if (serr != NULL)
+    {
+      return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                 "Could not prepare to write the file");
+    }
 
-      /* if the incoming data is an SVNDIFF, then create a stream that
-         will process the data into windows and invoke the FS window handler
-         when a window is ready. */
-      /* ### we need a better way to check the content-type! this is bogus
-         ### because we're effectively looking at the request_rec. doubly
-         ### bogus because this means you cannot open arbitrary streams and
-         ### feed them content (the type is always tied to a request_rec).
-         ### probably ought to pass the type to open_stream */
-      if (resource->info->is_svndiff)
-        {
-          (*stream)->wstream =
-            svn_txdelta_parse_svndiff((*stream)->delta_handler,
-                                      (*stream)->delta_baton,
-                                      TRUE,
-                                      resource->pool);
-        }
+  /* if the incoming data is an SVNDIFF, then create a stream that
+     will process the data into windows and invoke the FS window handler
+     when a window is ready. */
+  /* ### we need a better way to check the content-type! this is bogus
+     ### because we're effectively looking at the request_rec. doubly
+     ### bogus because this means you cannot open arbitrary streams and
+     ### feed them content (the type is always tied to a request_rec).
+     ### probably ought to pass the type to open_stream */
+  if (resource->info->is_svndiff)
+    {
+      (*stream)->wstream =
+        svn_txdelta_parse_svndiff((*stream)->delta_handler,
+                                  (*stream)->delta_baton,
+                                  TRUE,
+                                  resource->pool);
     }
 
   return NULL;
@@ -1307,21 +1227,6 @@ static dav_error * dav_svn_close_stream(dav_stream *stream, int commit)
     svn_stream_close(stream->wstream);
   else if (stream->delta_handler != NULL)
     (*stream->delta_handler)(NULL, stream->delta_baton);
-
-  return NULL;
-}
-
-static dav_error * dav_svn_read_stream(dav_stream *stream, void *buf,
-                                       apr_size_t *bufsize)
-{
-  svn_error_t *serr;
-
-  serr = svn_stream_read(stream->rstream, buf, bufsize);
-  if (serr != NULL)
-    {
-      return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                 "could not read the file contents");
-    }
 
   return NULL;
 }
@@ -1444,6 +1349,143 @@ static dav_error * dav_svn_set_headers(request_rec *r,
   /* ### until this is resolved, the Content-Type header is busted */
 
   return NULL;
+}
+
+static dav_error * dav_svn_deliver(const dav_resource *resource,
+                                   ap_filter_t *output)
+{
+  svn_error_t *serr;
+
+  /* Check resource type */
+  if (resource->type != DAV_RESOURCE_TYPE_REGULAR
+      && resource->type != DAV_RESOURCE_TYPE_VERSION
+      && resource->type != DAV_RESOURCE_TYPE_WORKING) {
+    return dav_new_error(resource->pool, HTTP_CONFLICT, 0,
+                         "Cannot GET this type of resource.");
+  }
+  if (resource->collection) {
+    return dav_new_error(resource->pool, HTTP_CONFLICT, 0,
+                         "There is no default response to GET for a "
+                         "collection.");
+  }
+
+  /* If we have a base for a delta, then we want to compute an svndiff
+     between the provided base and the requested resource. For a simple
+     request, then we just grab the file contents. */
+#if 0
+  if (resource->info->delta_base == NULL)
+#endif
+    {
+      svn_stream_t *stream;
+      char *block;
+      apr_bucket_brigade *bb;
+      apr_status_t status;
+      apr_bucket *bkt;
+
+      serr = svn_fs_file_contents(&stream,
+                                  resource->info->root.root,
+                                  DAV_SVN_REPOS_PATH(resource),
+                                  resource->pool);
+      if (serr != NULL)
+        {
+          return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                     "could not prepare to read the file");
+        }
+
+      /* ### one day in the future, we can create a custom bucket type
+         ### which will read from the FS stream on demand */
+
+      block = apr_palloc(resource->pool, SVN_STREAM_CHUNK_SIZE);
+      while (1) {
+        apr_size_t bufsize = SVN_STREAM_CHUNK_SIZE;
+
+        /* read from the FS ... */
+        serr = svn_stream_read(stream, block, &bufsize);
+        if (serr != NULL)
+          {
+            return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                       "could not read the file contents");
+          }
+        if (bufsize == 0)
+          break;
+
+        /* build a brigade and write to the filter ... */
+        bb = apr_brigade_create(resource->pool);
+        bkt = apr_bucket_transient_create(block, bufsize);
+        APR_BRIGADE_INSERT_TAIL(bb, bkt);
+        if ((status = ap_pass_brigade(output, bb)) != APR_SUCCESS) {
+          /* ### what to do with status; and that HTTP code... */
+          return dav_new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                               "Could not write data to filter.");
+        }
+      }
+
+      /* done with the file. write an EOS bucket now. */
+      bb = apr_brigade_create(resource->pool);
+      bkt = apr_bucket_eos_create();
+      APR_BRIGADE_INSERT_TAIL(bb, bkt);
+      if ((status = ap_pass_brigade(output, bb)) != APR_SUCCESS) {
+        /* ### what to do with status; and that HTTP code... */
+        return dav_new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                             "Could not write EOS to filter.");
+      }
+
+      return NULL;
+    }
+#if 0
+  else /* delta_base != NULL */
+    {
+      dav_svn_uri_info info;
+      svn_fs_root_t *root;
+      svn_stringbuf_t *id_str;
+      int is_file;
+
+      /* First order of business is to parse it. */
+      serr = dav_svn_simple_parse_uri(&info, resource,
+                                      resource->info->delta_base,
+                                      resource->pool);
+      if (serr != NULL)
+        return dav_svn_convert_err(serr, HTTP_BAD_REQUEST,
+                                   "could not parse the delta base");
+      if (info.node_id == NULL)
+        return dav_new_error(resource->pool, HTTP_BAD_REQUEST, 0,
+                             "the delta base was not a version "
+                             "resource URL");
+
+      /* We are always accessing the base resource by ID, so open
+         an ID root. */
+      serr = svn_fs_id_root(&root, resource->info->repos->fs,
+                            resource->pool);
+      if (serr != NULL)
+        return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                   "could not open a root for the base");
+
+      id_str = svn_fs_unparse_id(info.node_id, resource->pool);
+
+      /* verify that it is a file */
+      serr = svn_fs_is_file(&is_file, root, id_str->data, resource->pool);
+      if (serr != NULL)
+        return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                   "could not determine if the base "
+                                   "is really a file");
+      if (!is_file)
+        return dav_new_error(resource->pool, HTTP_BAD_REQUEST, 0,
+                             "the delta base does not refer to a file");
+
+      /* Okay. Let's open up a delta stream for the client to read. */
+      serr = svn_fs_get_file_delta_stream(
+                                          /* ### not right: */
+                                          &(*stream)->rstream,
+
+                                          root, id_str->data,
+                                          resource->info->root.root,
+                                          DAV_SVN_REPOS_PATH(resource),
+                                          resource->pool);
+      if (serr != NULL)
+        return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                   "could not prepare to read a delta");
+    }
+#endif /* 0 */
 }
 
 static dav_error * dav_svn_create_collection(dav_resource *resource)
@@ -1814,12 +1856,10 @@ const dav_hooks_repository dav_svn_hooks_repos =
   dav_svn_is_parent_resource,
   dav_svn_open_stream,
   dav_svn_close_stream,
-  dav_svn_read_stream,
   dav_svn_write_stream,
   dav_svn_seek_stream,
   dav_svn_set_headers,
-  NULL,                         /* get_pathname */
-  NULL,                         /* free_file */
+  dav_svn_deliver,
   dav_svn_create_collection,
   dav_svn_copy_resource,
   dav_svn_move_resource,
