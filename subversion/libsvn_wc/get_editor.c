@@ -190,6 +190,7 @@ free_dir_baton (struct dir_baton *dir_baton)
                                   svn_node_dir,
                                   0,
                                   0,
+                                  0,
                                   dir_baton->pool,
                                   NULL);
    if (err)
@@ -541,6 +542,7 @@ add_directory (svn_string_t *name,
                                   this_dir_baton->name,
                                   SVN_INVALID_REVNUM,
                                   svn_node_dir,
+                                  0,
                                   0,
                                   0,
                                   parent_dir_baton->pool,
@@ -1204,6 +1206,7 @@ close_file (void *file_baton)
                               "%d",
                               fb->dir_baton->edit_baton->target_revision);
 
+  /* Write log entry which will bump the revision number:  */
   svn_xml_make_open_tag (&entry_accum,
                          fb->pool,
                          svn_xml_self_closing,
@@ -1212,10 +1215,67 @@ close_file (void *file_baton)
                          fb->name,
                          SVN_WC_ENTRY_ATTR_REVISION,
                          svn_string_create (revision_str, fb->pool),
-                         SVN_WC_ENTRY_ATTR_TIMESTAMP,
-                         svn_string_create (SVN_WC_TIMESTAMP_WC,
-                                            fb->pool), /* use wfile time */
                          NULL);
+
+  if (fb->text_changed)
+    {
+      svn_boolean_t text_modified;
+
+      /* Is the working file's text locally modified? */
+      err = svn_wc_text_modified_p (&text_modified,
+                                    fb->path,
+                                    fb->pool);
+      if (err) return err;
+
+      /* Log entry which sets a new textual timestamp, but only if
+         there are no local changes to the text. */
+      if (! text_modified)
+        svn_xml_make_open_tag (&entry_accum,
+                               fb->pool,
+                               svn_xml_self_closing,
+                               SVN_WC__LOG_MODIFY_ENTRY,
+                               SVN_WC__LOG_ATTR_NAME,
+                               fb->name,
+                               SVN_WC_ENTRY_ATTR_TEXT_TIME,
+                               /* use wfile time */
+                               svn_string_create (SVN_WC_TIMESTAMP_WC,
+                                                  fb->pool),
+                               NULL);
+    }
+
+  if (fb->prop_changed)
+    {
+      svn_boolean_t prop_modified;
+
+      /* Are the working file's props locally modified? */
+      svn_string_t *full_prop_path = 
+        svn_wc__adm_path (fb->dir_baton->path,
+                          0, /* not tmp */
+                          fb->pool,
+                          SVN_WC__ADM_PROPS,
+                          fb->name,
+                          NULL);
+      
+      err = svn_wc_props_modified_p (&prop_modified,
+                                     full_prop_path,
+                                     fb->pool);
+      if (err) return err;
+
+      /* Log entry which sets a new property timestamp, but only if
+         there are no local changes to the props. */
+      if (! prop_modified)
+        svn_xml_make_open_tag (&entry_accum,
+                               fb->pool,
+                               svn_xml_self_closing,
+                               SVN_WC__LOG_MODIFY_ENTRY,
+                               SVN_WC__LOG_ATTR_NAME,
+                               fb->name,
+                               SVN_WC_ENTRY_ATTR_PROP_TIME,
+                               /* use wfile time */
+                               svn_string_create (SVN_WC_TIMESTAMP_WC,
+                                                  fb->pool),
+                               NULL);
+    }
 
   /* Write our accumulation of log entries into a log file */
   apr_err = apr_full_write (log_fp, entry_accum->data, entry_accum->len, NULL);

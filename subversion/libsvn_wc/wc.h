@@ -431,7 +431,8 @@ svn_error_t *svn_wc__entry_merge_sync (svn_string_t *path,
                                        svn_revnum_t revision,
                                        enum svn_node_kind kind,
                                        int flags,
-                                       apr_time_t timestamp,
+                                       apr_time_t text_time,
+                                       apr_time_t prop_time,
                                        apr_pool_t *pool,
                                        apr_hash_t *atts);
 

@@ -58,7 +58,7 @@
 
 
 
-/*** Timestamp generation and comparision. ***/
+/*** Timestamp generation and comparison. ***/
 
 svn_error_t *
 svn_wc__file_affected_time (apr_time_t *apr_time,
