@@ -136,9 +136,9 @@ static void usage(const char *progname, apr_pool_t *pool)
     progname = "svnserve";
 
   enable_message_translation();
-  svn_error_clear (svn_cmdline_fprintf (stderr, pool,
-                                        _("Type '%s --help' for usage.\n"),
-                                        progname));
+  svn_error_clear(svn_cmdline_fprintf(stderr, pool,
+                                      _("Type '%s --help' for usage.\n"),
+                                      progname));
   exit(1);
 }
 
@@ -147,17 +147,17 @@ static void help(apr_pool_t *pool)
   apr_size_t i;
 
   enable_message_translation();
-  svn_error_clear (svn_cmdline_fputs(_("Usage: svnserve [options]\n"
-                                       "\n"
-                                       "Valid options:\n"),
-                                     stdout, pool));
+  svn_error_clear(svn_cmdline_fputs(_("Usage: svnserve [options]\n"
+                                      "\n"
+                                      "Valid options:\n"),
+                                    stdout, pool));
   for (i = 0; svnserve__options[i].name && svnserve__options[i].optch; i++)
     {
       const char *optstr;
       svn_opt_format_option(&optstr, svnserve__options + i, TRUE, pool);
-      svn_error_clear (svn_cmdline_fprintf(stdout, pool, "  %s\n", optstr));
+      svn_error_clear(svn_cmdline_fprintf(stdout, pool, "  %s\n", optstr));
     }
-  svn_error_clear (svn_cmdline_fprintf(stdout, pool, "\n"));
+  svn_error_clear(svn_cmdline_fprintf(stdout, pool, "\n"));
   exit(0);
 }
 
@@ -213,7 +213,7 @@ static void * APR_THREAD_FUNC serve_thread(apr_thread_t *tid, void *data)
 
 /* Version compatibility check */
 static svn_error_t *
-check_lib_versions (void)
+check_lib_versions(void)
 {
   static const svn_version_checklist_t checklist[] =
     {
@@ -225,8 +225,8 @@ check_lib_versions (void)
       { NULL, NULL }
     };
 
-  SVN_VERSION_DEFINE (my_version);
-  return svn_ver_check_list (&my_version, checklist);
+  SVN_VERSION_DEFINE(my_version);
+  return svn_ver_check_list(&my_version, checklist);
 }
 
 
@@ -265,13 +265,13 @@ int main(int argc, const char *const *argv)
   pool = svn_pool_create(NULL);
 
   /* Check library versions */
-  err = check_lib_versions ();
+  err = check_lib_versions();
   if (err)
     {
       enable_message_translation();
-      svn_handle_error (err, stderr, FALSE);
-      svn_error_clear (err);
-      svn_pool_destroy (pool);
+      svn_handle_error(err, stderr, FALSE);
+      svn_error_clear(err);
+      svn_pool_destroy(pool);
       return EXIT_FAILURE;
     }
 
@@ -374,9 +374,9 @@ int main(int argc, const char *const *argv)
   if (run_mode == run_mode_none)
     {
       enable_message_translation();
-      svn_error_clear (svn_cmdline_fputs
-                       (_("You must specify one of -d, -i, -t or -X.\n"),
-                        stderr, pool));
+      svn_error_clear(svn_cmdline_fputs
+                      (_("You must specify one of -d, -i, -t or -X.\n"),
+                       stderr, pool));
       usage(argv[0], pool);
     }
 
@@ -395,8 +395,8 @@ int main(int argc, const char *const *argv)
   status = apr_sockaddr_info_get(&sa, host, APR_UNSPEC, port, 0, pool);
   if (status)
     {
-      fprintf (stderr, "Can't get address info: %s\n",
-               apr_strerror(status, errbuf, sizeof(errbuf)));
+      fprintf(stderr, "Can't get address info: %s\n",
+              apr_strerror(status, errbuf, sizeof(errbuf)));
       exit(1);
     }
 
@@ -410,8 +410,8 @@ int main(int argc, const char *const *argv)
 #endif
   if (status)
     {
-      fprintf (stderr, "Can't create server socket: %s\n",
-               apr_strerror(status, errbuf, sizeof(errbuf)));
+      fprintf(stderr, "Can't create server socket: %s\n",
+              apr_strerror(status, errbuf, sizeof(errbuf)));
       exit(1);
     }
 
@@ -422,8 +422,8 @@ int main(int argc, const char *const *argv)
   status = apr_socket_bind(sock, sa);
   if (status)
     {
-      fprintf (stderr, "Can't bind server socket: %s\n",
-               apr_strerror(status, errbuf, sizeof(errbuf)));
+      fprintf(stderr, "Can't bind server socket: %s\n",
+              apr_strerror(status, errbuf, sizeof(errbuf)));
       exit(1);
     }
 
