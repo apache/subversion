@@ -297,3 +297,17 @@ already know about.)
      Justification: useful features for 1.0, low risk.
      Votes:
       +1: mbk
+
+
+   * r8055, r8085, r8104, r8105
+     RPM Documentation build patch and added svnserve.conf and snvserve man
+        pages.  Also require correct apr/apr-util, and apache RPM versions.
+     Justification: Packaging fixes and additions.
+     Votes:
+
+
+   * r8125
+     Rename server directories from to "bin" from "i386".
+     Justification: I changed my directory structure because I've now got
+        non-i386 binaries.
+     Votes:
