@@ -117,8 +117,7 @@ static svn_error_t *svn_ra_close (void *session_baton)
 
 static const svn_ra_plugin_t dav_plugin = {
   "ra_dav",
-  "This RA library communicates with the SVN repository using the WebDAV "
-  "(DeltaV) protocol.",
+  "Module for accessing a repository via WebDAV (DeltaV) protocol.",
   svn_ra_open,
   svn_ra_close,
   svn_ra_dav__get_latest_revnum,

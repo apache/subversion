@@ -82,8 +82,7 @@ print_generic_help (apr_pool_t *pool)
 
   static const char info[] =
     "Subversion is a tool for revision control.\n"
-    "For updates and additional information, see the Subversion home page:\n"
-    "      http://subversion.tigris.org\n";
+    "For additional information, see http://subversion.tigris.org\n";
 
   int i = 0;
 
@@ -106,13 +105,41 @@ print_generic_help (apr_pool_t *pool)
 }
 
 
+static svn_error_t *
+print_version_info (apr_pool_t *pool)
+{
+  void *ra_baton;
+  svn_string_t *descriptions;
+  static const char info[] =
+    "Copyright (C) 2000-2001 CollabNet.  All rights reserved.\n"
+    "\n"
+    "Subversion is released under CollabNet's open source license,\n"
+    "which is available at http://subversion.tigris.org\n";
+
+  printf ("\nSubversion, version %s  (client)\n\n", SVN_VERSION);
+  printf ("%s\n", info);
+
+  printf ("The following repository access (RA) modules are available:\n\n");
+
+  /* Get a hash full of all available RA libraries.  */
+  SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
+
+  /* Get a descriptive list of them. */
+  SVN_ERR (svn_ra_print_ra_libraries (&descriptions, ra_baton, pool));
+
+  printf ("%s\n", descriptions->data);
+
+  return SVN_NO_ERROR;
+}
+
+
+
 /* Print either generic help, or command-specific help for each
  * command in os->args.  OPT_STATE is unused and may be null.
  * If OS is null then generic help will always be printed.
  * 
  * Unlike all the other command routines, ``help'' has its own
- * option processing.  Of course, it does not accept any options :-),
- * just command line args.
+ * option processing.
  */
 svn_error_t *
 svn_cl__help (apr_getopt_t *os,
@@ -132,7 +159,14 @@ svn_cl__help (apr_getopt_t *os,
 	svn_cl__subcommand_help (this->data, pool);
       }
   else
-    print_generic_help (pool);
+    {
+      /* the -v or --version option was given */
+      if (opt_state && opt_state->version) 
+          SVN_ERR (print_version_info (pool));        
+
+      else
+        print_generic_help (pool);      
+    }
 
   return SVN_NO_ERROR;
 }
