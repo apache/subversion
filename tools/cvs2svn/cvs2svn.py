@@ -2433,8 +2433,12 @@ def pass5(ctx):
   os.unlink(NODES_DB)
   os.unlink(SYMBOLIC_NAME_ROOTS_DB)
   os.unlink(SYMBOLIC_NAMES_DB)
-  os.unlink(DEFAULT_BRANCHES_DB)
   os.unlink(METADATA_DB)
+
+  # This is the only DB reference still reachable at this point; lose
+  # it before removing the file.
+  ctx.default_branches_db = None
+  os.unlink(DEFAULT_BRANCHES_DB)
   
   # Remove our other data files
   for suffix in (REVS_SUFFIX, CLEAN_REVS_SUFFIX,
