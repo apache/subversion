@@ -221,8 +221,8 @@ dump_node (struct edit_baton *eb,
 {
   svn_stringbuf_t *propstring;
   apr_hash_t *prophash;
-  apr_off_t textlen = 0, proplen = 0;
-  apr_size_t content_length = 0, len;
+  apr_off_t textlen = 0, content_length = 0;
+  apr_size_t proplen = 0, len;
   svn_boolean_t must_dump_text = FALSE, must_dump_props = FALSE;
   const char *compare_path = path;
   svn_revnum_t compare_rev = eb->current_rev - 1;
@@ -406,7 +406,7 @@ dump_node (struct edit_baton *eb,
       content_length += textlen;
       SVN_ERR (svn_stream_printf (eb->stream, pool,
                                   SVN_REPOS_DUMPFILE_TEXT_CONTENT_LENGTH 
-                                  ": %" APR_SIZE_T_FMT "\n", textlen));
+                                  ": %" APR_OFF_T_FMT "\n", textlen));
       /* ### someday write a node-content-checksum here.  */
     }
 
@@ -416,7 +416,7 @@ dump_node (struct edit_baton *eb,
      parsers. */
   SVN_ERR (svn_stream_printf (eb->stream, pool,
                               SVN_REPOS_DUMPFILE_CONTENT_LENGTH 
-                              ": %" APR_SIZE_T_FMT "\n\n", content_length));
+                              ": %" APR_OFF_T_FMT "\n\n", content_length));
 
   /* Dump property content if we're supposed to do so. */
   if (must_dump_props)
