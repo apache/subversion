@@ -129,7 +129,7 @@ svn_cl__propget (apr_getopt_t *os,
           
           SVN_ERR (stream_write (out, printable_val->data, 
                                  printable_val->len));
-          SVN_ERR (stream_write (out, "\n", 1));
+          SVN_ERR (stream_write (out, APR_EOL_STR, 1));
         }
     }
   else  /* operate on a normal, versioned property (not a revprop) */
@@ -199,7 +199,7 @@ svn_cl__propget (apr_getopt_t *os,
 
               SVN_ERR (stream_write (out, propval->data, propval->len));
               if (! opt_state->strict)
-                SVN_ERR (stream_write (out, "\n", 1));
+                SVN_ERR (stream_write (out, APR_EOL_STR, 1));
             }
         }
       svn_pool_destroy (subpool);
