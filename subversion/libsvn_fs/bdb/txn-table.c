@@ -119,11 +119,10 @@ allocate_txn_id (const char **id_p,
   /* Bump to future key. */
   len = result.size;
   svn_fs__next_key (result.data, &len, next_key);
-  db_err = fs->copies->put (fs->transactions, trail->db_txn,
-                            svn_fs__str_to_dbt (&query, 
-                                                (char *) svn_fs__next_key_key),
-                            svn_fs__str_to_dbt (&result, (char *) next_key), 
-                            0);
+  svn_fs__str_to_dbt (&query, (char *) svn_fs__next_key_key);
+  svn_fs__str_to_dbt (&result, (char *) next_key);
+  db_err = fs->transactions->put (fs->transactions, trail->db_txn,
+                                  &query, &result, 0);
 
   SVN_ERR (DB_WRAP (fs, "bumping next txn key", db_err));
   return SVN_NO_ERROR;

@@ -245,7 +245,7 @@ svn_fs__changes_fetch (apr_hash_t **changes_p,
   /* Get a cursor on the first record matching KEY, and then loop over
      the records, adding them to the return array. */
   SVN_ERR (DB_WRAP (fs, "creating cursor for reading changes",
-                    fs->strings->cursor (fs->changes, trail->db_txn,
+                    fs->changes->cursor (fs->changes, trail->db_txn,
                                          &cursor, 0)));
 
   /* Advance the cursor to the key that we're looking for. */
@@ -332,7 +332,7 @@ svn_fs__changes_fetch_raw (apr_array_header_t **changes_p,
   /* Get a cursor on the first record matching KEY, and then loop over
      the records, adding them to the return array. */
   SVN_ERR (DB_WRAP (fs, "creating cursor for reading changes",
-                    fs->strings->cursor (fs->changes, trail->db_txn,
+                    fs->changes->cursor (fs->changes, trail->db_txn,
                                          &cursor, 0)));
 
   /* Advance the cursor to the key that we're looking for. */

@@ -99,11 +99,11 @@ svn_fs__new_node_id (svn_fs_id_t **id_p,
   /* Bump to future key. */
   len = result.size;
   svn_fs__next_key (result.data, &len, next_key);
-  db_err = fs->copies->put (fs->nodes, trail->db_txn,
-                            svn_fs__str_to_dbt (&query, 
-                                                (char *) svn_fs__next_key_key),
-                            svn_fs__str_to_dbt (&result, (char *) next_key), 
-                            0);
+  db_err = fs->nodes->put (fs->nodes, trail->db_txn,
+                           svn_fs__str_to_dbt (&query, 
+                                               (char *) svn_fs__next_key_key),
+                           svn_fs__str_to_dbt (&result, (char *) next_key), 
+                           0);
   SVN_ERR (DB_WRAP (fs, "bumping next node ID key", db_err));
 
   /* Create and return the new node id. */
