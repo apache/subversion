@@ -1212,14 +1212,11 @@ merge (const char **conflict_p,
 
      ### TODO: Please see issue #418 about the inelegance of this. */
   {
-    const svn_fs_id_t *tgt_id, *anc_id;
     skel_t *tgt_skel, *anc_skel;
 
     /* Convert dag_nodes into id's, and id's into skels. */
-    tgt_id = svn_fs__dag_get_id (target);
-    anc_id = svn_fs__dag_get_id (ancestor);
-    SVN_ERR (svn_fs__get_node_revision (&tgt_skel, fs, tgt_id, trail));
-    SVN_ERR (svn_fs__get_node_revision (&anc_skel, fs, anc_id, trail));
+    SVN_ERR (svn_fs__get_node_revision (&tgt_skel, fs, target_id, trail));
+    SVN_ERR (svn_fs__get_node_revision (&anc_skel, fs, ancestor_id, trail));
         
     /* Now compare the prop-keys of the skels.  Note that just because
        the keys are different -doesn't- mean the proplists have
