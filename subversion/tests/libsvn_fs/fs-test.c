@@ -466,7 +466,7 @@ greek_tree_under_root (svn_fs_root_t *txn_root)
   SVN_ERR (svn_fs_make_file (txn_root, "A/B/E/beta", pool));
   SVN_ERR (set_file_contents (txn_root, "A/B/E/beta",
                               "This is the file 'beta'."));
-  SVN_ERR (svn_fs_make_dir  (txn_root, "A/B/E/F", pool));
+  SVN_ERR (svn_fs_make_dir  (txn_root, "A/B/F", pool));
   SVN_ERR (svn_fs_make_dir  (txn_root, "A/C", pool));
   SVN_ERR (svn_fs_make_dir  (txn_root, "A/D", pool));
   SVN_ERR (svn_fs_make_file (txn_root, "A/D/gamma", pool));
@@ -1128,6 +1128,168 @@ delete_mutables (const char **msg)
 }
 
 
+static svn_error_t *
+abort_txn (const char **msg)
+{
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn1, *txn2;
+  svn_fs_root_t *txn1_root, *txn2_root;
+
+  *msg = "abort a transaction (INCOMPLETE TEST)";
+
+  /* Prepare two txns to receive the Greek tree. */
+  SVN_ERR (create_fs_and_repos (&fs, "test-repo-abort-txn"));
+  SVN_ERR (svn_fs_begin_txn (&txn1, fs, 0, pool));
+  SVN_ERR (svn_fs_begin_txn (&txn2, fs, 0, pool));
+  SVN_ERR (svn_fs_txn_root (&txn1_root, txn1, pool));
+  SVN_ERR (svn_fs_txn_root (&txn2_root, txn2, pool));
+  
+  /* Create greek trees in them. */
+  SVN_ERR (greek_tree_under_root (txn1_root));
+  SVN_ERR (greek_tree_under_root (txn2_root));
+
+  /* We abort txn2, while leaving txn1.
+   *
+   * After we abort txn2, we make sure that a) all of its nodes
+   * disappeared from the database, and b) none of txn1's nodes
+   * disappeared.
+   */
+
+  {
+    /* Yes, I really am this paranoid. */
+
+    /* IDs for every file in the standard Greek Tree. */
+    svn_fs_id_t
+      *t1_root_id,    *t2_root_id,
+      *t1_iota_id,    *t2_iota_id,
+      *t1_A_id,       *t2_A_id,
+      *t1_mu_id,      *t2_mu_id,
+      *t1_B_id,       *t2_B_id,
+      *t1_lambda_id,  *t2_lambda_id,
+      *t1_E_id,       *t2_E_id,
+      *t1_alpha_id,   *t2_alpha_id,
+      *t1_beta_id,    *t2_beta_id,
+      *t1_F_id,       *t2_F_id,
+      *t1_C_id,       *t2_C_id,
+      *t1_D_id,       *t2_D_id,
+      *t1_gamma_id,   *t2_gamma_id,
+      *t1_H_id,       *t2_H_id,
+      *t1_chi_id,     *t2_chi_id,
+      *t1_psi_id,     *t2_psi_id,
+      *t1_omega_id,   *t2_omega_id,
+      *t1_G_id,       *t2_G_id,
+      *t1_pi_id,      *t2_pi_id,
+      *t1_rho_id,     *t2_rho_id,
+      *t1_tau_id,     *t2_tau_id;
+    
+    SVN_ERR (svn_fs_node_id (&t1_root_id, txn1_root, "", pool));
+    SVN_ERR (svn_fs_node_id (&t2_root_id, txn2_root, "", pool));
+    SVN_ERR (svn_fs_node_id (&t1_iota_id, txn1_root, "iota", pool));
+    SVN_ERR (svn_fs_node_id (&t2_iota_id, txn2_root, "iota", pool));
+    SVN_ERR (svn_fs_node_id (&t1_A_id, txn1_root, "/A", pool));
+    SVN_ERR (svn_fs_node_id (&t2_A_id, txn2_root, "/A", pool));
+    SVN_ERR (svn_fs_node_id (&t1_mu_id, txn1_root, "/A/mu", pool));
+    SVN_ERR (svn_fs_node_id (&t2_mu_id, txn2_root, "/A/mu", pool));
+    SVN_ERR (svn_fs_node_id (&t1_B_id, txn1_root, "/A/B", pool));
+    SVN_ERR (svn_fs_node_id (&t2_B_id, txn2_root, "/A/B", pool));
+    SVN_ERR (svn_fs_node_id (&t1_lambda_id, txn1_root, "/A/B/lambda", pool));
+    SVN_ERR (svn_fs_node_id (&t2_lambda_id, txn2_root, "/A/B/lambda", pool));
+    SVN_ERR (svn_fs_node_id (&t1_E_id, txn1_root, "/A/B/E", pool));
+    SVN_ERR (svn_fs_node_id (&t2_E_id, txn2_root, "/A/B/E", pool));
+    SVN_ERR (svn_fs_node_id (&t1_alpha_id, txn1_root, "/A/B/E/alpha", pool));
+    SVN_ERR (svn_fs_node_id (&t2_alpha_id, txn2_root, "/A/B/E/alpha", pool));
+    SVN_ERR (svn_fs_node_id (&t1_beta_id, txn1_root, "/A/B/E/beta", pool));
+    SVN_ERR (svn_fs_node_id (&t2_beta_id, txn2_root, "/A/B/E/beta", pool));
+    SVN_ERR (svn_fs_node_id (&t1_F_id, txn1_root, "/A/B/F", pool));
+    SVN_ERR (svn_fs_node_id (&t2_F_id, txn2_root, "/A/B/F", pool));
+    SVN_ERR (svn_fs_node_id (&t1_C_id, txn1_root, "/A/C", pool));
+    SVN_ERR (svn_fs_node_id (&t2_C_id, txn2_root, "/A/C", pool));
+    SVN_ERR (svn_fs_node_id (&t1_D_id, txn1_root, "/A/D", pool));
+    SVN_ERR (svn_fs_node_id (&t2_D_id, txn2_root, "/A/D", pool));
+    SVN_ERR (svn_fs_node_id (&t1_gamma_id, txn1_root, "/A/D/gamma", pool));
+    SVN_ERR (svn_fs_node_id (&t2_gamma_id, txn2_root, "/A/D/gamma", pool));
+    SVN_ERR (svn_fs_node_id (&t1_H_id, txn1_root, "/A/D/H", pool));
+    SVN_ERR (svn_fs_node_id (&t2_H_id, txn2_root, "/A/D/H", pool));
+    SVN_ERR (svn_fs_node_id (&t1_chi_id, txn1_root, "/A/D/H/chi", pool));
+    SVN_ERR (svn_fs_node_id (&t2_chi_id, txn2_root, "/A/D/H/chi", pool));
+    SVN_ERR (svn_fs_node_id (&t1_psi_id, txn1_root, "/A/D/H/psi", pool));
+    SVN_ERR (svn_fs_node_id (&t2_psi_id, txn2_root, "/A/D/H/psi", pool));
+    SVN_ERR (svn_fs_node_id (&t1_omega_id, txn1_root, "/A/D/H/omega", pool));
+    SVN_ERR (svn_fs_node_id (&t2_omega_id, txn2_root, "/A/D/H/omega", pool));
+    SVN_ERR (svn_fs_node_id (&t1_G_id, txn1_root, "/A/D/G", pool));
+    SVN_ERR (svn_fs_node_id (&t2_G_id, txn2_root, "/A/D/G", pool));
+    SVN_ERR (svn_fs_node_id (&t1_pi_id, txn1_root, "/A/D/G/pi", pool));
+    SVN_ERR (svn_fs_node_id (&t2_pi_id, txn2_root, "/A/D/G/pi", pool));
+    SVN_ERR (svn_fs_node_id (&t1_rho_id, txn1_root, "/A/D/G/rho", pool));
+    SVN_ERR (svn_fs_node_id (&t2_rho_id, txn2_root, "/A/D/G/rho", pool));
+    SVN_ERR (svn_fs_node_id (&t1_tau_id, txn1_root, "/A/D/G/tau", pool));
+    SVN_ERR (svn_fs_node_id (&t2_tau_id, txn2_root, "/A/D/G/tau", pool));
+
+    /* Abort just txn2. */
+    SVN_ERR (svn_fs_abort_txn (txn2));
+
+    /* Now test that all the nodes in txn2 at the time of the abort
+     * are gone, but all of the ones in txn1 are still there. 
+     */
+
+#if 0  /* Until svn_fs_abort_txn works */
+
+    /* Check the standard files in t2. */
+    SVN_ERR (check_id_absent (fs, t2_root_id));
+    SVN_ERR (check_id_absent (fs, t2_iota_id));
+    SVN_ERR (check_id_absent (fs, t2_A_id));
+    SVN_ERR (check_id_absent (fs, t2_mu_id));
+    SVN_ERR (check_id_absent (fs, t2_B_id));
+    SVN_ERR (check_id_absent (fs, t2_lambda_id));
+    SVN_ERR (check_id_absent (fs, t2_E_id));
+    SVN_ERR (check_id_absent (fs, t2_alpha_id));
+    SVN_ERR (check_id_absent (fs, t2_beta_id));
+    SVN_ERR (check_id_absent (fs, t2_F_id));
+    SVN_ERR (check_id_absent (fs, t2_C_id));
+    SVN_ERR (check_id_absent (fs, t2_D_id));
+    SVN_ERR (check_id_absent (fs, t2_gamma_id));
+    SVN_ERR (check_id_absent (fs, t2_H_id));
+    SVN_ERR (check_id_absent (fs, t2_chi_id));
+    SVN_ERR (check_id_absent (fs, t2_psi_id));
+    SVN_ERR (check_id_absent (fs, t2_omega_id));
+    SVN_ERR (check_id_absent (fs, t2_G_id));
+    SVN_ERR (check_id_absent (fs, t2_pi_id));
+    SVN_ERR (check_id_absent (fs, t2_rho_id));
+    SVN_ERR (check_id_absent (fs, t2_tau_id));
+    
+#endif /* 0 */
+
+    /* Check the standard files in t1. */
+    SVN_ERR (check_id_present (fs, t1_root_id));
+    SVN_ERR (check_id_present (fs, t1_iota_id));
+    SVN_ERR (check_id_present (fs, t1_A_id));
+    SVN_ERR (check_id_present (fs, t1_mu_id));
+    SVN_ERR (check_id_present (fs, t1_B_id));
+    SVN_ERR (check_id_present (fs, t1_lambda_id));
+    SVN_ERR (check_id_present (fs, t1_E_id));
+    SVN_ERR (check_id_present (fs, t1_alpha_id));
+    SVN_ERR (check_id_present (fs, t1_beta_id));
+    SVN_ERR (check_id_present (fs, t1_F_id));
+    SVN_ERR (check_id_present (fs, t1_C_id));
+    SVN_ERR (check_id_present (fs, t1_D_id));
+    SVN_ERR (check_id_present (fs, t1_gamma_id));
+    SVN_ERR (check_id_present (fs, t1_H_id));
+    SVN_ERR (check_id_present (fs, t1_chi_id));
+    SVN_ERR (check_id_present (fs, t1_psi_id));
+    SVN_ERR (check_id_present (fs, t1_omega_id));
+    SVN_ERR (check_id_present (fs, t1_G_id));
+    SVN_ERR (check_id_present (fs, t1_pi_id));
+    SVN_ERR (check_id_present (fs, t1_rho_id));
+    SVN_ERR (check_id_present (fs, t1_tau_id));
+  }
+
+  /* Close the transaction and fs. */
+  SVN_ERR (svn_fs_close_txn (txn1));
+  SVN_ERR (svn_fs_close_fs (fs));
+
+  return SVN_NO_ERROR;
+}
+
 
 /* Fetch the youngest revision from a repos. */
 static svn_error_t *
@@ -1229,6 +1391,7 @@ svn_error_t * (*test_funcs[]) (const char **msg) = {
   list_directory,
   revision_props,
   delete_mutables,
+  abort_txn,
   /* fetch_youngest_rev, */
   /* commit_transaction, */
   0

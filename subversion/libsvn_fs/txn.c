@@ -116,6 +116,8 @@ svn_fs_begin_txn (svn_fs_txn_t **txn_p,
 }
 
 
+
+/* Transaction names. */
 svn_error_t *
 svn_fs_txn_name (const char **name_p,
                  svn_fs_txn_t *txn,
@@ -133,6 +135,9 @@ svn_fs_txn_fs (svn_fs_txn_t *txn)
 }
 
 
+
+/* Closing transactions. */
+
 svn_error_t *
 svn_fs_close_txn (svn_fs_txn_t *txn)
 {
@@ -145,6 +150,40 @@ svn_fs_close_txn (svn_fs_txn_t *txn)
   return SVN_NO_ERROR;
 }
 
+
+
+/* Aborting transactions. */
+
+struct abort_txn_args
+{
+  /* kff todo: about to implement */
+};
+
+
+static svn_error_t *
+txn_body_abort_txn (void *baton, trail_t *trail)
+{
+  /* kff todo: about to implement */
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_fs_abort_txn (svn_fs_txn_t *txn)
+{
+  struct abort_txn_args args;
+
+  /* kff todo: about to implement */
+
+  SVN_ERR (svn_fs__retry_txn (txn->fs, txn_body_abort_txn, &args, txn->pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+
+
+/* Committing transactions. */
 
 svn_error_t *
 svn_fs_commit_txn (svn_revnum_t *new_rev, 
