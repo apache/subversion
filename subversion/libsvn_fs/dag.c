@@ -338,15 +338,13 @@ txn_body_dag_init_fs (void *fs_baton, trail_t *trail)
 
   /* Set a date on revision 0. */
   {
-    svn_string_t propname, date;
-
-    propname.data = SVN_PROP_REVISION_DATE;
-    propname.len  = strlen (SVN_PROP_REVISION_DATE);
+    svn_string_t date;
 
     date.data = svn_time_to_nts (apr_time_now(), trail->pool);
     date.len = strlen (date.data);
 
-    SVN_ERR (svn_fs__set_rev_prop (fs, 0, &propname, &date, trail));
+    SVN_ERR (svn_fs__set_rev_prop (fs, 0, SVN_PROP_REVISION_DATE, &date,
+                                   trail));
   }
 
   return SVN_NO_ERROR;
@@ -1869,15 +1867,13 @@ svn_fs__dag_commit_txn (svn_revnum_t *new_rev,
   /* Set a date on the commit.  We wait until now to fetch the date,
      so it's definitely newer than any previous revision's date. */
   {
-    svn_string_t propname, date;
-
-    propname.data = SVN_PROP_REVISION_DATE;
-    propname.len  = strlen (SVN_PROP_REVISION_DATE);
+    svn_string_t date;
 
     date.data = svn_time_to_nts (apr_time_now(), trail->pool);
     date.len = strlen (date.data);
 
-    SVN_ERR (svn_fs__set_rev_prop (fs, *new_rev, &propname, &date, trail));
+    SVN_ERR (svn_fs__set_rev_prop (fs, *new_rev, SVN_PROP_REVISION_DATE, &date,
+				   trail));
   }
 
   /* Recursively stabilize from ROOT using the new revision.  */

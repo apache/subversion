@@ -218,24 +218,19 @@ svn_repos_fs_begin_txn_for_commit (svn_fs_txn_t **txn_p,
      them as properties on the txn.  Later, when we commit the txn,
      these properties will be copied into the newly created revision. */
   {
-    svn_string_t log_prop_name = { SVN_PROP_REVISION_LOG,
-                                   sizeof(SVN_PROP_REVISION_LOG) - 1};
-    svn_string_t author_prop_name = { SVN_PROP_REVISION_AUTHOR,
-                                      sizeof(SVN_PROP_REVISION_AUTHOR) - 1};
-
     /* User (author). */
     {
       svn_string_t val;
       val.data = author;
       val.len = strlen (author);
       
-      SVN_ERR (svn_fs_change_txn_prop (*txn_p, &author_prop_name,
+      SVN_ERR (svn_fs_change_txn_prop (*txn_p, SVN_PROP_REVISION_AUTHOR,
                                        &val, pool));
     }
     
     /* Log message. */
     if (log_msg != NULL)
-      SVN_ERR (svn_fs_change_txn_prop (*txn_p, &log_prop_name,
+      SVN_ERR (svn_fs_change_txn_prop (*txn_p, SVN_PROP_REVISION_LOG,
                                        log_msg, pool));
   }
 
@@ -260,16 +255,13 @@ svn_repos_fs_begin_txn_for_update (svn_fs_txn_t **txn_p,
   /* We pass the author to the filesystem by adding it as a property
      on the txn. */
   {
-    svn_string_t author_prop_name = { SVN_PROP_REVISION_AUTHOR,
-                                      sizeof(SVN_PROP_REVISION_AUTHOR) - 1};
-
     /* User (author). */
     {
       svn_string_t val;
       val.data = author;
       val.len = strlen (author);
       
-      SVN_ERR (svn_fs_change_txn_prop (*txn_p, &author_prop_name,
+      SVN_ERR (svn_fs_change_txn_prop (*txn_p, SVN_PROP_REVISION_AUTHOR,
                                        &val, pool));
     }    
   }

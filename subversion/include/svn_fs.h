@@ -541,7 +541,7 @@ svn_error_t *svn_fs_txn_proplist (apr_hash_t **table_p,
    removed altogether.  Do any necessary temporary allocation in
    POOL. */
 svn_error_t *svn_fs_change_txn_prop (svn_fs_txn_t *txn,
-                                     const svn_string_t *name,
+                                     const char *name,
                                      const svn_string_t *value,
                                      apr_pool_t *pool);
 
@@ -745,7 +745,7 @@ svn_error_t *svn_fs_node_proplist (apr_hash_t **table_p,
    Do any necessary temporary allocation in POOL.  */
 svn_error_t *svn_fs_change_node_prop (svn_fs_root_t *root,
                                       const char *path,
-                                      const svn_string_t *name,
+                                      const char *name,
                                       const svn_string_t *value,
                                       apr_pool_t *pool);
 
@@ -1144,12 +1144,10 @@ svn_error_t *svn_fs_revision_proplist (apr_hash_t **table_p,
    them after the revision has been committed.  They are not protected
    via transactions.
 
-   Do any necessary temporary allocation in POOL.  
-
-   ### todo (issue #406): could be const char *name. */
+   Do any necessary temporary allocation in POOL.  */
 svn_error_t *svn_fs_change_rev_prop (svn_fs_t *fs,
                                      svn_revnum_t rev,
-                                     const svn_string_t *name,
+                                     const char *name,
                                      const svn_string_t *value,
                                      apr_pool_t *pool);
 

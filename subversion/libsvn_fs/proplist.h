@@ -43,11 +43,9 @@ svn_error_t *svn_fs__make_prop_hash (apr_hash_t **prop_hash,
 /* Set the value of the property NAME in PROPLIST to VALUE.  If NAME
    is not found in PROPLIST, add it to the list (with value VALUE).
    If VALUE is NULL, remove the property from the list altogether.  Do
-   all necessary allocations in POOL.
-   
-   ### todo (issue #406): could be const char *name.  */
+   all necessary allocations in POOL.  */
 svn_error_t *svn_fs__set_prop (skel_t *proplist,
-                               const svn_string_t *name,
+                               const char *name,
                                const svn_string_t *value,
                                apr_pool_t *pool);
 

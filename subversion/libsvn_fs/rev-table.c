@@ -364,7 +364,7 @@ svn_fs_revision_proplist (apr_hash_t **table_p,
 svn_error_t *
 svn_fs__set_rev_prop (svn_fs_t *fs,
                       svn_revnum_t rev,
-                      const svn_string_t *name,
+                      const char *name,
                       const svn_string_t *value,
                       trail_t *trail)
 {
@@ -399,7 +399,7 @@ svn_fs__set_rev_prop (svn_fs_t *fs,
 struct change_rev_prop_args {
   svn_fs_t *fs;
   svn_revnum_t rev;
-  const svn_string_t *name;
+  const char *name;
   const svn_string_t *value;
 };
 
@@ -419,7 +419,7 @@ txn_body_change_rev_prop (void *baton, trail_t *trail)
 svn_error_t *
 svn_fs_change_rev_prop (svn_fs_t *fs,
                         svn_revnum_t rev,
-                        const svn_string_t *name,
+                        const char *name,
                         const svn_string_t *value,
                         apr_pool_t *pool)
 {

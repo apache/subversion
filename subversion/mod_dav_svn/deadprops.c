@@ -117,14 +117,12 @@ static dav_error *get_value(dav_db *db, const dav_prop_name *name,
 static dav_error *save_value(dav_db *db, const dav_prop_name *name,
                              const svn_string_t *value)
 {
-  svn_string_t propname;
+  char *propname;
   svn_error_t *serr;
   char *tpropname;
 
   /* get the repos-local name */
-  get_repos_propname(db, name, &tpropname);
-  propname.data = tpropname;
-  propname.len = strlen (tpropname);
+  get_repos_propname(db, name, &propname);
 
   /* ### disallow arbitrary, non-SVN properties. this effectively shuts
      ### off arbitrary DeltaV clients for now. */
@@ -137,11 +135,11 @@ static dav_error *save_value(dav_db *db, const dav_prop_name *name,
   /* Working Baseline or Working (Version) Resource */
   if (db->resource->baselined)
     serr = svn_fs_change_txn_prop(db->resource->info->root.txn,
-                                  &propname, value, db->resource->pool);
+                                  propname, value, db->resource->pool);
   else
     serr = svn_fs_change_node_prop(db->resource->info->root.root,
                                    get_repos_path(db->resource->info),
-                                   &propname, value, db->resource->pool);
+                                   propname, value, db->resource->pool);
   if (serr != NULL)
     return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                "could not change a property");
@@ -292,27 +290,24 @@ static dav_error *dav_svn_db_store(dav_db *db, const dav_prop_name *name,
 
 static dav_error *dav_svn_db_remove(dav_db *db, const dav_prop_name *name)
 {
-  svn_string_t propname;
   svn_error_t *serr;
-  char *tpropname;
+  char *propname;
 
   /* get the repos-local name */
-  get_repos_propname(db, name, &tpropname);
-  propname.data = tpropname;
-  propname.len = strlen (tpropname);
+  get_repos_propname(db, name, &propname);
 
   /* ### non-svn props aren't in our repos, so punt for now */
-  if (propname.data == NULL)
+  if (propname == NULL)
     return NULL;
 
   /* Working Baseline or Working (Version) Resource */
   if (db->resource->baselined)
     serr = svn_fs_change_txn_prop(db->resource->info->root.txn,
-                                  &propname, NULL, db->resource->pool);
+                                  propname, NULL, db->resource->pool);
   else
     serr = svn_fs_change_node_prop(db->resource->info->root.root,
                                    get_repos_path(db->resource->info),
-                                   &propname, NULL, db->resource->pool);
+                                   propname, NULL, db->resource->pool);
   if (serr != NULL)
     return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                "could not remove a property");
