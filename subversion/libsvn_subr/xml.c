@@ -65,10 +65,8 @@ escape_string (svn_string_t *string, apr_pool_t *pool)
 {
   const char *start = string->data, *end = start + string->len;
   const char *p = start, *q;
-  svn_string_t *newstr;
+  svn_string_t *newstr = svn_string_create ("", pool);
 
-  newstr = svn_string_create ("", pool);
-  p = start;
   while (1)
     {
       /* Find a character which needs to be quoted and append bytes up
