@@ -699,6 +699,35 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
         }
     }
 
+#if 0
+  /* This is temporary test code for cmpilato's new commit system.  It
+     can be happily ignored. */
+  {
+    apr_hash_t *committables;
+    apr_array_header_t *array;
+    int i;
+    svn_stringbuf_t *base_url;
+    
+    SVN_ERR (svn_client__harvest_committables (&committables, base_dir,
+                                               condensed_targets, pool));
+    
+    array = apr_hash_get (committables, SVN_CLIENT__SINGLE_REPOS_NAME, 
+                          APR_HASH_KEY_STRING);
+    if (array)
+      {
+        SVN_ERR (svn_client__condense_committables (&base_url, array, pool));
+        printf ("Committables (at %s):\n", base_url->data);
+        for (i = 0; i < array->nelts; i++)
+          {
+            svn_stringbuf_t *url
+              = (((svn_client_commit_item_t **) array->elts)[i])->entry->url;
+            printf ("   %s\n", url->data);
+          }
+      }
+    }
+#endif /* 0 */
+
+
   err = send_to_repos (commit_info,
                        before_editor, before_edit_baton,
                        after_editor, after_edit_baton,                   

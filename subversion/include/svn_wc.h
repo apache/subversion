@@ -155,7 +155,8 @@ typedef struct svn_wc_entry_t
   /* General Attributes */
   svn_stringbuf_t *name;         /* entry's name */
   svn_revnum_t revision;         /* base revision */
-  svn_stringbuf_t *url;          /* base path */
+  svn_stringbuf_t *url;          /* url in repository */
+  svn_stringbuf_t *repos;        /* canonical repository url */
   svn_node_kind_t kind;          /* node kind (file, dir, ...) */
 
   /* State information */
