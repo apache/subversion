@@ -104,7 +104,9 @@ class GeneratorBase:
     # compute intra-library dependencies
     for section in self.sections.values():
       dep_types = ((DT_LINK, section.options.get('libs')),
-                   (DT_NONLIB, section.options.get('nonlibs')))
+                   (DT_NONLIB, section.options.get('nonlibs')),
+                   (DT_MSVC, section.options.get('msvc-deps')),
+                   (DT_FAKE, section.options.get('msvc-fake-deps')))
 
       for dt_type, deps_list in dep_types:
         if deps_list:
@@ -244,7 +246,9 @@ dep_types = [
   'DT_LINK',     # a libtool-linked filename, depending upon object fnames
   'DT_INCLUDE',  # filename includes (depends) on sources (all basenames)
   'DT_NONLIB',   # filename depends on object fnames, but isn't linked to them
-  'DT_PROJECT',  # visual studio projects
+  'DT_PROJECT',  # visual c++ projects
+  'DT_MSVC',     # MSVC project dependency
+  'DT_FAKE',     # dependency through a do-nothing project, to prevent linking
   ]
 
 # create some variables for these

@@ -235,18 +235,24 @@ class WinGeneratorBase(gen_base.GeneratorBase):
 
   def get_install_targets(self):
     "Generate the list of targets"
-    # Generate a fake depaprutil project
+
+    # First generate fake utility targets
+    self.fake_projects = {}
     options = {'path': 'build/win32'}
     utility = gen_base.TargetUtility
-    self.sections['libsvn_subr_fake'] = utility.Section(options, utility)
-    self.sections['libsvn_delta_fake'] = utility.Section(options, utility)
+    
+    for target in self.graph.get_all_sources(gen_base.DT_FAKE):
+      # since get_all_sources may return duplicates
+      if self.fake_projects.has_key(target):
+        continue
 
-    self.sections['libsvn_subr_fake'].create_targets(self.graph, 'libsvn_subr_fake', self.cfg, 
-                                            self._extension_map)
+      fake = utility.Section(options, utility)
+      fake.create_targets(self.graph, target.name + "_fake", self.cfg,
+                          self._extension_map)
+      self.graph.add(gen_base.DT_MSVC, fake.target.name, target)
+      self.fake_projects[target] = fake.target
 
-    self.sections['libsvn_delta_fake'].create_targets(self.graph, 'libsvn_delta_fake', self.cfg,
-                                             self._extension_map)
-
+    # Get list of targets to generate project files for
     install_targets = self.graph.get_all_sources(gen_base.DT_PROJECT)   \
                       + self.graph.get_all_sources(gen_base.DT_INSTALL)
 
@@ -343,21 +349,13 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     else:
       depends = self.sections['__CONFIG__'].get_dep_targets(target)
 
-    if isinstance(target, gen_base.TargetApacheMod):
-      if target.name == 'mod_authz_svn':
-        depends.extend(self.sections['mod_dav_svn'].get_dep_targets(target))
-      pass
-    elif name == 'libsvn_delta_fake':
-      depends.extend(self.sections['libsvn_delta'].get_dep_targets(target))
-    elif name == 'libsvn_wc':
-      depends.extend(self.sections['libsvn_delta_fake'].get_dep_targets(target))
-    elif name == 'libsvn_subr_fake':
-      depends.extend(self.sections['libsvn_subr'].get_dep_targets(target))
-    elif name == 'libsvn_ra_svn':
-      depends.extend(self.sections['libsvn_subr_fake'].get_dep_targets(target))
-    elif name == 'libsvn_ra_dav':
-      depends.extend(self.sections['libsvn_subr_fake'].get_dep_targets(target))
-      depends.extend(self.sections['neon'].get_dep_targets(target))
+    deps = self.graph.get_sources(gen_base.DT_MSVC, target.name)
+    fake_deps = self.graph.get_sources(gen_base.DT_FAKE, target.name)
+
+    if deps or fake_deps or isinstance(target, gen_base.TargetApacheMod):
+      depends.extend(deps)
+      for dep in fake_deps:
+        depends.append(self.fake_projects[dep])
     elif isinstance(target, gen_base.TargetExe):
       depends.extend(self.get_win_depends(target, 1,
                                           ccls=gen_base.TargetLib))
