@@ -257,6 +257,12 @@ class WinGeneratorBase(gen_base.GeneratorBase):
       if not isinstance(obj, gen_base.Target):
         continue
 
+      if isinstance(obj, gen_base.TargetSWIG):
+        tname = obj.install + '-' + gen_base.lang_abbrev[target.language]
+        for dep in self.graph.get_sources(gen_base.DT_INSTALL, tname):
+          deps[dep] = None
+        continue
+
       # if the object is in 'sub', then skip it
       if obj not in sub:
         deps[obj] = None
@@ -442,4 +448,3 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     "Override me when creating a new project type"
 
     raise NotImplementedError
-

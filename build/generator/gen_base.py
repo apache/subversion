@@ -84,6 +84,9 @@ class GeneratorBase:
       if parser.get(target, 'project_name'):
         target_ob.project_name = parser.get(target, 'project_name')
 
+      if parser.has_option(target, 'language'):
+        target_ob.language = parser.get(target, 'language')
+
       self.targets[target] = target_ob
 
       ### I don't feel like passing these to the constructor right now,
@@ -309,7 +312,7 @@ class SWIGLibrary(DependencyNode):
   ### stupid Target vs DependencyNode
   add_deps = ''
 
-  def __init__(self, fname, lang):
+  def __init__(self, fname, lang, desc):
     DependencyNode.__init__(self, fname)
     self.lang = lang
     self.lang_abbrev = lang_abbrev[lang]
@@ -317,9 +320,11 @@ class SWIGLibrary(DependencyNode):
     self.path = os.path.dirname(fname)
 
     self.name = lang + os.path.splitext(os.path.basename(fname))[0]
+    self.desc = desc + ' for ' + lang_full_name[lang]
 
     ### maybe tweak to avoid these duplicate attrs
     self.output = fname
+    self.shared_dir = 1
 
     ### hmm. this is Makefile-specific
     self.link_cmd = '$(LINK_%s_WRAPPER)' % string.upper(self.lang_abbrev)
@@ -336,6 +341,14 @@ lang_abbrev = {
   ### what others?
   }
 
+lang_full_name = {
+  'python' : 'Python',
+  'java' : 'Java',
+  'perl' : 'Perl',
+  'ruby' : 'Ruby',
+  'tcl' : 'TCL',
+  ### what others?
+  }
 
 ### we should turn these targets into DependencyNode subclasses...
 class Target:
@@ -360,6 +373,10 @@ class Target:
 
     # default output name; subclasses can/should change this
     self.output = os.path.join(path, name)
+
+    # true if several targets share the same directory, as is the case
+    # with SWIG bindings.
+    self.shared_dir = None
 
   def add_dependencies(self, src_patterns, graph):
     # subclasses should override to provide behavior, as appropriate
@@ -502,7 +519,7 @@ class TargetSWIG(Target):
       graph.add(DT_OBJECT, ofile, cfile)
 
       # the library depends upon the object
-      library = SWIGLibrary(os.path.join(dir, lang, libname), lang)
+      library = SWIGLibrary(os.path.join(dir, lang, libname), lang, self.desc)
       graph.add(DT_LINK, library, ofile)
 
       # add some more libraries
@@ -540,6 +557,8 @@ class TargetExternal(TargetSpecial):
 class TargetUtility(TargetSpecial):
   default_install = 'utility'
 
+class TargetSWIGUtility(TargetUtility):
+  default_install = 'swig_utility'
 
 _build_types = {
   'exe' : TargetExe,
@@ -550,6 +569,7 @@ _build_types = {
   'project' : TargetProject,
   'external' : TargetExternal,
   'utility' : TargetUtility,
+  'swig_utility' : TargetSWIGUtility,
   }
 
 
@@ -730,5 +750,12 @@ def _sorted_files(graph, area):
 class CircularDependencies(Exception):
   pass
 
+
+def unique(seq):
+  "Eliminate duplicates from a sequence"
+  d = {}
+  for i in seq:
+    d[i] = None
+  return d.keys()
 
 ### End of file.
