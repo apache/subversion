@@ -238,23 +238,6 @@ svn_xml_make_header (apr_pool_t *pool)
 }
 
 
-/* COMPATIBILITY FUNCTION so I don't break the tree.  Karl, nuke this
-   when you fix up libsvn_wc.  */
-svn_error_t *
-svn_xml_write_header (apr_file_t *file, apr_pool_t *pool)
-{
-  apr_status_t apr_err;
-  const char header[] = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n";
-
-  apr_err = apr_full_write (file, header, (sizeof (header) - 1), NULL);
-  if (apr_err)
-    return svn_error_create (apr_err, 0, NULL, pool,
-                             "svn_xml_write_header: file write error.");
-
-  return SVN_NO_ERROR;
-}
-
-
 
 /*** Creating attribute hashes. ***/
 
@@ -449,50 +432,6 @@ svn_xml_make_tag (apr_pool_t *pool,
   str = svn_xml_make_tag_v (pool, tagtype, tagname, ap);
   va_end (ap);
   return str;
-}
-
-
-/* COMPATIBILITY FUNCTION so I don't break the tree.  Karl, nuke this
-   when you fix up libsvn_wc.  */
-svn_error_t *
-svn_xml_write_tag_hash (apr_file_t *file,
-                        apr_pool_t *pool,
-                        enum svn_xml_tag_type tagtype,
-                        const char *tagname,
-                        apr_hash_t *attributes)
-{
-  apr_status_t status;
-  apr_size_t bytes_written;
-  svn_string_t *str = svn_xml_make_tag_hash (pool, tagtype, tagname,
-                                             attributes);
-
-  /* Do the write */
-  status = apr_full_write (file, str->data, str->len, &bytes_written);
-  if (status)
-    return svn_error_create (status, 0, NULL, pool,
-                             "svn_xml_write_tag:  file write error.");
-  return SVN_NO_ERROR;
-}
-
-
-/* COMPATIBILITY FUNCTION so I don't break the tree.  Karl, nuke this
-   when you fix up libsvn_wc.  */
-svn_error_t *
-svn_xml_write_tag (apr_file_t *file,
-                   apr_pool_t *pool,
-                   enum svn_xml_tag_type tagtype,
-                   const char *tagname,
-                   ...)
-{
-  va_list ap;
-  apr_hash_t *ht;
-  svn_error_t *err;
-
-  va_start (ap, tagname);
-  ht = svn_xml_ap_to_hash (ap, pool);
-  err = svn_xml_write_tag_hash (file, pool, tagtype, tagname, ht);
-  va_end (ap);
-  return err;
 }
 
 

@@ -77,7 +77,10 @@ svn_error_t *
 svn_wc__entries_init (svn_string_t *path, apr_pool_t *pool)
 {
   svn_error_t *err;
+  apr_status_t apr_err;
   apr_file_t *f = NULL;
+  svn_string_t *accum;
+  char *initial_verstr = apr_psprintf (pool, "%ld", 0);
 
   /* Create the entries file, which must not exist prior to this. */
   err = svn_wc__open_adm_file (&f, path, SVN_WC__ADM_ENTRIES,
@@ -85,56 +88,43 @@ svn_wc__entries_init (svn_string_t *path, apr_pool_t *pool)
   if (err)
     return err;
 
-  /* Write out the XML standard header to satisfy bureacracy. */
-  err = svn_xml_write_header (f, pool);
-  if (err)
-    {
-      apr_close (f);
-      return err;
-    }
+  /* Make a the XML standard header, to satisfy bureacracy. */
+  accum = svn_xml_make_header (pool);
 
   /* Open the file's top-level form. */
-  err = svn_xml_write_tag (f,
-                           pool,
-                           svn_xml_open_tag,
-                           SVN_WC__ENTRIES_START,
-                           "xmlns",
-                           svn_string_create (SVN_XML_NAMESPACE, pool),
-                           NULL);
-  if (err)
-    {
-      apr_close (f);
-      return err;
-    }
+  svn_xml_append_tag (accum,
+                      pool,
+                      svn_xml_open_tag,
+                      SVN_WC__ENTRIES_START,
+                      "xmlns",
+                      svn_string_create (SVN_XML_NAMESPACE, pool),
+                      NULL);
 
   /* Add an entry for the dir itself -- name is absent, only the
      version is present in the dir entry. */
-  {
-    char *verstr = apr_psprintf (pool, "%ld", 0);
-    err = svn_xml_write_tag (f, 
-                             pool,
-                             svn_xml_self_close_tag,
-                             SVN_WC__ENTRIES_ENTRY,
-                             SVN_WC__ENTRIES_ATTR_VERSION,
-                             svn_string_create (verstr, pool),
-                             NULL);
-    if (err)
-      {
-        apr_close (f);
-        return err;
-      }
-  }
+  svn_xml_append_tag (accum,
+                      pool,
+                      svn_xml_self_close_tag,
+                      SVN_WC__ENTRIES_ENTRY,
+                      SVN_WC__ENTRIES_ATTR_VERSION,
+                      svn_string_create (initial_verstr, pool),
+                      NULL);
 
   /* Close the top-level form. */
-  err = svn_xml_write_tag (f,
-                           pool,
-                           svn_xml_close_tag,
-                           SVN_WC__ENTRIES_END,
-                           NULL);
-  if (err)
+  svn_xml_append_tag (accum,
+                      pool,
+                      svn_xml_close_tag,
+                      SVN_WC__ENTRIES_END,
+                      NULL);
+
+  apr_err = apr_full_write (f, accum->data, accum->len, NULL);
+  if (apr_err)
     {
       apr_close (f);
-      return err;
+      return svn_error_createf (apr_err, 0, NULL, pool,
+                                "svn_wc__entries_init: "
+                                "error writing %s's entries file",
+                                path->data);
     }
 
   /* Now we have a `entries' file with exactly one entry, an entry
@@ -319,9 +309,10 @@ write_entry (apr_file_t *outfile,
              apr_hash_t *attributes,
              apr_pool_t *pool)
 {
+  apr_status_t apr_err;
+  svn_string_t *entry;
   svn_string_t *verstr
     = svn_string_create (apr_psprintf (pool, "%ld", (long int) version), pool);
-  
   svn_string_t *kindstr;
 
   switch (kind)
@@ -352,11 +343,16 @@ write_entry (apr_file_t *outfile,
                   strlen (SVN_WC__ENTRIES_ATTR_KIND),
                   kindstr);
   
-  return svn_xml_write_tag_hash (outfile,
-                                 pool,
+  entry = svn_xml_make_tag_hash (pool,
                                  svn_xml_self_close_tag,
                                  SVN_WC__ENTRIES_ENTRY,
                                  attributes);
+
+  apr_err = apr_full_write (outfile, entry->data, entry->len, NULL);
+  if (apr_err)
+    return svn_error_create (apr_err, 0, NULL, pool, "write_entry");
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -409,36 +405,36 @@ handle_start_tag (void *userData, const char *tagname, const char **atts)
                                   baton->pool);
         }
       else  /* An entry tag, but not the one we're looking for. */
-        {
-          if (baton->outfile)  /* just write it back out unchanged. */
-            {
-              err = svn_xml_write_tag_hash 
-                (baton->outfile,
-                 baton->pool,
-                 svn_xml_self_close_tag,
-                 SVN_WC__ENTRIES_ENTRY,
-                 svn_xml_make_att_hash (atts, baton->pool));
-                                            
-              if (err)
-                {
-                  svn_xml_signal_bailout (err, baton->parser);
-                  return;
-                }
-            }
-        } 
+        goto write_it_back_out;
     }
   else  /* This is some tag other than `entry', preserve it unchanged.  */
     {
+    write_it_back_out:
       if (baton->outfile)
         {
-          err = svn_xml_write_tag_hash
-            (baton->outfile, 
-             baton->pool,
-             svn_xml_open_tag,
-             tagname,
-             svn_xml_make_att_hash (atts, baton->pool));
-          if (err)
-            svn_xml_signal_bailout (err, baton->parser);
+          enum svn_xml_tag_type tag_type = svn_xml_self_close_tag;
+          apr_status_t apr_err;
+          svn_string_t *dup;
+
+          if (strcmp (tagname, SVN_WC__ENTRIES_START) == 0)
+            tag_type = svn_xml_open_tag;
+          else if (strcmp (tagname, SVN_WC__ENTRIES_END) == 0)
+            tag_type = svn_xml_close_tag;
+
+          dup = svn_xml_make_tag_hash (baton->pool,
+                                       tag_type,
+                                       tagname,
+                                       svn_xml_make_att_hash
+                                       (atts, baton->pool));
+          
+          apr_err = apr_full_write (baton->outfile, dup->data, dup->len, NULL);
+          if (apr_err)
+            {
+              err = svn_error_create (apr_err, 0, NULL, baton->pool,
+                                      "entries.c: handle_start_tag");
+              svn_xml_signal_bailout (err, baton->parser);
+              return;
+            }
         }
     }
 }
@@ -455,6 +451,9 @@ handle_end_tag (void *userData, const char *tagname)
     {
       if (baton->outfile)
         {
+          apr_status_t apr_err;
+          svn_string_t *close_tag;
+
           /* If this entry didn't exist before, then add it now. */
           if (! baton->found_it)
             {
@@ -472,19 +471,27 @@ handle_end_tag (void *userData, const char *tagname)
             }
 
           /* Now close off the file. */
-          err = svn_xml_write_tag (baton->outfile,
-                                   baton->pool,
-                                   svn_xml_close_tag,
-                                   tagname,
-                                   NULL);
-          if (err)
-            svn_xml_signal_bailout (err, baton->parser);
+          close_tag = svn_xml_make_tag (baton->pool,
+                                        svn_xml_close_tag,
+                                        tagname,
+                                        NULL);
+
+          apr_err = apr_full_write (baton->outfile,
+                                    close_tag->data,
+                                    close_tag->len,
+                                    NULL);
+          if (apr_err)
+            {
+              err = svn_error_create (apr_err, 0, NULL, baton->pool,
+                                      "entries.c: handle_end_tag");
+              svn_xml_signal_bailout (err, baton->parser);
+            }
         }
     }
 }
 
 
-/* Code chunk shared by svn_wc__[gs]et_entry()
+/* Code chunk shared by svn_wc__{get,set}_entry()
    
    Parses xml in BATON->infile using BATON as userdata. */
 static svn_error_t *
@@ -568,12 +575,24 @@ do_entry (svn_string_t *path,
 
   if (setting || removing)
     {
+      apr_status_t apr_err;
+      svn_string_t *front;
+
       /* Open a new `tmp/entries' file for writing */
       err = svn_wc__open_adm_file (&outfile, path,
                                    SVN_WC__ADM_ENTRIES,
                                    (APR_WRITE | APR_CREATE | APR_EXCL), pool);
       if (err)
         return err;
+
+      front = svn_xml_make_header (pool);
+      apr_err = apr_full_write (outfile, front->data, front->len, NULL);
+      if (apr_err)
+        {
+          apr_close (outfile);
+          return svn_error_create (apr_err, 0, NULL, baton->pool,
+                                   "entries.c: do_entry");
+        }
     }
 
   /* Fill in the userdata structure */
