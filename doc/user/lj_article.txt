@@ -92,7 +92,7 @@ software.)  In 1999, Karl Fogel published a book about CVS and the
 open-source development model it enables (cvsbook.red-bean.com).  Karl
 and Jim had long talked about writing a replacement for CVS; Jim had
 even drafted a new, theoretical repository design.  Finally, in
-February of 2000, Brian Behlendorf of Collabnet (www.collab.net)
+February of 2000, Brian Behlendorf of CollabNet (www.collab.net)
 offered Karl a full-time job to write a CVS replacement.  Karl
 gathered a team together and work began in May.
 
