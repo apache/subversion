@@ -2,7 +2,7 @@
 
      Inversion: A Version Control System You Actually Want To Use
      ------------------------------------------------------------
-              ($Revision: 1.34 $ of this document.)
+              ($Revision: 1.35 $ of this document.)
 
 * Introduction
 
@@ -981,6 +981,55 @@ that we can use in all sorts of circumstances, like
 (This will come in handy later, when we need a way to get unique
 labels for the diffy chromosome chunks in partial merging... but more
 about that when we get to it. :-) )
+
+*** "Shallow" and "deep" copies (insurance against loss of trunk)
+
+The cheapest kind of copy is constant-time and -space.  Call it a
+"surface" copy, because it includes by reference wherever possible.
+
+For tags and branches being stored in the same repository as the
+original project, surface is the way to go.
+
+But if you're making the copy on another server, then you have to make
+a political judgement involving the importance of your copy, of the
+historical data antecedant to your copy, and of the original
+repository's stability.  What if you think that source repository
+might disappear on you?  Then you want something more than just a
+surface copy.  
+
+Inversion offers two choices: "shallow" and "deep" copies.  Shallow
+copies locally duplicate all the data for the version in which this
+copy is rooted, but they don't duplicate anything older than that.
+Deep copies duplicate the *entire* project -- the whole node
+structure.  (A deep copy still remembers its ancestry, however).
+
+Here's are the three possible kinds of copies, for reference:
+
+   1. Surface copies
+        Refers to original project wherever possible.
+
+   2. Shallow copies
+        Duplicates the node structure of the source version that roots
+        this copy.  Older versions are included by reference, however.
+        Ancestry is remembered.
+
+   3. Deep copies
+        Duplicates the entire node structure of the source root
+        version, including back-links.  Ancestry is remembered.
+
+fooo:
+[This is why copies start at the version number they're rooted
+at... (todo: explain this)]
+
+fooo:
+Explain why remembering ancestry is important even for shallow and
+deep copies.
+
+fooo:
+Consider calling them something other than "copies".  It's getting
+confusing, because that word is used for so many other things
+already.  "Echoes"?  "Dups"?  "Mirrors"?  no, find some better word,
+take it from greek or something...
 
 *** Merging branches
 
