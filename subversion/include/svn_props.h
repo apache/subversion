@@ -256,6 +256,19 @@ svn_error_t *svn_categorize_props (const apr_array_header_t *proplist,
 /** The fs revision property that stores a commit's date. */
 #define SVN_PROP_REVISION_DATE  SVN_PROP_PREFIX "date"
 
+/** The fs revision property that stores a commit's "original" date.
+ *
+ * The svn:date property must be monotonically increasing, along with
+ * the revision number. In certain scenarios, this may pose a problem
+ * when the revision represents a commit that occurred at a time which
+ * does not fit within the sequencing required for svn:date. This can
+ * happen, for instance, when the revision represents a commit to a
+ * foreign version control system, or possibly when two Subversion
+ * repositories are combined. This property can be used to record the
+ * true, original date of the commit.
+ */
+#define SVN_PROP_REVISION_ORIG_DATE  SVN_PROP_PREFIX "original-date"
+
 /** @} */
 
 
