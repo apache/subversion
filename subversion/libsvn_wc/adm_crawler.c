@@ -84,7 +84,8 @@ restore_file (const char *file_path,
            (&toggled, file_path, pool));
 
   /* Remove any text conflict */
-  SVN_ERR (svn_wc_resolve_conflict (file_path, TRUE, FALSE, NULL, NULL, pool));
+  SVN_ERR (svn_wc_resolve_conflict (file_path, TRUE, FALSE, FALSE,
+                                    NULL, NULL, pool));
 
   /* ### hey guys, shouldn't we recording the 'restored'
      working-file's timestamp in its entry?  Right now, every time we

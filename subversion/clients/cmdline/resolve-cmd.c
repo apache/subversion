@@ -58,7 +58,10 @@ svn_cl__resolve (apr_getopt_t *os,
   for (i = 0; i < targets->nelts; i++)
     {
       const char *target = ((const char **) (targets->elts))[i];
-      err = svn_client_resolve (target, notify_func, notify_baton, subpool);
+      err = svn_client_resolve (target,
+                                notify_func, notify_baton,
+                                opt_state->recursive,
+                                subpool);
       if (err)
         {
           svn_handle_warning (err, err->message);
