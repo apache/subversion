@@ -31,7 +31,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2004-07-28 10:23+0200\n"
+"POT-Creation-Date: 2004-08-03 14:54+0200\n"
 "PO-Revision-Date: 2004-07-13 11:59+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Norwegian <dev@subversion.tigris.org>\n"
@@ -614,8 +614,7 @@ msgid ""
 msgstr ""
 "Vis forskjellene mellom to stier.\n"
 "bruk: 1. diff [-r N[:M]] [MÅL[@REV]...]\n"
-"      2. diff [-r N[:M]] --old=GML-MÅL[@GMLREV] [--new=NYTT-MÅL[@NYREV]] "
-"\\\n"
+"      2. diff [-r N[:M]] --old=GML-MÅL[@GMLREV] [--new=NYTT-MÅL[@NYREV]] \\\n"
 "              [STI...]\n"
 "      3. diff GML-URL[@GMLREV] NY-URL[@NYREV]\n"
 "\n"
@@ -627,20 +626,16 @@ msgstr ""
 "     arbeidsversjonen hvis et vilkårlig MÅL er en sti til en arbeidskopi,\n"
 "     eller HEAD hvis ikke.\n"
 "\n"
-"  2. Vis endringene mellom GML-MÅL slik det var i GMLREV og NYTT-MÅL "
-"slik det\n"
+"  2. Vis endringene mellom GML-MÅL slik det var i GMLREV og NYTT-MÅL slik "
+"det\n"
 "     var i NYREV. STIer, hvis angitt, er relative til GML-MÅL og NYTT-MÅL,\n"
-"     og begrenser utdataene til endringer for de angitte stiene. GML-MÅL "
-"og\n"
+"     og begrenser utdataene til endringer for de angitte stiene. GML-MÅL og\n"
 "     NYTT-MÅL kan være arbeidskopi-stier eller URL[@REV]. NYTT-MÅL sin\n"
-"     standardverdi er GML-MÅL hvis ikke angitt. -r N setter GMLREV "
-"sin\n"
-"     standardverdi til N, mens -r N:M setter GMLREV sin standardverdi til "
-"N\n"
+"     standardverdi er GML-MÅL hvis ikke angitt. -r N setter GMLREV sin\n"
+"     standardverdi til N, mens -r N:M setter GMLREV sin standardverdi til N\n"
 "     og NYREV sin til M.\n"
 "\n"
-"  3. Kortform for 'svn diff --old=GML-URL[@GMLREV] --new=NY-URL"
-"[@NYREV]'.\n"
+"  3. Kortform for 'svn diff --old=GML-URL[@GMLREV] --new=NY-URL[@NYREV]'.\n"
 "\n"
 "  Bruk bare 'svn diff' for å vise lokale endringer i en arbeidskopi.\n"
 
@@ -1289,13 +1284,13 @@ msgstr "Vis versjonsinformasjon for klienten\n"
 msgid "Caught signal"
 msgstr "Fanget signal"
 
-#: clients/cmdline/main.c:824 svnadmin/main.c:941
+#: clients/cmdline/main.c:824 svnadmin/main.c:953
 msgid ""
 "Multiple revision arguments encountered; try '-r M:N' instead of '-r M -r N'"
 msgstr ""
 "Flere revisjonsargument ble brukt. Prøv '-r M:N' i stedet for '-r M -r N'"
 
-#: clients/cmdline/main.c:836 svnadmin/main.c:958
+#: clients/cmdline/main.c:836 svnadmin/main.c:970
 #, c-format
 msgid "Syntax error in revision argument '%s'"
 msgstr "Syntaksfeil i revisjonsargumentet '%s'"
@@ -1313,7 +1308,7 @@ msgstr "Syntaksfeil i 'native-eol'-argumentet '%s'"
 msgid "Subcommand argument required\n"
 msgstr "Delkommandoen må ha et argument\n"
 
-#: clients/cmdline/main.c:1069 svnadmin/main.c:1075 svnlook/main.c:1971
+#: clients/cmdline/main.c:1069 svnadmin/main.c:1087 svnlook/main.c:1971
 #, c-format
 msgid "Unknown command: '%s'\n"
 msgstr "Ukjent kommando: '%s'\n"
@@ -4990,11 +4985,15 @@ msgstr ""
 "\n"
 "Tilgjengelige delkommandoer:\n"
 
-#: svnadmin/main.c:629
+#: svnadmin/main.c:630
 msgid "Please wait; recovering the repository may take some time...\n"
 msgstr "Vennligst vent. Gjenoppretting av depotet kan ta lang tid...\n"
 
-#: svnadmin/main.c:635
+#: svnadmin/main.c:641
+msgid "Waiting on repository lock; perhaps another process has it open?\n"
+msgstr "Venter på depotlås; kanskje en annen prosess har åpnet den?\n"
+
+#: svnadmin/main.c:647
 msgid ""
 "\n"
 "Recovery completed.\n"
@@ -5002,33 +5001,33 @@ msgstr ""
 "\n"
 "Gjenoppretting er fullført.\n"
 
-#: svnadmin/main.c:642
+#: svnadmin/main.c:654
 #, c-format
 msgid "The latest repos revision is %ld.\n"
 msgstr "Siste depotrevisjon er %ld.\n"
 
-#: svnadmin/main.c:750
+#: svnadmin/main.c:762
 #, c-format
 msgid "Transaction '%s' removed.\n"
 msgstr "Transaksjonen '%s' er fjernet.\n"
 
-#: svnadmin/main.c:774
+#: svnadmin/main.c:786
 msgid "Missing revision"
 msgstr "Mangler revisjon"
 
-#: svnadmin/main.c:777
+#: svnadmin/main.c:789
 msgid "Only one revision allowed"
 msgstr "Kun én revisjon er tillatt"
 
-#: svnadmin/main.c:783
+#: svnadmin/main.c:795
 msgid "Exactly one file argument required"
 msgstr "Kun ett filargument behøves"
 
-#: svnadmin/main.c:1053 svnlook/main.c:1948
+#: svnadmin/main.c:1065 svnlook/main.c:1948
 msgid "subcommand argument required\n"
 msgstr "Delkommandoen må ha et argument\n"
 
-#: svnadmin/main.c:1143
+#: svnadmin/main.c:1155
 #, c-format
 msgid ""
 "subcommand '%s' doesn't accept option '%s'\n"
@@ -5428,8 +5427,7 @@ msgid ""
 msgstr ""
 "bruk: svnversion [VALG] WC_STI [TRAIL_URL]\n"
 "\n"
-"  Lager et kompakt \"versjonsnummer\" for filstien WC_STI i en "
-"arbeidskopi.\n"
+"  Lager et kompakt \"versjonsnummer\" for filstien WC_STI i en arbeidskopi.\n"
 "  TRAIL_URL er den avsluttende delen av nettadressen (URL) som brukes for å\n"
 "  avgjøre om selve WC_STI er blitt byttet (TRAIL_URL behøves ikke for å\n"
 "  oppdage byttinger innenfor WC_STI). Versjonsnummeret er skrevet til\n"
