@@ -19,12 +19,9 @@
 #define SVN_RA_H
 
 #include <apr_pools.h>
-#include <apr_tables.h>
-#include <apr_dso.h>
 
 #include "svn_error.h"
 #include "svn_delta.h"
-#include "svn_wc.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -180,13 +177,37 @@ typedef struct svn_ra_plugin_t
 
    When called by libsvn_client, this routine simply returns an
    internal, static plugin structure.  POOL is a pool for allocating
-   configuration / one-time data.  */
+   configuration / one-time data.
+
+   This type is defined to use the "C Calling Conventions" to ensure that
+   abi_version is the first parameter. The RA plugin must check that value
+   before accessing the other parameters.
+
+   ### need to force this to be __cdecl on Windows... how??
+*/
 typedef svn_error_t *svn_ra_init_func_t (int abi_version,
                                          apr_pool_t *pool,
                                          const char **url_type,
                                          const svn_ra_plugin_t **plugin);
 
+/* The current ABI (Application Binary Interface) version for the
+   RA plugin model. This version number will change when the ABI
+   between the SVN core (e.g. libsvn_client) and the RA plugin changes.
 
+   An RA plugin should verify that the passed version number is acceptable
+   before accessing the rest of the parameters, and before returning any
+   information.
+
+   It is entirely acceptable for an RA plugin to accept multiple ABI
+   versions. It can simply interpret the parameters based on the version,
+   and it can return different plugin structures.
+
+
+   VSN  DATE        REASON FOR CHANGE
+   ---  ----------  ------------------------------------------------
+     1  2001-02-17  Initial revision.
+*/
+#define SVN_RA_ABI_VERSION      1
 
 
 /** Public RA implementations: ADD MORE HERE as necessary. **/
