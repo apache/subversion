@@ -116,6 +116,7 @@ typedef struct
    RA library to use is specified by RA_LIB.
 
    The root of the session is specified by BASE_URL and BASE_DIR.
+   BASE_ACCESS is an access baton for BASE_DIR administrative data.
 
    Additional control parameters:
 
@@ -136,7 +137,7 @@ typedef struct
 
    BASE_DIR may be NULL if the RA operation does not correspond to a
    working copy (in which case, DO_STORE and USE_ADMIN should both
-   be FALSE).
+   be FALSE, and BASE_ACCESS should be null).
 
    The calling application's authentication baton is provided in AUTH_BATON,
    and allocations related to this session are performed in POOL.  */
