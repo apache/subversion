@@ -146,8 +146,7 @@ print_short_format (const char *path,
 static void 
 print_long_format (const char *path,
                    svn_boolean_t show_last_committed,
-                   svn_wc_status_t *status,
-                   apr_pool_t *pool)
+                   svn_wc_status_t *status)
 {
   char str_status[5];
   char str_rev[7];
@@ -171,17 +170,23 @@ print_long_format (const char *path,
   else
     local_rev = SVN_INVALID_REVNUM;
 
-  /* If we are printing the last-committed stuff ... */
-  if ((show_last_committed) && (status->entry))
+  if (show_last_committed && status->entry)
     {
-      svn_stringbuf_t *revstr = NULL, *s_author = NULL;
+      char revbuf[20];
+      const char *revstr = revbuf;
+      svn_stringbuf_t *s_author;
       
       s_author = status->entry->cmt_author;
       if (SVN_IS_VALID_REVNUM (status->entry->cmt_rev))
-        revstr = svn_stringbuf_createf (pool, "%ld", status->entry->cmt_rev);
+        sprintf(revbuf, "%ld", status->entry->cmt_rev);
+      else
+        revstr = "    ? ";
 
+      /* ### we shouldn't clip the revstr and author, but that implies a
+         ### variable length 'last_committed' which means an allocation,
+         ### which means a pool, ...  */
       sprintf (last_committed, "%6.6s   %8.8s   ",
-               revstr ? revstr->data : "    ? ",
+               revstr,
                s_author ? s_author->data : "      ? ");
     }
   else
@@ -244,7 +249,7 @@ svn_cl__print_status_list (apr_hash_t *statushash,
         continue;
 
       if (detailed)
-        print_long_format (item->key, show_last_committed, status, pool);
+        print_long_format (item->key, show_last_committed, status);
       else
         print_short_format (item->key, status);
     }
