@@ -13,12 +13,11 @@
       In the world of open-source software, the Concurrent Versions
       System (CVS) has long been the tool of choice for version
       control.  And rightly so.  CVS itself is free software, and its
-      wonderful <quote>non-locking</quote> development
-      model&mdash;which allows dozens of far-flung programmers to
-      share their work&mdash;fits the collaborative model of the
-      open-source world very well.  CVS and its semi-chaotic
-      development model have become cornerstones of open-source
-      culture.
+      wonderful <quote>non-locking</quote> system&mdash;which allows
+      dozens of far-flung programmers to share their work&mdash;fits
+      the collaborative nature of the open-source world very well.  CVS
+      and its semi-chaotic development model have become cornerstones
+      of open-source culture.
     </para>
 
     <para>
@@ -26,12 +25,11 @@
       Subversion is a relatively new version control system designed
       to be the successor to CVS.  The designers set out to win the
       hearts of CVS users in two ways: by creating an open-source
-      version control system with a design (and "look and feel")
-      similar to CVS, and by attempting to fix most of CVS's noticeable
-      flaws.  While the result isn't necessarily the next great
-      evolution in version control design, Subversion
-      <emphasis>is</emphasis> very powerful, very usable, and very
-      flexible.
+      system with a design (and "look and feel") similar to CVS, and
+      by attempting to fix most of CVS's noticeable flaws.  While the
+      result isn't necessarily the next great evolution in version
+      control design, Subversion <emphasis>is</emphasis> very
+      powerful, very usable, and very flexible.
     </para>
 
   </simplesect>
@@ -83,19 +81,20 @@
       of the rest of the book.</para>
 
     <para>Chapters four, five, and six discuss the more complex topics
-      of branching, repository administration, and other advanced
-      features such as properties, externals, and access control.
-      Sysadmins and power-users will definitely want to read these
+      of branching, repository administration, and advanced features
+      such as properties, externals, and access control.  Sysadmins
+      and power-users will definitely want to read these
       chapters.</para>
 
     <para>Chapter seven is specially written for programmers who want
       to use Subversion's APIs in their own software, or want to work
       on Subversion itself.</para>
 
-    <para>The book ends with reference material.  Chapter eight is a
+    <para>The book ends with reference material: chapter eight is a
       reference guide for all Subversion commands, and the appendices
       cover a number of useful topics.  These are the chapters you're
-      mostly likely to come back to after you've finished the book.</para>
+      mostly likely to come back to after you've finished the
+      book.</para>
 
   </sect1>
 
@@ -151,7 +150,7 @@
 
     <para>A relatively recent online version of this book can be found
       at <systemitem
-      class="url">http://www.svnbook.org</systemitem>.</para>
+      class="url">http://svnbook.red-bean.com</systemitem>.</para>
 
   </sect1>
 

@@ -4,12 +4,11 @@
 
   <simplesect>
     <para>Version control is the art of managing changes to
-      information.  It has long been a critical tool to programmers,
+      information.  It has long been a critical tool for programmers,
       who typically spend their time making small changes to software
       and then undoing those changes the next day.  Imagine a team of
       these programmers working concurrently, and you can see why a
-      good version control system is needed to manage the potential
-      chaos.</para>
+      good system is needed to manage the potential chaos.</para>
   </simplesect>
 
 
@@ -37,11 +36,12 @@
     <para>Some version control systems are also software configuration
       management (SCM) systems.  These systems are specifically
       tailored to manage trees of source code, and have many features
-      that are specific to software development (such as natively
-      understanding programming languages).  Subversion, however, is
-      not one of these systems; it is a general system that can be
-      used to manage <emphasis>any</emphasis> sort of collection of
-      files, including source code.</para>
+      that are specific to software development&mdash;such as natively
+      understanding programming languages, or supplying tools for
+      building software.  Subversion, however, is not one of these
+      systems; it is a general system that can be used to manage
+      <emphasis>any</emphasis> sort of collection of files, including
+      source code.</para>
 
   </sect1>
 
@@ -112,7 +112,7 @@
           <para>The Subversion repository doesn't only track the
             history of individual files; instead, it implements a
             <quote>virtual</quote> versioned filesystem that tracks
-            changes to trees over time.  Files
+            changes to whole directory trees over time.  Files
             <emphasis>and</emphasis> directories are versioned.  As a
             result, there are real client-side <command>move</command>
             and <command>copy</command> commands that operate on files
@@ -124,8 +124,8 @@
         <term>Atomic commits</term>
         <listitem>
           <para>A commit either goes into the repository completely,
-            or not all.  This allows developers to commit changes as
-            logical <quote>changesets</quote>.</para>
+            or not all.  This allows developers to construct and
+            commit changes as logical chunks.</para>
         </listitem>
       </varlistentry>
 
@@ -290,8 +290,9 @@
         <term>svnserve</term>
         <listitem>
           <para>A standalone server program, runnable as a daemon
-            process; another way to make your repository available to
-            others over a network.  Discussed in Chapter 5.</para>
+            process or invokable by ssh; another way to make your
+            repository available to others over a network.  Discussed
+            in Chapter 5.</para>
         </listitem>
       </varlistentry>
 

@@ -22,7 +22,13 @@ To be fixed by cmpilato:
     such roots.
 
   - svndumpfilter.  in particular, show how to "migrate" a subdir in
-    one repos to a subdir in another one.
+    one repos to a subdir in another one.  Wherever this ends up
+    documented (probably in chapter 5 or 6), please be sure to mention
+    how to use svndumpfilter in chapter 4, "removing a change from the
+    repository".  At a minimum, create a xref from this part of
+    chapter 4 to the *real* svndumpfilter documentation, presumably to
+    use-case that shows how to use svndumpfilter as an alternative to
+    'svnadmin obliterate.'
 
   - ch07: maybe a explanation for the person writing a new main()
     application... what are all those callbacks in the ctx_t used for?
