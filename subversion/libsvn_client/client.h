@@ -229,8 +229,9 @@ svn_client_commit_info_t *svn_client__make_commit_info (svn_revnum_t revision,
 
 /* Verify that the path can be deleted without losing stuff, i.e. ensure
    that there are no modified or unversioned resources under PATH.  This is
-   similar to checking the output of the status command.  CTX is the client's 
-   context. */
+   similar to checking the output of the status command.  ADM_ACCESS should 
+   be for the directory PATH is in, or for PATH if it is a directory.  POOL 
+   is used for all temporary allocations. */
 svn_error_t * svn_client__can_delete (const char *path,
                                       svn_wc_adm_access_t *adm_access,
                                       apr_pool_t *pool);

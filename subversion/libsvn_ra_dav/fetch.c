@@ -469,7 +469,8 @@ static svn_error_t *custom_get_request(ne_session *sess,
   int decompress_rv;
   int decompress_on;
 
-  svn_config_t *cfg = apr_hash_get (config, "config", APR_HASH_KEY_STRING);
+  svn_config_t *cfg = apr_hash_get (config, SVN_CONFIG_CATEGORY_CONFIG,
+                                    APR_HASH_KEY_STRING);
 
   svn_config_get(cfg, &do_compression, "miscellany", "compression", "yes");
   decompress_on = (strcasecmp(do_compression, "yes") == 0);

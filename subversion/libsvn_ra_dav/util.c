@@ -274,7 +274,7 @@ svn_error_t *svn_ra_dav__parsed_request(svn_ra_session_t *ras,
   const char *do_compression;
   svn_error_t *err = SVN_NO_ERROR;
 
-  svn_config_t *cfg = apr_hash_get (ras->config, "config",
+  svn_config_t *cfg = apr_hash_get (ras->config, SVN_CONFIG_CATEGORY_CONFIG,
                                     APR_HASH_KEY_STRING);
 
   svn_config_get(cfg, &do_compression, "miscellany", "compression", "yes");

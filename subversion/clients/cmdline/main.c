@@ -920,13 +920,15 @@ main (int argc, const char * const *argv)
     if (err)
       svn_handle_error (err, stderr, 0);
     else
-      apr_hash_set (ctx.config, "config", APR_HASH_KEY_STRING, cfg);
+      apr_hash_set (ctx.config, SVN_CONFIG_CATEGORY_CONFIG,
+                    APR_HASH_KEY_STRING, cfg);
 
     err = svn_config_read_servers (&cfg, pool);
     if (err)
       svn_handle_error (err, stderr, 0);
     else
-      apr_hash_set (ctx.config, "servers", APR_HASH_KEY_STRING, cfg);
+      apr_hash_set (ctx.config, SVN_CONFIG_CATEGORY_SERVERS,
+                    APR_HASH_KEY_STRING, cfg);
   }
 
   err = (*subcommand->cmd_func) (os, &command_baton, pool);
