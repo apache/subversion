@@ -2312,6 +2312,7 @@ $ svnlook tree /sti/til/depot --show-ids
       <sect3 id="svn-ch-5-sect-3.1.2">
         <title>svnadmin</title>
 
+        <!-- @ENGLISH {{{
         <para>The <command>svnadmin</command> program is the
           repository administrator's best friend.  Besides providing
           the ability to create Subversion repositories, this program
@@ -2319,7 +2320,16 @@ $ svnlook tree /sti/til/depot --show-ids
           those repositories.  The syntax of
           <command>svnadmin</command> is similar to that of
           <command>svnlook</command>:</para>
+        @ENGLISH }}} -->
+        <para>Programmet <command>svnadmin</command> er 
+          depotadministratorens beste venn.
+          Ved siden av &#229; gi muligheten til &#229; opprette Subversiondepot, 
+          tillater dette programmet deg &#229; utf&#248;re flere 
+          vedlikeholdsoperasjoner p&#229; disse depotene.
+          Syntaksen p&#229; <command>svnadmin</command> er lik den i 
+          <command>svnlook</command>:</para>
 
+        <!-- @ENGLISH {{{
         <screen>
 $ svnadmin help
 general usage: svnadmin SUBCOMMAND REPOS_PATH  [ARGS &amp; OPTIONS ...]
@@ -2332,65 +2342,118 @@ Available subcommands:
    help (?, h)
 &hellip;
 </screen>
+        @ENGLISH }}} -->
+        <!-- &#164; --><screen>
+$ svnadmin help
+general usage: svnadmin SUBCOMMAND REPOS_PATH  [ARGS &amp; OPTIONS ...]
+Type "svnadmin help &lt;subcommand&gt;" for help on a specific subcommand.
 
+Available subcommands:
+   create
+   deltify
+   dump
+   help (?, h)
+&#8230;
+</screen>
+
+        <!-- @ENGLISH {{{
         <para>We've already mentioned <command>svnadmin</command>'s
           <literal>create</literal> subcommand (see <xref
           linkend="svn-ch-5-sect-2"/>).  Most of the others we will
           cover in more detail later in this chapter.  For now, let's
           just take a quick glance at what each of the available
           subcommands offers.</para>
+        @ENGLISH }}} -->
+        <para>Vi har allerede nevnt delkommandoen 
+          <literal>create</literal> i <command>svnadmin</command> (se 
+          <xref linkend="svn-ch-5-sect-2"/>).
+          De fleste andre vil vi g&#229; grundigere gjennom senere i dette 
+          kapitlet.
+          N&#229; n&#248;yer vi oss med &#229; ta en rask kikk p&#229; hva de forskjellige 
+          delkommandoene tilbyr.</para>
 
         <variablelist>
           <varlistentry>
             <term><literal>create</literal></term>
             <listitem>
+              <!-- @ENGLISH {{{
               <para>Create a new Subversion repository.</para>
+              @ENGLISH }}} -->
+              <para>Opprett et nytt Subversiondepot.</para>
             </listitem>
           </varlistentry>
 
           <varlistentry>
             <term><literal>deltify</literal></term>
             <listitem>
+              <!-- @ENGLISH {{{
               <para>Run over a specified revision range, performing
                 predecessor deltification on the paths changed in
                 those revisions.  If no revisions are specified, this
                 command will simply deltify the
                 <literal>HEAD</literal> revision.</para>
+              @ENGLISH }}} -->
+              <para>G&#229; over et spesifisert revisjonsomr&#229;de og utf&#248;r 
+                forl&#248;per-deltifisering p&#229; stiene som forandret seg i 
+                disse revisjonene.
+                Hvis ingen revisjoner er spesifisert, vil denne 
+                kommandoen rett og slett bare deltifisere 
+                <literal>HEAD</literal>-revisjonen.</para>
             </listitem>
           </varlistentry>
 
           <varlistentry>
             <term><literal>dump</literal></term>
             <listitem>
+              <!-- @ENGLISH {{{
               <para>Dump the contents of the repository, bounded by a
                 given set of revisions, using a portable dump format.</para>
+              @ENGLISH }}} -->
+              <para>Dump innholdet av depotet, begrenset av et 
+                spesifisert sett av revisjoner, i et portabelt 
+                dumpformat.</para>
             </listitem>
           </varlistentry>
 
           <varlistentry>
             <term><literal>hotcopy</literal></term>
             <listitem>
+              <!-- @ENGLISH {{{
               <para>Make a hot copy of a repository.  You can run
                 this command at any time and make a safe copy of the
                 repository, regardless if other processes are using
                 the repository.</para>
+              @ENGLISH }}} -->
+              <para>Lag en <quote>varm kopi</quote> av et depot.
+                Du kan kj&#248;re denne kommandoen til enhver tid og lage en 
+                trygg kopi av depotet, selv om andre prosesser bruker 
+                depotet.</para>
             </listitem>
           </varlistentry>
 
           <varlistentry>
             <term><literal>list-dblogs</literal></term>
             <listitem>
+              <!-- @ENGLISH {{{
               <para>(Berkeley DB repositories only.)  List the paths
                 of Berkeley DB log files associated with the
                 repository.  This list includes all log
                 files&mdash;those still in use by Subversion, as well
                 as those no longer in use.</para>
+              @ENGLISH }}} -->
+              <para>(Bare Berkeley DB-depot.)
+                List stiene for Berkeley DB-loggfiler assosiert med 
+                depotet.
+                Denne listen inkluderer alle loggfiler &#8213; de som fortsatt 
+                brukes av Subversion, sammen med de som ikke lenger er i 
+                bruk.</para>
             </listitem>
           </varlistentry>
 
           <varlistentry>
             <term><literal>list-unused-dblogs</literal></term>
             <listitem>
+              <!-- @ENGLISH {{{
               <para>(Berkeley DB repositories only.)  List the paths
                 of Berkeley DB log files associated with, but no
                 longer used by, the repository.  You may safely remove
@@ -2398,61 +2461,100 @@ Available subcommands:
                 archiving them for use in the event that you ever need
                 to perform a catastrophic recovery of the
                 repository.</para>
+              @ENGLISH }}} -->
+              <para>(Bare Berkeley DB-depot.)
+                List stiene for Berkeley DB-loggfiler assosiert med, men 
+                ikke lenger brukt av depotet.
+                Du kan trygt fjerne disse loggfilene fra depotet og 
+                muligens arkivere dem for senere bruk i tilfelle du en 
+                gang f&#229;r bruk for katastrofe-gjenoppretting av 
+                depotet.</para>
             </listitem>
           </varlistentry>
 
           <varlistentry>
             <term><literal>load</literal></term>
             <listitem>
+              <!-- @ENGLISH {{{
               <para>Load a set of revisions into a repository from a
                 stream of data that uses the same portable dump format
                 generated by the <literal>dump</literal> subcommand.</para>
+              @ENGLISH }}} -->
+              <para>Last et sett revisjoner inn i et depot fra en str&#248;m 
+                av data som bruker det samme portable dumpformatet 
+                generert av 
+                <literal>dump</literal>-delkommandoen.</para>
             </listitem>
           </varlistentry>
 
           <varlistentry>
             <term><literal>lstxns</literal></term>
             <listitem>
+              <!-- @ENGLISH {{{
               <para>List the names of uncommitted Subversion
                 transactions that currently exist in the repository.</para>
+              @ENGLISH }}} -->
+              <para>List navnene p&#229; Subversiontransaksjonene som ikke er 
+                lagt inn, men som eksisterer i depotet.</para>
             </listitem>
           </varlistentry>
 
           <varlistentry>
             <term><literal>recover</literal></term>
             <listitem>
+              <!-- @ENGLISH {{{
               <para>Perform recovery steps on a repository that is in
                 need of such, generally after a fatal error has
                 occurred that prevented a process from cleanly
                 shutting down its communication with the repository.</para>
+              @ENGLISH }}} -->
+              <para>Utf&#248;r gjenoppretting p&#229; et depot som trenger dette, 
+                vanligvis etter at en fatal feil er oppst&#229;tt som 
+                forhindret en prosess fra &#229; lukke kommunikasjonen med 
+                depotet p&#229; en skikkelig m&#229;te.</para>
             </listitem>
           </varlistentry>
 
           <varlistentry>
             <term><literal>rmtxns</literal></term>
             <listitem>
+              <!-- @ENGLISH {{{
               <para>Cleanly remove Subversion transactions from the
                 repository (conveniently fed by output from the
                 <literal>lstxns</literal> subcommand).</para>
+              @ENGLISH }}} -->
+              <para>Fjern Subversiontransaksjoner fra depotet p&#229; en 
+                renslig m&#229;te <!-- &#164; -->(kan bruke utdataene fra 
+                <literal>lstxns</literal>-delkommandoen).</para>
             </listitem>
           </varlistentry>
 
           <varlistentry>
             <term><literal>setlog</literal></term>
             <listitem>
+              <!-- @ENGLISH {{{
               <para>Replace the current value of the
                 <literal>svn:log</literal> (commit log message)
                 property on a given revision in the repository with a
                 new value.</para>
+              @ENGLISH }}} -->
+              <para>Erstatt den n&#229;v&#230;rende verdien i 
+                <literal>svn:log</literal>-egenskapen (loggmelding) for  
+                en angitt revisjon i depotet med en ny verdi.</para>
             </listitem>
           </varlistentry>
 
           <varlistentry>
             <term><literal>verify</literal></term>
             <listitem>
+              <!-- @ENGLISH {{{
               <para>Verify the contents of the repository.  This includes,
                 among other things, checksum comparisons of the
                 versioned data stored in the repository.</para>
+              @ENGLISH }}} -->
+              <para>Verifiser innholdet i et depot.
+                Dette inkluderer blant annet sjekk av kontrollsummer til 
+                de versjonerte dataene som er lagret i depotet.</para>
             </listitem>
           </varlistentry>
         </variablelist>
