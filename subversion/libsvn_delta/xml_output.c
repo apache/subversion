@@ -281,7 +281,7 @@ output_addreplace (struct edit_baton *eb, enum elemtype addreplace,
       sprintf (buf, "%lu", (unsigned long) ancestor_version);
       apr_hash_set (att, "ver", strlen("ver"), svn_string_create (buf, pool));
     }
-  svn_xml_make_open_tag (&str, pool, svn_xml_normal, innertag, att);
+  svn_xml_make_open_tag_hash (&str, pool, svn_xml_normal, innertag, att);
 
   eb->elem = dirfile;
 
