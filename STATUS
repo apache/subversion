@@ -28,7 +28,7 @@ Candidate changes:
       a simple propset, rather than text changes to every affected file.
       Patch has been filed in the issue for more than a year!
     Votes:
-      +1: maxb, bliss
+      +1: maxb, bliss, ghudson
       +1 (r10645 only, so far): cmpilato
 
   * r10674
@@ -37,7 +37,7 @@ Candidate changes:
       Tiny patch. If a user has an old apache on their system, but didn't ask
       us to use it, we shouldn't abort ./configure, just don't use it.
     Votes:
-      +1: maxb
+      +1: maxb, ghudson
       +0: bliss
 
   * r10704
@@ -46,7 +46,7 @@ Candidate changes:
     Justification:
       Small javahl binding only patch.
     Votes:
-      +1: pmayweg
+      +1: pmayweg, ghudson
 
   * r10322, r10531
     Update bash_completion to include new command line options in 1.1.x
@@ -64,7 +64,7 @@ Candidate changes:
     Justification:
       Perl bindings only; win32 fixes.
     Votes:
-      +1: clkao
+      +1: clkao, ghudson
 
   * r10438
     Replace references to APR_STATUS_IS_SUCCESS with a direct comparison
@@ -98,7 +98,7 @@ Candidate changes:
     Note: See discussion in
      http://www.contactor.se/~dast/svn/archive-2004-08/0804.shtml
     Votes:
-      +1: mbk, bliss
+      +1: mbk, bliss, ghudson
 
   * r10752
     Remove packages/rpm/mandrake-*.
@@ -106,7 +106,7 @@ Candidate changes:
       Foolish to include something that has been maintainerless since
       before 1.0.0 in 1.1.x.
     Votes:
-      +1: maxb, bliss
+      +1: maxb, bliss, ghudson
 
   * r10775
     Wrap svn_config_enumerator_t for Perl bindings.
@@ -137,13 +137,13 @@ Candidate changes:
       Unintrusive change.  Much more user friendly than store-auth-creds
       because username, SSL server cert trust, etc, is still saved.
     Votes:
-       +1: bliss
+       +1: bliss, ghudson
 
   * r10819
     Avoid repository corruption if executed with closed std{in,out,err}
     Justification:
       Simple fix for a nasty problem that has bitten at least one user.
     Votes:
-       +1: bliss, maxb
+       +1: bliss, maxb, ghudson
        -1: brane [until someone explains to me why this should be a
                   Unix-only change]
