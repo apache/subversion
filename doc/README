@@ -9,28 +9,32 @@ documentation for texinfo is at
 To build particular things, you'll need one or more of:
 
   * the `makeinfo' from ftp://ftp.gnu.org/pub/gnu/texinfo/texinfo-4.0.tar.gz
+  * the 'texi2dvi' or 'texi2html' programs
   * the `dvipdf' script from Ghostscript (pipes dvi | ps | Ghostscript)
 
 
 A rough guide:
 
-  programmer/
-                             Documents for Subversion programmers
-  programmer/design/
-                             The Design of Subversion
+  handbook/                  Our main documentation: the Subversion Handbook.
+                             For both newbies and experts alike.
+
+  programmer/                Documents for Subversion programmers.
+
+  programmer/design/         Subversion's original design document.
+                             (WARNING!  Extremely old!  From June 2000.)
+
   programmer/WritingChangeLogs.txt
-                             A longer version of the info in HACKING
-  user/
-                             Documents for Subversion users
-  user/manual
-                             A manual for users.
+                             A longer version of the info in HACKING.
 
+  user/                      Documents for Subversion users.
 
-In general, as we define theoretical client behaviors, please try to
-drop your scratch notes into the user manual.  This document will be a
-"central" place for what will someday end up as a kind of functional
-spec.
+  user/lj_article.txt        An introductory article from Linux Journal.
 
+  user/svn-ref.tex           LaTeX source for an svn quick-ref sheet.
+
+ 
+If you'd like to document a new feature, try to find a place for it
+somewhere in the Handbook.
 
 
 
