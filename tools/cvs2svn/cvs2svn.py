@@ -1867,10 +1867,7 @@ class Commit:
         ### something.
         ###
         ### Right now what happens is we get an empty revision
-        ### (assuming nothing else happened in this revision), so it
-        ### won't show up 'svn log' output, even when invoked on the
-        ### root -- because no paths changed!  That needs to be fixed,
-        ### regardless of whether cvs2svn creates such revisions.
+        ### (assuming nothing else happened in this revision).
         path_deleted, closed_tags, closed_branches = \
                       dumper.delete_path(svn_path, tags, branches, ctx.prune)
         sym_tracker.close_tags(svn_path, svn_rev, closed_tags)
