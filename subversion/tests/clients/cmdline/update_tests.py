@@ -1278,7 +1278,7 @@ test_list = [ None,
               another_hudson_problem,
               new_dir_with_spaces,
               non_recursive_update,
-              XFail(checkout_empty_dir),
+              checkout_empty_dir,
               update_to_deletion,
              ]
 

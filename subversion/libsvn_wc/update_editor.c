@@ -1942,6 +1942,22 @@ close_edit (void *edit_baton,
             apr_pool_t *pool)
 {
   struct edit_baton *eb = edit_baton;
+
+  if (! eb->root_opened)
+    {
+      svn_wc_adm_access_t *adm_access;
+      svn_wc_entry_t tmp_entry;
+
+      /* Ensure the wc root has no 'incomplete' flag. */
+      SVN_ERR (svn_wc_adm_retrieve (&adm_access, eb->adm_access,
+                                    eb->anchor, pool));
+      tmp_entry.incomplete = FALSE;      
+      SVN_ERR (svn_wc__entry_modify (adm_access, NULL /* this_dir */,
+                                     &tmp_entry,
+                                     SVN_WC__ENTRY_MODIFY_INCOMPLETE,
+                                     TRUE /* immediate write */,  pool));
+    }
+
   
   /* By definition, anybody "driving" this editor for update or switch
      purposes at a *minimum* must have called set_target_revision() at
@@ -1951,33 +1967,28 @@ close_edit (void *edit_baton,
      this editor needs to make sure that *all* paths have had their
      revisions bumped to the new target revision. */
 
-  /* Do nothing for checkout;  all urls and working revs are fine.
-     Updates and switches, though, have to be cleaned up.  */
-  if (eb->root_opened)
+  /* Make sure our update target now has the new working revision.
+     Also, if this was an 'svn switch', then rewrite the target's
+     url.  All of this tweaking might happen recursively!  Note
+     that if eb->target is NULL, that's okay (albeit "sneaky",
+     some might say).  */
+  
+  /* Extra check: if the update did nothing but make its target
+     'deleted', then do *not* run cleanup on the target, as it
+     will only remove the deleted entry!  */
+  if (! eb->target_deleted)
     {
-      /* Make sure our update target now has the new working revision.
-         Also, if this was an 'svn switch', then rewrite the target's
-         url.  All of this tweaking might happen recursively!  Note
-         that if eb->target is NULL, that's okay (albeit "sneaky",
-         some might say).  */
-      
-      /* Extra check: if the update did nothing but make its target
-         'deleted', then do *not* run cleanup on the target, as it
-         will only remove the deleted entry!  */
-      if (! eb->target_deleted)
-        {
-          SVN_ERR (svn_wc__do_update_cleanup
-                   (svn_path_join_many (eb->pool,
-                                        eb->anchor, eb->target, NULL),
-                    eb->adm_access,
-                    eb->recurse,
-                    eb->switch_url,
-                    eb->target_revision,
-                    eb->notify_func,
-                    eb->notify_baton,
-                    TRUE,
-                    eb->pool));
-        }
+      SVN_ERR (svn_wc__do_update_cleanup
+               (svn_path_join_many (eb->pool,
+                                    eb->anchor, eb->target, NULL),
+                eb->adm_access,
+                eb->recurse,
+                eb->switch_url,
+                eb->target_revision,
+                eb->notify_func,
+                eb->notify_baton,
+                TRUE,
+                eb->pool));
     }
 
   if (eb->notify_func)
