@@ -98,32 +98,71 @@ diff_cmd (svn_stringbuf_t *path1,
 
 /*** Public Interface. ***/
 
-/* Display context diffs
+/* Display context diffs between two PATH/REVISION pairs.  Each of
+   these input will be one of the following:
 
-     There are five cases:
-        1. path is not an URL and start_revision != end_revision
-        2. path is not an URL and start_revision == end_revision
-        3. path is an URL and start_revision != end_revision
-        4. path is an URL and start_revision == end_revision
-        5. path is not an URL and no revisions given
+   - a repository URL at a given revision.
+   - a working copy path, ignoring no local mods.
+   - a working copy path, including local mods.
 
-     With only one distinct revision the working copy provides the other.
-     When path is an URL there is no working copy. Thus
+   We can establish a matrix that shows the nine possible types of
+   diffs we expect to support.
 
-       1: compare repository versions for URL coresponding to working copy
-       2: compare working copy against repository version
-       3: compare repository versions for URL
-       4: nothing to do.
-       5: compare working copy against text-base
 
-     Case 4 is not as stupid as it looks, for example it may occur if the
-     user specifies two dates that resolve to the same revision.
+      ` .     DST ||  URL:rev   | WC:base    | WC:working |
+          ` .     ||            |            |            |
+      SRC     ` . ||            |            |            |
+      ============++============+============+============+
+       URL:rev    || (*)        | (*)        | (*)        |
+                  ||            |            |            |
+                  ||            |            |            |
+                  ||            |            |            |
+      ------------++------------+------------+------------+
+       WC:base    || (*)        |                         |
+                  ||            | New svn_wc_diff which   |
+                  ||            | is smart enough to      |
+                  ||            | handle two WC paths     |
+      ------------++------------+ and their related       +
+       WC:working || (*)        | text-bases and working  |
+                  ||            | files.  This operation  |
+                  ||            | is entirely local.      |
+                  ||            |                         |
+      ------------++------------+------------+------------+
+      * These cases require server communication.
 
-   ### TODO: Non-zero is not a good test for valid dates. Really all the
-   revision/date stuff needs to be reworked using a unifying revision
-   structure with validity flags etc.
+   Svn_client_diff() is the single entry point for all of the diff
+   operations, and will be in charge of examining the inputs and
+   making decisions about how to accurately report contextual diffs.
+
+   NOTE:  In the near future, svn_client_diff() will likely only
+   continue to report textual differences in files.  Property diffs
+   are important, too, and will need to be supported in some fashion
+   so that this code can be re-used for svn_client_merge(). 
 */
 
+
+
+/* Hi!  I'm a soon-to-be-out-of-date comment regarding a
+   soon-to-be-rewritten svn_client_diff() function!
+
+   There are five cases:
+      1. path is not an URL and start_revision != end_revision
+      2. path is not an URL and start_revision == end_revision
+      3. path is an URL and start_revision != end_revision
+      4. path is an URL and start_revision == end_revision
+      5. path is not an URL and no revisions given
+
+   With only one distinct revision the working copy provides the
+   other.  When path is an URL there is no working copy. Thus
+
+     1: compare repository versions for URL coresponding to working copy
+     2: compare working copy against repository version
+     3: compare repository versions for URL
+     4: nothing to do.
+     5: compare working copy against text-base
+
+   Case 4 is not as stupid as it looks, for example it may occur if
+   the user specifies two dates that resolve to the same revision.  */
 svn_error_t *
 svn_client_diff (const apr_array_header_t *diff_options,
                  svn_client_auth_baton_t *auth_baton,
