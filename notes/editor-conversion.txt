@@ -30,14 +30,11 @@ DONE    libsvn_delta/compose_editors.c
         libsvn_repos/delta.c            [svn_repos_dir_delta()]
         tests/libsvn_delta/xml-output-test.c
         bindings/ruby/delta_editor.c
-        libsvn_client/delete.c          [mini-drive]
-        libsvn_client/add.c             [mini-drive]
-STARTED libsvn_client/commit.c
-        libsvn_client/copy.c            [mini-ddrive]
+        libsvn_client/delete.c          [being re-written as new commit system]
+        libsvn_client/add.c             [being re-written as new commit system]
+STARTED libsvn_client/commit.c          [svn import]
+        libsvn_client/copy.c            [being re-written as new commit system]
         libsvn_ra_local/update_editor.c
         libsvn_ra_local/checkout.c
-        libsvn_wc/adm_crawler.c         [crawl_local_mods()]
-        libsvn_wc/adm_crawler.c         [crawl_as_copy()]
-
-
-(*) mini-drive means a short, special-purpose editor drive
+        libsvn_wc/adm_crawler.c         [being re-written as new commit system]
+        libsvn_wc/adm_crawler.c         [being re-written as new commit system]
