@@ -30,7 +30,7 @@ TABLE OF CONTENTS
    * Filing bugs / issues
    * Commit access
    * The configuration/build system under unix
-   * How to create a distribution tarball
+   * How to release a distribution tarball
    * Release numbering
 
 
@@ -1123,37 +1123,10 @@ configuration/build system:
 
 
 
-How to create a distribution tarball
+How to release a distribution tarball
 ====================================
 
-Pretty simple -- do this under Unix:
-
-   1. Get a completely up-to-date working copy with no local mods.
-      Make sure that APR is also up-to-date and pristine.  Build
-      Subversion and run the test suite, just to be safe.
-
-   2. Run "make dist".  This invokes `dist.sh', which checks out
-      Subversion and APR from their master repositories, then runs the
-      pre-configuration steps, so that the user will be able to run
-      `configure' right after unpacking.  Watch dist.sh's output to
-      make sure everything goes smoothly.
-
-   3. When it's done, you'll have `subversion-rBLAH.tar.gz' in the top
-      level of your working copy (BLAH is a revision number).  That's
-      your distribution.  Unpack it on a clean machine, make sure it
-      works, and upload it to
-
-         http://subversion.tigris.org/servlets/ProjectDownloadList
-
-      If you're making a new distribution in a hurry because the
-      previous one is known to have problems, it's fine to upload
-      first and then test, because the chances of the dist behaving
-      differently from your working copy are very small -- it should
-      be exactly the same code.
-
-These guidelines may get stricter when we have a real user base; for
-now, a distribution is just a bootstrap mechanism to obtain a working
-copy.
+See notes/releases.txt.
 
 
 
