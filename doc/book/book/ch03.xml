@@ -89,7 +89,7 @@ $ svn commit --message "Corrected number of cheese slices."
 Sending        sandwich.txt
 Transmitting file data .
 Committed revision 3.
-      </screen>
+</screen>
 
       <para>If at any point in the future you want to refer to that
         revision (we'll see how and why we might want to do that later
@@ -181,7 +181,7 @@ $ svn log --revision BASE:HEAD
 $ svn update --revision PREV foo.c
 # rewinds the last change on foo.c.
 # (foo.c's working revision is decreased.)
-      </screen>
+</screen>
       
       <para>These keywords allow you to perform many common (and
         helpful) operations without having to look up specific
@@ -216,7 +216,7 @@ $ svn checkout --revision {20020217T1530}
 $ svn checkout --revision {20020217T1530Z}
 $ svn checkout --revision {20020217T1530-0500}
 &hellip;
-      </screen>
+</screen>
       
       <para>When you specify a date as a revision, Subversion finds
         the most recent revision of the repository as of that
@@ -227,7 +227,7 @@ $ svn log --revision {2002-11-28}
 ------------------------------------------------------------------------
 r12 | ira | 2002-11-27 12:31:51 -0600 (Wed, 27 Nov 2002) | 6 lines
 &hellip;
-      </screen>
+</screen>
         
       <sidebar>
         <title>Is Subversion a Day Early?</title>
@@ -258,13 +258,13 @@ r12 | ira | 2002-11-27 12:31:51 -0600 (Wed, 27 Nov 2002) | 6 lines
       <screen>
 $ svn log --revision {2002-11-20}:{2002-11-29}
 &hellip;
-      </screen>
+</screen>
         
       <para>As we pointed out, you can also mix dates and revisions:</para>
       
       <screen>
 $ svn log --revision {2002-11-20}:4040
-      </screen>
+</screen>
 
       <para>Users should be aware of a subtlety that can become quite
         a stumblingblock when dealing with dates in Subversion.  Since
@@ -302,7 +302,7 @@ A  trunk/configure.in
 A  trunk/IDEAS
 &hellip;
 Checked out revision 2499.
-    </screen>
+</screen>
     
     <sidebar>
       <title>Repository Layout</title>
@@ -328,7 +328,7 @@ A  tools/dtd
 A  tools/dtd/dblite.dtd
 &hellip;
 Checked out revision 3678.
-    </screen>
+</screen>
     
     <para>Since Subversion uses a <quote>copy-modify-merge</quote>
       model instead of <quote>lock-modify-unlock</quote> (see <xref
@@ -390,7 +390,7 @@ A  subv/configure.in
 A  subv/IDEAS
 &hellip;
 Checked out revision 2499.
-    </screen>
+</screen>
     
     <para>That will place your working copy in a directory named
       <literal>subv</literal> instead of a directory named
@@ -492,7 +492,7 @@ $ svn update
 U  ./foo.c
 U  ./bar.c
 Updated to revision 2.
-      </screen>
+</screen>
       
       <para>In this case, someone else checked in modifications to
         both <filename>foo.c</filename> and <filename>bar.c</filename>
@@ -808,7 +808,7 @@ A      ./stuff/loot/bloo.h   # this file is scheduled for addition
 C      ./stuff/loot/lump.c   # this file has conflicts from an update
     S  ./stuff/squawk        # this file or dir has been switched to a branch
 &hellip;
-        </screen>
+</screen>
       
         <para>In this output format <command>svn status</command>
           prints five columns of characters, followed by several
@@ -969,7 +969,7 @@ C      ./stuff/loot/lump.c   # this file has conflicts from an update
         <screen>
 $ svn status stuff/fish.c
 D      stuff/fish.c
-        </screen>
+</screen>
         
         <para><command>svn status</command> also has a
           <option>--verbose</option> (<option>-v</option>) switch,
@@ -1085,7 +1085,7 @@ Index: stuff/things/bloo.h
 +++ stuff/things/bloo.h	(working copy)
 +Here is a new file to describe
 +things about bloo.
-        </screen>
+</screen>
         
         <para>The <command>svn diff</command> command produces this
           output by comparing your working files against the cached
@@ -1106,7 +1106,7 @@ Index: stuff/things/bloo.h
 
         <screen>
 $ svn diff > patchfile
-        </screen>
+</screen>
 
         <para>You could, for example, email the patchfile to another
           developer for review or testing prior to commit.</para>
@@ -1127,7 +1127,7 @@ $ svn diff > patchfile
         <screen>
 $ svn revert README
 Reverted ./README
-        </screen>
+</screen>
         
         <para>Subversion reverts the file to its pre-modified state by
           overwriting it with the cached <quote>pristine</quote> copy
@@ -1149,7 +1149,7 @@ Reverted foo
 
 $ svn status foo
 ?      foo
-        </screen>
+</screen>
 
         <note>
           <para><command>svn revert</command>
@@ -1177,7 +1177,7 @@ Reverted README
 
 $ svn status README
        README
-        </screen>
+</screen>
 
       </sect3>
 
@@ -1225,7 +1225,7 @@ U  ./INSTALL
 G  ./README
 C  ./bar.c
 Updated to revision 46.
-      </screen>
+</screen>
            
       <para>The <computeroutput>U</computeroutput> and
         <computeroutput>G</computeroutput> codes are no cause for
@@ -1323,7 +1323,7 @@ sandwich.txt
 sandwich.txt.mine
 sandwich.txt.r1
 sandwich.txt.r2
-      </screen>
+</screen>
       <!-- ###TODO What happens if the revnum is gt 99999?-->
       
       <para>At this point, Subversion will <emphasis>not</emphasis>
@@ -1335,7 +1335,7 @@ $ svn commit --message "Add a few more things"
 svn: A conflict in the working copy obstructs the current operation
 svn: Commit failed (details follow):
 svn: Aborting commit: '/home/sally/svn-work/sandwich.txt' remains in conflict.
-      </screen>
+</screen>
 
       <para>If you get a conflict, you need to do one of three
         things:</para>
@@ -1374,7 +1374,7 @@ svn: Aborting commit: '/home/sally/svn-work/sandwich.txt' remains in conflict.
       <screen>
 $ svn resolved sandwich.txt
 Resolved conflicted state of sandwich.txt
-      </screen>
+</screen>
 
       <sect3 id="svn-ch-3-sect-4.4.1">
         <title>Merging Conflicts by Hand</title>
@@ -1409,7 +1409,7 @@ Grilled Chicken
 &gt;&gt;&gt;&gt;&gt;&gt;&gt; .r2
 Creole Mustard
 Bottom piece of bread
-        </screen>
+</screen>
 
         <para>The strings of less-than signs, equal signs, and
           greater-than signs are called <firstterm>conflict
@@ -1423,7 +1423,7 @@ Salami
 Mortadella
 Prosciutto
 =======
-        </screen>
+</screen>
 
         <para>Whereas the text between the second and third sets of
         conflict markers is the text from Sally's commit:</para>
@@ -1433,7 +1433,7 @@ Prosciutto
 Sauerkraut
 Grilled Chicken
 &gt;&gt;&gt;&gt;&gt;&gt;&gt; .r2
-        </screen>
+</screen>
 
         <para>Usually you won't want to just delete the conflict
         markers and Sally's changes&mdash;she's going to be awfully
@@ -1456,7 +1456,7 @@ Mortadella
 Prosciutto
 Creole Mustard
 Bottom piece of bread
-        </screen>
+</screen>
 
         <para>Now run <command>svn resolved</command> and you're now
           ready to commit your changes:</para>
@@ -1464,7 +1464,7 @@ Bottom piece of bread
         <screen>
 $ svn resolved sandwich.txt
 $ svn commit -m "Go ahead and use my sandwich, discarding Sally's edits."
-        </screen>
+</screen>
 
         <para>Remember, if you ever get confused while editing the
           conflicted file, you can always consult the three files that
@@ -1490,7 +1490,7 @@ $ ls sandwich.*
 sandwich.txt  sandwich.txt.mine  sandwich.txt.r2  sandwich.txt.r1
 $ cp sandwich.txt.r2 sandwich.txt
 $ svn resolved sandwich.txt
-        </screen>
+</screen>
 
       </sect3>
 
@@ -1506,7 +1506,7 @@ $ svn revert sandwich.txt
 Reverted sandwich.txt
 $ ls sandwich.*
 sandwich.txt
-        </screen>
+</screen>
 
         <para>Note that when you revert a conflicted file, you don't
         have to run <command>svn resolved</command>.</para>
@@ -1545,7 +1545,7 @@ $ svn commit --message "Corrected number of cheese slices."
 Sending        sandwich.txt
 Transmitting file data .
 Committed revision 3.
-      </screen>
+</screen>
            
       <para>However, if you've been composing your log message as you
         work, you may want to tell Subversion to get the message from
@@ -1557,7 +1557,7 @@ svn commit --file logmsg
 Sending        sandwich
 Transmitting file data .
 Committed revision 4.
-      </screen>
+</screen>
 
       <para>If you fail to specify either the
         <option>--message</option> or <option>--file</option> switch,
@@ -1582,7 +1582,7 @@ Log message unchanged or not specified
 a)bort, c)ontinue, e)dit
 a
 $
-        </screen>
+</screen>
       </tip>
 
       <para>The repository doesn't know or care if your changes make
@@ -1701,7 +1701,7 @@ r1 | sally | Mon, 15 Jul 2002 17:40:08 -0500 | 2 lines
 
 Initial import
 ------------------------------------------------------------------------
-      </screen>
+</screen>
            
       <para>Note that the log messages are printed in
         <emphasis>reverse chronological order</emphasis> by default.
@@ -1716,7 +1716,7 @@ $ svn log --revision 5:19    # shows logs 5 through 19 in chronological order
 $ svn log -r 19:5            # shows logs 5 through 19 in reverse order
 
 $ svn log -r 8               # shows log for revision 8
-      </screen>
+</screen>
         
       <para>You can also examine the log history of a single file or directory.
       For example:</para>
@@ -1726,7 +1726,7 @@ $ svn log foo.c
 &hellip;
 $ svn log http://foo.com/svn/trunk/code/foo.c
 &hellip;
-      </screen>
+</screen>
            
       <para>These will display log messages <emphasis>only</emphasis>
         for those revisions in which the working file (or URL)
@@ -1754,7 +1754,7 @@ A /trunk/code/doc/README
 Frozzled the sub-space winch.
 
 ------------------------------------------------------------------------
-      </screen>
+</screen>
 
       <sidebar>
         <title>Why Does <command>svn log</command> Give Me an Empty
@@ -1767,7 +1767,7 @@ Frozzled the sub-space winch.
 $ svn log -r 2
 ------------------------------------------------------------------------
 $
-        </screen>
+</screen>
 
         <para>At first glance, this seems like an error.  But recall
           that while revisions are repository-wide, <command>svn
@@ -1836,7 +1836,7 @@ Index: rules.txt
 +Chew with your mouth closed
 +Listen when others are speaking
 $
-        </screen>
+</screen>
         
       </sect3>
 
@@ -1862,7 +1862,7 @@ Index: rules.txt
 +Chew with your mouth closed
 +Listen when others are speaking
 $
-        </screen>
+</screen>
           
       </sect3>
 
@@ -1887,7 +1887,7 @@ Index: rules.txt
  Everything in moderation
  Chew with your mouth closed 
 $
-        </screen>
+</screen>
           
         <para>Not only can you use <command>svn diff</command> to
            compare files in your working copy to the repository, but
@@ -1901,7 +1901,7 @@ $
 $ svn diff --revision 4:5 http://svn.red-bean.com/repos/example/trunk/text/rules.txt
 &hellip;
 $
-        </screen>
+</screen>
 
       </sect3>
 
@@ -1921,7 +1921,7 @@ Freedom = Chocolate Ice Cream
 Everything in moderation
 Chew with your mouth closed
 $
-      </screen>
+</screen>
 
       <para>You can also redirect the output directly into a
         file:</para>
@@ -1929,7 +1929,7 @@ $
       <screen>
 $ svn cat --revision 2 rules.txt > rules.txt.v2
 $
-      </screen>
+</screen>
 
       <para>You're probably wondering why we don't just use
         <command>svn update --revision</command> to update the file to
@@ -1964,7 +1964,7 @@ branches/
 clients/
 tags/
 trunk/
-      </screen>
+</screen>
 
       <para>If you want a more detailed listing, pass the
         <option>--verbose</option> (<option>-v</option>) flag to get
@@ -1977,7 +1977,7 @@ $ svn list --verbose http://svn.collab.net/repos/svn
    2769 sally               Jul 29 12:07 clients/
    2698 harry               Jul 24 18:07 tags/
    2785 sally               Jul 29 19:07 trunk/
-      </screen>
+</screen>
 
       <para>The columns tell you the revision at which the file or
         directory was last modified, the user who modified it, the size
@@ -2001,7 +2001,7 @@ $ svn checkout --revision 1729 # Checks out a new working copy at r1729
 &hellip;
 $ svn update --revision 1729 # Updates an existing working copy to r1729
 &hellip;
-      </screen>
+</screen>
 
     </sect2>
 
@@ -2049,7 +2049,7 @@ M      ./somedir/foo.c
 $ svn cleanup
 $ svn status
 M      ./somedir/foo.c
-      </screen>
+</screen>
 
     </sect2>
 
@@ -2069,7 +2069,7 @@ Adding  mytree/subdir
 Adding  mytree/subdir/quux.h
 Transmitting file data....
 Committed revision 1.
-      </screen>
+</screen>
 
       <para>The above example copied the contents of directory
         <filename>mytree</filename> under the directory
@@ -2080,7 +2080,7 @@ Committed revision 1.
 /fooproject/bar.c
 /fooproject/subdir
 /fooproject/subdir/quux.h
-      </screen>
+</screen>
 
     </sect2>
 

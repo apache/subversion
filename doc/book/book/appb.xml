@@ -120,7 +120,7 @@
 
           <screen>          
 $ svnadmin recover /path/to/repos
-          </screen>
+</screen>
 
           <para>Be sure that you disable all access to the repository
             before doing this (by shutting down httpd or
@@ -155,7 +155,7 @@ $ svnadmin recover /path/to/repos
 
           <screen>
 $ svn cleanup working-copy
-          </screen>
+</screen>
 
         </sect3>
 
@@ -189,7 +189,7 @@ $ svn import test file:///var/svn/test -m "Initial import"
 Adding         test/testfile
 Transmitting file data .
 Committed revision 1.
-          </screen>
+</screen>
 
           <para>But not from a remote host:</para>
 
@@ -200,7 +200,7 @@ harry's password: xxxxxxx
 svn_error: #21110 : 
 
 The specified activity does not exist.
-          </screen>
+</screen>
 
           <para>We've seen this when the
             <filename>REPOS/dav/</filename> directory is not writable
