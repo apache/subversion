@@ -247,7 +247,7 @@ fi
 
 # Restart apache server if needed.
 source /etc/init.d/functions
-if [ "`pidof httpd`"x != "x" ]; then
+if [ "`pidof httpd2`"x != "x" ]; then
    /etc/init.d/httpd2 restart
 fi
 
