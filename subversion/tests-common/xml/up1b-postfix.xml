@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<delta-pkg>
+  <tree-delta>
+    <replace name="iota" ver="5">
+      <file>
+        <text-delta-ref id="iota">
+      </file>
+    </replace>
+    <replace name="A">
+      <dir>
+        <tree-delta>
+          <replace name="mu" ver="5">
+            <file>
+              <text-delta-ref id="mu">
+            </file>
+          </replace>
+          <replace name="B">
+            <dir>
+              <tree-delta>
+                <replace name="E">
+                  <dir>
+                    <tree-delta>
+                      <replace name="beta" version="37">
+                        <file>
+                          <text-delta-ref id="beta">
+                        </file>
+                      </replace>
+                      <add name="sigma" version="37">
+                        <file>
+                          <text-delta-ref id="sigma">
+                        </file>
+                      </add>
+                    </tree-delta>
+                  </dir>
+                </replace>
+              </tree-delta>
+            </dir>
+          </replace>
+          <replace name="D">
+            <dir>
+              <tree-delta>
+                <replace name="G">
+                  <dir>
+                    <tree-delta>
+                      <replace name="rho" version="12">
+                        <file>
+                          <text-delta-ref id="rho">
+                        </file>
+                      </replace>
+                    </tree-delta>
+                  </dir>
+                </replace>
+              </tree-delta>
+            </dir>
+          </replace>
+        </tree-delta>
+      </dir>
+    </replace>
+  </tree-delta>
+<text-delta id="iota">This is v5 of 'iota'.</text-delta>
+<text-delta id="mu">This is v5 of 'mu'.</text-delta>
+<text-delta id="beta">This is v37 of 'beta'.</text-delta>
+<text-delta id="sigma">A new file, `sigma', v37.</text-delta>
+<text-delta id="rho">This is v12 of 'rho'.</text-delta>
+</delta-pkg>
