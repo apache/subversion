@@ -1773,11 +1773,6 @@ do_diff (const apr_array_header_t *options,
       || (revision2->kind == svn_opt_revision_unspecified))
     return svn_error_create (SVN_ERR_CLIENT_BAD_REVISION, NULL,
                              "do_diff: not all revisions are specified");
-  if ((revision1->kind == svn_opt_revision_committed)
-      || (revision2->kind == svn_opt_revision_committed))
-    return unsupported_diff_error 
-      (svn_error_create (SVN_ERR_INCORRECT_PARAMS, NULL,
-                         "do_diff: COMMITTED nomenclature not supported"));
 
   /* Revisions can be said to be local or remote.  BASE and WORKING,
      for example, are local.  */
@@ -1786,16 +1781,6 @@ do_diff (const apr_array_header_t *options,
   is_local_rev2 = ((revision2->kind == svn_opt_revision_base)
                    || (revision2->kind == svn_opt_revision_working));
 
-  /* URLs and local revisions don't mix. */
-  if (is_repos_path1 && is_local_rev1)
-    return svn_error_create 
-      (SVN_ERR_INCORRECT_PARAMS, NULL,
-       "do_diff: invalid revision specifier for URL path");
-  if (is_repos_path2 && is_local_rev2)
-    return svn_error_create 
-      (SVN_ERR_INCORRECT_PARAMS, NULL,
-       "do_diff: invalid revision specifier for URL path");
-  
   /* Working copy paths with non-local revisions get turned into
      URLs.  We don't do that here, though.  We simply record that it
      needs to be done, which is information that helps us choose our
