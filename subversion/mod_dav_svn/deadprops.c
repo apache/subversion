@@ -241,7 +241,7 @@ static dav_error *dav_svn_db_output_value(dav_db *db,
     {
       /* add <prefix:name>value</prefix:name> */
 
-      s = apr_psprintf(db->p, "<%s%s>" DEBUG_CR, prefix, name->name);
+      s = apr_psprintf(db->p, "<%s%s>", prefix, name->name);
       apr_text_append(db->p, phdr, s);
 
       /* the value is in our pool which means it has the right lifetime. */
