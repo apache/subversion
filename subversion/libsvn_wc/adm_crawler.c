@@ -605,7 +605,7 @@ static svn_error_t *report_local_mods (svn_string_t *path,
    recursion. */
 static svn_error_t *
 examine_and_report_entry (svn_string_t *path,
-                          void *dir_baton,
+                          void **dir_baton,
                           svn_string_t *filename,
                           const svn_delta_edit_fns_t *editor,
                           void *edit_baton,
@@ -636,16 +636,16 @@ examine_and_report_entry (svn_string_t *path,
       && (current_entry_name))
     {
       /* Do what's necessary to get a baton for current directory */
-      if (! dir_baton)
+      if (! *dir_baton)
         {
-          err = do_dir_replaces (&dir_baton,
+          err = do_dir_replaces (dir_baton,
                                  *stack, editor, edit_baton,
                                  locks, top_pool, subpool);
           if (err) return err;
         }
       
       /* Delete the entry */
-      err = editor->delete_entry (current_entry_name, dir_baton);
+      err = editor->delete_entry (current_entry_name, *dir_baton);
       if (err) return err;
       
       /* Remember that it was affected. */
@@ -673,9 +673,9 @@ examine_and_report_entry (svn_string_t *path,
       tb->entry = svn_wc__entry_dup (current_entry, top_pool);          
       
       /* Do what's necesary to get a baton for current directory */
-      if (! dir_baton)
+      if (! *dir_baton)
         {
-          err = do_dir_replaces (&dir_baton,
+          err = do_dir_replaces (dir_baton,
                                  *stack, editor, edit_baton,
                                  locks, top_pool, subpool);
           if (err) return err;
@@ -705,7 +705,7 @@ examine_and_report_entry (svn_string_t *path,
           /* Add the new directory, getting a new dir baton.  */
           SVN_ERR (editor->add_directory 
                    (current_entry_name,
-                    dir_baton, /* current dir is parent */
+                    *dir_baton, /* current dir is parent */
                     copyfrom_URL,
                     subdir_entry->revision,
                     &new_dir_baton)); /* get child */
@@ -716,7 +716,7 @@ examine_and_report_entry (svn_string_t *path,
         {
           /* Add a new file, getting a file baton */
           err = editor->add_file (current_entry_name,
-                                  dir_baton,             /* parent */
+                                  *dir_baton,             /* parent */
                                   current_entry->ancestor,
                                   current_entry->revision,
                                   &(tb->editor_baton));  /* child */
@@ -823,9 +823,9 @@ examine_and_report_entry (svn_string_t *path,
                                     svn_path_local_style);
           
           /* Do what's necesary to get a baton for current directory */
-          if (! dir_baton)
+          if (! *dir_baton)
             {
-              err = do_dir_replaces (&dir_baton,
+              err = do_dir_replaces (dir_baton,
                                      *stack, editor, edit_baton,
                                      locks, top_pool, subpool);
               if (err) return err;
@@ -835,7 +835,7 @@ examine_and_report_entry (svn_string_t *path,
             {
               /* Replace the file's text, getting a file baton */
               err = editor->replace_file (current_entry_name,
-                                          dir_baton,          /* parent */
+                                          *dir_baton,          /* parent */
                                           current_entry->revision,
                                           &(tb->editor_baton)); /* child */
               if (err) return err;
@@ -845,7 +845,7 @@ examine_and_report_entry (svn_string_t *path,
             {
               void *baton = 
                 (current_entry->kind == svn_node_file) ?
-                tb->editor_baton : dir_baton;
+                tb->editor_baton : *dir_baton;
               
               err = do_prop_deltas (longpath,
                                     current_entry,
@@ -957,9 +957,6 @@ report_local_mods (svn_string_t *path,
       svn_error_createf (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL, subpool,
                          "Can't find `.' entry in %s", path->data);
                               
-  /* Push the current {path, baton, this_dir} to the top of the stack */
-  push_stack (stack, path, dir_baton, this_dir, subpool);
-
   /**                           **/
   /** Main Logic                **/
   /**                           **/
@@ -981,8 +978,9 @@ report_local_mods (svn_string_t *path,
       svn_path_add_component (full_path_to_file, filename,
                               svn_path_local_style);
 
-      /* Do the dirty work.  No recursion here. */
-      SVN_ERR (examine_and_report_entry (path, dir_baton,
+      /* Do the dirty work.  No recursion here.  For a single file,
+         stack should already contain a stackframe for PATH. */
+      SVN_ERR (examine_and_report_entry (path, &dir_baton,
                                          filename,
                                          editor, edit_baton,
                                          stack,
@@ -996,6 +994,9 @@ report_local_mods (svn_string_t *path,
   /* Else do real recursion on PATH. */
   else 
     {
+      /* Push the current {path, baton, this_dir} to the top of the stack */
+      push_stack (stack, path, dir_baton, this_dir, subpool);
+
       /* Loop over each entry */
       for (entry_index = apr_hash_first (entries); entry_index;
            entry_index = apr_hash_next (entry_index))
@@ -1025,7 +1026,7 @@ report_local_mods (svn_string_t *path,
                                     svn_path_local_style);
       
           /* Do the dirty work, and mutually recurse. */
-          SVN_ERR (examine_and_report_entry (path, dir_baton,
+          SVN_ERR (examine_and_report_entry (path, &dir_baton,
                                              filename,
                                              editor, edit_baton,
                                              stack,
@@ -1261,6 +1262,9 @@ svn_wc_crawl_local_mods (svn_string_t *parent_dir,
       /* The Main Loop -- over each commit target. */
       for (i = 0; i < condensed_targets->nelts; i++)
         {
+          int j;
+          svn_string_t *ptarget;
+          svn_string_t *remainder_path;
           svn_string_t *target, *subparent;
           svn_string_t *relative_target =
             (((svn_string_t **) condensed_targets->elts)[i]);
@@ -1294,45 +1298,40 @@ svn_wc_crawl_local_mods (svn_string_t *parent_dir,
           /* Push new stackframes to get down to the immediate parent of
              the target ("ptarget"), which must also be a child of the
              subparent. */
-          {
-            int j;
-            svn_string_t *ptarget;
-            svn_string_t *remainder_path;
-
-            svn_path_split (target, &ptarget, NULL,
-                            svn_path_local_style, pool);
-            remainder_path = svn_path_is_child (stack->path, ptarget, pool);
-            
-            if (remainder_path)  /* is ptarget "below" the stack-path? */
-              {
-                apr_array_header_t *components;
-
-                /* split the remainder into path components. */
-                components = svn_path_decompose (remainder_path,
-                                                 svn_path_local_style,
-                                                 pool);
-                
-                for (j = 0; j < components->nelts; j++)
-                  {
-                    svn_string_t *new_path;
-                    svn_wc_entry_t *new_entry;
-
-                    svn_string_t *component = 
-                      (((svn_string_t **) components->elts)[j]);
-                    new_path = svn_string_dup (stack->path, pool);
-                    svn_path_add_component (new_path, component,
-                                            svn_path_local_style);
-                    
-                    SVN_ERR(svn_wc_entry (&new_entry, new_path, pool));
-                    
-                    push_stack (&stack, new_path, NULL, new_entry, pool);
-                  }
-              }
-          }
-
+          svn_path_split (target, &ptarget, NULL,
+                          svn_path_local_style, pool);
+          remainder_path = svn_path_is_child (stack->path, ptarget, pool);
+          
+          if (remainder_path)  /* is ptarget "below" the stack-path? */
+            {
+              apr_array_header_t *components;
+              
+              /* split the remainder into path components. */
+              components = svn_path_decompose (remainder_path,
+                                               svn_path_local_style,
+                                               pool);
+              
+              for (j = 0; j < components->nelts; j++)
+                {
+                  svn_string_t *new_path;
+                  svn_wc_entry_t *new_entry;
+                  
+                  svn_string_t *component = 
+                    (((svn_string_t **) components->elts)[j]);
+                  new_path = svn_string_dup (stack->path, pool);
+                  svn_path_add_component (new_path, component,
+                                          svn_path_local_style);
+                  
+                  SVN_ERR(svn_wc_entry (&new_entry, new_path, pool));
+                  
+                  push_stack (&stack, new_path, NULL, new_entry, pool);
+                }
+            }
+          
+          
           /* Figure out if TARGET is a file or a dir. */
           SVN_ERR(svn_wc_entry (&tgt_entry, target, pool));
-
+          
           if (tgt_entry->kind == svn_node_file)
             /* isolate the name of the file itself */
             filename = svn_path_last_component (target,
@@ -1345,7 +1344,8 @@ svn_wc_crawl_local_mods (svn_string_t *parent_dir,
              and stored in the stack.  File batons for postfix textdeltas
              will be continually added to AFFECTED_TARGETS, and locked
              directories will be appended to LOCKED_DIRS. */
-          err = report_local_mods (target, NULL, filename,
+          err = report_local_mods (filename ? ptarget : target,
+                                   NULL, filename,
                                    edit_fns, edit_baton,
                                    &stack, affected_targets, locked_dirs,
                                    pool);
