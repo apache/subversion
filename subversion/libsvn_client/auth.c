@@ -69,7 +69,6 @@ svn_client__default_auth_dir (const char **auth_dir_p,
   if (kind == svn_node_dir)
     {
       SVN_ERR (svn_client__dir_if_wc (auth_dir_p, path, pool));
-      SVN_ERR (svn_client__dir_if_wc (auth_dir_p, path, pool));
 
       /* Handle unversioned dir in a versioned parent. */
       if (! *auth_dir_p)
