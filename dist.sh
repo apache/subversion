@@ -20,14 +20,14 @@
 # such a line.
 ##########################################################################
 
-# Rolling block.
+### Rolling block.
 DIST_SANDBOX=.dist_sandbox
 
-# The "X.Y" part of ${DISTNAME}-X.Y.tar.gz
+### The "X.Y" part of ${DISTNAME}-X.Y.tar.gz
 VERSION=`grep SVN_VERSION configure.in | cut -f 2 -d ' ' | sed -e 's/"//g' | sed -e 's/,//g'`
 
-# The tarball's basename, also the name of the subdirectory into which
-# it should unpack.
+### The tarball's basename, also the name of the subdirectory into which
+### it should unpack.
 DISTNAME=subversion-${VERSION}
 
 ### Clean up the old docs so we're guaranteed the latest ones.
@@ -69,10 +69,14 @@ cp -r neon ${DIST_SANDBOX}/${DISTNAME}
 # something to do with @NEONOBJS@ in neon/src/Makefile.in?
 rm -f ${DIST_SANDBOX}/${DISTNAME}/neon/src/*.o
 
-# Run autogen.sh in the dist, so we ship with a configure script.
+### Run autogen.sh in the dist, so we ship with a configure script.
+# First make sure autogen.sh is executable, because, as Mike Pilato
+# points out, until we get permission versioning working, it won't be
+# executable on export from svn.
+chmod a+x ${DIST_SANDBOX}/${DISTNAME}/autogen.sh
 (cd ${DIST_SANDBOX}/${DISTNAME}; ./autogen.sh)
 
-# Copy all the pre-built docs, so we ship with ready documentation.
+### Copy all the pre-built docs, so we ship with ready documentation.
 for name in doc/programmer/design/svn-design.info   \
             doc/programmer/design/svn-design.info-* \
             doc/programmer/design/svn-design.html   \
@@ -84,7 +88,7 @@ do
    cp ${name} ${DIST_SANDBOX}/${DISTNAME}/${name}
 done
 
-# Tell people where to find old information.
+### Tell people where to find old information.
 cat > ${DIST_SANDBOX}/${DISTNAME}/ChangeLog.CVS <<EOF
 The old CVS ChangeLog is kept at 
 
@@ -95,11 +99,11 @@ you probably want to use the "svn log" command -- and if it
 does not do what you need, please send in a patch!
 EOF
 
-# Make the tarball.
+### Make the tarball.
 echo "Rolling ${DISTNAME}.tar.gz ..."
 (cd ${DIST_SANDBOX}; tar zcvpf ${DISTNAME}.tar.gz ${DISTNAME})
 
-# Copy it upstairs and clean up.
+### Copy it upstairs and clean up.
 cp ${DIST_SANDBOX}/${DISTNAME}.tar.gz .
 rm -rf ${DIST_SANDBOX}
 
