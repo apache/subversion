@@ -27,13 +27,15 @@
    of invariants to maintain, making it (hopefully) a useful interface
    boundary.
 
-   The fundamental differences between this interface and the public
-   interface are:
-   - exposes DAG structure,
-   - cloning is explicit --- no clone tracking, and
-   - based on Berkeley DB transactions (as wrapped up in trails), not
-     SVN transactions.  */
-
+   In other words, both svn_fs_node_t's and dag_node_t's represent
+   nodes in the filesystem, but:
+   - the dag_node_t interface exposes the internal DAG structure 
+     of the filesystem, while svn_fs_node_t's are looking at a tree,
+   - dag_node_t's must be explicitly cloned, whereas svn_fs_node_t's 
+     get implicitly cloned as necessry
+   - callers of the dag_node_t interface use Berkeley DB transactions
+     to ensure consistency between operations, while callers of the
+     svn_fs_node_t interface use Subversion transactions.  */
 
 
 /* Initializing a filesystem.  */
@@ -45,35 +47,9 @@ svn_error_t *svn_fs__dag_init_fs (svn_fs_t *fs);
 
 
 
-/* References to nodes in DAG filesystems.  */
+/* Generic DAG node stuff.  */
 
 typedef struct dag_node_t dag_node_t;
-
-
-/* Open the root of revision REV of filesystem FS, as part of TRAIL.
-   Set *NODE_P to the new node.  Allocate the node in TRAIL->pool.  */
-svn_error_t *svn_fs__dag_revision_root (dag_node_t **node_p,
-					svn_fs_t *fs,
-					svn_revnum_t rev,
-					trail_t *trail);
-
-
-/* Open the mutable node in the transaction named TXN whose ID is ID
-   in FS, as part of TRAIL; set *NODE_P to the new node.  Allocate the
-   node in TRAIL->pool.  */
-svn_error_t *svn_fs__dag_txn_node (dag_node_t **node_p,
-				   svn_fs_t *fs,
-				   const char *txn,
-				   const svn_fs_id_t *id,
-				   trail_t *trail);
-
-
-/* Close NODE.  */
-void svn_fs__dag_close (dag_node_t *node); 
-
-
-
-/* Generic node operations.  */
 
 
 /* Return a new dag_node_t object referring to the same node as NODE,
@@ -82,9 +58,26 @@ dag_node_t *svn_fs__dag_dup (dag_node_t *node,
 			     trail_t *trail);
 
 
-/* Return the ID of NODE.  The value returned is shared with NODE, and
-   will be deallocated when NODE is.  */
+/* Return the filesystem containing NODE.  */
+const svn_fs_t *svn_fs__dag_get_fs (dag_node_t *node);
+
+
+/* Return the node revision ID of NODE.  The value returned is shared
+   with NODE, and will be deallocated when NODE is.  */
 const svn_fs_id_t *svn_fs__dag_get_id (dag_node_t *node);
+
+
+/* Return true iff NODE is mutable.  */
+int svn_fs__dag_is_mutable (dag_node_t *node);
+
+
+/* Close NODE.  */
+void svn_fs__dag_close (dag_node_t *node); 
+
+
+/* Return true iff NODE is a file/directory.  */
+int svn_fs__dag_is_file (dag_node_t *node);
+int svn_fs__dag_is_directory (dag_node_t *node);
 
 
 /* Set *PROPLIST_P to a PROPLIST skel representing the entire property
@@ -115,6 +108,28 @@ svn_error_t *svn_fs__dag_clone_child (dag_node_t **child_p,
 				      dag_node_t *parent,
 				      const char *name,
 				      trail_t *trail);
+
+
+
+/* Revision and transaction roots.  */
+
+
+/* Open the root of revision REV of filesystem FS, as part of TRAIL.
+   Set *NODE_P to the new node.  Allocate the node in TRAIL->pool.  */
+svn_error_t *svn_fs__dag_revision_root (dag_node_t **node_p,
+					svn_fs_t *fs,
+					svn_revnum_t rev,
+					trail_t *trail);
+
+
+/* Open the mutable node in the transaction named TXN whose ID is ID
+   in FS, as part of TRAIL; set *NODE_P to the new node.  Allocate the
+   node in TRAIL->pool.  */
+svn_error_t *svn_fs__dag_txn_node (dag_node_t **node_p,
+				   svn_fs_t *fs,
+				   const char *txn,
+				   const svn_fs_id_t *id,
+				   trail_t *trail);
 
 
 /* Make sure the root directory of SVN_TXN in FS has been cloned as
@@ -180,8 +195,9 @@ svn_error_t *svn_fs__dag_delete (dag_node_t *parent,
    TRAIL.  Set *CHILD_P to a reference to the new node, allocated in
    TRAIL->pool.  The new directory has no contents, and no properties.
    PARENT must be mutable.  NAME must be a single path component; it
-   cannot be a slash-separated directory path.  Do any temporary
-   allocation in TRAIL->pool.  */
+   cannot be a slash-separated directory path.  PARENT must not
+   currently have an entry named NAME.  Do any temporary allocation in
+   TRAIL->pool.  */
 svn_error_t *svn_fs__dag_make_dir (dag_node_t **child_p,
 				   dag_node_t *parent,
 				   const char *name,
