@@ -1,3 +1,32 @@
+Version Pre-Alpha (released ? June 2002, revision ?)
+
+ User-visible changes:
+ * new Module System
+ * repositories have a new database schema;  existing ones must be upgraded!
+      - new svnadmin 'dump'/'load' commands to migrate repositories
+      - read http://svn.collab.net/repos/svn/trunk/notes/repos_upgrade_HOWTO
+
+ Developer-visible changes:
+ * complete rewrite of filesystem schema!
+    - skels are abstracted away, opening the door to SQL backends
+    - node-ids now have copy IDs
+ * massive conversion of stringbufs to char* in our public APIs
+ * vsn-rsc-urls are now based on created-rev/path instead of fs_id_t's.
+ * reinstate 'deleted' flag on entries, to ensure accurate update reports
+ * dir_delta learns how to send copy history
+    - svnlook no longer sends 10MB emails when we make a branch
+    - dumpfiles get much smaller
+ * memory consumption reduced via new apr-pool code that reuses/frees mem
+ * client can now parse ISO-8601 timestamps (start of issue 614)
+ * added script for stress-testing concurrent repository access
+ * auto-locate apache's apr libraries at build-time
+ * beginnings of ra_pipe library
+ * progress on delta combiner code
+ * many memleaks fixed, thanks to valgrind!
+ * upgrade to newest neon, allow deflated communication with apache
+ * many bugfixes to merge, switch, checkout, rm; tackling of issues 704,
+   705, 698, 711, 713, and others
+
 Version 0.12.0 (released 3 May 2002, revision 1868)
 
  User-visible changes:
