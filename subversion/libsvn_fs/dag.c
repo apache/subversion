@@ -788,9 +788,10 @@ svn_fs__dag_set_entry (dag_node_t *node,
 
 /*** Proplists. ***/
 
-svn_error_t *svn_fs__dag_get_proplist (skel_t **proplist_p,
-                                       dag_node_t *node,
-                                       trail_t *trail)
+svn_error_t *
+svn_fs__dag_get_proplist (skel_t **proplist_p,
+                          dag_node_t *node,
+                          trail_t *trail)
 {
   skel_t *node_rev;
   skel_t *header;
@@ -809,9 +810,10 @@ svn_error_t *svn_fs__dag_get_proplist (skel_t **proplist_p,
 }
 
 
-svn_error_t *svn_fs__dag_set_proplist (dag_node_t *node,
-                                       skel_t *proplist,
-                                       trail_t *trail)
+svn_error_t *
+svn_fs__dag_set_proplist (dag_node_t *node,
+                          skel_t *proplist,
+                          trail_t *trail)
 {
   skel_t *node_rev;
   skel_t *header;
@@ -1061,9 +1063,10 @@ svn_fs__dag_clone_root (dag_node_t **root_p,
 }
 
 
-svn_error_t *svn_fs__dag_delete (dag_node_t *parent,
-                                 const char *name,
-                                 trail_t *trail)
+svn_error_t *
+svn_fs__dag_delete (dag_node_t *parent,
+                    const char *name,
+                    trail_t *trail)
 {
   skel_t *node_rev, *new_dirent_list, *prev_entry, *entry;
   int deleted = FALSE;
@@ -1198,30 +1201,33 @@ svn_error_t *svn_fs__dag_delete (dag_node_t *parent,
 }
 
 
-svn_error_t *svn_fs__dag_make_file (dag_node_t **child_p,
-                                    dag_node_t *parent,
-                                    const char *name,
-                                    trail_t *trail)
+svn_error_t *
+svn_fs__dag_make_file (dag_node_t **child_p,
+                       dag_node_t *parent,
+                       const char *name,
+                       trail_t *trail)
 {
   /* Call our little helper function */
   return make_entry (child_p, parent, name, FALSE, trail);
 }
 
 
-svn_error_t *svn_fs__dag_make_dir (dag_node_t **child_p,
-                                   dag_node_t *parent,
-                                   const char *name,
-                                   trail_t *trail)
+svn_error_t *
+svn_fs__dag_make_dir (dag_node_t **child_p,
+                      dag_node_t *parent,
+                      const char *name,
+                      trail_t *trail)
 {
   /* Call our little helper function */
   return make_entry (child_p, parent, name, TRUE, trail);
 }
 
 
-svn_error_t *svn_fs__dag_link (dag_node_t *parent,
-                               dag_node_t *child,
-                               const char *name,
-                               trail_t *trail)
+svn_error_t *
+svn_fs__dag_link (dag_node_t *parent,
+                  dag_node_t *child,
+                  const char *name,
+                  trail_t *trail)
 {
   /* Make sure that parent is a directory */
   if (! svn_fs__dag_is_directory (parent))
@@ -1326,9 +1332,10 @@ read_file_contents (void *baton, char *buffer, apr_size_t *len)
 }
 
 
-svn_error_t *svn_fs__dag_get_contents (svn_stream_t **contents,
-                                       dag_node_t *file,
-                                       trail_t *trail)
+svn_error_t *
+svn_fs__dag_get_contents (svn_stream_t **contents,
+                          dag_node_t *file,
+                          trail_t *trail)
 { 
   skel_t *node_rev;
   file_content_baton_t *baton;
@@ -1367,9 +1374,10 @@ svn_error_t *svn_fs__dag_get_contents (svn_stream_t **contents,
 
 
 
-svn_error_t *svn_fs__dag_file_length (apr_off_t *length,
-                                      dag_node_t *file,
-                                      trail_t *trail)
+svn_error_t *
+svn_fs__dag_file_length (apr_off_t *length,
+                         dag_node_t *file,
+                         trail_t *trail)
 { 
   skel_t *node_rev;
 
@@ -1432,8 +1440,9 @@ svn_fs__dag_set_contents (dag_node_t *file,
 
 
 
-dag_node_t *svn_fs__dag_dup (dag_node_t *node,
-                             trail_t *trail)
+dag_node_t *
+svn_fs__dag_dup (dag_node_t *node,
+                 trail_t *trail)
 {
   /* Allocate our new node. */
   dag_node_t *new_node = apr_pcalloc (trail->pool, sizeof (*new_node));
@@ -1454,10 +1463,11 @@ dag_node_t *svn_fs__dag_dup (dag_node_t *node,
    Set *CHILD_P to the new node, allocated in TRAIL->pool.  NAME must be a
    single path component; it cannot be a slash-separated directory
    path.  */
-svn_error_t *svn_fs__dag_open (dag_node_t **child_p,
-                               dag_node_t *parent,
-                               const char *name,
-                               trail_t *trail)
+svn_error_t *
+svn_fs__dag_open (dag_node_t **child_p,
+                  dag_node_t *parent,
+                  const char *name,
+                  trail_t *trail)
 {
   skel_t *entry_skel;
   skel_t *pnode_rev;
@@ -1509,11 +1519,12 @@ svn_error_t *svn_fs__dag_open (dag_node_t **child_p,
    This function ensures that the rename does not create a cyclic
    directory structure, by checking that TO_DIR is not a child of
    FROM_DIR.  */
-svn_error_t *svn_fs__dag_rename (dag_node_t *from_dir, 
-                                 const char *from_name,
-                                 dag_node_t *to_dir, 
-                                 const char *to_name,
-                                 trail_t *trail)
+svn_error_t *
+svn_fs__dag_rename (dag_node_t *from_dir, 
+                    const char *from_name,
+                    dag_node_t *to_dir, 
+                    const char *to_name,
+                    trail_t *trail)
 {
   abort();
   /* NOTREACHED */
@@ -1527,12 +1538,13 @@ svn_error_t *svn_fs__dag_rename (dag_node_t *from_dir,
    to the new node, allocated in TRAIL->pool.  PARENT must be mutable.
    NAME must be a single path component; it cannot be a slash-
    separated directory path.  */
-svn_error_t *svn_fs__dag_make_copy (dag_node_t **child_p,
-                                    dag_node_t *parent,
-                                    const char *name,
-                                    svn_revnum_t source_revision,
-                                    const char *source_path,
-                                    trail_t *trail)
+svn_error_t *
+svn_fs__dag_make_copy (dag_node_t **child_p,
+                       dag_node_t *parent,
+                       const char *name,
+                       svn_revnum_t source_revision,
+                       const char *source_path,
+                       trail_t *trail)
 {
   skel_t *new_node_skel;
   svn_fs_id_t *new_node_id;
@@ -1679,10 +1691,11 @@ svn_error_t *svn_fs__dag_make_copy (dag_node_t **child_p,
 
 /* Set *REV_P and *PATH_P to the revision and path of NODE, which must
    be a copy node, as part of TRAIL.  Allocate *PATH_P in TRAIL->pool.  */
-svn_error_t *svn_fs__dag_get_copy (svn_revnum_t *rev_p,
-                                   char **path_p,
-                                   dag_node_t *node,
-                                   trail_t *trail)
+svn_error_t *
+svn_fs__dag_get_copy (svn_revnum_t *rev_p,
+                      char **path_p,
+                      dag_node_t *node,
+                      trail_t *trail)
 {
   abort();
   /* NOTREACHED */
