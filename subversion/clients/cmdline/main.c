@@ -365,6 +365,7 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
     "     '_' or ' ' no modifications, 'A' Added, 'D' Deleted, 'M' Modified\n"
     "     '?' file or directory is not under revision control\n"
     "     '!' file or directory is missing and was removed via non-svn command\n"
+    "     '~' versioned as directory, but is file, or vice versa\n"
     "   Second column: Modifications of a file's or directory's properties\n"
     "     '_' or ' ' no modifications, 'M' Modified\n"
     "   Third column: A svn process has a lock in '.svn' for the file or directory\n"
