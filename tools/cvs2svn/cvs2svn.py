@@ -886,6 +886,8 @@ class Dumper:
                         '\n')
 
   def flush_and_remove_dumpfile(self):
+    if self.dumpfile is None:
+      return
     self.dumpfile.close()
     print 'loading revision %d into %s' % (self.revision, self.target)
     os.system('%s load -q %s < %s'
