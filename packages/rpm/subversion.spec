@@ -199,7 +199,7 @@ if [ "$1"x = "0"x ]; then
 
       /sbin/install-info --delete /usr/share/info/svn-handbook-french.info.gz \
          /usr/share/info/dir \
-         --entry='* Subversion-french: (svn-handbook-french).          Guide du gestionnaire de version Subverion'
+         --entry='* Subversion-french: (svn-handbook-french).          Guide du gestionnaire de version Subversion'
    fi
 fi
 
