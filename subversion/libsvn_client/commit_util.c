@@ -892,6 +892,8 @@ svn_client__do_commit (svn_stringbuf_t *base_url,
   apr_array_header_t *db_stack;
   apr_hash_t *file_mods = apr_hash_make (pool);
   apr_hash_index_t *hi;
+  svn_stringbuf_t *last_url = NULL; /* Initialise to remove gcc 'may be used
+                                       unitialised' warning */
   int i, stack_ptr = 0;
 
 #ifdef SVN_CLIENT_COMMIT_DEBUG
@@ -918,7 +920,7 @@ svn_client__do_commit (svn_stringbuf_t *base_url,
      driving the editor. */
   for (i = 0; i < commit_items->nelts; i++)
     {
-      svn_stringbuf_t *last_url, *item_url, *item_dir, *item_name;
+      svn_stringbuf_t *item_url, *item_dir, *item_name;
       svn_stringbuf_t *common = NULL;
       svn_client_commit_item_t *item
         = ((svn_client_commit_item_t **) commit_items->elts)[i];
