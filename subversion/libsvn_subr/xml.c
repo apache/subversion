@@ -26,7 +26,7 @@
 
 void
 svn_xml_escape_string (svn_stringbuf_t **outstr,
-                       svn_stringbuf_t *string,
+                       const svn_stringbuf_t *string,
                        apr_pool_t *pool)
 {
   const char *start = string->data, *end = start + string->len;

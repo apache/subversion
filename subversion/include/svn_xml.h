@@ -46,7 +46,7 @@ enum svn_xml_open_tag_style {
    NULL (in which case a new string is created), or it must point to
    an existing string to append to.  */
 void svn_xml_escape_string (svn_stringbuf_t **outstr,
-			    svn_stringbuf_t *string,
+			    const svn_stringbuf_t *string,
 			    apr_pool_t *pool);
 
 /*---------------------------------------------------------------*/
