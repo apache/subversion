@@ -357,8 +357,8 @@ static dav_error * dav_svn_prep_resource(dav_resource_combined *comb)
 
 static dav_error * dav_svn_get_resource(request_rec *r,
                                         const char *root_uri,
-                                        const char *target,
-                                        int is_label,
+                                        const char *label,
+                                        int use_checked_in,
                                         dav_resource **resource)
 {
   const char *fs_path;
