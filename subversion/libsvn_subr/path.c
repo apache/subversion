@@ -23,6 +23,8 @@
 #include "svn_string.h"
 #include "svn_path.h"
 #include "svn_private_config.h"         /* for SVN_PATH_LOCAL_SEPARATOR */
+#include "svn_utf.h"
+#include "apr_file_info.h"
 
 
 /* todo: Though we have a notion of different types of separators for
@@ -908,6 +910,78 @@ svn_path_uri_decode (const char *path, apr_pool_t *pool)
   retstr->data[retstr->len] = 0;
 
   return retstr->data;
+}
+
+
+svn_error_t *
+svn_path_get_absolute(const char **pabsolute,
+                      const char *relative,
+                      apr_pool_t *pool)
+{
+  /* We call svn_path_canonicalize_nts() on the input data, rather
+     than the output, so that `buffer' can be returned directly
+     without const vs non-const issues. */
+
+  char * buffer;
+  apr_status_t apr_err;
+  const char *path_native;
+
+  SVN_ERR (svn_utf_cstring_from_utf8
+           (svn_path_canonicalize_nts (relative, pool), &path_native, pool));
+
+  apr_err = apr_filepath_merge(&buffer, NULL,
+                               path_native,
+                               (APR_FILEPATH_NOTRELATIVE
+                                | APR_FILEPATH_TRUENAME),
+                               pool);
+
+  if (apr_err)
+    return svn_error_createf(SVN_ERR_BAD_FILENAME, apr_err, NULL, pool,
+                             "Couldn't determine absolute path of %s.", 
+                             relative);
+
+  return svn_utf_cstring_to_utf8 (buffer, pabsolute, pool);
+}
+
+
+svn_error_t *
+svn_path_split_if_file(const char *path,
+                       const char **pdirectory,
+                       const char **pfile,
+                       apr_pool_t *pool)
+{
+  apr_finfo_t finfo;
+  svn_error_t *err;
+
+  err = svn_io_stat(&finfo, path, APR_FINFO_TYPE, pool);
+
+  if (err != SVN_NO_ERROR)
+    {
+      return svn_error_createf(SVN_ERR_BAD_FILENAME, 0, err, pool,
+                               "Couldn't determine if %s was "
+                               "a file or directory.",
+                               path);
+    }
+  else
+    {
+      if (finfo.filetype == APR_DIR)
+        {
+          *pdirectory = path;
+          *pfile = "";
+        }
+      else if (finfo.filetype == APR_REG)
+        {
+          svn_path_split_nts(path, pdirectory, pfile, pool);
+        }
+      else 
+        {
+          return svn_error_createf(SVN_ERR_BAD_FILENAME, 0, NULL, pool,
+                                  "%s is neither a file nor a directory name.",
+                                  path);
+        }
+    }
+
+  return SVN_NO_ERROR;
 }
 
 
