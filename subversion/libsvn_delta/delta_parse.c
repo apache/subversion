@@ -61,6 +61,8 @@
   
 */
 
+
+
 #include <stdio.h>
 #include <string.h>
 #include "svn_types.h"
@@ -72,10 +74,7 @@
 #include "delta.h"
 
 
-
 
-
-
 /* Return the value associated with NAME in expat attribute array ATTS,
    else return NULL.  (There could never be a NULL attribute value in
    the XML, although the empty string is possible.)
@@ -934,8 +933,6 @@ svn_delta_parse (svn_delta_read_fn_t *source_fn,
 
   return SVN_NO_ERROR;
 }
-
-
 
 
 
