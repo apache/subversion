@@ -232,8 +232,9 @@ svn_error_t *svn_io_is_file_executable(svn_boolean_t *executable,
  *
  * When the file is out of lines, @c APR_EOF will be returned.
  */
-apr_status_t
-svn_io_read_length_line (apr_file_t *file, char *buf, apr_size_t *limit);
+svn_error_t *
+svn_io_read_length_line (apr_file_t *file, char *buf, apr_size_t *limit,
+                         apr_pool_t *pool);
 
 
 /** Set @a *apr_time to the time of last modification of the contents of the

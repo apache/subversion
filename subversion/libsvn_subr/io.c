@@ -1794,6 +1794,37 @@ svn_io_file_write_full (apr_file_t *file, const void *buf,
 
 
 svn_error_t *
+svn_io_read_length_line (apr_file_t *file, char *buf, apr_size_t *limit,
+                         apr_pool_t *pool)
+{
+  apr_size_t i;
+  char c;
+
+  for (i = 0; i < *limit; i++)
+  {
+    SVN_ERR (svn_io_file_getc (&c, file, pool)); 
+    /* Note: this error could be APR_EOF, which
+       is totally fine.  The caller should be aware of
+       this. */
+
+    if (c == '\n')
+      {
+        buf[i] = '\0';
+        *limit = i;
+        return SVN_NO_ERROR;
+      }
+    else
+      {
+        buf[i] = c;
+      }
+  }
+
+  /* todo: make a custom error "SVN_LENGTH_TOO_LONG" or something? */
+  return svn_error_create (SVN_WARNING, NULL, NULL);
+}
+
+
+svn_error_t *
 svn_io_stat (apr_finfo_t *finfo, const char *fname,
              apr_int32_t wanted, apr_pool_t *pool)
 {

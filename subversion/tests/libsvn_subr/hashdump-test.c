@@ -30,17 +30,6 @@
 #include "svn_test.h"
 
 
-/* Convert an apr_status_t into an svn_error_t.  */
-static svn_error_t *
-check (apr_status_t status)
-{
-  if (status != APR_SUCCESS)
-    return svn_error_create (status, 0, "");
-  else
-    return SVN_NO_ERROR;
-}
-
-
 /* Our own global variables */
 apr_hash_t *proplist, *new_proplist;
 
@@ -60,7 +49,7 @@ test1 (const char **msg,
        svn_boolean_t msg_only,
        apr_pool_t *pool)
 {
-  apr_status_t result;
+  svn_error_t *result;
   svn_stringbuf_t *key;
   apr_file_t *f;
 
@@ -100,7 +89,7 @@ test1 (const char **msg,
 
   apr_file_close (f);
 
-  return check (result);
+  return result;
 }
 
 
@@ -111,7 +100,7 @@ test2 (const char **msg,
        svn_boolean_t msg_only,
        apr_pool_t *pool)
 {
-  apr_status_t result;
+  svn_error_t *result;
   apr_file_t *f;
 
   *msg = "read a file into a hash";
@@ -127,7 +116,7 @@ test2 (const char **msg,
 
   apr_file_close (f);
 
-  return check (result);
+  return result;
 }
 
 
