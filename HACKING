@@ -7,7 +7,7 @@ this first.
                      HACKER'S GUIDE TO SUBVERSION
                      ============================
 
-              Last updated:  $Date: 2001-08-27 23:49:57 $
+              Last updated:  $Date: 2001-08-31 00:45:57 $
 
 
 TABLE OF CONTENTS
@@ -283,6 +283,26 @@ There is some support for building Subversion on Win32 platforms. The
 project files included in the source tree are from Microsoft Visual
 C++ 6.x; earlier versions of the compiler are not supported at this
 time.
+
+To build the client components, you'll need a copy of neon 0.15.3. The
+sources are available at
+
+    http://www.webdav.org/neon/neon-0.15.3.tar.gz
+
+Unpack the distribution into the root directory of the Subversion
+source tree and rename the directory neon-0.15.3 to neon.  The MSVC
+project files in this archive are not up-to-date, so building the neon
+libraries is not straight-forward.  Pre-build neon libraries are
+available at
+
+   http://www.xbc.nu/sbn/libneon-0.15.3-svn-win32.zip
+
+Unpack the two files in this archive, libneon.lib and libneonD.lib,
+into the <SVN>/neon directory.
+
+IMPORTANT NOTE: These neon libraries should *only* be used when
+     building Subversion. They were build to depend on the verson of
+     expat-lite in the Subversion sources.
 
 If you want to build the server components, you'll also need a copy of
 Berkeley DB, version 3.3.11 or newer. The sources are available at
