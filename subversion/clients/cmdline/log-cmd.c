@@ -126,7 +126,7 @@ log_message_receiver (void *baton,
     }
 
   lines = num_lines (msg);
-  printf ("rev %lu:  %s | %s | %d line%s\n",
+  printf ("rev %" SVN_REVNUM_T_FMT ":  %s | %s | %d line%s\n",
           rev, author, dbuf, lines, (lines > 1) ? "s" : "");
   if (changed_paths)
     {

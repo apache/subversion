@@ -104,8 +104,8 @@ svn_fs__err_corrupt_fs_revision (svn_fs_t *fs, svn_revnum_t rev)
 {
   return svn_error_createf
     (SVN_ERR_FS_CORRUPT, 0, 0, fs->pool,
-     "corrupt filesystem revision `%lu' in filesystem `%s'",
-     (unsigned long) rev, fs->path);
+     "corrupt filesystem revision `%" SVN_REVNUM_T_FMT "' in filesystem `%s'",
+     rev, fs->path);
 }
 
 
@@ -149,8 +149,10 @@ svn_fs__err_dangling_rev (svn_fs_t *fs, svn_revnum_t rev)
 {
   return svn_error_createf
     (SVN_ERR_FS_NO_SUCH_REVISION, 0, 0, fs->pool,
-     "reference to non-existent revision `%lu' in filesystem `%s'",
-     (unsigned long) rev, fs->path);
+     "reference to non-existent revision `%"
+     SVN_REVNUM_T_FMT
+     "' in filesystem `%s'",
+     rev, fs->path);
 }
 
 

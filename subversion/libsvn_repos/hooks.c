@@ -156,7 +156,7 @@ run_post_commit_hook (svn_repos_t *repos,
 
       args[0] = hook;
       args[1] = svn_repos_path (repos, pool);
-      args[2] = apr_psprintf (pool, "%lu", rev);
+      args[2] = apr_psprintf (pool, "%" SVN_REVNUM_T_FMT, rev);
       args[3] = NULL;
 
       if ((err = run_cmd_with_output (hook, args, NULL, NULL, pool)))

@@ -1847,7 +1847,7 @@ make_node_immutable (dag_node_t *node,
   {
     char *revstr;
 
-    revstr = apr_psprintf (trail->pool, "%lu", (unsigned long) rev);
+    revstr = apr_psprintf (trail->pool, "%" SVN_REVNUM_T_FMT, rev);
     (SVN_FS__NR_HDR_REV (SVN_FS__NR_HEADER (node_rev)))->data = revstr;
     (SVN_FS__NR_HDR_REV (SVN_FS__NR_HEADER (node_rev)))->len = strlen (revstr);
     SVN_ERR (set_node_revision (node, node_rev, trail));

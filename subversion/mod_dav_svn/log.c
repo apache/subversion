@@ -68,7 +68,7 @@ static svn_error_t * log_receiver(void *baton,
 
   send_xml(lrb,
            "<S:log-item>" DEBUG_CR
-           "<D:version-name>%lu</D:version-name>" DEBUG_CR
+           "<D:version-name>%" SVN_REVNUM_T_FMT "</D:version-name>" DEBUG_CR
            "<D:creator-displayname>%s</D:creator-displayname>" DEBUG_CR
            /* ### this should be DAV:creation-date, but we need to format
               ### that date a bit differently */
