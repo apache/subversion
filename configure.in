@@ -144,7 +144,7 @@ dnl they will not have things such as ${bindir} available
 SVN_BINDIR="`eval echo ${SVN_BINDIR}`"
 AC_SUBST(SVN_BINDIR)
 
-dnl provide ${bindir} in svn_private.h for use in compiled code
+dnl provide ${bindir} in svn_private_config.h for use in compiled code
 AC_DEFINE_UNQUOTED(SVN_BINDIR, "${SVN_BINDIR}",
         [Defined to be the path to the installed binaries])
 
