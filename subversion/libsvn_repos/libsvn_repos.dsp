@@ -91,6 +91,10 @@ SOURCE=.\delta.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\dump.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\hooks.c
 # End Source File
 # Begin Source File
