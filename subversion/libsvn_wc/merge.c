@@ -307,7 +307,7 @@ svn_wc_merge (const char *left,
       else
         {
           svn_boolean_t same;
-          SVN_ERR (svn_wc__files_contents_same_p (&same, result_target,
+          SVN_ERR (svn_io_files_contents_same_p (&same, result_target,
                                                   merge_target, pool));
 
           *merge_outcome = same ? svn_wc_merge_unchanged : svn_wc_merge_merged;

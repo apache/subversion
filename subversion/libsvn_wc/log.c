@@ -262,7 +262,7 @@ install_committed_file (svn_boolean_t *overwrote_working,
                                            TRUE, /* expand keywords */
                                            pool));
 
-  SVN_ERR (svn_wc__files_contents_same_p (&same, tmp_wfile, filepath, pool));
+  SVN_ERR (svn_io_files_contents_same_p (&same, tmp_wfile, filepath, pool));
   
   if (! same)
     {
@@ -865,7 +865,7 @@ log_do_committed (struct log_runner *loggy,
         
         /* We need to decide which prop-timestamp to use, just like we
            did with text-time above. */
-        if ((err = svn_wc__files_contents_same_p (&same, wf, tmpf, pool)))
+        if ((err = svn_io_files_contents_same_p (&same, wf, tmpf, pool)))
           return svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG, err,
                                     "error comparing `%s' and `%s'",
                                     wf, tmpf);

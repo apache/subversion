@@ -195,94 +195,6 @@ svn_wc__timestamps_equal_p (svn_boolean_t *equal_p,
 }
 
 
-/* Do a byte-for-byte comparison of FILE1 and FILE2. */
-static svn_error_t *
-contents_identical_p (svn_boolean_t *identical_p,
-                      const char *file1,
-                      const char *file2,
-                      apr_pool_t *pool)
-{
-  apr_status_t status;
-  apr_size_t bytes_read1, bytes_read2;
-  char buf1[BUFSIZ], buf2[BUFSIZ];
-  apr_file_t *file1_h = NULL;
-  apr_file_t *file2_h = NULL;
-
-  SVN_ERR_W (svn_io_file_open (&file1_h, file1, APR_READ, APR_OS_DEFAULT,
-                               pool),
-             "contents_identical_p: open failed on file 1");
-
-  SVN_ERR_W (svn_io_file_open (&file2_h, file2, APR_READ, APR_OS_DEFAULT,
-                               pool),
-             "contents_identical_p: open failed on file 2");
-
-  *identical_p = TRUE;  /* assume TRUE, until disproved below */
-  for (status = 0; ! APR_STATUS_IS_EOF(status); )
-    {
-      status = apr_file_read_full (file1_h, buf1, sizeof(buf1), &bytes_read1);
-      if (status && !APR_STATUS_IS_EOF(status))
-        return svn_error_createf
-          (status, NULL,
-           "contents_identical_p: full read failed on '%s'.", 
-           file1);
-
-      status = apr_file_read_full (file2_h, buf2, sizeof(buf2), &bytes_read2);
-      if (status && !APR_STATUS_IS_EOF(status))
-        return svn_error_createf
-          (status, NULL,
-           "contents_identical_p: full read failed on '%s'.", 
-           file2);
-      
-      if ((bytes_read1 != bytes_read2)
-          || (memcmp (buf1, buf2, bytes_read1)))
-        {
-          *identical_p = FALSE;
-          break;
-        }
-    }
-
-  status = apr_file_close (file1_h);
-  if (status)
-    return svn_error_createf 
-      (status, NULL,
-       "contents_identical_p: failed to close '%s'.", file1);
-
-  status = apr_file_close (file2_h);
-  if (status)
-    return svn_error_createf 
-      (status, NULL,
-       "contents_identical_p: failed to close '%s'.", file2);
-
-  return SVN_NO_ERROR;
-}
-
-
-
-svn_error_t *
-svn_wc__files_contents_same_p (svn_boolean_t *same,
-                               const char *file1,
-                               const char *file2,
-                               apr_pool_t *pool)
-{
-  svn_boolean_t q;
-
-  SVN_ERR (svn_io_filesizes_different_p (&q, file1, file2, pool));
-
-  if (q)
-    {
-      *same = 0;
-      return SVN_NO_ERROR;
-    }
-  
-  SVN_ERR (contents_identical_p (&q, file1, file2, pool));
-
-  if (q)
-    *same = 1;
-  else
-    *same = 0;
-
-  return SVN_NO_ERROR;
-}
 
 
 svn_error_t *
@@ -299,7 +211,7 @@ svn_wc__versioned_file_modcheck (svn_boolean_t *modified_p,
   SVN_ERR (svn_wc_translated_file (&tmp_vfile, versioned_file, adm_access,
                                    TRUE, pool));
   
-  err = svn_wc__files_contents_same_p (&same, tmp_vfile, base_file, pool);
+  err = svn_io_files_contents_same_p (&same, tmp_vfile, base_file, pool);
   *modified_p = (! same);
   
   if (tmp_vfile != versioned_file)

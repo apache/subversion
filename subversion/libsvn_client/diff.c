@@ -549,6 +549,7 @@ merge_file_changed (svn_wc_adm_access_t *adm_access,
                                           ".merge-right.r%" SVN_REVNUM_T_FMT,
                                           yours_rev);
   svn_boolean_t has_local_mods;
+  svn_boolean_t merge_required = TRUE;
   enum svn_wc_merge_outcome_t merge_outcome;
 
   /* Easy out:  no access baton means there ain't no merge target */
@@ -565,10 +566,36 @@ merge_file_changed (svn_wc_adm_access_t *adm_access,
 
   SVN_ERR (svn_wc_text_modified_p (&has_local_mods, mine, FALSE,
                                    adm_access, subpool));
-  SVN_ERR (svn_wc_merge (older, yours, mine, adm_access,
-                         left_label, right_label, target_label,
-                         merge_b->dry_run, &merge_outcome, 
-                         merge_b->diff3_cmd, subpool));
+
+  /* Special case:  if a binary file isn't locally modified, and is
+     exactly identical to the 'left' side of the merge, then don't
+     allow svn_wc_merge to produce a conflict.  Instead, just
+     overwrite the working file with the 'right' side of the merge. */
+  if ((! has_local_mods)
+      && ((mimetype1 && svn_mime_type_is_binary (mimetype1))
+          || (mimetype2 && svn_mime_type_is_binary (mimetype1))))
+    {
+      svn_boolean_t same_contents;
+      /* ### someday, we should just be able to compare
+         identity-strings here.  */
+      SVN_ERR (svn_io_files_contents_same_p (&same_contents,
+                                             older, mine, subpool));
+      if (same_contents)
+        {
+          if (! merge_b->dry_run)
+            SVN_ERR (svn_io_file_rename (yours, mine, subpool));          
+          merge_outcome = svn_wc_merge_merged;
+          merge_required = FALSE;
+        }
+    }  
+
+  if (merge_required)
+    {
+      SVN_ERR (svn_wc_merge (older, yours, mine, adm_access,
+                             left_label, right_label, target_label,
+                             merge_b->dry_run, &merge_outcome, 
+                             merge_b->diff3_cmd, subpool));
+    }
 
   /* Philip asks "Why?"  Why does the notification depend on whether the
      file had modifications before the merge?  If the merge didn't change

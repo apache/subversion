@@ -53,19 +53,6 @@ svn_wc__timestamps_equal_p (svn_boolean_t *equal_p,
                             apr_pool_t *pool);
 
 
-/* Set *SAME to non-zero if file1 and file2 have the same contents,
-   else set it to zero. 
-
-   Note: This probably belongs in the svn_io library, however, it
-   shares some private helper functions with other wc-specific
-   routines.  Moving it to svn_io would not be impossible, merely
-   non-trivial.  So far, it hasn't been worth it. */
-svn_error_t *svn_wc__files_contents_same_p (svn_boolean_t *same,
-                                            const char *file1,
-                                            const char *file2,
-                                            apr_pool_t *pool);
-
-
 /* Set *MODIFIED_P to true if VERSIONED_FILE is modified with respect
  * to BASE_FILE, or false if it is not.  The comparison compensates
  * for VERSIONED_FILE's eol and keyword properties, but leaves
