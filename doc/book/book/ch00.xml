@@ -265,7 +265,8 @@
         </varlistentry>
 
         <varlistentry>
-          <term>Chapter 5, <emphasis>Repository Administration</emphasis></term>
+          <term>Chapter 5, <emphasis>Repository
+            Administration</emphasis></term>
           <listitem>
             <para>Describes the basics of the Subversion repository,
               how to create, configure, and maintain a repository, as
@@ -309,7 +310,8 @@
         </varlistentry>
 
         <varlistentry>
-          <term>Chapter 9, <emphasis>Subversion Complete Reference</emphasis></term>
+          <term>Chapter 9, <emphasis>Subversion Complete
+            Reference</emphasis></term>
           <listitem>
             <para>Explains in great detail every subcommand of
               <command>svn</command>, <command>svnadmin</command>, and
@@ -319,7 +321,8 @@
         </varlistentry>
 
         <varlistentry>
-          <term>Appendix A, <emphasis>Subversion for CVS Users</emphasis></term>
+          <term>Appendix A, <emphasis>Subversion for CVS
+            Users</emphasis></term>
           <listitem>
             <para>Covers the similarities and differences between
               Subversion and CVS, with numerous suggestions on how to
@@ -341,27 +344,21 @@
         </varlistentry>
 
         <varlistentry>
-          <term>Appendix C, <emphasis>WebDAV and Autoversioning</emphasis></term>
+          <term>Appendix C, <emphasis>WebDAV and
+            Autoversioning</emphasis></term>
           <listitem>
             <para>Describes the details of WebDAV and DeltaV, and how
-            you can configure your Subversion repository to be mounted
-            read/write as a DAV share.</para>
+              you can configure your Subversion repository to be
+              mounted read/write as a DAV share.</para>
           </listitem>
         </varlistentry>
 
         <varlistentry>
-          <term>Appendix D, <emphasis>Other Subversion Clients</emphasis></term>
+          <term>Appendix D, <emphasis>Third Party Tools</emphasis></term>
           <listitem>
-            <para>Explains where you can find Subversion clients other
-            than the command line client.</para>
-          </listitem>
-        </varlistentry>
-
-        <varlistentry>
-          <term>Appendix E, <emphasis>Third Party Tools</emphasis></term>
-          <listitem>
-            <para>Discusses tools that support or use
-            Subversion.</para>
+            <para>Discusses tools that support or use Subversion,
+              including alternative client programs, repository
+              browser tools, and so on.</para>
           </listitem>
         </varlistentry>
 

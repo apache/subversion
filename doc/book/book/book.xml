@@ -17,7 +17,7 @@
 <!ENTITY appa     SYSTEM "appa.xml">
 <!ENTITY appb     SYSTEM "appb.xml">
 <!ENTITY appc     SYSTEM "appc.xml">
-<!ENTITY appe     SYSTEM "appe.xml">
+<!ENTITY appd     SYSTEM "appd.xml">
 <!ENTITY gloss    SYSTEM "glossary.xml">
 <!ENTITY copy     SYSTEM "copyright.xml">
 <!ENTITY colo     SYSTEM "colo.xml">
@@ -80,7 +80,6 @@
   &appb;
   &appc;
   &appd;
-  &appe;
 <!--  &copy; This gives validation errors -->
   &gloss;
   &colo;

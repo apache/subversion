@@ -1,4 +1,4 @@
-<appendix id="svn-ap-e">
+<appendix id="svn-ap-d">
   <title>Third Party Tools</title>
 
   <simplesect>
@@ -20,7 +20,7 @@
   <!-- ******************************************************************* -->
   <!-- *** SECTION 1:  REPOSITORY CONVERTERS                           *** -->
   <!-- ******************************************************************* -->
-  <sect1 id="svn-ap-e-sect-1">
+  <sect1 id="svn-ap-d-sect-1">
     <title>Clients and Plugins</title>
 
     <variablelist>
@@ -120,7 +120,7 @@
   <!-- ******************************************************************* -->
   <!-- *** SECTION 2:  LANGUAGE BINDINGS                               *** -->
   <!-- ******************************************************************* -->
-  <sect1 id="svn-ap-e-sect-2">
+  <sect1 id="svn-ap-d-sect-2">
     <title>Language Bindings</title>
 
     <variablelist>
@@ -152,7 +152,7 @@
   <!-- ******************************************************************* -->
   <!-- *** SECTION 3:  REPOSITORY CONVERTERS                           *** -->
   <!-- ******************************************************************* -->
-  <sect1 id="svn-ap-e-sect-3">
+  <sect1 id="svn-ap-d-sect-3">
     <title>Repository Converters</title>
 
     <variablelist>
@@ -175,7 +175,7 @@
   <!-- ******************************************************************* -->
   <!-- *** SECTION 4:  HIGHER LEVEL TOOLS                              *** -->
   <!-- ******************************************************************* -->
-  <sect1 id="svn-ap-e-sect-4">
+  <sect1 id="svn-ap-d-sect-4">
     <title>Higher Level Tools</title>
 
     <variablelist>
@@ -221,7 +221,7 @@
   <!-- ******************************************************************* -->
   <!-- *** SECTION 5:  REPOSITORY BROWSING TOOLS                       *** -->
   <!-- ******************************************************************* -->
-  <sect1 id="svn-ap-e-sect-5">
+  <sect1 id="svn-ap-d-sect-5">
     <title>Repository Browsing Tools</title>
 
     <variablelist>
