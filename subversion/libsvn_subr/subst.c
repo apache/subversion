@@ -785,13 +785,14 @@ create_special_file (const char *src,
   const char *dst_tmp, *src_tmp = NULL;
   svn_error_t *err;
   svn_node_kind_t kind;
+  svn_boolean_t is_special;
 
   /* Check to see if we are being asked to create a special file from
      a special file.  If so, do a temporary detranslation and work
      from there. */
-  SVN_ERR (svn_io_check_special_path (src, &kind, pool));
+  SVN_ERR (svn_io_check_special_path (src, &kind, &is_special, pool));
 
-  if (kind == svn_node_special)
+  if (is_special)
     {
       apr_file_t *fp;
       
@@ -880,12 +881,13 @@ svn_subst_copy_and_translate2 (const char *src,
   svn_error_t *err;
   apr_pool_t *subpool;
   svn_node_kind_t kind;
+  svn_boolean_t path_special;
 
-  SVN_ERR (svn_io_check_special_path (src, &kind, pool));
+  SVN_ERR (svn_io_check_special_path (src, &kind, &path_special, pool));
 
   /* If this is a 'special' file, we may need to create it or
      detranslate it. */
-  if (special || (kind == svn_node_special))
+  if (special || path_special)
     {
       if (expand)
         SVN_ERR (create_special_file (src, dst, pool));
