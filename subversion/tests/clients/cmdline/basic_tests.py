@@ -1183,6 +1183,47 @@ def basic_node_kind_change(sbox):
 
 
 #----------------------------------------------------------------------
+def nonexistent_repository(sbox):
+  "'svn log file:///nonexistent_path' should fail"
+
+  # The bug was that
+  #
+  #   $ svn log file:///nonexistent_path
+  #
+  # would go into an infinite loop, instead of failing immediately as
+  # it should.  The loop was because svn_ra_local__split_URL() used
+  # svn_path_split() to lop off components and look for a repository
+  # in each shorter path in turn, depending on svn_path_is_empty_nts()
+  # to test if it had reached the end.  Somewhere along the line we
+  # changed the path functions (perhaps revision 3113?), and
+  # svn_path_split() stopped cooperating with svn_path_is_empty() in
+  # this particular context -- svn_path_split() would reach "/",
+  # svn_path_empty() would correctly claim that "/" is not empty, the
+  # next svn_path_split() would return "/" again, and so on, forever.
+  #
+  # This bug was fixed in revision 3150, by checking for "/"
+  # explicitly in svn_ra_local__split_URL().  By the time you read
+  # this, that may or may not be the settled fix, however, so check
+  # the logs to see if anything happened later.
+  #
+  # Anyway: this test _always_ operates on a file:/// path.  Note that
+  # if someone runs this test on a system with "/nonexistent_path" in
+  # the root directory, the test could fail, and that's just too bad :-). 
+
+  output, errput = svntest.main.run_svn (1, 'log', 'file:///nonexistent_path')
+
+  if not errput:
+    return 1
+
+  for line in errput:
+    if re.match(".*Unable to open an ra_local session to URL.*", line):
+      return 0
+    
+  # Else never matched the expected error output, so the test failed.
+  return 1
+
+
+#----------------------------------------------------------------------
 
 ########################################################################
 # Run the tests
@@ -1203,6 +1244,7 @@ test_list = [ None,
               basic_delete,
               basic_checkout_deleted,
               basic_node_kind_change,
+              nonexistent_repository,
               ### todo: more tests needed:
               ### test "svn rm http://some_url"
               ### not sure this file is the right place, though.
