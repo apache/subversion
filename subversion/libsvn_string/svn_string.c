@@ -48,7 +48,7 @@
  */
 
 #include <svn_string.h>  /* defines svn_string_t */
-
+#include <string.h>      /* memcpy and memcmp */
 
 
 /* create a new bytestring containing a C string (null-terminated) */
@@ -56,7 +56,7 @@
 svn_string_t *
 svn_string_create (char *cstring)
 {
-  svn_string_t new_string;
+  svn_string_t new_string;  /* MALLOC THIS, and do what follows  */
 
   svn_string_appendbytes (&new_string, cstring, sizeof(cstring));
 
@@ -70,7 +70,7 @@ svn_string_create (char *cstring)
 svn_string_t *
 svn_string_ncreate (char *cstring, size_t size)
 {
-  svn_string_t new_string;
+  svn_string_t new_string;  /* MALLOC THIS, and do what follows */
 
   svn_string_appendbytes (&new_string, cstring, size);
 
@@ -129,12 +129,12 @@ svn_string_appendbytes (svn_string_t *str, char *bytes, size_t count)
   if (total_len >= str->blocksize)
     {
       str->blocksize = total_len * 2;
-      str->data = xrealloc (str->blocksize);
+      str->data = xrealloc (str->data, str->blocksize); /* TODO */
     }
 
   /* copy one byte at a time */
 
-  position = str->len;
+  position = str->len;   /* memcpy TODO here! */
 
   for (i = 0; i < count; i++)
     {
@@ -168,7 +168,7 @@ svn_string_compare (svn_string_t *str1, svn_string_t *str2)
   if (str1->len != str2->len)
     return FALSE;
 
-  for (i = 0; i < str1->len ; i++)
+  for (i = 0; i < str1->len ; i++)   /* TODO: use memcmp */
     {
       if (str1->data[i] != str2->data[i])
         return FALSE;

@@ -70,6 +70,11 @@ typedef struct svn_string_t
 svn_string_t * svn_string_create (char *cstring);
 
 
+/* free a string structure */
+
+void svn_string_free (svn_string_t *str);
+
+
 /* create a new bytestring containing a specific array of bytes
    (NOT null-terminated!) */
 
@@ -81,9 +86,16 @@ svn_string_t * svn_string_ncreate (char *cstring, size_t size);
 void svn_string_setnull (svn_string_t *str);
 
 
-/* ask if a bytestring is null */
+/* overwrite bytestring with a character */
+
+void svn_string_setchar (svn_string_t *str, char c);
+
+
+/* ask if a bytestring is null or empty */
 
 svn_boolean_t svn_string_isnull (svn_string_t *str);
+
+svn_boolean_t svn_string_isempty (svn_string_t *str);
 
 
 /* append one bytestring type onto another */
@@ -98,7 +110,7 @@ void svn_string_appendbytes (svn_string_t *str, char *bytes, size_t count);
 
 /* duplicate a bytestring */
 
-svn_string_t * svn_string_dup (svn_string_t original_string);
+svn_string_t * svn_string_dup (svn_string_t *original_string);
 
 
 /* compare if two bytestrings' data fields are identical,
