@@ -144,7 +144,7 @@ svn_error_t *svn_io_append_file (svn_stringbuf_t *src,
    inconsistent line ending style, then: if REPAIR is FALSE, return
    SVN_ERR_IO_INCONSISTENT_EOL and remove DST, else if REPAIR is TRUE,
    convert any line ending in SRC to EOL_STR in DST.  Recognized line
-   endings are: "\n", "\r", "\r\n", and "\n\r".
+   endings are: "\n", "\r", and "\r\n".
 
    Expand and contract keywords using REVISION, DATE, AUTHOR, and URL
    as the new values.  If EXPAND is TRUE, expand contracted keywords

@@ -863,7 +863,7 @@ svn_io_copy_and_translate (const char *src,
                  a new one. */
               char c0 = newline_buf[0];
 
-              if (c0 == c)
+              if ((c0 == c) || ((c0 == '\n') && (c == '\r')))
                 {
                   /* The first '\n' (or '\r') is the newline... */
                   if ((err = translate_newline (eol_str, eol_str_len, 
@@ -877,9 +877,9 @@ svn_io_copy_and_translate (const char *src,
                   newline_buf[0] = c;
                   newline_off = 1;
                 }
-              else
+              else 
                 {
-                  /* '\n\r' or '\n\r' is our newline */
+                  /* '\r\n' is our newline */
                   newline_buf[newline_off++] = c;
                   if ((err = translate_newline (eol_str, eol_str_len, 
                                                 src_format, &src_format_len,

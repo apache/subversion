@@ -40,7 +40,7 @@
 
 /*** Helpers ***/
 
-/* All the tests share the same test data. */
+/* (Almost) all the tests share the same test data. */
 const char *lines[] =
   {
     "Line 1: fairly boring subst test data... blah blah",
@@ -108,7 +108,7 @@ static const char *
 random_eol_marker (void)
 {
   /* Select a random eol marker from this set. */
-  const char *eol_markers[] = { "\n", "\n\r", "\r\n", "\r" };
+  const char *eol_markers[] = { "\n", "\r\n", "\r" };
   static int seeded = 0;
 
   if (! seeded)
@@ -612,9 +612,6 @@ noop (const char **msg,
   SVN_ERR (substitute_and_verify
            ("noop", "\r\n", NULL, 0, NULL, NULL, NULL, NULL, 1, pool));
 
-  SVN_ERR (substitute_and_verify
-           ("noop", "\n\r", NULL, 0, NULL, NULL, NULL, NULL, 1, pool));
-
   return SVN_NO_ERROR;
 }
 
@@ -824,75 +821,6 @@ mixed_to_cr (const char **msg,
 
   SVN_ERR (substitute_and_verify
            ("mixed_to_cr", NULL, "\r", 1, NULL, NULL, NULL, NULL, 1, pool));
-
-  return SVN_NO_ERROR;
-}
-
-
-static svn_error_t *
-lf_to_lfcr (const char **msg,
-            svn_boolean_t msg_only,
-            apr_pool_t *pool)
-{
-  *msg = "convert LF to LFCR";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
-  SVN_ERR (substitute_and_verify
-           ("lf_to_lfcr", "\n", "\n\r", 0, NULL, NULL, NULL, NULL, 1, pool));
-
-  return SVN_NO_ERROR;
-}
-
-
-static svn_error_t *
-crlf_to_lfcr (const char **msg,
-              svn_boolean_t msg_only,
-              apr_pool_t *pool)
-{
-  *msg = "convert CRLF to LFCR";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
-  SVN_ERR (substitute_and_verify
-           ("crlf_to_lfcr", "\r\n", "\n\r", 0,
-            NULL, NULL, NULL, NULL, 1, pool));
-
-  return SVN_NO_ERROR;
-}
-
-
-static svn_error_t *
-cr_to_lfcr (const char **msg,
-            svn_boolean_t msg_only,
-            apr_pool_t *pool)
-{
-  *msg = "convert CR to LFCR";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
-  SVN_ERR (substitute_and_verify
-           ("cr_to_lfcr", "\r", "\n\r", 0, NULL, NULL, NULL, NULL, 1, pool));
-
-  return SVN_NO_ERROR;
-}
-
-
-static svn_error_t *
-mixed_to_lfcr (const char **msg,
-               svn_boolean_t msg_only,
-               apr_pool_t *pool)
-{
-  *msg = "convert mixed line endings to LFCR";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
-  SVN_ERR (substitute_and_verify
-           ("cr_to_lfcr", NULL, "\n\r", 1, NULL, NULL, NULL, NULL, 1, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1159,17 +1087,17 @@ cr_to_crlf_expand_rev (const char **msg,
 
 
 static svn_error_t *
-cr_to_lfcr_expand_rev_url (const char **msg,
+cr_to_crlf_expand_rev_url (const char **msg,
                            svn_boolean_t msg_only,
                            apr_pool_t *pool)
 {
-  *msg = "cr_to_lfcr, plus expand rev and url keywords";
+  *msg = "cr_to_crlf, plus expand rev and url keywords";
 
   if (msg_only)
     return SVN_NO_ERROR;
 
   SVN_ERR (substitute_and_verify
-           ("cr_to_lfcr_rev_url", "\r", "\n\r", 0,
+           ("cr_to_crlf_rev_url", "\r", "\r\n", 0,
             "1729", NULL, NULL, "http://subversion.tigris.org", 1, pool));
 
   return SVN_NO_ERROR;
@@ -1438,17 +1366,17 @@ cr_to_crlf_unexpand_rev (const char **msg,
 
 
 static svn_error_t *
-cr_to_lfcr_unexpand_rev_url (const char **msg,
+cr_to_crlf_unexpand_rev_url (const char **msg,
                              svn_boolean_t msg_only,
                              apr_pool_t *pool)
 {
-  *msg = "cr_to_lfcr, plus unexpand rev and url keywords";
+  *msg = "cr_to_crlf, plus unexpand rev and url keywords";
 
   if (msg_only)
     return SVN_NO_ERROR;
 
   SVN_ERR (substitute_and_verify
-           ("cr_to_lfcr_rev_url", "\r", "\n\r", 0,
+           ("cr_to_crlf_rev_url", "\r", "\r\n", 0,
             "1729", NULL, NULL, "http://subversion.tigris.org", 0, pool));
 
   return SVN_NO_ERROR;
@@ -1502,11 +1430,6 @@ svn_error_t * (*test_funcs[]) (const char **msg,
   lf_to_cr,
   cr_to_cr,
   mixed_to_cr,
-  /* Conversions resulting in lfcr, no keywords involved. */
-  lf_to_lfcr,
-  crlf_to_lfcr,
-  cr_to_lfcr,
-  mixed_to_lfcr,
   /* Random eol stuff. */
   mixed_no_repair,
   /* Keyword expansion alone, no eol conversion involved. */
@@ -1522,7 +1445,7 @@ svn_error_t * (*test_funcs[]) (const char **msg,
   mixed_to_lf_expand_author_date,
   crlf_to_cr_expand_author_rev,
   cr_to_crlf_expand_rev,
-  cr_to_lfcr_expand_rev_url,
+  cr_to_crlf_expand_rev_url,
   mixed_to_crlf_expand_author_date_rev_url,
   /* Keyword unexpansion alone, no eol conversion involved. */
   unexpand_author,
@@ -1537,7 +1460,7 @@ svn_error_t * (*test_funcs[]) (const char **msg,
   mixed_to_lf_unexpand_author_date,
   crlf_to_cr_unexpand_author_rev,
   cr_to_crlf_unexpand_rev,
-  cr_to_lfcr_unexpand_rev_url,
+  cr_to_crlf_unexpand_rev_url,
   mixed_to_crlf_unexpand_author_date_rev_url,
   0
 };
