@@ -1489,12 +1489,12 @@ close_edit (void *edit_baton,
 {
   struct edit_baton *eb = edit_baton;
   apr_array_header_t *ignores = eb->ignores;
-  
+
   /* If we get here and the root was not opened as part of the edit,
      we need to transmit statuses for everything.  Otherwise, we
      should be done. */
   if (eb->root_opened)
-    return SVN_NO_ERROR;
+    goto cleanup;
 
   /* If we have a target, that's the thing we're sending, otherwise
      we're sending the anchor. */
@@ -1546,6 +1546,17 @@ close_edit (void *edit_baton,
                                eb->descend, eb->get_all, eb->no_ignore, 
                                FALSE, eb->status_func, eb->status_baton, 
                                eb->cancel_func, eb->cancel_baton, pool));
+    }
+
+ cleanup:
+  /* Let's make sure that we didn't harvest any traversal info for the
+     anchor if we had a target. */
+  if (eb->target)
+    {
+      apr_hash_set (eb->traversal_info->externals_old,
+                    eb->anchor, APR_HASH_KEY_STRING, NULL);
+      apr_hash_set (eb->traversal_info->externals_new,
+                    eb->anchor, APR_HASH_KEY_STRING, NULL);
     }
   
   return SVN_NO_ERROR;
