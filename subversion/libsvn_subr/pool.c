@@ -31,8 +31,10 @@
 /* Key for a boolean signifying that this is a top-level Subversion pool. */
 static const char SVN_POOL_ROOTED_HERE[] = "svn-pool-rooted-here";
 
+#if APR_POOL_DEBUG
 /* file_line for the non-debug case. */
 static const char SVN_FILE_LINE_UNDEFINED[] = "svn:<undefined>";
+#endif /* APR_POOL_DEBUG */
 
 
 
