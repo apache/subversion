@@ -1772,7 +1772,7 @@ fetch_by_id (const char **msg,
       if (strcmp (contents_string->data, "This is the file 'omega'.\n") != 0)
         return svn_error_create
           (SVN_ERR_FS_GENERAL, 0, NULL, pool,
-           "file fetched by had wrong contents");
+           "file fetched by id had wrong contents");
     }
 
 
