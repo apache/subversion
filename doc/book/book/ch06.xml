@@ -201,22 +201,41 @@
         <programlisting>
 REGEDIT4
 
-[HKEY_LOCAL_MACHINE\Software\Tigris.org\Subversion\Servers\DEFAULT]
+[HKEY_LOCAL_MACHINE\Software\Tigris.org\Subversion\Servers\groups]
+
+[HKEY_LOCAL_MACHINE\Software\Tigris.org\Subversion\Servers\global]
 "#http-proxy-host"=""
 "#http-proxy-port"=""
 "#http-proxy-username"=""
 "#http-proxy-password"=""
-"#http-proxy-timeout"="0"
+"#http-proxy-exceptions"=""
+"#http-timeout"="0"
 "#http-compression"="yes"
+"#neon-debug-mask"=""
+"#ssl-authority-files"=""
+"#ssl-trust-default-ca"=""
+"#ssl-client-cert-file"=""
+"#ssl-client-cert-password"=""
 
 [HKEY_CURRENT_USER\Software\Tigris.org\Subversion\Config\auth]
 "#store-password"="no"
 
 [HKEY_CURRENT_USER\Software\Tigris.org\Subversion\Config\helpers]
 "#editor-cmd"="notepad"
+"#diff-cmd"=""
+"#diff3-cmd"=""
+"#diff3-has-program-arg"=""
 
 [HKEY_CURRENT_USER\Software\Tigris.org\Subversion\Config\miscellany]
 "#global-ignores"="*.o *.lo *.la #*# .*.rej *.rej .*~ *~ .#*"
+"#log-encoding"=""
+"#use-commit-times"=""
+"#template-root"=""
+"#enable-auto-props"=""
+
+[HKEY_CURRENT_USER\Software\Tigris.org\Subversion\Config\tunnels]
+
+[HKEY_CURRENT_USER\Software\Tigris.org\Subversion\Config\auto-props]
 </programlisting>
       </example>
 
