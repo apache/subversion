@@ -68,7 +68,7 @@ Candidate changes:
     Fix issue #1854 (user data loss on case-insensitive file systems).
     Justification: Never ever overwrite local modifications.
     Votes:
-      +1: bliss
+      +1: bliss, brane
 
   * r9720
     Fix problem with javahl bindings which triggers a java.lang.NoSuchMethodError
