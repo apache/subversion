@@ -341,8 +341,8 @@ import (svn_stringbuf_t *path,
  * Set *COMMITTED_REVISION, *COMMITTED_DATE, and *COMMITTED_AUTHOR to
  * the number, server-side date, and author of the new revision,
  * respectively.  Any of these may be NULL, in which case not touched.
- * If not NULL, but some or all of the information is unavailable, set
- * to SVN_INVALID_REVNUM, NULL, and/or NULL respectively.
+ * If not NULL, but the date/author information is unavailable, then
+ * *COMMITTED_DATE and *COMMITTED_AUTHOR will be set to NULL.
  *
  * BEFORE_EDITOR, BEFORE_EDIT_BATON and AFTER_EDITOR, AFTER_EDIT_BATON
  * are optional pre- and post-commit editors, wrapped around the
@@ -368,6 +368,10 @@ import (svn_stringbuf_t *path,
  * XML_DST is null, REVISION is ignored.
  * 
  * Use POOL for all allocation.
+ *
+ * If no error is returned, and *COMMITTED_REV is set to
+ * SVN_INVALID_REVNUM, then the commit was a no-op; nothing needed to
+ * be committed.
  *
  * When importing:
  *
@@ -441,6 +445,17 @@ send_to_repos (svn_revnum_t *committed_rev,
   else
     is_import = FALSE;
 
+  /* Set to default values.  This is important to keep the docstring's
+     promise.  If the commit turns out to be a no-op, then the
+     commit-crawler will never call RA->commit_editor->close_edit(),
+     thereby guaranteeing these variables are never touched. */
+  if (committed_rev)
+    *committed_rev = SVN_INVALID_REVNUM;
+  if (committed_date)
+    *committed_date = NULL;
+  if (committed_author)
+    *committed_author = NULL;
+
   /* Sanity check: if this is an import, then NEW_ENTRY can be null or
      non-empty, but it can't be empty. */ 
   if (is_import && (new_entry && (strcmp (new_entry->data, "") == 0)))
@@ -454,11 +469,6 @@ send_to_repos (svn_revnum_t *committed_rev,
     {
       /* ### kff todo: imports are not known to work with xml yet.
          They should someday. */
-
-      /* Set the author and date fields to NULL, since we're not
-         really committing to a repository.  */
-      *committed_date = NULL;
-      *committed_author = NULL;
 
       /* Open the xml file for writing. */
       apr_err = apr_file_open (&dst, xml_dst->data,
@@ -626,18 +636,19 @@ send_to_repos (svn_revnum_t *committed_rev,
       /* Even though the revision was passed in, return it back in
          committed_rev, so that the command-line client has something
          reasonable to print.  :-)  */
-      *committed_rev = revision;
+      if (committed_rev)
+        *committed_rev = revision;
     }
   else  
     /* We were committing to RA, so close the session. */
     SVN_ERR (ra_lib->close (session));
-
+  
   /* Strictly speaking, no copying is necessary, as the session's pool
      is the same as pool right now.  But I'd rather not rely on that
      always being true.  */
-  if (committed_date)
+  if (committed_date && *committed_date)
     *committed_date = apr_pstrdup (pool, *committed_date);
-  if (committed_author)
+  if (committed_author && *committed_author)
     *committed_author = apr_pstrdup (pool, *committed_author);
 
   return SVN_NO_ERROR;

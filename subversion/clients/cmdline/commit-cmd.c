@@ -120,8 +120,6 @@ svn_cl__commit (apr_getopt_t *os,
 
   if (SVN_IS_VALID_REVNUM (new_rev))
     printf ("Committed revision %ld.\n", new_rev);
-  else
-    printf ("Commit succeeded.\n");
 
   return SVN_NO_ERROR;
 }

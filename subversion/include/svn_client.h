@@ -322,8 +322,8 @@ svn_error_t *svn_client_import (svn_revnum_t *committed_rev,
    Set *COMMITTED_REVISION, *COMMITTED_DATE, and *COMMITTED_AUTHOR to
    the number, server-side date, and author of the new revision,
    respectively.  Any of these may be NULL, in which case not touched.
-   If not NULL, but some or all of the information is unavailable, set
-   to SVN_INVALID_REVNUM, NULL, and/or NULL respectively.
+   If not NULL, but the date/author information is unavailable, then
+   *COMMITTED_DATE and *COMMITTED_AUTHOR will be set to NULL.
 
    Store LOG_MSG as the log of the commit.
 
@@ -339,7 +339,12 @@ svn_error_t *svn_client_import (svn_revnum_t *committed_rev,
    will be updated appropriately.  If REVISION is invalid, the working
    copy remains unchanged.
 
-   This operation will use the provided memory POOL. */
+   This operation will use the provided memory POOL.
+
+   If no error is returned, and *COMMITTED_REV is set to
+   SVN_INVALID_REVNUM, then the commit was a no-op;  nothing needed to
+   be committed.
+ */
 svn_error_t *
 svn_client_commit (svn_revnum_t *committed_rev,
                    const char **committed_date,

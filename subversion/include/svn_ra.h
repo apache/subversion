@@ -288,12 +288,14 @@ typedef struct svn_ra_plugin_t
      Any of these functions may be null.
 
      After the editor's close_edit function returns successfully,
-     *NEW_REV, *COMMITTED_DATE, and *COMMITTED_AUTHOR hold the new
-     revision, the repository-side date, and repository-side author
-     (i.e., the one recorded as the author of the commit in the
-     repository), respectively, with the latter two allocated in the
-     session.  Any of NEW_REV, COMMITTED_DATE, or COMMITTED_AUTHOR may
-     be null, in which case not touched.
+     *NEW_REV holds either the new revision, or SVN_INVALID_REVNUM if
+     the commit was a no-op (i.e. nothing was committed);
+     *COMMITTED_DATE holds the repository-side date, or NULL if the
+     date is unavailable; *COMMITTED_AUTHOR holds the repository-side
+     author (i.e., the one recorded as the author of the commit in the
+     repository), or NULL if the author is unavailable.  Allocate the
+     latter two in the session.  Any of NEW_REV, COMMITTED_DATE, or
+     COMMITTED_AUTHOR may be null, in which case not touched.
   */
   svn_error_t *(*get_commit_editor) (void *session_baton,
                                      const svn_delta_edit_fns_t **editor,
