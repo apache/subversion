@@ -3456,8 +3456,6 @@ static svn_error_t *
 txn_body_txdelta_finalize_edits (void *baton, trail_t *trail)
 {
   txdelta_baton_t *tb = (txdelta_baton_t *) baton;
-
-  SVN_ERR (svn_stream_close (tb->target_stream));
   return svn_fs__dag_finalize_edits (tb->node, 
                                      tb->result_checksum,
                                      svn_fs_txn_root_name (tb->root,
@@ -3474,10 +3472,7 @@ static svn_error_t *
 write_to_string (void *baton, const char *data, apr_size_t *len)
 {
   txdelta_baton_t *tb = (txdelta_baton_t *) baton;
-
-
   svn_stringbuf_appendbytes (tb->target_string, data, *len);
-
   return SVN_NO_ERROR;
 }
 
@@ -3525,13 +3520,19 @@ window_consumer (svn_txdelta_window_t *window, void *baton)
       svn_stringbuf_set (tb->target_string, "");
     }
 
-  /* Is the window NULL?  If so, we're done, and we need to tell the
-     dag subsystem that we're finished with our edits. */
+  /* Is the window NULL?  If so, we're done. */
   if (! window)
-    SVN_ERR (svn_fs__retry_txn (svn_fs_root_fs (tb->root),
-                                txn_body_txdelta_finalize_edits, tb,
-                                tb->pool));
+    {
+      /* Close the internal-use stream.  ### This used to be inside of
+         txn_body_fulltext_finalize_edits(), but that invoked a nested
+         Berkeley DB transaction -- scandalous! */
+      SVN_ERR (svn_stream_close (tb->target_stream));
 
+      /* Tell the dag subsystem that we're finished with our edits. */
+      SVN_ERR (svn_fs__retry_txn (svn_fs_root_fs (tb->root),
+                                  txn_body_txdelta_finalize_edits, tb,
+                                  tb->pool));
+    }
 
   return SVN_NO_ERROR;
 }
@@ -3680,8 +3681,6 @@ static svn_error_t *
 txn_body_fulltext_finalize_edits (void *baton, trail_t *trail)
 {
   struct text_baton_t *tb = baton;
-
-  SVN_ERR (svn_stream_close (tb->file_stream));
   return svn_fs__dag_finalize_edits (tb->node, 
                                      tb->result_checksum,
                                      svn_fs_txn_root_name (tb->root, 
@@ -3706,6 +3705,11 @@ static svn_error_t *
 text_stream_closer (void *baton)
 {
   struct text_baton_t *tb = baton;
+
+  /* Close the internal-use stream.  ### This used to be inside of
+     txn_body_fulltext_finalize_edits(), but that invoked a nested
+     Berkeley DB transaction -- scandalous! */
+  SVN_ERR (svn_stream_close (tb->file_stream));
 
   /* Need to tell fs that we're done sending text */
   SVN_ERR (svn_fs__retry_txn (svn_fs_root_fs (tb->root),
