@@ -14,13 +14,7 @@ import string
 import getopt
 import statcache
 
-from svn import fs, util, _delta, _repos
-
-### these should go somewhere else. should have SWIG export them.
-svn_node_none = 0
-svn_node_file = 1
-svn_node_dir = 2
-svn_node_unknown = 3
+from svn import fs, util, delta, repos
 
 
 trunk_rev = re.compile('^[0-9]+\\.[0-9]+$')
@@ -215,7 +209,7 @@ def make_path(fs, root, repos_path, f_pool):
     for i in range(1, len(parts) + 1):
       # reassemble the pieces, adding a leading slash
       parent_dir = '/' + string.join(parts[:i], '/')
-      if fs.check_path(root, parent_dir, f_pool) == svn_node_none:
+      if fs.check_path(root, parent_dir, f_pool) == util.svn_node_none:
         print '    making dir:', parent_dir
         fs.make_dir(root, parent_dir, f_pool)
 
@@ -426,7 +420,7 @@ class Commit:
 
       make_path(fs, root, repos_path, f_pool)
 
-      if fs.check_path(root, repos_path, f_pool) == svn_node_none:
+      if fs.check_path(root, repos_path, f_pool) == util.svn_node_none:
         created_file = 1
         fs.make_file(root, repos_path, f_pool)
       else:
@@ -449,7 +443,7 @@ class Commit:
       ### we should watch out for file sizes here; we don't want to yank
       ### in HUGE files...
       if created_file:
-        _delta.svn_txdelta_send_string(pipe.read(), handler, baton, f_pool)
+        delta.svn_txdelta_send_string(pipe.read(), handler, baton, f_pool)
       else:
         # open an SVN stream onto the pipe
         stream2 = util.svn_stream_from_stdio(pipe, f_pool)
@@ -465,8 +459,8 @@ class Commit:
         else:
           stream1 = fs.file_contents(root, repos_path, f_pool)
 
-        txstream = _delta.svn_txdelta(stream1, stream2, f_pool)
-        _delta.svn_txdelta_send_txstream(txstream, handler, baton, f_pool)
+        txstream = delta.svn_txdelta(stream1, stream2, f_pool)
+        delta.svn_txdelta_send_txstream(txstream, handler, baton, f_pool)
 
         # shut down the previous-rev pipe, if we opened it
         infile2 = None
@@ -687,10 +681,10 @@ def pass4(ctx):
   # create the target repository
   if not ctx.dry_run:
     if ctx.create_repos:
-      t_repos = _repos.svn_repos_create(ctx.target, ctx.pool)
+      t_repos = repos.svn_repos_create(ctx.target, ctx.pool)
     else:
-      t_repos = _repos.svn_repos_open(ctx.target, ctx.pool)
-    t_fs = _repos.svn_repos_fs(t_repos)
+      t_repos = repos.svn_repos_open(ctx.target, ctx.pool)
+    t_fs = repos.svn_repos_fs(t_repos)
   else:
     t_fs = t_repos = None
 
