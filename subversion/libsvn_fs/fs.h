@@ -229,7 +229,7 @@ typedef struct
   /* Path of copy source. */
   const char *src_path;
 
-  /* Revision of copy source. */
+  /* Transaction id of copy source. */
   const char *src_txn_id;
 
   /* Node-revision of copy destination. */

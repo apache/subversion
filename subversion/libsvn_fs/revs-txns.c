@@ -319,6 +319,19 @@ svn_fs__txn_make_committed (svn_fs_t *fs,
 
 
 svn_error_t *
+svn_fs__txn_get_revision (svn_revnum_t *revision,
+                          svn_fs_t *fs,
+                          const char *txn_name,
+                          trail_t *trail)
+{
+  svn_fs__transaction_t *txn;
+  SVN_ERR (svn_fs__bdb_get_txn (&txn, fs, txn_name, trail));
+  *revision = txn->revision;
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
 svn_fs__get_txn_ids (const svn_fs_id_t **root_id_p,
                      const svn_fs_id_t **base_root_id_p,
                      svn_fs_t *fs,

@@ -283,18 +283,11 @@ svn_fs__dag_get_revision (svn_revnum_t *rev,
                           dag_node_t *node,
                           trail_t *trail)
 {
-  svn_fs__transaction_t *txn;
-
-  /* Get the txn ID from the node revision ID. */
-  const char *txn_id = svn_fs__id_txn_id (svn_fs__dag_get_id (node));
-  
-  /* Use the txn ID to look up the transaction.  */
-  SVN_ERR (svn_fs__bdb_get_txn (&txn, svn_fs__dag_get_fs (node), txn_id, trail));
-
-  /* If the transaction has been committed, we can return the revision
-     number, else we return the invalid revision number. */
-  *rev = txn->revision;
-  return SVN_NO_ERROR;
+  /* Use the txn ID from the NODE's id to look up the transaction and
+     get its revision number.  */
+  return svn_fs__txn_get_revision 
+    (rev, svn_fs__dag_get_fs (node), 
+     svn_fs__id_txn_id (svn_fs__dag_get_id (node)), trail);
 }
 
 
@@ -1578,14 +1571,11 @@ svn_fs__dag_copied_from (svn_revnum_t *rev_p,
                                          id_copy_id, trail));
           if (svn_fs__id_eq (copy->dst_noderev_id, id))
             {
-              /* We need to translate the COPY's transaction ID into a
-                 revision.  So we lookup the transaction, and pull the
-                 revision from it.  It's really not that complicated.  */
-              svn_fs__transaction_t *txn;
-              SVN_ERR (svn_fs__bdb_get_txn (&txn, svn_fs__dag_get_fs (node),
-                                            copy->src_txn_id, trail));
-              *rev_p = txn->revision;
+
               *path_p = copy->src_path;
+              SVN_ERR (svn_fs__txn_get_revision (rev_p, 
+                                                 svn_fs__dag_get_fs (node),
+                                                 copy->src_txn_id, trail));
             }
         }
     }

@@ -74,6 +74,19 @@ svn_error_t *svn_fs__bdb_get_copy (svn_fs__copy_t **copy_p,
                                    trail_t *trail);
 
 
+typedef svn_error_t *(*svn_fs__bdb_copy_cb_func_t) (void *baton,
+                                                    const char *copy_id,
+                                                    svn_fs__copy_t *copy,
+                                                    apr_pool_t *pool);
+
+svn_error_t *
+svn_fs__bdb_walk_copies_reverse (svn_fs__bdb_copy_cb_func_t callback,
+                                 void *baton,
+                                 svn_fs_t *fs,
+                                 const char *start_id,
+                                 const char *end_id,
+                                 trail_t *trail);
+
 
 #ifdef __cplusplus
 }

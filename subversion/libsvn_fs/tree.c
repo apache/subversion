@@ -3478,6 +3478,105 @@ svn_fs_get_file_delta_stream (svn_txdelta_stream_t **stream_p,
 
 /* Determining the revisions in which a given set of paths were changed. */
 
+struct copies_cb_baton
+{
+  apr_hash_t *revs;
+  svn_fs_t *fs;
+  const char *cur_path;
+  trail_t *trail;
+};
+
+
+/* This is a callback of type svn_fs__bdb_copy_cb_func_t */
+static svn_error_t *
+copies_cb_func (void *baton,
+                const char *copy_id,
+                svn_fs__copy_t *copy,
+                apr_pool_t *subpool)
+{
+  struct copies_cb_baton *cb = baton;
+  const char *dst_path;
+  const char *remainder;
+  svn_revnum_t *copy_rev;
+  dag_node_t *node;
+
+  /* Skip the "0" COPY_ID. */
+  if ((copy_id[0] == '0') && (copy_id[1] == '\0'))
+    return SVN_NO_ERROR;
+
+  /* Figure out the destination path of the copy operation. */
+  SVN_ERR (svn_fs__dag_get_node (&node, cb->fs, copy->dst_noderev_id, 
+                                 cb->trail));
+  dst_path = svn_fs__dag_get_created_path (node);
+
+  /* If our current path was the very destination of the copy, then
+     our new current path will be the copy source.  If our current
+     path was instead the *child* of the destination of the copy, then
+     figure out its previous location by taking its path relative to
+     the copy destination and appending that to the copy source.
+     Finally, if our current path doesn't meet one of these other
+     criteria, just ignore this copy operation altogether. */
+  if (strcmp (cb->cur_path, dst_path) == 0)
+    remainder = "";
+  else
+    remainder = svn_path_is_child (dst_path, cb->cur_path, subpool);
+      
+  /* Not a child or the destination itself?  Skip it. */
+  if (! remainder)
+    return SVN_NO_ERROR;
+
+  /* If we get here, then our current path is the destination of, or
+     the child of the destination of, a copy.  We will translate its
+     previous path under the copy source, remember that as our new
+     "current path", store the revision of this copy as one that we
+     care about, and carry on. */
+  cb->cur_path = svn_path_join (copy->src_path, remainder, cb->trail->pool);
+  copy_rev = apr_palloc (apr_hash_pool_get (cb->revs), sizeof (*copy_rev));
+  SVN_ERR (svn_fs__txn_get_revision (copy_rev, cb->fs,
+                                     svn_fs__id_txn_id (copy->dst_noderev_id),
+                                     cb->trail));
+  if (SVN_IS_VALID_REVNUM (*copy_rev))
+    apr_hash_set (cb->revs, (void *)copy_rev, sizeof (copy_rev), (void *)1);
+  
+  return SVN_NO_ERROR;
+}
+
+
+/* Walk the 'copies' table of FS backwards between the END_ID and START_ID,
+   looking for copies that would explain the ancestry between two
+   paths, END_PATH and START_PATH.  Use a TRAIL to do all of this, and
+   when you find a relevant copy operation, add the revision in which
+   this operation occured to the REVS hash. */
+static svn_error_t *
+find_relevant_copies (apr_hash_t *revs,
+                      svn_fs_t *fs,
+                      const char *start_path,
+                      const char *start_id,
+                      const char *end_path,
+                      const char *end_id,
+                      trail_t *trail)
+{
+  struct copies_cb_baton baton;
+
+  baton.revs = revs;
+  baton.fs = fs;
+  baton.cur_path = end_path;
+  baton.trail = trail;
+
+  SVN_ERR (svn_fs__bdb_walk_copies_reverse (copies_cb_func, &baton, fs,
+                                            start_id, end_id, trail));
+
+  /* Sanity check.  We should have been able to been able to walk back
+     to our exact path.  If we didn't, then either this code is
+     expecting something that the filesystem doesn't provide, or
+     something else is just wrong.  */
+  if (strcmp (baton.cur_path, start_path) != 0)
+    abort();
+
+  return SVN_NO_ERROR;
+}
+                      
+                      
 struct revisions_changed_baton
 {
   apr_hash_t *revs;
@@ -3525,7 +3624,11 @@ revisions_changed_callback (void *baton,
               return SVN_NO_ERROR;
             }
 
-          /* ### todo: derive the copies that took place here. */
+          /* Derive the copies that took place between our two nodes. */
+          SVN_ERR (find_relevant_copies (b->revs, svn_fs__dag_get_fs (node),
+                                         node_cr_path, node_cp_id,
+                                         b->successor_path, succ_cp_id,
+                                         trail));
         }
 
       /* See what NODE's created revision is. */
@@ -3535,11 +3638,12 @@ revisions_changed_callback (void *baton,
       if (SVN_IS_VALID_REVNUM (*rev))
         apr_hash_set (b->revs, (void *)rev, sizeof (rev), (void *)1);
 
-      /* Copy NODE's ID into B->SUCCESSOR_ID and cache it so we can do
-         the proper copy history crossing detection mentioned above on
-         the next iteration of this callback. */
+      /* Cache the NODE's ID and CMT-PATH in our baton so we can
+         compare against them on our next iteration through this
+         callback. */
       b->successor_id = svn_fs__id_copy (svn_fs__dag_get_id (node), 
                                          trail->pool);
+      b->successor_path = apr_pstrdup (trail->pool, node_cr_path);
     }
 
   return SVN_NO_ERROR;
@@ -3584,10 +3688,18 @@ txn_body_revisions_changed (void *baton, trail_t *trail)
   /* If we are coming at this thing from a different path than it was
      last committed at, there has been at least one copy of a parent
      directory made since that last commit.  If we aren't crossing
-     copy boundaries, we should stop our search here. */
-  if ((! b.cross_copy_history) 
-      && (strcmp (args->path, b.successor_path) != 0))
-    return SVN_NO_ERROR;
+     copy boundaries, we should stop our search here, else we need to
+     go find those missing copies.  */
+  if (strcmp (args->path, b.successor_path) != 0)
+    {
+      if (! b.cross_copy_history) 
+        return SVN_NO_ERROR;
+      
+      /* ### todo: call find_relevant_copies() here after we figure
+             out the youngest COPY_ID older than our root's revision
+             (or is that the oldest COPY_ID younger than that
+             revision ... I forget). */
+    }
 
   /* Add NODE's created rev to the array in the baton. */
   SVN_ERR (svn_fs__dag_get_revision (rev, node, trail));
