@@ -140,7 +140,7 @@ set_mutable_flag (skel_t *content, svn_fs_id_t *parent_id, apr_pool_t *pool)
                                          parent_id_string->len,
                                          pool),
                        flag_skel);
-      svn_fs__prepend (svn_fs__str_atom ((char *) "mutable", pool),
+      svn_fs__prepend (svn_fs__str_atom ("mutable", pool),
                        flag_skel);
 
       svn_fs__append (flag_skel, content->children);
@@ -1038,7 +1038,7 @@ add_new_entry (dag_node_t *parent,
                                    trail->pool);
   svn_fs__prepend (svn_fs__str_atom (node_id_str->data, trail->pool),
                    entry_list);
-  svn_fs__prepend (svn_fs__str_atom ((char *) name, trail->pool),
+  svn_fs__prepend (svn_fs__str_atom (name, trail->pool),
                    entry_list);
       
   /* ...and now we have an ENTRY skel for this new child: (NAME ID).
@@ -1133,7 +1133,7 @@ make_entry (dag_node_t **child_p,
     flag_skel = svn_fs__make_empty_list (trail->pool);
     svn_fs__prepend (svn_fs__str_atom (id_str->data, trail->pool),
                      flag_skel);
-    svn_fs__prepend (svn_fs__str_atom ((char *) "mutable", trail->pool), 
+    svn_fs__prepend (svn_fs__str_atom ("mutable", trail->pool), 
                      flag_skel);
     /* Now we have a FLAG skel: (`mutable' PARENT-ID) */
     
@@ -1144,12 +1144,12 @@ make_entry (dag_node_t **child_p,
                      header_skel);
     if (is_dir)
       {
-        svn_fs__prepend (svn_fs__str_atom ((char *) "dir", trail->pool),
+        svn_fs__prepend (svn_fs__str_atom ("dir", trail->pool),
                          header_skel);
       }
     else
       {
-        svn_fs__prepend (svn_fs__str_atom ((char *) "file", trail->pool),
+        svn_fs__prepend (svn_fs__str_atom ("file", trail->pool),
                          header_skel);
       }
     /* Now we have a HEADER skel: (`file'-or-`dir' () FLAG) */
@@ -1163,7 +1163,7 @@ make_entry (dag_node_t **child_p,
       }
     else
       {
-        svn_fs__prepend (svn_fs__str_atom ((char *) "", trail->pool),
+        svn_fs__prepend (svn_fs__str_atom ("", trail->pool),
                          new_node_skel);
       }
     svn_fs__prepend (header_skel, new_node_skel);
@@ -1603,7 +1603,7 @@ svn_error_t *svn_fs__dag_make_copy (dag_node_t **child_p,
     flag_skel = svn_fs__make_empty_list (trail->pool);
     svn_fs__prepend (svn_fs__str_atom (id_str->data, trail->pool),
                      flag_skel);
-    svn_fs__prepend (svn_fs__str_atom ((char *) "mutable", trail->pool), 
+    svn_fs__prepend (svn_fs__str_atom ("mutable", trail->pool), 
                      flag_skel);
     /* Now we have a FLAG skel: (`mutable' PARENT-ID) */
     
@@ -1614,7 +1614,7 @@ svn_error_t *svn_fs__dag_make_copy (dag_node_t **child_p,
        PROPLIST, or a copy of the PROPLIST from the source file. */
     svn_fs__prepend (svn_fs__make_empty_list (trail->pool),
                      header_skel);
-    svn_fs__prepend (svn_fs__str_atom ((char *) "copy", trail->pool),
+    svn_fs__prepend (svn_fs__str_atom ("copy", trail->pool),
                      header_skel);
     /* Now we have a HEADER skel: (`copy' () FLAG) */
 

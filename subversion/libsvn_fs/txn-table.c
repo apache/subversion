@@ -88,7 +88,7 @@ put_txn (svn_fs_t *fs,
                                      unparsed_root_id->len,
                                      pool),
                    txn_skel);
-  svn_fs__prepend (svn_fs__str_atom ((char *) "transaction", pool), txn_skel);
+  svn_fs__prepend (svn_fs__str_atom ("transaction", pool), txn_skel);
 
   /* Sanity check.  */
   if (! is_valid_transaction (txn_skel))
