@@ -50,12 +50,18 @@ class WinGeneratorBase(gen_base.GeneratorBase):
 
   def parse_options(self, options):
     self.httpd_path = None
+    self.zlib_path = None
+    self.openssl_path = None
     self.skip_targets = { 'mod_dav_svn': None }
 
     for opt, val in options:
       if opt == '--with-httpd':
         self.httpd_path = os.path.abspath(val)
         del self.skip_targets['mod_dav_svn']
+      elif opt == '--with-zlib':
+        self.zlib_path = os.path.abspath(val)
+      elif opt == '--with-openssl':
+        self.openssl_path = os.path.abspath(val)
 
   def __init__(self, fname, verfname, options, subdir):
     """
@@ -79,6 +85,12 @@ class WinGeneratorBase(gen_base.GeneratorBase):
 
     # parse (and save) the options that were passed to us
     self.parse_options(options)
+
+    data = {'zlib_path': self.zlib_path,
+            'openssl_path': self.openssl_path}
+    # Generate the build_neon.bat file
+    self.write_with_template('build/win32/build_neon.bat',
+                             'build_neon.ezt', data)
 
 ### GJS: don't do this right now
 #    self.movefile(os.path.join("subversion","mod_dav_svn","davlog.c"), os.path.join("subversion","mod_dav_svn","log.c"))

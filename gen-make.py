@@ -62,15 +62,27 @@ def _usage_exit():
   print
   print "           The default generator type is 'make'"
   print
-  print "  --with-httpd=DIR              [Windows]"
-  print "           the (compiled) httpd sources required"
-  print "           for building mod_dav_svn are in DIR."
+  print "  Windows-specific options:"
+  print
+  print "  --with-httpd=DIR"
+  print "           the httpd sources and binaries required"
+  print "           for building mod_dav_svn are in DIR"
+  print
+  print "  --with-openssl=DIR"
+  print "           tell neon to look for OpenSSL headers"
+  print "           and libs in DIR"
+  print
+  print "  --with-zlib=DIR"
+  print "           tell neon to look for ZLib headers and"
+  print "           libs in DIR"
   sys.exit(0)
 
 if __name__ == '__main__':
   try:
     opts, args = getopt.getopt(sys.argv[1:], 'st:',
-                               ['with-httpd='])
+                               ['with-httpd=',
+                                'with-openssl=',
+                                'with-zlib='])
     if len(args) > 1:
       _usage_exit()
   except getopt.GetoptError:
