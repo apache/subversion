@@ -521,6 +521,7 @@ static dav_error * dav_svn_prep_regular(dav_resource_combined *comb)
   apr_pool_t *pool = comb->res.pool;
   dav_svn_repos *repos = comb->priv.repos;
   svn_error_t *serr;
+  svn_node_kind_t kind;
 
   /* A REGULAR resource might have a specific revision already (e.g. if it
      is part of a baseline collection). However, if it doesn't, then we
@@ -547,28 +548,11 @@ static dav_error * dav_svn_prep_regular(dav_resource_combined *comb)
                                  "repository");
     }
 
-  /* ### how should we test for the existence of the path? call is_dir
-     ### and look for SVN_ERR_FS_NOT_FOUND? */
-  serr = NULL;
-  if (serr != NULL)
-    {
-      const char *msg;
+  kind = svn_fs_check_path (comb->priv.root.root, comb->priv.repos_path,
+                            pool);
 
-      msg = apr_psprintf(pool, "Could not open the resource '%s'",
-                         ap_escape_html(pool, comb->res.uri));
-      return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR, msg);
-    }
-
-  /* is this resource a collection? */
-  serr = svn_fs_is_dir(&comb->res.collection,
-                       comb->priv.root.root, comb->priv.repos_path,
-                       pool);
-  if (serr != NULL)
-    return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                               "could not determine resource kind");
-
-  /* if we are here, then the resource exists */
-  comb->res.exists = TRUE;
+  comb->res.exists = (kind == svn_node_none) ? FALSE : TRUE;
+  comb->res.collection = (kind == svn_node_dir) ? TRUE : FALSE;
 
   return NULL;
 }
@@ -641,6 +625,7 @@ static dav_error * dav_svn_prep_working(dav_resource_combined *comb)
                                          comb->priv.root.activity_id);
   apr_pool_t *pool = comb->res.pool;
   svn_error_t *serr;
+  svn_node_kind_t kind;
 
   if (txn_name == NULL)
     {
@@ -686,26 +671,11 @@ static dav_error * dav_svn_prep_working(dav_resource_combined *comb)
                                  "repository");
     }
 
-  serr = svn_fs_is_dir(&comb->res.collection,
-                       comb->priv.root.root, comb->priv.repos_path,
-                       pool);
-  if (serr != NULL)
-    {
-      if (serr->apr_err != SVN_ERR_FS_NOT_FOUND)
-        {
-          return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                     "Could not determine resource type");
-        }
+  kind = svn_fs_check_path (comb->priv.root.root, comb->priv.repos_path,
+                            pool);
 
-      /* ### verify that the parent exists. needed for PUT, MKCOL, COPY. */
-      /* ### actually, mod_dav validates that (via get_parent_resource).
-         ### so are we done? */
-      comb->res.exists = FALSE;
-    }
-  else
-    {
-      comb->res.exists = TRUE;
-    }
+  comb->res.exists = (kind == svn_node_none) ? FALSE : TRUE;
+  comb->res.collection = (kind == svn_node_dir) ? TRUE : FALSE;
 
   return NULL;
 }
