@@ -538,9 +538,9 @@ repos_to_wc_copy (svn_stringbuf_t *src_url,
 
       
       svn_delta_wrap_old_editor (&wrap_editor, &wrap_edit_baton,
-                             before_editor, before_edit_baton,
-                             wrap_editor, wrap_edit_baton,
-                             after_editor, after_edit_baton, pool);
+                                 before_editor, before_edit_baton,
+                                 wrap_editor, wrap_edit_baton,
+                                 after_editor, after_edit_baton, pool);
       
       /* Check out the new tree.  The parent dir will get no entry, so
          it will be as if the new tree isn't really there yet. */
