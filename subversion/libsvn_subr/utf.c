@@ -407,7 +407,10 @@ svn_utf_stringbuf_from_utf8 (svn_stringbuf_t **dest,
   SVN_ERR (get_uton_xlate_handle (&convset, pool));
 
   if (convset)
-    return convert_to_stringbuf (convset, src->data, src->len, dest, pool);
+    {
+      SVN_ERR (check_utf8 (src->data, src->len, pool));
+      return convert_to_stringbuf (convset, src->data, src->len, dest, pool);
+    }
   else
     {
       SVN_ERR (check_non_ascii (src->data, src->len, pool));
@@ -429,6 +432,7 @@ svn_utf_string_from_utf8 (const svn_string_t **dest,
 
   if (convset)
     {
+      SVN_ERR (check_utf8 (src->data, src->len, pool));
       SVN_ERR (convert_to_stringbuf (convset, src->data, src->len,
                                      &dbuf, pool));
       *dest = svn_string_create_from_buf (dbuf, pool);
@@ -451,6 +455,7 @@ svn_utf_cstring_from_utf8 (const char **dest,
   apr_xlate_t *convset;
 
   SVN_ERR (get_uton_xlate_handle (&convset, pool));
+  SVN_ERR (check_utf8 (src, strlen (src), pool));
   SVN_ERR (convert_cstring (dest, src, convset, pool));
 
   return SVN_NO_ERROR;
@@ -467,6 +472,7 @@ svn_utf_cstring_from_utf8_ex (const char **dest,
   apr_xlate_t *convset;
 
   SVN_ERR (get_xlate_handle (&convset, topage, "UTF-8", convset_key, pool));
+  SVN_ERR (check_utf8 (src, strlen (src), pool));
   SVN_ERR (convert_cstring (dest, src, convset, pool));
 
   return SVN_NO_ERROR;
@@ -574,6 +580,7 @@ svn_utf_cstring_from_utf8_string (const char **dest,
 
   if (convset)
     {
+      SVN_ERR (check_utf8 (src->data, src->len, pool));
       SVN_ERR (convert_to_stringbuf (convset, src->data, src->len,
                                      &dbuf, pool));
       *dest = dbuf->data;
