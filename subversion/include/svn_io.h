@@ -146,17 +146,19 @@ svn_error_t *svn_io_append_file (svn_stringbuf_t *src,
    convert any line ending in SRC to EOL_STR in DST.  Recognized line
    endings are: "\n", "\r", "\r\n", and "\n\r".
 
-   Expand keywords using REVISION, DATE, AUTHOR, and URL as the new
-   values; NULL for any of these parameters indicates that that
-   keyword should not be expanded.  Keywords are detected only if they
-   are no longer than SVN_IO_MAX_KEYWORD_LEN bytes, including the
-   delimiters and the keyword itself.
+   Expand and contract keywords using REVISION, DATE, AUTHOR, and URL
+   as the new values.  If EXPAND is TRUE, expand contracted keywords
+   and re-expand expanded keywords.  If EXPAND is FALSE, contract
+   expanded keywords and ignore contracted ones.  NULL for any of the
+   keyword value parameters (REVISION, e.g.) indicates that that
+   keyword should be ignored (not contracted or expanded).  Keywords
+   are detected only if they are no longer than SVN_IO_MAX_KEYWORD_LEN
+   bytes, including the delimiters and the keyword itself.
 
    Implication of above:
 
    If EOL_STR, REVISION, DATE, AUTHOR, and URL are all NULL, just do a
-   byte-for-byte copy.
-*/
+   byte-for-byte copy.  */
 svn_error_t *svn_io_copy_and_translate (const char *src,
                                         const char *dst,
                                         const char *eol_str,
@@ -165,6 +167,7 @@ svn_error_t *svn_io_copy_and_translate (const char *src,
                                         const char *date,
                                         const char *author,
                                         const char *url,
+                                        svn_boolean_t expand,
                                         apr_pool_t *pool);
 
 /* Read a line from FILE into BUF, but not exceeding *LIMIT bytes.
