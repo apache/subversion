@@ -71,8 +71,8 @@
 #define __SVN_SVR_H__
 
 
-#include <svn_types.h>
-
+#include <svn_types.h>   /* publically declared types */
+#include <svn_error.h>   /* private utility in svn_subr/  */
 
 
 

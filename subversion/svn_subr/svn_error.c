@@ -75,6 +75,11 @@ svn_handle_error (svn_error_t err)
   printf ("svn_error: errno %d\n");
   svn_string_print (err->description);
 
+  /* We can examine the APR canonicalized error here, make general
+     logical desciions if we wish.*/
+
+  /* We can also log errors here. */
+
   if (err->fatal)
     {
       printf ("Fatal error, exiting.\n");
@@ -89,5 +94,4 @@ svn_handle_error (svn_error_t err)
 /* 
  * local variables:
  * eval: (load-file "../svn-dev.el")
- * end:
- */
+ * end: */
