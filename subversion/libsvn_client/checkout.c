@@ -90,7 +90,11 @@ svn_client__checkout_internal (const char *URL,
       SVN_ERR (svn_client__get_revision_number
                (&revnum, ra_lib, session, revision, path, pool));
 
-      
+      SVN_ERR (ra_lib->check_path (&kind, session, "", revnum, pool));
+      if (kind == svn_node_none)
+        return svn_error_createf (SVN_ERR_RA_ILLEGAL_URL, NULL,
+                                  "Source URL doesn't exist: %s.", URL);
+
       SVN_ERR (svn_io_check_path (path, &kind, pool));
 
       if (kind == svn_node_none)
