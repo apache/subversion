@@ -1051,14 +1051,6 @@ that was changed:
       that everything in it has changed, so your log entry may simply
       give the file name, and say "Rewritten".
 
-   *  If your change was only to one file, or was the same change to
-      multiple files, then there's no need to list their paths in the
-      log message (because "svn log" can show the changed paths for
-      that revision anyway).  Only when you need to describe how the
-      change affected different areas in different ways is it
-      necessary to organize the log message by paths and symbols, as
-      in the examples above.
-
    *  If your change was to multiple files, provide a brief summary of
       the change at the top of the log message (before the paths and
       symbols list).
