@@ -115,4 +115,5 @@ List of 1.1 features/changes
   * document svn:special property, and how symlinks can be put under
     version control.   and what (doesn't) happen on win32.
 
-
+  * Add a note somewhere clarifying that the command line client auto-escapes
+    URIs and supports "IRI" syntax.
