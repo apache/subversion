@@ -408,8 +408,8 @@ $ svnserve -i
         the standard behavior for a program being run via
         <command>inetd</command>.  The IANA has reserved port 3690
         for the Subversion protocol, so on a Unix-like system you can
-        add a line to <literal>/etc/services</literal> like this (if
-        it doesn't already exist):</para>
+        add lines to <literal>/etc/services</literal> like these (if
+        they don't already exist):</para>
 
 <screen>
 svn           3690/tcp   # Subversion
