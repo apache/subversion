@@ -383,19 +383,23 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
       APR_EOL_STR
       "#"
       APR_EOL_STR
-      "#   ***   NOTE: THE HOOK PROGRAM MUST NOT MODIFY THE TXN.    ***"
+      "#   ***  NOTE: THE HOOK PROGRAM MUST NOT MODIFY THE TXN, EXCEPT  ***"
+      APR_EOL_STR
+      "#   ***  FOR REVISION PROPERTIES (like svn:log or svn:author).   ***"
+      APR_EOL_STR
+      "#"
       APR_EOL_STR
       "#   This is why we recommend using the read-only 'svnlook' utility."
       APR_EOL_STR
       "#   In the future, Subversion may enforce the rule that pre-commit"
       APR_EOL_STR
-      "#   hooks should not modify txns, or else come up with a mechanism"
+      "#   hooks should not modify the versioned data in txns, or else come"
       APR_EOL_STR
-      "#   to make it safe to do so (by informing the committing client of"
+      "#   up with a mechanism to make it safe to do so (by informing the"
       APR_EOL_STR
-      "#   the changes).  However, right now neither mechanism is"
+      "#   committing client of the changes).  However, right now neither"
       APR_EOL_STR
-      "#   implemented, so hook writers just have to be careful."
+      "#   mechanism is implemented, so hook writers just have to be careful."
       APR_EOL_STR
       "#"
       APR_EOL_STR
