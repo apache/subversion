@@ -165,14 +165,14 @@ Candidate changes:
     Branch:
       1.1.x-r13358 (1.1.x@13358 1.1.x-r13358@HEAD)
     Votes:
-      +1: breser
+      +1: breser, philip
 
   * r11980
     If a schedule deleted directory has a local mod made to it commit fails.
     Justification:
       Leaves the wc in a broken state after a commit.
     Votes:
-      +1: breser
+      +1: breser, philip
 
 
 Approved changes (further review is welcome, but not required):
