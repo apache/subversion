@@ -42,7 +42,7 @@
       small, specific ways.</para>
 
     <para>This is the basic concept of a <firstterm>branch</firstterm>
-      &mdash; namely, a line of development that exists independently of
+      &mdash;namely, a line of development that exists independently of
       another line, yet still shares a common history if you look far
       enough back in time.  A branch always begins life as a copy of
       something, and moves on from there, generating its own
@@ -430,7 +430,7 @@ Changed paths:
         </listitem>
         <listitem>
           <para>Subversion has no internal concept of a branch
-          &mdash; only copies.  When you copy a directory, the
+          &mdash;only copies.  When you copy a directory, the
           resulting directory is only a "branch" because
           <emphasis>you</emphasis> attach that meaning to it.  You may
           think of the directory differently, or treat it differently,
@@ -561,7 +561,7 @@ M  integer.c
 
       <para>The output of <command>svn merge</command> shows that your
         copy of <filename>integer.c</filename> was patched.  It now
-        contains Sally's change &mdash; the change has been "copied" from the
+        contains Sally's change&mdash;the change has been "copied" from the
         trunk to your working copy of your private branch, and now
         exists as a local modification.  At this point, it's up to you
         to review the local modification and make sure it works
@@ -839,7 +839,7 @@ $ svn status
 
       <para>But which two trees should be compared?  At first glance,
         the answer may seem obvious: just compare the latest trunk
-        tree with your latest branch tree.  But beware &mdash; this
+        tree with your latest branch tree.  But beware&mdash;this
         assumption is <emphasis>wrong</emphasis>, and has burned many
         a new user!  Since <command>svn merge</command> operates like
         <command>svn diff</command>, comparing the latest trunk and 
@@ -1089,7 +1089,7 @@ Changed paths:
         <filename>/calc/trunk/real.c</filename> from revision
         807.</para>
 
-      <para>That was the hard part &mdash; the research.  Now that you
+      <para>That was the hard part&mdash;the research.  Now that you
         know what you want to restore, you have two different
         choices.</para>
       
@@ -1216,7 +1216,7 @@ URL: http://svn.example.com/repos/calc/branches/my-calc-branch
       receive normal 'trunk' updates to most of their working copy,
       but the switched portions will remain immune (unless someone
       commits a change to their branch).  This feature adds a whole
-      new dimension to the concept of a "mixed working copy" &mdash;
+      new dimension to the concept of a "mixed working copy"&mdash;
       not only can working copies contain a mixture of working
       revisions, but a mixture of repository locations as well.</para>
     
@@ -1297,7 +1297,7 @@ URL: http://svn.example.com/repos/calc/branches/my-calc-branch
       <firstterm>tag</firstterm>.  A tag is just a
       <quote>snapshot</quote> of a project in time.  In Subversion,
       this idea already seems to be everywhere.  Each repository
-      revision is exactly that &mdash; a snapshot of the filesystem
+      revision is exactly that&mdash;a snapshot of the filesystem
       after each commit.</para>
 
     <para>However, people often want to give more human-friendly names
@@ -1403,7 +1403,7 @@ Committed revision 352.
 
       <para>Now there is a new directory in the repository,
         <filename>/calc/tags/mytag</filename>, which is an exact
-        snapshot of your working copy &mdash; mixed revisions, urls,
+        snapshot of your working copy&mdash;mixed revisions, urls,
         and all.</para>
 
       <para>Other users have found interesting uses for this feature.
@@ -1560,7 +1560,7 @@ Committed revision 377.
         people continue to work on the trunk, a human selectively
         ports bugfixes over to the stable branch.  Even after the
         stable branch has shipped, you'll probably continue to
-        maintain the branch for a long time &mdash; that is, as long
+        maintain the branch for a long time&mdash;that is, as long
         as you continue to support that release for customers.</para>
 
     </sect2>
