@@ -175,6 +175,30 @@ static svn_error_t *parse_proplist(apr_array_header_t *list, apr_pool_t *pool,
   return SVN_NO_ERROR;
 }
 
+/* Convert property diffs received from the server to an array of svn_prop_. */
+static svn_error_t *parse_prop_diffs(apr_array_header_t *list,
+                                     apr_pool_t *pool,
+                                     apr_array_header_t **diffs)
+{
+  svn_ra_svn_item_t *elt;
+  svn_prop_t *prop;
+  int i;
+
+  *diffs = apr_array_make(pool, list->nelts, sizeof(svn_prop_t));
+
+  for (i = 0; i < list->nelts; i++)
+    {
+      elt = &APR_ARRAY_IDX(list, i, svn_ra_svn_item_t);
+      if (elt->kind != SVN_RA_SVN_LIST)
+        return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
+                                _("Prop diffs element not a list"));
+      prop = apr_array_push(*diffs);
+      SVN_ERR(svn_ra_svn_parse_tuple(elt->u.list, pool, "c(?s)", &prop->name,
+                                     &prop->value));
+    }
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *interpret_kind(const char *str, apr_pool_t *pool,
                                    svn_node_kind_t *kind)
 {
@@ -1123,6 +1147,113 @@ static svn_error_t *ra_svn_get_locations(void *session_baton,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *ra_svn_get_file_revs(void *session_baton, const char *path,
+                                         svn_revnum_t start, svn_revnum_t end,
+                                         svn_ra_file_rev_handler_t handler,
+                                         void *handler_baton, apr_pool_t *pool)
+{
+  ra_svn_session_baton_t *sess = session_baton;
+  svn_error_t *err;
+  apr_pool_t *rev_pool, *chunk_pool;
+  svn_ra_svn_item_t *item;
+  const char *p;
+  svn_revnum_t rev;
+  apr_array_header_t *rev_proplist, *proplist;
+  apr_hash_t *rev_props;
+  apr_array_header_t *props;
+  svn_boolean_t has_txdelta;
+  svn_boolean_t had_revision = FALSE;
+  svn_stream_t *stream;
+  svn_txdelta_window_handler_t d_handler;
+  void *d_baton;
+  apr_size_t size;
+
+  /* One sub-pool for each revision and one for each txdelta chunk.
+     Note that the rev_pool must live during the following txdelta. */
+  rev_pool = svn_pool_create(pool);
+  chunk_pool = svn_pool_create(pool);
+
+  SVN_ERR(svn_ra_svn_write_cmd(sess->conn, pool, "get-file-revs",
+                               "c(?r)(?r)", path, start, end));
+
+  err = handle_auth_request(sess, pool);
+
+  /* Servers before 1.1 don't support this command.  Check for this here. */
+  if (err && err->apr_err == SVN_ERR_RA_SVN_UNKNOWN_CMD)
+    return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, err,
+                             _("get-file-revs not implemented"));
+  SVN_ERR(err);
+
+  while (1)
+    {
+      svn_pool_clear(rev_pool);
+      svn_pool_clear(chunk_pool);
+      SVN_ERR(svn_ra_svn_read_item(sess->conn, rev_pool, &item));
+      if (item->kind == SVN_RA_SVN_WORD && strcmp(item->u.word, "done") == 0)
+        break;
+      /* Either we've got a correct revision or we will error out below. */
+      had_revision = TRUE;
+      if (item->kind != SVN_RA_SVN_LIST)
+        return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
+                                _("Revision entry not a list"));
+
+      SVN_ERR(svn_ra_svn_parse_tuple(item->u.list, rev_pool,
+                                     "crll", &p, &rev, &rev_proplist,
+                                     &proplist));
+      SVN_ERR(parse_proplist(rev_proplist, rev_pool, &rev_props));
+      SVN_ERR(parse_prop_diffs(proplist, rev_pool, &props));
+
+      /* Get the first delta chunk so we know if there is a delta. */
+      SVN_ERR(svn_ra_svn_read_item(sess->conn, chunk_pool, &item));
+      if (item->kind != SVN_RA_SVN_STRING)
+        return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
+                                _("Text delta chunk not a string"));
+      has_txdelta = item->u.string->len > 0;
+
+      SVN_ERR(handler(handler_baton, p, rev, rev_props,
+                      has_txdelta ? &d_handler : NULL, &d_baton,
+                      props, rev_pool));
+
+      /* Process the text delta if any. */
+      if (has_txdelta)
+        {
+          if (d_handler)
+            stream = svn_txdelta_parse_svndiff(d_handler, d_baton, TRUE,
+                                               rev_pool);
+          else
+            stream = NULL;
+          while (item->u.string->len > 0)
+            {
+              size = item->u.string->len;
+              if (stream)
+                SVN_ERR(svn_stream_write(stream, item->u.string->data, &size));
+              svn_pool_clear(chunk_pool);
+
+              SVN_ERR(svn_ra_svn_read_item(sess->conn, chunk_pool, &item));
+              if (item->kind != SVN_RA_SVN_STRING)
+                return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
+                                        _("Text delta chunk not a string"));
+            }
+          if (stream)
+            SVN_ERR(svn_stream_close(stream));
+        }
+    }
+ 
+  SVN_ERR(svn_ra_svn_read_cmd_response(sess->conn, pool, ""));
+
+  /* Return error if we didn't get any revisions. */
+  if (!had_revision)
+    return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
+                            _("The get-file-revs command didn't return "
+                              "any revisions."));
+
+  svn_pool_destroy(chunk_pool);
+  svn_pool_destroy(rev_pool);
+
+  return SVN_NO_ERROR;
+}
+
+
 static const svn_ra_plugin_t ra_svn_plugin = {
   "ra_svn",
   "Module for accessing a repository using the svn network protocol.",
@@ -1143,7 +1274,8 @@ static const svn_ra_plugin_t ra_svn_plugin = {
   ra_svn_check_path,
   ra_svn_get_uuid,
   ra_svn_get_repos_root,
-  ra_svn_get_locations
+  ra_svn_get_locations,
+  ra_svn_get_file_revs
 };
 
 svn_error_t *svn_ra_svn_init(int abi_version, apr_pool_t *pool,

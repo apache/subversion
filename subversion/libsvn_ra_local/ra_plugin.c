@@ -23,9 +23,12 @@
 #include "svn_repos.h"
 #include "svn_pools.h"
 #include "svn_time.h"
+#include "svn_private_config.h"
 
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
+
+#include <assert.h>
 
 /*----------------------------------------------------------------*/
 
@@ -127,7 +130,24 @@ static const svn_ra_reporter_t ra_local_reporter =
   reporter_abort_report
 };
 
+static svn_error_t *
+svn_ra_local__get_file_revs (void *session_baton,
+                             const char *path,
+                             svn_revnum_t start,
+                             svn_revnum_t end,
+                             svn_ra_file_rev_handler_t handler,
+                             void *handler_baton,
+                             apr_pool_t *pool)
+{
+  svn_ra_local__session_baton_t *sbaton = session_baton;
+  const char *abs_path = sbaton->fs_path;
 
+  /* Concatenate paths */
+  abs_path = svn_path_join (abs_path, path, pool);
+
+  return svn_repos_get_file_revs (sbaton->repos, abs_path, start, end,
+                                  handler, handler_baton, pool);
+}
 
 /*----------------------------------------------------------------*/
 
@@ -891,7 +911,8 @@ static const svn_ra_plugin_t ra_local_plugin =
   svn_ra_local__do_check_path,
   svn_ra_local__get_uuid,
   svn_ra_local__get_repos_root,
-  svn_ra_local__get_locations
+  svn_ra_local__get_locations,
+  svn_ra_local__get_file_revs
 };
 
 

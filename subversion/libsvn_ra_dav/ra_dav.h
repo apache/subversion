@@ -273,6 +273,15 @@ svn_error_t *svn_ra_dav__do_check_path(
   svn_node_kind_t *kind,
   apr_pool_t *pool);
 
+svn_error_t *svn_ra_dav__get_file_revs (void *session_baton,
+                                        const char *path,
+                                        svn_revnum_t start,
+                                        svn_revnum_t end,
+                                        svn_ra_file_rev_handler_t handler,
+                                        void *handler_baton,
+                                        apr_pool_t *pool);
+
+
 /*
 ** SVN_RA_DAV__LP_*: local properties for RA/DAV
 **
@@ -628,7 +637,10 @@ enum {
   ELEM_human_readable,
   ELEM_repository_uuid,
   ELEM_get_locations_report,
-  ELEM_location
+  ELEM_location,
+  ELEM_file_revs_report,
+  ELEM_file_rev,
+  ELEM_rev_prop
 };
 
 /* ### docco */
