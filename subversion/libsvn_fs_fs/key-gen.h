@@ -107,6 +107,9 @@ int svn_fs__key_compare (const char *a, const char *b);
  */
 svn_boolean_t svn_fs__same_keys (const char *a, const char *b);
 
+/* Add two base-36 alphanumeric keys to get a third, the result. */
+void svn_fs__add_keys (const char *key1, const char *key2, char *result);
+
 
 #ifdef __cplusplus
 }

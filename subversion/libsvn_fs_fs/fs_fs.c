@@ -2455,6 +2455,9 @@ svn_fs__fs_set_proplist (svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
+/* Read the 'current' file for filesystem FS and store the next
+   available node id in *NODE_ID, and the next available copy id in
+   *COPY_ID.  Allocations are performed from POOL. */
 static svn_error_t *
 get_next_revision_ids (const char **node_id,
                        const char **copy_id,
@@ -2472,8 +2475,7 @@ get_next_revision_ids (const char **node_id,
                              APR_READ, APR_OS_DEFAULT, pool));
 
   len = sizeof (buf);
-  SVN_ERR (svn_io_file_read (revision_file, buf, &len, pool));
-  buf[len] = '\0';
+  SVN_ERR (svn_io_read_length_line (revision_file, buf, &len, pool));
 
   str = apr_strtok (buf, " ", &last_str);
   if (! str)
@@ -2497,38 +2499,340 @@ get_next_revision_ids (const char **node_id,
   return SVN_NO_ERROR;
 }
 
+/* This baton is used by the stream created for write_hash_rep. */
+struct write_hash_baton
+{
+  svn_stream_t *stream;
+
+  apr_size_t size;
+
+  struct apr_md5_ctx_t md5_context;
+};
+
+/* The handler for the write_hash_rep stream.  BATON is a
+   write_hash_baton, DATA has the data to write and *LEN is the number
+   of bytes to write. */
 static svn_error_t *
-write_final_rev (apr_off_t *offset,
+write_hash_handler (void *baton,
+                    const char *data,
+                    apr_size_t *len)
+{
+  struct write_hash_baton *whb = baton;
+
+  apr_md5_update (&whb->md5_context, data, *len);
+
+  SVN_ERR (svn_stream_write (whb->stream, data, len));
+  whb->size += *len;
+
+  return SVN_NO_ERROR;
+}
+
+/* Write out the hash HASH as a text representation to file FILE.  In
+   the process, record the total size of the dump in *SIZE, and the
+   md5 digest in CHECKSUM.  Perform temporary allocations in POOL. */
+static svn_error_t *
+write_hash_rep (apr_size_t *size,
+                char checksum[APR_MD5_DIGESTSIZE],
+                apr_file_t *file,
+                apr_hash_t *hash,
+                apr_pool_t *pool)
+{
+  svn_stream_t *stream;
+  struct write_hash_baton *whb;
+
+  whb = apr_pcalloc (pool, sizeof (*whb));
+
+  whb->stream = svn_stream_from_aprfile (file, pool);
+  whb->size = 0;
+  apr_md5_init (&(whb->md5_context));
+
+  stream = svn_stream_create (whb, pool);
+  svn_stream_set_write (stream, write_hash_handler);
+
+  SVN_ERR (svn_stream_printf (whb->stream, pool, "PLAIN\n"));
+  
+  SVN_ERR (hash_write (hash, stream, pool));
+
+  /* Store the results. */
+  apr_md5_final (checksum, &whb->md5_context);
+  *size = whb->size;
+  
+  return SVN_NO_ERROR;
+}
+
+/* Copy a node-revision specified by id ID in fileystem FS from a
+   transaction into the permanent rev-file FILE.  Return the offset of
+   the new node-revision in *OFFSET.  If this is a directory, all
+   children are copied as well.  START_NODE_ID and START_COPY_ID are
+   the first available node and copy ids for this filesystem.
+   Temporary allocations are from POOL. */
+static svn_error_t *
+write_final_rev (const svn_fs_id_t **new_id_p,
                  apr_file_t *file,
+                 svn_revnum_t rev,
                  svn_fs_t *fs,
                  const svn_fs_id_t *id,
                  const char *start_node_id,
                  const char *start_copy_id,
                  apr_pool_t *pool)
 {
-  abort ();
+  svn_fs__node_revision_t *noderev;
+  apr_off_t my_offset;
+  char my_node_id[SVN_FS__MAX_KEY_SIZE + 2];
+  char my_copy_id[SVN_FS__MAX_KEY_SIZE + 2];
+  const char *my_txn_id;
+
+  *new_id_p = NULL;
+  
+  /* Check to see if this is a transaction node. */
+  if (! id->txn_id)
+    return SVN_NO_ERROR;
+
+  SVN_ERR (svn_fs__fs_get_node_revision (&noderev, fs, id, pool));
+
+  if (noderev->kind == svn_node_dir)
+    {
+      apr_pool_t *subpool;
+      apr_hash_t *entries, *str_entries;
+      svn_fs_dirent_t *dirent;
+      void *val;
+      apr_hash_index_t *hi;
+      
+      /* This is a directory.  Write out all the children first. */
+      subpool = svn_pool_create (pool);
+
+      SVN_ERR (svn_fs__fs_rep_contents_dir (&entries, fs, noderev, pool));
+
+      for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
+        {
+          const svn_fs_id_t *new_id;
+          
+          svn_pool_clear (subpool);
+          apr_hash_this (hi, NULL, NULL, &val);
+          dirent = val;
+          SVN_ERR (write_final_rev (&new_id, file, rev, fs, dirent->id,
+                                    start_node_id, start_copy_id, subpool));
+          if (new_id && (new_id->rev == rev))
+              dirent->id = svn_fs__id_copy (new_id, pool);
+        }
+      svn_pool_destroy (subpool);
+
+      if (noderev->data_rep && noderev->data_rep->txn_id)
+        {
+          /* Write out the contents of this directory as a text rep. */
+          SVN_ERR (unparse_dir_entries (&str_entries, entries, pool));
+
+          noderev->data_rep->txn_id = NULL;
+          noderev->data_rep->revision = rev;
+          noderev->data_rep->offset = 0;
+          SVN_ERR (svn_io_file_seek (file, APR_CUR, &noderev->data_rep->offset,
+                                     pool));
+          SVN_ERR (write_hash_rep (&noderev->data_rep->size,
+                                   noderev->data_rep->checksum, file,
+                                   str_entries, pool));
+          noderev->data_rep->expanded_size = noderev->data_rep->size;
+        }          
+    }
+  else
+    {
+      /* This is a file.  We should make sure the data rep, if it
+         exists in a "this" state, gets rewritten to our new revision
+         num. */
+
+      if (noderev->data_rep && noderev->data_rep->txn_id)
+        {
+          noderev->data_rep->txn_id = NULL;
+          noderev->data_rep->revision = rev;
+        }
+    }
+
+  /* Fix up the property reps. */
+  if (noderev->prop_rep && noderev->prop_rep->txn_id)
+    {
+      noderev->prop_rep->txn_id = NULL;
+      noderev->prop_rep->revision = rev;
+    }
+
+  /* The offset won't be guaranteed to be good until we have written
+     something. */
+  SVN_ERR (svn_io_file_write_full (file, "\n", 1, NULL, pool));
+  
+  /* Convert our temporary ID into a permanent revision one. */
+  my_offset = 0;
+  SVN_ERR (svn_io_file_seek (file, APR_CUR, &my_offset, pool));
+  
+  if (noderev->id->node_id[0] == '_')
+    {
+      svn_fs__add_keys (start_node_id, &noderev->id->node_id[1], my_node_id);
+    }
+  else
+    {
+      strcpy (my_node_id, noderev->id->node_id);
+    }
+
+  if (noderev->id->copy_id[0] == '_')
+    {
+      svn_fs__add_keys (start_copy_id, &noderev->id->copy_id[1], my_copy_id);
+    }
+  else
+    {
+      strcpy (my_copy_id, noderev->id->copy_id);
+    }
+
+  my_txn_id = apr_psprintf (pool, "r%" SVN_REVNUM_T_FMT "/%" APR_OFF_T_FMT,
+                            rev, my_offset);
+
+  noderev->id = svn_fs__create_id (my_node_id, my_copy_id, my_txn_id, pool);
+
+  /* Write out our new node-revision. */
+  SVN_ERR (write_noderev_txn (file, noderev, pool));
+
+  SVN_ERR (svn_fs__fs_put_node_revision (fs, id, noderev, pool));
+
+  /* Return our ID that references the revision file. */
+  *new_id_p = noderev->id;
 
   return SVN_NO_ERROR;
 }
 
+/* Write the changed path info from transaction TXN_ID in filesystem
+   FS to the permanent rev-file FILE.  *OFFSET_P is set the to offset
+   in the file of the beginning of this information.  Perform
+   temporary allocations in POOL. */
 static svn_error_t *
-write_final_changed_path_info (apr_off_t *offset,
+write_final_changed_path_info (apr_off_t *offset_p,
                                apr_file_t *file,
                                svn_fs_t *fs,
                                const char *txn_id,
                                apr_pool_t *pool)
 {
-  abort ();
+  apr_file_t *changes_file;
+  const char *txn_dir;
+  svn_stream_t *changes_stream;
+  apr_pool_t *iterpool = svn_pool_create (pool);
+  apr_off_t offset;
+  
+  SVN_ERR (svn_io_file_write_full (file, "\n", 1, NULL, pool));
+  offset = 0;
+  SVN_ERR (svn_io_file_seek (file, APR_CUR, &offset, pool));
+  
+  txn_dir = svn_path_join_many (pool, fs->fs_path, SVN_FS_FS__TXNS_DIR,
+                                apr_pstrcat (pool, txn_id,
+                                             SVN_FS_FS__TXNS_EXT, NULL),
+                                NULL);
+
+  SVN_ERR (svn_io_file_open (&changes_file, svn_path_join (txn_dir,
+                                                           SVN_FS_FS__CHANGES,
+                                                           pool),
+                             APR_READ, APR_OS_DEFAULT, pool));
+
+  changes_stream = svn_stream_from_aprfile (changes_file, pool);
+  
+  /* Read the lines in one at a time, and convert the temporary
+     node-id into a permanent one for each change entry. */
+  while (1)
+    {
+      char *str, *last_str;
+      svn_stringbuf_t *line, *buf;
+      svn_boolean_t eof;
+      svn_fs__node_revision_t *noderev;
+      svn_fs_id_t *id;
+
+      svn_pool_clear (iterpool);
+      
+      SVN_ERR (svn_stream_readline (changes_stream, &line, "\n", &eof, iterpool));
+
+      /* Check of end of file. */
+      if (eof)
+        break;
+
+      /* Get the temporary node-id. */
+      str = apr_strtok (line->data, " ", &last_str);
+
+      if (! str)
+        return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
+                                 "Malformed changes line.");
+
+      id = svn_fs_parse_id (str, strlen (str), iterpool);
+
+      SVN_ERR (svn_fs__fs_get_node_revision (&noderev, fs, id, iterpool));
+
+      /* noderev has the permanent node-id at this point, so we just
+         substitute it for the temporary one. */
+
+      buf = svn_stringbuf_createf (iterpool, "%s %s\n",
+                                   svn_fs_unparse_id (noderev->id,
+                                                      iterpool)->data,
+                                   last_str);
+
+      SVN_ERR (svn_io_file_write_full (file, buf->data, buf->len, NULL,
+                                       iterpool));
+    }
+
+  svn_pool_destroy (iterpool);
+
+  SVN_ERR (svn_stream_close (changes_stream));
+
+  *offset_p = offset;
+  
+  return SVN_NO_ERROR;
+}
+
+/* Update the current file to hold the correct next node and copy_ids
+   from transaction TXN_ID in filesystem FS.  The current revision is
+   set to REV.  Perform temporary allocations in POOL. */
+static svn_error_t *
+write_final_current (svn_fs_t *fs,
+                     const char *txn_id,
+                     svn_revnum_t rev,
+                     const char *start_node_id,
+                     const char *start_copy_id,
+                     apr_pool_t *pool)
+{
+  const char *txn_node_id, *txn_copy_id;
+  char new_node_id[SVN_FS__MAX_KEY_SIZE + 2];
+  char new_copy_id[SVN_FS__MAX_KEY_SIZE + 2];
+  char *buf;
+  apr_file_t *file;
+  
+  /* To find the next available ids, we add the id that used to be in
+     the current file, to the next ids from the transaction file. */
+  SVN_ERR (read_next_ids (&txn_node_id, &txn_copy_id, fs, txn_id, pool));
+
+  svn_fs__add_keys (start_node_id, txn_node_id, new_node_id);
+  svn_fs__add_keys (start_copy_id, txn_copy_id, new_copy_id);
+
+  /* Now we can just write out this line. */
+  buf = apr_psprintf (pool, "%" SVN_REVNUM_T_FMT " %s %s\n", rev, new_node_id,
+                      new_copy_id);
+
+  SVN_ERR (svn_io_file_open (&file,
+                             svn_path_join (fs->fs_path, SVN_FS_FS__CURRENT,
+                                            pool),
+                             APR_WRITE | APR_TRUNCATE, APR_OS_DEFAULT, pool));
+
+  SVN_ERR (svn_io_file_write_full (file, buf, strlen (buf), NULL, pool));
+
+  SVN_ERR (svn_io_file_close (file, pool));
 
   return SVN_NO_ERROR;
 }
 
 static svn_error_t *
-write_final_current (svn_fs_t *fs,
-                     const char *txn_id)
+get_write_lock (svn_fs_t *fs,
+                apr_pool_t *pool)
 {
-  abort ();
+  const char *lock_filename;
+  svn_node_kind_t kind;
+  
+  lock_filename = svn_path_join (fs->fs_path, SVN_FS_FS__LOCK_FILE, pool);
 
+  SVN_ERR (svn_io_check_path (lock_filename, &kind, pool));
+  if ((kind == svn_node_unknown) || (kind == svn_node_none))
+    SVN_ERR (svn_io_file_create (lock_filename, "", pool));
+  
+  SVN_ERR (svn_io_file_lock (lock_filename, TRUE, pool));
+  
   return SVN_NO_ERROR;
 }
 
@@ -2538,19 +2842,18 @@ svn_fs__fs_commit (svn_revnum_t *new_rev_p,
                    svn_fs_txn_t *txn,
                    apr_pool_t *pool)
 {
-  const char *rev_filename, *proto_filename, *lock_filename;
-  const svn_fs_id_t *root_id;
+  const char *rev_filename, *proto_filename;
+  const char *revprop_filename, *final_revprop;
+  const svn_fs_id_t *root_id, *new_root_id;
   const char *start_node_id, *start_copy_id;
   svn_revnum_t new_rev;
   apr_pool_t *subpool = svn_pool_create (pool);
   apr_file_t *rev_file;
-  apr_off_t root_offset, changed_path_offset;
+  apr_off_t  changed_path_offset;
   char *buf;
 
   /* First grab a write lock. */
-  lock_filename = svn_path_join (fs->fs_path, SVN_FS_FS__LOCK_FILE, pool);
-  SVN_ERR (svn_io_file_create (lock_filename, "", pool));
-  SVN_ERR (svn_io_file_lock (lock_filename, TRUE, subpool));
+  SVN_ERR (get_write_lock (fs, subpool));
 
   /* Get the current youngest revision. */
   SVN_ERR (svn_fs__fs_youngest_revision (&new_rev, fs, subpool));
@@ -2584,7 +2887,7 @@ svn_fs__fs_commit (svn_revnum_t *new_rev_p,
   root_id = svn_fs__create_id ("0", "0",
                                apr_pstrcat (subpool, "t", txn->id, NULL),
                                subpool);
-  SVN_ERR (write_final_rev (&root_offset, rev_file, fs, root_id,
+  SVN_ERR (write_final_rev (&new_root_id, rev_file, new_rev, fs, root_id,
                             start_node_id, start_copy_id, subpool));
 
   /* Write the changed-path information. */
@@ -2593,21 +2896,35 @@ svn_fs__fs_commit (svn_revnum_t *new_rev_p,
 
   /* Write the final line. */
   buf = apr_psprintf(subpool, "\n%" APR_OFF_T_FMT " %" APR_OFF_T_FMT "\n",
-                     root_offset, changed_path_offset);
+                     new_root_id->offset, changed_path_offset);
   SVN_ERR (svn_io_file_write_full (rev_file, buf, strlen (buf), NULL,
                                    subpool));
   
   SVN_ERR (svn_io_file_close (rev_file, subpool));
 
+  /* Move the revision properties into place. */
+  revprop_filename = svn_path_join_many (subpool, fs->fs_path,
+                                         SVN_FS_FS__TXNS_DIR,
+                                         apr_pstrcat (subpool, txn->id,
+                                                      SVN_FS_FS__TXNS_EXT, NULL),
+                                         SVN_FS_FS__PROPS, NULL);
+
+  final_revprop = svn_path_join_many (subpool, fs->fs_path,
+                                      SVN_FS_FS__REVPROPS_DIR,
+                                      apr_psprintf (pool, "%" SVN_REVNUM_T_FMT,
+                                                    new_rev),
+                                      NULL);
+
+  SVN_ERR (svn_io_copy_file (revprop_filename, final_revprop, TRUE, subpool));
+  
   /* Update the 'current' file. */
-  SVN_ERR (write_final_current (fs, txn->id));
+  SVN_ERR (write_final_current (fs, txn->id, new_rev, start_node_id,
+                                start_copy_id, pool));
 
   /* Remove this transaction directory. */
 
   /* Destroy our subpool and release the lock. */
   svn_pool_destroy (subpool);
-
-  SVN_ERR (svn_io_remove_file (lock_filename, pool));
 
   *new_rev_p = new_rev;
   
