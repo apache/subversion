@@ -1,4 +1,4 @@
-/me <!DOCTYPE html PUBLIC "-//Tigris//DTD XHTML 1.0 Transitional//EN" 
+<!DOCTYPE html PUBLIC "-//Tigris//DTD XHTML 1.0 Transitional//EN" 
 "http://style.tigris.org/tigris_transitional.dtd">
 <html>
 <head>
@@ -924,6 +924,10 @@ access to the Berkeley DB files in order to function.</p>
 operations by comparing two trees.  One tree is the usually the HEAD
 revision, and the other is often a temporary transaction-tree -- thus
 the need for write access.</p>
+
+<p>This limitation only applies to the bdb backend; the <a
+href="http://svnbook.red-bean.com/svnbook-1.1/ch05.html#svn-ch-5-sect-1.2.A">FSFS
+backend</a> does not exhibit this behaviour.</p>
 
 <![CDATA[=========================================================]]>
 
