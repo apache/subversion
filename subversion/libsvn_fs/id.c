@@ -294,7 +294,7 @@ svn_fs__unparse_id (svn_fs_id_t *id,
       if (id[i + 1] != -1)
 	buf[len++] = '.';
 
-      svn_string_appendbytes (unparsed, buf, len, pool);
+      svn_string_appendbytes (unparsed, buf, len);
     }
 
   return unparsed;

@@ -163,7 +163,7 @@ svn_txdelta__insert_op (svn_txdelta_window_t *window,
       op->action_code = opcode;
       op->offset = window->new->len;
       op->length = length;
-      svn_string_appendbytes (window->new, new_data, length, window->pool);
+      svn_string_appendbytes (window->new, new_data, length);
       break;
     default:
       assert (!"unknown delta op.");

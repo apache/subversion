@@ -85,14 +85,14 @@ svn__my_readline (apr_file_t *file, svn_string_t *line, apr_pool_t *pool)
       if (c == '\n')          /* line is finished. */
         {
           /* store the newline in our bytestring (important!) */
-          svn_string_appendbytes (line, &c, 1, pool);
+          svn_string_appendbytes (line, &c, 1);
 
           return APR_SUCCESS;
         }
       
       else  /* otherwise, just append this byte to the bytestring */
         {
-          svn_string_appendbytes (line, &c, 1, pool);
+          svn_string_appendbytes (line, &c, 1);
         }
     }  
 }
@@ -135,8 +135,7 @@ svn__slurp_to (const svn_string_t *searchstr,
 
           svn_string_appendbytes (*substr,               /* new substring */
                                   searchstr->data + start,/* start copy */
-                                  (i - start),        /* number to copy */
-                                  pool);
+                                  (i - start));        /* number to copy */
           
           svn_string_strip_whitespace (*substr);
 
@@ -200,7 +199,7 @@ svn_parse (apr_hash_t **uberhash, const char *filename, apr_pool_t *pool)
       char *finalmsg;  /* TODO:  use apr's sprintf() thingie here */
       svn_string_t *msg = svn_string_create 
         ("svn_parse(): can't open for reading, file ", pool);
-      svn_string_appendstr (msg, filename, pool);
+      svn_string_appendstr (msg, filename);
 
       return svn_error_create (result, NULL, NULL, pool, msg->data);
     }

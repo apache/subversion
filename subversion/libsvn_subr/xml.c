@@ -81,7 +81,7 @@ svn_xml_escape_string (svn_string_t **outstr,
       while (q < end && *q != '&' && *q != '<' && *q != '>'
              && *q != '"' && *q != '\'')
         q++;
-      svn_string_appendbytes (*outstr, p, q - p, pool);
+      svn_string_appendbytes (*outstr, p, q - p);
 
       /* We may already be a winner.  */
       if (q == end)
@@ -89,15 +89,15 @@ svn_xml_escape_string (svn_string_t **outstr,
 
       /* Append the entity reference for the character.  */
       if (*q == '&')
-        svn_string_appendcstr (*outstr, "&amp;", pool);
+        svn_string_appendcstr (*outstr, "&amp;");
       else if (*q == '<')
-        svn_string_appendcstr (*outstr, "&lt;", pool);
+        svn_string_appendcstr (*outstr, "&lt;");
       else if (*q == '>')
-        svn_string_appendcstr (*outstr, "&gt;", pool);
+        svn_string_appendcstr (*outstr, "&gt;");
       else if (*q == '"')
-        svn_string_appendcstr (*outstr, "&quot;", pool);
+        svn_string_appendcstr (*outstr, "&quot;");
       else if (*q == '\'')
-        svn_string_appendcstr (*outstr, "&apos;", pool);
+        svn_string_appendcstr (*outstr, "&apos;");
 
       p = q + 1;
     }
@@ -238,8 +238,7 @@ svn_xml_make_header (svn_string_t **str, apr_pool_t *pool)
 {
   if (*str == NULL)
     *str = svn_string_create ("", pool);
-  svn_string_appendcstr (*str, "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n",
-                         pool);
+  svn_string_appendcstr (*str, "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n");
 }
 
 
@@ -336,8 +335,8 @@ svn_xml_make_open_tag_hash (svn_string_t **str,
   if (*str == NULL)
     *str = svn_string_create ("", pool);
 
-  svn_string_appendcstr (*str, "<", pool);
-  svn_string_appendcstr (*str, tagname, pool);
+  svn_string_appendcstr (*str, "<");
+  svn_string_appendcstr (*str, tagname);
 
   for (hi = apr_hash_first (attributes); hi; hi = apr_hash_next (hi))
     {
@@ -348,18 +347,18 @@ svn_xml_make_open_tag_hash (svn_string_t **str,
       apr_hash_this (hi, &key, &keylen, &val);
       assert (val != NULL);
 
-      svn_string_appendcstr (*str, "\n   ", pool);
-      svn_string_appendcstr (*str, (char *) key, pool);
-      svn_string_appendcstr (*str, "=\"", pool);
+      svn_string_appendcstr (*str, "\n   ");
+      svn_string_appendcstr (*str, (char *) key);
+      svn_string_appendcstr (*str, "=\"");
       svn_xml_escape_string (str, (svn_string_t *) val, pool);
-      svn_string_appendcstr (*str, "\"", pool);
+      svn_string_appendcstr (*str, "\"");
     }
 
   if (style == svn_xml_self_closing)
-    svn_string_appendcstr (*str, "/", pool);
-  svn_string_appendcstr (*str, ">", pool);
+    svn_string_appendcstr (*str, "/");
+  svn_string_appendcstr (*str, ">");
   if (style != svn_xml_protect_pcdata)
-    svn_string_appendcstr (*str, "\n", pool);
+    svn_string_appendcstr (*str, "\n");
 }
 
 
@@ -401,9 +400,9 @@ void svn_xml_make_close_tag (svn_string_t **str,
   if (*str == NULL)
     *str = svn_string_create ("", pool);
 
-  svn_string_appendcstr (*str, "</", pool);
-  svn_string_appendcstr (*str, tagname, pool);
-  svn_string_appendcstr (*str, ">\n", pool);
+  svn_string_appendcstr (*str, "</");
+  svn_string_appendcstr (*str, tagname);
+  svn_string_appendcstr (*str, ">\n");
 }
 
 

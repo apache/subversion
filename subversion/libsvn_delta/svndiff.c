@@ -125,7 +125,7 @@ append_encoded_int (svn_string_t *header, apr_off_t val, apr_pool_t *pool)
   char buf[128], *p;
 
   p = encode_int (buf, val);
-  svn_string_appendbytes (header, buf, p - buf, pool);
+  svn_string_appendbytes (header, buf, p - buf);
 }
 
 
@@ -177,7 +177,7 @@ window_handler (svn_txdelta_window_t *window, void *baton)
         ip = encode_int (ip + 1, op->length);
       if (op->action_code != svn_txdelta_new)
         ip = encode_int (ip, op->offset);
-      svn_string_appendbytes (instructions, ibuf, ip - ibuf, pool);
+      svn_string_appendbytes (instructions, ibuf, ip - ibuf);
     }
 
   /* Encode the header.  */
@@ -410,7 +410,7 @@ write_handler (void *baton,
     }
 
   /* Concatenate the old with the new.  */
-  svn_string_appendbytes (db->buffer, buffer, *len, db->subpool);
+  svn_string_appendbytes (db->buffer, buffer, *len);
 
   /* Read the header, if we have enough bytes for that.  */
   p = (const unsigned char *) db->buffer->data;

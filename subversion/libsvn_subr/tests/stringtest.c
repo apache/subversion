@@ -114,7 +114,7 @@ test3 (const char **msg)
   strcpy (tmp, a->data);
   strcat (tmp, b->data);
   old_len = a->len;
-  svn_string_appendstr (a, b, pool);
+  svn_string_appendstr (a, b);
   
   /* Test that length, data, and null-termination are correct. */
   if ((a->len == (old_len + b->len)) && ((strcmp (a->data, tmp)) == 0))
@@ -128,7 +128,7 @@ static int
 test4 (const char **msg)
 {
   a = svn_string_create (phrase_1, pool);
-  svn_string_appendcstr (a, "new bytes to append", pool);
+  svn_string_appendcstr (a, "new bytes to append");
   
   *msg = "append C string to svn_string_t";
 
@@ -145,7 +145,7 @@ static int
 test5 (const char **msg)
 {
   a = svn_string_create (phrase_1, pool);
-  svn_string_appendbytes (a, "new bytes to append", 9, pool);
+  svn_string_appendbytes (a, "new bytes to append", 9);
   
   *msg = "append bytes, then compare two strings";
 
@@ -289,7 +289,7 @@ test11 (const char **msg)
   block_len_1 = (s->blocksize);
   
   t = svn_string_create (", plus a string more than twice as long", pool);
-  svn_string_appendstr (s, t, pool);
+  svn_string_appendstr (s, t);
   len_2       = (s->len);
   block_len_2 = (s->blocksize);
   

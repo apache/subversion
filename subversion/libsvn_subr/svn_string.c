@@ -97,6 +97,7 @@ svn_string_ncreate (const char *bytes, const apr_size_t size,
   new_string->data = (char *) apr_palloc (pool, size + 1);
   new_string->len = size;
   new_string->blocksize = size + 1;
+  new_string->pool = pool;
 
   memcpy (new_string->data, bytes, size);
 
@@ -161,8 +162,7 @@ svn_string_isempty (const svn_string_t *str)
 
 void
 svn_string_ensure (svn_string_t *str, 
-                   apr_size_t minimum_size,
-                   apr_pool_t *pool)
+                   apr_size_t minimum_size)
 {
   /* Keep doubling capacity until have enough. */
   if (str->blocksize < minimum_size)
@@ -177,28 +177,22 @@ svn_string_ensure (svn_string_t *str,
   str->data = (char *) my__realloc (str->data, 
                                     str->len,
                                     str->blocksize,
-                                    pool); 
+                                    str->pool); 
 }
 
 
 /* Copy COUNT bytes from BYTES onto the end of bytestring STR. */
 void
 svn_string_appendbytes (svn_string_t *str, const char *bytes, 
-                        const apr_size_t count, apr_pool_t *pool)
+                        const apr_size_t count)
 {
   apr_size_t total_len;
   void *start_address;
 
-  if (str == NULL)
-    {
-      str = svn_string_ncreate (bytes, count, pool);
-      return;
-    }
-
   total_len = str->len + count;  /* total size needed */
 
   /* +1 for null terminator. */
-  svn_string_ensure (str, (total_len + 1), pool);
+  svn_string_ensure (str, (total_len + 1));
 
   /* get address 1 byte beyond end of original bytestring */
   start_address = (str->data + str->len);
@@ -214,21 +208,17 @@ svn_string_appendbytes (svn_string_t *str, const char *bytes,
 
 /* Append APPENDSTR onto TARGETSTR. */
 void
-svn_string_appendstr (svn_string_t *targetstr, const svn_string_t *appendstr,
-                      apr_pool_t *pool)
+svn_string_appendstr (svn_string_t *targetstr, const svn_string_t *appendstr)
 {
-  svn_string_appendbytes (targetstr, appendstr->data, 
-                          appendstr->len, pool);
+  svn_string_appendbytes (targetstr, appendstr->data, appendstr->len);
 }
 
 
 /* Append CSTR onto TARGETSTR. */
 void
-svn_string_appendcstr (svn_string_t *targetstr,
-                       const char *cstr,
-                       apr_pool_t *pool)
+svn_string_appendcstr (svn_string_t *targetstr, const char *cstr)
 {
-  svn_string_appendbytes (targetstr, cstr, strlen(cstr), pool);
+  svn_string_appendbytes (targetstr, cstr, strlen(cstr));
 }
 
 

@@ -112,11 +112,11 @@ encode_data (void *baton, const char *data, apr_size_t *len, apr_pool_t *pool)
 	  memset (eb->buf + eb->buflen, 0, 3 - eb->buflen);
 	  encode_group (eb->buf, group);
 	  memset (group + (eb->buflen + 1), '=', 4 - (eb->buflen + 1));
-	  svn_string_appendbytes (encoded, group, 4, subpool);
+	  svn_string_appendbytes (encoded, group, 4);
 	  eb->linelen += 4;
 	}
       if (eb->linelen != 0)
-	svn_string_appendcstr (encoded, "\n", subpool);
+	svn_string_appendcstr (encoded, "\n");
     }
   else
     {
@@ -129,12 +129,12 @@ encode_data (void *baton, const char *data, apr_size_t *len, apr_pool_t *pool)
 	  memcpy (eb->buf + eb->buflen, p, 3 - eb->buflen);
 	  p += (3 - eb->buflen);
 	  encode_group (eb->buf, group);
-	  svn_string_appendbytes (encoded, group, 4, subpool);
+	  svn_string_appendbytes (encoded, group, 4);
 	  eb->buflen = 0;
 	  eb->linelen += 4;
 	  if (eb->linelen == BASE64_LINELEN)
 	    {
-	      svn_string_appendcstr (encoded, "\n", subpool);
+	      svn_string_appendcstr (encoded, "\n");
 	      eb->linelen = 0;
 	    }
 	}
@@ -238,7 +238,7 @@ decode_data (void *baton, const char *data, apr_size_t *len, apr_pool_t *pool)
 	    {
 	      memset (db->buf + db->buflen, 0, 4 - db->buflen);
 	      decode_group (db->buf, group);
-	      svn_string_appendbytes (decoded, group, db->buflen - 1, subpool);
+	      svn_string_appendbytes (decoded, group, db->buflen - 1);
 	    }
 	  db->done = TRUE;
 	}
@@ -250,7 +250,7 @@ decode_data (void *baton, const char *data, apr_size_t *len, apr_pool_t *pool)
 	  if (db->buflen == 4)
 	    {
 	      decode_group (db->buf, group);
-	      svn_string_appendbytes (decoded, group, 3, subpool);
+	      svn_string_appendbytes (decoded, group, 3);
 	      db->buflen = 0;
 	    }
 	}
