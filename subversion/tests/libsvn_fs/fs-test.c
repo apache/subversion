@@ -15,6 +15,7 @@
 #include <string.h>
 #include <apr_pools.h>
 #include <apr_time.h>
+#include <apr_md5.h>
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_time.h"
@@ -4181,6 +4182,197 @@ check_all_revisions (const char **msg,
   return SVN_NO_ERROR;
 }
 
+
+/* Helper function for large_file_integrity().  Given a ROOT and PATH
+   to a file, calculate and return the MD5 digest for the contents of
+   the file. */
+static svn_error_t *
+get_file_digest (unsigned char digest[MD5_DIGESTSIZE],
+                 svn_fs_root_t *root,
+                 const char *path,
+                 apr_pool_t *pool)
+{
+  svn_stream_t *stream;
+  char buf[100000];
+  apr_size_t len;
+  apr_md5_ctx_t context;
+
+  /* Get a stream for the file contents. */
+  SVN_ERR (svn_fs_file_contents (&stream, root, path, pool));  
+
+  /* Initialize APR MD5 context. */
+  apr_md5_init (&context);
+
+  do 
+    {
+      /* "please read 1000 bytes into buf" */
+      len = 100000;
+      SVN_ERR (svn_stream_read (stream, buf, &len));
+      
+      /* Update the MD5 calculation with the data we just read.  */
+      apr_md5_update (&context, buf, len);
+      
+    } while (len);  /* Continue until we're told that no bytes were read. */
+
+  /* Finalize MD5 calculation. */
+  apr_md5_final (digest, &context);
+
+  return SVN_NO_ERROR;
+}
+
+
+
+static svn_error_t *
+large_file_integrity (const char **msg,
+                      apr_pool_t *pool)
+{ 
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root, *rev_root;
+  svn_revnum_t youngest_rev = 0;
+  apr_pool_t *subpool = svn_pool_create (pool);
+  svn_stringbuf_t contents;
+  unsigned char digest[MD5_DIGESTSIZE];
+  unsigned char digest_list[100][MD5_DIGESTSIZE];
+  apr_size_t filesize = 10000; /* This should be at least 100, and
+                                  perhaps as large as 1000000.  */
+  svn_txdelta_window_handler_t wh_func;
+  void *wh_baton;
+  int i, j;
+
+  *msg = "create and modify a large file, verifying its integrity";
+
+  /* Create a filesystem and repository. */
+  SVN_ERR (svn_test__create_fs_and_repos 
+           (&fs, "test-repo-check-all-revisions", pool));
+
+  /* Set up our file contents string buffer. */
+  contents.data = apr_palloc (pool, filesize);
+  contents.len = filesize;
+  contents.blocksize = filesize;
+  contents.pool = pool;
+
+  /* THE PLAN:
+
+     The plan here is simple.  We have a very large file (FILESIZE
+     bytes) that we initialize with pseudo-random data and commit.
+     Then we make pseudo-random modifications to that file's contents,
+     committing after each mod.  Prior to each commit, we generate an
+     MD5 checksum for the contents of the file, storing each of those
+     checksums in an array.  After we've made a whole bunch of edits
+     and commits, we'll re-check that file's contents as of each
+     revision in the repository, recalculate a checksum for those
+     contents, and make sure the "before" and "after" checksums
+     match.  */
+
+  /* Create a big, ugly, pseudo-random-filled file and commit it.  */
+  svn_pool_clear (subpool);
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, subpool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
+  SVN_ERR (svn_fs_make_file (txn_root, "bigfile", subpool));
+  for (i = 0; i < filesize; i++)
+    contents.data[i] = (char) ((rand() / RAND_MAX) * 255.0);
+  apr_md5 (digest, contents.data, contents.len);
+  SVN_ERR (svn_fs_apply_textdelta 
+           (&wh_func, &wh_baton, txn_root, "bigfile", subpool));
+  SVN_ERR (svn_txdelta_send_string (&contents, wh_func, wh_baton, subpool));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
+  SVN_ERR (svn_fs_close_txn (txn));
+  memcpy (digest_list[youngest_rev], digest, MD5_DIGESTSIZE);
+
+  /* Now, let's make some edits to the beginning of our file, and
+     commit those. */
+  svn_pool_clear (subpool);
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, subpool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
+  for (i = 0; i < 20; i++)
+    contents.data[i] = (char) ((rand() / RAND_MAX) * 255.0);
+  apr_md5 (digest, contents.data, contents.len);
+  SVN_ERR (svn_fs_apply_textdelta 
+           (&wh_func, &wh_baton, txn_root, "bigfile", subpool));
+  SVN_ERR (svn_txdelta_send_string (&contents, wh_func, wh_baton, subpool));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
+  SVN_ERR (svn_fs_close_txn (txn));
+  memcpy (digest_list[youngest_rev], digest, MD5_DIGESTSIZE);
+
+  /* Now, let's make some edits to the end of our file. */
+  svn_pool_clear (subpool);
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, subpool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
+  for (i = filesize - 10; i < filesize; i++)
+    contents.data[i] = (char) ((rand() / RAND_MAX) * 255.0);
+  apr_md5 (digest, contents.data, contents.len);
+  SVN_ERR (svn_fs_apply_textdelta 
+           (&wh_func, &wh_baton, txn_root, "bigfile", subpool));
+  SVN_ERR (svn_txdelta_send_string (&contents, wh_func, wh_baton, subpool));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
+  SVN_ERR (svn_fs_close_txn (txn));
+  memcpy (digest_list[youngest_rev], digest, MD5_DIGESTSIZE);
+
+  /* How about some edits to both the beginning and the end of the
+     file? */
+  svn_pool_clear (subpool);
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, subpool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
+  for (i = 0; i < 10; i++)
+    contents.data[i] = (char) ((rand() / RAND_MAX) * 255.0);
+  for (i = filesize - 10; i < filesize; i++)
+    contents.data[i] = (char) ((rand() / RAND_MAX) * 255.0);
+  apr_md5 (digest, contents.data, contents.len);
+  SVN_ERR (svn_fs_apply_textdelta 
+           (&wh_func, &wh_baton, txn_root, "bigfile", subpool));
+  SVN_ERR (svn_txdelta_send_string (&contents, wh_func, wh_baton, subpool));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
+  SVN_ERR (svn_fs_close_txn (txn));
+  memcpy (digest_list[youngest_rev], digest, MD5_DIGESTSIZE);
+
+  /* Alright, now we're just going to go crazy.  Let's make many more
+     edits -- pseudo-random numbers and offsets of bytes changed to
+     more pseudo-random values.  */
+  for (j = youngest_rev; j < 100; j++)
+    {
+      int num_bytes;
+      int offset;
+      
+      svn_pool_clear (subpool);
+      SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, subpool));
+      SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
+      num_bytes = (int) (((rand() / RAND_MAX) * (filesize / 100)) + 1);
+      for (i = 0; i < num_bytes; i++)
+        {
+          offset = (int) ((rand() / RAND_MAX) * (filesize - 1));
+          contents.data[offset] = (char) ((rand() / RAND_MAX) * 255.0);
+        }
+      apr_md5 (digest, contents.data, contents.len);
+      SVN_ERR (svn_fs_apply_textdelta 
+               (&wh_func, &wh_baton, txn_root, "bigfile", subpool));
+      SVN_ERR (svn_txdelta_send_string 
+               (&contents, wh_func, wh_baton, subpool));
+      SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
+      SVN_ERR (svn_fs_close_txn (txn));
+      memcpy (digest_list[youngest_rev], digest, MD5_DIGESTSIZE);
+    }
+
+  /* Now, calculate an MD5 digest for the contents of our big ugly
+     file in each revision currently in existence, and make the sure
+     the checksum matches the checksum of the data prior to its
+     commit. */
+  for (j = 1; j < youngest_rev; j++)
+    {
+      svn_pool_clear (subpool);
+      SVN_ERR (svn_fs_revision_root (&rev_root, fs, j, subpool));
+      SVN_ERR (get_file_digest (digest, rev_root, "bigfile", subpool));
+      if (memcmp (digest, digest_list[j], MD5_DIGESTSIZE))
+        return svn_error_createf
+          (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+           "MD5 checksum failure, revision %lu", (long unsigned int)j);
+    }
+
+  svn_pool_destroy (subpool);
+  return SVN_NO_ERROR;
+}
+
+
 
 /* The test table.  */
 
@@ -4214,9 +4406,9 @@ svn_error_t * (*test_funcs[]) (const char **msg,
   commit_date,
   check_old_revisions,
   check_all_revisions,
+  large_file_integrity,
   0
 };
-
 
 
 /* 

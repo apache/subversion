@@ -227,7 +227,7 @@ window_handler (svn_txdelta_window_t *window, void *baton)
   /* If this window is irrelevant because it reconstructs text that is
      entirely after the range we're interested in, and yet we don't
      think we're done, then something is mighty fishy indeed. */
-  if ((wb->cur_offset + window->tview_len) > (wb->req_offset + wb->len_req))
+  if (wb->cur_offset > (wb->req_offset + wb->len_req))
     {
       return svn_error_createf
         (SVN_ERR_FS_CORRUPT, 0, NULL, wb->pool,
@@ -268,19 +268,24 @@ window_handler (svn_txdelta_window_t *window, void *baton)
     {
       svn_txdelta_op_t *op;
       int i;
+      apr_size_t max_len;
 
       for (i = 0; i < window->num_ops; i++)
         {
           op = window->ops + i;
+          max_len = ((op->length < wb->len_req - wb->len_read) 
+                     ? op->length 
+                     : wb->len_req - wb->len_read);
 
           switch (op->action_code)
             {
             case svn_txdelta_source:
               {
+
                 memcpy (wb->buf + wb->len_read,
                         sbuf + op->offset,
-                        op->length);
-                wb->len_read += op->length;
+                        max_len);
+                wb->len_read += max_len;
               }
               break;
             case svn_txdelta_target:
@@ -288,7 +293,7 @@ window_handler (svn_txdelta_window_t *window, void *baton)
                 /* This could be done in bigger blocks, at the expense
                    of some more complexity. */
                 int t;
-                for (t = op->offset; t < op->offset + op->length; t++)
+                for (t = op->offset; t < op->offset + max_len; t++)
                   wb->buf[(wb->len_read)++] = wb->buf[t];
               }
               break;
@@ -296,8 +301,8 @@ window_handler (svn_txdelta_window_t *window, void *baton)
               {
                 memcpy (wb->buf + wb->len_read,
                         window->new_data->data + op->offset,
-                        op->length);
-                wb->len_read += op->length;
+                        max_len);
+                wb->len_read += max_len;
               }
               break;
             default:
