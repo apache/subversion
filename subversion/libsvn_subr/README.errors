@@ -40,6 +40,11 @@ typedef struct svn_error
         error = some_routine (foo);
         if (error)
           return (error);
+
+       Actually, a better way to do this would be with the SVN_ERR() macro, 
+       which does the same thing:
+
+       SVN_ERR (some_routine (foo));
         
     c) Throw the error upwards, wrapping it in a new error structure
        by including it as the "child" argument:
