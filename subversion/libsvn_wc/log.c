@@ -1253,17 +1253,21 @@ handle_killme (svn_wc_adm_access_t *adm_access,
 {
   const svn_wc_entry_t *thisdir_entry, *parent_entry;
   svn_wc_entry_t tmp_entry;
+  svn_error_t *err;
   SVN_ERR (svn_wc_entry (&thisdir_entry,
                          svn_wc_adm_access_path (adm_access), adm_access,
                          FALSE, pool));
 
   /* Blow away the entire directory, and all those below it too. */
-  SVN_ERR (svn_wc_remove_from_revision_control (adm_access,
-                                                SVN_WC_ENTRY_THIS_DIR,
-                                                TRUE, /* destroy */
-                                                FALSE, /* no instant err */
-                                                cancel_func, cancel_baton,
-                                                pool));
+  err = svn_wc_remove_from_revision_control (adm_access,
+                                             SVN_WC_ENTRY_THIS_DIR,
+                                             TRUE, /* destroy */
+                                             FALSE, /* no instant err */
+                                             cancel_func, cancel_baton,
+                                             pool);
+  if (err && err->apr_err != SVN_ERR_WC_LEFT_LOCAL_MOD)
+    return err;
+  svn_error_clear (err);
 
   /* If revnum of this dir is greater than parent's revnum, then
      recreate 'deleted' entry in parent. */
