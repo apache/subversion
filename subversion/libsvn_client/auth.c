@@ -448,11 +448,6 @@ typedef struct
   const char *default_username;
   const char *default_password;
 
-  /* base dir and access baton with which to save successful creds.
-     can be NULL. */
-  const char *base_dir;
-  svn_wc_adm_access_t *base_access;
-
 } simple_prompt_provider_baton_t;
 
 
@@ -551,23 +546,6 @@ simple_prompt_next_creds (void **credentials,
 }
 
 
-/* Save the credentials. */
-static svn_error_t *
-simple_prompt_save_creds (svn_boolean_t *saved,
-                          void *credentials,
-                          void *provider_baton,
-                          apr_pool_t *pool)
-{
-  svn_auth_cred_simple_t *creds = credentials;
-  simple_prompt_provider_baton_t *pb = provider_baton;
-  
-  *saved = FALSE;
-  if (pb->base_dir)
-    SVN_ERR (svn_wc_save_simple_creds (saved, pb->base_dir, pb->base_access, 
-                                       creds, pool));
-  return SVN_NO_ERROR;
-}
-
 
 /* Public API */
 void
@@ -578,8 +556,6 @@ svn_client__get_simple_prompt_provider (const svn_auth_provider_t **provider,
                                         int retry_limit,
                                         const char *default_username,
                                         const char *default_password,
-                                        const char *base_dir,
-                                        svn_wc_adm_access_t *base_access,
                                         apr_pool_t *pool)
 {
   simple_prompt_provider_baton_t *pb = apr_pcalloc (pool, sizeof(*pb));
@@ -588,7 +564,7 @@ svn_client__get_simple_prompt_provider (const svn_auth_provider_t **provider,
   prov->cred_kind = SVN_AUTH_CRED_SIMPLE;
   prov->first_credentials = simple_prompt_first_creds;
   prov->next_credentials = simple_prompt_next_creds;
-  prov->save_credentials = base_dir ? simple_prompt_save_creds : NULL;
+  prov->save_credentials = NULL;
 
   pb->prompt_func = prompt_func;
   pb->prompt_baton = prompt_baton;
@@ -598,12 +574,7 @@ svn_client__get_simple_prompt_provider (const svn_auth_provider_t **provider,
     pb->default_username = apr_pstrdup (pool, default_username);
   if (default_password)
     pb->default_password = apr_pstrdup (pool, default_password);
-  if (base_dir)
-    {
-      pb->base_dir = base_dir;
-      if (base_access)
-        pb->base_access = base_access;
-    }
+
   *provider = prov;
   *provider_baton = pb;
 }

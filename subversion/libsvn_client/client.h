@@ -110,8 +110,6 @@ svn_client__get_simple_prompt_provider (const svn_auth_provider_t **provider,
                                         int retry_limit,
                                         const char *default_username,
                                         const char *default_password,
-                                        const char *base_dir,
-                                        svn_wc_adm_access_t *base_access,
                                         apr_pool_t *pool);
 
 
