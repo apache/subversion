@@ -19,6 +19,7 @@ import string
 import svn.fs
 import svn.core
 import svn.delta
+from types import StringType, IntType, FloatType, LongType
 
 from libsvn.repos import *
 
@@ -48,22 +49,59 @@ class ChangedPath:
     self.added = added
 
 
-class RevisionChangeCollector(svn.delta.Editor):
-
+class ChangeCollector(svn.delta.Editor):
+  """
+  """
+  
   # BATON FORMAT: [path, base_path, base_rev]
   
-  def __init__(self, fs_ptr, rev, pool):
+  def __init__(self, fs_ptr, root, pool, notify_cb=None):
     self.fs_ptr = fs_ptr
-    self.rev = rev
     self.changes = { } # path -> ChangedPathEntry()
     self.roots = { } # revision -> svn_fs_root_t
     self.pool = pool
+    self.notify_cb = notify_cb
+    self.props = { }
+    self.fs_root = root
+
+    ### COMPATIBILITY CODE: If we get an Int or Long for the ROOT,
+    ### assume it is a revision number coming through the deprecated
+    ### RevisionChangeCollector interface.
+    if isinstance(root, IntType) or isinstance(root, LongType):
+      self.fs_root = svn.fs.revision_root(self.fs_ptr, root, pool)
+      
+    # Figger out the base revision and root properties.
+    subpool = svn.core.svn_pool_create(self.pool)
+    if svn.fs.is_revision_root(self.fs_root):
+      rev = svn.fs.revision_root_revision(self.fs_root)
+      self.base_rev = rev - 1
+      self.props = svn.fs.revision_proplist(self.fs_ptr, rev, subpool).copy()
+    else:
+      txn_name = svn.fs.txn_root_name(self.fs_root, pool)
+      txn_t = svn.fs.open_txn(self.fs_ptr, txn_name, subpool)
+      self.base_rev = svn.fs.txn_base_revision(txn_t)
+      self.props = svn.fs.txn_proplist(txn_t, subpool).copy()
+    svn.core.svn_pool_destroy(subpool)
+
+  def get_root_props(self):
+    return self.props
+
+  def get_changes(self):
+    return self.changes
+  
+  def _send_change(self, path):
+    if self.notify_cb:
+      change = self.changes.get(path)
+      if change:
+        self.notify_cb(change)
     
   def _make_base_path(self, parent_path, path):
     idx = string.rfind(path, '/')
+    if parent_path:
+      parent_path = parent_path + '/'
     if idx == -1:
-      return parent_path + '/' + path
-    return parent_path + path[idx:]
+      return parent_path + path
+    return parent_path + path[idx+1:]
 
   def _get_root(self, rev):
     try:
@@ -74,7 +112,7 @@ class RevisionChangeCollector(svn.delta.Editor):
     return root
     
   def open_root(self, base_revision, dir_pool):
-    return ('', '', self.rev - 1)  # dir_baton
+    return ('', '', self.base_rev)  # dir_baton
 
   def delete_entry(self, path, revision, parent_baton, pool):
     base_path = self._make_base_path(parent_baton[1], path)
@@ -90,6 +128,7 @@ class RevisionChangeCollector(svn.delta.Editor):
                                      None,            # (new) path
                                      False,           # added
                                      )
+    self._send_change(path)
 
   def add_directory(self, path, parent_baton,
                     copyfrom_path, copyfrom_revision, dir_pool):
@@ -182,6 +221,16 @@ class RevisionChangeCollector(svn.delta.Editor):
                                             file_path,     # path
                                             False,         # added
                                             )
+  def close_directory(self, dir_baton):
+    self._send_change(dir_baton[0])
+    
+  def close_file(self, file_baton, text_checksum):
+    self._send_change(file_baton[0])
+    
+
+### for compatibility 
+RevisionChangeCollector = ChangeCollector
+
 
 # enable True/False in older vsns of Python
 try:
@@ -189,5 +238,3 @@ try:
 except NameError:
   True = 1
   False = 0
-
-
