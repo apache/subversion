@@ -56,6 +56,7 @@ static const ne_propname starting_props[] =
   { "DAV:", "version-controlled-configuration" },
   { "DAV:", "resourcetype" },
   { SVN_DAV_PROP_NS_DAV, "baseline-relative-path" },
+  { SVN_DAV_PROP_NS_DAV, "repository-uuid"},
   { NULL }
 };
 
@@ -621,19 +622,13 @@ svn_error_t * svn_ra_dav__get_starting_props(svn_ra_dav_resource_t **rsrc,
 }
 
 
-/* Shared helper func: given a public URL which may not exist in HEAD,
-   use SESS to search up parent directories until we can retrieve a
-   *RSRC (allocated in POOL) containing a standard set of "starting"
-   props: {VCC, resourcetype, baseline-relative-path}.  
 
-   Also return *MISSING_PATH (allocated in POOL), which is the
-   trailing portion of the URL that did not exist.  If an error
-   occurs, *MISSING_PATH isn't changed. */
-static svn_error_t * search_for_starting_props(svn_ra_dav_resource_t **rsrc,
-                                               const char **missing_path,
-                                               ne_session *sess,
-                                               const char *url,
-                                               apr_pool_t *pool)
+svn_error_t * 
+svn_ra_dav__search_for_starting_props(svn_ra_dav_resource_t **rsrc,
+                                      const char **missing_path,
+                                      ne_session *sess,
+                                      const char *url,
+                                      apr_pool_t *pool)
 {
   svn_error_t *err;
   apr_size_t len;
@@ -707,8 +702,8 @@ svn_error_t *svn_ra_dav__get_vcc(const char **vcc,
   /* ### Someday, possibly look for disk-cached VCC via get_wcprop callback. */
 
   /* Finally, resort to a set of PROPFINDs up parent directories. */
-  SVN_ERR( search_for_starting_props(&rsrc, &lopped_path,
-                                     sess, url, pool) );
+  SVN_ERR( svn_ra_dav__search_for_starting_props(&rsrc, &lopped_path,
+                                                 sess, url, pool) );
 
   vcc_s = apr_hash_get(rsrc->propset,
                        SVN_RA_DAV__PROP_VCC, APR_HASH_KEY_STRING);
@@ -759,8 +754,8 @@ svn_error_t *svn_ra_dav__get_baseline_props(svn_string_t *bc_relative,
         parent directories.
   */
 
-  SVN_ERR( search_for_starting_props(&rsrc, &lopped_path,
-                                     sess, url, pool) );
+  SVN_ERR( svn_ra_dav__search_for_starting_props(&rsrc, &lopped_path,
+                                                 sess, url, pool) );
   
   vcc = apr_hash_get(rsrc->propset, SVN_RA_DAV__PROP_VCC, APR_HASH_KEY_STRING);
   if (vcc == NULL)

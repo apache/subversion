@@ -1060,6 +1060,53 @@ def wc_copy_parent_into_child(sbox):
                                         expected_disk,
                                         expected_status)
 
+#----------------------------------------------------------------------
+# Issue 1419: at one point ra_dav->get_uuid() was failing on a
+# non-existent public URL, which prevented us from resurrecting files
+# (svn cp -rOLD URL wc).
+
+def resurrect_deleted_file(sbox):
+  "resurrect a deleted file"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Delete a file in the repository via immediate commit
+  rho_url = svntest.main.current_repo_url + '/A/D/G/rho'
+  outlines,errlines = svntest.main.run_svn(None, 'rm', rho_url, '-m', 'rev 2')
+  if errlines:
+    raise svntest.Failure
+
+  # Update the wc to HEAD (r2)
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/G/rho' : Item(status='D '),
+    })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('A/D/G/rho')
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.remove('A/D/G/rho')
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status)
+
+  # repos->wc copy, to resurrect deleted file.
+  outlines,errlines = svntest.main.run_svn(None, 'cp', '-r', '1',
+                                           rho_url, wc_dir)
+  if errlines:
+    print "Copy Error:"
+    for line in errlines:
+      print line
+    raise svntest.Failure
+
+  # status should now show the file scheduled for addition-with-history
+  expected_status.add({
+    'rho' : Item(status='A ', copied='+', wc_rev='-', repos_rev=2),
+    })
+  svntest.actions.run_and_verify_status (wc_dir, expected_status)
+
+
+
 ########################################################################
 # Run the tests
 
@@ -1082,6 +1129,7 @@ test_list = [ None,
               copy_to_root,
               url_copy_parent_into_child,
               wc_copy_parent_into_child,
+              resurrect_deleted_file,
              ]
 
 if __name__ == '__main__':

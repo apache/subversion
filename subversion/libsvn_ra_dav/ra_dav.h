@@ -284,6 +284,21 @@ svn_error_t * svn_ra_dav__get_starting_props(svn_ra_dav_resource_t **rsrc,
                                              const char *label,
                                              apr_pool_t *pool);
 
+/* Shared helper func: given a public URL which may not exist in HEAD,
+   use SESS to search up parent directories until we can retrieve a
+   *RSRC (allocated in POOL) containing a standard set of "starting"
+   props: {VCC, resourcetype, baseline-relative-path}.  
+
+   Also return *MISSING_PATH (allocated in POOL), which is the
+   trailing portion of the URL that did not exist.  If an error
+   occurs, *MISSING_PATH isn't changed. */
+svn_error_t * 
+svn_ra_dav__search_for_starting_props(svn_ra_dav_resource_t **rsrc,
+                                      const char **missing_path,
+                                      ne_session *sess,
+                                      const char *url,
+                                      apr_pool_t *pool);
+
 /* fetch a single property from a single resource */
 svn_error_t * svn_ra_dav__get_one_prop(const svn_string_t **propval,
                                        ne_session *sess,
