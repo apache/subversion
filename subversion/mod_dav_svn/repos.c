@@ -33,6 +33,7 @@
 #include "svn_fs.h"
 #include "svn_repos.h"
 #include "svn_dav.h"
+#include "svn_sorts.h"
 
 #include "dav_svn.h"
 
@@ -841,6 +842,7 @@ static dav_error * dav_svn_get_resource(request_rec *r,
   const char *relative;
   svn_error_t *serr;
   dav_error *err;
+  int had_slash;
 
   /* this is usually the first entry into mod_dav_svn, so let's initialize
      the error pool, as a subpool of the request pool. */
@@ -884,7 +886,12 @@ static dav_error * dav_svn_get_resource(request_rec *r,
   /* make sure the URI does not have a trailing "/" */
   len1 = strlen(uri);
   if (len1 > 1 && uri[len1 - 1] == '/')
-    uri[len1 - 1] = '\0';
+    {
+      had_slash = 1;
+      uri[len1 - 1] = '\0';
+    }
+  else
+    had_slash = 0;
 
   comb->res.uri = uri;
 
@@ -986,6 +993,23 @@ static dav_error * dav_svn_get_resource(request_rec *r,
   /* prepare the resource for operation */
   if ((err = dav_svn_prep_resource(comb)) != NULL)
     return err;
+
+  /* a GET request for a REGULAR collection resource MUST have a trailing
+     slash. Redirect to include one if it does not. */
+  if (comb->res.collection && comb->res.type == DAV_RESOURCE_TYPE_REGULAR
+      && !had_slash && r->method_number == M_GET)
+    {
+      /* note that we drop r->args. we don't deal with them anyways */
+      const char *new_path = apr_pstrcat(r->pool,
+                                         ap_escape_uri(r->pool, r->uri),
+                                         "/",
+                                         NULL);
+      apr_table_setn(r->headers_out, "Location",
+                     ap_construct_url(r->pool, new_path, r));
+      return dav_new_error(r->pool, HTTP_MOVED_PERMANENTLY, 0,
+                           "Requests for a collection must have a "
+                           "trailing slash on the URI.");
+    }
 
   *resource = &comb->res;
   return NULL;
@@ -1339,10 +1363,15 @@ static dav_error * dav_svn_set_headers(request_rec *r,
   /* we accept byte-ranges */
   apr_table_setn(r->headers_out, "Accept-Ranges", "bytes");
 
-  /* If we have a delta base, then we will always be generating an svndiff.
-     Otherwise, we need to fetch the appropriate MIME type from the
-     resource's properties (and use text/plain if it isn't there). */
-  if (resource->info->delta_base != NULL)
+  /* For a directory, we will generate text/html. If we have a delta
+     base, then we will always be generating an svndiff.  Otherwise,
+     we need to fetch the appropriate MIME type from the resource's
+     properties (and use text/plain if it isn't there). */
+  if (resource->collection)
+    {
+      mimetype = "text/html";
+    }
+  else if (resource->info->delta_base != NULL)
     {
       mimetype = SVN_SVNDIFF_MIME_TYPE;
     }
@@ -1426,6 +1455,9 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
                                    ap_filter_t *output)
 {
   svn_error_t *serr;
+  apr_bucket_brigade *bb;
+  apr_bucket *bkt;
+  apr_status_t status;
 
   /* Check resource type */
   if (resource->type != DAV_RESOURCE_TYPE_REGULAR
@@ -1434,10 +1466,84 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
     return dav_new_error(resource->pool, HTTP_CONFLICT, 0,
                          "Cannot GET this type of resource.");
   }
+
   if (resource->collection) {
-    return dav_new_error(resource->pool, HTTP_CONFLICT, 0,
-                         "There is no default response to GET for a "
-                         "collection.");
+    apr_hash_t *entries;
+    apr_pool_t *entry_pool;
+    const char *title;
+    apr_array_header_t *sorted;
+    int i;
+
+    serr = svn_fs_dir_entries(&entries, resource->info->root.root,
+                              DAV_SVN_REPOS_PATH(resource), resource->pool);
+    if (serr != NULL)
+      return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                 "could not fetch directory entries");
+
+    if (resource->info->repos_path == NULL)
+      title = "unknown location";
+    else
+      title = ap_escape_html(resource->pool, resource->info->repos_path);
+
+    bb = apr_brigade_create(resource->pool);
+    ap_fprintf(output, bb,
+               "<html><head><title>%s</title></head>"
+               "<body><h1>%s</h1><ul>",
+               title, title);
+
+    /* get a sorted list of the entries */
+    sorted = apr_hash_sorted_keys(entries, svn_sort_compare_items_as_paths,
+                                  resource->pool);
+
+    entry_pool = svn_pool_create(resource->pool);
+
+    for (i = 0; i < sorted->nelts; ++i)
+      {
+        const svn_item_t *item = &APR_ARRAY_IDX(sorted, i, const svn_item_t);
+        /* unused: const svn_fs_dirent_t *entry = elem->value; */
+        const char *entry_path;
+        const char *name;
+        int is_dir;
+
+        /* for a REGULAR resource, the root is going to be a normal root,
+           which allows us to access it with a path. build a path for this
+           entry so that we can get information for it. */
+        entry_path = apr_pstrcat(entry_pool, resource->info->repos_path,
+                                 "/", item->key, NULL);
+
+        (void) svn_fs_is_dir(&is_dir, resource->info->root.root,
+                             entry_path, entry_pool);
+
+        name = ap_escape_html(entry_pool, item->key);
+
+        /* append a trailing slash onto the name for directories. we NEED
+           this for the href portion so that the relative reference will
+           descend properly. for the visible portion, it is just nice. */
+        if (is_dir)
+          name = apr_pstrcat(entry_pool, name, "/", NULL);
+
+        ap_fprintf(output, bb,
+                   "<li><a href=\"%s\">%s</a></li>",
+                   name, name);
+
+        svn_pool_clear(entry_pool);
+      }
+
+    svn_pool_destroy(entry_pool);
+
+    ap_fputs(output, bb,
+             "</ul><hr noshade><em>Powered by "
+             "<a href=\"http://subversion.tigris.org/\">Subversion</a>"
+             "</em></body></html>");
+
+    bkt = apr_bucket_eos_create();
+    APR_BRIGADE_INSERT_TAIL(bb, bkt);
+    if ((status = ap_pass_brigade(output, bb)) != APR_SUCCESS) {
+      return dav_new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                           "Could not write EOS to filter.");
+    }
+
+    return NULL;
   }
 
   /* If we have a base for a delta, then we want to compute an svndiff
@@ -1447,9 +1553,6 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
     {
       svn_stream_t *stream;
       char *block;
-      apr_bucket_brigade *bb;
-      apr_status_t status;
-      apr_bucket *bkt;
 
       serr = svn_fs_file_contents(&stream,
                                   resource->info->root.root,
