@@ -5,6 +5,7 @@ Version 0.14.1 [Alpha Interim 1] (released ? August 2002, revision ?)
  * 'svn co' can take multiple URLs now
  * new 'svn ls' command
  * new 'svn st --no-ignore' option
+ * new 'svn --version --quiet' option
  * more conservative 'svn help' usage error-message
  * more graceful degredation from charset conversion failure
  * standardize policy of -q switch behavior
