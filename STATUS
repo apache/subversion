@@ -20,8 +20,7 @@ Candidate changes:
       This conflicts with the branch.  See the 1.1.x-r10788 branch.
       Causes httpd to crash on exit in some cases without r11458.
     Votes:
-      +1: lundblad, dionisos
-      +1: ghudson (not r11551)
+      +1: lundblad, dionisos, ghudson
 
   * r11284, r11321
     Fix memory usage bloat in ra-dav commits.
