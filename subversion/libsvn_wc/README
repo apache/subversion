@@ -7,6 +7,7 @@ It performs local operations in the working copy, tweaking
 administrative files and versioned data, generally in response to a
 received delta.  It communicates with the server through libsvn_cl.
 
+
 The Problem We're Solving.
 ==========================
 
@@ -20,150 +21,162 @@ Furthermore, updates/commits do not always involve the entire tree, so
 it is possible for the working copy to go a very long time without
 being a perfect mirror of some tree in the repository.
 
-To resolve all situations safely, we define exactly what a "change" is
-and what a "conflict" is, and how conflicts are resolved.
 
-Kinds of Changes.
-=================
+One Way We're Not Solving It.
+=============================
 
-As their trees change over time, the working copy and repository each
-track changes to files and directories.  There are two kinds of
-changes, "direct" and "indirect":
+Updates and commits are about merging two trees that share a common
+ancestor, but have diverged since that ancestor.  In real life, one of
+the trees comes from the working copy, the other from the repository.
+But when thinking about how to merge two such trees, we can ignore the
+question of which is the working copy and which is the repository,
+because the principles involved are symmetrical.
 
-               Direct Change        Indirect Change
-          ._______________________._______________________.
-          | Change to file's      |                       |
-   file   | contents; OR, file    |                       |
-          | was added, removed,   |  [No such thing]      |
-          | or renamed            |                       |
-          |_______________________|_______________________|
-          |                       |  A descendant of this |
-   dir    | This dir was added,   |  dir was added,       |
-          | removed, or renamed   |  removed, renamed,    |
-          |                       |  or modified          |
-          |_______________________|_______________________|
+Why do we say symmetrical?
 
-In other words, a change that directly affects an entity's textual
-contents, its name, or its existence is a "direct" change.  A change
-that affects the name or existence of a directory's descendant is an
-"indirect" change to the directory (although it's a direct change to
-the descendant, of course).  Only directories can have indirect
-changes.
+It's tempting to think of a change as being either "from" the working
+copy or "in" the repository.  But the true source of a change is some
+committer -- each change represents some developer's intention toward
+a file or a tree, and a conflict is what happens when two intentions
+are incompatible (or their compatibility cannot be automatically
+determined).
 
+It doesn't matter in what order the intentions were discovered --
+which has already made it into the repository versus which exists only
+in someone's working copy.  Incompatibility is incompatibility,
+independent of timing.
 
-Comparing Changes.
-==================
+In fact, a working copy can be viewed as a "branch" off the
+repository, and the changes committed in the repository *since* then
+represent another, divergent branch.  Thus, every update or commit is
+a general branch-merge problem:
 
-In both commits and updates, the client and server must compare
-changes in the working copy against changes in the repository.  For
-commits, the comparison is part of the pre-commit up-to-date check;
-for updates, the comparison determines what changes will be sent from
-server to client.
+   - An update is an attempt to merge the repository's branch into the
+     working copy's branch, and the attempt may fail wholly or
+     partially depending on the number of conflicts.
 
-Since commits do not change the working copy, pre-commit checks need
-not do intelligent conflict checking and merging.  They are only
-concerned with whether things are "up-to-date" -- that is, for the
-entities in question, have there been divergent changes between
-working copy and repository?  If so, then the working copy is
-out-of-date.
+   - A commit is an attempt to merge the working copy's branch into
+     the repository.  The exact same algorithm is used as with
+     updates, the only difference being that a commit must succeed
+     completely or not at all.  That last condition is merely a
+     useability decision: the repository tree is shared by many
+     people, so folding both sides of a conflict into it to aid
+     resolution would actually make it less useable, not more.  On the
+     other hand, representing both sides of a conflict in a working
+     copy is often helpful to the person who owns that copy.
 
-Updates, on the other hand, usually do affect the working copy.
-Updates merge changes into the working copy where possible (not only
-textual changes, but even tree-structure changes), and describe
-conflicts as usefully as possible when merging is not an option.
-
-To understand how the above happens, you need to know
-
-  * How the working copy describes its state to the server.
-
-  * In the case of a commit,
-       a) how the server uses this state to perform a pre-commit check.
-       b) how the client completes the commit.
-
-  * In the case of an update,
-       a) how the server uses this state to generate an update delta.
-       b) how the client applies an update delta.
+So below we consider the general problem of how to merge two trees
+that have a common ancestor.  The concrete tree layout discussed will
+be that of the working copy, because this library needs to know
+exactly how to massage a working copy from one state to another.
 
 
-How the working copy describes its state to the server.
-=======================================================
+Structure of the Working Copy
+=============================
 
-The problem of describing the working copy's state to the server is
-the same whether for pre-commit check or for update.  In both
-scenarios, the working copy describes its state to the server by
-sending over a "snapshot".  The server uses the snapshot to determine
-how to respond to the client.  (The state includes only those entities
-involved in the transaction -- the working copy is certainly not
-required to describe its *entire* state for every operation.)
+     [Note: this is redundant with some of client.texi, but 
+     overrides it.  We'll sync them up after implementation.]
 
-For the moment, let's treat the snapshot as a black box (in practice,
-it's probably a skelta).  It contains one entry per entity, and each
-entry consists of:
+Working copy meta-information is stored in SVN/ subdirectories,
+analogous to CVS/ sudirs:
 
-   oName              (Original Name, a full path, of course)
-   oVersion           (Original Version, also called "base" version)
-   Action             (modify, add, remove, rename...)
-   nName              (New Name, if any)
-   nVersion           (New Version, == repos Latest if left empty)
+   SVN/versions
+       properties
+       here-changes
+       under-changes
+       lock                     /* optional */
+       tmp
+       base/foo.c
+            bar.c               /* holds contents _and_ properties */
+            ... (no subdirs) ...
+            baz.c
+
+`versions':
+
+   This file holds the version number of this directory and its
+   children.  The first line represents the current directory and
+   looks like:
+
+      . VersionNumber DirName
+
+   and each succeeding line like
+
+      VersionNumber FileOrDirName
+
+   with names escaped so all characters are possible.  The directory's
+   own VersionNumber is implicit for every child of the directory, so
+   only the exceptions need to be recorded.  For example
+
+      . 15 blah       /* Current dir is at 15, and all its files too... */
+      17 foo.c        /* ... except foo.c, which is at 17, and... */
+      20 bar.c        /* ... bar.c, which is at 20, and also...
+      12 baz.c        /* ... bar.c, whose 12 might be result of "update -r" */
+
+   The versions of child directories are not recorded, because they
+   have their own `SVN/versions' files.
+
+fooo working here
+
+      [todo: should list all files, so one can know what files this
+      dir contains even if user removed them all with Unix `rm' and
+      not a word to subversion?  Or should it list only the ones that
+      are different from top version?]
+
+   Anything asserted by a `versions' file is known to the repository;
+   for example, if the user does "svn rename foo.c qux.c", the
+   versions file will still claim that foo.c is at version 17 (the
+   rename gets recorded in the `changes' file, described later).
+   After the rename is committed, the line for foo.c becomes:
+
+      21 qux.c
+
+   with version number adjusted appropriately of course.
+   
+`properties'
+
+   Properties for this directory, in standard hashdump format.
+
+`changes'
+
+   Records changes made to this directory.  Oh ho, this needs a
+   careful format, each line like
+
+      Operation oVersion oName [nVersion or "L"] [nName]
+
+   All names are full paths, so we can identify unambiguously.
+
+`lock'
+
+   Present iff some client is making changes in this SVN/ subdir.
+   (Do we need read vs write locks?  Hmm, yes, probably.)
+
+`tmp'
+
+   Use this instead of /tmp, for debuggability and easy avoidance of
+   filename collisions.
+
+Now, about the `base/' subdir:
+
+explain how it holds *both* properties and contents...
 
 
-How the server uses the snapshot to perform a pre-commit check.
-===============================================================
+------------------------
+todo: some loose ends
 
-First, the server checks the snapshot for internal consistency -- if
-the snapshot claims that two files have been renamed to the same name,
-or something equally ridiculous, it is rejected out of hand.
-
-Assuming the snapshot is consistent, the server checks whether each
-entity in it has changed in the repository, or will change due to a
-pending commit, since the given base version.  A direct change always
-causes the pre-commit check to fail; an indirect change causes failure
-iff it mentions the same name as the change in the snapshot.
-
-(See the section "Conflict/Merge Tables" farther down for a formal
-accounting of these rules.)
-
-The server *never* accepts a commit based on a working copy state that
-conflicts with the repository.  The client is always responsible for
-sending non-conflicting deltas.  Therefore, the client may need to
-update and resolve any conflicts before committing.  So when a
-pre-commit check fails, the server doesn't just send back a terse
-denial.  It tells the client exactly which entities are out of date,
-so the client can update efficiently.
-
-If the pre-commit check succeeds, the server sends back a token
-(unique among all other pending commits), which the client will use to
-complete the commit.
+   1. filename escaping in SVN/versions
+   2. 
 
 
-How the client completes the commit.
-------------------------------------
+------------------------
+todo: make a concrete example using Jim's starting tree:
 
-The client sends back the success token it received from the server,
-along with a full delta describing the changes.  (In practice,
-probably a filled-in version of the skelta it sent previously.)  The
-server applies these changes, creating a new version, and sends a
-success ACK back to the client.  The client-side entities involved in
-the commit are, for that instant at least, up-to-date.
+   /dir1/file1
+         file2
+         dir2/file3
+              file4
+         dir3/file5
 
 
-How the server uses the snapshot to generate an update delta.
-=============================================================
-
-This question is interesting if you're implementing the repository
-filesystem, but it's too complex to go into here and it's not part of
-libsvn_wc. :-) Suffice it to say that the server sends back a tree
-delta describing what the working copy must do to become up-to-date,
-according to the base revisions in the snapshot the working copy sent.
-
-How the working copy *uses* that tree delta is much more relevant to
-libsvn_wc, and is the subject of the next section...
-
-[JimB: hopefully the first section, "How the server uses the snapshot
-to perform a pre-commit check", resolves the issues about filesystem
-implementation.  Basically, if there's any doubt about the
-commitability of a delta, then reject it and tell the client to
-update.  See also "Conflict/Merge Tables" below.]
 
 
 How the client applies an update delta.
@@ -232,243 +245,3 @@ punting can become a rare event.  We should start out with a _simple_
 conflict-folding algorithm initially, though.
 
 
-Conflict/Merge Tables.
-======================
-
-The tables below describe how client and server behave in various
-potential conflict scenarios.  Each intersection describes what
-happens when one change meets another on the same entity.
-
-   Table 1:   Direct changes   <==>   Indirect changes
-   Table 2:   Indirect changes  <==>  Indirect changes
-   Table 3:   Direct changes   <==>   Direct changes
-
-In each cell
-
-   C   means    "Conflict"
-   M   means    "Mergeable"
-
-The principles involved are symmetrical, so the immediate origin of
-each change (working copy vs repository) doesn't matter.
-
-Let's justify this claim of symmetry:
-
-It's tempting to think of a change as being either "from" the working
-copy or "in" the repository.  But the true source of a change is some
-committer -- each change represents some developer's intention toward
-a file or a tree, and a conflict is what happens when two intentions
-are incompatible (or their compatibility cannot be automatically
-determined).
-
-It doesn't matter in what order the intentions were discovered, i.e.,
-which has already made it into the repository versus which exists only
-in someone's working copy.  Incompatibility is incompatibility,
-independent of timing.
-
-(BEN SEZ: Right!  No matter how you look at it, we're attempting to
-merge two branches.  It's irrelevant that one branch happens to be the
-"mainline" repository branch.  We may want to mention that all of the
-following logic will still apply when we actually merge "official"
-repository branches too.)
-
-So what these tables really show is how to decide when two changes are
-compatible.  They're a brute force guide to the changespace, mapping
-each kind of change against each other kind of change, and telling
-what happens in each scenario.
-
-Following the tables are some scenarios that explore a few of the
-intersections in depth.
-
-
-          Table 1: Direct changes against indirect changes
-          ************************************************
-
-  [changes    |         d i r e c t     c h a n g e s
-   on direc-  |
-   tories]    |    self add         self remove        self rename
-  ------------|------------------.---------------.-------------------.
-              | C                .               .                   .
-        child | (Must be really  .       C       .       M           .
-         add  | out-of-date for  .               .                   .
-  i           | this to happen!) .               .                   .
-  n           |. . . . . . . . . . . . . . . . . . . . . . . . . . . .
-  d           |                  .               .                   .
-  i     child |  C               .               .                   .
-  r    remove |                  .       C       .       M           .
-  e           | (Same as above.) .               .                   .
-  c           |                  .               .                   .
-  t           |. . . . . . . . . . . . . . . . . . . . . . . . . . . .
-              |                  .               .                   .
-  c     child |  C               .               .                   .
-  h    rename |                  .       C       .       M           .
-  a           | (Same as above.) .               .                   .
-  n           |                  .               .                   .
-  g           |. . . . . . . . . . . . . . . . . . . . . . . . . . . .
-  e           |                  .               .                   .
-  s     child |  C               .               .                   .
-       modify |                  .       C       .       M           .
-              | (Same as above.) .               .                   .
-              |                  .               .                   .
-              |. . . . . . . . . . . . . . . . . . . . . . . . . . . .
-
-
-A note about Table 1: technically, it is possible for the horizontal
-axis to include changes on files as well as directories.  But this
-would mean a directory's type had changed to file, which would imply
-an add or remove at some point in the past, and that would have
-conflicted already (by columns one and two).
-
-
-         Table 2: Indirect changes against indirect changes
-         **************************************************
-
-  [changes  |         i n d i r e c t     c h a n g e s
-   on direc-|
-   tories]  |  child add      child remove      child rename    child mod
-  ----------|--------------.-----------------.-----------------.-------------.
-  i         |              .                 .                 .             .
-  n   child |  C if name   .  C if name      .  C if name      . C if name   .
-  d    add  |  conflicts,  .  conflicts,     .  conflicts,     . conflicts,  .
-  i         |  else M      .  else M         .  else M         . else M      .
-  r         |. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
-  e         |              . commit: C if    .                 .             .
-  c   child |  C if name   . name conflicts, .  C if name      . C if name   .
-  t  remove |  conflicts,  . else M          .  conflicts,     . conflicts,  .
-            |  else M      . update: M       .  else M         . else M      .
-  c         |. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
-  h         |              .                 .                 . commit: C   .
-  a   child |  C if name   .  C if name      .  C if name      . if name     .
-  n  rename |  conflicts,  .  conflicts,     .  conflicts,     . conflicts,  .
-  g         |  else M      .  else M         .  else M         . else M      .
-  e         |              .                 .                 . update: M   .
-  s         |. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
-            |              .                 . commit: C if    .             .
-      child |  C if name   .  C if name      . name conflicts, .  commit: C  .
-     modify |  conflicts,  .  conflicts,     . else M          .  update: M  .
-            |  else M      .  else M         . update: M       .    or C     .
-            |. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
-
-
-[Yes, the table mirrors itself across the diagonal -- I filled in both
-sides anyway, to see if my mind would come to the same conclusions for
-the same intersections.  It did. :-) -kff]
-
-(BEN SEZ:  [grin])
-
-Notes about Table 2: "if name conflicts" means "if the same child name
-is mentioned in both changes".  (It doesn't matter if it's oName or
-nName; if it appears anywhere on both sides, it's a conflict.)
-
-In a sense, the conflicts-on-name don't even need to be mentioned,
-because the two child entities will directly conflict with each other
-in Table 3 below.  However, if Table 2 is to show circumstances in
-which indirect changes do not conflict, it needs to also mention the
-one circumstance in which they would conflict, for contrast.
-
-
-           Table 3: Direct changes against direct changes
-           **********************************************
-
-  [changes to |            d i r e c t     c h a n g e s
-   any kind   |
-   of entity] |   add          remove         rename         text change
-  ------------|------------.-------------.---------------.-----------------.
-              |            .             .               .  commit: C      .
-      add     |            .             .               .                 .
-  d           |    C       .     C       .     C         .  update: M      .
-  i           |            .             .               .    or C         .
-  r           |. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
-  e           |            . commit: C   .               .                 .
-  c   remove  |            .             .               .                 .
-  t           |    C       . update: M   .     C         .    C            .
-              |            .             .               .                 .
-  c           |. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
-  h           |            .             .  commit: C    .  commit: C      .
-  a   rename  |            .             .               .                 .
-  n           |    C       .     C       .  update: M    .  update: M      .
-  g           |            .             .    or C       .                 .
-  e           |. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
-  s           | commit: C  .             .  commit: C    .  commit: C      .
-      text    |            .             .               .                 .
-      change  | update: M  .     C       .  update: M    .  update: M or C .
-              |   or C     .             .               .                 .
-              |. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
-
-
-Note about all three tables: Haven't thought carefully about how this
-extends to directory *entries* as entities.  I think it works out, but
-am not sure yet.
-
-
-Scenarios.
-----------
-
-* Scenario 1:
-
-  Client edits foo/bar.c, meanwhile in repos foo/ has been renamed to
-  baz/.  Client commits.
-
-  RESULT: success.  The only "meeting" of changes is indirect (change
-  to child of foo/) vs direct (rename of foo/ to baz/).  Table 1 shows
-  that this intersection does not conflict, so the server accepts the
-  change.  Afterwards, repository:baz/bar.c matches wc:foo/bar.c
-
-  If the client did an update inside foo/, changes to foo/* (baz/* in
-  the repository) would show up, but foo/ would not be renamed.  If
-  the client updated from above foo/, then foo/ would be renamed to
-  baz/ in the working copy.
-
-  --- Mirror image of Scenario 1 ---
-
-  Client renames foo/ to baz/ locally.  Meanwhile, in the repository,
-  there has been a change to foo/bar.c.
-
-  If the client updates (either in baz/ or above it), baz/bar.c will
-  be updated to the latest repository version of foo/bar.c.
-
-  If the client commits the rename, that will succeed too, and Version
-  N of foo/bar.c in the repository will be the same as Version N+1 of
-  baz/bar.c.
-
-  Here's an interesting question: what happens if some third client,
-  who is way behind the times and has *none* of the above commits, now
-  runs update inside foo/?  Clearly, she should get the change to
-  foo/bar.c, even though that change is found as baz/bar.c in the
-  repository.  How does the repository implement this?
-
-  Well, 
-
-* Scenario 2:
-
-  Client has local changes to foo/bar.c; meanwhile, in the repository,
-  foo/ has been renamed to baz/, *and* bar.c renamed to qux.c.
-
-  If client tries to commit, it fails, by Table 3 (rename vs text
-  change).  Note that the dir rename was not the problem.
-
-  If client updates, it is mergeable, and either one or both renames
-  will happen depending on what was updated.  The local edits are
-  preserved in the rename.
-
-  --- Mirror image of Scenario 2 ---
-  
-  Client renames foo/ to baz/, and foo/bar.c to baz/qux.c.  Meanwhile,
-  in repository, foo/bar.c has changed.
-
-  If client commits, it will fail (direct changes to bar.c<>qux.c), so
-  client must update first.
-
-  If client updates, qux.c receives the changes that applied to bar.c
-  in the repository (by rename vs text change in Table 3).
-
-* Scenario 3:
-
-  
-
-From Jim's original scenario:
-
-/dir1/file1
-      file2
-      dir2/file3
-           file4
-      dir3/file5
