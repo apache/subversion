@@ -16,9 +16,6 @@ libsvn_subr_la_SOURCES = svn_string.c svn_error.c path.c \
 
 INCLUDES = @SVN_INCLUDES@ @SVN_APR_INCLUDES@ @SVN_EXPAT_INCLUDES@
 
-## Build *this* directory first, *then* the test subdirectory!
-SUBDIRS = . tests
-
 ## Make libtool be quiet
 LIBTOOL = @LIBTOOL@ --silent
 

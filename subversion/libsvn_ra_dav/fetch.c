@@ -634,6 +634,7 @@ svn_error_t * svn_ra_dav__checkout (void *session_baton,
 ** ### docco...
 */
 
+#if 0
 static svn_error_t *
 update_delete_item (svn_string_t *name,
                void *parent_baton)
@@ -717,26 +718,6 @@ update_close_file (void *file_baton)
   return SVN_NO_ERROR;
 }
 
-/*
-** This structure is used during the update process. An external caller
-** uses these callbacks to describe all the changes in the working copy.
-** These are communicated to the server, which then decides how to update
-** the client to a specific version/latest/label/etc.
-*/
-static const svn_delta_edit_fns_t update_editor = {
-  update_delete_item,
-  update_add_dir,
-  update_rep_dir,
-  update_change_dir_prop,
-  update_close_dir,
-  update_add_file,
-  update_rep_file,
-  update_apply_txdelta,
-  update_change_file_prop,
-  update_close_file,
-};
-
-#if 0
 svn_error_t *
 svn_ra_dav__get_update_editor(void *session_baton,
                               const svn_delta_edit_fns_t **editor,
@@ -745,13 +726,33 @@ svn_ra_dav__get_update_editor(void *session_baton,
                               void *wc_update_baton,
                               svn_string_t *URL)
 {
+  svn_pool_t *pool = Need to get a pool from somewhere;
+  svn_delta_edit_fns_t *update_editor = svn_delta_default_editor(pool);
+
+  /* Set up the editor.
+  ** This structure is used during the update process. An external caller
+  ** uses these callbacks to describe all the changes in the working copy.
+  ** These are communicated to the server, which then decides how to update
+  ** the client to a specific version/latest/label/etc.
+  */
+  update_editor->update_delete_item = update_delete_item;
+  update_editor->update_add_dir = update_add_dir;
+  update_editor->update_rep_dir = update_rep_dir;
+  update_editor->update_change_dir_prop = update_change_dir_prop;
+  update_editor->update_close_dir = update_close_dir;
+  update_editor->update_add_file = update_add_file;
+  update_editor->update_rep_file = update_rep_file;
+  update_editor->update_apply_txdelta = update_apply_txdelta;
+  update_editor->update_change_file_prop = update_change_file_prop;
+  update_editor->update_close_file = update_close_file;
+
   /* shove the session and wc_* values into our baton */
 
-  *editor = &update_editor;
+  *editor = update_editor;
   *root_dir_baton = NULL;
   return SVN_NO_ERROR;
 }
-#endif
+#endif /* 0 */
 
 
 /* 

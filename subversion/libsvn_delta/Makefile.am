@@ -9,14 +9,12 @@ lib_LTLIBRARIES = libsvn_delta.la
 
 ## Sources needed to build each library (names canonicalized)
 libsvn_delta_la_SOURCES = xml_parse.c xml_output.c text_delta.c vdelta.c \
-			  svndiff.c compose_editors.c delta.h
+			  svndiff.c compose_editors.c delta.h \
+                          default_editor.c
 
 ## Build flags ---------
 
 INCLUDES = @SVN_INCLUDES@ @SVN_APR_INCLUDES@ @SVN_EXPAT_INCLUDES@
-
-## Build *this* directory first, *then* the test subdirectory!
-SUBDIRS = . tests
 
 ## Make libtool be quiet
 LIBTOOL = @LIBTOOL@ --silent

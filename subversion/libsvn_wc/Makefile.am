@@ -16,8 +16,5 @@ libsvn_wc_la_SOURCES = adm_crawler.c adm_files.c adm_ops.c entries.c \
 
 INCLUDES = @SVN_INCLUDES@ @SVN_APR_INCLUDES@ @SVN_EXPAT_INCLUDES@
 
-## Build *this* directory first, *then* the test subdirectory!
-SUBDIRS = . tests
-
 ## Make libtool be quiet
 LIBTOOL = @LIBTOOL@ --silent

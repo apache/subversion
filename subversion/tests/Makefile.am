@@ -15,3 +15,11 @@ EXTRA_DIST = xml/README xml/co1-inline.xml xml/co1-postfix.xml xml/co1.txt \
 
 ## Make libtool be quiet
 LIBTOOL = @LIBTOOL@ --silent
+
+## List of directories in which Makefile.in's should be generated:
+
+SUBDIRS = libsvn_subr                \
+          libsvn_delta               \
+          libsvn_wc                  \
+          libsvn_ra_dav              \
+          @LIBSVN_FS@

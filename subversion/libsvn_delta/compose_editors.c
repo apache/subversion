@@ -389,23 +389,7 @@ change_dir_prop (void *parent_baton,
 }
 
 
-
 
-static const svn_delta_edit_fns_t composed_editor =
-{
-  delete_item,
-  add_directory,
-  replace_directory,
-  change_dir_prop,
-  close_directory,
-  add_file,
-  replace_file,
-  apply_textdelta,
-  change_file_prop,
-  close_file,
-};
-
-
 void
 svn_delta_compose_editors (const svn_delta_edit_fns_t **new_editor,
                            void **new_root_dir_baton,
@@ -415,8 +399,22 @@ svn_delta_compose_editors (const svn_delta_edit_fns_t **new_editor,
                            void *root_dir_baton_2,
                            apr_pool_t *pool)
 {
+  svn_delta_edit_fns_t *editor = svn_delta_default_editor (pool);
   struct dir_baton *rb = apr_pcalloc (pool, sizeof (*rb));
   
+  /* Set up the editor. */
+  editor->delete_item = delete_item;
+  editor->add_directory = add_directory;
+  editor->replace_directory = replace_directory;
+  editor->change_dir_prop = change_dir_prop;
+  editor->close_directory = close_directory;
+  editor->add_file = add_file;
+  editor->replace_file = replace_file;
+  editor->apply_textdelta = apply_textdelta;
+  editor->change_file_prop = change_file_prop;
+  editor->close_file = close_file;
+
+  /* Set up the root directory baton. */
   rb->editor_1 = editor_1;
   rb->editor_2 = editor_2;
   rb->root_dir_baton_1 = root_dir_baton_1;
@@ -424,7 +422,7 @@ svn_delta_compose_editors (const svn_delta_edit_fns_t **new_editor,
   rb->pool = pool;
 
   *new_root_dir_baton = rb;
-  *new_editor = &composed_editor;
+  *new_editor = editor;
 }
 
 

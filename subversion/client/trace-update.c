@@ -316,21 +316,6 @@ change_dir_prop (void *parent_baton,
 
 
 
-static const svn_delta_edit_fns_t trace_editor =
-{
-  delete_item,
-  add_directory,
-  replace_directory,
-  change_dir_prop,
-  close_directory,
-  add_file,
-  replace_file,
-  apply_textdelta,
-  change_file_prop,
-  close_file,
-};
-
-
 svn_error_t *
 svn_cl__get_trace_update_editor (const svn_delta_edit_fns_t **editor,
                                  void **root_dir_baton,
@@ -342,16 +327,31 @@ svn_cl__get_trace_update_editor (const svn_delta_edit_fns_t **editor,
      root baton. */
   struct edit_context *ec = apr_pcalloc (pool, sizeof (*ec));
   struct dir_baton *rb = apr_pcalloc (pool, sizeof (*rb));
+  svn_delta_edit_fns_t *trace_editor = svn_delta_default_editor (pool);
 
+  /* Set up the edit context. */
   ec->pool = svn_pool_create (pool);
   ec->initial_path = svn_string_dup (initial_path, ec->pool);
 
+  /* Set up the root directory baton. */
   rb->edit_context = ec;
   rb->parent_dir_baton = NULL;
   rb->path = ec->initial_path;
 
+  /* Set up the editor. */
+  trace_editor->delete_item = delete_item;
+  trace_editor->add_directory = add_directory;
+  trace_editor->replace_directory = replace_directory;
+  trace_editor->change_dir_prop = change_dir_prop;
+  trace_editor->close_directory = close_directory;
+  trace_editor->add_file = add_file;
+  trace_editor->replace_file = replace_file;
+  trace_editor->apply_textdelta = apply_textdelta;
+  trace_editor->change_file_prop = change_file_prop;
+  trace_editor->close_file = close_file;
+
   *root_dir_baton = rb;
-  *editor = &trace_editor;
+  *editor = trace_editor;
   
   return SVN_NO_ERROR;
 }

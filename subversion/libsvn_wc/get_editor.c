@@ -1285,21 +1285,6 @@ close_file (void *file_baton)
 
 /*** Returning editors. ***/
 
-static const svn_delta_edit_fns_t tree_editor =
-{
-  delete_item,
-  add_directory,
-  replace_directory,
-  change_dir_prop,
-  close_directory,
-  add_file,
-  replace_file,
-  apply_textdelta,
-  change_file_prop,
-  close_file,
-};
-
-
 /* Helper for the two public editor-supplying functions. */
 static svn_error_t *
 make_editor (svn_string_t *dest,
@@ -1315,6 +1300,7 @@ make_editor (svn_string_t *dest,
   struct edit_context *ec;
   struct dir_baton *rb;
   apr_pool_t *subpool = svn_pool_create (pool);
+  svn_delta_edit_fns_t *tree_editor = svn_delta_default_editor (pool);
 
   if (is_checkout)
     {
@@ -1347,8 +1333,20 @@ make_editor (svn_string_t *dest,
         return err;
     }
 
+  /* Construct an editor. */
+  tree_editor->delete_item = delete_item;
+  tree_editor->add_directory = add_directory;
+  tree_editor->replace_directory = replace_directory;
+  tree_editor->change_dir_prop = change_dir_prop;
+  tree_editor->close_directory = close_directory;
+  tree_editor->add_file = add_file;
+  tree_editor->replace_file = replace_file;
+  tree_editor->apply_textdelta = apply_textdelta;
+  tree_editor->change_file_prop = change_file_prop;
+  tree_editor->close_file = close_file;
+
   *root_dir_baton = rb;
-  *editor = &tree_editor;
+  *editor = tree_editor;
 
   return SVN_NO_ERROR;
 }
