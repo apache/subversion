@@ -43,6 +43,8 @@
 #include "svn_subst.h"
 #include "svn_pools.h"
 
+#include "svn_private_config.h"
+
 /**
  * The textual elements of a detranslated special file.  One of these
  * strings must appear as the first element of any special file as it
@@ -930,7 +932,13 @@ svn_subst_copy_and_translate2 (const char *src,
   err = svn_subst_translate_stream (src_stream, dst_stream,
                                     eol_str, repair, keywords, expand);
   if (err)
-    goto error;
+    {
+      if (err->apr_err == SVN_ERR_IO_INCONSISTENT_EOL)
+        err = svn_error_createf 
+          (SVN_ERR_IO_INCONSISTENT_EOL, err,
+           _("File '%s' has inconsistent newlines"), src);
+      goto error;
+    }
 
   /* clean up nicely. */
   err = svn_stream_close (src_stream);
