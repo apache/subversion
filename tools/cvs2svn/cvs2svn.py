@@ -274,7 +274,6 @@ def make_path(ctx, path, branch_name = None, tag_name = None):
                + path[first_sep:]
 
   return ret_path
-    
 
 
 def relative_name(cvsroot, fname):
@@ -284,6 +283,7 @@ def relative_name(cvsroot, fname):
       return fname[l+1:]
     return fname[l:]
   return l
+
 
 def visit_file(arg, dirname, files):
   cd, p, stats = arg
@@ -301,6 +301,7 @@ def visit_file(arg, dirname, files):
       print pathname
     p.parse(open(pathname), cd)
     stats[0] = stats[0] + 1
+
 
 class RevInfoParser(rcsparse.Sink):
   def __init__(self):
@@ -458,10 +459,8 @@ class RepositoryMirror:
     for component in components[:-1]:
       # parent is always mutable at the top of the loop
 
-      if path_so_far:
-        path_so_far = path_so_far + '/' + component
-      else:
-        path_so_far = component
+      if path_so_far: path_so_far = path_so_far + '/' + component
+      else:           path_so_far = component
 
       # Ensure that the parent has an entry for this component.
       if not parent.has_key(component):
@@ -592,10 +591,8 @@ class RepositoryMirror:
     for component in components[:-1]:
       # parent is always mutable at the top of the loop
 
-      if path_so_far:
-        path_so_far = path_so_far + '/' + component
-      else:
-        path_so_far = component
+      if path_so_far: path_so_far = path_so_far + '/' + component
+      else:           path_so_far = component
 
       # If we can't reach the dest, then we don't need to do anything.
       if not parent.has_key(component):
@@ -683,7 +680,7 @@ class RepositoryMirror:
     self.stabilize_youngest()
 
 
-class Dump:
+class Dumper:
   def __init__(self, dumpfile_path):
     'Open DUMPFILE_PATH, and initialize revision to REVISION.'
     self.dumpfile_path = dumpfile_path
@@ -1307,8 +1304,7 @@ class Commit:
 
     return author, log, date
 
-
-  def commit(self, dump, ctx, sym_tracker):
+  def commit(self, dumper, ctx, sym_tracker):
     # commit this transaction
     seconds = self.t_max - self.t_min
     print 'committing: %s, over %d seconds' % (time.ctime(self.t_min), seconds)
@@ -1369,7 +1365,7 @@ class Commit:
       svn_path = make_path(ctx, cvs_path, br)
       print '    adding or changing %s : %s' % (cvs_rev, svn_path)
       if svn_rev == SVN_INVALID_REVNUM:
-        svn_rev = dump.start_revision(props)
+        svn_rev = dumper.start_revision(props)
       sym_tracker.enroot_names(svn_path, svn_rev, tags, branches)
       if br:
         ### FIXME: Here is an obvious optimization point.  Probably
@@ -1379,11 +1375,11 @@ class Commit:
         ### maintain a database mirroring just the head tree, but
         ### keyed on full paths, to reduce the check to a quick
         ### constant time query.
-        if not dump.probe_path(svn_path):
-          sym_tracker.fill_branch(dump, ctx, br, svn_rev, svn_path)
-      closed_names = dump.add_or_change_path(cvs_path, svn_path,
-                                             cvs_rev, rcs_file,
-                                             tags, branches)
+        if not dumper.probe_path(svn_path):
+          sym_tracker.fill_branch(dumper, ctx, br, svn_rev, svn_path)
+      closed_names = dumper.add_or_change_path(cvs_path, svn_path,
+                                               cvs_rev, rcs_file,
+                                               tags, branches)
       sym_tracker.close_names(svn_path, svn_rev, closed_names)
 
     for rcs_file, cvs_rev, br, tags, branches in self.deletes:
@@ -1393,7 +1389,7 @@ class Commit:
       print '    deleting %s : %s' % (cvs_rev, svn_path)
       if cvs_rev != '1.1':
         if svn_rev == SVN_INVALID_REVNUM:
-          svn_rev = dump.start_revision(props)
+          svn_rev = dumper.start_revision(props)
         # Uh, can this even happen on a deleted path?  Hmmm.  If not,
         # there's no risk, since tags and branches would just be empty
         # and therefore enrooting would be a no-op.  Still, it would
@@ -1412,140 +1408,15 @@ class Commit:
         ### won't show up 'svn log' output, even when invoked on the
         ### root -- because no paths changed!  That needs to be fixed,
         ### regardless of whether cvs2svn creates such revisions.
-        path_deleted, closed_names = dump.delete_path(svn_path,
-                                                      tags, branches,
-                                                      ctx.prune)
+        path_deleted, closed_names = dumper.delete_path(svn_path,
+                                                        tags, branches,
+                                                        ctx.prune)
         sym_tracker.close_names(svn_path, svn_rev, closed_names)
 
     if svn_rev != SVN_INVALID_REVNUM:
       print '    new revision:', svn_rev
     else:
       print '    no new revision created, as nothing to do'
-
-
-# ### This stuff left in temporarily, as a reference:
-#
-#      make_path(fs, root, svn_path, f_pool)
-#
-#      if fs.check_path(root, svn_path, f_pool) == util.svn_node_none:
-#        created_file = 1
-#        fs.make_file(root, svn_path, f_pool)
-#      else:
-#        created_file = 0
-#
-#      handler, baton = fs.apply_textdelta(root, svn_path, None, None, f_pool)
-#
-#      # figure out the real file path for "co"
-#      try:
-#        f_st = os.stat(rcs_file)
-#      except os.error:
-#        dirname, fname = os.path.split(rcs_file)
-#        f = os.path.join(dirname, 'Attic', fname)
-#        f_st = os.stat(rcs_file)
-#
-#      pipe = os.popen('co -q -p%s \'%s\'' % (cvs_rev, rcs_file), 'r', 102400)
-#
-#      # if we just made the file, we can send it in one big hunk, rather
-#      # than streaming it in.
-#      ### we should watch out for file sizes here; we don't want to yank
-#      ### in HUGE files...
-#      if created_file:
-#        delta.svn_txdelta_send_string(pipe.read(), handler, baton, f_pool)
-#        if f_st[0] & stat.S_IXUSR:
-#          fs.change_node_prop(root, svn_path, "svn:executable", "", f_pool)
-#      else:
-#        # open an SVN stream onto the pipe
-#        stream2 = util.svn_stream_from_aprfile(pipe, f_pool)
-#
-#        # Get the current file contents from the repo, or, if we have
-#        # multiple CVS revisions to the same file being done in this
-#        # single commit, then get the contents of the previous
-#        # revision from co, or else the delta won't be correct because
-#        # the contents in the repo won't have changed yet.
-#        if svn_path == lastcommit[0]:
-#          infile2 = os.popen("co -q -p%s \'%s\'"
-#                             % (lastcommit[1], rcs_file), "r", 102400)
-#          stream1 = util.svn_stream_from_aprfile(infile2, f_pool)
-#        else:
-#          stream1 = fs.file_contents(root, svn_path, f_pool)
-#
-#        txstream = delta.svn_txdelta(stream1, stream2, f_pool)
-#        delta.svn_txdelta_send_txstream(txstream, handler, baton, f_pool)
-#
-#        # shut down the previous-rev pipe, if we opened it
-#        infile2 = None
-#
-#      # shut down the current-rev pipe
-#      pipe.close()
-#
-#      # wipe the pool. this will get rid of the pipe streams and the delta
-#      # stream, and anything the FS may have done.
-#      util.svn_pool_clear(f_pool)
-#
-#      # remember what we just did, for the next iteration
-#      lastcommit = (svn_path, cvs_rev)
-#
-#      for to_tag in tags:
-#        to_tag_path = get_tag_path(ctx, to_tag) + rel_name
-#        do_copies.append((svn_path, to_tag_path, 1))
-#      for to_branch in branches:
-#        to_branch_path = branch_path(ctx, to_branch) + rel_name
-#        do_copies.append((svn_path, to_branch_path, 2))
-#
-#    for rcs_file, cvs_rev, br, tags, branches in self.deletes:
-#      # compute a repository path. ensure we have a leading "/" and drop
-#      # the ,v from the file name
-#      rel_name = relative_name(ctx.cvsroot, f[:-2])
-#      svn_path = branch_path(ctx, br) + rel_name
-#
-#      print '    deleting %s : %s' % (cvs_rev, svn_path)
-#
-#      # If the file was initially added on a branch, the first mainline
-#      # revision will be marked dead, and thus, attempts to delete it will
-#      # fail, since it doesn't really exist.
-#      if r != '1.1':
-#        ### need to discriminate between OS paths and FS paths
-#        fs.delete(root, svn_path, f_pool)
-#
-#      for to_branch in branches:
-#        to_branch_path = branch_path(ctx, to_branch) + rel_name
-#        print "file", rcs_file, "created on branch", to_branch, \
-#              "rev", cvs_rev, "path", to_branch_path
-#
-#      # wipe the pool, in case the delete loads it up
-#      util.svn_pool_clear(f_pool)
-#
-#    if len(do_copies) > 0:
-#      # make a new transaction for the tags
-#      rev = fs.youngest_rev(t_fs, c_pool)
-#      txn = fs.begin_txn(t_fs, rev, c_pool)
-#      root = fs.txn_root(txn, c_pool)
-#
-#      for c_from, c_to, c_type in do_copies:
-#        print "copying", c_from, "to", c_to
-#
-#        t_root = fs.revision_root(t_fs, rev, f_pool)
-#        make_path(fs, root, c_to, f_pool)
-#        fs.copy(t_root, c_from, root, c_to, f_pool)
-#
-#        # clear the pool after each copy
-#        util.svn_pool_clear(f_pool)
-#
-#      log_msg = "%d copies to tags/branches\n" % (len(do_copies))
-#      fs.change_txn_prop(txn, 'svn:author', "cvs2svn", c_pool)
-#      fs.change_txn_prop(txn, 'svn:log', log_msg, c_pool)
-#
-#      conflicts, new_rev = fs.commit_txn(txn)
-#      if conflicts:
-#        # our commit processing should never generate a conflict. if we *do*
-#        # see something, then we've got some badness going on. punt.
-#        print 'Exiting due to conflicts:', str(conflicts)
-#        sys.exit(1)
-#      print '    new revision:', new_rev
-#
-#      # FIXME: we don't set a date here
-#      # gstein sez: tags don't have dates, so no biggy. commits to
-#      #             branches have dates, tho.
 
 
 def read_resync(fname):
@@ -1581,6 +1452,7 @@ def read_resync(fname):
       resync[digest] = [ [t1_l, t1_u, t2] ]
   return resync
 
+
 def parse_revs_line(line):
   data = line.split(' ', 6)
   timestamp = int(data[0], 16)
@@ -1600,6 +1472,7 @@ def parse_revs_line(line):
 
   return timestamp, id, op, rev, fname, branch_name, tags, branches
 
+
 def write_revs_line(output, timestamp, digest, op, revision, fname,
                     branch_name, tags, branches):
   output.write('%08lx %s %s %s ' % (timestamp, digest, op, revision))
@@ -1614,6 +1487,7 @@ def write_revs_line(output, timestamp, digest, op, revision, fname,
     output.write('%s ' % (branch))
   output.write('%s\n' % fname)
 
+
 def pass1(ctx):
   cd = CollectData(ctx.cvsroot, DATAFILE)
   p = rcsparse.Parser()
@@ -1621,6 +1495,7 @@ def pass1(ctx):
   os.path.walk(ctx.cvsroot, visit_file, (cd, p, stats))
   if ctx.verbose:
     print 'processed', stats[0], 'files'
+
 
 def pass2(ctx):
   "Pass 2: clean up the revision information."
@@ -1665,10 +1540,12 @@ def pass2(ctx):
       # the file/rev did not need to have its time changed.
       output.write(line)
 
+
 def pass3(ctx):
   # sort the log files
   os.system('sort %s > %s' % (ctx.log_fname_base + CLEAN_REVS_SUFFIX,
                               ctx.log_fname_base + SORTED_REVS_SUFFIX))
+
 
 def pass4(ctx):
   # create the target repository
@@ -1697,7 +1574,7 @@ def pass4(ctx):
   count = 0
 
   # Start the dumpfile object.
-  dump = Dump(ctx.dumpfile)
+  dumper = Dumper(ctx.dumpfile)
 
   # process the logfiles, creating the target
   for line in fileinput.FileInput(ctx.log_fname_base + SORTED_REVS_SUFFIX):
@@ -1739,7 +1616,7 @@ def pass4(ctx):
     # part of any of them.  Sort them into time-order, then commit 'em.
     process.sort()
     for t_max, c in process:
-      c.commit(dump, ctx, sym_tracker)
+      c.commit(dumper, ctx, sym_tracker)
     count = count + len(process)
 
     # Add this item into the set of still-available commits.
@@ -1756,13 +1633,14 @@ def pass4(ctx):
       process.append((c.t_max, c))
     process.sort()
     for t_max, c in process:
-      c.commit(dump, ctx, sym_tracker)
+      c.commit(dumper, ctx, sym_tracker)
     count = count + len(process)
 
-  dump.close()
+  dumper.close()
 
   if ctx.verbose:
     print count, 'commits processed.'
+
 
 def pass5(ctx):
   if not ctx.dry_run:
@@ -1772,6 +1650,7 @@ def pass5(ctx):
     os.system('%s load --ignore-uuid %s < %s'
               % (ctx.svnadmin, ctx.target, ctx.dumpfile))
 
+
 _passes = [
   pass1,
   pass2,
@@ -1780,8 +1659,10 @@ _passes = [
   pass5,
   ]
 
+
 class _ctx:
   pass
+
 
 def convert(ctx, start_pass=1):
   "Convert a CVS repository to an SVN repository."
@@ -1799,6 +1680,7 @@ def convert(ctx, start_pass=1):
       print 'pass %d: %d seconds' % (i, int(times[i] - times[i-1]))
     print ' total:', int(times[len(_passes)] - times[start_pass-1]), 'seconds'
 
+
 def usage(ctx):
   print 'USAGE: %s [-n] [-v] [-s svn-repos-path] [-p pass] cvs-repos-path' \
         % os.path.basename(sys.argv[0])
@@ -1815,6 +1697,7 @@ def usage(ctx):
   print '  --no-prune         Don\'t prune empty directories.'
   print '  --encoding=ENC   encoding of log messages in CVS repos (default: %s)' % ctx.encoding
   sys.exit(1)
+
 
 def main():
   # prepare the operation context
@@ -1877,6 +1760,7 @@ def main():
       ctx.encoding = value
 
   convert(ctx, start_pass=start_pass)
+
 
 if __name__ == '__main__':
   main()
