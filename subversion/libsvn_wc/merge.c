@@ -39,7 +39,7 @@ svn_wc_merge (const char *left,
               const char *target_label,
               svn_boolean_t dry_run,
               enum svn_wc_merge_outcome_t *merge_outcome,
-              apr_hash_t *config,
+              const char *diff3_cmd,
               apr_pool_t *pool)
 {
   const char *tmp_target, *result_target, *tmp_left, *tmp_right;
@@ -50,7 +50,6 @@ svn_wc_merge (const char *left,
   const char *eol;
   apr_status_t apr_err;
   const svn_wc_entry_t *entry;
-  const char *merge_cmd = NULL;
   svn_boolean_t contains_conflicts;
 
   svn_path_split (merge_target, &mt_pt, &mt_bn, pool);
@@ -126,25 +125,15 @@ svn_wc_merge (const char *left,
       SVN_ERR (svn_io_copy_file (left, tmp_left, TRUE, pool));
       SVN_ERR (svn_io_copy_file (right, tmp_right, TRUE, pool));
 
-      /* Find out if we need to run an external merge */
-      if (config)
-        {
-          svn_config_t *cfg = apr_hash_get (config,
-                                            SVN_CONFIG_CATEGORY_CONFIG,
-                                            APR_HASH_KEY_STRING);
-          svn_config_get (cfg, &merge_cmd, SVN_CONFIG_SECTION_HELPERS,
-	                  SVN_CONFIG_OPTION_DIFF3_CMD, NULL);
-        }
-
-      if (merge_cmd)
+      /* Run an external merge if requested. */
+      if (diff3_cmd)
         {
           int exit_code;
 
           SVN_ERR (svn_io_run_diff3 (".",
                                      tmp_target, tmp_left, tmp_right,
                                      target_label, left_label, right_label,
-                                     result_f, &exit_code, config,
-                                     pool));
+                                     result_f, &exit_code, diff3_cmd, pool));
           
           contains_conflicts = exit_code == 1;
         }

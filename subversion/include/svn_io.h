@@ -547,8 +547,8 @@ svn_error_t *svn_io_run_cmd (const char *path,
  * @a from is the first file passed to diff, and @a to is the second.  The
  * stdout of diff will be sent to @a outfile, and the stderr to @a errfile.
  *
- * @a config is a hash of @c svn_config_t * items, keyed on category
- * names, and may be @c NULL.
+ * If @a diff_cmd is non-null, it is the diff command to use;
+ * otherwise a default built-in diff command is used.
  *
  * Do all allocation in @a pool. 
  */
@@ -562,7 +562,7 @@ svn_error_t *svn_io_run_diff (const char *dir,
                               int *exitcode,
                               apr_file_t *outfile,
                               apr_file_t *errfile,
-                              apr_hash_t *config,
+                              const char *diff_cmd,
                               apr_pool_t *pool);
 
 
@@ -592,8 +592,10 @@ svn_error_t *svn_io_run_diff (const char *dir,
  * `diff3' was successful, 1 means some conflicts were found, and 2
  * means trouble.") 
  *
- * @a config is a hash of @c svn_config_t * items, keyed on category
- * names, and may be @c NULL.
+ * If @a diff_cmd is non-null, it is the diff command to use;
+ * otherwise a default built-in diff command is used.
+ *
+ * Do all allocation in @a pool. 
  */
 svn_error_t *svn_io_run_diff3 (const char *dir,
                                const char *mine,
@@ -604,7 +606,7 @@ svn_error_t *svn_io_run_diff3 (const char *dir,
                                const char *yours_label,
                                apr_file_t *merged,
                                int *exitcode,
-                               apr_hash_t *config,
+                               const char *diff3_cmd,
                                apr_pool_t *pool);
 
 

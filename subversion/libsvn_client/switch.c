@@ -30,6 +30,7 @@
 #include "svn_error.h"
 #include "svn_path.h"
 #include "svn_time.h"
+#include "svn_config.h"
 #include "client.h"
 
 
@@ -66,6 +67,18 @@ svn_client_switch (const char *path,
   svn_revnum_t revnum;
   svn_error_t *err = SVN_NO_ERROR;
   svn_wc_adm_access_t *adm_access;
+  const char *diff3_cmd;
+  
+  /* Get the external diff3, if any. */
+  {
+    svn_config_t *cfg = ctx->config
+      ? apr_hash_get (ctx->config, SVN_CONFIG_CATEGORY_CONFIG,  
+                      APR_HASH_KEY_STRING)
+      : NULL;
+    
+    svn_config_get (cfg, &diff3_cmd, SVN_CONFIG_SECTION_HELPERS,
+                    SVN_CONFIG_OPTION_DIFF3_CMD, NULL);
+  }
 
   /* Sanity check.  Without these, the switch is meaningless. */
   assert (path);
@@ -156,6 +169,7 @@ svn_client_switch (const char *path,
                                          revnum, switch_url, recurse,
                                          ctx->notify_func, ctx->notify_baton,
                                          ctx->cancel_func, ctx->cancel_baton,
+                                         diff3_cmd,
                                          &switch_editor, &switch_edit_baton,
                                          traversal_info, pool));
 
@@ -274,6 +288,7 @@ svn_client_switch (const char *path,
                                       new_text_path,
                                       proparray, TRUE, /* is full proplist */
                                       switch_url, /* new url */
+                                      diff3_cmd,
                                       pool));     
 
         if (ctx->notify_func != NULL)

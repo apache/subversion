@@ -348,7 +348,7 @@ svn_wc_process_committed (const char *path,
 
 
   /* Run the log file we just created. */
-  SVN_ERR (svn_wc__run_log (adm_access, pool));
+  SVN_ERR (svn_wc__run_log (adm_access, NULL, pool));
             
   if (recurse)
     {

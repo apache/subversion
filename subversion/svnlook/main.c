@@ -666,10 +666,22 @@ print_diff_tree (svn_fs_root_t *root,
 
           label = apr_psprintf (pool, "%s\t(original)", base_path);
           SVN_ERR (svn_path_get_absolute (&abs_path, orig_path, pool));
-          SVN_ERR (svn_io_run_diff (SVNLOOK_TMPDIR, NULL, 0, label, NULL,
-                                    abs_path, path, 
-                                    &exitcode, outhandle, NULL, config,
-                                    pool));
+
+          {
+            const char *diff_cmd;
+            svn_config_t *cfg;
+
+            cfg = config ? apr_hash_get (config, SVN_CONFIG_CATEGORY_CONFIG,
+                                         APR_HASH_KEY_STRING) : NULL;
+
+            svn_config_get (cfg, &diff_cmd, SVN_CONFIG_SECTION_HELPERS, 
+                            SVN_CONFIG_OPTION_DIFF_CMD, NULL);
+
+            SVN_ERR (svn_io_run_diff (SVNLOOK_TMPDIR, NULL, 0, label, NULL,
+                                      abs_path, path, 
+                                      &exitcode, outhandle, NULL, diff_cmd,
+                                      pool));
+          }
 
           /* TODO: Handle exit code == 2 (i.e. diff error) here. */
         }
