@@ -70,8 +70,13 @@ svn_error_t *svn_wc_has_binary_prop (svn_boolean_t *has_binary_prop,
 /*** Detecting modification. ***/
 
 /* Set *MODIFIED_P to non-zero if FILENAME's text is modified
-   w.r.t. the base revision, else set MODIFIED_P to zero.
-   FILENAME is a path to the file, not just a basename. */
+   w.r.t. the base revision, else set *MODIFIED_P to zero.
+   FILENAME is a path to the file, not just a basename. 
+
+   If FILENAME does not exist, consider it unmodified.  If it exists
+   but is not under revision control (not even scheduled for
+   addition), return the error SVN_ERR_WC_ENTRY_NOT_FOUND.
+*/
 svn_error_t *svn_wc_text_modified_p (svn_boolean_t *modified_p,
                                      svn_stringbuf_t *filename,
                                      apr_pool_t *pool);
