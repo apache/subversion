@@ -190,6 +190,13 @@ typedef struct svn_version_t
 svn_boolean_t svn_ver_compatible (const svn_version_t *my_version,
                                   const svn_version_t *lib_version);
 
+/**
+ * Check if @a my_version and @a lib_version encode the same version number.
+ * @since New in 1.2.
+ */
+svn_boolean_t svn_ver_equal (const svn_version_t *my_version,
+                             const svn_version_t *lib_version);
+
 
 /**
  * An entry in the compatibility checklist.

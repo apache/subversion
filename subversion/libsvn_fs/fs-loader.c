@@ -137,7 +137,7 @@ get_library_vtable (fs_library_vtable_t **vtable, const char *fs_type,
 
   SVN_ERR (initfunc (my_version, vtable));
   fs_version = (*vtable)->get_version();
-  if (!svn_ver_compatible (my_version, fs_version))
+  if (!svn_ver_equal (my_version, fs_version))
     return svn_error_createf (SVN_ERR_VERSION_MISMATCH, NULL,
                               _("Mismatched FS module version for '%s':"
                                 " found %d.%d.%d%s,"
