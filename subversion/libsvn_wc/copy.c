@@ -284,11 +284,15 @@ copy_dir_administratively (const char *src_path,
      in the repository.  See comment at the bottom of this file for an
      explanation. */
   SVN_ERR (svn_wc_entry (&src_entry, src_path, src_access, FALSE, pool));
+  if (! src_entry)
+    return svn_error_createf
+      (SVN_ERR_ENTRY_NOT_FOUND, NULL, 
+       "`%s' is not under version control", src_path);
   if ((src_entry->schedule == svn_wc_schedule_add)
       || (! src_entry->url))
     return svn_error_createf 
       (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-       "Not allowed to copy or move '%s' -- it's not in the repository yet.\n"
+       "Not allowed to copy or move `%s' -- it's not in the repository yet.\n"
        "Try committing first.",
        src_path);
 
