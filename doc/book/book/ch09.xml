@@ -35,7 +35,7 @@ $ svn status -v myfile
 
     <para>You can find many more examples of how to use most client
       commands in <xref linkend="svn-ch-3"/> and commands for managing
-      properties in <xref linkend="svn-ch-7-sect-2"/></para>
+      properties in <xref linkend="svn-ch-7-sect-2"/>.</para>
     
     <sect2 id="svn-ch-9-sect-1.1">
       <title><command>svn</command> Switches</title> 
@@ -3709,7 +3709,7 @@ Updated to revision 30.
     <para><command>svnadmin</command> is the administrative tool for
       monitoring and repairing your Subversion repository.  For
       detailed information, see <xref
-        linkend="svn-ch-5-sect-3.1.2"/></para>
+        linkend="svn-ch-5-sect-3.1.2"/>.</para>
 
     <para>Since <command>svnadmin</command> works via direct repository access
       (and thus can only be used on the machine that holds the
@@ -4193,7 +4193,7 @@ The latest repos revision is 34.
 
           <para>Deletes outstanding transactions from a repository.
             This is covered in detail in <xref
-            linkend="svn-ch-5-sect-3.2"/></para>
+            linkend="svn-ch-5-sect-3.2"/>.</para>
         </refsect1>
 
         <refsect1>

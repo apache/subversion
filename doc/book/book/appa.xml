@@ -324,7 +324,7 @@ X    Resource is external to this working copy (comes from another
       <quote>branch</quote> space; branches and tags are ordinary
       directories within the filesystem.  This is probably the single
       biggest mental hurdle a CVS user will need to climb.  Read all
-      about it in <xref linkend="svn-ch-4"/></para>
+      about it in <xref linkend="svn-ch-4"/>.</para>
 
 
     <warning>
