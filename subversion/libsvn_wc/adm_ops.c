@@ -113,7 +113,7 @@ svn_wc_close_commit (svn_string_t *path,
   if (err)
     return err;
 
-  err = svn_wc__cleanup (path, pool);
+  err = svn_wc__cleanup (path, 0, pool);
   if (err)
     return err;
 
