@@ -202,10 +202,10 @@ convert_to_stringbuf (apr_xlate_t *convset,
 }
 
 
-/* Return SVN_ERR_UNSUPPORTED_FEATURE if the first LEN bytes of DATA
-   contain anything other than seven-bit, non-control (except for
-   whitespace) ascii characters, finding the error pool from POOL.
-   Otherwise, return SVN_NO_ERROR. */
+/* Return APR_EINVAL if the first LEN bytes of DATA contain anything
+   other than seven-bit, non-control (except for whitespace) ascii
+   characters, finding the error pool from POOL.  Otherwise, return
+   SVN_NO_ERROR. */
 static svn_error_t *
 check_non_ascii (const char *data, apr_size_t len, apr_pool_t *pool)
 {
@@ -231,7 +231,7 @@ check_non_ascii (const char *data, apr_size_t len, apr_pool_t *pool)
                 = apr_pstrndup (pool, data_start, (data - data_start));
 
               return svn_error_createf
-                (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL, pool,
+                (APR_EINVAL, 0, NULL, pool,
                  "Safe data:\n"
                  "\"%s\"\n"
                  "... was followed by non-ascii byte %d.\n"
@@ -243,7 +243,7 @@ check_non_ascii (const char *data, apr_size_t len, apr_pool_t *pool)
           else
             {
               return svn_error_createf
-                (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL, pool,
+                (APR_EINVAL, 0, NULL, pool,
                  "Non-ascii character (code %d) detected, "
                  "and unable to convert to UTF-8.\n",
                  *((unsigned char *) data));
@@ -410,6 +410,69 @@ svn_utf_cstring_from_utf8 (const char **dest,
     }
 
   return SVN_NO_ERROR;
+}
+
+
+const char *
+svn_utf_cstring_from_utf8_fuzzy (const char *src,
+                                 apr_pool_t *pool)
+{
+  const char *src_orig = src;
+  apr_off_t new_len = 0;
+  char *new;
+  const char *new_orig;
+  svn_error_t *err;
+
+  /* First count how big a dest string we'll need. */
+  while (*src)
+    {
+      if (! apr_isascii (*src))
+        new_len += 5;  /* 5 slots, for "?\XXX" */
+      else
+        new_len += 1;  /* one slot for the 7-bit char */
+
+      src++;
+    }
+
+  /* Allocate that amount. */
+  new = apr_palloc (pool, new_len + 1);
+
+  /* All right, Brane.  We allocated it, we're building it, we're
+     returning it.  We can cast it, right? :-) */ 
+  new_orig = (const char *) new;
+
+  /* And fill it up. */
+  while (*src_orig)
+    {
+      if (! apr_isascii (*src_orig))
+        {
+          sprintf (new, "?\\%03u", (unsigned char) *src_orig);
+          new += 5;
+        }
+      else
+        {
+          *new = *src_orig;
+          new += 1;
+        }
+
+      src_orig++;
+    }
+
+  *new = '\0';
+
+  /* Okay, now we have a *new* UTF-8 string, one that's guaranteed to
+     contain only 7-bit bytes :-).  Recode to native... */
+  err = svn_utf_cstring_from_utf8 (((const char **) &new), new_orig, pool);
+
+  if (err)
+    return new_orig;
+  else
+    return (const char *) new;
+
+  /* ### Check the client locale, maybe we can avoid that second
+   * conversion!  See Ulrich Drepper's patch at
+   * http://subversion.tigris.org/issues/show_bug.cgi?id=807.
+   */
 }
 
 

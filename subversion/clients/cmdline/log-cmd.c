@@ -131,58 +131,24 @@ log_message_receiver (void *baton,
       return SVN_NO_ERROR;
     }
 
-  /* If log data has UTF-8 characters that cannot be converted to the
-     local encoding, we shouldn't stop cold, so we just emit a
-     placeholder and move on.  (Subversion's logs actually have such
-     data, in revision 2600 for example.)
-
-     In general, Subversion's behavior on encountering unconvertible
-     data depends on context.  There may becircumstances where
-     conversion failure should be a fatal error, it's just that log
-     isn't one of them.  If a particular log message can't be
-     converted, that doesn't imply others will fail too.
-
-     A more sophisticated solution would be a fuzzy conversion
-     function that converts what it can and uses '?' for the bad
-     bytes, or perhaps ?\XXX to give the UTF escape code, or whatever.
-
-     But the first task is to unbreak "svn log" for most users; fancy
-     stuff can come later! */
+  /* ### See http://subversion.tigris.org/issues/show_bug.cgi?id=807
+     for more on the fallback fuzzy conversions below. */
 
   err = svn_utf_cstring_from_utf8 (&author_native, author, pool);
   if (err && (APR_STATUS_IS_EINVAL (err->apr_err)))
-    {
-    
-      SVN_ERR (svn_utf_cstring_from_utf8
-               (&author_native,
-                "[unconvertible author,\n"
-"see http://subversion.tigris.org/issues/show_bug.cgi?id=807 for details.]\n",
-                pool));
-    }
+    author_native = svn_utf_cstring_from_utf8_fuzzy (author, pool);
   else if (err)
     return err;
 
   err = svn_utf_cstring_from_utf8 (&date_native, date, pool);
   if (err && (APR_STATUS_IS_EINVAL (err->apr_err)))   /* unlikely! */
-    {
-      SVN_ERR (svn_utf_cstring_from_utf8
-               (&date_native,
-                "[unconvertible date,\n"
-"see http://subversion.tigris.org/issues/show_bug.cgi?id=807 for details.]\n",
-                pool));
-    }
+    date_native = svn_utf_cstring_from_utf8_fuzzy (date, pool);
   else if (err)
     return err;
 
   err = svn_utf_cstring_from_utf8 (&msg_native, msg, pool);
   if (err && (APR_STATUS_IS_EINVAL (err->apr_err)))
-    {
-      SVN_ERR (svn_utf_cstring_from_utf8
-               (&msg_native,
-                "[unconvertible log msg,\n"
-"see http://subversion.tigris.org/issues/show_bug.cgi?id=807 for details.]\n",
-                pool));
-    }
+    msg_native = svn_utf_cstring_from_utf8_fuzzy (msg, pool);
   else if (err)
     return err;
 
