@@ -81,6 +81,83 @@ svn_fs__dag_init_fs (svn_fs_t *fs)
 
 
 
+/* ### these functions are defined so that we can load the library.
+   ### without them, we get undefined references from tree.c
+   ### obviously, they don't work and will need to be filled in...
+*/
+svn_error_t *svn_fs__dag_txn_node (dag_node_t **node_p,
+				   svn_fs_t *fs,
+				   const char *txn,
+				   const svn_fs_id_t *id,
+				   trail_t *trail)
+{
+  abort();
+  /* NOTREACHED */
+  return NULL;
+}
+void svn_fs__dag_close (dag_node_t *node)
+{
+  abort();
+}
+const svn_fs_id_t *svn_fs__dag_get_id (dag_node_t *node)
+{
+  abort();
+  /* NOTREACHED */
+  return NULL;
+}
+svn_error_t *svn_fs__dag_get_proplist (skel_t **proplist_p,
+				       dag_node_t *node,
+				       trail_t *trail)
+{
+  abort();
+  /* NOTREACHED */
+  return NULL;
+}
+svn_error_t *svn_fs__dag_set_proplist (dag_node_t *node,
+				       skel_t *proplist,
+				       trail_t *trail)
+{
+  abort();
+  /* NOTREACHED */
+  return NULL;
+}
+svn_error_t *svn_fs__dag_clone_child (dag_node_t **child_p,
+				      dag_node_t *parent,
+				      const char *name,
+				      trail_t *trail)
+{
+  abort();
+  /* NOTREACHED */
+  return NULL;
+}
+svn_error_t *svn_fs__dag_clone_root (dag_node_t **root_p,
+				     svn_fs_t *fs,
+				     const char *svn_txn,
+				     trail_t *trail)
+{
+  abort();
+  /* NOTREACHED */
+  return NULL;
+}
+svn_error_t *svn_fs__dag_open (dag_node_t **child_p,
+			       dag_node_t *parent,
+			       const char *name,
+			       trail_t *trail)
+{
+  abort();
+  /* NOTREACHED */
+  return NULL;
+}
+svn_error_t *svn_fs__dag_delete (dag_node_t *parent,
+				 const char *name,
+				 trail_t *trail)
+{
+  abort();
+  /* NOTREACHED */
+  return NULL;
+}
+
+
 /* 
  * local variables:
  * eval: (load-file "../svn-dev.el")
