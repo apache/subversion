@@ -192,7 +192,7 @@ window_handler (svn_txdelta_window_t *window, void *baton)
 
   /* If this window is irrelevant because it reconstructs text that is
      entirely before the range we're interested in, then ignore it. */
-  if ((wb->cur_offset + window->tview_len) < wb->req_offset)
+  if ((wb->cur_offset + window->tview_len - 1) < wb->req_offset)
     {
       wb->cur_offset += window->tview_len;
       return SVN_NO_ERROR;
@@ -229,10 +229,10 @@ window_handler (svn_txdelta_window_t *window, void *baton)
     char *sbuf;       /* Reconstructed source data. */
     apr_size_t slen;  /* Length of source data. */
 
-    slen = window->sview_offset;
-
     subpool = svn_pool_create (wb->pool);
-    sbuf = apr_palloc (subpool, window->sview_len);
+
+    slen = window->sview_len;
+    sbuf = apr_palloc (subpool, slen);
 
     /* ### todo: this is what has to go :-) */
     SVN_ERR (rep_read_range (wb->fs,
@@ -276,7 +276,7 @@ window_handler (svn_txdelta_window_t *window, void *baton)
             case svn_txdelta_new:
               {
                 memcpy (wb->buf + wb->len_read,
-                        window->new_data + op->offset,
+                        window->new_data->data + op->offset,
                         op->length);
                 wb->len_read += op->length;
               }
@@ -1191,6 +1191,8 @@ svn_fs__rep_deltify (svn_fs_t *fs,
     /* Write out the new representation. */
     SVN_ERR (svn_fs__write_rep (fs, target, rep, trail));
     SVN_ERR (svn_fs__string_delete (fs, orig_str_key, trail));
+#else
+    SVN_ERR (svn_fs__string_delete (fs, new_target_baton.key, trail));
 #endif /* 0 */
   }
 

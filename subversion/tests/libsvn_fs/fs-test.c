@@ -3636,8 +3636,14 @@ check_old_revisions (const char **msg,
     const char *iota_contents_5
       = "XTYhQis is ACK, PHHHT! no longer 'ioZZZZZta'.blarf\nbye";
 
-    /* Revert to the original contents. */
+    /* Reassure iota that it will live for quite some time. */
     const char *iota_contents_6
+      = "Matthew 5:18 (Revised Standard Version) --
+For truly, I say to you, till heaven and earth pass away, not an iota,
+not a dot, will pass from the law until all is accomplished.";
+
+    /* Revert to the original contents. */
+    const char *iota_contents_7
       = "This is the file 'iota'.\n";
 
     /* Revision 2. */
@@ -3677,6 +3683,14 @@ check_old_revisions (const char **msg,
     SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
     SVN_ERR (svn_test__set_file_contents
              (txn_root, "iota", iota_contents_6, pool));
+    SVN_ERR (svn_fs_commit_txn (NULL, &rev, txn));
+    SVN_ERR (svn_fs_close_txn (txn));
+
+    /* Revision 7. */
+    SVN_ERR (svn_fs_begin_txn (&txn, fs, rev, pool));
+    SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+    SVN_ERR (svn_test__set_file_contents
+             (txn_root, "iota", iota_contents_7, pool));
     SVN_ERR (svn_fs_commit_txn (NULL, &rev, txn));
     SVN_ERR (svn_fs_close_txn (txn));
 
@@ -3866,6 +3880,37 @@ check_old_revisions (const char **msg,
       };
 
       SVN_ERR (svn_fs_revision_root (&root, fs, 6, pool));
+      SVN_ERR (svn_test__validate_tree (root, expected_entries, 20, pool));
+    }
+
+    /* Validate revision 7.  */
+    {
+      svn_fs_root_t *root;
+      svn_test__tree_entry_t expected_entries[] = {
+        /* path, contents (0 = dir) */
+        { "iota",        iota_contents_7 },
+        { "A",           0 },
+        { "A/mu",        "This is the file 'mu'.\n" },
+        { "A/B",         0 },
+        { "A/B/lambda",  "This is the file 'lambda'.\n" },
+        { "A/B/E",       0 },
+        { "A/B/E/alpha", "This is the file 'alpha'.\n" },
+        { "A/B/E/beta",  "This is the file 'beta'.\n" },
+        { "A/B/F",       0 },
+        { "A/C",         0 },
+        { "A/D",         0 },
+        { "A/D/gamma",   "This is the file 'gamma'.\n" },
+        { "A/D/G",       0 },
+        { "A/D/G/pi",    "This is the file 'pi'.\n" },
+        { "A/D/G/rho",   "This is the file 'rho'.\n" },
+        { "A/D/G/tau",   "This is the file 'tau'.\n" },
+        { "A/D/H",       0 },
+        { "A/D/H/chi",   "This is the file 'chi'.\n" },
+        { "A/D/H/psi",   "This is the file 'psi'.\n" },
+        { "A/D/H/omega", "This is the file 'omega'.\n" }
+      };
+
+      SVN_ERR (svn_fs_revision_root (&root, fs, 7, pool));
       SVN_ERR (svn_test__validate_tree (root, expected_entries, 20, pool));
     }
   }

@@ -201,7 +201,8 @@ get_dir_entries (apr_hash_t *tree_entries,
 
 static svn_error_t *
 validate_tree_entry (svn_fs_root_t *root,
-                     svn_test__tree_entry_t *entry, 
+                     const char *path,
+                     const char *contents,
                      apr_pool_t *pool)
 {
   svn_stream_t *rstream;
@@ -209,24 +210,24 @@ validate_tree_entry (svn_fs_root_t *root,
   int is_dir;
 
   /* Verify that this is the expected type of node */
-  SVN_ERR (svn_fs_is_dir (&is_dir, root, entry->path, pool));
-  if ((!is_dir && !entry->contents) || (is_dir && entry->contents))
+  SVN_ERR (svn_fs_is_dir (&is_dir, root, path, pool));
+  if ((!is_dir && !contents) || (is_dir && contents))
     return svn_error_createf
       (SVN_ERR_FS_GENERAL, 0, NULL, pool,
        "node `%s' in tree was of unexpected node type", 
-       entry->path);
+       path);
 
   /* Verify that the contents are as expected (files only) */
   if (! is_dir)
     {
-      SVN_ERR (svn_fs_file_contents (&rstream, root, entry->path, pool));  
+      SVN_ERR (svn_fs_file_contents (&rstream, root, path, pool));  
       SVN_ERR (svn_test__stream_to_string (&rstring, rstream, pool));
       if (! svn_stringbuf_compare (rstring, 
-                                svn_stringbuf_create (entry->contents, pool)))
+                                   svn_stringbuf_create (contents, pool)))
         return svn_error_createf 
           (SVN_ERR_FS_GENERAL, 0, NULL, pool,
            "node `%s' in tree had unexpected contents",
-           entry->path);
+           path);
     }
 
   return SVN_NO_ERROR;
@@ -244,43 +245,106 @@ svn_test__validate_tree (svn_fs_root_t *root,
                          int num_entries, 
                          apr_pool_t *pool)
 {
-  apr_hash_t *tree_entries;
-  int i;
+  apr_hash_t *tree_entries, *expected_entries;
   apr_pool_t *subpool = svn_pool_create (pool);
   svn_stringbuf_t *root_dir = svn_stringbuf_create ("", subpool);
+  svn_stringbuf_t *extra_entries = NULL;
+  svn_stringbuf_t *missing_entries = NULL;
+  svn_stringbuf_t *corrupt_entries = NULL;
+  apr_hash_index_t *hi;
+  int i;
+
+  /* Create a hash for storing our expected entries */
+  expected_entries = apr_hash_make (subpool);
   
+  /* Copy our array of expected entries into a hash. */
+  for (i = 0; i < num_entries; i++)
+    apr_hash_set (expected_entries, entries[i].path, 
+                  APR_HASH_KEY_STRING, &(entries[i]));
+
   /* Create our master hash for storing the entries */
   tree_entries = apr_hash_make (pool);
   
   /* Begin the recursive directory entry dig */
   SVN_ERR (get_dir_entries (tree_entries, root, root_dir, subpool));
 
-  if (num_entries < apr_hash_count (tree_entries))
-    return svn_error_create
-      (SVN_ERR_FS_GENERAL, 0, NULL, pool,
-       "unexpected number of items in tree (too many)");
-  if (num_entries > apr_hash_count (tree_entries))
-    return svn_error_create
-      (SVN_ERR_FS_GENERAL, 0, NULL, pool,
-       "unexpected number of items in tree (too few)");
-
-  if ((num_entries > 0) && (! entries))
-    return svn_error_create
-      (SVN_ERR_TEST_FAILED, 0, NULL, pool,
-       "validation requested against non-existant control data");
-
-  for (i = 0; i < num_entries; i++)
+  /* For each entry in our EXPECTED_ENTRIES hash, try to find that
+     entry in the TREE_ENTRIES hash given us by the FS.  If we find
+     that object, remove it from the TREE_ENTRIES.  If we don't find
+     it, there's a problem to report! */
+  for (hi = apr_hash_first (expected_entries); hi; hi = apr_hash_next (hi))
     {
+      const void *key;
+      apr_size_t keylen;
       void *val;
-      
+      svn_test__tree_entry_t *entry;
+
+      apr_hash_this (hi, &key, &keylen, &val);
+      entry = val;
+
       /* Verify that the entry exists in our full list of entries. */
-      val = apr_hash_get (tree_entries, entries[i].path, APR_HASH_KEY_STRING);
-      if (! val)
-        return svn_error_createf
-          (SVN_ERR_FS_GENERAL, 0, NULL, pool,
-           "failed to find expected node `%s' in tree", 
-           entries[i].path);
-      SVN_ERR (validate_tree_entry (root, &entries[i], subpool));
+      val = apr_hash_get (tree_entries, key, keylen);
+      if (val)
+        {
+          if (validate_tree_entry (root, entry->path, 
+                                   entry->contents, subpool))
+            {
+              /* If we don't have a corrupt entries string, make one. */
+              if (! corrupt_entries)
+                corrupt_entries = svn_stringbuf_create ("", subpool);
+
+              /* Append this entry name to the list of corrupt entries. */
+              svn_stringbuf_appendcstr (corrupt_entries, "   "); 
+              svn_stringbuf_appendbytes (corrupt_entries, (char *)key, keylen);
+              svn_stringbuf_appendcstr (corrupt_entries, "\n"); 
+            }
+
+          apr_hash_set (tree_entries, key, keylen, NULL);
+        }
+      else
+        {
+          /* If we don't have a missing entries string, make one. */
+          if (! missing_entries)
+            missing_entries = svn_stringbuf_create ("", subpool);
+
+          /* Append this entry name to the list of missing entries. */
+          svn_stringbuf_appendcstr (missing_entries, "   "); 
+          svn_stringbuf_appendbytes (missing_entries, (char *)key, keylen);
+          svn_stringbuf_appendcstr (missing_entries, "\n"); 
+        } 
+    }
+
+  /* Any entries still left in TREE_ENTRIES are extra ones that are
+     not expected to be present.  Assemble a string with their names. */
+  for (hi = apr_hash_first (tree_entries); hi; hi = apr_hash_next (hi))
+    {
+      const void *key;
+      apr_size_t keylen;
+      void *val;
+
+      apr_hash_this (hi, &key, &keylen, &val);
+
+      /* If we don't have an extra entries string, make one. */
+      if (! extra_entries)
+        extra_entries = svn_stringbuf_create ("", subpool);
+      
+      /* Append this entry name to the list of missing entries. */
+      svn_stringbuf_appendcstr (extra_entries, "   "); 
+      svn_stringbuf_appendbytes (extra_entries, (char *)key, keylen);
+      svn_stringbuf_appendcstr (extra_entries, "\n"); 
+    }
+
+  if (missing_entries || extra_entries || corrupt_entries)
+    {
+      return svn_error_createf
+        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+         "Repository tree does not look as expected.\n"
+         "Corrupt entries:\n%s"
+         "Missing entries:\n%s"
+         "Extra entries:\n%s",
+         corrupt_entries ? corrupt_entries->data : "",
+         missing_entries ? missing_entries->data : "",
+         extra_entries ? extra_entries->data : "");
     }
 
   svn_pool_destroy (subpool);
