@@ -221,16 +221,6 @@ const svn_diff_output_fns_t output_fns = {
 };
 
 
-static int 
-compare_items_as_paths (const void *a, const void *b)
-{
-  const char *item1 = a;
-  const char *item2 = b;
-  return svn_path_compare_paths (item1, item2);
-}
-
-
-                     
 /* Callback for log messages: accumulates revision metadata into
    a chronologically ordered list stored in the baton. */
 static svn_error_t *
@@ -276,21 +266,11 @@ log_message_receiver (void *baton,
          to find that directory, and effective "re-base" our path on
          that directory's copyfrom_path. */
       int i;
-      apr_hash_index_t *hi;
-      apr_array_header_t *paths = 
-        apr_array_make (pool, apr_hash_count (changed_paths), 
-                        sizeof (const char *));
+      apr_array_header_t *paths;
 
       /* Build a sorted list of the changed paths. */
-      for (hi = apr_hash_first (pool, changed_paths); hi; 
-           hi = apr_hash_next (hi))
-        {
-          const void *key;
-          apr_hash_this (hi, &key, NULL, NULL);
-          APR_ARRAY_PUSH (paths, const char *) = key;
-        }
-      qsort (paths->elts, paths->nelts, paths->elt_size, 
-             compare_items_as_paths);
+      paths = apr_hash_sorted_keys (changed_paths,
+                                    svn_sort_compare_items_as_paths, pool);
 
       /* Now, walk the list of paths backwards, looking a parent of
          our path that has copyfrom information. */
