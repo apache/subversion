@@ -675,12 +675,6 @@ add_file_or_dir (struct context *c, void *dir_baton,
       base_revision = get_revision_from_hash (c->source_rev_diffs,
                                               source_full_path,
                                               pool);
-
-      if (! SVN_IS_VALID_REVNUM(base_revision))
-        return
-          svn_error_create
-          (SVN_ERR_FS_NO_SUCH_REVISION, 0, 0, pool,
-           "unable to ascertain base revision for source path");
     }
 
   if (is_dir)
@@ -751,12 +745,6 @@ replace_file_or_dir (struct context *c,
   base_revision = get_revision_from_hash (c->source_rev_diffs,
                                           source_full_path,
                                           pool);
-
-  if (! SVN_IS_VALID_REVNUM(base_revision))
-    return
-      svn_error_create
-      (SVN_ERR_FS_NO_SUCH_REVISION, 0, 0, pool,
-       "unable to ascertain base revision for source path");
 
   if (is_dir)
     {
