@@ -341,14 +341,14 @@ static svn_error_t *simple_fetch_file(svn_ra_session_t *ras,
 
   frc.pool = pool;
 
-  rv = ne_read_file(ras->sess, url, fetch_file_reader, &frc);
+  rv = ne_read_file(ras->sess2, url, fetch_file_reader, &frc);
   if (rv != NE_OK)
     {
       /* ### other GET responses? */
 
       /* ### need an SVN_ERR here */
       err = svn_error_create(APR_EGENERAL, 0, NULL, pool,
-                             ne_get_error(ras->sess));
+                             ne_get_error(ras->sess2));
     }
   /* else: err == NULL */
 

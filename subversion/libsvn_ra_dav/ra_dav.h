@@ -43,6 +43,7 @@ typedef struct {
   const char *password;
 
   ne_session *sess;           /* HTTP session to server */
+  ne_session *sess2;
 
 } svn_ra_session_t;
 

@@ -89,6 +89,7 @@ static svn_error_t * auth_authenticate (void **session_baton, void *auth_baton)
   svn_ra_session_t *ras = auth_baton;
 
   ne_set_server_auth(ras->sess, request_auth, ras);
+  ne_set_server_auth(ras->sess2, request_auth, ras);
 
   *session_baton = ras;
 
@@ -107,6 +108,9 @@ static const svn_ra_simple_password_authenticator_t userpass_authenticator =
   auth_authenticate
 };
 
+/* ### need an ne_session_dup to avoid the second gethostbyname
+ * call and make this halfway sane. */
+
 static svn_error_t * svn_ra_get_authenticator (const void **authenticator,
                                                void **auth_baton,
                                                svn_stringbuf_t *repos_URL,
@@ -115,7 +119,7 @@ static svn_error_t * svn_ra_get_authenticator (const void **authenticator,
 {
   const char *repository = repos_URL->data;
   apr_size_t len;
-  ne_session *sess;
+  ne_session *sess, *sess2;
   struct uri uri = { 0 };
   svn_ra_session_t *ras;
 
@@ -138,12 +142,19 @@ static svn_error_t * svn_ra_get_authenticator (const void **authenticator,
                             "network socket initialization failed");
   }
 
+#if 0
+  ne_debug_init(stderr, NE_DBG_HTTP|NE_DBG_HTTPBODY);
+#endif
+
   sess = ne_session_create();
+  sess2 = ne_session_create();
 
   /* make sure we will eventually destroy the session */
   apr_pool_cleanup_register(pool, sess, cleanup_session, apr_pool_cleanup_null);
+  apr_pool_cleanup_register(pool, sess2, cleanup_session, apr_pool_cleanup_null);
 
   ne_set_useragent(sess, "SVN/" SVN_VERSION);
+  ne_set_useragent(sess2, "SVN/" SVN_VERSION);
 
   /* we want to know if the repository is actually somewhere else */
   /* ### not yet: http_redirect_register(sess, ... ); */
@@ -180,6 +191,8 @@ static svn_error_t * svn_ra_get_authenticator (const void **authenticator,
                                "Hostname not found: %s", uri.host);
     }
 
+  ne_session_server(sess2, uri.host, uri.port);
+
   /* clean up trailing slashes from the URL */
   len = strlen(uri.path);
   if (len > 1 && uri.path[len - 1] == '/')
@@ -189,6 +202,7 @@ static svn_error_t * svn_ra_get_authenticator (const void **authenticator,
   ras->pool = pool;
   ras->root = uri;
   ras->sess = sess;
+  ras->sess2 = sess2;  
 
   if (method == SVN_RA_AUTH_USERNAME)
     *authenticator = &username_authenticator;
@@ -205,6 +219,7 @@ static svn_error_t *svn_ra_close (void *session_baton)
   svn_ra_session_t *ras = session_baton;
 
   (void) apr_pool_cleanup_run(ras->pool, ras->sess, cleanup_session);
+  (void) apr_pool_cleanup_run(ras->pool, ras->sess2, cleanup_session);
   return NULL;
 }
 
