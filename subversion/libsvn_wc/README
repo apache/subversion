@@ -117,7 +117,7 @@ analogous to CVS/ subdirs:
    Also, the presence of this file means that the entire process of
    creating the adm area was completed, because this is always the
    last file created.  Of course, that's no guarantee that someone
-   didn't muck things up afterwords, but it's good enough for
+   didn't muck things up afterwards, but it's good enough for
    existence-checking.
 
 `format'
