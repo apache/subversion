@@ -94,7 +94,8 @@ send_file_contents (const char *path,
 
       if (keywords_val)
         SVN_ERR (svn_subst_build_keywords (&keywords, keywords_val->data, 
-                                           "-1", "", 0, "", pool));
+                                           APR_STRINGIFY(SVN_INVALID_REVNUM),
+                                           "", 0, "", pool));
 
       /* Now create a new tempfile, and open a stream to it. */
       SVN_ERR (svn_io_temp_dir (&temp_dir, pool));
