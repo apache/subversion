@@ -1,69 +1,113 @@
 #!/usr/bin/env python
 #
-# gen-make.py -- generate makefiles for building Subversion
-#
-# USAGE:
-#    gen-make.py [-s] BUILD-CONFIG
+# gen-base.py -- infrastructire for generateing makefiles, dependencies, etc.
 #
 
-import sys
-import os
-import ConfigParser
-import string
-import glob
+import os, sys
+import string, glob, re
 import fileinput
-import re
+import ConfigParser
+
+
+__all__ = ['MakefileGenerator', 'MsvcProjectGenerator']
+
+
+class _GeneratorBase:
+  def __init__(self, fname, oname):
+    self.parser = ConfigParser.ConfigParser(_cfg_defaults)
+    self.parser.read(fname)
+    self.oname = oname
+    self.targets = { }
+    self.install = { }                       # install area name -> targets
+    self.test_progs = [ ]
+    self.test_deps = [ ]
+    self.fs_test_progs = [ ]
+    self.fs_test_deps = [ ]
+    self.file_deps = [ ]
+    self.target_dirs = { }
+    self.manpages = [ ]
+    self.infopages = [ ]
+
+    # PASS 1: collect the targets and some basic info
+    errors = 0
+    self.target_names = _filter_targets(self.parser.sections())
+    for target in self.target_names:
+      try:
+        target_ob = _Target(target,
+                            self.parser.get(target, 'path'),
+                            self.parser.get(target, 'install'),
+                            self.parser.get(target, 'type'))
+      except GenError, e:
+        print e
+        errors = 1
+        continue
+
+      self.targets[target] = target_ob
+
+      itype = target_ob.install
+      if self.install.has_key(itype):
+        self.install[itype].append(target_ob)
+      else:
+        self.install[itype] = [ target_ob ]
+
+      self.target_dirs[target_ob.path] = None
+
+    if errors:
+      raise GenError('Target generation failed, exiting.')
+
+
+class MsvcProjectGenerator(_GeneratorBase):
+  def __init__(self, fname, oname):
+    _GeneratorBase.__init__(self, fname, oname)
+
+  def write(self):
+    raise NotImplementedError
+
+
+class MakefileGenerator(_GeneratorBase):
+  def __init__(self, fname, oname):
+    _GeneratorBase.__init__(self, fname, oname)
+    self.ofile = open(self.oname, 'w')
+    self.ofile.write('# DO NOT EDIT -- AUTOMATICALLY GENERATED\n\n')
+
+  def write(self):
+    pass
+
+  def write_depends(self):
+    #
+    # Find all the available headers and what they depend upon. the
+    # include_deps is a dictionary mapping a short header name to a tuple
+    # of the full path to the header and a dictionary of dependent header
+    # names (short) mapping to None.
+    #
+    # Example:
+    #   { 'short.h' : ('/path/to/short.h',
+    #                  { 'other.h' : None, 'foo.h' : None }) }
+    #
+    # Note that this structure does not allow for similarly named headers
+    # in per-project directories. SVN doesn't have this at this time, so
+    # this structure works quite fine. (the alternative would be to use
+    # the full pathname for the key, but that is actually a bit harder to
+    # work with since we only see short names when scanning, and keeping
+    # a second variable around for mapping the short to long names is more
+    # than I cared to do right now)
+    #
+    include_deps = _create_include_deps(self.includes)
+    for d in target_dirs.keys():
+      hdrs = glob.glob(os.path.join(d, '*.h'))
+      if hdrs:
+        more_deps = _create_include_deps(hdrs, include_deps)
+        include_deps.update(more_deps)
+
+    for src, objname in file_deps:
+      hdrs = [ ]
+      for short in _find_includes(src, include_deps):
+        hdrs.append(include_deps[short][0])
+      self.ofile.write('%s: %s %s\n' % (objname, src, string.join(hdrs)))
+
 
 
 def main(fname, oname=None, skip_depends=0):
-  parser = ConfigParser.ConfigParser(_cfg_defaults)
-  parser.read(fname)
-
-  if oname is None:
-    oname = os.path.splitext(os.path.basename(fname))[0] + '-outputs.mk'
-
-  ofile = open(oname, 'w')
-  ofile.write('# DO NOT EDIT -- AUTOMATICALLY GENERATED\n\n')
-
-  errors = 0
-  targets = { }
-  install = { }		# install area name -> targets
-  test_progs = [ ]
-  test_deps = [ ]
-  fs_test_progs = [ ] 
-  fs_test_deps = [ ]
-  file_deps = [ ]
-  target_dirs = { }
-  manpages = [ ]
-  infopages = [ ]
-
-  target_names = _filter_targets(parser.sections())
-
-  # PASS 1: collect the targets and some basic info
-  for target in target_names:
-    try:
-      target_ob = Target(target,
-                         parser.get(target, 'path'),
-                         parser.get(target, 'install'),
-                         parser.get(target, 'type'))
-    except GenMakeError, e:
-      print e
-      errors = 1
-      continue
-
-    targets[target] = target_ob
-
-    itype = target_ob.install
-    if install.has_key(itype):
-      install[itype].append(target_ob)
-    else:
-      install[itype] = [ target_ob ]
-
-    target_dirs[target_ob.path] = None
-
-  if errors:
-    sys.exit(1)
-
   # PASS 2: generate the outputs
   for target in target_names:
     target_ob = targets[target]
@@ -274,42 +318,13 @@ def main(fname, oname=None, skip_depends=0):
   ofile.write('INFOPAGES = %s\n\n' % string.join(infopages))
 
   if not skip_depends:
-    #
-    # Find all the available headers and what they depend upon. the
-    # include_deps is a dictionary mapping a short header name to a tuple
-    # of the full path to the header and a dictionary of dependent header
-    # names (short) mapping to None.
-    #
-    # Example:
-    #   { 'short.h' : ('/path/to/short.h',
-    #                  { 'other.h' : None, 'foo.h' : None }) }
-    #
-    # Note that this structure does not allow for similarly named headers
-    # in per-project directories. SVN doesn't have this at this time, so
-    # this structure works quite fine. (the alternative would be to use
-    # the full pathname for the key, but that is actually a bit harder to
-    # work with since we only see short names when scanning, and keeping
-    # a second variable around for mapping the short to long names is more
-    # than I cared to do right now)
-    #
-    include_deps = _create_include_deps(includes)
-    for d in target_dirs.keys():
-      hdrs = glob.glob(os.path.join(d, '*.h'))
-      if hdrs:
-        more_deps = _create_include_deps(hdrs, include_deps)
-        include_deps.update(more_deps)
-
-    for src, objname in file_deps:
-      hdrs = [ ]
-      for short in _find_includes(src, include_deps):
-        hdrs.append(include_deps[short][0])
-      ofile.write('%s: %s %s\n' % (objname, src, string.join(hdrs)))
+    ##gone to Generator.write_depends
 
   if errors:
     sys.exit(1)
 
 
-class Target:
+class _Target:
   def __init__(self, name, path, install, type):
     self.name = name
     self.deps = [ ]	# dependencies (list of other Target objects)
@@ -329,7 +344,7 @@ class Target:
     elif type == 'doc':
       pass
     else:
-      raise GenMakeError('ERROR: unknown build type: ' + type)
+      raise GenError('ERROR: unknown build type: ' + type)
 
     self.install = install
     self.output = os.path.join(path, tfile)
@@ -362,7 +377,7 @@ class Target:
     fname = os.path.join(self.path, self.name + '.dsp-test')
     open(fname, 'wb').write(dsp)
 
-class GenMakeError(Exception):
+class GenError(Exception):
   pass
 
 _cfg_defaults = {
@@ -508,24 +523,3 @@ def _sorted_files(targets):
 
 class CircularDependencies(Exception):
   pass
-
-
-def _usage_exit():
-  "print usage, exit the script"
-  print "usage:  gen-make.py [-s] conf-file\n"
-  sys.exit(0)
-
-if __name__ == '__main__':
-  argc = len(sys.argv)
-  
-  if argc == 1:
-    _usage_exit()
-  if sys.argv[1] == '-s':
-    if argc == 2:
-      _usage_exit()
-    skip = 1
-    fname = sys.argv[2]
-  else:
-    skip = 0
-    fname = sys.argv[1]
-  main(fname, skip_depends=skip)
