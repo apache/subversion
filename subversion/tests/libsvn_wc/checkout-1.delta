@@ -1,6 +1,6 @@
 <tree-delta>
   <new name='A'>
-    <dir ancestor='/A' ver=1>
+    <dir ancestor='/A' ver='1'>
       <tree-delta>
         <new name='mu'>
           <file ancestor='/A/mu'>
