@@ -25,8 +25,7 @@
 
 
 svn_error_t *
-svn_wc_merge (const char *parent,
-              const char *left,
+svn_wc_merge (const char *left,
               const char *right,
               const char *merge_target,
               const char *left_label,
@@ -35,8 +34,8 @@ svn_wc_merge (const char *parent,
               apr_pool_t *pool)
 {
   svn_stringbuf_t *full_tgt_path, *full_left_path, *full_right_path;
-  svn_stringbuf_t *tmp_target, *result_target;
-  svn_stringbuf_t *pt, *bn;
+  svn_stringbuf_t *tmp_target, *result_target, *tmp_left, *tmp_right;
+  svn_stringbuf_t *pt, *bn, *bn_left, *bn_right, *mt_pt, *mt_bn;
   apr_file_t *tmp_f, *result_f;
   svn_boolean_t is_binary;
   svn_wc_keywords_t *keywords;
@@ -46,26 +45,23 @@ svn_wc_merge (const char *parent,
   int exit_code;
   svn_wc_entry_t *entry;
 
-  /* We need temporary fullpaths of our three basenames, so that we
-     pass them as arguments to svn_io_copy_*, svn_wc_entry,
+  /* Stringbuf versions of our three fulltext paths, so that we pass
+     them as arguments to svn_io_copy_*, svn_wc_entry,
      svn_io_open_unique_file..., etc. */
-  full_tgt_path = svn_stringbuf_create (parent, pool);
-  svn_path_add_component_nts (full_tgt_path, merge_target);
-  full_left_path = svn_stringbuf_create (parent, pool);
-  svn_path_add_component_nts (full_left_path, left);
-  full_right_path = svn_stringbuf_create (parent, pool);
-  svn_path_add_component_nts (full_right_path, right);
+  full_tgt_path = svn_stringbuf_create (merge_target, pool);
+  full_left_path = svn_stringbuf_create (left, pool);
+  full_right_path = svn_stringbuf_create (right, pool);
+  svn_path_split (full_tgt_path, &mt_pt, &mt_bn, pool);
 
   /* Sanity check:  the merge target must be under revision control. */
   SVN_ERR (svn_wc_entry (&entry, full_tgt_path, pool));
   if (! entry)
     return svn_error_createf
       (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool,
-       "svn_wc_merge: `%s' not under revision control", full_tgt_path->data);
+       "svn_wc_merge: `%s' not under revision control", merge_target);
 
   /* Decide if the merge target is a text or binary file. */
   SVN_ERR (svn_wc_has_binary_prop (&is_binary, full_tgt_path, pool));
-
   
   if (! is_binary)              /* this is a text file */
     {
@@ -78,7 +74,7 @@ svn_wc_merge (const char *parent,
           /* The target is already in repository form, so we just need to
              make a verbatim copy of it. */
           SVN_ERR (svn_io_open_unique_file (&tmp_f, &tmp_target,
-                                            full_tgt_path->data,
+                                            merge_target,
                                             SVN_WC__TMP_EXT,
                                             FALSE, pool));
           apr_err = apr_file_close (tmp_f);
@@ -88,25 +84,57 @@ svn_wc_merge (const char *parent,
                "svn_wc_merge: unable to close tmp file `%s'",
                tmp_target->data);
       
-          SVN_ERR (svn_io_copy_file (full_tgt_path->data,
+          SVN_ERR (svn_io_copy_file (merge_target,
                                      tmp_target->data, TRUE, pool));
         }
 
       /* Open a second temporary file for writing; this is where diff3
          will write the merged results. */
       SVN_ERR (svn_io_open_unique_file (&result_f, &result_target,
-                                        full_tgt_path->data, SVN_WC__TMP_EXT,
+                                        merge_target, SVN_WC__TMP_EXT,
                                         FALSE, pool));
 
-      /* Run diff3 on the basenames {left, right, basename(tmp_target)}. */
+      /* LEFT and RIGHT might be in totally different directories than
+         MERGE_TARGET, and our diff3 command wants them all to be in
+         the same directory.  So make temporary copies of LEFT and
+         RIGHT right next to the target. */
+      SVN_ERR (svn_io_open_unique_file (&tmp_f, &tmp_left,
+                                        merge_target,
+                                        SVN_WC__TMP_EXT,
+                                        FALSE, pool));
+      apr_err = apr_file_close (tmp_f);
+      if (! APR_STATUS_IS_SUCCESS (apr_err))
+        return svn_error_createf
+          (apr_err, 0, NULL, pool,
+           "svn_wc_merge: unable to close tmp file `%s'",
+           tmp_left->data);
+
+      SVN_ERR (svn_io_open_unique_file (&tmp_f, &tmp_right,
+                                        merge_target,
+                                        SVN_WC__TMP_EXT,
+                                        FALSE, pool));
+      apr_err = apr_file_close (tmp_f);
+      if (! APR_STATUS_IS_SUCCESS (apr_err))
+        return svn_error_createf
+          (apr_err, 0, NULL, pool,
+           "svn_wc_merge: unable to close tmp file `%s'",
+           tmp_right->data);
+    
+      SVN_ERR (svn_io_copy_file (left, tmp_left->data, TRUE, pool));
+      SVN_ERR (svn_io_copy_file (right, tmp_right->data, TRUE, pool));
+
+      /* Do the Deed, using all four scratch files. */
+      svn_path_split (tmp_left, &pt, &bn_left, pool);
+      svn_path_split (tmp_right, &pt, &bn_right, pool);
       svn_path_split (tmp_target, &pt, &bn, pool);
-      SVN_ERR (svn_io_run_diff3 (parent,
-                                 bn->data, left, right,
+      SVN_ERR (svn_io_run_diff3 (pt->data,
+                                 bn->data, bn_left->data, bn_right->data,
                                  target_label, left_label, right_label,
                                  result_f,
                                  &exit_code,
                                  pool));
   
+      /* Close the output file */
       apr_err = apr_file_close (result_f);
       if (! APR_STATUS_IS_SUCCESS (apr_err))
         return svn_error_createf
@@ -125,7 +153,7 @@ svn_wc_merge (const char *parent,
 
           SVN_ERR (svn_io_open_unique_file (&lcopy_f,
                                             &left_copy,
-                                            full_tgt_path->data,
+                                            merge_target,
                                             left_label,
                                             FALSE,
                                             pool));
@@ -140,7 +168,7 @@ svn_wc_merge (const char *parent,
 
           SVN_ERR (svn_io_open_unique_file (&rcopy_f,
                                             &right_copy,
-                                            full_tgt_path->data,
+                                            merge_target,
                                             right_label,
                                             FALSE,
                                             pool));
@@ -159,7 +187,7 @@ svn_wc_merge (const char *parent,
 
           SVN_ERR (svn_io_open_unique_file (&tcopy_f,
                                             &target_copy,
-                                            full_tgt_path->data,
+                                            merge_target,
                                             target_label,
                                             FALSE,
                                             pool));
@@ -188,22 +216,22 @@ svn_wc_merge (const char *parent,
 
           /* Create LEFT and RIGHT backup files, in expanded form.
              We use merge_target's current properties to do the translation. */
-          SVN_ERR (svn_wc__get_keywords (&keywords, full_tgt_path->data,
+          SVN_ERR (svn_wc__get_keywords (&keywords, merge_target,
                                          NULL, pool));
           SVN_ERR (svn_wc__get_eol_style (&eol_style, &eol,
-                                          full_tgt_path->data,
+                                          merge_target,
                                           pool));
-          SVN_ERR (svn_wc_copy_and_translate (full_left_path->data, 
+          SVN_ERR (svn_wc_copy_and_translate (left, 
                                               left_copy->data,
                                               eol, FALSE, keywords,
                                               TRUE, pool));
-          SVN_ERR (svn_wc_copy_and_translate (full_right_path->data,
+          SVN_ERR (svn_wc_copy_and_translate (right,
                                               right_copy->data,
                                               eol, FALSE, keywords,
                                               TRUE, pool));
 
           /* Back up MERGE_TARGET verbatim (it's already in expanded form.) */
-          SVN_ERR (svn_io_copy_file (full_tgt_path->data,
+          SVN_ERR (svn_io_copy_file (merge_target,
                                      target_copy->data, TRUE, pool));
 
           /* Derive the basenames of the the 3 backup files. */
@@ -217,24 +245,26 @@ svn_wc_merge (const char *parent,
           /* Mark merge_target's entry as "Conflicted", and start tracking
              the backup files in the entry as well. */
           SVN_ERR (svn_wc__entry_modify 
-                   (parentt, svn_stringbuf_create (merge_target, pool), entry,
+                   (parentt, mt_bn, entry,
                     SVN_WC__ENTRY_MODIFY_CONFLICT_OLD
                     | SVN_WC__ENTRY_MODIFY_CONFLICT_NEW
                     | SVN_WC__ENTRY_MODIFY_CONFLICT_WRK,
                     pool));
-        }
+
+        } /* end of conflict handling */
 
       /* Unconditionally replace MERGE_TARGET with the new merged file,
          expanding. */
-      SVN_ERR (svn_wc__get_keywords (&keywords, full_tgt_path->data,
+      SVN_ERR (svn_wc__get_keywords (&keywords, merge_target,
                                      NULL, pool));
-      SVN_ERR (svn_wc__get_eol_style (&eol_style, &eol, full_tgt_path->data,
+      SVN_ERR (svn_wc__get_eol_style (&eol_style, &eol, merge_target,
                                       pool));
       SVN_ERR (svn_wc_copy_and_translate (result_target->data,
-                                          full_tgt_path->data,
+                                          merge_target,
                                           eol, FALSE, keywords, TRUE, pool));
 
-      /* Don't forget to clean up tmp_target and result_target. */
+      /* Don't forget to clean up tmp_target, result_target, tmp_left,
+         tmp_right.  There are a lot of scratch files lying around. */
       apr_err = apr_file_remove (tmp_target->data, pool);
       if (! APR_STATUS_IS_SUCCESS (apr_err))
         return svn_error_createf
@@ -247,6 +277,18 @@ svn_wc_merge (const char *parent,
           (apr_err, 0, NULL, pool,
            "svn_wc_merge: unable to delete tmp file `%s'",
            result_target->data);
+      apr_err = apr_file_remove (tmp_left->data, pool);
+      if (! APR_STATUS_IS_SUCCESS (apr_err))
+        return svn_error_createf
+          (apr_err, 0, NULL, pool,
+           "svn_wc_merge: unable to delete tmp file `%s'",
+           tmp_left->data);
+      apr_err = apr_file_remove (tmp_right->data, pool);
+      if (! APR_STATUS_IS_SUCCESS (apr_err))
+        return svn_error_createf
+          (apr_err, 0, NULL, pool,
+           "svn_wc_merge: unable to delete tmp file `%s'",
+           tmp_right->data);
 
     } /* end of merging for text files */
 
@@ -262,7 +304,7 @@ svn_wc_merge (const char *parent,
       /* reserve names for backups of left and right fulltexts */
       SVN_ERR (svn_io_open_unique_file (&lcopy_f,
                                         &left_copy,
-                                        full_tgt_path->data,
+                                        merge_target,
                                         left_label,
                                         FALSE,
                                         pool));
@@ -274,7 +316,7 @@ svn_wc_merge (const char *parent,
 
       SVN_ERR (svn_io_open_unique_file (&rcopy_f,
                                         &right_copy,
-                                        full_tgt_path->data,
+                                        merge_target,
                                         right_label,
                                         FALSE,
                                         pool));
@@ -286,9 +328,9 @@ svn_wc_merge (const char *parent,
            right_copy->data);
 
       /* create the backup files */
-      SVN_ERR (svn_io_copy_file (full_left_path->data,
+      SVN_ERR (svn_io_copy_file (left,
                                  left_copy->data, TRUE, pool));
-      SVN_ERR (svn_io_copy_file (full_right_path->data,
+      SVN_ERR (svn_io_copy_file (right,
                                  right_copy->data, TRUE, pool));
       
       /* Derive the basenames of the the backup files. */
@@ -301,21 +343,22 @@ svn_wc_merge (const char *parent,
       /* Mark merge_target's entry as "Conflicted", and start tracking
          the backup files in the entry as well. */
       SVN_ERR (svn_wc__entry_modify 
-               (parentt, svn_stringbuf_create (merge_target, pool), entry,
+               (parentt, mt_bn, entry,
                 SVN_WC__ENTRY_MODIFY_CONFLICT_OLD
                 | SVN_WC__ENTRY_MODIFY_CONFLICT_NEW
                 | SVN_WC__ENTRY_MODIFY_CONFLICT_WRK,
                 pool));
 
       exit_code = 1;  /* a conflict happened */
-    }
+
+    } /* end of binary conflict handling */
 
   /* The docstring promises we'll return a CONFLICT error if
      appropriate;  presumably callers will specifically look for this. */
   if (exit_code == 1)
     return svn_error_createf
       (SVN_ERR_WC_CONFLICT, 0, NULL, pool,
-       "svn_wc_merge: `%s' had conflicts during merge", full_tgt_path->data);
+       "svn_wc_merge: `%s' had conflicts during merge", merge_target);
 
   else
     return SVN_NO_ERROR;

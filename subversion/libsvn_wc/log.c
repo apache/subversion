@@ -28,6 +28,7 @@
 #include "svn_error.h"
 #include "svn_string.h"
 #include "svn_xml.h"
+#include "svn_pools.h"
 #include "wc.h"
 
 
@@ -360,6 +361,7 @@ log_do_merge (struct log_runner *loggy,
 {
   const char *left, *right;
   const char *left_label, *right_label, *target_label;
+  apr_pool_t *subpool;
   svn_error_t *err;
 
   /* NAME is the basename of our merge_target.  Pull out LEFT and RIGHT. */
@@ -379,17 +381,23 @@ log_do_merge (struct log_runner *loggy,
   right_label = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_ARG_4, atts);
   target_label = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_ARG_5, atts);
 
+  /* Convert the 3 basenames into full paths. */
+  left = svn_path_join (loggy->path->data, left, loggy->pool);
+  right = svn_path_join (loggy->path->data, right, loggy->pool);
+  name = svn_path_join (loggy->path->data, name, loggy->pool);
+  
   /* Now do the merge with our full paths. */
-  err = svn_wc_merge (loggy->path->data,
-                      left, right, name,
+  subpool = svn_pool_create (loggy->pool);
+  err = svn_wc_merge (left, right, name,
                       left_label, right_label, target_label,
-                      loggy->pool);
+                      subpool);
 
   if (err && (err->apr_err != SVN_ERR_WC_CONFLICT))
     /* Got a *real* error. */
     return svn_error_quick_wrap 
       (err, "svn_wc_merge() returned an unexpected error");
 
+  svn_pool_destroy (subpool);
   return SVN_NO_ERROR;
 }
 

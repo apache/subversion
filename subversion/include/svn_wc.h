@@ -937,11 +937,11 @@ svn_error_t *svn_wc_diff (svn_stringbuf_t *anchor,
                           apr_pool_t *pool);
 
 
-/* Given three basenames within a common PARENT directory, merge the
-   differences between LEFT and RIGHT into MERGE_TARGET.  (It may help
-   to know that LEFT, RIGHT, and MERGE_TARGET correspond to "OLDER",
-   "YOURS", and "MINE", respectively, in the diff3 documentation.)
-   Use POOL for any temporary allocation. 
+/* Given paths to three fulltexts, merge the differences between LEFT
+   and RIGHT into MERGE_TARGET.  (It may help to know that LEFT,
+   RIGHT, and MERGE_TARGET correspond to "OLDER", "YOURS", and "MINE",
+   respectively, in the diff3 documentation.)  Use POOL for any
+   temporary allocation.
 
    This function assumes that LEFT and RIGHT are in repository-normal
    form (linefeeds, with keywords contracted); if necessary,
@@ -979,8 +979,7 @@ svn_error_t *svn_wc_diff (svn_stringbuf_t *anchor,
     tracking the two backup files.  SVN_ERR_WC_CONFLICT is returned.
 
 */
-svn_error_t *svn_wc_merge (const char *parent,
-                           const char *left,
+svn_error_t *svn_wc_merge (const char *left,
                            const char *right,
                            const char *merge_target,
                            const char *left_label,
