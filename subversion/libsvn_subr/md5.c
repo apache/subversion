@@ -27,7 +27,7 @@ static const unsigned char svn_md5__empty_string_digest[] = {
 };
 
 const unsigned char *
-svn_md5_empty_string_digest ()
+svn_md5_empty_string_digest (void)
 {
   return svn_md5__empty_string_digest;
 }
