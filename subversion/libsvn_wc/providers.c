@@ -51,7 +51,6 @@ get_creds (const char **username,
            apr_hash_t *parameters,
            apr_pool_t *pool)
 {
-  svn_error_t *err1 = NULL, *err2 = NULL;
   svn_stringbuf_t *susername = NULL, *spassword = NULL;
   const char *def_username = apr_hash_get (parameters, 
                                            SVN_AUTH_PARAM_DEFAULT_USERNAME,
@@ -72,34 +71,35 @@ get_creds (const char **username,
   if (password)
     *password = NULL;
 
-  /* No base dir?  No creds. */
-  if (! pb->base_dir)
-    return SVN_NO_ERROR;
-
-  /* Try to read the cache file data. */
-  if (! def_username)
-    err1 = svn_wc_get_auth_file (pb->base_dir, 
-                                 SVN_WC__AUTHFILE_USERNAME,
-                                 &susername, pool);
-  if (! def_password)
-    err2 = svn_wc_get_auth_file (pb->base_dir, 
-                                 SVN_WC__AUTHFILE_PASSWORD,
-                                 &spassword, pool);  
-  if (err1 || err2)
+  if (pb->base_dir)
     {
-      /* for now, let's not try to distinguish "real" errors from
-         situations where the files may simply not be present.  what
-         really matters is that we failed to get the creds, so allow
-         libsvn_auth to try the next provider.  */
-      return SVN_NO_ERROR;
-    }
+      svn_error_t *err1 = NULL, *err2 = NULL;
 
+      /* Try to read the cache file data. */
+      if (! def_username)
+        err1 = svn_wc_get_auth_file (pb->base_dir, 
+                                     SVN_WC__AUTHFILE_USERNAME,
+                                     &susername, pool);
+      if (! def_password)
+        err2 = svn_wc_get_auth_file (pb->base_dir, 
+                                     SVN_WC__AUTHFILE_PASSWORD,
+                                     &spassword, pool);      
+      if (err1 || err2)
+        {
+          /* for now, let's not try to distinguish "real" errors from
+             situations where the files may simply not be present.  what
+             really matters is that we failed to get the creds, so allow
+             libsvn_auth to try the next provider.  */
+          return SVN_NO_ERROR;
+        }
+    }
+  
   /* If we read values from the cache, we want to remember those. */
   if (susername && susername->data)
     pb->username = susername->data;
   if (spassword && spassword->data)
     pb->password = spassword->data;
-
+      
   if (username)
     *username = def_username ? def_username : susername->data;
   if (password)
