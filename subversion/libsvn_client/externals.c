@@ -147,19 +147,9 @@ compare_external_items (struct external_item *new_item,
                         struct external_item *old_item)
 {
   if ((strcmp (new_item->target_dir, old_item->target_dir) != 0)
-      || (strcmp (new_item->url, old_item->url) != 0))
-    return FALSE;
-
-  /* Same url and target subdir, but what about the revision? */
-  
-  /* ### Need svn_client_compare_revisions()? */
-  if ((new_item->revision.kind != old_item->revision.kind)
-      || ((new_item->revision.kind == svn_client_revision_number)
-          && (new_item->revision.value.number
-              != old_item->revision.value.number))
-      || ((new_item->revision.kind == svn_client_revision_date)
-          && (new_item->revision.value.date
-              != old_item->revision.value.date)))
+      || (strcmp (new_item->url, old_item->url) != 0)
+      || (! svn_client__compare_revisions (&(new_item->revision),
+                                           &(old_item->revision))))
     return FALSE;
     
   /* Else. */
@@ -175,16 +165,16 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
                              void *baton)
 {
   struct handle_external_item_change_baton *ib = baton;
-  struct external_item *old, *new;
+  struct external_item *old_item, *new_item;
 
   /* Don't bother to check status, since we'll get that for free by
      attempting to retrieve the hash values anyway.  */
 
-  old = apr_hash_get (ib->old_desc, key, klen);
-  new = apr_hash_get (ib->new_desc, key, klen);
+  old_item = apr_hash_get (ib->old_desc, key, klen);
+  new_item = apr_hash_get (ib->new_desc, key, klen);
 
   /* We couldn't possibly be here if both values were null, right? */
-  assert (old || new);
+  assert (old_item || new_item);
 
   /* There's one potential ugliness.  If a target subdir changed, but
      its URL did not, then we only want to rename the subdir, and not
@@ -200,7 +190,7 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
      part of a rename, then we'd do the rename right then.  This is
      not worth the bookkeeping complexity, IMHO. */
 
-  if (! old)
+  if (! old_item)
     {
       /* ### todo: before checking out a new subdir, see if this is
          really just a rename of an old one.  This can work in tandem
@@ -214,31 +204,31 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
                 ib->after_editor,
                 ib->after_edit_baton,
                 ib->auth_baton,
-                new->url,
-                svn_path_join (ib->parent_dir, new->target_dir, ib->pool),
-                &(new->revision),
+                new_item->url,
+                svn_path_join (ib->parent_dir, new_item->target_dir, ib->pool),
+                &(new_item->revision),
                 TRUE, /* recurse */
                 NULL,
                 ib->pool));
     }
-  if (! new)
+  if (! new_item)
     {
       /* ### todo: before removing an old subdir, see if it wants to
          just be renamed to a new one.  See above case. */
       svn_error_t *err;
 
       err = svn_wc_remove_from_revision_control (ib->parent_dir,
-                                                 old->target_dir,
+                                                 old_item->target_dir,
                                                  TRUE,  /* destroy wc */
                                                  ib->pool);
 
       if (err && (err->apr_err != SVN_ERR_WC_LEFT_LOCAL_MOD))
         return err;
     }
-  else if (! compare_external_items (new, old))
+  else if (! compare_external_items (new_item, old_item))
     {
       SVN_ERR (svn_io_remove_dir (svn_path_join (ib->parent_dir,
-                                                 old->target_dir,
+                                                 old_item->target_dir,
                                                  ib->pool), ib->pool));
       
       SVN_ERR (svn_client_checkout
@@ -247,9 +237,9 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
                 ib->after_editor,
                 ib->after_edit_baton,
                 ib->auth_baton,
-                new->url,
-                svn_path_join (ib->parent_dir, new->target_dir, ib->pool),
-                &(new->revision),
+                new_item->url,
+                svn_path_join (ib->parent_dir, new_item->target_dir, ib->pool),
+                &(new_item->revision),
                 TRUE, /* recurse */
                 NULL,
                 ib->pool));

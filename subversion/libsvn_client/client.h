@@ -68,6 +68,14 @@ svn_client__get_revision_number (svn_revnum_t *revnum,
                                  const char *path,
                                  apr_pool_t *pool);
 
+/* Return true if REVISION1 and REVISION2 would result in the same
+   revision number if interpreted in the context of the same working
+   copy and path and repository, or if both are of kind
+   svn_client_revision_unspecified.  Otherwise, return false. */
+svn_boolean_t
+svn_client__compare_revisions (svn_client_revision_t *revision1,
+                               svn_client_revision_t *revision2);
+
 
 /* ---------------------------------------------------------------- */
 
