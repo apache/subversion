@@ -108,12 +108,12 @@ IV.   QUICKSTART GUIDE
       many things, but its most important feature is creating an empty
       repository:
 
-          $ svnadmin create /usr/local/svn/repos1
+        $ svnadmin create /usr/local/svn/repos1
 
       After the repository is created, you can initially import data
       into it, using libsvn_ra_local (invoked by using a 'file' URL):
 
-          $ svn import file:///usr/local/svn/repos1 some/local/dir/
+        $ svn import -m "log msg" some/local/dir/ file:///usr/local/svn/repos1 
 
       The above example imports the contents of some/local/dir/ right
       into the root of the repository.  If you want to put these
