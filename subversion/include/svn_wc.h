@@ -564,7 +564,7 @@ svn_error_t *svn_wc_add (const char *path,
 
    If NAME is a file, all its info will be removed from PATH's
    administrative directory.  If NAME is SVN_WC_ENTRY_THIS_DIR, then
-   PATH's entrire administrative area will be deleted, along with
+   PATH's entire administrative area will be deleted, along with
    *all* the administrative areas anywhere in the tree below PATH.
 
    Normally, only adminstrative data is removed.  However, if

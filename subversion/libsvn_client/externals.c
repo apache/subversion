@@ -209,6 +209,47 @@ compare_external_items (struct external_item *new_item,
 }
 
 
+/* Remove PATH from revision control, and do the same to any revision
+ * controlled directories underneath PATH (including directories not
+ * referred to by parent svn administrative areas); then if PATH is
+ * empty afterwards, remove it, else rename it to a unique name in the
+ * same parent directory.
+ *
+ * Use POOL for all temporary allocation.
+ */
+static svn_error_t *
+relegate_external (const char *path, apr_pool_t *pool)
+{
+  svn_error_t *err;
+  err = svn_wc_remove_from_revision_control (path,
+                                             SVN_WC_ENTRY_THIS_DIR,
+                                             TRUE,
+                                             pool);
+
+  if (err && (err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD))
+    {
+      apr_status_t apr_err;
+      apr_file_t *f;
+      const char *new_path;
+
+      /* Reserve the new dir name. */
+      SVN_ERR (svn_io_open_unique_file
+               (&f, &new_path, path, ".OLD", FALSE, pool));
+      apr_file_close (f);  /* toss error */
+
+      /* Rename. */
+      apr_err = apr_file_rename (path, new_path, pool);
+      if (apr_err)
+        return svn_error_createf (apr_err, 0, NULL, pool,
+                                  "error renaming %s to %s", path, new_path);
+    }
+  else if (err)
+    return err;
+
+  return SVN_NO_ERROR;
+}
+
+
 /* This implements the `svn_hash_diff_func_t' interface.
    BATON is of type `struct handle_external_item_change_baton *'.  */
 static svn_error_t *
@@ -286,10 +327,9 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
          just be renamed to a new one.  See above case. */
       svn_error_t *err;
 
-      err = svn_wc_remove_from_revision_control (ib->parent_dir,
-                                                 old_item->target_dir,
-                                                 TRUE,  /* destroy wc */
-                                                 ib->pool);
+      err = svn_wc_remove_from_revision_control
+        (svn_path_join (ib->parent_dir, old_item->target_dir, ib->pool),
+         SVN_WC_ENTRY_THIS_DIR, TRUE, ib->pool);
 
       if (err && (err->apr_err != SVN_ERR_WC_LEFT_LOCAL_MOD))
         return err;
@@ -300,9 +340,9 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
     }
   else if (! compare_external_items (new_item, old_item))
     {
-      SVN_ERR (svn_io_remove_dir (svn_path_join (ib->parent_dir,
-                                                 old_item->target_dir,
-                                                 ib->pool), ib->pool));
+      SVN_ERR (relegate_external
+               (svn_path_join (ib->parent_dir, old_item->target_dir, ib->pool),
+                ib->pool));
       
       SVN_ERR (svn_client_checkout
                (ib->notify_func, ib->notify_baton,
