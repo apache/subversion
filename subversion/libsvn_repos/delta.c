@@ -405,6 +405,24 @@ delta_proplists (struct context *c,
              (&t_props, c->target_root, target_path->data,
               subpool));
 
+  if (source_path && target_path)
+    {
+      int changed;
+
+      /* Is this deltification worth our time? */
+      SVN_ERR (svn_fs_props_changed (&changed,
+                                     c->target_root,
+                                     target_path->data,
+                                     c->source_root,
+                                     source_path->data,
+                                     subpool));
+      if (! changed)
+        {
+          svn_pool_destroy (subpool);
+          return SVN_NO_ERROR;
+        }
+    }
+
   for (hi = apr_hash_first (subpool, t_props); hi; hi = apr_hash_next (hi))
     {
       svn_stringbuf_t *s_value, *t_value, *t_name;
@@ -520,6 +538,21 @@ delta_files (struct context *c, void *file_baton,
 
   if (source_path)
     {
+      int changed;
+
+      /* Is this deltification worth our time? */
+      SVN_ERR (svn_fs_contents_changed (&changed,
+                                        c->target_root,
+                                        target_path->data,
+                                        c->source_root,
+                                        source_path->data,
+                                        subpool));
+      if (! changed)
+        {
+          svn_pool_destroy (subpool);
+          return SVN_NO_ERROR;
+        }
+
       /* Get a delta stream turning SOURCE_PATH's contents into
          TARGET_PATH's contents.  */
       SVN_ERR (svn_fs_get_file_delta_stream 

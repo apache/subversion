@@ -965,7 +965,8 @@ struct things_changed_args
   int *changed_p;
   svn_fs_root_t *root1;
   svn_fs_root_t *root2;
-  const char *path;
+  const char *path1;
+  const char *path2;
   apr_pool_t *pool;
 };
 
@@ -976,8 +977,8 @@ txn_body_props_changed (void *baton, trail_t *trail)
   struct things_changed_args *args = baton;
   parent_path_t *parent_path_1, *parent_path_2;
 
-  SVN_ERR (open_path (&parent_path_1, args->root1, args->path, 0, trail));
-  SVN_ERR (open_path (&parent_path_2, args->root2, args->path, 0, trail));
+  SVN_ERR (open_path (&parent_path_1, args->root1, args->path1, 0, trail));
+  SVN_ERR (open_path (&parent_path_2, args->root2, args->path2, 0, trail));
 
   SVN_ERR (svn_fs__things_different (args->changed_p,
                                      NULL,
@@ -992,22 +993,23 @@ txn_body_props_changed (void *baton, trail_t *trail)
 svn_error_t *
 svn_fs_props_changed (int *changed_p,
                       svn_fs_root_t *root1,
+                      const char *path1,
                       svn_fs_root_t *root2,
-                      const char *path,
+                      const char *path2,
                       apr_pool_t *pool)
 {
   struct things_changed_args args;
   
   /* Check that roots are in the same fs. */
   if ((svn_fs_root_fs (root1)) != (svn_fs_root_fs (root2)))
-    return svn_error_createf
+    return svn_error_create
       (SVN_ERR_FS_GENERAL, 0, NULL, pool,
-       "Asking props changed at `%s' in two different filesystems.",
-       path);
+       "Asking props changed in two different filesystems.");
   
   args.root1      = root1;
   args.root2      = root2;
-  args.path       = path;
+  args.path1      = path1;
+  args.path2      = path2;
   args.changed_p  = changed_p;
   args.pool       = pool;
 
@@ -2601,8 +2603,8 @@ txn_body_contents_changed (void *baton, trail_t *trail)
   struct things_changed_args *args = baton;
   parent_path_t *parent_path_1, *parent_path_2;
 
-  SVN_ERR (open_path (&parent_path_1, args->root1, args->path, 0, trail));
-  SVN_ERR (open_path (&parent_path_2, args->root2, args->path, 0, trail));
+  SVN_ERR (open_path (&parent_path_1, args->root1, args->path1, 0, trail));
+  SVN_ERR (open_path (&parent_path_2, args->root2, args->path2, 0, trail));
 
   SVN_ERR (svn_fs__things_different (NULL,
                                      args->changed_p,
@@ -2617,37 +2619,38 @@ txn_body_contents_changed (void *baton, trail_t *trail)
 svn_error_t *
 svn_fs_contents_changed (int *changed_p,
                          svn_fs_root_t *root1,
+                         const char *path1,
                          svn_fs_root_t *root2,
-                         const char *path,
+                         const char *path2,
                          apr_pool_t *pool)
 {
   struct things_changed_args args;
 
   /* Check that roots are in the same fs. */
   if ((svn_fs_root_fs (root1)) != (svn_fs_root_fs (root2)))
-    return svn_error_createf
+    return svn_error_create
       (SVN_ERR_FS_GENERAL, 0, NULL, pool,
-       "Asking props changed at `%s' in two different filesystems.",
-       path);
+       "Asking props changed in two different filesystems.");
   
   /* Check that both paths are files. */
   {
     int is_file;
 
-    SVN_ERR (svn_fs_is_file (&is_file, root1, path, pool));
+    SVN_ERR (svn_fs_is_file (&is_file, root1, path1, pool));
     if (! is_file)
       return svn_error_createf
-        (SVN_ERR_FS_GENERAL, 0, NULL, pool, "`%s' is not a file.", path);
+        (SVN_ERR_FS_GENERAL, 0, NULL, pool, "`%s' is not a file.", path1);
       
-    SVN_ERR (svn_fs_is_file (&is_file, root2, path, pool));
+    SVN_ERR (svn_fs_is_file (&is_file, root2, path2, pool));
     if (! is_file)
       return svn_error_createf
-        (SVN_ERR_FS_GENERAL, 0, NULL, pool, "`%s' is not a file.", path);
+        (SVN_ERR_FS_GENERAL, 0, NULL, pool, "`%s' is not a file.", path2);
   }
 
   args.root1      = root1;
   args.root2      = root2;
-  args.path       = path;
+  args.path1      = path1;
+  args.path2      = path2;
   args.changed_p  = changed_p;
   args.pool       = pool;
 
