@@ -856,12 +856,7 @@ static svn_error_t *ra_svn_log(void *sess, const apr_array_header_t *paths,
   svn_revnum_t rev, copy_rev;
   svn_log_changed_path_t *change;
 
-  /* Write out the command manually, since we have to send an array. */
-  SVN_ERR(svn_ra_svn_start_list(conn, pool));
-  SVN_ERR(svn_ra_svn_write_word(conn, pool, "log"));
-  SVN_ERR(svn_ra_svn_start_list(conn, pool));
-  /* Parameter 1: paths */
-  SVN_ERR(svn_ra_svn_start_list(conn, pool));
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w((!", "log"));
   if (paths)
     {
       for (i = 0; i < paths->nelts; i++)
@@ -870,25 +865,8 @@ static svn_error_t *ra_svn_log(void *sess, const apr_array_header_t *paths,
           SVN_ERR(svn_ra_svn_write_cstring(conn, pool, path));
         }
     }
-  SVN_ERR(svn_ra_svn_end_list(conn, pool));
-  /* Parameter 2: start rev (optional) */
-  SVN_ERR(svn_ra_svn_start_list(conn, pool));
-  if (SVN_IS_VALID_REVNUM(start))
-    SVN_ERR(svn_ra_svn_write_number(conn, pool, start));
-  SVN_ERR(svn_ra_svn_end_list(conn, pool));
-  /* Parameter 3: end rev (optional) */
-  SVN_ERR(svn_ra_svn_start_list(conn, pool));
-  if (SVN_IS_VALID_REVNUM(end))
-    SVN_ERR(svn_ra_svn_write_number(conn, pool, end));
-  SVN_ERR(svn_ra_svn_end_list(conn, pool));
-  /* Parameter 4: changed-paths */
-  SVN_ERR(svn_ra_svn_write_word(conn, pool,
-                                discover_changed_paths ? "true" : "false"));
-  /* Parameter 5: strict-node */
-  SVN_ERR(svn_ra_svn_write_word(conn, pool,
-                                strict_node_history ? "true" : "false"));
-  SVN_ERR(svn_ra_svn_end_list(conn, pool));
-  SVN_ERR(svn_ra_svn_end_list(conn, pool));
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)(?r)(?r)bb)", start, end,
+                                 discover_changed_paths, strict_node_history));
 
   /* Read the log messages. */
   subpool = svn_pool_create(pool);

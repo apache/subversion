@@ -160,6 +160,7 @@ svn_error_t *svn_ra_svn_flush(svn_ra_svn_conn_t *conn, apr_pool_t *pool);
  *   (                           Begin tuple
  *   )                           End tuple
  *   ?                           Remaining elements optional
+ *   ! (at beginning or end)     Suppress opening or closing of tuple
  * </pre>
  *
  * Inside the optional part of a tuple, 'r' values may be @c
@@ -167,6 +168,14 @@ svn_error_t *svn_ra_svn_flush(svn_ra_svn_conn_t *conn, apr_pool_t *pool);
  * these cases no data will be written.  'n', 'b', and '(' may not
  * appear in the optional part of a tuple.  Either all or none of the
  * optional values should be valid.
+ *
+ * Use the '!' format specifier to write partial tuples when you have
+ * to transmit an array or other unusual data.  For example, to write
+ * a tuple containing a revision, an array of words, and a boolean:
+ *   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "r(!", rev));
+ *   for (i = 0; i < n; i++)
+ *     SVN_ERR(svn_ra_svn_write_word(conn, pool, words[i]));
+ *   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)b", flag));
  */
 svn_error_t *svn_ra_svn_write_tuple(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                     const char *fmt, ...);
@@ -251,8 +260,10 @@ svn_error_t *svn_ra_svn_handle_commands(svn_ra_svn_conn_t *conn,
 svn_error_t *svn_ra_svn_write_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                   const char *cmdname, const char *fmt, ...);
 
-/** Write a successful command response over the network, using the same 
- * format string notation as svn_ra_svn_write_tuple.
+/** Write a successful command response over the network, using the
+ * same format string notation as svn_ra_svn_write_tuple.  Do not use
+ * partial tuples with this function; if you need to use partial
+ * tuples, just write out the "success" and argument tuple by hand.
  */
 svn_error_t *svn_ra_svn_write_cmd_response(svn_ra_svn_conn_t *conn,
                                            apr_pool_t *pool,

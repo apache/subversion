@@ -321,7 +321,10 @@ static svn_error_t *vwrite_tuple(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   const char *cstr;
   const svn_string_t *str;
 
-  SVN_ERR(svn_ra_svn_start_list(conn, pool));
+  if (*fmt == '!')
+    fmt++;
+  else
+    SVN_ERR(svn_ra_svn_start_list(conn, pool));
   for (; *fmt; fmt++)
     {
       if (*fmt == 'n' && !opt)
@@ -368,6 +371,8 @@ static svn_error_t *vwrite_tuple(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
           SVN_ERR(svn_ra_svn_end_list(conn, pool));
           opt = FALSE;
         }
+      else if (*fmt == '!' && !*(fmt + 1))
+        return SVN_NO_ERROR;
       else
         abort();
     }
