@@ -795,14 +795,60 @@ svn_fs_base__clean_logs(const char *live_path,
   return SVN_NO_ERROR;
 }
 
+
+
+/* Open the BDB environment at PATH and compare its configuration
+   flags with FLAGS.  If every flag in FLAGS is set in the
+   environment, then set *MATCH to true.  Else set *MATCH to false. */
+static svn_error_t *
+check_env_flags (svn_boolean_t *match,
+                 u_int32_t flags,
+                 const char *path,
+                 apr_pool_t *pool)
+{
+  DB_ENV *env;
+  u_int32_t envflags;
+  const char *path_native;
+
+  SVN_BDB_ERR (db_env_create (&env, 0));
+  SVN_BDB_ERR (env->set_alloc (env, malloc, realloc, free));
+  SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, pool));
+
+  SVN_BDB_ERR (env->open (env, path_native, (DB_CREATE
+                                             | DB_INIT_LOCK | DB_INIT_LOG
+                                             | DB_INIT_MPOOL | DB_INIT_TXN),
+                          0666));
+
+  SVN_BDB_ERR (env->get_flags (env, &envflags));
+  SVN_BDB_ERR (env->close (env, 0));
+
+  if (flags & envflags)
+    *match = TRUE;
+  else
+    *match = FALSE;
+
+  return SVN_NO_ERROR;
+}
+
+
 static svn_error_t *
 base_hotcopy (const char *src_path,
               const char *dest_path,
               svn_boolean_t clean_logs,
               apr_pool_t *pool)
 {
-  /* Check DBD version, just in case */
+  svn_boolean_t log_autoremove;
+
+  /* Check BDB version, just in case */
   SVN_ERR (check_bdb_version (pool));
+
+  /* Note whether the DB_LOG_AUTOREMOVE feature is on.  If it is, we
+     have a potential race condition: another process might delete a
+     logfile while we're in the middle of copying all the logfiles.
+     (This is not a huge deal; at worst, the hotcopy fails with a
+     file-not-found error.) */
+  SVN_ERR (check_env_flags (&log_autoremove, DB_LOG_AUTOREMOVE,
+                            src_path, pool));
 
   /* Copy the DB_CONFIG file. */
   SVN_ERR (svn_io_dir_file_copy (src_path, dest_path, "DB_CONFIG", pool));
@@ -821,6 +867,8 @@ base_hotcopy (const char *src_path,
   {
     apr_array_header_t *logfiles;
     int idx;
+    svn_error_t *err;
+    apr_pool_t *subpool;
 
     SVN_ERR (base_bdb_logfiles (&logfiles,
                                 src_path,
@@ -828,13 +876,29 @@ base_hotcopy (const char *src_path,
                                 pool));
 
     /* Process log files. */
+    subpool = svn_pool_create (pool);
     for (idx = 0; idx < logfiles->nelts; idx++)
       {
-        SVN_ERR (svn_io_dir_file_copy (src_path, dest_path,
-                                       APR_ARRAY_IDX (logfiles, idx,
-                                                      const char *),
-                                       pool));
+        svn_pool_clear (subpool);
+        err = svn_io_dir_file_copy (src_path, dest_path,
+                                    APR_ARRAY_IDX (logfiles, idx,
+                                                   const char *),
+                                    subpool);
+        if (err)
+          {
+            if (log_autoremove)
+              return
+                svn_error_quick_wrap 
+                (err,
+                 _("Error copying logfile;  the DB_LOG_AUTOREMOVE feature \n"
+                   "may be interfering with the hotcopy algorithm.  If \n"
+                   "the problem persists, try deactivating this feature \n"
+                   "in DB_CONFIG."));
+            else
+              return err;
+          }
       }
+    svn_pool_destroy (subpool);
   }
 
   /* Since this is a copy we will have exclusive access to the repository. */
