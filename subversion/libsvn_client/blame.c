@@ -249,73 +249,12 @@ log_message_receiver (void *baton,
   rev->next = lmb->eldest;
   lmb->eldest = rev;
 
-  /* See if the path was explicitly changed in this revision.  If so,
-     we'll either use the path, or, if was copied, use its
-     copyfrom_path. */
-  change = apr_hash_get (changed_paths, lmb->path, APR_HASH_KEY_STRING);
-  if (change)
-    {
-      lmb->action = change->action; 
-      lmb->copyrev = change->copyfrom_rev;
-      if (change->copyfrom_path)
-        lmb->path = apr_pstrdup (lmb->pool, change->copyfrom_path);
+  SVN_ERR (svn_client__prev_log_path (&lmb->path, &lmb->action,
+                                      &lmb->copyrev, changed_paths,
+                                      lmb->path, svn_node_file, revision,
+                                      lmb->pool));
 
-      return SVN_NO_ERROR;
-    }
-  else if (apr_hash_count (changed_paths))
-    {
-      /* The path was not explicitly changed in this revision.  The
-         fact that we're hearing about this revision implies, then,
-         that the path was a child of some copied directory.  We need
-         to find that directory, and effective "re-base" our path on
-         that directory's copyfrom_path. */
-      int i;
-      apr_array_header_t *paths;
-
-      /* Build a sorted list of the changed paths. */
-      paths = svn_sort__hash (changed_paths,
-                              svn_sort_compare_items_as_paths, pool);
-
-      /* Now, walk the list of paths backwards, looking a parent of
-         our path that has copyfrom information. */
-      for (i = paths->nelts; i > 0; i--)
-        {
-          svn_sort__item_t item = APR_ARRAY_IDX (paths, i - 1,
-                                                 svn_sort__item_t);
-          const char *ch_path = item.key;
-          int len = strlen (ch_path);
-
-          /* See if our path is the child of this change path. */
-          if ((strncmp (ch_path, lmb->path, len) == 0)
-              && (lmb->path[len] == '/'))
-            {
-              /* Okay, our path *is* a child of this change path.
-                 Does the change path have copyfrom data? */
-              change = apr_hash_get (changed_paths, ch_path, len);
-              if (change->copyfrom_path)
-                {
-                  /* Yes!  This change was copied, so we just need to
-                     apply the portion of our path that is relative to
-                     this change's path, to the change's copyfrom path.  */
-                  lmb->action = change->action;
-                  lmb->copyrev = change->copyfrom_rev;
-                  lmb->path = svn_path_join (change->copyfrom_path, 
-                                             lmb->path + len + 1,
-                                             lmb->pool);
-                  return SVN_NO_ERROR;
-                }
-              
-              /* Nope.  No copyfrom data.  That's okay, we'll keep
-                 looking. */
-            }
-        }
-    }
-
-  /* We didn't find what we expected to find. */
-  return svn_error_createf (APR_EGENERAL, NULL,
-                            "Missing changed-path information for "
-                            "revision %" SVN_REVNUM_T_FMT " of '%s'",
-                            rev->revision, rev->path);
+  return SVN_NO_ERROR;
 }
 
 static apr_status_t
