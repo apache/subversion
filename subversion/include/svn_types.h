@@ -75,14 +75,14 @@ typedef struct svn_string_t
 
 
 /* useful macro, suggested by Greg Stein */
-#define AP_ARRAY_GET_ITEM(ary,i,type) (((type *)(ary)->elts)[i])
+#define APR_ARRAY_GET_ITEM(ary,i,type) (((type *)(ary)->elts)[i])
 
 
 
 /* a file is a proplist and a string */
 typedef struct svn_file_t
 {
-  ap_hash_t *proplist;  /* the file's properties */
+  apr_hash_t *proplist;  /* the file's properties */
   svn_string_t *text;        /* the file's main content */
 } svn_file_t;
 
@@ -92,17 +92,17 @@ typedef struct svn_dirent_t
 {
   unsigned long node_num;    /* a node pointed to */
   svn_string_t *name;        /* name of the node pointed to */
-  ap_hash_t *proplist;  /* entry's properties */
+  apr_hash_t *proplist;  /* entry's properties */
 } svn_dirent_t;
 
 
-/* TODO:  use an actual ap_array below */
+/* TODO:  use an actual apr_array below */
 /* a directory is an unordered list of directory entries, and a proplist */
 typedef struct svn_directory_t
 {
   svn_dirent_t *list;        /* an array of dirents */
   size_t len;                /* length of array */
-  ap_hash_t *proplist;  /* directory's properties */
+  apr_hash_t *proplist;  /* directory's properties */
 } svn_directory_t;
 
 
@@ -122,7 +122,7 @@ typedef struct svn_node_t
 typedef struct svn_ver
 {
   unsigned long node_num;             /* the root node of a tree */
-  ap_hash_t *proplist;           /* version's properties */
+  apr_hash_t *proplist;           /* version's properties */
 } svn_ver_t;
 
 

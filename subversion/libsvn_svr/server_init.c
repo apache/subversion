@@ -64,7 +64,7 @@
             
    Returns:  error structure or SVN_NO_ERROR
 
-   ASSUMES that ap_dso_init() has already been called!
+   ASSUMES that apr_dso_init() has already been called!
 
 */
 
@@ -73,21 +73,21 @@ svn_svr_load_plugin (svn_svr_policies_t *policy,
                      const svn_string_t *path,
                      const svn_string_t *init_routine)
 {
-  ap_dso_handle_t *library;
-  ap_dso_handle_sym_t initfunc;
-  ap_status_t result;
+  apr_dso_handle_t *library;
+  apr_dso_handle_sym_t initfunc;
+  apr_status_t result;
   svn_error_t *error;
 
   char *my_path   = svn_string_2cstring (path, policy->pool);
   char *my_sym    = svn_string_2cstring (init_routine, policy->pool);
 
   /* Load the plugin */
-  result = ap_dso_load (&library, my_path, policy->pool);
+  result = apr_dso_load (&library, my_path, policy->pool);
 
   if (result != APR_SUCCESS)
     {
       char *msg =
-        ap_psprintf (policy->pool,
+        apr_psprintf (policy->pool,
                      "svn_svr_load_plugin(): can't load DSO %s", my_path); 
       return svn_create_error (result, NULL, msg, NULL, policy->pool);
     }
@@ -95,12 +95,12 @@ svn_svr_load_plugin (svn_svr_policies_t *policy,
 
   /* Find the plugin's initialization routine. */
   
-  result = ap_dso_sym (&initfunc, library, my_sym);
+  result = apr_dso_sym (&initfunc, library, my_sym);
 
   if (result != APR_SUCCESS)
     {
       char *msg =
-        ap_psprintf (policy->pool,
+        apr_psprintf (policy->pool,
                      "svn_svr_load_plugin(): can't find symbol %s", my_sym); 
       return svn_create_error (result, NULL, msg, NULL, policy->pool);
     }
@@ -133,31 +133,31 @@ svn_svr_load_plugin (svn_svr_policies_t *policy,
     the policy structure.  */
 
 svn_error_t *
-svn__svr_load_all_plugins (ap_hash_t *plugins, svn_svr_policies_t *policy)
+svn__svr_load_all_plugins (apr_hash_t *plugins, svn_svr_policies_t *policy)
 {
-  ap_hash_index_t *hash_index;
+  apr_hash_index_t *hash_index;
   void *key, *val;
   size_t keylen;
   svn_error_t *err;
   
   /* Initialize the APR DSO mechanism*/
-  ap_status_t result = ap_dso_init();
+  apr_status_t result = apr_dso_init();
 
   if (result != APR_SUCCESS)
     {
-      char *msg = "svr__load_plugins(): fatal: can't ap_dso_init() ";
+      char *msg = "svr__load_plugins(): fatal: can't apr_dso_init() ";
       return (svn_create_error (result, NULL, msg, NULL, policy->pool));
     }
 
   /* Loop through the hash of plugins from configdata */
 
-  for (hash_index = ap_hash_first (plugins);    /* get first hash entry */
+  for (hash_index = apr_hash_first (plugins);    /* get first hash entry */
        hash_index;                              /* NULL if out of entries */
-       hash_index = ap_hash_next (hash_index))  /* get next hash entry */
+       hash_index = apr_hash_next (hash_index))  /* get next hash entry */
     {
       svn_string_t keystring, *valstring;
 
-      ap_hash_this (hash_index, &key, &keylen, &val);
+      apr_hash_this (hash_index, &key, &keylen, &val);
 
       keystring.data = key;
       keystring.len = keylen;
@@ -190,19 +190,19 @@ svn__svr_load_all_plugins (ap_hash_t *plugins, svn_svr_policies_t *policy)
 
 svn_error_t *
 svn_svr_init (svn_svr_policies_t **policy, 
-              ap_pool_t *pool)
+              apr_pool_t *pool)
 {
-  ap_status_t result;
+  apr_status_t result;
 
   /* First, allocate a `policy' structure and all of its internal
      lists */
 
   *policy = 
-    (svn_svr_policies_t *) ap_palloc (pool, sizeof(svn_svr_policies_t));
+    (svn_svr_policies_t *) apr_palloc (pool, sizeof(svn_svr_policies_t));
 
-  *policy->repos_aliases = ap_make_hash (pool);
-  *policy->global_restrictions = ap_make_hash (pool);
-  *policy->plugins = ap_make_hash (pool);
+  *policy->repos_aliases = apr_make_hash (pool);
+  *policy->global_restrictions = apr_make_hash (pool);
+  *policy->plugins = apr_make_hash (pool);
 
   /* Set brain-dead warning handler as default */
 
@@ -212,7 +212,7 @@ svn_svr_init (svn_svr_policies_t **policy,
   /* A policy structure has its own private memory pool, a sub-pool of
      the pool passed in.  */
 
-  result = ap_create_pool (& (*policy->pool), pool);
+  result = apr_create_pool (& (*policy->pool), pool);
 
   if (result != APR_SUCCESS)
     {
@@ -229,7 +229,7 @@ svn_error_t *
 svn_svr_load_policy (svn_svr_policies_t *policy, 
                      const char *filename)
 {
-  ap_hash_t *configdata;
+  apr_hash_t *configdata;
   svn_error_t *err;
 
   /* Parse the file, get a hash-of-hashes back */
@@ -248,16 +248,16 @@ svn_svr_load_policy (svn_svr_policies_t *policy,
 
   /* Now walk through our Uberhash, filling in the policy as we go. */
   {
-    ap_hash_index_t *hash_index;
+    apr_hash_index_t *hash_index;
     void *key, *val;
     size_t keylen;
 
-    for (hash_index = ap_hash_first (configdata); /* get first hash entry */
+    for (hash_index = apr_hash_first (configdata); /* get first hash entry */
          hash_index;                              /* NULL if out of entries */
-         hash_index = ap_hash_next (hash_index))  /* get next hash entry */
+         hash_index = apr_hash_next (hash_index))  /* get next hash entry */
       {
         /* Retrieve key and val from current hash entry */
-        ap_hash_this (hash_index, &key, &keylen, &val);
+        apr_hash_this (hash_index, &key, &keylen, &val);
 
         /* Figure out which `section' of svn.conf we're looking at */
 
@@ -268,7 +268,7 @@ svn_svr_load_policy (svn_svr_policies_t *policy,
                aliases, alrady as we want them.  Just store this value
                in our policy structure! */
 
-            policy->repos_aliases = (ap_hash_t *) val;
+            policy->repos_aliases = (apr_hash_t *) val;
           }
 
         else if (svn_string_compare_2cstring ((svn_string_t *) key,
@@ -278,7 +278,7 @@ svn_svr_load_policy (svn_svr_policies_t *policy,
                commands; again, we just store a pointer to this hash
                in our policy (the commands are interpreted elsewhere) */
 
-            policy->global_restrictions = (ap_hash_t *) val;
+            policy->global_restrictions = (apr_hash_t *) val;
           }
 
         else if (svn_string_compare_2cstring ((svn_string_t *) key,
@@ -288,7 +288,7 @@ svn_svr_load_policy (svn_svr_policies_t *policy,
                libraries to load up.  We'll definitely do that here
                and now! */
             
-            svn__svr_load_all_plugins ((ap_hash_t *) val, policy);
+            svn__svr_load_all_plugins ((apr_hash_t *) val, policy);
           }
 
         else
@@ -315,7 +315,7 @@ svn_error_t *
 svn_svr_register_plugin (svn_svr_policies_t *policy,
                          svn_svr_plugin_t *new_plugin)
 {
-  ap_hash_set (policy->plugins,         /* the policy's plugin hashtable */
+  apr_hash_set (policy->plugins,         /* the policy's plugin hashtable */
                new_plugin->name->data,  /* key = name of the plugin */
                new_plugin->name->len,   /* length of this name */
                new_plugin);             /* val = ptr to the plugin itself */

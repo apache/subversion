@@ -65,17 +65,17 @@
 */
 
 
-ap_status_t
-svn__my_readline (ap_file_t *FILE, svn_string_t *line, ap_pool_t *pool)
+apr_status_t
+svn__my_readline (apr_file_t *FILE, svn_string_t *line, apr_pool_t *pool)
 {
   char c;
-  ap_status_t result;
+  apr_status_t result;
 
   svn_string_setempty (line);  /* clear the bytestring first! */
 
   while (1)
     {
-      result = ap_getc (&c, FILE);  /* read a byte from the file */
+      result = apr_getc (&c, FILE);  /* read a byte from the file */
 
       if (result == APR_EOF)  /* file is finished. */
         {
@@ -119,7 +119,7 @@ svn__slurp_to (const svn_string_t *searchstr,
            svn_string_t **substr,
            const size_t start, 
            const char sc,
-           ap_pool_t *pool)
+           apr_pool_t *pool)
 {
   int i;
 
@@ -176,20 +176,20 @@ svn__slurp_to (const svn_string_t *searchstr,
 
 
 svn_error_t *
-svn_parse (ap_hash_t **uberhash, const char *filename, ap_pool_t *pool)
+svn_parse (apr_hash_t **uberhash, const char *filename, apr_pool_t *pool)
 {
-  ap_hash_t *current_hash;  /* the hash we're currently storing vals in */
+  apr_hash_t *current_hash;  /* the hash we're currently storing vals in */
 
-  ap_pool_t *scratchpool;
+  apr_pool_t *scratchpool;
   svn_string_t *currentline;
-  ap_status_t result;     
-  ap_file_t *FILE = NULL;
+  apr_status_t result;     
+  apr_file_t *FILE = NULL;
 
   /* Create our uberhash */
-  *uberhash = ap_make_hash (pool);
+  *uberhash = apr_make_hash (pool);
 
   /* Open the config file */
-  result = ap_open (&FILE,
+  result = apr_open (&FILE,
                     filename,
                     APR_READ,
                     APR_OS_DEFAULT, /*TODO: WHAT IS THIS? */
@@ -207,7 +207,7 @@ svn_parse (ap_hash_t **uberhash, const char *filename, ap_pool_t *pool)
     }
 
   /* Create a scratch memory pool for buffering our file as we read it */
-  if ((result = ap_create_pool (&scratchpool, pool)) != APR_SUCCESS)
+  if ((result = apr_create_pool (&scratchpool, pool)) != APR_SUCCESS)
     {
       return
         (svn_create_error 
@@ -249,7 +249,7 @@ svn_parse (ap_hash_t **uberhash, const char *filename, ap_pool_t *pool)
             /* It's a new section! */  
 
             /* Create new hash to hold this section's keys/vals  */
-            ap_hash_t *new_section_hash = ap_make_hash (pool);  
+            apr_hash_t *new_section_hash = apr_make_hash (pool);  
 
             /* Slurp up the section name */
             svn_string_t *new_section;
@@ -277,7 +277,7 @@ svn_parse (ap_hash_t **uberhash, const char *filename, ap_pool_t *pool)
             current_hash = new_section_hash;  
 
             /* store this new hash in our uberhash */
-            ap_hash_set (*uberhash, 
+            apr_hash_set (*uberhash, 
                          new_section->data,   /* key: bytestring */
                          new_section->len,    /* the length of the key */
                          new_section_hash);   /* val: ptr to the new hash */
@@ -329,7 +329,7 @@ svn_parse (ap_hash_t **uberhash, const char *filename, ap_pool_t *pool)
             */
 
             /* Store key and val in the currently active hash */
-            ap_hash_set (current_hash,
+            apr_hash_set (current_hash,
                          new_key->data,       /* key: bytestring data */
                          new_key->len,        /* length of key */
                          new_val);            /* val: ptr to bytestring */
@@ -341,7 +341,7 @@ svn_parse (ap_hash_t **uberhash, const char *filename, ap_pool_t *pool)
      
   /* Close the file and free our scratchpool */
 
-  result = ap_close (FILE);
+  result = apr_close (FILE);
   if (result != APR_SUCCESS)
     {
       policy->warning 
@@ -350,7 +350,7 @@ svn_parse (ap_hash_t **uberhash, const char *filename, ap_pool_t *pool)
          svn_string_2cstring, (filename, pool));
     }
   
-  ap_destroy_pool (scratchpool);
+  apr_destroy_pool (scratchpool);
 
   return SVN_NO_ERROR;
 }
@@ -359,28 +359,28 @@ svn_parse (ap_hash_t **uberhash, const char *filename, ap_pool_t *pool)
 
 
 
-/*  Convenience Routine:  pretty-print an ap_hash_t.
+/*  Convenience Routine:  pretty-print an apr_hash_t.
 
      (ASSUMING that all keys and vals are of type (svn_string_t *) )
 
 */
 
 void
-svn_hash_print (ap_hash_t *hash, FILE *stream)
+svn_hash_print (apr_hash_t *hash, FILE *stream)
 {
-  ap_hash_index_t *hash_index;   /* this represents a hash entry */
+  apr_hash_index_t *hash_index;   /* this represents a hash entry */
   void *key, *val;
   size_t keylen;
   svn_string_t keystring, *valstring;
 
   fprintf (stream, "\n-----> Printing hash:\n");
 
-  for (hash_index = ap_hash_first (hash);      /* get first hash entry */
+  for (hash_index = apr_hash_first (hash);      /* get first hash entry */
        hash_index;                             /* NULL if out of entries */
-       hash_index = ap_hash_next (hash_index)) /* get next hash entry */
+       hash_index = apr_hash_next (hash_index)) /* get next hash entry */
     {
       /* Retrieve key and val from current hash entry */
-      ap_hash_this (hash_index, &key, &keylen, &val);
+      apr_hash_this (hash_index, &key, &keylen, &val);
 
       /* Cast things nicely */
       keystring.data = key;
@@ -407,27 +407,27 @@ svn_hash_print (ap_hash_t *hash, FILE *stream)
 /* Convenience Routine:  pretty-print "uberhash" from svn_parse().
 
    (ASSUMING that all keys are (svn_string_t *),
-                  all vals are (ap_hash_t *) printable by svn_hash_print() )
+                  all vals are (apr_hash_t *) printable by svn_hash_print() )
 */
 
 
 void
-svn_uberhash_print (ap_hash_t *uberhash, FILE *stream)
+svn_uberhash_print (apr_hash_t *uberhash, FILE *stream)
 {
-  ap_hash_index_t *hash_index;   /* this represents a hash entry */
+  apr_hash_index_t *hash_index;   /* this represents a hash entry */
   void *key, *val;
   size_t keylen;
   svn_string_t keystring;
-  ap_hash_t *valhash;
+  apr_hash_t *valhash;
 
   fprintf (stream, "\n-> Printing Uberhash:\n");
 
-  for (hash_index = ap_hash_first (uberhash);  /* get first hash entry */
+  for (hash_index = apr_hash_first (uberhash);  /* get first hash entry */
        hash_index;                             /* NULL if out of entries */
-       hash_index = ap_hash_next (hash_index)) /* get next hash entry */
+       hash_index = apr_hash_next (hash_index)) /* get next hash entry */
     {
       /* Retrieve key and val from current hash entry */
-      ap_hash_this (hash_index, &key, &keylen, &val);
+      apr_hash_this (hash_index, &key, &keylen, &val);
 
       /* Cast things nicely */
       keystring.data = key;

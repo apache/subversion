@@ -7,19 +7,19 @@
 int
 main ()
 {
-  ap_hash_t *configdata;
-  ap_pool_t *pool;
+  apr_hash_t *configdata;
+  apr_pool_t *pool;
   svn_error_t *error;
 
   /* Initialize APR (Apache pools) */
-  if (ap_initialize () != APR_SUCCESS)
+  if (apr_initialize () != APR_SUCCESS)
     {
-      printf ("ap_initialize() failed.\n");
+      printf ("apr_initialize() failed.\n");
       exit (1);
     }
-  if (ap_create_pool (&pool, NULL) != APR_SUCCESS)
+  if (apr_create_pool (&pool, NULL) != APR_SUCCESS)
     {
-      printf ("ap_create_pool() failed.\n");
+      printf ("apr_create_pool() failed.\n");
       exit (1);
     }
 
@@ -45,8 +45,8 @@ main ()
      calls.  */
 
   /* Clean up our memory pool and apr */
-  ap_destroy_pool (pool);
-  ap_terminate ();
+  apr_destroy_pool (pool);
+  apr_terminate ();
 
   printf ("Test complete, exiting cleanly.\n\n");
   return 0;

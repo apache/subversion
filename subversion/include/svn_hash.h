@@ -60,16 +60,16 @@
  *
  */
 
-ap_status_t hash_read (ap_hash_t **hash, 
+apr_status_t hash_read (apr_hash_t **hash, 
                        void *(*pack_func) (size_t len, const char *val,
-                                           ap_pool_t *pool),
-                       ap_file_t *srcfile,
-                       ap_pool_t *pool);
+                                           apr_pool_t *pool),
+                       apr_file_t *srcfile,
+                       apr_pool_t *pool);
 
-ap_status_t hash_write (ap_hash_t *hash, 
-                        ap_size_t (*unpack_func) (char **unpacked_data,
+apr_status_t hash_write (apr_hash_t *hash, 
+                        apr_size_t (*unpack_func) (char **unpacked_data,
                                                   void *val),
-                        ap_file_t *destfile);
+                        apr_file_t *destfile);
 
 
 /* Helper routines specific to Subversion proplists;  
@@ -79,9 +79,9 @@ ap_status_t hash_write (ap_hash_t *hash,
  *  svn_string_t objects.)
  */
 
-ap_size_t svn_unpack_bytestring (char **returndata, void *value);
+apr_size_t svn_unpack_bytestring (char **returndata, void *value);
 
-void * svn_pack_bytestring (size_t len, const char *val, ap_pool_t *pool);
+void * svn_pack_bytestring (size_t len, const char *val, apr_pool_t *pool);
 
 
 

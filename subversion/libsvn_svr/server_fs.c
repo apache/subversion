@@ -80,7 +80,7 @@ svn__svr_expand_repos_name (svn_svr_policy_t *policy,
   void *val;
 
   /* Look up the alias name in our repos_aliases hash */
-  val = ap_hash_get (policy->repos_aliases, repos->data, repos->len);
+  val = apr_hash_get (policy->repos_aliases, repos->data, repos->len);
 
   if (val == NULL)   /* If no expansion exists, */
     return repos;    /*   return the original string */
@@ -101,7 +101,7 @@ svn_svr_plugin_authorize (svn_fsrequest_t *request)
   int i;
   svn_error_t *err;
   svn_svr_plugin_t *current_plugin;
-  ap_hash_index_t *hash_index;
+  apr_hash_index_t *hash_index;
   void *key, *val;
   size_t keylen;
   (svn_error_t *) (* current_auth_hook) (svn_string_t *r, svn_user_t *u,
@@ -111,12 +111,12 @@ svn_svr_plugin_authorize (svn_fsrequest_t *request)
   /* Next:  loop through our policy's array of plugins... */
 
   for (hash_index = 
-         ap_hash_first (request->policy->plugins); /* get first hash entry */
+         apr_hash_first (request->policy->plugins); /* get first hash entry */
        hash_index;                                 /* NULL if out of entries */
-       hash_index = ap_hash_next (hash_index))     /* get next hash entry */
+       hash_index = apr_hash_next (hash_index))     /* get next hash entry */
     {
       /* grab a plugin from the list of plugins */
-      ap_hash_this (hash_index, &key, &keylen, &val);
+      apr_hash_this (hash_index, &key, &keylen, &val);
 
       current_plugin = (svn_svr_plugin_t *) val;
 
@@ -522,7 +522,7 @@ svn_svr_get_dirent_prop (svn_string_t **propvalue,
 /* Retrieve the entire property list of a version. */
 
 svn_error_t *
-svn_svr_get_ver_proplist (ap_hash_t **proplist,
+svn_svr_get_ver_proplist (apr_hash_t **proplist,
                           svn_svr_policies_t *policy,
                           svn_string_t *repos,
                           svn_user_t *user,
@@ -550,7 +550,7 @@ svn_svr_get_ver_proplist (ap_hash_t **proplist,
 /* Retrieve the entire property list of a node. */
 
 svn_error_t *
-svn_svr_get_node_proplist (ap_hash_t **proplist,
+svn_svr_get_node_proplist (apr_hash_t **proplist,
                            svn_svr_policies_t *policy,
                            svn_string_t *repos,
                            svn_user_t *user,
@@ -581,7 +581,7 @@ svn_svr_get_node_proplist (ap_hash_t **proplist,
 /* Retrieve the entire property list of a directory entry. */
 
 svn_error_t *
-svn_svr_get_dirent_proplist (ap_hash_t **proplist,
+svn_svr_get_dirent_proplist (apr_hash_t **proplist,
                              svn_svr_policies_t *policy,
                              svn_string_t *repos,
                              svn_user_t *user,
@@ -615,7 +615,7 @@ svn_svr_get_dirent_proplist (ap_hash_t **proplist,
 /* Retrieve all propnames of a version */
 
 svn_error_t *
-svn_svr_get_ver_propnames (ap_hash_t **propnames,
+svn_svr_get_ver_propnames (apr_hash_t **propnames,
                            svn_svr_policies_t *policy,
                            svn_string_t *repos,
                            svn_user_t *user,
@@ -643,7 +643,7 @@ svn_svr_get_ver_propnames (ap_hash_t **propnames,
 /* Retrieve all propnames of a node */
 
 svn_error_t *
-svn_svr_get_node_propnames (ap_hash_t **propnames,
+svn_svr_get_node_propnames (apr_hash_t **propnames,
                             svn_svr_policies_t *policy,
                             svn_string_t *repos,
                             svn_user_t *user,
@@ -673,7 +673,7 @@ svn_svr_get_node_propnames (ap_hash_t **propnames,
 /* Retrieve all propnames of a dirent */
 
 svn_error_t *
-svn_svr_get_dirent_propnames (ap_hash_t **propnames,
+svn_svr_get_dirent_propnames (apr_hash_t **propnames,
                               svn_svr_policies_t *policy,
                               svn_string_t *repos,
                               svn_user_t *user,

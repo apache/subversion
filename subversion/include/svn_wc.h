@@ -74,10 +74,10 @@
  * an array of (svn_string_t *) file and/or directory names.  
  */
 
-ap_status_t svn_wc_rename (svn_string_t *src, svn_string_t *dst);
-ap_status_t svn_wc_copy   (svn_string_t *src, svn_string_t *dst);
-ap_status_t svn_wc_add    (apr_array_header_t *paths);
-ap_status_t svn_wc_delete (apr_array_header_t *paths);
+apr_status_t svn_wc_rename (svn_string_t *src, svn_string_t *dst);
+apr_status_t svn_wc_copy   (svn_string_t *src, svn_string_t *dst);
+apr_status_t svn_wc_add    (apr_array_header_t *paths);
+apr_status_t svn_wc_delete (apr_array_header_t *paths);
 
 svn_skelta_t svn_wc_make_skelta (apr_array_header_t *paths);
 
@@ -96,16 +96,16 @@ svn_prop_t *svn_wc_get_dirent_prop (svn_string_t *path,
                                     svn_string_t *propname);
 
 /* Return all properties (names and values) of file or directory PATH. */
-ap_hash_t *svn_wc_get_node_proplist (svn_string_t *path);
+apr_hash_t *svn_wc_get_node_proplist (svn_string_t *path);
 
 /* Return all properties (names and values) of directory entry PATH. */
-ap_hash_t *svn_wc_get_dirent_proplist (svn_string_t *path);
+apr_hash_t *svn_wc_get_dirent_proplist (svn_string_t *path);
 
 /* Return all property names of file or directory PATH. */
-ap_hash_t *svn_wc_get_node_propnames (path);
+apr_hash_t *svn_wc_get_node_propnames (path);
 
 /* Return all property names of directory entry PATH. */
-ap_hash_t *svn_wc_get_dirent_propnames (path);
+apr_hash_t *svn_wc_get_dirent_propnames (path);
 
 #endif  /* SVN_WC_H */
 

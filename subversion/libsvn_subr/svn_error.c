@@ -54,7 +54,7 @@
 /*
   svn_create_error() : for creating nested exception structures.
 
-  Input:  an ap_status_t error code,
+  Input:  an apr_status_t error code,
           the "original" system error code, if applicable,
           a descriptive message,
           a "child" exception,
@@ -65,14 +65,14 @@
  */
 
 svn_error_t *
-svn_create_error (ap_status_t apr_err,
+svn_create_error (apr_status_t apr_err,
                   int src_err,
                   const char *message,
                   svn_error_t *child,
-                  ap_pool_t *pool)
+                  apr_pool_t *pool)
 {
   /* Create the new error structure */
-  svn_error_t *new_error = (svn_error_t *) ap_palloc (pool,
+  svn_error_t *new_error = (svn_error_t *) apr_palloc (pool,
                                                       sizeof(svn_error_t));
 
   new_error->apr_err = apr_err;
@@ -120,8 +120,8 @@ svn_handle_error (svn_error_t *err, FILE *stream)
            err->apr_err,
            err->src_err);
   fprintf (stream, "  canonical err %d : %s\n",
-           ap_canonical_error (err->apr_err),
-           ap_strerror (err->apr_err, buf, sizeof(buf)));
+           apr_canonical_error (err->apr_err),
+           apr_strerror (err->apr_err, buf, sizeof(buf)));
   fprintf (stream, "  %s\n", err->message);
   fflush (stream);
 

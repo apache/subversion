@@ -80,11 +80,11 @@
 
 typedef struct svn_error
 {
-  ap_status_t apr_err;       /* APR error value, possibly SVN_ custom err */
+  apr_status_t apr_err;       /* APR error value, possibly SVN_ custom err */
   int src_err;               /* native error code (e.g. errno, h_errno...) */
   const char *message;       /* details from producer of error */
   struct svn_error *child;   /* ptr to the error we "wrap" */
-  ap_pool_t *pool;           /* place to generate message strings from */
+  apr_pool_t *pool;           /* place to generate message strings from */
 
 } svn_error_t;
 
@@ -107,11 +107,11 @@ typedef struct svn_error
 
  */
 
-svn_error_t *svn_create_error (ap_status_t apr_err,
+svn_error_t *svn_create_error (apr_status_t apr_err,
                                int src_err,
                                const char *message,
                                svn_error_t *child,
-                               ap_pool_t *pool);
+                               apr_pool_t *pool);
 
 
 
