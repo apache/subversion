@@ -610,19 +610,19 @@ svn_fs__dag_clone_child (dag_node_t **child_p,
           noderev->copyfrom_rev = svn_fs__id_rev (noderev->id);
           noderev->copykind = svn_fs__copy_kind_soft;
           /* Set the copyroot equal to our own ID. */
-          noderev->copyroot = NULL;
         }
       else
         {
           noderev->copyfrom_path = NULL;
           noderev->copyfrom_rev = SVN_INVALID_REVNUM;
-          if ((strcmp (svn_fs__id_node_id (noderev->id),
-                       svn_fs__id_node_id (noderev->copyroot)) != 0))
-            {
-              SVN_ERR (get_node_revision (&parent_noderev, parent, pool));
-              noderev->copyroot = svn_fs__id_copy (parent_noderev->copyroot,
-                                                   pool);
-            }
+        }
+      
+      if ((strcmp (svn_fs__id_node_id (noderev->id),
+                   svn_fs__id_node_id (noderev->copyroot)) != 0))
+        {
+          SVN_ERR (get_node_revision (&parent_noderev, parent, pool));
+          noderev->copyroot = svn_fs__id_copy (parent_noderev->copyroot,
+                                               pool);
         }
       
       noderev->predecessor_id = svn_fs__id_copy (cur_entry->id, pool);
@@ -1277,3 +1277,16 @@ svn_fs__dag_get_copyfrom_path (const char **path,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_fs__dag_get_copy_kind (svn_fs__copy_kind_t *copy_kind,
+                           dag_node_t *node,
+                           apr_pool_t *pool)
+{
+  svn_fs__node_revision_t *noderev;
+  
+  SVN_ERR (get_node_revision (&noderev, node, pool));
+  
+  *copy_kind = noderev->copykind;
+  
+  return SVN_NO_ERROR;
+}

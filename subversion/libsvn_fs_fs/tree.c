@@ -3458,6 +3458,7 @@ txn_body_history_prev (void *baton, apr_pool_t *pool)
     {
       const char *remainder;
       const char *copy_dst, *copy_src;
+      svn_fs__copy_kind_t copy_kind;
 
       SVN_ERR (svn_fs__dag_get_node (&node, fs, copyroot_id, pool));
       copy_dst = svn_fs__dag_get_created_path (node);
@@ -3475,14 +3476,22 @@ txn_body_history_prev (void *baton, apr_pool_t *pool)
       else
         remainder = svn_path_is_child (copy_dst, path, pool);
 
-      /* If we get here, then our current path is the destination 
-         of, or the child of the destination of, a copy.  Fill
-         in the return values and get outta here.  */
-      SVN_ERR (svn_fs__dag_get_copyfrom_rev (&src_rev, node, pool));
-      SVN_ERR (svn_fs__dag_get_copyfrom_path (&copy_src, node, pool));
-
-      dst_rev = svn_fs__id_rev (copyroot_id);
-      src_path = svn_path_join (copy_src, remainder, pool);
+      if (remainder)
+        {
+          /* If we get here, then our current path is the destination 
+             of, or the child of the destination of, a copy.  Fill
+             in the return values and get outta here.  */
+          SVN_ERR (svn_fs__dag_get_copy_kind (&copy_kind, node, pool));
+          
+          SVN_ERR (svn_fs__dag_get_copyfrom_rev (&src_rev, node, pool));
+          SVN_ERR (svn_fs__dag_get_copyfrom_path (&copy_src, node, pool));
+          
+          dst_rev = svn_fs__id_rev (copyroot_id);
+          src_path = svn_path_join (copy_src, remainder, pool);
+          
+          if (copy_kind == svn_fs__copy_kind_soft)
+            retry = TRUE;
+        }
     }
 
   /* If we calculated a copy source path and revision, and the
