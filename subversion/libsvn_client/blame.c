@@ -378,7 +378,10 @@ svn_client_blame (const char *target,
 
   SVN_ERR (ra_lib->get_repos_root (session, &reposURL, pool));
 
-  lmb.path = url + strlen (reposURL);
+  /* URI decode the path before placing it in the baton, since changed_paths
+     passed into log_message_receiver will not be URI encoded. */
+  lmb.path = svn_path_uri_decode (url + strlen (reposURL), pool);
+
   lmb.cancel_func = ctx->cancel_func;
   lmb.cancel_baton = ctx->cancel_baton;
   lmb.eldest = NULL;
