@@ -233,7 +233,7 @@ static int check_access(svn_config_t *cfg,
 /* Check if the current request R is allowed.  Upon exit *REPOS_PATH_REF
  * will contain the path and repository name that an operation was requested
  * on in the form 'name:path'.  *DEST_REPOS_PATH_REF will contain the
- * destination path if the the requested operation was a MOVE or a COPY.
+ * destination path if the requested operation was a MOVE or a COPY.
  * Returns OK when access is allowed, DECLINED when it isn't, or an HTTP_
  * error code when an error occurred.
  */
