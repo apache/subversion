@@ -596,17 +596,17 @@ read_lock_from_abs_path (svn_lock_t **lock_p,
 
   val = hash_fetch (hash, PATH_KEY, pool);
   if (!val)
-    return svn_fs_fs__err_invalid_lockfile (fs, PATH_KEY, abs_path);
+    return svn_fs_fs__err_corrupt_lockfile (fs, abs_path);
   lock->path = val;
 
   val = hash_fetch (hash, TOKEN_KEY, pool);
   if (!val)
-    return svn_fs_fs__err_invalid_lockfile (fs, TOKEN_KEY, abs_path);
+    return svn_fs_fs__err_corrupt_lockfile (fs, abs_path);
   lock->token = val;
 
   val = hash_fetch (hash, OWNER_KEY, pool);
   if (!val)
-    return svn_fs_fs__err_invalid_lockfile (fs, OWNER_KEY, abs_path);
+    return svn_fs_fs__err_corrupt_lockfile (fs, abs_path);
   lock->owner = val;
 
   val = hash_fetch (hash, COMMENT_KEY, pool);
@@ -617,14 +617,14 @@ read_lock_from_abs_path (svn_lock_t **lock_p,
 
   val = hash_fetch (hash, CREATION_DATE_KEY, pool);
   if (!val)
-    return svn_fs_fs__err_invalid_lockfile (fs, CREATION_DATE_KEY, abs_path);
-  svn_time_from_cstring (&(lock->creation_date), val, pool);
+    return svn_fs_fs__err_corrupt_lockfile (fs, abs_path);
+  SVN_ERR (svn_time_from_cstring (&(lock->creation_date), val, pool));
 
   val = hash_fetch (hash, EXPIRATION_DATE_KEY, pool);
-  if (!val || val == 0) /* No expiration date. */
+  if (!val) /* No expiration date. */
     lock->expiration_date = 0;
   else
-    svn_time_from_cstring (&(lock->expiration_date), val, pool);
+    SVN_ERR (svn_time_from_cstring (&(lock->expiration_date), val, pool));
 
   *lock_p = lock;
 

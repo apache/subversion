@@ -160,6 +160,17 @@ svn_fs_fs__err_corrupt_copy (svn_fs_t *fs, const char *copy_id)
 
 
 svn_error_t *
+svn_fs_fs__err_corrupt_lockfile (svn_fs_t *fs, const char *path)
+{
+  return
+    svn_error_createf
+    (SVN_ERR_FS_CORRUPT, 0,
+     _("Corrupt lockfile for path '%s' in filesystem '%s'"), 
+     path, fs->path);
+}
+
+
+svn_error_t *
 svn_fs_fs__err_lock_expired (svn_fs_t *fs, const char *token)
 {
   return
@@ -265,19 +276,6 @@ svn_fs_fs__err_bad_lock_token (svn_fs_t *fs, const char *lock_token)
     (SVN_ERR_FS_BAD_LOCK_TOKEN, 0,
      _("Token '%s' does not point to any existing lock in filesystem '%s'"),
      lock_token, fs->path);
-}
-
-
-svn_error_t *
-svn_fs_fs__err_invalid_lockfile (svn_fs_t *fs,
-                                 const char *field,
-                                 const char *path)
-{
-  return
-    svn_error_createf
-    (SVN_ERR_FS_INVALID_LOCKFILE, 0,
-     _("Error reading %s field from lockfile for '%s' in filesystem '%s'"),
-     field, path, fs->path);
 }
 
 

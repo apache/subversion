@@ -82,6 +82,9 @@ svn_error_t *svn_fs_fs__err_corrupt_txn (svn_fs_t *fs, const char *txn);
    is corrupt.  */
 svn_error_t *svn_fs_fs__err_corrupt_copy (svn_fs_t *fs, const char *copy_id);
 
+/* SVN_ERR_FS_CORRUPT: the lockfile for PATH in FS is corrupt.  */
+svn_error_t *svn_fs_fs__err_corrupt_lockfile (svn_fs_t *fs, const char *path);
+
 /* SVN_ERR_FS_LOCK_EXPIRED: TOKEN's lock in FS has been auto-expired. */
 svn_error_t *svn_fs_fs__err_lock_expired (svn_fs_t *fs, const char *token);
 
@@ -112,11 +115,6 @@ svn_error_t *svn_fs_fs__err_not_directory (svn_fs_t *fs, const char *path);
 /* SVN_ERR_FS_BAD_LOCK_TOKEN: LOCK_TOKEN does not refer to a lock in FS.  */
 svn_error_t *svn_fs_fs__err_bad_lock_token (svn_fs_t *fs,
                                             const char *lock_token);
-
-/* SVN_ERR_FS_INVALID_LOCKFILE: LOCK_FILE on disk is incomplete or corrupt. */
-svn_error_t *svn_fs_fs__err_invalid_lockfile (svn_fs_t *fs,
-                                              const char *field,
-                                              const char *path);
 
 /* SVN_ERR_FS_NO_USER: FS does not have a user associated with it. */
 svn_error_t *svn_fs_fs__err_no_user (svn_fs_t *fs);
