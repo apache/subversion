@@ -57,6 +57,7 @@
 #include "svn_types.h"
 #include "svn_error.h"
 #include "svn_delta.h"
+#include "svn_io.h"
 
 
 /* A lot of the functions in this interface take a POOL argument; if
