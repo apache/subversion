@@ -664,8 +664,6 @@ class TargetJavaHeaders(TargetJava):
     for pattern in string.split(self.sources):
       dirname = build_path_dirname(pattern)
       if dirname:
-        ### hmm. probably shouldn't be os.path.join() right here
-        ### (at this point in the control flow; defer to output)
         graph.add(DT_LIST, LT_TARGET_DIRS,
                   build_path_join(self.path, dirname))
 
@@ -721,8 +719,6 @@ class TargetJavaClasses(TargetJava):
     for pattern in string.split(self.sources):
       dirname = build_path_dirname(pattern)
       if dirname:
-        ### hmm. probably shouldn't be os.path.join() right here
-        ### (at this point in the control flow; defer to output)
         graph.add(DT_LIST, LT_TARGET_DIRS,
                   build_path_join(self.path, dirname))
 

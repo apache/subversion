@@ -29,18 +29,6 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     ('script', 'object'): '',
     }
 
-  def copyfile(self, dest, src):
-    "Copy file to dest from src"
-
-    open(dest, 'wb').write(open(src, 'rb').read())
-
-  def movefile(self, dest, src):
-    "Move file to dest from src if src exists"
-
-    if os.path.exists(src):
-      open(dest,'wb').write(open(src, 'rb').read())
-      os.unlink(src)
-
   def parse_options(self, options):
     self.apr_path = 'apr'
     self.apr_util_path = 'apr-util'
@@ -93,18 +81,8 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     """
     Do some Windows specific setup
 
-    To avoid some compiler issues,
-    move mod_dav_svn/log.c to mod_dav_svn/davlog.c &
-    move mod_dav_svn/repos.c to mod_dav_svn/davrepos.c
-
-    Find db-4.0.x, db-4.1.x or db-4.2.x
-
-    Configure inno-setup
-    TODO Revisit this, it may not be needed
-
     Build the list of Platforms & Configurations &
     create the necessary paths
-
     """
 
     # parse (and save) the options that were passed to us
@@ -174,9 +152,6 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     #Here we can add additional modes to compile for
     self.configs = ['Debug','Release']
 
-    #Here we could enable shared libraries
-    self.shared = 0
-
   def path(self, *paths):
     """Convert build path to msvc path and prepend root"""
     return msvc_path_join(self.rootpath, *map(msvc_path, paths))
@@ -242,8 +217,6 @@ class WinGeneratorBase(gen_base.GeneratorBase):
       cbuild = None
       ctarget = None
       for source, object, reldir in self.get_win_sources(target):
-        rsrc = self.path(str(source))
-
         if isinstance(target, gen_base.TargetJavaHeaders):
           classes = self.path(target.classes)
           if self.junit_path is not None:
@@ -269,8 +242,10 @@ class WinGeneratorBase(gen_base.GeneratorBase):
 
           ctarget = self.path(object.filename)
 
+        rsrc = self.path(str(source))
         if quote_path and '-' in rsrc:
           rsrc = '"%s"' % rsrc
+
         sources.append(ProjectItem(path=rsrc, reldir=reldir, user_deps=[],
                                    custom_build=cbuild, custom_target=ctarget))
 
