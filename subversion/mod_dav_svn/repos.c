@@ -806,14 +806,15 @@ static void log_warning(void *baton, svn_error_t *err)
 }
 
 
-dav_error * dav_svn_split_uri (request_rec *r,
-                               const char *uri_to_split,
-                               const char *root_path,
-                               const char **cleaned_uri,
-                               int *trailing_slash,
-                               const char **repos_name,
-                               const char **relative_path,
-                               const char **repos_path)
+AP_MODULE_DECLARE(dav_error *)
+dav_svn_split_uri (request_rec *r,
+                   const char *uri_to_split,
+                   const char *root_path,
+                   const char **cleaned_uri,
+                   int *trailing_slash,
+                   const char **repos_name,
+                   const char **relative_path,
+                   const char **repos_path)
 {
   apr_size_t len1;
   int had_slash;

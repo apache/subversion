@@ -268,10 +268,13 @@ class WinGeneratorBase(gen_base.GeneratorBase):
   def get_win_defines(self, target, cfg):
     "Return the list of defines for target"
 
+    fakedefines = ["WIN32","_WINDOWS","alloca=_alloca"]
     if target.is_apache_mod:
-      fakedefines = ["WIN32","_WINDOWS","alloca=_alloca"]
+      if target.name == 'mod_dav_svn':
+        fakedefines.extend(["AP_DECLARE_EXPORT"])
+      pass
     else:
-      fakedefines = ["WIN32","_WINDOWS","APR_DECLARE_STATIC","APU_DECLARE_STATIC","alloca=_alloca"]
+      fakedefines.extend(["APR_DECLARE_STATIC","APU_DECLARE_STATIC"])
 
     if cfg == 'Debug':
       fakedefines.extend(["_DEBUG","SVN_DEBUG"])
@@ -315,11 +318,12 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     if target.is_apache_mod:
       fakelibdirs.extend([
         self.httpd_path + "/%s" % cfg,
-        self.httpd_path + "/modules/dav/main/%s" % cfg,
         self.httpd_path + "/srclib/apr/%s" % cfg,
         self.httpd_path + "/srclib/apr-util/%s" % cfg,
         self.httpd_path + "/srclib/apr-util/xml/expat/lib/%s" % libcfg
         ])
+      if target.name == 'mod_dav_svn':
+        fakelibdirs.extend([self.httpd_path + "/modules/dav/main/%s" % cfg])
 
     return self.make_windirs(fakelibdirs)
 
@@ -328,14 +332,14 @@ class WinGeneratorBase(gen_base.GeneratorBase):
 
     if target.is_apache_mod:
       if target.name == 'mod_dav_svn':
-        libs = [ self.dblibname+(cfg == 'Debug' and 'd.lib' or '.lib') ]
+        libs = [ self.dblibname+(cfg == 'Debug' and 'd.lib' or '.lib'),
+                 'mod_dav.lib' ]
       else:
         libs = []
       libs.extend([ 'xml.lib',
                     'libapr.lib',
                     'libaprutil.lib',
                     'libhttpd.lib',
-                    'mod_dav.lib',
                     'mswsock.lib',
                     'ws2_32.lib',
                     'advapi32.lib',

@@ -147,6 +147,8 @@ class Generator(gen_win.WinGeneratorBase):
         depends = [self.targets['__CONFIG__']]
 
       if target.is_apache_mod:
+        if target.name == 'mod_authz_svn':
+          depends.append(self.targets['mod_dav_svn'])
         pass
       elif name == 'depdelta':
         depends.append(self.targets['libsvn_delta'])

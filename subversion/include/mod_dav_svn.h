@@ -462,14 +462,15 @@ svn_error_t *dav_svn_simple_parse_uri(dav_svn_uri_info *info,
      * REPOS_PATH:     A/B/alpha
      * TRAILING_SLASH: FALSE
 */
-dav_error * dav_svn_split_uri (request_rec *r,
-                               const char *uri,
-                               const char *root_path,
-                               const char **cleaned_uri,
-                               int *trailing_slash,
-                               const char **repos_name,
-                               const char **relative_path,
-                               const char **repos_path);
+AP_MODULE_DECLARE(dav_error *)
+       dav_svn_split_uri (request_rec *r,
+                          const char *uri,
+                          const char *root_path,
+                          const char **cleaned_uri,
+                          int *trailing_slash,
+                          const char **repos_name,
+                          const char **relative_path,
+                          const char **repos_path);
 
 
 
