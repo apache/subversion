@@ -3,15 +3,6 @@ This is a -*- text -*- file.
 
 --------------------------------------------------------------
 
-To be fixed by someone:
-
-  - When using shared working copies, a user changing the permissions
-    of a file directly (svn ps svn:executable) or indirectly
-    (i.e. through an update), must own that file.  There is no way to
-    do this automatically which does not involve possible data loss.
-
---------------------------------------------------------------
-
 Put in best-practices doc:
 
   - (perhaps) suggest the use of environment variables to represent
@@ -19,9 +10,13 @@ Put in best-practices doc:
     Maybe this can go into our existing best-practices doc?
 
 
---------------------------------------------------------------
 
-To be added by someone:
+To be fixed by someone:
+
+  - When using shared working copies, a user changing the permissions
+    of a file directly (svn ps svn:executable) or indirectly
+    (i.e. through an update), must own that file.  There is no way to
+    do this automatically which does not involve possible data loss.
 
   - With svn 1.1, it's now possible to set up svn+ssh using just one
     Unix account on the server.  The book should perhaps document this
@@ -32,12 +27,27 @@ To be added by someone:
     has been fixed that broke it and potentially update the 
     example to use it instead.
 
---------------------------------------------------------------
-To be fixed by someone:
+  - we seem to inconsistently assume repositories live either in
+    /usr/local/svn/ or /usr/local/repositories/ throughout the book.
+    We ought to consistify.
 
- - we seem to inconsistently assume repositories live either in
-   /usr/local/svn/ or /usr/local/repositories/ throughout the book.
-   We ought to consistify.
+
+--------------------------------------------------------------
+
+To be fixed by fitz:
+
+
+   - ch03, description of the 3 fulltext files that appear in a
+     conflict.  it turns out that if the file is marked as a binary
+     file, then
+
+          - no conflict markers are made
+          - the '.mine' file isn't created, since it would be
+            identical to the working file anyway.
+
+     these things need to be mentioned, perhaps with an xref to ch7
+     properties/binary mime-types.
+
 
 --------------------------------------------------------------
 
