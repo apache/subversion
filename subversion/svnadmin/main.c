@@ -378,7 +378,7 @@ main (int argc, const char * const *argv)
         apr_array_header_t *txns;
         const char *txn_name;
         svn_boolean_t show_extra = FALSE;
-        apr_pool_t *this_pool; /* only used if SHOW_EXTRA is TRUE */
+        apr_pool_t *this_pool = NULL; /* only used if SHOW_EXTRA is TRUE */
         int i;
 
         if (argc >= 4) 
