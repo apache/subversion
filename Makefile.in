@@ -19,7 +19,6 @@ SWIG_DIRS = subversion/bindings/swig            \
             subversion/bindings/swig/python     \
             subversion/bindings/swig/python/svn \
             subversion/bindings/swig/java       \
-            subversion/bindings/swig/java/build \
             subversion/bindings/swig/java/org   \
             subversion/bindings/swig/java/org/tigris \
             subversion/bindings/swig/java/org/tigris/subversion \
@@ -84,6 +83,8 @@ SWIG_PY_COMPILE = @SWIG_PY_COMPILE@
 SWIG_PY_LINK = @SWIG_PY_LINK@
 SWIG_PY_SETUP_LDFLAGS = @SWIG_PY_SETUP_LDFLAGS@
 SWIG_JAVA_INCLUDES = @SWIG_JAVA_INCLUDES@
+SWIG_JAVA_COMPILE = $(CC) -DNDEBUG -g -O3 -Wall -Wstrict-prototypes -fPIC
+SWIG_JAVA_LINK = $(CC) -shared
 
 SVN_APR_INCLUDES = @SVN_APR_INCLUDES@
 SVN_APR_PREFIX = @SVN_APR_PREFIX@
@@ -100,23 +101,23 @@ LT_COMPILE = $(LIBTOOL) $(LTFLAGS) --mode=compile $(COMPILE)
 
 COMPILE_APACHE_MOD = $(LIBTOOL) $(LTFLAGS) --mode=compile $(CC) $(CPPFLAGS) $(CFLAGS) $(APACHE_INCLUDES) $(INCLUDES) -o $@ -c $<
 
-# special SWIG compilation
+# Compilation of SWIG helper libraries
 COMPILE_SWIG_PY = $(LIBTOOL) $(LTFLAGS) --mode=compile $(CC) $(CPPFLAGS) -DSWIGPYTHON $(CFLAGS) $(SWIG_PY_INCLUDES) $(INCLUDES) -o $@ -c $<
-COMPILE_SWIG_JAVA = $(LIBTOOL) $(LTFLAGS) --mode=compile $(CC) $(CPPFLAGS) -DSWIGPYTHON $(CFLAGS) $(SWIG_JAVA_INCLUDES) $(INCLUDES) -o $@ -c $<
+COMPILE_SWIG_JAVA = $(LIBTOOL) $(LTFLAGS) --mode=compile $(CC) $(CPPFLAGS) $(CFLAGS) $(SWIG_JAVA_INCLUDES) $(INCLUDES) -o $@ -c $<
 
 LINK = $(LIBTOOL) $(LTFLAGS) --mode=link $(CC) $(LT_LDFLAGS) $(CFLAGS) $(LDFLAGS) -rpath $(libdir)
 LINK_APACHE_MOD = $(LIBTOOL) $(LTFLAGS) --mode=link $(CC) $(LT_LDFLAGS) $(CFLAGS) $(LDFLAGS) -rpath $(APACHE_LIBEXECDIR) -avoid-version -module
 
+# SWIG'ing of C source code
 RUN_SWIG_PY = $(SWIG) -c -python -noproxy $(SWIG_INCLUDES) $(SWIG_PY_INCLUDES) -o $@ $<
 RUN_SWIG_JAVA = $(SWIG) -c -java -noproxy -module 'Subversion' -package 'org.tigris.subversion.swig' $(SWIG_INCLUDES) -o $@ $<
 
+# Compilation of SWIG-generated C source code
 COMPILE_PY_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=compile $(SWIG_PY_COMPILE) $(SWIG_INCLUDES) $(SWIG_PY_INCLUDES) -prefer-pic -c -o $@ $<
-COMPILE_JAVA_WRAPPER = \
-  echo "ERROR: compilation of Java wrappers not yet supported" ; exit 1
+COMPILE_JAVA_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=compile $(SWIG_JAVA_COMPILE) -DSWIGJAVA $(SWIG_INCLUDES) $(SWIG_JAVA_INCLUDES) -prefer-pic -c -o $@ $<
 
 LINK_PY_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=link $(SWIG_PY_LINK) $(SWIG_LDFLAGS) -rpath $(swig_pydir) -avoid-version -module
-LINK_JAVA_WRAPPER = \
-  echo "ERROR: linking of Java wrappers not yet supported" ; exit 1
+LINK_JAVA_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=link $(SWIG_JAVA_LINK) $(SWIG_LDFLAGS) -rpath $(swig_javadir) -avoid-version -module
 
 
 INSTALL = @INSTALL@
@@ -194,10 +195,10 @@ local-extraclean: local-distclean
               ac-helpers/ltmain.sh
 
 # clean everything, including test output.
-local-clean: fast-clean check-clean swig-clean
+local-clean: fast-clean check-clean swig-py-ext-clean
 
 # clean everything, including test output.
-local-distclean: fast-distclean check-clean swig-clean
+local-distclean: fast-distclean check-clean swig-py-ext-clean
 
 local-install: @INSTALL_RULES@ @SWIG_INSTALL_RULES@
 
@@ -343,13 +344,11 @@ doc-clean:
         done
 
 swig-assert-available:
-	@if test -z "$(SWIG)" || test "$(SWIG)" = "none"; then     \
+	@if test -z "$(SWIG)" || test "$(SWIG)" = 'none'; then     \
 	    echo 'SWIG variable not defined; this rule is unavailable' >&2; \
 	    echo 'Re-run configure --with-swig' >&2;               \
 	    exit 1;                                                \
 	fi
-
-swig-clean: swig-py-ext-clean swig-java-ext-clean
 
 swig-py-ext: swig-assert-available
 	cd $(SWIG_BUILD_DIR)/python; \
@@ -362,22 +361,7 @@ install-swig-py-ext: swig-assert-available
 swig-py-ext-clean:
 	rm -rf $(SWIG_BUILD_DIR)/python/build
 
-swig-java-ext: swig-assert-available mkdir-init java
-	cd $(SWIG_SRC_DIR)/java/org/tigris/subversion/swig; \
-        for source in $(SWIG_SRC_DIR)/*.i; do \
-            target="`echo -n $$source | sed 's!^.*/\(.*\)\.i$$!\1.c!'`"; \
-            $(SWIG) -c -java -noproxy -module 'Subversion' \
-                -package 'org.tigris.subversion.swig' \
-                -I$(SWIG_SRC_DIR) \
-                -I$(abs_srcdir)/subversion/include $(SVN_APR_INCLUDES) \
-                -o $(SWIG_SRC_DIR)/java/build/$$target $$source; \
-        done
-
-swig-java-ext-clean:
-	rm -rf $(SWIG_SRC_DIR)/java/build/
-	rm -rf $(SWIG_SRC_DIR)/java/org/
-
-java:
+java-api:
 	@$(MAKE) -C $(abs_srcdir)/subversion/bindings/java "JAVAC=$(JAVAC)"
 
 
