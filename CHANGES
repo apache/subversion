@@ -3,31 +3,24 @@ Version 0.13.1 [Pre-Alpha] (released 20 June 2002, revision 2291)
  User-visible changes:
  * "modules" are now implemented
  * new 'svn export' command
- * 'svn log' now traverses copy history (unless --strict is used) and
-   can print the paths changed in a revision
+ * 'svn log' now traverses copy history and can print changed paths
  * 'svn merge' now (temporarily) only merges into '.'
  * 'svnadmin lscr' now traverses copy history
  * changes to the 'svn:executable' prop take effect immediately now
- * server is now more tolerant of working copies with old-style
-   version resource URLs
+ * server is more tolerant of wc's with old-style version resource URLs
  * new Handbook started
- * commit-email.pl fixes and improvements -- it now shows prop mods
-   and copy history
+ * commit-email.pl fixes/improvements -- now shows prop mods and copy history
  * bug fixes to cp, rm, merge, revert, admin dump and load, svnlook
 
  Developer-visible changes:
- * headers installed into PREFIX/subversion-1 and libraries are named
-   libsvn_FOO-1.so (per http://www106.pair.com/rhp/parallel.html)
+ * headers now install in subdir and libs are named libsvn_FOO-1.so
  * improvements to the Python test suite
  * delta combiner implemented (unused for now, though)
- * Python SWIG binding improvments, including the ability to write an
-   editor in Python
+ * Python SWIG binding improvements: ability to write an editor in Python
  * new example: tools/examples/svnlook.py
- * before/after editors were removed from some svn_client APIs, in
-   favor of an extended and improved notification callback
+ * start moving libsvn_client to new notification system (no composed editors!)
  * upgrade to neon 0.21.2, fixing deflated communication with apache
- * Berkeley DB -related files moved into libsvn_fs/bdb/, with some
-   utility functions (skels) in libsvn_fs/util/
+ * Moved Berkeley-specific code to libsvn_fs/bdb/, skels into libsvn_fs/util/
  * changes to the RPM packaging
 
 
