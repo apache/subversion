@@ -906,7 +906,7 @@ svn_ra_local__get_locations (void *session_baton,
 
   SVN_ERR (svn_repos_trace_node_locations (sbaton->fs, locations, abs_path,
                                            peg_revision, location_revisions,
-                                           pool));
+                                           NULL, NULL, pool));
 
   return SVN_NO_ERROR;
 }

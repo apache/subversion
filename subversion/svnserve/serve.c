@@ -986,7 +986,7 @@ static svn_error_t *get_locations(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
   err = svn_repos_trace_node_locations(b->fs, &fs_locations, abs_path,
                                        peg_revision, location_revisions,
-                                       pool);
+                                       NULL, NULL, pool);
 
   /* Now, write the results to the connection. */
   if (!err)
