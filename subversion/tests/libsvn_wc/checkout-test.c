@@ -16,9 +16,12 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+
 #include <apr_pools.h>
 #include <apr_hash.h>
 #include <apr_file_io.h>
+#include <apr_general.h>
+
 #include "svn_types.h"
 #include "svn_delta.h"
 #include "svn_wc.h"

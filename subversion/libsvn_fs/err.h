@@ -41,7 +41,7 @@ svn_error_t *svn_fs__dberr (apr_pool_t *pool, int db_err);
    There is no separator between the two messages; if you want one,
    you should include it in FMT.  */
 svn_error_t *svn_fs__dberrf (apr_pool_t *pool, int db_err,
-			     char *fmt, ...);
+			     const char *fmt, ...);
 
 
 /* Check the return status from the Berkeley DB operation.  If the

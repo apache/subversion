@@ -137,7 +137,7 @@ static svn_error_t *
 test_delete (svn_string_t *filename, void *parent_baton)
 {
   struct dir_baton *d = (struct dir_baton *) parent_baton;
-  char *Aname = filename->data ? filename->data : "(unknown)";
+  const char *Aname = filename->data ? filename->data : "(unknown)";
 
   print_spaces (d->indent_level);
 
@@ -177,8 +177,8 @@ add_or_replace_dir (svn_string_t *name,
                     const char *pivot_string)
 {
   struct dir_baton *pd = (struct dir_baton *) parent_baton;
-  char *Aname = name ? name->data : "(unknown)";
-  char *ancestor = ancestor_path ? ancestor_path->data : "(unknown)";
+  const char *Aname = name ? name->data : "(unknown)";
+  const char *ancestor = ancestor_path ? ancestor_path->data : "(unknown)";
   struct dir_baton *d;
 
   /* Set child_baton to a new dir baton. */
@@ -278,7 +278,7 @@ test_apply_textdelta (void *file_baton,
 {
   struct file_baton *fb = (struct file_baton *) file_baton;
 
-  char *Aname = fb->path ? fb->path->data : "(unknown)";
+  const char *Aname = fb->path ? fb->path->data : "(unknown)";
 
   print_spaces (fb->indent_level + indent_amount);
 
@@ -302,8 +302,8 @@ add_or_replace_file (svn_string_t *name,
 {
   struct dir_baton *d = (struct dir_baton *) parent_baton;
   struct file_baton *fb;
-  char *Aname = name ? name->data : "(unknown)";
-  char *ancestor = ancestor_path ? ancestor_path->data : "(unknown)";
+  const char *Aname = name ? name->data : "(unknown)";
+  const char *ancestor = ancestor_path ? ancestor_path->data : "(unknown)";
 
   /* Put the filename in file_baton */
   fb = apr_pcalloc (d->edit_baton->pool, sizeof (*fb));

@@ -13,11 +13,14 @@
  */
 
 #include <stdio.h>
+
+#include <apr_pools.h>
+#include <apr_general.h>
+
 #include "svn_types.h"
 #include "svn_error.h"
 #include "svn_path.h"
 #include "svn_delta.h"
-#include "apr_pools.h"
 
 /* This is a really rough first-cut test program just to exercise the
  * code and see if it works.  It doesn't verify the output and can't

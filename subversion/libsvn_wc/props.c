@@ -686,20 +686,21 @@ svn_wc__do_property_merge (svn_string_t *path,
           /* Reserve a new .prej file *above* the SVN/ directory by
              opening and closing it. */
           svn_string_t *reserved_path;
-          svn_string_t *full_path = svn_string_dup (path, pool);
+          svn_string_t *full_reject_path = svn_string_dup (path, pool);
 
           if (is_dir)
-            svn_path_add_component (full_path,
+            svn_path_add_component (full_reject_path,
                                     svn_string_create
                                     (SVN_WC__THIS_DIR_PREJ,
                                      pool),
                                     svn_path_local_style);
           else
-            svn_path_add_component (full_path, name, svn_path_local_style);
+            svn_path_add_component (full_reject_path, name,
+                                    svn_path_local_style);
 
           err = svn_io_open_unique_file (&reject_fp,
                                          &reserved_path,
-                                         full_path,
+                                         full_reject_path,
                                          SVN_WC__PROP_REJ_EXT,
                                          pool);
           if (err) return err;
@@ -708,7 +709,7 @@ svn_wc__do_property_merge (svn_string_t *path,
           if (status)
             return svn_error_createf (status, 0, NULL, pool,
                                       "do_property_merge: can't close '%s'",
-                                      reject_path->data);
+                                      full_reject_path->data);
           
           /* This file will be overwritten when the log is run; that's
              ok, because at least now we have a reservation on

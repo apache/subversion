@@ -100,7 +100,7 @@ svn_wc__string_to_time (svn_string_t *tstr)
 {
   apr_exploded_time_t exploded_time;
   char wday[4], month[4];
-  apr_time_t time;
+  apr_time_t when;
 
   sscanf (tstr->data,
           timestamp_format,
@@ -121,9 +121,9 @@ svn_wc__string_to_time (svn_string_t *tstr)
   exploded_time.tm_wday = find_matching_string (wday, apr_day_snames);
   exploded_time.tm_mon = find_matching_string (month, apr_month_snames);
 
-  apr_implode_time (&time, &exploded_time);
+  apr_implode_time (&when, &exploded_time);
 
-  return time;
+  return when;
 }
 
 
