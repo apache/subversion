@@ -80,7 +80,7 @@ section for approved changes.)
       Justification:  Inconsistent with what we support and breaks
         SVN_INVALID_FILESIZE.
       Votes:
-       +1: ghudson
+       +1: ghudson, kfogel
 
     * r8463  (fix for issue #1709)
       Make mod_dav_svn stop spewing huge responses at dead sockets.
