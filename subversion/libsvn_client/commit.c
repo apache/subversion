@@ -417,8 +417,7 @@ send_to_repos (const svn_delta_edit_fns_t *before_editor,
   svn_ra_callbacks_t *ra_callbacks;
   svn_boolean_t is_import;
   struct svn_wc_close_commit_baton ccb = {base_dir, pool};
-  apr_array_header_t *tgt_array
-    = apr_array_make (pool, 1, sizeof (svn_stringbuf_t *));
+  apr_hash_t *committed_targets = apr_hash_make (pool);
   
   if (url) 
     is_import = TRUE;
@@ -463,12 +462,12 @@ send_to_repos (const svn_delta_edit_fns_t *before_editor,
         {
           /* If we're supposed to bump revisions to REVISION, then
              fetch tracking editor and compose it.  Committed targets
-             will be stored in tgt_array, and bumped by
+             will be stored in committed_targets, and bumped by
              svn_wc_set_revision().  */
           SVN_ERR (svn_delta_get_commit_track_editor (&track_editor,
                                                       &track_edit_baton,
                                                       pool,
-                                                      tgt_array,
+                                                      committed_targets,
                                                       revision,
                                                       svn_wc_set_revision,
                                                       &ccb));

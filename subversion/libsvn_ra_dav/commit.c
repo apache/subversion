@@ -83,6 +83,7 @@ typedef struct
   /* name of local prop to hold the version resource's URL */
   svn_stringbuf_t *vsn_url_name;
 
+  apr_hash_t *valid_targets;
   svn_ra_get_wc_prop_func_t get_func;
   svn_ra_set_wc_prop_func_t set_func;
   svn_ra_close_commit_func_t close_func;
@@ -917,6 +918,7 @@ static svn_error_t * commit_close_edit(void *edit_baton)
   SVN_ERR( svn_ra_dav__merge_activity(cc->ras,
                                       cc->ras->root.path,
                                       cc->activity_url,
+                                      cc->valid_targets,
                                       cc->set_func,
                                       cc->close_func,
                                       cc->close_baton,
@@ -987,14 +989,25 @@ svn_error_t * svn_ra_dav__get_commit_editor(
   void *close_baton)
 {
   svn_ra_session_t *ras = session_baton;
-  commit_ctx_t *cc;
-  svn_delta_edit_fns_t *commit_editor;
 
+  /* The main commit editor and its baton. */
+  svn_delta_edit_fns_t *commit_editor;
+  commit_ctx_t *cc;
+
+  /* The editor we return will be composed with a tracking editor,
+     which will keep track of which targets should get their revisions
+     and wcprops set after the commit.  Thus we avoid overzealously
+     bumping directories on commit. */
+  svn_delta_edit_fns_t *tracking_editor;
+  void *tracking_baton;
+
+  /* Build the main commit editor's baton. */
   cc = apr_pcalloc(ras->pool, sizeof(*cc));
   cc->ras = ras;
   cc->resources = apr_hash_make(ras->pool);
   cc->vsn_url_name = svn_stringbuf_create(SVN_RA_DAV__LP_VSN_URL, ras->pool);
   cc->get_func = get_func;
+  cc->valid_targets = apr_hash_make(ras->pool);
   cc->set_func = set_func;
   cc->close_func = close_func;
   cc->close_baton = close_baton;
@@ -1039,8 +1052,20 @@ svn_error_t * svn_ra_dav__get_commit_editor(
   commit_editor->close_file = commit_close_file;
   commit_editor->close_edit = commit_close_edit;
 
-  *edit_baton = cc;
-  *editor = commit_editor;
+  /* Get the tracking editor. */
+  SVN_ERR( svn_delta_get_commit_track_editor(&tracking_editor,
+                                             &tracking_baton,
+                                             ras->pool,
+                                             cc->valid_targets,
+                                             SVN_INVALID_REVNUM,
+                                             NULL,
+                                             NULL) );
+
+  /* Compose the two editors, returning the composition by reference. */
+  svn_delta_compose_editors(editor, edit_baton,
+                            tracking_editor, tracking_baton,
+                            commit_editor, cc,
+                            ras->pool);
 
   return NULL;
 }
