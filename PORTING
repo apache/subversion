@@ -186,7 +186,7 @@ Solaris 2.6:
      Notes:
      -- gcc 2.95.2
      -- failed to check out a working copy, but think this may be due
-        to running "svn checkout URL -d ../path".  Perhaps the ".." in
+        to running "svn checkout URL ../path".  Perhaps the ".." in
         the target stimulated a universal Subversion bug, i.e., has
         nothing to do with it being Solaris 2.6.  Have asked Sam
         Cooper to try it without ".." and let us know what happens.
