@@ -4255,6 +4255,7 @@ file_integrity_helper (apr_size_t filesize, apr_uint32_t *seed,
            (&wh_func, &wh_baton, txn_root, "bigfile", NULL, NULL, subpool));
   SVN_ERR (svn_txdelta_send_string (&contents, wh_func, wh_baton, subpool));
   SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn, subpool));
+  SVN_ERR (svn_fs_deltify_revision (fs, youngest_rev, subpool));
   memcpy (digest_list[youngest_rev], digest, MD5_DIGESTSIZE);
   svn_pool_clear (subpool);
 
@@ -4268,6 +4269,7 @@ file_integrity_helper (apr_size_t filesize, apr_uint32_t *seed,
            (&wh_func, &wh_baton, txn_root, "bigfile", NULL, NULL, subpool));
   SVN_ERR (svn_txdelta_send_string (&contents, wh_func, wh_baton, subpool));
   SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn, subpool));
+  SVN_ERR (svn_fs_deltify_revision (fs, youngest_rev, subpool));
   memcpy (digest_list[youngest_rev], digest, MD5_DIGESTSIZE);
   svn_pool_clear (subpool);
 
@@ -4280,6 +4282,7 @@ file_integrity_helper (apr_size_t filesize, apr_uint32_t *seed,
            (&wh_func, &wh_baton, txn_root, "bigfile", NULL, NULL, subpool));
   SVN_ERR (svn_txdelta_send_string (&contents, wh_func, wh_baton, subpool));
   SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn, subpool));
+  SVN_ERR (svn_fs_deltify_revision (fs, youngest_rev, subpool));
   memcpy (digest_list[youngest_rev], digest, MD5_DIGESTSIZE);
   svn_pool_clear (subpool);
 
@@ -4294,6 +4297,7 @@ file_integrity_helper (apr_size_t filesize, apr_uint32_t *seed,
            (&wh_func, &wh_baton, txn_root, "bigfile", NULL, NULL, subpool));
   SVN_ERR (svn_txdelta_send_string (&contents, wh_func, wh_baton, subpool));
   SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn, subpool));
+  SVN_ERR (svn_fs_deltify_revision (fs, youngest_rev, subpool));
   memcpy (digest_list[youngest_rev], digest, MD5_DIGESTSIZE);
   svn_pool_clear (subpool);
 
@@ -4311,6 +4315,7 @@ file_integrity_helper (apr_size_t filesize, apr_uint32_t *seed,
       SVN_ERR (svn_txdelta_send_string 
                (&contents, wh_func, wh_baton, subpool));
       SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn, subpool));
+      SVN_ERR (svn_fs_deltify_revision (fs, youngest_rev, subpool));
       memcpy (digest_list[youngest_rev], digest, MD5_DIGESTSIZE);
       svn_pool_clear (subpool);
     }

@@ -944,6 +944,9 @@ close_revision (void *baton)
         return err;
     }
 
+  /* Deltify the predecessors of paths changed in this revision. */
+  SVN_ERR (svn_fs_deltify_revision (pb->fs, new_rev, rb->pool));
+
   /* Grrr, svn_fs_commit_txn rewrites the datestamp property to the
      current clock-time.  We don't want that, we want to preserve
      history exactly.  Good thing revision props aren't versioned! */

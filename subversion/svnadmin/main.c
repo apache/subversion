@@ -90,14 +90,15 @@ parse_local_repos_path(apr_getopt_t *os, const char ** repos_path,
 /** Subcommands. **/
 
 static svn_opt_subcommand_t
-  subcommand_hotcopy,
   subcommand_create,
+  subcommand_deltify,
   subcommand_dump,
   subcommand_help,
+  subcommand_hotcopy,
   subcommand_load,
-  subcommand_lstxns,
   subcommand_list_dblogs,
   subcommand_list_unused_dblogs,
+  subcommand_lstxns,
   subcommand_recover,
   subcommand_rmtxns,
   subcommand_setlog,
@@ -177,7 +178,14 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
      "usage: svnadmin create REPOS_PATH\n\n"
      "Create a new, empty repository at REPOS_PATH.\n",
      {svnadmin__bdb_txn_nosync, svnadmin__config_dir} },
-    
+
+    {"deltify", subcommand_deltify, {0},
+     "usage: svnadmin deltify [-r LOWER[:UPPER]] REPOS_PATH\n\n"
+     "Run over the requested revision range, performing predecessor deltifi-\n"
+     "cation on the paths changed in those revisions.  If no revisions are\n"
+     "specified, this will simply deltify the HEAD revision.\n",
+     {'r', 'q'} },
+     
     {"dump", subcommand_dump, {0},
      "usage: svnadmin dump REPOS_PATH [-r LOWER[:UPPER]] [--incremental]\n\n"
      "Dump the contents of filesystem to stdout in a 'dumpfile'\n"
@@ -303,6 +311,66 @@ subcommand_create (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+
+/* This implements `svn_opt_subcommand_t'. */
+static svn_error_t *
+subcommand_deltify (apr_getopt_t *os, void *baton, apr_pool_t *pool)
+{
+  struct svnadmin_opt_state *opt_state = baton;
+  svn_repos_t *repos;
+  svn_fs_t *fs;
+  svn_revnum_t start = SVN_INVALID_REVNUM, end = SVN_INVALID_REVNUM;
+  svn_revnum_t youngest, revision, increment;
+  apr_pool_t *subpool = svn_pool_create (pool);
+
+  SVN_ERR (svn_repos_open (&repos, opt_state->repository_path, pool));
+  fs = svn_repos_fs (repos);
+  SVN_ERR (svn_fs_youngest_rev (&youngest, fs, pool));
+
+  /* ### We only handle revision numbers right now, not dates. */
+  if (opt_state->start_revision.kind == svn_opt_revision_number)
+    start = opt_state->start_revision.value.number;
+  else if (opt_state->start_revision.kind == svn_opt_revision_head)
+    start = youngest;
+  else
+    start = SVN_INVALID_REVNUM;
+
+  if (opt_state->end_revision.kind == svn_opt_revision_number)
+    end = opt_state->end_revision.value.number;
+  else if (opt_state->end_revision.kind == svn_opt_revision_head)
+    end = youngest;
+  else
+    end = SVN_INVALID_REVNUM;
+
+  /* Fill in implied revisions if necessary. */
+  if (start == SVN_INVALID_REVNUM)
+    start = youngest;
+  if (end == SVN_INVALID_REVNUM)
+    end = start;
+        
+  if ((start > youngest) || (end > youngest))
+    return svn_error_createf
+      (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+       "revisions must not be greater than the youngest revision (%" 
+       SVN_REVNUM_T_FMT ")", youngest);
+
+  /* Loop over the requested revision range, performing the
+     predecessor deltification on paths changed in each. */
+  increment = (start > end) ? -1 : 1;
+  end = end + increment;
+  for (revision = start; revision != end; revision += increment)
+    {
+      svn_pool_clear (subpool);
+      if (! opt_state->quiet)
+        printf ("Deltifying revision %" SVN_REVNUM_T_FMT "...", revision);
+      SVN_ERR (svn_fs_deltify_revision (fs, revision, subpool));
+      if (! opt_state->quiet)
+        printf ("done.\n");
+    }
+  svn_pool_destroy (subpool);
+
+  return SVN_NO_ERROR;
+}
 
 /* This implements `svn_opt_subcommand_t'. */
 static svn_error_t *
