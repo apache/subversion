@@ -69,7 +69,7 @@ Source2:	%{rc_file}
 Source3:	%{py_patch}
 Patch0:		%{svn_patch}
 Patch1:		%{svn_version}
-Packager:	Michael Ballbach <ballbach@rten.net>
+Packager:	Shamim Islam <files@poetryunlimited.com>
 BuildRoot:      %{svn_root}
 BuildRequires:	apache2-devel >= %{apache_ver}
 BuildRequires:	%{neon_rpm}-devel >= %{neon_ver}
