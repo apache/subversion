@@ -190,7 +190,7 @@ svn_cl__auth_ssl_server_trust_prompt (
   const svn_auth_ssl_server_cert_info_t *cert_info,
   apr_pool_t *pool)
 {
-  int allow_perm_accept = failures & SVN_AUTH_SSL_UNKNOWNCA;
+  int allow_perm_accept = ! (failures & SVN_AUTH_SSL_OTHER);
   const char *choice;
   svn_stringbuf_t *buf = svn_stringbuf_create
     ("Error validating server certificate:\n", pool);
@@ -227,6 +227,11 @@ svn_cl__auth_ssl_server_trust_prompt (
       svn_stringbuf_appendcstr (buf, "   Valid until ");
       svn_stringbuf_appendcstr (buf, cert_info->valid_until);
       svn_stringbuf_appendcstr (buf, "\n");
+    }
+
+  if (failures & SVN_AUTH_SSL_OTHER)
+    {
+      svn_stringbuf_appendcstr (buf, " - Unknown error\n");
     }
 
   if (allow_perm_accept)
