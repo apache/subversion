@@ -634,3 +634,27 @@ svn_cl__may_need_force (svn_error_t *err)
 
   return err;
 }
+
+
+svn_error_t *
+svn_cl__error_checked_fputs (const char *string, FILE* stream)
+{
+  /* This function is equal to svn_cmdline_fputs() minus
+     the utf8->local encoding translation */
+
+  /* On POSIX systems, errno will be set on an error in fputs, but this might
+     not be the case on other platforms.  We reset errno and only
+     use it if it was set by the below fputs call.  Else, we just return
+     a generic error. */
+  errno = 0;
+
+  if (fputs (string, stream) == EOF)
+    {
+      if (errno)
+        return svn_error_wrap_apr (errno, _("Write error"));
+      else
+        return svn_error_create (SVN_ERR_IO_WRITE_ERROR, NULL, NULL);
+    }
+
+  return SVN_NO_ERROR;
+}

@@ -138,27 +138,44 @@ kind_str (svn_node_kind_t kind)
 
 
 static svn_error_t *
+print_header_xml (apr_pool_t *pool)
+{
+  svn_stringbuf_t *sb = svn_stringbuf_create ("", pool);
+
+  /* <?xml version="1.0" encoding="utf-8"?> */
+  svn_xml_make_header (&sb, pool);
+  
+  /* "<lists>" */
+  svn_xml_make_open_tag (&sb, pool, svn_xml_normal, "lists", NULL);
+  
+  return svn_cl__error_checked_fputs (sb->data, stdout);
+}
+
+
+static svn_error_t *
 print_dirents_xml (apr_hash_t *dirents,
                    const char *path,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
-  /* Collate whole list into sb before printing. */
-  svn_stringbuf_t *sb = svn_stringbuf_create ("", pool);
-
   apr_array_header_t *array;
   int i;
   apr_pool_t *subpool = svn_pool_create (pool); 
 
   array = svn_sort__hash (dirents, svn_sort_compare_items_as_paths, pool);
-  
-  /* "<list path=...>" */
-  svn_xml_make_open_tag (&sb, pool, svn_xml_normal, "list",
-                         "path", path[0] == '\0' ? "." : path,
-                         NULL);
+
+  {
+    /* "<list path=...>" */
+    svn_stringbuf_t *sb = svn_stringbuf_create ("", pool);
+    svn_xml_make_open_tag (&sb, pool, svn_xml_normal, "list",
+                           "path", path[0] == '\0' ? "." : path,
+                           NULL);
+    SVN_ERR (svn_cl__error_checked_fputs (sb->data, stdout));
+  }
 
   for (i = 0; i < array->nelts; ++i)
     {
+      svn_stringbuf_t *sb;
       const char *utf8_entryname;
       svn_dirent_t *dirent;
       svn_sort__item_t *item;
@@ -173,6 +190,8 @@ print_dirents_xml (apr_hash_t *dirents,
       utf8_entryname = item->key;
 
       dirent = apr_hash_get (dirents, utf8_entryname, item->klen);
+
+      sb = svn_stringbuf_create ("", subpool);
 
       /* "<entry ...>" */
       svn_xml_make_open_tag (&sb, subpool, svn_xml_protect_pcdata, "entry",
@@ -221,14 +240,30 @@ print_dirents_xml (apr_hash_t *dirents,
 
       /* "</entry>" */
       svn_xml_make_close_tag (&sb, subpool, "entry");
+
+      SVN_ERR (svn_cl__error_checked_fputs (sb->data, stdout));
     }
 
   svn_pool_destroy (subpool);
   
-  /* "</list>" */
-  svn_xml_make_close_tag (&sb, pool, "list");
+  {
+    /* "</list>" */
+    svn_stringbuf_t *sb = svn_stringbuf_create ("", pool);
+    svn_xml_make_close_tag (&sb, pool, "list");
+    SVN_ERR (svn_cl__error_checked_fputs (sb->data, stdout));
+  }
 
-  return svn_cmdline_printf (pool, "%s", sb->data);
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+print_footer_xml (apr_pool_t *pool)
+{
+  /* "</lists>" */
+  svn_stringbuf_t *sb = svn_stringbuf_create ("", pool);
+  svn_xml_make_close_tag (&sb, pool, "lists");
+  return svn_cl__error_checked_fputs (sb->data, stdout);
 }
 
 
@@ -262,17 +297,7 @@ svn_cl__ls (apr_getopt_t *os,
          everything in a top-level element. This makes the output in
          its entirety a well-formed XML document. */
       if (! opt_state->incremental)
-        {
-          svn_stringbuf_t *sb = svn_stringbuf_create ("", pool);
-
-          /* <?xml version="1.0" encoding="utf-8"?> */
-          svn_xml_make_header (&sb, pool);
-          
-          /* "<lists>" */
-          svn_xml_make_open_tag (&sb, pool, svn_xml_normal, "lists", NULL);
-          
-          SVN_ERR (svn_cmdline_printf (pool, "%s", sb->data));
-        }
+        SVN_ERR (print_header_xml (pool));
     }
   else
     {
@@ -312,12 +337,7 @@ svn_cl__ls (apr_getopt_t *os,
   if (opt_state->xml)
     {
       if (! opt_state->incremental)
-        {
-          svn_stringbuf_t *sb = svn_stringbuf_create ("", pool);
-          /* "</lists>" */
-          svn_xml_make_close_tag (&sb, pool, "lists");
-          SVN_ERR (svn_cmdline_printf (pool, "%s", sb->data));
-        }
+        SVN_ERR (print_footer_xml (pool));
     }
 
   return SVN_NO_ERROR;
