@@ -127,6 +127,14 @@ typedef struct {
   */
   const char *txn_name;
 
+  /* If the root is part of a transaction, this contains the FS's transaction
+     handle. It may be NULL if this root corresponds to a specific revision.
+     It may also be NULL if we have not opened the transaction yet.
+
+     WORKING resources use this field.
+  */
+  svn_fs_txn_t *txn;
+
 } dav_svn_root;
 
 /* internal structure to hold information about this resource */

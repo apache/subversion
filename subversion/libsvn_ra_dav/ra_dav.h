@@ -43,6 +43,12 @@ typedef struct {
 } svn_ra_session_t;
 
 
+#ifdef SVN_DEBUG
+#define DEBUG_CR "\n"
+#else
+#define DEBUG_CR ""
+#endif
+
 
 /** plugin function prototypes */
 

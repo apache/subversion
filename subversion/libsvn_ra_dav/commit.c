@@ -27,6 +27,7 @@
 #endif
 
 #include <ne_request.h>
+#include <ne_props.h>
 
 #include "svn_pools.h"
 #include "svn_error.h"
@@ -122,6 +123,8 @@ static const ne_propname fetch_props[] =
   { "DAV:", "checked-in" },
   { NULL }
 };
+
+static const ne_propname log_message_prop = { SVN_PROP_PREFIX, "log" };
 
 
 static svn_error_t * simple_request(svn_ra_session_t *ras, const char *method,
@@ -440,7 +443,8 @@ static svn_error_t * do_proppatch(svn_ra_session_t *ras,
                                   resource_baton_t *rb)
 {
   ne_request *req;
-  int rv, code;
+  int rv;
+  int code;
   ne_buffer *body; /* ### using an ne_buffer because it can realloc */
 
   /* just punt if there are no changes to make. */
@@ -452,7 +456,8 @@ static svn_error_t * do_proppatch(svn_ra_session_t *ras,
    * doesn't really do anything clever. */
   body = ne_buffer_create();
 
-  ne_buffer_zappend(body, "<?xml version=\"1.0\" encoding=\"utf-8\" ?>" EOL
+  ne_buffer_zappend(body,
+                    "<?xml version=\"1.0\" encoding=\"utf-8\" ?>" DEBUG_CR
                     "<D:propertyupdate xmlns:D=\"DAV:\" xmlns:S=\""
                     SVN_RA_DAV__CUSTOM_NAMESPACE "\">");
 
@@ -884,24 +889,44 @@ static svn_error_t * commit_close_edit(void *edit_baton)
   return NULL;
 }
 
-static svn_error_t *get_baseline_url(svn_ra_session_t *ras,
-                                     const svn_string_t **baseline)
+static svn_error_t * apply_log_message(commit_ctx_t *cc,
+                                       svn_stringbuf_t *log_msg)
 {
+  apr_pool_t *pool = cc->ras->pool;
   const svn_string_t *vcc;
+  const svn_string_t *baseline_url;
+  resource_t baseline_rsrc = { 0 };
+  ne_proppatch_operation po[2] = { { 0 } };
+  int rv;
 
   /* ### this whole sequence can/should be replaced with an expand-property
      ### REPORT when that is available on the server. */
 
-  /* ### should we perform an OPTIONS to validate the server we're about
-     ### to talk to? */
-
   /* fetch the DAV:version-controlled-configuration from the session's URL */
-  SVN_ERR( svn_ra_dav__get_one_prop(&vcc, ras, ras->root.path, NULL,
-                                    &svn_ra_dav__vcc_prop, ras->pool) );
+  SVN_ERR( svn_ra_dav__get_one_prop(&vcc, cc->ras, cc->ras->root.path, NULL,
+                                    &svn_ra_dav__vcc_prop, pool) );
 
   /* Get the Baseline from the DAV:checked-in value */
-  SVN_ERR( svn_ra_dav__get_one_prop(baseline, ras, vcc->data, NULL,
-                                    &svn_ra_dav__checked_in_prop, ras->pool) );
+  SVN_ERR( svn_ra_dav__get_one_prop(&baseline_url, cc->ras, vcc->data, NULL,
+                                    &svn_ra_dav__checked_in_prop, pool) );
+
+  baseline_rsrc.vsn_url = baseline_url->data;
+  SVN_ERR( checkout_resource(cc, &baseline_rsrc) );
+
+  po[0].name = &log_message_prop;
+  po[0].type = ne_propset;
+  po[0].value = log_msg->data;  /* ### do not allow embedded nulls */
+
+  rv = ne_proppatch(cc->ras->sess, baseline_rsrc.wr_url, po);
+  if (rv != NE_OK)
+    {
+      return svn_error_createf(SVN_ERR_RA_REQUEST_FAILED, 0, NULL,
+                               pool,
+                               "The log message's PROPPATCH request failed "
+                               "(neon: %d) (%s)",
+                               rv, baseline_rsrc.wr_url);
+    }
+
 
   return SVN_NO_ERROR;
 }
@@ -919,8 +944,6 @@ svn_error_t * svn_ra_dav__get_commit_editor(
   svn_ra_session_t *ras = session_baton;
   commit_ctx_t *cc;
   svn_delta_edit_fns_t *commit_editor;
-  const svn_string_t *baseline_url;
-  resource_t baseline_rsrc = { 0 };
 
   cc = apr_pcalloc(ras->pool, sizeof(*cc));
   cc->ras = ras;
@@ -934,12 +957,21 @@ svn_error_t * svn_ra_dav__get_commit_editor(
 
   cc->deleted = apr_array_make(ras->pool, 10, sizeof(const char *));
 
+  /* ### should we perform an OPTIONS to validate the server we're about
+     ### to talk to? */
+
+  /*
+  ** Create an Activity. This corresponds directly to an FS transaction.
+  ** We will check out all further resources within the context of this
+  ** activity.
+  */
   SVN_ERR( create_activity(cc) );
 
-  SVN_ERR( get_baseline_url(ras, &baseline_url) );
-
-  baseline_rsrc.vsn_url = baseline_url->data;
-  SVN_ERR( checkout_resource(cc, &baseline_rsrc) );
+  /*
+  ** Find the latest baseline resource, check it out, and then apply the
+  ** log message onto the thing.
+  */
+  SVN_ERR( apply_log_message(cc, log_msg) );
 
   /*
   ** Set up the editor.
