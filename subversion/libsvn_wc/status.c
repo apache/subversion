@@ -62,23 +62,23 @@ add_ignore_patterns (const char *dirpath,
                      apr_array_header_t *patterns,
                      apr_pool_t *pool)
 {
-  svn_stringbuf_t *value = NULL;
-  svn_stringbuf_t *name = svn_stringbuf_create (SVN_PROP_IGNORE, pool);
+  const svn_string_t *value;
 
   /* Try to load the SVN_PROP_IGNORE property. */
-  SVN_ERR (svn_wc_prop_get (&value, name, 
-                            svn_stringbuf_create (dirpath, pool), pool));
+  SVN_ERR (svn_wc_prop_get (&value, SVN_PROP_IGNORE, dirpath, pool));
+
   if (value != NULL)
     {
-      char sep[3] = "\n\r";
+      static const char sep[3] = "\n\r";
       char *last;
-      char *p = apr_strtok (value->data, sep, &last);
+      char *pats = apr_pstrdup (pool, value->data);
+      char *p = apr_strtok (pats, sep, &last);
+
       while (p)
         {
           if (p[0] != '\0')
             {
-              (*((const char **) apr_array_push (patterns))) = 
-                apr_pstrdup (pool, p);
+              (*((const char **) apr_array_push (patterns))) = p;
             }
           p = apr_strtok (NULL, sep, &last);
         } 

@@ -530,9 +530,9 @@ svn_client_move (svn_stringbuf_t *src_path,
  
    Use POOL for all memory allocation. */
 svn_error_t *
-svn_client_propset (svn_stringbuf_t *propname,
-                    svn_stringbuf_t *propval,
-                    svn_stringbuf_t *target,
+svn_client_propset (const char *propname,
+                    const svn_string_t *propval,
+                    const char *target,
                     svn_boolean_t recurse,
                     apr_pool_t *pool);
 
@@ -552,8 +552,8 @@ svn_client_propset (svn_stringbuf_t *propname,
    empty. */
 svn_error_t *
 svn_client_propget (apr_hash_t **props,
-                    svn_stringbuf_t *propname,
-                    svn_stringbuf_t *target,
+                    const char *propname,
+                    const char *target,
                     svn_boolean_t recurse,
                     apr_pool_t *pool);
 
@@ -567,7 +567,7 @@ svn_client_propget (apr_hash_t **props,
    (and including) TARGET. */
 svn_error_t *
 svn_client_proplist (apr_array_header_t **props,
-                     svn_stringbuf_t *target, 
+                     const char *target, 
                      svn_boolean_t recurse,
                      apr_pool_t *pool);
 

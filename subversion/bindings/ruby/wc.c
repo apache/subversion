@@ -139,14 +139,12 @@ static VALUE
 prop_list (VALUE class, VALUE aPath)
 {
   apr_hash_t *table;
-  svn_stringbuf_t *path;
   apr_pool_t *pool;
   svn_error_t *err;
 
   Check_Type (aPath, T_STRING);
   pool = svn_pool_create (NULL);
-  path = svn_stringbuf_create (StringValuePtr (aPath), pool);
-  err = svn_wc_prop_list (&table, path, pool);
+  err = svn_wc_prop_list (&table, StringValuePtr (aPath), pool);
   if (err)
     {
       apr_pool_destroy (pool);
@@ -178,7 +176,7 @@ prop_list (VALUE class, VALUE aPath)
 static VALUE
 wc_prop_get (VALUE class, VALUE aName, VALUE aPath)
 {
-  svn_stringbuf_t *value, *name, *path;
+  const svn_string_t *value;
   apr_pool_t *pool;
   svn_error_t *err;
 
@@ -186,9 +184,8 @@ wc_prop_get (VALUE class, VALUE aName, VALUE aPath)
   Check_Type (aPath, T_STRING);
 
   pool = svn_pool_create (NULL);
-  name = svn_stringbuf_create (StringValuePtr (aName), pool);
-  path = svn_stringbuf_create (StringValuePtr (aPath), pool);
-  err = svn_wc_prop_get (&value, name, path, pool);
+  err = svn_wc_prop_get (&value, StringValuePtr (aName),
+                         StringValuePtr(aPath), pool);
 
   if (err)
     {
@@ -202,7 +199,7 @@ wc_prop_get (VALUE class, VALUE aName, VALUE aPath)
 static VALUE
 wc_prop_set (VALUE class, VALUE aName, VALUE aValue, VALUE aPath)
 {
-  svn_stringbuf_t *value, *name, *path;
+  const svn_string_t *value;
   apr_pool_t *pool;
   svn_error_t *err;
 
@@ -211,11 +208,10 @@ wc_prop_set (VALUE class, VALUE aName, VALUE aValue, VALUE aPath)
   Check_Type (aPath, T_STRING);
 
   pool = svn_pool_create (NULL);
-  name = svn_stringbuf_create (StringValuePtr (aName), pool);
-  value = svn_stringbuf_ncreate (StringValuePtr (aValue),
-                                 RSTRING (aValue)->len, pool);
-  path = svn_stringbuf_create (StringValuePtr (aPath), pool);
-  err = svn_wc_prop_set (value, name, path, pool);
+  value = svn_stringf_ncreate (StringValuePtr (aValue),
+                               RSTRING (aValue)->len, pool);
+  err = svn_wc_prop_set (StringValuePtr (aName), value,
+                         StringValuePtr (aPath), pool);
 
   if (err)
     {
@@ -229,15 +225,10 @@ wc_prop_set (VALUE class, VALUE aName, VALUE aValue, VALUE aPath)
 static VALUE
 is_wc_prop (VALUE class, VALUE aPath)
 {
-  svn_stringbuf_t *name;
   svn_boolean_t wc_p;
-  apr_pool_t *pool;
 
   Check_Type (aPath, T_STRING);
-  pool = svn_pool_create (NULL);
-  name = svn_stringbuf_create (StringValuePtr (aPath), pool);
-  wc_p = svn_wc_is_wc_prop (name);
-  apr_pool_destroy (pool);
+  wc_p = svn_wc_is_wc_prop (StringValePtr (aPath));
 
   if (wc_p)
     return Qtrue;

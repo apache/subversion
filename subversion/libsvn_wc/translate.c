@@ -90,7 +90,7 @@ translate_keyword_subst (char *buf,
                          apr_size_t *len,
                          const char *keyword,
                          apr_size_t keyword_len,
-                         svn_string_t *value)
+                         const svn_string_t *value)
 {
   char *buf_ptr;
 
@@ -119,13 +119,15 @@ translate_keyword_subst (char *buf,
           buf_ptr[1] = ' ';
           if (value->len)
             {
+              apr_size_t vallen = value->len;
+
               /* "$keyword: value $" */
-              if (value->len > (SVN_KEYWORD_MAX_LEN - 5))
-                value->len = SVN_KEYWORD_MAX_LEN - 5;
-              strncpy (buf_ptr + 2, value->data, value->len);
-              buf_ptr[2 + value->len] = ' ';
-              buf_ptr[2 + value->len + 1] = '$';
-              *len = 5 + keyword_len + value->len;
+              if (vallen > (SVN_KEYWORD_MAX_LEN - 5))
+                vallen = SVN_KEYWORD_MAX_LEN - 5;
+              strncpy (buf_ptr + 2, value->data, vallen);
+              buf_ptr[2 + vallen] = ' ';
+              buf_ptr[2 + vallen + 1] = '$';
+              *len = 5 + keyword_len + vallen;
             }
           else
             {
@@ -161,13 +163,15 @@ translate_keyword_subst (char *buf,
           buf_ptr[1] = ' ';
           if (value->len)
             {
+              apr_size_t vallen = value->len;
+
               /* "$keyword: value $" */
-              if (value->len > (SVN_KEYWORD_MAX_LEN - 5))
-                value->len = SVN_KEYWORD_MAX_LEN - 5;
-              strncpy (buf_ptr + 2, value->data, value->len);
-              buf_ptr[2 + value->len] = ' ';
-              buf_ptr[2 + value->len + 1] = '$';
-              *len = 5 + keyword_len + value->len;
+              if (vallen > (SVN_KEYWORD_MAX_LEN - 5))
+                vallen = SVN_KEYWORD_MAX_LEN - 5;
+              strncpy (buf_ptr + 2, value->data, vallen);
+              buf_ptr[2 + vallen] = ' ';
+              buf_ptr[2 + vallen + 1] = '$';
+              *len = 5 + keyword_len + vallen;
             }
           else
             {
@@ -205,7 +209,7 @@ translate_keyword (char *buf,
                    svn_wc_keywords_t *keywords)
 {
   const char *keyword;
-  svn_string_t *value;
+  const svn_string_t *value;
   int keyword_len;
 
   /* Make sure we gotz good stuffs. */

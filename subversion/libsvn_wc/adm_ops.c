@@ -673,11 +673,15 @@ svn_wc_add (svn_stringbuf_t *path,
       /* Try to detect the mime-type of this new addition. */
       SVN_ERR (svn_io_detect_mimetype (&mimetype, path->data, pool));
       if (mimetype)
-        SVN_ERR (svn_wc_prop_set 
-                 (svn_stringbuf_create (SVN_PROP_MIME_TYPE, pool),
-                  svn_stringbuf_create (mimetype, pool),
-                  path,
-                  pool));
+        {
+          svn_string_t mt_str;
+          mt_str.data = mimetype;
+          mt_str.len = strlen(mimetype);
+          SVN_ERR (svn_wc_prop_set (SVN_PROP_MIME_TYPE,
+                                    &mt_str,
+                                    path->data,
+                                    pool));
+        }
     }  
   else /* scheduling a directory for addition */
     {

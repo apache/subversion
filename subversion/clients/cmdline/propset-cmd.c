@@ -39,13 +39,13 @@ svn_cl__propset (apr_getopt_t *os,
                  apr_pool_t *pool)
 {
   svn_stringbuf_t *propname;
-  svn_stringbuf_t *propval = NULL;
+  const svn_string_t *propval = NULL;
   apr_array_header_t *targets;
   int i;
   int num_args_wanted = 2;
 
   if (opt_state->filedata) {
-    propval = opt_state->filedata;
+    propval = svn_string_create_from_buf (opt_state->filedata, pool);
     num_args_wanted = 1;
   }
   /* PROPNAME and PROPVAL expected as first 2 arguments if filedata
@@ -55,7 +55,10 @@ svn_cl__propset (apr_getopt_t *os,
 
   propname  = ((svn_stringbuf_t **) (opt_state->args->elts))[0];
   if (num_args_wanted == 2)
-    propval = ((svn_stringbuf_t **) (opt_state->args->elts))[1];
+    {
+      svn_stringbuf_t *buf = ((svn_stringbuf_t **) (opt_state->args->elts))[1];
+      propval = svn_string_create_from_buf (buf, pool);
+    }
 
   /* suck up all the remaining arguments into a targets array */
   targets = svn_cl__args_to_target_array (os, pool);
@@ -66,7 +69,7 @@ svn_cl__propset (apr_getopt_t *os,
   for (i = 0; i < targets->nelts; i++)
     {
       svn_stringbuf_t *target = ((svn_stringbuf_t **) (targets->elts))[i];
-      SVN_ERR (svn_client_propset(propname, propval, target,
+      SVN_ERR (svn_client_propset(propname->data, propval, target->data,
                                   opt_state->recursive, pool));
 
       if (! opt_state->quiet)

@@ -102,7 +102,7 @@ struct dir_baton
      yet in the parent's list of entries */
   svn_boolean_t added;
 
-  /* An array of (svn_prop_t *)'s, representing all the property
+  /* An array of svn_prop_t structures, representing all the property
      changes to be applied to this file. */
   apr_array_header_t *propchanges;
 
@@ -163,7 +163,7 @@ make_dir_baton (svn_stringbuf_t *name,
   d->parent_baton = parent_baton;
   d->ref_count    = 1;
   d->pool         = subpool;
-  d->propchanges  = apr_array_make (subpool, 1, sizeof(svn_prop_t *));
+  d->propchanges  = apr_array_make (subpool, 1, sizeof(svn_prop_t));
   d->added        = added;
 
   if (parent_baton)
@@ -302,21 +302,21 @@ struct file_baton
 
   /* Same case as above, but for SVN_PROP_KEYWORDS property. */
   svn_boolean_t got_new_keywords_value;
-  svn_stringbuf_t *new_keywords_value;
+  const svn_string_t *new_keywords_value;
 
   /* This gets set if there's a conflict when merging a prop-delta
      into the locally modified props.  */
   svn_boolean_t prop_conflict;
 
-  /* An array of (svn_prop_t *)'s, representing all the property
+  /* An array of svn_prop_t structures, representing all the property
      changes to be applied to this file. */
   apr_array_header_t *propchanges;
 
-  /* An array of (svn_prop_t *)'s, representing all the "wc" property
+  /* An array of svn_prop_t structures, representing all the "wc" property
      changes to be stored for this file. */
   apr_array_header_t *wcpropchanges;
 
-  /* An array of (svn_prop_t *)'s, representing all the "entry"
+  /* An array of svn_prop_t structures, representing all the "entry"
      property changes to be stored for this file. */
   apr_array_header_t *entrypropchanges;
 
@@ -346,9 +346,9 @@ make_file_baton (struct dir_baton *parent_dir_baton, svn_stringbuf_t *name)
   f->name       = svn_stringbuf_dup (name, subpool);
 
   f->path       = path;
-  f->propchanges = apr_array_make (subpool, 1, sizeof(svn_prop_t *));
-  f->wcpropchanges = apr_array_make (subpool, 1, sizeof(svn_prop_t *));
-  f->entrypropchanges = apr_array_make (subpool, 1, sizeof(svn_prop_t *));
+  f->propchanges = apr_array_make (subpool, 1, sizeof(svn_prop_t));
+  f->wcpropchanges = apr_array_make (subpool, 1, sizeof(svn_prop_t));
+  f->entrypropchanges = apr_array_make (subpool, 1, sizeof(svn_prop_t));
 
   parent_dir_baton->ref_count++;
 
@@ -658,7 +658,7 @@ change_dir_prop (void *dir_baton,
                  svn_stringbuf_t *value)
 {
   svn_stringbuf_t *local_name, *local_value;
-  svn_prop_t *propchange, **receiver;
+  svn_prop_t *propchange;
   struct dir_baton *db = dir_baton;
 
   /* Duplicate storage of name/value pair;  they should live in the
@@ -674,20 +674,26 @@ change_dir_prop (void *dir_baton,
 
   /* If this is a 'wc' prop, store it in the administrative area and
      get on with life.  It's not a regular versioned property. */
-  if (svn_wc_is_wc_prop (name))
+  if (svn_wc_is_wc_prop (name->data))
     {
-      svn_string_t value_struct;
+      if (local_value == NULL)
+        SVN_ERR (svn_wc__wcprop_set (name->data, NULL,
+                                     db->path->data, db->pool));
+      else
+        {
+          svn_string_t value_struct;
 
-      value_struct.data = value->data;
-      value_struct.len = value->len;
-      SVN_ERR (svn_wc__wcprop_set (name->data, &value_struct, db->path->data,
-                                   db->pool));
+          value_struct.data = local_value->data;
+          value_struct.len = local_value->len;
+          SVN_ERR (svn_wc__wcprop_set (name->data, &value_struct,
+                                       db->path->data, db->pool));
+        }
       return SVN_NO_ERROR;
     }
   
   /* If this is an 'entry' prop, store it in the entries file and get
      on with life.  It's not a regular user property. */
-  else if (svn_wc_is_entry_prop (name))
+  else if (svn_wc_is_entry_prop (name->data))
     {
       /* make a temporary hash */
       apr_pool_t *subpool = svn_pool_create (db->pool);
@@ -722,14 +728,10 @@ change_dir_prop (void *dir_baton,
 
   /* Else, it's a real ("normal") property... */
 
-  /* Build propchange object */
-  propchange = apr_pcalloc (db->pool, sizeof(*propchange));
-  propchange->name = local_name;
-  propchange->value = local_value;
-
-  /* Push the object to the directory baton's array of propchanges */
-  receiver = (svn_prop_t **) apr_array_push (db->propchanges);
-  *receiver = propchange;
+  /* Push a new propchange to the directory baton's array of propchanges */
+  propchange = apr_array_push (db->propchanges);
+  propchange->name = local_name->data;
+  propchange->value = svn_string_create_from_buf (local_value, db->pool);
 
   /* Let close_dir() know that propchanges are waiting to be
      applied. */
@@ -776,7 +778,7 @@ close_directory (void *dir_baton)
 
       /* Merge pending properties into temporary files and detect
          conflicts. */
-      err = svn_wc__do_property_merge (db->path, NULL,
+      err = svn_wc__do_property_merge (db->path->data, NULL,
                                        db->propchanges, db->pool,
                                        &entry_accum, &conflicts);
       if (err) 
@@ -794,8 +796,8 @@ close_directory (void *dir_baton)
                              svn_xml_self_closing,
                              SVN_WC__LOG_MODIFY_ENTRY,
                              SVN_WC__LOG_ATTR_NAME,
-                             svn_stringbuf_create
-                             (SVN_WC_ENTRY_THIS_DIR, db->pool),
+                             svn_stringbuf_create (SVN_WC_ENTRY_THIS_DIR,
+                                                   db->pool),
                              SVN_WC_ENTRY_ATTR_REVISION,
                              svn_stringbuf_create (revision_str, db->pool),
                              NULL);
@@ -815,12 +817,12 @@ close_directory (void *dir_baton)
                                svn_xml_self_closing,
                                SVN_WC__LOG_MODIFY_ENTRY,
                                SVN_WC__LOG_ATTR_NAME,
-                               svn_stringbuf_create
-                               (SVN_WC_ENTRY_THIS_DIR, db->pool),
+                               svn_stringbuf_create (SVN_WC_ENTRY_THIS_DIR,
+                                                     db->pool),
                                SVN_WC_ENTRY_ATTR_PROP_TIME,
                                /* use wfile time */
                                svn_stringbuf_create (SVN_WC_TIMESTAMP_WC,
-                                                  db->pool),
+                                                     db->pool),
                                NULL);
 
       
@@ -1055,40 +1057,38 @@ change_file_prop (void *file_baton,
                   svn_stringbuf_t *value)
 {
   struct file_baton *fb = file_baton;
-  svn_stringbuf_t *local_name, *local_value;
-  svn_prop_t *propchange, **receiver;
+  const char *local_name;
+  const svn_string_t *local_value;
+  svn_prop_t *propchange;
 
   /* Duplicate storage of name/value pair;  they should live in the
      file baton's pool, not some pool within the editor's driver. :)
   */
-  local_name = svn_stringbuf_dup (name, fb->pool);
+  local_name = apr_pstrdup (fb->pool, name->data);
   if (value)
     /* remember that value could be NULL, signifying a property
        `delete' */
-    local_value = svn_stringbuf_dup (value, fb->pool);
+    local_value = svn_string_create_from_buf (value, fb->pool);
   else
     local_value = NULL;
 
-  /* Build propchange object */
-  propchange = apr_pcalloc (fb->pool, sizeof(*propchange));
-  propchange->name = local_name;
-  propchange->value = local_value;
-
   /* If this is a 'wc' prop, store it in a different array. */
-  if (svn_wc_is_wc_prop (name))
+  if (svn_wc_is_wc_prop (name->data))
     {
-      receiver = (svn_prop_t **) apr_array_push (fb->wcpropchanges);
-      *receiver = propchange;
+      propchange = apr_array_push (fb->wcpropchanges);
+      propchange->name = local_name;
+      propchange->value = local_value;
       
       fb->wcprop_changed = 1;
       return SVN_NO_ERROR;
     }
   
   /* If this is an 'entry' prop, store it a different array. */
-  else if (svn_wc_is_entry_prop (name))
+  else if (svn_wc_is_entry_prop (name->data))
     {
-      receiver = (svn_prop_t **) apr_array_push (fb->entrypropchanges);
-      *receiver = propchange;
+      propchange = apr_array_push (fb->entrypropchanges);
+      propchange->name = local_name;
+      propchange->value = local_value;
       
       fb->entryprop_changed = 1;
       return SVN_NO_ERROR;
@@ -1096,16 +1096,17 @@ change_file_prop (void *file_baton,
 
   /* Else, it's a normal property... */
 
-  /* Push the object to the file baton's array of propchanges */
-  receiver = (svn_prop_t **) apr_array_push (fb->propchanges);
-  *receiver = propchange;
+  /* Push a new propchange to the file baton's array of propchanges */
+  propchange = apr_array_push (fb->propchanges);
+  propchange->name = local_name;
+  propchange->value = local_value;
 
   /* Let close_file() know that propchanges are waiting to be
      applied. */
   fb->prop_changed = 1;
 
   /* If the eol-style was set, remember info for close_file(). */
-  if (! strcmp (local_name->data, SVN_PROP_EOL_STYLE))
+  if (! strcmp (local_name, SVN_PROP_EOL_STYLE))
     {
       svn_wc__eol_style_from_value (&fb->new_style, &fb->new_eol, 
                                     value ? value->data : NULL);
@@ -1113,7 +1114,7 @@ change_file_prop (void *file_baton,
     }
 
   /* If the keywords property was set, remember info for close_file(). */
-  if (! strcmp (local_name->data, SVN_PROP_KEYWORDS))
+  if (! strcmp (local_name, SVN_PROP_KEYWORDS))
     {
       fb->new_keywords_value = local_value;
       fb->got_new_keywords_value = TRUE;
@@ -1257,7 +1258,7 @@ make_patch_open_tag (svn_stringbuf_t **entry_accum,
    matches a keyword (and is already set in KEYWORDS) then make
    KEYWORDS field point to this new value. */
 static void
-latest_keyword_data (apr_array_header_t *props,
+latest_keyword_data (const apr_array_header_t *props,
                      svn_wc_keywords_t *keywords,
                      apr_pool_t *pool)
 {
@@ -1270,39 +1271,36 @@ latest_keyword_data (apr_array_header_t *props,
   for (i = 0; i < props->nelts; i++)
     {
       svn_stringbuf_t *propname;
-      svn_prop_t *prop;
-      prop = (((svn_prop_t **)(props)->elts)[i]);
+      const svn_prop_t *prop;
+
+      prop = &APR_ARRAY_IDX(props, i, svn_prop_t);
       
       /* strip the 'svn:entry:' prefix from the property name. */
-      propname = svn_stringbuf_dup (prop->name, pool);
+      propname = svn_stringbuf_create (prop->name, pool);
       svn_wc__strip_entry_prefix (propname);
      
       if (keywords->revision
           && (! strcmp (propname->data, SVN_ENTRY_ATTR_COMMITTED_REV)))
         {
-          keywords->revision->data = prop->value->data;
-          keywords->revision->len = prop->value->len;
+          keywords->revision = prop->value;
         }
 
       if (keywords->date
           && (! strcmp (propname->data, SVN_ENTRY_ATTR_COMMITTED_DATE)))
         {
-          keywords->date->data = prop->value->data;
-          keywords->date->len = prop->value->len;
+          keywords->date = prop->value;
         }
 
       if (keywords->author
           && (! strcmp (propname->data, SVN_ENTRY_ATTR_LAST_AUTHOR)))
         {
-          keywords->author->data = prop->value->data;
-          keywords->author->len = prop->value->len;
+          keywords->author = prop->value;
         }
 
       if (keywords->url
           && (! strcmp (propname->data, SVN_WC_ENTRY_ATTR_URL)))
         {
-          keywords->url->data = prop->value->data;
-          keywords->url->len = prop->value->len;
+          keywords->url = prop->value;
         }
     }
 }
@@ -1396,7 +1394,8 @@ close_file (void *file_baton)
          we'll need to know before attempting any textual merging.
          (The textual merging process cares about conflicts on the
          eol-style and keywords properties.) */
-      err = svn_wc__do_property_merge (fb->dir_baton->path, fb->name,
+      err = svn_wc__do_property_merge (fb->dir_baton->path->data,
+                                       fb->name->data,
                                        fb->propchanges, fb->pool,
                                        &entry_accum, &prop_conflicts);
       if (err) 
@@ -1415,11 +1414,20 @@ close_file (void *file_baton)
       /* foreach entry prop... */
       for (i = 0; i < fb->entrypropchanges->nelts; i++)
         {
-          svn_prop_t *prop;
-          prop = (((svn_prop_t **)(fb->entrypropchanges)->elts)[i]);
+          const svn_prop_t *prop;
+          svn_stringbuf_t *propname;
+          svn_stringbuf_t *propval;
+
+          prop = &APR_ARRAY_IDX(fb->entrypropchanges, i, svn_prop_t);
 
           /* strip the 'svn:wc:entry:' prefix from the property name. */
-          svn_wc__strip_entry_prefix (prop->name);
+          propname = svn_stringbuf_create (prop->name, fb->pool);
+          svn_wc__strip_entry_prefix (propname);
+
+          if (prop->value)
+            propval = svn_stringbuf_create_from_string(prop->value, fb->pool);
+          else
+            propval = svn_stringbuf_create ("", fb->pool);
 
           /* append a command to the log which will append the
              property as a entry attribute. */
@@ -1429,10 +1437,8 @@ close_file (void *file_baton)
                                  SVN_WC__LOG_MODIFY_ENTRY,
                                  SVN_WC__LOG_ATTR_NAME,
                                  fb->name,
-                                 prop->name->data,
-                                 prop->value ? 
-                                      prop->value : 
-                                      svn_stringbuf_create ("", fb->pool),
+                                 propname->data,
+                                 propval,
                                  NULL);         
         }
     }
@@ -1474,9 +1480,9 @@ close_file (void *file_baton)
         else  /* got a new eol-style from the server */
           {            
             /* Check to see if the new property conflicted. */
-            svn_prop_t *conflict = 
-              (svn_prop_t *) apr_hash_get (prop_conflicts, SVN_PROP_EOL_STYLE,
-                                           APR_HASH_KEY_STRING);
+            const svn_prop_t *conflict = apr_hash_get (prop_conflicts,
+                                                       SVN_PROP_EOL_STYLE,
+                                                       APR_HASH_KEY_STRING);
 
             if (conflict)
               /* Use our current locally-modified style. */
@@ -1517,9 +1523,9 @@ close_file (void *file_baton)
         else  /* got a new keywords value from the server */
           {            
             /* Check to see if the new property conflicted. */
-            svn_prop_t *conflict = 
-              (svn_prop_t *) apr_hash_get (prop_conflicts, SVN_PROP_KEYWORDS,
-                                           APR_HASH_KEY_STRING);
+            const svn_prop_t *conflict = apr_hash_get (prop_conflicts,
+                                                       SVN_PROP_KEYWORDS,
+                                                       APR_HASH_KEY_STRING);
 
             if (conflict)
               /* Use our current locally-modified style. */
@@ -2000,13 +2006,10 @@ close_file (void *file_baton)
       int i;
       for (i = 0; i < fb->wcpropchanges->nelts; i++)
         {
-          svn_prop_t *prop;
-          svn_string_t value_struct;
+          const svn_prop_t *prop;
 
-          prop = (((svn_prop_t **)(fb->wcpropchanges)->elts)[i]);
-          value_struct.data = prop->value->data;
-          value_struct.len = prop->value->len;
-          SVN_ERR (svn_wc__wcprop_set (prop->name->data, &value_struct,
+          prop = &APR_ARRAY_IDX(fb->wcpropchanges, i, svn_prop_t);
+          SVN_ERR (svn_wc__wcprop_set (prop->name, prop->value,
                                        fb->path->data, fb->pool));
         }
     }

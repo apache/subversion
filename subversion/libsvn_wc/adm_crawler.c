@@ -573,6 +573,8 @@ do_prop_deltas (svn_stringbuf_t *path,
   apr_array_header_t *local_propchanges;
   apr_hash_t *localprops = apr_hash_make (pool);
   apr_hash_t *baseprops = apr_hash_make (pool);
+  svn_stringbuf_t *propname;
+  svn_stringbuf_t *propval;
   
   /* First, get the prop_path from the original path */
   SVN_ERR (svn_wc__prop_path (&prop_path, path, 0, pool));
@@ -585,28 +587,43 @@ do_prop_deltas (svn_stringbuf_t *path,
   SVN_ERR (svn_io_copy_file (prop_path->data, tmp_prop_path->data, pool));
 
   /* Load all properties into hashes */
-  SVN_ERR (svn_wc__load_prop_file (tmp_prop_path, localprops, pool));
-  SVN_ERR (svn_wc__load_prop_file (prop_base_path, baseprops, pool));
+  SVN_ERR (svn_wc__load_prop_file (tmp_prop_path->data, localprops, pool));
+  SVN_ERR (svn_wc__load_prop_file (prop_base_path->data, baseprops, pool));
   
   /* Get an array of local changes by comparing the hashes. */
   SVN_ERR (svn_wc__get_local_propchanges 
            (&local_propchanges, localprops, baseprops, pool));
-  
+
+  /* create some reusable buffers for the prop name and value */
+  propname = svn_stringbuf_create ("", pool);
+  propval = svn_stringbuf_create ("", pool);
+
   /* Apply each local change to the baton */
   for (i = 0; i < local_propchanges->nelts; i++)
     {
-      svn_prop_t *change;
+      const svn_prop_t *change;
 
-      change = (((svn_prop_t **)(local_propchanges)->elts)[i]);
-      
+      change = &APR_ARRAY_IDX(local_propchanges, i, svn_prop_t);
+
+      svn_stringbuf_set (propname, change->name);
+
+      if (change->value != NULL)
+        {
+          /*
+            svn_stringbuf_nset (propval,
+                                change->value->data, change->value->len);
+          */
+          svn_stringbuf_setempty (propval);
+          svn_stringbuf_appendbytes (propval,
+                                     change->value->data, change->value->len);
+        }
+
       if (entry->kind == svn_node_file)
-        SVN_ERR (editor->change_file_prop (baton,
-                                           change->name,
-                                           change->value));
+        SVN_ERR (editor->change_file_prop (baton, propname,
+                                           change->value ? propval : NULL));
       else
-        SVN_ERR (editor->change_dir_prop (baton,
-                                          change->name,
-                                          change->value));
+        SVN_ERR (editor->change_dir_prop (baton, propname,
+                                          change->value ? propval : NULL));
     }
 
   return SVN_NO_ERROR;

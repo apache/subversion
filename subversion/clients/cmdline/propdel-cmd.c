@@ -57,8 +57,8 @@ svn_cl__propdel (apr_getopt_t *os,
   for (i = 0; i < targets->nelts; i++)
     {
       svn_stringbuf_t *target = ((svn_stringbuf_t **) (targets->elts))[i];
-      SVN_ERR (svn_client_propset (pname, NULL, target, opt_state->recursive,
-                                   pool));
+      SVN_ERR (svn_client_propset (pname->data, NULL, target->data,
+                                   opt_state->recursive, pool));
 
       if (! opt_state->quiet)
         printf ("property `%s' deleted %s from '%s'.\n", pname->data,

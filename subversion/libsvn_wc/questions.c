@@ -580,8 +580,10 @@ svn_wc_props_modified_p (svn_boolean_t *modified_p,
     apr_hash_t *localprops = apr_hash_make (subpool);
     apr_hash_t *baseprops = apr_hash_make (subpool);
 
-    SVN_ERR (svn_wc__load_prop_file (prop_path, localprops, subpool));
-    SVN_ERR (svn_wc__load_prop_file (prop_base_path, baseprops, subpool));
+    SVN_ERR (svn_wc__load_prop_file (prop_path->data, localprops, subpool));
+    SVN_ERR (svn_wc__load_prop_file (prop_base_path->data,
+                                     baseprops,
+                                     subpool));
     SVN_ERR (svn_wc__get_local_propchanges (&local_propchanges,
                                             localprops,
                                             baseprops,
@@ -701,16 +703,14 @@ svn_wc_has_binary_prop (svn_boolean_t *has_binary_prop,
                         const svn_stringbuf_t *path,
                         apr_pool_t *pool)
 {
-  svn_stringbuf_t *name, *value, *vpath;
+  const svn_string_t *value;
   apr_pool_t *subpool = svn_pool_create (pool);
 
   /* The heuristic here is simple;  a file is of type `binary' iff it
      has the `svn:mime-type' property and its value does *not* start
      with `text/'. */
 
-  vpath = svn_stringbuf_dup (path, subpool);
-  name = svn_stringbuf_create (SVN_PROP_MIME_TYPE, subpool);
-  SVN_ERR (svn_wc_prop_get (&value, name, vpath, subpool));
+  SVN_ERR (svn_wc_prop_get (&value, SVN_PROP_MIME_TYPE, path->data, subpool));
  
   if (value
       && (value->len > 5) 
