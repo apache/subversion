@@ -183,7 +183,7 @@ cleanup_fs_apr (void *data)
            (Feel free to replace this with some more sensible
            behavior.  I just don't want to throw any information into
            the bit bucket.)  */
-        fs->warning (fs->warning_baton, "%s", svn_err->message);
+        (*fs->warning) (fs->warning_baton, "%s", svn_err->message);
       
       return SVN_ERR_FS_CLEANUP;
     }
@@ -218,7 +218,7 @@ svn_fs_new (apr_pool_t *parent_pool)
 
 void
 svn_fs_set_warning_func (svn_fs_t *fs,
-                         svn_fs_warning_callback_t *warning,
+                         svn_fs_warning_callback_t warning,
                          void *warning_baton)
 {
   fs->warning = warning;

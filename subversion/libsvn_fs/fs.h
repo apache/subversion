@@ -42,7 +42,7 @@ struct svn_fs_t {
 
   /* A callback function for printing warning messages, and a baton to
      pass through to it.  */
-  svn_fs_warning_callback_t *warning;
+  svn_fs_warning_callback_t warning;
   void *warning_baton;
 
   /* A kludge for handling errors noticed by APR pool cleanup functions.
