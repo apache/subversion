@@ -12,7 +12,7 @@
 > 
 > svn_client_update2
 >    Enhancement: Ought to update all targets from the same repository to the
-> same revision.
+>    same revision.
 > 
 > svn_client_checkout
 >    Bug: doesn't mention svn_client_checkout2's "ignore_externals" argument.
@@ -38,12 +38,10 @@
 > svn_client_lock
 > svn_client_unlock
 > svn_fs_lock
-> svn_fs_attach_lock
 > svn_fs_unlock
 > svn_ra_lock
 > svn_ra_unlock
 > svn_repos_fs_lock
-> svn_repos_fs_attach_lock
 > svn_repos_fs_unlock
 > svn_wc_prop_set2
 >    Bug: parameter "force" needs a better name (and, in some cases,
@@ -78,21 +76,20 @@
 > svn_fs_create_access
 >    No need to say "username must be non-NULL".
 > 
-> svn_fs_attach_lock
->    Contradiction: "@a lock->owner must be filled in with an
->    authenticated username.  If not, ...".  Change "must" to "may".
-> 
 > svn_fs_lock
-> svn_fs_attach_lock
 >    Contradiction: "If @a lock->path is already locked, then return @c
 >    SVN_ERR_FS_PATH_LOCKED. If @a force is true, then steal the existing
 >    lock anyway, ...".  Change to "... unless @a force is true, in which
 >    case ..." or some such.
-> 
+
+cmpilato
+
 > svn_fs_unlock
 >    Contradiction.  Before "return @c SVN_ERR_FS_LOCK_OWNER_MISMATCH",
 >    add "and @a force is false,".
-> 
+
+cmpilato
+
 > svn_ra_lock_callback_t
 >    Clarification: change "do_lock should be" to "do_lock is".
 > 
@@ -100,11 +97,15 @@
 > svn_repos_fs_lock
 >    Use of type "long int" is not generally helpful in a public
 >    interface. Plain "int" would be better.
-> 
+
+cmpilato
+
 > svn_repos_fs_get_locks
 >    Bug: Says "Like @c svn_fs_get_locks" but it isn't much like it; it
 >    returns the result in a completely different, undocumented way.
-> 
+
+cmpilato
+
 > svn_cstring_count_newlines
 >    Bug: Needs to mention "LF" in the list of newline types.
 > 
