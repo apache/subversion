@@ -1,4 +1,4 @@
-<chapter id="svn-ch-8">
+<chapter id="svn-ch-9">
   <title>Subversion Complete Reference</title>
   
   <simplesect>
@@ -13,7 +13,7 @@
   <!-- ================================================================= -->
   <!-- ======================== SECTION 1 ============================== -->
   <!-- ================================================================= -->
-  <sect1 id="svn-ch-8-sect-1">
+  <sect1 id="svn-ch-9-sect-1">
     <title>The Subversion Command Line Client:
       <command>svn</command></title>
     
@@ -35,9 +35,9 @@ $ svn status -v myfile
 
     <para>You can find many more examples of how to use most client
       commands in <xref linkend="svn-ch-3"/> and commands for managing
-      properties in <xref linkend="svn-ch-6-sect-2"/></para>
+      properties in <xref linkend="svn-ch-7-sect-2"/></para>
     
-    <sect2 id="svn-ch-8-sect-1.1">
+    <sect2 id="svn-ch-9-sect-1.1">
       <title><command>svn</command> Switches</title> 
       
       <para>While Subversion has different switches for its
@@ -238,7 +238,7 @@ $ svn commit -m "They don't make Sunday."
             <para>Shows files in the status listing that would
               normally be omitted since they match a pattern in the
               svn:ignore property. See <xref
-              linkend="svn-ch-6-sect-1.3.2"/> for more
+              linkend="svn-ch-7-sect-1.3.2"/> for more
               information.</para>
           </listitem>
         </varlistentry>
@@ -441,7 +441,7 @@ $ svn log -r 1729:{2/17/02}
       
     </sect2>
     
-    <sect2 id="svn-ch-8-sect-1.2">
+    <sect2 id="svn-ch-9-sect-1.2">
       <title><command>svn</command> Subcommands</title>
 
       <refentry>
@@ -797,7 +797,7 @@ $ svn cleanup /path/to/working-copy
             <command>svn</command> will launch your editor for you
             to compose a commit message.  See the
             <literal>editor-cmd</literal> section in <xref
-            linkend="svn-ch-6-sect-1.3.2"/>.</para>
+            linkend="svn-ch-7-sect-1.3.2"/>.</para>
 
           <tip>
             <para>If you begin a commit and Subversion launches your
@@ -2394,7 +2394,7 @@ Set new value for property `svn:keywords' on `foo.c'
             versioned property of an item or items in your working
             copy, while the second prints unversioned remote
             property on a repository revision.  See <xref
-            linkend="svn-ch-6-sect-2"/> for more information on
+            linkend="svn-ch-7-sect-2"/> for more information on
             properties.</para>
         </refsect1>
 
@@ -2545,7 +2545,7 @@ Properties on 'foo.c':
           <tip>
             <para>Subversion has a number of <quote>special</quote>
               properties that affect its behavior.  See <xref
-              linkend="svn-ch-6-sect-2.3"/> for more on these
+              linkend="svn-ch-7-sect-2.3"/> for more on these
               properties.</para>
           </tip>
 
@@ -3405,7 +3405,7 @@ Updated to revision 30.
   <!-- ================================================================= -->
   <!-- ======================== SECTION 2 ============================== -->
   <!-- ================================================================= -->
-  <sect1 id="svn-ch-8-sect-2">
+  <sect1 id="svn-ch-9-sect-2">
     <title><command>svnadmin</command></title>
     
     <para><command>svnadmin</command> is the administrative tool for
@@ -3417,7 +3417,7 @@ Updated to revision 30.
       (and thus can only be used on the machine that holds the
       repository), it refers to the repository with a path, not a URL.</para>
       
-    <sect2 id="svn-ch-8-sect-2.1">
+    <sect2 id="svn-ch-9-sect-2.1">
       <title><command>svnadmin</command> Switches</title> 
       
       <variablelist>
@@ -3517,7 +3517,7 @@ Updated to revision 30.
     </sect2>
 
     <!-- ================================================================= -->
-    <sect2 id="svn-ch-8-sect-2.2">
+    <sect2 id="svn-ch-9-sect-2.2">
       <title><command>svnadmin</command> Subcommands</title>
 
       <refentry>
@@ -3893,7 +3893,7 @@ $ svnadmin setlog /usr/local/svn/repos/ -r 19 msg
   <!-- ================================================================= -->
   <!-- ======================== SECTION 3 ============================== -->
   <!-- ================================================================= -->
-  <sect1 id="svn-ch-8-sect-3">
+  <sect1 id="svn-ch-9-sect-3">
     <title><command>svnlook</command></title>
     
     <para><command>svnlook</command> is a command-line utility for
@@ -3912,7 +3912,7 @@ $ svnadmin setlog /usr/local/svn/repos/ -r 19 msg
       <command>svnlook</command> defaults to the youngest (most
       recent) revision of the repository.</para>
     
-    <sect2 id="svn-ch-8-sect-3.1">
+    <sect2 id="svn-ch-9-sect-3.1">
       <title><command>svnlook</command> Switches</title>
       
       <para>Switches in <command>svnlook</command> are global, just
@@ -3966,7 +3966,7 @@ $ svnadmin setlog /usr/local/svn/repos/ -r 19 msg
     </sect2>
 
     <!-- ================================================================= -->
-    <sect2 id="svn-ch-8-sect-3.2">
+    <sect2 id="svn-ch-9-sect-3.2">
       <title><command>svnlook</command> Subcommands</title>
 
       <refentry>

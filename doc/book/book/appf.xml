@@ -4,8 +4,8 @@
   <simplesect>
 
     <para>Subversion's modular design (covered in <xref
-      linkend="svn-ch-7-sect-1" />) and the availability of language
-      bindings (as described in <xref linkend="svn-ch-7-sect-2.3" />)
+      linkend="svn-ch-8-sect-1" />) and the availability of language
+      bindings (as described in <xref linkend="svn-ch-8-sect-2.3" />)
       make Subversion a likely candidate for use as an extension or
       backend to other pieces of software.  In this appendix, we'll
       introduce you to some of the third-party tools which are using

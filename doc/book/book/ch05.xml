@@ -977,7 +977,7 @@ Available commands:
           use the <literal>cat</literal> command to display the
           contents of a file.</para>
 
-        <example id="svn-ch-7-sect-3.1.3-ex-1">
+        <example id="svn-ch-8-sect-3.1.3-ex-1">
           <title>Using svnshell to Navigate the Repository</title>
 
           <screen>
@@ -1180,7 +1180,7 @@ $ svnadmin list-unused-dblogs /path/to/repos | xargs rm
         message after the commit is finished, then the user can
         <quote>fix</quote> her log message remotely using the
         <command>svn</command> program's <literal>propset</literal>
-        command (see <xref linkend="svn-ch-8"/>).  However, because of
+        command (see <xref linkend="svn-ch-9"/>).  However, because of
         the potential to lose information forever, Subversion
         repositories are not, by default, configured to allow changes
         to unversioned properties&mdash;except by an
@@ -2536,7 +2536,7 @@ ssh = ssh -l username
 
         <para>For more information about changing the
           <filename>config</filename> run-time configuration file, see
-          <xref linkend="svn-ch-6-sect-1.3.2"/>.</para>
+          <xref linkend="svn-ch-7-sect-1.3.2"/>.</para>
 
 
       </sect3>
@@ -2829,7 +2829,7 @@ ssh = ssh -l username
         repository with that layout and with initial project data.
         There are a couple of ways to do this in Subversion.  You
         could use the <command>svn mkdir</command> command (see <xref
-        linkend="svn-ch-8"/><!-- ###TODO fix link -->) to create each directory in
+        linkend="svn-ch-9"/><!-- ###TODO fix link -->) to create each directory in
         your skeletal repository layout, one-by-one.  A quicker way to
         accomplish the same task is to use the <command>svn
         import</command> command (see <xref

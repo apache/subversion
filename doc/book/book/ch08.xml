@@ -1,7 +1,7 @@
-<chapter id="svn-ch-7">
+<chapter id="svn-ch-8">
   <title>Developer Information</title>
   
-  <simplesect id="svn-ch-7-sect-0">
+  <simplesect id="svn-ch-8-sect-0">
     <para>Subversion is an open-source software project developed
       under an Apache-style software license.  The project is
       financially backed by CollabNet, Inc., a California-based
@@ -28,7 +28,7 @@
   <!-- ******************************************************************* -->
   <!-- *** SECTION 1:  LAYERED LIBRARY DESIGN                          *** -->
   <!-- ******************************************************************* -->
-  <sect1 id="svn-ch-7-sect-1">
+  <sect1 id="svn-ch-8-sect-1">
     <title>Layered Library Design</title>
 
     <para>Subversion has a modular design, implemented as a collection
@@ -41,7 +41,7 @@
       refer to the libraries by their extensionless Unix library names
       (e.g.: libsvn_fs, libsvn_wc, mod_dav_svn).</para>
 
-    <table id="svn-ch-7-table-1">
+    <table id="svn-ch-8-table-1">
       <title>A Brief Inventory of the Subversion Libraries</title>
       <tgroup cols="2">
         <thead>
@@ -145,10 +145,10 @@
       command-line client does.  Subversion's libsvn_client library is
       the one-stop shop for most of the functionality necessary for
       designing a working Subversion client (see <xref
-      linkend="svn-ch-7-sect-1.3"/>).</para>
+      linkend="svn-ch-8-sect-1.3"/>).</para>
 
     <!-- ***************************************************************** -->
-    <sect2 id="svn-ch-7-sect-1.1">
+    <sect2 id="svn-ch-8-sect-1.1">
       <title>Repository Layer</title>
 
       <para>When referring to Subversion's Repository Layer, we're
@@ -356,7 +356,7 @@
         checks for a non-successful error return from the function it
         wraps, and returns that error if it exists.</para>
 
-      <example id="svn-ch-7-sect-1.1-ex-1">
+      <example id="svn-ch-8-sect-1.1-ex-1">
         <title>Using the Repository Layer</title>
 
         <programlisting>
@@ -495,7 +495,7 @@ make_new_directory (const char *repos_path,
     </sect2>
 
     <!-- ****************************************************************** -->
-    <sect2 id="svn-ch-7-sect-1.2">
+    <sect2 id="svn-ch-8-sect-1.2">
       <title>Repository Access Layer</title>
 
       <para>If the Subversion Repository Layer is at "the other end of
@@ -539,7 +539,7 @@ The following repository access (RA) modules are available:
   - handles 'svn' schema
 </screen>
     
-      <sect3 id="svn-ch-7-sect-1.2.1">
+      <sect3 id="svn-ch-8-sect-1.2.1">
         <title>RA-DAV (Repository Access Using HTTP/DAV)</title>
 
         <para>The libsvn_ra_dav library is designed for use by clients
@@ -640,7 +640,7 @@ The following repository access (RA) modules are available:
 
       </sect3>
 
-      <sect3 id="svn-ch-7-sect-1.2.2">
+      <sect3 id="svn-ch-8-sect-1.2.2">
         <title>RA-SVN (Proprietary Protocol Repository Access)</title>
 
         <para>In addition to the standard HTTP/WebDAV protocol,
@@ -666,7 +666,7 @@ The following repository access (RA) modules are available:
 
       </sect3>
 
-      <sect3 id="svn-ch-7-sect-1.2.3">
+      <sect3 id="svn-ch-8-sect-1.2.3">
         <title>RA-Local (Direct Repository Access)</title>
 
         <para>Not all communications with a Subversion repository
@@ -694,12 +694,12 @@ The following repository access (RA) modules are available:
           contents of the file at that location by examining the
           filesystem directly.  However, Subversion's resources exist
           in a virtual filesystem (see <xref
-          linkend="svn-ch-7-sect-1.1" />), and your browser will not
+          linkend="svn-ch-8-sect-1.1" />), and your browser will not
           understand how to read that filesystem.</para>
 
       </sect3>
 
-      <sect3 id="svn-ch-7-sect-1.2.4">
+      <sect3 id="svn-ch-8-sect-1.2.4">
         <title>Your RA Library Here</title>
 
         <para>For those who wish to access a Subversion repository
@@ -717,7 +717,7 @@ The following repository access (RA) modules are available:
     </sect2>
 
     <!-- ***************************************************************** -->
-    <sect2 id="svn-ch-7-sect-1.3">
+    <sect2 id="svn-ch-8-sect-1.3">
       <title>Client Layer</title>
       
       <para>On the client side, the Subversion working copy is where
@@ -742,7 +742,7 @@ The following repository access (RA) modules are available:
         to the <filename>CVS</filename> administrative directories
         found in CVS working copies.  For more information about the
         <filename>.svn</filename> administrative area, see <xref
-        linkend="svn-ch-7-sect-3"/>in this chapter.</para>
+        linkend="svn-ch-8-sect-3"/>in this chapter.</para>
 
       <para>The Subversion client library, libsvn_client, has the
         broadest responsibility; its job is to mingle the
@@ -801,7 +801,7 @@ The following repository access (RA) modules are available:
   <!-- ******************************************************************* -->
   <!-- *** SECTION 2:  USING THE APIS                                  *** -->
   <!-- ******************************************************************* -->
-  <sect1 id="svn-ch-7-sect-2">
+  <sect1 id="svn-ch-8-sect-2">
     <title>Using the APIs</title>
 
     <para>Developing applications against the Subversion library APIs
@@ -832,7 +832,7 @@ The following repository access (RA) modules are available:
       to clarify the scope of a given function or datatype.</para>
 
     <!-- ***************************************************************** -->
-    <sect2 id="svn-ch-7-sect-2.1">
+    <sect2 id="svn-ch-8-sect-2.1">
       <title>The Apache Portable Runtime Library</title>
 
       <para>Along with Subversion's own datatype, you will see many
@@ -876,13 +876,13 @@ The following repository access (RA) modules are available:
         users of the Subversion API must also link against APR, must
         call <function>apr_initialize()</function> to initialize the
         APR subsystem, and then must acquire a pool for use with
-        Subversion API calls.  See <xref linkend="svn-ch-7-sect-5"/>
+        Subversion API calls.  See <xref linkend="svn-ch-8-sect-5"/>
         for more information.</para>
 
     </sect2>
 
     <!-- ***************************************************************** -->
-    <sect2 id="svn-ch-7-sect-2.2">
+    <sect2 id="svn-ch-8-sect-2.2">
       <title>URL and Path Requirements</title>
 
       <para>With remote version control operation as the whole point
@@ -917,7 +917,7 @@ The following repository access (RA) modules are available:
     </sect2>
 
     <!-- ***************************************************************** -->
-    <sect2 id="svn-ch-7-sect-2.3">
+    <sect2 id="svn-ch-8-sect-2.3">
       <title>Using Languages Other than C and C++</title> 
 
       <para>If you are interested in using the Subversion libraries in
@@ -951,7 +951,7 @@ The following repository access (RA) modules are available:
         example.  Note the difference in size and complexity of the
         function this time!</para>
 
-      <example id="svn-ch-7-sect-2.3-ex-1">
+      <example id="svn-ch-8-sect-2.3-ex-1">
         <title>Using the Repository Layer with Python</title>
 
         <programlisting>
@@ -1010,7 +1010,7 @@ def crawl_filesystem_dir (root, directory, pool):
         just a few lines of Python, you can check out a fully
         functional Subversion working copy!</para>
 
-      <example id="svn-ch-7-sect-2.3-ex-2">
+      <example id="svn-ch-8-sect-2.3-ex-2">
         <title>A Simple Script to Check Out a Working Copy.</title>
 
         <programlisting>
@@ -1059,7 +1059,7 @@ if __name__ == '__main__':
   <!-- ******************************************************************* -->
   <!-- *** SECTION 3:  INSIDE THE WORKING COPY ADMINISTRATION AREA     *** -->
   <!-- ******************************************************************* -->
-  <sect1 id="svn-ch-7-sect-3">
+  <sect1 id="svn-ch-8-sect-3">
     <title>Inside the Working Copy Administration Area</title>
     
     <para>As we mentioned earlier, each directory of a Subversion
@@ -1093,7 +1093,7 @@ if __name__ == '__main__':
       couple of the most important items.</para>
 
     <!-- ***************************************************************** -->
-    <sect2 id="svn-ch-7-sect-3.1">
+    <sect2 id="svn-ch-8-sect-3.1">
       <title>The Entries File</title>
 
       <para>Perhaps the single most important file in the
@@ -1127,7 +1127,7 @@ if __name__ == '__main__':
       <para>The following is an example of an actual entries
         file:</para>
 
-      <example id="svn-ch-7-sect-3-ex-1">
+      <example id="svn-ch-8-sect-3-ex-1">
         <title>Contents of a Typical <filename>.svn/entries</filename>
           File</title>
         <programlisting>
@@ -1222,7 +1222,7 @@ if __name__ == '__main__':
     </sect2>
 
     <!-- ***************************************************************** -->
-    <sect2 id="svn-ch-7-sect-3.2">
+    <sect2 id="svn-ch-8-sect-3.2">
       <title>Pristine Copies and Property Files</title>
 
       <para>As mentioned before, the <filename>.svn</filename>
@@ -1261,7 +1261,7 @@ if __name__ == '__main__':
   <!-- ******************************************************************* -->
   <!-- *** SECTION 4:  WEBDAV                                          *** -->
   <!-- ******************************************************************* -->
-  <sect1 id="svn-ch-7-sect-4">
+  <sect1 id="svn-ch-8-sect-4">
     <title>WebDAV</title>
 
     <para>WebDAV ("Web-based Distributed Authoring and Versioning") is
@@ -1306,7 +1306,7 @@ if __name__ == '__main__':
   <!-- ******************************************************************* -->
   <!-- *** SECTION 5:  PROGRAMMING WITH MEMORY POOLS                   *** -->
   <!-- ******************************************************************* -->
-  <sect1 id="svn-ch-7-sect-5">
+  <sect1 id="svn-ch-8-sect-5">
     <title>Programming with Memory Pools</title>
 
     <para>Almost every developer who has used the C programming
@@ -1375,7 +1375,7 @@ if __name__ == '__main__':
       is fairly common&mdash;recursively crawling a directory tree,
       doing some task to each thing in the tree.</para>
 
-    <example id="svn-ch-7-sect-5-ex-1">
+    <example id="svn-ch-8-sect-5-ex-1">
       <title>Effective Pool Usage</title>
       <programlisting>
 /* Recursively crawl over DIRECTORY, adding the paths of all its file
@@ -1488,7 +1488,7 @@ crawl_dir (apr_array_header_t *files,
   <!-- ******************************************************************* -->
   <!-- *** SECTION 6:  CONTRIBUTING TO SUBVERSION                      *** -->
   <!-- ******************************************************************* -->
-  <sect1 id="svn-ch-7-sect-6">
+  <sect1 id="svn-ch-8-sect-6">
     <title>Contributing to Subversion</title>
     
     <para>The official source of information about the Subversion
@@ -1502,7 +1502,7 @@ crawl_dir (apr_array_header_t *files,
       started.</para>
 
     <!-- ***************************************************************** -->
-    <sect2 id="svn-ch-7-sect-6.1">
+    <sect2 id="svn-ch-8-sect-6.1">
       <title>Join the Community</title>
       
       <para>The first step in community participation is to find a way
@@ -1536,7 +1536,7 @@ crawl_dir (apr_array_header_t *files,
     </sect2>
     
     <!-- ***************************************************************** -->
-    <sect2 id="svn-ch-7-sect-6.2">
+    <sect2 id="svn-ch-8-sect-6.2">
       <title>Get the Source Code</title>
       
       <para>To edit the code, you need to have the code.  This means
@@ -1588,7 +1588,7 @@ A  build.conf
     </sect2>
 
     <!-- ***************************************************************** -->
-    <sect2 id="svn-ch-7-sect-6.3">
+    <sect2 id="svn-ch-8-sect-6.3">
       <title>Become Familiar with Community Policies</title>
       
       <para>Now that you have a working copy containing the latest
@@ -1616,7 +1616,7 @@ A  build.conf
     </sect2>
 
     <!-- ***************************************************************** -->
-    <sect2 id="svn-ch-7-sect-6.4">
+    <sect2 id="svn-ch-8-sect-6.4">
       <title>Make and Test Your Changes</title>
       
       <para>With the code and community policy understanding in hand,
@@ -1665,7 +1665,7 @@ A  build.conf
     </sect2>
 
     <!-- ***************************************************************** -->
-    <sect2 id="svn-ch-7-sect-6.5">
+    <sect2 id="svn-ch-8-sect-6.5">
       <title>Donate Your Changes</title>
       
       <para>After making your modifications to the source code,

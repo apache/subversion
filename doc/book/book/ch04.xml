@@ -660,7 +660,7 @@ U   my-calc-branch/integer.c
       <para>Of course, Subversion has plans to solve this problem
         sometime after release 1.0.  All of this merging information
         can be tracked in property metadata (see <xref
-        linkend="svn-ch-6-sect-2"/>), and thus Subversion will someday
+        linkend="svn-ch-7-sect-2"/>), and thus Subversion will someday
         be able to automatically avoid repeated merges.</para>
 
     </sect2>
@@ -894,7 +894,7 @@ URL: http://svn.example.com/branches/calc/my-calc-branch
       <option>--relocate</option> switch if the URL of your server
       changes and you don't want to abandon an existing working copy.
       See the <command>svn switch</command> section in <xref
-      linkend="svn-ch-8"/> for more information and an example.</para>
+      linkend="svn-ch-9"/> for more information and an example.</para>
       </footnote></para>
     
     <sidebar>

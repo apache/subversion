@@ -1,7 +1,7 @@
-<chapter id="svn-ch-6">
+<chapter id="svn-ch-7">
   <title>Advanced Topics</title>
 
-  <simplesect id="svn-ch-6-sect-0">
+  <simplesect id="svn-ch-7-sect-0">
 
     <para>If you've been reading this book chapter by chapter, from
       start to finish, you should by now have acquired enough
@@ -46,7 +46,7 @@
   <!-- ******************************************************************* -->
   <!-- *** SECTION 1:  RUNTIME CONFIGURATION AREA                      *** -->
   <!-- ******************************************************************* -->
-  <sect1 id="svn-ch-6-sect-1">
+  <sect1 id="svn-ch-7-sect-1">
     <title>Runtime Configuration Area</title>
     
     <para>Subversion provides many optional behaviors that can be
@@ -69,7 +69,7 @@
       prefers.</para>
 
     <!-- ***************************************************************** -->
-    <sect2 id="svn-ch-6-sect-1.1">
+    <sect2 id="svn-ch-7-sect-1.1">
       <title>Configuration Area Layout</title>
 
       <para>The first time that the <command>svn</command>
@@ -137,7 +137,7 @@
     </sect2>
 
     <!-- ***************************************************************** -->
-    <sect2 id="svn-ch-6-sect-1.2">
+    <sect2 id="svn-ch-7-sect-1.2">
       <title>Configuration and the Windows Registry</title>
 
       <para>In addition to the usual INI-based configuration area,
@@ -201,7 +201,7 @@
         file from the Explorer shell, which will cause the data to be
         merged into your registry.</para>
 
-      <example id="svn-ch-6-sect-1.2-ex-1">
+      <example id="svn-ch-7-sect-1.2-ex-1">
         <title>Sample Registration Entries (.REG) File.</title>
 
         <programlisting>
@@ -259,14 +259,14 @@ REGEDIT4
     </sect2>
 
     <!-- ***************************************************************** -->
-    <sect2 id="svn-ch-6-sect-1.3">
+    <sect2 id="svn-ch-7-sect-1.3">
       <title>Configuration Options</title>
       
       <para>In this section, we will discuss the specific
         run-time configuration options which are currently supported
         by Subversion.</para>
 
-      <sect3 id="svn-ch-6-sect-1.3.1">
+      <sect3 id="svn-ch-7-sect-1.3.1">
         <title>Servers</title>
 
         <para>The <filename>servers</filename> file contains
@@ -376,7 +376,7 @@ collabnet = svn.collab.net
                 debugging output to yield.  The default value is
                 <literal>0</literal>, which will silence all debugging
                 output.  For more information about how Subversion
-                makes use of Neon, see <xref linkend="svn-ch-7" />.</para>
+                makes use of Neon, see <xref linkend="svn-ch-8" />.</para>
             </listitem>
           </varlistentry>
           <varlistentry>
@@ -398,7 +398,7 @@ collabnet = svn.collab.net
         </variablelist>
 
       </sect3>
-      <sect3 id="svn-ch-6-sect-1.3.2">
+      <sect3 id="svn-ch-7-sect-1.3.2">
         <title>Config</title>
 
         <para>The <filename>config</filename> file contains the rest
@@ -447,7 +447,7 @@ collabnet = svn.collab.net
                 populated with the current value of the property the
                 user wishes to edit, and the edits take places right
                 in the editor program (see <xref
-                linkend="svn-ch-6-sect-2" />).  This option's default
+                linkend="svn-ch-7-sect-2" />).  This option's default
                 value is empty.  If the option is not set, Subversion
                 will fall back to checking the environment variables
                 <literal>SVN_EDITOR</literal>,
@@ -524,7 +524,7 @@ collabnet = svn.collab.net
                 of the <command>svn status</command> command by using
                 the <option>--no-ignore</option> command-line flag.
                 For information on more fine-grained control of
-                ignored items, see <xref linkend="svn-ch-6-sect-2.3.3"
+                ignored items, see <xref linkend="svn-ch-7-sect-2.3.3"
                 />.</para>
             </listitem>
           </varlistentry>
@@ -536,7 +536,7 @@ collabnet = svn.collab.net
   <!-- ******************************************************************* -->
   <!-- *** SECTION 2:  PROPERTIES                                      *** -->
   <!-- ******************************************************************* -->
-  <sect1 id="svn-ch-6-sect-2">
+  <sect1 id="svn-ch-7-sect-2">
     <title>Properties</title>
 
     <para>We've already covered in detail how Subversion stores and
@@ -585,7 +585,7 @@ collabnet = svn.collab.net
       enhance your version control experience.</para>
 
     <!-- ***************************************************************** -->
-    <sect2 id="svn-ch-6-sect-2.1">
+    <sect2 id="svn-ch-7-sect-2.1">
       <title>Why Properties?</title>
 
       <para>Properties can be very useful additions to your working
@@ -625,7 +625,7 @@ collabnet = svn.collab.net
         scripts know better.  They know that they can use
         <command>svn</command> (or better yet, they can use the
         Subversion language bindings&mdash;see <xref
-        linkend="svn-ch-7-sect-2.3" />) to dig out the extra
+        linkend="svn-ch-8-sect-2.3" />) to dig out the extra
         information that your site needs to display without having to
         read an index file or play path manipulation games.</para>
 
@@ -638,7 +638,7 @@ collabnet = svn.collab.net
     </sect2>
 
     <!-- ***************************************************************** -->
-    <sect2 id="svn-ch-6-sect-2.2">
+    <sect2 id="svn-ch-7-sect-2.2">
       <title>Manipulating Properties</title>
 
       <para>The <command>svn</command> command affords a few ways to
@@ -673,7 +673,7 @@ $
         <command>svn</command> program supplies the
         <command>propedit</command> command.  This command uses the
         configured editor program (see <xref
-        linkend="svn-ch-6-sect-1.3.2" />) to add or modify properties.
+        linkend="svn-ch-7-sect-1.3.2" />) to add or modify properties.
         When you run the command, <command>svn</command> invokes your
         editor program on a temporary file that contains the current
         value of the property (or which is empty, if you are adding a
@@ -924,7 +924,7 @@ $
     </sect2>
 
     <!-- ***************************************************************** -->
-    <sect2 id="svn-ch-6-sect-2.3">
+    <sect2 id="svn-ch-7-sect-2.3">
       
      <title>Special properties</title>
 
@@ -938,7 +938,7 @@ $
         we'll untangle the mystery, and describe how these special
         properties make your life just a little easier.</para>
       
-      <sect3 id="svn-ch-6-sect-2.3.1">
+      <sect3 id="svn-ch-7-sect-2.3.1">
         <title><literal>svn:executable</literal></title>
  
         <para>The <literal>svn:executable</literal> property is used
@@ -978,7 +978,7 @@ $
 
       </sect3>
 
-      <sect3 id="svn-ch-6-sect-2.3.2">
+      <sect3 id="svn-ch-7-sect-2.3.2">
         <title><literal>svn:mime-type</literal></title>
         
         <para>The <literal>svn:mime-type</literal> property serves
@@ -1034,7 +1034,7 @@ $
 
       </sect3>
 
-      <sect3 id="svn-ch-6-sect-2.3.3">
+      <sect3 id="svn-ch-7-sect-2.3.3">
         <title><literal>svn:ignore</literal></title>
 
         <para>The <literal>svn:ignore</literal> property contains a
@@ -1042,7 +1042,7 @@ $
           will ignore.  Perhaps the most commonly used special
           property, it works in conjunction with the
           <literal>global-ignores</literal> run-time configuration
-          option (see <xref linkend="svn-ch-6-sect-1.3.2" />) to
+          option (see <xref linkend="svn-ch-7-sect-1.3.2" />) to
           filter unversioned files and directories out of commands
           like <command>svn status</command>.</para>
 
@@ -1199,7 +1199,7 @@ I      calc/debug_log.3.gz
 
       <!-- cmpilato was here -->
 
-      <sect3 id="svn-ch-6-sect-2.3.4">
+      <sect3 id="svn-ch-7-sect-2.3.4">
         <title><literal>svn:keywords</literal></title>
 
         <para>Subversion has the ability to substitute
@@ -1389,7 +1389,7 @@ Cumulus clouds are appearing more frequently as summer approaches.
 
       </sect3>
 
-      <sect3 id="svn-ch-6-sect-2.3.5">
+      <sect3 id="svn-ch-7-sect-2.3.5">
         <title><literal>svn:eol-style</literal></title>
 
         <para>Unless otherwise noted using a versioned file's
@@ -1518,14 +1518,14 @@ Cumulus clouds are appearing more frequently as summer approaches.
         
       </sect3>
 
-      <sect3 id="svn-ch-6-sect-2.3.6">
+      <sect3 id="svn-ch-7-sect-2.3.6">
         <title><literal>svn:externals</literal></title>
 
         <para>The <literal>svn:externals</literal> property contains
           instructions for Subversion to populate a versioned
           directory with one or more other checked-out Subversion
           working copies.  For more information on this keyword and
-          its use, see <xref linkend="svn-ch-6-sect-3"/>.</para>
+          its use, see <xref linkend="svn-ch-7-sect-3"/>.</para>
 
       </sect3>
     </sect2>
@@ -1534,7 +1534,7 @@ Cumulus clouds are appearing more frequently as summer approaches.
   <!-- ******************************************************************* -->
   <!-- *** SECTION 3:  EXTERNALS DEFINITIONS                           *** -->
   <!-- ******************************************************************* -->
-  <sect1 id="svn-ch-6-sect-3">
+  <sect1 id="svn-ch-7-sect-3">
     <title>Externals Definitions</title>
     
     <para>Sometimes it is useful to construct a working copy that is
@@ -1619,7 +1619,7 @@ Fetching external item into calc/third-party/skins
   <!-- ******************************************************************* -->
   <!-- *** SECTION 4:  VENDOR BRANCHES                                 *** -->
   <!-- ******************************************************************* -->
-  <sect1 id="svn-ch-6-sect-4">
+  <sect1 id="svn-ch-7-sect-4">
     <title>Vendor branches</title>
 
     <para>As is especially the case when developing software, the data
@@ -1635,7 +1635,7 @@ Fetching external item into calc/third-party/skins
     <para>For example, software developers might be working on an
       application which makes use of a third-party library.
       Subversion has just such a relationship with the Apache Portable
-      Runtime library (see <xref linkend="svn-ch-7-sect-2.1" />).  The
+      Runtime library (see <xref linkend="svn-ch-8-sect-2.1" />).  The
       Subversion source code depends on the APR library for all its
       portability needs.  In earlier stages of Subversion's
       development, the project closely tracked APR's changing API,
@@ -1654,7 +1654,7 @@ Fetching external item into calc/third-party/skins
       repository, you could also use Subversion's externals
       definitions to effectively <quote>pin down</quote> specific
       versions of that information to some location in your own
-      working copy directory (see <xref linkend="svn-ch-6-sect-3" />).</para>
+      working copy directory (see <xref linkend="svn-ch-7-sect-3" />).</para>
 
     <para>But sometimes you want to maintain custom modifications to
       third-party data in your own version control system.  Returning
@@ -1694,7 +1694,7 @@ Fetching external item into calc/third-party/skins
       worse, manual) method for swapping in your customizations.</para>
 
     <!-- ***************************************************************** -->
-    <sect2 id="svn-ch-6-sect-4.1">
+    <sect2 id="svn-ch-7-sect-4.1">
       <title>General Vendor Branch Management Procedure</title>
 
       <para>Managing vendor branches generally works like this.  You
@@ -1812,7 +1812,7 @@ $ svn commit -m 'merging libcomplex-1.1 into the main branch'
          running with just svn merge, now that it ignores ancestry. -->
 
     <!-- ***************************************************************** -->
-    <sect2 id="svn-ch-6-sect-4.2">
+    <sect2 id="svn-ch-7-sect-4.2">
       <title><command>svn-load-dirs.pl</command></title>
 
       <para>Vendor drops that contain more than a few deletes,
