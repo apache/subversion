@@ -1,0 +1,7 @@
+This directory contains material to help OS-specific packaging
+systems, such as RedHat's rpm, Debian's dpkg, Sun/BSD's pkg_add, and
+so on.
+
+Right now, the only thing we have is a spec file for a source rpm, so
+it's in `rpm/subversion.spec'.  Feel free to reorganize as we get more
+stuff.
