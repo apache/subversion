@@ -415,6 +415,74 @@ prop_path_internal (svn_string_t **prop_path,
 
 
 
+/* Return a path to the 'wcprop' file for PATH, possibly in TMP area.  */
+svn_error_t *
+svn_wc__wcprop_path (svn_string_t **wcprop_path,
+                     const svn_string_t *path,
+                     svn_boolean_t tmp,
+                     apr_pool_t *pool)
+{
+  svn_error_t *err;
+  enum svn_node_kind kind;
+  svn_boolean_t is_wc;
+  svn_string_t *entry_name;
+
+  err = svn_io_check_path (path, &kind, pool);
+  if (err)
+    return err;
+
+  /* kff todo: some factorization can be done on most callers of
+     svn_wc_check_wc()? */
+
+  is_wc = FALSE;
+  entry_name = NULL;
+  if (kind == svn_node_dir)
+    {
+      err = svn_wc_check_wc (path, &is_wc, pool);
+      if (err)
+        return err;
+    }
+
+  if (is_wc)  /* It's not only a dir, it's a working copy dir */
+    {
+      *wcprop_path = svn_string_dup (path, pool);
+      extend_with_adm_name 
+        (*wcprop_path,
+         0,
+         pool,
+         tmp ? SVN_WC__ADM_TMP : "",
+         SVN_WC__ADM_DIR_WCPROPS,
+         NULL);
+    }
+  else  /* It's either a file, or a non-wc dir (i.e., maybe an ex-file) */
+    {
+      svn_path_split (path, wcprop_path, &entry_name,
+                      svn_path_local_style, pool);
+ 
+      err = svn_wc_check_wc (*wcprop_path, &is_wc, pool);
+      if (err)
+        return err;
+      else if (! is_wc)
+        return svn_error_createf
+          (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL, pool,
+           "wcprop_path: %s is not a working copy directory",
+           (*wcprop_path)->data);
+
+      extend_with_adm_name (*wcprop_path,
+                            0,
+                            pool,
+                            tmp ? SVN_WC__ADM_TMP : "",
+                            SVN_WC__ADM_WCPROPS,
+                            entry_name->data,
+                            NULL);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+
+
 svn_error_t *
 svn_wc__prop_path (svn_string_t **prop_path,
                    const svn_string_t *path,
@@ -836,6 +904,13 @@ init_adm (svn_string_t *path,
     return err;
 
 
+  /* SVN_WC__ADM_WCPROPS */
+  err = svn_wc__make_adm_thing (path, SVN_WC__ADM_WCPROPS,
+                                svn_node_dir, 0, pool);
+  if (err)
+    return err;
+
+
   /** Make sub-subdirectories. ***/
 
   /* SVN_WC__ADM_TMP/SVN_WC__ADM_TEXT_BASE */
@@ -854,6 +929,12 @@ init_adm (svn_string_t *path,
 
   /* SVN_WC__ADM_TMP/SVN_WC__ADM_PROPS */
   err = svn_wc__make_adm_thing (path, SVN_WC__ADM_PROPS,
+                                svn_node_dir, 1, pool);
+  if (err)
+    return err;
+
+  /* SVN_WC__ADM_TMP/SVN_WC__ADM_WCPROPS */
+  err = svn_wc__make_adm_thing (path, SVN_WC__ADM_WCPROPS,
                                 svn_node_dir, 1, pool);
   if (err)
     return err;
@@ -887,6 +968,12 @@ init_adm (svn_string_t *path,
   if (err)
     return err;
 
+
+  /* SVN_WC__ADM_DIR_WCPROPS */
+  err = svn_wc__make_adm_thing (path, SVN_WC__ADM_DIR_WCPROPS,
+                                svn_node_file, 0, pool);
+  if (err)
+    return err;
 
 
   /* THIS FILE MUST BE CREATED LAST: 

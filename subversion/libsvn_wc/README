@@ -97,6 +97,11 @@ analogous to CVS/ sudirs:
             foo.c                  /* Stores foo.c's pristine properties */
             bar.c
             baz.c
+       wcprops/                 /* special 'wc' props for files in this dir*/
+            foo.c
+            bar.c
+            baz.c
+       dir-wcprops              /* 'wc' props for this directory. */
        tmp/                     /* Local tmp area */
             ./                     /* Adm files are written directly here. */
             text-base/             /* tmp area for base files */
@@ -343,6 +348,23 @@ analogous to CVS/ sudirs:
    sufficiently, but shouldn't be abused.  They'll work fine for
    storing information like ACLs, permissions, ownership, and notes;
    but users shouldn't be trying to store 30 meg PNG files.  :)
+
+'wcprops/' and 'dir-wcprops'
+
+   Some properties are never seen or set by the user, and are never
+   stored in the repository filesystem.  They are created by the
+   networking layer (DAV right now) and need to be secretly saved and
+   retrieved, much like a web browser stores "cookies".  Special wc
+   library routines allow the networking layer to get and set these
+   properties.  
+
+   Note that because these properties aren't being versioned, we don't
+   bother to keep pristine forms of them in a 'base' area.  Nor do we
+   paranoid-ly move them through SVN/tmp/ when changing them.  These
+   sorts of behaviors are meant for preserving sacred user data,
+   especially local modifications.  wcprops, on the other hand, are
+   just internal tracking data used by the system, like the 'entries'
+   file.
 
 
 ------------------------

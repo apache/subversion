@@ -85,14 +85,15 @@ svn_error_t *svn_wc__set_up_new_dir (svn_string_t *path,
 #define SVN_WC__ADM_FORMAT              "format"
 #define SVN_WC__ADM_README              "README"
 #define SVN_WC__ADM_ENTRIES             "entries"
-#define SVN_WC__ADM_DIR_PROPS           "dir-props"
-#define SVN_WC__ADM_PROPS               "props"
 #define SVN_WC__ADM_LOCK                "lock"
 #define SVN_WC__ADM_TMP                 "tmp"
 #define SVN_WC__ADM_TEXT_BASE           "text-base"
+#define SVN_WC__ADM_PROPS               "props"
 #define SVN_WC__ADM_PROP_BASE           "prop-base"
+#define SVN_WC__ADM_DIR_PROPS           "dir-props"
 #define SVN_WC__ADM_DIR_PROP_BASE       "dir-prop-base"
-#define SVN_WC__ADM_DPROP_BASE          "dprop-base"/* Isn't this bogus now? */
+#define SVN_WC__ADM_WCPROPS             "wcprops"
+#define SVN_WC__ADM_DIR_WCPROPS         "dir-wcprops"
 #define SVN_WC__ADM_LOG                 "log"
 
 /* The basename of the ".prej" file, if a directory ever has property
@@ -212,6 +213,13 @@ svn_error_t *svn_wc__prop_base_path (svn_string_t **prop_path,
                                      const svn_string_t *path,
                                      svn_boolean_t tmp,
                                      apr_pool_t *pool);
+
+
+/* Return a path to the 'wcprop' file for PATH, possibly in TMP area.  */
+svn_error_t *svn_wc__wcprop_path (svn_string_t **wcprop_path,
+                                  const svn_string_t *path,
+                                  svn_boolean_t tmp,
+                                  apr_pool_t *pool);
 
 
 /* Ensure that PATH is a locked working copy directory.
@@ -602,6 +610,19 @@ svn_wc__do_property_merge (svn_string_t *path,
                            svn_string_t **entry_accum);
 
 
+/* Get a single 'wcprop' NAME for versioned object PATH, return in
+   *VALUE. */
+svn_error_t *svn_wc__wcprop_get (svn_string_t **value,
+                                 svn_string_t *name,
+                                 svn_string_t *path,
+                                 apr_pool_t *pool);
+
+/* Set a single 'wcprop' NAME to VALUE for versioned object PATH. */
+svn_error_t *
+svn_wc__wcprop_set (svn_string_t *name,
+                    svn_string_t *value,
+                    svn_string_t *path,
+                    apr_pool_t *pool);
 
 
 /* 
