@@ -554,7 +554,10 @@ svn_wc_entry (svn_wc_entry_t **entry,
 
       svn_string_t *dir, *basename;
       svn_path_split (path, &dir, &basename, svn_path_local_style, pool);
-      
+
+      if (svn_path_is_empty (dir, svn_path_local_style))
+        svn_string_set (dir, ".");
+
       err = svn_wc_check_wc (dir, &is_wc, pool);
       if (err)
         return err;
