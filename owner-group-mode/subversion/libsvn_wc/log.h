@@ -79,6 +79,10 @@ extern "C" {
 /* Set SVN_WC__LOG_ATTR_NAME to have timestamp SVN_WC__LOG_ATTR_TIMESTAMP. */
 #define SVN_WC__LOG_SET_TIMESTAMP       "set-timestamp"
 
+/* Defines the owner, group, and unix-mode */
+#define SVN_WC__LOG_SET_OWNER           "set-owner"
+#define SVN_WC__LOG_SET_GROUP           "set-group"
+#define SVN_WC__LOG_SET_UNIX_MODE       "set-unix-mode"
 
 /* Handle closure after a commit completes successfully:  
  *
@@ -125,6 +129,9 @@ extern "C" {
 #define SVN_WC__LOG_ATTR_TEXT_REJFILE   "text-rejfile"
 #define SVN_WC__LOG_ATTR_PROP_REJFILE   "prop-rejfile"
 #define SVN_WC__LOG_ATTR_TIMESTAMP      "timestamp"
+#define SVN_WC__LOG_ATTR_OWNER          "owner"
+#define SVN_WC__LOG_ATTR_GROUP          "group"
+#define SVN_WC__LOG_ATTR_UNIX_MODE      "unix-mode"
 /* The rest are for SVN_WC__LOG_MERGE.  Extend as necessary. */
 #define SVN_WC__LOG_ATTR_ARG_1          "arg1"
 #define SVN_WC__LOG_ATTR_ARG_2          "arg2"

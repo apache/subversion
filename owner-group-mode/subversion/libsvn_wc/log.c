@@ -470,6 +470,132 @@ log_do_file_timestamp (struct log_runner *loggy,
 }
 
 
+/* Set file NAME in log's CWD to the specified owner */
+static svn_error_t *
+log_do_file_owner (struct log_runner *loggy,
+                       const char *name,                       
+                       const char **atts)
+{
+  svn_node_kind_t kind;
+  const char *full_path
+    = svn_path_join (svn_wc_adm_access_path (loggy->adm_access), name,
+                     loggy->pool);
+
+  const char *owner
+    = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_OWNER, atts);
+  svn_boolean_t is_special;
+  svn_string_t *value;
+  
+  if (! owner)
+    return svn_error_createf (pick_error_code (loggy), NULL,
+                              _("Missing 'owner' attribute in '%s'"),
+                              svn_path_local_style
+                              (svn_wc_adm_access_path (loggy->adm_access),
+                               loggy->pool));
+
+  /* Do not set the owner on special files.
+   * In case we're doing devices sometimes this needs to be revisited. */
+  SVN_ERR (svn_io_check_special_path (full_path, &kind, &is_special,
+                                      loggy->pool));
+  
+  if (! is_special)
+    {
+      value=svn_string_create(owner, loggy->pool);
+      SVN_ERR (svn_io_file_set_file_owner_group_mode (full_path,
+                                                      value,
+                                                      NULL,
+                                                      NULL,
+                                                      loggy->pool) );
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+/* Set file NAME in log's CWD to the specified group */
+static svn_error_t *
+log_do_file_group (struct log_runner *loggy,
+                       const char *name,                       
+                       const char **atts)
+{
+  svn_node_kind_t kind;
+  const char *full_path
+    = svn_path_join (svn_wc_adm_access_path (loggy->adm_access), name,
+                     loggy->pool);
+
+  const char *group
+    = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_GROUP, atts);
+  svn_boolean_t is_special;
+  svn_string_t *value;
+  
+  if (! group)
+    return svn_error_createf (pick_error_code (loggy), NULL,
+                              _("Missing 'group' attribute in '%s'"),
+                              svn_path_local_style
+                              (svn_wc_adm_access_path (loggy->adm_access),
+                               loggy->pool));
+
+  /* Do not set the group on special files.
+   * In case we're doing devices sometimes this needs to be revisited. */
+  SVN_ERR (svn_io_check_special_path (full_path, &kind, &is_special,
+                                      loggy->pool));
+  
+  if (! is_special)
+    {
+      value=svn_string_create(group, loggy->pool);
+      SVN_ERR (svn_io_file_set_file_owner_group_mode (full_path,
+                                                      NULL,
+                                                      value,
+                                                      NULL,
+                                                      loggy->pool) );
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+/* Set file NAME in log's CWD to the specified unix_mode */
+static svn_error_t *
+log_do_file_unix_mode (struct log_runner *loggy,
+                       const char *name,                       
+                       const char **atts)
+{
+  svn_node_kind_t kind;
+  const char *full_path
+    = svn_path_join (svn_wc_adm_access_path (loggy->adm_access), name,
+                     loggy->pool);
+
+  const char *unix_mode
+    = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_UNIX_MODE, atts);
+  svn_boolean_t is_special;
+  svn_string_t *value;
+  
+  if (! unix_mode)
+    return svn_error_createf (pick_error_code (loggy), NULL,
+                              _("Missing 'unix_mode' attribute in '%s'"),
+                              svn_path_local_style
+                              (svn_wc_adm_access_path (loggy->adm_access),
+                               loggy->pool));
+
+  /* Do not set the unix_mode on special files.
+   * In case we're doing devices sometimes this needs to be revisited. */
+  SVN_ERR (svn_io_check_special_path (full_path, &kind, &is_special,
+                                      loggy->pool));
+  
+  if (! is_special)
+    {
+      value=svn_string_create(unix_mode, loggy->pool);
+      SVN_ERR (svn_io_file_set_file_owner_group_mode (full_path,
+                                                      NULL,
+                                                      NULL,
+                                                      value,
+                                                      loggy->pool) );
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
 /* Remove file NAME in log's CWD. */
 static svn_error_t *
 log_do_rm (struct log_runner *loggy, const char *name)
@@ -1243,6 +1369,15 @@ start_handler (void *userData, const char *eltname, const char **atts)
   }
   else if (strcmp (eltname, SVN_WC__LOG_SET_TIMESTAMP) == 0) {
     err = log_do_file_timestamp (loggy, name, atts);
+  }
+  else if (strcmp (eltname, SVN_WC__LOG_SET_OWNER) == 0) {
+    err = log_do_file_owner (loggy, name, atts);
+  }
+  else if (strcmp (eltname, SVN_WC__LOG_SET_GROUP) == 0) {
+    err = log_do_file_group (loggy, name, atts);
+  }
+  else if (strcmp (eltname, SVN_WC__LOG_SET_UNIX_MODE) == 0) {
+    err = log_do_file_unix_mode (loggy, name, atts);
   }
   else
     {

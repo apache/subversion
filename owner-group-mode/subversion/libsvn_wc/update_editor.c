@@ -527,8 +527,10 @@ struct file_baton
   const char *last_changed_date;
   svn_boolean_t last_changed_is_for_entry;
 
-  /* The fields for owner, group, and mode of this file */
-  svn_string_t *owner, *group, *mode;
+  /* The files' owner, group, and unix-mode. */
+  const char *owner;
+  const char *group;
+  const char *unix_mode;
 
   /* Bump information for the directory this file lives in */
   struct bump_dir_info *bump_info;
@@ -1703,25 +1705,25 @@ change_file_prop (void *file_baton,
     {
       if ( (strcmp (name, SVN_PROP_TEXT_TIME) == 0) )
         {
-    fb->last_changed_date = apr_pstrdup (fb->pool, value->data);
+          fb->last_changed_date = apr_pstrdup (fb->pool, value->data);
           fb->last_changed_is_for_entry = 1;
         }
-      if ( (strcmp (name, SVN_PROP_ENTRY_COMMITTED_DATE) == 0) &&
+      else if ( (strcmp (name, SVN_PROP_OWNER) == 0) )
+        {
+          fb->owner = apr_pstrdup (fb->pool, value->data);
+        }
+      else if ( (strcmp (name, SVN_PROP_GROUP) == 0) )
+        {
+          fb->group = apr_pstrdup (fb->pool, value->data);
+        }
+      else if ( (strcmp (name, SVN_PROP_UNIX_MODE) == 0) )
+        {
+          fb->unix_mode = apr_pstrdup (fb->pool, value->data);
+        }
+      else if ( (strcmp (name, SVN_PROP_ENTRY_COMMITTED_DATE) == 0) &&
            !fb->last_changed_is_for_entry)
         fb->last_changed_date = apr_pstrdup (fb->pool, value->data);
-      if ( (strcmp (name, SVN_PROP_OWNER) == 0) )
-        {
-          fb->owner = svn_string_dup (value, fb->pool);
-        }
-      if ( (strcmp (name, SVN_PROP_GROUP) == 0) )
-        {
-          fb->group = svn_string_dup (value, fb->pool);
-        }
-      if ( (strcmp (name, SVN_PROP_UNIX_MODE) == 0) )
-        {
-          fb->mode = svn_string_dup (value, fb->pool);
-        }
-  }
+    }
 
   return SVN_NO_ERROR;
 }
@@ -1818,6 +1820,9 @@ install_file (svn_wc_notify_state_t *content_state,
               svn_revnum_t copyfrom_rev,
               const char *diff3_cmd,
               const char *timestamp_string,
+	      const char *owner, 
+	      const char *group,
+	      const char *unix_mode,
               apr_pool_t *pool)
 {
   apr_file_t *log_fp = NULL;
@@ -2294,6 +2299,40 @@ install_file (svn_wc_notify_state_t *content_state,
                                NULL);
     }
 
+  if (owner)
+    svn_xml_make_open_tag (&log_accum,
+                           pool,
+                           svn_xml_self_closing,
+                           SVN_WC__LOG_SET_OWNER,
+                           SVN_WC__LOG_ATTR_NAME,
+                           base_name,
+                           SVN_WC__LOG_ATTR_OWNER,
+                           owner,
+                           NULL);
+
+  if (group)
+    svn_xml_make_open_tag (&log_accum,
+                           pool,
+                           svn_xml_self_closing,
+                           SVN_WC__LOG_SET_GROUP,
+                           SVN_WC__LOG_ATTR_NAME,
+                           base_name,
+                           SVN_WC__LOG_ATTR_GROUP,
+                           group,
+                           NULL);
+
+  if (unix_mode)
+    svn_xml_make_open_tag (&log_accum,
+                           pool,
+                           svn_xml_self_closing,
+                           SVN_WC__LOG_SET_UNIX_MODE,
+                           SVN_WC__LOG_ATTR_NAME,
+                           base_name,
+                           SVN_WC__LOG_ATTR_UNIX_MODE,
+                           unix_mode,
+                           NULL);
+
+
 
   /* Write our accumulation of log entries into a log file */
   SVN_ERR_W (svn_io_file_write_full (log_fp, log_accum->data, 
@@ -2390,6 +2429,9 @@ close_file (void *file_baton,
                          SVN_INVALID_REVNUM,
                          eb->diff3_cmd,
                          fb->last_changed_date,
+                         fb->owner,
+                         fb->group,
+                         fb->unix_mode,
                          pool));
 
   /* We have one less referrer to the directory's bump information. */
@@ -2879,6 +2921,9 @@ svn_wc_add_repos_file (const char *dst_path,
                          TRUE,
                          copyfrom_url,
                          copyfrom_rev,
+                         NULL,
+                         NULL,
+                         NULL,
                          NULL,
                          NULL,
                          pool));
