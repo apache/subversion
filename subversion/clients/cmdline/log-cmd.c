@@ -91,8 +91,7 @@ struct log_receiver_baton
 
 /* The separator between log messages. */
 #define SEP_STRING \
-  "------------------------------------------------------------------------" \
-  APR_EOL_STR
+  "------------------------------------------------------------------------\n"
 
 
 /* Implement `svn_log_message_receiver_t', printing the logs in
@@ -190,11 +189,7 @@ log_message_receiver (void *baton,
     SVN_ERR (lb->cancel_func (lb->cancel_baton));
 
   if (rev == 0)
-    {
-      return svn_cmdline_printf (pool,
-                                 _("No commit for revision 0.%s"),
-                                 APR_EOL_STR);
-    }
+    return svn_cmdline_printf (pool, _("No commit for revision 0.\n"));
 
   /* ### See http://subversion.tigris.org/issues/show_bug.cgi?id=807
      for more on the fallback fuzzy conversions below. */
@@ -212,24 +207,12 @@ log_message_receiver (void *baton,
     }
   else
     date = _("(no date)");
-  
-  if (! lb->omit_log_message)
-    {
-      if (msg == NULL)
-        msg = "";
 
-      {
-        /* Convert log message from LF to native eol-style. */
-        svn_string_t *logmsg = svn_string_create (msg, pool);
-        SVN_ERR (svn_subst_detranslate_string (&logmsg, logmsg, FALSE, pool));
-        msg = logmsg->data;
-      }
-    }
-
-  SVN_ERR (svn_cmdline_printf (pool, "%s", SEP_STRING));
+  if (! lb->omit_log_message && msg == NULL)
+    msg = "";
 
   SVN_ERR (svn_cmdline_printf (pool,
-                               "r%ld | %s | %s",
+                               SEP_STRING "r%ld | %s | %s",
                                rev, author, date));
 
   if (! lb->omit_log_message)
@@ -241,7 +224,7 @@ log_message_receiver (void *baton,
                                    (lines > 1) ? "s" : ""));
     }
 
-  SVN_ERR (svn_cmdline_printf (pool, APR_EOL_STR));
+  SVN_ERR (svn_cmdline_printf (pool, "\n"));
 
   if (changed_paths)
     {
@@ -253,7 +236,7 @@ log_message_receiver (void *baton,
                                      svn_sort_compare_items_as_paths, pool);
 
       SVN_ERR (svn_cmdline_printf (pool,
-                                   _("Changed paths:%s"), APR_EOL_STR));
+                                   _("Changed paths:\n")));
       for (i = 0; i < sorted_paths->nelts; i++)
         {
           svn_sort__item_t *item = &(APR_ARRAY_IDX (sorted_paths, i,
@@ -272,7 +255,7 @@ log_message_receiver (void *baton,
                                 log_item->copyfrom_path,
                                 log_item->copyfrom_rev);
             }
-          SVN_ERR (svn_cmdline_printf (pool, "   %c %s%s" APR_EOL_STR,
+          SVN_ERR (svn_cmdline_printf (pool, "   %c %s%s\n",
                                        log_item->action, path,
                                        copy_data));
         }
@@ -281,7 +264,7 @@ log_message_receiver (void *baton,
   if (! lb->omit_log_message)
     {
       /* A blank line always precedes the log message. */
-      SVN_ERR (svn_cmdline_printf (pool, APR_EOL_STR "%s" APR_EOL_STR, msg));
+      SVN_ERR (svn_cmdline_printf (pool, "\n%s\n", msg));
     }
 
   return SVN_NO_ERROR;
@@ -337,7 +320,6 @@ log_message_receiver_xml (void *baton,
   /* Collate whole log message into sb before printing. */
   svn_stringbuf_t *sb = svn_stringbuf_create ("", pool);
   char *revstr;
-  const char *msg_native_eol;  
 
   if (lb->cancel_func)
     SVN_ERR (lb->cancel_func (lb->cancel_baton));
@@ -427,13 +409,7 @@ log_message_receiver_xml (void *baton,
 
       /* <msg>xxx</msg> */
       svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata, "msg", NULL);
-      SVN_ERR (svn_subst_translate_cstring (msg, &msg_native_eol,
-                                            APR_EOL_STR, /* the 'native' eol */
-                                            FALSE,       /* no need to repair */
-                                            NULL,        /* no keywords */
-                                            FALSE,       /* no expansion */
-                                            pool));
-      svn_xml_escape_cdata_cstring (&sb, msg_native_eol, pool);
+      svn_xml_escape_cdata_cstring (&sb, msg, pool);
       svn_xml_make_close_tag (&sb, pool, "msg");
     }
 
