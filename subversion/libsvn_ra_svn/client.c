@@ -1022,7 +1022,7 @@ static svn_error_t *ra_svn_log2(void *baton, const apr_array_header_t *paths,
   apr_hash_t *cphash;
   svn_revnum_t rev, copy_rev;
   svn_log_changed_path_t *change;
-  unsigned int nreceived = 0;
+  int nreceived = 0;
 
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w((!", "log"));
   if (paths)
