@@ -31,13 +31,15 @@ MDOCS_INSTALL_DIR = $(INSTALL_DIR)/misc-docs
 
 XSL_DIR = ${BOOK_TOP}/tools/xsl
 XSL_FO = ${BOOK_TOP}/tools/fo-stylesheet.xsl
-XSL_HTML = $(XSL_DIR)/html/docbook.xsl
-XSL_HTML_CHUNK = $(XSL_DIR)/html/chunk.xsl
+XSL_HTML = $(BOOK_TOP)/tools/html-stylesheet.xsl
+XSL_HTML_CHUNK = $(BOOK_TOP)/tools/chunk-stylesheet.xsl
 
 RUN_FOP = ${BOOK_TOP}/tools/bin/run-fop.sh
 
 # Book xsltproc options for HTML output
-BOOK_HTML_XSLTPROC_OPTS = --stringparam html.stylesheet styles.css
+# Note: --stringparam arguments no longer go here; 
+# see tools/html-stylesheet.xsl and tools/chunk-stylesheet.xsl
+BOOK_HTML_XSLTPROC_OPTS = 
 
 # Book xsltproc options for PDF and PostScript output
 # BOOK_PDF_XSLTPROC_OPTS = --stringparam page.height 9in --stringparam page.width 6.4in
