@@ -702,18 +702,17 @@ III.  BUILDING A SUBVERSION SERVER
       At the top of the httpd-2.0 tree:
 
           $ ./buildconf
-          $ ./configure --enable-dav --enable-so --prefix=/usr/local/apache2
+          $ ./configure --enable-dav --enable-so --enable-maintainer-mode
 
       The first arg says to build mod_dav.
+
       The second arg says to enable shared module support which is needed
       for a typical compile of mod_dav_svn (see below).
-      The third arg is where you will ultimately install apache.
 
-      Note: if you build Subversion with --enable-maintainer-mode,
-      then do the same for Apache. mod_dav_svn uses Apache's
-      maintainer-mode stuff from its headers, so you want to ensure
-      that Apache is built with the same assumption. Just add
-      --enable-maintainer-mode to the configure line above.
+      The third arg says to include debugging information.  If you
+      built Subversion with --enable-maintainer-mode, then you should
+      do the same for Apache; there can be problems if one was
+      compiled with debugging and the other without.
 
       Note: if you have multiple db versions installed on your system,
       Apache might link to a different one than Subversion, causing
@@ -732,8 +731,8 @@ III.  BUILDING A SUBVERSION SERVER
       for more details.
 
       All instructions below assume you configured Apache to install
-      under /usr/local/apache2/; substitute appropriately if you
-      chose some other location.
+      in its default location, /usr/local/apache2/; substitute
+      appropriately if you chose some other location.
 
       Compile and install apache:
 
