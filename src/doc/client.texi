@@ -52,18 +52,21 @@ TODO: this should go somewhere else in the document
 @node The working copy management library
 @subsection The working copy management library
 
-This library performs "offline" operations on the working copy.
+This library performs "offline" operations on the working copy.  The
+prefix @code{wc_} is used to identify that this is the "working copy"
+library.
 
 @table @code
 
-@item skelta make_skelta (path1, ...)
+@item skelta wc_make_skelta (path1, ...)
 
-Returns a skelta -- a delta object describing the changes to PATHs, but
-not including the actual content of the changes (i.e., the vdeltas).  In
-other words, this is how you get a list of all local modifications.
+Returns a skelta -- a delta object describing the changes to
+@emph{paths} but not including the actual content of the changes (i.e.,
+the vdeltas).  In other words, this is how you get a list of all local
+modifications.
 
-A PATH can be a directory or a file; if directory, then it's a root from
-which to start looking for modifications.  
+A @emph{path} can be a directory or a file; if directory, then it's a
+root from which to start looking for modifications.
 
 Takes multiple @code{path} arguments because you might want to do
 something like this:
@@ -78,44 +81,64 @@ request a delta for any subset of the working tree.  Although some files
 and directories outside that subset might also have been modified, the
 delta will not include those changes.
 
-@item delta fill_skelta (skelta)
+@item delta wc_fill_skelta (skelta)
 
-Turns a skelta into a delta by generating the vdiffs and placing them
-into the skelta.
+Turns @emph{skelta} into a delta by generating the appropriate vdiffs
+and pdiffs, and placing them into the skelta.
 
 (Note to self: probably okay for this to modify its argument.)
 
-@item make_delta (path1, ...)
+@item delta wc_make_delta (path1, ...)
 
 Equivalent to 
 
 @example
-   fill_skelta (make_skelta (path1, ...))
+   wc_fill_skelta (make_skelta (path1, ...))
 @end example
 
-@item apply_delta (delta)
+@item bool wc_apply_delta (delta)
 
-Applies a delta to a tree.
+Applies @emph{delta} to the working copy.
 
-@item add (path)
+@item bool wc_add (path)
 
-Add this file (i.e., tweak the administrative files appropriately).
+Add the file @emph{path} (i.e., tweak the administrative files
+appropriately).
 
-@item remove (path)
+@item bool wc_delete (path)
 
 Remove this file.
 
-@item rename (old_path, new_path)
+@item bool wc_rename (old_path, new_path)
 
 Move/rename this file (within the working copy, of course).
 
-@item read_prop (path, name)
+@item str_t wc_get_node_prop (path, propname)
 
-Return the value of the property named NAME.
+Return local value of @emph{propname} for the file or directory
+@emph{path}.
 
-@item write_prop (path, name, value)
+@item str_t wc_get_dirent_prop (path, propname)
 
-Set the value of the property NAME to VALUE.
+Return local value of @emph{propname} for the directory entry @emph{path}.
+
+@item proplist_t wc_get_node_proplist (path)
+
+Return all properties (names and values) of file or directory
+@emph{path}, in a hash table.
+
+@item proplist_t wc_get_dirent_proplist (path)
+
+Return all properties (names and values) of directory entry @emph{path},
+in a hash table.
+
+@item str_t *wc_get_node_propnames (path)
+
+Return all property names for file or directory @emph{path}.
+
+@item str_t *wc_get_dirent_propnames (path)
+
+Return all property names for a directory entry.
 
 @end table
 
@@ -124,51 +147,109 @@ Set the value of the property NAME to VALUE.
 @section The repository access library
 
 This library performs operations involving communication with the
-repository.
+repository.  The prefix @code{ra_} is used for everything in this
+library.
 
 @table @code
 
-@item latest (repository, path)
+@item version ra_latest (repos, path)
 
-Report the latest version in the repository for PATH.
+Report the latest ra_version in the repository for @emph{path}.
 
-@item approve_delta (repository, delta)
+@item token ra_submit_delta (repos, skelta)
 
-@item commit_delta (repository, delta)
+Submit @emph{skelta} for approval (see @pxref{Locking}).
+Either a skelta or a full delta can be passed.
 
-@item changes_between (repository, path1, version1, version2)
+@item ver ra_write_delta (repos, delta, token)
 
-TODO: Unclear whether path relative to ver1 or ver2, and should we be
-using an entity number instead?  No, that hasn't been standard
-practice.  Think about the general question of client-visibility of
-those numbers...
+Write previously-approved @emph{delta} into the version history.
+Must be a full delta, of course; a skelta would be insufficient.
 
-@item get_property (repository, version)
+@item skelta ra_get_status (repos, skelta)
 
-TODO: yes, but how does it know the repository?  Just using the current
-working directory seems kind of lame... :-)
+Find out the status (up-to-date or not) for the files mentioned in
+@emph{skelta}.
 
-@item find_repository_modified (path1, ...)
+@item delta ra_get_update (repos, skelta)
 
-@item PLACEHOLDER
+Get changes for files mentioned in @emph{skelta}.
 
-TODO: go through the cvs ops now...
+@item bool ra_abandon (repos, token)
 
-@item update (path1, ...)
+Abandon the transaction identified by token (for example, a user might
+interrupt the client between calls to submit_delta() and write_delta(),
+and the server would want to know the commit has been abandoned so it
+can clear out its pool of approved changes).
 
-TODO: update() is complex because not everything has the same base
-revision; this interface is hiding a lot of complexity -- the client has
-to get a delta from the server that's appropriate for the particular set
-of versions the client has.  Look over server section, see what the
-server's interface is...
+@item delta ra_get_delta (repos, ver1, path1, ver2, path2)
+
+Return the delta between the two trees.
+
+(Note: it's not yet clear that this function is strictly necessary.  It
+is included for completeness' sake, but I think we can implement
+everything without it.)
+
+@item diff ra_get_diff (repos, ver1, path1, ver2, path2, 
+                     [ver3, path3, ver4, path4, ...])
+
+Return a text diff between versions in the repository.
+(This must be done server side, the client doesn't have enough
+information to make the diff.)
+
+@item node ra_read (repos, ver, path)
+
+Return a file or directory from the repository.
+@c todo: explain lazy reading
+
+@item str_t ra_get_node_prop (path, propname)
+
+Return local value of @emph{propname} for the file or directory
+@emph{path}.
+
+@item str_t ra_get_dirent_prop (path, propname)
+
+Return local value of @emph{propname} for the directory entry @emph{path}.
+
+@item prop_t ra_get_ver_prop (ver, propname)
+
+Return the value of @emph{propname} for a version (e.g., log message).
+
+@item proplist_t ra_get_node_proplist (path)
+
+Return all properties (names and values) of file or directory
+@emph{path}, in a hash table.
+
+@item proplist_t ra_get_dirent_proplist (path)
+
+Return all properties (names and values) of directory entry @emph{path},
+in a hash table.
+
+@item prolist_t ra_get_ver_proplist (ver)
+
+Return all properties (keys and values) of a version.
+
+@item str_t *ra_get_node_propnames (path)
+
+Return all property names for file or directory @emph{path}.
+
+@item str_t *ra_get_dirent_propnames (path)
+
+Return all property names for a directory entry.
+
+@item str_t *ra_get_ver_propnames (ver)
+
+Return all property keys for a version.
 
 @end table
-
-TODO: mention the combo ops from the yellow sheet...
 
 @c -----------------------------------------------------------------------
 @node The layout of working copies
 @subsection The layout of working copies
+
+This section gives an overview of how working copies are arranged
+physically.  It is not a full specification of working copy layout,
+however; many details will be resolved only as the code takes shape.
 
 As with CVS, Subversion working copies are simply directory trees with
 special administrative subdirectories, in this case named "SVN" instead
@@ -196,6 +277,11 @@ of "CVS":
        foo.c     bar.c
 
 @end example
+
+Each SVN/ directory records the files in its parent, their version
+numbers and property lists, and any local changes (such as uncommitted
+adds, deletes, and renames) that have happened
+
 
 Although often it would often be possible to deduce certain information
 by examining parent directories, this is avoided in favor of making each
