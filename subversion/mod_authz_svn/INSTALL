@@ -17,26 +17,68 @@ II.   Configuration
 
         LoadModule authz_svn_module   modules/mod_authz_svn.so
 
+      There are several ways to setup access checking for your subversion
+      location.  These are simple examples, for more complex configuration
+      of authentication/authorization with Apache, please refer to the
+      documentation: http://httpd.apache.org/docs-2.0/.
 
-      Next set up your subversion location like so:
+      A. Example 1: Anonymous access only
 
-        <Location /svn>
-          DAV svn
-          SVNPath /path/to/repos
+         This configuration will allow access only to the directories everyone
+         has permissions to do the operation performed.  All other access is
+         denied.  See section II.2 on how to set up permissions.
 
-          AuthType Basic
-          AuthName "Subversion repository"
-          AuthUserFile /path/to/htpasswd/file
+         <Location /svn>
+           DAV svn
+           SVNPath /path/to/repos
 
-          AuthzSVNAccessFile /path/to/access/file
+           AuthzSVNAccessFile /path/to/access/file
+         </Location>
 
-          Require valid-user
-        </Location>
+      B. Example 2: Mixed anonymous and authenticated access
 
-      NOTE: Authentication is always required using mod_authz_svn for all
-      methods you wish to protect.  This means you need a dummy 'anonymous'
-      account for anonymous read only users now, if you want to be able
-      to restrict reading of any portion of the repository.
+         This configuration checks to see if anonymous access is allowed
+         first, if not, it falls back to checking if the authenticated
+         user has permissions to do the operation performed.
+
+         <Location /svn>
+           DAV svn
+           SVNPath /path/to/repos
+
+           AuthType Basic
+           AuthName "Subversion repository"
+           AuthUserFile /path/to/htpasswd/file
+
+           AuthzSVNAccessFile /path/to/access/file
+
+           # The following line will allow to fall back to authenticated
+           # access when anonymous fails.
+           Satisfy Any
+           Require valid-user
+         </Location>
+
+      C. Example 3: Authenticated access only
+
+         This configuration requires everyone accessing the repository to be
+         authenticated.
+
+         <Location /svn>
+           DAV svn
+           SVNPath /path/to/repos
+
+           AuthType Basic
+           AuthName "Subversion repository"
+           AuthUserFile /path/to/htpasswd/file
+
+           AuthzSVNAccessFile /path/to/access/file
+
+           Require valid-user
+         </Location>
+
+         NOTE: Because there is no 'Satisfy Any' line, the module acts as if
+         though AuthzSVNAnonymous was set to 'No'.  The AuthzSVNAnonymous
+         directive prevents the anonymous access check from being run.
+
 
    2. Specifying permissions
 

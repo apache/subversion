@@ -21,6 +21,7 @@
 
 #include <httpd.h>
 #include <http_config.h>
+#include <http_core.h>
 #include <http_request.h>
 #include <http_protocol.h>
 #include <http_log.h>
@@ -45,6 +46,7 @@ enum {
 
 typedef struct {
     int authoritative;
+    int anonymous;
     const char *base_path;
     const char *access_file;
 } authz_svn_config_rec;
@@ -69,6 +71,7 @@ static void *create_authz_svn_dir_config(apr_pool_t *p, char *d)
 
     /* By default keep the fortress secure */
     conf->authoritative = 1;
+    conf->anonymous = 1;
 
     return conf;
 }
@@ -84,6 +87,11 @@ static const command_rec authz_svn_cmds[] =
                   (void *)APR_OFFSETOF(authz_svn_config_rec, access_file),
                   OR_AUTHCFG,
                   "Text file containing permissions of repository paths."),
+    AP_INIT_FLAG("AuthzSVNAnonymous", ap_set_flag_slot,
+                 (void *)APR_OFFSETOF(authz_svn_config_rec, anonymous),
+                 OR_AUTHCFG,
+                 "Set to 'Off' to skip access control when no authenticated "
+                 "user is required. (default is On.)"),
     { NULL }
 };
 
@@ -116,12 +124,17 @@ static svn_boolean_t parse_authz_line(const char *name, const char *value,
 {
     struct parse_authz_line_baton *b = baton;
 
-    if (*name == '@') {
-        if (!group_contains_user(b->config, &name[1], b->user, b->pool))
+    if (strcmp(name, "*")) {
+        if (!b->user) {
             return TRUE;
-    }
-    else if (strcmp(name, b->user) && strcmp(name, "*")) {
-        return TRUE;
+        }
+        else if (*name == '@') {
+            if (!group_contains_user(b->config, &name[1], b->user, b->pool))
+                return TRUE;
+        }
+        else if (strcmp(name, b->user)) {
+            return TRUE;
+        }
     }
 
     if (ap_strchr_c(value, 'r')) {
@@ -187,20 +200,23 @@ static int check_access(svn_config_t *cfg,
            || (baton.allow & required_access) != 0;
 }
 
-
-/*
- * Hooks
+/* Check if the current request R is allowed.  Upon exit *REPOS_PATH_REF
+ * will contain the path that an operation was requested on.
+ * *DEST_REPOS_PATH_REF will contain the destination path if the the requested
+ * operation was a MOVE or a COPY.  Returns OK when access is allowed,
+ * DECLINED when it isn't, or an HTTP_ error code when an error occurred.
  */
-
-static int auth_checker(request_rec *r)
+static int req_check_access(request_rec *r,
+                            authz_svn_config_rec *conf,
+                            const char **repos_path_ref,
+                            const char **dest_repos_path_ref)
 {
-    authz_svn_config_rec *conf = ap_get_module_config(r->per_dir_config,
-                                                      &authz_svn_module);
     const char *dest_uri;
-    apr_uri_t   parsed_dest_uri;
+    apr_uri_t parsed_dest_uri;
     const char *cleaned_uri;
     int trailing_slash;
     const char *repos_name;
+    const char *dest_repos_name;
     const char *relative_path;
     const char *repos_path;
     const char *dest_repos_path = NULL;
@@ -208,11 +224,7 @@ static int auth_checker(request_rec *r)
     int authz_svn_type;
     svn_config_t *access_conf = NULL;
     svn_error_t *svn_err;
-    int status = OK;
     const char *cache_key;
-
-    if (!conf->access_file)
-        return DECLINED;
 
     switch (r->method_number) {
     /* All methods requiring read access to r->uri */
@@ -260,6 +272,50 @@ static int auth_checker(request_rec *r)
     if (repos_path)
         repos_path = svn_path_join("/", repos_path, r->pool);
 
+    *repos_path_ref = repos_path;
+
+    if (r->method_number == M_MOVE || r->method_number == M_COPY) {
+        dest_uri = apr_table_get(r->headers_in, "Destination");
+
+        /* Decline MOVE or COPY when there is no Destination uri, this will
+         * cause failure.
+         */
+        if (!dest_uri)
+            return DECLINED;
+
+        apr_uri_parse(r->pool, dest_uri, &parsed_dest_uri);
+
+        dest_uri = parsed_dest_uri.path;
+        if (strncmp(dest_uri, conf->base_path, strlen(conf->base_path))) {
+            /* If it is not the same location, then we don't allow it.
+             * XXX: Instead we could compare repository uuids, but that
+             * XXX: seems a bit over the top.
+             */
+            return HTTP_BAD_REQUEST;
+        }
+
+        dav_err = dav_svn_split_uri(r,
+                                    dest_uri,
+                                    conf->base_path,
+                                    &cleaned_uri,
+                                    &trailing_slash,
+                                    &dest_repos_name,
+                                    &relative_path,
+                                    &dest_repos_path);
+
+        if (dav_err) {
+            ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r,
+                          "%s  [%d, #%d]",
+                          dav_err->desc, dav_err->status, dav_err->error_id);
+            return HTTP_INTERNAL_SERVER_ERROR;
+        }
+
+        if (dest_repos_path)
+            dest_repos_path = svn_path_join("/", dest_repos_path, r->pool);
+
+        *dest_repos_path_ref = dest_repos_path;
+    }
+
     /* Retrieve/cache authorization file */
     cache_key = apr_pstrcat(r->pool, "mod_authz_svn:", conf->access_file, NULL);
     apr_pool_userdata_get((void **)&access_conf, cache_key, r->connection->pool);
@@ -281,17 +337,9 @@ static int auth_checker(request_rec *r)
     if (!check_access(access_conf,
                       repos_path, r->user, authz_svn_type,
                       r->pool)) {
-        if (conf->authoritative) {
-            ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r,
-                "Access denied: '%s' %s %s",
-                r->user, r->method, repos_path);
-            ap_note_auth_failure(r);
-            return HTTP_UNAUTHORIZED;
-        }
-
-        status = DECLINED;
+        return DECLINED;
     }
-    
+
     /* XXX: DELETE, MOVE, MKCOL and PUT, if the path doesn't exist yet, also
      * XXX: require write access to the parent dir of repos_path.
      */
@@ -299,77 +347,135 @@ static int auth_checker(request_rec *r)
     /* Only MOVE and COPY have a second uri we have to check access to. */
     if (r->method_number != M_MOVE
         && r->method_number != M_COPY) {
-        if (status == DECLINED)
-            return DECLINED;
-
-        ap_log_rerror(APLOG_MARK, APLOG_INFO, 0, r,
-            "Access granted: '%s' %s %s", r->user, r->method, repos_path);
         return OK;
     }
-
-    dest_uri = apr_table_get(r->headers_in, "Destination");
-
-    /* Decline MOVE or COPY when there is no Destination uri, this will
-     * cause failure.
-     */
-    if (!dest_uri) {
-        return DECLINED;
-    }
-
-    apr_uri_parse(r->pool, dest_uri, &parsed_dest_uri);
-
-    dest_uri = parsed_dest_uri.path;
-    if (strncmp(dest_uri, conf->base_path, strlen(conf->base_path))) {
-        /* If it is not the same location, then we don't allow it.
-         * XXX: Instead we could compare repository uuids, but that
-         * XXX: seems a bit over the top.
-         */
-        return HTTP_BAD_REQUEST;
-    }
-
-    dav_err = dav_svn_split_uri(r,
-                                dest_uri,
-                                conf->base_path,
-                                &cleaned_uri,
-                                &trailing_slash,
-                                &repos_name,
-                                &relative_path,
-                                &dest_repos_path);
-
-    if (dav_err) {
-        ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r,
-                      "%s  [%d, #%d]",
-                      dav_err->desc, dav_err->status, dav_err->error_id);
-        return HTTP_INTERNAL_SERVER_ERROR;
-    }
-
-    if (dest_repos_path)
-        dest_repos_path = svn_path_join("/", dest_repos_path, r->pool);
 
     /* Check access on the first repos_path */
     if (!check_access(access_conf,
                       dest_repos_path, r->user, AUTHZ_SVN_WRITE,
                       r->pool)) {
-        if (!conf->authoritative)
-            return DECLINED;
-
-        ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r,
-            "Access denied: '%s' %s %s %s",
-            r->user, r->method, repos_path, dest_repos_path);
-        ap_note_auth_failure(r);
-        return HTTP_UNAUTHORIZED;
+        return DECLINED;
     }
 
     /* XXX: MOVE and COPY, if the path doesn't exist yet, also
      * XXX: require write access to the parent dir of dest_repos_path.
      */
 
-    if (status == DECLINED)
+    return OK;
+}
+
+/*
+ * Hooks
+ */
+
+static int access_checker(request_rec *r)
+{
+    authz_svn_config_rec *conf = ap_get_module_config(r->per_dir_config,
+                                                      &authz_svn_module);
+    const char *repos_path;
+    const char *dest_repos_path = NULL;
+    int status;
+
+    /* We are not configured to run */
+    if (!conf->anonymous || !conf->access_file)
         return DECLINED;
 
-    ap_log_rerror(APLOG_MARK, APLOG_INFO, 0, r,
-        "Access granted: '%s' %s %s %s",
-        r->user, r->method, repos_path, dest_repos_path);
+    /* It makes no sense to check if a location is both accessible
+     * anonymous and by an authenticated user.
+     */
+    if (ap_some_auth_required(r) && ap_satisfies(r) != SATISFY_ANY)
+        return DECLINED;
+
+    /* XXX: Don't run when ap_some_auth_required(r) and an Authorization
+     * XXX: or Proxy-Authorization are present?
+     */
+
+    /* If anon access is allowed, return OK */
+    status = req_check_access(r, conf, &repos_path, &dest_repos_path);
+    if (status == DECLINED) {
+        if (!conf->authoritative)
+            return DECLINED;
+
+        if (!ap_some_auth_required(r)) {
+            if (dest_repos_path) {
+                ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r,
+                    "Access denied: - %s %s %s",
+                    r->method, repos_path, dest_repos_path);
+            }
+            else {
+                ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r,
+                    "Access denied: - %s %s",
+                    r->method, repos_path);
+            }
+
+        }
+
+        return HTTP_FORBIDDEN;
+    }
+
+    if (status != OK)
+        return status;
+
+    if (dest_repos_path) {
+        ap_log_rerror(APLOG_MARK, APLOG_INFO, 0, r,
+            "Access granted: - %s %s %s",
+            r->method, repos_path, dest_repos_path);
+    }
+    else {
+        ap_log_rerror(APLOG_MARK, APLOG_INFO, 0, r,
+            "Access granted: - %s %s",
+            r->method, repos_path);
+    }
+
+    return OK;
+}
+
+static int auth_checker(request_rec *r)
+{
+    authz_svn_config_rec *conf = ap_get_module_config(r->per_dir_config,
+                                                      &authz_svn_module);
+    const char *repos_path;
+    const char *dest_repos_path = NULL;
+    int status;
+
+    /* We are not configured to run */
+    if (!conf->access_file)
+        return DECLINED;
+
+    status = req_check_access(r, conf, &repos_path, &dest_repos_path);
+    if (status == DECLINED) {
+        if (conf->authoritative) {
+            if (dest_repos_path) {
+                ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r,
+                    "Access denied: '%s' %s %s %s",
+                    r->user, r->method, repos_path, dest_repos_path);
+            }
+            else {
+                ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r,
+                    "Access denied: '%s' %s %s",
+                    r->user, r->method, repos_path);
+            }
+            ap_note_auth_failure(r);
+            return HTTP_UNAUTHORIZED;
+        }
+
+        return DECLINED;
+    }
+
+    if (status != OK)
+        return status;
+
+    if (dest_repos_path) {
+        ap_log_rerror(APLOG_MARK, APLOG_INFO, 0, r,
+            "Access granted: '%s' %s %s %s",
+            r->user, r->method, repos_path, dest_repos_path);
+    }
+    else {
+        ap_log_rerror(APLOG_MARK, APLOG_INFO, 0, r,
+            "Access granted: '%s' %s %s",
+            r->user, r->method, repos_path);
+    }
+
     return OK;
 }
 
@@ -379,6 +485,7 @@ static int auth_checker(request_rec *r)
 
 static void register_hooks(apr_pool_t *p)
 {
+    ap_hook_access_checker(access_checker, NULL, NULL, APR_HOOK_LAST);
     ap_hook_auth_checker(auth_checker, NULL, NULL, APR_HOOK_FIRST);
 }
 
