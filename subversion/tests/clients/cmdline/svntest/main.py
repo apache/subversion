@@ -420,9 +420,29 @@ class Sandbox:
 
   def cleanup_test_paths(self):
     for path in self.test_paths:
-      if verbose_mode:
-        print "CLEANUP: " + path
-      safe_rmtree(path)
+      _cleanup_test_path(path)
+
+
+_deferred_test_paths = []
+def _cleanup_deferred_test_paths():
+  global _deferred_test_paths
+  test_paths = _deferred_test_paths[:]
+  _deferred_test_paths = []
+  for path in test_paths:
+    _cleanup_test_path(path, 1)
+
+def _cleanup_test_path(path, retrying=None):
+  if verbose_mode:
+    if retrying:
+      print "CLEANUP: RETRY:", path
+    else:
+      print "CLEANUP:", path
+  try:
+    safe_rmtree(path)
+  except:
+    if verbose_mode:
+      print "WARNING: cleanup failed, will try again later"
+    _deferred_test_paths.append(path)
 
 ######################################################################
 # Main testing functions
@@ -475,7 +495,9 @@ def _internal_run_tests(test_list, testnum=None):
   else:
     exit_code = run_one_test(testnum, test_list)
 
+  _cleanup_deferred_test_paths()
   return exit_code
+
 
 # Main func.  This is the "entry point" that all the test scripts call
 # to run their list of tests.
@@ -545,6 +567,8 @@ def run_tests(test_list):
   # This ensures that an 'import' will happen the next time we run.
   if os.path.exists(temp_dir):
     shutil.rmtree(temp_dir)
+
+  _cleanup_deferred_test_paths()
 
   # return the appropriate exit code from the tests.
   sys.exit(exit_code)
