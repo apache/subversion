@@ -1073,7 +1073,7 @@ svn_fs__rep_contents_clear (svn_fs_t *fs,
   if (! rep->is_mutable)
     return svn_error_createf
       (SVN_ERR_FS_REP_NOT_MUTABLE, 0, NULL, trail->pool,
-       "svn_fs__rep_contents_clear: rep \"%s\" is not mutable", rep);
+       "svn_fs__rep_contents_clear: rep \"%s\" is not mutable", rep_key);
 
   if (rep->kind == svn_fs__rep_kind_fulltext)
     {
