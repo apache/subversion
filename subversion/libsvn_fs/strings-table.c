@@ -249,6 +249,12 @@ svn_fs__string_read (svn_fs_t *fs,
 {
   apr_size_t amt_read = 0;
 
+  /* ### todo: See IZ issue #642.
+
+     Currently, the helper function for this, string_read() is having
+     to lookup keys and setup the cursor on each call.  Ideally, the
+     following looping concept would be inside that helper so would
+     only have to setup the cursor once. */
   while (1)
     {
       apr_size_t size = *len - amt_read;
