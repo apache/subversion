@@ -1,3 +1,4 @@
+es
 /*
  * fetch.c :  routines for fetching updates and checkouts
  *
@@ -305,7 +306,7 @@ static svn_error_t *get_delta_base(const char **delta_base,
   "mistakenly thinks something is wrong.  This is a known bug, and will be\n"
   "fixed soon.  See\n"
   "\n"
-  "   http://subversion.tigris.org/issues/show_bug.cgi?id=806"
+  "   http://subversion.tigris.org/issues/show_bug.cgi?id=806\n"
   "\n"
   "for details.\n",
              relpath,
