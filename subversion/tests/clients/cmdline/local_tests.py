@@ -560,12 +560,12 @@ def update_from_wc_top():
 
   # Create expected disk tree for the update.
   my_greek_tree = svn_test_main.copy_greek_tree()
-  my_greek_tree[2][1] = my_greek_tree[2][1] + 'appended mu text\n'
-  my_greek_tree[14][1] = my_greek_tree[14][1] + 'new appended text for rho\n'
+  my_greek_tree[2][1] = my_greek_tree[2][1] + 'appended mu text'
+  my_greek_tree[14][1] = my_greek_tree[14][1] + 'new appended text for rho'
   expected_disk_tree = svn_tree.build_generic_tree(my_greek_tree)
 
   # Create expected status tree for the update.
-  status_list = get_virginal_status_list(wc_dir, '2')
+  status_list = get_virginal_status_list(wc_backup, '2')
   expected_status_tree = svn_tree.build_generic_tree(status_list)
   
   # Do the update and check the results in three ways.
