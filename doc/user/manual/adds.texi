@@ -1,0 +1,80 @@
+@node Adds
+@chapter Adds
+
+This section describes how the Subversion client deals with the addition
+of files and directories. 
+
+@menu
+* Adding items::              How to add items to revision control.
+* Additions from updates::    When 'update' tries to add things.
+* Replacements::              When you add a previously deleted item.
+@end menu
+
+
+@c ------------------------------------------------------------------
+@node Adding items
+@section Adding items
+
+
+Describe 'svn add' command.  Stress that repo doesn't change.
+Describe recursive flag.
+Describe 'svn unadd' -- same as 'svn rm' after an 'add'..
+Describe Commit:  item is copied te repository.  Server-side conflict if the
+item can't be created in the latest repository tree.
+
+Rule:  you can't add something that doesn't exist in your wc first.
+
+Rule:  you can never add something to a directory that is scheduled for
+deletion.
+
+
+
+
+@c ------------------------------------------------------------------
+@node Additions from updates
+@section Additions from updates
+
+New stuff might be added during an update.
+
+You'll get a conflict (C) if these additions would overwrite any
+existing items of the same name.
+
+
+@c ------------------------------------------------------------------
+@node Replacements
+@section Replacements
+
+
+@dfn{Replacement} is when you add a new item that has the same name as
+an item already scheduled for deletion.   Instead of showing both "D"
+and "A" flags simultaneously, an "R" flag is shown.
+
+For example:
+
+@example
+$ svn st
+_   1       (     1)  .
+_   1       (     1)  ./foo.c
+
+$ svn rm foo.c
+$ svn st
+_   1       (     1)  .
+D   1       (     1)  ./foo.c
+
+$ rm foo.c
+$ echo "a whole new foo" > foo.c
+$ svn add foo.c
+$ svn st
+_   1       (     1)  .
+R   1       (     1)  ./foo.c
+
+@end example
+
+When a replaced item is committed, the client will first delete the
+original @file{foo.c} from the repository, and then add the "new"
+@file{foo.c}.
+
+Replacements are useful:  the object being replaced can even 
+
+
+
