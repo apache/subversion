@@ -32,6 +32,7 @@
 
 #include "dav_svn.h"
 
+#include <mod_dav_svn.h>
 
 /* This is the default "special uri" used for SVN's special resources
    (e.g. working resources, activities) */
@@ -248,6 +249,48 @@ const char *dav_svn_get_fs_parent_path(request_rec *r)
     return conf->fs_parent_path;
 }
 
+AP_MODULE_DECLARE(dav_error *) dav_svn_get_repos_path(request_rec *r, 
+                                                      const char *root_path,
+                                                      const char **repos_path)
+{
+
+    const char *fs_path;        
+    const char *fs_parent_path; 
+    const char *repos_name;
+    const char *ignored_path_in_repos;
+    const char *ignored_cleaned_uri;
+    const char *ignored_relative;
+    int ignored_had_slash;
+    dav_error *derr;
+
+    /* Handle the SVNPath case. */
+    fs_path = dav_svn_get_fs_path(r);
+
+    if (fs_path != NULL)
+      {
+        *repos_path = fs_path;
+        return NULL;
+      }
+
+    /* Handle the SVNParentPath case.  If neither directive was used,
+       dav_svn_split_uri will throw a suitable error for us - we do
+       not need to check that here. */
+    fs_parent_path = dav_svn_get_fs_parent_path(r);
+
+    /* Split the svn URI to get the name of the repository below
+       the parent path. */
+    derr = dav_svn_split_uri(r, r->uri, root_path,
+                             &ignored_cleaned_uri, &ignored_had_slash,
+                             &repos_name,
+                             &ignored_relative, &ignored_path_in_repos);
+    if (derr)
+      return derr;
+
+    /* Construct the full path from the parent path base directory
+       and the repository name. */
+    *repos_path = svn_path_join(fs_parent_path, repos_name, r->pool);
+    return NULL;
+}
 
 const char *dav_svn_get_repo_name(request_rec *r)
 {
