@@ -1,9 +1,9 @@
 #!/bin/sh
 
 echo ""
-echo "Note that you should source this script instead of running it, i.e.:"
+echo "I hope you sourced this script, i.e.:"
 echo "   'source svn-dev.sh'"
-echo "because it needs to affect the parent's environment."
+echo "instead of running it the standard way; it wants to affect parent env."
 echo ""
 
 if [ -d ${HOME}/projects/subversion ]; then
