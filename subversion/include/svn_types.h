@@ -177,11 +177,8 @@ svn_error_t *svn_categorize_props (const apr_array_header_t *proplist,
 /* Set to either TRUE or FALSE if we want a file to be executable or not. */
 #define SVN_PROP_EXECUTABLE  SVN_PROP_PREFIX "executable"
 
-/* Set to either TRUE or FALSE to indicate if a file is a module.
-   ### This should be automatically inherited from the parent
-   directory... which raises the general issue of property
-   inheritance. */
-#define SVN_PROP_MODULE  SVN_PROP_PREFIX "module"
+/* Describes external items to check out into this directory. */
+#define SVN_PROP_EXTERNALS  SVN_PROP_PREFIX "externals"
 
 /* The character set of a given file. */
 #define SVN_PROP_CHARSET  SVN_PROP_PREFIX "charset"
