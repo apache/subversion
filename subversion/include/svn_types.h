@@ -153,15 +153,12 @@ svn_error_t *svn_categorize_props (const apr_array_header_t *proplist,
 /* All Subversion property names start with this. */
 #define SVN_PROP_PREFIX "svn:"
 
+/* --------------------------------------------------------------------- */
+/** VISIBLE PROPERTIES **/
 
-/* The fs revision property that stores a commit's author. */
-#define SVN_PROP_REVISION_AUTHOR  SVN_PROP_PREFIX "author"
-
-/* The fs revision property that stores a commit's log message. */
-#define SVN_PROP_REVISION_LOG  SVN_PROP_PREFIX "log"
-
-/* The fs revision property that stores a commit's date. */
-#define SVN_PROP_REVISION_DATE  SVN_PROP_PREFIX "date"
+/* These are regular properties that are attached to ordinary files
+   and dirs, and are visible (and tweakable) by svn client programs
+   and users.  Adding these properties causes specific effects.  */
 
 /* The mime-type of a given file. */
 #define SVN_PROP_MIME_TYPE  SVN_PROP_PREFIX "mime-type"
@@ -181,6 +178,12 @@ svn_error_t *svn_categorize_props (const apr_array_header_t *proplist,
 /* The character set of a given file. */
 #define SVN_PROP_CHARSET  SVN_PROP_PREFIX "charset"
 
+/* --------------------------------------------------------------------- */
+/** INVISBILE PROPERTIES  **/
+
+/* WC props are props that are invisible to users:  they're generated
+   by an RA layer, and stored in secret parts of .svn/.  */
+
 /* The propname *prefix* that makes a propname a "WC property". 
    For example, ra_dav might store a versioned-resource url as a WC
    prop like this:
@@ -193,16 +196,8 @@ svn_error_t *svn_categorize_props (const apr_array_header_t *proplist,
    when committing.  */
 #define SVN_PROP_WC_PREFIX     SVN_PROP_PREFIX "wc:"
 
-
 /* Another type of non-user-visible property.  "Entry properties" are
    stored as fields with the adminstrative 'entries' file.  
-
-  [ 'entry props' aren't normal user properties.  Really, they're not
-     properties at all; they're untweakable metadata that are being
-     communicated via the editor's prop-mechanism.  They have the same
-     importance as arguments to editor calls, but are too specific to
-     the update-editor; therefore they're not part of the editor API,
-     and thus -only- the update-editor looks for them. ]
 */
 #define SVN_PROP_ENTRY_PREFIX  SVN_PROP_PREFIX "entry:"
 
@@ -211,10 +206,23 @@ svn_error_t *svn_categorize_props (const apr_array_header_t *proplist,
 #define SVN_PROP_ENTRY_COMMITTED_DATE    SVN_PROP_ENTRY_PREFIX "committed-date"
 #define SVN_PROP_ENTRY_LAST_AUTHOR       SVN_PROP_ENTRY_PREFIX "last-author"
 
-
 /* When custom, user-defined properties are passed over the wire, they will
    have this prefix added to their name */
 #define SVN_PROP_CUSTOM_PREFIX SVN_PROP_PREFIX "custom:"
+
+/** These are reserved properties attached to a "revision" object in
+    the repository filesystem.  They can be queried by using
+    svn_fs_revision_prop().  They are invisible to svn clients. **/
+
+/* The fs revision property that stores a commit's author. */
+#define SVN_PROP_REVISION_AUTHOR  SVN_PROP_PREFIX "author"
+
+/* The fs revision property that stores a commit's log message. */
+#define SVN_PROP_REVISION_LOG  SVN_PROP_PREFIX "log"
+
+/* The fs revision property that stores a commit's date. */
+#define SVN_PROP_REVISION_DATE  SVN_PROP_PREFIX "date"
+
 
 
 
