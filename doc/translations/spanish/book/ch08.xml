@@ -645,39 +645,43 @@ The following repository access (RA) modules are available:
           con mod_dav_svn, que enlaza directamente con la capa de
           repositorio de Subversion.</para>
   
-        <para>That was a simplified description of the actual
-          exchanges taking place, though.  For example, the Subversion
-          repository might be protected by Apache's authorization
-          directives.  This could result in initial attempts to
-          communicate with the repository being rejected by Apache on
-          authorization grounds.  At this point, libsvn_ra_dav gets
-          back the notice from Apache that insufficient identification
-          was supplied, and calls back into the Client Layer to get
-          some updated authentication data.  If the data is supplied
-          correctly, and the user has the permissions that Apache
-          seeks, libsvn_ra_dav's next automatic attempt at performing
-          the original operation will be granted, and all will be
-          well.  If sufficient authentication information cannot be
-          supplied, the request will ultimately fail, and the client
-          will report the failure to the user.</para>
+        <para>Pero eso es una descripción simplificada de los
+          intercambios reales que ocurren. Por ejemplo, el
+          repositorio Subversion podría estar protegido por
+          las directivas de autorización de Apache. Esto podría
+          significar que los intentos iniciales de comunicación
+          con el repositorio podrían ser rechazados por Apache
+          debido al código de autorización. En esta situación,
+          libsvn_ra_dav recibe la notificación de Apache de que no
+          se proporcionaron suficientes datos de identificación, y
+          llama de vuelta a la capa cliente para obtener algunos
+          datos actualizados de autenticación.  Si los datos se
+          proporcionan correctamente, y el usuario tiene los
+          permisos que Apache necesita, el siguiente intento
+          automático de libsvn_ra_dav para realizar la operación
+          original será aceptado, y todo irá bien.  Si no se puede
+          proporcionar suficiente información de autenticación,
+          la petición fallará, y el cliente informará del fallo
+          al usuario.</para>
   
         <!-- A diagram here? -->
   
-        <para>By using Neon and Apache, Subversion gets free
-          functionality in several other complex areas, too.  For
-          example, if Neon finds the OpenSSL libraries, it allows the
-          Subversion client to attempt to use SSL-encrypted
-          communications with the Apache server (whose own mod_ssl can
-          <quote>speak the language</quote>).  Also, both Neon itself
-          and Apache's mod_deflate can understand the
-          <quote>deflate</quote> algorithm (the same one used by the
-          PKZIP and gzip programs), so requests can be sent in smaller,
-          compressed chunks across the wire.  Other complex features
-          that Subversion hopes to support in the future include the
-          ability to automatically handle server-specified redirects
-          (for example, when a repository has been moved to a new
-          canonical URL) and taking advantage of HTTP
-          pipelining.</para>
+        <para>Gracias al uso de Neon y Apache, Subversion también
+          obtiene funcionalidad gratuita en algunas otras áreas
+          complejas. Por ejemplo, si Neon encuentra las librerías
+          OpenSSL, permitirá al cliente de Subversion intentar
+          usar comunicaciones cifradas con SSL con el servidor
+          Apache (cuyo módulo mod_ssl puede <quote>hablar el
+          lenguaje</quote>).  Además, tanto Neon como mod_deflate de
+          Apache pueden entender el algoritmo <quote>deflate</quote>
+          (el mismo usado por los programas PKZIP y gzip), por lo que
+          las peticiones pueden ser enviadas en trozos comprimidos
+          más pequeños a través del cable. Otras características
+          complejas que Subversion espera soportar en el futuro
+          incluyen la capacidad de manejar de forma automática las
+          redirecciones indicadas por el servidor (por ejemplo,
+          cuando un repositorio se mueve a otra nueva URL canónica)
+          y obtener la ventaja del pipelining HTTP.</para>
   
         <!-- Talk about another difference between CVS and Subversion.
              CVS users had to specify which auth mechanism to use
