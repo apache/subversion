@@ -1012,7 +1012,15 @@ svn_diff_output(svn_diff_t *diff,
           break;
 
         case svn_diff__type_conflict:
-          output_fn = vtable->output_common;
+          output_fn = NULL;
+          if (vtable->output_conflict != NULL)
+            {
+              SVN_ERR(vtable->output_conflict(output_baton,
+                               diff->original_start, diff->original_length,
+                               diff->modified_start, diff->modified_length,
+                               diff->latest_start, diff->latest_length,
+                               diff->resolved_diff));
+            }
           break;
 
         default:
