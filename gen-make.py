@@ -75,6 +75,16 @@ def _usage_exit():
   print "  --with-zlib=DIR"
   print "           tell neon to look for ZLib headers and"
   print "           libs in DIR"
+  print
+  print "  --enable-pool-debug"
+  print "           turn on APR pool debugging"
+  print
+  print "  --enable-purify"
+  print "           add support for Purify instrumentation;"
+  print "           implies --enable-pool-debug"
+  print
+  print "  --enable-quantify"
+  print "           add support for Quantify instrumentation"
   sys.exit(0)
 
 if __name__ == '__main__':
@@ -82,7 +92,11 @@ if __name__ == '__main__':
     opts, args = getopt.getopt(sys.argv[1:], 'st:',
                                ['with-httpd=',
                                 'with-openssl=',
-                                'with-zlib='])
+                                'with-zlib=',
+                                'enable-pool-debug',
+                                'enable-purify',
+                                'enable-quantify',
+                                ])
     if len(args) > 1:
       _usage_exit()
   except getopt.GetoptError:

@@ -52,16 +52,29 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     self.httpd_path = None
     self.zlib_path = None
     self.openssl_path = None
-    self.skip_targets = { 'mod_dav_svn': None }
+    self.skip_targets = { 'mod_dav_svn': None,
+                          'mod_authz_svn': None }
+
+    # Instrumentation options
+    self.instrument_apr_pools = None
+    self.instrument_purify_quantify = None
 
     for opt, val in options:
       if opt == '--with-httpd':
         self.httpd_path = os.path.abspath(val)
         del self.skip_targets['mod_dav_svn']
+        del self.skip_targets['mod_authz_svn']
       elif opt == '--with-zlib':
         self.zlib_path = os.path.abspath(val)
       elif opt == '--with-openssl':
         self.openssl_path = os.path.abspath(val)
+      elif opt == '--enable-purify':
+        self.instrument_purify_quantify = 1
+        self.instrument_apr_pools = 1
+      elif opt == '--enable-quantify':
+        self.instrument_purify_quantify = 1
+      elif opt == '--enable-pool-debug':
+        self.instrument_apr_pools = 1
 
   def __init__(self, fname, verfname, options, subdir):
     """
@@ -255,7 +268,7 @@ class WinGeneratorBase(gen_base.GeneratorBase):
   def get_win_defines(self, target, cfg):
     "Return the list of defines for target"
 
-    if target.name == 'mod_dav_svn':
+    if target.is_apache_mod:
       fakedefines = ["WIN32","_WINDOWS","alloca=_alloca"]
     else:
       fakedefines = ["WIN32","_WINDOWS","APR_DECLARE_STATIC","APU_DECLARE_STATIC","alloca=_alloca"]
@@ -269,7 +282,7 @@ class WinGeneratorBase(gen_base.GeneratorBase):
   def get_win_includes(self, target, rootpath):
     "Return the list of include directories for target"
 
-    if target.name == 'mod_dav_svn':
+    if target.is_apache_mod:
       fakeincludes = self.map_rootpath(["subversion/include",
                                         self.dbincpath,
                                         ""],
@@ -298,8 +311,8 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     libcfg = string.replace(string.replace(cfg, "Debug", "LibD"),
                             "Release", "LibR")
 
-    if target.name == 'mod_dav_svn':
-      fakelibdirs = self.map_rootpath([self.dblibpath], rootpath)
+    fakelibdirs = self.map_rootpath([self.dblibpath], rootpath)
+    if target.is_apache_mod:
       fakelibdirs.extend([
         self.httpd_path + "/%s" % cfg,
         self.httpd_path + "/modules/dav/main/%s" % cfg,
@@ -307,26 +320,28 @@ class WinGeneratorBase(gen_base.GeneratorBase):
         self.httpd_path + "/srclib/apr-util/%s" % cfg,
         self.httpd_path + "/srclib/apr-util/xml/expat/lib/%s" % libcfg
         ])
-    else:
-      fakelibdirs = self.map_rootpath([self.dblibpath], rootpath)
 
     return self.make_windirs(fakelibdirs)
 
   def get_win_libs(self, target, cfg):
     "Return the list of external libraries needed for target"
-    
-    if target.name == 'mod_dav_svn':
-      return [ self.dblibname+(cfg == 'Debug' and 'd.lib' or '.lib'),
-               'xml.lib',
-               'libapr.lib',
-               'libaprutil.lib',
-               'libhttpd.lib',
-               'mod_dav.lib',
-               'mswsock.lib',
-               'ws2_32.lib',
-               'advapi32.lib',
-               'rpcrt4.lib',
-               'shfolder.lib' ]
+
+    if target.is_apache_mod:
+      if target.name == 'mod_dav_svn':
+        libs = [ self.dblibname+(cfg == 'Debug' and 'd.lib' or '.lib') ]
+      else:
+        libs = []
+      libs.extend([ 'xml.lib',
+                    'libapr.lib',
+                    'libaprutil.lib',
+                    'libhttpd.lib',
+                    'mod_dav.lib',
+                    'mswsock.lib',
+                    'ws2_32.lib',
+                    'advapi32.lib',
+                    'rpcrt4.lib',
+                    'shfolder.lib' ])
+      return libs
 
     if not isinstance(target, gen_base.TargetExe):
       return []
@@ -350,15 +365,14 @@ class WinGeneratorBase(gen_base.GeneratorBase):
 
     sources = { }
 
-    if target.name == 'mod_dav_svn':
-      # get (fname, reldir) pairs for these dependent libs
-      for src in (self.get_win_sources(self.targets['libsvn_fs'], 'fs')
-                  + self.get_win_sources(self.targets['libsvn_subr'], 'subr')
-                  + self.get_win_sources(self.targets['libsvn_delta'], 'delta')
-                  + self.get_win_sources(self.targets['libsvn_diff'], 'diff')
-                  + self.get_win_sources(self.targets['libsvn_repos'],
-                                         'repos')):
-        sources[src] = None
+    if target.is_apache_mod:
+      # get (fname, reldir) pairs for dependent libs
+      for dep_tgt in self.get_win_depends(target, 1):
+        if not isinstance(dep_tgt, gen_base.TargetLib):
+          continue
+        subdir = string.replace(dep_tgt.name, 'libsvn_', '')
+        for src in self.get_win_sources(dep_tgt, subdir):
+          sources[src] = None
 
     for obj in self.graph.get_sources(gen_base.DT_LINK, target.name):
       if isinstance(obj, gen_base.Target):
