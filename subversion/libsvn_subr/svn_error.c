@@ -118,7 +118,12 @@ svn_error__get_error_pool (apr_pool_t *pool,
     abort_on_pool_failure (SVN_ERR_BAD_CONTAINING_POOL);
 
   if (rooted_here)
-    apr_pool_userdata_get ((void *) rooted_here, SVN_ERROR_POOL_ROOTED_HERE, pool);
+    {
+      void *value;
+
+      apr_pool_userdata_get (&value, SVN_ERROR_POOL_ROOTED_HERE, pool);
+      *rooted_here = (svn_boolean_t)value;
+    }
 }
 
 
@@ -169,8 +174,14 @@ svn_pool__inherit_error_pool (apr_pool_t *p)
 apr_status_t
 svn_error_init_pool (apr_pool_t *top_pool)
 {
+  void *check_for_pool;
   apr_pool_t *error_pool;
   apr_status_t apr_err;
+
+  /* just return if an error pool already exists */
+  apr_pool_userdata_get (&check_for_pool, SVN_ERROR_POOL, top_pool);
+  if (check_for_pool != NULL)
+    return APR_SUCCESS;
 
   apr_err = svn_error__make_error_pool (top_pool, &error_pool);
   if (! APR_STATUS_IS_SUCCESS (apr_err))
@@ -178,7 +189,7 @@ svn_error_init_pool (apr_pool_t *top_pool)
 
   svn_error__set_error_pool (top_pool, error_pool, 1);
 
-  return 0;
+  return APR_SUCCESS;
 }
 
 
