@@ -287,10 +287,7 @@ void svn_handle_error (svn_error_t *error,
                        FILE *stream,
                        svn_boolean_t fatal);
 
-/* Very dumb "default" warning handler -- used by all policies, unless
-   svn_svr_warning_callback() is used to set the warning handler
-   differently.  */
-
+/* Basic, default warning handler, just prints to stderr. */
 void svn_handle_warning (void *data, char *fmt, ...);
 
 
