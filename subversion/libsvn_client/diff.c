@@ -838,6 +838,8 @@ do_single_file_merge (svn_wc_notify_func_t notify_func,
   SVN_ERR (svn_wc_merge_prop_diffs (&prop_state, target_wcpath, adm_access,
                                     propchanges, pool));
 
+  SVN_ERR (svn_wc_adm_close (adm_access));
+
   if (notify_func)
     {
 
