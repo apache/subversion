@@ -10,13 +10,14 @@ Tasks:
 - update status page
 - Put the old CVS ChangeLog up
 
+- enable password-protected committing
+
 - make a backup system
 
 - don't forget to increment VERSION in configure.in :-)
 
 - when importing the new repository, don't forget to remove APR and
   neon first. :-)
-
 
 - immediately post-M3, write up release procedure, lucas@collab.net
   has volunteered to review it, among others.
