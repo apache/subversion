@@ -233,6 +233,10 @@ temp_file_cleanup_register (svn_stringbuf_t *path,
 /* Get the repository version of a file. This makes an RA request to
  * retrieve the file contents. A pool cleanup handler is installed to
  * delete this file.
+ *
+ * ### TODO: The editor calls this function to get REV1 of the file. Can we
+ * get the file props as well?  Then get_wc_prop() could return them later
+ * on enabling the REV1:REV2 request to send diffs.
  */
 static svn_error_t *
 get_file_from_ra (struct file_baton *b)

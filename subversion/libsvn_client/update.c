@@ -130,8 +130,7 @@ svn_client_update (const svn_delta_edit_fns_t *before_editor,
 
       /* Open an RA session for the URL */
       SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, anchor,
-                                            TRUE, TRUE, FALSE, auth_baton,
-                                            pool));
+                                            TRUE, TRUE, auth_baton, pool));
 
       /* If TM is given, convert the time into a revision number. */
       if (tm)

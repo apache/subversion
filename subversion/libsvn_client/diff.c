@@ -219,11 +219,13 @@ svn_client_diff (svn_stringbuf_t *path,
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
   SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL->data, pool));
 
-  /* Set the arbitrary wc revision flag, to indicate that the wc revision
-     may bear no relation to the revision of the requested data. */
-  SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, anchor,
-                                        use_admin, use_admin, TRUE, auth_baton,
-                                        pool));
+  /* ### TODO: We have to pass null for the base_dir here, since the
+     working copy does not match the requested revision. It might be
+     possible to have a special ra session for diff, where get_wc_prop
+     cooperates with the editor and returns values when the file is in the
+     wc, and null otherwise. */
+  SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, NULL,
+                                        FALSE, FALSE, auth_baton, pool));
 
   if (start_date)
     SVN_ERR (ra_lib->get_dated_revision (session, &start_revision, start_date));
@@ -265,28 +267,13 @@ svn_client_diff (svn_stringbuf_t *path,
          this limitation. */
       void *session2;
 
-      /* ### TODO: Forcing the anchor to null prevents the server sending
-         diffs over the second session. The repository diff editor doesn't
-         handle them yet. */
+      /* ### TODO: Forcing the base_dir to null. It might be possible to
+         use a special ra session that cooperates with the editor to enable
+         get_wc_prop to return values when the file is in the wc */
       SVN_ERR (svn_client__open_ra_session (&session2, ra_lib, URL,
-                                            NULL, /* ### TODO: anchor, */
-                                            FALSE, FALSE, TRUE,
+                                            NULL,
+                                            FALSE, FALSE,
                                             auth_baton, pool));
-
-      if (anchor)
-        {
-          /* Closing and reopening the first session, forcing the anchor to
-             null, is required. Otherwise the ra_dav server will send
-             differences between the working copy and end_revision instead
-             of between start_revision and end_revision. This in itself is
-             not a problem, the editor could be modified to handle it, but
-             ra_local doesn't do this and there is no way to distinguish
-             which we are using. */
-          SVN_ERR (ra_lib->close (session));
-          SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, NULL,
-                                                FALSE, FALSE, TRUE,
-                                                auth_baton, pool));
-        }
 
       SVN_ERR (svn_client__get_diff_editor (target,
                                             svn_client__diff_cmd,
