@@ -399,7 +399,7 @@ fetch_file (svn_ra_session_t *ras,
   /* ### store URL into a local, predefined property */
 
   /* done with the file */
-  return (*fc->editor->finish_file)(fc->edit_baton, file_baton);
+  return (*fc->editor->close_file)(fc->edit_baton, file_baton);
 }
 
 svn_error_t *
@@ -451,7 +451,7 @@ svn_ra_checkout (svn_ra_session_t *ras,
           if (url != NULL)
             break;
 
-          err = (*editor->finish_directory) (edit_baton, parent_baton);
+          err = (*editor->close_directory) (edit_baton, parent_baton);
           if (err)
             return svn_quick_wrap_error(err, "could not finish directory");
 
@@ -459,7 +459,7 @@ svn_ra_checkout (svn_ra_session_t *ras,
             goto traversal_complete;
         }
 
-      /* add a placeholder. this will be used to signal a finish_directory
+      /* add a placeholder. this will be used to signal a close_directory
          for this directory's baton. */
       dr = apr_push_array(fc.subdirs);
       dr->href = NULL;
@@ -565,7 +565,7 @@ update_change_dirent_prop (void *edit_baton,
 }
 
 static svn_error_t *
-update_finish_dir (void *edit_baton, void *dir_baton)
+update_close_dir (void *edit_baton, void *dir_baton)
 {
   return NULL;
 }
@@ -613,7 +613,7 @@ update_change_file_prop (void *edit_baton,
 }
 
 static svn_error_t *
-update_finish_file (void *edit_baton, void *file_baton)
+update_close_file (void *edit_baton, void *file_baton)
 {
   return NULL;
 }
@@ -630,12 +630,12 @@ static const svn_delta_edit_fns_t update_editor = {
   update_rep_dir,
   update_change_dir_prop,
   update_change_dirent_prop,
-  update_finish_dir,
+  update_close_dir,
   update_add_file,
   update_rep_file,
   update_apply_txdelta,
   update_change_file_prop,
-  update_finish_file
+  update_close_file
 };
 
 svn_error_t *

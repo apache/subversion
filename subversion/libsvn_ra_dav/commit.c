@@ -152,7 +152,7 @@ commit_change_dirent_prop (void *edit_baton,
 }
 
 static svn_error_t *
-commit_finish_dir (void *edit_baton, void *dir_baton)
+commit_close_dir (void *edit_baton, void *dir_baton)
 {
   /* ### nothing? */
 
@@ -210,7 +210,7 @@ commit_change_file_prop (void *edit_baton,
 }
 
 static svn_error_t *
-commit_finish_file (void *edit_baton, void *file_baton)
+commit_close_file (void *edit_baton, void *file_baton)
 {
   /* ### nothing? */
   return NULL;
@@ -227,12 +227,12 @@ static const svn_delta_edit_fns_t commit_editor = {
   commit_rep_dir,
   commit_change_dir_prop,
   commit_change_dirent_prop,
-  commit_finish_dir,
+  commit_close_dir,
   commit_add_file,
   commit_rep_file,
   commit_apply_txdelta,
   commit_change_file_prop,
-  commit_finish_file
+  commit_close_file
 };
 
 svn_error_t *

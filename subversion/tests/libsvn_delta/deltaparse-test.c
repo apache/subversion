@@ -151,31 +151,31 @@ test_replace_directory (svn_string_t *name,
 
 
 svn_error_t *
-test_finish_directory (void *edit_baton, void *dir_baton)
+test_close_directory (void *edit_baton, void *dir_baton)
 {
   print_spaces (edit_baton);
   dec_spaces (edit_baton);
 
   if (dir_baton)
-    printf ("FINISH_DIR '%s'\n", (char *)((svn_string_t *) dir_baton)->data);
+    printf ("CLOSE_DIR '%s'\n", (char *)((svn_string_t *) dir_baton)->data);
   else 
-    printf ("FINISH_DIR:  no name!!\n");
+    printf ("CLOSE_DIR:  no name!!\n");
 
   return SVN_NO_ERROR;    
 }
 
 
 svn_error_t *
-test_finish_file (void *edit_baton, void *file_baton)
+test_close_file (void *edit_baton, void *file_baton)
 {
   print_spaces (edit_baton);
   dec_spaces (edit_baton);
 
   if (file_baton)
-    printf ("FINISH_FILE '%s'\n", 
+    printf ("CLOSE_FILE '%s'\n", 
             (char *)((svn_string_t *) file_baton)->data);
   else
-    printf ("FINISH_DIR:  no name!!\n");
+    printf ("CLOSE_DIR:  no name!!\n");
 
   return SVN_NO_ERROR;    
 }
@@ -401,11 +401,11 @@ int main(int argc, char *argv[])
 
   my_editor.add_directory      = test_add_directory;
   my_editor.replace_directory  = test_replace_directory;
-  my_editor.finish_directory   = test_finish_directory;
+  my_editor.close_directory   = test_close_directory;
 
   my_editor.add_file           = test_add_file;
   my_editor.replace_file       = test_replace_file;
-  my_editor.finish_file        = test_finish_file;
+  my_editor.close_file        = test_close_file;
 
   my_editor.apply_textdelta    = test_apply_textdelta;
 
@@ -413,7 +413,7 @@ int main(int argc, char *argv[])
   my_editor.change_dir_prop    = test_change_dir_prop;
   my_editor.change_dirent_prop = test_change_dirent_prop;
 
-  my_editor.finish_edit        = NULL;
+  my_editor.close_edit        = NULL;
 
   /* Set context variables for evaluating a tree-delta */
   base_version = 1;
