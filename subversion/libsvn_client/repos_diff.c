@@ -210,6 +210,49 @@ make_file_baton (const char *path,
   return file_baton;
 }
 
+
+/* Helper function: return up to two svn:mime-type values buried
+ * within a file baton.  Set *MIMETYPE1 to the value within the file's
+ * pristine properties, or NULL if not available.  Set *MIMETYPE2 to
+ * the value within the "new" file's propchanges, or NULL if not
+ * available.
+ */
+static void
+get_file_mime_types (const char **mimetype1,
+                     const char **mimetype2,
+                     struct file_baton *b)
+{
+  /* Defaults */
+  *mimetype1 = NULL;
+  *mimetype2 = NULL;
+
+  if (b->pristine_props)
+    {
+      svn_string_t *pristine_val;
+      pristine_val = apr_hash_get (b->pristine_props, SVN_PROP_MIME_TYPE,
+                                   strlen(SVN_PROP_MIME_TYPE));
+      if (pristine_val)
+        *mimetype1 = pristine_val->data;
+    }
+
+  if (b->propchanges)
+    {
+      int i;
+      svn_prop_t *propchange;
+
+      for (i = 0; i < b->propchanges->nelts; i++)
+        {
+          propchange = &APR_ARRAY_IDX(b->propchanges, i, svn_prop_t);
+          if (strcmp (propchange->name, SVN_PROP_MIME_TYPE) == 0)
+            {
+              *mimetype2 = propchange->value->data;
+              break;
+            }
+        }
+    }
+}
+
+
 /* An apr pool cleanup handler, this deletes one of the temporary files.
  */
 static apr_status_t
@@ -469,18 +512,24 @@ delete_entry (const char *path,
     {
     case svn_node_file:
       {
+        const char *mimetype1, *mimetype2;
+
         /* Compare a file being deleted against an empty file */
         struct file_baton *b = make_file_baton (path,
                                                 FALSE,
                                                 pb->edit_baton,
                                                 pool);
+
         SVN_ERR (get_file_from_ra (b));
         SVN_ERR (get_empty_file(b->edit_baton, &(b->path_end_revision)));
+
+        get_file_mime_types (&mimetype1, &mimetype2, b);
         
         SVN_ERR (pb->edit_baton->diff_callbacks->file_deleted 
                  (adm_access, b->wcpath,
                   b->path_start_revision,
                   b->path_end_revision,
+                  mimetype1, mimetype2,
                   b->edit_baton->diff_cmd_baton));
 
         break;
@@ -690,11 +739,15 @@ close_file (void *file_baton,
                               b->wcpath, eb->dry_run, b->pool));
   if (b->path_end_revision)
     {
+      const char *mimetype1, *mimetype2;
+      get_file_mime_types (&mimetype1, &mimetype2, b);
+
       if (b->added)
         SVN_ERR (eb->diff_callbacks->file_added
                  (adm_access, b->wcpath,
                   b->path_start_revision,
                   b->path_end_revision,
+                  mimetype1, mimetype2,
                   b->edit_baton->diff_cmd_baton));
       else
         SVN_ERR (eb->diff_callbacks->file_changed
@@ -704,6 +757,7 @@ close_file (void *file_baton,
                   b->path_end_revision,
                   b->edit_baton->revision,
                   b->edit_baton->target_revision,
+                  mimetype1, mimetype2,
                   b->edit_baton->diff_cmd_baton));
     }
 
