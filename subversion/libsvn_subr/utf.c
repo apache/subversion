@@ -72,29 +72,41 @@ xlate_cleanup (void *arg)
   return APR_SUCCESS;
 }
 
-void
-svn_utf_initialize (void)
+/* Set the handle of ARG to NULL. */
+static apr_status_t
+xlate_handle_node_cleanup (void *arg)
 {
-  apr_pool_t *pool;
+  xlate_handle_node_t *node = arg;
+
+  node->handle = NULL;
+  return APR_SUCCESS;
+}
+
+void
+svn_utf_initialize (apr_pool_t *pool)
+{
+  apr_pool_t *subpool;
 #if APR_HAS_THREADS
   apr_thread_mutex_t *mutex;
 #endif
 
   if (!xlate_handle_hash)
     {
-      /* We create our own pool, which we protect with the mutex.
-         It will be destroyed during APR termination. */
-      pool = svn_pool_create (NULL);
+      /* We create our own subpool, which we protect with the mutex.
+         We can't use the pool passed to us by the caller, since we will
+         use it for xlate handle allocations, possibly in multiple threads,
+         and pool allocation is not thread-safe. */
+      subpool = svn_pool_create (pool);
 #if APR_HAS_THREADS
-      if (apr_thread_mutex_create (&mutex, APR_THREAD_MUTEX_DEFAULT, pool)
+      if (apr_thread_mutex_create (&mutex, APR_THREAD_MUTEX_DEFAULT, subpool)
           == APR_SUCCESS)
         xlate_handle_mutex = mutex;
       else
         return;
 #endif
       
-      xlate_handle_hash = apr_hash_make (pool);
-      apr_pool_cleanup_register (pool, NULL, xlate_cleanup,
+      xlate_handle_hash = apr_hash_make (subpool);
+      apr_pool_cleanup_register (subpool, NULL, xlate_cleanup,
                                  apr_pool_cleanup_null);
     }
 }
@@ -110,15 +122,15 @@ get_xlate_handle_node (xlate_handle_node_t **ret,
                        const char *topage, const char *frompage,
                        const char *userdata_key, apr_pool_t *pool)
 {
-  xlate_handle_node_t *old_handle = NULL;
+  void *old_handle = NULL;
   apr_status_t apr_err;
 
   /* If we already have a handle, just return it. */
   if (userdata_key)
     {
-#if APR_HAS_THREADS
-      if (xlate_handle_mutex)
+      if (xlate_handle_hash)
         {
+#if APR_HAS_THREADS
           apr_err = apr_thread_mutex_lock (xlate_handle_mutex);
           if (apr_err != APR_SUCCESS)
             return svn_error_create (apr_err, NULL,
@@ -128,48 +140,71 @@ get_xlate_handle_node (xlate_handle_node_t **ret,
                                      APR_HASH_KEY_STRING);
           if (old_handle)
             {
-              /* Remove from the hash table. */
-              apr_hash_set (xlate_handle_hash, userdata_key,
-                            APR_HASH_KEY_STRING, old_handle->next);
-              old_handle->next = NULL;
-              apr_err = apr_thread_mutex_unlock (xlate_handle_mutex);
-              if (apr_err != APR_SUCCESS)
-                return svn_error_create (apr_err, NULL,
-                                         "Can't unlock charset "
-                                         "translation mutex");
               *ret = old_handle;
-              return SVN_NO_ERROR;
+              /* Ensure that the handle is still valid. */
+              if ((*ret)->handle)
+                {
+                  /* Remove from the hash table. */
+                  apr_hash_set (xlate_handle_hash, userdata_key,
+                                APR_HASH_KEY_STRING, (*ret)->next);
+                  (*ret)->next = NULL;
+                  apr_err = apr_thread_mutex_unlock (xlate_handle_mutex);
+                  if (apr_err != APR_SUCCESS)
+                    return svn_error_create (apr_err, NULL,
+                                             "Can't unlock charset "
+                                             "translation mutex");
+                  return SVN_NO_ERROR;
+                }
             }
-        }
 #else /* ! APR_HAS_THREADS */
-      if (xlate_handle_hash)
-        {
           old_handle = apr_hash_get(xlate_handle_hash, userdata_key,
                                     APR_HASH_KEY_STRING);
           if (old_handle)
             {
               *ret = old_handle;
-              return SVN_NO_ERROR;
+              /* Ensure that the handle is still valid. */
+              if ((*ret)->handle)
+                return SVN_NO_ERROR;
+            }
+#endif
+        }
+      else
+        {
+          /* We fall back on a per-pool cache instead. */
+          apr_pool_userdata_get (&old_handle, userdata_key, pool);
+          if (old_handle)
+            {
+              *ret = old_handle;
+              /* Ensure that the handle is still valid. */
+              if ((*ret)->handle)
+                return SVN_NO_ERROR;
             }
         }
-#endif
     }
 
-  /* Note that we still have the mutex locked, so we can use the global
-     pool for creating the new xlate handle. */
+  /* Note that we still have the mutex locked (if it is initialized), so we
+     can use the global pool for creating the new xlate handle. */
 
   /* Use the correct pool for creating the handle. */
   if (userdata_key && xlate_handle_hash)
     pool = apr_hash_pool_get (xlate_handle_hash);
 
-  /* Try to create one. */
+  /* Try to create a handle. */
   *ret = apr_palloc (pool, sizeof(xlate_handle_node_t));
   apr_err = apr_xlate_open (&(**ret).handle, topage, frompage, pool);
   (**ret).next = NULL;
 
+  /* If we are called from inside a pool cleanup handler, the just created
+     xlate handle will be closed when that handler returns by a newly
+     registered cleanup handler, however, the handle is still cached by us.
+     To prevent this, we register a cleanup handler that will reset our
+     handle, so we don't use an invalid one. */
+  apr_pool_cleanup_register (pool, *ret, xlate_handle_node_cleanup,
+                             apr_pool_cleanup_null);
+
   /* Don't need the lock anymore. */
 #if APR_HAS_THREADS
-  if (xlate_handle_mutex)
+  if (xlate_handle_hash)
     {
       apr_status_t unlock_err = apr_thread_mutex_unlock (xlate_handle_mutex);
       if (unlock_err != APR_SUCCESS)
@@ -196,29 +231,38 @@ get_xlate_handle_node (xlate_handle_node_t **ret,
 }
 
 /* Put back NODE into the xlate handle cache for use by other calls.
+   If there is no global cache, store the handle in POOL.
    Ignore errors related to locking/unlocking the mutex.
    ### Mutex errors here are very weird. Should we handle them "correctly"
    ### even if that complicates error handling in the routines below? */
 static void
 put_xlate_handle_node (xlate_handle_node_t *node,
-                       const char *userdata_key)
+                       const char *userdata_key,
+                       apr_pool_t *pool)
 {
   assert (node->next == NULL);
   if (!userdata_key)
     return;
-#if APR_HAS_THREADS
-  if (xlate_handle_mutex)
+  if (xlate_handle_hash)
     {
+#if APR_HAS_THREADS
       if (apr_thread_mutex_lock (xlate_handle_mutex) != APR_SUCCESS)
         abort ();
+#endif
       node->next = apr_hash_get (xlate_handle_hash, userdata_key,
                                  APR_HASH_KEY_STRING);
       apr_hash_set (xlate_handle_hash, userdata_key, APR_HASH_KEY_STRING,
                     node);
+#if APR_HAS_THREADS
       if (apr_thread_mutex_unlock (xlate_handle_mutex) != APR_SUCCESS)
         abort ();
-    }
 #endif
+    }
+  else
+    {
+      /* Store it in the per-pool cache. */
+      apr_pool_userdata_set (node, userdata_key, apr_pool_cleanup_null, pool);
+    }
 }
 
 /* Return the apr_xlate handle for converting native characters to UTF-8. */
@@ -435,7 +479,7 @@ svn_utf_stringbuf_to_utf8 (svn_stringbuf_t **dest,
     {
       err = convert_to_stringbuf (node->handle, src->data, src->len, dest,
                                   pool);
-      put_xlate_handle_node (node, SVN_UTF_NTOU_XLATE_HANDLE);
+      put_xlate_handle_node (node, SVN_UTF_NTOU_XLATE_HANDLE, pool);
       SVN_ERR (err);
       return check_utf8 ((*dest)->data, (*dest)->len, pool);
     }
@@ -463,7 +507,7 @@ svn_utf_string_to_utf8 (const svn_string_t **dest,
     {
       err = convert_to_stringbuf (node->handle, src->data, src->len, 
                                   &destbuf, pool);
-      put_xlate_handle_node (node, SVN_UTF_NTOU_XLATE_HANDLE);
+      put_xlate_handle_node (node, SVN_UTF_NTOU_XLATE_HANDLE, pool);
       SVN_ERR (err);
       SVN_ERR (check_utf8 (destbuf->data, destbuf->len, pool));
       *dest = svn_string_create_from_buf (destbuf, pool);
@@ -515,7 +559,7 @@ svn_utf_cstring_to_utf8 (const char **dest,
 
   SVN_ERR (get_ntou_xlate_handle_node (&node, pool));
   err = convert_cstring (dest, src, node->handle, pool);
-  put_xlate_handle_node (node, SVN_UTF_NTOU_XLATE_HANDLE);
+  put_xlate_handle_node (node, SVN_UTF_NTOU_XLATE_HANDLE, pool);
   SVN_ERR (err);
   SVN_ERR (check_cstring_utf8 (*dest, pool));
 
@@ -535,7 +579,7 @@ svn_utf_cstring_to_utf8_ex (const char **dest,
 
   SVN_ERR (get_xlate_handle_node (&node, "UTF-8", frompage, convset_key, pool));
   err = convert_cstring (dest, src, node->handle, pool);
-  put_xlate_handle_node (node, convset_key);
+  put_xlate_handle_node (node, convset_key, pool);
   SVN_ERR (err);
   SVN_ERR (check_cstring_utf8 (*dest, pool));
 
@@ -557,7 +601,7 @@ svn_utf_stringbuf_from_utf8 (svn_stringbuf_t **dest,
     {
       SVN_ERR (check_utf8 (src->data, src->len, pool));
       err = convert_to_stringbuf (node->handle, src->data, src->len, dest, pool);
-      put_xlate_handle_node (node, SVN_UTF_UTON_XLATE_HANDLE);
+      put_xlate_handle_node (node, SVN_UTF_UTON_XLATE_HANDLE, pool);
       return err;
     }
   else
@@ -585,7 +629,7 @@ svn_utf_string_from_utf8 (const svn_string_t **dest,
       SVN_ERR (check_utf8 (src->data, src->len, pool));
       err = convert_to_stringbuf (node->handle, src->data, src->len,
                                   &dbuf, pool);
-      put_xlate_handle_node (node, SVN_UTF_UTON_XLATE_HANDLE);
+      put_xlate_handle_node (node, SVN_UTF_UTON_XLATE_HANDLE, pool);
       SVN_ERR (err);
       *dest = svn_string_create_from_buf (dbuf, pool);
     }
@@ -610,7 +654,7 @@ svn_utf_cstring_from_utf8 (const char **dest,
   SVN_ERR (get_uton_xlate_handle_node (&node, pool));
   SVN_ERR (check_utf8 (src, strlen (src), pool));
   err = convert_cstring (dest, src, node->handle, pool);
-  put_xlate_handle_node (node, SVN_UTF_UTON_XLATE_HANDLE);
+  put_xlate_handle_node (node, SVN_UTF_UTON_XLATE_HANDLE, pool);
   SVN_ERR (err);
 
   return SVN_NO_ERROR;
@@ -630,7 +674,7 @@ svn_utf_cstring_from_utf8_ex (const char **dest,
   SVN_ERR (get_xlate_handle_node (&node, topage, "UTF-8", convset_key, pool));
   SVN_ERR (check_utf8 (src, strlen (src), pool));
   err = convert_cstring (dest, src, node->handle, pool);
-  put_xlate_handle_node (node, convset_key);
+  put_xlate_handle_node (node, convset_key, pool);
 
   return err;
 }
@@ -741,7 +785,7 @@ svn_utf_cstring_from_utf8_string (const char **dest,
       SVN_ERR (check_utf8 (src->data, src->len, pool));
       err = convert_to_stringbuf (node->handle, src->data, src->len,
                                   &dbuf, pool);
-      put_xlate_handle_node (node, SVN_UTF_UTON_XLATE_HANDLE);
+      put_xlate_handle_node (node, SVN_UTF_UTON_XLATE_HANDLE, pool);
       SVN_ERR (err);
       *dest = dbuf->data;
       return SVN_NO_ERROR;
