@@ -1332,7 +1332,7 @@ if __name__ == '__main__':
       language has at some point sighed at the daunting task of
       managing memory usage.  Allocating enough memory to use, keeping
       track of those allocations, freeing the memory when you no
-      longer it&mdash;these tasks can be quite complex.  And of
+      longer need it&mdash;these tasks can be quite complex.  And of
       course, failure to do those things properly can result in a
       program that crashes itself, or worse, crashes the computer.
       Fortunately, the APR library that Subversion depends on for
