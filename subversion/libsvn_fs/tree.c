@@ -1268,12 +1268,24 @@ merge (const char **conflict_p,
           else if ((s_entry = apr_hash_get (s_entries, key, klen))
                    && (! apr_hash_get (t_entries, key, klen)))
             {
-              /* target takes source */
-              dag_node_t *tnode;
-              SVN_ERR (get_dag_mutable (&tnode, target_root,
-                                        target_path, trail));
-              SVN_ERR (svn_fs__dag_set_entry
-                       (tnode, s_entry->name, s_entry->id, trail));
+              /* If E changed between ancestor and source, then that
+                 conflicts with E's having been removed from
+                 target. */
+              if (! svn_fs_id_eq (a_entry->id, s_entry->id))
+                {
+                  /* ### kff todo: abstract path creation func here? */
+                  const char *new_tpath
+                    = apr_psprintf (trail->pool, "%s/%s",
+                                    target_path, a_entry->name);
+                  
+                  *conflict_p = new_tpath;
+                  return svn_error_createf
+                    (SVN_ERR_FS_CONFLICT, 0, NULL, trail->pool,
+                     "conflict at \"%s\"", new_tpath);
+                }
+
+              /* Else if E did not change between ancestor and source,
+                 then E's removal from target holds, so do nothing. */
             }
           /* E exists in target but not source */
           else if ((t_entry = apr_hash_get (t_entries, key, klen))

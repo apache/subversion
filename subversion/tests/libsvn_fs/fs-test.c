@@ -135,6 +135,21 @@ set_file_contents (svn_fs_root_t *root,
 }
 
 
+static svn_error_t *
+get_file_contents (svn_fs_root_t *root,
+                   const char *path,
+                   svn_string_t **str)
+{
+  svn_stream_t *stream;
+
+  SVN_ERR (svn_fs_file_contents (&stream, root, path, pool));  
+  SVN_ERR (stream_to_string (str, stream));
+
+  return SVN_NO_ERROR;
+}
+
+
+
 /* The Helper Functions to End All Helper Functions */
 
 /* Structure used for testing integrity of the filesystem's revision
@@ -230,6 +245,53 @@ validate_tree_entry (svn_fs_root_t *root,
   return SVN_NO_ERROR;
 }
                      
+
+static svn_error_t *
+print_tree (svn_fs_root_t *root)
+{
+  apr_hash_t *entries;
+  apr_hash_index_t *hi;
+  
+  entries = apr_hash_make (pool);
+  SVN_ERR (get_dir_entries (entries, root, svn_string_create ("", pool)));
+
+  if (! entries)
+    return svn_error_create
+      (SVN_ERR_TEST_FAILED, 0, NULL, pool,
+       "validation requested against non-existant control data");
+
+  if (svn_fs_is_txn_root (root))
+    {
+      printf ("Transaction %s\n", svn_fs_txn_root_name (root, pool));
+      printf ("-------------------\n");
+    }
+  else if (svn_fs_is_revision_root (root))
+    {
+      printf ("Revision %d\n", (int) svn_fs_revision_root_revision (root));
+      printf ("-------------------\n");
+    }
+  else
+    return svn_error_create
+      (SVN_ERR_TEST_FAILED, 0, NULL, pool,
+       "validation requested against non-existant control data");
+
+  for (hi = apr_hash_first (entries); hi; hi = apr_hash_next (hi))
+    {
+      const void *key;
+      apr_size_t keylen;
+      void *val;
+      svn_string_t *path;
+ 
+      apr_hash_this (hi, &key, &keylen, &val);
+      path = svn_string_ncreate (key, keylen, pool);
+      printf ("%s\n", path->data);
+    }
+
+  printf ("\n");
+
+  return SVN_NO_ERROR;
+}
+
 
 /* Given a transaction or revision root (ROOT), check to see if the
    tree that grows from that root has all the path entries, and only
@@ -2433,7 +2495,47 @@ merging_commit (const char **msg)
     /* (1) E exists in ANCESTOR, but has been deleted from B.  If
        neither delete was a result of a rename, then omit E from the
        merged tree.  Otherwise, conflict. */
-    /* cmpilato todo: test rename case(s), svn_fs_rename */
+    /* ### cmpilato todo: the rename case isn't actually handled by
+       merge yet, so we know we won't get a conflict here. */
+    SVN_ERR (svn_fs_begin_txn (&txn, fs, revisions[1], pool));
+    SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+    SVN_ERR (svn_fs_delete_tree (txn_root, "A/D/H", pool));
+    SVN_ERR (test_commit_txn (&conflict, &after_rev, txn, TRUE));
+    /*********************************************************************/
+    /* REVISION 6 */
+    /*********************************************************************/
+    {
+      tree_test_entry_t expected_entries[] = {
+        /* path, is_dir, contents */
+        { "theta",         0, "This is the file 'theta'.\n" },
+        { "A",             1, "" },
+        { "A/mu",          0, "This is the file 'mu'.\n" },
+        { "A/B",           1, "" },
+        { "A/B/lambda",    0, "This is the file 'lambda'.\n" },
+        { "A/B/E",         1, "" },
+        { "A/B/E/alpha",   0, "This is the file 'alpha'.\n" },
+        { "A/B/E/beta",    0, "This is the file 'beta'.\n" },
+        { "A/B/F",         1, "" },
+        { "A/C",           1, "" },
+        { "A/C/kappa",     0, "This is the file 'kappa'.\n" },
+        { "A/D",           1, "" },
+        { "A/D/gamma",     0, "This is the file 'gamma'.\n" },
+        { "A/D/G",         1, "" },
+        { "A/D/G/pi",      0, "This is the file 'pi'.\n" },
+        { "A/D/G/rho",     0, "This is the file 'rho'.\n" },
+        { "A/D/G/tau",     0, "This is the file 'tau'.\n" },
+        { "A/D/I",         1, "" },
+        { "A/D/I/delta",   0, "This is the file 'delta'.\n" },
+        { "A/D/I/epsilon", 0, "This is the file 'epsilon'.\n" }
+      };
+      SVN_ERR (svn_fs_revision_root (&revision_root, fs, after_rev, pool)); 
+      SVN_ERR (validate_tree (revision_root, expected_entries, 20));
+    }
+    revisions[revision_count++] = after_rev;
+
+    /* Try deleting a file F inside a subtree S where S does not exist
+       in the most recent revision, but does exist in the ancestor
+       tree.  This should conflict. */
     SVN_ERR (svn_fs_begin_txn (&txn, fs, revisions[1], pool));
     SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
     SVN_ERR (svn_fs_delete (txn_root, "A/D/H/omega", pool));
@@ -2442,52 +2544,351 @@ merging_commit (const char **msg)
     /* E exists in both ANCESTOR and B ... */
     {
       /* (1) but refers to different nodes.  Conflict. */
-
-      /* ### kff todo: this test was bogus (we passed FALSE when we
-         should have passed TRUE).  Now it passes, but it's probably
-         not testing what we want to test.  Sit down with Mike
-         tomorrow and figure out what we meant to do here. */
       SVN_ERR (svn_fs_begin_txn (&txn, fs, revisions[1], pool));
       SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
-      SVN_ERR (svn_fs_delete (txn_root, "A/D/H/omega", pool));
+      SVN_ERR (svn_fs_delete_tree (txn_root, "A/D/H", pool));
+      SVN_ERR (svn_fs_make_dir (txn_root, "A/D/H", pool));
       SVN_ERR (test_commit_txn (&conflict, &after_rev, txn, FALSE));
-      revisions[revision_count++] = after_rev;
 
       /* (1) but refers to different revisions of the same node.
          Conflict. */
+      SVN_ERR (svn_fs_begin_txn (&txn, fs, revisions[1], pool));
+      SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+      SVN_ERR (svn_fs_make_file (txn_root, "A/D/H/zeta", pool));
+      SVN_ERR (test_commit_txn (&conflict, &after_rev, txn, FALSE));
 
       /* (1) and refers to the same node revision.  Omit E from the
-         merged tree.  */
-      /* Already tested in Merge-Test 3 (A/D/H/chi, A/D/H/psi, e.g.) */
+         merged tree.  This is already tested in Merge-Test 3
+         (A/D/H/chi, A/D/H/psi, e.g.), but we'll test it here again
+         anyway.  A little paranoia never hurt anyone.  */
+      SVN_ERR (svn_fs_begin_txn (&txn, fs, revisions[1], pool));
+      SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+      SVN_ERR (svn_fs_delete (txn_root, "A/mu", pool)); /* unrelated change */
+      SVN_ERR (test_commit_txn (&conflict, &after_rev, txn, TRUE));
+
+      /*********************************************************************/
+      /* REVISION 7 */
+      /*********************************************************************/
+      {
+        tree_test_entry_t expected_entries[] = {
+          /* path, is_dir, contents */
+          { "theta",         0, "This is the file 'theta'.\n" },
+          { "A",             1, "" },
+          { "A/B",           1, "" },
+          { "A/B/lambda",    0, "This is the file 'lambda'.\n" },
+          { "A/B/E",         1, "" },
+          { "A/B/E/alpha",   0, "This is the file 'alpha'.\n" },
+          { "A/B/E/beta",    0, "This is the file 'beta'.\n" },
+          { "A/B/F",         1, "" },
+          { "A/C",           1, "" },
+          { "A/C/kappa",     0, "This is the file 'kappa'.\n" },
+          { "A/D",           1, "" },
+          { "A/D/gamma",     0, "This is the file 'gamma'.\n" },
+          { "A/D/G",         1, "" },
+          { "A/D/G/pi",      0, "This is the file 'pi'.\n" },
+          { "A/D/G/rho",     0, "This is the file 'rho'.\n" },
+          { "A/D/G/tau",     0, "This is the file 'tau'.\n" },
+          { "A/D/I",         1, "" },
+          { "A/D/I/delta",   0, "This is the file 'delta'.\n" },
+          { "A/D/I/epsilon", 0, "This is the file 'epsilon'.\n" }
+        };
+        SVN_ERR (svn_fs_revision_root (&revision_root, fs, after_rev, pool)); 
+        SVN_ERR (validate_tree (revision_root, expected_entries, 19));
+      }
+      revisions[revision_count++] = after_rev;
     }
   }
 
-  /* ### kff todo: Somewhere below, another test is failing.  Debug
-     with Mike tomorrow. */
-#if 0
-
+  /* Preparation for upcoming tests. 
+     We make a new head revision, with A/mu restored, but containing
+     slightly different contents than its first incarnation. */
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, revisions[revision_count-1], pool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+  SVN_ERR (svn_fs_make_file (txn_root, "A/mu", pool));
+  SVN_ERR (set_file_contents (txn_root, "A/mu", "A new file 'mu'.\n"));
+  SVN_ERR (svn_fs_make_file (txn_root, "A/D/G/xi", pool));
+  SVN_ERR (set_file_contents (txn_root, "A/D/G/xi",
+                              "This is the file 'xi'.\n"));
+  SVN_ERR (test_commit_txn (&conflict, &after_rev, txn, TRUE));
+  /*********************************************************************/
+  /* REVISION 8 */
+  /*********************************************************************/
+  {
+    tree_test_entry_t expected_entries[] = {
+      /* path, is_dir, contents */
+      { "theta",         0, "This is the file 'theta'.\n" },
+      { "A",             1, "" },
+      { "A/mu",          0, "A new file 'mu'.\n" },
+      { "A/B",           1, "" },
+      { "A/B/lambda",    0, "This is the file 'lambda'.\n" },
+      { "A/B/E",         1, "" },
+      { "A/B/E/alpha",   0, "This is the file 'alpha'.\n" },
+      { "A/B/E/beta",    0, "This is the file 'beta'.\n" },
+      { "A/B/F",         1, "" },
+      { "A/C",           1, "" },
+      { "A/C/kappa",     0, "This is the file 'kappa'.\n" },
+      { "A/D",           1, "" },
+      { "A/D/gamma",     0, "This is the file 'gamma'.\n" },
+      { "A/D/G",         1, "" },
+      { "A/D/G/pi",      0, "This is the file 'pi'.\n" },
+      { "A/D/G/rho",     0, "This is the file 'rho'.\n" },
+      { "A/D/G/tau",     0, "This is the file 'tau'.\n" },
+      { "A/D/G/xi",      0, "This is the file 'xi'.\n" },
+      { "A/D/I",         1, "" },
+      { "A/D/I/delta",   0, "This is the file 'delta'.\n" },
+      { "A/D/I/epsilon", 0, "This is the file 'epsilon'.\n" }
+    };
+    SVN_ERR (svn_fs_revision_root (&revision_root, fs, after_rev, pool)); 
+    SVN_ERR (validate_tree (revision_root, expected_entries, 21));
+  }
+  revisions[revision_count++] = after_rev;
+  
   /* (3) E exists in both ANCESTOR and A, but refers to different
      nodes. */
   {
     /* (1) E exists in both ANCESTOR and B, but refers to different
-       nodes.  Conflict. */
+       nodes, and not all nodes are directories.  Conflict. */
+
+    /* ### kff todo: A/mu's contents will be exactly the same.
+       If the fs ever starts optimizing this case, these tests may
+       start to fail. */
+    SVN_ERR (svn_fs_begin_txn (&txn, fs, revisions[1], pool));
+    SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+    SVN_ERR (svn_fs_delete (txn_root, "A/mu", pool));
+    SVN_ERR (svn_fs_make_file (txn_root, "A/mu", pool));
+    SVN_ERR (set_file_contents (txn_root, "A/mu", "This is the file 'mu'.\n"));
+    SVN_ERR (test_commit_txn (&conflict, &after_rev, txn, FALSE));
 
     /* (1) E exists in both ANCESTOR and B, but refers to different
        revisions of the same node.  Conflict. */
+    SVN_ERR (svn_fs_begin_txn (&txn, fs, revisions[1], pool));
+    SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+    SVN_ERR (set_file_contents (txn_root, "A/mu", "A change to file 'mu'.\n"));
+    SVN_ERR (test_commit_txn (&conflict, &after_rev, txn, FALSE));
 
     /* (1) E exists in both ANCESTOR and B, and refers to the same
-       node revision.  Replace E with A's node revision. */
+       node revision.  Replace E with A's node revision.  */
+    {
+      svn_string_t *old_mu_contents;
+      SVN_ERR (svn_fs_begin_txn (&txn, fs, revisions[1], pool));
+      SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+      SVN_ERR (get_file_contents (txn_root, "A/mu", &old_mu_contents));
+      if ((! old_mu_contents) || (strcmp (old_mu_contents->data,
+                                          "This is the file 'mu'.\n") != 0))
+        {
+          return svn_error_create
+            (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+             "got wrong contents from an old revision tree");
+        }
+      SVN_ERR (svn_fs_make_file (txn_root, "A/sigma", pool));
+      SVN_ERR (set_file_contents (txn_root, "A/sigma",  /* unrelated change */
+                                  "This is the file 'sigma'.\n"));
+      SVN_ERR (test_commit_txn (&conflict, &after_rev, txn, TRUE));
+      /*********************************************************************/
+      /* REVISION 9 */
+      /*********************************************************************/
+      {
+        tree_test_entry_t expected_entries[] = {
+          /* path, is_dir, contents */
+          { "theta",         0, "This is the file 'theta'.\n" },
+          { "A",             1, "" },
+          { "A/mu",          0, "A new file 'mu'.\n" },
+          { "A/sigma",       0, "This is the file 'sigma'.\n" },
+          { "A/B",           1, "" },
+          { "A/B/lambda",    0, "This is the file 'lambda'.\n" },
+          { "A/B/E",         1, "" },
+          { "A/B/E/alpha",   0, "This is the file 'alpha'.\n" },
+          { "A/B/E/beta",    0, "This is the file 'beta'.\n" },
+          { "A/B/F",         1, "" },
+          { "A/C",           1, "" },
+          { "A/C/kappa",     0, "This is the file 'kappa'.\n" },
+          { "A/D",           1, "" },
+          { "A/D/gamma",     0, "This is the file 'gamma'.\n" },
+          { "A/D/G",         1, "" },
+          { "A/D/G/pi",      0, "This is the file 'pi'.\n" },
+          { "A/D/G/rho",     0, "This is the file 'rho'.\n" },
+          { "A/D/G/tau",     0, "This is the file 'tau'.\n" },
+          { "A/D/G/xi",      0, "This is the file 'xi'.\n" },
+          { "A/D/I",         1, "" },
+          { "A/D/I/delta",   0, "This is the file 'delta'.\n" },
+          { "A/D/I/epsilon", 0, "This is the file 'epsilon'.\n" }
+        };
+        SVN_ERR (svn_fs_revision_root (&revision_root, fs, after_rev, pool)); 
+        SVN_ERR (validate_tree (revision_root, expected_entries, 22));
+      }
+      revisions[revision_count++] = after_rev;
+    }
   }
+
+  /* Preparation for upcoming tests. 
+     We make a new head revision.  There are two changes in the new
+     revision: A/B/lambda has been modified.  We will also use the
+     recent addition of A/D/G/xi, treated as a modification to
+     A/D/G. */
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, revisions[revision_count-1], pool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+  SVN_ERR (set_file_contents (txn_root, "A/B/lambda",
+                              "Change to file 'lambda'.\n"));
+  SVN_ERR (test_commit_txn (&conflict, &after_rev, txn, TRUE));
+  /*********************************************************************/
+  /* REVISION 10 */
+  /*********************************************************************/
+  {
+    tree_test_entry_t expected_entries[] = {
+      /* path, is_dir, contents */
+      { "theta",         0, "This is the file 'theta'.\n" },
+      { "A",             1, "" },
+      { "A/mu",          0, "A new file 'mu'.\n" },
+      { "A/sigma",       0, "This is the file 'sigma'.\n" },
+      { "A/B",           1, "" },
+      { "A/B/lambda",    0, "Change to file 'lambda'.\n" },
+      { "A/B/E",         1, "" },
+      { "A/B/E/alpha",   0, "This is the file 'alpha'.\n" },
+      { "A/B/E/beta",    0, "This is the file 'beta'.\n" },
+      { "A/B/F",         1, "" },
+      { "A/C",           1, "" },
+      { "A/C/kappa",     0, "This is the file 'kappa'.\n" },
+      { "A/D",           1, "" },
+      { "A/D/gamma",     0, "This is the file 'gamma'.\n" },
+      { "A/D/G",         1, "" },
+      { "A/D/G/pi",      0, "This is the file 'pi'.\n" },
+      { "A/D/G/rho",     0, "This is the file 'rho'.\n" },
+      { "A/D/G/tau",     0, "This is the file 'tau'.\n" },
+      { "A/D/G/xi",      0, "This is the file 'xi'.\n" },
+      { "A/D/I",         1, "" },
+      { "A/D/I/delta",   0, "This is the file 'delta'.\n" },
+      { "A/D/I/epsilon", 0, "This is the file 'epsilon'.\n" }
+    };
+    SVN_ERR (svn_fs_revision_root (&revision_root, fs, after_rev, pool)); 
+    SVN_ERR (validate_tree (revision_root, expected_entries, 22));
+  }
+  revisions[revision_count++] = after_rev;
 
   /* (2) E exists in both ANCESTOR and A, but refers to different 
      revisions of the same node. */
   {
-    /* (1) E exists in both ANCESTOR and B, but refers to different revisions
-       of the same node.  Try to merge A/E and B/E, recursively. */
+    /* (1a) E exists in both ANCESTOR and B, but refers to different
+       revisions of the same file node.  Conflict. */
+    SVN_ERR (svn_fs_begin_txn (&txn, fs, revisions[1], pool));
+    SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+    SVN_ERR (set_file_contents (txn_root, "A/B/lambda",
+                                "A different change to 'lambda'.\n"));
+    SVN_ERR (test_commit_txn (&conflict, &after_rev, txn, FALSE));
+
+    /* (1b) E exists in both ANCESTOR and B, but refers to different
+       revisions of the same directory node.  Merge A/E and B/E,
+       recursively.  Succeed, because no conflict beneath E. */
+    SVN_ERR (svn_fs_begin_txn (&txn, fs, revisions[1], pool));
+    SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+    SVN_ERR (svn_fs_make_file (txn_root, "A/D/G/nu", pool));
+    SVN_ERR (set_file_contents (txn_root, "A/D/G/nu",
+                                "This is the file 'nu'.\n"));
+    SVN_ERR (test_commit_txn (&conflict, &after_rev, txn, TRUE));
+    /*********************************************************************/
+    /* REVISION 11 */
+    /*********************************************************************/
+    {
+      tree_test_entry_t expected_entries[] = {
+        /* path, is_dir, contents */
+        { "theta",         0, "This is the file 'theta'.\n" },
+        { "A",             1, "" },
+        { "A/mu",          0, "A new file 'mu'.\n" },
+        { "A/sigma",       0, "This is the file 'sigma'.\n" },
+        { "A/B",           1, "" },
+        { "A/B/lambda",    0, "Change to file 'lambda'.\n" },
+        { "A/B/E",         1, "" },
+        { "A/B/E/alpha",   0, "This is the file 'alpha'.\n" },
+        { "A/B/E/beta",    0, "This is the file 'beta'.\n" },
+        { "A/B/F",         1, "" },
+        { "A/C",           1, "" },
+        { "A/C/kappa",     0, "This is the file 'kappa'.\n" },
+        { "A/D",           1, "" },
+        { "A/D/gamma",     0, "This is the file 'gamma'.\n" },
+        { "A/D/G",         1, "" },
+        { "A/D/G/pi",      0, "This is the file 'pi'.\n" },
+        { "A/D/G/rho",     0, "This is the file 'rho'.\n" },
+        { "A/D/G/tau",     0, "This is the file 'tau'.\n" },
+        { "A/D/G/xi",      0, "This is the file 'xi'.\n" },
+        { "A/D/G/nu",      0, "This is the file 'nu'.\n" },
+        { "A/D/I",         1, "" },
+        { "A/D/I/delta",   0, "This is the file 'delta'.\n" },
+        { "A/D/I/epsilon", 0, "This is the file 'epsilon'.\n" }
+      };
+      SVN_ERR (svn_fs_revision_root (&revision_root, fs, after_rev, pool)); 
+      SVN_ERR (validate_tree (revision_root, expected_entries, 23));
+    }
+    revisions[revision_count++] = after_rev;
+
+    /* (1c) E exists in both ANCESTOR and B, but refers to different
+       revisions of the same directory node.  Merge A/E and B/E,
+       recursively.  Fail, because conflict beneath E. */
+    SVN_ERR (svn_fs_begin_txn (&txn, fs, revisions[1], pool));
+    SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+    SVN_ERR (svn_fs_make_file (txn_root, "A/D/G/xi", pool));
+    SVN_ERR (set_file_contents (txn_root, "A/D/G/xi",
+                                "This is a different file 'xi'.\n"));
+    SVN_ERR (test_commit_txn (&conflict, &after_rev, txn, FALSE));
+    if (strcmp (conflict, "/A/D/G") != 0)
+      {
+        return svn_error_createf
+          (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+           "got conflict `%s', but expected `/A/D/G'", conflict);
+      }
 
     /* (1) E exists in both ANCESTOR and B, and refers to the same node
        revision.  Replace E with A's node revision.  */
-  }
+    {
+      svn_string_t *old_lambda_ctnts;
+      SVN_ERR (svn_fs_begin_txn (&txn, fs, revisions[1], pool));
+      SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+      SVN_ERR (get_file_contents (txn_root, "A/B/lambda", &old_lambda_ctnts));
+      if ((! old_lambda_ctnts)
+          || (strcmp (old_lambda_ctnts->data,
+                      "This is the file 'lambda'.\n") != 0))
+        {
+          return svn_error_create
+            (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+             "got wrong contents from an old revision tree");
+        }
+      SVN_ERR (set_file_contents (txn_root, "A/D/G/rho",
+                                  "This is an irrelevant change to 'rho'.\n"));
+      SVN_ERR (test_commit_txn (&conflict, &after_rev, txn, TRUE));
+      /*********************************************************************/
+      /* REVISION 12 */
+      /*********************************************************************/
+      {
+        tree_test_entry_t expected_entries[] = {
+          /* path, is_dir, contents */
+          { "theta",         0, "This is the file 'theta'.\n" },
+          { "A",             1, "" },
+          { "A/mu",          0, "A new file 'mu'.\n" },
+          { "A/sigma",       0, "This is the file 'sigma'.\n" },
+          { "A/B",           1, "" },
+          { "A/B/lambda",    0, "Change to file 'lambda'.\n" },
+          { "A/B/E",         1, "" },
+          { "A/B/E/alpha",   0, "This is the file 'alpha'.\n" },
+          { "A/B/E/beta",    0, "This is the file 'beta'.\n" },
+          { "A/B/F",         1, "" },
+          { "A/C",           1, "" },
+          { "A/C/kappa",     0, "This is the file 'kappa'.\n" },
+          { "A/D",           1, "" },
+          { "A/D/gamma",     0, "This is the file 'gamma'.\n" },
+          { "A/D/G",         1, "" },
+          { "A/D/G/pi",      0, "This is the file 'pi'.\n" },
+          { "A/D/G/rho",     0, "This is an irrelevant change to 'rho'.\n" },
+          { "A/D/G/tau",     0, "This is the file 'tau'.\n" },
+          { "A/D/G/xi",      0, "This is the file 'xi'.\n" },
+          { "A/D/G/nu",      0, "This is the file 'nu'.\n"},
+          { "A/D/I",         1, "" },
+          { "A/D/I/delta",   0, "This is the file 'delta'.\n" },
+          { "A/D/I/epsilon", 0, "This is the file 'epsilon'.\n" }
+        };
+        SVN_ERR (svn_fs_revision_root (&revision_root, fs, after_rev, pool)); 
+        SVN_ERR (validate_tree (revision_root, expected_entries, 23));
+      }
+      revisions[revision_count++] = after_rev;
+    }
+  }  
 
   /* (1) E exists in both ANCESTOR and A, and refers to the same node
      revision. */
@@ -2495,28 +2896,27 @@ merging_commit (const char **msg)
     /* (1) E exists in both ANCESTOR and B, and refers to the same
        node revision.  Nothing has happened to ANCESTOR/E, so no
        change is necessary. */
+
+    /* This has now been tested about fifty-four trillion times.  We
+       don't need to test it again here. */
   }
-
-
 
   /* E exists in ANCESTOR, but has been deleted from A.  E exists in
      both ANCESTOR and B but refers to different nodes.  Conflict.  */
-  SVN_ERR (svn_fs_begin_txn (&txn, fs, revisions[0], pool));
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, revisions[1], pool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+  SVN_ERR (svn_fs_delete (txn_root, "iota", pool));
   SVN_ERR (svn_fs_make_file (txn_root, "iota", pool));
+  SVN_ERR (set_file_contents (txn_root, "iota", "New contents for 'iota'.\n"));
   SVN_ERR (test_commit_txn (&conflict, &after_rev, txn, FALSE));
-
 
   /* E exists in ANCESTOR, but has been deleted from A.  E exists in
      both ANCESTOR and B but refers to different revisions of the same
      node.  Conflict.  */
-
-  SVN_ERR (svn_fs_begin_txn (&txn, fs, revisions[0], pool));
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, revisions[1], pool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
-  SVN_ERR (svn_fs_make_file (txn_root, "iota", pool));
+  SVN_ERR (set_file_contents (txn_root, "iota", "New contents for 'iota'.\n"));
   SVN_ERR (test_commit_txn (&conflict, &after_rev, txn, FALSE));
-
-#endif /* 0 */
 
   /* Close the filesystem. */
   SVN_ERR (svn_fs_close_fs (fs));
