@@ -84,17 +84,28 @@
 #define SVN_PATH_URL_STYLE 3
 
 
-/* Add a COMPONENT (a null-terminated C-string) to PATH. */
-void svn_path_add_component_nts (svn_string_t *path, 
-                                 const char *component,
-                                 int style,
-                                 apr_pool_t *pool);
+/* Add a COMPONENT (a null-terminated C-string) to PATH.
 
-/* Add COMPONENT to PATH. */
+   If PATH is non-empty, append the appropriate directory separator
+   character, and then COMPONENT.  If PATH is empty, simply set it to
+   COMPONENT; don't add any separator character.
+
+   If the result ends in a separator character, then remove the separator.
+
+   The separator character is chosen according to STYLE.  For
+   SVN_PATH_REPOS_STYLE, it would be '/'.  For SVN_PATH_LOCAL_STYLE on
+   a Unix system, it would also be '/'.  */
 void svn_path_add_component (svn_string_t *path,
                              const svn_string_t *component,
                              int style,
                              apr_pool_t *pool);
+
+/* Same as `svn_path_add_component', except that the COMPONENT argument is 
+   a C-style '\0'-terminated string, not an svn_string_t.  */
+void svn_path_add_component_nts (svn_string_t *path, 
+                                 const char *component,
+                                 int style,
+                                 apr_pool_t *pool);
 
 /* Remove one component off the end of PATH. */
 void svn_path_remove_component (svn_string_t *path, int style);
