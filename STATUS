@@ -30,7 +30,7 @@ Candidate changes:
       r11321 is just a docstring addition -- we can drop that from
       this merge if folks really care.
     Votes:
-      +1: cmpilato, sussman
+      +1: cmpilato, sussman, breser
 
   * r11394
     Fix javahl bindings not using the default config directory if nothing
