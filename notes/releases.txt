@@ -30,7 +30,12 @@
    Someone with administrative access should do this, usually not the
    release manager.
 
-7. Post tarball to http://subversion.tigris.org/servlets/ProjectDownloadList
+7. Post tarball to the "File sharing" section of the tigris.org web
+   site <http://subversion.tigris.org/servlets/ProjectDownloadList>.
+   The ability to upload a public, automatically approved tarball
+   requires the "Project Document - Approve" permission, which is a
+   standard part of the "Download Manager" or "Content Developer"
+   roles.
 
 8. Move branch into the tags directory in the repository.  Now that
    the release is public, no more changes can happen on that branch.
