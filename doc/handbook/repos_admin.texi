@@ -8,9 +8,9 @@ In this section, we'll mainly focus on how to use the
 
 @menu
 * Creating a repository::
-* Examining with svnlook::
+* Examining a repository::
+* Repository hooks::
 @end menu
-@c * Hook scripts::
 @c * Repository maintenance::
 @c * Tweaking a repository::
 @c * Networking a repository::
@@ -42,8 +42,6 @@ For a newly created repository, revision 0 has nothing but a
 
 Here is a quick run-down of the anatomy of a repository:
 
-### SOMEBODY DO THIS
-
 @example
 $ ls myrepos
 conf/
@@ -53,10 +51,241 @@ hooks/
 locks/
 @end example
 
+@table @samp
+@item conf
+Currently unused;  repository-side config files will go in here someday.
+@item dav
+If the repository is being accessed by Apache and mod_dav_svn, some
+private housekeeping databases are stored here.
+@item db
+The main Berkeley DB environment, full of DB tables that comprise the
+data store for libsvn_fs.  This is where all of your data is!  In
+particular, most of your files' contents end up in the 'strings' table.
+Logfiles accumulate here as well, so transactions can be recovered.
+@item hooks
+Where pre- and post-commit hook scripts live.  (And someday, read-hooks.)
+@item locks
+A single file lives here;  repository readers and writers take out
+shared locks on this file.  Do not remove this file.
+@end table
+
+
 @c ------------------------------------------------------------------
-@node Examining with svnlook
-@section Examining with svnlook
+@node Examining a repository
+@section Examining a repository
 
 
+@subsection Transactions and Revisions
 
+A Subversion repository is essentially a sequence of trees;  each tree
+is called a @dfn{revision}.  (If this is news to you, it might be good
+for you to read @ref{Transactions and Revision Numbers}.)
+
+Every revision begins life as a @dfn{transaction} tree.  When doing a
+commit, a client builds a transaction that mirrors their local changes,
+and when the commit succeeds, the transaction is effectively "promoted"
+into a new revision tree, and is assigned a new revision number.
+
+At the moment, updates work in a similar way: the client builds a
+transaction tree that is a "mirror" of their working copy.  The
+repository then compares the transaction tree with some revision tree,
+and sends back a tree-delta.  After the update completes, the
+transaction is deleted.
+
+Transaction trees are the only way to 'write' to the repository's
+versioned filesystem; all users of libsvn_fs will do this.  However,
+it's important to understand that the lifetime of a transaction is
+completely flexible.  In the case of updates, transactions are temporary
+trees that are immediately destroyed.  In the case of commits,
+transactions are transformed into permanent revisions (or aborted if the
+commit fails.)  In the case of an error or bug, it's possible that a
+transaction can be accidentally left lying around -- the libsvn_fs
+caller might die before deleting it.  And in theory, someday whole
+workflow applications might revolve around the creation of transactions;
+they might be examined in turn by different managers before being
+deleted or promoted to revisions.
+
+The point is:  if you're administering a Subversion repository, you're
+going to have to examine revisions and transactions.  It's part of
+monitoring the health of the repository.
+
+@node svnlook
+@subsection svnlook
+
+@command{svnlook} is a read-only@footnote{Why read-only?  Because if a
+pre-commit hook script changed the transaction before commit, the
+working copy would have no way of knowing what happened, and would
+therefore be out of sync and not know it.  Subversion currently has no
+way to handle this situation, and maybe never will.} tool that can be
+used to examine the revision and transaction trees within a repository.
+It's useful for system administrators, and can be used by pre- and
+post-commit hook scripts as well.
+
+The simplest usage is
+
+@example
+$ svnlook repos
+@end example
+
+This will print information about the HEAD revision in the repository
+"repos".  In particular, it will show the log message, author, date, and
+a diagram of the tree.
+
+To look at a particular revision or transaction:
+
+@example
+$ svnlook repos rev 522
+$ svnlook repos txn 340
+@end example
+
+Or, if you only want to see certain types of information,
+@command{svnlook} accepts a number of subcommands.  For example,
+
+@example
+$ svnlook repos rev 522 log
+$ svnlook repos rev 559 diff
+@end example
+   
+Available subcommands are:
+   
+@table @samp
+@item log
+Print the tree's log message.
+@item author
+Print the tree's author.
+@item date
+Print the tree's datestamp.
+@item dirs-changed
+List the directories that changed in the tree.
+@item changed
+List all files and directories that changed in the tree.
+@item diff
+Print unified diffs of changed files.
+@end table
+
+
+@subsection the shell
+
+The @command{svnadmin} tool has a toy 'shell' mode as well.  It doesn't
+do much, but it allows you to poke around the repository as if it were
+an imaginary mounted filesystem.  The basic commands @command{cd},
+@command{ls}, @command{exit}, and @command{help} are available, as well
+as the very special command @command{cr} -- "change revision".  The last
+command allows you to move @emph{between} revision trees.
+
+@example 
+$ svnadmin shell repos
+<609: />$
+<609: />$ ls
+  < 1.0.2i7>  [   601]  1           0    trunk/
+  <nh.0.2i9>  [   588]  0           0    branches/
+  <jz.0.18c>  [   596]  0           0    tags/
+
+<609: />$ cd trunk
+<609: /trunk>$ cr 500
+<500: /trunk>$ ls
+  <   2.0.1>  [     1]  0        3462    svn_config.dsp
+  <  4.0.dj>  [   487]  0        3856    PORTING
+  <  3.0.cr>  [   459]  0        7886    Makefile.in
+  <  d.0.ds>  [   496]  0        9736    build.conf
+  <  5.0.d9>  [   477]  1           0    ac-helpers/
+  <   y.0.1>  [     1]  0        1805    subversion.dsp
+[...]
+<500: />$ exit
+@end example
+
+
+The output of @command{ls} has only a few columns:
+
+@example
+  NODE-ID  CREATED-REV HAS_PROPS?  SIZE  NAME
+
+  < 1.0.2i7>  [   601]  1           0    trunk/
+  <nh.0.2i9>  [   588]  0           0    branches/
+  <jz.0.18c>  [   596]  0           0    tags/
+@end example
+
+
+@c ------------------------------------------------------------------
+@node Repository hooks
+@section Repository hooks
+
+A @dfn{hook} is a program triggered by a repository read or write
+access.  The hook is handed enough information to tell what the action
+is, what target(s) it's operating on, and who is doing it.  Depending on
+the hook's output or return status, the hook program may continue the
+action, stop it, or suspend it in some way.
+
+Subversion's hooks are programs that live in the repository's hooks/
+directory:
+
+@example
+$ ls repos/hooks/
+post-commit.tmpl*  read-sentinels.tmpl  write-sentinels.tmpl
+pre-commit.tmpl*   start-commit.tmpl*
+@end example
+
+This is how the 'hooks' directory appears after a repository is first
+created.  It doesn't contain any hook programs -- just templates.
+
+The actual hooks need to be named `start-commit', `pre-commit' and
+`post-commit'.  The template (.tmpl) files are example shell scripts to
+get you started; read them for details about how each hook works.  To
+make your own hook, just copy `foo.tmpl' to `foo' and edit.
+
+(The `read-sentinels' and `write-sentinels' are not yet implemented.
+They are intended to be more like daemons than hooks.  A sentinel is
+started up at the beginning of a user operation.  The Subversion
+server communicates with the sentinel using a protocol yet to be
+defined.  Depending on the sentinel's responses, Subversion may stop
+or otherwise modify the operation.)
+
+Here is a description of the hook programs:
+
+@table @samp
+
+@item start-commit
+This is run before the committer's transaction is even created.  It is
+typically used to decide if the user has commit privileges at all.  The
+repository passes two arguments to this program: the path to the
+repository, and username which is attempting to commit.  If the program
+returns a non-zero exit value, the commit is stopped before the
+transaction is even created.
+
+@item pre-commit
+This is run when the transaction is complete, but before it is
+committed.  Typically, this hook is used to protect against commits that
+are disallowed due to content or location (for example, your site might
+require that all commits to a certain branch include a ticket number
+from the bug tracker, or that the incoming log message is
+non-empty.)@footnote{At this time, this is the only method by which
+users can implement finer-grained access control beyond what
+@file{httpd.conf} offers.  In a future version of Subversion, we plan to
+implement ACLs directly in the filesystem.}  The repository passes two
+arguments to this program: the path to the repository, and the name of
+the transaction being committed.  If the program returns a non-zero exit
+value, the commit is aborted and transaction is removed.
+
+@item post-commit
+This is run after the transaction is committed, and we have a new
+revision.  Most people use this hook to send out desciptive
+commit-emails or to make a hot-backup of the repository.  The repository
+passes two arugments to this program:  the path to the repository, and
+the new revision number that was created.  The exit code of the program
+is ignored.
+
+@end table
+
+Note that the hooks must be executable by the user who will invoke them
+(commonly the user httpd runs as), and that that same user needs to be
+able to access the repository.
+
+The pre-commit and post-commit hooks need to know things about the
+change about to be committed (or that has just been committed).  The
+solution is a standalone program, @command{svnlook} (@xref{svnlook}),
+which was installed in the same place as the @command{svn} binary.  Have
+the script use @command{svnlook} to examine a transaction or revision
+tree.  It produces output that is both human- and machine-readable, so
+hook scripts can easily parse it.  Note that `svnlook' is read-only --
+it can only inspect, not change the repository.
 
