@@ -18,10 +18,10 @@ package org.tigris.subversion.lib;
  */
 
 public class Revision {
-    public final static int INVALID_REVISION=-1;
-    private int revision=INVALID_REVISION;
+    public final static long INVALID_REVISION=-1;
+    private long revision=INVALID_REVISION;
 
-    public Revision(int revision)
+    public Revision(long revision)
     {
 	super();
 
@@ -30,26 +30,33 @@ public class Revision {
 
     public Revision(Revision revision)
     {
-	this(revision.toInteger());
+	this(revision.toLong());
     }
 
     public static boolean isValidRevision(Revision revision)
     {
-	return isValidRevision(revision.toInteger());
+	return isValidRevision(revision.toLong());
     }
 
-    public static boolean isValidRevision(int revision)
+    public static boolean isValidRevision(long revision)
     {
 	return revision >= 0;
     }
 
-    public int toInteger()
+    public long toLong()
     {
 	return revision;
     }
 
-    public static int toInteger(Revision revision)
+    public static long toLong(Revision revision)
     {
-	return revision.toInteger();
+	return revision.toLong();
     }
 }
+
+/* 
+ * local variables:
+ * eval: (load-file "../../../../../../../svn-dev.el")
+ * end: 
+ */
+
