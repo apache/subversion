@@ -90,7 +90,7 @@ struct stack_object
 {
   svn_string_t *path;         /* A working copy directory */
   void *baton;                /* An associated dir baton, if any exists yet. */
-  svn_wc_entry_t *this_dir;  /* All entry info about this directory */
+  svn_wc_entry_t *this_dir;   /* All entry info about this directory */
 
   struct stack_object *next;
   struct stack_object *previous;
@@ -99,8 +99,8 @@ struct stack_object
 
 
 
-/* Create a new stack object containing PATH and BATON and push it on
-   top of STACK. */
+/* Create a new stack object containing {PATH, BATON, ENTRY} and push
+   it on top of STACK. */
 static void
 push_stack (struct stack_object **stack,
             svn_string_t *path,
@@ -458,47 +458,65 @@ do_postfix_text_deltas (apr_hash_t *affected_targets,
 
 
 
-/* Decide if the file represented by ENTRY continues to exist in a
-   state of conflict.  If so, aid in the bailout of the current commit
-   by unlocking all admin-area locks in LOCKS and returning an error.
+/* Decide if the file or dir represented by ENTRY continues to exist
+   in a state of conflict.  If so, aid in the bailout of the current
+   commit by unlocking all admin-area locks in LOCKS and returning an
+   error.
    
    Obviously, this routine should only be called on entries who have
    the `conflicted' flag bit set.  */
 static svn_error_t *
-check_for_unresolved_file_conflict (svn_string_t *full_path_to_file,
-                                    svn_wc_entry_t *entry,
-                                    apr_hash_t *locks,
-                                    apr_pool_t *pool)
+bail_if_unresolved_conflict (svn_string_t *full_path,
+                             svn_wc_entry_t *entry,
+                             apr_hash_t *locks,
+                             apr_pool_t *pool)
 {
   svn_error_t *err;
-  apr_time_t wc_time;
 
-  /* Get the timestamp from the working copy file */
-  err = svn_io_file_affected_time (&wc_time, full_path_to_file, pool);
-  if (err) return err;
-
-  /* If the working copy has a later timestamp than the entry, then
-     assume the conflict has been resolved.  Otherwise, assume the
-     conflict is still present.  */
-  if (wc_time > entry->text_time)  /* TODO:  FIX THIS!!!  Make it
-                                      property-aware. */
-    return SVN_NO_ERROR;
-
-  else
+  if (entry->flags & SVN_WC_ENTRY_CONFLICT)
     {
-      svn_error_t *final_err;
+      /* We must decide if either component is "conflicted", based
+         on whether reject files are mentioned and/or continue to
+         exist.  Luckily, we have a function to do this.  :) */
+      svn_boolean_t text_conflict_p, prop_conflict_p;
+      svn_string_t *parent_dir;
       
-      final_err =
-        svn_error_createf (SVN_ERR_WC_FOUND_CONFLICT, 0, NULL, pool,
-                           "Aborting commit:  file '%s' in state of conflict.",
-                           full_path_to_file->data);
+      if (entry->kind == svn_node_file)
+        {
+          parent_dir = svn_string_dup (full_path, pool);
+          svn_path_remove_component (parent_dir, svn_path_local_style);
+        }
+      else if (entry->kind == svn_node_dir)
+        parent_dir = full_path;
+      
+      err = svn_wc__conflicted_p (&text_conflict_p,
+                                  &prop_conflict_p,
+                                  parent_dir,
+                                  entry,
+                                  pool);
+      if (err) return err;
 
-      err = remove_all_locks (locks, pool);
-      if (err)
-        final_err->child = err; /* nestle them */
-      
-      return final_err;
+      if ((! text_conflict_p) && (! prop_conflict_p))
+        return SVN_NO_ERROR;
+
+      else /* a tracked .rej or .prej file still exists */
+        {
+          svn_error_t *final_err;
+          
+          final_err =
+            svn_error_createf (SVN_ERR_WC_FOUND_CONFLICT, 0, NULL, pool,
+                               "Aborting commit: '%s' remains in conflict.",
+                               full_path->data);
+          
+          err = remove_all_locks (locks, pool);
+          if (err)
+            final_err->child = err; /* nestle them */
+          
+          return final_err;
+        }
     }
+  
+  return SVN_NO_ERROR;
 }
 
 
@@ -597,14 +615,10 @@ process_subdirectory (svn_string_t *path, void *dir_baton,
       /* Preemptive strike:  if the current entry is a file in a state
          of conflict that has NOT yet been resolved, we abort the
          entire commit.  */
-      if ((current_entry->kind == svn_node_file)
-          && (current_entry->flags & SVN_WC_ENTRY_CONFLICT))
-        {
-          err = check_for_unresolved_file_conflict (full_path_to_entry,
-                                                    current_entry,
-                                                    locks, subpool);
-          if (err) return err;
-        }
+      err = bail_if_unresolved_conflict (full_path_to_entry,
+                                         current_entry,
+                                         locks, subpool);
+      if (err) return err;
 
       /* Is the entry marked for both deletion AND addition? */
       if ((current_entry->flags & SVN_WC_ENTRY_DELETE)
