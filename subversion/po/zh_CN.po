@@ -1588,12 +1588,12 @@ msgstr "“%s”不像是工作拷贝路径"
 #: clients/cmdline/propedit-cmd.c:250
 #, c-format
 msgid "Set new value for property '%s' on '%s'\n"
-msgstr "属性“%s”于“%s”设为新值\n"
+msgstr "“%2$s”的“%1$s”属性被设为新值\n"
 
 #: clients/cmdline/propedit-cmd.c:257
 #, c-format
 msgid "No changes to property '%s' on '%s'\n"
-msgstr "属性“%s”于“%s”没有改变\n"
+msgstr "“%2$s”的“%1$s”属性没有改变\n"
 
 #: clients/cmdline/proplist-cmd.c:94
 #, c-format
@@ -2775,7 +2775,7 @@ msgstr "目前只支持路径的文件参考基础与其工作文件之间的文
 #: libsvn_client/diff.c:1716 libsvn_client/diff.c:1721
 #, c-format
 msgid "'%s' was not found in the repository at revision %ld"
-msgstr "“%s”于档案库的修订版 %ld 找不到"
+msgstr "在档案库的修订版 %2$ld 中找不到“%1$s”"
 
 #: libsvn_client/diff.c:1852 libsvn_client/switch.c:117
 #, c-format
@@ -4189,7 +4189,7 @@ msgstr "无法确认的日志文件元素“%s”于“%s”中"
 #: libsvn_wc/log.c:1241
 #, c-format
 msgid "Error processing command '%s' in '%s'"
-msgstr "处理命令“%s”于“%s”中时发生错误"
+msgstr "在“%2$s”中处理命令“%1$s”时发生错误"
 
 #: libsvn_wc/log.c:1357
 msgid "Couldn't open log"
@@ -4238,7 +4238,7 @@ msgstr "无法写入属性集到“%s”"
 #: libsvn_wc/props.c:250
 #, c-format
 msgid "Can't find entry '%s' in '%s'"
-msgstr "无法找到项目“%s”于“%s”之中"
+msgstr "无法在“%2$s”中找到项目“%1$s”"
 
 #: libsvn_wc/props.c:318 libsvn_wc/update_editor.c:2268
 #, c-format
