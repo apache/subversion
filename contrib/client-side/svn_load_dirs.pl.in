@@ -14,10 +14,11 @@ use Digest::MD5  2.20;
 use File::Copy   2.03;
 use File::Find;
 use File::Path   1.0404;
-use File::Temp   0.12   qw(tempdir);
+use File::Temp   0.12   qw(tempdir tempfile);
 use Getopt::Long 2.25;
 use Text::Wrap;
 use URI          1.17;
+use English;
 
 $Text::Wrap::columns = 72;
 
@@ -339,12 +340,7 @@ else
   }
 
 # Create a temporary directory for svn to work in.
-my $temp_dir = $ENV{TMPDIR};
-unless (defined $temp_dir and length $temp_dir) {
-  $temp_dir = '/tmp';
-}
-my $temp_template = "$temp_dir/svn_load_dirs_XXXXXXXXXX";
-$temp_dir         = tempdir($temp_template);
+my $temp_dir = tempdir( "svn_load_dirs_XXXXXXXXXX", TMPDIR => 1 );
 
 # Put in a signal handler to clean up any temporary directories.
 sub catch_signal {
@@ -1133,11 +1129,17 @@ while (defined (my $load_dir = &get_next_load_dir))
                   {
                     @diff_ignore_space_changes = ('-b');
                   }
+                
+                # Write the value to a temporary file in case it's multi-line
+                my ($handle, $tmpfile) = tempfile(DIR => $temp_dir);
+                print $handle $property_value;
+                close($handle);
 
                 read_from_process($svn,
                                   'propset',
                                   $property_name,
-                                  $property_value,
+                                  '--file',
+                                  $tmpfile,
                                   $add_file);
               }
           }
@@ -1411,25 +1413,74 @@ sub file_info
 }
 
 # Start a child process safely without using /bin/sh.
+my $openfork_available = "MSWin32" ne $OSNAME;
 sub safe_read_from_pipe
 {
   unless (@_)
     {
       croak "$0: safe_read_from_pipe $INCORRECT_NUMBER_OF_ARGS";
     }
-  print "Running @_\n";
-  my $pid = open(SAFE_READ, '-|');
-  unless (defined $pid)
+
+  if ($openfork_available)
     {
-      die "$0: cannot fork: $!\n";
+      print "Running @_\n";
+      my $pid = open(SAFE_READ, "-|");
+      unless (defined $pid)
+        {
+          die "$0: cannot fork: $!\n";
+        }
+      unless ($pid)
+        {
+          # child
+          open(STDERR, ">&STDOUT")
+            or die "$0: cannot dup STDOUT: $!\n";
+          exec(@_)
+            or die "$0: cannot exec '@_': $!\n";
+        }
     }
-  unless ($pid)
+  else
     {
-      open(STDERR, ">&STDOUT")
-        or die "$0: cannot dup STDOUT: $!\n";
-      exec(@_)
-        or die "$0: cannot exec '@_': $!\n";
-  }
+      # Redirect the comment into a temp file and use that to work around
+      # Windoze's (non-)handling of multi-line commands.
+      my @commandline = ();
+      my $command;
+      my $comment;
+        
+      while ($command = shift)
+        {
+          if ("-m" eq $command)
+            {
+              my $comment = shift;
+              my ($handle, $tmpfile) = tempfile(DIR => $temp_dir);
+              print $handle $comment;
+              close($handle);
+                
+              push(@commandline, "--file");
+              push(@commandline, $tmpfile);
+            }
+          else
+            {
+              # Munge the command to protect it from the command line
+              $command =~ s/\"/\\\"/g;
+              if ($command =~ m"\s") { $command = "\"$command\""; }
+              if ($command eq "") { $command = "\"\""; }
+              if ($command =~ m"\n")
+                {
+                  warn "$0: carriage return detected in command - may not work\n";
+                }
+              push(@commandline, $command);
+            }
+        }
+        
+      print "Running @commandline\n";
+      if ( $comment ) { print $comment; }
+        
+      # Now do the pipe.
+      open(SAFE_READ, "@commandline |")
+        or die "$0: cannot pipe to command: $!\n";
+    }
+    
+  # parent
   my @output;
   while (<SAFE_READ>)
     {
