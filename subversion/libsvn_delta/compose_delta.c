@@ -27,7 +27,90 @@
 
 
 /* ==================================================================== */
+/* Support for efficient small-block allocation from pools. */
+
+/* The following structs will be allocated and freed often: */
+
+/* A node in the range index tree. */
+typedef struct range_index_node_t range_index_node_t;
+struct range_index_node_t
+{
+  /* 'offset' and 'limit' define the range in the source window. */
+  apr_off_t offset;
+  apr_off_t limit;
+
+  /* 'target_offset' is where that range is represented in the target. */
+  apr_off_t target_offset;
+
+  /* 'left' and 'right' link the node into a splay tree. */
+  range_index_node_t *left, *right;
+
+  /* 'prev' and 'next' link it into an ordered, doubly-linked list. */
+  range_index_node_t *prev, *next;
+};
+
+/* A node in a list of ranges for source and target op copies. */
+typedef struct range_list_node_t range_list_node_t;
+struct range_list_node_t
+{
+  /* 'offset' and 'limit' define the range. */
+  apr_off_t offset;
+  apr_off_t limit;
+
+  /* Where does the range come from?
+     If TRUE, 'offset' and 'limit' refer to target data; otherwise they
+     refer to the "virtual" source data for the second delta window. */
+  svn_boolean_t from_source;
+
+  /* 'prev' and 'next' link the node into an ordered, doubly-linked list. */
+  range_list_node_t *prev, *next;
+};
+
+
+/* This is what will be allocated: */
+typedef union alloc_block_t alloc_block_t;
+union alloc_block_t
+{
+  range_index_node_t index_node;
+  range_list_node_t list_node;
+
+  /* Links free blocks into a freelist. */
+  alloc_block_t *next_free;
+};
+
+
+/* Allocate a block. */
+static APR_INLINE void *
+alloc_block (apr_pool_t *pool, alloc_block_t **free_list)
+{
+  alloc_block_t *block;
+  if (*free_list == NULL)
+    block = apr_palloc(pool, sizeof(*block));
+  else
+    {
+      block = *free_list;
+      *free_list = block->next_free;
+    }
+  return block;
+}
+
+/* Return the block back to the free list. */
+static APR_INLINE void
+free_block (void *ptr, alloc_block_t **free_list)
+{
+  /* Wrapper functions take care of type safety. */
+  alloc_block_t *const block = ptr;
+  block->next_free = *free_list;
+  *free_list = block;
+}
+
+
+
+/* ==================================================================== */
 /* Mapping offsets in the target streem to txdelta ops. */
+
+/* FIXME: For every 'svn_txdelta_new' op, the offset index must
+   have a pointer to the start of the new data for that op.*/
 
 typedef struct offset_index_t
 {
@@ -98,20 +181,11 @@ search_offset_index (offset_index_t *ndx, apr_off_t offset)
 /* ==================================================================== */
 /* Mapping ranges in the source stream to ranges in the composed delta. */
 
-typedef struct range_index_node_t range_index_node_t;
-struct range_index_node_t
-{
-  apr_off_t offset;
-  apr_off_t limit;
-  apr_off_t target_offset;
-  range_index_node_t *left, *right;
-  range_index_node_t *prev, *next;
-};
-
+/* The range index tree. */
 typedef struct range_index_t
 {
   range_index_node_t *tree;
-  range_index_node_t *free_list;
+  alloc_block_t *free_list;
   apr_pool_t *pool;
 } range_index_t;
 
@@ -120,27 +194,20 @@ static range_index_t *
 create_range_index (apr_pool_t *pool)
 {
   range_index_t *ndx = apr_palloc(pool, sizeof(*ndx));
-  ndx->tree = ndx->free_list = NULL;
+  ndx->tree = NULL;
   ndx->pool = pool;
+  ndx->free_list = NULL;
   return ndx;
 }
 
 /* Allocate a node for the range index tree. */
-static APR_INLINE range_index_node_t *
+static range_index_node_t *
 alloc_range_index_node (range_index_t *ndx,
                         apr_off_t offset,
                         apr_off_t limit,
                         apr_off_t target_offset)
 {
-  range_index_node_t *node;
-  if (ndx->free_list == NULL)
-    node = apr_palloc(ndx->pool, sizeof(*node));
-  else
-    {
-      node = ndx->free_list;
-      ndx->free_list = node->right;
-    }
-
+  range_index_node_t *const node = alloc_block(ndx->pool, &ndx->free_list);
   node->offset = offset;
   node->limit = limit;
   node->target_offset = target_offset;
@@ -150,23 +217,28 @@ alloc_range_index_node (range_index_t *ndx,
 }
 
 /* Free a node from the range index tree. */
-static APR_INLINE void
+static void
 free_range_index_node (range_index_t *ndx, range_index_node_t *node)
 {
-  node->right = ndx->free_list;
-  ndx->free_list = node;
+  if (node->next)
+    node->next->prev = node->prev;
+  if (node->prev)
+    node->prev->next = node->next;
+  free_block(node, &ndx->free_list);
 }
+
 
 /* Splay the index tree, using OFFSET as the key. */
 
-static range_index_node_t *
-splay_range_index (apr_off_t offset, range_index_node_t *tree)
+static void
+splay_range_index (apr_off_t offset, range_index_t *ndx)
 {
+  range_index_node_t *tree = ndx->tree;
   range_index_node_t scratch_node;
   range_index_node_t *left, *right;
 
   if (tree == NULL)
-    return NULL;
+    return;
 
   scratch_node.left = scratch_node.right = NULL;
   left = right = &scratch_node;
@@ -221,7 +293,6 @@ splay_range_index (apr_off_t offset, range_index_node_t *tree)
   tree->left  = scratch_node.right;
   tree->right = scratch_node.left;
 
-
   /* The basic top-down splay is finished, but we may still need to
      turn the tree around. What we want is to put the node with the
      largest offset where node->offset <= offset at the top of the
@@ -257,8 +328,11 @@ splay_range_index (apr_off_t offset, range_index_node_t *tree)
         }
     }
 
-  return tree;
+  /* Sanity check ... */
+  assert(offset >= tree->offset || tree->left == NULL && tree->prev == NULL);
+  ndx->tree = tree;
 }
+
 
 /* Remove all ranges from NDX that fall into the root's range.  To
    keep the range index as small as possible, we must also remove
@@ -286,11 +360,6 @@ delete_subtree (range_index_t *ndx, range_index_node_t *node)
     {
       delete_subtree(ndx, node->left);
       delete_subtree(ndx, node->right);
-
-      if (node->next)
-        node->next->prev = node->prev;
-      if (node->prev)
-        node->prev->next = node->next;
       free_range_index_node(ndx, node);
     }
 }
@@ -324,10 +393,10 @@ clean_tree (range_index_t *ndx, apr_off_t limit)
 }
 
 
-/* Add a range [OFFSET, LIMIT) into NDX. If NDX already contains
-   a range that encloses [OFFSET, LIMIT), do nothing. Otherwise,
-   remove all ranges from NDX that are superseded by the new
-   range. */
+/* Add a range [OFFSET, LIMIT) into NDX. If NDX already contains a
+   range that encloses [OFFSET, LIMIT), do nothing. Otherwise, remove
+   all ranges from NDX that are superseded by the new range.
+   NOTE: The range index must be splayed to OFFSET! */
 
 static void
 insert_range (apr_off_t offset, apr_off_t limit, apr_off_t target_offset,
@@ -342,8 +411,6 @@ insert_range (apr_off_t offset, apr_off_t limit, apr_off_t target_offset,
     }
   else
     {
-      ndx->tree = splay_range_index(offset, ndx->tree);
-
       if (offset == ndx->tree->offset
           && limit > ndx->tree->limit)
         {
@@ -356,38 +423,16 @@ insert_range (apr_off_t offset, apr_off_t limit, apr_off_t target_offset,
           /* We have to make the same sort of checks as clean_tree()
              does for superseded ranges. Have to merge these someday. */
 
-          svn_boolean_t insert_range_p = (ndx->tree->right == NULL);
-
-          if (!insert_range_p)
-            {
-              node = ndx->tree->right;
-              while (node->left != NULL)
-                node = node->left;
-
-              insert_range_p = (ndx->tree->limit < node->offset
-                                || limit > node->limit);
-            }
+          const svn_boolean_t insert_range_p =
+            (!ndx->tree->next
+             || ndx->tree->limit < ndx->tree->next->offset
+             || limit > ndx->tree->next->limit);
 
           if (insert_range_p)
             {
-              /* Again, we have to check if the new node in and the one
+              /* Again, we have to check if the new node and the one
                  to the left of the root override root's range. */
-
-              svn_boolean_t left_overrides_p = FALSE;
-
-              /* FIXME: splay_range_index should return a pointer to this
-                 node, because it does the exact same traversal before
-                 the giant promotion. */
-              if (ndx->tree->left != NULL)
-                {
-                  node = ndx->tree->left;
-                  while (node->right != NULL)
-                    node = node->right;
-
-                  left_overrides_p = (node->limit >= offset);
-                }
-
-              if (left_overrides_p)
+              if (ndx->tree->prev && ndx->tree->prev->limit >= offset)
                 {
                   /* Replace the data in the splayed node. */
                   ndx->tree->offset = offset;
@@ -432,6 +477,89 @@ insert_range (apr_off_t offset, apr_off_t limit, apr_off_t target_offset,
 
 
 
+/* ==================================================================== */
+/* Juggling with lists of ranges. */
+
+/* Allocate a node for the range list. */
+static range_list_node_t *
+alloc_range_list_node (range_index_t *ndx,
+                       apr_off_t offset,
+                       apr_off_t limit,
+                       svn_boolean_t from_source)
+{
+  range_list_node_t *const node = alloc_block(ndx->pool, &ndx->free_list);
+  node->offset = offset;
+  node->limit = limit;
+  node->from_source = from_source;
+  node->prev = node->next = NULL;
+  return node;
+}
+
+/* Free a node from the range index tree. */
+static void
+free_range_list (range_index_t *ndx, range_list_node_t *list)
+{
+  while (list)
+    {
+      range_list_node_t *const node = list;
+      list = node->next;
+      free_block(node, &ndx->free_list);
+    }
+}
+
+
+/* Based on the data in NDX, build a list of ranges that cover
+   [OFFSET, LIMIT) in the "virtual" source data.
+   NOTE: The range index must be splayed to OFFSET! */
+
+static range_list_node_t *
+build_range_list (apr_off_t offset, apr_off_t limit, range_index_t *ndx)
+{
+  range_list_node_t *range_list;
+  range_index_node_t *node = ndx->tree;
+
+  /* No-brainer check if the range is outside the index. */
+  if (node == NULL
+      || node->offset > limit)
+    return alloc_range_list_node(ndx, offset, limit, TRUE);
+
+  /* Break off whatever is left of the node. */
+  if (offset < node->offset)
+    {
+      range_list = alloc_range_list_node(ndx, offset, node->offset - 1, TRUE);
+      offset = node->offset;
+    }
+
+  /* FIXME: NO, THIS IS NOT FINISHED YET! */
+
+  return range_list;
+}
+
+
+static void
+copy_source_ops (svn_txdelta__ops_baton_t *build_baton,
+                 const range_list_node_t *range,
+                 const svn_txdelta_window_t *window,
+                 const offset_index_t *offset_index,
+                 apr_pool_t *op_pool, apr_pool_t *pool)
+{
+
+  /* FIXME: "Use" unused variables and functions. */
+  (void) build_baton;
+  (void) range;
+  (void) window;
+  (void) offset_index;
+  (void) op_pool;
+  (void) pool;
+
+  (void) search_offset_index;
+}
+
+
+
+/* ==================================================================== */
+/* Bringing it all together. */
+
 /* Trivial optimisation: if the second delta window contains only
    target copies and new data, then it doesn't refer to the source and
    is already the composite. */
@@ -460,15 +588,10 @@ svn_txdelta__compose_windows (const svn_txdelta_window_t *window_A,
       svn_txdelta__ops_baton_t build_baton = { 0 };
       svn_txdelta_window_t *composite = NULL;
 
-      const char *new_data_A = window_A->new_data->data;
+      /* FIXME: const char *new_data_A = window_A->new_data->data; */
       const char *new_data_B = window_B->new_data->data;
       apr_size_t target_offset = 0;
       int i;
-
-      /* FIXME: "Use" unused variables and functions. */
-      (void) offset_index;
-      (void) new_data_A;
-      (void) search_offset_index;
 
       /* Read the description of the delta composition algorithm in
          notes/fs-improvements.txt before going any further.
@@ -488,11 +611,28 @@ svn_txdelta__compose_windows (const svn_txdelta_window_t *window_A,
             }
           else
             {
-              /* ToDo: replace with data from window_A. */
+              /* NOTE: Remember that `offset' and `limit' refer to
+                 positions in window_B's _source_ stream, which is the
+                 same as window_A's _target_ stream! */
+              const apr_off_t offset = op->offset;
+              const apr_off_t limit = op->offset + op->length - 1;
+              range_list_node_t *range_list, *range;
 
-              /* ### this is the _last_ thing to do! */
-              insert_range(op->offset, op->offset + op->length - 1,
-                           target_offset, range_index);
+              splay_range_index(offset, range_index);
+              range_list = build_range_list(offset, limit, range_index);
+
+              for (range = range_list; range; range = range->next)
+                if (!range->from_source)
+                  svn_txdelta__insert_op(&build_baton, svn_txdelta_target,
+                                         range->offset,
+                                         range->limit - range->offset + 1,
+                                         NULL, pool);
+                else
+                  copy_source_ops(&build_baton, range,
+                                  window_A, offset_index, pool, subpool);
+
+              free_range_list(range_index, range_list);
+              insert_range(offset, limit, target_offset, range_index);
             }
 
           /* Remember the new offset in the would-be target stream. */
