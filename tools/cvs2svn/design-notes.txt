@@ -249,10 +249,67 @@ entries.  For example, search for "/mutable" and "/sym_names" in
 cvs2svn.py.
 
 The repository mirror allows cvs2svn to remember what paths exist in
-what revisions.  For each path, it records what tags and branches can
-sprout from that revision...
+what revisions.  For each file path in a revision, it records what
+tags and branches can sprout from that revision; when the file
+changes, these attributes do not propagate to the new revision, since
+the symbolic name isn't based on that revision.
 
-[todo: writing here]
+The symbolic name trees are all stored in one db file, as paths, where
+the first element in each path is the symbolic name, and the rest is
+the full Subversion path to the file in question.  For example, if the
+Subversion revision 7 is the root of branch 'Rel_1', this fact would
+be recorded under the path
+
+   '/Rel_1/myproj/trunk/lib/driver.c'
+
+(the exact layout is dependent on the make_path() function in
+cvs2svn.py, which may change).
+
+   root_key  ==> { 'Rel_1' : 'a', ... }
+   'a'       ==> { 'myproj' : 'b', ... }
+   'b'       ==> { 'trunk : 'c', ... }
+   'c'       ==> { 'lib' : 'd', ... }
+   'd'       ==> { 'driver.c' : 'e', ... }
+   'e'       ==> { }
+
+The source revision is stored in the leaf node, and also in all the
+parent nodes, in the manner described in the class documentation for
+'SymbolicNameTracker'.  The special entries "/opening" and "/closing"
+are not shown above, for brevity, but their values are where the
+revision ranges are stored (that is, the ranges indicating when this
+path could be copied from to produce the tag or branch in question).
+
+When it's time to create a branch or tag, cvs2svn.py walks the
+appropriate symbolic name tree, calculating the ideal source revision
+for each subpath (see 'SymbolicNameTracker' for the exact algorithm)
+and emitting the minimum number of copies to the dumpfile and to the
+skeleton repository mirror.  As it goes, it marks each path as
+emitted, so that we don't redo the same copies during the cleanup
+phase later on.
+
+At this point, the entire branch is done except for:
+
+   1. Any source revisions that haven't yet been committed (this is
+      a rare situation, but anyway such revisions will automatically
+      be handled later by the same algorithm, invoked either due to
+      another commit on the branch, or in the cleanup phase), and
+
+   2. Files that were accidentally copied onto the branch as part of a
+      subtree, but which don't actually belong on the branch, because
+      the corresponding CVS file doesn't contain that tag.
+
+We handle (2) by doing tree diffs between the newly copied tree in the
+skeleton repository mirror, and the corresponding portion of the
+symbolic name tree.  If the skeleton mirror has a file that's not in
+the symbolic name tree, we emit a delete to the dumpfile and remove
+that path from the skeleton mirror.
+
+The cleanup phase happens after all regular changes have been
+processed.  Just loop over the "root directory" of the symbolic name
+tree, running the same creation algorithm on each name (we'll have to
+distinguish between branches and tags, probably through a special
+entry on the directory object), skipping parts of the tree already
+marked as copied.
 
 
 Pass 5:
