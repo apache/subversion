@@ -892,6 +892,10 @@ Otherwise run `find-file'."
 (defun svn-status-line-info->show-user-elide-continuation (line-info)
   (eq (svn-status-line-info->user-elide line-info) 'directory))
 
+;; modify the line-info
+(defun svn-status-line-info->set-filemark (line-info value)
+  (setcar (nthcdr 1 line-info) value))
+
 (defun svn-status-toggle-elide ()
   (interactive)
   (let ((st-info svn-status-info)
@@ -1632,6 +1636,41 @@ See `svn-status-marked-files' for what counts as selected."
       (svn-status-create-arg-file svn-status-temp-arg-file "" (svn-status-marked-files) "")
       (svn-run-svn t t 'resolved "resolved" "--targets" svn-status-temp-arg-file))))
 
+;; --------------------------------------------------------------------------------
+;; Update the *svn-status* buffer, when a file is saved
+;; --------------------------------------------------------------------------------
+
+(defun svn-status-after-save-hook ()
+  "Set a modified indication, when a file is saved from a svn working copy."
+  (let* ((svn-dir (expand-file-name (car-safe svn-status-directory-history)))
+         (file-dir (file-name-directory (buffer-file-name)))
+         (svn-dir-len (length (or svn-dir "")))
+         (file-dir-len (length file-dir))
+         (file-name))
+    (when (and svn-dir
+               (>= file-dir-len svn-dir-len)
+               (string= (substring file-dir 0 svn-dir-len) svn-dir))
+      (setq file-name (substring (buffer-file-name) svn-dir-len))
+      ;;(message (format "In svn-status directory %S" file-name))
+      (let ((st-info svn-status-info)
+            (i-fname))
+        (while st-info
+          (setq i-fname (svn-status-line-info->filename (car st-info)))
+          ;;(message (format "i-fname=%S" i-fname))
+          (when (and (string= file-name i-fname)
+                     (not (eq (svn-status-line-info->filemark (car st-info)) ??)))
+            (svn-status-line-info->set-filemark (car st-info) ?m)
+            (save-excursion
+              (set-buffer "*svn-status*")
+              (svn-status-goto-file-name i-fname)
+              (let ((buffer-read-only nil))
+                (delete-region (point-at-bol) (point-at-eol))
+                (svn-insert-line-in-status-buffer (car st-info))
+                (delete-char 1))))
+          (setq st-info (cdr st-info))))))
+  nil)
+
+(add-hook 'after-save-hook 'svn-status-after-save-hook)
 
 ;; --------------------------------------------------------------------------------
 ;; Getting older revisions
