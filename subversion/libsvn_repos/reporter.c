@@ -57,9 +57,6 @@ typedef struct svn_repos_report_baton_t
   /* Whether or not to recurse into the directories */
   svn_boolean_t recurse;
 
-  /* Is this a switch operation?  (As opposed to an update) */
-  svn_boolean_t is_switch;
-
   /* the editor to drive */
   const svn_delta_edit_fns_t *update_editor;
   void *update_edit_baton; 
@@ -191,39 +188,19 @@ svn_repos_finish_report (void *report_baton)
                                  rbaton->revnum_to_update_to,
                                  rbaton->pool));
 
-  if (rbaton->is_switch && rbaton->target)
-    {
-      /* When doing a 'switch' on a single file, we don't want to run
-         dir_delta; that function would try to delete the first file
-         and add the second.  Instead, we call a variant that simply
-         patches one file into the other, in-place.  */
-
-      SVN_ERR (svn_repos_switch_file (rbaton->txn_root, 
-                                      rbaton->base_path,
-                                      rbaton->target ?
-                                         rbaton->target->data : NULL,
-                                      rbaton->path_rev_hash,
-                                      rev_root, rbaton->tgt_path,
-                                      rbaton->update_editor,
-                                      rbaton->update_edit_baton,
-                                      rbaton->pool));
-    }
-      
-  else 
-    {
-      SVN_ERR (svn_repos_dir_delta (rbaton->txn_root, 
-                                    rbaton->base_path, 
-                                    rbaton->target ? 
-                                        rbaton->target->data : NULL,
-                                    rbaton->path_rev_hash,
-                                    rev_root, 
-                                    rbaton->tgt_path,
-                                    rbaton->update_editor,
-                                    rbaton->update_edit_baton,
-                                    rbaton->text_deltas,
-                                    rbaton->recurse,
-                                    rbaton->pool));
-    }
+  /* Drive the update-editor. */
+  SVN_ERR (svn_repos_dir_delta (rbaton->txn_root, 
+                                rbaton->base_path, 
+                                rbaton->target ? 
+                                rbaton->target->data : NULL,
+                                rbaton->path_rev_hash,
+                                rev_root, 
+                                rbaton->tgt_path,
+                                rbaton->update_editor,
+                                rbaton->update_edit_baton,
+                                rbaton->text_deltas,
+                                rbaton->recurse,
+                                rbaton->pool));
   
   /* Still here?  Great!  Throw out the transaction. */
   SVN_ERR (svn_fs_abort_txn (rbaton->txn));
@@ -258,7 +235,6 @@ svn_repos_begin_report (void **report_baton,
                         const char *fs_base,
                         const char *target,
                         const char *tgt_path,
-                        svn_boolean_t is_switch,
                         svn_boolean_t text_deltas,
                         svn_boolean_t recurse,
                         const svn_delta_edit_fns_t *editor,
@@ -276,7 +252,6 @@ svn_repos_begin_report (void **report_baton,
   rbaton->repos = repos;
   rbaton->text_deltas = text_deltas;
   rbaton->recurse = recurse;
-  rbaton->is_switch = is_switch;
   rbaton->pool = pool;
 
   /* Copy these since we're keeping them past the end of this function call.

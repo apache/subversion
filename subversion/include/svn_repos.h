@@ -131,9 +131,6 @@ const char *svn_repos_write_sentinel_hook (svn_repos_t *repos, apr_pool_t *pool)
    RECURSE instructs the driver of the EDITOR to send a recursive
    delta (or not.)
 
-   IS_SWITCH tells the driver of the EDITOR whether a pure update is
-   happening, or whether a 'switch' is happening.
-
    All allocation for the context and collected state will occur in
    POOL. */
 svn_error_t *
@@ -144,7 +141,6 @@ svn_repos_begin_report (void **report_baton,
                         const char *fs_base,
                         const char *target,
                         const char *tgt_path,
-                        svn_boolean_t is_switch,
                         svn_boolean_t text_deltas,
                         svn_boolean_t recurse,
                         const svn_delta_edit_fns_t *editor,
@@ -235,27 +231,6 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
                      svn_boolean_t text_deltas,
                      svn_boolean_t recurse,
                      apr_pool_t *pool);
-
-
-
-/* Drive EDITOR, sending a text-delta and prop-delta which converts
-   the file SRC_PATH/SRC_NAME into the file TGT_PATH, without doing a
-   replacement.
-
-   This function assumes that EDITOR is anchored on the parent
-   directory of SRC_PATH, and that SRC_REVS is a hash describing the
-   revisions of the item in the SRC_ROOT tree.  (See description of
-   svn_repos_dir_delta above.)  */
-svn_error_t *
-svn_repos_switch_file (svn_fs_root_t *src_root,
-                       const char *src_path,
-                       const char *src_name,
-                       apr_hash_t *src_revs,
-                       svn_fs_root_t *tgt_root,
-                       const char *tgt_path,
-                       const svn_delta_edit_fns_t *editor,
-                       void *edit_baton,
-                       apr_pool_t *pool);
 
 
 /* ---------------------------------------------------------------*/
