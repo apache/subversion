@@ -139,19 +139,29 @@ _svn()
 
 		# take out alternatives
 		case $opt in
-		-d)            cmdOpts=${cmdOpts/ --destination / } ;;
-		--destination) cmdOpts=${cmdOpts/ -d / } ;;
-		-m)            cmdOpts=${cmdOpts/ --message / } ;;
-		--message)     cmdOpts=${cmdOpts/ -m / } ;;
-		-F)            cmdOpts=${cmdOpts/ --file / } ;;
-		--file)        cmdOpts=${cmdOpts/ -F / } ;;
-		-v)            cmdOpts=${cmdOpts/ --verbose / } ;;
-		--verbose)     cmdOpts=${cmdOpts/ -v / } ;;
+		-d)             cmdOpts=${cmdOpts/ --destination / } ;;
+		--destination)  cmdOpts=${cmdOpts/ -d / } ;;
+		-v)             cmdOpts=${cmdOpts/ --verbose / } ;;
+		--verbose)      cmdOpts=${cmdOpts/ -v / } ;;
+		-n)             cmdOpts=${cmdOpts/ --nonrecursive / } ;;
+		--nonrecursive) cmdOpts=${cmdOpts/ -n / } ;;
+		-x)             cmdOpts=${cmdOpts/ --extensions / } ;;
+		--extensions)   cmdOpts=${cmdOpts/ -x / } ;;
+		-q)             cmdOpts=${cmdOpts/ --quiet / } ;;
+		--quiet)        cmdOpts=${cmdOpts/ -q / } ;;
+
 		-r|--revision|-D|--date)
 			cmdOpts=${cmdOpts/ --revision / }
 			cmdOpts=${cmdOpts/ -r / }
 			cmdOpts=${cmdOpts/ --date / }
 			cmdOpts=${cmdOpts/ -D / }
+			;;
+
+		-m|--message|-F|--file)
+			cmdOpts=${cmdOpts/ --message / }
+			cmdOpts=${cmdOpts/ -m / }
+			cmdOpts=${cmdOpts/ --file / }
+			cmdOpts=${cmdOpts/ -F / }
 			;;
 		esac
 
