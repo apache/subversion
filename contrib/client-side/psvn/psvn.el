@@ -180,7 +180,7 @@ Possible values are: commit, revert.")
 
 (defvar svn-status-negate-meaning-of-arg-commands nil
   "*List of operations that sould use a negated meaning of the prefix argument.
-Supported functions are now 'svn-status and 'svn-status-update.")
+The only supported function is 'svn-status.")
 
 (defvar svn-status-svn-executable "svn" "*The name of the svn executable.")
 
@@ -1609,11 +1609,11 @@ non-interactive use."
   "Run 'svn status -v'.
 When called with a prefix argument run 'svn status -vu'."
   (interactive "P")
-  (setq arg (svn-status-possibly-negate-meaning-of-arg arg))
   (unless (interactive-p)
     (save-excursion
       (set-buffer "*svn-process*")
-      (setq svn-status-update-previous-process-output (buffer-substring (point-min) (point-max)))))
+      (setq svn-status-update-previous-process-output
+            (buffer-substring (point-min) (point-max)))))
   (svn-status default-directory arg))
 
 (defun svn-status-get-line-information ()
