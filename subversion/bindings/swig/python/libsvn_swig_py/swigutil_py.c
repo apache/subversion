@@ -31,6 +31,7 @@
 #include "svn_string.h"
 #include "svn_opt.h"
 #include "svn_delta.h"
+#include "svn_auth.h"
 
 #include "swigutil_py.h"
 
@@ -1383,5 +1384,118 @@ svn_error_t *svn_swig_py_log_receiver(void *baton,
 
   Py_DECREF(chpaths);
   svn_swig_py_release_py_lock();
+  return err;
+}
+
+
+svn_error_t *
+svn_swig_py_auth_simple_prompt_func (svn_auth_cred_simple_t **cred,
+                                     void *baton,
+                                     const char *realm,
+                                     const char *username,
+                                     svn_boolean_t may_save,
+                                     apr_pool_t *pool)
+{
+  PyObject *function = baton;
+  PyObject *result;
+  svn_auth_cred_simple_t *creds = NULL;
+  svn_error_t *err = SVN_NO_ERROR;
+
+  if ((function == NULL) || (function == Py_None))
+    return SVN_NO_ERROR;
+
+  svn_swig_py_acquire_py_lock();
+
+  if ((result = PyObject_CallFunction(function, 
+                                      (char *)"sslO&", 
+                                      realm, username, may_save, 
+                                      make_ob_pool, pool)) == NULL)
+    {
+      err = callback_exception_error();
+    }
+  else
+    {
+      if (! (PyTuple_Check(result) 
+             && (PyTuple_Size(result) == 3)
+             && PyString_Check(PyTuple_GetItem(result, 0))
+             && PyString_Check(PyTuple_GetItem(result, 1))
+             && (PyInt_Check(PyTuple_GetItem(result, 2))
+                 || PyLong_Check(PyTuple_GetItem(result, 2)))))
+        {
+          err = callback_bad_return_error
+            ("Expected tuple: str(username), str(password), int(may_save)");
+        }
+      else
+        {
+          PyObject *item;
+          creds = apr_pcalloc(pool, sizeof (*creds));
+          creds->username = apr_pstrdup
+            (pool, PyString_AS_STRING(PyTuple_GetItem(result, 0)));
+          creds->password = apr_pstrdup
+            (pool, PyString_AS_STRING(PyTuple_GetItem(result, 1)));
+          item = PyTuple_GetItem(result, 2);
+          if (PyInt_Check(item))
+            creds->may_save = PyInt_AsLong(item);
+          else
+            creds->may_save = PyLong_AsLong(item);
+        }
+      Py_DECREF(result);
+    }
+  svn_swig_py_release_py_lock();
+  *cred = creds;
+  return err;
+}
+
+svn_error_t *
+svn_swig_py_auth_username_prompt_func (svn_auth_cred_username_t **cred,
+                                       void *baton,
+                                       const char *realm,
+                                       svn_boolean_t may_save,
+                                       apr_pool_t *pool)
+{
+  PyObject *function = baton;
+  PyObject *result;
+  svn_auth_cred_username_t *creds = NULL;
+  svn_error_t *err = SVN_NO_ERROR;
+
+  if ((function == NULL) || (function == Py_None))
+    return SVN_NO_ERROR;
+
+  svn_swig_py_acquire_py_lock();
+
+  if ((result = PyObject_CallFunction(function, 
+                                      (char *)"slO&", 
+                                      realm, may_save, 
+                                      make_ob_pool, pool)) == NULL)
+    {
+      err = callback_exception_error();
+    }
+  else
+    {
+      if (! (PyTuple_Check(result) 
+             && (PyTuple_Size(result) == 2)
+             && PyString_Check(PyTuple_GetItem(result, 0))
+             && (PyInt_Check(PyTuple_GetItem(result, 1))
+                 || PyLong_Check(PyTuple_GetItem(result, 1)))))
+        {
+          err = callback_bad_return_error
+            ("Expected tuple: str(username), int(may_save)");
+        }
+      else
+        {
+          PyObject *item;
+          creds = apr_pcalloc(pool, sizeof (*creds));
+          creds->username = apr_pstrdup
+            (pool, PyString_AS_STRING(PyTuple_GetItem(result, 0)));
+          item = PyTuple_GetItem(result, 1);
+          if (PyInt_Check(item))
+            creds->may_save = PyInt_AsLong(item);
+          else
+            creds->may_save = PyLong_AsLong(item);
+        }
+      Py_DECREF(result);
+    }
+  svn_swig_py_release_py_lock();
+  *cred = creds;
   return err;
 }
