@@ -1,0 +1,155 @@
+# Programmable completion for the Subversion svn command under bash. Source
+# this file (or on some systems add it to ~/.bash_completion and start a new
+# shell) and bash's completion mechanism will know all about svn's options!
+# Who wants to read man pages/help text...
+
+# Doesn't do --xml-file and its associated options, that's intentional :)
+
+# Known to work with bash 2.05a with programmable completion enabled.
+
+_svn()
+{
+	local cur cmds cmdOpts pOpts mOpts rOpts qOpts nOpts optsParam opt ds fs
+
+	COMPREPLY=()
+	cur=${COMP_WORDS[COMP_CWORD]}
+
+	if [[ $COMP_CWORD -eq 1 ]] ; then
+		cmds='add checkout co cleanup commit ci copy cp delete del \
+		      remove rm diff di import log merge mkdir move mv rename \
+		      ren propdel pdel propedit pedit pe propget pget pg \
+		      proplist plist pl propset pset ps revert resolve status \
+		      stat st switch sw update up --version'
+
+		COMPREPLY=( $( compgen -W "$cmds" -- $cur ) )
+		return 0
+	fi
+
+	# options that require a parameter
+	optsParam="-r|--revision|-D|--date|--username|--password|--targets|\
+	           |-d|--destination|-x|--extensions|-m|--message|-F|--file"
+
+	# if previous option required a parameter provide no options this time
+	if [[ ${COMP_WORDS[COMP_CWORD-1]} == @($optsParam) ]] ; then
+		return 0
+	fi
+
+	pOpts="--username --password"
+	mOpts="-m --message -F --file"
+	rOpts="-r --revision -D --date"
+	qOpts="-q --quiet"
+	nOpts="-n --nonrecursive"
+
+	# possible options for the command
+	cmdOpts=
+	case ${COMP_WORDS[1]} in
+	add)
+		cmdOpts="--targets --recursive"
+		;;
+	checkout|co)
+		cmdOpts="-d --destination $rOpts $pOpts $qOpts"
+		;;
+	cleanup)
+		;;
+	commit|ci)
+		cmdOpts="$mOpts $qOpts $nOpts --targets --force $pOpts"
+		;;
+	copy|cp)
+		cmdOpts="$mOpts $rOpts $pOpts"
+		;;
+	delete|del|remove|rm)
+		cmdOpts="--force $mOpts --targets $pOpts"
+		;;
+	diff|di)
+		# multi-occurence options added later
+		cmdOpts="$nOpts $pOpts -x --extensions"
+		;;
+	help|h)
+		;;
+	import)
+		cmdOpts="$mOpts $qOpts $nOpts $pOpts"
+		;;
+	log)
+		cmdOpts="$rOpts -v --verbose --targets $pOpts"
+		;;
+	merge)
+		cmdOpts="$rOpts $nOpts $pOpts"
+		;;
+	mkdir)
+		cmdOpts="$mOpts $pOpts"
+		;;
+	move|mv|rename|ren)
+		cmdOpts="$mOpts $rOpts $pOpts --force"
+		;;
+	propdel|pdel)
+		cmdOpts="$qOpts --recursive"
+		;;
+	propedit|pedit)
+		cmdOpts="$qOpts --recursive"
+		;;
+	propget|pget|pg)
+		cmdOpts="--recursive"
+		;;
+	proplist|plist|pl)
+		cmdOpts="-v --verbose --recursive"
+		;;
+	propset|pset|ps)
+		cmdOpts="$mOpts --targets --recursive"
+		;;
+	revert)
+		cmdOpts="--targets --recursive"
+		;;
+	resolve)
+		cmdOpts="--targets"
+		;;
+	status|stat|st)
+		cmdOpts="-u --show-updates -v --verbose $nOpts $qOpts $pOpts"
+		;;
+	switch|sw)
+		cmdOpts="$rOpts $nOpts --force"
+		;;
+	update|up)
+		cmdOpts="$rOpts $nOpts $pOpts"
+		;;
+	*)
+		;;
+	esac
+
+	# take out options already given
+	for (( i=2; i<=$COMP_CWORD-1; ++i )) ; do
+		opt=${COMP_WORDS[$i]}
+		cmdOpts=" $cmdOpts "
+		cmdOpts=${cmdOpts/ ${opt} / }
+
+		# take out alternatives
+		case $opt in
+		-r)            cmdOpts=${cmdOpts/ --revision / } ;;
+		--revision)    cmdOpts=${cmdOpts/ --r / } ;;
+		-D)            cmdOpts=${cmdOpts/ --date / } ;;
+		--date)        cmdOpts=${cmdOpts/ -D / } ;;
+		-d)            cmdOpts=${cmdOpts/ --destination / } ;;
+		--destination) cmdOpts=${cmdOpts/ -d / } ;;
+		-m)            cmdOpts=${cmdOpts/ --message / } ;;
+		--message)     cmdOpts=${cmdOpts/ -m / } ;;
+		-F)            cmdOpts=${cmdOpts/ --file / } ;;
+		--file)        cmdOpts=${cmdOpts/ -F / } ;;
+		-v)            cmdOpts=${cmdOpts/ --verbose / } ;;
+		--verbose)     cmdOpts=${cmdOpts/ -v / } ;;
+		esac
+
+		# skip next option if this one requires a parameter
+		if [[ $opt == @($optsParam) ]] ; then
+			((++i))
+		fi
+	done
+
+	# add options that can occur multiple times
+	if [[ ${COMP_WORDS[1]} == "diff" ]] ; then
+		cmdOpts="$cmdOpts $rOpts"
+	fi
+
+	COMPREPLY=( $( compgen -W "$cmdOpts" -- $cur ) )
+
+	return 0
+}
+complete -F _svn -o default svn

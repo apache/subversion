@@ -152,7 +152,8 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
     "    WC  -> URL:  immediately commit a copy of WC to URL\n"
     "    URL -> WC:   check out URL into WC, schedule for addition\n"
     "    URL -> URL:  complete server-side copy;  used to branch & tag\n",
-    {'m', 'F', 'r', svn_cl__auth_username_opt, svn_cl__auth_password_opt} },
+    {'m', 'F', 'r', 'D',
+     svn_cl__auth_username_opt, svn_cl__auth_password_opt} },
   
   { "delete", svn_cl__delete, {"del", "remove", "rm"},
     "Remove files and directories from version control.\n"
@@ -232,7 +233,7 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
     "    - If WCPATH is omitted, a value of '.' is assumed.\n"
     "    - If PATH1 and PATH2 are identical, an alternate syntax is allowed:\n"
     "            svn merge -rN:M PATH [WCPATH]\n",
-    {'r', 'n', svn_cl__auth_username_opt, svn_cl__auth_password_opt} },
+    {'r', 'D', 'n', svn_cl__auth_username_opt, svn_cl__auth_password_opt} },
   
   { "mkdir", svn_cl__mkdir, {0},
     "Create a new directory under revision control.\n"
@@ -248,7 +249,7 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
     "  SRC and DST can both be working copy (WC) paths or URLs:\n"
     "    WC  -> WC:   move and schedule for addition (with history)\n"
     "    URL -> URL:  complete server-side rename.\n",    
-    {'m', 'F', 'r', svn_cl__auth_username_opt, svn_cl__auth_password_opt,
+    {'m', 'F', 'r', 'D', svn_cl__auth_username_opt, svn_cl__auth_password_opt,
      svn_cl__force_opt} },
   
   { "propdel", svn_cl__propdel, {"pdel"},
@@ -310,7 +311,7 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
     "Update working copy to mirror a new URL\n"
     "usage: switch [TARGET] REPOS_URL\n\n" /* ### should args be reversed? */
     "   Note:  this is the way to move a working copy to a new branch.\n",
-    {'r', 'n', svn_cl__force_opt} },
+    {'r', 'D', 'n', svn_cl__force_opt} },
  
   { "update", svn_cl__update, {"up"}, 
     "Bring changes from the repository into the working copy.\n"
