@@ -661,10 +661,10 @@ the repository's filesystem, and copies all the data from
 
 Now check out a fresh "working copy" of your project.  To do this, we
 specify a URL to the exact directory within the repository that we want.
-The '-d' option allows us to name the working copy we check out.
+The parameter after the URL allows us to name the working copy we check out.
 
 @example
-$ svn co file:///usr/local/svn/repos1 -d wc
+$ svn co file:///usr/local/svn/repos1 wc
 A  wc/foo
 A  wc/bar
 A  wc/baz
