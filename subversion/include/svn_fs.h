@@ -1427,7 +1427,25 @@ svn_fs_get_file_delta_stream (svn_txdelta_stream_t **stream_p,
                               apr_pool_t *pool);
 
 
+
+/* UUID manipulation. */
 
+/** Populate @a *uuid with the UUID associated with @a fs.
+ */
+
+svn_error_t *
+svn_fs_get_uuid(svn_fs_t *fs,
+                const char **uuid,
+                apr_pool_t *pool);
+
+
+/** Associate @a *uuid with @a fs.
+ */
+
+svn_error_t *
+svn_fs_set_uuid(svn_fs_t *fs,
+                const char *uuid,
+                apr_pool_t *pool);
 
 
 /* Non-historical properties.  */

@@ -225,6 +225,9 @@ svn_error_t *svn_categorize_props (const apr_array_header_t *proplist,
 /** The author who last committed to this entry. */
 #define SVN_PROP_ENTRY_LAST_AUTHOR       SVN_PROP_ENTRY_PREFIX "last-author"
 
+/** The UUID of this entry's repository. */
+#define SVN_PROP_ENTRY_UUID       SVN_PROP_ENTRY_PREFIX "uuid"
+
 /** When custom, user-defined properties are passed over the wire, they will
  * have this prefix added to their name.
  */

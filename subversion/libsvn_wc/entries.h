@@ -61,6 +61,7 @@ extern "C" {
 #define SVN_WC__ENTRY_ATTR_CMT_REV       "committed-rev"
 #define SVN_WC__ENTRY_ATTR_CMT_DATE      "committed-date"
 #define SVN_WC__ENTRY_ATTR_CMT_AUTHOR    "last-author"
+#define SVN_WC__ENTRY_ATTR_UUID          "uuid"
 
 
 
@@ -112,6 +113,7 @@ svn_error_t *svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
 #define SVN_WC__ENTRY_MODIFY_CMT_REV       0x00008000
 #define SVN_WC__ENTRY_MODIFY_CMT_DATE      0x00010000
 #define SVN_WC__ENTRY_MODIFY_CMT_AUTHOR    0x00020000
+#define SVN_WC__ENTRY_MODIFY_UUID          0x00040000
 
 
 /* ...or perhaps this to mean all of those above... */

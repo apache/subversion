@@ -659,6 +659,11 @@ Non-Historical Properties
 
 [[Yes, do tell.]]
 
+
+UUIDs: Universally Unique Identifiers
+
+Every filesystem has a UUID.  This is represented as record #1 in the
+`uuids' table.
 
 
 Layers
@@ -721,6 +726,7 @@ Berkeley DB tables
                "copies" : btree(CPY -> COPY, "next-id" -> CPY)
               "strings" : btree(STR -> STRING, "next-id" -> STR)
       "representations" : btree(REP -> REPRESENTATION, "next-id" -> REP)
+                "uuids" : recno(UUID)
 
 Syntactic elements
 ------------------
@@ -826,14 +832,24 @@ Node revision IDs:
             NODE-REV-ID ::= NODE-ID '.' CPY '.' TXN ;
                 NODE-ID ::= number ;
 
-
+UUIDs:
+                   UUID ::= uuid ;
+                   
 Lexical elements
 ----------------
 
+UUIDs:
+
+                   uuid ::= hexits-32 '-' hexits-16 '-' hexits-16 '-'
+                            hexits-16 '-' hexits-48 ;
+ 
 Numbers:
 
                  number ::= /{digit.class}+/ ;
               number-36 ::= /{base36.class}+/ ;
+              hexits-32 ::= /{base16.class}{8}/ ;
+              hexits-16 ::= /{base16.class}{4}/ ;
+              hexits-48 ::= /{base16.class}{12}/ ;
 
 
 (Note: the following are described in skel.h)
@@ -859,5 +875,6 @@ Character classes:
                ws.class ::= [\t\n\f\r\ ] ;
             digit.class ::= [0-9] ;
              name.class ::= [A-Za-z] ;
+           base16.class ::= [0-9a-f]
            base36.class ::= [a-z0-9]
          anything.class ::= anything at all ;
