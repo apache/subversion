@@ -1005,7 +1005,7 @@ fold_entry (apr_hash_t *entries,
             const svn_stringbuf_t *url,
             apr_hash_t *atts,
             apr_pool_t *pool,
-            va_list ap)
+            va_list *pap)
 {
   apr_hash_index_t *hi;
   svn_wc_entry_t *entry = apr_hash_get (entries, name->data, name->len);
@@ -1088,8 +1088,11 @@ fold_entry (apr_hash_t *entries,
   normalize_entry (entry, pool);
 
   /* Remove any attributes named for removal. */
-  while ((remove_me = va_arg (ap, const char *)) != NULL)
-    apr_hash_set (entry->attributes, remove_me, APR_HASH_KEY_STRING, NULL);
+  if (pap)
+    {
+      while ((remove_me = va_arg (*pap, const char *)) != NULL)
+	apr_hash_set (entry->attributes, remove_me, APR_HASH_KEY_STRING, NULL);
+    }
 
   /* Make sure the entry exists in the entries hash.  Possibly it
      already did, in which case this could have been skipped, but what
@@ -1372,10 +1375,11 @@ svn_wc__entry_modify (svn_stringbuf_t *path,
   if (! entry_was_deleted_p)
     fold_entry (entries, name, modify_flags, revision, kind, 
                 schedule, conflicted, copied, text_time,
-                prop_time, url, attributes, pool, ap);
+                prop_time, url, attributes, pool, &ap);
 
   SVN_ERR (svn_wc__entries_write (entries, path, pool));
 
+  va_end (ap);
   return SVN_NO_ERROR;
 }
 
