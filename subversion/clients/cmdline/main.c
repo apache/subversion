@@ -1237,14 +1237,14 @@ main (int argc, const char * const *argv)
         /* Two basic prompt providers: username/password, and just username. */
         svn_client_get_simple_prompt_provider (&provider,
                                                svn_cl__auth_simple_prompt,
-                                               NULL,
+                                               ctx,
                                                2, /* retry limit */
                                                pool);
         APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
 
         svn_client_get_username_prompt_provider (&provider,
                                                  svn_cl__auth_username_prompt,
-                                                 NULL, 
+                                                 ctx, 
                                                  2, /* retry limit */
                                                  pool);
         APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
@@ -1252,15 +1252,15 @@ main (int argc, const char * const *argv)
         /* Three ssl prompt providers, for server-certs, client-certs,
            and client-cert-passphrases.  */
         svn_client_get_ssl_server_trust_prompt_provider
-          (&provider, svn_cl__auth_ssl_server_trust_prompt, NULL, pool);
+          (&provider, svn_cl__auth_ssl_server_trust_prompt, ctx, pool);
         APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
 
         svn_client_get_ssl_client_cert_prompt_provider
-          (&provider, svn_cl__auth_ssl_client_cert_prompt, NULL, 2, pool);
+          (&provider, svn_cl__auth_ssl_client_cert_prompt, ctx, 2, pool);
         APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
 
         svn_client_get_ssl_client_cert_pw_prompt_provider
-          (&provider, svn_cl__auth_ssl_client_cert_pw_prompt, NULL, 2, pool);
+          (&provider, svn_cl__auth_ssl_client_cert_pw_prompt, ctx, 2, pool);
         APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
       }
 
