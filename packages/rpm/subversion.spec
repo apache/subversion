@@ -1,4 +1,4 @@
-%define apache_version 2.0.40-0.1
+%define apache_version 2.0.40-0.4
 %define neon_version 0.21.2
 %define apache_dir /usr/local/apache2
 Summary: A Concurrent Versioning system similar to but better than CVS.
@@ -65,6 +65,14 @@ The subversion-server package adds the Subversion server Apache module to
 the Apache directories and configuration.
 
 %changelog
+* Tue Jun 25 2002 David Summers <david@summersoft.fay.ar.us> 0.13.0-2332
+- Updated to APACHE/APR/APR-UTIL 2002-06-25.
+- Previous version had a few problems because of missing apache error/ files.
+
+* Sun Jun 23 2002 David Summers <david@summersoft.fay.ar.us> 0.13.0-2318
+- Updated to apache-2.0.40-0.3.
+- Updated to subversion-0.13.1-2318.
+
 * Tue Jun 18 2002 David Summers <david@summersoft.fay.ar.us> 0.13.0-2277
 - Updated for RedHat 7.3 (autoconf253).
 - Added a bunch of pre-requisites I didn't know were needed because I built a
