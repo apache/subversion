@@ -135,11 +135,13 @@ svn_cl__ls (apr_getopt_t *os,
   for (i = 0; i < targets->nelts; i++)
     {
       apr_hash_t *dirents;
-      const char *target_native;
       const char *target = ((const char **) (targets->elts))[i];
      
       if (! svn_path_is_url (target))
         {
+          const char *target_native;
+
+          SVN_ERR (svn_utf_cstring_from_utf8 (&target_native, target, pool));
           printf ("Invalid URL: %s\n", target_native);
           continue;
         }
