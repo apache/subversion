@@ -17,6 +17,7 @@
  */
 
 
+#include <assert.h>
 #include <apr_hash.h>
 
 #include "svn_types.h"
@@ -32,7 +33,11 @@ svn_fs_create_access (svn_fs_access_t **access_ctx,
                       const char *username,
                       apr_pool_t *pool)
 {
-  svn_fs_access_t *ac = apr_pcalloc (pool, sizeof(*ac));
+  svn_fs_access_t *ac;
+
+  assert (username != NULL);
+
+  ac = apr_pcalloc (pool, sizeof(*ac));
   ac->username = apr_pstrdup (pool, username);
   ac->lock_tokens = apr_hash_make (pool);
   *access_ctx = ac;

@@ -291,8 +291,8 @@ typedef struct svn_fs_access_t svn_fs_access_t;
 
 
 /** Set @a *access_ctx to a new @c svn_fs_access_t object
- *  representing @a username, allocated in @a pool.  Presumably @a
- *  username has already been authenticated by the caller.
+ *  representing @a username, allocated in @a pool.  @a username must be
+ *  non-@c NULL; presumably it has already been authenticated by the caller.
  */
 svn_error_t *svn_fs_create_access (svn_fs_access_t **access_ctx,
                                    const char *username,
