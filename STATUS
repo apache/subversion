@@ -7,6 +7,12 @@ delay a release, etc.
 Status of 1.1.4:
 ================
 
+Showstoppers:
+
+  * SWIG 1.3.25+ changes were not properly backported.  Makefile.in changes
+    were omitted.  LSWIGPY and LSWIGPL need to be merged so that <1.3.25 can
+    work correctly.
+
 Candidate changes that seem to have become stalled
 due to persistent lack of votes:
 
