@@ -184,6 +184,9 @@ main (int argc, const char * const *argv)
     {"filedata",      'F', 1},
     {"xml-file",      svn_cl__xml_file_opt, 1},
     {"locale",        svn_cl__locale_opt, 1},
+    /* Here begin authentication args, add more as needed: */
+    {"username",      svn_cl__auth_username_opt, 1},
+    {"password",      svn_cl__auth_password_opt, 1},    
     {0,               0, 0}
   };
 
@@ -272,6 +275,12 @@ main (int argc, const char * const *argv)
         break;
       case svn_cl__recursive_opt:
         opt_state.recursive = TRUE;
+        break;
+      case svn_cl__auth_username_opt:
+        opt_state.auth_username = svn_stringbuf_create (opt_arg, pool);
+        break;
+      case svn_cl__auth_password_opt:
+        opt_state.auth_password = svn_stringbuf_create (opt_arg, pool);
         break;
       case svn_cl__locale_opt:
         /* The only locale name that ISO C defines is the "C" locale;

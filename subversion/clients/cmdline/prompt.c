@@ -28,6 +28,30 @@
 
 #include "apr_lib.h"
 
+
+
+/*** Build an authentication object from commandline args. ***/
+
+svn_client_auth_t *
+svn_cl__make_auth_obj (svn_cl__opt_state_t *opt_state,
+                       apr_pool_t *pool)
+{
+  svn_client_auth_t *auth_obj;
+  auth_obj = apr_pcalloc (pool, sizeof(*auth_obj));
+
+  auth_obj->prompt_callback = svn_cl__prompt_user;
+  auth_obj->prompt_baton = NULL;
+
+  if (opt_state->auth_username)
+    auth_obj->username = opt_state->auth_username->data;
+  if (opt_state->auth_password)
+    auth_obj->password = opt_state->auth_password->data;
+  /* Add more authentication args here as necessary... */
+
+  return auth_obj;
+}
+
+
 
 /*** Our implementation of the 'auth info callback' routine, 
      as defined in svn_client.h.   This callback is passed to any

@@ -999,6 +999,12 @@ svn_wc_set_auth_file (svn_stringbuf_t *path,
     return svn_error_createf (status, 0, NULL, pool,
                               "error writing data to '%s'",
                               full_path_to_file->data);
+
+  status = apr_file_trunc (fp, (apr_off_t) contents->len);
+  if (status) 
+    return svn_error_createf (status, 0, NULL, pool,
+                              "error truncating file '%s'",
+                              full_path_to_file->data);
   
   status = apr_file_close (fp);
   if (status) 
@@ -1026,7 +1032,8 @@ svn_wc_set_auth_file (svn_stringbuf_t *path,
           basename = (const char *) key;          
           entry = (svn_wc_entry_t *) val;
 
-          if (entry->kind == svn_node_dir)
+          if ((entry->kind == svn_node_dir)
+              && (strcmp (basename, SVN_WC_ENTRY_THIS_DIR)))
             {              
               svn_stringbuf_t *childpath; 
               

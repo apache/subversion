@@ -66,44 +66,78 @@ store_auth_info (void *baton)
    This method is used only by `ra_local' right now. */
 static svn_error_t *
 authorize_username (void **session_baton,
-                    svn_client_auth_storage_callback_t *storage_cb,
-                    void **storage_baton,
                     svn_ra_plugin_t *ra_lib,
                     svn_stringbuf_t *path,
-                    svn_client_auth_info_callback_t cb,
-                    void *cb_baton,
+                    svn_client_auth_t *auth_obj,
                     void *authenticator,
                     apr_pool_t *pool)
 {
   apr_uid_t uid;
   apr_gid_t gid;
   apr_status_t status;
-  char *username;
+  svn_error_t *err;
+  svn_stringbuf_t *username;
+  svn_boolean_t need_to_store = FALSE;
 
-  svn_ra_username_authenticator_t *auth_obj =
+  svn_ra_username_authenticator_t *auth_vtable =
     (svn_ra_username_authenticator_t *) authenticator;
 
-  /* Set the username by getting the process UID.  We don't need the
-     app callback because we don't need to prompt for anything.  */
-  status = apr_current_userid (&uid, &gid, pool);
-  if (status)
-    return svn_error_createf(status, 0, NULL, pool,
-                             "Error getting UID of client process.");
-  
-  status = apr_get_username (&username, uid, pool);
-  if (status)
-    return svn_error_createf(status, 0, NULL, pool,
-                             "Error changing UID to username.");
+  /* Try to get username: */
 
-  SVN_ERR (auth_obj->set_username (username, auth_obj->pbaton));
+  /* 1. From the application (e.g. commandline args) */
+  if (auth_obj->username)
+    {
+      username = svn_stringbuf_create (auth_obj->username, pool);
+      need_to_store = TRUE;
+    }
+  /* 2. From the working copy */
+  else 
+    {
+      err = svn_wc_get_auth_file (path, SVN_CLIENT_AUTH_USERNAME,
+                                  &username, pool);
+      if (err && (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND))
+        {
+          /* 3. Else, just use the process owner. */
+          char *un;
+          status = apr_current_userid (&uid, &gid, pool);
+          if (status)
+            return svn_error_createf(status, 0, NULL, pool,
+                                     "Error getting UID of client process.");
+  
+          status = apr_get_username (&un, uid, pool);
+          if (status)
+            return svn_error_createf(status, 0, NULL, pool,
+                                     "Error changing UID to username.");
+
+          username = svn_stringbuf_create (un, pool);        
+          need_to_store = TRUE;
+        }
+      else if (err)
+        return err;
+    }
+
+  /* Send username to the RA layer. */
+  SVN_ERR (auth_vtable->set_username (username->data, auth_vtable->pbaton));
 
   /* Get (and implicitly return) the session baton. */
-  SVN_ERR (auth_obj->authenticate (session_baton, auth_obj->pbaton));
+  SVN_ERR (auth_vtable->authenticate (session_baton, auth_vtable->pbaton));
 
-  /* Completeness:  we never store auth info in the working copy.  We
-     indicate this by returning NULL in storage_cb. */
-  *storage_cb = NULL;
-  *storage_baton = NULL;
+  if (need_to_store)
+    {
+      /* Return a callback and baton that will allow the client
+         routine to store the auth info in PATH's admin area. */
+      svn_auth_info_baton_t *abaton = apr_pcalloc (pool, sizeof(*abaton));
+      abaton->username = username;
+      abaton->password = NULL;  /* no password to store. */
+      abaton->path = path;
+      abaton->pool = pool;
+
+      auth_obj->storage_callback = store_auth_info;
+      auth_obj->storage_baton = abaton;
+    }
+  else
+    /* No storage needed */
+    auth_obj->storage_callback = NULL;
 
   return SVN_NO_ERROR;
 }
@@ -116,55 +150,78 @@ authorize_username (void **session_baton,
    This method is used only by `ra_dav' right now. */
 static svn_error_t *
 authorize_simple_password (void **session_baton,
-                           svn_client_auth_storage_callback_t *storage_cb,
-                           void **storage_baton,
                            svn_ra_plugin_t *ra_lib,
                            svn_stringbuf_t *path,
-                           svn_client_auth_info_callback_t cb,
-                           void *cb_baton,
+                           svn_client_auth_t *auth_obj,
                            void *authenticator,
                            apr_pool_t *pool)
 {
   svn_error_t *err;
   svn_stringbuf_t *username, *password;
   svn_boolean_t need_to_store = FALSE;
-  svn_ra_simple_password_authenticator_t *auth_obj =
+  svn_ra_simple_password_authenticator_t *auth_vtable =
     (svn_ra_simple_password_authenticator_t *) authenticator;
+  
+  /* Try to get username: */
 
-  /* Try to get username from working copy (look in PATH). */
-  err = svn_wc_get_auth_file (path, SVN_CLIENT_AUTH_USERNAME,
-                              &username, pool);
-  if (err && (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND))
+  /* 1. From the application (e.g. commandline args) */
+  if (auth_obj->username)
     {
-      /* Prompt for username instead. */
-      char *answer;
-      SVN_ERR (cb (&answer, "Username: ", 0, cb_baton, pool));
-      username = svn_stringbuf_create (answer, pool);
+      username = svn_stringbuf_create (auth_obj->username, pool);
       need_to_store = TRUE;
     }
-  else if (err)
-    return err;
-
-  /* Try to get password from working copy (look in PATH). */
-  err = svn_wc_get_auth_file (path, SVN_CLIENT_AUTH_PASSWORD,
-                              &password, pool);
-  if (err && (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND))
+  /* 2. From the working copy */
+  else 
     {
-      /* Prompt for password instead. */
-      char *answer;
-      SVN_ERR (cb (&answer, "Password: ", 1, cb_baton, pool));
-      password = svn_stringbuf_create (answer, pool);
+      err = svn_wc_get_auth_file (path, SVN_CLIENT_AUTH_USERNAME,
+                                  &username, pool);
+      if (err && (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND))
+        {
+          /* 3. From the user directly, by prompting */
+          char *answer;
+          SVN_ERR (auth_obj->prompt_callback (&answer, 
+                                              "Username: ", 0, 
+                                              auth_obj->prompt_baton, pool));
+          username = svn_stringbuf_create (answer, pool);
+          need_to_store = TRUE;
+        }
+      else if (err)
+        return err;
+    }
+
+  /* Try to get password: */
+
+  /* 1. From the application (e.g. commandline args) */
+  if (auth_obj->password)
+    {
+      password = svn_stringbuf_create (auth_obj->password, pool);
       need_to_store = TRUE;
     }
-  else if (err)
-    return err;
-    
+  /* 2. From the working copy */
+  else 
+    {
+      err = svn_wc_get_auth_file (path, SVN_CLIENT_AUTH_PASSWORD,
+                                  &password, pool);
+      if (err && (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND))
+        {
+          /* 3. From the user directly, by prompting */
+          char *answer;
+          SVN_ERR (auth_obj->prompt_callback (&answer, 
+                                              "Password: ", 0, 
+                                              auth_obj->prompt_baton, pool));
+          password = svn_stringbuf_create (answer, pool);
+          need_to_store = TRUE;
+        }
+      else if (err)
+        return err;
+    }
+
   /* Send username/password to the RA layer. */
-  SVN_ERR (auth_obj->set_username (username->data, auth_obj->pbaton));
-  SVN_ERR (auth_obj->set_password (password->data, auth_obj->pbaton));
+  SVN_ERR (auth_vtable->set_username (username->data, auth_vtable->pbaton));
+  SVN_ERR (auth_vtable->set_password (password->data, auth_vtable->pbaton));
   
   /* Get (and implicitly return) the session baton. */
-  SVN_ERR (auth_obj->authenticate (session_baton, auth_obj->pbaton));
+  SVN_ERR (auth_vtable->authenticate (session_baton, auth_vtable->pbaton));
 
   /* If we had to display a prompt to the user... */
   if (need_to_store)
@@ -176,11 +233,13 @@ authorize_simple_password (void **session_baton,
       abaton->password = password;
       abaton->path = path;
       abaton->pool = pool;
-      *storage_cb = store_auth_info;
-      *storage_baton = abaton;
+
+      auth_obj->storage_callback = store_auth_info;
+      auth_obj->storage_baton = abaton;
     }
   else
-    *storage_cb = NULL;  /* info was already in in working copy. */
+    /* No storage needed */
+    auth_obj->storage_callback = NULL;
 
   return SVN_NO_ERROR;
 }
@@ -194,13 +253,10 @@ authorize_simple_password (void **session_baton,
 
 svn_error_t *
 svn_client_authenticate (void **session_baton,
-                         svn_client_auth_storage_callback_t *storage_callback,
-                         void **storage_baton,
                          svn_ra_plugin_t *ra_lib,
                          svn_stringbuf_t *repos_URL,
                          svn_stringbuf_t *path,
-                         svn_client_auth_info_callback_t callback,
-                         void *callback_baton,
+                         svn_client_auth_t *auth_obj,
                          apr_pool_t *pool)
 {
   void *obj;
@@ -213,11 +269,11 @@ svn_client_authenticate (void **session_baton,
   if (ra_lib->auth_methods & SVN_RA_AUTH_USERNAME)
     {
       SVN_ERR (ra_lib->get_authenticator (&obj, repos_URL,
-                                          SVN_RA_AUTH_USERNAME, pool));
+                                          SVN_RA_AUTH_USERNAME, /* method */
+                                          pool));
       
       SVN_ERR (authorize_username (session_baton,
-                                   storage_callback, storage_baton,
-                                   ra_lib, path, callback, callback_baton,
+                                   ra_lib, path, auth_obj,
                                    obj, pool));
     }
 
@@ -229,9 +285,7 @@ svn_client_authenticate (void **session_baton,
                                           pool));
       
       SVN_ERR (authorize_simple_password (session_baton,
-                                          storage_callback, storage_baton,
-                                          ra_lib, path, 
-                                          callback, callback_baton,
+                                          ra_lib, path, auth_obj,
                                           obj, pool));
     }
 

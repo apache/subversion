@@ -54,8 +54,7 @@ svn_client_update (const svn_delta_edit_fns_t *before_editor,
                    void *before_edit_baton,
                    const svn_delta_edit_fns_t *after_editor,
                    void *after_edit_baton,
-                   svn_client_auth_info_callback_t callback,
-                   void *callback_baton,
+                   svn_client_auth_t *auth_obj,
                    svn_stringbuf_t *path,
                    svn_stringbuf_t *xml_src,
                    svn_revnum_t revision,
@@ -111,8 +110,7 @@ svn_client_update (const svn_delta_edit_fns_t *before_editor,
   /* if using an RA layer */
   if (! xml_src)
     {
-      void *ra_baton, *session, *storage_baton;
-      svn_client_auth_storage_callback_t storage_callback;
+      void *ra_baton, *session;
       svn_ra_plugin_t *ra_lib;
 
       /* Get the RA vtable that matches URL. */
@@ -121,9 +119,7 @@ svn_client_update (const svn_delta_edit_fns_t *before_editor,
 
       /* Open an RA session to URL */
       SVN_ERR (svn_client_authenticate (&session, 
-                                        &storage_callback, &storage_baton,
-                                        ra_lib, URL, path,
-                                        callback, callback_baton, pool));
+                                        ra_lib, URL, path, auth_obj, pool));
 
       /* Decide which revision to update to: */
 
@@ -154,8 +150,8 @@ svn_client_update (const svn_delta_edit_fns_t *before_editor,
       SVN_ERR (ra_lib->close (session));
 
       /* Possibly store any authentication info from the RA session. */
-      if (storage_callback)
-        SVN_ERR (storage_callback (storage_baton));
+      if (auth_obj->storage_callback)
+        SVN_ERR (auth_obj->storage_callback (auth_obj->storage_baton));
     }      
   
   /* else we're checking out from xml */

@@ -38,8 +38,12 @@ svn_cl__status (apr_getopt_t *os,
   apr_hash_t *statushash;
   apr_array_header_t *targets;
   int i;
+  svn_client_auth_t *auth_obj;
 
   targets = svn_cl__args_to_target_array (os, pool);
+
+  /* Build an authentication object to give to libsvn_client. */
+  auth_obj = svn_cl__make_auth_obj (opt_state, pool);
 
   /* Add "." if user passed 0 arguments */
   svn_cl__push_implicit_dot_target(targets, pool);
@@ -53,8 +57,8 @@ svn_cl__status (apr_getopt_t *os,
          received from caller, which in turn would set it according
          to a command-line argument telling svn whether to recurse
          fully or just do immediate children. */
-      err = svn_client_status (&statushash, target, 1, 
-                               svn_cl__prompt_user, NULL, pool);
+      err = svn_client_status (&statushash, target, 1, auth_obj, pool);
+
       if (err)
         return err;
 

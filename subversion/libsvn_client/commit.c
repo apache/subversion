@@ -371,8 +371,7 @@ send_to_repos (const svn_delta_edit_fns_t *before_editor,
                apr_array_header_t *condensed_targets,
                svn_stringbuf_t *url,        /* null unless importing */
                svn_stringbuf_t *new_entry,  /* null except when importing */
-               svn_client_auth_info_callback_t callback,
-               void *callback_baton,
+               svn_client_auth_t *auth_obj,
                svn_stringbuf_t *log_msg,
                svn_stringbuf_t *xml_dst,
                svn_revnum_t revision,
@@ -392,8 +391,6 @@ send_to_repos (const svn_delta_edit_fns_t *before_editor,
 #endif /* 0 */
   void *ra_baton, *session;
   svn_ra_plugin_t *ra_lib;
-  void *storage_baton;
-  svn_client_auth_storage_callback_t storage_callback;
   svn_boolean_t is_import;
   struct svn_wc_close_commit_baton ccb = {base_dir, pool};
   apr_array_header_t *tgt_array
@@ -477,9 +474,8 @@ send_to_repos (const svn_delta_edit_fns_t *before_editor,
       
       /* Open an RA session to URL */
       SVN_ERR (svn_client_authenticate (&session, 
-                                        &storage_callback, &storage_baton,
                                         ra_lib, url, base_dir,
-                                        callback, callback_baton, pool));
+                                        auth_obj, pool));
       
       /* Fetch RA commit editor, giving it svn_wc_set_revision(). */
       SVN_ERR (ra_lib->get_commit_editor
@@ -564,8 +560,8 @@ send_to_repos (const svn_delta_edit_fns_t *before_editor,
       SVN_ERR (ra_lib->close (session));
 
       /* Possibly store any authentication info from the RA session. */
-      if (storage_callback)
-        SVN_ERR (storage_callback (storage_baton));      
+      if (auth_obj->storage_callback)
+        SVN_ERR (auth_obj->storage_callback (auth_obj->storage_baton));
     }
 
   return SVN_NO_ERROR;
@@ -581,8 +577,7 @@ svn_client_import (const svn_delta_edit_fns_t *before_editor,
                    void *before_edit_baton,
                    const svn_delta_edit_fns_t *after_editor,
                    void *after_edit_baton,
-                   svn_client_auth_info_callback_t callback,
-                   void *callback_baton,
+                   svn_client_auth_t *auth_obj,
                    svn_stringbuf_t *path,
                    svn_stringbuf_t *url,
                    svn_stringbuf_t *new_entry,
@@ -596,7 +591,7 @@ svn_client_import (const svn_delta_edit_fns_t *before_editor,
                           after_editor, after_edit_baton,                   
                           path, NULL,
                           url, new_entry,
-                          callback, callback_baton,
+                          auth_obj,
                           log_msg,
                           xml_dst, revision,
                           pool));
@@ -610,8 +605,7 @@ svn_client_commit (const svn_delta_edit_fns_t *before_editor,
                    void *before_edit_baton,
                    const svn_delta_edit_fns_t *after_editor,
                    void *after_edit_baton, 
-                   svn_client_auth_info_callback_t callback,
-                   void *callback_baton,                  
+                   svn_client_auth_t *auth_obj,
                    const apr_array_header_t *targets,
                    svn_stringbuf_t *log_msg,
                    svn_stringbuf_t *xml_dst,
@@ -661,8 +655,7 @@ svn_client_commit (const svn_delta_edit_fns_t *before_editor,
                           base_dir,
                           condensed_targets,
                           NULL, NULL,  /* NULLs because not importing */
-                          callback,
-                          callback_baton,
+                          auth_obj,
                           log_msg,
                           xml_dst, revision,
                           pool));
