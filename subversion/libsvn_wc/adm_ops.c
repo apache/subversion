@@ -771,28 +771,23 @@ svn_wc_add_file (svn_stringbuf_t *file,
    KIND, and using POOL for any necessary allocations.  Set REVERTED
    to TRUE if anything was modified, FALSE otherwise. */
 static svn_error_t *
-revert_admin_things (svn_boolean_t *reverted,
-                     svn_stringbuf_t *parent_dir,
-                     svn_stringbuf_t *entry,
-                     enum svn_node_kind kind,
+revert_admin_things (svn_stringbuf_t *parent_dir,
+                     svn_stringbuf_t *name,
+                     svn_wc_entry_t *entry,
+                     apr_uint64_t *modify_flags,
                      apr_pool_t *pool)
 {
   svn_stringbuf_t *full_path, *thing, *pristine_thing;
+  svn_boolean_t modified_p;
   svn_error_t *err;
-  svn_boolean_t text_modified_p = FALSE, prop_modified_p = FALSE;
-  apr_time_t tstamp, pstamp;
+  apr_time_t tstamp;
 
-  *reverted = FALSE;
   full_path = svn_stringbuf_dup (parent_dir, pool);
-  if (entry)
-    svn_path_add_component (full_path, entry, svn_path_local_style);
+  if (name && (strcmp (name->data, SVN_WC_ENTRY_THIS_DIR)))
+    svn_path_add_component (full_path, name, svn_path_local_style);
 
-  /* ### todo:  WARNING WARNING WARNING!!  This is NOT crash-proof! */
-  /* ### todo:  WARNING WARNING WARNING!!  This is NOT crash-proof! */
-  /* ### todo:  WARNING WARNING WARNING!!  This is NOT crash-proof! */
-
-  SVN_ERR (svn_wc_props_modified_p (&prop_modified_p, full_path, pool));  
-  if (prop_modified_p)
+  SVN_ERR (svn_wc_props_modified_p (&modified_p, full_path, pool));  
+  if (modified_p)
     {
       SVN_ERR (svn_wc__prop_path (&thing, full_path, 0, pool)); 
       SVN_ERR (svn_wc__prop_base_path (&pristine_thing, full_path, 0, pool));
@@ -802,13 +797,17 @@ revert_admin_things (svn_boolean_t *reverted,
           (err->apr_err, 0, NULL, pool,
            "revert_admin_things:  Error restoring pristine props for '%s'", 
            full_path->data);
-      SVN_ERR (svn_io_file_affected_time (&pstamp, thing, pool));
+      SVN_ERR (svn_io_file_affected_time (&tstamp, thing, pool));
+
+      /* Modify our entry structure. */
+      *modify_flags |= SVN_WC__ENTRY_MODIFY_PROP_TIME;
+      entry->prop_time = tstamp;
     }
 
-  if (kind == svn_node_file)
+  if (entry->kind == svn_node_file)
     {
-      SVN_ERR (svn_wc_text_modified_p (&text_modified_p, full_path, pool));
-      if (text_modified_p)
+      SVN_ERR (svn_wc_text_modified_p (&modified_p, full_path, pool));
+      if (modified_p)
         {
           /* If there are textual mods, copy the text-base out into
              the working copy, and update the timestamp in the entries
@@ -821,33 +820,53 @@ revert_admin_things (svn_boolean_t *reverted,
                "revert_admin_things:  Error restoring pristine text for '%s'", 
                full_path->data);
           SVN_ERR (svn_io_file_affected_time (&tstamp, full_path, pool));
+
+          /* Modify our entry structure. */
+          *modify_flags |= SVN_WC__ENTRY_MODIFY_TEXT_TIME;
+          entry->text_time = tstamp;
         }
     }
 
-  
-  if (text_modified_p || prop_modified_p)
+  if (entry->conflicted)
     {
-      apr_uint64_t modify_flags = 0;
-      modify_flags |= (text_modified_p ? SVN_WC__ENTRY_MODIFY_TEXT_TIME : 0);
-      modify_flags |= (prop_modified_p ? SVN_WC__ENTRY_MODIFY_PROP_TIME : 0);
+      svn_stringbuf_t *rej_file = NULL, *prej_file = NULL, *rmfile;
+      apr_status_t apr_err;
 
-      /* Update the entries file. */
-      SVN_ERR (svn_wc__entry_modify
-               (parent_dir, 
-                entry,
-                modify_flags,
-                SVN_INVALID_REVNUM, 
-                svn_node_none, 
-                svn_wc_schedule_normal,
-                svn_wc_existence_normal, 
-                FALSE, 
-                tstamp, 
-                pstamp, 
-                NULL, NULL,
-                pool, 
-                NULL));
+      /* Get the names of the reject files. */
+      rej_file = apr_hash_get (entry->attributes, 
+                               SVN_WC_ENTRY_ATTR_REJFILE,
+                               APR_HASH_KEY_STRING);
+      prej_file = apr_hash_get (entry->attributes, 
+                                SVN_WC_ENTRY_ATTR_PREJFILE,
+                                APR_HASH_KEY_STRING);
 
-      *reverted = TRUE;
+      /* Now blow them away. */
+      if (rej_file)
+        {
+          rmfile = svn_stringbuf_dup (parent_dir, pool);
+          svn_path_add_component (rmfile, rej_file, svn_path_local_style);
+          apr_err = apr_file_remove (rmfile->data, pool);
+          if (apr_err)
+            return svn_error_createf
+              (apr_err, 0, NULL, pool, 
+               "Unable to remove '%s'", rmfile->data);
+          *modify_flags |= SVN_WC__ENTRY_MODIFY_ATTRIBUTES;
+        }
+      if (prej_file)
+        {
+          rmfile = svn_stringbuf_dup (parent_dir, pool);
+          svn_path_add_component (rmfile, prej_file, svn_path_local_style);
+          apr_err = apr_file_remove (rmfile->data, pool);
+          if (apr_err)
+            return svn_error_createf
+              (apr_err, 0, NULL, pool, 
+               "Unable to remove '%s'", rmfile->data);
+          *modify_flags |= SVN_WC__ENTRY_MODIFY_ATTRIBUTES;
+        }
+
+      /* Modify our entry structure. */
+      *modify_flags |= SVN_WC__ENTRY_MODIFY_CONFLICTED;
+      entry->conflicted = FALSE;
     }
 
   return SVN_NO_ERROR;
@@ -860,9 +879,10 @@ svn_wc_revert (svn_stringbuf_t *path,
                apr_pool_t *pool)
 {
   enum svn_node_kind kind;
-  svn_stringbuf_t *p_dir = NULL, *basename = NULL;
+  svn_stringbuf_t *p_dir = NULL, *bname = NULL;
   svn_wc_entry_t *entry;
   svn_boolean_t wc_root, reverted = FALSE;
+  apr_uint64_t modify_flags = 0;
   svn_pool_feedback_t *fbtable = svn_pool_get_feedback_vtable (pool);
 
   /* Safeguard 1:  is this a versioned resource? */
@@ -895,7 +915,7 @@ svn_wc_revert (svn_stringbuf_t *path,
   if (! wc_root)
     {
       /* Split the basename from the parent path. */
-      svn_path_split (path, &p_dir, &basename, svn_path_local_style, pool);
+      svn_path_split (path, &p_dir, &bname, svn_path_local_style, pool);
       if (svn_path_is_empty (p_dir, svn_path_local_style))
         p_dir = svn_stringbuf_create (".", pool);
     }
@@ -910,10 +930,10 @@ svn_wc_revert (svn_stringbuf_t *path,
                   svn_stringbuf_create (SVN_WC_ENTRY_THIS_DIR, pool),
                   FALSE, pool));
       else
-        SVN_ERR (svn_wc_remove_from_revision_control (p_dir, basename, 
+        SVN_ERR (svn_wc_remove_from_revision_control (p_dir, bname, 
                                                       FALSE, pool));
 
-      /* Recursivity is taken care of by svn_wc_remove_from_revision_control,
+      /* Recursivity is taken care of by svn_wc_remove_from_revision_control, 
          and we've definitely reverted PATH at this point. */
       recursive = FALSE;
       reverted = TRUE;
@@ -923,12 +943,12 @@ svn_wc_revert (svn_stringbuf_t *path,
   else if (entry->schedule == svn_wc_schedule_normal)
     {
       /* Revert the prop and text mods (if any). */
+      if (entry->kind == svn_node_file)
+        SVN_ERR (revert_admin_things (p_dir, bname, entry, &modify_flags, 
+                                      pool));
       if (entry->kind == svn_node_dir)
-        SVN_ERR (revert_admin_things (&reverted, path, NULL, 
-                                      entry->kind, pool));
-      else
-        SVN_ERR (revert_admin_things (&reverted, p_dir, basename, 
-                                      entry->kind, pool));
+        SVN_ERR (revert_admin_things (path, NULL, entry, &modify_flags, 
+                                      pool));
     }
 
   /* Deletions and replacements. */
@@ -936,29 +956,48 @@ svn_wc_revert (svn_stringbuf_t *path,
            || (entry->schedule == svn_wc_schedule_replace))
     {
       /* Revert the prop and text mods (if any). */
+      if (entry->kind == svn_node_file)
+        SVN_ERR (revert_admin_things (p_dir, bname, entry, &modify_flags,
+                                      pool));
       if (entry->kind == svn_node_dir)
-        SVN_ERR (revert_admin_things (&reverted, path, NULL, 
-                                      entry->kind, pool));
-      else
-        SVN_ERR (revert_admin_things (&reverted, p_dir, basename, 
-                                      entry->kind, pool));
+        SVN_ERR (revert_admin_things (path, NULL, entry, &modify_flags,
+                                      pool));
+
+      modify_flags |= SVN_WC__ENTRY_MODIFY_SCHEDULE;
+    }
+
+  /* All our disk modifications should be finished by now.  Let's
+     update our entries files. */
+  if (modify_flags)
+    {
+      const char *remove1, *remove2;
 
       /* Reset the schedule to normal. */
       if (! wc_root)
         {
+          if (modify_flags & SVN_WC__ENTRY_MODIFY_ATTRIBUTES)
+            {
+              /* This *should* be the removal of the .rej and .prej
+                 directives. */
+              remove1 = SVN_WC_ENTRY_ATTR_REJFILE;
+              remove2 = SVN_WC_ENTRY_ATTR_PREJFILE;
+            }
+
           SVN_ERR (svn_wc__entry_modify
                    (p_dir,
-                    basename,
-                    SVN_WC__ENTRY_MODIFY_SCHEDULE | SVN_WC__ENTRY_MODIFY_FORCE,
+                    bname,
+                    modify_flags | SVN_WC__ENTRY_MODIFY_FORCE,
                     SVN_INVALID_REVNUM,
-                    svn_node_none,
+                    entry->kind,
                     svn_wc_schedule_normal,
                     svn_wc_existence_normal,
-                    TRUE,
-                    0,
-                    0,
-                    NULL, NULL,
+                    entry->conflicted,
+                    entry->text_time,
+                    entry->prop_time,
+                    NULL, entry->attributes,
                     pool,
+                    remove1,
+                    remove2,
                     NULL));
         }
 
@@ -969,20 +1008,30 @@ svn_wc_revert (svn_stringbuf_t *path,
           if (entry->schedule == svn_wc_schedule_replace)
             recursive = TRUE;
 
+          if (modify_flags & SVN_WC__ENTRY_MODIFY_ATTRIBUTES)
+            {
+              /* This *should* be the removal of the .rej and .prej
+                 directives. */
+              remove1 = SVN_WC_ENTRY_ATTR_PREJFILE;
+            }
+
           /* Reset the schedule to normal in the directory itself. */
           SVN_ERR (svn_wc__entry_modify
                    (path,
                     NULL,
-                    SVN_WC__ENTRY_MODIFY_SCHEDULE | SVN_WC__ENTRY_MODIFY_FORCE,
+                    SVN_WC__ENTRY_MODIFY_SCHEDULE 
+                    | SVN_WC__ENTRY_MODIFY_CONFLICTED 
+                    | SVN_WC__ENTRY_MODIFY_FORCE,
                     SVN_INVALID_REVNUM,
                     svn_node_none,
                     svn_wc_schedule_normal,
                     svn_wc_existence_normal,
-                    TRUE,
+                    FALSE,
                     0,
                     0,
                     NULL, NULL,
                     pool,
+                    remove1,
                     NULL));
         }
 
