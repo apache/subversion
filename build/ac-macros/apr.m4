@@ -81,10 +81,16 @@ AC_DEFUN(SVN_LIB_APR,
     AC_MSG_ERROR([apr-config --link-ld --libs failed])
   fi
 
+  SVN_APR_SHLIB_PATH_VAR="`$apr_config --shlib-path-var`"
+  if test $? -ne 0; then
+    AC_MSG_ERROR([apr-config --shlib-path-var failed])
+  fi
+
   AC_SUBST(SVN_APR_PREFIX)
   AC_SUBST(SVN_APR_INCLUDES)
   AC_SUBST(SVN_APR_LIBS)
   AC_SUBST(SVN_APR_EXPORT_LIBS)
+  AC_SUBST(SVN_APR_SHLIB_PATH_VAR)
 ])
 
 dnl SVN_DOWNLOAD_APR()
