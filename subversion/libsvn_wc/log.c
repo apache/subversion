@@ -1095,6 +1095,7 @@ log_do_committed (struct log_runner *loggy,
   /* Make sure our entry exists in the parent. */
   {
     svn_wc_adm_access_t *paccess;
+    svn_boolean_t unassociated = FALSE;
     
     svn_path_split (svn_wc_adm_access_path (loggy->adm_access), &pdir,
                     &base_name, pool);
@@ -1104,6 +1105,7 @@ log_do_committed (struct log_runner *loggy,
       {
         svn_error_clear (err);
         SVN_ERR (svn_wc_adm_open (&paccess, NULL, pdir, TRUE, FALSE, pool));
+        unassociated = TRUE;
       }
     else if (err)
       return err;
@@ -1120,6 +1122,9 @@ log_do_committed (struct log_runner *loggy,
           return svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG, err,
                                     "error merge_syncing '%s'", name);
       }
+
+    if (unassociated)
+      SVN_ERR (svn_wc_adm_close (paccess));
   }
 
   return SVN_NO_ERROR;
