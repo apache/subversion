@@ -42,10 +42,12 @@ typedef struct svn_string_t svn_string_t;
     }
     $result = t_output_helper($result, s);
 }
-%typemap(java,argout,fragment="t_output_helper") RET_STRING {
-    /* FIXME: This is just a stub -- implement JNI code! */
-    return NULL;
+%typemap(java,out) RET_STRING {
+    /* FIXME: This is just a stub -- implement JNI code for returning a string! */
+    $output = NULL;
 }
+
+%typemap(jni) char *                                         "jstring"
 
 /* -----------------------------------------------------------------------
    TYPE: svn_stringbuf_t
@@ -67,7 +69,7 @@ typedef struct svn_string_t svn_string_t;
 }
 
 /* svn_stringbuf_t ** is always an output parameter */
-%typemap(in,numinputs=0) svn_stringbuf_t ** (svn_stringbuf_t *temp) {
+%typemap(python,in,numinputs=0) svn_stringbuf_t ** (svn_stringbuf_t *temp) {
     $1 = &temp;
 }
 %apply RET_STRING { svn_stringbuf_t ** };
@@ -142,8 +144,20 @@ typedef struct svn_string_t svn_string_t;
     if ($1 == NULL)
         return NULL;
 }
-%typemap(java,in) const apr_array_header_t *STRINGLIST {
-    /* FIXME: This is just a stub -- implement JNI code! */
+
+%typemap(jni) const apr_array_header_t *STRINGLIST "jobjectArray"
+%typemap(jtype) const apr_array_header_t *STRINGLIST "java.lang.String[]"
+%typemap(jstype) const apr_array_header_t *STRINGLIST "java.lang.String[]"
+%typemap(javain) const apr_array_header_t *STRINGLIST "$javainput"
+
+%typemap(java,in) const apr_array_header_t *STRINGLIST (apr_array_header_t *temp) {
+	temp = (apr_array_header_t *)svn_swig_java_strings_to_array(jenv, $input, _global_pool);
+	$1 = temp;
 }
+
+%typemap(java,freearg) const apr_array_header_t *STRINGLIST {
+	/* FIXME: Perhaps free up "temp"? */
+}
+
 
 /* ----------------------------------------------------------------------- */

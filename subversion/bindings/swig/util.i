@@ -20,6 +20,13 @@
 
 %include typemaps.i
 
+/* This is default in SWIG 1.3.17 and is a really good idea */
+%typemap(javagetcptr) SWIGTYPE, SWIGTYPE *, SWIGTYPE &, SWIGTYPE [], SWIGTYPE (CLASS::*) %{
+  protected static long getCPtr($javaclassname obj) {
+    return (obj == null) ? 0 : obj.swigCPtr;
+  }
+%}
+
 %{
 #include "svn_opt.h"
 %}
@@ -203,4 +210,5 @@ void apr_pool_destroy(apr_pool_t *p);
 #ifdef SWIGJAVA
 #include "swigutil_java.h"
 #endif
+
 %}

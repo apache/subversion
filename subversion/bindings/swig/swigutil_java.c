@@ -22,11 +22,13 @@
 #include <apr_pools.h>
 #include <apr_hash.h>
 
+
+#include "svn_client.h"
+
 #include "svn_string.h"
 #include "svn_delta.h"
 
 #include "swigutil_java.h"
-
 
 /* FIXME: Need java.swg for the JCALL macros.  The following was taken
    from javahead.swg (which is included by java.swg). */
@@ -60,27 +62,19 @@ typedef struct {
   JNIEnv *jenv;         /* Java native interface structure */
 } handler_baton;
 
-
-static jobject make_pointer(const char *typename, void *ptr)
+static jobject make_pointer(JNIEnv* env, void *ptr)
 {
-  /* ### cache the swig_type_info at some point? */
-  return SWIG_NewPointerObj(ptr, SWIG_TypeQuery(typename), 0);
+  /* Return a Long object contining the C pointer to the object
+     (SWIG/Java knows nothing of SWIG_NewPointerObj) */
+  jclass cls = JCALL1(FindClass, env, "java/lang/Long");
+  return JCALL3(NewObject, env, cls,
+                        JCALL3(GetMethodID, env, cls, "<init>", "(J)V"),
+                        (jlong) ptr);
 }
 
-/* for use by the "O&" format specifier */
-static jobject make_ob_pool(void *ptr)
-{
-  return make_pointer("apr_pool_t *", ptr);
-}
-
-/* for use by the "O&" format specifier */
-static jobject make_ob_window(void *ptr)
-{
-  return make_pointer("svn_txdelta_window_t *", ptr);
-}
-
-static jobject convert_hash(JNIEnv *jenv, apr_hash_t *hash,
-                            jobject  (*converter_func)(void *value,
+static jobject convert_hash(JNIEnv* jenv, apr_hash_t *hash,
+                            jobject  (*converter_func)(JNIEnv* env,
+														void *value,
                                                        void *ctx),
                             void *ctx)
 {
@@ -103,32 +97,57 @@ static jobject convert_hash(JNIEnv *jenv, apr_hash_t *hash,
       jobject value;
 
       apr_hash_this(hi, &key, NULL, &val);
-      value = (*converter_func)(val, ctx);
+      value = (*converter_func)(jenv, val, ctx);
       JCALL4(CallObjectMethod, jenv, dict, put,
-             JCALL2(NewString, jenv, key, strlen(key)), value);
+              JCALL1(NewStringUTF, jenv, key), value);
       JCALL1(DeleteLocalRef, jenv, value);
     }
 
   return dict;
 }
 
-static jobject convert_to_swigtype(void *value, void *ctx)
+void svn_swig_java_add_to_map(JNIEnv* jenv, apr_hash_t *hash, jobject map)
 {
-  /* ctx is a 'swig_type_info *' */
-  return SWIG_NewPointerObj(value, ctx, 0);
+  apr_hash_index_t *hi;
+  jclass cls = JCALL1(FindClass, jenv, "java/util/Map");
+  jmethodID put = JCALL3(GetMethodID, jenv, cls, "put",
+                         "(Ljava/lang/Object;Ljava/lang/Object;)"
+                         "Ljava/lang/Object;");
+
+  for (hi = apr_hash_first(NULL, hash); hi; hi = apr_hash_next(hi))
+    {
+      const void *key;
+      void *val;
+      jobject keyname, value, oldvalue;
+
+      apr_hash_this(hi, &key, NULL, &val);
+      keyname = JCALL1(NewStringUTF, jenv, key);
+      value = make_pointer(jenv, val);
+	  
+      oldvalue = JCALL4(CallObjectMethod, jenv, map, put, keyname, value);
+  
+      JCALL1(DeleteLocalRef, jenv, value);
+      JCALL1(DeleteLocalRef, jenv, oldvalue);
+      JCALL1(DeleteLocalRef, jenv, keyname);
+
+	  if (JCALL0(ExceptionOccurred, jenv))
+          return;
+    }
 }
 
-static jobject convert_svn_string_t(void *value, void *ctx)
+static jobject convert_to_swigtype(JNIEnv* jenv, void *value, void *ctx)
 {
-  JNIEnv *jenv = (JNIEnv *) ctx;
+  /* ctx is a 'swig_type_info *', but this is lost entirely */
+  return make_pointer(jenv, value);
+}
+
+static jobject convert_svn_string_t(JNIEnv* jenv, void *value, void *ctx)
+{
   const svn_string_t *s = value;
 
-  /* ### borrowing from value in the pool. or should we copy? note
-     ### that copying is "safest" */
-
-  return JCALL2(NewString, jenv, (const jchar *) s->data, s->len);
+  /* This will copy the data */
+  return JCALL1(NewStringUTF, jenv, s->data);
 }
-
 
 jobject svn_swig_java_prophash_to_dict(JNIEnv *jenv, apr_hash_t *hash)
 {
@@ -151,7 +170,7 @@ jobject svn_swig_java_c_strings_to_list(JNIEnv *jenv, char **strings)
   jobject obj;
   while ((s = *strings++) != NULL)
     {
-      obj = JCALL2(NewString, jenv, (const jchar *) s, strlen(s));
+      obj = JCALL1(NewStringUTF, jenv, s);
 
       if (obj == NULL)
           goto error;
@@ -168,7 +187,8 @@ jobject svn_swig_java_c_strings_to_list(JNIEnv *jenv, char **strings)
   return NULL;
 }
 
-jobject svn_swig_java_array_to_list(JNIEnv *jenv, const apr_array_header_t *strings)
+jobject svn_swig_java_array_to_list(JNIEnv *jenv,
+                                    const apr_array_header_t *strings)
 {
   jclass cls = JCALL1(FindClass, jenv, "java/util/ArrayList");
   jobject list = JCALL3(NewObject, jenv, cls,
@@ -177,17 +197,19 @@ jobject svn_swig_java_array_to_list(JNIEnv *jenv, const apr_array_header_t *stri
   int i;
   jobject obj;
 
+  jmethodID add;
+  if (strings->nelts > 0)
+    add = JCALL3(GetMethodID, jenv, cls, "add", "(i, Ljava/lang/Object;)Z");
+
   for (i = 0; i < strings->nelts; ++i)
     {
-      jmethodID add;
       const char *s;
 
       s = APR_ARRAY_IDX(strings, i, const char *);
-      obj = JCALL2(NewString, jenv, (const jchar *) s, strlen(s));
+      obj = JCALL1(NewStringUTF, jenv, s);
       if (obj == NULL)
         goto error;
       /* ### HELP: The format specifier might be 'I' instead of 'i' */
-      add = JCALL3(GetMethodID, jenv, cls, "add", "(i, Ljava/lang/Object;)Z");
       JCALL4(CallObjectMethod, jenv, list, add, i, obj);
       JCALL1(DeleteLocalRef, jenv, obj);
     }
@@ -225,6 +247,7 @@ const apr_array_header_t *svn_swig_java_strings_to_array(JNIEnv *jenv,
   while (targlen--)
     {
       jobject o = JCALL3(CallObjectMethod, jenv, source, get, targlen);
+	  const char * c_string;
       if (o == NULL)
           return NULL;
       else if (!JCALL2(IsInstanceOf, jenv, o,
@@ -236,14 +259,14 @@ const apr_array_header_t *svn_swig_java_strings_to_array(JNIEnv *jenv,
               return NULL;
             }
         }
-
-      APR_ARRAY_IDX(temp, targlen, const char *) =
-          (char *) JCALL2(GetStringChars, jenv, o, FALSE);
+      c_string = (*jenv)->GetStringUTFChars(jenv, o, 0);
+      APR_ARRAY_IDX(temp, targlen, const char *) = apr_pstrdup(pool, c_string);
+      (*jenv)->ReleaseStringUTFChars(jenv, o, c_string);
       JCALL1(DeleteLocalRef, jenv, o);
+
     }
   return temp;
 }
-
 
 static svn_error_t * convert_java_error(JNIEnv *jenv, apr_pool_t *pool)
 {
@@ -259,6 +282,10 @@ static item_baton * make_baton(JNIEnv *jenv, apr_pool_t *pool,
                                jobject editor, jobject baton)
 {
   item_baton *newb = apr_palloc(pool, sizeof(*newb));
+
+  /* one more reference to the editor. */
+  JCALL1(NewGlobalRef, jenv, editor);
+  JCALL1(NewGlobalRef, jenv, baton);
 
   /* note: we take the caller's reference to 'baton' */
 
@@ -281,6 +308,7 @@ static svn_error_t * close_baton(void *baton, const char *method)
   /* If there is no baton object, then it is an edit_baton, and we should
      not bother to pass an object. Note that we still shove a NULL onto
      the stack, but the format specified just won't reference it.  */
+
   if (ib->baton)
     {
       methodID = JCALL3(GetMethodID, jenv, cls, method,
@@ -662,3 +690,42 @@ void svn_swig_java_make_editor(JNIEnv *jenv,
   *editor = thunk_editor;
   *edit_baton = make_baton(jenv, pool, java_editor, NULL);
 }
+
+/* a notify function that executes a Java method on an object which is
+   passed in via the baton argument */
+void svn_swig_java_notify_func(void *baton,
+                               const char *path,
+                               svn_wc_notify_action_t action,
+                               svn_node_kind_t kind,
+                               const char *mime_type,
+                               svn_wc_notify_state_t content_state,
+                               svn_wc_notify_state_t prop_state,
+                               svn_revnum_t revision)
+{
+    /* TODO: svn_swig_java_notify_func is not implemented yet */
+}
+
+/* thunked commit log fetcher */
+svn_error_t *svn_swig_java_get_commit_log_func (const char **log_msg,
+                                              const char **tmp_file,
+                                              apr_array_header_t *commit_items,
+                                              void *baton,
+                                              apr_pool_t *pool)
+{
+    return svn_error_create(APR_EGENERAL, NULL, "TODO: "
+                            "svn_swig_java_get_commit_log_func is not "
+                            "implemented yet");
+}
+
+/* log messages are returned in this */
+svn_error_t *svn_swig_java_log_message_receiver(void *baton,
+      apr_hash_t *changed_paths,
+      svn_revnum_t revision,
+      const char *author,
+      const char *date,  /* use svn_time_from_string() if need apr_time_t */
+      const char *message,
+      apr_pool_t *pool)
+{
+    return svn_error_create(APR_EGENERAL, NULL, "TODO: svn_swig_java_get_commit_log_func is not implemented yet");
+}
+

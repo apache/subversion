@@ -28,7 +28,11 @@
          typemap will be applied onto a "real" type.
 */
 
-%typemap(in,numinputs=0) SWIGTYPE **OUTPARAM ($*1_type temp) {
+%typemap(python, in, numinputs=0) SWIGTYPE **OUTPARAM ($*1_type temp) {
+    $1 = ($1_ltype)&temp;
+}
+
+%typemap(java, in) SWIGTYPE **OUTPARAM ($*1_type temp) {
     $1 = ($1_ltype)&temp;
 }
 %typemap(python, argout, fragment="t_output_helper") SWIGTYPE **OUTPARAM {
@@ -60,7 +64,7 @@
    Specify how svn_error_t returns are turned into exceptions.
 */
 
-%typemap(python,out) svn_error_t * {
+%typemap(python, out) svn_error_t * {
     if ($1 != NULL) {
         if ($1->apr_err != SVN_ERR_SWIG_PY_EXCEPTION_SET)
             PyErr_SetString(PyExc_RuntimeError,
@@ -69,6 +73,19 @@
     }
     Py_INCREF(Py_None);
     $result = Py_None;
+}
+
+%typemap(java, out) svn_error_t * {
+    if ($1 != NULL) {
+        SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, $1->message);
+    }
+}
+%typemap(jni) svn_error_t * "int"
+%typemap(jtype) svn_error_t * "int"
+%typemap(jstype) svn_error_t * "int"
+%typemap(javain) svn_error_t * "@javainput"
+%typemap(javaout) svn_error_t * {
+	$jnicall;
 }
 
 /* -----------------------------------------------------------------------
@@ -88,21 +105,23 @@
     $1 = PyString_AS_STRING($input);
     $2 = PyString_GET_SIZE($input);
 }
-%typemap(java, in) (const char *PTR, apr_size_t LEN) {
-    /* FIXME: This is just a stub -- implement JNI code! */
-}
 
 /* -----------------------------------------------------------------------
    Define a generic arginit mapping for pools.
 */
 
-%typemap(arginit) apr_pool_t *pool(apr_pool_t *_global_pool) {
+%typemap(python, arginit) apr_pool_t *pool(apr_pool_t *_global_pool) {
     /* Assume that the pool here is the last argument in the list */
     SWIG_ConvertPtr(PyTuple_GET_ITEM(args, PyTuple_GET_SIZE(args) - 1),
                     (void **)&$1, $1_descriptor, SWIG_POINTER_EXCEPTION | 0);
     _global_pool = $1;
 }
-%typemap(in) apr_pool_t *pool "";
+
+%typemap(java, arginit) apr_pool_t *pool(apr_pool_t *_global_pool) {
+    /* ### HACK: Get the input variable based on naming convention */
+	_global_pool = (apr_pool_t *)j$1;
+	$1 = 0;
+}
 
 /* -----------------------------------------------------------------------
    Handle python thread locking.
