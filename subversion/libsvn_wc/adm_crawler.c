@@ -579,6 +579,65 @@ bail_if_unresolved_conflict (svn_string_t *full_path,
 }
 
 
+/* Given a directory DIR under revision control, verify that it is
+   marked for deletion, and that all of its children are marked for
+   deletion. */
+static svn_error_t *
+verify_deleted_tree (svn_string_t *dir,
+                     apr_pool_t *pool)
+{
+  apr_pool_t *subpool = svn_pool_create (pool);
+  apr_hash_t *entries;
+  apr_hash_index_t *hi;
+  svn_string_t *fullpath = svn_string_dup (dir, pool);
+
+  /* Read the entries file for this directory. */
+  SVN_ERR (svn_wc_entries_read (&entries, dir, pool));
+
+  /* Delete each entry in the entries file. */
+  for (hi = apr_hash_first (entries); hi; hi = apr_hash_next (hi))
+    {
+      const void *key;
+      apr_size_t klen;
+      void *val;
+      svn_string_t *basename;
+      svn_wc_entry_t *entry; 
+      int is_this_dir;
+
+      /* Get the next entry */
+      apr_hash_this (hi, &key, &klen, &val);
+      entry = (svn_wc_entry_t *) val;
+      basename = svn_string_create ((const char *) key, subpool);
+      is_this_dir = (strcmp (basename->data, 
+                             SVN_WC_ENTRY_THIS_DIR)) ? FALSE : TRUE;
+
+      /* Construct the fullpath of this entry. */
+      if (! is_this_dir)
+        svn_path_add_component (fullpath, basename, svn_path_local_style);
+
+      /* If this entry is not marked for deletion, quit here. */
+      if (! (entry->state & SVN_WC_ENTRY_DELETED))
+        return svn_error_createf 
+          (SVN_ERR_WC_FOUND_CONFLICT, 0, NULL, pool,
+           "Aborting commit: '%s' dangling in deleted directory.",
+           fullpath->data);
+
+      /* Recurse on subdirectories. */
+      if ((entry->kind == svn_node_dir) && (! is_this_dir))
+        SVN_ERR (verify_deleted_tree (fullpath, subpool));
+
+      /* Reset FULLPATH to just hold this dir's name. */
+      svn_string_set (fullpath, dir->data);
+
+      /* Clear our per-iteration pool. */
+      svn_pool_clear (subpool);
+    }
+
+  /* Destroy our per-iteration pool. */
+  svn_pool_destroy (subpool);
+  return SVN_NO_ERROR;
+}
+
 
 /* Declaration to allow mutual-recursion between two static funcs. */
 static svn_error_t *report_local_mods (svn_string_t *path,
@@ -644,6 +703,12 @@ examine_and_report_entry (svn_string_t *path,
           if (err) return err;
         }
       
+      /* If this is a directory, we do a sanity check and make sure
+         that all the directory's children are also marked for
+         deletion.  If not, we're in a screwy state. */
+      if (current_entry->kind == svn_node_dir)
+        SVN_ERR (verify_deleted_tree (full_path_to_entry, subpool));
+
       /* Delete the entry */
       err = editor->delete_entry (current_entry_name, *dir_baton);
       if (err) return err;
