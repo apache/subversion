@@ -212,7 +212,7 @@
   (interactive)
   (let* ((hist svn-status-directory-history)
          (dir (read-from-minibuffer "svn-status on directory: "
-                              (cdr svn-status-directory-history)
+                              (cadr svn-status-directory-history)
                               nil nil 'hist)))
     (when (file-directory-p dir)
       (svn-status dir))))
