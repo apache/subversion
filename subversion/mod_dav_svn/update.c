@@ -719,10 +719,13 @@ static svn_error_t * upd_change_xxx_prop(void *baton,
     {
       if (value)
         {
-          const svn_string_t *qval = value;
+          const svn_string_t *qval;
           
           if (svn_xml_is_xml_safe(value->data, value->len))
             {
+              svn_stringbuf_t *tmp = NULL;
+              svn_xml_escape_cdata_string(&tmp, value, pool);
+              qval = svn_string_create (tmp->data, pool);
               send_xml(b->uc, "<S:set-prop name=\"%s\">", qname);
             }
           else
