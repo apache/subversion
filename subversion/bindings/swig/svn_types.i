@@ -143,9 +143,9 @@
 %typemap(javaptrconstructormodifiers) SWIGTYPE, SWIGTYPE *, SWIGTYPE &, SWIGTYPE [] "public"
 
 /* -----------------------------------------------------------------------
-   'svn_renum_t *' will always be an OUTPUT parameter
+   'svn_revnum_t *' and 'svn_boolean_t *' will always be an OUTPUT parameter
 */
-%apply long *OUTPUT { svn_revnum_t * };
+%apply long *OUTPUT { svn_revnum_t *, svn_boolean_t * };
 
 /* -----------------------------------------------------------------------
    Define an OUTPUT typemap for 'svn_filesize_t *'.  For now, we'll

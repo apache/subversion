@@ -140,7 +140,7 @@ sub getline
 {
     my $self = shift;
     *$self->{pool} ||= SVN::Core::pool_create (undef);
-    my $buf = *$self->{svn_stream}->readline (*$self->{pool});
+    my $buf = (*$self->{svn_stream}->readline ("\n", *$self->{pool}))[0];
     return defined $buf ? $buf."\n" : undef;
 }
 
