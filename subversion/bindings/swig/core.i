@@ -73,11 +73,21 @@
    scripting language already has facilities for these things (or they
    are relatively trivial).
 */
+
+/* svn_io.h: We cherry-pick certain functions from this file. To aid in this,
+ * EVERY function in the file is listed in the order it appears, and is either
+ * %ignore-d, or present as a comment, explicitly documenting that we wrap it.
+ */
+
 %ignore svn_io_check_path;
-%ignore svn_io_check_resolved_path;
 %ignore svn_io_check_special_path;
+%ignore svn_io_check_resolved_path;
+%ignore svn_io_open_unique_file;
+%ignore svn_io_create_unique_link;
+%ignore svn_io_read_link;
 %ignore svn_io_temp_dir;
 %ignore svn_io_copy_file;
+%ignore svn_io_copy_link;
 %ignore svn_io_copy_dir_recursively;
 %ignore svn_io_make_dir_recursively;
 %ignore svn_io_dir_empty;
@@ -90,9 +100,46 @@
 %ignore svn_io_file_affected_time;
 %ignore svn_io_set_file_affected_time;
 %ignore svn_io_filesizes_different_p;
+// svn_io_file_checksum
+// svn_io_files_contents_same_p
 %ignore svn_io_file_create;
 %ignore svn_io_file_lock;
+%ignore svn_io_file_lock2;
+%ignore svn_io_file_flush_to_disk;
 %ignore svn_io_dir_file_copy;
+
+/* Not useful from scripting languages. Custom streams should be achieved
+ * by passing a scripting language native stream into a svn_stream_t *
+ * parameter, and letting a typemap using svn_swig_xx_make_stream() take
+ * care of the details. */
+%ignore svn_stream_create;
+%ignore svn_stream_set_baton;
+%ignore svn_stream_set_read;
+%ignore svn_stream_set_write;
+%ignore svn_stream_set_close;
+
+/* The permitted svn_stream and svn_stringbuf functions could possibly
+ * be used by a script, in conjunction with other APIs which return or
+ * accept streams. This requires that the relevant language's custom
+ * svn_stream_t wrapping code does not obstruct this usage. */
+// svn_stream_empty
+// svn_stream_from_aprfile
+// svn_stream_for_stdout
+// svn_stream_from_stringbuf
+// svn_stream_compressed
+// svn_stream_read
+// svn_stream_write
+// svn_stream_close
+
+/* Scripts can do the printf, then write to a stream.
+ * We can't really handle the variadic, so ignore it. */
+%ignore svn_stream_printf;
+
+// svn_stream_readline
+// svn_stream_copy
+// svn_stringbuf_from_file
+// svn_stringbuf_from_aprfile
+
 %ignore svn_io_remove_file;
 %ignore svn_io_remove_dir;
 %ignore svn_io_get_dirents;
@@ -100,6 +147,7 @@
 %ignore svn_io_run_cmd;
 %ignore svn_io_run_diff;
 %ignore svn_io_run_diff3;
+// svn_io_detect_mimetype
 %ignore svn_io_file_open;
 %ignore svn_io_file_close;
 %ignore svn_io_file_getc;
@@ -113,20 +161,18 @@
 %ignore svn_io_file_rename;
 %ignore svn_io_dir_make;
 %ignore svn_io_dir_make_hidden;
+%ignore svn_io_dir_make_sgid;
 %ignore svn_io_dir_open;
 %ignore svn_io_dir_remove_nonrecursive;
 %ignore svn_io_dir_read;
 %ignore svn_io_read_version_file;
 %ignore svn_io_write_version_file;
 
+/* Other files */
 %ignore apr_check_dir_empty;
 
 /* bad pool convention */
 %ignore svn_opt_print_generic_help;
-
-/* scripts can do the printf, then write to a stream. we can't really
-   handle the variadic, so ignore it. */
-%ignore svn_stream_printf;
 
 /* Ugliness because the constants are typedefed and SWIG ignores them
    as a result. */
