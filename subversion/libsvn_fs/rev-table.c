@@ -75,6 +75,10 @@ svn_fs__get_rev (skel_t **skel_p,
   int db_err;
   DBT key, value;
   skel_t *skel;
+
+  /* Turn the revision number into a Berkeley DB record number.
+     Revisions are numbered starting with zero; Berkeley DB record
+     numbers begin with one.  */
   db_recno_t recno = rev + 1;
 
   db_err = fs->revisions->get (fs->revisions, db_txn,
@@ -119,11 +123,14 @@ svn_fs__put_rev (svn_revnum_t *rev,
     return svn_fs__err_corrupt_fs_revision (fs, -1);
 
   db_err = fs->revisions->put (fs->revisions, db_txn,
-                               svn_fs__set_dbt (&key, &recno, sizeof (recno)),
+                               svn_fs__recno_dbt(&key, &recno),
                                svn_fs__skel_to_dbt (&value, skel, pool),
                                DB_APPEND);
   SVN_ERR (DB_WRAP (fs, "storing filesystem revision", db_err));
 
+  /* Turn the record number into a Subversion revision number.
+     Revisions are numbered starting with zero; Berkeley DB record
+     numbers begin with one.  */
   *rev = recno - 1;
   return SVN_NO_ERROR;
 }

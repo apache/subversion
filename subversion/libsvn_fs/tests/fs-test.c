@@ -12,8 +12,11 @@
  */
 
 #include <stdlib.h>
-#include "apr.h"
+#include <apr_pools.h>
+#include "svn_error.h"
 #include "fs.h"
+#include "rev-table.h"
+#include "trail.c"
 
 /* Some utility functions.  */
 
@@ -35,7 +38,7 @@ const char repository[] = "test-repo";
 
 
 
-/* Create/Open a filesystem.  */
+/* Create a filesystem.  */
 
 static int
 create_berkeley_filesystem (const char **msg)
@@ -58,6 +61,28 @@ create_berkeley_filesystem (const char **msg)
 }
 
 
+
+
+/* Open a filesystem.  */
+
+
+/* Get and chedk the initial root id; must be 0.0. */
+static svn_error_t *
+check_filesystem_root_id (void *fs_baton, trail_t *trail)
+{
+  svn_fs_t *fs = fs_baton;
+  svn_fs_id_t *root_id;
+
+  SVN_ERR (svn_fs__rev_get_root (&root_id, fs, 0, trail));
+  if (root_id[0] != 0
+      && root_id[1] != 0
+      && root_id[2] != -1)
+    return svn_error_create(SVN_ERR_FS_CORRUPT, 0, 0, fs->pool,
+                            "node id of revision `0' is not `0.0'");
+  return SVN_NO_ERROR;
+}
+
+
 static int
 open_berkeley_filesystem (const char **msg)
 {
@@ -70,6 +95,10 @@ open_berkeley_filesystem (const char **msg)
     return fail();
 
   if (SVN_NO_ERROR != svn_fs_open_berkeley (fs, repository))
+    return fail();
+
+  if (SVN_NO_ERROR != svn_fs__retry_txn (fs, check_filesystem_root_id,
+                                         fs, fs->pool))
     return fail();
 
   if (SVN_NO_ERROR != svn_fs_close_fs (fs))
