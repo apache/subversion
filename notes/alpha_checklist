@@ -69,3 +69,8 @@ P. Optimizations that *should* be in effect, but aren't yet:
        client and server sides -- even though we already have a whole
        streamy system in place to make this unnecessary!
 
+Q. Need more descriptive error messages all around.  Perhaps a table
+   that maps errnos to strings.  (We'll need this anyway once we
+   internationalize.) 
+
+R. Speaking of which:  i18n plans?  Mulitlingual plans?
