@@ -625,10 +625,10 @@ struct rep_read_baton
 
 static struct rep_read_baton *
 rep_read_get_baton (svn_fs_t *fs,
-                            const char *rep_key,
-                            apr_size_t offset,
-                            trail_t *trail,
-                            apr_pool_t *pool)
+                    const char *rep_key,
+                    apr_size_t offset,
+                    trail_t *trail,
+                    apr_pool_t *pool)
 {
   struct rep_read_baton *b;
 
