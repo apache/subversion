@@ -180,6 +180,7 @@ Not yet approved:
      Votes:
       +1: patrick
       +1 (concept): gstein (assuming base change is imp'd)
+      +0: kfogel
 
 
    * r8022, r8024, r8038
@@ -187,7 +188,7 @@ Not yet approved:
      Justification: API stability; low risk because of bindings only change.
      Votes:
       +1: patrick
-      +0: gstein
+      +0: gstein, kfogel
 
 
    * r8039
@@ -195,7 +196,7 @@ Not yet approved:
      Justification: API stability; low risk because of bindings only change.
      Votes:
       +1: patrick
-      +0: gstein
+      +0: gstein, kfogel
 
    * r8289
      Applying r8220 to javahl.
@@ -203,6 +204,7 @@ Not yet approved:
      Justification: API stability; low risk because of bindings only change.
      Votes:
       +1: patrick
+      +0: kfogel
 
    * r8270
      Perl bindings fixes and enhancements.
@@ -211,3 +213,4 @@ Not yet approved:
                 of the client library support.
      Votes:
       +1: breser, clkao
+
