@@ -464,7 +464,7 @@ get_ra_editor (void **ra_baton,
   /* Fetch RA commit editor. */
   return (*ra_lib)->get_commit_editor (*session, editor, edit_baton, 
                                        committed_rev, committed_date, 
-                                       committed_author, log_msg);
+                                       committed_author, log_msg, pool);
 }
 
 

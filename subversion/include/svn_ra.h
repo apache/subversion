@@ -368,6 +368,8 @@ typedef struct svn_ra_plugin_t
    * repository), or @c NULL if the author is unavailable.  Allocate the
    * latter two in the session.  Any of @a new_rev, @a committed_date, or
    * @a committed_author may be @c NULL, in which case not touched.
+   *
+   * Use @a pool for memory allocation.
    */
   svn_error_t *(*get_commit_editor) (void *session_baton,
                                      const svn_delta_editor_t **editor,
@@ -375,7 +377,8 @@ typedef struct svn_ra_plugin_t
                                      svn_revnum_t *new_rev,
                                      const char **committed_date,
                                      const char **committed_author,
-                                     const char *log_msg);
+                                     const char *log_msg,
+                                     apr_pool_t *pool);
 
   /** Fetch the contents and properties of file @a path at @a revision.
    *

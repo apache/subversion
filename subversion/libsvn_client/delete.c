@@ -174,7 +174,7 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
                                           &committed_rev,
                                           &committed_date,
                                           &committed_author,
-                                          log_msg));
+                                          log_msg, pool));
 
       /* Drive the editor to delete the TARGET. */
       SVN_ERR (editor->open_root (edit_baton, SVN_INVALID_REVNUM, pool,
