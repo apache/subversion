@@ -25,6 +25,8 @@
 #include "svn_delta.h"
 #include "svn_pools.h"
 #include "svn_error.h"
+#include "../svn_tests.h"
+
 #include "../../libsvn_delta/delta.h"
 #include "delta-window-test.h"
 
@@ -41,11 +43,11 @@
 extern int test_argc;
 extern const char **test_argv;
 
-static void init_params (unsigned long *seed,
-                         int *maxlen, int *iterations,
+static void init_params (apr_uint32_t *seed,
+                         apr_uint32_t *maxlen, int *iterations,
                          int *dump_files, int *print_windows,
                          const char **random_bytes,
-                         unsigned long *bytes_range,
+                         apr_uint32_t *bytes_range,
                          apr_pool_t *pool)
 {
   apr_getopt_t *opt;
@@ -53,7 +55,7 @@ static void init_params (unsigned long *seed,
   const char *opt_arg;
   apr_status_t status;
 
-  *seed = (unsigned long) apr_time_now();
+  *seed = (apr_uint32_t) apr_time_now();
   *maxlen = DEFAULT_MAXLEN;
   *iterations = DEFAULT_ITERATIONS;
   *dump_files = DEFAULT_DUMP_FILES;
@@ -91,41 +93,35 @@ static void init_params (unsigned long *seed,
 }
 
 
-static unsigned long
-myrand (unsigned long *seed)
-{
-  *seed = (*seed * 1103515245 + 12345) & 0xffffffff;
-  return *seed;
-}
-
-
 /* Generate a temporary file containing sort-of random data.  Diffs
    between files of random data tend to be pretty boring, so we try to
    make sure there are a bunch of common substrings between two runs
    of this function with the same seedbase.  */
 static FILE *
-generate_random_file (int maxlen, unsigned long subseed_base,
+generate_random_file (apr_uint32_t maxlen,
+                      apr_uint32_t subseed_base,
                       unsigned long *seed,
                       const char *random_bytes,
-                      unsigned long bytes_range,
+                      apr_uint32_t bytes_range,
                       int dump_files)
 {
-  int len, seqlen;
+  apr_uint32_t len, seqlen;
   FILE *fp;
   unsigned long r;
 
   fp = tmpfile ();
   assert (fp != NULL);
-  len = myrand (seed) % maxlen;       /* We might go over this by a bit.  */
+  len = svn_test_rand (seed) % maxlen; /* We might go over this by a bit.  */
   while (len > 0)
     {
       /* Generate a pseudo-random sequence of up to MAXSEQ bytes,
          where the seed is in the range [seedbase..seedbase+MAXSEQ-1].
          (Use our own pseudo-random number generator here to avoid
          clobbering the seed of the libc random number generator.)  */
-      seqlen = myrand (seed) % MAXSEQ;
+      seqlen = svn_test_rand (seed) % MAXSEQ;
+      if (seqlen > len) seqlen = len;
       len -= seqlen;
-      r = subseed_base + myrand (seed) % SEEDS;
+      r = subseed_base + svn_test_rand (seed) % SEEDS;
       while (seqlen-- > 0)
         {
           const int ch = (random_bytes
@@ -211,15 +207,15 @@ random_test (const char **msg,
 {
   static char msg_buff[256];
 
-  unsigned long seed, bytes_range;
-  int i, maxlen, iterations, dump_files, print_windows;
+  apr_uint32_t seed, bytes_range, maxlen;
+  int i, iterations, dump_files, print_windows;
   const char *random_bytes;
 
   /* Initialize parameters and print out the seed in case we dump core
      or something. */
   init_params(&seed, &maxlen, &iterations, &dump_files, &print_windows,
               &random_bytes, &bytes_range, pool);
-  sprintf(msg_buff, "random delta test, seed = %lu", seed);
+  sprintf(msg_buff, "random delta test, seed = %lu", (unsigned long) seed);
   *msg = msg_buff;
 
   if (msg_only)
@@ -230,7 +226,7 @@ random_test (const char **msg,
   for (i = 0; i < iterations; i++)
     {
       /* Generate source and target for the delta and its application.  */
-      unsigned long subseed_base = myrand (&seed);
+      apr_uint32_t subseed_base = svn_test_rand (&seed);
       FILE *source = generate_random_file (maxlen, subseed_base, &seed,
                                            random_bytes, bytes_range,
                                            dump_files);
@@ -293,19 +289,20 @@ static svn_error_t *
 do_random_combine_test (const char **msg,
                         svn_boolean_t msg_only,
                         apr_pool_t *pool,
-                        unsigned long *last_seed)
+                        apr_uint32_t *last_seed)
 {
   static char msg_buff[256];
 
-  unsigned long seed, bytes_range;
-  int i, maxlen, iterations, dump_files, print_windows;
+  apr_uint32_t seed, bytes_range, maxlen;
+  int i, iterations, dump_files, print_windows;
   const char *random_bytes;
 
   /* Initialize parameters and print out the seed in case we dump core
      or something. */
   init_params(&seed, &maxlen, &iterations, &dump_files, &print_windows,
               &random_bytes, &bytes_range, pool);
-  sprintf(msg_buff, "random combine delta test, seed = %lu", seed);
+  sprintf(msg_buff,
+          "random combine delta test, seed = %lu", (unsigned long) seed);
   *msg = msg_buff;
 
   if (msg_only)
@@ -316,7 +313,7 @@ do_random_combine_test (const char **msg,
   for (i = 0; i < iterations; i++)
     {
       /* Generate source and target for the delta and its application.  */
-      unsigned long subseed_base = myrand ((*last_seed = seed, &seed));
+      apr_uint32_t subseed_base = svn_test_rand ((*last_seed = seed, &seed));
       FILE *source = generate_random_file (maxlen, subseed_base, &seed,
                                            random_bytes, bytes_range,
                                            dump_files);
@@ -415,7 +412,7 @@ random_combine_test (const char **msg,
                      svn_boolean_t msg_only,
                      apr_pool_t *pool)
 {
-  unsigned long seed;
+  apr_uint32_t seed;
   svn_error_t *err = do_random_combine_test (msg, msg_only, pool, &seed);
   if (!msg_only)
     printf("SEED: Last seen = %lu\n", seed);
