@@ -470,6 +470,29 @@ svn_fs__prepend (skel_t *skel, skel_t *list_skel)
 }
 
 
+void
+svn_fs__append (skel_t *skel, skel_t *list_skel)
+{
+  /* No kids?  Let's make one. */
+  if (! list_skel->children)
+    {
+      list_skel->children = skel;
+    }
+  else
+    {
+      skel_t *tmp = list_skel->children;
+      
+      /* Find the last child... */
+      while (tmp->next)
+        {
+          tmp = tmp->next;
+        }
+      /* ...and then give her a sister. */
+      tmp->next = skel;
+    }
+}
+
+
 
 /* Examining skels.  */
 
