@@ -80,3 +80,14 @@ Candidate changes:
     This fix doesn't try to fix the ipv6 issue, just the SIGSEGV.
     Votes:
       +1: dwhedon, jerenkrantz
+
+  * r8867, r8868, r8902
+    Trivial performance fix for mod_authz_svn; cache the access file per
+    connection instead of reloading it per request.
+    Justification: Saves at least 2 loads of the access file per update, plus
+    an additional number of times equal to the number of entries in the REPORT
+    response.
+    Notes: Similar code has been present in mod_dav_svn to cache an open
+    filesystem per connection.
+    Votes:
+      +1: striker
