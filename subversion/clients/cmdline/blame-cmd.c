@@ -64,17 +64,26 @@ svn_cl__blame (apr_getopt_t *os,
   if (! targets->nelts)
     return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, "");
 
+  if (opt_state->end_revision.kind == svn_opt_revision_unspecified)
+    {
+      if (opt_state->start_revision.kind != svn_opt_revision_unspecified)
+        {
+          /* In the case that -rX was specified, we actually want to set the
+             range to be -r1:X. */
+
+          opt_state->end_revision = opt_state->start_revision;
+          opt_state->start_revision.kind = svn_opt_revision_number;
+          opt_state->start_revision.value.number = 1;
+        }
+      else
+        opt_state->end_revision.kind = svn_opt_revision_head;
+    }
+
   if (opt_state->start_revision.kind == svn_opt_revision_unspecified)
     {
       opt_state->start_revision.kind = svn_opt_revision_number;
       opt_state->start_revision.value.number = 1;
     }
-
-  if (opt_state->end_revision.kind == svn_opt_revision_unspecified)
-    {
-      opt_state->end_revision.kind = svn_opt_revision_head;
-    }
-
 
   SVN_ERR (svn_stream_for_stdout (&out, pool));
 
