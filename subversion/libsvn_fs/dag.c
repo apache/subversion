@@ -356,19 +356,6 @@ svn_error_t *svn_fs__dag_get_proplist (skel_t **proplist_p,
 }
 
 
-/* Helper for svn_fs__dag_set_proplist */
-static svn_error_t *
-malformed_proplist_error (dag_node_t *node)
-{
-  svn_string_t *idstr = svn_fs_unparse_id (node->id, node->pool);
-  return 
-    svn_error_createf 
-    (SVN_ERR_FS_MALFORMED_SKEL, 0, NULL, node->pool,
-     "Attempted to commit *malformed* proplist on node-revision %s",
-     idstr->data);
-}
-
-
 svn_error_t *svn_fs__dag_set_proplist (dag_node_t *node,
                                        skel_t *proplist,
                                        trail_t *trail)
@@ -397,13 +384,13 @@ svn_error_t *svn_fs__dag_set_proplist (dag_node_t *node,
        isn't a list in the first place, list_length will return -1,
        which will still fail the test.) */
     if (len % 2 != 0)
-      return malformed_proplist_error (node);
+      abort ();
     
     /* Is each element an atom? */
     for (this = proplist->children; this; this = this->next)
       {
         if (! this->is_atom)
-          return malformed_proplist_error (node);
+          abort ();
       }
   }
   

@@ -156,9 +156,6 @@ typedef enum svn_errno_t {
   /* The caller attempted to change a node which is not mutable.  */
   SVN_ERR_FS_NOT_MUTABLE,
 
-  /* The caller attempted to commit a malformed skel. */
-  SVN_ERR_FS_MALFORMED_SKEL,
-
   /* You tried to create a new file in a filesystem revision, but the
      file already exists. */
   SVN_ERR_FS_ALREADY_EXISTS,
