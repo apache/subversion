@@ -43,6 +43,12 @@
 #define SVN_JNI_STATUS__SET_REPOS_PROP_STATUS "setReposPropStatus"
 #define SVN_JNI_STATUS__SET_REPOS_PROP_STATUS_SIG "(I)V"
 
+/*
+ * Do you want to debug code in this file?
+ * Just uncomment the following define
+ */
+//#define SVN_JNI__DEBUG_STATUS
+
 
 /*** Code ***/
 jobject
@@ -53,7 +59,7 @@ status__create(JNIEnv *env, svn_wc_status_t *status,
   jobject jentry = NULL;
   jboolean _hasException = JNI_FALSE;
 
-#ifdef SVN_JNI__VERBOSE
+#ifdef SVN_JNI__DEBUG_STATUS
   fprintf(stderr, ">>>status__create(");
   SVN_JNI__DEBUG_PTR(status);
   if( status != NULL )
@@ -150,7 +156,7 @@ status__create(JNIEnv *env, svn_wc_status_t *status,
                                         jstatus,
                                         status->repos_prop_status);
         }
-#ifdef SVN_JNI__VERBOSE
+#ifdef SVN_JNI__DEBUG_STATUS
       SVN_JNI__DEBUG_PTR(statusClass);
       SVN_JNI__DEBUG_PTR(statusConstructor);
       SVN_JNI__DEBUG_PTR(jstatus);
@@ -159,14 +165,14 @@ status__create(JNIEnv *env, svn_wc_status_t *status,
       (*env)->PopLocalFrame(env, jstatus);
     }
 
-#ifdef SVN_JNI__VERBOSE
+#ifdef SVN_JNI__DEBUG_STATUS
   SVN_JNI__DEBUG_BOOL(_hasException);
   fprintf(stderr, "\n<<<status__create\n");
 #endif
 
-  if( hasException != NULL )
+  if( (hasException != NULL) && _hasException )
     {
-      *hasException = _hasException;
+      *hasException = JNI_TRUE;
     }
 
   return jstatus;
@@ -176,7 +182,7 @@ void
 status__set_entry(JNIEnv *env, jboolean *hasException,
                   jobject jstatus, jobject jentry)
 {
-#ifdef SVN_JNI__VERBOSE
+#ifdef SVN_JNI__DEBUG_STATUS
   fprintf(stderr, ">>>status__set_entry(");
   SVN_JNI__DEBUG_PTR(jstatus);
   SVN_JNI__DEBUG_PTR(jentry);
@@ -187,7 +193,7 @@ status__set_entry(JNIEnv *env, jboolean *hasException,
                 SVN_JNI_STATUS__SET_ENTRY,
                 SVN_JNI_STATUS__SET_ENTRY_SIG,
                 jstatus, jentry);
-#ifdef SVN_JNI__VERBOSE
+#ifdef SVN_JNI__DEBUG_STATUS
   fprintf(stderr, "\n<<<status__set_entry\n");
 #endif
 }
@@ -196,7 +202,7 @@ void
 status__set_repos_rev(JNIEnv *env, jboolean *hasException,
                       jobject jstatus, jlong jrepos_rev)
 {
-#ifdef SVN_JNI__VERBOSE
+#ifdef SVN_JNI__DEBUG_STATUS
   fprintf(stderr, ">>>status__set_repos_rev(");
   SVN_JNI__DEBUG_PTR(jstatus);
   SVN_JNI__DEBUG_DEC(jrepos_rev);
@@ -206,7 +212,7 @@ status__set_repos_rev(JNIEnv *env, jboolean *hasException,
               SVN_JNI_STATUS__CLASS, 
               SVN_JNI_STATUS__SET_REPOS_REV,
               jstatus, jrepos_rev);
-#ifdef SVN_JNI__VERBOSE
+#ifdef SVN_JNI__DEBUG_STATUS
   fprintf(stderr, "\n<<<status__set_repos_rev\n");
 #endif
 }
@@ -215,7 +221,7 @@ void
 status__set_text_status(JNIEnv *env, jboolean *hasException,
                         jobject jstatus, jint jtext_status)
 {
-#ifdef SVN_JNI__VERBOSE
+#ifdef SVN_JNI__DEBUG_STATUS
   fprintf(stderr, ">>>status__set_text_status(");
   SVN_JNI__DEBUG_PTR(jstatus);
   SVN_JNI__DEBUG_DEC(jtext_status);
@@ -225,7 +231,7 @@ status__set_text_status(JNIEnv *env, jboolean *hasException,
              SVN_JNI_STATUS__CLASS,
              SVN_JNI_STATUS__SET_TEXT_STATUS,
              jstatus, jtext_status);
-#ifdef SVN_JNI__VERBOSE
+#ifdef SVN_JNI__DEBUG_STATUS
   fprintf(stderr, "\n<<<status__set_text_status\n");
 #endif
 }
@@ -234,7 +240,7 @@ void
 status__set_prop_status(JNIEnv *env, jboolean *hasException,
                         jobject jstatus, jint jprop_status)
 {
-#ifdef SVN_JNI__VERBOSE
+#ifdef SVN_JNI__DEBUG_STATUS
   fprintf(stderr, ">>>status__set_prop_status(");
   SVN_JNI__DEBUG_PTR(jstatus);
   SVN_JNI__DEBUG_DEC(jprop_status);
@@ -244,7 +250,7 @@ status__set_prop_status(JNIEnv *env, jboolean *hasException,
              SVN_JNI_STATUS__CLASS,
              SVN_JNI_STATUS__SET_PROP_STATUS,
              jstatus, jprop_status);
-#ifdef SVN_JNI__VERBOSE
+#ifdef SVN_JNI__DEBUG_STATUS
   fprintf(stderr, "\n<<<status__set_prop_status\n");
 #endif
 }
@@ -253,7 +259,7 @@ void
 status__set_locked(JNIEnv *env, jboolean *hasException,
                    jobject jstatus, jboolean jlocked)
 {
-#ifdef SVN_JNI__VERBOSE
+#ifdef SVN_JNI__DEBUG_STATUS
   fprintf(stderr, ">>>status__set_locked(");
   SVN_JNI__DEBUG_PTR(jstatus);
   SVN_JNI__DEBUG_DEC(jlocked);
@@ -263,7 +269,7 @@ status__set_locked(JNIEnv *env, jboolean *hasException,
                  SVN_JNI_STATUS__CLASS,
                  SVN_JNI_STATUS__SET_LOCKED,
                  jstatus, jlocked);
-#ifdef SVN_JNI__VERBOSE
+#ifdef SVN_JNI__DEBUG_STATUS
   fprintf(stderr, "\n<<<status__set_locked\n");
 #endif
 }
@@ -273,7 +279,7 @@ status__set_repos_text_status(JNIEnv *env, jboolean *hasException,
                               jobject jstatus, 
                               jint jrepos_text_status)
 {
-#ifdef SVN_JNI__VERBOSE
+#ifdef SVN_JNI__DEBUG_STATUS
   fprintf(stderr, ">>>status__set_repos_text_status(");
   SVN_JNI__DEBUG_PTR(jstatus);
   SVN_JNI__DEBUG_DEC(jrepos_text_status);
@@ -283,7 +289,7 @@ status__set_repos_text_status(JNIEnv *env, jboolean *hasException,
              SVN_JNI_STATUS__CLASS,
              SVN_JNI_STATUS__SET_REPOS_TEXT_STATUS,
              jstatus, jrepos_text_status);
-#ifdef SVN_JNI__VERBOSE
+#ifdef SVN_JNI__DEBUG_STATUS
   fprintf(stderr, "\n<<<status__set_repos_text_status\n");
 #endif
 }
@@ -293,7 +299,7 @@ status__set_repos_prop_status(JNIEnv *env, jboolean *hasException,
                               jobject jstatus,
                               jint jrepos_prop_status)
 {
-#ifdef SVN_JNI__VERBOSE
+#ifdef SVN_JNI__DEBUG_STATUS
   fprintf(stderr, ">>>status__set_repos_prop_status(");
   SVN_JNI__DEBUG_PTR(jstatus);
   SVN_JNI__DEBUG_DEC(jrepos_prop_status);
@@ -303,7 +309,7 @@ status__set_repos_prop_status(JNIEnv *env, jboolean *hasException,
              SVN_JNI_STATUS__CLASS,
              SVN_JNI_STATUS__SET_REPOS_PROP_STATUS,
              jstatus, jrepos_prop_status);
-#ifdef SVN_JNI__VERBOSE
+#ifdef SVN_JNI__DEBUG_STATUS
   fprintf(stderr, "\n<<<status__set_repos_prop_status\n");
 #endif
 }

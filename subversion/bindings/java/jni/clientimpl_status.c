@@ -37,6 +37,9 @@
 #include "status.h"
 #include "string.h"
 
+/*** Defines ***/
+#define SVN_JNI__CLIENTIMPL_STATUS \
+"Java_org_tigris_subversion_lib_ClientImpl_status"
 
 /*** Code ***/
 JNIEXPORT jobject JNICALL 
@@ -57,8 +60,7 @@ Java_org_tigris_subversion_lib_ClientImpl_status
   apr_pool_t *pool = NULL;
 
 #ifdef SVN_JNI__VERBOSE
-  fprintf(stderr, 
-	  "Java_org_tigris_subversion_lib_ClientImpl_status(...)\n");
+  fprintf(stderr, ">>>" SVN_JNI__CLIENTIMPL_STATUS "\n");
 #endif
 
   /* create a new pool
@@ -152,7 +154,6 @@ Java_org_tigris_subversion_lib_ClientImpl_status
                                 auth_baton,descend, 
                                 get_all, update, 
                                 pool);
-                                fprintf(stderr, "<<<HALLO!\n");
       if( error != NULL )
 	{
 #ifdef SVN_JNI__VERBOSE
@@ -190,6 +191,12 @@ Java_org_tigris_subversion_lib_ClientImpl_status
               apr_hash_index_t *index;
               int i=0;
 
+#ifdef SVN_JNI__VERBOSE
+              int statushash_count=apr_hash_count(statushash);
+              SVN_JNI__DEBUG_DEC(statushash_count);
+              fprintf(stderr, "\n");
+#endif
+
 	      /* iterate through apr hashtable and
 	       * insert each item into java hashtable */
 	      index = apr_hash_first(pool, 
@@ -201,6 +208,7 @@ Java_org_tigris_subversion_lib_ClientImpl_status
               SVN_JNI__DEBUG_PTR(statushash);
               SVN_JNI__DEBUG_PTR(index);
               fprintf(stderr, ")\n");
+              fprintf(stderr, "while loop\n");
 #endif
 
 	      while( (index != NULL) && (!hasException ) )
@@ -221,6 +229,7 @@ Java_org_tigris_subversion_lib_ClientImpl_status
                   SVN_JNI__DEBUG_DEC(len);
                   SVN_JNI__DEBUG_STR(key);
                   SVN_JNI__DEBUG_PTR(val);
+                  SVN_JNI__DEBUG_BOOL(hasException);
                   fprintf(stderr, ")\n");
 #endif
 		  //path = item->key;
@@ -230,55 +239,66 @@ Java_org_tigris_subversion_lib_ClientImpl_status
                   status = (svn_wc_status_t*)val;
  
 		  /* convert native string to java string */
-		  //jpath = string__c_to_j(env, path, &hasException);
+		  jpath = string__c_to_j(env, path, &hasException);
 
-		  /* convert svn_wc_status_t to java class Status 
+		  /* convert svn_wc_status_t to java class Status */
 		  if( !hasException )
 		    {
 		      jstatus = status__create(env, status, 
                                                &hasException);
 		    }
-                  */
+                  
 
 		  /* put entry into java hashtable */
 		  if( !hasException )
 		    {
-		      //hashtable__put(env, hashtable, jpath, jitem, 
-                      //               &hasException);
-                      /* HERE CRASHES THE VM NOW!!!! */
-
-                      jstring jpath=NULL;
-                      jstring jstatus=NULL;
-                      char puffer[20];
-                      sprintf(puffer, "X%4d", i++);
-                      fprintf(stderr, "%04d", i);
-                      jpath = string__c_to_j(env, puffer, NULL);
-                      jstatus = string__c_to_j(env, puffer, NULL);
-
-                      hashtable__put(env, hashtable, jpath, jstatus,
+		      hashtable__put(env, hashtable, jpath, jstatus, 
                                      &hasException);
 
-                      (*env)->DeleteLocalRef(env, jpath);
-                      (*env)->DeleteLocalRef(env, jstatus);
 		    }
 		  
 		  if( !hasException )
-		    {
-		      /* proceed to the next iteration */
-		      apr_hash_next(index);
-		    }
+                  {
+#ifdef SVN_JNI__VERBOSE
+                    fprintf(stderr, "apr_hash_next(");
+                    SVN_JNI__DEBUG_PTR(index);
+                    fprintf(stderr, ")...");
+#endif SVN_JNI__VERBOSE
+
+                    /* proceed to the next iteration */
+                    apr_hash_next(index);
+#ifdef SVN_JNI__VERBOSE
+                    fprintf(stderr, "Done\n");
+#endif
+                  }
 
                   /* delete local refs... */
                   if( jpath != NULL )
                     {
+#ifdef SVN_JNI__VERBOSE
+                      fprintf(stderr, "\nDeleteLocalRef(jpath)...");
+#endif
                       (*env)->DeleteLocalRef(env, jpath);
+#ifdef SVN_JNI__VERBOSE
+                      fprintf(stderr, "Done\n");
+#endif
                     }
                   if( jstatus != NULL )
                     {
+#ifdef SVN_JNI__VERBOSE
+                      fprintf(stderr, "DeleteLocalRef(jstatus)...");
+#endif
                       (*env)->DeleteLocalRef(env, jstatus);
+#ifdef SVN_JNI__VERBOSE
+                      fprintf(stderr, "Done\n");
+#endif
                     }
-
 		} /* while( ... ) */
+
+#ifdef SVN_JNI__VERBOSE
+              SVN_JNI__DEBUG_BOOL(hasException);
+              fprintf(stderr, "\nend of while loop!\n");
+#endif
 
 	    } /* if( !_hasException ) */
 
@@ -291,6 +311,12 @@ Java_org_tigris_subversion_lib_ClientImpl_status
     {
       svn_pool_destroy(pool);
     }
+
+#ifdef SVN_JNI__VERBOSE
+  fprintf(stderr, "\n<<<" SVN_JNI__CLIENTIMPL_STATUS "(");
+  SVN_JNI__DEBUG_BOOL(hasException);
+  fprintf(stderr, ")\n");
+#endif
 
   return hashtable;
 }

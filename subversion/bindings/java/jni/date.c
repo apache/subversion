@@ -97,9 +97,9 @@ date__apr_to_j(JNIEnv *env, jboolean *hasException,
   fprintf(stderr, "<<<date_apr_to_j\n");
 #endif
 				    
-  if( hasException != NULL )
+  if( (hasException != NULL) && _hasException )
     {
-      *hasException = _hasException;
+      *hasException = JNI_TRUE;
     }
 
   return result;

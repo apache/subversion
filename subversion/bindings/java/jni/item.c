@@ -74,9 +74,9 @@ item__create(JNIEnv *env, jobject jpath, jobject jstatus,
   fprintf(stderr, "\nitem__create\n");
 #endif
 
-  if( hasException != NULL )
+  if( (hasException != NULL) && _hasException )
   {
-      *hasException = _hasException;
+      *hasException = JNI_TRUE;
   }
 
   return jitem;
