@@ -90,9 +90,8 @@ reasons, and is ignored by the client.  The cap values give a list of
 server capabilities (see section 2.1).
 
 If the client does not support a protocol version within the specified
-range, or does not support any of the specified SASL mechanisms, it
-closes the connection.  Otherwise, the client responds to the greeting
-with an item matching the prototype:
+range, it closes the connection.  Otherwise, the client responds to
+the greeting with an item matching the prototype:
 
   response: ( version:number ( cap:word ... ) url:string )
 
@@ -415,5 +414,3 @@ desirability:
 
   * The protocol version may be bumped.  Clients and servers can then
     choose to any range of protocol versions.
-
-It is quite possible that the protocol version will never change.
