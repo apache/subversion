@@ -727,6 +727,73 @@ svn_wc__entry_remove (apr_hash_t *entries,
 }
 
 
+/*
+   NOTES on svn_wc__entry_merge_sync
+   =================================
+
+   There are only two ways to change an entry on disk:
+
+     1.  Use entry_merge_sync to change a single entry, or 
+
+     2.  read all entries into a hash (svn_wc_entries_read), modify
+     the entry structures manually, and write them all out again
+     (svn_wc__entries_write).
+
+   The wc library is repsonsible for enforcing *correct* logic when
+   manipulating an entry's flags.  In the first case, entry_merge_sync
+   has the power to do this, and this is what we document below.  In
+   the second case, there's nothing the wc lib can do -- so let the
+   tweaker beware!
+
+   Here we list all of the cases for setting an entry's "add" and
+   "delete" flags, and how merge_sync should behave in each situation:
+
+   [entry doesn't exist]
+ 
+      "set add":  create entry, set add flag.
+      "set del":  return error.
+
+   [entry exists, neither add nor del flag set]
+
+      "set add":  set add flag.
+      "set del":  set del flag.
+
+   [entry has only add flag set]
+
+      "set add":  return warning - "entry already marked for addition"
+      "set del":  remove the entry from disk.
+                  (obviously, somebody changed their mind about adding
+                  the entry *before* the commit.)
+
+   [entry has only del flag set]
+
+      "set add":  set add flag.
+                  (it's ok to have both flags set;  this means that an
+                  old version was removed, and a new version is being
+                  added.  this is the only meaningful interpretation,
+                  and it's what `svn commit' assumes when it sees both
+                  flags set.)
+      "set del":  return warning - "entry already marked for deletion"
+
+    [entry has BOTH add and del flags set]
+
+      "set add":  return warning - "entry already marked for addition"
+      "set del":  UNSET the add flag.
+                  (this covers the bizarre case of the user doing
+
+                         svn delete foo
+                         svn add foo
+                         svn delete foo
+
+                   In other words, the user deleted the old foo, added
+                   a new foo, then changed her mind and removed the
+                   old foo again.  The result is that the old foo
+                   should *still* be marked for deletion.)
+
+      Phew!
+
+ */
+
 svn_error_t *
 svn_wc__entry_merge_sync (svn_string_t *path,
                           svn_string_t *name,
