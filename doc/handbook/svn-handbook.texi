@@ -18,8 +18,8 @@
 @c  documentation and/or other materials provided with the distribution.
 @c  
 @c  3. The end-user documentation included with the redistribution, if
-@c  any, must include the following acknowledgment: "This product includes
-@c  software developed by CollabNet (http://www.Collab.Net/)."
+@c  any, must include the following acknowledgment: ``This product includes
+@c  software developed by CollabNet (@uref{http://www.Collab.Net/}).''
 @c  Alternately, this acknowledgment may appear in the software itself, if
 @c  and wherever such third-party acknowledgments normally appear.
 @c  
@@ -27,8 +27,8 @@
 @c  products derived from this software without prior written
 @c  permission. For written permission, please contact info@collab.net.
 @c  
-@c  5. Products derived from this software may not use the "Tigris" name
-@c  nor may "Tigris" appear in their names without prior written
+@c  5. Products derived from this software may not use the ``Tigris'' name
+@c  nor may ``Tigris'' appear in their names without prior written
 @c  permission of CollabNet.
 @c  
 @c  THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESSED OR IMPLIED
@@ -69,7 +69,7 @@
 @c -----------------------------------------------------------------
 @titlepage
 @title @titlefont{The Subversion Handbook}
-@author Subversion Development Project @url{http://subversion.tigris.org}
+@author Subversion Development Project @uref{http://subversion.tigris.org/}
 
 @page
 @vskip 0pt plus 1filll

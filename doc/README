@@ -41,6 +41,31 @@ somewhere in the Handbook.
 
 -------------- NOTES on Texinfo usage -----------------------------
 
+Use these rules for determining how to label something.  These rules
+were derived from
+
+http://www.gnu.org/manual/texinfo-4.0/html_chapter/texinfo_toc.html
+
+1) Use `` and '' for quoting any text.  Do not use a single ' or a
+   single ".
+2) When quoting single characters, such as discussing the output from
+   an svn merge or svn update, use @samp{}.
+3) Use @samp{} for any commands to run on the command line.  Do not use
+   @command{}, this is for the program itself.  So use @samp{ls -l},
+   but refer to ls as @command{ls}.  For svn, svnadmin, svnlook
+   subcommands, use @samp{}, so to refer to svnlook's youngest
+   subcommand, use @samp{youngest}.
+4) Use @option{} for command line options to programs that are not
+   listed with the program.  So @samp{ls -l}, but refer to -l as
+   @option{-l}.
+5) Use @uref{} for URLs that anybody on the Internet can access.
+   These are converted to real links in HTML pages, while @url{}'s are
+   not.  Use @url{} for sample http:// or file:// URLs.  For any
+   @uref{} URLs that refer to a site's home page or a directory, place
+   a / at the end of the URL.  This saves a redirect and loads the
+   page faster.
+6) Svn keywords, i.e. svn:ignore, should be in @samp{}.
+
 -------------
 JimB fixed up a lot of our Texinfo problems, here's what he says:
 -------------
