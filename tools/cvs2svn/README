@@ -1,76 +1,14 @@
-This is a python script which converts a CVS repository to an SVN Repository.
+cvs2svn has been moved to its own repository.  To check it out, do:
 
+   $ svn co http://svn.collab.net/repos/cvs2svn/trunk cvs2svn
 
-   ****************************** Warning ******************************
-   *                                                                   *
-   * cvs2svn.py is not "1.0 quality" yet.  While it has successfully   *
-   * converted many repositories (including their branches and tags),  *
-   * for others it has either failed to complete the conversion, or    *
-   * converted the data in an unexpected or subtly wrong way.  It is   *
-   * also not well-packaged yet.  For example, there's no easy way to  *
-   * install it on your system: right now the recommended way to run   *
-   * cvs2svn.py is right out of this directory, so it can find the     *
-   * 'rcsparse' module on which it depends (see subdir rcsparse/).     *
-   *                                                                   *
-   *********************************************************************
+The tigris.org project is
 
-All that said, the script has been used on straightforward CVS
-repositories successfully.  As an example, the whole first year of
-Subversion's own history was converted from CVS into a 3000+ revision
-svn repository.  Your Mileage May Vary.  To see a list of all open
-cvs2svn bugs, visit:
+   http://cvs2svn.tigris.org/
 
-   http://subversion.tigris.org/issues/buglist.cgi?component=subversion&issue_status=NEW&issue_status=STARTED&issue_status=REOPENED&target_milestone=cvs2svn-1.0
-Using cvs2svn:
-==============
+Don't forget to subscribe to the new mailing lists there, if you
+follow cvs2svn development.
 
-* Prerequisites:
-
-  - Install RCS.  cvs2svn.py uses the "co" command.  The RCS home page
-    is http://www.cs.purdue.edu/homes/trinkle/RCS/.
-
-  - Get at least Python 2.0; see http://www.python.org/.
-
-  - Make sure you have GNU 'sort' installed, or some other sort
-    program that handles large files other than by reading them
-    entirely into memory.  GNU sort is part of the coreutils
-    package, see http://www.gnu.org/software/coreutils/.
-
-  - If you're not running cvs2svn.py from this directory, then make
-    sure to install the rcsparse/ tree somewhere where Python can
-    find it.  Note that it's a CVS working copy, so we can update
-    it easily :-).  Except for 'compat.py', which comes from
-    viewcvs/lib/compat.py.
-
-    Rcsparse is currently part of ViewCVS, see
-    http://viewcvs.sourceforge.net/.  Someday rcsparse will be an
-    independent Python project, and then we can depend on it in a
-    more normal way.
-
-* Basic usage:
-
-  To create a new Subversion repository by converting an existing CVS
-  repository, run the script like this:
-
-     $ cvs2svn.py --create -s NEW_SVNREPOS CVSREPOS
-
-  To create a new Subversion repository containing only trunk commits,
-  and omitting all branches and tags from the CVS repository, do
-
-     $ cvs2svn.py --trunk-only --create -s NEW_SVNREPOS CVSREPOS
-
-  To create a Subversion dumpfile (suitable for 'svnadmin load') from
-  a CVS repository, run it like this:
-
-     $ cvs2svn.py --dump-only --dumpfile DUMPFILE CVSREPOS
-
-As it works, cvs2svn.py will create many temporary files in the
-current directory.  This is normal.  If the entire conversion is
-successful, however, those tempfiles will be automatically removed.
-If the conversion is not successful, or if you specify the
-'--skip-cleanup' option, cvs2svn will leave the temporary files behind
-for possible debugging.
-
-To see more options, run:
-
-     $ cvs2svn.py --help
+If you were able to commit to cvs2svn before, you should still be able
+to now.  Please email cmpilato@collab.net or kfogel@collab.net if you
+have any problems.
