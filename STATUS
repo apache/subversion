@@ -22,4 +22,12 @@ Candidate changes:
     Justification:
       blame is totally broken with more than 2 revisions on win32.
     Votes:
-      +1: lundblad
+      +1: lundblad, sussman
+
+  * r10385:
+    Make svnserve CRAM-MD5 work for usernames containing spaces.
+    Justification:
+      one-line fix, and it's a silly bug.
+    Votes:
+      +1: ghudson, sussman
+
