@@ -19,8 +19,6 @@ MUST HAVE
     - mod_dav_svn changes:
 
         --> LOCK/UNLOCK/PROPFIND on lock-null should work.  (sussman)
-        --> revert cmpilato's code to list lock-nulls in parents,
-             after making it work properly.  (cmpilato)
 
     - don't let svn clients lock nonexistent paths -- for now. 
 
