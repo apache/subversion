@@ -185,8 +185,11 @@ typedef struct svn_delta_digger_t
      this is done by signal_expat_bailout(). */
   XML_Parser expat_parser;   /* (note: this is a pointer in disguise!) */
 
-  /* A vcdiff parser, called whenever we receive binary data from expat. */
-  svn_vcdiff_parser_T *vcdiff_parser;
+  /* A vcdiff parser, called whenever we receive binary data from
+     expat.  Specifically, this is the _current_ vcdiff parser that
+     we're using to handle the data within the _current_ file being
+     added or replaced.*/
+  svn_vcdiff_parser_t *vcdiff_parser;
 
 
 } svn_delta_digger_t;

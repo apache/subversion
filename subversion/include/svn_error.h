@@ -73,6 +73,7 @@ typedef enum svn_errno_t {
   SVN_ERR_UNKNOWN_FS_ACTION,
   SVN_ERR_UNEXPECTED_EOF,
   SVN_ERR_MALFORMED_FILE,
+  SVN_ERR_INCOMPLETE_DATA,
 
   /* The xml delta we got was not valid. */
   SVN_ERR_MALFORMED_XML,
