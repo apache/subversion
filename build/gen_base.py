@@ -2,10 +2,14 @@
 # gen_base.py -- infrastructure for generating makefiles, dependencies, etc.
 #
 
-import os, sys
-import string, glob, re
+import os
+import sys
+import string
+import glob
+import re
 import fileinput
 import ConfigParser
+
 import getversion
 
 
@@ -77,19 +81,8 @@ class GeneratorBase:
       # find all the sources involved in building this target
       target_ob.find_sources(self.parser.get(target, 'sources'))
 
-      # compute the object files for each source file
-      if type != 'script' and type != 'swig':
-        for src in target_ob.sources:
-          if src[-2:] == '.c':
-            objname = src[:-2] + target_ob.objext
-
-            # object depends upon source
-            self.graph.add(DT_OBJECT, objname, src)
-
-            # target (a linked item) depends upon object
-            self.graph.add(DT_LINK, target, objname)
-          else:
-            raise GenError('ERROR: unknown file extension on ' + src)
+      # the target should add all relevant dependencies
+      target_ob.add_dependencies(self.graph)
 
       self.manpages.extend(string.split(self.parser.get(target, 'manpages')))
       self.infopages.extend(string.split(self.parser.get(target, 'infopages')))
@@ -268,8 +261,21 @@ class _Target:
         patterns = self.default_sources
       except AttributeError:
         raise GenError('build type "%s" has no default sources' % self.type)
-    self.sources = _collect_paths(patterns, self.path)
-    self.sources.sort()
+    self._sources = _collect_paths(patterns, self.path)
+    self._sources.sort()
+
+  def add_dependencies(self, graph):
+    for src in self._sources:
+      if src[-2:] == '.c':
+        objname = src[:-2] + self.objext
+
+        # object depends upon source
+        graph.add(DT_OBJECT, objname, src)
+
+        # target (a linked item) depends upon object
+        graph.add(DT_LINK, self.name, objname)
+      else:
+        raise GenError('ERROR: unknown file extension on ' + src)
 
   def write_dsp(self):
     if self.type == 'exe':
@@ -282,7 +288,7 @@ class _Target:
     dsp = string.replace(template, '@NAME@', self.name)
 
     cfiles = [ ]
-    for src in self.sources:
+    for src in self._sources:
       cfiles.append('# Begin Source File\x0d\x0a'
                     '\x0d\x0a'
                     'SOURCE=.\\%s\x0d\x0a'
@@ -308,6 +314,11 @@ class _TargetScript(_Target):
     # is run. Therefore, we have no work to do in find_sources().
     pass
 
+  def add_dependencies(self, graph):
+    # we don't need to "compile" the sources, so there are no dependencies
+    # to add here.
+    pass
+
 class _TargetLib(_Target):
   default_install = 'lib'
   default_sources = '*.c'
@@ -319,6 +330,10 @@ class _TargetDoc(_Target):
 class _TargetSWIG(_Target):
   default_install = 'swig'
   # no default_sources
+
+  def add_dependencies(self, graph):
+    ### incomplete
+    pass
 
 _build_types = {
   'exe' : _TargetExe,
