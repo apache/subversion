@@ -1045,7 +1045,6 @@ add_or_open_file (const char *path,
   struct dir_baton *pb = parent_baton;
   struct file_baton *fb;
   const svn_wc_entry_t *entry;
-  int is_wc;
   svn_node_kind_t kind;
   svn_wc_adm_access_t *adm_access;
 
@@ -1061,13 +1060,6 @@ add_or_open_file (const char *path,
 
   /* It is interesting to note: everything below is just validation. We
      aren't actually doing any "work" or fetching any persistent data. */
-
-  /* ### It would be nice to get the dirents and entries *once* and stash
-     ### them in the directory baton.  But an important question is,
-     ### are we re-reading the entries each time because we need to be
-     ### sensitive to any work we've already done on the directory?
-     ### Are editor drives guaranteed not to mention the same name
-     ### twice in the same dir baton?  Don't know.  */
 
   SVN_ERR (svn_io_check_path (fb->path, &kind, subpool));
   SVN_ERR (svn_wc_adm_retrieve (&adm_access, pb->edit_baton->adm_access,
@@ -1115,16 +1107,6 @@ add_or_open_file (const char *path,
                               "'%s' in directory '%s'",
                               fb->name, pb->path);
   
-        
-  /* Make sure we've got a working copy to put the file in. */
-  /* kff todo: need stricter logic here */
-  SVN_ERR (svn_wc_check_wc (pb->path, &is_wc, subpool));
-  if (! is_wc)
-    return svn_error_createf
-      (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-       "add_or_open_file: '%s' is not a working copy directory",
-       pb->path);
-
   /* ### todo:  right now the incoming copyfrom* args are being
      completely ignored!  Someday the editor-driver may expect us to
      support this optimization;  when that happens, this func needs to
@@ -2236,16 +2218,15 @@ check_wc_root (svn_boolean_t *wc_root,
     return SVN_NO_ERROR;
 
   /* If we cannot get an entry for PATH's parent, PATH is a WC root. */
+  p_entry = NULL;
   svn_path_split (path, &parent, &base_name, pool);
-  SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, parent, FALSE, FALSE,
-                                  pool));
-  err = svn_wc_entry (&p_entry, parent, adm_access, FALSE, pool);
-  SVN_ERR (svn_wc_adm_close (adm_access));
+  err = svn_wc_adm_probe_open (&adm_access, NULL, parent, FALSE, FALSE,
+                               pool);
+  if (! err)
+    err = svn_wc_entry (&p_entry, parent, adm_access, FALSE, pool);
   if (err || (! p_entry))
     {
-      if (err)
-        svn_error_clear (err);
-
+      svn_error_clear (err);
       return SVN_NO_ERROR;
     }
   

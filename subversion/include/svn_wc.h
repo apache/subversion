@@ -72,8 +72,9 @@ typedef struct svn_wc_adm_access_t svn_wc_adm_access_t;
  * copy administrative area associated with the directory @a path.  If
  * @a write_lock is true the baton will include a write lock, otherwise the
  * baton can only be used for read access.  If @a path refers to a directory
- * that is already locked then the error @c SVN_ERR_WC_LOCKED will be
- * returned.
+ * that is already write locked then the error @c SVN_ERR_WC_LOCKED will be
+ * returned.  The error @c SVN_ERR_WC_NOT_DIRECTORY will be returned if
+ * @a path is not a versioned directory.
  *
  * If @a associated is an open access baton then @a adm_access will be added 
  * to the set containing @a associated.  @a associated can be @c NULL, in 
@@ -85,7 +86,8 @@ typedef struct svn_wc_adm_access_t svn_wc_adm_access_t;
  * possible to lock the entire tree then an error will be returned and
  * @a adm_access will be invalid, with the exception that sudirectories of
  * @a path that are missing from the physical filesystem will not be locked
- * and will not cause an error.
+ * and will not cause an error.  The error @c SVN_ERR_WC_LOCKED will be
+ * returned if a subdirectory of @a path is already write locked.
  *
  * @a pool will be used to allocate memory for the baton and any subsequently
  * cached items.  If @a adm_access has not been closed when the pool is
@@ -170,11 +172,6 @@ apr_pool_t *svn_wc_adm_access_pool (svn_wc_adm_access_t *adm_access);
  * @c SVN_ERR_WC_NOT_LOCKED if this is not the case.
  */
 svn_error_t *svn_wc_adm_write_check (svn_wc_adm_access_t *adm_access);
-
-/** Set @a *wc_format to the working copy format version number for
- * @a adm_access. */
-svn_error_t *svn_wc_adm_wc_format (svn_wc_adm_access_t *adm_access,
-                                   int *wc_format);
 
 
 /** Set @a *locked to non-zero if @a path is locked, else set it to zero. */

@@ -173,12 +173,7 @@ assemble_status (svn_wc_status_t **status,
     {
       if (path_kind == svn_node_dir)
         {
-          int wc_format_version;
-
-          SVN_ERR (svn_wc_check_wc (path, &wc_format_version, pool));
-
-          /* a "version" of 0 means a non-wc directory */
-          if (wc_format_version == 0)
+          if (svn_wc__adm_missing (adm_access, path))
             final_text_status = svn_wc_status_obstructed;
         }
       else if (path_kind != svn_node_none)
