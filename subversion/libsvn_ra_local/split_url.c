@@ -60,7 +60,7 @@ svn_ra_local__split_URL (svn_repos_t **repos,
     {
       hostname = svn_path_uri_decode (apr_pstrmemdup (pool, hostname,
                                                      path - hostname), pool);
-        if ((strncmp (hostname, "localhost/", 10) != 0))
+        if ((strncmp (hostname, "localhost", 9) != 0))
           return svn_error_createf
             (SVN_ERR_RA_ILLEGAL_URL, NULL, 
              _("Local URL '%s' contains unsupported hostname"), URL);
