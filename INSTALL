@@ -588,18 +588,28 @@ II.   INSTALLATION
       * An assembler, e.g., nasm which is available from
         http://www.kernel.org/pub/software/devel/nasm/binaries/win32/
       * For localization gnu gettext is needed.  Get
-        gettext-runtime-0.12.1.bin.woe32.zip,
-        gettext-tools-0.12.1.bin.woe32.zip, and
+        gettext-runtime-0.13.bin.woe32.zip,
+        gettext-tools-0.13.bin.woe32.zip, and
         libiconv-1.9.1.bin.woe32.zip from
-        http://mirrors.kernel.org/gnu/gettext
+        http://mirrors.kernel.org/gnu/gettext/ and
+        http://mirrors.kernel.org/gnu/libiconv/.
       * A Subversion client binary from http://subversion.tigris.org/ to
         do the initial checkout of the Subversion source. See the section
         "Bootstrapping from a Zip or Installer File under Windows" above
         for more.
-      * A means of unpacking the files.  Native Win32 versions of gunzip,
-        tar and unzip can be found at http://unxutils.sourceforge.net/ or
-        http://gnuwin32.sourceforge.net/.
-        If you have WinZip that will also unpack the files.
+      * A means of unpacking the files.  The Subversion tar.gz file uses the
+        POSIX.1 standard for file names which exceed 100 characters.  This
+        format is not understood by all programs which claim to be able to
+        unpack .tar.gz files.  Notable examples of this are WinZip and the
+        utilities which can be found at http://unxutils.sourceforge.net/. 
+        The version of tar at http://gnuwin32.sourceforge.net/ is derived from
+        GNU tar, so it can handle POSIX.1. However, it is *not* able to unpack
+        gzip files, neither is it able to pipe from gzip. Thus the unpacking
+        must be done in two steps if you are using that program.
+        Cygwin can unpack this file, however cygwin is a large package to
+        install such just to unpack the tarball on Windows.  The Subversion
+        project will be making source releases available in zip format so when
+        this is available use it in preference to the .tar.gz file.
 
    E.2 Notes
 
@@ -671,8 +681,8 @@ II.   INSTALLATION
       * Extract openssl into SVN\openssl-0.9.7d
       * Extract nasm into SVN\nasm and put it in your path
       * Make a directory SVN\gettext and unpack
-        gettext-runtime-0.12.1.bin.woe32.zip,
-        gettext-tools-0.12.1.bin.woe32.zip, and
+        gettext-runtime-0.13.bin.woe32.zip,
+        gettext-tools-0.13.bin.woe32.zip, and
         libiconv-1.9.1.bin.woe32.zip into it.  Add SVN\gettext\bin to your
         path, SVN\gettext\include to your INCLUDE path and
         SVN\gettext\lib to your LIB path environment variables.  You can
