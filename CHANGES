@@ -1,4 +1,4 @@
-Version 0.15 (released 7 Nov 2002, revision 3685)
+Version 0.15 (released 7 Nov 2002, revision 3687)
 
  User-visible changes:
  * New 'S' indicator in 'svn status' shows switched subdirs 

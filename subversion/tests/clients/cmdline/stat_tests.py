@@ -208,6 +208,41 @@ def status_type_change(sbox):
   return 0
 
 
+def status_with_new_files_pending(sbox):
+  "status -u with new files pending in the repository (tests rev 3686)"
+
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
+  was_cwd = os.getcwd()
+
+  os.chdir(wc_dir)
+
+  svntest.main.file_append('newfile', 'this is a new file')
+  svntest.main.run_svn(None, 'add', 'newfile')
+  svntest.main.run_svn(None, 'ci', '-m', 'logmsg')
+  svntest.main.run_svn(None, 'up', '-r', '1')
+
+  stat_output, err_output = svntest.main.run_svn(None, 'status', '-u')
+  if err_output:
+    return 1
+
+  # The bug fixed in revision 3686 was a seg fault.  We don't have a
+  # reliable way to detect a seg fault here, since we haven't dealt
+  # with the popen2{Popen3,Popen4} mess in Python yet (the latter two
+  # are classes within the first, which is a module, and the Popen3
+  # class is not the same as os.popen3().  Got that?)  See the Python
+  # docs for details; in the meantime, no output means there was a
+  # problem.
+  if not stat_output:
+    return 1
+
+  os.chdir(was_cwd)
+
+  return 0
+
+
 ########################################################################
 # Run the tests
 
@@ -219,6 +254,7 @@ test_list = [ None,
               status_shows_all_in_current_dir,
               status_missing_file,
               status_type_change,
+              status_with_new_files_pending,
              ]
 
 if __name__ == '__main__':
